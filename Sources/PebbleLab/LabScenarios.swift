@@ -100,9 +100,13 @@ func prepareScenario(_ options: Options, world: World) -> ScenarioResult {
             adoptedChunks: adoptedChunks
         )
         if scenario == "agent_smoke" {
+            var agent0 = makeLabAgent(id: "agent_0", x: 8, z: 8, world: world)
+            var agent1 = makeLabAgent(id: "agent_1", x: 12, z: 8, world: world)
+            agent0.inventory.add("food", count: 1)
+            agent1.inventory.add("wood", count: 2)
             result.agents = [
-                makeLabAgent(id: "agent_0", x: 8, z: 8, world: world),
-                makeLabAgent(id: "agent_1", x: 12, z: 8, world: world)
+                agent0,
+                agent1
             ]
         }
         return result

@@ -68,6 +68,24 @@ func encodeHomeAssignedEvent(_ agent: LabAgent, tick: Int) throws -> String {
     ))
 }
 
+func encodeInventoryAssignedEvents(_ agent: LabAgent, tick: Int) throws -> String {
+    var lines = ""
+    for item in agent.inventory.items.keys.sorted() {
+        let count = agent.inventory.count(item)
+        lines += try encodeEventLine(RunEvent(
+            type: "agent_inventory_assigned",
+            tick: tick,
+            scenario: options.scenario,
+            agentId: agent.id,
+            reason: "initial scenario inventory",
+            item: item,
+            delta: count,
+            count: count
+        ))
+    }
+    return lines
+}
+
 func encodeFearChangedEvent(_ agent: LabAgent, effect: LabAgentActionEffect, tick: Int) throws -> String {
     try encodeEventLine(RunEvent(
         type: "agent_fear_changed",
@@ -104,6 +122,7 @@ func encodeSpawnAndInitialObservation(agent: inout LabAgent, allAgents: [LabAgen
         state: agent.state
     ))
     lines += try encodeHomeAssignedEvent(agent, tick: 0)
+    lines += try encodeInventoryAssignedEvents(agent, tick: 0)
     if let observation = agent.observation {
         lines += try encodeEventLine(RunEvent(
             type: "agent_observed",
@@ -248,6 +267,15 @@ func goalsByKind() -> [String: Int]? {
     guard !labAgents.isEmpty else { return nil }
     return labAgents.reduce(into: [:]) { counts, agent in
         counts[agent.currentGoal.kind.rawValue, default: 0] += 1
+    }
+}
+
+func inventoryItemsByKind() -> [String: Int]? {
+    guard !labAgents.isEmpty else { return nil }
+    return labAgents.reduce(into: [:]) { counts, agent in
+        for (item, count) in agent.inventory.items {
+            counts[item, default: 0] += count
+        }
     }
 }
 
@@ -434,7 +462,10 @@ if let outPath = options.outPath {
                 averageFear: averageAgents { $0.fear },
                 agentsWithHome: countAgents { _ in true },
                 minHealth: minAgentValue { $0.health },
-                maxFear: maxAgentValue { $0.fear }
+                maxFear: maxAgentValue { $0.fear },
+                agentsWithInventory: countAgents { !$0.inventory.isEmpty },
+                totalInventoryItems: sumAgents { $0.inventory.totalItemCount },
+                inventoryItemsByKind: inventoryItemsByKind()
             ),
             to: outURL.appendingPathComponent("metrics.json")
         )

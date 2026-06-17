@@ -130,3 +130,47 @@ the smoke suite remains green.
 Next steps:
 
 - Phase 3.4: `LabInventory minimal v0`.
+
+## 2026-06-17 - Phase 3.4 LabInventory Minimal V0
+
+Branch: `lab/pebblelab-v1`
+
+Objective: add a minimal deterministic abstract inventory to PebbleLab agents
+without using PebbleCore `ItemStack`, crafting, shared storage, physical pickup,
+or world interaction.
+
+Files modified:
+
+- `Sources/PebbleLab/LabAgent.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DECISIONS.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+Behavior added:
+
+- `LabInventory` stores positive integer item counts keyed by string ids.
+- Each `LabAgent` now owns an inventory.
+- `agent_smoke` gives `agent_0` one `food` and `agent_1` two `wood`.
+- `agent_snapshot.json` includes each inventory.
+- `events.ndjson` includes `agent_inventory_assigned` for initial items.
+- `metrics.json` includes `agentsWithInventory`, `totalInventoryItems`, and
+  `inventoryItemsByKind`.
+
+Commands of validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --scenario agent_smoke --seed 42 --ticks 3 --out runs/agent_smoke_inventory_v0`
+- `swift run -c release pebsmoke`
+
+Result: validation passed. `agent_smoke` writes inventory snapshots for both
+agents, emits `agent_inventory_assigned`, reports three total abstract items,
+and the smoke suite remains green.
+
+Next steps:
+
+- Phase 3.5: `agents_basic scenario + --agents N`.

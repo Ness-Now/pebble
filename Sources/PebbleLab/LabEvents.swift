@@ -41,6 +41,9 @@ struct RunEvent: Encodable {
     let blockAtFeet: Int?
     let action: String?
     let reason: String?
+    let item: String?
+    let delta: Int?
+    let count: Int?
     let memoryType: String?
     let importance: Double?
     let summary: String?
@@ -111,6 +114,9 @@ struct RunEvent: Encodable {
         blockAtFeet: Int? = nil,
         action: String? = nil,
         reason: String? = nil,
+        item: String? = nil,
+        delta: Int? = nil,
+        count: Int? = nil,
         memoryType: String? = nil,
         importance: Double? = nil,
         summary: String? = nil,
@@ -180,6 +186,9 @@ struct RunEvent: Encodable {
         self.blockAtFeet = blockAtFeet
         self.action = action
         self.reason = reason
+        self.item = item
+        self.delta = delta
+        self.count = count
         self.memoryType = memoryType
         self.importance = importance
         self.summary = summary

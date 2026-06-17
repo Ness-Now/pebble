@@ -23,5 +23,14 @@ physical entities, inventory, or social relationships.
 
 ## Phase 3.4 - LabInventory Minimal V0
 
-Next recommended step: add a minimal abstract inventory state without item
-registries, physical pickup, block interaction, or crafting.
+Status: done and validated.
+
+Goal: abstract agents carry a small deterministic string-keyed inventory
+without item registries, physical pickup, block interaction, crafting, or
+sharing.
+
+## Phase 3.5 - agents_basic Scenario And --agents N
+
+Next recommended step: add a small scenario or CLI option that can create a
+configurable number of abstract agents while keeping the current deterministic
+logging and snapshot contracts.

@@ -48,6 +48,9 @@ struct RunMetrics: Encodable {
     let agentsWithHome: Int?
     let minHealth: Int?
     let maxFear: Int?
+    let agentsWithInventory: Int?
+    let totalInventoryItems: Int?
+    let inventoryItemsByKind: [String: Int]?
 
     init(
         scenario: String,
@@ -88,7 +91,10 @@ struct RunMetrics: Encodable {
         averageFear: Double? = nil,
         agentsWithHome: Int? = nil,
         minHealth: Int? = nil,
-        maxFear: Int? = nil
+        maxFear: Int? = nil,
+        agentsWithInventory: Int? = nil,
+        totalInventoryItems: Int? = nil,
+        inventoryItemsByKind: [String: Int]? = nil
     ) {
         self.scenario = scenario
         self.seed = seed
@@ -129,6 +135,9 @@ struct RunMetrics: Encodable {
         self.agentsWithHome = agentsWithHome
         self.minHealth = minHealth
         self.maxFear = maxFear
+        self.agentsWithInventory = agentsWithInventory
+        self.totalInventoryItems = totalInventoryItems
+        self.inventoryItemsByKind = inventoryItemsByKind
     }
 }
 

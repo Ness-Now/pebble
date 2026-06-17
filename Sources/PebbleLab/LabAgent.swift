@@ -10,6 +10,7 @@ struct LabAgent: Encodable {
     var health: Int
     var fear: Int
     var homePosition: LabAgentPosition
+    var inventory: LabInventory
     var observation: LabAgentObservation?
     var nearbyAgents: [LabNearbyAgentObservation]
     var currentGoal: LabGoal
@@ -37,6 +38,7 @@ struct LabAgent: Encodable {
         health = 100
         fear = 10
         homePosition = spawnPosition
+        inventory = LabInventory()
         observation = nil
         nearbyAgents = []
         currentGoal = LabGoal(kind: .idle, reason: "initial goal", startedAtTick: 0, urgency: 0)
@@ -239,6 +241,7 @@ struct LabAgent: Encodable {
         case isAlive
         case fear
         case homePosition
+        case inventory
         case observation
         case nearbyAgents
         case currentGoal
@@ -266,6 +269,7 @@ struct LabAgent: Encodable {
         try container.encode(isAlive, forKey: .isAlive)
         try container.encode(fear, forKey: .fear)
         try container.encode(homePosition, forKey: .homePosition)
+        try container.encode(inventory, forKey: .inventory)
         try container.encodeIfPresent(observation, forKey: .observation)
         try container.encode(nearbyAgents, forKey: .nearbyAgents)
         try container.encode(currentGoal, forKey: .currentGoal)
@@ -294,6 +298,61 @@ struct LabAgentNeeds: Encodable {
     var fatigue: Double
     var curiosity: Double
     var safety: Double
+}
+
+struct LabInventory: Codable, Equatable {
+    private(set) var items: [String: Int]
+
+    var isEmpty: Bool { items.isEmpty }
+    var totalItemCount: Int { items.values.reduce(0, +) }
+
+    init(items: [String: Int] = [:]) {
+        self.items = items.filter { _, count in count > 0 }
+    }
+
+    func count(_ item: String) -> Int {
+        items[item, default: 0]
+    }
+
+    func has(_ item: String, count: Int = 1) -> Bool {
+        guard count > 0 else { return false }
+        return self.count(item) >= count
+    }
+
+    mutating func add(_ item: String, count: Int = 1) {
+        guard count > 0 else { return }
+        items[item, default: 0] += count
+    }
+
+    mutating func remove(_ item: String, count: Int = 1) -> Bool {
+        guard count > 0, has(item, count: count) else { return false }
+        let remaining = self.count(item) - count
+        if remaining > 0 {
+            items[item] = remaining
+        } else {
+            items.removeValue(forKey: item)
+        }
+        return true
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case items
+        case totalItemCount
+        case isEmpty
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedItems = try container.decode([String: Int].self, forKey: .items)
+        self.init(items: decodedItems)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(items, forKey: .items)
+        try container.encode(totalItemCount, forKey: .totalItemCount)
+        try container.encode(isEmpty, forKey: .isEmpty)
+    }
 }
 
 struct LabAgentObservation: Encodable {

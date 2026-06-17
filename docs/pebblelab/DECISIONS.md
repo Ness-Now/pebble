@@ -36,3 +36,15 @@ priority layer.
 
 Reason: future survival and settlement behavior needs stable state anchors
 before adding inventory, physical agents, homes, groups, or social systems.
+
+## 2026-06-17 - Abstract String-Keyed Inventory
+
+Decision: PebbleLab agents use an abstract `LabInventory` keyed by string item
+identifiers.
+
+This intentionally avoids PebbleCore `ItemStack`, registries, physical pickup,
+crafting, storage, exchange, theft, sharing, or economy mechanics until
+physical agents and world interactions are introduced.
+
+Reason: future food, gathering, construction, and social behavior needs a small
+deterministic inventory surface before coupling agents to the full item system.
