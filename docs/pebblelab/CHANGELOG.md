@@ -14,3 +14,4 @@
 - Added `agent_inventory_assigned` NDJSON events and inventory metrics.
 - Added `agents_basic` scenario with configurable `--agents` count.
 - Added abstract movement v0 for PebbleLab agents.
+- Added abstract seekSafety movement toward `homePosition`.

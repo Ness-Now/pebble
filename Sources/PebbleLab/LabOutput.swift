@@ -56,6 +56,11 @@ struct RunMetrics: Encodable {
     let totalManhattanDistanceMoved: Int?
     let maxDistanceFromHome: Int?
     let averageDistanceFromHome: Double?
+    let agentReturnHomeMoves: Int?
+    let agentsMovedTowardHome: Int?
+    let totalDistanceReducedTowardHome: Int?
+    let agentsAtHome: Int?
+    let agentsNearHome: Int?
 
     init(
         scenario: String,
@@ -104,7 +109,12 @@ struct RunMetrics: Encodable {
         agentsMoved: Int? = nil,
         totalManhattanDistanceMoved: Int? = nil,
         maxDistanceFromHome: Int? = nil,
-        averageDistanceFromHome: Double? = nil
+        averageDistanceFromHome: Double? = nil,
+        agentReturnHomeMoves: Int? = nil,
+        agentsMovedTowardHome: Int? = nil,
+        totalDistanceReducedTowardHome: Int? = nil,
+        agentsAtHome: Int? = nil,
+        agentsNearHome: Int? = nil
     ) {
         self.scenario = scenario
         self.seed = seed
@@ -153,6 +163,11 @@ struct RunMetrics: Encodable {
         self.totalManhattanDistanceMoved = totalManhattanDistanceMoved
         self.maxDistanceFromHome = maxDistanceFromHome
         self.averageDistanceFromHome = averageDistanceFromHome
+        self.agentReturnHomeMoves = agentReturnHomeMoves
+        self.agentsMovedTowardHome = agentsMovedTowardHome
+        self.totalDistanceReducedTowardHome = totalDistanceReducedTowardHome
+        self.agentsAtHome = agentsAtHome
+        self.agentsNearHome = agentsNearHome
     }
 }
 

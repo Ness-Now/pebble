@@ -115,7 +115,13 @@ func encodeMovementEvent(_ movement: LabAgentMovement, agent: LabAgent) throws -
         dy: movement.dy,
         dz: movement.dz,
         distanceManhattan: movement.distanceManhattan,
-        goal: movement.goal
+        goal: movement.goal,
+        homeX: movement.homeX,
+        homeY: movement.homeY,
+        homeZ: movement.homeZ,
+        distanceFromHomeBefore: movement.distanceFromHomeBefore,
+        distanceFromHomeAfter: movement.distanceFromHomeAfter,
+        distanceReducedTowardHome: movement.distanceReducedTowardHome
     ))
 }
 
@@ -496,7 +502,12 @@ if let outPath = options.outPath {
                 agentsMoved: countAgents { $0.movementCount > 0 },
                 totalManhattanDistanceMoved: sumAgents { $0.totalManhattanDistanceMoved },
                 maxDistanceFromHome: maxAgentValue { $0.distanceFromHome },
-                averageDistanceFromHome: averageAgents { $0.distanceFromHome }
+                averageDistanceFromHome: averageAgents { $0.distanceFromHome },
+                agentReturnHomeMoves: sumAgents { $0.returnHomeMoveCount },
+                agentsMovedTowardHome: countAgents { $0.returnHomeMoveCount > 0 },
+                totalDistanceReducedTowardHome: sumAgents { $0.totalDistanceReducedTowardHome },
+                agentsAtHome: countAgents { $0.distanceFromHome == 0 },
+                agentsNearHome: countAgents { $0.distanceFromHome <= 1 }
             ),
             to: outURL.appendingPathComponent("metrics.json")
         )
@@ -515,7 +526,7 @@ if let outPath = options.outPath {
                 path: "world_snapshot.json"
             ))
         }
-        if !labAgents.isEmpty, options.scenario == "agent_smoke" || options.scenario == "agents_basic" {
+        if !labAgents.isEmpty, options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke" {
             try writeJSON(
                 AgentSnapshot(
                     scenario: options.scenario,

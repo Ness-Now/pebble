@@ -28,6 +28,8 @@ struct LabAgent: Encodable {
     var actionEffectCount: Int
     var movementCount: Int
     var totalManhattanDistanceMoved: Int
+    var returnHomeMoveCount: Int
+    var totalDistanceReducedTowardHome: Int
 
     var isAlive: Bool { health > 0 }
     var distanceFromHome: Int {
@@ -62,6 +64,8 @@ struct LabAgent: Encodable {
         actionEffectCount = 0
         movementCount = 0
         totalManhattanDistanceMoved = 0
+        returnHomeMoveCount = 0
+        totalDistanceReducedTowardHome = 0
     }
 
     mutating func tick() {
@@ -155,7 +159,18 @@ struct LabAgent: Encodable {
         let action: LabAgentAction
         switch currentGoal.kind {
         case .seekSafety:
-            action = LabAgentAction(name: "wait", reason: "goal seekSafety", tick: tick)
+            if let step = movementStepTowardHome() {
+                action = LabAgentAction(
+                    name: "move_abstract",
+                    reason: "goal seekSafety",
+                    tick: tick,
+                    dx: step.dx,
+                    dy: 0,
+                    dz: step.dz
+                )
+            } else {
+                action = LabAgentAction(name: "wait", reason: "goal seekSafety at home", tick: tick)
+            }
         case .rest:
             action = LabAgentAction(name: "rest", reason: "goal rest", tick: tick)
         case .observeOtherAgent:
@@ -206,15 +221,23 @@ struct LabAgent: Encodable {
             state = "observing"
             effect = "curiosity +0.01"
         case "move_abstract":
-            needs.curiosity = max(0, needs.curiosity - 0.005)
-            state = "moving"
-            effect = "curiosity -0.005"
-        case "wait":
             if currentGoal.kind == .seekSafety {
                 fear = max(0, fear - 1)
+                effect = "fear -1"
+            } else {
+                needs.curiosity = max(0, needs.curiosity - 0.005)
+                effect = "curiosity -0.005"
+            }
+            state = "moving"
+        case "wait":
+            if currentGoal.kind == .seekSafety {
+                let reduction = distanceFromHome <= 1 ? 2 : 1
+                fear = max(0, fear - reduction)
             }
             state = "waiting"
-            effect = currentGoal.kind == .seekSafety ? "fear -1" : "no need change"
+            effect = currentGoal.kind == .seekSafety
+                ? (distanceFromHome <= 1 ? "fear -2" : "fear -1")
+                : "no need change"
         default:
             effect = "no effect"
         }
@@ -261,8 +284,11 @@ struct LabAgent: Encodable {
         }
 
         let from = position
+        let distanceFromHomeBefore = distanceFromHome
         let to = LabAgentPosition(x: from.x + dx, y: from.y, z: from.z + dz)
         position = to
+        let distanceFromHomeAfter = distanceFromHome
+        let distanceReducedTowardHome = max(0, distanceFromHomeBefore - distanceFromHomeAfter)
 
         let movement = LabAgentMovement(
             tick: tick,
@@ -277,11 +303,21 @@ struct LabAgent: Encodable {
             dz: dz,
             distanceManhattan: distance,
             reason: action.reason,
-            goal: currentGoal.kind.rawValue
+            goal: currentGoal.kind.rawValue,
+            homeX: homePosition.x,
+            homeY: homePosition.y,
+            homeZ: homePosition.z,
+            distanceFromHomeBefore: distanceFromHomeBefore,
+            distanceFromHomeAfter: distanceFromHomeAfter,
+            distanceReducedTowardHome: distanceReducedTowardHome
         )
         lastMovement = movement
         movementCount += 1
         totalManhattanDistanceMoved += distance
+        if currentGoal.kind == .seekSafety, distanceReducedTowardHome > 0 {
+            returnHomeMoveCount += 1
+            totalDistanceReducedTowardHome += distanceReducedTowardHome
+        }
         remember(
             tick: tick,
             type: "moved_abstract",
@@ -289,6 +325,25 @@ struct LabAgent: Encodable {
             importance: 0.1
         )
         return movement
+    }
+
+    func movementStepTowardHome() -> (dx: Int, dz: Int)? {
+        let dxToHome = homePosition.x - position.x
+        let dzToHome = homePosition.z - position.z
+
+        if dxToHome == 0 && dzToHome == 0 {
+            return nil
+        }
+
+        if abs(dxToHome) >= abs(dzToHome), dxToHome != 0 {
+            return (dxToHome > 0 ? 1 : -1, 0)
+        }
+
+        if dzToHome != 0 {
+            return (0, dzToHome > 0 ? 1 : -1)
+        }
+
+        return nil
     }
 
     mutating func remember(tick: Int, type: String, summary: String, importance: Double) {
@@ -323,6 +378,8 @@ struct LabAgent: Encodable {
         case actionEffectCount
         case movementCount
         case totalManhattanDistanceMoved
+        case returnHomeMoveCount
+        case totalDistanceReducedTowardHome
         case distanceFromHome
         case nearbyObservationCount
         case goalSelectionCount
@@ -355,6 +412,8 @@ struct LabAgent: Encodable {
         try container.encode(actionEffectCount, forKey: .actionEffectCount)
         try container.encode(movementCount, forKey: .movementCount)
         try container.encode(totalManhattanDistanceMoved, forKey: .totalManhattanDistanceMoved)
+        try container.encode(returnHomeMoveCount, forKey: .returnHomeMoveCount)
+        try container.encode(totalDistanceReducedTowardHome, forKey: .totalDistanceReducedTowardHome)
         try container.encode(distanceFromHome, forKey: .distanceFromHome)
         try container.encode(nearbyObservationCount, forKey: .nearbyObservationCount)
         try container.encode(goalSelectionCount, forKey: .goalSelectionCount)
@@ -538,6 +597,12 @@ struct LabAgentMovement: Encodable {
     let distanceManhattan: Int
     let reason: String
     let goal: String
+    let homeX: Int
+    let homeY: Int
+    let homeZ: Int
+    let distanceFromHomeBefore: Int
+    let distanceFromHomeAfter: Int
+    let distanceReducedTowardHome: Int
 }
 
 struct LabMemoryEntry: Encodable {

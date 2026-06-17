@@ -45,5 +45,13 @@ pathfinding, PebbleCore entities, collision, gravity, or world mutation.
 
 ## Phase 3.7 - Abstract ReturnHome / seekSafety Movement
 
-Next recommended step: make `seekSafety` move agents one abstract step toward
-their `homePosition`, still without pathfinding or physical entities.
+Status: done and validated.
+
+Goal: agents with `seekSafety` move one abstract X/Z step toward their
+`homePosition`, still without pathfinding, collision, physical entities, or
+world mutation.
+
+## Phase 3.8 - long_run_smoke And Event Rate Controls
+
+Next recommended step: add a longer-running validation scenario and introduce
+basic controls for event volume before increasing simulation scale.

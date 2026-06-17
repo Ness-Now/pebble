@@ -26,11 +26,11 @@ struct AdoptedChunk {
     let nonAirBlocks: Int
 }
 
-let supportedScenarios = ["empty", "chunk_smoke", "agent_smoke", "agents_basic"]
+let supportedScenarios = ["empty", "chunk_smoke", "agent_smoke", "agents_basic", "seek_safety_smoke"]
 
 func validateScenario(_ scenario: String) {
     guard supportedScenarios.contains(scenario) else {
-        fail("unsupported scenario: \(scenario). Currently supported: empty, chunk_smoke, agent_smoke, agents_basic")
+        fail("unsupported scenario: \(scenario). Currently supported: empty, chunk_smoke, agent_smoke, agents_basic, seek_safety_smoke")
     }
 }
 
@@ -38,11 +38,11 @@ func prepareScenario(_ options: Options, world: World) -> ScenarioResult {
     let scenario = options.scenario
 
     switch scenario {
-    case "chunk_smoke", "agent_smoke", "agents_basic":
+    case "chunk_smoke", "agent_smoke", "agents_basic", "seek_safety_smoke":
         registerAllBlocks()
         registerAllBiomes()
 
-        let chunkRadius = (scenario == "agent_smoke" || scenario == "agents_basic") && !options.chunkRadiusProvided ? 1 : options.chunkRadius
+        let chunkRadius = (scenario == "agent_smoke" || scenario == "agents_basic" || scenario == "seek_safety_smoke") && !options.chunkRadiusProvided ? 1 : options.chunkRadius
         var adoptedChunks: [AdoptedChunk] = []
         var nonAirBlocksTotal = 0
 
@@ -111,6 +111,12 @@ func prepareScenario(_ options: Options, world: World) -> ScenarioResult {
             ]
         } else if scenario == "agents_basic" {
             result.agents = makeBasicAgents(count: options.agents, seed: options.seed, world: world)
+        } else if scenario == "seek_safety_smoke" {
+            var agent = makeLabAgent(id: "agent_0", x: 13, z: 8, world: world)
+            agent.homePosition = LabAgentPosition(x: 8, y: spawnYAt(x: 8, z: 8, world: world), z: 8)
+            agent.fear = 90
+            agent.needs.curiosity = 0.1
+            result.agents = [agent]
         }
         return result
     default:
@@ -151,11 +157,16 @@ func makeBasicAgents(count: Int, seed: UInt32, world: World) -> [LabAgent] {
 }
 
 func makeLabAgent(id: String, x: Int, z: Int, world: World) -> LabAgent {
+    let spawnY = spawnYAt(x: x, z: z, world: world)
+    return LabAgent(id: id, x: x, y: spawnY, z: z)
+}
+
+func spawnYAt(x: Int, z: Int, world: World) -> Int {
     var spawnY = world.heightAt(x, z) + 1
     while world.getBlock(x, spawnY, z) != 0 && spawnY < world.info.minY + world.info.height {
         spawnY += 1
     }
-    return LabAgent(id: id, x: x, y: spawnY, z: z)
+    return spawnY
 }
 
 func makeWorldSnapshot(
@@ -164,7 +175,7 @@ func makeWorldSnapshot(
     result: ScenarioResult,
     ticksCompleted: Int
 ) -> WorldSnapshot? {
-    guard (options.scenario == "chunk_smoke" || options.scenario == "agent_smoke" || options.scenario == "agents_basic"),
+    guard (options.scenario == "chunk_smoke" || options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke"),
           let chunkRadius = result.chunkRadius,
           let expectedChunks = result.expectedChunks,
           let readyChunks = result.readyChunks,

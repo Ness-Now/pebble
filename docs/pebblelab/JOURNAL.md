@@ -262,3 +262,48 @@ smoke suite remains green.
 Next steps:
 
 - Phase 3.7: `abstract returnHome / seekSafety movement`.
+
+## 2026-06-17 - Phase 3.7 Abstract ReturnHome / seekSafety Movement
+
+Branch: `lab/pebblelab-v1`
+
+Objective: make `seekSafety` move abstract agents toward `homePosition` without
+physical entities, pathfinding, collision, gravity, or world mutation.
+
+Files modified:
+
+- `Sources/PebbleLab/LabAgent.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DECISIONS.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+Behavior added:
+
+- `seekSafety` now selects `move_abstract` toward home when away from home.
+- The return-home step moves only on X/Z with `dy = 0`.
+- `seek_safety_smoke` starts an agent away from home with high fear and proves
+  distance reduction.
+- Movement events include home coordinates and distance-from-home before/after.
+- Metrics include return-home moves, agents moved toward home, distance reduced,
+  and agents at/near home.
+
+Commands of validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --scenario agent_smoke --seed 42 --ticks 3 --out runs/agent_smoke_after_seek_safety`
+- `swift run -c release PebbleLab -- --scenario agents_basic --seed 42 --agents 10 --ticks 20 --out runs/agents_basic_after_seek_safety`
+- `swift run -c release PebbleLab -- --scenario seek_safety_smoke --seed 42 --ticks 10 --out runs/seek_safety_smoke_v0`
+- `swift run -c release pebsmoke`
+
+Result: validation passed. Existing `agent_smoke` and `agents_basic` still run,
+and `seek_safety_smoke` reduces distance to home through abstract movement.
+
+Next steps:
+
+- Phase 3.8: `long_run_smoke + event rate controls`.

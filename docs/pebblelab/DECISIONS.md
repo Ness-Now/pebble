@@ -74,3 +74,15 @@ observation/action/logging loop.
 
 Reason: simulations need visible agent trajectories before introducing
 physical bodies or real navigation.
+
+## 2026-06-17 - Abstract seekSafety Movement Toward Home
+
+Decision: PebbleLab `seekSafety` behavior moves agents abstractly toward
+`homePosition`.
+
+This remains separate from physical pathfinding, collision, world navigation,
+PebbleCore entity movement, and world mutation. The v0 behavior takes one
+deterministic X/Z step toward home and records distance reduction metrics.
+
+Reason: agents need an inspectable safety loop before introducing richer
+navigation, homes, settlements, or physical bodies.
