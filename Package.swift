@@ -39,5 +39,12 @@ let package = Package(
             path: "Sources/pebsmoke",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
+        // headless simulation laboratory runner
+        .executableTarget(
+            name: "PebbleLab",
+            dependencies: ["PebbleCore"],
+            path: "Sources/PebbleLab",
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
     ]
 )
