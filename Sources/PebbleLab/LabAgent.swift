@@ -16,6 +16,7 @@ struct LabAgent: Encodable {
     var currentGoal: LabGoal
     var lastAction: LabAgentAction?
     var lastActionEffect: LabAgentActionEffect?
+    var lastMovement: LabAgentMovement?
     var memory: [LabMemoryEntry]
     let tickCreated: Int
     var ticksAlive: Int
@@ -25,8 +26,13 @@ struct LabAgent: Encodable {
     var goalChangeCount: Int
     var actionCount: Int
     var actionEffectCount: Int
+    var movementCount: Int
+    var totalManhattanDistanceMoved: Int
 
     var isAlive: Bool { health > 0 }
+    var distanceFromHome: Int {
+        abs(position.x - homePosition.x) + abs(position.y - homePosition.y) + abs(position.z - homePosition.z)
+    }
 
     init(id: String, x: Int, y: Int, z: Int) {
         self.id = id
@@ -44,6 +50,7 @@ struct LabAgent: Encodable {
         currentGoal = LabGoal(kind: .idle, reason: "initial goal", startedAtTick: 0, urgency: 0)
         lastAction = nil
         lastActionEffect = nil
+        lastMovement = nil
         memory = []
         tickCreated = 0
         ticksAlive = 0
@@ -53,6 +60,8 @@ struct LabAgent: Encodable {
         goalChangeCount = 0
         actionCount = 0
         actionEffectCount = 0
+        movementCount = 0
+        totalManhattanDistanceMoved = 0
     }
 
     mutating func tick() {
@@ -124,6 +133,8 @@ struct LabAgent: Encodable {
             nextGoal = LabGoal(kind: .seekSafety, reason: "safety < 0.5", startedAtTick: tick, urgency: 90)
         } else if needs.fatigue >= 0.02 {
             nextGoal = LabGoal(kind: .rest, reason: "fatigue >= 0.02", startedAtTick: tick, urgency: 70)
+        } else if needs.curiosity >= 0.8 {
+            nextGoal = LabGoal(kind: .explore, reason: "curiosity >= 0.8", startedAtTick: tick, urgency: 60)
         } else if !nearbyAgents.isEmpty {
             nextGoal = LabGoal(kind: .observeOtherAgent, reason: "nearby agent detected", startedAtTick: tick, urgency: 50)
         } else if needs.curiosity >= 0.5 {
@@ -150,7 +161,15 @@ struct LabAgent: Encodable {
         case .observeOtherAgent:
             action = LabAgentAction(name: "observe_area", reason: "goal observeOtherAgent", tick: tick)
         case .explore:
-            action = LabAgentAction(name: "observe_area", reason: "goal explore", tick: tick)
+            let direction = movementDirectionForAgent(id: id, tick: tick)
+            action = LabAgentAction(
+                name: "move_abstract",
+                reason: "goal explore",
+                tick: tick,
+                dx: direction.dx,
+                dy: 0,
+                dz: direction.dz
+            )
         case .idle:
             action = LabAgentAction(name: "wait", reason: "goal idle", tick: tick)
         }
@@ -186,6 +205,10 @@ struct LabAgent: Encodable {
             needs.curiosity = min(1, needs.curiosity + 0.01)
             state = "observing"
             effect = "curiosity +0.01"
+        case "move_abstract":
+            needs.curiosity = max(0, needs.curiosity - 0.005)
+            state = "moving"
+            effect = "curiosity -0.005"
         case "wait":
             if currentGoal.kind == .seekSafety {
                 fear = max(0, fear - 1)
@@ -222,6 +245,52 @@ struct LabAgent: Encodable {
         )
     }
 
+    mutating func applyAbstractMovement(tick: Int) -> LabAgentMovement? {
+        guard let action = lastAction, action.name == "move_abstract" else {
+            lastMovement = nil
+            return nil
+        }
+
+        let dx = action.dx ?? 0
+        let dy = action.dy ?? 0
+        let dz = action.dz ?? 0
+        let distance = abs(dx) + abs(dy) + abs(dz)
+        guard distance > 0 else {
+            lastMovement = nil
+            return nil
+        }
+
+        let from = position
+        let to = LabAgentPosition(x: from.x + dx, y: from.y, z: from.z + dz)
+        position = to
+
+        let movement = LabAgentMovement(
+            tick: tick,
+            fromX: from.x,
+            fromY: from.y,
+            fromZ: from.z,
+            toX: to.x,
+            toY: to.y,
+            toZ: to.z,
+            dx: dx,
+            dy: 0,
+            dz: dz,
+            distanceManhattan: distance,
+            reason: action.reason,
+            goal: currentGoal.kind.rawValue
+        )
+        lastMovement = movement
+        movementCount += 1
+        totalManhattanDistanceMoved += distance
+        remember(
+            tick: tick,
+            type: "moved_abstract",
+            summary: "\(id) moved abstractly by (\(dx),0,\(dz)) because \(action.reason)",
+            importance: 0.1
+        )
+        return movement
+    }
+
     mutating func remember(tick: Int, type: String, summary: String, importance: Double) {
         memory.append(LabMemoryEntry(
             tick: tick,
@@ -247,10 +316,14 @@ struct LabAgent: Encodable {
         case currentGoal
         case lastAction
         case lastActionEffect
+        case lastMovement
         case tickCreated
         case ticksAlive
         case actionCount
         case actionEffectCount
+        case movementCount
+        case totalManhattanDistanceMoved
+        case distanceFromHome
         case nearbyObservationCount
         case goalSelectionCount
         case goalChangeCount
@@ -275,15 +348,33 @@ struct LabAgent: Encodable {
         try container.encode(currentGoal, forKey: .currentGoal)
         try container.encodeIfPresent(lastAction, forKey: .lastAction)
         try container.encodeIfPresent(lastActionEffect, forKey: .lastActionEffect)
+        try container.encodeIfPresent(lastMovement, forKey: .lastMovement)
         try container.encode(tickCreated, forKey: .tickCreated)
         try container.encode(ticksAlive, forKey: .ticksAlive)
         try container.encode(actionCount, forKey: .actionCount)
         try container.encode(actionEffectCount, forKey: .actionEffectCount)
+        try container.encode(movementCount, forKey: .movementCount)
+        try container.encode(totalManhattanDistanceMoved, forKey: .totalManhattanDistanceMoved)
+        try container.encode(distanceFromHome, forKey: .distanceFromHome)
         try container.encode(nearbyObservationCount, forKey: .nearbyObservationCount)
         try container.encode(goalSelectionCount, forKey: .goalSelectionCount)
         try container.encode(goalChangeCount, forKey: .goalChangeCount)
         try container.encode(memory.count, forKey: .memoryCount)
         try container.encode(Array(memory.suffix(10)), forKey: .recentMemory)
+    }
+}
+
+func movementDirectionForAgent(id: String, tick: Int) -> (dx: Int, dz: Int) {
+    let suffix = id.split(separator: "_").last.flatMap { Int($0) } ?? 0
+    switch (suffix + tick) % 4 {
+    case 0:
+        return (1, 0)
+    case 1:
+        return (0, 1)
+    case 2:
+        return (-1, 0)
+    default:
+        return (0, -1)
     }
 }
 
@@ -401,6 +492,18 @@ struct LabAgentAction: Encodable {
     let name: String
     let reason: String
     let tick: Int
+    let dx: Int?
+    let dy: Int?
+    let dz: Int?
+
+    init(name: String, reason: String, tick: Int, dx: Int? = nil, dy: Int? = nil, dz: Int? = nil) {
+        self.name = name
+        self.reason = reason
+        self.tick = tick
+        self.dx = dx
+        self.dy = dy
+        self.dz = dz
+    }
 }
 
 struct LabAgentActionEffect: Encodable {
@@ -419,6 +522,22 @@ struct LabAgentActionEffect: Encodable {
     let fearAfter: Int
     let stateBefore: String
     let stateAfter: String
+}
+
+struct LabAgentMovement: Encodable {
+    let tick: Int
+    let fromX: Int
+    let fromY: Int
+    let fromZ: Int
+    let toX: Int
+    let toY: Int
+    let toZ: Int
+    let dx: Int
+    let dy: Int
+    let dz: Int
+    let distanceManhattan: Int
+    let reason: String
+    let goal: String
 }
 
 struct LabMemoryEntry: Encodable {

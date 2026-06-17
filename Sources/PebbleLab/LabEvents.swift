@@ -28,6 +28,12 @@ struct RunEvent: Encodable {
     let x: Int?
     let y: Int?
     let z: Int?
+    let fromX: Int?
+    let fromY: Int?
+    let fromZ: Int?
+    let toX: Int?
+    let toY: Int?
+    let toZ: Int?
     let state: String?
     let hunger: Double?
     let fatigue: Double?
@@ -66,6 +72,7 @@ struct RunEvent: Encodable {
     let distanceManhattan: Int?
     let fromGoal: String?
     let toGoal: String?
+    let goal: String?
     let urgency: Int?
     let fromValue: Int?
     let toValue: Int?
@@ -101,6 +108,12 @@ struct RunEvent: Encodable {
         x: Int? = nil,
         y: Int? = nil,
         z: Int? = nil,
+        fromX: Int? = nil,
+        fromY: Int? = nil,
+        fromZ: Int? = nil,
+        toX: Int? = nil,
+        toY: Int? = nil,
+        toZ: Int? = nil,
         state: String? = nil,
         hunger: Double? = nil,
         fatigue: Double? = nil,
@@ -139,6 +152,7 @@ struct RunEvent: Encodable {
         distanceManhattan: Int? = nil,
         fromGoal: String? = nil,
         toGoal: String? = nil,
+        goal: String? = nil,
         urgency: Int? = nil,
         fromValue: Int? = nil,
         toValue: Int? = nil,
@@ -173,6 +187,12 @@ struct RunEvent: Encodable {
         self.x = x
         self.y = y
         self.z = z
+        self.fromX = fromX
+        self.fromY = fromY
+        self.fromZ = fromZ
+        self.toX = toX
+        self.toY = toY
+        self.toZ = toZ
         self.state = state
         self.hunger = hunger
         self.fatigue = fatigue
@@ -211,6 +231,7 @@ struct RunEvent: Encodable {
         self.distanceManhattan = distanceManhattan
         self.fromGoal = fromGoal
         self.toGoal = toGoal
+        self.goal = goal
         self.urgency = urgency
         self.fromValue = fromValue
         self.toValue = toValue

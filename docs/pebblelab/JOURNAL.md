@@ -217,3 +217,48 @@ nearby-agent perception, and the smoke suite remains green.
 Next steps:
 
 - Phase 3.6: `abstract movement v0`.
+
+## 2026-06-17 - Phase 3.6 Abstract Movement V0
+
+Branch: `lab/pebblelab-v1`
+
+Objective: let abstract agents update their own position from selected actions
+without physical entities, pathfinding, collision, gravity, or world mutation.
+
+Files modified:
+
+- `Sources/PebbleLab/LabAgent.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DECISIONS.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+Behavior added:
+
+- `explore` can choose `move_abstract` with deterministic `dx`, `dy`, `dz`.
+- Abstract movement changes only the agent position; `dy` stays `0`.
+- `agents_basic` gives a subset of agents high initial curiosity so movement
+  is visible in short validation runs.
+- `agent_snapshot.json` includes final positions and `lastMovement`.
+- `events.ndjson` includes `agent_moved_abstract`.
+- `metrics.json` includes `agentMoves`, `agentsMoved`, and
+  `totalManhattanDistanceMoved`.
+
+Commands of validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --scenario agent_smoke --seed 42 --ticks 3 --out runs/agent_smoke_after_movement`
+- `swift run -c release PebbleLab -- --scenario agents_basic --seed 42 --agents 10 --ticks 20 --out runs/agents_basic_movement_v0`
+- `swift run -c release pebsmoke`
+
+Result: validation passed. `agent_smoke` remains stable with no movement,
+`agents_basic` records abstract movement events and movement metrics, and the
+smoke suite remains green.
+
+Next steps:
+
+- Phase 3.7: `abstract returnHome / seekSafety movement`.

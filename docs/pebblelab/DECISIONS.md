@@ -61,3 +61,16 @@ resource sharing, economy, or world mutation.
 
 Reason: the project needs a stable tiny smoke scenario and a separate scalable
 scenario for longer abstract simulations.
+
+## 2026-06-17 - Abstract Position Updates
+
+Decision: PebbleLab agents can update their abstract position from selected
+actions.
+
+This movement intentionally does not use PebbleCore physical entities,
+pathfinding, collision, gravity, block checks, or world interaction. For v0,
+movement is limited to X/Z steps with `dy = 0` and is used to validate the
+observation/action/logging loop.
+
+Reason: simulations need visible agent trajectories before introducing
+physical bodies or real navigation.

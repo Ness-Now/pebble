@@ -98,6 +98,27 @@ func encodeFearChangedEvent(_ agent: LabAgent, effect: LabAgentActionEffect, tic
     ))
 }
 
+func encodeMovementEvent(_ movement: LabAgentMovement, agent: LabAgent) throws -> String {
+    try encodeEventLine(RunEvent(
+        type: "agent_moved_abstract",
+        tick: movement.tick,
+        scenario: options.scenario,
+        agentId: agent.id,
+        fromX: movement.fromX,
+        fromY: movement.fromY,
+        fromZ: movement.fromZ,
+        toX: movement.toX,
+        toY: movement.toY,
+        toZ: movement.toZ,
+        reason: movement.reason,
+        dx: movement.dx,
+        dy: movement.dy,
+        dz: movement.dz,
+        distanceManhattan: movement.distanceManhattan,
+        goal: movement.goal
+    ))
+}
+
 func encodeSpawnAndInitialObservation(agent: inout LabAgent, allAgents: [LabAgent]) throws -> String {
     var lines = ""
     let memoryStart = agent.memory.count
@@ -160,6 +181,7 @@ func tickAndEncodeAgent(_ agent: inout LabAgent, allAgents: [LabAgent]) throws -
     let goalChange = agent.selectGoal(tick: ticksCompleted)
     agent.decideAction(tick: ticksCompleted)
     agent.applyLastActionEffect(tick: ticksCompleted)
+    let movement = agent.applyAbstractMovement(tick: ticksCompleted)
     lines += try encodeEventLine(RunEvent(
         type: "agent_tick",
         tick: ticksCompleted,
@@ -232,6 +254,9 @@ func tickAndEncodeAgent(_ agent: inout LabAgent, allAgents: [LabAgent]) throws -
         if effect.fearBefore != effect.fearAfter {
             lines += try encodeFearChangedEvent(agent, effect: effect, tick: ticksCompleted)
         }
+    }
+    if let movement {
+        lines += try encodeMovementEvent(movement, agent: agent)
     }
     for entry in agent.memory.dropFirst(memoryStart) {
         lines += try encodeMemoryEvent(entry, agent: agent, scenario: options.scenario)
@@ -365,6 +390,7 @@ for _ in 0..<options.ticks {
                 _ = labAgents[index].selectGoal(tick: ticksCompleted)
                 labAgents[index].decideAction(tick: ticksCompleted)
                 labAgents[index].applyLastActionEffect(tick: ticksCompleted)
+                _ = labAgents[index].applyAbstractMovement(tick: ticksCompleted)
             }
         }
     }
@@ -465,7 +491,12 @@ if let outPath = options.outPath {
                 maxFear: maxAgentValue { $0.fear },
                 agentsWithInventory: countAgents { !$0.inventory.isEmpty },
                 totalInventoryItems: sumAgents { $0.inventory.totalItemCount },
-                inventoryItemsByKind: inventoryItemsByKind()
+                inventoryItemsByKind: inventoryItemsByKind(),
+                agentMoves: sumAgents { $0.movementCount },
+                agentsMoved: countAgents { $0.movementCount > 0 },
+                totalManhattanDistanceMoved: sumAgents { $0.totalManhattanDistanceMoved },
+                maxDistanceFromHome: maxAgentValue { $0.distanceFromHome },
+                averageDistanceFromHome: averageAgents { $0.distanceFromHome }
             ),
             to: outURL.appendingPathComponent("metrics.json")
         )

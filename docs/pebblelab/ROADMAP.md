@@ -38,5 +38,12 @@ Goal: keep `agent_smoke` as a fixed two-agent validation scenario while adding
 
 ## Phase 3.6 - Abstract Movement V0
 
-Next recommended step: add abstract, non-physical movement intent or position
-updates without pathfinding, PebbleCore entities, collision, or world mutation.
+Status: done and validated.
+
+Goal: agents can update abstract positions from selected actions without
+pathfinding, PebbleCore entities, collision, gravity, or world mutation.
+
+## Phase 3.7 - Abstract ReturnHome / seekSafety Movement
+
+Next recommended step: make `seekSafety` move agents one abstract step toward
+their `homePosition`, still without pathfinding or physical entities.

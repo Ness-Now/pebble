@@ -136,6 +136,10 @@ func makeBasicAgents(count: Int, seed: UInt32, world: World) -> [LabAgent] {
         let z = centerZ + row * spacing - zOffset
         var agent = makeLabAgent(id: "agent_\(index)", x: x, z: z, world: world)
 
+        if index % 3 == 0 {
+            agent.needs.curiosity = 0.9
+        }
+
         if index == 0 {
             agent.inventory.add("food", count: 1)
         } else if index == 1 {

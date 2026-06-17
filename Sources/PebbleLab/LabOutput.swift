@@ -51,6 +51,11 @@ struct RunMetrics: Encodable {
     let agentsWithInventory: Int?
     let totalInventoryItems: Int?
     let inventoryItemsByKind: [String: Int]?
+    let agentMoves: Int?
+    let agentsMoved: Int?
+    let totalManhattanDistanceMoved: Int?
+    let maxDistanceFromHome: Int?
+    let averageDistanceFromHome: Double?
 
     init(
         scenario: String,
@@ -94,7 +99,12 @@ struct RunMetrics: Encodable {
         maxFear: Int? = nil,
         agentsWithInventory: Int? = nil,
         totalInventoryItems: Int? = nil,
-        inventoryItemsByKind: [String: Int]? = nil
+        inventoryItemsByKind: [String: Int]? = nil,
+        agentMoves: Int? = nil,
+        agentsMoved: Int? = nil,
+        totalManhattanDistanceMoved: Int? = nil,
+        maxDistanceFromHome: Int? = nil,
+        averageDistanceFromHome: Double? = nil
     ) {
         self.scenario = scenario
         self.seed = seed
@@ -138,6 +148,11 @@ struct RunMetrics: Encodable {
         self.agentsWithInventory = agentsWithInventory
         self.totalInventoryItems = totalInventoryItems
         self.inventoryItemsByKind = inventoryItemsByKind
+        self.agentMoves = agentMoves
+        self.agentsMoved = agentsMoved
+        self.totalManhattanDistanceMoved = totalManhattanDistanceMoved
+        self.maxDistanceFromHome = maxDistanceFromHome
+        self.averageDistanceFromHome = averageDistanceFromHome
     }
 }
 
