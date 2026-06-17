@@ -24,6 +24,16 @@ struct RunMetrics: Encodable {
     let success: Bool
 }
 
+struct RunEvent: Encodable {
+    let type: String
+    let tick: Int
+    let scenario: String?
+    let seed: UInt32?
+    let ticksRequested: Int?
+    let worldTime: Int?
+    let success: Bool?
+}
+
 func usage() -> String {
     """
     PebbleLab - headless PebbleCore simulation runner
@@ -105,12 +115,72 @@ func writeJSON<T: Encodable>(_ value: T, to url: URL) throws {
     try data.write(to: url, options: .atomic)
 }
 
+func encodeEventLine(_ event: RunEvent) throws -> String {
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
+    let data = try encoder.encode(event)
+    guard let line = String(data: data, encoding: .utf8) else {
+        throw CocoaError(.fileWriteInapplicableStringEncoding)
+    }
+    return line + "\n"
+}
+
 let world = World(dim: .overworld, seed: options.seed)
 
 var ticksCompleted = 0
+var eventsNDJSON = ""
+
+if options.outPath != nil {
+    do {
+        eventsNDJSON += try encodeEventLine(RunEvent(
+            type: "run_started",
+            tick: 0,
+            scenario: options.scenario,
+            seed: options.seed,
+            ticksRequested: options.ticks,
+            worldTime: nil,
+            success: nil
+        ))
+    } catch {
+        fail("failed to encode run_started event: \(error)")
+    }
+}
+
 for _ in 0..<options.ticks {
     world.tick()
     ticksCompleted += 1
+
+    if options.outPath != nil {
+        do {
+            eventsNDJSON += try encodeEventLine(RunEvent(
+                type: "world_tick",
+                tick: ticksCompleted,
+                scenario: nil,
+                seed: nil,
+                ticksRequested: nil,
+                worldTime: world.time,
+                success: nil
+            ))
+        } catch {
+            fail("failed to encode world_tick event: \(error)")
+        }
+    }
+}
+
+if options.outPath != nil {
+    do {
+        eventsNDJSON += try encodeEventLine(RunEvent(
+            type: "run_finished",
+            tick: ticksCompleted,
+            scenario: nil,
+            seed: nil,
+            ticksRequested: nil,
+            worldTime: world.time,
+            success: true
+        ))
+    } catch {
+        fail("failed to encode run_finished event: \(error)")
+    }
 }
 
 if let outPath = options.outPath {
@@ -137,6 +207,11 @@ if let outPath = options.outPath {
                 success: true
             ),
             to: outURL.appendingPathComponent("metrics.json")
+        )
+        try eventsNDJSON.write(
+            to: outURL.appendingPathComponent("events.ndjson"),
+            atomically: true,
+            encoding: .utf8
         )
     } catch {
         fail("failed to write run outputs to \(outPath): \(error)")
