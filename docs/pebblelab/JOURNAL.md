@@ -351,3 +351,46 @@ success metrics.
 Next steps:
 
 - Phase 3.9: `scenario success criteria + regression report`.
+
+## 2026-06-17 - Phase 3.9 Scenario Success Criteria And Regression Report
+
+Branch: `lab/pebblelab-v1`
+
+Objective: add a compact PebbleLab regression scenario that reports pass/fail
+checks and key metrics without manually inspecting every output file.
+
+Files modified:
+
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DECISIONS.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+Behavior added:
+
+- `regression_smoke` runs a compact deterministic abstract-agent scenario.
+- `regression_report.json` summarizes checks, expected values, actual values,
+  and key metrics.
+- Success criteria remain in `metrics.json` and are reflected in the report.
+- The report is PebbleLab-local and does not replace `pebsmoke`.
+
+Commands of validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --scenario agent_smoke --seed 42 --ticks 3 --out runs/agent_smoke_after_regression`
+- `swift run -c release PebbleLab -- --scenario agents_basic --seed 42 --agents 10 --ticks 20 --out runs/agents_basic_after_regression`
+- `swift run -c release PebbleLab -- --scenario seek_safety_smoke --seed 42 --ticks 10 --out runs/seek_safety_after_regression`
+- `swift run -c release PebbleLab -- --scenario long_run_smoke --seed 42 --agents 10 --ticks 1000 --event-rate 10 --out runs/long_run_after_regression`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/regression_smoke_v0`
+- `swift run -c release pebsmoke`
+
+Result: validation passed. Existing scenarios still run, `regression_smoke`
+writes a compact passing report, and `pebsmoke` remains green.
+
+Next steps:
+
+- Phase 4.0: physical agent spike planning.

@@ -60,6 +60,13 @@ frequent NDJSON events without changing internal simulation metrics.
 
 ## Phase 3.9 - Scenario Success Criteria And Regression Report
 
-Next recommended step: make scenario validation summaries easier to compare
-across runs, including success criteria, expected metric ranges, and compact
-regression output.
+Status: done and validated.
+
+Goal: provide a compact `regression_smoke` report with scenario criteria,
+key metrics, and pass/fail checks for quick PebbleLab health validation.
+
+## Phase 4.0 - Physical Agent Spike Planning
+
+Next recommended step: plan the first physical-agent spike without implementing
+entities yet, including ownership boundaries, PebbleCore risks, and required
+test coverage.

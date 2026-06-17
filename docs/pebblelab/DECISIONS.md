@@ -99,3 +99,17 @@ unthrottled.
 
 Reason: longer runs need bounded log sizes without losing deterministic
 simulation state or summary metrics.
+
+## 2026-06-17 - Compact Regression Report Stays PebbleLab-Local
+
+Decision: `regression_smoke` writes a compact PebbleLab regression report for
+the current run instead of spawning multiple subprocesses or replacing
+`pebsmoke`.
+
+The report summarizes success criteria and key metrics for a deterministic
+headless scenario. It is intentionally separate from PebbleCore golden tests
+and does not modify registries, goldens, or game systems.
+
+Reason: PebbleLab needs a quick health signal that is easier to inspect than
+several raw JSON files, while `pebsmoke` remains the authoritative engine
+regression suite.

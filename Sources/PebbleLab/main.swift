@@ -338,6 +338,84 @@ func inventoryItemsByKind() -> [String: Int]? {
     }
 }
 
+func makeRegressionReport(metrics: RunMetrics, expectedAgents: Int) -> RegressionReport {
+    let expectedAgentTicks = expectedAgents * ticksCompleted
+    let checks = [
+        RegressionCheck(
+            name: "ticks_completed",
+            passed: metrics.ticksCompleted == metrics.ticksRequested,
+            expected: "\(metrics.ticksRequested)",
+            actual: "\(metrics.ticksCompleted)"
+        ),
+        RegressionCheck(
+            name: "run_success",
+            passed: metrics.success,
+            expected: "true",
+            actual: "\(metrics.success)"
+        ),
+        RegressionCheck(
+            name: "agents_spawned",
+            passed: metrics.agentCount == expectedAgents,
+            expected: "\(expectedAgents)",
+            actual: "\(metrics.agentCount ?? 0)"
+        ),
+        RegressionCheck(
+            name: "agents_alive",
+            passed: metrics.agentsAlive == expectedAgents,
+            expected: "\(expectedAgents)",
+            actual: "\(metrics.agentsAlive ?? 0)"
+        ),
+        RegressionCheck(
+            name: "agent_ticks_recorded",
+            passed: metrics.agentTicks == expectedAgentTicks,
+            expected: "\(expectedAgentTicks)",
+            actual: "\(metrics.agentTicks ?? 0)"
+        ),
+        RegressionCheck(
+            name: "chunks_ready",
+            passed: metrics.readyChunks == metrics.expectedChunks,
+            expected: "\(metrics.expectedChunks ?? 0)",
+            actual: "\(metrics.readyChunks ?? 0)"
+        ),
+        RegressionCheck(
+            name: "events_written",
+            passed: (metrics.eventsWritten ?? 0) > 0,
+            expected: "> 0",
+            actual: "\(metrics.eventsWritten ?? 0)"
+        )
+    ]
+    let checksFailed = checks.filter { !$0.passed }.count
+
+    return RegressionReport(
+        scenario: metrics.scenario,
+        seed: metrics.seed,
+        success: checksFailed == 0,
+        summary: RegressionSummary(
+            ticksRequested: metrics.ticksRequested,
+            ticksCompleted: metrics.ticksCompleted,
+            expectedAgents: expectedAgents,
+            actualAgents: metrics.agentCount ?? 0,
+            checksPassed: checks.count - checksFailed,
+            checksFailed: checksFailed
+        ),
+        checks: checks,
+        keyMetrics: RegressionKeyMetrics(
+            worldTime: metrics.worldTime,
+            agentTicks: metrics.agentTicks,
+            agentsAlive: metrics.agentsAlive,
+            agentMoves: metrics.agentMoves,
+            nearbyAgentObservations: metrics.nearbyAgentObservations,
+            agentGoalChanges: metrics.agentGoalChanges,
+            eventsWritten: metrics.eventsWritten,
+            eventsSuppressed: metrics.eventsSuppressed
+        ),
+        notes: [
+            "Regression smoke is compact and in-process; it does not spawn other PebbleLab commands.",
+            "Checks summarize this deterministic run and do not replace pebsmoke goldens."
+        ]
+    )
+}
+
 if options.outPath != nil {
     do {
         try appendEvent(RunEvent(
@@ -518,7 +596,7 @@ if let outPath = options.outPath {
                 path: "world_snapshot.json"
             ))
         }
-        if !labAgents.isEmpty, options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke" || options.scenario == "long_run_smoke" {
+        if !labAgents.isEmpty, options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke" || options.scenario == "long_run_smoke" || options.scenario == "regression_smoke" {
             try writeJSON(
                 AgentSnapshot(
                     scenario: options.scenario,
@@ -536,71 +614,75 @@ if let outPath = options.outPath {
                 agents: labAgents.count
             ))
         }
-        try writeJSON(
-            RunMetrics(
-                scenario: options.scenario,
-                seed: options.seed,
-                ticksRequested: options.ticks,
-                ticksCompleted: ticksCompleted,
-                worldTime: world.time,
-                success: runSuccess,
-                chunksTouched: scenarioResult.chunksTouched,
-                chunkRadius: scenarioResult.chunkRadius,
-                originChunkReady: scenarioResult.originChunkReady,
-                centerHeight: scenarioResult.centerHeight,
-                centerSurfaceY: scenarioResult.centerSurfaceY,
-                nonAirBlocks: scenarioResult.nonAirBlocks,
-                expectedChunks: scenarioResult.expectedChunks,
-                readyChunks: scenarioResult.readyChunks,
-                nonAirBlocksTotal: scenarioResult.nonAirBlocksTotal,
-                agentCount: agentCount,
-                agentsSpawned: agentCount,
-                agentTicks: sumAgents { $0.ticksAlive },
-                agentObservations: sumAgents { $0.observationCount },
-                agentCurrentChunkReady: primaryAgent?.observation?.chunkReady,
-                agentSurfaceY: primaryAgent?.observation?.surfaceY,
-                agentHeight: primaryAgent?.observation?.height,
-                agentActions: sumAgents { $0.actionCount },
-                agentLastAction: primaryAgent?.lastAction?.name,
-                agentMemoryEntries: sumAgents { $0.memory.count },
-                agentLastMemoryType: primaryAgent?.memory.last?.type,
-                agentActionEffects: sumAgents { $0.actionEffectCount },
-                agentLastActionEffect: primaryAgent?.lastActionEffect?.effect,
-                nearbyAgentObservations: sumAgents { $0.nearbyObservationCount },
-                agentsWithNearbyAgents: countAgents { !$0.nearbyAgents.isEmpty },
-                agentGoalSelections: sumAgents { $0.goalSelectionCount },
-                agentGoalChanges: sumAgents { $0.goalChangeCount },
-                goalsByKind: goalsByKind(),
-                agentsAlive: countAgents { $0.isAlive },
-                averageHealth: averageAgents { $0.health },
-                averageFear: averageAgents { $0.fear },
-                agentsWithHome: countAgents { _ in true },
-                minHealth: minAgentValue { $0.health },
-                maxFear: maxAgentValue { $0.fear },
-                agentsWithInventory: countAgents { !$0.inventory.isEmpty },
-                totalInventoryItems: sumAgents { $0.inventory.totalItemCount },
-                inventoryItemsByKind: inventoryItemsByKind(),
-                agentMoves: sumAgents { $0.movementCount },
-                agentsMoved: countAgents { $0.movementCount > 0 },
-                totalManhattanDistanceMoved: sumAgents { $0.totalManhattanDistanceMoved },
-                maxDistanceFromHome: maxAgentValue { $0.distanceFromHome },
-                averageDistanceFromHome: averageAgents { $0.distanceFromHome },
-                agentReturnHomeMoves: sumAgents { $0.returnHomeMoveCount },
-                agentsMovedTowardHome: countAgents { $0.returnHomeMoveCount > 0 },
-                totalDistanceReducedTowardHome: sumAgents { $0.totalDistanceReducedTowardHome },
-                agentsAtHome: countAgents { $0.distanceFromHome == 0 },
-                agentsNearHome: countAgents { $0.distanceFromHome <= 1 },
-                eventsWritten: eventsWritten,
-                eventsSuppressed: eventsSuppressed,
-                eventRate: options.eventRate,
-                worldTickEventsWritten: worldTickEventsWritten,
-                worldTickEventsSuppressed: worldTickEventsSuppressed,
-                nearbyAgentEventsWritten: nearbyAgentEventsWritten,
-                nearbyAgentEventsSuppressed: nearbyAgentEventsSuppressed,
-                successCriteria: successCriteria
-            ),
-            to: outURL.appendingPathComponent("metrics.json")
+        let metrics = RunMetrics(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticksRequested: options.ticks,
+            ticksCompleted: ticksCompleted,
+            worldTime: world.time,
+            success: runSuccess,
+            chunksTouched: scenarioResult.chunksTouched,
+            chunkRadius: scenarioResult.chunkRadius,
+            originChunkReady: scenarioResult.originChunkReady,
+            centerHeight: scenarioResult.centerHeight,
+            centerSurfaceY: scenarioResult.centerSurfaceY,
+            nonAirBlocks: scenarioResult.nonAirBlocks,
+            expectedChunks: scenarioResult.expectedChunks,
+            readyChunks: scenarioResult.readyChunks,
+            nonAirBlocksTotal: scenarioResult.nonAirBlocksTotal,
+            agentCount: agentCount,
+            agentsSpawned: agentCount,
+            agentTicks: sumAgents { $0.ticksAlive },
+            agentObservations: sumAgents { $0.observationCount },
+            agentCurrentChunkReady: primaryAgent?.observation?.chunkReady,
+            agentSurfaceY: primaryAgent?.observation?.surfaceY,
+            agentHeight: primaryAgent?.observation?.height,
+            agentActions: sumAgents { $0.actionCount },
+            agentLastAction: primaryAgent?.lastAction?.name,
+            agentMemoryEntries: sumAgents { $0.memory.count },
+            agentLastMemoryType: primaryAgent?.memory.last?.type,
+            agentActionEffects: sumAgents { $0.actionEffectCount },
+            agentLastActionEffect: primaryAgent?.lastActionEffect?.effect,
+            nearbyAgentObservations: sumAgents { $0.nearbyObservationCount },
+            agentsWithNearbyAgents: countAgents { !$0.nearbyAgents.isEmpty },
+            agentGoalSelections: sumAgents { $0.goalSelectionCount },
+            agentGoalChanges: sumAgents { $0.goalChangeCount },
+            goalsByKind: goalsByKind(),
+            agentsAlive: countAgents { $0.isAlive },
+            averageHealth: averageAgents { $0.health },
+            averageFear: averageAgents { $0.fear },
+            agentsWithHome: countAgents { _ in true },
+            minHealth: minAgentValue { $0.health },
+            maxFear: maxAgentValue { $0.fear },
+            agentsWithInventory: countAgents { !$0.inventory.isEmpty },
+            totalInventoryItems: sumAgents { $0.inventory.totalItemCount },
+            inventoryItemsByKind: inventoryItemsByKind(),
+            agentMoves: sumAgents { $0.movementCount },
+            agentsMoved: countAgents { $0.movementCount > 0 },
+            totalManhattanDistanceMoved: sumAgents { $0.totalManhattanDistanceMoved },
+            maxDistanceFromHome: maxAgentValue { $0.distanceFromHome },
+            averageDistanceFromHome: averageAgents { $0.distanceFromHome },
+            agentReturnHomeMoves: sumAgents { $0.returnHomeMoveCount },
+            agentsMovedTowardHome: countAgents { $0.returnHomeMoveCount > 0 },
+            totalDistanceReducedTowardHome: sumAgents { $0.totalDistanceReducedTowardHome },
+            agentsAtHome: countAgents { $0.distanceFromHome == 0 },
+            agentsNearHome: countAgents { $0.distanceFromHome <= 1 },
+            eventsWritten: eventsWritten,
+            eventsSuppressed: eventsSuppressed,
+            eventRate: options.eventRate,
+            worldTickEventsWritten: worldTickEventsWritten,
+            worldTickEventsSuppressed: worldTickEventsSuppressed,
+            nearbyAgentEventsWritten: nearbyAgentEventsWritten,
+            nearbyAgentEventsSuppressed: nearbyAgentEventsSuppressed,
+            successCriteria: successCriteria
         )
+        try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))
+        if options.scenario == "regression_smoke" {
+            try writeJSON(
+                makeRegressionReport(metrics: metrics, expectedAgents: labAgents.count),
+                to: outURL.appendingPathComponent("regression_report.json")
+            )
+        }
         try eventsNDJSON.write(
             to: outURL.appendingPathComponent("events.ndjson"),
             atomically: true,

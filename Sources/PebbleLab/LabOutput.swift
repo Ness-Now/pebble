@@ -15,6 +15,43 @@ struct RunSuccessCriteria: Encodable {
     let agentTicksRecorded: Bool
 }
 
+struct RegressionReport: Encodable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: RegressionSummary
+    let checks: [RegressionCheck]
+    let keyMetrics: RegressionKeyMetrics
+    let notes: [String]
+}
+
+struct RegressionSummary: Encodable {
+    let ticksRequested: Int
+    let ticksCompleted: Int
+    let expectedAgents: Int
+    let actualAgents: Int
+    let checksPassed: Int
+    let checksFailed: Int
+}
+
+struct RegressionCheck: Encodable {
+    let name: String
+    let passed: Bool
+    let expected: String
+    let actual: String
+}
+
+struct RegressionKeyMetrics: Encodable {
+    let worldTime: Int
+    let agentTicks: Int?
+    let agentsAlive: Int?
+    let agentMoves: Int?
+    let nearbyAgentObservations: Int?
+    let agentGoalChanges: Int?
+    let eventsWritten: Int?
+    let eventsSuppressed: Int?
+}
+
 struct RunMetrics: Encodable {
     let scenario: String
     let seed: UInt32
