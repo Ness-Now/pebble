@@ -39,6 +39,9 @@ struct RunEvent: Encodable {
     let blockAtFeet: Int?
     let action: String?
     let reason: String?
+    let memoryType: String?
+    let importance: Double?
+    let summary: String?
 
     init(
         type: String,
@@ -78,7 +81,10 @@ struct RunEvent: Encodable {
         blockBelow: Int? = nil,
         blockAtFeet: Int? = nil,
         action: String? = nil,
-        reason: String? = nil
+        reason: String? = nil,
+        memoryType: String? = nil,
+        importance: Double? = nil,
+        summary: String? = nil
     ) {
         self.type = type
         self.tick = tick
@@ -118,6 +124,9 @@ struct RunEvent: Encodable {
         self.blockAtFeet = blockAtFeet
         self.action = action
         self.reason = reason
+        self.memoryType = memoryType
+        self.importance = importance
+        self.summary = summary
     }
 }
 

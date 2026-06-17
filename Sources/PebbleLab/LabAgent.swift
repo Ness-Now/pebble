@@ -9,6 +9,7 @@ struct LabAgent: Encodable {
     var needs: LabAgentNeeds
     var observation: LabAgentObservation?
     var lastAction: LabAgentAction?
+    var memory: [LabMemoryEntry]
     let tickCreated: Int
     var ticksAlive: Int
     var observationCount: Int
@@ -22,6 +23,7 @@ struct LabAgent: Encodable {
         needs = LabAgentNeeds(hunger: 0, fatigue: 0, curiosity: 0.5, safety: 1)
         observation = nil
         lastAction = nil
+        memory = []
         tickCreated = 0
         ticksAlive = 0
         observationCount = 0
@@ -35,7 +37,7 @@ struct LabAgent: Encodable {
         ticksAlive += 1
     }
 
-    mutating func observe(world: World) {
+    mutating func observe(world: World, tick: Int? = nil) {
         let x = position.x
         let y = position.y
         let z = position.z
@@ -54,6 +56,14 @@ struct LabAgent: Encodable {
             blockAtFeet: world.getBlock(x, y, z)
         )
         observationCount += 1
+        if let tick {
+            remember(
+                tick: tick,
+                type: "observed",
+                summary: "\(id) observed chunk (\(chunkX),\(chunkZ)) at (\(x),\(y),\(z))",
+                importance: 0.1
+            )
+        }
     }
 
     mutating func decideAction(tick: Int) {
@@ -68,6 +78,21 @@ struct LabAgent: Encodable {
 
         lastAction = action
         actionCount += 1
+        remember(
+            tick: tick,
+            type: "action_chosen",
+            summary: "\(id) chose \(action.name) because \(action.reason)",
+            importance: 0.2
+        )
+    }
+
+    mutating func remember(tick: Int, type: String, summary: String, importance: Double) {
+        memory.append(LabMemoryEntry(
+            tick: tick,
+            type: type,
+            summary: summary,
+            importance: importance
+        ))
     }
 
     enum CodingKeys: String, CodingKey {
@@ -81,6 +106,24 @@ struct LabAgent: Encodable {
         case tickCreated
         case ticksAlive
         case actionCount
+        case memoryCount
+        case recentMemory
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(type, forKey: .type)
+        try container.encode(state, forKey: .state)
+        try container.encode(position, forKey: .position)
+        try container.encode(needs, forKey: .needs)
+        try container.encodeIfPresent(observation, forKey: .observation)
+        try container.encodeIfPresent(lastAction, forKey: .lastAction)
+        try container.encode(tickCreated, forKey: .tickCreated)
+        try container.encode(ticksAlive, forKey: .ticksAlive)
+        try container.encode(actionCount, forKey: .actionCount)
+        try container.encode(memory.count, forKey: .memoryCount)
+        try container.encode(Array(memory.suffix(10)), forKey: .recentMemory)
     }
 }
 
@@ -114,4 +157,11 @@ struct LabAgentAction: Encodable {
     let name: String
     let reason: String
     let tick: Int
+}
+
+struct LabMemoryEntry: Encodable {
+    let tick: Int
+    let type: String
+    let summary: String
+    let importance: Double
 }

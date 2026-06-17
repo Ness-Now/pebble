@@ -45,6 +45,10 @@
   `observe_area`, `wait`, and `rest`.
 - `agent_action_chosen` events.
 - Agent action metrics: `agentActions` and `agentLastAction`.
+- Agent memory v0 for `agent_smoke`, recording local `spawned`, `observed`,
+  and `action_chosen` memories in RAM.
+- `agent_memory_recorded` events.
+- Agent memory metrics: `agentMemoryEntries` and `agentLastMemoryType`.
 
 ## Changed
 
@@ -60,6 +64,7 @@
 - Help text now lists `agent_smoke`.
 - `agent_snapshot.json` now includes the final observation for `agent_smoke`.
 - `agent_snapshot.json` now includes the final abstract action and action count.
+- `agent_snapshot.json` now includes `memoryCount` and `recentMemory`.
 
 ## Fixed
 
@@ -76,6 +81,8 @@
 - `agent_smoke` has no movement, pathfinding, or AI policy yet.
 - Agent actions are decisions only; they do not move the agent or modify the
   world.
+- Agent memory is local and in-memory only; there is no separate `memory.json`
+  and no social memory yet.
 - Agent observations are local and raw; they do not include semantic block names
   or navigation data yet.
 - No agents, needs, memory, roles, tasks, pathfinding, or social behavior.

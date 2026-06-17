@@ -11,6 +11,18 @@ var labAgent = scenarioResult.agent
 var ticksCompleted = 0
 var eventsNDJSON = ""
 
+func encodeMemoryEvent(_ entry: LabMemoryEntry, agent: LabAgent, scenario: String) throws -> String {
+    try encodeEventLine(RunEvent(
+        type: "agent_memory_recorded",
+        tick: entry.tick,
+        scenario: scenario,
+        agentId: agent.id,
+        memoryType: entry.type,
+        importance: entry.importance,
+        summary: entry.summary
+    ))
+}
+
 if options.outPath != nil {
     do {
         eventsNDJSON += try encodeEventLine(RunEvent(
@@ -66,7 +78,14 @@ if options.outPath != nil {
             ))
         }
         if var agent = labAgent {
-            agent.observe(world: world)
+            let memoryStart = agent.memory.count
+            agent.remember(
+                tick: 0,
+                type: "spawned",
+                summary: "\(agent.id) spawned at (\(agent.position.x),\(agent.position.y),\(agent.position.z))",
+                importance: 1.0
+            )
+            agent.observe(world: world, tick: 0)
             labAgent = agent
             eventsNDJSON += try encodeEventLine(RunEvent(
                 type: "agent_spawned",
@@ -97,6 +116,9 @@ if options.outPath != nil {
                     blockAtFeet: observation.blockAtFeet
                 ))
             }
+            for entry in agent.memory.dropFirst(memoryStart) {
+                eventsNDJSON += try encodeMemoryEvent(entry, agent: agent, scenario: options.scenario)
+            }
         }
     } catch {
         fail("failed to encode run_started event: \(error)")
@@ -108,8 +130,9 @@ for _ in 0..<options.ticks {
     ticksCompleted += 1
 
     if var agent = labAgent {
+        let memoryStart = agent.memory.count
         agent.tick()
-        agent.observe(world: world)
+        agent.observe(world: world, tick: ticksCompleted)
         agent.decideAction(tick: ticksCompleted)
         labAgent = agent
         if options.outPath != nil {
@@ -157,6 +180,9 @@ for _ in 0..<options.ticks {
                         action: action.name,
                         reason: action.reason
                     ))
+                }
+                for entry in agent.memory.dropFirst(memoryStart) {
+                    eventsNDJSON += try encodeMemoryEvent(entry, agent: agent, scenario: options.scenario)
                 }
             } catch {
                 fail("failed to encode agent_tick event: \(error)")
@@ -240,7 +266,9 @@ if let outPath = options.outPath {
                 agentSurfaceY: labAgent?.observation?.surfaceY,
                 agentHeight: labAgent?.observation?.height,
                 agentActions: labAgent?.actionCount,
-                agentLastAction: labAgent?.lastAction?.name
+                agentLastAction: labAgent?.lastAction?.name,
+                agentMemoryEntries: labAgent?.memory.count,
+                agentLastMemoryType: labAgent?.memory.last?.type
             ),
             to: outURL.appendingPathComponent("metrics.json")
         )

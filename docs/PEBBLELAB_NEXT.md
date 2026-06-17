@@ -41,16 +41,20 @@ Useful additions:
 
 ## Medium Term
 
-### Agent Memory
+### Stabilize Agent Memory
 
-Add a small PebbleLab-only memory model after abstract actions stabilize.
-Initial memory can be simple:
+`agent_smoke` now has a first PebbleLab-only memory list. Keep the next memory
+work focused:
 
-- observations seen;
-- actions taken;
-- outcomes;
-- useful locations;
-- recent events.
+- verify `recentMemory` stays compact and deterministic;
+- decide whether actions should have small internal effects;
+- keep memory local to one agent until interaction scenarios exist.
+
+Possible next patches:
+
+- add one abstract action with a small internal effect;
+- add a second passive agent without communication;
+- add explicit interaction events only after single-agent memory stays stable.
 
 ### Agent-Agent Interaction
 

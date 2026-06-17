@@ -33,6 +33,8 @@ struct RunMetrics: Encodable {
     let agentHeight: Int?
     let agentActions: Int?
     let agentLastAction: String?
+    let agentMemoryEntries: Int?
+    let agentLastMemoryType: String?
 
     init(
         scenario: String,
@@ -58,7 +60,9 @@ struct RunMetrics: Encodable {
         agentSurfaceY: Int? = nil,
         agentHeight: Int? = nil,
         agentActions: Int? = nil,
-        agentLastAction: String? = nil
+        agentLastAction: String? = nil,
+        agentMemoryEntries: Int? = nil,
+        agentLastMemoryType: String? = nil
     ) {
         self.scenario = scenario
         self.seed = seed
@@ -84,6 +88,8 @@ struct RunMetrics: Encodable {
         self.agentHeight = agentHeight
         self.agentActions = agentActions
         self.agentLastAction = agentLastAction
+        self.agentMemoryEntries = agentMemoryEntries
+        self.agentLastMemoryType = agentLastMemoryType
     }
 }
 

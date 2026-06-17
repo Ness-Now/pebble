@@ -10,7 +10,11 @@ PebbleLab should eventually be able to run deterministic multi-agent simulations
 
 None of the social systems described here are implemented yet.
 
-Current PebbleLab agents are abstract, immobile, and PebbleLab-only. They are not PebbleCore entities, do not pathfind, do not communicate, do not maintain memory, and do not have social relationships.
+Current PebbleLab agents are abstract, immobile, and PebbleLab-only. They are not PebbleCore entities, do not pathfind, do not communicate, and do not have social relationships. They may maintain a small local memory, but no social memory exists yet.
+
+Agent memory v0 is a prerequisite for future trust, friendship, and reputation
+systems, but it is still local single-agent memory. No social relationship,
+communication, or agent-agent interaction is implemented yet.
 
 ## Future Capabilities
 

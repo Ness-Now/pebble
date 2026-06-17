@@ -386,3 +386,38 @@ interaction.
 
 Decision: Keep the loop order stable as needs tick, observation, then abstract
 decision.
+
+## 2026-06-17 - Agent Memory V0
+
+Summary: Added a first deterministic in-memory memory list to the
+PebbleLab-only `LabAgent`. The agent records local memories for spawn,
+observation, and abstract action choices.
+
+Files touched:
+
+- `Sources/PebbleLab/LabAgent.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/PEBBLELAB_JOURNAL.md`
+- `docs/PEBBLELAB_CHANGELOG.md`
+- `docs/PEBBLELAB_NEXT.md`
+- `docs/PEBBLELAB_SOCIAL_AGENTS.md`
+
+Validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario empty --out runs/smoke_empty_after_memory`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario chunk_smoke --chunk-radius 1 --out runs/smoke_chunk_after_memory`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario agent_smoke --out runs/smoke_agent_memory`
+
+Result: `agent_snapshot.json` includes `memoryCount` and `recentMemory`.
+`events.ndjson` includes `agent_memory_recorded`, and metrics include
+`agentMemoryEntries` and `agentLastMemoryType`.
+
+Known limits: Memory is local, in RAM, and only persisted through the agent
+snapshot. It is not social memory, does not connect agents, and does not affect
+action decisions yet.
+
+Decision: Keep memory as a simple PebbleLab-only record before adding
+multi-agent interaction or communication.
