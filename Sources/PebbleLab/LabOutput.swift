@@ -24,6 +24,9 @@ struct RunMetrics: Encodable {
     let expectedChunks: Int?
     let readyChunks: Int?
     let nonAirBlocksTotal: Int?
+    let agentCount: Int?
+    let agentsSpawned: Int?
+    let agentTicks: Int?
 
     init(
         scenario: String,
@@ -40,7 +43,10 @@ struct RunMetrics: Encodable {
         nonAirBlocks: Int? = nil,
         expectedChunks: Int? = nil,
         readyChunks: Int? = nil,
-        nonAirBlocksTotal: Int? = nil
+        nonAirBlocksTotal: Int? = nil,
+        agentCount: Int? = nil,
+        agentsSpawned: Int? = nil,
+        agentTicks: Int? = nil
     ) {
         self.scenario = scenario
         self.seed = seed
@@ -57,6 +63,9 @@ struct RunMetrics: Encodable {
         self.expectedChunks = expectedChunks
         self.readyChunks = readyChunks
         self.nonAirBlocksTotal = nonAirBlocksTotal
+        self.agentCount = agentCount
+        self.agentsSpawned = agentsSpawned
+        self.agentTicks = agentTicks
     }
 }
 
@@ -87,6 +96,13 @@ struct SnapshotChunk: Encodable {
     let centerHeight: Int
     let centerSurfaceY: Int
     let nonAirBlocks: Int?
+}
+
+struct AgentSnapshot: Encodable {
+    let scenario: String
+    let seed: UInt32
+    let ticksCompleted: Int
+    let agents: [LabAgent]
 }
 
 func writeJSON<T: Encodable>(_ value: T, to url: URL) throws {

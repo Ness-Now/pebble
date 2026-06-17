@@ -281,3 +281,40 @@ entities, block entities, inventories, or pathfinding data.
 
 Decision: Keep snapshots as simple read-only observability artifacts before
 introducing agents.
+
+## 2026-06-17 - `agent_smoke` Abstract Agent
+
+Summary: Added the first PebbleLab-only abstract agent scenario, `agent_smoke`.
+The scenario generates a chunk area like `chunk_smoke`, spawns one
+`abstract_lab_agent` at the world center, ticks simple needs, logs agent events,
+and writes `agent_snapshot.json`.
+
+Files touched:
+
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/LabAgent.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/PEBBLELAB_JOURNAL.md`
+- `docs/PEBBLELAB_CHANGELOG.md`
+- `docs/PEBBLELAB_NEXT.md`
+
+Validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --help`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario empty --out runs/smoke_empty_after_agent`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario chunk_smoke --chunk-radius 1 --out runs/smoke_chunk_after_agent`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario agent_smoke --out runs/smoke_agent`
+
+Result: `empty` and `chunk_smoke` still worked. `agent_smoke` produced
+`world_snapshot.json`, `agent_snapshot.json`, agent metrics, `agent_spawned`,
+three `agent_tick` events for three ticks, and `agent_snapshot_written`.
+
+Known limits: The agent is not a PebbleCore entity, does not move, has no
+pathfinding, and has no AI policy. Needs are simple deterministic counters.
+
+Decision: Introduce agents as PebbleLab-only abstract state before considering
+physical entities or pathfinding.

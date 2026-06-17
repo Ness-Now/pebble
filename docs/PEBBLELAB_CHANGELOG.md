@@ -30,6 +30,12 @@
 - `world_snapshot.json` for `chunk_smoke` runs with `--out`, including center
   terrain data and sorted per-chunk summaries.
 - `world_snapshot_written` event when a snapshot is emitted.
+- `agent_smoke` scenario with one PebbleLab-only abstract agent.
+- `LabAgent` v0 with simple deterministic needs: hunger, fatigue, curiosity,
+  and safety.
+- `agent_snapshot.json` for `agent_smoke` runs.
+- Agent events: `agent_spawned`, `agent_tick`, and `agent_snapshot_written`.
+- Agent metrics: `agentCount`, `agentsSpawned`, and `agentTicks`.
 
 ## Changed
 
@@ -42,6 +48,7 @@
 - `chunk_smoke` emits one `chunk_smoke_chunk_adopted` event per adopted chunk.
 - `chunk_smoke` run outputs now include a stable terrain snapshot for generated
   chunk areas.
+- Help text now lists `agent_smoke`.
 
 ## Fixed
 
@@ -54,6 +61,8 @@
 - `--chunk-radius` is capped at `1` for now.
 - `world_snapshot.json` does not include entities, block entities, or pathing
   data yet.
+- `agent_smoke` agents are abstract PebbleLab records, not PebbleCore entities.
+- `agent_smoke` has no movement, pathfinding, or AI policy yet.
 - No agents, needs, memory, roles, tasks, pathfinding, or social behavior.
 - No Python analysis or training pipeline yet.
 - No visual replay or Pebble viewer integration yet.

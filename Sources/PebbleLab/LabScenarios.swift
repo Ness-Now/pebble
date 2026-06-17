@@ -11,6 +11,7 @@ struct ScenarioResult {
     var readyChunks: Int?
     var nonAirBlocksTotal: Int?
     var adoptedChunks: [AdoptedChunk] = []
+    var agent: LabAgent?
 }
 
 struct AdoptedChunk {
@@ -24,11 +25,11 @@ struct AdoptedChunk {
     let nonAirBlocks: Int
 }
 
-let supportedScenarios = ["empty", "chunk_smoke"]
+let supportedScenarios = ["empty", "chunk_smoke", "agent_smoke"]
 
 func validateScenario(_ scenario: String) {
     guard supportedScenarios.contains(scenario) else {
-        fail("unsupported scenario: \(scenario). Currently supported: empty, chunk_smoke")
+        fail("unsupported scenario: \(scenario). Currently supported: empty, chunk_smoke, agent_smoke")
     }
 }
 
@@ -36,11 +37,11 @@ func prepareScenario(_ options: Options, world: World) -> ScenarioResult {
     let scenario = options.scenario
 
     switch scenario {
-    case "chunk_smoke":
+    case "chunk_smoke", "agent_smoke":
         registerAllBlocks()
         registerAllBiomes()
 
-        let chunkRadius = options.chunkRadius
+        let chunkRadius = scenario == "agent_smoke" && !options.chunkRadiusProvided ? 1 : options.chunkRadius
         var adoptedChunks: [AdoptedChunk] = []
         var nonAirBlocksTotal = 0
 
@@ -84,7 +85,7 @@ func prepareScenario(_ options: Options, world: World) -> ScenarioResult {
             }
         }
 
-        return ScenarioResult(
+        var result = ScenarioResult(
             chunksTouched: world.chunks.count,
             chunkRadius: chunkRadius,
             originChunkReady: world.isChunkReady(0, 0),
@@ -98,6 +99,11 @@ func prepareScenario(_ options: Options, world: World) -> ScenarioResult {
             nonAirBlocksTotal: nonAirBlocksTotal,
             adoptedChunks: adoptedChunks
         )
+        if scenario == "agent_smoke" {
+            let spawnY = (result.centerSurfaceY ?? world.surfaceY(8, 8)) + 1
+            result.agent = LabAgent(id: "agent_0", x: 8, y: spawnY, z: 8)
+        }
+        return result
     default:
         return ScenarioResult()
     }
@@ -109,7 +115,7 @@ func makeWorldSnapshot(
     result: ScenarioResult,
     ticksCompleted: Int
 ) -> WorldSnapshot? {
-    guard options.scenario == "chunk_smoke",
+    guard (options.scenario == "chunk_smoke" || options.scenario == "agent_smoke"),
           let chunkRadius = result.chunkRadius,
           let expectedChunks = result.expectedChunks,
           let readyChunks = result.readyChunks,

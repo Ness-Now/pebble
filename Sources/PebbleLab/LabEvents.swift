@@ -21,6 +21,17 @@ struct RunEvent: Encodable {
     let nonAirBlocksTotal: Int?
     let chunks: Int?
     let path: String?
+    let agentId: String?
+    let agentType: String?
+    let x: Int?
+    let y: Int?
+    let z: Int?
+    let state: String?
+    let hunger: Double?
+    let fatigue: Double?
+    let curiosity: Double?
+    let safety: Double?
+    let agents: Int?
 
     init(
         type: String,
@@ -42,7 +53,18 @@ struct RunEvent: Encodable {
         readyChunks: Int? = nil,
         nonAirBlocksTotal: Int? = nil,
         chunks: Int? = nil,
-        path: String? = nil
+        path: String? = nil,
+        agentId: String? = nil,
+        agentType: String? = nil,
+        x: Int? = nil,
+        y: Int? = nil,
+        z: Int? = nil,
+        state: String? = nil,
+        hunger: Double? = nil,
+        fatigue: Double? = nil,
+        curiosity: Double? = nil,
+        safety: Double? = nil,
+        agents: Int? = nil
     ) {
         self.type = type
         self.tick = tick
@@ -64,6 +86,17 @@ struct RunEvent: Encodable {
         self.nonAirBlocksTotal = nonAirBlocksTotal
         self.chunks = chunks
         self.path = path
+        self.agentId = agentId
+        self.agentType = agentType
+        self.x = x
+        self.y = y
+        self.z = z
+        self.state = state
+        self.hunger = hunger
+        self.fatigue = fatigue
+        self.curiosity = curiosity
+        self.safety = safety
+        self.agents = agents
     }
 }
 

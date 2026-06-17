@@ -6,6 +6,7 @@ struct Options {
     var scenario = "empty"
     var outPath: String?
     var chunkRadius = 0
+    var chunkRadiusProvided = false
 }
 
 func usage() -> String {
@@ -19,7 +20,7 @@ func usage() -> String {
     Options:
       --seed <UInt32>      World seed. Default: 12345
       --ticks <Int>        Number of ticks to run. Default: 20
-      --scenario <String>  Scenario name. Currently supported: empty, chunk_smoke
+      --scenario <String>  Scenario name. Currently supported: empty, chunk_smoke, agent_smoke
       --chunk-radius <Int> Chunk radius for chunk_smoke. Default: 0. Supported: 0...1
       --out <path>         Directory where run outputs are written.
       --help               Show this help and exit.
@@ -76,6 +77,7 @@ func parseArguments(_ arguments: [String]) -> Options {
                 fail("invalid --chunk-radius \(radius): supported range is 0...1")
             }
             options.chunkRadius = radius
+            options.chunkRadiusProvided = true
         case "--out":
             index += 1
             guard index < arguments.count else { fail("missing value for --out") }

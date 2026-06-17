@@ -6,6 +6,7 @@ validateScenario(options.scenario)
 
 let world = World(dim: .overworld, seed: options.seed)
 let scenarioResult = prepareScenario(options, world: world)
+var labAgent = scenarioResult.agent
 
 var ticksCompleted = 0
 var eventsNDJSON = ""
@@ -64,6 +65,19 @@ if options.outPath != nil {
                 nonAirBlocksTotal: scenarioResult.nonAirBlocksTotal
             ))
         }
+        if let agent = labAgent {
+            eventsNDJSON += try encodeEventLine(RunEvent(
+                type: "agent_spawned",
+                tick: 0,
+                scenario: options.scenario,
+                agentId: agent.id,
+                agentType: agent.type,
+                x: agent.position.x,
+                y: agent.position.y,
+                z: agent.position.z,
+                state: agent.state
+            ))
+        }
     } catch {
         fail("failed to encode run_started event: \(error)")
     }
@@ -72,6 +86,28 @@ if options.outPath != nil {
 for _ in 0..<options.ticks {
     world.tick()
     ticksCompleted += 1
+
+    if var agent = labAgent {
+        agent.tick()
+        labAgent = agent
+        if options.outPath != nil {
+            do {
+                eventsNDJSON += try encodeEventLine(RunEvent(
+                    type: "agent_tick",
+                    tick: ticksCompleted,
+                    scenario: options.scenario,
+                    agentId: agent.id,
+                    state: agent.state,
+                    hunger: agent.needs.hunger,
+                    fatigue: agent.needs.fatigue,
+                    curiosity: agent.needs.curiosity,
+                    safety: agent.needs.safety
+                ))
+            } catch {
+                fail("failed to encode agent_tick event: \(error)")
+            }
+        }
+    }
 
     if options.outPath != nil {
         do {
@@ -140,7 +176,10 @@ if let outPath = options.outPath {
                 nonAirBlocks: scenarioResult.nonAirBlocks,
                 expectedChunks: scenarioResult.expectedChunks,
                 readyChunks: scenarioResult.readyChunks,
-                nonAirBlocksTotal: scenarioResult.nonAirBlocksTotal
+                nonAirBlocksTotal: scenarioResult.nonAirBlocksTotal,
+                agentCount: labAgent == nil ? nil : 1,
+                agentsSpawned: labAgent == nil ? nil : 1,
+                agentTicks: labAgent?.ticksAlive
             ),
             to: outURL.appendingPathComponent("metrics.json")
         )
@@ -157,6 +196,24 @@ if let outPath = options.outPath {
                 scenario: options.scenario,
                 chunks: snapshot.chunks.count,
                 path: "world_snapshot.json"
+            ))
+        }
+        if let agent = labAgent, options.scenario == "agent_smoke" {
+            try writeJSON(
+                AgentSnapshot(
+                    scenario: options.scenario,
+                    seed: options.seed,
+                    ticksCompleted: ticksCompleted,
+                    agents: [agent]
+                ),
+                to: outURL.appendingPathComponent("agent_snapshot.json")
+            )
+            eventsNDJSON += try encodeEventLine(RunEvent(
+                type: "agent_snapshot_written",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                path: "agent_snapshot.json",
+                agents: 1
             ))
         }
         try eventsNDJSON.write(

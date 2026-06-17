@@ -47,12 +47,19 @@ Possible event additions:
 
 Keep NDJSON one object per line.
 
-## 5. Add An Abstract Agent Later
+## 5. Expand Abstract Agent Behavior
 
-Add the first agent only after scenarios and logs are stable.
+The first abstract agent exists in `agent_smoke`. Next steps should keep it
+small and deterministic.
 
-The first agent should be simple and deterministic. It should not require RL,
-Python, LLM planning, or a new registered PebbleCore entity.
+Possible additions:
+
+- richer needs
+- a single abstract action such as observe or wait
+- action events
+- simple terrain observation from `world_snapshot.json`
+
+Avoid RL, Python, LLM planning, or new registered PebbleCore entities.
 
 ## 6. Delay Python Integration
 
