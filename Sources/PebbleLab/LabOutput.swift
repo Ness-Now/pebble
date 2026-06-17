@@ -16,6 +16,39 @@ struct RunMetrics: Encodable {
     let success: Bool
     let chunksTouched: Int?
     let chunkRadius: Int?
+
+    let originChunkReady: Bool?
+    let centerHeight: Int?
+    let centerSurfaceY: Int?
+    let nonAirBlocks: Int?
+
+    init(
+        scenario: String,
+        seed: UInt32,
+        ticksRequested: Int,
+        ticksCompleted: Int,
+        worldTime: Int,
+        success: Bool,
+        chunksTouched: Int? = nil,
+        chunkRadius: Int? = nil,
+        originChunkReady: Bool? = nil,
+        centerHeight: Int? = nil,
+        centerSurfaceY: Int? = nil,
+        nonAirBlocks: Int? = nil
+    ) {
+        self.scenario = scenario
+        self.seed = seed
+        self.ticksRequested = ticksRequested
+        self.ticksCompleted = ticksCompleted
+        self.worldTime = worldTime
+        self.success = success
+        self.chunksTouched = chunksTouched
+        self.chunkRadius = chunkRadius
+        self.originChunkReady = originChunkReady
+        self.centerHeight = centerHeight
+        self.centerSurfaceY = centerSurfaceY
+        self.nonAirBlocks = nonAirBlocks
+    }
 }
 
 func writeJSON<T: Encodable>(_ value: T, to url: URL) throws {

@@ -25,7 +25,7 @@ if options.outPath != nil {
         ))
         if options.scenario == "chunk_smoke" {
             eventsNDJSON += try encodeEventLine(RunEvent(
-                type: "scenario_started",
+                type: "chunk_smoke_chunk_adopted",
                 tick: 0,
                 scenario: options.scenario,
                 seed: nil,
@@ -33,7 +33,13 @@ if options.outPath != nil {
                 worldTime: nil,
                 success: nil,
                 chunksTouched: scenarioResult.chunksTouched,
-                chunkRadius: scenarioResult.chunkRadius
+                chunkRadius: scenarioResult.chunkRadius,
+                chunkX: 0,
+                chunkZ: 0,
+                originChunkReady: scenarioResult.originChunkReady,
+                centerHeight: scenarioResult.centerHeight,
+                centerSurfaceY: scenarioResult.centerSurfaceY,
+                nonAirBlocks: scenarioResult.nonAirBlocks
             ))
         }
     } catch {
@@ -105,7 +111,11 @@ if let outPath = options.outPath {
                 worldTime: world.time,
                 success: true,
                 chunksTouched: scenarioResult.chunksTouched,
-                chunkRadius: scenarioResult.chunkRadius
+                chunkRadius: scenarioResult.chunkRadius,
+                originChunkReady: scenarioResult.originChunkReady,
+                centerHeight: scenarioResult.centerHeight,
+                centerSurfaceY: scenarioResult.centerSurfaceY,
+                nonAirBlocks: scenarioResult.nonAirBlocks
             ),
             to: outURL.appendingPathComponent("metrics.json")
         )

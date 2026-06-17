@@ -10,6 +10,46 @@ struct RunEvent: Encodable {
     let success: Bool?
     let chunksTouched: Int?
     let chunkRadius: Int?
+    let chunkX: Int?
+    let chunkZ: Int?
+    let originChunkReady: Bool?
+    let centerHeight: Int?
+    let centerSurfaceY: Int?
+    let nonAirBlocks: Int?
+
+    init(
+        type: String,
+        tick: Int,
+        scenario: String? = nil,
+        seed: UInt32? = nil,
+        ticksRequested: Int? = nil,
+        worldTime: Int? = nil,
+        success: Bool? = nil,
+        chunksTouched: Int? = nil,
+        chunkRadius: Int? = nil,
+        chunkX: Int? = nil,
+        chunkZ: Int? = nil,
+        originChunkReady: Bool? = nil,
+        centerHeight: Int? = nil,
+        centerSurfaceY: Int? = nil,
+        nonAirBlocks: Int? = nil
+    ) {
+        self.type = type
+        self.tick = tick
+        self.scenario = scenario
+        self.seed = seed
+        self.ticksRequested = ticksRequested
+        self.worldTime = worldTime
+        self.success = success
+        self.chunksTouched = chunksTouched
+        self.chunkRadius = chunkRadius
+        self.chunkX = chunkX
+        self.chunkZ = chunkZ
+        self.originChunkReady = originChunkReady
+        self.centerHeight = centerHeight
+        self.centerSurfaceY = centerSurfaceY
+        self.nonAirBlocks = nonAirBlocks
+    }
 }
 
 func encodeEventLine(_ event: RunEvent) throws -> String {

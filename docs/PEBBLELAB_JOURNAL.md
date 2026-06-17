@@ -176,3 +176,37 @@ Known limits: `chunk_smoke` only probes public chunk access and does not force
 real chunk generation.
 
 Decision: Do not modify PebbleCore just to make the first scenario more active.
+
+## 2026-06-17 - `chunk_smoke` Origin Chunk Adoption
+
+Summary: Improved `chunk_smoke` so it generates the origin chunk `(0,0)` through
+public PebbleCore APIs, assembles a `Chunk`, adopts it into the direct
+`World`, initializes lighting, and records chunk metrics.
+
+Files touched:
+
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/PEBBLELAB_JOURNAL.md`
+- `docs/PEBBLELAB_CHANGELOG.md`
+
+Validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario empty --out runs/smoke_empty_after_chunk_patch`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario chunk_smoke --out runs/smoke_chunk_adopted`
+- `cat runs/smoke_chunk_adopted/config.json`
+- `cat runs/smoke_chunk_adopted/metrics.json`
+- `cat runs/smoke_chunk_adopted/events.ndjson`
+
+Result: `empty` still worked. `chunk_smoke` adopted one generated chunk and
+reported `chunksTouched`, `originChunkReady`, center height/surface, and
+non-air block count.
+
+Known limits: The scenario still does not resolve worldgen entity specs or block
+entity specs, and it does not reproduce the full `GameCore` streaming path.
+
+Decision: Use only public PebbleCore APIs from PebbleLab for this step and keep
+the scope to a single chunk.
