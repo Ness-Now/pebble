@@ -106,8 +106,15 @@ constructed directly by PebbleLab, linked to `LabAgent`, added to
 `World.entities`, ticked explicitly, and validated headlessly without modifying
 `EntityRegistry`, rendering, save/load, or goldens.
 
-## Phase 4.3B - Registry-Safe Entity Registration Planning
+## Phase 4.3B - Core Entity Bridge Hardening and Invariant Report
 
-Next recommended step: harden the core entity bridge contract and plan any
-registered entity or debug visibility work separately, with explicit protection
-for registries, goldens, save/load, and renderer assumptions.
+Status: done and validated.
+
+Goal: validate the unregistered core entity probe with a compact report covering
+agent and placeholder links, membership in `World.entities`, probe kind, entity
+ticks, final divergence, and the direct-construction registry contract.
+
+## Phase 4.4A - Debug Visibility Planning
+
+Next recommended step: plan a debug-only way to inspect the probe without
+registering it, adding save/load, or coupling PebbleLab to Metal rendering.

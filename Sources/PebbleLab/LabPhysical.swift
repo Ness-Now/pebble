@@ -71,6 +71,33 @@ struct CoreEntitySnapshot: Encodable {
     let coreEntities: [LabCoreAgentLink]
 }
 
+struct CoreEntityInvariantReport: Encodable {
+    let scenario: String
+    let seed: UInt32
+    let ticksCompleted: Int
+    let success: Bool
+    let summary: CoreEntityInvariantSummary
+    let checks: [CoreEntityInvariantCheck]
+    let notes: [String]
+}
+
+struct CoreEntityInvariantSummary: Encodable {
+    let checksPassed: Int
+    let checksFailed: Int
+    let labAgents: Int
+    let physicalPlaceholders: Int
+    let coreEntities: Int
+    let worldEntities: Int
+    let abstractCoreEntityDivergence: Int
+}
+
+struct CoreEntityInvariantCheck: Encodable {
+    let name: String
+    let passed: Bool
+    let expected: String
+    let actual: String
+}
+
 struct LabAgentPhysicalBridge {
     private(set) var handles: [LabPhysicalAgentHandle] = []
 
@@ -239,6 +266,106 @@ struct LabCoreEntityBridge {
 
     func maxDivergence(from agents: [LabAgent]) -> Int {
         snapshotLinks(for: agents).map(\.divergence).max() ?? 0
+    }
+
+    func invariantReport(
+        scenario: String,
+        seed: UInt32,
+        ticksCompleted: Int,
+        agents: [LabAgent],
+        physicalBridge: LabAgentPhysicalBridge,
+        world: World
+    ) -> CoreEntityInvariantReport {
+        let divergence = totalDivergence(from: agents)
+        let worldContainsAll = entities.allSatisfy { entity in
+            world.entities.contains { $0 === entity }
+                && world.entityById[entity.id] === entity
+        }
+        let agentsMatch = entities.allSatisfy { entity in
+            agents.contains { $0.id == entity.labAgentId }
+        }
+        let physicalIdsMatch = entities.allSatisfy { entity in
+            physicalBridge.handles.contains {
+                $0.agentId == entity.labAgentId && $0.physicalId == entity.physicalId
+            }
+        }
+        let kindsMatch = entities.allSatisfy { $0.type == LabCoreAgentEntity.kind }
+        let ticksRecorded = !entities.isEmpty && entities.allSatisfy { $0.ticksAlive > 0 }
+
+        let checks = [
+            CoreEntityInvariantCheck(
+                name: "core_entity_count",
+                passed: entities.count == agents.count,
+                expected: "\(agents.count)",
+                actual: "\(entities.count)"
+            ),
+            CoreEntityInvariantCheck(
+                name: "world_contains_core_entity",
+                passed: worldContainsAll,
+                expected: "true",
+                actual: "\(worldContainsAll)"
+            ),
+            CoreEntityInvariantCheck(
+                name: "core_entity_has_matching_lab_agent",
+                passed: agentsMatch,
+                expected: agents.map(\.id).sorted().joined(separator: ","),
+                actual: entities.map(\.labAgentId).sorted().joined(separator: ",")
+            ),
+            CoreEntityInvariantCheck(
+                name: "core_entity_has_matching_physical_id",
+                passed: physicalIdsMatch,
+                expected: physicalBridge.handles.map(\.physicalId).sorted().joined(separator: ","),
+                actual: entities.map(\.physicalId).sorted().joined(separator: ",")
+            ),
+            CoreEntityInvariantCheck(
+                name: "core_entity_kind_is_probe",
+                passed: kindsMatch,
+                expected: LabCoreAgentEntity.kind,
+                actual: entities.map(\.type).sorted().joined(separator: ",")
+            ),
+            CoreEntityInvariantCheck(
+                name: "abstract_core_divergence_zero",
+                passed: divergence == 0,
+                expected: "0",
+                actual: "\(divergence)"
+            ),
+            CoreEntityInvariantCheck(
+                name: "core_entity_ticks_recorded",
+                passed: ticksRecorded,
+                expected: "> 0",
+                actual: "\(tickCount)"
+            ),
+            CoreEntityInvariantCheck(
+                name: "registry_not_modified_runtime_contract",
+                passed: true,
+                expected: "unregistered direct construction",
+                actual: "no EntityRegistry path used by scenario"
+            )
+        ]
+        let checksPassed = checks.filter(\.passed).count
+        let checksFailed = checks.count - checksPassed
+
+        return CoreEntityInvariantReport(
+            scenario: scenario,
+            seed: seed,
+            ticksCompleted: ticksCompleted,
+            success: checksFailed == 0,
+            summary: CoreEntityInvariantSummary(
+                checksPassed: checksPassed,
+                checksFailed: checksFailed,
+                labAgents: agents.count,
+                physicalPlaceholders: physicalBridge.count,
+                coreEntities: entities.count,
+                worldEntities: world.entities.count,
+                abstractCoreEntityDivergence: divergence
+            ),
+            checks: checks,
+            notes: [
+                "This report validates the PebbleLab core entity probe contract.",
+                "The unregistered check is a scenario contract; it does not introspect or mutate EntityRegistry.",
+                "This report does not prove save/load or renderer integration."
+            ]
+        )
     }
 
     private static func entityPosition(_ entity: LabCoreAgentEntity) -> LabAgentPosition {

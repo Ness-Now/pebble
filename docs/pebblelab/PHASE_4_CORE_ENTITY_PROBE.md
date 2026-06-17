@@ -60,6 +60,7 @@ core entity to the abstract position.
 `core_entity_smoke` writes the existing run outputs plus:
 
 - `core_entity_snapshot.json`
+- `core_entity_invariant_report.json`
 
 The snapshot records:
 
@@ -87,6 +88,23 @@ Phase 4.3A adds:
 - `worldEntitiesCount`.
 
 The expected healthy smoke result is final divergence `0`.
+
+## Invariant Report
+
+Phase 4.3B adds eight checks for the probe contract:
+
+- core entity count matches the abstract agent count;
+- every core entity is present by identity in `World.entities` and
+  `World.entityById`;
+- every core entity has a matching `LabAgent`;
+- every core entity has a matching physical placeholder identifier;
+- every core entity uses `pebblelab:core_agent_probe`;
+- final abstract/core divergence is zero;
+- every core entity has recorded at least one explicit tick;
+- the scenario retains its direct-construction, unregistered contract.
+
+The final check is a documented scenario contract, not registry introspection.
+The report does not call or mutate `EntityRegistry`.
 
 ## Events
 
@@ -131,6 +149,6 @@ git status
 
 ## Next Step
 
-Recommended next phase: Phase 4.3B, harden the core entity bridge contract or
-plan registry-safe visibility/registration separately. Do not register the
-entity until a dedicated registry-safe patch has explicit validation criteria.
+Recommended next phase: Phase 4.4A, plan debug visibility separately. Do not
+register the entity until a dedicated registry-safe patch has explicit
+validation criteria.

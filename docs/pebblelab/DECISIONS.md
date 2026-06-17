@@ -194,3 +194,18 @@ save/load, vanilla mobs, pathfinding, collision, combat, sounds, or goldens.
 Reason: this is the smallest real PebbleCore entity presence that can validate
 the bridge contract while avoiding registry and rendering risk. Registered
 entity work remains a separate later phase.
+
+## 2026-06-18 - Harden the Probe Contract Before Visibility or Registration
+
+Decision: Phase 4.3B adds invariant reporting around the unregistered core
+entity probe before any renderer, `GameCore`, save/load, or registry integration.
+
+The report checks the actual `core_entity_smoke` object graph: every probe has a
+matching abstract agent and physical identifier, is present by identity in both
+`World.entities` and `World.entityById`, uses the experimental probe kind, has
+recorded ticks, and ends with zero abstract/core divergence.
+
+The unregistered check is deliberately documented as a scenario contract. The
+scenario constructs `LabCoreAgentEntity` directly and does not call
+`EntityRegistry`, `registerAllEntities`, `spawnMob`, or `loadEntity` for it. No
+runtime registry introspection or mutation is introduced.

@@ -764,3 +764,51 @@ Next steps:
 
 - Phase 4.3B: core entity bridge hardening or registry-safe visibility
   planning, kept separate from the unregistered probe.
+
+## 2026-06-18 - Phase 4.3B Core Entity Bridge Hardening
+
+Branch: `lab/pebblelab-v1`
+
+Objective: make the unregistered core entity probe contract explicit and
+machine-readable before any visibility, `GameCore`, save/load, or registry
+integration.
+
+Files modified:
+
+- `Sources/PebbleLab/LabPhysical.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DECISIONS.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/PHASE_4_CORE_ENTITY_HARDENING.md`
+- `docs/pebblelab/PHASE_4_CORE_ENTITY_PROBE.md`
+- `docs/pebblelab/ROADMAP.md`
+
+Behavior added:
+
+- `core_entity_smoke` writes `core_entity_invariant_report.json`.
+- Eight deterministic checks cover counts, world membership, agent and
+  physical links, probe kind, final divergence, explicit ticks, and the
+  unregistered direct-construction contract.
+- The scenario result is unsuccessful if an invariant check fails.
+- `events.ndjson` records `core_entity_invariant_report_written`.
+
+Validation commands:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --scenario core_entity_smoke --seed 42 --ticks 5 --out runs/check_core_entity_hardening`
+- `swift run -c release PebbleLab -- --scenario physical_sync_smoke --seed 42 --ticks 5 --out runs/check_physical_sync_after_core_entity_hardening`
+- `swift run -c release PebbleLab -- --scenario physical_placeholder_smoke --seed 42 --ticks 3 --out runs/check_physical_placeholder_after_core_entity_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_smoke --seed 42 --ticks 3 --out runs/check_agent_smoke_after_core_entity_hardening`
+- `swift run -c release PebbleLab -- --scenario agents_basic --seed 42 --agents 10 --ticks 20 --out runs/check_agents_basic_after_core_entity_hardening`
+- `swift run -c release PebbleLab -- --scenario seek_safety_smoke --seed 42 --ticks 10 --out runs/check_seek_safety_after_core_entity_hardening`
+- `swift run -c release PebbleLab -- --scenario long_run_smoke --seed 42 --agents 10 --ticks 1000 --event-rate 10 --out runs/check_long_run_after_core_entity_hardening`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_core_entity_hardening`
+- `swift run -c release pebsmoke`
+
+Result: validation passed. The report contains eight passing checks, zero
+failures, one world entity, and zero final abstract/core divergence. Existing
+scenarios remain stable and `pebsmoke` reports 456 passed, 0 failed.
+
+Next step: Phase 4.4A, debug visibility planning without registry, save/load,
+or renderer coupling.

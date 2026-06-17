@@ -665,9 +665,20 @@ func makeSuccessCriteria() -> RunSuccessCriteria {
 }
 
 let successCriteria = makeSuccessCriteria()
+let coreEntityInvariantReport = options.scenario == "core_entity_smoke"
+    ? coreEntityBridge.invariantReport(
+        scenario: options.scenario,
+        seed: options.seed,
+        ticksCompleted: ticksCompleted,
+        agents: labAgents,
+        physicalBridge: physicalBridge,
+        world: world
+    )
+    : nil
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
     && successCriteria.agentTicksRecorded
+    && (coreEntityInvariantReport?.success ?? true)
 
 if options.outPath != nil {
     do {
@@ -773,6 +784,19 @@ if let outPath = options.outPath {
                 path: "core_entity_snapshot.json",
                 agents: coreEntityBridge.count
             ))
+            if let coreEntityInvariantReport {
+                try writeJSON(
+                    coreEntityInvariantReport,
+                    to: outURL.appendingPathComponent("core_entity_invariant_report.json")
+                )
+                try appendEvent(RunEvent(
+                    type: "core_entity_invariant_report_written",
+                    tick: ticksCompleted,
+                    scenario: options.scenario,
+                    success: coreEntityInvariantReport.success,
+                    path: "core_entity_invariant_report.json"
+                ))
+            }
         }
         let metrics = RunMetrics(
             scenario: options.scenario,
