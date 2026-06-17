@@ -99,12 +99,15 @@ registries.
 
 ## Phase 4.3A - Unregistered LabCoreAgentEntity Probe
 
-Next recommended step: add a minimal unregistered PebbleCore `Entity` subclass
-that is constructed directly by PebbleLab, linked to `LabAgent`, and validated
-headlessly without modifying `EntityRegistry`, rendering, save/load, or
-goldens.
+Status: done and validated.
+
+Goal: add a minimal unregistered PebbleCore `Entity` subclass that is
+constructed directly by PebbleLab, linked to `LabAgent`, added to
+`World.entities`, ticked explicitly, and validated headlessly without modifying
+`EntityRegistry`, rendering, save/load, or goldens.
 
 ## Phase 4.3B - Registry-Safe Entity Registration Planning
 
-Later step: plan and review any registered entity work after the unregistered
-probe proves the real-entity bridge contract.
+Next recommended step: harden the core entity bridge contract and plan any
+registered entity or debug visibility work separately, with explicit protection
+for registries, goldens, save/load, and renderer assumptions.

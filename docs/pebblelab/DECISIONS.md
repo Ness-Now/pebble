@@ -178,3 +178,19 @@ Reason: `EntityRegistry` order, entity type count, spawnable mob lists, natural
 spawning, and vanilla mob behavior are golden-sensitive. A direct unregistered
 probe is the smallest real PebbleCore boundary crossing that preserves the
 existing deterministic bridge contract.
+
+## 2026-06-18 - Unregistered Core Entity Probe Before Registration
+
+Decision: Phase 4.3A introduces `LabCoreAgentEntity` as an unregistered
+PebbleCore `Entity` probe constructed directly by PebbleLab.
+
+The probe inherits from `Entity` only. It is added to `World.entities` by the
+`core_entity_smoke` scenario, ticked explicitly by PebbleLab, synchronized from
+`LabAgent.position`, and measured through metrics, events, and
+`core_entity_snapshot.json`. It does not touch `EntityRegistry`,
+`spawnableMobs`, `registerAllEntities`, `loadEntity`, renderer model mapping,
+save/load, vanilla mobs, pathfinding, collision, combat, sounds, or goldens.
+
+Reason: this is the smallest real PebbleCore entity presence that can validate
+the bridge contract while avoiding registry and rendering risk. Registered
+entity work remains a separate later phase.

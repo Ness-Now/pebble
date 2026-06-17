@@ -122,6 +122,15 @@ struct RunMetrics: Encodable {
     let physicalSyncDistance: Int?
     let abstractPhysicalDivergence: Int?
     let maxAbstractPhysicalDivergence: Int?
+    let coreEntitiesSpawned: Int?
+    let coreEntitiesTicked: Int?
+    let coreEntityLinks: Int?
+    let coreEntitiesSynced: Int?
+    let coreEntitySyncEvents: Int?
+    let coreEntitySyncDistance: Int?
+    let abstractCoreEntityDivergence: Int?
+    let maxAbstractCoreEntityDivergence: Int?
+    let worldEntitiesCount: Int?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -193,6 +202,15 @@ struct RunMetrics: Encodable {
         physicalSyncDistance: Int? = nil,
         abstractPhysicalDivergence: Int? = nil,
         maxAbstractPhysicalDivergence: Int? = nil,
+        coreEntitiesSpawned: Int? = nil,
+        coreEntitiesTicked: Int? = nil,
+        coreEntityLinks: Int? = nil,
+        coreEntitiesSynced: Int? = nil,
+        coreEntitySyncEvents: Int? = nil,
+        coreEntitySyncDistance: Int? = nil,
+        abstractCoreEntityDivergence: Int? = nil,
+        maxAbstractCoreEntityDivergence: Int? = nil,
+        worldEntitiesCount: Int? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -263,6 +281,15 @@ struct RunMetrics: Encodable {
         self.physicalSyncDistance = physicalSyncDistance
         self.abstractPhysicalDivergence = abstractPhysicalDivergence
         self.maxAbstractPhysicalDivergence = maxAbstractPhysicalDivergence
+        self.coreEntitiesSpawned = coreEntitiesSpawned
+        self.coreEntitiesTicked = coreEntitiesTicked
+        self.coreEntityLinks = coreEntityLinks
+        self.coreEntitiesSynced = coreEntitiesSynced
+        self.coreEntitySyncEvents = coreEntitySyncEvents
+        self.coreEntitySyncDistance = coreEntitySyncDistance
+        self.abstractCoreEntityDivergence = abstractCoreEntityDivergence
+        self.maxAbstractCoreEntityDivergence = maxAbstractCoreEntityDivergence
+        self.worldEntitiesCount = worldEntitiesCount
         self.successCriteria = successCriteria
     }
 }

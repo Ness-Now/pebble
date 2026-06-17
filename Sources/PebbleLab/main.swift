@@ -8,6 +8,7 @@ let world = World(dim: .overworld, seed: options.seed)
 let scenarioResult = prepareScenario(options, world: world)
 var labAgents = scenarioResult.agents
 var physicalBridge = scenarioResult.physicalBridge
+var coreEntityBridge = scenarioResult.coreEntityBridge
 
 var ticksCompleted = 0
 var eventsNDJSON = ""
@@ -20,6 +21,9 @@ var nearbyAgentEventsSuppressed = 0
 var physicalSyncEvents = 0
 var physicalSyncDistance = 0
 var physicalSyncedAgentIds = Set<String>()
+var coreEntitySyncEvents = 0
+var coreEntitySyncDistance = 0
+var coreEntitySyncedAgentIds = Set<String>()
 
 func shouldWriteFrequentEvent(tick: Int) -> Bool {
     options.eventRate == 1 || tick % options.eventRate == 0
@@ -188,6 +192,42 @@ func makePhysicalSyncEvent(_ sync: LabPhysicalAgentSync) -> RunEvent {
         toZ: sync.toPosition.z,
         distanceManhattan: sync.distanceManhattan,
         physicalId: sync.physicalId
+    )
+}
+
+func makeCoreEntitySpawnEvent(_ entity: LabCoreAgentEntity) -> RunEvent {
+    RunEvent(
+        type: "lab_core_entity_spawned",
+        tick: 0,
+        scenario: options.scenario,
+        agentId: entity.labAgentId,
+        x: Int(entity.x.rounded()),
+        y: Int(entity.y.rounded()),
+        z: Int(entity.z.rounded()),
+        physicalId: entity.physicalId,
+        coreEntityId: entity.id,
+        kind: entity.type
+    )
+}
+
+func makeCoreEntitySyncEvent(_ sync: LabCoreAgentSync) -> RunEvent {
+    RunEvent(
+        type: "lab_core_entity_synced",
+        tick: sync.tick,
+        scenario: options.scenario,
+        agentId: sync.agentId,
+        x: sync.abstractPosition.x,
+        y: sync.abstractPosition.y,
+        z: sync.abstractPosition.z,
+        fromX: sync.fromPosition.x,
+        fromY: sync.fromPosition.y,
+        fromZ: sync.fromPosition.z,
+        toX: sync.toPosition.x,
+        toY: sync.toPosition.y,
+        toZ: sync.toPosition.z,
+        distanceManhattan: sync.distanceManhattan,
+        physicalId: sync.physicalId,
+        coreEntityId: sync.coreEntityId
     )
 }
 
@@ -518,6 +558,9 @@ if options.outPath != nil {
         for handle in physicalBridge.handles {
             try appendEvent(makePhysicalSpawnEvent(handle))
         }
+        for entity in coreEntityBridge.entities {
+            try appendEvent(makeCoreEntitySpawnEvent(entity))
+        }
     } catch {
         fail("failed to encode run_started event: \(error)")
     }
@@ -564,6 +607,26 @@ for _ in 0..<options.ticks {
                 }
             } catch {
                 fail("failed to encode physical sync event: \(error)")
+            }
+        }
+    }
+
+    coreEntityBridge.tick()
+    let coreSyncs = coreEntityBridge.sync(with: labAgents, tick: ticksCompleted)
+    if !coreSyncs.isEmpty {
+        coreEntitySyncEvents += coreSyncs.count
+        coreEntitySyncDistance += coreSyncs.reduce(0) { $0 + $1.distanceManhattan }
+        for sync in coreSyncs {
+            coreEntitySyncedAgentIds.insert(sync.agentId)
+        }
+
+        if options.outPath != nil {
+            do {
+                for sync in coreSyncs {
+                    try appendEvent(makeCoreEntitySyncEvent(sync))
+                }
+            } catch {
+                fail("failed to encode core entity sync event: \(error)")
             }
         }
     }
@@ -657,7 +720,7 @@ if let outPath = options.outPath {
                 path: "world_snapshot.json"
             ))
         }
-        if !labAgents.isEmpty, options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke" || options.scenario == "long_run_smoke" || options.scenario == "regression_smoke" || options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" {
+        if !labAgents.isEmpty, options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke" || options.scenario == "long_run_smoke" || options.scenario == "regression_smoke" || options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" || options.scenario == "core_entity_smoke" {
             try writeJSON(
                 AgentSnapshot(
                     scenario: options.scenario,
@@ -675,7 +738,7 @@ if let outPath = options.outPath {
                 agents: labAgents.count
             ))
         }
-        if options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" {
+        if options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" || options.scenario == "core_entity_smoke" {
             try writeJSON(
                 PhysicalSnapshot(
                     scenario: options.scenario,
@@ -691,6 +754,24 @@ if let outPath = options.outPath {
                 scenario: options.scenario,
                 path: "physical_snapshot.json",
                 agents: physicalBridge.count
+            ))
+        }
+        if options.scenario == "core_entity_smoke" {
+            try writeJSON(
+                CoreEntitySnapshot(
+                    scenario: options.scenario,
+                    seed: options.seed,
+                    ticksCompleted: ticksCompleted,
+                    coreEntities: coreEntityBridge.snapshotLinks(for: labAgents)
+                ),
+                to: outURL.appendingPathComponent("core_entity_snapshot.json")
+            )
+            try appendEvent(RunEvent(
+                type: "core_entity_snapshot_written",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                path: "core_entity_snapshot.json",
+                agents: coreEntityBridge.count
             ))
         }
         let metrics = RunMetrics(
@@ -762,6 +843,15 @@ if let outPath = options.outPath {
             physicalSyncDistance: physicalBridge.count == 0 ? nil : physicalSyncDistance,
             abstractPhysicalDivergence: physicalBridge.count == 0 ? nil : physicalBridge.totalDivergence(from: labAgents),
             maxAbstractPhysicalDivergence: physicalBridge.count == 0 ? nil : physicalBridge.maxDivergence(from: labAgents),
+            coreEntitiesSpawned: coreEntityBridge.count == 0 ? nil : coreEntityBridge.count,
+            coreEntitiesTicked: coreEntityBridge.count == 0 ? nil : coreEntityBridge.tickCount,
+            coreEntityLinks: coreEntityBridge.count == 0 ? nil : coreEntityBridge.linkCount,
+            coreEntitiesSynced: coreEntityBridge.count == 0 ? nil : coreEntitySyncedAgentIds.count,
+            coreEntitySyncEvents: coreEntityBridge.count == 0 ? nil : coreEntitySyncEvents,
+            coreEntitySyncDistance: coreEntityBridge.count == 0 ? nil : coreEntitySyncDistance,
+            abstractCoreEntityDivergence: coreEntityBridge.count == 0 ? nil : coreEntityBridge.totalDivergence(from: labAgents),
+            maxAbstractCoreEntityDivergence: coreEntityBridge.count == 0 ? nil : coreEntityBridge.maxDivergence(from: labAgents),
+            worldEntitiesCount: coreEntityBridge.count == 0 ? nil : world.entities.count,
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))

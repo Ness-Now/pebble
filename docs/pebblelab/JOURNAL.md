@@ -686,3 +686,81 @@ Next steps:
 
 - Phase 4.3A: unregistered `LabCoreAgentEntity` probe, constructed directly by
   PebbleLab and validated headlessly before any registry work.
+
+## 2026-06-18 - Phase 4.3A Unregistered LabCoreAgentEntity Probe
+
+Branch: `lab/pebblelab-v1`
+
+Objective: create the first true PebbleCore entity presence for a PebbleLab
+agent while avoiding `EntityRegistry`, save/load, renderer, and mob behavior.
+
+Files inspected:
+
+- `AGENTS.md`
+- `docs/pebblelab/PHASE_4_REAL_ENTITY_FEASIBILITY.md`
+- `Sources/PebbleCore/Entity/Entity.swift`
+- `Sources/PebbleCore/Entity/EntityRegistry.swift`
+- `Sources/PebbleCore/World/GameWorld.swift`
+- `Sources/PebbleCore/Game/GameCore.swift`
+- `Sources/PebbleLab/LabPhysical.swift`
+- `Sources/PebbleLab/LabAgent.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/main.swift`
+- `Sources/pebsmoke/main.swift`
+
+Files modified:
+
+- `Sources/PebbleCore/Entity/LabCoreAgentEntity.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabPhysical.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DECISIONS.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/PHASE_4_CORE_ENTITY_PROBE.md`
+- `docs/pebblelab/ROADMAP.md`
+
+Behavior added:
+
+- `LabCoreAgentEntity` is a minimal unregistered PebbleCore `Entity` subclass.
+- `core_entity_smoke` creates one abstract `LabAgent`, one PebbleLab physical
+  placeholder, and one direct core entity probe.
+- The probe is added to `World.entities` with `world.addEntity`.
+- PebbleLab ticks the probe explicitly because direct `World.tick()` does not
+  tick entities.
+- PebbleLab synchronizes the probe from `LabAgent.position` after abstract
+  movement.
+- `events.ndjson` includes `lab_core_entity_spawned` and
+  `lab_core_entity_synced`.
+- `metrics.json` includes core entity counts, sync counts, sync distance,
+  final abstract/core divergence, and `worldEntitiesCount`.
+- `core_entity_snapshot.json` records the final abstract/core position pair.
+
+Commands of validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --scenario core_entity_smoke --seed 42 --ticks 5 --out runs/check_core_entity_smoke`
+- `swift run -c release PebbleLab -- --scenario physical_sync_smoke --seed 42 --ticks 5 --out runs/check_physical_sync_after_core_entity`
+- `swift run -c release PebbleLab -- --scenario physical_placeholder_smoke --seed 42 --ticks 3 --out runs/check_physical_placeholder_after_core_entity`
+- `swift run -c release PebbleLab -- --scenario agent_smoke --seed 42 --ticks 3 --out runs/check_agent_smoke_after_core_entity`
+- `swift run -c release PebbleLab -- --scenario agents_basic --seed 42 --agents 10 --ticks 20 --out runs/check_agents_basic_after_core_entity`
+- `swift run -c release PebbleLab -- --scenario seek_safety_smoke --seed 42 --ticks 10 --out runs/check_seek_safety_after_core_entity`
+- `swift run -c release PebbleLab -- --scenario long_run_smoke --seed 42 --agents 10 --ticks 1000 --event-rate 10 --out runs/check_long_run_after_core_entity`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_core_entity`
+- `swift run -c release pebsmoke`
+
+Result: validation passed. `core_entity_smoke` ends with
+`abstractCoreEntityDivergence = 0`, `maxAbstractCoreEntityDivergence = 0`, and
+`worldEntitiesCount = 1`. Existing Phase 3 and Phase 4 placeholder scenarios
+remain stable, and no registry, renderer, audio, resource pack, packaging, or
+golden file was modified.
+
+Next steps:
+
+- Phase 4.3B: core entity bridge hardening or registry-safe visibility
+  planning, kept separate from the unregistered probe.
