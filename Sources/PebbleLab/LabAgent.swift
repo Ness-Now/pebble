@@ -9,6 +9,7 @@ struct LabAgent: Encodable {
     var needs: LabAgentNeeds
     var observation: LabAgentObservation?
     var nearbyAgents: [LabNearbyAgentObservation]
+    var currentGoal: LabGoal
     var lastAction: LabAgentAction?
     var lastActionEffect: LabAgentActionEffect?
     var memory: [LabMemoryEntry]
@@ -16,6 +17,8 @@ struct LabAgent: Encodable {
     var ticksAlive: Int
     var observationCount: Int
     var nearbyObservationCount: Int
+    var goalSelectionCount: Int
+    var goalChangeCount: Int
     var actionCount: Int
     var actionEffectCount: Int
 
@@ -27,6 +30,7 @@ struct LabAgent: Encodable {
         needs = LabAgentNeeds(hunger: 0, fatigue: 0, curiosity: 0.5, safety: 1)
         observation = nil
         nearbyAgents = []
+        currentGoal = LabGoal(kind: .idle, reason: "initial goal", startedAtTick: 0, urgency: 0)
         lastAction = nil
         lastActionEffect = nil
         memory = []
@@ -34,6 +38,8 @@ struct LabAgent: Encodable {
         ticksAlive = 0
         observationCount = 0
         nearbyObservationCount = 0
+        goalSelectionCount = 0
+        goalChangeCount = 0
         actionCount = 0
         actionEffectCount = 0
     }
@@ -95,14 +101,43 @@ struct LabAgent: Encodable {
         nearbyObservationCount += nearbyAgents.count
     }
 
+    mutating func selectGoal(tick: Int) -> LabGoalChange? {
+        goalSelectionCount += 1
+
+        let nextGoal: LabGoal
+        if needs.safety < 0.5 {
+            nextGoal = LabGoal(kind: .seekSafety, reason: "safety < 0.5", startedAtTick: tick, urgency: 90)
+        } else if needs.fatigue >= 0.02 {
+            nextGoal = LabGoal(kind: .rest, reason: "fatigue >= 0.02", startedAtTick: tick, urgency: 70)
+        } else if !nearbyAgents.isEmpty {
+            nextGoal = LabGoal(kind: .observeOtherAgent, reason: "nearby agent detected", startedAtTick: tick, urgency: 50)
+        } else if needs.curiosity >= 0.5 {
+            nextGoal = LabGoal(kind: .explore, reason: "curiosity >= 0.5", startedAtTick: tick, urgency: 40)
+        } else {
+            nextGoal = LabGoal(kind: .idle, reason: "no active need", startedAtTick: tick, urgency: 0)
+        }
+
+        guard nextGoal.kind != currentGoal.kind else { return nil }
+
+        let change = LabGoalChange(from: currentGoal.kind, to: nextGoal.kind, goal: nextGoal)
+        currentGoal = nextGoal
+        goalChangeCount += 1
+        return change
+    }
+
     mutating func decideAction(tick: Int) {
         let action: LabAgentAction
-        if needs.fatigue >= 0.02 {
-            action = LabAgentAction(name: "rest", reason: "fatigue >= 0.02", tick: tick)
-        } else if needs.curiosity >= 0.5 {
-            action = LabAgentAction(name: "observe_area", reason: "curiosity >= 0.5", tick: tick)
-        } else {
-            action = LabAgentAction(name: "wait", reason: "default", tick: tick)
+        switch currentGoal.kind {
+        case .seekSafety:
+            action = LabAgentAction(name: "wait", reason: "goal seekSafety", tick: tick)
+        case .rest:
+            action = LabAgentAction(name: "rest", reason: "goal rest", tick: tick)
+        case .observeOtherAgent:
+            action = LabAgentAction(name: "observe_area", reason: "goal observeOtherAgent", tick: tick)
+        case .explore:
+            action = LabAgentAction(name: "observe_area", reason: "goal explore", tick: tick)
+        case .idle:
+            action = LabAgentAction(name: "wait", reason: "goal idle", tick: tick)
         }
 
         lastAction = action
@@ -182,6 +217,7 @@ struct LabAgent: Encodable {
         case needs
         case observation
         case nearbyAgents
+        case currentGoal
         case lastAction
         case lastActionEffect
         case tickCreated
@@ -189,6 +225,8 @@ struct LabAgent: Encodable {
         case actionCount
         case actionEffectCount
         case nearbyObservationCount
+        case goalSelectionCount
+        case goalChangeCount
         case memoryCount
         case recentMemory
     }
@@ -202,6 +240,7 @@ struct LabAgent: Encodable {
         try container.encode(needs, forKey: .needs)
         try container.encodeIfPresent(observation, forKey: .observation)
         try container.encode(nearbyAgents, forKey: .nearbyAgents)
+        try container.encode(currentGoal, forKey: .currentGoal)
         try container.encodeIfPresent(lastAction, forKey: .lastAction)
         try container.encodeIfPresent(lastActionEffect, forKey: .lastActionEffect)
         try container.encode(tickCreated, forKey: .tickCreated)
@@ -209,6 +248,8 @@ struct LabAgent: Encodable {
         try container.encode(actionCount, forKey: .actionCount)
         try container.encode(actionEffectCount, forKey: .actionEffectCount)
         try container.encode(nearbyObservationCount, forKey: .nearbyObservationCount)
+        try container.encode(goalSelectionCount, forKey: .goalSelectionCount)
+        try container.encode(goalChangeCount, forKey: .goalChangeCount)
         try container.encode(memory.count, forKey: .memoryCount)
         try container.encode(Array(memory.suffix(10)), forKey: .recentMemory)
     }
@@ -246,6 +287,27 @@ struct LabNearbyAgentObservation: Codable, Equatable {
     let dy: Int
     let dz: Int
     let distanceManhattan: Int
+}
+
+enum LabGoalKind: String, Codable, Equatable {
+    case idle
+    case rest
+    case seekSafety
+    case explore
+    case observeOtherAgent
+}
+
+struct LabGoal: Codable, Equatable {
+    let kind: LabGoalKind
+    let reason: String
+    let startedAtTick: Int
+    let urgency: Int
+}
+
+struct LabGoalChange {
+    let from: LabGoalKind
+    let to: LabGoalKind
+    let goal: LabGoal
 }
 
 struct LabAgentAction: Encodable {

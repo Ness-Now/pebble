@@ -11,3 +11,15 @@ reputation, groups, physical entities, or any world mutation.
 Reason: the project needs a deterministic perception signal before adding
 agent-agent interaction or social state.
 
+## 2026-06-17 - Deterministic Current Goal Before Action
+
+Decision: PebbleLab agents choose a stable `currentGoal` before selecting an
+abstract action.
+
+The goal system remains abstract and deterministic. It does not introduce a
+planner, LLM, physical entity, pathfinding, communication, or social
+relationship system.
+
+Reason: goals create a small explicit layer between observations/needs and
+actions, making future behavior easier to inspect before adding more complex
+planning.

@@ -59,6 +59,9 @@ struct RunEvent: Encodable {
     let dy: Int?
     let dz: Int?
     let distanceManhattan: Int?
+    let fromGoal: String?
+    let toGoal: String?
+    let urgency: Int?
 
     init(
         type: String,
@@ -118,7 +121,10 @@ struct RunEvent: Encodable {
         dx: Int? = nil,
         dy: Int? = nil,
         dz: Int? = nil,
-        distanceManhattan: Int? = nil
+        distanceManhattan: Int? = nil,
+        fromGoal: String? = nil,
+        toGoal: String? = nil,
+        urgency: Int? = nil
     ) {
         self.type = type
         self.event = event
@@ -178,6 +184,9 @@ struct RunEvent: Encodable {
         self.dy = dy
         self.dz = dz
         self.distanceManhattan = distanceManhattan
+        self.fromGoal = fromGoal
+        self.toGoal = toGoal
+        self.urgency = urgency
     }
 }
 
