@@ -21,6 +21,9 @@ struct RunMetrics: Encodable {
     let centerHeight: Int?
     let centerSurfaceY: Int?
     let nonAirBlocks: Int?
+    let expectedChunks: Int?
+    let readyChunks: Int?
+    let nonAirBlocksTotal: Int?
 
     init(
         scenario: String,
@@ -34,7 +37,10 @@ struct RunMetrics: Encodable {
         originChunkReady: Bool? = nil,
         centerHeight: Int? = nil,
         centerSurfaceY: Int? = nil,
-        nonAirBlocks: Int? = nil
+        nonAirBlocks: Int? = nil,
+        expectedChunks: Int? = nil,
+        readyChunks: Int? = nil,
+        nonAirBlocksTotal: Int? = nil
     ) {
         self.scenario = scenario
         self.seed = seed
@@ -48,6 +54,9 @@ struct RunMetrics: Encodable {
         self.centerHeight = centerHeight
         self.centerSurfaceY = centerSurfaceY
         self.nonAirBlocks = nonAirBlocks
+        self.expectedChunks = expectedChunks
+        self.readyChunks = readyChunks
+        self.nonAirBlocksTotal = nonAirBlocksTotal
     }
 }
 

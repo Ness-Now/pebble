@@ -210,3 +210,38 @@ entity specs, and it does not reproduce the full `GameCore` streaming path.
 
 Decision: Use only public PebbleCore APIs from PebbleLab for this step and keep
 the scope to a single chunk.
+
+## 2026-06-17 - `chunk_smoke` Chunk Radius
+
+Summary: Added `--chunk-radius <Int>` for `chunk_smoke`, with supported values
+`0...1`. Radius `0` keeps the single origin chunk behavior; radius `1`
+generates and adopts a 3x3 chunk area around the origin.
+
+Files touched:
+
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/PEBBLELAB_JOURNAL.md`
+- `docs/PEBBLELAB_CHANGELOG.md`
+
+Validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --help`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario empty --out runs/smoke_empty_after_radius`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario chunk_smoke --chunk-radius 0 --out runs/smoke_chunk_radius0`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario chunk_smoke --chunk-radius 1 --out runs/smoke_chunk_radius1`
+- `swift run -c release PebbleLab -- --scenario chunk_smoke --chunk-radius 2`
+- `swift run -c release PebbleLab -- --scenario chunk_smoke --chunk-radius -1`
+
+Result: Radius `0` produced one ready chunk. Radius `1` produced nine ready
+chunks and area summary metrics. Invalid radii failed with readable errors.
+
+Known limits: Radius is intentionally capped at `1`, and PebbleLab still does
+not resolve worldgen entity specs or block entity specs.
+
+Decision: Keep chunk area generation small and explicit until scenario/log
+contracts are more mature.

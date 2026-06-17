@@ -5,7 +5,7 @@ let options = parseArguments(CommandLine.arguments)
 validateScenario(options.scenario)
 
 let world = World(dim: .overworld, seed: options.seed)
-let scenarioResult = prepareScenario(options.scenario, world: world)
+let scenarioResult = prepareScenario(options, world: world)
 
 var ticksCompleted = 0
 var eventsNDJSON = ""
@@ -23,7 +23,7 @@ if options.outPath != nil {
             chunksTouched: nil,
             chunkRadius: nil
         ))
-        if options.scenario == "chunk_smoke" {
+        for adopted in scenarioResult.adoptedChunks {
             eventsNDJSON += try encodeEventLine(RunEvent(
                 type: "chunk_smoke_chunk_adopted",
                 tick: 0,
@@ -32,14 +32,36 @@ if options.outPath != nil {
                 ticksRequested: nil,
                 worldTime: nil,
                 success: nil,
+                chunksTouched: adopted.chunksTouched,
+                chunkRadius: scenarioResult.chunkRadius,
+                chunkX: adopted.x,
+                chunkZ: adopted.z,
+                originChunkReady: adopted.x == 0 && adopted.z == 0 ? adopted.originChunkReady : nil,
+                centerHeight: nil,
+                centerSurfaceY: nil,
+                nonAirBlocks: adopted.nonAirBlocks
+            ))
+        }
+        if options.scenario == "chunk_smoke" {
+            eventsNDJSON += try encodeEventLine(RunEvent(
+                type: "chunk_smoke_area_ready",
+                tick: 0,
+                scenario: options.scenario,
+                seed: nil,
+                ticksRequested: nil,
+                worldTime: nil,
+                success: nil,
                 chunksTouched: scenarioResult.chunksTouched,
                 chunkRadius: scenarioResult.chunkRadius,
-                chunkX: 0,
-                chunkZ: 0,
+                chunkX: nil,
+                chunkZ: nil,
                 originChunkReady: scenarioResult.originChunkReady,
                 centerHeight: scenarioResult.centerHeight,
                 centerSurfaceY: scenarioResult.centerSurfaceY,
-                nonAirBlocks: scenarioResult.nonAirBlocks
+                nonAirBlocks: nil,
+                expectedChunks: scenarioResult.expectedChunks,
+                readyChunks: scenarioResult.readyChunks,
+                nonAirBlocksTotal: scenarioResult.nonAirBlocksTotal
             ))
         }
     } catch {
@@ -115,7 +137,10 @@ if let outPath = options.outPath {
                 originChunkReady: scenarioResult.originChunkReady,
                 centerHeight: scenarioResult.centerHeight,
                 centerSurfaceY: scenarioResult.centerSurfaceY,
-                nonAirBlocks: scenarioResult.nonAirBlocks
+                nonAirBlocks: scenarioResult.nonAirBlocks,
+                expectedChunks: scenarioResult.expectedChunks,
+                readyChunks: scenarioResult.readyChunks,
+                nonAirBlocksTotal: scenarioResult.nonAirBlocksTotal
             ),
             to: outURL.appendingPathComponent("metrics.json")
         )

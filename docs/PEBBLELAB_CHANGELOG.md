@@ -21,6 +21,12 @@
 - Additional `chunk_smoke` metrics: `originChunkReady`, `centerHeight`,
   `centerSurfaceY`, and `nonAirBlocks`.
 - `chunk_smoke_chunk_adopted` event in `events.ndjson`.
+- CLI option `--chunk-radius <Int>` for `chunk_smoke`, currently limited to
+  `0...1`.
+- `chunk_smoke` can now generate a 3x3 area around origin when
+  `--chunk-radius 1` is used.
+- Area metrics: `expectedChunks`, `readyChunks`, and `nonAirBlocksTotal`.
+- `chunk_smoke_area_ready` summary event in `events.ndjson`.
 
 ## Changed
 
@@ -30,6 +36,7 @@
   and `chunkRadius`.
 - `chunk_smoke` metrics now reflect an adopted origin chunk instead of a passive
   chunk lookup.
+- `chunk_smoke` emits one `chunk_smoke_chunk_adopted` event per adopted chunk.
 
 ## Fixed
 
@@ -39,6 +46,7 @@
 
 - `chunk_smoke` generates one chunk only; it does not resolve worldgen entities
   or block entities.
+- `--chunk-radius` is capped at `1` for now.
 - No agents, needs, memory, roles, tasks, pathfinding, or social behavior.
 - No Python analysis or training pipeline yet.
 - No visual replay or Pebble viewer integration yet.
