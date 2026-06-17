@@ -117,6 +117,11 @@ struct RunMetrics: Encodable {
     let physicalAgentsTicked: Int?
     let agentsWithPhysicalPlaceholder: Int?
     let physicalBridgeLinks: Int?
+    let physicalAgentsSynced: Int?
+    let physicalSyncEvents: Int?
+    let physicalSyncDistance: Int?
+    let abstractPhysicalDivergence: Int?
+    let maxAbstractPhysicalDivergence: Int?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -183,6 +188,11 @@ struct RunMetrics: Encodable {
         physicalAgentsTicked: Int? = nil,
         agentsWithPhysicalPlaceholder: Int? = nil,
         physicalBridgeLinks: Int? = nil,
+        physicalAgentsSynced: Int? = nil,
+        physicalSyncEvents: Int? = nil,
+        physicalSyncDistance: Int? = nil,
+        abstractPhysicalDivergence: Int? = nil,
+        maxAbstractPhysicalDivergence: Int? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -248,6 +258,11 @@ struct RunMetrics: Encodable {
         self.physicalAgentsTicked = physicalAgentsTicked
         self.agentsWithPhysicalPlaceholder = agentsWithPhysicalPlaceholder
         self.physicalBridgeLinks = physicalBridgeLinks
+        self.physicalAgentsSynced = physicalAgentsSynced
+        self.physicalSyncEvents = physicalSyncEvents
+        self.physicalSyncDistance = physicalSyncDistance
+        self.abstractPhysicalDivergence = abstractPhysicalDivergence
+        self.maxAbstractPhysicalDivergence = maxAbstractPhysicalDivergence
         self.successCriteria = successCriteria
     }
 }

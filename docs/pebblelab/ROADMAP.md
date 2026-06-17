@@ -83,11 +83,13 @@ incrementally through a non-invasive PebbleLab bridge.
 
 ## Phase 4.2A - Physical Placeholder Synchronization
 
-Next recommended step: synchronize the PebbleLab-only physical placeholder with
-abstract movement, still without creating a real PebbleCore entity, touching
-registries, modifying existing mobs, or introducing pathfinding.
+Status: done and validated.
+
+Goal: synchronize the PebbleLab-only physical placeholder with abstract
+movement after agent actions, still without creating a real PebbleCore entity,
+touching registries, modifying existing mobs, or introducing pathfinding.
 
 ## Phase 4.2B - Real PebbleCore Entity Feasibility Patch
 
-Later step: evaluate a registry-safe dedicated experimental entity only after
-the placeholder bridge contract is stable.
+Next recommended step: evaluate a registry-safe dedicated experimental entity
+only after the placeholder bridge contract is stable.

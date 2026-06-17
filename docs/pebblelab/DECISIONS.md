@@ -145,3 +145,18 @@ Reason: a non-invasive placeholder proves the bridge shape and output contract
 without touching entity registries or golden-sensitive mob behavior. The next
 step is placeholder synchronization with abstract movement; a real PebbleCore
 entity remains a later registry-safe feasibility patch.
+
+## 2026-06-18 - Physical Placeholder Syncs From Abstract Movement
+
+Decision: Phase 4.2A synchronizes PebbleLab physical placeholders from abstract
+`LabAgent` positions after abstract movement has been applied.
+
+The bridge remains PebbleLab-only and deterministic. It compares each
+placeholder position with the matching `LabAgent.position`, updates only when
+there is divergence, records sync metrics, and writes
+`lab_physical_agent_synced` events. It does not create a PebbleCore entity,
+does not enter `World.entities`, and does not use registries, collision,
+pathfinding, rendering, save/load, item stacks, combat, or construction.
+
+Reason: the project needs a stable bridge contract and measurable drift before
+planning any registry-safe real entity feasibility patch.

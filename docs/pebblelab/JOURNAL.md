@@ -556,3 +556,58 @@ pushed to `origin/lab/pebblelab-v1`.
 Next steps:
 
 - Phase 4.2A: `physical placeholder synchronization with abstract movement`.
+
+## 2026-06-18 - Phase 4.2A Physical Placeholder Synchronization
+
+Branch: `lab/pebblelab-v1`
+
+Objective: synchronize the PebbleLab-only physical placeholder with abstract
+`LabAgent` movement while keeping the bridge non-invasive.
+
+Files modified:
+
+- `Sources/PebbleLab/LabPhysical.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DECISIONS.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/PHASE_4_PHYSICAL_SYNC.md`
+- `docs/pebblelab/ROADMAP.md`
+
+Behavior added:
+
+- `physical_sync_smoke` creates one abstract `LabAgent` and one PebbleLab-only
+  physical placeholder.
+- The agent uses deterministic abstract `explore` movement.
+- `LabAgentPhysicalBridge` syncs placeholder position after abstract movement.
+- `events.ndjson` includes `lab_physical_agent_synced` only when the
+  placeholder actually catches up to a changed abstract position.
+- `metrics.json` includes physical sync counts, sync distance, and final
+  abstract/physical divergence metrics.
+- `physical_snapshot.json` records abstract position, physical position, final
+  divergence, and placeholder tick count.
+
+Commands of validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --scenario agent_smoke --seed 42 --ticks 3 --out runs/check_agent_smoke_after_physical_sync`
+- `swift run -c release PebbleLab -- --scenario agents_basic --seed 42 --agents 10 --ticks 20 --out runs/check_agents_basic_after_physical_sync`
+- `swift run -c release PebbleLab -- --scenario seek_safety_smoke --seed 42 --ticks 10 --out runs/check_seek_safety_after_physical_sync`
+- `swift run -c release PebbleLab -- --scenario long_run_smoke --seed 42 --agents 10 --ticks 1000 --event-rate 10 --out runs/check_long_run_after_physical_sync`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_physical_sync`
+- `swift run -c release PebbleLab -- --scenario physical_placeholder_smoke --seed 42 --ticks 3 --out runs/check_physical_placeholder_after_sync`
+- `swift run -c release PebbleLab -- --scenario physical_sync_smoke --seed 42 --ticks 5 --out runs/check_physical_sync`
+- `swift run -c release pebsmoke`
+
+Result: validation passed. `physical_sync_smoke` ends with zero final
+abstract/physical divergence, Phase 3 scenarios remain stable, and no
+PebbleCore, registry, renderer, audio, resource pack, packaging, or golden file
+was modified.
+
+Next steps:
+
+- Phase 4.2B: real PebbleCore entity feasibility patch, registry-safe and
+  planned separately.

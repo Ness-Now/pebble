@@ -17,6 +17,9 @@ var worldTickEventsWritten = 0
 var worldTickEventsSuppressed = 0
 var nearbyAgentEventsWritten = 0
 var nearbyAgentEventsSuppressed = 0
+var physicalSyncEvents = 0
+var physicalSyncDistance = 0
+var physicalSyncedAgentIds = Set<String>()
 
 func shouldWriteFrequentEvent(tick: Int) -> Bool {
     options.eventRate == 1 || tick % options.eventRate == 0
@@ -165,6 +168,26 @@ func makePhysicalSpawnEvent(_ handle: LabPhysicalAgentHandle) -> RunEvent {
         z: handle.position.z,
         physicalId: handle.physicalId,
         kind: handle.kind
+    )
+}
+
+func makePhysicalSyncEvent(_ sync: LabPhysicalAgentSync) -> RunEvent {
+    RunEvent(
+        type: "lab_physical_agent_synced",
+        tick: sync.tick,
+        scenario: options.scenario,
+        agentId: sync.agentId,
+        x: sync.abstractPosition.x,
+        y: sync.abstractPosition.y,
+        z: sync.abstractPosition.z,
+        fromX: sync.fromPosition.x,
+        fromY: sync.fromPosition.y,
+        fromZ: sync.fromPosition.z,
+        toX: sync.toPosition.x,
+        toY: sync.toPosition.y,
+        toZ: sync.toPosition.z,
+        distanceManhattan: sync.distanceManhattan,
+        physicalId: sync.physicalId
     )
 }
 
@@ -503,7 +526,6 @@ if options.outPath != nil {
 for _ in 0..<options.ticks {
     world.tick()
     ticksCompleted += 1
-    physicalBridge.tick()
 
     if !labAgents.isEmpty {
         let allAgents = labAgents
@@ -522,6 +544,26 @@ for _ in 0..<options.ticks {
                 labAgents[index].decideAction(tick: ticksCompleted)
                 labAgents[index].applyLastActionEffect(tick: ticksCompleted)
                 _ = labAgents[index].applyAbstractMovement(tick: ticksCompleted)
+            }
+        }
+    }
+
+    physicalBridge.tick()
+    let syncs = physicalBridge.sync(with: labAgents, tick: ticksCompleted)
+    if !syncs.isEmpty {
+        physicalSyncEvents += syncs.count
+        physicalSyncDistance += syncs.reduce(0) { $0 + $1.distanceManhattan }
+        for sync in syncs {
+            physicalSyncedAgentIds.insert(sync.agentId)
+        }
+
+        if options.outPath != nil {
+            do {
+                for sync in syncs {
+                    try appendEvent(makePhysicalSyncEvent(sync))
+                }
+            } catch {
+                fail("failed to encode physical sync event: \(error)")
             }
         }
     }
@@ -615,7 +657,7 @@ if let outPath = options.outPath {
                 path: "world_snapshot.json"
             ))
         }
-        if !labAgents.isEmpty, options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke" || options.scenario == "long_run_smoke" || options.scenario == "regression_smoke" || options.scenario == "physical_placeholder_smoke" {
+        if !labAgents.isEmpty, options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke" || options.scenario == "long_run_smoke" || options.scenario == "regression_smoke" || options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" {
             try writeJSON(
                 AgentSnapshot(
                     scenario: options.scenario,
@@ -633,7 +675,7 @@ if let outPath = options.outPath {
                 agents: labAgents.count
             ))
         }
-        if options.scenario == "physical_placeholder_smoke" {
+        if options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" {
             try writeJSON(
                 PhysicalSnapshot(
                     scenario: options.scenario,
@@ -715,6 +757,11 @@ if let outPath = options.outPath {
             physicalAgentsTicked: physicalBridge.count == 0 ? nil : physicalBridge.tickCount,
             agentsWithPhysicalPlaceholder: physicalBridge.count == 0 ? nil : physicalBridge.snapshotLinks(for: labAgents).count,
             physicalBridgeLinks: physicalBridge.count == 0 ? nil : physicalBridge.linkCount,
+            physicalAgentsSynced: physicalBridge.count == 0 ? nil : physicalSyncedAgentIds.count,
+            physicalSyncEvents: physicalBridge.count == 0 ? nil : physicalSyncEvents,
+            physicalSyncDistance: physicalBridge.count == 0 ? nil : physicalSyncDistance,
+            abstractPhysicalDivergence: physicalBridge.count == 0 ? nil : physicalBridge.totalDivergence(from: labAgents),
+            maxAbstractPhysicalDivergence: physicalBridge.count == 0 ? nil : physicalBridge.maxDivergence(from: labAgents),
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))
