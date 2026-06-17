@@ -484,7 +484,7 @@ if let outPath = options.outPath {
                 path: "world_snapshot.json"
             ))
         }
-        if !labAgents.isEmpty, options.scenario == "agent_smoke" {
+        if !labAgents.isEmpty, options.scenario == "agent_smoke" || options.scenario == "agents_basic" {
             try writeJSON(
                 AgentSnapshot(
                     scenario: options.scenario,

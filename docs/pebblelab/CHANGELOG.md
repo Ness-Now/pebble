@@ -12,3 +12,4 @@
 - Added `agent_home_assigned` NDJSON events and health/fear/home metrics.
 - Added `LabInventory` minimal v0 for abstract PebbleLab agents.
 - Added `agent_inventory_assigned` NDJSON events and inventory metrics.
+- Added `agents_basic` scenario with configurable `--agents` count.

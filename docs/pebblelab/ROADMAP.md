@@ -31,6 +31,12 @@ sharing.
 
 ## Phase 3.5 - agents_basic Scenario And --agents N
 
-Next recommended step: add a small scenario or CLI option that can create a
-configurable number of abstract agents while keeping the current deterministic
-logging and snapshot contracts.
+Status: done and validated.
+
+Goal: keep `agent_smoke` as a fixed two-agent validation scenario while adding
+`agents_basic` as a configurable deterministic multi-agent simulation scenario.
+
+## Phase 3.6 - Abstract Movement V0
+
+Next recommended step: add abstract, non-physical movement intent or position
+updates without pathfinding, PebbleCore entities, collision, or world mutation.

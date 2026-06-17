@@ -1,3 +1,4 @@
+import Foundation
 import PebbleCore
 
 struct ScenarioResult {
@@ -25,11 +26,11 @@ struct AdoptedChunk {
     let nonAirBlocks: Int
 }
 
-let supportedScenarios = ["empty", "chunk_smoke", "agent_smoke"]
+let supportedScenarios = ["empty", "chunk_smoke", "agent_smoke", "agents_basic"]
 
 func validateScenario(_ scenario: String) {
     guard supportedScenarios.contains(scenario) else {
-        fail("unsupported scenario: \(scenario). Currently supported: empty, chunk_smoke, agent_smoke")
+        fail("unsupported scenario: \(scenario). Currently supported: empty, chunk_smoke, agent_smoke, agents_basic")
     }
 }
 
@@ -37,11 +38,11 @@ func prepareScenario(_ options: Options, world: World) -> ScenarioResult {
     let scenario = options.scenario
 
     switch scenario {
-    case "chunk_smoke", "agent_smoke":
+    case "chunk_smoke", "agent_smoke", "agents_basic":
         registerAllBlocks()
         registerAllBiomes()
 
-        let chunkRadius = scenario == "agent_smoke" && !options.chunkRadiusProvided ? 1 : options.chunkRadius
+        let chunkRadius = (scenario == "agent_smoke" || scenario == "agents_basic") && !options.chunkRadiusProvided ? 1 : options.chunkRadius
         var adoptedChunks: [AdoptedChunk] = []
         var nonAirBlocksTotal = 0
 
@@ -108,10 +109,40 @@ func prepareScenario(_ options: Options, world: World) -> ScenarioResult {
                 agent0,
                 agent1
             ]
+        } else if scenario == "agents_basic" {
+            result.agents = makeBasicAgents(count: options.agents, seed: options.seed, world: world)
         }
         return result
     default:
         return ScenarioResult()
+    }
+}
+
+func makeBasicAgents(count: Int, seed: UInt32, world: World) -> [LabAgent] {
+    let columns = max(1, Int(ceil(Double(count).squareRoot())))
+    let rows = max(1, Int(ceil(Double(count) / Double(columns))))
+    let spacing = 4
+    let centerX = 8
+    let centerZ = 8
+    let xOffset = ((columns - 1) * spacing) / 2
+    let zOffset = ((rows - 1) * spacing) / 2
+    let seedOffset = Int(seed % UInt32(count))
+
+    return (0..<count).map { index in
+        let placedIndex = (index + seedOffset) % count
+        let column = placedIndex % columns
+        let row = placedIndex / columns
+        let x = centerX + column * spacing - xOffset
+        let z = centerZ + row * spacing - zOffset
+        var agent = makeLabAgent(id: "agent_\(index)", x: x, z: z, world: world)
+
+        if index == 0 {
+            agent.inventory.add("food", count: 1)
+        } else if index == 1 {
+            agent.inventory.add("wood", count: 2)
+        }
+
+        return agent
     }
 }
 
@@ -129,7 +160,7 @@ func makeWorldSnapshot(
     result: ScenarioResult,
     ticksCompleted: Int
 ) -> WorldSnapshot? {
-    guard (options.scenario == "chunk_smoke" || options.scenario == "agent_smoke"),
+    guard (options.scenario == "chunk_smoke" || options.scenario == "agent_smoke" || options.scenario == "agents_basic"),
           let chunkRadius = result.chunkRadius,
           let expectedChunks = result.expectedChunks,
           let readyChunks = result.readyChunks,

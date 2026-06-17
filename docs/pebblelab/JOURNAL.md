@@ -174,3 +174,46 @@ and the smoke suite remains green.
 Next steps:
 
 - Phase 3.5: `agents_basic scenario + --agents N`.
+
+## 2026-06-17 - Phase 3.5 agents_basic Scenario And Agents CLI
+
+Branch: `lab/pebblelab-v1`
+
+Objective: keep `agent_smoke` as a fixed two-agent smoke test and add a
+deterministic configurable multi-agent scenario for longer abstract runs.
+
+Files modified:
+
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DECISIONS.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+Behavior added:
+
+- CLI option `--agents <Int>` with default `2` and supported range `1...100`.
+- Scenario `agents_basic` creates deterministic abstract agents with stable
+  ids `agent_0`, `agent_1`, `agent_2`, and so on.
+- `agents_basic` places agents on a compact seed/index-derived grid around the
+  world center, keeping nearby-agent perception useful.
+- `agent_smoke` remains a fixed two-agent validation scenario.
+- `agent_snapshot.json`, metrics, and NDJSON agent events are emitted for
+  `agents_basic`.
+
+Commands of validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --scenario agent_smoke --seed 42 --ticks 3 --out runs/agent_smoke_after_agents_basic`
+- `swift run -c release PebbleLab -- --scenario agents_basic --seed 42 --agents 10 --ticks 20 --out runs/agents_basic_v0`
+- `swift run -c release pebsmoke`
+
+Result: validation passed. `agent_smoke` remains a fixed two-agent scenario,
+`agents_basic --agents 10` creates ten living abstract agents with homes and
+nearby-agent perception, and the smoke suite remains green.
+
+Next steps:
+
+- Phase 3.6: `abstract movement v0`.

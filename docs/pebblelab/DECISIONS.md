@@ -48,3 +48,16 @@ physical agents and world interactions are introduced.
 
 Reason: future food, gathering, construction, and social behavior needs a small
 deterministic inventory surface before coupling agents to the full item system.
+
+## 2026-06-17 - Fixed Smoke Scenario And Configurable Agent Scenario
+
+Decision: PebbleLab keeps `agent_smoke` as a fixed two-agent validation
+scenario and adds `agents_basic` as the configurable multi-agent simulation
+scenario.
+
+`agents_basic` uses deterministic grid placement from the run seed and agent
+index. It does not introduce movement, pathfinding, physical entities,
+resource sharing, economy, or world mutation.
+
+Reason: the project needs a stable tiny smoke scenario and a separate scalable
+scenario for longer abstract simulations.

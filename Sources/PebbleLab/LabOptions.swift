@@ -7,6 +7,7 @@ struct Options {
     var outPath: String?
     var chunkRadius = 0
     var chunkRadiusProvided = false
+    var agents = 2
 }
 
 func usage() -> String {
@@ -14,14 +15,15 @@ func usage() -> String {
     PebbleLab - headless PebbleCore simulation runner
 
     Usage:
-      PebbleLab [--seed <UInt32>] [--ticks <Int>] [--scenario empty] [--chunk-radius <Int>] [--out <path>]
+      PebbleLab [--seed <UInt32>] [--ticks <Int>] [--scenario empty] [--chunk-radius <Int>] [--agents <Int>] [--out <path>]
       PebbleLab --help
 
     Options:
       --seed <UInt32>      World seed. Default: 12345
       --ticks <Int>        Number of ticks to run. Default: 20
-      --scenario <String>  Scenario name. Currently supported: empty, chunk_smoke, agent_smoke
+      --scenario <String>  Scenario name. Currently supported: empty, chunk_smoke, agent_smoke, agents_basic
       --chunk-radius <Int> Chunk radius for chunk_smoke. Default: 0. Supported: 0...1
+      --agents <Int>       Agent count for agents_basic. Default: 2. Supported: 1...100
       --out <path>         Directory where run outputs are written.
       --help               Show this help and exit.
     """
@@ -78,6 +80,19 @@ func parseArguments(_ arguments: [String]) -> Options {
             }
             options.chunkRadius = radius
             options.chunkRadiusProvided = true
+        case "--agents":
+            index += 1
+            guard index < arguments.count else { fail("missing value for --agents") }
+            guard let agents = Int(arguments[index]) else {
+                fail("invalid Int value for --agents: \(arguments[index])")
+            }
+            guard agents >= 1 else {
+                fail("invalid --agents \(agents): must be at least 1")
+            }
+            guard agents <= 100 else {
+                fail("invalid --agents \(agents): supported range is 1...100")
+            }
+            options.agents = agents
         case "--out":
             index += 1
             guard index < arguments.count else { fail("missing value for --out") }
