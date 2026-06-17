@@ -23,3 +23,16 @@ relationship system.
 Reason: goals create a small explicit layer between observations/needs and
 actions, making future behavior easier to inspect before adding more complex
 planning.
+
+## 2026-06-17 - Abstract Vital And Home State
+
+Decision: PebbleLab agents track `health`, `fear`, and `homePosition` as
+abstract agent state.
+
+These fields do not imply physical movement, pathfinding, inventory,
+world mutation, or social relationships. `homePosition` is assigned from the
+spawn position for now, and fear/health only influence the deterministic goal
+priority layer.
+
+Reason: future survival and settlement behavior needs stable state anchors
+before adding inventory, physical agents, homes, groups, or social systems.

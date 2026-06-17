@@ -87,3 +87,46 @@ remains green.
 Next steps:
 
 - Phase 3.3: `health/fear/homePosition v0`.
+
+## 2026-06-17 - Phase 3.3 Health Fear HomePosition V0
+
+Branch: `lab/pebblelab-v1`
+
+Objective: add minimal survival and anchoring state to abstract agents without
+physical entities, pathfinding, inventory, or social relationships.
+
+Files modified:
+
+- `Sources/PebbleLab/LabAgent.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DECISIONS.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+Behavior added:
+
+- Each `LabAgent` now has `health`, `fear`, `isAlive`, and `homePosition`.
+- `homePosition` is assigned from the spawn position in `agent_smoke`.
+- Goal selection now prioritizes low health or high fear before fatigue,
+  nearby agents, curiosity, and idle behavior.
+- `agent_snapshot.json` includes the new agent state.
+- `events.ndjson` includes `agent_home_assigned`.
+- `metrics.json` includes `agentsAlive`, `averageHealth`, `averageFear`,
+  `agentsWithHome`, `minHealth`, and `maxFear`.
+
+Commands of validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --scenario agent_smoke --seed 42 --ticks 3 --out runs/agent_smoke_health_fear_home_v0`
+- `swift run -c release pebsmoke`
+
+Result: validation passed. `agent_smoke` writes health, fear, alive state, and
+home position for both agents; metrics report two living agents with homes; and
+the smoke suite remains green.
+
+Next steps:
+
+- Phase 3.4: `LabInventory minimal v0`.

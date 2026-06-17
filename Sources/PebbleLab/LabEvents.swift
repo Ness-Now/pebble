@@ -53,6 +53,8 @@ struct RunEvent: Encodable {
     let curiosityAfter: Double?
     let safetyBefore: Double?
     let safetyAfter: Double?
+    let fearBefore: Int?
+    let fearAfter: Int?
     let stateBefore: String?
     let stateAfter: String?
     let dx: Int?
@@ -62,6 +64,11 @@ struct RunEvent: Encodable {
     let fromGoal: String?
     let toGoal: String?
     let urgency: Int?
+    let fromValue: Int?
+    let toValue: Int?
+    let homeX: Int?
+    let homeY: Int?
+    let homeZ: Int?
 
     init(
         type: String,
@@ -116,6 +123,8 @@ struct RunEvent: Encodable {
         curiosityAfter: Double? = nil,
         safetyBefore: Double? = nil,
         safetyAfter: Double? = nil,
+        fearBefore: Int? = nil,
+        fearAfter: Int? = nil,
         stateBefore: String? = nil,
         stateAfter: String? = nil,
         dx: Int? = nil,
@@ -124,7 +133,12 @@ struct RunEvent: Encodable {
         distanceManhattan: Int? = nil,
         fromGoal: String? = nil,
         toGoal: String? = nil,
-        urgency: Int? = nil
+        urgency: Int? = nil,
+        fromValue: Int? = nil,
+        toValue: Int? = nil,
+        homeX: Int? = nil,
+        homeY: Int? = nil,
+        homeZ: Int? = nil
     ) {
         self.type = type
         self.event = event
@@ -178,6 +192,8 @@ struct RunEvent: Encodable {
         self.curiosityAfter = curiosityAfter
         self.safetyBefore = safetyBefore
         self.safetyAfter = safetyAfter
+        self.fearBefore = fearBefore
+        self.fearAfter = fearAfter
         self.stateBefore = stateBefore
         self.stateAfter = stateAfter
         self.dx = dx
@@ -187,6 +203,11 @@ struct RunEvent: Encodable {
         self.fromGoal = fromGoal
         self.toGoal = toGoal
         self.urgency = urgency
+        self.fromValue = fromValue
+        self.toValue = toValue
+        self.homeX = homeX
+        self.homeY = homeY
+        self.homeZ = homeZ
     }
 }
 

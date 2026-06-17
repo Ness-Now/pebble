@@ -8,3 +8,5 @@
 - Added `LabGoal/currentGoal` v0 for abstract PebbleLab agents.
 - Added `agent_goal_changed` NDJSON events.
 - Added `agentGoalSelections`, `agentGoalChanges`, and `goalsByKind` metrics.
+- Added health, fear and homePosition v0 for abstract PebbleLab agents.
+- Added `agent_home_assigned` NDJSON events and health/fear/home metrics.

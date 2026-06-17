@@ -55,6 +55,31 @@ func encodeGoalChangeEvent(_ change: LabGoalChange, agent: LabAgent, tick: Int) 
     ))
 }
 
+func encodeHomeAssignedEvent(_ agent: LabAgent, tick: Int) throws -> String {
+    try encodeEventLine(RunEvent(
+        type: "agent_home_assigned",
+        tick: tick,
+        scenario: options.scenario,
+        agentId: agent.id,
+        reason: "spawn position assigned as home",
+        homeX: agent.homePosition.x,
+        homeY: agent.homePosition.y,
+        homeZ: agent.homePosition.z
+    ))
+}
+
+func encodeFearChangedEvent(_ agent: LabAgent, effect: LabAgentActionEffect, tick: Int) throws -> String {
+    try encodeEventLine(RunEvent(
+        type: "agent_fear_changed",
+        tick: tick,
+        scenario: options.scenario,
+        agentId: agent.id,
+        reason: effect.effect,
+        fromValue: effect.fearBefore,
+        toValue: effect.fearAfter
+    ))
+}
+
 func encodeSpawnAndInitialObservation(agent: inout LabAgent, allAgents: [LabAgent]) throws -> String {
     var lines = ""
     let memoryStart = agent.memory.count
@@ -78,6 +103,7 @@ func encodeSpawnAndInitialObservation(agent: inout LabAgent, allAgents: [LabAgen
         z: agent.position.z,
         state: agent.state
     ))
+    lines += try encodeHomeAssignedEvent(agent, tick: 0)
     if let observation = agent.observation {
         lines += try encodeEventLine(RunEvent(
             type: "agent_observed",
@@ -179,9 +205,14 @@ func tickAndEncodeAgent(_ agent: inout LabAgent, allAgents: [LabAgent]) throws -
             curiosityAfter: effect.curiosityAfter,
             safetyBefore: effect.safetyBefore,
             safetyAfter: effect.safetyAfter,
+            fearBefore: effect.fearBefore,
+            fearAfter: effect.fearAfter,
             stateBefore: effect.stateBefore,
             stateAfter: effect.stateAfter
         ))
+        if effect.fearBefore != effect.fearAfter {
+            lines += try encodeFearChangedEvent(agent, effect: effect, tick: ticksCompleted)
+        }
     }
     for entry in agent.memory.dropFirst(memoryStart) {
         lines += try encodeMemoryEvent(entry, agent: agent, scenario: options.scenario)
@@ -197,6 +228,20 @@ func sumAgents(_ value: (LabAgent) -> Int) -> Int? {
 func countAgents(_ include: (LabAgent) -> Bool) -> Int? {
     guard !labAgents.isEmpty else { return nil }
     return labAgents.filter(include).count
+}
+
+func averageAgents(_ value: (LabAgent) -> Int) -> Double? {
+    guard !labAgents.isEmpty else { return nil }
+    let total = labAgents.reduce(0) { $0 + value($1) }
+    return Double(total) / Double(labAgents.count)
+}
+
+func minAgentValue(_ value: (LabAgent) -> Int) -> Int? {
+    labAgents.map(value).min()
+}
+
+func maxAgentValue(_ value: (LabAgent) -> Int) -> Int? {
+    labAgents.map(value).max()
 }
 
 func goalsByKind() -> [String: Int]? {
@@ -383,7 +428,13 @@ if let outPath = options.outPath {
                 agentsWithNearbyAgents: countAgents { !$0.nearbyAgents.isEmpty },
                 agentGoalSelections: sumAgents { $0.goalSelectionCount },
                 agentGoalChanges: sumAgents { $0.goalChangeCount },
-                goalsByKind: goalsByKind()
+                goalsByKind: goalsByKind(),
+                agentsAlive: countAgents { $0.isAlive },
+                averageHealth: averageAgents { $0.health },
+                averageFear: averageAgents { $0.fear },
+                agentsWithHome: countAgents { _ in true },
+                minHealth: minAgentValue { $0.health },
+                maxFear: maxAgentValue { $0.fear }
             ),
             to: outURL.appendingPathComponent("metrics.json")
         )

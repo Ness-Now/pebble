@@ -7,6 +7,9 @@ struct LabAgent: Encodable {
     var state: String
     var position: LabAgentPosition
     var needs: LabAgentNeeds
+    var health: Int
+    var fear: Int
+    var homePosition: LabAgentPosition
     var observation: LabAgentObservation?
     var nearbyAgents: [LabNearbyAgentObservation]
     var currentGoal: LabGoal
@@ -22,12 +25,18 @@ struct LabAgent: Encodable {
     var actionCount: Int
     var actionEffectCount: Int
 
+    var isAlive: Bool { health > 0 }
+
     init(id: String, x: Int, y: Int, z: Int) {
         self.id = id
+        let spawnPosition = LabAgentPosition(x: x, y: y, z: z)
         type = "abstract_lab_agent"
         state = "idle"
-        position = LabAgentPosition(x: x, y: y, z: z)
+        position = spawnPosition
         needs = LabAgentNeeds(hunger: 0, fatigue: 0, curiosity: 0.5, safety: 1)
+        health = 100
+        fear = 10
+        homePosition = spawnPosition
         observation = nil
         nearbyAgents = []
         currentGoal = LabGoal(kind: .idle, reason: "initial goal", startedAtTick: 0, urgency: 0)
@@ -105,7 +114,11 @@ struct LabAgent: Encodable {
         goalSelectionCount += 1
 
         let nextGoal: LabGoal
-        if needs.safety < 0.5 {
+        if health <= 25 {
+            nextGoal = LabGoal(kind: .seekSafety, reason: "health <= 25", startedAtTick: tick, urgency: 100)
+        } else if fear >= 70 {
+            nextGoal = LabGoal(kind: .seekSafety, reason: "fear >= 70", startedAtTick: tick, urgency: 85)
+        } else if needs.safety < 0.5 {
             nextGoal = LabGoal(kind: .seekSafety, reason: "safety < 0.5", startedAtTick: tick, urgency: 90)
         } else if needs.fatigue >= 0.02 {
             nextGoal = LabGoal(kind: .rest, reason: "fatigue >= 0.02", startedAtTick: tick, urgency: 70)
@@ -157,21 +170,26 @@ struct LabAgent: Encodable {
         let fatigueBefore = needs.fatigue
         let curiosityBefore = needs.curiosity
         let safetyBefore = needs.safety
+        let fearBefore = fear
         let stateBefore = state
         let effect: String
 
         switch action.name {
         case "rest":
             needs.fatigue = max(0, needs.fatigue - 0.02)
+            fear = max(0, fear - 1)
             state = "resting"
-            effect = "fatigue -0.02"
+            effect = "fatigue -0.02, fear -1"
         case "observe_area":
             needs.curiosity = min(1, needs.curiosity + 0.01)
             state = "observing"
             effect = "curiosity +0.01"
         case "wait":
+            if currentGoal.kind == .seekSafety {
+                fear = max(0, fear - 1)
+            }
             state = "waiting"
-            effect = "no need change"
+            effect = currentGoal.kind == .seekSafety ? "fear -1" : "no need change"
         default:
             effect = "no effect"
         }
@@ -188,6 +206,8 @@ struct LabAgent: Encodable {
             curiosityAfter: needs.curiosity,
             safetyBefore: safetyBefore,
             safetyAfter: needs.safety,
+            fearBefore: fearBefore,
+            fearAfter: fear,
             stateBefore: stateBefore,
             stateAfter: state
         )
@@ -215,6 +235,10 @@ struct LabAgent: Encodable {
         case state
         case position
         case needs
+        case health
+        case isAlive
+        case fear
+        case homePosition
         case observation
         case nearbyAgents
         case currentGoal
@@ -238,6 +262,10 @@ struct LabAgent: Encodable {
         try container.encode(state, forKey: .state)
         try container.encode(position, forKey: .position)
         try container.encode(needs, forKey: .needs)
+        try container.encode(health, forKey: .health)
+        try container.encode(isAlive, forKey: .isAlive)
+        try container.encode(fear, forKey: .fear)
+        try container.encode(homePosition, forKey: .homePosition)
         try container.encodeIfPresent(observation, forKey: .observation)
         try container.encode(nearbyAgents, forKey: .nearbyAgents)
         try container.encode(currentGoal, forKey: .currentGoal)
@@ -255,7 +283,7 @@ struct LabAgent: Encodable {
     }
 }
 
-struct LabAgentPosition: Encodable {
+struct LabAgentPosition: Codable, Equatable {
     let x: Int
     let y: Int
     let z: Int
@@ -328,6 +356,8 @@ struct LabAgentActionEffect: Encodable {
     let curiosityAfter: Double
     let safetyBefore: Double
     let safetyAfter: Double
+    let fearBefore: Int
+    let fearAfter: Int
     let stateBefore: String
     let stateAfter: String
 }
