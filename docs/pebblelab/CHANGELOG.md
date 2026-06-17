@@ -18,3 +18,4 @@
 - Added `long_run_smoke` scenario and event rate controls.
 - Added `regression_smoke` scenario with compact `regression_report.json`.
 - Documented Phase 4 physical agent spike plan.
+- Added physical placeholder smoke for PebbleLab agents.

@@ -129,3 +129,19 @@ reviewed separately and must not reorder existing registrations.
 Reason: PebbleCore entities bring registry, save/load, ticking, pathfinding,
 rendering, and golden-test risks. A bridge-first plan preserves deterministic
 PebbleLab scenarios while creating a controlled path toward physical agents.
+
+## 2026-06-17 - Non-Invasive Physical Placeholder
+
+Decision: Phase 4.1 introduces a PebbleLab-only physical placeholder for
+`LabAgent` instead of registering a new PebbleCore mob.
+
+The placeholder records a deterministic `agentId` to `physicalId` link, a
+physical position, kind, spawn tick, tick count, metrics, NDJSON events, and a
+dedicated `physical_snapshot.json`. It does not enter `World.entities`, does
+not modify PebbleCore, and does not use pathfinding, collision, rendering,
+save/load, item stacks, combat, or construction.
+
+Reason: a non-invasive placeholder proves the bridge shape and output contract
+without touching entity registries or golden-sensitive mob behavior. The next
+step is placeholder synchronization with abstract movement; a real PebbleCore
+entity remains a later registry-safe feasibility patch.

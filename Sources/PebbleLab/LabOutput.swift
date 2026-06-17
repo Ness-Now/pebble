@@ -113,6 +113,10 @@ struct RunMetrics: Encodable {
     let worldTickEventsSuppressed: Int?
     let nearbyAgentEventsWritten: Int?
     let nearbyAgentEventsSuppressed: Int?
+    let physicalAgentsSpawned: Int?
+    let physicalAgentsTicked: Int?
+    let agentsWithPhysicalPlaceholder: Int?
+    let physicalBridgeLinks: Int?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -175,6 +179,10 @@ struct RunMetrics: Encodable {
         worldTickEventsSuppressed: Int? = nil,
         nearbyAgentEventsWritten: Int? = nil,
         nearbyAgentEventsSuppressed: Int? = nil,
+        physicalAgentsSpawned: Int? = nil,
+        physicalAgentsTicked: Int? = nil,
+        agentsWithPhysicalPlaceholder: Int? = nil,
+        physicalBridgeLinks: Int? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -236,6 +244,10 @@ struct RunMetrics: Encodable {
         self.worldTickEventsSuppressed = worldTickEventsSuppressed
         self.nearbyAgentEventsWritten = nearbyAgentEventsWritten
         self.nearbyAgentEventsSuppressed = nearbyAgentEventsSuppressed
+        self.physicalAgentsSpawned = physicalAgentsSpawned
+        self.physicalAgentsTicked = physicalAgentsTicked
+        self.agentsWithPhysicalPlaceholder = agentsWithPhysicalPlaceholder
+        self.physicalBridgeLinks = physicalBridgeLinks
         self.successCriteria = successCriteria
     }
 }

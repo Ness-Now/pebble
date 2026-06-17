@@ -322,6 +322,13 @@ Two acceptable implementation tracks for Phase 4.1:
 The safer default is bridge-first planning followed by a deliberately reviewed
 new-entity patch.
 
+Phase 4.1 confirmed this direction by adding a PebbleLab-only
+`LabAgentPhysicalBridge` and `LabPhysicalAgentHandle`. The placeholder is not a
+PebbleCore entity, does not enter `World.entities`, and intentionally defers
+registry work. The next recommended step is Phase 4.2A: synchronize the
+placeholder position with abstract movement before evaluating a real PebbleCore
+entity feasibility patch.
+
 ## 6. Risks
 
 Registry order:

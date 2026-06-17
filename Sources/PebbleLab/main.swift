@@ -7,6 +7,7 @@ validateScenario(options.scenario)
 let world = World(dim: .overworld, seed: options.seed)
 let scenarioResult = prepareScenario(options, world: world)
 var labAgents = scenarioResult.agents
+var physicalBridge = scenarioResult.physicalBridge
 
 var ticksCompleted = 0
 var eventsNDJSON = ""
@@ -151,6 +152,20 @@ func encodeMovementEvent(_ movement: LabAgentMovement, agent: LabAgent) throws -
         distanceFromHomeAfter: movement.distanceFromHomeAfter,
         distanceReducedTowardHome: movement.distanceReducedTowardHome
     ))
+}
+
+func makePhysicalSpawnEvent(_ handle: LabPhysicalAgentHandle) -> RunEvent {
+    RunEvent(
+        type: "lab_physical_agent_spawned",
+        tick: handle.spawnedAtTick,
+        scenario: options.scenario,
+        agentId: handle.agentId,
+        x: handle.position.x,
+        y: handle.position.y,
+        z: handle.position.z,
+        physicalId: handle.physicalId,
+        kind: handle.kind
+    )
 }
 
 func encodeSpawnAndInitialObservation(agent: inout LabAgent, allAgents: [LabAgent]) throws -> String {
@@ -477,6 +492,9 @@ if options.outPath != nil {
                 allAgents: allAgents
             ))
         }
+        for handle in physicalBridge.handles {
+            try appendEvent(makePhysicalSpawnEvent(handle))
+        }
     } catch {
         fail("failed to encode run_started event: \(error)")
     }
@@ -485,6 +503,7 @@ if options.outPath != nil {
 for _ in 0..<options.ticks {
     world.tick()
     ticksCompleted += 1
+    physicalBridge.tick()
 
     if !labAgents.isEmpty {
         let allAgents = labAgents
@@ -596,7 +615,7 @@ if let outPath = options.outPath {
                 path: "world_snapshot.json"
             ))
         }
-        if !labAgents.isEmpty, options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke" || options.scenario == "long_run_smoke" || options.scenario == "regression_smoke" {
+        if !labAgents.isEmpty, options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke" || options.scenario == "long_run_smoke" || options.scenario == "regression_smoke" || options.scenario == "physical_placeholder_smoke" {
             try writeJSON(
                 AgentSnapshot(
                     scenario: options.scenario,
@@ -612,6 +631,24 @@ if let outPath = options.outPath {
                 scenario: options.scenario,
                 path: "agent_snapshot.json",
                 agents: labAgents.count
+            ))
+        }
+        if options.scenario == "physical_placeholder_smoke" {
+            try writeJSON(
+                PhysicalSnapshot(
+                    scenario: options.scenario,
+                    seed: options.seed,
+                    ticksCompleted: ticksCompleted,
+                    physicalAgents: physicalBridge.snapshotLinks(for: labAgents)
+                ),
+                to: outURL.appendingPathComponent("physical_snapshot.json")
+            )
+            try appendEvent(RunEvent(
+                type: "physical_snapshot_written",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                path: "physical_snapshot.json",
+                agents: physicalBridge.count
             ))
         }
         let metrics = RunMetrics(
@@ -674,6 +711,10 @@ if let outPath = options.outPath {
             worldTickEventsSuppressed: worldTickEventsSuppressed,
             nearbyAgentEventsWritten: nearbyAgentEventsWritten,
             nearbyAgentEventsSuppressed: nearbyAgentEventsSuppressed,
+            physicalAgentsSpawned: physicalBridge.count == 0 ? nil : physicalBridge.count,
+            physicalAgentsTicked: physicalBridge.count == 0 ? nil : physicalBridge.tickCount,
+            agentsWithPhysicalPlaceholder: physicalBridge.count == 0 ? nil : physicalBridge.snapshotLinks(for: labAgents).count,
+            physicalBridgeLinks: physicalBridge.count == 0 ? nil : physicalBridge.linkCount,
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))

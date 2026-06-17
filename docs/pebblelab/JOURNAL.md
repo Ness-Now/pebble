@@ -455,3 +455,104 @@ modified.
 Next steps:
 
 - Phase 4.1: `physical agent placeholder spawn`.
+
+## 2026-06-17 - Phase 4.1 Physical Agent Placeholder Spawn
+
+Branch: `lab/pebblelab-v1`
+
+Objective: add a deterministic non-invasive physical placeholder linked to a
+PebbleLab abstract agent, without creating a PebbleCore entity or modifying
+registries.
+
+Files modified:
+
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabPhysical.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DECISIONS.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/PHASE_4_PHYSICAL_AGENT_SPIKE.md`
+- `docs/pebblelab/ROADMAP.md`
+
+Behavior added:
+
+- `physical_placeholder_smoke` creates one abstract `LabAgent`.
+- `LabAgentPhysicalBridge` creates one PebbleLab-only physical placeholder.
+- The placeholder has stable id `physical_agent_0`, kind
+  `lab_physical_placeholder`, spawn tick, position, and tick count.
+- `events.ndjson` includes `lab_physical_agent_spawned`.
+- `metrics.json` includes physical placeholder metrics.
+- `physical_snapshot.json` records the abstract-to-physical link.
+
+Commands of validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --scenario physical_placeholder_smoke --seed 42 --ticks 3 --out runs/physical_placeholder_smoke_v0`
+- `swift run -c release PebbleLab -- --scenario agent_smoke --seed 42 --ticks 3 --out runs/agent_smoke_after_physical_placeholder`
+- `swift run -c release PebbleLab -- --scenario agents_basic --seed 42 --agents 10 --ticks 20 --out runs/agents_basic_after_physical_placeholder`
+- `swift run -c release PebbleLab -- --scenario seek_safety_smoke --seed 42 --ticks 10 --out runs/seek_safety_after_physical_placeholder`
+- `swift run -c release PebbleLab -- --scenario long_run_smoke --seed 42 --agents 10 --ticks 1000 --event-rate 10 --out runs/long_run_after_physical_placeholder`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/regression_after_physical_placeholder`
+- `swift run -c release pebsmoke`
+
+Result: validation passed. Existing Phase 3 scenarios remain stable, the new
+placeholder smoke reports one physical placeholder, and no PebbleCore entity,
+registry, renderer, audio, resource pack, packaging, or golden file was
+modified.
+
+Next steps:
+
+- Phase 4.2A: `physical placeholder synchronization with abstract movement`.
+
+## 2026-06-18 - Phase 4.1 Reconciliation For GitHub Publish
+
+Branch: `lab/pebblelab-v1`
+
+Objective: reconcile the local Phase 4.1 implementation with the project
+journal before publishing the branch to GitHub.
+
+Files checked:
+
+- `Sources/PebbleLab/LabPhysical.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DECISIONS.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/PHASE_4_PHYSICAL_AGENT_SPIKE.md`
+- `docs/pebblelab/ROADMAP.md`
+
+Conclusion:
+
+- Phase 4.1 was already present locally.
+- The implementation remains non-invasive and PebbleLab-only.
+- No PebbleCore entity, registry, renderer, audio, resource pack, packaging, or
+  golden file is modified.
+- The recommended next phase is Phase 4.2A: synchronize the physical
+  placeholder with abstract movement before considering a real PebbleCore
+  entity.
+
+Commands of validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --scenario agent_smoke --seed 42 --ticks 3 --out runs/check_agent_smoke`
+- `swift run -c release PebbleLab -- --scenario agents_basic --seed 42 --agents 10 --ticks 20 --out runs/check_agents_basic`
+- `swift run -c release PebbleLab -- --scenario seek_safety_smoke --seed 42 --ticks 10 --out runs/check_seek_safety`
+- `swift run -c release PebbleLab -- --scenario long_run_smoke --seed 42 --agents 10 --ticks 1000 --event-rate 10 --out runs/check_long_run`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression`
+- `swift run -c release PebbleLab -- --scenario physical_placeholder_smoke --seed 42 --ticks 3 --out runs/check_physical_placeholder`
+- `swift run -c release pebsmoke`
+
+Result: validation passed, then the Phase 4.1 changes were committed and
+pushed to `origin/lab/pebblelab-v1`.
+
+Next steps:
+
+- Phase 4.2A: `physical placeholder synchronization with abstract movement`.
