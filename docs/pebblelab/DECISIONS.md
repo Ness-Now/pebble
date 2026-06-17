@@ -113,3 +113,19 @@ and does not modify registries, goldens, or game systems.
 Reason: PebbleLab needs a quick health signal that is easier to inspect than
 several raw JSON files, while `pebsmoke` remains the authoritative engine
 regression suite.
+
+## 2026-06-17 - Physical Agent Bridge Before Mob Changes
+
+Decision: Phase 4 keeps `LabAgent` as the abstract cognitive state and plans
+physical representation through an isolated bridge before modifying existing
+mobs or adding full pathfinding.
+
+The recommended path is to avoid changing existing mob behavior, avoid reusing
+mob AI as the lab brain, and introduce a future physical placeholder with clear
+id mapping, spawn/tick/snapshot logs, and drift metrics. A dedicated
+experimental entity can be considered later, but registry changes must be
+reviewed separately and must not reorder existing registrations.
+
+Reason: PebbleCore entities bring registry, save/load, ticking, pathfinding,
+rendering, and golden-test risks. A bridge-first plan preserves deterministic
+PebbleLab scenarios while creating a controlled path toward physical agents.

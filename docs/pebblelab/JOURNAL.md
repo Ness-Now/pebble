@@ -394,3 +394,64 @@ writes a compact passing report, and `pebsmoke` remains green.
 Next steps:
 
 - Phase 4.0: physical agent spike planning.
+
+## 2026-06-17 - Phase 4.0 Physical Agent Spike Planning
+
+Branch: `lab/pebblelab-v1`
+
+Objective: inspect PebbleCore entity architecture and document the safest path
+from abstract PebbleLab agents toward a future physical representation, without
+implementing an entity or modifying gameplay code.
+
+Files inspected:
+
+- `Sources/PebbleCore/Entity/Entity.swift`
+- `Sources/PebbleCore/Entity/Living.swift`
+- `Sources/PebbleCore/Entity/AI.swift`
+- `Sources/PebbleCore/Entity/EntityRegistry.swift`
+- `Sources/PebbleCore/Entity/SpawnHooks.swift`
+- `Sources/PebbleCore/Entity/Player.swift`
+- `Sources/PebbleCore/Entity/Villagers.swift`
+- `Sources/PebbleCore/Entity/Animals.swift`
+- `Sources/PebbleCore/World/GameWorld.swift`
+- `Sources/PebbleCore/Game/GameCore.swift`
+- `Sources/pebsmoke/main.swift`
+- `Sources/PebbleLab/LabAgent.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+
+Files modified:
+
+- `docs/pebblelab/PHASE_4_PHYSICAL_AGENT_SPIKE.md`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DECISIONS.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+Conclusions:
+
+- `World` stores entities, but `GameCore` is the main orchestrator that ticks
+  entities in loaded simulation range.
+- Existing mobs are behavior-rich and should not be modified or reused as the
+  long-term PebbleLab brain.
+- Entity registration is order-sensitive and must be changed only in a focused,
+  reviewed future patch.
+- The recommended path is to keep `LabAgent` as the abstract cognitive state
+  and add a future isolated bridge to a physical placeholder.
+
+Commands of validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/regression_after_phase4_planning`
+- `swift run -c release pebsmoke`
+
+Result: validation passed. The phase produced documentation only; no gameplay
+code, registries, renderer, audio, resource packs, packaging, or goldens were
+modified.
+
+Next steps:
+
+- Phase 4.1: `physical agent placeholder spawn`.

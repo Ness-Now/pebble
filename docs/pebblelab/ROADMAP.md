@@ -67,6 +67,14 @@ key metrics, and pass/fail checks for quick PebbleLab health validation.
 
 ## Phase 4.0 - Physical Agent Spike Planning
 
-Next recommended step: plan the first physical-agent spike without implementing
-entities yet, including ownership boundaries, PebbleCore risks, and required
-test coverage.
+Status: done and validated.
+
+Goal: plan the first physical-agent spike without implementing entities yet,
+including ownership boundaries, PebbleCore risks, integration options, and
+required test coverage.
+
+## Phase 4.1 - Physical Agent Placeholder Spawn
+
+Next recommended step: add one opt-in physical-agent placeholder smoke that
+keeps `LabAgent` as the abstract cognitive state and introduces physical
+representation incrementally through an isolated bridge.
