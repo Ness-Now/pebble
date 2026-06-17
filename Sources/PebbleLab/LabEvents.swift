@@ -32,6 +32,11 @@ struct RunEvent: Encodable {
     let curiosity: Double?
     let safety: Double?
     let agents: Int?
+    let chunkReady: Bool?
+    let surfaceY: Int?
+    let height: Int?
+    let blockBelow: Int?
+    let blockAtFeet: Int?
 
     init(
         type: String,
@@ -64,7 +69,12 @@ struct RunEvent: Encodable {
         fatigue: Double? = nil,
         curiosity: Double? = nil,
         safety: Double? = nil,
-        agents: Int? = nil
+        agents: Int? = nil,
+        chunkReady: Bool? = nil,
+        surfaceY: Int? = nil,
+        height: Int? = nil,
+        blockBelow: Int? = nil,
+        blockAtFeet: Int? = nil
     ) {
         self.type = type
         self.tick = tick
@@ -97,6 +107,11 @@ struct RunEvent: Encodable {
         self.curiosity = curiosity
         self.safety = safety
         self.agents = agents
+        self.chunkReady = chunkReady
+        self.surfaceY = surfaceY
+        self.height = height
+        self.blockBelow = blockBelow
+        self.blockAtFeet = blockAtFeet
     }
 }
 

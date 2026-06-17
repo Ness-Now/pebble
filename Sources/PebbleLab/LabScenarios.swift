@@ -100,7 +100,10 @@ func prepareScenario(_ options: Options, world: World) -> ScenarioResult {
             adoptedChunks: adoptedChunks
         )
         if scenario == "agent_smoke" {
-            let spawnY = (result.centerSurfaceY ?? world.surfaceY(8, 8)) + 1
+            var spawnY = (result.centerHeight ?? world.heightAt(8, 8)) + 1
+            while world.getBlock(8, spawnY, 8) != 0 && spawnY < world.info.minY + world.info.height {
+                spawnY += 1
+            }
             result.agent = LabAgent(id: "agent_0", x: 8, y: spawnY, z: 8)
         }
         return result

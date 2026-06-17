@@ -1,79 +1,99 @@
 # PebbleLab Next Steps
 
-These are recommended next steps, in a conservative order.
+PebbleLab should keep moving in small, reviewable patches. The priority is to preserve the original Pebble game while growing a deterministic headless laboratory around PebbleCore.
 
-## 1. Improve `chunk_smoke`
+## Immediate
 
-Find a safe public way to create, load, or generate a small chunk area without
-touching rendering, audio, registries, or goldens.
+### Stabilize Agent Observation
 
-Definition of Done:
+`agent_smoke` now has a first local observation path. Keep it simple and deterministic:
 
-- `chunk_smoke` reports meaningful chunk metrics.
-- The scenario remains deterministic.
-- `empty` remains unchanged.
+- verify spawn placement stays outside solid cells;
+- keep observing current position, chunk readiness, `surfaceY`, `height`, and raw block values;
+- avoid semantic block interpretation until there is a clear need;
+- keep the agent immobile for now.
 
-## 2. Clarify Scenario Structure
+### Add One Abstract Action
 
-Keep `LabScenarios.swift` small for now. If scenarios grow, introduce a light
-scenario protocol or table only when duplication becomes real.
+After observation is stable, add the smallest useful action layer. Candidate actions:
 
-Avoid:
+- `wait`
+- `observe`
+- possibly a simple abstract `lookAround`
 
-- a heavy `LabRunner`
-- a heavy `LabWorldBuilder`
-- scenario abstractions before there are multiple real scenarios
+This should remain PebbleLab-only. Do not create a PebbleCore entity, mob, pathfinder, or AI planner for this step.
 
-## 3. Add More Useful Metrics
+## Short Term
 
-Possible metrics:
+### Improve Metrics
 
-- chunks loaded or touched
-- world time
-- blocks changed
-- entities observed
-- scenario-specific success checks
+Useful additions:
 
-Metrics should stay JSON-serializable and deterministic.
+- spawn clearance metrics;
+- final observation summary;
+- per-scenario success criteria;
+- clearer error metrics for invalid or incomplete runs.
 
-## 4. Add Better Event Coverage
+### Keep World Snapshots Useful
 
-Possible event additions:
+`world_snapshot.json` should remain stable and easy to inspect. Future work can add more terrain details only when needed by scenarios or agents.
 
-- scenario checkpoints
-- chunk probes
-- block observations
-- entity observations once agents/entities are introduced
+## Medium Term
 
-Keep NDJSON one object per line.
+### Agent Memory
 
-## 5. Expand Abstract Agent Behavior
+Add a small PebbleLab-only memory model after actions exist. Initial memory can be simple:
 
-The first abstract agent exists in `agent_smoke`. Next steps should keep it
-small and deterministic.
+- observations seen;
+- actions taken;
+- outcomes;
+- useful locations;
+- recent events.
 
-Possible additions:
+### Agent-Agent Interaction
 
-- richer needs
-- a single abstract action such as observe or wait
-- action events
-- simple terrain observation from `world_snapshot.json`
+Only after one agent can observe and act, add controlled multi-agent scenarios:
 
-Avoid RL, Python, LLM planning, or new registered PebbleCore entities.
+- two abstract agents in one generated area;
+- explicit interaction events;
+- no social complexity at first;
+- no physical PebbleCore entities yet.
 
-## 6. Delay Python Integration
+## Long Term Social Agents
 
-Python should start as read-only analysis of `runs/` artifacts. Training,
-models, and active control should wait until the Swift runner is stable.
+PebbleLab should eventually support social multi-agent simulations, but this is not implemented yet.
 
-## 7. Avoid PebbleCore Changes Where Possible
+Future agents may be able to:
 
-Prefer PebbleLab-side code until a clear missing public API is identified.
+- communicate;
+- send public messages;
+- send private messages;
+- ask for help;
+- propose exchanges;
+- share information;
+- hide or falsify information if the simulation later chooses to model that;
+- remember interactions;
+- build trust or distrust;
+- become friends;
+- form groups;
+- cooperate;
+- betray;
+- build reputations.
 
-If PebbleCore must change:
+This direction should influence future design, but it should not be coded too early. The safer sequence is:
 
-- keep the patch small
-- preserve determinism
-- run `swift build`
-- run `swift run -c release pebsmoke` for core simulation changes
-- do not touch registries or goldens without explicit approval
+1. agent exists;
+2. agent observes;
+3. agent performs simple abstract actions;
+4. agent remembers;
+5. agents interact;
+6. agents communicate socially.
+
+## Still Avoid
+
+- modifying PebbleCore unless a public API is clearly missing;
+- creating registered entities for early lab agents;
+- pathfinding before the action model is clearer;
+- Python or training loops before logs and scenarios stabilize;
+- RL, LLM planning, or neural models in the early PebbleLab runtime;
+- touching registries, goldens, rendering, audio, resource packs, or packaging without explicit instruction.

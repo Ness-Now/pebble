@@ -36,6 +36,11 @@
 - `agent_snapshot.json` for `agent_smoke` runs.
 - Agent events: `agent_spawned`, `agent_tick`, and `agent_snapshot_written`.
 - Agent metrics: `agentCount`, `agentsSpawned`, and `agentTicks`.
+- Agent observation v0 for `agent_smoke`, including current position, chunk,
+  terrain height/surface, and raw cells below/at feet.
+- `agent_observed` events.
+- Agent observation metrics: `agentObservations`, `agentCurrentChunkReady`,
+  `agentSurfaceY`, and `agentHeight`.
 
 ## Changed
 
@@ -49,6 +54,7 @@
 - `chunk_smoke` run outputs now include a stable terrain snapshot for generated
   chunk areas.
 - Help text now lists `agent_smoke`.
+- `agent_snapshot.json` now includes the final observation for `agent_smoke`.
 
 ## Fixed
 
@@ -63,6 +69,8 @@
   data yet.
 - `agent_smoke` agents are abstract PebbleLab records, not PebbleCore entities.
 - `agent_smoke` has no movement, pathfinding, or AI policy yet.
+- Agent observations are local and raw; they do not include semantic block names
+  or navigation data yet.
 - No agents, needs, memory, roles, tasks, pathfinding, or social behavior.
 - No Python analysis or training pipeline yet.
 - No visual replay or Pebble viewer integration yet.

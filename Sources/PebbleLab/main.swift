@@ -65,7 +65,9 @@ if options.outPath != nil {
                 nonAirBlocksTotal: scenarioResult.nonAirBlocksTotal
             ))
         }
-        if let agent = labAgent {
+        if var agent = labAgent {
+            agent.observe(world: world)
+            labAgent = agent
             eventsNDJSON += try encodeEventLine(RunEvent(
                 type: "agent_spawned",
                 tick: 0,
@@ -77,6 +79,24 @@ if options.outPath != nil {
                 z: agent.position.z,
                 state: agent.state
             ))
+            if let observation = agent.observation {
+                eventsNDJSON += try encodeEventLine(RunEvent(
+                    type: "agent_observed",
+                    tick: 0,
+                    scenario: options.scenario,
+                    chunkX: observation.chunkX,
+                    chunkZ: observation.chunkZ,
+                    agentId: agent.id,
+                    x: observation.x,
+                    y: observation.y,
+                    z: observation.z,
+                    chunkReady: observation.chunkReady,
+                    surfaceY: observation.surfaceY,
+                    height: observation.height,
+                    blockBelow: observation.blockBelow,
+                    blockAtFeet: observation.blockAtFeet
+                ))
+            }
         }
     } catch {
         fail("failed to encode run_started event: \(error)")
@@ -89,6 +109,7 @@ for _ in 0..<options.ticks {
 
     if var agent = labAgent {
         agent.tick()
+        agent.observe(world: world)
         labAgent = agent
         if options.outPath != nil {
             do {
@@ -103,6 +124,24 @@ for _ in 0..<options.ticks {
                     curiosity: agent.needs.curiosity,
                     safety: agent.needs.safety
                 ))
+                if let observation = agent.observation {
+                    eventsNDJSON += try encodeEventLine(RunEvent(
+                        type: "agent_observed",
+                        tick: ticksCompleted,
+                        scenario: options.scenario,
+                        chunkX: observation.chunkX,
+                        chunkZ: observation.chunkZ,
+                        agentId: agent.id,
+                        x: observation.x,
+                        y: observation.y,
+                        z: observation.z,
+                        chunkReady: observation.chunkReady,
+                        surfaceY: observation.surfaceY,
+                        height: observation.height,
+                        blockBelow: observation.blockBelow,
+                        blockAtFeet: observation.blockAtFeet
+                    ))
+                }
             } catch {
                 fail("failed to encode agent_tick event: \(error)")
             }
@@ -179,7 +218,11 @@ if let outPath = options.outPath {
                 nonAirBlocksTotal: scenarioResult.nonAirBlocksTotal,
                 agentCount: labAgent == nil ? nil : 1,
                 agentsSpawned: labAgent == nil ? nil : 1,
-                agentTicks: labAgent?.ticksAlive
+                agentTicks: labAgent?.ticksAlive,
+                agentObservations: labAgent?.observationCount,
+                agentCurrentChunkReady: labAgent?.observation?.chunkReady,
+                agentSurfaceY: labAgent?.observation?.surfaceY,
+                agentHeight: labAgent?.observation?.height
             ),
             to: outURL.appendingPathComponent("metrics.json")
         )

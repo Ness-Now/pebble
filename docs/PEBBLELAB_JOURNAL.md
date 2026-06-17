@@ -318,3 +318,36 @@ pathfinding, and has no AI policy. Needs are simple deterministic counters.
 
 Decision: Introduce agents as PebbleLab-only abstract state before considering
 physical entities or pathfinding.
+
+## 2026-06-17 - Agent Observation V0
+
+Summary: Added a first local deterministic observation for `agent_smoke`.
+The abstract agent now observes its own position, current chunk, chunk
+readiness, terrain height/surface, and raw cells below/at its feet.
+
+Files touched:
+
+- `Sources/PebbleLab/LabAgent.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/PEBBLELAB_JOURNAL.md`
+- `docs/PEBBLELAB_CHANGELOG.md`
+- `docs/PEBBLELAB_NEXT.md`
+
+Validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario empty --out runs/smoke_empty_after_observation`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario chunk_smoke --chunk-radius 1 --out runs/smoke_chunk_after_observation`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario agent_smoke --out runs/smoke_agent_observation`
+
+Result: `agent_snapshot.json` includes the final observation. `events.ndjson`
+contains `agent_observed` events. Metrics include observation count and current
+agent terrain/chunk data.
+
+Known limits: Observation is local and raw. It does not include pathfinding,
+semantic block names, inventory, nearby entities, or policy decisions.
+
+Decision: Keep perception as PebbleLab-only read-only state before adding
+abstract actions.
