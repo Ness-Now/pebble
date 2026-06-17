@@ -110,6 +110,7 @@ for _ in 0..<options.ticks {
     if var agent = labAgent {
         agent.tick()
         agent.observe(world: world)
+        agent.decideAction(tick: ticksCompleted)
         labAgent = agent
         if options.outPath != nil {
             do {
@@ -140,6 +141,21 @@ for _ in 0..<options.ticks {
                         height: observation.height,
                         blockBelow: observation.blockBelow,
                         blockAtFeet: observation.blockAtFeet
+                    ))
+                }
+                if let action = agent.lastAction {
+                    eventsNDJSON += try encodeEventLine(RunEvent(
+                        type: "agent_action_chosen",
+                        tick: ticksCompleted,
+                        scenario: options.scenario,
+                        agentId: agent.id,
+                        state: agent.state,
+                        hunger: agent.needs.hunger,
+                        fatigue: agent.needs.fatigue,
+                        curiosity: agent.needs.curiosity,
+                        safety: agent.needs.safety,
+                        action: action.name,
+                        reason: action.reason
                     ))
                 }
             } catch {
@@ -222,7 +238,9 @@ if let outPath = options.outPath {
                 agentObservations: labAgent?.observationCount,
                 agentCurrentChunkReady: labAgent?.observation?.chunkReady,
                 agentSurfaceY: labAgent?.observation?.surfaceY,
-                agentHeight: labAgent?.observation?.height
+                agentHeight: labAgent?.observation?.height,
+                agentActions: labAgent?.actionCount,
+                agentLastAction: labAgent?.lastAction?.name
             ),
             to: outURL.appendingPathComponent("metrics.json")
         )

@@ -351,3 +351,38 @@ semantic block names, inventory, nearby entities, or policy decisions.
 
 Decision: Keep perception as PebbleLab-only read-only state before adding
 abstract actions.
+
+## 2026-06-17 - Agent Abstract Action V0
+
+Summary: Added the first deterministic abstract action decision for
+`agent_smoke`. The agent now updates needs, observes the local world, then
+chooses one of `observe_area`, `wait`, or `rest` without moving or changing the
+world.
+
+Files touched:
+
+- `Sources/PebbleLab/LabAgent.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/PEBBLELAB_JOURNAL.md`
+- `docs/PEBBLELAB_CHANGELOG.md`
+- `docs/PEBBLELAB_NEXT.md`
+
+Validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario empty --out runs/smoke_empty_after_action`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario chunk_smoke --chunk-radius 1 --out runs/smoke_chunk_after_action`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario agent_smoke --out runs/smoke_agent_action`
+
+Result: `agent_snapshot.json` includes `lastAction` and `actionCount`.
+`events.ndjson` includes `agent_action_chosen` events, and metrics include
+`agentActions` and `agentLastAction`.
+
+Known limits: Actions are abstract decisions only. They do not execute physical
+movement, pathfinding, block changes, memory updates, communication, or social
+interaction.
+
+Decision: Keep the loop order stable as needs tick, observation, then abstract
+decision.

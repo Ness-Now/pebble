@@ -37,6 +37,8 @@ struct RunEvent: Encodable {
     let height: Int?
     let blockBelow: Int?
     let blockAtFeet: Int?
+    let action: String?
+    let reason: String?
 
     init(
         type: String,
@@ -74,7 +76,9 @@ struct RunEvent: Encodable {
         surfaceY: Int? = nil,
         height: Int? = nil,
         blockBelow: Int? = nil,
-        blockAtFeet: Int? = nil
+        blockAtFeet: Int? = nil,
+        action: String? = nil,
+        reason: String? = nil
     ) {
         self.type = type
         self.tick = tick
@@ -112,6 +116,8 @@ struct RunEvent: Encodable {
         self.height = height
         self.blockBelow = blockBelow
         self.blockAtFeet = blockAtFeet
+        self.action = action
+        self.reason = reason
     }
 }
 

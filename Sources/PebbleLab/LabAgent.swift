@@ -8,9 +8,11 @@ struct LabAgent: Encodable {
     var position: LabAgentPosition
     var needs: LabAgentNeeds
     var observation: LabAgentObservation?
+    var lastAction: LabAgentAction?
     let tickCreated: Int
     var ticksAlive: Int
     var observationCount: Int
+    var actionCount: Int
 
     init(id: String, x: Int, y: Int, z: Int) {
         self.id = id
@@ -19,9 +21,11 @@ struct LabAgent: Encodable {
         position = LabAgentPosition(x: x, y: y, z: z)
         needs = LabAgentNeeds(hunger: 0, fatigue: 0, curiosity: 0.5, safety: 1)
         observation = nil
+        lastAction = nil
         tickCreated = 0
         ticksAlive = 0
         observationCount = 0
+        actionCount = 0
     }
 
     mutating func tick() {
@@ -52,6 +56,20 @@ struct LabAgent: Encodable {
         observationCount += 1
     }
 
+    mutating func decideAction(tick: Int) {
+        let action: LabAgentAction
+        if needs.fatigue >= 0.02 {
+            action = LabAgentAction(name: "rest", reason: "fatigue >= 0.02", tick: tick)
+        } else if needs.curiosity >= 0.5 {
+            action = LabAgentAction(name: "observe_area", reason: "curiosity >= 0.5", tick: tick)
+        } else {
+            action = LabAgentAction(name: "wait", reason: "default", tick: tick)
+        }
+
+        lastAction = action
+        actionCount += 1
+    }
+
     enum CodingKeys: String, CodingKey {
         case id
         case type
@@ -59,8 +77,10 @@ struct LabAgent: Encodable {
         case position
         case needs
         case observation
+        case lastAction
         case tickCreated
         case ticksAlive
+        case actionCount
     }
 }
 
@@ -88,4 +108,10 @@ struct LabAgentObservation: Encodable {
     let height: Int
     let blockBelow: Int?
     let blockAtFeet: Int?
+}
+
+struct LabAgentAction: Encodable {
+    let name: String
+    let reason: String
+    let tick: Int
 }

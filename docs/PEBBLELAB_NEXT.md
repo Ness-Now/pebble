@@ -13,13 +13,14 @@ PebbleLab should keep moving in small, reviewable patches. The priority is to pr
 - avoid semantic block interpretation until there is a clear need;
 - keep the agent immobile for now.
 
-### Add One Abstract Action
+### Stabilize Abstract Actions
 
-After observation is stable, add the smallest useful action layer. Candidate actions:
+`agent_smoke` now has a first deterministic abstract action decision. Keep the
+next step equally small:
 
-- `wait`
-- `observe`
-- possibly a simple abstract `lookAround`
+- verify action events and metrics stay stable;
+- consider one action with a small internal effect;
+- avoid physical movement until the action contract is clearer.
 
 This should remain PebbleLab-only. Do not create a PebbleCore entity, mob, pathfinder, or AI planner for this step.
 
@@ -42,7 +43,8 @@ Useful additions:
 
 ### Agent Memory
 
-Add a small PebbleLab-only memory model after actions exist. Initial memory can be simple:
+Add a small PebbleLab-only memory model after abstract actions stabilize.
+Initial memory can be simple:
 
 - observations seen;
 - actions taken;

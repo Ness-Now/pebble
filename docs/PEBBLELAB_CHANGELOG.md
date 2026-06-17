@@ -41,6 +41,10 @@
 - `agent_observed` events.
 - Agent observation metrics: `agentObservations`, `agentCurrentChunkReady`,
   `agentSurfaceY`, and `agentHeight`.
+- Agent action v0 for `agent_smoke`, with deterministic abstract actions
+  `observe_area`, `wait`, and `rest`.
+- `agent_action_chosen` events.
+- Agent action metrics: `agentActions` and `agentLastAction`.
 
 ## Changed
 
@@ -55,6 +59,7 @@
   chunk areas.
 - Help text now lists `agent_smoke`.
 - `agent_snapshot.json` now includes the final observation for `agent_smoke`.
+- `agent_snapshot.json` now includes the final abstract action and action count.
 
 ## Fixed
 
@@ -69,6 +74,8 @@
   data yet.
 - `agent_smoke` agents are abstract PebbleLab records, not PebbleCore entities.
 - `agent_smoke` has no movement, pathfinding, or AI policy yet.
+- Agent actions are decisions only; they do not move the agent or modify the
+  world.
 - Agent observations are local and raw; they do not include semantic block names
   or navigation data yet.
 - No agents, needs, memory, roles, tasks, pathfinding, or social behavior.
