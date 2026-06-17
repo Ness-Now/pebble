@@ -37,6 +37,8 @@ struct RunMetrics: Encodable {
     let agentLastMemoryType: String?
     let agentActionEffects: Int?
     let agentLastActionEffect: String?
+    let nearbyAgentObservations: Int?
+    let agentsWithNearbyAgents: Int?
 
     init(
         scenario: String,
@@ -66,7 +68,9 @@ struct RunMetrics: Encodable {
         agentMemoryEntries: Int? = nil,
         agentLastMemoryType: String? = nil,
         agentActionEffects: Int? = nil,
-        agentLastActionEffect: String? = nil
+        agentLastActionEffect: String? = nil,
+        nearbyAgentObservations: Int? = nil,
+        agentsWithNearbyAgents: Int? = nil
     ) {
         self.scenario = scenario
         self.seed = seed
@@ -96,6 +100,8 @@ struct RunMetrics: Encodable {
         self.agentLastMemoryType = agentLastMemoryType
         self.agentActionEffects = agentActionEffects
         self.agentLastActionEffect = agentLastActionEffect
+        self.nearbyAgentObservations = nearbyAgentObservations
+        self.agentsWithNearbyAgents = agentsWithNearbyAgents
     }
 }
 

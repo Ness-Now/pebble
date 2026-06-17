@@ -23,7 +23,26 @@ func encodeMemoryEvent(_ entry: LabMemoryEntry, agent: LabAgent, scenario: Strin
     ))
 }
 
-func encodeSpawnAndInitialObservation(agent: inout LabAgent) throws -> String {
+func encodeNearbyAgentEvents(_ agent: LabAgent, tick: Int) throws -> String {
+    var lines = ""
+    for nearbyAgent in agent.nearbyAgents {
+        lines += try encodeEventLine(RunEvent(
+            type: "agent_observed_nearby_agent",
+            tick: tick,
+            event: "agent_observed_nearby_agent",
+            scenario: options.scenario,
+            agentId: agent.id,
+            otherAgentId: nearbyAgent.id,
+            dx: nearbyAgent.dx,
+            dy: nearbyAgent.dy,
+            dz: nearbyAgent.dz,
+            distanceManhattan: nearbyAgent.distanceManhattan
+        ))
+    }
+    return lines
+}
+
+func encodeSpawnAndInitialObservation(agent: inout LabAgent, allAgents: [LabAgent]) throws -> String {
     var lines = ""
     let memoryStart = agent.memory.count
     agent.remember(
@@ -33,6 +52,7 @@ func encodeSpawnAndInitialObservation(agent: inout LabAgent) throws -> String {
         importance: 1.0
     )
     agent.observe(world: world, tick: 0)
+    agent.observeNearbyAgents(allAgents)
     lines += try encodeEventLine(RunEvent(
         type: "agent_spawned",
         tick: 0,
@@ -62,17 +82,19 @@ func encodeSpawnAndInitialObservation(agent: inout LabAgent) throws -> String {
             blockAtFeet: observation.blockAtFeet
         ))
     }
+    lines += try encodeNearbyAgentEvents(agent, tick: 0)
     for entry in agent.memory.dropFirst(memoryStart) {
         lines += try encodeMemoryEvent(entry, agent: agent, scenario: options.scenario)
     }
     return lines
 }
 
-func tickAndEncodeAgent(_ agent: inout LabAgent) throws -> String {
+func tickAndEncodeAgent(_ agent: inout LabAgent, allAgents: [LabAgent]) throws -> String {
     var lines = ""
     let memoryStart = agent.memory.count
     agent.tick()
     agent.observe(world: world, tick: ticksCompleted)
+    agent.observeNearbyAgents(allAgents)
     agent.decideAction(tick: ticksCompleted)
     agent.applyLastActionEffect(tick: ticksCompleted)
     lines += try encodeEventLine(RunEvent(
@@ -104,6 +126,7 @@ func tickAndEncodeAgent(_ agent: inout LabAgent) throws -> String {
             blockAtFeet: observation.blockAtFeet
         ))
     }
+    lines += try encodeNearbyAgentEvents(agent, tick: ticksCompleted)
     if let action = agent.lastAction {
         lines += try encodeEventLine(RunEvent(
             type: "agent_action_chosen",
@@ -148,6 +171,11 @@ func tickAndEncodeAgent(_ agent: inout LabAgent) throws -> String {
 func sumAgents(_ value: (LabAgent) -> Int) -> Int? {
     guard !labAgents.isEmpty else { return nil }
     return labAgents.reduce(0) { $0 + value($1) }
+}
+
+func countAgents(_ include: (LabAgent) -> Bool) -> Int? {
+    guard !labAgents.isEmpty else { return nil }
+    return labAgents.filter(include).count
 }
 
 if options.outPath != nil {
@@ -204,8 +232,12 @@ if options.outPath != nil {
                 nonAirBlocksTotal: scenarioResult.nonAirBlocksTotal
             ))
         }
+        let allAgents = labAgents
         for index in labAgents.indices {
-            eventsNDJSON += try encodeSpawnAndInitialObservation(agent: &labAgents[index])
+            eventsNDJSON += try encodeSpawnAndInitialObservation(
+                agent: &labAgents[index],
+                allAgents: allAgents
+            )
         }
     } catch {
         fail("failed to encode run_started event: \(error)")
@@ -217,16 +249,18 @@ for _ in 0..<options.ticks {
     ticksCompleted += 1
 
     if !labAgents.isEmpty {
+        let allAgents = labAgents
         for index in labAgents.indices {
             if options.outPath != nil {
                 do {
-                    eventsNDJSON += try tickAndEncodeAgent(&labAgents[index])
+                    eventsNDJSON += try tickAndEncodeAgent(&labAgents[index], allAgents: allAgents)
                 } catch {
                     fail("failed to encode agent_tick event: \(error)")
                 }
             } else {
                 labAgents[index].tick()
                 labAgents[index].observe(world: world, tick: ticksCompleted)
+                labAgents[index].observeNearbyAgents(allAgents)
                 labAgents[index].decideAction(tick: ticksCompleted)
                 labAgents[index].applyLastActionEffect(tick: ticksCompleted)
             }
@@ -315,7 +349,9 @@ if let outPath = options.outPath {
                 agentMemoryEntries: sumAgents { $0.memory.count },
                 agentLastMemoryType: primaryAgent?.memory.last?.type,
                 agentActionEffects: sumAgents { $0.actionEffectCount },
-                agentLastActionEffect: primaryAgent?.lastActionEffect?.effect
+                agentLastActionEffect: primaryAgent?.lastActionEffect?.effect,
+                nearbyAgentObservations: sumAgents { $0.nearbyObservationCount },
+                agentsWithNearbyAgents: countAgents { !$0.nearbyAgents.isEmpty }
             ),
             to: outURL.appendingPathComponent("metrics.json")
         )

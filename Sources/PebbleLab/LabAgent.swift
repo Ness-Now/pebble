@@ -8,12 +8,14 @@ struct LabAgent: Encodable {
     var position: LabAgentPosition
     var needs: LabAgentNeeds
     var observation: LabAgentObservation?
+    var nearbyAgents: [LabNearbyAgentObservation]
     var lastAction: LabAgentAction?
     var lastActionEffect: LabAgentActionEffect?
     var memory: [LabMemoryEntry]
     let tickCreated: Int
     var ticksAlive: Int
     var observationCount: Int
+    var nearbyObservationCount: Int
     var actionCount: Int
     var actionEffectCount: Int
 
@@ -24,12 +26,14 @@ struct LabAgent: Encodable {
         position = LabAgentPosition(x: x, y: y, z: z)
         needs = LabAgentNeeds(hunger: 0, fatigue: 0, curiosity: 0.5, safety: 1)
         observation = nil
+        nearbyAgents = []
         lastAction = nil
         lastActionEffect = nil
         memory = []
         tickCreated = 0
         ticksAlive = 0
         observationCount = 0
+        nearbyObservationCount = 0
         actionCount = 0
         actionEffectCount = 0
     }
@@ -68,6 +72,27 @@ struct LabAgent: Encodable {
                 importance: 0.1
             )
         }
+    }
+
+    mutating func observeNearbyAgents(_ agents: [LabAgent], radius: Int = 8) {
+        nearbyAgents = agents.compactMap { other in
+            guard other.id != id else { return nil }
+
+            let dx = other.position.x - position.x
+            let dy = other.position.y - position.y
+            let dz = other.position.z - position.z
+            let distanceManhattan = abs(dx) + abs(dy) + abs(dz)
+            guard distanceManhattan <= radius else { return nil }
+
+            return LabNearbyAgentObservation(
+                id: other.id,
+                dx: dx,
+                dy: dy,
+                dz: dz,
+                distanceManhattan: distanceManhattan
+            )
+        }
+        nearbyObservationCount += nearbyAgents.count
     }
 
     mutating func decideAction(tick: Int) {
@@ -156,12 +181,14 @@ struct LabAgent: Encodable {
         case position
         case needs
         case observation
+        case nearbyAgents
         case lastAction
         case lastActionEffect
         case tickCreated
         case ticksAlive
         case actionCount
         case actionEffectCount
+        case nearbyObservationCount
         case memoryCount
         case recentMemory
     }
@@ -174,12 +201,14 @@ struct LabAgent: Encodable {
         try container.encode(position, forKey: .position)
         try container.encode(needs, forKey: .needs)
         try container.encodeIfPresent(observation, forKey: .observation)
+        try container.encode(nearbyAgents, forKey: .nearbyAgents)
         try container.encodeIfPresent(lastAction, forKey: .lastAction)
         try container.encodeIfPresent(lastActionEffect, forKey: .lastActionEffect)
         try container.encode(tickCreated, forKey: .tickCreated)
         try container.encode(ticksAlive, forKey: .ticksAlive)
         try container.encode(actionCount, forKey: .actionCount)
         try container.encode(actionEffectCount, forKey: .actionEffectCount)
+        try container.encode(nearbyObservationCount, forKey: .nearbyObservationCount)
         try container.encode(memory.count, forKey: .memoryCount)
         try container.encode(Array(memory.suffix(10)), forKey: .recentMemory)
     }
@@ -209,6 +238,14 @@ struct LabAgentObservation: Encodable {
     let height: Int
     let blockBelow: Int?
     let blockAtFeet: Int?
+}
+
+struct LabNearbyAgentObservation: Codable, Equatable {
+    let id: String
+    let dx: Int
+    let dy: Int
+    let dz: Int
+    let distanceManhattan: Int
 }
 
 struct LabAgentAction: Encodable {

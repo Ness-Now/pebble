@@ -2,6 +2,7 @@ import Foundation
 
 struct RunEvent: Encodable {
     let type: String
+    let event: String?
     let tick: Int
     let scenario: String?
     let seed: UInt32?
@@ -22,6 +23,7 @@ struct RunEvent: Encodable {
     let chunks: Int?
     let path: String?
     let agentId: String?
+    let otherAgentId: String?
     let agentType: String?
     let x: Int?
     let y: Int?
@@ -53,10 +55,15 @@ struct RunEvent: Encodable {
     let safetyAfter: Double?
     let stateBefore: String?
     let stateAfter: String?
+    let dx: Int?
+    let dy: Int?
+    let dz: Int?
+    let distanceManhattan: Int?
 
     init(
         type: String,
         tick: Int,
+        event: String? = nil,
         scenario: String? = nil,
         seed: UInt32? = nil,
         ticksRequested: Int? = nil,
@@ -76,6 +83,7 @@ struct RunEvent: Encodable {
         chunks: Int? = nil,
         path: String? = nil,
         agentId: String? = nil,
+        otherAgentId: String? = nil,
         agentType: String? = nil,
         x: Int? = nil,
         y: Int? = nil,
@@ -106,9 +114,14 @@ struct RunEvent: Encodable {
         safetyBefore: Double? = nil,
         safetyAfter: Double? = nil,
         stateBefore: String? = nil,
-        stateAfter: String? = nil
+        stateAfter: String? = nil,
+        dx: Int? = nil,
+        dy: Int? = nil,
+        dz: Int? = nil,
+        distanceManhattan: Int? = nil
     ) {
         self.type = type
+        self.event = event
         self.tick = tick
         self.scenario = scenario
         self.seed = seed
@@ -129,6 +142,7 @@ struct RunEvent: Encodable {
         self.chunks = chunks
         self.path = path
         self.agentId = agentId
+        self.otherAgentId = otherAgentId
         self.agentType = agentType
         self.x = x
         self.y = y
@@ -160,6 +174,10 @@ struct RunEvent: Encodable {
         self.safetyAfter = safetyAfter
         self.stateBefore = stateBefore
         self.stateAfter = stateAfter
+        self.dx = dx
+        self.dy = dy
+        self.dz = dz
+        self.distanceManhattan = distanceManhattan
     }
 }
 
