@@ -49,6 +49,11 @@
   and `action_chosen` memories in RAM.
 - `agent_memory_recorded` events.
 - Agent memory metrics: `agentMemoryEntries` and `agentLastMemoryType`.
+- Internal action effects v0 for `agent_smoke`, applied to agent needs/state
+  without changing the world.
+- `agent_action_effect_applied` events.
+- Agent action effect metrics: `agentActionEffects` and
+  `agentLastActionEffect`.
 
 ## Changed
 
@@ -65,6 +70,8 @@
 - `agent_snapshot.json` now includes the final observation for `agent_smoke`.
 - `agent_snapshot.json` now includes the final abstract action and action count.
 - `agent_snapshot.json` now includes `memoryCount` and `recentMemory`.
+- `agent_snapshot.json` now includes `lastActionEffect` and
+  `actionEffectCount`.
 
 ## Fixed
 
@@ -83,6 +90,8 @@
   world.
 - Agent memory is local and in-memory only; there is no separate `memory.json`
   and no social memory yet.
+- Action effects are internal only; they do not move agents, edit blocks, or
+  modify chunks.
 - Agent observations are local and raw; they do not include semantic block names
   or navigation data yet.
 - No agents, needs, memory, roles, tasks, pathfinding, or social behavior.

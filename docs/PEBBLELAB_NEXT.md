@@ -41,18 +41,18 @@ Useful additions:
 
 ## Medium Term
 
-### Stabilize Agent Memory
+### Stabilize Agent Loop
 
-`agent_smoke` now has a first PebbleLab-only memory list. Keep the next memory
-work focused:
+`agent_smoke` now has observation, abstract actions, local memory, and internal
+action effects. Keep the next work focused:
 
 - verify `recentMemory` stays compact and deterministic;
-- decide whether actions should have small internal effects;
+- verify internal effects stay deterministic and do not touch the world;
 - keep memory local to one agent until interaction scenarios exist.
 
 Possible next patches:
 
-- add one abstract action with a small internal effect;
+- refine action effect metrics;
 - add a second passive agent without communication;
 - add explicit interaction events only after single-agent memory stays stable.
 

@@ -42,6 +42,17 @@ struct RunEvent: Encodable {
     let memoryType: String?
     let importance: Double?
     let summary: String?
+    let effect: String?
+    let hungerBefore: Double?
+    let hungerAfter: Double?
+    let fatigueBefore: Double?
+    let fatigueAfter: Double?
+    let curiosityBefore: Double?
+    let curiosityAfter: Double?
+    let safetyBefore: Double?
+    let safetyAfter: Double?
+    let stateBefore: String?
+    let stateAfter: String?
 
     init(
         type: String,
@@ -84,7 +95,18 @@ struct RunEvent: Encodable {
         reason: String? = nil,
         memoryType: String? = nil,
         importance: Double? = nil,
-        summary: String? = nil
+        summary: String? = nil,
+        effect: String? = nil,
+        hungerBefore: Double? = nil,
+        hungerAfter: Double? = nil,
+        fatigueBefore: Double? = nil,
+        fatigueAfter: Double? = nil,
+        curiosityBefore: Double? = nil,
+        curiosityAfter: Double? = nil,
+        safetyBefore: Double? = nil,
+        safetyAfter: Double? = nil,
+        stateBefore: String? = nil,
+        stateAfter: String? = nil
     ) {
         self.type = type
         self.tick = tick
@@ -127,6 +149,17 @@ struct RunEvent: Encodable {
         self.memoryType = memoryType
         self.importance = importance
         self.summary = summary
+        self.effect = effect
+        self.hungerBefore = hungerBefore
+        self.hungerAfter = hungerAfter
+        self.fatigueBefore = fatigueBefore
+        self.fatigueAfter = fatigueAfter
+        self.curiosityBefore = curiosityBefore
+        self.curiosityAfter = curiosityAfter
+        self.safetyBefore = safetyBefore
+        self.safetyAfter = safetyAfter
+        self.stateBefore = stateBefore
+        self.stateAfter = stateAfter
     }
 }
 

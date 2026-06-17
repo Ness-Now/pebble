@@ -421,3 +421,38 @@ action decisions yet.
 
 Decision: Keep memory as a simple PebbleLab-only record before adding
 multi-agent interaction or communication.
+
+## 2026-06-17 - Agent Internal Action Effects V0
+
+Summary: Added deterministic internal effects for abstract `agent_smoke`
+actions. Effects update only the PebbleLab agent's needs/state and do not
+change world blocks, chunks, entities, or PebbleCore.
+
+Files touched:
+
+- `Sources/PebbleLab/LabAgent.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/PEBBLELAB_JOURNAL.md`
+- `docs/PEBBLELAB_CHANGELOG.md`
+- `docs/PEBBLELAB_NEXT.md`
+
+Validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario empty --out runs/smoke_empty_after_action_effect`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario chunk_smoke --chunk-radius 1 --out runs/smoke_chunk_after_action_effect`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario agent_smoke --out runs/smoke_agent_action_effect`
+
+Result: `agent_snapshot.json` includes `lastActionEffect` and
+`actionEffectCount`. `events.ndjson` includes
+`agent_action_effect_applied`, and metrics include `agentActionEffects` and
+`agentLastActionEffect`.
+
+Known limits: Effects are internal only. There is still no movement,
+pathfinding, world modification, second agent, communication, or social
+relationship.
+
+Decision: Keep the loop order stable as needs tick, observation, action
+decision, then internal effect application.

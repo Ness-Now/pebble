@@ -9,11 +9,13 @@ struct LabAgent: Encodable {
     var needs: LabAgentNeeds
     var observation: LabAgentObservation?
     var lastAction: LabAgentAction?
+    var lastActionEffect: LabAgentActionEffect?
     var memory: [LabMemoryEntry]
     let tickCreated: Int
     var ticksAlive: Int
     var observationCount: Int
     var actionCount: Int
+    var actionEffectCount: Int
 
     init(id: String, x: Int, y: Int, z: Int) {
         self.id = id
@@ -23,11 +25,13 @@ struct LabAgent: Encodable {
         needs = LabAgentNeeds(hunger: 0, fatigue: 0, curiosity: 0.5, safety: 1)
         observation = nil
         lastAction = nil
+        lastActionEffect = nil
         memory = []
         tickCreated = 0
         ticksAlive = 0
         observationCount = 0
         actionCount = 0
+        actionEffectCount = 0
     }
 
     mutating func tick() {
@@ -86,6 +90,56 @@ struct LabAgent: Encodable {
         )
     }
 
+    mutating func applyLastActionEffect(tick: Int) {
+        guard let action = lastAction else { return }
+
+        let hungerBefore = needs.hunger
+        let fatigueBefore = needs.fatigue
+        let curiosityBefore = needs.curiosity
+        let safetyBefore = needs.safety
+        let stateBefore = state
+        let effect: String
+
+        switch action.name {
+        case "rest":
+            needs.fatigue = max(0, needs.fatigue - 0.02)
+            state = "resting"
+            effect = "fatigue -0.02"
+        case "observe_area":
+            needs.curiosity = min(1, needs.curiosity + 0.01)
+            state = "observing"
+            effect = "curiosity +0.01"
+        case "wait":
+            state = "waiting"
+            effect = "no need change"
+        default:
+            effect = "no effect"
+        }
+
+        lastActionEffect = LabAgentActionEffect(
+            action: action.name,
+            effect: effect,
+            tick: tick,
+            hungerBefore: hungerBefore,
+            hungerAfter: needs.hunger,
+            fatigueBefore: fatigueBefore,
+            fatigueAfter: needs.fatigue,
+            curiosityBefore: curiosityBefore,
+            curiosityAfter: needs.curiosity,
+            safetyBefore: safetyBefore,
+            safetyAfter: needs.safety,
+            stateBefore: stateBefore,
+            stateAfter: state
+        )
+        actionEffectCount += 1
+        remember(
+            tick: tick,
+            type: "action_effect_applied",
+            summary: "\(id) applied \(action.name) effect",
+            importance: 0.15
+        )
+    }
+
     mutating func remember(tick: Int, type: String, summary: String, importance: Double) {
         memory.append(LabMemoryEntry(
             tick: tick,
@@ -103,9 +157,11 @@ struct LabAgent: Encodable {
         case needs
         case observation
         case lastAction
+        case lastActionEffect
         case tickCreated
         case ticksAlive
         case actionCount
+        case actionEffectCount
         case memoryCount
         case recentMemory
     }
@@ -119,9 +175,11 @@ struct LabAgent: Encodable {
         try container.encode(needs, forKey: .needs)
         try container.encodeIfPresent(observation, forKey: .observation)
         try container.encodeIfPresent(lastAction, forKey: .lastAction)
+        try container.encodeIfPresent(lastActionEffect, forKey: .lastActionEffect)
         try container.encode(tickCreated, forKey: .tickCreated)
         try container.encode(ticksAlive, forKey: .ticksAlive)
         try container.encode(actionCount, forKey: .actionCount)
+        try container.encode(actionEffectCount, forKey: .actionEffectCount)
         try container.encode(memory.count, forKey: .memoryCount)
         try container.encode(Array(memory.suffix(10)), forKey: .recentMemory)
     }
@@ -157,6 +215,22 @@ struct LabAgentAction: Encodable {
     let name: String
     let reason: String
     let tick: Int
+}
+
+struct LabAgentActionEffect: Encodable {
+    let action: String
+    let effect: String
+    let tick: Int
+    let hungerBefore: Double
+    let hungerAfter: Double
+    let fatigueBefore: Double
+    let fatigueAfter: Double
+    let curiosityBefore: Double
+    let curiosityAfter: Double
+    let safetyBefore: Double
+    let safetyAfter: Double
+    let stateBefore: String
+    let stateAfter: String
 }
 
 struct LabMemoryEntry: Encodable {

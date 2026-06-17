@@ -134,6 +134,7 @@ for _ in 0..<options.ticks {
         agent.tick()
         agent.observe(world: world, tick: ticksCompleted)
         agent.decideAction(tick: ticksCompleted)
+        agent.applyLastActionEffect(tick: ticksCompleted)
         labAgent = agent
         if options.outPath != nil {
             do {
@@ -179,6 +180,26 @@ for _ in 0..<options.ticks {
                         safety: agent.needs.safety,
                         action: action.name,
                         reason: action.reason
+                    ))
+                }
+                if let effect = agent.lastActionEffect {
+                    eventsNDJSON += try encodeEventLine(RunEvent(
+                        type: "agent_action_effect_applied",
+                        tick: ticksCompleted,
+                        scenario: options.scenario,
+                        agentId: agent.id,
+                        action: effect.action,
+                        effect: effect.effect,
+                        hungerBefore: effect.hungerBefore,
+                        hungerAfter: effect.hungerAfter,
+                        fatigueBefore: effect.fatigueBefore,
+                        fatigueAfter: effect.fatigueAfter,
+                        curiosityBefore: effect.curiosityBefore,
+                        curiosityAfter: effect.curiosityAfter,
+                        safetyBefore: effect.safetyBefore,
+                        safetyAfter: effect.safetyAfter,
+                        stateBefore: effect.stateBefore,
+                        stateAfter: effect.stateAfter
                     ))
                 }
                 for entry in agent.memory.dropFirst(memoryStart) {
@@ -268,7 +289,9 @@ if let outPath = options.outPath {
                 agentActions: labAgent?.actionCount,
                 agentLastAction: labAgent?.lastAction?.name,
                 agentMemoryEntries: labAgent?.memory.count,
-                agentLastMemoryType: labAgent?.memory.last?.type
+                agentLastMemoryType: labAgent?.memory.last?.type,
+                agentActionEffects: labAgent?.actionEffectCount,
+                agentLastActionEffect: labAgent?.lastActionEffect?.effect
             ),
             to: outURL.appendingPathComponent("metrics.json")
         )
