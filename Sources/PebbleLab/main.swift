@@ -6,7 +6,7 @@ validateScenario(options.scenario)
 
 let world = World(dim: .overworld, seed: options.seed)
 let scenarioResult = prepareScenario(options, world: world)
-var labAgent = scenarioResult.agent
+var labAgents = scenarioResult.agents
 
 var ticksCompleted = 0
 var eventsNDJSON = ""
@@ -21,6 +21,133 @@ func encodeMemoryEvent(_ entry: LabMemoryEntry, agent: LabAgent, scenario: Strin
         importance: entry.importance,
         summary: entry.summary
     ))
+}
+
+func encodeSpawnAndInitialObservation(agent: inout LabAgent) throws -> String {
+    var lines = ""
+    let memoryStart = agent.memory.count
+    agent.remember(
+        tick: 0,
+        type: "spawned",
+        summary: "\(agent.id) spawned at (\(agent.position.x),\(agent.position.y),\(agent.position.z))",
+        importance: 1.0
+    )
+    agent.observe(world: world, tick: 0)
+    lines += try encodeEventLine(RunEvent(
+        type: "agent_spawned",
+        tick: 0,
+        scenario: options.scenario,
+        agentId: agent.id,
+        agentType: agent.type,
+        x: agent.position.x,
+        y: agent.position.y,
+        z: agent.position.z,
+        state: agent.state
+    ))
+    if let observation = agent.observation {
+        lines += try encodeEventLine(RunEvent(
+            type: "agent_observed",
+            tick: 0,
+            scenario: options.scenario,
+            chunkX: observation.chunkX,
+            chunkZ: observation.chunkZ,
+            agentId: agent.id,
+            x: observation.x,
+            y: observation.y,
+            z: observation.z,
+            chunkReady: observation.chunkReady,
+            surfaceY: observation.surfaceY,
+            height: observation.height,
+            blockBelow: observation.blockBelow,
+            blockAtFeet: observation.blockAtFeet
+        ))
+    }
+    for entry in agent.memory.dropFirst(memoryStart) {
+        lines += try encodeMemoryEvent(entry, agent: agent, scenario: options.scenario)
+    }
+    return lines
+}
+
+func tickAndEncodeAgent(_ agent: inout LabAgent) throws -> String {
+    var lines = ""
+    let memoryStart = agent.memory.count
+    agent.tick()
+    agent.observe(world: world, tick: ticksCompleted)
+    agent.decideAction(tick: ticksCompleted)
+    agent.applyLastActionEffect(tick: ticksCompleted)
+    lines += try encodeEventLine(RunEvent(
+        type: "agent_tick",
+        tick: ticksCompleted,
+        scenario: options.scenario,
+        agentId: agent.id,
+        state: agent.state,
+        hunger: agent.needs.hunger,
+        fatigue: agent.needs.fatigue,
+        curiosity: agent.needs.curiosity,
+        safety: agent.needs.safety
+    ))
+    if let observation = agent.observation {
+        lines += try encodeEventLine(RunEvent(
+            type: "agent_observed",
+            tick: ticksCompleted,
+            scenario: options.scenario,
+            chunkX: observation.chunkX,
+            chunkZ: observation.chunkZ,
+            agentId: agent.id,
+            x: observation.x,
+            y: observation.y,
+            z: observation.z,
+            chunkReady: observation.chunkReady,
+            surfaceY: observation.surfaceY,
+            height: observation.height,
+            blockBelow: observation.blockBelow,
+            blockAtFeet: observation.blockAtFeet
+        ))
+    }
+    if let action = agent.lastAction {
+        lines += try encodeEventLine(RunEvent(
+            type: "agent_action_chosen",
+            tick: ticksCompleted,
+            scenario: options.scenario,
+            agentId: agent.id,
+            state: agent.state,
+            hunger: agent.needs.hunger,
+            fatigue: agent.needs.fatigue,
+            curiosity: agent.needs.curiosity,
+            safety: agent.needs.safety,
+            action: action.name,
+            reason: action.reason
+        ))
+    }
+    if let effect = agent.lastActionEffect {
+        lines += try encodeEventLine(RunEvent(
+            type: "agent_action_effect_applied",
+            tick: ticksCompleted,
+            scenario: options.scenario,
+            agentId: agent.id,
+            action: effect.action,
+            effect: effect.effect,
+            hungerBefore: effect.hungerBefore,
+            hungerAfter: effect.hungerAfter,
+            fatigueBefore: effect.fatigueBefore,
+            fatigueAfter: effect.fatigueAfter,
+            curiosityBefore: effect.curiosityBefore,
+            curiosityAfter: effect.curiosityAfter,
+            safetyBefore: effect.safetyBefore,
+            safetyAfter: effect.safetyAfter,
+            stateBefore: effect.stateBefore,
+            stateAfter: effect.stateAfter
+        ))
+    }
+    for entry in agent.memory.dropFirst(memoryStart) {
+        lines += try encodeMemoryEvent(entry, agent: agent, scenario: options.scenario)
+    }
+    return lines
+}
+
+func sumAgents(_ value: (LabAgent) -> Int) -> Int? {
+    guard !labAgents.isEmpty else { return nil }
+    return labAgents.reduce(0) { $0 + value($1) }
 }
 
 if options.outPath != nil {
@@ -77,48 +204,8 @@ if options.outPath != nil {
                 nonAirBlocksTotal: scenarioResult.nonAirBlocksTotal
             ))
         }
-        if var agent = labAgent {
-            let memoryStart = agent.memory.count
-            agent.remember(
-                tick: 0,
-                type: "spawned",
-                summary: "\(agent.id) spawned at (\(agent.position.x),\(agent.position.y),\(agent.position.z))",
-                importance: 1.0
-            )
-            agent.observe(world: world, tick: 0)
-            labAgent = agent
-            eventsNDJSON += try encodeEventLine(RunEvent(
-                type: "agent_spawned",
-                tick: 0,
-                scenario: options.scenario,
-                agentId: agent.id,
-                agentType: agent.type,
-                x: agent.position.x,
-                y: agent.position.y,
-                z: agent.position.z,
-                state: agent.state
-            ))
-            if let observation = agent.observation {
-                eventsNDJSON += try encodeEventLine(RunEvent(
-                    type: "agent_observed",
-                    tick: 0,
-                    scenario: options.scenario,
-                    chunkX: observation.chunkX,
-                    chunkZ: observation.chunkZ,
-                    agentId: agent.id,
-                    x: observation.x,
-                    y: observation.y,
-                    z: observation.z,
-                    chunkReady: observation.chunkReady,
-                    surfaceY: observation.surfaceY,
-                    height: observation.height,
-                    blockBelow: observation.blockBelow,
-                    blockAtFeet: observation.blockAtFeet
-                ))
-            }
-            for entry in agent.memory.dropFirst(memoryStart) {
-                eventsNDJSON += try encodeMemoryEvent(entry, agent: agent, scenario: options.scenario)
-            }
+        for index in labAgents.indices {
+            eventsNDJSON += try encodeSpawnAndInitialObservation(agent: &labAgents[index])
         }
     } catch {
         fail("failed to encode run_started event: \(error)")
@@ -129,84 +216,19 @@ for _ in 0..<options.ticks {
     world.tick()
     ticksCompleted += 1
 
-    if var agent = labAgent {
-        let memoryStart = agent.memory.count
-        agent.tick()
-        agent.observe(world: world, tick: ticksCompleted)
-        agent.decideAction(tick: ticksCompleted)
-        agent.applyLastActionEffect(tick: ticksCompleted)
-        labAgent = agent
-        if options.outPath != nil {
-            do {
-                eventsNDJSON += try encodeEventLine(RunEvent(
-                    type: "agent_tick",
-                    tick: ticksCompleted,
-                    scenario: options.scenario,
-                    agentId: agent.id,
-                    state: agent.state,
-                    hunger: agent.needs.hunger,
-                    fatigue: agent.needs.fatigue,
-                    curiosity: agent.needs.curiosity,
-                    safety: agent.needs.safety
-                ))
-                if let observation = agent.observation {
-                    eventsNDJSON += try encodeEventLine(RunEvent(
-                        type: "agent_observed",
-                        tick: ticksCompleted,
-                        scenario: options.scenario,
-                        chunkX: observation.chunkX,
-                        chunkZ: observation.chunkZ,
-                        agentId: agent.id,
-                        x: observation.x,
-                        y: observation.y,
-                        z: observation.z,
-                        chunkReady: observation.chunkReady,
-                        surfaceY: observation.surfaceY,
-                        height: observation.height,
-                        blockBelow: observation.blockBelow,
-                        blockAtFeet: observation.blockAtFeet
-                    ))
+    if !labAgents.isEmpty {
+        for index in labAgents.indices {
+            if options.outPath != nil {
+                do {
+                    eventsNDJSON += try tickAndEncodeAgent(&labAgents[index])
+                } catch {
+                    fail("failed to encode agent_tick event: \(error)")
                 }
-                if let action = agent.lastAction {
-                    eventsNDJSON += try encodeEventLine(RunEvent(
-                        type: "agent_action_chosen",
-                        tick: ticksCompleted,
-                        scenario: options.scenario,
-                        agentId: agent.id,
-                        state: agent.state,
-                        hunger: agent.needs.hunger,
-                        fatigue: agent.needs.fatigue,
-                        curiosity: agent.needs.curiosity,
-                        safety: agent.needs.safety,
-                        action: action.name,
-                        reason: action.reason
-                    ))
-                }
-                if let effect = agent.lastActionEffect {
-                    eventsNDJSON += try encodeEventLine(RunEvent(
-                        type: "agent_action_effect_applied",
-                        tick: ticksCompleted,
-                        scenario: options.scenario,
-                        agentId: agent.id,
-                        action: effect.action,
-                        effect: effect.effect,
-                        hungerBefore: effect.hungerBefore,
-                        hungerAfter: effect.hungerAfter,
-                        fatigueBefore: effect.fatigueBefore,
-                        fatigueAfter: effect.fatigueAfter,
-                        curiosityBefore: effect.curiosityBefore,
-                        curiosityAfter: effect.curiosityAfter,
-                        safetyBefore: effect.safetyBefore,
-                        safetyAfter: effect.safetyAfter,
-                        stateBefore: effect.stateBefore,
-                        stateAfter: effect.stateAfter
-                    ))
-                }
-                for entry in agent.memory.dropFirst(memoryStart) {
-                    eventsNDJSON += try encodeMemoryEvent(entry, agent: agent, scenario: options.scenario)
-                }
-            } catch {
-                fail("failed to encode agent_tick event: \(error)")
+            } else {
+                labAgents[index].tick()
+                labAgents[index].observe(world: world, tick: ticksCompleted)
+                labAgents[index].decideAction(tick: ticksCompleted)
+                labAgents[index].applyLastActionEffect(tick: ticksCompleted)
             }
         }
     }
@@ -252,6 +274,8 @@ if let outPath = options.outPath {
     let outURL = URL(fileURLWithPath: outPath, isDirectory: true)
 
     do {
+        let primaryAgent = labAgents.first
+        let agentCount = labAgents.isEmpty ? nil : labAgents.count
         try FileManager.default.createDirectory(at: outURL, withIntermediateDirectories: true)
         try writeJSON(
             RunConfig(
@@ -279,19 +303,19 @@ if let outPath = options.outPath {
                 expectedChunks: scenarioResult.expectedChunks,
                 readyChunks: scenarioResult.readyChunks,
                 nonAirBlocksTotal: scenarioResult.nonAirBlocksTotal,
-                agentCount: labAgent == nil ? nil : 1,
-                agentsSpawned: labAgent == nil ? nil : 1,
-                agentTicks: labAgent?.ticksAlive,
-                agentObservations: labAgent?.observationCount,
-                agentCurrentChunkReady: labAgent?.observation?.chunkReady,
-                agentSurfaceY: labAgent?.observation?.surfaceY,
-                agentHeight: labAgent?.observation?.height,
-                agentActions: labAgent?.actionCount,
-                agentLastAction: labAgent?.lastAction?.name,
-                agentMemoryEntries: labAgent?.memory.count,
-                agentLastMemoryType: labAgent?.memory.last?.type,
-                agentActionEffects: labAgent?.actionEffectCount,
-                agentLastActionEffect: labAgent?.lastActionEffect?.effect
+                agentCount: agentCount,
+                agentsSpawned: agentCount,
+                agentTicks: sumAgents { $0.ticksAlive },
+                agentObservations: sumAgents { $0.observationCount },
+                agentCurrentChunkReady: primaryAgent?.observation?.chunkReady,
+                agentSurfaceY: primaryAgent?.observation?.surfaceY,
+                agentHeight: primaryAgent?.observation?.height,
+                agentActions: sumAgents { $0.actionCount },
+                agentLastAction: primaryAgent?.lastAction?.name,
+                agentMemoryEntries: sumAgents { $0.memory.count },
+                agentLastMemoryType: primaryAgent?.memory.last?.type,
+                agentActionEffects: sumAgents { $0.actionEffectCount },
+                agentLastActionEffect: primaryAgent?.lastActionEffect?.effect
             ),
             to: outURL.appendingPathComponent("metrics.json")
         )
@@ -310,13 +334,13 @@ if let outPath = options.outPath {
                 path: "world_snapshot.json"
             ))
         }
-        if let agent = labAgent, options.scenario == "agent_smoke" {
+        if !labAgents.isEmpty, options.scenario == "agent_smoke" {
             try writeJSON(
                 AgentSnapshot(
                     scenario: options.scenario,
                     seed: options.seed,
                     ticksCompleted: ticksCompleted,
-                    agents: [agent]
+                    agents: labAgents
                 ),
                 to: outURL.appendingPathComponent("agent_snapshot.json")
             )
@@ -325,7 +349,7 @@ if let outPath = options.outPath {
                 tick: ticksCompleted,
                 scenario: options.scenario,
                 path: "agent_snapshot.json",
-                agents: 1
+                agents: labAgents.count
             ))
         }
         try eventsNDJSON.write(

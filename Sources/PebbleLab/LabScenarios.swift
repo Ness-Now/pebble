@@ -11,7 +11,7 @@ struct ScenarioResult {
     var readyChunks: Int?
     var nonAirBlocksTotal: Int?
     var adoptedChunks: [AdoptedChunk] = []
-    var agent: LabAgent?
+    var agents: [LabAgent] = []
 }
 
 struct AdoptedChunk {
@@ -100,16 +100,23 @@ func prepareScenario(_ options: Options, world: World) -> ScenarioResult {
             adoptedChunks: adoptedChunks
         )
         if scenario == "agent_smoke" {
-            var spawnY = (result.centerHeight ?? world.heightAt(8, 8)) + 1
-            while world.getBlock(8, spawnY, 8) != 0 && spawnY < world.info.minY + world.info.height {
-                spawnY += 1
-            }
-            result.agent = LabAgent(id: "agent_0", x: 8, y: spawnY, z: 8)
+            result.agents = [
+                makeLabAgent(id: "agent_0", x: 8, z: 8, world: world),
+                makeLabAgent(id: "agent_1", x: 12, z: 8, world: world)
+            ]
         }
         return result
     default:
         return ScenarioResult()
     }
+}
+
+func makeLabAgent(id: String, x: Int, z: Int, world: World) -> LabAgent {
+    var spawnY = world.heightAt(x, z) + 1
+    while world.getBlock(x, spawnY, z) != 0 && spawnY < world.info.minY + world.info.height {
+        spawnY += 1
+    }
+    return LabAgent(id: id, x: x, y: spawnY, z: z)
 }
 
 func makeWorldSnapshot(

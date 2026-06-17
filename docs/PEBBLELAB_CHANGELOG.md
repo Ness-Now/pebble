@@ -54,6 +54,8 @@
 - `agent_action_effect_applied` events.
 - Agent action effect metrics: `agentActionEffects` and
   `agentLastActionEffect`.
+- `agent_smoke` now spawns two abstract agents, `agent_0` and `agent_1`,
+  without agent-agent interaction.
 
 ## Changed
 
@@ -72,6 +74,11 @@
 - `agent_snapshot.json` now includes `memoryCount` and `recentMemory`.
 - `agent_snapshot.json` now includes `lastActionEffect` and
   `actionEffectCount`.
+- `agent_snapshot.json` now includes both passive abstract agents for
+  `agent_smoke`.
+- Agent count, tick, observation, action, effect, and memory metrics now report
+  multi-agent totals. Single-agent compatibility fields still describe
+  `agent_0`.
 
 ## Fixed
 
@@ -92,6 +99,8 @@
   and no social memory yet.
 - Action effects are internal only; they do not move agents, edit blocks, or
   modify chunks.
+- Multi-agent support is passive only. There is no communication, relationship,
+  cooperation, conflict, or pathfinding.
 - Agent observations are local and raw; they do not include semantic block names
   or navigation data yet.
 - No agents, needs, memory, roles, tasks, pathfinding, or social behavior.

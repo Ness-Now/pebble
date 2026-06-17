@@ -53,8 +53,17 @@ action effects. Keep the next work focused:
 Possible next patches:
 
 - refine action effect metrics;
-- add a second passive agent without communication;
 - add explicit interaction events only after single-agent memory stays stable.
+
+### Stabilize Passive Multi-Agent Runs
+
+`agent_smoke` now supports two passive abstract agents. Next work should keep
+that multi-agent state understandable:
+
+- verify aggregated metrics remain useful;
+- avoid communication or relationship state until event formats are stable;
+- consider one explicit non-social interaction event only after passive runs
+  are boring and predictable.
 
 ### Agent-Agent Interaction
 

@@ -456,3 +456,35 @@ relationship.
 
 Decision: Keep the loop order stable as needs tick, observation, action
 decision, then internal effect application.
+
+## 2026-06-17 - Passive Multi-Agent V0
+
+Summary: Updated `agent_smoke` to spawn two PebbleLab-only abstract agents,
+`agent_0` and `agent_1`. Both agents run the same internal loop independently:
+needs tick, observation, action decision, action effect, and memory recording.
+
+Files touched:
+
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/PEBBLELAB_JOURNAL.md`
+- `docs/PEBBLELAB_CHANGELOG.md`
+- `docs/PEBBLELAB_NEXT.md`
+
+Validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario empty --out runs/smoke_empty_after_second_agent`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario chunk_smoke --chunk-radius 1 --out runs/smoke_chunk_after_second_agent`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario agent_smoke --out runs/smoke_agent_second`
+
+Result: `agent_snapshot.json` contains both agents. Agent events include
+`agentId`, so events remain separable. Metrics such as ticks, observations,
+actions, action effects, and memory entries are now totals across both agents.
+
+Known limits: The agents do not interact. There is no communication, social
+relationship, pathfinding, movement, or world effect.
+
+Decision: Introduce passive multi-agent handling before adding any
+agent-agent interaction.
