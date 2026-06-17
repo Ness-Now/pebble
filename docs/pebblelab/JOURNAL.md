@@ -611,3 +611,78 @@ Next steps:
 
 - Phase 4.2B: real PebbleCore entity feasibility patch, registry-safe and
   planned separately.
+
+## 2026-06-18 - Phase 4.2B Real Entity Feasibility Planning
+
+Branch: `lab/pebblelab-v1`
+
+Objective: plan the safest path from PebbleLab-only physical placeholders to a
+future real PebbleCore entity without implementing the entity or touching
+registries.
+
+Files inspected:
+
+- `AGENTS.md`
+- `Package.swift`
+- `Sources/PebbleLab/LabAgent.swift`
+- `Sources/PebbleLab/LabPhysical.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `Sources/PebbleCore/Entity/Entity.swift`
+- `Sources/PebbleCore/Entity/Living.swift`
+- `Sources/PebbleCore/Entity/AI.swift`
+- `Sources/PebbleCore/Entity/EntityRegistry.swift`
+- `Sources/PebbleCore/Entity/SpawnHooks.swift`
+- `Sources/PebbleCore/Entity/Player.swift`
+- `Sources/PebbleCore/Entity/Villagers.swift`
+- `Sources/PebbleCore/Entity/Animals.swift`
+- `Sources/PebbleCore/World/GameWorld.swift`
+- `Sources/PebbleCore/Game/GameCore.swift`
+- `Sources/Pebble/WorldRenderer.swift`
+- `Sources/Pebble/CommandsM.swift`
+- `Sources/pebsmoke/main.swift`
+- `docs/pebblelab/PHASE_4_PHYSICAL_AGENT_SPIKE.md`
+- `docs/pebblelab/PHASE_4_PHYSICAL_SYNC.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/DECISIONS.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/CHANGELOG.md`
+
+Files modified:
+
+- `docs/pebblelab/PHASE_4_REAL_ENTITY_FEASIBILITY.md`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DECISIONS.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+Conclusions:
+
+- `LabAgent` remains the abstract brain, and the Phase 4.2A placeholder bridge
+  is PebbleLab-only.
+- `World` stores entities but does not tick them by itself; `GameCore` owns the
+  normal entity tick loop.
+- `EntityRegistry` order, entity type count, and spawnable mob list are
+  covered by `pebsmoke` goldens.
+- Existing mobs are not good lab shells because `Mob` brings goals,
+  navigation, despawn, sounds, interactions, and vanilla behavior.
+- Rendering is separate from simulation: a real entity in `World.entities` is
+  not visible unless `WorldRenderer` can resolve a model or debug path.
+- The recommended next phase is an unregistered PebbleCore `Entity` probe
+  constructed directly by PebbleLab, not a registry patch.
+
+Commands of validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --scenario physical_sync_smoke --seed 42 --ticks 5 --out runs/check_physical_sync_after_feasibility_docs`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_feasibility_docs`
+- `swift run -c release pebsmoke`
+
+Result: validation passed. This phase is documentation-only; no PebbleCore,
+registry, renderer, audio, resource pack, packaging, or golden file was
+modified.
+
+Next steps:
+
+- Phase 4.3A: unregistered `LabCoreAgentEntity` probe, constructed directly by
+  PebbleLab and validated headlessly before any registry work.

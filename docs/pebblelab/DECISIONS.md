@@ -160,3 +160,21 @@ pathfinding, rendering, save/load, item stacks, combat, or construction.
 
 Reason: the project needs a stable bridge contract and measurable drift before
 planning any registry-safe real entity feasibility patch.
+
+## 2026-06-18 - Probe Real Entities Before Registry Changes
+
+Decision: the next real-entity step should be an unregistered PebbleCore
+`Entity` probe constructed directly by PebbleLab, not a registered entity and
+not a wrapper around an existing mob.
+
+The recommended Phase 4.3A path is to add a minimal `LabCoreAgentEntity` that
+can be inserted into a PebbleLab `World.entities` scenario, linked to a
+`LabAgent`, ticked explicitly, and measured through snapshots and metrics. It
+must not modify `EntityRegistry`, `spawnableMobs`, renderer model mapping,
+save/load contracts, vanilla mob behavior, pathfinding, collision, combat, or
+goldens.
+
+Reason: `EntityRegistry` order, entity type count, spawnable mob lists, natural
+spawning, and vanilla mob behavior are golden-sensitive. A direct unregistered
+probe is the smallest real PebbleCore boundary crossing that preserves the
+existing deterministic bridge contract.

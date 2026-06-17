@@ -91,5 +91,20 @@ touching registries, modifying existing mobs, or introducing pathfinding.
 
 ## Phase 4.2B - Real PebbleCore Entity Feasibility Patch
 
-Next recommended step: evaluate a registry-safe dedicated experimental entity
-only after the placeholder bridge contract is stable.
+Status: done and validated as a docs-only feasibility phase.
+
+Goal: evaluate the safest path from PebbleLab-only physical placeholders to a
+future real PebbleCore entity without implementing that entity or touching
+registries.
+
+## Phase 4.3A - Unregistered LabCoreAgentEntity Probe
+
+Next recommended step: add a minimal unregistered PebbleCore `Entity` subclass
+that is constructed directly by PebbleLab, linked to `LabAgent`, and validated
+headlessly without modifying `EntityRegistry`, rendering, save/load, or
+goldens.
+
+## Phase 4.3B - Registry-Safe Entity Registration Planning
+
+Later step: plan and review any registered entity work after the unregistered
+probe proves the real-entity bridge contract.

@@ -20,3 +20,4 @@
 - Documented Phase 4 physical agent spike plan.
 - Added physical placeholder smoke for PebbleLab agents.
 - Added physical placeholder synchronization with abstract movement.
+- Documented real PebbleCore entity feasibility for PebbleLab agents.
