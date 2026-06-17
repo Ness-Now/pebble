@@ -18,7 +18,7 @@ func usage() -> String {
     Options:
       --seed <UInt32>      World seed. Default: 12345
       --ticks <Int>        Number of ticks to run. Default: 20
-      --scenario <String>  Scenario name. Currently supported: empty
+      --scenario <String>  Scenario name. Currently supported: empty, chunk_smoke
       --out <path>         Directory where run outputs are written.
       --help               Show this help and exit.
     """

@@ -8,6 +8,8 @@ struct RunEvent: Encodable {
     let ticksRequested: Int?
     let worldTime: Int?
     let success: Bool?
+    let chunksTouched: Int?
+    let chunkRadius: Int?
 }
 
 func encodeEventLine(_ event: RunEvent) throws -> String {

@@ -14,6 +14,8 @@ struct RunMetrics: Encodable {
     let ticksCompleted: Int
     let worldTime: Int
     let success: Bool
+    let chunksTouched: Int?
+    let chunkRadius: Int?
 }
 
 func writeJSON<T: Encodable>(_ value: T, to url: URL) throws {

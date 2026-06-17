@@ -2,12 +2,10 @@ import Foundation
 import PebbleCore
 
 let options = parseArguments(CommandLine.arguments)
-
-guard options.scenario == "empty" else {
-    fail("unsupported scenario: \(options.scenario). Currently supported: empty")
-}
+validateScenario(options.scenario)
 
 let world = World(dim: .overworld, seed: options.seed)
+let scenarioResult = prepareScenario(options.scenario, world: world)
 
 var ticksCompleted = 0
 var eventsNDJSON = ""
@@ -21,8 +19,23 @@ if options.outPath != nil {
             seed: options.seed,
             ticksRequested: options.ticks,
             worldTime: nil,
-            success: nil
+            success: nil,
+            chunksTouched: nil,
+            chunkRadius: nil
         ))
+        if options.scenario == "chunk_smoke" {
+            eventsNDJSON += try encodeEventLine(RunEvent(
+                type: "scenario_started",
+                tick: 0,
+                scenario: options.scenario,
+                seed: nil,
+                ticksRequested: nil,
+                worldTime: nil,
+                success: nil,
+                chunksTouched: scenarioResult.chunksTouched,
+                chunkRadius: scenarioResult.chunkRadius
+            ))
+        }
     } catch {
         fail("failed to encode run_started event: \(error)")
     }
@@ -41,7 +54,9 @@ for _ in 0..<options.ticks {
                 seed: nil,
                 ticksRequested: nil,
                 worldTime: world.time,
-                success: nil
+                success: nil,
+                chunksTouched: nil,
+                chunkRadius: nil
             ))
         } catch {
             fail("failed to encode world_tick event: \(error)")
@@ -58,7 +73,9 @@ if options.outPath != nil {
             seed: nil,
             ticksRequested: nil,
             worldTime: world.time,
-            success: true
+            success: true,
+            chunksTouched: nil,
+            chunkRadius: nil
         ))
     } catch {
         fail("failed to encode run_finished event: \(error)")
@@ -86,7 +103,9 @@ if let outPath = options.outPath {
                 ticksRequested: options.ticks,
                 ticksCompleted: ticksCompleted,
                 worldTime: world.time,
-                success: true
+                success: true,
+                chunksTouched: scenarioResult.chunksTouched,
+                chunkRadius: scenarioResult.chunkRadius
             ),
             to: outURL.appendingPathComponent("metrics.json")
         )
