@@ -5,3 +5,5 @@ dist/
 *.zip
 !packaging/*.zip
 .claude/
+runs/
+models/
