@@ -27,6 +27,9 @@
   `--chunk-radius 1` is used.
 - Area metrics: `expectedChunks`, `readyChunks`, and `nonAirBlocksTotal`.
 - `chunk_smoke_area_ready` summary event in `events.ndjson`.
+- `world_snapshot.json` for `chunk_smoke` runs with `--out`, including center
+  terrain data and sorted per-chunk summaries.
+- `world_snapshot_written` event when a snapshot is emitted.
 
 ## Changed
 
@@ -37,6 +40,8 @@
 - `chunk_smoke` metrics now reflect an adopted origin chunk instead of a passive
   chunk lookup.
 - `chunk_smoke` emits one `chunk_smoke_chunk_adopted` event per adopted chunk.
+- `chunk_smoke` run outputs now include a stable terrain snapshot for generated
+  chunk areas.
 
 ## Fixed
 
@@ -47,6 +52,8 @@
 - `chunk_smoke` generates one chunk only; it does not resolve worldgen entities
   or block entities.
 - `--chunk-radius` is capped at `1` for now.
+- `world_snapshot.json` does not include entities, block entities, or pathing
+  data yet.
 - No agents, needs, memory, roles, tasks, pathfinding, or social behavior.
 - No Python analysis or training pipeline yet.
 - No visual replay or Pebble viewer integration yet.

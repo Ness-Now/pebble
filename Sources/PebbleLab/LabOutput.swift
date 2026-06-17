@@ -60,6 +60,35 @@ struct RunMetrics: Encodable {
     }
 }
 
+struct WorldSnapshot: Encodable {
+    let scenario: String
+    let seed: UInt32
+    let ticksCompleted: Int
+    let worldTime: Int
+    let chunkRadius: Int
+    let expectedChunks: Int
+    let readyChunks: Int
+    let originChunkReady: Bool
+    let center: SnapshotCenter
+    let chunks: [SnapshotChunk]
+}
+
+struct SnapshotCenter: Encodable {
+    let x: Int
+    let z: Int
+    let height: Int
+    let surfaceY: Int
+}
+
+struct SnapshotChunk: Encodable {
+    let cx: Int
+    let cz: Int
+    let ready: Bool
+    let centerHeight: Int
+    let centerSurfaceY: Int
+    let nonAirBlocks: Int?
+}
+
 func writeJSON<T: Encodable>(_ value: T, to url: URL) throws {
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

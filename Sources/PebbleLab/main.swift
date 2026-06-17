@@ -144,6 +144,21 @@ if let outPath = options.outPath {
             ),
             to: outURL.appendingPathComponent("metrics.json")
         )
+        if let snapshot = makeWorldSnapshot(
+            options: options,
+            world: world,
+            result: scenarioResult,
+            ticksCompleted: ticksCompleted
+        ) {
+            try writeJSON(snapshot, to: outURL.appendingPathComponent("world_snapshot.json"))
+            eventsNDJSON += try encodeEventLine(RunEvent(
+                type: "world_snapshot_written",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                chunks: snapshot.chunks.count,
+                path: "world_snapshot.json"
+            ))
+        }
         try eventsNDJSON.write(
             to: outURL.appendingPathComponent("events.ndjson"),
             atomically: true,

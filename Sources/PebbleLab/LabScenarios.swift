@@ -18,6 +18,9 @@ struct AdoptedChunk {
     let z: Int
     let chunksTouched: Int
     let originChunkReady: Bool
+    let ready: Bool
+    let centerHeight: Int
+    let centerSurfaceY: Int
     let nonAirBlocks: Int
 }
 
@@ -58,11 +61,16 @@ func prepareScenario(_ options: Options, world: World) -> ScenarioResult {
                     count + (cell == 0 ? 0 : 1)
                 }
                 nonAirBlocksTotal += nonAirBlocks
+                let centerX = cx * 16 + 8
+                let centerZ = cz * 16 + 8
                 adoptedChunks.append(AdoptedChunk(
                     x: cx,
                     z: cz,
                     chunksTouched: world.chunks.count,
                     originChunkReady: world.isChunkReady(0, 0),
+                    ready: world.isChunkReady(cx, cz),
+                    centerHeight: world.heightAt(centerX, centerZ),
+                    centerSurfaceY: world.surfaceY(centerX, centerZ),
                     nonAirBlocks: nonAirBlocks
                 ))
             }
@@ -93,4 +101,49 @@ func prepareScenario(_ options: Options, world: World) -> ScenarioResult {
     default:
         return ScenarioResult()
     }
+}
+
+func makeWorldSnapshot(
+    options: Options,
+    world: World,
+    result: ScenarioResult,
+    ticksCompleted: Int
+) -> WorldSnapshot? {
+    guard options.scenario == "chunk_smoke",
+          let chunkRadius = result.chunkRadius,
+          let expectedChunks = result.expectedChunks,
+          let readyChunks = result.readyChunks,
+          let originChunkReady = result.originChunkReady,
+          let centerHeight = result.centerHeight,
+          let centerSurfaceY = result.centerSurfaceY
+    else { return nil }
+
+    let chunks = result.adoptedChunks
+        .sorted {
+            if $0.x != $1.x { return $0.x < $1.x }
+            return $0.z < $1.z
+        }
+        .map {
+            SnapshotChunk(
+                cx: $0.x,
+                cz: $0.z,
+                ready: $0.ready,
+                centerHeight: $0.centerHeight,
+                centerSurfaceY: $0.centerSurfaceY,
+                nonAirBlocks: $0.nonAirBlocks
+            )
+        }
+
+    return WorldSnapshot(
+        scenario: options.scenario,
+        seed: options.seed,
+        ticksCompleted: ticksCompleted,
+        worldTime: world.time,
+        chunkRadius: chunkRadius,
+        expectedChunks: expectedChunks,
+        readyChunks: readyChunks,
+        originChunkReady: originChunkReady,
+        center: SnapshotCenter(x: 8, z: 8, height: centerHeight, surfaceY: centerSurfaceY),
+        chunks: chunks
+    )
 }

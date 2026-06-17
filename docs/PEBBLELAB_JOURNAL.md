@@ -245,3 +245,39 @@ not resolve worldgen entity specs or block entity specs.
 
 Decision: Keep chunk area generation small and explicit until scenario/log
 contracts are more mature.
+
+## 2026-06-17 - `chunk_smoke` World Snapshot
+
+Summary: Added `world_snapshot.json` for `chunk_smoke` runs with `--out`. The
+snapshot describes the generated chunk area in stable JSON, including global
+run context, center terrain data, and one entry per generated chunk.
+
+Files touched:
+
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/PEBBLELAB_JOURNAL.md`
+- `docs/PEBBLELAB_CHANGELOG.md`
+
+Validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario empty --out runs/smoke_empty_snapshot`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario chunk_smoke --chunk-radius 0 --out runs/smoke_snapshot_radius0`
+- `swift run -c release PebbleLab -- --seed 42 --ticks 3 --scenario chunk_smoke --chunk-radius 1 --out runs/smoke_snapshot_radius1`
+- `cat runs/smoke_snapshot_radius0/world_snapshot.json`
+- `cat runs/smoke_snapshot_radius1/world_snapshot.json`
+- `cat runs/smoke_snapshot_radius1/metrics.json`
+- `cat runs/smoke_snapshot_radius1/events.ndjson`
+
+Result: `empty` still ran without a snapshot. `chunk_smoke` wrote
+`world_snapshot.json`; radius `0` contained one chunk and radius `1` contained
+nine sorted chunk entries.
+
+Known limits: The snapshot is terrain/chunk oriented only. It does not include
+entities, block entities, inventories, or pathfinding data.
+
+Decision: Keep snapshots as simple read-only observability artifacts before
+introducing agents.

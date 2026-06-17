@@ -19,6 +19,8 @@ struct RunEvent: Encodable {
     let expectedChunks: Int?
     let readyChunks: Int?
     let nonAirBlocksTotal: Int?
+    let chunks: Int?
+    let path: String?
 
     init(
         type: String,
@@ -38,7 +40,9 @@ struct RunEvent: Encodable {
         nonAirBlocks: Int? = nil,
         expectedChunks: Int? = nil,
         readyChunks: Int? = nil,
-        nonAirBlocksTotal: Int? = nil
+        nonAirBlocksTotal: Int? = nil,
+        chunks: Int? = nil,
+        path: String? = nil
     ) {
         self.type = type
         self.tick = tick
@@ -58,6 +62,8 @@ struct RunEvent: Encodable {
         self.expectedChunks = expectedChunks
         self.readyChunks = readyChunks
         self.nonAirBlocksTotal = nonAirBlocksTotal
+        self.chunks = chunks
+        self.path = path
     }
 }
 
