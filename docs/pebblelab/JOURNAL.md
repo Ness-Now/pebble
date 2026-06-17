@@ -307,3 +307,47 @@ and `seek_safety_smoke` reduces distance to home through abstract movement.
 Next steps:
 
 - Phase 3.8: `long_run_smoke + event rate controls`.
+
+## 2026-06-17 - Phase 3.8 long_run_smoke And Event Rate Controls
+
+Branch: `lab/pebblelab-v1`
+
+Objective: prepare PebbleLab for longer abstract-agent runs by adding a
+long-running smoke scenario and basic controls for high-volume events.
+
+Files modified:
+
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DECISIONS.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+Behavior added:
+
+- `long_run_smoke` runs deterministic abstract agents for longer simulations.
+- `--event-rate` throttles frequent NDJSON events while preserving internal
+  metrics.
+- `--log-world-ticks` controls whether `world_tick` events are emitted.
+- Log-volume metrics track written and suppressed events.
+- `successCriteria` records basic scenario completion checks.
+
+Commands of validation:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --scenario agent_smoke --seed 42 --ticks 3 --out runs/agent_smoke_after_long_run`
+- `swift run -c release PebbleLab -- --scenario agents_basic --seed 42 --agents 10 --ticks 20 --out runs/agents_basic_after_long_run`
+- `swift run -c release PebbleLab -- --scenario seek_safety_smoke --seed 42 --ticks 10 --out runs/seek_safety_after_long_run`
+- `swift run -c release PebbleLab -- --scenario long_run_smoke --seed 42 --agents 10 --ticks 1000 --event-rate 10 --out runs/long_run_smoke_v0`
+- `swift run -c release pebsmoke`
+
+Result: validation passed. Existing scenarios still run, and
+`long_run_smoke` completes 1000 ticks with throttled frequent events and
+success metrics.
+
+Next steps:
+
+- Phase 3.9: `scenario success criteria + regression report`.

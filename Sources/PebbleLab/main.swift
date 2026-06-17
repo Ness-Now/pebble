@@ -10,6 +10,27 @@ var labAgents = scenarioResult.agents
 
 var ticksCompleted = 0
 var eventsNDJSON = ""
+var eventsWritten = 0
+var eventsSuppressed = 0
+var worldTickEventsWritten = 0
+var worldTickEventsSuppressed = 0
+var nearbyAgentEventsWritten = 0
+var nearbyAgentEventsSuppressed = 0
+
+func shouldWriteFrequentEvent(tick: Int) -> Bool {
+    options.eventRate == 1 || tick % options.eventRate == 0
+}
+
+func appendEvent(_ event: RunEvent) throws {
+    eventsNDJSON += try encodeEventLine(event)
+    eventsWritten += 1
+}
+
+func appendEventLines(_ lines: String) {
+    guard !lines.isEmpty else { return }
+    eventsWritten += lines.split(separator: "\n", omittingEmptySubsequences: true).count
+    eventsNDJSON += lines
+}
 
 func encodeMemoryEvent(_ entry: LabMemoryEntry, agent: LabAgent, scenario: String) throws -> String {
     try encodeEventLine(RunEvent(
@@ -26,6 +47,13 @@ func encodeMemoryEvent(_ entry: LabMemoryEntry, agent: LabAgent, scenario: Strin
 func encodeNearbyAgentEvents(_ agent: LabAgent, tick: Int) throws -> String {
     var lines = ""
     for nearbyAgent in agent.nearbyAgents {
+        guard shouldWriteFrequentEvent(tick: tick) else {
+            nearbyAgentEventsSuppressed += 1
+            eventsSuppressed += 1
+            continue
+        }
+
+        nearbyAgentEventsWritten += 1
         lines += try encodeEventLine(RunEvent(
             type: "agent_observed_nearby_agent",
             tick: tick,
@@ -312,7 +340,7 @@ func inventoryItemsByKind() -> [String: Int]? {
 
 if options.outPath != nil {
     do {
-        eventsNDJSON += try encodeEventLine(RunEvent(
+        try appendEvent(RunEvent(
             type: "run_started",
             tick: 0,
             scenario: options.scenario,
@@ -324,7 +352,7 @@ if options.outPath != nil {
             chunkRadius: nil
         ))
         for adopted in scenarioResult.adoptedChunks {
-            eventsNDJSON += try encodeEventLine(RunEvent(
+            try appendEvent(RunEvent(
                 type: "chunk_smoke_chunk_adopted",
                 tick: 0,
                 scenario: options.scenario,
@@ -343,7 +371,7 @@ if options.outPath != nil {
             ))
         }
         if options.scenario == "chunk_smoke" {
-            eventsNDJSON += try encodeEventLine(RunEvent(
+            try appendEvent(RunEvent(
                 type: "chunk_smoke_area_ready",
                 tick: 0,
                 scenario: options.scenario,
@@ -366,10 +394,10 @@ if options.outPath != nil {
         }
         let allAgents = labAgents
         for index in labAgents.indices {
-            eventsNDJSON += try encodeSpawnAndInitialObservation(
+            appendEventLines(try encodeSpawnAndInitialObservation(
                 agent: &labAgents[index],
                 allAgents: allAgents
-            )
+            ))
         }
     } catch {
         fail("failed to encode run_started event: \(error)")
@@ -385,7 +413,7 @@ for _ in 0..<options.ticks {
         for index in labAgents.indices {
             if options.outPath != nil {
                 do {
-                    eventsNDJSON += try tickAndEncodeAgent(&labAgents[index], allAgents: allAgents)
+                    appendEventLines(try tickAndEncodeAgent(&labAgents[index], allAgents: allAgents))
                 } catch {
                     fail("failed to encode agent_tick event: \(error)")
                 }
@@ -403,33 +431,52 @@ for _ in 0..<options.ticks {
 
     if options.outPath != nil {
         do {
-            eventsNDJSON += try encodeEventLine(RunEvent(
-                type: "world_tick",
-                tick: ticksCompleted,
-                scenario: nil,
-                seed: nil,
-                ticksRequested: nil,
-                worldTime: world.time,
-                success: nil,
-                chunksTouched: nil,
-                chunkRadius: nil
-            ))
+            if options.logWorldTicks && shouldWriteFrequentEvent(tick: ticksCompleted) {
+                try appendEvent(RunEvent(
+                    type: "world_tick",
+                    tick: ticksCompleted,
+                    scenario: nil,
+                    seed: nil,
+                    ticksRequested: nil,
+                    worldTime: world.time,
+                    success: nil,
+                    chunksTouched: nil,
+                    chunkRadius: nil
+                ))
+                worldTickEventsWritten += 1
+            } else {
+                worldTickEventsSuppressed += 1
+                eventsSuppressed += 1
+            }
         } catch {
             fail("failed to encode world_tick event: \(error)")
         }
     }
 }
 
+func makeSuccessCriteria() -> RunSuccessCriteria {
+    RunSuccessCriteria(
+        ticksCompleted: ticksCompleted == options.ticks,
+        agentsSpawned: labAgents.count == scenarioResult.agents.count,
+        agentTicksRecorded: labAgents.isEmpty || (sumAgents { $0.ticksAlive } ?? 0) > 0
+    )
+}
+
+let successCriteria = makeSuccessCriteria()
+let runSuccess = successCriteria.ticksCompleted
+    && successCriteria.agentsSpawned
+    && successCriteria.agentTicksRecorded
+
 if options.outPath != nil {
     do {
-        eventsNDJSON += try encodeEventLine(RunEvent(
+        try appendEvent(RunEvent(
             type: "run_finished",
             tick: ticksCompleted,
             scenario: nil,
             seed: nil,
             ticksRequested: nil,
             worldTime: world.time,
-            success: true,
+            success: runSuccess,
             chunksTouched: nil,
             chunkRadius: nil
         ))
@@ -450,10 +497,45 @@ if let outPath = options.outPath {
                 scenario: options.scenario,
                 seed: options.seed,
                 ticks: options.ticks,
+                eventRate: options.eventRate,
+                logWorldTicks: options.logWorldTicks,
                 outPath: outPath
             ),
             to: outURL.appendingPathComponent("config.json")
         )
+        if let snapshot = makeWorldSnapshot(
+            options: options,
+            world: world,
+            result: scenarioResult,
+            ticksCompleted: ticksCompleted
+        ) {
+            try writeJSON(snapshot, to: outURL.appendingPathComponent("world_snapshot.json"))
+            try appendEvent(RunEvent(
+                type: "world_snapshot_written",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                chunks: snapshot.chunks.count,
+                path: "world_snapshot.json"
+            ))
+        }
+        if !labAgents.isEmpty, options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke" || options.scenario == "long_run_smoke" {
+            try writeJSON(
+                AgentSnapshot(
+                    scenario: options.scenario,
+                    seed: options.seed,
+                    ticksCompleted: ticksCompleted,
+                    agents: labAgents
+                ),
+                to: outURL.appendingPathComponent("agent_snapshot.json")
+            )
+            try appendEvent(RunEvent(
+                type: "agent_snapshot_written",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                path: "agent_snapshot.json",
+                agents: labAgents.count
+            ))
+        }
         try writeJSON(
             RunMetrics(
                 scenario: options.scenario,
@@ -461,7 +543,7 @@ if let outPath = options.outPath {
                 ticksRequested: options.ticks,
                 ticksCompleted: ticksCompleted,
                 worldTime: world.time,
-                success: true,
+                success: runSuccess,
                 chunksTouched: scenarioResult.chunksTouched,
                 chunkRadius: scenarioResult.chunkRadius,
                 originChunkReady: scenarioResult.originChunkReady,
@@ -507,43 +589,18 @@ if let outPath = options.outPath {
                 agentsMovedTowardHome: countAgents { $0.returnHomeMoveCount > 0 },
                 totalDistanceReducedTowardHome: sumAgents { $0.totalDistanceReducedTowardHome },
                 agentsAtHome: countAgents { $0.distanceFromHome == 0 },
-                agentsNearHome: countAgents { $0.distanceFromHome <= 1 }
+                agentsNearHome: countAgents { $0.distanceFromHome <= 1 },
+                eventsWritten: eventsWritten,
+                eventsSuppressed: eventsSuppressed,
+                eventRate: options.eventRate,
+                worldTickEventsWritten: worldTickEventsWritten,
+                worldTickEventsSuppressed: worldTickEventsSuppressed,
+                nearbyAgentEventsWritten: nearbyAgentEventsWritten,
+                nearbyAgentEventsSuppressed: nearbyAgentEventsSuppressed,
+                successCriteria: successCriteria
             ),
             to: outURL.appendingPathComponent("metrics.json")
         )
-        if let snapshot = makeWorldSnapshot(
-            options: options,
-            world: world,
-            result: scenarioResult,
-            ticksCompleted: ticksCompleted
-        ) {
-            try writeJSON(snapshot, to: outURL.appendingPathComponent("world_snapshot.json"))
-            eventsNDJSON += try encodeEventLine(RunEvent(
-                type: "world_snapshot_written",
-                tick: ticksCompleted,
-                scenario: options.scenario,
-                chunks: snapshot.chunks.count,
-                path: "world_snapshot.json"
-            ))
-        }
-        if !labAgents.isEmpty, options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke" {
-            try writeJSON(
-                AgentSnapshot(
-                    scenario: options.scenario,
-                    seed: options.seed,
-                    ticksCompleted: ticksCompleted,
-                    agents: labAgents
-                ),
-                to: outURL.appendingPathComponent("agent_snapshot.json")
-            )
-            eventsNDJSON += try encodeEventLine(RunEvent(
-                type: "agent_snapshot_written",
-                tick: ticksCompleted,
-                scenario: options.scenario,
-                path: "agent_snapshot.json",
-                agents: labAgents.count
-            ))
-        }
         try eventsNDJSON.write(
             to: outURL.appendingPathComponent("events.ndjson"),
             atomically: true,

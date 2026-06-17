@@ -8,6 +8,9 @@ struct Options {
     var chunkRadius = 0
     var chunkRadiusProvided = false
     var agents = 2
+    var agentsProvided = false
+    var eventRate = 1
+    var logWorldTicks = true
 }
 
 func usage() -> String {
@@ -15,15 +18,18 @@ func usage() -> String {
     PebbleLab - headless PebbleCore simulation runner
 
     Usage:
-      PebbleLab [--seed <UInt32>] [--ticks <Int>] [--scenario empty] [--chunk-radius <Int>] [--agents <Int>] [--out <path>]
+      PebbleLab [--seed <UInt32>] [--ticks <Int>] [--scenario empty] [--chunk-radius <Int>] [--agents <Int>] [--event-rate <Int>] [--log-world-ticks <Bool>] [--out <path>]
       PebbleLab --help
 
     Options:
       --seed <UInt32>      World seed. Default: 12345
       --ticks <Int>        Number of ticks to run. Default: 20
-      --scenario <String>  Scenario name. Currently supported: empty, chunk_smoke, agent_smoke, agents_basic, seek_safety_smoke
+      --scenario <String>  Scenario name. Currently supported: empty, chunk_smoke, agent_smoke, agents_basic, seek_safety_smoke, long_run_smoke
       --chunk-radius <Int> Chunk radius for chunk_smoke. Default: 0. Supported: 0...1
-      --agents <Int>       Agent count for agents_basic. Default: 2. Supported: 1...100
+      --agents <Int>       Agent count for agents_basic and long_run_smoke. Default: 2, or 10 for long_run_smoke. Supported: 1...100
+      --event-rate <Int>   Write frequent events every N ticks. Default: 1
+      --log-world-ticks <Bool>
+                           Write world_tick events. Default: true
       --out <path>         Directory where run outputs are written.
       --help               Show this help and exit.
     """
@@ -93,6 +99,28 @@ func parseArguments(_ arguments: [String]) -> Options {
                 fail("invalid --agents \(agents): supported range is 1...100")
             }
             options.agents = agents
+            options.agentsProvided = true
+        case "--event-rate":
+            index += 1
+            guard index < arguments.count else { fail("missing value for --event-rate") }
+            guard let eventRate = Int(arguments[index]) else {
+                fail("invalid Int value for --event-rate: \(arguments[index])")
+            }
+            guard eventRate >= 1 else {
+                fail("invalid --event-rate \(eventRate): must be at least 1")
+            }
+            options.eventRate = eventRate
+        case "--log-world-ticks":
+            index += 1
+            guard index < arguments.count else { fail("missing value for --log-world-ticks") }
+            switch arguments[index].lowercased() {
+            case "true", "yes", "1":
+                options.logWorldTicks = true
+            case "false", "no", "0":
+                options.logWorldTicks = false
+            default:
+                fail("invalid Bool value for --log-world-ticks: \(arguments[index])")
+            }
         case "--out":
             index += 1
             guard index < arguments.count else { fail("missing value for --out") }

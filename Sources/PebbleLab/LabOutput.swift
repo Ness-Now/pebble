@@ -4,7 +4,15 @@ struct RunConfig: Encodable {
     let scenario: String
     let seed: UInt32
     let ticks: Int
+    let eventRate: Int
+    let logWorldTicks: Bool
     let outPath: String?
+}
+
+struct RunSuccessCriteria: Encodable {
+    let ticksCompleted: Bool
+    let agentsSpawned: Bool
+    let agentTicksRecorded: Bool
 }
 
 struct RunMetrics: Encodable {
@@ -61,6 +69,14 @@ struct RunMetrics: Encodable {
     let totalDistanceReducedTowardHome: Int?
     let agentsAtHome: Int?
     let agentsNearHome: Int?
+    let eventsWritten: Int?
+    let eventsSuppressed: Int?
+    let eventRate: Int?
+    let worldTickEventsWritten: Int?
+    let worldTickEventsSuppressed: Int?
+    let nearbyAgentEventsWritten: Int?
+    let nearbyAgentEventsSuppressed: Int?
+    let successCriteria: RunSuccessCriteria?
 
     init(
         scenario: String,
@@ -114,7 +130,15 @@ struct RunMetrics: Encodable {
         agentsMovedTowardHome: Int? = nil,
         totalDistanceReducedTowardHome: Int? = nil,
         agentsAtHome: Int? = nil,
-        agentsNearHome: Int? = nil
+        agentsNearHome: Int? = nil,
+        eventsWritten: Int? = nil,
+        eventsSuppressed: Int? = nil,
+        eventRate: Int? = nil,
+        worldTickEventsWritten: Int? = nil,
+        worldTickEventsSuppressed: Int? = nil,
+        nearbyAgentEventsWritten: Int? = nil,
+        nearbyAgentEventsSuppressed: Int? = nil,
+        successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
         self.seed = seed
@@ -168,6 +192,14 @@ struct RunMetrics: Encodable {
         self.totalDistanceReducedTowardHome = totalDistanceReducedTowardHome
         self.agentsAtHome = agentsAtHome
         self.agentsNearHome = agentsNearHome
+        self.eventsWritten = eventsWritten
+        self.eventsSuppressed = eventsSuppressed
+        self.eventRate = eventRate
+        self.worldTickEventsWritten = worldTickEventsWritten
+        self.worldTickEventsSuppressed = worldTickEventsSuppressed
+        self.nearbyAgentEventsWritten = nearbyAgentEventsWritten
+        self.nearbyAgentEventsSuppressed = nearbyAgentEventsSuppressed
+        self.successCriteria = successCriteria
     }
 }
 

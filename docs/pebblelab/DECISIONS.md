@@ -86,3 +86,16 @@ deterministic X/Z step toward home and records distance reduction metrics.
 
 Reason: agents need an inspectable safety loop before introducing richer
 navigation, homes, settlements, or physical bodies.
+
+## 2026-06-17 - Internal Metrics Separate From Event Volume
+
+Decision: PebbleLab separates internal simulation metrics from emitted NDJSON
+event volume.
+
+`--event-rate` throttles frequent events such as `world_tick` and
+`agent_observed_nearby_agent`, but it does not change agent state, world ticks,
+goal selection, movement, or aggregate metrics. Critical lifecycle events stay
+unthrottled.
+
+Reason: longer runs need bounded log sizes without losing deterministic
+simulation state or summary metrics.

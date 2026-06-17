@@ -15,3 +15,4 @@
 - Added `agents_basic` scenario with configurable `--agents` count.
 - Added abstract movement v0 for PebbleLab agents.
 - Added abstract seekSafety movement toward `homePosition`.
+- Added `long_run_smoke` scenario and event rate controls.

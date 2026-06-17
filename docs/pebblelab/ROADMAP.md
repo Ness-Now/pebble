@@ -53,5 +53,13 @@ world mutation.
 
 ## Phase 3.8 - long_run_smoke And Event Rate Controls
 
-Next recommended step: add a longer-running validation scenario and introduce
-basic controls for event volume before increasing simulation scale.
+Status: done and validated.
+
+Goal: run longer deterministic abstract-agent simulations while throttling
+frequent NDJSON events without changing internal simulation metrics.
+
+## Phase 3.9 - Scenario Success Criteria And Regression Report
+
+Next recommended step: make scenario validation summaries easier to compare
+across runs, including success criteria, expected metric ranges, and compact
+regression output.
