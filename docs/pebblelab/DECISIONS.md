@@ -226,3 +226,16 @@ Do not add a `/labprobe` spawn command in the same patch. `GameCore.chunkRecord`
 currently serializes non-player entities in loaded chunks without filtering on
 `persistent`, so an app-spawned unregistered probe could enter a save record.
 App-side probe injection requires a separate transient-lifecycle decision.
+
+## 2026-06-18 - Keep Debug Visibility Purely Renderer-Side
+
+Decision: Phase 4.4B implements the planned marker entirely in
+`WorldRenderer`. The renderer reads `PEBBLELAB_DEBUG_ENTITIES` once, enables
+the path only for the exact value `1`, selects only `LabCoreAgentEntity`, and
+draws interpolated cyan wireframe AABBs through the existing line pipeline.
+
+The patch does not change `modelNameFor`, create entities, add commands, alter
+simulation state, register types, or touch save/load, models, textures,
+shaders, resource packs, metrics, events, or snapshots. App-side probe
+creation remains deferred to Phase 4.4C because it needs a safe transient
+lifecycle and persistence exclusion contract.

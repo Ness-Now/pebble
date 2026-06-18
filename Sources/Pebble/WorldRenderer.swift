@@ -262,6 +262,8 @@ final class WorldRenderer {
 
     let entityRenderer: EntityRendererM
     let particles: ParticleSystemM
+    private let pebbleLabDebugEntitiesEnabled =
+        ProcessInfo.processInfo.environment["PEBBLELAB_DEBUG_ENTITIES"] == "1"
 
     // item sprite atlas (dropped items / thrown projectiles)
     var spriteTex: MTLTexture!
@@ -1041,6 +1043,15 @@ final class WorldRenderer {
         let camPos = SIMD3<Double>(cam.x, cam.y, cam.z)
         drawEntities(enc, game: game, viewProj: viewProj, camPos: camPos, dayLight: sky.dayLight,
                      fog: (fogColor, fogStart, fogEnd), partial: partial, timeSec: timeSec)
+        if pebbleLabDebugEntitiesEnabled {
+            drawLabCoreAgentDebugMarkers(
+                enc,
+                game: game,
+                viewProj: viewProj,
+                camPos: camPos,
+                partial: partial
+            )
+        }
         drawSprites(enc, game: game, viewProj: viewProj, camPos: camPos, cam: cam,
                     dayLight: sky.dayLight, fog: (fogColor, fogStart, fogEnd), partial: partial)
         drawCubes(enc, game: game, viewProj: viewProj, camPos: camPos, uni: &uni, partial: partial)
@@ -1296,6 +1307,45 @@ final class WorldRenderer {
                 }
             }
         }
+    }
+
+    private func drawLabCoreAgentDebugMarkers(
+        _ enc: MTLRenderCommandEncoder,
+        game: GameCore,
+        viewProj: simd_float4x4,
+        camPos: SIMD3<Double>,
+        partial: Double
+    ) {
+        let maxD = game.settings.entityDistance * game.settings.entityDistance
+        var boxes: [(Double, Double, Double, Double, Double, Double)] = []
+
+        for entityRef in game.world.entities {
+            guard let entity = entityRef as? LabCoreAgentEntity, !entity.dead else { continue }
+            let dx = entity.x - camPos.x
+            let dz = entity.z - camPos.z
+            if dx * dx + dz * dz > maxD { continue }
+
+            let x = entity.prevX + (entity.x - entity.prevX) * partial
+            let y = entity.prevY + (entity.y - entity.prevY) * partial
+            let z = entity.prevZ + (entity.z - entity.prevZ) * partial
+            let halfWidth = entity.width / 2 + 0.02
+            boxes.append((
+                x - halfWidth - camPos.x,
+                y - 0.02 - camPos.y,
+                z - halfWidth - camPos.z,
+                x + halfWidth - camPos.x,
+                y + entity.height + 0.02 - camPos.y,
+                z + halfWidth - camPos.z
+            ))
+        }
+
+        drawBoxOutline(
+            enc,
+            viewProj,
+            boxes,
+            asLines: false,
+            color: SIMD4<Float>(0.1, 0.95, 1, 0.9)
+        )
     }
 
     // ---- item / projectile billboards ------------------------------------------

@@ -24,3 +24,4 @@
 - Added unregistered PebbleCore entity probe for PebbleLab agents.
 - Added invariant report for the PebbleLab core entity probe.
 - Documented debug visibility plan for PebbleLab core entities.
+- Added gated wireframe debug marker for PebbleLab core entities.

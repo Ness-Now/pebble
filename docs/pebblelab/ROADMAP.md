@@ -124,6 +124,14 @@ simulation changes.
 
 ## Phase 4.4B - Renderer-Gated Debug Marker
 
-Next recommended step: add an environment-gated wireframe marker in
-`WorldRenderer` using its existing line pipeline. Do not add app-side probe
-spawning until transient save behavior has a separate safe contract.
+Status: done and validated.
+
+Goal: render existing `LabCoreAgentEntity` instances as cyan wireframe AABBs
+when `PEBBLELAB_DEBUG_ENTITIES=1`, using only `WorldRenderer`'s existing line
+pipeline and leaving simulation behavior unchanged.
+
+## Phase 4.4C - App-Side Transient Probe Lifecycle Planning
+
+Next recommended step: define how an app-side debug probe can be created,
+excluded from chunk saves, and removed safely. Do not add a spawn command until
+that transient lifecycle contract is explicit.

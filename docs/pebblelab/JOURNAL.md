@@ -871,3 +871,46 @@ remain green.
 
 Next step: Phase 4.4B, renderer-gated debug marker. Keep app-side probe
 injection and transient save handling separate.
+
+## 2026-06-18 - Phase 4.4B Renderer-Gated Debug Marker
+
+Branch: `lab/pebblelab-v1`
+
+Objective: render an existing `LabCoreAgentEntity` as a debug-only wireframe
+without changing simulation, registries, models, resources, or persistence.
+
+Files modified:
+
+- `Sources/Pebble/WorldRenderer.swift`
+- `docs/pebblelab/PHASE_4_DEBUG_VISIBILITY_PLAN.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/DECISIONS.md`
+
+Behavior added:
+
+- `WorldRenderer` reads `PEBBLELAB_DEBUG_ENTITIES` once at initialization.
+- The marker path is enabled only when the value is exactly `1`.
+- `drawLabCoreAgentDebugMarkers` selects only live
+  `LabCoreAgentEntity` instances, applies entity-distance culling, interpolates
+  previous/current positions, and batches camera-relative AABBs.
+- The marker uses the existing `linePipeline` through `drawBoxOutline`.
+- No app-side spawn, `/labprobe`, model mapping, shader, resource, metric,
+  event, or snapshot was added.
+
+Validation commands:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --scenario core_entity_smoke --seed 42 --ticks 5 --out runs/check_core_entity_after_debug_marker`
+- `swift run -c release PebbleLab -- --scenario physical_sync_smoke --seed 42 --ticks 5 --out runs/check_physical_sync_after_debug_marker`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_debug_marker`
+- `swift run -c release PebbleLab -- --scenario agent_smoke --seed 42 --ticks 3 --out runs/check_agent_smoke_after_debug_marker`
+- `swift run -c release pebsmoke`
+
+Result: validation passed. The app target builds, all requested PebbleLab
+scenarios remain green, and `pebsmoke` reports 456 passed, 0 failed. The app
+was not launched because no safe app-side probe injection exists yet.
+
+Next step: Phase 4.4C, app-side transient probe lifecycle planning with an
+explicit save-exclusion contract.

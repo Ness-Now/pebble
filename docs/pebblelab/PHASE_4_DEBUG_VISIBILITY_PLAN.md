@@ -223,20 +223,20 @@ Complexity: high. Golden compatibility: requires dedicated review.
 
 Recommendation: no until physical entity semantics are stable.
 
-## 4. Recommended Next Patch
+## 4. Implemented Patch
 
-Recommended phase:
+Implemented phase:
 
 `Phase 4.4B - renderer-gated debug marker for LabCoreAgentEntity`
 
-This should be a small code patch, not another docs-only phase.
+Phase 4.4B is implemented as a small renderer-only patch.
 
 Modify only:
 
 - `Sources/Pebble/WorldRenderer.swift`;
 - PebbleLab tracking documents.
 
-Implementation contract:
+Implementation:
 
 - read `PEBBLELAB_DEBUG_ENTITIES` once and enable only when its value is `1`;
 - keep the default disabled;
@@ -250,7 +250,7 @@ Implementation contract:
 - do not alter `modelNameFor`, model tables, textures, shaders, or packs;
 - add no simulation metrics, snapshots, or NDJSON events.
 
-Do not add a spawn command in Phase 4.4B. The marker should be a pure view of
+No spawn command was added. The marker is a pure view of
 entities already present. App-side probe injection requires a later contract
 that prevents an unregistered probe from entering chunk saves.
 
@@ -292,29 +292,30 @@ The environment variable controls drawing only. It must not create entities.
 | Save contamination | High | Medium with a spawn command | Do not add `/labprobe`; design transient exclusion before app injection. | Explicitly deferred. |
 | Long-term maintenance | Medium | Low | One isolated helper and one startup gate; no resources. | Keep patch removable. |
 
-## 7. Validation Plan for Future Phase
+## 7. Validation
 
-Headless and regression validation:
+Headless and regression validation for Phase 4.4B:
 
 ```sh
 cd ~/Dev/pebble-lab
 git checkout lab/pebblelab-v1
 swift build
-swift run -c release PebbleLab -- --scenario core_entity_smoke --seed 42 --ticks 5 --out runs/check_core_entity_before_debug_visibility
-swift run -c release PebbleLab -- --scenario physical_sync_smoke --seed 42 --ticks 5 --out runs/check_physical_sync_before_debug_visibility
-swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_before_debug_visibility
+swift run -c release PebbleLab -- --scenario core_entity_smoke --seed 42 --ticks 5 --out runs/check_core_entity_after_debug_marker
+swift run -c release PebbleLab -- --scenario physical_sync_smoke --seed 42 --ticks 5 --out runs/check_physical_sync_after_debug_marker
+swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_debug_marker
+swift run -c release PebbleLab -- --scenario agent_smoke --seed 42 --ticks 3 --out runs/check_agent_smoke_after_debug_marker
 swift run -c release pebsmoke
 git status
 ```
 
-The future patch should also build the app target explicitly:
+The normal build compiles the app target. It can also be built explicitly:
 
 ```sh
 cd ~/Dev/pebble-lab
 swift build -c release --product Pebble
 ```
 
-A realistic eventual visual workflow, after a separate safe app-side probe
+A realistic visual workflow, after a separate safe app-side probe
 injection mechanism exists, would be:
 
 ```sh
@@ -322,12 +323,12 @@ cd ~/Dev/pebble-lab
 PEBBLELAB_DEBUG_ENTITIES=1 PEBBLE_AUTOLOAD=1 PEBBLE_SHOT=/tmp/pebblelab-debug.png@180 swift run -c release Pebble
 ```
 
-Do not use that workflow in Phase 4.4B until the world is guaranteed disposable
+Do not use that workflow until the world is guaranteed disposable
 or the probe is excluded from persistence. Visual inspection should confirm a
 wireframe box at the probe position and no marker when the environment variable
 is absent.
 
-Future Phase 4.4B Definition of Done:
+Phase 4.4B Definition of Done:
 
 - marker disabled by default;
 - exact env gate works;
@@ -336,6 +337,10 @@ Future Phase 4.4B Definition of Done:
 - Pebble app product builds;
 - marker helper uses the existing line pipeline;
 - no app-side probe spawning is introduced.
+
+Result: complete. `swift build`, all requested PebbleLab scenarios, and all
+456 `pebsmoke` checks pass. Visual capture remains deferred because the app has
+no safe probe injection lifecycle.
 
 ## 8. Definition of Done for This Docs-Only Phase
 
