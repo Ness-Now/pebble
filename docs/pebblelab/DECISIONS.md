@@ -267,3 +267,21 @@ cleanup still removes every live non-player entity through `World.removeEntity`.
 
 This preserves all existing entity defaults, save format, registry behavior,
 and `persistent` semantics while giving transient probes an explicit opt-out.
+
+## 2026-06-18 - Gate App Probe Creation Separately From Rendering
+
+Decision: Phase 4.4E adds app-side `/labprobe status`, `/labprobe spawn`, and
+`/labprobe clear` operations in `CommandsM.swift` only.
+
+Probe creation requires the exact environment value
+`PEBBLELAB_APP_PROBES=1`. Rendering remains separately controlled by
+`PEBBLELAB_DEBUG_ENTITIES=1`; neither gate implies the other. Spawn constructs
+one unregistered `LabCoreAgentEntity` directly, verifies its
+`shouldSaveToChunk == false` contract, and inserts it through
+`World.addEntity`. Duplicate probes are rejected.
+
+Status is read-only. Clear remains available even when creation is disabled so
+an existing transient probe always has a safe cleanup path, and removes probes
+only through `World.removeEntity` to keep `entities` and `entityById`
+consistent. The command remains absent from normal `/help` output unless the
+creation gate is active.

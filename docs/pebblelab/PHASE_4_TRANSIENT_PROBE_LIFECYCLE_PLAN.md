@@ -16,12 +16,11 @@ The probe remains unregistered. `EntityRegistry` has no factory for
 
 `WorldRenderer` now has a default-off wireframe path gated by
 `PEBBLELAB_DEBUG_ENTITIES=1`. It can display a live `LabCoreAgentEntity` already
-present in an app world, but the app does not create one. There is no
-`/labprobe` command, startup injection, transient manager, or save-safe app
-lifecycle.
+present in an app world. Phase 4.4E adds a gated `/labprobe` command for
+explicit status, spawn, and clear operations; no startup injection exists.
 
-A naive command is unsafe because normal GameCore chunk serialization would
-include the unregistered probe in a save record.
+Phase 4.4D makes this lifecycle save-safe by excluding the unregistered probe
+from chunk records through `shouldSaveToChunk == false`.
 
 ## 2. Save/Load Architecture Summary
 
@@ -283,12 +282,28 @@ Files that must not change include `EntityRegistry.swift`, `WorldRenderer.swift`
 `CommandsM.swift`, app startup, model/resource paths, shaders, audio, packaging,
 and goldens.
 
-No `/labprobe` or app injection was added. A gated command becomes eligible
-for Phase 4.4E because save exclusion is now validated.
+No `/labprobe` or app injection was added in Phase 4.4D. Phase 4.4E now builds
+on this validated exclusion contract.
+
+### Phase 4.4E implementation
+
+`CommandsM.swift` now provides:
+
+- `/labprobe status`, a read-only report of gate state, probe count, IDs, and
+  positions;
+- `/labprobe spawn`, enabled only when `PEBBLELAB_APP_PROBES=1`, rejecting
+  duplicates, verifying `shouldSaveToChunk == false`, and inserting through
+  `World.addEntity`;
+- `/labprobe clear`, which remains available as a safe cleanup path and removes
+  every probe through `World.removeEntity`.
+
+The rendering gate remains separate at `PEBBLELAB_DEBUG_ENTITIES=1`. The app
+does not automatically inject a probe, and no registry, `spawnMob`,
+`loadEntity`, GameCore, save format, or renderer change is involved.
 
 ## 5. Safe Transient Lifecycle Contract
 
-A future app-side probe is allowed only when all of these are true:
+An app-side probe is allowed only when all of these are true:
 
 - creation requires an explicit debug gate;
 - the feature is inactive by default;
@@ -300,29 +315,31 @@ A future app-side probe is allowed only when all of these are true:
 - disposable test worlds are preferred even after exclusion;
 - creation is idempotent for a given debug identity;
 - cleanup calls `World.removeEntity`, removing both `entities` and `entityById`;
-- cleanup runs on explicit clear, world exit, dimension transition, and debug
-  session shutdown;
+- explicit cleanup is available through `/labprobe clear`;
+- automatic cleanup on world exit, dimension transition, and debug session
+  shutdown remains future hardening work;
 - dead or unloaded probes leave no app-side bridge references;
 - debug logs or HUD state clearly label the entity as transient;
 - renderer activation remains separately gated by
   `PEBBLELAB_DEBUG_ENTITIES=1`;
 - no gameplay state depends on the probe.
 
-Once Phase 4.4D exists, a later command may be acceptable if it is gated,
-supports both `spawn` and `clear`, refuses duplicates, and reports its transient
-status. It must still not be listed as a normal summonable mob.
+Phase 4.4E satisfies the command contract: creation is gated, spawn is
+idempotent, clear is safe, and status reports transient probes. The command is
+not a normal summon path and the probe is absent from `EntityRegistry` and
+`spawnableMobs`.
 
 ## 6. Risk Map
 
 | Risk | Severity | Probability | Mitigation | Decision |
 | --- | --- | --- | --- | --- |
 | Save contamination | Critical | High without exclusion | Add explicit entity save policy and apply it in both unload presence and serialization. | Phase 4.4D first. |
-| Probe dropped on load | High | Certain if serialized | Prevent serialization; do not register merely to hide the problem. | No app injection yet. |
+| Probe dropped on load | High | Low after exclusion | Prevent serialization; do not register merely to hide the problem. | Save exclusion enforced. |
 | Worldgen entities suppressed by stale record | High | Medium | Ensure a probe alone cannot create an entity-only record. | Filter `hasEntities`. |
 | Orphan in `entityById` | High | Medium with manual cleanup | Always use `World.removeEntity`; never mutate arrays directly. | Lifecycle contract requirement. |
 | Memory or bridge leak | Medium | Medium | Clear bridge references when probe is removed or world changes. | Test spawn/clear later. |
 | Debug/gameplay confusion | Medium | Medium | Exact env gate, debug naming, wireframe only, no summon registry. | Default off. |
-| Accidental activation | Medium | Low | Require explicit env value and later gated command. | No persisted setting. |
+| Accidental activation | Medium | Low | Require exact `PEBBLELAB_APP_PROBES=1` for spawn. | No persisted setting. |
 | `pebsmoke` incompatibility | High | Low with default-true policy | Preserve all vanilla defaults and test representative entities. | Run all 456 checks. |
 | GameCore/PebbleLab coupling | Medium | Medium | Generic save-policy property on `Entity`; only probe override mentions Lab. | Avoid Lab checks in generic policy API. |
 | Renderer/simulation mixing | Medium | Low | Keep renderer gate read-only and lifecycle outside `WorldRenderer`. | Separate phases. |
@@ -349,17 +366,16 @@ Add focused `pebsmoke` checks that prove:
 - `LabCoreAgentEntity` is not saveable to chunks;
 - entity registry count/order and spawnable list remain unchanged.
 
-Future app-side validation belongs to Phase 4.4E, after exclusion exists. A
-realistic eventual workflow would use a disposable world and explicit gate:
+Manual app-side validation uses a disposable world and both explicit gates:
 
 ```sh
 cd ~/Dev/pebble-lab
-PEBBLELAB_DEBUG_ENTITIES=1 PEBBLE_AUTOLOAD=1 swift run -c release Pebble
+PEBBLELAB_APP_PROBES=1 PEBBLELAB_DEBUG_ENTITIES=1 swift run -c release Pebble
 ```
 
-That later workflow must verify spawn, visible marker, clear, world exit, and
-reload without a saved `pebblelab:core_agent_probe` record. It is not
-implemented or run in Phase 4.4C.
+Run `/labprobe status`, `/labprobe spawn`, `/labprobe status`, `/labprobe
+clear`, and `/labprobe status`. Automated visual capture and world-transition
+cleanup validation remain Phase 4.4F work.
 
 Phase 4.4D result:
 

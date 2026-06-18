@@ -1027,3 +1027,50 @@ Result: validation passed. All requested scenarios remain green and
 
 Next step: Phase 4.4E, gated app-side probe lifecycle with explicit spawn,
 clear, duplicate prevention, and disposable-world validation.
+
+## 2026-06-18 - Phase 4.4E Gated App-Side Probe Lifecycle
+
+Branch: `lab/pebblelab-v1`
+
+Objective: add an explicit, default-off lifecycle for one transient
+`LabCoreAgentEntity` in the Pebble app without registration, automatic
+injection, or persistence changes.
+
+Files modified:
+
+- `Sources/Pebble/CommandsM.swift`
+- `docs/pebblelab/PHASE_4_APP_PROBE_LIFECYCLE.md`
+- `docs/pebblelab/PHASE_4_TRANSIENT_PROBE_LIFECYCLE_PLAN.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/DECISIONS.md`
+
+Behavior added:
+
+- `/labprobe status` reports creation-gate state and current probe details.
+- `/labprobe spawn` requires `PEBBLELAB_APP_PROBES=1`, rejects duplicates,
+  validates save exclusion, and uses `World.addEntity`.
+- `/labprobe clear` removes all probes exclusively with
+  `World.removeEntity`, including when creation is disabled.
+- `PEBBLELAB_DEBUG_ENTITIES=1` remains an independent renderer-only gate.
+- The command does not use `EntityRegistry`, `spawnMob`, `loadEntity`, or app
+  startup injection.
+
+Validation commands:
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario core_entity_smoke --seed 42 --ticks 5 --out runs/check_core_entity_after_app_probe_lifecycle`
+- `swift run -c release PebbleLab -- --scenario physical_sync_smoke --seed 42 --ticks 5 --out runs/check_physical_sync_after_app_probe_lifecycle`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_app_probe_lifecycle`
+- `swift run -c release pebsmoke`
+
+Result: validation passed. Both debug and release Pebble products build,
+`core_entity_smoke`, `physical_sync_smoke`, and `regression_smoke` remain
+green, and `pebsmoke` reports 456 passed, 0 failed. App-side command and visual
+behavior remain a manual disposable-world workflow; this phase does not launch
+the app.
+
+Next step: Phase 4.4F, visual app validation and cleanup hardening across world
+transitions.

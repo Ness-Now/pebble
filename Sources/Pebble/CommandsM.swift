@@ -27,7 +27,11 @@ func runCommand(_ game: GameCore, _ raw: String) {
 
     switch cmd {
     case "help":
-        ok("Commands: give, tp, time, weather, gamemode, seed, kill, summon, effect, enchant, xp, setblock, fill, locate, difficulty, gamerule, clear, spawnpoint, heal")
+        var commands = "Commands: give, tp, time, weather, gamemode, seed, kill, summon, effect, enchant, xp, setblock, fill, locate, difficulty, gamerule, clear, spawnpoint, heal"
+        if ProcessInfo.processInfo.environment["PEBBLELAB_APP_PROBES"] == "1" {
+            commands += ", labprobe"
+        }
+        ok(commands)
     case "give":
         guard let itemName = arg(0) else { return fail("Usage: /give <item> [count]") }
         let count = arg(1).flatMap(Int.init) ?? 1
@@ -252,6 +256,50 @@ func runCommand(_ game: GameCore, _ raw: String) {
         p.hunger = 20
         p.saturation = 20
         ok("Healed")
+    case "labprobe":
+        let enabled = ProcessInfo.processInfo.environment["PEBBLELAB_APP_PROBES"] == "1"
+        let probes = world.entities.compactMap { $0 as? LabCoreAgentEntity }
+            .sorted { $0.id < $1.id }
+        switch arg(0)?.lowercased() {
+        case "status":
+            let state = enabled ? "enabled" : "disabled"
+            if probes.isEmpty {
+                ok("Lab probes: gate=\(state), count=0")
+            } else {
+                let details = probes.map {
+                    String(format: "id=%d at %.1f %.1f %.1f", $0.id, $0.x, $0.y, $0.z)
+                }.joined(separator: "; ")
+                ok("Lab probes: gate=\(state), count=\(probes.count); \(details)")
+            }
+        case "spawn":
+            guard enabled else {
+                return fail("Lab probes are disabled. Set PEBBLELAB_APP_PROBES=1 before launching Pebble.")
+            }
+            guard probes.isEmpty else {
+                return fail("A lab probe already exists. Use /labprobe clear first.")
+            }
+            let probe = LabCoreAgentEntity(
+                world: world,
+                labAgentId: "app_probe",
+                physicalId: "physical_app_probe"
+            )
+            guard !probe.shouldSaveToChunk else {
+                return fail("Lab probe save-exclusion contract is not active.")
+            }
+            probe.setPos(p.x + 1, p.y, p.z)
+            probe.prevX = probe.x
+            probe.prevY = probe.y
+            probe.prevZ = probe.z
+            world.addEntity(probe)
+            ok(String(format: "Spawned transient lab probe id=%d at %.1f %.1f %.1f", probe.id, probe.x, probe.y, probe.z))
+        case "clear":
+            for probe in probes {
+                world.removeEntity(probe)
+            }
+            ok("Removed \(probes.count) lab probe\(probes.count == 1 ? "" : "s")")
+        default:
+            fail("Usage: /labprobe <status|spawn|clear>")
+        }
     case "meshmode":
         let mode = arg(0)
         guard mode == "simple" || mode == "greedy" else { return fail("Usage: /meshmode <simple|greedy>") }

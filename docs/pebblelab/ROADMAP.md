@@ -147,7 +147,16 @@ and chunk serialization honor the policy without changing `persistent`.
 
 ## Phase 4.4E - Gated App-Side Probe Command and Lifecycle
 
-Next recommended step: add an explicitly gated, idempotent app-side probe
-controller with spawn and clear operations, cleanup through
-`World.removeEntity`, and validation in a disposable world. Keep the probe
-unregistered and excluded from saves.
+Status: done and validated.
+
+Goal: provide hidden app-side `status`, gated `spawn`, and unconditional safe
+`clear` operations for one transient `LabCoreAgentEntity`. Creation requires
+`PEBBLELAB_APP_PROBES=1`; rendering remains independently gated by
+`PEBBLELAB_DEBUG_ENTITIES=1`.
+
+## Phase 4.4F - Visual App Validation Workflow
+
+Next recommended step: validate the gated probe and wireframe marker together
+in a disposable app world, including duplicate prevention, cleanup, and a
+documented screenshot/manual verification workflow without changing gameplay
+or persistence.
