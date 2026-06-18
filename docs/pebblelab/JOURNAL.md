@@ -812,3 +812,62 @@ scenarios remain stable and `pebsmoke` reports 456 passed, 0 failed.
 
 Next step: Phase 4.4A, debug visibility planning without registry, save/load,
 or renderer coupling.
+
+## 2026-06-18 - Phase 4.4A Debug Visibility Planning
+
+Branch: `lab/pebblelab-v1`
+
+Objective: map Pebble's entity rendering path and define a safe future debug
+marker for the unregistered `LabCoreAgentEntity`, without changing code outside
+documentation.
+
+Files inspected:
+
+- `AGENTS.md`
+- `Package.swift`
+- Phase 4 feasibility, probe, and hardening documents
+- `Sources/PebbleCore/Entity/Entity.swift`
+- `Sources/PebbleCore/Entity/EntityRegistry.swift`
+- `Sources/PebbleCore/Entity/LabCoreAgentEntity.swift`
+- `Sources/PebbleCore/Render/EntityModels.swift`
+- `Sources/PebbleCore/World/GameWorld.swift`
+- `Sources/PebbleCore/Game/GameCore.swift`
+- `Sources/Pebble/WorldRenderer.swift`
+- `Sources/Pebble/EntityRendererM.swift`
+- `Sources/Pebble/CommandsM.swift`
+- `Sources/Pebble/HudM.swift`
+- `Sources/Pebble/main.swift`
+- `Sources/pebsmoke/main.swift`
+- PebbleLab tracking documents
+
+Files modified:
+
+- `docs/pebblelab/PHASE_4_DEBUG_VISIBILITY_PLAN.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/DECISIONS.md`
+
+Conclusions:
+
+- Unknown entity types are skipped because `modelNameFor` returns `nil`.
+- A wireframe marker can reuse `drawBoxOutline` and the existing line pipeline
+  without model, texture, shader, or resource-pack changes.
+- `PEBBLELAB_DEBUG_ENTITIES=1` is the recommended explicit, default-off gate.
+- A debug spawn command is deferred because existing chunk save code does not
+  exclude all `persistent == false` entities.
+
+Validation commands:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --scenario core_entity_smoke --seed 42 --ticks 5 --out runs/check_core_entity_after_debug_visibility_docs`
+- `swift run -c release PebbleLab -- --scenario physical_sync_smoke --seed 42 --ticks 5 --out runs/check_physical_sync_after_debug_visibility_docs`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_debug_visibility_docs`
+- `swift run -c release pebsmoke`
+
+Result: validation passed. This phase modifies documentation only; build,
+headless bridge scenarios, regression reporting, and all 456 `pebsmoke` checks
+remain green.
+
+Next step: Phase 4.4B, renderer-gated debug marker. Keep app-side probe
+injection and transient save handling separate.

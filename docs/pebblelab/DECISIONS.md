@@ -209,3 +209,20 @@ The unregistered check is deliberately documented as a scenario contract. The
 scenario constructs `LabCoreAgentEntity` directly and does not call
 `EntityRegistry`, `registerAllEntities`, `spawnMob`, or `loadEntity` for it. No
 runtime registry introspection or mutation is introduced.
+
+## 2026-06-18 - Use a Renderer-Only Wireframe Marker for Debug Visibility
+
+Decision: the first visibility patch should add a disabled-by-default
+wireframe marker for `LabCoreAgentEntity` in `WorldRenderer`, gated by
+`PEBBLELAB_DEBUG_ENTITIES=1`.
+
+The marker should reuse the existing line pipeline and `drawBoxOutline`, select
+entities by `LabCoreAgentEntity` type, and avoid `modelNameFor`, entity model
+tables, resource-pack textures, shaders, registries, save/load, and simulation
+state. It should emit no PebbleLab metrics or events because visibility is an
+app-side diagnostic only.
+
+Do not add a `/labprobe` spawn command in the same patch. `GameCore.chunkRecord`
+currently serializes non-player entities in loaded chunks without filtering on
+`persistent`, so an app-spawned unregistered probe could enter a save record.
+App-side probe injection requires a separate transient-lifecycle decision.

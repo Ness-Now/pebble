@@ -116,5 +116,14 @@ ticks, final divergence, and the direct-construction registry contract.
 
 ## Phase 4.4A - Debug Visibility Planning
 
-Next recommended step: plan a debug-only way to inspect the probe without
-registering it, adding save/load, or coupling PebbleLab to Metal rendering.
+Status: done and validated as a docs-only phase.
+
+Goal: define a disabled-by-default, renderer-only wireframe marker for
+`LabCoreAgentEntity` without model mappings, resource assets, registration, or
+simulation changes.
+
+## Phase 4.4B - Renderer-Gated Debug Marker
+
+Next recommended step: add an environment-gated wireframe marker in
+`WorldRenderer` using its existing line pipeline. Do not add app-side probe
+spawning until transient save behavior has a separate safe contract.
