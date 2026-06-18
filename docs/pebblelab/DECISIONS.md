@@ -378,3 +378,14 @@ before calling `World.getBlock`. It should observe one deterministic cell below
 a synchronized agent and produce dedicated outputs. `World.setBlock`, even
 with silent flags, remains out of scope because it mutates cells and marks the
 chunk modified.
+
+## 2026-06-18 - Observe Loaded Blocks Without Mutation
+
+Decision: Phase 4.7B implements read-only block observation below a
+synchronized agent. It checks loaded/ready state before reading and does not
+mutate blocks, chunks, saves, registries, renderer, or resources.
+
+The dedicated smoke resolves the packed cell into block ID, metadata, and a
+stable registered name. Scenario success requires a coherent physical/core
+link, zero divergence, valid loaded data, and unchanged chunk
+`modified`/`version`/`dirty` state.

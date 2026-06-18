@@ -1506,3 +1506,58 @@ Result: validation passed. No Swift, registry, save/load, renderer, resource,
 or golden file changed.
 
 Next step: Phase 4.7B, perception-only block observation smoke.
+
+## 2026-06-18 - Phase 4.7B Perception-Only Block Observation
+
+Branch: `lab/pebblelab-v1`
+
+Objective: let one synchronized agent explicitly observe the loaded voxel
+below it without any world mutation.
+
+Files modified:
+
+- `Sources/PebbleLab/LabWorldInteraction.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/PHASE_4_WORLD_OBSERVATION.md`
+- PebbleLab tracking documents
+
+Behavior added:
+
+- `world_observation_smoke` creates one stationary abstract agent, placeholder,
+  and unregistered core entity.
+- The scenario checks loaded and ready state before calling `World.getBlock`
+  for the cell directly below the agent.
+- It records packed cell, block ID, metadata, registered name, physical link,
+  positions, divergence, and chunk state integrity.
+- Dedicated metrics, `lab_world_observation_recorded`, and
+  `world_interaction_snapshot.json` make the observation auditable.
+- Run success requires exactly one valid observation and zero divergence.
+
+Validated result for seed 42 and five ticks:
+
+- one agent and one observation;
+- target `(8, 63, 8)`, relation `below`;
+- chunk `(0, 0)` loaded and ready;
+- cell `4672`, block `292`, meta `0`, name `water`;
+- abstract/core divergence `0`;
+- chunk state unchanged and success `true`.
+
+Validation commands:
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `world_observation_smoke` with seed 42 and 5 ticks
+- `physical_behavior_multi_smoke`
+- `physical_behavior_smoke`
+- `core_entity_smoke`
+- `regression_smoke`
+- `pebsmoke`
+
+Result: validation passed. Changes remain limited to PebbleLab and Markdown
+documentation; no block mutation API is called.
+
+Next step: Phase 4.7C, multi-agent read-only observation smoke.

@@ -36,3 +36,4 @@
 - Added multi-agent physical behavior smoke for PebbleLab core entities.
 - Added invariant report for multi-agent physical behavior smoke.
 - Documented first world interaction plan for PebbleLab agents.
+- Added perception-only world observation smoke for PebbleLab agents.

@@ -303,3 +303,11 @@ with a clean determinism and safety story. Terrain scans can follow after that
 contract is stable. Block mutation, mining, and construction should remain out
 of scope until separate plans cover restoration, saves, block entities, light,
 mesh, neighbor updates, and inventory semantics.
+
+## Phase 4.7B Outcome
+
+The recommended `world_observation_smoke` is now implemented. For seed `42`,
+it observes water below the synchronized agent in a loaded and ready chunk,
+records cell `4672` (`blockId=292`, `meta=0`), preserves zero abstract/core
+divergence, and confirms chunk mutation state is unchanged. See
+`PHASE_4_WORLD_OBSERVATION.md`.

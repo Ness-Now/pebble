@@ -140,6 +140,13 @@ struct RunMetrics: Encodable {
     let physicalBehaviorFinalDivergence: Int?
     let physicalBehaviorMaxDivergence: Int?
     let physicalBehaviorSuccess: Bool?
+    let worldInteractionAgents: Int?
+    let worldInteractionObservations: Int?
+    let worldInteractionLoadedObservations: Int?
+    let worldInteractionReadyObservations: Int?
+    let worldInteractionBlockId: Int?
+    let worldInteractionMeta: Int?
+    let worldInteractionSuccess: Bool?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -229,6 +236,13 @@ struct RunMetrics: Encodable {
         physicalBehaviorFinalDivergence: Int? = nil,
         physicalBehaviorMaxDivergence: Int? = nil,
         physicalBehaviorSuccess: Bool? = nil,
+        worldInteractionAgents: Int? = nil,
+        worldInteractionObservations: Int? = nil,
+        worldInteractionLoadedObservations: Int? = nil,
+        worldInteractionReadyObservations: Int? = nil,
+        worldInteractionBlockId: Int? = nil,
+        worldInteractionMeta: Int? = nil,
+        worldInteractionSuccess: Bool? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -317,6 +331,13 @@ struct RunMetrics: Encodable {
         self.physicalBehaviorFinalDivergence = physicalBehaviorFinalDivergence
         self.physicalBehaviorMaxDivergence = physicalBehaviorMaxDivergence
         self.physicalBehaviorSuccess = physicalBehaviorSuccess
+        self.worldInteractionAgents = worldInteractionAgents
+        self.worldInteractionObservations = worldInteractionObservations
+        self.worldInteractionLoadedObservations = worldInteractionLoadedObservations
+        self.worldInteractionReadyObservations = worldInteractionReadyObservations
+        self.worldInteractionBlockId = worldInteractionBlockId
+        self.worldInteractionMeta = worldInteractionMeta
+        self.worldInteractionSuccess = worldInteractionSuccess
         self.successCriteria = successCriteria
     }
 }

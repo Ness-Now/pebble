@@ -214,6 +214,14 @@ first safe voxel-world contract.
 
 ## Phase 4.7B - Perception-Only Block Observation Smoke
 
-Next recommended step: observe the loaded block below one synchronized agent,
-without mutation, save/load, dirty chunks, renderer changes, inventory,
-collision, or navigation.
+Status: done and validated.
+
+Goal: observe one loaded and ready block below a synchronized agent, decode its
+cell deterministically, and prove zero abstract/core divergence and unchanged
+chunk state without invoking mutation APIs.
+
+## Phase 4.7C - Multi-Agent Read-Only Observation Smoke
+
+Next recommended step: extend the same guarded one-cell observation to several
+agents with stable ordering and aggregate outputs, still without terrain scans
+or world mutation.

@@ -11,6 +11,7 @@ var physicalBridge = scenarioResult.physicalBridge
 var coreEntityBridge = scenarioResult.coreEntityBridge
 let isPhysicalBehaviorScenario = options.scenario == "physical_behavior_smoke"
     || options.scenario == "physical_behavior_multi_smoke"
+let isWorldObservationScenario = options.scenario == "world_observation_smoke"
 
 var ticksCompleted = 0
 var eventsNDJSON = ""
@@ -748,12 +749,35 @@ let physicalBehaviorSuccess = isPhysicalBehaviorScenario
         && physicalBehaviorLinksCoherent
         && (physicalBehaviorInvariantReport?.success ?? true))
     : nil
+let worldInteractionSnapshot: LabWorldInteractionSnapshot? = {
+    guard isWorldObservationScenario,
+          let agent = labAgents.first,
+          let handle = physicalBridge.handles.first,
+          let coreLink = coreEntityBridge.snapshotLinks(for: labAgents).first else {
+        return nil
+    }
+    return observeBlockBelow(
+        world: world,
+        scenario: options.scenario,
+        seed: options.seed,
+        ticksCompleted: ticksCompleted,
+        agent: agent,
+        handle: handle,
+        coreLink: coreLink
+    )
+}()
+let worldInteractionAgents = isWorldObservationScenario ? labAgents.count : nil
+let worldInteractionObservations = isWorldObservationScenario ? (worldInteractionSnapshot == nil ? 0 : 1) : nil
+let worldInteractionLoadedObservations = isWorldObservationScenario && worldInteractionSnapshot?.chunk.loaded == true ? 1 : (isWorldObservationScenario ? 0 : nil)
+let worldInteractionReadyObservations = isWorldObservationScenario && worldInteractionSnapshot?.chunk.ready == true ? 1 : (isWorldObservationScenario ? 0 : nil)
+let worldInteractionSuccess = isWorldObservationScenario ? (worldInteractionSnapshot?.success ?? false) : nil
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
     && successCriteria.agentTicksRecorded
     && (coreEntityInvariantReport?.success ?? true)
     && (physicalBehaviorInvariantReport?.success ?? true)
     && (physicalBehaviorSuccess ?? true)
+    && (worldInteractionSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -782,6 +806,38 @@ if options.outPath != nil {
                 finalDivergence: physicalBehaviorFinalDivergence,
                 agentsMoved: physicalBehaviorAgentsMoved,
                 maxDivergence: physicalBehaviorMaxDivergence
+            ))
+        }
+        if let worldInteractionSnapshot {
+            try appendEvent(RunEvent(
+                type: "lab_world_observation_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: worldInteractionSnapshot.success,
+                chunkX: worldInteractionSnapshot.chunk.cx,
+                chunkZ: worldInteractionSnapshot.chunk.cz,
+                agentId: worldInteractionSnapshot.agentId,
+                x: worldInteractionSnapshot.target.x,
+                y: worldInteractionSnapshot.target.y,
+                z: worldInteractionSnapshot.target.z,
+                physicalId: worldInteractionSnapshot.physicalId,
+                coreEntityId: worldInteractionSnapshot.coreEntityId,
+                relation: worldInteractionSnapshot.relation,
+                loaded: worldInteractionSnapshot.chunk.loaded,
+                ready: worldInteractionSnapshot.chunk.ready,
+                blockId: worldInteractionSnapshot.blockId,
+                meta: worldInteractionSnapshot.meta,
+                blockName: worldInteractionSnapshot.blockName
+            ))
+        } else if isWorldObservationScenario {
+            try appendEvent(RunEvent(
+                type: "lab_world_observation_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: false,
+                relation: "below",
+                loaded: false,
+                ready: false
             ))
         }
         try appendEvent(RunEvent(
@@ -833,7 +889,7 @@ if let outPath = options.outPath {
                 path: "world_snapshot.json"
             ))
         }
-        if !labAgents.isEmpty, options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke" || options.scenario == "long_run_smoke" || options.scenario == "regression_smoke" || options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" || options.scenario == "core_entity_smoke" || isPhysicalBehaviorScenario {
+        if !labAgents.isEmpty, options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke" || options.scenario == "long_run_smoke" || options.scenario == "regression_smoke" || options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" || options.scenario == "core_entity_smoke" || isPhysicalBehaviorScenario || isWorldObservationScenario {
             try writeJSON(
                 AgentSnapshot(
                     scenario: options.scenario,
@@ -851,7 +907,7 @@ if let outPath = options.outPath {
                 agents: labAgents.count
             ))
         }
-        if options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" || options.scenario == "core_entity_smoke" || isPhysicalBehaviorScenario {
+        if options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" || options.scenario == "core_entity_smoke" || isPhysicalBehaviorScenario || isWorldObservationScenario {
             try writeJSON(
                 PhysicalSnapshot(
                     scenario: options.scenario,
@@ -869,7 +925,7 @@ if let outPath = options.outPath {
                 agents: physicalBridge.count
             ))
         }
-        if options.scenario == "core_entity_smoke" || isPhysicalBehaviorScenario {
+        if options.scenario == "core_entity_smoke" || isPhysicalBehaviorScenario || isWorldObservationScenario {
             try writeJSON(
                 CoreEntitySnapshot(
                     scenario: options.scenario,
@@ -985,6 +1041,19 @@ if let outPath = options.outPath {
                 ))
             }
         }
+        if let worldInteractionSnapshot {
+            try writeJSON(
+                worldInteractionSnapshot,
+                to: outURL.appendingPathComponent("world_interaction_snapshot.json")
+            )
+            try appendEvent(RunEvent(
+                type: "world_interaction_snapshot_written",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: worldInteractionSnapshot.success,
+                path: "world_interaction_snapshot.json"
+            ))
+        }
         let metrics = RunMetrics(
             scenario: options.scenario,
             seed: options.seed,
@@ -1072,6 +1141,13 @@ if let outPath = options.outPath {
             physicalBehaviorFinalDivergence: physicalBehaviorFinalDivergence,
             physicalBehaviorMaxDivergence: physicalBehaviorMaxDivergence,
             physicalBehaviorSuccess: physicalBehaviorSuccess,
+            worldInteractionAgents: worldInteractionAgents,
+            worldInteractionObservations: worldInteractionObservations,
+            worldInteractionLoadedObservations: worldInteractionLoadedObservations,
+            worldInteractionReadyObservations: worldInteractionReadyObservations,
+            worldInteractionBlockId: worldInteractionSnapshot?.blockId,
+            worldInteractionMeta: worldInteractionSnapshot?.meta,
+            worldInteractionSuccess: worldInteractionSuccess,
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))
