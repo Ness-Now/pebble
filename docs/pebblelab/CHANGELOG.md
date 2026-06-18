@@ -32,3 +32,4 @@
 - Recorded successful manual visual validation for PebbleLab app probes.
 - Added cleanup hardening for PebbleLab app probes.
 - Documented scripted screenshot validation workflow for PebbleLab probes.
+- Added first simple physical behavior smoke for PebbleLab core entities.

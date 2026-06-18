@@ -131,6 +131,12 @@ struct RunMetrics: Encodable {
     let abstractCoreEntityDivergence: Int?
     let maxAbstractCoreEntityDivergence: Int?
     let worldEntitiesCount: Int?
+    let physicalBehaviorTicks: Int?
+    let physicalBehaviorMoves: Int?
+    let physicalBehaviorCoreSyncs: Int?
+    let physicalBehaviorTotalDistance: Int?
+    let physicalBehaviorFinalDivergence: Int?
+    let physicalBehaviorSuccess: Bool?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -211,6 +217,12 @@ struct RunMetrics: Encodable {
         abstractCoreEntityDivergence: Int? = nil,
         maxAbstractCoreEntityDivergence: Int? = nil,
         worldEntitiesCount: Int? = nil,
+        physicalBehaviorTicks: Int? = nil,
+        physicalBehaviorMoves: Int? = nil,
+        physicalBehaviorCoreSyncs: Int? = nil,
+        physicalBehaviorTotalDistance: Int? = nil,
+        physicalBehaviorFinalDivergence: Int? = nil,
+        physicalBehaviorSuccess: Bool? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -290,6 +302,12 @@ struct RunMetrics: Encodable {
         self.abstractCoreEntityDivergence = abstractCoreEntityDivergence
         self.maxAbstractCoreEntityDivergence = maxAbstractCoreEntityDivergence
         self.worldEntitiesCount = worldEntitiesCount
+        self.physicalBehaviorTicks = physicalBehaviorTicks
+        self.physicalBehaviorMoves = physicalBehaviorMoves
+        self.physicalBehaviorCoreSyncs = physicalBehaviorCoreSyncs
+        self.physicalBehaviorTotalDistance = physicalBehaviorTotalDistance
+        self.physicalBehaviorFinalDivergence = physicalBehaviorFinalDivergence
+        self.physicalBehaviorSuccess = physicalBehaviorSuccess
         self.successCriteria = successCriteria
     }
 }

@@ -85,6 +85,9 @@ struct RunEvent: Encodable {
     let physicalId: String?
     let coreEntityId: Int?
     let kind: String?
+    let moves: Int?
+    let totalDistance: Int?
+    let finalDivergence: Int?
 
     init(
         type: String,
@@ -170,7 +173,10 @@ struct RunEvent: Encodable {
         distanceReducedTowardHome: Int? = nil,
         physicalId: String? = nil,
         coreEntityId: Int? = nil,
-        kind: String? = nil
+        kind: String? = nil,
+        moves: Int? = nil,
+        totalDistance: Int? = nil,
+        finalDivergence: Int? = nil
     ) {
         self.type = type
         self.event = event
@@ -256,6 +262,9 @@ struct RunEvent: Encodable {
         self.physicalId = physicalId
         self.coreEntityId = coreEntityId
         self.kind = kind
+        self.moves = moves
+        self.totalDistance = totalDistance
+        self.finalDivergence = finalDivergence
     }
 }
 

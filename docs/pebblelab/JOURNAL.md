@@ -1293,3 +1293,58 @@ builds and all three requested PebbleLab scenarios are green; `pebsmoke`
 reports 456 passed, 0 failed.
 
 Next step: Phase 4.6A, first simple physical behavior loop planning.
+
+## 2026-06-18 - Phase 4.6A First Simple Physical Behavior Loop
+
+Branch: `lab/pebblelab-v1`
+
+Objective: prove a complete deterministic headless loop from abstract agent
+movement into placeholder and unregistered PebbleCore entity positions.
+
+Files modified:
+
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabPhysical.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/PHASE_4_PHYSICAL_BEHAVIOR_LOOP.md`
+- PebbleLab tracking documents
+
+Behavior added:
+
+- `physical_behavior_smoke` creates one curious abstract agent, one physical
+  placeholder, and one unregistered core entity.
+- Existing `move_abstract` behavior remains authoritative.
+- Both physical representations synchronize after abstract movement.
+- Success requires movement, effective core sync, and zero final divergence.
+- Dedicated metrics, start/completed events, and
+  `physical_behavior_snapshot.json` make the loop directly inspectable.
+
+Validated scenario result for seed 42 and 10 ticks:
+
+- 8 movements;
+- 8 core syncs;
+- total distance 8;
+- final abstract/core divergence 0;
+- final positions `(5, 64, 9)`;
+- `physicalBehaviorSuccess = true`.
+
+Validation commands:
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `physical_behavior_smoke` with 10 ticks
+- `core_entity_smoke`
+- `physical_sync_smoke`
+- `long_run_smoke` with 10 agents and 1000 ticks
+- `regression_smoke`
+- `pebsmoke`
+
+Result: validation passed. Debug and release builds, the new behavior smoke,
+all requested existing PebbleLab scenarios, the 1000-tick long run, and all
+456 `pebsmoke` checks are green.
+
+Next step: Phase 4.6B, behavior-loop hardening and multi-agent physical
+behavior.

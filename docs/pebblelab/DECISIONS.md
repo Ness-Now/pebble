@@ -334,3 +334,14 @@ normal termination afterward. Camera orientation is supplied through the
 existing `/tp` command rather than a new probe or renderer API. No script,
 gameplay command, renderer change, or screenshot-specific simulation state is
 introduced.
+
+## 2026-06-18 - Keep Physical Behavior Abstract And Synchronized
+
+Decision: Phase 4.6A keeps physical behavior as deterministic abstract movement
+synchronized into the core entity. It intentionally avoids pathfinding,
+collision, block interaction, registry, and save/load changes.
+
+`LabAgent.position` remains authoritative. The placeholder and unregistered
+`LabCoreAgentEntity` are synchronized after the existing abstract movement
+step. Scenario success requires at least one movement and core sync plus zero
+final abstract/core divergence; it does not imply realistic locomotion.

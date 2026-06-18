@@ -71,6 +71,22 @@ struct CoreEntitySnapshot: Encodable {
     let coreEntities: [LabCoreAgentLink]
 }
 
+struct PhysicalBehaviorSnapshot: Encodable {
+    let scenario: String
+    let seed: UInt32
+    let ticksCompleted: Int
+    let agentId: String
+    let physicalId: String
+    let coreEntityId: Int
+    let startPosition: LabAgentPosition
+    let finalAbstractPosition: LabAgentPosition
+    let finalCoreEntityPosition: LabAgentPosition
+    let moves: Int
+    let totalDistance: Int
+    let finalDivergence: Int
+    let success: Bool
+}
+
 struct CoreEntityInvariantReport: Encodable {
     let scenario: String
     let seed: UInt32

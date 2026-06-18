@@ -182,6 +182,14 @@ hooks to generate a disposable-world PNG containing the cyan probe marker.
 
 ## Phase 4.6A - First Simple Physical Behavior Loop Planning
 
-Next recommended step: plan one deterministic, explicitly gated physical
-behavior while preserving the abstract-agent authority, unregistered probe
-contract, and separation from vanilla mobs.
+Status: done and validated.
+
+Goal: close one deterministic headless loop from abstract goal/action and
+movement through placeholder and unregistered core-entity synchronization,
+with explicit behavior metrics and zero final divergence.
+
+## Phase 4.6B - Multi-Agent Physical Behavior Hardening
+
+Next recommended step: define and validate ordering, ownership, aggregate
+metrics, and divergence invariants for multiple physical representations while
+still avoiding pathfinding, collision, and block interaction.

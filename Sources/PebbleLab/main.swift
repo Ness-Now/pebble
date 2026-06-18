@@ -561,6 +561,22 @@ if options.outPath != nil {
         for entity in coreEntityBridge.entities {
             try appendEvent(makeCoreEntitySpawnEvent(entity))
         }
+        if options.scenario == "physical_behavior_smoke",
+           let agent = labAgents.first,
+           let handle = physicalBridge.handles.first,
+           let entity = coreEntityBridge.entities.first {
+            try appendEvent(RunEvent(
+                type: "lab_physical_behavior_started",
+                tick: 0,
+                scenario: options.scenario,
+                agentId: agent.id,
+                x: agent.position.x,
+                y: agent.position.y,
+                z: agent.position.z,
+                physicalId: handle.physicalId,
+                coreEntityId: entity.id
+            ))
+        }
     } catch {
         fail("failed to encode run_started event: \(error)")
     }
@@ -675,13 +691,42 @@ let coreEntityInvariantReport = options.scenario == "core_entity_smoke"
         world: world
     )
     : nil
+let physicalBehaviorMoves = options.scenario == "physical_behavior_smoke"
+    ? (labAgents.first?.movementCount ?? 0)
+    : nil
+let physicalBehaviorTotalDistance = options.scenario == "physical_behavior_smoke"
+    ? (labAgents.first?.totalManhattanDistanceMoved ?? 0)
+    : nil
+let physicalBehaviorFinalDivergence = options.scenario == "physical_behavior_smoke"
+    ? coreEntityBridge.totalDivergence(from: labAgents)
+    : nil
+let physicalBehaviorSuccess = options.scenario == "physical_behavior_smoke"
+    ? ((physicalBehaviorMoves ?? 0) > 0
+        && coreEntitySyncEvents > 0
+        && physicalBehaviorFinalDivergence == 0)
+    : nil
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
     && successCriteria.agentTicksRecorded
     && (coreEntityInvariantReport?.success ?? true)
+    && (physicalBehaviorSuccess ?? true)
 
 if options.outPath != nil {
     do {
+        if options.scenario == "physical_behavior_smoke" {
+            try appendEvent(RunEvent(
+                type: "lab_physical_behavior_completed",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: physicalBehaviorSuccess,
+                agentId: labAgents.first?.id,
+                physicalId: physicalBridge.handles.first?.physicalId,
+                coreEntityId: coreEntityBridge.entities.first?.id,
+                moves: physicalBehaviorMoves,
+                totalDistance: physicalBehaviorTotalDistance,
+                finalDivergence: physicalBehaviorFinalDivergence
+            ))
+        }
         try appendEvent(RunEvent(
             type: "run_finished",
             tick: ticksCompleted,
@@ -731,7 +776,7 @@ if let outPath = options.outPath {
                 path: "world_snapshot.json"
             ))
         }
-        if !labAgents.isEmpty, options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke" || options.scenario == "long_run_smoke" || options.scenario == "regression_smoke" || options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" || options.scenario == "core_entity_smoke" {
+        if !labAgents.isEmpty, options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke" || options.scenario == "long_run_smoke" || options.scenario == "regression_smoke" || options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" || options.scenario == "core_entity_smoke" || options.scenario == "physical_behavior_smoke" {
             try writeJSON(
                 AgentSnapshot(
                     scenario: options.scenario,
@@ -749,7 +794,7 @@ if let outPath = options.outPath {
                 agents: labAgents.count
             ))
         }
-        if options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" || options.scenario == "core_entity_smoke" {
+        if options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" || options.scenario == "core_entity_smoke" || options.scenario == "physical_behavior_smoke" {
             try writeJSON(
                 PhysicalSnapshot(
                     scenario: options.scenario,
@@ -767,7 +812,7 @@ if let outPath = options.outPath {
                 agents: physicalBridge.count
             ))
         }
-        if options.scenario == "core_entity_smoke" {
+        if options.scenario == "core_entity_smoke" || options.scenario == "physical_behavior_smoke" {
             try writeJSON(
                 CoreEntitySnapshot(
                     scenario: options.scenario,
@@ -797,6 +842,36 @@ if let outPath = options.outPath {
                     path: "core_entity_invariant_report.json"
                 ))
             }
+        }
+        if options.scenario == "physical_behavior_smoke",
+           let agent = labAgents.first,
+           let coreLink = coreEntityBridge.snapshotLinks(for: labAgents).first,
+           let behaviorSuccess = physicalBehaviorSuccess {
+            try writeJSON(
+                PhysicalBehaviorSnapshot(
+                    scenario: options.scenario,
+                    seed: options.seed,
+                    ticksCompleted: ticksCompleted,
+                    agentId: agent.id,
+                    physicalId: coreLink.physicalId,
+                    coreEntityId: coreLink.coreEntityId,
+                    startPosition: agent.homePosition,
+                    finalAbstractPosition: agent.position,
+                    finalCoreEntityPosition: coreLink.coreEntityPosition,
+                    moves: physicalBehaviorMoves ?? 0,
+                    totalDistance: physicalBehaviorTotalDistance ?? 0,
+                    finalDivergence: physicalBehaviorFinalDivergence ?? 0,
+                    success: behaviorSuccess
+                ),
+                to: outURL.appendingPathComponent("physical_behavior_snapshot.json")
+            )
+            try appendEvent(RunEvent(
+                type: "physical_behavior_snapshot_written",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: behaviorSuccess,
+                path: "physical_behavior_snapshot.json"
+            ))
         }
         let metrics = RunMetrics(
             scenario: options.scenario,
@@ -876,6 +951,12 @@ if let outPath = options.outPath {
             abstractCoreEntityDivergence: coreEntityBridge.count == 0 ? nil : coreEntityBridge.totalDivergence(from: labAgents),
             maxAbstractCoreEntityDivergence: coreEntityBridge.count == 0 ? nil : coreEntityBridge.maxDivergence(from: labAgents),
             worldEntitiesCount: coreEntityBridge.count == 0 ? nil : world.entities.count,
+            physicalBehaviorTicks: options.scenario == "physical_behavior_smoke" ? ticksCompleted : nil,
+            physicalBehaviorMoves: physicalBehaviorMoves,
+            physicalBehaviorCoreSyncs: options.scenario == "physical_behavior_smoke" ? coreEntitySyncEvents : nil,
+            physicalBehaviorTotalDistance: physicalBehaviorTotalDistance,
+            physicalBehaviorFinalDivergence: physicalBehaviorFinalDivergence,
+            physicalBehaviorSuccess: physicalBehaviorSuccess,
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))
