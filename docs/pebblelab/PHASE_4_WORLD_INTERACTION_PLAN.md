@@ -315,3 +315,8 @@ divergence, and confirms chunk mutation state is unchanged. See
 Phase 4.7C now applies the same one-cell read contract to three synchronized
 agents and aggregates their results without adding a terrain scan. See
 `PHASE_4_MULTI_AGENT_WORLD_OBSERVATION.md`.
+
+Phase 4.7D now gates the multi-agent contract with a dedicated invariant
+report. Phase 4.8A then specifies the next bounded step: a single-agent,
+radius-1, nine-cell, read-only scan around the below-cell origin in stable
+`dz_then_dx` order. See `PHASE_4_TERRAIN_SCAN_PLAN.md`.

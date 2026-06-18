@@ -238,6 +238,14 @@ success.
 
 ## Phase 4.8A - Terrain Scan Planning
 
-Next recommended step: design a fixed, bounded, read-only terrain scan with
-deterministic coordinate ordering and explicit chunk-boundary/output limits
-before implementing any multi-cell observation.
+Status: done and validated as a docs-only phase.
+
+Goal: define a single-agent, radius-1, `3x3` read-only scan around the below
+cell, with deterministic `dz_then_dx` ordering, per-cell loaded/ready guards,
+bounded output, aggregate metrics, and an invariant report contract.
+
+## Phase 4.8B - Bounded Read-Only Terrain Scan Smoke
+
+Next recommended step: implement the planned nine-cell scan without chunk
+loading, terrain mutation, pathfinding, collision, save/load, or renderer
+changes.

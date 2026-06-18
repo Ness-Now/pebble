@@ -1663,3 +1663,47 @@ Result: validation passed. Changes remain limited to PebbleLab reporting and
 Markdown; no world interaction or mutation path changed.
 
 Next step: Phase 4.8A, terrain scan planning.
+
+## 2026-06-18 - Phase 4.8A Terrain Scan Planning
+
+Branch: `lab/pebblelab-v1`
+
+Objective: specify the first bounded multi-cell perception contract without
+implementing a scan or changing simulation code.
+
+Files inspected:
+
+- existing world-interaction, observation, multi-agent, and invariant docs;
+- `Sources/PebbleLab/LabWorldInteraction.swift`;
+- `Sources/PebbleLab/LabScenarios.swift` and `main.swift`;
+- PebbleCore world, chunk, and block-definition read paths.
+
+Files modified:
+
+- `docs/pebblelab/PHASE_4_TERRAIN_SCAN_PLAN.md`;
+- world-interaction and observation-invariant docs;
+- PebbleLab tracking documents.
+
+Planning result:
+
+- future scenario: `terrain_scan_smoke`;
+- one synchronized agent and relation `around_below`;
+- radius `1`, fixed below Y, and exactly nine planned cells;
+- deterministic `dz_then_dx` order;
+- independent loaded/ready guard before every read and decode;
+- complete snapshot, aggregate metrics, one summary event, and dedicated
+  invariant-report contracts;
+- explicit prohibition on chunk loading, terrain mutation, pathfinding,
+  collision, save/load, rendering, and registry changes.
+
+Validation commands:
+
+- `swift build`;
+- `world_observation_multi_smoke`;
+- `regression_smoke`;
+- `pebsmoke`.
+
+Result: docs-only planning complete. The existing one-cell observation and
+regression contracts remain the validation baseline.
+
+Next step: Phase 4.8B, bounded read-only terrain scan smoke.

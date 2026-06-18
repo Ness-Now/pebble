@@ -409,3 +409,15 @@ The report is authoritative for scenario success. It validates unique physical
 links, loaded/ready guards, successful below-cell observations, zero
 divergence, unchanged chunks, exact cell decoding, registered names, and the
 reported block-ID diversity.
+
+## 2026-06-18 - Bound The First Terrain Scan To Nine Cells
+
+Decision: Phase 4.8A chooses a radius-1, `3x3`, read-only terrain scan around
+the below-cell origin as the next world-perception step before any terrain
+mutation, pathfinding, or collision.
+
+The future scan uses one synchronized agent, a fixed Y of `agent.y - 1`, and
+deterministic `dz_then_dx` ordering. Every target must pass independent
+loaded/ready guards before decoding; unavailable cells are explicit failures,
+never inferred air. Phase 4.8B remains capped at nine cells and may not load
+chunks, mutate terrain, or introduce multi-agent scanning.

@@ -80,3 +80,7 @@ swift run -c release pebsmoke
 Recommended: Phase 4.8A, terrain scan planning. Define a fixed, bounded,
 read-only coordinate order, chunk-boundary behavior, output limits, and
 success contract before implementing a multi-cell scan.
+
+Phase 4.8A is complete. The resulting contract fixes the future scan at one
+agent, radius `1`, nine cells, one Y layer, and deterministic `dz_then_dx`
+order with per-cell loaded/ready guards. See `PHASE_4_TERRAIN_SCAN_PLAN.md`.
