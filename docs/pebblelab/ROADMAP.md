@@ -190,6 +190,14 @@ with explicit behavior metrics and zero final divergence.
 
 ## Phase 4.6B - Multi-Agent Physical Behavior Hardening
 
-Next recommended step: define and validate ordering, ownership, aggregate
-metrics, and divergence invariants for multiple physical representations while
-still avoiding pathfinding, collision, and block interaction.
+Status: done and validated.
+
+Goal: run three deterministic abstract agents with one placeholder and one
+unregistered core entity each, then validate link ownership, aggregate
+movement metrics, and zero total/max final divergence.
+
+## Phase 4.6C - Multi-Agent Physical Behavior Report And Invariants
+
+Next recommended step: extract the multi-agent link and divergence checks into
+a dedicated compact invariant report without adding pathfinding, collision, or
+world interaction.

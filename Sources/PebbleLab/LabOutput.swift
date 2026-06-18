@@ -132,10 +132,13 @@ struct RunMetrics: Encodable {
     let maxAbstractCoreEntityDivergence: Int?
     let worldEntitiesCount: Int?
     let physicalBehaviorTicks: Int?
+    let physicalBehaviorAgents: Int?
+    let physicalBehaviorAgentsMoved: Int?
     let physicalBehaviorMoves: Int?
     let physicalBehaviorCoreSyncs: Int?
     let physicalBehaviorTotalDistance: Int?
     let physicalBehaviorFinalDivergence: Int?
+    let physicalBehaviorMaxDivergence: Int?
     let physicalBehaviorSuccess: Bool?
     let successCriteria: RunSuccessCriteria?
 
@@ -218,10 +221,13 @@ struct RunMetrics: Encodable {
         maxAbstractCoreEntityDivergence: Int? = nil,
         worldEntitiesCount: Int? = nil,
         physicalBehaviorTicks: Int? = nil,
+        physicalBehaviorAgents: Int? = nil,
+        physicalBehaviorAgentsMoved: Int? = nil,
         physicalBehaviorMoves: Int? = nil,
         physicalBehaviorCoreSyncs: Int? = nil,
         physicalBehaviorTotalDistance: Int? = nil,
         physicalBehaviorFinalDivergence: Int? = nil,
+        physicalBehaviorMaxDivergence: Int? = nil,
         physicalBehaviorSuccess: Bool? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
@@ -303,10 +309,13 @@ struct RunMetrics: Encodable {
         self.maxAbstractCoreEntityDivergence = maxAbstractCoreEntityDivergence
         self.worldEntitiesCount = worldEntitiesCount
         self.physicalBehaviorTicks = physicalBehaviorTicks
+        self.physicalBehaviorAgents = physicalBehaviorAgents
+        self.physicalBehaviorAgentsMoved = physicalBehaviorAgentsMoved
         self.physicalBehaviorMoves = physicalBehaviorMoves
         self.physicalBehaviorCoreSyncs = physicalBehaviorCoreSyncs
         self.physicalBehaviorTotalDistance = physicalBehaviorTotalDistance
         self.physicalBehaviorFinalDivergence = physicalBehaviorFinalDivergence
+        self.physicalBehaviorMaxDivergence = physicalBehaviorMaxDivergence
         self.physicalBehaviorSuccess = physicalBehaviorSuccess
         self.successCriteria = successCriteria
     }

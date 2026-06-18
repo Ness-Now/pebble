@@ -101,6 +101,10 @@ swift run -c release pebsmoke
 
 ## Next Step
 
-Recommended: Phase 4.6B, behavior-loop hardening and multi-agent physical
-behavior. It should first define ownership, ordering, and aggregate invariants
-for multiple core entities without adding pathfinding or world interaction.
+Phase 4.6B now extends this same loop to three agents. It preserves the tick
+order and authoritative abstract positions while adding aggregate metrics,
+one-to-one link checks, and total/max divergence checks. See
+`PHASE_4_MULTI_AGENT_PHYSICAL_BEHAVIOR.md`.
+
+Recommended next: Phase 4.6C, a compact multi-agent physical behavior invariant
+report without pathfinding or world interaction.

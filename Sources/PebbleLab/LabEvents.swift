@@ -88,6 +88,8 @@ struct RunEvent: Encodable {
     let moves: Int?
     let totalDistance: Int?
     let finalDivergence: Int?
+    let agentsMoved: Int?
+    let maxDivergence: Int?
 
     init(
         type: String,
@@ -176,7 +178,9 @@ struct RunEvent: Encodable {
         kind: String? = nil,
         moves: Int? = nil,
         totalDistance: Int? = nil,
-        finalDivergence: Int? = nil
+        finalDivergence: Int? = nil,
+        agentsMoved: Int? = nil,
+        maxDivergence: Int? = nil
     ) {
         self.type = type
         self.event = event
@@ -265,6 +269,8 @@ struct RunEvent: Encodable {
         self.moves = moves
         self.totalDistance = totalDistance
         self.finalDivergence = finalDivergence
+        self.agentsMoved = agentsMoved
+        self.maxDivergence = maxDivergence
     }
 }
 

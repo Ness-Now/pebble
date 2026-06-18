@@ -87,6 +87,31 @@ struct PhysicalBehaviorSnapshot: Encodable {
     let success: Bool
 }
 
+struct PhysicalBehaviorAgentSnapshot: Encodable {
+    let agentId: String
+    let physicalId: String
+    let coreEntityId: Int
+    let startPosition: LabAgentPosition
+    let finalAbstractPosition: LabAgentPosition
+    let finalCoreEntityPosition: LabAgentPosition
+    let moves: Int
+    let totalDistance: Int
+    let finalDivergence: Int
+}
+
+struct PhysicalBehaviorMultiSnapshot: Encodable {
+    let scenario: String
+    let seed: UInt32
+    let ticksCompleted: Int
+    let agents: [PhysicalBehaviorAgentSnapshot]
+    let agentsMoved: Int
+    let totalMoves: Int
+    let totalDistance: Int
+    let finalDivergence: Int
+    let maxDivergence: Int
+    let success: Bool
+}
+
 struct CoreEntityInvariantReport: Encodable {
     let scenario: String
     let seed: UInt32

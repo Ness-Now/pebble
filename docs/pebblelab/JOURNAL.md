@@ -1348,3 +1348,59 @@ all requested existing PebbleLab scenarios, the 1000-tick long run, and all
 
 Next step: Phase 4.6B, behavior-loop hardening and multi-agent physical
 behavior.
+
+## 2026-06-18 - Phase 4.6B Multi-Agent Physical Behavior Hardening
+
+Branch: `lab/pebblelab-v1`
+
+Objective: prove that several abstract agents can each own a placeholder and
+an unregistered core entity while preserving deterministic synchronization and
+zero final divergence.
+
+Files modified:
+
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabPhysical.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/PHASE_4_PHYSICAL_BEHAVIOR_LOOP.md`
+- `docs/pebblelab/PHASE_4_MULTI_AGENT_PHYSICAL_BEHAVIOR.md`
+- PebbleLab tracking documents
+
+Behavior added:
+
+- `physical_behavior_multi_smoke` creates three agents at distinct positions,
+  with one placeholder and one directly constructed core entity per agent.
+- Existing deterministic `move_abstract` behavior remains authoritative.
+- Aggregate metrics count agents, movers, moves, core syncs, distance, and
+  total/max final divergence.
+- Scenario success checks complete one-to-one links, unique physical/core IDs,
+  at least two moving agents, effective sync, and zero divergence.
+- The multi-agent snapshot records each link and its final state.
+
+Validated scenario result for seed 42 and 10 ticks:
+
+- 3 physical agents and 3 agents moved;
+- 24 movements and 24 core syncs;
+- total distance 24;
+- total and maximum final divergence 0;
+- `physicalBehaviorSuccess = true`.
+
+Validation commands:
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `physical_behavior_multi_smoke` with 10 ticks
+- `physical_behavior_smoke` with 10 ticks
+- `core_entity_smoke`
+- `physical_sync_smoke`
+- `long_run_smoke` with 10 agents and 1000 ticks
+- `regression_smoke`
+- `pebsmoke`
+
+Result: validation passed. No PebbleCore, registry, save/load, renderer,
+resource, or golden file was changed.
+
+Next step: Phase 4.6C, multi-agent physical behavior report and invariants.

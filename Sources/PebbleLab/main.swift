@@ -9,6 +9,8 @@ let scenarioResult = prepareScenario(options, world: world)
 var labAgents = scenarioResult.agents
 var physicalBridge = scenarioResult.physicalBridge
 var coreEntityBridge = scenarioResult.coreEntityBridge
+let isPhysicalBehaviorScenario = options.scenario == "physical_behavior_smoke"
+    || options.scenario == "physical_behavior_multi_smoke"
 
 var ticksCompleted = 0
 var eventsNDJSON = ""
@@ -576,6 +578,13 @@ if options.outPath != nil {
                 physicalId: handle.physicalId,
                 coreEntityId: entity.id
             ))
+        } else if options.scenario == "physical_behavior_multi_smoke" {
+            try appendEvent(RunEvent(
+                type: "lab_physical_behavior_multi_started",
+                tick: 0,
+                scenario: options.scenario,
+                agents: labAgents.count
+            ))
         }
     } catch {
         fail("failed to encode run_started event: \(error)")
@@ -691,19 +700,40 @@ let coreEntityInvariantReport = options.scenario == "core_entity_smoke"
         world: world
     )
     : nil
-let physicalBehaviorMoves = options.scenario == "physical_behavior_smoke"
-    ? (labAgents.first?.movementCount ?? 0)
+let physicalBehaviorAgents = isPhysicalBehaviorScenario ? labAgents.count : nil
+let physicalBehaviorAgentsMoved = isPhysicalBehaviorScenario
+    ? labAgents.filter { $0.movementCount > 0 }.count
     : nil
-let physicalBehaviorTotalDistance = options.scenario == "physical_behavior_smoke"
-    ? (labAgents.first?.totalManhattanDistanceMoved ?? 0)
+let physicalBehaviorMoves = isPhysicalBehaviorScenario
+    ? labAgents.reduce(0) { $0 + $1.movementCount }
     : nil
-let physicalBehaviorFinalDivergence = options.scenario == "physical_behavior_smoke"
+let physicalBehaviorTotalDistance = isPhysicalBehaviorScenario
+    ? labAgents.reduce(0) { $0 + $1.totalManhattanDistanceMoved }
+    : nil
+let physicalBehaviorFinalDivergence = isPhysicalBehaviorScenario
     ? coreEntityBridge.totalDivergence(from: labAgents)
     : nil
-let physicalBehaviorSuccess = options.scenario == "physical_behavior_smoke"
-    ? ((physicalBehaviorMoves ?? 0) > 0
+let physicalBehaviorMaxDivergence = isPhysicalBehaviorScenario
+    ? coreEntityBridge.maxDivergence(from: labAgents)
+    : nil
+let physicalBehaviorLinksCoherent = isPhysicalBehaviorScenario && labAgents.allSatisfy { agent in
+    let handles = physicalBridge.handles.filter { $0.agentId == agent.id }
+    let entities = coreEntityBridge.entities.filter { $0.labAgentId == agent.id }
+    return handles.count == 1
+        && entities.count == 1
+        && handles[0].physicalId == entities[0].physicalId
+} && Set(physicalBridge.handles.map(\.physicalId)).count == physicalBridge.count
+    && Set(coreEntityBridge.entities.map(\.id)).count == coreEntityBridge.count
+    && physicalBridge.count == labAgents.count
+    && coreEntityBridge.count == labAgents.count
+let requiredPhysicalBehaviorAgentsMoved = options.scenario == "physical_behavior_multi_smoke" ? 2 : 1
+let physicalBehaviorSuccess = isPhysicalBehaviorScenario
+    ? ((physicalBehaviorAgentsMoved ?? 0) >= requiredPhysicalBehaviorAgentsMoved
+        && (physicalBehaviorMoves ?? 0) > 0
         && coreEntitySyncEvents > 0
-        && physicalBehaviorFinalDivergence == 0)
+        && physicalBehaviorFinalDivergence == 0
+        && physicalBehaviorMaxDivergence == 0
+        && physicalBehaviorLinksCoherent)
     : nil
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
@@ -725,6 +755,19 @@ if options.outPath != nil {
                 moves: physicalBehaviorMoves,
                 totalDistance: physicalBehaviorTotalDistance,
                 finalDivergence: physicalBehaviorFinalDivergence
+            ))
+        } else if options.scenario == "physical_behavior_multi_smoke" {
+            try appendEvent(RunEvent(
+                type: "lab_physical_behavior_multi_completed",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: physicalBehaviorSuccess,
+                agents: physicalBehaviorAgents,
+                moves: physicalBehaviorMoves,
+                totalDistance: physicalBehaviorTotalDistance,
+                finalDivergence: physicalBehaviorFinalDivergence,
+                agentsMoved: physicalBehaviorAgentsMoved,
+                maxDivergence: physicalBehaviorMaxDivergence
             ))
         }
         try appendEvent(RunEvent(
@@ -776,7 +819,7 @@ if let outPath = options.outPath {
                 path: "world_snapshot.json"
             ))
         }
-        if !labAgents.isEmpty, options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke" || options.scenario == "long_run_smoke" || options.scenario == "regression_smoke" || options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" || options.scenario == "core_entity_smoke" || options.scenario == "physical_behavior_smoke" {
+        if !labAgents.isEmpty, options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke" || options.scenario == "long_run_smoke" || options.scenario == "regression_smoke" || options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" || options.scenario == "core_entity_smoke" || isPhysicalBehaviorScenario {
             try writeJSON(
                 AgentSnapshot(
                     scenario: options.scenario,
@@ -794,7 +837,7 @@ if let outPath = options.outPath {
                 agents: labAgents.count
             ))
         }
-        if options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" || options.scenario == "core_entity_smoke" || options.scenario == "physical_behavior_smoke" {
+        if options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" || options.scenario == "core_entity_smoke" || isPhysicalBehaviorScenario {
             try writeJSON(
                 PhysicalSnapshot(
                     scenario: options.scenario,
@@ -812,7 +855,7 @@ if let outPath = options.outPath {
                 agents: physicalBridge.count
             ))
         }
-        if options.scenario == "core_entity_smoke" || options.scenario == "physical_behavior_smoke" {
+        if options.scenario == "core_entity_smoke" || isPhysicalBehaviorScenario {
             try writeJSON(
                 CoreEntitySnapshot(
                     scenario: options.scenario,
@@ -871,6 +914,48 @@ if let outPath = options.outPath {
                 scenario: options.scenario,
                 success: behaviorSuccess,
                 path: "physical_behavior_snapshot.json"
+            ))
+        } else if options.scenario == "physical_behavior_multi_smoke",
+                  let behaviorSuccess = physicalBehaviorSuccess {
+            let coreLinks = coreEntityBridge.snapshotLinks(for: labAgents)
+            let agentSnapshots = labAgents.compactMap { agent -> PhysicalBehaviorAgentSnapshot? in
+                guard let coreLink = coreLinks.first(where: { $0.agentId == agent.id }) else {
+                    return nil
+                }
+                return PhysicalBehaviorAgentSnapshot(
+                    agentId: agent.id,
+                    physicalId: coreLink.physicalId,
+                    coreEntityId: coreLink.coreEntityId,
+                    startPosition: agent.homePosition,
+                    finalAbstractPosition: agent.position,
+                    finalCoreEntityPosition: coreLink.coreEntityPosition,
+                    moves: agent.movementCount,
+                    totalDistance: agent.totalManhattanDistanceMoved,
+                    finalDivergence: coreLink.divergence
+                )
+            }
+            try writeJSON(
+                PhysicalBehaviorMultiSnapshot(
+                    scenario: options.scenario,
+                    seed: options.seed,
+                    ticksCompleted: ticksCompleted,
+                    agents: agentSnapshots,
+                    agentsMoved: physicalBehaviorAgentsMoved ?? 0,
+                    totalMoves: physicalBehaviorMoves ?? 0,
+                    totalDistance: physicalBehaviorTotalDistance ?? 0,
+                    finalDivergence: physicalBehaviorFinalDivergence ?? 0,
+                    maxDivergence: physicalBehaviorMaxDivergence ?? 0,
+                    success: behaviorSuccess
+                ),
+                to: outURL.appendingPathComponent("physical_behavior_snapshot.json")
+            )
+            try appendEvent(RunEvent(
+                type: "physical_behavior_snapshot_written",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: behaviorSuccess,
+                path: "physical_behavior_snapshot.json",
+                agents: agentSnapshots.count
             ))
         }
         let metrics = RunMetrics(
@@ -951,11 +1036,14 @@ if let outPath = options.outPath {
             abstractCoreEntityDivergence: coreEntityBridge.count == 0 ? nil : coreEntityBridge.totalDivergence(from: labAgents),
             maxAbstractCoreEntityDivergence: coreEntityBridge.count == 0 ? nil : coreEntityBridge.maxDivergence(from: labAgents),
             worldEntitiesCount: coreEntityBridge.count == 0 ? nil : world.entities.count,
-            physicalBehaviorTicks: options.scenario == "physical_behavior_smoke" ? ticksCompleted : nil,
+            physicalBehaviorTicks: isPhysicalBehaviorScenario ? ticksCompleted : nil,
+            physicalBehaviorAgents: physicalBehaviorAgents,
+            physicalBehaviorAgentsMoved: physicalBehaviorAgentsMoved,
             physicalBehaviorMoves: physicalBehaviorMoves,
-            physicalBehaviorCoreSyncs: options.scenario == "physical_behavior_smoke" ? coreEntitySyncEvents : nil,
+            physicalBehaviorCoreSyncs: isPhysicalBehaviorScenario ? coreEntitySyncEvents : nil,
             physicalBehaviorTotalDistance: physicalBehaviorTotalDistance,
             physicalBehaviorFinalDivergence: physicalBehaviorFinalDivergence,
+            physicalBehaviorMaxDivergence: physicalBehaviorMaxDivergence,
             physicalBehaviorSuccess: physicalBehaviorSuccess,
             successCriteria: successCriteria
         )

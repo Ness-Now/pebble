@@ -345,3 +345,14 @@ collision, block interaction, registry, and save/load changes.
 `LabCoreAgentEntity` are synchronized after the existing abstract movement
 step. Scenario success requires at least one movement and core sync plus zero
 final abstract/core divergence; it does not imply realistic locomotion.
+
+## 2026-06-18 - Extend Physical Behavior Through One-To-One Links
+
+Decision: Phase 4.6B extends the physical behavior loop to multiple agents
+while preserving deterministic abstract movement and avoiding pathfinding,
+collision, block interaction, registry, and save/load changes.
+
+Each `LabAgent` owns exactly one distinct `physicalId` and one unregistered
+core entity in the smoke scenario. Success requires complete one-to-one links,
+at least two moving agents, effective core synchronization, and zero total and
+maximum final abstract/core divergence.
