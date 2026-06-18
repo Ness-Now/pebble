@@ -144,6 +144,8 @@ struct RunMetrics: Encodable {
     let worldInteractionObservations: Int?
     let worldInteractionLoadedObservations: Int?
     let worldInteractionReadyObservations: Int?
+    let worldInteractionUniqueChunks: Int?
+    let worldInteractionDistinctBlockIds: Int?
     let worldInteractionBlockId: Int?
     let worldInteractionMeta: Int?
     let worldInteractionSuccess: Bool?
@@ -240,6 +242,8 @@ struct RunMetrics: Encodable {
         worldInteractionObservations: Int? = nil,
         worldInteractionLoadedObservations: Int? = nil,
         worldInteractionReadyObservations: Int? = nil,
+        worldInteractionUniqueChunks: Int? = nil,
+        worldInteractionDistinctBlockIds: Int? = nil,
         worldInteractionBlockId: Int? = nil,
         worldInteractionMeta: Int? = nil,
         worldInteractionSuccess: Bool? = nil,
@@ -335,6 +339,8 @@ struct RunMetrics: Encodable {
         self.worldInteractionObservations = worldInteractionObservations
         self.worldInteractionLoadedObservations = worldInteractionLoadedObservations
         self.worldInteractionReadyObservations = worldInteractionReadyObservations
+        self.worldInteractionUniqueChunks = worldInteractionUniqueChunks
+        self.worldInteractionDistinctBlockIds = worldInteractionDistinctBlockIds
         self.worldInteractionBlockId = worldInteractionBlockId
         self.worldInteractionMeta = worldInteractionMeta
         self.worldInteractionSuccess = worldInteractionSuccess

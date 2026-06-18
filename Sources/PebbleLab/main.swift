@@ -11,7 +11,9 @@ var physicalBridge = scenarioResult.physicalBridge
 var coreEntityBridge = scenarioResult.coreEntityBridge
 let isPhysicalBehaviorScenario = options.scenario == "physical_behavior_smoke"
     || options.scenario == "physical_behavior_multi_smoke"
-let isWorldObservationScenario = options.scenario == "world_observation_smoke"
+let isWorldObservationSingleScenario = options.scenario == "world_observation_smoke"
+let isWorldObservationMultiScenario = options.scenario == "world_observation_multi_smoke"
+let isWorldObservationScenario = isWorldObservationSingleScenario || isWorldObservationMultiScenario
 
 var ticksCompleted = 0
 var eventsNDJSON = ""
@@ -749,28 +751,50 @@ let physicalBehaviorSuccess = isPhysicalBehaviorScenario
         && physicalBehaviorLinksCoherent
         && (physicalBehaviorInvariantReport?.success ?? true))
     : nil
-let worldInteractionSnapshot: LabWorldInteractionSnapshot? = {
-    guard isWorldObservationScenario,
-          let agent = labAgents.first,
-          let handle = physicalBridge.handles.first,
-          let coreLink = coreEntityBridge.snapshotLinks(for: labAgents).first else {
-        return nil
+let worldInteractionSnapshots: [LabWorldInteractionSnapshot] = {
+    guard isWorldObservationScenario else { return [] }
+    let coreLinks = coreEntityBridge.snapshotLinks(for: labAgents)
+    return labAgents.compactMap { agent in
+        guard let handle = physicalBridge.handles.first(where: { $0.agentId == agent.id }),
+              let coreLink = coreLinks.first(where: { $0.agentId == agent.id }) else {
+            return nil
+        }
+        return observeBlockBelow(
+            world: world,
+            scenario: options.scenario,
+            seed: options.seed,
+            ticksCompleted: ticksCompleted,
+            agent: agent,
+            handle: handle,
+            coreLink: coreLink
+        )
     }
-    return observeBlockBelow(
-        world: world,
+}()
+let worldInteractionSnapshot = isWorldObservationSingleScenario ? worldInteractionSnapshots.first : nil
+let worldInteractionMultiSnapshot = isWorldObservationMultiScenario
+    ? makeWorldInteractionMultiSnapshot(
         scenario: options.scenario,
         seed: options.seed,
         ticksCompleted: ticksCompleted,
-        agent: agent,
-        handle: handle,
-        coreLink: coreLink
+        snapshots: worldInteractionSnapshots,
+        agents: labAgents.count,
+        placeholders: physicalBridge.count,
+        coreEntities: coreEntityBridge.count
     )
-}()
+    : nil
 let worldInteractionAgents = isWorldObservationScenario ? labAgents.count : nil
-let worldInteractionObservations = isWorldObservationScenario ? (worldInteractionSnapshot == nil ? 0 : 1) : nil
-let worldInteractionLoadedObservations = isWorldObservationScenario && worldInteractionSnapshot?.chunk.loaded == true ? 1 : (isWorldObservationScenario ? 0 : nil)
-let worldInteractionReadyObservations = isWorldObservationScenario && worldInteractionSnapshot?.chunk.ready == true ? 1 : (isWorldObservationScenario ? 0 : nil)
-let worldInteractionSuccess = isWorldObservationScenario ? (worldInteractionSnapshot?.success ?? false) : nil
+let worldInteractionObservations = isWorldObservationScenario ? worldInteractionSnapshots.count : nil
+let worldInteractionLoadedObservations = isWorldObservationScenario ? worldInteractionSnapshots.filter { $0.chunk.loaded }.count : nil
+let worldInteractionReadyObservations = isWorldObservationScenario ? worldInteractionSnapshots.filter { $0.chunk.ready }.count : nil
+let worldInteractionUniqueChunks = isWorldObservationScenario
+    ? Set(worldInteractionSnapshots.map { "\($0.chunk.cx),\($0.chunk.cz)" }).count
+    : nil
+let worldInteractionDistinctBlockIds = isWorldObservationScenario
+    ? Set(worldInteractionSnapshots.compactMap(\.blockId)).count
+    : nil
+let worldInteractionSuccess = isWorldObservationSingleScenario
+    ? (worldInteractionSnapshot?.success ?? false)
+    : (isWorldObservationMultiScenario ? (worldInteractionMultiSnapshot?.summary.success ?? false) : nil)
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
     && successCriteria.agentTicksRecorded
@@ -808,7 +832,20 @@ if options.outPath != nil {
                 maxDivergence: physicalBehaviorMaxDivergence
             ))
         }
-        if let worldInteractionSnapshot {
+        if let worldInteractionMultiSnapshot {
+            try appendEvent(RunEvent(
+                type: "lab_world_observation_multi_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: worldInteractionMultiSnapshot.summary.success,
+                agents: worldInteractionMultiSnapshot.summary.agents,
+                observations: worldInteractionMultiSnapshot.summary.observations,
+                loadedObservations: worldInteractionMultiSnapshot.summary.loadedObservations,
+                readyObservations: worldInteractionMultiSnapshot.summary.readyObservations,
+                uniqueChunks: worldInteractionMultiSnapshot.summary.uniqueChunks,
+                distinctBlockIds: worldInteractionMultiSnapshot.summary.distinctBlockIds
+            ))
+        } else if let worldInteractionSnapshot {
             try appendEvent(RunEvent(
                 type: "lab_world_observation_recorded",
                 tick: ticksCompleted,
@@ -831,7 +868,9 @@ if options.outPath != nil {
             ))
         } else if isWorldObservationScenario {
             try appendEvent(RunEvent(
-                type: "lab_world_observation_recorded",
+                type: isWorldObservationMultiScenario
+                    ? "lab_world_observation_multi_recorded"
+                    : "lab_world_observation_recorded",
                 tick: ticksCompleted,
                 scenario: options.scenario,
                 success: false,
@@ -1041,7 +1080,20 @@ if let outPath = options.outPath {
                 ))
             }
         }
-        if let worldInteractionSnapshot {
+        if let worldInteractionMultiSnapshot {
+            try writeJSON(
+                worldInteractionMultiSnapshot,
+                to: outURL.appendingPathComponent("world_interaction_snapshot.json")
+            )
+            try appendEvent(RunEvent(
+                type: "world_interaction_snapshot_written",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: worldInteractionMultiSnapshot.summary.success,
+                path: "world_interaction_snapshot.json",
+                agents: worldInteractionMultiSnapshot.summary.agents
+            ))
+        } else if let worldInteractionSnapshot {
             try writeJSON(
                 worldInteractionSnapshot,
                 to: outURL.appendingPathComponent("world_interaction_snapshot.json")
@@ -1145,8 +1197,10 @@ if let outPath = options.outPath {
             worldInteractionObservations: worldInteractionObservations,
             worldInteractionLoadedObservations: worldInteractionLoadedObservations,
             worldInteractionReadyObservations: worldInteractionReadyObservations,
-            worldInteractionBlockId: worldInteractionSnapshot?.blockId,
-            worldInteractionMeta: worldInteractionSnapshot?.meta,
+            worldInteractionUniqueChunks: worldInteractionUniqueChunks,
+            worldInteractionDistinctBlockIds: worldInteractionDistinctBlockIds,
+            worldInteractionBlockId: isWorldObservationSingleScenario ? worldInteractionSnapshot?.blockId : nil,
+            worldInteractionMeta: isWorldObservationSingleScenario ? worldInteractionSnapshot?.meta : nil,
             worldInteractionSuccess: worldInteractionSuccess,
             successCriteria: successCriteria
         )

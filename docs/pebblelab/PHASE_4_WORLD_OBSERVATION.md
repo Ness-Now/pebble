@@ -96,3 +96,7 @@ swift run -c release pebsmoke
 Recommended: Phase 4.7C, multi-agent read-only observation smoke. It should
 preserve fixed observation ordering, loaded/ready guards, bounded output, and
 the zero-mutation contract before any terrain scan is considered.
+
+Phase 4.7C is now complete. Three agents reuse the same guarded observation
+function and produce an ordered aggregate snapshot. See
+`PHASE_4_MULTI_AGENT_WORLD_OBSERVATION.md`.

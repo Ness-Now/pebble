@@ -311,3 +311,7 @@ it observes water below the synchronized agent in a loaded and ready chunk,
 records cell `4672` (`blockId=292`, `meta=0`), preserves zero abstract/core
 divergence, and confirms chunk mutation state is unchanged. See
 `PHASE_4_WORLD_OBSERVATION.md`.
+
+Phase 4.7C now applies the same one-cell read contract to three synchronized
+agents and aggregates their results without adding a terrain scan. See
+`PHASE_4_MULTI_AGENT_WORLD_OBSERVATION.md`.

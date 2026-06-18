@@ -96,6 +96,11 @@ struct RunEvent: Encodable {
     let blockId: Int?
     let meta: Int?
     let blockName: String?
+    let observations: Int?
+    let loadedObservations: Int?
+    let readyObservations: Int?
+    let uniqueChunks: Int?
+    let distinctBlockIds: Int?
 
     init(
         type: String,
@@ -192,7 +197,12 @@ struct RunEvent: Encodable {
         ready: Bool? = nil,
         blockId: Int? = nil,
         meta: Int? = nil,
-        blockName: String? = nil
+        blockName: String? = nil,
+        observations: Int? = nil,
+        loadedObservations: Int? = nil,
+        readyObservations: Int? = nil,
+        uniqueChunks: Int? = nil,
+        distinctBlockIds: Int? = nil
     ) {
         self.type = type
         self.event = event
@@ -289,6 +299,11 @@ struct RunEvent: Encodable {
         self.blockId = blockId
         self.meta = meta
         self.blockName = blockName
+        self.observations = observations
+        self.loadedObservations = loadedObservations
+        self.readyObservations = readyObservations
+        self.uniqueChunks = uniqueChunks
+        self.distinctBlockIds = distinctBlockIds
     }
 }
 

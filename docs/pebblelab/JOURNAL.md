@@ -1561,3 +1561,56 @@ Result: validation passed. Changes remain limited to PebbleLab and Markdown
 documentation; no block mutation API is called.
 
 Next step: Phase 4.7C, multi-agent read-only observation smoke.
+
+## 2026-06-18 - Phase 4.7C Multi-Agent Read-Only Observation
+
+Branch: `lab/pebblelab-v1`
+
+Objective: extend the guarded below-cell observation to three synchronized
+agents without adding terrain scans or mutation.
+
+Files modified:
+
+- `Sources/PebbleLab/LabWorldInteraction.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/PHASE_4_MULTI_AGENT_WORLD_OBSERVATION.md`
+- PebbleLab tracking documents
+
+Behavior added:
+
+- `world_observation_multi_smoke` creates three stationary agent/placeholder/
+  core-entity links at distinct positions.
+- The runner maps the existing `observeBlockBelow` logic in stable agent order.
+- A multi-agent snapshot aggregates observations, loaded/ready counts, unique
+  chunks, distinct block IDs, and success.
+- `lab_world_observation_multi_recorded` emits one compact summary event.
+- Scenario success requires all three observations, guards, divergences, and
+  unchanged chunk-state checks to pass.
+
+Validated result for seed 42 and five ticks:
+
+- agents/observations: 3/3;
+- loaded/ready observations: 3/3;
+- unique chunks/distinct block IDs: 1/1;
+- every observed cell is water (`4672`, ID 292, meta 0);
+- every divergence is 0;
+- every `chunkStateUnchanged` and aggregate success is true.
+
+Validation commands:
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `world_observation_multi_smoke`
+- `world_observation_smoke`
+- `physical_behavior_multi_smoke`
+- `regression_smoke`
+- `pebsmoke`
+
+Result: validation passed. Changes remain limited to PebbleLab and Markdown;
+no block mutation API is called.
+
+Next step: Phase 4.7D, world observation invariant report.

@@ -389,3 +389,13 @@ The dedicated smoke resolves the packed cell into block ID, metadata, and a
 stable registered name. Scenario success requires a coherent physical/core
 link, zero divergence, valid loaded data, and unchanged chunk
 `modified`/`version`/`dirty` state.
+
+## 2026-06-18 - Extend Read-Only Observation With Stable Aggregation
+
+Decision: Phase 4.7C extends read-only block observation to multiple
+synchronized agents while preserving the no-mutation contract.
+
+Each agent still observes exactly one `below` cell through the existing guarded
+function. Results are sorted by agent ID and summarized once; the multi-agent
+scenario does not introduce scan radius, orientation, pathfinding, collision,
+block mutation, or per-agent event spam.

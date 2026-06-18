@@ -222,6 +222,14 @@ chunk state without invoking mutation APIs.
 
 ## Phase 4.7C - Multi-Agent Read-Only Observation Smoke
 
-Next recommended step: extend the same guarded one-cell observation to several
-agents with stable ordering and aggregate outputs, still without terrain scans
-or world mutation.
+Status: done and validated.
+
+Goal: observe one guarded below-cell for each of three synchronized agents,
+aggregate loaded/ready, chunk and block-ID counts, and preserve zero divergence
+and unchanged chunk state.
+
+## Phase 4.7D - World Observation Invariant Report
+
+Next recommended step: expose the multi-agent observation counts, links,
+loaded/ready guards, divergences, and no-mutation checks in a compact invariant
+report before terrain scan planning.
