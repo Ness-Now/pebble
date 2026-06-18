@@ -356,3 +356,13 @@ Each `LabAgent` owns exactly one distinct `physicalId` and one unregistered
 core entity in the smoke scenario. Success requires complete one-to-one links,
 at least two moving agents, effective core synchronization, and zero total and
 maximum final abstract/core divergence.
+
+## 2026-06-18 - Report Multi-Agent Physical Invariants Explicitly
+
+Decision: Phase 4.6C adds a dedicated invariant report for multi-agent physical
+behavior before introducing any pathfinding, collision, block interaction, or
+world manipulation.
+
+The report is part of scenario success rather than a passive artifact. It
+audits one-to-one ownership, identifier uniqueness, cross-bridge `physicalId`
+agreement, movement, positive distance, and zero total/max final divergence.

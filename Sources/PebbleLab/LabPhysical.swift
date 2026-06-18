@@ -112,6 +112,36 @@ struct PhysicalBehaviorMultiSnapshot: Encodable {
     let success: Bool
 }
 
+struct PhysicalBehaviorInvariantReport: Encodable {
+    let scenario: String
+    let seed: UInt32
+    let ticksCompleted: Int
+    let success: Bool
+    let summary: PhysicalBehaviorInvariantSummary
+    let checks: [PhysicalBehaviorInvariantCheck]
+    let notes: [String]
+}
+
+struct PhysicalBehaviorInvariantSummary: Encodable {
+    let checksPassed: Int
+    let checksFailed: Int
+    let agents: Int
+    let placeholders: Int
+    let coreEntities: Int
+    let agentsMoved: Int
+    let totalMoves: Int
+    let totalDistance: Int
+    let finalDivergence: Int
+    let maxDivergence: Int
+}
+
+struct PhysicalBehaviorInvariantCheck: Encodable {
+    let name: String
+    let passed: Bool
+    let expected: String
+    let actual: String
+}
+
 struct CoreEntityInvariantReport: Encodable {
     let scenario: String
     let seed: UInt32
@@ -307,6 +337,124 @@ struct LabCoreEntityBridge {
 
     func maxDivergence(from agents: [LabAgent]) -> Int {
         snapshotLinks(for: agents).map(\.divergence).max() ?? 0
+    }
+
+    func physicalBehaviorInvariantReport(
+        scenario: String,
+        seed: UInt32,
+        ticksCompleted: Int,
+        agents: [LabAgent],
+        physicalBridge: LabAgentPhysicalBridge,
+        agentsMoved: Int,
+        totalMoves: Int,
+        totalDistance: Int
+    ) -> PhysicalBehaviorInvariantReport {
+        let finalDivergence = totalDivergence(from: agents)
+        let finalMaxDivergence = maxDivergence(from: agents)
+        let expectedAgents = 3
+        let eachAgentHasOnePlaceholder = agents.allSatisfy { agent in
+            physicalBridge.handles.filter { $0.agentId == agent.id }.count == 1
+        } && physicalBridge.count == agents.count
+        let eachAgentHasOneCoreEntity = agents.allSatisfy { agent in
+            entities.filter { $0.labAgentId == agent.id }.count == 1
+        } && count == agents.count
+        let uniquePhysicalIds = Set(physicalBridge.handles.map(\.physicalId)).count
+        let uniqueCoreEntityIds = Set(entities.map(\.id)).count
+        let physicalIdsMatchCoreEntities = agents.allSatisfy { agent in
+            guard let handle = physicalBridge.handles.first(where: { $0.agentId == agent.id }),
+                  let entity = entities.first(where: { $0.labAgentId == agent.id }) else {
+                return false
+            }
+            return handle.physicalId == entity.physicalId
+        }
+
+        let checks = [
+            PhysicalBehaviorInvariantCheck(
+                name: "agent_count",
+                passed: agents.count == expectedAgents,
+                expected: "\(expectedAgents)",
+                actual: "\(agents.count)"
+            ),
+            PhysicalBehaviorInvariantCheck(
+                name: "each_agent_has_one_placeholder",
+                passed: eachAgentHasOnePlaceholder,
+                expected: "true",
+                actual: "\(eachAgentHasOnePlaceholder)"
+            ),
+            PhysicalBehaviorInvariantCheck(
+                name: "each_agent_has_one_core_entity",
+                passed: eachAgentHasOneCoreEntity,
+                expected: "true",
+                actual: "\(eachAgentHasOneCoreEntity)"
+            ),
+            PhysicalBehaviorInvariantCheck(
+                name: "physical_ids_unique",
+                passed: uniquePhysicalIds == physicalBridge.count,
+                expected: "\(physicalBridge.count) unique",
+                actual: "\(uniquePhysicalIds) unique"
+            ),
+            PhysicalBehaviorInvariantCheck(
+                name: "core_entity_ids_unique",
+                passed: uniqueCoreEntityIds == count,
+                expected: "\(count) unique",
+                actual: "\(uniqueCoreEntityIds) unique"
+            ),
+            PhysicalBehaviorInvariantCheck(
+                name: "physical_ids_match_core_entities",
+                passed: physicalIdsMatchCoreEntities,
+                expected: "true",
+                actual: "\(physicalIdsMatchCoreEntities)"
+            ),
+            PhysicalBehaviorInvariantCheck(
+                name: "at_least_two_agents_moved",
+                passed: agentsMoved >= 2,
+                expected: ">= 2",
+                actual: "\(agentsMoved)"
+            ),
+            PhysicalBehaviorInvariantCheck(
+                name: "total_distance_positive",
+                passed: totalDistance > 0,
+                expected: "> 0",
+                actual: "\(totalDistance)"
+            ),
+            PhysicalBehaviorInvariantCheck(
+                name: "final_divergence_zero",
+                passed: finalDivergence == 0,
+                expected: "0",
+                actual: "\(finalDivergence)"
+            ),
+            PhysicalBehaviorInvariantCheck(
+                name: "max_divergence_zero",
+                passed: finalMaxDivergence == 0,
+                expected: "0",
+                actual: "\(finalMaxDivergence)"
+            )
+        ]
+        let checksFailed = checks.filter { !$0.passed }.count
+
+        return PhysicalBehaviorInvariantReport(
+            scenario: scenario,
+            seed: seed,
+            ticksCompleted: ticksCompleted,
+            success: checksFailed == 0,
+            summary: PhysicalBehaviorInvariantSummary(
+                checksPassed: checks.count - checksFailed,
+                checksFailed: checksFailed,
+                agents: agents.count,
+                placeholders: physicalBridge.count,
+                coreEntities: count,
+                agentsMoved: agentsMoved,
+                totalMoves: totalMoves,
+                totalDistance: totalDistance,
+                finalDivergence: finalDivergence,
+                maxDivergence: finalMaxDivergence
+            ),
+            checks: checks,
+            notes: [
+                "This report validates the multi-agent physical behavior smoke.",
+                "It does not prove pathfinding, collision, block interaction, or social physical behavior."
+            ]
+        )
     }
 
     func invariantReport(

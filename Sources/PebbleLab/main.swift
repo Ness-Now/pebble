@@ -727,18 +727,32 @@ let physicalBehaviorLinksCoherent = isPhysicalBehaviorScenario && labAgents.allS
     && physicalBridge.count == labAgents.count
     && coreEntityBridge.count == labAgents.count
 let requiredPhysicalBehaviorAgentsMoved = options.scenario == "physical_behavior_multi_smoke" ? 2 : 1
+let physicalBehaviorInvariantReport = options.scenario == "physical_behavior_multi_smoke"
+    ? coreEntityBridge.physicalBehaviorInvariantReport(
+        scenario: options.scenario,
+        seed: options.seed,
+        ticksCompleted: ticksCompleted,
+        agents: labAgents,
+        physicalBridge: physicalBridge,
+        agentsMoved: physicalBehaviorAgentsMoved ?? 0,
+        totalMoves: physicalBehaviorMoves ?? 0,
+        totalDistance: physicalBehaviorTotalDistance ?? 0
+    )
+    : nil
 let physicalBehaviorSuccess = isPhysicalBehaviorScenario
     ? ((physicalBehaviorAgentsMoved ?? 0) >= requiredPhysicalBehaviorAgentsMoved
         && (physicalBehaviorMoves ?? 0) > 0
         && coreEntitySyncEvents > 0
         && physicalBehaviorFinalDivergence == 0
         && physicalBehaviorMaxDivergence == 0
-        && physicalBehaviorLinksCoherent)
+        && physicalBehaviorLinksCoherent
+        && (physicalBehaviorInvariantReport?.success ?? true))
     : nil
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
     && successCriteria.agentTicksRecorded
     && (coreEntityInvariantReport?.success ?? true)
+    && (physicalBehaviorInvariantReport?.success ?? true)
     && (physicalBehaviorSuccess ?? true)
 
 if options.outPath != nil {
@@ -957,6 +971,19 @@ if let outPath = options.outPath {
                 path: "physical_behavior_snapshot.json",
                 agents: agentSnapshots.count
             ))
+            if let physicalBehaviorInvariantReport {
+                try writeJSON(
+                    physicalBehaviorInvariantReport,
+                    to: outURL.appendingPathComponent("physical_behavior_invariant_report.json")
+                )
+                try appendEvent(RunEvent(
+                    type: "physical_behavior_invariant_report_written",
+                    tick: ticksCompleted,
+                    scenario: options.scenario,
+                    success: physicalBehaviorInvariantReport.success,
+                    path: "physical_behavior_invariant_report.json"
+                ))
+            }
         }
         let metrics = RunMetrics(
             scenario: options.scenario,

@@ -108,3 +108,7 @@ one-to-one link checks, and total/max divergence checks. See
 
 Recommended next: Phase 4.6C, a compact multi-agent physical behavior invariant
 report without pathfinding or world interaction.
+
+Phase 4.6C is now complete. The multi-agent report makes the ownership and
+divergence checks explicit and gates scenario success. The next recommended
+step is Phase 4.7A, first simple world interaction planning.

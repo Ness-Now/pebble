@@ -198,6 +198,13 @@ movement metrics, and zero total/max final divergence.
 
 ## Phase 4.6C - Multi-Agent Physical Behavior Report And Invariants
 
-Next recommended step: extract the multi-agent link and divergence checks into
-a dedicated compact invariant report without adding pathfinding, collision, or
-world interaction.
+Status: done and validated.
+
+Goal: expose the multi-agent ownership, identifier, movement, distance, and
+divergence contract in `physical_behavior_invariant_report.json`, and make a
+failed report fail the scenario.
+
+## Phase 4.7A - First Simple World Interaction Planning
+
+Next recommended step: plan a deterministic, narrowly scoped first world
+interaction before changing blocks, inventories, collision, or navigation.

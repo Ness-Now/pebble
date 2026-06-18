@@ -1404,3 +1404,56 @@ Result: validation passed. No PebbleCore, registry, save/load, renderer,
 resource, or golden file was changed.
 
 Next step: Phase 4.6C, multi-agent physical behavior report and invariants.
+
+## 2026-06-18 - Phase 4.6C Multi-Agent Physical Behavior Report
+
+Branch: `lab/pebblelab-v1`
+
+Objective: turn the embedded multi-agent physical behavior checks into a
+dedicated, readable report that gates scenario success.
+
+Files modified:
+
+- `Sources/PebbleLab/LabPhysical.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/PHASE_4_PHYSICAL_BEHAVIOR_INVARIANTS.md`
+- `docs/pebblelab/PHASE_4_MULTI_AGENT_PHYSICAL_BEHAVIOR.md`
+- `docs/pebblelab/PHASE_4_PHYSICAL_BEHAVIOR_LOOP.md`
+- PebbleLab tracking documents
+
+Behavior added:
+
+- `physical_behavior_multi_smoke` writes
+  `physical_behavior_invariant_report.json`.
+- Ten checks cover counts, one-to-one ownership, unique IDs, matching
+  `physicalId` links, movement, distance, and total/max divergence.
+- The report's `success` participates directly in run success.
+- `physical_behavior_invariant_report_written` records the artifact path and
+  result without adding per-tick event volume.
+
+Validated result for seed 42 and 10 ticks:
+
+- checks passed: 10;
+- checks failed: 0;
+- agents/placeholders/core entities: 3/3/3;
+- agents moved: 3;
+- total moves and distance: 24/24;
+- total and maximum final divergence: 0/0;
+- report and scenario success: true.
+
+Validation commands:
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `physical_behavior_multi_smoke` with 10 ticks
+- `physical_behavior_smoke` with 10 ticks
+- `core_entity_smoke`
+- `physical_sync_smoke`
+- `long_run_smoke` with 10 agents and 1000 ticks
+- `regression_smoke`
+- `pebsmoke`
+
+Result: validation passed. Changes remain limited to PebbleLab reporting and
+documentation.
+
+Next step: Phase 4.7A, first simple world interaction planning.

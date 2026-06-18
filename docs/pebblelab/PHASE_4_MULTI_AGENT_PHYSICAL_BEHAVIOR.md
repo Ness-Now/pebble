@@ -58,6 +58,13 @@ The run emits `lab_physical_behavior_multi_started` and
 `lab_physical_behavior_multi_completed`; existing movement and sync events
 remain the detailed trace.
 
+Phase 4.6C also writes `physical_behavior_invariant_report.json`. Its ten
+checks audit agent count, one placeholder and core entity per agent, unique
+physical/core IDs, matching `physicalId` links, movement by at least two
+agents, positive distance, and zero total/max final divergence. The report's
+success is part of the scenario success contract. A
+`physical_behavior_invariant_report_written` event records the artifact.
+
 ## Validated Result
 
 For seed `42` and 10 ticks:
@@ -94,5 +101,9 @@ swift run -c release pebsmoke
 
 ## Next Step
 
-Recommended: Phase 4.6C, a compact multi-agent physical behavior invariant
-report that makes ownership and divergence regressions easier to diagnose.
+Phase 4.6C completed the compact invariant report with 10 passed checks and no
+failures for the validated seed-42 run.
+
+Recommended: Phase 4.7A, first simple world interaction planning. It should
+define a deterministic, non-destructive initial contract before any world
+mutation, collision, navigation, or real inventory integration.

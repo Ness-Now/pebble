@@ -34,3 +34,4 @@
 - Documented scripted screenshot validation workflow for PebbleLab probes.
 - Added first simple physical behavior smoke for PebbleLab core entities.
 - Added multi-agent physical behavior smoke for PebbleLab core entities.
+- Added invariant report for multi-agent physical behavior smoke.
