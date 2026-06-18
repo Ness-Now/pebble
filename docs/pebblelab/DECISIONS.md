@@ -321,3 +321,16 @@ GameCore applies it across all dimension worlds before title exit, world
 replacement, and dimension transfer; the app invokes the same GameCore cleanup
 before termination. `/labprobe clear` delegates to the helper for the active
 world. Direct mutation of `entities` or `entityById` remains forbidden.
+
+## 2026-06-18 - Keep Screenshot Validation Outside Simulation
+
+Decision: Phase 4.5B keeps scripted screenshot validation separate from
+simulation and persistence changes. Any screenshot workflow must use disposable
+worlds and explicit gates.
+
+The existing `PEBBLE_AUTOLOAD`, `PEBBLE_NEWWORLD`, `PEBBLE_CMD`, and
+`PEBBLE_SHOT` hooks already guarantee command execution before capture and
+normal termination afterward. Camera orientation is supplied through the
+existing `/tp` command rather than a new probe or renderer API. No script,
+gameplay command, renderer change, or screenshot-specific simulation state is
+introduced.

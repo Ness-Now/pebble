@@ -31,3 +31,4 @@
 - Documented visual app validation workflow for PebbleLab probes.
 - Recorded successful manual visual validation for PebbleLab app probes.
 - Added cleanup hardening for PebbleLab app probes.
+- Documented scripted screenshot validation workflow for PebbleLab probes.

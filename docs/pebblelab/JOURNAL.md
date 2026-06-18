@@ -1236,3 +1236,60 @@ requested PebbleLab scenarios are green; `pebsmoke` reports 456 passed, 0
 failed.
 
 Next step: Phase 4.5B, scripted screenshot validation in a disposable world.
+
+## 2026-06-18 - Phase 4.5B Scripted Screenshot Validation
+
+Branch: `lab/pebblelab-v1`
+
+Objective: determine whether existing Pebble app hooks can create a disposable
+world, execute the gated probe command, capture visual evidence, and terminate
+without implementation changes.
+
+Hooks inspected:
+
+- `PEBBLE_AUTOLOAD` enters a world without menu interaction.
+- `PEBBLE_NEWWORLD` creates a fresh `WGTest-*` world when autoload is active.
+- `PEBBLE_CMD` executes semicolon-separated commands after world/player setup
+  and a delay of more than 90 frames.
+- `PEBBLE_SHOT` waits until commands complete, delays capture by its requested
+  frame count, writes a composited PNG, then terminates normally.
+- App termination invokes hardened probe cleanup before final save.
+
+Execution:
+
+- The first disposable-world capture succeeded technically but did not frame
+  the probe.
+- A second run used `/tp ~ ~ ~ -90 0;/labprobe spawn` to face the probe before
+  capture.
+- Pebble wrote `/tmp/pebblelab-probe-phase45b-facing.png` at `3024 x 1898`.
+- Visual inspection confirmed the cyan wireframe AABB in the resulting image.
+- Neither PNG is tracked or committed.
+
+Files modified:
+
+- `docs/pebblelab/PHASE_4_SCRIPTED_SCREENSHOT_VALIDATION.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/DECISIONS.md`
+- `docs/pebblelab/PHASE_4_VISUAL_APP_VALIDATION.md`
+- `docs/pebblelab/PHASE_4_APP_PROBE_LIFECYCLE.md`
+
+Implementation result: docs-only. No script convention was introduced because
+the repository has no `scripts/` directory and the existing hooks are already
+sufficient.
+
+Validation commands:
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario core_entity_smoke --seed 42 --ticks 5 --out runs/check_core_entity_after_scripted_screenshot_docs`
+- `swift run -c release PebbleLab -- --scenario physical_sync_smoke --seed 42 --ticks 5 --out runs/check_physical_sync_after_scripted_screenshot_docs`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_scripted_screenshot_docs`
+- `swift run -c release pebsmoke`
+
+Result: scripted app capture and standard validation passed. Debug and release
+builds and all three requested PebbleLab scenarios are green; `pebsmoke`
+reports 456 passed, 0 failed.
+
+Next step: Phase 4.6A, first simple physical behavior loop planning.

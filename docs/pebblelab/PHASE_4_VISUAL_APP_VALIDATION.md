@@ -150,5 +150,8 @@ chat output before marking the visual check complete.
 
 ## Next Phase
 
-Recommended: Phase 4.5B, scripted screenshot validation of the existing gated
-workflow and hardened cleanup contract in a disposable world.
+Phase 4.5B successfully captured the cyan marker through Pebble's existing
+autoload, command, and screenshot hooks. See
+`PHASE_4_SCRIPTED_SCREENSHOT_VALIDATION.md`.
+
+Recommended next: Phase 4.6A, first simple physical behavior loop planning.

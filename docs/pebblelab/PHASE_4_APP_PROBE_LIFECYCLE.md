@@ -108,5 +108,9 @@ and final status returned `count=0`.
 
 ## Next Step
 
-Phase 4.5B should automate the disposable-world screenshot and command
-workflow against the hardened cleanup contract.
+Phase 4.5B validated the disposable-world screenshot workflow with existing app
+hooks and no implementation changes. See
+`PHASE_4_SCRIPTED_SCREENSHOT_VALIDATION.md`.
+
+Phase 4.6A should plan the first deterministic physical behavior loop without
+registering the probe or coupling it to vanilla mobs.

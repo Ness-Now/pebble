@@ -175,6 +175,13 @@ app. Preserve the default-off, unregistered, unsaved probe contract.
 
 ## Phase 4.5B - Scripted Screenshot Validation
 
-Next recommended step: automate the already validated disposable-world command
-and screenshot workflow without adding gameplay behavior or weakening the two
-explicit environment gates.
+Status: done and visually validated from an automated app capture.
+
+Goal: use existing autoload, fresh-world, command, capture, and termination
+hooks to generate a disposable-world PNG containing the cyan probe marker.
+
+## Phase 4.6A - First Simple Physical Behavior Loop Planning
+
+Next recommended step: plan one deterministic, explicitly gated physical
+behavior while preserving the abstract-agent authority, unregistered probe
+contract, and separation from vanilla mobs.
