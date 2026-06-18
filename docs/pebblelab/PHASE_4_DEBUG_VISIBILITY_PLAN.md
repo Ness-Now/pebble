@@ -342,6 +342,10 @@ Result: complete. `swift build`, all requested PebbleLab scenarios, and all
 456 `pebsmoke` checks pass. Visual capture remains deferred because the app has
 no safe probe injection lifecycle.
 
+Phase 4.4C documents that lifecycle separately. Its recommendation is to add
+and validate explicit chunk-save exclusion before any app-side probe command or
+injection is implemented.
+
 ## 8. Definition of Done for This Docs-Only Phase
 
 Phase 4.4A is complete when:

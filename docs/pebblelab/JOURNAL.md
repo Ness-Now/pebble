@@ -914,3 +914,60 @@ was not launched because no safe app-side probe injection exists yet.
 
 Next step: Phase 4.4C, app-side transient probe lifecycle planning with an
 explicit save-exclusion contract.
+
+## 2026-06-18 - Phase 4.4C App-Side Transient Probe Lifecycle Planning
+
+Branch: `lab/pebblelab-v1`
+
+Objective: determine how a future app-side `LabCoreAgentEntity` can be visible
+for debugging without contaminating chunk saves or leaving stale world indexes.
+
+Files inspected:
+
+- `AGENTS.md`
+- `Package.swift`
+- Phase 4 feasibility, probe, hardening, and visibility documents
+- `Sources/PebbleCore/Entity/Entity.swift`
+- `Sources/PebbleCore/Entity/EntityRegistry.swift`
+- `Sources/PebbleCore/Entity/LabCoreAgentEntity.swift`
+- `Sources/PebbleCore/World/GameWorld.swift`
+- `Sources/PebbleCore/Game/GameCore.swift`
+- `Sources/PebbleCore/Game/Saves.swift`
+- `Sources/Pebble/CommandsM.swift`
+- `Sources/Pebble/main.swift`
+- `Sources/Pebble/WorldRenderer.swift`
+- `Sources/pebsmoke/main.swift`
+- PebbleLab tracking documents
+
+Files modified:
+
+- `docs/pebblelab/PHASE_4_TRANSIENT_PROBE_LIFECYCLE_PLAN.md`
+- `docs/pebblelab/PHASE_4_DEBUG_VISIBILITY_PLAN.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/DECISIONS.md`
+
+Conclusions:
+
+- `chunkRecord` serializes every live non-player entity in the chunk except old
+  item/XP drops; it does not filter on `persistent`.
+- `unloadChunk` treats the probe as save-worthy, creates an entity record, then
+  removes the live entity from both world indexes.
+- `loadEntity` cannot reconstruct the unregistered type, and any saved record
+  also suppresses fresh worldgen entity specs for that chunk.
+- Save exclusion must precede any app-side command or injection.
+
+Validation commands:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --scenario core_entity_smoke --seed 42 --ticks 5 --out runs/check_core_entity_after_transient_lifecycle_docs`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_transient_lifecycle_docs`
+- `swift run -c release pebsmoke`
+
+Result: validation passed. This phase changes documentation only; build,
+headless core entity validation, regression reporting, and all 456 `pebsmoke`
+checks remain green.
+
+Next step: Phase 4.4D, explicit core entity save-exclusion contract. App-side
+probe creation remains forbidden until that contract is implemented and tested.

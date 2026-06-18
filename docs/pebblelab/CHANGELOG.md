@@ -25,3 +25,4 @@
 - Added invariant report for the PebbleLab core entity probe.
 - Documented debug visibility plan for PebbleLab core entities.
 - Added gated wireframe debug marker for PebbleLab core entities.
+- Documented transient app-side probe lifecycle plan.

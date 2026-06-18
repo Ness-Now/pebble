@@ -239,3 +239,18 @@ simulation state, register types, or touch save/load, models, textures,
 shaders, resource packs, metrics, events, or snapshots. App-side probe
 creation remains deferred to Phase 4.4C because it needs a safe transient
 lifecycle and persistence exclusion contract.
+
+## 2026-06-18 - Establish Save Exclusion Before App-Side Probe Injection
+
+Decision: no app-side `LabCoreAgentEntity` may be created until PebbleCore has
+an explicit chunk-save policy that excludes the probe.
+
+The next code phase should add a default-true property such as
+`shouldSaveToChunk` on `Entity`, override it to `false` on
+`LabCoreAgentEntity`, and use it in both `GameCore.unloadChunk` entity-presence
+decisions and `GameCore.chunkRecord` serialization. This policy must remain
+separate from the existing `persistent` flag, which is serialized and affects
+mob lifecycle but currently does not control chunk-save inclusion.
+
+Phase 4.4D must not add `/labprobe` or any app injection. A later phase may add
+explicitly gated creation and cleanup only after save exclusion is validated.

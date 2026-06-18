@@ -132,6 +132,14 @@ pipeline and leaving simulation behavior unchanged.
 
 ## Phase 4.4C - App-Side Transient Probe Lifecycle Planning
 
-Next recommended step: define how an app-side debug probe can be created,
-excluded from chunk saves, and removed safely. Do not add a spawn command until
-that transient lifecycle contract is explicit.
+Status: done and validated as a docs-only phase.
+
+Goal: define how a future app-side probe is explicitly excluded from chunk
+saves, gated, and removed from both world entity indexes without registration.
+
+## Phase 4.4D - Explicit Core Entity Save-Exclusion Contract
+
+Next recommended step: add a default-true entity chunk-save policy, override it
+for `LabCoreAgentEntity`, and apply it consistently when deciding whether a
+chunk contains saveable entities and when serializing its entity list. Do not
+add `/labprobe` or app-side injection in the same patch.
