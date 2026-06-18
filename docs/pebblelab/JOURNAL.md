@@ -1174,3 +1174,65 @@ Result: validation passed. `swift build`, `core_entity_smoke`, and
 phase modifies documentation only.
 
 Next step: Phase 4.5A, cleanup hardening on world and dimension transitions.
+
+## 2026-06-18 - Phase 4.5A Probe Cleanup Hardening
+
+Branch: `lab/pebblelab-v1`
+
+Objective: centralize transient probe removal and apply it to explicit clear,
+world replacement, title exit, dimension transfer, and app termination.
+
+Files inspected:
+
+- `AGENTS.md`
+- Phase 4 lifecycle, visual validation, and save-exclusion documents
+- `Sources/Pebble/CommandsM.swift`
+- `Sources/Pebble/main.swift`
+- `Sources/Pebble/WorldRenderer.swift`
+- `Sources/PebbleCore/Game/GameCore.swift`
+- `Sources/PebbleCore/World/GameWorld.swift`
+- `Sources/PebbleCore/Entity/LabCoreAgentEntity.swift`
+- `Sources/PebbleCore/Entity/Entity.swift`
+- `Sources/pebsmoke/main.swift`
+
+Files modified:
+
+- `Sources/PebbleCore/Entity/LabCoreAgentEntity.swift`
+- `Sources/PebbleCore/Game/GameCore.swift`
+- `Sources/Pebble/CommandsM.swift`
+- `Sources/Pebble/main.swift`
+- `Sources/pebsmoke/main.swift`
+- `docs/pebblelab/PHASE_4_PROBE_CLEANUP_HARDENING.md`
+- PebbleLab tracking and lifecycle documents
+
+Behavior added:
+
+- `clearLabCoreAgentProbes(in:)` snapshots probes and removes each only through
+  `World.removeEntity`, returning the count removed.
+- `/labprobe clear` delegates to the shared helper.
+- GameCore clears probes across every dimension before title exit, entering a
+  replacement world, and dimension transfer.
+- App termination clears probes before final synchronous save.
+- The helper is idempotent and independent of environment gates.
+
+Test coverage:
+
+- The existing entity contract smoke adds two probes and one standard entity
+  to a World, verifies removal count two then zero, and checks both
+  `entities` and `entityById` remain coherent.
+- The global entity ID counter is restored and the test total remains 456.
+
+Validation commands:
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario core_entity_smoke --seed 42 --ticks 5 --out runs/check_core_entity_after_probe_cleanup`
+- `swift run -c release PebbleLab -- --scenario physical_sync_smoke --seed 42 --ticks 5 --out runs/check_physical_sync_after_probe_cleanup`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_probe_cleanup`
+- `swift run -c release pebsmoke`
+
+Result: validation passed. Debug and release Pebble builds and all three
+requested PebbleLab scenarios are green; `pebsmoke` reports 456 passed, 0
+failed.
+
+Next step: Phase 4.5B, scripted screenshot validation in a disposable world.

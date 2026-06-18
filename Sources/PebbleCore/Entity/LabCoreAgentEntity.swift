@@ -31,3 +31,16 @@ public final class LabCoreAgentEntity: Entity {
         ticksAlive += 1
     }
 }
+
+/// Removes every experimental Lab probe through the World's entity API.
+///
+/// This keeps `entities` and `entityById` consistent and is intentionally
+/// independent of renderer and environment-variable state.
+@discardableResult
+public func clearLabCoreAgentProbes(in world: World) -> Int {
+    let probes = world.entities.compactMap { $0 as? LabCoreAgentEntity }
+    for probe in probes {
+        world.removeEntity(probe)
+    }
+    return probes.count
+}

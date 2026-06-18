@@ -167,7 +167,14 @@ wireframe visible, duplicate rejected, one probe cleared, and final count zero.
 
 ## Phase 4.5A - Cleanup Hardening On World Transitions
 
-Next recommended step: define and implement gated cleanup when the app leaves
-or replaces a world or changes dimension. Keep removal routed through
-`World.removeEntity` and preserve the default-off, unregistered, unsaved probe
-contract.
+Status: done and validated.
+
+Goal: centralize probe cleanup through `World.removeEntity` and invoke it when
+returning to title, replacing a world, changing dimension, or terminating the
+app. Preserve the default-off, unregistered, unsaved probe contract.
+
+## Phase 4.5B - Scripted Screenshot Validation
+
+Next recommended step: automate the already validated disposable-world command
+and screenshot workflow without adding gameplay behavior or weakening the two
+explicit environment gates.

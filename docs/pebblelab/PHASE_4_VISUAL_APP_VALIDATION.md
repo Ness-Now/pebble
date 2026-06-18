@@ -138,8 +138,9 @@ chat output before marking the visual check complete.
 
 ## Remaining Risks
 
-- World or dimension transitions do not yet trigger explicit automatic probe
-  cleanup.
+- World replacement, dimension transfer, title exit, and app termination now
+  trigger explicit automatic probe cleanup, but those UI transitions are not
+  yet covered by automated app navigation tests.
 - A crash can prevent the operator from running `/labprobe clear`, although the
   save-exclusion policy prevents chunk serialization.
 - The marker has not yet been visually verified across camera distances,
@@ -149,6 +150,5 @@ chat output before marking the visual check complete.
 
 ## Next Phase
 
-Recommended: Phase 4.5A, cleanup hardening on world and dimension transitions.
-It should remain explicitly gated and remove probes through
-`World.removeEntity` before broader screenshot automation is attempted.
+Recommended: Phase 4.5B, scripted screenshot validation of the existing gated
+workflow and hardened cleanup contract in a disposable world.

@@ -487,6 +487,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        game.clearLabCoreAgentProbes()
         if game.hasWorld() { game.saveAndFlush(synchronous: true) }
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }

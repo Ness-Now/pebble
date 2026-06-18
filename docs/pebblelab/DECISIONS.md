@@ -309,3 +309,15 @@ rejection, explicit clear, and final count zero in a new disposable world.
 User-provided screenshots support the recorded observations but are not
 committed. The validation does not claim unreported results such as automatic
 world-transition cleanup. Phase 4.5A remains responsible for that hardening.
+
+## 2026-06-18 - Centralize Probe Cleanup Through World APIs
+
+Decision: Phase 4.5A centralizes `LabCoreAgentEntity` cleanup through
+`World.removeEntity` and uses it for explicit and transition cleanup. It does
+not alter save/load, registry, or rendering behavior.
+
+The reusable world helper is independent of environment gates and idempotent.
+GameCore applies it across all dimension worlds before title exit, world
+replacement, and dimension transfer; the app invokes the same GameCore cleanup
+before termination. `/labprobe clear` delegates to the helper for the active
+world. Direct mutation of `entities` or `entityById` remains forbidden.

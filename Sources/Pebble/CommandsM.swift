@@ -293,10 +293,8 @@ func runCommand(_ game: GameCore, _ raw: String) {
             world.addEntity(probe)
             ok(String(format: "Spawned transient lab probe id=%d at %.1f %.1f %.1f", probe.id, probe.x, probe.y, probe.z))
         case "clear":
-            for probe in probes {
-                world.removeEntity(probe)
-            }
-            ok("Removed \(probes.count) lab probe\(probes.count == 1 ? "" : "s")")
+            let removed = clearLabCoreAgentProbes(in: world)
+            ok("Removed \(removed) lab probe\(removed == 1 ? "" : "s")")
         default:
             fail("Usage: /labprobe <status|spawn|clear>")
         }

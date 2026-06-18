@@ -384,6 +384,7 @@ public final class GameCore {
     }
 
     public func exitToTitle() {
+        clearLabCoreAgentProbes()
         if inWorld { saveAndFlush(synchronous: true) }
         inWorld = false
         worldRec = nil
@@ -464,6 +465,7 @@ public final class GameCore {
     // World lifecycle
     // ===========================================================================
     private func enterWorld(_ rec: WorldRecord, _ playerData: [String: Any]?, _ adv: [String]?) {
+        clearLabCoreAgentProbes()
         worldRec = rec
         advancements = AdvancementTracker()
         if let adv { advancements.load(adv) }
@@ -1236,7 +1238,17 @@ public final class GameCore {
     // ===========================================================================
     // Dimension travel
     // ===========================================================================
+    @discardableResult
+    public func clearLabCoreAgentProbes() -> Int {
+        var removed = 0
+        for world in worlds.values {
+            removed += PebbleCore.clearLabCoreAgentProbes(in: world)
+        }
+        return removed
+    }
+
     private func moveToDimension(_ dest: Dim) {
+        clearLabCoreAgentProbes()
         let from = world
         from.removeEntity(player)
         dim = dest

@@ -30,3 +30,4 @@
 - Added gated app-side lifecycle commands for PebbleLab core entity probes.
 - Documented visual app validation workflow for PebbleLab probes.
 - Recorded successful manual visual validation for PebbleLab app probes.
+- Added cleanup hardening for PebbleLab app probes.

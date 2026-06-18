@@ -1189,17 +1189,34 @@ if let g = loadJSON("entity-goldens.json") {
         labAgentId: "save_policy_probe",
         physicalId: "physical_save_policy_probe"
     )
+    let secondTransientSavePolicyEntity = LabCoreAgentEntity(
+        world: savePolicyWorld,
+        labAgentId: "save_policy_probe_2",
+        physicalId: "physical_save_policy_probe_2"
+    )
     let savePolicyCandidates = [standardSavePolicyEntity, transientSavePolicyEntity]
         .filter { !$0.isPlayer && !$0.dead && $0.shouldSaveToChunk }
+    savePolicyWorld.addEntity(standardSavePolicyEntity)
+    savePolicyWorld.addEntity(transientSavePolicyEntity)
+    savePolicyWorld.addEntity(secondTransientSavePolicyEntity)
+    let removedSavePolicyProbes = clearLabCoreAgentProbes(in: savePolicyWorld)
+    let cleanupPolicyOK = removedSavePolicyProbes == 2
+        && clearLabCoreAgentProbes(in: savePolicyWorld) == 0
+        && savePolicyWorld.entities.count == 1
+        && savePolicyWorld.entities.first === standardSavePolicyEntity
+        && savePolicyWorld.entityById[standardSavePolicyEntity.id] === standardSavePolicyEntity
+        && savePolicyWorld.entityById[transientSavePolicyEntity.id] == nil
+        && savePolicyWorld.entityById[secondTransientSavePolicyEntity.id] == nil
     let savePolicyOK = standardSavePolicyEntity.shouldSaveToChunk
         && !transientSavePolicyEntity.shouldSaveToChunk
         && savePolicyCandidates.count == 1
         && savePolicyCandidates.first === standardSavePolicyEntity
+        && cleanupPolicyOK
     resetEntityIds(nextEntityIdBeforeSavePolicyProbe)
 
     check("entity type count + chunk save policy",
           entityTypes().count == num("entityTypeCount") && savePolicyOK,
-          "types \(entityTypes().count)/\(num("entityTypeCount")), standard=\(standardSavePolicyEntity.shouldSaveToChunk), probe=\(transientSavePolicyEntity.shouldSaveToChunk), candidates=\(savePolicyCandidates.count)")
+          "types \(entityTypes().count)/\(num("entityTypeCount")), standard=\(standardSavePolicyEntity.shouldSaveToChunk), probe=\(transientSavePolicyEntity.shouldSaveToChunk), candidates=\(savePolicyCandidates.count), removed=\(removedSavePolicyProbes)")
     check("entity registration order", hashString(entityTypes().joined(separator: ",")) == hash32("entityTypesH"))
     check("spawnable mob list", hashString(spawnableMobs().joined(separator: ",")) == hash32("spawnableH"))
 

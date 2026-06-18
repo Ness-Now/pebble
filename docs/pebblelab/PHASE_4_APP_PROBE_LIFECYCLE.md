@@ -44,6 +44,11 @@ Removes every `LabCoreAgentEntity` from the current world through
 debug state always has a safe cleanup path. The command never edits
 `World.entities` or `World.entityById` directly.
 
+Phase 4.5A routes this command through the shared
+`clearLabCoreAgentProbes(in:)` helper. The same helper is applied across all
+GameCore dimension worlds before title exit, world replacement, dimension
+transfer, and app termination.
+
 ## Persistence Contract
 
 The probe remains unregistered and overrides `shouldSaveToChunk` to `false`.
@@ -103,5 +108,5 @@ and final status returned `count=0`.
 
 ## Next Step
 
-Phase 4.5A should harden cleanup across world and dimension transitions before
-scripted screenshot automation or broader app integration.
+Phase 4.5B should automate the disposable-world screenshot and command
+workflow against the hardened cleanup contract.
