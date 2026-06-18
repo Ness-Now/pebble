@@ -399,3 +399,13 @@ Each agent still observes exactly one `below` cell through the existing guarded
 function. Results are sorted by agent ID and summarized once; the multi-agent
 scenario does not introduce scan radius, orientation, pathfinding, collision,
 block mutation, or per-agent event spam.
+
+## 2026-06-18 - Gate World Observation With A Dedicated Report
+
+Decision: Phase 4.7D adds a dedicated invariant report for read-only
+multi-agent world observation before terrain scans or any block mutation.
+
+The report is authoritative for scenario success. It validates unique physical
+links, loaded/ready guards, successful below-cell observations, zero
+divergence, unchanged chunks, exact cell decoding, registered names, and the
+reported block-ID diversity.

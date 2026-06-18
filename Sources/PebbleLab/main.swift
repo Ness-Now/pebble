@@ -782,6 +782,9 @@ let worldInteractionMultiSnapshot = isWorldObservationMultiScenario
         coreEntities: coreEntityBridge.count
     )
     : nil
+let worldObservationInvariantReport = worldInteractionMultiSnapshot.map(
+    makeWorldObservationInvariantReport
+)
 let worldInteractionAgents = isWorldObservationScenario ? labAgents.count : nil
 let worldInteractionObservations = isWorldObservationScenario ? worldInteractionSnapshots.count : nil
 let worldInteractionLoadedObservations = isWorldObservationScenario ? worldInteractionSnapshots.filter { $0.chunk.loaded }.count : nil
@@ -794,13 +797,17 @@ let worldInteractionDistinctBlockIds = isWorldObservationScenario
     : nil
 let worldInteractionSuccess = isWorldObservationSingleScenario
     ? (worldInteractionSnapshot?.success ?? false)
-    : (isWorldObservationMultiScenario ? (worldInteractionMultiSnapshot?.summary.success ?? false) : nil)
+    : (isWorldObservationMultiScenario
+        ? ((worldInteractionMultiSnapshot?.summary.success ?? false)
+            && (worldObservationInvariantReport?.success ?? false))
+        : nil)
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
     && successCriteria.agentTicksRecorded
     && (coreEntityInvariantReport?.success ?? true)
     && (physicalBehaviorInvariantReport?.success ?? true)
     && (physicalBehaviorSuccess ?? true)
+    && (worldObservationInvariantReport?.success ?? true)
     && (worldInteractionSuccess ?? true)
 
 if options.outPath != nil {
@@ -1093,6 +1100,19 @@ if let outPath = options.outPath {
                 path: "world_interaction_snapshot.json",
                 agents: worldInteractionMultiSnapshot.summary.agents
             ))
+            if let worldObservationInvariantReport {
+                try writeJSON(
+                    worldObservationInvariantReport,
+                    to: outURL.appendingPathComponent("world_observation_invariant_report.json")
+                )
+                try appendEvent(RunEvent(
+                    type: "world_observation_invariant_report_written",
+                    tick: ticksCompleted,
+                    scenario: options.scenario,
+                    success: worldObservationInvariantReport.success,
+                    path: "world_observation_invariant_report.json"
+                ))
+            }
         } else if let worldInteractionSnapshot {
             try writeJSON(
                 worldInteractionSnapshot,

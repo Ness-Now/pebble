@@ -230,6 +230,14 @@ and unchanged chunk state.
 
 ## Phase 4.7D - World Observation Invariant Report
 
-Next recommended step: expose the multi-agent observation counts, links,
-loaded/ready guards, divergences, and no-mutation checks in a compact invariant
-report before terrain scan planning.
+Status: done and validated.
+
+Goal: expose links, guards, relation, block validity, divergence, unchanged
+chunk state, and block-ID diversity in a dedicated report that gates scenario
+success.
+
+## Phase 4.8A - Terrain Scan Planning
+
+Next recommended step: design a fixed, bounded, read-only terrain scan with
+deterministic coordinate ordering and explicit chunk-boundary/output limits
+before implementing any multi-cell observation.

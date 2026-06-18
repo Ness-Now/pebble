@@ -1614,3 +1614,52 @@ Result: validation passed. Changes remain limited to PebbleLab and Markdown;
 no block mutation API is called.
 
 Next step: Phase 4.7D, world observation invariant report.
+
+## 2026-06-18 - Phase 4.7D World Observation Invariant Report
+
+Branch: `lab/pebblelab-v1`
+
+Objective: make the multi-agent read-only observation contract explicit and
+scenario-failing through a dedicated invariant report.
+
+Files modified:
+
+- `Sources/PebbleLab/LabWorldInteraction.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/PHASE_4_WORLD_OBSERVATION_INVARIANTS.md`
+- `docs/pebblelab/PHASE_4_WORLD_OBSERVATION.md`
+- `docs/pebblelab/PHASE_4_MULTI_AGENT_WORLD_OBSERVATION.md`
+- PebbleLab tracking documents
+
+Reporting added:
+
+- `world_observation_invariant_report.json` with ten named checks;
+- explicit linked-observation and valid-block counts;
+- exact packed-cell, registered-name, relation, guard, divergence, and
+  unchanged-chunk validation;
+- `world_observation_invariant_report_written` event;
+- report success integrated into world-interaction and overall run success.
+
+Validated result for seed 42 and five ticks:
+
+- checks passed/failed: 10/0;
+- agents/observations/linked observations: 3/3/3;
+- loaded/ready/successful: 3/3/3;
+- zero divergence/unchanged chunk/valid block: 3/3/3;
+- unique chunks/distinct block IDs: 1/1;
+- report and scenario success: true.
+
+Validation commands:
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `world_observation_multi_smoke`
+- `world_observation_smoke`
+- `physical_behavior_multi_smoke`
+- `regression_smoke`
+- `pebsmoke`
+
+Result: validation passed. Changes remain limited to PebbleLab reporting and
+Markdown; no world interaction or mutation path changed.
+
+Next step: Phase 4.8A, terrain scan planning.

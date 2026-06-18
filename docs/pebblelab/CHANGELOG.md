@@ -38,3 +38,4 @@
 - Documented first world interaction plan for PebbleLab agents.
 - Added perception-only world observation smoke for PebbleLab agents.
 - Added multi-agent read-only world observation smoke for PebbleLab agents.
+- Added invariant report for multi-agent world observation smoke.

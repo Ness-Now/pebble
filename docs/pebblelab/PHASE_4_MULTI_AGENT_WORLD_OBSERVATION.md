@@ -51,6 +51,11 @@ multi-agent JSON.
 The run emits `lab_world_observation_multi_recorded` once, avoiding per-tick
 or per-agent event volume.
 
+Phase 4.7D also writes `world_observation_invariant_report.json`. Its ten
+checks cover counts and unique links, loaded/ready/success state, zero
+divergence, unchanged chunks, valid packed block data, `below` relations, and
+reported block-ID diversity. Report success gates scenario success.
+
 ## Validated Result
 
 For seed `42` and five ticks:
@@ -88,3 +93,6 @@ swift run -c release pebsmoke
 Recommended: Phase 4.7D, world observation invariant report. Make the link,
 guard, count, divergence, and unchanged-chunk checks independently readable
 before planning any bounded terrain scan.
+
+Phase 4.7D is complete with 10 passed checks and no failures for the validated
+seed-42 run. The next recommended phase is 4.8A, terrain scan planning.

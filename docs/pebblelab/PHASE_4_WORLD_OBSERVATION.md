@@ -100,3 +100,6 @@ the zero-mutation contract before any terrain scan is considered.
 Phase 4.7C is now complete. Three agents reuse the same guarded observation
 function and produce an ordered aggregate snapshot. See
 `PHASE_4_MULTI_AGENT_WORLD_OBSERVATION.md`.
+
+Phase 4.7D now adds an authoritative ten-check report for that aggregate
+contract. See `PHASE_4_WORLD_OBSERVATION_INVARIANTS.md`.
