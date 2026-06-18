@@ -69,3 +69,7 @@ swift run -c release pebsmoke
 Recommended: Phase 4.7A, first simple world interaction planning. Define a
 small deterministic and initially non-destructive contract before implementing
 any world mutation or physical navigation.
+
+Phase 4.7A completed that planning and chose read-only observation of the
+loaded block below one synchronized agent. Phase 4.7B should implement the
+dedicated smoke and outputs without block mutation.

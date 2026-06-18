@@ -107,3 +107,7 @@ failures for the validated seed-42 run.
 Recommended: Phase 4.7A, first simple world interaction planning. It should
 define a deterministic, non-destructive initial contract before any world
 mutation, collision, navigation, or real inventory integration.
+
+Phase 4.7A selected a one-cell, perception-only observation below the agent.
+See `PHASE_4_WORLD_INTERACTION_PLAN.md`. The next implementation phase is
+Phase 4.7B, `world_observation_smoke`.

@@ -366,3 +366,15 @@ world manipulation.
 The report is part of scenario success rather than a passive artifact. It
 audits one-to-one ownership, identifier uniqueness, cross-bridge `physicalId`
 agreement, movement, positive distance, and zero total/max final divergence.
+
+## 2026-06-18 - Begin World Interaction With Read-Only Perception
+
+Decision: Phase 4.7A chooses perception-only block observation as the first
+world interaction candidate before any block mutation, mining, construction,
+inventory, pathfinding, or save/load changes.
+
+The future smoke must distinguish loaded air from the missing-chunk fallback
+before calling `World.getBlock`. It should observe one deterministic cell below
+a synchronized agent and produce dedicated outputs. `World.setBlock`, even
+with silent flags, remains out of scope because it mutates cells and marks the
+chunk modified.

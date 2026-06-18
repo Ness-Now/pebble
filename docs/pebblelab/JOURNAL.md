@@ -1457,3 +1457,52 @@ Result: validation passed. Changes remain limited to PebbleLab reporting and
 documentation.
 
 Next step: Phase 4.7A, first simple world interaction planning.
+
+## 2026-06-18 - Phase 4.7A First Simple World Interaction Planning
+
+Branch: `lab/pebblelab-v1`
+
+Objective: inspect PebbleCore block read/mutation architecture and select the
+first safe voxel-world interaction for a synchronized PebbleLab agent.
+
+Files inspected:
+
+- `Sources/PebbleCore/World/GameWorld.swift`
+- `Sources/PebbleCore/World/Chunk.swift`
+- `Sources/PebbleCore/World/BlockDefs.swift`
+- `Sources/PebbleCore/World/BlockRegistry*.swift`
+- `Sources/PebbleCore/World/LightEngine.swift`
+- `Sources/PebbleCore/Game/GameCore.swift`
+- `Sources/PebbleCore/Game/Saves.swift`
+- `Sources/PebbleCore/Systems/Interact.swift`
+- `Sources/Pebble/CommandsM.swift`
+- PebbleLab agent, physical, scenario, output, and runner files
+- `Sources/pebsmoke/main.swift`
+- PebbleLab Phase 4 documentation
+
+Files modified: PebbleLab Markdown documentation only.
+
+Conclusions:
+
+- `World.getBlock` is the correct read path, but missing chunks also return
+  cell zero; loaded/ready checks are mandatory.
+- Cells pack block ID and metadata as `id << 4 | meta`.
+- `LabAgent.observe` already reads below/feet cells, proving the basic API.
+- `World.setBlock` marks the chunk modified and can trigger heightmap, light,
+  remesh, neighbor, scheduled-tick, and block-entity effects.
+- `placeBlock` and `finishBreaking` add real inventory, collision, drops,
+  effects, statistics, and multiblock behavior and are not safe first steps.
+- The safest next patch is one read-only observation below one synchronized
+  agent with dedicated metrics, event, and snapshot.
+
+Validation commands:
+
+- `swift build`
+- `physical_behavior_multi_smoke` with seed 42 and 10 ticks
+- `regression_smoke` with seed 42
+- `pebsmoke`
+
+Result: validation passed. No Swift, registry, save/load, renderer, resource,
+or golden file changed.
+
+Next step: Phase 4.7B, perception-only block observation smoke.

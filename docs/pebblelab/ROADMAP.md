@@ -206,5 +206,14 @@ failed report fail the scenario.
 
 ## Phase 4.7A - First Simple World Interaction Planning
 
-Next recommended step: plan a deterministic, narrowly scoped first world
-interaction before changing blocks, inventories, collision, or navigation.
+Status: done and validated as a docs-only phase.
+
+Goal: map PebbleCore's block read and mutation paths, compare six candidate
+interactions, and select a loaded, perception-only block observation as the
+first safe voxel-world contract.
+
+## Phase 4.7B - Perception-Only Block Observation Smoke
+
+Next recommended step: observe the loaded block below one synchronized agent,
+without mutation, save/load, dirty chunks, renderer changes, inventory,
+collision, or navigation.
