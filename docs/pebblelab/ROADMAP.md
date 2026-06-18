@@ -139,7 +139,15 @@ saves, gated, and removed from both world entity indexes without registration.
 
 ## Phase 4.4D - Explicit Core Entity Save-Exclusion Contract
 
-Next recommended step: add a default-true entity chunk-save policy, override it
-for `LabCoreAgentEntity`, and apply it consistently when deciding whether a
-chunk contains saveable entities and when serializing its entity list. Do not
-add `/labprobe` or app-side injection in the same patch.
+Status: done and validated.
+
+Goal: keep every existing entity saveable by default while allowing
+`LabCoreAgentEntity` to opt out explicitly. Both chunk entity-presence checks
+and chunk serialization honor the policy without changing `persistent`.
+
+## Phase 4.4E - Gated App-Side Probe Command and Lifecycle
+
+Next recommended step: add an explicitly gated, idempotent app-side probe
+controller with spawn and clear operations, cleanup through
+`World.removeEntity`, and validation in a disposable world. Keep the probe
+unregistered and excluded from saves.

@@ -254,3 +254,16 @@ mob lifecycle but currently does not control chunk-save inclusion.
 
 Phase 4.4D must not add `/labprobe` or any app injection. A later phase may add
 explicitly gated creation and cleanup only after save exclusion is validated.
+
+## 2026-06-18 - Separate Chunk Save Policy From Persistent Lifecycle State
+
+Decision: Phase 4.4D adds `Entity.shouldSaveToChunk`, defaulting to `true`,
+rather than reusing `persistent`.
+
+`LabCoreAgentEntity` overrides the policy to `false`. `GameCore.chunkRecord`
+uses it before serialization, and `GameCore.unloadChunk` uses it when deciding
+whether live entities alone require an entity-only record. The later unload
+cleanup still removes every live non-player entity through `World.removeEntity`.
+
+This preserves all existing entity defaults, save format, registry behavior,
+and `persistent` semantics while giving transient probes an explicit opt-out.

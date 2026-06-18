@@ -971,3 +971,59 @@ checks remain green.
 
 Next step: Phase 4.4D, explicit core entity save-exclusion contract. App-side
 probe creation remains forbidden until that contract is implemented and tested.
+
+## 2026-06-18 - Phase 4.4D Explicit Save-Exclusion Contract
+
+Branch: `lab/pebblelab-v1`
+
+Objective: prevent transient `LabCoreAgentEntity` probes from creating or
+entering chunk save records without changing registry or persistence formats.
+
+Files modified:
+
+- `Sources/PebbleCore/Entity/Entity.swift`
+- `Sources/PebbleCore/Entity/LabCoreAgentEntity.swift`
+- `Sources/PebbleCore/Game/GameCore.swift`
+- `Sources/pebsmoke/main.swift`
+- `docs/pebblelab/PHASE_4_SAVE_EXCLUSION.md`
+- `docs/pebblelab/PHASE_4_TRANSIENT_PROBE_LIFECYCLE_PLAN.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/DECISIONS.md`
+
+Behavior added:
+
+- `Entity.shouldSaveToChunk` defaults to `true`.
+- `LabCoreAgentEntity.shouldSaveToChunk` returns `false`.
+- `chunkRecord` excludes entities with a false save policy.
+- `unloadChunk` does not treat excluded entities as a reason to create an
+  entity-only record.
+- The live unload removal loop remains unchanged and still uses
+  `World.removeEntity`.
+- `persistent`, save encoding, registry loading, renderer behavior, and
+  goldens remain unchanged.
+
+Test coverage:
+
+- The existing entity contract check now also verifies a standard entity is
+  saveable, the Lab probe is not, and the collector-style policy filter keeps
+  only the standard entity.
+- The test restores the global entity ID counter before continuing, preserving
+  deterministic golden behavior and the total of 456 checks.
+- `chunkRecord` and `unloadChunk` remain private; the smoke tests the public
+  policy and closest filter behavior rather than exposing debug save APIs.
+
+Validation commands:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --scenario core_entity_smoke --seed 42 --ticks 5 --out runs/check_core_entity_after_save_exclusion`
+- `swift run -c release PebbleLab -- --scenario physical_sync_smoke --seed 42 --ticks 5 --out runs/check_physical_sync_after_save_exclusion`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_save_exclusion`
+- `swift run -c release pebsmoke`
+
+Result: validation passed. All requested scenarios remain green and
+`pebsmoke` reports 456 passed, 0 failed.
+
+Next step: Phase 4.4E, gated app-side probe lifecycle with explicit spawn,
+clear, duplicate prevention, and disposable-world validation.

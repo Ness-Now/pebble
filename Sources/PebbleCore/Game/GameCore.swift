@@ -641,7 +641,7 @@ public final class GameCore {
         // persist entities standing in this chunk (skip player + transient)
         var ents: [[String: Any]] = []
         for e in w.entities {
-            guard let ent = e as? Entity, !ent.isPlayer, !ent.dead else { continue }
+            guard let ent = e as? Entity, !ent.isPlayer, !ent.dead, ent.shouldSaveToChunk else { continue }
             if floorDiv(ifloor(ent.x), 16) != c.cx || floorDiv(ifloor(ent.z), 16) != c.cz { continue }
             if (ent.type == "item" || ent.type == "xp_orb") && ent.age > 4000 { continue }
             ents.append(ent.save())
@@ -1053,7 +1053,7 @@ public final class GameCore {
         // persist if edited, if live entities stand in it, or if a stale record exists
         var hasEntities = false
         for e in w.entities {
-            guard let ent = e as? Entity, !ent.isPlayer, !ent.dead else { continue }
+            guard let ent = e as? Entity, !ent.isPlayer, !ent.dead, ent.shouldSaveToChunk else { continue }
             if floorDiv(ifloor(ent.x), 16) == c.cx && floorDiv(ifloor(ent.z), 16) == c.cz {
                 hasEntities = true
                 break

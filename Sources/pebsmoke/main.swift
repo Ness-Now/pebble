@@ -1181,8 +1181,25 @@ if let g = loadJSON("entity-goldens.json") {
     func num(_ k: String) -> Int { (g[k] as! NSNumber).intValue }
     func hash32(_ k: String) -> UInt32 { UInt32(truncating: g[k] as! NSNumber) }
 
-    check("entity type count", entityTypes().count == num("entityTypeCount"),
-          "got \(entityTypes().count) want \(num("entityTypeCount"))")
+    let nextEntityIdBeforeSavePolicyProbe = peekNextEntityId()
+    let savePolicyWorld = World(dim: .overworld, seed: 12345)
+    let standardSavePolicyEntity = Entity(world: savePolicyWorld)
+    let transientSavePolicyEntity = LabCoreAgentEntity(
+        world: savePolicyWorld,
+        labAgentId: "save_policy_probe",
+        physicalId: "physical_save_policy_probe"
+    )
+    let savePolicyCandidates = [standardSavePolicyEntity, transientSavePolicyEntity]
+        .filter { !$0.isPlayer && !$0.dead && $0.shouldSaveToChunk }
+    let savePolicyOK = standardSavePolicyEntity.shouldSaveToChunk
+        && !transientSavePolicyEntity.shouldSaveToChunk
+        && savePolicyCandidates.count == 1
+        && savePolicyCandidates.first === standardSavePolicyEntity
+    resetEntityIds(nextEntityIdBeforeSavePolicyProbe)
+
+    check("entity type count + chunk save policy",
+          entityTypes().count == num("entityTypeCount") && savePolicyOK,
+          "types \(entityTypes().count)/\(num("entityTypeCount")), standard=\(standardSavePolicyEntity.shouldSaveToChunk), probe=\(transientSavePolicyEntity.shouldSaveToChunk), candidates=\(savePolicyCandidates.count)")
     check("entity registration order", hashString(entityTypes().joined(separator: ",")) == hash32("entityTypesH"))
     check("spawnable mob list", hashString(spawnableMobs().joined(separator: ",")) == hash32("spawnableH"))
 

@@ -249,14 +249,13 @@ Complexity: high. Roadmap compatibility: eventual, not current.
 
 Recommendation: no until transient physical behavior is stable.
 
-## 4. Recommended Next Patch
+## 4. Implemented Save-Exclusion Patch
 
-Recommended phase:
+Implemented phase:
 
 `Phase 4.4D - explicit save-exclusion contract for LabCoreAgentEntity`
 
-This should be a small code patch. It should not remain docs-only, because the
-unsafe serialization behavior is now identified precisely and can be isolated.
+Phase 4.4D is implemented as a small PebbleCore policy patch.
 
 Modify only:
 
@@ -266,7 +265,7 @@ Modify only:
 - `Sources/pebsmoke/main.swift`;
 - PebbleLab tracking documents.
 
-Implementation contract:
+Implementation:
 
 - add a default-true entity property such as `shouldSaveToChunk`;
 - override it to `false` only for `LabCoreAgentEntity`;
@@ -284,8 +283,8 @@ Files that must not change include `EntityRegistry.swift`, `WorldRenderer.swift`
 `CommandsM.swift`, app startup, model/resource paths, shaders, audio, packaging,
 and goldens.
 
-`/labprobe` remains forbidden in Phase 4.4D. It becomes eligible for a later
-Phase 4.4E only after save exclusion is validated.
+No `/labprobe` or app injection was added. A gated command becomes eligible
+for Phase 4.4E because save exclusion is now validated.
 
 ## 5. Safe Transient Lifecycle Contract
 
@@ -329,16 +328,17 @@ status. It must still not be listed as a normal summonable mob.
 | Renderer/simulation mixing | Medium | Low | Keep renderer gate read-only and lifecycle outside `WorldRenderer`. | Separate phases. |
 | Future registered-type conflict | High | Low now | Revisit save policy explicitly before registration; do not silently flip behavior. | Document migration requirement. |
 
-## 7. Validation Plan for Future Phase
+## 7. Validation
 
-Required validation for Phase 4.4D:
+Validation for Phase 4.4D:
 
 ```sh
 cd ~/Dev/pebble-lab
 git checkout lab/pebblelab-v1
 swift build
-swift run -c release PebbleLab -- --scenario core_entity_smoke --seed 42 --ticks 5 --out runs/check_core_entity_before_transient_probe
-swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_before_transient_probe
+swift run -c release PebbleLab -- --scenario core_entity_smoke --seed 42 --ticks 5 --out runs/check_core_entity_after_save_exclusion
+swift run -c release PebbleLab -- --scenario physical_sync_smoke --seed 42 --ticks 5 --out runs/check_physical_sync_after_save_exclusion
+swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_save_exclusion
 swift run -c release pebsmoke
 git status
 ```
@@ -361,7 +361,7 @@ That later workflow must verify spawn, visible marker, clear, world exit, and
 reload without a saved `pebblelab:core_agent_probe` record. It is not
 implemented or run in Phase 4.4C.
 
-Phase 4.4D Definition of Done:
+Phase 4.4D result:
 
 - save policy defaults to true for existing entities;
 - the Lab probe overrides it to false;
@@ -370,6 +370,10 @@ Phase 4.4D Definition of Done:
 - registry, renderer, save schema, and goldens are unchanged;
 - targeted policy checks and all existing `pebsmoke` checks pass;
 - PebbleLab core and regression smokes remain green.
+
+All conditions passed. The private `chunkRecord` and `unloadChunk` methods were
+not exposed solely for testing; `pebsmoke` validates the public policy and the
+equivalent collector filter while production uses the property in both paths.
 
 ## 8. Definition of Done for This Docs-Only Phase
 

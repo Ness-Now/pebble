@@ -75,6 +75,9 @@ open class Entity: EntityRef {
     public var passengers: [Entity] = []
     /// mark for save persistence
     public var persistent = false
+    /// chunk-save policy; transient debug entities can opt out without
+    /// changing the existing `persistent` lifecycle semantics.
+    open var shouldSaveToChunk: Bool { true }
     public var data = EntityData()
     public var portalCooldown = 0
     public var portalTime = 0

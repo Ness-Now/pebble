@@ -12,6 +12,7 @@ public final class LabCoreAgentEntity: Entity {
     public private(set) var ticksAlive = 0
 
     public override var type: String { Self.kind }
+    public override var shouldSaveToChunk: Bool { false }
 
     public init(world: World, labAgentId: String, physicalId: String) {
         self.labAgentId = labAgentId
