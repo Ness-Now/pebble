@@ -1074,3 +1074,58 @@ the app.
 
 Next step: Phase 4.4F, visual app validation and cleanup hardening across world
 transitions.
+
+## 2026-06-18 - Phase 4.4F Visual App Validation Workflow
+
+Branch: `lab/pebblelab-v1`
+
+Objective: formalize a safe, reproducible manual workflow for validating the
+gated app probe and cyan wireframe marker without adding app functionality.
+
+Files inspected:
+
+- `AGENTS.md`
+- `docs/pebblelab/PHASE_4_APP_PROBE_LIFECYCLE.md`
+- `docs/pebblelab/PHASE_4_DEBUG_VISIBILITY_PLAN.md`
+- `docs/pebblelab/PHASE_4_SAVE_EXCLUSION.md`
+- `Sources/Pebble/CommandsM.swift`
+- `Sources/Pebble/WorldRenderer.swift`
+- `Sources/PebbleCore/Entity/LabCoreAgentEntity.swift`
+- `Sources/PebbleCore/Entity/Entity.swift`
+- `Sources/PebbleCore/Game/GameCore.swift`
+- `Sources/pebsmoke/main.swift`
+
+Files modified:
+
+- `docs/pebblelab/PHASE_4_VISUAL_APP_VALIDATION.md`
+- `docs/pebblelab/PHASE_4_APP_PROBE_LIFECYCLE.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/DECISIONS.md`
+
+Behavior documented:
+
+- launch Pebble with both independent exact-value gates;
+- use a disposable world;
+- run status, spawn, duplicate spawn, clear, and final status in order;
+- confirm the cyan marker appears and disappears;
+- clear before exit and avoid important saves;
+- report UI observations only when actually witnessed.
+
+Validation commands:
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario core_entity_smoke --seed 42 --ticks 5 --out runs/check_core_entity_after_visual_validation_docs`
+- `swift run -c release PebbleLab -- --scenario physical_sync_smoke --seed 42 --ticks 5 --out runs/check_physical_sync_after_visual_validation_docs`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_visual_validation_docs`
+- `swift run -c release pebsmoke`
+
+Result: automated validation passed. Debug and release Pebble builds,
+`core_entity_smoke`, `physical_sync_smoke`, and `regression_smoke` are green;
+`pebsmoke` reports 456 passed, 0 failed. The app UI was not launched or
+observed, so manual visual validation remains explicitly assigned to an
+operator using a disposable world.
+
+Next step: Phase 4.5A, cleanup hardening on world and dimension transitions.

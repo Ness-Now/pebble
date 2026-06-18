@@ -156,7 +156,16 @@ Goal: provide hidden app-side `status`, gated `spawn`, and unconditional safe
 
 ## Phase 4.4F - Visual App Validation Workflow
 
-Next recommended step: validate the gated probe and wireframe marker together
-in a disposable app world, including duplicate prevention, cleanup, and a
-documented screenshot/manual verification workflow without changing gameplay
-or persistence.
+Status: workflow documented; automated prerequisites validated. Manual visual
+execution remains pending.
+
+Goal: validate the gated probe and wireframe marker together in a disposable
+app world, including duplicate prevention, explicit cleanup, and honest
+operator-observed results without changing gameplay or persistence.
+
+## Phase 4.5A - Cleanup Hardening On World Transitions
+
+Next recommended step: define and implement gated cleanup when the app leaves
+or replaces a world or changes dimension. Keep removal routed through
+`World.removeEntity` and preserve the default-off, unregistered, unsaved probe
+contract.

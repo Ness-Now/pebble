@@ -285,3 +285,17 @@ an existing transient probe always has a safe cleanup path, and removes probes
 only through `World.removeEntity` to keep `entities` and `entityById`
 consistent. The command remains absent from normal `/help` output unless the
 creation gate is active.
+
+## 2026-06-18 - Keep Visual Validation Explicit And Disposable
+
+Decision: Phase 4.4F keeps app visual validation as an explicit
+disposable-world workflow before any automatic lifecycle hardening.
+
+Automated builds and headless scenarios validate compilation and simulation
+contracts, but they do not prove that the macOS UI displayed the cyan marker or
+accepted chat commands. Visual success must be recorded only after an operator
+launches Pebble with both exact-value gates, executes the documented command
+sequence, rejects a duplicate spawn, clears the probe, and observes count zero.
+
+Important saves remain out of scope. The next code phase should harden cleanup
+across world and dimension transitions before scripted screenshot automation.

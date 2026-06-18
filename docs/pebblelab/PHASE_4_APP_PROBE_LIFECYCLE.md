@@ -91,8 +91,16 @@ Phase 4.4E adds no registry entry, app startup injection, GameCore change,
 renderer change, save/load change, model, texture, shader, resource-pack,
 audio, packaging, or golden update.
 
+## Visual Validation
+
+The complete operator workflow, expected results, safety checklist, and cleanup
+steps are documented in `PHASE_4_VISUAL_APP_VALIDATION.md`.
+
+Automated builds and headless validation pass, but the macOS UI was not
+launched or observed during Phase 4.4F. Visual confirmation remains a manual
+disposable-world task.
+
 ## Next Step
 
-Phase 4.4F should define and execute the visual app validation workflow in a
-disposable world. It should verify the marker, duplicate rejection, explicit
-clear, and world-transition cleanup before any broader app integration.
+Phase 4.5A should harden cleanup across world and dimension transitions before
+scripted screenshot automation or broader app integration.

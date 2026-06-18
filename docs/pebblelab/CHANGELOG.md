@@ -28,3 +28,4 @@
 - Documented transient app-side probe lifecycle plan.
 - Added explicit chunk-save exclusion policy for PebbleLab core entity probes.
 - Added gated app-side lifecycle commands for PebbleLab core entity probes.
+- Documented visual app validation workflow for PebbleLab probes.
