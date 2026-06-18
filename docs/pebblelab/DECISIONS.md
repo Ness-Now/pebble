@@ -299,3 +299,13 @@ sequence, rejects a duplicate spawn, clears the probe, and observes count zero.
 
 Important saves remain out of scope. The next code phase should harden cleanup
 across world and dimension transitions before scripted screenshot automation.
+
+## 2026-06-18 - Accept Manual Visual Validation For Phase 4.4F
+
+Decision: manual visual validation is accepted as completed for Phase 4.4F
+because the operator confirmed spawn, cyan wireframe visibility, duplicate
+rejection, explicit clear, and final count zero in a new disposable world.
+
+User-provided screenshots support the recorded observations but are not
+committed. The validation does not claim unreported results such as automatic
+world-transition cleanup. Phase 4.5A remains responsible for that hardening.

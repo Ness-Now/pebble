@@ -65,23 +65,49 @@ from `EntityRegistry`. Its `shouldSaveToChunk` policy remains `false`.
 
 ## Observed Results
 
-Automated builds and headless validations passed.
+Manual app visual validation was completed successfully by the user in a new
+disposable world with both `PEBBLELAB_APP_PROBES=1` and
+`PEBBLELAB_DEBUG_ENTITIES=1` active.
 
-Manual app visual validation remains to be performed by the user in a
-disposable world. This session did not launch or observe the macOS UI, so it
-does not claim that the marker or chat responses were visually confirmed.
+Observed command results:
+
+```text
+/labprobe status
+Lab probes: gate=enabled, count=0
+
+/labprobe spawn
+Spawned transient lab probe id=715 at 26.8 68.0 -106.5
+
+/labprobe status
+Lab probes: gate=enabled, count=1, id=715 at 26.8 68.0 -106.5
+
+/labprobe spawn
+A lab probe already exists. Use /labprobe clear first.
+
+/labprobe clear
+Removed 1 lab probe
+
+/labprobe status
+Lab probes: gate=enabled, count=0
+```
+
+The cyan wireframe was visible near the player after spawn. User-provided
+screenshots confirmed the workflow; the screenshots are not committed to this
+repository.
+
+The final `count=0` confirms cleanup; no additional clear command was required.
 
 ## Validation Checklist
 
-- [ ] Launch uses both exact-value environment gates.
-- [ ] A disposable world is opened or created.
-- [ ] Initial status is enabled with count zero.
-- [ ] First spawn succeeds.
-- [ ] Cyan wireframe is visible near the player.
-- [ ] Status reports one probe with a plausible position.
-- [ ] Duplicate spawn is refused.
-- [ ] Clear removes exactly one probe.
-- [ ] Final status is count zero.
+- [x] Launch uses both exact-value environment gates.
+- [x] A disposable world is opened or created.
+- [x] Initial status is enabled with count zero.
+- [x] First spawn succeeds.
+- [x] Cyan wireframe is visible near the player.
+- [x] Status reports one probe with a plausible position.
+- [x] Duplicate spawn is refused.
+- [x] Clear removes exactly one probe.
+- [x] Final status is count zero.
 - [ ] Wireframe disappears.
 - [ ] App exits normally after cleanup.
 

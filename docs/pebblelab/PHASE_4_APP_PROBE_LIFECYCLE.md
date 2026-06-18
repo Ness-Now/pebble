@@ -96,9 +96,10 @@ audio, packaging, or golden update.
 The complete operator workflow, expected results, safety checklist, and cleanup
 steps are documented in `PHASE_4_VISUAL_APP_VALIDATION.md`.
 
-Automated builds and headless validation pass, but the macOS UI was not
-launched or observed during Phase 4.4F. Visual confirmation remains a manual
-disposable-world task.
+Automated builds and headless validation pass. The user subsequently completed
+the manual disposable-world workflow: spawn produced probe `id=715`, the cyan
+wireframe was visible, duplicate spawn was refused, clear removed one probe,
+and final status returned `count=0`.
 
 ## Next Step
 

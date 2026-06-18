@@ -156,12 +156,14 @@ Goal: provide hidden app-side `status`, gated `spawn`, and unconditional safe
 
 ## Phase 4.4F - Visual App Validation Workflow
 
-Status: workflow documented; automated prerequisites validated. Manual visual
-execution remains pending.
+Status: done and manually validated in a disposable world.
 
 Goal: validate the gated probe and wireframe marker together in a disposable
 app world, including duplicate prevention, explicit cleanup, and honest
 operator-observed results without changing gameplay or persistence.
+
+Observed: both gates enabled, initial count zero, probe `id=715` spawned,
+wireframe visible, duplicate rejected, one probe cleared, and final count zero.
 
 ## Phase 4.5A - Cleanup Hardening On World Transitions
 

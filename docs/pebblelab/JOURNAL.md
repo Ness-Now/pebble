@@ -1129,3 +1129,48 @@ observed, so manual visual validation remains explicitly assigned to an
 operator using a disposable world.
 
 Next step: Phase 4.5A, cleanup hardening on world and dimension transitions.
+
+## 2026-06-18 - Phase 4.4G Manual Visual App Validation Recorded
+
+Branch: `lab/pebblelab-v1`
+
+Objective: record the user's completed manual validation of the gated app
+probe lifecycle and cyan debug marker without modifying implementation code.
+
+Observed results:
+
+- Pebble launched successfully in a new disposable world.
+- `PEBBLELAB_APP_PROBES=1` and `PEBBLELAB_DEBUG_ENTITIES=1` were active.
+- Initial `/labprobe status` returned `gate=enabled, count=0`.
+- `/labprobe spawn` created probe `id=715` at `26.8 68.0 -106.5`.
+- The cyan wireframe was visible near the player.
+- Status then reported `count=1` with the same ID and position.
+- A second spawn was refused with the expected duplicate message.
+- `/labprobe clear` reported `Removed 1 lab probe`.
+- Final status returned `gate=enabled, count=0`.
+
+Screenshots were supplied by the user as evidence of the workflow and are not
+committed to the repository. The final count zero confirms explicit cleanup;
+no additional clear command was needed. No unreported UI behavior is inferred.
+
+Files modified:
+
+- `docs/pebblelab/PHASE_4_VISUAL_APP_VALIDATION.md`
+- `docs/pebblelab/PHASE_4_APP_PROBE_LIFECYCLE.md`
+- `docs/pebblelab/JOURNAL.md`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/DECISIONS.md`
+
+Validation commands:
+
+- `swift build`
+- `swift run -c release PebbleLab -- --scenario core_entity_smoke --seed 42 --ticks 5 --out runs/check_core_entity_after_manual_visual_record`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_manual_visual_record`
+- `swift run -c release pebsmoke`
+
+Result: validation passed. `swift build`, `core_entity_smoke`, and
+`regression_smoke` are green; `pebsmoke` reports 456 passed, 0 failed. This
+phase modifies documentation only.
+
+Next step: Phase 4.5A, cleanup hardening on world and dimension transitions.
