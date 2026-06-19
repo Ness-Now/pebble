@@ -218,3 +218,63 @@ contract rather than a scenario string inside the report.
 Phase 4.9A: read-only terrain semantics planning. Define a minimal semantic
 classification contract before adding any classification code. Mutation,
 pathfinding, collision, and traversability decisions remain out of scope.
+
+## 2026-06-19 — Phase 4.9A Read-Only Terrain Semantics Planning
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Define the first bounded terrain-semantics contract for the cells already
+captured by the central and edge terrain scans, without implementing a Swift
+classifier or changing runtime behavior.
+
+### Files Created Or Modified
+
+- `docs/pebblelab/PHASE_4_TERRAIN_SEMANTICS_PLAN.md` (new)
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+### Technical Decisions
+
+- Future classification is a pure `LabTerrainScanCell` to semantic-cell
+  transformation and must not reread `World`.
+- Raw scan cells remain unchanged; future semantic results belong in a
+  parallel `semanticCells` array with identical ordering.
+- Exact air and liquid identities are preferred over broad substring rules.
+- Valid unmatched blocks fall back to `other`; the current scan cell lacks a
+  reliable solid flag, so 4.9B must not infer solidity universally.
+- Semantic labels explicitly do not imply traversability, collision, hazard,
+  mining value, or agent behavior.
+
+### Risks
+
+Block names and IDs can be over-interpreted, broad plant/liquid rules can
+misclassify blocks, and semantic labels can be mistaken for navigation facts.
+The plan mitigates these risks with conservative exact rules, confidence and
+reason fields, `unknown`/`other` fallbacks, one-to-one invariants, and a strict
+no-world-access boundary.
+
+### Still Prohibited
+
+No Swift, PebbleCore, registry, save/load, renderer, resource, or golden change
+was made. Pathfinding, traversability, collision, mutation, mining,
+construction, inventory, multi-agent/vertical scans, and ML integrations
+remain out of scope.
+
+### Validation Commands
+
+- `swift build`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Documentation-only diff confirmed; no Swift file changed.
+- `swift build` passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.9B: implement terrain cell semantic classification v0 as a pure,
+read-only transformation over the existing nine scan cells.

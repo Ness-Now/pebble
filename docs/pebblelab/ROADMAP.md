@@ -270,7 +270,15 @@ preserving all existing outputs and invariant coverage.
 
 ## Phase 4.9A - Read-Only Terrain Semantics Planning
 
-Next recommended step: define a minimal, deterministic classification contract
-for already-observed cells before implementing terrain semantics. Mutation,
-pathfinding, collision, traversability decisions, multi-agent scans, and
-configurable radii remain out of scope.
+Status: done as a docs-only planning phase.
+
+Goal: define a minimal, deterministic, pure classification contract for
+already-observed terrain cells without rereading or mutating the world.
+
+## Phase 4.9B - Terrain Cell Semantic Classification V0
+
+Next recommended step: classify the existing nine scan cells into conservative
+`unknown`, `air`, `solid`, `liquid`, `plantLike`, or `other` results while
+preserving raw scan evidence and deterministic ordering. Pathfinding,
+traversability, collision, mutation, multi-agent scans, and configurable radii
+remain out of scope.

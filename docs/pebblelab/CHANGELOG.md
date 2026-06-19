@@ -43,3 +43,4 @@
 - Added bounded read-only terrain scan smoke for PebbleLab agents.
 - Added edge-position terrain scan smoke crossing chunk boundaries.
 - Hardened terrain scan scenario contracts and shared invariants.
+- Documented read-only terrain semantics plan for PebbleLab terrain scans.
