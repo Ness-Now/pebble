@@ -71,3 +71,77 @@ run products are unchanged.
 Phase 4.8C: terrain scan edge and invariant hardening, followed later by
 read-only terrain semantics/traversability planning. Terrain mutation remains
 deferred.
+
+## 2026-06-19 - Phase 4.8C Edge Terrain Scan Smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Validate the existing fixed radius-1 read-only terrain scan when its origin is
+on both an X and Z chunk boundary.
+
+### Files Modified
+
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabWorldInteraction.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+### Position And Chunk Contract
+
+- Agent position: `(16, 64, 16)`.
+- Scan origin: `(16, 63, 16)`.
+- Fixed radius/order: `1 / dz_then_dx`.
+- Target chunks: `(0,0)`, `(1,0)`, `(0,1)`, `(1,1)`.
+- Expected and observed unique chunk count: `4`.
+
+The scenario reuses `scanTerrainAroundBelow` without a second scan path. The
+existing scenario preparation loads the radius-1 chunk region before the scan;
+the scan itself neither loads nor generates chunks.
+
+### Invariant Hardening
+
+`terrain_scan_edge_smoke` adds two conditional checks to the shared report:
+
+- `edge_scan_crosses_chunk_boundary` requires more than one unique chunk;
+- `edge_scan_expected_unique_chunks` requires exactly four chunks.
+
+The original `terrain_scan_smoke` keeps its existing 15-check contract. The
+edge scenario has 17 checks.
+
+### Read-Only Guardrails
+
+Every cell still checks loaded/ready state before `World.getBlock`, decodes
+only present cells, and compares chunk `modified`, `version`, and `dirty`
+state. No mutation, chunk loading, registry, save/load, renderer, pathfinding,
+collision, or gameplay path was added.
+
+### Validation Commands
+
+- `swift build`
+- `swift run -c release PebbleLab -- --scenario terrain_scan_edge_smoke --seed 42 --ticks 5 --out runs/check_terrain_scan_edge_smoke`
+- `swift run -c release PebbleLab -- --scenario terrain_scan_smoke --seed 42 --ticks 5 --out runs/check_terrain_scan_smoke_after_edge`
+- `swift run -c release PebbleLab -- --scenario world_observation_multi_smoke --seed 42 --ticks 5 --out runs/check_world_observation_after_edge_scan`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_edge_scan`
+- `swift build -c release --product Pebble`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Planned/observed/loaded/ready cells: `9/9/9/9`.
+- Unique chunks: `4`.
+- Chunk state unchanged and terrain scan success: `true`.
+- Edge invariant report: `17 passed, 0 failed`.
+- Central terrain scan, world observation, and regression scenarios passed.
+- Pebble release build passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.8D: terrain scan contract cleanup and shared invariant hardening before
+planning terrain semantics or traversability. Terrain mutation remains
+deferred.

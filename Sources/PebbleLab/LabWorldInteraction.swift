@@ -581,7 +581,7 @@ func makeTerrainScanInvariantReport(
         && !snapshot.physicalId.isEmpty
         && snapshot.coreEntityId > 0
 
-    let checks = [
+    var checks = [
         TerrainScanInvariantCheck(
             name: "agent_exists",
             passed: agents == 1 && !snapshot.agentId.isEmpty,
@@ -674,6 +674,21 @@ func makeTerrainScanInvariantReport(
             actual: "code-review invariant"
         )
     ]
+
+    if snapshot.scenario == "terrain_scan_edge_smoke" {
+        checks.append(TerrainScanInvariantCheck(
+            name: "edge_scan_crosses_chunk_boundary",
+            passed: snapshot.summary.uniqueChunks > 1,
+            expected: "> 1",
+            actual: "\(snapshot.summary.uniqueChunks)"
+        ))
+        checks.append(TerrainScanInvariantCheck(
+            name: "edge_scan_expected_unique_chunks",
+            passed: snapshot.summary.uniqueChunks == 4,
+            expected: "4",
+            actual: "\(snapshot.summary.uniqueChunks)"
+        ))
+    }
     let checksFailed = checks.filter { !$0.passed }.count
 
     return TerrainScanInvariantReport(

@@ -15,6 +15,7 @@ let isWorldObservationSingleScenario = options.scenario == "world_observation_sm
 let isWorldObservationMultiScenario = options.scenario == "world_observation_multi_smoke"
 let isWorldObservationScenario = isWorldObservationSingleScenario || isWorldObservationMultiScenario
 let isTerrainScanScenario = options.scenario == "terrain_scan_smoke"
+    || options.scenario == "terrain_scan_edge_smoke"
 let isWorldInteractionScenario = isWorldObservationScenario || isTerrainScanScenario
 
 var ticksCompleted = 0

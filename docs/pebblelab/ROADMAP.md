@@ -254,7 +254,14 @@ with a dedicated 15-check invariant report.
 
 ## Phase 4.8C - Terrain Scan Edge And Invariant Hardening
 
-Next recommended step: validate the same fixed radius-1 scan near a loaded
-chunk edge and harden unavailable-cell reporting. Terrain semantics and
-traversability should follow only after that read-only boundary contract is
-stable; mutation remains out of scope.
+Status: done and validated.
+
+Goal: reuse the fixed radius-1 scan at agent position `(16,64,16)`, prove the
+nine cells cross exactly four preloaded chunks, and add edge-specific boundary
+invariants without adding a second scan implementation.
+
+## Phase 4.8D - Terrain Scan Contract Cleanup And Shared Invariant Hardening
+
+Next recommended step: consolidate scenario expectations and report contracts
+before planning read-only terrain semantics or traversability. Mutation,
+pathfinding, collision, and configurable scan radii remain out of scope.
