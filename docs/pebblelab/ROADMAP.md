@@ -332,7 +332,19 @@ The edge report extends the shared 18 checks with two boundary-specific checks.
 
 ## Phase 4.11D - Terrain Column Scan Contract Cleanup
 
-Next recommended step: review the shared central/edge contract and invariant
-surface before any new perception behavior. Pathfinding, collision, mutation,
-multi-agent column scans, configurable radius, and movement remain out of
-scope.
+Status: deferred as optional cleanup; the shared central/edge contract is
+already stable enough for fixture-only pathfinding planning.
+
+## Phase 4.12A - Pathfinding Planning
+
+Status: done as a docs-only planning phase.
+
+Goal: define a deterministic, bounded, world-free pathfinding contract while
+keeping traversability, search, movement, collision, and agent decisions as
+separate layers.
+
+## Phase 4.12B - Terrain Pathfinding Fixture Smoke
+
+Next recommended step: validate bounded BFS over synthetic traversability
+grids with fixed north/east/south/west neighbor order. Live pathfinding,
+collision, mutation, route following, and agent movement remain out of scope.

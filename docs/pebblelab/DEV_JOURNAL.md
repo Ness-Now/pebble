@@ -814,3 +814,68 @@ goal selection, multi-agent scan, or configurable radius was added.
 
 Phase 4.11D: clean up and review the shared column-scan contracts and invariant
 surface before planning pathfinding or any behavior consuming traversability.
+
+## 2026-06-19 — Phase 4.12A Terrain Pathfinding Planning
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Define a strict, bounded pathfinding contract before introducing any graph
+search code or connecting traversability evidence to movement.
+
+### Files Created Or Modified
+
+- `docs/pebblelab/PHASE_4_PATHFINDING_PLAN.md` (new)
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+### Technical Decisions
+
+- Phase 4.12B will be `terrain_pathfinding_fixture_smoke`, with synthetic
+  traversability grids only and no `World`, chunks, or real agents.
+- Bounded BFS is preferred over A* for uniform-cost fixture grids.
+- Only exact `.traversable` nodes are passable in v0.
+- Neighbors are four-directional in fixed north/east/south/west order.
+- Search uses uniform cost one, a mandatory `maxVisited`, and visited-node
+  tracking.
+- Results are abstract evidence only and never command movement.
+
+### Layer Distinctions
+
+Scans capture world evidence; semantics describe cells; traversability
+evaluates candidate columns; pathfinding searches an abstract graph; movement
+executes a request; collision remains engine truth. Agent decisions select
+goals independently. None of these layers is allowed to silently stand in for
+another.
+
+### Risks
+
+The plan addresses premature live integration, confusion between route and
+movement, collision overclaims, passable unknown/unsafe nodes, nondeterministic
+ties, infinite loops, unbounded graph growth, premature A*, world access or
+mutation, and cost complexity before fixture coverage.
+
+### Still Prohibited
+
+No Swift, PebbleCore, registry, save/load, renderer, resource, or golden file
+was changed. Pathfinding code, A*, Dijkstra, graph expansion, live world reads,
+collision, movement, goals, mutation, mining, construction, multi-agent
+navigation, and ML integrations remain out of scope.
+
+### Validation Commands
+
+- `swift build`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Documentation-only diff confirmed; no Swift file changed.
+- `swift build` passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.12B: implement a pure `terrain_pathfinding_fixture_smoke` using
+bounded deterministic BFS over synthetic traversability grids.
