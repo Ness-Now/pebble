@@ -439,3 +439,65 @@ remain out of scope.
 Phase 4.10A: terrain traversability planning, docs-only. Define the boundary
 between descriptive semantics and possible movement evidence before adding
 any traversability, pathfinding, collision, or behavior code.
+
+## 2026-06-19 — Phase 4.10A Terrain Traversability Planning
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Define a conservative read-only traversability contract without implementing
+traversability, vertical scanning, pathfinding, collision, or agent behavior.
+
+### Files Created Or Modified
+
+- `docs/pebblelab/PHASE_4_TRAVERSABILITY_PLAN.md` (new)
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+### Technical Decisions
+
+- Semantic kind remains a description of one captured cell.
+- Traversability requires at least a support/feet/head semantic column and is
+  only a candidate occupancy assessment.
+- Pathfinding remains graph search over positions and is not part of the
+  traversability classifier.
+- Collision remains PebbleCore's physical truth and cannot be replaced by a
+  read-only label.
+- Phase 4.10B should be a pure synthetic column fixture smoke. Connecting to a
+  real vertical scan is deferred to a later contract phase.
+- Missing or ambiguous evidence returns `unknown`; liquid support is `unsafe`;
+  solid support with clear air feet/head is only a `traversable` candidate.
+
+### Risks
+
+The main risks are conflating semantics with movement, declaring positions
+traversable from below-only evidence, overinterpreting liquids/plants/other,
+rereading or mutating the world, coupling fixtures to block IDs, and quietly
+introducing pathfinding or collision assumptions. Separate types, pure
+synthetic columns, conservative results, and explicit review invariants bound
+those risks.
+
+### Still Prohibited
+
+No Swift, PebbleCore, registry, save/load, renderer, resource, or golden file
+was changed. Traversability code, vertical scans, pathfinding, collision,
+movement decisions, mutation, mining, construction, multi-agent navigation,
+and ML integrations remain out of scope.
+
+### Validation Commands
+
+- `swift build`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Documentation-only diff confirmed; no Swift file changed.
+- `swift build` passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.10B: add a pure `terrain_traversability_fixture_smoke` over synthetic
+support/feet/head semantic columns, with no world access or gameplay behavior.

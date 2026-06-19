@@ -292,8 +292,15 @@ world-free fixtures and verify both expected kind and reason.
 
 ## Phase 4.10A - Terrain Traversability Planning
 
-Next recommended step: docs-only planning that defines what additional
-evidence would be required to reason about traversability without conflating
-it with the current descriptive semantic labels. Pathfinding, traversability
-implementation, collision, mutation, multi-agent scans, and configurable
-radii remain out of scope until separately approved.
+Status: done as a docs-only planning phase.
+
+Goal: define the support/feet/head evidence and conservative result contract
+needed before traversability can be implemented without conflating it with
+semantics, pathfinding, collision, or agent actions.
+
+## Phase 4.10B - Terrain Traversability Fixture Smoke
+
+Next recommended step: validate the proposed traversability rules with pure
+synthetic semantic columns and no world access. Pathfinding, collision,
+mutation, live vertical scans, multi-agent navigation, and movement decisions
+remain out of scope.

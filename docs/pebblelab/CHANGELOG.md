@@ -46,3 +46,4 @@
 - Documented read-only terrain semantics plan for PebbleLab terrain scans.
 - Added read-only terrain semantic classification v0 for terrain scans.
 - Added terrain semantics fixture smoke covering classification rules.
+- Documented terrain traversability planning contract.
