@@ -163,7 +163,9 @@ struct LabTerrainScanSnapshot: Encodable {
     let relation: String
     let order: String
     let cells: [LabTerrainScanCell]
+    let semanticCells: [LabTerrainCellSemantic]
     let summary: LabTerrainScanSummary
+    let semanticSummary: LabTerrainSemanticsSummary
 }
 
 struct TerrainScanInvariantReport: Encodable {
@@ -511,6 +513,11 @@ func scanTerrainAroundBelow(
         && distinctBlockIds > 0
         && chunkStateUnchanged
         && cells.allSatisfy(\.success)
+    let semanticCells = classifyTerrainScanCells(cells)
+    let semanticSummary = makeTerrainSemanticsSummary(
+        cells: semanticCells,
+        expectedCount: contract.expectedCellsObserved
+    )
 
     return LabTerrainScanSnapshot(
         scenario: scenario,
@@ -528,6 +535,7 @@ func scanTerrainAroundBelow(
         relation: contract.relation,
         order: contract.order,
         cells: cells,
+        semanticCells: semanticCells,
         summary: LabTerrainScanSummary(
             cellsPlanned: contract.expectedCellsPlanned,
             cellsObserved: cellsObserved,
@@ -537,7 +545,8 @@ func scanTerrainAroundBelow(
             uniqueChunks: uniqueChunks,
             chunkStateUnchanged: chunkStateUnchanged,
             success: success
-        )
+        ),
+        semanticSummary: semanticSummary
     )
 }
 

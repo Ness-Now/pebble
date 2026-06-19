@@ -277,8 +277,15 @@ already-observed terrain cells without rereading or mutating the world.
 
 ## Phase 4.9B - Terrain Cell Semantic Classification V0
 
-Next recommended step: classify the existing nine scan cells into conservative
-`unknown`, `air`, `solid`, `liquid`, `plantLike`, or `other` results while
-preserving raw scan evidence and deterministic ordering. Pathfinding,
-traversability, collision, mutation, multi-agent scans, and configurable radii
-remain out of scope.
+Status: implemented and validated.
+
+Goal: classify the existing nine scan cells into conservative `unknown`,
+`air`, `solid`, `liquid`, `plantLike`, or `other` results while preserving raw
+scan evidence and deterministic ordering.
+
+## Phase 4.9C - Terrain Semantics Fixture Hardening
+
+Next recommended step: add focused central/edge semantic fixtures and rule
+coverage without introducing a new scan, world access, or gameplay behavior.
+Traversability, pathfinding, collision, mutation, multi-agent scans, and
+configurable radii remain out of scope until a dedicated planning phase.

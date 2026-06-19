@@ -250,3 +250,16 @@ Proceed with **Phase 4.9B — terrain cell semantic classification v0**. Keep th
 implementation inside PebbleLab, transform the existing scan cells once, and
 defer traversability, pathfinding, collision, and all mutation until the
 semantic output is independently auditable.
+
+## Phase 4.9B Implementation Status
+
+Implemented and validated on 2026-06-19. Both existing terrain-scan scenarios
+now classify their nine captured cells through a pure PebbleLab transform.
+`terrain_scan_snapshot.json` preserves raw `cells` and adds parallel
+`semanticCells` plus `semanticSummary`. Metrics, one aggregate event, and
+`terrain_semantics_invariant_report.json` expose the classification contract.
+
+The implementation uses exact air, liquid, plant, and solid identities plus
+the reviewed `_leaves` and `_sapling` suffixes. Valid unmatched cells remain
+`other`. No world reference is accepted by the classifier, and semantic kinds
+do not influence agent behavior or imply traversability.

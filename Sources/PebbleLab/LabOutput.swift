@@ -158,6 +158,14 @@ struct RunMetrics: Encodable {
     let terrainScanDistinctBlockIds: Int?
     let terrainScanUniqueChunks: Int?
     let terrainScanSuccess: Bool?
+    let terrainSemanticCells: Int?
+    let terrainSemanticUnknownCells: Int?
+    let terrainSemanticAirCells: Int?
+    let terrainSemanticSolidCells: Int?
+    let terrainSemanticLiquidCells: Int?
+    let terrainSemanticPlantLikeCells: Int?
+    let terrainSemanticOtherCells: Int?
+    let terrainSemanticSuccess: Bool?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -265,6 +273,14 @@ struct RunMetrics: Encodable {
         terrainScanDistinctBlockIds: Int? = nil,
         terrainScanUniqueChunks: Int? = nil,
         terrainScanSuccess: Bool? = nil,
+        terrainSemanticCells: Int? = nil,
+        terrainSemanticUnknownCells: Int? = nil,
+        terrainSemanticAirCells: Int? = nil,
+        terrainSemanticSolidCells: Int? = nil,
+        terrainSemanticLiquidCells: Int? = nil,
+        terrainSemanticPlantLikeCells: Int? = nil,
+        terrainSemanticOtherCells: Int? = nil,
+        terrainSemanticSuccess: Bool? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -371,6 +387,14 @@ struct RunMetrics: Encodable {
         self.terrainScanDistinctBlockIds = terrainScanDistinctBlockIds
         self.terrainScanUniqueChunks = terrainScanUniqueChunks
         self.terrainScanSuccess = terrainScanSuccess
+        self.terrainSemanticCells = terrainSemanticCells
+        self.terrainSemanticUnknownCells = terrainSemanticUnknownCells
+        self.terrainSemanticAirCells = terrainSemanticAirCells
+        self.terrainSemanticSolidCells = terrainSemanticSolidCells
+        self.terrainSemanticLiquidCells = terrainSemanticLiquidCells
+        self.terrainSemanticPlantLikeCells = terrainSemanticPlantLikeCells
+        self.terrainSemanticOtherCells = terrainSemanticOtherCells
+        self.terrainSemanticSuccess = terrainSemanticSuccess
         self.successCriteria = successCriteria
     }
 }

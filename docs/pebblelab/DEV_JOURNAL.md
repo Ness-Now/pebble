@@ -278,3 +278,85 @@ remain out of scope.
 
 Phase 4.9B: implement terrain cell semantic classification v0 as a pure,
 read-only transformation over the existing nine scan cells.
+
+## 2026-06-19 — Phase 4.9B Terrain Cell Semantic Classification V0
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Classify the nine cells already captured by both terrain-scan scenarios using
+a pure PebbleLab transform, without rereading or mutating the world and without
+introducing traversability or agent behavior.
+
+### Files Created Or Modified
+
+- `Sources/PebbleLab/LabTerrainSemantics.swift` (new)
+- `Sources/PebbleLab/LabWorldInteraction.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_TERRAIN_SEMANTICS_PLAN.md`
+
+### Classification Rules
+
+- Unsuccessful, unavailable, incomplete, or invalid packed cells become
+  `unknown`.
+- Exact air names become `air`; exact `water` and `lava` become `liquid`.
+- A reviewed exact plant set plus `_leaves` and `_sapling` suffixes becomes
+  `plantLike`.
+- A small reviewed exact set of common blocks becomes `solid`.
+- Every other valid cell becomes `other`.
+
+No broad name substring rule is used. The classifier receives only
+`LabTerrainScanCell`; it has no `World` parameter or PebbleCore dependency.
+
+### Outputs And Invariants
+
+- `terrain_scan_snapshot.json` retains raw `cells` and adds ordered
+  `semanticCells` plus a separate `semanticSummary`.
+- `metrics.json` adds the eight `terrainSemantic*` fields.
+- `events.ndjson` adds one `lab_terrain_semantics_recorded` event per scan.
+- `terrain_semantics_invariant_report.json` checks scan presence, one-to-one
+  mapping, unavailable-cell handling, packed values, counts, ordering, raw
+  scan success, pure classification, and no mutation path.
+- Final run success requires both the existing terrain scan contract and the
+  semantic invariant report; raw `terrainScanSuccess` keeps its prior meaning.
+
+### Still Prohibited
+
+No PebbleCore, registry, save/load, renderer, resource, or golden path changed.
+World rereads, chunk loading, mutation, traversability, pathfinding, collision,
+mining, construction, multi-agent scans, and behavior changes remain out of
+scope.
+
+### Validation Commands
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario terrain_scan_smoke --seed 42 --ticks 5 --out runs/check_terrain_semantics_central`
+- `swift run -c release PebbleLab -- --scenario terrain_scan_edge_smoke --seed 42 --ticks 5 --out runs/check_terrain_semantics_edge`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_terrain_semantics`
+- `swift run -c release PebbleLab -- --scenario world_observation_multi_smoke --seed 42 --ticks 5 --out runs/check_world_observation_after_terrain_semantics`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Debug and Pebble release builds passed.
+- Central terrain semantics: `9` cells classified, `10/10` semantic checks,
+  raw scan success and semantic success both `true`.
+- Edge terrain semantics: `9` cells classified across `4` chunks, `10/10`
+  semantic checks, raw scan success and semantic success both `true`.
+- With seed `42`, all captured cells in both runs were exact `water` identities
+  and classified as `liquid` with confidence `1.0`.
+- Regression and multi-agent world observation scenarios passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.9C: harden central/edge semantic fixtures and rule coverage before any
+docs-only traversability planning. Traversability, pathfinding, collision, and
+mutation remain explicitly deferred.

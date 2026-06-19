@@ -834,9 +834,16 @@ let terrainScanInvariantReport: TerrainScanInvariantReport? = terrainScanSnapsho
         contract: terrainScanContract
     )
 }
+let terrainSemanticsInvariantReport = terrainScanSnapshot.map(
+    makeTerrainSemanticsInvariantReport
+)
 let terrainScanSuccess = isTerrainScanRun
     ? ((terrainScanSnapshot?.summary.success ?? false)
         && (terrainScanInvariantReport?.success ?? false))
+    : nil
+let terrainSemanticSuccess = isTerrainScanRun
+    ? ((terrainScanSnapshot?.semanticSummary.success ?? false)
+        && (terrainSemanticsInvariantReport?.success ?? false))
     : nil
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
@@ -847,6 +854,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (worldObservationInvariantReport?.success ?? true)
     && (worldInteractionSuccess ?? true)
     && (terrainScanSuccess ?? true)
+    && (terrainSemanticSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -893,6 +901,21 @@ if options.outPath != nil {
                 cellsObserved: terrainScanSnapshot.summary.cellsObserved,
                 loadedCells: terrainScanSnapshot.summary.loadedCells,
                 readyCells: terrainScanSnapshot.summary.readyCells
+            ))
+            try appendEvent(RunEvent(
+                type: "lab_terrain_semantics_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: terrainSemanticSuccess,
+                agentId: terrainScanSnapshot.agentId,
+                radius: terrainScanSnapshot.radius,
+                cellsClassified: terrainScanSnapshot.semanticSummary.cellsClassified,
+                unknownCells: terrainScanSnapshot.semanticSummary.unknownCells,
+                airCells: terrainScanSnapshot.semanticSummary.airCells,
+                solidCells: terrainScanSnapshot.semanticSummary.solidCells,
+                liquidCells: terrainScanSnapshot.semanticSummary.liquidCells,
+                plantLikeCells: terrainScanSnapshot.semanticSummary.plantLikeCells,
+                otherCells: terrainScanSnapshot.semanticSummary.otherCells
             ))
         } else if let worldInteractionMultiSnapshot {
             try appendEvent(RunEvent(
@@ -1165,6 +1188,12 @@ if let outPath = options.outPath {
                     to: outURL.appendingPathComponent("terrain_scan_invariant_report.json")
                 )
             }
+            if let terrainSemanticsInvariantReport {
+                try writeJSON(
+                    terrainSemanticsInvariantReport,
+                    to: outURL.appendingPathComponent("terrain_semantics_invariant_report.json")
+                )
+            }
         } else if let worldInteractionMultiSnapshot {
             try writeJSON(
                 worldInteractionMultiSnapshot,
@@ -1309,6 +1338,14 @@ if let outPath = options.outPath {
             terrainScanDistinctBlockIds: terrainScanSnapshot?.summary.distinctBlockIds,
             terrainScanUniqueChunks: terrainScanSnapshot?.summary.uniqueChunks,
             terrainScanSuccess: terrainScanSuccess,
+            terrainSemanticCells: terrainScanSnapshot?.semanticSummary.cellsClassified,
+            terrainSemanticUnknownCells: terrainScanSnapshot?.semanticSummary.unknownCells,
+            terrainSemanticAirCells: terrainScanSnapshot?.semanticSummary.airCells,
+            terrainSemanticSolidCells: terrainScanSnapshot?.semanticSummary.solidCells,
+            terrainSemanticLiquidCells: terrainScanSnapshot?.semanticSummary.liquidCells,
+            terrainSemanticPlantLikeCells: terrainScanSnapshot?.semanticSummary.plantLikeCells,
+            terrainSemanticOtherCells: terrainScanSnapshot?.semanticSummary.otherCells,
+            terrainSemanticSuccess: terrainSemanticSuccess,
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))
