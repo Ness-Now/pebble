@@ -587,3 +587,72 @@ was added.
 Phase 4.11A: vertical column scan planning, docs-only. Define how support,
 feet, and head cells could be captured read-only before any live
 traversability integration is considered.
+
+## 2026-06-19 — Phase 4.11A Vertical Column Scan Planning
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Define a bounded read-only support/feet/head scan contract before connecting
+synthetic traversability rules to real terrain evidence.
+
+### Files Created Or Modified
+
+- `docs/pebblelab/PHASE_4_VERTICAL_COLUMN_SCAN_PLAN.md` (new)
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+### Technical Decisions
+
+- Phase 4.11B begins central-only at `(8, y, 8)` with fixed radius one.
+- Horizontal order remains `dz_then_dx`; each column uses deterministic
+  `support_feet_head` order.
+- Nine columns produce exactly 27 planned raw cells.
+- Every role independently checks loaded/ready before reading and audits chunk
+  modified/version/dirty state.
+- Raw scan, semantic transform, traversability transform, future pathfinding,
+  and future movement remain separate layers with separate success contracts.
+- Existing terrain snapshots stay unchanged; column scans receive dedicated
+  outputs and invariants.
+- A focused future `LabTerrainColumnScan.swift` module is preferred over
+  placing scan logic in `main.swift`.
+
+### Layer Relationship
+
+The vertical scan is the only world-reading layer. Semantics transform its
+captured cells without rereading. Traversability transforms complete semantic
+columns without world access. Pathfinding and collision remain future,
+separate concerns; no agent action consumes the result in 4.11B.
+
+### Risks
+
+The plan addresses unloaded-as-air mistakes, repeated world reads, duplicated
+scan logic, monolithic orchestration, premature pathfinding/collision,
+regression of existing snapshots, engine coupling, configurable scope growth,
+and unaudited output growth through fixed bounds and layered reports.
+
+### Still Prohibited
+
+No Swift, PebbleCore, registry, save/load, renderer, resource, or golden file
+was changed. Vertical scanning, pathfinding, collision, movement, goal
+selection, mutation, mining, construction, multi-agent scans, configurable
+radius, and ML integrations remain out of scope in this docs-only phase.
+
+### Validation Commands
+
+- `swift build`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Documentation-only diff confirmed; no Swift file changed.
+- `swift build` passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.11B: implement central-only `terrain_column_scan_smoke` with nine
+columns, 27 guarded raw reads, dedicated snapshot/metrics/event, and a raw
+invariant report.

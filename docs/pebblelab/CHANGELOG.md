@@ -48,3 +48,4 @@
 - Added terrain semantics fixture smoke covering classification rules.
 - Documented terrain traversability planning contract.
 - Added terrain traversability fixture smoke for synthetic semantic columns.
+- Documented vertical column scan planning contract.

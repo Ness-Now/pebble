@@ -307,7 +307,13 @@ semantic columns and dedicated fixture/invariant reports.
 
 ## Phase 4.11A - Vertical Column Scan Planning
 
-Next recommended step: docs-only planning for a bounded read-only vertical
-column observation contract. Pathfinding, collision, mutation, live
-traversability decisions, multi-agent navigation, and movement remain out of
-scope.
+Status: done as a docs-only planning phase.
+
+Goal: define the central-only support/feet/head observation contract, fixed
+ordering, 27-cell bounds, layered derivation, outputs, and invariants.
+
+## Phase 4.11B - Terrain Column Scan Smoke
+
+Next recommended step: implement the central-only, fixed radius-1 raw column
+scan with dedicated outputs and invariant reporting. Pathfinding, collision,
+mutation, edge/multi-agent column scans, and movement remain out of scope.
