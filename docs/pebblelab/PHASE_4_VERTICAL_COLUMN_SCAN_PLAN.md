@@ -355,3 +355,18 @@ Proceed with **Phase 4.11B — terrain column scan smoke** as a central-only,
 fixed radius-1, read-only raw observation. Stabilize its 27-cell evidence and
 invariants before adding an edge scenario or consuming live traversability in
 any navigation or movement system.
+
+## Phase 4.11B Implementation Status
+
+Phase 4.11B is implemented and validated. `terrain_column_scan_smoke` captures
+nine columns and 27 cells in `dz_then_dx` / `support_feet_head` order, writes
+`terrain_column_scan_snapshot.json` and
+`terrain_column_scan_invariant_report.json`, and records dedicated metrics and
+one aggregate event. Every raw read is loaded/ready guarded and audits chunk
+modified/version/dirty state.
+
+The snapshot also exposes semantic columns and traversability results derived
+purely from the captured cells. These derived values do not alter raw scan
+success and are not consumed by pathfinding, collision, movement, or agent
+decisions. The next bounded validation is Phase 4.11C, an edge-position column
+scan using the same fixed contract.

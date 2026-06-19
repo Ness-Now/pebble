@@ -314,6 +314,16 @@ ordering, 27-cell bounds, layered derivation, outputs, and invariants.
 
 ## Phase 4.11B - Terrain Column Scan Smoke
 
-Next recommended step: implement the central-only, fixed radius-1 raw column
-scan with dedicated outputs and invariant reporting. Pathfinding, collision,
-mutation, edge/multi-agent column scans, and movement remain out of scope.
+Status: implemented and validated.
+
+Goal: capture nine central support/feet/head columns as 27 guarded read-only
+cells, preserve deterministic horizontal and vertical ordering, and audit the
+raw evidence with dedicated snapshot, metrics, event, and invariant report.
+Semantic and traversability values are derived purely from captured cells and
+do not drive agent behavior.
+
+## Phase 4.11C - Terrain Column Scan Edge Smoke
+
+Next recommended step: validate the same fixed 9-column/27-cell contract at a
+chunk boundary. Pathfinding, collision, mutation, multi-agent column scans,
+configurable radius, and movement remain out of scope.

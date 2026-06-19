@@ -188,6 +188,22 @@ struct RunMetrics: Encodable {
     let terrainTraversabilityFixtureCases: Int?
     let terrainTraversabilityFixturePassed: Int?
     let terrainTraversabilityFixtureFailed: Int?
+    let terrainColumnScanColumns: Int?
+    let terrainColumnScanColumnsObserved: Int?
+    let terrainColumnScanCellsPlanned: Int?
+    let terrainColumnScanCellsObserved: Int?
+    let terrainColumnScanLoadedCells: Int?
+    let terrainColumnScanReadyCells: Int?
+    let terrainColumnScanUniqueChunks: Int?
+    let terrainColumnScanSuccess: Bool?
+    let terrainColumnSemanticCells: Int?
+    let terrainColumnTraversabilityCells: Int?
+    let terrainColumnTraversableCells: Int?
+    let terrainColumnUnsafeCells: Int?
+    let terrainColumnUnknownCells: Int?
+    let terrainColumnUnsupportedCells: Int?
+    let terrainColumnOccupiedVerticalSpaceCells: Int?
+    let terrainColumnTraversabilitySuccess: Bool?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -325,6 +341,22 @@ struct RunMetrics: Encodable {
         terrainTraversabilityFixtureCases: Int? = nil,
         terrainTraversabilityFixturePassed: Int? = nil,
         terrainTraversabilityFixtureFailed: Int? = nil,
+        terrainColumnScanColumns: Int? = nil,
+        terrainColumnScanColumnsObserved: Int? = nil,
+        terrainColumnScanCellsPlanned: Int? = nil,
+        terrainColumnScanCellsObserved: Int? = nil,
+        terrainColumnScanLoadedCells: Int? = nil,
+        terrainColumnScanReadyCells: Int? = nil,
+        terrainColumnScanUniqueChunks: Int? = nil,
+        terrainColumnScanSuccess: Bool? = nil,
+        terrainColumnSemanticCells: Int? = nil,
+        terrainColumnTraversabilityCells: Int? = nil,
+        terrainColumnTraversableCells: Int? = nil,
+        terrainColumnUnsafeCells: Int? = nil,
+        terrainColumnUnknownCells: Int? = nil,
+        terrainColumnUnsupportedCells: Int? = nil,
+        terrainColumnOccupiedVerticalSpaceCells: Int? = nil,
+        terrainColumnTraversabilitySuccess: Bool? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -461,6 +493,22 @@ struct RunMetrics: Encodable {
         self.terrainTraversabilityFixtureCases = terrainTraversabilityFixtureCases
         self.terrainTraversabilityFixturePassed = terrainTraversabilityFixturePassed
         self.terrainTraversabilityFixtureFailed = terrainTraversabilityFixtureFailed
+        self.terrainColumnScanColumns = terrainColumnScanColumns
+        self.terrainColumnScanColumnsObserved = terrainColumnScanColumnsObserved
+        self.terrainColumnScanCellsPlanned = terrainColumnScanCellsPlanned
+        self.terrainColumnScanCellsObserved = terrainColumnScanCellsObserved
+        self.terrainColumnScanLoadedCells = terrainColumnScanLoadedCells
+        self.terrainColumnScanReadyCells = terrainColumnScanReadyCells
+        self.terrainColumnScanUniqueChunks = terrainColumnScanUniqueChunks
+        self.terrainColumnScanSuccess = terrainColumnScanSuccess
+        self.terrainColumnSemanticCells = terrainColumnSemanticCells
+        self.terrainColumnTraversabilityCells = terrainColumnTraversabilityCells
+        self.terrainColumnTraversableCells = terrainColumnTraversableCells
+        self.terrainColumnUnsafeCells = terrainColumnUnsafeCells
+        self.terrainColumnUnknownCells = terrainColumnUnknownCells
+        self.terrainColumnUnsupportedCells = terrainColumnUnsupportedCells
+        self.terrainColumnOccupiedVerticalSpaceCells = terrainColumnOccupiedVerticalSpaceCells
+        self.terrainColumnTraversabilitySuccess = terrainColumnTraversabilitySuccess
         self.successCriteria = successCriteria
     }
 }

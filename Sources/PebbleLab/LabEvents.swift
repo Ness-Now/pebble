@@ -128,6 +128,7 @@ struct RunEvent: Encodable {
     let unsupportedCells: Int?
     let unsafeCells: Int?
     let occupiedVerticalSpaceCells: Int?
+    let columns: Int?
 
     init(
         type: String,
@@ -256,7 +257,8 @@ struct RunEvent: Encodable {
         blockedCells: Int? = nil,
         unsupportedCells: Int? = nil,
         unsafeCells: Int? = nil,
-        occupiedVerticalSpaceCells: Int? = nil
+        occupiedVerticalSpaceCells: Int? = nil,
+        columns: Int? = nil
     ) {
         self.type = type
         self.event = event
@@ -385,6 +387,7 @@ struct RunEvent: Encodable {
         self.unsupportedCells = unsupportedCells
         self.unsafeCells = unsafeCells
         self.occupiedVerticalSpaceCells = occupiedVerticalSpaceCells
+        self.columns = columns
     }
 }
 

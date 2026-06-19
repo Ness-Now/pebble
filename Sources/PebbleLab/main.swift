@@ -16,10 +16,13 @@ let isWorldObservationMultiScenario = options.scenario == "world_observation_mul
 let isWorldObservationScenario = isWorldObservationSingleScenario || isWorldObservationMultiScenario
 let terrainScanContract = terrainScanScenarioContract(for: options.scenario)
 let isTerrainScanRun = terrainScanContract != nil
+let isTerrainColumnScanScenario = options.scenario == "terrain_column_scan_smoke"
 let isTerrainSemanticsFixtureScenario = options.scenario == "terrain_semantics_fixture_smoke"
 let isTerrainTraversabilityFixtureScenario = options.scenario
     == "terrain_traversability_fixture_smoke"
-let isWorldInteractionScenario = isWorldObservationScenario || isTerrainScanRun
+let isWorldInteractionScenario = isWorldObservationScenario
+    || isTerrainScanRun
+    || isTerrainColumnScanScenario
 
 var ticksCompleted = 0
 var eventsNDJSON = ""
@@ -866,6 +869,43 @@ let terrainSemanticSuccess = isTerrainScanRun
     ? ((terrainScanSnapshot?.semanticSummary.success ?? false)
         && (terrainSemanticsInvariantReport?.success ?? false))
     : nil
+let terrainColumnScanSnapshot: LabTerrainColumnScanSnapshot? = {
+    guard isTerrainColumnScanScenario,
+          let agent = labAgents.first,
+          let handle = physicalBridge.handles.first(where: { $0.agentId == agent.id }),
+          let coreLink = coreEntityBridge.snapshotLinks(for: labAgents).first(where: {
+              $0.agentId == agent.id
+          }) else {
+        return nil
+    }
+    return scanTerrainColumns(
+        world: world,
+        scenario: options.scenario,
+        seed: options.seed,
+        ticksCompleted: ticksCompleted,
+        agent: agent,
+        handle: handle,
+        coreLink: coreLink
+    )
+}()
+let terrainColumnScanInvariantReport = terrainColumnScanSnapshot.map {
+    makeTerrainColumnScanInvariantReport(
+        snapshot: $0,
+        agents: labAgents.count,
+        placeholders: physicalBridge.count,
+        coreEntities: coreEntityBridge.count
+    )
+}
+let terrainColumnDerivedSummary = terrainColumnScanSnapshot.map(
+    makeTerrainColumnDerivedSummary
+)
+let terrainColumnScanSuccess = isTerrainColumnScanScenario
+    ? ((terrainColumnScanSnapshot?.summary.success ?? false)
+        && (terrainColumnScanInvariantReport?.success ?? false))
+    : nil
+let terrainColumnTraversabilitySuccess = isTerrainColumnScanScenario
+    ? (terrainColumnDerivedSummary?.success ?? false)
+    : nil
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
     && successCriteria.agentTicksRecorded
@@ -878,6 +918,8 @@ let runSuccess = successCriteria.ticksCompleted
     && (terrainSemanticSuccess ?? true)
     && (terrainSemanticsFixtureSuccess ?? true)
     && (terrainTraversabilitySuccess ?? true)
+    && (terrainColumnScanSuccess ?? true)
+    && (terrainColumnTraversabilitySuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -939,6 +981,22 @@ if options.outPath != nil {
                 unsupportedCells: traversabilitySummary.unsupportedCells,
                 unsafeCells: traversabilitySummary.unsafeCells,
                 occupiedVerticalSpaceCells: traversabilitySummary.occupiedVerticalSpaceCells
+            ))
+        }
+        if let terrainColumnScanSnapshot {
+            try appendEvent(RunEvent(
+                type: "lab_terrain_column_scan_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: terrainColumnScanSuccess,
+                agentId: terrainColumnScanSnapshot.agentId,
+                uniqueChunks: terrainColumnScanSnapshot.summary.uniqueChunks,
+                radius: terrainColumnScanSnapshot.radius,
+                cellsPlanned: terrainColumnScanSnapshot.summary.cellsPlanned,
+                cellsObserved: terrainColumnScanSnapshot.summary.cellsObserved,
+                loadedCells: terrainColumnScanSnapshot.summary.loadedCells,
+                readyCells: terrainColumnScanSnapshot.summary.readyCells,
+                columns: terrainColumnScanSnapshot.summary.columnsObserved
             ))
         }
         if let terrainScanSnapshot {
@@ -1251,6 +1309,18 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("terrain_traversability_invariant_report.json")
             )
         }
+        if let terrainColumnScanSnapshot {
+            try writeJSON(
+                terrainColumnScanSnapshot,
+                to: outURL.appendingPathComponent("terrain_column_scan_snapshot.json")
+            )
+            if let terrainColumnScanInvariantReport {
+                try writeJSON(
+                    terrainColumnScanInvariantReport,
+                    to: outURL.appendingPathComponent("terrain_column_scan_invariant_report.json")
+                )
+            }
+        }
         if let terrainScanSnapshot {
             try writeJSON(
                 terrainScanSnapshot,
@@ -1442,6 +1512,22 @@ if let outPath = options.outPath {
             terrainTraversabilityFixtureCases: terrainTraversabilityFixtureReport?.summary.fixtures,
             terrainTraversabilityFixturePassed: terrainTraversabilityFixtureReport?.summary.passed,
             terrainTraversabilityFixtureFailed: terrainTraversabilityFixtureReport?.summary.failed,
+            terrainColumnScanColumns: terrainColumnScanSnapshot?.summary.columnsPlanned,
+            terrainColumnScanColumnsObserved: terrainColumnScanSnapshot?.summary.columnsObserved,
+            terrainColumnScanCellsPlanned: terrainColumnScanSnapshot?.summary.cellsPlanned,
+            terrainColumnScanCellsObserved: terrainColumnScanSnapshot?.summary.cellsObserved,
+            terrainColumnScanLoadedCells: terrainColumnScanSnapshot?.summary.loadedCells,
+            terrainColumnScanReadyCells: terrainColumnScanSnapshot?.summary.readyCells,
+            terrainColumnScanUniqueChunks: terrainColumnScanSnapshot?.summary.uniqueChunks,
+            terrainColumnScanSuccess: terrainColumnScanSuccess,
+            terrainColumnSemanticCells: terrainColumnDerivedSummary?.semanticCells,
+            terrainColumnTraversabilityCells: terrainColumnDerivedSummary?.traversabilityCells,
+            terrainColumnTraversableCells: terrainColumnDerivedSummary?.traversableCells,
+            terrainColumnUnsafeCells: terrainColumnDerivedSummary?.unsafeCells,
+            terrainColumnUnknownCells: terrainColumnDerivedSummary?.unknownCells,
+            terrainColumnUnsupportedCells: terrainColumnDerivedSummary?.unsupportedCells,
+            terrainColumnOccupiedVerticalSpaceCells: terrainColumnDerivedSummary?.occupiedVerticalSpaceCells,
+            terrainColumnTraversabilitySuccess: terrainColumnTraversabilitySuccess,
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))

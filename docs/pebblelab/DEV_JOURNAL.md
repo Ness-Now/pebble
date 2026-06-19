@@ -656,3 +656,84 @@ radius, and ML integrations remain out of scope in this docs-only phase.
 Phase 4.11B: implement central-only `terrain_column_scan_smoke` with nine
 columns, 27 guarded raw reads, dedicated snapshot/metrics/event, and a raw
 invariant report.
+
+## 2026-06-19 — Phase 4.11B Terrain Column Scan Smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Implement the first real read-only support/feet/head column scan around one
+synchronized central agent, without adding navigation, collision, movement,
+or mutation behavior.
+
+### Files Created Or Modified
+
+- `Sources/PebbleLab/LabTerrainColumnScan.swift` (new)
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_VERTICAL_COLUMN_SCAN_PLAN.md`
+
+### Technical Decisions
+
+- The scenario uses one agent at central coordinates `(8, y, 8)`, fixed radius
+  one, nine columns, and exactly 27 cells.
+- Horizontal order is `dz_then_dx`; vertical order is
+  `support_feet_head`.
+- Each role independently checks loaded/ready, reads only when both hold, and
+  compares chunk modified/version/dirty state before and after.
+- `LabTerrainColumnScan.swift` owns raw capture, pure semantic/traversability
+  derivation, summaries, and the 18-check invariant report; `main.swift` only
+  orchestrates the run and outputs.
+- Existing terrain scan snapshots are unchanged. Column evidence is written to
+  dedicated snapshot and invariant files.
+
+### Outputs And Invariants
+
+- `terrain_column_scan_snapshot.json`
+- `terrain_column_scan_invariant_report.json`
+- `terrainColumnScan*` and separate derived metrics in `metrics.json`
+- one `lab_terrain_column_scan_recorded` event
+- 18 checks covering links, divergence, fixed bounds and order, loaded/ready
+  guards, role completeness, coordinate uniqueness, packed cells, unchanged
+  chunks, and explicit no-mutation/no-pathfinding/no-movement review guards
+
+### Still Prohibited
+
+No PebbleCore, registry, save/load, renderer, resource, or golden change was
+made. No mutation, pathfinding, collision, route, cost, movement command,
+goal selection, edge scan, multi-agent scan, or configurable radius was added.
+
+### Validation Commands
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario terrain_column_scan_smoke --seed 42 --ticks 5 --out runs/check_terrain_column_scan`
+- `swift run -c release PebbleLab -- --scenario terrain_traversability_fixture_smoke --seed 42 --ticks 0 --out runs/check_terrain_traversability_fixture_after_column_scan`
+- `swift run -c release PebbleLab -- --scenario terrain_semantics_fixture_smoke --seed 42 --ticks 0 --out runs/check_terrain_semantics_fixture_after_column_scan`
+- `swift run -c release PebbleLab -- --scenario terrain_scan_smoke --seed 42 --ticks 5 --out runs/check_terrain_scan_after_column_scan`
+- `swift run -c release PebbleLab -- --scenario terrain_scan_edge_smoke --seed 42 --ticks 5 --out runs/check_terrain_scan_edge_after_column_scan`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_column_scan`
+- `swift run -c release PebbleLab -- --scenario world_observation_multi_smoke --seed 42 --ticks 5 --out runs/check_world_observation_after_column_scan`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Central raw scan: nine columns, 27/27 observed, loaded, and ready cells.
+- Chunk state remained unchanged and raw scan success was true.
+- Invariant report: `18 passed, 0 failed`.
+- Semantic derivation covered 27 cells; traversability derivation covered nine
+  columns and remained separate from raw scan success.
+- All required builds and existing scenario regressions passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.11C: add an edge-position terrain column scan smoke that reuses the
+same fixed read-only contract across chunk boundaries.
