@@ -360,3 +360,82 @@ scope.
 Phase 4.9C: harden central/edge semantic fixtures and rule coverage before any
 docs-only traversability planning. Traversability, pathfinding, collision, and
 mutation remain explicitly deferred.
+
+## 2026-06-19 — Phase 4.9C Terrain Semantics Fixture Smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Exercise every terrain semantic classification branch with deterministic
+synthetic `LabTerrainScanCell` fixtures, without world access, chunk setup,
+agents, or gameplay behavior.
+
+### Files Modified
+
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabTerrainSemantics.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+### Rule Coverage
+
+The smoke contains 21 fixtures:
+
+- exact water/lava liquid identities;
+- all three exact air identities;
+- five reviewed solid identities, including `grass_block` as solid rather
+  than plant-like;
+- five reviewed exact/suffix plant identities;
+- unavailable, unsuccessful, incomplete, and invalid packed cells as unknown;
+- a valid `mystery_block` fallback as other.
+
+Fixture IDs are stable synthetic values. Packed values are produced directly
+from each fixture's ID and metadata; no registry is consulted.
+
+### Outputs
+
+- `terrain_semantics_fixture_report.json` records expected and actual kind and
+  reason for every fixture.
+- `metrics.json` exposes fixture totals, per-kind counts, and success.
+- `events.ndjson` contains one `lab_terrain_semantics_fixture_recorded` event.
+
+### Still Prohibited
+
+No PebbleCore, registry, save/load, renderer, resource, or golden path changed.
+The scenario creates no agent or chunk and performs no world read. Mutation,
+traversability, pathfinding, collision, mining, construction, and ML systems
+remain out of scope.
+
+### Validation Commands
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario terrain_semantics_fixture_smoke --seed 42 --ticks 0 --out runs/check_terrain_semantics_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_scan_smoke --seed 42 --ticks 5 --out runs/check_terrain_semantics_central_after_fixtures`
+- `swift run -c release PebbleLab -- --scenario terrain_scan_edge_smoke --seed 42 --ticks 5 --out runs/check_terrain_semantics_edge_after_fixtures`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_semantics_fixtures`
+- `swift run -c release PebbleLab -- --scenario world_observation_multi_smoke --seed 42 --ticks 5 --out runs/check_world_observation_after_semantics_fixtures`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Fixture report: `21 passed, 0 failed`.
+- Expected-kind counts: unknown `5`, air `3`, solid `5`, liquid `2`,
+  plant-like `5`, other `1`.
+- Debug and Pebble release builds passed.
+- Central and edge terrain scans passed with nine semantic cells each; edge
+  coverage remains four chunks.
+- Regression and multi-agent world observation scenarios passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.10A: terrain traversability planning, docs-only. Define the boundary
+between descriptive semantics and possible movement evidence before adding
+any traversability, pathfinding, collision, or behavior code.

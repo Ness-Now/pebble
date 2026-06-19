@@ -61,6 +61,43 @@ struct TerrainSemanticsInvariantCheck: Codable {
     let actual: String
 }
 
+struct TerrainSemanticsFixtureReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: TerrainSemanticsFixtureSummary
+    let cases: [TerrainSemanticsFixtureResult]
+}
+
+struct TerrainSemanticsFixtureSummary: Codable {
+    let fixtures: Int
+    let passed: Int
+    let failed: Int
+    let unknownCases: Int
+    let airCases: Int
+    let solidCases: Int
+    let liquidCases: Int
+    let plantLikeCases: Int
+    let otherCases: Int
+}
+
+struct TerrainSemanticsFixtureResult: Codable {
+    let name: String
+    let blockName: String?
+    let expectedKind: LabTerrainCellKind
+    let actualKind: LabTerrainCellKind
+    let expectedReason: String
+    let actualReason: String
+    let passed: Bool
+}
+
+private struct TerrainSemanticsFixtureDefinition {
+    let name: String
+    let cell: LabTerrainScanCell
+    let expectedKind: LabTerrainCellKind
+    let expectedReason: String
+}
+
 private let exactAirBlockNames: Set<String> = [
     "air", "cave_air", "void_air"
 ]
@@ -140,6 +177,186 @@ func classifyTerrainCell(_ scanCell: LabTerrainScanCell) -> LabTerrainCellSemant
 
 func classifyTerrainScanCells(_ cells: [LabTerrainScanCell]) -> [LabTerrainCellSemantic] {
     cells.map(classifyTerrainCell)
+}
+
+private func makeTerrainSemanticsFixtureCell(
+    index: Int,
+    blockId: Int? = nil,
+    meta: Int? = nil,
+    blockName: String? = nil,
+    packedCell: Int? = nil,
+    loaded: Bool = true,
+    ready: Bool = true,
+    success: Bool = true
+) -> LabTerrainScanCell {
+    LabTerrainScanCell(
+        dx: index,
+        dz: 0,
+        x: index,
+        y: 0,
+        z: 0,
+        chunk: LabWorldInteractionChunk(cx: 0, cz: 0, loaded: loaded, ready: ready),
+        cell: packedCell,
+        blockId: blockId,
+        meta: meta,
+        blockName: blockName,
+        chunkStateUnchanged: true,
+        success: success
+    )
+}
+
+private func makeValidTerrainSemanticsFixtureCell(
+    index: Int,
+    blockId: Int,
+    meta: Int = 0,
+    blockName: String
+) -> LabTerrainScanCell {
+    makeTerrainSemanticsFixtureCell(
+        index: index,
+        blockId: blockId,
+        meta: meta,
+        blockName: blockName,
+        packedCell: (blockId << 4) | meta
+    )
+}
+
+private func terrainSemanticsFixtureDefinitions() -> [TerrainSemanticsFixtureDefinition] {
+    let validCases: [(String, Int, String, LabTerrainCellKind, String)] = [
+        ("water_is_liquid", 292, "water", .liquid, "exact_liquid_identity"),
+        ("lava_is_liquid", 293, "lava", .liquid, "exact_liquid_identity"),
+        ("air_is_air", 0, "air", .air, "exact_air_identity"),
+        ("cave_air_is_air", 0, "cave_air", .air, "exact_air_identity"),
+        ("void_air_is_air", 0, "void_air", .air, "exact_air_identity"),
+        ("stone_is_solid", 1, "stone", .solid, "reviewed_solid_identity"),
+        ("dirt_is_solid", 2, "dirt", .solid, "reviewed_solid_identity"),
+        ("grass_block_is_solid_not_plant", 3, "grass_block", .solid, "reviewed_solid_identity"),
+        ("oak_log_is_solid", 17, "oak_log", .solid, "reviewed_solid_identity"),
+        ("oak_planks_is_solid", 5, "oak_planks", .solid, "reviewed_solid_identity"),
+        ("oak_leaves_is_plant_like", 18, "oak_leaves", .plantLike, "reviewed_plant_identity"),
+        ("oak_sapling_is_plant_like", 6, "oak_sapling", .plantLike, "reviewed_plant_identity"),
+        ("tall_grass_is_plant_like", 31, "tall_grass", .plantLike, "reviewed_plant_identity"),
+        ("fern_is_plant_like", 32, "fern", .plantLike, "reviewed_plant_identity"),
+        ("dandelion_is_plant_like", 37, "dandelion", .plantLike, "reviewed_plant_identity"),
+        ("valid_unclassified_cell_is_other", 999, "mystery_block", .other, "fallback_valid_unclassified_cell")
+    ]
+    var definitions = validCases.enumerated().map { index, fixture in
+        TerrainSemanticsFixtureDefinition(
+            name: fixture.0,
+            cell: makeValidTerrainSemanticsFixtureCell(
+                index: index,
+                blockId: fixture.1,
+                blockName: fixture.2
+            ),
+            expectedKind: fixture.3,
+            expectedReason: fixture.4
+        )
+    }
+
+    definitions.append(TerrainSemanticsFixtureDefinition(
+        name: "unloaded_cell_is_unknown",
+        cell: makeTerrainSemanticsFixtureCell(
+            index: 16,
+            blockId: 1,
+            meta: 0,
+            blockName: "stone",
+            packedCell: 16,
+            loaded: false
+        ),
+        expectedKind: .unknown,
+        expectedReason: "cell_not_loaded_or_ready"
+    ))
+    definitions.append(TerrainSemanticsFixtureDefinition(
+        name: "unready_cell_is_unknown",
+        cell: makeTerrainSemanticsFixtureCell(
+            index: 17,
+            blockId: 1,
+            meta: 0,
+            blockName: "stone",
+            packedCell: 16,
+            ready: false
+        ),
+        expectedKind: .unknown,
+        expectedReason: "cell_not_loaded_or_ready"
+    ))
+    definitions.append(TerrainSemanticsFixtureDefinition(
+        name: "unsuccessful_cell_is_unknown",
+        cell: makeTerrainSemanticsFixtureCell(
+            index: 18,
+            blockId: 1,
+            meta: 0,
+            blockName: "stone",
+            packedCell: 16,
+            success: false
+        ),
+        expectedKind: .unknown,
+        expectedReason: "scan_cell_unsuccessful"
+    ))
+    definitions.append(TerrainSemanticsFixtureDefinition(
+        name: "missing_block_identity_is_unknown",
+        cell: makeTerrainSemanticsFixtureCell(index: 19),
+        expectedKind: .unknown,
+        expectedReason: "missing_block_identity"
+    ))
+    definitions.append(TerrainSemanticsFixtureDefinition(
+        name: "invalid_packed_cell_is_unknown",
+        cell: makeTerrainSemanticsFixtureCell(
+            index: 20,
+            blockId: 1,
+            meta: 0,
+            blockName: "stone",
+            packedCell: 17
+        ),
+        expectedKind: .unknown,
+        expectedReason: "invalid_packed_cell"
+    ))
+    return definitions
+}
+
+func makeTerrainSemanticsFixtureReport(
+    scenario: String,
+    seed: UInt32
+) -> TerrainSemanticsFixtureReport {
+    let results = terrainSemanticsFixtureDefinitions().map { fixture in
+        let semantic = classifyTerrainCell(fixture.cell)
+        return TerrainSemanticsFixtureResult(
+            name: fixture.name,
+            blockName: fixture.cell.blockName,
+            expectedKind: fixture.expectedKind,
+            actualKind: semantic.kind,
+            expectedReason: fixture.expectedReason,
+            actualReason: semantic.reason,
+            passed: semantic.kind == fixture.expectedKind
+                && semantic.reason == fixture.expectedReason
+        )
+    }
+    let passed = results.filter(\.passed).count
+    let failed = results.count - passed
+    let unknownCases = results.filter { $0.expectedKind == .unknown }.count
+    let airCases = results.filter { $0.expectedKind == .air }.count
+    let solidCases = results.filter { $0.expectedKind == .solid }.count
+    let liquidCases = results.filter { $0.expectedKind == .liquid }.count
+    let plantLikeCases = results.filter { $0.expectedKind == .plantLike }.count
+    let otherCases = results.filter { $0.expectedKind == .other }.count
+    let countedCases = unknownCases + airCases + solidCases + liquidCases
+        + plantLikeCases + otherCases
+
+    return TerrainSemanticsFixtureReport(
+        scenario: scenario,
+        seed: seed,
+        success: failed == 0 && countedCases == results.count,
+        summary: TerrainSemanticsFixtureSummary(
+            fixtures: results.count,
+            passed: passed,
+            failed: failed,
+            unknownCases: unknownCases,
+            airCases: airCases,
+            solidCases: solidCases,
+            liquidCases: liquidCases,
+            plantLikeCases: plantLikeCases,
+            otherCases: otherCases
+        ),
+        cases: results
+    )
 }
 
 func makeTerrainSemanticsSummary(

@@ -285,7 +285,15 @@ scan evidence and deterministic ordering.
 
 ## Phase 4.9C - Terrain Semantics Fixture Hardening
 
-Next recommended step: add focused central/edge semantic fixtures and rule
-coverage without introducing a new scan, world access, or gameplay behavior.
-Traversability, pathfinding, collision, mutation, multi-agent scans, and
-configurable radii remain out of scope until a dedicated planning phase.
+Status: implemented and validated.
+
+Goal: cover all semantic classification branches with 21 deterministic,
+world-free fixtures and verify both expected kind and reason.
+
+## Phase 4.10A - Terrain Traversability Planning
+
+Next recommended step: docs-only planning that defines what additional
+evidence would be required to reason about traversability without conflating
+it with the current descriptive semantic labels. Pathfinding, traversability
+implementation, collision, mutation, multi-agent scans, and configurable
+radii remain out of scope until separately approved.

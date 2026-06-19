@@ -166,6 +166,16 @@ struct RunMetrics: Encodable {
     let terrainSemanticPlantLikeCells: Int?
     let terrainSemanticOtherCells: Int?
     let terrainSemanticSuccess: Bool?
+    let terrainSemanticFixtureCases: Int?
+    let terrainSemanticFixturePassed: Int?
+    let terrainSemanticFixtureFailed: Int?
+    let terrainSemanticFixtureUnknownCases: Int?
+    let terrainSemanticFixtureAirCases: Int?
+    let terrainSemanticFixtureSolidCases: Int?
+    let terrainSemanticFixtureLiquidCases: Int?
+    let terrainSemanticFixturePlantLikeCases: Int?
+    let terrainSemanticFixtureOtherCases: Int?
+    let terrainSemanticFixtureSuccess: Bool?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -281,6 +291,16 @@ struct RunMetrics: Encodable {
         terrainSemanticPlantLikeCells: Int? = nil,
         terrainSemanticOtherCells: Int? = nil,
         terrainSemanticSuccess: Bool? = nil,
+        terrainSemanticFixtureCases: Int? = nil,
+        terrainSemanticFixturePassed: Int? = nil,
+        terrainSemanticFixtureFailed: Int? = nil,
+        terrainSemanticFixtureUnknownCases: Int? = nil,
+        terrainSemanticFixtureAirCases: Int? = nil,
+        terrainSemanticFixtureSolidCases: Int? = nil,
+        terrainSemanticFixtureLiquidCases: Int? = nil,
+        terrainSemanticFixturePlantLikeCases: Int? = nil,
+        terrainSemanticFixtureOtherCases: Int? = nil,
+        terrainSemanticFixtureSuccess: Bool? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -395,6 +415,16 @@ struct RunMetrics: Encodable {
         self.terrainSemanticPlantLikeCells = terrainSemanticPlantLikeCells
         self.terrainSemanticOtherCells = terrainSemanticOtherCells
         self.terrainSemanticSuccess = terrainSemanticSuccess
+        self.terrainSemanticFixtureCases = terrainSemanticFixtureCases
+        self.terrainSemanticFixturePassed = terrainSemanticFixturePassed
+        self.terrainSemanticFixtureFailed = terrainSemanticFixtureFailed
+        self.terrainSemanticFixtureUnknownCases = terrainSemanticFixtureUnknownCases
+        self.terrainSemanticFixtureAirCases = terrainSemanticFixtureAirCases
+        self.terrainSemanticFixtureSolidCases = terrainSemanticFixtureSolidCases
+        self.terrainSemanticFixtureLiquidCases = terrainSemanticFixtureLiquidCases
+        self.terrainSemanticFixturePlantLikeCases = terrainSemanticFixturePlantLikeCases
+        self.terrainSemanticFixtureOtherCases = terrainSemanticFixtureOtherCases
+        self.terrainSemanticFixtureSuccess = terrainSemanticFixtureSuccess
         self.successCriteria = successCriteria
     }
 }

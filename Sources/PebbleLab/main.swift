@@ -16,6 +16,7 @@ let isWorldObservationMultiScenario = options.scenario == "world_observation_mul
 let isWorldObservationScenario = isWorldObservationSingleScenario || isWorldObservationMultiScenario
 let terrainScanContract = terrainScanScenarioContract(for: options.scenario)
 let isTerrainScanRun = terrainScanContract != nil
+let isTerrainSemanticsFixtureScenario = options.scenario == "terrain_semantics_fixture_smoke"
 let isWorldInteractionScenario = isWorldObservationScenario || isTerrainScanRun
 
 var ticksCompleted = 0
@@ -696,6 +697,10 @@ func makeSuccessCriteria() -> RunSuccessCriteria {
 }
 
 let successCriteria = makeSuccessCriteria()
+let terrainSemanticsFixtureReport = isTerrainSemanticsFixtureScenario
+    ? makeTerrainSemanticsFixtureReport(scenario: options.scenario, seed: options.seed)
+    : nil
+let terrainSemanticsFixtureSuccess = terrainSemanticsFixtureReport?.success
 let coreEntityInvariantReport = options.scenario == "core_entity_smoke"
     ? coreEntityBridge.invariantReport(
         scenario: options.scenario,
@@ -855,6 +860,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (worldInteractionSuccess ?? true)
     && (terrainScanSuccess ?? true)
     && (terrainSemanticSuccess ?? true)
+    && (terrainSemanticsFixtureSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -883,6 +889,23 @@ if options.outPath != nil {
                 finalDivergence: physicalBehaviorFinalDivergence,
                 agentsMoved: physicalBehaviorAgentsMoved,
                 maxDivergence: physicalBehaviorMaxDivergence
+            ))
+        }
+        if let fixtureReport = terrainSemanticsFixtureReport {
+            try appendEvent(RunEvent(
+                type: "lab_terrain_semantics_fixture_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: fixtureReport.success,
+                fixtures: fixtureReport.summary.fixtures,
+                passed: fixtureReport.summary.passed,
+                failed: fixtureReport.summary.failed,
+                unknownCases: fixtureReport.summary.unknownCases,
+                airCases: fixtureReport.summary.airCases,
+                solidCases: fixtureReport.summary.solidCases,
+                liquidCases: fixtureReport.summary.liquidCases,
+                plantLikeCases: fixtureReport.summary.plantLikeCases,
+                otherCases: fixtureReport.summary.otherCases
             ))
         }
         if let terrainScanSnapshot {
@@ -1177,6 +1200,12 @@ if let outPath = options.outPath {
                 ))
             }
         }
+        if let terrainSemanticsFixtureReport {
+            try writeJSON(
+                terrainSemanticsFixtureReport,
+                to: outURL.appendingPathComponent("terrain_semantics_fixture_report.json")
+            )
+        }
         if let terrainScanSnapshot {
             try writeJSON(
                 terrainScanSnapshot,
@@ -1346,6 +1375,16 @@ if let outPath = options.outPath {
             terrainSemanticPlantLikeCells: terrainScanSnapshot?.semanticSummary.plantLikeCells,
             terrainSemanticOtherCells: terrainScanSnapshot?.semanticSummary.otherCells,
             terrainSemanticSuccess: terrainSemanticSuccess,
+            terrainSemanticFixtureCases: terrainSemanticsFixtureReport?.summary.fixtures,
+            terrainSemanticFixturePassed: terrainSemanticsFixtureReport?.summary.passed,
+            terrainSemanticFixtureFailed: terrainSemanticsFixtureReport?.summary.failed,
+            terrainSemanticFixtureUnknownCases: terrainSemanticsFixtureReport?.summary.unknownCases,
+            terrainSemanticFixtureAirCases: terrainSemanticsFixtureReport?.summary.airCases,
+            terrainSemanticFixtureSolidCases: terrainSemanticsFixtureReport?.summary.solidCases,
+            terrainSemanticFixtureLiquidCases: terrainSemanticsFixtureReport?.summary.liquidCases,
+            terrainSemanticFixturePlantLikeCases: terrainSemanticsFixtureReport?.summary.plantLikeCases,
+            terrainSemanticFixtureOtherCases: terrainSemanticsFixtureReport?.summary.otherCases,
+            terrainSemanticFixtureSuccess: terrainSemanticsFixtureSuccess,
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))
