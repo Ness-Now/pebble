@@ -325,3 +325,17 @@ Proceed with **Phase 4.12B — terrain pathfinding fixture smoke** using bounded
 deterministic BFS over small synthetic traversability grids. Stabilize search
 statuses, four-neighbor paths, limits, and invariants before planning any live
 world integration or movement consumer.
+
+## Phase 4.12B Implementation Status
+
+Phase 4.12B is implemented and validated. The world-free
+`terrain_pathfinding_fixture_smoke` runs bounded BFS over 12 synthetic
+traversability grids. Expansion order is north, east, south, west; only exact
+`.traversable` nodes are passable; paths use uniform cost one; and discovered
+nodes, including start, count against `maxVisited`.
+
+The scenario writes `terrain_pathfinding_fixture_report.json` and
+`terrain_pathfinding_invariant_report.json`, exposes `terrainPathfinding*`
+metrics, and emits one `lab_terrain_pathfinding_fixture_recorded` event. All 12
+fixtures and all 15 invariants pass. The implementation has no `World`, chunk,
+live scan, agent, movement, collision, or mutation dependency.

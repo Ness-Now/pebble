@@ -879,3 +879,94 @@ navigation, and ML integrations remain out of scope.
 
 Phase 4.12B: implement a pure `terrain_pathfinding_fixture_smoke` using
 bounded deterministic BFS over synthetic traversability grids.
+
+## 2026-06-19 — Phase 4.12B Terrain Pathfinding Fixture Smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Validate a bounded deterministic path search over synthetic traversability
+grids without connecting search to world reads, live scans, agents, movement,
+collision, or mutation.
+
+### Files Created Or Modified
+
+- `Sources/PebbleLab/LabTerrainPathfinding.swift` (new)
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_PATHFINDING_PLAN.md`
+
+### BFS Contract
+
+- Only exact `.traversable` synthetic nodes are passable.
+- Expansion order is fixed: north, east, south, west.
+- Edges are four-directional, horizontal, and uniform-cost.
+- Start and goal must exist and be traversable.
+- Discovered nodes, including start, count against mandatory `maxVisited`.
+- Visited tracking prevents cycles; exceeding the bound returns
+  `searchLimitReached`.
+- Results are abstract evidence only and do not command movement or claim
+  collision safety.
+
+### Fixtures And Outputs
+
+Twelve fixtures cover straight and turning paths, invalid start/goal, a blocked
+wall, unknown and unsafe detours, forbidden diagonal shortcuts, bounded-search
+failure, deterministic tie-breaking, identical start/goal, and missing goal.
+
+Outputs:
+
+- `terrain_pathfinding_fixture_report.json`
+- `terrain_pathfinding_invariant_report.json`
+- `terrainPathfinding*` metrics
+- one `lab_terrain_pathfinding_fixture_recorded` event
+
+The invariant report contains 15 checks for input/status coherence, path node
+eligibility, endpoints, four-neighbor steps, diagonal exclusion, visited
+bounds, deterministic order, summary counts, and explicit no-world,
+no-mutation, no-movement, and no-collision review guards.
+
+### Still Prohibited
+
+No PebbleCore, registry, save/load, renderer, resource, or golden file was
+changed. No live pathfinding, `World`, chunk, live scan, real agent, movement,
+collision, goal selection, behavior tree, mutation, A*, Dijkstra, diagonal,
+terrain cost, multi-agent navigation, or ML integration was added.
+
+### Validation Commands
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_fixture_smoke --seed 42 --ticks 0 --out runs/check_terrain_pathfinding_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_column_scan_smoke --seed 42 --ticks 5 --out runs/check_column_scan_after_pathfinding_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_column_scan_edge_smoke --seed 42 --ticks 5 --out runs/check_column_scan_edge_after_pathfinding_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_traversability_fixture_smoke --seed 42 --ticks 0 --out runs/check_traversability_fixture_after_pathfinding_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_semantics_fixture_smoke --seed 42 --ticks 0 --out runs/check_semantics_fixture_after_pathfinding_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_scan_smoke --seed 42 --ticks 5 --out runs/check_terrain_scan_after_pathfinding_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_scan_edge_smoke --seed 42 --ticks 5 --out runs/check_terrain_scan_edge_after_pathfinding_fixture`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_pathfinding_fixture`
+- `swift run -c release PebbleLab -- --scenario world_observation_multi_smoke --seed 42 --ticks 5 --out runs/check_world_observation_after_pathfinding_fixture`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Fixture report: `12 passed, 0 failed`.
+- Status counts: found `6`, not found `2`, invalid start `1`, invalid goal
+  `2`, search limit reached `1`, unknown `0`.
+- Invariant report: `15 passed, 0 failed`.
+- Debug and Pebble release builds passed.
+- Column, terrain, semantics, traversability, regression, and multi-agent world
+  observation scenarios passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.12C: harden fixture coverage and clean up the pathfinding contract
+before any docs-only plan for live pathfinding integration.

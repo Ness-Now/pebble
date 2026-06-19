@@ -52,3 +52,4 @@
 - Added central read-only terrain column scan smoke.
 - Added edge-position terrain column scan smoke crossing chunk boundaries.
 - Documented terrain pathfinding planning contract.
+- Added terrain pathfinding fixture smoke with bounded deterministic BFS.

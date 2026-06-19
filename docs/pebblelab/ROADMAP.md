@@ -345,6 +345,15 @@ separate layers.
 
 ## Phase 4.12B - Terrain Pathfinding Fixture Smoke
 
-Next recommended step: validate bounded BFS over synthetic traversability
-grids with fixed north/east/south/west neighbor order. Live pathfinding,
-collision, mutation, route following, and agent movement remain out of scope.
+Status: implemented and validated.
+
+Goal: validate bounded deterministic BFS over 12 synthetic traversability
+fixtures with fixed north/east/south/west neighbor order, uniform cost, explicit
+failure statuses, and dedicated fixture/invariant reports.
+
+## Phase 4.12C - Pathfinding Fixture Hardening And Contract Cleanup
+
+Next recommended step: review fixture coverage, bounded-search semantics, and
+shared report contracts before any live integration planning. Live
+pathfinding, collision, mutation, route following, and agent movement remain
+out of scope.

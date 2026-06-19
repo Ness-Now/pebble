@@ -204,6 +204,16 @@ struct RunMetrics: Encodable {
     let terrainColumnUnsupportedCells: Int?
     let terrainColumnOccupiedVerticalSpaceCells: Int?
     let terrainColumnTraversabilitySuccess: Bool?
+    let terrainPathfindingFixtureCases: Int?
+    let terrainPathfindingFixturePassed: Int?
+    let terrainPathfindingFixtureFailed: Int?
+    let terrainPathfindingPathsFound: Int?
+    let terrainPathfindingPathsNotFound: Int?
+    let terrainPathfindingInvalidStarts: Int?
+    let terrainPathfindingInvalidGoals: Int?
+    let terrainPathfindingSearchLimitReached: Int?
+    let terrainPathfindingUnknown: Int?
+    let terrainPathfindingSuccess: Bool?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -357,6 +367,16 @@ struct RunMetrics: Encodable {
         terrainColumnUnsupportedCells: Int? = nil,
         terrainColumnOccupiedVerticalSpaceCells: Int? = nil,
         terrainColumnTraversabilitySuccess: Bool? = nil,
+        terrainPathfindingFixtureCases: Int? = nil,
+        terrainPathfindingFixturePassed: Int? = nil,
+        terrainPathfindingFixtureFailed: Int? = nil,
+        terrainPathfindingPathsFound: Int? = nil,
+        terrainPathfindingPathsNotFound: Int? = nil,
+        terrainPathfindingInvalidStarts: Int? = nil,
+        terrainPathfindingInvalidGoals: Int? = nil,
+        terrainPathfindingSearchLimitReached: Int? = nil,
+        terrainPathfindingUnknown: Int? = nil,
+        terrainPathfindingSuccess: Bool? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -509,6 +529,16 @@ struct RunMetrics: Encodable {
         self.terrainColumnUnsupportedCells = terrainColumnUnsupportedCells
         self.terrainColumnOccupiedVerticalSpaceCells = terrainColumnOccupiedVerticalSpaceCells
         self.terrainColumnTraversabilitySuccess = terrainColumnTraversabilitySuccess
+        self.terrainPathfindingFixtureCases = terrainPathfindingFixtureCases
+        self.terrainPathfindingFixturePassed = terrainPathfindingFixturePassed
+        self.terrainPathfindingFixtureFailed = terrainPathfindingFixtureFailed
+        self.terrainPathfindingPathsFound = terrainPathfindingPathsFound
+        self.terrainPathfindingPathsNotFound = terrainPathfindingPathsNotFound
+        self.terrainPathfindingInvalidStarts = terrainPathfindingInvalidStarts
+        self.terrainPathfindingInvalidGoals = terrainPathfindingInvalidGoals
+        self.terrainPathfindingSearchLimitReached = terrainPathfindingSearchLimitReached
+        self.terrainPathfindingUnknown = terrainPathfindingUnknown
+        self.terrainPathfindingSuccess = terrainPathfindingSuccess
         self.successCriteria = successCriteria
     }
 }

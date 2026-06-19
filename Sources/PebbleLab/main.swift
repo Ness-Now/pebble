@@ -21,6 +21,8 @@ let isTerrainColumnScanRun = terrainColumnScanContract != nil
 let isTerrainSemanticsFixtureScenario = options.scenario == "terrain_semantics_fixture_smoke"
 let isTerrainTraversabilityFixtureScenario = options.scenario
     == "terrain_traversability_fixture_smoke"
+let isTerrainPathfindingFixtureScenario = options.scenario
+    == "terrain_pathfinding_fixture_smoke"
 let isWorldInteractionScenario = isWorldObservationScenario
     || isTerrainScanRun
     || isTerrainColumnScanRun
@@ -721,6 +723,16 @@ let terrainTraversabilitySuccess = isTerrainTraversabilityFixtureScenario
         && (terrainTraversabilitySummary?.success ?? false)
         && (terrainTraversabilityInvariantReport?.success ?? false))
     : nil
+let terrainPathfindingFixtureReport = isTerrainPathfindingFixtureScenario
+    ? makeTerrainPathfindingFixtureReport(scenario: options.scenario, seed: options.seed)
+    : nil
+let terrainPathfindingInvariantReport = terrainPathfindingFixtureReport.map(
+    makeTerrainPathfindingInvariantReport
+)
+let terrainPathfindingSuccess = isTerrainPathfindingFixtureScenario
+    ? ((terrainPathfindingFixtureReport?.success ?? false)
+        && (terrainPathfindingInvariantReport?.success ?? false))
+    : nil
 let coreEntityInvariantReport = options.scenario == "core_entity_smoke"
     ? coreEntityBridge.invariantReport(
         scenario: options.scenario,
@@ -924,6 +936,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (terrainTraversabilitySuccess ?? true)
     && (terrainColumnScanSuccess ?? true)
     && (terrainColumnTraversabilitySuccess ?? true)
+    && (terrainPathfindingSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -985,6 +998,23 @@ if options.outPath != nil {
                 unsupportedCells: traversabilitySummary.unsupportedCells,
                 unsafeCells: traversabilitySummary.unsafeCells,
                 occupiedVerticalSpaceCells: traversabilitySummary.occupiedVerticalSpaceCells
+            ))
+        }
+        if let pathfindingSummary = terrainPathfindingFixtureReport?.summary {
+            try appendEvent(RunEvent(
+                type: "lab_terrain_pathfinding_fixture_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: terrainPathfindingSuccess,
+                fixtures: pathfindingSummary.fixtures,
+                passed: pathfindingSummary.passed,
+                failed: pathfindingSummary.failed,
+                pathsFound: pathfindingSummary.pathsFound,
+                pathsNotFound: pathfindingSummary.pathsNotFound,
+                invalidStarts: pathfindingSummary.invalidStarts,
+                invalidGoals: pathfindingSummary.invalidGoals,
+                searchLimitReached: pathfindingSummary.searchLimitReached,
+                unknown: pathfindingSummary.unknown
             ))
         }
         if let terrainColumnScanSnapshot {
@@ -1313,6 +1343,18 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("terrain_traversability_invariant_report.json")
             )
         }
+        if let terrainPathfindingFixtureReport {
+            try writeJSON(
+                terrainPathfindingFixtureReport,
+                to: outURL.appendingPathComponent("terrain_pathfinding_fixture_report.json")
+            )
+        }
+        if let terrainPathfindingInvariantReport {
+            try writeJSON(
+                terrainPathfindingInvariantReport,
+                to: outURL.appendingPathComponent("terrain_pathfinding_invariant_report.json")
+            )
+        }
         if let terrainColumnScanSnapshot {
             try writeJSON(
                 terrainColumnScanSnapshot,
@@ -1532,6 +1574,16 @@ if let outPath = options.outPath {
             terrainColumnUnsupportedCells: terrainColumnDerivedSummary?.unsupportedCells,
             terrainColumnOccupiedVerticalSpaceCells: terrainColumnDerivedSummary?.occupiedVerticalSpaceCells,
             terrainColumnTraversabilitySuccess: terrainColumnTraversabilitySuccess,
+            terrainPathfindingFixtureCases: terrainPathfindingFixtureReport?.summary.fixtures,
+            terrainPathfindingFixturePassed: terrainPathfindingFixtureReport?.summary.passed,
+            terrainPathfindingFixtureFailed: terrainPathfindingFixtureReport?.summary.failed,
+            terrainPathfindingPathsFound: terrainPathfindingFixtureReport?.summary.pathsFound,
+            terrainPathfindingPathsNotFound: terrainPathfindingFixtureReport?.summary.pathsNotFound,
+            terrainPathfindingInvalidStarts: terrainPathfindingFixtureReport?.summary.invalidStarts,
+            terrainPathfindingInvalidGoals: terrainPathfindingFixtureReport?.summary.invalidGoals,
+            terrainPathfindingSearchLimitReached: terrainPathfindingFixtureReport?.summary.searchLimitReached,
+            terrainPathfindingUnknown: terrainPathfindingFixtureReport?.summary.unknown,
+            terrainPathfindingSuccess: terrainPathfindingSuccess,
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))

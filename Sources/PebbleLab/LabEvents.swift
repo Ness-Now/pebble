@@ -129,6 +129,12 @@ struct RunEvent: Encodable {
     let unsafeCells: Int?
     let occupiedVerticalSpaceCells: Int?
     let columns: Int?
+    let pathsFound: Int?
+    let pathsNotFound: Int?
+    let invalidStarts: Int?
+    let invalidGoals: Int?
+    let searchLimitReached: Int?
+    let unknown: Int?
 
     init(
         type: String,
@@ -258,7 +264,13 @@ struct RunEvent: Encodable {
         unsupportedCells: Int? = nil,
         unsafeCells: Int? = nil,
         occupiedVerticalSpaceCells: Int? = nil,
-        columns: Int? = nil
+        columns: Int? = nil,
+        pathsFound: Int? = nil,
+        pathsNotFound: Int? = nil,
+        invalidStarts: Int? = nil,
+        invalidGoals: Int? = nil,
+        searchLimitReached: Int? = nil,
+        unknown: Int? = nil
     ) {
         self.type = type
         self.event = event
@@ -388,6 +400,12 @@ struct RunEvent: Encodable {
         self.unsafeCells = unsafeCells
         self.occupiedVerticalSpaceCells = occupiedVerticalSpaceCells
         self.columns = columns
+        self.pathsFound = pathsFound
+        self.pathsNotFound = pathsNotFound
+        self.invalidStarts = invalidStarts
+        self.invalidGoals = invalidGoals
+        self.searchLimitReached = searchLimitReached
+        self.unknown = unknown
     }
 }
 
