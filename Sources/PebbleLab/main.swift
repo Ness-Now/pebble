@@ -14,9 +14,9 @@ let isPhysicalBehaviorScenario = options.scenario == "physical_behavior_smoke"
 let isWorldObservationSingleScenario = options.scenario == "world_observation_smoke"
 let isWorldObservationMultiScenario = options.scenario == "world_observation_multi_smoke"
 let isWorldObservationScenario = isWorldObservationSingleScenario || isWorldObservationMultiScenario
-let isTerrainScanScenario = options.scenario == "terrain_scan_smoke"
-    || options.scenario == "terrain_scan_edge_smoke"
-let isWorldInteractionScenario = isWorldObservationScenario || isTerrainScanScenario
+let terrainScanContract = terrainScanScenarioContract(for: options.scenario)
+let isTerrainScanRun = terrainScanContract != nil
+let isWorldInteractionScenario = isWorldObservationScenario || isTerrainScanRun
 
 var ticksCompleted = 0
 var eventsNDJSON = ""
@@ -805,7 +805,7 @@ let worldInteractionSuccess = isWorldObservationSingleScenario
             && (worldObservationInvariantReport?.success ?? false))
         : nil)
 let terrainScanSnapshot: LabTerrainScanSnapshot? = {
-    guard isTerrainScanScenario,
+    guard let terrainScanContract,
           let agent = labAgents.first,
           let handle = physicalBridge.handles.first(where: { $0.agentId == agent.id }),
           let coreLink = coreEntityBridge.snapshotLinks(for: labAgents).first(where: {
@@ -820,18 +820,21 @@ let terrainScanSnapshot: LabTerrainScanSnapshot? = {
         ticksCompleted: ticksCompleted,
         agent: agent,
         handle: handle,
-        coreLink: coreLink
+        coreLink: coreLink,
+        contract: terrainScanContract
     )
 }()
-let terrainScanInvariantReport = terrainScanSnapshot.map {
-    makeTerrainScanInvariantReport(
-        snapshot: $0,
+let terrainScanInvariantReport: TerrainScanInvariantReport? = terrainScanSnapshot.flatMap { snapshot in
+    guard let terrainScanContract else { return nil }
+    return makeTerrainScanInvariantReport(
+        snapshot: snapshot,
         agents: labAgents.count,
         placeholders: physicalBridge.count,
-        coreEntities: coreEntityBridge.count
+        coreEntities: coreEntityBridge.count,
+        contract: terrainScanContract
     )
 }
-let terrainScanSuccess = isTerrainScanScenario
+let terrainScanSuccess = isTerrainScanRun
     ? ((terrainScanSnapshot?.summary.success ?? false)
         && (terrainScanInvariantReport?.success ?? false))
     : nil
@@ -925,14 +928,14 @@ if options.outPath != nil {
                 meta: worldInteractionSnapshot.meta,
                 blockName: worldInteractionSnapshot.blockName
             ))
-        } else if isTerrainScanScenario {
+        } else if isTerrainScanRun {
             try appendEvent(RunEvent(
                 type: "lab_terrain_scan_recorded",
                 tick: ticksCompleted,
                 scenario: options.scenario,
                 success: false,
-                radius: 1,
-                cellsPlanned: 9,
+                radius: terrainScanContract?.radius,
+                cellsPlanned: terrainScanContract?.expectedCellsPlanned,
                 cellsObserved: 0,
                 loadedCells: 0,
                 readyCells: 0
@@ -1297,7 +1300,7 @@ if let outPath = options.outPath {
             worldInteractionBlockId: isWorldObservationSingleScenario ? worldInteractionSnapshot?.blockId : nil,
             worldInteractionMeta: isWorldObservationSingleScenario ? worldInteractionSnapshot?.meta : nil,
             worldInteractionSuccess: worldInteractionSuccess,
-            terrainScanAgents: isTerrainScanScenario ? labAgents.count : nil,
+            terrainScanAgents: isTerrainScanRun ? labAgents.count : nil,
             terrainScanRadius: terrainScanSnapshot?.radius,
             terrainScanCellsPlanned: terrainScanSnapshot?.summary.cellsPlanned,
             terrainScanCellsObserved: terrainScanSnapshot?.summary.cellsObserved,

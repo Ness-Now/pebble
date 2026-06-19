@@ -145,3 +145,76 @@ collision, or gameplay path was added.
 Phase 4.8D: terrain scan contract cleanup and shared invariant hardening before
 planning terrain semantics or traversability. Terrain mutation remains
 deferred.
+
+## 2026-06-19 - Phase 4.8D Terrain Scan Contract Cleanup
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Centralize the fixed terrain-scan scenario rules without changing the
+observable behavior of the central or edge smoke tests.
+
+### Files Modified
+
+- `Sources/PebbleLab/LabTerrainScanContract.swift` (new)
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabWorldInteraction.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+### Refactor
+
+`LabTerrainScanScenarioContract` now owns each scenario's:
+
+- agent X/Z position;
+- fixed radius, relation, and ordering;
+- expected planned and observed cell counts;
+- optional expected unique chunk count;
+- chunk-boundary requirement.
+
+`terrainScanScenarioContract(for:)` defines the two existing contracts, and
+`isTerrainScanScenario` centralizes scenario recognition. Scenario preparation
+uses contract positions, `main.swift` passes the selected contract into the
+shared scan/report path, and invariant expectations are derived from the same
+contract. Edge checks retain their existing names and are enabled by the
+contract rather than a scenario string inside the report.
+
+### Unchanged Behavior
+
+- No scenario, JSON output, metric, or event was added.
+- Radius remains fixed at `1`; scans remain single-agent and read-only.
+- Central scan: position `(8,64,8)`, one chunk, 15 checks.
+- Edge scan: position `(16,64,16)`, four chunks, 17 checks.
+- Loaded/ready guards, deterministic `dz_then_dx` order, packed-cell decoding,
+  and unchanged-chunk checks are unchanged.
+- No PebbleCore, registry, save/load, renderer, resource, mutation,
+  pathfinding, collision, or terrain-semantics code changed.
+
+### Validation Commands
+
+- `swift build`
+- `swift run -c release PebbleLab -- --scenario terrain_scan_smoke --seed 42 --ticks 5 --out runs/check_terrain_scan_smoke_after_contract_cleanup`
+- `swift run -c release PebbleLab -- --scenario terrain_scan_edge_smoke --seed 42 --ticks 5 --out runs/check_terrain_scan_edge_smoke_after_contract_cleanup`
+- `swift run -c release PebbleLab -- --scenario world_observation_multi_smoke --seed 42 --ticks 5 --out runs/check_world_observation_after_contract_cleanup`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_contract_cleanup`
+- `swift build -c release --product Pebble`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Central terrain scan: success, `9/9/9/9` planned/observed/loaded/ready,
+  unique chunks `1`, invariant checks `15/15`.
+- Edge terrain scan: success, `9/9/9/9`, unique chunks `4`, invariant checks
+  `17/17`, both edge checks preserved.
+- World observation and regression scenarios passed.
+- Pebble release build passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.9A: read-only terrain semantics planning. Define a minimal semantic
+classification contract before adding any classification code. Mutation,
+pathfinding, collision, and traversability decisions remain out of scope.

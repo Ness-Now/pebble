@@ -437,9 +437,10 @@ func scanTerrainAroundBelow(
     ticksCompleted: Int,
     agent: LabAgent,
     handle: LabPhysicalAgentHandle,
-    coreLink: LabCoreAgentLink
+    coreLink: LabCoreAgentLink,
+    contract: LabTerrainScanScenarioContract
 ) -> LabTerrainScanSnapshot {
-    let radius = 1
+    let radius = contract.radius
     let origin = LabWorldInteractionTarget(
         x: agent.position.x,
         y: agent.position.y - 1,
@@ -503,10 +504,10 @@ func scanTerrainAroundBelow(
         && handle.physicalId == coreLink.physicalId
     let success = linksMatch
         && coreLink.divergence == 0
-        && cells.count == 9
-        && cellsObserved == 9
-        && loadedCells == 9
-        && readyCells == 9
+        && cells.count == contract.expectedCellsPlanned
+        && cellsObserved == contract.expectedCellsObserved
+        && loadedCells == contract.expectedCellsObserved
+        && readyCells == contract.expectedCellsObserved
         && distinctBlockIds > 0
         && chunkStateUnchanged
         && cells.allSatisfy(\.success)
@@ -524,11 +525,11 @@ func scanTerrainAroundBelow(
         linksCoherent: linksMatch,
         origin: origin,
         radius: radius,
-        relation: "around_below",
-        order: "dz_then_dx",
+        relation: contract.relation,
+        order: contract.order,
         cells: cells,
         summary: LabTerrainScanSummary(
-            cellsPlanned: 9,
+            cellsPlanned: contract.expectedCellsPlanned,
             cellsObserved: cellsObserved,
             loadedCells: loadedCells,
             readyCells: readyCells,
@@ -544,13 +545,15 @@ func makeTerrainScanInvariantReport(
     snapshot: LabTerrainScanSnapshot,
     agents: Int,
     placeholders: Int,
-    coreEntities: Int
+    coreEntities: Int,
+    contract: LabTerrainScanScenarioContract
 ) -> TerrainScanInvariantReport {
-    let expectedOffsets = [
-        (-1, -1), (0, -1), (1, -1),
-        (-1, 0), (0, 0), (1, 0),
-        (-1, 1), (0, 1), (1, 1)
-    ]
+    var expectedOffsets: [(Int, Int)] = []
+    for dz in -contract.radius...contract.radius {
+        for dx in -contract.radius...contract.radius {
+            expectedOffsets.append((dx, dz))
+        }
+    }
     let actualOffsets = snapshot.cells.map { ($0.dx, $0.dz) }
     let offsetsOrdered = zip(actualOffsets, expectedOffsets).allSatisfy { actual, expected in
         actual.0 == expected.0 && actual.1 == expected.1
@@ -576,6 +579,7 @@ func makeTerrainScanInvariantReport(
     let linksCoherent = agents == 1
         && placeholders == 1
         && coreEntities == 1
+        && snapshot.scenario == contract.scenario
         && snapshot.linksCoherent
         && !snapshot.agentId.isEmpty
         && !snapshot.physicalId.isEmpty
@@ -602,56 +606,57 @@ func makeTerrainScanInvariantReport(
         ),
         TerrainScanInvariantCheck(
             name: "radius_equals_one",
-            passed: snapshot.radius == 1,
-            expected: "1",
+            passed: snapshot.radius == contract.radius,
+            expected: "\(contract.radius)",
             actual: "\(snapshot.radius)"
         ),
         TerrainScanInvariantCheck(
             name: "relation_around_below",
-            passed: snapshot.relation == "around_below",
-            expected: "around_below",
+            passed: snapshot.relation == contract.relation,
+            expected: contract.relation,
             actual: snapshot.relation
         ),
         TerrainScanInvariantCheck(
             name: "order_dz_then_dx",
-            passed: snapshot.order == "dz_then_dx",
-            expected: "dz_then_dx",
+            passed: snapshot.order == contract.order,
+            expected: contract.order,
             actual: snapshot.order
         ),
         TerrainScanInvariantCheck(
             name: "cells_planned_equals_nine",
-            passed: snapshot.summary.cellsPlanned == 9,
-            expected: "9",
+            passed: snapshot.summary.cellsPlanned == contract.expectedCellsPlanned,
+            expected: "\(contract.expectedCellsPlanned)",
             actual: "\(snapshot.summary.cellsPlanned)"
         ),
         TerrainScanInvariantCheck(
             name: "cells_observed_equals_nine",
-            passed: snapshot.summary.cellsObserved == 9,
-            expected: "9",
+            passed: snapshot.summary.cellsObserved == contract.expectedCellsObserved,
+            expected: "\(contract.expectedCellsObserved)",
             actual: "\(snapshot.summary.cellsObserved)"
         ),
         TerrainScanInvariantCheck(
             name: "all_decoded_cells_loaded_ready",
-            passed: loadedAndReadyCells == 9,
-            expected: "9",
+            passed: loadedAndReadyCells == contract.expectedCellsObserved,
+            expected: "\(contract.expectedCellsObserved)",
             actual: "\(loadedAndReadyCells)"
         ),
         TerrainScanInvariantCheck(
             name: "all_chunks_unchanged",
-            passed: unchangedCells == 9 && snapshot.summary.chunkStateUnchanged,
-            expected: "9",
+            passed: unchangedCells == contract.expectedCellsObserved
+                && snapshot.summary.chunkStateUnchanged,
+            expected: "\(contract.expectedCellsObserved)",
             actual: "\(unchangedCells)"
         ),
         TerrainScanInvariantCheck(
             name: "offsets_deterministic_dz_then_dx",
             passed: offsetsOrdered,
-            expected: "9 ordered offsets",
+            expected: "\(contract.expectedCellsPlanned) ordered offsets",
             actual: "\(actualOffsets.count) ordered offsets"
         ),
         TerrainScanInvariantCheck(
             name: "target_coordinates_unique",
-            passed: uniqueTargets == 9,
-            expected: "9 unique",
+            passed: uniqueTargets == contract.expectedCellsPlanned,
+            expected: "\(contract.expectedCellsPlanned) unique",
             actual: "\(uniqueTargets) unique"
         ),
         TerrainScanInvariantCheck(
@@ -663,8 +668,8 @@ func makeTerrainScanInvariantReport(
         ),
         TerrainScanInvariantCheck(
             name: "all_packed_cells_valid",
-            passed: validPackedCells == 9,
-            expected: "9",
+            passed: validPackedCells == contract.expectedCellsObserved,
+            expected: "\(contract.expectedCellsObserved)",
             actual: "\(validPackedCells)"
         ),
         TerrainScanInvariantCheck(
@@ -675,19 +680,21 @@ func makeTerrainScanInvariantReport(
         )
     ]
 
-    if snapshot.scenario == "terrain_scan_edge_smoke" {
+    if contract.requiresChunkBoundaryCrossing {
         checks.append(TerrainScanInvariantCheck(
             name: "edge_scan_crosses_chunk_boundary",
             passed: snapshot.summary.uniqueChunks > 1,
             expected: "> 1",
             actual: "\(snapshot.summary.uniqueChunks)"
         ))
-        checks.append(TerrainScanInvariantCheck(
-            name: "edge_scan_expected_unique_chunks",
-            passed: snapshot.summary.uniqueChunks == 4,
-            expected: "4",
-            actual: "\(snapshot.summary.uniqueChunks)"
-        ))
+        if let expectedUniqueChunks = contract.expectedUniqueChunks {
+            checks.append(TerrainScanInvariantCheck(
+                name: "edge_scan_expected_unique_chunks",
+                passed: snapshot.summary.uniqueChunks == expectedUniqueChunks,
+                expected: "\(expectedUniqueChunks)",
+                actual: "\(snapshot.summary.uniqueChunks)"
+            ))
+        }
     }
     let checksFailed = checks.filter { !$0.passed }.count
 

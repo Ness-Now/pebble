@@ -44,7 +44,7 @@ func prepareScenario(_ options: Options, world: World) -> ScenarioResult {
         registerAllBlocks()
         registerAllBiomes()
 
-        let chunkRadius = (scenario == "agent_smoke" || scenario == "agents_basic" || scenario == "seek_safety_smoke" || scenario == "long_run_smoke" || scenario == "regression_smoke" || scenario == "physical_placeholder_smoke" || scenario == "physical_sync_smoke" || scenario == "core_entity_smoke" || scenario == "physical_behavior_smoke" || scenario == "physical_behavior_multi_smoke" || scenario == "world_observation_smoke" || scenario == "world_observation_multi_smoke" || scenario == "terrain_scan_smoke" || scenario == "terrain_scan_edge_smoke") && !options.chunkRadiusProvided ? 1 : options.chunkRadius
+        let chunkRadius = (scenario == "agent_smoke" || scenario == "agents_basic" || scenario == "seek_safety_smoke" || scenario == "long_run_smoke" || scenario == "regression_smoke" || scenario == "physical_placeholder_smoke" || scenario == "physical_sync_smoke" || scenario == "core_entity_smoke" || scenario == "physical_behavior_smoke" || scenario == "physical_behavior_multi_smoke" || scenario == "world_observation_smoke" || scenario == "world_observation_multi_smoke" || isTerrainScanScenario(scenario)) && !options.chunkRadiusProvided ? 1 : options.chunkRadius
         var adoptedChunks: [AdoptedChunk] = []
         var nonAirBlocksTotal = 0
 
@@ -162,12 +162,12 @@ func prepareScenario(_ options: Options, world: World) -> ScenarioResult {
                     world: world
                 )
             }
-        } else if scenario == "world_observation_smoke" || scenario == "terrain_scan_smoke" || scenario == "terrain_scan_edge_smoke" {
-            let scanEdge = scenario == "terrain_scan_edge_smoke"
+        } else if scenario == "world_observation_smoke" || isTerrainScanScenario(scenario) {
+            let terrainContract = terrainScanScenarioContract(for: scenario)
             var agent = makeLabAgent(
                 id: "agent_0",
-                x: scanEdge ? 16 : 8,
-                z: scanEdge ? 16 : 8,
+                x: terrainContract?.agentX ?? 8,
+                z: terrainContract?.agentZ ?? 8,
                 world: world
             )
             agent.needs.curiosity = 0.1
@@ -253,7 +253,7 @@ func makeWorldSnapshot(
     result: ScenarioResult,
     ticksCompleted: Int
 ) -> WorldSnapshot? {
-    guard (options.scenario == "chunk_smoke" || options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke" || options.scenario == "long_run_smoke" || options.scenario == "regression_smoke" || options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" || options.scenario == "core_entity_smoke" || options.scenario == "physical_behavior_smoke" || options.scenario == "physical_behavior_multi_smoke" || options.scenario == "world_observation_smoke" || options.scenario == "world_observation_multi_smoke" || options.scenario == "terrain_scan_smoke" || options.scenario == "terrain_scan_edge_smoke"),
+    guard (options.scenario == "chunk_smoke" || options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke" || options.scenario == "long_run_smoke" || options.scenario == "regression_smoke" || options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" || options.scenario == "core_entity_smoke" || options.scenario == "physical_behavior_smoke" || options.scenario == "physical_behavior_multi_smoke" || options.scenario == "world_observation_smoke" || options.scenario == "world_observation_multi_smoke" || isTerrainScanScenario(options.scenario)),
           let chunkRadius = result.chunkRadius,
           let expectedChunks = result.expectedChunks,
           let readyChunks = result.readyChunks,

@@ -262,6 +262,15 @@ invariants without adding a second scan implementation.
 
 ## Phase 4.8D - Terrain Scan Contract Cleanup And Shared Invariant Hardening
 
-Next recommended step: consolidate scenario expectations and report contracts
-before planning read-only terrain semantics or traversability. Mutation,
-pathfinding, collision, and configurable scan radii remain out of scope.
+Status: done and validated.
+
+Goal: centralize both terrain-scan scenario positions, fixed scan constants,
+count expectations, and edge requirements in a small shared contract while
+preserving all existing outputs and invariant coverage.
+
+## Phase 4.9A - Read-Only Terrain Semantics Planning
+
+Next recommended step: define a minimal, deterministic classification contract
+for already-observed cells before implementing terrain semantics. Mutation,
+pathfinding, collision, traversability decisions, multi-agent scans, and
+configurable radii remain out of scope.
