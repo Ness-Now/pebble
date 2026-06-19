@@ -53,3 +53,4 @@
 - Added edge-position terrain column scan smoke crossing chunk boundaries.
 - Documented terrain pathfinding planning contract.
 - Added terrain pathfinding fixture smoke with bounded deterministic BFS.
+- Hardened terrain pathfinding fixture coverage and edge-case invariants.

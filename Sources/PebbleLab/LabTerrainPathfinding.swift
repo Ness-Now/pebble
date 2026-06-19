@@ -67,6 +67,8 @@ struct TerrainPathfindingFixtureResult: Codable {
     let actualPathLength: Int
     let expectedPath: [LabTerrainPathNodeKey]?
     let actualPath: [LabTerrainPathNodeKey]
+    let expectedReason: String?
+    let actualReason: String
     let visited: Int
     let maxVisited: Int
     let passed: Bool
@@ -101,6 +103,23 @@ private struct TerrainPathfindingFixtureDefinition {
     let expectedStatus: LabTerrainPathfindingStatus
     let expectedPath: [LabTerrainPathNodeKey]?
     let expectedPathLength: Int?
+    let expectedReason: String?
+
+    init(
+        name: String,
+        request: LabTerrainPathRequest,
+        expectedStatus: LabTerrainPathfindingStatus,
+        expectedPath: [LabTerrainPathNodeKey]?,
+        expectedPathLength: Int?,
+        expectedReason: String? = nil
+    ) {
+        self.name = name
+        self.request = request
+        self.expectedStatus = expectedStatus
+        self.expectedPath = expectedPath
+        self.expectedPathLength = expectedPathLength
+        self.expectedReason = expectedReason
+    }
 }
 
 private let terrainPathNeighborMode = "north_east_south_west"
@@ -127,6 +146,16 @@ private func terrainPathNeighbors(of key: LabTerrainPathNodeKey) -> [LabTerrainP
     ]
 }
 
+private func terrainPathNodeMap(
+    _ nodes: [LabTerrainPathNode]
+) -> [LabTerrainPathNodeKey: LabTerrainPathNode] {
+    var nodesByKey: [LabTerrainPathNodeKey: LabTerrainPathNode] = [:]
+    for node in nodes where nodesByKey[node.key] == nil {
+        nodesByKey[node.key] = node
+    }
+    return nodesByKey
+}
+
 func findTerrainPath(_ request: LabTerrainPathRequest) -> LabTerrainPathResult {
     guard request.maxVisited > 0 else {
         return LabTerrainPathResult(
@@ -145,10 +174,7 @@ func findTerrainPath(_ request: LabTerrainPathRequest) -> LabTerrainPathResult {
         )
     }
 
-    var nodesByKey: [LabTerrainPathNodeKey: LabTerrainPathNode] = [:]
-    for node in request.nodes where nodesByKey[node.key] == nil {
-        nodesByKey[node.key] = node
-    }
+    let nodesByKey = terrainPathNodeMap(request.nodes)
     guard let startNode = nodesByKey[request.start],
           startNode.traversability == .traversable else {
         return LabTerrainPathResult(
@@ -235,6 +261,12 @@ private func terrainPathfindingFixtureDefinitions()
     let unknownDetour = [terrainPathKey(0, 0), terrainPathKey(0, 1), terrainPathKey(1, 1), terrainPathKey(2, 1), terrainPathKey(2, 0)]
     let unsafeDetour = [terrainPathKey(0, 0), terrainPathKey(0, -1), terrainPathKey(1, -1), terrainPathKey(2, -1), terrainPathKey(2, 0)]
     let deterministicPath = [terrainPathKey(1, 1), terrainPathKey(1, 0), terrainPathKey(2, 0)]
+    let duplicatePath = [terrainPathKey(0, 0), terrainPathKey(1, 0)]
+    let cyclePath = [terrainPathKey(0, 0), terrainPathKey(1, 0), terrainPathKey(1, 1), terrainPathKey(2, 1)]
+    let complexEqualPath = [
+        terrainPathKey(2, 2), terrainPathKey(2, 1), terrainPathKey(2, 0),
+        terrainPathKey(3, 0), terrainPathKey(4, 0)
+    ]
 
     return [
         TerrainPathfindingFixtureDefinition(
@@ -361,7 +393,126 @@ private func terrainPathfindingFixtureDefinitions()
                 nodes: [terrainPathNode(0, 0)],
                 maxVisited: 20, neighborMode: terrainPathNeighborMode
             ),
-            expectedStatus: .invalidGoal, expectedPath: [], expectedPathLength: 0
+            expectedStatus: .invalidGoal,
+            expectedPath: [],
+            expectedPathLength: 0,
+            expectedReason: "goal_missing_or_not_traversable"
+        ),
+        TerrainPathfindingFixtureDefinition(
+            name: "missing_start_invalid",
+            request: LabTerrainPathRequest(
+                start: terrainPathKey(0, 0), goal: terrainPathKey(1, 0),
+                nodes: [terrainPathNode(1, 0)],
+                maxVisited: 20, neighborMode: terrainPathNeighborMode
+            ),
+            expectedStatus: .invalidStart,
+            expectedPath: [],
+            expectedPathLength: 0,
+            expectedReason: "start_missing_or_not_traversable"
+        ),
+        TerrainPathfindingFixtureDefinition(
+            name: "unsupported_neighbor_mode_unknown",
+            request: LabTerrainPathRequest(
+                start: terrainPathKey(0, 0), goal: terrainPathKey(1, 0),
+                nodes: [terrainPathNode(0, 0), terrainPathNode(1, 0)],
+                maxVisited: 20, neighborMode: "diagonal_or_unknown_mode"
+            ),
+            expectedStatus: .unknown,
+            expectedPath: [],
+            expectedPathLength: 0,
+            expectedReason: "unsupported_neighbor_mode"
+        ),
+        TerrainPathfindingFixtureDefinition(
+            name: "non_positive_search_limit_reached",
+            request: LabTerrainPathRequest(
+                start: terrainPathKey(0, 0), goal: terrainPathKey(1, 0),
+                nodes: [terrainPathNode(0, 0), terrainPathNode(1, 0)],
+                maxVisited: 0, neighborMode: terrainPathNeighborMode
+            ),
+            expectedStatus: .searchLimitReached,
+            expectedPath: [],
+            expectedPathLength: 0,
+            expectedReason: "non_positive_search_limit"
+        ),
+        TerrainPathfindingFixtureDefinition(
+            name: "duplicate_coordinates_first_node_wins",
+            request: LabTerrainPathRequest(
+                start: duplicatePath[0], goal: duplicatePath[1],
+                nodes: [
+                    terrainPathNode(0, 0),
+                    terrainPathNode(0, 0, kind: .blocked),
+                    terrainPathNode(1, 0)
+                ],
+                maxVisited: 20, neighborMode: terrainPathNeighborMode
+            ),
+            expectedStatus: .found,
+            expectedPath: duplicatePath,
+            expectedPathLength: 2,
+            expectedReason: "bounded_bfs_path_found"
+        ),
+        TerrainPathfindingFixtureDefinition(
+            name: "cycle_graph_does_not_loop",
+            request: LabTerrainPathRequest(
+                start: cyclePath[0], goal: cyclePath[3],
+                nodes: [
+                    terrainPathNode(0, 0), terrainPathNode(1, 0),
+                    terrainPathNode(1, 1), terrainPathNode(0, 1),
+                    terrainPathNode(2, 1)
+                ],
+                maxVisited: 20, neighborMode: terrainPathNeighborMode
+            ),
+            expectedStatus: .found,
+            expectedPath: cyclePath,
+            expectedPathLength: 4,
+            expectedReason: "bounded_bfs_path_found"
+        ),
+        TerrainPathfindingFixtureDefinition(
+            name: "cycle_graph_not_found_does_not_loop",
+            request: LabTerrainPathRequest(
+                start: terrainPathKey(0, 0), goal: terrainPathKey(3, 3),
+                nodes: [
+                    terrainPathNode(0, 0), terrainPathNode(1, 0),
+                    terrainPathNode(1, 1), terrainPathNode(0, 1),
+                    terrainPathNode(3, 3)
+                ],
+                maxVisited: 20, neighborMode: terrainPathNeighborMode
+            ),
+            expectedStatus: .notFound,
+            expectedPath: [],
+            expectedPathLength: 0,
+            expectedReason: "traversable_graph_exhausted"
+        ),
+        TerrainPathfindingFixtureDefinition(
+            name: "vertical_neighbor_not_used",
+            request: LabTerrainPathRequest(
+                start: terrainPathKey(0, 0, y: 64),
+                goal: terrainPathKey(0, 0, y: 65),
+                nodes: [
+                    terrainPathNode(0, 0, y: 64),
+                    terrainPathNode(0, 0, y: 65)
+                ],
+                maxVisited: 20, neighborMode: terrainPathNeighborMode
+            ),
+            expectedStatus: .notFound,
+            expectedPath: [],
+            expectedPathLength: 0,
+            expectedReason: "traversable_graph_exhausted"
+        ),
+        TerrainPathfindingFixtureDefinition(
+            name: "complex_equal_paths_neighbor_order_stable",
+            request: LabTerrainPathRequest(
+                start: complexEqualPath[0], goal: complexEqualPath[4],
+                nodes: [
+                    terrainPathNode(2, 2), terrainPathNode(3, 2), terrainPathNode(4, 2),
+                    terrainPathNode(2, 1), terrainPathNode(3, 1), terrainPathNode(4, 1),
+                    terrainPathNode(2, 0), terrainPathNode(3, 0), terrainPathNode(4, 0)
+                ],
+                maxVisited: 20, neighborMode: terrainPathNeighborMode
+            ),
+            expectedStatus: .found,
+            expectedPath: complexEqualPath,
+            expectedPathLength: 5,
+            expectedReason: "bounded_bfs_path_found"
         )
     ]
 }
@@ -374,6 +525,7 @@ func makeTerrainPathfindingFixtureReport(
         let actual = findTerrainPath(fixture.request)
         let pathMatches = fixture.expectedPath.map { $0 == actual.path } ?? true
         let lengthMatches = fixture.expectedPathLength.map { $0 == actual.path.count } ?? true
+        let reasonMatches = fixture.expectedReason.map { $0 == actual.reason } ?? true
         return TerrainPathfindingFixtureResult(
             name: fixture.name,
             expectedStatus: fixture.expectedStatus,
@@ -382,9 +534,14 @@ func makeTerrainPathfindingFixtureReport(
             actualPathLength: actual.path.count,
             expectedPath: fixture.expectedPath,
             actualPath: actual.path,
+            expectedReason: fixture.expectedReason,
+            actualReason: actual.reason,
             visited: actual.visited,
             maxVisited: fixture.request.maxVisited,
-            passed: actual.status == fixture.expectedStatus && pathMatches && lengthMatches
+            passed: actual.status == fixture.expectedStatus
+                && pathMatches
+                && lengthMatches
+                && reasonMatches
         )
     }
     let passed = results.filter(\.passed).count
@@ -422,7 +579,7 @@ func makeTerrainPathfindingInvariantReport(
     let pairs = Array(zip(definitions, results))
     let foundPairs = pairs.filter { $0.1.actualStatus == .found }
     let statusesCoherent = pairs.allSatisfy { fixture, result in
-        let nodes = Dictionary(uniqueKeysWithValues: fixture.request.nodes.map { ($0.key, $0) })
+        let nodes = terrainPathNodeMap(fixture.request.nodes)
         switch result.actualStatus {
         case .invalidStart:
             return nodes[fixture.request.start]?.traversability != .traversable
@@ -435,7 +592,7 @@ func makeTerrainPathfindingInvariantReport(
         }
     }
     let onlyTraversable = foundPairs.allSatisfy { fixture, result in
-        let nodes = Dictionary(uniqueKeysWithValues: fixture.request.nodes.map { ($0.key, $0) })
+        let nodes = terrainPathNodeMap(fixture.request.nodes)
         return result.actualPath.allSatisfy {
             nodes[$0]?.traversability == .traversable
         }
@@ -451,22 +608,62 @@ func makeTerrainPathfindingInvariantReport(
                 && abs(current.x - next.x) + abs(current.z - next.z) == 1
         }
     }
-    let deterministicCase = results.first { $0.name == "deterministic_neighbor_order" }
+    let noVerticalSteps = foundPairs.allSatisfy { _, result in
+        zip(result.actualPath, result.actualPath.dropFirst()).allSatisfy { current, next in
+            current.y == next.y
+        }
+    }
+    let noRepeatedPathNodes = foundPairs.allSatisfy { _, result in
+        Set(result.actualPath).count == result.actualPath.count
+    }
+    func result(named name: String) -> TerrainPathfindingFixtureResult? {
+        results.first { $0.name == name }
+    }
+    let deterministicCases = [
+        result(named: "deterministic_neighbor_order"),
+        result(named: "complex_equal_paths_neighbor_order_stable")
+    ]
+    let deterministicOrderPreserved = deterministicCases.allSatisfy {
+        $0?.actualPath == $0?.expectedPath && $0?.passed == true
+    }
+    let missingStartCase = result(named: "missing_start_invalid")
+    let unsupportedModeCase = result(named: "unsupported_neighbor_mode_unknown")
+    let nonPositiveLimitCase = result(named: "non_positive_search_limit_reached")
+    let duplicateCase = result(named: "duplicate_coordinates_first_node_wins")
+    let cycleCases = [
+        result(named: "cycle_graph_does_not_loop"),
+        result(named: "cycle_graph_not_found_does_not_loop")
+    ]
+    let cycleCasesTerminate = cycleCases.allSatisfy {
+        guard let result = $0 else { return false }
+        return result.passed && result.visited <= result.maxVisited
+    }
+    let expectedReasonsMatch = results.allSatisfy {
+        $0.expectedReason == nil || $0.expectedReason == $0.actualReason
+    }
     let counted = fixtureReport.summary.pathsFound + fixtureReport.summary.pathsNotFound
         + fixtureReport.summary.invalidStarts + fixtureReport.summary.invalidGoals
         + fixtureReport.summary.searchLimitReached + fixtureReport.summary.unknown
 
     let checks = [
         TerrainPathfindingInvariantCheck(name: "fixture_inputs_exist", passed: !definitions.isEmpty, expected: "> 0", actual: "\(definitions.count)"),
-        TerrainPathfindingInvariantCheck(name: "every_fixture_has_start_and_goal", passed: definitions.count == results.count, expected: "\(definitions.count) requests", actual: "\(results.count) results"),
+        TerrainPathfindingInvariantCheck(name: "every_fixture_has_start_goal_keys", passed: definitions.count == results.count, expected: "\(definitions.count) requests with keys", actual: "\(results.count) results"),
         TerrainPathfindingInvariantCheck(name: "start_goal_statuses_match_traversability", passed: statusesCoherent, expected: "all statuses coherent", actual: statusesCoherent ? "all statuses coherent" : "mismatch"),
         TerrainPathfindingInvariantCheck(name: "only_traversable_nodes_used_in_paths", passed: onlyTraversable, expected: "all path nodes traversable", actual: onlyTraversable ? "all path nodes traversable" : "non-traversable path node"),
         TerrainPathfindingInvariantCheck(name: "found_paths_begin_at_start", passed: foundPairs.allSatisfy { $0.1.actualPath.first == $0.0.request.start }, expected: "all found paths", actual: "\(foundPairs.filter { $0.1.actualPath.first == $0.0.request.start }.count)/\(foundPairs.count)"),
         TerrainPathfindingInvariantCheck(name: "found_paths_end_at_goal", passed: foundPairs.allSatisfy { $0.1.actualPath.last == $0.0.request.goal }, expected: "all found paths", actual: "\(foundPairs.filter { $0.1.actualPath.last == $0.0.request.goal }.count)/\(foundPairs.count)"),
         TerrainPathfindingInvariantCheck(name: "consecutive_path_nodes_are_four_neighbors", passed: fourNeighborSteps, expected: "Manhattan distance 1", actual: fourNeighborSteps ? "all steps valid" : "invalid step"),
         TerrainPathfindingInvariantCheck(name: "no_diagonal_steps", passed: noDiagonalSteps, expected: "0 diagonal steps", actual: noDiagonalSteps ? "0 diagonal steps" : "diagonal step found"),
+        TerrainPathfindingInvariantCheck(name: "no_vertical_steps", passed: noVerticalSteps, expected: "0 vertical steps", actual: noVerticalSteps ? "0 vertical steps" : "vertical step found"),
+        TerrainPathfindingInvariantCheck(name: "found_paths_have_no_repeated_nodes", passed: noRepeatedPathNodes, expected: "all found paths unique", actual: noRepeatedPathNodes ? "all found paths unique" : "repeated path node"),
         TerrainPathfindingInvariantCheck(name: "visited_count_within_limit", passed: pairs.allSatisfy { $0.1.visited <= $0.0.request.maxVisited }, expected: "all <= maxVisited", actual: "\(pairs.filter { $0.1.visited <= $0.0.request.maxVisited }.count)/\(pairs.count)"),
-        TerrainPathfindingInvariantCheck(name: "deterministic_neighbor_order_preserved", passed: deterministicCase?.actualPath == deterministicCase?.expectedPath && deterministicCase?.passed == true, expected: terrainPathNeighborMode, actual: deterministicCase?.passed == true ? terrainPathNeighborMode : "mismatch"),
+        TerrainPathfindingInvariantCheck(name: "deterministic_neighbor_order_preserved", passed: deterministicOrderPreserved, expected: terrainPathNeighborMode, actual: deterministicOrderPreserved ? terrainPathNeighborMode : "mismatch"),
+        TerrainPathfindingInvariantCheck(name: "missing_start_returns_invalid_start", passed: missingStartCase?.actualStatus == .invalidStart && missingStartCase?.passed == true, expected: "invalidStart", actual: missingStartCase?.actualStatus.rawValue ?? "missing fixture"),
+        TerrainPathfindingInvariantCheck(name: "unsupported_neighbor_mode_returns_unknown", passed: unsupportedModeCase?.actualStatus == .unknown && unsupportedModeCase?.actualReason == "unsupported_neighbor_mode" && unsupportedModeCase?.passed == true, expected: "unknown/unsupported_neighbor_mode", actual: "\(unsupportedModeCase?.actualStatus.rawValue ?? "missing")/\(unsupportedModeCase?.actualReason ?? "missing")"),
+        TerrainPathfindingInvariantCheck(name: "non_positive_search_limit_returns_limit_reached", passed: nonPositiveLimitCase?.actualStatus == .searchLimitReached && nonPositiveLimitCase?.actualReason == "non_positive_search_limit" && nonPositiveLimitCase?.passed == true, expected: "searchLimitReached/non_positive_search_limit", actual: "\(nonPositiveLimitCase?.actualStatus.rawValue ?? "missing")/\(nonPositiveLimitCase?.actualReason ?? "missing")"),
+        TerrainPathfindingInvariantCheck(name: "duplicate_coordinate_contract_preserved", passed: duplicateCase?.actualStatus == .found && duplicateCase?.actualPathLength == 2 && duplicateCase?.passed == true, expected: "first node wins", actual: duplicateCase?.passed == true ? "first node wins" : "mismatch"),
+        TerrainPathfindingInvariantCheck(name: "cycles_do_not_loop", passed: cycleCasesTerminate, expected: "both cycle fixtures bounded", actual: cycleCasesTerminate ? "both cycle fixtures bounded" : "cycle fixture failed"),
+        TerrainPathfindingInvariantCheck(name: "reasons_match_expected_when_specified", passed: expectedReasonsMatch, expected: "all specified reasons", actual: expectedReasonsMatch ? "all specified reasons" : "reason mismatch"),
         TerrainPathfindingInvariantCheck(name: "result_counts_match_summary", passed: counted == fixtureReport.summary.fixtures && fixtureReport.summary.passed + fixtureReport.summary.failed == fixtureReport.summary.fixtures, expected: "\(fixtureReport.summary.fixtures)", actual: "\(counted)"),
         TerrainPathfindingInvariantCheck(name: "no_world_access_required", passed: true, expected: "pure synthetic node graph", actual: "code-review invariant"),
         TerrainPathfindingInvariantCheck(name: "no_mutation_path_used", passed: true, expected: "none", actual: "code-review invariant"),

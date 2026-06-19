@@ -353,7 +353,16 @@ failure statuses, and dedicated fixture/invariant reports.
 
 ## Phase 4.12C - Pathfinding Fixture Hardening And Contract Cleanup
 
-Next recommended step: review fixture coverage, bounded-search semantics, and
-shared report contracts before any live integration planning. Live
-pathfinding, collision, mutation, route following, and agent movement remain
-out of scope.
+Status: implemented and validated.
+
+Goal: harden the fixture-only BFS contract with missing inputs, unsupported
+neighbor mode, non-positive limits, duplicate coordinates, cycles, vertical
+separation, and complex equal-path tie-breaking. Twenty fixtures and 23
+invariants now cover the bounded search contract.
+
+## Phase 4.13A - Live Pathfinding Integration Planning
+
+Next recommended step: document how captured column traversability could be
+adapted into a bounded live-search input without implementing that integration.
+Live pathfinding, collision, mutation, route following, and agent movement
+remain out of scope.

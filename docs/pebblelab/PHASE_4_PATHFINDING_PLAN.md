@@ -339,3 +339,22 @@ The scenario writes `terrain_pathfinding_fixture_report.json` and
 metrics, and emits one `lab_terrain_pathfinding_fixture_recorded` event. All 12
 fixtures and all 15 invariants pass. The implementation has no `World`, chunk,
 live scan, agent, movement, collision, or mutation dependency.
+
+## Phase 4.12C Hardening Status
+
+Phase 4.12C is implemented and validated. The same fixture smoke now contains
+20 cases and 23 invariants. Added coverage includes missing start evidence,
+unsupported neighbor mode, non-positive search limits, duplicate coordinates,
+reachable and unreachable cycles, vertical-only adjacency, and a larger
+equal-path graph with an exact deterministic route.
+
+The hardened contract specifies that the first node at a duplicated coordinate
+wins. Unsupported neighbor modes return `.unknown` with
+`unsupported_neighbor_mode`; non-positive limits return
+`.searchLimitReached` with `non_positive_search_limit`. Fixture results expose
+optional expected reasons plus actual reasons, and invariants verify specified
+reasons, bounded cycle termination, no vertical steps, and no repeated nodes
+in found paths.
+
+No live scan, world, chunk, real agent, movement, collision, mutation, A*, or
+weighted path behavior was introduced.
