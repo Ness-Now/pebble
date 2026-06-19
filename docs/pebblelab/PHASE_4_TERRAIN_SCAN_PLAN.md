@@ -265,3 +265,23 @@ Proceed to **Phase 4.8B - bounded read-only terrain scan smoke**. Implement the
 single-agent, radius-1, nine-cell contract exactly as specified before
 considering larger radii, multiple agents, vertical layers, orientation, or
 any world mutation.
+
+## Phase 4.8B Outcome
+
+The planned scenario is implemented and validated for seed `42` and five
+ticks:
+
+- one agent, placeholder, and unregistered core entity;
+- origin `(8, 63, 8)`, radius `1`, relation `around_below`;
+- exact `dz_then_dx` offset order;
+- planned/observed/loaded/ready cells: `9/9/9/9`;
+- one unique chunk and one distinct block ID (`water`, ID `292`);
+- all chunk states unchanged;
+- terrain scan and run success: `true`;
+- invariant checks passed/failed: `15/0`;
+- `pebsmoke`: `456 passed, 0 failed`.
+
+The next recommended phase is **Phase 4.8C - terrain scan edge and invariant
+hardening**. It should exercise an origin near a loaded chunk edge without
+adding radius configuration, multi-agent scans, terrain semantics, or
+mutation.

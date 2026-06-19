@@ -149,6 +149,15 @@ struct RunMetrics: Encodable {
     let worldInteractionBlockId: Int?
     let worldInteractionMeta: Int?
     let worldInteractionSuccess: Bool?
+    let terrainScanAgents: Int?
+    let terrainScanRadius: Int?
+    let terrainScanCellsPlanned: Int?
+    let terrainScanCellsObserved: Int?
+    let terrainScanLoadedCells: Int?
+    let terrainScanReadyCells: Int?
+    let terrainScanDistinctBlockIds: Int?
+    let terrainScanUniqueChunks: Int?
+    let terrainScanSuccess: Bool?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -247,6 +256,15 @@ struct RunMetrics: Encodable {
         worldInteractionBlockId: Int? = nil,
         worldInteractionMeta: Int? = nil,
         worldInteractionSuccess: Bool? = nil,
+        terrainScanAgents: Int? = nil,
+        terrainScanRadius: Int? = nil,
+        terrainScanCellsPlanned: Int? = nil,
+        terrainScanCellsObserved: Int? = nil,
+        terrainScanLoadedCells: Int? = nil,
+        terrainScanReadyCells: Int? = nil,
+        terrainScanDistinctBlockIds: Int? = nil,
+        terrainScanUniqueChunks: Int? = nil,
+        terrainScanSuccess: Bool? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -344,6 +362,15 @@ struct RunMetrics: Encodable {
         self.worldInteractionBlockId = worldInteractionBlockId
         self.worldInteractionMeta = worldInteractionMeta
         self.worldInteractionSuccess = worldInteractionSuccess
+        self.terrainScanAgents = terrainScanAgents
+        self.terrainScanRadius = terrainScanRadius
+        self.terrainScanCellsPlanned = terrainScanCellsPlanned
+        self.terrainScanCellsObserved = terrainScanCellsObserved
+        self.terrainScanLoadedCells = terrainScanLoadedCells
+        self.terrainScanReadyCells = terrainScanReadyCells
+        self.terrainScanDistinctBlockIds = terrainScanDistinctBlockIds
+        self.terrainScanUniqueChunks = terrainScanUniqueChunks
+        self.terrainScanSuccess = terrainScanSuccess
         self.successCriteria = successCriteria
     }
 }

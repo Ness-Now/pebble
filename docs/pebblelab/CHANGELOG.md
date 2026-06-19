@@ -40,3 +40,4 @@
 - Added multi-agent read-only world observation smoke for PebbleLab agents.
 - Added invariant report for multi-agent world observation smoke.
 - Documented bounded read-only terrain scan plan for PebbleLab agents.
+- Added bounded read-only terrain scan smoke for PebbleLab agents.

@@ -121,6 +121,83 @@ struct WorldObservationInvariantCheck: Encodable {
     let actual: String
 }
 
+struct LabTerrainScanCell: Encodable {
+    let dx: Int
+    let dz: Int
+    let x: Int
+    let y: Int
+    let z: Int
+    let chunk: LabWorldInteractionChunk
+    let cell: Int?
+    let blockId: Int?
+    let meta: Int?
+    let blockName: String?
+    let chunkStateUnchanged: Bool
+    let success: Bool
+}
+
+struct LabTerrainScanSummary: Encodable {
+    let cellsPlanned: Int
+    let cellsObserved: Int
+    let loadedCells: Int
+    let readyCells: Int
+    let distinctBlockIds: Int
+    let uniqueChunks: Int
+    let chunkStateUnchanged: Bool
+    let success: Bool
+}
+
+struct LabTerrainScanSnapshot: Encodable {
+    let scenario: String
+    let seed: UInt32
+    let ticksCompleted: Int
+    let agentId: String
+    let physicalId: String
+    let coreEntityId: Int
+    let agentPosition: LabAgentPosition
+    let coreEntityPosition: LabAgentPosition
+    let divergence: Int
+    let linksCoherent: Bool
+    let origin: LabWorldInteractionTarget
+    let radius: Int
+    let relation: String
+    let order: String
+    let cells: [LabTerrainScanCell]
+    let summary: LabTerrainScanSummary
+}
+
+struct TerrainScanInvariantReport: Encodable {
+    let scenario: String
+    let seed: UInt32
+    let ticksCompleted: Int
+    let success: Bool
+    let summary: TerrainScanInvariantSummary
+    let checks: [TerrainScanInvariantCheck]
+    let notes: [String]
+}
+
+struct TerrainScanInvariantSummary: Encodable {
+    let checksPassed: Int
+    let checksFailed: Int
+    let agents: Int
+    let placeholders: Int
+    let coreEntities: Int
+    let radius: Int
+    let cellsPlanned: Int
+    let cellsObserved: Int
+    let loadedCells: Int
+    let readyCells: Int
+    let distinctBlockIds: Int
+    let uniqueChunks: Int
+}
+
+struct TerrainScanInvariantCheck: Encodable {
+    let name: String
+    let passed: Bool
+    let expected: String
+    let actual: String
+}
+
 func observeBlockBelow(
     world: World,
     scenario: String,
@@ -349,6 +426,280 @@ func makeWorldObservationInvariantReport(
         notes: [
             "This report validates read-only multi-agent world observation.",
             "It does not prove terrain scanning, pathfinding, collision, mining, construction, inventory, or mutation safety."
+        ]
+    )
+}
+
+func scanTerrainAroundBelow(
+    world: World,
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int,
+    agent: LabAgent,
+    handle: LabPhysicalAgentHandle,
+    coreLink: LabCoreAgentLink
+) -> LabTerrainScanSnapshot {
+    let radius = 1
+    let origin = LabWorldInteractionTarget(
+        x: agent.position.x,
+        y: agent.position.y - 1,
+        z: agent.position.z
+    )
+    var cells: [LabTerrainScanCell] = []
+
+    for dz in -radius...radius {
+        for dx in -radius...radius {
+            let x = origin.x + dx
+            let y = origin.y
+            let z = origin.z + dz
+            let cx = floorDiv(x, CHUNK_W)
+            let cz = floorDiv(z, CHUNK_W)
+            let loaded = world.isLoadedAt(x, z)
+            let ready = world.isChunkReady(cx, cz)
+            let chunk = world.getChunk(cx, cz)
+            let modifiedBefore = chunk?.modified
+            let versionBefore = chunk?.version
+            let dirtyBefore = chunk?.dirty
+
+            let cell = loaded && ready ? world.getBlock(x, y, z) : nil
+            let blockId = cell.map { $0 >> 4 }
+            let meta = cell.map { $0 & 15 }
+            let validBlockId = blockId.map { $0 >= 0 && $0 < blockDefs.count } ?? false
+            let blockName = validBlockId ? blockId.map { blockDefs[$0].name } : nil
+            let chunkStateUnchanged = modifiedBefore == chunk?.modified
+                && versionBefore == chunk?.version
+                && dirtyBefore == chunk?.dirty
+
+            cells.append(LabTerrainScanCell(
+                dx: dx,
+                dz: dz,
+                x: x,
+                y: y,
+                z: z,
+                chunk: LabWorldInteractionChunk(
+                    cx: cx,
+                    cz: cz,
+                    loaded: loaded,
+                    ready: ready
+                ),
+                cell: cell,
+                blockId: blockId,
+                meta: meta,
+                blockName: blockName,
+                chunkStateUnchanged: chunkStateUnchanged,
+                success: loaded && ready && validBlockId && chunkStateUnchanged
+            ))
+        }
+    }
+
+    let cellsObserved = cells.filter { $0.cell != nil }.count
+    let loadedCells = cells.filter { $0.chunk.loaded }.count
+    let readyCells = cells.filter { $0.chunk.ready }.count
+    let distinctBlockIds = Set(cells.compactMap(\.blockId)).count
+    let uniqueChunks = Set(cells.map { "\($0.chunk.cx),\($0.chunk.cz)" }).count
+    let chunkStateUnchanged = cells.allSatisfy(\.chunkStateUnchanged)
+    let linksMatch = handle.agentId == agent.id
+        && coreLink.agentId == agent.id
+        && handle.physicalId == coreLink.physicalId
+    let success = linksMatch
+        && coreLink.divergence == 0
+        && cells.count == 9
+        && cellsObserved == 9
+        && loadedCells == 9
+        && readyCells == 9
+        && distinctBlockIds > 0
+        && chunkStateUnchanged
+        && cells.allSatisfy(\.success)
+
+    return LabTerrainScanSnapshot(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        agentId: agent.id,
+        physicalId: handle.physicalId,
+        coreEntityId: coreLink.coreEntityId,
+        agentPosition: agent.position,
+        coreEntityPosition: coreLink.coreEntityPosition,
+        divergence: coreLink.divergence,
+        linksCoherent: linksMatch,
+        origin: origin,
+        radius: radius,
+        relation: "around_below",
+        order: "dz_then_dx",
+        cells: cells,
+        summary: LabTerrainScanSummary(
+            cellsPlanned: 9,
+            cellsObserved: cellsObserved,
+            loadedCells: loadedCells,
+            readyCells: readyCells,
+            distinctBlockIds: distinctBlockIds,
+            uniqueChunks: uniqueChunks,
+            chunkStateUnchanged: chunkStateUnchanged,
+            success: success
+        )
+    )
+}
+
+func makeTerrainScanInvariantReport(
+    snapshot: LabTerrainScanSnapshot,
+    agents: Int,
+    placeholders: Int,
+    coreEntities: Int
+) -> TerrainScanInvariantReport {
+    let expectedOffsets = [
+        (-1, -1), (0, -1), (1, -1),
+        (-1, 0), (0, 0), (1, 0),
+        (-1, 1), (0, 1), (1, 1)
+    ]
+    let actualOffsets = snapshot.cells.map { ($0.dx, $0.dz) }
+    let offsetsOrdered = zip(actualOffsets, expectedOffsets).allSatisfy { actual, expected in
+        actual.0 == expected.0 && actual.1 == expected.1
+    } && actualOffsets.count == expectedOffsets.count
+    let uniqueTargets = Set(snapshot.cells.map { "\($0.x),\($0.y),\($0.z)" }).count
+    let loadedAndReadyCells = snapshot.cells.filter {
+        $0.cell != nil && $0.chunk.loaded && $0.chunk.ready
+    }.count
+    let unchangedCells = snapshot.cells.filter(\.chunkStateUnchanged).count
+    let distinctBlockIds = Set(snapshot.cells.compactMap(\.blockId)).count
+    let validPackedCells = snapshot.cells.filter { scanCell in
+        guard let cell = scanCell.cell,
+              let blockId = scanCell.blockId,
+              let meta = scanCell.meta,
+              let blockName = scanCell.blockName,
+              blockId >= 0,
+              blockId < blockDefs.count,
+              (0...15).contains(meta) else {
+            return false
+        }
+        return cell == ((blockId << 4) | meta) && blockDefs[blockId].name == blockName
+    }.count
+    let linksCoherent = agents == 1
+        && placeholders == 1
+        && coreEntities == 1
+        && snapshot.linksCoherent
+        && !snapshot.agentId.isEmpty
+        && !snapshot.physicalId.isEmpty
+        && snapshot.coreEntityId > 0
+
+    let checks = [
+        TerrainScanInvariantCheck(
+            name: "agent_exists",
+            passed: agents == 1 && !snapshot.agentId.isEmpty,
+            expected: "1",
+            actual: "\(agents)"
+        ),
+        TerrainScanInvariantCheck(
+            name: "physical_core_links_coherent",
+            passed: linksCoherent,
+            expected: "one coherent link",
+            actual: "agents=\(agents), placeholders=\(placeholders), coreEntities=\(coreEntities)"
+        ),
+        TerrainScanInvariantCheck(
+            name: "abstract_core_divergence_zero",
+            passed: snapshot.divergence == 0,
+            expected: "0",
+            actual: "\(snapshot.divergence)"
+        ),
+        TerrainScanInvariantCheck(
+            name: "radius_equals_one",
+            passed: snapshot.radius == 1,
+            expected: "1",
+            actual: "\(snapshot.radius)"
+        ),
+        TerrainScanInvariantCheck(
+            name: "relation_around_below",
+            passed: snapshot.relation == "around_below",
+            expected: "around_below",
+            actual: snapshot.relation
+        ),
+        TerrainScanInvariantCheck(
+            name: "order_dz_then_dx",
+            passed: snapshot.order == "dz_then_dx",
+            expected: "dz_then_dx",
+            actual: snapshot.order
+        ),
+        TerrainScanInvariantCheck(
+            name: "cells_planned_equals_nine",
+            passed: snapshot.summary.cellsPlanned == 9,
+            expected: "9",
+            actual: "\(snapshot.summary.cellsPlanned)"
+        ),
+        TerrainScanInvariantCheck(
+            name: "cells_observed_equals_nine",
+            passed: snapshot.summary.cellsObserved == 9,
+            expected: "9",
+            actual: "\(snapshot.summary.cellsObserved)"
+        ),
+        TerrainScanInvariantCheck(
+            name: "all_decoded_cells_loaded_ready",
+            passed: loadedAndReadyCells == 9,
+            expected: "9",
+            actual: "\(loadedAndReadyCells)"
+        ),
+        TerrainScanInvariantCheck(
+            name: "all_chunks_unchanged",
+            passed: unchangedCells == 9 && snapshot.summary.chunkStateUnchanged,
+            expected: "9",
+            actual: "\(unchangedCells)"
+        ),
+        TerrainScanInvariantCheck(
+            name: "offsets_deterministic_dz_then_dx",
+            passed: offsetsOrdered,
+            expected: "9 ordered offsets",
+            actual: "\(actualOffsets.count) ordered offsets"
+        ),
+        TerrainScanInvariantCheck(
+            name: "target_coordinates_unique",
+            passed: uniqueTargets == 9,
+            expected: "9 unique",
+            actual: "\(uniqueTargets) unique"
+        ),
+        TerrainScanInvariantCheck(
+            name: "distinct_block_ids_accounted",
+            passed: distinctBlockIds > 0
+                && distinctBlockIds == snapshot.summary.distinctBlockIds,
+            expected: ">= 1 and matches summary",
+            actual: "\(distinctBlockIds)"
+        ),
+        TerrainScanInvariantCheck(
+            name: "all_packed_cells_valid",
+            passed: validPackedCells == 9,
+            expected: "9",
+            actual: "\(validPackedCells)"
+        ),
+        TerrainScanInvariantCheck(
+            name: "no_mutation_path_used",
+            passed: true,
+            expected: "guarded World.getBlock only",
+            actual: "code-review invariant"
+        )
+    ]
+    let checksFailed = checks.filter { !$0.passed }.count
+
+    return TerrainScanInvariantReport(
+        scenario: snapshot.scenario,
+        seed: snapshot.seed,
+        ticksCompleted: snapshot.ticksCompleted,
+        success: checksFailed == 0 && snapshot.summary.success,
+        summary: TerrainScanInvariantSummary(
+            checksPassed: checks.count - checksFailed,
+            checksFailed: checksFailed,
+            agents: agents,
+            placeholders: placeholders,
+            coreEntities: coreEntities,
+            radius: snapshot.radius,
+            cellsPlanned: snapshot.summary.cellsPlanned,
+            cellsObserved: snapshot.summary.cellsObserved,
+            loadedCells: snapshot.summary.loadedCells,
+            readyCells: snapshot.summary.readyCells,
+            distinctBlockIds: snapshot.summary.distinctBlockIds,
+            uniqueChunks: snapshot.summary.uniqueChunks
+        ),
+        checks: checks,
+        notes: [
+            "This report validates the bounded read-only terrain scan smoke.",
+            "The no-mutation check is a code-review contract; the runtime checks also require unchanged chunk state.",
+            "It does not prove pathfinding, collision, traversability, mining, construction, or multi-agent scanning."
         ]
     )
 }

@@ -14,6 +14,8 @@ let isPhysicalBehaviorScenario = options.scenario == "physical_behavior_smoke"
 let isWorldObservationSingleScenario = options.scenario == "world_observation_smoke"
 let isWorldObservationMultiScenario = options.scenario == "world_observation_multi_smoke"
 let isWorldObservationScenario = isWorldObservationSingleScenario || isWorldObservationMultiScenario
+let isTerrainScanScenario = options.scenario == "terrain_scan_smoke"
+let isWorldInteractionScenario = isWorldObservationScenario || isTerrainScanScenario
 
 var ticksCompleted = 0
 var eventsNDJSON = ""
@@ -801,6 +803,37 @@ let worldInteractionSuccess = isWorldObservationSingleScenario
         ? ((worldInteractionMultiSnapshot?.summary.success ?? false)
             && (worldObservationInvariantReport?.success ?? false))
         : nil)
+let terrainScanSnapshot: LabTerrainScanSnapshot? = {
+    guard isTerrainScanScenario,
+          let agent = labAgents.first,
+          let handle = physicalBridge.handles.first(where: { $0.agentId == agent.id }),
+          let coreLink = coreEntityBridge.snapshotLinks(for: labAgents).first(where: {
+              $0.agentId == agent.id
+          }) else {
+        return nil
+    }
+    return scanTerrainAroundBelow(
+        world: world,
+        scenario: options.scenario,
+        seed: options.seed,
+        ticksCompleted: ticksCompleted,
+        agent: agent,
+        handle: handle,
+        coreLink: coreLink
+    )
+}()
+let terrainScanInvariantReport = terrainScanSnapshot.map {
+    makeTerrainScanInvariantReport(
+        snapshot: $0,
+        agents: labAgents.count,
+        placeholders: physicalBridge.count,
+        coreEntities: coreEntityBridge.count
+    )
+}
+let terrainScanSuccess = isTerrainScanScenario
+    ? ((terrainScanSnapshot?.summary.success ?? false)
+        && (terrainScanInvariantReport?.success ?? false))
+    : nil
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
     && successCriteria.agentTicksRecorded
@@ -809,6 +842,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (physicalBehaviorSuccess ?? true)
     && (worldObservationInvariantReport?.success ?? true)
     && (worldInteractionSuccess ?? true)
+    && (terrainScanSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -839,7 +873,24 @@ if options.outPath != nil {
                 maxDivergence: physicalBehaviorMaxDivergence
             ))
         }
-        if let worldInteractionMultiSnapshot {
+        if let terrainScanSnapshot {
+            try appendEvent(RunEvent(
+                type: "lab_terrain_scan_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: terrainScanSuccess,
+                agentId: terrainScanSnapshot.agentId,
+                physicalId: terrainScanSnapshot.physicalId,
+                coreEntityId: terrainScanSnapshot.coreEntityId,
+                uniqueChunks: terrainScanSnapshot.summary.uniqueChunks,
+                distinctBlockIds: terrainScanSnapshot.summary.distinctBlockIds,
+                radius: terrainScanSnapshot.radius,
+                cellsPlanned: terrainScanSnapshot.summary.cellsPlanned,
+                cellsObserved: terrainScanSnapshot.summary.cellsObserved,
+                loadedCells: terrainScanSnapshot.summary.loadedCells,
+                readyCells: terrainScanSnapshot.summary.readyCells
+            ))
+        } else if let worldInteractionMultiSnapshot {
             try appendEvent(RunEvent(
                 type: "lab_world_observation_multi_recorded",
                 tick: ticksCompleted,
@@ -872,6 +923,18 @@ if options.outPath != nil {
                 blockId: worldInteractionSnapshot.blockId,
                 meta: worldInteractionSnapshot.meta,
                 blockName: worldInteractionSnapshot.blockName
+            ))
+        } else if isTerrainScanScenario {
+            try appendEvent(RunEvent(
+                type: "lab_terrain_scan_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: false,
+                radius: 1,
+                cellsPlanned: 9,
+                cellsObserved: 0,
+                loadedCells: 0,
+                readyCells: 0
             ))
         } else if isWorldObservationScenario {
             try appendEvent(RunEvent(
@@ -935,7 +998,7 @@ if let outPath = options.outPath {
                 path: "world_snapshot.json"
             ))
         }
-        if !labAgents.isEmpty, options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke" || options.scenario == "long_run_smoke" || options.scenario == "regression_smoke" || options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" || options.scenario == "core_entity_smoke" || isPhysicalBehaviorScenario || isWorldObservationScenario {
+        if !labAgents.isEmpty, options.scenario == "agent_smoke" || options.scenario == "agents_basic" || options.scenario == "seek_safety_smoke" || options.scenario == "long_run_smoke" || options.scenario == "regression_smoke" || options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" || options.scenario == "core_entity_smoke" || isPhysicalBehaviorScenario || isWorldInteractionScenario {
             try writeJSON(
                 AgentSnapshot(
                     scenario: options.scenario,
@@ -953,7 +1016,7 @@ if let outPath = options.outPath {
                 agents: labAgents.count
             ))
         }
-        if options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" || options.scenario == "core_entity_smoke" || isPhysicalBehaviorScenario || isWorldObservationScenario {
+        if options.scenario == "physical_placeholder_smoke" || options.scenario == "physical_sync_smoke" || options.scenario == "core_entity_smoke" || isPhysicalBehaviorScenario || isWorldInteractionScenario {
             try writeJSON(
                 PhysicalSnapshot(
                     scenario: options.scenario,
@@ -971,7 +1034,7 @@ if let outPath = options.outPath {
                 agents: physicalBridge.count
             ))
         }
-        if options.scenario == "core_entity_smoke" || isPhysicalBehaviorScenario || isWorldObservationScenario {
+        if options.scenario == "core_entity_smoke" || isPhysicalBehaviorScenario || isWorldInteractionScenario {
             try writeJSON(
                 CoreEntitySnapshot(
                     scenario: options.scenario,
@@ -1087,7 +1150,18 @@ if let outPath = options.outPath {
                 ))
             }
         }
-        if let worldInteractionMultiSnapshot {
+        if let terrainScanSnapshot {
+            try writeJSON(
+                terrainScanSnapshot,
+                to: outURL.appendingPathComponent("terrain_scan_snapshot.json")
+            )
+            if let terrainScanInvariantReport {
+                try writeJSON(
+                    terrainScanInvariantReport,
+                    to: outURL.appendingPathComponent("terrain_scan_invariant_report.json")
+                )
+            }
+        } else if let worldInteractionMultiSnapshot {
             try writeJSON(
                 worldInteractionMultiSnapshot,
                 to: outURL.appendingPathComponent("world_interaction_snapshot.json")
@@ -1222,6 +1296,15 @@ if let outPath = options.outPath {
             worldInteractionBlockId: isWorldObservationSingleScenario ? worldInteractionSnapshot?.blockId : nil,
             worldInteractionMeta: isWorldObservationSingleScenario ? worldInteractionSnapshot?.meta : nil,
             worldInteractionSuccess: worldInteractionSuccess,
+            terrainScanAgents: isTerrainScanScenario ? labAgents.count : nil,
+            terrainScanRadius: terrainScanSnapshot?.radius,
+            terrainScanCellsPlanned: terrainScanSnapshot?.summary.cellsPlanned,
+            terrainScanCellsObserved: terrainScanSnapshot?.summary.cellsObserved,
+            terrainScanLoadedCells: terrainScanSnapshot?.summary.loadedCells,
+            terrainScanReadyCells: terrainScanSnapshot?.summary.readyCells,
+            terrainScanDistinctBlockIds: terrainScanSnapshot?.summary.distinctBlockIds,
+            terrainScanUniqueChunks: terrainScanSnapshot?.summary.uniqueChunks,
+            terrainScanSuccess: terrainScanSuccess,
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))

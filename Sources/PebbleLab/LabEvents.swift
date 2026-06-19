@@ -101,6 +101,11 @@ struct RunEvent: Encodable {
     let readyObservations: Int?
     let uniqueChunks: Int?
     let distinctBlockIds: Int?
+    let radius: Int?
+    let cellsPlanned: Int?
+    let cellsObserved: Int?
+    let loadedCells: Int?
+    let readyCells: Int?
 
     init(
         type: String,
@@ -202,7 +207,12 @@ struct RunEvent: Encodable {
         loadedObservations: Int? = nil,
         readyObservations: Int? = nil,
         uniqueChunks: Int? = nil,
-        distinctBlockIds: Int? = nil
+        distinctBlockIds: Int? = nil,
+        radius: Int? = nil,
+        cellsPlanned: Int? = nil,
+        cellsObserved: Int? = nil,
+        loadedCells: Int? = nil,
+        readyCells: Int? = nil
     ) {
         self.type = type
         self.event = event
@@ -304,6 +314,11 @@ struct RunEvent: Encodable {
         self.readyObservations = readyObservations
         self.uniqueChunks = uniqueChunks
         self.distinctBlockIds = distinctBlockIds
+        self.radius = radius
+        self.cellsPlanned = cellsPlanned
+        self.cellsObserved = cellsObserved
+        self.loadedCells = loadedCells
+        self.readyCells = readyCells
     }
 }
 

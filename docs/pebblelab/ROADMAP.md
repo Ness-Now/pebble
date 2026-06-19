@@ -246,6 +246,15 @@ bounded output, aggregate metrics, and an invariant report contract.
 
 ## Phase 4.8B - Bounded Read-Only Terrain Scan Smoke
 
-Next recommended step: implement the planned nine-cell scan without chunk
-loading, terrain mutation, pathfinding, collision, save/load, or renderer
-changes.
+Status: done and validated.
+
+Goal: scan exactly nine loaded and ready cells around one synchronized agent's
+below-cell origin, preserve deterministic `dz_then_dx` order, and gate success
+with a dedicated 15-check invariant report.
+
+## Phase 4.8C - Terrain Scan Edge And Invariant Hardening
+
+Next recommended step: validate the same fixed radius-1 scan near a loaded
+chunk edge and harden unavailable-cell reporting. Terrain semantics and
+traversability should follow only after that read-only boundary contract is
+stable; mutation remains out of scope.
