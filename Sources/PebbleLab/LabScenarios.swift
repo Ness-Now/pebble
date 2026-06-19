@@ -28,7 +28,7 @@ struct AdoptedChunk {
     let nonAirBlocks: Int
 }
 
-let supportedScenarios = ["empty", "chunk_smoke", "agent_smoke", "agents_basic", "seek_safety_smoke", "long_run_smoke", "regression_smoke", "physical_placeholder_smoke", "physical_sync_smoke", "core_entity_smoke", "physical_behavior_smoke", "physical_behavior_multi_smoke", "world_observation_smoke", "world_observation_multi_smoke", "terrain_scan_smoke", "terrain_scan_edge_smoke", "terrain_semantics_fixture_smoke"]
+let supportedScenarios = ["empty", "chunk_smoke", "agent_smoke", "agents_basic", "seek_safety_smoke", "long_run_smoke", "regression_smoke", "physical_placeholder_smoke", "physical_sync_smoke", "core_entity_smoke", "physical_behavior_smoke", "physical_behavior_multi_smoke", "world_observation_smoke", "world_observation_multi_smoke", "terrain_scan_smoke", "terrain_scan_edge_smoke", "terrain_semantics_fixture_smoke", "terrain_traversability_fixture_smoke"]
 
 func validateScenario(_ scenario: String) {
     guard supportedScenarios.contains(scenario) else {
@@ -40,7 +40,7 @@ func prepareScenario(_ options: Options, world: World) -> ScenarioResult {
     let scenario = options.scenario
 
     switch scenario {
-    case "terrain_semantics_fixture_smoke":
+    case "terrain_semantics_fixture_smoke", "terrain_traversability_fixture_smoke":
         return ScenarioResult()
     case "chunk_smoke", "agent_smoke", "agents_basic", "seek_safety_smoke", "long_run_smoke", "regression_smoke", "physical_placeholder_smoke", "physical_sync_smoke", "core_entity_smoke", "physical_behavior_smoke", "physical_behavior_multi_smoke", "world_observation_smoke", "world_observation_multi_smoke", "terrain_scan_smoke", "terrain_scan_edge_smoke":
         registerAllBlocks()

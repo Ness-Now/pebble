@@ -24,7 +24,7 @@ func usage() -> String {
     Options:
       --seed <UInt32>      World seed. Default: 12345
       --ticks <Int>        Number of ticks to run. Default: 20
-      --scenario <String>  Scenario name. Currently supported: empty, chunk_smoke, agent_smoke, agents_basic, seek_safety_smoke, long_run_smoke, regression_smoke, physical_placeholder_smoke, physical_sync_smoke, core_entity_smoke, physical_behavior_smoke, physical_behavior_multi_smoke, world_observation_smoke, world_observation_multi_smoke, terrain_scan_smoke, terrain_scan_edge_smoke, terrain_semantics_fixture_smoke
+      --scenario <String>  Scenario name. Currently supported: empty, chunk_smoke, agent_smoke, agents_basic, seek_safety_smoke, long_run_smoke, regression_smoke, physical_placeholder_smoke, physical_sync_smoke, core_entity_smoke, physical_behavior_smoke, physical_behavior_multi_smoke, world_observation_smoke, world_observation_multi_smoke, terrain_scan_smoke, terrain_scan_edge_smoke, terrain_semantics_fixture_smoke, terrain_traversability_fixture_smoke
       --chunk-radius <Int> Chunk radius for chunk_smoke. Default: 0. Supported: 0...1
       --agents <Int>       Agent count for agents_basic and long_run_smoke. Default: 2, or 10 for long_run_smoke. Supported: 1...100
       --event-rate <Int>   Write frequent events every N ticks. Default: 1

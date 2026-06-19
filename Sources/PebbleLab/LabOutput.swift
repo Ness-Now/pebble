@@ -176,6 +176,18 @@ struct RunMetrics: Encodable {
     let terrainSemanticFixturePlantLikeCases: Int?
     let terrainSemanticFixtureOtherCases: Int?
     let terrainSemanticFixtureSuccess: Bool?
+    let terrainTraversabilityCells: Int?
+    let terrainTraversabilityTraversableCells: Int?
+    let terrainTraversabilityBlockedCells: Int?
+    let terrainTraversabilityUnknownCells: Int?
+    let terrainTraversabilityUnsupportedCells: Int?
+    let terrainTraversabilityUnsafeCells: Int?
+    let terrainTraversabilityOccupiedVerticalSpaceCells: Int?
+    let terrainTraversabilityOtherCells: Int?
+    let terrainTraversabilitySuccess: Bool?
+    let terrainTraversabilityFixtureCases: Int?
+    let terrainTraversabilityFixturePassed: Int?
+    let terrainTraversabilityFixtureFailed: Int?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -301,6 +313,18 @@ struct RunMetrics: Encodable {
         terrainSemanticFixturePlantLikeCases: Int? = nil,
         terrainSemanticFixtureOtherCases: Int? = nil,
         terrainSemanticFixtureSuccess: Bool? = nil,
+        terrainTraversabilityCells: Int? = nil,
+        terrainTraversabilityTraversableCells: Int? = nil,
+        terrainTraversabilityBlockedCells: Int? = nil,
+        terrainTraversabilityUnknownCells: Int? = nil,
+        terrainTraversabilityUnsupportedCells: Int? = nil,
+        terrainTraversabilityUnsafeCells: Int? = nil,
+        terrainTraversabilityOccupiedVerticalSpaceCells: Int? = nil,
+        terrainTraversabilityOtherCells: Int? = nil,
+        terrainTraversabilitySuccess: Bool? = nil,
+        terrainTraversabilityFixtureCases: Int? = nil,
+        terrainTraversabilityFixturePassed: Int? = nil,
+        terrainTraversabilityFixtureFailed: Int? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -425,6 +449,18 @@ struct RunMetrics: Encodable {
         self.terrainSemanticFixturePlantLikeCases = terrainSemanticFixturePlantLikeCases
         self.terrainSemanticFixtureOtherCases = terrainSemanticFixtureOtherCases
         self.terrainSemanticFixtureSuccess = terrainSemanticFixtureSuccess
+        self.terrainTraversabilityCells = terrainTraversabilityCells
+        self.terrainTraversabilityTraversableCells = terrainTraversabilityTraversableCells
+        self.terrainTraversabilityBlockedCells = terrainTraversabilityBlockedCells
+        self.terrainTraversabilityUnknownCells = terrainTraversabilityUnknownCells
+        self.terrainTraversabilityUnsupportedCells = terrainTraversabilityUnsupportedCells
+        self.terrainTraversabilityUnsafeCells = terrainTraversabilityUnsafeCells
+        self.terrainTraversabilityOccupiedVerticalSpaceCells = terrainTraversabilityOccupiedVerticalSpaceCells
+        self.terrainTraversabilityOtherCells = terrainTraversabilityOtherCells
+        self.terrainTraversabilitySuccess = terrainTraversabilitySuccess
+        self.terrainTraversabilityFixtureCases = terrainTraversabilityFixtureCases
+        self.terrainTraversabilityFixturePassed = terrainTraversabilityFixturePassed
+        self.terrainTraversabilityFixtureFailed = terrainTraversabilityFixtureFailed
         self.successCriteria = successCriteria
     }
 }

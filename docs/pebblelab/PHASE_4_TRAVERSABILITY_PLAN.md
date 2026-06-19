@@ -294,3 +294,16 @@ Proceed with **Phase 4.10B — terrain traversability fixture smoke** as a pure
 PebbleLab fixture scenario over synthetic support/feet/head columns. Do not
 connect the classifier to a real world scan until a later Phase 4.10C defines
 and validates a bounded vertical read-only observation contract.
+
+## Phase 4.10B Implementation Status
+
+Implemented and validated on 2026-06-19. The pure
+`terrain_traversability_fixture_smoke` evaluates 15 synthetic semantic columns
+without agents, chunks, registries, or world reads. It produces a fixture
+report, an 11-check invariant report, aggregate metrics, and one event.
+
+All fixtures pass. The coherent v0 distribution is one traversable candidate,
+eight unknown columns, one unsupported column, three unsafe columns, and two
+occupied vertical spaces. No fixture currently emits `blocked` or `other`.
+Traversability remains an abstract candidate assessment and is not connected
+to terrain scans, pathfinding, collision, or agent movement.

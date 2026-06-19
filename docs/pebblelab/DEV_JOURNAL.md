@@ -501,3 +501,89 @@ and ML integrations remain out of scope.
 
 Phase 4.10B: add a pure `terrain_traversability_fixture_smoke` over synthetic
 support/feet/head semantic columns, with no world access or gameplay behavior.
+
+## 2026-06-19 — Phase 4.10B Terrain Traversability Fixture Smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Implement and audit a pure traversability classifier over synthetic
+support/feet/head semantic columns, without connecting it to a world scan,
+physics, pathfinding, or agent behavior.
+
+### Files Created Or Modified
+
+- `Sources/PebbleLab/LabTerrainTraversability.swift` (new)
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_TRAVERSABILITY_PLAN.md`
+
+### Traversability V0 Rules
+
+- Missing cells and unknown semantics return `unknown`.
+- Solid feet/head returns `occupiedVerticalSpace`.
+- Air support returns `unsupported`.
+- Liquid support or vertical liquid returns `unsafe`.
+- Other support and plant-like vertical space return `unknown`.
+- Solid support with air feet/head returns a `traversable` candidate.
+- Remaining combinations fall back to `other`.
+
+The classifier accepts only `LabTerrainColumnSemantic`. It has no `World`
+parameter and produces no neighbors, routes, costs, movement, or actions.
+
+### Fixtures And Outputs
+
+Fifteen fixtures cover clear support, unsupported air, solid obstructions,
+liquid support/space, unknown semantics, plant-like space, missing data, and
+unclassified support.
+
+- `terrain_traversability_fixture_report.json` records expected and actual
+  kind/reason for each fixture.
+- `terrain_traversability_invariant_report.json` audits 11 runtime and
+  code-review contracts.
+- `metrics.json` exposes result and fixture counts.
+- `events.ndjson` contains one `lab_terrain_traversability_recorded` event.
+
+### Still Prohibited
+
+No PebbleCore, registry, save/load, renderer, resource, or golden path changed.
+No live vertical scan, world read, mutation, pathfinding, collision, neighbor
+expansion, route, cost, movement, goal selection, or multi-agent navigation
+was added.
+
+### Validation Commands
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario terrain_traversability_fixture_smoke --seed 42 --ticks 0 --out runs/check_terrain_traversability_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_semantics_fixture_smoke --seed 42 --ticks 0 --out runs/check_terrain_semantics_fixture_after_traversability`
+- `swift run -c release PebbleLab -- --scenario terrain_scan_smoke --seed 42 --ticks 5 --out runs/check_terrain_scan_after_traversability`
+- `swift run -c release PebbleLab -- --scenario terrain_scan_edge_smoke --seed 42 --ticks 5 --out runs/check_terrain_scan_edge_after_traversability`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_traversability`
+- `swift run -c release PebbleLab -- --scenario world_observation_multi_smoke --seed 42 --ticks 5 --out runs/check_world_observation_after_traversability`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Fixture report: `15 passed, 0 failed`.
+- Invariant report: `11 passed, 0 failed`.
+- Result counts: traversable `1`, blocked `0`, unknown `8`, unsupported `1`,
+  unsafe `3`, occupied vertical space `2`, other `0`.
+- Debug and Pebble release builds passed.
+- Semantic fixture, central terrain scan, edge terrain scan, regression, and
+  multi-agent world observation scenarios passed.
+- The edge scan remains successful across four chunks.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.11A: vertical column scan planning, docs-only. Define how support,
+feet, and head cells could be captured read-only before any live
+traversability integration is considered.

@@ -47,3 +47,4 @@
 - Added read-only terrain semantic classification v0 for terrain scans.
 - Added terrain semantics fixture smoke covering classification rules.
 - Documented terrain traversability planning contract.
+- Added terrain traversability fixture smoke for synthetic semantic columns.

@@ -300,7 +300,14 @@ semantics, pathfinding, collision, or agent actions.
 
 ## Phase 4.10B - Terrain Traversability Fixture Smoke
 
-Next recommended step: validate the proposed traversability rules with pure
-synthetic semantic columns and no world access. Pathfinding, collision,
-mutation, live vertical scans, multi-agent navigation, and movement decisions
-remain out of scope.
+Status: implemented and validated.
+
+Goal: validate the conservative support/feet/head rules with 15 pure synthetic
+semantic columns and dedicated fixture/invariant reports.
+
+## Phase 4.11A - Vertical Column Scan Planning
+
+Next recommended step: docs-only planning for a bounded read-only vertical
+column observation contract. Pathfinding, collision, mutation, live
+traversability decisions, multi-agent navigation, and movement remain out of
+scope.

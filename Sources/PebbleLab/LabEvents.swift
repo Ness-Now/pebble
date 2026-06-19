@@ -122,6 +122,12 @@ struct RunEvent: Encodable {
     let liquidCases: Int?
     let plantLikeCases: Int?
     let otherCases: Int?
+    let cellsEvaluated: Int?
+    let traversableCells: Int?
+    let blockedCells: Int?
+    let unsupportedCells: Int?
+    let unsafeCells: Int?
+    let occupiedVerticalSpaceCells: Int?
 
     init(
         type: String,
@@ -244,7 +250,13 @@ struct RunEvent: Encodable {
         solidCases: Int? = nil,
         liquidCases: Int? = nil,
         plantLikeCases: Int? = nil,
-        otherCases: Int? = nil
+        otherCases: Int? = nil,
+        cellsEvaluated: Int? = nil,
+        traversableCells: Int? = nil,
+        blockedCells: Int? = nil,
+        unsupportedCells: Int? = nil,
+        unsafeCells: Int? = nil,
+        occupiedVerticalSpaceCells: Int? = nil
     ) {
         self.type = type
         self.event = event
@@ -367,6 +379,12 @@ struct RunEvent: Encodable {
         self.liquidCases = liquidCases
         self.plantLikeCases = plantLikeCases
         self.otherCases = otherCases
+        self.cellsEvaluated = cellsEvaluated
+        self.traversableCells = traversableCells
+        self.blockedCells = blockedCells
+        self.unsupportedCells = unsupportedCells
+        self.unsafeCells = unsafeCells
+        self.occupiedVerticalSpaceCells = occupiedVerticalSpaceCells
     }
 }
 

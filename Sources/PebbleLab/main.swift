@@ -17,6 +17,8 @@ let isWorldObservationScenario = isWorldObservationSingleScenario || isWorldObse
 let terrainScanContract = terrainScanScenarioContract(for: options.scenario)
 let isTerrainScanRun = terrainScanContract != nil
 let isTerrainSemanticsFixtureScenario = options.scenario == "terrain_semantics_fixture_smoke"
+let isTerrainTraversabilityFixtureScenario = options.scenario
+    == "terrain_traversability_fixture_smoke"
 let isWorldInteractionScenario = isWorldObservationScenario || isTerrainScanRun
 
 var ticksCompleted = 0
@@ -701,6 +703,20 @@ let terrainSemanticsFixtureReport = isTerrainSemanticsFixtureScenario
     ? makeTerrainSemanticsFixtureReport(scenario: options.scenario, seed: options.seed)
     : nil
 let terrainSemanticsFixtureSuccess = terrainSemanticsFixtureReport?.success
+let terrainTraversabilityFixtureReport = isTerrainTraversabilityFixtureScenario
+    ? makeTerrainTraversabilityFixtureReport(scenario: options.scenario, seed: options.seed)
+    : nil
+let terrainTraversabilitySummary = terrainTraversabilityFixtureReport.map(
+    makeTerrainTraversabilitySummary
+)
+let terrainTraversabilityInvariantReport = terrainTraversabilityFixtureReport.map(
+    makeTerrainTraversabilityInvariantReport
+)
+let terrainTraversabilitySuccess = isTerrainTraversabilityFixtureScenario
+    ? ((terrainTraversabilityFixtureReport?.success ?? false)
+        && (terrainTraversabilitySummary?.success ?? false)
+        && (terrainTraversabilityInvariantReport?.success ?? false))
+    : nil
 let coreEntityInvariantReport = options.scenario == "core_entity_smoke"
     ? coreEntityBridge.invariantReport(
         scenario: options.scenario,
@@ -861,6 +877,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (terrainScanSuccess ?? true)
     && (terrainSemanticSuccess ?? true)
     && (terrainSemanticsFixtureSuccess ?? true)
+    && (terrainTraversabilitySuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -906,6 +923,22 @@ if options.outPath != nil {
                 liquidCases: fixtureReport.summary.liquidCases,
                 plantLikeCases: fixtureReport.summary.plantLikeCases,
                 otherCases: fixtureReport.summary.otherCases
+            ))
+        }
+        if let traversabilitySummary = terrainTraversabilitySummary {
+            try appendEvent(RunEvent(
+                type: "lab_terrain_traversability_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: terrainTraversabilitySuccess,
+                unknownCells: traversabilitySummary.unknownCells,
+                otherCells: traversabilitySummary.otherCells,
+                cellsEvaluated: traversabilitySummary.cellsEvaluated,
+                traversableCells: traversabilitySummary.traversableCells,
+                blockedCells: traversabilitySummary.blockedCells,
+                unsupportedCells: traversabilitySummary.unsupportedCells,
+                unsafeCells: traversabilitySummary.unsafeCells,
+                occupiedVerticalSpaceCells: traversabilitySummary.occupiedVerticalSpaceCells
             ))
         }
         if let terrainScanSnapshot {
@@ -1206,6 +1239,18 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("terrain_semantics_fixture_report.json")
             )
         }
+        if let terrainTraversabilityFixtureReport {
+            try writeJSON(
+                terrainTraversabilityFixtureReport,
+                to: outURL.appendingPathComponent("terrain_traversability_fixture_report.json")
+            )
+        }
+        if let terrainTraversabilityInvariantReport {
+            try writeJSON(
+                terrainTraversabilityInvariantReport,
+                to: outURL.appendingPathComponent("terrain_traversability_invariant_report.json")
+            )
+        }
         if let terrainScanSnapshot {
             try writeJSON(
                 terrainScanSnapshot,
@@ -1385,6 +1430,18 @@ if let outPath = options.outPath {
             terrainSemanticFixturePlantLikeCases: terrainSemanticsFixtureReport?.summary.plantLikeCases,
             terrainSemanticFixtureOtherCases: terrainSemanticsFixtureReport?.summary.otherCases,
             terrainSemanticFixtureSuccess: terrainSemanticsFixtureSuccess,
+            terrainTraversabilityCells: terrainTraversabilitySummary?.cellsEvaluated,
+            terrainTraversabilityTraversableCells: terrainTraversabilitySummary?.traversableCells,
+            terrainTraversabilityBlockedCells: terrainTraversabilitySummary?.blockedCells,
+            terrainTraversabilityUnknownCells: terrainTraversabilitySummary?.unknownCells,
+            terrainTraversabilityUnsupportedCells: terrainTraversabilitySummary?.unsupportedCells,
+            terrainTraversabilityUnsafeCells: terrainTraversabilitySummary?.unsafeCells,
+            terrainTraversabilityOccupiedVerticalSpaceCells: terrainTraversabilitySummary?.occupiedVerticalSpaceCells,
+            terrainTraversabilityOtherCells: terrainTraversabilitySummary?.otherCells,
+            terrainTraversabilitySuccess: terrainTraversabilitySuccess,
+            terrainTraversabilityFixtureCases: terrainTraversabilityFixtureReport?.summary.fixtures,
+            terrainTraversabilityFixturePassed: terrainTraversabilityFixtureReport?.summary.passed,
+            terrainTraversabilityFixtureFailed: terrainTraversabilityFixtureReport?.summary.failed,
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))
