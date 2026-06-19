@@ -324,6 +324,15 @@ do not drive agent behavior.
 
 ## Phase 4.11C - Terrain Column Scan Edge Smoke
 
-Next recommended step: validate the same fixed 9-column/27-cell contract at a
-chunk boundary. Pathfinding, collision, mutation, multi-agent column scans,
-configurable radius, and movement remain out of scope.
+Status: implemented and validated.
+
+Goal: reuse the fixed 9-column/27-cell scan at `(16, y, 16)` and prove guarded
+support/feet/head reads across chunks `(0,0)`, `(1,0)`, `(0,1)`, and `(1,1)`.
+The edge report extends the shared 18 checks with two boundary-specific checks.
+
+## Phase 4.11D - Terrain Column Scan Contract Cleanup
+
+Next recommended step: review the shared central/edge contract and invariant
+surface before any new perception behavior. Pathfinding, collision, mutation,
+multi-agent column scans, configurable radius, and movement remain out of
+scope.

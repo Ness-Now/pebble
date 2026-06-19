@@ -737,3 +737,80 @@ goal selection, edge scan, multi-agent scan, or configurable radius was added.
 
 Phase 4.11C: add an edge-position terrain column scan smoke that reuses the
 same fixed read-only contract across chunk boundaries.
+
+## 2026-06-19 — Phase 4.11C Terrain Column Scan Edge Smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Validate the existing read-only support/feet/head column scan at a chunk
+corner without introducing a second scan path or expanding into navigation.
+
+### Files Modified
+
+- `Sources/PebbleLab/LabTerrainColumnScan.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_VERTICAL_COLUMN_SCAN_PLAN.md`
+
+### Technical Decisions
+
+- A small `LabTerrainColumnScanScenarioContract` centralizes scenario,
+  position, fixed radius, expected column/cell counts, expected chunk count,
+  and boundary-crossing requirements.
+- The central scenario remains at `(8, y, 8)`; the edge scenario uses exactly
+  `(16, y, 16)`.
+- Both scenarios call the unchanged guarded `scanTerrainColumns` read path.
+- The edge 3x3 footprint spans exactly chunks `(0,0)`, `(1,0)`, `(0,1)`, and
+  `(1,1)`.
+- The common 18-check report is preserved; the edge contract adds two checks
+  for boundary crossing and exactly four unique chunks.
+
+### Outputs And Derived Layers
+
+The edge scenario reuses `terrain_column_scan_snapshot.json`,
+`terrain_column_scan_invariant_report.json`, `metrics.json`, and
+`events.ndjson`. Its 27 semantics and nine traversability values are derived
+from captured cells without rereading the world and remain separate from
+agent decisions.
+
+### Still Prohibited
+
+No PebbleCore, registry, save/load, renderer, resource, or golden file was
+changed. No mutation, pathfinding, collision, route, cost, movement command,
+goal selection, multi-agent scan, or configurable radius was added.
+
+### Validation Commands
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario terrain_column_scan_smoke --seed 42 --ticks 5 --out runs/check_terrain_column_scan_after_edge`
+- `swift run -c release PebbleLab -- --scenario terrain_column_scan_edge_smoke --seed 42 --ticks 5 --out runs/check_terrain_column_scan_edge`
+- `swift run -c release PebbleLab -- --scenario terrain_traversability_fixture_smoke --seed 42 --ticks 0 --out runs/check_terrain_traversability_fixture_after_column_edge`
+- `swift run -c release PebbleLab -- --scenario terrain_semantics_fixture_smoke --seed 42 --ticks 0 --out runs/check_terrain_semantics_fixture_after_column_edge`
+- `swift run -c release PebbleLab -- --scenario terrain_scan_smoke --seed 42 --ticks 5 --out runs/check_terrain_scan_after_column_edge`
+- `swift run -c release PebbleLab -- --scenario terrain_scan_edge_smoke --seed 42 --ticks 5 --out runs/check_terrain_scan_edge_after_column_edge`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_column_edge`
+- `swift run -c release PebbleLab -- --scenario world_observation_multi_smoke --seed 42 --ticks 5 --out runs/check_world_observation_after_column_edge`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Agent position: `(16,64,16)`.
+- Edge raw scan: nine columns and 27/27 observed, loaded, ready cells.
+- Unique chunks: exactly four, `(0,0)`, `(1,0)`, `(0,1)`, `(1,1)`.
+- Chunk state remained unchanged; raw and derived success values were true.
+- Edge invariant report: `20 passed, 0 failed`.
+- Central scan retained its `18 passed, 0 failed` report.
+- All required builds and existing scenario regressions passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.11D: clean up and review the shared column-scan contracts and invariant
+surface before planning pathfinding or any behavior consuming traversability.

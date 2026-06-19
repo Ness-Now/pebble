@@ -16,13 +16,14 @@ let isWorldObservationMultiScenario = options.scenario == "world_observation_mul
 let isWorldObservationScenario = isWorldObservationSingleScenario || isWorldObservationMultiScenario
 let terrainScanContract = terrainScanScenarioContract(for: options.scenario)
 let isTerrainScanRun = terrainScanContract != nil
-let isTerrainColumnScanScenario = options.scenario == "terrain_column_scan_smoke"
+let terrainColumnScanContract = terrainColumnScanScenarioContract(for: options.scenario)
+let isTerrainColumnScanRun = terrainColumnScanContract != nil
 let isTerrainSemanticsFixtureScenario = options.scenario == "terrain_semantics_fixture_smoke"
 let isTerrainTraversabilityFixtureScenario = options.scenario
     == "terrain_traversability_fixture_smoke"
 let isWorldInteractionScenario = isWorldObservationScenario
     || isTerrainScanRun
-    || isTerrainColumnScanScenario
+    || isTerrainColumnScanRun
 
 var ticksCompleted = 0
 var eventsNDJSON = ""
@@ -870,7 +871,7 @@ let terrainSemanticSuccess = isTerrainScanRun
         && (terrainSemanticsInvariantReport?.success ?? false))
     : nil
 let terrainColumnScanSnapshot: LabTerrainColumnScanSnapshot? = {
-    guard isTerrainColumnScanScenario,
+    guard let terrainColumnScanContract,
           let agent = labAgents.first,
           let handle = physicalBridge.handles.first(where: { $0.agentId == agent.id }),
           let coreLink = coreEntityBridge.snapshotLinks(for: labAgents).first(where: {
@@ -885,25 +886,28 @@ let terrainColumnScanSnapshot: LabTerrainColumnScanSnapshot? = {
         ticksCompleted: ticksCompleted,
         agent: agent,
         handle: handle,
-        coreLink: coreLink
+        coreLink: coreLink,
+        contract: terrainColumnScanContract
     )
 }()
-let terrainColumnScanInvariantReport = terrainColumnScanSnapshot.map {
-    makeTerrainColumnScanInvariantReport(
-        snapshot: $0,
+let terrainColumnScanInvariantReport: TerrainColumnScanInvariantReport? = terrainColumnScanSnapshot.flatMap { snapshot in
+    guard let terrainColumnScanContract else { return nil }
+    return makeTerrainColumnScanInvariantReport(
+        snapshot: snapshot,
         agents: labAgents.count,
         placeholders: physicalBridge.count,
-        coreEntities: coreEntityBridge.count
+        coreEntities: coreEntityBridge.count,
+        contract: terrainColumnScanContract
     )
 }
 let terrainColumnDerivedSummary = terrainColumnScanSnapshot.map(
     makeTerrainColumnDerivedSummary
 )
-let terrainColumnScanSuccess = isTerrainColumnScanScenario
+let terrainColumnScanSuccess = isTerrainColumnScanRun
     ? ((terrainColumnScanSnapshot?.summary.success ?? false)
         && (terrainColumnScanInvariantReport?.success ?? false))
     : nil
-let terrainColumnTraversabilitySuccess = isTerrainColumnScanScenario
+let terrainColumnTraversabilitySuccess = isTerrainColumnScanRun
     ? (terrainColumnDerivedSummary?.success ?? false)
     : nil
 let runSuccess = successCriteria.ticksCompleted

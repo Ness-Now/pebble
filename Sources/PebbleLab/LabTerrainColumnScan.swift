@@ -104,7 +104,52 @@ struct TerrainColumnScanInvariantCheck: Encodable {
     let actual: String
 }
 
-private let terrainColumnRadius = 1
+struct LabTerrainColumnScanScenarioContract {
+    let scenario: String
+    let agentX: Int
+    let agentZ: Int
+    let radius: Int
+    let expectedColumns: Int
+    let expectedCells: Int
+    let expectedUniqueChunks: Int?
+    let requiresChunkBoundaryCrossing: Bool
+}
+
+func terrainColumnScanScenarioContract(
+    for scenario: String
+) -> LabTerrainColumnScanScenarioContract? {
+    switch scenario {
+    case "terrain_column_scan_smoke":
+        return LabTerrainColumnScanScenarioContract(
+            scenario: scenario,
+            agentX: 8,
+            agentZ: 8,
+            radius: 1,
+            expectedColumns: 9,
+            expectedCells: 27,
+            expectedUniqueChunks: nil,
+            requiresChunkBoundaryCrossing: false
+        )
+    case "terrain_column_scan_edge_smoke":
+        return LabTerrainColumnScanScenarioContract(
+            scenario: scenario,
+            agentX: 16,
+            agentZ: 16,
+            radius: 1,
+            expectedColumns: 9,
+            expectedCells: 27,
+            expectedUniqueChunks: 4,
+            requiresChunkBoundaryCrossing: true
+        )
+    default:
+        return nil
+    }
+}
+
+func isTerrainColumnScanScenario(_ scenario: String) -> Bool {
+    terrainColumnScanScenarioContract(for: scenario) != nil
+}
+
 private let terrainColumnRelation = "support_feet_head"
 private let terrainColumnHorizontalOrder = "dz_then_dx"
 private let terrainColumnVerticalOrder = "support_feet_head"
@@ -137,7 +182,8 @@ func scanTerrainColumns(
     ticksCompleted: Int,
     agent: LabAgent,
     handle: LabPhysicalAgentHandle,
-    coreLink: LabCoreAgentLink
+    coreLink: LabCoreAgentLink,
+    contract: LabTerrainColumnScanScenarioContract
 ) -> LabTerrainColumnScanSnapshot {
     func readCell(
         role: LabTerrainColumnCellRole,
@@ -183,8 +229,8 @@ func scanTerrainColumns(
 
     let baseY = agent.position.y
     var columns: [LabTerrainColumnScan] = []
-    for dz in -terrainColumnRadius...terrainColumnRadius {
-        for dx in -terrainColumnRadius...terrainColumnRadius {
+    for dz in -contract.radius...contract.radius {
+        for dx in -contract.radius...contract.radius {
             let x = agent.position.x + dx
             let z = agent.position.z + dz
             let support = readCell(
@@ -231,12 +277,14 @@ func scanTerrainColumns(
         && handle.physicalId == coreLink.physicalId
     let success = linksCoherent
         && coreLink.divergence == 0
-        && columns.count == 9
-        && columnsObserved == 9
-        && allCells.count == 27
-        && cellsObserved == 27
-        && loadedCells == 27
-        && readyCells == 27
+        && columns.count == contract.expectedColumns
+        && columnsObserved == contract.expectedColumns
+        && allCells.count == contract.expectedCells
+        && cellsObserved == contract.expectedCells
+        && loadedCells == contract.expectedCells
+        && readyCells == contract.expectedCells
+        && (contract.expectedUniqueChunks == nil
+            || uniqueChunks == contract.expectedUniqueChunks)
         && chunkStateUnchanged
         && allCells.allSatisfy(\.success)
 
@@ -251,15 +299,15 @@ func scanTerrainColumns(
         coreEntityPosition: coreLink.coreEntityPosition,
         divergence: coreLink.divergence,
         linksCoherent: linksCoherent,
-        radius: terrainColumnRadius,
+        radius: contract.radius,
         relation: terrainColumnRelation,
         horizontalOrder: terrainColumnHorizontalOrder,
         verticalOrder: terrainColumnVerticalOrder,
         columns: columns,
         summary: LabTerrainColumnScanSummary(
-            columnsPlanned: 9,
+            columnsPlanned: contract.expectedColumns,
             columnsObserved: columnsObserved,
-            cellsPlanned: 27,
+            cellsPlanned: contract.expectedCells,
             cellsObserved: cellsObserved,
             loadedCells: loadedCells,
             readyCells: readyCells,
@@ -296,11 +344,12 @@ func makeTerrainColumnScanInvariantReport(
     snapshot: LabTerrainColumnScanSnapshot,
     agents: Int,
     placeholders: Int,
-    coreEntities: Int
+    coreEntities: Int,
+    contract: LabTerrainColumnScanScenarioContract
 ) -> TerrainColumnScanInvariantReport {
     var expectedOffsets: [(Int, Int)] = []
-    for dz in -terrainColumnRadius...terrainColumnRadius {
-        for dx in -terrainColumnRadius...terrainColumnRadius {
+    for dz in -contract.radius...contract.radius {
+        for dx in -contract.radius...contract.radius {
             expectedOffsets.append((dx, dz))
         }
     }
@@ -342,26 +391,42 @@ func makeTerrainColumnScanInvariantReport(
         && !snapshot.physicalId.isEmpty
         && snapshot.coreEntityId > 0
 
-    let checks = [
+    var checks = [
         TerrainColumnScanInvariantCheck(name: "agent_exists", passed: agents == 1, expected: "1", actual: "\(agents)"),
         TerrainColumnScanInvariantCheck(name: "physical_core_links_coherent", passed: linksCoherent, expected: "one coherent link", actual: "agents=\(agents), placeholders=\(placeholders), coreEntities=\(coreEntities)"),
         TerrainColumnScanInvariantCheck(name: "abstract_core_divergence_zero", passed: snapshot.divergence == 0, expected: "0", actual: "\(snapshot.divergence)"),
-        TerrainColumnScanInvariantCheck(name: "radius_equals_one", passed: snapshot.radius == 1, expected: "1", actual: "\(snapshot.radius)"),
+        TerrainColumnScanInvariantCheck(name: "radius_equals_one", passed: snapshot.radius == contract.radius, expected: "\(contract.radius)", actual: "\(snapshot.radius)"),
         TerrainColumnScanInvariantCheck(name: "horizontal_order_dz_then_dx", passed: snapshot.horizontalOrder == terrainColumnHorizontalOrder && horizontalOrderValid, expected: terrainColumnHorizontalOrder, actual: snapshot.horizontalOrder),
         TerrainColumnScanInvariantCheck(name: "vertical_order_support_feet_head", passed: snapshot.verticalOrder == terrainColumnVerticalOrder && verticalOrderValid, expected: terrainColumnVerticalOrder, actual: snapshot.verticalOrder),
-        TerrainColumnScanInvariantCheck(name: "columns_planned_equals_nine", passed: snapshot.summary.columnsPlanned == 9, expected: "9", actual: "\(snapshot.summary.columnsPlanned)"),
-        TerrainColumnScanInvariantCheck(name: "cells_planned_equals_twenty_seven", passed: snapshot.summary.cellsPlanned == 27, expected: "27", actual: "\(snapshot.summary.cellsPlanned)"),
-        TerrainColumnScanInvariantCheck(name: "cells_observed_equals_twenty_seven", passed: snapshot.summary.cellsObserved == 27, expected: "27", actual: "\(snapshot.summary.cellsObserved)"),
-        TerrainColumnScanInvariantCheck(name: "all_decoded_cells_loaded_ready", passed: loadedReadyDecoded == 27, expected: "27", actual: "\(loadedReadyDecoded)"),
-        TerrainColumnScanInvariantCheck(name: "all_columns_have_three_roles", passed: rolesComplete == 9, expected: "9", actual: "\(rolesComplete)"),
-        TerrainColumnScanInvariantCheck(name: "target_coordinates_unique_per_role", passed: uniqueRoleTargets == 27, expected: "27 unique", actual: "\(uniqueRoleTargets) unique"),
-        TerrainColumnScanInvariantCheck(name: "all_chunks_unchanged", passed: unchangedCells == 27 && snapshot.summary.chunkStateUnchanged, expected: "27", actual: "\(unchangedCells)"),
-        TerrainColumnScanInvariantCheck(name: "all_packed_cells_valid", passed: validPackedCells == 27, expected: "27", actual: "\(validPackedCells)"),
+        TerrainColumnScanInvariantCheck(name: "columns_planned_equals_nine", passed: snapshot.summary.columnsPlanned == contract.expectedColumns, expected: "\(contract.expectedColumns)", actual: "\(snapshot.summary.columnsPlanned)"),
+        TerrainColumnScanInvariantCheck(name: "cells_planned_equals_twenty_seven", passed: snapshot.summary.cellsPlanned == contract.expectedCells, expected: "\(contract.expectedCells)", actual: "\(snapshot.summary.cellsPlanned)"),
+        TerrainColumnScanInvariantCheck(name: "cells_observed_equals_twenty_seven", passed: snapshot.summary.cellsObserved == contract.expectedCells, expected: "\(contract.expectedCells)", actual: "\(snapshot.summary.cellsObserved)"),
+        TerrainColumnScanInvariantCheck(name: "all_decoded_cells_loaded_ready", passed: loadedReadyDecoded == contract.expectedCells, expected: "\(contract.expectedCells)", actual: "\(loadedReadyDecoded)"),
+        TerrainColumnScanInvariantCheck(name: "all_columns_have_three_roles", passed: rolesComplete == contract.expectedColumns, expected: "\(contract.expectedColumns)", actual: "\(rolesComplete)"),
+        TerrainColumnScanInvariantCheck(name: "target_coordinates_unique_per_role", passed: uniqueRoleTargets == contract.expectedCells, expected: "\(contract.expectedCells) unique", actual: "\(uniqueRoleTargets) unique"),
+        TerrainColumnScanInvariantCheck(name: "all_chunks_unchanged", passed: unchangedCells == contract.expectedCells && snapshot.summary.chunkStateUnchanged, expected: "\(contract.expectedCells)", actual: "\(unchangedCells)"),
+        TerrainColumnScanInvariantCheck(name: "all_packed_cells_valid", passed: validPackedCells == contract.expectedCells, expected: "\(contract.expectedCells)", actual: "\(validPackedCells)"),
         TerrainColumnScanInvariantCheck(name: "raw_scan_success_true", passed: snapshot.summary.success, expected: "true", actual: "\(snapshot.summary.success)"),
         TerrainColumnScanInvariantCheck(name: "no_mutation_path_used", passed: true, expected: "guarded World.getBlock only", actual: "code-review invariant"),
         TerrainColumnScanInvariantCheck(name: "no_pathfinding_performed", passed: true, expected: "none", actual: "code-review invariant"),
         TerrainColumnScanInvariantCheck(name: "no_agent_movement_commanded", passed: true, expected: "none", actual: "code-review invariant")
     ]
+    if contract.requiresChunkBoundaryCrossing {
+        checks.append(TerrainColumnScanInvariantCheck(
+            name: "edge_column_scan_crosses_chunk_boundary",
+            passed: snapshot.summary.uniqueChunks > 1,
+            expected: "> 1",
+            actual: "\(snapshot.summary.uniqueChunks)"
+        ))
+        if let expectedUniqueChunks = contract.expectedUniqueChunks {
+            checks.append(TerrainColumnScanInvariantCheck(
+                name: "edge_column_scan_expected_unique_chunks",
+                passed: snapshot.summary.uniqueChunks == expectedUniqueChunks,
+                expected: "\(expectedUniqueChunks)",
+                actual: "\(snapshot.summary.uniqueChunks)"
+            ))
+        }
+    }
     let checksPassed = checks.filter(\.passed).count
     let checksFailed = checks.count - checksPassed
     return TerrainColumnScanInvariantReport(
@@ -380,7 +445,7 @@ func makeTerrainColumnScanInvariantReport(
         ),
         checks: checks,
         notes: [
-            "This report validates a central read-only support/feet/head column scan.",
+            "This report validates a read-only support/feet/head column scan.",
             "It does not prove pathfinding, collision, movement, or mutation safety."
         ]
     )

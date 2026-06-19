@@ -370,3 +370,16 @@ purely from the captured cells. These derived values do not alter raw scan
 success and are not consumed by pathfinding, collision, movement, or agent
 decisions. The next bounded validation is Phase 4.11C, an edge-position column
 scan using the same fixed contract.
+
+## Phase 4.11C Implementation Status
+
+Phase 4.11C is implemented and validated. A small shared column-scan scenario
+contract now selects central `(8,8)` or edge `(16,16)` placement while both
+scenarios continue to call the same `scanTerrainColumns` implementation.
+
+The edge scan observes nine columns and 27 cells across exactly four chunks:
+`(0,0)`, `(1,0)`, `(0,1)`, and `(1,1)`. Its invariant report retains the 18
+shared checks and adds `edge_column_scan_crosses_chunk_boundary` plus
+`edge_column_scan_expected_unique_chunks`, for 20 passing checks total.
+Semantics and traversability remain pure derived evidence; no pathfinding,
+collision, movement, or mutation consumes the result.

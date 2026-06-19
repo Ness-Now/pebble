@@ -50,3 +50,4 @@
 - Added terrain traversability fixture smoke for synthetic semantic columns.
 - Documented vertical column scan planning contract.
 - Added central read-only terrain column scan smoke.
+- Added edge-position terrain column scan smoke crossing chunk boundaries.
