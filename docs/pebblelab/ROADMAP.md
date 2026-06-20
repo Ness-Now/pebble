@@ -390,3 +390,16 @@ unsafe nodes without modifying terrain or search behavior.
 Next recommended step: Phase 4.14A - movement planning docs-only, or Phase
 4.13D - positive live pathfinding planning docs-only. Movement, collision,
 mutation, multi-agent pathfinding, and route following remain out of scope.
+
+## Phase 4.13D - Positive Live Pathfinding Planning
+
+Status: done as a docs-only planning phase.
+
+Goal: define a bounded deterministic read-only discovery contract for a future
+live `found` result without terrain mutation, movement, collision, or a second
+BFS. The preferred approach evaluates a small fixed candidate list and audits
+the first naturally traversable route.
+
+Next recommended step: Phase 4.13E - positive live column pathfinding smoke.
+Movement, collision, mutation, route following, and multi-agent pathfinding
+remain out of scope.

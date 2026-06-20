@@ -57,3 +57,4 @@
 - Documented live column pathfinding integration planning contract.
 - Added central live column pathfinding smoke using captured traversability and existing BFS.
 - Added edge live column pathfinding smoke crossing chunk boundaries.
+- Documented positive live column pathfinding planning contract.

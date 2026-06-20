@@ -1323,3 +1323,85 @@ weighted cost, Python, ML, LLM, or RL integration was added.
 Phase 4.14A should plan movement docs-only, or Phase 4.13D should plan a
 positive live pathfinding scenario docs-only. Movement, collision, mutation,
 route following, and multi-agent pathfinding remain separate future concerns.
+
+## 2026-06-19 — Phase 4.13D Positive Live Pathfinding Planning
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Define how PebbleLab can later prove a positive live path without changing
+terrain, search rules, movement, or collision behavior.
+
+### Files Created Or Modified
+
+- `docs/pebblelab/PHASE_4_POSITIVE_LIVE_PATHFINDING_PLAN.md` (new)
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+### Current Negative Evidence
+
+Central `(8,8)` and edge `(16,16)` seed-42 scans both produce nine unsafe
+nodes because support cells are liquid. Their `invalidStart` results are
+correct and remain valuable refusal evidence, but they do not prove that the
+live adapter and BFS can produce `found` from captured traversable columns.
+
+### Options Considered
+
+- a manually discovered fixed seed and position;
+- a bounded deterministic read-only candidate list;
+- replayed column snapshots as fixture/live hybrid coverage;
+- a naturally solid generated area selected without block mutation.
+
+The plan recommends bounded deterministic discovery when it stays small and
+fast, with a manually documented fixed candidate as the simpler fallback.
+Replayed snapshots may supplement regression tests but do not count as the live
+positive proof.
+
+### Recommended Strategy
+
+Phase 4.13E should evaluate at most 16 fixed candidates in a documented order,
+using the existing column scan, semantic/traversability transforms, adapter,
+and BFS. It should stop at the first `found`, record every attempt compactly,
+and fail with evidence if no candidate succeeds. Fixed start `(0,0)` and goal
+`(1,0)` remain preferred; a simple first-traversable/first-neighbor rule is an
+acceptable audited test-only fallback, not agent goal selection.
+
+### Relationship With Movement Planning
+
+Movement remains a future consumer. A positive path proves only abstract route
+construction over captured nodes, not physical execution or collision safety.
+Movement implementation should preferably wait until central negative, edge
+negative, and positive live path evidence are all validated and Phase 4.14A has
+defined a separate docs-only contract.
+
+### Risks
+
+The plan addresses terrain mutation to force success, test selection leaking
+into agent policy, nondeterministic or unbounded discovery, validation runtime,
+generation drift, world rereads during BFS, premature movement, and collision
+overclaims.
+
+### Still Prohibited
+
+No Swift, PebbleCore, registry, save/load, renderer, resource, or golden file
+was changed. No executable scenario, seed search, mutation, movement,
+collision, route following, agent decision, multi-agent pathfinding, A*,
+Dijkstra, weighted cost, Python, ML, LLM, or RL integration was added.
+
+### Validation Commands
+
+- `swift build`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Documentation-only diff confirmed; no Swift file changed.
+- `swift build` passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.13E: implement a positive live column pathfinding smoke using bounded,
+deterministic, read-only discovery and the existing scan/adapter/BFS stack.
