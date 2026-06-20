@@ -58,6 +58,12 @@ struct TerrainMovementFixtureResult: Codable {
     let actualStatus: LabTerrainMovementStatus
     let expectedMoves: Int
     let actualMoves: Int
+    let expectedCurrent: LabTerrainPathNodeKey?
+    let actualCurrent: LabTerrainPathNodeKey
+    let expectedTargetIndex: Int?
+    let actualTargetIndex: Int
+    let expectedIntentReason: String?
+    let actualIntentReason: String?
     let steps: [LabTerrainMovementStepResult]
     let passed: Bool
 }
@@ -92,6 +98,34 @@ private struct TerrainMovementFixtureDefinition {
     let ticks: Int
     let expectedStatus: LabTerrainMovementStatus
     let expectedMoves: Int
+    let initialState: LabTerrainMovementState?
+    let expectedCurrent: LabTerrainPathNodeKey?
+    let expectedTargetIndex: Int?
+    let expectedIntentReason: String?
+
+    init(
+        name: String,
+        current: LabTerrainPathNodeKey,
+        path: [LabTerrainPathNodeKey],
+        ticks: Int,
+        expectedStatus: LabTerrainMovementStatus,
+        expectedMoves: Int,
+        initialState: LabTerrainMovementState? = nil,
+        expectedCurrent: LabTerrainPathNodeKey? = nil,
+        expectedTargetIndex: Int? = nil,
+        expectedIntentReason: String? = nil
+    ) {
+        self.name = name
+        self.current = current
+        self.path = path
+        self.ticks = ticks
+        self.expectedStatus = expectedStatus
+        self.expectedMoves = expectedMoves
+        self.initialState = initialState
+        self.expectedCurrent = expectedCurrent
+        self.expectedTargetIndex = expectedTargetIndex
+        self.expectedIntentReason = expectedIntentReason
+    }
 }
 
 private func movementKey(_ x: Int, _ z: Int, y: Int = 64) -> LabTerrainPathNodeKey {
@@ -184,8 +218,11 @@ func makeTerrainMovementIntent(
     case .failed:
         return denied(reason: "failed")
     case .moving:
-        guard state.path.indices.contains(state.targetIndex) else {
-            return denied(reason: "invalid_edge")
+        guard state.path.indices.contains(state.targetIndex), state.targetIndex > 0 else {
+            return denied(reason: "invalid_target_index")
+        }
+        guard state.current == state.path[state.targetIndex - 1] else {
+            return denied(reason: "current_not_on_expected_path_edge")
         }
         let target = state.path[state.targetIndex]
         let dx = target.x - state.current.x
@@ -249,6 +286,9 @@ private func terrainMovementFixtures() -> [TerrainMovementFixtureDefinition] {
     let east = movementKey(1, 0)
     let east2 = movementKey(2, 0)
     let southEast2 = movementKey(2, 1)
+    let south = movementKey(0, 1)
+    let southEast = movementKey(1, 1)
+    let longPath = [start, east, east2, southEast2]
     return [
         TerrainMovementFixtureDefinition(name: "single_step_reaches_goal", current: start, path: [start, east], ticks: 1, expectedStatus: .reachedGoal, expectedMoves: 1),
         TerrainMovementFixtureDefinition(name: "multi_step_reaches_goal", current: start, path: [start, east, east2, southEast2], ticks: 3, expectedStatus: .reachedGoal, expectedMoves: 3),
@@ -261,14 +301,25 @@ private func terrainMovementFixtures() -> [TerrainMovementFixtureDefinition] {
         TerrainMovementFixtureDefinition(name: "wrong_initial_position_invalid", current: east, path: [start, east], ticks: 1, expectedStatus: .invalidPath, expectedMoves: 0),
         TerrainMovementFixtureDefinition(name: "no_world_required", current: start, path: [start, east], ticks: 1, expectedStatus: .reachedGoal, expectedMoves: 1),
         TerrainMovementFixtureDefinition(name: "repeated_node_invalid", current: start, path: [start, east, start], ticks: 1, expectedStatus: .invalidPath, expectedMoves: 0),
-        TerrainMovementFixtureDefinition(name: "already_reached_goal_stays_idle", current: start, path: [start], ticks: 3, expectedStatus: .reachedGoal, expectedMoves: 0)
+        TerrainMovementFixtureDefinition(name: "already_reached_goal_stays_idle", current: start, path: [start], ticks: 3, expectedStatus: .reachedGoal, expectedMoves: 0),
+        TerrainMovementFixtureDefinition(name: "partial_multi_step_remains_moving", current: start, path: longPath, ticks: 2, expectedStatus: .moving, expectedMoves: 2, expectedCurrent: east2, expectedTargetIndex: 3, expectedIntentReason: "move_to_next_path_node"),
+        TerrainMovementFixtureDefinition(name: "moving_target_index_out_of_bounds_invalid", current: start, path: [start, east], ticks: 1, expectedStatus: .invalidPath, expectedMoves: 0, initialState: LabTerrainMovementState(current: start, path: [start, east], targetIndex: 2, status: .moving), expectedCurrent: start, expectedTargetIndex: 2, expectedIntentReason: "invalid_target_index"),
+        TerrainMovementFixtureDefinition(name: "moving_current_not_previous_node_invalid", current: south, path: [start, east, east2], ticks: 1, expectedStatus: .invalidPath, expectedMoves: 0, initialState: LabTerrainMovementState(current: south, path: [start, east, east2], targetIndex: 1, status: .moving), expectedCurrent: south, expectedTargetIndex: 1, expectedIntentReason: "current_not_on_expected_path_edge"),
+        TerrainMovementFixtureDefinition(name: "idle_state_does_not_move", current: start, path: [start, east], ticks: 2, expectedStatus: .idle, expectedMoves: 0, initialState: LabTerrainMovementState(current: start, path: [start, east], targetIndex: 1, status: .idle), expectedCurrent: start, expectedTargetIndex: 1, expectedIntentReason: "idle"),
+        TerrainMovementFixtureDefinition(name: "blocked_state_does_not_move", current: start, path: [start, east], ticks: 2, expectedStatus: .blocked, expectedMoves: 0, initialState: LabTerrainMovementState(current: start, path: [start, east], targetIndex: 1, status: .blocked), expectedCurrent: start, expectedTargetIndex: 1, expectedIntentReason: "blocked"),
+        TerrainMovementFixtureDefinition(name: "failed_state_does_not_move", current: start, path: [start, east], ticks: 2, expectedStatus: .failed, expectedMoves: 0, initialState: LabTerrainMovementState(current: start, path: [start, east], targetIndex: 1, status: .failed), expectedCurrent: start, expectedTargetIndex: 1, expectedIntentReason: "failed"),
+        TerrainMovementFixtureDefinition(name: "invalid_path_multiple_ticks_stays_invalid", current: start, path: [start, movementKey(2, 0)], ticks: 3, expectedStatus: .invalidPath, expectedMoves: 0, expectedCurrent: start, expectedTargetIndex: 0, expectedIntentReason: "invalid_path"),
+        TerrainMovementFixtureDefinition(name: "reached_goal_multiple_ticks_stays_goal", current: start, path: [start], ticks: 3, expectedStatus: .reachedGoal, expectedMoves: 0, expectedCurrent: start, expectedTargetIndex: 0, expectedIntentReason: "already_reached_goal"),
+        TerrainMovementFixtureDefinition(name: "target_index_progression_exact", current: start, path: longPath, ticks: 3, expectedStatus: .reachedGoal, expectedMoves: 3, expectedCurrent: southEast2, expectedTargetIndex: 3, expectedIntentReason: "move_to_next_path_node"),
+        TerrainMovementFixtureDefinition(name: "intent_delta_matches_next_node", current: start, path: [start, east, southEast, south], ticks: 3, expectedStatus: .reachedGoal, expectedMoves: 3, expectedCurrent: south, expectedTargetIndex: 3, expectedIntentReason: "move_to_next_path_node")
     ]
 }
 
 private func evaluateTerrainMovementFixture(
     _ fixture: TerrainMovementFixtureDefinition
 ) -> TerrainMovementFixtureResult {
-    var state = validateTerrainMovementPath(current: fixture.current, path: fixture.path)
+    var state = fixture.initialState
+        ?? validateTerrainMovementPath(current: fixture.current, path: fixture.path)
     var steps: [LabTerrainMovementStepResult] = []
     for _ in 0..<fixture.ticks {
         let result = stepTerrainMovement(state)
@@ -276,6 +327,10 @@ private func evaluateTerrainMovementFixture(
         state = result.after
     }
     let moves = steps.filter(\.moved).count
+    let currentMatches = fixture.expectedCurrent.map { state.current == $0 } ?? true
+    let targetIndexMatches = fixture.expectedTargetIndex.map { state.targetIndex == $0 } ?? true
+    let intentReason = steps.first?.intent.reason
+    let intentReasonMatches = fixture.expectedIntentReason.map { intentReason == $0 } ?? true
     return TerrainMovementFixtureResult(
         name: fixture.name,
         initialCurrent: fixture.current,
@@ -285,8 +340,18 @@ private func evaluateTerrainMovementFixture(
         actualStatus: state.status,
         expectedMoves: fixture.expectedMoves,
         actualMoves: moves,
+        expectedCurrent: fixture.expectedCurrent,
+        actualCurrent: state.current,
+        expectedTargetIndex: fixture.expectedTargetIndex,
+        actualTargetIndex: state.targetIndex,
+        expectedIntentReason: fixture.expectedIntentReason,
+        actualIntentReason: intentReason,
         steps: steps,
-        passed: state.status == fixture.expectedStatus && moves == fixture.expectedMoves
+        passed: state.status == fixture.expectedStatus
+            && moves == fixture.expectedMoves
+            && currentMatches
+            && targetIndexMatches
+            && intentReasonMatches
     )
 }
 
@@ -336,6 +401,59 @@ func makeTerrainMovementInvariantReport(
     let invalidPathsDoNotMove = invalidResults.allSatisfy { result in
         result.actualStatus == .invalidPath && result.steps.allSatisfy { !$0.moved }
     }
+    func isTerminal(_ status: LabTerrainMovementStatus) -> Bool {
+        switch status {
+        case .idle, .reachedGoal, .invalidPath, .blocked, .failed:
+            return true
+        case .moving:
+            return false
+        }
+    }
+    let terminalSteps = report.cases.flatMap(\.steps).filter { isTerminal($0.before.status) }
+    let terminalStatesStable = terminalSteps.allSatisfy {
+        !$0.moved
+            && $0.after.current == $0.before.current
+            && $0.after.targetIndex == $0.before.targetIndex
+            && $0.after.status == $0.before.status
+    }
+    let invalidTargetCase = report.cases.first {
+        $0.name == "moving_target_index_out_of_bounds_invalid"
+    }
+    let movingRequiresValidTarget = invalidTargetCase.map {
+        $0.actualStatus == .invalidPath
+            && $0.actualMoves == 0
+            && $0.actualIntentReason == "invalid_target_index"
+    } ?? false
+    let incoherentCurrentCase = report.cases.first {
+        $0.name == "moving_current_not_previous_node_invalid"
+    }
+    let movingRequiresExpectedCurrent = incoherentCurrentCase.map {
+        $0.actualStatus == .invalidPath
+            && $0.actualMoves == 0
+            && $0.actualIntentReason == "current_not_on_expected_path_edge"
+    } ?? false
+    let targetIndexProgressesExactly = movedSteps.allSatisfy { step in
+        if step.after.status == .reachedGoal {
+            return step.after.targetIndex == step.before.targetIndex
+        }
+        return step.after.targetIndex == step.before.targetIndex + 1
+    }
+    let partialProgressRemainsMoving = report.cases.first {
+        $0.name == "partial_multi_step_remains_moving"
+    }.map {
+        $0.actualStatus == .moving && $0.actualMoves == 2 && $0.actualTargetIndex == 3
+    } ?? false
+    let intentDeltaMatchesTarget = report.cases.flatMap(\.steps).allSatisfy { step in
+        step.intent.dx == step.intent.to.x - step.intent.from.x
+            && step.intent.dy == step.intent.to.y - step.intent.from.y
+            && step.intent.dz == step.intent.to.z - step.intent.from.z
+    }
+    let deniedIntentsDoNotMove = report.cases.flatMap(\.steps).allSatisfy {
+        $0.intent.allowed || !$0.moved
+    }
+    let allowedIntentsMoveOnce = report.cases.flatMap(\.steps).allSatisfy {
+        !$0.intent.allowed || ($0.moved && $0.after.current == $0.intent.to)
+    }
 
     let checks: [TerrainMovementInvariantCheck] = [
         TerrainMovementInvariantCheck(name: "fixture_inputs_exist", passed: !report.cases.isEmpty, expected: "> 0", actual: String(report.cases.count)),
@@ -350,6 +468,14 @@ func makeTerrainMovementInvariantReport(
         TerrainMovementInvariantCheck(name: "reached_goal_only_at_final_node", passed: reachedOnlyAtFinal, expected: "true", actual: String(reachedOnlyAtFinal)),
         TerrainMovementInvariantCheck(name: "post_goal_ticks_do_not_move", passed: idleAfterGoal, expected: "true", actual: String(idleAfterGoal)),
         TerrainMovementInvariantCheck(name: "invalid_paths_do_not_move", passed: invalidPathsDoNotMove, expected: "true", actual: String(invalidPathsDoNotMove)),
+        TerrainMovementInvariantCheck(name: "terminal_states_do_not_move", passed: terminalStatesStable, expected: "true", actual: String(terminalStatesStable)),
+        TerrainMovementInvariantCheck(name: "moving_state_requires_valid_target_index", passed: movingRequiresValidTarget, expected: "invalidPath / invalid_target_index", actual: invalidTargetCase.map { "\($0.actualStatus.rawValue) / \($0.actualIntentReason ?? "missing")" } ?? "missing fixture"),
+        TerrainMovementInvariantCheck(name: "moving_state_requires_current_on_expected_edge", passed: movingRequiresExpectedCurrent, expected: "invalidPath / current_not_on_expected_path_edge", actual: incoherentCurrentCase.map { "\($0.actualStatus.rawValue) / \($0.actualIntentReason ?? "missing")" } ?? "missing fixture"),
+        TerrainMovementInvariantCheck(name: "target_index_progresses_exactly", passed: targetIndexProgressesExactly, expected: "one index per move", actual: String(targetIndexProgressesExactly)),
+        TerrainMovementInvariantCheck(name: "partial_progress_remains_moving", passed: partialProgressRemainsMoving, expected: "moving", actual: report.cases.first(where: { $0.name == "partial_multi_step_remains_moving" })?.actualStatus.rawValue ?? "missing"),
+        TerrainMovementInvariantCheck(name: "intent_delta_matches_target", passed: intentDeltaMatchesTarget, expected: "to - from", actual: String(intentDeltaMatchesTarget)),
+        TerrainMovementInvariantCheck(name: "denied_intents_do_not_move", passed: deniedIntentsDoNotMove, expected: "true", actual: String(deniedIntentsDoNotMove)),
+        TerrainMovementInvariantCheck(name: "allowed_intents_move_once", passed: allowedIntentsMoveOnce, expected: "true", actual: String(allowedIntentsMoveOnce)),
         TerrainMovementInvariantCheck(name: "no_world_access_required", passed: true, expected: "pure node-key state", actual: "pure node-key state"),
         TerrainMovementInvariantCheck(name: "no_mutation_path_used", passed: true, expected: "true", actual: "true"),
         TerrainMovementInvariantCheck(name: "no_collision_performed", passed: true, expected: "true", actual: "true"),

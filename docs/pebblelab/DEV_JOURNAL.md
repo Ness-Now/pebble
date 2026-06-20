@@ -1677,3 +1677,101 @@ agent decision, multi-agent movement, Python, ML, LLM, or RL integration.
 
 Phase 4.14C: harden movement fixture state/index/error contracts before Phase
 4.15A plans any live movement integration.
+
+## 2026-06-19 — Phase 4.14C Terrain Movement Fixture Hardening
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Harden the fixture-only movement state machine around manually constructed
+states, denied intents, terminal stability, partial progress, target indexes,
+and exact intent deltas before any live integration planning.
+
+### Files Modified
+
+- `Sources/PebbleLab/LabTerrainMovement.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_MOVEMENT_PLAN.md`
+
+Existing metrics, event fields, scenario wiring, and output file names remain
+unchanged.
+
+### New Fixtures
+
+Ten fixtures were added:
+
+- partial multi-step progress remains moving;
+- moving target index out of bounds;
+- moving current node inconsistent with the expected previous path node;
+- direct idle, blocked, and failed terminal states;
+- invalid path stability over multiple ticks;
+- reached-goal stability over multiple ticks;
+- exact target-index progression;
+- exact movement-intent deltas across multiple horizontal directions.
+
+The fixture total grows from 12 to 22.
+
+### Contract Decisions
+
+- A moving state requires `targetIndex` inside the path and greater than zero.
+- Its current node must equal `path[targetIndex - 1]`.
+- Invalid indexes deny intent with `invalid_target_index`.
+- Incoherent current nodes deny intent with
+  `current_not_on_expected_path_edge`.
+- A denied moving intent becomes `invalidPath` without movement.
+- Idle, blocked, failed, invalid-path, and reached-goal states remain unchanged
+  and immobile.
+- Allowed intents move exactly once to `intent.to`; non-goal target indexes
+  advance by exactly one.
+
+### Invariant Hardening
+
+Eight checks were added for terminal-state immobility, target-index validity,
+current/path coherence, exact index progression, partial movement state,
+intent deltas, denied-intent immobility, and allowed-intent execution. The
+report now passes 25 checks.
+
+### Still Prohibited
+
+No PebbleCore, registry, save/load, renderer, resource, or golden change was
+made. Movement still uses no world, chunk, real agent, placeholder, core
+entity, pathfinding call, collision, physics integration, mutation, route
+following, agent decision, or multi-agent movement.
+
+### Validation Commands
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario terrain_path_movement_fixture_smoke --seed 42 --ticks 0 --out runs/check_terrain_path_movement_fixture_hardened`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_column_positive_smoke --seed 42 --ticks 5 --out runs/check_positive_path_after_movement_hardening`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_column_smoke --seed 42 --ticks 5 --out runs/check_negative_central_after_movement_hardening`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_column_edge_smoke --seed 42 --ticks 5 --out runs/check_negative_edge_after_movement_hardening`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_fixture_smoke --seed 42 --ticks 0 --out runs/check_pathfinding_fixture_after_movement_hardening`
+- `swift run -c release PebbleLab -- --scenario terrain_column_scan_smoke --seed 42 --ticks 5 --out runs/check_column_scan_after_movement_hardening`
+- `swift run -c release PebbleLab -- --scenario terrain_column_scan_edge_smoke --seed 42 --ticks 5 --out runs/check_column_scan_edge_after_movement_hardening`
+- `swift run -c release PebbleLab -- --scenario terrain_semantics_fixture_smoke --seed 42 --ticks 0 --out runs/check_semantics_fixture_after_movement_hardening`
+- `swift run -c release PebbleLab -- --scenario terrain_traversability_fixture_smoke --seed 42 --ticks 0 --out runs/check_traversability_fixture_after_movement_hardening`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_movement_hardening`
+- `swift run -c release PebbleLab -- --scenario world_observation_multi_smoke --seed 42 --ticks 5 --out runs/check_world_observation_after_movement_hardening`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Movement fixtures: `22 passed, 0 failed`.
+- Steps: 14 planned, 14 executed.
+- Final classifications: nine reached goals, nine invalid paths, plus stable
+  moving/idle/blocked/failed cases.
+- Movement invariants: `25 passed, 0 failed`.
+- Debug and Pebble release builds passed.
+- Positive/negative pathfinding, pathfinding fixtures, central/edge column
+  scans, semantics/traversability fixtures, regression, and multi-agent world
+  observation passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.15A: plan live movement integration docs-only, retaining fixture
+movement as the authority for abstract state progression.

@@ -441,3 +441,16 @@ empty, repeated, diagonal, vertical, non-neighbor, and misaligned paths.
 Next recommended step: Phase 4.14C - movement fixture hardening and contract
 cleanup, followed by Phase 4.15A - live movement integration planning docs-only.
 Live movement, collision, mutation, and route following remain out of scope.
+
+## Phase 4.14C - Movement Fixture Hardening And Contract Cleanup
+
+Status: implemented and validated.
+
+Goal: harden synthetic movement with manually constructed inconsistent states,
+explicit denied-intent reasons, terminal-state stability, exact target-index
+progression, partial progress, and direction-delta auditing. Twenty-two fixtures
+and 25 invariants now cover the movement contract.
+
+Next recommended step: Phase 4.15A - live movement integration planning
+docs-only. Live movement, collision, mutation, route following, and multi-agent
+movement remain out of scope.

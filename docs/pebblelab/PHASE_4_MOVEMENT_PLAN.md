@@ -395,3 +395,24 @@ six invalid paths, and `12 passed, 0 failed`. Its dedicated invariant report
 passes 17 checks. It writes fixture/report JSON, eight `terrainMovement*`
 metrics, and one aggregate `lab_terrain_movement_fixture_recorded` event. No
 pathfinding function, live agent, collision, or world mutation is involved.
+
+## Phase 4.14C Hardening Result
+
+Phase 4.14C expanded the fixture set from 12 to 22 and the invariant report
+from 17 to 25 checks. Fixture definitions can now inject manually constructed
+movement states and audit expected final position, target index, and first
+intent reason in addition to status and move count.
+
+The movement contract now explicitly rejects a moving state when its
+`targetIndex` is outside the path with reason `invalid_target_index`. It also
+rejects a moving state whose current node is not `path[targetIndex - 1]` with
+reason `current_not_on_expected_path_edge`. Denied moving intents transition to
+`invalidPath`; idle, blocked, failed, invalid-path, and reached-goal states
+remain stable and immobile.
+
+New fixtures cover partial multi-step progress, out-of-bounds target index,
+incoherent current node, direct idle/blocked/failed states, repeated invalid
+ticks, repeated reached-goal ticks, exact target-index progression, and intent
+deltas over east/south/west edges. The hardened run reports `22 passed, 0
+failed`, 14 planned/executed steps, nine reached goals, and nine invalid paths.
+No metrics or event schema expansion was needed.

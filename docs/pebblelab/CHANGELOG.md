@@ -61,3 +61,4 @@
 - Added positive live column pathfinding smoke with bounded read-only candidate discovery.
 - Documented terrain path movement planning contract.
 - Added fixture-only terrain path movement smoke.
+- Hardened fixture-only terrain path movement coverage and invariants.
