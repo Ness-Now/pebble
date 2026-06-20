@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Hardened abstract live terrain movement adapter invariants.
 - Added abstract live terrain movement smoke over positive path evidence.
 - Added `nearbyAgents` social perception v0 for abstract `agent_smoke` agents.
 - Added `agent_observed_nearby_agent` NDJSON events.

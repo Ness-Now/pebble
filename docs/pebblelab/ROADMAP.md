@@ -480,3 +480,17 @@ Next recommended step: Phase 4.15C - live movement adapter hardening without
 collision, or Phase 4.16A - collision planning docs-only. Collision, physical
 displacement, mutation, gameplay route following, and multi-agent movement
 remain out of scope.
+
+## Phase 4.15C - Live Movement Adapter Hardening Without Collision
+
+Status: implemented and validated.
+
+Goal: audit positive-candidate provenance, exact selected-path consumption,
+initial movement state, step and summary agreement, intent reasons, contractual
+false safety flags, and rejection of absent or invalid positive evidence. The
+live movement report now passes 28 checks without adding another scenario.
+
+Next recommended step: Phase 4.16A - collision planning docs-only, or Phase
+4.15D - live movement failure-case fixtures without collision. Collision,
+physical displacement, mutation, gameplay route following, and multi-agent
+movement remain out of scope.

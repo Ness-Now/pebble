@@ -60,12 +60,13 @@ struct TerrainLiveMovementInvariantCheck: Codable {
 }
 
 func makeTerrainLiveMovementSnapshot(
-    from positiveSnapshot: LabTerrainPathfindingPositiveSnapshot,
+    from positiveSnapshot: LabTerrainPathfindingPositiveSnapshot?,
     scenario: String,
     seed: UInt32,
     ticksCompleted: Int
 ) -> LabTerrainLiveMovementSnapshot? {
-    guard positiveSnapshot.summary.success,
+    guard let positiveSnapshot,
+          positiveSnapshot.summary.success,
           let selected = positiveSnapshot.selectedPathfindingSnapshot,
           selected.result.status == .found,
           selected.result.path.count > 1,
@@ -157,6 +158,52 @@ func makeTerrainLiveMovementInvariantReport(
     }
     let noVerticalSteps = steps.allSatisfy { !$0.moved || $0.intent.dy == 0 }
     let consumedSelectedPath = positiveSelected?.result.path == path
+    let selectedCandidateMetadataPresent = movementSnapshot != nil
+        && positiveSnapshot?.summary.selectedCandidateIndex != nil
+        && positiveSnapshot?.summary.selectedSeed != nil
+        && positiveSnapshot?.summary.selectedAgentX != nil
+        && positiveSnapshot?.summary.selectedAgentZ != nil
+    let selectedCandidateMatchesSummary = movementSnapshot.map { movement in
+        movement.selectedCandidateIndex == positiveSnapshot?.summary.selectedCandidateIndex
+            && movement.selectedSeed == positiveSnapshot?.summary.selectedSeed
+            && movement.selectedAgentX == positiveSnapshot?.summary.selectedAgentX
+            && movement.selectedAgentZ == positiveSnapshot?.summary.selectedAgentZ
+    } ?? false
+    let stepCountMatchesSummary = movementSnapshot.map {
+        $0.movementSteps.count == $0.summary.stepsExecuted
+    } ?? false
+    let summaryPathLengthMatches = movementSnapshot.map {
+        $0.summary.pathLength == $0.selectedPath.count
+    } ?? false
+    let allStepsMoved = !steps.isEmpty && steps.allSatisfy(\.moved)
+    let intentReasonsMatch = !steps.isEmpty && steps.allSatisfy {
+        $0.intent.reason == "move_to_next_path_node"
+    }
+    let invalidPositiveSnapshot = positiveSnapshot.map {
+        LabTerrainPathfindingPositiveSnapshot(
+            scenario: $0.scenario,
+            seed: $0.seed,
+            ticksCompleted: $0.ticksCompleted,
+            strategy: $0.strategy,
+            candidates: $0.candidates,
+            attempts: $0.attempts,
+            selectedPathfindingSnapshot: nil,
+            summary: $0.summary
+        )
+    }
+    let missingOrInvalidEvidenceDoesNotMove = makeTerrainLiveMovementSnapshot(
+        from: nil,
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: 0
+    ) == nil && invalidPositiveSnapshot.flatMap {
+        makeTerrainLiveMovementSnapshot(
+            from: $0,
+            scenario: scenario,
+            seed: seed,
+            ticksCompleted: 0
+        )
+    } == nil
 
     let checks: [TerrainLiveMovementInvariantCheck] = [
         TerrainLiveMovementInvariantCheck(name: "positive_pathfinding_snapshot_exists", passed: positiveSelected != nil, expected: "true", actual: String(positiveSelected != nil)),
@@ -176,7 +223,17 @@ func makeTerrainLiveMovementInvariantReport(
         TerrainLiveMovementInvariantCheck(name: "no_collision_performed", passed: movementSnapshot?.summary.collisionPerformed == false, expected: "false", actual: String(movementSnapshot?.summary.collisionPerformed ?? true)),
         TerrainLiveMovementInvariantCheck(name: "no_mutation_performed", passed: movementSnapshot?.summary.mutationPerformed == false, expected: "false", actual: String(movementSnapshot?.summary.mutationPerformed ?? true)),
         TerrainLiveMovementInvariantCheck(name: "positive_pathfinding_evidence_successful", passed: positiveSnapshot?.summary.success == true && movementSnapshot?.positivePathfindingSuccess == true, expected: "true", actual: String(positiveSnapshot?.summary.success == true && movementSnapshot?.positivePathfindingSuccess == true)),
-        TerrainLiveMovementInvariantCheck(name: "movement_fixture_evidence_remains_separate", passed: true, expected: "no fixture runtime dependency", actual: "no fixture runtime dependency")
+        TerrainLiveMovementInvariantCheck(name: "movement_fixture_evidence_remains_separate", passed: true, expected: "no fixture runtime dependency", actual: "no fixture runtime dependency"),
+        TerrainLiveMovementInvariantCheck(name: "selected_candidate_metadata_present", passed: selectedCandidateMetadataPresent, expected: "index, seed, x, z", actual: selectedCandidateMetadataPresent ? "index, seed, x, z" : "missing metadata"),
+        TerrainLiveMovementInvariantCheck(name: "selected_candidate_matches_positive_summary", passed: selectedCandidateMatchesSummary, expected: "exact metadata match", actual: selectedCandidateMatchesSummary ? "exact metadata match" : "metadata mismatch"),
+        TerrainLiveMovementInvariantCheck(name: "selected_path_consumed_exactly", passed: consumedSelectedPath, expected: "exact selected result path", actual: consumedSelectedPath ? "exact selected result path" : "path mismatch"),
+        TerrainLiveMovementInvariantCheck(name: "initial_state_status_moving", passed: movementSnapshot?.initialMovementState.status == .moving, expected: "moving", actual: movementSnapshot?.initialMovementState.status.rawValue ?? "missing"),
+        TerrainLiveMovementInvariantCheck(name: "initial_state_target_index_one", passed: movementSnapshot?.initialMovementState.targetIndex == 1, expected: "1", actual: String(movementSnapshot?.initialMovementState.targetIndex ?? -1)),
+        TerrainLiveMovementInvariantCheck(name: "step_count_matches_summary", passed: stepCountMatchesSummary, expected: "movementSteps.count == summary.stepsExecuted", actual: stepCountMatchesSummary ? "match" : "mismatch"),
+        TerrainLiveMovementInvariantCheck(name: "summary_path_length_matches_selected_path", passed: summaryPathLengthMatches, expected: "summary.pathLength == selectedPath.count", actual: summaryPathLengthMatches ? "match" : "mismatch"),
+        TerrainLiveMovementInvariantCheck(name: "all_steps_moved_true", passed: allStepsMoved, expected: "true", actual: String(allStepsMoved)),
+        TerrainLiveMovementInvariantCheck(name: "intent_reasons_are_move_to_next_path_node", passed: intentReasonsMatch, expected: "move_to_next_path_node", actual: intentReasonsMatch ? "move_to_next_path_node" : "unexpected reason"),
+        TerrainLiveMovementInvariantCheck(name: "missing_or_invalid_positive_evidence_does_not_move", passed: missingOrInvalidEvidenceDoesNotMove, expected: "no movement snapshot", actual: missingOrInvalidEvidenceDoesNotMove ? "no movement snapshot" : "unexpected movement snapshot")
     ]
     let passed = checks.filter(\.passed).count
     let reportSuccess = movementSnapshot?.summary.success == true && passed == checks.count
@@ -195,7 +252,9 @@ func makeTerrainLiveMovementInvariantReport(
         notes: [
             "The path is live evidence; movement execution mutates value-state only.",
             "No agent, physical placeholder, core entity, collision state, or world block is changed.",
-            "Movement reuses validation and stepping from LabTerrainMovement without invoking pathfinding."
+            "Movement reuses validation and stepping from LabTerrainMovement without invoking pathfinding.",
+            "Missing or invalid positive evidence cannot create movement steps or a successful report.",
+            "Runner metrics and the aggregate event are populated directly from the snapshot summary."
         ]
     )
 }

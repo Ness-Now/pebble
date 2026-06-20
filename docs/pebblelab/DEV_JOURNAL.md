@@ -1926,3 +1926,89 @@ added.
 
 Phase 4.15C: harden the live movement adapter without collision, or Phase 4.16A:
 plan collision docs-only before any physical displacement is attempted.
+
+## 2026-06-19 — Phase 4.15C Live Movement Adapter Hardening
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Strengthen the existing abstract live movement adapter before collision or real
+displacement by auditing positive evidence provenance, exact path consumption,
+movement-state construction, step recording, and output consistency.
+
+### Files Modified
+
+- `Sources/PebbleLab/LabTerrainLiveMovement.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_LIVE_MOVEMENT_INTEGRATION_PLAN.md`
+
+Metrics and event schemas remain unchanged because their existing fields fully
+express the hardened contract.
+
+### Invariant Hardening
+
+The invariant report grows from 18 to 28 checks. New checks verify selected
+candidate metadata presence and exact agreement with the positive summary,
+exact selected-path consumption, initial `moving` state and target index one,
+movement-step and summary counts, summary path length, successful moved steps,
+and the canonical `move_to_next_path_node` intent reason.
+
+A pure synthetic audit passes nil and invalid positive evidence to the adapter
+and confirms that neither can create a movement snapshot or steps. No world,
+chunk, agent, pathfinding, or separate scenario participates in this audit.
+
+### Contract Decisions
+
+The positive path remains candidate index zero, seed 99 at `(8,8)`, with path
+`(8,64,8) -> (9,64,8)`. The adapter consumes it unchanged. Metrics and the
+single aggregate event continue to read directly from the snapshot summary;
+runner-level validation checks their agreement.
+
+The safety flags remain contractual output, not commentary:
+
+- `liveAgentDisplaced = false`;
+- `collisionPerformed = false`;
+- `mutationPerformed = false`.
+
+### Still Prohibited
+
+No PebbleCore, registry, save/load, renderer, resource, or golden file changed.
+No live entity displacement, collision, physics integration, mutation,
+pathfinding inside movement, second BFS, goal selection, gameplay route
+following, multi-agent movement, avoidance, Python, ML, LLM, or RL integration
+was added.
+
+### Validation Commands
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario terrain_path_live_movement_smoke --seed 42 --ticks 5 --out runs/check_terrain_path_live_movement_hardened`
+- `swift run -c release PebbleLab -- --scenario terrain_path_movement_fixture_smoke --seed 42 --ticks 0 --out runs/check_movement_fixture_after_live_movement_hardening`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_column_positive_smoke --seed 42 --ticks 5 --out runs/check_positive_path_after_live_movement_hardening`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_column_smoke --seed 42 --ticks 5 --out runs/check_negative_central_after_live_movement_hardening`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_column_edge_smoke --seed 42 --ticks 5 --out runs/check_negative_edge_after_live_movement_hardening`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_fixture_smoke --seed 42 --ticks 0 --out runs/check_pathfinding_fixture_after_live_movement_hardening`
+- `swift run -c release PebbleLab -- --scenario terrain_column_scan_smoke --seed 42 --ticks 5 --out runs/check_column_scan_after_live_movement_hardening`
+- `swift run -c release PebbleLab -- --scenario terrain_column_scan_edge_smoke --seed 42 --ticks 5 --out runs/check_column_scan_edge_after_live_movement_hardening`
+- `swift run -c release PebbleLab -- --scenario terrain_semantics_fixture_smoke --seed 42 --ticks 0 --out runs/check_semantics_fixture_after_live_movement_hardening`
+- `swift run -c release PebbleLab -- --scenario terrain_traversability_fixture_smoke --seed 42 --ticks 0 --out runs/check_traversability_fixture_after_live_movement_hardening`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_live_movement_hardening`
+- `swift run -c release PebbleLab -- --scenario world_observation_multi_smoke --seed 42 --ticks 5 --out runs/check_world_observation_after_live_movement_hardening`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Hardened live movement path: two nodes, one abstract step, `reachedGoal`.
+- Live movement invariants: `28 passed, 0 failed`.
+- Snapshot, metrics, and event agree on path length two, one step, final goal,
+  success true, and all three safety flags false.
+- Debug/release builds and the full requested non-regression matrix passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.16A: plan collision docs-only, or Phase 4.15D: add isolated live
+movement failure-case fixtures while retaining zero physical displacement.

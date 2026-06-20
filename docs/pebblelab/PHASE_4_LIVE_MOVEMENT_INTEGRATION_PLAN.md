@@ -337,3 +337,18 @@ The dedicated snapshot reports `liveAgentDisplaced = false`,
 `collisionPerformed = false`, and `mutationPerformed = false`. Its invariant
 report passes all 18 checks. Physical displacement, collision, route following,
 mutation, and multi-agent movement remain outside the implemented scope.
+
+## Phase 4.15C Hardening Status
+
+Phase 4.15C hardened the existing adapter and scenario without adding collision,
+physical synchronization, a second scenario, or new output formats. The
+invariant report now passes 28 checks.
+
+The added checks audit selected-candidate metadata and its exact match with the
+positive summary, byte-for-structure selected-path consumption, initial
+`moving` state and target index, path/step/summary agreement, successful intent
+reasons, and the contractual false displacement/collision/mutation flags. A
+pure synthetic guard also proves that absent or invalid positive evidence
+cannot create a movement snapshot or any abstract steps. Metrics and the
+aggregate event remain populated directly from the snapshot summary and are
+audited at runner validation time.
