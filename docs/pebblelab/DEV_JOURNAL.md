@@ -1062,3 +1062,75 @@ navigation, or ML integration was added.
 Phase 4.13A: plan live pathfinding integration docs-only, preserving the
 strict separation between captured traversability, search evidence, movement,
 and collision.
+
+## 2026-06-19 — Phase 4.13A Live Pathfinding Integration Planning
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Define the exact boundary between captured live column traversability and the
+existing fixture-proven BFS before adding any live pathfinding code.
+
+### Files Created Or Modified
+
+- `docs/pebblelab/PHASE_4_LIVE_PATHFINDING_INTEGRATION_PLAN.md` (new)
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+### Technical Decisions
+
+- Phase 4.13B begins central-only with seed 42, one agent, radius one, nine
+  columns, and nine abstract nodes.
+- Each node copies coordinates and traversability from one captured column;
+  adaptation and BFS perform no world read.
+- Start is fixed at offset `(0,0)` and goal at `(1,0)`.
+- Neighbor mode remains `north_east_south_west`; `maxVisited` is nine.
+- Phase 4.13B reuses `scanTerrainColumns` evidence and `findTerrainPath`; it
+  does not introduce another scan or BFS.
+
+### Negative Results
+
+Seed 42 commonly produces water support and `.unsafe` column results. A
+coherent `invalidStart`, `invalidGoal`, or `notFound` is therefore accepted as
+successful integration evidence. Terrain, semantic rules, traversability, and
+BFS must not be changed to manufacture a found route.
+
+### Layer Relationship
+
+Column scan reads and audits the world. Semantics and traversability transform
+captured values. The live adapter creates nine abstract nodes. Existing BFS
+returns search evidence. Movement, collision, and agent goal selection remain
+future, separate layers.
+
+### Risks
+
+The plan addresses premature world coupling, repeated reads, terrain mutation
+to force success, rejection of honest negative statuses, collision overclaims,
+fixture BFS changes for live convenience, intelligent goal-selection leakage,
+and premature edge or multi-agent expansion.
+
+### Still Prohibited
+
+No Swift, PebbleCore, registry, save/load, renderer, resource, or golden file
+was changed. Live pathfinding code, world rereads, graph execution, movement,
+collision, mutation, intelligent goals, edge/multi-agent search, A*, Dijkstra,
+weighted costs, and ML integrations remain out of scope.
+
+### Validation Commands
+
+- `swift build`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Documentation-only diff confirmed; no Swift file changed.
+- `swift build` passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.13B: implement central-only `terrain_pathfinding_column_smoke` as a
+pure adapter from captured column traversability to the existing BFS, with no
+movement or collision consumer.

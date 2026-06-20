@@ -54,3 +54,4 @@
 - Documented terrain pathfinding planning contract.
 - Added terrain pathfinding fixture smoke with bounded deterministic BFS.
 - Hardened terrain pathfinding fixture coverage and edge-case invariants.
+- Documented live column pathfinding integration planning contract.

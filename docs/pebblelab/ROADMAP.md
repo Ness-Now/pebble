@@ -362,7 +362,15 @@ invariants now cover the bounded search contract.
 
 ## Phase 4.13A - Live Pathfinding Integration Planning
 
-Next recommended step: document how captured column traversability could be
-adapted into a bounded live-search input without implementing that integration.
-Live pathfinding, collision, mutation, route following, and agent movement
-remain out of scope.
+Status: done as a docs-only planning phase.
+
+Goal: define a central-only adapter from nine captured column traversability
+results into the existing bounded BFS while accepting coherent negative path
+statuses and preserving the no-reread/no-movement contract.
+
+## Phase 4.13B - Terrain Pathfinding Column Smoke
+
+Next recommended step: build nine abstract nodes from the central column scan,
+use fixed center/east start and goal keys, and call the existing BFS without
+movement or collision integration. Edge and multi-agent live pathfinding,
+mutation, route following, and agent movement remain out of scope.
