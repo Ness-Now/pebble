@@ -28,6 +28,8 @@ let isTerrainPathfindingColumnScenario = options.scenario
     || options.scenario == "terrain_pathfinding_column_edge_smoke"
 let isTerrainPathfindingPositiveScenario = options.scenario
     == "terrain_pathfinding_column_positive_smoke"
+let isTerrainLiveMovementScenario = options.scenario
+    == "terrain_path_live_movement_smoke"
 let isTerrainMovementFixtureScenario = options.scenario
     == "terrain_path_movement_fixture_smoke"
 let isWorldInteractionScenario = isWorldObservationScenario
@@ -970,6 +972,38 @@ let terrainPathfindingPositiveSuccess = isTerrainPathfindingPositiveScenario
         && (terrainPathfindingPositiveInvariantReport?.success ?? false)
         && terrainPathfindingPositiveSnapshot?.selectedPathfindingSnapshot?.result.status == .found)
     : nil
+let terrainLiveMovementPositiveSnapshot = isTerrainLiveMovementScenario
+    ? makeTerrainPathfindingPositiveSnapshot(
+        scenario: options.scenario,
+        seed: options.seed,
+        ticksCompleted: ticksCompleted
+    )
+    : nil
+let terrainLiveMovementSnapshot = terrainLiveMovementPositiveSnapshot.flatMap {
+    makeTerrainLiveMovementSnapshot(
+        from: $0,
+        scenario: options.scenario,
+        seed: options.seed,
+        ticksCompleted: ticksCompleted
+    )
+}
+let terrainLiveMovementInvariantReport = isTerrainLiveMovementScenario
+    ? makeTerrainLiveMovementInvariantReport(
+        positiveSnapshot: terrainLiveMovementPositiveSnapshot,
+        movementSnapshot: terrainLiveMovementSnapshot,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let terrainLiveMovementSuccess = isTerrainLiveMovementScenario
+    ? ((terrainLiveMovementSnapshot?.summary.success ?? false)
+        && (terrainLiveMovementInvariantReport?.success ?? false)
+        && terrainLiveMovementSnapshot?.selectedPathStatus == .found
+        && terrainLiveMovementSnapshot?.finalMovementState.status == .reachedGoal
+        && terrainLiveMovementSnapshot?.summary.liveAgentDisplaced == false
+        && terrainLiveMovementSnapshot?.summary.collisionPerformed == false
+        && terrainLiveMovementSnapshot?.summary.mutationPerformed == false)
+    : nil
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
     && successCriteria.agentTicksRecorded
@@ -988,6 +1022,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (terrainPathfindingColumnSuccess ?? true)
     && (terrainPathfindingPositiveSuccess ?? true)
     && (terrainMovementSuccess ?? true)
+    && (terrainLiveMovementSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -1135,6 +1170,23 @@ if options.outPath != nil {
                 selectedSeed: positiveSnapshot.summary.selectedSeed,
                 agentX: positiveSnapshot.summary.selectedAgentX,
                 agentZ: positiveSnapshot.summary.selectedAgentZ
+            ))
+        }
+        if let liveMovementSnapshot = terrainLiveMovementSnapshot {
+            let summary = liveMovementSnapshot.summary
+            try appendEvent(RunEvent(
+                type: "lab_terrain_live_movement_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: terrainLiveMovementSuccess,
+                pathLength: summary.pathLength,
+                selectedCandidateIndex: liveMovementSnapshot.selectedCandidateIndex,
+                stepsExecuted: summary.stepsExecuted,
+                reachedGoal: summary.reachedGoal,
+                finalStatus: summary.finalStatus.rawValue,
+                liveAgentDisplaced: summary.liveAgentDisplaced,
+                collisionPerformed: summary.collisionPerformed,
+                mutationPerformed: summary.mutationPerformed
             ))
         }
         if let terrainScanSnapshot {
@@ -1507,6 +1559,18 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("terrain_pathfinding_column_positive_invariant_report.json")
             )
         }
+        if let terrainLiveMovementSnapshot {
+            try writeJSON(
+                terrainLiveMovementSnapshot,
+                to: outURL.appendingPathComponent("terrain_path_live_movement_snapshot.json")
+            )
+        }
+        if let terrainLiveMovementInvariantReport {
+            try writeJSON(
+                terrainLiveMovementInvariantReport,
+                to: outURL.appendingPathComponent("terrain_path_live_movement_invariant_report.json")
+            )
+        }
         if let terrainScanSnapshot {
             try writeJSON(
                 terrainScanSnapshot,
@@ -1748,6 +1812,14 @@ if let outPath = options.outPath {
             terrainMovementReachedGoals: terrainMovementFixtureReport?.summary.reachedGoals,
             terrainMovementInvalidPaths: terrainMovementFixtureReport?.summary.invalidPaths,
             terrainMovementSuccess: terrainMovementSuccess,
+            terrainLiveMovementPathLength: terrainLiveMovementSnapshot?.summary.pathLength,
+            terrainLiveMovementStepsExecuted: terrainLiveMovementSnapshot?.summary.stepsExecuted,
+            terrainLiveMovementReachedGoal: terrainLiveMovementSnapshot?.summary.reachedGoal,
+            terrainLiveMovementFinalStatus: terrainLiveMovementSnapshot?.summary.finalStatus.rawValue,
+            terrainLiveMovementLiveAgentDisplaced: terrainLiveMovementSnapshot?.summary.liveAgentDisplaced,
+            terrainLiveMovementCollisionPerformed: terrainLiveMovementSnapshot?.summary.collisionPerformed,
+            terrainLiveMovementMutationPerformed: terrainLiveMovementSnapshot?.summary.mutationPerformed,
+            terrainLiveMovementSuccess: terrainLiveMovementSuccess,
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))

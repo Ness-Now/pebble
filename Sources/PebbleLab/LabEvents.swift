@@ -153,6 +153,11 @@ struct RunEvent: Encodable {
     let stepsExecuted: Int?
     let reachedGoals: Int?
     let invalidPaths: Int?
+    let reachedGoal: Bool?
+    let finalStatus: String?
+    let liveAgentDisplaced: Bool?
+    let collisionPerformed: Bool?
+    let mutationPerformed: Bool?
 
     init(
         type: String,
@@ -306,7 +311,12 @@ struct RunEvent: Encodable {
         stepsPlanned: Int? = nil,
         stepsExecuted: Int? = nil,
         reachedGoals: Int? = nil,
-        invalidPaths: Int? = nil
+        invalidPaths: Int? = nil,
+        reachedGoal: Bool? = nil,
+        finalStatus: String? = nil,
+        liveAgentDisplaced: Bool? = nil,
+        collisionPerformed: Bool? = nil,
+        mutationPerformed: Bool? = nil
     ) {
         self.type = type
         self.event = event
@@ -460,6 +470,11 @@ struct RunEvent: Encodable {
         self.stepsExecuted = stepsExecuted
         self.reachedGoals = reachedGoals
         self.invalidPaths = invalidPaths
+        self.reachedGoal = reachedGoal
+        self.finalStatus = finalStatus
+        self.liveAgentDisplaced = liveAgentDisplaced
+        self.collisionPerformed = collisionPerformed
+        self.mutationPerformed = mutationPerformed
     }
 }
 

@@ -466,3 +466,17 @@ the world, or introducing gameplay route following.
 Next recommended step: Phase 4.15B - terrain path live movement smoke.
 Collision, physical displacement, mutation, route following, and multi-agent
 movement remain out of scope.
+
+## Phase 4.15B - Terrain Path Live Movement Smoke
+
+Status: implemented and validated.
+
+Goal: consume the existing positive live path evidence in the hardened abstract
+movement state machine. Candidate index zero, seed 99 at `(8,8)`, supplies the
+two-node path `(8,64,8) -> (9,64,8)`; one value-state step reaches the goal
+without displacing an agent, performing collision, or mutating the world.
+
+Next recommended step: Phase 4.15C - live movement adapter hardening without
+collision, or Phase 4.16A - collision planning docs-only. Collision, physical
+displacement, mutation, gameplay route following, and multi-agent movement
+remain out of scope.

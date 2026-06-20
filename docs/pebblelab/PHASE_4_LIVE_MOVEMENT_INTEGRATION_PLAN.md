@@ -323,3 +323,17 @@ integration only. Reuse the positive live path, feed it into the existing pure
 movement state machine, record every abstract step, and require
 `reachedGoal`. Keep all live positions unchanged and make no collision or
 mutation claim.
+
+## Phase 4.15B Implementation Status
+
+Phase 4.15B implemented and validated `terrain_path_live_movement_smoke`.
+The scenario reuses positive pathfinding evidence and the existing movement
+validation and stepping functions; it contains no second pathfinder and no
+independent movement state machine.
+
+The selected evidence is candidate index zero, seed 99 at `(8,8)`, with path
+`(8,64,8) -> (9,64,8)`. One abstract eastward step reaches `reachedGoal`.
+The dedicated snapshot reports `liveAgentDisplaced = false`,
+`collisionPerformed = false`, and `mutationPerformed = false`. Its invariant
+report passes all 18 checks. Physical displacement, collision, route following,
+mutation, and multi-agent movement remain outside the implemented scope.

@@ -1838,3 +1838,91 @@ Python, ML, LLM, or RL integration was added.
 
 Phase 4.15B: implement `terrain_path_live_movement_smoke` as abstract movement
 over positive live path evidence, with no live displacement or collision.
+
+## 2026-06-19 — Phase 4.15B Terrain Path Live Movement Smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Consume a naturally captured positive live path with the existing abstract
+movement state machine, record every value-state transition, and reach the goal
+without changing any live agent, physical placeholder, core entity, chunk, or
+world block.
+
+### Files Created Or Modified
+
+- `Sources/PebbleLab/LabTerrainLiveMovement.swift` (new)
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_LIVE_MOVEMENT_INTEGRATION_PLAN.md`
+
+### Positive Path And Abstract Movement
+
+The existing bounded candidate pipeline selects candidate index zero, seed 99
+at `(8,8)`. Its existing BFS returns `found` for the path
+`(8,64,8) -> (9,64,8)`. The live movement adapter consumes that exact path,
+initializes `targetIndex = 1`, and delegates to `stepTerrainMovement` once. The
+recorded eastward intent has delta `(1,0,0)` and reaches `reachedGoal` without
+running pathfinding inside movement or selecting another goal.
+
+### Outputs And Invariants
+
+The scenario writes `terrain_path_live_movement_snapshot.json`,
+`terrain_path_live_movement_invariant_report.json`, `metrics.json`, and
+`events.ndjson`. Metrics use the `terrainLiveMovement*` prefix and one
+`lab_terrain_live_movement_recorded` event summarizes the run. All 18 dedicated
+invariants pass, including exact path order, no skipped/diagonal/vertical steps,
+and separation from fixture runtime evidence.
+
+The snapshot and metrics explicitly report:
+
+- `liveAgentDisplaced = false`;
+- `collisionPerformed = false`;
+- `mutationPerformed = false`.
+
+### Still Prohibited
+
+No PebbleCore, registry, save/load, renderer, resource, or golden file changed.
+No live position synchronization, physical movement, collision, physics,
+mutation, second BFS, pathfinding inside movement, gameplay route following,
+goal selection, multi-agent movement, Python, ML, LLM, or RL integration was
+added.
+
+### Validation Commands
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario terrain_path_live_movement_smoke --seed 42 --ticks 5 --out runs/check_terrain_path_live_movement`
+- `swift run -c release PebbleLab -- --scenario terrain_path_movement_fixture_smoke --seed 42 --ticks 0 --out runs/check_movement_fixture_after_live_movement`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_column_positive_smoke --seed 42 --ticks 5 --out runs/check_positive_path_after_live_movement`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_column_smoke --seed 42 --ticks 5 --out runs/check_negative_central_after_live_movement`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_column_edge_smoke --seed 42 --ticks 5 --out runs/check_negative_edge_after_live_movement`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_fixture_smoke --seed 42 --ticks 0 --out runs/check_pathfinding_fixture_after_live_movement`
+- `swift run -c release PebbleLab -- --scenario terrain_column_scan_smoke --seed 42 --ticks 5 --out runs/check_column_scan_after_live_movement`
+- `swift run -c release PebbleLab -- --scenario terrain_column_scan_edge_smoke --seed 42 --ticks 5 --out runs/check_column_scan_edge_after_live_movement`
+- `swift run -c release PebbleLab -- --scenario terrain_semantics_fixture_smoke --seed 42 --ticks 0 --out runs/check_semantics_fixture_after_live_movement`
+- `swift run -c release PebbleLab -- --scenario terrain_traversability_fixture_smoke --seed 42 --ticks 0 --out runs/check_traversability_fixture_after_live_movement`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_live_movement`
+- `swift run -c release PebbleLab -- --scenario world_observation_multi_smoke --seed 42 --ticks 5 --out runs/check_world_observation_after_live_movement`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Live movement path: two nodes, one step, final `reachedGoal`.
+- Live movement invariants: `18 passed, 0 failed`.
+- No-displacement, no-collision, and no-mutation flags: false as required.
+- Debug build and the principal release scenario passed.
+- Full non-regression validation passed, including `pebsmoke` at
+  `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.15C: harden the live movement adapter without collision, or Phase 4.16A:
+plan collision docs-only before any physical displacement is attempted.

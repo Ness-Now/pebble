@@ -236,6 +236,14 @@ struct RunMetrics: Encodable {
     let terrainMovementReachedGoals: Int?
     let terrainMovementInvalidPaths: Int?
     let terrainMovementSuccess: Bool?
+    let terrainLiveMovementPathLength: Int?
+    let terrainLiveMovementStepsExecuted: Int?
+    let terrainLiveMovementReachedGoal: Bool?
+    let terrainLiveMovementFinalStatus: String?
+    let terrainLiveMovementLiveAgentDisplaced: Bool?
+    let terrainLiveMovementCollisionPerformed: Bool?
+    let terrainLiveMovementMutationPerformed: Bool?
+    let terrainLiveMovementSuccess: Bool?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -421,6 +429,14 @@ struct RunMetrics: Encodable {
         terrainMovementReachedGoals: Int? = nil,
         terrainMovementInvalidPaths: Int? = nil,
         terrainMovementSuccess: Bool? = nil,
+        terrainLiveMovementPathLength: Int? = nil,
+        terrainLiveMovementStepsExecuted: Int? = nil,
+        terrainLiveMovementReachedGoal: Bool? = nil,
+        terrainLiveMovementFinalStatus: String? = nil,
+        terrainLiveMovementLiveAgentDisplaced: Bool? = nil,
+        terrainLiveMovementCollisionPerformed: Bool? = nil,
+        terrainLiveMovementMutationPerformed: Bool? = nil,
+        terrainLiveMovementSuccess: Bool? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -605,6 +621,14 @@ struct RunMetrics: Encodable {
         self.terrainMovementReachedGoals = terrainMovementReachedGoals
         self.terrainMovementInvalidPaths = terrainMovementInvalidPaths
         self.terrainMovementSuccess = terrainMovementSuccess
+        self.terrainLiveMovementPathLength = terrainLiveMovementPathLength
+        self.terrainLiveMovementStepsExecuted = terrainLiveMovementStepsExecuted
+        self.terrainLiveMovementReachedGoal = terrainLiveMovementReachedGoal
+        self.terrainLiveMovementFinalStatus = terrainLiveMovementFinalStatus
+        self.terrainLiveMovementLiveAgentDisplaced = terrainLiveMovementLiveAgentDisplaced
+        self.terrainLiveMovementCollisionPerformed = terrainLiveMovementCollisionPerformed
+        self.terrainLiveMovementMutationPerformed = terrainLiveMovementMutationPerformed
+        self.terrainLiveMovementSuccess = terrainLiveMovementSuccess
         self.successCriteria = successCriteria
     }
 }
