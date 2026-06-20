@@ -26,6 +26,8 @@ let isTerrainPathfindingFixtureScenario = options.scenario
 let isTerrainPathfindingColumnScenario = options.scenario
     == "terrain_pathfinding_column_smoke"
     || options.scenario == "terrain_pathfinding_column_edge_smoke"
+let isTerrainPathfindingPositiveScenario = options.scenario
+    == "terrain_pathfinding_column_positive_smoke"
 let isWorldInteractionScenario = isWorldObservationScenario
     || isTerrainScanRun
     || isTerrainColumnScanRun
@@ -926,7 +928,7 @@ let terrainColumnTraversabilitySuccess = isTerrainColumnScanRun
     ? (terrainColumnDerivedSummary?.success ?? false)
     : nil
 let terrainPathfindingColumnSnapshot = isTerrainPathfindingColumnScenario
-    ? terrainColumnScanSnapshot.flatMap(makeTerrainLivePathfindingSnapshot)
+    ? terrainColumnScanSnapshot.flatMap { makeTerrainLivePathfindingSnapshot(from: $0) }
     : nil
 let terrainPathfindingColumnInvariantReport = terrainPathfindingColumnSnapshot.flatMap { snapshot in
     terrainColumnScanSnapshot.map {
@@ -939,6 +941,21 @@ let terrainPathfindingColumnInvariantReport = terrainPathfindingColumnSnapshot.f
 let terrainPathfindingColumnSuccess = isTerrainPathfindingColumnScenario
     ? ((terrainPathfindingColumnSnapshot?.summary.success ?? false)
         && (terrainPathfindingColumnInvariantReport?.success ?? false))
+    : nil
+let terrainPathfindingPositiveSnapshot = isTerrainPathfindingPositiveScenario
+    ? makeTerrainPathfindingPositiveSnapshot(
+        scenario: options.scenario,
+        seed: options.seed,
+        ticksCompleted: ticksCompleted
+    )
+    : nil
+let terrainPathfindingPositiveInvariantReport = terrainPathfindingPositiveSnapshot.map(
+    makeTerrainPathfindingPositiveInvariantReport
+)
+let terrainPathfindingPositiveSuccess = isTerrainPathfindingPositiveScenario
+    ? ((terrainPathfindingPositiveSnapshot?.summary.success ?? false)
+        && (terrainPathfindingPositiveInvariantReport?.success ?? false)
+        && terrainPathfindingPositiveSnapshot?.selectedPathfindingSnapshot?.result.status == .found)
     : nil
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
@@ -956,6 +973,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (terrainColumnTraversabilitySuccess ?? true)
     && (terrainPathfindingSuccess ?? true)
     && (terrainPathfindingColumnSuccess ?? true)
+    && (terrainPathfindingPositiveSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -1069,6 +1087,25 @@ if options.outPath != nil {
                 pathStatus: summary.pathStatus.rawValue,
                 pathLength: summary.pathLength,
                 visited: summary.visited
+            ))
+        }
+        if let positiveSnapshot = terrainPathfindingPositiveSnapshot,
+           let selected = positiveSnapshot.selectedPathfindingSnapshot {
+            try appendEvent(RunEvent(
+                type: "lab_terrain_pathfinding_column_positive_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: terrainPathfindingPositiveSuccess,
+                nodes: selected.nodeCount,
+                traversableNodes: selected.summary.traversableNodes,
+                pathStatus: selected.result.status.rawValue,
+                pathLength: selected.result.path.count,
+                visited: selected.result.visited,
+                candidates: positiveSnapshot.summary.candidates,
+                selectedCandidateIndex: positiveSnapshot.summary.selectedCandidateIndex,
+                selectedSeed: positiveSnapshot.summary.selectedSeed,
+                agentX: positiveSnapshot.summary.selectedAgentX,
+                agentZ: positiveSnapshot.summary.selectedAgentZ
             ))
         }
         if let terrainScanSnapshot {
@@ -1417,6 +1454,18 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("terrain_pathfinding_column_invariant_report.json")
             )
         }
+        if let terrainPathfindingPositiveSnapshot {
+            try writeJSON(
+                terrainPathfindingPositiveSnapshot,
+                to: outURL.appendingPathComponent("terrain_pathfinding_column_positive_snapshot.json")
+            )
+        }
+        if let terrainPathfindingPositiveInvariantReport {
+            try writeJSON(
+                terrainPathfindingPositiveInvariantReport,
+                to: outURL.appendingPathComponent("terrain_pathfinding_column_positive_invariant_report.json")
+            )
+        }
         if let terrainScanSnapshot {
             try writeJSON(
                 terrainScanSnapshot,
@@ -1638,10 +1687,18 @@ if let outPath = options.outPath {
             terrainPathfindingColumnTraversableNodes: terrainPathfindingColumnSnapshot?.summary.traversableNodes,
             terrainPathfindingColumnUnsafeNodes: terrainPathfindingColumnSnapshot?.summary.unsafeNodes,
             terrainPathfindingColumnUnknownNodes: terrainPathfindingColumnSnapshot?.summary.unknownNodes,
-            terrainPathfindingColumnPathFound: terrainPathfindingColumnSnapshot.map { $0.result.status == .found },
+            terrainPathfindingColumnPathFound: terrainPathfindingColumnSnapshot.map {
+                $0.result.status == LabTerrainPathfindingStatus.found
+            },
             terrainPathfindingColumnPathLength: terrainPathfindingColumnSnapshot?.summary.pathLength,
             terrainPathfindingColumnVisited: terrainPathfindingColumnSnapshot?.summary.visited,
             terrainPathfindingColumnSuccess: terrainPathfindingColumnSuccess,
+            terrainPathfindingColumnPositiveCandidates: terrainPathfindingPositiveSnapshot?.summary.candidates,
+            terrainPathfindingColumnPositiveCandidateIndex: terrainPathfindingPositiveSnapshot?.summary.selectedCandidateIndex,
+            terrainPathfindingColumnPositiveFound: terrainPathfindingPositiveSnapshot?.summary.pathFound,
+            terrainPathfindingColumnPositivePathLength: terrainPathfindingPositiveSnapshot?.summary.pathLength,
+            terrainPathfindingColumnPositiveVisited: terrainPathfindingPositiveSnapshot?.summary.visited,
+            terrainPathfindingColumnPositiveSuccess: terrainPathfindingPositiveSuccess,
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))

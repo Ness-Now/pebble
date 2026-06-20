@@ -144,6 +144,11 @@ struct RunEvent: Encodable {
     let pathStatus: String?
     let pathLength: Int?
     let visited: Int?
+    let candidates: Int?
+    let selectedCandidateIndex: Int?
+    let selectedSeed: UInt32?
+    let agentX: Int?
+    let agentZ: Int?
 
     init(
         type: String,
@@ -288,7 +293,12 @@ struct RunEvent: Encodable {
         goalStatus: String? = nil,
         pathStatus: String? = nil,
         pathLength: Int? = nil,
-        visited: Int? = nil
+        visited: Int? = nil,
+        candidates: Int? = nil,
+        selectedCandidateIndex: Int? = nil,
+        selectedSeed: UInt32? = nil,
+        agentX: Int? = nil,
+        agentZ: Int? = nil
     ) {
         self.type = type
         self.event = event
@@ -433,6 +443,11 @@ struct RunEvent: Encodable {
         self.pathStatus = pathStatus
         self.pathLength = pathLength
         self.visited = visited
+        self.candidates = candidates
+        self.selectedCandidateIndex = selectedCandidateIndex
+        self.selectedSeed = selectedSeed
+        self.agentX = agentX
+        self.agentZ = agentZ
     }
 }
 

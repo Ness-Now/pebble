@@ -127,7 +127,9 @@ private func pathStatusIsCoherent(
 }
 
 func makeTerrainLivePathfindingSnapshot(
-    from columnSnapshot: LabTerrainColumnScanSnapshot
+    from columnSnapshot: LabTerrainColumnScanSnapshot,
+    startOffset: LabTerrainPathOffset = LabTerrainPathOffset(dx: 0, dz: 0),
+    goalOffset: LabTerrainPathOffset = LabTerrainPathOffset(dx: 1, dz: 0)
 ) -> LabTerrainLivePathfindingSnapshot? {
     let nodeSources = columnSnapshot.columns.enumerated().compactMap { index, column in
         column.traversability.map { traversability in
@@ -144,8 +146,12 @@ func makeTerrainLivePathfindingSnapshot(
         }
     }
     guard nodeSources.count == columnSnapshot.columns.count,
-          let startSource = nodeSources.first(where: { $0.dx == 0 && $0.dz == 0 }),
-          let goalSource = nodeSources.first(where: { $0.dx == 1 && $0.dz == 0 }) else {
+          let startSource = nodeSources.first(where: {
+              $0.dx == startOffset.dx && $0.dz == startOffset.dz
+          }),
+          let goalSource = nodeSources.first(where: {
+              $0.dx == goalOffset.dx && $0.dz == goalOffset.dz
+          }) else {
         return nil
     }
 
@@ -183,8 +189,8 @@ func makeTerrainLivePathfindingSnapshot(
         agentId: columnSnapshot.agentId,
         radius: columnSnapshot.radius,
         nodeCount: nodes.count,
-        startOffset: LabTerrainPathOffset(dx: 0, dz: 0),
-        goalOffset: LabTerrainPathOffset(dx: 1, dz: 0),
+        startOffset: startOffset,
+        goalOffset: goalOffset,
         start: request.start,
         goal: request.goal,
         request: request,

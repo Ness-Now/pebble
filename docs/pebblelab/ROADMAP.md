@@ -403,3 +403,16 @@ the first naturally traversable route.
 Next recommended step: Phase 4.13E - positive live column pathfinding smoke.
 Movement, collision, mutation, route following, and multi-agent pathfinding
 remain out of scope.
+
+## Phase 4.13E - Positive Live Column Pathfinding Smoke
+
+Status: implemented and validated.
+
+Goal: evaluate a fixed bounded candidate list, capture naturally generated
+column traversability, and require the existing BFS to return `found`. Candidate
+index zero, seed 99 at `(8,8)`, produces a two-node path with fixed center/east
+offsets and no terrain mutation.
+
+Next recommended step: Phase 4.14A - movement planning docs-only. Movement,
+collision, mutation, route following, and multi-agent pathfinding remain out of
+scope.

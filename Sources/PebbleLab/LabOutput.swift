@@ -222,6 +222,12 @@ struct RunMetrics: Encodable {
     let terrainPathfindingColumnPathLength: Int?
     let terrainPathfindingColumnVisited: Int?
     let terrainPathfindingColumnSuccess: Bool?
+    let terrainPathfindingColumnPositiveCandidates: Int?
+    let terrainPathfindingColumnPositiveCandidateIndex: Int?
+    let terrainPathfindingColumnPositiveFound: Bool?
+    let terrainPathfindingColumnPositivePathLength: Int?
+    let terrainPathfindingColumnPositiveVisited: Int?
+    let terrainPathfindingColumnPositiveSuccess: Bool?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -393,6 +399,12 @@ struct RunMetrics: Encodable {
         terrainPathfindingColumnPathLength: Int? = nil,
         terrainPathfindingColumnVisited: Int? = nil,
         terrainPathfindingColumnSuccess: Bool? = nil,
+        terrainPathfindingColumnPositiveCandidates: Int? = nil,
+        terrainPathfindingColumnPositiveCandidateIndex: Int? = nil,
+        terrainPathfindingColumnPositiveFound: Bool? = nil,
+        terrainPathfindingColumnPositivePathLength: Int? = nil,
+        terrainPathfindingColumnPositiveVisited: Int? = nil,
+        terrainPathfindingColumnPositiveSuccess: Bool? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -563,6 +575,12 @@ struct RunMetrics: Encodable {
         self.terrainPathfindingColumnPathLength = terrainPathfindingColumnPathLength
         self.terrainPathfindingColumnVisited = terrainPathfindingColumnVisited
         self.terrainPathfindingColumnSuccess = terrainPathfindingColumnSuccess
+        self.terrainPathfindingColumnPositiveCandidates = terrainPathfindingColumnPositiveCandidates
+        self.terrainPathfindingColumnPositiveCandidateIndex = terrainPathfindingColumnPositiveCandidateIndex
+        self.terrainPathfindingColumnPositiveFound = terrainPathfindingColumnPositiveFound
+        self.terrainPathfindingColumnPositivePathLength = terrainPathfindingColumnPositivePathLength
+        self.terrainPathfindingColumnPositiveVisited = terrainPathfindingColumnPositiveVisited
+        self.terrainPathfindingColumnPositiveSuccess = terrainPathfindingColumnPositiveSuccess
         self.successCriteria = successCriteria
     }
 }

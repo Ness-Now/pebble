@@ -409,3 +409,32 @@ start `(0,0)` and goal `(1,0)` when a stable candidate supports them; otherwise
 use the first traversable node and its first traversable orthogonal neighbor as
 an explicitly test-only, audited selection rule. Require `found`, but do not
 move the agent or claim collision safety.
+
+## Phase 4.13E Implementation Result
+
+Phase 4.13E implemented `terrain_pathfinding_column_positive_smoke` with the
+planned fixed, bounded, deterministic candidate list. The list contains 16
+candidates and places the known-good naturally generated candidate first:
+seed 99 at `(8,8)`. Discovery stops at the first `found`, so the validated run
+performs one attempt while retaining the complete ordered list in its snapshot.
+
+The selected candidate uses the preferred fixed offsets rather than the
+fallback selection rule:
+
+- start `(0,0)` at world key `(8,64,8)`;
+- goal `(1,0)` at world key `(9,64,8)`;
+- nine mapped nodes, five traversable;
+- existing `findTerrainPath` result `found`;
+- path length two and visited count three.
+
+The fallback remains a pure test-only function: when fixed offsets fail, it
+selects the first traversable source in `dz_then_dx` order and its first
+traversable north/east/south/west neighbor. It does not search, score, reread
+the world, or represent an agent decision.
+
+The run writes `terrain_pathfinding_column_positive_snapshot.json`, a dedicated
+26-check invariant report, six `terrainPathfindingColumnPositive*` metrics, and
+one aggregate `lab_terrain_pathfinding_column_positive_recorded` event. Raw
+terrain is generated through existing chunk generation and never altered to
+obtain the path. BFS receives only mapped captured nodes; no movement or
+collision consumer is present.

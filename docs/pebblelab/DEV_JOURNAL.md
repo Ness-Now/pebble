@@ -1405,3 +1405,110 @@ Dijkstra, weighted cost, Python, ML, LLM, or RL integration was added.
 
 Phase 4.13E: implement a positive live column pathfinding smoke using bounded,
 deterministic, read-only discovery and the existing scan/adapter/BFS stack.
+
+## 2026-06-19 — Phase 4.13E Positive Live Column Pathfinding Smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Produce the first live `found` path from naturally generated, read-only column
+evidence while preserving the existing scan, semantic, traversability,
+adapter, and BFS boundaries.
+
+### Files Created Or Modified
+
+- `Sources/PebbleLab/LabTerrainPathfindingPositive.swift` (new)
+- `Sources/PebbleLab/LabTerrainPathfindingColumn.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_POSITIVE_LIVE_PATHFINDING_PLAN.md`
+
+### Candidate Strategy
+
+The smoke defines 16 candidates in a fixed order and stops at the first
+positive result. Development probing identified seed 99 at `(8,8)` as a stable
+naturally generated candidate, so it is explicitly placed at index zero. The
+snapshot retains the complete candidate list and records every attempted
+candidate; the validated run requires one attempt.
+
+Each attempt creates an isolated world, generates only a radius-one chunk area
+around the candidate through the existing generation path, captures nine
+columns, maps nine nodes, and calls the existing BFS. No block is placed,
+removed, or rewritten to obtain `found`.
+
+### Start And Goal
+
+The selected candidate succeeds with the preferred fixed strategy:
+
+- start offset `(0,0)`, world key `(8,64,8)`;
+- goal offset `(1,0)`, world key `(9,64,8)`;
+- neighbor mode `north_east_south_west`;
+- `maxVisited = 9`.
+
+A pure fallback can choose the first traversable column and its first
+traversable orthogonal neighbor, but it was not used by the validated run and
+is explicitly test harness selection rather than agent goal selection.
+
+### Positive Result
+
+Candidate index zero, seed 99 at `(8,8)`, produced nine nodes including five
+traversable nodes. `findTerrainPath` returned `found`, reason
+`bounded_bfs_path_found`, path length two, and visited count three. Both path
+nodes are captured traversable nodes and form one eastward four-neighbor step.
+
+### Outputs And Invariants
+
+The scenario adds `terrain_pathfinding_column_positive_snapshot.json`,
+`terrain_pathfinding_column_positive_invariant_report.json`, six positive
+metrics, and one aggregate positive event. The invariant report passes 26
+checks covering candidate bounds, selected evidence, mapped nodes, path shape,
+and the no-second-BFS/no-mutation/no-movement boundary.
+
+### Still Prohibited
+
+No PebbleCore, registry, save/load, renderer, resource, or golden change was
+made. No second BFS, block mutation, world reread during BFS, movement,
+collision, route following, multi-agent pathfinding, intelligent goal
+selection, A*, Dijkstra, weighted cost, Python, ML, LLM, or RL integration was
+added.
+
+### Validation Commands
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_column_positive_smoke --seed 42 --ticks 5 --out runs/check_terrain_pathfinding_column_positive`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_column_smoke --seed 42 --ticks 5 --out runs/check_terrain_pathfinding_column_after_positive`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_column_edge_smoke --seed 42 --ticks 5 --out runs/check_terrain_pathfinding_column_edge_after_positive`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_fixture_smoke --seed 42 --ticks 0 --out runs/check_pathfinding_fixture_after_positive`
+- `swift run -c release PebbleLab -- --scenario terrain_column_scan_smoke --seed 42 --ticks 5 --out runs/check_column_scan_after_positive`
+- `swift run -c release PebbleLab -- --scenario terrain_column_scan_edge_smoke --seed 42 --ticks 5 --out runs/check_column_scan_edge_after_positive`
+- `swift run -c release PebbleLab -- --scenario terrain_traversability_fixture_smoke --seed 42 --ticks 0 --out runs/check_traversability_fixture_after_positive`
+- `swift run -c release PebbleLab -- --scenario terrain_semantics_fixture_smoke --seed 42 --ticks 0 --out runs/check_semantics_fixture_after_positive`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_positive`
+- `swift run -c release PebbleLab -- --scenario world_observation_multi_smoke --seed 42 --ticks 5 --out runs/check_world_observation_after_positive`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Positive snapshot: 16 configured candidates, one attempt, selected index zero,
+  seed 99 at `(8,8)`.
+- Selected path: `found`, length two, visited three, five traversable nodes.
+- Positive invariant report: `26 passed, 0 failed`.
+- Debug and Pebble release builds passed.
+- Negative central/edge live pathfinding, pathfinding fixtures, central/edge
+  column scans, traversability and semantics fixtures, regression, and
+  multi-agent observation passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.14A: define movement planning docs-only. A found path remains abstract
+evidence and does not yet authorize displacement, collision assumptions, or
+route following.
