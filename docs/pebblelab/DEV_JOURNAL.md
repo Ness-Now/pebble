@@ -1233,3 +1233,93 @@ goal selection, Python, ML, LLM, or RL integration was added.
 Phase 4.13C should plan edge live pathfinding docs-only, or Phase 4.14A should
 plan movement docs-only. Movement, collision, mutation, route following, and
 multi-agent pathfinding remain separate future concerns.
+
+## 2026-06-19 — Phase 4.13C Edge Live Column Pathfinding Smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Prove that the existing captured-column adapter and bounded BFS preserve their
+contract when the source scan crosses chunk boundaries, without adding another
+scan, adapter, BFS, or movement consumer.
+
+### Files Modified
+
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabTerrainColumnScan.swift`
+- `Sources/PebbleLab/LabTerrainPathfindingColumn.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_LIVE_PATHFINDING_INTEGRATION_PLAN.md`
+
+### Edge Contract And Mapping
+
+The shared column contract places the single synchronized agent at
+`x=16,z=16`, with radius one, nine columns, and 27 support/feet/head cells
+across chunks `(0,0)`, `(1,0)`, `(0,1)`, and `(1,1)`. The existing adapter maps
+those captured columns one-to-one to nine nodes, preserving order, offsets,
+coordinates, source indexes, traversability kinds, and reasons. It performs no
+world or chunk reread.
+
+### Fixed Search And Observed Result
+
+Start remains offset `(0,0)`, goal remains `(1,0)`, `maxVisited` remains nine,
+and neighbor mode remains `north_east_south_west`. Seed 42 produced nine unsafe
+nodes. The existing BFS therefore returned coherent `invalidStart`, reason
+`start_missing_or_not_traversable`, with path length zero and visited zero.
+No fallback goal or terrain mutation was introduced.
+
+### Outputs And Invariants
+
+The scenario reuses `terrain_pathfinding_column_snapshot.json`,
+`terrain_pathfinding_column_invariant_report.json`, the
+`terrainPathfindingColumn*` metrics, and the aggregate
+`lab_terrain_pathfinding_column_recorded` event. Two conditional edge checks
+prove boundary crossing and exactly four chunks, bringing the edge report to
+`28 passed, 0 failed`; the central report remains at 26 checks.
+
+### Still Prohibited
+
+No PebbleCore, registry, save/load, renderer, resource, or golden change was
+made. No second BFS, world reread, movement, route following, collision,
+mutation, multi-agent pathfinding, intelligent goal selection, A*, Dijkstra,
+weighted cost, Python, ML, LLM, or RL integration was added.
+
+### Validation Commands
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_column_smoke --seed 42 --ticks 5 --out runs/check_terrain_pathfinding_column_after_edge`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_column_edge_smoke --seed 42 --ticks 5 --out runs/check_terrain_pathfinding_column_edge`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_fixture_smoke --seed 42 --ticks 0 --out runs/check_pathfinding_fixture_after_column_edge_live`
+- `swift run -c release PebbleLab -- --scenario terrain_column_scan_smoke --seed 42 --ticks 5 --out runs/check_column_scan_after_column_edge_live`
+- `swift run -c release PebbleLab -- --scenario terrain_column_scan_edge_smoke --seed 42 --ticks 5 --out runs/check_column_scan_edge_after_column_edge_live`
+- `swift run -c release PebbleLab -- --scenario terrain_traversability_fixture_smoke --seed 42 --ticks 0 --out runs/check_traversability_fixture_after_column_edge_live`
+- `swift run -c release PebbleLab -- --scenario terrain_semantics_fixture_smoke --seed 42 --ticks 0 --out runs/check_semantics_fixture_after_column_edge_live`
+- `swift run -c release PebbleLab -- --scenario terrain_scan_smoke --seed 42 --ticks 5 --out runs/check_terrain_scan_after_column_edge_live`
+- `swift run -c release PebbleLab -- --scenario terrain_scan_edge_smoke --seed 42 --ticks 5 --out runs/check_terrain_scan_edge_after_column_edge_live`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_column_edge_live`
+- `swift run -c release PebbleLab -- --scenario world_observation_multi_smoke --seed 42 --ticks 5 --out runs/check_world_observation_after_column_edge_live`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Edge live pathfinding: nine nodes, nine unsafe, coherent `invalidStart`, run
+  success true.
+- Underlying edge column scan: four unique chunks, 27 observed cells.
+- Edge invariant report: `28 passed, 0 failed`.
+- Debug and Pebble release builds passed.
+- Central live pathfinding, pathfinding fixtures, central/edge column scans,
+  traversability and semantics fixtures, central/edge terrain scans,
+  regression, and multi-agent observation passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.14A should plan movement docs-only, or Phase 4.13D should plan a
+positive live pathfinding scenario docs-only. Movement, collision, mutation,
+route following, and multi-agent pathfinding remain separate future concerns.

@@ -348,3 +348,22 @@ The run writes `terrain_pathfinding_column_snapshot.json`, a dedicated
 26-check invariant report, aggregate `terrainPathfindingColumn*` metrics, and
 one `lab_terrain_pathfinding_column_recorded` event. Existing column scan
 outputs remain available and authoritative for the raw read-only observation.
+
+## Phase 4.13C Edge Implementation Result
+
+Phase 4.13C added `terrain_pathfinding_column_edge_smoke` without introducing a
+second scan, adapter, snapshot type, invariant type, or BFS. The shared column
+contract places the agent at `x=16,z=16`; its radius-one columns span chunks
+`(0,0)`, `(1,0)`, `(0,1)`, and `(1,1)`.
+
+The adapter preserves column order and source indexes, uses the same fixed
+start `(0,0)` and goal `(1,0)`, and calls `findTerrainPath` with nine nodes and
+the existing neighbor mode. Seed 42 again yields nine unsafe nodes, so the
+coherent result is `invalidStart`, path length zero, visited zero. No terrain,
+semantic, traversability, or BFS rule was changed to force `found`.
+
+The shared report retains the central scenario's 26 checks and conditionally
+adds `edge_pathfinding_column_crosses_chunk_boundary` plus
+`edge_pathfinding_column_expected_unique_chunks`. The edge report therefore
+passes 28 checks and proves exactly four source chunks; the central report
+remains unchanged at 26 checks.

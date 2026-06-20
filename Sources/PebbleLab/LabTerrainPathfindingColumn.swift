@@ -239,7 +239,7 @@ func makeTerrainPathfindingColumnInvariantReport(
         $0.y == $1.y
     }
 
-    let checks = [
+    var checks = [
         TerrainPathfindingColumnInvariantCheck(name: "column_scan_exists", passed: true, expected: "true", actual: "true"),
         TerrainPathfindingColumnInvariantCheck(name: "column_scan_success_true", passed: columnSnapshot.summary.success, expected: "true", actual: String(columnSnapshot.summary.success)),
         TerrainPathfindingColumnInvariantCheck(name: "nodes_count_equals_columns_count", passed: request.nodes.count == columns.count && columns.count == 9, expected: "9", actual: "\(request.nodes.count) nodes / \(columns.count) columns"),
@@ -267,6 +267,21 @@ func makeTerrainPathfindingColumnInvariantReport(
         TerrainPathfindingColumnInvariantCheck(name: "no_movement_commanded", passed: true, expected: "true", actual: "true"),
         TerrainPathfindingColumnInvariantCheck(name: "no_collision_performed", passed: true, expected: "true", actual: "true")
     ]
+    if terrainColumnScanScenarioContract(for: columnSnapshot.scenario)?
+        .requiresChunkBoundaryCrossing == true {
+        checks.append(TerrainPathfindingColumnInvariantCheck(
+            name: "edge_pathfinding_column_crosses_chunk_boundary",
+            passed: columnSnapshot.summary.uniqueChunks > 1,
+            expected: "> 1",
+            actual: String(columnSnapshot.summary.uniqueChunks)
+        ))
+        checks.append(TerrainPathfindingColumnInvariantCheck(
+            name: "edge_pathfinding_column_expected_unique_chunks",
+            passed: columnSnapshot.summary.uniqueChunks == 4,
+            expected: "4",
+            actual: String(columnSnapshot.summary.uniqueChunks)
+        ))
+    }
     let checksPassed = checks.filter(\.passed).count
     let success = pathfindingSnapshot.summary.success && checksPassed == checks.count
 

@@ -25,6 +25,7 @@ let isTerrainPathfindingFixtureScenario = options.scenario
     == "terrain_pathfinding_fixture_smoke"
 let isTerrainPathfindingColumnScenario = options.scenario
     == "terrain_pathfinding_column_smoke"
+    || options.scenario == "terrain_pathfinding_column_edge_smoke"
 let isWorldInteractionScenario = isWorldObservationScenario
     || isTerrainScanRun
     || isTerrainColumnScanRun

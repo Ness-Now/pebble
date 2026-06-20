@@ -130,7 +130,7 @@ func terrainColumnScanScenarioContract(
             expectedUniqueChunks: nil,
             requiresChunkBoundaryCrossing: false
         )
-    case "terrain_column_scan_edge_smoke":
+    case "terrain_column_scan_edge_smoke", "terrain_pathfinding_column_edge_smoke":
         return LabTerrainColumnScanScenarioContract(
             scenario: scenario,
             agentX: 16,

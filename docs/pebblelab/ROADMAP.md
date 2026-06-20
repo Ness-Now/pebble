@@ -378,6 +378,15 @@ bounded BFS without rereading the world. Seed 42 produces a coherent
 `invalidStart` because all nine supports are unsafe; this is accepted audit
 evidence rather than hidden by terrain mutation.
 
-Next recommended step: Phase 4.13C - live pathfinding edge planning docs-only,
-or Phase 4.14A - movement planning docs-only. Movement, collision, mutation,
-edge/multi-agent pathfinding, and route following remain out of scope.
+## Phase 4.13C - Edge Live Column Pathfinding Smoke
+
+Status: implemented and validated.
+
+Goal: reuse the live column adapter and existing BFS at agent position
+`x=16,z=16`, where nine captured columns cross four chunks. The edge run keeps
+fixed center/east keys and accepts the coherent `invalidStart` produced by nine
+unsafe nodes without modifying terrain or search behavior.
+
+Next recommended step: Phase 4.14A - movement planning docs-only, or Phase
+4.13D - positive live pathfinding planning docs-only. Movement, collision,
+mutation, multi-agent pathfinding, and route following remain out of scope.
