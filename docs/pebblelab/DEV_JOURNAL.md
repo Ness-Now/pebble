@@ -1775,3 +1775,66 @@ following, agent decision, or multi-agent movement.
 
 Phase 4.15A: plan live movement integration docs-only, retaining fixture
 movement as the authority for abstract state progression.
+
+## 2026-06-19 — Phase 4.15A Live Movement Integration Planning
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Define the adapter boundary from positive live path evidence to abstract
+movement execution before any real agent, placeholder, or core-entity position
+is changed.
+
+### Files Created Or Modified
+
+- `docs/pebblelab/PHASE_4_LIVE_MOVEMENT_INTEGRATION_PLAN.md` (new)
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+### Layer Distinction
+
+Live pathfinding supplies a route derived from captured terrain. The movement
+fixture proves stepping over supplied node keys. The future live adapter should
+preserve selected-candidate/path provenance, initialize movement state, and
+record abstract steps. Collision, physical synchronization, gameplay route
+following, and the decision to follow a path remain separate future layers.
+
+### Phase 4.15B Recommendation
+
+Start with live path to abstract movement state. Reuse the positive selected
+path and existing movement validation/step functions, execute one abstract edge
+per record, and require final `reachedGoal`. Explicitly report
+`liveAgentDisplaced = false`, `collisionPerformed = false`, and
+`mutationPerformed = false`.
+
+### Risks
+
+The plan addresses premature real-agent displacement, abstract evidence being
+presented as physics, hidden collision, repeated pathfinding, goal selection in
+the adapter, unaudited live-position mutation, positive-path regression,
+seed-99 overcoupling, and gameplay work before complete snapshots exist.
+
+### Still Prohibited
+
+No Swift, PebbleCore, registry, save/load, renderer, resource, or golden file
+was changed. No live movement, route following, collision, physics integration,
+position synchronization, mutation, agent decision, multi-agent movement,
+Python, ML, LLM, or RL integration was added.
+
+### Validation Commands
+
+- `swift build`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Documentation-only diff confirmed; no Swift file changed.
+- `swift build` passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.15B: implement `terrain_path_live_movement_smoke` as abstract movement
+over positive live path evidence, with no live displacement or collision.

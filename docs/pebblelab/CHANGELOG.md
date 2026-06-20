@@ -62,3 +62,4 @@
 - Documented terrain path movement planning contract.
 - Added fixture-only terrain path movement smoke.
 - Hardened fixture-only terrain path movement coverage and invariants.
+- Documented live terrain movement integration planning contract.

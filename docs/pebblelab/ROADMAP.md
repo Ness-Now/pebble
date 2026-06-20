@@ -454,3 +454,15 @@ and 25 invariants now cover the movement contract.
 Next recommended step: Phase 4.15A - live movement integration planning
 docs-only. Live movement, collision, mutation, route following, and multi-agent
 movement remain out of scope.
+
+## Phase 4.15A - Live Movement Integration Planning
+
+Status: done as a docs-only planning phase.
+
+Goal: connect positive live path provenance to the validated abstract movement
+state machine without displacing a live agent, performing collision, mutating
+the world, or introducing gameplay route following.
+
+Next recommended step: Phase 4.15B - terrain path live movement smoke.
+Collision, physical displacement, mutation, route following, and multi-agent
+movement remain out of scope.
