@@ -1512,3 +1512,77 @@ added.
 Phase 4.14A: define movement planning docs-only. A found path remains abstract
 evidence and does not yet authorize displacement, collision assumptions, or
 route following.
+
+## 2026-06-19 — Phase 4.14A Movement Planning
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Define the first movement contract after positive live pathfinding while
+preserving strict separation from collision, live agents, world mutation,
+pathfinding, and agent decisions.
+
+### Files Created Or Modified
+
+- `docs/pebblelab/PHASE_4_MOVEMENT_PLAN.md` (new)
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+### Technical Decisions
+
+- Phase 4.14B begins fixture-only with synthetic node-key paths.
+- Pathfinding supplies an already completed path and is never called by the
+  movement layer.
+- Movement intent describes one next-node transition.
+- Fixture execution updates only an abstract movement state.
+- One tick advances at most one horizontal four-neighbor edge.
+- Diagonal and vertical movement are invalid in v0.
+- Collision, real agent position updates, and `blocked` behavior are deferred.
+
+### Layer Distinction
+
+Pathfinding produces route evidence. Movement intent asks for one path edge.
+Abstract movement execution advances fixture state. Collision remains the
+engine's separate physical truth. Agent decision remains the separate choice to
+follow a route. None of these boundaries is collapsed in Phase 4.14A.
+
+### Fixture Recommendation
+
+The future `terrain_path_movement_fixture_smoke` should cover single- and
+multi-step completion, stable post-goal ticks, empty and one-node paths,
+diagonal/vertical/non-neighbor rejection, wrong initial position, and explicit
+world independence. At least ten fixtures and a dedicated invariant report are
+required.
+
+### Risks
+
+The plan addresses confusion between abstract movement and physics, treating a
+found path as executable, premature live movement, collision without a
+contract, accidental live position mutation, hidden agent decisions,
+pathfinding inside movement, unsupported diagonal/vertical steps, and
+regression of existing pathfinding scenarios.
+
+### Still Prohibited
+
+No Swift, PebbleCore, registry, save/load, renderer, resource, or golden file
+was changed. No movement code, live route following, collision, physics
+integration, mutation, agent decision, multi-agent movement, A*, Dijkstra,
+weighted costs, Python, ML, LLM, or RL integration was added.
+
+### Validation Commands
+
+- `swift build`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Documentation-only diff confirmed; no Swift file changed.
+- `swift build` passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.14B: implement `terrain_path_movement_fixture_smoke` as a pure abstract
+path consumer with no world, collision, real agent, or pathfinding dependency.

@@ -416,3 +416,16 @@ offsets and no terrain mutation.
 Next recommended step: Phase 4.14A - movement planning docs-only. Movement,
 collision, mutation, route following, and multi-agent pathfinding remain out of
 scope.
+
+## Phase 4.14A - Movement Planning
+
+Status: done as a docs-only planning phase.
+
+Goal: separate path evidence, movement intent, abstract movement execution,
+collision, and agent decisions before any live displacement. The first movement
+phase remains fixture-only and consumes synthetic paths without `World` or real
+agents.
+
+Next recommended step: Phase 4.14B - terrain path movement fixture smoke. Live
+movement, collision, mutation, route following, and multi-agent movement remain
+out of scope.
