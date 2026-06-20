@@ -494,3 +494,17 @@ Next recommended step: Phase 4.16A - collision planning docs-only, or Phase
 4.15D - live movement failure-case fixtures without collision. Collision,
 physical displacement, mutation, gameplay route following, and multi-agent
 movement remain out of scope.
+
+## Phase 4.16A - Collision Planning Docs-Only
+
+Status: done as a docs-only planning phase.
+
+Goal: define the boundary between abstract traversability and physical body
+occupancy, propose a conservative `0.6 x 1.8` LabHuman body, reserve `blocked`
+for explicit collision evidence, and stage fixture/live read-only collision
+validation before any real displacement.
+
+Collision is not implemented. Physical displacement, route following,
+mutation, physics integration, and multi-agent movement remain out of scope.
+
+Next recommended step: Phase 4.16B - Collision Fixture Smoke.

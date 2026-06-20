@@ -2012,3 +2012,79 @@ was added.
 
 Phase 4.16A: plan collision docs-only, or Phase 4.15D: add isolated live
 movement failure-case fixtures while retaining zero physical displacement.
+
+## 2026-06-19 — Phase 4.16A Collision Planning Docs-Only
+
+Branch: `lab/pebblelab-v1`
+
+### Objective And Starting State
+
+Define collision and occupancy before any physical displacement. PebbleLab
+starts this phase with a positive live-derived path, hardened abstract movement,
+and explicit false displacement/collision/mutation flags, but no body-shape or
+physical occupancy proof.
+
+### Files Created Or Modified
+
+- `docs/pebblelab/PHASE_4_COLLISION_PLAN.md` (new)
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+No Swift file changed.
+
+### Traversability Versus Collision
+
+Traversability classifies whether a support/feet/head column is theoretically
+passable. Collision asks whether a body with explicit dimensions can occupy or
+cross the space without intersecting blocking shapes and with sufficient
+support. A path `found` or abstract `reachedGoal` remains insufficient physical
+evidence.
+
+The plan proposes a provisional `0.6` block wide, `1.8` block high LabHuman
+body centered in the node column and anchored at its feet plane. Collision v0
+is conservative: full-cube support and known empty volume only, same-y
+four-neighbor queries, and no jump, fall, swim, climb, diagonal, or vertical
+transition.
+
+### Future Architecture
+
+Future concepts include `LabTerrainCollisionQuery`,
+`LabTerrainCollisionResult`, `LabTerrainOccupancyStatus`, fixture definitions,
+live snapshots, and invariant reports. Suggested future modules separate pure
+collision evaluation, fixtures, and bounded live read-only sampling. Phase
+4.16A creates none of those Swift files.
+
+### Future Outputs And Invariants
+
+Planned outputs are `terrain_collision_fixture_report.json`,
+`terrain_collision_invariant_report.json`,
+`terrain_collision_live_snapshot.json`, `metrics.json`, and `events.ndjson`.
+Future invariants forbid movement, displacement, mutation, pathfinding, route
+following, and goal selection; preserve support/feet/head evidence; require
+deterministic occupancy and explicit blocked reasons; and keep fixture/live
+evidence separate.
+
+### Still Prohibited
+
+No collision, movement, physical displacement, pathfinding change, movement
+state-machine change, route following, physics, world mutation, multi-agent
+movement, avoidance, registry/save/load/renderer/resource/golden change, or
+Python, ML, LLM, or RL integration was added.
+
+### Validation
+
+- `swift build`
+- `swift run -c release pebsmoke`
+- `git status`
+
+### Results
+
+- Documentation-only diff confirmed; no Swift file changed.
+- `swift build` passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.16B: implement a fixture-only collision and occupancy smoke with
+synthetic shapes, no `World`, no agent, no movement, and no mutation.
