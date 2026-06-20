@@ -28,6 +28,8 @@ let isTerrainPathfindingColumnScenario = options.scenario
     || options.scenario == "terrain_pathfinding_column_edge_smoke"
 let isTerrainPathfindingPositiveScenario = options.scenario
     == "terrain_pathfinding_column_positive_smoke"
+let isTerrainMovementFixtureScenario = options.scenario
+    == "terrain_path_movement_fixture_smoke"
 let isWorldInteractionScenario = isWorldObservationScenario
     || isTerrainScanRun
     || isTerrainColumnScanRun
@@ -738,6 +740,17 @@ let terrainPathfindingSuccess = isTerrainPathfindingFixtureScenario
     ? ((terrainPathfindingFixtureReport?.success ?? false)
         && (terrainPathfindingInvariantReport?.success ?? false))
     : nil
+let terrainMovementFixtureReport = isTerrainMovementFixtureScenario
+    ? makeTerrainMovementFixtureReport(scenario: options.scenario, seed: options.seed)
+    : nil
+let terrainMovementInvariantReport = terrainMovementFixtureReport.map(
+    makeTerrainMovementInvariantReport
+)
+let terrainMovementSuccess = isTerrainMovementFixtureScenario
+    ? ((terrainMovementFixtureReport?.success ?? false)
+        && (terrainMovementInvariantReport?.success ?? false)
+        && terrainMovementFixtureReport?.summary.failed == 0)
+    : nil
 let coreEntityInvariantReport = options.scenario == "core_entity_smoke"
     ? coreEntityBridge.invariantReport(
         scenario: options.scenario,
@@ -974,6 +987,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (terrainPathfindingSuccess ?? true)
     && (terrainPathfindingColumnSuccess ?? true)
     && (terrainPathfindingPositiveSuccess ?? true)
+    && (terrainMovementSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -1052,6 +1066,21 @@ if options.outPath != nil {
                 invalidGoals: pathfindingSummary.invalidGoals,
                 searchLimitReached: pathfindingSummary.searchLimitReached,
                 unknown: pathfindingSummary.unknown
+            ))
+        }
+        if let movementSummary = terrainMovementFixtureReport?.summary {
+            try appendEvent(RunEvent(
+                type: "lab_terrain_movement_fixture_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: terrainMovementSuccess,
+                fixtures: movementSummary.fixtures,
+                passed: movementSummary.passed,
+                failed: movementSummary.failed,
+                stepsPlanned: movementSummary.stepsPlanned,
+                stepsExecuted: movementSummary.stepsExecuted,
+                reachedGoals: movementSummary.reachedGoals,
+                invalidPaths: movementSummary.invalidPaths
             ))
         }
         if let terrainColumnScanSnapshot {
@@ -1430,6 +1459,18 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("terrain_pathfinding_invariant_report.json")
             )
         }
+        if let terrainMovementFixtureReport {
+            try writeJSON(
+                terrainMovementFixtureReport,
+                to: outURL.appendingPathComponent("terrain_path_movement_fixture_report.json")
+            )
+        }
+        if let terrainMovementInvariantReport {
+            try writeJSON(
+                terrainMovementInvariantReport,
+                to: outURL.appendingPathComponent("terrain_path_movement_invariant_report.json")
+            )
+        }
         if let terrainColumnScanSnapshot {
             try writeJSON(
                 terrainColumnScanSnapshot,
@@ -1699,6 +1740,14 @@ if let outPath = options.outPath {
             terrainPathfindingColumnPositivePathLength: terrainPathfindingPositiveSnapshot?.summary.pathLength,
             terrainPathfindingColumnPositiveVisited: terrainPathfindingPositiveSnapshot?.summary.visited,
             terrainPathfindingColumnPositiveSuccess: terrainPathfindingPositiveSuccess,
+            terrainMovementFixtureCases: terrainMovementFixtureReport?.summary.fixtures,
+            terrainMovementFixturePassed: terrainMovementFixtureReport?.summary.passed,
+            terrainMovementFixtureFailed: terrainMovementFixtureReport?.summary.failed,
+            terrainMovementStepsPlanned: terrainMovementFixtureReport?.summary.stepsPlanned,
+            terrainMovementStepsExecuted: terrainMovementFixtureReport?.summary.stepsExecuted,
+            terrainMovementReachedGoals: terrainMovementFixtureReport?.summary.reachedGoals,
+            terrainMovementInvalidPaths: terrainMovementFixtureReport?.summary.invalidPaths,
+            terrainMovementSuccess: terrainMovementSuccess,
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))

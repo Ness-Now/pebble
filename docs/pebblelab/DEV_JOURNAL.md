@@ -1586,3 +1586,94 @@ weighted costs, Python, ML, LLM, or RL integration was added.
 
 Phase 4.14B: implement `terrain_path_movement_fixture_smoke` as a pure abstract
 path consumer with no world, collision, real agent, or pathfinding dependency.
+
+## 2026-06-19 — Phase 4.14B Terrain Path Movement Fixture Smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Implement the first movement layer as a pure synthetic path consumer, proving
+validation, one-edge progression, goal completion, and invalid-path refusal
+without any live world or agent dependency.
+
+### Files Created Or Modified
+
+- `Sources/PebbleLab/LabTerrainMovement.swift` (new)
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_MOVEMENT_PLAN.md`
+
+### Movement Rules
+
+- Empty or malformed paths return `invalidPath`.
+- One-node paths begin at `reachedGoal`.
+- Multi-node paths require current position to equal the first node.
+- Repeated nodes are invalid in v0.
+- Every edge must remain at constant y and have horizontal Manhattan distance
+  one.
+- One call advances at most one path edge and increments target index in order.
+- Reaching the final node sets `reachedGoal`.
+- Additional post-goal ticks do not move.
+
+### Fixtures
+
+Twelve fixtures cover single-step and multi-step completion, post-goal idling,
+empty and one-node paths, diagonal/vertical/non-neighbor rejection, wrong
+initial position, explicit engine independence, repeated-node rejection, and
+stable already-reached-goal ticks.
+
+### Outputs And Invariants
+
+The scenario writes `terrain_path_movement_fixture_report.json`,
+`terrain_path_movement_invariant_report.json`, eight movement metrics, and one
+aggregate event. Results are `12 passed, 0 failed`, six planned/executed steps,
+six reached goals, and six invalid paths. The invariant report passes all 17
+checks.
+
+### Still Prohibited
+
+No PebbleCore, registry, save/load, renderer, resource, or golden change was
+made. Movement uses no world, chunk, real agent, placeholder, core entity,
+pathfinding call, collision, physics integration, mutation, route following,
+agent decision, multi-agent movement, Python, ML, LLM, or RL integration.
+
+### Validation Commands
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario terrain_path_movement_fixture_smoke --seed 42 --ticks 0 --out runs/check_terrain_path_movement_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_column_positive_smoke --seed 42 --ticks 5 --out runs/check_positive_path_after_movement_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_column_smoke --seed 42 --ticks 5 --out runs/check_negative_central_after_movement_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_column_edge_smoke --seed 42 --ticks 5 --out runs/check_negative_edge_after_movement_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_fixture_smoke --seed 42 --ticks 0 --out runs/check_pathfinding_fixture_after_movement_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_column_scan_smoke --seed 42 --ticks 5 --out runs/check_column_scan_after_movement_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_column_scan_edge_smoke --seed 42 --ticks 5 --out runs/check_column_scan_edge_after_movement_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_semantics_fixture_smoke --seed 42 --ticks 0 --out runs/check_semantics_fixture_after_movement_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_traversability_fixture_smoke --seed 42 --ticks 0 --out runs/check_traversability_fixture_after_movement_fixture`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_movement_fixture`
+- `swift run -c release PebbleLab -- --scenario world_observation_multi_smoke --seed 42 --ticks 5 --out runs/check_world_observation_after_movement_fixture`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Movement fixtures: `12 passed, 0 failed`.
+- Steps: six planned, six executed.
+- Final classifications: six reached goals, six invalid paths.
+- Movement invariants: `17 passed, 0 failed`.
+- Debug and Pebble release builds passed.
+- Positive/negative pathfinding, pathfinding fixtures, central/edge column
+  scans, semantics/traversability fixtures, regression, and multi-agent world
+  observation passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.14C: harden movement fixture state/index/error contracts before Phase
+4.15A plans any live movement integration.

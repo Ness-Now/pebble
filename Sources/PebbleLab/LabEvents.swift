@@ -149,6 +149,10 @@ struct RunEvent: Encodable {
     let selectedSeed: UInt32?
     let agentX: Int?
     let agentZ: Int?
+    let stepsPlanned: Int?
+    let stepsExecuted: Int?
+    let reachedGoals: Int?
+    let invalidPaths: Int?
 
     init(
         type: String,
@@ -298,7 +302,11 @@ struct RunEvent: Encodable {
         selectedCandidateIndex: Int? = nil,
         selectedSeed: UInt32? = nil,
         agentX: Int? = nil,
-        agentZ: Int? = nil
+        agentZ: Int? = nil,
+        stepsPlanned: Int? = nil,
+        stepsExecuted: Int? = nil,
+        reachedGoals: Int? = nil,
+        invalidPaths: Int? = nil
     ) {
         self.type = type
         self.event = event
@@ -448,6 +456,10 @@ struct RunEvent: Encodable {
         self.selectedSeed = selectedSeed
         self.agentX = agentX
         self.agentZ = agentZ
+        self.stepsPlanned = stepsPlanned
+        self.stepsExecuted = stepsExecuted
+        self.reachedGoals = reachedGoals
+        self.invalidPaths = invalidPaths
     }
 }
 

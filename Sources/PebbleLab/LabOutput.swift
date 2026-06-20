@@ -228,6 +228,14 @@ struct RunMetrics: Encodable {
     let terrainPathfindingColumnPositivePathLength: Int?
     let terrainPathfindingColumnPositiveVisited: Int?
     let terrainPathfindingColumnPositiveSuccess: Bool?
+    let terrainMovementFixtureCases: Int?
+    let terrainMovementFixturePassed: Int?
+    let terrainMovementFixtureFailed: Int?
+    let terrainMovementStepsPlanned: Int?
+    let terrainMovementStepsExecuted: Int?
+    let terrainMovementReachedGoals: Int?
+    let terrainMovementInvalidPaths: Int?
+    let terrainMovementSuccess: Bool?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -405,6 +413,14 @@ struct RunMetrics: Encodable {
         terrainPathfindingColumnPositivePathLength: Int? = nil,
         terrainPathfindingColumnPositiveVisited: Int? = nil,
         terrainPathfindingColumnPositiveSuccess: Bool? = nil,
+        terrainMovementFixtureCases: Int? = nil,
+        terrainMovementFixturePassed: Int? = nil,
+        terrainMovementFixtureFailed: Int? = nil,
+        terrainMovementStepsPlanned: Int? = nil,
+        terrainMovementStepsExecuted: Int? = nil,
+        terrainMovementReachedGoals: Int? = nil,
+        terrainMovementInvalidPaths: Int? = nil,
+        terrainMovementSuccess: Bool? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -581,6 +597,14 @@ struct RunMetrics: Encodable {
         self.terrainPathfindingColumnPositivePathLength = terrainPathfindingColumnPositivePathLength
         self.terrainPathfindingColumnPositiveVisited = terrainPathfindingColumnPositiveVisited
         self.terrainPathfindingColumnPositiveSuccess = terrainPathfindingColumnPositiveSuccess
+        self.terrainMovementFixtureCases = terrainMovementFixtureCases
+        self.terrainMovementFixturePassed = terrainMovementFixturePassed
+        self.terrainMovementFixtureFailed = terrainMovementFixtureFailed
+        self.terrainMovementStepsPlanned = terrainMovementStepsPlanned
+        self.terrainMovementStepsExecuted = terrainMovementStepsExecuted
+        self.terrainMovementReachedGoals = terrainMovementReachedGoals
+        self.terrainMovementInvalidPaths = terrainMovementInvalidPaths
+        self.terrainMovementSuccess = terrainMovementSuccess
         self.successCriteria = successCriteria
     }
 }

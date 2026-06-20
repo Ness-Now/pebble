@@ -429,3 +429,15 @@ agents.
 Next recommended step: Phase 4.14B - terrain path movement fixture smoke. Live
 movement, collision, mutation, route following, and multi-agent movement remain
 out of scope.
+
+## Phase 4.14B - Terrain Path Movement Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: validate pure synthetic path movement with one horizontal path edge per
+tick, explicit goal completion, stable post-goal ticks, and strict rejection of
+empty, repeated, diagonal, vertical, non-neighbor, and misaligned paths.
+
+Next recommended step: Phase 4.14C - movement fixture hardening and contract
+cleanup, followed by Phase 4.15A - live movement integration planning docs-only.
+Live movement, collision, mutation, and route following remain out of scope.

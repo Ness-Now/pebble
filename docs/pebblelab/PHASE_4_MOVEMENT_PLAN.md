@@ -363,3 +363,35 @@ small pure state machine that consumes synthetic validated paths and advances
 at most one horizontal four-neighbor edge per tick. Keep `World`, real agents,
 collision, pathfinding, goal selection, and mutation entirely outside the
 movement module.
+
+## Phase 4.14B Implementation Result
+
+Phase 4.14B implemented `terrain_path_movement_fixture_smoke` in
+`LabTerrainMovement.swift`. The module imports no engine layer and operates only
+on synthetic `LabTerrainPathNodeKey` values, immutable-style movement states,
+one-edge intents, and step results.
+
+The implemented contract validates the complete path before movement. Empty,
+misaligned, repeated, diagonal, vertical, and non-neighbor paths become
+`invalidPath`. Valid multi-node paths begin in `moving` state with target index
+one; a one-node path begins at `reachedGoal`. Each call to
+`stepTerrainMovement` advances at most one horizontal four-neighbor edge.
+Post-goal calls remain stationary.
+
+Twelve fixtures pass:
+
+- single- and multi-step goal completion;
+- post-goal idling;
+- empty-path rejection;
+- immediate one-node completion;
+- diagonal, vertical, and non-neighbor rejection;
+- wrong-initial-position rejection;
+- explicit engine-independent execution;
+- repeated-node rejection;
+- stable already-reached-goal ticks.
+
+The run reports six planned and six executed movement steps, six reached goals,
+six invalid paths, and `12 passed, 0 failed`. Its dedicated invariant report
+passes 17 checks. It writes fixture/report JSON, eight `terrainMovement*`
+metrics, and one aggregate `lab_terrain_movement_fixture_recorded` event. No
+pathfinding function, live agent, collision, or world mutation is involved.
