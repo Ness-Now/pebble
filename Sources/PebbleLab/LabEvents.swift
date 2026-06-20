@@ -135,6 +135,15 @@ struct RunEvent: Encodable {
     let invalidGoals: Int?
     let searchLimitReached: Int?
     let unknown: Int?
+    let nodes: Int?
+    let traversableNodes: Int?
+    let unsafeNodes: Int?
+    let unknownNodes: Int?
+    let startStatus: String?
+    let goalStatus: String?
+    let pathStatus: String?
+    let pathLength: Int?
+    let visited: Int?
 
     init(
         type: String,
@@ -270,7 +279,16 @@ struct RunEvent: Encodable {
         invalidStarts: Int? = nil,
         invalidGoals: Int? = nil,
         searchLimitReached: Int? = nil,
-        unknown: Int? = nil
+        unknown: Int? = nil,
+        nodes: Int? = nil,
+        traversableNodes: Int? = nil,
+        unsafeNodes: Int? = nil,
+        unknownNodes: Int? = nil,
+        startStatus: String? = nil,
+        goalStatus: String? = nil,
+        pathStatus: String? = nil,
+        pathLength: Int? = nil,
+        visited: Int? = nil
     ) {
         self.type = type
         self.event = event
@@ -406,6 +424,15 @@ struct RunEvent: Encodable {
         self.invalidGoals = invalidGoals
         self.searchLimitReached = searchLimitReached
         self.unknown = unknown
+        self.nodes = nodes
+        self.traversableNodes = traversableNodes
+        self.unsafeNodes = unsafeNodes
+        self.unknownNodes = unknownNodes
+        self.startStatus = startStatus
+        self.goalStatus = goalStatus
+        self.pathStatus = pathStatus
+        self.pathLength = pathLength
+        self.visited = visited
     }
 }
 

@@ -327,3 +327,24 @@ Proceed with **Phase 4.13B — terrain pathfinding column smoke** as a
 central-only adapter validation. Reuse the existing column scan and BFS, keep
 start/goal fixed, and treat a coherent negative path result as valid evidence
 rather than altering terrain or search rules to force success.
+
+## Phase 4.13B Implementation Result
+
+Phase 4.13B implemented `terrain_pathfinding_column_smoke` as the planned
+central-only adapter. It reuses `scanTerrainColumns` to capture nine columns,
+maps those captured traversability results to nine path nodes in column order,
+and calls the existing `findTerrainPath` BFS with fixed offsets `(0,0)` and
+`(1,0)`, `maxVisited = 9`, and neighbor mode
+`north_east_south_west`.
+
+For seed 42, all nine column results are `unsafe`. The fixed start and goal are
+therefore both unsafe, and BFS correctly returns `invalidStart` with no visited
+nodes and no path. The scenario succeeds because the negative result is
+coherent with captured evidence. It does not alter terrain, choose a substitute
+goal, reread the world during adaptation, command movement, or perform
+collision checks.
+
+The run writes `terrain_pathfinding_column_snapshot.json`, a dedicated
+26-check invariant report, aggregate `terrainPathfindingColumn*` metrics, and
+one `lab_terrain_pathfinding_column_recorded` event. Existing column scan
+outputs remain available and authoritative for the raw read-only observation.

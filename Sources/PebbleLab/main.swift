@@ -23,6 +23,8 @@ let isTerrainTraversabilityFixtureScenario = options.scenario
     == "terrain_traversability_fixture_smoke"
 let isTerrainPathfindingFixtureScenario = options.scenario
     == "terrain_pathfinding_fixture_smoke"
+let isTerrainPathfindingColumnScenario = options.scenario
+    == "terrain_pathfinding_column_smoke"
 let isWorldInteractionScenario = isWorldObservationScenario
     || isTerrainScanRun
     || isTerrainColumnScanRun
@@ -922,6 +924,21 @@ let terrainColumnScanSuccess = isTerrainColumnScanRun
 let terrainColumnTraversabilitySuccess = isTerrainColumnScanRun
     ? (terrainColumnDerivedSummary?.success ?? false)
     : nil
+let terrainPathfindingColumnSnapshot = isTerrainPathfindingColumnScenario
+    ? terrainColumnScanSnapshot.flatMap(makeTerrainLivePathfindingSnapshot)
+    : nil
+let terrainPathfindingColumnInvariantReport = terrainPathfindingColumnSnapshot.flatMap { snapshot in
+    terrainColumnScanSnapshot.map {
+        makeTerrainPathfindingColumnInvariantReport(
+            columnSnapshot: $0,
+            pathfindingSnapshot: snapshot
+        )
+    }
+}
+let terrainPathfindingColumnSuccess = isTerrainPathfindingColumnScenario
+    ? ((terrainPathfindingColumnSnapshot?.summary.success ?? false)
+        && (terrainPathfindingColumnInvariantReport?.success ?? false))
+    : nil
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
     && successCriteria.agentTicksRecorded
@@ -937,6 +954,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (terrainColumnScanSuccess ?? true)
     && (terrainColumnTraversabilitySuccess ?? true)
     && (terrainPathfindingSuccess ?? true)
+    && (terrainPathfindingColumnSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -1031,6 +1049,25 @@ if options.outPath != nil {
                 loadedCells: terrainColumnScanSnapshot.summary.loadedCells,
                 readyCells: terrainColumnScanSnapshot.summary.readyCells,
                 columns: terrainColumnScanSnapshot.summary.columnsObserved
+            ))
+        }
+        if let pathfindingColumnSnapshot = terrainPathfindingColumnSnapshot {
+            let summary = pathfindingColumnSnapshot.summary
+            try appendEvent(RunEvent(
+                type: "lab_terrain_pathfinding_column_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: terrainPathfindingColumnSuccess,
+                agentId: pathfindingColumnSnapshot.agentId,
+                nodes: summary.nodes,
+                traversableNodes: summary.traversableNodes,
+                unsafeNodes: summary.unsafeNodes,
+                unknownNodes: summary.unknownNodes,
+                startStatus: summary.startStatus,
+                goalStatus: summary.goalStatus,
+                pathStatus: summary.pathStatus.rawValue,
+                pathLength: summary.pathLength,
+                visited: summary.visited
             ))
         }
         if let terrainScanSnapshot {
@@ -1367,6 +1404,18 @@ if let outPath = options.outPath {
                 )
             }
         }
+        if let terrainPathfindingColumnSnapshot {
+            try writeJSON(
+                terrainPathfindingColumnSnapshot,
+                to: outURL.appendingPathComponent("terrain_pathfinding_column_snapshot.json")
+            )
+        }
+        if let terrainPathfindingColumnInvariantReport {
+            try writeJSON(
+                terrainPathfindingColumnInvariantReport,
+                to: outURL.appendingPathComponent("terrain_pathfinding_column_invariant_report.json")
+            )
+        }
         if let terrainScanSnapshot {
             try writeJSON(
                 terrainScanSnapshot,
@@ -1584,6 +1633,14 @@ if let outPath = options.outPath {
             terrainPathfindingSearchLimitReached: terrainPathfindingFixtureReport?.summary.searchLimitReached,
             terrainPathfindingUnknown: terrainPathfindingFixtureReport?.summary.unknown,
             terrainPathfindingSuccess: terrainPathfindingSuccess,
+            terrainPathfindingColumnNodes: terrainPathfindingColumnSnapshot?.summary.nodes,
+            terrainPathfindingColumnTraversableNodes: terrainPathfindingColumnSnapshot?.summary.traversableNodes,
+            terrainPathfindingColumnUnsafeNodes: terrainPathfindingColumnSnapshot?.summary.unsafeNodes,
+            terrainPathfindingColumnUnknownNodes: terrainPathfindingColumnSnapshot?.summary.unknownNodes,
+            terrainPathfindingColumnPathFound: terrainPathfindingColumnSnapshot.map { $0.result.status == .found },
+            terrainPathfindingColumnPathLength: terrainPathfindingColumnSnapshot?.summary.pathLength,
+            terrainPathfindingColumnVisited: terrainPathfindingColumnSnapshot?.summary.visited,
+            terrainPathfindingColumnSuccess: terrainPathfindingColumnSuccess,
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))

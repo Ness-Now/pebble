@@ -214,6 +214,14 @@ struct RunMetrics: Encodable {
     let terrainPathfindingSearchLimitReached: Int?
     let terrainPathfindingUnknown: Int?
     let terrainPathfindingSuccess: Bool?
+    let terrainPathfindingColumnNodes: Int?
+    let terrainPathfindingColumnTraversableNodes: Int?
+    let terrainPathfindingColumnUnsafeNodes: Int?
+    let terrainPathfindingColumnUnknownNodes: Int?
+    let terrainPathfindingColumnPathFound: Bool?
+    let terrainPathfindingColumnPathLength: Int?
+    let terrainPathfindingColumnVisited: Int?
+    let terrainPathfindingColumnSuccess: Bool?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -377,6 +385,14 @@ struct RunMetrics: Encodable {
         terrainPathfindingSearchLimitReached: Int? = nil,
         terrainPathfindingUnknown: Int? = nil,
         terrainPathfindingSuccess: Bool? = nil,
+        terrainPathfindingColumnNodes: Int? = nil,
+        terrainPathfindingColumnTraversableNodes: Int? = nil,
+        terrainPathfindingColumnUnsafeNodes: Int? = nil,
+        terrainPathfindingColumnUnknownNodes: Int? = nil,
+        terrainPathfindingColumnPathFound: Bool? = nil,
+        terrainPathfindingColumnPathLength: Int? = nil,
+        terrainPathfindingColumnVisited: Int? = nil,
+        terrainPathfindingColumnSuccess: Bool? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -539,6 +555,14 @@ struct RunMetrics: Encodable {
         self.terrainPathfindingSearchLimitReached = terrainPathfindingSearchLimitReached
         self.terrainPathfindingUnknown = terrainPathfindingUnknown
         self.terrainPathfindingSuccess = terrainPathfindingSuccess
+        self.terrainPathfindingColumnNodes = terrainPathfindingColumnNodes
+        self.terrainPathfindingColumnTraversableNodes = terrainPathfindingColumnTraversableNodes
+        self.terrainPathfindingColumnUnsafeNodes = terrainPathfindingColumnUnsafeNodes
+        self.terrainPathfindingColumnUnknownNodes = terrainPathfindingColumnUnknownNodes
+        self.terrainPathfindingColumnPathFound = terrainPathfindingColumnPathFound
+        self.terrainPathfindingColumnPathLength = terrainPathfindingColumnPathLength
+        self.terrainPathfindingColumnVisited = terrainPathfindingColumnVisited
+        self.terrainPathfindingColumnSuccess = terrainPathfindingColumnSuccess
         self.successCriteria = successCriteria
     }
 }

@@ -370,7 +370,14 @@ statuses and preserving the no-reread/no-movement contract.
 
 ## Phase 4.13B - Terrain Pathfinding Column Smoke
 
-Next recommended step: build nine abstract nodes from the central column scan,
-use fixed center/east start and goal keys, and call the existing BFS without
-movement or collision integration. Edge and multi-agent live pathfinding,
-mutation, route following, and agent movement remain out of scope.
+Status: implemented and validated.
+
+Goal: map the nine captured central column traversability results to nine
+abstract nodes, use fixed center/east start and goal keys, and call the existing
+bounded BFS without rereading the world. Seed 42 produces a coherent
+`invalidStart` because all nine supports are unsafe; this is accepted audit
+evidence rather than hidden by terrain mutation.
+
+Next recommended step: Phase 4.13C - live pathfinding edge planning docs-only,
+or Phase 4.14A - movement planning docs-only. Movement, collision, mutation,
+edge/multi-agent pathfinding, and route following remain out of scope.

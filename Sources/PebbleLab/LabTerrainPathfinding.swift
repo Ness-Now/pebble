@@ -122,7 +122,8 @@ private struct TerrainPathfindingFixtureDefinition {
     }
 }
 
-private let terrainPathNeighborMode = "north_east_south_west"
+let labTerrainPathNeighborMode = "north_east_south_west"
+private let terrainPathNeighborMode = labTerrainPathNeighborMode
 
 private func terrainPathKey(_ x: Int, _ z: Int, y: Int = 64) -> LabTerrainPathNodeKey {
     LabTerrainPathNodeKey(x: x, y: y, z: z)
@@ -165,7 +166,7 @@ func findTerrainPath(_ request: LabTerrainPathRequest) -> LabTerrainPathResult {
             reason: "non_positive_search_limit"
         )
     }
-    guard request.neighborMode == terrainPathNeighborMode else {
+    guard request.neighborMode == labTerrainPathNeighborMode else {
         return LabTerrainPathResult(
             status: .unknown,
             path: [],

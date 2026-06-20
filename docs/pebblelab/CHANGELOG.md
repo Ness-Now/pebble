@@ -55,3 +55,4 @@
 - Added terrain pathfinding fixture smoke with bounded deterministic BFS.
 - Hardened terrain pathfinding fixture coverage and edge-case invariants.
 - Documented live column pathfinding integration planning contract.
+- Added central live column pathfinding smoke using captured traversability and existing BFS.

@@ -119,7 +119,7 @@ func terrainColumnScanScenarioContract(
     for scenario: String
 ) -> LabTerrainColumnScanScenarioContract? {
     switch scenario {
-    case "terrain_column_scan_smoke":
+    case "terrain_column_scan_smoke", "terrain_pathfinding_column_smoke":
         return LabTerrainColumnScanScenarioContract(
             scenario: scenario,
             agentX: 8,
