@@ -158,6 +158,14 @@ struct RunEvent: Encodable {
     let liveAgentDisplaced: Bool?
     let collisionPerformed: Bool?
     let mutationPerformed: Bool?
+    let occupable: Int?
+    let blocked: Int?
+    let unsupported: Int?
+    let verticalSpaceOccupied: Int?
+    let liquidUnsupported: Int?
+    let outOfBounds: Int?
+    let notLoaded: Int?
+    let notReady: Int?
 
     init(
         type: String,
@@ -316,7 +324,15 @@ struct RunEvent: Encodable {
         finalStatus: String? = nil,
         liveAgentDisplaced: Bool? = nil,
         collisionPerformed: Bool? = nil,
-        mutationPerformed: Bool? = nil
+        mutationPerformed: Bool? = nil,
+        occupable: Int? = nil,
+        blocked: Int? = nil,
+        unsupported: Int? = nil,
+        verticalSpaceOccupied: Int? = nil,
+        liquidUnsupported: Int? = nil,
+        outOfBounds: Int? = nil,
+        notLoaded: Int? = nil,
+        notReady: Int? = nil
     ) {
         self.type = type
         self.event = event
@@ -475,6 +491,14 @@ struct RunEvent: Encodable {
         self.liveAgentDisplaced = liveAgentDisplaced
         self.collisionPerformed = collisionPerformed
         self.mutationPerformed = mutationPerformed
+        self.occupable = occupable
+        self.blocked = blocked
+        self.unsupported = unsupported
+        self.verticalSpaceOccupied = verticalSpaceOccupied
+        self.liquidUnsupported = liquidUnsupported
+        self.outOfBounds = outOfBounds
+        self.notLoaded = notLoaded
+        self.notReady = notReady
     }
 }
 

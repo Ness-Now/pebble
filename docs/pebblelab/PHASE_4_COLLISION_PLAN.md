@@ -353,6 +353,25 @@ deterministic occupancy result.
 Neither phase may claim physical movement. Phase 4.17 planning begins only
 after fixture and live read-only collision evidence are independently green.
 
+## Phase 4.16B Implementation Status
+
+Phase 4.16B implements the fixture-only collision smoke described here. It adds
+pure synthetic occupancy evaluation for support/feet/head shape evidence and a
+`LabHumanV0` body contract with a `0.6 x 0.6 x 1.8` body box anchored at the
+feet plane and centered in the node column.
+
+The implemented scenario is `terrain_collision_fixture_smoke`. It writes
+`terrain_collision_fixture_report.json`,
+`terrain_collision_invariant_report.json`, `metrics.json`, and `events.ndjson`.
+The fixture report covers all v0 occupancy statuses: `occupable`, `blocked`,
+`unsupported`, `verticalSpaceOccupied`, `liquidUnsupported`, `unknown`,
+`outOfBounds`, `notLoaded`, and `notReady`.
+
+This remains a pure fixture layer. It performs no live query, no `World` access,
+no chunk access, no agent displacement, no movement runtime, no pathfinding, no
+route following, no physics integration, and no mutation. Phase 4.16C remains
+the recommended next step for bounded live read-only occupancy sampling.
+
 ## Recommended Validation Commands
 
 ```text

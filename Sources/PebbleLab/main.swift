@@ -32,6 +32,8 @@ let isTerrainLiveMovementScenario = options.scenario
     == "terrain_path_live_movement_smoke"
 let isTerrainMovementFixtureScenario = options.scenario
     == "terrain_path_movement_fixture_smoke"
+let isTerrainCollisionFixtureScenario = options.scenario
+    == "terrain_collision_fixture_smoke"
 let isWorldInteractionScenario = isWorldObservationScenario
     || isTerrainScanRun
     || isTerrainColumnScanRun
@@ -753,6 +755,17 @@ let terrainMovementSuccess = isTerrainMovementFixtureScenario
         && (terrainMovementInvariantReport?.success ?? false)
         && terrainMovementFixtureReport?.summary.failed == 0)
     : nil
+let terrainCollisionFixtureReport = isTerrainCollisionFixtureScenario
+    ? makeTerrainCollisionFixtureReport(scenario: options.scenario, seed: options.seed)
+    : nil
+let terrainCollisionInvariantReport = terrainCollisionFixtureReport.map(
+    makeTerrainCollisionInvariantReport
+)
+let terrainCollisionSuccess = isTerrainCollisionFixtureScenario
+    ? ((terrainCollisionFixtureReport?.success ?? false)
+        && (terrainCollisionInvariantReport?.success ?? false)
+        && terrainCollisionFixtureReport?.summary.failed == 0)
+    : nil
 let coreEntityInvariantReport = options.scenario == "core_entity_smoke"
     ? coreEntityBridge.invariantReport(
         scenario: options.scenario,
@@ -1023,6 +1036,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (terrainPathfindingPositiveSuccess ?? true)
     && (terrainMovementSuccess ?? true)
     && (terrainLiveMovementSuccess ?? true)
+    && (terrainCollisionSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -1116,6 +1130,26 @@ if options.outPath != nil {
                 stepsExecuted: movementSummary.stepsExecuted,
                 reachedGoals: movementSummary.reachedGoals,
                 invalidPaths: movementSummary.invalidPaths
+            ))
+        }
+        if let collisionSummary = terrainCollisionFixtureReport?.summary {
+            try appendEvent(RunEvent(
+                type: "lab_terrain_collision_fixture_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: terrainCollisionSuccess,
+                fixtures: collisionSummary.fixtures,
+                passed: collisionSummary.passed,
+                failed: collisionSummary.failed,
+                unknown: collisionSummary.unknown,
+                occupable: collisionSummary.occupable,
+                blocked: collisionSummary.blocked,
+                unsupported: collisionSummary.unsupported,
+                verticalSpaceOccupied: collisionSummary.verticalSpaceOccupied,
+                liquidUnsupported: collisionSummary.liquidUnsupported,
+                outOfBounds: collisionSummary.outOfBounds,
+                notLoaded: collisionSummary.notLoaded,
+                notReady: collisionSummary.notReady
             ))
         }
         if let terrainColumnScanSnapshot {
@@ -1523,6 +1557,18 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("terrain_path_movement_invariant_report.json")
             )
         }
+        if let terrainCollisionFixtureReport {
+            try writeJSON(
+                terrainCollisionFixtureReport,
+                to: outURL.appendingPathComponent("terrain_collision_fixture_report.json")
+            )
+        }
+        if let terrainCollisionInvariantReport {
+            try writeJSON(
+                terrainCollisionInvariantReport,
+                to: outURL.appendingPathComponent("terrain_collision_invariant_report.json")
+            )
+        }
         if let terrainColumnScanSnapshot {
             try writeJSON(
                 terrainColumnScanSnapshot,
@@ -1820,6 +1866,19 @@ if let outPath = options.outPath {
             terrainLiveMovementCollisionPerformed: terrainLiveMovementSnapshot?.summary.collisionPerformed,
             terrainLiveMovementMutationPerformed: terrainLiveMovementSnapshot?.summary.mutationPerformed,
             terrainLiveMovementSuccess: terrainLiveMovementSuccess,
+            terrainCollisionFixtureCases: terrainCollisionFixtureReport?.summary.fixtures,
+            terrainCollisionFixturePassed: terrainCollisionFixtureReport?.summary.passed,
+            terrainCollisionFixtureFailed: terrainCollisionFixtureReport?.summary.failed,
+            terrainCollisionOccupable: terrainCollisionFixtureReport?.summary.occupable,
+            terrainCollisionBlocked: terrainCollisionFixtureReport?.summary.blocked,
+            terrainCollisionUnsupported: terrainCollisionFixtureReport?.summary.unsupported,
+            terrainCollisionVerticalSpaceOccupied: terrainCollisionFixtureReport?.summary.verticalSpaceOccupied,
+            terrainCollisionLiquidUnsupported: terrainCollisionFixtureReport?.summary.liquidUnsupported,
+            terrainCollisionUnknown: terrainCollisionFixtureReport?.summary.unknown,
+            terrainCollisionOutOfBounds: terrainCollisionFixtureReport?.summary.outOfBounds,
+            terrainCollisionNotLoaded: terrainCollisionFixtureReport?.summary.notLoaded,
+            terrainCollisionNotReady: terrainCollisionFixtureReport?.summary.notReady,
+            terrainCollisionFixtureSuccess: terrainCollisionSuccess,
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))

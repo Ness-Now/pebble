@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added fixture-only terrain collision and occupancy smoke.
 - Documented PebbleLab collision and occupancy planning contract.
 - Hardened abstract live terrain movement adapter invariants.
 - Added abstract live terrain movement smoke over positive path evidence.

@@ -244,6 +244,19 @@ struct RunMetrics: Encodable {
     let terrainLiveMovementCollisionPerformed: Bool?
     let terrainLiveMovementMutationPerformed: Bool?
     let terrainLiveMovementSuccess: Bool?
+    let terrainCollisionFixtureCases: Int?
+    let terrainCollisionFixturePassed: Int?
+    let terrainCollisionFixtureFailed: Int?
+    let terrainCollisionOccupable: Int?
+    let terrainCollisionBlocked: Int?
+    let terrainCollisionUnsupported: Int?
+    let terrainCollisionVerticalSpaceOccupied: Int?
+    let terrainCollisionLiquidUnsupported: Int?
+    let terrainCollisionUnknown: Int?
+    let terrainCollisionOutOfBounds: Int?
+    let terrainCollisionNotLoaded: Int?
+    let terrainCollisionNotReady: Int?
+    let terrainCollisionFixtureSuccess: Bool?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -437,6 +450,19 @@ struct RunMetrics: Encodable {
         terrainLiveMovementCollisionPerformed: Bool? = nil,
         terrainLiveMovementMutationPerformed: Bool? = nil,
         terrainLiveMovementSuccess: Bool? = nil,
+        terrainCollisionFixtureCases: Int? = nil,
+        terrainCollisionFixturePassed: Int? = nil,
+        terrainCollisionFixtureFailed: Int? = nil,
+        terrainCollisionOccupable: Int? = nil,
+        terrainCollisionBlocked: Int? = nil,
+        terrainCollisionUnsupported: Int? = nil,
+        terrainCollisionVerticalSpaceOccupied: Int? = nil,
+        terrainCollisionLiquidUnsupported: Int? = nil,
+        terrainCollisionUnknown: Int? = nil,
+        terrainCollisionOutOfBounds: Int? = nil,
+        terrainCollisionNotLoaded: Int? = nil,
+        terrainCollisionNotReady: Int? = nil,
+        terrainCollisionFixtureSuccess: Bool? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -629,6 +655,19 @@ struct RunMetrics: Encodable {
         self.terrainLiveMovementCollisionPerformed = terrainLiveMovementCollisionPerformed
         self.terrainLiveMovementMutationPerformed = terrainLiveMovementMutationPerformed
         self.terrainLiveMovementSuccess = terrainLiveMovementSuccess
+        self.terrainCollisionFixtureCases = terrainCollisionFixtureCases
+        self.terrainCollisionFixturePassed = terrainCollisionFixturePassed
+        self.terrainCollisionFixtureFailed = terrainCollisionFixtureFailed
+        self.terrainCollisionOccupable = terrainCollisionOccupable
+        self.terrainCollisionBlocked = terrainCollisionBlocked
+        self.terrainCollisionUnsupported = terrainCollisionUnsupported
+        self.terrainCollisionVerticalSpaceOccupied = terrainCollisionVerticalSpaceOccupied
+        self.terrainCollisionLiquidUnsupported = terrainCollisionLiquidUnsupported
+        self.terrainCollisionUnknown = terrainCollisionUnknown
+        self.terrainCollisionOutOfBounds = terrainCollisionOutOfBounds
+        self.terrainCollisionNotLoaded = terrainCollisionNotLoaded
+        self.terrainCollisionNotReady = terrainCollisionNotReady
+        self.terrainCollisionFixtureSuccess = terrainCollisionFixtureSuccess
         self.successCriteria = successCriteria
     }
 }

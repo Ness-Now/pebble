@@ -508,3 +508,18 @@ Collision is not implemented. Physical displacement, route following,
 mutation, physics integration, and multi-agent movement remain out of scope.
 
 Next recommended step: Phase 4.16B - Collision Fixture Smoke.
+
+## Phase 4.16B - Collision Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: add a fixture-only terrain collision and occupancy contract for a
+future `LabHuman` body without `World`, chunks, agents, movement runtime,
+pathfinding, displacement, or mutation. Nineteen synthetic support/feet/head
+fixtures cover occupable, blocked, unsupported, vertical-space occupied,
+liquid unsupported, unknown, out-of-bounds, not-loaded, and not-ready results.
+
+Live collision, physical displacement, route following, world mutation, physics
+integration, and multi-agent movement remain out of scope.
+
+Next recommended step: Phase 4.16C - Collision Live Read-Only Smoke.

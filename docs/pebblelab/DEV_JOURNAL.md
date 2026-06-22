@@ -2088,3 +2088,119 @@ Python, ML, LLM, or RL integration was added.
 
 Phase 4.16B: implement a fixture-only collision and occupancy smoke with
 synthetic shapes, no `World`, no agent, no movement, and no mutation.
+
+## 2026-06-19 — Phase 4.16B Collision Fixture Smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Create the first pure collision and occupancy layer for PebbleLab. The phase
+proves that a future `LabHuman` body contract can be represented and evaluated
+against synthetic support/feet/head fixtures while remaining separate from
+traversability, movement, pathfinding, live agents, physical displacement, and
+world mutation.
+
+### Files Created Or Modified
+
+- `Sources/PebbleLab/LabTerrainCollision.swift` (new)
+- `Sources/PebbleLab/LabTerrainCollisionFixtures.swift` (new)
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_COLLISION_PLAN.md`
+
+No PebbleCore, renderer, shader, resource, registry, save/load, or golden file
+changed.
+
+### Body Contract
+
+The fixture smoke uses `LabHumanV0`:
+
+- width: `0.6`;
+- depth: `0.6`;
+- height: `1.8`;
+- anchor: `feet_plane`;
+- horizontal centering: `node_center`.
+
+This is an occupancy fixture contract only. It is not a PebbleCore entity
+shape, not a physics shape, and not a displacement guarantee.
+
+### Fixtures Covered
+
+Nineteen fixtures cover the v0 statuses:
+
+- full-cube support with empty feet/head: `occupable`;
+- missing support: `unsupported`;
+- unknown support, unknown feet, unknown head, and special unmodeled support:
+  `unknown`;
+- liquid support: `liquidUnsupported`;
+- feet full cube, liquid feet, and liquid head: `blocked`;
+- head full cube: `verticalSpaceOccupied`;
+- support/feet/head not loaded: `notLoaded`;
+- support/feet/head not ready: `notReady`;
+- loaded/ready guard precedence before success;
+- out-of-bounds candidate: `outOfBounds`.
+
+Every result includes an explicit reason string.
+
+### Outputs, Invariants, Metrics, And Event
+
+The scenario `terrain_collision_fixture_smoke` writes:
+
+- `terrain_collision_fixture_report.json`;
+- `terrain_collision_invariant_report.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The invariant report has 22 checks covering fixture-only execution, no world,
+no movement, no agent/placeholder/core displacement, no mutation, no
+pathfinding, no route following, no goal selection, body contract agreement,
+determinism, explicit reasons, guard precedence, occupable requirements,
+blocked reason preservation, fixture/live separation, status counts, and
+expected status coverage.
+
+Metrics use the `terrainCollision*` prefix and the run emits one aggregate
+`lab_terrain_collision_fixture_recorded` event.
+
+### Still Prohibited
+
+No `World`, live chunk, live agent, physical placeholder, core entity,
+movement runtime, `stepTerrainMovement`, `findTerrainPath`, route following,
+live collision, physics integration, gravity, velocity, jump, fall, swim,
+climb, multi-agent movement, avoidance, Python, ML, LLM, RL, or mutation was
+added.
+
+### Validation Commands
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario terrain_collision_fixture_smoke --seed 42 --ticks 0 --out runs/check_terrain_collision_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_path_live_movement_smoke --seed 42 --ticks 5 --out runs/check_live_movement_after_collision_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_path_movement_fixture_smoke --seed 42 --ticks 0 --out runs/check_movement_fixture_after_collision_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_pathfinding_column_positive_smoke --seed 42 --ticks 5 --out runs/check_positive_path_after_collision_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_traversability_fixture_smoke --seed 42 --ticks 0 --out runs/check_traversability_after_collision_fixture`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_collision_fixture`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Collision fixture report: `19 passed, 0 failed`, success true.
+- Collision invariant report: `22 passed, 0 failed`, success true.
+- All v0 occupancy statuses are covered.
+- Metrics contain `terrainCollision*`.
+- `events.ndjson` contains `lab_terrain_collision_fixture_recorded`.
+- Debug/release builds, requested non-regression scenarios, and `pebsmoke`
+  passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.16C: add a bounded collision live read-only smoke that asks whether a
+captured node is occupable without movement, displacement, pathfinding, route
+following, physics, or mutation.
