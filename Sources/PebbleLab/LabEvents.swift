@@ -119,6 +119,12 @@ struct RunEvent: Encodable {
     let approved: Int?
     let denied: Int?
     let displacementRefused: Int?
+    let completed: Int?
+    let stopped: Int?
+    let attemptedEdges: Int?
+    let completedEdges: Int?
+    let displacementsApplied: Int?
+    let deniedEdges: Int?
     let unknownCases: Int?
     let airCases: Int?
     let solidCases: Int?
@@ -305,6 +311,12 @@ struct RunEvent: Encodable {
         approved: Int? = nil,
         denied: Int? = nil,
         displacementRefused: Int? = nil,
+        completed: Int? = nil,
+        stopped: Int? = nil,
+        attemptedEdges: Int? = nil,
+        completedEdges: Int? = nil,
+        displacementsApplied: Int? = nil,
+        deniedEdges: Int? = nil,
         unknownCases: Int? = nil,
         airCases: Int? = nil,
         solidCases: Int? = nil,
@@ -490,6 +502,12 @@ struct RunEvent: Encodable {
         self.approved = approved
         self.denied = denied
         self.displacementRefused = displacementRefused
+        self.completed = completed
+        self.stopped = stopped
+        self.attemptedEdges = attemptedEdges
+        self.completedEdges = completedEdges
+        self.displacementsApplied = displacementsApplied
+        self.deniedEdges = deniedEdges
         self.unknownCases = unknownCases
         self.airCases = airCases
         self.solidCases = solidCases

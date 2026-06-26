@@ -684,3 +684,27 @@ movement, avoidance, reservation tables, physics integration, terrain mutation,
 world mutation, and gameplay route following remain out of scope.
 
 Next recommended step: Phase 4.18B - Route Following Fixture Smoke.
+
+## Phase 4.18B - Route Following Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: add a fixture-only route following smoke over synthetic routes. The
+scenario `route_following_fixture_smoke` validates route index progression,
+no skipped nodes, stop-on-first-denied-edge, completed-only-at-last-node, and
+displacement gates requiring occupable collision plus approved single-step
+status.
+
+The smoke writes `route_following_fixture_report.json`,
+`route_following_fixture_invariant_report.json`, `routeFollowingFixture*`
+metrics, and one `lab_route_following_fixture_recorded` event. It covers one
+completed two-edge route and seven stopped routes: collision denial, diagonal
+invalid edge, vertical invalid edge, source mismatch, divergence, max steps,
+and stale collision evidence.
+
+Live route following, approved live multi-step movement, dynamic replanning,
+pathfinding inside a follower, multi-agent movement, avoidance, reservation
+tables, physics integration, terrain mutation, world mutation, and gameplay
+route following remain out of scope.
+
+Next recommended step: Phase 4.18C - Route Following Denied Live Smoke.

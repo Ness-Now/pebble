@@ -44,6 +44,8 @@ let isPhysicalMovementHardeningScenario = options.scenario
     == "physical_movement_single_step_hardening_smoke"
 let isPhysicalMovementOccupableSearchScenario = options.scenario
     == "physical_movement_find_occupable_smoke"
+let isRouteFollowingFixtureScenario = options.scenario
+    == "route_following_fixture_smoke"
 let isWorldInteractionScenario = isWorldObservationScenario
     || isTerrainScanRun
     || isTerrainColumnScanRun
@@ -910,6 +912,27 @@ let physicalMovementHardeningSuccess = isPhysicalMovementHardeningScenario
                 && !$0.snapshot.mutationPerformed
         } ?? false))
     : nil
+let routeFollowingFixtureReport = isRouteFollowingFixtureScenario
+    ? makeRouteFollowingFixtureReport(
+        scenario: options.scenario,
+        seed: options.seed,
+        ticksCompleted: ticksCompleted
+    )
+    : nil
+let routeFollowingFixtureInvariantReport = isRouteFollowingFixtureScenario
+    ? makeRouteFollowingFixtureInvariantReport(
+        report: routeFollowingFixtureReport,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let routeFollowingFixtureSuccess = isRouteFollowingFixtureScenario
+    ? ((routeFollowingFixtureReport?.success ?? false)
+        && (routeFollowingFixtureInvariantReport?.success ?? false)
+        && routeFollowingFixtureReport?.summary.failed == 0
+        && (routeFollowingFixtureReport?.summary.completed ?? 0) >= 1
+        && (routeFollowingFixtureReport?.summary.stopped ?? 0) >= 1)
+    : nil
 let coreEntityInvariantReport = options.scenario == "core_entity_smoke"
     ? coreEntityBridge.invariantReport(
         scenario: options.scenario,
@@ -1185,6 +1208,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (physicalMovementSuccess ?? true)
     && (physicalMovementOccupableSearchSuccess ?? true)
     && (physicalMovementHardeningSuccess ?? true)
+    && (routeFollowingFixtureSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -1386,6 +1410,24 @@ if options.outPath != nil {
                 displacementRefused: summary.displacementRefused,
                 cases: summary.cases,
                 displacementApplied: summary.displacementApplied > 0
+            ))
+        }
+        if let routeFollowingFixtureReport {
+            let summary = routeFollowingFixtureReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_route_following_fixture_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: routeFollowingFixtureSuccess,
+                passed: summary.passed,
+                failed: summary.failed,
+                completed: summary.completed,
+                stopped: summary.stopped,
+                attemptedEdges: summary.attemptedEdges,
+                completedEdges: summary.completedEdges,
+                displacementsApplied: summary.displacementsApplied,
+                deniedEdges: summary.deniedEdges,
+                cases: summary.cases
             ))
         }
         if let terrainColumnScanSnapshot {
@@ -1853,6 +1895,18 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("physical_movement_single_step_hardening_invariant_report.json")
             )
         }
+        if let routeFollowingFixtureReport {
+            try writeJSON(
+                routeFollowingFixtureReport,
+                to: outURL.appendingPathComponent("route_following_fixture_report.json")
+            )
+        }
+        if let routeFollowingFixtureInvariantReport {
+            try writeJSON(
+                routeFollowingFixtureInvariantReport,
+                to: outURL.appendingPathComponent("route_following_fixture_invariant_report.json")
+            )
+        }
         if let terrainColumnScanSnapshot {
             try writeJSON(
                 terrainColumnScanSnapshot,
@@ -2227,6 +2281,21 @@ if let outPath = options.outPath {
             physicalMovementHardeningDisplacementApplied: physicalMovementHardeningReport?.summary.displacementApplied,
             physicalMovementHardeningDisplacementRefused: physicalMovementHardeningReport?.summary.displacementRefused,
             physicalMovementHardeningSuccess: physicalMovementHardeningSuccess,
+            routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
+            routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
+            routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,
+            routeFollowingFixtureCompleted: routeFollowingFixtureReport?.summary.completed,
+            routeFollowingFixtureStopped: routeFollowingFixtureReport?.summary.stopped,
+            routeFollowingFixtureAttemptedEdges: routeFollowingFixtureReport?.summary.attemptedEdges,
+            routeFollowingFixtureCompletedEdges: routeFollowingFixtureReport?.summary.completedEdges,
+            routeFollowingFixtureDisplacementsApplied: routeFollowingFixtureReport?.summary.displacementsApplied,
+            routeFollowingFixtureDeniedEdges: routeFollowingFixtureReport?.summary.deniedEdges,
+            routeFollowingFixtureCollisionDenied: routeFollowingFixtureReport?.summary.collisionDenied,
+            routeFollowingFixtureInvalidEdges: routeFollowingFixtureReport?.summary.invalidEdges,
+            routeFollowingFixtureSourceMismatch: routeFollowingFixtureReport?.summary.sourceMismatch,
+            routeFollowingFixtureDivergence: routeFollowingFixtureReport?.summary.divergence,
+            routeFollowingFixtureMaxSteps: routeFollowingFixtureReport?.summary.maxSteps,
+            routeFollowingFixtureSuccess: routeFollowingFixtureSuccess,
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))

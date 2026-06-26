@@ -319,6 +319,21 @@ struct RunMetrics: Encodable {
     let physicalMovementHardeningDisplacementApplied: Int?
     let physicalMovementHardeningDisplacementRefused: Int?
     let physicalMovementHardeningSuccess: Bool?
+    let routeFollowingFixtureCases: Int?
+    let routeFollowingFixturePassed: Int?
+    let routeFollowingFixtureFailed: Int?
+    let routeFollowingFixtureCompleted: Int?
+    let routeFollowingFixtureStopped: Int?
+    let routeFollowingFixtureAttemptedEdges: Int?
+    let routeFollowingFixtureCompletedEdges: Int?
+    let routeFollowingFixtureDisplacementsApplied: Int?
+    let routeFollowingFixtureDeniedEdges: Int?
+    let routeFollowingFixtureCollisionDenied: Int?
+    let routeFollowingFixtureInvalidEdges: Int?
+    let routeFollowingFixtureSourceMismatch: Int?
+    let routeFollowingFixtureDivergence: Int?
+    let routeFollowingFixtureMaxSteps: Int?
+    let routeFollowingFixtureSuccess: Bool?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -587,6 +602,21 @@ struct RunMetrics: Encodable {
         physicalMovementHardeningDisplacementApplied: Int? = nil,
         physicalMovementHardeningDisplacementRefused: Int? = nil,
         physicalMovementHardeningSuccess: Bool? = nil,
+        routeFollowingFixtureCases: Int? = nil,
+        routeFollowingFixturePassed: Int? = nil,
+        routeFollowingFixtureFailed: Int? = nil,
+        routeFollowingFixtureCompleted: Int? = nil,
+        routeFollowingFixtureStopped: Int? = nil,
+        routeFollowingFixtureAttemptedEdges: Int? = nil,
+        routeFollowingFixtureCompletedEdges: Int? = nil,
+        routeFollowingFixtureDisplacementsApplied: Int? = nil,
+        routeFollowingFixtureDeniedEdges: Int? = nil,
+        routeFollowingFixtureCollisionDenied: Int? = nil,
+        routeFollowingFixtureInvalidEdges: Int? = nil,
+        routeFollowingFixtureSourceMismatch: Int? = nil,
+        routeFollowingFixtureDivergence: Int? = nil,
+        routeFollowingFixtureMaxSteps: Int? = nil,
+        routeFollowingFixtureSuccess: Bool? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -854,6 +884,21 @@ struct RunMetrics: Encodable {
         self.physicalMovementHardeningDisplacementApplied = physicalMovementHardeningDisplacementApplied
         self.physicalMovementHardeningDisplacementRefused = physicalMovementHardeningDisplacementRefused
         self.physicalMovementHardeningSuccess = physicalMovementHardeningSuccess
+        self.routeFollowingFixtureCases = routeFollowingFixtureCases
+        self.routeFollowingFixturePassed = routeFollowingFixturePassed
+        self.routeFollowingFixtureFailed = routeFollowingFixtureFailed
+        self.routeFollowingFixtureCompleted = routeFollowingFixtureCompleted
+        self.routeFollowingFixtureStopped = routeFollowingFixtureStopped
+        self.routeFollowingFixtureAttemptedEdges = routeFollowingFixtureAttemptedEdges
+        self.routeFollowingFixtureCompletedEdges = routeFollowingFixtureCompletedEdges
+        self.routeFollowingFixtureDisplacementsApplied = routeFollowingFixtureDisplacementsApplied
+        self.routeFollowingFixtureDeniedEdges = routeFollowingFixtureDeniedEdges
+        self.routeFollowingFixtureCollisionDenied = routeFollowingFixtureCollisionDenied
+        self.routeFollowingFixtureInvalidEdges = routeFollowingFixtureInvalidEdges
+        self.routeFollowingFixtureSourceMismatch = routeFollowingFixtureSourceMismatch
+        self.routeFollowingFixtureDivergence = routeFollowingFixtureDivergence
+        self.routeFollowingFixtureMaxSteps = routeFollowingFixtureMaxSteps
+        self.routeFollowingFixtureSuccess = routeFollowingFixtureSuccess
         self.successCriteria = successCriteria
     }
 }

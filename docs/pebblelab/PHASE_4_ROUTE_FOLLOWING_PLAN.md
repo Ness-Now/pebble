@@ -383,3 +383,39 @@ git status
 Success for Phase 4.18A means this document exists, the changelog, developer
 journal, and roadmap are updated, no Swift files are modified, and the build
 and smoke suite remain green.
+
+## Phase 4.18B Implementation Status
+
+Phase 4.18B implements the first fixture-only route following smoke. The
+scenario is `route_following_fixture_smoke`.
+
+The smoke uses synthetic routes and synthetic per-edge collision/single-step
+evidence. It does not use `World`, live agents, live collision, live physical
+placeholders, pathfinding, dynamic replanning, physics integration, terrain
+mutation, or world mutation.
+
+The fixture cases are:
+
+- `completed_two_edges`;
+- `stopped_collision_denied_second_edge`;
+- `stopped_invalid_diagonal_edge`;
+- `stopped_vertical_edge`;
+- `stopped_source_mismatch`;
+- `stopped_divergence_after_first_edge`;
+- `stopped_max_steps`;
+- `stopped_stale_collision`.
+
+The completed case reaches the last route node after two approved synthetic
+edges. The stopped cases preserve the last valid node and stop immediately when
+the fixture evidence denies progress or when max steps is reached.
+
+The phase writes `route_following_fixture_report.json`,
+`route_following_fixture_invariant_report.json`, `metrics.json`, and
+`events.ndjson`. The invariant report validates 36 checks covering fixture-only
+execution, required cases, route length, contiguity, no skipped nodes, index
+progression, completed/stopped semantics, stop-on-first-denied-edge,
+displacement gates, explicit status/reason, and runner output contracts.
+
+Phase 4.18B still does not implement live route following. It proves only that
+the route-following contract can be simulated and audited over deterministic
+fixtures.

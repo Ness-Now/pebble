@@ -2993,3 +2993,107 @@ passed, and `pebsmoke` remains `456 passed, 0 failed`.
 Phase 4.18B: route following fixture smoke. It should remain fixture-only and
 prove route index progression, stop behavior, and no skipped nodes before any
 live route following code.
+
+## 2026-06-19 — Phase 4.18B route following fixture smoke
+
+### Objective
+
+Add the first route following layer as a fixture-only smoke. The scenario
+simulates multi-edge orchestration over synthetic routes without `World`, live
+agents, live collision, live physical placeholders, pathfinding, physics,
+dynamic replanning, or mutation.
+
+### Files Created/Modified
+
+- Created `Sources/PebbleLab/LabRouteFollowing.swift`.
+- Created `Sources/PebbleLab/LabRouteFollowingFixtures.swift`.
+- Modified `Sources/PebbleLab/LabOptions.swift`.
+- Modified `Sources/PebbleLab/LabScenarios.swift`.
+- Modified `Sources/PebbleLab/LabOutput.swift`.
+- Modified `Sources/PebbleLab/LabEvents.swift`.
+- Modified `Sources/PebbleLab/main.swift`.
+- Updated `docs/pebblelab/CHANGELOG.md`.
+- Updated `docs/pebblelab/DEV_JOURNAL.md`.
+- Updated `docs/pebblelab/ROADMAP.md`.
+- Updated `docs/pebblelab/PHASE_4_ROUTE_FOLLOWING_PLAN.md`.
+
+### Cases Covered
+
+The new scenario is `route_following_fixture_smoke`.
+
+It covers eight deterministic fixture cases:
+
+- `completed_two_edges`;
+- `stopped_collision_denied_second_edge`;
+- `stopped_invalid_diagonal_edge`;
+- `stopped_vertical_edge`;
+- `stopped_source_mismatch`;
+- `stopped_divergence_after_first_edge`;
+- `stopped_max_steps`;
+- `stopped_stale_collision`.
+
+### Completed And Stopped Summary
+
+The fixture report has one completed route and seven stopped routes. It records
+9 attempted edge records, 5 completed edges, 5 synthetic displacements, and 4
+denied edge records. The source mismatch and max-step stops happen before
+another edge displacement; divergence stops immediately after the first
+approved edge records divergence.
+
+### Outputs, Invariants, Metrics, And Event
+
+The scenario writes:
+
+- `route_following_fixture_report.json`;
+- `route_following_fixture_invariant_report.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The invariant report has 36 checks covering fixture-only/no-World behavior,
+case presence, route lengths, contiguous approved edges, no skipped nodes,
+index progression, completed/stopped semantics, stop-on-first-denial,
+displacement gates, explicit status/reason, expected status/completed-edge
+matching, and runner outputs.
+
+Metrics use the `routeFollowingFixture*` prefix. The run emits one aggregate
+`lab_route_following_fixture_recorded` event.
+
+### Still Prohibited
+
+No live route following, live agent displacement, live physical placeholder
+movement, live collision, pathfinding, dynamic replanning, goal selection,
+physics integration, multi-agent movement, avoidance, reservation table,
+terrain mutation, world mutation, Python, ML, LLM, or RL was added.
+
+### Validation Commands
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario route_following_fixture_smoke --seed 42 --ticks 0 --out runs/check_route_following_fixture`
+- `swift run -c release PebbleLab -- --scenario physical_movement_single_step_hardening_smoke --seed 42 --ticks 5 --out runs/check_single_step_hardening_after_route_fixture`
+- `swift run -c release PebbleLab -- --scenario physical_movement_approved_single_step_smoke --seed 42 --ticks 5 --out runs/check_approved_single_step_after_route_fixture`
+- `swift run -c release PebbleLab -- --scenario physical_movement_find_occupable_smoke --seed 42 --ticks 5 --out runs/check_find_occupable_after_route_fixture`
+- `swift run -c release PebbleLab -- --scenario physical_movement_denied_smoke --seed 42 --ticks 5 --out runs/check_denied_movement_after_route_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_collision_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_collision_live_after_route_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_collision_fixture_smoke --seed 42 --ticks 0 --out runs/check_collision_fixture_after_route_fixture`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_route_fixture`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Route following fixture report: success true.
+- Cases: `8 passed, 0 failed`.
+- Summary: `1 completed`, `7 stopped`, `9 attemptedEdges`,
+  `5 completedEdges`, `5 displacementsApplied`, `4 deniedEdges`.
+- Invariant report: `36 passed, 0 failed`.
+- Metrics contain `routeFollowingFixture*`.
+- `events.ndjson` contains `lab_route_following_fixture_recorded`.
+- Debug/release builds, requested non-regression scenarios, and `pebsmoke`
+  passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.18C: route following denied live smoke. It should use a short live route
+with at least one collision-denied edge and succeed only if the follower stops
+cleanly without route following gameplay, replanning, physics, or mutation.
