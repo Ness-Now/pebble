@@ -615,3 +615,26 @@ integration, mutation, avoidance, and reservation tables remain out of scope.
 
 Next recommended step: Phase 4.17B2 - Approved Single-Step Physical
 Displacement Smoke.
+
+## Phase 4.17B2 - Approved Single-Step Physical Displacement Smoke
+
+Status: implemented and validated.
+
+Goal: apply exactly one approved physical displacement after live collision
+evidence proves the destination is occupable. The scenario uses seed 99
+collision evidence for destination `(8,64,8)`, attempts `(7,64,8) ->
+(8,64,8)`, moves one local abstract `agent_0`, syncs one physical placeholder,
+and verifies divergence remains zero.
+
+The smoke writes `physical_movement_integration_snapshot.json`,
+`physical_movement_integration_invariant_report.json`, `physicalMovement*`
+metrics, and one `lab_physical_movement_integration_recorded` event. It does
+not create a core entity for this first approved smoke, and it does not perform
+pathfinding, route following, physics integration, terrain mutation, world
+mutation, or multi-agent movement.
+
+Route following, multi-agent movement, avoidance, reservation tables, physics
+integration, terrain mutation, gameplay movement, mining, construction, and
+inventory behavior remain out of scope.
+
+Next recommended step: Phase 4.17C - Single-Step Displacement Hardening.

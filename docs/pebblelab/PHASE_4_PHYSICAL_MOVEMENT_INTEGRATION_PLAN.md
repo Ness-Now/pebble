@@ -453,6 +453,43 @@ pathfinding, route following, physics, or mutation.
 This phase still applies no physical displacement. It only identifies that
 seed 99 node `(8,64,8)` can feed Phase 4.17B2 as a destination candidate.
 
+## Phase 4.17B2 Implementation Status
+
+Phase 4.17B2 implements the first approved single-step physical displacement
+smoke. The scenario is `physical_movement_approved_single_step_smoke`.
+
+The smoke uses the destination identified by Phase 4.17B2A:
+
+- collision seed: `99`;
+- destination: `(8,64,8)`;
+- support: `grass_block`;
+- feet/head: `air` / `air`;
+- collision status: `occupable`;
+- collision reason: `full_cube_support_empty_body_volume`.
+
+The selected edge is `(7,64,8) -> (8,64,8)`. It is same-y, orthogonal, and
+4-neighbor. The scenario creates one local `agent_0` and one local physical
+placeholder at the source, applies one abstract movement action, then syncs the
+placeholder to the abstract position. The approved movement status is
+`approved`, `displacementApplied` is true, and divergence remains `0 -> 0`.
+
+The core entity fields remain absent for this first approved smoke. Creating a
+core entity would add a live world entity; this phase limits the proof to the
+abstract agent plus physical placeholder bridge and leaves core-entity
+approved displacement for a later hardening phase.
+
+The phase writes `physical_movement_integration_snapshot.json`,
+`physical_movement_integration_invariant_report.json`, `metrics.json`, and
+`events.ndjson`. The invariant report validates 28 checks covering occupable
+collision evidence, edge shape, pre/post abstract and physical positions,
+approved status, displacement application, no pathfinding, no route following,
+no goal selection, no multi-agent movement, no physics integration, no terrain
+or world mutation, zero divergence before/after, and runner output contracts.
+
+This remains a single-step smoke. It is not route following, dynamic replanning,
+multi-agent movement, physics integration, terrain mutation, or gameplay
+movement.
+
 ## Explicitly Out Of Scope
 
 - route following;

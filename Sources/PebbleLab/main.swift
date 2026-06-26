@@ -38,6 +38,8 @@ let isTerrainCollisionLiveScenario = options.scenario
     == "terrain_collision_live_readonly_smoke"
 let isPhysicalMovementDeniedScenario = options.scenario
     == "physical_movement_denied_smoke"
+let isPhysicalMovementApprovedScenario = options.scenario
+    == "physical_movement_approved_single_step_smoke"
 let isPhysicalMovementOccupableSearchScenario = options.scenario
     == "physical_movement_find_occupable_smoke"
 let isWorldInteractionScenario = isWorldObservationScenario
@@ -805,27 +807,49 @@ let physicalMovementSnapshot = isPhysicalMovementDeniedScenario
         ticksCompleted: ticksCompleted,
         world: world
     )
-    : nil
-let physicalMovementInvariantReport = isPhysicalMovementDeniedScenario
+    : (isPhysicalMovementApprovedScenario
+        ? makePhysicalMovementApprovedSingleStepSnapshot(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticksCompleted: ticksCompleted
+        )
+        : nil)
+let isPhysicalMovementIntegrationScenario = isPhysicalMovementDeniedScenario
+    || isPhysicalMovementApprovedScenario
+let physicalMovementInvariantReport = isPhysicalMovementIntegrationScenario
     ? makePhysicalMovementIntegrationInvariantReport(
         snapshot: physicalMovementSnapshot,
         scenario: options.scenario,
         seed: options.seed
     )
     : nil
-let physicalMovementSuccess = isPhysicalMovementDeniedScenario
-    ? ((physicalMovementSnapshot?.success ?? false)
-        && (physicalMovementInvariantReport?.success ?? false)
-        && physicalMovementSnapshot?.displacementApplied == false
-        && physicalMovementSnapshot?.status == .collisionDenied
-        && physicalMovementSnapshot?.collisionStatus != .occupable
-        && physicalMovementSnapshot?.pathfindingPerformed == false
-        && physicalMovementSnapshot?.routeFollowingPerformed == false
-        && physicalMovementSnapshot?.physicsPerformed == false
-        && physicalMovementSnapshot?.mutationPerformed == false
-        && physicalMovementSnapshot?.preAbstractPosition == physicalMovementSnapshot?.postAbstractPosition
-        && physicalMovementSnapshot?.prePhysicalPosition == physicalMovementSnapshot?.postPhysicalPosition
-        && physicalMovementSnapshot?.preCoreEntityPosition == physicalMovementSnapshot?.postCoreEntityPosition)
+let physicalMovementDeniedSuccess = isPhysicalMovementDeniedScenario
+    && (physicalMovementSnapshot?.success ?? false)
+    && (physicalMovementInvariantReport?.success ?? false)
+    && physicalMovementSnapshot?.displacementApplied == false
+    && physicalMovementSnapshot?.status == .collisionDenied
+    && physicalMovementSnapshot?.collisionStatus != .occupable
+    && physicalMovementSnapshot?.pathfindingPerformed == false
+    && physicalMovementSnapshot?.routeFollowingPerformed == false
+    && physicalMovementSnapshot?.physicsPerformed == false
+    && physicalMovementSnapshot?.mutationPerformed == false
+    && physicalMovementSnapshot?.preAbstractPosition == physicalMovementSnapshot?.postAbstractPosition
+    && physicalMovementSnapshot?.prePhysicalPosition == physicalMovementSnapshot?.postPhysicalPosition
+    && physicalMovementSnapshot?.preCoreEntityPosition == physicalMovementSnapshot?.postCoreEntityPosition
+let physicalMovementApprovedSuccess = isPhysicalMovementApprovedScenario
+    && (physicalMovementSnapshot?.success ?? false)
+    && (physicalMovementInvariantReport?.success ?? false)
+    && physicalMovementSnapshot?.status == .approved
+    && physicalMovementSnapshot?.displacementApplied == true
+    && physicalMovementSnapshot?.collisionStatus == .occupable
+    && physicalMovementSnapshot?.divergenceBefore == 0
+    && physicalMovementSnapshot?.divergenceAfter == 0
+    && physicalMovementSnapshot?.pathfindingPerformed == false
+    && physicalMovementSnapshot?.routeFollowingPerformed == false
+    && physicalMovementSnapshot?.physicsPerformed == false
+    && physicalMovementSnapshot?.mutationPerformed == false
+let physicalMovementSuccess = isPhysicalMovementIntegrationScenario
+    ? (physicalMovementDeniedSuccess || physicalMovementApprovedSuccess)
     : nil
 let physicalMovementOccupableSearchSnapshot = isPhysicalMovementOccupableSearchScenario
     ? makePhysicalMovementOccupableSearchSnapshot(

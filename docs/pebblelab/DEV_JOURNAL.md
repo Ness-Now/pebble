@@ -2659,3 +2659,127 @@ added.
 Phase 4.17B2: approved single-step physical displacement smoke using the
 identified occupable destination, still with no route following, multi-agent
 movement, physics integration, terrain mutation, or gameplay movement.
+
+## 2026-06-19 — Phase 4.17B2 approved single-step physical displacement smoke
+
+### Objective
+
+Apply PebbleLab's first approved physical displacement, strictly limited to one
+single-step smoke. The phase combines an occupable live collision destination,
+a local abstract agent, and a local physical placeholder sync. It does not add
+route following, pathfinding during displacement, physics integration,
+multi-agent movement, or terrain mutation.
+
+### Files Created/Modified
+
+- Modified `Sources/PebbleLab/LabPhysicalMovementIntegration.swift`.
+- Modified `Sources/PebbleLab/LabOptions.swift`.
+- Modified `Sources/PebbleLab/LabScenarios.swift`.
+- Modified `Sources/PebbleLab/main.swift`.
+- Updated `docs/pebblelab/CHANGELOG.md`.
+- Updated `docs/pebblelab/ROADMAP.md`.
+- Updated `docs/pebblelab/PHASE_4_PHYSICAL_MOVEMENT_INTEGRATION_PLAN.md`.
+- Updated `docs/pebblelab/DEV_JOURNAL.md`.
+
+### Source, Destination, And Collision
+
+The approved edge is:
+
+- source: `(7,64,8)`;
+- destination: `(8,64,8)`;
+- same-y: yes;
+- 4-neighbor: yes;
+- diagonal: no.
+
+The collision evidence uses seed `99` and destination `(8,64,8)`:
+
+- support: `grass_block`;
+- feet: `air`;
+- head: `air`;
+- status: `occupable`;
+- reason: `full_cube_support_empty_body_volume`.
+
+### Displacement Result
+
+The scenario creates local `agent_0` at `(7,64,8)` and a local physical
+placeholder at the same position. It applies one abstract move and syncs the
+physical placeholder once.
+
+Result:
+
+- status: `approved`;
+- reason: `approved_occupable_destination_single_step`;
+- `displacementApplied = true`;
+- abstract position: `(7,64,8) -> (8,64,8)`;
+- physical placeholder position: `(7,64,8) -> (8,64,8)`;
+- core entity position: not present;
+- divergence: `0 -> 0`.
+
+The core entity remains absent by design. Creating one would add a live world
+entity and is better left to a later hardening phase after the placeholder
+single-step contract is stable.
+
+### Outputs, Invariants, Metrics, And Event
+
+The scenario writes:
+
+- `physical_movement_integration_snapshot.json`;
+- `physical_movement_integration_invariant_report.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The invariant report has 28 checks covering occupable destination evidence,
+explicit collision reason, selected edge existence, 4-neighbor/same-y/no
+diagonal rules, pre/post abstract and physical positions, approved status,
+occupable approval gate, no pathfinding, no route following, no goal selection,
+no multi-agent movement, no physics integration, no terrain/world mutation,
+zero divergence before/after, runner outputs, and separation from the denied
+smoke.
+
+Metrics use the `physicalMovement*` prefix. The run emits one aggregate
+`lab_physical_movement_integration_recorded` event.
+
+### Still Prohibited
+
+No route following, multi-agent movement, avoidance, reservation table, physics
+integration, gravity, velocity, jump, fall, swim, climb, mining, construction,
+inventory behavior, pathfinding during displacement, dynamic replanning,
+terrain mutation, world mutation, Python, ML, LLM, or RL was added.
+
+### Validation Commands
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario physical_movement_approved_single_step_smoke --seed 42 --ticks 5 --out runs/check_physical_movement_approved_single_step`
+- `swift run -c release PebbleLab -- --scenario physical_movement_find_occupable_smoke --seed 42 --ticks 5 --out runs/check_find_occupable_after_approved_move`
+- `swift run -c release PebbleLab -- --scenario physical_movement_denied_smoke --seed 42 --ticks 5 --out runs/check_denied_movement_after_approved_move`
+- `swift run -c release PebbleLab -- --scenario terrain_collision_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_collision_live_after_approved_move`
+- `swift run -c release PebbleLab -- --scenario terrain_collision_fixture_smoke --seed 42 --ticks 0 --out runs/check_collision_fixture_after_approved_move`
+- `swift run -c release PebbleLab -- --scenario terrain_path_live_movement_smoke --seed 42 --ticks 5 --out runs/check_live_movement_after_approved_move`
+- `swift run -c release PebbleLab -- --scenario physical_behavior_smoke --seed 42 --ticks 5 --out runs/check_physical_behavior_after_approved_move`
+- `swift run -c release PebbleLab -- --scenario physical_behavior_multi_smoke --seed 42 --ticks 5 --out runs/check_physical_behavior_multi_after_approved_move`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_approved_move`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Approved single-step snapshot: success true.
+- Status: `approved`.
+- Collision status: `occupable`.
+- Displacement applied: true.
+- Abstract position: `(7,64,8) -> (8,64,8)`.
+- Physical placeholder position: `(7,64,8) -> (8,64,8)`.
+- Divergence: `0 -> 0`.
+- Invariant report: `28 passed, 0 failed`.
+- Metrics contain `physicalMovement*`.
+- `events.ndjson` contains `lab_physical_movement_integration_recorded`.
+- Debug/release builds, requested non-regression scenarios, and `pebsmoke`
+  passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.17C: single-step displacement hardening, covering source mismatch,
+missing handles, stale collision evidence, stale path evidence, divergence
+cases, and explicit core-entity handling without introducing route following
+or gameplay movement.
