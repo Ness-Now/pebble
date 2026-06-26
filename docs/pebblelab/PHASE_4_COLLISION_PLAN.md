@@ -372,6 +372,35 @@ no chunk access, no agent displacement, no movement runtime, no pathfinding, no
 route following, no physics integration, and no mutation. Phase 4.16C remains
 the recommended next step for bounded live read-only occupancy sampling.
 
+## Phase 4.16C Implementation Status
+
+Phase 4.16C implements the first bounded live read-only collision occupancy
+smoke. The scenario is `terrain_collision_live_readonly_smoke`.
+
+The smoke reads exactly one deterministic node, `(8,64,8)`, after preparing the
+normal live world chunks for seed 42. It samples:
+
+- support at `(8,63,8)`;
+- feet at `(8,64,8)`;
+- head at `(8,65,8)`.
+
+Each sample preserves loaded/ready state, block identity, semantic kind,
+collision shape, and chunk-state unchanged evidence. The live adapter then
+builds a `LabTerrainCollisionColumnFixture` with source
+`live_readonly_fixture_adapter` and calls the same
+`evaluateTerrainOccupancyFixture(...)` v0 evaluator used by Phase 4.16B.
+
+For the validated seed 42 run, support is water and feet/head are air, so the
+occupancy result is `liquidUnsupported` with reason `liquid_support`. This is a
+successful non-occupable result: the phase validates bounded read-only evidence
+and explicit collision classification, not movement.
+
+The scenario writes `terrain_collision_live_snapshot.json`,
+`terrain_collision_live_invariant_report.json`, `metrics.json`, and
+`events.ndjson`. It still performs no agent displacement, no physical
+placeholder displacement, no core entity displacement, no movement runtime, no
+pathfinding, no route following, no physics integration, and no mutation.
+
 ## Recommended Validation Commands
 
 ```text

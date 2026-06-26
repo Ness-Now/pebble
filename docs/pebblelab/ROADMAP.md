@@ -523,3 +523,23 @@ Live collision, physical displacement, route following, world mutation, physics
 integration, and multi-agent movement remain out of scope.
 
 Next recommended step: Phase 4.16C - Collision Live Read-Only Smoke.
+
+## Phase 4.16C - Collision Live Read-Only Smoke
+
+Status: implemented and validated.
+
+Goal: read exactly one live candidate node in a bounded read-only pass, adapt
+support/feet/head samples into the fixture collision evaluator, and produce a
+deterministic occupancy result without movement, pathfinding, displacement,
+route following, physics, or mutation.
+
+The smoke samples node `(8,64,8)` with seed 42. Support is water, feet/head are
+air, so collision v0 returns `liquidUnsupported` with reason `liquid_support`.
+This is accepted because the phase proves read-only evidence and explicit
+occupancy classification, not physical movement.
+
+Physical displacement, route following, mutation, physics integration, and
+multi-agent movement remain out of scope.
+
+Next recommended step: Phase 4.17A - Physical Movement Integration Planning
+Docs-Only.

@@ -166,6 +166,14 @@ struct RunEvent: Encodable {
     let outOfBounds: Int?
     let notLoaded: Int?
     let notReady: Int?
+    let status: String?
+    let samples: Int?
+    let loadedSamples: Int?
+    let readySamples: Int?
+    let physicalPlaceholderDisplaced: Bool?
+    let coreEntityDisplaced: Bool?
+    let movementPerformed: Bool?
+    let pathfindingPerformed: Bool?
 
     init(
         type: String,
@@ -332,7 +340,15 @@ struct RunEvent: Encodable {
         liquidUnsupported: Int? = nil,
         outOfBounds: Int? = nil,
         notLoaded: Int? = nil,
-        notReady: Int? = nil
+        notReady: Int? = nil,
+        status: String? = nil,
+        samples: Int? = nil,
+        loadedSamples: Int? = nil,
+        readySamples: Int? = nil,
+        physicalPlaceholderDisplaced: Bool? = nil,
+        coreEntityDisplaced: Bool? = nil,
+        movementPerformed: Bool? = nil,
+        pathfindingPerformed: Bool? = nil
     ) {
         self.type = type
         self.event = event
@@ -499,6 +515,14 @@ struct RunEvent: Encodable {
         self.outOfBounds = outOfBounds
         self.notLoaded = notLoaded
         self.notReady = notReady
+        self.status = status
+        self.samples = samples
+        self.loadedSamples = loadedSamples
+        self.readySamples = readySamples
+        self.physicalPlaceholderDisplaced = physicalPlaceholderDisplaced
+        self.coreEntityDisplaced = coreEntityDisplaced
+        self.movementPerformed = movementPerformed
+        self.pathfindingPerformed = pathfindingPerformed
     }
 }
 

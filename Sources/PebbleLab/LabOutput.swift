@@ -257,6 +257,23 @@ struct RunMetrics: Encodable {
     let terrainCollisionNotLoaded: Int?
     let terrainCollisionNotReady: Int?
     let terrainCollisionFixtureSuccess: Bool?
+    let terrainCollisionLiveSamples: Int?
+    let terrainCollisionLiveLoadedSamples: Int?
+    let terrainCollisionLiveReadySamples: Int?
+    let terrainCollisionLiveStatus: String?
+    let terrainCollisionLiveOccupable: Bool?
+    let terrainCollisionLiveBlocked: Bool?
+    let terrainCollisionLiveUnsupported: Bool?
+    let terrainCollisionLiveVerticalSpaceOccupied: Bool?
+    let terrainCollisionLiveLiquidUnsupported: Bool?
+    let terrainCollisionLiveUnknown: Bool?
+    let terrainCollisionLiveOutOfBounds: Bool?
+    let terrainCollisionLiveNotLoaded: Bool?
+    let terrainCollisionLiveNotReady: Bool?
+    let terrainCollisionLiveMovementPerformed: Bool?
+    let terrainCollisionLivePathfindingPerformed: Bool?
+    let terrainCollisionLiveMutationPerformed: Bool?
+    let terrainCollisionLiveSuccess: Bool?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -463,6 +480,23 @@ struct RunMetrics: Encodable {
         terrainCollisionNotLoaded: Int? = nil,
         terrainCollisionNotReady: Int? = nil,
         terrainCollisionFixtureSuccess: Bool? = nil,
+        terrainCollisionLiveSamples: Int? = nil,
+        terrainCollisionLiveLoadedSamples: Int? = nil,
+        terrainCollisionLiveReadySamples: Int? = nil,
+        terrainCollisionLiveStatus: String? = nil,
+        terrainCollisionLiveOccupable: Bool? = nil,
+        terrainCollisionLiveBlocked: Bool? = nil,
+        terrainCollisionLiveUnsupported: Bool? = nil,
+        terrainCollisionLiveVerticalSpaceOccupied: Bool? = nil,
+        terrainCollisionLiveLiquidUnsupported: Bool? = nil,
+        terrainCollisionLiveUnknown: Bool? = nil,
+        terrainCollisionLiveOutOfBounds: Bool? = nil,
+        terrainCollisionLiveNotLoaded: Bool? = nil,
+        terrainCollisionLiveNotReady: Bool? = nil,
+        terrainCollisionLiveMovementPerformed: Bool? = nil,
+        terrainCollisionLivePathfindingPerformed: Bool? = nil,
+        terrainCollisionLiveMutationPerformed: Bool? = nil,
+        terrainCollisionLiveSuccess: Bool? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -668,6 +702,23 @@ struct RunMetrics: Encodable {
         self.terrainCollisionNotLoaded = terrainCollisionNotLoaded
         self.terrainCollisionNotReady = terrainCollisionNotReady
         self.terrainCollisionFixtureSuccess = terrainCollisionFixtureSuccess
+        self.terrainCollisionLiveSamples = terrainCollisionLiveSamples
+        self.terrainCollisionLiveLoadedSamples = terrainCollisionLiveLoadedSamples
+        self.terrainCollisionLiveReadySamples = terrainCollisionLiveReadySamples
+        self.terrainCollisionLiveStatus = terrainCollisionLiveStatus
+        self.terrainCollisionLiveOccupable = terrainCollisionLiveOccupable
+        self.terrainCollisionLiveBlocked = terrainCollisionLiveBlocked
+        self.terrainCollisionLiveUnsupported = terrainCollisionLiveUnsupported
+        self.terrainCollisionLiveVerticalSpaceOccupied = terrainCollisionLiveVerticalSpaceOccupied
+        self.terrainCollisionLiveLiquidUnsupported = terrainCollisionLiveLiquidUnsupported
+        self.terrainCollisionLiveUnknown = terrainCollisionLiveUnknown
+        self.terrainCollisionLiveOutOfBounds = terrainCollisionLiveOutOfBounds
+        self.terrainCollisionLiveNotLoaded = terrainCollisionLiveNotLoaded
+        self.terrainCollisionLiveNotReady = terrainCollisionLiveNotReady
+        self.terrainCollisionLiveMovementPerformed = terrainCollisionLiveMovementPerformed
+        self.terrainCollisionLivePathfindingPerformed = terrainCollisionLivePathfindingPerformed
+        self.terrainCollisionLiveMutationPerformed = terrainCollisionLiveMutationPerformed
+        self.terrainCollisionLiveSuccess = terrainCollisionLiveSuccess
         self.successCriteria = successCriteria
     }
 }
