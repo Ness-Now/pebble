@@ -2326,3 +2326,112 @@ Python, ML, LLM, or RL integration was added.
 
 Phase 4.17A: plan physical movement integration docs-only before any real
 agent, placeholder, or core entity displacement is attempted.
+
+## 2026-06-19 — Phase 4.17A Physical Movement Integration Planning Docs-Only
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Plan the first future bridge from positive live path evidence, validated
+abstract movement, and read-only live collision evidence to a physical movement
+decision. This phase is documentation-only and does not implement
+displacement.
+
+### Starting State
+
+PebbleLab already has terrain traversability fixtures, terrain scan and column
+scan live evidence, pathfinding fixtures, live pathfinding negative and
+positive smokes, movement fixture hardening, live path to abstract movement,
+collision fixtures, and live read-only collision. These layers prove route,
+value-state progression, and occupancy separately. None of them physically
+moves a `LabAgent`, physical placeholder, or core entity.
+
+### Files Created Or Modified
+
+- `docs/pebblelab/PHASE_4_PHYSICAL_MOVEMENT_INTEGRATION_PLAN.md` (new)
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+No Swift, PebbleCore, renderer, shader, resource, registry, save/load, or
+golden file was modified.
+
+### Why Docs-Only
+
+Physical displacement is a new boundary. A path `found`, an abstract
+`reachedGoal`, and a collision result are necessary evidence, but none should
+silently become real agent movement. The plan defines a separate future
+physical displacement adapter and requires explicit approval/denial evidence
+before any position is changed.
+
+### Future Approval Conditions
+
+A future approved single-step displacement must require a positive path, a
+selected 4-neighbor same-y edge, a valid movement intent, destination live
+collision status `occupable`, loaded/ready evidence, preserved source/target
+coordinates, required physical/core handles, source-position agreement, and
+zero unexpected divergence. Non-occupable collision statuses must deny the
+move.
+
+### Refusal Path
+
+Denied movement is a valid audited result. If the destination is liquid,
+blocked, unknown, not loaded, not ready, unsupported, vertically occupied, or
+out of bounds, the future adapter must leave the agent, physical placeholder,
+core entity, and world unchanged while writing a status, reason, metrics, and
+event.
+
+### Future Outputs, Invariants, Metrics, And Event
+
+The plan proposes:
+
+- `physical_movement_integration_snapshot.json`;
+- `physical_movement_integration_invariant_report.json`;
+- `physicalMovement*` metrics;
+- one aggregate `lab_physical_movement_integration_recorded` event.
+
+The future invariant report should cover path evidence, selected-edge shape,
+movement-intent agreement, collision evidence, denial for non-occupable
+targets, no pathfinding/replanning/route following/goal selection, no physics,
+no mutation, handle/link requirements, pre/post position agreement,
+divergence, event, snapshot, metrics, and success-contract enforcement.
+
+### Recommended Subdivision
+
+The plan recommends splitting implementation:
+
+- Phase 4.17B1 - Denied Physical Movement Smoke;
+- Phase 4.17B2 - Approved Single-Step Physical Displacement Smoke;
+- Phase 4.17C - Single-Step Displacement Hardening;
+- Phase 4.18A - Route Following Planning Docs-Only.
+
+This keeps the refusal path auditable before approving a physical move.
+
+### Still Prohibited
+
+No route following, multiple physical steps, dynamic replanning, multi-agent
+movement, avoidance, reservations, combat, mining, construction, inventory,
+full physics, jump, fall, swim, climb, velocity, friction, acceleration,
+animation, rendering change, save/load change, registry change, Python, ML,
+LLM, or RL integration is part of this phase.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift run -c release pebsmoke`
+- `git status`
+
+### Results
+
+- Documentation-only plan created.
+- No Swift files modified.
+- `swift build` passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+- Final `git status` was clean after commit.
+
+### Next Step
+
+Phase 4.17B1: implement a denied physical movement smoke over non-occupable
+live collision evidence, with no displacement and a fully audited refusal.

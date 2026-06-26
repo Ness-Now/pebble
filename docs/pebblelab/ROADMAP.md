@@ -543,3 +543,26 @@ multi-agent movement remain out of scope.
 
 Next recommended step: Phase 4.17A - Physical Movement Integration Planning
 Docs-Only.
+
+## Phase 4.17A - Physical Movement Integration Planning Docs-Only
+
+Status: done as a docs-only planning phase.
+
+Goal: define the future boundary for one single-step physical displacement
+decision that combines positive live path evidence, abstract movement intent,
+and read-only live collision occupancy. The phase plans approval and denial
+contracts, future snapshots, invariants, metrics, and events without modifying
+Swift code or moving any agent, physical placeholder, or core entity.
+
+The plan requires destination collision status `occupable` before any future
+approved displacement. Non-occupable statuses such as `liquidUnsupported`,
+`blocked`, `unknown`, `notLoaded`, `notReady`, `unsupported`,
+`verticalSpaceOccupied`, and `outOfBounds` must deny physical movement while
+leaving all positions unchanged.
+
+Physical displacement, route following, mutation, physics integration,
+multi-agent movement, avoidance, and reservation tables remain out of scope for
+this phase. The first approved physical move should come only after an audited
+denied smoke or after a reliable occupable destination is identified.
+
+Next recommended step: Phase 4.17B1 - Denied Physical Movement Smoke.

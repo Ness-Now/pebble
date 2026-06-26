@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Documented PebbleLab physical movement integration planning contract.
 - Added read-only live terrain collision occupancy smoke.
 - Added fixture-only terrain collision and occupancy smoke.
 - Documented PebbleLab collision and occupancy planning contract.
