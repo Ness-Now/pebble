@@ -2551,3 +2551,111 @@ approved physical displacement was added.
 
 Phase 4.17B2A: find or prove a reliable occupable live destination before
 attempting an approved single-step physical displacement.
+
+## 2026-06-19 — Phase 4.17B2A find occupable live destination smoke
+
+### Objective
+
+Find a reliable live destination with collision status `occupable` before any
+approved physical displacement phase. This is a search-only smoke: it reads
+live collision evidence, selects the first occupable candidate, and applies no
+movement or displacement.
+
+### Files Created/Modified
+
+- Created `Sources/PebbleLab/LabPhysicalMovementOccupableSearch.swift`.
+- Modified `Sources/PebbleLab/LabTerrainCollisionLive.swift`.
+- Modified `Sources/PebbleLab/LabOptions.swift`.
+- Modified `Sources/PebbleLab/LabScenarios.swift`.
+- Modified `Sources/PebbleLab/LabOutput.swift`.
+- Modified `Sources/PebbleLab/LabEvents.swift`.
+- Modified `Sources/PebbleLab/main.swift`.
+- Updated `docs/pebblelab/CHANGELOG.md`.
+- Updated `docs/pebblelab/ROADMAP.md`.
+- Updated `docs/pebblelab/PHASE_4_PHYSICAL_MOVEMENT_INTEGRATION_PLAN.md`.
+
+### Search Strategy
+
+The scenario `physical_movement_find_occupable_smoke` evaluates a tiny
+deterministic multi-seed candidate list:
+
+- candidate 0: seed 42, node `(8,64,8)`;
+- candidate 1: seed 99, node `(8,64,8)`;
+- candidate 2: seed 99, node `(9,64,8)`.
+
+Seed 42 remains first so the search preserves the currently audited
+`liquidUnsupported` destination. Seed 99 is included because the positive live
+pathfinding smoke already proved a real live path through `(8,64,8)` and
+`(9,64,8)` without mutation.
+
+### Selected Candidate
+
+The search selected candidate index `1`: seed `99`, node `(8,64,8)`. The live
+read-only collision evidence is:
+
+- support: `grass_block`;
+- feet: `air`;
+- head: `air`;
+- status: `occupable`;
+- reason: `full_cube_support_empty_body_volume`.
+
+### Outputs, Invariants, Metrics, And Event
+
+The smoke writes:
+
+- `physical_movement_occupable_search_snapshot.json`;
+- `physical_movement_occupable_search_invariant_report.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The invariant report has 22 checks covering non-empty bounded candidate order,
+explicit status/reason, selected candidate existence, first-occupable
+selection, coordinate preservation, no movement, no agent/placeholder/core
+displacement, no pathfinding, no route following, no physics, no mutation, live
+collision read-only reuse, preservation of the default collision live scenario,
+and the success contract.
+
+Metrics use the `physicalMovementOccupableSearch*` prefix. The run emits one
+aggregate `lab_physical_movement_occupable_search_recorded` event.
+
+### Still Prohibited
+
+No movement, physical displacement, route following, pathfinding, physics
+integration, world mutation, terrain mutation, agent mutation, placeholder
+movement, core entity movement, multi-agent movement, avoidance, reservation
+table, mining, construction, inventory behavior, Python, ML, LLM, or RL was
+added.
+
+### Validation Commands
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario physical_movement_find_occupable_smoke --seed 42 --ticks 5 --out runs/check_physical_movement_find_occupable`
+- `swift run -c release PebbleLab -- --scenario physical_movement_denied_smoke --seed 42 --ticks 5 --out runs/check_denied_movement_after_occupable_search`
+- `swift run -c release PebbleLab -- --scenario terrain_collision_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_collision_live_after_occupable_search`
+- `swift run -c release PebbleLab -- --scenario terrain_collision_fixture_smoke --seed 42 --ticks 0 --out runs/check_collision_fixture_after_occupable_search`
+- `swift run -c release PebbleLab -- --scenario terrain_path_live_movement_smoke --seed 42 --ticks 5 --out runs/check_live_movement_after_occupable_search`
+- `swift run -c release PebbleLab -- --scenario physical_behavior_smoke --seed 42 --ticks 5 --out runs/check_physical_behavior_after_occupable_search`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_occupable_search`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Occupable search snapshot: success true.
+- Candidates evaluated: 3.
+- Selected candidate: index `1`, seed `99`, node `(8,64,8)`.
+- Selected status: `occupable`.
+- Selected reason: `full_cube_support_empty_body_volume`.
+- Invariant report: `22 passed, 0 failed`.
+- Metrics contain `physicalMovementOccupableSearch*`.
+- `events.ndjson` contains
+  `lab_physical_movement_occupable_search_recorded`.
+- Debug/release builds, requested non-regression scenarios, and `pebsmoke`
+  passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.17B2: approved single-step physical displacement smoke using the
+identified occupable destination, still with no route following, multi-agent
+movement, physics integration, terrain mutation, or gameplay movement.

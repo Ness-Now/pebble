@@ -425,6 +425,34 @@ auditing that no core entity position changes.
 Phase 4.17B2 should not approve a displacement until a reliable destination
 with collision status `occupable` is identified.
 
+## Phase 4.17B2A Implementation Status
+
+Phase 4.17B2A implements a bounded read-only search for a future approved
+physical movement destination. The scenario is
+`physical_movement_find_occupable_smoke`.
+
+The search is deterministic and intentionally small:
+
+- candidate 0: seed 42, node `(8,64,8)`;
+- candidate 1: seed 99, node `(8,64,8)`;
+- candidate 2: seed 99, node `(9,64,8)`.
+
+Candidate 0 preserves the currently audited non-occupable evidence from the
+denied smoke: support is water and collision returns `liquidUnsupported` with
+reason `liquid_support`. Candidate 1 is the first occupable destination:
+support is `grass_block`, feet/head are `air`, and collision returns
+`occupable` with reason `full_cube_support_empty_body_volume`.
+
+The phase writes `physical_movement_occupable_search_snapshot.json`,
+`physical_movement_occupable_search_invariant_report.json`, `metrics.json`,
+and `events.ndjson`. The invariant report validates 22 checks covering bounded
+candidate order, explicit status/reason, first-occupable selection, preserved
+coordinates, live read-only collision reuse, and no movement, displacement,
+pathfinding, route following, physics, or mutation.
+
+This phase still applies no physical displacement. It only identifies that
+seed 99 node `(8,64,8)` can feed Phase 4.17B2 as a destination candidate.
+
 ## Explicitly Out Of Scope
 
 - route following;

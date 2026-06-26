@@ -294,6 +294,19 @@ struct RunMetrics: Encodable {
     let physicalMovementDivergenceBefore: Int?
     let physicalMovementDivergenceAfter: Int?
     let physicalMovementSuccess: Bool?
+    let physicalMovementOccupableSearchCandidates: Int?
+    let physicalMovementOccupableSearchFound: Bool?
+    let physicalMovementOccupableSearchSelectedIndex: Int?
+    let physicalMovementOccupableSearchSelectedX: Int?
+    let physicalMovementOccupableSearchSelectedY: Int?
+    let physicalMovementOccupableSearchSelectedZ: Int?
+    let physicalMovementOccupableSearchSelectedStatus: String?
+    let physicalMovementOccupableSearchMovementPerformed: Bool?
+    let physicalMovementOccupableSearchPathfindingPerformed: Bool?
+    let physicalMovementOccupableSearchRouteFollowingPerformed: Bool?
+    let physicalMovementOccupableSearchPhysicsPerformed: Bool?
+    let physicalMovementOccupableSearchMutationPerformed: Bool?
+    let physicalMovementOccupableSearchSuccess: Bool?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -537,6 +550,19 @@ struct RunMetrics: Encodable {
         physicalMovementDivergenceBefore: Int? = nil,
         physicalMovementDivergenceAfter: Int? = nil,
         physicalMovementSuccess: Bool? = nil,
+        physicalMovementOccupableSearchCandidates: Int? = nil,
+        physicalMovementOccupableSearchFound: Bool? = nil,
+        physicalMovementOccupableSearchSelectedIndex: Int? = nil,
+        physicalMovementOccupableSearchSelectedX: Int? = nil,
+        physicalMovementOccupableSearchSelectedY: Int? = nil,
+        physicalMovementOccupableSearchSelectedZ: Int? = nil,
+        physicalMovementOccupableSearchSelectedStatus: String? = nil,
+        physicalMovementOccupableSearchMovementPerformed: Bool? = nil,
+        physicalMovementOccupableSearchPathfindingPerformed: Bool? = nil,
+        physicalMovementOccupableSearchRouteFollowingPerformed: Bool? = nil,
+        physicalMovementOccupableSearchPhysicsPerformed: Bool? = nil,
+        physicalMovementOccupableSearchMutationPerformed: Bool? = nil,
+        physicalMovementOccupableSearchSuccess: Bool? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -779,6 +805,19 @@ struct RunMetrics: Encodable {
         self.physicalMovementDivergenceBefore = physicalMovementDivergenceBefore
         self.physicalMovementDivergenceAfter = physicalMovementDivergenceAfter
         self.physicalMovementSuccess = physicalMovementSuccess
+        self.physicalMovementOccupableSearchCandidates = physicalMovementOccupableSearchCandidates
+        self.physicalMovementOccupableSearchFound = physicalMovementOccupableSearchFound
+        self.physicalMovementOccupableSearchSelectedIndex = physicalMovementOccupableSearchSelectedIndex
+        self.physicalMovementOccupableSearchSelectedX = physicalMovementOccupableSearchSelectedX
+        self.physicalMovementOccupableSearchSelectedY = physicalMovementOccupableSearchSelectedY
+        self.physicalMovementOccupableSearchSelectedZ = physicalMovementOccupableSearchSelectedZ
+        self.physicalMovementOccupableSearchSelectedStatus = physicalMovementOccupableSearchSelectedStatus
+        self.physicalMovementOccupableSearchMovementPerformed = physicalMovementOccupableSearchMovementPerformed
+        self.physicalMovementOccupableSearchPathfindingPerformed = physicalMovementOccupableSearchPathfindingPerformed
+        self.physicalMovementOccupableSearchRouteFollowingPerformed = physicalMovementOccupableSearchRouteFollowingPerformed
+        self.physicalMovementOccupableSearchPhysicsPerformed = physicalMovementOccupableSearchPhysicsPerformed
+        self.physicalMovementOccupableSearchMutationPerformed = physicalMovementOccupableSearchMutationPerformed
+        self.physicalMovementOccupableSearchSuccess = physicalMovementOccupableSearchSuccess
         self.successCriteria = successCriteria
     }
 }

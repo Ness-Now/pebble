@@ -38,6 +38,8 @@ let isTerrainCollisionLiveScenario = options.scenario
     == "terrain_collision_live_readonly_smoke"
 let isPhysicalMovementDeniedScenario = options.scenario
     == "physical_movement_denied_smoke"
+let isPhysicalMovementOccupableSearchScenario = options.scenario
+    == "physical_movement_find_occupable_smoke"
 let isWorldInteractionScenario = isWorldObservationScenario
     || isTerrainScanRun
     || isTerrainColumnScanRun
@@ -825,6 +827,36 @@ let physicalMovementSuccess = isPhysicalMovementDeniedScenario
         && physicalMovementSnapshot?.prePhysicalPosition == physicalMovementSnapshot?.postPhysicalPosition
         && physicalMovementSnapshot?.preCoreEntityPosition == physicalMovementSnapshot?.postCoreEntityPosition)
     : nil
+let physicalMovementOccupableSearchSnapshot = isPhysicalMovementOccupableSearchScenario
+    ? makePhysicalMovementOccupableSearchSnapshot(
+        scenario: options.scenario,
+        seed: options.seed,
+        ticksCompleted: ticksCompleted,
+        world: world
+    )
+    : nil
+let physicalMovementOccupableSearchInvariantReport =
+    isPhysicalMovementOccupableSearchScenario
+        ? makePhysicalMovementOccupableSearchInvariantReport(
+            snapshot: physicalMovementOccupableSearchSnapshot,
+            scenario: options.scenario,
+            seed: options.seed
+        )
+        : nil
+let physicalMovementOccupableSearchSuccess = isPhysicalMovementOccupableSearchScenario
+    ? ((physicalMovementOccupableSearchSnapshot?.summary.success ?? false)
+        && (physicalMovementOccupableSearchInvariantReport?.success ?? false)
+        && physicalMovementOccupableSearchSnapshot?.summary.occupableFound == true
+        && physicalMovementOccupableSearchSnapshot?.summary.selectedStatus == .occupable
+        && physicalMovementOccupableSearchSnapshot?.summary.movementPerformed == false
+        && physicalMovementOccupableSearchSnapshot?.summary.agentDisplaced == false
+        && physicalMovementOccupableSearchSnapshot?.summary.physicalPlaceholderDisplaced == false
+        && physicalMovementOccupableSearchSnapshot?.summary.coreEntityDisplaced == false
+        && physicalMovementOccupableSearchSnapshot?.summary.pathfindingPerformed == false
+        && physicalMovementOccupableSearchSnapshot?.summary.routeFollowingPerformed == false
+        && physicalMovementOccupableSearchSnapshot?.summary.physicsPerformed == false
+        && physicalMovementOccupableSearchSnapshot?.summary.mutationPerformed == false)
+    : nil
 let coreEntityInvariantReport = options.scenario == "core_entity_smoke"
     ? coreEntityBridge.invariantReport(
         scenario: options.scenario,
@@ -1098,6 +1130,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (terrainCollisionSuccess ?? true)
     && (terrainCollisionLiveSuccess ?? true)
     && (physicalMovementSuccess ?? true)
+    && (physicalMovementOccupableSearchSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -1262,6 +1295,27 @@ if options.outPath != nil {
                 physicsPerformed: physicalMovementSnapshot.physicsPerformed,
                 divergenceBefore: physicalMovementSnapshot.divergenceBefore,
                 divergenceAfter: physicalMovementSnapshot.divergenceAfter
+            ))
+        }
+        if let physicalMovementOccupableSearchSnapshot {
+            let summary = physicalMovementOccupableSearchSnapshot.summary
+            try appendEvent(RunEvent(
+                type: "lab_physical_movement_occupable_search_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: physicalMovementOccupableSearchSuccess,
+                x: summary.selectedNode?.x,
+                y: summary.selectedNode?.y,
+                z: summary.selectedNode?.z,
+                candidates: summary.candidatesEvaluated,
+                occupableFound: summary.occupableFound,
+                selectedCandidateIndex: summary.selectedCandidateIndex,
+                mutationPerformed: summary.mutationPerformed,
+                status: summary.selectedStatus?.rawValue,
+                movementPerformed: summary.movementPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
+                routeFollowingPerformed: summary.routeFollowingPerformed,
+                physicsPerformed: summary.physicsPerformed
             ))
         }
         if let terrainColumnScanSnapshot {
@@ -1705,6 +1759,18 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("physical_movement_integration_invariant_report.json")
             )
         }
+        if let physicalMovementOccupableSearchSnapshot {
+            try writeJSON(
+                physicalMovementOccupableSearchSnapshot,
+                to: outURL.appendingPathComponent("physical_movement_occupable_search_snapshot.json")
+            )
+        }
+        if let physicalMovementOccupableSearchInvariantReport {
+            try writeJSON(
+                physicalMovementOccupableSearchInvariantReport,
+                to: outURL.appendingPathComponent("physical_movement_occupable_search_invariant_report.json")
+            )
+        }
         if let terrainColumnScanSnapshot {
             try writeJSON(
                 terrainColumnScanSnapshot,
@@ -2054,6 +2120,19 @@ if let outPath = options.outPath {
             physicalMovementDivergenceBefore: physicalMovementSnapshot?.divergenceBefore,
             physicalMovementDivergenceAfter: physicalMovementSnapshot?.divergenceAfter,
             physicalMovementSuccess: physicalMovementSuccess,
+            physicalMovementOccupableSearchCandidates: physicalMovementOccupableSearchSnapshot?.summary.candidatesEvaluated,
+            physicalMovementOccupableSearchFound: physicalMovementOccupableSearchSnapshot?.summary.occupableFound,
+            physicalMovementOccupableSearchSelectedIndex: physicalMovementOccupableSearchSnapshot?.summary.selectedCandidateIndex,
+            physicalMovementOccupableSearchSelectedX: physicalMovementOccupableSearchSnapshot?.summary.selectedNode?.x,
+            physicalMovementOccupableSearchSelectedY: physicalMovementOccupableSearchSnapshot?.summary.selectedNode?.y,
+            physicalMovementOccupableSearchSelectedZ: physicalMovementOccupableSearchSnapshot?.summary.selectedNode?.z,
+            physicalMovementOccupableSearchSelectedStatus: physicalMovementOccupableSearchSnapshot?.summary.selectedStatus?.rawValue,
+            physicalMovementOccupableSearchMovementPerformed: physicalMovementOccupableSearchSnapshot?.summary.movementPerformed,
+            physicalMovementOccupableSearchPathfindingPerformed: physicalMovementOccupableSearchSnapshot?.summary.pathfindingPerformed,
+            physicalMovementOccupableSearchRouteFollowingPerformed: physicalMovementOccupableSearchSnapshot?.summary.routeFollowingPerformed,
+            physicalMovementOccupableSearchPhysicsPerformed: physicalMovementOccupableSearchSnapshot?.summary.physicsPerformed,
+            physicalMovementOccupableSearchMutationPerformed: physicalMovementOccupableSearchSnapshot?.summary.mutationPerformed,
+            physicalMovementOccupableSearchSuccess: physicalMovementOccupableSearchSuccess,
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))

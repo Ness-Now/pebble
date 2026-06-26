@@ -145,6 +145,7 @@ struct RunEvent: Encodable {
     let pathLength: Int?
     let visited: Int?
     let candidates: Int?
+    let occupableFound: Bool?
     let selectedCandidateIndex: Int?
     let selectedSeed: UInt32?
     let agentX: Int?
@@ -326,6 +327,7 @@ struct RunEvent: Encodable {
         pathLength: Int? = nil,
         visited: Int? = nil,
         candidates: Int? = nil,
+        occupableFound: Bool? = nil,
         selectedCandidateIndex: Int? = nil,
         selectedSeed: UInt32? = nil,
         agentX: Int? = nil,
@@ -506,6 +508,7 @@ struct RunEvent: Encodable {
         self.pathLength = pathLength
         self.visited = visited
         self.candidates = candidates
+        self.occupableFound = occupableFound
         self.selectedCandidateIndex = selectedCandidateIndex
         self.selectedSeed = selectedSeed
         self.agentX = agentX

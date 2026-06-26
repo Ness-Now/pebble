@@ -592,3 +592,26 @@ remain out of scope.
 Next recommended step: Phase 4.17B2A - Find Occupable Live Destination Smoke,
 or Phase 4.17B2 - Approved Single-Step Physical Displacement Smoke once a
 reliable occupable destination is identified.
+
+## Phase 4.17B2A - Find Occupable Live Destination Smoke
+
+Status: implemented and validated.
+
+Goal: find a reliable live destination with collision status `occupable`
+before attempting an approved physical displacement. The scenario evaluates a
+small deterministic candidate list: seed 42 at `(8,64,8)` preserves the current
+`liquidUnsupported` evidence, then seed 99 at `(8,64,8)` supplies the first
+occupable destination with grass support and empty feet/head space.
+
+The smoke writes `physical_movement_occupable_search_snapshot.json`,
+`physical_movement_occupable_search_invariant_report.json`,
+`physicalMovementOccupableSearch*` metrics, and one
+`lab_physical_movement_occupable_search_recorded` event. It does not move any
+agent, physical placeholder, or core entity; it does not call movement,
+pathfinding, route following, physics, or mutation code.
+
+Physical displacement, route following, multi-agent movement, physics
+integration, mutation, avoidance, and reservation tables remain out of scope.
+
+Next recommended step: Phase 4.17B2 - Approved Single-Step Physical
+Displacement Smoke.

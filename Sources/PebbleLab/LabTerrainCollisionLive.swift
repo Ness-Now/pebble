@@ -166,7 +166,22 @@ func makeTerrainCollisionLiveSnapshot(
     ticksCompleted: Int,
     world: World
 ) -> LabTerrainCollisionLiveSnapshot {
-    let node = terrainCollisionLiveCandidateNode()
+    makeTerrainCollisionLiveSnapshot(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        world: world,
+        node: terrainCollisionLiveCandidateNode()
+    )
+}
+
+func makeTerrainCollisionLiveSnapshot(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int,
+    world: World,
+    node: LabTerrainPathNodeKey
+) -> LabTerrainCollisionLiveSnapshot {
     let body = labTerrainHumanBodyContractV0()
     let support = makeTerrainCollisionLiveSample(
         role: .support,
