@@ -566,3 +566,29 @@ this phase. The first approved physical move should come only after an audited
 denied smoke or after a reliable occupable destination is identified.
 
 Next recommended step: Phase 4.17B1 - Denied Physical Movement Smoke.
+
+## Phase 4.17B1 - Denied Physical Movement Smoke
+
+Status: implemented and validated.
+
+Goal: prove that physical movement integration refuses a single-step attempt
+when live collision marks the destination non-occupable. The scenario attempts
+`(7,64,8) -> (8,64,8)` and reuses live collision evidence for node `(8,64,8)`;
+water support returns `liquidUnsupported`, so the integration status is
+`collisionDenied` and `displacementApplied` remains false.
+
+The smoke writes `physical_movement_integration_snapshot.json`,
+`physical_movement_integration_invariant_report.json`, `physicalMovement*`
+metrics, and one `lab_physical_movement_integration_recorded` event. Abstract
+and physical placeholder positions remain unchanged, divergence stays zero,
+and no core entity is created for this denied case to avoid world entity
+mutation.
+
+Route following, multi-agent movement, avoidance, reservation tables, physics
+integration, gravity, velocity, jump, fall, swim, climb, mining, construction,
+inventory behavior, world mutation, terrain mutation, and gameplay movement
+remain out of scope.
+
+Next recommended step: Phase 4.17B2A - Find Occupable Live Destination Smoke,
+or Phase 4.17B2 - Approved Single-Step Physical Displacement Smoke once a
+reliable occupable destination is identified.

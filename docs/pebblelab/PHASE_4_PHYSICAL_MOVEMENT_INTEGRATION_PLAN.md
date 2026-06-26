@@ -393,6 +393,38 @@ handles, missing links, and divergence before or after the attempt.
 Plan multi-step route consumption only after single-step displacement is
 reliable.
 
+## Phase 4.17B1 Implementation Status
+
+Phase 4.17B1 implements the denied physical movement smoke described here. The
+scenario is `physical_movement_denied_smoke`.
+
+The smoke uses the current non-occupable live collision evidence for node
+`(8,64,8)`: support is water, feet/head are air, and collision v0 returns
+`liquidUnsupported` with reason `liquid_support`. It prepares a single-step
+attempt from `(7,64,8)` to `(8,64,8)` and correctly refuses the move with
+status `collisionDenied` and reason
+`collision_denied_liquid_support_non_occupable`.
+
+No displacement is applied. The audited positions remain:
+
+- abstract: `(7,64,8) -> (7,64,8)`;
+- physical placeholder: `(7,64,8) -> (7,64,8)`;
+- core entity: absent for this denied smoke.
+
+Divergence remains `0 -> 0`. The scenario writes
+`physical_movement_integration_snapshot.json`,
+`physical_movement_integration_invariant_report.json`, `metrics.json`, and
+`events.ndjson`. The invariant report validates 22 checks and the metrics use
+the `physicalMovement*` prefix.
+
+The denied smoke intentionally does not create a core entity, because
+constructing one through the existing bridge adds a live world entity. Keeping
+the core fields absent preserves the no-world-mutation boundary while still
+auditing that no core entity position changes.
+
+Phase 4.17B2 should not approve a displacement until a reliable destination
+with collision status `occupable` is identified.
+
 ## Explicitly Out Of Scope
 
 - route following;

@@ -174,6 +174,12 @@ struct RunEvent: Encodable {
     let coreEntityDisplaced: Bool?
     let movementPerformed: Bool?
     let pathfindingPerformed: Bool?
+    let collisionStatus: String?
+    let displacementApplied: Bool?
+    let routeFollowingPerformed: Bool?
+    let physicsPerformed: Bool?
+    let divergenceBefore: Int?
+    let divergenceAfter: Int?
 
     init(
         type: String,
@@ -348,7 +354,13 @@ struct RunEvent: Encodable {
         physicalPlaceholderDisplaced: Bool? = nil,
         coreEntityDisplaced: Bool? = nil,
         movementPerformed: Bool? = nil,
-        pathfindingPerformed: Bool? = nil
+        pathfindingPerformed: Bool? = nil,
+        collisionStatus: String? = nil,
+        displacementApplied: Bool? = nil,
+        routeFollowingPerformed: Bool? = nil,
+        physicsPerformed: Bool? = nil,
+        divergenceBefore: Int? = nil,
+        divergenceAfter: Int? = nil
     ) {
         self.type = type
         self.event = event
@@ -523,6 +535,12 @@ struct RunEvent: Encodable {
         self.coreEntityDisplaced = coreEntityDisplaced
         self.movementPerformed = movementPerformed
         self.pathfindingPerformed = pathfindingPerformed
+        self.collisionStatus = collisionStatus
+        self.displacementApplied = displacementApplied
+        self.routeFollowingPerformed = routeFollowingPerformed
+        self.physicsPerformed = physicsPerformed
+        self.divergenceBefore = divergenceBefore
+        self.divergenceAfter = divergenceAfter
     }
 }
 

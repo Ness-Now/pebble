@@ -274,6 +274,26 @@ struct RunMetrics: Encodable {
     let terrainCollisionLivePathfindingPerformed: Bool?
     let terrainCollisionLiveMutationPerformed: Bool?
     let terrainCollisionLiveSuccess: Bool?
+    let physicalMovementAttempted: Bool?
+    let physicalMovementApproved: Bool?
+    let physicalMovementDenied: Bool?
+    let physicalMovementStatus: String?
+    let physicalMovementReason: String?
+    let physicalMovementFromX: Int?
+    let physicalMovementFromY: Int?
+    let physicalMovementFromZ: Int?
+    let physicalMovementToX: Int?
+    let physicalMovementToY: Int?
+    let physicalMovementToZ: Int?
+    let physicalMovementCollisionStatus: String?
+    let physicalMovementDisplacementApplied: Bool?
+    let physicalMovementPathfindingPerformed: Bool?
+    let physicalMovementRouteFollowingPerformed: Bool?
+    let physicalMovementPhysicsPerformed: Bool?
+    let physicalMovementMutationPerformed: Bool?
+    let physicalMovementDivergenceBefore: Int?
+    let physicalMovementDivergenceAfter: Int?
+    let physicalMovementSuccess: Bool?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -497,6 +517,26 @@ struct RunMetrics: Encodable {
         terrainCollisionLivePathfindingPerformed: Bool? = nil,
         terrainCollisionLiveMutationPerformed: Bool? = nil,
         terrainCollisionLiveSuccess: Bool? = nil,
+        physicalMovementAttempted: Bool? = nil,
+        physicalMovementApproved: Bool? = nil,
+        physicalMovementDenied: Bool? = nil,
+        physicalMovementStatus: String? = nil,
+        physicalMovementReason: String? = nil,
+        physicalMovementFromX: Int? = nil,
+        physicalMovementFromY: Int? = nil,
+        physicalMovementFromZ: Int? = nil,
+        physicalMovementToX: Int? = nil,
+        physicalMovementToY: Int? = nil,
+        physicalMovementToZ: Int? = nil,
+        physicalMovementCollisionStatus: String? = nil,
+        physicalMovementDisplacementApplied: Bool? = nil,
+        physicalMovementPathfindingPerformed: Bool? = nil,
+        physicalMovementRouteFollowingPerformed: Bool? = nil,
+        physicalMovementPhysicsPerformed: Bool? = nil,
+        physicalMovementMutationPerformed: Bool? = nil,
+        physicalMovementDivergenceBefore: Int? = nil,
+        physicalMovementDivergenceAfter: Int? = nil,
+        physicalMovementSuccess: Bool? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -719,6 +759,26 @@ struct RunMetrics: Encodable {
         self.terrainCollisionLivePathfindingPerformed = terrainCollisionLivePathfindingPerformed
         self.terrainCollisionLiveMutationPerformed = terrainCollisionLiveMutationPerformed
         self.terrainCollisionLiveSuccess = terrainCollisionLiveSuccess
+        self.physicalMovementAttempted = physicalMovementAttempted
+        self.physicalMovementApproved = physicalMovementApproved
+        self.physicalMovementDenied = physicalMovementDenied
+        self.physicalMovementStatus = physicalMovementStatus
+        self.physicalMovementReason = physicalMovementReason
+        self.physicalMovementFromX = physicalMovementFromX
+        self.physicalMovementFromY = physicalMovementFromY
+        self.physicalMovementFromZ = physicalMovementFromZ
+        self.physicalMovementToX = physicalMovementToX
+        self.physicalMovementToY = physicalMovementToY
+        self.physicalMovementToZ = physicalMovementToZ
+        self.physicalMovementCollisionStatus = physicalMovementCollisionStatus
+        self.physicalMovementDisplacementApplied = physicalMovementDisplacementApplied
+        self.physicalMovementPathfindingPerformed = physicalMovementPathfindingPerformed
+        self.physicalMovementRouteFollowingPerformed = physicalMovementRouteFollowingPerformed
+        self.physicalMovementPhysicsPerformed = physicalMovementPhysicsPerformed
+        self.physicalMovementMutationPerformed = physicalMovementMutationPerformed
+        self.physicalMovementDivergenceBefore = physicalMovementDivergenceBefore
+        self.physicalMovementDivergenceAfter = physicalMovementDivergenceAfter
+        self.physicalMovementSuccess = physicalMovementSuccess
         self.successCriteria = successCriteria
     }
 }

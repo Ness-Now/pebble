@@ -2435,3 +2435,119 @@ LLM, or RL integration is part of this phase.
 
 Phase 4.17B1: implement a denied physical movement smoke over non-occupable
 live collision evidence, with no displacement and a fully audited refusal.
+
+## 2026-06-19 — Phase 4.17B1 Denied Physical Movement Smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Add the first physical movement integration smoke as an expected denial. The
+scenario attempts one single-step physical movement toward a non-occupable live
+collision node and succeeds only because no displacement is applied.
+
+### Files Created Or Modified
+
+- `Sources/PebbleLab/LabPhysicalMovementIntegration.swift` (new)
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_PHYSICAL_MOVEMENT_INTEGRATION_PLAN.md`
+
+No PebbleCore, renderer, shader, resource, registry, save/load, or golden file
+changed.
+
+### Collision Evidence
+
+The scenario `physical_movement_denied_smoke` prepares the same bounded live
+collision evidence used by Phase 4.16C. Destination node `(8,64,8)` has water
+support at `(8,63,8)` and air at feet/head, so collision v0 returns:
+
+- status: `liquidUnsupported`;
+- reason: `liquid_support`.
+
+The movement attempt is from `(7,64,8)` to `(8,64,8)`.
+
+### Denial Result
+
+The physical movement integration status is:
+
+- status: `collisionDenied`;
+- reason: `collision_denied_liquid_support_non_occupable`;
+- `displacementApplied = false`.
+
+The scenario uses a local `agent_0` and a local physical placeholder handle for
+audit fields. It intentionally does not create a core entity, because creating
+one would add a live world entity and blur the no-world-mutation boundary of
+this denied smoke.
+
+Pre/post positions are unchanged:
+
+- abstract position: `(7,64,8) -> (7,64,8)`;
+- physical placeholder position: `(7,64,8) -> (7,64,8)`;
+- core entity position: not present.
+
+Divergence remains `0 -> 0`.
+
+### Outputs, Invariants, Metrics, And Event
+
+The scenario writes:
+
+- `physical_movement_integration_snapshot.json`;
+- `physical_movement_integration_invariant_report.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The invariant report has 22 checks covering collision evidence, explicit
+status/reason, non-occupable denial, no displacement, no pathfinding, no route
+following, no goal selection, no multi-agent movement, no physics, no world
+mutation, unchanged abstract/physical/core positions, preserved divergence,
+runner output contracts, denial reason, the current `liquidUnsupported` case,
+and the rule that approval requires `occupable`.
+
+Metrics use the `physicalMovement*` prefix and the run emits one aggregate
+`lab_physical_movement_integration_recorded` event.
+
+### Still Prohibited
+
+No route following, multi-agent movement, avoidance, reservation table, physics
+integration, gravity, velocity, jump, fall, swim, climb, mining, construction,
+inventory behavior, Python, ML, LLM, RL, world mutation, terrain mutation, or
+approved physical displacement was added.
+
+### Validation Commands
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario physical_movement_denied_smoke --seed 42 --ticks 5 --out runs/check_physical_movement_denied`
+- `swift run -c release PebbleLab -- --scenario terrain_collision_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_collision_live_after_denied_movement`
+- `swift run -c release PebbleLab -- --scenario terrain_collision_fixture_smoke --seed 42 --ticks 0 --out runs/check_collision_fixture_after_denied_movement`
+- `swift run -c release PebbleLab -- --scenario terrain_path_live_movement_smoke --seed 42 --ticks 5 --out runs/check_live_movement_after_denied_movement`
+- `swift run -c release PebbleLab -- --scenario physical_behavior_smoke --seed 42 --ticks 5 --out runs/check_physical_behavior_after_denied_movement`
+- `swift run -c release PebbleLab -- --scenario physical_behavior_multi_smoke --seed 42 --ticks 5 --out runs/check_physical_behavior_multi_after_denied_movement`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_denied_movement`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Denied physical movement snapshot: success true.
+- Physical movement status: `collisionDenied`.
+- Collision status: `liquidUnsupported`, reason `liquid_support`.
+- Displacement applied: false.
+- Divergence: `0 -> 0`.
+- Invariant report: `22 passed, 0 failed`.
+- Metrics contain `physicalMovement*`.
+- `events.ndjson` contains `lab_physical_movement_integration_recorded`.
+- Debug/release builds, requested non-regression scenarios, and `pebsmoke`
+  passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.17B2A: find or prove a reliable occupable live destination before
+attempting an approved single-step physical displacement.

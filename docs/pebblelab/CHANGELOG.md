@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added denied physical movement smoke for non-occupable live collision.
 - Documented PebbleLab physical movement integration planning contract.
 - Added read-only live terrain collision occupancy smoke.
 - Added fixture-only terrain collision and occupancy smoke.

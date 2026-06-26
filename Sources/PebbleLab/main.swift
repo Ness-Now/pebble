@@ -36,6 +36,8 @@ let isTerrainCollisionFixtureScenario = options.scenario
     == "terrain_collision_fixture_smoke"
 let isTerrainCollisionLiveScenario = options.scenario
     == "terrain_collision_live_readonly_smoke"
+let isPhysicalMovementDeniedScenario = options.scenario
+    == "physical_movement_denied_smoke"
 let isWorldInteractionScenario = isWorldObservationScenario
     || isTerrainScanRun
     || isTerrainColumnScanRun
@@ -794,6 +796,35 @@ let terrainCollisionLiveSuccess = isTerrainCollisionLiveScenario
         && terrainCollisionLiveSnapshot?.summary.physicalPlaceholderDisplaced == false
         && terrainCollisionLiveSnapshot?.summary.coreEntityDisplaced == false)
     : nil
+let physicalMovementSnapshot = isPhysicalMovementDeniedScenario
+    ? makePhysicalMovementDeniedSnapshot(
+        scenario: options.scenario,
+        seed: options.seed,
+        ticksCompleted: ticksCompleted,
+        world: world
+    )
+    : nil
+let physicalMovementInvariantReport = isPhysicalMovementDeniedScenario
+    ? makePhysicalMovementIntegrationInvariantReport(
+        snapshot: physicalMovementSnapshot,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let physicalMovementSuccess = isPhysicalMovementDeniedScenario
+    ? ((physicalMovementSnapshot?.success ?? false)
+        && (physicalMovementInvariantReport?.success ?? false)
+        && physicalMovementSnapshot?.displacementApplied == false
+        && physicalMovementSnapshot?.status == .collisionDenied
+        && physicalMovementSnapshot?.collisionStatus != .occupable
+        && physicalMovementSnapshot?.pathfindingPerformed == false
+        && physicalMovementSnapshot?.routeFollowingPerformed == false
+        && physicalMovementSnapshot?.physicsPerformed == false
+        && physicalMovementSnapshot?.mutationPerformed == false
+        && physicalMovementSnapshot?.preAbstractPosition == physicalMovementSnapshot?.postAbstractPosition
+        && physicalMovementSnapshot?.prePhysicalPosition == physicalMovementSnapshot?.postPhysicalPosition
+        && physicalMovementSnapshot?.preCoreEntityPosition == physicalMovementSnapshot?.postCoreEntityPosition)
+    : nil
 let coreEntityInvariantReport = options.scenario == "core_entity_smoke"
     ? coreEntityBridge.invariantReport(
         scenario: options.scenario,
@@ -1066,6 +1097,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (terrainLiveMovementSuccess ?? true)
     && (terrainCollisionSuccess ?? true)
     && (terrainCollisionLiveSuccess ?? true)
+    && (physicalMovementSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -1203,6 +1235,33 @@ if options.outPath != nil {
                 coreEntityDisplaced: summary.coreEntityDisplaced,
                 movementPerformed: summary.movementPerformed,
                 pathfindingPerformed: summary.pathfindingPerformed,
+            ))
+        }
+        if let physicalMovementSnapshot {
+            try appendEvent(RunEvent(
+                type: "lab_physical_movement_integration_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: physicalMovementSuccess,
+                agentId: physicalMovementSnapshot.agentId,
+                fromX: physicalMovementSnapshot.from.x,
+                fromY: physicalMovementSnapshot.from.y,
+                fromZ: physicalMovementSnapshot.from.z,
+                toX: physicalMovementSnapshot.to.x,
+                toY: physicalMovementSnapshot.to.y,
+                toZ: physicalMovementSnapshot.to.z,
+                reason: physicalMovementSnapshot.reason,
+                physicalId: physicalMovementSnapshot.physicalId,
+                coreEntityId: physicalMovementSnapshot.coreEntityId,
+                mutationPerformed: physicalMovementSnapshot.mutationPerformed,
+                status: physicalMovementSnapshot.status.rawValue,
+                pathfindingPerformed: physicalMovementSnapshot.pathfindingPerformed,
+                collisionStatus: physicalMovementSnapshot.collisionStatus.rawValue,
+                displacementApplied: physicalMovementSnapshot.displacementApplied,
+                routeFollowingPerformed: physicalMovementSnapshot.routeFollowingPerformed,
+                physicsPerformed: physicalMovementSnapshot.physicsPerformed,
+                divergenceBefore: physicalMovementSnapshot.divergenceBefore,
+                divergenceAfter: physicalMovementSnapshot.divergenceAfter
             ))
         }
         if let terrainColumnScanSnapshot {
@@ -1634,6 +1693,18 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("terrain_collision_live_invariant_report.json")
             )
         }
+        if let physicalMovementSnapshot {
+            try writeJSON(
+                physicalMovementSnapshot,
+                to: outURL.appendingPathComponent("physical_movement_integration_snapshot.json")
+            )
+        }
+        if let physicalMovementInvariantReport {
+            try writeJSON(
+                physicalMovementInvariantReport,
+                to: outURL.appendingPathComponent("physical_movement_integration_invariant_report.json")
+            )
+        }
         if let terrainColumnScanSnapshot {
             try writeJSON(
                 terrainColumnScanSnapshot,
@@ -1961,6 +2032,28 @@ if let outPath = options.outPath {
             terrainCollisionLivePathfindingPerformed: terrainCollisionLiveSnapshot?.summary.pathfindingPerformed,
             terrainCollisionLiveMutationPerformed: terrainCollisionLiveSnapshot?.summary.mutationPerformed,
             terrainCollisionLiveSuccess: terrainCollisionLiveSuccess,
+            physicalMovementAttempted: physicalMovementSnapshot.map { _ in true },
+            physicalMovementApproved: physicalMovementSnapshot.map { $0.status == .approved },
+            physicalMovementDenied: physicalMovementSnapshot.map {
+                $0.status == .collisionDenied || $0.status == .denied
+            },
+            physicalMovementStatus: physicalMovementSnapshot?.status.rawValue,
+            physicalMovementReason: physicalMovementSnapshot?.reason,
+            physicalMovementFromX: physicalMovementSnapshot?.from.x,
+            physicalMovementFromY: physicalMovementSnapshot?.from.y,
+            physicalMovementFromZ: physicalMovementSnapshot?.from.z,
+            physicalMovementToX: physicalMovementSnapshot?.to.x,
+            physicalMovementToY: physicalMovementSnapshot?.to.y,
+            physicalMovementToZ: physicalMovementSnapshot?.to.z,
+            physicalMovementCollisionStatus: physicalMovementSnapshot?.collisionStatus.rawValue,
+            physicalMovementDisplacementApplied: physicalMovementSnapshot?.displacementApplied,
+            physicalMovementPathfindingPerformed: physicalMovementSnapshot?.pathfindingPerformed,
+            physicalMovementRouteFollowingPerformed: physicalMovementSnapshot?.routeFollowingPerformed,
+            physicalMovementPhysicsPerformed: physicalMovementSnapshot?.physicsPerformed,
+            physicalMovementMutationPerformed: physicalMovementSnapshot?.mutationPerformed,
+            physicalMovementDivergenceBefore: physicalMovementSnapshot?.divergenceBefore,
+            physicalMovementDivergenceAfter: physicalMovementSnapshot?.divergenceAfter,
+            physicalMovementSuccess: physicalMovementSuccess,
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))
