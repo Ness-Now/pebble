@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Documented PebbleLab route following planning contract.
 - Hardened single-step physical movement integration cases.
 - Added approved single-step physical movement smoke.
 - Added bounded occupable live destination search for future physical movement.

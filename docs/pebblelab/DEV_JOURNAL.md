@@ -2893,3 +2893,103 @@ mining, construction, inventory behavior, Python, ML, LLM, or RL was added.
 
 Phase 4.18A: route following planning docs-only. Route following should remain
 out of code until the single-step contract is stable and explicitly planned.
+
+## 2026-06-19 — Phase 4.18A route following planning docs-only
+
+### Objective
+
+Define the future route following contract without implementing route
+following. The phase creates a planning document for orchestrating multiple
+approved single-step movements while keeping pathfinding, movement value-state,
+collision, physical displacement, and future route following responsibilities
+separate.
+
+### Starting State
+
+PebbleLab already validates terrain scans, column scans, traversability,
+fixture pathfinding, live positive and negative pathfinding, movement fixtures,
+live path to abstract movement, collision fixtures, live read-only collision,
+denied physical movement, occupable destination search, approved single-step
+physical movement, and single-step displacement hardening.
+
+The current single-step contract has 8 hardening cases, 28 invariants, exactly
+one approved displacement, and seven denied cases that do not move.
+
+### Files Created/Modified
+
+- Created `docs/pebblelab/PHASE_4_ROUTE_FOLLOWING_PLAN.md`.
+- Updated `docs/pebblelab/CHANGELOG.md`.
+- Updated `docs/pebblelab/DEV_JOURNAL.md`.
+- Updated `docs/pebblelab/ROADMAP.md`.
+
+No Swift files were modified.
+
+### Why Docs-Only
+
+Route following is a new orchestration boundary. It must not appear as a hidden
+extension of single-step movement. The plan defines the audit surface before any
+code exists: route records, per-edge collision checks, single-step adapter use,
+stop reasons, metrics, and event shape.
+
+### Route Following Contract
+
+The future follower must consume an existing route, attempt one edge at a time,
+check collision `occupable` before each edge, call the single-step adapter,
+advance the route index by exactly one on success, stop on the first denial,
+and never call pathfinding, replanning, goal selection, physics, terrain
+mutation, or multi-agent movement.
+
+### Stopping And Failure Modes
+
+The plan defines future statuses for completed routes and stopped routes:
+collision denial, invalid edge, source mismatch, divergence, missing physical
+handle, stale path, stale collision, max steps, and unexpected mutation.
+Expected stops can be invariant-successful if they preserve the last valid
+position and emit an explicit reason.
+
+### Future Outputs, Invariants, Metrics, And Event
+
+The future route following smoke should write:
+
+- `route_following_snapshot.json`;
+- `route_following_invariant_report.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The plan proposes 30 invariant checks, `routeFollowing*` metrics, and one
+aggregate `lab_route_following_recorded` event. Per-edge details belong in the
+snapshot, not in per-edge events.
+
+### Future Phase Progression
+
+- Phase 4.18B: route following fixture smoke.
+- Phase 4.18C: route following denied live smoke.
+- Phase 4.18D: route following approved two-step smoke.
+- Phase 4.18E: route following hardening.
+- Phase 4.19A: multi-agent movement planning docs-only.
+
+### Still Prohibited
+
+No Swift code, route following, multi-step movement, dynamic replanning,
+pathfinding inside a follower, physics integration, multi-agent movement,
+avoidance, reservation table, terrain/world mutation, gameplay movement,
+Python, ML, LLM, or RL was added.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+- `git status`
+
+### Results
+
+The docs-only phase keeps implementation unchanged. Build and smoke validation
+passed, and `pebsmoke` remains `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.18B: route following fixture smoke. It should remain fixture-only and
+prove route index progression, stop behavior, and no skipped nodes before any
+live route following code.

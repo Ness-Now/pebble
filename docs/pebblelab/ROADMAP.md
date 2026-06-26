@@ -661,3 +661,26 @@ reservation tables, physics integration, terrain mutation, world mutation, and
 gameplay movement remain out of scope.
 
 Next recommended step: Phase 4.18A - Route Following Planning Docs-Only.
+
+## Phase 4.18A - Route Following Planning Docs-Only
+
+Status: done as a docs-only planning phase.
+
+Goal: define the future route following contract before any multi-step movement
+is implemented. The plan keeps route following as an orchestration layer over
+the existing single-step adapter: each route edge must be contiguous,
+4-neighbor, same-y for v0, collision-checked, and applied only through the
+single-step physical movement contract.
+
+The plan proposes future route snapshots, per-edge records, invariant reports,
+`routeFollowing*` metrics, and one aggregate
+`lab_route_following_recorded` event. It also defines stop states for collision
+denial, invalid edge, source mismatch, divergence, missing handles, stale path
+or collision evidence, max steps, and unexpected mutation.
+
+Route following is not implemented yet. Multi-step movement, dynamic
+replanning, pathfinding inside a follower, goal selection, multi-agent
+movement, avoidance, reservation tables, physics integration, terrain mutation,
+world mutation, and gameplay route following remain out of scope.
+
+Next recommended step: Phase 4.18B - Route Following Fixture Smoke.
