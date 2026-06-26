@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Hardened single-step physical movement integration cases.
 - Added approved single-step physical movement smoke.
 - Added bounded occupable live destination search for future physical movement.
 - Added denied physical movement smoke for non-occupable live collision.

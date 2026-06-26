@@ -40,6 +40,8 @@ let isPhysicalMovementDeniedScenario = options.scenario
     == "physical_movement_denied_smoke"
 let isPhysicalMovementApprovedScenario = options.scenario
     == "physical_movement_approved_single_step_smoke"
+let isPhysicalMovementHardeningScenario = options.scenario
+    == "physical_movement_single_step_hardening_smoke"
 let isPhysicalMovementOccupableSearchScenario = options.scenario
     == "physical_movement_find_occupable_smoke"
 let isWorldInteractionScenario = isWorldObservationScenario
@@ -881,6 +883,33 @@ let physicalMovementOccupableSearchSuccess = isPhysicalMovementOccupableSearchSc
         && physicalMovementOccupableSearchSnapshot?.summary.physicsPerformed == false
         && physicalMovementOccupableSearchSnapshot?.summary.mutationPerformed == false)
     : nil
+let physicalMovementHardeningReport = isPhysicalMovementHardeningScenario
+    ? makePhysicalMovementSingleStepHardeningReport(
+        scenario: options.scenario,
+        seed: options.seed,
+        ticksCompleted: ticksCompleted
+    )
+    : nil
+let physicalMovementHardeningInvariantReport = isPhysicalMovementHardeningScenario
+    ? makePhysicalMovementHardeningInvariantReport(
+        report: physicalMovementHardeningReport,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let physicalMovementHardeningSuccess = isPhysicalMovementHardeningScenario
+    ? ((physicalMovementHardeningReport?.success ?? false)
+        && (physicalMovementHardeningInvariantReport?.success ?? false)
+        && physicalMovementHardeningReport?.summary.failed == 0
+        && physicalMovementHardeningReport?.summary.displacementApplied == 1
+        && physicalMovementHardeningReport?.summary.displacementRefused == (physicalMovementHardeningReport?.summary.cases ?? 0) - 1
+        && (physicalMovementHardeningReport?.cases.allSatisfy {
+            !$0.snapshot.pathfindingPerformed
+                && !$0.snapshot.routeFollowingPerformed
+                && !$0.snapshot.physicsPerformed
+                && !$0.snapshot.mutationPerformed
+        } ?? false))
+    : nil
 let coreEntityInvariantReport = options.scenario == "core_entity_smoke"
     ? coreEntityBridge.invariantReport(
         scenario: options.scenario,
@@ -1155,6 +1184,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (terrainCollisionLiveSuccess ?? true)
     && (physicalMovementSuccess ?? true)
     && (physicalMovementOccupableSearchSuccess ?? true)
+    && (physicalMovementHardeningSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -1340,6 +1370,22 @@ if options.outPath != nil {
                 pathfindingPerformed: summary.pathfindingPerformed,
                 routeFollowingPerformed: summary.routeFollowingPerformed,
                 physicsPerformed: summary.physicsPerformed
+            ))
+        }
+        if let physicalMovementHardeningReport {
+            let summary = physicalMovementHardeningReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_physical_movement_single_step_hardening_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: physicalMovementHardeningSuccess,
+                passed: summary.passed,
+                failed: summary.failed,
+                approved: summary.approved,
+                denied: summary.denied,
+                displacementRefused: summary.displacementRefused,
+                cases: summary.cases,
+                displacementApplied: summary.displacementApplied > 0
             ))
         }
         if let terrainColumnScanSnapshot {
@@ -1795,6 +1841,18 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("physical_movement_occupable_search_invariant_report.json")
             )
         }
+        if let physicalMovementHardeningReport {
+            try writeJSON(
+                physicalMovementHardeningReport,
+                to: outURL.appendingPathComponent("physical_movement_single_step_hardening_report.json")
+            )
+        }
+        if let physicalMovementHardeningInvariantReport {
+            try writeJSON(
+                physicalMovementHardeningInvariantReport,
+                to: outURL.appendingPathComponent("physical_movement_single_step_hardening_invariant_report.json")
+            )
+        }
         if let terrainColumnScanSnapshot {
             try writeJSON(
                 terrainColumnScanSnapshot,
@@ -2157,6 +2215,18 @@ if let outPath = options.outPath {
             physicalMovementOccupableSearchPhysicsPerformed: physicalMovementOccupableSearchSnapshot?.summary.physicsPerformed,
             physicalMovementOccupableSearchMutationPerformed: physicalMovementOccupableSearchSnapshot?.summary.mutationPerformed,
             physicalMovementOccupableSearchSuccess: physicalMovementOccupableSearchSuccess,
+            physicalMovementHardeningCases: physicalMovementHardeningReport?.summary.cases,
+            physicalMovementHardeningPassed: physicalMovementHardeningReport?.summary.passed,
+            physicalMovementHardeningFailed: physicalMovementHardeningReport?.summary.failed,
+            physicalMovementHardeningApproved: physicalMovementHardeningReport?.summary.approved,
+            physicalMovementHardeningDenied: physicalMovementHardeningReport?.summary.denied,
+            physicalMovementHardeningCollisionDenied: physicalMovementHardeningReport?.summary.collisionDenied,
+            physicalMovementHardeningSourceMismatch: physicalMovementHardeningReport?.summary.sourceMismatch,
+            physicalMovementHardeningMissingPhysicalHandle: physicalMovementHardeningReport?.summary.missingPhysicalHandle,
+            physicalMovementHardeningDivergenceBeforeMove: physicalMovementHardeningReport?.summary.divergenceBeforeMove,
+            physicalMovementHardeningDisplacementApplied: physicalMovementHardeningReport?.summary.displacementApplied,
+            physicalMovementHardeningDisplacementRefused: physicalMovementHardeningReport?.summary.displacementRefused,
+            physicalMovementHardeningSuccess: physicalMovementHardeningSuccess,
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))

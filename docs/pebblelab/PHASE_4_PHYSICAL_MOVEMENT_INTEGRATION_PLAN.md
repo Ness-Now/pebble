@@ -490,6 +490,39 @@ This remains a single-step smoke. It is not route following, dynamic replanning,
 multi-agent movement, physics integration, terrain mutation, or gameplay
 movement.
 
+## Phase 4.17C Implementation Status
+
+Phase 4.17C hardens the single-step physical movement adapter with the scenario
+`physical_movement_single_step_hardening_smoke`.
+
+The smoke evaluates eight deterministic cases:
+
+- approved single-step movement from `(7,64,8)` to `(8,64,8)` using seed 99
+  occupable collision evidence;
+- denied movement over seed 42 `liquidUnsupported` collision evidence;
+- source mismatch;
+- diagonal edge denial;
+- vertical edge denial;
+- missing physical handle;
+- divergence before move;
+- stale collision evidence or target mismatch.
+
+The approved case applies exactly one abstract movement and one physical
+placeholder sync. All denied cases keep abstract and physical positions
+unchanged. No case performs pathfinding, route following, physics integration,
+multi-agent movement, terrain mutation, or world mutation.
+
+The phase writes `physical_movement_single_step_hardening_report.json`,
+`physical_movement_single_step_hardening_invariant_report.json`,
+`metrics.json`, and `events.ndjson`. The invariant report validates 28 checks
+covering case coverage, single approved displacement, denied immobility,
+approved one-step abstract and physical movement, zero approved divergence,
+explicit statuses and reasons, no pathfinding, no route following, no physics,
+no world mutation, and runner output contracts.
+
+Phase 4.17C confirms that the single-step boundary is explicit enough to plan
+route following next, but it does not implement route following.
+
 ## Explicitly Out Of Scope
 
 - route following;

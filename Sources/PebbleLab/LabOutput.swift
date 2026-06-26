@@ -307,6 +307,18 @@ struct RunMetrics: Encodable {
     let physicalMovementOccupableSearchPhysicsPerformed: Bool?
     let physicalMovementOccupableSearchMutationPerformed: Bool?
     let physicalMovementOccupableSearchSuccess: Bool?
+    let physicalMovementHardeningCases: Int?
+    let physicalMovementHardeningPassed: Int?
+    let physicalMovementHardeningFailed: Int?
+    let physicalMovementHardeningApproved: Int?
+    let physicalMovementHardeningDenied: Int?
+    let physicalMovementHardeningCollisionDenied: Int?
+    let physicalMovementHardeningSourceMismatch: Int?
+    let physicalMovementHardeningMissingPhysicalHandle: Int?
+    let physicalMovementHardeningDivergenceBeforeMove: Int?
+    let physicalMovementHardeningDisplacementApplied: Int?
+    let physicalMovementHardeningDisplacementRefused: Int?
+    let physicalMovementHardeningSuccess: Bool?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -563,6 +575,18 @@ struct RunMetrics: Encodable {
         physicalMovementOccupableSearchPhysicsPerformed: Bool? = nil,
         physicalMovementOccupableSearchMutationPerformed: Bool? = nil,
         physicalMovementOccupableSearchSuccess: Bool? = nil,
+        physicalMovementHardeningCases: Int? = nil,
+        physicalMovementHardeningPassed: Int? = nil,
+        physicalMovementHardeningFailed: Int? = nil,
+        physicalMovementHardeningApproved: Int? = nil,
+        physicalMovementHardeningDenied: Int? = nil,
+        physicalMovementHardeningCollisionDenied: Int? = nil,
+        physicalMovementHardeningSourceMismatch: Int? = nil,
+        physicalMovementHardeningMissingPhysicalHandle: Int? = nil,
+        physicalMovementHardeningDivergenceBeforeMove: Int? = nil,
+        physicalMovementHardeningDisplacementApplied: Int? = nil,
+        physicalMovementHardeningDisplacementRefused: Int? = nil,
+        physicalMovementHardeningSuccess: Bool? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -818,6 +842,18 @@ struct RunMetrics: Encodable {
         self.physicalMovementOccupableSearchPhysicsPerformed = physicalMovementOccupableSearchPhysicsPerformed
         self.physicalMovementOccupableSearchMutationPerformed = physicalMovementOccupableSearchMutationPerformed
         self.physicalMovementOccupableSearchSuccess = physicalMovementOccupableSearchSuccess
+        self.physicalMovementHardeningCases = physicalMovementHardeningCases
+        self.physicalMovementHardeningPassed = physicalMovementHardeningPassed
+        self.physicalMovementHardeningFailed = physicalMovementHardeningFailed
+        self.physicalMovementHardeningApproved = physicalMovementHardeningApproved
+        self.physicalMovementHardeningDenied = physicalMovementHardeningDenied
+        self.physicalMovementHardeningCollisionDenied = physicalMovementHardeningCollisionDenied
+        self.physicalMovementHardeningSourceMismatch = physicalMovementHardeningSourceMismatch
+        self.physicalMovementHardeningMissingPhysicalHandle = physicalMovementHardeningMissingPhysicalHandle
+        self.physicalMovementHardeningDivergenceBeforeMove = physicalMovementHardeningDivergenceBeforeMove
+        self.physicalMovementHardeningDisplacementApplied = physicalMovementHardeningDisplacementApplied
+        self.physicalMovementHardeningDisplacementRefused = physicalMovementHardeningDisplacementRefused
+        self.physicalMovementHardeningSuccess = physicalMovementHardeningSuccess
         self.successCriteria = successCriteria
     }
 }

@@ -2783,3 +2783,113 @@ Phase 4.17C: single-step displacement hardening, covering source mismatch,
 missing handles, stale collision evidence, stale path evidence, divergence
 cases, and explicit core-entity handling without introducing route following
 or gameplay movement.
+
+## 2026-06-19 — Phase 4.17C single-step displacement hardening
+
+### Objective
+
+Harden the single-step physical displacement contract before any route
+following. The phase adds a bounded fixture-style smoke over local live
+collision evidence and validates approved and denied one-step decisions without
+pathfinding, route following, physics integration, multi-agent movement, or
+terrain mutation.
+
+### Files Created/Modified
+
+- Modified `Sources/PebbleLab/LabPhysicalMovementIntegration.swift`.
+- Modified `Sources/PebbleLab/LabOptions.swift`.
+- Modified `Sources/PebbleLab/LabScenarios.swift`.
+- Modified `Sources/PebbleLab/LabOutput.swift`.
+- Modified `Sources/PebbleLab/LabEvents.swift`.
+- Modified `Sources/PebbleLab/main.swift`.
+- Updated `docs/pebblelab/CHANGELOG.md`.
+- Updated `docs/pebblelab/ROADMAP.md`.
+- Updated `docs/pebblelab/PHASE_4_PHYSICAL_MOVEMENT_INTEGRATION_PLAN.md`.
+- Updated `docs/pebblelab/DEV_JOURNAL.md`.
+
+### Cases Covered
+
+The new scenario is `physical_movement_single_step_hardening_smoke`.
+
+It covers eight deterministic cases:
+
+- `approved_single_step`: `(7,64,8) -> (8,64,8)`, seed 99 collision
+  `occupable`, displacement applied.
+- `denied_non_occupable`: seed 42 collision `liquidUnsupported`, no
+  displacement.
+- `source_mismatch`: pre-position does not match claimed source, no
+  displacement.
+- `diagonal_denied`: same-y diagonal edge, no displacement.
+- `vertical_denied`: vertical edge, no displacement.
+- `missing_physical_handle`: no placeholder handle, no displacement.
+- `divergence_before_move`: abstract and physical positions differ before the
+  move, no displacement.
+- `stale_collision_or_target_mismatch`: collision evidence node does not match
+  the attempted target, no displacement.
+
+### Approved And Denied Summary
+
+Exactly one case is approved and applies displacement. Seven cases are denied
+or refused and keep abstract and physical positions unchanged. The denied cases
+exercise `collisionDenied`, `sourceMismatch`, `invalidEdge`,
+`missingPhysicalHandle`, `divergenceBeforeMove`, and
+`staleCollisionEvidence`.
+
+### Outputs, Invariants, Metrics, And Event
+
+The scenario writes:
+
+- `physical_movement_single_step_hardening_report.json`;
+- `physical_movement_single_step_hardening_invariant_report.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The invariant report has 28 checks covering required case presence, only one
+approved displacement, denied-case immobility, approved abstract and physical
+single-step movement, zero approved divergence, no pathfinding, no route
+following, no physics, no world mutation, explicit status/reason, expected
+status/displacement matching, and runner outputs.
+
+Metrics use the `physicalMovementHardening*` prefix. The run emits one
+aggregate `lab_physical_movement_single_step_hardening_recorded` event.
+
+### Still Prohibited
+
+No route following, dynamic replanning, pathfinding during displacement,
+physics integration, gravity, velocity, jump, fall, swim, climb, multi-agent
+movement, avoidance, reservation table, terrain mutation, world mutation,
+mining, construction, inventory behavior, Python, ML, LLM, or RL was added.
+
+### Validation Commands
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario physical_movement_single_step_hardening_smoke --seed 42 --ticks 5 --out runs/check_physical_movement_single_step_hardening`
+- `swift run -c release PebbleLab -- --scenario physical_movement_approved_single_step_smoke --seed 42 --ticks 5 --out runs/check_approved_single_step_after_hardening`
+- `swift run -c release PebbleLab -- --scenario physical_movement_find_occupable_smoke --seed 42 --ticks 5 --out runs/check_find_occupable_after_hardening`
+- `swift run -c release PebbleLab -- --scenario physical_movement_denied_smoke --seed 42 --ticks 5 --out runs/check_denied_movement_after_hardening`
+- `swift run -c release PebbleLab -- --scenario terrain_collision_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_collision_live_after_hardening`
+- `swift run -c release PebbleLab -- --scenario terrain_collision_fixture_smoke --seed 42 --ticks 0 --out runs/check_collision_fixture_after_hardening`
+- `swift run -c release PebbleLab -- --scenario physical_behavior_smoke --seed 42 --ticks 5 --out runs/check_physical_behavior_after_hardening`
+- `swift run -c release PebbleLab -- --scenario physical_behavior_multi_smoke --seed 42 --ticks 5 --out runs/check_physical_behavior_multi_after_hardening`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_hardening`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Hardening report: success true.
+- Cases: `8 passed, 0 failed`.
+- Summary: `1 approved`, `7 denied`, `1 displacementApplied`,
+  `7 displacementRefused`.
+- Invariant report: `28 passed, 0 failed`.
+- Metrics contain `physicalMovementHardening*`.
+- `events.ndjson` contains
+  `lab_physical_movement_single_step_hardening_recorded`.
+- Debug/release builds, requested non-regression scenarios, and `pebsmoke`
+  passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.18A: route following planning docs-only. Route following should remain
+out of code until the single-step contract is stable and explicitly planned.

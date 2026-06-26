@@ -116,6 +116,9 @@ struct RunEvent: Encodable {
     let fixtures: Int?
     let passed: Int?
     let failed: Int?
+    let approved: Int?
+    let denied: Int?
+    let displacementRefused: Int?
     let unknownCases: Int?
     let airCases: Int?
     let solidCases: Int?
@@ -145,6 +148,7 @@ struct RunEvent: Encodable {
     let pathLength: Int?
     let visited: Int?
     let candidates: Int?
+    let cases: Int?
     let occupableFound: Bool?
     let selectedCandidateIndex: Int?
     let selectedSeed: UInt32?
@@ -298,6 +302,9 @@ struct RunEvent: Encodable {
         fixtures: Int? = nil,
         passed: Int? = nil,
         failed: Int? = nil,
+        approved: Int? = nil,
+        denied: Int? = nil,
+        displacementRefused: Int? = nil,
         unknownCases: Int? = nil,
         airCases: Int? = nil,
         solidCases: Int? = nil,
@@ -327,6 +334,7 @@ struct RunEvent: Encodable {
         pathLength: Int? = nil,
         visited: Int? = nil,
         candidates: Int? = nil,
+        cases: Int? = nil,
         occupableFound: Bool? = nil,
         selectedCandidateIndex: Int? = nil,
         selectedSeed: UInt32? = nil,
@@ -479,6 +487,9 @@ struct RunEvent: Encodable {
         self.fixtures = fixtures
         self.passed = passed
         self.failed = failed
+        self.approved = approved
+        self.denied = denied
+        self.displacementRefused = displacementRefused
         self.unknownCases = unknownCases
         self.airCases = airCases
         self.solidCases = solidCases
@@ -508,6 +519,7 @@ struct RunEvent: Encodable {
         self.pathLength = pathLength
         self.visited = visited
         self.candidates = candidates
+        self.cases = cases
         self.occupableFound = occupableFound
         self.selectedCandidateIndex = selectedCandidateIndex
         self.selectedSeed = selectedSeed

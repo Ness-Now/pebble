@@ -638,3 +638,26 @@ integration, terrain mutation, gameplay movement, mining, construction, and
 inventory behavior remain out of scope.
 
 Next recommended step: Phase 4.17C - Single-Step Displacement Hardening.
+
+## Phase 4.17C - Single-Step Displacement Hardening
+
+Status: implemented and validated.
+
+Goal: harden the single-step physical displacement contract across approved
+and denied cases before any route following. The scenario
+`physical_movement_single_step_hardening_smoke` covers approved movement,
+non-occupable denial, source mismatch, diagonal denial, vertical denial,
+missing physical handle, divergence before move, and stale collision evidence.
+
+The smoke writes `physical_movement_single_step_hardening_report.json`,
+`physical_movement_single_step_hardening_invariant_report.json`,
+`physicalMovementHardening*` metrics, and one
+`lab_physical_movement_single_step_hardening_recorded` event. Exactly one case
+applies displacement; all denied cases leave abstract and physical positions
+unchanged.
+
+Route following, dynamic replanning, multi-agent movement, avoidance,
+reservation tables, physics integration, terrain mutation, world mutation, and
+gameplay movement remain out of scope.
+
+Next recommended step: Phase 4.18A - Route Following Planning Docs-Only.
