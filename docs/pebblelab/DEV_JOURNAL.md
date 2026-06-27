@@ -4884,3 +4884,123 @@ how agents will produce movement intentions from goals before any autonomous
 loop, reservation runtime, avoidance, dynamic replanning, route repair,
 physics, save/load, social behavior, communication, or gameplay movement is
 introduced.
+
+## 2026-06-27 — Phase 4.21A agent intent production planning docs-only
+
+### Objective
+
+Document the future contract for agent-produced movement intentions without
+implementing runtime behavior. The phase answers how PebbleLab can later move
+from scenario-created synthetic intents to policy-created
+`LabAgentMoveIntent` values while preserving the tick movement contracts
+validated in 4.20.
+
+### Starting State
+
+Phase 4.19A through 4.19F validated multi-agent movement primitives and live
+hardening. Phase 4.20A through 4.20E validated tick input/output, read-only
+collision evidence, approved application, feedback, and tick hardening. The
+current tick scenarios still use synthetic intents. No agent policy produces
+movement intent yet, and no autonomous movement loop exists.
+
+### Files Created/Modified
+
+- `docs/pebblelab/PHASE_4_AGENT_INTENT_PRODUCTION_PLAN.md`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+No Swift files were modified.
+
+### Why Docs-Only
+
+The next risk is architectural ownership, not movement mechanics. PebbleLab
+needs a documented boundary before introducing agent policy code: policy may
+propose intent, but it must not move agents, read collision, arbitrate,
+pathfind, replan, avoid, reserve positions, mutate memory, mutate goals, or
+mutate the world.
+
+### Problem To Solve
+
+The current shape is `fixture/scenario creates intents`. The future shape
+should be `agent policy proposes movement intent`. The plan keeps the first
+agent policy narrow: observe context, produce zero or one proposal, validate
+format, collect accepted intents, and pass them to the already validated tick
+movement contract.
+
+### Target Architecture
+
+The plan defines these future layers:
+
+- agent state observation;
+- intent policy layer;
+- intent validation layer;
+- tick collection layer;
+- movement tick layer;
+- feedback consumption future;
+- reporting boundary.
+
+### Policy v0
+
+The proposed first policy is deterministic, one-edge, same-y, fixture-hint
+driven, and bounded. It may output `noIntent`, `proposeMove`, or
+`invalidContext`. It performs no pathfinding, no route planning, no
+replanning, no avoidance, no reservation runtime, no collision read, no goal
+selection, no memory update, and no movement application.
+
+### Relationship With Feedback
+
+Feedback remains structured input for later phases only. `moved`,
+`blockedByCollision`, `blockedByAgentConflict`, `blockedBySourceMismatch`,
+`blockedByDivergence`, `blockedByStaleIntent`, `blockedByInvalidEdge`, and
+`blockedByMaxAgents` are documented as future signals, but 4.21A does not
+consume feedback, update memory, learn, replan, invoke LLM/RL, or change
+goals.
+
+### Future Outputs, Invariants, Metrics, and Event
+
+The plan proposes:
+
+- `agent_intent_production_report.json`;
+- `agent_intent_production_invariant_report.json`;
+- `agent_intent_proposals.json`;
+- `metrics.json`;
+- `events.ndjson`;
+- `agentIntentProduction*` metrics;
+- one aggregate `lab_agent_intent_production_recorded` event;
+- more than 35 invariant checks covering deterministic ordering, accepted
+  intent shape, no pathfinding, no replanning, no avoidance, no reservation
+  runtime, no collision read, no movement, no memory update, no goal change,
+  no LLM/Python/RL, and no mutation.
+
+### Future Phases Recommended
+
+- Phase 4.21B - Agent Intent Production Fixture Smoke.
+- Phase 4.21C - Agent Intent Production Hardening.
+- Phase 4.21D - Agent Intent To Tick Fixture Integration Smoke.
+- Phase 4.21E - Agent Intent To Tick Live Read-Only Smoke.
+- Phase 4.21F - Agent Intent To Tick Approved Application Smoke.
+- Phase 4.22A - Feedback Consumption Planning Docs-Only.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+- `git status`
+
+### Results
+
+- Planning document created.
+- CHANGELOG, DEV_JOURNAL, and ROADMAP updated.
+- No Swift files modified.
+- No `PebbleCore`, renderer, shader, resource, registry, save/load, or golden
+  files modified.
+
+### Next Step
+
+Phase 4.21B: Agent Intent Production Fixture Smoke. It should add the first
+fixture-only intent production scenario without `World`, movement, collision
+reads, pathfinding, replanning, avoidance, reservation runtime, feedback
+consumption, memory update, goal selection, or terrain/world mutation.

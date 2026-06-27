@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Documented PebbleLab agent movement intent production plan.
 - Hardened multi-agent movement tick contract.
 - Added multi-agent movement tick approved application smoke.
 - Added multi-agent movement tick live read-only collision smoke.

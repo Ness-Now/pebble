@@ -1094,3 +1094,26 @@ terrain/world mutation remain out of scope.
 
 Next recommended step: Phase 4.21A - Agent Intent Production Planning
 Docs-Only.
+
+## Phase 4.21A - Agent Intent Production Planning Docs-Only
+
+Status: implemented and validated.
+
+Goal: document how PebbleLab can later move from scenario-created synthetic
+movement intentions to agent-produced `LabAgentMoveIntent` values while
+keeping movement, collision, arbitration, feedback, and reporting ownership
+separate.
+
+The document `PHASE_4_AGENT_INTENT_PRODUCTION_PLAN.md` defines the future
+agent observation layer, intent policy layer, intent validation layer, tick
+collection layer, movement tick layer, and feedback consumption boundary. It
+also proposes future context/proposal/result types, a conservative v0 policy,
+future outputs, metrics, event, invariants, scenario sequence, and risks.
+
+The agent intent runtime is not implemented yet. Autonomous movement, goal
+selection, pathfinding, route planning, replanning, avoidance, reservation
+runtime, feedback consumption, memory updates, repeated tick loops, physics,
+save/load, social behavior, communication, LLM/Python/RL, gameplay behavior,
+and terrain/world mutation remain out of scope.
+
+Next recommended step: Phase 4.21B - Agent Intent Production Fixture Smoke.
