@@ -796,6 +796,73 @@ integrated tick level while keeping reservation runtime, avoidance, dynamic
 replanning, route repair, physics, save/load, social behavior, and gameplay
 movement out of scope.
 
+## Phase 4.20E Implementation Status
+
+Phase 4.20E implements the integrated tick-level hardening smoke:
+`multi_agent_movement_tick_hardening_smoke`.
+
+Validated tick hardening cases:
+
+- approved tick application remains green;
+- collision denied tick preserves position;
+- partial approval tick;
+- same-destination tick conflict;
+- swap conflict denies both;
+- source mismatch denied before collision;
+- stale intent denied before collision;
+- invalid edge denied before collision;
+- divergence before tick denied;
+- stale collision tick denied;
+- all-denied tick mixed reasons;
+- max-agents tick bound exceeded.
+
+The scenario validates tick input/output wrapping for the previously proven
+multi-agent movement hardening semantics. Each case produces deterministic
+tick resolutions sorted by stable `agentId`, feedback for every resolution,
+abstract and physical before/after positions, divergence summaries, and
+decision-specific counters.
+
+Feedback JSON produced:
+
+- approved applied movements produce `moved`;
+- denied collision produces `blockedByCollision`;
+- same-destination and swap conflicts produce `blockedByAgentConflict`;
+- source mismatch produces `blockedBySourceMismatch`;
+- divergence denial produces `blockedByDivergence`;
+- stale intent and stale collision produce `blockedByStaleIntent`;
+- invalid edges produce `blockedByInvalidEdge`;
+- max-agent denials produce `blockedByMaxAgents`;
+- `approvedForMovement` remains reserved for read-only or fixture ticks where
+  displacement is not applied.
+
+The scenario writes:
+
+- `multi_agent_movement_tick_hardening_report.json`;
+- `multi_agent_movement_tick_hardening_invariant_report.json`;
+- `multi_agent_movement_tick_hardening_feedback.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Validated limits:
+
+- no autonomous intent production;
+- no repeated tick loop;
+- no route following;
+- no pathfinding;
+- no replanning;
+- no goal selection;
+- no avoidance;
+- no reservation runtime;
+- no physics;
+- no terrain/world mutation;
+- no gameplay movement.
+
+Next recommended step: Phase 4.21A - Agent Intent Production Planning
+Docs-Only. It should document how agents will eventually produce movement
+intentions before any autonomous loop, reservation runtime, avoidance,
+dynamic replanning, route repair, physics, save/load, social behavior, or
+gameplay movement is introduced.
+
 ## 15. Documentation Updates
 
 Phase 4.20A should update:

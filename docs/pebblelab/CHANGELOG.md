@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Hardened multi-agent movement tick contract.
 - Added multi-agent movement tick approved application smoke.
 - Added multi-agent movement tick live read-only collision smoke.
 - Added fixture-only multi-agent movement tick contract smoke.

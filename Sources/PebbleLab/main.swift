@@ -20,11 +20,14 @@ let isMultiAgentMovementTickLiveReadonlyScenario = options.scenario
     == "multi_agent_movement_tick_live_readonly_smoke"
 let isMultiAgentMovementTickApprovedApplicationScenario = options.scenario
     == "multi_agent_movement_tick_approved_application_smoke"
+let isMultiAgentMovementTickHardeningScenario = options.scenario
+    == "multi_agent_movement_tick_hardening_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
     || isMultiAgentMovementTickLiveReadonlyScenario
-    || isMultiAgentMovementTickApprovedApplicationScenario)
+    || isMultiAgentMovementTickApprovedApplicationScenario
+    || isMultiAgentMovementTickHardeningScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -665,7 +668,8 @@ if options.outPath != nil {
 }
 
 if isMultiAgentMovementTickLiveReadonlyScenario
-    || isMultiAgentMovementTickApprovedApplicationScenario {
+    || isMultiAgentMovementTickApprovedApplicationScenario
+    || isMultiAgentMovementTickHardeningScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -1325,6 +1329,59 @@ let multiAgentMovementTickApprovedApplicationSuccess =
             && multiAgentMovementTickApprovedApplicationReport?.summary.terrainMutationPerformed == false
             && multiAgentMovementTickApprovedApplicationReport?.summary.worldMutationPerformed == false)
         : nil
+let multiAgentMovementTickHardeningReport =
+    isMultiAgentMovementTickHardeningScenario
+        ? makeMultiAgentMovementTickHardeningReport(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticksCompleted: ticksCompleted
+        )
+        : nil
+let multiAgentMovementTickHardeningInvariantReport =
+    isMultiAgentMovementTickHardeningScenario
+        ? makeMultiAgentMovementTickHardeningInvariantReport(
+            report: multiAgentMovementTickHardeningReport,
+            scenario: options.scenario,
+            seed: options.seed
+        )
+        : nil
+let multiAgentMovementTickHardeningSuccess =
+    isMultiAgentMovementTickHardeningScenario
+        ? ((multiAgentMovementTickHardeningReport?.success ?? false)
+            && (multiAgentMovementTickHardeningInvariantReport?.success ?? false)
+            && multiAgentMovementTickHardeningReport?.summary.cases == 12
+            && multiAgentMovementTickHardeningReport?.summary.failed == 0
+            && (multiAgentMovementTickHardeningReport?.summary.approvedTotal ?? 0) > 0
+            && (multiAgentMovementTickHardeningReport?.summary.deniedTotal ?? 0) > 0
+            && (multiAgentMovementTickHardeningReport?.summary.displacementsApplied ?? 0) > 0
+            && (multiAgentMovementTickHardeningReport?.summary.collisionDenied ?? 0) > 0
+            && (multiAgentMovementTickHardeningReport?.summary.partialApprovalCases ?? 0) > 0
+            && (multiAgentMovementTickHardeningReport?.summary.sameDestinationConflicts ?? 0) > 0
+            && (multiAgentMovementTickHardeningReport?.summary.swapConflicts ?? 0) > 0
+            && (multiAgentMovementTickHardeningReport?.summary.sourceMismatch ?? 0) > 0
+            && (multiAgentMovementTickHardeningReport?.summary.staleIntent ?? 0) > 0
+            && (multiAgentMovementTickHardeningReport?.summary.invalidEdges ?? 0) > 0
+            && (multiAgentMovementTickHardeningReport?.summary.divergenceDenied ?? 0) > 0
+            && (multiAgentMovementTickHardeningReport?.summary.staleCollision ?? 0) > 0
+            && (multiAgentMovementTickHardeningReport?.summary.allDeniedCases ?? 0) > 0
+            && (multiAgentMovementTickHardeningReport?.summary.maxAgentsExceeded ?? 0) > 0
+            && (multiAgentMovementTickHardeningReport?.summary.movedFeedback ?? 0) > 0
+            && (multiAgentMovementTickHardeningReport?.summary.blockedByCollisionFeedback ?? 0) > 0
+            && (multiAgentMovementTickHardeningReport?.summary.blockedByAgentConflictFeedback ?? 0) > 0
+            && (multiAgentMovementTickHardeningReport?.summary.blockedBySourceMismatchFeedback ?? 0) > 0
+            && (multiAgentMovementTickHardeningReport?.summary.blockedByDivergenceFeedback ?? 0) > 0
+            && (multiAgentMovementTickHardeningReport?.summary.blockedByStaleIntentFeedback ?? 0) > 0
+            && (multiAgentMovementTickHardeningReport?.summary.blockedByInvalidEdgeFeedback ?? 0) > 0
+            && (multiAgentMovementTickHardeningReport?.summary.blockedByMaxAgentsFeedback ?? 0) > 0
+            && multiAgentMovementTickHardeningReport?.summary.routeFollowingApplied == false
+            && multiAgentMovementTickHardeningReport?.summary.pathfindingPerformed == false
+            && multiAgentMovementTickHardeningReport?.summary.replanningPerformed == false
+            && multiAgentMovementTickHardeningReport?.summary.avoidancePerformed == false
+            && multiAgentMovementTickHardeningReport?.summary.reservationRuntimeUsed == false
+            && multiAgentMovementTickHardeningReport?.summary.physicsPerformed == false
+            && multiAgentMovementTickHardeningReport?.summary.terrainMutationPerformed == false
+            && multiAgentMovementTickHardeningReport?.summary.worldMutationPerformed == false)
+        : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
@@ -1702,6 +1759,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (multiAgentMovementTickFixtureSuccess ?? true)
     && (multiAgentMovementTickLiveReadonlySuccess ?? true)
     && (multiAgentMovementTickApprovedApplicationSuccess ?? true)
+    && (multiAgentMovementTickHardeningSuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -2127,6 +2185,54 @@ if options.outPath != nil {
                 routeFollowingApplied: summary.routeFollowingApplied,
                 mutationPerformed: summary.terrainMutationPerformed || summary.worldMutationPerformed,
                 pathfindingPerformed: summary.pathfindingPerformed,
+            ))
+        }
+        if let multiAgentMovementTickHardeningReport {
+            let summary = multiAgentMovementTickHardeningReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_multi_agent_movement_tick_hardening_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: multiAgentMovementTickHardeningSuccess,
+                passed: summary.passed,
+                failed: summary.failed,
+                approved: summary.approvedTotal,
+                denied: summary.deniedTotal,
+                displacementsApplied: summary.displacementsApplied,
+                cases: summary.cases,
+                tickCount: summary.tickCount,
+                agentCount: summary.agentCountTotal,
+                intentCount: summary.intentCountTotal,
+                resolutions: summary.resolutionCountTotal,
+                feedback: summary.feedbackCountTotal,
+                sameDestinationConflicts: summary.sameDestinationConflicts,
+                swapConflicts: summary.swapConflicts,
+                sourceMismatch: summary.sourceMismatch,
+                staleIntent: summary.staleIntent,
+                invalidEdges: summary.invalidEdges,
+                allDeniedCases: summary.allDeniedCases,
+                maxAgentsExceeded: summary.maxAgentsExceeded,
+                movedFeedback: summary.movedFeedback,
+                approvedForMovementFeedback: summary.approvedForMovementFeedback,
+                blockedByCollisionFeedback: summary.blockedByCollisionFeedback,
+                blockedByAgentConflictFeedback: summary.blockedByAgentConflictFeedback,
+                blockedBySourceMismatchFeedback: summary.blockedBySourceMismatchFeedback,
+                blockedByDivergenceFeedback: summary.blockedByDivergenceFeedback,
+                blockedByStaleIntentFeedback: summary.blockedByStaleIntentFeedback,
+                blockedByInvalidEdgeFeedback: summary.blockedByInvalidEdgeFeedback,
+                blockedByMaxAgentsFeedback: summary.blockedByMaxAgentsFeedback,
+                collisionDenied: summary.collisionDenied,
+                divergenceDenied: summary.divergenceDenied,
+                staleCollision: summary.staleCollision,
+                partialApprovalCases: summary.partialApprovalCases,
+                divergenceBeforeMax: summary.divergenceBeforeMax,
+                divergenceAfterMax: summary.divergenceAfterMax,
+                worldUsed: summary.worldUsed,
+                liveCollisionRead: summary.liveCollisionRead,
+                physicalMovementApplied: summary.physicalMovementApplied,
+                routeFollowingApplied: summary.routeFollowingApplied,
+                mutationPerformed: summary.terrainMutationPerformed || summary.worldMutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed
             ))
         }
         if let routeFollowingLiveSnapshot {
@@ -2756,6 +2862,22 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("multi_agent_movement_tick_approved_application_invariant_report.json")
             )
         }
+        if let multiAgentMovementTickHardeningReport {
+            try writeJSON(
+                multiAgentMovementTickHardeningReport,
+                to: outURL.appendingPathComponent("multi_agent_movement_tick_hardening_report.json")
+            )
+            try writeJSON(
+                multiAgentMovementTickHardeningReport.cases.flatMap(\.feedback),
+                to: outURL.appendingPathComponent("multi_agent_movement_tick_hardening_feedback.json")
+            )
+        }
+        if let multiAgentMovementTickHardeningInvariantReport {
+            try writeJSON(
+                multiAgentMovementTickHardeningInvariantReport,
+                to: outURL.appendingPathComponent("multi_agent_movement_tick_hardening_invariant_report.json")
+            )
+        }
         if let routeFollowingLiveSnapshot {
             try writeJSON(
                 routeFollowingLiveSnapshot,
@@ -3345,6 +3467,53 @@ if let outPath = options.outPath {
             multiAgentMovementTickApprovedApplicationTerrainMutationPerformed: multiAgentMovementTickApprovedApplicationReport?.summary.terrainMutationPerformed,
             multiAgentMovementTickApprovedApplicationWorldMutationPerformed: multiAgentMovementTickApprovedApplicationReport?.summary.worldMutationPerformed,
             multiAgentMovementTickApprovedApplicationSuccess: multiAgentMovementTickApprovedApplicationSuccess,
+            multiAgentMovementTickHardeningCases: multiAgentMovementTickHardeningReport?.summary.cases,
+            multiAgentMovementTickHardeningPassed: multiAgentMovementTickHardeningReport?.summary.passed,
+            multiAgentMovementTickHardeningFailed: multiAgentMovementTickHardeningReport?.summary.failed,
+            multiAgentMovementTickHardeningTicks: multiAgentMovementTickHardeningReport?.summary.tickCount,
+            multiAgentMovementTickHardeningAgents: multiAgentMovementTickHardeningReport?.summary.agentCountTotal,
+            multiAgentMovementTickHardeningIntents: multiAgentMovementTickHardeningReport?.summary.intentCountTotal,
+            multiAgentMovementTickHardeningResolutions: multiAgentMovementTickHardeningReport?.summary.resolutionCountTotal,
+            multiAgentMovementTickHardeningFeedback: multiAgentMovementTickHardeningReport?.summary.feedbackCountTotal,
+            multiAgentMovementTickHardeningApproved: multiAgentMovementTickHardeningReport?.summary.approvedTotal,
+            multiAgentMovementTickHardeningDenied: multiAgentMovementTickHardeningReport?.summary.deniedTotal,
+            multiAgentMovementTickHardeningDisplacementsApplied: multiAgentMovementTickHardeningReport?.summary.displacementsApplied,
+            multiAgentMovementTickHardeningOccupableDestinations: multiAgentMovementTickHardeningReport?.summary.occupableDestinations,
+            multiAgentMovementTickHardeningNonOccupableDestinations: multiAgentMovementTickHardeningReport?.summary.nonOccupableDestinations,
+            multiAgentMovementTickHardeningCollisionDenied: multiAgentMovementTickHardeningReport?.summary.collisionDenied,
+            multiAgentMovementTickHardeningSameDestinationConflicts: multiAgentMovementTickHardeningReport?.summary.sameDestinationConflicts,
+            multiAgentMovementTickHardeningSwapConflicts: multiAgentMovementTickHardeningReport?.summary.swapConflicts,
+            multiAgentMovementTickHardeningSourceMismatch: multiAgentMovementTickHardeningReport?.summary.sourceMismatch,
+            multiAgentMovementTickHardeningStaleIntent: multiAgentMovementTickHardeningReport?.summary.staleIntent,
+            multiAgentMovementTickHardeningInvalidEdges: multiAgentMovementTickHardeningReport?.summary.invalidEdges,
+            multiAgentMovementTickHardeningDivergenceDenied: multiAgentMovementTickHardeningReport?.summary.divergenceDenied,
+            multiAgentMovementTickHardeningStaleCollision: multiAgentMovementTickHardeningReport?.summary.staleCollision,
+            multiAgentMovementTickHardeningPartialApprovalCases: multiAgentMovementTickHardeningReport?.summary.partialApprovalCases,
+            multiAgentMovementTickHardeningAllDeniedCases: multiAgentMovementTickHardeningReport?.summary.allDeniedCases,
+            multiAgentMovementTickHardeningMaxAgentsExceeded: multiAgentMovementTickHardeningReport?.summary.maxAgentsExceeded,
+            multiAgentMovementTickHardeningMovedFeedback: multiAgentMovementTickHardeningReport?.summary.movedFeedback,
+            multiAgentMovementTickHardeningApprovedForMovementFeedback: multiAgentMovementTickHardeningReport?.summary.approvedForMovementFeedback,
+            multiAgentMovementTickHardeningBlockedByCollisionFeedback: multiAgentMovementTickHardeningReport?.summary.blockedByCollisionFeedback,
+            multiAgentMovementTickHardeningBlockedByAgentConflictFeedback: multiAgentMovementTickHardeningReport?.summary.blockedByAgentConflictFeedback,
+            multiAgentMovementTickHardeningBlockedBySourceMismatchFeedback: multiAgentMovementTickHardeningReport?.summary.blockedBySourceMismatchFeedback,
+            multiAgentMovementTickHardeningBlockedByDivergenceFeedback: multiAgentMovementTickHardeningReport?.summary.blockedByDivergenceFeedback,
+            multiAgentMovementTickHardeningBlockedByStaleIntentFeedback: multiAgentMovementTickHardeningReport?.summary.blockedByStaleIntentFeedback,
+            multiAgentMovementTickHardeningBlockedByInvalidEdgeFeedback: multiAgentMovementTickHardeningReport?.summary.blockedByInvalidEdgeFeedback,
+            multiAgentMovementTickHardeningBlockedByMaxAgentsFeedback: multiAgentMovementTickHardeningReport?.summary.blockedByMaxAgentsFeedback,
+            multiAgentMovementTickHardeningDivergenceBeforeMax: multiAgentMovementTickHardeningReport?.summary.divergenceBeforeMax,
+            multiAgentMovementTickHardeningDivergenceAfterMax: multiAgentMovementTickHardeningReport?.summary.divergenceAfterMax,
+            multiAgentMovementTickHardeningWorldUsed: multiAgentMovementTickHardeningReport?.summary.worldUsed,
+            multiAgentMovementTickHardeningLiveCollisionRead: multiAgentMovementTickHardeningReport?.summary.liveCollisionRead,
+            multiAgentMovementTickHardeningPhysicalMovementApplied: multiAgentMovementTickHardeningReport?.summary.physicalMovementApplied,
+            multiAgentMovementTickHardeningRouteFollowingApplied: multiAgentMovementTickHardeningReport?.summary.routeFollowingApplied,
+            multiAgentMovementTickHardeningPathfindingPerformed: multiAgentMovementTickHardeningReport?.summary.pathfindingPerformed,
+            multiAgentMovementTickHardeningReplanningPerformed: multiAgentMovementTickHardeningReport?.summary.replanningPerformed,
+            multiAgentMovementTickHardeningAvoidancePerformed: multiAgentMovementTickHardeningReport?.summary.avoidancePerformed,
+            multiAgentMovementTickHardeningReservationRuntimeUsed: multiAgentMovementTickHardeningReport?.summary.reservationRuntimeUsed,
+            multiAgentMovementTickHardeningPhysicsPerformed: multiAgentMovementTickHardeningReport?.summary.physicsPerformed,
+            multiAgentMovementTickHardeningTerrainMutationPerformed: multiAgentMovementTickHardeningReport?.summary.terrainMutationPerformed,
+            multiAgentMovementTickHardeningWorldMutationPerformed: multiAgentMovementTickHardeningReport?.summary.worldMutationPerformed,
+            multiAgentMovementTickHardeningSuccess: multiAgentMovementTickHardeningSuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,

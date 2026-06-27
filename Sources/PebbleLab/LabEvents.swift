@@ -157,6 +157,7 @@ struct RunEvent: Encodable {
     let visited: Int?
     let candidates: Int?
     let cases: Int?
+    let tickCount: Int?
     let agentCount: Int?
     let intentCount: Int?
     let resolutions: Int?
@@ -177,6 +178,15 @@ struct RunEvent: Encodable {
     let allDeniedCases: Int?
     let emptyIntentCases: Int?
     let maxAgentsExceeded: Int?
+    let movedFeedback: Int?
+    let approvedForMovementFeedback: Int?
+    let blockedByCollisionFeedback: Int?
+    let blockedByAgentConflictFeedback: Int?
+    let blockedBySourceMismatchFeedback: Int?
+    let blockedByDivergenceFeedback: Int?
+    let blockedByStaleIntentFeedback: Int?
+    let blockedByInvalidEdgeFeedback: Int?
+    let blockedByMaxAgentsFeedback: Int?
     let occupableDestinations: Int?
     let nonOccupableDestinations: Int?
     let collisionDenied: Int?
@@ -385,6 +395,7 @@ struct RunEvent: Encodable {
         visited: Int? = nil,
         candidates: Int? = nil,
         cases: Int? = nil,
+        tickCount: Int? = nil,
         agentCount: Int? = nil,
         intentCount: Int? = nil,
         resolutions: Int? = nil,
@@ -405,6 +416,15 @@ struct RunEvent: Encodable {
         allDeniedCases: Int? = nil,
         emptyIntentCases: Int? = nil,
         maxAgentsExceeded: Int? = nil,
+        movedFeedback: Int? = nil,
+        approvedForMovementFeedback: Int? = nil,
+        blockedByCollisionFeedback: Int? = nil,
+        blockedByAgentConflictFeedback: Int? = nil,
+        blockedBySourceMismatchFeedback: Int? = nil,
+        blockedByDivergenceFeedback: Int? = nil,
+        blockedByStaleIntentFeedback: Int? = nil,
+        blockedByInvalidEdgeFeedback: Int? = nil,
+        blockedByMaxAgentsFeedback: Int? = nil,
         occupableDestinations: Int? = nil,
         nonOccupableDestinations: Int? = nil,
         collisionDenied: Int? = nil,
@@ -612,6 +632,7 @@ struct RunEvent: Encodable {
         self.visited = visited
         self.candidates = candidates
         self.cases = cases
+        self.tickCount = tickCount
         self.agentCount = agentCount
         self.intentCount = intentCount
         self.resolutions = resolutions
@@ -632,6 +653,15 @@ struct RunEvent: Encodable {
         self.allDeniedCases = allDeniedCases
         self.emptyIntentCases = emptyIntentCases
         self.maxAgentsExceeded = maxAgentsExceeded
+        self.movedFeedback = movedFeedback
+        self.approvedForMovementFeedback = approvedForMovementFeedback
+        self.blockedByCollisionFeedback = blockedByCollisionFeedback
+        self.blockedByAgentConflictFeedback = blockedByAgentConflictFeedback
+        self.blockedBySourceMismatchFeedback = blockedBySourceMismatchFeedback
+        self.blockedByDivergenceFeedback = blockedByDivergenceFeedback
+        self.blockedByStaleIntentFeedback = blockedByStaleIntentFeedback
+        self.blockedByInvalidEdgeFeedback = blockedByInvalidEdgeFeedback
+        self.blockedByMaxAgentsFeedback = blockedByMaxAgentsFeedback
         self.occupableDestinations = occupableDestinations
         self.nonOccupableDestinations = nonOccupableDestinations
         self.collisionDenied = collisionDenied

@@ -1063,3 +1063,34 @@ physics, save/load, social behavior, communication, gameplay movement, and
 terrain/world mutation remain out of scope.
 
 Next recommended step: Phase 4.20E - Multi-Agent Movement Tick Hardening.
+
+## Phase 4.20E - Multi-Agent Movement Tick Hardening
+
+Status: implemented and validated.
+
+Goal: harden the integrated tick-level multi-agent movement contract by
+bringing approved movement, denied collision, partial approval,
+same-destination conflicts, swap conflicts, source mismatch, stale intent,
+invalid edges, divergence denial, stale collision evidence, all-denied mixed
+reasons, and the max-agent bound into one tick-level report shape.
+
+The scenario `multi_agent_movement_tick_hardening_smoke` reuses the validated
+multi-agent hardening movement semantics and wraps each case in tick
+input/output, resolution, and feedback records. It preserves stable `agentId`
+ordering, produces feedback for every resolution, applies only approved
+movements, preserves denied abstract/physical positions, and keeps approved
+abstract/physical final positions synchronized.
+
+It writes `multi_agent_movement_tick_hardening_report.json`,
+`multi_agent_movement_tick_hardening_invariant_report.json`,
+`multi_agent_movement_tick_hardening_feedback.json`,
+`multiAgentMovementTickHardening*` metrics, and one aggregate
+`lab_multi_agent_movement_tick_hardening_recorded` event.
+
+Autonomous intent production, repeated tick loops, reservation runtime,
+avoidance, dynamic replanning, route repair, route following, pathfinding,
+physics, save/load, social behavior, communication, gameplay movement, and
+terrain/world mutation remain out of scope.
+
+Next recommended step: Phase 4.21A - Agent Intent Production Planning
+Docs-Only.

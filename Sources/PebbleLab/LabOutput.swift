@@ -510,6 +510,53 @@ struct RunMetrics: Encodable {
     let multiAgentMovementTickApprovedApplicationTerrainMutationPerformed: Bool?
     let multiAgentMovementTickApprovedApplicationWorldMutationPerformed: Bool?
     let multiAgentMovementTickApprovedApplicationSuccess: Bool?
+    let multiAgentMovementTickHardeningCases: Int?
+    let multiAgentMovementTickHardeningPassed: Int?
+    let multiAgentMovementTickHardeningFailed: Int?
+    let multiAgentMovementTickHardeningTicks: Int?
+    let multiAgentMovementTickHardeningAgents: Int?
+    let multiAgentMovementTickHardeningIntents: Int?
+    let multiAgentMovementTickHardeningResolutions: Int?
+    let multiAgentMovementTickHardeningFeedback: Int?
+    let multiAgentMovementTickHardeningApproved: Int?
+    let multiAgentMovementTickHardeningDenied: Int?
+    let multiAgentMovementTickHardeningDisplacementsApplied: Int?
+    let multiAgentMovementTickHardeningOccupableDestinations: Int?
+    let multiAgentMovementTickHardeningNonOccupableDestinations: Int?
+    let multiAgentMovementTickHardeningCollisionDenied: Int?
+    let multiAgentMovementTickHardeningSameDestinationConflicts: Int?
+    let multiAgentMovementTickHardeningSwapConflicts: Int?
+    let multiAgentMovementTickHardeningSourceMismatch: Int?
+    let multiAgentMovementTickHardeningStaleIntent: Int?
+    let multiAgentMovementTickHardeningInvalidEdges: Int?
+    let multiAgentMovementTickHardeningDivergenceDenied: Int?
+    let multiAgentMovementTickHardeningStaleCollision: Int?
+    let multiAgentMovementTickHardeningPartialApprovalCases: Int?
+    let multiAgentMovementTickHardeningAllDeniedCases: Int?
+    let multiAgentMovementTickHardeningMaxAgentsExceeded: Int?
+    let multiAgentMovementTickHardeningMovedFeedback: Int?
+    let multiAgentMovementTickHardeningApprovedForMovementFeedback: Int?
+    let multiAgentMovementTickHardeningBlockedByCollisionFeedback: Int?
+    let multiAgentMovementTickHardeningBlockedByAgentConflictFeedback: Int?
+    let multiAgentMovementTickHardeningBlockedBySourceMismatchFeedback: Int?
+    let multiAgentMovementTickHardeningBlockedByDivergenceFeedback: Int?
+    let multiAgentMovementTickHardeningBlockedByStaleIntentFeedback: Int?
+    let multiAgentMovementTickHardeningBlockedByInvalidEdgeFeedback: Int?
+    let multiAgentMovementTickHardeningBlockedByMaxAgentsFeedback: Int?
+    let multiAgentMovementTickHardeningDivergenceBeforeMax: Int?
+    let multiAgentMovementTickHardeningDivergenceAfterMax: Int?
+    let multiAgentMovementTickHardeningWorldUsed: Bool?
+    let multiAgentMovementTickHardeningLiveCollisionRead: Bool?
+    let multiAgentMovementTickHardeningPhysicalMovementApplied: Bool?
+    let multiAgentMovementTickHardeningRouteFollowingApplied: Bool?
+    let multiAgentMovementTickHardeningPathfindingPerformed: Bool?
+    let multiAgentMovementTickHardeningReplanningPerformed: Bool?
+    let multiAgentMovementTickHardeningAvoidancePerformed: Bool?
+    let multiAgentMovementTickHardeningReservationRuntimeUsed: Bool?
+    let multiAgentMovementTickHardeningPhysicsPerformed: Bool?
+    let multiAgentMovementTickHardeningTerrainMutationPerformed: Bool?
+    let multiAgentMovementTickHardeningWorldMutationPerformed: Bool?
+    let multiAgentMovementTickHardeningSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -1020,6 +1067,53 @@ struct RunMetrics: Encodable {
         multiAgentMovementTickApprovedApplicationTerrainMutationPerformed: Bool? = nil,
         multiAgentMovementTickApprovedApplicationWorldMutationPerformed: Bool? = nil,
         multiAgentMovementTickApprovedApplicationSuccess: Bool? = nil,
+        multiAgentMovementTickHardeningCases: Int? = nil,
+        multiAgentMovementTickHardeningPassed: Int? = nil,
+        multiAgentMovementTickHardeningFailed: Int? = nil,
+        multiAgentMovementTickHardeningTicks: Int? = nil,
+        multiAgentMovementTickHardeningAgents: Int? = nil,
+        multiAgentMovementTickHardeningIntents: Int? = nil,
+        multiAgentMovementTickHardeningResolutions: Int? = nil,
+        multiAgentMovementTickHardeningFeedback: Int? = nil,
+        multiAgentMovementTickHardeningApproved: Int? = nil,
+        multiAgentMovementTickHardeningDenied: Int? = nil,
+        multiAgentMovementTickHardeningDisplacementsApplied: Int? = nil,
+        multiAgentMovementTickHardeningOccupableDestinations: Int? = nil,
+        multiAgentMovementTickHardeningNonOccupableDestinations: Int? = nil,
+        multiAgentMovementTickHardeningCollisionDenied: Int? = nil,
+        multiAgentMovementTickHardeningSameDestinationConflicts: Int? = nil,
+        multiAgentMovementTickHardeningSwapConflicts: Int? = nil,
+        multiAgentMovementTickHardeningSourceMismatch: Int? = nil,
+        multiAgentMovementTickHardeningStaleIntent: Int? = nil,
+        multiAgentMovementTickHardeningInvalidEdges: Int? = nil,
+        multiAgentMovementTickHardeningDivergenceDenied: Int? = nil,
+        multiAgentMovementTickHardeningStaleCollision: Int? = nil,
+        multiAgentMovementTickHardeningPartialApprovalCases: Int? = nil,
+        multiAgentMovementTickHardeningAllDeniedCases: Int? = nil,
+        multiAgentMovementTickHardeningMaxAgentsExceeded: Int? = nil,
+        multiAgentMovementTickHardeningMovedFeedback: Int? = nil,
+        multiAgentMovementTickHardeningApprovedForMovementFeedback: Int? = nil,
+        multiAgentMovementTickHardeningBlockedByCollisionFeedback: Int? = nil,
+        multiAgentMovementTickHardeningBlockedByAgentConflictFeedback: Int? = nil,
+        multiAgentMovementTickHardeningBlockedBySourceMismatchFeedback: Int? = nil,
+        multiAgentMovementTickHardeningBlockedByDivergenceFeedback: Int? = nil,
+        multiAgentMovementTickHardeningBlockedByStaleIntentFeedback: Int? = nil,
+        multiAgentMovementTickHardeningBlockedByInvalidEdgeFeedback: Int? = nil,
+        multiAgentMovementTickHardeningBlockedByMaxAgentsFeedback: Int? = nil,
+        multiAgentMovementTickHardeningDivergenceBeforeMax: Int? = nil,
+        multiAgentMovementTickHardeningDivergenceAfterMax: Int? = nil,
+        multiAgentMovementTickHardeningWorldUsed: Bool? = nil,
+        multiAgentMovementTickHardeningLiveCollisionRead: Bool? = nil,
+        multiAgentMovementTickHardeningPhysicalMovementApplied: Bool? = nil,
+        multiAgentMovementTickHardeningRouteFollowingApplied: Bool? = nil,
+        multiAgentMovementTickHardeningPathfindingPerformed: Bool? = nil,
+        multiAgentMovementTickHardeningReplanningPerformed: Bool? = nil,
+        multiAgentMovementTickHardeningAvoidancePerformed: Bool? = nil,
+        multiAgentMovementTickHardeningReservationRuntimeUsed: Bool? = nil,
+        multiAgentMovementTickHardeningPhysicsPerformed: Bool? = nil,
+        multiAgentMovementTickHardeningTerrainMutationPerformed: Bool? = nil,
+        multiAgentMovementTickHardeningWorldMutationPerformed: Bool? = nil,
+        multiAgentMovementTickHardeningSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -1529,6 +1623,53 @@ struct RunMetrics: Encodable {
         self.multiAgentMovementTickApprovedApplicationTerrainMutationPerformed = multiAgentMovementTickApprovedApplicationTerrainMutationPerformed
         self.multiAgentMovementTickApprovedApplicationWorldMutationPerformed = multiAgentMovementTickApprovedApplicationWorldMutationPerformed
         self.multiAgentMovementTickApprovedApplicationSuccess = multiAgentMovementTickApprovedApplicationSuccess
+        self.multiAgentMovementTickHardeningCases = multiAgentMovementTickHardeningCases
+        self.multiAgentMovementTickHardeningPassed = multiAgentMovementTickHardeningPassed
+        self.multiAgentMovementTickHardeningFailed = multiAgentMovementTickHardeningFailed
+        self.multiAgentMovementTickHardeningTicks = multiAgentMovementTickHardeningTicks
+        self.multiAgentMovementTickHardeningAgents = multiAgentMovementTickHardeningAgents
+        self.multiAgentMovementTickHardeningIntents = multiAgentMovementTickHardeningIntents
+        self.multiAgentMovementTickHardeningResolutions = multiAgentMovementTickHardeningResolutions
+        self.multiAgentMovementTickHardeningFeedback = multiAgentMovementTickHardeningFeedback
+        self.multiAgentMovementTickHardeningApproved = multiAgentMovementTickHardeningApproved
+        self.multiAgentMovementTickHardeningDenied = multiAgentMovementTickHardeningDenied
+        self.multiAgentMovementTickHardeningDisplacementsApplied = multiAgentMovementTickHardeningDisplacementsApplied
+        self.multiAgentMovementTickHardeningOccupableDestinations = multiAgentMovementTickHardeningOccupableDestinations
+        self.multiAgentMovementTickHardeningNonOccupableDestinations = multiAgentMovementTickHardeningNonOccupableDestinations
+        self.multiAgentMovementTickHardeningCollisionDenied = multiAgentMovementTickHardeningCollisionDenied
+        self.multiAgentMovementTickHardeningSameDestinationConflicts = multiAgentMovementTickHardeningSameDestinationConflicts
+        self.multiAgentMovementTickHardeningSwapConflicts = multiAgentMovementTickHardeningSwapConflicts
+        self.multiAgentMovementTickHardeningSourceMismatch = multiAgentMovementTickHardeningSourceMismatch
+        self.multiAgentMovementTickHardeningStaleIntent = multiAgentMovementTickHardeningStaleIntent
+        self.multiAgentMovementTickHardeningInvalidEdges = multiAgentMovementTickHardeningInvalidEdges
+        self.multiAgentMovementTickHardeningDivergenceDenied = multiAgentMovementTickHardeningDivergenceDenied
+        self.multiAgentMovementTickHardeningStaleCollision = multiAgentMovementTickHardeningStaleCollision
+        self.multiAgentMovementTickHardeningPartialApprovalCases = multiAgentMovementTickHardeningPartialApprovalCases
+        self.multiAgentMovementTickHardeningAllDeniedCases = multiAgentMovementTickHardeningAllDeniedCases
+        self.multiAgentMovementTickHardeningMaxAgentsExceeded = multiAgentMovementTickHardeningMaxAgentsExceeded
+        self.multiAgentMovementTickHardeningMovedFeedback = multiAgentMovementTickHardeningMovedFeedback
+        self.multiAgentMovementTickHardeningApprovedForMovementFeedback = multiAgentMovementTickHardeningApprovedForMovementFeedback
+        self.multiAgentMovementTickHardeningBlockedByCollisionFeedback = multiAgentMovementTickHardeningBlockedByCollisionFeedback
+        self.multiAgentMovementTickHardeningBlockedByAgentConflictFeedback = multiAgentMovementTickHardeningBlockedByAgentConflictFeedback
+        self.multiAgentMovementTickHardeningBlockedBySourceMismatchFeedback = multiAgentMovementTickHardeningBlockedBySourceMismatchFeedback
+        self.multiAgentMovementTickHardeningBlockedByDivergenceFeedback = multiAgentMovementTickHardeningBlockedByDivergenceFeedback
+        self.multiAgentMovementTickHardeningBlockedByStaleIntentFeedback = multiAgentMovementTickHardeningBlockedByStaleIntentFeedback
+        self.multiAgentMovementTickHardeningBlockedByInvalidEdgeFeedback = multiAgentMovementTickHardeningBlockedByInvalidEdgeFeedback
+        self.multiAgentMovementTickHardeningBlockedByMaxAgentsFeedback = multiAgentMovementTickHardeningBlockedByMaxAgentsFeedback
+        self.multiAgentMovementTickHardeningDivergenceBeforeMax = multiAgentMovementTickHardeningDivergenceBeforeMax
+        self.multiAgentMovementTickHardeningDivergenceAfterMax = multiAgentMovementTickHardeningDivergenceAfterMax
+        self.multiAgentMovementTickHardeningWorldUsed = multiAgentMovementTickHardeningWorldUsed
+        self.multiAgentMovementTickHardeningLiveCollisionRead = multiAgentMovementTickHardeningLiveCollisionRead
+        self.multiAgentMovementTickHardeningPhysicalMovementApplied = multiAgentMovementTickHardeningPhysicalMovementApplied
+        self.multiAgentMovementTickHardeningRouteFollowingApplied = multiAgentMovementTickHardeningRouteFollowingApplied
+        self.multiAgentMovementTickHardeningPathfindingPerformed = multiAgentMovementTickHardeningPathfindingPerformed
+        self.multiAgentMovementTickHardeningReplanningPerformed = multiAgentMovementTickHardeningReplanningPerformed
+        self.multiAgentMovementTickHardeningAvoidancePerformed = multiAgentMovementTickHardeningAvoidancePerformed
+        self.multiAgentMovementTickHardeningReservationRuntimeUsed = multiAgentMovementTickHardeningReservationRuntimeUsed
+        self.multiAgentMovementTickHardeningPhysicsPerformed = multiAgentMovementTickHardeningPhysicsPerformed
+        self.multiAgentMovementTickHardeningTerrainMutationPerformed = multiAgentMovementTickHardeningTerrainMutationPerformed
+        self.multiAgentMovementTickHardeningWorldMutationPerformed = multiAgentMovementTickHardeningWorldMutationPerformed
+        self.multiAgentMovementTickHardeningSuccess = multiAgentMovementTickHardeningSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

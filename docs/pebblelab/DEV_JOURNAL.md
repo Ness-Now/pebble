@@ -4736,3 +4736,151 @@ denied collision, partial approval, conflicts, source mismatch, stale intent,
 invalid edges, divergence, and max-agent bounds at the integrated tick level
 without adding reservation runtime, avoidance, dynamic replanning, route
 repair, physics, save/load, social behavior, or gameplay movement.
+
+## 2026-06-27 — Phase 4.20E multi-agent movement tick hardening
+
+### Objective
+
+Implement `multi_agent_movement_tick_hardening_smoke`, the first integrated
+tick-level hardening scenario for multi-agent movement. The goal is to prove
+that the tick input/output contract can represent approved movements, denied
+movements, partial approval, conflicts, divergence, stale evidence, and
+max-agent bounds while keeping feedback, metrics, events, and invariants
+coherent.
+
+### Starting State
+
+Phase 4.20B validated fixture-only tick input/output and
+`approvedForMovement` feedback without movement application. Phase 4.20C
+added live read-only collision evidence while preserving all positions. Phase
+4.20D applied two approved tick movements and used `moved` feedback for real
+displacements. Phase 4.19F already proved the lower-level live hardening
+movement semantics for collision denial, partial approval, conflicts, stale
+intent, invalid edge, divergence, stale collision, and max-agent denial.
+
+### Files Created/Modified
+
+- `Sources/PebbleLab/LabMultiAgentMovement.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_MULTI_AGENT_MOVEMENT_INTEGRATION_PLAN.md`
+
+### Why Tick Hardening
+
+The earlier smokes proved individual contracts. This phase hardens the
+integrated tick shape so future agent intent production can consume one
+coherent output: sorted resolutions, position before/after data, feedback for
+each resolution, aggregate summary fields, metrics, and one event. It does
+not introduce autonomous movement or a repeated tick loop.
+
+### Cases Covered
+
+- approved tick application remains green;
+- collision denied tick preserves position;
+- partial approval tick;
+- same-destination tick conflict;
+- swap conflict denies both;
+- source mismatch denied before collision;
+- stale intent denied before collision;
+- invalid edge denied before collision;
+- divergence before tick denied;
+- stale collision tick denied;
+- all-denied tick mixed reasons;
+- max-agents tick bound exceeded.
+
+### Collision/Application Policy
+
+The tick hardening smoke reuses the validated 4.19F hardening movement core
+and wraps each result as a tick-level contract. Approved movements apply one
+controlled edge. Denied movements preserve abstract and physical positions.
+Collision evidence is used only for the cases that require it, stale
+collision evidence is denied, and no pathfinding, replanning, avoidance, or
+reservation runtime is introduced.
+
+### Feedback Policy
+
+Applied approved movements emit `moved`. Read-only approved feedback from
+4.20B/4.20C remains `approvedForMovement`, but 4.20E expects zero
+`approvedForMovement` records because approved resolutions are applied.
+Denials map to explicit feedback: collision, agent conflict, source mismatch,
+divergence, stale intent, invalid edge, and max-agent bound.
+
+### Outputs, Invariants, Metrics, and Event
+
+The scenario writes:
+
+- `multi_agent_movement_tick_hardening_report.json`;
+- `multi_agent_movement_tick_hardening_invariant_report.json`;
+- `multi_agent_movement_tick_hardening_feedback.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The invariant report checks case coverage, sorted resolutions, feedback
+coherence, approved movement application, denied position preservation,
+partial approval, conflict denial, divergence bounds, stale evidence denial,
+max-agent denial, lower-level smoke compatibility, and the no
+route-following/pathfinding/replanning/avoidance/reservation/physics/mutation
+contract. Metrics use the `multiAgentMovementTickHardening*` prefix, and the
+event is `lab_multi_agent_movement_tick_hardening_recorded`.
+
+### Out-of-Scope Confirmations
+
+This phase does not add route following, pathfinding, replanning, goal
+selection, avoidance, reservation runtime, physics, autonomous movement,
+repeated tick loops, terrain/world mutation, save/load changes, social
+behavior, communication, or gameplay movement.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_tick_hardening_smoke --seed 42 --ticks 5 --out runs/check_multi_agent_movement_tick_hardening`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_tick_approved_application_smoke --seed 42 --ticks 5 --out runs/check_tick_approved_application_after_tick_hardening`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_tick_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_tick_live_readonly_after_tick_hardening`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_tick_fixture_after_tick_hardening`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_hardening_smoke --seed 42 --ticks 5 --out runs/check_multi_agent_movement_hardening_after_tick_hardening`
+- `swift run -c release PebbleLab -- --scenario multi_agent_approved_physical_movement_smoke --seed 42 --ticks 5 --out runs/check_multi_agent_approved_physical_after_tick_hardening`
+- `swift run -c release PebbleLab -- --scenario multi_agent_live_collision_intent_smoke --seed 42 --ticks 5 --out runs/check_multi_agent_live_collision_intent_after_tick_hardening`
+- `swift run -c release PebbleLab -- --scenario physical_movement_single_step_hardening_smoke --seed 42 --ticks 5 --out runs/check_single_step_hardening_after_tick_hardening`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_tick_hardening`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- Tick hardening report: success true.
+- Tick hardening invariant report: success true.
+- Hardening cases: 12 passed, 0 failed.
+- Approved/denied totals: 4 / 18.
+- Displacements applied: 4.
+- Collision denied: 3.
+- Partial approval cases: 2.
+- Same-destination conflicts: 1.
+- Swap conflicts: 2.
+- Source mismatch: 2.
+- Stale intent: 1.
+- Invalid edges: 2.
+- Divergence denied: 1.
+- Stale collision: 1.
+- Max-agent denials: 5.
+- Feedback records: 22.
+- Divergence before/after max: 1 / 1, from the intentionally divergent
+  denied case.
+- Metrics contain `multiAgentMovementTickHardening*`.
+- `events.ndjson` contains
+  `lab_multi_agent_movement_tick_hardening_recorded`.
+
+### Next Step
+
+Phase 4.21A: Agent Intent Production Planning Docs-Only. It should document
+how agents will produce movement intentions from goals before any autonomous
+loop, reservation runtime, avoidance, dynamic replanning, route repair,
+physics, save/load, social behavior, communication, or gameplay movement is
+introduced.
