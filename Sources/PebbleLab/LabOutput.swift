@@ -334,6 +334,26 @@ struct RunMetrics: Encodable {
     let routeFollowingFixtureDivergence: Int?
     let routeFollowingFixtureMaxSteps: Int?
     let routeFollowingFixtureSuccess: Bool?
+    let routeFollowingLiveAttempted: Bool?
+    let routeFollowingLiveCompleted: Bool?
+    let routeFollowingLiveStopped: Bool?
+    let routeFollowingLiveStatus: String?
+    let routeFollowingLiveReason: String?
+    let routeFollowingLiveRouteLength: Int?
+    let routeFollowingLiveAttemptedEdges: Int?
+    let routeFollowingLiveCompletedEdges: Int?
+    let routeFollowingLiveStoppedAtIndex: Int?
+    let routeFollowingLiveDisplacementsApplied: Int?
+    let routeFollowingLiveDeniedEdges: Int?
+    let routeFollowingLiveCollisionDenied: Int?
+    let routeFollowingLiveInvalidEdges: Int?
+    let routeFollowingLiveSourceMismatch: Int?
+    let routeFollowingLiveDivergence: Int?
+    let routeFollowingLivePathfindingInsideFollower: Bool?
+    let routeFollowingLiveReplanningPerformed: Bool?
+    let routeFollowingLivePhysicsPerformed: Bool?
+    let routeFollowingLiveMutationPerformed: Bool?
+    let routeFollowingLiveSuccess: Bool?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -617,6 +637,26 @@ struct RunMetrics: Encodable {
         routeFollowingFixtureDivergence: Int? = nil,
         routeFollowingFixtureMaxSteps: Int? = nil,
         routeFollowingFixtureSuccess: Bool? = nil,
+        routeFollowingLiveAttempted: Bool? = nil,
+        routeFollowingLiveCompleted: Bool? = nil,
+        routeFollowingLiveStopped: Bool? = nil,
+        routeFollowingLiveStatus: String? = nil,
+        routeFollowingLiveReason: String? = nil,
+        routeFollowingLiveRouteLength: Int? = nil,
+        routeFollowingLiveAttemptedEdges: Int? = nil,
+        routeFollowingLiveCompletedEdges: Int? = nil,
+        routeFollowingLiveStoppedAtIndex: Int? = nil,
+        routeFollowingLiveDisplacementsApplied: Int? = nil,
+        routeFollowingLiveDeniedEdges: Int? = nil,
+        routeFollowingLiveCollisionDenied: Int? = nil,
+        routeFollowingLiveInvalidEdges: Int? = nil,
+        routeFollowingLiveSourceMismatch: Int? = nil,
+        routeFollowingLiveDivergence: Int? = nil,
+        routeFollowingLivePathfindingInsideFollower: Bool? = nil,
+        routeFollowingLiveReplanningPerformed: Bool? = nil,
+        routeFollowingLivePhysicsPerformed: Bool? = nil,
+        routeFollowingLiveMutationPerformed: Bool? = nil,
+        routeFollowingLiveSuccess: Bool? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -899,6 +939,26 @@ struct RunMetrics: Encodable {
         self.routeFollowingFixtureDivergence = routeFollowingFixtureDivergence
         self.routeFollowingFixtureMaxSteps = routeFollowingFixtureMaxSteps
         self.routeFollowingFixtureSuccess = routeFollowingFixtureSuccess
+        self.routeFollowingLiveAttempted = routeFollowingLiveAttempted
+        self.routeFollowingLiveCompleted = routeFollowingLiveCompleted
+        self.routeFollowingLiveStopped = routeFollowingLiveStopped
+        self.routeFollowingLiveStatus = routeFollowingLiveStatus
+        self.routeFollowingLiveReason = routeFollowingLiveReason
+        self.routeFollowingLiveRouteLength = routeFollowingLiveRouteLength
+        self.routeFollowingLiveAttemptedEdges = routeFollowingLiveAttemptedEdges
+        self.routeFollowingLiveCompletedEdges = routeFollowingLiveCompletedEdges
+        self.routeFollowingLiveStoppedAtIndex = routeFollowingLiveStoppedAtIndex
+        self.routeFollowingLiveDisplacementsApplied = routeFollowingLiveDisplacementsApplied
+        self.routeFollowingLiveDeniedEdges = routeFollowingLiveDeniedEdges
+        self.routeFollowingLiveCollisionDenied = routeFollowingLiveCollisionDenied
+        self.routeFollowingLiveInvalidEdges = routeFollowingLiveInvalidEdges
+        self.routeFollowingLiveSourceMismatch = routeFollowingLiveSourceMismatch
+        self.routeFollowingLiveDivergence = routeFollowingLiveDivergence
+        self.routeFollowingLivePathfindingInsideFollower = routeFollowingLivePathfindingInsideFollower
+        self.routeFollowingLiveReplanningPerformed = routeFollowingLiveReplanningPerformed
+        self.routeFollowingLivePhysicsPerformed = routeFollowingLivePhysicsPerformed
+        self.routeFollowingLiveMutationPerformed = routeFollowingLiveMutationPerformed
+        self.routeFollowingLiveSuccess = routeFollowingLiveSuccess
         self.successCriteria = successCriteria
     }
 }

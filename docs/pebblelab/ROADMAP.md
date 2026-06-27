@@ -708,3 +708,26 @@ tables, physics integration, terrain mutation, world mutation, and gameplay
 route following remain out of scope.
 
 Next recommended step: Phase 4.18C - Route Following Denied Live Smoke.
+
+## Phase 4.18C - Route Following Denied Live Smoke
+
+Status: implemented and validated.
+
+Goal: add the first live route following smoke as an expected collision-denied
+stop. The scenario `route_following_denied_live_smoke` uses a short route
+`(7,64,8) -> (8,64,8)` under seed 42. It checks live read-only collision for
+the destination before displacement and stops immediately because the
+destination is `liquidUnsupported` with reason `liquid_support`.
+
+The smoke writes `route_following_live_snapshot.json`,
+`route_following_live_invariant_report.json`, `routeFollowingLive*` metrics,
+and one `lab_route_following_recorded` event. It attempts one edge, completes
+zero edges, applies zero displacements, records one denied edge, preserves the
+last valid abstract and physical positions, and keeps divergence at zero.
+
+Approved live multi-step route following, long route following, dynamic
+replanning, pathfinding inside a follower, goal selection, multi-agent
+movement, avoidance, reservation tables, physics integration, terrain
+mutation, world mutation, and gameplay route following remain out of scope.
+
+Next recommended step: Phase 4.18D - Route Following Approved Two-Step Smoke.

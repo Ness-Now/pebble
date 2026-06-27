@@ -3097,3 +3097,116 @@ terrain mutation, world mutation, Python, ML, LLM, or RL was added.
 Phase 4.18C: route following denied live smoke. It should use a short live route
 with at least one collision-denied edge and succeed only if the follower stops
 cleanly without route following gameplay, replanning, physics, or mutation.
+
+## 2026-06-19 — Phase 4.18C denied live route following smoke
+
+### Objective
+
+Add the first live route following smoke as an expected stop, not an approved
+multi-step route. The scenario `route_following_denied_live_smoke` attempts a
+short deterministic live route and succeeds only if collision denies the first
+edge, the follower stops immediately, and positions remain unchanged.
+
+### Files Created/Modified
+
+- Created `Sources/PebbleLab/LabRouteFollowingLive.swift`.
+- Modified `Sources/PebbleLab/LabRouteFollowing.swift`.
+- Modified `Sources/PebbleLab/LabOptions.swift`.
+- Modified `Sources/PebbleLab/LabScenarios.swift`.
+- Modified `Sources/PebbleLab/LabOutput.swift`.
+- Modified `Sources/PebbleLab/LabEvents.swift`.
+- Modified `Sources/PebbleLab/main.swift`.
+- Updated `docs/pebblelab/CHANGELOG.md`.
+- Updated `docs/pebblelab/DEV_JOURNAL.md`.
+- Updated `docs/pebblelab/ROADMAP.md`.
+- Updated `docs/pebblelab/PHASE_4_ROUTE_FOLLOWING_PLAN.md`.
+
+### Route Used
+
+The live route is one edge:
+
+- from `(7,64,8)`;
+- to `(8,64,8)`;
+- seed `42`;
+- route length `2`.
+
+The destination is evaluated through the existing live read-only collision
+adapter before any displacement decision.
+
+### Collision Status And Stop Reason
+
+The destination `(8,64,8)` reads support water/liquid with empty feet/head and
+returns collision status `liquidUnsupported`, reason `liquid_support`.
+
+The route follower records:
+
+- status `stoppedCollisionDenied`;
+- reason `stopped_collision_denied_liquid_support`;
+- `attemptedEdges = 1`;
+- `completedEdges = 0`;
+- `stoppedAtIndex = 0`;
+- `displacementsApplied = 0`;
+- `deniedEdges = 1`.
+
+The abstract agent and physical placeholder remain at `(7,64,8)`, with
+divergence before/after equal to `0`.
+
+### Outputs, Invariants, Metrics, And Event
+
+The scenario writes:
+
+- `route_following_live_snapshot.json`;
+- `route_following_live_invariant_report.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The invariant report has 34 checks covering live route existence, edge shape,
+starting positions, collision evidence, explicit status/reason, stop on first
+denied edge, no displacement, final position preservation, no skipped nodes,
+no pathfinding inside the follower, no replanning, no goal selection, no
+multi-agent movement, no physics, no mutation, divergence zero, and runner
+output contracts.
+
+Metrics use the `routeFollowingLive*` prefix. The scenario emits one aggregate
+`lab_route_following_recorded` event. Per-edge evidence stays in the snapshot.
+
+### Still Prohibited
+
+No approved live multi-step route following, long route following, pathfinding
+inside the follower, dynamic replanning, goal selection, physics integration,
+multi-agent movement, avoidance, reservation table, terrain mutation, world
+mutation, Python, ML, LLM, or RL was added.
+
+### Validation Commands
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario route_following_denied_live_smoke --seed 42 --ticks 5 --out runs/check_route_following_denied_live`
+- `swift run -c release PebbleLab -- --scenario route_following_fixture_smoke --seed 42 --ticks 0 --out runs/check_route_fixture_after_denied_live`
+- `swift run -c release PebbleLab -- --scenario physical_movement_single_step_hardening_smoke --seed 42 --ticks 5 --out runs/check_single_step_hardening_after_denied_live`
+- `swift run -c release PebbleLab -- --scenario physical_movement_approved_single_step_smoke --seed 42 --ticks 5 --out runs/check_approved_single_step_after_denied_live`
+- `swift run -c release PebbleLab -- --scenario physical_movement_denied_smoke --seed 42 --ticks 5 --out runs/check_denied_movement_after_denied_live`
+- `swift run -c release PebbleLab -- --scenario terrain_collision_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_collision_live_after_denied_live`
+- `swift run -c release PebbleLab -- --scenario terrain_collision_fixture_smoke --seed 42 --ticks 0 --out runs/check_collision_fixture_after_denied_live`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_denied_live`
+- `swift run -c release pebsmoke`
+
+### Results
+
+- Route following live snapshot: success true.
+- Status: `stoppedCollisionDenied`.
+- Collision status: `liquidUnsupported`.
+- Reason: `liquid_support`.
+- Invariant report: `34 passed, 0 failed`.
+- Metrics contain `routeFollowingLive*`.
+- `events.ndjson` contains `lab_route_following_recorded`.
+- Debug/release builds, requested non-regression scenarios, and `pebsmoke`
+  passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.18D: route following approved two-step smoke. It should remain short
+and auditable, apply at most two approved single-step displacements, and still
+avoid dynamic replanning, physics, long-route gameplay, and multi-agent
+movement.

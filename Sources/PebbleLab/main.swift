@@ -46,6 +46,8 @@ let isPhysicalMovementOccupableSearchScenario = options.scenario
     == "physical_movement_find_occupable_smoke"
 let isRouteFollowingFixtureScenario = options.scenario
     == "route_following_fixture_smoke"
+let isRouteFollowingDeniedLiveScenario = options.scenario
+    == "route_following_denied_live_smoke"
 let isWorldInteractionScenario = isWorldObservationScenario
     || isTerrainScanRun
     || isTerrainColumnScanRun
@@ -933,6 +935,45 @@ let routeFollowingFixtureSuccess = isRouteFollowingFixtureScenario
         && (routeFollowingFixtureReport?.summary.completed ?? 0) >= 1
         && (routeFollowingFixtureReport?.summary.stopped ?? 0) >= 1)
     : nil
+let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
+    ? makeRouteFollowingDeniedLiveSnapshot(
+        scenario: options.scenario,
+        seed: options.seed,
+        ticksCompleted: ticksCompleted,
+        world: world
+    )
+    : nil
+let routeFollowingLiveInvariantReport = isRouteFollowingDeniedLiveScenario
+    ? makeRouteFollowingLiveInvariantReport(
+        snapshot: routeFollowingLiveSnapshot,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let routeFollowingLiveDeniedEdges = routeFollowingLiveSnapshot?.perEdgeRecords.filter {
+    !$0.displacementApplied
+}.count
+let routeFollowingLiveDisplacementsApplied = routeFollowingLiveSnapshot?.perEdgeRecords.filter(
+    \.displacementApplied
+).count
+let routeFollowingLiveSuccess = isRouteFollowingDeniedLiveScenario
+    ? ((routeFollowingLiveSnapshot?.success ?? false)
+        && (routeFollowingLiveInvariantReport?.success ?? false)
+        && routeFollowingLiveSnapshot?.status == .stoppedCollisionDenied
+        && routeFollowingLiveSnapshot?.stoppedAtIndex == 0
+        && routeFollowingLiveSnapshot?.attemptedEdges == 1
+        && routeFollowingLiveSnapshot?.completedEdges == 0
+        && routeFollowingLiveDisplacementsApplied == 0
+        && routeFollowingLiveDeniedEdges == 1
+        && routeFollowingLiveSnapshot?.finalAbstractPosition == routeFollowingLiveSnapshot?.perEdgeRecords.first?.preAbstractPosition
+        && routeFollowingLiveSnapshot?.finalPhysicalPosition == routeFollowingLiveSnapshot?.perEdgeRecords.first?.prePhysicalPosition
+        && routeFollowingLiveSnapshot?.divergenceBefore == 0
+        && routeFollowingLiveSnapshot?.divergenceAfter == 0
+        && routeFollowingLiveSnapshot?.pathfindingPerformedInsideFollower == false
+        && routeFollowingLiveSnapshot?.replanningPerformed == false
+        && routeFollowingLiveSnapshot?.physicsPerformed == false
+        && routeFollowingLiveSnapshot?.mutationPerformed == false)
+    : nil
 let coreEntityInvariantReport = options.scenario == "core_entity_smoke"
     ? coreEntityBridge.invariantReport(
         scenario: options.scenario,
@@ -1209,6 +1250,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (physicalMovementOccupableSearchSuccess ?? true)
     && (physicalMovementHardeningSuccess ?? true)
     && (routeFollowingFixtureSuccess ?? true)
+    && (routeFollowingLiveSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -1428,6 +1470,29 @@ if options.outPath != nil {
                 displacementsApplied: summary.displacementsApplied,
                 deniedEdges: summary.deniedEdges,
                 cases: summary.cases
+            ))
+        }
+        if let routeFollowingLiveSnapshot {
+            try appendEvent(RunEvent(
+                type: "lab_route_following_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: routeFollowingLiveSuccess,
+                agentId: routeFollowingLiveSnapshot.agentId,
+                reason: routeFollowingLiveSnapshot.reason,
+                physicalId: routeFollowingLiveSnapshot.physicalId,
+                attemptedEdges: routeFollowingLiveSnapshot.attemptedEdges,
+                completedEdges: routeFollowingLiveSnapshot.completedEdges,
+                displacementsApplied: routeFollowingLiveDisplacementsApplied,
+                deniedEdges: routeFollowingLiveDeniedEdges,
+                routeLength: routeFollowingLiveSnapshot.route.count,
+                stoppedAtIndex: routeFollowingLiveSnapshot.stoppedAtIndex,
+                mutationPerformed: routeFollowingLiveSnapshot.mutationPerformed,
+                status: routeFollowingLiveSnapshot.status.rawValue,
+                routeFollowingPerformed: routeFollowingLiveSnapshot.routeFollowingPerformed,
+                pathfindingInsideFollower: routeFollowingLiveSnapshot.pathfindingPerformedInsideFollower,
+                replanningPerformed: routeFollowingLiveSnapshot.replanningPerformed,
+                physicsPerformed: routeFollowingLiveSnapshot.physicsPerformed
             ))
         }
         if let terrainColumnScanSnapshot {
@@ -1907,6 +1972,18 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("route_following_fixture_invariant_report.json")
             )
         }
+        if let routeFollowingLiveSnapshot {
+            try writeJSON(
+                routeFollowingLiveSnapshot,
+                to: outURL.appendingPathComponent("route_following_live_snapshot.json")
+            )
+        }
+        if let routeFollowingLiveInvariantReport {
+            try writeJSON(
+                routeFollowingLiveInvariantReport,
+                to: outURL.appendingPathComponent("route_following_live_invariant_report.json")
+            )
+        }
         if let terrainColumnScanSnapshot {
             try writeJSON(
                 terrainColumnScanSnapshot,
@@ -2296,6 +2373,34 @@ if let outPath = options.outPath {
             routeFollowingFixtureDivergence: routeFollowingFixtureReport?.summary.divergence,
             routeFollowingFixtureMaxSteps: routeFollowingFixtureReport?.summary.maxSteps,
             routeFollowingFixtureSuccess: routeFollowingFixtureSuccess,
+            routeFollowingLiveAttempted: routeFollowingLiveSnapshot.map { _ in true },
+            routeFollowingLiveCompleted: routeFollowingLiveSnapshot.map { $0.status == .completed },
+            routeFollowingLiveStopped: routeFollowingLiveSnapshot.map { $0.status != .completed },
+            routeFollowingLiveStatus: routeFollowingLiveSnapshot?.status.rawValue,
+            routeFollowingLiveReason: routeFollowingLiveSnapshot?.reason,
+            routeFollowingLiveRouteLength: routeFollowingLiveSnapshot?.route.count,
+            routeFollowingLiveAttemptedEdges: routeFollowingLiveSnapshot?.attemptedEdges,
+            routeFollowingLiveCompletedEdges: routeFollowingLiveSnapshot?.completedEdges,
+            routeFollowingLiveStoppedAtIndex: routeFollowingLiveSnapshot?.stoppedAtIndex,
+            routeFollowingLiveDisplacementsApplied: routeFollowingLiveDisplacementsApplied,
+            routeFollowingLiveDeniedEdges: routeFollowingLiveDeniedEdges,
+            routeFollowingLiveCollisionDenied: routeFollowingLiveSnapshot.map {
+                $0.status == .stoppedCollisionDenied ? 1 : 0
+            },
+            routeFollowingLiveInvalidEdges: routeFollowingLiveSnapshot.map {
+                $0.status == .stoppedInvalidEdge ? 1 : 0
+            },
+            routeFollowingLiveSourceMismatch: routeFollowingLiveSnapshot.map {
+                $0.status == .stoppedSourceMismatch ? 1 : 0
+            },
+            routeFollowingLiveDivergence: routeFollowingLiveSnapshot.map {
+                $0.status == .stoppedDivergence ? 1 : 0
+            },
+            routeFollowingLivePathfindingInsideFollower: routeFollowingLiveSnapshot?.pathfindingPerformedInsideFollower,
+            routeFollowingLiveReplanningPerformed: routeFollowingLiveSnapshot?.replanningPerformed,
+            routeFollowingLivePhysicsPerformed: routeFollowingLiveSnapshot?.physicsPerformed,
+            routeFollowingLiveMutationPerformed: routeFollowingLiveSnapshot?.mutationPerformed,
+            routeFollowingLiveSuccess: routeFollowingLiveSuccess,
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))

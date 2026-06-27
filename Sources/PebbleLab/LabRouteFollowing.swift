@@ -113,3 +113,77 @@ struct RouteFollowingFixtureInvariantCheck: Codable {
     let expected: String
     let actual: String
 }
+
+struct LabRouteFollowingLiveEdgeRecord: Codable {
+    let edgeIndex: Int
+    let from: LabTerrainPathNodeKey
+    let to: LabTerrainPathNodeKey
+    let collisionSnapshot: LabTerrainCollisionLiveSnapshot
+    let collisionStatus: LabTerrainOccupancyStatus
+    let collisionReason: String
+    let singleStepStatus: LabPhysicalMovementStatus
+    let routeStatusAfterEdge: LabRouteFollowingStatus
+    let displacementApplied: Bool
+    let preAbstractPosition: LabAgentPosition
+    let postAbstractPosition: LabAgentPosition
+    let prePhysicalPosition: LabAgentPosition
+    let postPhysicalPosition: LabAgentPosition
+    let divergenceBefore: Int
+    let divergenceAfter: Int
+    let success: Bool
+}
+
+struct LabRouteFollowingLiveSnapshot: Codable {
+    let scenario: String
+    let seed: UInt32
+    let ticksCompleted: Int
+    let agentId: String?
+    let physicalId: String?
+    let coreEntityId: Int?
+    let route: [LabTerrainPathNodeKey]
+    let startNode: LabTerrainPathNodeKey
+    let finalNode: LabTerrainPathNodeKey
+    let currentIndex: Int
+    let targetIndex: Int?
+    let attemptedEdges: Int
+    let completedEdges: Int
+    let stoppedAtIndex: Int?
+    let status: LabRouteFollowingStatus
+    let reason: String
+    let perEdgeRecords: [LabRouteFollowingLiveEdgeRecord]
+    let finalAbstractPosition: LabAgentPosition
+    let finalPhysicalPosition: LabAgentPosition
+    let finalCoreEntityPosition: LabAgentPosition?
+    let divergenceBefore: Int
+    let divergenceAfter: Int
+    let pathfindingPerformedInsideFollower: Bool
+    let replanningPerformed: Bool
+    let routeFollowingPerformed: Bool
+    let physicsPerformed: Bool
+    let mutationPerformed: Bool
+    let success: Bool
+}
+
+struct RouteFollowingLiveInvariantReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: RouteFollowingLiveInvariantSummary
+    let checks: [RouteFollowingLiveInvariantCheck]
+    let notes: [String]
+}
+
+struct RouteFollowingLiveInvariantSummary: Codable {
+    let checksPassed: Int
+    let checksFailed: Int
+    let attemptedEdges: Int
+    let completedEdges: Int
+    let deniedEdges: Int
+}
+
+struct RouteFollowingLiveInvariantCheck: Codable {
+    let name: String
+    let passed: Bool
+    let expected: String
+    let actual: String
+}

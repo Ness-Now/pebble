@@ -125,6 +125,8 @@ struct RunEvent: Encodable {
     let completedEdges: Int?
     let displacementsApplied: Int?
     let deniedEdges: Int?
+    let routeLength: Int?
+    let stoppedAtIndex: Int?
     let unknownCases: Int?
     let airCases: Int?
     let solidCases: Int?
@@ -188,6 +190,8 @@ struct RunEvent: Encodable {
     let collisionStatus: String?
     let displacementApplied: Bool?
     let routeFollowingPerformed: Bool?
+    let pathfindingInsideFollower: Bool?
+    let replanningPerformed: Bool?
     let physicsPerformed: Bool?
     let divergenceBefore: Int?
     let divergenceAfter: Int?
@@ -317,6 +321,8 @@ struct RunEvent: Encodable {
         completedEdges: Int? = nil,
         displacementsApplied: Int? = nil,
         deniedEdges: Int? = nil,
+        routeLength: Int? = nil,
+        stoppedAtIndex: Int? = nil,
         unknownCases: Int? = nil,
         airCases: Int? = nil,
         solidCases: Int? = nil,
@@ -380,6 +386,8 @@ struct RunEvent: Encodable {
         collisionStatus: String? = nil,
         displacementApplied: Bool? = nil,
         routeFollowingPerformed: Bool? = nil,
+        pathfindingInsideFollower: Bool? = nil,
+        replanningPerformed: Bool? = nil,
         physicsPerformed: Bool? = nil,
         divergenceBefore: Int? = nil,
         divergenceAfter: Int? = nil
@@ -508,6 +516,8 @@ struct RunEvent: Encodable {
         self.completedEdges = completedEdges
         self.displacementsApplied = displacementsApplied
         self.deniedEdges = deniedEdges
+        self.routeLength = routeLength
+        self.stoppedAtIndex = stoppedAtIndex
         self.unknownCases = unknownCases
         self.airCases = airCases
         self.solidCases = solidCases
@@ -571,6 +581,8 @@ struct RunEvent: Encodable {
         self.collisionStatus = collisionStatus
         self.displacementApplied = displacementApplied
         self.routeFollowingPerformed = routeFollowingPerformed
+        self.pathfindingInsideFollower = pathfindingInsideFollower
+        self.replanningPerformed = replanningPerformed
         self.physicsPerformed = physicsPerformed
         self.divergenceBefore = divergenceBefore
         self.divergenceAfter = divergenceAfter

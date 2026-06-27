@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added denied live route following smoke.
 - Added fixture-only route following smoke.
 - Documented PebbleLab route following planning contract.
 - Hardened single-step physical movement integration cases.

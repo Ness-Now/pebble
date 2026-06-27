@@ -419,3 +419,39 @@ displacement gates, explicit status/reason, and runner output contracts.
 Phase 4.18B still does not implement live route following. It proves only that
 the route-following contract can be simulated and audited over deterministic
 fixtures.
+
+## Phase 4.18C Implementation Status
+
+Phase 4.18C implements the first denied live route following smoke. The
+scenario is `route_following_denied_live_smoke`.
+
+The smoke uses a short live route:
+
+- start `(7,64,8)`;
+- destination `(8,64,8)`;
+- seed `42`;
+- one attempted edge.
+
+Before displacement, the follower reads live collision evidence for the
+destination through the existing read-only collision adapter. The destination
+has liquid support and returns status `liquidUnsupported`, reason
+`liquid_support`.
+
+Because the destination is not `occupable`, the follower records status
+`stoppedCollisionDenied`, `stoppedAtIndex = 0`, `attemptedEdges = 1`,
+`completedEdges = 0`, `displacementsApplied = 0`, and `deniedEdges = 1`.
+The abstract agent and physical placeholder remain at `(7,64,8)`, and
+divergence stays zero before and after the denied edge.
+
+The phase writes `route_following_live_snapshot.json`,
+`route_following_live_invariant_report.json`, `metrics.json`, and
+`events.ndjson`. The invariant report validates 34 checks covering live route
+shape, same-y 4-neighbor edge, start/physical position alignment, collision
+evidence, explicit status/reason, stop on first denied edge, no displacement,
+position preservation, no skipped nodes, no pathfinding inside the follower,
+no replanning, no goal selection, no multi-agent movement, no physics, no
+mutation, divergence zero, and runner output contracts.
+
+Phase 4.18C still does not implement approved live multi-step route following.
+It proves only that a live follower can stop cleanly and auditably when a
+destination collision result is non-occupable.
