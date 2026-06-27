@@ -382,6 +382,28 @@ struct RunMetrics: Encodable {
     let multiAgentLiveCollisionIntentPhysicsPerformed: Bool?
     let multiAgentLiveCollisionIntentMutationPerformed: Bool?
     let multiAgentLiveCollisionIntentSuccess: Bool?
+    let multiAgentApprovedPhysicalMovementCases: Int?
+    let multiAgentApprovedPhysicalMovementPassed: Int?
+    let multiAgentApprovedPhysicalMovementFailed: Int?
+    let multiAgentApprovedPhysicalMovementAgentCount: Int?
+    let multiAgentApprovedPhysicalMovementIntentCount: Int?
+    let multiAgentApprovedPhysicalMovementApproved: Int?
+    let multiAgentApprovedPhysicalMovementDenied: Int?
+    let multiAgentApprovedPhysicalMovementDisplacementsApplied: Int?
+    let multiAgentApprovedPhysicalMovementOccupableDestinations: Int?
+    let multiAgentApprovedPhysicalMovementNonOccupableDestinations: Int?
+    let multiAgentApprovedPhysicalMovementDivergenceBeforeMax: Int?
+    let multiAgentApprovedPhysicalMovementDivergenceAfterMax: Int?
+    let multiAgentApprovedPhysicalMovementWorldUsed: Bool?
+    let multiAgentApprovedPhysicalMovementLiveCollisionRead: Bool?
+    let multiAgentApprovedPhysicalMovementPhysicalMovementApplied: Bool?
+    let multiAgentApprovedPhysicalMovementRouteFollowingApplied: Bool?
+    let multiAgentApprovedPhysicalMovementPathfindingPerformed: Bool?
+    let multiAgentApprovedPhysicalMovementReplanningPerformed: Bool?
+    let multiAgentApprovedPhysicalMovementPhysicsPerformed: Bool?
+    let multiAgentApprovedPhysicalMovementTerrainMutationPerformed: Bool?
+    let multiAgentApprovedPhysicalMovementWorldMutationPerformed: Bool?
+    let multiAgentApprovedPhysicalMovementSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -764,6 +786,28 @@ struct RunMetrics: Encodable {
         multiAgentLiveCollisionIntentPhysicsPerformed: Bool? = nil,
         multiAgentLiveCollisionIntentMutationPerformed: Bool? = nil,
         multiAgentLiveCollisionIntentSuccess: Bool? = nil,
+        multiAgentApprovedPhysicalMovementCases: Int? = nil,
+        multiAgentApprovedPhysicalMovementPassed: Int? = nil,
+        multiAgentApprovedPhysicalMovementFailed: Int? = nil,
+        multiAgentApprovedPhysicalMovementAgentCount: Int? = nil,
+        multiAgentApprovedPhysicalMovementIntentCount: Int? = nil,
+        multiAgentApprovedPhysicalMovementApproved: Int? = nil,
+        multiAgentApprovedPhysicalMovementDenied: Int? = nil,
+        multiAgentApprovedPhysicalMovementDisplacementsApplied: Int? = nil,
+        multiAgentApprovedPhysicalMovementOccupableDestinations: Int? = nil,
+        multiAgentApprovedPhysicalMovementNonOccupableDestinations: Int? = nil,
+        multiAgentApprovedPhysicalMovementDivergenceBeforeMax: Int? = nil,
+        multiAgentApprovedPhysicalMovementDivergenceAfterMax: Int? = nil,
+        multiAgentApprovedPhysicalMovementWorldUsed: Bool? = nil,
+        multiAgentApprovedPhysicalMovementLiveCollisionRead: Bool? = nil,
+        multiAgentApprovedPhysicalMovementPhysicalMovementApplied: Bool? = nil,
+        multiAgentApprovedPhysicalMovementRouteFollowingApplied: Bool? = nil,
+        multiAgentApprovedPhysicalMovementPathfindingPerformed: Bool? = nil,
+        multiAgentApprovedPhysicalMovementReplanningPerformed: Bool? = nil,
+        multiAgentApprovedPhysicalMovementPhysicsPerformed: Bool? = nil,
+        multiAgentApprovedPhysicalMovementTerrainMutationPerformed: Bool? = nil,
+        multiAgentApprovedPhysicalMovementWorldMutationPerformed: Bool? = nil,
+        multiAgentApprovedPhysicalMovementSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -1145,6 +1189,28 @@ struct RunMetrics: Encodable {
         self.multiAgentLiveCollisionIntentPhysicsPerformed = multiAgentLiveCollisionIntentPhysicsPerformed
         self.multiAgentLiveCollisionIntentMutationPerformed = multiAgentLiveCollisionIntentMutationPerformed
         self.multiAgentLiveCollisionIntentSuccess = multiAgentLiveCollisionIntentSuccess
+        self.multiAgentApprovedPhysicalMovementCases = multiAgentApprovedPhysicalMovementCases
+        self.multiAgentApprovedPhysicalMovementPassed = multiAgentApprovedPhysicalMovementPassed
+        self.multiAgentApprovedPhysicalMovementFailed = multiAgentApprovedPhysicalMovementFailed
+        self.multiAgentApprovedPhysicalMovementAgentCount = multiAgentApprovedPhysicalMovementAgentCount
+        self.multiAgentApprovedPhysicalMovementIntentCount = multiAgentApprovedPhysicalMovementIntentCount
+        self.multiAgentApprovedPhysicalMovementApproved = multiAgentApprovedPhysicalMovementApproved
+        self.multiAgentApprovedPhysicalMovementDenied = multiAgentApprovedPhysicalMovementDenied
+        self.multiAgentApprovedPhysicalMovementDisplacementsApplied = multiAgentApprovedPhysicalMovementDisplacementsApplied
+        self.multiAgentApprovedPhysicalMovementOccupableDestinations = multiAgentApprovedPhysicalMovementOccupableDestinations
+        self.multiAgentApprovedPhysicalMovementNonOccupableDestinations = multiAgentApprovedPhysicalMovementNonOccupableDestinations
+        self.multiAgentApprovedPhysicalMovementDivergenceBeforeMax = multiAgentApprovedPhysicalMovementDivergenceBeforeMax
+        self.multiAgentApprovedPhysicalMovementDivergenceAfterMax = multiAgentApprovedPhysicalMovementDivergenceAfterMax
+        self.multiAgentApprovedPhysicalMovementWorldUsed = multiAgentApprovedPhysicalMovementWorldUsed
+        self.multiAgentApprovedPhysicalMovementLiveCollisionRead = multiAgentApprovedPhysicalMovementLiveCollisionRead
+        self.multiAgentApprovedPhysicalMovementPhysicalMovementApplied = multiAgentApprovedPhysicalMovementPhysicalMovementApplied
+        self.multiAgentApprovedPhysicalMovementRouteFollowingApplied = multiAgentApprovedPhysicalMovementRouteFollowingApplied
+        self.multiAgentApprovedPhysicalMovementPathfindingPerformed = multiAgentApprovedPhysicalMovementPathfindingPerformed
+        self.multiAgentApprovedPhysicalMovementReplanningPerformed = multiAgentApprovedPhysicalMovementReplanningPerformed
+        self.multiAgentApprovedPhysicalMovementPhysicsPerformed = multiAgentApprovedPhysicalMovementPhysicsPerformed
+        self.multiAgentApprovedPhysicalMovementTerrainMutationPerformed = multiAgentApprovedPhysicalMovementTerrainMutationPerformed
+        self.multiAgentApprovedPhysicalMovementWorldMutationPerformed = multiAgentApprovedPhysicalMovementWorldMutationPerformed
+        self.multiAgentApprovedPhysicalMovementSuccess = multiAgentApprovedPhysicalMovementSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

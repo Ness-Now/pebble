@@ -745,3 +745,61 @@ Limits:
 Next recommended step: Phase 4.19E, multi-agent approved physical movement
 smoke. That phase should remain tiny, bounded, and no-replanning while
 introducing the first explicit application of approved multi-agent movement.
+
+## Phase 4.19E Implementation Status
+
+Phase 4.19E added the first approved multi-agent physical movement smoke:
+
+```text
+multi_agent_approved_physical_movement_smoke
+```
+
+Validated approved physical movement cases:
+
+- `two_agents_two_approved_single_step_moves`;
+- `deterministic_order_two_approved_moves`.
+
+Outputs produced:
+
+- `multi_agent_approved_physical_movement_report.json`;
+- `multi_agent_approved_physical_movement_invariant_report.json`;
+- `metrics.json` with `multiAgentApprovedPhysicalMovement*` fields;
+- `events.ndjson` with one aggregate
+  `lab_multi_agent_approved_physical_movement_recorded` event.
+
+Validated summary:
+
+- 2 cases;
+- 2 passed;
+- 0 failed;
+- 4 approved resolutions across the two cases;
+- 0 denied resolutions;
+- 4 displacements applied;
+- 4 occupable live destinations observed;
+- 0 non-occupable live destinations observed;
+- divergence before max 0;
+- divergence after max 0;
+- 42 invariant checks passed.
+
+Limits:
+
+- approved-only smoke;
+- two agents per case;
+- one edge per agent;
+- no same-destination conflict;
+- no swap conflict;
+- no denied live multi-agent movement;
+- no route following live;
+- no pathfinding;
+- no replanning;
+- no goal selection;
+- no avoidance;
+- no reservation table runtime;
+- no physics;
+- no terrain/world mutation;
+- no gameplay movement.
+
+Next recommended step: Phase 4.19F, multi-agent movement hardening. That
+phase should add denied live movement and conflict coverage around the
+approved physical movement path without adding avoidance, reservation runtime,
+replanning, physics, or gameplay movement.

@@ -3923,3 +3923,122 @@ Phase 4.19E: multi-agent approved physical movement smoke. It should remain
 small and bounded, with two or three agents maximum, one approved edge each,
 no replanning, no route repair, no reservation runtime, no avoidance, and no
 gameplay movement.
+
+## 2026-06-27 — Phase 4.19E multi-agent approved physical movement smoke
+
+### Objective
+
+Apply the first controlled multi-agent physical placeholder movement: two
+agents, two occupable destinations, one approved edge each, no conflicts, and
+no denied live movement.
+
+### Starting State
+
+Phase 4.19B established fixture-only deterministic arbitration. Phase 4.19C
+hardened fixture conflicts and dependency cases. Phase 4.19D added live
+read-only collision intent evidence without displacement. Phase 4.19E builds
+on that by allowing only the smallest approved physical movement case.
+
+### Files Created/Modified
+
+- Modified `Sources/PebbleLab/LabMultiAgentMovement.swift`.
+- Modified `Sources/PebbleLab/LabOptions.swift`.
+- Modified `Sources/PebbleLab/LabScenarios.swift`.
+- Modified `Sources/PebbleLab/LabOutput.swift`.
+- Modified `Sources/PebbleLab/LabEvents.swift`.
+- Modified `Sources/PebbleLab/main.swift`.
+- Updated `docs/pebblelab/CHANGELOG.md`.
+- Updated `docs/pebblelab/DEV_JOURNAL.md`.
+- Updated `docs/pebblelab/ROADMAP.md`.
+- Updated `docs/pebblelab/PHASE_4_MULTI_AGENT_MOVEMENT_PLAN.md`.
+
+### Why Approved-Only
+
+Denied live multi-agent movement and live conflict handling require more
+hardening. This phase proves only the success path: both destinations are
+live occupable, there is no same-destination conflict, no swap conflict, no
+source mismatch, and every intent can be applied as exactly one edge.
+
+### Cases Covered
+
+- `two_agents_two_approved_single_step_moves`;
+- `deterministic_order_two_approved_moves`.
+
+### Collision And Movement Application Policy
+
+Each valid intent reads live collision for its destination using seed 99.
+Only occupable destinations can be approved. Approved moves set a one-edge
+abstract movement action on each synthetic agent and then synchronize the
+existing physical placeholder bridge. No route follower state is created or
+advanced.
+
+### Outputs, Invariants, Metrics, And Event
+
+The scenario writes:
+
+- `multi_agent_approved_physical_movement_report.json`;
+- `multi_agent_approved_physical_movement_invariant_report.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The report records 2 cases, 2 passed, 0 failed, 4 approved resolutions, 0
+denied resolutions, 4 displacements applied, 4 occupable live destinations,
+0 non-occupable live destinations, divergence before max 0, and divergence
+after max 0.
+
+The invariant report has 42 checks and passes all of them. Metrics use the
+`multiAgentApprovedPhysicalMovement*` prefix. The scenario emits one
+aggregate `lab_multi_agent_approved_physical_movement_recorded` event.
+
+### Confirmed Movement
+
+In each case, `agent_0` moves from `(7,64,8)` to `(8,64,8)` and `agent_1`
+moves from `(9,64,7)` to `(9,64,8)`. Abstract final positions match physical
+placeholder final positions. `divergenceBeforeMax` and `divergenceAfterMax`
+are both 0.
+
+### Confirmed Out Of Scope
+
+No route following, pathfinding, replanning, goal selection, avoidance,
+reservation table runtime, physics, terrain mutation, world mutation, denied
+live multi-agent movement, long route following, route repair, save/load, or
+gameplay movement is performed.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario multi_agent_approved_physical_movement_smoke --seed 42 --ticks 5 --out runs/check_multi_agent_approved_physical_movement`
+- `swift run -c release PebbleLab -- --scenario multi_agent_live_collision_intent_smoke --seed 42 --ticks 5 --out runs/check_multi_agent_live_collision_intent_after_approved_multi_agent_movement`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_fixture_smoke --seed 42 --ticks 0 --out runs/check_multi_agent_fixture_after_approved_multi_agent_movement`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_fixture_hardening_smoke --seed 42 --ticks 0 --out runs/check_multi_agent_fixture_hardening_after_approved_multi_agent_movement`
+- `swift run -c release PebbleLab -- --scenario terrain_collision_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_collision_live_after_approved_multi_agent_movement`
+- `swift run -c release PebbleLab -- --scenario physical_movement_approved_single_step_smoke --seed 42 --ticks 5 --out runs/check_approved_single_step_after_multi_agent_approved_movement`
+- `swift run -c release PebbleLab -- --scenario physical_movement_single_step_hardening_smoke --seed 42 --ticks 5 --out runs/check_single_step_hardening_after_multi_agent_approved_movement`
+- `swift run -c release PebbleLab -- --scenario physical_movement_denied_smoke --seed 42 --ticks 5 --out runs/check_denied_single_step_after_multi_agent_approved_movement`
+- `swift run -c release PebbleLab -- --scenario route_following_live_hardening_smoke --seed 42 --ticks 5 --out runs/check_route_following_live_hardening_after_multi_agent_approved_movement`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_multi_agent_approved_movement`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- Approved physical movement report: success true.
+- Approved physical movement invariant report: success true.
+- Cases: 2 passed, 0 failed.
+- Approved/denied totals: 4 / 0.
+- Displacements applied: 4.
+- Occupable/non-occupable destination totals: 4 / 0.
+- Divergence before/after max: 0 / 0.
+- Metrics contain `multiAgentApprovedPhysicalMovement*`.
+- `events.ndjson` contains
+  `lab_multi_agent_approved_physical_movement_recorded`.
+
+### Next Step
+
+Phase 4.19F: multi-agent movement hardening. It should add denied live
+movement and conflict coverage around same-destination, swap, collision
+denied, source mismatch, stale collision, partial approval, and max
+agents/tick bounds while keeping avoidance, reservation runtime, replanning,
+physics, and gameplay movement out of scope.

@@ -884,3 +884,29 @@ remain out of scope.
 
 Next recommended step: Phase 4.19E - Multi-Agent Approved Physical Movement
 Smoke.
+
+## Phase 4.19E - Multi-Agent Approved Physical Movement Smoke
+
+Status: implemented and validated.
+
+Goal: apply the first controlled multi-agent physical placeholder movement
+after fixture arbitration and live read-only collision intent evidence. The
+phase is approved-only: two agents, two distinct occupable destinations, one
+edge per agent, no conflicts, and no denied live movement.
+
+The scenario `multi_agent_approved_physical_movement_smoke` covers a nominal
+two-agent approved single-step case and an unordered-input deterministic case.
+Both cases use seed 99 live collision evidence, move `agent_0` from
+`(7,64,8)` to `(8,64,8)`, move `agent_1` from `(9,64,7)` to `(9,64,8)`,
+sync the physical placeholders to the abstract positions, and keep
+divergence at zero. It writes
+`multi_agent_approved_physical_movement_report.json`,
+`multi_agent_approved_physical_movement_invariant_report.json`,
+`multiAgentApprovedPhysicalMovement*` metrics, and one aggregate
+`lab_multi_agent_approved_physical_movement_recorded` event.
+
+Denied live multi-agent movement, live conflict hardening, reservation table
+runtime, avoidance, dynamic replanning, route repair, physics, save/load,
+social behavior, communication, and gameplay movement remain out of scope.
+
+Next recommended step: Phase 4.19F - Multi-Agent Movement Hardening.

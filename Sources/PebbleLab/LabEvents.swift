@@ -178,6 +178,9 @@ struct RunEvent: Encodable {
     let occupableDestinations: Int?
     let nonOccupableDestinations: Int?
     let collisionDenied: Int?
+    let divergenceBeforeMax: Int?
+    let divergenceAfterMax: Int?
+    let worldUsed: Bool?
     let liveCollisionRead: Bool?
     let physicalMovementApplied: Bool?
     let routeFollowingApplied: Bool?
@@ -398,6 +401,9 @@ struct RunEvent: Encodable {
         occupableDestinations: Int? = nil,
         nonOccupableDestinations: Int? = nil,
         collisionDenied: Int? = nil,
+        divergenceBeforeMax: Int? = nil,
+        divergenceAfterMax: Int? = nil,
+        worldUsed: Bool? = nil,
         liveCollisionRead: Bool? = nil,
         physicalMovementApplied: Bool? = nil,
         routeFollowingApplied: Bool? = nil,
@@ -617,6 +623,9 @@ struct RunEvent: Encodable {
         self.occupableDestinations = occupableDestinations
         self.nonOccupableDestinations = nonOccupableDestinations
         self.collisionDenied = collisionDenied
+        self.divergenceBeforeMax = divergenceBeforeMax
+        self.divergenceAfterMax = divergenceAfterMax
+        self.worldUsed = worldUsed
         self.liveCollisionRead = liveCollisionRead
         self.physicalMovementApplied = physicalMovementApplied
         self.routeFollowingApplied = routeFollowingApplied
