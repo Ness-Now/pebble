@@ -785,3 +785,27 @@ avoidance, reservation tables, physics integration, terrain mutation, world
 mutation, save/load changes, and registry changes remain out of scope.
 
 Next recommended step: Phase 4.19A - Multi-Agent Movement Planning Docs-Only.
+
+## Phase 4.19A - Multi-Agent Movement Planning Docs-Only
+
+Status: done as a docs-only planning phase.
+
+Goal: define the future multi-agent movement planning contract before any
+multi-agent movement implementation exists. The plan keeps single-agent route
+following as an intent source, introduces a future deterministic arbiter
+boundary, and documents same-destination, occupied-destination, swap, cycle,
+source-mismatch, stale-intent, priority, and dependency conflicts.
+
+The plan proposes future movement intent and resolution records,
+`multi_agent_movement_*` reports, `multiAgentMovement*` metrics, one aggregate
+`lab_multi_agent_movement_recorded` event, and global invariants for
+deterministic ordering, partial approval, no duplicate approved destination,
+no approved swaps, no pathfinding inside arbitration, no replanning, no
+physics, and no world or terrain mutation.
+
+Multi-agent movement is not implemented yet. Reservation table runtime,
+avoidance, dynamic replanning, pathfinding during arbitration, multi-agent
+pathfinding, gameplay movement, physics integration, renderer changes,
+save/load changes, registry changes, Python, LLM, and RL remain out of scope.
+
+Next recommended step: Phase 4.19B - Multi-Agent Movement Fixture Smoke.

@@ -3453,3 +3453,122 @@ Python, ML, LLM, or RL was added.
 Phase 4.19A: multi-agent movement planning docs-only. Route following remains
 single-agent and short; multi-agent movement, avoidance/reservation, physics,
 dynamic replanning, and gameplay route following remain deferred.
+
+## 2026-06-27 — Phase 4.19A multi-agent movement planning docs-only
+
+### Objective
+
+Create a technical plan for moving later from hardened single-agent route
+following toward controlled multi-agent movement planning, without
+implementing multi-agent movement.
+
+### Starting State
+
+PebbleLab already has physical placeholders, an experimental gated core entity
+probe, fixture/live read-only collision, denied and approved single-step
+physical movement, single-step hardening, fixture route following, denied live
+route following, approved two-step live route following, and live route
+following hardening. The latest route following hardening smoke validated 8
+cases with 8 passed, 0 failed, 1 completed, 7 stopped, 9 attempted edges, 4
+completed edges, 4 applied displacements, and 5 denied edges.
+
+No multi-agent movement implementation exists yet.
+
+### Files Created/Modified
+
+- Created `docs/pebblelab/PHASE_4_MULTI_AGENT_MOVEMENT_PLAN.md`.
+- Updated `docs/pebblelab/CHANGELOG.md`.
+- Updated `docs/pebblelab/DEV_JOURNAL.md`.
+- Updated `docs/pebblelab/ROADMAP.md`.
+
+### Why Docs-Only
+
+The single-agent route follower is now reliable enough to plan the next
+boundary, but multi-agent movement introduces global conflicts that local route
+following cannot solve safely. A docs-only phase keeps the next contract small
+and reviewable before adding arbitration, reservations, or live movement.
+
+### Single-Agent Route Following Vs Multi-Agent Movement
+
+Single-agent route following has one agent, one route, one `currentIndex`, one
+edge per step, local collision checks, and local stop states.
+
+Multi-agent movement has N agents, N intentions, node conflicts, edge
+conflicts, swaps, partial approvals, priority/order decisions, global tick
+coherence, aggregate logs, and global invariants. The future route follower
+should produce a next-edge intent; a separate arbiter should decide whether it
+may be applied.
+
+### Conflicts To Plan For
+
+The plan defines same-destination conflicts, edge swaps, future crossing-edge
+conflicts, occupied static destinations, moving-away destinations, chain
+dependencies, cycles, route denial conflicts, priority conflicts, and stale
+intent/source mismatch.
+
+### Future Arbiter And State
+
+The recommended v0 arbiter collects all intentions, sorts agents by stable
+`agentId`, denies source mismatches and non-occupable destinations, resolves
+same-destination conflicts by stable order, denies swaps and cycles, applies at
+most one edge per agent per tick, does not replan, does not search
+alternatives, does not push agents, and logs every denial reason.
+
+The plan proposes future status and decision sketches such as
+`LabMultiAgentMovementStatus`, `LabMultiAgentMoveDecision`,
+`LabAgentMoveIntent`, `LabAgentMoveResolution`, and
+`LabMultiAgentMovementSnapshot`.
+
+### Future Outputs, Invariants, Metrics, And Event
+
+The plan recommends:
+
+- `multi_agent_movement_report.json`;
+- `multi_agent_movement_invariant_report.json`;
+- `multi_agent_movement_snapshot.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+It proposes `multiAgentMovement*` metrics for attempts, agent count, intents,
+approvals, denials, same-destination conflicts, swaps, occupied destinations,
+source mismatches, collision denials, divergence, pathfinding/replanning/
+physics/mutation guard flags, and success.
+
+It also proposes one aggregate event:
+`lab_multi_agent_movement_recorded`.
+
+The future invariant list includes more than 35 checks covering agent and
+intent presence, explicit sources and destinations, 4-neighbor same-y edges,
+source/current-position coherence, duplicate approved destination prevention,
+swap/cycle denial, occupied-destination denial, deterministic ordering,
+denied-position preservation, one-edge movement, no skipped nodes, count
+coherence, final position coherence, bounded divergence, single-step ownership
+of displacement, collision-before-approval for live scenarios, no pathfinding,
+no replanning, no goal selection, no avoidance, no reservation table in the
+first fixture smoke, no physics, no world/terrain mutation, and report/metric/
+event output contracts.
+
+### Future Phases Recommended
+
+- Phase 4.19B: multi-agent movement fixture planning/contract smoke.
+- Phase 4.19C: multi-agent movement fixture hardening.
+- Phase 4.19D: multi-agent live read-only collision intent smoke.
+- Phase 4.19E: multi-agent approved physical movement smoke.
+- Phase 4.19F: multi-agent movement hardening.
+
+### Validation
+
+Requested validation for this docs-only phase:
+
+- `git status`;
+- `swift build`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git status`.
+
+### Next Step
+
+Phase 4.19B: multi-agent movement fixture smoke. It should remain fixture-only
+with synthetic agents and intentions, no `World`, no live collision, no
+movement application, no reservation table runtime, no avoidance, no
+replanning, and no pathfinding inside arbitration.

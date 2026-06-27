@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Documented PebbleLab multi-agent movement planning contract.
 - Hardened live route following cases.
 - Added approved two-step live route following smoke.
 - Added denied live route following smoke.
