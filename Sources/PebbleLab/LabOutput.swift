@@ -358,6 +358,30 @@ struct RunMetrics: Encodable {
     let multiAgentMovementFixtureHardeningPhysicsPerformed: Bool?
     let multiAgentMovementFixtureHardeningMutationPerformed: Bool?
     let multiAgentMovementFixtureHardeningSuccess: Bool?
+    let multiAgentLiveCollisionIntentCases: Int?
+    let multiAgentLiveCollisionIntentPassed: Int?
+    let multiAgentLiveCollisionIntentFailed: Int?
+    let multiAgentLiveCollisionIntentAgentCount: Int?
+    let multiAgentLiveCollisionIntentIntentCount: Int?
+    let multiAgentLiveCollisionIntentApproved: Int?
+    let multiAgentLiveCollisionIntentDenied: Int?
+    let multiAgentLiveCollisionIntentOccupableDestinations: Int?
+    let multiAgentLiveCollisionIntentNonOccupableDestinations: Int?
+    let multiAgentLiveCollisionIntentCollisionDenied: Int?
+    let multiAgentLiveCollisionIntentSameDestinationConflicts: Int?
+    let multiAgentLiveCollisionIntentSourceMismatch: Int?
+    let multiAgentLiveCollisionIntentInvalidEdges: Int?
+    let multiAgentLiveCollisionIntentStaleIntent: Int?
+    let multiAgentLiveCollisionIntentWorldUsed: Bool?
+    let multiAgentLiveCollisionIntentLiveCollisionRead: Bool?
+    let multiAgentLiveCollisionIntentDisplacementApplied: Bool?
+    let multiAgentLiveCollisionIntentPhysicalMovementApplied: Bool?
+    let multiAgentLiveCollisionIntentRouteFollowingApplied: Bool?
+    let multiAgentLiveCollisionIntentPathfindingPerformed: Bool?
+    let multiAgentLiveCollisionIntentReplanningPerformed: Bool?
+    let multiAgentLiveCollisionIntentPhysicsPerformed: Bool?
+    let multiAgentLiveCollisionIntentMutationPerformed: Bool?
+    let multiAgentLiveCollisionIntentSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -716,6 +740,30 @@ struct RunMetrics: Encodable {
         multiAgentMovementFixtureHardeningPhysicsPerformed: Bool? = nil,
         multiAgentMovementFixtureHardeningMutationPerformed: Bool? = nil,
         multiAgentMovementFixtureHardeningSuccess: Bool? = nil,
+        multiAgentLiveCollisionIntentCases: Int? = nil,
+        multiAgentLiveCollisionIntentPassed: Int? = nil,
+        multiAgentLiveCollisionIntentFailed: Int? = nil,
+        multiAgentLiveCollisionIntentAgentCount: Int? = nil,
+        multiAgentLiveCollisionIntentIntentCount: Int? = nil,
+        multiAgentLiveCollisionIntentApproved: Int? = nil,
+        multiAgentLiveCollisionIntentDenied: Int? = nil,
+        multiAgentLiveCollisionIntentOccupableDestinations: Int? = nil,
+        multiAgentLiveCollisionIntentNonOccupableDestinations: Int? = nil,
+        multiAgentLiveCollisionIntentCollisionDenied: Int? = nil,
+        multiAgentLiveCollisionIntentSameDestinationConflicts: Int? = nil,
+        multiAgentLiveCollisionIntentSourceMismatch: Int? = nil,
+        multiAgentLiveCollisionIntentInvalidEdges: Int? = nil,
+        multiAgentLiveCollisionIntentStaleIntent: Int? = nil,
+        multiAgentLiveCollisionIntentWorldUsed: Bool? = nil,
+        multiAgentLiveCollisionIntentLiveCollisionRead: Bool? = nil,
+        multiAgentLiveCollisionIntentDisplacementApplied: Bool? = nil,
+        multiAgentLiveCollisionIntentPhysicalMovementApplied: Bool? = nil,
+        multiAgentLiveCollisionIntentRouteFollowingApplied: Bool? = nil,
+        multiAgentLiveCollisionIntentPathfindingPerformed: Bool? = nil,
+        multiAgentLiveCollisionIntentReplanningPerformed: Bool? = nil,
+        multiAgentLiveCollisionIntentPhysicsPerformed: Bool? = nil,
+        multiAgentLiveCollisionIntentMutationPerformed: Bool? = nil,
+        multiAgentLiveCollisionIntentSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -1073,6 +1121,30 @@ struct RunMetrics: Encodable {
         self.multiAgentMovementFixtureHardeningPhysicsPerformed = multiAgentMovementFixtureHardeningPhysicsPerformed
         self.multiAgentMovementFixtureHardeningMutationPerformed = multiAgentMovementFixtureHardeningMutationPerformed
         self.multiAgentMovementFixtureHardeningSuccess = multiAgentMovementFixtureHardeningSuccess
+        self.multiAgentLiveCollisionIntentCases = multiAgentLiveCollisionIntentCases
+        self.multiAgentLiveCollisionIntentPassed = multiAgentLiveCollisionIntentPassed
+        self.multiAgentLiveCollisionIntentFailed = multiAgentLiveCollisionIntentFailed
+        self.multiAgentLiveCollisionIntentAgentCount = multiAgentLiveCollisionIntentAgentCount
+        self.multiAgentLiveCollisionIntentIntentCount = multiAgentLiveCollisionIntentIntentCount
+        self.multiAgentLiveCollisionIntentApproved = multiAgentLiveCollisionIntentApproved
+        self.multiAgentLiveCollisionIntentDenied = multiAgentLiveCollisionIntentDenied
+        self.multiAgentLiveCollisionIntentOccupableDestinations = multiAgentLiveCollisionIntentOccupableDestinations
+        self.multiAgentLiveCollisionIntentNonOccupableDestinations = multiAgentLiveCollisionIntentNonOccupableDestinations
+        self.multiAgentLiveCollisionIntentCollisionDenied = multiAgentLiveCollisionIntentCollisionDenied
+        self.multiAgentLiveCollisionIntentSameDestinationConflicts = multiAgentLiveCollisionIntentSameDestinationConflicts
+        self.multiAgentLiveCollisionIntentSourceMismatch = multiAgentLiveCollisionIntentSourceMismatch
+        self.multiAgentLiveCollisionIntentInvalidEdges = multiAgentLiveCollisionIntentInvalidEdges
+        self.multiAgentLiveCollisionIntentStaleIntent = multiAgentLiveCollisionIntentStaleIntent
+        self.multiAgentLiveCollisionIntentWorldUsed = multiAgentLiveCollisionIntentWorldUsed
+        self.multiAgentLiveCollisionIntentLiveCollisionRead = multiAgentLiveCollisionIntentLiveCollisionRead
+        self.multiAgentLiveCollisionIntentDisplacementApplied = multiAgentLiveCollisionIntentDisplacementApplied
+        self.multiAgentLiveCollisionIntentPhysicalMovementApplied = multiAgentLiveCollisionIntentPhysicalMovementApplied
+        self.multiAgentLiveCollisionIntentRouteFollowingApplied = multiAgentLiveCollisionIntentRouteFollowingApplied
+        self.multiAgentLiveCollisionIntentPathfindingPerformed = multiAgentLiveCollisionIntentPathfindingPerformed
+        self.multiAgentLiveCollisionIntentReplanningPerformed = multiAgentLiveCollisionIntentReplanningPerformed
+        self.multiAgentLiveCollisionIntentPhysicsPerformed = multiAgentLiveCollisionIntentPhysicsPerformed
+        self.multiAgentLiveCollisionIntentMutationPerformed = multiAgentLiveCollisionIntentMutationPerformed
+        self.multiAgentLiveCollisionIntentSuccess = multiAgentLiveCollisionIntentSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

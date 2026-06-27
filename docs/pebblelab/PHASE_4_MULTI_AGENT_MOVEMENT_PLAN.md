@@ -682,3 +682,66 @@ Next recommended step: Phase 4.19D, live read-only collision intent smoke.
 That phase should collect multi-agent candidate intentions against live
 collision evidence, but still avoid movement application, reservation runtime,
 avoidance, replanning, physics, and mutation.
+
+## Phase 4.19D Implementation Status
+
+Phase 4.19D added the first multi-agent live read-only collision intent smoke:
+
+```text
+multi_agent_live_collision_intent_smoke
+```
+
+Validated live collision intent cases:
+
+- `occupable_destination_intent_approved_readonly`;
+- `two_occupable_destinations_non_conflicting_readonly`;
+- `non_occupable_destination_denied_readonly`;
+- `same_destination_conflict_after_occupable_collision`;
+- `source_mismatch_skips_collision`;
+- `invalid_edge_skips_collision`;
+- `stale_intent_skips_collision`.
+
+Outputs produced:
+
+- `multi_agent_live_collision_intent_report.json`;
+- `multi_agent_live_collision_intent_invariant_report.json`;
+- `metrics.json` with `multiAgentLiveCollisionIntent*` fields;
+- `events.ndjson` with one aggregate
+  `lab_multi_agent_live_collision_intent_recorded` event.
+
+Validated summary:
+
+- 7 cases;
+- 7 passed;
+- 0 failed;
+- 4 approved intent resolutions;
+- 5 denied intent resolutions;
+- 5 occupable live destinations observed;
+- 1 non-occupable live destination observed;
+- 1 collision denial;
+- 1 same-destination conflict after occupable collision evidence;
+- 1 source mismatch;
+- 1 invalid edge;
+- 1 stale intent;
+- 38 invariant checks passed.
+
+Limits:
+
+- live collision is read only as destination evidence;
+- approved resolutions do not apply displacement;
+- final positions remain equal to initial positions;
+- no physical placeholder is created or moved;
+- no core entity is created or moved;
+- no route following live;
+- no single-step physical movement application;
+- no pathfinding;
+- no replanning;
+- no goal selection;
+- no avoidance;
+- no reservation table runtime;
+- no physics;
+- no terrain/world mutation.
+
+Next recommended step: Phase 4.19E, multi-agent approved physical movement
+smoke. That phase should remain tiny, bounded, and no-replanning while
+introducing the first explicit application of approved multi-agent movement.

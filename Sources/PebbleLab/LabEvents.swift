@@ -175,6 +175,12 @@ struct RunEvent: Encodable {
     let allDeniedCases: Int?
     let emptyIntentCases: Int?
     let maxAgentsExceeded: Int?
+    let occupableDestinations: Int?
+    let nonOccupableDestinations: Int?
+    let collisionDenied: Int?
+    let liveCollisionRead: Bool?
+    let physicalMovementApplied: Bool?
+    let routeFollowingApplied: Bool?
     let occupableFound: Bool?
     let selectedCandidateIndex: Int?
     let selectedSeed: UInt32?
@@ -389,6 +395,12 @@ struct RunEvent: Encodable {
         allDeniedCases: Int? = nil,
         emptyIntentCases: Int? = nil,
         maxAgentsExceeded: Int? = nil,
+        occupableDestinations: Int? = nil,
+        nonOccupableDestinations: Int? = nil,
+        collisionDenied: Int? = nil,
+        liveCollisionRead: Bool? = nil,
+        physicalMovementApplied: Bool? = nil,
+        routeFollowingApplied: Bool? = nil,
         occupableFound: Bool? = nil,
         selectedCandidateIndex: Int? = nil,
         selectedSeed: UInt32? = nil,
@@ -602,6 +614,12 @@ struct RunEvent: Encodable {
         self.allDeniedCases = allDeniedCases
         self.emptyIntentCases = emptyIntentCases
         self.maxAgentsExceeded = maxAgentsExceeded
+        self.occupableDestinations = occupableDestinations
+        self.nonOccupableDestinations = nonOccupableDestinations
+        self.collisionDenied = collisionDenied
+        self.liveCollisionRead = liveCollisionRead
+        self.physicalMovementApplied = physicalMovementApplied
+        self.routeFollowingApplied = routeFollowingApplied
         self.occupableFound = occupableFound
         self.selectedCandidateIndex = selectedCandidateIndex
         self.selectedSeed = selectedSeed

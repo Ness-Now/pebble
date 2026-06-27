@@ -3807,3 +3807,119 @@ Phase 4.19D: multi-agent live read-only collision intent smoke. It should
 collect live collision evidence for candidate multi-agent intentions without
 applying movement, adding reservation runtime, avoidance, replanning, physics,
 or mutation.
+
+## 2026-06-27 — Phase 4.19D multi-agent live read-only collision intent smoke
+
+### Objective
+
+Bridge fixture-only multi-agent arbitration to future live physical
+multi-agent movement by reading live collision evidence for synthetic
+multi-agent intentions without applying movement.
+
+### Starting State
+
+Phase 4.19B proved deterministic fixture-only arbitration over 8 cases.
+Phase 4.19C hardened that fixture arbiter over 10 adversarial cases,
+including duplicate intents, cycles, chain dependencies, moving-away
+destinations, zero-length edges, and max-agent bounds. Neither phase used
+`World`, live collision, pathfinding, replanning, physics, or mutation.
+
+### Files Created/Modified
+
+- Modified `Sources/PebbleLab/LabMultiAgentMovement.swift`.
+- Modified `Sources/PebbleLab/LabOptions.swift`.
+- Modified `Sources/PebbleLab/LabScenarios.swift`.
+- Modified `Sources/PebbleLab/LabOutput.swift`.
+- Modified `Sources/PebbleLab/LabEvents.swift`.
+- Modified `Sources/PebbleLab/main.swift`.
+- Updated `docs/pebblelab/CHANGELOG.md`.
+- Updated `docs/pebblelab/DEV_JOURNAL.md`.
+- Updated `docs/pebblelab/ROADMAP.md`.
+- Updated `docs/pebblelab/PHASE_4_MULTI_AGENT_MOVEMENT_PLAN.md`.
+
+### Why Live Read-Only
+
+The scenario uses live `World` collision evidence only to classify intent
+destinations as occupable or non-occupable. It does not create or move
+physical placeholders, create or move core entities, call route following
+live, call single-step physical movement apply, or mutate terrain/world
+state. Approved results are intent approvals only.
+
+### Cases Covered
+
+- `occupable_destination_intent_approved_readonly`;
+- `two_occupable_destinations_non_conflicting_readonly`;
+- `non_occupable_destination_denied_readonly`;
+- `same_destination_conflict_after_occupable_collision`;
+- `source_mismatch_skips_collision`;
+- `invalid_edge_skips_collision`;
+- `stale_intent_skips_collision`.
+
+### Collision Evidence Policy
+
+Valid same-y 4-neighbor intentions with matching current source read live
+collision for their destination. Occupable destinations may be approved by
+stable `agentId` arbitration. Non-occupable destinations are denied with
+`deniedCollision`. Source mismatch, invalid edge, and stale intents are
+denied before live collision is read.
+
+### Outputs, Invariants, Metrics, And Event
+
+The scenario writes:
+
+- `multi_agent_live_collision_intent_report.json`;
+- `multi_agent_live_collision_intent_invariant_report.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The report records 7 cases, 7 passed, 0 failed, 4 approved intent
+resolutions, 5 denied intent resolutions, 5 occupable live destinations, 1
+non-occupable live destination, 1 collision denial, 1 same-destination
+conflict, 1 source mismatch, 1 invalid edge, and 1 stale intent.
+
+The invariant report has 38 checks and passes all of them. Metrics use the
+`multiAgentLiveCollisionIntent*` prefix. The scenario emits one aggregate
+`lab_multi_agent_live_collision_intent_recorded` event.
+
+### Confirmed Out Of Scope
+
+No displacement, physical movement application, physical placeholder
+movement, core entity movement, route following live, pathfinding, replanning,
+goal selection, avoidance, reservation table runtime, physics, terrain
+mutation, or world mutation is performed.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario multi_agent_live_collision_intent_smoke --seed 42 --ticks 5 --out runs/check_multi_agent_live_collision_intent`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_fixture_smoke --seed 42 --ticks 0 --out runs/check_multi_agent_fixture_after_live_collision_intent`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_fixture_hardening_smoke --seed 42 --ticks 0 --out runs/check_multi_agent_fixture_hardening_after_live_collision_intent`
+- `swift run -c release PebbleLab -- --scenario terrain_collision_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_collision_live_after_multi_agent_live_collision_intent`
+- `swift run -c release PebbleLab -- --scenario route_following_live_hardening_smoke --seed 42 --ticks 5 --out runs/check_route_following_live_hardening_after_multi_agent_live_collision_intent`
+- `swift run -c release PebbleLab -- --scenario physical_movement_single_step_hardening_smoke --seed 42 --ticks 5 --out runs/check_single_step_hardening_after_multi_agent_live_collision_intent`
+- `swift run -c release PebbleLab -- --scenario physical_movement_approved_single_step_smoke --seed 42 --ticks 5 --out runs/check_approved_single_step_after_multi_agent_live_collision_intent`
+- `swift run -c release PebbleLab -- --scenario physical_movement_denied_smoke --seed 42 --ticks 5 --out runs/check_denied_single_step_after_multi_agent_live_collision_intent`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_multi_agent_live_collision_intent`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- Live collision intent report: success true.
+- Live collision intent invariant report: success true.
+- Cases: 7 passed, 0 failed.
+- Approved/denied totals: 4 / 5.
+- Occupable/non-occupable destination totals: 5 / 1.
+- Invariant checks: 38 passed, 0 failed.
+- Metrics contain `multiAgentLiveCollisionIntent*`.
+- `events.ndjson` contains
+  `lab_multi_agent_live_collision_intent_recorded`.
+
+### Next Step
+
+Phase 4.19E: multi-agent approved physical movement smoke. It should remain
+small and bounded, with two or three agents maximum, one approved edge each,
+no replanning, no route repair, no reservation runtime, no avoidance, and no
+gameplay movement.

@@ -857,3 +857,30 @@ gameplay movement remain out of scope.
 
 Next recommended step: Phase 4.19D - Multi-Agent Live Read-Only Collision
 Intent Smoke.
+
+## Phase 4.19D - Multi-Agent Live Read-Only Collision Intent Smoke
+
+Status: implemented and validated.
+
+Goal: bridge fixture-only multi-agent arbitration to future live physical
+multi-agent movement by reading live collision evidence for synthetic
+multi-agent edge intentions without applying any displacement.
+
+The scenario `multi_agent_live_collision_intent_smoke` covers an occupable
+destination approval intent, two non-conflicting occupable destination
+approval intents, a non-occupable destination denied by live collision, a
+same-destination conflict after occupable collision evidence, source mismatch
+skipping collision, invalid edge skipping collision, and stale intent skipping
+collision. It writes `multi_agent_live_collision_intent_report.json`,
+`multi_agent_live_collision_intent_invariant_report.json`,
+`multiAgentLiveCollisionIntent*` metrics, and one aggregate
+`lab_multi_agent_live_collision_intent_recorded` event.
+
+Live physical movement application, physical placeholder movement, core
+entity movement, route following live, single-step physical movement apply,
+reservation table runtime, avoidance, dynamic replanning, route repair,
+physics, save/load, social behavior, communication, and gameplay movement
+remain out of scope.
+
+Next recommended step: Phase 4.19E - Multi-Agent Approved Physical Movement
+Smoke.

@@ -8,6 +8,8 @@ let isMultiAgentMovementFixtureScenario = options.scenario
     == "multi_agent_movement_fixture_smoke"
 let isMultiAgentMovementFixtureHardeningScenario = options.scenario
     == "multi_agent_movement_fixture_hardening_smoke"
+let isMultiAgentLiveCollisionIntentScenario = options.scenario
+    == "multi_agent_live_collision_intent_smoke"
 let world = (isMultiAgentMovementFixtureScenario || isMultiAgentMovementFixtureHardeningScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
@@ -1027,6 +1029,47 @@ let multiAgentMovementFixtureHardeningSuccess =
             && multiAgentMovementFixtureHardeningReport?.summary.physicsPerformed == false
             && multiAgentMovementFixtureHardeningReport?.summary.mutationPerformed == false)
         : nil
+let multiAgentLiveCollisionIntentReport = isMultiAgentLiveCollisionIntentScenario
+    ? makeMultiAgentLiveCollisionIntentReport(
+        scenario: options.scenario,
+        seed: options.seed,
+        ticksCompleted: ticksCompleted
+    )
+    : nil
+let multiAgentLiveCollisionIntentInvariantReport =
+    isMultiAgentLiveCollisionIntentScenario
+        ? makeMultiAgentLiveCollisionIntentInvariantReport(
+            report: multiAgentLiveCollisionIntentReport,
+            scenario: options.scenario,
+            seed: options.seed
+        )
+        : nil
+let multiAgentLiveCollisionIntentSuccess =
+    isMultiAgentLiveCollisionIntentScenario
+        ? ((multiAgentLiveCollisionIntentReport?.success ?? false)
+            && (multiAgentLiveCollisionIntentInvariantReport?.success ?? false)
+            && multiAgentLiveCollisionIntentReport?.summary.failed == 0
+            && (multiAgentLiveCollisionIntentReport?.summary.occupableDestinations ?? 0) > 0
+            && (multiAgentLiveCollisionIntentReport?.summary.nonOccupableDestinations ?? 0) > 0
+            && (multiAgentLiveCollisionIntentReport?.summary.approvedTotal ?? 0) > 0
+            && (multiAgentLiveCollisionIntentReport?.summary.collisionDenied ?? 0) > 0
+            && (multiAgentLiveCollisionIntentReport?.summary.sameDestinationConflicts ?? 0) > 0
+            && (multiAgentLiveCollisionIntentReport?.summary.sourceMismatch ?? 0) > 0
+            && (multiAgentLiveCollisionIntentReport?.summary.invalidEdges ?? 0) > 0
+            && (multiAgentLiveCollisionIntentReport?.summary.staleIntent ?? 0) > 0
+            && multiAgentLiveCollisionIntentReport?.summary.worldUsed == true
+            && multiAgentLiveCollisionIntentReport?.summary.liveCollisionRead == true
+            && multiAgentLiveCollisionIntentReport?.summary.displacementApplied == false
+            && multiAgentLiveCollisionIntentReport?.summary.physicalMovementApplied == false
+            && multiAgentLiveCollisionIntentReport?.summary.routeFollowingApplied == false
+            && multiAgentLiveCollisionIntentReport?.summary.pathfindingPerformed == false
+            && multiAgentLiveCollisionIntentReport?.summary.replanningPerformed == false
+            && multiAgentLiveCollisionIntentReport?.summary.goalSelectionPerformed == false
+            && multiAgentLiveCollisionIntentReport?.summary.avoidancePerformed == false
+            && multiAgentLiveCollisionIntentReport?.summary.reservationTableImplemented == false
+            && multiAgentLiveCollisionIntentReport?.summary.physicsPerformed == false
+            && multiAgentLiveCollisionIntentReport?.summary.mutationPerformed == false)
+        : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
@@ -1398,6 +1441,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (routeFollowingFixtureSuccess ?? true)
     && (multiAgentMovementFixtureSuccess ?? true)
     && (multiAgentMovementFixtureHardeningSuccess ?? true)
+    && (multiAgentLiveCollisionIntentSuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -1665,6 +1709,33 @@ if options.outPath != nil {
                 allDeniedCases: summary.allDeniedCases,
                 emptyIntentCases: summary.emptyIntentCases,
                 maxAgentsExceeded: summary.maxAgentsExceeded
+            ))
+        }
+        if let multiAgentLiveCollisionIntentReport {
+            let summary = multiAgentLiveCollisionIntentReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_multi_agent_live_collision_intent_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: multiAgentLiveCollisionIntentSuccess,
+                passed: summary.passed,
+                failed: summary.failed,
+                approved: summary.approvedTotal,
+                denied: summary.deniedTotal,
+                cases: summary.cases,
+                agentCount: summary.agentCountTotal,
+                intentCount: summary.intentCountTotal,
+                sameDestinationConflicts: summary.sameDestinationConflicts,
+                sourceMismatch: summary.sourceMismatch,
+                staleIntent: summary.staleIntent,
+                invalidEdges: summary.invalidEdges,
+                occupableDestinations: summary.occupableDestinations,
+                nonOccupableDestinations: summary.nonOccupableDestinations,
+                collisionDenied: summary.collisionDenied,
+                liveCollisionRead: summary.liveCollisionRead,
+                physicalMovementApplied: summary.physicalMovementApplied,
+                routeFollowingApplied: summary.routeFollowingApplied,
+                displacementApplied: summary.displacementApplied
             ))
         }
         if let routeFollowingLiveSnapshot {
@@ -2210,6 +2281,18 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("multi_agent_movement_fixture_hardening_invariant_report.json")
             )
         }
+        if let multiAgentLiveCollisionIntentReport {
+            try writeJSON(
+                multiAgentLiveCollisionIntentReport,
+                to: outURL.appendingPathComponent("multi_agent_live_collision_intent_report.json")
+            )
+        }
+        if let multiAgentLiveCollisionIntentInvariantReport {
+            try writeJSON(
+                multiAgentLiveCollisionIntentInvariantReport,
+                to: outURL.appendingPathComponent("multi_agent_live_collision_intent_invariant_report.json")
+            )
+        }
         if let routeFollowingLiveSnapshot {
             try writeJSON(
                 routeFollowingLiveSnapshot,
@@ -2647,6 +2730,30 @@ if let outPath = options.outPath {
             multiAgentMovementFixtureHardeningPhysicsPerformed: multiAgentMovementFixtureHardeningReport?.summary.physicsPerformed,
             multiAgentMovementFixtureHardeningMutationPerformed: multiAgentMovementFixtureHardeningReport?.summary.mutationPerformed,
             multiAgentMovementFixtureHardeningSuccess: multiAgentMovementFixtureHardeningSuccess,
+            multiAgentLiveCollisionIntentCases: multiAgentLiveCollisionIntentReport?.summary.cases,
+            multiAgentLiveCollisionIntentPassed: multiAgentLiveCollisionIntentReport?.summary.passed,
+            multiAgentLiveCollisionIntentFailed: multiAgentLiveCollisionIntentReport?.summary.failed,
+            multiAgentLiveCollisionIntentAgentCount: multiAgentLiveCollisionIntentReport?.summary.agentCountTotal,
+            multiAgentLiveCollisionIntentIntentCount: multiAgentLiveCollisionIntentReport?.summary.intentCountTotal,
+            multiAgentLiveCollisionIntentApproved: multiAgentLiveCollisionIntentReport?.summary.approvedTotal,
+            multiAgentLiveCollisionIntentDenied: multiAgentLiveCollisionIntentReport?.summary.deniedTotal,
+            multiAgentLiveCollisionIntentOccupableDestinations: multiAgentLiveCollisionIntentReport?.summary.occupableDestinations,
+            multiAgentLiveCollisionIntentNonOccupableDestinations: multiAgentLiveCollisionIntentReport?.summary.nonOccupableDestinations,
+            multiAgentLiveCollisionIntentCollisionDenied: multiAgentLiveCollisionIntentReport?.summary.collisionDenied,
+            multiAgentLiveCollisionIntentSameDestinationConflicts: multiAgentLiveCollisionIntentReport?.summary.sameDestinationConflicts,
+            multiAgentLiveCollisionIntentSourceMismatch: multiAgentLiveCollisionIntentReport?.summary.sourceMismatch,
+            multiAgentLiveCollisionIntentInvalidEdges: multiAgentLiveCollisionIntentReport?.summary.invalidEdges,
+            multiAgentLiveCollisionIntentStaleIntent: multiAgentLiveCollisionIntentReport?.summary.staleIntent,
+            multiAgentLiveCollisionIntentWorldUsed: multiAgentLiveCollisionIntentReport?.summary.worldUsed,
+            multiAgentLiveCollisionIntentLiveCollisionRead: multiAgentLiveCollisionIntentReport?.summary.liveCollisionRead,
+            multiAgentLiveCollisionIntentDisplacementApplied: multiAgentLiveCollisionIntentReport?.summary.displacementApplied,
+            multiAgentLiveCollisionIntentPhysicalMovementApplied: multiAgentLiveCollisionIntentReport?.summary.physicalMovementApplied,
+            multiAgentLiveCollisionIntentRouteFollowingApplied: multiAgentLiveCollisionIntentReport?.summary.routeFollowingApplied,
+            multiAgentLiveCollisionIntentPathfindingPerformed: multiAgentLiveCollisionIntentReport?.summary.pathfindingPerformed,
+            multiAgentLiveCollisionIntentReplanningPerformed: multiAgentLiveCollisionIntentReport?.summary.replanningPerformed,
+            multiAgentLiveCollisionIntentPhysicsPerformed: multiAgentLiveCollisionIntentReport?.summary.physicsPerformed,
+            multiAgentLiveCollisionIntentMutationPerformed: multiAgentLiveCollisionIntentReport?.summary.mutationPerformed,
+            multiAgentLiveCollisionIntentSuccess: multiAgentLiveCollisionIntentSuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,

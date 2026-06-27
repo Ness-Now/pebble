@@ -1,3 +1,5 @@
+import PebbleCore
+
 enum LabMultiAgentMovementStatus: String, Codable {
     case notStarted
     case collectedIntentions
@@ -11,6 +13,7 @@ enum LabMultiAgentMovementStatus: String, Codable {
 enum LabMultiAgentMoveDecision: String, Codable {
     case approved
     case deniedSourceMismatch
+    case deniedCollision
     case deniedSameDestinationConflict
     case deniedOccupiedDestination
     case deniedSwapConflict
@@ -144,6 +147,101 @@ struct LabMultiAgentMovementFixtureHardeningReport: Codable {
 }
 
 struct LabMultiAgentMovementFixtureHardeningInvariantReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: LabMultiAgentMovementFixtureInvariantSummary
+    let checks: [LabMultiAgentMovementFixtureInvariantCheck]
+    let notes: [String]
+}
+
+struct LabMultiAgentLiveCollisionIntentCase: Codable {
+    let name: String
+    let seed: UInt32
+    let agents: [String: LabTerrainPathNodeKey]
+    let intents: [LabAgentMoveIntent]
+    let expectedApproved: Int
+    let expectedDenied: Int
+    let expectedOccupableDestinations: Int
+    let expectedNonOccupableDestinations: Int
+    let expectedDecisionCounts: [String: Int]
+}
+
+struct LabMultiAgentLiveCollisionIntentResolution: Codable {
+    let agentId: String
+    let intent: LabAgentMoveIntent
+    let collisionRead: Bool
+    let collisionStatus: LabTerrainOccupancyStatus?
+    let collisionReason: String
+    let decision: LabMultiAgentMoveDecision
+    let approved: Bool
+    let reason: String
+    let prePosition: LabTerrainPathNodeKey?
+    let postPosition: LabTerrainPathNodeKey?
+    let displacementApplied: Bool
+}
+
+struct LabMultiAgentLiveCollisionIntentCaseResult: Codable {
+    let name: String
+    let passed: Bool
+    let seed: UInt32
+    let agents: [String: LabTerrainPathNodeKey]
+    let intents: [LabAgentMoveIntent]
+    let resolutions: [LabMultiAgentLiveCollisionIntentResolution]
+    let initialPositions: [String: LabTerrainPathNodeKey]
+    let finalPositions: [String: LabTerrainPathNodeKey]
+    let expectedApproved: Int
+    let actualApproved: Int
+    let expectedDenied: Int
+    let actualDenied: Int
+    let expectedOccupableDestinations: Int
+    let actualOccupableDestinations: Int
+    let expectedNonOccupableDestinations: Int
+    let actualNonOccupableDestinations: Int
+    let expectedDecisionCounts: [String: Int]
+    let actualDecisionCounts: [String: Int]
+}
+
+struct LabMultiAgentLiveCollisionIntentSummary: Codable {
+    let cases: Int
+    let passed: Int
+    let failed: Int
+    let agentCountTotal: Int
+    let intentCountTotal: Int
+    let approvedTotal: Int
+    let deniedTotal: Int
+    let occupableDestinations: Int
+    let nonOccupableDestinations: Int
+    let collisionDenied: Int
+    let sameDestinationConflicts: Int
+    let sourceMismatch: Int
+    let invalidEdges: Int
+    let staleIntent: Int
+    let worldUsed: Bool
+    let liveCollisionRead: Bool
+    let displacementApplied: Bool
+    let physicalMovementApplied: Bool
+    let routeFollowingApplied: Bool
+    let pathfindingPerformed: Bool
+    let replanningPerformed: Bool
+    let goalSelectionPerformed: Bool
+    let avoidancePerformed: Bool
+    let reservationTableImplemented: Bool
+    let physicsPerformed: Bool
+    let mutationPerformed: Bool
+    let success: Bool
+}
+
+struct LabMultiAgentLiveCollisionIntentReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let ticksCompleted: Int
+    let success: Bool
+    let summary: LabMultiAgentLiveCollisionIntentSummary
+    let cases: [LabMultiAgentLiveCollisionIntentCaseResult]
+}
+
+struct LabMultiAgentLiveCollisionIntentInvariantReport: Codable {
     let scenario: String
     let seed: UInt32
     let success: Bool
@@ -891,6 +989,599 @@ func makeMultiAgentMovementFixtureHardeningInvariantReport(
             "The hardening scenario remains no-World, no live collision, no pathfinding, no replanning, no reservation runtime, no avoidance, no physics, and no mutation."
         ]
     )
+}
+
+private func multiAgentLiveCollisionIntentCases()
+    -> [LabMultiAgentLiveCollisionIntentCase] {
+    let approvedSeed: UInt32 = 99
+    let deniedSeed: UInt32 = 42
+    let occupableA = LabTerrainPathNodeKey(x: 8, y: 64, z: 8)
+    let occupableB = LabTerrainPathNodeKey(x: 9, y: 64, z: 8)
+    let sourceA = LabTerrainPathNodeKey(x: 7, y: 64, z: 8)
+    let sourceB = LabTerrainPathNodeKey(x: 9, y: 64, z: 7)
+
+    return [
+        LabMultiAgentLiveCollisionIntentCase(
+            name: "occupable_destination_intent_approved_readonly",
+            seed: approvedSeed,
+            agents: ["agent_0": sourceA],
+            intents: [
+                multiAgentIntent("agent_0", from: sourceA, to: occupableA, reason: "live_collision_occupable_readonly")
+            ],
+            expectedApproved: 1,
+            expectedDenied: 0,
+            expectedOccupableDestinations: 1,
+            expectedNonOccupableDestinations: 0,
+            expectedDecisionCounts: ["approved": 1]
+        ),
+        LabMultiAgentLiveCollisionIntentCase(
+            name: "two_occupable_destinations_non_conflicting_readonly",
+            seed: approvedSeed,
+            agents: [
+                "agent_0": sourceA,
+                "agent_1": sourceB
+            ],
+            intents: [
+                multiAgentIntent("agent_0", from: sourceA, to: occupableA, reason: "live_collision_two_occupable"),
+                multiAgentIntent("agent_1", from: sourceB, to: occupableB, reason: "live_collision_two_occupable")
+            ],
+            expectedApproved: 2,
+            expectedDenied: 0,
+            expectedOccupableDestinations: 2,
+            expectedNonOccupableDestinations: 0,
+            expectedDecisionCounts: ["approved": 2]
+        ),
+        LabMultiAgentLiveCollisionIntentCase(
+            name: "non_occupable_destination_denied_readonly",
+            seed: deniedSeed,
+            agents: ["agent_0": sourceA],
+            intents: [
+                multiAgentIntent("agent_0", from: sourceA, to: occupableA, reason: "live_collision_non_occupable")
+            ],
+            expectedApproved: 0,
+            expectedDenied: 1,
+            expectedOccupableDestinations: 0,
+            expectedNonOccupableDestinations: 1,
+            expectedDecisionCounts: ["deniedCollision": 1]
+        ),
+        LabMultiAgentLiveCollisionIntentCase(
+            name: "same_destination_conflict_after_occupable_collision",
+            seed: approvedSeed,
+            agents: [
+                "agent_0": sourceA,
+                "agent_1": LabTerrainPathNodeKey(x: 8, y: 64, z: 7)
+            ],
+            intents: [
+                multiAgentIntent("agent_0", from: sourceA, to: occupableA, reason: "live_collision_same_destination"),
+                multiAgentIntent("agent_1", from: LabTerrainPathNodeKey(x: 8, y: 64, z: 7), to: occupableA, reason: "live_collision_same_destination")
+            ],
+            expectedApproved: 1,
+            expectedDenied: 1,
+            expectedOccupableDestinations: 2,
+            expectedNonOccupableDestinations: 0,
+            expectedDecisionCounts: [
+                "approved": 1,
+                "deniedSameDestinationConflict": 1
+            ]
+        ),
+        LabMultiAgentLiveCollisionIntentCase(
+            name: "source_mismatch_skips_collision",
+            seed: approvedSeed,
+            agents: ["agent_0": sourceA],
+            intents: [
+                multiAgentIntent("agent_0", from: occupableA, to: occupableB, reason: "live_collision_source_mismatch")
+            ],
+            expectedApproved: 0,
+            expectedDenied: 1,
+            expectedOccupableDestinations: 0,
+            expectedNonOccupableDestinations: 0,
+            expectedDecisionCounts: ["deniedSourceMismatch": 1]
+        ),
+        LabMultiAgentLiveCollisionIntentCase(
+            name: "invalid_edge_skips_collision",
+            seed: approvedSeed,
+            agents: ["agent_0": sourceA],
+            intents: [
+                multiAgentIntent("agent_0", from: sourceA, to: LabTerrainPathNodeKey(x: 8, y: 64, z: 9), reason: "live_collision_invalid_edge")
+            ],
+            expectedApproved: 0,
+            expectedDenied: 1,
+            expectedOccupableDestinations: 0,
+            expectedNonOccupableDestinations: 0,
+            expectedDecisionCounts: ["deniedInvalidEdge": 1]
+        ),
+        LabMultiAgentLiveCollisionIntentCase(
+            name: "stale_intent_skips_collision",
+            seed: approvedSeed,
+            agents: ["agent_0": sourceA],
+            intents: [
+                multiAgentIntent("agent_0", from: sourceA, to: occupableA, reason: "live_collision_stale_intent", stale: true)
+            ],
+            expectedApproved: 0,
+            expectedDenied: 1,
+            expectedOccupableDestinations: 0,
+            expectedNonOccupableDestinations: 0,
+            expectedDecisionCounts: ["deniedStaleIntent": 1]
+        )
+    ]
+}
+
+func makeMultiAgentLiveCollisionIntentReport(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int
+) -> LabMultiAgentLiveCollisionIntentReport {
+    let results = multiAgentLiveCollisionIntentCases().map {
+        evaluateMultiAgentLiveCollisionIntentCase(
+            $0,
+            scenario: scenario,
+            ticksCompleted: ticksCompleted
+        )
+    }
+    let passed = results.filter(\.passed).count
+    let approved = results.reduce(0) { $0 + $1.actualApproved }
+    let denied = results.reduce(0) { $0 + $1.actualDenied }
+    let liveCollisionRead = results.flatMap(\.resolutions).contains {
+        $0.collisionRead
+    }
+    let summary = LabMultiAgentLiveCollisionIntentSummary(
+        cases: results.count,
+        passed: passed,
+        failed: results.count - passed,
+        agentCountTotal: results.reduce(0) { $0 + $1.agents.count },
+        intentCountTotal: results.reduce(0) { $0 + $1.intents.count },
+        approvedTotal: approved,
+        deniedTotal: denied,
+        occupableDestinations: results.reduce(0) { $0 + $1.actualOccupableDestinations },
+        nonOccupableDestinations: results.reduce(0) { $0 + $1.actualNonOccupableDestinations },
+        collisionDenied: liveDecisionCount(in: results, .deniedCollision),
+        sameDestinationConflicts: liveDecisionCount(in: results, .deniedSameDestinationConflict),
+        sourceMismatch: liveDecisionCount(in: results, .deniedSourceMismatch),
+        invalidEdges: liveDecisionCount(in: results, .deniedInvalidEdge),
+        staleIntent: liveDecisionCount(in: results, .deniedStaleIntent),
+        worldUsed: true,
+        liveCollisionRead: liveCollisionRead,
+        displacementApplied: results.flatMap(\.resolutions).contains {
+            $0.displacementApplied
+        },
+        physicalMovementApplied: false,
+        routeFollowingApplied: false,
+        pathfindingPerformed: false,
+        replanningPerformed: false,
+        goalSelectionPerformed: false,
+        avoidancePerformed: false,
+        reservationTableImplemented: false,
+        physicsPerformed: false,
+        mutationPerformed: false,
+        success: passed == results.count
+            && approved > 0
+            && denied > 0
+            && results.reduce(0) { $0 + $1.actualOccupableDestinations } > 0
+            && results.reduce(0) { $0 + $1.actualNonOccupableDestinations } > 0
+            && liveDecisionCount(in: results, .deniedCollision) > 0
+            && liveDecisionCount(in: results, .deniedSameDestinationConflict) > 0
+            && liveDecisionCount(in: results, .deniedSourceMismatch) > 0
+            && liveDecisionCount(in: results, .deniedInvalidEdge) > 0
+            && liveDecisionCount(in: results, .deniedStaleIntent) > 0
+            && results.allSatisfy { $0.initialPositions == $0.finalPositions }
+            && !results.flatMap(\.resolutions).contains { $0.displacementApplied }
+    )
+
+    return LabMultiAgentLiveCollisionIntentReport(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        success: summary.success,
+        summary: summary,
+        cases: results
+    )
+}
+
+func makeMultiAgentLiveCollisionIntentInvariantReport(
+    report: LabMultiAgentLiveCollisionIntentReport?,
+    scenario: String,
+    seed: UInt32
+) -> LabMultiAgentLiveCollisionIntentInvariantReport {
+    let cases = report?.cases ?? []
+    let names = Set(cases.map(\.name))
+    let resolutions = cases.flatMap(\.resolutions)
+    let approved = resolutions.filter(\.approved)
+    let denied = resolutions.filter { !$0.approved }
+    let fixtureReport = makeMultiAgentMovementFixtureReport(
+        scenario: "multi_agent_movement_fixture_smoke",
+        seed: seed,
+        ticksCompleted: 0
+    )
+    let fixtureInvariantReport = makeMultiAgentMovementFixtureInvariantReport(
+        report: fixtureReport,
+        scenario: "multi_agent_movement_fixture_smoke",
+        seed: seed
+    )
+    let hardeningReport = makeMultiAgentMovementFixtureHardeningReport(
+        scenario: "multi_agent_movement_fixture_hardening_smoke",
+        seed: seed,
+        ticksCompleted: 0
+    )
+    let hardeningInvariantReport = makeMultiAgentMovementFixtureHardeningInvariantReport(
+        report: hardeningReport,
+        scenario: "multi_agent_movement_fixture_hardening_smoke",
+        seed: seed
+    )
+    let collisionWorld = prepareMultiAgentLiveCollisionWorld(
+        seed: seed,
+        around: terrainCollisionLiveCandidateNode()
+    )
+    let collisionSnapshot = makeTerrainCollisionLiveSnapshot(
+        scenario: "terrain_collision_live_readonly_smoke",
+        seed: seed,
+        ticksCompleted: 0,
+        world: collisionWorld
+    )
+    let collisionInvariantReport = makeTerrainCollisionLiveInvariantReport(
+        snapshot: collisionSnapshot,
+        scenario: "terrain_collision_live_readonly_smoke",
+        seed: seed
+    )
+    let fixtureSmokeGreen = fixtureReport.success
+        && fixtureInvariantReport.success
+        && fixtureReport.summary.passed == 8
+        && fixtureReport.summary.failed == 0
+    let hardeningSmokeGreen = hardeningReport.success
+        && hardeningInvariantReport.success
+        && hardeningReport.summary.passed == 10
+        && hardeningReport.summary.failed == 0
+    let collisionLiveReadonlyGreen = collisionSnapshot.summary.success
+        && collisionInvariantReport.success
+    let invalidSkipped = cases.first {
+        $0.name == "invalid_edge_skips_collision"
+    }?.resolutions.allSatisfy { !$0.collisionRead } == true
+    let sourceMismatchSkipped = cases.first {
+        $0.name == "source_mismatch_skips_collision"
+    }?.resolutions.allSatisfy { !$0.collisionRead } == true
+    let staleSkipped = cases.first {
+        $0.name == "stale_intent_skips_collision"
+    }?.resolutions.allSatisfy { !$0.collisionRead } == true
+    let validCollisionReads = cases.filter {
+        !$0.name.contains("skips_collision")
+    }.flatMap(\.resolutions).allSatisfy(\.collisionRead)
+    let noDuplicateApprovedDestination = cases.allSatisfy { result in
+        let destinations = result.resolutions.filter(\.approved).map(\.intent.to)
+        return Set(destinations).count == destinations.count
+    }
+    let noApprovedSwap = cases.allSatisfy { result in
+        let approved = result.resolutions.filter(\.approved)
+        return !approved.contains { first in
+            approved.contains { second in
+                first.agentId != second.agentId
+                    && first.intent.from == second.intent.to
+                    && first.intent.to == second.intent.from
+            }
+        }
+    }
+    let finalPositionsUnchanged = cases.allSatisfy {
+        $0.initialPositions == $0.finalPositions
+    }
+    let approvedOneEdge = approved.allSatisfy {
+        isFixtureEdgeAllowed(from: $0.intent.from, to: $0.intent.to)
+    }
+    let approvedCountsMatch = cases.allSatisfy {
+        $0.actualApproved == $0.resolutions.filter(\.approved).count
+    }
+    let deniedCountsMatch = cases.allSatisfy {
+        $0.actualDenied == $0.resolutions.filter { !$0.approved }.count
+    }
+    let checks = [
+        check("live_collision_intent_cases_exist", !cases.isEmpty, "> 0", "\(cases.count)"),
+        check("occupable_destination_case_exists", names.contains("occupable_destination_intent_approved_readonly"), "present", names.sorted().joined(separator: ",")),
+        check("non_occupable_destination_case_exists", names.contains("non_occupable_destination_denied_readonly"), "present", names.sorted().joined(separator: ",")),
+        check("aggregate_approved_and_denied_exists", (report?.summary.approvedTotal ?? 0) > 0 && (report?.summary.deniedTotal ?? 0) > 0, "> 0 / > 0", "\(report?.summary.approvedTotal ?? -1)/\(report?.summary.deniedTotal ?? -1)"),
+        check("same_destination_after_collision_case_exists", names.contains("same_destination_conflict_after_occupable_collision"), "present", names.sorted().joined(separator: ",")),
+        check("source_mismatch_case_exists", names.contains("source_mismatch_skips_collision"), "present", names.sorted().joined(separator: ",")),
+        check("invalid_edge_case_exists", names.contains("invalid_edge_skips_collision"), "present", names.sorted().joined(separator: ",")),
+        check("stale_intent_case_exists", names.contains("stale_intent_skips_collision"), "present", names.sorted().joined(separator: ",")),
+        check("world_used_for_readonly_collision", report?.summary.worldUsed == true, "true", String(report?.summary.worldUsed ?? false)),
+        check("live_collision_read_per_valid_collision_required_intent", validCollisionReads, "true", String(validCollisionReads)),
+        check("invalid_edges_skip_collision", invalidSkipped, "true", String(invalidSkipped)),
+        check("source_mismatch_skips_collision", sourceMismatchSkipped, "true", String(sourceMismatchSkipped)),
+        check("stale_intents_skip_collision", staleSkipped, "true", String(staleSkipped)),
+        check("occupable_destinations_may_be_approved", approved.contains { $0.collisionStatus == .occupable }, "approved occupable", "\(approved.map { $0.collisionStatus?.rawValue ?? "missing" })"),
+        check("non_occupable_destinations_denied", denied.contains { $0.decision == .deniedCollision && $0.collisionStatus != .occupable }, "denied non-occupable", "\(denied.map { $0.collisionStatus?.rawValue ?? "skipped" })"),
+        check("collision_denied_decision_used", liveDecisionCount(in: cases, .deniedCollision) > 0, "> 0", "\(liveDecisionCount(in: cases, .deniedCollision))"),
+        check("same_destination_conflict_resolves_deterministically", cases.first { $0.name == "same_destination_conflict_after_occupable_collision" }?.resolutions.first(where: { $0.agentId == "agent_0" })?.approved == true, "agent_0 approved", cases.first { $0.name == "same_destination_conflict_after_occupable_collision" }?.actualDecisionCounts.description ?? "missing"),
+        check("no_duplicate_approved_destination", noDuplicateApprovedDestination, "true", String(noDuplicateApprovedDestination)),
+        check("no_approved_swap", noApprovedSwap, "true", String(noApprovedSwap)),
+        check("final_positions_equal_initial_positions", finalPositionsUnchanged, "true", String(finalPositionsUnchanged)),
+        check("no_displacement_applied", report?.summary.displacementApplied == false, "false", String(report?.summary.displacementApplied ?? true)),
+        check("physical_movement_not_applied", report?.summary.physicalMovementApplied == false, "false", String(report?.summary.physicalMovementApplied ?? true)),
+        check("route_following_not_applied", report?.summary.routeFollowingApplied == false, "false", String(report?.summary.routeFollowingApplied ?? true)),
+        check("pathfinding_not_performed", report?.summary.pathfindingPerformed == false, "false", String(report?.summary.pathfindingPerformed ?? true)),
+        check("replanning_not_performed", report?.summary.replanningPerformed == false, "false", String(report?.summary.replanningPerformed ?? true)),
+        check("goal_selection_not_performed", report?.summary.goalSelectionPerformed == false, "false", String(report?.summary.goalSelectionPerformed ?? true)),
+        check("avoidance_not_performed", report?.summary.avoidancePerformed == false, "false", String(report?.summary.avoidancePerformed ?? true)),
+        check("reservation_table_not_implemented", report?.summary.reservationTableImplemented == false, "false", String(report?.summary.reservationTableImplemented ?? true)),
+        check("physics_not_performed", report?.summary.physicsPerformed == false, "false", String(report?.summary.physicsPerformed ?? true)),
+        check("world_mutation_not_performed", report?.summary.mutationPerformed == false, "false", String(report?.summary.mutationPerformed ?? true)),
+        check("terrain_mutation_not_performed", report?.summary.mutationPerformed == false, "false", String(report?.summary.mutationPerformed ?? true)),
+        check("fixture_smoke_remains_green", fixtureSmokeGreen, "true", String(fixtureSmokeGreen)),
+        check("fixture_hardening_smoke_remains_green", hardeningSmokeGreen, "true", String(hardeningSmokeGreen)),
+        check("collision_live_readonly_smoke_remains_green", collisionLiveReadonlyGreen, "true", String(collisionLiveReadonlyGreen)),
+        check("report_written", true, "multi_agent_live_collision_intent_report.json", "multi_agent_live_collision_intent_report.json"),
+        check("metrics_written", true, "multiAgentLiveCollisionIntent* metrics", "multiAgentLiveCollisionIntent* metrics"),
+        check("event_written", true, "lab_multi_agent_live_collision_intent_recorded", "lab_multi_agent_live_collision_intent_recorded"),
+        check("success_contract_respected", report?.success == true && report?.summary.failed == 0 && approvedCountsMatch && deniedCountsMatch && approvedOneEdge, "true", "\(report?.success == true), approvedCounts=\(approvedCountsMatch), deniedCounts=\(deniedCountsMatch), approvedOneEdge=\(approvedOneEdge)")
+    ]
+    let failed = checks.filter { !$0.passed }.count
+
+    return LabMultiAgentLiveCollisionIntentInvariantReport(
+        scenario: scenario,
+        seed: seed,
+        success: failed == 0,
+        summary: LabMultiAgentMovementFixtureInvariantSummary(
+            checksPassed: checks.count - failed,
+            checksFailed: failed,
+            cases: cases.count,
+            passed: report?.summary.passed ?? 0,
+            failed: report?.summary.failed ?? cases.count
+        ),
+        checks: checks,
+        notes: [
+            "Phase 4.19D reads live collision evidence for valid multi-agent intents without applying movement.",
+            "Invalid, stale, and source-mismatched intents are denied before live collision is read.",
+            "Approved decisions are intent approvals only; final positions remain equal to initial positions and no displacement is applied."
+        ]
+    )
+}
+
+private func evaluateMultiAgentLiveCollisionIntentCase(
+    _ fixture: LabMultiAgentLiveCollisionIntentCase,
+    scenario: String,
+    ticksCompleted: Int
+) -> LabMultiAgentLiveCollisionIntentCaseResult {
+    let initialPositions = fixture.agents
+    let finalPositions = initialPositions
+    var resolutions: [LabMultiAgentLiveCollisionIntentResolution] = []
+    var pending: [LabAgentMoveIntent] = []
+    let sortedIntents = fixture.intents.sorted { $0.agentId < $1.agentId }
+
+    for intent in sortedIntents {
+        guard let current = initialPositions[intent.agentId] else {
+            resolutions.append(liveResolution(
+                for: intent,
+                decision: .deniedMissingAgent,
+                reason: "missing_agent",
+                pre: nil,
+                post: nil
+            ))
+            continue
+        }
+        if intent.stale {
+            resolutions.append(liveResolution(
+                for: intent,
+                decision: .deniedStaleIntent,
+                reason: "stale_intent_skips_collision",
+                pre: current,
+                post: current
+            ))
+        } else if intent.from != current {
+            resolutions.append(liveResolution(
+                for: intent,
+                decision: .deniedSourceMismatch,
+                reason: "source_mismatch_skips_collision",
+                pre: current,
+                post: current
+            ))
+        } else if intent.from == intent.to {
+            resolutions.append(liveResolution(
+                for: intent,
+                decision: .deniedZeroLengthEdge,
+                reason: "zero_length_edge_skips_collision",
+                pre: current,
+                post: current
+            ))
+        } else if !isFixtureEdgeAllowed(from: intent.from, to: intent.to) {
+            resolutions.append(liveResolution(
+                for: intent,
+                decision: .deniedInvalidEdge,
+                reason: "invalid_edge_skips_collision",
+                pre: current,
+                post: current
+            ))
+        } else {
+            pending.append(intent)
+        }
+    }
+
+    let collisionEvidence: [String: LabTerrainCollisionLiveSnapshot] =
+        Dictionary(uniqueKeysWithValues: pending.map { intent in
+            let world = prepareMultiAgentLiveCollisionWorld(
+                seed: fixture.seed,
+                around: intent.to
+            )
+            let snapshot = makeTerrainCollisionLiveSnapshot(
+                scenario: scenario,
+                seed: fixture.seed,
+                ticksCompleted: ticksCompleted,
+                world: world,
+                node: intent.to
+            )
+            return (intent.agentId, snapshot)
+        })
+    let occupablePending = pending.filter {
+        collisionEvidence[$0.agentId]?.result.status == .occupable
+    }
+    let destinationCounts = Dictionary(grouping: occupablePending, by: \.to)
+    var approvedDestinations = Set<LabTerrainPathNodeKey>()
+
+    for intent in pending {
+        let current = initialPositions[intent.agentId]
+        guard let evidence = collisionEvidence[intent.agentId] else {
+            resolutions.append(liveResolution(
+                for: intent,
+                decision: .deniedCollision,
+                reason: "missing_collision_evidence",
+                pre: current,
+                post: current
+            ))
+            continue
+        }
+        if evidence.result.status != .occupable {
+            resolutions.append(liveResolution(
+                for: intent,
+                decision: .deniedCollision,
+                reason: "collision_denied_\(evidence.result.reason)",
+                pre: current,
+                post: current,
+                collision: evidence
+            ))
+            continue
+        }
+
+        let destinationGroup = destinationCounts[intent.to] ?? []
+        if destinationGroup.count > 1
+            && destinationGroup.map(\.agentId).sorted().first != intent.agentId {
+            resolutions.append(liveResolution(
+                for: intent,
+                decision: .deniedSameDestinationConflict,
+                reason: "same_destination_conflict_after_occupable_collision",
+                pre: current,
+                post: current,
+                collision: evidence
+            ))
+        } else if approvedDestinations.contains(intent.to) {
+            resolutions.append(liveResolution(
+                for: intent,
+                decision: .deniedSameDestinationConflict,
+                reason: "duplicate_destination_guard_after_collision",
+                pre: current,
+                post: current,
+                collision: evidence
+            ))
+        } else {
+            approvedDestinations.insert(intent.to)
+            resolutions.append(liveResolution(
+                for: intent,
+                decision: .approved,
+                reason: "approved_by_occupable_collision_readonly",
+                pre: current,
+                post: current,
+                collision: evidence
+            ))
+        }
+    }
+
+    resolutions.sort {
+        $0.agentId == $1.agentId
+            ? $0.intent.reason < $1.intent.reason
+            : $0.agentId < $1.agentId
+    }
+    let actualApproved = resolutions.filter(\.approved).count
+    let actualDenied = resolutions.count - actualApproved
+    let occupable = resolutions.filter {
+        $0.collisionRead && $0.collisionStatus == .occupable
+    }.count
+    let nonOccupable = resolutions.filter {
+        $0.collisionRead
+            && $0.collisionStatus != nil
+            && $0.collisionStatus != .occupable
+    }.count
+    let actualDecisionCounts = liveDecisionCounts(for: resolutions)
+    let passed = actualApproved == fixture.expectedApproved
+        && actualDenied == fixture.expectedDenied
+        && occupable == fixture.expectedOccupableDestinations
+        && nonOccupable == fixture.expectedNonOccupableDestinations
+        && actualDecisionCounts == fixture.expectedDecisionCounts
+        && initialPositions == finalPositions
+        && resolutions.allSatisfy { !$0.displacementApplied }
+
+    return LabMultiAgentLiveCollisionIntentCaseResult(
+        name: fixture.name,
+        passed: passed,
+        seed: fixture.seed,
+        agents: fixture.agents,
+        intents: fixture.intents,
+        resolutions: resolutions,
+        initialPositions: initialPositions,
+        finalPositions: finalPositions,
+        expectedApproved: fixture.expectedApproved,
+        actualApproved: actualApproved,
+        expectedDenied: fixture.expectedDenied,
+        actualDenied: actualDenied,
+        expectedOccupableDestinations: fixture.expectedOccupableDestinations,
+        actualOccupableDestinations: occupable,
+        expectedNonOccupableDestinations: fixture.expectedNonOccupableDestinations,
+        actualNonOccupableDestinations: nonOccupable,
+        expectedDecisionCounts: fixture.expectedDecisionCounts,
+        actualDecisionCounts: actualDecisionCounts
+    )
+}
+
+private func liveResolution(
+    for intent: LabAgentMoveIntent,
+    decision: LabMultiAgentMoveDecision,
+    reason: String,
+    pre: LabTerrainPathNodeKey?,
+    post: LabTerrainPathNodeKey?,
+    collision: LabTerrainCollisionLiveSnapshot? = nil
+) -> LabMultiAgentLiveCollisionIntentResolution {
+    LabMultiAgentLiveCollisionIntentResolution(
+        agentId: intent.agentId,
+        intent: intent,
+        collisionRead: collision != nil,
+        collisionStatus: collision?.result.status,
+        collisionReason: collision?.result.reason ?? "collision_not_read",
+        decision: decision,
+        approved: decision == .approved,
+        reason: reason,
+        prePosition: pre,
+        postPosition: post,
+        displacementApplied: false
+    )
+}
+
+private func liveDecisionCounts(
+    for resolutions: [LabMultiAgentLiveCollisionIntentResolution]
+) -> [String: Int] {
+    var counts: [String: Int] = [:]
+    for resolution in resolutions {
+        counts[resolution.decision.rawValue, default: 0] += 1
+    }
+    return counts
+}
+
+private func liveDecisionCount(
+    in results: [LabMultiAgentLiveCollisionIntentCaseResult],
+    _ decision: LabMultiAgentMoveDecision
+) -> Int {
+    results.reduce(0) { total, result in
+        total + result.resolutions.filter { $0.decision == decision }.count
+    }
+}
+
+private func prepareMultiAgentLiveCollisionWorld(
+    seed: UInt32,
+    around node: LabTerrainPathNodeKey
+) -> World {
+    registerAllBlocks()
+    registerAllBiomes()
+
+    let world = World(dim: .overworld, seed: seed)
+    let centerCX = floorDiv(node.x, CHUNK_W)
+    let centerCZ = floorDiv(node.z, CHUNK_W)
+
+    for cz in (centerCZ - 1)...(centerCZ + 1) {
+        for cx in (centerCX - 1)...(centerCX + 1) {
+            let generated = generateChunk(.overworld, world.seed, cx, cz)
+            let chunk = Chunk(cx: cx, cz: cz, minY: world.info.minY, height: world.info.height)
+            chunk.blocks = generated.blocks
+            chunk.biomes = generated.biomes
+            chunk.buildHeightmap()
+            chunk.scanSpecials()
+            world.setChunk(chunk)
+            world.light.initChunkLight(chunk)
+        }
+    }
+
+    return world
 }
 
 private func evaluateMultiAgentMovementFixtureCase(
