@@ -549,3 +549,75 @@ invalid proposal rejection without adding tick integration, live collision,
 movement application, feedback consumption, memory updates, goal selection,
 pathfinding, replanning, avoidance, reservation runtime, physics, or
 terrain/world mutation.
+
+## Phase 4.21C Implementation Status
+
+Phase 4.21C implements the fixture-only hardening smoke:
+`agent_intent_production_hardening_smoke`.
+
+Validated hardening cases:
+
+- `baseline_fixture_remains_green`;
+- `duplicate_agent_context_denied`;
+- `duplicate_proposal_denied`;
+- `invalid_diagonal_proposal_rejected`;
+- `zero_length_proposal_rejected`;
+- `stale_proposal_rejected`;
+- `wrong_source_proposal_rejected`;
+- `max_proposals_bound_exceeded`;
+- `deterministic_hint_ordering`;
+- `unknown_role_no_intent`.
+
+Accepted/rejected policy:
+
+- proposals are sorted by stable `agentId`;
+- accepted intents are sorted by stable `agentId`;
+- only valid `proposeMove` proposals with matching source, one-edge
+  Manhattan distance, and same-y destinations are accepted;
+- `noIntent`, missing-position `invalidContext`, invalid diagonal,
+  zero-length, stale, wrong-source, duplicate, and max-bound proposals are
+  rejected;
+- same-destination accepted intents remain allowed because production does
+  not arbitrate conflicts.
+
+Duplicate, max, stale, and wrong-source policy:
+
+- duplicate contexts are counted and only one accepted intent per agent is
+  allowed;
+- duplicate proposals are rejected deterministically;
+- stale proposals are rejected before acceptance;
+- wrong-source proposals are rejected when intent source differs from the
+  stable context position;
+- max proposal bounds reject deterministic excess proposals after stable
+  ordering.
+
+Outputs produced:
+
+- `agent_intent_production_hardening_report.json`;
+- `agent_intent_production_hardening_invariant_report.json`;
+- `agent_intent_proposals.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Validated limits:
+
+- no tick movement contract call;
+- no `World`;
+- no collision read;
+- no movement application;
+- no feedback consumption;
+- no memory update;
+- no goal change;
+- no pathfinding;
+- no replanning;
+- no avoidance;
+- no reservation runtime;
+- no physics;
+- no terrain/world mutation.
+
+Next recommended step: Phase 4.21D - Agent Intent To Tick Fixture
+Integration Smoke. It should feed accepted produced intents into the
+fixture-only tick movement contract while keeping live collision, physical
+movement application, feedback consumption, memory updates, goal selection,
+pathfinding, replanning, avoidance, reservation runtime, physics, and
+terrain/world mutation out of scope.

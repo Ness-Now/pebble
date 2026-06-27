@@ -582,6 +582,38 @@ struct RunMetrics: Encodable {
     let agentIntentProductionFixtureReservationRuntimeUsed: Bool?
     let agentIntentProductionFixtureMutationPerformed: Bool?
     let agentIntentProductionFixtureSuccess: Bool?
+    let agentIntentProductionHardeningCases: Int?
+    let agentIntentProductionHardeningPassed: Int?
+    let agentIntentProductionHardeningFailed: Int?
+    let agentIntentProductionHardeningContexts: Int?
+    let agentIntentProductionHardeningProposals: Int?
+    let agentIntentProductionHardeningAcceptedIntents: Int?
+    let agentIntentProductionHardeningRejectedProposals: Int?
+    let agentIntentProductionHardeningNoIntent: Int?
+    let agentIntentProductionHardeningInvalidContext: Int?
+    let agentIntentProductionHardeningDuplicateAgentContexts: Int?
+    let agentIntentProductionHardeningDuplicateProposals: Int?
+    let agentIntentProductionHardeningInvalidOneEdgeProposals: Int?
+    let agentIntentProductionHardeningStaleProposals: Int?
+    let agentIntentProductionHardeningWrongSourceProposals: Int?
+    let agentIntentProductionHardeningMaxProposalsExceeded: Int?
+    let agentIntentProductionHardeningAcceptedMoveEast: Int?
+    let agentIntentProductionHardeningAcceptedMoveWest: Int?
+    let agentIntentProductionHardeningAcceptedMoveNorth: Int?
+    let agentIntentProductionHardeningAcceptedMoveSouth: Int?
+    let agentIntentProductionHardeningWorldUsed: Bool?
+    let agentIntentProductionHardeningCollisionRead: Bool?
+    let agentIntentProductionHardeningMovementApplied: Bool?
+    let agentIntentProductionHardeningFeedbackConsumed: Bool?
+    let agentIntentProductionHardeningMemoryUpdated: Bool?
+    let agentIntentProductionHardeningGoalChanged: Bool?
+    let agentIntentProductionHardeningPathfindingPerformed: Bool?
+    let agentIntentProductionHardeningReplanningPerformed: Bool?
+    let agentIntentProductionHardeningAvoidancePerformed: Bool?
+    let agentIntentProductionHardeningReservationRuntimeUsed: Bool?
+    let agentIntentProductionHardeningPhysicsPerformed: Bool?
+    let agentIntentProductionHardeningMutationPerformed: Bool?
+    let agentIntentProductionHardeningSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -1164,6 +1196,38 @@ struct RunMetrics: Encodable {
         agentIntentProductionFixtureReservationRuntimeUsed: Bool? = nil,
         agentIntentProductionFixtureMutationPerformed: Bool? = nil,
         agentIntentProductionFixtureSuccess: Bool? = nil,
+        agentIntentProductionHardeningCases: Int? = nil,
+        agentIntentProductionHardeningPassed: Int? = nil,
+        agentIntentProductionHardeningFailed: Int? = nil,
+        agentIntentProductionHardeningContexts: Int? = nil,
+        agentIntentProductionHardeningProposals: Int? = nil,
+        agentIntentProductionHardeningAcceptedIntents: Int? = nil,
+        agentIntentProductionHardeningRejectedProposals: Int? = nil,
+        agentIntentProductionHardeningNoIntent: Int? = nil,
+        agentIntentProductionHardeningInvalidContext: Int? = nil,
+        agentIntentProductionHardeningDuplicateAgentContexts: Int? = nil,
+        agentIntentProductionHardeningDuplicateProposals: Int? = nil,
+        agentIntentProductionHardeningInvalidOneEdgeProposals: Int? = nil,
+        agentIntentProductionHardeningStaleProposals: Int? = nil,
+        agentIntentProductionHardeningWrongSourceProposals: Int? = nil,
+        agentIntentProductionHardeningMaxProposalsExceeded: Int? = nil,
+        agentIntentProductionHardeningAcceptedMoveEast: Int? = nil,
+        agentIntentProductionHardeningAcceptedMoveWest: Int? = nil,
+        agentIntentProductionHardeningAcceptedMoveNorth: Int? = nil,
+        agentIntentProductionHardeningAcceptedMoveSouth: Int? = nil,
+        agentIntentProductionHardeningWorldUsed: Bool? = nil,
+        agentIntentProductionHardeningCollisionRead: Bool? = nil,
+        agentIntentProductionHardeningMovementApplied: Bool? = nil,
+        agentIntentProductionHardeningFeedbackConsumed: Bool? = nil,
+        agentIntentProductionHardeningMemoryUpdated: Bool? = nil,
+        agentIntentProductionHardeningGoalChanged: Bool? = nil,
+        agentIntentProductionHardeningPathfindingPerformed: Bool? = nil,
+        agentIntentProductionHardeningReplanningPerformed: Bool? = nil,
+        agentIntentProductionHardeningAvoidancePerformed: Bool? = nil,
+        agentIntentProductionHardeningReservationRuntimeUsed: Bool? = nil,
+        agentIntentProductionHardeningPhysicsPerformed: Bool? = nil,
+        agentIntentProductionHardeningMutationPerformed: Bool? = nil,
+        agentIntentProductionHardeningSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -1745,6 +1809,38 @@ struct RunMetrics: Encodable {
         self.agentIntentProductionFixtureReservationRuntimeUsed = agentIntentProductionFixtureReservationRuntimeUsed
         self.agentIntentProductionFixtureMutationPerformed = agentIntentProductionFixtureMutationPerformed
         self.agentIntentProductionFixtureSuccess = agentIntentProductionFixtureSuccess
+        self.agentIntentProductionHardeningCases = agentIntentProductionHardeningCases
+        self.agentIntentProductionHardeningPassed = agentIntentProductionHardeningPassed
+        self.agentIntentProductionHardeningFailed = agentIntentProductionHardeningFailed
+        self.agentIntentProductionHardeningContexts = agentIntentProductionHardeningContexts
+        self.agentIntentProductionHardeningProposals = agentIntentProductionHardeningProposals
+        self.agentIntentProductionHardeningAcceptedIntents = agentIntentProductionHardeningAcceptedIntents
+        self.agentIntentProductionHardeningRejectedProposals = agentIntentProductionHardeningRejectedProposals
+        self.agentIntentProductionHardeningNoIntent = agentIntentProductionHardeningNoIntent
+        self.agentIntentProductionHardeningInvalidContext = agentIntentProductionHardeningInvalidContext
+        self.agentIntentProductionHardeningDuplicateAgentContexts = agentIntentProductionHardeningDuplicateAgentContexts
+        self.agentIntentProductionHardeningDuplicateProposals = agentIntentProductionHardeningDuplicateProposals
+        self.agentIntentProductionHardeningInvalidOneEdgeProposals = agentIntentProductionHardeningInvalidOneEdgeProposals
+        self.agentIntentProductionHardeningStaleProposals = agentIntentProductionHardeningStaleProposals
+        self.agentIntentProductionHardeningWrongSourceProposals = agentIntentProductionHardeningWrongSourceProposals
+        self.agentIntentProductionHardeningMaxProposalsExceeded = agentIntentProductionHardeningMaxProposalsExceeded
+        self.agentIntentProductionHardeningAcceptedMoveEast = agentIntentProductionHardeningAcceptedMoveEast
+        self.agentIntentProductionHardeningAcceptedMoveWest = agentIntentProductionHardeningAcceptedMoveWest
+        self.agentIntentProductionHardeningAcceptedMoveNorth = agentIntentProductionHardeningAcceptedMoveNorth
+        self.agentIntentProductionHardeningAcceptedMoveSouth = agentIntentProductionHardeningAcceptedMoveSouth
+        self.agentIntentProductionHardeningWorldUsed = agentIntentProductionHardeningWorldUsed
+        self.agentIntentProductionHardeningCollisionRead = agentIntentProductionHardeningCollisionRead
+        self.agentIntentProductionHardeningMovementApplied = agentIntentProductionHardeningMovementApplied
+        self.agentIntentProductionHardeningFeedbackConsumed = agentIntentProductionHardeningFeedbackConsumed
+        self.agentIntentProductionHardeningMemoryUpdated = agentIntentProductionHardeningMemoryUpdated
+        self.agentIntentProductionHardeningGoalChanged = agentIntentProductionHardeningGoalChanged
+        self.agentIntentProductionHardeningPathfindingPerformed = agentIntentProductionHardeningPathfindingPerformed
+        self.agentIntentProductionHardeningReplanningPerformed = agentIntentProductionHardeningReplanningPerformed
+        self.agentIntentProductionHardeningAvoidancePerformed = agentIntentProductionHardeningAvoidancePerformed
+        self.agentIntentProductionHardeningReservationRuntimeUsed = agentIntentProductionHardeningReservationRuntimeUsed
+        self.agentIntentProductionHardeningPhysicsPerformed = agentIntentProductionHardeningPhysicsPerformed
+        self.agentIntentProductionHardeningMutationPerformed = agentIntentProductionHardeningMutationPerformed
+        self.agentIntentProductionHardeningSuccess = agentIntentProductionHardeningSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

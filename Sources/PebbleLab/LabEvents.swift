@@ -169,7 +169,12 @@ struct RunEvent: Encodable {
     let rejectedProposals: Int?
     let noIntent: Int?
     let invalidContext: Int?
+    let duplicateAgentContexts: Int?
+    let duplicateProposals: Int?
     let invalidOneEdgeProposals: Int?
+    let staleProposals: Int?
+    let wrongSourceProposals: Int?
+    let maxProposalsExceeded: Int?
     let sameDestinationConflicts: Int?
     let occupiedDestinationConflicts: Int?
     let swapConflicts: Int?
@@ -422,7 +427,12 @@ struct RunEvent: Encodable {
         rejectedProposals: Int? = nil,
         noIntent: Int? = nil,
         invalidContext: Int? = nil,
+        duplicateAgentContexts: Int? = nil,
+        duplicateProposals: Int? = nil,
         invalidOneEdgeProposals: Int? = nil,
+        staleProposals: Int? = nil,
+        wrongSourceProposals: Int? = nil,
+        maxProposalsExceeded: Int? = nil,
         sameDestinationConflicts: Int? = nil,
         occupiedDestinationConflicts: Int? = nil,
         swapConflicts: Int? = nil,
@@ -674,7 +684,12 @@ struct RunEvent: Encodable {
         self.rejectedProposals = rejectedProposals
         self.noIntent = noIntent
         self.invalidContext = invalidContext
+        self.duplicateAgentContexts = duplicateAgentContexts
+        self.duplicateProposals = duplicateProposals
         self.invalidOneEdgeProposals = invalidOneEdgeProposals
+        self.staleProposals = staleProposals
+        self.wrongSourceProposals = wrongSourceProposals
+        self.maxProposalsExceeded = maxProposalsExceeded
         self.sameDestinationConflicts = sameDestinationConflicts
         self.occupiedDestinationConflicts = occupiedDestinationConflicts
         self.swapConflicts = swapConflicts

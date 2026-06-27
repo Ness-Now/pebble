@@ -24,13 +24,16 @@ let isMultiAgentMovementTickHardeningScenario = options.scenario
     == "multi_agent_movement_tick_hardening_smoke"
 let isAgentIntentProductionFixtureScenario = options.scenario
     == "agent_intent_production_fixture_smoke"
+let isAgentIntentProductionHardeningScenario = options.scenario
+    == "agent_intent_production_hardening_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
     || isMultiAgentMovementTickLiveReadonlyScenario
     || isMultiAgentMovementTickApprovedApplicationScenario
     || isMultiAgentMovementTickHardeningScenario
-    || isAgentIntentProductionFixtureScenario)
+    || isAgentIntentProductionFixtureScenario
+    || isAgentIntentProductionHardeningScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -1435,6 +1438,59 @@ let agentIntentProductionFixtureSuccess =
             && agentIntentProductionFixtureReport?.summary.reservationRuntimeUsed == false
             && agentIntentProductionFixtureReport?.summary.mutationPerformed == false)
         : nil
+let agentIntentProductionHardeningReport =
+    isAgentIntentProductionHardeningScenario
+        ? makeAgentIntentProductionHardeningReport(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticksCompleted: ticksCompleted
+        )
+        : nil
+let agentIntentProductionHardeningInvariantReport =
+    isAgentIntentProductionHardeningScenario
+        ? makeAgentIntentProductionHardeningInvariantReport(
+            report: agentIntentProductionHardeningReport,
+            scenario: options.scenario,
+            seed: options.seed
+        )
+        : nil
+let agentIntentProductionHardeningSuccess =
+    isAgentIntentProductionHardeningScenario
+        ? ((agentIntentProductionHardeningReport?.success ?? false)
+            && (agentIntentProductionHardeningInvariantReport?.success ?? false)
+            && agentIntentProductionHardeningReport?.summary.cases == 10
+            && agentIntentProductionHardeningReport?.summary.failed == 0
+            && (agentIntentProductionHardeningReport?.summary.acceptedIntentsTotal ?? 0) > 0
+            && (agentIntentProductionHardeningReport?.summary.rejectedProposalsTotal ?? 0) > 0
+            && (agentIntentProductionHardeningReport?.summary.noIntentTotal ?? 0) > 0
+            && (agentIntentProductionHardeningReport?.summary.invalidContextTotal ?? 0) > 0
+            && (agentIntentProductionHardeningReport?.summary.duplicateAgentContextsTotal ?? 0) > 0
+            && (agentIntentProductionHardeningReport?.summary.duplicateProposalsTotal ?? 0) > 0
+            && (agentIntentProductionHardeningReport?.summary.invalidOneEdgeProposalsTotal ?? 0) > 0
+            && (agentIntentProductionHardeningReport?.summary.staleProposalsTotal ?? 0) > 0
+            && (agentIntentProductionHardeningReport?.summary.wrongSourceProposalsTotal ?? 0) > 0
+            && (agentIntentProductionHardeningReport?.summary.maxProposalsExceededTotal ?? 0) > 0
+            && (agentIntentProductionHardeningReport?.summary.acceptedMoveEast ?? 0) > 0
+            && (agentIntentProductionHardeningReport?.summary.acceptedMoveWest ?? 0) > 0
+            && agentIntentProductionHardeningReport?.cases.allSatisfy { caseResult in
+                caseResult.result.acceptedIntents.allSatisfy {
+                    abs($0.from.x - $0.to.x) + abs($0.from.y - $0.to.y) + abs($0.from.z - $0.to.z) == 1
+                        && $0.from.y == $0.to.y
+                }
+            } == true
+            && agentIntentProductionHardeningReport?.summary.worldUsed == false
+            && agentIntentProductionHardeningReport?.summary.collisionRead == false
+            && agentIntentProductionHardeningReport?.summary.movementApplied == false
+            && agentIntentProductionHardeningReport?.summary.feedbackConsumed == false
+            && agentIntentProductionHardeningReport?.summary.memoryUpdated == false
+            && agentIntentProductionHardeningReport?.summary.goalChanged == false
+            && agentIntentProductionHardeningReport?.summary.pathfindingPerformed == false
+            && agentIntentProductionHardeningReport?.summary.replanningPerformed == false
+            && agentIntentProductionHardeningReport?.summary.avoidancePerformed == false
+            && agentIntentProductionHardeningReport?.summary.reservationRuntimeUsed == false
+            && agentIntentProductionHardeningReport?.summary.physicsPerformed == false
+            && agentIntentProductionHardeningReport?.summary.mutationPerformed == false)
+        : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
@@ -1814,6 +1870,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (multiAgentMovementTickApprovedApplicationSuccess ?? true)
     && (multiAgentMovementTickHardeningSuccess ?? true)
     && (agentIntentProductionFixtureSuccess ?? true)
+    && (agentIntentProductionHardeningSuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -2316,6 +2373,42 @@ if options.outPath != nil {
                 mutationPerformed: summary.mutationPerformed,
                 pathfindingPerformed: summary.pathfindingPerformed,
                 replanningPerformed: summary.replanningPerformed
+            ))
+        }
+        if let agentIntentProductionHardeningReport {
+            let summary = agentIntentProductionHardeningReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_agent_intent_production_hardening_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: agentIntentProductionHardeningSuccess,
+                passed: summary.passed,
+                failed: summary.failed,
+                cases: summary.cases,
+                contexts: summary.contextsTotal,
+                proposals: summary.proposalsTotal,
+                acceptedIntents: summary.acceptedIntentsTotal,
+                rejectedProposals: summary.rejectedProposalsTotal,
+                noIntent: summary.noIntentTotal,
+                invalidContext: summary.invalidContextTotal,
+                duplicateAgentContexts: summary.duplicateAgentContextsTotal,
+                duplicateProposals: summary.duplicateProposalsTotal,
+                invalidOneEdgeProposals: summary.invalidOneEdgeProposalsTotal,
+                staleProposals: summary.staleProposalsTotal,
+                wrongSourceProposals: summary.wrongSourceProposalsTotal,
+                maxProposalsExceeded: summary.maxProposalsExceededTotal,
+                worldUsed: summary.worldUsed,
+                collisionRead: summary.collisionRead,
+                movementApplied: summary.movementApplied,
+                feedbackConsumed: summary.feedbackConsumed,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                avoidancePerformed: summary.avoidancePerformed,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
+                replanningPerformed: summary.replanningPerformed,
+                physicsPerformed: summary.physicsPerformed
             ))
         }
         if let routeFollowingLiveSnapshot {
@@ -2975,6 +3068,22 @@ if let outPath = options.outPath {
             try writeJSON(
                 agentIntentProductionFixtureInvariantReport,
                 to: outURL.appendingPathComponent("agent_intent_production_fixture_invariant_report.json")
+            )
+        }
+        if let agentIntentProductionHardeningReport {
+            try writeJSON(
+                agentIntentProductionHardeningReport,
+                to: outURL.appendingPathComponent("agent_intent_production_hardening_report.json")
+            )
+            try writeJSON(
+                agentIntentProductionHardeningReport.cases,
+                to: outURL.appendingPathComponent("agent_intent_proposals.json")
+            )
+        }
+        if let agentIntentProductionHardeningInvariantReport {
+            try writeJSON(
+                agentIntentProductionHardeningInvariantReport,
+                to: outURL.appendingPathComponent("agent_intent_production_hardening_invariant_report.json")
             )
         }
         if let routeFollowingLiveSnapshot {
@@ -3638,6 +3747,38 @@ if let outPath = options.outPath {
             agentIntentProductionFixtureReservationRuntimeUsed: agentIntentProductionFixtureReport?.summary.reservationRuntimeUsed,
             agentIntentProductionFixtureMutationPerformed: agentIntentProductionFixtureReport?.summary.mutationPerformed,
             agentIntentProductionFixtureSuccess: agentIntentProductionFixtureSuccess,
+            agentIntentProductionHardeningCases: agentIntentProductionHardeningReport?.summary.cases,
+            agentIntentProductionHardeningPassed: agentIntentProductionHardeningReport?.summary.passed,
+            agentIntentProductionHardeningFailed: agentIntentProductionHardeningReport?.summary.failed,
+            agentIntentProductionHardeningContexts: agentIntentProductionHardeningReport?.summary.contextsTotal,
+            agentIntentProductionHardeningProposals: agentIntentProductionHardeningReport?.summary.proposalsTotal,
+            agentIntentProductionHardeningAcceptedIntents: agentIntentProductionHardeningReport?.summary.acceptedIntentsTotal,
+            agentIntentProductionHardeningRejectedProposals: agentIntentProductionHardeningReport?.summary.rejectedProposalsTotal,
+            agentIntentProductionHardeningNoIntent: agentIntentProductionHardeningReport?.summary.noIntentTotal,
+            agentIntentProductionHardeningInvalidContext: agentIntentProductionHardeningReport?.summary.invalidContextTotal,
+            agentIntentProductionHardeningDuplicateAgentContexts: agentIntentProductionHardeningReport?.summary.duplicateAgentContextsTotal,
+            agentIntentProductionHardeningDuplicateProposals: agentIntentProductionHardeningReport?.summary.duplicateProposalsTotal,
+            agentIntentProductionHardeningInvalidOneEdgeProposals: agentIntentProductionHardeningReport?.summary.invalidOneEdgeProposalsTotal,
+            agentIntentProductionHardeningStaleProposals: agentIntentProductionHardeningReport?.summary.staleProposalsTotal,
+            agentIntentProductionHardeningWrongSourceProposals: agentIntentProductionHardeningReport?.summary.wrongSourceProposalsTotal,
+            agentIntentProductionHardeningMaxProposalsExceeded: agentIntentProductionHardeningReport?.summary.maxProposalsExceededTotal,
+            agentIntentProductionHardeningAcceptedMoveEast: agentIntentProductionHardeningReport?.summary.acceptedMoveEast,
+            agentIntentProductionHardeningAcceptedMoveWest: agentIntentProductionHardeningReport?.summary.acceptedMoveWest,
+            agentIntentProductionHardeningAcceptedMoveNorth: agentIntentProductionHardeningReport?.summary.acceptedMoveNorth,
+            agentIntentProductionHardeningAcceptedMoveSouth: agentIntentProductionHardeningReport?.summary.acceptedMoveSouth,
+            agentIntentProductionHardeningWorldUsed: agentIntentProductionHardeningReport?.summary.worldUsed,
+            agentIntentProductionHardeningCollisionRead: agentIntentProductionHardeningReport?.summary.collisionRead,
+            agentIntentProductionHardeningMovementApplied: agentIntentProductionHardeningReport?.summary.movementApplied,
+            agentIntentProductionHardeningFeedbackConsumed: agentIntentProductionHardeningReport?.summary.feedbackConsumed,
+            agentIntentProductionHardeningMemoryUpdated: agentIntentProductionHardeningReport?.summary.memoryUpdated,
+            agentIntentProductionHardeningGoalChanged: agentIntentProductionHardeningReport?.summary.goalChanged,
+            agentIntentProductionHardeningPathfindingPerformed: agentIntentProductionHardeningReport?.summary.pathfindingPerformed,
+            agentIntentProductionHardeningReplanningPerformed: agentIntentProductionHardeningReport?.summary.replanningPerformed,
+            agentIntentProductionHardeningAvoidancePerformed: agentIntentProductionHardeningReport?.summary.avoidancePerformed,
+            agentIntentProductionHardeningReservationRuntimeUsed: agentIntentProductionHardeningReport?.summary.reservationRuntimeUsed,
+            agentIntentProductionHardeningPhysicsPerformed: agentIntentProductionHardeningReport?.summary.physicsPerformed,
+            agentIntentProductionHardeningMutationPerformed: agentIntentProductionHardeningReport?.summary.mutationPerformed,
+            agentIntentProductionHardeningSuccess: agentIntentProductionHardeningSuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,

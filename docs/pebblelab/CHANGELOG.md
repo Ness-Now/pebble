@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Hardened fixture-only agent intent production.
 - Added fixture-only agent intent production smoke.
 - Documented PebbleLab agent movement intent production plan.
 - Hardened multi-agent movement tick contract.

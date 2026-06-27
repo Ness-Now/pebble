@@ -1147,3 +1147,32 @@ communication, gameplay movement, and terrain/world mutation remain out of
 scope.
 
 Next recommended step: Phase 4.21C - Agent Intent Production Hardening.
+
+## Phase 4.21C - Agent Intent Production Hardening
+
+Status: implemented and validated.
+
+Goal: harden fixture-only agent intent production without feeding produced
+intents into the tick movement contract. The scenario keeps policy,
+validation, proposals, accepted intents, rejected proposals, reports,
+metrics, and events in the intent-production layer.
+
+The scenario `agent_intent_production_hardening_smoke` covers 10 cases:
+baseline fixture compatibility, duplicate agent contexts, duplicate
+proposals, invalid diagonal proposals, zero-length proposals, stale
+proposals, wrong-source proposals, max proposal bounds, deterministic hint
+ordering, and unknown role `noIntent`.
+
+It writes `agent_intent_production_hardening_report.json`,
+`agent_intent_production_hardening_invariant_report.json`,
+`agent_intent_proposals.json`, `agentIntentProductionHardening*` metrics, and
+one aggregate `lab_agent_intent_production_hardening_recorded` event.
+
+Tick integration, live collision, movement application, feedback
+consumption, memory update, goal selection, pathfinding, replanning,
+avoidance, reservation runtime, physics, save/load, social behavior,
+communication, gameplay movement, and terrain/world mutation remain out of
+scope.
+
+Next recommended step: Phase 4.21D - Agent Intent To Tick Fixture
+Integration Smoke.

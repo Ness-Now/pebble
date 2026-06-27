@@ -5130,3 +5130,145 @@ still without tick integration, live collision, movement application,
 feedback consumption, memory updates, goal selection, pathfinding,
 replanning, avoidance, reservation runtime, physics, or terrain/world
 mutation.
+
+## 2026-06-27 — Phase 4.21C agent intent production hardening
+
+### Objective
+
+Implement `agent_intent_production_hardening_smoke`, the fixture-only
+hardening scenario for agent intent production. The goal is to validate
+duplicate handling, malformed proposals, stale proposals, wrong-source
+proposals, max proposal bounds, deterministic hint ordering, deterministic
+output ordering, and accepted/rejected counts without integrating with tick
+movement.
+
+### Starting State
+
+Phase 4.21B added `agent_intent_production_fixture_smoke` with five
+synthetic contexts, five sorted proposals, two accepted intents, three
+rejected proposals, and no World/collision/movement/feedback/memory/goals/
+pathfinding/replanning/reservation/mutation. It intentionally allowed two
+accepted intents to target the same destination because production does not
+arbitrate conflicts.
+
+### Files Created/Modified
+
+- `Sources/PebbleLab/LabAgentIntentProduction.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_AGENT_INTENT_PRODUCTION_PLAN.md`
+
+### Why Fixture-Only Hardening
+
+The intent production layer still owns only context-to-proposal and
+proposal-to-intent validation. It should become robust against bad policy
+output before any produced intent is passed into the tick movement contract.
+
+### Cases Covered
+
+- baseline fixture remains green;
+- duplicate agent context denied;
+- duplicate proposal denied;
+- invalid diagonal proposal rejected;
+- zero-length proposal rejected;
+- stale proposal rejected;
+- wrong-source proposal rejected;
+- max proposals bound exceeded;
+- deterministic hint ordering;
+- unknown role produces `noIntent`.
+
+### Policy v0
+
+The v0 policy remains deterministic. `wander_fixture` still chooses hints in
+the stable order east, west, north, south. Fixture-only bad roles produce
+invalid diagonal, zero-length, stale, and wrong-source proposals to harden
+validation; these roles are not gameplay policy.
+
+### Accepted/Rejected Proposal Policy
+
+Accepted intents must have a stable agent id, source, destination, one-edge
+same-y move, matching source position, non-stale intent, and at most one
+accepted intent per agent. Rejected proposals include `noIntent`,
+`invalidContext`, duplicate proposals, invalid edge proposals, stale
+proposals, wrong-source proposals, and proposals beyond max bounds.
+
+### Duplicate, Max, Stale, and Wrong-Source Policy
+
+Duplicate contexts are counted and deterministic output still allows at most
+one accepted intent for that agent. Duplicate proposals are rejected. Stale
+proposals are rejected before acceptance. Wrong-source proposals are rejected
+when the proposal source differs from the stable context position. Max bounds
+reject deterministic excess proposals after sorting.
+
+### Outputs, Invariants, Metrics, and Event
+
+The scenario writes:
+
+- `agent_intent_production_hardening_report.json`;
+- `agent_intent_production_hardening_invariant_report.json`;
+- `agent_intent_proposals.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Metrics use the `agentIntentProductionHardening*` prefix, and the aggregate
+event is `lab_agent_intent_production_hardening_recorded`. The invariant
+report includes 54 checks covering case existence, sorted outputs,
+accepted-intent shape, duplicate/stale/wrong-source/max rejections,
+same-destination deferral, and no World/collision/movement/feedback/memory/
+goals/pathfinding/replanning/avoidance/reservation/physics/mutation.
+
+### Out-of-Scope Confirmations
+
+No `World` is created. No collision is read. No movement is applied. No tick
+movement contract is called. No feedback is consumed. No memory or goals are
+modified. No pathfinding, replanning, avoidance, reservation runtime,
+physics, route following, LLM/Python/RL, social behavior, communication,
+gameplay movement, or terrain/world mutation is added.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_hardening_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_production_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_fixture_after_hardening`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_tick_hardening_smoke --seed 42 --ticks 5 --out runs/check_tick_hardening_after_agent_intent_hardening`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_tick_fixture_after_agent_intent_hardening`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_agent_intent_hardening`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- Hardening report success true.
+- Hardening invariant report success true.
+- Cases: 10 passed, 0 failed.
+- Contexts total: 19.
+- Proposals total: 20.
+- Accepted intents total: 9.
+- Rejected proposals total: 11.
+- `noIntentTotal`: 2.
+- `invalidContextTotal`: 1.
+- `duplicateAgentContextsTotal`: 1.
+- `duplicateProposalsTotal`: 2.
+- `invalidOneEdgeProposalsTotal`: 3.
+- `staleProposalsTotal`: 1.
+- `wrongSourceProposalsTotal`: 1.
+- `maxProposalsExceededTotal`: 1.
+- Accepted move directions include east and west.
+- Metrics contain `agentIntentProductionHardening*`.
+- `events.ndjson` contains `lab_agent_intent_production_hardening_recorded`.
+
+### Next Step
+
+Phase 4.21D: Agent Intent To Tick Fixture Integration Smoke. It should feed
+accepted produced intents into the fixture-only tick movement contract,
+without live collision, physical movement application, feedback consumption,
+memory updates, goal selection, pathfinding, replanning, avoidance,
+reservation runtime, physics, or terrain/world mutation.
