@@ -803,3 +803,79 @@ Next recommended step: Phase 4.19F, multi-agent movement hardening. That
 phase should add denied live movement and conflict coverage around the
 approved physical movement path without adding avoidance, reservation runtime,
 replanning, physics, or gameplay movement.
+
+## Phase 4.19F Implementation Status
+
+Phase 4.19F added live multi-agent movement hardening:
+
+```text
+multi_agent_movement_hardening_smoke
+```
+
+Validated hardening cases:
+
+- `approved_two_agents_remains_green`;
+- `collision_denied_preserves_position`;
+- `partial_approval_one_approved_one_collision_denied`;
+- `same_destination_live_conflict_denies_loser`;
+- `swap_conflict_live_denies_both`;
+- `source_mismatch_live_denied_before_collision`;
+- `stale_intent_live_denied_before_collision`;
+- `invalid_edge_live_denied_before_collision`;
+- `divergence_before_movement_denied`;
+- `stale_collision_evidence_denied`;
+- `all_denied_live_mixed_reasons`;
+- `max_agents_live_bound_exceeded`.
+
+Outputs produced:
+
+- `multi_agent_movement_hardening_report.json`;
+- `multi_agent_movement_hardening_invariant_report.json`;
+- `metrics.json` with `multiAgentMovementHardening*` fields;
+- `events.ndjson` with one aggregate
+  `lab_multi_agent_movement_hardening_recorded` event.
+
+Validated summary:
+
+- 12 cases;
+- 12 passed;
+- 0 failed;
+- 4 approved resolutions;
+- 18 denied resolutions;
+- 4 displacements applied;
+- 6 occupable live destinations observed;
+- 3 non-occupable live destinations observed;
+- 3 collision denials;
+- 1 same-destination conflict;
+- 2 swap-conflict denials;
+- 2 source-mismatch denials;
+- 1 stale-intent denial;
+- 2 invalid-edge denials;
+- 1 divergence-before denial;
+- 1 stale-collision denial;
+- 5 max-agent denials;
+- divergence before max 1;
+- divergence after max 1, only in the intentionally divergent denied case;
+- 55 invariant checks passed.
+
+Limits:
+
+- hardening smoke, not gameplay movement;
+- 2 to 5 synthetic agents per case;
+- approved moves are exactly one edge;
+- denied moves preserve abstract and physical positions;
+- no route following live;
+- no pathfinding;
+- no replanning;
+- no goal selection;
+- no avoidance;
+- no reservation table runtime;
+- no physics;
+- no terrain/world mutation;
+- no save/load or registry changes.
+
+Next recommended step: Phase 4.20A, multi-agent movement integration
+planning docs-only. That phase should define how the hardened smoke contract
+connects to future integration work before adding reservation runtime,
+avoidance, replanning, route repair, physics, or long-running multi-agent
+navigation.

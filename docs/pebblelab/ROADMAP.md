@@ -910,3 +910,35 @@ runtime, avoidance, dynamic replanning, route repair, physics, save/load,
 social behavior, communication, and gameplay movement remain out of scope.
 
 Next recommended step: Phase 4.19F - Multi-Agent Movement Hardening.
+
+## Phase 4.19F - Multi-Agent Movement Hardening
+
+Status: implemented and validated.
+
+Goal: harden live multi-agent physical movement beyond the approved-only
+smoke by covering controlled refusals, partial approval, and live conflict
+cases without turning the harness into gameplay movement.
+
+The scenario `multi_agent_movement_hardening_smoke` covers approved two-agent
+movement, live collision denial, partial approval, same-destination live
+conflict, swap conflict, source mismatch, stale intent, invalid edge,
+divergence before movement, stale collision evidence, all-denied mixed
+reasons, and a hardening-only max-agent bound. It writes
+`multi_agent_movement_hardening_report.json`,
+`multi_agent_movement_hardening_invariant_report.json`,
+`multiAgentMovementHardening*` metrics, and one aggregate
+`lab_multi_agent_movement_hardening_recorded` event.
+
+The hardening scenario records 12 cases, 12 passed, 0 failed, 4 approved
+resolutions, 18 denied resolutions, 4 displacements applied, 3 collision
+denials, 1 same-destination conflict, 2 swap denials, 1 stale collision
+denial, and 5 max-agent denials. Denied abstract and physical positions are
+preserved. Approved abstract and physical positions move exactly one
+4-neighbor same-y edge and finish synchronized.
+
+Reservation table runtime, avoidance, dynamic replanning, route repair,
+physics, save/load, social behavior, gameplay movement, and long-running
+multi-agent navigation remain out of scope.
+
+Next recommended step: Phase 4.20A - Multi-Agent Movement Integration
+Planning Docs-Only.

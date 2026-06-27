@@ -26,6 +26,8 @@ enum LabMultiAgentMoveDecision: String, Codable {
     case deniedMovingAwayDestination
     case deniedZeroLengthEdge
     case deniedMaxAgents
+    case deniedDivergence
+    case deniedStaleCollision
 }
 
 struct LabAgentMoveIntent: Codable {
@@ -338,6 +340,117 @@ struct LabMultiAgentApprovedPhysicalMovementReport: Codable {
 }
 
 struct LabMultiAgentApprovedPhysicalMovementInvariantReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: LabMultiAgentMovementFixtureInvariantSummary
+    let checks: [LabMultiAgentMovementFixtureInvariantCheck]
+    let notes: [String]
+}
+
+struct LabMultiAgentMovementHardeningCase: Codable {
+    let name: String
+    let seed: UInt32
+    let agents: [String: LabTerrainPathNodeKey]
+    let intents: [LabAgentMoveIntent]
+    let expectedApproved: Int
+    let expectedDenied: Int
+    let expectedDisplacementsApplied: Int
+    let expectedDecisionCounts: [String: Int]
+    let expectedDivergenceBeforeMax: Int
+    let expectedDivergenceAfterMax: Int
+}
+
+struct LabMultiAgentMovementHardeningResolution: Codable {
+    let agentId: String
+    let intent: LabAgentMoveIntent
+    let collisionRead: Bool
+    let collisionStatus: LabTerrainOccupancyStatus?
+    let collisionReason: String
+    let decision: LabMultiAgentMoveDecision
+    let approved: Bool
+    let displacementApplied: Bool
+    let abstractBefore: LabTerrainPathNodeKey?
+    let abstractAfter: LabTerrainPathNodeKey?
+    let physicalBefore: LabTerrainPathNodeKey?
+    let physicalAfter: LabTerrainPathNodeKey?
+    let divergenceBefore: Int?
+    let divergenceAfter: Int?
+    let reason: String
+}
+
+struct LabMultiAgentMovementHardeningCaseResult: Codable {
+    let name: String
+    let passed: Bool
+    let seed: UInt32
+    let agents: [String: LabTerrainPathNodeKey]
+    let intents: [LabAgentMoveIntent]
+    let resolutions: [LabMultiAgentMovementHardeningResolution]
+    let initialAbstractPositions: [String: LabTerrainPathNodeKey]
+    let finalAbstractPositions: [String: LabTerrainPathNodeKey]
+    let initialPhysicalPositions: [String: LabTerrainPathNodeKey]
+    let finalPhysicalPositions: [String: LabTerrainPathNodeKey]
+    let expectedApproved: Int
+    let actualApproved: Int
+    let expectedDenied: Int
+    let actualDenied: Int
+    let expectedDisplacementsApplied: Int
+    let actualDisplacementsApplied: Int
+    let expectedDecisionCounts: [String: Int]
+    let actualDecisionCounts: [String: Int]
+    let divergenceBeforeMax: Int
+    let divergenceAfterMax: Int
+}
+
+struct LabMultiAgentMovementHardeningSummary: Codable {
+    let cases: Int
+    let passed: Int
+    let failed: Int
+    let agentCountTotal: Int
+    let intentCountTotal: Int
+    let approvedTotal: Int
+    let deniedTotal: Int
+    let displacementsApplied: Int
+    let occupableDestinations: Int
+    let nonOccupableDestinations: Int
+    let collisionDenied: Int
+    let sameDestinationConflicts: Int
+    let swapConflicts: Int
+    let sourceMismatch: Int
+    let staleIntent: Int
+    let invalidEdges: Int
+    let divergenceDenied: Int
+    let staleCollision: Int
+    let partialApprovalCases: Int
+    let allDeniedCases: Int
+    let maxAgentsExceeded: Int
+    let divergenceBeforeMax: Int
+    let divergenceAfterMax: Int
+    let worldUsed: Bool
+    let liveCollisionRead: Bool
+    let physicalMovementApplied: Bool
+    let routeFollowingApplied: Bool
+    let pathfindingPerformed: Bool
+    let replanningPerformed: Bool
+    let goalSelectionPerformed: Bool
+    let avoidancePerformed: Bool
+    let reservationTableImplemented: Bool
+    let physicsPerformed: Bool
+    let terrainMutationPerformed: Bool
+    let worldMutationPerformed: Bool
+    let success: Bool
+}
+
+struct LabMultiAgentMovementHardeningReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let ticksCompleted: Int
+    let success: Bool
+    let summary: LabMultiAgentMovementHardeningSummary
+    let cases: [LabMultiAgentMovementHardeningCaseResult]
+}
+
+struct LabMultiAgentMovementHardeningInvariantReport: Codable {
     let scenario: String
     let seed: UInt32
     let success: Bool
@@ -1486,6 +1599,273 @@ private func multiAgentApprovedPhysicalMovementCases()
     ]
 }
 
+private struct LabMultiAgentMovementHardeningFixture {
+    let contract: LabMultiAgentMovementHardeningCase
+    let maxAgents: Int?
+    let physicalPositionOverrides: [String: LabTerrainPathNodeKey]
+    let collisionEvidenceSeeds: [String: UInt32]
+    let collisionEvidenceNodes: [String: LabTerrainPathNodeKey]
+}
+
+private func multiAgentMovementHardeningCases()
+    -> [LabMultiAgentMovementHardeningFixture] {
+    let approvedSeed: UInt32 = 99
+    let deniedSeed: UInt32 = 42
+    let agent0From = LabTerrainPathNodeKey(x: 7, y: 64, z: 8)
+    let agent0To = LabTerrainPathNodeKey(x: 8, y: 64, z: 8)
+    let agent1From = LabTerrainPathNodeKey(x: 9, y: 64, z: 7)
+    let agent1To = LabTerrainPathNodeKey(x: 9, y: 64, z: 8)
+
+    func fixture(
+        _ contract: LabMultiAgentMovementHardeningCase,
+        maxAgents: Int? = nil,
+        physicalPositionOverrides: [String: LabTerrainPathNodeKey] = [:],
+        collisionEvidenceSeeds: [String: UInt32] = [:],
+        collisionEvidenceNodes: [String: LabTerrainPathNodeKey] = [:]
+    ) -> LabMultiAgentMovementHardeningFixture {
+        LabMultiAgentMovementHardeningFixture(
+            contract: contract,
+            maxAgents: maxAgents,
+            physicalPositionOverrides: physicalPositionOverrides,
+            collisionEvidenceSeeds: collisionEvidenceSeeds,
+            collisionEvidenceNodes: collisionEvidenceNodes
+        )
+    }
+
+    return [
+        fixture(LabMultiAgentMovementHardeningCase(
+            name: "approved_two_agents_remains_green",
+            seed: approvedSeed,
+            agents: [
+                "agent_0": agent0From,
+                "agent_1": agent1From
+            ],
+            intents: [
+                multiAgentIntent("agent_0", from: agent0From, to: agent0To, reason: "hardening_approved_green"),
+                multiAgentIntent("agent_1", from: agent1From, to: agent1To, reason: "hardening_approved_green")
+            ],
+            expectedApproved: 2,
+            expectedDenied: 0,
+            expectedDisplacementsApplied: 2,
+            expectedDecisionCounts: ["approved": 2],
+            expectedDivergenceBeforeMax: 0,
+            expectedDivergenceAfterMax: 0
+        )),
+        fixture(LabMultiAgentMovementHardeningCase(
+            name: "collision_denied_preserves_position",
+            seed: deniedSeed,
+            agents: ["agent_0": agent0From],
+            intents: [
+                multiAgentIntent("agent_0", from: agent0From, to: agent0To, reason: "hardening_collision_denied")
+            ],
+            expectedApproved: 0,
+            expectedDenied: 1,
+            expectedDisplacementsApplied: 0,
+            expectedDecisionCounts: ["deniedCollision": 1],
+            expectedDivergenceBeforeMax: 0,
+            expectedDivergenceAfterMax: 0
+        )),
+        fixture(
+            LabMultiAgentMovementHardeningCase(
+                name: "partial_approval_one_approved_one_collision_denied",
+                seed: approvedSeed,
+                agents: [
+                    "agent_0": agent0From,
+                    "agent_1": LabTerrainPathNodeKey(x: 8, y: 64, z: 7)
+                ],
+                intents: [
+                    multiAgentIntent("agent_0", from: agent0From, to: agent0To, reason: "hardening_partial_approval"),
+                    multiAgentIntent("agent_1", from: LabTerrainPathNodeKey(x: 8, y: 64, z: 7), to: agent0To, reason: "hardening_partial_collision_denied")
+                ],
+                expectedApproved: 1,
+                expectedDenied: 1,
+                expectedDisplacementsApplied: 1,
+                expectedDecisionCounts: [
+                    "approved": 1,
+                    "deniedCollision": 1
+                ],
+                expectedDivergenceBeforeMax: 0,
+                expectedDivergenceAfterMax: 0
+            ),
+            collisionEvidenceSeeds: ["agent_1": deniedSeed]
+        ),
+        fixture(LabMultiAgentMovementHardeningCase(
+            name: "same_destination_live_conflict_denies_loser",
+            seed: approvedSeed,
+            agents: [
+                "agent_0": agent0From,
+                "agent_1": LabTerrainPathNodeKey(x: 8, y: 64, z: 7)
+            ],
+            intents: [
+                multiAgentIntent("agent_0", from: agent0From, to: agent0To, reason: "hardening_same_destination"),
+                multiAgentIntent("agent_1", from: LabTerrainPathNodeKey(x: 8, y: 64, z: 7), to: agent0To, reason: "hardening_same_destination")
+            ],
+            expectedApproved: 1,
+            expectedDenied: 1,
+            expectedDisplacementsApplied: 1,
+            expectedDecisionCounts: [
+                "approved": 1,
+                "deniedSameDestinationConflict": 1
+            ],
+            expectedDivergenceBeforeMax: 0,
+            expectedDivergenceAfterMax: 0
+        )),
+        fixture(LabMultiAgentMovementHardeningCase(
+            name: "swap_conflict_live_denies_both",
+            seed: approvedSeed,
+            agents: [
+                "agent_0": agent0From,
+                "agent_1": agent0To
+            ],
+            intents: [
+                multiAgentIntent("agent_0", from: agent0From, to: agent0To, reason: "hardening_swap_conflict"),
+                multiAgentIntent("agent_1", from: agent0To, to: agent0From, reason: "hardening_swap_conflict")
+            ],
+            expectedApproved: 0,
+            expectedDenied: 2,
+            expectedDisplacementsApplied: 0,
+            expectedDecisionCounts: ["deniedSwapConflict": 2],
+            expectedDivergenceBeforeMax: 0,
+            expectedDivergenceAfterMax: 0
+        )),
+        fixture(LabMultiAgentMovementHardeningCase(
+            name: "source_mismatch_live_denied_before_collision",
+            seed: approvedSeed,
+            agents: ["agent_0": agent0From],
+            intents: [
+                multiAgentIntent("agent_0", from: LabTerrainPathNodeKey(x: 6, y: 64, z: 8), to: agent0To, reason: "hardening_source_mismatch")
+            ],
+            expectedApproved: 0,
+            expectedDenied: 1,
+            expectedDisplacementsApplied: 0,
+            expectedDecisionCounts: ["deniedSourceMismatch": 1],
+            expectedDivergenceBeforeMax: 0,
+            expectedDivergenceAfterMax: 0
+        )),
+        fixture(LabMultiAgentMovementHardeningCase(
+            name: "stale_intent_live_denied_before_collision",
+            seed: approvedSeed,
+            agents: ["agent_0": agent0From],
+            intents: [
+                multiAgentIntent("agent_0", from: agent0From, to: agent0To, reason: "hardening_stale_intent", stale: true)
+            ],
+            expectedApproved: 0,
+            expectedDenied: 1,
+            expectedDisplacementsApplied: 0,
+            expectedDecisionCounts: ["deniedStaleIntent": 1],
+            expectedDivergenceBeforeMax: 0,
+            expectedDivergenceAfterMax: 0
+        )),
+        fixture(LabMultiAgentMovementHardeningCase(
+            name: "invalid_edge_live_denied_before_collision",
+            seed: approvedSeed,
+            agents: ["agent_0": agent0From],
+            intents: [
+                multiAgentIntent("agent_0", from: agent0From, to: LabTerrainPathNodeKey(x: 8, y: 64, z: 9), reason: "hardening_invalid_edge")
+            ],
+            expectedApproved: 0,
+            expectedDenied: 1,
+            expectedDisplacementsApplied: 0,
+            expectedDecisionCounts: ["deniedInvalidEdge": 1],
+            expectedDivergenceBeforeMax: 0,
+            expectedDivergenceAfterMax: 0
+        )),
+        fixture(
+            LabMultiAgentMovementHardeningCase(
+                name: "divergence_before_movement_denied",
+                seed: approvedSeed,
+                agents: ["agent_0": agent0From],
+                intents: [
+                    multiAgentIntent("agent_0", from: agent0From, to: agent0To, reason: "hardening_divergence_before")
+                ],
+                expectedApproved: 0,
+                expectedDenied: 1,
+                expectedDisplacementsApplied: 0,
+                expectedDecisionCounts: ["deniedDivergence": 1],
+                expectedDivergenceBeforeMax: 1,
+                expectedDivergenceAfterMax: 1
+            ),
+            physicalPositionOverrides: [
+                "agent_0": LabTerrainPathNodeKey(x: 6, y: 64, z: 8)
+            ]
+        ),
+        fixture(
+            LabMultiAgentMovementHardeningCase(
+                name: "stale_collision_evidence_denied",
+                seed: approvedSeed,
+                agents: ["agent_0": agent0From],
+                intents: [
+                    multiAgentIntent("agent_0", from: agent0From, to: agent0To, reason: "hardening_stale_collision")
+                ],
+                expectedApproved: 0,
+                expectedDenied: 1,
+                expectedDisplacementsApplied: 0,
+                expectedDecisionCounts: ["deniedStaleCollision": 1],
+                expectedDivergenceBeforeMax: 0,
+                expectedDivergenceAfterMax: 0
+            ),
+            collisionEvidenceNodes: [
+                "agent_0": agent1To
+            ]
+        ),
+        fixture(
+            LabMultiAgentMovementHardeningCase(
+                name: "all_denied_live_mixed_reasons",
+                seed: approvedSeed,
+                agents: [
+                    "agent_0": agent0From,
+                    "agent_1": agent1From,
+                    "agent_2": LabTerrainPathNodeKey(x: 10, y: 64, z: 7)
+                ],
+                intents: [
+                    multiAgentIntent("agent_0", from: agent0From, to: agent0To, reason: "hardening_all_denied_collision"),
+                    multiAgentIntent("agent_1", from: LabTerrainPathNodeKey(x: 8, y: 64, z: 7), to: agent1To, reason: "hardening_all_denied_source_mismatch"),
+                    multiAgentIntent("agent_2", from: LabTerrainPathNodeKey(x: 10, y: 64, z: 7), to: LabTerrainPathNodeKey(x: 11, y: 64, z: 8), reason: "hardening_all_denied_invalid")
+                ],
+                expectedApproved: 0,
+                expectedDenied: 3,
+                expectedDisplacementsApplied: 0,
+                expectedDecisionCounts: [
+                    "deniedCollision": 1,
+                    "deniedInvalidEdge": 1,
+                    "deniedSourceMismatch": 1
+                ],
+                expectedDivergenceBeforeMax: 0,
+                expectedDivergenceAfterMax: 0
+            ),
+            collisionEvidenceSeeds: ["agent_0": deniedSeed],
+            collisionEvidenceNodes: ["agent_0": agent0To]
+        ),
+        fixture(
+            LabMultiAgentMovementHardeningCase(
+                name: "max_agents_live_bound_exceeded",
+                seed: approvedSeed,
+                agents: [
+                    "agent_0": agent0From,
+                    "agent_1": agent1From,
+                    "agent_2": LabTerrainPathNodeKey(x: 10, y: 64, z: 7),
+                    "agent_3": LabTerrainPathNodeKey(x: 11, y: 64, z: 7),
+                    "agent_4": LabTerrainPathNodeKey(x: 12, y: 64, z: 7)
+                ],
+                intents: [
+                    multiAgentIntent("agent_0", from: agent0From, to: agent0To, reason: "hardening_max_agents"),
+                    multiAgentIntent("agent_1", from: agent1From, to: agent1To, reason: "hardening_max_agents"),
+                    multiAgentIntent("agent_2", from: LabTerrainPathNodeKey(x: 10, y: 64, z: 7), to: LabTerrainPathNodeKey(x: 10, y: 64, z: 8), reason: "hardening_max_agents"),
+                    multiAgentIntent("agent_3", from: LabTerrainPathNodeKey(x: 11, y: 64, z: 7), to: LabTerrainPathNodeKey(x: 11, y: 64, z: 8), reason: "hardening_max_agents"),
+                    multiAgentIntent("agent_4", from: LabTerrainPathNodeKey(x: 12, y: 64, z: 7), to: LabTerrainPathNodeKey(x: 12, y: 64, z: 8), reason: "hardening_max_agents")
+                ],
+                expectedApproved: 0,
+                expectedDenied: 5,
+                expectedDisplacementsApplied: 0,
+                expectedDecisionCounts: ["deniedMaxAgents": 5],
+                expectedDivergenceBeforeMax: 0,
+                expectedDivergenceAfterMax: 0
+            ),
+            maxAgents: 4
+        )
+    ]
+}
+
 func makeMultiAgentApprovedPhysicalMovementReport(
     scenario: String,
     seed: UInt32,
@@ -1736,6 +2116,819 @@ func makeMultiAgentApprovedPhysicalMovementInvariantReport(
             "Denied live multi-agent movement and conflict hardening remain deferred to Phase 4.19F."
         ]
     )
+}
+
+func makeMultiAgentMovementHardeningReport(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int
+) -> LabMultiAgentMovementHardeningReport {
+    let results = multiAgentMovementHardeningCases().map {
+        evaluateMultiAgentMovementHardeningCase(
+            $0,
+            scenario: scenario,
+            ticksCompleted: ticksCompleted
+        )
+    }
+    let passed = results.filter(\.passed).count
+    let approved = results.reduce(0) { $0 + $1.actualApproved }
+    let denied = results.reduce(0) { $0 + $1.actualDenied }
+    let displacements = results.reduce(0) { $0 + $1.actualDisplacementsApplied }
+    let allResolutions = results.flatMap(\.resolutions)
+    let divergenceBeforeMax = results.map(\.divergenceBeforeMax).max() ?? 0
+    let divergenceAfterMax = results.map(\.divergenceAfterMax).max() ?? 0
+    let occupableDestinations = allResolutions.filter {
+        $0.collisionRead && $0.collisionStatus == .occupable
+    }.count
+    let nonOccupableDestinations = allResolutions.filter {
+        $0.collisionRead
+            && $0.collisionStatus != nil
+            && $0.collisionStatus != .occupable
+    }.count
+    let summary = LabMultiAgentMovementHardeningSummary(
+        cases: results.count,
+        passed: passed,
+        failed: results.count - passed,
+        agentCountTotal: results.reduce(0) { $0 + $1.agents.count },
+        intentCountTotal: results.reduce(0) { $0 + $1.intents.count },
+        approvedTotal: approved,
+        deniedTotal: denied,
+        displacementsApplied: displacements,
+        occupableDestinations: occupableDestinations,
+        nonOccupableDestinations: nonOccupableDestinations,
+        collisionDenied: hardeningDecisionCount(in: results, .deniedCollision),
+        sameDestinationConflicts: hardeningDecisionCount(in: results, .deniedSameDestinationConflict),
+        swapConflicts: hardeningDecisionCount(in: results, .deniedSwapConflict),
+        sourceMismatch: hardeningDecisionCount(in: results, .deniedSourceMismatch),
+        staleIntent: hardeningDecisionCount(in: results, .deniedStaleIntent),
+        invalidEdges: hardeningDecisionCount(in: results, .deniedInvalidEdge),
+        divergenceDenied: hardeningDecisionCount(in: results, .deniedDivergence),
+        staleCollision: hardeningDecisionCount(in: results, .deniedStaleCollision),
+        partialApprovalCases: results.filter {
+            $0.actualApproved > 0 && $0.actualDenied > 0
+        }.count,
+        allDeniedCases: results.filter {
+            !$0.intents.isEmpty && $0.actualApproved == 0 && $0.actualDenied > 0
+        }.count,
+        maxAgentsExceeded: hardeningDecisionCount(in: results, .deniedMaxAgents),
+        divergenceBeforeMax: divergenceBeforeMax,
+        divergenceAfterMax: divergenceAfterMax,
+        worldUsed: true,
+        liveCollisionRead: allResolutions.contains { $0.collisionRead },
+        physicalMovementApplied: displacements > 0,
+        routeFollowingApplied: false,
+        pathfindingPerformed: false,
+        replanningPerformed: false,
+        goalSelectionPerformed: false,
+        avoidancePerformed: false,
+        reservationTableImplemented: false,
+        physicsPerformed: false,
+        terrainMutationPerformed: false,
+        worldMutationPerformed: false,
+        success: passed == results.count
+            && approved > 0
+            && denied > 0
+            && displacements > 0
+            && results.contains { $0.name == "partial_approval_one_approved_one_collision_denied" && $0.passed }
+            && hardeningDecisionCount(in: results, .deniedCollision) > 0
+            && hardeningDecisionCount(in: results, .deniedSameDestinationConflict) > 0
+            && hardeningDecisionCount(in: results, .deniedSwapConflict) > 0
+            && hardeningDecisionCount(in: results, .deniedSourceMismatch) > 0
+            && hardeningDecisionCount(in: results, .deniedStaleIntent) > 0
+            && hardeningDecisionCount(in: results, .deniedInvalidEdge) > 0
+            && hardeningDecisionCount(in: results, .deniedDivergence) > 0
+            && hardeningDecisionCount(in: results, .deniedStaleCollision) > 0
+            && hardeningDecisionCount(in: results, .deniedMaxAgents) > 0
+            && allResolutions.filter(\.approved).allSatisfy { $0.divergenceAfter == 0 }
+    )
+
+    return LabMultiAgentMovementHardeningReport(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        success: summary.success,
+        summary: summary,
+        cases: results
+    )
+}
+
+func makeMultiAgentMovementHardeningInvariantReport(
+    report: LabMultiAgentMovementHardeningReport?,
+    scenario: String,
+    seed: UInt32
+) -> LabMultiAgentMovementHardeningInvariantReport {
+    let cases = report?.cases ?? []
+    let names = Set(cases.map(\.name))
+    let resolutions = cases.flatMap(\.resolutions)
+    let approved = resolutions.filter(\.approved)
+    let denied = resolutions.filter { !$0.approved }
+    let fixtureReport = makeMultiAgentMovementFixtureReport(
+        scenario: "multi_agent_movement_fixture_smoke",
+        seed: seed,
+        ticksCompleted: 0
+    )
+    let fixtureInvariantReport = makeMultiAgentMovementFixtureInvariantReport(
+        report: fixtureReport,
+        scenario: "multi_agent_movement_fixture_smoke",
+        seed: seed
+    )
+    let fixtureHardeningReport = makeMultiAgentMovementFixtureHardeningReport(
+        scenario: "multi_agent_movement_fixture_hardening_smoke",
+        seed: seed,
+        ticksCompleted: 0
+    )
+    let fixtureHardeningInvariantReport = makeMultiAgentMovementFixtureHardeningInvariantReport(
+        report: fixtureHardeningReport,
+        scenario: "multi_agent_movement_fixture_hardening_smoke",
+        seed: seed
+    )
+    let liveIntentReport = makeMultiAgentLiveCollisionIntentReport(
+        scenario: "multi_agent_live_collision_intent_smoke",
+        seed: seed,
+        ticksCompleted: 0
+    )
+    let liveIntentInvariantReport = makeMultiAgentLiveCollisionIntentInvariantReport(
+        report: liveIntentReport,
+        scenario: "multi_agent_live_collision_intent_smoke",
+        seed: seed
+    )
+    let approvedPhysicalReport = makeMultiAgentApprovedPhysicalMovementReport(
+        scenario: "multi_agent_approved_physical_movement_smoke",
+        seed: seed,
+        ticksCompleted: 0
+    )
+    let approvedPhysicalInvariantReport = makeMultiAgentApprovedPhysicalMovementInvariantReport(
+        report: approvedPhysicalReport,
+        scenario: "multi_agent_approved_physical_movement_smoke",
+        seed: seed
+    )
+    let singleStepHardening = makePhysicalMovementSingleStepHardeningReport(
+        scenario: "physical_movement_single_step_hardening_smoke",
+        seed: seed,
+        ticksCompleted: 0
+    )
+    let singleStepHardeningInvariant = makePhysicalMovementHardeningInvariantReport(
+        report: singleStepHardening,
+        scenario: "physical_movement_single_step_hardening_smoke",
+        seed: seed
+    )
+    let fixtureSmokeGreen = fixtureReport.success
+        && fixtureInvariantReport.success
+        && fixtureReport.summary.failed == 0
+    let fixtureHardeningGreen = fixtureHardeningReport.success
+        && fixtureHardeningInvariantReport.success
+        && fixtureHardeningReport.summary.failed == 0
+    let liveIntentGreen = liveIntentReport.success
+        && liveIntentInvariantReport.success
+        && liveIntentReport.summary.failed == 0
+    let approvedPhysicalGreen = approvedPhysicalReport.success
+        && approvedPhysicalInvariantReport.success
+        && approvedPhysicalReport.summary.failed == 0
+    let singleStepHardeningGreen = singleStepHardening.success
+        && singleStepHardeningInvariant.success
+        && singleStepHardening.summary.failed == 0
+    let deniedAbstractPreserved = denied.allSatisfy {
+        $0.abstractBefore == $0.abstractAfter
+    }
+    let deniedPhysicalPreserved = denied.allSatisfy {
+        $0.physicalBefore == $0.physicalAfter
+    }
+    let approvedAbstractOneEdge = approved.allSatisfy {
+        guard let before = $0.abstractBefore, let after = $0.abstractAfter else {
+            return false
+        }
+        return isFixtureEdgeAllowed(from: before, to: after)
+    }
+    let approvedPhysicalOneEdge = approved.allSatisfy {
+        guard let before = $0.physicalBefore, let after = $0.physicalAfter else {
+            return false
+        }
+        return isFixtureEdgeAllowed(from: before, to: after)
+    }
+    let finalAbstractPhysicalMatch = cases.allSatisfy { result in
+        result.resolutions.filter(\.approved).allSatisfy {
+            result.finalAbstractPositions[$0.agentId] == result.finalPhysicalPositions[$0.agentId]
+        }
+    }
+    let noDuplicateApprovedDestination = cases.allSatisfy {
+        let destinations = $0.resolutions.filter(\.approved).map(\.intent.to)
+        return Set(destinations).count == destinations.count
+    }
+    let noApprovedSwap = cases.allSatisfy { result in
+        let approved = result.resolutions.filter(\.approved)
+        return !approved.contains { first in
+            approved.contains { second in
+                first.agentId != second.agentId
+                    && first.intent.from == second.intent.to
+                    && first.intent.to == second.intent.from
+            }
+        }
+    }
+    let sourceMismatchSkipsCollision = cases.first {
+        $0.name == "source_mismatch_live_denied_before_collision"
+    }?.resolutions.allSatisfy { !$0.collisionRead } == true
+    let staleSkipsCollision = cases.first {
+        $0.name == "stale_intent_live_denied_before_collision"
+    }?.resolutions.allSatisfy { !$0.collisionRead } == true
+    let invalidSkipsCollision = cases.first {
+        $0.name == "invalid_edge_live_denied_before_collision"
+    }?.resolutions.allSatisfy { !$0.collisionRead } == true
+    let liveCollisionReadForCollisionRequired = cases.filter {
+        ![
+            "source_mismatch_live_denied_before_collision",
+            "stale_intent_live_denied_before_collision",
+            "invalid_edge_live_denied_before_collision",
+            "divergence_before_movement_denied",
+            "swap_conflict_live_denies_both",
+            "max_agents_live_bound_exceeded"
+        ].contains($0.name)
+    }.flatMap(\.resolutions).filter {
+        ![.deniedSourceMismatch, .deniedStaleIntent, .deniedInvalidEdge, .deniedDivergence, .deniedSwapConflict, .deniedMaxAgents].contains($0.decision)
+    }.allSatisfy(\.collisionRead)
+    let collisionDeniedPreserves = cases.first {
+        $0.name == "collision_denied_preserves_position"
+    }?.resolutions.allSatisfy {
+        !$0.approved && $0.abstractBefore == $0.abstractAfter && $0.physicalBefore == $0.physicalAfter
+    } == true
+    let partialApprovalPreservesDenied = cases.first {
+        $0.name == "partial_approval_one_approved_one_collision_denied"
+    }?.resolutions.filter { !$0.approved }.allSatisfy {
+        $0.abstractBefore == $0.abstractAfter && $0.physicalBefore == $0.physicalAfter
+    } == true
+    let sameDestinationLoserDenied = cases.first {
+        $0.name == "same_destination_live_conflict_denies_loser"
+    }?.resolutions.first(where: { $0.agentId == "agent_1" })?.decision == .deniedSameDestinationConflict
+    let swapDeniesBoth = cases.first {
+        $0.name == "swap_conflict_live_denies_both"
+    }?.resolutions.allSatisfy { $0.decision == .deniedSwapConflict } == true
+    let allDeniedZeroDisplacements = cases.first {
+        $0.name == "all_denied_live_mixed_reasons"
+    }?.actualDisplacementsApplied == 0
+    let maxAgentsDeniedAll = cases.first {
+        $0.name == "max_agents_live_bound_exceeded"
+    }?.actualDecisionCounts["deniedMaxAgents"] == 5
+    let displacementsMatchApproved = report?.summary.displacementsApplied == approved.filter(\.displacementApplied).count
+        && approved.allSatisfy(\.displacementApplied)
+    let nonOccupableDenied = denied.contains {
+        $0.decision == .deniedCollision
+            && $0.collisionRead
+            && $0.collisionStatus != .occupable
+    }
+    let checks = [
+        check("hardening_cases_exist", !cases.isEmpty, "> 0", "\(cases.count)"),
+        check("approved_case_exists", names.contains("approved_two_agents_remains_green"), "present", names.sorted().joined(separator: ",")),
+        check("collision_denied_case_exists", names.contains("collision_denied_preserves_position"), "present", names.sorted().joined(separator: ",")),
+        check("partial_approval_case_exists", names.contains("partial_approval_one_approved_one_collision_denied"), "present", names.sorted().joined(separator: ",")),
+        check("same_destination_live_conflict_case_exists", names.contains("same_destination_live_conflict_denies_loser"), "present", names.sorted().joined(separator: ",")),
+        check("swap_conflict_live_case_exists", names.contains("swap_conflict_live_denies_both"), "present", names.sorted().joined(separator: ",")),
+        check("source_mismatch_case_exists", names.contains("source_mismatch_live_denied_before_collision"), "present", names.sorted().joined(separator: ",")),
+        check("stale_intent_case_exists", names.contains("stale_intent_live_denied_before_collision"), "present", names.sorted().joined(separator: ",")),
+        check("invalid_edge_case_exists", names.contains("invalid_edge_live_denied_before_collision"), "present", names.sorted().joined(separator: ",")),
+        check("divergence_before_case_exists", names.contains("divergence_before_movement_denied"), "present", names.sorted().joined(separator: ",")),
+        check("stale_collision_case_exists", names.contains("stale_collision_evidence_denied"), "present", names.sorted().joined(separator: ",")),
+        check("all_denied_case_exists", names.contains("all_denied_live_mixed_reasons"), "present", names.sorted().joined(separator: ",")),
+        check("max_agents_case_exists", names.contains("max_agents_live_bound_exceeded"), "present", names.sorted().joined(separator: ",")),
+        check("all_cases_passed", report?.summary.failed == 0, "0", "\(report?.summary.failed ?? -1)"),
+        check("approved_case_applies_expected_displacements", cases.first { $0.name == "approved_two_agents_remains_green" }?.actualDisplacementsApplied == 2, "2", "\(cases.first { $0.name == "approved_two_agents_remains_green" }?.actualDisplacementsApplied ?? -1)"),
+        check("collision_denied_preserves_position", collisionDeniedPreserves, "true", String(collisionDeniedPreserves)),
+        check("partial_approval_preserves_denied_agent", partialApprovalPreservesDenied, "true", String(partialApprovalPreservesDenied)),
+        check("same_destination_loser_denied", sameDestinationLoserDenied, "true", String(sameDestinationLoserDenied)),
+        check("no_duplicate_approved_destination", noDuplicateApprovedDestination, "true", String(noDuplicateApprovedDestination)),
+        check("swap_conflict_denies_both", swapDeniesBoth, "true", String(swapDeniesBoth)),
+        check("no_approved_swap", noApprovedSwap, "true", String(noApprovedSwap)),
+        check("source_mismatch_skips_collision", sourceMismatchSkipsCollision, "true", String(sourceMismatchSkipsCollision)),
+        check("stale_intent_skips_collision", staleSkipsCollision, "true", String(staleSkipsCollision)),
+        check("invalid_edge_skips_collision", invalidSkipsCollision, "true", String(invalidSkipsCollision)),
+        check("divergence_before_denies_movement", hardeningDecisionCount(in: cases, .deniedDivergence) > 0, "> 0", "\(hardeningDecisionCount(in: cases, .deniedDivergence))"),
+        check("stale_collision_denies_movement", hardeningDecisionCount(in: cases, .deniedStaleCollision) > 0, "> 0", "\(hardeningDecisionCount(in: cases, .deniedStaleCollision))"),
+        check("all_denied_case_has_zero_displacements", allDeniedZeroDisplacements == true, "true", String(allDeniedZeroDisplacements == true)),
+        check("max_agents_bound_denies_all", maxAgentsDeniedAll, "true", String(maxAgentsDeniedAll)),
+        check("denied_movements_preserve_abstract_position", deniedAbstractPreserved, "true", String(deniedAbstractPreserved)),
+        check("denied_movements_preserve_physical_position", deniedPhysicalPreserved, "true", String(deniedPhysicalPreserved)),
+        check("approved_movements_move_abstract_one_edge", approvedAbstractOneEdge, "true", String(approvedAbstractOneEdge)),
+        check("approved_movements_move_physical_one_edge", approvedPhysicalOneEdge, "true", String(approvedPhysicalOneEdge)),
+        check("abstract_and_physical_final_positions_match", finalAbstractPhysicalMatch, "approved final abstract == physical", String(finalAbstractPhysicalMatch)),
+        check("divergence_after_zero_for_approved_moves", approved.allSatisfy { $0.divergenceAfter == 0 }, "true", String(approved.allSatisfy { $0.divergenceAfter == 0 })),
+        check("displacements_match_approved_movements", displacementsMatchApproved, "true", String(displacementsMatchApproved)),
+        check("live_collision_read_for_collision_required_intents", liveCollisionReadForCollisionRequired, "true", String(liveCollisionReadForCollisionRequired)),
+        check("non_occupable_destinations_denied", nonOccupableDenied, "true", String(nonOccupableDenied)),
+        check("route_following_not_applied", report?.summary.routeFollowingApplied == false, "false", String(report?.summary.routeFollowingApplied ?? true)),
+        check("pathfinding_not_performed", report?.summary.pathfindingPerformed == false, "false", String(report?.summary.pathfindingPerformed ?? true)),
+        check("replanning_not_performed", report?.summary.replanningPerformed == false, "false", String(report?.summary.replanningPerformed ?? true)),
+        check("goal_selection_not_performed", report?.summary.goalSelectionPerformed == false, "false", String(report?.summary.goalSelectionPerformed ?? true)),
+        check("avoidance_not_performed", report?.summary.avoidancePerformed == false, "false", String(report?.summary.avoidancePerformed ?? true)),
+        check("reservation_table_not_implemented", report?.summary.reservationTableImplemented == false, "false", String(report?.summary.reservationTableImplemented ?? true)),
+        check("physics_not_performed", report?.summary.physicsPerformed == false, "false", String(report?.summary.physicsPerformed ?? true)),
+        check("terrain_mutation_not_performed", report?.summary.terrainMutationPerformed == false, "false", String(report?.summary.terrainMutationPerformed ?? true)),
+        check("world_mutation_not_performed", report?.summary.worldMutationPerformed == false, "false", String(report?.summary.worldMutationPerformed ?? true)),
+        check("fixture_smoke_remains_green", fixtureSmokeGreen, "true", String(fixtureSmokeGreen)),
+        check("fixture_hardening_smoke_remains_green", fixtureHardeningGreen, "true", String(fixtureHardeningGreen)),
+        check("live_collision_intent_smoke_remains_green", liveIntentGreen, "true", String(liveIntentGreen)),
+        check("approved_physical_movement_smoke_remains_green", approvedPhysicalGreen, "true", String(approvedPhysicalGreen)),
+        check("single_step_hardening_smoke_remains_green", singleStepHardeningGreen, "true", String(singleStepHardeningGreen)),
+        check("report_written", true, "multi_agent_movement_hardening_report.json", "multi_agent_movement_hardening_report.json"),
+        check("metrics_written", true, "multiAgentMovementHardening* metrics", "multiAgentMovementHardening* metrics"),
+        check("event_written", true, "lab_multi_agent_movement_hardening_recorded", "lab_multi_agent_movement_hardening_recorded"),
+        check("success_contract_respected", report?.success == true && report?.summary.failed == 0, "true", String(report?.success == true && report?.summary.failed == 0))
+    ]
+    let failed = checks.filter { !$0.passed }.count
+
+    return LabMultiAgentMovementHardeningInvariantReport(
+        scenario: scenario,
+        seed: seed,
+        success: failed == 0,
+        summary: LabMultiAgentMovementFixtureInvariantSummary(
+            checksPassed: checks.count - failed,
+            checksFailed: failed,
+            cases: cases.count,
+            passed: report?.summary.passed ?? 0,
+            failed: report?.summary.failed ?? cases.count
+        ),
+        checks: checks,
+        notes: [
+            "Phase 4.19F hardens live multi-agent physical movement with controlled approvals and refusals.",
+            "Denied intents preserve abstract and physical positions; approved intents move one 4-neighbor same-y edge and are synced through LabAgentPhysicalBridge.",
+            "No route following, pathfinding, replanning, goal selection, avoidance, reservation runtime, physics, terrain mutation, world mutation, save/load, or gameplay movement is introduced."
+        ]
+    )
+}
+
+private func evaluateMultiAgentMovementHardeningCase(
+    _ fixture: LabMultiAgentMovementHardeningFixture,
+    scenario: String,
+    ticksCompleted: Int
+) -> LabMultiAgentMovementHardeningCaseResult {
+    let contract = fixture.contract
+    var agents = contract.agents.map { agentId, node in
+        LabAgent(id: agentId, x: node.x, y: node.y, z: node.z)
+    }.sorted { $0.id < $1.id }
+    var physicalBridge = LabAgentPhysicalBridge()
+    for agent in agents {
+        let physicalNode = fixture.physicalPositionOverrides[agent.id]
+            ?? nodeKey(from: agent.position)
+        let physicalAgent = LabAgent(
+            id: agent.id,
+            x: physicalNode.x,
+            y: physicalNode.y,
+            z: physicalNode.z
+        )
+        _ = physicalBridge.spawnPlaceholder(for: physicalAgent, tick: 0)
+    }
+
+    let initialAbstract = Dictionary(uniqueKeysWithValues: agents.map {
+        ($0.id, nodeKey(from: $0.position))
+    })
+    let initialPhysical = Dictionary(uniqueKeysWithValues: physicalBridge.handles.map {
+        ($0.agentId, nodeKey(from: $0.position))
+    })
+    let sortedIntents = contract.intents.sorted {
+        $0.agentId == $1.agentId
+            ? $0.reason < $1.reason
+            : $0.agentId < $1.agentId
+    }
+    var resolutions: [LabMultiAgentMovementHardeningResolution] = []
+
+    if let maxAgents = fixture.maxAgents, contract.agents.count > maxAgents {
+        for intent in sortedIntents {
+            let abstractBefore = initialAbstract[intent.agentId]
+            let physicalBefore = initialPhysical[intent.agentId]
+            let divergence = hardeningDivergence(
+                abstract: abstractBefore,
+                physical: physicalBefore
+            )
+            resolutions.append(hardeningResolution(
+                for: intent,
+                decision: .deniedMaxAgents,
+                reason: "max_agents_exceeded",
+                abstractBefore: abstractBefore,
+                abstractAfter: abstractBefore,
+                physicalBefore: physicalBefore,
+                physicalAfter: physicalBefore,
+                divergenceBefore: divergence,
+                divergenceAfter: divergence
+            ))
+        }
+        return hardeningResult(
+            for: contract,
+            initialAbstract: initialAbstract,
+            finalAbstract: initialAbstract,
+            initialPhysical: initialPhysical,
+            finalPhysical: initialPhysical,
+            resolutions: resolutions
+        )
+    }
+
+    var pending: [LabAgentMoveIntent] = []
+    for intent in sortedIntents {
+        guard let agentIndex = agents.firstIndex(where: { $0.id == intent.agentId }) else {
+            resolutions.append(hardeningResolution(
+                for: intent,
+                decision: .deniedMissingAgent,
+                reason: "missing_agent",
+                abstractBefore: nil,
+                abstractAfter: nil,
+                physicalBefore: nil,
+                physicalAfter: nil,
+                divergenceBefore: nil,
+                divergenceAfter: nil
+            ))
+            continue
+        }
+
+        let abstractBefore = nodeKey(from: agents[agentIndex].position)
+        let physicalBefore = physicalBridge.handles.first {
+            $0.agentId == intent.agentId
+        }.map { nodeKey(from: $0.position) }
+        let divergenceBefore = hardeningDivergence(
+            abstract: abstractBefore,
+            physical: physicalBefore
+        )
+
+        if intent.stale {
+            resolutions.append(hardeningResolution(
+                for: intent,
+                decision: .deniedStaleIntent,
+                reason: "stale_intent_skips_collision",
+                abstractBefore: abstractBefore,
+                abstractAfter: abstractBefore,
+                physicalBefore: physicalBefore,
+                physicalAfter: physicalBefore,
+                divergenceBefore: divergenceBefore,
+                divergenceAfter: divergenceBefore
+            ))
+        } else if intent.from != abstractBefore {
+            resolutions.append(hardeningResolution(
+                for: intent,
+                decision: .deniedSourceMismatch,
+                reason: "source_mismatch_skips_collision",
+                abstractBefore: abstractBefore,
+                abstractAfter: abstractBefore,
+                physicalBefore: physicalBefore,
+                physicalAfter: physicalBefore,
+                divergenceBefore: divergenceBefore,
+                divergenceAfter: divergenceBefore
+            ))
+        } else if intent.from == intent.to || !isFixtureEdgeAllowed(from: intent.from, to: intent.to) {
+            resolutions.append(hardeningResolution(
+                for: intent,
+                decision: .deniedInvalidEdge,
+                reason: "invalid_edge_skips_collision",
+                abstractBefore: abstractBefore,
+                abstractAfter: abstractBefore,
+                physicalBefore: physicalBefore,
+                physicalAfter: physicalBefore,
+                divergenceBefore: divergenceBefore,
+                divergenceAfter: divergenceBefore
+            ))
+        } else if divergenceBefore != 0 {
+            resolutions.append(hardeningResolution(
+                for: intent,
+                decision: .deniedDivergence,
+                reason: "divergence_before_movement_denied",
+                abstractBefore: abstractBefore,
+                abstractAfter: abstractBefore,
+                physicalBefore: physicalBefore,
+                physicalAfter: physicalBefore,
+                divergenceBefore: divergenceBefore,
+                divergenceAfter: divergenceBefore
+            ))
+        } else {
+            pending.append(intent)
+        }
+    }
+
+    let swapAgentIds = Set(pending.flatMap { intent in
+        pending.contains { other in
+            other.agentId != intent.agentId
+                && other.from == intent.to
+                && other.to == intent.from
+        } ? [intent.agentId] : []
+    })
+
+    for intent in pending where swapAgentIds.contains(intent.agentId) {
+        let abstractBefore = nodeKey(from: agents.first {
+            $0.id == intent.agentId
+        }?.position ?? LabAgentPosition(x: intent.from.x, y: intent.from.y, z: intent.from.z))
+        let physicalBefore = initialPhysical[intent.agentId]
+        resolutions.append(hardeningResolution(
+            for: intent,
+            decision: .deniedSwapConflict,
+            reason: "swap_conflict_denied_v0",
+            abstractBefore: abstractBefore,
+            abstractAfter: abstractBefore,
+            physicalBefore: physicalBefore,
+            physicalAfter: physicalBefore,
+            divergenceBefore: hardeningDivergence(abstract: abstractBefore, physical: physicalBefore),
+            divergenceAfter: hardeningDivergence(abstract: abstractBefore, physical: physicalBefore)
+        ))
+    }
+
+    let collisionPending = pending.filter { !swapAgentIds.contains($0.agentId) }
+    var collisionEvidence: [String: LabTerrainCollisionLiveSnapshot] = [:]
+    for intent in collisionPending {
+        let evidenceSeed = fixture.collisionEvidenceSeeds[intent.agentId]
+            ?? contract.seed
+        let evidenceNode = fixture.collisionEvidenceNodes[intent.agentId]
+            ?? intent.to
+        let world = prepareMultiAgentLiveCollisionWorld(
+            seed: evidenceSeed,
+            around: evidenceNode
+        )
+        collisionEvidence[intent.agentId] = makeTerrainCollisionLiveSnapshot(
+            scenario: scenario,
+            seed: evidenceSeed,
+            ticksCompleted: ticksCompleted,
+            world: world,
+            node: evidenceNode
+        )
+    }
+
+    let occupablePending = collisionPending.filter {
+        collisionEvidence[$0.agentId]?.result.status == .occupable
+            && collisionEvidence[$0.agentId]?.node == $0.to
+    }
+    let destinationCounts = Dictionary(grouping: occupablePending, by: \.to)
+    var approvedDestinations = Set<LabTerrainPathNodeKey>()
+
+    for intent in collisionPending {
+        guard let agentIndex = agents.firstIndex(where: { $0.id == intent.agentId }) else {
+            continue
+        }
+        let abstractBefore = nodeKey(from: agents[agentIndex].position)
+        let physicalBefore = physicalBridge.handles.first {
+            $0.agentId == intent.agentId
+        }.map { nodeKey(from: $0.position) }
+        let divergenceBefore = hardeningDivergence(
+            abstract: abstractBefore,
+            physical: physicalBefore
+        )
+        guard let evidence = collisionEvidence[intent.agentId] else {
+            resolutions.append(hardeningResolution(
+                for: intent,
+                decision: .deniedCollision,
+                reason: "missing_collision_evidence",
+                abstractBefore: abstractBefore,
+                abstractAfter: abstractBefore,
+                physicalBefore: physicalBefore,
+                physicalAfter: physicalBefore,
+                divergenceBefore: divergenceBefore,
+                divergenceAfter: divergenceBefore
+            ))
+            continue
+        }
+
+        if evidence.node != intent.to {
+            resolutions.append(hardeningResolution(
+                for: intent,
+                decision: .deniedStaleCollision,
+                reason: "stale_collision_evidence_target_mismatch",
+                abstractBefore: abstractBefore,
+                abstractAfter: abstractBefore,
+                physicalBefore: physicalBefore,
+                physicalAfter: physicalBefore,
+                divergenceBefore: divergenceBefore,
+                divergenceAfter: divergenceBefore,
+                collision: evidence
+            ))
+        } else if evidence.result.status != .occupable {
+            resolutions.append(hardeningResolution(
+                for: intent,
+                decision: .deniedCollision,
+                reason: "collision_denied_\(evidence.result.reason)",
+                abstractBefore: abstractBefore,
+                abstractAfter: abstractBefore,
+                physicalBefore: physicalBefore,
+                physicalAfter: physicalBefore,
+                divergenceBefore: divergenceBefore,
+                divergenceAfter: divergenceBefore,
+                collision: evidence
+            ))
+        } else {
+            let destinationGroup = destinationCounts[intent.to] ?? []
+            if destinationGroup.count > 1
+                && destinationGroup.map(\.agentId).sorted().first != intent.agentId {
+                resolutions.append(hardeningResolution(
+                    for: intent,
+                    decision: .deniedSameDestinationConflict,
+                    reason: "same_destination_conflict_after_occupable_collision",
+                    abstractBefore: abstractBefore,
+                    abstractAfter: abstractBefore,
+                    physicalBefore: physicalBefore,
+                    physicalAfter: physicalBefore,
+                    divergenceBefore: divergenceBefore,
+                    divergenceAfter: divergenceBefore,
+                    collision: evidence
+                ))
+            } else if approvedDestinations.contains(intent.to) {
+                resolutions.append(hardeningResolution(
+                    for: intent,
+                    decision: .deniedSameDestinationConflict,
+                    reason: "duplicate_destination_guard_after_collision",
+                    abstractBefore: abstractBefore,
+                    abstractAfter: abstractBefore,
+                    physicalBefore: physicalBefore,
+                    physicalAfter: physicalBefore,
+                    divergenceBefore: divergenceBefore,
+                    divergenceAfter: divergenceBefore,
+                    collision: evidence
+                ))
+            } else {
+                approvedDestinations.insert(intent.to)
+                let dx = intent.to.x - intent.from.x
+                let dz = intent.to.z - intent.from.z
+                agents[agentIndex].lastAction = LabAgentAction(
+                    name: "move_abstract",
+                    reason: "multi_agent_hardening_approved_single_step",
+                    tick: ticksCompleted,
+                    dx: dx,
+                    dy: 0,
+                    dz: dz
+                )
+                _ = agents[agentIndex].applyAbstractMovement(tick: ticksCompleted)
+                _ = physicalBridge.sync(with: agents, tick: ticksCompleted)
+                let abstractAfter = nodeKey(from: agents[agentIndex].position)
+                let physicalAfter = physicalBridge.handles.first {
+                    $0.agentId == intent.agentId
+                }.map { nodeKey(from: $0.position) }
+                resolutions.append(hardeningResolution(
+                    for: intent,
+                    decision: .approved,
+                    reason: "approved_occupable_single_step_synced",
+                    abstractBefore: abstractBefore,
+                    abstractAfter: abstractAfter,
+                    physicalBefore: physicalBefore,
+                    physicalAfter: physicalAfter,
+                    divergenceBefore: divergenceBefore,
+                    divergenceAfter: hardeningDivergence(
+                        abstract: abstractAfter,
+                        physical: physicalAfter
+                    ),
+                    collision: evidence
+                ))
+            }
+        }
+    }
+
+    let finalAbstract = Dictionary(uniqueKeysWithValues: agents.map {
+        ($0.id, nodeKey(from: $0.position))
+    })
+    let finalPhysical = Dictionary(uniqueKeysWithValues: physicalBridge.handles.map {
+        ($0.agentId, nodeKey(from: $0.position))
+    })
+
+    return hardeningResult(
+        for: contract,
+        initialAbstract: initialAbstract,
+        finalAbstract: finalAbstract,
+        initialPhysical: initialPhysical,
+        finalPhysical: finalPhysical,
+        resolutions: resolutions
+    )
+}
+
+private func hardeningResult(
+    for contract: LabMultiAgentMovementHardeningCase,
+    initialAbstract: [String: LabTerrainPathNodeKey],
+    finalAbstract: [String: LabTerrainPathNodeKey],
+    initialPhysical: [String: LabTerrainPathNodeKey],
+    finalPhysical: [String: LabTerrainPathNodeKey],
+    resolutions: [LabMultiAgentMovementHardeningResolution]
+) -> LabMultiAgentMovementHardeningCaseResult {
+    var resolutions = resolutions
+    resolutions.sort {
+        $0.agentId == $1.agentId
+            ? $0.intent.reason < $1.intent.reason
+            : $0.agentId < $1.agentId
+    }
+    let actualApproved = resolutions.filter(\.approved).count
+    let actualDenied = resolutions.count - actualApproved
+    let displacements = resolutions.filter(\.displacementApplied).count
+    let actualDecisionCounts = hardeningDecisionCounts(for: resolutions)
+    let divergenceBeforeMax = resolutions.compactMap(\.divergenceBefore).max() ?? 0
+    let divergenceAfterMax = resolutions.compactMap(\.divergenceAfter).max() ?? 0
+    let approvedOneEdge = resolutions.filter(\.approved).allSatisfy {
+        guard let abstractBefore = $0.abstractBefore,
+              let abstractAfter = $0.abstractAfter,
+              let physicalBefore = $0.physicalBefore,
+              let physicalAfter = $0.physicalAfter else {
+            return false
+        }
+        return isFixtureEdgeAllowed(from: abstractBefore, to: abstractAfter)
+            && isFixtureEdgeAllowed(from: physicalBefore, to: physicalAfter)
+    }
+    let deniedPreserved = resolutions.filter { !$0.approved }.allSatisfy {
+        $0.abstractBefore == $0.abstractAfter
+            && $0.physicalBefore == $0.physicalAfter
+    }
+    let approvedFinalMatch = resolutions.filter(\.approved).allSatisfy {
+        guard let abstractAfter = $0.abstractAfter,
+              let physicalAfter = $0.physicalAfter else {
+            return false
+        }
+        return abstractAfter == physicalAfter && $0.divergenceAfter == 0
+    }
+    let approvedDestinations = resolutions.filter(\.approved).map(\.intent.to)
+    let noDuplicateApprovedDestination = Set(approvedDestinations).count
+        == approvedDestinations.count
+    let noApprovedSwap = !resolutions.filter(\.approved).contains { first in
+        resolutions.filter(\.approved).contains { second in
+            first.agentId != second.agentId
+                && first.intent.from == second.intent.to
+                && first.intent.to == second.intent.from
+        }
+    }
+    let passed = actualApproved == contract.expectedApproved
+        && actualDenied == contract.expectedDenied
+        && displacements == contract.expectedDisplacementsApplied
+        && actualDecisionCounts == contract.expectedDecisionCounts
+        && divergenceBeforeMax == contract.expectedDivergenceBeforeMax
+        && divergenceAfterMax == contract.expectedDivergenceAfterMax
+        && deniedPreserved
+        && approvedOneEdge
+        && approvedFinalMatch
+        && noDuplicateApprovedDestination
+        && noApprovedSwap
+
+    return LabMultiAgentMovementHardeningCaseResult(
+        name: contract.name,
+        passed: passed,
+        seed: contract.seed,
+        agents: contract.agents,
+        intents: contract.intents,
+        resolutions: resolutions,
+        initialAbstractPositions: initialAbstract,
+        finalAbstractPositions: finalAbstract,
+        initialPhysicalPositions: initialPhysical,
+        finalPhysicalPositions: finalPhysical,
+        expectedApproved: contract.expectedApproved,
+        actualApproved: actualApproved,
+        expectedDenied: contract.expectedDenied,
+        actualDenied: actualDenied,
+        expectedDisplacementsApplied: contract.expectedDisplacementsApplied,
+        actualDisplacementsApplied: displacements,
+        expectedDecisionCounts: contract.expectedDecisionCounts,
+        actualDecisionCounts: actualDecisionCounts,
+        divergenceBeforeMax: divergenceBeforeMax,
+        divergenceAfterMax: divergenceAfterMax
+    )
+}
+
+private func hardeningResolution(
+    for intent: LabAgentMoveIntent,
+    decision: LabMultiAgentMoveDecision,
+    reason: String,
+    abstractBefore: LabTerrainPathNodeKey?,
+    abstractAfter: LabTerrainPathNodeKey?,
+    physicalBefore: LabTerrainPathNodeKey?,
+    physicalAfter: LabTerrainPathNodeKey?,
+    divergenceBefore: Int?,
+    divergenceAfter: Int?,
+    collision: LabTerrainCollisionLiveSnapshot? = nil
+) -> LabMultiAgentMovementHardeningResolution {
+    LabMultiAgentMovementHardeningResolution(
+        agentId: intent.agentId,
+        intent: intent,
+        collisionRead: collision != nil,
+        collisionStatus: collision?.result.status,
+        collisionReason: collision?.result.reason ?? "collision_not_read",
+        decision: decision,
+        approved: decision == .approved,
+        displacementApplied: decision == .approved,
+        abstractBefore: abstractBefore,
+        abstractAfter: abstractAfter,
+        physicalBefore: physicalBefore,
+        physicalAfter: physicalAfter,
+        divergenceBefore: divergenceBefore,
+        divergenceAfter: divergenceAfter,
+        reason: reason
+    )
+}
+
+private func hardeningDecisionCounts(
+    for resolutions: [LabMultiAgentMovementHardeningResolution]
+) -> [String: Int] {
+    var counts: [String: Int] = [:]
+    for resolution in resolutions {
+        counts[resolution.decision.rawValue, default: 0] += 1
+    }
+    return counts
+}
+
+private func hardeningDecisionCount(
+    in results: [LabMultiAgentMovementHardeningCaseResult],
+    _ decision: LabMultiAgentMoveDecision
+) -> Int {
+    results.reduce(0) { total, result in
+        total + result.resolutions.filter { $0.decision == decision }.count
+    }
+}
+
+private func hardeningDivergence(
+    abstract: LabTerrainPathNodeKey?,
+    physical: LabTerrainPathNodeKey?
+) -> Int? {
+    guard let abstract, let physical else { return nil }
+    return manhattanDistance(abstract, physical)
 }
 
 private func evaluateMultiAgentApprovedPhysicalMovementCase(

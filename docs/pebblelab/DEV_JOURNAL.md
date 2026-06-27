@@ -4042,3 +4042,146 @@ movement and conflict coverage around same-destination, swap, collision
 denied, source mismatch, stale collision, partial approval, and max
 agents/tick bounds while keeping avoidance, reservation runtime, replanning,
 physics, and gameplay movement out of scope.
+
+## 2026-06-27 — Phase 4.19F multi-agent movement hardening
+
+### Objective
+
+Harden live multi-agent movement after the approved-only smoke by covering
+controlled denials, conflicts, partial approval, divergence, stale collision
+evidence, and a hardening-only max-agent bound.
+
+### Starting State
+
+Phase 4.19B added deterministic fixture-only arbitration. Phase 4.19C
+hardened fixture arbitration. Phase 4.19D added live read-only collision
+intent evidence with no displacement. Phase 4.19E added the first approved
+multi-agent physical placeholder movement: two agents, two occupable
+destinations, one edge each, no denials, and divergence zero.
+
+### Files Created/Modified
+
+- Modified `Sources/PebbleLab/LabMultiAgentMovement.swift`.
+- Modified `Sources/PebbleLab/LabOptions.swift`.
+- Modified `Sources/PebbleLab/LabScenarios.swift`.
+- Modified `Sources/PebbleLab/LabOutput.swift`.
+- Modified `Sources/PebbleLab/LabEvents.swift`.
+- Modified `Sources/PebbleLab/main.swift`.
+- Updated `docs/pebblelab/CHANGELOG.md`.
+- Updated `docs/pebblelab/DEV_JOURNAL.md`.
+- Updated `docs/pebblelab/ROADMAP.md`.
+- Updated `docs/pebblelab/PHASE_4_MULTI_AGENT_MOVEMENT_PLAN.md`.
+
+### Why Hardening
+
+The previous live movement phase only proved the success path. This phase
+keeps the same bounded physical placeholder contract but adds adversarial
+live cases around collision denial, same-destination conflict, swap conflict,
+source mismatch, stale intent, invalid edge, divergence before movement,
+stale collision evidence, partial approval, all-denied outcomes, and
+max-agent overflow. It remains a smoke/hardening harness, not gameplay
+movement.
+
+### Cases Covered
+
+- `approved_two_agents_remains_green`;
+- `collision_denied_preserves_position`;
+- `partial_approval_one_approved_one_collision_denied`;
+- `same_destination_live_conflict_denies_loser`;
+- `swap_conflict_live_denies_both`;
+- `source_mismatch_live_denied_before_collision`;
+- `stale_intent_live_denied_before_collision`;
+- `invalid_edge_live_denied_before_collision`;
+- `divergence_before_movement_denied`;
+- `stale_collision_evidence_denied`;
+- `all_denied_live_mixed_reasons`;
+- `max_agents_live_bound_exceeded`.
+
+### Approved, Denied, And Partial Approval Policy
+
+Valid intents are processed in stable `agentId` order. Source mismatch, stale
+intent, invalid edge, divergence-before, swap conflict, and max-agent overflow
+are denied before live collision is read. Remaining valid intents read live
+collision evidence. Occupable destinations may be approved unless a
+same-destination conflict makes the stable-order loser deny. Non-occupable
+destinations are denied with `deniedCollision`. Only approved resolutions
+apply one abstract edge and synchronize the physical placeholder.
+
+The partial approval case uses controlled per-intent live evidence: one
+agent reads seed 99 occupable evidence and moves, while the other reads seed
+42 non-occupable evidence for its destination and remains unchanged.
+
+### Divergence And Stale Collision Policy
+
+The divergence case starts the physical placeholder at a different node than
+the abstract agent and denies movement with `deniedDivergence` before
+collision is read. The stale collision case reads live evidence for a
+different node than the intent destination and denies with
+`deniedStaleCollision`. Both are controlled hardening injections and do not
+mutate terrain/world state.
+
+### Outputs, Invariants, Metrics, And Event
+
+The scenario writes:
+
+- `multi_agent_movement_hardening_report.json`;
+- `multi_agent_movement_hardening_invariant_report.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The report records 12 cases, 12 passed, 0 failed, 4 approved resolutions, 18
+denied resolutions, 4 displacements applied, 6 occupable live destinations,
+3 non-occupable live destinations, 3 collision denials, 1 same-destination
+conflict, 2 swap denials, 2 source mismatches, 1 stale intent, 2 invalid
+edges, 1 divergence denial, 1 stale collision denial, 9 all-denied cases,
+5 max-agent denials, divergence before max 1, and divergence after max 1.
+
+The invariant report has 55 checks and passes all of them. Metrics use the
+`multiAgentMovementHardening*` prefix. The scenario emits one aggregate
+`lab_multi_agent_movement_hardening_recorded` event.
+
+### Confirmed Out Of Scope
+
+No route following, pathfinding, replanning, goal selection, avoidance,
+reservation table runtime, physics, terrain mutation, world mutation,
+save/load change, registry change, social behavior, communication, long
+route following, route repair, or gameplay movement is performed.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_hardening_smoke --seed 42 --ticks 5 --out runs/check_multi_agent_movement_hardening`
+- `swift run -c release PebbleLab -- --scenario multi_agent_approved_physical_movement_smoke --seed 42 --ticks 5 --out runs/check_multi_agent_approved_physical_after_hardening`
+- `swift run -c release PebbleLab -- --scenario multi_agent_live_collision_intent_smoke --seed 42 --ticks 5 --out runs/check_multi_agent_live_collision_intent_after_hardening`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_fixture_smoke --seed 42 --ticks 0 --out runs/check_multi_agent_fixture_after_hardening`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_fixture_hardening_smoke --seed 42 --ticks 0 --out runs/check_multi_agent_fixture_hardening_after_hardening`
+- `swift run -c release PebbleLab -- --scenario physical_movement_single_step_hardening_smoke --seed 42 --ticks 5 --out runs/check_single_step_hardening_after_multi_agent_hardening`
+- `swift run -c release PebbleLab -- --scenario physical_movement_approved_single_step_smoke --seed 42 --ticks 5 --out runs/check_approved_single_step_after_multi_agent_hardening`
+- `swift run -c release PebbleLab -- --scenario physical_movement_denied_smoke --seed 42 --ticks 5 --out runs/check_denied_single_step_after_multi_agent_hardening`
+- `swift run -c release PebbleLab -- --scenario route_following_live_hardening_smoke --seed 42 --ticks 5 --out runs/check_route_following_live_hardening_after_multi_agent_hardening`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_multi_agent_hardening`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- Multi-agent movement hardening report: success true.
+- Multi-agent movement hardening invariant report: success true.
+- Cases: 12 passed, 0 failed.
+- Approved/denied totals: 4 / 18.
+- Displacements applied: 4.
+- Occupable/non-occupable destination totals: 6 / 3.
+- Divergence before/after max: 1 / 1.
+- Invariant checks: 55 passed, 0 failed.
+- Metrics contain `multiAgentMovementHardening*`.
+- `events.ndjson` contains
+  `lab_multi_agent_movement_hardening_recorded`.
+
+### Next Step
+
+Phase 4.20A: multi-agent movement integration planning docs-only. It should
+define the next integration boundary before adding reservation runtime,
+avoidance, dynamic replanning, route repair, physics, save/load, social
+behavior, gameplay movement, or long-running multi-agent navigation.

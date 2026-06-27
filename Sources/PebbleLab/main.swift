@@ -12,6 +12,8 @@ let isMultiAgentLiveCollisionIntentScenario = options.scenario
     == "multi_agent_live_collision_intent_smoke"
 let isMultiAgentApprovedPhysicalMovementScenario = options.scenario
     == "multi_agent_approved_physical_movement_smoke"
+let isMultiAgentMovementHardeningScenario = options.scenario
+    == "multi_agent_movement_hardening_smoke"
 let world = (isMultiAgentMovementFixtureScenario || isMultiAgentMovementFixtureHardeningScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
@@ -1115,6 +1117,52 @@ let multiAgentApprovedPhysicalMovementSuccess =
             && multiAgentApprovedPhysicalMovementReport?.summary.terrainMutationPerformed == false
             && multiAgentApprovedPhysicalMovementReport?.summary.worldMutationPerformed == false)
         : nil
+let multiAgentMovementHardeningReport = isMultiAgentMovementHardeningScenario
+    ? makeMultiAgentMovementHardeningReport(
+        scenario: options.scenario,
+        seed: options.seed,
+        ticksCompleted: ticksCompleted
+    )
+    : nil
+let multiAgentMovementHardeningInvariantReport =
+    isMultiAgentMovementHardeningScenario
+        ? makeMultiAgentMovementHardeningInvariantReport(
+            report: multiAgentMovementHardeningReport,
+            scenario: options.scenario,
+            seed: options.seed
+        )
+        : nil
+let multiAgentMovementHardeningSuccess =
+    isMultiAgentMovementHardeningScenario
+        ? ((multiAgentMovementHardeningReport?.success ?? false)
+            && (multiAgentMovementHardeningInvariantReport?.success ?? false)
+            && multiAgentMovementHardeningReport?.summary.failed == 0
+            && (multiAgentMovementHardeningReport?.summary.approvedTotal ?? 0) > 0
+            && (multiAgentMovementHardeningReport?.summary.deniedTotal ?? 0) > 0
+            && (multiAgentMovementHardeningReport?.summary.displacementsApplied ?? 0) > 0
+            && (multiAgentMovementHardeningReport?.summary.partialApprovalCases ?? 0) > 0
+            && (multiAgentMovementHardeningReport?.summary.collisionDenied ?? 0) > 0
+            && (multiAgentMovementHardeningReport?.summary.sameDestinationConflicts ?? 0) > 0
+            && (multiAgentMovementHardeningReport?.summary.swapConflicts ?? 0) > 0
+            && (multiAgentMovementHardeningReport?.summary.sourceMismatch ?? 0) > 0
+            && (multiAgentMovementHardeningReport?.summary.staleIntent ?? 0) > 0
+            && (multiAgentMovementHardeningReport?.summary.invalidEdges ?? 0) > 0
+            && (multiAgentMovementHardeningReport?.summary.divergenceDenied ?? 0) > 0
+            && (multiAgentMovementHardeningReport?.summary.staleCollision ?? 0) > 0
+            && (multiAgentMovementHardeningReport?.summary.maxAgentsExceeded ?? 0) > 0
+            && multiAgentMovementHardeningReport?.summary.worldUsed == true
+            && multiAgentMovementHardeningReport?.summary.liveCollisionRead == true
+            && multiAgentMovementHardeningReport?.summary.physicalMovementApplied == true
+            && multiAgentMovementHardeningReport?.summary.routeFollowingApplied == false
+            && multiAgentMovementHardeningReport?.summary.pathfindingPerformed == false
+            && multiAgentMovementHardeningReport?.summary.replanningPerformed == false
+            && multiAgentMovementHardeningReport?.summary.goalSelectionPerformed == false
+            && multiAgentMovementHardeningReport?.summary.avoidancePerformed == false
+            && multiAgentMovementHardeningReport?.summary.reservationTableImplemented == false
+            && multiAgentMovementHardeningReport?.summary.physicsPerformed == false
+            && multiAgentMovementHardeningReport?.summary.terrainMutationPerformed == false
+            && multiAgentMovementHardeningReport?.summary.worldMutationPerformed == false)
+        : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
@@ -1488,6 +1536,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (multiAgentMovementFixtureHardeningSuccess ?? true)
     && (multiAgentLiveCollisionIntentSuccess ?? true)
     && (multiAgentApprovedPhysicalMovementSuccess ?? true)
+    && (multiAgentMovementHardeningSuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -1801,6 +1850,42 @@ if options.outPath != nil {
                 intentCount: summary.intentCountTotal,
                 occupableDestinations: summary.occupableDestinations,
                 nonOccupableDestinations: summary.nonOccupableDestinations,
+                divergenceBeforeMax: summary.divergenceBeforeMax,
+                divergenceAfterMax: summary.divergenceAfterMax,
+                worldUsed: summary.worldUsed,
+                liveCollisionRead: summary.liveCollisionRead,
+                physicalMovementApplied: summary.physicalMovementApplied,
+                routeFollowingApplied: summary.routeFollowingApplied,
+                mutationPerformed: summary.terrainMutationPerformed || summary.worldMutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed
+            ))
+        }
+        if let multiAgentMovementHardeningReport {
+            let summary = multiAgentMovementHardeningReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_multi_agent_movement_hardening_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: multiAgentMovementHardeningSuccess,
+                passed: summary.passed,
+                failed: summary.failed,
+                approved: summary.approvedTotal,
+                denied: summary.deniedTotal,
+                displacementsApplied: summary.displacementsApplied,
+                cases: summary.cases,
+                agentCount: summary.agentCountTotal,
+                intentCount: summary.intentCountTotal,
+                sameDestinationConflicts: summary.sameDestinationConflicts,
+                swapConflicts: summary.swapConflicts,
+                sourceMismatch: summary.sourceMismatch,
+                staleIntent: summary.staleIntent,
+                invalidEdges: summary.invalidEdges,
+                allDeniedCases: summary.allDeniedCases,
+                maxAgentsExceeded: summary.maxAgentsExceeded,
+                collisionDenied: summary.collisionDenied,
+                divergenceDenied: summary.divergenceDenied,
+                staleCollision: summary.staleCollision,
+                partialApprovalCases: summary.partialApprovalCases,
                 divergenceBeforeMax: summary.divergenceBeforeMax,
                 divergenceAfterMax: summary.divergenceAfterMax,
                 worldUsed: summary.worldUsed,
@@ -2378,6 +2463,18 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("multi_agent_approved_physical_movement_invariant_report.json")
             )
         }
+        if let multiAgentMovementHardeningReport {
+            try writeJSON(
+                multiAgentMovementHardeningReport,
+                to: outURL.appendingPathComponent("multi_agent_movement_hardening_report.json")
+            )
+        }
+        if let multiAgentMovementHardeningInvariantReport {
+            try writeJSON(
+                multiAgentMovementHardeningInvariantReport,
+                to: outURL.appendingPathComponent("multi_agent_movement_hardening_invariant_report.json")
+            )
+        }
         if let routeFollowingLiveSnapshot {
             try writeJSON(
                 routeFollowingLiveSnapshot,
@@ -2861,6 +2958,39 @@ if let outPath = options.outPath {
             multiAgentApprovedPhysicalMovementTerrainMutationPerformed: multiAgentApprovedPhysicalMovementReport?.summary.terrainMutationPerformed,
             multiAgentApprovedPhysicalMovementWorldMutationPerformed: multiAgentApprovedPhysicalMovementReport?.summary.worldMutationPerformed,
             multiAgentApprovedPhysicalMovementSuccess: multiAgentApprovedPhysicalMovementSuccess,
+            multiAgentMovementHardeningCases: multiAgentMovementHardeningReport?.summary.cases,
+            multiAgentMovementHardeningPassed: multiAgentMovementHardeningReport?.summary.passed,
+            multiAgentMovementHardeningFailed: multiAgentMovementHardeningReport?.summary.failed,
+            multiAgentMovementHardeningAgentCount: multiAgentMovementHardeningReport?.summary.agentCountTotal,
+            multiAgentMovementHardeningIntentCount: multiAgentMovementHardeningReport?.summary.intentCountTotal,
+            multiAgentMovementHardeningApproved: multiAgentMovementHardeningReport?.summary.approvedTotal,
+            multiAgentMovementHardeningDenied: multiAgentMovementHardeningReport?.summary.deniedTotal,
+            multiAgentMovementHardeningDisplacementsApplied: multiAgentMovementHardeningReport?.summary.displacementsApplied,
+            multiAgentMovementHardeningOccupableDestinations: multiAgentMovementHardeningReport?.summary.occupableDestinations,
+            multiAgentMovementHardeningNonOccupableDestinations: multiAgentMovementHardeningReport?.summary.nonOccupableDestinations,
+            multiAgentMovementHardeningCollisionDenied: multiAgentMovementHardeningReport?.summary.collisionDenied,
+            multiAgentMovementHardeningSameDestinationConflicts: multiAgentMovementHardeningReport?.summary.sameDestinationConflicts,
+            multiAgentMovementHardeningSwapConflicts: multiAgentMovementHardeningReport?.summary.swapConflicts,
+            multiAgentMovementHardeningSourceMismatch: multiAgentMovementHardeningReport?.summary.sourceMismatch,
+            multiAgentMovementHardeningStaleIntent: multiAgentMovementHardeningReport?.summary.staleIntent,
+            multiAgentMovementHardeningInvalidEdges: multiAgentMovementHardeningReport?.summary.invalidEdges,
+            multiAgentMovementHardeningDivergenceDenied: multiAgentMovementHardeningReport?.summary.divergenceDenied,
+            multiAgentMovementHardeningStaleCollision: multiAgentMovementHardeningReport?.summary.staleCollision,
+            multiAgentMovementHardeningPartialApprovalCases: multiAgentMovementHardeningReport?.summary.partialApprovalCases,
+            multiAgentMovementHardeningAllDeniedCases: multiAgentMovementHardeningReport?.summary.allDeniedCases,
+            multiAgentMovementHardeningMaxAgentsExceeded: multiAgentMovementHardeningReport?.summary.maxAgentsExceeded,
+            multiAgentMovementHardeningDivergenceBeforeMax: multiAgentMovementHardeningReport?.summary.divergenceBeforeMax,
+            multiAgentMovementHardeningDivergenceAfterMax: multiAgentMovementHardeningReport?.summary.divergenceAfterMax,
+            multiAgentMovementHardeningWorldUsed: multiAgentMovementHardeningReport?.summary.worldUsed,
+            multiAgentMovementHardeningLiveCollisionRead: multiAgentMovementHardeningReport?.summary.liveCollisionRead,
+            multiAgentMovementHardeningPhysicalMovementApplied: multiAgentMovementHardeningReport?.summary.physicalMovementApplied,
+            multiAgentMovementHardeningRouteFollowingApplied: multiAgentMovementHardeningReport?.summary.routeFollowingApplied,
+            multiAgentMovementHardeningPathfindingPerformed: multiAgentMovementHardeningReport?.summary.pathfindingPerformed,
+            multiAgentMovementHardeningReplanningPerformed: multiAgentMovementHardeningReport?.summary.replanningPerformed,
+            multiAgentMovementHardeningPhysicsPerformed: multiAgentMovementHardeningReport?.summary.physicsPerformed,
+            multiAgentMovementHardeningTerrainMutationPerformed: multiAgentMovementHardeningReport?.summary.terrainMutationPerformed,
+            multiAgentMovementHardeningWorldMutationPerformed: multiAgentMovementHardeningReport?.summary.worldMutationPerformed,
+            multiAgentMovementHardeningSuccess: multiAgentMovementHardeningSuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Hardened multi-agent physical movement cases.
 - Added multi-agent approved physical movement smoke.
 - Added multi-agent live read-only collision intent smoke.
 - Hardened fixture-only multi-agent movement arbitration.

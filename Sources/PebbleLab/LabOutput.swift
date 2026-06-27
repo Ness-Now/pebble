@@ -404,6 +404,39 @@ struct RunMetrics: Encodable {
     let multiAgentApprovedPhysicalMovementTerrainMutationPerformed: Bool?
     let multiAgentApprovedPhysicalMovementWorldMutationPerformed: Bool?
     let multiAgentApprovedPhysicalMovementSuccess: Bool?
+    let multiAgentMovementHardeningCases: Int?
+    let multiAgentMovementHardeningPassed: Int?
+    let multiAgentMovementHardeningFailed: Int?
+    let multiAgentMovementHardeningAgentCount: Int?
+    let multiAgentMovementHardeningIntentCount: Int?
+    let multiAgentMovementHardeningApproved: Int?
+    let multiAgentMovementHardeningDenied: Int?
+    let multiAgentMovementHardeningDisplacementsApplied: Int?
+    let multiAgentMovementHardeningOccupableDestinations: Int?
+    let multiAgentMovementHardeningNonOccupableDestinations: Int?
+    let multiAgentMovementHardeningCollisionDenied: Int?
+    let multiAgentMovementHardeningSameDestinationConflicts: Int?
+    let multiAgentMovementHardeningSwapConflicts: Int?
+    let multiAgentMovementHardeningSourceMismatch: Int?
+    let multiAgentMovementHardeningStaleIntent: Int?
+    let multiAgentMovementHardeningInvalidEdges: Int?
+    let multiAgentMovementHardeningDivergenceDenied: Int?
+    let multiAgentMovementHardeningStaleCollision: Int?
+    let multiAgentMovementHardeningPartialApprovalCases: Int?
+    let multiAgentMovementHardeningAllDeniedCases: Int?
+    let multiAgentMovementHardeningMaxAgentsExceeded: Int?
+    let multiAgentMovementHardeningDivergenceBeforeMax: Int?
+    let multiAgentMovementHardeningDivergenceAfterMax: Int?
+    let multiAgentMovementHardeningWorldUsed: Bool?
+    let multiAgentMovementHardeningLiveCollisionRead: Bool?
+    let multiAgentMovementHardeningPhysicalMovementApplied: Bool?
+    let multiAgentMovementHardeningRouteFollowingApplied: Bool?
+    let multiAgentMovementHardeningPathfindingPerformed: Bool?
+    let multiAgentMovementHardeningReplanningPerformed: Bool?
+    let multiAgentMovementHardeningPhysicsPerformed: Bool?
+    let multiAgentMovementHardeningTerrainMutationPerformed: Bool?
+    let multiAgentMovementHardeningWorldMutationPerformed: Bool?
+    let multiAgentMovementHardeningSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -808,6 +841,39 @@ struct RunMetrics: Encodable {
         multiAgentApprovedPhysicalMovementTerrainMutationPerformed: Bool? = nil,
         multiAgentApprovedPhysicalMovementWorldMutationPerformed: Bool? = nil,
         multiAgentApprovedPhysicalMovementSuccess: Bool? = nil,
+        multiAgentMovementHardeningCases: Int? = nil,
+        multiAgentMovementHardeningPassed: Int? = nil,
+        multiAgentMovementHardeningFailed: Int? = nil,
+        multiAgentMovementHardeningAgentCount: Int? = nil,
+        multiAgentMovementHardeningIntentCount: Int? = nil,
+        multiAgentMovementHardeningApproved: Int? = nil,
+        multiAgentMovementHardeningDenied: Int? = nil,
+        multiAgentMovementHardeningDisplacementsApplied: Int? = nil,
+        multiAgentMovementHardeningOccupableDestinations: Int? = nil,
+        multiAgentMovementHardeningNonOccupableDestinations: Int? = nil,
+        multiAgentMovementHardeningCollisionDenied: Int? = nil,
+        multiAgentMovementHardeningSameDestinationConflicts: Int? = nil,
+        multiAgentMovementHardeningSwapConflicts: Int? = nil,
+        multiAgentMovementHardeningSourceMismatch: Int? = nil,
+        multiAgentMovementHardeningStaleIntent: Int? = nil,
+        multiAgentMovementHardeningInvalidEdges: Int? = nil,
+        multiAgentMovementHardeningDivergenceDenied: Int? = nil,
+        multiAgentMovementHardeningStaleCollision: Int? = nil,
+        multiAgentMovementHardeningPartialApprovalCases: Int? = nil,
+        multiAgentMovementHardeningAllDeniedCases: Int? = nil,
+        multiAgentMovementHardeningMaxAgentsExceeded: Int? = nil,
+        multiAgentMovementHardeningDivergenceBeforeMax: Int? = nil,
+        multiAgentMovementHardeningDivergenceAfterMax: Int? = nil,
+        multiAgentMovementHardeningWorldUsed: Bool? = nil,
+        multiAgentMovementHardeningLiveCollisionRead: Bool? = nil,
+        multiAgentMovementHardeningPhysicalMovementApplied: Bool? = nil,
+        multiAgentMovementHardeningRouteFollowingApplied: Bool? = nil,
+        multiAgentMovementHardeningPathfindingPerformed: Bool? = nil,
+        multiAgentMovementHardeningReplanningPerformed: Bool? = nil,
+        multiAgentMovementHardeningPhysicsPerformed: Bool? = nil,
+        multiAgentMovementHardeningTerrainMutationPerformed: Bool? = nil,
+        multiAgentMovementHardeningWorldMutationPerformed: Bool? = nil,
+        multiAgentMovementHardeningSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -1211,6 +1277,39 @@ struct RunMetrics: Encodable {
         self.multiAgentApprovedPhysicalMovementTerrainMutationPerformed = multiAgentApprovedPhysicalMovementTerrainMutationPerformed
         self.multiAgentApprovedPhysicalMovementWorldMutationPerformed = multiAgentApprovedPhysicalMovementWorldMutationPerformed
         self.multiAgentApprovedPhysicalMovementSuccess = multiAgentApprovedPhysicalMovementSuccess
+        self.multiAgentMovementHardeningCases = multiAgentMovementHardeningCases
+        self.multiAgentMovementHardeningPassed = multiAgentMovementHardeningPassed
+        self.multiAgentMovementHardeningFailed = multiAgentMovementHardeningFailed
+        self.multiAgentMovementHardeningAgentCount = multiAgentMovementHardeningAgentCount
+        self.multiAgentMovementHardeningIntentCount = multiAgentMovementHardeningIntentCount
+        self.multiAgentMovementHardeningApproved = multiAgentMovementHardeningApproved
+        self.multiAgentMovementHardeningDenied = multiAgentMovementHardeningDenied
+        self.multiAgentMovementHardeningDisplacementsApplied = multiAgentMovementHardeningDisplacementsApplied
+        self.multiAgentMovementHardeningOccupableDestinations = multiAgentMovementHardeningOccupableDestinations
+        self.multiAgentMovementHardeningNonOccupableDestinations = multiAgentMovementHardeningNonOccupableDestinations
+        self.multiAgentMovementHardeningCollisionDenied = multiAgentMovementHardeningCollisionDenied
+        self.multiAgentMovementHardeningSameDestinationConflicts = multiAgentMovementHardeningSameDestinationConflicts
+        self.multiAgentMovementHardeningSwapConflicts = multiAgentMovementHardeningSwapConflicts
+        self.multiAgentMovementHardeningSourceMismatch = multiAgentMovementHardeningSourceMismatch
+        self.multiAgentMovementHardeningStaleIntent = multiAgentMovementHardeningStaleIntent
+        self.multiAgentMovementHardeningInvalidEdges = multiAgentMovementHardeningInvalidEdges
+        self.multiAgentMovementHardeningDivergenceDenied = multiAgentMovementHardeningDivergenceDenied
+        self.multiAgentMovementHardeningStaleCollision = multiAgentMovementHardeningStaleCollision
+        self.multiAgentMovementHardeningPartialApprovalCases = multiAgentMovementHardeningPartialApprovalCases
+        self.multiAgentMovementHardeningAllDeniedCases = multiAgentMovementHardeningAllDeniedCases
+        self.multiAgentMovementHardeningMaxAgentsExceeded = multiAgentMovementHardeningMaxAgentsExceeded
+        self.multiAgentMovementHardeningDivergenceBeforeMax = multiAgentMovementHardeningDivergenceBeforeMax
+        self.multiAgentMovementHardeningDivergenceAfterMax = multiAgentMovementHardeningDivergenceAfterMax
+        self.multiAgentMovementHardeningWorldUsed = multiAgentMovementHardeningWorldUsed
+        self.multiAgentMovementHardeningLiveCollisionRead = multiAgentMovementHardeningLiveCollisionRead
+        self.multiAgentMovementHardeningPhysicalMovementApplied = multiAgentMovementHardeningPhysicalMovementApplied
+        self.multiAgentMovementHardeningRouteFollowingApplied = multiAgentMovementHardeningRouteFollowingApplied
+        self.multiAgentMovementHardeningPathfindingPerformed = multiAgentMovementHardeningPathfindingPerformed
+        self.multiAgentMovementHardeningReplanningPerformed = multiAgentMovementHardeningReplanningPerformed
+        self.multiAgentMovementHardeningPhysicsPerformed = multiAgentMovementHardeningPhysicsPerformed
+        self.multiAgentMovementHardeningTerrainMutationPerformed = multiAgentMovementHardeningTerrainMutationPerformed
+        self.multiAgentMovementHardeningWorldMutationPerformed = multiAgentMovementHardeningWorldMutationPerformed
+        self.multiAgentMovementHardeningSuccess = multiAgentMovementHardeningSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed
