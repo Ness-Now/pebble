@@ -1273,3 +1273,31 @@ terrain/world mutation remain out of scope.
 
 Next recommended step: Phase 4.22A - Feedback Consumption Planning
 Docs-Only.
+
+## Phase 4.22A - Feedback Consumption Planning Docs-Only
+
+Status: implemented and validated.
+
+Goal: document how PebbleLab will later consume structured movement feedback
+as bounded agent policy context without implementing runtime feedback
+consumption yet.
+
+The document `PHASE_4_FEEDBACK_CONSUMPTION_PLAN.md` summarizes the validated
+4.19 movement primitives, 4.20 tick movement contract, and 4.21 agent intent
+production chain. It defines semantics for `approvedForMovement`, `moved`,
+and every `blockedBy*` feedback kind; proposes future observation/context
+types; defines an observe-only deterministic v0 policy; and lays out future
+fixture, hardening, and integration phases.
+
+The plan also defines future outputs, `agentFeedbackConsumption*` metrics, the
+aggregate `lab_agent_feedback_consumption_recorded` event, 50 future
+invariants, explicit out-of-scope boundaries, and a risk table for keeping
+feedback from becoming memory, learning, replanning, pathfinding, social
+behavior, or reservation runtime too early.
+
+Runtime feedback consumption is not implemented. Memory updates, goal
+changes, learning, LLM/RL/Python, pathfinding, replanning, avoidance,
+reservation runtime, movement application, collision reads, route following,
+physics, gameplay movement, and terrain/world mutation remain out of scope.
+
+Next recommended step: Phase 4.22B - Feedback Consumption Fixture Smoke.

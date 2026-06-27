@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Documented PebbleLab feedback consumption plan.
 - Added agent intent to movement tick approved application smoke.
 - Added agent intent to movement tick live read-only smoke.
 - Added fixture-only agent intent to movement tick integration smoke.

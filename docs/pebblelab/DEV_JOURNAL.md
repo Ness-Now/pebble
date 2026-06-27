@@ -5666,3 +5666,151 @@ structured movement feedback may later be consumed by agent policy or memory,
 without implementing memory updates, goal changes, replanning, pathfinding,
 avoidance, reservation runtime, route following, physics, or gameplay
 movement.
+
+## 2026-06-28 — Phase 4.22A feedback consumption planning docs-only
+
+### Objective
+
+Document the future feedback consumption contract before implementing any
+runtime behavior. The phase explains how `LabMovementFeedback` can later
+become bounded policy context for agents while keeping memory, goals,
+learning, replanning, pathfinding, movement, and mutation out of scope.
+
+### Starting State
+
+Phases 4.19A-F validated multi-agent movement primitives. Phases 4.20A-E
+validated tick-level movement, feedback, approved application, and hardening.
+Phases 4.21A-F validated agent intent production through approved tick
+application. The current system produces `approvedForMovement`, `moved`, and
+`blockedBy*` feedback, but agents do not consume it.
+
+### Files Created or Modified
+
+- `docs/pebblelab/PHASE_4_FEEDBACK_CONSUMPTION_PLAN.md`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+
+### Why Docs-Only
+
+Feedback consumption is the next responsibility boundary. Implementing it too
+early could accidentally introduce memory mutation, goal changes, retries,
+replanning, pathfinding, avoidance, reservation runtime, or hidden behavior
+adaptation. The docs-only phase locks the contract first.
+
+### Problem To Solve
+
+The future transition is from tick-produced `LabMovementFeedback` to
+agent-observed bounded feedback context. Feedback must stay deterministic,
+traceable, and explicit; it must not become free-form memory or implicit
+learning.
+
+### Target Architecture
+
+The plan defines a layered architecture:
+
+- feedback observation layer;
+- feedback normalization layer;
+- agent feedback context layer;
+- policy input augmentation layer;
+- future decision policy layer;
+- reporting boundary;
+- future memory/learning boundary.
+
+Each layer has explicit responsibilities and prohibitions.
+
+### Feedback Semantics
+
+The plan documents semantics for `approvedForMovement`, `moved`,
+`blockedByCollision`, `blockedByAgentConflict`, `blockedBySourceMismatch`,
+`blockedByDivergence`, `blockedByStaleIntent`, `blockedByInvalidEdge`, and
+`blockedByMaxAgents`. Each kind is observation-only in the first consumption
+phases.
+
+### Future Types
+
+The proposed future types are:
+
+- `LabAgentFeedbackObservation`;
+- `LabAgentFeedbackContext`;
+- `LabAgentFeedbackConsumptionDecision`;
+- `LabAgentFeedbackConsumptionResult`;
+- `LabAgentFeedbackConsumptionSummary`.
+
+They are documented only and not implemented.
+
+### v0 Policy
+
+The v0 policy is deterministic and observe-only. It accepts known feedback,
+rejects unknown or malformed feedback, consumes at most one feedback item per
+agent, and emits structured context. It does not mutate memory or goals,
+retry, replan, pathfind, avoid, reserve, apply movement, read collision, call
+LLM/RL/Python, or emit new movement intents.
+
+### Relationship With Agent Intent Production
+
+Later phases may pass feedback context into `LabAgentIntentContext.lastFeedback`.
+The first integration remains plumbing only: no alternate move selection, no
+retry loop, and no dynamic policy mutation.
+
+### Future Phases
+
+The plan recommends:
+
+- Phase 4.22B — Feedback Consumption Fixture Smoke;
+- Phase 4.22C — Feedback Consumption Hardening;
+- Phase 4.22D — Feedback To Agent Intent Context Fixture Smoke;
+- Phase 4.22E — Feedback To Agent Intent Context Hardening;
+- Phase 4.22F — Feedback-Aware Intent Policy Planning Docs-Only;
+- Phase 4.23A — Bounded Feedback-Aware Intent Policy Fixture Smoke.
+
+### Outputs, Metrics, Event, and Invariants
+
+Future outputs include `agent_feedback_consumption_report.json`,
+`agent_feedback_consumption_invariant_report.json`,
+`agent_feedback_contexts.json`, `metrics.json`, and `events.ndjson`.
+Metrics use the `agentFeedbackConsumption*` prefix, and the proposed event is
+`lab_agent_feedback_consumption_recorded`. The plan lists 50 future invariant
+checks.
+
+### Explicit Out of Scope
+
+Memory updates, goal changes, learning, reward updates, LLM reasoning,
+Python/RL integration, social communication, negotiation, pathfinding,
+replanning, avoidance, reservation runtime, movement application, collision
+reads, terrain/world mutation, inventory, mining, construction, and
+autonomous loops remain out of scope.
+
+### Risk Table
+
+The plan covers risks including feedback accidentally becoming memory,
+feedback changing policy too early, retry/replanning leaks, collision feedback
+turning into pathfinding, social behavior appearing too early, divergence
+feedback becoming repair, invalid edges hiding policy bugs, max-agent feedback
+becoming scheduling, nondeterministic ordering, and report/metric drift.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+- `git status`
+
+### Results
+
+- Feedback consumption plan created.
+- CHANGELOG, DEV_JOURNAL, and ROADMAP updated.
+- No Swift files modified.
+- No PebbleCore, renderer, shader, resource, registry, save/load, or golden
+  files modified.
+- `swift build` passed.
+- `swift run -c release pebsmoke` passed with `456 passed, 0 failed`.
+- `git diff --check` passed.
+
+### Next Step
+
+Phase 4.22B — Feedback Consumption Fixture Smoke. It should consume
+synthetic feedback and produce bounded feedback context without movement,
+intent production integration, memory updates, goal changes, collision reads,
+pathfinding, replanning, avoidance, reservation runtime, or mutation.
