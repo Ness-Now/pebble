@@ -18,10 +18,13 @@ let isMultiAgentMovementTickFixtureScenario = options.scenario
     == "multi_agent_movement_tick_fixture_smoke"
 let isMultiAgentMovementTickLiveReadonlyScenario = options.scenario
     == "multi_agent_movement_tick_live_readonly_smoke"
+let isMultiAgentMovementTickApprovedApplicationScenario = options.scenario
+    == "multi_agent_movement_tick_approved_application_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
-    || isMultiAgentMovementTickLiveReadonlyScenario)
+    || isMultiAgentMovementTickLiveReadonlyScenario
+    || isMultiAgentMovementTickApprovedApplicationScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -661,7 +664,8 @@ if options.outPath != nil {
     }
 }
 
-if isMultiAgentMovementTickLiveReadonlyScenario {
+if isMultiAgentMovementTickLiveReadonlyScenario
+    || isMultiAgentMovementTickApprovedApplicationScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -1262,6 +1266,65 @@ let multiAgentMovementTickLiveReadonlySuccess =
             && multiAgentMovementTickLiveReadonlyReport?.summary.physicsPerformed == false
             && multiAgentMovementTickLiveReadonlyReport?.summary.mutationPerformed == false)
         : nil
+let multiAgentMovementTickApprovedApplicationReport =
+    isMultiAgentMovementTickApprovedApplicationScenario
+        ? makeMultiAgentMovementTickApprovedApplicationReport(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticksCompleted: ticksCompleted
+        )
+        : nil
+let multiAgentMovementTickApprovedApplicationInvariantReport =
+    isMultiAgentMovementTickApprovedApplicationScenario
+        ? makeMultiAgentMovementTickApprovedApplicationInvariantReport(
+            report: multiAgentMovementTickApprovedApplicationReport,
+            scenario: options.scenario,
+            seed: options.seed
+        )
+        : nil
+let multiAgentMovementTickApprovedApplicationSuccess =
+    isMultiAgentMovementTickApprovedApplicationScenario
+        ? ((multiAgentMovementTickApprovedApplicationReport?.success ?? false)
+            && (multiAgentMovementTickApprovedApplicationInvariantReport?.success ?? false)
+            && multiAgentMovementTickApprovedApplicationReport?.summary.agentCount == 2
+            && multiAgentMovementTickApprovedApplicationReport?.summary.physicalPositionCount == 2
+            && multiAgentMovementTickApprovedApplicationReport?.summary.intentCount == 2
+            && multiAgentMovementTickApprovedApplicationReport?.summary.resolutions == 2
+            && multiAgentMovementTickApprovedApplicationReport?.summary.feedbackCount == 2
+            && multiAgentMovementTickApprovedApplicationReport?.summary.occupableDestinations == 2
+            && multiAgentMovementTickApprovedApplicationReport?.summary.nonOccupableDestinations == 0
+            && multiAgentMovementTickApprovedApplicationReport?.summary.approved == 2
+            && multiAgentMovementTickApprovedApplicationReport?.summary.denied == 0
+            && multiAgentMovementTickApprovedApplicationReport?.summary.displacementsApplied == 2
+            && multiAgentMovementTickApprovedApplicationReport?.summary.divergenceBeforeMax == 0
+            && multiAgentMovementTickApprovedApplicationReport?.summary.divergenceAfterMax == 0
+            && multiAgentMovementTickApprovedApplicationReport?.output.abstractPositionsAfter == multiAgentMovementTickApprovedApplicationReport?.output.physicalPositionsAfter
+            && multiAgentMovementTickApprovedApplicationReport?.output.resolutions.allSatisfy {
+                let abstractDelta = abs($0.abstractAfter.x - $0.abstractBefore.x)
+                    + abs($0.abstractAfter.y - $0.abstractBefore.y)
+                    + abs($0.abstractAfter.z - $0.abstractBefore.z)
+                let physicalDelta = abs($0.physicalAfter.x - $0.physicalBefore.x)
+                    + abs($0.physicalAfter.y - $0.physicalBefore.y)
+                    + abs($0.physicalAfter.z - $0.physicalBefore.z)
+                return $0.feedbackKind == .moved
+                    && $0.displacementApplied
+                    && abstractDelta == 1
+                    && physicalDelta == 1
+                    && $0.abstractBefore.y == $0.abstractAfter.y
+                    && $0.physicalBefore.y == $0.physicalAfter.y
+            } == true
+            && multiAgentMovementTickApprovedApplicationReport?.summary.worldUsed == true
+            && multiAgentMovementTickApprovedApplicationReport?.summary.liveCollisionRead == true
+            && multiAgentMovementTickApprovedApplicationReport?.summary.physicalMovementApplied == true
+            && multiAgentMovementTickApprovedApplicationReport?.summary.routeFollowingApplied == false
+            && multiAgentMovementTickApprovedApplicationReport?.summary.pathfindingPerformed == false
+            && multiAgentMovementTickApprovedApplicationReport?.summary.replanningPerformed == false
+            && multiAgentMovementTickApprovedApplicationReport?.summary.avoidancePerformed == false
+            && multiAgentMovementTickApprovedApplicationReport?.summary.reservationRuntimeUsed == false
+            && multiAgentMovementTickApprovedApplicationReport?.summary.physicsPerformed == false
+            && multiAgentMovementTickApprovedApplicationReport?.summary.terrainMutationPerformed == false
+            && multiAgentMovementTickApprovedApplicationReport?.summary.worldMutationPerformed == false)
+        : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
@@ -1638,6 +1701,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (multiAgentMovementHardeningSuccess ?? true)
     && (multiAgentMovementTickFixtureSuccess ?? true)
     && (multiAgentMovementTickLiveReadonlySuccess ?? true)
+    && (multiAgentMovementTickApprovedApplicationSuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -2037,6 +2101,32 @@ if options.outPath != nil {
                 worldUsed: summary.worldUsed,
                 liveCollisionRead: summary.liveCollisionRead,
                 physicalMovementApplied: summary.physicalMovementApplied
+            ))
+        }
+        if let multiAgentMovementTickApprovedApplicationReport {
+            let summary = multiAgentMovementTickApprovedApplicationReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_multi_agent_movement_tick_approved_application_recorded",
+                tick: summary.tick,
+                scenario: options.scenario,
+                success: multiAgentMovementTickApprovedApplicationSuccess,
+                approved: summary.approved,
+                denied: summary.denied,
+                displacementsApplied: summary.displacementsApplied,
+                agentCount: summary.agentCount,
+                intentCount: summary.intentCount,
+                resolutions: summary.resolutions,
+                feedback: summary.feedbackCount,
+                occupableDestinations: summary.occupableDestinations,
+                nonOccupableDestinations: summary.nonOccupableDestinations,
+                divergenceBeforeMax: summary.divergenceBeforeMax,
+                divergenceAfterMax: summary.divergenceAfterMax,
+                worldUsed: summary.worldUsed,
+                liveCollisionRead: summary.liveCollisionRead,
+                physicalMovementApplied: summary.physicalMovementApplied,
+                routeFollowingApplied: summary.routeFollowingApplied,
+                mutationPerformed: summary.terrainMutationPerformed || summary.worldMutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
             ))
         }
         if let routeFollowingLiveSnapshot {
@@ -2650,6 +2740,22 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("multi_agent_movement_tick_live_readonly_invariant_report.json")
             )
         }
+        if let multiAgentMovementTickApprovedApplicationReport {
+            try writeJSON(
+                multiAgentMovementTickApprovedApplicationReport,
+                to: outURL.appendingPathComponent("multi_agent_movement_tick_approved_application_report.json")
+            )
+            try writeJSON(
+                multiAgentMovementTickApprovedApplicationReport.output.feedback,
+                to: outURL.appendingPathComponent("multi_agent_movement_tick_approved_application_feedback.json")
+            )
+        }
+        if let multiAgentMovementTickApprovedApplicationInvariantReport {
+            try writeJSON(
+                multiAgentMovementTickApprovedApplicationInvariantReport,
+                to: outURL.appendingPathComponent("multi_agent_movement_tick_approved_application_invariant_report.json")
+            )
+        }
         if let routeFollowingLiveSnapshot {
             try writeJSON(
                 routeFollowingLiveSnapshot,
@@ -3214,6 +3320,31 @@ if let outPath = options.outPath {
             multiAgentMovementTickLiveReadonlyPhysicsPerformed: multiAgentMovementTickLiveReadonlyReport?.summary.physicsPerformed,
             multiAgentMovementTickLiveReadonlyMutationPerformed: multiAgentMovementTickLiveReadonlyReport?.summary.mutationPerformed,
             multiAgentMovementTickLiveReadonlySuccess: multiAgentMovementTickLiveReadonlySuccess,
+            multiAgentMovementTickApprovedApplicationInputs: multiAgentMovementTickApprovedApplicationReport.map { _ in 1 },
+            multiAgentMovementTickApprovedApplicationAgents: multiAgentMovementTickApprovedApplicationReport?.summary.agentCount,
+            multiAgentMovementTickApprovedApplicationPhysicalPositions: multiAgentMovementTickApprovedApplicationReport?.summary.physicalPositionCount,
+            multiAgentMovementTickApprovedApplicationIntents: multiAgentMovementTickApprovedApplicationReport?.summary.intentCount,
+            multiAgentMovementTickApprovedApplicationResolutions: multiAgentMovementTickApprovedApplicationReport?.summary.resolutions,
+            multiAgentMovementTickApprovedApplicationFeedback: multiAgentMovementTickApprovedApplicationReport?.summary.feedbackCount,
+            multiAgentMovementTickApprovedApplicationApproved: multiAgentMovementTickApprovedApplicationReport?.summary.approved,
+            multiAgentMovementTickApprovedApplicationDenied: multiAgentMovementTickApprovedApplicationReport?.summary.denied,
+            multiAgentMovementTickApprovedApplicationOccupableDestinations: multiAgentMovementTickApprovedApplicationReport?.summary.occupableDestinations,
+            multiAgentMovementTickApprovedApplicationNonOccupableDestinations: multiAgentMovementTickApprovedApplicationReport?.summary.nonOccupableDestinations,
+            multiAgentMovementTickApprovedApplicationDisplacementsApplied: multiAgentMovementTickApprovedApplicationReport?.summary.displacementsApplied,
+            multiAgentMovementTickApprovedApplicationDivergenceBeforeMax: multiAgentMovementTickApprovedApplicationReport?.summary.divergenceBeforeMax,
+            multiAgentMovementTickApprovedApplicationDivergenceAfterMax: multiAgentMovementTickApprovedApplicationReport?.summary.divergenceAfterMax,
+            multiAgentMovementTickApprovedApplicationWorldUsed: multiAgentMovementTickApprovedApplicationReport?.summary.worldUsed,
+            multiAgentMovementTickApprovedApplicationLiveCollisionRead: multiAgentMovementTickApprovedApplicationReport?.summary.liveCollisionRead,
+            multiAgentMovementTickApprovedApplicationPhysicalMovementApplied: multiAgentMovementTickApprovedApplicationReport?.summary.physicalMovementApplied,
+            multiAgentMovementTickApprovedApplicationRouteFollowingApplied: multiAgentMovementTickApprovedApplicationReport?.summary.routeFollowingApplied,
+            multiAgentMovementTickApprovedApplicationPathfindingPerformed: multiAgentMovementTickApprovedApplicationReport?.summary.pathfindingPerformed,
+            multiAgentMovementTickApprovedApplicationReplanningPerformed: multiAgentMovementTickApprovedApplicationReport?.summary.replanningPerformed,
+            multiAgentMovementTickApprovedApplicationAvoidancePerformed: multiAgentMovementTickApprovedApplicationReport?.summary.avoidancePerformed,
+            multiAgentMovementTickApprovedApplicationReservationRuntimeUsed: multiAgentMovementTickApprovedApplicationReport?.summary.reservationRuntimeUsed,
+            multiAgentMovementTickApprovedApplicationPhysicsPerformed: multiAgentMovementTickApprovedApplicationReport?.summary.physicsPerformed,
+            multiAgentMovementTickApprovedApplicationTerrainMutationPerformed: multiAgentMovementTickApprovedApplicationReport?.summary.terrainMutationPerformed,
+            multiAgentMovementTickApprovedApplicationWorldMutationPerformed: multiAgentMovementTickApprovedApplicationReport?.summary.worldMutationPerformed,
+            multiAgentMovementTickApprovedApplicationSuccess: multiAgentMovementTickApprovedApplicationSuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,

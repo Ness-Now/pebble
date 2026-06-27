@@ -736,6 +736,66 @@ Next recommended step: Phase 4.20D - Multi-Agent Movement Tick Approved
 Application Smoke. It should apply approved tick resolutions in a tightly
 controlled case and keep denied/conflict hardening for later phases.
 
+## Phase 4.20D Implementation Status
+
+Phase 4.20D implements the first tick-level approved application contract:
+`multi_agent_movement_tick_approved_application_smoke`.
+
+Validated tick approved application input/output:
+
+- one synthetic tick, `tick = 0`;
+- two abstract agent positions;
+- two matching physical positions;
+- two deliberately unordered intentions;
+- deterministic resolution order by stable `agentId`;
+- two live occupable destinations;
+- two approved intentions;
+- zero denied intentions;
+- two displacement applications;
+- abstract final positions updated to intent destinations;
+- physical final positions updated to intent destinations;
+- abstract final positions equal physical final positions;
+- divergence before and after max both equal `0`.
+
+Moved feedback policy:
+
+- 4.20B and 4.20C use `approvedForMovement` for approved intentions that do
+  not apply displacement;
+- 4.20D uses `moved` because each approved resolution has
+  `displacementApplied = true`;
+- the invariant report checks that no `approvedForMovement` feedback remains
+  for applied movements.
+
+The scenario writes:
+
+- `multi_agent_movement_tick_approved_application_report.json`;
+- `multi_agent_movement_tick_approved_application_invariant_report.json`;
+- `multi_agent_movement_tick_approved_application_feedback.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Validated limits:
+
+- no denied tick application;
+- no partial approval tick hardening;
+- no route following;
+- no pathfinding;
+- no replanning;
+- no goal selection;
+- no avoidance;
+- no reservation runtime;
+- no physics;
+- no terrain/world mutation;
+- no autonomous movement loop;
+- no repeated tick loop.
+
+Next recommended step: Phase 4.20E - Multi-Agent Movement Tick Hardening.
+It should reintroduce denied collision, conflicts, partial approval,
+divergence, stale intent, invalid edges, and max-agent cases at the
+integrated tick level while keeping reservation runtime, avoidance, dynamic
+replanning, route repair, physics, save/load, social behavior, and gameplay
+movement out of scope.
+
 ## 15. Documentation Updates
 
 Phase 4.20A should update:

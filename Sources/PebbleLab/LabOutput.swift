@@ -485,6 +485,31 @@ struct RunMetrics: Encodable {
     let multiAgentMovementTickLiveReadonlyPhysicsPerformed: Bool?
     let multiAgentMovementTickLiveReadonlyMutationPerformed: Bool?
     let multiAgentMovementTickLiveReadonlySuccess: Bool?
+    let multiAgentMovementTickApprovedApplicationInputs: Int?
+    let multiAgentMovementTickApprovedApplicationAgents: Int?
+    let multiAgentMovementTickApprovedApplicationPhysicalPositions: Int?
+    let multiAgentMovementTickApprovedApplicationIntents: Int?
+    let multiAgentMovementTickApprovedApplicationResolutions: Int?
+    let multiAgentMovementTickApprovedApplicationFeedback: Int?
+    let multiAgentMovementTickApprovedApplicationApproved: Int?
+    let multiAgentMovementTickApprovedApplicationDenied: Int?
+    let multiAgentMovementTickApprovedApplicationOccupableDestinations: Int?
+    let multiAgentMovementTickApprovedApplicationNonOccupableDestinations: Int?
+    let multiAgentMovementTickApprovedApplicationDisplacementsApplied: Int?
+    let multiAgentMovementTickApprovedApplicationDivergenceBeforeMax: Int?
+    let multiAgentMovementTickApprovedApplicationDivergenceAfterMax: Int?
+    let multiAgentMovementTickApprovedApplicationWorldUsed: Bool?
+    let multiAgentMovementTickApprovedApplicationLiveCollisionRead: Bool?
+    let multiAgentMovementTickApprovedApplicationPhysicalMovementApplied: Bool?
+    let multiAgentMovementTickApprovedApplicationRouteFollowingApplied: Bool?
+    let multiAgentMovementTickApprovedApplicationPathfindingPerformed: Bool?
+    let multiAgentMovementTickApprovedApplicationReplanningPerformed: Bool?
+    let multiAgentMovementTickApprovedApplicationAvoidancePerformed: Bool?
+    let multiAgentMovementTickApprovedApplicationReservationRuntimeUsed: Bool?
+    let multiAgentMovementTickApprovedApplicationPhysicsPerformed: Bool?
+    let multiAgentMovementTickApprovedApplicationTerrainMutationPerformed: Bool?
+    let multiAgentMovementTickApprovedApplicationWorldMutationPerformed: Bool?
+    let multiAgentMovementTickApprovedApplicationSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -970,6 +995,31 @@ struct RunMetrics: Encodable {
         multiAgentMovementTickLiveReadonlyPhysicsPerformed: Bool? = nil,
         multiAgentMovementTickLiveReadonlyMutationPerformed: Bool? = nil,
         multiAgentMovementTickLiveReadonlySuccess: Bool? = nil,
+        multiAgentMovementTickApprovedApplicationInputs: Int? = nil,
+        multiAgentMovementTickApprovedApplicationAgents: Int? = nil,
+        multiAgentMovementTickApprovedApplicationPhysicalPositions: Int? = nil,
+        multiAgentMovementTickApprovedApplicationIntents: Int? = nil,
+        multiAgentMovementTickApprovedApplicationResolutions: Int? = nil,
+        multiAgentMovementTickApprovedApplicationFeedback: Int? = nil,
+        multiAgentMovementTickApprovedApplicationApproved: Int? = nil,
+        multiAgentMovementTickApprovedApplicationDenied: Int? = nil,
+        multiAgentMovementTickApprovedApplicationOccupableDestinations: Int? = nil,
+        multiAgentMovementTickApprovedApplicationNonOccupableDestinations: Int? = nil,
+        multiAgentMovementTickApprovedApplicationDisplacementsApplied: Int? = nil,
+        multiAgentMovementTickApprovedApplicationDivergenceBeforeMax: Int? = nil,
+        multiAgentMovementTickApprovedApplicationDivergenceAfterMax: Int? = nil,
+        multiAgentMovementTickApprovedApplicationWorldUsed: Bool? = nil,
+        multiAgentMovementTickApprovedApplicationLiveCollisionRead: Bool? = nil,
+        multiAgentMovementTickApprovedApplicationPhysicalMovementApplied: Bool? = nil,
+        multiAgentMovementTickApprovedApplicationRouteFollowingApplied: Bool? = nil,
+        multiAgentMovementTickApprovedApplicationPathfindingPerformed: Bool? = nil,
+        multiAgentMovementTickApprovedApplicationReplanningPerformed: Bool? = nil,
+        multiAgentMovementTickApprovedApplicationAvoidancePerformed: Bool? = nil,
+        multiAgentMovementTickApprovedApplicationReservationRuntimeUsed: Bool? = nil,
+        multiAgentMovementTickApprovedApplicationPhysicsPerformed: Bool? = nil,
+        multiAgentMovementTickApprovedApplicationTerrainMutationPerformed: Bool? = nil,
+        multiAgentMovementTickApprovedApplicationWorldMutationPerformed: Bool? = nil,
+        multiAgentMovementTickApprovedApplicationSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -1454,6 +1504,31 @@ struct RunMetrics: Encodable {
         self.multiAgentMovementTickLiveReadonlyPhysicsPerformed = multiAgentMovementTickLiveReadonlyPhysicsPerformed
         self.multiAgentMovementTickLiveReadonlyMutationPerformed = multiAgentMovementTickLiveReadonlyMutationPerformed
         self.multiAgentMovementTickLiveReadonlySuccess = multiAgentMovementTickLiveReadonlySuccess
+        self.multiAgentMovementTickApprovedApplicationInputs = multiAgentMovementTickApprovedApplicationInputs
+        self.multiAgentMovementTickApprovedApplicationAgents = multiAgentMovementTickApprovedApplicationAgents
+        self.multiAgentMovementTickApprovedApplicationPhysicalPositions = multiAgentMovementTickApprovedApplicationPhysicalPositions
+        self.multiAgentMovementTickApprovedApplicationIntents = multiAgentMovementTickApprovedApplicationIntents
+        self.multiAgentMovementTickApprovedApplicationResolutions = multiAgentMovementTickApprovedApplicationResolutions
+        self.multiAgentMovementTickApprovedApplicationFeedback = multiAgentMovementTickApprovedApplicationFeedback
+        self.multiAgentMovementTickApprovedApplicationApproved = multiAgentMovementTickApprovedApplicationApproved
+        self.multiAgentMovementTickApprovedApplicationDenied = multiAgentMovementTickApprovedApplicationDenied
+        self.multiAgentMovementTickApprovedApplicationOccupableDestinations = multiAgentMovementTickApprovedApplicationOccupableDestinations
+        self.multiAgentMovementTickApprovedApplicationNonOccupableDestinations = multiAgentMovementTickApprovedApplicationNonOccupableDestinations
+        self.multiAgentMovementTickApprovedApplicationDisplacementsApplied = multiAgentMovementTickApprovedApplicationDisplacementsApplied
+        self.multiAgentMovementTickApprovedApplicationDivergenceBeforeMax = multiAgentMovementTickApprovedApplicationDivergenceBeforeMax
+        self.multiAgentMovementTickApprovedApplicationDivergenceAfterMax = multiAgentMovementTickApprovedApplicationDivergenceAfterMax
+        self.multiAgentMovementTickApprovedApplicationWorldUsed = multiAgentMovementTickApprovedApplicationWorldUsed
+        self.multiAgentMovementTickApprovedApplicationLiveCollisionRead = multiAgentMovementTickApprovedApplicationLiveCollisionRead
+        self.multiAgentMovementTickApprovedApplicationPhysicalMovementApplied = multiAgentMovementTickApprovedApplicationPhysicalMovementApplied
+        self.multiAgentMovementTickApprovedApplicationRouteFollowingApplied = multiAgentMovementTickApprovedApplicationRouteFollowingApplied
+        self.multiAgentMovementTickApprovedApplicationPathfindingPerformed = multiAgentMovementTickApprovedApplicationPathfindingPerformed
+        self.multiAgentMovementTickApprovedApplicationReplanningPerformed = multiAgentMovementTickApprovedApplicationReplanningPerformed
+        self.multiAgentMovementTickApprovedApplicationAvoidancePerformed = multiAgentMovementTickApprovedApplicationAvoidancePerformed
+        self.multiAgentMovementTickApprovedApplicationReservationRuntimeUsed = multiAgentMovementTickApprovedApplicationReservationRuntimeUsed
+        self.multiAgentMovementTickApprovedApplicationPhysicsPerformed = multiAgentMovementTickApprovedApplicationPhysicsPerformed
+        self.multiAgentMovementTickApprovedApplicationTerrainMutationPerformed = multiAgentMovementTickApprovedApplicationTerrainMutationPerformed
+        self.multiAgentMovementTickApprovedApplicationWorldMutationPerformed = multiAgentMovementTickApprovedApplicationWorldMutationPerformed
+        self.multiAgentMovementTickApprovedApplicationSuccess = multiAgentMovementTickApprovedApplicationSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

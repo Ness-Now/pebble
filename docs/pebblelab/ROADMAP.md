@@ -1035,3 +1035,31 @@ terrain/world mutation remain out of scope.
 
 Next recommended step: Phase 4.20D - Multi-Agent Movement Tick Approved
 Application Smoke.
+
+## Phase 4.20D - Multi-Agent Movement Tick Approved Application Smoke
+
+Status: implemented and validated.
+
+Goal: apply the first integrated tick-level approved multi-agent movement in a
+controlled two-agent case. The scenario keeps unordered intents, stable
+`agentId` resolution ordering, live occupable collision evidence, one edge per
+agent, synchronized abstract/physical final positions, and `moved` feedback.
+
+The scenario `multi_agent_movement_tick_approved_application_smoke` creates
+one tick with two agents and two intentionally unordered intents. Both
+destinations are live occupable, both intents are approved, both movements are
+applied, and `displacementsApplied` is 2. Divergence before and after remains
+0.
+
+It writes `multi_agent_movement_tick_approved_application_report.json`,
+`multi_agent_movement_tick_approved_application_invariant_report.json`,
+`multi_agent_movement_tick_approved_application_feedback.json`,
+`multiAgentMovementTickApprovedApplication*` metrics, and one aggregate
+`lab_multi_agent_movement_tick_approved_application_recorded` event.
+
+Denied tick application, partial approval tick hardening, reservation runtime,
+avoidance, dynamic replanning, route repair, route following, pathfinding,
+physics, save/load, social behavior, communication, gameplay movement, and
+terrain/world mutation remain out of scope.
+
+Next recommended step: Phase 4.20E - Multi-Agent Movement Tick Hardening.
