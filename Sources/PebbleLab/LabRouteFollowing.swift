@@ -147,6 +147,8 @@ struct LabRouteFollowingLiveSnapshot: Codable {
     let targetIndex: Int?
     let attemptedEdges: Int
     let completedEdges: Int
+    let displacementsApplied: Int
+    let deniedEdges: Int
     let stoppedAtIndex: Int?
     let status: LabRouteFollowingStatus
     let reason: String

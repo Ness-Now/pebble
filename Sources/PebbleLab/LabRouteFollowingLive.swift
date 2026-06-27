@@ -112,6 +112,8 @@ func makeRouteFollowingDeniedLiveSnapshot(
         targetIndex: 1,
         attemptedEdges: 1,
         completedEdges: 0,
+        displacementsApplied: 0,
+        deniedEdges: 1,
         stoppedAtIndex: 0,
         status: status,
         reason: reason,
@@ -274,12 +276,15 @@ func makeRouteFollowingApprovedTwoStepSnapshot(
         finalAbstractPosition,
         finalPhysicalPosition
     )
+    let displacementsApplied = records.filter(\.displacementApplied).count
+    let deniedEdges = records.count - displacementsApplied
     let success = status == .completed
         && stoppedAtIndex == nil
         && route.count == 3
         && records.count == 2
         && completedEdges == 2
-        && records.allSatisfy { $0.displacementApplied }
+        && displacementsApplied == 2
+        && deniedEdges == 0
         && records.allSatisfy { $0.collisionStatus == .occupable }
         && finalAbstractPosition == LabAgentPosition(x: route[2].x, y: route[2].y, z: route[2].z)
         && finalPhysicalPosition == LabAgentPosition(x: route[2].x, y: route[2].y, z: route[2].z)
@@ -300,6 +305,8 @@ func makeRouteFollowingApprovedTwoStepSnapshot(
         targetIndex: nil,
         attemptedEdges: records.count,
         completedEdges: completedEdges,
+        displacementsApplied: displacementsApplied,
+        deniedEdges: deniedEdges,
         stoppedAtIndex: stoppedAtIndex,
         status: status,
         reason: reason,
