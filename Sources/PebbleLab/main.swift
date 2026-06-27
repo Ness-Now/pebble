@@ -28,6 +28,8 @@ let isAgentIntentProductionHardeningScenario = options.scenario
     == "agent_intent_production_hardening_smoke"
 let isAgentIntentToTickFixtureScenario = options.scenario
     == "agent_intent_to_tick_fixture_smoke"
+let isAgentIntentToTickLiveReadonlyScenario = options.scenario
+    == "agent_intent_to_tick_live_readonly_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -36,7 +38,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementTickHardeningScenario
     || isAgentIntentProductionFixtureScenario
     || isAgentIntentProductionHardeningScenario
-    || isAgentIntentToTickFixtureScenario)
+    || isAgentIntentToTickFixtureScenario
+    || isAgentIntentToTickLiveReadonlyScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -678,7 +681,8 @@ if options.outPath != nil {
 
 if isMultiAgentMovementTickLiveReadonlyScenario
     || isMultiAgentMovementTickApprovedApplicationScenario
-    || isMultiAgentMovementTickHardeningScenario {
+    || isMultiAgentMovementTickHardeningScenario
+    || isAgentIntentToTickLiveReadonlyScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -1561,6 +1565,70 @@ let agentIntentToTickFixtureSuccess =
             && agentIntentToTickFixtureReport?.summary.physicsPerformed == false
             && agentIntentToTickFixtureReport?.summary.mutationPerformed == false)
         : nil
+let agentIntentToTickLiveReadonlyReport =
+    isAgentIntentToTickLiveReadonlyScenario
+        ? makeAgentIntentToTickLiveReadonlyReport(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticksCompleted: ticksCompleted
+        )
+        : nil
+let agentIntentToTickLiveReadonlyInvariantReport =
+    isAgentIntentToTickLiveReadonlyScenario
+        ? makeAgentIntentToTickLiveReadonlyInvariantReport(
+            report: agentIntentToTickLiveReadonlyReport,
+            scenario: options.scenario,
+            seed: options.seed
+        )
+        : nil
+let agentIntentToTickLiveReadonlySuccess =
+    isAgentIntentToTickLiveReadonlyScenario
+        ? ((agentIntentToTickLiveReadonlyReport?.success ?? false)
+            && (agentIntentToTickLiveReadonlyInvariantReport?.success ?? false)
+            && agentIntentToTickLiveReadonlyReport?.summary.contexts == 5
+            && agentIntentToTickLiveReadonlyReport?.summary.proposals == 5
+            && agentIntentToTickLiveReadonlyReport?.summary.acceptedIntents == 3
+            && agentIntentToTickLiveReadonlyReport?.summary.rejectedProposals == 2
+            && agentIntentToTickLiveReadonlyReport?.intentProduction.summary.noIntent == 1
+            && agentIntentToTickLiveReadonlyReport?.intentProduction.summary.invalidOneEdgeProposals == 1
+            && agentIntentToTickLiveReadonlyReport?.intentProduction.acceptedIntents.map(\.agentId)
+                == agentIntentToTickLiveReadonlyReport?.intentProduction.acceptedIntents.map(\.agentId).sorted()
+            && agentIntentToTickLiveReadonlyReport?.intentProduction.acceptedIntents.allSatisfy {
+                abs($0.from.x - $0.to.x) + abs($0.from.y - $0.to.y) + abs($0.from.z - $0.to.z) == 1
+                    && $0.from.y == $0.to.y
+            } == true
+            && agentIntentToTickLiveReadonlyReport?.summary.productionReadCollision == false
+            && agentIntentToTickLiveReadonlyReport?.summary.tickReadLiveCollision == true
+            && agentIntentToTickLiveReadonlyReport?.summary.worldUsed == true
+            && agentIntentToTickLiveReadonlyReport?.summary.collisionRead == true
+            && agentIntentToTickLiveReadonlyReport?.summary.occupableDestinations == 2
+            && agentIntentToTickLiveReadonlyReport?.summary.nonOccupableDestinations == 1
+            && agentIntentToTickLiveReadonlyReport?.summary.tickApproved == 2
+            && agentIntentToTickLiveReadonlyReport?.summary.tickDenied == 1
+            && agentIntentToTickLiveReadonlyReport?.summary.collisionDenied == 1
+            && agentIntentToTickLiveReadonlyReport?.summary.tickFeedback == 3
+            && agentIntentToTickLiveReadonlyReport?.tickOutput.feedback.filter {
+                $0.kind == .approvedForMovement
+            }.count == 2
+            && agentIntentToTickLiveReadonlyReport?.tickOutput.feedback.contains {
+                $0.agentId == "agent_2" && $0.kind == .blockedByCollision
+            } == true
+            && agentIntentToTickLiveReadonlyReport?.tickOutput.abstractPositionsBefore
+                == agentIntentToTickLiveReadonlyReport?.tickOutput.abstractPositionsAfter
+            && agentIntentToTickLiveReadonlyReport?.tickOutput.physicalPositionsBefore
+                == agentIntentToTickLiveReadonlyReport?.tickOutput.physicalPositionsAfter
+            && agentIntentToTickLiveReadonlyReport?.summary.displacementsApplied == 0
+            && agentIntentToTickLiveReadonlyReport?.summary.movementApplied == false
+            && agentIntentToTickLiveReadonlyReport?.summary.feedbackConsumed == false
+            && agentIntentToTickLiveReadonlyReport?.summary.memoryUpdated == false
+            && agentIntentToTickLiveReadonlyReport?.summary.goalChanged == false
+            && agentIntentToTickLiveReadonlyReport?.summary.pathfindingPerformed == false
+            && agentIntentToTickLiveReadonlyReport?.summary.replanningPerformed == false
+            && agentIntentToTickLiveReadonlyReport?.summary.avoidancePerformed == false
+            && agentIntentToTickLiveReadonlyReport?.summary.reservationRuntimeUsed == false
+            && agentIntentToTickLiveReadonlyReport?.summary.physicsPerformed == false
+            && agentIntentToTickLiveReadonlyReport?.summary.mutationPerformed == false)
+        : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
@@ -1942,6 +2010,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (agentIntentProductionFixtureSuccess ?? true)
     && (agentIntentProductionHardeningSuccess ?? true)
     && (agentIntentToTickFixtureSuccess ?? true)
+    && (agentIntentToTickLiveReadonlySuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -2503,6 +2572,43 @@ if options.outPath != nil {
                 sameDestinationConflicts: summary.sameDestinationConflicts,
                 productionAcceptedSameDestination: summary.productionAcceptedSameDestination,
                 tickResolvedSameDestination: summary.tickResolvedSameDestination,
+                worldUsed: summary.worldUsed,
+                collisionRead: summary.collisionRead,
+                movementApplied: summary.movementApplied,
+                feedbackConsumed: summary.feedbackConsumed,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                avoidancePerformed: summary.avoidancePerformed,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
+                replanningPerformed: summary.replanningPerformed,
+                physicsPerformed: summary.physicsPerformed
+            ))
+        }
+        if let agentIntentToTickLiveReadonlyReport {
+            let summary = agentIntentToTickLiveReadonlyReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_agent_intent_to_tick_live_readonly_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: agentIntentToTickLiveReadonlySuccess,
+                displacementsApplied: summary.displacementsApplied,
+                contexts: summary.contexts,
+                proposals: summary.proposals,
+                acceptedIntents: summary.acceptedIntents,
+                rejectedProposals: summary.rejectedProposals,
+                tickAgents: summary.tickAgents,
+                tickIntents: summary.tickIntents,
+                tickResolutions: summary.tickResolutions,
+                tickFeedback: summary.tickFeedback,
+                tickApproved: summary.tickApproved,
+                tickDenied: summary.tickDenied,
+                occupableDestinations: summary.occupableDestinations,
+                nonOccupableDestinations: summary.nonOccupableDestinations,
+                collisionDenied: summary.collisionDenied,
+                productionReadCollision: summary.productionReadCollision,
+                tickReadCollision: summary.tickReadLiveCollision,
                 worldUsed: summary.worldUsed,
                 collisionRead: summary.collisionRead,
                 movementApplied: summary.movementApplied,
@@ -3206,6 +3312,22 @@ if let outPath = options.outPath {
             try writeJSON(
                 agentIntentToTickFixtureInvariantReport,
                 to: outURL.appendingPathComponent("agent_intent_to_tick_fixture_invariant_report.json")
+            )
+        }
+        if let agentIntentToTickLiveReadonlyReport {
+            try writeJSON(
+                agentIntentToTickLiveReadonlyReport,
+                to: outURL.appendingPathComponent("agent_intent_to_tick_live_readonly_report.json")
+            )
+            try writeJSON(
+                agentIntentToTickLiveReadonlyReport,
+                to: outURL.appendingPathComponent("agent_intent_to_tick_live_readonly_proposals.json")
+            )
+        }
+        if let agentIntentToTickLiveReadonlyInvariantReport {
+            try writeJSON(
+                agentIntentToTickLiveReadonlyInvariantReport,
+                to: outURL.appendingPathComponent("agent_intent_to_tick_live_readonly_invariant_report.json")
             )
         }
         if let routeFollowingLiveSnapshot {
@@ -3930,6 +4052,37 @@ if let outPath = options.outPath {
             agentIntentToTickFixturePhysicsPerformed: agentIntentToTickFixtureReport?.summary.physicsPerformed,
             agentIntentToTickFixtureMutationPerformed: agentIntentToTickFixtureReport?.summary.mutationPerformed,
             agentIntentToTickFixtureSuccess: agentIntentToTickFixtureSuccess,
+            agentIntentToTickLiveReadonlyContexts: agentIntentToTickLiveReadonlyReport?.summary.contexts,
+            agentIntentToTickLiveReadonlyProposals: agentIntentToTickLiveReadonlyReport?.summary.proposals,
+            agentIntentToTickLiveReadonlyAcceptedIntents: agentIntentToTickLiveReadonlyReport?.summary.acceptedIntents,
+            agentIntentToTickLiveReadonlyRejectedProposals: agentIntentToTickLiveReadonlyReport?.summary.rejectedProposals,
+            agentIntentToTickLiveReadonlyNoIntent: agentIntentToTickLiveReadonlyReport?.intentProduction.summary.noIntent,
+            agentIntentToTickLiveReadonlyInvalidOneEdgeProposals: agentIntentToTickLiveReadonlyReport?.intentProduction.summary.invalidOneEdgeProposals,
+            agentIntentToTickLiveReadonlyTickAgents: agentIntentToTickLiveReadonlyReport?.summary.tickAgents,
+            agentIntentToTickLiveReadonlyTickIntents: agentIntentToTickLiveReadonlyReport?.summary.tickIntents,
+            agentIntentToTickLiveReadonlyTickResolutions: agentIntentToTickLiveReadonlyReport?.summary.tickResolutions,
+            agentIntentToTickLiveReadonlyTickFeedback: agentIntentToTickLiveReadonlyReport?.summary.tickFeedback,
+            agentIntentToTickLiveReadonlyTickApproved: agentIntentToTickLiveReadonlyReport?.summary.tickApproved,
+            agentIntentToTickLiveReadonlyTickDenied: agentIntentToTickLiveReadonlyReport?.summary.tickDenied,
+            agentIntentToTickLiveReadonlyOccupableDestinations: agentIntentToTickLiveReadonlyReport?.summary.occupableDestinations,
+            agentIntentToTickLiveReadonlyNonOccupableDestinations: agentIntentToTickLiveReadonlyReport?.summary.nonOccupableDestinations,
+            agentIntentToTickLiveReadonlyCollisionDenied: agentIntentToTickLiveReadonlyReport?.summary.collisionDenied,
+            agentIntentToTickLiveReadonlyDisplacementsApplied: agentIntentToTickLiveReadonlyReport?.summary.displacementsApplied,
+            agentIntentToTickLiveReadonlyProductionReadCollision: agentIntentToTickLiveReadonlyReport?.summary.productionReadCollision,
+            agentIntentToTickLiveReadonlyTickReadCollision: agentIntentToTickLiveReadonlyReport?.summary.tickReadLiveCollision,
+            agentIntentToTickLiveReadonlyWorldUsed: agentIntentToTickLiveReadonlyReport?.summary.worldUsed,
+            agentIntentToTickLiveReadonlyCollisionRead: agentIntentToTickLiveReadonlyReport?.summary.collisionRead,
+            agentIntentToTickLiveReadonlyMovementApplied: agentIntentToTickLiveReadonlyReport?.summary.movementApplied,
+            agentIntentToTickLiveReadonlyFeedbackConsumed: agentIntentToTickLiveReadonlyReport?.summary.feedbackConsumed,
+            agentIntentToTickLiveReadonlyMemoryUpdated: agentIntentToTickLiveReadonlyReport?.summary.memoryUpdated,
+            agentIntentToTickLiveReadonlyGoalChanged: agentIntentToTickLiveReadonlyReport?.summary.goalChanged,
+            agentIntentToTickLiveReadonlyPathfindingPerformed: agentIntentToTickLiveReadonlyReport?.summary.pathfindingPerformed,
+            agentIntentToTickLiveReadonlyReplanningPerformed: agentIntentToTickLiveReadonlyReport?.summary.replanningPerformed,
+            agentIntentToTickLiveReadonlyAvoidancePerformed: agentIntentToTickLiveReadonlyReport?.summary.avoidancePerformed,
+            agentIntentToTickLiveReadonlyReservationRuntimeUsed: agentIntentToTickLiveReadonlyReport?.summary.reservationRuntimeUsed,
+            agentIntentToTickLiveReadonlyPhysicsPerformed: agentIntentToTickLiveReadonlyReport?.summary.physicsPerformed,
+            agentIntentToTickLiveReadonlyMutationPerformed: agentIntentToTickLiveReadonlyReport?.summary.mutationPerformed,
+            agentIntentToTickLiveReadonlySuccess: agentIntentToTickLiveReadonlySuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,

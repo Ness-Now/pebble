@@ -680,3 +680,70 @@ with `World` used only for collision evidence, while keeping movement
 application, feedback consumption, memory updates, goal selection,
 pathfinding, replanning, avoidance, reservation runtime, physics, and
 terrain/world mutation out of scope.
+
+## Phase 4.21E Implementation Status
+
+Phase 4.21E implements the first production-to-live-readonly-tick handoff:
+`agent_intent_to_tick_live_readonly_smoke`.
+
+Validated production-to-live-readonly-tick handoff:
+
+- five intentionally unordered `LabAgentIntentContext` values are created;
+- the v0 policy produces five proposals sorted by stable `agentId`;
+- three valid `wander_fixture` proposals become accepted intents;
+- one idle context produces `noIntent`;
+- one invalid vertical proposal is rejected;
+- accepted intents are sorted by stable `agentId`;
+- accepted intents are one-edge same-y;
+- accepted intents are copied into a `LabMultiAgentMovementTickInput`;
+- synthetic physical positions mirror abstract positions;
+- the tick live read-only layer reads collision evidence.
+
+Production responsibility:
+
+- production does not read collision;
+- production does not decide occupability;
+- production does not apply movement;
+- production does not consume feedback;
+- production does not modify memory or goals.
+
+Tick responsibility:
+
+- tick live read-only uses controlled collision evidence seeds;
+- `agent_0` and `agent_1` use seed 99 and are approved by occupable
+  destinations;
+- `agent_2` uses seed 42 and is denied by non-occupable collision evidence;
+- approved feedback is `approvedForMovement`;
+- collision-denied feedback is `blockedByCollision`;
+- positions remain unchanged;
+- `displacementsApplied` remains zero.
+
+Outputs produced:
+
+- `agent_intent_to_tick_live_readonly_report.json`;
+- `agent_intent_to_tick_live_readonly_invariant_report.json`;
+- `agent_intent_to_tick_live_readonly_proposals.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Validated limits:
+
+- no movement application;
+- no physical placeholder or core entity movement;
+- no feedback consumption;
+- no memory update;
+- no goal change;
+- no pathfinding;
+- no replanning;
+- no avoidance;
+- no reservation runtime;
+- no physics;
+- no terrain/world mutation;
+- no multi-tick loop.
+
+Next recommended step: Phase 4.21F - Agent Intent To Tick Approved
+Application Smoke. It should feed produced intents into the tick approved
+application contract and apply only controlled approved movements while
+keeping denied hardening, feedback consumption, memory updates, goal
+selection, pathfinding, replanning, avoidance, reservation runtime, physics,
+and terrain/world mutation out of scope.

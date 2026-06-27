@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added agent intent to movement tick live read-only smoke.
 - Added fixture-only agent intent to movement tick integration smoke.
 - Hardened fixture-only agent intent production.
 - Added fixture-only agent intent production smoke.

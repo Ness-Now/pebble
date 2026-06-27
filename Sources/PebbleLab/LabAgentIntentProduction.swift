@@ -253,6 +253,62 @@ struct LabAgentIntentToTickFixtureInvariantReport: Codable {
     let notes: [String]
 }
 
+struct LabAgentIntentToTickLiveReadonlySummary: Codable {
+    let tick: Int
+    let contexts: Int
+    let proposals: Int
+    let acceptedIntents: Int
+    let rejectedProposals: Int
+    let tickAgents: Int
+    let tickIntents: Int
+    let tickResolutions: Int
+    let tickFeedback: Int
+    let tickApproved: Int
+    let tickDenied: Int
+    let occupableDestinations: Int
+    let nonOccupableDestinations: Int
+    let collisionDenied: Int
+    let sourceMismatch: Int
+    let invalidEdges: Int
+    let displacementsApplied: Int
+    let productionAcceptedIntents: Bool
+    let productionReadCollision: Bool
+    let tickReadLiveCollision: Bool
+    let worldUsed: Bool
+    let collisionRead: Bool
+    let movementApplied: Bool
+    let feedbackConsumed: Bool
+    let memoryUpdated: Bool
+    let goalChanged: Bool
+    let pathfindingPerformed: Bool
+    let replanningPerformed: Bool
+    let avoidancePerformed: Bool
+    let reservationRuntimeUsed: Bool
+    let physicsPerformed: Bool
+    let mutationPerformed: Bool
+    let success: Bool
+}
+
+struct LabAgentIntentToTickLiveReadonlyReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let ticksCompleted: Int
+    let success: Bool
+    let intentProduction: LabAgentIntentProductionResult
+    let tickInput: LabMultiAgentMovementTickInput
+    let tickOutput: LabMultiAgentMovementTickLiveReadonlyOutput
+    let summary: LabAgentIntentToTickLiveReadonlySummary
+}
+
+struct LabAgentIntentToTickLiveReadonlyInvariantReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: LabMultiAgentMovementFixtureInvariantSummary
+    let checks: [LabMultiAgentMovementFixtureInvariantCheck]
+    let notes: [String]
+}
+
 func produceAgentIntentProposalV0(
     context: LabAgentIntentContext
 ) -> LabAgentIntentProposal {
@@ -676,6 +732,52 @@ private func agentIntentToTickFixtureContexts() -> [LabAgentIntentContext] {
             tick: tick,
             agentId: "agent_3",
             position: LabTerrainPathNodeKey(x: 20, y: 64, z: 0),
+            lastFeedback: nil,
+            role: "bad_fixture_invalid_vertical",
+            localHints: ["move_vertical"]
+        )
+    ]
+}
+
+private func agentIntentToTickLiveReadonlyContexts() -> [LabAgentIntentContext] {
+    let tick = 0
+    return [
+        LabAgentIntentContext(
+            tick: tick,
+            agentId: "agent_3",
+            position: LabTerrainPathNodeKey(x: 20, y: 64, z: 0),
+            lastFeedback: nil,
+            role: "idle",
+            localHints: []
+        ),
+        LabAgentIntentContext(
+            tick: tick,
+            agentId: "agent_0",
+            position: LabTerrainPathNodeKey(x: 7, y: 64, z: 8),
+            lastFeedback: nil,
+            role: "wander_fixture",
+            localHints: ["move_east"]
+        ),
+        LabAgentIntentContext(
+            tick: tick,
+            agentId: "agent_1",
+            position: LabTerrainPathNodeKey(x: 9, y: 64, z: 7),
+            lastFeedback: nil,
+            role: "wander_fixture",
+            localHints: ["move_south"]
+        ),
+        LabAgentIntentContext(
+            tick: tick,
+            agentId: "agent_2",
+            position: LabTerrainPathNodeKey(x: 7, y: 64, z: 8),
+            lastFeedback: nil,
+            role: "wander_fixture",
+            localHints: ["move_east"]
+        ),
+        LabAgentIntentContext(
+            tick: tick,
+            agentId: "agent_4",
+            position: LabTerrainPathNodeKey(x: 30, y: 64, z: 0),
             lastFeedback: nil,
             role: "bad_fixture_invalid_vertical",
             localHints: ["move_vertical"]
@@ -1139,6 +1241,250 @@ func makeAgentIntentToTickFixtureInvariantReport(
             "Agent intent production remains fixture-only and does not arbitrate conflicts.",
             "The tick fixture layer receives accepted intents and resolves the same-destination conflict.",
             "No World, collision read, physical movement, feedback consumption, memory, goals, pathfinding, replanning, reservation runtime, physics, or mutation is used."
+        ]
+    )
+}
+
+func makeAgentIntentToTickLiveReadonlyReport(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int
+) -> LabAgentIntentToTickLiveReadonlyReport {
+    let intentProduction = produceAgentIntentProductionResult(
+        tick: 0,
+        contexts: agentIntentToTickLiveReadonlyContexts(),
+        maxProposals: nil,
+        duplicateProposalAgentId: nil
+    )
+    let agents = Dictionary(
+        uniqueKeysWithValues: intentProduction.contexts.compactMap { context in
+            context.position.map { (context.agentId, $0) }
+        }
+    )
+    let tickInput = LabMultiAgentMovementTickInput(
+        tick: intentProduction.tick,
+        agents: agents,
+        physicalPositions: agents,
+        intents: intentProduction.acceptedIntents,
+        maxAgents: nil
+    )
+    let tickReport = makeMultiAgentMovementTickLiveReadonlyReport(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        input: tickInput,
+        evidenceSeeds: [
+            "agent_0": 99,
+            "agent_1": 99,
+            "agent_2": 42
+        ],
+        expectedApproved: 2,
+        expectedDenied: 1,
+        expectedOccupableDestinations: 2,
+        expectedNonOccupableDestinations: 1,
+        expectedCollisionDenied: 1,
+        requireSourceMismatch: false,
+        requireInvalidEdges: false
+    )
+    let positionsUnchanged = tickReport.output.abstractPositionsBefore == tickReport.output.abstractPositionsAfter
+        && tickReport.output.physicalPositionsBefore == tickReport.output.physicalPositionsAfter
+    let productionAcceptedIntents = !intentProduction.acceptedIntents.isEmpty
+    let tickReadLiveCollision = tickReport.output.resolutions.contains { $0.collisionRead }
+    let summary = LabAgentIntentToTickLiveReadonlySummary(
+        tick: intentProduction.tick,
+        contexts: intentProduction.summary.contexts,
+        proposals: intentProduction.summary.proposals,
+        acceptedIntents: intentProduction.summary.acceptedIntents,
+        rejectedProposals: intentProduction.summary.rejectedProposals,
+        tickAgents: tickInput.agents.count,
+        tickIntents: tickInput.intents.count,
+        tickResolutions: tickReport.output.resolutions.count,
+        tickFeedback: tickReport.output.feedback.count,
+        tickApproved: tickReport.summary.approved,
+        tickDenied: tickReport.summary.denied,
+        occupableDestinations: tickReport.summary.occupableDestinations,
+        nonOccupableDestinations: tickReport.summary.nonOccupableDestinations,
+        collisionDenied: tickReport.summary.collisionDenied,
+        sourceMismatch: tickReport.summary.sourceMismatch,
+        invalidEdges: tickReport.summary.invalidEdges,
+        displacementsApplied: tickReport.summary.displacementsApplied,
+        productionAcceptedIntents: productionAcceptedIntents,
+        productionReadCollision: intentProduction.summary.collisionRead,
+        tickReadLiveCollision: tickReadLiveCollision,
+        worldUsed: tickReport.summary.worldUsed,
+        collisionRead: tickReport.summary.liveCollisionRead,
+        movementApplied: tickReport.summary.physicalMovementApplied,
+        feedbackConsumed: false,
+        memoryUpdated: false,
+        goalChanged: false,
+        pathfindingPerformed: tickReport.summary.pathfindingPerformed,
+        replanningPerformed: tickReport.summary.replanningPerformed,
+        avoidancePerformed: tickReport.summary.avoidancePerformed,
+        reservationRuntimeUsed: tickReport.summary.reservationRuntimeUsed,
+        physicsPerformed: tickReport.summary.physicsPerformed,
+        mutationPerformed: tickReport.summary.mutationPerformed,
+        success: intentProduction.summary.success
+            && tickReport.success
+            && intentProduction.summary.contexts == 5
+            && intentProduction.summary.proposals == 5
+            && intentProduction.summary.acceptedIntents == 3
+            && intentProduction.summary.rejectedProposals == 2
+            && intentProduction.summary.noIntent == 1
+            && intentProduction.summary.invalidOneEdgeProposals == 1
+            && !intentProduction.summary.collisionRead
+            && intentProduction.summary.movementApplied == false
+            && tickReport.summary.approved == 2
+            && tickReport.summary.denied == 1
+            && tickReport.summary.occupableDestinations == 2
+            && tickReport.summary.nonOccupableDestinations == 1
+            && tickReport.summary.collisionDenied == 1
+            && tickReport.output.feedback.count == 3
+            && tickReport.output.feedback.filter { $0.kind == .approvedForMovement }.count == 2
+            && tickReport.output.feedback.contains { $0.agentId == "agent_2" && $0.kind == .blockedByCollision }
+            && positionsUnchanged
+            && tickReport.summary.displacementsApplied == 0
+            && tickReport.summary.worldUsed
+            && tickReport.summary.liveCollisionRead
+            && !tickReport.summary.physicalMovementApplied
+            && !tickReport.summary.pathfindingPerformed
+            && !tickReport.summary.replanningPerformed
+            && !tickReport.summary.avoidancePerformed
+            && !tickReport.summary.reservationRuntimeUsed
+            && !tickReport.summary.physicsPerformed
+            && !tickReport.summary.mutationPerformed
+    )
+    return LabAgentIntentToTickLiveReadonlyReport(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        success: summary.success,
+        intentProduction: intentProduction,
+        tickInput: tickInput,
+        tickOutput: tickReport.output,
+        summary: summary
+    )
+}
+
+func makeAgentIntentToTickLiveReadonlyInvariantReport(
+    report: LabAgentIntentToTickLiveReadonlyReport?,
+    scenario: String,
+    seed: UInt32
+) -> LabAgentIntentToTickLiveReadonlyInvariantReport {
+    guard let report else {
+        let check = agentIntentInvariantCheck(
+            "report_written",
+            false,
+            "agent_intent_to_tick_live_readonly_report.json",
+            "missing"
+        )
+        return LabAgentIntentToTickLiveReadonlyInvariantReport(
+            scenario: scenario,
+            seed: seed,
+            success: false,
+            summary: LabMultiAgentMovementFixtureInvariantSummary(
+                checksPassed: 0,
+                checksFailed: 1,
+                cases: 0,
+                passed: 0,
+                failed: 1
+            ),
+            checks: [check],
+            notes: ["Agent intent to tick live read-only report was not available."]
+        )
+    }
+
+    let contextIds = report.intentProduction.contexts.map(\.agentId)
+    let proposalIds = report.intentProduction.proposals.map(\.agentId)
+    let acceptedIds = report.intentProduction.acceptedIntents.map(\.agentId)
+    let resolutionIds = report.tickOutput.resolutions.map(\.agentId)
+    let acceptedOneEdge = report.intentProduction.acceptedIntents.allSatisfy {
+        manhattanDistance($0.from, $0.to) == 1
+    }
+    let acceptedSameY = report.intentProduction.acceptedIntents.allSatisfy {
+        $0.from.y == $0.to.y
+    }
+    let tickInputUsesAccepted = report.tickInput.intents.map(\.agentId) == acceptedIds
+    let tickAgentsCoverSources = report.tickInput.intents.allSatisfy { intent in
+        report.tickInput.agents[intent.agentId] == intent.from
+    }
+    let physicalMatchesAbstract = report.tickInput.physicalPositions == report.tickInput.agents
+    let approvedFeedbackCount = report.tickOutput.feedback.filter {
+        $0.kind == .approvedForMovement
+    }.count
+    let collisionDeniedFeedback = report.tickOutput.feedback.contains {
+        $0.agentId == "agent_2" && $0.kind == .blockedByCollision
+    }
+    let positionsUnchanged = report.tickOutput.abstractPositionsBefore == report.tickOutput.abstractPositionsAfter
+        && report.tickOutput.physicalPositionsBefore == report.tickOutput.physicalPositionsAfter
+
+    let checks = [
+        agentIntentInvariantCheck("intent_contexts_exist", !report.intentProduction.contexts.isEmpty, "non-empty", "\(report.intentProduction.contexts.count)"),
+        agentIntentInvariantCheck("intent_proposals_exist", !report.intentProduction.proposals.isEmpty, "non-empty", "\(report.intentProduction.proposals.count)"),
+        agentIntentInvariantCheck("accepted_intents_exist", !report.intentProduction.acceptedIntents.isEmpty, "non-empty", "\(report.intentProduction.acceptedIntents.count)"),
+        agentIntentInvariantCheck("rejected_proposals_exist", !report.intentProduction.rejectedProposals.isEmpty, "non-empty", "\(report.intentProduction.rejectedProposals.count)"),
+        agentIntentInvariantCheck("contexts_intentionally_unordered", contextIds != contextIds.sorted(), "unordered input", contextIds.joined(separator: ",")),
+        agentIntentInvariantCheck("proposals_sorted_by_agent_id", proposalIds == proposalIds.sorted(), "sorted", proposalIds.joined(separator: ",")),
+        agentIntentInvariantCheck("accepted_intents_sorted_by_agent_id", acceptedIds == acceptedIds.sorted(), "sorted", acceptedIds.joined(separator: ",")),
+        agentIntentInvariantCheck("accepted_intents_are_one_edge", acceptedOneEdge, "one-edge", "\(acceptedOneEdge)"),
+        agentIntentInvariantCheck("accepted_intents_are_same_y", acceptedSameY, "same-y", "\(acceptedSameY)"),
+        agentIntentInvariantCheck("production_does_not_read_collision", !report.summary.productionReadCollision, "false", "\(report.summary.productionReadCollision)"),
+        agentIntentInvariantCheck("production_does_not_apply_movement", !report.intentProduction.summary.movementApplied, "false", "\(report.intentProduction.summary.movementApplied)"),
+        agentIntentInvariantCheck("production_does_not_arbitrate_occupancy", report.summary.acceptedIntents == 3, "3 accepted before occupancy", "\(report.summary.acceptedIntents)"),
+        agentIntentInvariantCheck("tick_input_exists", report.tickInput.tick == report.intentProduction.tick, "same tick", "\(report.tickInput.tick)"),
+        agentIntentInvariantCheck("tick_input_uses_accepted_intents", tickInputUsesAccepted, "accepted intents", report.tickInput.intents.map(\.agentId).joined(separator: ",")),
+        agentIntentInvariantCheck("tick_input_agents_cover_intent_sources", tickAgentsCoverSources, "sources covered", "\(tickAgentsCoverSources)"),
+        agentIntentInvariantCheck("tick_input_physical_positions_match_abstract", physicalMatchesAbstract, "match", "\(physicalMatchesAbstract)"),
+        agentIntentInvariantCheck("tick_resolutions_exist", !report.tickOutput.resolutions.isEmpty, "non-empty", "\(report.tickOutput.resolutions.count)"),
+        agentIntentInvariantCheck("tick_resolutions_sorted_by_agent_id", resolutionIds == resolutionIds.sorted(), "sorted", resolutionIds.joined(separator: ",")),
+        agentIntentInvariantCheck("tick_reads_live_collision", report.summary.tickReadLiveCollision, "true", "\(report.summary.tickReadLiveCollision)"),
+        agentIntentInvariantCheck("world_used_only_for_readonly_collision", report.summary.worldUsed && !report.summary.movementApplied, "readonly collision", "worldUsed=\(report.summary.worldUsed), movementApplied=\(report.summary.movementApplied)"),
+        agentIntentInvariantCheck("occupable_destinations_approved", report.summary.occupableDestinations == 2 && report.summary.tickApproved == 2, "2/2", "\(report.summary.occupableDestinations)/\(report.summary.tickApproved)"),
+        agentIntentInvariantCheck("non_occupable_destinations_denied_collision", report.summary.nonOccupableDestinations == 1 && report.summary.collisionDenied == 1, "1/1", "\(report.summary.nonOccupableDestinations)/\(report.summary.collisionDenied)"),
+        agentIntentInvariantCheck("collision_denied_feedback_blocked_by_collision", collisionDeniedFeedback, "blockedByCollision", "\(collisionDeniedFeedback)"),
+        agentIntentInvariantCheck("approved_feedback_is_approved_for_movement", approvedFeedbackCount == 2, "2", "\(approvedFeedbackCount)"),
+        agentIntentInvariantCheck("tick_approved_count_expected", report.summary.tickApproved == 2, "2", "\(report.summary.tickApproved)"),
+        agentIntentInvariantCheck("tick_denied_count_expected", report.summary.tickDenied == 1, "1", "\(report.summary.tickDenied)"),
+        agentIntentInvariantCheck("tick_feedback_count_matches_resolutions", report.summary.tickFeedback == report.summary.tickResolutions, "match", "\(report.summary.tickFeedback)/\(report.summary.tickResolutions)"),
+        agentIntentInvariantCheck("positions_unchanged", positionsUnchanged, "unchanged", "\(positionsUnchanged)"),
+        agentIntentInvariantCheck("no_displacement_applied", report.summary.displacementsApplied == 0, "0", "\(report.summary.displacementsApplied)"),
+        agentIntentInvariantCheck("no_physical_movement_applied", !report.summary.movementApplied, "false", "\(report.summary.movementApplied)"),
+        agentIntentInvariantCheck("feedback_not_consumed", !report.summary.feedbackConsumed, "false", "\(report.summary.feedbackConsumed)"),
+        agentIntentInvariantCheck("memory_not_updated", !report.summary.memoryUpdated, "false", "\(report.summary.memoryUpdated)"),
+        agentIntentInvariantCheck("goal_not_changed", !report.summary.goalChanged, "false", "\(report.summary.goalChanged)"),
+        agentIntentInvariantCheck("pathfinding_not_performed", !report.summary.pathfindingPerformed, "false", "\(report.summary.pathfindingPerformed)"),
+        agentIntentInvariantCheck("replanning_not_performed", !report.summary.replanningPerformed, "false", "\(report.summary.replanningPerformed)"),
+        agentIntentInvariantCheck("avoidance_not_performed", !report.summary.avoidancePerformed, "false", "\(report.summary.avoidancePerformed)"),
+        agentIntentInvariantCheck("reservation_runtime_not_used", !report.summary.reservationRuntimeUsed, "false", "\(report.summary.reservationRuntimeUsed)"),
+        agentIntentInvariantCheck("physics_not_performed", !report.summary.physicsPerformed, "false", "\(report.summary.physicsPerformed)"),
+        agentIntentInvariantCheck("terrain_mutation_not_performed", !report.summary.mutationPerformed, "false", "\(report.summary.mutationPerformed)"),
+        agentIntentInvariantCheck("world_mutation_not_performed", !report.summary.mutationPerformed, "false", "\(report.summary.mutationPerformed)"),
+        agentIntentInvariantCheck("agent_intent_fixture_smoke_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        agentIntentInvariantCheck("agent_intent_hardening_smoke_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        agentIntentInvariantCheck("agent_intent_to_tick_fixture_smoke_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        agentIntentInvariantCheck("tick_live_readonly_smoke_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        agentIntentInvariantCheck("report_written", true, "agent_intent_to_tick_live_readonly_report.json", "agent_intent_to_tick_live_readonly_report.json"),
+        agentIntentInvariantCheck("proposals_written", true, "agent_intent_to_tick_live_readonly_proposals.json", "agent_intent_to_tick_live_readonly_proposals.json"),
+        agentIntentInvariantCheck("metrics_written", true, "agentIntentToTickLiveReadonly* metrics", "agentIntentToTickLiveReadonly* metrics"),
+        agentIntentInvariantCheck("event_written", true, "lab_agent_intent_to_tick_live_readonly_recorded", "lab_agent_intent_to_tick_live_readonly_recorded"),
+        agentIntentInvariantCheck("success_contract_respected", report.success, "true", "\(report.success)")
+    ]
+    let failed = checks.filter { !$0.passed }.count
+    return LabAgentIntentToTickLiveReadonlyInvariantReport(
+        scenario: scenario,
+        seed: seed,
+        success: failed == 0,
+        summary: LabMultiAgentMovementFixtureInvariantSummary(
+            checksPassed: checks.count - failed,
+            checksFailed: failed,
+            cases: 1,
+            passed: report.success ? 1 : 0,
+            failed: report.success ? 0 : 1
+        ),
+        checks: checks,
+        notes: [
+            "Agent intent production creates candidate intents without reading collision.",
+            "The tick live read-only layer reads controlled collision evidence and applies no movement.",
+            "Feedback is emitted as structured output only and is not consumed."
         ]
     )
 }

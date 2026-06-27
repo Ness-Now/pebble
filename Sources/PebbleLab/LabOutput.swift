@@ -643,6 +643,37 @@ struct RunMetrics: Encodable {
     let agentIntentToTickFixturePhysicsPerformed: Bool?
     let agentIntentToTickFixtureMutationPerformed: Bool?
     let agentIntentToTickFixtureSuccess: Bool?
+    let agentIntentToTickLiveReadonlyContexts: Int?
+    let agentIntentToTickLiveReadonlyProposals: Int?
+    let agentIntentToTickLiveReadonlyAcceptedIntents: Int?
+    let agentIntentToTickLiveReadonlyRejectedProposals: Int?
+    let agentIntentToTickLiveReadonlyNoIntent: Int?
+    let agentIntentToTickLiveReadonlyInvalidOneEdgeProposals: Int?
+    let agentIntentToTickLiveReadonlyTickAgents: Int?
+    let agentIntentToTickLiveReadonlyTickIntents: Int?
+    let agentIntentToTickLiveReadonlyTickResolutions: Int?
+    let agentIntentToTickLiveReadonlyTickFeedback: Int?
+    let agentIntentToTickLiveReadonlyTickApproved: Int?
+    let agentIntentToTickLiveReadonlyTickDenied: Int?
+    let agentIntentToTickLiveReadonlyOccupableDestinations: Int?
+    let agentIntentToTickLiveReadonlyNonOccupableDestinations: Int?
+    let agentIntentToTickLiveReadonlyCollisionDenied: Int?
+    let agentIntentToTickLiveReadonlyDisplacementsApplied: Int?
+    let agentIntentToTickLiveReadonlyProductionReadCollision: Bool?
+    let agentIntentToTickLiveReadonlyTickReadCollision: Bool?
+    let agentIntentToTickLiveReadonlyWorldUsed: Bool?
+    let agentIntentToTickLiveReadonlyCollisionRead: Bool?
+    let agentIntentToTickLiveReadonlyMovementApplied: Bool?
+    let agentIntentToTickLiveReadonlyFeedbackConsumed: Bool?
+    let agentIntentToTickLiveReadonlyMemoryUpdated: Bool?
+    let agentIntentToTickLiveReadonlyGoalChanged: Bool?
+    let agentIntentToTickLiveReadonlyPathfindingPerformed: Bool?
+    let agentIntentToTickLiveReadonlyReplanningPerformed: Bool?
+    let agentIntentToTickLiveReadonlyAvoidancePerformed: Bool?
+    let agentIntentToTickLiveReadonlyReservationRuntimeUsed: Bool?
+    let agentIntentToTickLiveReadonlyPhysicsPerformed: Bool?
+    let agentIntentToTickLiveReadonlyMutationPerformed: Bool?
+    let agentIntentToTickLiveReadonlySuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -1286,6 +1317,37 @@ struct RunMetrics: Encodable {
         agentIntentToTickFixturePhysicsPerformed: Bool? = nil,
         agentIntentToTickFixtureMutationPerformed: Bool? = nil,
         agentIntentToTickFixtureSuccess: Bool? = nil,
+        agentIntentToTickLiveReadonlyContexts: Int? = nil,
+        agentIntentToTickLiveReadonlyProposals: Int? = nil,
+        agentIntentToTickLiveReadonlyAcceptedIntents: Int? = nil,
+        agentIntentToTickLiveReadonlyRejectedProposals: Int? = nil,
+        agentIntentToTickLiveReadonlyNoIntent: Int? = nil,
+        agentIntentToTickLiveReadonlyInvalidOneEdgeProposals: Int? = nil,
+        agentIntentToTickLiveReadonlyTickAgents: Int? = nil,
+        agentIntentToTickLiveReadonlyTickIntents: Int? = nil,
+        agentIntentToTickLiveReadonlyTickResolutions: Int? = nil,
+        agentIntentToTickLiveReadonlyTickFeedback: Int? = nil,
+        agentIntentToTickLiveReadonlyTickApproved: Int? = nil,
+        agentIntentToTickLiveReadonlyTickDenied: Int? = nil,
+        agentIntentToTickLiveReadonlyOccupableDestinations: Int? = nil,
+        agentIntentToTickLiveReadonlyNonOccupableDestinations: Int? = nil,
+        agentIntentToTickLiveReadonlyCollisionDenied: Int? = nil,
+        agentIntentToTickLiveReadonlyDisplacementsApplied: Int? = nil,
+        agentIntentToTickLiveReadonlyProductionReadCollision: Bool? = nil,
+        agentIntentToTickLiveReadonlyTickReadCollision: Bool? = nil,
+        agentIntentToTickLiveReadonlyWorldUsed: Bool? = nil,
+        agentIntentToTickLiveReadonlyCollisionRead: Bool? = nil,
+        agentIntentToTickLiveReadonlyMovementApplied: Bool? = nil,
+        agentIntentToTickLiveReadonlyFeedbackConsumed: Bool? = nil,
+        agentIntentToTickLiveReadonlyMemoryUpdated: Bool? = nil,
+        agentIntentToTickLiveReadonlyGoalChanged: Bool? = nil,
+        agentIntentToTickLiveReadonlyPathfindingPerformed: Bool? = nil,
+        agentIntentToTickLiveReadonlyReplanningPerformed: Bool? = nil,
+        agentIntentToTickLiveReadonlyAvoidancePerformed: Bool? = nil,
+        agentIntentToTickLiveReadonlyReservationRuntimeUsed: Bool? = nil,
+        agentIntentToTickLiveReadonlyPhysicsPerformed: Bool? = nil,
+        agentIntentToTickLiveReadonlyMutationPerformed: Bool? = nil,
+        agentIntentToTickLiveReadonlySuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -1928,6 +1990,37 @@ struct RunMetrics: Encodable {
         self.agentIntentToTickFixturePhysicsPerformed = agentIntentToTickFixturePhysicsPerformed
         self.agentIntentToTickFixtureMutationPerformed = agentIntentToTickFixtureMutationPerformed
         self.agentIntentToTickFixtureSuccess = agentIntentToTickFixtureSuccess
+        self.agentIntentToTickLiveReadonlyContexts = agentIntentToTickLiveReadonlyContexts
+        self.agentIntentToTickLiveReadonlyProposals = agentIntentToTickLiveReadonlyProposals
+        self.agentIntentToTickLiveReadonlyAcceptedIntents = agentIntentToTickLiveReadonlyAcceptedIntents
+        self.agentIntentToTickLiveReadonlyRejectedProposals = agentIntentToTickLiveReadonlyRejectedProposals
+        self.agentIntentToTickLiveReadonlyNoIntent = agentIntentToTickLiveReadonlyNoIntent
+        self.agentIntentToTickLiveReadonlyInvalidOneEdgeProposals = agentIntentToTickLiveReadonlyInvalidOneEdgeProposals
+        self.agentIntentToTickLiveReadonlyTickAgents = agentIntentToTickLiveReadonlyTickAgents
+        self.agentIntentToTickLiveReadonlyTickIntents = agentIntentToTickLiveReadonlyTickIntents
+        self.agentIntentToTickLiveReadonlyTickResolutions = agentIntentToTickLiveReadonlyTickResolutions
+        self.agentIntentToTickLiveReadonlyTickFeedback = agentIntentToTickLiveReadonlyTickFeedback
+        self.agentIntentToTickLiveReadonlyTickApproved = agentIntentToTickLiveReadonlyTickApproved
+        self.agentIntentToTickLiveReadonlyTickDenied = agentIntentToTickLiveReadonlyTickDenied
+        self.agentIntentToTickLiveReadonlyOccupableDestinations = agentIntentToTickLiveReadonlyOccupableDestinations
+        self.agentIntentToTickLiveReadonlyNonOccupableDestinations = agentIntentToTickLiveReadonlyNonOccupableDestinations
+        self.agentIntentToTickLiveReadonlyCollisionDenied = agentIntentToTickLiveReadonlyCollisionDenied
+        self.agentIntentToTickLiveReadonlyDisplacementsApplied = agentIntentToTickLiveReadonlyDisplacementsApplied
+        self.agentIntentToTickLiveReadonlyProductionReadCollision = agentIntentToTickLiveReadonlyProductionReadCollision
+        self.agentIntentToTickLiveReadonlyTickReadCollision = agentIntentToTickLiveReadonlyTickReadCollision
+        self.agentIntentToTickLiveReadonlyWorldUsed = agentIntentToTickLiveReadonlyWorldUsed
+        self.agentIntentToTickLiveReadonlyCollisionRead = agentIntentToTickLiveReadonlyCollisionRead
+        self.agentIntentToTickLiveReadonlyMovementApplied = agentIntentToTickLiveReadonlyMovementApplied
+        self.agentIntentToTickLiveReadonlyFeedbackConsumed = agentIntentToTickLiveReadonlyFeedbackConsumed
+        self.agentIntentToTickLiveReadonlyMemoryUpdated = agentIntentToTickLiveReadonlyMemoryUpdated
+        self.agentIntentToTickLiveReadonlyGoalChanged = agentIntentToTickLiveReadonlyGoalChanged
+        self.agentIntentToTickLiveReadonlyPathfindingPerformed = agentIntentToTickLiveReadonlyPathfindingPerformed
+        self.agentIntentToTickLiveReadonlyReplanningPerformed = agentIntentToTickLiveReadonlyReplanningPerformed
+        self.agentIntentToTickLiveReadonlyAvoidancePerformed = agentIntentToTickLiveReadonlyAvoidancePerformed
+        self.agentIntentToTickLiveReadonlyReservationRuntimeUsed = agentIntentToTickLiveReadonlyReservationRuntimeUsed
+        self.agentIntentToTickLiveReadonlyPhysicsPerformed = agentIntentToTickLiveReadonlyPhysicsPerformed
+        self.agentIntentToTickLiveReadonlyMutationPerformed = agentIntentToTickLiveReadonlyMutationPerformed
+        self.agentIntentToTickLiveReadonlySuccess = agentIntentToTickLiveReadonlySuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

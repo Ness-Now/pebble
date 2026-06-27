@@ -216,6 +216,8 @@ struct RunEvent: Encodable {
     let divergenceAfterMax: Int?
     let productionAcceptedSameDestination: Bool?
     let tickResolvedSameDestination: Bool?
+    let productionReadCollision: Bool?
+    let tickReadCollision: Bool?
     let worldUsed: Bool?
     let liveCollisionRead: Bool?
     let physicalMovementApplied: Bool?
@@ -482,6 +484,8 @@ struct RunEvent: Encodable {
         divergenceAfterMax: Int? = nil,
         productionAcceptedSameDestination: Bool? = nil,
         tickResolvedSameDestination: Bool? = nil,
+        productionReadCollision: Bool? = nil,
+        tickReadCollision: Bool? = nil,
         worldUsed: Bool? = nil,
         liveCollisionRead: Bool? = nil,
         physicalMovementApplied: Bool? = nil,
@@ -747,6 +751,8 @@ struct RunEvent: Encodable {
         self.divergenceAfterMax = divergenceAfterMax
         self.productionAcceptedSameDestination = productionAcceptedSameDestination
         self.tickResolvedSameDestination = tickResolvedSameDestination
+        self.productionReadCollision = productionReadCollision
+        self.tickReadCollision = tickReadCollision
         self.worldUsed = worldUsed
         self.liveCollisionRead = liveCollisionRead
         self.physicalMovementApplied = physicalMovementApplied

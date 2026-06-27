@@ -1209,3 +1209,35 @@ terrain/world mutation remain out of scope.
 
 Next recommended step: Phase 4.21E - Agent Intent To Tick Live Read-Only
 Smoke.
+
+## Phase 4.21E - Agent Intent To Tick Live Read-Only Smoke
+
+Status: implemented and validated.
+
+Goal: connect agent intent production to tick live read-only collision
+evidence without applying movement, consuming feedback, updating memory or
+goals, pathfinding, replanning, avoidance, reservation runtime, physics, or
+terrain/world mutation.
+
+The scenario `agent_intent_to_tick_live_readonly_smoke` creates five
+contexts, produces three accepted one-edge same-y intents, rejects one idle
+proposal and one invalid vertical proposal, then feeds the accepted intents
+into the tick live read-only contract. Production remains collision-blind.
+The tick layer reads controlled live collision evidence, approves two
+occupable destinations, denies one non-occupable destination with
+`deniedCollision`, emits `approvedForMovement` / `blockedByCollision`
+feedback, and preserves all positions with zero displacements.
+
+It writes `agent_intent_to_tick_live_readonly_report.json`,
+`agent_intent_to_tick_live_readonly_invariant_report.json`,
+`agent_intent_to_tick_live_readonly_proposals.json`,
+`agentIntentToTickLiveReadonly*` metrics, and one aggregate
+`lab_agent_intent_to_tick_live_readonly_recorded` event.
+
+Movement application, feedback consumption, memory update, goal selection,
+pathfinding, replanning, avoidance, reservation runtime, physics, save/load,
+social behavior, communication, gameplay movement, and terrain/world
+mutation remain out of scope.
+
+Next recommended step: Phase 4.21F - Agent Intent To Tick Approved
+Application Smoke.

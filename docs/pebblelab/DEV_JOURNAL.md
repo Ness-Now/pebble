@@ -5401,3 +5401,133 @@ produced intents into the live read-only tick contract, using `World` only
 for collision evidence and still avoiding movement application, feedback
 consumption, memory updates, goals, pathfinding, replanning, avoidance,
 reservation runtime, physics, and terrain/world mutation.
+
+## 2026-06-27 — Phase 4.21E agent intent to tick live read-only smoke
+
+### Objective
+
+Connect agent-produced fixture intents to the tick live read-only collision
+contract. This proves that policy output can feed a live collision evidence
+tick without applying movement or consuming feedback.
+
+### Starting State
+
+Phase 4.21D proved the fixture handoff: production accepted same-destination
+intents and tick fixture arbitration resolved them. Phase 4.20C proved
+tick-level live read-only collision evidence over synthetic intents. Phase
+4.21E combines those boundaries while keeping movement application out of
+scope.
+
+### Files Created or Modified
+
+- `Sources/PebbleLab/LabAgentIntentProduction.swift`
+- `Sources/PebbleLab/LabMultiAgentMovement.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_AGENT_INTENT_PRODUCTION_PLAN.md`
+
+### Why Live Read-Only Integration
+
+The next ownership boundary is collision evidence: production should still
+only propose valid one-edge intents, while the tick live read-only layer owns
+occupability evidence and final approval or collision denial. This keeps
+agent policy from learning about live collision too early.
+
+### Production-to-Tick Flow
+
+Five intentionally unordered contexts produce five sorted proposals. Three
+valid `wander_fixture` proposals become accepted intents, while one idle
+context produces `noIntent` and one invalid vertical proposal is rejected.
+Accepted intents are placed into a `LabMultiAgentMovementTickInput` with
+synthetic physical positions mirroring abstract positions.
+
+### Collision Evidence Policy
+
+The tick layer reads controlled live collision evidence only for accepted,
+valid tick intents. `agent_0` and `agent_1` use seed 99 and observe
+occupable destinations. `agent_2` uses seed 42 and observes a non-occupable
+destination, producing `deniedCollision`.
+
+### Production vs Tick Responsibility Boundary
+
+Production does not read collision, does not decide occupancy, and does not
+apply movement. Tick live read-only reads collision evidence, approves
+occupable destinations, denies non-occupable destinations, and emits
+feedback while preserving positions.
+
+### Tick Approval and Denial Result
+
+The tick output has three resolutions: two approved intents with
+`approvedForMovement` feedback and one collision-denied intent with
+`blockedByCollision` feedback. Abstract and physical positions remain
+unchanged, and `displacementsApplied` remains zero.
+
+### Outputs, Invariants, Metrics, and Event
+
+The scenario writes:
+
+- `agent_intent_to_tick_live_readonly_report.json`;
+- `agent_intent_to_tick_live_readonly_invariant_report.json`;
+- `agent_intent_to_tick_live_readonly_proposals.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Metrics use the `agentIntentToTickLiveReadonly*` prefix. The aggregate event
+is `lab_agent_intent_to_tick_live_readonly_recorded`.
+
+### Out-of-Scope Confirmations
+
+No movement is applied. No feedback is consumed. No memory or goals are
+modified. No physical placeholder or core entity is created or moved. No
+route following, pathfinding, replanning, avoidance, reservation runtime,
+physics, LLM/Python/RL, social behavior, communication, gameplay movement,
+or terrain/world mutation is added.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_agent_intent_to_tick_live_readonly`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_to_tick_fixture_after_live_readonly`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_hardening_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_hardening_after_live_readonly`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_fixture_after_live_readonly`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_tick_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_tick_live_readonly_after_agent_intent_live_readonly`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_tick_fixture_after_agent_intent_live_readonly`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_agent_intent_live_readonly`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- Live read-only integration report success true.
+- Invariant report success true.
+- Production contexts: 5.
+- Proposals: 5.
+- Accepted intents: 3.
+- Rejected proposals: 2.
+- Tick agents: 5.
+- Tick intents: 3.
+- Tick approved: 2.
+- Tick denied: 1.
+- Occupable destinations: 2.
+- Non-occupable destinations: 1.
+- Collision denied: 1.
+- Tick feedback: 3.
+- Displacements applied: 0.
+- Metrics contain `agentIntentToTickLiveReadonly*`.
+- `events.ndjson` contains `lab_agent_intent_to_tick_live_readonly_recorded`.
+
+### Next Step
+
+Phase 4.21F: Agent Intent To Tick Approved Application Smoke. It should feed
+produced intents into the tick approved application contract and apply only
+controlled approved movements while keeping denied hardening, feedback
+consumption, memory updates, goals, pathfinding, replanning, avoidance,
+reservation runtime, physics, and terrain/world mutation out of scope.

@@ -2407,6 +2407,36 @@ func makeMultiAgentMovementTickLiveReadonlyReport(
         "agent_1": 99,
         "agent_2": 42
     ]
+    return makeMultiAgentMovementTickLiveReadonlyReport(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        input: input,
+        evidenceSeeds: evidenceSeeds,
+        expectedApproved: 2,
+        expectedDenied: 3,
+        expectedOccupableDestinations: 2,
+        expectedNonOccupableDestinations: 1,
+        expectedCollisionDenied: 1,
+        requireSourceMismatch: true,
+        requireInvalidEdges: true
+    )
+}
+
+func makeMultiAgentMovementTickLiveReadonlyReport(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int,
+    input: LabMultiAgentMovementTickInput,
+    evidenceSeeds: [String: UInt32],
+    expectedApproved: Int,
+    expectedDenied: Int,
+    expectedOccupableDestinations: Int,
+    expectedNonOccupableDestinations: Int,
+    expectedCollisionDenied: Int,
+    requireSourceMismatch: Bool,
+    requireInvalidEdges: Bool
+) -> LabMultiAgentMovementTickLiveReadonlyReport {
     var resolutions: [LabMultiAgentMovementTickLiveReadonlyResolution] = []
     var pending: [LabAgentMoveIntent] = []
     let sortedIntents = input.intents.sorted { $0.agentId < $1.agentId }
@@ -2586,13 +2616,13 @@ func makeMultiAgentMovementTickLiveReadonlyReport(
         divergenceDenied: 0,
         maxDivergenceBefore: 0,
         maxDivergenceAfter: 0,
-        success: approved > 0
-            && denied > 0
-            && occupable > 0
-            && nonOccupable > 0
-            && collisionDenied > 0
-            && sourceMismatch > 0
-            && invalidEdges > 0
+        success: approved == expectedApproved
+            && denied == expectedDenied
+            && occupable == expectedOccupableDestinations
+            && nonOccupable == expectedNonOccupableDestinations
+            && collisionDenied == expectedCollisionDenied
+            && (!requireSourceMismatch || sourceMismatch > 0)
+            && (!requireInvalidEdges || invalidEdges > 0)
             && feedback.count == resolutions.count
             && feedbackKindsMatch
             && resolutions.allSatisfy { !$0.displacementApplied }
