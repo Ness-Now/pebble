@@ -974,3 +974,34 @@ changes, and gameplay movement remain out of scope.
 
 Next recommended step: Phase 4.20B - Multi-Agent Movement Tick Fixture
 Smoke.
+
+## Phase 4.20B - Multi-Agent Movement Tick Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: instantiate the first integrated multi-agent movement tick contract as
+a fixture-only scenario, with synthetic abstract positions, synthetic
+physical positions, unordered movement intentions, deterministic
+arbitration, tick output, structured feedback, reports, metrics, and one
+aggregate event.
+
+The scenario `multi_agent_movement_tick_fixture_smoke` builds one tick with
+four agents and four intentionally unordered intents. It approves `agent_0`
+and `agent_2`, denies `agent_1` for the same-destination conflict, and
+denies `agent_3` for an invalid vertical edge. The resolutions are sorted by
+stable `agentId`, feedback is produced for every resolution, and positions
+remain unchanged because no movement is applied in this fixture phase.
+
+It writes `multi_agent_movement_tick_fixture_report.json`,
+`multi_agent_movement_tick_fixture_invariant_report.json`,
+`multi_agent_movement_tick_fixture_feedback.json`,
+`multiAgentMovementTickFixture*` metrics, and one aggregate
+`lab_multi_agent_movement_tick_fixture_recorded` event.
+
+Live collision, physical application, reservation runtime, avoidance,
+dynamic replanning, route repair, pathfinding, route following, physics,
+save/load, social behavior, communication, gameplay movement, and
+terrain/world mutation remain out of scope.
+
+Next recommended step: Phase 4.20C - Multi-Agent Movement Tick Live
+Read-Only Smoke.

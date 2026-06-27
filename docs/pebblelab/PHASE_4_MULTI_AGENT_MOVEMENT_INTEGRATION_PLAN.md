@@ -629,6 +629,54 @@ The following are out of scope for Phase 4.20A:
 | Reporting starts influencing simulation | Keep report generation after movement output is complete and read-only. |
 | Goal selection sneaks into movement tick | Keep goal selection out of 4.20 and defer agent intent production to 4.21 planning. |
 
+## Phase 4.20B Implementation Status
+
+Phase 4.20B implements the first fixture-only tick-level contract:
+`multi_agent_movement_tick_fixture_smoke`.
+
+Validated tick input/output:
+
+- one synthetic tick, `tick = 0`;
+- four abstract agent positions;
+- four matching synthetic physical positions;
+- four deliberately unordered intentions;
+- deterministic resolution order by stable `agentId`;
+- two approved intentions;
+- one same-destination conflict denial;
+- one invalid vertical edge denial;
+- no position changes in this fixture-only phase.
+
+The scenario writes:
+
+- `multi_agent_movement_tick_fixture_report.json`;
+- `multi_agent_movement_tick_fixture_invariant_report.json`;
+- `multi_agent_movement_tick_fixture_feedback.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The feedback JSON records one feedback entry per resolution. Approved
+fixture-only resolutions use `approvedForMovement` because no displacement
+is applied; `moved` remains reserved for future application phases.
+
+Validated limits:
+
+- no `World`;
+- no live collision read;
+- no physical movement application;
+- no route following;
+- no pathfinding;
+- no replanning;
+- no goal selection;
+- no avoidance;
+- no reservation runtime;
+- no physics;
+- no terrain/world mutation;
+- no repeated tick loop.
+
+Next recommended step: Phase 4.20C - Multi-Agent Movement Tick Live
+Read-Only Smoke. It should attach live collision evidence to the same
+tick-level input/output contract while still avoiding movement application.
+
 ## 15. Documentation Updates
 
 Phase 4.20A should update:

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added fixture-only multi-agent movement tick contract smoke.
 - Documented PebbleLab multi-agent movement integration planning contract.
 - Hardened multi-agent physical movement cases.
 - Added multi-agent approved physical movement smoke.

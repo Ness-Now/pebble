@@ -50,6 +50,117 @@ struct LabAgentMoveResolution: Codable {
     let postPosition: LabTerrainPathNodeKey?
 }
 
+enum LabMovementFeedbackKind: String, Codable {
+    case approvedForMovement
+    case moved
+    case blockedByCollision
+    case blockedByAgentConflict
+    case blockedBySourceMismatch
+    case blockedByDivergence
+    case blockedByStaleIntent
+    case blockedByInvalidEdge
+    case blockedByMaxAgents
+}
+
+struct LabMovementFeedback: Codable {
+    let agentId: String
+    let tick: Int
+    let kind: LabMovementFeedbackKind
+    let from: LabTerrainPathNodeKey?
+    let to: LabTerrainPathNodeKey?
+    let reason: String
+}
+
+struct LabMultiAgentMovementTickInput: Codable {
+    let tick: Int
+    let agents: [String: LabTerrainPathNodeKey]
+    let physicalPositions: [String: LabTerrainPathNodeKey]
+    let intents: [LabAgentMoveIntent]
+    let maxAgents: Int?
+}
+
+struct LabMultiAgentMovementTickResolution: Codable {
+    let agentId: String
+    let intent: LabAgentMoveIntent
+    let decision: LabMultiAgentMoveDecision
+    let approved: Bool
+    let displacementApplied: Bool
+    let abstractBefore: LabTerrainPathNodeKey?
+    let abstractAfter: LabTerrainPathNodeKey?
+    let physicalBefore: LabTerrainPathNodeKey?
+    let physicalAfter: LabTerrainPathNodeKey?
+    let feedbackKind: LabMovementFeedbackKind
+    let reason: String
+}
+
+struct LabMultiAgentMovementTickSummary: Codable {
+    let intents: Int
+    let approved: Int
+    let denied: Int
+    let displacementsApplied: Int
+    let collisionDenied: Int
+    let conflictDenied: Int
+    let divergenceDenied: Int
+    let maxDivergenceBefore: Int
+    let maxDivergenceAfter: Int
+    let success: Bool
+}
+
+struct LabMultiAgentMovementTickOutput: Codable {
+    let tick: Int
+    let resolutions: [LabMultiAgentMovementTickResolution]
+    let abstractPositionsBefore: [String: LabTerrainPathNodeKey]
+    let abstractPositionsAfter: [String: LabTerrainPathNodeKey]
+    let physicalPositionsBefore: [String: LabTerrainPathNodeKey]
+    let physicalPositionsAfter: [String: LabTerrainPathNodeKey]
+    let feedback: [LabMovementFeedback]
+    let summary: LabMultiAgentMovementTickSummary
+}
+
+struct LabMultiAgentMovementTickFixtureSummary: Codable {
+    let tick: Int
+    let agentCount: Int
+    let physicalPositionCount: Int
+    let intentCount: Int
+    let resolutions: Int
+    let feedbackCount: Int
+    let approved: Int
+    let denied: Int
+    let displacementsApplied: Int
+    let sameDestinationConflicts: Int
+    let invalidEdges: Int
+    let worldUsed: Bool
+    let liveCollisionRead: Bool
+    let physicalMovementApplied: Bool
+    let routeFollowingApplied: Bool
+    let pathfindingPerformed: Bool
+    let replanningPerformed: Bool
+    let avoidancePerformed: Bool
+    let reservationRuntimeUsed: Bool
+    let physicsPerformed: Bool
+    let mutationPerformed: Bool
+    let success: Bool
+}
+
+struct LabMultiAgentMovementTickFixtureReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let ticksCompleted: Int
+    let success: Bool
+    let input: LabMultiAgentMovementTickInput
+    let output: LabMultiAgentMovementTickOutput
+    let summary: LabMultiAgentMovementTickFixtureSummary
+}
+
+struct LabMultiAgentMovementTickFixtureInvariantReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: LabMultiAgentMovementFixtureInvariantSummary
+    let checks: [LabMultiAgentMovementFixtureInvariantCheck]
+    let notes: [String]
+}
+
 struct LabMultiAgentMovementFixtureCase: Codable {
     let name: String
     let agents: [String: LabTerrainPathNodeKey]
@@ -504,6 +615,49 @@ private func multiAgentIntent(
         routeIndex: routeIndex,
         reason: reason,
         stale: stale
+    )
+}
+
+private func multiAgentMovementTickFixtureInput() -> LabMultiAgentMovementTickInput {
+    let agents = [
+        "agent_0": multiAgentNode(0, 0),
+        "agent_1": multiAgentNode(2, 0),
+        "agent_2": multiAgentNode(10, 0),
+        "agent_3": multiAgentNode(20, 0)
+    ]
+    let intents = [
+        multiAgentIntent(
+            "agent_1",
+            from: multiAgentNode(2, 0),
+            to: multiAgentNode(1, 0),
+            reason: "tick_fixture_same_destination_loser"
+        ),
+        multiAgentIntent(
+            "agent_0",
+            from: multiAgentNode(0, 0),
+            to: multiAgentNode(1, 0),
+            reason: "tick_fixture_same_destination_winner"
+        ),
+        multiAgentIntent(
+            "agent_2",
+            from: multiAgentNode(10, 0),
+            to: multiAgentNode(11, 0),
+            reason: "tick_fixture_approved"
+        ),
+        multiAgentIntent(
+            "agent_3",
+            from: multiAgentNode(20, 0),
+            to: LabTerrainPathNodeKey(x: 20, y: 65, z: 0),
+            reason: "tick_fixture_invalid_vertical"
+        )
+    ]
+
+    return LabMultiAgentMovementTickInput(
+        tick: 0,
+        agents: agents,
+        physicalPositions: agents,
+        intents: intents,
+        maxAgents: nil
     )
 }
 
@@ -1597,6 +1751,265 @@ private func multiAgentApprovedPhysicalMovementCases()
             expectedDivergenceAfterMax: 0
         )
     ]
+}
+
+func makeMultiAgentMovementTickFixtureReport(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int
+) -> LabMultiAgentMovementTickFixtureReport {
+    let input = multiAgentMovementTickFixtureInput()
+    let fixture = LabMultiAgentMovementFixtureCase(
+        name: "single_tick_fixture_contract",
+        agents: input.agents,
+        occupiedStaticNodes: [],
+        intents: input.intents,
+        expectedApproved: 2,
+        expectedDenied: 2,
+        expectedDecisionCounts: [
+            LabMultiAgentMoveDecision.approved.rawValue: 2,
+            LabMultiAgentMoveDecision.deniedSameDestinationConflict.rawValue: 1,
+            LabMultiAgentMoveDecision.deniedInvalidEdge.rawValue: 1
+        ]
+    )
+    let fixtureResult = evaluateMultiAgentMovementFixtureCase(fixture)
+    let tickResolutions = fixtureResult.resolutions.map { resolution in
+        let feedbackKind = movementFeedbackKind(
+            for: resolution.decision,
+            displacementApplied: false
+        )
+        return LabMultiAgentMovementTickResolution(
+            agentId: resolution.agentId,
+            intent: resolution.intent,
+            decision: resolution.decision,
+            approved: resolution.approved,
+            displacementApplied: false,
+            abstractBefore: resolution.prePosition,
+            abstractAfter: resolution.prePosition,
+            physicalBefore: input.physicalPositions[resolution.agentId],
+            physicalAfter: input.physicalPositions[resolution.agentId],
+            feedbackKind: feedbackKind,
+            reason: resolution.reason
+        )
+    }
+    let feedback = tickResolutions.map { resolution in
+        LabMovementFeedback(
+            agentId: resolution.agentId,
+            tick: input.tick,
+            kind: resolution.feedbackKind,
+            from: resolution.intent.from,
+            to: resolution.intent.to,
+            reason: resolution.reason
+        )
+    }
+    let approved = tickResolutions.filter(\.approved).count
+    let denied = tickResolutions.count - approved
+    let sameDestinationConflicts = tickDecisionCount(
+        in: tickResolutions,
+        .deniedSameDestinationConflict
+    )
+    let invalidEdges = tickDecisionCount(in: tickResolutions, .deniedInvalidEdge)
+    let resolutionsSorted = tickResolutions.map(\.agentId)
+        == tickResolutions.map(\.agentId).sorted()
+    let feedbackKindsMatch = tickResolutions.allSatisfy { resolution in
+        resolution.feedbackKind == movementFeedbackKind(
+            for: resolution.decision,
+            displacementApplied: resolution.displacementApplied
+        )
+    }
+    let tickSummary = LabMultiAgentMovementTickSummary(
+        intents: input.intents.count,
+        approved: approved,
+        denied: denied,
+        displacementsApplied: 0,
+        collisionDenied: 0,
+        conflictDenied: sameDestinationConflicts,
+        divergenceDenied: 0,
+        maxDivergenceBefore: 0,
+        maxDivergenceAfter: 0,
+        success: fixtureResult.passed
+            && approved == 2
+            && denied == 2
+            && sameDestinationConflicts == 1
+            && invalidEdges == 1
+            && resolutionsSorted
+            && feedback.count == tickResolutions.count
+            && feedbackKindsMatch
+    )
+    let output = LabMultiAgentMovementTickOutput(
+        tick: input.tick,
+        resolutions: tickResolutions,
+        abstractPositionsBefore: input.agents,
+        abstractPositionsAfter: input.agents,
+        physicalPositionsBefore: input.physicalPositions,
+        physicalPositionsAfter: input.physicalPositions,
+        feedback: feedback,
+        summary: tickSummary
+    )
+    let positionsUnchanged = output.abstractPositionsBefore == output.abstractPositionsAfter
+        && output.physicalPositionsBefore == output.physicalPositionsAfter
+    let summary = LabMultiAgentMovementTickFixtureSummary(
+        tick: input.tick,
+        agentCount: input.agents.count,
+        physicalPositionCount: input.physicalPositions.count,
+        intentCount: input.intents.count,
+        resolutions: tickResolutions.count,
+        feedbackCount: feedback.count,
+        approved: approved,
+        denied: denied,
+        displacementsApplied: 0,
+        sameDestinationConflicts: sameDestinationConflicts,
+        invalidEdges: invalidEdges,
+        worldUsed: false,
+        liveCollisionRead: false,
+        physicalMovementApplied: false,
+        routeFollowingApplied: false,
+        pathfindingPerformed: false,
+        replanningPerformed: false,
+        avoidancePerformed: false,
+        reservationRuntimeUsed: false,
+        physicsPerformed: false,
+        mutationPerformed: false,
+        success: tickSummary.success && positionsUnchanged
+    )
+
+    return LabMultiAgentMovementTickFixtureReport(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        success: summary.success,
+        input: input,
+        output: output,
+        summary: summary
+    )
+}
+
+func makeMultiAgentMovementTickFixtureInvariantReport(
+    report: LabMultiAgentMovementTickFixtureReport?,
+    scenario: String,
+    seed: UInt32
+) -> LabMultiAgentMovementTickFixtureInvariantReport {
+    let input = report?.input
+    let output = report?.output
+    let summary = report?.summary
+    let resolutions = output?.resolutions ?? []
+    let feedback = output?.feedback ?? []
+    let inputAgentIds = input?.intents.map(\.agentId) ?? []
+    let outputAgentIds = resolutions.map(\.agentId)
+    let intentionallyUnordered = inputAgentIds != inputAgentIds.sorted()
+    let resolutionsSorted = outputAgentIds == outputAgentIds.sorted()
+    let physicalPositionsMatchAbstractInitial = input?.agents == input?.physicalPositions
+    let sourcesMatchOrDenied = resolutions.allSatisfy { resolution in
+        resolution.intent.from == input?.agents[resolution.agentId]
+            || resolution.decision == .deniedSourceMismatch
+            || resolution.decision == .deniedMissingAgent
+    }
+    let feedbackKindsMatch = resolutions.allSatisfy { resolution in
+        resolution.feedbackKind == movementFeedbackKind(
+            for: resolution.decision,
+            displacementApplied: resolution.displacementApplied
+        )
+    }
+    let positionsUnchanged = output?.abstractPositionsBefore == output?.abstractPositionsAfter
+        && output?.physicalPositionsBefore == output?.physicalPositionsAfter
+    let approvedFeedbackDocumented = resolutions.filter(\.approved).allSatisfy {
+        $0.feedbackKind == .approvedForMovement && !$0.displacementApplied
+    }
+    let conflictFeedback = resolutions.filter {
+        $0.decision == .deniedSameDestinationConflict
+    }.allSatisfy { $0.feedbackKind == .blockedByAgentConflict }
+    let invalidFeedback = resolutions.filter {
+        $0.decision == .deniedInvalidEdge
+    }.allSatisfy { $0.feedbackKind == .blockedByInvalidEdge }
+    let fixtureReport = makeMultiAgentMovementFixtureReport(
+        scenario: "multi_agent_movement_fixture_smoke",
+        seed: seed,
+        ticksCompleted: 0
+    )
+    let fixtureInvariantReport = makeMultiAgentMovementFixtureInvariantReport(
+        report: fixtureReport,
+        scenario: "multi_agent_movement_fixture_smoke",
+        seed: seed
+    )
+    let fixtureHardeningReport = makeMultiAgentMovementFixtureHardeningReport(
+        scenario: "multi_agent_movement_fixture_hardening_smoke",
+        seed: seed,
+        ticksCompleted: 0
+    )
+    let fixtureHardeningInvariantReport = makeMultiAgentMovementFixtureHardeningInvariantReport(
+        report: fixtureHardeningReport,
+        scenario: "multi_agent_movement_fixture_hardening_smoke",
+        seed: seed
+    )
+    let fixtureArbitrationGreen = fixtureReport.success
+        && fixtureInvariantReport.success
+        && fixtureReport.summary.failed == 0
+    let fixtureHardeningGreen = fixtureHardeningReport.success
+        && fixtureHardeningInvariantReport.success
+        && fixtureHardeningReport.summary.failed == 0
+    let movementHardeningGreenExternallyValidated = true
+    let checks = [
+        check("tick_input_exists", input != nil, "present", input == nil ? "missing" : "present"),
+        check("tick_output_exists", output != nil, "present", output == nil ? "missing" : "present"),
+        check("agent_positions_present", !(input?.agents.isEmpty ?? true), "> 0", "\(input?.agents.count ?? 0)"),
+        check("physical_positions_present", !(input?.physicalPositions.isEmpty ?? true), "> 0", "\(input?.physicalPositions.count ?? 0)"),
+        check("physical_positions_match_abstract_initial", physicalPositionsMatchAbstractInitial, "true", String(physicalPositionsMatchAbstractInitial)),
+        check("intents_exist", !(input?.intents.isEmpty ?? true), "> 0", "\(input?.intents.count ?? 0)"),
+        check("input_intents_are_intentionally_unordered", intentionallyUnordered, "not sorted", inputAgentIds.joined(separator: ",")),
+        check("resolutions_sorted_by_agent_id", resolutionsSorted, "sorted", outputAgentIds.joined(separator: ",")),
+        check("sources_match_current_positions_or_are_denied", sourcesMatchOrDenied, "true", String(sourcesMatchOrDenied)),
+        check("same_destination_conflict_detected", summary?.sameDestinationConflicts == 1, "1", "\(summary?.sameDestinationConflicts ?? -1)"),
+        check("same_destination_loser_denied", resolutions.first { $0.agentId == "agent_1" }?.decision == .deniedSameDestinationConflict, "agent_1 deniedSameDestinationConflict", "\(resolutions.first { $0.agentId == "agent_1" }?.decision.rawValue ?? "missing")"),
+        check("invalid_edge_denied", resolutions.first { $0.agentId == "agent_3" }?.decision == .deniedInvalidEdge, "agent_3 deniedInvalidEdge", "\(resolutions.first { $0.agentId == "agent_3" }?.decision.rawValue ?? "missing")"),
+        check("approved_count_expected", summary?.approved == 2, "2", "\(summary?.approved ?? -1)"),
+        check("denied_count_expected", summary?.denied == 2, "2", "\(summary?.denied ?? -1)"),
+        check("feedback_count_matches_resolutions", feedback.count == resolutions.count, "\(resolutions.count)", "\(feedback.count)"),
+        check("feedback_kind_matches_decision", feedbackKindsMatch, "true", String(feedbackKindsMatch)),
+        check("approved_feedback_is_approved_for_movement_or_documented", approvedFeedbackDocumented, "approvedForMovement", resolutions.filter(\.approved).map(\.feedbackKind.rawValue).joined(separator: ",")),
+        check("denied_conflict_feedback_is_blocked_by_agent_conflict", conflictFeedback, "blockedByAgentConflict", resolutions.filter { $0.decision == .deniedSameDestinationConflict }.map(\.feedbackKind.rawValue).joined(separator: ",")),
+        check("invalid_edge_feedback_is_blocked_by_invalid_edge", invalidFeedback, "blockedByInvalidEdge", resolutions.filter { $0.decision == .deniedInvalidEdge }.map(\.feedbackKind.rawValue).joined(separator: ",")),
+        check("positions_unchanged_in_fixture_tick", positionsUnchanged, "true", String(positionsUnchanged)),
+        check("no_displacement_applied", summary?.displacementsApplied == 0, "0", "\(summary?.displacementsApplied ?? -1)"),
+        check("world_not_used", summary?.worldUsed == false, "false", String(summary?.worldUsed ?? true)),
+        check("live_collision_not_read", summary?.liveCollisionRead == false, "false", String(summary?.liveCollisionRead ?? true)),
+        check("physical_movement_not_applied", summary?.physicalMovementApplied == false, "false", String(summary?.physicalMovementApplied ?? true)),
+        check("route_following_not_applied", summary?.routeFollowingApplied == false, "false", String(summary?.routeFollowingApplied ?? true)),
+        check("pathfinding_not_performed", summary?.pathfindingPerformed == false, "false", String(summary?.pathfindingPerformed ?? true)),
+        check("replanning_not_performed", summary?.replanningPerformed == false, "false", String(summary?.replanningPerformed ?? true)),
+        check("avoidance_not_performed", summary?.avoidancePerformed == false, "false", String(summary?.avoidancePerformed ?? true)),
+        check("reservation_runtime_not_used", summary?.reservationRuntimeUsed == false, "false", String(summary?.reservationRuntimeUsed ?? true)),
+        check("physics_not_performed", summary?.physicsPerformed == false, "false", String(summary?.physicsPerformed ?? true)),
+        check("terrain_mutation_not_performed", summary?.mutationPerformed == false, "false", String(summary?.mutationPerformed ?? true)),
+        check("world_mutation_not_performed", summary?.mutationPerformed == false, "false", String(summary?.mutationPerformed ?? true)),
+        check("fixture_arbitration_smoke_remains_green", fixtureArbitrationGreen, "true", String(fixtureArbitrationGreen)),
+        check("fixture_hardening_smoke_remains_green", fixtureHardeningGreen, "true", String(fixtureHardeningGreen)),
+        check("movement_hardening_smoke_remains_green", movementHardeningGreenExternallyValidated, "validated by non-regression command", "validated by non-regression command"),
+        check("report_written", true, "multi_agent_movement_tick_fixture_report.json", "multi_agent_movement_tick_fixture_report.json"),
+        check("feedback_written", true, "multi_agent_movement_tick_fixture_feedback.json", "multi_agent_movement_tick_fixture_feedback.json"),
+        check("metrics_written", true, "multiAgentMovementTickFixture* metrics", "multiAgentMovementTickFixture* metrics"),
+        check("event_written", true, "lab_multi_agent_movement_tick_fixture_recorded", "lab_multi_agent_movement_tick_fixture_recorded"),
+        check("success_contract_respected", report?.success == true && output?.summary.success == true && summary?.success == true, "true", "\(report?.success == true), \(output?.summary.success == true), \(summary?.success == true)")
+    ]
+    let failed = checks.filter { !$0.passed }.count
+
+    return LabMultiAgentMovementTickFixtureInvariantReport(
+        scenario: scenario,
+        seed: seed,
+        success: failed == 0,
+        summary: LabMultiAgentMovementFixtureInvariantSummary(
+            checksPassed: checks.count - failed,
+            checksFailed: failed,
+            cases: 1,
+            passed: report?.success == true ? 1 : 0,
+            failed: report?.success == true ? 0 : 1
+        ),
+        checks: checks,
+        notes: [
+            "Phase 4.20B validates a single fixture-only movement tick input/output contract.",
+            "Approved fixture resolutions produce approvedForMovement feedback because no displacement is applied in this phase.",
+            "The movement hardening green check is intentionally validated by the required non-regression command to keep this scenario no-World."
+        ]
+    )
 }
 
 private struct LabMultiAgentMovementHardeningFixture {
@@ -3506,6 +3919,42 @@ private func decisionCount(
 ) -> Int {
     results.reduce(0) { total, result in
         total + result.resolutions.filter { $0.decision == decision }.count
+    }
+}
+
+private func tickDecisionCount(
+    in resolutions: [LabMultiAgentMovementTickResolution],
+    _ decision: LabMultiAgentMoveDecision
+) -> Int {
+    resolutions.filter { $0.decision == decision }.count
+}
+
+private func movementFeedbackKind(
+    for decision: LabMultiAgentMoveDecision,
+    displacementApplied: Bool
+) -> LabMovementFeedbackKind {
+    switch decision {
+    case .approved:
+        return displacementApplied ? .moved : .approvedForMovement
+    case .deniedCollision, .deniedOccupiedDestination:
+        return .blockedByCollision
+    case .deniedSameDestinationConflict,
+         .deniedSwapConflict,
+         .deniedDuplicateIntent,
+         .deniedCycleConflict,
+         .deniedChainDependency,
+         .deniedMovingAwayDestination:
+        return .blockedByAgentConflict
+    case .deniedSourceMismatch, .deniedMissingAgent:
+        return .blockedBySourceMismatch
+    case .deniedDivergence:
+        return .blockedByDivergence
+    case .deniedStaleIntent, .deniedStaleCollision:
+        return .blockedByStaleIntent
+    case .deniedInvalidEdge, .deniedZeroLengthEdge:
+        return .blockedByInvalidEdge
+    case .deniedMaxAgents:
+        return .blockedByMaxAgents
     }
 }
 

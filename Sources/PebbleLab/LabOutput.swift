@@ -437,6 +437,28 @@ struct RunMetrics: Encodable {
     let multiAgentMovementHardeningTerrainMutationPerformed: Bool?
     let multiAgentMovementHardeningWorldMutationPerformed: Bool?
     let multiAgentMovementHardeningSuccess: Bool?
+    let multiAgentMovementTickFixtureInputs: Int?
+    let multiAgentMovementTickFixtureAgents: Int?
+    let multiAgentMovementTickFixturePhysicalPositions: Int?
+    let multiAgentMovementTickFixtureIntents: Int?
+    let multiAgentMovementTickFixtureResolutions: Int?
+    let multiAgentMovementTickFixtureFeedback: Int?
+    let multiAgentMovementTickFixtureApproved: Int?
+    let multiAgentMovementTickFixtureDenied: Int?
+    let multiAgentMovementTickFixtureDisplacementsApplied: Int?
+    let multiAgentMovementTickFixtureSameDestinationConflicts: Int?
+    let multiAgentMovementTickFixtureInvalidEdges: Int?
+    let multiAgentMovementTickFixtureWorldUsed: Bool?
+    let multiAgentMovementTickFixtureLiveCollisionRead: Bool?
+    let multiAgentMovementTickFixturePhysicalMovementApplied: Bool?
+    let multiAgentMovementTickFixtureRouteFollowingApplied: Bool?
+    let multiAgentMovementTickFixturePathfindingPerformed: Bool?
+    let multiAgentMovementTickFixtureReplanningPerformed: Bool?
+    let multiAgentMovementTickFixtureAvoidancePerformed: Bool?
+    let multiAgentMovementTickFixtureReservationRuntimeUsed: Bool?
+    let multiAgentMovementTickFixturePhysicsPerformed: Bool?
+    let multiAgentMovementTickFixtureMutationPerformed: Bool?
+    let multiAgentMovementTickFixtureSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -874,6 +896,28 @@ struct RunMetrics: Encodable {
         multiAgentMovementHardeningTerrainMutationPerformed: Bool? = nil,
         multiAgentMovementHardeningWorldMutationPerformed: Bool? = nil,
         multiAgentMovementHardeningSuccess: Bool? = nil,
+        multiAgentMovementTickFixtureInputs: Int? = nil,
+        multiAgentMovementTickFixtureAgents: Int? = nil,
+        multiAgentMovementTickFixturePhysicalPositions: Int? = nil,
+        multiAgentMovementTickFixtureIntents: Int? = nil,
+        multiAgentMovementTickFixtureResolutions: Int? = nil,
+        multiAgentMovementTickFixtureFeedback: Int? = nil,
+        multiAgentMovementTickFixtureApproved: Int? = nil,
+        multiAgentMovementTickFixtureDenied: Int? = nil,
+        multiAgentMovementTickFixtureDisplacementsApplied: Int? = nil,
+        multiAgentMovementTickFixtureSameDestinationConflicts: Int? = nil,
+        multiAgentMovementTickFixtureInvalidEdges: Int? = nil,
+        multiAgentMovementTickFixtureWorldUsed: Bool? = nil,
+        multiAgentMovementTickFixtureLiveCollisionRead: Bool? = nil,
+        multiAgentMovementTickFixturePhysicalMovementApplied: Bool? = nil,
+        multiAgentMovementTickFixtureRouteFollowingApplied: Bool? = nil,
+        multiAgentMovementTickFixturePathfindingPerformed: Bool? = nil,
+        multiAgentMovementTickFixtureReplanningPerformed: Bool? = nil,
+        multiAgentMovementTickFixtureAvoidancePerformed: Bool? = nil,
+        multiAgentMovementTickFixtureReservationRuntimeUsed: Bool? = nil,
+        multiAgentMovementTickFixturePhysicsPerformed: Bool? = nil,
+        multiAgentMovementTickFixtureMutationPerformed: Bool? = nil,
+        multiAgentMovementTickFixtureSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -1310,6 +1354,28 @@ struct RunMetrics: Encodable {
         self.multiAgentMovementHardeningTerrainMutationPerformed = multiAgentMovementHardeningTerrainMutationPerformed
         self.multiAgentMovementHardeningWorldMutationPerformed = multiAgentMovementHardeningWorldMutationPerformed
         self.multiAgentMovementHardeningSuccess = multiAgentMovementHardeningSuccess
+        self.multiAgentMovementTickFixtureInputs = multiAgentMovementTickFixtureInputs
+        self.multiAgentMovementTickFixtureAgents = multiAgentMovementTickFixtureAgents
+        self.multiAgentMovementTickFixturePhysicalPositions = multiAgentMovementTickFixturePhysicalPositions
+        self.multiAgentMovementTickFixtureIntents = multiAgentMovementTickFixtureIntents
+        self.multiAgentMovementTickFixtureResolutions = multiAgentMovementTickFixtureResolutions
+        self.multiAgentMovementTickFixtureFeedback = multiAgentMovementTickFixtureFeedback
+        self.multiAgentMovementTickFixtureApproved = multiAgentMovementTickFixtureApproved
+        self.multiAgentMovementTickFixtureDenied = multiAgentMovementTickFixtureDenied
+        self.multiAgentMovementTickFixtureDisplacementsApplied = multiAgentMovementTickFixtureDisplacementsApplied
+        self.multiAgentMovementTickFixtureSameDestinationConflicts = multiAgentMovementTickFixtureSameDestinationConflicts
+        self.multiAgentMovementTickFixtureInvalidEdges = multiAgentMovementTickFixtureInvalidEdges
+        self.multiAgentMovementTickFixtureWorldUsed = multiAgentMovementTickFixtureWorldUsed
+        self.multiAgentMovementTickFixtureLiveCollisionRead = multiAgentMovementTickFixtureLiveCollisionRead
+        self.multiAgentMovementTickFixturePhysicalMovementApplied = multiAgentMovementTickFixturePhysicalMovementApplied
+        self.multiAgentMovementTickFixtureRouteFollowingApplied = multiAgentMovementTickFixtureRouteFollowingApplied
+        self.multiAgentMovementTickFixturePathfindingPerformed = multiAgentMovementTickFixturePathfindingPerformed
+        self.multiAgentMovementTickFixtureReplanningPerformed = multiAgentMovementTickFixtureReplanningPerformed
+        self.multiAgentMovementTickFixtureAvoidancePerformed = multiAgentMovementTickFixtureAvoidancePerformed
+        self.multiAgentMovementTickFixtureReservationRuntimeUsed = multiAgentMovementTickFixtureReservationRuntimeUsed
+        self.multiAgentMovementTickFixturePhysicsPerformed = multiAgentMovementTickFixturePhysicsPerformed
+        self.multiAgentMovementTickFixtureMutationPerformed = multiAgentMovementTickFixtureMutationPerformed
+        self.multiAgentMovementTickFixtureSuccess = multiAgentMovementTickFixtureSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

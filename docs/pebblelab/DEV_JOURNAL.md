@@ -4351,3 +4351,122 @@ Phase 4.20B: Multi-Agent Movement Tick Fixture Smoke. It should implement
 only a fixture-level tick input/output contract, with no `World`, no live
 collision, no physical movement, no reservation runtime, no avoidance, no
 pathfinding, no replanning, no goal selection, no physics, and no mutation.
+
+## 2026-06-27 — Phase 4.20B multi-agent movement tick fixture smoke
+
+### Objective
+
+Implement the first tick-level multi-agent movement contract smoke as a
+fixture-only scenario. The goal is to validate the shape of a synthetic tick
+input, deterministic collection/arbitration, tick output, structured
+feedback, reports, metrics, and aggregate event without introducing live
+collision, physical movement application, or a multi-tick loop.
+
+### Starting State
+
+Phase 4.20A documented the integration boundary after the 4.19 local proofs:
+fixture arbitration, fixture hardening, live read-only collision intent,
+approved physical movement, and live movement hardening. Those phases proved
+lower-level contracts, but not a single integrated tick input/output shape.
+
+### Files Created/Modified
+
+- Modified `Sources/PebbleLab/LabMultiAgentMovement.swift`.
+- Modified `Sources/PebbleLab/LabOptions.swift`.
+- Modified `Sources/PebbleLab/LabScenarios.swift`.
+- Modified `Sources/PebbleLab/LabOutput.swift`.
+- Modified `Sources/PebbleLab/LabEvents.swift`.
+- Modified `Sources/PebbleLab/main.swift`.
+- Updated `docs/pebblelab/CHANGELOG.md`.
+- Updated `docs/pebblelab/DEV_JOURNAL.md`.
+- Updated `docs/pebblelab/ROADMAP.md`.
+- Updated
+  `docs/pebblelab/PHASE_4_MULTI_AGENT_MOVEMENT_INTEGRATION_PLAN.md`.
+
+### Why Fixture-Only
+
+The phase validates tick orchestration shape without a `World`. It does not
+read live collision evidence, does not create physical placeholders, does
+not apply single-step movement, and does not call route following. This keeps
+the first integration contract focused on deterministic intent ordering,
+arbitration, feedback, and reporting.
+
+### Tick Input/Output
+
+The scenario `multi_agent_movement_tick_fixture_smoke` builds one synthetic
+tick, `tick = 0`, with four abstract agents and four matching synthetic
+physical positions. The input intentions are deliberately unordered:
+`agent_1`, `agent_0`, `agent_2`, `agent_3`.
+
+The output resolutions are sorted by stable `agentId`: `agent_0`,
+`agent_1`, `agent_2`, `agent_3`. `agent_0` and `agent_2` are approved.
+`agent_1` is denied by same-destination conflict. `agent_3` is denied for a
+vertical invalid edge. Because this is fixture-only, abstract and physical
+positions after the tick remain equal to their initial positions.
+
+### Feedback Policy
+
+The tick fixture adds `approvedForMovement` feedback for approved decisions
+when `displacementApplied == false`. This avoids claiming `moved` before a
+movement application phase. Denied same-destination conflict maps to
+`blockedByAgentConflict`; denied invalid edge maps to `blockedByInvalidEdge`.
+
+### Outputs, Invariants, Metrics, And Event
+
+The scenario writes:
+
+- `multi_agent_movement_tick_fixture_report.json`;
+- `multi_agent_movement_tick_fixture_invariant_report.json`;
+- `multi_agent_movement_tick_fixture_feedback.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The invariant report covers 40 checks. Metrics use the
+`multiAgentMovementTickFixture*` prefix. The scenario emits one aggregate
+`lab_multi_agent_movement_tick_fixture_recorded` event.
+
+### Confirmed Out Of Scope
+
+No `World`, live collision, physical movement, route following, pathfinding,
+replanning, goal selection, avoidance, reservation runtime, physics,
+terrain mutation, world mutation, physical placeholder movement, core entity
+movement, autonomous movement, or multi-tick loop is performed.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_multi_agent_movement_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_hardening_smoke --seed 42 --ticks 5 --out runs/check_multi_agent_movement_hardening_after_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario multi_agent_approved_physical_movement_smoke --seed 42 --ticks 5 --out runs/check_multi_agent_approved_physical_after_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario multi_agent_live_collision_intent_smoke --seed 42 --ticks 5 --out runs/check_multi_agent_live_collision_intent_after_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_fixture_smoke --seed 42 --ticks 0 --out runs/check_multi_agent_fixture_after_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_fixture_hardening_smoke --seed 42 --ticks 0 --out runs/check_multi_agent_fixture_hardening_after_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario physical_movement_single_step_hardening_smoke --seed 42 --ticks 5 --out runs/check_single_step_hardening_after_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_tick_fixture`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- Tick fixture report: success true.
+- Tick fixture invariant report: success true.
+- Invariant checks: 40 passed, 0 failed.
+- Approved/denied totals: 2 / 2.
+- Feedback records: 4.
+- Displacements applied: 0.
+- Same-destination conflicts: 1.
+- Invalid edges: 1.
+- Abstract positions unchanged.
+- Physical positions unchanged.
+- Metrics contain `multiAgentMovementTickFixture*`.
+- `events.ndjson` contains
+  `lab_multi_agent_movement_tick_fixture_recorded`.
+
+### Next Step
+
+Phase 4.20C: Multi-Agent Movement Tick Live Read-Only Smoke. It should add
+live collision evidence to the tick input/output contract while still
+avoiding physical movement application, route following, pathfinding,
+replanning, avoidance, reservation runtime, physics, and mutation.

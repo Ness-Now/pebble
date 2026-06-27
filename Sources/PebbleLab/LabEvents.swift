@@ -159,6 +159,8 @@ struct RunEvent: Encodable {
     let cases: Int?
     let agentCount: Int?
     let intentCount: Int?
+    let resolutions: Int?
+    let feedback: Int?
     let sameDestinationConflicts: Int?
     let occupiedDestinationConflicts: Int?
     let swapConflicts: Int?
@@ -385,6 +387,8 @@ struct RunEvent: Encodable {
         cases: Int? = nil,
         agentCount: Int? = nil,
         intentCount: Int? = nil,
+        resolutions: Int? = nil,
+        feedback: Int? = nil,
         sameDestinationConflicts: Int? = nil,
         occupiedDestinationConflicts: Int? = nil,
         swapConflicts: Int? = nil,
@@ -610,6 +614,8 @@ struct RunEvent: Encodable {
         self.cases = cases
         self.agentCount = agentCount
         self.intentCount = intentCount
+        self.resolutions = resolutions
+        self.feedback = feedback
         self.sameDestinationConflicts = sameDestinationConflicts
         self.occupiedDestinationConflicts = occupiedDestinationConflicts
         self.swapConflicts = swapConflicts

@@ -14,7 +14,11 @@ let isMultiAgentApprovedPhysicalMovementScenario = options.scenario
     == "multi_agent_approved_physical_movement_smoke"
 let isMultiAgentMovementHardeningScenario = options.scenario
     == "multi_agent_movement_hardening_smoke"
-let world = (isMultiAgentMovementFixtureScenario || isMultiAgentMovementFixtureHardeningScenario)
+let isMultiAgentMovementTickFixtureScenario = options.scenario
+    == "multi_agent_movement_tick_fixture_smoke"
+let world = (isMultiAgentMovementFixtureScenario
+    || isMultiAgentMovementFixtureHardeningScenario
+    || isMultiAgentMovementTickFixtureScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -1163,6 +1167,48 @@ let multiAgentMovementHardeningSuccess =
             && multiAgentMovementHardeningReport?.summary.terrainMutationPerformed == false
             && multiAgentMovementHardeningReport?.summary.worldMutationPerformed == false)
         : nil
+let multiAgentMovementTickFixtureReport = isMultiAgentMovementTickFixtureScenario
+    ? makeMultiAgentMovementTickFixtureReport(
+        scenario: options.scenario,
+        seed: options.seed,
+        ticksCompleted: ticksCompleted
+    )
+    : nil
+let multiAgentMovementTickFixtureInvariantReport =
+    isMultiAgentMovementTickFixtureScenario
+        ? makeMultiAgentMovementTickFixtureInvariantReport(
+            report: multiAgentMovementTickFixtureReport,
+            scenario: options.scenario,
+            seed: options.seed
+        )
+        : nil
+let multiAgentMovementTickFixtureSuccess =
+    isMultiAgentMovementTickFixtureScenario
+        ? ((multiAgentMovementTickFixtureReport?.success ?? false)
+            && (multiAgentMovementTickFixtureInvariantReport?.success ?? false)
+            && multiAgentMovementTickFixtureReport?.summary.agentCount == 4
+            && multiAgentMovementTickFixtureReport?.summary.physicalPositionCount == 4
+            && multiAgentMovementTickFixtureReport?.summary.intentCount == 4
+            && multiAgentMovementTickFixtureReport?.summary.resolutions == 4
+            && multiAgentMovementTickFixtureReport?.summary.feedbackCount == 4
+            && multiAgentMovementTickFixtureReport?.summary.approved == 2
+            && multiAgentMovementTickFixtureReport?.summary.denied == 2
+            && multiAgentMovementTickFixtureReport?.summary.sameDestinationConflicts == 1
+            && multiAgentMovementTickFixtureReport?.summary.invalidEdges == 1
+            && multiAgentMovementTickFixtureReport?.summary.displacementsApplied == 0
+            && multiAgentMovementTickFixtureReport?.output.abstractPositionsBefore == multiAgentMovementTickFixtureReport?.output.abstractPositionsAfter
+            && multiAgentMovementTickFixtureReport?.output.physicalPositionsBefore == multiAgentMovementTickFixtureReport?.output.physicalPositionsAfter
+            && multiAgentMovementTickFixtureReport?.summary.worldUsed == false
+            && multiAgentMovementTickFixtureReport?.summary.liveCollisionRead == false
+            && multiAgentMovementTickFixtureReport?.summary.physicalMovementApplied == false
+            && multiAgentMovementTickFixtureReport?.summary.routeFollowingApplied == false
+            && multiAgentMovementTickFixtureReport?.summary.pathfindingPerformed == false
+            && multiAgentMovementTickFixtureReport?.summary.replanningPerformed == false
+            && multiAgentMovementTickFixtureReport?.summary.avoidancePerformed == false
+            && multiAgentMovementTickFixtureReport?.summary.reservationRuntimeUsed == false
+            && multiAgentMovementTickFixtureReport?.summary.physicsPerformed == false
+            && multiAgentMovementTickFixtureReport?.summary.mutationPerformed == false)
+        : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
@@ -1537,6 +1583,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (multiAgentLiveCollisionIntentSuccess ?? true)
     && (multiAgentApprovedPhysicalMovementSuccess ?? true)
     && (multiAgentMovementHardeningSuccess ?? true)
+    && (multiAgentMovementTickFixtureSuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -1894,6 +1941,24 @@ if options.outPath != nil {
                 routeFollowingApplied: summary.routeFollowingApplied,
                 mutationPerformed: summary.terrainMutationPerformed || summary.worldMutationPerformed,
                 pathfindingPerformed: summary.pathfindingPerformed
+            ))
+        }
+        if let multiAgentMovementTickFixtureReport {
+            let summary = multiAgentMovementTickFixtureReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_multi_agent_movement_tick_fixture_recorded",
+                tick: summary.tick,
+                scenario: options.scenario,
+                success: multiAgentMovementTickFixtureSuccess,
+                approved: summary.approved,
+                denied: summary.denied,
+                displacementsApplied: summary.displacementsApplied,
+                agentCount: summary.agentCount,
+                intentCount: summary.intentCount,
+                resolutions: summary.resolutions,
+                feedback: summary.feedbackCount,
+                sameDestinationConflicts: summary.sameDestinationConflicts,
+                invalidEdges: summary.invalidEdges
             ))
         }
         if let routeFollowingLiveSnapshot {
@@ -2475,6 +2540,22 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("multi_agent_movement_hardening_invariant_report.json")
             )
         }
+        if let multiAgentMovementTickFixtureReport {
+            try writeJSON(
+                multiAgentMovementTickFixtureReport,
+                to: outURL.appendingPathComponent("multi_agent_movement_tick_fixture_report.json")
+            )
+            try writeJSON(
+                multiAgentMovementTickFixtureReport.output.feedback,
+                to: outURL.appendingPathComponent("multi_agent_movement_tick_fixture_feedback.json")
+            )
+        }
+        if let multiAgentMovementTickFixtureInvariantReport {
+            try writeJSON(
+                multiAgentMovementTickFixtureInvariantReport,
+                to: outURL.appendingPathComponent("multi_agent_movement_tick_fixture_invariant_report.json")
+            )
+        }
         if let routeFollowingLiveSnapshot {
             try writeJSON(
                 routeFollowingLiveSnapshot,
@@ -2991,6 +3072,28 @@ if let outPath = options.outPath {
             multiAgentMovementHardeningTerrainMutationPerformed: multiAgentMovementHardeningReport?.summary.terrainMutationPerformed,
             multiAgentMovementHardeningWorldMutationPerformed: multiAgentMovementHardeningReport?.summary.worldMutationPerformed,
             multiAgentMovementHardeningSuccess: multiAgentMovementHardeningSuccess,
+            multiAgentMovementTickFixtureInputs: multiAgentMovementTickFixtureReport.map { _ in 1 },
+            multiAgentMovementTickFixtureAgents: multiAgentMovementTickFixtureReport?.summary.agentCount,
+            multiAgentMovementTickFixturePhysicalPositions: multiAgentMovementTickFixtureReport?.summary.physicalPositionCount,
+            multiAgentMovementTickFixtureIntents: multiAgentMovementTickFixtureReport?.summary.intentCount,
+            multiAgentMovementTickFixtureResolutions: multiAgentMovementTickFixtureReport?.summary.resolutions,
+            multiAgentMovementTickFixtureFeedback: multiAgentMovementTickFixtureReport?.summary.feedbackCount,
+            multiAgentMovementTickFixtureApproved: multiAgentMovementTickFixtureReport?.summary.approved,
+            multiAgentMovementTickFixtureDenied: multiAgentMovementTickFixtureReport?.summary.denied,
+            multiAgentMovementTickFixtureDisplacementsApplied: multiAgentMovementTickFixtureReport?.summary.displacementsApplied,
+            multiAgentMovementTickFixtureSameDestinationConflicts: multiAgentMovementTickFixtureReport?.summary.sameDestinationConflicts,
+            multiAgentMovementTickFixtureInvalidEdges: multiAgentMovementTickFixtureReport?.summary.invalidEdges,
+            multiAgentMovementTickFixtureWorldUsed: multiAgentMovementTickFixtureReport?.summary.worldUsed,
+            multiAgentMovementTickFixtureLiveCollisionRead: multiAgentMovementTickFixtureReport?.summary.liveCollisionRead,
+            multiAgentMovementTickFixturePhysicalMovementApplied: multiAgentMovementTickFixtureReport?.summary.physicalMovementApplied,
+            multiAgentMovementTickFixtureRouteFollowingApplied: multiAgentMovementTickFixtureReport?.summary.routeFollowingApplied,
+            multiAgentMovementTickFixturePathfindingPerformed: multiAgentMovementTickFixtureReport?.summary.pathfindingPerformed,
+            multiAgentMovementTickFixtureReplanningPerformed: multiAgentMovementTickFixtureReport?.summary.replanningPerformed,
+            multiAgentMovementTickFixtureAvoidancePerformed: multiAgentMovementTickFixtureReport?.summary.avoidancePerformed,
+            multiAgentMovementTickFixtureReservationRuntimeUsed: multiAgentMovementTickFixtureReport?.summary.reservationRuntimeUsed,
+            multiAgentMovementTickFixturePhysicsPerformed: multiAgentMovementTickFixtureReport?.summary.physicsPerformed,
+            multiAgentMovementTickFixtureMutationPerformed: multiAgentMovementTickFixtureReport?.summary.mutationPerformed,
+            multiAgentMovementTickFixtureSuccess: multiAgentMovementTickFixtureSuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,
