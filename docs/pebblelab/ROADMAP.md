@@ -1117,3 +1117,33 @@ save/load, social behavior, communication, LLM/Python/RL, gameplay behavior,
 and terrain/world mutation remain out of scope.
 
 Next recommended step: Phase 4.21B - Agent Intent Production Fixture Smoke.
+
+## Phase 4.21B - Agent Intent Production Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: add the first fixture-only production path from agent contexts to
+policy proposals to accepted `LabAgentMoveIntent` values, without invoking
+tick movement, live collision, movement application, feedback consumption, or
+agent memory/goal mutation.
+
+The scenario `agent_intent_production_fixture_smoke` creates five synthetic
+contexts in intentionally unordered input order. The deterministic v0 policy
+produces five sorted proposals: two accepted `wander_fixture` one-edge same-y
+move intents, one `idle` `noIntent`, one missing-position `invalidContext`,
+and one invalid vertical proposal rejected by validation. The two accepted
+intents intentionally target the same destination and are left for later tick
+arbitration.
+
+It writes `agent_intent_production_fixture_report.json`,
+`agent_intent_production_fixture_invariant_report.json`,
+`agent_intent_proposals.json`, `agentIntentProductionFixture*` metrics, and
+one aggregate `lab_agent_intent_production_fixture_recorded` event.
+
+Tick integration, live collision, movement application, feedback
+consumption, memory update, goal selection, pathfinding, replanning,
+avoidance, reservation runtime, physics, save/load, social behavior,
+communication, gameplay movement, and terrain/world mutation remain out of
+scope.
+
+Next recommended step: Phase 4.21C - Agent Intent Production Hardening.

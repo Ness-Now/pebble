@@ -22,12 +22,15 @@ let isMultiAgentMovementTickApprovedApplicationScenario = options.scenario
     == "multi_agent_movement_tick_approved_application_smoke"
 let isMultiAgentMovementTickHardeningScenario = options.scenario
     == "multi_agent_movement_tick_hardening_smoke"
+let isAgentIntentProductionFixtureScenario = options.scenario
+    == "agent_intent_production_fixture_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
     || isMultiAgentMovementTickLiveReadonlyScenario
     || isMultiAgentMovementTickApprovedApplicationScenario
-    || isMultiAgentMovementTickHardeningScenario)
+    || isMultiAgentMovementTickHardeningScenario
+    || isAgentIntentProductionFixtureScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -1382,6 +1385,56 @@ let multiAgentMovementTickHardeningSuccess =
             && multiAgentMovementTickHardeningReport?.summary.terrainMutationPerformed == false
             && multiAgentMovementTickHardeningReport?.summary.worldMutationPerformed == false)
         : nil
+let agentIntentProductionFixtureReport =
+    isAgentIntentProductionFixtureScenario
+        ? makeAgentIntentProductionFixtureReport(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticksCompleted: ticksCompleted
+        )
+        : nil
+let agentIntentProductionFixtureInvariantReport =
+    isAgentIntentProductionFixtureScenario
+        ? makeAgentIntentProductionFixtureInvariantReport(
+            report: agentIntentProductionFixtureReport,
+            scenario: options.scenario,
+            seed: options.seed
+        )
+        : nil
+let agentIntentProductionFixtureSuccess =
+    isAgentIntentProductionFixtureScenario
+        ? ((agentIntentProductionFixtureReport?.success ?? false)
+            && (agentIntentProductionFixtureInvariantReport?.success ?? false)
+            && agentIntentProductionFixtureReport?.summary.contexts == 5
+            && agentIntentProductionFixtureReport?.summary.proposals == 5
+            && agentIntentProductionFixtureReport?.summary.acceptedIntents == 2
+            && agentIntentProductionFixtureReport?.summary.rejectedProposals == 3
+            && agentIntentProductionFixtureReport?.summary.noIntent == 1
+            && agentIntentProductionFixtureReport?.summary.invalidContext == 1
+            && agentIntentProductionFixtureReport?.summary.invalidOneEdgeProposals == 1
+            && agentIntentProductionFixtureReport?.result.contexts.map(\.agentId)
+                != agentIntentProductionFixtureReport?.result.contexts.map(\.agentId).sorted()
+            && agentIntentProductionFixtureReport?.result.proposals.map(\.agentId)
+                == agentIntentProductionFixtureReport?.result.proposals.map(\.agentId).sorted()
+            && agentIntentProductionFixtureReport?.result.acceptedIntents.map(\.agentId)
+                == agentIntentProductionFixtureReport?.result.acceptedIntents.map(\.agentId).sorted()
+            && agentIntentProductionFixtureReport?.result.acceptedIntents.allSatisfy {
+                abs($0.from.x - $0.to.x) + abs($0.from.y - $0.to.y) + abs($0.from.z - $0.to.z) == 1
+                    && $0.from.y == $0.to.y
+            } == true
+            && Set(agentIntentProductionFixtureReport?.result.acceptedIntents.map(\.to) ?? []).count == 1
+            && agentIntentProductionFixtureReport?.summary.worldUsed == false
+            && agentIntentProductionFixtureReport?.summary.collisionRead == false
+            && agentIntentProductionFixtureReport?.summary.movementApplied == false
+            && agentIntentProductionFixtureReport?.summary.feedbackConsumed == false
+            && agentIntentProductionFixtureReport?.summary.memoryUpdated == false
+            && agentIntentProductionFixtureReport?.summary.goalChanged == false
+            && agentIntentProductionFixtureReport?.summary.pathfindingPerformed == false
+            && agentIntentProductionFixtureReport?.summary.replanningPerformed == false
+            && agentIntentProductionFixtureReport?.summary.avoidancePerformed == false
+            && agentIntentProductionFixtureReport?.summary.reservationRuntimeUsed == false
+            && agentIntentProductionFixtureReport?.summary.mutationPerformed == false)
+        : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
@@ -1760,6 +1813,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (multiAgentMovementTickLiveReadonlySuccess ?? true)
     && (multiAgentMovementTickApprovedApplicationSuccess ?? true)
     && (multiAgentMovementTickHardeningSuccess ?? true)
+    && (agentIntentProductionFixtureSuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -2233,6 +2287,35 @@ if options.outPath != nil {
                 routeFollowingApplied: summary.routeFollowingApplied,
                 mutationPerformed: summary.terrainMutationPerformed || summary.worldMutationPerformed,
                 pathfindingPerformed: summary.pathfindingPerformed
+            ))
+        }
+        if let agentIntentProductionFixtureReport {
+            let summary = agentIntentProductionFixtureReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_agent_intent_production_fixture_recorded",
+                tick: summary.tick,
+                scenario: options.scenario,
+                success: agentIntentProductionFixtureSuccess,
+                agentCount: summary.agentsObserved,
+                agentsObserved: summary.agentsObserved,
+                contexts: summary.contexts,
+                proposals: summary.proposals,
+                acceptedIntents: summary.acceptedIntents,
+                rejectedProposals: summary.rejectedProposals,
+                noIntent: summary.noIntent,
+                invalidContext: summary.invalidContext,
+                invalidOneEdgeProposals: summary.invalidOneEdgeProposals,
+                worldUsed: summary.worldUsed,
+                collisionRead: summary.collisionRead,
+                movementApplied: summary.movementApplied,
+                feedbackConsumed: summary.feedbackConsumed,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                avoidancePerformed: summary.avoidancePerformed,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
+                replanningPerformed: summary.replanningPerformed
             ))
         }
         if let routeFollowingLiveSnapshot {
@@ -2878,6 +2961,22 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("multi_agent_movement_tick_hardening_invariant_report.json")
             )
         }
+        if let agentIntentProductionFixtureReport {
+            try writeJSON(
+                agentIntentProductionFixtureReport,
+                to: outURL.appendingPathComponent("agent_intent_production_fixture_report.json")
+            )
+            try writeJSON(
+                agentIntentProductionFixtureReport.result,
+                to: outURL.appendingPathComponent("agent_intent_proposals.json")
+            )
+        }
+        if let agentIntentProductionFixtureInvariantReport {
+            try writeJSON(
+                agentIntentProductionFixtureInvariantReport,
+                to: outURL.appendingPathComponent("agent_intent_production_fixture_invariant_report.json")
+            )
+        }
         if let routeFollowingLiveSnapshot {
             try writeJSON(
                 routeFollowingLiveSnapshot,
@@ -3514,6 +3613,31 @@ if let outPath = options.outPath {
             multiAgentMovementTickHardeningTerrainMutationPerformed: multiAgentMovementTickHardeningReport?.summary.terrainMutationPerformed,
             multiAgentMovementTickHardeningWorldMutationPerformed: multiAgentMovementTickHardeningReport?.summary.worldMutationPerformed,
             multiAgentMovementTickHardeningSuccess: multiAgentMovementTickHardeningSuccess,
+            agentIntentProductionFixtureAgentsObserved: agentIntentProductionFixtureReport?.summary.agentsObserved,
+            agentIntentProductionFixtureContexts: agentIntentProductionFixtureReport?.summary.contexts,
+            agentIntentProductionFixtureProposals: agentIntentProductionFixtureReport?.summary.proposals,
+            agentIntentProductionFixtureAcceptedIntents: agentIntentProductionFixtureReport?.summary.acceptedIntents,
+            agentIntentProductionFixtureRejectedProposals: agentIntentProductionFixtureReport?.summary.rejectedProposals,
+            agentIntentProductionFixtureNoIntent: agentIntentProductionFixtureReport?.summary.noIntent,
+            agentIntentProductionFixtureInvalidContext: agentIntentProductionFixtureReport?.summary.invalidContext,
+            agentIntentProductionFixtureDuplicateAgentContexts: agentIntentProductionFixtureReport?.summary.duplicateAgentContexts,
+            agentIntentProductionFixtureInvalidOneEdgeProposals: agentIntentProductionFixtureReport?.summary.invalidOneEdgeProposals,
+            agentIntentProductionFixtureAcceptedMoveEast: agentIntentProductionFixtureReport?.summary.acceptedMoveEast,
+            agentIntentProductionFixtureAcceptedMoveWest: agentIntentProductionFixtureReport?.summary.acceptedMoveWest,
+            agentIntentProductionFixtureAcceptedMoveNorth: agentIntentProductionFixtureReport?.summary.acceptedMoveNorth,
+            agentIntentProductionFixtureAcceptedMoveSouth: agentIntentProductionFixtureReport?.summary.acceptedMoveSouth,
+            agentIntentProductionFixtureWorldUsed: agentIntentProductionFixtureReport?.summary.worldUsed,
+            agentIntentProductionFixtureCollisionRead: agentIntentProductionFixtureReport?.summary.collisionRead,
+            agentIntentProductionFixtureMovementApplied: agentIntentProductionFixtureReport?.summary.movementApplied,
+            agentIntentProductionFixtureFeedbackConsumed: agentIntentProductionFixtureReport?.summary.feedbackConsumed,
+            agentIntentProductionFixtureMemoryUpdated: agentIntentProductionFixtureReport?.summary.memoryUpdated,
+            agentIntentProductionFixtureGoalChanged: agentIntentProductionFixtureReport?.summary.goalChanged,
+            agentIntentProductionFixturePathfindingPerformed: agentIntentProductionFixtureReport?.summary.pathfindingPerformed,
+            agentIntentProductionFixtureReplanningPerformed: agentIntentProductionFixtureReport?.summary.replanningPerformed,
+            agentIntentProductionFixtureAvoidancePerformed: agentIntentProductionFixtureReport?.summary.avoidancePerformed,
+            agentIntentProductionFixtureReservationRuntimeUsed: agentIntentProductionFixtureReport?.summary.reservationRuntimeUsed,
+            agentIntentProductionFixtureMutationPerformed: agentIntentProductionFixtureReport?.summary.mutationPerformed,
+            agentIntentProductionFixtureSuccess: agentIntentProductionFixtureSuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,

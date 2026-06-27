@@ -159,9 +159,17 @@ struct RunEvent: Encodable {
     let cases: Int?
     let tickCount: Int?
     let agentCount: Int?
+    let agentsObserved: Int?
     let intentCount: Int?
     let resolutions: Int?
     let feedback: Int?
+    let contexts: Int?
+    let proposals: Int?
+    let acceptedIntents: Int?
+    let rejectedProposals: Int?
+    let noIntent: Int?
+    let invalidContext: Int?
+    let invalidOneEdgeProposals: Int?
     let sameDestinationConflicts: Int?
     let occupiedDestinationConflicts: Int?
     let swapConflicts: Int?
@@ -212,6 +220,13 @@ struct RunEvent: Encodable {
     let finalStatus: String?
     let liveAgentDisplaced: Bool?
     let collisionPerformed: Bool?
+    let collisionRead: Bool?
+    let movementApplied: Bool?
+    let feedbackConsumed: Bool?
+    let memoryUpdated: Bool?
+    let goalChanged: Bool?
+    let avoidancePerformed: Bool?
+    let reservationRuntimeUsed: Bool?
     let mutationPerformed: Bool?
     let occupable: Int?
     let blocked: Int?
@@ -397,9 +412,17 @@ struct RunEvent: Encodable {
         cases: Int? = nil,
         tickCount: Int? = nil,
         agentCount: Int? = nil,
+        agentsObserved: Int? = nil,
         intentCount: Int? = nil,
         resolutions: Int? = nil,
         feedback: Int? = nil,
+        contexts: Int? = nil,
+        proposals: Int? = nil,
+        acceptedIntents: Int? = nil,
+        rejectedProposals: Int? = nil,
+        noIntent: Int? = nil,
+        invalidContext: Int? = nil,
+        invalidOneEdgeProposals: Int? = nil,
         sameDestinationConflicts: Int? = nil,
         occupiedDestinationConflicts: Int? = nil,
         swapConflicts: Int? = nil,
@@ -450,6 +473,13 @@ struct RunEvent: Encodable {
         finalStatus: String? = nil,
         liveAgentDisplaced: Bool? = nil,
         collisionPerformed: Bool? = nil,
+        collisionRead: Bool? = nil,
+        movementApplied: Bool? = nil,
+        feedbackConsumed: Bool? = nil,
+        memoryUpdated: Bool? = nil,
+        goalChanged: Bool? = nil,
+        avoidancePerformed: Bool? = nil,
+        reservationRuntimeUsed: Bool? = nil,
         mutationPerformed: Bool? = nil,
         occupable: Int? = nil,
         blocked: Int? = nil,
@@ -634,9 +664,17 @@ struct RunEvent: Encodable {
         self.cases = cases
         self.tickCount = tickCount
         self.agentCount = agentCount
+        self.agentsObserved = agentsObserved
         self.intentCount = intentCount
         self.resolutions = resolutions
         self.feedback = feedback
+        self.contexts = contexts
+        self.proposals = proposals
+        self.acceptedIntents = acceptedIntents
+        self.rejectedProposals = rejectedProposals
+        self.noIntent = noIntent
+        self.invalidContext = invalidContext
+        self.invalidOneEdgeProposals = invalidOneEdgeProposals
         self.sameDestinationConflicts = sameDestinationConflicts
         self.occupiedDestinationConflicts = occupiedDestinationConflicts
         self.swapConflicts = swapConflicts
@@ -687,6 +725,13 @@ struct RunEvent: Encodable {
         self.finalStatus = finalStatus
         self.liveAgentDisplaced = liveAgentDisplaced
         self.collisionPerformed = collisionPerformed
+        self.collisionRead = collisionRead
+        self.movementApplied = movementApplied
+        self.feedbackConsumed = feedbackConsumed
+        self.memoryUpdated = memoryUpdated
+        self.goalChanged = goalChanged
+        self.avoidancePerformed = avoidancePerformed
+        self.reservationRuntimeUsed = reservationRuntimeUsed
         self.mutationPerformed = mutationPerformed
         self.occupable = occupable
         self.blocked = blocked

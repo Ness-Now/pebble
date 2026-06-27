@@ -557,6 +557,31 @@ struct RunMetrics: Encodable {
     let multiAgentMovementTickHardeningTerrainMutationPerformed: Bool?
     let multiAgentMovementTickHardeningWorldMutationPerformed: Bool?
     let multiAgentMovementTickHardeningSuccess: Bool?
+    let agentIntentProductionFixtureAgentsObserved: Int?
+    let agentIntentProductionFixtureContexts: Int?
+    let agentIntentProductionFixtureProposals: Int?
+    let agentIntentProductionFixtureAcceptedIntents: Int?
+    let agentIntentProductionFixtureRejectedProposals: Int?
+    let agentIntentProductionFixtureNoIntent: Int?
+    let agentIntentProductionFixtureInvalidContext: Int?
+    let agentIntentProductionFixtureDuplicateAgentContexts: Int?
+    let agentIntentProductionFixtureInvalidOneEdgeProposals: Int?
+    let agentIntentProductionFixtureAcceptedMoveEast: Int?
+    let agentIntentProductionFixtureAcceptedMoveWest: Int?
+    let agentIntentProductionFixtureAcceptedMoveNorth: Int?
+    let agentIntentProductionFixtureAcceptedMoveSouth: Int?
+    let agentIntentProductionFixtureWorldUsed: Bool?
+    let agentIntentProductionFixtureCollisionRead: Bool?
+    let agentIntentProductionFixtureMovementApplied: Bool?
+    let agentIntentProductionFixtureFeedbackConsumed: Bool?
+    let agentIntentProductionFixtureMemoryUpdated: Bool?
+    let agentIntentProductionFixtureGoalChanged: Bool?
+    let agentIntentProductionFixturePathfindingPerformed: Bool?
+    let agentIntentProductionFixtureReplanningPerformed: Bool?
+    let agentIntentProductionFixtureAvoidancePerformed: Bool?
+    let agentIntentProductionFixtureReservationRuntimeUsed: Bool?
+    let agentIntentProductionFixtureMutationPerformed: Bool?
+    let agentIntentProductionFixtureSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -1114,6 +1139,31 @@ struct RunMetrics: Encodable {
         multiAgentMovementTickHardeningTerrainMutationPerformed: Bool? = nil,
         multiAgentMovementTickHardeningWorldMutationPerformed: Bool? = nil,
         multiAgentMovementTickHardeningSuccess: Bool? = nil,
+        agentIntentProductionFixtureAgentsObserved: Int? = nil,
+        agentIntentProductionFixtureContexts: Int? = nil,
+        agentIntentProductionFixtureProposals: Int? = nil,
+        agentIntentProductionFixtureAcceptedIntents: Int? = nil,
+        agentIntentProductionFixtureRejectedProposals: Int? = nil,
+        agentIntentProductionFixtureNoIntent: Int? = nil,
+        agentIntentProductionFixtureInvalidContext: Int? = nil,
+        agentIntentProductionFixtureDuplicateAgentContexts: Int? = nil,
+        agentIntentProductionFixtureInvalidOneEdgeProposals: Int? = nil,
+        agentIntentProductionFixtureAcceptedMoveEast: Int? = nil,
+        agentIntentProductionFixtureAcceptedMoveWest: Int? = nil,
+        agentIntentProductionFixtureAcceptedMoveNorth: Int? = nil,
+        agentIntentProductionFixtureAcceptedMoveSouth: Int? = nil,
+        agentIntentProductionFixtureWorldUsed: Bool? = nil,
+        agentIntentProductionFixtureCollisionRead: Bool? = nil,
+        agentIntentProductionFixtureMovementApplied: Bool? = nil,
+        agentIntentProductionFixtureFeedbackConsumed: Bool? = nil,
+        agentIntentProductionFixtureMemoryUpdated: Bool? = nil,
+        agentIntentProductionFixtureGoalChanged: Bool? = nil,
+        agentIntentProductionFixturePathfindingPerformed: Bool? = nil,
+        agentIntentProductionFixtureReplanningPerformed: Bool? = nil,
+        agentIntentProductionFixtureAvoidancePerformed: Bool? = nil,
+        agentIntentProductionFixtureReservationRuntimeUsed: Bool? = nil,
+        agentIntentProductionFixtureMutationPerformed: Bool? = nil,
+        agentIntentProductionFixtureSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -1670,6 +1720,31 @@ struct RunMetrics: Encodable {
         self.multiAgentMovementTickHardeningTerrainMutationPerformed = multiAgentMovementTickHardeningTerrainMutationPerformed
         self.multiAgentMovementTickHardeningWorldMutationPerformed = multiAgentMovementTickHardeningWorldMutationPerformed
         self.multiAgentMovementTickHardeningSuccess = multiAgentMovementTickHardeningSuccess
+        self.agentIntentProductionFixtureAgentsObserved = agentIntentProductionFixtureAgentsObserved
+        self.agentIntentProductionFixtureContexts = agentIntentProductionFixtureContexts
+        self.agentIntentProductionFixtureProposals = agentIntentProductionFixtureProposals
+        self.agentIntentProductionFixtureAcceptedIntents = agentIntentProductionFixtureAcceptedIntents
+        self.agentIntentProductionFixtureRejectedProposals = agentIntentProductionFixtureRejectedProposals
+        self.agentIntentProductionFixtureNoIntent = agentIntentProductionFixtureNoIntent
+        self.agentIntentProductionFixtureInvalidContext = agentIntentProductionFixtureInvalidContext
+        self.agentIntentProductionFixtureDuplicateAgentContexts = agentIntentProductionFixtureDuplicateAgentContexts
+        self.agentIntentProductionFixtureInvalidOneEdgeProposals = agentIntentProductionFixtureInvalidOneEdgeProposals
+        self.agentIntentProductionFixtureAcceptedMoveEast = agentIntentProductionFixtureAcceptedMoveEast
+        self.agentIntentProductionFixtureAcceptedMoveWest = agentIntentProductionFixtureAcceptedMoveWest
+        self.agentIntentProductionFixtureAcceptedMoveNorth = agentIntentProductionFixtureAcceptedMoveNorth
+        self.agentIntentProductionFixtureAcceptedMoveSouth = agentIntentProductionFixtureAcceptedMoveSouth
+        self.agentIntentProductionFixtureWorldUsed = agentIntentProductionFixtureWorldUsed
+        self.agentIntentProductionFixtureCollisionRead = agentIntentProductionFixtureCollisionRead
+        self.agentIntentProductionFixtureMovementApplied = agentIntentProductionFixtureMovementApplied
+        self.agentIntentProductionFixtureFeedbackConsumed = agentIntentProductionFixtureFeedbackConsumed
+        self.agentIntentProductionFixtureMemoryUpdated = agentIntentProductionFixtureMemoryUpdated
+        self.agentIntentProductionFixtureGoalChanged = agentIntentProductionFixtureGoalChanged
+        self.agentIntentProductionFixturePathfindingPerformed = agentIntentProductionFixturePathfindingPerformed
+        self.agentIntentProductionFixtureReplanningPerformed = agentIntentProductionFixtureReplanningPerformed
+        self.agentIntentProductionFixtureAvoidancePerformed = agentIntentProductionFixtureAvoidancePerformed
+        self.agentIntentProductionFixtureReservationRuntimeUsed = agentIntentProductionFixtureReservationRuntimeUsed
+        self.agentIntentProductionFixtureMutationPerformed = agentIntentProductionFixtureMutationPerformed
+        self.agentIntentProductionFixtureSuccess = agentIntentProductionFixtureSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

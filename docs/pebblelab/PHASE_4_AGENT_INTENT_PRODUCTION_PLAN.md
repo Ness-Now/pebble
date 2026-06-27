@@ -490,3 +490,62 @@ Phase 4.21A updates only:
 
 No Swift files, `PebbleCore`, renderer, shaders, resources, registries,
 save/load files, or goldens are modified.
+
+## Phase 4.21B Implementation Status
+
+Phase 4.21B implements the first fixture-only agent intent production smoke:
+`agent_intent_production_fixture_smoke`.
+
+Validated contexts:
+
+- `agent_2`: `idle`, position `(10,64,0)`, produces `noIntent`;
+- `agent_0`: `wander_fixture`, position `(0,64,0)`, hint `move_east`,
+  produces accepted intent `(0,64,0) -> (1,64,0)`;
+- `agent_1`: `wander_fixture`, position `(2,64,0)`, hint `move_west`,
+  produces accepted intent `(2,64,0) -> (1,64,0)`;
+- `agent_3`: missing position, produces `invalidContext`;
+- `agent_4`: `bad_fixture_invalid_vertical`, position `(20,64,0)`,
+  produces a vertical proposal rejected by validation.
+
+Validated proposal policy:
+
+- contexts are intentionally unordered;
+- proposals are sorted by stable `agentId`;
+- accepted intents are sorted by stable `agentId`;
+- valid `proposeMove` proposals become accepted intents;
+- `noIntent`, `invalidContext`, and invalid vertical proposals are rejected;
+- accepted intents are one-edge same-y;
+- accepted same-destination intents are allowed because production does not
+  arbitrate conflicts.
+
+Outputs produced:
+
+- `agent_intent_production_fixture_report.json`;
+- `agent_intent_production_fixture_invariant_report.json`;
+- `agent_intent_proposals.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Validated limits:
+
+- no `World`;
+- no collision read;
+- no movement application;
+- no tick movement invocation;
+- no feedback consumption;
+- no memory update;
+- no goal change;
+- no pathfinding;
+- no replanning;
+- no avoidance;
+- no reservation runtime;
+- no physics;
+- no terrain/world mutation.
+
+Next recommended step: Phase 4.21C - Agent Intent Production Hardening. It
+should cover duplicate contexts, duplicate proposals, malformed moves,
+missing data, unknown roles, deterministic ordering, max proposal bounds, and
+invalid proposal rejection without adding tick integration, live collision,
+movement application, feedback consumption, memory updates, goal selection,
+pathfinding, replanning, avoidance, reservation runtime, physics, or
+terrain/world mutation.

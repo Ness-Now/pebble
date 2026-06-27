@@ -5004,3 +5004,129 @@ Phase 4.21B: Agent Intent Production Fixture Smoke. It should add the first
 fixture-only intent production scenario without `World`, movement, collision
 reads, pathfinding, replanning, avoidance, reservation runtime, feedback
 consumption, memory update, goal selection, or terrain/world mutation.
+
+## 2026-06-27 — Phase 4.21B agent intent production fixture smoke
+
+### Objective
+
+Implement `agent_intent_production_fixture_smoke`, the first fixture-only
+contract where scenarios create agent contexts, a deterministic v0 policy
+produces proposals, validation accepts safe proposals, and accepted proposals
+become `LabAgentMoveIntent` values.
+
+### Starting State
+
+Phase 4.21A documented the future intent production boundary. Phase 4.20B-E
+validated tick input/output, feedback, read-only collision, approved
+application, and tick hardening. Before this phase, all movement intentions
+were still created directly by scenarios.
+
+### Files Created/Modified
+
+- `Sources/PebbleLab/LabAgentIntentProduction.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_AGENT_INTENT_PRODUCTION_PLAN.md`
+
+### Why Fixture-Only
+
+The phase validates production shape only. It does not feed produced intents
+into the tick movement contract, does not call live collision, does not apply
+movement, and does not introduce autonomous agent behavior.
+
+### Policy v0
+
+The fixture v0 policy is deterministic. `idle` produces `noIntent`.
+`wander_fixture` scans hints in the stable order `move_east`, `move_west`,
+`move_north`, `move_south` and proposes the first matching one-edge same-y
+move. Missing position produces `invalidContext`. The
+`bad_fixture_invalid_vertical` role intentionally proposes a vertical edge so
+validation can reject it.
+
+### Context, Proposal, and Result Types
+
+The phase adds `LabAgentIntentContext`, `LabAgentIntentDecision`,
+`LabAgentIntentProposal`, `LabAgentIntentProductionResult`, and
+`LabAgentIntentProductionSummary`, plus fixture report and invariant report
+types.
+
+### Accepted/Rejected Proposal Policy
+
+Validation accepts only `proposeMove` proposals with a non-nil intent, matching
+agent id, source and destination, one-edge Manhattan distance, same-y, and at
+most one accepted intent per agent. `noIntent`, `invalidContext`, invalid
+vertical proposals, and duplicates are rejected. Same-destination accepted
+intents are allowed because this phase does not arbitrate conflicts.
+
+### Outputs, Invariants, Metrics, and Event
+
+The scenario writes:
+
+- `agent_intent_production_fixture_report.json`;
+- `agent_intent_production_fixture_invariant_report.json`;
+- `agent_intent_proposals.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Metrics use the `agentIntentProductionFixture*` prefix, and the aggregate
+event is `lab_agent_intent_production_fixture_recorded`. The invariant report
+checks unordered contexts, sorted proposals, sorted accepted intents, one
+proposal per agent, one accepted intent per agent, valid accepted intent
+shape, rejected invalid/no-intent contexts, same-destination deferral to tick
+arbitration, and the no World/collision/movement/feedback/memory/goals/
+pathfinding/replanning/avoidance/reservation/mutation contract.
+
+### Out-of-Scope Confirmations
+
+No `World` is created. No collision is read. No movement is applied. No
+feedback is consumed. No memory or goals are modified. No pathfinding,
+replanning, avoidance, reservation runtime, physics, terrain/world mutation,
+tick movement invocation, route following, LLM/Python/RL, social behavior, or
+gameplay movement is added.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_production_fixture`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_tick_hardening_smoke --seed 42 --ticks 5 --out runs/check_tick_hardening_after_agent_intent_fixture`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_tick_fixture_after_agent_intent_fixture`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_tick_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_tick_live_readonly_after_agent_intent_fixture`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_tick_approved_application_smoke --seed 42 --ticks 5 --out runs/check_tick_approved_application_after_agent_intent_fixture`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_agent_intent_fixture`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- Report success true.
+- Invariant report success true.
+- Contexts: 5.
+- Proposals: 5.
+- Accepted intents: 2.
+- Rejected proposals: 3.
+- `noIntent`: 1.
+- `invalidContext`: 1.
+- `invalidOneEdgeProposals`: 1.
+- Accepted intents are sorted by stable `agentId`.
+- Proposals are sorted by stable `agentId`.
+- Same-destination accepted intents are preserved for later tick arbitration.
+- Metrics contain `agentIntentProductionFixture*`.
+- `events.ndjson` contains `lab_agent_intent_production_fixture_recorded`.
+
+### Next Step
+
+Phase 4.21C: Agent Intent Production Hardening. It should add adversarial
+fixture cases for duplicate contexts, duplicate proposals, malformed moves,
+unknown roles, missing data, deterministic ordering, and max proposal bounds,
+still without tick integration, live collision, movement application,
+feedback consumption, memory updates, goal selection, pathfinding,
+replanning, avoidance, reservation runtime, physics, or terrain/world
+mutation.

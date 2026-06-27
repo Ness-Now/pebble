@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added fixture-only agent intent production smoke.
 - Documented PebbleLab agent movement intent production plan.
 - Hardened multi-agent movement tick contract.
 - Added multi-agent movement tick approved application smoke.
