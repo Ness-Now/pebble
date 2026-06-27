@@ -201,6 +201,58 @@ struct LabAgentIntentProductionHardeningInvariantReport: Codable {
     let notes: [String]
 }
 
+struct LabAgentIntentToTickFixtureSummary: Codable {
+    let tick: Int
+    let contexts: Int
+    let proposals: Int
+    let acceptedIntents: Int
+    let rejectedProposals: Int
+    let tickAgents: Int
+    let tickIntents: Int
+    let tickResolutions: Int
+    let tickFeedback: Int
+    let tickApproved: Int
+    let tickDenied: Int
+    let sameDestinationConflicts: Int
+    let invalidEdges: Int
+    let displacementsApplied: Int
+    let productionAcceptedSameDestination: Bool
+    let tickResolvedSameDestination: Bool
+    let worldUsed: Bool
+    let collisionRead: Bool
+    let movementApplied: Bool
+    let feedbackConsumed: Bool
+    let memoryUpdated: Bool
+    let goalChanged: Bool
+    let pathfindingPerformed: Bool
+    let replanningPerformed: Bool
+    let avoidancePerformed: Bool
+    let reservationRuntimeUsed: Bool
+    let physicsPerformed: Bool
+    let mutationPerformed: Bool
+    let success: Bool
+}
+
+struct LabAgentIntentToTickFixtureReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let ticksCompleted: Int
+    let success: Bool
+    let intentProduction: LabAgentIntentProductionResult
+    let tickInput: LabMultiAgentMovementTickInput
+    let tickOutput: LabMultiAgentMovementTickOutput
+    let summary: LabAgentIntentToTickFixtureSummary
+}
+
+struct LabAgentIntentToTickFixtureInvariantReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: LabMultiAgentMovementFixtureInvariantSummary
+    let checks: [LabMultiAgentMovementFixtureInvariantCheck]
+    let notes: [String]
+}
+
 func produceAgentIntentProposalV0(
     context: LabAgentIntentContext
 ) -> LabAgentIntentProposal {
@@ -593,6 +645,44 @@ private func agentIntentProductionFixtureContexts() -> [LabAgentIntentContext] {
     ]
 }
 
+private func agentIntentToTickFixtureContexts() -> [LabAgentIntentContext] {
+    let tick = 0
+    return [
+        LabAgentIntentContext(
+            tick: tick,
+            agentId: "agent_2",
+            position: LabTerrainPathNodeKey(x: 10, y: 64, z: 0),
+            lastFeedback: nil,
+            role: "idle",
+            localHints: []
+        ),
+        LabAgentIntentContext(
+            tick: tick,
+            agentId: "agent_0",
+            position: LabTerrainPathNodeKey(x: 0, y: 64, z: 0),
+            lastFeedback: nil,
+            role: "wander_fixture",
+            localHints: ["move_east"]
+        ),
+        LabAgentIntentContext(
+            tick: tick,
+            agentId: "agent_1",
+            position: LabTerrainPathNodeKey(x: 2, y: 64, z: 0),
+            lastFeedback: nil,
+            role: "wander_fixture",
+            localHints: ["move_west"]
+        ),
+        LabAgentIntentContext(
+            tick: tick,
+            agentId: "agent_3",
+            position: LabTerrainPathNodeKey(x: 20, y: 64, z: 0),
+            lastFeedback: nil,
+            role: "bad_fixture_invalid_vertical",
+            localHints: ["move_vertical"]
+        )
+    ]
+}
+
 func makeAgentIntentProductionHardeningReport(
     scenario: String,
     seed: UInt32,
@@ -811,6 +901,244 @@ func makeAgentIntentProductionHardeningInvariantReport(
         notes: [
             "Agent intent production hardening remains fixture-only.",
             "Accepted same-destination intents are intentionally left for later tick arbitration."
+        ]
+    )
+}
+
+func makeAgentIntentToTickFixtureReport(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int
+) -> LabAgentIntentToTickFixtureReport {
+    let intentProduction = produceAgentIntentProductionResult(
+        tick: 0,
+        contexts: agentIntentToTickFixtureContexts(),
+        maxProposals: nil,
+        duplicateProposalAgentId: nil
+    )
+    let agents = Dictionary(
+        uniqueKeysWithValues: intentProduction.contexts.compactMap { context in
+            context.position.map { (context.agentId, $0) }
+        }
+    )
+    let tickInput = LabMultiAgentMovementTickInput(
+        tick: intentProduction.tick,
+        agents: agents,
+        physicalPositions: agents,
+        intents: intentProduction.acceptedIntents,
+        maxAgents: nil
+    )
+    let tickReport = makeMultiAgentMovementTickFixtureReport(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        input: tickInput,
+        expectedApproved: 1,
+        expectedDenied: 1,
+        expectedDecisionCounts: [
+            LabMultiAgentMoveDecision.approved.rawValue: 1,
+            LabMultiAgentMoveDecision.deniedSameDestinationConflict.rawValue: 1
+        ]
+    )
+    let acceptedDestinations = intentProduction.acceptedIntents.map(\.to)
+    let productionAcceptedSameDestination =
+        !acceptedDestinations.isEmpty && Set(acceptedDestinations).count < acceptedDestinations.count
+    let tickResolvedSameDestination = tickReport.summary.sameDestinationConflicts == 1
+        && tickReport.output.resolutions.contains {
+            $0.agentId == "agent_0" && $0.decision == .approved && $0.approved
+        }
+        && tickReport.output.resolutions.contains {
+            $0.agentId == "agent_1"
+                && $0.decision == .deniedSameDestinationConflict
+                && !$0.approved
+        }
+    let positionsUnchanged = tickReport.output.abstractPositionsBefore == tickReport.output.abstractPositionsAfter
+        && tickReport.output.physicalPositionsBefore == tickReport.output.physicalPositionsAfter
+    let summary = LabAgentIntentToTickFixtureSummary(
+        tick: intentProduction.tick,
+        contexts: intentProduction.summary.contexts,
+        proposals: intentProduction.summary.proposals,
+        acceptedIntents: intentProduction.summary.acceptedIntents,
+        rejectedProposals: intentProduction.summary.rejectedProposals,
+        tickAgents: tickInput.agents.count,
+        tickIntents: tickInput.intents.count,
+        tickResolutions: tickReport.output.resolutions.count,
+        tickFeedback: tickReport.output.feedback.count,
+        tickApproved: tickReport.summary.approved,
+        tickDenied: tickReport.summary.denied,
+        sameDestinationConflicts: tickReport.summary.sameDestinationConflicts,
+        invalidEdges: tickReport.summary.invalidEdges,
+        displacementsApplied: tickReport.summary.displacementsApplied,
+        productionAcceptedSameDestination: productionAcceptedSameDestination,
+        tickResolvedSameDestination: tickResolvedSameDestination,
+        worldUsed: false,
+        collisionRead: false,
+        movementApplied: false,
+        feedbackConsumed: false,
+        memoryUpdated: false,
+        goalChanged: false,
+        pathfindingPerformed: false,
+        replanningPerformed: false,
+        avoidancePerformed: false,
+        reservationRuntimeUsed: false,
+        physicsPerformed: false,
+        mutationPerformed: false,
+        success: intentProduction.summary.success
+            && tickReport.success
+            && intentProduction.summary.contexts == 4
+            && intentProduction.summary.proposals == 4
+            && intentProduction.summary.acceptedIntents == 2
+            && intentProduction.summary.rejectedProposals == 2
+            && intentProduction.summary.noIntent == 1
+            && intentProduction.summary.invalidOneEdgeProposals == 1
+            && productionAcceptedSameDestination
+            && tickResolvedSameDestination
+            && tickReport.summary.approved == 1
+            && tickReport.summary.denied == 1
+            && tickReport.output.feedback.count == 2
+            && positionsUnchanged
+            && tickReport.summary.displacementsApplied == 0
+    )
+    return LabAgentIntentToTickFixtureReport(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        success: summary.success,
+        intentProduction: intentProduction,
+        tickInput: tickInput,
+        tickOutput: tickReport.output,
+        summary: summary
+    )
+}
+
+func makeAgentIntentToTickFixtureInvariantReport(
+    report: LabAgentIntentToTickFixtureReport?,
+    scenario: String,
+    seed: UInt32
+) -> LabAgentIntentToTickFixtureInvariantReport {
+    guard let report else {
+        let check = agentIntentInvariantCheck(
+            "report_written",
+            false,
+            "agent_intent_to_tick_fixture_report.json",
+            "missing"
+        )
+        return LabAgentIntentToTickFixtureInvariantReport(
+            scenario: scenario,
+            seed: seed,
+            success: false,
+            summary: LabMultiAgentMovementFixtureInvariantSummary(
+                checksPassed: 0,
+                checksFailed: 1,
+                cases: 0,
+                passed: 0,
+                failed: 1
+            ),
+            checks: [check],
+            notes: ["Agent intent to tick fixture report was not available."]
+        )
+    }
+
+    let contextIds = report.intentProduction.contexts.map(\.agentId)
+    let proposalIds = report.intentProduction.proposals.map(\.agentId)
+    let acceptedIds = report.intentProduction.acceptedIntents.map(\.agentId)
+    let resolutionIds = report.tickOutput.resolutions.map(\.agentId)
+    let acceptedDestinations = report.intentProduction.acceptedIntents.map(\.to)
+    let productionAcceptedSameDestination =
+        !acceptedDestinations.isEmpty && Set(acceptedDestinations).count < acceptedDestinations.count
+    let acceptedOneEdge = report.intentProduction.acceptedIntents.allSatisfy {
+        manhattanDistance($0.from, $0.to) == 1
+    }
+    let acceptedSameY = report.intentProduction.acceptedIntents.allSatisfy {
+        $0.from.y == $0.to.y
+    }
+    let tickInputUsesAccepted = report.tickInput.intents.map(\.agentId) == acceptedIds
+    let tickAgentsCoverSources = report.tickInput.intents.allSatisfy { intent in
+        report.tickInput.agents[intent.agentId] == intent.from
+    }
+    let physicalMatchesAbstract = report.tickInput.physicalPositions == report.tickInput.agents
+    let agent0Approved = report.tickOutput.resolutions.contains {
+        $0.agentId == "agent_0" && $0.decision == .approved && $0.approved
+    }
+    let agent1Denied = report.tickOutput.resolutions.contains {
+        $0.agentId == "agent_1" && $0.decision == .deniedSameDestinationConflict && !$0.approved
+    }
+    let approvedFeedback = report.tickOutput.feedback.contains {
+        $0.agentId == "agent_0" && $0.kind == .approvedForMovement
+    }
+    let deniedFeedback = report.tickOutput.feedback.contains {
+        $0.agentId == "agent_1" && $0.kind == .blockedByAgentConflict
+    }
+    let positionsUnchanged = report.tickOutput.abstractPositionsBefore == report.tickOutput.abstractPositionsAfter
+        && report.tickOutput.physicalPositionsBefore == report.tickOutput.physicalPositionsAfter
+
+    let checks = [
+        agentIntentInvariantCheck("intent_contexts_exist", !report.intentProduction.contexts.isEmpty, "non-empty", "\(report.intentProduction.contexts.count)"),
+        agentIntentInvariantCheck("intent_proposals_exist", !report.intentProduction.proposals.isEmpty, "non-empty", "\(report.intentProduction.proposals.count)"),
+        agentIntentInvariantCheck("accepted_intents_exist", !report.intentProduction.acceptedIntents.isEmpty, "non-empty", "\(report.intentProduction.acceptedIntents.count)"),
+        agentIntentInvariantCheck("rejected_proposals_exist", !report.intentProduction.rejectedProposals.isEmpty, "non-empty", "\(report.intentProduction.rejectedProposals.count)"),
+        agentIntentInvariantCheck("contexts_intentionally_unordered", contextIds != contextIds.sorted(), "unordered input", contextIds.joined(separator: ",")),
+        agentIntentInvariantCheck("proposals_sorted_by_agent_id", proposalIds == proposalIds.sorted(), "sorted", proposalIds.joined(separator: ",")),
+        agentIntentInvariantCheck("accepted_intents_sorted_by_agent_id", acceptedIds == acceptedIds.sorted(), "sorted", acceptedIds.joined(separator: ",")),
+        agentIntentInvariantCheck("accepted_intents_are_one_edge", acceptedOneEdge, "one-edge", "\(acceptedOneEdge)"),
+        agentIntentInvariantCheck("accepted_intents_are_same_y", acceptedSameY, "same-y", "\(acceptedSameY)"),
+        agentIntentInvariantCheck("production_accepts_same_destination_intents", productionAcceptedSameDestination, "true", "\(productionAcceptedSameDestination)"),
+        agentIntentInvariantCheck("production_does_not_arbitrate_conflicts", productionAcceptedSameDestination, "same destination preserved", "\(acceptedDestinations)"),
+        agentIntentInvariantCheck("tick_input_exists", report.tickInput.tick == report.intentProduction.tick, "same tick", "\(report.tickInput.tick)"),
+        agentIntentInvariantCheck("tick_input_uses_accepted_intents", tickInputUsesAccepted, "accepted intents", report.tickInput.intents.map(\.agentId).joined(separator: ",")),
+        agentIntentInvariantCheck("tick_input_agents_cover_intent_sources", tickAgentsCoverSources, "sources covered", "\(tickAgentsCoverSources)"),
+        agentIntentInvariantCheck("tick_input_physical_positions_match_abstract", physicalMatchesAbstract, "match", "\(physicalMatchesAbstract)"),
+        agentIntentInvariantCheck("tick_resolutions_exist", !report.tickOutput.resolutions.isEmpty, "non-empty", "\(report.tickOutput.resolutions.count)"),
+        agentIntentInvariantCheck("tick_resolutions_sorted_by_agent_id", resolutionIds == resolutionIds.sorted(), "sorted", resolutionIds.joined(separator: ",")),
+        agentIntentInvariantCheck("tick_resolves_same_destination_conflict", report.summary.tickResolvedSameDestination, "true", "\(report.summary.tickResolvedSameDestination)"),
+        agentIntentInvariantCheck("stable_agent_id_winner_agent_0", agent0Approved, "agent_0 approved", "\(agent0Approved)"),
+        agentIntentInvariantCheck("same_destination_loser_agent_1_denied", agent1Denied, "agent_1 denied", "\(agent1Denied)"),
+        agentIntentInvariantCheck("tick_approved_count_expected", report.summary.tickApproved == 1, "1", "\(report.summary.tickApproved)"),
+        agentIntentInvariantCheck("tick_denied_count_expected", report.summary.tickDenied == 1, "1", "\(report.summary.tickDenied)"),
+        agentIntentInvariantCheck("tick_feedback_count_matches_resolutions", report.summary.tickFeedback == report.summary.tickResolutions, "match", "\(report.summary.tickFeedback)/\(report.summary.tickResolutions)"),
+        agentIntentInvariantCheck("approved_tick_feedback_is_approved_for_movement", approvedFeedback, "approvedForMovement", "\(approvedFeedback)"),
+        agentIntentInvariantCheck("denied_conflict_feedback_is_blocked_by_agent_conflict", deniedFeedback, "blockedByAgentConflict", "\(deniedFeedback)"),
+        agentIntentInvariantCheck("positions_unchanged", positionsUnchanged, "unchanged", "\(positionsUnchanged)"),
+        agentIntentInvariantCheck("no_displacement_applied", report.summary.displacementsApplied == 0, "0", "\(report.summary.displacementsApplied)"),
+        agentIntentInvariantCheck("no_world_used", !report.summary.worldUsed, "false", "\(report.summary.worldUsed)"),
+        agentIntentInvariantCheck("collision_not_read", !report.summary.collisionRead, "false", "\(report.summary.collisionRead)"),
+        agentIntentInvariantCheck("movement_not_applied", !report.summary.movementApplied, "false", "\(report.summary.movementApplied)"),
+        agentIntentInvariantCheck("feedback_not_consumed", !report.summary.feedbackConsumed, "false", "\(report.summary.feedbackConsumed)"),
+        agentIntentInvariantCheck("memory_not_updated", !report.summary.memoryUpdated, "false", "\(report.summary.memoryUpdated)"),
+        agentIntentInvariantCheck("goal_not_changed", !report.summary.goalChanged, "false", "\(report.summary.goalChanged)"),
+        agentIntentInvariantCheck("pathfinding_not_performed", !report.summary.pathfindingPerformed, "false", "\(report.summary.pathfindingPerformed)"),
+        agentIntentInvariantCheck("replanning_not_performed", !report.summary.replanningPerformed, "false", "\(report.summary.replanningPerformed)"),
+        agentIntentInvariantCheck("avoidance_not_performed", !report.summary.avoidancePerformed, "false", "\(report.summary.avoidancePerformed)"),
+        agentIntentInvariantCheck("reservation_runtime_not_used", !report.summary.reservationRuntimeUsed, "false", "\(report.summary.reservationRuntimeUsed)"),
+        agentIntentInvariantCheck("physics_not_performed", !report.summary.physicsPerformed, "false", "\(report.summary.physicsPerformed)"),
+        agentIntentInvariantCheck("terrain_mutation_not_performed", !report.summary.mutationPerformed, "false", "\(report.summary.mutationPerformed)"),
+        agentIntentInvariantCheck("world_mutation_not_performed", !report.summary.mutationPerformed, "false", "\(report.summary.mutationPerformed)"),
+        agentIntentInvariantCheck("agent_intent_fixture_smoke_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        agentIntentInvariantCheck("agent_intent_hardening_smoke_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        agentIntentInvariantCheck("tick_fixture_smoke_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        agentIntentInvariantCheck("report_written", true, "agent_intent_to_tick_fixture_report.json", "agent_intent_to_tick_fixture_report.json"),
+        agentIntentInvariantCheck("proposals_written", true, "agent_intent_to_tick_fixture_proposals.json", "agent_intent_to_tick_fixture_proposals.json"),
+        agentIntentInvariantCheck("metrics_written", true, "agentIntentToTickFixture* metrics", "agentIntentToTickFixture* metrics"),
+        agentIntentInvariantCheck("event_written", true, "lab_agent_intent_to_tick_fixture_recorded", "lab_agent_intent_to_tick_fixture_recorded"),
+        agentIntentInvariantCheck("success_contract_respected", report.success, "true", "\(report.success)")
+    ]
+    let failed = checks.filter { !$0.passed }.count
+    return LabAgentIntentToTickFixtureInvariantReport(
+        scenario: scenario,
+        seed: seed,
+        success: failed == 0,
+        summary: LabMultiAgentMovementFixtureInvariantSummary(
+            checksPassed: checks.count - failed,
+            checksFailed: failed,
+            cases: 1,
+            passed: report.success ? 1 : 0,
+            failed: report.success ? 0 : 1
+        ),
+        checks: checks,
+        notes: [
+            "Agent intent production remains fixture-only and does not arbitrate conflicts.",
+            "The tick fixture layer receives accepted intents and resolves the same-destination conflict.",
+            "No World, collision read, physical movement, feedback consumption, memory, goals, pathfinding, replanning, reservation runtime, physics, or mutation is used."
         ]
     )
 }

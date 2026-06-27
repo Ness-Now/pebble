@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added fixture-only agent intent to movement tick integration smoke.
 - Hardened fixture-only agent intent production.
 - Added fixture-only agent intent production smoke.
 - Documented PebbleLab agent movement intent production plan.

@@ -621,3 +621,62 @@ fixture-only tick movement contract while keeping live collision, physical
 movement application, feedback consumption, memory updates, goal selection,
 pathfinding, replanning, avoidance, reservation runtime, physics, and
 terrain/world mutation out of scope.
+
+## Phase 4.21D Implementation Status
+
+Phase 4.21D implements the first fixture-only production-to-tick handoff:
+`agent_intent_to_tick_fixture_smoke`.
+
+Production-to-tick handoff validated:
+
+- four intentionally unordered `LabAgentIntentContext` values are created;
+- the v0 policy produces four proposals sorted by stable `agentId`;
+- two valid `wander_fixture` proposals become accepted intents;
+- one `idle` context produces `noIntent`;
+- one invalid vertical proposal is rejected;
+- accepted intents are sorted by stable `agentId`;
+- accepted intents are one-edge same-y;
+- accepted intents are copied into a `LabMultiAgentMovementTickInput`;
+- synthetic physical positions mirror abstract positions;
+- no `World` is created.
+
+Same-destination policy:
+
+- production accepts both `agent_0` and `agent_1` intents to `(1,64,0)`;
+- production does not arbitrate the conflict;
+- the tick fixture layer resolves the conflict deterministically;
+- `agent_0` is approved by stable `agentId` ordering;
+- `agent_1` is denied with `deniedSameDestinationConflict`;
+- feedback is `approvedForMovement` for `agent_0` and
+  `blockedByAgentConflict` for `agent_1`.
+
+Outputs produced:
+
+- `agent_intent_to_tick_fixture_report.json`;
+- `agent_intent_to_tick_fixture_invariant_report.json`;
+- `agent_intent_to_tick_fixture_proposals.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Validated limits:
+
+- no live collision;
+- no movement application;
+- no physical placeholder or core entity movement;
+- no feedback consumption;
+- no memory update;
+- no goal change;
+- no pathfinding;
+- no replanning;
+- no avoidance;
+- no reservation runtime;
+- no physics;
+- no terrain/world mutation;
+- no multi-tick loop.
+
+Next recommended step: Phase 4.21E - Agent Intent To Tick Live Read-Only
+Smoke. It should feed produced intents into the tick live read-only contract
+with `World` used only for collision evidence, while keeping movement
+application, feedback consumption, memory updates, goal selection,
+pathfinding, replanning, avoidance, reservation runtime, physics, and
+terrain/world mutation out of scope.

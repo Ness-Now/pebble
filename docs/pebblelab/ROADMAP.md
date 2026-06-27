@@ -1176,3 +1176,36 @@ scope.
 
 Next recommended step: Phase 4.21D - Agent Intent To Tick Fixture
 Integration Smoke.
+
+## Phase 4.21D - Agent Intent To Tick Fixture Integration Smoke
+
+Status: implemented and validated.
+
+Goal: connect fixture-only agent intent production to the fixture-only
+multi-agent movement tick contract without live collision, movement
+application, feedback consumption, memory updates, goals, pathfinding,
+replanning, avoidance, reservation runtime, physics, or terrain/world
+mutation.
+
+The scenario `agent_intent_to_tick_fixture_smoke` produces four sorted
+policy proposals from intentionally unordered contexts. Two valid
+`wander_fixture` proposals become accepted intents and intentionally target
+the same destination. The production layer leaves that conflict unresolved,
+then the tick fixture layer receives the accepted intents, approves
+`agent_0`, denies `agent_1` with `deniedSameDestinationConflict`, and emits
+`approvedForMovement` / `blockedByAgentConflict` feedback with positions
+unchanged and zero displacements.
+
+It writes `agent_intent_to_tick_fixture_report.json`,
+`agent_intent_to_tick_fixture_invariant_report.json`,
+`agent_intent_to_tick_fixture_proposals.json`,
+`agentIntentToTickFixture*` metrics, and one aggregate
+`lab_agent_intent_to_tick_fixture_recorded` event.
+
+Live collision, movement application, feedback consumption, memory update,
+goal selection, pathfinding, replanning, avoidance, reservation runtime,
+physics, save/load, social behavior, communication, gameplay movement, and
+terrain/world mutation remain out of scope.
+
+Next recommended step: Phase 4.21E - Agent Intent To Tick Live Read-Only
+Smoke.

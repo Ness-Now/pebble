@@ -5272,3 +5272,132 @@ accepted produced intents into the fixture-only tick movement contract,
 without live collision, physical movement application, feedback consumption,
 memory updates, goal selection, pathfinding, replanning, avoidance,
 reservation runtime, physics, or terrain/world mutation.
+
+## 2026-06-27 — Phase 4.21D agent intent to tick fixture integration smoke
+
+### Objective
+
+Connect fixture-only agent intent production to the fixture-only movement
+tick contract. This validates that policy-produced `LabAgentMoveIntent`
+values can feed tick arbitration without adding live collision, physical
+movement, feedback consumption, memory updates, goals, pathfinding,
+replanning, reservation runtime, physics, or terrain/world mutation.
+
+### Starting State
+
+Phase 4.21B proved deterministic context-to-proposal production with two
+accepted same-destination intents left unresolved. Phase 4.21C hardened the
+production layer. Phase 4.20B already proved fixture-only tick arbitration
+with stable `agentId` ordering, same-destination conflict denial, feedback,
+unchanged positions, and no movement.
+
+### Files Created or Modified
+
+- `Sources/PebbleLab/LabAgentIntentProduction.swift`
+- `Sources/PebbleLab/LabMultiAgentMovement.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_AGENT_INTENT_PRODUCTION_PLAN.md`
+
+### Why Fixture-Only Integration
+
+The goal is to validate ownership boundaries before live behavior grows:
+the production layer proposes and validates intents, while the tick fixture
+layer arbitrates conflicts and produces feedback. The scenario still avoids
+World creation, live collision, physical movement, autonomous loops, and
+feedback consumption.
+
+### Production-to-Tick Flow
+
+The scenario creates four intentionally unordered contexts. The v0 policy
+produces sorted proposals, accepts two `wander_fixture` intents, rejects one
+`idle` `noIntent`, and rejects one invalid vertical proposal. The accepted
+intents are passed into a `LabMultiAgentMovementTickInput` with synthetic
+abstract and physical positions. The tick fixture contract then resolves the
+same-destination conflict.
+
+### Same-Destination Handoff Policy
+
+Production continues to allow both accepted intents to target `(1,64,0)`.
+It does not arbitrate conflicts. The tick fixture layer approves `agent_0`
+by stable `agentId` ordering and denies `agent_1` with
+`deniedSameDestinationConflict`.
+
+### Tick Arbitration Result
+
+The integrated smoke expects two accepted production intents, one tick
+approval, one tick denial, two feedback records, no displacement, and
+unchanged abstract/physical positions. Approved feedback is
+`approvedForMovement`; denied conflict feedback is `blockedByAgentConflict`.
+
+### Outputs, Invariants, Metrics, and Event
+
+The scenario writes:
+
+- `agent_intent_to_tick_fixture_report.json`;
+- `agent_intent_to_tick_fixture_invariant_report.json`;
+- `agent_intent_to_tick_fixture_proposals.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Metrics use the `agentIntentToTickFixture*` prefix. The aggregate event is
+`lab_agent_intent_to_tick_fixture_recorded`. The invariant report covers
+contexts, proposals, accepted/rejected proposals, tick input construction,
+same-destination handoff, stable ordering, feedback mapping, unchanged
+positions, no displacement, and all fixture-only out-of-scope guarantees.
+
+### Out-of-Scope Confirmations
+
+No `World` is created. No collision is read. No movement is applied. No
+physical placeholder or core entity is created or moved. No feedback is
+consumed. No memory or goals are modified. No pathfinding, replanning,
+avoidance, reservation runtime, physics, route following, LLM/Python/RL,
+social behavior, communication, gameplay movement, or terrain/world mutation
+is added.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_to_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_hardening_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_hardening_after_intent_to_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_fixture_after_intent_to_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_tick_fixture_after_intent_to_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_tick_hardening_smoke --seed 42 --ticks 5 --out runs/check_tick_hardening_after_intent_to_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_intent_to_tick_fixture`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- Integration report success true.
+- Integration invariant report success true.
+- Production contexts: 4.
+- Production proposals: 4.
+- Accepted intents: 2.
+- Rejected proposals: 2.
+- Tick agents: 4.
+- Tick intents: 2.
+- Tick resolutions: 2.
+- Tick feedback: 2.
+- Tick approved: 1.
+- Tick denied: 1.
+- Same-destination conflict resolved by tick fixture arbitration.
+- Displacements applied: 0.
+- Metrics contain `agentIntentToTickFixture*`.
+- `events.ndjson` contains `lab_agent_intent_to_tick_fixture_recorded`.
+
+### Next Step
+
+Phase 4.21E: Agent Intent To Tick Live Read-Only Smoke. It should feed
+produced intents into the live read-only tick contract, using `World` only
+for collision evidence and still avoiding movement application, feedback
+consumption, memory updates, goals, pathfinding, replanning, avoidance,
+reservation runtime, physics, and terrain/world mutation.

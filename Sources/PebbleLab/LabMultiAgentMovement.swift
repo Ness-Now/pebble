@@ -2125,11 +2125,11 @@ func makeMultiAgentMovementTickFixtureReport(
     ticksCompleted: Int
 ) -> LabMultiAgentMovementTickFixtureReport {
     let input = multiAgentMovementTickFixtureInput()
-    let fixture = LabMultiAgentMovementFixtureCase(
-        name: "single_tick_fixture_contract",
-        agents: input.agents,
-        occupiedStaticNodes: [],
-        intents: input.intents,
+    return makeMultiAgentMovementTickFixtureReport(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        input: input,
         expectedApproved: 2,
         expectedDenied: 2,
         expectedDecisionCounts: [
@@ -2137,6 +2137,26 @@ func makeMultiAgentMovementTickFixtureReport(
             LabMultiAgentMoveDecision.deniedSameDestinationConflict.rawValue: 1,
             LabMultiAgentMoveDecision.deniedInvalidEdge.rawValue: 1
         ]
+    )
+}
+
+func makeMultiAgentMovementTickFixtureReport(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int,
+    input: LabMultiAgentMovementTickInput,
+    expectedApproved: Int,
+    expectedDenied: Int,
+    expectedDecisionCounts: [String: Int]
+) -> LabMultiAgentMovementTickFixtureReport {
+    let fixture = LabMultiAgentMovementFixtureCase(
+        name: "single_tick_fixture_contract",
+        agents: input.agents,
+        occupiedStaticNodes: [],
+        intents: input.intents,
+        expectedApproved: expectedApproved,
+        expectedDenied: expectedDenied,
+        expectedDecisionCounts: expectedDecisionCounts
     )
     let fixtureResult = evaluateMultiAgentMovementFixtureCase(fixture)
     let tickResolutions = fixtureResult.resolutions.map { resolution in
@@ -2194,10 +2214,8 @@ func makeMultiAgentMovementTickFixtureReport(
         maxDivergenceBefore: 0,
         maxDivergenceAfter: 0,
         success: fixtureResult.passed
-            && approved == 2
-            && denied == 2
-            && sameDestinationConflicts == 1
-            && invalidEdges == 1
+            && approved == expectedApproved
+            && denied == expectedDenied
             && resolutionsSorted
             && feedback.count == tickResolutions.count
             && feedbackKindsMatch

@@ -175,6 +175,12 @@ struct RunEvent: Encodable {
     let staleProposals: Int?
     let wrongSourceProposals: Int?
     let maxProposalsExceeded: Int?
+    let tickAgents: Int?
+    let tickIntents: Int?
+    let tickResolutions: Int?
+    let tickFeedback: Int?
+    let tickApproved: Int?
+    let tickDenied: Int?
     let sameDestinationConflicts: Int?
     let occupiedDestinationConflicts: Int?
     let swapConflicts: Int?
@@ -208,6 +214,8 @@ struct RunEvent: Encodable {
     let partialApprovalCases: Int?
     let divergenceBeforeMax: Int?
     let divergenceAfterMax: Int?
+    let productionAcceptedSameDestination: Bool?
+    let tickResolvedSameDestination: Bool?
     let worldUsed: Bool?
     let liveCollisionRead: Bool?
     let physicalMovementApplied: Bool?
@@ -433,6 +441,12 @@ struct RunEvent: Encodable {
         staleProposals: Int? = nil,
         wrongSourceProposals: Int? = nil,
         maxProposalsExceeded: Int? = nil,
+        tickAgents: Int? = nil,
+        tickIntents: Int? = nil,
+        tickResolutions: Int? = nil,
+        tickFeedback: Int? = nil,
+        tickApproved: Int? = nil,
+        tickDenied: Int? = nil,
         sameDestinationConflicts: Int? = nil,
         occupiedDestinationConflicts: Int? = nil,
         swapConflicts: Int? = nil,
@@ -466,6 +480,8 @@ struct RunEvent: Encodable {
         partialApprovalCases: Int? = nil,
         divergenceBeforeMax: Int? = nil,
         divergenceAfterMax: Int? = nil,
+        productionAcceptedSameDestination: Bool? = nil,
+        tickResolvedSameDestination: Bool? = nil,
         worldUsed: Bool? = nil,
         liveCollisionRead: Bool? = nil,
         physicalMovementApplied: Bool? = nil,
@@ -690,6 +706,12 @@ struct RunEvent: Encodable {
         self.staleProposals = staleProposals
         self.wrongSourceProposals = wrongSourceProposals
         self.maxProposalsExceeded = maxProposalsExceeded
+        self.tickAgents = tickAgents
+        self.tickIntents = tickIntents
+        self.tickResolutions = tickResolutions
+        self.tickFeedback = tickFeedback
+        self.tickApproved = tickApproved
+        self.tickDenied = tickDenied
         self.sameDestinationConflicts = sameDestinationConflicts
         self.occupiedDestinationConflicts = occupiedDestinationConflicts
         self.swapConflicts = swapConflicts
@@ -723,6 +745,8 @@ struct RunEvent: Encodable {
         self.partialApprovalCases = partialApprovalCases
         self.divergenceBeforeMax = divergenceBeforeMax
         self.divergenceAfterMax = divergenceAfterMax
+        self.productionAcceptedSameDestination = productionAcceptedSameDestination
+        self.tickResolvedSameDestination = tickResolvedSameDestination
         self.worldUsed = worldUsed
         self.liveCollisionRead = liveCollisionRead
         self.physicalMovementApplied = physicalMovementApplied

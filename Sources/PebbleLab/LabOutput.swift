@@ -614,6 +614,35 @@ struct RunMetrics: Encodable {
     let agentIntentProductionHardeningPhysicsPerformed: Bool?
     let agentIntentProductionHardeningMutationPerformed: Bool?
     let agentIntentProductionHardeningSuccess: Bool?
+    let agentIntentToTickFixtureContexts: Int?
+    let agentIntentToTickFixtureProposals: Int?
+    let agentIntentToTickFixtureAcceptedIntents: Int?
+    let agentIntentToTickFixtureRejectedProposals: Int?
+    let agentIntentToTickFixtureNoIntent: Int?
+    let agentIntentToTickFixtureInvalidOneEdgeProposals: Int?
+    let agentIntentToTickFixtureTickAgents: Int?
+    let agentIntentToTickFixtureTickIntents: Int?
+    let agentIntentToTickFixtureTickResolutions: Int?
+    let agentIntentToTickFixtureTickFeedback: Int?
+    let agentIntentToTickFixtureTickApproved: Int?
+    let agentIntentToTickFixtureTickDenied: Int?
+    let agentIntentToTickFixtureSameDestinationConflicts: Int?
+    let agentIntentToTickFixtureDisplacementsApplied: Int?
+    let agentIntentToTickFixtureProductionAcceptedSameDestination: Bool?
+    let agentIntentToTickFixtureTickResolvedSameDestination: Bool?
+    let agentIntentToTickFixtureWorldUsed: Bool?
+    let agentIntentToTickFixtureCollisionRead: Bool?
+    let agentIntentToTickFixtureMovementApplied: Bool?
+    let agentIntentToTickFixtureFeedbackConsumed: Bool?
+    let agentIntentToTickFixtureMemoryUpdated: Bool?
+    let agentIntentToTickFixtureGoalChanged: Bool?
+    let agentIntentToTickFixturePathfindingPerformed: Bool?
+    let agentIntentToTickFixtureReplanningPerformed: Bool?
+    let agentIntentToTickFixtureAvoidancePerformed: Bool?
+    let agentIntentToTickFixtureReservationRuntimeUsed: Bool?
+    let agentIntentToTickFixturePhysicsPerformed: Bool?
+    let agentIntentToTickFixtureMutationPerformed: Bool?
+    let agentIntentToTickFixtureSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -1228,6 +1257,35 @@ struct RunMetrics: Encodable {
         agentIntentProductionHardeningPhysicsPerformed: Bool? = nil,
         agentIntentProductionHardeningMutationPerformed: Bool? = nil,
         agentIntentProductionHardeningSuccess: Bool? = nil,
+        agentIntentToTickFixtureContexts: Int? = nil,
+        agentIntentToTickFixtureProposals: Int? = nil,
+        agentIntentToTickFixtureAcceptedIntents: Int? = nil,
+        agentIntentToTickFixtureRejectedProposals: Int? = nil,
+        agentIntentToTickFixtureNoIntent: Int? = nil,
+        agentIntentToTickFixtureInvalidOneEdgeProposals: Int? = nil,
+        agentIntentToTickFixtureTickAgents: Int? = nil,
+        agentIntentToTickFixtureTickIntents: Int? = nil,
+        agentIntentToTickFixtureTickResolutions: Int? = nil,
+        agentIntentToTickFixtureTickFeedback: Int? = nil,
+        agentIntentToTickFixtureTickApproved: Int? = nil,
+        agentIntentToTickFixtureTickDenied: Int? = nil,
+        agentIntentToTickFixtureSameDestinationConflicts: Int? = nil,
+        agentIntentToTickFixtureDisplacementsApplied: Int? = nil,
+        agentIntentToTickFixtureProductionAcceptedSameDestination: Bool? = nil,
+        agentIntentToTickFixtureTickResolvedSameDestination: Bool? = nil,
+        agentIntentToTickFixtureWorldUsed: Bool? = nil,
+        agentIntentToTickFixtureCollisionRead: Bool? = nil,
+        agentIntentToTickFixtureMovementApplied: Bool? = nil,
+        agentIntentToTickFixtureFeedbackConsumed: Bool? = nil,
+        agentIntentToTickFixtureMemoryUpdated: Bool? = nil,
+        agentIntentToTickFixtureGoalChanged: Bool? = nil,
+        agentIntentToTickFixturePathfindingPerformed: Bool? = nil,
+        agentIntentToTickFixtureReplanningPerformed: Bool? = nil,
+        agentIntentToTickFixtureAvoidancePerformed: Bool? = nil,
+        agentIntentToTickFixtureReservationRuntimeUsed: Bool? = nil,
+        agentIntentToTickFixturePhysicsPerformed: Bool? = nil,
+        agentIntentToTickFixtureMutationPerformed: Bool? = nil,
+        agentIntentToTickFixtureSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -1841,6 +1899,35 @@ struct RunMetrics: Encodable {
         self.agentIntentProductionHardeningPhysicsPerformed = agentIntentProductionHardeningPhysicsPerformed
         self.agentIntentProductionHardeningMutationPerformed = agentIntentProductionHardeningMutationPerformed
         self.agentIntentProductionHardeningSuccess = agentIntentProductionHardeningSuccess
+        self.agentIntentToTickFixtureContexts = agentIntentToTickFixtureContexts
+        self.agentIntentToTickFixtureProposals = agentIntentToTickFixtureProposals
+        self.agentIntentToTickFixtureAcceptedIntents = agentIntentToTickFixtureAcceptedIntents
+        self.agentIntentToTickFixtureRejectedProposals = agentIntentToTickFixtureRejectedProposals
+        self.agentIntentToTickFixtureNoIntent = agentIntentToTickFixtureNoIntent
+        self.agentIntentToTickFixtureInvalidOneEdgeProposals = agentIntentToTickFixtureInvalidOneEdgeProposals
+        self.agentIntentToTickFixtureTickAgents = agentIntentToTickFixtureTickAgents
+        self.agentIntentToTickFixtureTickIntents = agentIntentToTickFixtureTickIntents
+        self.agentIntentToTickFixtureTickResolutions = agentIntentToTickFixtureTickResolutions
+        self.agentIntentToTickFixtureTickFeedback = agentIntentToTickFixtureTickFeedback
+        self.agentIntentToTickFixtureTickApproved = agentIntentToTickFixtureTickApproved
+        self.agentIntentToTickFixtureTickDenied = agentIntentToTickFixtureTickDenied
+        self.agentIntentToTickFixtureSameDestinationConflicts = agentIntentToTickFixtureSameDestinationConflicts
+        self.agentIntentToTickFixtureDisplacementsApplied = agentIntentToTickFixtureDisplacementsApplied
+        self.agentIntentToTickFixtureProductionAcceptedSameDestination = agentIntentToTickFixtureProductionAcceptedSameDestination
+        self.agentIntentToTickFixtureTickResolvedSameDestination = agentIntentToTickFixtureTickResolvedSameDestination
+        self.agentIntentToTickFixtureWorldUsed = agentIntentToTickFixtureWorldUsed
+        self.agentIntentToTickFixtureCollisionRead = agentIntentToTickFixtureCollisionRead
+        self.agentIntentToTickFixtureMovementApplied = agentIntentToTickFixtureMovementApplied
+        self.agentIntentToTickFixtureFeedbackConsumed = agentIntentToTickFixtureFeedbackConsumed
+        self.agentIntentToTickFixtureMemoryUpdated = agentIntentToTickFixtureMemoryUpdated
+        self.agentIntentToTickFixtureGoalChanged = agentIntentToTickFixtureGoalChanged
+        self.agentIntentToTickFixturePathfindingPerformed = agentIntentToTickFixturePathfindingPerformed
+        self.agentIntentToTickFixtureReplanningPerformed = agentIntentToTickFixtureReplanningPerformed
+        self.agentIntentToTickFixtureAvoidancePerformed = agentIntentToTickFixtureAvoidancePerformed
+        self.agentIntentToTickFixtureReservationRuntimeUsed = agentIntentToTickFixtureReservationRuntimeUsed
+        self.agentIntentToTickFixturePhysicsPerformed = agentIntentToTickFixturePhysicsPerformed
+        self.agentIntentToTickFixtureMutationPerformed = agentIntentToTickFixtureMutationPerformed
+        self.agentIntentToTickFixtureSuccess = agentIntentToTickFixtureSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed
