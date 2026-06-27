@@ -674,6 +674,44 @@ struct RunMetrics: Encodable {
     let agentIntentToTickLiveReadonlyPhysicsPerformed: Bool?
     let agentIntentToTickLiveReadonlyMutationPerformed: Bool?
     let agentIntentToTickLiveReadonlySuccess: Bool?
+    let agentIntentToTickApprovedApplicationContexts: Int?
+    let agentIntentToTickApprovedApplicationProposals: Int?
+    let agentIntentToTickApprovedApplicationAcceptedIntents: Int?
+    let agentIntentToTickApprovedApplicationRejectedProposals: Int?
+    let agentIntentToTickApprovedApplicationNoIntent: Int?
+    let agentIntentToTickApprovedApplicationInvalidOneEdgeProposals: Int?
+    let agentIntentToTickApprovedApplicationTickAgents: Int?
+    let agentIntentToTickApprovedApplicationTickIntents: Int?
+    let agentIntentToTickApprovedApplicationTickResolutions: Int?
+    let agentIntentToTickApprovedApplicationTickFeedback: Int?
+    let agentIntentToTickApprovedApplicationTickApproved: Int?
+    let agentIntentToTickApprovedApplicationTickDenied: Int?
+    let agentIntentToTickApprovedApplicationOccupableDestinations: Int?
+    let agentIntentToTickApprovedApplicationNonOccupableDestinations: Int?
+    let agentIntentToTickApprovedApplicationCollisionDenied: Int?
+    let agentIntentToTickApprovedApplicationDisplacementsApplied: Int?
+    let agentIntentToTickApprovedApplicationMovedFeedback: Int?
+    let agentIntentToTickApprovedApplicationBlockedByCollisionFeedback: Int?
+    let agentIntentToTickApprovedApplicationDivergenceBefore: Int?
+    let agentIntentToTickApprovedApplicationDivergenceAfter: Int?
+    let agentIntentToTickApprovedApplicationDeniedPositionsPreserved: Bool?
+    let agentIntentToTickApprovedApplicationApprovedPositionsMoved: Bool?
+    let agentIntentToTickApprovedApplicationProductionReadCollision: Bool?
+    let agentIntentToTickApprovedApplicationTickReadCollision: Bool?
+    let agentIntentToTickApprovedApplicationWorldUsed: Bool?
+    let agentIntentToTickApprovedApplicationCollisionRead: Bool?
+    let agentIntentToTickApprovedApplicationMovementApplied: Bool?
+    let agentIntentToTickApprovedApplicationFeedbackConsumed: Bool?
+    let agentIntentToTickApprovedApplicationMemoryUpdated: Bool?
+    let agentIntentToTickApprovedApplicationGoalChanged: Bool?
+    let agentIntentToTickApprovedApplicationPathfindingPerformed: Bool?
+    let agentIntentToTickApprovedApplicationReplanningPerformed: Bool?
+    let agentIntentToTickApprovedApplicationAvoidancePerformed: Bool?
+    let agentIntentToTickApprovedApplicationReservationRuntimeUsed: Bool?
+    let agentIntentToTickApprovedApplicationRouteFollowingApplied: Bool?
+    let agentIntentToTickApprovedApplicationPhysicsPerformed: Bool?
+    let agentIntentToTickApprovedApplicationMutationPerformed: Bool?
+    let agentIntentToTickApprovedApplicationSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -1348,6 +1386,44 @@ struct RunMetrics: Encodable {
         agentIntentToTickLiveReadonlyPhysicsPerformed: Bool? = nil,
         agentIntentToTickLiveReadonlyMutationPerformed: Bool? = nil,
         agentIntentToTickLiveReadonlySuccess: Bool? = nil,
+        agentIntentToTickApprovedApplicationContexts: Int? = nil,
+        agentIntentToTickApprovedApplicationProposals: Int? = nil,
+        agentIntentToTickApprovedApplicationAcceptedIntents: Int? = nil,
+        agentIntentToTickApprovedApplicationRejectedProposals: Int? = nil,
+        agentIntentToTickApprovedApplicationNoIntent: Int? = nil,
+        agentIntentToTickApprovedApplicationInvalidOneEdgeProposals: Int? = nil,
+        agentIntentToTickApprovedApplicationTickAgents: Int? = nil,
+        agentIntentToTickApprovedApplicationTickIntents: Int? = nil,
+        agentIntentToTickApprovedApplicationTickResolutions: Int? = nil,
+        agentIntentToTickApprovedApplicationTickFeedback: Int? = nil,
+        agentIntentToTickApprovedApplicationTickApproved: Int? = nil,
+        agentIntentToTickApprovedApplicationTickDenied: Int? = nil,
+        agentIntentToTickApprovedApplicationOccupableDestinations: Int? = nil,
+        agentIntentToTickApprovedApplicationNonOccupableDestinations: Int? = nil,
+        agentIntentToTickApprovedApplicationCollisionDenied: Int? = nil,
+        agentIntentToTickApprovedApplicationDisplacementsApplied: Int? = nil,
+        agentIntentToTickApprovedApplicationMovedFeedback: Int? = nil,
+        agentIntentToTickApprovedApplicationBlockedByCollisionFeedback: Int? = nil,
+        agentIntentToTickApprovedApplicationDivergenceBefore: Int? = nil,
+        agentIntentToTickApprovedApplicationDivergenceAfter: Int? = nil,
+        agentIntentToTickApprovedApplicationDeniedPositionsPreserved: Bool? = nil,
+        agentIntentToTickApprovedApplicationApprovedPositionsMoved: Bool? = nil,
+        agentIntentToTickApprovedApplicationProductionReadCollision: Bool? = nil,
+        agentIntentToTickApprovedApplicationTickReadCollision: Bool? = nil,
+        agentIntentToTickApprovedApplicationWorldUsed: Bool? = nil,
+        agentIntentToTickApprovedApplicationCollisionRead: Bool? = nil,
+        agentIntentToTickApprovedApplicationMovementApplied: Bool? = nil,
+        agentIntentToTickApprovedApplicationFeedbackConsumed: Bool? = nil,
+        agentIntentToTickApprovedApplicationMemoryUpdated: Bool? = nil,
+        agentIntentToTickApprovedApplicationGoalChanged: Bool? = nil,
+        agentIntentToTickApprovedApplicationPathfindingPerformed: Bool? = nil,
+        agentIntentToTickApprovedApplicationReplanningPerformed: Bool? = nil,
+        agentIntentToTickApprovedApplicationAvoidancePerformed: Bool? = nil,
+        agentIntentToTickApprovedApplicationReservationRuntimeUsed: Bool? = nil,
+        agentIntentToTickApprovedApplicationRouteFollowingApplied: Bool? = nil,
+        agentIntentToTickApprovedApplicationPhysicsPerformed: Bool? = nil,
+        agentIntentToTickApprovedApplicationMutationPerformed: Bool? = nil,
+        agentIntentToTickApprovedApplicationSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -2021,6 +2097,44 @@ struct RunMetrics: Encodable {
         self.agentIntentToTickLiveReadonlyPhysicsPerformed = agentIntentToTickLiveReadonlyPhysicsPerformed
         self.agentIntentToTickLiveReadonlyMutationPerformed = agentIntentToTickLiveReadonlyMutationPerformed
         self.agentIntentToTickLiveReadonlySuccess = agentIntentToTickLiveReadonlySuccess
+        self.agentIntentToTickApprovedApplicationContexts = agentIntentToTickApprovedApplicationContexts
+        self.agentIntentToTickApprovedApplicationProposals = agentIntentToTickApprovedApplicationProposals
+        self.agentIntentToTickApprovedApplicationAcceptedIntents = agentIntentToTickApprovedApplicationAcceptedIntents
+        self.agentIntentToTickApprovedApplicationRejectedProposals = agentIntentToTickApprovedApplicationRejectedProposals
+        self.agentIntentToTickApprovedApplicationNoIntent = agentIntentToTickApprovedApplicationNoIntent
+        self.agentIntentToTickApprovedApplicationInvalidOneEdgeProposals = agentIntentToTickApprovedApplicationInvalidOneEdgeProposals
+        self.agentIntentToTickApprovedApplicationTickAgents = agentIntentToTickApprovedApplicationTickAgents
+        self.agentIntentToTickApprovedApplicationTickIntents = agentIntentToTickApprovedApplicationTickIntents
+        self.agentIntentToTickApprovedApplicationTickResolutions = agentIntentToTickApprovedApplicationTickResolutions
+        self.agentIntentToTickApprovedApplicationTickFeedback = agentIntentToTickApprovedApplicationTickFeedback
+        self.agentIntentToTickApprovedApplicationTickApproved = agentIntentToTickApprovedApplicationTickApproved
+        self.agentIntentToTickApprovedApplicationTickDenied = agentIntentToTickApprovedApplicationTickDenied
+        self.agentIntentToTickApprovedApplicationOccupableDestinations = agentIntentToTickApprovedApplicationOccupableDestinations
+        self.agentIntentToTickApprovedApplicationNonOccupableDestinations = agentIntentToTickApprovedApplicationNonOccupableDestinations
+        self.agentIntentToTickApprovedApplicationCollisionDenied = agentIntentToTickApprovedApplicationCollisionDenied
+        self.agentIntentToTickApprovedApplicationDisplacementsApplied = agentIntentToTickApprovedApplicationDisplacementsApplied
+        self.agentIntentToTickApprovedApplicationMovedFeedback = agentIntentToTickApprovedApplicationMovedFeedback
+        self.agentIntentToTickApprovedApplicationBlockedByCollisionFeedback = agentIntentToTickApprovedApplicationBlockedByCollisionFeedback
+        self.agentIntentToTickApprovedApplicationDivergenceBefore = agentIntentToTickApprovedApplicationDivergenceBefore
+        self.agentIntentToTickApprovedApplicationDivergenceAfter = agentIntentToTickApprovedApplicationDivergenceAfter
+        self.agentIntentToTickApprovedApplicationDeniedPositionsPreserved = agentIntentToTickApprovedApplicationDeniedPositionsPreserved
+        self.agentIntentToTickApprovedApplicationApprovedPositionsMoved = agentIntentToTickApprovedApplicationApprovedPositionsMoved
+        self.agentIntentToTickApprovedApplicationProductionReadCollision = agentIntentToTickApprovedApplicationProductionReadCollision
+        self.agentIntentToTickApprovedApplicationTickReadCollision = agentIntentToTickApprovedApplicationTickReadCollision
+        self.agentIntentToTickApprovedApplicationWorldUsed = agentIntentToTickApprovedApplicationWorldUsed
+        self.agentIntentToTickApprovedApplicationCollisionRead = agentIntentToTickApprovedApplicationCollisionRead
+        self.agentIntentToTickApprovedApplicationMovementApplied = agentIntentToTickApprovedApplicationMovementApplied
+        self.agentIntentToTickApprovedApplicationFeedbackConsumed = agentIntentToTickApprovedApplicationFeedbackConsumed
+        self.agentIntentToTickApprovedApplicationMemoryUpdated = agentIntentToTickApprovedApplicationMemoryUpdated
+        self.agentIntentToTickApprovedApplicationGoalChanged = agentIntentToTickApprovedApplicationGoalChanged
+        self.agentIntentToTickApprovedApplicationPathfindingPerformed = agentIntentToTickApprovedApplicationPathfindingPerformed
+        self.agentIntentToTickApprovedApplicationReplanningPerformed = agentIntentToTickApprovedApplicationReplanningPerformed
+        self.agentIntentToTickApprovedApplicationAvoidancePerformed = agentIntentToTickApprovedApplicationAvoidancePerformed
+        self.agentIntentToTickApprovedApplicationReservationRuntimeUsed = agentIntentToTickApprovedApplicationReservationRuntimeUsed
+        self.agentIntentToTickApprovedApplicationRouteFollowingApplied = agentIntentToTickApprovedApplicationRouteFollowingApplied
+        self.agentIntentToTickApprovedApplicationPhysicsPerformed = agentIntentToTickApprovedApplicationPhysicsPerformed
+        self.agentIntentToTickApprovedApplicationMutationPerformed = agentIntentToTickApprovedApplicationMutationPerformed
+        self.agentIntentToTickApprovedApplicationSuccess = agentIntentToTickApprovedApplicationSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

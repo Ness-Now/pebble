@@ -5531,3 +5531,138 @@ produced intents into the tick approved application contract and apply only
 controlled approved movements while keeping denied hardening, feedback
 consumption, memory updates, goals, pathfinding, replanning, avoidance,
 reservation runtime, physics, and terrain/world mutation out of scope.
+
+## 2026-06-28 — Phase 4.21F agent intent to tick approved application smoke
+
+### Objective
+
+Connect agent-produced intents to a tick that reads live collision evidence,
+approves occupable moves, applies only approved one-edge movements, preserves
+denied positions, and emits applied-movement feedback.
+
+### Starting State
+
+Phase 4.21E proved the production-to-live-readonly tick boundary: production
+created candidate intents without reading collision, and the tick layer
+approved or denied them without moving positions. Phase 4.20D separately
+proved tick approved application for synthetic intents. Phase 4.21F combines
+those contracts while keeping feedback consumption, memory, goals,
+pathfinding, replanning, avoidance, reservation runtime, route following,
+physics, and mutation out of scope.
+
+### Files Created or Modified
+
+- `Sources/PebbleLab/LabAgentIntentProduction.swift`
+- `Sources/PebbleLab/LabMultiAgentMovement.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_AGENT_INTENT_PRODUCTION_PLAN.md`
+
+### Why Approved Application Integration
+
+The next boundary is controlled movement application. Production still only
+proposes one-edge same-y intents; the tick layer owns collision evidence,
+approval, denial, and application. This validates the full handoff without
+starting autonomous loops or gameplay movement.
+
+### Production-to-Tick Flow
+
+Five intentionally unordered contexts produce five sorted proposals. Three
+valid `wander_fixture` proposals become accepted intents, while one idle
+context produces `noIntent` and one invalid vertical proposal is rejected.
+The accepted intents are copied into a `LabMultiAgentMovementTickInput` with
+synthetic physical positions matching abstract positions before application.
+
+### Collision and Application Policy
+
+The tick layer reads controlled live collision evidence for accepted intents.
+`agent_0` and `agent_1` use seed 99 and observe occupable destinations.
+`agent_2` uses seed 42 and observes a non-occupable destination. Only the two
+approved moves are applied. The denied collision intent is not moved.
+
+### Position and Feedback Result
+
+`agent_0` moves from `(7,64,8)` to `(8,64,8)`. `agent_1` moves from
+`(9,64,7)` to `(9,64,8)`. `agent_2` remains at `(7,64,8)`. Abstract and
+physical positions are synchronized before and after with divergence zero.
+Approved moves emit `moved`; the denied collision emits
+`blockedByCollision`.
+
+### Responsibility Boundary
+
+Production does not read collision, does not arbitrate occupancy, and does
+not apply movement. Tick approved application reads collision, applies only
+approved moves, preserves denied positions, and emits feedback as structured
+output only.
+
+### Outputs, Invariants, Metrics, and Event
+
+The scenario writes:
+
+- `agent_intent_to_tick_approved_application_report.json`;
+- `agent_intent_to_tick_approved_application_invariant_report.json`;
+- `agent_intent_to_tick_approved_application_proposals.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Metrics use the `agentIntentToTickApprovedApplication*` prefix. The aggregate
+event is `lab_agent_intent_to_tick_approved_application_recorded`.
+
+### Out-of-Scope Confirmations
+
+No feedback is consumed. No memory or goals are modified. No route following,
+pathfinding, replanning, avoidance, reservation runtime, physics,
+LLM/Python/RL, social behavior, communication, gameplay movement, or
+terrain/world mutation is added.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_approved_application_smoke --seed 42 --ticks 5 --out runs/check_agent_intent_to_tick_approved_application`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_agent_intent_live_readonly_after_approved_application`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_to_tick_fixture_after_approved_application`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_hardening_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_hardening_after_approved_application`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_fixture_after_approved_application`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_tick_approved_application_smoke --seed 42 --ticks 5 --out runs/check_tick_approved_application_after_agent_intent_approved_application`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_tick_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_tick_live_readonly_after_agent_intent_approved_application`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_agent_intent_approved_application`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- Approved application integration report success true.
+- Invariant report success true.
+- Production contexts: 5.
+- Proposals: 5.
+- Accepted intents: 3.
+- Rejected proposals: 2.
+- Tick agents: 5.
+- Tick intents: 3.
+- Tick approved: 2.
+- Tick denied: 1.
+- Occupable destinations: 2.
+- Non-occupable destinations: 1.
+- Collision denied: 1.
+- Displacements applied: 2.
+- Moved feedback: 2.
+- Blocked-by-collision feedback: 1.
+- Divergence before/after: 0/0.
+- Metrics contain `agentIntentToTickApprovedApplication*`.
+- `events.ndjson` contains `lab_agent_intent_to_tick_approved_application_recorded`.
+
+### Next Step
+
+Phase 4.22A: Feedback Consumption Planning Docs-Only. It should plan how
+structured movement feedback may later be consumed by agent policy or memory,
+without implementing memory updates, goal changes, replanning, pathfinding,
+avoidance, reservation runtime, route following, physics, or gameplay
+movement.

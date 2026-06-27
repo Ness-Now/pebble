@@ -1241,3 +1241,35 @@ mutation remain out of scope.
 
 Next recommended step: Phase 4.21F - Agent Intent To Tick Approved
 Application Smoke.
+
+## Phase 4.21F - Agent Intent To Tick Approved Application Smoke
+
+Status: implemented and validated.
+
+Goal: connect agent intent production to tick approved application so
+agent-produced intents can be approved by live collision evidence and applied
+through the controlled one-edge movement contract.
+
+The scenario `agent_intent_to_tick_approved_application_smoke` creates five
+contexts, produces three accepted one-edge same-y intents, rejects one idle
+proposal and one invalid vertical proposal, then feeds the accepted intents
+into the tick approved application contract. Production remains
+collision-blind and does not apply movement. The tick layer reads controlled
+live collision evidence, approves two occupable destinations, denies one
+non-occupable destination with `deniedCollision`, applies exactly two
+approved moves, emits `moved` / `blockedByCollision` feedback, preserves the
+denied agent position, and keeps abstract/physical divergence at zero.
+
+It writes `agent_intent_to_tick_approved_application_report.json`,
+`agent_intent_to_tick_approved_application_invariant_report.json`,
+`agent_intent_to_tick_approved_application_proposals.json`,
+`agentIntentToTickApprovedApplication*` metrics, and one aggregate
+`lab_agent_intent_to_tick_approved_application_recorded` event.
+
+Feedback consumption, memory update, goal selection, pathfinding,
+replanning, avoidance, reservation runtime, route following, physics,
+save/load, social behavior, communication, gameplay movement, and
+terrain/world mutation remain out of scope.
+
+Next recommended step: Phase 4.22A - Feedback Consumption Planning
+Docs-Only.

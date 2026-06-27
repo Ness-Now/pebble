@@ -30,6 +30,8 @@ let isAgentIntentToTickFixtureScenario = options.scenario
     == "agent_intent_to_tick_fixture_smoke"
 let isAgentIntentToTickLiveReadonlyScenario = options.scenario
     == "agent_intent_to_tick_live_readonly_smoke"
+let isAgentIntentToTickApprovedApplicationScenario = options.scenario
+    == "agent_intent_to_tick_approved_application_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -39,7 +41,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isAgentIntentProductionFixtureScenario
     || isAgentIntentProductionHardeningScenario
     || isAgentIntentToTickFixtureScenario
-    || isAgentIntentToTickLiveReadonlyScenario)
+    || isAgentIntentToTickLiveReadonlyScenario
+    || isAgentIntentToTickApprovedApplicationScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -682,7 +685,8 @@ if options.outPath != nil {
 if isMultiAgentMovementTickLiveReadonlyScenario
     || isMultiAgentMovementTickApprovedApplicationScenario
     || isMultiAgentMovementTickHardeningScenario
-    || isAgentIntentToTickLiveReadonlyScenario {
+    || isAgentIntentToTickLiveReadonlyScenario
+    || isAgentIntentToTickApprovedApplicationScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -1629,6 +1633,66 @@ let agentIntentToTickLiveReadonlySuccess =
             && agentIntentToTickLiveReadonlyReport?.summary.physicsPerformed == false
             && agentIntentToTickLiveReadonlyReport?.summary.mutationPerformed == false)
         : nil
+let agentIntentToTickApprovedApplicationReport =
+    isAgentIntentToTickApprovedApplicationScenario
+        ? makeAgentIntentToTickApprovedApplicationReport(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticksCompleted: ticksCompleted
+        )
+        : nil
+let agentIntentToTickApprovedApplicationInvariantReport =
+    isAgentIntentToTickApprovedApplicationScenario
+        ? makeAgentIntentToTickApprovedApplicationInvariantReport(
+            report: agentIntentToTickApprovedApplicationReport,
+            scenario: options.scenario,
+            seed: options.seed
+        )
+        : nil
+let agentIntentToTickApprovedApplicationSuccess =
+    isAgentIntentToTickApprovedApplicationScenario
+        ? ((agentIntentToTickApprovedApplicationReport?.success ?? false)
+            && (agentIntentToTickApprovedApplicationInvariantReport?.success ?? false)
+            && agentIntentToTickApprovedApplicationReport?.summary.contexts == 5
+            && agentIntentToTickApprovedApplicationReport?.summary.proposals == 5
+            && agentIntentToTickApprovedApplicationReport?.summary.acceptedIntents == 3
+            && agentIntentToTickApprovedApplicationReport?.summary.rejectedProposals == 2
+            && agentIntentToTickApprovedApplicationReport?.intentProduction.summary.noIntent == 1
+            && agentIntentToTickApprovedApplicationReport?.intentProduction.summary.invalidOneEdgeProposals == 1
+            && agentIntentToTickApprovedApplicationReport?.intentProduction.acceptedIntents.map(\.agentId)
+                == agentIntentToTickApprovedApplicationReport?.intentProduction.acceptedIntents.map(\.agentId).sorted()
+            && agentIntentToTickApprovedApplicationReport?.intentProduction.acceptedIntents.allSatisfy {
+                abs($0.from.x - $0.to.x) + abs($0.from.y - $0.to.y) + abs($0.from.z - $0.to.z) == 1
+                    && $0.from.y == $0.to.y
+            } == true
+            && agentIntentToTickApprovedApplicationReport?.summary.productionReadCollision == false
+            && agentIntentToTickApprovedApplicationReport?.summary.tickReadLiveCollision == true
+            && agentIntentToTickApprovedApplicationReport?.summary.worldUsed == true
+            && agentIntentToTickApprovedApplicationReport?.summary.collisionRead == true
+            && agentIntentToTickApprovedApplicationReport?.summary.occupableDestinations == 2
+            && agentIntentToTickApprovedApplicationReport?.summary.nonOccupableDestinations == 1
+            && agentIntentToTickApprovedApplicationReport?.summary.tickApproved == 2
+            && agentIntentToTickApprovedApplicationReport?.summary.tickDenied == 1
+            && agentIntentToTickApprovedApplicationReport?.summary.collisionDenied == 1
+            && agentIntentToTickApprovedApplicationReport?.summary.displacementsApplied == 2
+            && agentIntentToTickApprovedApplicationReport?.summary.movedFeedback == 2
+            && agentIntentToTickApprovedApplicationReport?.summary.blockedByCollisionFeedback == 1
+            && agentIntentToTickApprovedApplicationReport?.summary.approvedPositionsMoved == true
+            && agentIntentToTickApprovedApplicationReport?.summary.deniedPositionsPreserved == true
+            && agentIntentToTickApprovedApplicationReport?.summary.abstractPhysicalDivergenceBefore == 0
+            && agentIntentToTickApprovedApplicationReport?.summary.abstractPhysicalDivergenceAfter == 0
+            && agentIntentToTickApprovedApplicationReport?.summary.movementApplied == true
+            && agentIntentToTickApprovedApplicationReport?.summary.feedbackConsumed == false
+            && agentIntentToTickApprovedApplicationReport?.summary.memoryUpdated == false
+            && agentIntentToTickApprovedApplicationReport?.summary.goalChanged == false
+            && agentIntentToTickApprovedApplicationReport?.summary.pathfindingPerformed == false
+            && agentIntentToTickApprovedApplicationReport?.summary.replanningPerformed == false
+            && agentIntentToTickApprovedApplicationReport?.summary.avoidancePerformed == false
+            && agentIntentToTickApprovedApplicationReport?.summary.reservationRuntimeUsed == false
+            && agentIntentToTickApprovedApplicationReport?.summary.routeFollowingApplied == false
+            && agentIntentToTickApprovedApplicationReport?.summary.physicsPerformed == false
+            && agentIntentToTickApprovedApplicationReport?.summary.mutationPerformed == false)
+        : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
@@ -2011,6 +2075,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (agentIntentProductionHardeningSuccess ?? true)
     && (agentIntentToTickFixtureSuccess ?? true)
     && (agentIntentToTickLiveReadonlySuccess ?? true)
+    && (agentIntentToTickApprovedApplicationSuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -2621,6 +2686,50 @@ if options.outPath != nil {
                 pathfindingPerformed: summary.pathfindingPerformed,
                 replanningPerformed: summary.replanningPerformed,
                 physicsPerformed: summary.physicsPerformed
+            ))
+        }
+        if let agentIntentToTickApprovedApplicationReport {
+            let summary = agentIntentToTickApprovedApplicationReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_agent_intent_to_tick_approved_application_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: agentIntentToTickApprovedApplicationSuccess,
+                displacementsApplied: summary.displacementsApplied,
+                contexts: summary.contexts,
+                proposals: summary.proposals,
+                acceptedIntents: summary.acceptedIntents,
+                rejectedProposals: summary.rejectedProposals,
+                tickAgents: summary.tickAgents,
+                tickIntents: summary.tickIntents,
+                tickResolutions: summary.tickResolutions,
+                tickFeedback: summary.tickFeedback,
+                tickApproved: summary.tickApproved,
+                tickDenied: summary.tickDenied,
+                movedFeedback: summary.movedFeedback,
+                blockedByCollisionFeedback: summary.blockedByCollisionFeedback,
+                occupableDestinations: summary.occupableDestinations,
+                nonOccupableDestinations: summary.nonOccupableDestinations,
+                collisionDenied: summary.collisionDenied,
+                deniedPositionsPreserved: summary.deniedPositionsPreserved,
+                approvedPositionsMoved: summary.approvedPositionsMoved,
+                productionReadCollision: summary.productionReadCollision,
+                tickReadCollision: summary.tickReadLiveCollision,
+                worldUsed: summary.worldUsed,
+                routeFollowingApplied: summary.routeFollowingApplied,
+                collisionRead: summary.collisionRead,
+                movementApplied: summary.movementApplied,
+                feedbackConsumed: summary.feedbackConsumed,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                avoidancePerformed: summary.avoidancePerformed,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
+                replanningPerformed: summary.replanningPerformed,
+                physicsPerformed: summary.physicsPerformed,
+                divergenceBefore: summary.abstractPhysicalDivergenceBefore,
+                divergenceAfter: summary.abstractPhysicalDivergenceAfter
             ))
         }
         if let routeFollowingLiveSnapshot {
@@ -3328,6 +3437,22 @@ if let outPath = options.outPath {
             try writeJSON(
                 agentIntentToTickLiveReadonlyInvariantReport,
                 to: outURL.appendingPathComponent("agent_intent_to_tick_live_readonly_invariant_report.json")
+            )
+        }
+        if let agentIntentToTickApprovedApplicationReport {
+            try writeJSON(
+                agentIntentToTickApprovedApplicationReport,
+                to: outURL.appendingPathComponent("agent_intent_to_tick_approved_application_report.json")
+            )
+            try writeJSON(
+                agentIntentToTickApprovedApplicationReport,
+                to: outURL.appendingPathComponent("agent_intent_to_tick_approved_application_proposals.json")
+            )
+        }
+        if let agentIntentToTickApprovedApplicationInvariantReport {
+            try writeJSON(
+                agentIntentToTickApprovedApplicationInvariantReport,
+                to: outURL.appendingPathComponent("agent_intent_to_tick_approved_application_invariant_report.json")
             )
         }
         if let routeFollowingLiveSnapshot {
@@ -4083,6 +4208,44 @@ if let outPath = options.outPath {
             agentIntentToTickLiveReadonlyPhysicsPerformed: agentIntentToTickLiveReadonlyReport?.summary.physicsPerformed,
             agentIntentToTickLiveReadonlyMutationPerformed: agentIntentToTickLiveReadonlyReport?.summary.mutationPerformed,
             agentIntentToTickLiveReadonlySuccess: agentIntentToTickLiveReadonlySuccess,
+            agentIntentToTickApprovedApplicationContexts: agentIntentToTickApprovedApplicationReport?.summary.contexts,
+            agentIntentToTickApprovedApplicationProposals: agentIntentToTickApprovedApplicationReport?.summary.proposals,
+            agentIntentToTickApprovedApplicationAcceptedIntents: agentIntentToTickApprovedApplicationReport?.summary.acceptedIntents,
+            agentIntentToTickApprovedApplicationRejectedProposals: agentIntentToTickApprovedApplicationReport?.summary.rejectedProposals,
+            agentIntentToTickApprovedApplicationNoIntent: agentIntentToTickApprovedApplicationReport?.intentProduction.summary.noIntent,
+            agentIntentToTickApprovedApplicationInvalidOneEdgeProposals: agentIntentToTickApprovedApplicationReport?.intentProduction.summary.invalidOneEdgeProposals,
+            agentIntentToTickApprovedApplicationTickAgents: agentIntentToTickApprovedApplicationReport?.summary.tickAgents,
+            agentIntentToTickApprovedApplicationTickIntents: agentIntentToTickApprovedApplicationReport?.summary.tickIntents,
+            agentIntentToTickApprovedApplicationTickResolutions: agentIntentToTickApprovedApplicationReport?.summary.tickResolutions,
+            agentIntentToTickApprovedApplicationTickFeedback: agentIntentToTickApprovedApplicationReport?.summary.tickFeedback,
+            agentIntentToTickApprovedApplicationTickApproved: agentIntentToTickApprovedApplicationReport?.summary.tickApproved,
+            agentIntentToTickApprovedApplicationTickDenied: agentIntentToTickApprovedApplicationReport?.summary.tickDenied,
+            agentIntentToTickApprovedApplicationOccupableDestinations: agentIntentToTickApprovedApplicationReport?.summary.occupableDestinations,
+            agentIntentToTickApprovedApplicationNonOccupableDestinations: agentIntentToTickApprovedApplicationReport?.summary.nonOccupableDestinations,
+            agentIntentToTickApprovedApplicationCollisionDenied: agentIntentToTickApprovedApplicationReport?.summary.collisionDenied,
+            agentIntentToTickApprovedApplicationDisplacementsApplied: agentIntentToTickApprovedApplicationReport?.summary.displacementsApplied,
+            agentIntentToTickApprovedApplicationMovedFeedback: agentIntentToTickApprovedApplicationReport?.summary.movedFeedback,
+            agentIntentToTickApprovedApplicationBlockedByCollisionFeedback: agentIntentToTickApprovedApplicationReport?.summary.blockedByCollisionFeedback,
+            agentIntentToTickApprovedApplicationDivergenceBefore: agentIntentToTickApprovedApplicationReport?.summary.abstractPhysicalDivergenceBefore,
+            agentIntentToTickApprovedApplicationDivergenceAfter: agentIntentToTickApprovedApplicationReport?.summary.abstractPhysicalDivergenceAfter,
+            agentIntentToTickApprovedApplicationDeniedPositionsPreserved: agentIntentToTickApprovedApplicationReport?.summary.deniedPositionsPreserved,
+            agentIntentToTickApprovedApplicationApprovedPositionsMoved: agentIntentToTickApprovedApplicationReport?.summary.approvedPositionsMoved,
+            agentIntentToTickApprovedApplicationProductionReadCollision: agentIntentToTickApprovedApplicationReport?.summary.productionReadCollision,
+            agentIntentToTickApprovedApplicationTickReadCollision: agentIntentToTickApprovedApplicationReport?.summary.tickReadLiveCollision,
+            agentIntentToTickApprovedApplicationWorldUsed: agentIntentToTickApprovedApplicationReport?.summary.worldUsed,
+            agentIntentToTickApprovedApplicationCollisionRead: agentIntentToTickApprovedApplicationReport?.summary.collisionRead,
+            agentIntentToTickApprovedApplicationMovementApplied: agentIntentToTickApprovedApplicationReport?.summary.movementApplied,
+            agentIntentToTickApprovedApplicationFeedbackConsumed: agentIntentToTickApprovedApplicationReport?.summary.feedbackConsumed,
+            agentIntentToTickApprovedApplicationMemoryUpdated: agentIntentToTickApprovedApplicationReport?.summary.memoryUpdated,
+            agentIntentToTickApprovedApplicationGoalChanged: agentIntentToTickApprovedApplicationReport?.summary.goalChanged,
+            agentIntentToTickApprovedApplicationPathfindingPerformed: agentIntentToTickApprovedApplicationReport?.summary.pathfindingPerformed,
+            agentIntentToTickApprovedApplicationReplanningPerformed: agentIntentToTickApprovedApplicationReport?.summary.replanningPerformed,
+            agentIntentToTickApprovedApplicationAvoidancePerformed: agentIntentToTickApprovedApplicationReport?.summary.avoidancePerformed,
+            agentIntentToTickApprovedApplicationReservationRuntimeUsed: agentIntentToTickApprovedApplicationReport?.summary.reservationRuntimeUsed,
+            agentIntentToTickApprovedApplicationRouteFollowingApplied: agentIntentToTickApprovedApplicationReport?.summary.routeFollowingApplied,
+            agentIntentToTickApprovedApplicationPhysicsPerformed: agentIntentToTickApprovedApplicationReport?.summary.physicsPerformed,
+            agentIntentToTickApprovedApplicationMutationPerformed: agentIntentToTickApprovedApplicationReport?.summary.mutationPerformed,
+            agentIntentToTickApprovedApplicationSuccess: agentIntentToTickApprovedApplicationSuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,

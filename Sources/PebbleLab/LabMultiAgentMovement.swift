@@ -2836,7 +2836,47 @@ func makeMultiAgentMovementTickApprovedApplicationReport(
     ticksCompleted: Int
 ) -> LabMultiAgentMovementTickApprovedApplicationReport {
     let input = multiAgentMovementTickApprovedApplicationInput()
-    let collisionEvidenceSeed: UInt32 = 99
+    return makeMultiAgentMovementTickApprovedApplicationReport(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        input: input,
+        evidenceSeeds: [
+            "agent_0": 99,
+            "agent_1": 99
+        ],
+        expectedAgentCount: 2,
+        expectedIntentCount: 2,
+        expectedApproved: 2,
+        expectedDenied: 0,
+        expectedOccupableDestinations: 2,
+        expectedNonOccupableDestinations: 0,
+        expectedDisplacementsApplied: 2,
+        expectedDivergenceBeforeMax: 0,
+        expectedDivergenceAfterMax: 0,
+        expectedMovedFeedback: 2,
+        expectedBlockedByCollisionFeedback: 0
+    )
+}
+
+func makeMultiAgentMovementTickApprovedApplicationReport(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int,
+    input: LabMultiAgentMovementTickInput,
+    evidenceSeeds: [String: UInt32],
+    expectedAgentCount: Int,
+    expectedIntentCount: Int,
+    expectedApproved: Int,
+    expectedDenied: Int,
+    expectedOccupableDestinations: Int,
+    expectedNonOccupableDestinations: Int,
+    expectedDisplacementsApplied: Int,
+    expectedDivergenceBeforeMax: Int,
+    expectedDivergenceAfterMax: Int,
+    expectedMovedFeedback: Int,
+    expectedBlockedByCollisionFeedback: Int
+) -> LabMultiAgentMovementTickApprovedApplicationReport {
     var agents = input.agents.map { agentId, node in
         LabAgent(id: agentId, x: node.x, y: node.y, z: node.z)
     }.sorted { $0.id < $1.id }
@@ -2863,6 +2903,7 @@ func makeMultiAgentMovementTickApprovedApplicationReport(
         let abstractBeforeNode = nodeKey(from: agents[agentIndex].position)
         let physicalBeforeNode = nodeKey(from: physicalBeforePosition)
         let divergenceBefore = manhattanDistance(abstractBeforeNode, physicalBeforeNode)
+        let collisionEvidenceSeed = evidenceSeeds[intent.agentId] ?? seed
         let collisionWorld = prepareMultiAgentLiveCollisionWorld(
             seed: collisionEvidenceSeed,
             around: intent.to
@@ -2877,10 +2918,19 @@ func makeMultiAgentMovementTickApprovedApplicationReport(
         let sourceMatches = abstractBeforeNode == intent.from
         let edgeAllowed = isFixtureEdgeAllowed(from: intent.from, to: intent.to)
         let destinationFree = !approvedDestinations.contains(intent.to)
-        let approved = sourceMatches
-            && edgeAllowed
-            && destinationFree
-            && collisionSnapshot.result.status == .occupable
+        let decision: LabMultiAgentMoveDecision
+        if !sourceMatches {
+            decision = .deniedSourceMismatch
+        } else if !edgeAllowed {
+            decision = .deniedInvalidEdge
+        } else if collisionSnapshot.result.status != .occupable {
+            decision = .deniedCollision
+        } else if !destinationFree {
+            decision = .deniedSameDestinationConflict
+        } else {
+            decision = .approved
+        }
+        let approved = decision == .approved
 
         if approved {
             approvedDestinations.insert(intent.to)
@@ -2901,7 +2951,6 @@ func makeMultiAgentMovementTickApprovedApplicationReport(
             $0.agentId == intent.agentId
         }?.position ?? physicalBeforePosition)
         let divergenceAfter = manhattanDistance(abstractAfterNode, physicalAfterNode)
-        let decision: LabMultiAgentMoveDecision = approved ? .approved : .deniedCollision
         let displacementApplied = approved
         let feedbackKind = movementFeedbackKind(
             for: decision,
@@ -2923,9 +2972,7 @@ func makeMultiAgentMovementTickApprovedApplicationReport(
             divergenceBefore: divergenceBefore,
             divergenceAfter: divergenceAfter,
             feedbackKind: feedbackKind,
-            reason: approved
-                ? "moved_one_edge_after_occupable_collision"
-                : "denied_unexpected_tick_approved_application_guard"
+            reason: approved ? "moved_one_edge_after_occupable_collision" : decision.rawValue
         ))
     }
 
@@ -2960,11 +3007,22 @@ func makeMultiAgentMovementTickApprovedApplicationReport(
             && $0.collisionStatus != nil
             && $0.collisionStatus != .occupable
     }.count
+    let collisionDenied = resolutions.filter { $0.decision == .deniedCollision }.count
+    let conflictDenied = resolutions.filter {
+        [
+            LabMultiAgentMoveDecision.deniedSameDestinationConflict,
+            .deniedSwapConflict,
+            .deniedCycleConflict,
+            .deniedChainDependency,
+            .deniedMovingAwayDestination
+        ].contains($0.decision)
+    }.count
     let displacements = resolutions.filter(\.displacementApplied).count
     let divergenceBeforeMax = resolutions.map(\.divergenceBefore).max() ?? 0
     let divergenceAfterMax = resolutions.map(\.divergenceAfter).max() ?? 0
-    let noDuplicateDestination = Set(resolutions.map(\.intent.to)).count
-        == resolutions.count
+    let approvedDestinationKeys = resolutions.filter(\.approved).map(\.intent.to)
+    let noDuplicateApprovedDestination = Set(approvedDestinationKeys).count
+        == approvedDestinationKeys.count
     let noSwapConflict = !resolutions.contains { resolution in
         resolutions.contains {
             $0.agentId != resolution.agentId
@@ -2978,31 +3036,35 @@ func makeMultiAgentMovementTickApprovedApplicationReport(
             displacementApplied: $0.displacementApplied
         )
     }
+    let movedFeedback = feedback.filter { $0.kind == .moved }.count
+    let blockedByCollisionFeedback = feedback.filter { $0.kind == .blockedByCollision }.count
     let tickSummary = LabMultiAgentMovementTickSummary(
         intents: input.intents.count,
         approved: approved,
         denied: denied,
         displacementsApplied: displacements,
-        collisionDenied: 0,
-        conflictDenied: 0,
+        collisionDenied: collisionDenied,
+        conflictDenied: conflictDenied,
         divergenceDenied: 0,
         maxDivergenceBefore: divergenceBeforeMax,
         maxDivergenceAfter: divergenceAfterMax,
-        success: input.agents.count == 2
-            && input.intents.count == 2
-            && approved == 2
-            && denied == 0
-            && occupable == 2
-            && nonOccupable == 0
+        success: input.agents.count == expectedAgentCount
+            && input.intents.count == expectedIntentCount
+            && approved == expectedApproved
+            && denied == expectedDenied
+            && occupable == expectedOccupableDestinations
+            && nonOccupable == expectedNonOccupableDestinations
+            && displacements == expectedDisplacementsApplied
             && displacements == approved
-            && divergenceBeforeMax == 0
-            && divergenceAfterMax == 0
+            && divergenceBeforeMax == expectedDivergenceBeforeMax
+            && divergenceAfterMax == expectedDivergenceAfterMax
             && abstractAfter == physicalAfter
-            && noDuplicateDestination
+            && noDuplicateApprovedDestination
             && noSwapConflict
             && feedback.count == resolutions.count
             && feedbackKindsMatch
-            && resolutions.allSatisfy { $0.feedbackKind == .moved }
+            && movedFeedback == expectedMovedFeedback
+            && blockedByCollisionFeedback == expectedBlockedByCollisionFeedback
     )
     let output = LabMultiAgentMovementTickApprovedApplicationOutput(
         tick: input.tick,

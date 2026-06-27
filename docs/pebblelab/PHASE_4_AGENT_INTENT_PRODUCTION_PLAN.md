@@ -747,3 +747,69 @@ application contract and apply only controlled approved movements while
 keeping denied hardening, feedback consumption, memory updates, goal
 selection, pathfinding, replanning, avoidance, reservation runtime, physics,
 and terrain/world mutation out of scope.
+
+## Phase 4.21F Implementation Status
+
+Phase 4.21F implements the first production-to-approved-application handoff:
+`agent_intent_to_tick_approved_application_smoke`.
+
+Validated production-to-approved-application handoff:
+
+- five intentionally unordered `LabAgentIntentContext` values are created;
+- the v0 policy produces five proposals sorted by stable `agentId`;
+- three valid `wander_fixture` proposals become accepted intents;
+- one idle context produces `noIntent`;
+- one invalid vertical proposal is rejected;
+- accepted intents are sorted by stable `agentId`;
+- accepted intents are one-edge same-y;
+- accepted intents are copied into a `LabMultiAgentMovementTickInput`;
+- synthetic physical positions mirror abstract positions before movement;
+- the tick approved application layer reads collision evidence;
+- approved moves are applied;
+- denied collision moves are preserved.
+
+Production responsibility:
+
+- production does not read collision;
+- production does not decide occupability;
+- production does not apply movement;
+- production does not consume feedback;
+- production does not modify memory or goals.
+
+Tick responsibility:
+
+- tick approved application uses controlled collision evidence seeds;
+- `agent_0` and `agent_1` use seed 99 and move to occupable destinations;
+- `agent_2` uses seed 42 and is denied by non-occupable collision evidence;
+- approved feedback is `moved`;
+- collision-denied feedback is `blockedByCollision`;
+- abstract and physical positions stay synchronized before and after;
+- divergence before and after remains zero.
+
+Outputs produced:
+
+- `agent_intent_to_tick_approved_application_report.json`;
+- `agent_intent_to_tick_approved_application_invariant_report.json`;
+- `agent_intent_to_tick_approved_application_proposals.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Validated limits:
+
+- no feedback consumption;
+- no memory update;
+- no goal change;
+- no route following;
+- no pathfinding;
+- no replanning;
+- no avoidance;
+- no reservation runtime;
+- no physics;
+- no terrain/world mutation;
+- no multi-tick autonomous loop.
+
+Next recommended step: Phase 4.22A - Feedback Consumption Planning
+Docs-Only. It should document how `LabMovementFeedback` may later influence
+agent policy or memory, without implementing feedback consumption, memory
+updates, goal changes, replanning, pathfinding, avoidance, reservation
+runtime, route following, physics, or gameplay movement.
