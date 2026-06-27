@@ -455,3 +455,44 @@ mutation, divergence zero, and runner output contracts.
 Phase 4.18C still does not implement approved live multi-step route following.
 It proves only that a live follower can stop cleanly and auditably when a
 destination collision result is non-occupable.
+
+## Phase 4.18D Implementation Status
+
+Phase 4.18D implements the first approved live two-step route following smoke.
+The scenario is `route_following_approved_two_step_smoke`.
+
+The smoke uses a short route with exactly two edges:
+
+- `(7,64,8) -> (8,64,8)`;
+- `(8,64,8) -> (9,64,8)`.
+
+Collision evidence uses seed 99. Before each displacement, the follower reads
+live collision evidence for the edge destination through the existing read-only
+collision adapter. Both destinations return status `occupable`, reason
+`full_cube_support_empty_body_volume`.
+
+Because both destinations are occupable, the follower applies exactly two
+single-step displacements, advances the route index once per edge, never skips
+a node, and completes only when the final route node `(9,64,8)` is reached.
+The scenario records status `completed`, `attemptedEdges = 2`,
+`completedEdges = 2`, `displacementsApplied = 2`, `deniedEdges = 0`, and
+`stoppedAtIndex = nil`.
+
+The abstract agent and physical placeholder both finish at `(9,64,8)`.
+Divergence remains zero before the route, after each edge, and at final state.
+
+The phase writes `route_following_live_snapshot.json`,
+`route_following_live_invariant_report.json`, `metrics.json`, and
+`events.ndjson`. The invariant report validates 36 checks covering live route
+existence, route length 3, contiguous same-y 4-neighbor edges, start/physical
+position alignment, collision before each edge, occupable collision per edge,
+explicit collision reasons, displacement gates, route index progression, no
+skipped nodes, completed status requiring the final node, final positions,
+divergence zero, no pathfinding inside the follower, no replanning, no goal
+selection, no multi-agent movement, no physics, no mutation, and runner output
+contracts.
+
+Phase 4.18D still does not implement long route following or gameplay route
+following. It proves only that a short live follower can apply two approved
+single-step displacements under the existing collision and physical movement
+contracts.

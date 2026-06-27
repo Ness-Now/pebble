@@ -48,6 +48,8 @@ let isRouteFollowingFixtureScenario = options.scenario
     == "route_following_fixture_smoke"
 let isRouteFollowingDeniedLiveScenario = options.scenario
     == "route_following_denied_live_smoke"
+let isRouteFollowingApprovedTwoStepScenario = options.scenario
+    == "route_following_approved_two_step_smoke"
 let isWorldInteractionScenario = isWorldObservationScenario
     || isTerrainScanRun
     || isTerrainColumnScanRun
@@ -942,8 +944,16 @@ let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
         ticksCompleted: ticksCompleted,
         world: world
     )
-    : nil
-let routeFollowingLiveInvariantReport = isRouteFollowingDeniedLiveScenario
+    : (isRouteFollowingApprovedTwoStepScenario
+        ? makeRouteFollowingApprovedTwoStepSnapshot(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticksCompleted: ticksCompleted
+        )
+        : nil)
+let isRouteFollowingLiveScenario = isRouteFollowingDeniedLiveScenario
+    || isRouteFollowingApprovedTwoStepScenario
+let routeFollowingLiveInvariantReport = isRouteFollowingLiveScenario
     ? makeRouteFollowingLiveInvariantReport(
         snapshot: routeFollowingLiveSnapshot,
         scenario: options.scenario,
@@ -956,8 +966,8 @@ let routeFollowingLiveDeniedEdges = routeFollowingLiveSnapshot?.perEdgeRecords.f
 let routeFollowingLiveDisplacementsApplied = routeFollowingLiveSnapshot?.perEdgeRecords.filter(
     \.displacementApplied
 ).count
-let routeFollowingLiveSuccess = isRouteFollowingDeniedLiveScenario
-    ? ((routeFollowingLiveSnapshot?.success ?? false)
+let routeFollowingLiveDeniedSuccess = isRouteFollowingDeniedLiveScenario
+    && (routeFollowingLiveSnapshot?.success ?? false)
         && (routeFollowingLiveInvariantReport?.success ?? false)
         && routeFollowingLiveSnapshot?.status == .stoppedCollisionDenied
         && routeFollowingLiveSnapshot?.stoppedAtIndex == 0
@@ -972,7 +982,27 @@ let routeFollowingLiveSuccess = isRouteFollowingDeniedLiveScenario
         && routeFollowingLiveSnapshot?.pathfindingPerformedInsideFollower == false
         && routeFollowingLiveSnapshot?.replanningPerformed == false
         && routeFollowingLiveSnapshot?.physicsPerformed == false
-        && routeFollowingLiveSnapshot?.mutationPerformed == false)
+        && routeFollowingLiveSnapshot?.mutationPerformed == false
+let routeFollowingLiveApprovedSuccess = isRouteFollowingApprovedTwoStepScenario
+    && (routeFollowingLiveSnapshot?.success ?? false)
+        && (routeFollowingLiveInvariantReport?.success ?? false)
+        && routeFollowingLiveSnapshot?.status == .completed
+        && routeFollowingLiveSnapshot?.route.count == 3
+        && routeFollowingLiveSnapshot?.attemptedEdges == 2
+        && routeFollowingLiveSnapshot?.completedEdges == 2
+        && routeFollowingLiveDisplacementsApplied == 2
+        && routeFollowingLiveDeniedEdges == 0
+        && routeFollowingLiveSnapshot?.stoppedAtIndex == nil
+        && routeFollowingLiveSnapshot?.finalAbstractPosition == routeFollowingLiveSnapshot?.perEdgeRecords.last?.postAbstractPosition
+        && routeFollowingLiveSnapshot?.finalPhysicalPosition == routeFollowingLiveSnapshot?.perEdgeRecords.last?.postPhysicalPosition
+        && routeFollowingLiveSnapshot?.divergenceBefore == 0
+        && routeFollowingLiveSnapshot?.divergenceAfter == 0
+        && routeFollowingLiveSnapshot?.pathfindingPerformedInsideFollower == false
+        && routeFollowingLiveSnapshot?.replanningPerformed == false
+        && routeFollowingLiveSnapshot?.physicsPerformed == false
+        && routeFollowingLiveSnapshot?.mutationPerformed == false
+let routeFollowingLiveSuccess = isRouteFollowingLiveScenario
+    ? (routeFollowingLiveDeniedSuccess || routeFollowingLiveApprovedSuccess)
     : nil
 let coreEntityInvariantReport = options.scenario == "core_entity_smoke"
     ? coreEntityBridge.invariantReport(

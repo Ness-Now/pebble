@@ -731,3 +731,26 @@ movement, avoidance, reservation tables, physics integration, terrain
 mutation, world mutation, and gameplay route following remain out of scope.
 
 Next recommended step: Phase 4.18D - Route Following Approved Two-Step Smoke.
+
+## Phase 4.18D - Route Following Approved Two-Step Smoke
+
+Status: implemented and validated.
+
+Goal: add the first approved live route following smoke over exactly two
+edges. The scenario `route_following_approved_two_step_smoke` uses seed 99
+collision evidence for route `(7,64,8) -> (8,64,8) -> (9,64,8)`. Both
+destinations are collision status `occupable` with reason
+`full_cube_support_empty_body_volume`.
+
+The smoke writes `route_following_live_snapshot.json`,
+`route_following_live_invariant_report.json`, `routeFollowingLive*` metrics,
+and one `lab_route_following_recorded` event. It attempts two edges, completes
+two edges, applies two displacements, records zero denied edges, reaches
+`(9,64,8)`, and keeps abstract/physical divergence at zero.
+
+Long route following, gameplay route following, dynamic replanning,
+pathfinding inside a follower, goal selection, multi-agent movement,
+avoidance, reservation tables, physics integration, terrain mutation, and
+world mutation remain out of scope.
+
+Next recommended step: Phase 4.18E - Route Following Hardening.

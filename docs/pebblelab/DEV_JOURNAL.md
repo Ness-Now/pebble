@@ -3210,3 +3210,121 @@ Phase 4.18D: route following approved two-step smoke. It should remain short
 and auditable, apply at most two approved single-step displacements, and still
 avoid dynamic replanning, physics, long-route gameplay, and multi-agent
 movement.
+
+## 2026-06-19 — Phase 4.18D approved two-step live route following smoke
+
+### Objective
+
+Add the first approved live route following smoke. The scenario
+`route_following_approved_two_step_smoke` follows exactly two live edges, then
+completes because the last route node is reached. It remains a short smoke,
+not gameplay route following.
+
+### Files Created/Modified
+
+- Modified `Sources/PebbleLab/LabRouteFollowingLive.swift`.
+- Modified `Sources/PebbleLab/LabOptions.swift`.
+- Modified `Sources/PebbleLab/LabScenarios.swift`.
+- Modified `Sources/PebbleLab/main.swift`.
+- Updated `docs/pebblelab/CHANGELOG.md`.
+- Updated `docs/pebblelab/DEV_JOURNAL.md`.
+- Updated `docs/pebblelab/ROADMAP.md`.
+- Updated `docs/pebblelab/PHASE_4_ROUTE_FOLLOWING_PLAN.md`.
+
+### Route Used
+
+The live route uses seed 99 collision evidence:
+
+- `(7,64,8) -> (8,64,8)`;
+- `(8,64,8) -> (9,64,8)`.
+
+Route length is `3`, with exactly `2` attempted edges.
+
+### Collision Status And Reason Per Edge
+
+- Edge 0 destination `(8,64,8)`: `occupable`,
+  `full_cube_support_empty_body_volume`.
+- Edge 1 destination `(9,64,8)`: `occupable`,
+  `full_cube_support_empty_body_volume`.
+
+Each destination is checked with live read-only collision before displacement.
+
+### Completion And Positions
+
+The scenario records:
+
+- status `completed`;
+- reason `completed_two_step_route`;
+- `attemptedEdges = 2`;
+- `completedEdges = 2`;
+- `displacementsApplied = 2`;
+- `deniedEdges = 0`;
+- `stoppedAtIndex = nil`;
+- final abstract position `(9,64,8)`;
+- final physical placeholder position `(9,64,8)`;
+- divergence before/final `0`.
+
+### Outputs, Invariants, Metrics, And Event
+
+The scenario writes:
+
+- `route_following_live_snapshot.json`;
+- `route_following_live_invariant_report.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The invariant report has 36 checks covering live route existence, route length
+3, contiguous same-y 4-neighbor edges, start and physical position alignment,
+collision before each edge, occupable collision per edge, explicit reasons,
+displacement gates, route index progression, no skipped nodes, completed
+status requiring the last node, final positions, divergence zero, no
+pathfinding inside the follower, no replanning, no goal selection, no
+multi-agent movement, no physics, no mutation, and runner output contracts.
+
+Metrics use the `routeFollowingLive*` prefix. The scenario emits one aggregate
+`lab_route_following_recorded` event.
+
+### Still Prohibited
+
+No long route following, gameplay route following, pathfinding inside the
+follower, dynamic replanning, goal selection, physics integration, multi-agent
+movement, avoidance, reservation table, terrain mutation, world mutation,
+Python, ML, LLM, or RL was added.
+
+### Validation Commands
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario route_following_approved_two_step_smoke --seed 42 --ticks 5 --out runs/check_route_following_approved_two_step`
+- `swift run -c release PebbleLab -- --scenario route_following_denied_live_smoke --seed 42 --ticks 5 --out runs/check_denied_live_route_after_approved_two_step`
+- `swift run -c release PebbleLab -- --scenario route_following_fixture_smoke --seed 42 --ticks 0 --out runs/check_route_fixture_after_approved_two_step`
+- `swift run -c release PebbleLab -- --scenario physical_movement_single_step_hardening_smoke --seed 42 --ticks 5 --out runs/check_single_step_hardening_after_approved_two_step`
+- `swift run -c release PebbleLab -- --scenario physical_movement_approved_single_step_smoke --seed 42 --ticks 5 --out runs/check_approved_single_step_after_approved_two_step`
+- `swift run -c release PebbleLab -- --scenario physical_movement_find_occupable_smoke --seed 42 --ticks 5 --out runs/check_find_occupable_after_approved_two_step`
+- `swift run -c release PebbleLab -- --scenario physical_movement_denied_smoke --seed 42 --ticks 5 --out runs/check_denied_movement_after_approved_two_step`
+- `swift run -c release PebbleLab -- --scenario terrain_collision_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_collision_live_after_approved_two_step`
+- `swift run -c release PebbleLab -- --scenario terrain_collision_fixture_smoke --seed 42 --ticks 0 --out runs/check_collision_fixture_after_approved_two_step`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_approved_two_step`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- Route following live snapshot: success true.
+- Status: `completed`.
+- Route length: `3`.
+- Attempted/completed edges: `2 / 2`.
+- Displacements/denied edges: `2 / 0`.
+- Invariant report: `36 passed, 0 failed`.
+- Metrics contain `routeFollowingLive*`.
+- `events.ndjson` contains `lab_route_following_recorded`.
+- Debug/release builds, requested non-regression scenarios, and `pebsmoke`
+  passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.18E: route following hardening. It should keep route following short
+and auditable while covering stale collision, source mismatch, divergence,
+max-step, and denied-edge edge cases before any longer route or multi-agent
+movement work.
