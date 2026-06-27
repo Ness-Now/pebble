@@ -319,6 +319,25 @@ struct RunMetrics: Encodable {
     let physicalMovementHardeningDisplacementApplied: Int?
     let physicalMovementHardeningDisplacementRefused: Int?
     let physicalMovementHardeningSuccess: Bool?
+    let multiAgentMovementFixtureCases: Int?
+    let multiAgentMovementFixturePassed: Int?
+    let multiAgentMovementFixtureFailed: Int?
+    let multiAgentMovementFixtureAgentCount: Int?
+    let multiAgentMovementFixtureIntentCount: Int?
+    let multiAgentMovementFixtureApproved: Int?
+    let multiAgentMovementFixtureDenied: Int?
+    let multiAgentMovementFixtureSameDestinationConflicts: Int?
+    let multiAgentMovementFixtureOccupiedDestinationConflicts: Int?
+    let multiAgentMovementFixtureSwapConflicts: Int?
+    let multiAgentMovementFixtureSourceMismatch: Int?
+    let multiAgentMovementFixtureStaleIntent: Int?
+    let multiAgentMovementFixtureMissingAgent: Int?
+    let multiAgentMovementFixtureInvalidEdges: Int?
+    let multiAgentMovementFixturePathfindingPerformed: Bool?
+    let multiAgentMovementFixtureReplanningPerformed: Bool?
+    let multiAgentMovementFixturePhysicsPerformed: Bool?
+    let multiAgentMovementFixtureMutationPerformed: Bool?
+    let multiAgentMovementFixtureSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -638,6 +657,25 @@ struct RunMetrics: Encodable {
         physicalMovementHardeningDisplacementApplied: Int? = nil,
         physicalMovementHardeningDisplacementRefused: Int? = nil,
         physicalMovementHardeningSuccess: Bool? = nil,
+        multiAgentMovementFixtureCases: Int? = nil,
+        multiAgentMovementFixturePassed: Int? = nil,
+        multiAgentMovementFixtureFailed: Int? = nil,
+        multiAgentMovementFixtureAgentCount: Int? = nil,
+        multiAgentMovementFixtureIntentCount: Int? = nil,
+        multiAgentMovementFixtureApproved: Int? = nil,
+        multiAgentMovementFixtureDenied: Int? = nil,
+        multiAgentMovementFixtureSameDestinationConflicts: Int? = nil,
+        multiAgentMovementFixtureOccupiedDestinationConflicts: Int? = nil,
+        multiAgentMovementFixtureSwapConflicts: Int? = nil,
+        multiAgentMovementFixtureSourceMismatch: Int? = nil,
+        multiAgentMovementFixtureStaleIntent: Int? = nil,
+        multiAgentMovementFixtureMissingAgent: Int? = nil,
+        multiAgentMovementFixtureInvalidEdges: Int? = nil,
+        multiAgentMovementFixturePathfindingPerformed: Bool? = nil,
+        multiAgentMovementFixtureReplanningPerformed: Bool? = nil,
+        multiAgentMovementFixturePhysicsPerformed: Bool? = nil,
+        multiAgentMovementFixtureMutationPerformed: Bool? = nil,
+        multiAgentMovementFixtureSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -956,6 +994,25 @@ struct RunMetrics: Encodable {
         self.physicalMovementHardeningDisplacementApplied = physicalMovementHardeningDisplacementApplied
         self.physicalMovementHardeningDisplacementRefused = physicalMovementHardeningDisplacementRefused
         self.physicalMovementHardeningSuccess = physicalMovementHardeningSuccess
+        self.multiAgentMovementFixtureCases = multiAgentMovementFixtureCases
+        self.multiAgentMovementFixturePassed = multiAgentMovementFixturePassed
+        self.multiAgentMovementFixtureFailed = multiAgentMovementFixtureFailed
+        self.multiAgentMovementFixtureAgentCount = multiAgentMovementFixtureAgentCount
+        self.multiAgentMovementFixtureIntentCount = multiAgentMovementFixtureIntentCount
+        self.multiAgentMovementFixtureApproved = multiAgentMovementFixtureApproved
+        self.multiAgentMovementFixtureDenied = multiAgentMovementFixtureDenied
+        self.multiAgentMovementFixtureSameDestinationConflicts = multiAgentMovementFixtureSameDestinationConflicts
+        self.multiAgentMovementFixtureOccupiedDestinationConflicts = multiAgentMovementFixtureOccupiedDestinationConflicts
+        self.multiAgentMovementFixtureSwapConflicts = multiAgentMovementFixtureSwapConflicts
+        self.multiAgentMovementFixtureSourceMismatch = multiAgentMovementFixtureSourceMismatch
+        self.multiAgentMovementFixtureStaleIntent = multiAgentMovementFixtureStaleIntent
+        self.multiAgentMovementFixtureMissingAgent = multiAgentMovementFixtureMissingAgent
+        self.multiAgentMovementFixtureInvalidEdges = multiAgentMovementFixtureInvalidEdges
+        self.multiAgentMovementFixturePathfindingPerformed = multiAgentMovementFixturePathfindingPerformed
+        self.multiAgentMovementFixtureReplanningPerformed = multiAgentMovementFixtureReplanningPerformed
+        self.multiAgentMovementFixturePhysicsPerformed = multiAgentMovementFixturePhysicsPerformed
+        self.multiAgentMovementFixtureMutationPerformed = multiAgentMovementFixtureMutationPerformed
+        self.multiAgentMovementFixtureSuccess = multiAgentMovementFixtureSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

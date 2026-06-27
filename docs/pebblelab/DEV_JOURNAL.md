@@ -3572,3 +3572,118 @@ Phase 4.19B: multi-agent movement fixture smoke. It should remain fixture-only
 with synthetic agents and intentions, no `World`, no live collision, no
 movement application, no reservation table runtime, no avoidance, no
 replanning, and no pathfinding inside arbitration.
+
+## 2026-06-27 — Phase 4.19B multi-agent movement fixture smoke
+
+### Objective
+
+Implement the first fixture-only multi-agent movement arbitration smoke. The
+scenario validates deterministic arbitration over synthetic agents, synthetic
+positions, and synthetic next-edge intentions before any live collision or
+physical movement integration.
+
+### Starting State
+
+Phase 4.19A documented the future multi-agent movement contract. Route
+following remained single-agent, hardened, and separate from global
+arbitration. No multi-agent movement runtime existed yet.
+
+### Files Created/Modified
+
+- Created `Sources/PebbleLab/LabMultiAgentMovement.swift`.
+- Modified `Sources/PebbleLab/LabOptions.swift`.
+- Modified `Sources/PebbleLab/LabScenarios.swift`.
+- Modified `Sources/PebbleLab/LabOutput.swift`.
+- Modified `Sources/PebbleLab/LabEvents.swift`.
+- Modified `Sources/PebbleLab/main.swift`.
+- Updated `docs/pebblelab/CHANGELOG.md`.
+- Updated `docs/pebblelab/DEV_JOURNAL.md`.
+- Updated `docs/pebblelab/ROADMAP.md`.
+- Updated `docs/pebblelab/PHASE_4_MULTI_AGENT_MOVEMENT_PLAN.md`.
+
+### Why Fixture-Only
+
+The smoke tests only the arbitration contract. It does not create or use
+`World`, does not query live collision, does not call pathfinding, does not
+call route following live, does not call live physical movement, and does not
+touch placeholders, core entities, physics, terrain, or world mutation.
+
+### Cases Covered
+
+- `two_agents_different_destinations_approved`;
+- `same_destination_conflict`;
+- `occupied_destination_conflict`;
+- `swap_conflict`;
+- `source_mismatch`;
+- `stale_intent_duplicate_source_or_route_index`;
+- `missing_agent`;
+- `invalid_edge_diagonal_or_vertical`.
+
+### Arbitration Policy
+
+The fixture arbiter sorts intentions by stable `agentId`. It denies missing
+agents, stale intents, source mismatches, invalid non-4-neighbor or vertical
+edges, and occupied static destinations before resolving global conflicts. It
+denies both sides of a swap in v0, approves only the first stable agent for a
+shared destination, applies approved moves to fixture-only abstract positions,
+and preserves denied positions.
+
+### Outputs, Invariants, Metrics, And Event
+
+The scenario writes:
+
+- `multi_agent_movement_fixture_report.json`;
+- `multi_agent_movement_fixture_invariant_report.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The report records 8 cases, 8 passed, 0 failed, 10 fixture agents total, 11
+intents, 3 approved moves, and 8 denied moves. Conflict totals are 1
+same-destination denial, 1 occupied static destination denial, 2 swap denials,
+1 source mismatch, 1 stale intent, 1 missing agent, and 1 invalid edge.
+
+The invariant report has 47 checks and passes all of them. Metrics use the
+`multiAgentMovementFixture*` prefix. The scenario emits one aggregate
+`lab_multi_agent_movement_fixture_recorded` event.
+
+### Confirmed Out Of Scope
+
+No `World`, live collision, pathfinding, replanning, goal selection, avoidance,
+reservation table runtime, physics, physical placeholder movement, core entity
+movement, terrain mutation, or world mutation is performed. The runner prints
+`dim=fixture`, and no `world_snapshot.json` is written for this scenario.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_fixture_smoke --seed 42 --ticks 0 --out runs/check_multi_agent_movement_fixture`
+- `swift run -c release PebbleLab -- --scenario route_following_live_hardening_smoke --seed 42 --ticks 5 --out runs/check_route_following_live_hardening_after_multi_agent_fixture`
+- `swift run -c release PebbleLab -- --scenario route_following_approved_two_step_smoke --seed 42 --ticks 5 --out runs/check_route_approved_after_multi_agent_fixture`
+- `swift run -c release PebbleLab -- --scenario route_following_denied_live_smoke --seed 42 --ticks 5 --out runs/check_route_denied_after_multi_agent_fixture`
+- `swift run -c release PebbleLab -- --scenario route_following_fixture_smoke --seed 42 --ticks 0 --out runs/check_route_fixture_after_multi_agent_fixture`
+- `swift run -c release PebbleLab -- --scenario physical_movement_single_step_hardening_smoke --seed 42 --ticks 5 --out runs/check_single_step_hardening_after_multi_agent_fixture`
+- `swift run -c release PebbleLab -- --scenario physical_movement_approved_single_step_smoke --seed 42 --ticks 5 --out runs/check_approved_single_step_after_multi_agent_fixture`
+- `swift run -c release PebbleLab -- --scenario physical_movement_denied_smoke --seed 42 --ticks 5 --out runs/check_denied_single_step_after_multi_agent_fixture`
+- `swift run -c release PebbleLab -- --scenario terrain_collision_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_collision_live_after_multi_agent_fixture`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_multi_agent_fixture`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- Fixture report: success true.
+- Invariant report: success true.
+- Cases: 8 passed, 0 failed.
+- Approved/denied totals: 3 / 8.
+- Invariant checks: 47 passed, 0 failed.
+- Metrics contain `multiAgentMovementFixture*`.
+- `events.ndjson` contains `lab_multi_agent_movement_fixture_recorded`.
+- `pebsmoke`: 456 passed, 0 failed.
+
+### Next Step
+
+Phase 4.19C: multi-agent movement fixture hardening. It should expand edge
+coverage while staying fixture-only, with no live collision, physical movement
+live, reservation table runtime, avoidance, replanning, physics, or mutation.

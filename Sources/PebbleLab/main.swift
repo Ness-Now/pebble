@@ -4,8 +4,12 @@ import PebbleCore
 let options = parseArguments(CommandLine.arguments)
 validateScenario(options.scenario)
 
-let world = World(dim: .overworld, seed: options.seed)
-let scenarioResult = prepareScenario(options, world: world)
+let isMultiAgentMovementFixtureScenario = options.scenario
+    == "multi_agent_movement_fixture_smoke"
+let world = isMultiAgentMovementFixtureScenario
+    ? nil
+    : World(dim: .overworld, seed: options.seed)
+let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
 var labAgents = scenarioResult.agents
 var physicalBridge = scenarioResult.physicalBridge
 var coreEntityBridge = scenarioResult.coreEntityBridge
@@ -70,6 +74,13 @@ var physicalSyncedAgentIds = Set<String>()
 var coreEntitySyncEvents = 0
 var coreEntitySyncDistance = 0
 var coreEntitySyncedAgentIds = Set<String>()
+
+func requireWorld() -> World {
+    guard let world else {
+        fail("scenario \(options.scenario) does not create or use World")
+    }
+    return world
+}
 
 func shouldWriteFrequentEvent(tick: Int) -> Bool {
     options.eventRate == 1 || tick % options.eventRate == 0
@@ -286,7 +297,7 @@ func encodeSpawnAndInitialObservation(agent: inout LabAgent, allAgents: [LabAgen
         summary: "\(agent.id) spawned at (\(agent.position.x),\(agent.position.y),\(agent.position.z))",
         importance: 1.0
     )
-    agent.observe(world: world, tick: 0)
+    agent.observe(world: requireWorld(), tick: 0)
     agent.observeNearbyAgents(allAgents)
     let goalChange = agent.selectGoal(tick: 0)
     lines += try encodeEventLine(RunEvent(
@@ -334,7 +345,7 @@ func tickAndEncodeAgent(_ agent: inout LabAgent, allAgents: [LabAgent]) throws -
     var lines = ""
     let memoryStart = agent.memory.count
     agent.tick()
-    agent.observe(world: world, tick: ticksCompleted)
+    agent.observe(world: requireWorld(), tick: ticksCompleted)
     agent.observeNearbyAgents(allAgents)
     let goalChange = agent.selectGoal(tick: ticksCompleted)
     agent.decideAction(tick: ticksCompleted)
@@ -636,7 +647,7 @@ if options.outPath != nil {
 }
 
 for _ in 0..<options.ticks {
-    world.tick()
+    requireWorld().tick()
     ticksCompleted += 1
 
     if !labAgents.isEmpty {
@@ -650,7 +661,7 @@ for _ in 0..<options.ticks {
                 }
             } else {
                 labAgents[index].tick()
-                labAgents[index].observe(world: world, tick: ticksCompleted)
+                labAgents[index].observe(world: requireWorld(), tick: ticksCompleted)
                 labAgents[index].observeNearbyAgents(allAgents)
                 _ = labAgents[index].selectGoal(tick: ticksCompleted)
                 labAgents[index].decideAction(tick: ticksCompleted)
@@ -709,7 +720,7 @@ for _ in 0..<options.ticks {
                     scenario: nil,
                     seed: nil,
                     ticksRequested: nil,
-                    worldTime: world.time,
+                    worldTime: world?.time ?? 0,
                     success: nil,
                     chunksTouched: nil,
                     chunkRadius: nil
@@ -789,7 +800,7 @@ let terrainCollisionLiveSnapshot = isTerrainCollisionLiveScenario
         scenario: options.scenario,
         seed: options.seed,
         ticksCompleted: ticksCompleted,
-        world: world
+        world: requireWorld()
     )
     : nil
 let terrainCollisionLiveInvariantReport = isTerrainCollisionLiveScenario
@@ -815,7 +826,7 @@ let physicalMovementSnapshot = isPhysicalMovementDeniedScenario
         scenario: options.scenario,
         seed: options.seed,
         ticksCompleted: ticksCompleted,
-        world: world
+        world: requireWorld()
     )
     : (isPhysicalMovementApprovedScenario
         ? makePhysicalMovementApprovedSingleStepSnapshot(
@@ -866,7 +877,7 @@ let physicalMovementOccupableSearchSnapshot = isPhysicalMovementOccupableSearchS
         scenario: options.scenario,
         seed: options.seed,
         ticksCompleted: ticksCompleted,
-        world: world
+        world: requireWorld()
     )
     : nil
 let physicalMovementOccupableSearchInvariantReport =
@@ -939,12 +950,48 @@ let routeFollowingFixtureSuccess = isRouteFollowingFixtureScenario
         && (routeFollowingFixtureReport?.summary.completed ?? 0) >= 1
         && (routeFollowingFixtureReport?.summary.stopped ?? 0) >= 1)
     : nil
+let multiAgentMovementFixtureReport = isMultiAgentMovementFixtureScenario
+    ? makeMultiAgentMovementFixtureReport(
+        scenario: options.scenario,
+        seed: options.seed,
+        ticksCompleted: ticksCompleted
+    )
+    : nil
+let multiAgentMovementFixtureInvariantReport = isMultiAgentMovementFixtureScenario
+    ? makeMultiAgentMovementFixtureInvariantReport(
+        report: multiAgentMovementFixtureReport,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let multiAgentMovementFixtureSuccess = isMultiAgentMovementFixtureScenario
+    ? ((multiAgentMovementFixtureReport?.success ?? false)
+        && (multiAgentMovementFixtureInvariantReport?.success ?? false)
+        && multiAgentMovementFixtureReport?.summary.failed == 0
+        && (multiAgentMovementFixtureReport?.summary.approvedTotal ?? 0) > 0
+        && (multiAgentMovementFixtureReport?.summary.deniedTotal ?? 0) > 0
+        && (multiAgentMovementFixtureReport?.summary.sameDestinationConflicts ?? 0) > 0
+        && (multiAgentMovementFixtureReport?.summary.occupiedDestinationConflicts ?? 0) > 0
+        && (multiAgentMovementFixtureReport?.summary.swapConflicts ?? 0) > 0
+        && (multiAgentMovementFixtureReport?.summary.sourceMismatch ?? 0) > 0
+        && (multiAgentMovementFixtureReport?.summary.staleIntent ?? 0) > 0
+        && (multiAgentMovementFixtureReport?.summary.missingAgent ?? 0) > 0
+        && (multiAgentMovementFixtureReport?.summary.invalidEdges ?? 0) > 0
+        && multiAgentMovementFixtureReport?.summary.pathfindingPerformed == false
+        && multiAgentMovementFixtureReport?.summary.replanningPerformed == false
+        && multiAgentMovementFixtureReport?.summary.goalSelectionPerformed == false
+        && multiAgentMovementFixtureReport?.summary.avoidancePerformed == false
+        && multiAgentMovementFixtureReport?.summary.reservationTableImplemented == false
+        && multiAgentMovementFixtureReport?.summary.physicsPerformed == false
+        && multiAgentMovementFixtureReport?.summary.worldUsed == false
+        && multiAgentMovementFixtureReport?.summary.mutationPerformed == false)
+    : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
         seed: options.seed,
         ticksCompleted: ticksCompleted,
-        world: world
+        world: requireWorld()
     )
     : (isRouteFollowingApprovedTwoStepScenario
         ? makeRouteFollowingApprovedTwoStepSnapshot(
@@ -1039,7 +1086,7 @@ let coreEntityInvariantReport = options.scenario == "core_entity_smoke"
         ticksCompleted: ticksCompleted,
         agents: labAgents,
         physicalBridge: physicalBridge,
-        world: world
+        world: requireWorld()
     )
     : nil
 let physicalBehaviorAgents = isPhysicalBehaviorScenario ? labAgents.count : nil
@@ -1099,7 +1146,7 @@ let worldInteractionSnapshots: [LabWorldInteractionSnapshot] = {
             return nil
         }
         return observeBlockBelow(
-            world: world,
+            world: requireWorld(),
             scenario: options.scenario,
             seed: options.seed,
             ticksCompleted: ticksCompleted,
@@ -1150,7 +1197,7 @@ let terrainScanSnapshot: LabTerrainScanSnapshot? = {
         return nil
     }
     return scanTerrainAroundBelow(
-        world: world,
+        world: requireWorld(),
         scenario: options.scenario,
         seed: options.seed,
         ticksCompleted: ticksCompleted,
@@ -1191,7 +1238,7 @@ let terrainColumnScanSnapshot: LabTerrainColumnScanSnapshot? = {
         return nil
     }
     return scanTerrainColumns(
-        world: world,
+        world: requireWorld(),
         scenario: options.scenario,
         seed: options.seed,
         ticksCompleted: ticksCompleted,
@@ -1308,6 +1355,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (physicalMovementOccupableSearchSuccess ?? true)
     && (physicalMovementHardeningSuccess ?? true)
     && (routeFollowingFixtureSuccess ?? true)
+    && (multiAgentMovementFixtureSuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -1531,6 +1579,29 @@ if options.outPath != nil {
                 cases: summary.cases
             ))
         }
+        if let multiAgentMovementFixtureReport {
+            let summary = multiAgentMovementFixtureReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_multi_agent_movement_fixture_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: multiAgentMovementFixtureSuccess,
+                passed: summary.passed,
+                failed: summary.failed,
+                approved: summary.approvedTotal,
+                denied: summary.deniedTotal,
+                cases: summary.cases,
+                agentCount: summary.agentCountTotal,
+                intentCount: summary.intentCountTotal,
+                sameDestinationConflicts: summary.sameDestinationConflicts,
+                occupiedDestinationConflicts: summary.occupiedDestinationConflicts,
+                swapConflicts: summary.swapConflicts,
+                sourceMismatch: summary.sourceMismatch,
+                staleIntent: summary.staleIntent,
+                missingAgent: summary.missingAgent,
+                invalidEdges: summary.invalidEdges
+            ))
+        }
         if let routeFollowingLiveSnapshot {
             try appendEvent(RunEvent(
                 type: "lab_route_following_recorded",
@@ -1740,7 +1811,7 @@ if options.outPath != nil {
             scenario: nil,
             seed: nil,
             ticksRequested: nil,
-            worldTime: world.time,
+            worldTime: world?.time ?? 0,
             success: runSuccess,
             chunksTouched: nil,
             chunkRadius: nil
@@ -1768,12 +1839,13 @@ if let outPath = options.outPath {
             ),
             to: outURL.appendingPathComponent("config.json")
         )
-        if let snapshot = makeWorldSnapshot(
+        if let world,
+           let snapshot = makeWorldSnapshot(
             options: options,
             world: world,
             result: scenarioResult,
             ticksCompleted: ticksCompleted
-        ) {
+           ) {
             try writeJSON(snapshot, to: outURL.appendingPathComponent("world_snapshot.json"))
             try appendEvent(RunEvent(
                 type: "world_snapshot_written",
@@ -2049,6 +2121,18 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("route_following_fixture_invariant_report.json")
             )
         }
+        if let multiAgentMovementFixtureReport {
+            try writeJSON(
+                multiAgentMovementFixtureReport,
+                to: outURL.appendingPathComponent("multi_agent_movement_fixture_report.json")
+            )
+        }
+        if let multiAgentMovementFixtureInvariantReport {
+            try writeJSON(
+                multiAgentMovementFixtureInvariantReport,
+                to: outURL.appendingPathComponent("multi_agent_movement_fixture_invariant_report.json")
+            )
+        }
         if let routeFollowingLiveSnapshot {
             try writeJSON(
                 routeFollowingLiveSnapshot,
@@ -2182,7 +2266,7 @@ if let outPath = options.outPath {
             seed: options.seed,
             ticksRequested: options.ticks,
             ticksCompleted: ticksCompleted,
-            worldTime: world.time,
+            worldTime: world?.time ?? 0,
             success: runSuccess,
             chunksTouched: scenarioResult.chunksTouched,
             chunkRadius: scenarioResult.chunkRadius,
@@ -2254,7 +2338,7 @@ if let outPath = options.outPath {
             coreEntitySyncDistance: coreEntityBridge.count == 0 ? nil : coreEntitySyncDistance,
             abstractCoreEntityDivergence: coreEntityBridge.count == 0 ? nil : coreEntityBridge.totalDivergence(from: labAgents),
             maxAbstractCoreEntityDivergence: coreEntityBridge.count == 0 ? nil : coreEntityBridge.maxDivergence(from: labAgents),
-            worldEntitiesCount: coreEntityBridge.count == 0 ? nil : world.entities.count,
+            worldEntitiesCount: coreEntityBridge.count == 0 ? nil : requireWorld().entities.count,
             physicalBehaviorTicks: isPhysicalBehaviorScenario ? ticksCompleted : nil,
             physicalBehaviorAgents: physicalBehaviorAgents,
             physicalBehaviorAgentsMoved: physicalBehaviorAgentsMoved,
@@ -2447,6 +2531,25 @@ if let outPath = options.outPath {
             physicalMovementHardeningDisplacementApplied: physicalMovementHardeningReport?.summary.displacementApplied,
             physicalMovementHardeningDisplacementRefused: physicalMovementHardeningReport?.summary.displacementRefused,
             physicalMovementHardeningSuccess: physicalMovementHardeningSuccess,
+            multiAgentMovementFixtureCases: multiAgentMovementFixtureReport?.summary.cases,
+            multiAgentMovementFixturePassed: multiAgentMovementFixtureReport?.summary.passed,
+            multiAgentMovementFixtureFailed: multiAgentMovementFixtureReport?.summary.failed,
+            multiAgentMovementFixtureAgentCount: multiAgentMovementFixtureReport?.summary.agentCountTotal,
+            multiAgentMovementFixtureIntentCount: multiAgentMovementFixtureReport?.summary.intentCountTotal,
+            multiAgentMovementFixtureApproved: multiAgentMovementFixtureReport?.summary.approvedTotal,
+            multiAgentMovementFixtureDenied: multiAgentMovementFixtureReport?.summary.deniedTotal,
+            multiAgentMovementFixtureSameDestinationConflicts: multiAgentMovementFixtureReport?.summary.sameDestinationConflicts,
+            multiAgentMovementFixtureOccupiedDestinationConflicts: multiAgentMovementFixtureReport?.summary.occupiedDestinationConflicts,
+            multiAgentMovementFixtureSwapConflicts: multiAgentMovementFixtureReport?.summary.swapConflicts,
+            multiAgentMovementFixtureSourceMismatch: multiAgentMovementFixtureReport?.summary.sourceMismatch,
+            multiAgentMovementFixtureStaleIntent: multiAgentMovementFixtureReport?.summary.staleIntent,
+            multiAgentMovementFixtureMissingAgent: multiAgentMovementFixtureReport?.summary.missingAgent,
+            multiAgentMovementFixtureInvalidEdges: multiAgentMovementFixtureReport?.summary.invalidEdges,
+            multiAgentMovementFixturePathfindingPerformed: multiAgentMovementFixtureReport?.summary.pathfindingPerformed,
+            multiAgentMovementFixtureReplanningPerformed: multiAgentMovementFixtureReport?.summary.replanningPerformed,
+            multiAgentMovementFixturePhysicsPerformed: multiAgentMovementFixtureReport?.summary.physicsPerformed,
+            multiAgentMovementFixtureMutationPerformed: multiAgentMovementFixtureReport?.summary.mutationPerformed,
+            multiAgentMovementFixtureSuccess: multiAgentMovementFixtureSuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,
@@ -2525,4 +2628,8 @@ if let outPath = options.outPath {
     }
 }
 
-print("PebbleLab headless scenario=\(options.scenario) dim=\(world.dim.rawValue) seed=\(world.seed) ticks=\(world.time)")
+if let world {
+    print("PebbleLab headless scenario=\(options.scenario) dim=\(world.dim.rawValue) seed=\(world.seed) ticks=\(world.time)")
+} else {
+    print("PebbleLab headless scenario=\(options.scenario) dim=fixture seed=\(options.seed) ticks=\(ticksCompleted)")
+}

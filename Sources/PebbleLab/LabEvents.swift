@@ -157,6 +157,15 @@ struct RunEvent: Encodable {
     let visited: Int?
     let candidates: Int?
     let cases: Int?
+    let agentCount: Int?
+    let intentCount: Int?
+    let sameDestinationConflicts: Int?
+    let occupiedDestinationConflicts: Int?
+    let swapConflicts: Int?
+    let sourceMismatch: Int?
+    let staleIntent: Int?
+    let missingAgent: Int?
+    let invalidEdges: Int?
     let occupableFound: Bool?
     let selectedCandidateIndex: Int?
     let selectedSeed: UInt32?
@@ -353,6 +362,15 @@ struct RunEvent: Encodable {
         visited: Int? = nil,
         candidates: Int? = nil,
         cases: Int? = nil,
+        agentCount: Int? = nil,
+        intentCount: Int? = nil,
+        sameDestinationConflicts: Int? = nil,
+        occupiedDestinationConflicts: Int? = nil,
+        swapConflicts: Int? = nil,
+        sourceMismatch: Int? = nil,
+        staleIntent: Int? = nil,
+        missingAgent: Int? = nil,
+        invalidEdges: Int? = nil,
         occupableFound: Bool? = nil,
         selectedCandidateIndex: Int? = nil,
         selectedSeed: UInt32? = nil,
@@ -548,6 +566,15 @@ struct RunEvent: Encodable {
         self.visited = visited
         self.candidates = candidates
         self.cases = cases
+        self.agentCount = agentCount
+        self.intentCount = intentCount
+        self.sameDestinationConflicts = sameDestinationConflicts
+        self.occupiedDestinationConflicts = occupiedDestinationConflicts
+        self.swapConflicts = swapConflicts
+        self.sourceMismatch = sourceMismatch
+        self.staleIntent = staleIntent
+        self.missingAgent = missingAgent
+        self.invalidEdges = invalidEdges
         self.occupableFound = occupableFound
         self.selectedCandidateIndex = selectedCandidateIndex
         self.selectedSeed = selectedSeed

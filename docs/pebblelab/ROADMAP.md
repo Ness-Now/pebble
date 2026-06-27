@@ -809,3 +809,26 @@ pathfinding, gameplay movement, physics integration, renderer changes,
 save/load changes, registry changes, Python, LLM, and RL remain out of scope.
 
 Next recommended step: Phase 4.19B - Multi-Agent Movement Fixture Smoke.
+
+## Phase 4.19B - Multi-Agent Movement Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: add the first fixture-only multi-agent movement arbitration smoke over
+synthetic agents, synthetic positions, and synthetic next-edge intentions. The
+scenario `multi_agent_movement_fixture_smoke` validates deterministic
+stable-`agentId` arbitration without creating or using `World`.
+
+The smoke covers two agents approved to different destinations,
+same-destination conflict, occupied static destination, swap conflict, source
+mismatch, stale intent, missing agent, and invalid edge. It writes
+`multi_agent_movement_fixture_report.json`,
+`multi_agent_movement_fixture_invariant_report.json`,
+`multiAgentMovementFixture*` metrics, and one aggregate
+`lab_multi_agent_movement_fixture_recorded` event.
+
+Live collision, live physical movement, route following live, reservation
+table runtime, avoidance, dynamic replanning, route repair, physics,
+save/load changes, and gameplay movement remain out of scope.
+
+Next recommended step: Phase 4.19C - Multi-Agent Movement Fixture Hardening.

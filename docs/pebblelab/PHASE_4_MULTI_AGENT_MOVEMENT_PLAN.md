@@ -553,3 +553,65 @@ Phase 4.19A creates this plan and updates only:
 
 No Swift file, PebbleCore file, renderer/shader/resource file, registry,
 save/load path, golden, runner, or scenario is modified by this phase.
+
+## Phase 4.19B Implementation Status
+
+Phase 4.19B added the first fixture-only multi-agent movement arbitration
+smoke:
+
+```text
+multi_agent_movement_fixture_smoke
+```
+
+Validated cases:
+
+- `two_agents_different_destinations_approved`;
+- `same_destination_conflict`;
+- `occupied_destination_conflict`;
+- `swap_conflict`;
+- `source_mismatch`;
+- `stale_intent_duplicate_source_or_route_index`;
+- `missing_agent`;
+- `invalid_edge_diagonal_or_vertical`.
+
+Outputs produced:
+
+- `multi_agent_movement_fixture_report.json`;
+- `multi_agent_movement_fixture_invariant_report.json`;
+- `metrics.json` with `multiAgentMovementFixture*` fields;
+- `events.ndjson` with one aggregate
+  `lab_multi_agent_movement_fixture_recorded` event.
+
+Validated summary:
+
+- 8 cases;
+- 8 passed;
+- 0 failed;
+- 3 approved movements;
+- 8 denied movements;
+- 1 same-destination denial;
+- 1 occupied static destination denial;
+- 2 swap denials;
+- 1 source mismatch;
+- 1 stale intent;
+- 1 missing agent;
+- 1 invalid edge;
+- 47 invariant checks passed.
+
+Limits:
+
+- fixture-only;
+- no `World` creation or use;
+- no live collision;
+- no live physical movement;
+- no route following live;
+- no pathfinding;
+- no replanning;
+- no goal selection;
+- no avoidance;
+- no reservation table runtime;
+- no physics;
+- no terrain/world mutation.
+
+Next recommended step: Phase 4.19C, fixture hardening for broader edge cases
+and stronger arbitration contracts before any live collision intent smoke.
