@@ -677,6 +677,65 @@ Next recommended step: Phase 4.20C - Multi-Agent Movement Tick Live
 Read-Only Smoke. It should attach live collision evidence to the same
 tick-level input/output contract while still avoiding movement application.
 
+## Phase 4.20C Implementation Status
+
+Phase 4.20C implements the first tick-level live read-only collision
+contract: `multi_agent_movement_tick_live_readonly_smoke`.
+
+Validated tick live read-only input/output:
+
+- one synthetic tick, `tick = 0`;
+- five abstract agent positions;
+- five matching synthetic physical positions;
+- five deliberately unordered intentions;
+- deterministic resolution order by stable `agentId`;
+- two approved read-only intentions with occupable evidence;
+- one collision denial with non-occupable evidence;
+- one source mismatch denial before collision;
+- one invalid vertical edge denial before collision;
+- no abstract position changes;
+- no physical position changes;
+- no displacement application.
+
+Collision evidence policy:
+
+- valid collision-required intentions read live collision evidence;
+- source mismatch, stale intent if present, and invalid edges skip collision;
+- controlled per-intent evidence seeds allow the smoke to cover both
+  occupable and non-occupable destinations in one aggregate tick report;
+- evidence remains read-only and does not trigger movement, replanning,
+  avoidance, reservation, or route following.
+
+The scenario writes:
+
+- `multi_agent_movement_tick_live_readonly_report.json`;
+- `multi_agent_movement_tick_live_readonly_invariant_report.json`;
+- `multi_agent_movement_tick_live_readonly_feedback.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The feedback JSON records one feedback entry per resolution. Approved
+read-only resolutions use `approvedForMovement`; collision denial uses
+`blockedByCollision`; source mismatch uses `blockedBySourceMismatch`; invalid
+edge uses `blockedByInvalidEdge`.
+
+Validated limits:
+
+- no physical movement application;
+- no route following;
+- no pathfinding;
+- no replanning;
+- no goal selection;
+- no avoidance;
+- no reservation runtime;
+- no physics;
+- no terrain/world mutation;
+- no autonomous movement loop.
+
+Next recommended step: Phase 4.20D - Multi-Agent Movement Tick Approved
+Application Smoke. It should apply approved tick resolutions in a tightly
+controlled case and keep denied/conflict hardening for later phases.
+
 ## 15. Documentation Updates
 
 Phase 4.20A should update:

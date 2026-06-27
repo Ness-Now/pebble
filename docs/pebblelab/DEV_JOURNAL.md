@@ -4470,3 +4470,138 @@ Phase 4.20C: Multi-Agent Movement Tick Live Read-Only Smoke. It should add
 live collision evidence to the tick input/output contract while still
 avoiding physical movement application, route following, pathfinding,
 replanning, avoidance, reservation runtime, physics, and mutation.
+
+## 2026-06-27 — Phase 4.20C multi-agent movement tick live read-only smoke
+
+### Objective
+
+Add the first tick-level live read-only collision smoke for multi-agent
+movement. The scenario keeps the 4.20B tick input/output contract, adds live
+collision evidence for valid intentions, produces structured feedback, and
+still applies no movement.
+
+### Starting State
+
+Phase 4.20B proved the fixture-only tick shape with unordered input intents,
+stable `agentId` resolution ordering, structured feedback, unchanged
+abstract/physical positions, and no `World` use. Phase 4.19D had already
+proved live collision intent evidence outside the tick contract.
+
+### Files Created/Modified
+
+- Modified `Sources/PebbleLab/LabMultiAgentMovement.swift`.
+- Modified `Sources/PebbleLab/LabOptions.swift`.
+- Modified `Sources/PebbleLab/LabScenarios.swift`.
+- Modified `Sources/PebbleLab/LabOutput.swift`.
+- Modified `Sources/PebbleLab/main.swift`.
+- Updated `docs/pebblelab/CHANGELOG.md`.
+- Updated `docs/pebblelab/DEV_JOURNAL.md`.
+- Updated `docs/pebblelab/ROADMAP.md`.
+- Updated
+  `docs/pebblelab/PHASE_4_MULTI_AGENT_MOVEMENT_INTEGRATION_PLAN.md`.
+
+### Why Live Read-Only
+
+The phase connects tick-level arbitration and feedback to live terrain
+collision evidence without moving agents. It uses `World` only to prepare and
+read collision snapshots for valid collision-required intentions. It does
+not create physical placeholders, core entities, route followers, or
+single-step physical movement applications.
+
+### Tick Input/Output
+
+The scenario `multi_agent_movement_tick_live_readonly_smoke` creates one
+synthetic tick with five abstract agents and matching synthetic physical
+positions. Input intentions are deliberately unordered: `agent_1`,
+`agent_0`, `agent_2`, `agent_3`, `agent_4`.
+
+The output resolutions are sorted by stable `agentId`:
+
+- `agent_0`: approved from live occupable evidence;
+- `agent_1`: approved from live occupable evidence;
+- `agent_2`: denied by live collision evidence;
+- `agent_3`: denied source mismatch before collision;
+- `agent_4`: denied invalid vertical edge before collision.
+
+Abstract and physical positions remain unchanged. `displacementsApplied` is
+0.
+
+### Collision Evidence Policy
+
+The scenario uses controlled per-intent read-only evidence seeds, matching
+the hardening style introduced in 4.19F. `agent_0` and `agent_1` read seed
+99 occupable destinations. `agent_2` reads seed 42 for a non-occupable
+destination and is denied with `deniedCollision`. Source mismatch, stale
+intent if present, and invalid edge are rejected before collision is read.
+
+This is evidence injection for a lab smoke, not gameplay movement,
+pathfinding, replanning, reservation, or avoidance.
+
+### Feedback Policy
+
+Approved read-only intentions emit `approvedForMovement` because no
+displacement is applied. Collision denial emits `blockedByCollision`.
+Source mismatch emits `blockedBySourceMismatch`. Invalid edge emits
+`blockedByInvalidEdge`. `moved` remains reserved for future tick application
+phases.
+
+### Outputs, Invariants, Metrics, And Event
+
+The scenario writes:
+
+- `multi_agent_movement_tick_live_readonly_report.json`;
+- `multi_agent_movement_tick_live_readonly_invariant_report.json`;
+- `multi_agent_movement_tick_live_readonly_feedback.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The invariant report covers 42 checks. Metrics use the
+`multiAgentMovementTickLiveReadonly*` prefix. The scenario emits one
+aggregate `lab_multi_agent_movement_tick_live_readonly_recorded` event.
+
+### Confirmed Out Of Scope
+
+No physical movement, route following, pathfinding, replanning, goal
+selection, avoidance, reservation runtime, physics, terrain mutation, world
+mutation, physical placeholder movement, core entity movement, autonomous
+movement, or multi-tick simulation loop is performed.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_tick_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_multi_agent_movement_tick_live_readonly`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_tick_fixture_after_tick_live_readonly`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_hardening_smoke --seed 42 --ticks 5 --out runs/check_multi_agent_movement_hardening_after_tick_live_readonly`
+- `swift run -c release PebbleLab -- --scenario multi_agent_live_collision_intent_smoke --seed 42 --ticks 5 --out runs/check_multi_agent_live_collision_intent_after_tick_live_readonly`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_fixture_smoke --seed 42 --ticks 0 --out runs/check_multi_agent_fixture_after_tick_live_readonly`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_fixture_hardening_smoke --seed 42 --ticks 0 --out runs/check_multi_agent_fixture_hardening_after_tick_live_readonly`
+- `swift run -c release PebbleLab -- --scenario physical_movement_single_step_hardening_smoke --seed 42 --ticks 5 --out runs/check_single_step_hardening_after_tick_live_readonly`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_tick_live_readonly`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- Tick live read-only report: success true.
+- Tick live read-only invariant report: success true.
+- Invariant checks: 42 passed, 0 failed.
+- Approved/denied totals: 2 / 3.
+- Occupable/non-occupable destination totals: 2 / 1.
+- Collision denied/source mismatch/invalid edge totals: 1 / 1 / 1.
+- Feedback records: 5.
+- Displacements applied: 0.
+- Abstract positions unchanged.
+- Physical positions unchanged.
+- Metrics contain `multiAgentMovementTickLiveReadonly*`.
+- `events.ndjson` contains
+  `lab_multi_agent_movement_tick_live_readonly_recorded`.
+
+### Next Step
+
+Phase 4.20D: Multi-Agent Movement Tick Approved Application Smoke. It should
+apply approved tick resolutions in a small controlled case while keeping
+denied/conflict hardening, reservation runtime, avoidance, dynamic
+replanning, route repair, physics, save/load, social behavior, and gameplay
+movement out of scope.

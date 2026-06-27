@@ -16,9 +16,12 @@ let isMultiAgentMovementHardeningScenario = options.scenario
     == "multi_agent_movement_hardening_smoke"
 let isMultiAgentMovementTickFixtureScenario = options.scenario
     == "multi_agent_movement_tick_fixture_smoke"
+let isMultiAgentMovementTickLiveReadonlyScenario = options.scenario
+    == "multi_agent_movement_tick_live_readonly_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
-    || isMultiAgentMovementTickFixtureScenario)
+    || isMultiAgentMovementTickFixtureScenario
+    || isMultiAgentMovementTickLiveReadonlyScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -658,92 +661,96 @@ if options.outPath != nil {
     }
 }
 
-for _ in 0..<options.ticks {
-    requireWorld().tick()
-    ticksCompleted += 1
+if isMultiAgentMovementTickLiveReadonlyScenario {
+    ticksCompleted = options.ticks
+} else {
+    for _ in 0..<options.ticks {
+        requireWorld().tick()
+        ticksCompleted += 1
 
-    if !labAgents.isEmpty {
-        let allAgents = labAgents
-        for index in labAgents.indices {
+        if !labAgents.isEmpty {
+            let allAgents = labAgents
+            for index in labAgents.indices {
+                if options.outPath != nil {
+                    do {
+                        appendEventLines(try tickAndEncodeAgent(&labAgents[index], allAgents: allAgents))
+                    } catch {
+                        fail("failed to encode agent_tick event: \(error)")
+                    }
+                } else {
+                    labAgents[index].tick()
+                    labAgents[index].observe(world: requireWorld(), tick: ticksCompleted)
+                    labAgents[index].observeNearbyAgents(allAgents)
+                    _ = labAgents[index].selectGoal(tick: ticksCompleted)
+                    labAgents[index].decideAction(tick: ticksCompleted)
+                    labAgents[index].applyLastActionEffect(tick: ticksCompleted)
+                    _ = labAgents[index].applyAbstractMovement(tick: ticksCompleted)
+                }
+            }
+        }
+
+        physicalBridge.tick()
+        let syncs = physicalBridge.sync(with: labAgents, tick: ticksCompleted)
+        if !syncs.isEmpty {
+            physicalSyncEvents += syncs.count
+            physicalSyncDistance += syncs.reduce(0) { $0 + $1.distanceManhattan }
+            for sync in syncs {
+                physicalSyncedAgentIds.insert(sync.agentId)
+            }
+
             if options.outPath != nil {
                 do {
-                    appendEventLines(try tickAndEncodeAgent(&labAgents[index], allAgents: allAgents))
+                    for sync in syncs {
+                        try appendEvent(makePhysicalSyncEvent(sync))
+                    }
                 } catch {
-                    fail("failed to encode agent_tick event: \(error)")
+                    fail("failed to encode physical sync event: \(error)")
                 }
-            } else {
-                labAgents[index].tick()
-                labAgents[index].observe(world: requireWorld(), tick: ticksCompleted)
-                labAgents[index].observeNearbyAgents(allAgents)
-                _ = labAgents[index].selectGoal(tick: ticksCompleted)
-                labAgents[index].decideAction(tick: ticksCompleted)
-                labAgents[index].applyLastActionEffect(tick: ticksCompleted)
-                _ = labAgents[index].applyAbstractMovement(tick: ticksCompleted)
             }
         }
-    }
 
-    physicalBridge.tick()
-    let syncs = physicalBridge.sync(with: labAgents, tick: ticksCompleted)
-    if !syncs.isEmpty {
-        physicalSyncEvents += syncs.count
-        physicalSyncDistance += syncs.reduce(0) { $0 + $1.distanceManhattan }
-        for sync in syncs {
-            physicalSyncedAgentIds.insert(sync.agentId)
+        coreEntityBridge.tick()
+        let coreSyncs = coreEntityBridge.sync(with: labAgents, tick: ticksCompleted)
+        if !coreSyncs.isEmpty {
+            coreEntitySyncEvents += coreSyncs.count
+            coreEntitySyncDistance += coreSyncs.reduce(0) { $0 + $1.distanceManhattan }
+            for sync in coreSyncs {
+                coreEntitySyncedAgentIds.insert(sync.agentId)
+            }
+
+            if options.outPath != nil {
+                do {
+                    for sync in coreSyncs {
+                        try appendEvent(makeCoreEntitySyncEvent(sync))
+                    }
+                } catch {
+                    fail("failed to encode core entity sync event: \(error)")
+                }
+            }
         }
 
         if options.outPath != nil {
             do {
-                for sync in syncs {
-                    try appendEvent(makePhysicalSyncEvent(sync))
+                if options.logWorldTicks && shouldWriteFrequentEvent(tick: ticksCompleted) {
+                    try appendEvent(RunEvent(
+                        type: "world_tick",
+                        tick: ticksCompleted,
+                        scenario: nil,
+                        seed: nil,
+                        ticksRequested: nil,
+                        worldTime: world?.time ?? 0,
+                        success: nil,
+                        chunksTouched: nil,
+                        chunkRadius: nil
+                    ))
+                    worldTickEventsWritten += 1
+                } else {
+                    worldTickEventsSuppressed += 1
+                    eventsSuppressed += 1
                 }
             } catch {
-                fail("failed to encode physical sync event: \(error)")
+                fail("failed to encode world_tick event: \(error)")
             }
-        }
-    }
-
-    coreEntityBridge.tick()
-    let coreSyncs = coreEntityBridge.sync(with: labAgents, tick: ticksCompleted)
-    if !coreSyncs.isEmpty {
-        coreEntitySyncEvents += coreSyncs.count
-        coreEntitySyncDistance += coreSyncs.reduce(0) { $0 + $1.distanceManhattan }
-        for sync in coreSyncs {
-            coreEntitySyncedAgentIds.insert(sync.agentId)
-        }
-
-        if options.outPath != nil {
-            do {
-                for sync in coreSyncs {
-                    try appendEvent(makeCoreEntitySyncEvent(sync))
-                }
-            } catch {
-                fail("failed to encode core entity sync event: \(error)")
-            }
-        }
-    }
-
-    if options.outPath != nil {
-        do {
-            if options.logWorldTicks && shouldWriteFrequentEvent(tick: ticksCompleted) {
-                try appendEvent(RunEvent(
-                    type: "world_tick",
-                    tick: ticksCompleted,
-                    scenario: nil,
-                    seed: nil,
-                    ticksRequested: nil,
-                    worldTime: world?.time ?? 0,
-                    success: nil,
-                    chunksTouched: nil,
-                    chunkRadius: nil
-                ))
-                worldTickEventsWritten += 1
-            } else {
-                worldTickEventsSuppressed += 1
-                eventsSuppressed += 1
-            }
-        } catch {
-            fail("failed to encode world_tick event: \(error)")
         }
     }
 }
@@ -1209,6 +1216,52 @@ let multiAgentMovementTickFixtureSuccess =
             && multiAgentMovementTickFixtureReport?.summary.physicsPerformed == false
             && multiAgentMovementTickFixtureReport?.summary.mutationPerformed == false)
         : nil
+let multiAgentMovementTickLiveReadonlyReport =
+    isMultiAgentMovementTickLiveReadonlyScenario
+        ? makeMultiAgentMovementTickLiveReadonlyReport(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticksCompleted: ticksCompleted
+        )
+        : nil
+let multiAgentMovementTickLiveReadonlyInvariantReport =
+    isMultiAgentMovementTickLiveReadonlyScenario
+        ? makeMultiAgentMovementTickLiveReadonlyInvariantReport(
+            report: multiAgentMovementTickLiveReadonlyReport,
+            scenario: options.scenario,
+            seed: options.seed
+        )
+        : nil
+let multiAgentMovementTickLiveReadonlySuccess =
+    isMultiAgentMovementTickLiveReadonlyScenario
+        ? ((multiAgentMovementTickLiveReadonlyReport?.success ?? false)
+            && (multiAgentMovementTickLiveReadonlyInvariantReport?.success ?? false)
+            && multiAgentMovementTickLiveReadonlyReport?.summary.agentCount == 5
+            && multiAgentMovementTickLiveReadonlyReport?.summary.physicalPositionCount == 5
+            && multiAgentMovementTickLiveReadonlyReport?.summary.intentCount == 5
+            && multiAgentMovementTickLiveReadonlyReport?.summary.resolutions == 5
+            && multiAgentMovementTickLiveReadonlyReport?.summary.feedbackCount == 5
+            && (multiAgentMovementTickLiveReadonlyReport?.summary.occupableDestinations ?? 0) > 0
+            && (multiAgentMovementTickLiveReadonlyReport?.summary.nonOccupableDestinations ?? 0) > 0
+            && (multiAgentMovementTickLiveReadonlyReport?.summary.approved ?? 0) > 0
+            && (multiAgentMovementTickLiveReadonlyReport?.summary.denied ?? 0) > 0
+            && (multiAgentMovementTickLiveReadonlyReport?.summary.collisionDenied ?? 0) > 0
+            && (multiAgentMovementTickLiveReadonlyReport?.summary.sourceMismatch ?? 0) > 0
+            && (multiAgentMovementTickLiveReadonlyReport?.summary.invalidEdges ?? 0) > 0
+            && multiAgentMovementTickLiveReadonlyReport?.summary.displacementsApplied == 0
+            && multiAgentMovementTickLiveReadonlyReport?.output.abstractPositionsBefore == multiAgentMovementTickLiveReadonlyReport?.output.abstractPositionsAfter
+            && multiAgentMovementTickLiveReadonlyReport?.output.physicalPositionsBefore == multiAgentMovementTickLiveReadonlyReport?.output.physicalPositionsAfter
+            && multiAgentMovementTickLiveReadonlyReport?.summary.worldUsed == true
+            && multiAgentMovementTickLiveReadonlyReport?.summary.liveCollisionRead == true
+            && multiAgentMovementTickLiveReadonlyReport?.summary.physicalMovementApplied == false
+            && multiAgentMovementTickLiveReadonlyReport?.summary.routeFollowingApplied == false
+            && multiAgentMovementTickLiveReadonlyReport?.summary.pathfindingPerformed == false
+            && multiAgentMovementTickLiveReadonlyReport?.summary.replanningPerformed == false
+            && multiAgentMovementTickLiveReadonlyReport?.summary.avoidancePerformed == false
+            && multiAgentMovementTickLiveReadonlyReport?.summary.reservationRuntimeUsed == false
+            && multiAgentMovementTickLiveReadonlyReport?.summary.physicsPerformed == false
+            && multiAgentMovementTickLiveReadonlyReport?.summary.mutationPerformed == false)
+        : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
@@ -1584,6 +1637,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (multiAgentApprovedPhysicalMovementSuccess ?? true)
     && (multiAgentMovementHardeningSuccess ?? true)
     && (multiAgentMovementTickFixtureSuccess ?? true)
+    && (multiAgentMovementTickLiveReadonlySuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -1959,6 +2013,30 @@ if options.outPath != nil {
                 feedback: summary.feedbackCount,
                 sameDestinationConflicts: summary.sameDestinationConflicts,
                 invalidEdges: summary.invalidEdges
+            ))
+        }
+        if let multiAgentMovementTickLiveReadonlyReport {
+            let summary = multiAgentMovementTickLiveReadonlyReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_multi_agent_movement_tick_live_readonly_recorded",
+                tick: summary.tick,
+                scenario: options.scenario,
+                success: multiAgentMovementTickLiveReadonlySuccess,
+                approved: summary.approved,
+                denied: summary.denied,
+                displacementsApplied: summary.displacementsApplied,
+                agentCount: summary.agentCount,
+                intentCount: summary.intentCount,
+                resolutions: summary.resolutions,
+                feedback: summary.feedbackCount,
+                sourceMismatch: summary.sourceMismatch,
+                invalidEdges: summary.invalidEdges,
+                occupableDestinations: summary.occupableDestinations,
+                nonOccupableDestinations: summary.nonOccupableDestinations,
+                collisionDenied: summary.collisionDenied,
+                worldUsed: summary.worldUsed,
+                liveCollisionRead: summary.liveCollisionRead,
+                physicalMovementApplied: summary.physicalMovementApplied
             ))
         }
         if let routeFollowingLiveSnapshot {
@@ -2556,6 +2634,22 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("multi_agent_movement_tick_fixture_invariant_report.json")
             )
         }
+        if let multiAgentMovementTickLiveReadonlyReport {
+            try writeJSON(
+                multiAgentMovementTickLiveReadonlyReport,
+                to: outURL.appendingPathComponent("multi_agent_movement_tick_live_readonly_report.json")
+            )
+            try writeJSON(
+                multiAgentMovementTickLiveReadonlyReport.output.feedback,
+                to: outURL.appendingPathComponent("multi_agent_movement_tick_live_readonly_feedback.json")
+            )
+        }
+        if let multiAgentMovementTickLiveReadonlyInvariantReport {
+            try writeJSON(
+                multiAgentMovementTickLiveReadonlyInvariantReport,
+                to: outURL.appendingPathComponent("multi_agent_movement_tick_live_readonly_invariant_report.json")
+            )
+        }
         if let routeFollowingLiveSnapshot {
             try writeJSON(
                 routeFollowingLiveSnapshot,
@@ -3094,6 +3188,32 @@ if let outPath = options.outPath {
             multiAgentMovementTickFixturePhysicsPerformed: multiAgentMovementTickFixtureReport?.summary.physicsPerformed,
             multiAgentMovementTickFixtureMutationPerformed: multiAgentMovementTickFixtureReport?.summary.mutationPerformed,
             multiAgentMovementTickFixtureSuccess: multiAgentMovementTickFixtureSuccess,
+            multiAgentMovementTickLiveReadonlyInputs: multiAgentMovementTickLiveReadonlyReport.map { _ in 1 },
+            multiAgentMovementTickLiveReadonlyAgents: multiAgentMovementTickLiveReadonlyReport?.summary.agentCount,
+            multiAgentMovementTickLiveReadonlyPhysicalPositions: multiAgentMovementTickLiveReadonlyReport?.summary.physicalPositionCount,
+            multiAgentMovementTickLiveReadonlyIntents: multiAgentMovementTickLiveReadonlyReport?.summary.intentCount,
+            multiAgentMovementTickLiveReadonlyResolutions: multiAgentMovementTickLiveReadonlyReport?.summary.resolutions,
+            multiAgentMovementTickLiveReadonlyFeedback: multiAgentMovementTickLiveReadonlyReport?.summary.feedbackCount,
+            multiAgentMovementTickLiveReadonlyApproved: multiAgentMovementTickLiveReadonlyReport?.summary.approved,
+            multiAgentMovementTickLiveReadonlyDenied: multiAgentMovementTickLiveReadonlyReport?.summary.denied,
+            multiAgentMovementTickLiveReadonlyOccupableDestinations: multiAgentMovementTickLiveReadonlyReport?.summary.occupableDestinations,
+            multiAgentMovementTickLiveReadonlyNonOccupableDestinations: multiAgentMovementTickLiveReadonlyReport?.summary.nonOccupableDestinations,
+            multiAgentMovementTickLiveReadonlyCollisionDenied: multiAgentMovementTickLiveReadonlyReport?.summary.collisionDenied,
+            multiAgentMovementTickLiveReadonlySourceMismatch: multiAgentMovementTickLiveReadonlyReport?.summary.sourceMismatch,
+            multiAgentMovementTickLiveReadonlyInvalidEdges: multiAgentMovementTickLiveReadonlyReport?.summary.invalidEdges,
+            multiAgentMovementTickLiveReadonlyStaleIntent: multiAgentMovementTickLiveReadonlyReport?.summary.staleIntent,
+            multiAgentMovementTickLiveReadonlyDisplacementsApplied: multiAgentMovementTickLiveReadonlyReport?.summary.displacementsApplied,
+            multiAgentMovementTickLiveReadonlyWorldUsed: multiAgentMovementTickLiveReadonlyReport?.summary.worldUsed,
+            multiAgentMovementTickLiveReadonlyLiveCollisionRead: multiAgentMovementTickLiveReadonlyReport?.summary.liveCollisionRead,
+            multiAgentMovementTickLiveReadonlyPhysicalMovementApplied: multiAgentMovementTickLiveReadonlyReport?.summary.physicalMovementApplied,
+            multiAgentMovementTickLiveReadonlyRouteFollowingApplied: multiAgentMovementTickLiveReadonlyReport?.summary.routeFollowingApplied,
+            multiAgentMovementTickLiveReadonlyPathfindingPerformed: multiAgentMovementTickLiveReadonlyReport?.summary.pathfindingPerformed,
+            multiAgentMovementTickLiveReadonlyReplanningPerformed: multiAgentMovementTickLiveReadonlyReport?.summary.replanningPerformed,
+            multiAgentMovementTickLiveReadonlyAvoidancePerformed: multiAgentMovementTickLiveReadonlyReport?.summary.avoidancePerformed,
+            multiAgentMovementTickLiveReadonlyReservationRuntimeUsed: multiAgentMovementTickLiveReadonlyReport?.summary.reservationRuntimeUsed,
+            multiAgentMovementTickLiveReadonlyPhysicsPerformed: multiAgentMovementTickLiveReadonlyReport?.summary.physicsPerformed,
+            multiAgentMovementTickLiveReadonlyMutationPerformed: multiAgentMovementTickLiveReadonlyReport?.summary.mutationPerformed,
+            multiAgentMovementTickLiveReadonlySuccess: multiAgentMovementTickLiveReadonlySuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,

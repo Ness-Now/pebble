@@ -459,6 +459,32 @@ struct RunMetrics: Encodable {
     let multiAgentMovementTickFixturePhysicsPerformed: Bool?
     let multiAgentMovementTickFixtureMutationPerformed: Bool?
     let multiAgentMovementTickFixtureSuccess: Bool?
+    let multiAgentMovementTickLiveReadonlyInputs: Int?
+    let multiAgentMovementTickLiveReadonlyAgents: Int?
+    let multiAgentMovementTickLiveReadonlyPhysicalPositions: Int?
+    let multiAgentMovementTickLiveReadonlyIntents: Int?
+    let multiAgentMovementTickLiveReadonlyResolutions: Int?
+    let multiAgentMovementTickLiveReadonlyFeedback: Int?
+    let multiAgentMovementTickLiveReadonlyApproved: Int?
+    let multiAgentMovementTickLiveReadonlyDenied: Int?
+    let multiAgentMovementTickLiveReadonlyOccupableDestinations: Int?
+    let multiAgentMovementTickLiveReadonlyNonOccupableDestinations: Int?
+    let multiAgentMovementTickLiveReadonlyCollisionDenied: Int?
+    let multiAgentMovementTickLiveReadonlySourceMismatch: Int?
+    let multiAgentMovementTickLiveReadonlyInvalidEdges: Int?
+    let multiAgentMovementTickLiveReadonlyStaleIntent: Int?
+    let multiAgentMovementTickLiveReadonlyDisplacementsApplied: Int?
+    let multiAgentMovementTickLiveReadonlyWorldUsed: Bool?
+    let multiAgentMovementTickLiveReadonlyLiveCollisionRead: Bool?
+    let multiAgentMovementTickLiveReadonlyPhysicalMovementApplied: Bool?
+    let multiAgentMovementTickLiveReadonlyRouteFollowingApplied: Bool?
+    let multiAgentMovementTickLiveReadonlyPathfindingPerformed: Bool?
+    let multiAgentMovementTickLiveReadonlyReplanningPerformed: Bool?
+    let multiAgentMovementTickLiveReadonlyAvoidancePerformed: Bool?
+    let multiAgentMovementTickLiveReadonlyReservationRuntimeUsed: Bool?
+    let multiAgentMovementTickLiveReadonlyPhysicsPerformed: Bool?
+    let multiAgentMovementTickLiveReadonlyMutationPerformed: Bool?
+    let multiAgentMovementTickLiveReadonlySuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -918,6 +944,32 @@ struct RunMetrics: Encodable {
         multiAgentMovementTickFixturePhysicsPerformed: Bool? = nil,
         multiAgentMovementTickFixtureMutationPerformed: Bool? = nil,
         multiAgentMovementTickFixtureSuccess: Bool? = nil,
+        multiAgentMovementTickLiveReadonlyInputs: Int? = nil,
+        multiAgentMovementTickLiveReadonlyAgents: Int? = nil,
+        multiAgentMovementTickLiveReadonlyPhysicalPositions: Int? = nil,
+        multiAgentMovementTickLiveReadonlyIntents: Int? = nil,
+        multiAgentMovementTickLiveReadonlyResolutions: Int? = nil,
+        multiAgentMovementTickLiveReadonlyFeedback: Int? = nil,
+        multiAgentMovementTickLiveReadonlyApproved: Int? = nil,
+        multiAgentMovementTickLiveReadonlyDenied: Int? = nil,
+        multiAgentMovementTickLiveReadonlyOccupableDestinations: Int? = nil,
+        multiAgentMovementTickLiveReadonlyNonOccupableDestinations: Int? = nil,
+        multiAgentMovementTickLiveReadonlyCollisionDenied: Int? = nil,
+        multiAgentMovementTickLiveReadonlySourceMismatch: Int? = nil,
+        multiAgentMovementTickLiveReadonlyInvalidEdges: Int? = nil,
+        multiAgentMovementTickLiveReadonlyStaleIntent: Int? = nil,
+        multiAgentMovementTickLiveReadonlyDisplacementsApplied: Int? = nil,
+        multiAgentMovementTickLiveReadonlyWorldUsed: Bool? = nil,
+        multiAgentMovementTickLiveReadonlyLiveCollisionRead: Bool? = nil,
+        multiAgentMovementTickLiveReadonlyPhysicalMovementApplied: Bool? = nil,
+        multiAgentMovementTickLiveReadonlyRouteFollowingApplied: Bool? = nil,
+        multiAgentMovementTickLiveReadonlyPathfindingPerformed: Bool? = nil,
+        multiAgentMovementTickLiveReadonlyReplanningPerformed: Bool? = nil,
+        multiAgentMovementTickLiveReadonlyAvoidancePerformed: Bool? = nil,
+        multiAgentMovementTickLiveReadonlyReservationRuntimeUsed: Bool? = nil,
+        multiAgentMovementTickLiveReadonlyPhysicsPerformed: Bool? = nil,
+        multiAgentMovementTickLiveReadonlyMutationPerformed: Bool? = nil,
+        multiAgentMovementTickLiveReadonlySuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -1376,6 +1428,32 @@ struct RunMetrics: Encodable {
         self.multiAgentMovementTickFixturePhysicsPerformed = multiAgentMovementTickFixturePhysicsPerformed
         self.multiAgentMovementTickFixtureMutationPerformed = multiAgentMovementTickFixtureMutationPerformed
         self.multiAgentMovementTickFixtureSuccess = multiAgentMovementTickFixtureSuccess
+        self.multiAgentMovementTickLiveReadonlyInputs = multiAgentMovementTickLiveReadonlyInputs
+        self.multiAgentMovementTickLiveReadonlyAgents = multiAgentMovementTickLiveReadonlyAgents
+        self.multiAgentMovementTickLiveReadonlyPhysicalPositions = multiAgentMovementTickLiveReadonlyPhysicalPositions
+        self.multiAgentMovementTickLiveReadonlyIntents = multiAgentMovementTickLiveReadonlyIntents
+        self.multiAgentMovementTickLiveReadonlyResolutions = multiAgentMovementTickLiveReadonlyResolutions
+        self.multiAgentMovementTickLiveReadonlyFeedback = multiAgentMovementTickLiveReadonlyFeedback
+        self.multiAgentMovementTickLiveReadonlyApproved = multiAgentMovementTickLiveReadonlyApproved
+        self.multiAgentMovementTickLiveReadonlyDenied = multiAgentMovementTickLiveReadonlyDenied
+        self.multiAgentMovementTickLiveReadonlyOccupableDestinations = multiAgentMovementTickLiveReadonlyOccupableDestinations
+        self.multiAgentMovementTickLiveReadonlyNonOccupableDestinations = multiAgentMovementTickLiveReadonlyNonOccupableDestinations
+        self.multiAgentMovementTickLiveReadonlyCollisionDenied = multiAgentMovementTickLiveReadonlyCollisionDenied
+        self.multiAgentMovementTickLiveReadonlySourceMismatch = multiAgentMovementTickLiveReadonlySourceMismatch
+        self.multiAgentMovementTickLiveReadonlyInvalidEdges = multiAgentMovementTickLiveReadonlyInvalidEdges
+        self.multiAgentMovementTickLiveReadonlyStaleIntent = multiAgentMovementTickLiveReadonlyStaleIntent
+        self.multiAgentMovementTickLiveReadonlyDisplacementsApplied = multiAgentMovementTickLiveReadonlyDisplacementsApplied
+        self.multiAgentMovementTickLiveReadonlyWorldUsed = multiAgentMovementTickLiveReadonlyWorldUsed
+        self.multiAgentMovementTickLiveReadonlyLiveCollisionRead = multiAgentMovementTickLiveReadonlyLiveCollisionRead
+        self.multiAgentMovementTickLiveReadonlyPhysicalMovementApplied = multiAgentMovementTickLiveReadonlyPhysicalMovementApplied
+        self.multiAgentMovementTickLiveReadonlyRouteFollowingApplied = multiAgentMovementTickLiveReadonlyRouteFollowingApplied
+        self.multiAgentMovementTickLiveReadonlyPathfindingPerformed = multiAgentMovementTickLiveReadonlyPathfindingPerformed
+        self.multiAgentMovementTickLiveReadonlyReplanningPerformed = multiAgentMovementTickLiveReadonlyReplanningPerformed
+        self.multiAgentMovementTickLiveReadonlyAvoidancePerformed = multiAgentMovementTickLiveReadonlyAvoidancePerformed
+        self.multiAgentMovementTickLiveReadonlyReservationRuntimeUsed = multiAgentMovementTickLiveReadonlyReservationRuntimeUsed
+        self.multiAgentMovementTickLiveReadonlyPhysicsPerformed = multiAgentMovementTickLiveReadonlyPhysicsPerformed
+        self.multiAgentMovementTickLiveReadonlyMutationPerformed = multiAgentMovementTickLiveReadonlyMutationPerformed
+        self.multiAgentMovementTickLiveReadonlySuccess = multiAgentMovementTickLiveReadonlySuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

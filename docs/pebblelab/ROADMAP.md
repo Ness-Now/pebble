@@ -1005,3 +1005,33 @@ terrain/world mutation remain out of scope.
 
 Next recommended step: Phase 4.20C - Multi-Agent Movement Tick Live
 Read-Only Smoke.
+
+## Phase 4.20C - Multi-Agent Movement Tick Live Read-Only Smoke
+
+Status: implemented and validated.
+
+Goal: add live read-only collision evidence to the tick-level multi-agent
+movement contract without applying movement. The scenario keeps synthetic
+abstract and physical positions, unordered intents, stable `agentId`
+resolution ordering, structured feedback, and unchanged positions.
+
+The scenario `multi_agent_movement_tick_live_readonly_smoke` creates one
+tick with five agents and five intentionally unordered intents. Two intents
+read occupable live collision evidence and are approved for movement without
+displacement. One intent reads non-occupable live evidence and is denied by
+collision. One source mismatch and one invalid vertical edge are denied
+before collision is read.
+
+It writes `multi_agent_movement_tick_live_readonly_report.json`,
+`multi_agent_movement_tick_live_readonly_invariant_report.json`,
+`multi_agent_movement_tick_live_readonly_feedback.json`,
+`multiAgentMovementTickLiveReadonly*` metrics, and one aggregate
+`lab_multi_agent_movement_tick_live_readonly_recorded` event.
+
+Physical application in the tick loop, reservation runtime, avoidance,
+dynamic replanning, route repair, route following, pathfinding, physics,
+save/load, social behavior, communication, gameplay movement, and
+terrain/world mutation remain out of scope.
+
+Next recommended step: Phase 4.20D - Multi-Agent Movement Tick Approved
+Application Smoke.
