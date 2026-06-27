@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Documented PebbleLab multi-agent movement integration planning contract.
 - Hardened multi-agent physical movement cases.
 - Added multi-agent approved physical movement smoke.
 - Added multi-agent live read-only collision intent smoke.

@@ -4185,3 +4185,169 @@ Phase 4.20A: multi-agent movement integration planning docs-only. It should
 define the next integration boundary before adding reservation runtime,
 avoidance, dynamic replanning, route repair, physics, save/load, social
 behavior, gameplay movement, or long-running multi-agent navigation.
+
+## 2026-06-27 — Phase 4.20A multi-agent movement integration planning docs-only
+
+### Objective
+
+Document how PebbleLab should integrate the validated 4.19 multi-agent
+movement smokes into a future tick-level movement contract without
+implementing that runtime integration yet.
+
+### Starting State
+
+Phase 4.19A documented the multi-agent movement contract. Phase 4.19B proved
+fixture-only arbitration. Phase 4.19C hardened fixture arbitration. Phase
+4.19D proved live read-only collision evidence for movement intents. Phase
+4.19E proved approved physical placeholder application. Phase 4.19F hardened
+live multi-agent movement with controlled refusals, partial approval,
+same-destination conflict, swap conflict, source mismatch, stale intent,
+invalid edge, divergence, stale collision, and max-agent bound coverage.
+
+All 4.19 work kept route following live loops, pathfinding, replanning,
+avoidance, reservation runtime, physics, terrain/world mutation, save/load,
+registries, and gameplay movement out of scope.
+
+### Files Created/Modified
+
+- Created
+  `docs/pebblelab/PHASE_4_MULTI_AGENT_MOVEMENT_INTEGRATION_PLAN.md`.
+- Updated `docs/pebblelab/CHANGELOG.md`.
+- Updated `docs/pebblelab/DEV_JOURNAL.md`.
+- Updated `docs/pebblelab/ROADMAP.md`.
+
+No Swift files were modified.
+
+### Why Docs-Only
+
+The previous phases validated several local contracts, but not their
+orchestration. Jumping directly to reservation tables, avoidance, dynamic
+replanning, pathfinding, autonomous movement, or long-running navigation
+would mix ownership boundaries too early. This phase defines the integration
+shape first.
+
+### Integration Problem
+
+The plan identifies the next problem as tick ownership:
+
+- where movement intentions are produced;
+- when they are collected;
+- which layer stabilizes ordering;
+- which layer arbitrates;
+- which layer reads collision evidence;
+- which layer applies approved moves;
+- how denied moves become feedback;
+- how reports and metrics stay useful;
+- how to avoid turning the runner into a monolithic movement function.
+
+### Target Architecture
+
+The plan proposes these future layers:
+
+- agent decision layer;
+- intent collection layer;
+- arbitration layer;
+- collision evidence layer;
+- application layer;
+- feedback layer;
+- reporting layer.
+
+Each layer has explicit responsibilities and non-responsibilities. Agents
+produce intents but do not move directly. The collector stabilizes inputs but
+does not decide conflicts. The arbiter resolves conflicts but does not
+pathfind, replan, avoid, reserve, or mutate world. Collision evidence remains
+read-only. Application applies only approved resolutions. Feedback is output
+only. Reporting does not affect simulation.
+
+### Boundary Rules
+
+The document defines separation rules for agent intent production,
+collection, arbitration, collision evidence, application, feedback, and
+reporting. Key rules: no direct agent mutation, no pathfinding inside the
+arbiter, no world mutation inside arbitration or collision evidence, no
+re-arbitration inside application, no memory/goal mutation inside feedback,
+and no gameplay decisions inside reporting.
+
+### Future Tick Input/Output
+
+The plan proposes future Swift shapes only in documentation:
+
+- `LabMultiAgentMovementTickInput`;
+- `LabMultiAgentMovementTickOutput`;
+- `LabMultiAgentMovementTickSummary`;
+- `LabMovementFeedbackKind`;
+- `LabMovementFeedback`.
+
+These shapes are meant to unify the existing lower-level proofs into a
+single future tick contract.
+
+### Feedback Policy
+
+The plan maps movement decisions to structured feedback:
+
+- approved displacement -> `moved`;
+- collision denial -> `blockedByCollision`;
+- same-destination, swap, cycle, chain, moving-away denial ->
+  `blockedByAgentConflict`;
+- source mismatch -> `blockedBySourceMismatch`;
+- divergence -> `blockedByDivergence`;
+- stale intent or stale collision -> `blockedByStaleIntent`;
+- invalid or zero-length edge -> `blockedByInvalidEdge`;
+- max-agent overflow -> `blockedByMaxAgents`.
+
+Feedback does not yet update memory, change goals, trigger replanning,
+communicate, call LLM/Python/RL, or invent movement.
+
+### Future Outputs, Invariants, Metrics, And Event
+
+Future tick-level phases should write:
+
+- `multi_agent_movement_tick_report.json`;
+- `multi_agent_movement_tick_invariant_report.json`;
+- `multi_agent_movement_tick_feedback.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The plan proposes `multiAgentMovementTick*` metrics and one aggregate
+`lab_multi_agent_movement_tick_recorded` event. It also lists 50 future
+invariant checks, including deterministic intent ordering, collision
+evidence ownership, stale evidence denial, no duplicate approved
+destination, no approved swap, denied position preservation, one-edge
+approved movement, abstract/physical final match, feedback coverage, no
+pathfinding, no replanning, no avoidance, no reservation runtime, no physics,
+no mutation, and lower-level smoke health checks.
+
+### Future Phases Recommended
+
+- Phase 4.20B - Multi-Agent Movement Tick Fixture Smoke.
+- Phase 4.20C - Multi-Agent Movement Tick Live Read-Only Smoke.
+- Phase 4.20D - Multi-Agent Movement Tick Approved Application Smoke.
+- Phase 4.20E - Multi-Agent Movement Tick Hardening.
+- Phase 4.21A - Agent Intent Production Planning Docs-Only.
+- Phase 4.21B - Agent Intent Production Fixture Smoke.
+
+### Validation
+
+Commands:
+
+- `git status`
+- `swift build`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+- `git status`
+
+Results:
+
+- Documentation plan created.
+- CHANGELOG, DEV_JOURNAL, and ROADMAP updated.
+- No Swift files modified.
+- `swift build`: passed.
+- `swift run -c release pebsmoke`: 456 passed, 0 failed.
+- `git diff --check`: passed.
+
+### Next Step
+
+Phase 4.20B: Multi-Agent Movement Tick Fixture Smoke. It should implement
+only a fixture-level tick input/output contract, with no `World`, no live
+collision, no physical movement, no reservation runtime, no avoidance, no
+pathfinding, no replanning, no goal selection, no physics, and no mutation.

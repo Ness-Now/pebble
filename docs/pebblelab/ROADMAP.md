@@ -942,3 +942,35 @@ multi-agent navigation remain out of scope.
 
 Next recommended step: Phase 4.20A - Multi-Agent Movement Integration
 Planning Docs-Only.
+
+## Phase 4.20A - Multi-Agent Movement Integration Planning Docs-Only
+
+Status: done as a docs-only planning phase.
+
+Goal: define the future integration boundary that will connect the validated
+4.19 multi-agent movement smokes into one tick-level movement contract
+without yet implementing runtime integration.
+
+The plan creates
+`docs/pebblelab/PHASE_4_MULTI_AGENT_MOVEMENT_INTEGRATION_PLAN.md`. It
+summarizes the validated 4.19A-F contracts, identifies the integration
+problem, and proposes layered ownership for agent decision, intent
+collection, arbitration, live collision evidence, movement application,
+feedback, and reporting.
+
+The proposed future tick contract includes `LabMultiAgentMovementTickInput`,
+`LabMultiAgentMovementTickOutput`, `LabMultiAgentMovementTickSummary`, and
+`LabMovementFeedback` shapes. It also defines boundary rules, a feedback
+policy, future `multi_agent_movement_tick_*` outputs,
+`multiAgentMovementTick*` metrics, one aggregate
+`lab_multi_agent_movement_tick_recorded` event, and tick-level invariants.
+
+Runtime integration is not implemented yet. Autonomous agent movement,
+repeated tick loops, long-running navigation, reservation table runtime,
+avoidance, steering, dynamic replanning, pathfinding, route repair, route
+following long, goal selection, memory updates, social behavior,
+communication, physics, terrain/world mutation, save/load changes, registry
+changes, and gameplay movement remain out of scope.
+
+Next recommended step: Phase 4.20B - Multi-Agent Movement Tick Fixture
+Smoke.
