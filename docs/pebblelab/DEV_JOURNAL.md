@@ -3328,3 +3328,128 @@ Phase 4.18E: route following hardening. It should keep route following short
 and auditable while covering stale collision, source mismatch, divergence,
 max-step, and denied-edge edge cases before any longer route or multi-agent
 movement work.
+
+## 2026-06-19 — Phase 4.18E live route following hardening
+
+### Objective
+
+Harden the live route following contract before any longer route or gameplay
+follower work. The new scenario `route_following_live_hardening_smoke` runs a
+bounded set of live/near-live route-following cases that cover completed and
+stopped outcomes without adding pathfinding inside the follower, dynamic
+replanning, physics, terrain mutation, or multi-agent movement.
+
+### Files Created/Modified
+
+- Modified `Sources/PebbleLab/LabRouteFollowing.swift`.
+- Modified `Sources/PebbleLab/LabRouteFollowingLive.swift`.
+- Modified `Sources/PebbleLab/LabOptions.swift`.
+- Modified `Sources/PebbleLab/LabScenarios.swift`.
+- Modified `Sources/PebbleLab/LabOutput.swift`.
+- Modified `Sources/PebbleLab/main.swift`.
+- Updated `docs/pebblelab/CHANGELOG.md`.
+- Updated `docs/pebblelab/DEV_JOURNAL.md`.
+- Updated `docs/pebblelab/ROADMAP.md`.
+- Updated `docs/pebblelab/PHASE_4_ROUTE_FOLLOWING_PLAN.md`.
+
+### Cases Covered
+
+The hardening report covers 8 cases:
+
+- `completed_two_step`;
+- `stopped_collision_denied_first_edge`;
+- `stopped_invalid_diagonal_edge`;
+- `stopped_vertical_edge`;
+- `stopped_source_mismatch`;
+- `stopped_divergence_after_first_edge`;
+- `stopped_stale_collision`;
+- `stopped_max_steps`.
+
+The completed case reuses the Phase 4.18D route
+`(7,64,8) -> (8,64,8) -> (9,64,8)` with seed 99 collision evidence. The
+collision-denied case reuses the Phase 4.18C first-edge denial under seed 42.
+The source mismatch, divergence, stale collision, invalid-edge, and max-step
+cases are controlled near-live harness snapshots that use the same live route
+following and collision snapshot types while injecting the specific contract
+fault without mutating terrain or world state.
+
+### Completed And Stopped Summary
+
+The scenario records:
+
+- cases `8`;
+- passed `8`;
+- failed `0`;
+- completed `1`;
+- stopped `7`;
+- attempted edges `9`;
+- completed edges `4`;
+- displacements applied `4`;
+- denied edges `5`.
+
+The stop cases preserve the last audited position, stop on the first denied or
+invalid edge, and never continue to a later route edge after a failed contract
+check.
+
+### Outputs, Invariants, Metrics, And Event
+
+The scenario writes:
+
+- `route_following_live_hardening_report.json`;
+- `route_following_live_hardening_invariant_report.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The invariant report has 42 checks covering case presence, explicit
+status/reason, expected edge counts, expected displacements and denied edges,
+completed final position, stopped final position preservation, stop on first
+denied edge, no skipped nodes, route index progression, collision-before-
+displacement, displacement requiring occupable collision, invalid-edge and
+stale-collision no-displacement rules, max-step and divergence stops, no
+pathfinding inside the follower, no replanning, no goal selection, no
+multi-agent movement, no avoidance/reservation, no physics, no world/terrain
+mutation, and runner output contracts.
+
+Metrics use the `routeFollowingLiveHardening*` prefix. The scenario emits one
+aggregate `lab_route_following_live_hardening_recorded` event.
+
+### Still Prohibited
+
+No long route following, gameplay route following, pathfinding inside the
+follower, dynamic replanning, goal selection, physics integration, multi-agent
+movement, avoidance, reservation table, terrain mutation, world mutation,
+Python, ML, LLM, or RL was added.
+
+### Validation Commands
+
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario route_following_live_hardening_smoke --seed 42 --ticks 5 --out runs/check_route_following_live_hardening`
+- `swift run -c release PebbleLab -- --scenario route_following_approved_two_step_smoke --seed 42 --ticks 5 --out runs/check_approved_two_step_after_route_hardening`
+- `swift run -c release PebbleLab -- --scenario route_following_denied_live_smoke --seed 42 --ticks 5 --out runs/check_denied_live_after_route_hardening`
+- `swift run -c release PebbleLab -- --scenario route_following_fixture_smoke --seed 42 --ticks 0 --out runs/check_fixture_route_after_route_hardening`
+- `swift run -c release PebbleLab -- --scenario physical_movement_single_step_hardening_smoke --seed 42 --ticks 5 --out runs/check_single_step_hardening_after_route_hardening`
+- `swift run -c release PebbleLab -- --scenario physical_movement_approved_single_step_smoke --seed 42 --ticks 5 --out runs/check_approved_single_step_after_route_hardening`
+- `swift run -c release PebbleLab -- --scenario physical_movement_denied_smoke --seed 42 --ticks 5 --out runs/check_denied_movement_after_route_hardening`
+- `swift run -c release PebbleLab -- --scenario terrain_collision_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_collision_live_after_route_hardening`
+- `swift run -c release PebbleLab -- --scenario terrain_collision_fixture_smoke --seed 42 --ticks 0 --out runs/check_collision_fixture_after_route_hardening`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_route_hardening`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- Route following live hardening report: success true.
+- Cases: `8 passed, 0 failed`.
+- Invariant report: `42 passed, 0 failed`.
+- Metrics contain `routeFollowingLiveHardening*`.
+- `events.ndjson` contains `lab_route_following_live_hardening_recorded`.
+- Debug/release builds, requested non-regression scenarios, and `pebsmoke`
+  passed.
+- `pebsmoke`: `456 passed, 0 failed`.
+
+### Next Step
+
+Phase 4.19A: multi-agent movement planning docs-only. Route following remains
+single-agent and short; multi-agent movement, avoidance/reservation, physics,
+dynamic replanning, and gameplay route following remain deferred.

@@ -50,6 +50,8 @@ let isRouteFollowingDeniedLiveScenario = options.scenario
     == "route_following_denied_live_smoke"
 let isRouteFollowingApprovedTwoStepScenario = options.scenario
     == "route_following_approved_two_step_smoke"
+let isRouteFollowingLiveHardeningScenario = options.scenario
+    == "route_following_live_hardening_smoke"
 let isWorldInteractionScenario = isWorldObservationScenario
     || isTerrainScanRun
     || isTerrainColumnScanRun
@@ -1004,6 +1006,32 @@ let routeFollowingLiveApprovedSuccess = isRouteFollowingApprovedTwoStepScenario
 let routeFollowingLiveSuccess = isRouteFollowingLiveScenario
     ? (routeFollowingLiveDeniedSuccess || routeFollowingLiveApprovedSuccess)
     : nil
+let routeFollowingLiveHardeningReport = isRouteFollowingLiveHardeningScenario
+    ? makeRouteFollowingLiveHardeningReport(
+        scenario: options.scenario,
+        seed: options.seed,
+        ticksCompleted: ticksCompleted
+    )
+    : nil
+let routeFollowingLiveHardeningInvariantReport = isRouteFollowingLiveHardeningScenario
+    ? makeRouteFollowingLiveHardeningInvariantReport(
+        report: routeFollowingLiveHardeningReport,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let routeFollowingLiveHardeningSuccess = isRouteFollowingLiveHardeningScenario
+    ? ((routeFollowingLiveHardeningReport?.success ?? false)
+        && (routeFollowingLiveHardeningInvariantReport?.success ?? false)
+        && routeFollowingLiveHardeningReport?.summary.failed == 0
+        && (routeFollowingLiveHardeningReport?.summary.completed ?? 0) >= 1
+        && (routeFollowingLiveHardeningReport?.summary.collisionDenied ?? 0) >= 1
+        && (routeFollowingLiveHardeningReport?.summary.invalidEdges ?? 0) >= 2
+        && (routeFollowingLiveHardeningReport?.summary.sourceMismatch ?? 0) >= 1
+        && (routeFollowingLiveHardeningReport?.summary.divergence ?? 0) >= 1
+        && (routeFollowingLiveHardeningReport?.summary.staleCollision ?? 0) >= 1
+        && (routeFollowingLiveHardeningReport?.summary.maxSteps ?? 0) >= 1)
+    : nil
 let coreEntityInvariantReport = options.scenario == "core_entity_smoke"
     ? coreEntityBridge.invariantReport(
         scenario: options.scenario,
@@ -1281,6 +1309,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (physicalMovementHardeningSuccess ?? true)
     && (routeFollowingFixtureSuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
+    && (routeFollowingLiveHardeningSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -1523,6 +1552,24 @@ if options.outPath != nil {
                 pathfindingInsideFollower: routeFollowingLiveSnapshot.pathfindingPerformedInsideFollower,
                 replanningPerformed: routeFollowingLiveSnapshot.replanningPerformed,
                 physicsPerformed: routeFollowingLiveSnapshot.physicsPerformed
+            ))
+        }
+        if let routeFollowingLiveHardeningReport {
+            let summary = routeFollowingLiveHardeningReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_route_following_live_hardening_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: routeFollowingLiveHardeningSuccess,
+                passed: summary.passed,
+                failed: summary.failed,
+                completed: summary.completed,
+                stopped: summary.stopped,
+                attemptedEdges: summary.attemptedEdges,
+                completedEdges: summary.completedEdges,
+                displacementsApplied: summary.displacementsApplied,
+                deniedEdges: summary.deniedEdges,
+                cases: summary.cases
             ))
         }
         if let terrainColumnScanSnapshot {
@@ -2014,6 +2061,18 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("route_following_live_invariant_report.json")
             )
         }
+        if let routeFollowingLiveHardeningReport {
+            try writeJSON(
+                routeFollowingLiveHardeningReport,
+                to: outURL.appendingPathComponent("route_following_live_hardening_report.json")
+            )
+        }
+        if let routeFollowingLiveHardeningInvariantReport {
+            try writeJSON(
+                routeFollowingLiveHardeningInvariantReport,
+                to: outURL.appendingPathComponent("route_following_live_hardening_invariant_report.json")
+            )
+        }
         if let terrainColumnScanSnapshot {
             try writeJSON(
                 terrainColumnScanSnapshot,
@@ -2431,6 +2490,22 @@ if let outPath = options.outPath {
             routeFollowingLivePhysicsPerformed: routeFollowingLiveSnapshot?.physicsPerformed,
             routeFollowingLiveMutationPerformed: routeFollowingLiveSnapshot?.mutationPerformed,
             routeFollowingLiveSuccess: routeFollowingLiveSuccess,
+            routeFollowingLiveHardeningCases: routeFollowingLiveHardeningReport?.summary.cases,
+            routeFollowingLiveHardeningPassed: routeFollowingLiveHardeningReport?.summary.passed,
+            routeFollowingLiveHardeningFailed: routeFollowingLiveHardeningReport?.summary.failed,
+            routeFollowingLiveHardeningCompleted: routeFollowingLiveHardeningReport?.summary.completed,
+            routeFollowingLiveHardeningStopped: routeFollowingLiveHardeningReport?.summary.stopped,
+            routeFollowingLiveHardeningAttemptedEdges: routeFollowingLiveHardeningReport?.summary.attemptedEdges,
+            routeFollowingLiveHardeningCompletedEdges: routeFollowingLiveHardeningReport?.summary.completedEdges,
+            routeFollowingLiveHardeningDisplacementsApplied: routeFollowingLiveHardeningReport?.summary.displacementsApplied,
+            routeFollowingLiveHardeningDeniedEdges: routeFollowingLiveHardeningReport?.summary.deniedEdges,
+            routeFollowingLiveHardeningCollisionDenied: routeFollowingLiveHardeningReport?.summary.collisionDenied,
+            routeFollowingLiveHardeningInvalidEdges: routeFollowingLiveHardeningReport?.summary.invalidEdges,
+            routeFollowingLiveHardeningSourceMismatch: routeFollowingLiveHardeningReport?.summary.sourceMismatch,
+            routeFollowingLiveHardeningDivergence: routeFollowingLiveHardeningReport?.summary.divergence,
+            routeFollowingLiveHardeningStaleCollision: routeFollowingLiveHardeningReport?.summary.staleCollision,
+            routeFollowingLiveHardeningMaxSteps: routeFollowingLiveHardeningReport?.summary.maxSteps,
+            routeFollowingLiveHardeningSuccess: routeFollowingLiveHardeningSuccess,
             successCriteria: successCriteria
         )
         try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))

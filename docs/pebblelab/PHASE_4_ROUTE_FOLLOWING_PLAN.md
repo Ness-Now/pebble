@@ -496,3 +496,48 @@ Phase 4.18D still does not implement long route following or gameplay route
 following. It proves only that a short live follower can apply two approved
 single-step displacements under the existing collision and physical movement
 contracts.
+
+## Phase 4.18E Implementation Status
+
+Phase 4.18E implements live route following hardening. The scenario is
+`route_following_live_hardening_smoke`.
+
+The hardening scenario runs 8 bounded cases:
+
+- `completed_two_step`;
+- `stopped_collision_denied_first_edge`;
+- `stopped_invalid_diagonal_edge`;
+- `stopped_vertical_edge`;
+- `stopped_source_mismatch`;
+- `stopped_divergence_after_first_edge`;
+- `stopped_stale_collision`;
+- `stopped_max_steps`.
+
+The completed case reuses the Phase 4.18D two-edge route. The collision-denied
+case reuses the Phase 4.18C denied first edge. The other stop cases are
+controlled near-live harness snapshots that use the same live route following
+snapshot and collision snapshot types while injecting a single contract fault.
+This keeps the hardening phase deterministic and auditable without mutating
+terrain/world state or creating a core entity.
+
+The phase writes `route_following_live_hardening_report.json`,
+`route_following_live_hardening_invariant_report.json`, `metrics.json`, and
+`events.ndjson`. Metrics use the `routeFollowingLiveHardening*` prefix, and the
+scenario emits one aggregate `lab_route_following_live_hardening_recorded`
+event.
+
+The report records 8 cases, 8 passed, 0 failed, 1 completed, 7 stopped, 9
+attempted edges, 4 completed edges, 4 displacements applied, and 5 denied
+edges. The invariant report validates 42 checks covering case coverage,
+expected statuses and counts, completed final position, stopped position
+preservation, stop on first denied edge, no skipped nodes, route index
+progression, collision-before-displacement, displacement only with occupable
+collision, invalid/stale no-displacement behavior, max-step and divergence
+stops, no pathfinding inside the follower, no dynamic replanning, no goal
+selection, no multi-agent movement, no avoidance/reservation, no physics, no
+world/terrain mutation, and runner output contracts.
+
+Phase 4.18E still does not implement long route following, gameplay route
+following, dynamic replanning, pathfinding inside a follower, multi-agent
+movement, avoidance/reservation, physics integration, or terrain/world
+mutation. It hardens only the short single-agent route following contract.

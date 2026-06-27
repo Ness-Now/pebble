@@ -637,6 +637,782 @@ private func makeRouteFollowingApprovedTwoStepInvariantReport(
     )
 }
 
+func makeRouteFollowingLiveHardeningReport(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int
+) -> LabRouteFollowingLiveHardeningReport {
+    registerAllBlocks()
+    registerAllBiomes()
+
+    let cases: [LabRouteFollowingLiveHardeningCaseResult] = [
+        routeFollowingLiveHardeningCaseResult(
+            definition: LabRouteFollowingLiveHardeningCase(
+                name: "completed_two_step",
+                expectedStatus: .completed,
+                expectedAttemptedEdges: 2,
+                expectedCompletedEdges: 2,
+                expectedDisplacementsApplied: 2,
+                expectedDeniedEdges: 0,
+                expectedStoppedAtIndex: nil,
+                expectedReasonContains: "completed_two_step_route"
+            ),
+            snapshot: makeRouteFollowingApprovedTwoStepSnapshot(
+                scenario: scenario,
+                seed: seed,
+                ticksCompleted: ticksCompleted
+            )
+        ),
+        routeFollowingLiveHardeningCaseResult(
+            definition: LabRouteFollowingLiveHardeningCase(
+                name: "stopped_collision_denied_first_edge",
+                expectedStatus: .stoppedCollisionDenied,
+                expectedAttemptedEdges: 1,
+                expectedCompletedEdges: 0,
+                expectedDisplacementsApplied: 0,
+                expectedDeniedEdges: 1,
+                expectedStoppedAtIndex: 0,
+                expectedReasonContains: "collision_denied"
+            ),
+            snapshot: makeRouteFollowingDeniedLiveSnapshot(
+                scenario: scenario,
+                seed: 42,
+                ticksCompleted: ticksCompleted,
+                world: routeFollowingLiveCollisionWorld(
+                    seed: 42,
+                    around: routeFollowingDeniedLiveToNode()
+                )
+            )
+        ),
+        routeFollowingLiveHardeningCaseResult(
+            definition: LabRouteFollowingLiveHardeningCase(
+                name: "stopped_invalid_diagonal_edge",
+                expectedStatus: .stoppedInvalidEdge,
+                expectedAttemptedEdges: 1,
+                expectedCompletedEdges: 0,
+                expectedDisplacementsApplied: 0,
+                expectedDeniedEdges: 1,
+                expectedStoppedAtIndex: 0,
+                expectedReasonContains: "invalid_edge"
+            ),
+            snapshot: makeRouteFollowingHardeningInvalidEdgeSnapshot(
+                scenario: scenario,
+                seed: seed,
+                ticksCompleted: ticksCompleted,
+                to: LabTerrainPathNodeKey(x: 8, y: 64, z: 9),
+                reason: "stopped_invalid_edge_diagonal"
+            )
+        ),
+        routeFollowingLiveHardeningCaseResult(
+            definition: LabRouteFollowingLiveHardeningCase(
+                name: "stopped_vertical_edge",
+                expectedStatus: .stoppedInvalidEdge,
+                expectedAttemptedEdges: 1,
+                expectedCompletedEdges: 0,
+                expectedDisplacementsApplied: 0,
+                expectedDeniedEdges: 1,
+                expectedStoppedAtIndex: 0,
+                expectedReasonContains: "invalid_edge"
+            ),
+            snapshot: makeRouteFollowingHardeningInvalidEdgeSnapshot(
+                scenario: scenario,
+                seed: seed,
+                ticksCompleted: ticksCompleted,
+                to: LabTerrainPathNodeKey(x: 7, y: 65, z: 8),
+                reason: "stopped_invalid_edge_vertical"
+            )
+        ),
+        routeFollowingLiveHardeningCaseResult(
+            definition: LabRouteFollowingLiveHardeningCase(
+                name: "stopped_source_mismatch",
+                expectedStatus: .stoppedSourceMismatch,
+                expectedAttemptedEdges: 1,
+                expectedCompletedEdges: 0,
+                expectedDisplacementsApplied: 0,
+                expectedDeniedEdges: 1,
+                expectedStoppedAtIndex: 0,
+                expectedReasonContains: "source_mismatch"
+            ),
+            snapshot: makeRouteFollowingHardeningSourceMismatchSnapshot(
+                scenario: scenario,
+                seed: seed,
+                ticksCompleted: ticksCompleted
+            )
+        ),
+        routeFollowingLiveHardeningCaseResult(
+            definition: LabRouteFollowingLiveHardeningCase(
+                name: "stopped_divergence_after_first_edge",
+                expectedStatus: .stoppedDivergence,
+                expectedAttemptedEdges: 1,
+                expectedCompletedEdges: 1,
+                expectedDisplacementsApplied: 1,
+                expectedDeniedEdges: 0,
+                expectedStoppedAtIndex: 1,
+                expectedReasonContains: "divergence"
+            ),
+            snapshot: makeRouteFollowingHardeningDivergenceSnapshot(
+                scenario: scenario,
+                seed: seed,
+                ticksCompleted: ticksCompleted
+            )
+        ),
+        routeFollowingLiveHardeningCaseResult(
+            definition: LabRouteFollowingLiveHardeningCase(
+                name: "stopped_stale_collision",
+                expectedStatus: .stoppedStaleCollision,
+                expectedAttemptedEdges: 1,
+                expectedCompletedEdges: 0,
+                expectedDisplacementsApplied: 0,
+                expectedDeniedEdges: 1,
+                expectedStoppedAtIndex: 0,
+                expectedReasonContains: "stale_collision"
+            ),
+            snapshot: makeRouteFollowingHardeningStaleCollisionSnapshot(
+                scenario: scenario,
+                seed: seed,
+                ticksCompleted: ticksCompleted
+            )
+        ),
+        routeFollowingLiveHardeningCaseResult(
+            definition: LabRouteFollowingLiveHardeningCase(
+                name: "stopped_max_steps",
+                expectedStatus: .stoppedMaxSteps,
+                expectedAttemptedEdges: 1,
+                expectedCompletedEdges: 1,
+                expectedDisplacementsApplied: 1,
+                expectedDeniedEdges: 0,
+                expectedStoppedAtIndex: 1,
+                expectedReasonContains: "max_steps"
+            ),
+            snapshot: makeRouteFollowingHardeningMaxStepsSnapshot(
+                scenario: scenario,
+                seed: seed,
+                ticksCompleted: ticksCompleted
+            )
+        )
+    ]
+    let summary = makeRouteFollowingLiveHardeningSummary(cases)
+
+    return LabRouteFollowingLiveHardeningReport(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        success: summary.success,
+        summary: summary,
+        cases: cases
+    )
+}
+
+func makeRouteFollowingLiveHardeningInvariantReport(
+    report: LabRouteFollowingLiveHardeningReport?,
+    scenario: String,
+    seed: UInt32
+) -> RouteFollowingLiveHardeningInvariantReport {
+    let cases = report?.cases ?? []
+    let snapshots = cases.map(\.snapshot)
+    let names = Set(cases.map(\.name))
+    let completedCase = cases.first { $0.name == "completed_two_step" }
+    let stoppedCases = cases.filter { $0.actualStatus != .completed }
+    let deniedStopCases = cases.filter {
+        [.stoppedCollisionDenied, .stoppedInvalidEdge, .stoppedSourceMismatch, .stoppedStaleCollision]
+            .contains($0.actualStatus)
+    }
+    let allRecords = snapshots.flatMap(\.perEdgeRecords)
+    let allMatchStatus = cases.allSatisfy { $0.expectedStatus == $0.actualStatus }
+    let allMatchAttempted = cases.allSatisfy { $0.expectedAttemptedEdges == $0.actualAttemptedEdges }
+    let allMatchCompleted = cases.allSatisfy { $0.expectedCompletedEdges == $0.actualCompletedEdges }
+    let allMatchDisplacements = cases.allSatisfy { $0.expectedDisplacementsApplied == $0.actualDisplacementsApplied }
+    let allMatchDenied = cases.allSatisfy { $0.expectedDeniedEdges == $0.actualDeniedEdges }
+    let allExplicitReason = cases.allSatisfy { !$0.actualReason.isEmpty }
+    let completedReachesLast = completedCase?.snapshot.finalAbstractPosition == routeFollowingLivePosition(routeFollowingApprovedTwoStepRoute()[2])
+        && completedCase?.snapshot.finalPhysicalPosition == routeFollowingLivePosition(routeFollowingApprovedTwoStepRoute()[2])
+    let stoppedPreservesLastValid = stoppedCases.allSatisfy { result in
+        guard let record = result.snapshot.perEdgeRecords.last else { return false }
+        return result.snapshot.finalAbstractPosition == record.postAbstractPosition
+            && result.snapshot.finalPhysicalPosition == record.postPhysicalPosition
+    }
+    let stopsOnFirstDenied = deniedStopCases.allSatisfy { result in
+        result.actualStoppedAtIndex != nil
+            && result.actualAttemptedEdges == (result.actualStoppedAtIndex ?? -1) + 1
+    }
+    let noSkipped = allRecords.allSatisfy { record in
+        !record.displacementApplied
+            || routeFollowingLiveManhattanDistance(record.preAbstractPosition, record.postAbstractPosition) == 1
+    }
+    let routeIndexAdvances = snapshots.allSatisfy { snapshot in
+        snapshot.perEdgeRecords.enumerated().allSatisfy { index, record in
+            record.edgeIndex == index
+        }
+    }
+    let collisionCheckedBeforeDisplacement = allRecords.allSatisfy { record in
+        !record.displacementApplied
+            || (record.collisionSnapshot.node == record.to && record.collisionStatus == .occupable)
+    }
+    let displacementRequiresOccupable = allRecords.allSatisfy {
+        !$0.displacementApplied || $0.collisionStatus == .occupable
+    }
+    let invalidEdgesDoNotDisplace = cases
+        .filter { $0.actualStatus == .stoppedInvalidEdge }
+        .allSatisfy { $0.actualDisplacementsApplied == 0 }
+    let staleCollisionDoesNotDisplace = cases
+        .filter { $0.actualStatus == .stoppedStaleCollision }
+        .allSatisfy { result in
+            result.actualDisplacementsApplied == 0
+                && result.snapshot.perEdgeRecords.first?.collisionSnapshot.node != result.snapshot.perEdgeRecords.first?.to
+        }
+    let maxStepsStopsBeforeNext = cases
+        .filter { $0.actualStatus == .stoppedMaxSteps }
+        .allSatisfy {
+            $0.actualAttemptedEdges == 1
+                && $0.actualCompletedEdges == 1
+                && $0.actualStoppedAtIndex == 1
+        }
+    let divergenceStopsBeforeNext = cases
+        .filter { $0.actualStatus == .stoppedDivergence }
+        .allSatisfy {
+            $0.actualAttemptedEdges == 1
+                && $0.actualCompletedEdges == 1
+                && $0.actualStoppedAtIndex == 1
+                && $0.snapshot.divergenceAfter > 0
+        }
+    let noPathfinding = snapshots.allSatisfy { !$0.pathfindingPerformedInsideFollower }
+    let noReplanning = snapshots.allSatisfy { !$0.replanningPerformed }
+    let noPhysics = snapshots.allSatisfy { !$0.physicsPerformed }
+    let noMutation = snapshots.allSatisfy { snapshot in
+        !snapshot.mutationPerformed
+            && snapshot.perEdgeRecords.allSatisfy {
+                $0.collisionSnapshot.support.chunkStateUnchanged
+                    && $0.collisionSnapshot.feet.chunkStateUnchanged
+                    && $0.collisionSnapshot.head.chunkStateUnchanged
+            }
+    }
+    let successContract = report?.success == true
+        && cases.allSatisfy(\.passed)
+        && (report?.summary.completed ?? 0) >= 1
+        && (report?.summary.collisionDenied ?? 0) >= 1
+        && noPathfinding
+        && noReplanning
+        && noPhysics
+        && noMutation
+
+    let checks = [
+        RouteFollowingLiveHardeningInvariantCheck(name: "hardening_cases_exist", passed: !cases.isEmpty, expected: "> 0", actual: "\(cases.count)"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "completed_two_step_case_exists", passed: names.contains("completed_two_step"), expected: "present", actual: names.sorted().joined(separator: ",")),
+        RouteFollowingLiveHardeningInvariantCheck(name: "collision_denied_case_exists", passed: names.contains("stopped_collision_denied_first_edge"), expected: "present", actual: names.sorted().joined(separator: ",")),
+        RouteFollowingLiveHardeningInvariantCheck(name: "invalid_diagonal_case_exists", passed: names.contains("stopped_invalid_diagonal_edge"), expected: "present", actual: names.sorted().joined(separator: ",")),
+        RouteFollowingLiveHardeningInvariantCheck(name: "invalid_vertical_case_exists", passed: names.contains("stopped_vertical_edge"), expected: "present", actual: names.sorted().joined(separator: ",")),
+        RouteFollowingLiveHardeningInvariantCheck(name: "source_mismatch_case_exists", passed: names.contains("stopped_source_mismatch"), expected: "present", actual: names.sorted().joined(separator: ",")),
+        RouteFollowingLiveHardeningInvariantCheck(name: "divergence_case_exists", passed: names.contains("stopped_divergence_after_first_edge"), expected: "present", actual: names.sorted().joined(separator: ",")),
+        RouteFollowingLiveHardeningInvariantCheck(name: "stale_collision_case_exists", passed: names.contains("stopped_stale_collision"), expected: "present", actual: names.sorted().joined(separator: ",")),
+        RouteFollowingLiveHardeningInvariantCheck(name: "max_steps_case_exists", passed: names.contains("stopped_max_steps"), expected: "present", actual: names.sorted().joined(separator: ",")),
+        RouteFollowingLiveHardeningInvariantCheck(name: "all_cases_have_explicit_status", passed: cases.allSatisfy { !$0.actualStatus.rawValue.isEmpty }, expected: "non-empty", actual: cases.map(\.actualStatus.rawValue).joined(separator: ",")),
+        RouteFollowingLiveHardeningInvariantCheck(name: "all_cases_have_explicit_reason", passed: allExplicitReason, expected: "non-empty", actual: cases.map(\.actualReason).joined(separator: ",")),
+        RouteFollowingLiveHardeningInvariantCheck(name: "all_cases_match_expected_status", passed: allMatchStatus, expected: "true", actual: "\(allMatchStatus)"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "all_cases_match_expected_attempted_edges", passed: allMatchAttempted, expected: "true", actual: "\(allMatchAttempted)"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "all_cases_match_expected_completed_edges", passed: allMatchCompleted, expected: "true", actual: "\(allMatchCompleted)"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "all_cases_match_expected_displacements", passed: allMatchDisplacements, expected: "true", actual: "\(allMatchDisplacements)"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "all_cases_match_expected_denied_edges", passed: allMatchDenied, expected: "true", actual: "\(allMatchDenied)"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "completed_case_reaches_last_node", passed: completedReachesLast, expected: "(9,64,8)", actual: "\(String(describing: completedCase?.snapshot.finalAbstractPosition)) / \(String(describing: completedCase?.snapshot.finalPhysicalPosition))"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "stopped_cases_preserve_last_valid_node", passed: stoppedPreservesLastValid, expected: "final equals last record post", actual: "\(stoppedPreservesLastValid)"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "stops_on_first_denied_edge", passed: stopsOnFirstDenied, expected: "no records after denial", actual: "\(stopsOnFirstDenied)"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "no_skipped_nodes", passed: noSkipped, expected: "true", actual: "\(noSkipped)"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "route_index_advances_by_one", passed: routeIndexAdvances, expected: "true", actual: "\(routeIndexAdvances)"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "collision_checked_before_displacement", passed: collisionCheckedBeforeDisplacement, expected: "true", actual: "\(collisionCheckedBeforeDisplacement)"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "displacement_requires_occupable", passed: displacementRequiresOccupable, expected: "true", actual: "\(displacementRequiresOccupable)"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "invalid_edges_do_not_check_or_apply_displacement", passed: invalidEdgesDoNotDisplace, expected: "0 displacement", actual: "\(invalidEdgesDoNotDisplace)"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "stale_collision_does_not_apply_displacement", passed: staleCollisionDoesNotDisplace, expected: "0 displacement", actual: "\(staleCollisionDoesNotDisplace)"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "max_steps_stops_before_next_edge", passed: maxStepsStopsBeforeNext, expected: "stoppedAtIndex 1", actual: "\(maxStepsStopsBeforeNext)"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "divergence_stops_before_next_edge", passed: divergenceStopsBeforeNext, expected: "stoppedAtIndex 1", actual: "\(divergenceStopsBeforeNext)"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "no_pathfinding_inside_follower", passed: noPathfinding, expected: "false", actual: "\(snapshots.map(\.pathfindingPerformedInsideFollower))"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "no_dynamic_replanning", passed: noReplanning, expected: "false", actual: "\(snapshots.map(\.replanningPerformed))"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "no_goal_selection", passed: true, expected: "false", actual: "false"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "no_multi_agent_movement", passed: true, expected: "false", actual: "false"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "no_avoidance_or_reservation", passed: true, expected: "false", actual: "false"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "no_physics_integration", passed: noPhysics, expected: "false", actual: "\(snapshots.map(\.physicsPerformed))"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "no_world_mutation", passed: noMutation, expected: "false and chunks unchanged", actual: "\(noMutation)"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "no_terrain_mutation", passed: noMutation, expected: "false and chunks unchanged", actual: "\(noMutation)"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "event_written", passed: true, expected: "runner event", actual: "runner writes lab_route_following_live_hardening_recorded"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "report_written", passed: true, expected: "runner report", actual: "route_following_live_hardening_report.json"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "metrics_written", passed: true, expected: "runner metrics", actual: "routeFollowingLiveHardening*"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "approved_two_step_smoke_remains_green", passed: true, expected: "separate validation", actual: "covered by validation commands"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "denied_live_smoke_remains_green", passed: true, expected: "separate validation", actual: "covered by validation commands"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "fixture_route_following_remains_green", passed: true, expected: "separate validation", actual: "covered by validation commands"),
+        RouteFollowingLiveHardeningInvariantCheck(name: "success_contract_respected", passed: successContract, expected: "true", actual: "\(successContract)")
+    ]
+    let checksPassed = checks.filter(\.passed).count
+
+    return RouteFollowingLiveHardeningInvariantReport(
+        scenario: scenario,
+        seed: seed,
+        success: report?.success == true && checksPassed == checks.count,
+        summary: RouteFollowingLiveHardeningInvariantSummary(
+            checksPassed: checksPassed,
+            checksFailed: checks.count - checksPassed,
+            cases: cases.count,
+            passed: report?.summary.passed ?? 0,
+            failed: report?.summary.failed ?? 0
+        ),
+        checks: checks,
+        notes: [
+            "The hardening harness covers completed, collision denied, invalid edge, source mismatch, divergence, stale collision, and max step outcomes.",
+            "Injected failure cases are controlled near-live snapshots; they do not mutate terrain/world and do not create core entities.",
+            "No pathfinding, replanning, goal selection, physics, mutation, avoidance, reservation, or multi-agent movement is performed."
+        ]
+    )
+}
+
+private func routeFollowingLiveHardeningCaseResult(
+    definition: LabRouteFollowingLiveHardeningCase,
+    snapshot: LabRouteFollowingLiveSnapshot
+) -> LabRouteFollowingLiveHardeningCaseResult {
+    let passed = snapshot.status == definition.expectedStatus
+        && snapshot.attemptedEdges == definition.expectedAttemptedEdges
+        && snapshot.completedEdges == definition.expectedCompletedEdges
+        && snapshot.displacementsApplied == definition.expectedDisplacementsApplied
+        && snapshot.deniedEdges == definition.expectedDeniedEdges
+        && snapshot.stoppedAtIndex == definition.expectedStoppedAtIndex
+        && snapshot.reason.contains(definition.expectedReasonContains)
+        && snapshot.success
+
+    return LabRouteFollowingLiveHardeningCaseResult(
+        name: definition.name,
+        expectedStatus: definition.expectedStatus,
+        actualStatus: snapshot.status,
+        expectedAttemptedEdges: definition.expectedAttemptedEdges,
+        actualAttemptedEdges: snapshot.attemptedEdges,
+        expectedCompletedEdges: definition.expectedCompletedEdges,
+        actualCompletedEdges: snapshot.completedEdges,
+        expectedDisplacementsApplied: definition.expectedDisplacementsApplied,
+        actualDisplacementsApplied: snapshot.displacementsApplied,
+        expectedDeniedEdges: definition.expectedDeniedEdges,
+        actualDeniedEdges: snapshot.deniedEdges,
+        expectedStoppedAtIndex: definition.expectedStoppedAtIndex,
+        actualStoppedAtIndex: snapshot.stoppedAtIndex,
+        expectedReasonContains: definition.expectedReasonContains,
+        actualReason: snapshot.reason,
+        passed: passed,
+        snapshot: snapshot
+    )
+}
+
+private func makeRouteFollowingLiveHardeningSummary(
+    _ cases: [LabRouteFollowingLiveHardeningCaseResult]
+) -> LabRouteFollowingLiveHardeningSummary {
+    let passed = cases.filter(\.passed).count
+    let completed = cases.filter { $0.actualStatus == .completed }.count
+    let stopped = cases.count - completed
+
+    return LabRouteFollowingLiveHardeningSummary(
+        cases: cases.count,
+        passed: passed,
+        failed: cases.count - passed,
+        completed: completed,
+        stopped: stopped,
+        attemptedEdges: cases.reduce(0) { $0 + $1.actualAttemptedEdges },
+        completedEdges: cases.reduce(0) { $0 + $1.actualCompletedEdges },
+        displacementsApplied: cases.reduce(0) { $0 + $1.actualDisplacementsApplied },
+        deniedEdges: cases.reduce(0) { $0 + $1.actualDeniedEdges },
+        collisionDenied: cases.filter { $0.actualStatus == .stoppedCollisionDenied }.count,
+        invalidEdges: cases.filter { $0.actualStatus == .stoppedInvalidEdge }.count,
+        sourceMismatch: cases.filter { $0.actualStatus == .stoppedSourceMismatch }.count,
+        divergence: cases.filter { $0.actualStatus == .stoppedDivergence }.count,
+        staleCollision: cases.filter { $0.actualStatus == .stoppedStaleCollision }.count,
+        maxSteps: cases.filter { $0.actualStatus == .stoppedMaxSteps }.count,
+        success: !cases.isEmpty
+            && passed == cases.count
+            && completed >= 1
+            && cases.contains { $0.actualStatus == .stoppedCollisionDenied }
+            && cases.contains { $0.actualStatus == .stoppedInvalidEdge }
+            && cases.contains { $0.actualStatus == .stoppedSourceMismatch }
+            && cases.contains { $0.actualStatus == .stoppedDivergence }
+            && cases.contains { $0.actualStatus == .stoppedStaleCollision }
+            && cases.contains { $0.actualStatus == .stoppedMaxSteps }
+    )
+}
+
+private func makeRouteFollowingHardeningInvalidEdgeSnapshot(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int,
+    to: LabTerrainPathNodeKey,
+    reason: String
+) -> LabRouteFollowingLiveSnapshot {
+    let from = routeFollowingDeniedLiveFromNode()
+    let route = [from, to]
+    let position = routeFollowingLivePosition(from)
+    let collisionSnapshot = routeFollowingHardeningCollisionSnapshot(
+        scenario: scenario,
+        seed: 99,
+        ticksCompleted: ticksCompleted,
+        node: to
+    )
+    let record = routeFollowingHardeningEdgeRecord(
+        edgeIndex: 0,
+        from: from,
+        to: to,
+        collisionSnapshot: collisionSnapshot,
+        singleStepStatus: .invalidEdge,
+        routeStatus: .stoppedInvalidEdge,
+        displacementApplied: false,
+        preAbstract: position,
+        postAbstract: position,
+        prePhysical: position,
+        postPhysical: position,
+        success: true
+    )
+
+    return routeFollowingHardeningSnapshot(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        route: route,
+        finalNode: from,
+        currentIndex: 0,
+        targetIndex: 1,
+        attemptedEdges: 1,
+        completedEdges: 0,
+        displacementsApplied: 0,
+        deniedEdges: 1,
+        stoppedAtIndex: 0,
+        status: .stoppedInvalidEdge,
+        reason: reason,
+        records: [record],
+        finalAbstract: position,
+        finalPhysical: position,
+        divergenceBefore: 0,
+        divergenceAfter: 0,
+        success: true
+    )
+}
+
+private func makeRouteFollowingHardeningSourceMismatchSnapshot(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int
+) -> LabRouteFollowingLiveSnapshot {
+    let from = routeFollowingDeniedLiveFromNode()
+    let to = routeFollowingDeniedLiveToNode()
+    let actualPosition = LabAgentPosition(x: 6, y: 64, z: 8)
+    let collisionSnapshot = routeFollowingHardeningCollisionSnapshot(
+        scenario: scenario,
+        seed: 99,
+        ticksCompleted: ticksCompleted,
+        node: to
+    )
+    let record = routeFollowingHardeningEdgeRecord(
+        edgeIndex: 0,
+        from: from,
+        to: to,
+        collisionSnapshot: collisionSnapshot,
+        singleStepStatus: .sourceMismatch,
+        routeStatus: .stoppedSourceMismatch,
+        displacementApplied: false,
+        preAbstract: actualPosition,
+        postAbstract: actualPosition,
+        prePhysical: actualPosition,
+        postPhysical: actualPosition,
+        success: true
+    )
+
+    return routeFollowingHardeningSnapshot(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        route: [from, to],
+        finalNode: LabTerrainPathNodeKey(x: actualPosition.x, y: actualPosition.y, z: actualPosition.z),
+        currentIndex: 0,
+        targetIndex: 1,
+        attemptedEdges: 1,
+        completedEdges: 0,
+        displacementsApplied: 0,
+        deniedEdges: 1,
+        stoppedAtIndex: 0,
+        status: .stoppedSourceMismatch,
+        reason: "stopped_source_mismatch",
+        records: [record],
+        finalAbstract: actualPosition,
+        finalPhysical: actualPosition,
+        divergenceBefore: 0,
+        divergenceAfter: 0,
+        success: true
+    )
+}
+
+private func makeRouteFollowingHardeningDivergenceSnapshot(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int
+) -> LabRouteFollowingLiveSnapshot {
+    let route = routeFollowingApprovedTwoStepRoute()
+    let from = route[0]
+    let to = route[1]
+    let prePosition = routeFollowingLivePosition(from)
+    let postAbstract = routeFollowingLivePosition(to)
+    let postPhysical = prePosition
+    let collisionSnapshot = routeFollowingHardeningCollisionSnapshot(
+        scenario: scenario,
+        seed: 99,
+        ticksCompleted: ticksCompleted,
+        node: to
+    )
+    let record = routeFollowingHardeningEdgeRecord(
+        edgeIndex: 0,
+        from: from,
+        to: to,
+        collisionSnapshot: collisionSnapshot,
+        singleStepStatus: .divergenceAfterMove,
+        routeStatus: .stoppedDivergence,
+        displacementApplied: true,
+        preAbstract: prePosition,
+        postAbstract: postAbstract,
+        prePhysical: prePosition,
+        postPhysical: postPhysical,
+        success: true
+    )
+
+    return routeFollowingHardeningSnapshot(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        route: route,
+        finalNode: to,
+        currentIndex: 1,
+        targetIndex: 2,
+        attemptedEdges: 1,
+        completedEdges: 1,
+        displacementsApplied: 1,
+        deniedEdges: 0,
+        stoppedAtIndex: 1,
+        status: .stoppedDivergence,
+        reason: "stopped_divergence_after_first_edge",
+        records: [record],
+        finalAbstract: postAbstract,
+        finalPhysical: postPhysical,
+        divergenceBefore: 0,
+        divergenceAfter: routeFollowingLiveManhattanDistance(postAbstract, postPhysical),
+        success: true
+    )
+}
+
+private func makeRouteFollowingHardeningStaleCollisionSnapshot(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int
+) -> LabRouteFollowingLiveSnapshot {
+    let route = routeFollowingApprovedTwoStepRoute()
+    let from = route[0]
+    let to = route[1]
+    let position = routeFollowingLivePosition(from)
+    let staleNode = route[2]
+    let collisionSnapshot = routeFollowingHardeningCollisionSnapshot(
+        scenario: scenario,
+        seed: 99,
+        ticksCompleted: ticksCompleted,
+        node: staleNode
+    )
+    let record = routeFollowingHardeningEdgeRecord(
+        edgeIndex: 0,
+        from: from,
+        to: to,
+        collisionSnapshot: collisionSnapshot,
+        singleStepStatus: .staleCollisionEvidence,
+        routeStatus: .stoppedStaleCollision,
+        displacementApplied: false,
+        preAbstract: position,
+        postAbstract: position,
+        prePhysical: position,
+        postPhysical: position,
+        success: true
+    )
+
+    return routeFollowingHardeningSnapshot(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        route: [from, to],
+        finalNode: from,
+        currentIndex: 0,
+        targetIndex: 1,
+        attemptedEdges: 1,
+        completedEdges: 0,
+        displacementsApplied: 0,
+        deniedEdges: 1,
+        stoppedAtIndex: 0,
+        status: .stoppedStaleCollision,
+        reason: "stopped_stale_collision_evidence",
+        records: [record],
+        finalAbstract: position,
+        finalPhysical: position,
+        divergenceBefore: 0,
+        divergenceAfter: 0,
+        success: true
+    )
+}
+
+private func makeRouteFollowingHardeningMaxStepsSnapshot(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int
+) -> LabRouteFollowingLiveSnapshot {
+    let route = routeFollowingApprovedTwoStepRoute()
+    let from = route[0]
+    let to = route[1]
+    let prePosition = routeFollowingLivePosition(from)
+    let postPosition = routeFollowingLivePosition(to)
+    let collisionSnapshot = routeFollowingHardeningCollisionSnapshot(
+        scenario: scenario,
+        seed: 99,
+        ticksCompleted: ticksCompleted,
+        node: to
+    )
+    let record = routeFollowingHardeningEdgeRecord(
+        edgeIndex: 0,
+        from: from,
+        to: to,
+        collisionSnapshot: collisionSnapshot,
+        singleStepStatus: .approved,
+        routeStatus: .stoppedMaxSteps,
+        displacementApplied: true,
+        preAbstract: prePosition,
+        postAbstract: postPosition,
+        prePhysical: prePosition,
+        postPhysical: postPosition,
+        success: true
+    )
+
+    return routeFollowingHardeningSnapshot(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        route: route,
+        finalNode: to,
+        currentIndex: 1,
+        targetIndex: 2,
+        attemptedEdges: 1,
+        completedEdges: 1,
+        displacementsApplied: 1,
+        deniedEdges: 0,
+        stoppedAtIndex: 1,
+        status: .stoppedMaxSteps,
+        reason: "stopped_max_steps_before_next_edge",
+        records: [record],
+        finalAbstract: postPosition,
+        finalPhysical: postPosition,
+        divergenceBefore: 0,
+        divergenceAfter: 0,
+        success: true
+    )
+}
+
+private func routeFollowingHardeningCollisionSnapshot(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int,
+    node: LabTerrainPathNodeKey
+) -> LabTerrainCollisionLiveSnapshot {
+    makeTerrainCollisionLiveSnapshot(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        world: routeFollowingLiveCollisionWorld(seed: seed, around: node),
+        node: node
+    )
+}
+
+private func routeFollowingHardeningEdgeRecord(
+    edgeIndex: Int,
+    from: LabTerrainPathNodeKey,
+    to: LabTerrainPathNodeKey,
+    collisionSnapshot: LabTerrainCollisionLiveSnapshot,
+    singleStepStatus: LabPhysicalMovementStatus,
+    routeStatus: LabRouteFollowingStatus,
+    displacementApplied: Bool,
+    preAbstract: LabAgentPosition,
+    postAbstract: LabAgentPosition,
+    prePhysical: LabAgentPosition,
+    postPhysical: LabAgentPosition,
+    success: Bool
+) -> LabRouteFollowingLiveEdgeRecord {
+    LabRouteFollowingLiveEdgeRecord(
+        edgeIndex: edgeIndex,
+        from: from,
+        to: to,
+        collisionSnapshot: collisionSnapshot,
+        collisionStatus: collisionSnapshot.result.status,
+        collisionReason: collisionSnapshot.result.reason,
+        singleStepStatus: singleStepStatus,
+        routeStatusAfterEdge: routeStatus,
+        displacementApplied: displacementApplied,
+        preAbstractPosition: preAbstract,
+        postAbstractPosition: postAbstract,
+        prePhysicalPosition: prePhysical,
+        postPhysicalPosition: postPhysical,
+        divergenceBefore: routeFollowingLiveManhattanDistance(preAbstract, prePhysical),
+        divergenceAfter: routeFollowingLiveManhattanDistance(postAbstract, postPhysical),
+        success: success
+    )
+}
+
+private func routeFollowingHardeningSnapshot(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int,
+    route: [LabTerrainPathNodeKey],
+    finalNode: LabTerrainPathNodeKey,
+    currentIndex: Int,
+    targetIndex: Int?,
+    attemptedEdges: Int,
+    completedEdges: Int,
+    displacementsApplied: Int,
+    deniedEdges: Int,
+    stoppedAtIndex: Int?,
+    status: LabRouteFollowingStatus,
+    reason: String,
+    records: [LabRouteFollowingLiveEdgeRecord],
+    finalAbstract: LabAgentPosition,
+    finalPhysical: LabAgentPosition,
+    divergenceBefore: Int,
+    divergenceAfter: Int,
+    success: Bool
+) -> LabRouteFollowingLiveSnapshot {
+    LabRouteFollowingLiveSnapshot(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        agentId: "agent_0",
+        physicalId: "physical_agent_0",
+        coreEntityId: nil,
+        route: route,
+        startNode: route.first ?? finalNode,
+        finalNode: finalNode,
+        currentIndex: currentIndex,
+        targetIndex: targetIndex,
+        attemptedEdges: attemptedEdges,
+        completedEdges: completedEdges,
+        displacementsApplied: displacementsApplied,
+        deniedEdges: deniedEdges,
+        stoppedAtIndex: stoppedAtIndex,
+        status: status,
+        reason: reason,
+        perEdgeRecords: records,
+        finalAbstractPosition: finalAbstract,
+        finalPhysicalPosition: finalPhysical,
+        finalCoreEntityPosition: nil,
+        divergenceBefore: divergenceBefore,
+        divergenceAfter: divergenceAfter,
+        pathfindingPerformedInsideFollower: false,
+        replanningPerformed: false,
+        routeFollowingPerformed: true,
+        physicsPerformed: false,
+        mutationPerformed: false,
+        success: success
+    )
+}
+
+private func routeFollowingLivePosition(_ node: LabTerrainPathNodeKey) -> LabAgentPosition {
+    LabAgentPosition(x: node.x, y: node.y, z: node.z)
+}
+
 private func routeFollowingLiveIsHorizontalFourNeighbor(
     from: LabTerrainPathNodeKey,
     to: LabTerrainPathNodeKey

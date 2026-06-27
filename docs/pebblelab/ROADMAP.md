@@ -754,3 +754,34 @@ avoidance, reservation tables, physics integration, terrain mutation, and
 world mutation remain out of scope.
 
 Next recommended step: Phase 4.18E - Route Following Hardening.
+
+## Phase 4.18E - Route Following Hardening
+
+Status: implemented and validated.
+
+Goal: harden live route following with a bounded set of completed and stopped
+cases before any longer route or gameplay follower work. The scenario
+`route_following_live_hardening_smoke` runs 8 cases: completed two-step,
+collision denied first edge, invalid diagonal edge, invalid vertical edge,
+source mismatch, divergence after the first edge, stale collision evidence,
+and max steps.
+
+The smoke writes `route_following_live_hardening_report.json`,
+`route_following_live_hardening_invariant_report.json`,
+`routeFollowingLiveHardening*` metrics, and one
+`lab_route_following_live_hardening_recorded` event. It records 8 passed
+cases, 0 failed cases, 1 completed case, 7 stopped cases, 9 attempted edges,
+4 completed edges, 4 displacements applied, and 5 denied edges.
+
+The hardening harness reuses the existing live route following and collision
+snapshot types. Some stop cases are controlled near-live snapshots that inject
+source mismatch, divergence, stale collision, invalid edge, or max-step
+conditions without mutating terrain/world state and without creating a core
+entity.
+
+Long route following, gameplay route following, dynamic replanning,
+pathfinding inside a follower, goal selection, multi-agent movement,
+avoidance, reservation tables, physics integration, terrain mutation, world
+mutation, save/load changes, and registry changes remain out of scope.
+
+Next recommended step: Phase 4.19A - Multi-Agent Movement Planning Docs-Only.

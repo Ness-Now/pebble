@@ -189,3 +189,86 @@ struct RouteFollowingLiveInvariantCheck: Codable {
     let expected: String
     let actual: String
 }
+
+struct LabRouteFollowingLiveHardeningCase: Codable {
+    let name: String
+    let expectedStatus: LabRouteFollowingStatus
+    let expectedAttemptedEdges: Int
+    let expectedCompletedEdges: Int
+    let expectedDisplacementsApplied: Int
+    let expectedDeniedEdges: Int
+    let expectedStoppedAtIndex: Int?
+    let expectedReasonContains: String
+}
+
+struct LabRouteFollowingLiveHardeningCaseResult: Codable {
+    let name: String
+    let expectedStatus: LabRouteFollowingStatus
+    let actualStatus: LabRouteFollowingStatus
+    let expectedAttemptedEdges: Int
+    let actualAttemptedEdges: Int
+    let expectedCompletedEdges: Int
+    let actualCompletedEdges: Int
+    let expectedDisplacementsApplied: Int
+    let actualDisplacementsApplied: Int
+    let expectedDeniedEdges: Int
+    let actualDeniedEdges: Int
+    let expectedStoppedAtIndex: Int?
+    let actualStoppedAtIndex: Int?
+    let expectedReasonContains: String
+    let actualReason: String
+    let passed: Bool
+    let snapshot: LabRouteFollowingLiveSnapshot
+}
+
+struct LabRouteFollowingLiveHardeningSummary: Codable {
+    let cases: Int
+    let passed: Int
+    let failed: Int
+    let completed: Int
+    let stopped: Int
+    let attemptedEdges: Int
+    let completedEdges: Int
+    let displacementsApplied: Int
+    let deniedEdges: Int
+    let collisionDenied: Int
+    let invalidEdges: Int
+    let sourceMismatch: Int
+    let divergence: Int
+    let staleCollision: Int
+    let maxSteps: Int
+    let success: Bool
+}
+
+struct LabRouteFollowingLiveHardeningReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let ticksCompleted: Int
+    let success: Bool
+    let summary: LabRouteFollowingLiveHardeningSummary
+    let cases: [LabRouteFollowingLiveHardeningCaseResult]
+}
+
+struct RouteFollowingLiveHardeningInvariantReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: RouteFollowingLiveHardeningInvariantSummary
+    let checks: [RouteFollowingLiveHardeningInvariantCheck]
+    let notes: [String]
+}
+
+struct RouteFollowingLiveHardeningInvariantSummary: Codable {
+    let checksPassed: Int
+    let checksFailed: Int
+    let cases: Int
+    let passed: Int
+    let failed: Int
+}
+
+struct RouteFollowingLiveHardeningInvariantCheck: Codable {
+    let name: String
+    let passed: Bool
+    let expected: String
+    let actual: String
+}

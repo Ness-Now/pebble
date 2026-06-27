@@ -354,6 +354,22 @@ struct RunMetrics: Encodable {
     let routeFollowingLivePhysicsPerformed: Bool?
     let routeFollowingLiveMutationPerformed: Bool?
     let routeFollowingLiveSuccess: Bool?
+    let routeFollowingLiveHardeningCases: Int?
+    let routeFollowingLiveHardeningPassed: Int?
+    let routeFollowingLiveHardeningFailed: Int?
+    let routeFollowingLiveHardeningCompleted: Int?
+    let routeFollowingLiveHardeningStopped: Int?
+    let routeFollowingLiveHardeningAttemptedEdges: Int?
+    let routeFollowingLiveHardeningCompletedEdges: Int?
+    let routeFollowingLiveHardeningDisplacementsApplied: Int?
+    let routeFollowingLiveHardeningDeniedEdges: Int?
+    let routeFollowingLiveHardeningCollisionDenied: Int?
+    let routeFollowingLiveHardeningInvalidEdges: Int?
+    let routeFollowingLiveHardeningSourceMismatch: Int?
+    let routeFollowingLiveHardeningDivergence: Int?
+    let routeFollowingLiveHardeningStaleCollision: Int?
+    let routeFollowingLiveHardeningMaxSteps: Int?
+    let routeFollowingLiveHardeningSuccess: Bool?
     let successCriteria: RunSuccessCriteria?
 
     init(
@@ -657,6 +673,22 @@ struct RunMetrics: Encodable {
         routeFollowingLivePhysicsPerformed: Bool? = nil,
         routeFollowingLiveMutationPerformed: Bool? = nil,
         routeFollowingLiveSuccess: Bool? = nil,
+        routeFollowingLiveHardeningCases: Int? = nil,
+        routeFollowingLiveHardeningPassed: Int? = nil,
+        routeFollowingLiveHardeningFailed: Int? = nil,
+        routeFollowingLiveHardeningCompleted: Int? = nil,
+        routeFollowingLiveHardeningStopped: Int? = nil,
+        routeFollowingLiveHardeningAttemptedEdges: Int? = nil,
+        routeFollowingLiveHardeningCompletedEdges: Int? = nil,
+        routeFollowingLiveHardeningDisplacementsApplied: Int? = nil,
+        routeFollowingLiveHardeningDeniedEdges: Int? = nil,
+        routeFollowingLiveHardeningCollisionDenied: Int? = nil,
+        routeFollowingLiveHardeningInvalidEdges: Int? = nil,
+        routeFollowingLiveHardeningSourceMismatch: Int? = nil,
+        routeFollowingLiveHardeningDivergence: Int? = nil,
+        routeFollowingLiveHardeningStaleCollision: Int? = nil,
+        routeFollowingLiveHardeningMaxSteps: Int? = nil,
+        routeFollowingLiveHardeningSuccess: Bool? = nil,
         successCriteria: RunSuccessCriteria? = nil
     ) {
         self.scenario = scenario
@@ -959,6 +991,22 @@ struct RunMetrics: Encodable {
         self.routeFollowingLivePhysicsPerformed = routeFollowingLivePhysicsPerformed
         self.routeFollowingLiveMutationPerformed = routeFollowingLiveMutationPerformed
         self.routeFollowingLiveSuccess = routeFollowingLiveSuccess
+        self.routeFollowingLiveHardeningCases = routeFollowingLiveHardeningCases
+        self.routeFollowingLiveHardeningPassed = routeFollowingLiveHardeningPassed
+        self.routeFollowingLiveHardeningFailed = routeFollowingLiveHardeningFailed
+        self.routeFollowingLiveHardeningCompleted = routeFollowingLiveHardeningCompleted
+        self.routeFollowingLiveHardeningStopped = routeFollowingLiveHardeningStopped
+        self.routeFollowingLiveHardeningAttemptedEdges = routeFollowingLiveHardeningAttemptedEdges
+        self.routeFollowingLiveHardeningCompletedEdges = routeFollowingLiveHardeningCompletedEdges
+        self.routeFollowingLiveHardeningDisplacementsApplied = routeFollowingLiveHardeningDisplacementsApplied
+        self.routeFollowingLiveHardeningDeniedEdges = routeFollowingLiveHardeningDeniedEdges
+        self.routeFollowingLiveHardeningCollisionDenied = routeFollowingLiveHardeningCollisionDenied
+        self.routeFollowingLiveHardeningInvalidEdges = routeFollowingLiveHardeningInvalidEdges
+        self.routeFollowingLiveHardeningSourceMismatch = routeFollowingLiveHardeningSourceMismatch
+        self.routeFollowingLiveHardeningDivergence = routeFollowingLiveHardeningDivergence
+        self.routeFollowingLiveHardeningStaleCollision = routeFollowingLiveHardeningStaleCollision
+        self.routeFollowingLiveHardeningMaxSteps = routeFollowingLiveHardeningMaxSteps
+        self.routeFollowingLiveHardeningSuccess = routeFollowingLiveHardeningSuccess
         self.successCriteria = successCriteria
     }
 }

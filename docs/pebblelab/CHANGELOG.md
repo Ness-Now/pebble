@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Hardened live route following cases.
 - Added approved two-step live route following smoke.
 - Added denied live route following smoke.
 - Added fixture-only route following smoke.
