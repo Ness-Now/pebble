@@ -832,3 +832,28 @@ table runtime, avoidance, dynamic replanning, route repair, physics,
 save/load changes, and gameplay movement remain out of scope.
 
 Next recommended step: Phase 4.19C - Multi-Agent Movement Fixture Hardening.
+
+## Phase 4.19C - Multi-Agent Movement Fixture Hardening
+
+Status: implemented and validated.
+
+Goal: harden the fixture-only multi-agent movement arbiter with more
+adversarial synthetic intent sets before any live collision, physical
+movement, reservation runtime, avoidance, replanning, or gameplay movement.
+
+The scenario `multi_agent_movement_fixture_hardening_smoke` covers unordered
+same-destination intents, duplicate intents for one agent, a three-agent
+cycle, chain dependency, moving-away destination, vertical invalid edge,
+zero-length edge, all-denied mixed reasons, empty-intents no-op, and a
+fixture-only max-agent bound. It writes
+`multi_agent_movement_fixture_hardening_report.json`,
+`multi_agent_movement_fixture_hardening_invariant_report.json`,
+`multiAgentMovementFixtureHardening*` metrics, and one aggregate
+`lab_multi_agent_movement_fixture_hardening_recorded` event.
+
+Live collision, live physical movement, reservation table runtime, avoidance,
+dynamic replanning, route repair, physics, save/load, social behavior, and
+gameplay movement remain out of scope.
+
+Next recommended step: Phase 4.19D - Multi-Agent Live Read-Only Collision
+Intent Smoke.

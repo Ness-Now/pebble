@@ -3687,3 +3687,123 @@ movement, terrain mutation, or world mutation is performed. The runner prints
 Phase 4.19C: multi-agent movement fixture hardening. It should expand edge
 coverage while staying fixture-only, with no live collision, physical movement
 live, reservation table runtime, avoidance, replanning, physics, or mutation.
+
+## 2026-06-27 — Phase 4.19C multi-agent movement fixture hardening
+
+### Objective
+
+Harden the fixture-only multi-agent movement arbiter with adversarial
+synthetic intent cases before adding any live collision intent smoke or live
+movement application.
+
+### Starting State
+
+Phase 4.19B added `multi_agent_movement_fixture_smoke` with 8 fixture cases,
+8 passed, 0 failed, 3 approved moves, and 8 denied moves. It proved stable
+`agentId` ordering, same-destination conflict handling, occupied destination,
+swap denial, source mismatch, stale intent, missing agent, invalid edge, no
+duplicate approved destination, no approved swap, denied-position
+preservation, and no `World`.
+
+### Files Created/Modified
+
+- Modified `Sources/PebbleLab/LabMultiAgentMovement.swift`.
+- Modified `Sources/PebbleLab/LabOptions.swift`.
+- Modified `Sources/PebbleLab/LabScenarios.swift`.
+- Modified `Sources/PebbleLab/LabOutput.swift`.
+- Modified `Sources/PebbleLab/LabEvents.swift`.
+- Modified `Sources/PebbleLab/main.swift`.
+- Updated `docs/pebblelab/CHANGELOG.md`.
+- Updated `docs/pebblelab/DEV_JOURNAL.md`.
+- Updated `docs/pebblelab/ROADMAP.md`.
+- Updated `docs/pebblelab/PHASE_4_MULTI_AGENT_MOVEMENT_PLAN.md`.
+
+### Cases Covered
+
+- `unordered_intents_still_resolve_by_agent_id`;
+- `duplicate_intents_same_agent_denied`;
+- `three_agent_cycle_denied`;
+- `chain_dependency_denied`;
+- `moving_away_destination_denied`;
+- `invalid_vertical_edge`;
+- `zero_length_edge_denied`;
+- `all_denied_mixed_reasons`;
+- `empty_intents_noop_success`;
+- `max_agents_bound_exceeded`.
+
+### Hardening Policy
+
+The hardening path reuses the fixture arbiter. It still sorts by stable
+`agentId`, so unordered input cannot change conflict winners. Duplicate
+intents from one agent are all denied with `deniedDuplicateIntent`. Swaps are
+denied before general cycle checks. Multi-agent cycles are denied with
+`deniedCycleConflict`. Chain dependencies and moving-away destinations are
+conservatively denied in v0 with explicit decisions rather than applying
+simultaneous dependent movement. Zero-length edges are denied separately from
+other invalid edges. A fixture-only max-agent bound denies all intents with
+`deniedMaxAgents` when exceeded.
+
+### Outputs, Invariants, Metrics, And Event
+
+The scenario writes:
+
+- `multi_agent_movement_fixture_hardening_report.json`;
+- `multi_agent_movement_fixture_hardening_invariant_report.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The report records 10 cases, 10 passed, 0 failed, 1 approved move, and 20
+denied moves. Conflict and guard totals are 2 duplicate-intent denials, 3
+cycle denials, 2 chain-dependency denials, 2 moving-away destination denials,
+2 vertical invalid-edge denials, 1 zero-length edge denial, 8 all-denied
+cases, 1 empty-intents case, and 5 max-agent denials.
+
+The invariant report has 43 checks and passes all of them. Metrics use the
+`multiAgentMovementFixtureHardening*` prefix. The scenario emits one aggregate
+`lab_multi_agent_movement_fixture_hardening_recorded` event.
+
+### Confirmed Out Of Scope
+
+No `World`, live collision, pathfinding, replanning, goal selection, avoidance,
+reservation table runtime, physics, physical placeholder movement, core entity
+movement, terrain mutation, or world mutation is performed. The runner prints
+`dim=fixture`, and no `world_snapshot.json` is written for this scenario.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_fixture_hardening_smoke --seed 42 --ticks 0 --out runs/check_multi_agent_movement_fixture_hardening`
+- `swift run -c release PebbleLab -- --scenario multi_agent_movement_fixture_smoke --seed 42 --ticks 0 --out runs/check_multi_agent_fixture_after_hardening`
+- `swift run -c release PebbleLab -- --scenario route_following_live_hardening_smoke --seed 42 --ticks 5 --out runs/check_route_following_live_hardening_after_multi_agent_hardening`
+- `swift run -c release PebbleLab -- --scenario route_following_approved_two_step_smoke --seed 42 --ticks 5 --out runs/check_route_approved_after_multi_agent_hardening`
+- `swift run -c release PebbleLab -- --scenario route_following_denied_live_smoke --seed 42 --ticks 5 --out runs/check_route_denied_after_multi_agent_hardening`
+- `swift run -c release PebbleLab -- --scenario route_following_fixture_smoke --seed 42 --ticks 0 --out runs/check_route_fixture_after_multi_agent_hardening`
+- `swift run -c release PebbleLab -- --scenario physical_movement_single_step_hardening_smoke --seed 42 --ticks 5 --out runs/check_single_step_hardening_after_multi_agent_hardening`
+- `swift run -c release PebbleLab -- --scenario physical_movement_approved_single_step_smoke --seed 42 --ticks 5 --out runs/check_approved_single_step_after_multi_agent_hardening`
+- `swift run -c release PebbleLab -- --scenario physical_movement_denied_smoke --seed 42 --ticks 5 --out runs/check_denied_single_step_after_multi_agent_hardening`
+- `swift run -c release PebbleLab -- --scenario terrain_collision_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_collision_live_after_multi_agent_hardening`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_multi_agent_hardening`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- Hardening report: success true.
+- Hardening invariant report: success true.
+- Cases: 10 passed, 0 failed.
+- Approved/denied totals: 1 / 20.
+- Invariant checks: 43 passed, 0 failed.
+- The original 4.19B fixture smoke remains green.
+- Metrics contain `multiAgentMovementFixtureHardening*`.
+- `events.ndjson` contains
+  `lab_multi_agent_movement_fixture_hardening_recorded`.
+- `pebsmoke`: 456 passed, 0 failed.
+
+### Next Step
+
+Phase 4.19D: multi-agent live read-only collision intent smoke. It should
+collect live collision evidence for candidate multi-agent intentions without
+applying movement, adding reservation runtime, avoidance, replanning, physics,
+or mutation.

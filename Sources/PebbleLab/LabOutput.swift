@@ -338,6 +338,26 @@ struct RunMetrics: Encodable {
     let multiAgentMovementFixturePhysicsPerformed: Bool?
     let multiAgentMovementFixtureMutationPerformed: Bool?
     let multiAgentMovementFixtureSuccess: Bool?
+    let multiAgentMovementFixtureHardeningCases: Int?
+    let multiAgentMovementFixtureHardeningPassed: Int?
+    let multiAgentMovementFixtureHardeningFailed: Int?
+    let multiAgentMovementFixtureHardeningApproved: Int?
+    let multiAgentMovementFixtureHardeningDenied: Int?
+    let multiAgentMovementFixtureHardeningDuplicateIntent: Int?
+    let multiAgentMovementFixtureHardeningCycleConflicts: Int?
+    let multiAgentMovementFixtureHardeningChainDependencies: Int?
+    let multiAgentMovementFixtureHardeningMovingAwayDestination: Int?
+    let multiAgentMovementFixtureHardeningVerticalInvalidEdges: Int?
+    let multiAgentMovementFixtureHardeningZeroLengthEdges: Int?
+    let multiAgentMovementFixtureHardeningAllDeniedCases: Int?
+    let multiAgentMovementFixtureHardeningEmptyIntentCases: Int?
+    let multiAgentMovementFixtureHardeningMaxAgentsExceeded: Int?
+    let multiAgentMovementFixtureHardeningWorldUsed: Bool?
+    let multiAgentMovementFixtureHardeningPathfindingPerformed: Bool?
+    let multiAgentMovementFixtureHardeningReplanningPerformed: Bool?
+    let multiAgentMovementFixtureHardeningPhysicsPerformed: Bool?
+    let multiAgentMovementFixtureHardeningMutationPerformed: Bool?
+    let multiAgentMovementFixtureHardeningSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -676,6 +696,26 @@ struct RunMetrics: Encodable {
         multiAgentMovementFixturePhysicsPerformed: Bool? = nil,
         multiAgentMovementFixtureMutationPerformed: Bool? = nil,
         multiAgentMovementFixtureSuccess: Bool? = nil,
+        multiAgentMovementFixtureHardeningCases: Int? = nil,
+        multiAgentMovementFixtureHardeningPassed: Int? = nil,
+        multiAgentMovementFixtureHardeningFailed: Int? = nil,
+        multiAgentMovementFixtureHardeningApproved: Int? = nil,
+        multiAgentMovementFixtureHardeningDenied: Int? = nil,
+        multiAgentMovementFixtureHardeningDuplicateIntent: Int? = nil,
+        multiAgentMovementFixtureHardeningCycleConflicts: Int? = nil,
+        multiAgentMovementFixtureHardeningChainDependencies: Int? = nil,
+        multiAgentMovementFixtureHardeningMovingAwayDestination: Int? = nil,
+        multiAgentMovementFixtureHardeningVerticalInvalidEdges: Int? = nil,
+        multiAgentMovementFixtureHardeningZeroLengthEdges: Int? = nil,
+        multiAgentMovementFixtureHardeningAllDeniedCases: Int? = nil,
+        multiAgentMovementFixtureHardeningEmptyIntentCases: Int? = nil,
+        multiAgentMovementFixtureHardeningMaxAgentsExceeded: Int? = nil,
+        multiAgentMovementFixtureHardeningWorldUsed: Bool? = nil,
+        multiAgentMovementFixtureHardeningPathfindingPerformed: Bool? = nil,
+        multiAgentMovementFixtureHardeningReplanningPerformed: Bool? = nil,
+        multiAgentMovementFixtureHardeningPhysicsPerformed: Bool? = nil,
+        multiAgentMovementFixtureHardeningMutationPerformed: Bool? = nil,
+        multiAgentMovementFixtureHardeningSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -1013,6 +1053,26 @@ struct RunMetrics: Encodable {
         self.multiAgentMovementFixturePhysicsPerformed = multiAgentMovementFixturePhysicsPerformed
         self.multiAgentMovementFixtureMutationPerformed = multiAgentMovementFixtureMutationPerformed
         self.multiAgentMovementFixtureSuccess = multiAgentMovementFixtureSuccess
+        self.multiAgentMovementFixtureHardeningCases = multiAgentMovementFixtureHardeningCases
+        self.multiAgentMovementFixtureHardeningPassed = multiAgentMovementFixtureHardeningPassed
+        self.multiAgentMovementFixtureHardeningFailed = multiAgentMovementFixtureHardeningFailed
+        self.multiAgentMovementFixtureHardeningApproved = multiAgentMovementFixtureHardeningApproved
+        self.multiAgentMovementFixtureHardeningDenied = multiAgentMovementFixtureHardeningDenied
+        self.multiAgentMovementFixtureHardeningDuplicateIntent = multiAgentMovementFixtureHardeningDuplicateIntent
+        self.multiAgentMovementFixtureHardeningCycleConflicts = multiAgentMovementFixtureHardeningCycleConflicts
+        self.multiAgentMovementFixtureHardeningChainDependencies = multiAgentMovementFixtureHardeningChainDependencies
+        self.multiAgentMovementFixtureHardeningMovingAwayDestination = multiAgentMovementFixtureHardeningMovingAwayDestination
+        self.multiAgentMovementFixtureHardeningVerticalInvalidEdges = multiAgentMovementFixtureHardeningVerticalInvalidEdges
+        self.multiAgentMovementFixtureHardeningZeroLengthEdges = multiAgentMovementFixtureHardeningZeroLengthEdges
+        self.multiAgentMovementFixtureHardeningAllDeniedCases = multiAgentMovementFixtureHardeningAllDeniedCases
+        self.multiAgentMovementFixtureHardeningEmptyIntentCases = multiAgentMovementFixtureHardeningEmptyIntentCases
+        self.multiAgentMovementFixtureHardeningMaxAgentsExceeded = multiAgentMovementFixtureHardeningMaxAgentsExceeded
+        self.multiAgentMovementFixtureHardeningWorldUsed = multiAgentMovementFixtureHardeningWorldUsed
+        self.multiAgentMovementFixtureHardeningPathfindingPerformed = multiAgentMovementFixtureHardeningPathfindingPerformed
+        self.multiAgentMovementFixtureHardeningReplanningPerformed = multiAgentMovementFixtureHardeningReplanningPerformed
+        self.multiAgentMovementFixtureHardeningPhysicsPerformed = multiAgentMovementFixtureHardeningPhysicsPerformed
+        self.multiAgentMovementFixtureHardeningMutationPerformed = multiAgentMovementFixtureHardeningMutationPerformed
+        self.multiAgentMovementFixtureHardeningSuccess = multiAgentMovementFixtureHardeningSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

@@ -615,3 +615,70 @@ Limits:
 
 Next recommended step: Phase 4.19C, fixture hardening for broader edge cases
 and stronger arbitration contracts before any live collision intent smoke.
+
+## Phase 4.19C Implementation Status
+
+Phase 4.19C added fixture-only hardening for multi-agent movement arbitration:
+
+```text
+multi_agent_movement_fixture_hardening_smoke
+```
+
+Validated hardening cases:
+
+- `unordered_intents_still_resolve_by_agent_id`;
+- `duplicate_intents_same_agent_denied`;
+- `three_agent_cycle_denied`;
+- `chain_dependency_denied`;
+- `moving_away_destination_denied`;
+- `invalid_vertical_edge`;
+- `zero_length_edge_denied`;
+- `all_denied_mixed_reasons`;
+- `empty_intents_noop_success`;
+- `max_agents_bound_exceeded`.
+
+Outputs produced:
+
+- `multi_agent_movement_fixture_hardening_report.json`;
+- `multi_agent_movement_fixture_hardening_invariant_report.json`;
+- `metrics.json` with `multiAgentMovementFixtureHardening*` fields;
+- `events.ndjson` with one aggregate
+  `lab_multi_agent_movement_fixture_hardening_recorded` event.
+
+Validated summary:
+
+- 10 cases;
+- 10 passed;
+- 0 failed;
+- 1 approved movement;
+- 20 denied movements;
+- 2 duplicate-intent denials;
+- 3 cycle denials;
+- 2 chain-dependency denials;
+- 2 moving-away destination denials;
+- 2 vertical invalid-edge denials;
+- 1 zero-length edge denial;
+- 8 all-denied cases;
+- 1 empty-intents no-op case;
+- 5 max-agent bound denials;
+- 43 invariant checks passed.
+
+Limits:
+
+- fixture-only;
+- no `World` creation or use;
+- no live collision;
+- no live physical movement;
+- no route following live;
+- no pathfinding;
+- no replanning;
+- no goal selection;
+- no avoidance;
+- no reservation table runtime;
+- no physics;
+- no terrain/world mutation.
+
+Next recommended step: Phase 4.19D, live read-only collision intent smoke.
+That phase should collect multi-agent candidate intentions against live
+collision evidence, but still avoid movement application, reservation runtime,
+avoidance, replanning, physics, and mutation.

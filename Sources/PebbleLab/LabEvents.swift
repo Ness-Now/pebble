@@ -166,6 +166,15 @@ struct RunEvent: Encodable {
     let staleIntent: Int?
     let missingAgent: Int?
     let invalidEdges: Int?
+    let duplicateIntent: Int?
+    let cycleConflicts: Int?
+    let chainDependencies: Int?
+    let movingAwayDestination: Int?
+    let verticalInvalidEdges: Int?
+    let zeroLengthEdges: Int?
+    let allDeniedCases: Int?
+    let emptyIntentCases: Int?
+    let maxAgentsExceeded: Int?
     let occupableFound: Bool?
     let selectedCandidateIndex: Int?
     let selectedSeed: UInt32?
@@ -371,6 +380,15 @@ struct RunEvent: Encodable {
         staleIntent: Int? = nil,
         missingAgent: Int? = nil,
         invalidEdges: Int? = nil,
+        duplicateIntent: Int? = nil,
+        cycleConflicts: Int? = nil,
+        chainDependencies: Int? = nil,
+        movingAwayDestination: Int? = nil,
+        verticalInvalidEdges: Int? = nil,
+        zeroLengthEdges: Int? = nil,
+        allDeniedCases: Int? = nil,
+        emptyIntentCases: Int? = nil,
+        maxAgentsExceeded: Int? = nil,
         occupableFound: Bool? = nil,
         selectedCandidateIndex: Int? = nil,
         selectedSeed: UInt32? = nil,
@@ -575,6 +593,15 @@ struct RunEvent: Encodable {
         self.staleIntent = staleIntent
         self.missingAgent = missingAgent
         self.invalidEdges = invalidEdges
+        self.duplicateIntent = duplicateIntent
+        self.cycleConflicts = cycleConflicts
+        self.chainDependencies = chainDependencies
+        self.movingAwayDestination = movingAwayDestination
+        self.verticalInvalidEdges = verticalInvalidEdges
+        self.zeroLengthEdges = zeroLengthEdges
+        self.allDeniedCases = allDeniedCases
+        self.emptyIntentCases = emptyIntentCases
+        self.maxAgentsExceeded = maxAgentsExceeded
         self.occupableFound = occupableFound
         self.selectedCandidateIndex = selectedCandidateIndex
         self.selectedSeed = selectedSeed

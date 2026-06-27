@@ -6,7 +6,9 @@ validateScenario(options.scenario)
 
 let isMultiAgentMovementFixtureScenario = options.scenario
     == "multi_agent_movement_fixture_smoke"
-let world = isMultiAgentMovementFixtureScenario
+let isMultiAgentMovementFixtureHardeningScenario = options.scenario
+    == "multi_agent_movement_fixture_hardening_smoke"
+let world = (isMultiAgentMovementFixtureScenario || isMultiAgentMovementFixtureHardeningScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -986,6 +988,45 @@ let multiAgentMovementFixtureSuccess = isMultiAgentMovementFixtureScenario
         && multiAgentMovementFixtureReport?.summary.worldUsed == false
         && multiAgentMovementFixtureReport?.summary.mutationPerformed == false)
     : nil
+let multiAgentMovementFixtureHardeningReport =
+    isMultiAgentMovementFixtureHardeningScenario
+        ? makeMultiAgentMovementFixtureHardeningReport(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticksCompleted: ticksCompleted
+        )
+        : nil
+let multiAgentMovementFixtureHardeningInvariantReport =
+    isMultiAgentMovementFixtureHardeningScenario
+        ? makeMultiAgentMovementFixtureHardeningInvariantReport(
+            report: multiAgentMovementFixtureHardeningReport,
+            scenario: options.scenario,
+            seed: options.seed
+        )
+        : nil
+let multiAgentMovementFixtureHardeningSuccess =
+    isMultiAgentMovementFixtureHardeningScenario
+        ? ((multiAgentMovementFixtureHardeningReport?.success ?? false)
+            && (multiAgentMovementFixtureHardeningInvariantReport?.success ?? false)
+            && multiAgentMovementFixtureHardeningReport?.summary.failed == 0
+            && (multiAgentMovementFixtureHardeningReport?.summary.duplicateIntent ?? 0) > 0
+            && (multiAgentMovementFixtureHardeningReport?.summary.cycleConflicts ?? 0) > 0
+            && (multiAgentMovementFixtureHardeningReport?.summary.chainDependencies ?? 0) > 0
+            && (multiAgentMovementFixtureHardeningReport?.summary.movingAwayDestination ?? 0) > 0
+            && (multiAgentMovementFixtureHardeningReport?.summary.verticalInvalidEdges ?? 0) > 0
+            && (multiAgentMovementFixtureHardeningReport?.summary.zeroLengthEdges ?? 0) > 0
+            && (multiAgentMovementFixtureHardeningReport?.summary.allDeniedCases ?? 0) > 0
+            && (multiAgentMovementFixtureHardeningReport?.summary.emptyIntentCases ?? 0) > 0
+            && (multiAgentMovementFixtureHardeningReport?.summary.maxAgentsExceeded ?? 0) > 0
+            && multiAgentMovementFixtureHardeningReport?.summary.worldUsed == false
+            && multiAgentMovementFixtureHardeningReport?.summary.pathfindingPerformed == false
+            && multiAgentMovementFixtureHardeningReport?.summary.replanningPerformed == false
+            && multiAgentMovementFixtureHardeningReport?.summary.goalSelectionPerformed == false
+            && multiAgentMovementFixtureHardeningReport?.summary.avoidancePerformed == false
+            && multiAgentMovementFixtureHardeningReport?.summary.reservationTableImplemented == false
+            && multiAgentMovementFixtureHardeningReport?.summary.physicsPerformed == false
+            && multiAgentMovementFixtureHardeningReport?.summary.mutationPerformed == false)
+        : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
@@ -1356,6 +1397,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (physicalMovementHardeningSuccess ?? true)
     && (routeFollowingFixtureSuccess ?? true)
     && (multiAgentMovementFixtureSuccess ?? true)
+    && (multiAgentMovementFixtureHardeningSuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -1600,6 +1642,29 @@ if options.outPath != nil {
                 staleIntent: summary.staleIntent,
                 missingAgent: summary.missingAgent,
                 invalidEdges: summary.invalidEdges
+            ))
+        }
+        if let multiAgentMovementFixtureHardeningReport {
+            let summary = multiAgentMovementFixtureHardeningReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_multi_agent_movement_fixture_hardening_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: multiAgentMovementFixtureHardeningSuccess,
+                passed: summary.passed,
+                failed: summary.failed,
+                approved: summary.approvedTotal,
+                denied: summary.deniedTotal,
+                cases: summary.cases,
+                duplicateIntent: summary.duplicateIntent,
+                cycleConflicts: summary.cycleConflicts,
+                chainDependencies: summary.chainDependencies,
+                movingAwayDestination: summary.movingAwayDestination,
+                verticalInvalidEdges: summary.verticalInvalidEdges,
+                zeroLengthEdges: summary.zeroLengthEdges,
+                allDeniedCases: summary.allDeniedCases,
+                emptyIntentCases: summary.emptyIntentCases,
+                maxAgentsExceeded: summary.maxAgentsExceeded
             ))
         }
         if let routeFollowingLiveSnapshot {
@@ -2133,6 +2198,18 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("multi_agent_movement_fixture_invariant_report.json")
             )
         }
+        if let multiAgentMovementFixtureHardeningReport {
+            try writeJSON(
+                multiAgentMovementFixtureHardeningReport,
+                to: outURL.appendingPathComponent("multi_agent_movement_fixture_hardening_report.json")
+            )
+        }
+        if let multiAgentMovementFixtureHardeningInvariantReport {
+            try writeJSON(
+                multiAgentMovementFixtureHardeningInvariantReport,
+                to: outURL.appendingPathComponent("multi_agent_movement_fixture_hardening_invariant_report.json")
+            )
+        }
         if let routeFollowingLiveSnapshot {
             try writeJSON(
                 routeFollowingLiveSnapshot,
@@ -2550,6 +2627,26 @@ if let outPath = options.outPath {
             multiAgentMovementFixturePhysicsPerformed: multiAgentMovementFixtureReport?.summary.physicsPerformed,
             multiAgentMovementFixtureMutationPerformed: multiAgentMovementFixtureReport?.summary.mutationPerformed,
             multiAgentMovementFixtureSuccess: multiAgentMovementFixtureSuccess,
+            multiAgentMovementFixtureHardeningCases: multiAgentMovementFixtureHardeningReport?.summary.cases,
+            multiAgentMovementFixtureHardeningPassed: multiAgentMovementFixtureHardeningReport?.summary.passed,
+            multiAgentMovementFixtureHardeningFailed: multiAgentMovementFixtureHardeningReport?.summary.failed,
+            multiAgentMovementFixtureHardeningApproved: multiAgentMovementFixtureHardeningReport?.summary.approvedTotal,
+            multiAgentMovementFixtureHardeningDenied: multiAgentMovementFixtureHardeningReport?.summary.deniedTotal,
+            multiAgentMovementFixtureHardeningDuplicateIntent: multiAgentMovementFixtureHardeningReport?.summary.duplicateIntent,
+            multiAgentMovementFixtureHardeningCycleConflicts: multiAgentMovementFixtureHardeningReport?.summary.cycleConflicts,
+            multiAgentMovementFixtureHardeningChainDependencies: multiAgentMovementFixtureHardeningReport?.summary.chainDependencies,
+            multiAgentMovementFixtureHardeningMovingAwayDestination: multiAgentMovementFixtureHardeningReport?.summary.movingAwayDestination,
+            multiAgentMovementFixtureHardeningVerticalInvalidEdges: multiAgentMovementFixtureHardeningReport?.summary.verticalInvalidEdges,
+            multiAgentMovementFixtureHardeningZeroLengthEdges: multiAgentMovementFixtureHardeningReport?.summary.zeroLengthEdges,
+            multiAgentMovementFixtureHardeningAllDeniedCases: multiAgentMovementFixtureHardeningReport?.summary.allDeniedCases,
+            multiAgentMovementFixtureHardeningEmptyIntentCases: multiAgentMovementFixtureHardeningReport?.summary.emptyIntentCases,
+            multiAgentMovementFixtureHardeningMaxAgentsExceeded: multiAgentMovementFixtureHardeningReport?.summary.maxAgentsExceeded,
+            multiAgentMovementFixtureHardeningWorldUsed: multiAgentMovementFixtureHardeningReport?.summary.worldUsed,
+            multiAgentMovementFixtureHardeningPathfindingPerformed: multiAgentMovementFixtureHardeningReport?.summary.pathfindingPerformed,
+            multiAgentMovementFixtureHardeningReplanningPerformed: multiAgentMovementFixtureHardeningReport?.summary.replanningPerformed,
+            multiAgentMovementFixtureHardeningPhysicsPerformed: multiAgentMovementFixtureHardeningReport?.summary.physicsPerformed,
+            multiAgentMovementFixtureHardeningMutationPerformed: multiAgentMovementFixtureHardeningReport?.summary.mutationPerformed,
+            multiAgentMovementFixtureHardeningSuccess: multiAgentMovementFixtureHardeningSuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,

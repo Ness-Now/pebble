@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Hardened fixture-only multi-agent movement arbitration.
 - Added fixture-only multi-agent movement arbitration smoke.
 - Documented PebbleLab multi-agent movement planning contract.
 - Hardened live route following cases.
