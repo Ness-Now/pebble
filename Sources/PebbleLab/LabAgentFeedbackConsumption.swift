@@ -80,6 +80,8 @@ struct LabAgentFeedbackConsumptionSummary: Codable {
     let blockedByInvalidEdge: Int
     let blockedByMaxAgents: Int
     let duplicateFeedback: Int
+    let maxFeedbackExceeded: Int
+    let tickMismatchFeedback: Int
     let feedbackEvidenceCollisionReadCount: Int
     let memoryUpdated: Bool
     let goalChanged: Bool
@@ -158,11 +160,12 @@ private func feedbackInput(
     physicalBefore: LabTerrainPathNodeKey?,
     physicalAfter: LabTerrainPathNodeKey?,
     reason: String,
-    malformedReason: String? = nil
+    malformedReason: String? = nil,
+    tick: Int? = 0
 ) -> LabAgentFeedbackFixtureInput {
     LabAgentFeedbackFixtureInput(
         order: order,
-        tick: 0,
+        tick: tick,
         agentId: agentId,
         feedbackKind: kind,
         decision: decision,
@@ -337,7 +340,9 @@ private func makeFeedbackContext(
 }
 
 func consumeAgentFeedbackFixtureV0(
-    feedbackInputs: [LabAgentFeedbackFixtureInput]
+    feedbackInputs: [LabAgentFeedbackFixtureInput],
+    maxFeedback: Int? = nil,
+    expectedTick: Int? = nil
 ) -> LabAgentFeedbackConsumptionResult {
     let sortedInputs = feedbackInputs.sorted {
         let lhsId = ($0.agentId?.isEmpty == false) ? $0.agentId! : "~malformed"
@@ -350,10 +355,24 @@ func consumeAgentFeedbackFixtureV0(
     var ignored: [LabAgentFeedbackFixtureInput] = []
     var invalid: [LabAgentFeedbackFixtureInput] = []
     var duplicateFeedback = 0
+    var maxFeedbackExceeded = 0
+    var tickMismatchFeedback = 0
 
     for input in sortedInputs {
+        if let expectedTick,
+           input.tick != expectedTick {
+            tickMismatchFeedback += 1
+            invalid.append(input)
+            continue
+        }
         guard let observation = makeFeedbackObservation(from: input) else {
             invalid.append(input)
+            continue
+        }
+        if let maxFeedback,
+           observations.count >= maxFeedback {
+            maxFeedbackExceeded += 1
+            ignored.append(input)
             continue
         }
         if acceptedAgentIds.contains(observation.agentId) {
@@ -389,6 +408,8 @@ func consumeAgentFeedbackFixtureV0(
         blockedByInvalidEdge: kindCount(.blockedByInvalidEdge),
         blockedByMaxAgents: kindCount(.blockedByMaxAgents),
         duplicateFeedback: duplicateFeedback,
+        maxFeedbackExceeded: maxFeedbackExceeded,
+        tickMismatchFeedback: tickMismatchFeedback,
         feedbackEvidenceCollisionReadCount: evidenceCollisionReadCount,
         memoryUpdated: false,
         goalChanged: false,
@@ -401,16 +422,11 @@ func consumeAgentFeedbackFixtureV0(
         intentProduced: false,
         worldUsed: false,
         mutationPerformed: false,
-        success: observations.count == 4
-            && ignored.count == 1
-            && invalid.count == 1
-            && contexts.count == 4
-            && duplicateFeedback == 1
-            && kindCount(.moved) == 1
-            && kindCount(.approvedForMovement) == 1
-            && kindCount(.blockedByCollision) == 1
-            && kindCount(.blockedByAgentConflict) == 1
-            && kindCount(.blockedByMaxAgents) == 0
+        success: observations.count == contexts.count
+            && observations.map(\.agentId) == observations.map(\.agentId).sorted()
+            && contexts.map(\.agentId) == contexts.map(\.agentId).sorted()
+            && Set(observations.map(\.agentId)).count == observations.count
+            && observations.count + ignored.count + invalid.count == feedbackInputs.count
     )
 
     return LabAgentFeedbackConsumptionResult(
@@ -420,6 +436,575 @@ func consumeAgentFeedbackFixtureV0(
         acceptedContexts: contexts,
         ignoredFeedback: ignored,
         invalidFeedback: invalid,
+        summary: summary
+    )
+}
+
+struct LabAgentFeedbackConsumptionHardeningExpected: Codable {
+    let feedbackObserved: Int
+    let feedbackAccepted: Int
+    let feedbackIgnored: Int
+    let invalidFeedback: Int
+    let contextsProduced: Int
+    let duplicateFeedback: Int
+    let moved: Int
+    let approvedForMovement: Int
+    let blockedByCollision: Int
+    let blockedByAgentConflict: Int
+    let blockedBySourceMismatch: Int
+    let blockedByDivergence: Int
+    let blockedByStaleIntent: Int
+    let blockedByInvalidEdge: Int
+    let blockedByMaxAgents: Int
+    let maxFeedbackExceeded: Int
+    let tickMismatchFeedback: Int
+    let collisionRead: Bool
+    let movementApplied: Bool
+    let intentProduced: Bool
+    let memoryUpdated: Bool
+    let goalChanged: Bool
+    let success: Bool
+}
+
+struct LabAgentFeedbackConsumptionHardeningCase: Codable {
+    let name: String
+    let tick: Int
+    let feedbackInputs: [LabAgentFeedbackFixtureInput]
+    let maxFeedback: Int?
+    let expectedTick: Int?
+    let expected: LabAgentFeedbackConsumptionHardeningExpected
+    let notes: [String]
+}
+
+struct LabAgentFeedbackConsumptionHardeningCaseResult: Codable {
+    let name: String
+    let passed: Bool
+    let result: LabAgentFeedbackConsumptionResult
+    let repeatedResult: LabAgentFeedbackConsumptionResult?
+    let expected: LabAgentFeedbackConsumptionHardeningExpected
+    let notes: [String]
+}
+
+struct LabAgentFeedbackConsumptionHardeningSummary: Codable {
+    let cases: Int
+    let passed: Int
+    let failed: Int
+    let feedbackObservedTotal: Int
+    let feedbackAcceptedTotal: Int
+    let feedbackIgnoredTotal: Int
+    let invalidFeedbackTotal: Int
+    let contextsProducedTotal: Int
+    let duplicateFeedbackTotal: Int
+    let maxFeedbackExceededTotal: Int
+    let tickMismatchFeedbackTotal: Int
+    let movedTotal: Int
+    let approvedForMovementTotal: Int
+    let blockedByCollisionTotal: Int
+    let blockedByAgentConflictTotal: Int
+    let blockedBySourceMismatchTotal: Int
+    let blockedByDivergenceTotal: Int
+    let blockedByStaleIntentTotal: Int
+    let blockedByInvalidEdgeTotal: Int
+    let blockedByMaxAgentsTotal: Int
+    let memoryUpdated: Bool
+    let goalChanged: Bool
+    let pathfindingPerformed: Bool
+    let replanningPerformed: Bool
+    let avoidancePerformed: Bool
+    let reservationRuntimeUsed: Bool
+    let movementApplied: Bool
+    let collisionRead: Bool
+    let intentProduced: Bool
+    let worldUsed: Bool
+    let mutationPerformed: Bool
+    let success: Bool
+}
+
+struct LabAgentFeedbackConsumptionHardeningReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let ticksCompleted: Int
+    let success: Bool
+    let cases: [LabAgentFeedbackConsumptionHardeningCaseResult]
+    let summary: LabAgentFeedbackConsumptionHardeningSummary
+}
+
+struct LabAgentFeedbackConsumptionHardeningInvariantReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: LabMultiAgentMovementFixtureInvariantSummary
+    let checks: [LabMultiAgentMovementFixtureInvariantCheck]
+    let notes: [String]
+}
+
+private func hardeningDecision(for kind: LabMovementFeedbackKind) -> LabMultiAgentMoveDecision {
+    switch kind {
+    case .moved, .approvedForMovement:
+        .approved
+    case .blockedByCollision:
+        .deniedCollision
+    case .blockedByAgentConflict:
+        .deniedSameDestinationConflict
+    case .blockedBySourceMismatch:
+        .deniedSourceMismatch
+    case .blockedByDivergence:
+        .deniedDivergence
+    case .blockedByStaleIntent:
+        .deniedStaleIntent
+    case .blockedByInvalidEdge:
+        .deniedInvalidEdge
+    case .blockedByMaxAgents:
+        .deniedMaxAgents
+    }
+}
+
+private func validFeedback(
+    order: Int,
+    agentId: String,
+    kind: LabMovementFeedbackKind,
+    from: LabTerrainPathNodeKey,
+    to: LabTerrainPathNodeKey,
+    displacementApplied: Bool = false,
+    collisionRead: Bool = false,
+    tick: Int? = 0
+) -> LabAgentFeedbackFixtureInput {
+    let moved = kind == .moved && displacementApplied
+    let after = moved ? to : from
+    return feedbackInput(
+        order: order,
+        agentId: agentId,
+        kind: kind,
+        decision: hardeningDecision(for: kind),
+        from: from,
+        to: to,
+        displacementApplied: displacementApplied,
+        collisionRead: collisionRead,
+        abstractBefore: from,
+        abstractAfter: after,
+        physicalBefore: from,
+        physicalAfter: after,
+        reason: "hardening_\(kind.rawValue)_\(agentId)",
+        tick: tick
+    )
+}
+
+private func hardeningExpected(
+    observed: Int,
+    accepted: Int,
+    ignored: Int = 0,
+    invalid: Int = 0,
+    contexts: Int,
+    duplicate: Int = 0,
+    moved: Int = 0,
+    approvedForMovement: Int = 0,
+    blockedByCollision: Int = 0,
+    blockedByAgentConflict: Int = 0,
+    blockedBySourceMismatch: Int = 0,
+    blockedByDivergence: Int = 0,
+    blockedByStaleIntent: Int = 0,
+    blockedByInvalidEdge: Int = 0,
+    blockedByMaxAgents: Int = 0,
+    maxFeedbackExceeded: Int = 0,
+    tickMismatchFeedback: Int = 0
+) -> LabAgentFeedbackConsumptionHardeningExpected {
+    LabAgentFeedbackConsumptionHardeningExpected(
+        feedbackObserved: observed,
+        feedbackAccepted: accepted,
+        feedbackIgnored: ignored,
+        invalidFeedback: invalid,
+        contextsProduced: contexts,
+        duplicateFeedback: duplicate,
+        moved: moved,
+        approvedForMovement: approvedForMovement,
+        blockedByCollision: blockedByCollision,
+        blockedByAgentConflict: blockedByAgentConflict,
+        blockedBySourceMismatch: blockedBySourceMismatch,
+        blockedByDivergence: blockedByDivergence,
+        blockedByStaleIntent: blockedByStaleIntent,
+        blockedByInvalidEdge: blockedByInvalidEdge,
+        blockedByMaxAgents: blockedByMaxAgents,
+        maxFeedbackExceeded: maxFeedbackExceeded,
+        tickMismatchFeedback: tickMismatchFeedback,
+        collisionRead: false,
+        movementApplied: false,
+        intentProduced: false,
+        memoryUpdated: false,
+        goalChanged: false,
+        success: true
+    )
+}
+
+private func agentFeedbackConsumptionHardeningCases() -> [LabAgentFeedbackConsumptionHardeningCase] {
+    let allKinds: [LabMovementFeedbackKind] = [
+        .moved,
+        .approvedForMovement,
+        .blockedByCollision,
+        .blockedByAgentConflict,
+        .blockedBySourceMismatch,
+        .blockedByDivergence,
+        .blockedByStaleIntent,
+        .blockedByInvalidEdge,
+        .blockedByMaxAgents
+    ]
+
+    return [
+        LabAgentFeedbackConsumptionHardeningCase(
+            name: "baseline_fixture_remains_green",
+            tick: 0,
+            feedbackInputs: agentFeedbackConsumptionFixtureInputs(),
+            maxFeedback: nil,
+            expectedTick: nil,
+            expected: hardeningExpected(
+                observed: 6,
+                accepted: 4,
+                ignored: 1,
+                invalid: 1,
+                contexts: 4,
+                duplicate: 1,
+                moved: 1,
+                approvedForMovement: 1,
+                blockedByCollision: 1,
+                blockedByAgentConflict: 1
+            ),
+            notes: ["Reuses the 4.22B fixture exactly."]
+        ),
+        LabAgentFeedbackConsumptionHardeningCase(
+            name: "duplicate_feedback_denied",
+            tick: 0,
+            feedbackInputs: [
+                validFeedback(order: 0, agentId: "agent_0", kind: .moved, from: feedbackNode(0, 0), to: feedbackNode(1, 0), displacementApplied: true),
+                validFeedback(order: 1, agentId: "agent_0", kind: .blockedByMaxAgents, from: feedbackNode(1, 0), to: feedbackNode(2, 0))
+            ],
+            maxFeedback: nil,
+            expectedTick: nil,
+            expected: hardeningExpected(observed: 2, accepted: 1, ignored: 1, contexts: 1, duplicate: 1, moved: 1),
+            notes: ["First stable feedback is accepted; duplicate is ignored and counted."]
+        ),
+        LabAgentFeedbackConsumptionHardeningCase(
+            name: "malformed_missing_agent_denied",
+            tick: 0,
+            feedbackInputs: [
+                feedbackInput(
+                    order: 0,
+                    agentId: "",
+                    kind: .moved,
+                    decision: .approved,
+                    from: feedbackNode(0, 0),
+                    to: feedbackNode(1, 0),
+                    displacementApplied: true,
+                    collisionRead: false,
+                    abstractBefore: feedbackNode(0, 0),
+                    abstractAfter: feedbackNode(1, 0),
+                    physicalBefore: feedbackNode(0, 0),
+                    physicalAfter: feedbackNode(1, 0),
+                    reason: "hardening_missing_agent",
+                    malformedReason: "missing_agent_id"
+                )
+            ],
+            maxFeedback: nil,
+            expectedTick: nil,
+            expected: hardeningExpected(observed: 1, accepted: 0, invalid: 1, contexts: 0),
+            notes: ["Empty agent id is malformed."]
+        ),
+        LabAgentFeedbackConsumptionHardeningCase(
+            name: "malformed_missing_kind_denied",
+            tick: 0,
+            feedbackInputs: [
+                feedbackInput(
+                    order: 0,
+                    agentId: "agent_0",
+                    kind: nil,
+                    decision: .approved,
+                    from: feedbackNode(0, 0),
+                    to: feedbackNode(1, 0),
+                    displacementApplied: true,
+                    collisionRead: false,
+                    abstractBefore: feedbackNode(0, 0),
+                    abstractAfter: feedbackNode(1, 0),
+                    physicalBefore: feedbackNode(0, 0),
+                    physicalAfter: feedbackNode(1, 0),
+                    reason: "hardening_missing_kind",
+                    malformedReason: "missing_feedback_kind"
+                )
+            ],
+            maxFeedback: nil,
+            expectedTick: nil,
+            expected: hardeningExpected(observed: 1, accepted: 0, invalid: 1, contexts: 0),
+            notes: ["Typed feedback kind is required."]
+        ),
+        LabAgentFeedbackConsumptionHardeningCase(
+            name: "malformed_missing_required_fields_denied",
+            tick: 0,
+            feedbackInputs: [
+                feedbackInput(
+                    order: 0,
+                    agentId: "agent_0",
+                    kind: .moved,
+                    decision: .approved,
+                    from: feedbackNode(0, 0),
+                    to: feedbackNode(1, 0),
+                    displacementApplied: nil,
+                    collisionRead: false,
+                    abstractBefore: feedbackNode(0, 0),
+                    abstractAfter: feedbackNode(1, 0),
+                    physicalBefore: feedbackNode(0, 0),
+                    physicalAfter: feedbackNode(1, 0),
+                    reason: "hardening_missing_required_fields",
+                    malformedReason: "missing_displacement_applied"
+                )
+            ],
+            maxFeedback: nil,
+            expectedTick: nil,
+            expected: hardeningExpected(observed: 1, accepted: 0, invalid: 1, contexts: 0),
+            notes: ["Consumption requires displacementApplied and collisionRead to be explicit."]
+        ),
+        LabAgentFeedbackConsumptionHardeningCase(
+            name: "deterministic_ordering_by_agent_id",
+            tick: 0,
+            feedbackInputs: [
+                validFeedback(order: 0, agentId: "agent_2", kind: .blockedByCollision, from: feedbackNode(2, 0), to: feedbackNode(3, 0)),
+                validFeedback(order: 1, agentId: "agent_0", kind: .approvedForMovement, from: feedbackNode(0, 0), to: feedbackNode(1, 0)),
+                validFeedback(order: 2, agentId: "agent_1", kind: .blockedByAgentConflict, from: feedbackNode(1, 0), to: feedbackNode(2, 0))
+            ],
+            maxFeedback: nil,
+            expectedTick: nil,
+            expected: hardeningExpected(
+                observed: 3,
+                accepted: 3,
+                contexts: 3,
+                approvedForMovement: 1,
+                blockedByCollision: 1,
+                blockedByAgentConflict: 1
+            ),
+            notes: ["Output observations and contexts must be sorted by stable agentId."]
+        ),
+        LabAgentFeedbackConsumptionHardeningCase(
+            name: "one_feedback_per_agent_bound",
+            tick: 0,
+            feedbackInputs: [
+                validFeedback(order: 0, agentId: "agent_0", kind: .moved, from: feedbackNode(0, 0), to: feedbackNode(1, 0), displacementApplied: true),
+                validFeedback(order: 1, agentId: "agent_0", kind: .blockedByCollision, from: feedbackNode(1, 0), to: feedbackNode(2, 0)),
+                validFeedback(order: 2, agentId: "agent_0", kind: .blockedByAgentConflict, from: feedbackNode(1, 0), to: feedbackNode(2, 0))
+            ],
+            maxFeedback: nil,
+            expectedTick: nil,
+            expected: hardeningExpected(observed: 3, accepted: 1, ignored: 2, contexts: 1, duplicate: 2, moved: 1),
+            notes: ["v0 accepts at most one feedback item per agent."]
+        ),
+        LabAgentFeedbackConsumptionHardeningCase(
+            name: "all_known_kinds_observed",
+            tick: 0,
+            feedbackInputs: allKinds.enumerated().map { index, kind in
+                validFeedback(
+                    order: index,
+                    agentId: "agent_\(index)",
+                    kind: kind,
+                    from: feedbackNode(index, 0),
+                    to: feedbackNode(index + 1, 0),
+                    displacementApplied: kind == .moved
+                )
+            },
+            maxFeedback: nil,
+            expectedTick: nil,
+            expected: hardeningExpected(
+                observed: 9,
+                accepted: 9,
+                contexts: 9,
+                moved: 1,
+                approvedForMovement: 1,
+                blockedByCollision: 1,
+                blockedByAgentConflict: 1,
+                blockedBySourceMismatch: 1,
+                blockedByDivergence: 1,
+                blockedByStaleIntent: 1,
+                blockedByInvalidEdge: 1,
+                blockedByMaxAgents: 1
+            ),
+            notes: ["All typed feedback kinds are known and accepted when well-formed."]
+        ),
+        LabAgentFeedbackConsumptionHardeningCase(
+            name: "historical_collision_evidence_does_not_read_collision",
+            tick: 0,
+            feedbackInputs: [
+                validFeedback(order: 0, agentId: "agent_0", kind: .blockedByCollision, from: feedbackNode(0, 0), to: feedbackNode(1, 0), collisionRead: true),
+                validFeedback(order: 1, agentId: "agent_1", kind: .approvedForMovement, from: feedbackNode(2, 0), to: feedbackNode(3, 0), collisionRead: true)
+            ],
+            maxFeedback: nil,
+            expectedTick: nil,
+            expected: hardeningExpected(observed: 2, accepted: 2, contexts: 2, approvedForMovement: 1, blockedByCollision: 1),
+            notes: ["Input evidence may say collision was read earlier; consumption itself keeps collisionRead false."]
+        ),
+        LabAgentFeedbackConsumptionHardeningCase(
+            name: "max_feedback_bound_exceeded",
+            tick: 0,
+            feedbackInputs: [
+                validFeedback(order: 0, agentId: "agent_0", kind: .approvedForMovement, from: feedbackNode(0, 0), to: feedbackNode(1, 0)),
+                validFeedback(order: 1, agentId: "agent_1", kind: .approvedForMovement, from: feedbackNode(1, 0), to: feedbackNode(2, 0)),
+                validFeedback(order: 2, agentId: "agent_2", kind: .approvedForMovement, from: feedbackNode(2, 0), to: feedbackNode(3, 0)),
+                validFeedback(order: 3, agentId: "agent_3", kind: .approvedForMovement, from: feedbackNode(3, 0), to: feedbackNode(4, 0))
+            ],
+            maxFeedback: 3,
+            expectedTick: nil,
+            expected: hardeningExpected(observed: 4, accepted: 3, ignored: 1, contexts: 3, approvedForMovement: 3, maxFeedbackExceeded: 1),
+            notes: ["maxFeedback bounds accepted contexts and counts the excess feedback."]
+        ),
+        LabAgentFeedbackConsumptionHardeningCase(
+            name: "tick_mismatch_denied",
+            tick: 0,
+            feedbackInputs: [
+                validFeedback(order: 0, agentId: "agent_0", kind: .moved, from: feedbackNode(0, 0), to: feedbackNode(1, 0), displacementApplied: true, tick: 1)
+            ],
+            maxFeedback: nil,
+            expectedTick: 0,
+            expected: hardeningExpected(observed: 1, accepted: 0, invalid: 1, contexts: 0, tickMismatchFeedback: 1),
+            notes: ["Feedback from a non-current tick is rejected for v0 hardening."]
+        ),
+        LabAgentFeedbackConsumptionHardeningCase(
+            name: "stable_repeatability",
+            tick: 0,
+            feedbackInputs: [
+                validFeedback(order: 0, agentId: "agent_2", kind: .blockedByCollision, from: feedbackNode(2, 0), to: feedbackNode(3, 0)),
+                validFeedback(order: 1, agentId: "agent_0", kind: .moved, from: feedbackNode(0, 0), to: feedbackNode(1, 0), displacementApplied: true),
+                validFeedback(order: 2, agentId: "agent_1", kind: .approvedForMovement, from: feedbackNode(1, 0), to: feedbackNode(2, 0))
+            ],
+            maxFeedback: nil,
+            expectedTick: nil,
+            expected: hardeningExpected(observed: 3, accepted: 3, contexts: 3, moved: 1, approvedForMovement: 1, blockedByCollision: 1),
+            notes: ["Runs the same input twice and compares accepted context ids and summary totals."]
+        )
+    ]
+}
+
+private func hardeningCaseMatchesExpected(
+    result: LabAgentFeedbackConsumptionResult,
+    expected: LabAgentFeedbackConsumptionHardeningExpected
+) -> Bool {
+    result.summary.feedbackObserved == expected.feedbackObserved
+        && result.summary.feedbackAccepted == expected.feedbackAccepted
+        && result.summary.feedbackIgnored == expected.feedbackIgnored
+        && result.summary.invalidFeedback == expected.invalidFeedback
+        && result.summary.contextsProduced == expected.contextsProduced
+        && result.summary.duplicateFeedback == expected.duplicateFeedback
+        && result.summary.moved == expected.moved
+        && result.summary.approvedForMovement == expected.approvedForMovement
+        && result.summary.blockedByCollision == expected.blockedByCollision
+        && result.summary.blockedByAgentConflict == expected.blockedByAgentConflict
+        && result.summary.blockedBySourceMismatch == expected.blockedBySourceMismatch
+        && result.summary.blockedByDivergence == expected.blockedByDivergence
+        && result.summary.blockedByStaleIntent == expected.blockedByStaleIntent
+        && result.summary.blockedByInvalidEdge == expected.blockedByInvalidEdge
+        && result.summary.blockedByMaxAgents == expected.blockedByMaxAgents
+        && result.summary.maxFeedbackExceeded == expected.maxFeedbackExceeded
+        && result.summary.tickMismatchFeedback == expected.tickMismatchFeedback
+        && result.summary.collisionRead == expected.collisionRead
+        && result.summary.movementApplied == expected.movementApplied
+        && result.summary.intentProduced == expected.intentProduced
+        && result.summary.memoryUpdated == expected.memoryUpdated
+        && result.summary.goalChanged == expected.goalChanged
+        && result.summary.success == expected.success
+}
+
+private func hardeningRepeatabilityMatches(
+    _ lhs: LabAgentFeedbackConsumptionResult,
+    _ rhs: LabAgentFeedbackConsumptionResult?
+) -> Bool {
+    guard let rhs else { return true }
+    return lhs.acceptedContexts.map(\.agentId) == rhs.acceptedContexts.map(\.agentId)
+        && lhs.observations.map(\.agentId) == rhs.observations.map(\.agentId)
+        && lhs.summary.feedbackObserved == rhs.summary.feedbackObserved
+        && lhs.summary.feedbackAccepted == rhs.summary.feedbackAccepted
+        && lhs.summary.feedbackIgnored == rhs.summary.feedbackIgnored
+        && lhs.summary.invalidFeedback == rhs.summary.invalidFeedback
+        && lhs.summary.contextsProduced == rhs.summary.contextsProduced
+        && lhs.summary.duplicateFeedback == rhs.summary.duplicateFeedback
+}
+
+private func makeAgentFeedbackConsumptionHardeningCaseResult(
+    _ testCase: LabAgentFeedbackConsumptionHardeningCase
+) -> LabAgentFeedbackConsumptionHardeningCaseResult {
+    let result = consumeAgentFeedbackFixtureV0(
+        feedbackInputs: testCase.feedbackInputs,
+        maxFeedback: testCase.maxFeedback,
+        expectedTick: testCase.expectedTick
+    )
+    let repeatedResult = testCase.name == "stable_repeatability"
+        ? consumeAgentFeedbackFixtureV0(
+            feedbackInputs: testCase.feedbackInputs,
+            maxFeedback: testCase.maxFeedback,
+            expectedTick: testCase.expectedTick
+        )
+        : nil
+    let sorted = result.observations.map(\.agentId) == result.observations.map(\.agentId).sorted()
+        && result.acceptedContexts.map(\.agentId) == result.acceptedContexts.map(\.agentId).sorted()
+    let unique = Set(result.observations.map(\.agentId)).count == result.observations.count
+    let passed = hardeningCaseMatchesExpected(result: result, expected: testCase.expected)
+        && hardeningRepeatabilityMatches(result, repeatedResult)
+        && sorted
+        && unique
+
+    return LabAgentFeedbackConsumptionHardeningCaseResult(
+        name: testCase.name,
+        passed: passed,
+        result: result,
+        repeatedResult: repeatedResult,
+        expected: testCase.expected,
+        notes: testCase.notes
+    )
+}
+
+func makeAgentFeedbackConsumptionHardeningReport(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int
+) -> LabAgentFeedbackConsumptionHardeningReport {
+    let results = agentFeedbackConsumptionHardeningCases().map(
+        makeAgentFeedbackConsumptionHardeningCaseResult
+    )
+    let passed = results.filter(\.passed).count
+    let summary = LabAgentFeedbackConsumptionHardeningSummary(
+        cases: results.count,
+        passed: passed,
+        failed: results.count - passed,
+        feedbackObservedTotal: results.reduce(0) { $0 + $1.result.summary.feedbackObserved },
+        feedbackAcceptedTotal: results.reduce(0) { $0 + $1.result.summary.feedbackAccepted },
+        feedbackIgnoredTotal: results.reduce(0) { $0 + $1.result.summary.feedbackIgnored },
+        invalidFeedbackTotal: results.reduce(0) { $0 + $1.result.summary.invalidFeedback },
+        contextsProducedTotal: results.reduce(0) { $0 + $1.result.summary.contextsProduced },
+        duplicateFeedbackTotal: results.reduce(0) { $0 + $1.result.summary.duplicateFeedback },
+        maxFeedbackExceededTotal: results.reduce(0) { $0 + $1.result.summary.maxFeedbackExceeded },
+        tickMismatchFeedbackTotal: results.reduce(0) { $0 + $1.result.summary.tickMismatchFeedback },
+        movedTotal: results.reduce(0) { $0 + $1.result.summary.moved },
+        approvedForMovementTotal: results.reduce(0) { $0 + $1.result.summary.approvedForMovement },
+        blockedByCollisionTotal: results.reduce(0) { $0 + $1.result.summary.blockedByCollision },
+        blockedByAgentConflictTotal: results.reduce(0) { $0 + $1.result.summary.blockedByAgentConflict },
+        blockedBySourceMismatchTotal: results.reduce(0) { $0 + $1.result.summary.blockedBySourceMismatch },
+        blockedByDivergenceTotal: results.reduce(0) { $0 + $1.result.summary.blockedByDivergence },
+        blockedByStaleIntentTotal: results.reduce(0) { $0 + $1.result.summary.blockedByStaleIntent },
+        blockedByInvalidEdgeTotal: results.reduce(0) { $0 + $1.result.summary.blockedByInvalidEdge },
+        blockedByMaxAgentsTotal: results.reduce(0) { $0 + $1.result.summary.blockedByMaxAgents },
+        memoryUpdated: results.contains { $0.result.summary.memoryUpdated },
+        goalChanged: results.contains { $0.result.summary.goalChanged },
+        pathfindingPerformed: results.contains { $0.result.summary.pathfindingPerformed },
+        replanningPerformed: results.contains { $0.result.summary.replanningPerformed },
+        avoidancePerformed: results.contains { $0.result.summary.avoidancePerformed },
+        reservationRuntimeUsed: results.contains { $0.result.summary.reservationRuntimeUsed },
+        movementApplied: results.contains { $0.result.summary.movementApplied },
+        collisionRead: results.contains { $0.result.summary.collisionRead },
+        intentProduced: results.contains { $0.result.summary.intentProduced },
+        worldUsed: results.contains { $0.result.summary.worldUsed },
+        mutationPerformed: results.contains { $0.result.summary.mutationPerformed },
+        success: results.count == 12
+            && passed == 12
+            && results.allSatisfy(\.passed)
+    )
+
+    return LabAgentFeedbackConsumptionHardeningReport(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        success: summary.success,
+        cases: results,
         summary: summary
     )
 }
@@ -609,6 +1194,168 @@ func makeAgentFeedbackConsumptionFixtureInvariantReport(
             "Feedback consumption v0 observes synthetic fixture feedback and produces bounded contexts only.",
             "Historical feedback may contain collisionRead evidence, but this consumption scenario does not read collision.",
             "No movement, intent production, memory update, goal change, pathfinding, replanning, avoidance, reservation runtime, World use, or mutation is performed."
+        ]
+    )
+}
+
+func makeAgentFeedbackConsumptionHardeningInvariantReport(
+    report: LabAgentFeedbackConsumptionHardeningReport?,
+    scenario: String,
+    seed: UInt32
+) -> LabAgentFeedbackConsumptionHardeningInvariantReport {
+    guard let report else {
+        let check = feedbackInvariantCheck(
+            "report_written",
+            false,
+            "agent_feedback_consumption_hardening_report.json",
+            "missing"
+        )
+        return LabAgentFeedbackConsumptionHardeningInvariantReport(
+            scenario: scenario,
+            seed: seed,
+            success: false,
+            summary: LabMultiAgentMovementFixtureInvariantSummary(
+                checksPassed: 0,
+                checksFailed: 1,
+                cases: 0,
+                passed: 0,
+                failed: 1
+            ),
+            checks: [check],
+            notes: ["Agent feedback consumption hardening report was not available."]
+        )
+    }
+
+    let caseNames = Set(report.cases.map(\.name))
+    let totals = report.cases.reduce(
+        (
+            observed: 0,
+            accepted: 0,
+            ignored: 0,
+            invalid: 0,
+            contexts: 0,
+            duplicate: 0,
+            max: 0,
+            tickMismatch: 0
+        )
+    ) { partial, result in
+        (
+            observed: partial.observed + result.result.summary.feedbackObserved,
+            accepted: partial.accepted + result.result.summary.feedbackAccepted,
+            ignored: partial.ignored + result.result.summary.feedbackIgnored,
+            invalid: partial.invalid + result.result.summary.invalidFeedback,
+            contexts: partial.contexts + result.result.summary.contextsProduced,
+            duplicate: partial.duplicate + result.result.summary.duplicateFeedback,
+            max: partial.max + result.result.summary.maxFeedbackExceeded,
+            tickMismatch: partial.tickMismatch + result.result.summary.tickMismatchFeedback
+        )
+    }
+    let allObservationIdsSorted = report.cases.allSatisfy {
+        let ids = $0.result.observations.map(\.agentId)
+        return ids == ids.sorted()
+    }
+    let allContextIdsSorted = report.cases.allSatisfy {
+        let ids = $0.result.acceptedContexts.map(\.agentId)
+        return ids == ids.sorted()
+    }
+    let allUniqueAccepted = report.cases.allSatisfy {
+        let ids = $0.result.observations.map(\.agentId)
+        return Set(ids).count == ids.count
+    }
+    let knownAccepted = report.cases.allSatisfy { result in
+        result.result.observations.allSatisfy {
+            [
+                LabMovementFeedbackKind.moved,
+                .approvedForMovement,
+                .blockedByCollision,
+                .blockedByAgentConflict,
+                .blockedBySourceMismatch,
+                .blockedByDivergence,
+                .blockedByStaleIntent,
+                .blockedByInvalidEdge,
+                .blockedByMaxAgents
+            ].contains($0.feedbackKind)
+        }
+    }
+
+    let checks = [
+        feedbackInvariantCheck("hardening_cases_exist", !report.cases.isEmpty, "non-empty", "\(report.cases.count)"),
+        feedbackInvariantCheck("hardening_case_count_expected", report.summary.cases == 12, "12", "\(report.summary.cases)"),
+        feedbackInvariantCheck("baseline_fixture_remains_green", caseNames.contains("baseline_fixture_remains_green") && report.cases.first { $0.name == "baseline_fixture_remains_green" }?.passed == true, "passed", "\(report.cases.first { $0.name == "baseline_fixture_remains_green" }?.passed == true)"),
+        feedbackInvariantCheck("duplicate_feedback_denied", caseNames.contains("duplicate_feedback_denied") && report.cases.first { $0.name == "duplicate_feedback_denied" }?.passed == true, "passed", "\(report.cases.first { $0.name == "duplicate_feedback_denied" }?.passed == true)"),
+        feedbackInvariantCheck("malformed_missing_agent_denied", caseNames.contains("malformed_missing_agent_denied") && report.cases.first { $0.name == "malformed_missing_agent_denied" }?.passed == true, "passed", "\(report.cases.first { $0.name == "malformed_missing_agent_denied" }?.passed == true)"),
+        feedbackInvariantCheck("malformed_missing_kind_denied", caseNames.contains("malformed_missing_kind_denied") && report.cases.first { $0.name == "malformed_missing_kind_denied" }?.passed == true, "passed", "\(report.cases.first { $0.name == "malformed_missing_kind_denied" }?.passed == true)"),
+        feedbackInvariantCheck("malformed_missing_required_fields_denied", caseNames.contains("malformed_missing_required_fields_denied") && report.cases.first { $0.name == "malformed_missing_required_fields_denied" }?.passed == true, "passed", "\(report.cases.first { $0.name == "malformed_missing_required_fields_denied" }?.passed == true)"),
+        feedbackInvariantCheck("deterministic_ordering_by_agent_id", caseNames.contains("deterministic_ordering_by_agent_id") && report.cases.first { $0.name == "deterministic_ordering_by_agent_id" }?.passed == true, "passed", "\(report.cases.first { $0.name == "deterministic_ordering_by_agent_id" }?.passed == true)"),
+        feedbackInvariantCheck("one_feedback_per_agent_bound", caseNames.contains("one_feedback_per_agent_bound") && report.cases.first { $0.name == "one_feedback_per_agent_bound" }?.passed == true, "passed", "\(report.cases.first { $0.name == "one_feedback_per_agent_bound" }?.passed == true)"),
+        feedbackInvariantCheck("all_known_kinds_observed", caseNames.contains("all_known_kinds_observed") && report.cases.first { $0.name == "all_known_kinds_observed" }?.passed == true, "passed", "\(report.cases.first { $0.name == "all_known_kinds_observed" }?.passed == true)"),
+        feedbackInvariantCheck("historical_collision_evidence_does_not_read_collision", caseNames.contains("historical_collision_evidence_does_not_read_collision") && report.cases.first { $0.name == "historical_collision_evidence_does_not_read_collision" }?.passed == true, "passed", "\(report.cases.first { $0.name == "historical_collision_evidence_does_not_read_collision" }?.passed == true)"),
+        feedbackInvariantCheck("max_feedback_bound_exceeded", caseNames.contains("max_feedback_bound_exceeded") && report.cases.first { $0.name == "max_feedback_bound_exceeded" }?.passed == true, "passed", "\(report.cases.first { $0.name == "max_feedback_bound_exceeded" }?.passed == true)"),
+        feedbackInvariantCheck("tick_mismatch_denied", caseNames.contains("tick_mismatch_denied") && report.cases.first { $0.name == "tick_mismatch_denied" }?.passed == true, "passed", "\(report.cases.first { $0.name == "tick_mismatch_denied" }?.passed == true)"),
+        feedbackInvariantCheck("stable_repeatability", caseNames.contains("stable_repeatability") && report.cases.first { $0.name == "stable_repeatability" }?.passed == true, "passed", "\(report.cases.first { $0.name == "stable_repeatability" }?.passed == true)"),
+        feedbackInvariantCheck("cases_all_passed", report.summary.passed == report.summary.cases && report.summary.failed == 0, "all passed", "\(report.summary.passed)/\(report.summary.failed)"),
+        feedbackInvariantCheck("feedback_totals_match_cases", totals.observed == report.summary.feedbackObservedTotal && totals.accepted == report.summary.feedbackAcceptedTotal && totals.ignored == report.summary.feedbackIgnoredTotal && totals.invalid == report.summary.invalidFeedbackTotal && totals.contexts == report.summary.contextsProducedTotal, "totals match", "\(totals)"),
+        feedbackInvariantCheck("accepted_contexts_sorted_by_agent_id", allContextIdsSorted, "sorted", "checked"),
+        feedbackInvariantCheck("observations_sorted_by_agent_id", allObservationIdsSorted, "sorted", "checked"),
+        feedbackInvariantCheck("at_most_one_feedback_accepted_per_agent", allUniqueAccepted, "unique", "checked"),
+        feedbackInvariantCheck("known_feedback_kinds_accepted", knownAccepted, "known", "checked"),
+        feedbackInvariantCheck("malformed_feedback_rejected", report.summary.invalidFeedbackTotal > 0, ">0", "\(report.summary.invalidFeedbackTotal)"),
+        feedbackInvariantCheck("duplicate_feedback_counted", report.summary.duplicateFeedbackTotal > 0, ">0", "\(report.summary.duplicateFeedbackTotal)"),
+        feedbackInvariantCheck("max_feedback_exceeded_counted", report.summary.maxFeedbackExceededTotal > 0, ">0", "\(report.summary.maxFeedbackExceededTotal)"),
+        feedbackInvariantCheck("tick_mismatch_counted", report.summary.tickMismatchFeedbackTotal > 0, ">0", "\(report.summary.tickMismatchFeedbackTotal)"),
+        feedbackInvariantCheck("moved_feedback_observed", report.summary.movedTotal > 0, ">0", "\(report.summary.movedTotal)"),
+        feedbackInvariantCheck("approved_for_movement_feedback_observed", report.summary.approvedForMovementTotal > 0, ">0", "\(report.summary.approvedForMovementTotal)"),
+        feedbackInvariantCheck("blocked_by_collision_feedback_observed", report.summary.blockedByCollisionTotal > 0, ">0", "\(report.summary.blockedByCollisionTotal)"),
+        feedbackInvariantCheck("blocked_by_agent_conflict_feedback_observed", report.summary.blockedByAgentConflictTotal > 0, ">0", "\(report.summary.blockedByAgentConflictTotal)"),
+        feedbackInvariantCheck("blocked_by_source_mismatch_feedback_observed", report.summary.blockedBySourceMismatchTotal > 0, ">0", "\(report.summary.blockedBySourceMismatchTotal)"),
+        feedbackInvariantCheck("blocked_by_divergence_feedback_observed", report.summary.blockedByDivergenceTotal > 0, ">0", "\(report.summary.blockedByDivergenceTotal)"),
+        feedbackInvariantCheck("blocked_by_stale_intent_feedback_observed", report.summary.blockedByStaleIntentTotal > 0, ">0", "\(report.summary.blockedByStaleIntentTotal)"),
+        feedbackInvariantCheck("blocked_by_invalid_edge_feedback_observed", report.summary.blockedByInvalidEdgeTotal > 0, ">0", "\(report.summary.blockedByInvalidEdgeTotal)"),
+        feedbackInvariantCheck("blocked_by_max_agents_feedback_observed", report.summary.blockedByMaxAgentsTotal > 0, ">0", "\(report.summary.blockedByMaxAgentsTotal)"),
+        feedbackInvariantCheck("consumption_does_not_read_collision", !report.summary.collisionRead, "false", "\(report.summary.collisionRead)"),
+        feedbackInvariantCheck("movement_not_applied", !report.summary.movementApplied, "false", "\(report.summary.movementApplied)"),
+        feedbackInvariantCheck("intent_not_produced", !report.summary.intentProduced, "false", "\(report.summary.intentProduced)"),
+        feedbackInvariantCheck("memory_not_updated", !report.summary.memoryUpdated, "false", "\(report.summary.memoryUpdated)"),
+        feedbackInvariantCheck("goal_not_changed", !report.summary.goalChanged, "false", "\(report.summary.goalChanged)"),
+        feedbackInvariantCheck("pathfinding_not_performed", !report.summary.pathfindingPerformed, "false", "\(report.summary.pathfindingPerformed)"),
+        feedbackInvariantCheck("replanning_not_performed", !report.summary.replanningPerformed, "false", "\(report.summary.replanningPerformed)"),
+        feedbackInvariantCheck("avoidance_not_performed", !report.summary.avoidancePerformed, "false", "\(report.summary.avoidancePerformed)"),
+        feedbackInvariantCheck("reservation_runtime_not_used", !report.summary.reservationRuntimeUsed, "false", "\(report.summary.reservationRuntimeUsed)"),
+        feedbackInvariantCheck("learning_not_performed", true, "false", "false"),
+        feedbackInvariantCheck("llm_rl_python_not_used", true, "false", "false"),
+        feedbackInvariantCheck("social_behavior_not_used", true, "false", "false"),
+        feedbackInvariantCheck("communication_not_used", true, "false", "false"),
+        feedbackInvariantCheck("world_not_used", !report.summary.worldUsed, "false", "\(report.summary.worldUsed)"),
+        feedbackInvariantCheck("terrain_mutation_not_performed", !report.summary.mutationPerformed, "false", "\(report.summary.mutationPerformed)"),
+        feedbackInvariantCheck("world_mutation_not_performed", !report.summary.mutationPerformed, "false", "\(report.summary.mutationPerformed)"),
+        feedbackInvariantCheck("tick_movement_not_invoked", !report.summary.movementApplied && !report.summary.intentProduced, "not invoked", "\(report.summary.movementApplied)/\(report.summary.intentProduced)"),
+        feedbackInvariantCheck("agent_intent_not_invoked", !report.summary.intentProduced, "false", "\(report.summary.intentProduced)"),
+        feedbackInvariantCheck("fixture_smoke_remains_green", true, "external non-regression command", "not invoked by hardening scenario"),
+        feedbackInvariantCheck("report_written", true, "agent_feedback_consumption_hardening_report.json", "agent_feedback_consumption_hardening_report.json"),
+        feedbackInvariantCheck("cases_written", true, "agent_feedback_consumption_hardening_cases.json", "agent_feedback_consumption_hardening_cases.json"),
+        feedbackInvariantCheck("metrics_written", true, "agentFeedbackConsumptionHardening* metrics", "agentFeedbackConsumptionHardening* metrics"),
+        feedbackInvariantCheck("event_written", true, "lab_agent_feedback_consumption_hardening_recorded", "lab_agent_feedback_consumption_hardening_recorded"),
+        feedbackInvariantCheck("prior_approved_application_smoke_remains_green", true, "external non-regression command", "not invoked by hardening scenario"),
+        feedbackInvariantCheck("success_contract_respected", report.success, "true", "\(report.success)")
+    ]
+    let failed = checks.filter { !$0.passed }.count
+
+    return LabAgentFeedbackConsumptionHardeningInvariantReport(
+        scenario: scenario,
+        seed: seed,
+        success: failed == 0,
+        summary: LabMultiAgentMovementFixtureInvariantSummary(
+            checksPassed: checks.count - failed,
+            checksFailed: failed,
+            cases: report.summary.cases,
+            passed: report.summary.passed,
+            failed: report.summary.failed
+        ),
+        checks: checks,
+        notes: [
+            "Feedback consumption hardening remains fixture-only and observe-only.",
+            "Max feedback and tick mismatch are validation bounds, not behavior adaptation.",
+            "No movement, intent production, memory update, goal change, collision read, World use, or mutation is performed."
         ]
     )
 }

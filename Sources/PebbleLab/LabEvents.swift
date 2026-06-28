@@ -168,6 +168,23 @@ struct RunEvent: Encodable {
     let feedbackIgnored: Int?
     let invalidFeedback: Int?
     let contextsProduced: Int?
+    let feedbackObservedTotal: Int?
+    let feedbackAcceptedTotal: Int?
+    let feedbackIgnoredTotal: Int?
+    let invalidFeedbackTotal: Int?
+    let contextsProducedTotal: Int?
+    let duplicateFeedbackTotal: Int?
+    let maxFeedbackExceededTotal: Int?
+    let tickMismatchFeedbackTotal: Int?
+    let movedTotal: Int?
+    let approvedForMovementTotal: Int?
+    let blockedByCollisionTotal: Int?
+    let blockedByAgentConflictTotal: Int?
+    let blockedBySourceMismatchTotal: Int?
+    let blockedByDivergenceTotal: Int?
+    let blockedByStaleIntentTotal: Int?
+    let blockedByInvalidEdgeTotal: Int?
+    let blockedByMaxAgentsTotal: Int?
     let contexts: Int?
     let proposals: Int?
     let acceptedIntents: Int?
@@ -450,6 +467,23 @@ struct RunEvent: Encodable {
         feedbackIgnored: Int? = nil,
         invalidFeedback: Int? = nil,
         contextsProduced: Int? = nil,
+        feedbackObservedTotal: Int? = nil,
+        feedbackAcceptedTotal: Int? = nil,
+        feedbackIgnoredTotal: Int? = nil,
+        invalidFeedbackTotal: Int? = nil,
+        contextsProducedTotal: Int? = nil,
+        duplicateFeedbackTotal: Int? = nil,
+        maxFeedbackExceededTotal: Int? = nil,
+        tickMismatchFeedbackTotal: Int? = nil,
+        movedTotal: Int? = nil,
+        approvedForMovementTotal: Int? = nil,
+        blockedByCollisionTotal: Int? = nil,
+        blockedByAgentConflictTotal: Int? = nil,
+        blockedBySourceMismatchTotal: Int? = nil,
+        blockedByDivergenceTotal: Int? = nil,
+        blockedByStaleIntentTotal: Int? = nil,
+        blockedByInvalidEdgeTotal: Int? = nil,
+        blockedByMaxAgentsTotal: Int? = nil,
         contexts: Int? = nil,
         proposals: Int? = nil,
         acceptedIntents: Int? = nil,
@@ -731,6 +765,23 @@ struct RunEvent: Encodable {
         self.feedbackIgnored = feedbackIgnored
         self.invalidFeedback = invalidFeedback
         self.contextsProduced = contextsProduced
+        self.feedbackObservedTotal = feedbackObservedTotal
+        self.feedbackAcceptedTotal = feedbackAcceptedTotal
+        self.feedbackIgnoredTotal = feedbackIgnoredTotal
+        self.invalidFeedbackTotal = invalidFeedbackTotal
+        self.contextsProducedTotal = contextsProducedTotal
+        self.duplicateFeedbackTotal = duplicateFeedbackTotal
+        self.maxFeedbackExceededTotal = maxFeedbackExceededTotal
+        self.tickMismatchFeedbackTotal = tickMismatchFeedbackTotal
+        self.movedTotal = movedTotal
+        self.approvedForMovementTotal = approvedForMovementTotal
+        self.blockedByCollisionTotal = blockedByCollisionTotal
+        self.blockedByAgentConflictTotal = blockedByAgentConflictTotal
+        self.blockedBySourceMismatchTotal = blockedBySourceMismatchTotal
+        self.blockedByDivergenceTotal = blockedByDivergenceTotal
+        self.blockedByStaleIntentTotal = blockedByStaleIntentTotal
+        self.blockedByInvalidEdgeTotal = blockedByInvalidEdgeTotal
+        self.blockedByMaxAgentsTotal = blockedByMaxAgentsTotal
         self.contexts = contexts
         self.proposals = proposals
         self.acceptedIntents = acceptedIntents

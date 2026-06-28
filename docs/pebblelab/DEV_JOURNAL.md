@@ -5936,3 +5936,127 @@ behavior, communicate, create a `World`, or mutate terrain/world.
 ### Next Step
 
 Phase 4.22C — Feedback Consumption Hardening.
+
+## 2026-06-28 — Phase 4.22C feedback consumption hardening
+
+### Objective
+
+Implement `agent_feedback_consumption_hardening_smoke`, a fixture-only
+hardening scenario for feedback consumption v0.
+
+### Starting Point
+
+Phase 4.22B added `agent_feedback_consumption_fixture_smoke`, which consumed
+six synthetic feedback inputs, accepted four known feedbacks, ignored one
+duplicate, rejected one malformed input, produced four bounded feedback
+contexts, and confirmed no movement, collision read, intent production,
+memory update, goal change, pathfinding, replanning, reservation runtime,
+World use, or terrain/world mutation.
+
+### Files Created or Modified
+
+- Updated `Sources/PebbleLab/LabAgentFeedbackConsumption.swift`.
+- Updated `Sources/PebbleLab/LabOptions.swift`.
+- Updated `Sources/PebbleLab/LabScenarios.swift`.
+- Updated `Sources/PebbleLab/LabOutput.swift`.
+- Updated `Sources/PebbleLab/LabEvents.swift`.
+- Updated `Sources/PebbleLab/main.swift`.
+- Updated `docs/pebblelab/CHANGELOG.md`.
+- Updated `docs/pebblelab/DEV_JOURNAL.md`.
+- Updated `docs/pebblelab/ROADMAP.md`.
+- Updated `docs/pebblelab/PHASE_4_FEEDBACK_CONSUMPTION_PLAN.md`.
+
+### Why Hardening
+
+The first fixture smoke proved the happy contract and a small duplicate /
+malformed path. The hardening phase adds isolated cases for malformed inputs,
+duplicates, max feedback bounds, tick mismatch, all known feedback kinds, and
+repeatability before any feedback is allowed to influence agent intent
+production.
+
+### Cases Covered
+
+- `baseline_fixture_remains_green`;
+- `duplicate_feedback_denied`;
+- `malformed_missing_agent_denied`;
+- `malformed_missing_kind_denied`;
+- `malformed_missing_required_fields_denied`;
+- `deterministic_ordering_by_agent_id`;
+- `one_feedback_per_agent_bound`;
+- `all_known_kinds_observed`;
+- `historical_collision_evidence_does_not_read_collision`;
+- `max_feedback_bound_exceeded`;
+- `tick_mismatch_denied`;
+- `stable_repeatability`.
+
+### Duplicate, Malformed, Max, and Tick Policies
+
+Duplicate feedback is ignored after the first stable accepted feedback for an
+agent and counted as `duplicateFeedback`. Malformed feedback with missing
+agent id, missing kind, or missing required fields is rejected and counted as
+invalid. The optional `maxFeedback` bound caps accepted feedback and counts
+excess input as `maxFeedbackExceeded`. The optional `expectedTick` check
+rejects mismatched feedback and counts `tickMismatchFeedback`.
+
+### Deterministic Ordering
+
+Inputs may be intentionally unordered, but observations and accepted contexts
+are sorted by stable `agentId`. Stable repeatability runs the same inputs twice
+and compares accepted context ids and summary totals.
+
+### Outputs, Invariants, Metrics, and Event
+
+The scenario writes:
+
+- `agent_feedback_consumption_hardening_report.json`;
+- `agent_feedback_consumption_hardening_invariant_report.json`;
+- `agent_feedback_consumption_hardening_cases.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The invariant report has 58 checks. Metrics use
+`agentFeedbackConsumptionHardening*`, and the aggregate event is
+`lab_agent_feedback_consumption_hardening_recorded`.
+
+### Boundaries Confirmed
+
+No movement is applied. The consumption layer does not read collision, produce
+intents, call `produceAgentIntentProposalV0`, call agent intent production
+scenarios, invoke tick movement scenarios, update memory, change goals,
+pathfind, replan, avoid, reserve, learn, use LLM/RL/Python, create social
+behavior, communicate, create a `World`, or mutate terrain/world.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario agent_feedback_consumption_hardening_smoke --seed 42 --ticks 0 --out runs/check_agent_feedback_consumption_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_feedback_consumption_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_feedback_consumption_fixture_after_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_approved_application_smoke --seed 42 --ticks 5 --out runs/check_agent_intent_approved_application_after_feedback_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_agent_intent_live_readonly_after_feedback_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_to_tick_fixture_after_feedback_hardening`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_feedback_hardening`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- `cases = 12`.
+- `passed = 12`.
+- `failed = 0`.
+- `feedbackObservedTotal = 36`.
+- `feedbackAcceptedTotal = 26`.
+- `feedbackIgnoredTotal = 5`.
+- `invalidFeedbackTotal = 5`.
+- `contextsProducedTotal = 26`.
+- `duplicateFeedbackTotal = 4`.
+- `maxFeedbackExceededTotal = 1`.
+- `tickMismatchFeedbackTotal = 1`.
+- Every known feedback kind is observed.
+- Hardening report, invariant report, cases JSON, metrics, and event are
+  produced.
+
+### Next Step
+
+Phase 4.22D — Feedback To Agent Intent Context Fixture Smoke.

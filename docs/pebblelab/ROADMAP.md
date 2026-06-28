@@ -1329,3 +1329,49 @@ following, movement application, collision reads, physics, gameplay movement,
 and terrain/world mutation remain out of scope.
 
 Next recommended step: Phase 4.22C - Feedback Consumption Hardening.
+
+## Phase 4.22C - Feedback Consumption Hardening
+
+Status: implemented and validated.
+
+Goal: harden the fixture-only feedback consumption v0 contract without
+integrating agent intent production, tick movement, live collision, memory, or
+goal updates.
+
+The scenario `agent_feedback_consumption_hardening_smoke` runs 12 hardening
+cases:
+
+- `baseline_fixture_remains_green`;
+- `duplicate_feedback_denied`;
+- `malformed_missing_agent_denied`;
+- `malformed_missing_kind_denied`;
+- `malformed_missing_required_fields_denied`;
+- `deterministic_ordering_by_agent_id`;
+- `one_feedback_per_agent_bound`;
+- `all_known_kinds_observed`;
+- `historical_collision_evidence_does_not_read_collision`;
+- `max_feedback_bound_exceeded`;
+- `tick_mismatch_denied`;
+- `stable_repeatability`.
+
+All 12 cases pass. The aggregate summary records `feedbackObservedTotal = 36`,
+`feedbackAcceptedTotal = 26`, `feedbackIgnoredTotal = 5`,
+`invalidFeedbackTotal = 5`, `contextsProducedTotal = 26`,
+`duplicateFeedbackTotal = 4`, `maxFeedbackExceededTotal = 1`, and
+`tickMismatchFeedbackTotal = 1`. Every known feedback kind is observed at
+least once, observations and contexts remain sorted by stable `agentId`, and
+v0 accepts at most one feedback item per agent.
+
+It writes `agent_feedback_consumption_hardening_report.json`,
+`agent_feedback_consumption_hardening_invariant_report.json`,
+`agent_feedback_consumption_hardening_cases.json`,
+`agentFeedbackConsumptionHardening*` metrics, and one aggregate
+`lab_agent_feedback_consumption_hardening_recorded` event.
+
+Behavior adaptation, memory update, goal selection, pathfinding, replanning,
+avoidance, reservation runtime, route following, movement application,
+collision reads, physics, gameplay movement, and terrain/world mutation remain
+out of scope.
+
+Next recommended step: Phase 4.22D - Feedback To Agent Intent Context Fixture
+Smoke.

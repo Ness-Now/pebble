@@ -740,6 +740,38 @@ struct RunMetrics: Encodable {
     let agentFeedbackConsumptionFixtureWorldUsed: Bool?
     let agentFeedbackConsumptionFixtureMutationPerformed: Bool?
     let agentFeedbackConsumptionFixtureSuccess: Bool?
+    let agentFeedbackConsumptionHardeningCases: Int?
+    let agentFeedbackConsumptionHardeningPassed: Int?
+    let agentFeedbackConsumptionHardeningFailed: Int?
+    let agentFeedbackConsumptionHardeningFeedbackObservedTotal: Int?
+    let agentFeedbackConsumptionHardeningFeedbackAcceptedTotal: Int?
+    let agentFeedbackConsumptionHardeningFeedbackIgnoredTotal: Int?
+    let agentFeedbackConsumptionHardeningInvalidFeedbackTotal: Int?
+    let agentFeedbackConsumptionHardeningContextsProducedTotal: Int?
+    let agentFeedbackConsumptionHardeningDuplicateFeedbackTotal: Int?
+    let agentFeedbackConsumptionHardeningMaxFeedbackExceededTotal: Int?
+    let agentFeedbackConsumptionHardeningTickMismatchFeedbackTotal: Int?
+    let agentFeedbackConsumptionHardeningMovedTotal: Int?
+    let agentFeedbackConsumptionHardeningApprovedForMovementTotal: Int?
+    let agentFeedbackConsumptionHardeningBlockedByCollisionTotal: Int?
+    let agentFeedbackConsumptionHardeningBlockedByAgentConflictTotal: Int?
+    let agentFeedbackConsumptionHardeningBlockedBySourceMismatchTotal: Int?
+    let agentFeedbackConsumptionHardeningBlockedByDivergenceTotal: Int?
+    let agentFeedbackConsumptionHardeningBlockedByStaleIntentTotal: Int?
+    let agentFeedbackConsumptionHardeningBlockedByInvalidEdgeTotal: Int?
+    let agentFeedbackConsumptionHardeningBlockedByMaxAgentsTotal: Int?
+    let agentFeedbackConsumptionHardeningMemoryUpdated: Bool?
+    let agentFeedbackConsumptionHardeningGoalChanged: Bool?
+    let agentFeedbackConsumptionHardeningPathfindingPerformed: Bool?
+    let agentFeedbackConsumptionHardeningReplanningPerformed: Bool?
+    let agentFeedbackConsumptionHardeningAvoidancePerformed: Bool?
+    let agentFeedbackConsumptionHardeningReservationRuntimeUsed: Bool?
+    let agentFeedbackConsumptionHardeningMovementApplied: Bool?
+    let agentFeedbackConsumptionHardeningCollisionRead: Bool?
+    let agentFeedbackConsumptionHardeningIntentProduced: Bool?
+    let agentFeedbackConsumptionHardeningWorldUsed: Bool?
+    let agentFeedbackConsumptionHardeningMutationPerformed: Bool?
+    let agentFeedbackConsumptionHardeningSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -1480,6 +1512,38 @@ struct RunMetrics: Encodable {
         agentFeedbackConsumptionFixtureWorldUsed: Bool? = nil,
         agentFeedbackConsumptionFixtureMutationPerformed: Bool? = nil,
         agentFeedbackConsumptionFixtureSuccess: Bool? = nil,
+        agentFeedbackConsumptionHardeningCases: Int? = nil,
+        agentFeedbackConsumptionHardeningPassed: Int? = nil,
+        agentFeedbackConsumptionHardeningFailed: Int? = nil,
+        agentFeedbackConsumptionHardeningFeedbackObservedTotal: Int? = nil,
+        agentFeedbackConsumptionHardeningFeedbackAcceptedTotal: Int? = nil,
+        agentFeedbackConsumptionHardeningFeedbackIgnoredTotal: Int? = nil,
+        agentFeedbackConsumptionHardeningInvalidFeedbackTotal: Int? = nil,
+        agentFeedbackConsumptionHardeningContextsProducedTotal: Int? = nil,
+        agentFeedbackConsumptionHardeningDuplicateFeedbackTotal: Int? = nil,
+        agentFeedbackConsumptionHardeningMaxFeedbackExceededTotal: Int? = nil,
+        agentFeedbackConsumptionHardeningTickMismatchFeedbackTotal: Int? = nil,
+        agentFeedbackConsumptionHardeningMovedTotal: Int? = nil,
+        agentFeedbackConsumptionHardeningApprovedForMovementTotal: Int? = nil,
+        agentFeedbackConsumptionHardeningBlockedByCollisionTotal: Int? = nil,
+        agentFeedbackConsumptionHardeningBlockedByAgentConflictTotal: Int? = nil,
+        agentFeedbackConsumptionHardeningBlockedBySourceMismatchTotal: Int? = nil,
+        agentFeedbackConsumptionHardeningBlockedByDivergenceTotal: Int? = nil,
+        agentFeedbackConsumptionHardeningBlockedByStaleIntentTotal: Int? = nil,
+        agentFeedbackConsumptionHardeningBlockedByInvalidEdgeTotal: Int? = nil,
+        agentFeedbackConsumptionHardeningBlockedByMaxAgentsTotal: Int? = nil,
+        agentFeedbackConsumptionHardeningMemoryUpdated: Bool? = nil,
+        agentFeedbackConsumptionHardeningGoalChanged: Bool? = nil,
+        agentFeedbackConsumptionHardeningPathfindingPerformed: Bool? = nil,
+        agentFeedbackConsumptionHardeningReplanningPerformed: Bool? = nil,
+        agentFeedbackConsumptionHardeningAvoidancePerformed: Bool? = nil,
+        agentFeedbackConsumptionHardeningReservationRuntimeUsed: Bool? = nil,
+        agentFeedbackConsumptionHardeningMovementApplied: Bool? = nil,
+        agentFeedbackConsumptionHardeningCollisionRead: Bool? = nil,
+        agentFeedbackConsumptionHardeningIntentProduced: Bool? = nil,
+        agentFeedbackConsumptionHardeningWorldUsed: Bool? = nil,
+        agentFeedbackConsumptionHardeningMutationPerformed: Bool? = nil,
+        agentFeedbackConsumptionHardeningSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -2219,6 +2283,38 @@ struct RunMetrics: Encodable {
         self.agentFeedbackConsumptionFixtureWorldUsed = agentFeedbackConsumptionFixtureWorldUsed
         self.agentFeedbackConsumptionFixtureMutationPerformed = agentFeedbackConsumptionFixtureMutationPerformed
         self.agentFeedbackConsumptionFixtureSuccess = agentFeedbackConsumptionFixtureSuccess
+        self.agentFeedbackConsumptionHardeningCases = agentFeedbackConsumptionHardeningCases
+        self.agentFeedbackConsumptionHardeningPassed = agentFeedbackConsumptionHardeningPassed
+        self.agentFeedbackConsumptionHardeningFailed = agentFeedbackConsumptionHardeningFailed
+        self.agentFeedbackConsumptionHardeningFeedbackObservedTotal = agentFeedbackConsumptionHardeningFeedbackObservedTotal
+        self.agentFeedbackConsumptionHardeningFeedbackAcceptedTotal = agentFeedbackConsumptionHardeningFeedbackAcceptedTotal
+        self.agentFeedbackConsumptionHardeningFeedbackIgnoredTotal = agentFeedbackConsumptionHardeningFeedbackIgnoredTotal
+        self.agentFeedbackConsumptionHardeningInvalidFeedbackTotal = agentFeedbackConsumptionHardeningInvalidFeedbackTotal
+        self.agentFeedbackConsumptionHardeningContextsProducedTotal = agentFeedbackConsumptionHardeningContextsProducedTotal
+        self.agentFeedbackConsumptionHardeningDuplicateFeedbackTotal = agentFeedbackConsumptionHardeningDuplicateFeedbackTotal
+        self.agentFeedbackConsumptionHardeningMaxFeedbackExceededTotal = agentFeedbackConsumptionHardeningMaxFeedbackExceededTotal
+        self.agentFeedbackConsumptionHardeningTickMismatchFeedbackTotal = agentFeedbackConsumptionHardeningTickMismatchFeedbackTotal
+        self.agentFeedbackConsumptionHardeningMovedTotal = agentFeedbackConsumptionHardeningMovedTotal
+        self.agentFeedbackConsumptionHardeningApprovedForMovementTotal = agentFeedbackConsumptionHardeningApprovedForMovementTotal
+        self.agentFeedbackConsumptionHardeningBlockedByCollisionTotal = agentFeedbackConsumptionHardeningBlockedByCollisionTotal
+        self.agentFeedbackConsumptionHardeningBlockedByAgentConflictTotal = agentFeedbackConsumptionHardeningBlockedByAgentConflictTotal
+        self.agentFeedbackConsumptionHardeningBlockedBySourceMismatchTotal = agentFeedbackConsumptionHardeningBlockedBySourceMismatchTotal
+        self.agentFeedbackConsumptionHardeningBlockedByDivergenceTotal = agentFeedbackConsumptionHardeningBlockedByDivergenceTotal
+        self.agentFeedbackConsumptionHardeningBlockedByStaleIntentTotal = agentFeedbackConsumptionHardeningBlockedByStaleIntentTotal
+        self.agentFeedbackConsumptionHardeningBlockedByInvalidEdgeTotal = agentFeedbackConsumptionHardeningBlockedByInvalidEdgeTotal
+        self.agentFeedbackConsumptionHardeningBlockedByMaxAgentsTotal = agentFeedbackConsumptionHardeningBlockedByMaxAgentsTotal
+        self.agentFeedbackConsumptionHardeningMemoryUpdated = agentFeedbackConsumptionHardeningMemoryUpdated
+        self.agentFeedbackConsumptionHardeningGoalChanged = agentFeedbackConsumptionHardeningGoalChanged
+        self.agentFeedbackConsumptionHardeningPathfindingPerformed = agentFeedbackConsumptionHardeningPathfindingPerformed
+        self.agentFeedbackConsumptionHardeningReplanningPerformed = agentFeedbackConsumptionHardeningReplanningPerformed
+        self.agentFeedbackConsumptionHardeningAvoidancePerformed = agentFeedbackConsumptionHardeningAvoidancePerformed
+        self.agentFeedbackConsumptionHardeningReservationRuntimeUsed = agentFeedbackConsumptionHardeningReservationRuntimeUsed
+        self.agentFeedbackConsumptionHardeningMovementApplied = agentFeedbackConsumptionHardeningMovementApplied
+        self.agentFeedbackConsumptionHardeningCollisionRead = agentFeedbackConsumptionHardeningCollisionRead
+        self.agentFeedbackConsumptionHardeningIntentProduced = agentFeedbackConsumptionHardeningIntentProduced
+        self.agentFeedbackConsumptionHardeningWorldUsed = agentFeedbackConsumptionHardeningWorldUsed
+        self.agentFeedbackConsumptionHardeningMutationPerformed = agentFeedbackConsumptionHardeningMutationPerformed
+        self.agentFeedbackConsumptionHardeningSuccess = agentFeedbackConsumptionHardeningSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

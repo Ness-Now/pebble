@@ -557,3 +557,62 @@ World creation, LLM/RL/Python, social behavior, communication, or terrain/world
 mutation.
 
 Next recommended step: Phase 4.22C — Feedback Consumption Hardening.
+
+## Phase 4.22C Implementation Status
+
+Phase 4.22C implements the fixture-only hardening smoke:
+`agent_feedback_consumption_hardening_smoke`.
+
+The hardening report validates 12 cases:
+
+1. `baseline_fixture_remains_green`;
+2. `duplicate_feedback_denied`;
+3. `malformed_missing_agent_denied`;
+4. `malformed_missing_kind_denied`;
+5. `malformed_missing_required_fields_denied`;
+6. `deterministic_ordering_by_agent_id`;
+7. `one_feedback_per_agent_bound`;
+8. `all_known_kinds_observed`;
+9. `historical_collision_evidence_does_not_read_collision`;
+10. `max_feedback_bound_exceeded`;
+11. `tick_mismatch_denied`;
+12. `stable_repeatability`.
+
+All 12 cases pass. The hardening layer reuses `consumeAgentFeedbackFixtureV0`
+and extends it with two fixture-only validation bounds:
+
+- `maxFeedback`, which caps accepted feedback and counts excess feedback as
+  `maxFeedbackExceeded`;
+- `expectedTick`, which rejects mismatched feedback as `tickMismatchFeedback`.
+
+The aggregate summary validates:
+
+- `feedbackObservedTotal = 36`;
+- `feedbackAcceptedTotal = 26`;
+- `feedbackIgnoredTotal = 5`;
+- `invalidFeedbackTotal = 5`;
+- `contextsProducedTotal = 26`;
+- `duplicateFeedbackTotal = 4`;
+- `maxFeedbackExceededTotal = 1`;
+- `tickMismatchFeedbackTotal = 1`;
+- all known feedback kinds observed at least once;
+- observations and accepted contexts sorted by stable `agentId`;
+- at most one feedback accepted per agent;
+- stable repeatability across identical input.
+
+The scenario writes:
+
+- `agent_feedback_consumption_hardening_report.json`;
+- `agent_feedback_consumption_hardening_invariant_report.json`;
+- `agent_feedback_consumption_hardening_cases.json`;
+- `metrics.json` with `agentFeedbackConsumptionHardening*` fields;
+- `events.ndjson` with `lab_agent_feedback_consumption_hardening_recorded`.
+
+The hardening scenario remains feedback-consumption-only. It does not invoke
+agent intent production, tick movement, live collision, movement application,
+memory updates, goal changes, pathfinding, replanning, avoidance, reservation
+runtime, World creation, LLM/RL/Python, social behavior, communication, or
+terrain/world mutation.
+
+Next recommended step: Phase 4.22D — Feedback To Agent Intent Context Fixture
+Smoke.

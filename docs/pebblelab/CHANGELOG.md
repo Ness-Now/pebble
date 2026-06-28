@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added agent feedback consumption hardening smoke.
 - Added fixture-only agent feedback consumption smoke.
 - Documented PebbleLab feedback consumption plan.
 - Added agent intent to movement tick approved application smoke.

@@ -34,6 +34,8 @@ let isAgentIntentToTickApprovedApplicationScenario = options.scenario
     == "agent_intent_to_tick_approved_application_smoke"
 let isAgentFeedbackConsumptionFixtureScenario = options.scenario
     == "agent_feedback_consumption_fixture_smoke"
+let isAgentFeedbackConsumptionHardeningScenario = options.scenario
+    == "agent_feedback_consumption_hardening_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -45,7 +47,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isAgentIntentToTickFixtureScenario
     || isAgentIntentToTickLiveReadonlyScenario
     || isAgentIntentToTickApprovedApplicationScenario
-    || isAgentFeedbackConsumptionFixtureScenario)
+    || isAgentFeedbackConsumptionFixtureScenario
+    || isAgentFeedbackConsumptionHardeningScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -690,7 +693,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isMultiAgentMovementTickHardeningScenario
     || isAgentIntentToTickLiveReadonlyScenario
     || isAgentIntentToTickApprovedApplicationScenario
-    || isAgentFeedbackConsumptionFixtureScenario {
+    || isAgentFeedbackConsumptionFixtureScenario
+    || isAgentFeedbackConsumptionHardeningScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -1762,6 +1766,65 @@ let agentFeedbackConsumptionFixtureSuccess =
             && agentFeedbackConsumptionFixtureReport?.summary.worldUsed == false
             && agentFeedbackConsumptionFixtureReport?.summary.mutationPerformed == false)
         : nil
+let agentFeedbackConsumptionHardeningReport =
+    isAgentFeedbackConsumptionHardeningScenario
+        ? makeAgentFeedbackConsumptionHardeningReport(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticksCompleted: ticksCompleted
+        )
+        : nil
+let agentFeedbackConsumptionHardeningInvariantReport =
+    isAgentFeedbackConsumptionHardeningScenario
+        ? makeAgentFeedbackConsumptionHardeningInvariantReport(
+            report: agentFeedbackConsumptionHardeningReport,
+            scenario: options.scenario,
+            seed: options.seed
+        )
+        : nil
+let agentFeedbackConsumptionHardeningSummary = agentFeedbackConsumptionHardeningReport?.summary
+let agentFeedbackConsumptionHardeningSuccess =
+    isAgentFeedbackConsumptionHardeningScenario
+        ? ((agentFeedbackConsumptionHardeningReport?.success ?? false)
+            && (agentFeedbackConsumptionHardeningInvariantReport?.success ?? false)
+            && agentFeedbackConsumptionHardeningSummary?.cases == 12
+            && agentFeedbackConsumptionHardeningSummary?.passed == 12
+            && agentFeedbackConsumptionHardeningSummary?.failed == 0
+            && (agentFeedbackConsumptionHardeningSummary?.feedbackAcceptedTotal ?? 0) > 0
+            && (agentFeedbackConsumptionHardeningSummary?.feedbackIgnoredTotal ?? 0) > 0
+            && (agentFeedbackConsumptionHardeningSummary?.invalidFeedbackTotal ?? 0) > 0
+            && (agentFeedbackConsumptionHardeningSummary?.contextsProducedTotal ?? 0) > 0
+            && (agentFeedbackConsumptionHardeningSummary?.duplicateFeedbackTotal ?? 0) > 0
+            && (agentFeedbackConsumptionHardeningSummary?.maxFeedbackExceededTotal ?? 0) > 0
+            && (agentFeedbackConsumptionHardeningSummary?.tickMismatchFeedbackTotal ?? 0) > 0
+            && (agentFeedbackConsumptionHardeningSummary?.movedTotal ?? 0) > 0
+            && (agentFeedbackConsumptionHardeningSummary?.approvedForMovementTotal ?? 0) > 0
+            && (agentFeedbackConsumptionHardeningSummary?.blockedByCollisionTotal ?? 0) > 0
+            && (agentFeedbackConsumptionHardeningSummary?.blockedByAgentConflictTotal ?? 0) > 0
+            && (agentFeedbackConsumptionHardeningSummary?.blockedBySourceMismatchTotal ?? 0) > 0
+            && (agentFeedbackConsumptionHardeningSummary?.blockedByDivergenceTotal ?? 0) > 0
+            && (agentFeedbackConsumptionHardeningSummary?.blockedByStaleIntentTotal ?? 0) > 0
+            && (agentFeedbackConsumptionHardeningSummary?.blockedByInvalidEdgeTotal ?? 0) > 0
+            && (agentFeedbackConsumptionHardeningSummary?.blockedByMaxAgentsTotal ?? 0) > 0
+            && agentFeedbackConsumptionHardeningReport?.cases.allSatisfy {
+                let observationIds = $0.result.observations.map(\.agentId)
+                let contextIds = $0.result.acceptedContexts.map(\.agentId)
+                return observationIds == observationIds.sorted()
+                    && contextIds == contextIds.sorted()
+                    && Set(observationIds).count == observationIds.count
+            } == true
+            && agentFeedbackConsumptionHardeningSummary?.collisionRead == false
+            && agentFeedbackConsumptionHardeningSummary?.movementApplied == false
+            && agentFeedbackConsumptionHardeningSummary?.intentProduced == false
+            && agentFeedbackConsumptionHardeningSummary?.memoryUpdated == false
+            && agentFeedbackConsumptionHardeningSummary?.goalChanged == false
+            && agentFeedbackConsumptionHardeningSummary?.pathfindingPerformed == false
+            && agentFeedbackConsumptionHardeningSummary?.replanningPerformed == false
+            && agentFeedbackConsumptionHardeningSummary?.avoidancePerformed == false
+            && agentFeedbackConsumptionHardeningSummary?.reservationRuntimeUsed == false
+            && agentFeedbackConsumptionHardeningSummary?.worldUsed == false
+            && agentFeedbackConsumptionHardeningSummary?.mutationPerformed == false)
+        : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
@@ -2146,6 +2209,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (agentIntentToTickLiveReadonlySuccess ?? true)
     && (agentIntentToTickApprovedApplicationSuccess ?? true)
     && (agentFeedbackConsumptionFixtureSuccess ?? true)
+    && (agentFeedbackConsumptionHardeningSuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -2827,6 +2891,46 @@ if options.outPath != nil {
                 collisionRead: summary.collisionRead,
                 movementApplied: summary.movementApplied,
                 feedbackConsumed: true,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                avoidancePerformed: summary.avoidancePerformed,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
+                replanningPerformed: summary.replanningPerformed
+            ))
+        }
+        if let agentFeedbackConsumptionHardeningReport {
+            let summary = agentFeedbackConsumptionHardeningReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_agent_feedback_consumption_hardening_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: agentFeedbackConsumptionHardeningSuccess,
+                passed: summary.passed,
+                failed: summary.failed,
+                cases: summary.cases,
+                feedbackObservedTotal: summary.feedbackObservedTotal,
+                feedbackAcceptedTotal: summary.feedbackAcceptedTotal,
+                feedbackIgnoredTotal: summary.feedbackIgnoredTotal,
+                invalidFeedbackTotal: summary.invalidFeedbackTotal,
+                contextsProducedTotal: summary.contextsProducedTotal,
+                duplicateFeedbackTotal: summary.duplicateFeedbackTotal,
+                maxFeedbackExceededTotal: summary.maxFeedbackExceededTotal,
+                tickMismatchFeedbackTotal: summary.tickMismatchFeedbackTotal,
+                movedTotal: summary.movedTotal,
+                approvedForMovementTotal: summary.approvedForMovementTotal,
+                blockedByCollisionTotal: summary.blockedByCollisionTotal,
+                blockedByAgentConflictTotal: summary.blockedByAgentConflictTotal,
+                blockedBySourceMismatchTotal: summary.blockedBySourceMismatchTotal,
+                blockedByDivergenceTotal: summary.blockedByDivergenceTotal,
+                blockedByStaleIntentTotal: summary.blockedByStaleIntentTotal,
+                blockedByInvalidEdgeTotal: summary.blockedByInvalidEdgeTotal,
+                blockedByMaxAgentsTotal: summary.blockedByMaxAgentsTotal,
+                intentProduced: summary.intentProduced,
+                worldUsed: summary.worldUsed,
+                collisionRead: summary.collisionRead,
+                movementApplied: summary.movementApplied,
                 memoryUpdated: summary.memoryUpdated,
                 goalChanged: summary.goalChanged,
                 avoidancePerformed: summary.avoidancePerformed,
@@ -3573,6 +3677,22 @@ if let outPath = options.outPath {
             try writeJSON(
                 agentFeedbackConsumptionFixtureInvariantReport,
                 to: outURL.appendingPathComponent("agent_feedback_consumption_fixture_invariant_report.json")
+            )
+        }
+        if let agentFeedbackConsumptionHardeningReport {
+            try writeJSON(
+                agentFeedbackConsumptionHardeningReport,
+                to: outURL.appendingPathComponent("agent_feedback_consumption_hardening_report.json")
+            )
+            try writeJSON(
+                agentFeedbackConsumptionHardeningReport.cases,
+                to: outURL.appendingPathComponent("agent_feedback_consumption_hardening_cases.json")
+            )
+        }
+        if let agentFeedbackConsumptionHardeningInvariantReport {
+            try writeJSON(
+                agentFeedbackConsumptionHardeningInvariantReport,
+                to: outURL.appendingPathComponent("agent_feedback_consumption_hardening_invariant_report.json")
             )
         }
         if let routeFollowingLiveSnapshot {
@@ -4394,6 +4514,38 @@ if let outPath = options.outPath {
             agentFeedbackConsumptionFixtureWorldUsed: agentFeedbackConsumptionFixtureReport?.summary.worldUsed,
             agentFeedbackConsumptionFixtureMutationPerformed: agentFeedbackConsumptionFixtureReport?.summary.mutationPerformed,
             agentFeedbackConsumptionFixtureSuccess: agentFeedbackConsumptionFixtureSuccess,
+            agentFeedbackConsumptionHardeningCases: agentFeedbackConsumptionHardeningReport?.summary.cases,
+            agentFeedbackConsumptionHardeningPassed: agentFeedbackConsumptionHardeningReport?.summary.passed,
+            agentFeedbackConsumptionHardeningFailed: agentFeedbackConsumptionHardeningReport?.summary.failed,
+            agentFeedbackConsumptionHardeningFeedbackObservedTotal: agentFeedbackConsumptionHardeningReport?.summary.feedbackObservedTotal,
+            agentFeedbackConsumptionHardeningFeedbackAcceptedTotal: agentFeedbackConsumptionHardeningReport?.summary.feedbackAcceptedTotal,
+            agentFeedbackConsumptionHardeningFeedbackIgnoredTotal: agentFeedbackConsumptionHardeningReport?.summary.feedbackIgnoredTotal,
+            agentFeedbackConsumptionHardeningInvalidFeedbackTotal: agentFeedbackConsumptionHardeningReport?.summary.invalidFeedbackTotal,
+            agentFeedbackConsumptionHardeningContextsProducedTotal: agentFeedbackConsumptionHardeningReport?.summary.contextsProducedTotal,
+            agentFeedbackConsumptionHardeningDuplicateFeedbackTotal: agentFeedbackConsumptionHardeningReport?.summary.duplicateFeedbackTotal,
+            agentFeedbackConsumptionHardeningMaxFeedbackExceededTotal: agentFeedbackConsumptionHardeningReport?.summary.maxFeedbackExceededTotal,
+            agentFeedbackConsumptionHardeningTickMismatchFeedbackTotal: agentFeedbackConsumptionHardeningReport?.summary.tickMismatchFeedbackTotal,
+            agentFeedbackConsumptionHardeningMovedTotal: agentFeedbackConsumptionHardeningReport?.summary.movedTotal,
+            agentFeedbackConsumptionHardeningApprovedForMovementTotal: agentFeedbackConsumptionHardeningReport?.summary.approvedForMovementTotal,
+            agentFeedbackConsumptionHardeningBlockedByCollisionTotal: agentFeedbackConsumptionHardeningReport?.summary.blockedByCollisionTotal,
+            agentFeedbackConsumptionHardeningBlockedByAgentConflictTotal: agentFeedbackConsumptionHardeningReport?.summary.blockedByAgentConflictTotal,
+            agentFeedbackConsumptionHardeningBlockedBySourceMismatchTotal: agentFeedbackConsumptionHardeningReport?.summary.blockedBySourceMismatchTotal,
+            agentFeedbackConsumptionHardeningBlockedByDivergenceTotal: agentFeedbackConsumptionHardeningReport?.summary.blockedByDivergenceTotal,
+            agentFeedbackConsumptionHardeningBlockedByStaleIntentTotal: agentFeedbackConsumptionHardeningReport?.summary.blockedByStaleIntentTotal,
+            agentFeedbackConsumptionHardeningBlockedByInvalidEdgeTotal: agentFeedbackConsumptionHardeningReport?.summary.blockedByInvalidEdgeTotal,
+            agentFeedbackConsumptionHardeningBlockedByMaxAgentsTotal: agentFeedbackConsumptionHardeningReport?.summary.blockedByMaxAgentsTotal,
+            agentFeedbackConsumptionHardeningMemoryUpdated: agentFeedbackConsumptionHardeningReport?.summary.memoryUpdated,
+            agentFeedbackConsumptionHardeningGoalChanged: agentFeedbackConsumptionHardeningReport?.summary.goalChanged,
+            agentFeedbackConsumptionHardeningPathfindingPerformed: agentFeedbackConsumptionHardeningReport?.summary.pathfindingPerformed,
+            agentFeedbackConsumptionHardeningReplanningPerformed: agentFeedbackConsumptionHardeningReport?.summary.replanningPerformed,
+            agentFeedbackConsumptionHardeningAvoidancePerformed: agentFeedbackConsumptionHardeningReport?.summary.avoidancePerformed,
+            agentFeedbackConsumptionHardeningReservationRuntimeUsed: agentFeedbackConsumptionHardeningReport?.summary.reservationRuntimeUsed,
+            agentFeedbackConsumptionHardeningMovementApplied: agentFeedbackConsumptionHardeningReport?.summary.movementApplied,
+            agentFeedbackConsumptionHardeningCollisionRead: agentFeedbackConsumptionHardeningReport?.summary.collisionRead,
+            agentFeedbackConsumptionHardeningIntentProduced: agentFeedbackConsumptionHardeningReport?.summary.intentProduced,
+            agentFeedbackConsumptionHardeningWorldUsed: agentFeedbackConsumptionHardeningReport?.summary.worldUsed,
+            agentFeedbackConsumptionHardeningMutationPerformed: agentFeedbackConsumptionHardeningReport?.summary.mutationPerformed,
+            agentFeedbackConsumptionHardeningSuccess: agentFeedbackConsumptionHardeningSuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,
