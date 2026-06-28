@@ -163,6 +163,11 @@ struct RunEvent: Encodable {
     let intentCount: Int?
     let resolutions: Int?
     let feedback: Int?
+    let feedbackObserved: Int?
+    let feedbackAccepted: Int?
+    let feedbackIgnored: Int?
+    let invalidFeedback: Int?
+    let contextsProduced: Int?
     let contexts: Int?
     let proposals: Int?
     let acceptedIntents: Int?
@@ -197,6 +202,12 @@ struct RunEvent: Encodable {
     let allDeniedCases: Int?
     let emptyIntentCases: Int?
     let maxAgentsExceeded: Int?
+    let moved: Int?
+    let approvedForMovement: Int?
+    let blockedByCollision: Int?
+    let blockedByAgentConflict: Int?
+    let blockedByMaxAgents: Int?
+    let duplicateFeedback: Int?
     let movedFeedback: Int?
     let approvedForMovementFeedback: Int?
     let blockedByCollisionFeedback: Int?
@@ -218,6 +229,7 @@ struct RunEvent: Encodable {
     let tickResolvedSameDestination: Bool?
     let deniedPositionsPreserved: Bool?
     let approvedPositionsMoved: Bool?
+    let intentProduced: Bool?
     let productionReadCollision: Bool?
     let tickReadCollision: Bool?
     let worldUsed: Bool?
@@ -433,6 +445,11 @@ struct RunEvent: Encodable {
         intentCount: Int? = nil,
         resolutions: Int? = nil,
         feedback: Int? = nil,
+        feedbackObserved: Int? = nil,
+        feedbackAccepted: Int? = nil,
+        feedbackIgnored: Int? = nil,
+        invalidFeedback: Int? = nil,
+        contextsProduced: Int? = nil,
         contexts: Int? = nil,
         proposals: Int? = nil,
         acceptedIntents: Int? = nil,
@@ -467,6 +484,12 @@ struct RunEvent: Encodable {
         allDeniedCases: Int? = nil,
         emptyIntentCases: Int? = nil,
         maxAgentsExceeded: Int? = nil,
+        moved: Int? = nil,
+        approvedForMovement: Int? = nil,
+        blockedByCollision: Int? = nil,
+        blockedByAgentConflict: Int? = nil,
+        blockedByMaxAgents: Int? = nil,
+        duplicateFeedback: Int? = nil,
         movedFeedback: Int? = nil,
         approvedForMovementFeedback: Int? = nil,
         blockedByCollisionFeedback: Int? = nil,
@@ -488,6 +511,7 @@ struct RunEvent: Encodable {
         tickResolvedSameDestination: Bool? = nil,
         deniedPositionsPreserved: Bool? = nil,
         approvedPositionsMoved: Bool? = nil,
+        intentProduced: Bool? = nil,
         productionReadCollision: Bool? = nil,
         tickReadCollision: Bool? = nil,
         worldUsed: Bool? = nil,
@@ -702,6 +726,11 @@ struct RunEvent: Encodable {
         self.intentCount = intentCount
         self.resolutions = resolutions
         self.feedback = feedback
+        self.feedbackObserved = feedbackObserved
+        self.feedbackAccepted = feedbackAccepted
+        self.feedbackIgnored = feedbackIgnored
+        self.invalidFeedback = invalidFeedback
+        self.contextsProduced = contextsProduced
         self.contexts = contexts
         self.proposals = proposals
         self.acceptedIntents = acceptedIntents
@@ -736,6 +765,12 @@ struct RunEvent: Encodable {
         self.allDeniedCases = allDeniedCases
         self.emptyIntentCases = emptyIntentCases
         self.maxAgentsExceeded = maxAgentsExceeded
+        self.moved = moved
+        self.approvedForMovement = approvedForMovement
+        self.blockedByCollision = blockedByCollision
+        self.blockedByAgentConflict = blockedByAgentConflict
+        self.blockedByMaxAgents = blockedByMaxAgents
+        self.duplicateFeedback = duplicateFeedback
         self.movedFeedback = movedFeedback
         self.approvedForMovementFeedback = approvedForMovementFeedback
         self.blockedByCollisionFeedback = blockedByCollisionFeedback
@@ -757,6 +792,7 @@ struct RunEvent: Encodable {
         self.tickResolvedSameDestination = tickResolvedSameDestination
         self.deniedPositionsPreserved = deniedPositionsPreserved
         self.approvedPositionsMoved = approvedPositionsMoved
+        self.intentProduced = intentProduced
         self.productionReadCollision = productionReadCollision
         self.tickReadCollision = tickReadCollision
         self.worldUsed = worldUsed

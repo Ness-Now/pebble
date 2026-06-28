@@ -504,3 +504,56 @@ Phase 4.22A succeeds when:
 - `swift run -c release pebsmoke` passes;
 - `git diff --check` passes;
 - the final commit contains only documentation changes.
+
+## Phase 4.22B Implementation Status
+
+Phase 4.22B implements the first fixture-only feedback consumption smoke:
+`agent_feedback_consumption_fixture_smoke`.
+
+The smoke validates the observe-only v0 consumption policy with six synthetic
+feedback inputs. Inputs are intentionally unordered, then observations and
+accepted contexts are sorted by stable `agentId`. Four known feedback items
+are accepted as bounded context:
+
+- `agent_0`: `moved`, with `lastMoveSucceeded = true` and last known position
+  taken from the after position.
+- `agent_1`: `approvedForMovement`, accepted as a decision-layer success but
+  not marked as moved.
+- `agent_2`: `blockedByCollision`, marked as blocked with the last known
+  position preserved.
+- `agent_3`: `blockedByAgentConflict`, marked as blocked with the last known
+  position preserved.
+
+One duplicate `agent_0` feedback with `blockedByMaxAgents` is ignored and
+counted as duplicate feedback. One malformed feedback input with an empty
+agent id and missing required fields is rejected as invalid. The fixture
+therefore validates:
+
+- `feedbackObserved = 6`;
+- `feedbackAccepted = 4`;
+- `feedbackIgnored = 1`;
+- `invalidFeedback = 1`;
+- `contextsProduced = 4`;
+- `moved = 1`;
+- `approvedForMovement = 1`;
+- `blockedByCollision = 1`;
+- `blockedByAgentConflict = 1`;
+- `duplicateFeedback = 1`.
+
+The scenario writes:
+
+- `agent_feedback_consumption_fixture_report.json`;
+- `agent_feedback_consumption_fixture_invariant_report.json`;
+- `agent_feedback_contexts.json`;
+- `metrics.json` with `agentFeedbackConsumptionFixture*` fields;
+- `events.ndjson` with `lab_agent_feedback_consumption_fixture_recorded`.
+
+The fixture feedback may contain historical `collisionRead = true` evidence
+from the tick that produced it, but the consumption layer itself does not read
+collision. The scenario does not invoke tick movement, agent intent
+production, `produceAgentIntentProposalV0`, memory updates, goal changes,
+pathfinding, replanning, avoidance, reservation runtime, movement application,
+World creation, LLM/RL/Python, social behavior, communication, or terrain/world
+mutation.
+
+Next recommended step: Phase 4.22C — Feedback Consumption Hardening.

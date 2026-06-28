@@ -5814,3 +5814,125 @@ Phase 4.22B — Feedback Consumption Fixture Smoke. It should consume
 synthetic feedback and produce bounded feedback context without movement,
 intent production integration, memory updates, goal changes, collision reads,
 pathfinding, replanning, avoidance, reservation runtime, or mutation.
+
+## 2026-06-28 — Phase 4.22B feedback consumption fixture smoke
+
+### Objective
+
+Implement the first fixture-only feedback consumption smoke:
+`agent_feedback_consumption_fixture_smoke`.
+
+### Starting Point
+
+Phase 4.22A documented how future agents should observe structured
+`LabMovementFeedback` as bounded policy context. Before this phase, feedback
+was produced by movement ticks but no runtime smoke consumed synthetic
+feedback into agent feedback context.
+
+### Files Created or Modified
+
+- Created `Sources/PebbleLab/LabAgentFeedbackConsumption.swift`.
+- Updated `Sources/PebbleLab/LabOptions.swift`.
+- Updated `Sources/PebbleLab/LabScenarios.swift`.
+- Updated `Sources/PebbleLab/LabOutput.swift`.
+- Updated `Sources/PebbleLab/LabEvents.swift`.
+- Updated `Sources/PebbleLab/main.swift`.
+- Updated `docs/pebblelab/CHANGELOG.md`.
+- Updated `docs/pebblelab/DEV_JOURNAL.md`.
+- Updated `docs/pebblelab/ROADMAP.md`.
+- Updated `docs/pebblelab/PHASE_4_FEEDBACK_CONSUMPTION_PLAN.md`.
+
+### Why Fixture-Only
+
+This phase validates only the feedback consumption contract. It does not call
+agent intent production, tick movement, live collision, physical movement, or
+any autonomous loop. Fixture-only inputs keep ordering, duplicate, malformed,
+and context semantics deterministic.
+
+### Feedback Fixture Inputs
+
+The scenario consumes six intentionally unordered feedback inputs:
+
+- `agent_2`: `blockedByCollision`, accepted as blocked context.
+- `agent_0`: `moved`, accepted as succeeded context.
+- `agent_1`: `approvedForMovement`, accepted without marking movement as
+  applied.
+- `agent_3`: `blockedByAgentConflict`, accepted as blocked context.
+- duplicate `agent_0`: `blockedByMaxAgents`, ignored and counted as duplicate.
+- malformed feedback with empty agent id and missing required fields, rejected
+  as invalid.
+
+### Consumption v0
+
+The v0 consumer sorts inputs by stable `agentId`, accepts known well-formed
+feedback, produces at most one context per agent, ignores duplicate feedback,
+and rejects malformed feedback.
+
+It produces `LabAgentFeedbackObservation`,
+`LabAgentFeedbackContext`, `LabAgentFeedbackConsumptionResult`, and summary
+records. It never mutates memory or goals, never produces an intent, never
+reads collision, and never applies movement.
+
+### Accepted, Ignored, and Invalid Policy
+
+- Accepted: known feedback kind, non-empty agent id, required fields present,
+  and first accepted feedback for that agent.
+- Ignored: duplicate feedback for an already accepted agent.
+- Invalid: malformed feedback such as missing agent id or missing required
+  fields.
+
+### Outputs, Invariants, Metrics, and Event
+
+The scenario writes:
+
+- `agent_feedback_consumption_fixture_report.json`;
+- `agent_feedback_consumption_fixture_invariant_report.json`;
+- `agent_feedback_contexts.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The invariant report contains 50 checks covering deterministic ordering,
+known feedback acceptance, malformed rejection, duplicate handling, context
+semantics, last known position semantics, and all no-movement/no-mutation
+boundaries. Metrics use the `agentFeedbackConsumptionFixture*` prefix, and the
+event is `lab_agent_feedback_consumption_fixture_recorded`.
+
+### Boundaries Confirmed
+
+No movement is applied. The consumption layer does not read collision, produce
+intents, call `produceAgentIntentProposalV0`, call agent intent production
+scenarios, invoke tick movement scenarios, update memory, change goals,
+pathfind, replan, avoid, reserve, learn, use LLM/RL/Python, create social
+behavior, communicate, create a `World`, or mutate terrain/world.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario agent_feedback_consumption_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_feedback_consumption_fixture`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_approved_application_smoke --seed 42 --ticks 5 --out runs/check_agent_intent_approved_application_after_feedback_fixture`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_agent_intent_live_readonly_after_feedback_fixture`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_to_tick_fixture_after_feedback_fixture`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_hardening_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_hardening_after_feedback_fixture`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_feedback_fixture`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- `feedbackObserved = 6`.
+- `feedbackAccepted = 4`.
+- `feedbackIgnored = 1`.
+- `invalidFeedback = 1`.
+- `contextsProduced = 4`.
+- `moved = 1`.
+- `approvedForMovement = 1`.
+- `blockedByCollision = 1`.
+- `blockedByAgentConflict = 1`.
+- `duplicateFeedback = 1`.
+- Reports, contexts JSON, metrics, and event are produced.
+
+### Next Step
+
+Phase 4.22C — Feedback Consumption Hardening.

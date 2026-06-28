@@ -32,6 +32,8 @@ let isAgentIntentToTickLiveReadonlyScenario = options.scenario
     == "agent_intent_to_tick_live_readonly_smoke"
 let isAgentIntentToTickApprovedApplicationScenario = options.scenario
     == "agent_intent_to_tick_approved_application_smoke"
+let isAgentFeedbackConsumptionFixtureScenario = options.scenario
+    == "agent_feedback_consumption_fixture_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -42,7 +44,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isAgentIntentProductionHardeningScenario
     || isAgentIntentToTickFixtureScenario
     || isAgentIntentToTickLiveReadonlyScenario
-    || isAgentIntentToTickApprovedApplicationScenario)
+    || isAgentIntentToTickApprovedApplicationScenario
+    || isAgentFeedbackConsumptionFixtureScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -686,7 +689,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isMultiAgentMovementTickApprovedApplicationScenario
     || isMultiAgentMovementTickHardeningScenario
     || isAgentIntentToTickLiveReadonlyScenario
-    || isAgentIntentToTickApprovedApplicationScenario {
+    || isAgentIntentToTickApprovedApplicationScenario
+    || isAgentFeedbackConsumptionFixtureScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -1693,6 +1697,71 @@ let agentIntentToTickApprovedApplicationSuccess =
             && agentIntentToTickApprovedApplicationReport?.summary.physicsPerformed == false
             && agentIntentToTickApprovedApplicationReport?.summary.mutationPerformed == false)
         : nil
+let agentFeedbackConsumptionFixtureReport =
+    isAgentFeedbackConsumptionFixtureScenario
+        ? makeAgentFeedbackConsumptionFixtureReport(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticksCompleted: ticksCompleted
+        )
+        : nil
+let agentFeedbackConsumptionFixtureInvariantReport =
+    isAgentFeedbackConsumptionFixtureScenario
+        ? makeAgentFeedbackConsumptionFixtureInvariantReport(
+            report: agentFeedbackConsumptionFixtureReport,
+            scenario: options.scenario,
+            seed: options.seed
+        )
+        : nil
+let agentFeedbackConsumptionObservationIds =
+    agentFeedbackConsumptionFixtureReport?.result.observations.map(\.agentId) ?? []
+let agentFeedbackConsumptionContextIds =
+    agentFeedbackConsumptionFixtureReport?.result.acceptedContexts.map(\.agentId) ?? []
+let agentFeedbackConsumptionContextsByAgent = Dictionary(
+    uniqueKeysWithValues: (agentFeedbackConsumptionFixtureReport?.result.acceptedContexts ?? []).map {
+        ($0.agentId, $0)
+    }
+)
+let agentFeedbackConsumptionFixtureSuccess =
+    isAgentFeedbackConsumptionFixtureScenario
+        ? ((agentFeedbackConsumptionFixtureReport?.success ?? false)
+            && (agentFeedbackConsumptionFixtureInvariantReport?.success ?? false)
+            && agentFeedbackConsumptionFixtureReport?.summary.feedbackObserved == 6
+            && agentFeedbackConsumptionFixtureReport?.summary.feedbackAccepted == 4
+            && agentFeedbackConsumptionFixtureReport?.summary.feedbackIgnored == 1
+            && agentFeedbackConsumptionFixtureReport?.summary.invalidFeedback == 1
+            && agentFeedbackConsumptionFixtureReport?.summary.contextsProduced == 4
+            && agentFeedbackConsumptionFixtureReport?.summary.moved == 1
+            && agentFeedbackConsumptionFixtureReport?.summary.approvedForMovement == 1
+            && agentFeedbackConsumptionFixtureReport?.summary.blockedByCollision == 1
+            && agentFeedbackConsumptionFixtureReport?.summary.blockedByAgentConflict == 1
+            && agentFeedbackConsumptionFixtureReport?.summary.duplicateFeedback == 1
+            && agentFeedbackConsumptionObservationIds == agentFeedbackConsumptionObservationIds.sorted()
+            && agentFeedbackConsumptionContextIds == agentFeedbackConsumptionContextIds.sorted()
+            && Set(agentFeedbackConsumptionObservationIds).count == agentFeedbackConsumptionObservationIds.count
+            && agentFeedbackConsumptionContextsByAgent["agent_0"]?.lastMoveSucceeded == true
+            && agentFeedbackConsumptionContextsByAgent["agent_0"]?.lastMoveBlocked == false
+            && agentFeedbackConsumptionContextsByAgent["agent_0"]?.lastKnownPosition == LabTerrainPathNodeKey(x: 8, y: 64, z: 8)
+            && agentFeedbackConsumptionContextsByAgent["agent_1"]?.lastMoveSucceeded == false
+            && agentFeedbackConsumptionContextsByAgent["agent_1"]?.lastMoveBlocked == false
+            && agentFeedbackConsumptionContextsByAgent["agent_1"]?.lastKnownPosition == LabTerrainPathNodeKey(x: 9, y: 64, z: 7)
+            && agentFeedbackConsumptionContextsByAgent["agent_2"]?.lastMoveBlocked == true
+            && agentFeedbackConsumptionContextsByAgent["agent_2"]?.lastBlockReason == .blockedByCollision
+            && agentFeedbackConsumptionContextsByAgent["agent_2"]?.lastKnownPosition == LabTerrainPathNodeKey(x: 7, y: 64, z: 8)
+            && agentFeedbackConsumptionContextsByAgent["agent_3"]?.lastMoveBlocked == true
+            && agentFeedbackConsumptionContextsByAgent["agent_3"]?.lastBlockReason == .blockedByAgentConflict
+            && agentFeedbackConsumptionFixtureReport?.summary.collisionRead == false
+            && agentFeedbackConsumptionFixtureReport?.summary.movementApplied == false
+            && agentFeedbackConsumptionFixtureReport?.summary.intentProduced == false
+            && agentFeedbackConsumptionFixtureReport?.summary.memoryUpdated == false
+            && agentFeedbackConsumptionFixtureReport?.summary.goalChanged == false
+            && agentFeedbackConsumptionFixtureReport?.summary.pathfindingPerformed == false
+            && agentFeedbackConsumptionFixtureReport?.summary.replanningPerformed == false
+            && agentFeedbackConsumptionFixtureReport?.summary.avoidancePerformed == false
+            && agentFeedbackConsumptionFixtureReport?.summary.reservationRuntimeUsed == false
+            && agentFeedbackConsumptionFixtureReport?.summary.worldUsed == false
+            && agentFeedbackConsumptionFixtureReport?.summary.mutationPerformed == false)
+        : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
@@ -2076,6 +2145,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (agentIntentToTickFixtureSuccess ?? true)
     && (agentIntentToTickLiveReadonlySuccess ?? true)
     && (agentIntentToTickApprovedApplicationSuccess ?? true)
+    && (agentFeedbackConsumptionFixtureSuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -2730,6 +2800,40 @@ if options.outPath != nil {
                 physicsPerformed: summary.physicsPerformed,
                 divergenceBefore: summary.abstractPhysicalDivergenceBefore,
                 divergenceAfter: summary.abstractPhysicalDivergenceAfter
+            ))
+        }
+        if let agentFeedbackConsumptionFixtureReport {
+            let summary = agentFeedbackConsumptionFixtureReport.summary
+            let resultSummary = agentFeedbackConsumptionFixtureReport.result.summary
+            try appendEvent(RunEvent(
+                type: "lab_agent_feedback_consumption_fixture_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: agentFeedbackConsumptionFixtureSuccess,
+                agentsObserved: summary.agentsObserved,
+                feedbackObserved: summary.feedbackObserved,
+                feedbackAccepted: summary.feedbackAccepted,
+                feedbackIgnored: summary.feedbackIgnored,
+                invalidFeedback: summary.invalidFeedback,
+                contextsProduced: summary.contextsProduced,
+                moved: summary.moved,
+                approvedForMovement: summary.approvedForMovement,
+                blockedByCollision: summary.blockedByCollision,
+                blockedByAgentConflict: summary.blockedByAgentConflict,
+                blockedByMaxAgents: resultSummary.blockedByMaxAgents,
+                duplicateFeedback: summary.duplicateFeedback,
+                intentProduced: summary.intentProduced,
+                worldUsed: summary.worldUsed,
+                collisionRead: summary.collisionRead,
+                movementApplied: summary.movementApplied,
+                feedbackConsumed: true,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                avoidancePerformed: summary.avoidancePerformed,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
+                replanningPerformed: summary.replanningPerformed
             ))
         }
         if let routeFollowingLiveSnapshot {
@@ -3453,6 +3557,22 @@ if let outPath = options.outPath {
             try writeJSON(
                 agentIntentToTickApprovedApplicationInvariantReport,
                 to: outURL.appendingPathComponent("agent_intent_to_tick_approved_application_invariant_report.json")
+            )
+        }
+        if let agentFeedbackConsumptionFixtureReport {
+            try writeJSON(
+                agentFeedbackConsumptionFixtureReport,
+                to: outURL.appendingPathComponent("agent_feedback_consumption_fixture_report.json")
+            )
+            try writeJSON(
+                agentFeedbackConsumptionFixtureReport.result,
+                to: outURL.appendingPathComponent("agent_feedback_contexts.json")
+            )
+        }
+        if let agentFeedbackConsumptionFixtureInvariantReport {
+            try writeJSON(
+                agentFeedbackConsumptionFixtureInvariantReport,
+                to: outURL.appendingPathComponent("agent_feedback_consumption_fixture_invariant_report.json")
             )
         }
         if let routeFollowingLiveSnapshot {
@@ -4246,6 +4366,34 @@ if let outPath = options.outPath {
             agentIntentToTickApprovedApplicationPhysicsPerformed: agentIntentToTickApprovedApplicationReport?.summary.physicsPerformed,
             agentIntentToTickApprovedApplicationMutationPerformed: agentIntentToTickApprovedApplicationReport?.summary.mutationPerformed,
             agentIntentToTickApprovedApplicationSuccess: agentIntentToTickApprovedApplicationSuccess,
+            agentFeedbackConsumptionFixtureAgentsObserved: agentFeedbackConsumptionFixtureReport?.summary.agentsObserved,
+            agentFeedbackConsumptionFixtureFeedbackObserved: agentFeedbackConsumptionFixtureReport?.summary.feedbackObserved,
+            agentFeedbackConsumptionFixtureFeedbackAccepted: agentFeedbackConsumptionFixtureReport?.summary.feedbackAccepted,
+            agentFeedbackConsumptionFixtureFeedbackIgnored: agentFeedbackConsumptionFixtureReport?.summary.feedbackIgnored,
+            agentFeedbackConsumptionFixtureInvalidFeedback: agentFeedbackConsumptionFixtureReport?.summary.invalidFeedback,
+            agentFeedbackConsumptionFixtureContextsProduced: agentFeedbackConsumptionFixtureReport?.summary.contextsProduced,
+            agentFeedbackConsumptionFixtureMoved: agentFeedbackConsumptionFixtureReport?.summary.moved,
+            agentFeedbackConsumptionFixtureApprovedForMovement: agentFeedbackConsumptionFixtureReport?.summary.approvedForMovement,
+            agentFeedbackConsumptionFixtureBlockedByCollision: agentFeedbackConsumptionFixtureReport?.summary.blockedByCollision,
+            agentFeedbackConsumptionFixtureBlockedByAgentConflict: agentFeedbackConsumptionFixtureReport?.summary.blockedByAgentConflict,
+            agentFeedbackConsumptionFixtureBlockedBySourceMismatch: agentFeedbackConsumptionFixtureReport?.result.summary.blockedBySourceMismatch,
+            agentFeedbackConsumptionFixtureBlockedByDivergence: agentFeedbackConsumptionFixtureReport?.result.summary.blockedByDivergence,
+            agentFeedbackConsumptionFixtureBlockedByStaleIntent: agentFeedbackConsumptionFixtureReport?.result.summary.blockedByStaleIntent,
+            agentFeedbackConsumptionFixtureBlockedByInvalidEdge: agentFeedbackConsumptionFixtureReport?.result.summary.blockedByInvalidEdge,
+            agentFeedbackConsumptionFixtureBlockedByMaxAgents: agentFeedbackConsumptionFixtureReport?.result.summary.blockedByMaxAgents,
+            agentFeedbackConsumptionFixtureDuplicateFeedback: agentFeedbackConsumptionFixtureReport?.summary.duplicateFeedback,
+            agentFeedbackConsumptionFixtureMemoryUpdated: agentFeedbackConsumptionFixtureReport?.summary.memoryUpdated,
+            agentFeedbackConsumptionFixtureGoalChanged: agentFeedbackConsumptionFixtureReport?.summary.goalChanged,
+            agentFeedbackConsumptionFixturePathfindingPerformed: agentFeedbackConsumptionFixtureReport?.summary.pathfindingPerformed,
+            agentFeedbackConsumptionFixtureReplanningPerformed: agentFeedbackConsumptionFixtureReport?.summary.replanningPerformed,
+            agentFeedbackConsumptionFixtureAvoidancePerformed: agentFeedbackConsumptionFixtureReport?.summary.avoidancePerformed,
+            agentFeedbackConsumptionFixtureReservationRuntimeUsed: agentFeedbackConsumptionFixtureReport?.summary.reservationRuntimeUsed,
+            agentFeedbackConsumptionFixtureMovementApplied: agentFeedbackConsumptionFixtureReport?.summary.movementApplied,
+            agentFeedbackConsumptionFixtureCollisionRead: agentFeedbackConsumptionFixtureReport?.summary.collisionRead,
+            agentFeedbackConsumptionFixtureIntentProduced: agentFeedbackConsumptionFixtureReport?.summary.intentProduced,
+            agentFeedbackConsumptionFixtureWorldUsed: agentFeedbackConsumptionFixtureReport?.summary.worldUsed,
+            agentFeedbackConsumptionFixtureMutationPerformed: agentFeedbackConsumptionFixtureReport?.summary.mutationPerformed,
+            agentFeedbackConsumptionFixtureSuccess: agentFeedbackConsumptionFixtureSuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,

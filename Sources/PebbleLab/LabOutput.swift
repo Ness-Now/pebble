@@ -712,6 +712,34 @@ struct RunMetrics: Encodable {
     let agentIntentToTickApprovedApplicationPhysicsPerformed: Bool?
     let agentIntentToTickApprovedApplicationMutationPerformed: Bool?
     let agentIntentToTickApprovedApplicationSuccess: Bool?
+    let agentFeedbackConsumptionFixtureAgentsObserved: Int?
+    let agentFeedbackConsumptionFixtureFeedbackObserved: Int?
+    let agentFeedbackConsumptionFixtureFeedbackAccepted: Int?
+    let agentFeedbackConsumptionFixtureFeedbackIgnored: Int?
+    let agentFeedbackConsumptionFixtureInvalidFeedback: Int?
+    let agentFeedbackConsumptionFixtureContextsProduced: Int?
+    let agentFeedbackConsumptionFixtureMoved: Int?
+    let agentFeedbackConsumptionFixtureApprovedForMovement: Int?
+    let agentFeedbackConsumptionFixtureBlockedByCollision: Int?
+    let agentFeedbackConsumptionFixtureBlockedByAgentConflict: Int?
+    let agentFeedbackConsumptionFixtureBlockedBySourceMismatch: Int?
+    let agentFeedbackConsumptionFixtureBlockedByDivergence: Int?
+    let agentFeedbackConsumptionFixtureBlockedByStaleIntent: Int?
+    let agentFeedbackConsumptionFixtureBlockedByInvalidEdge: Int?
+    let agentFeedbackConsumptionFixtureBlockedByMaxAgents: Int?
+    let agentFeedbackConsumptionFixtureDuplicateFeedback: Int?
+    let agentFeedbackConsumptionFixtureMemoryUpdated: Bool?
+    let agentFeedbackConsumptionFixtureGoalChanged: Bool?
+    let agentFeedbackConsumptionFixturePathfindingPerformed: Bool?
+    let agentFeedbackConsumptionFixtureReplanningPerformed: Bool?
+    let agentFeedbackConsumptionFixtureAvoidancePerformed: Bool?
+    let agentFeedbackConsumptionFixtureReservationRuntimeUsed: Bool?
+    let agentFeedbackConsumptionFixtureMovementApplied: Bool?
+    let agentFeedbackConsumptionFixtureCollisionRead: Bool?
+    let agentFeedbackConsumptionFixtureIntentProduced: Bool?
+    let agentFeedbackConsumptionFixtureWorldUsed: Bool?
+    let agentFeedbackConsumptionFixtureMutationPerformed: Bool?
+    let agentFeedbackConsumptionFixtureSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -1424,6 +1452,34 @@ struct RunMetrics: Encodable {
         agentIntentToTickApprovedApplicationPhysicsPerformed: Bool? = nil,
         agentIntentToTickApprovedApplicationMutationPerformed: Bool? = nil,
         agentIntentToTickApprovedApplicationSuccess: Bool? = nil,
+        agentFeedbackConsumptionFixtureAgentsObserved: Int? = nil,
+        agentFeedbackConsumptionFixtureFeedbackObserved: Int? = nil,
+        agentFeedbackConsumptionFixtureFeedbackAccepted: Int? = nil,
+        agentFeedbackConsumptionFixtureFeedbackIgnored: Int? = nil,
+        agentFeedbackConsumptionFixtureInvalidFeedback: Int? = nil,
+        agentFeedbackConsumptionFixtureContextsProduced: Int? = nil,
+        agentFeedbackConsumptionFixtureMoved: Int? = nil,
+        agentFeedbackConsumptionFixtureApprovedForMovement: Int? = nil,
+        agentFeedbackConsumptionFixtureBlockedByCollision: Int? = nil,
+        agentFeedbackConsumptionFixtureBlockedByAgentConflict: Int? = nil,
+        agentFeedbackConsumptionFixtureBlockedBySourceMismatch: Int? = nil,
+        agentFeedbackConsumptionFixtureBlockedByDivergence: Int? = nil,
+        agentFeedbackConsumptionFixtureBlockedByStaleIntent: Int? = nil,
+        agentFeedbackConsumptionFixtureBlockedByInvalidEdge: Int? = nil,
+        agentFeedbackConsumptionFixtureBlockedByMaxAgents: Int? = nil,
+        agentFeedbackConsumptionFixtureDuplicateFeedback: Int? = nil,
+        agentFeedbackConsumptionFixtureMemoryUpdated: Bool? = nil,
+        agentFeedbackConsumptionFixtureGoalChanged: Bool? = nil,
+        agentFeedbackConsumptionFixturePathfindingPerformed: Bool? = nil,
+        agentFeedbackConsumptionFixtureReplanningPerformed: Bool? = nil,
+        agentFeedbackConsumptionFixtureAvoidancePerformed: Bool? = nil,
+        agentFeedbackConsumptionFixtureReservationRuntimeUsed: Bool? = nil,
+        agentFeedbackConsumptionFixtureMovementApplied: Bool? = nil,
+        agentFeedbackConsumptionFixtureCollisionRead: Bool? = nil,
+        agentFeedbackConsumptionFixtureIntentProduced: Bool? = nil,
+        agentFeedbackConsumptionFixtureWorldUsed: Bool? = nil,
+        agentFeedbackConsumptionFixtureMutationPerformed: Bool? = nil,
+        agentFeedbackConsumptionFixtureSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -2135,6 +2191,34 @@ struct RunMetrics: Encodable {
         self.agentIntentToTickApprovedApplicationPhysicsPerformed = agentIntentToTickApprovedApplicationPhysicsPerformed
         self.agentIntentToTickApprovedApplicationMutationPerformed = agentIntentToTickApprovedApplicationMutationPerformed
         self.agentIntentToTickApprovedApplicationSuccess = agentIntentToTickApprovedApplicationSuccess
+        self.agentFeedbackConsumptionFixtureAgentsObserved = agentFeedbackConsumptionFixtureAgentsObserved
+        self.agentFeedbackConsumptionFixtureFeedbackObserved = agentFeedbackConsumptionFixtureFeedbackObserved
+        self.agentFeedbackConsumptionFixtureFeedbackAccepted = agentFeedbackConsumptionFixtureFeedbackAccepted
+        self.agentFeedbackConsumptionFixtureFeedbackIgnored = agentFeedbackConsumptionFixtureFeedbackIgnored
+        self.agentFeedbackConsumptionFixtureInvalidFeedback = agentFeedbackConsumptionFixtureInvalidFeedback
+        self.agentFeedbackConsumptionFixtureContextsProduced = agentFeedbackConsumptionFixtureContextsProduced
+        self.agentFeedbackConsumptionFixtureMoved = agentFeedbackConsumptionFixtureMoved
+        self.agentFeedbackConsumptionFixtureApprovedForMovement = agentFeedbackConsumptionFixtureApprovedForMovement
+        self.agentFeedbackConsumptionFixtureBlockedByCollision = agentFeedbackConsumptionFixtureBlockedByCollision
+        self.agentFeedbackConsumptionFixtureBlockedByAgentConflict = agentFeedbackConsumptionFixtureBlockedByAgentConflict
+        self.agentFeedbackConsumptionFixtureBlockedBySourceMismatch = agentFeedbackConsumptionFixtureBlockedBySourceMismatch
+        self.agentFeedbackConsumptionFixtureBlockedByDivergence = agentFeedbackConsumptionFixtureBlockedByDivergence
+        self.agentFeedbackConsumptionFixtureBlockedByStaleIntent = agentFeedbackConsumptionFixtureBlockedByStaleIntent
+        self.agentFeedbackConsumptionFixtureBlockedByInvalidEdge = agentFeedbackConsumptionFixtureBlockedByInvalidEdge
+        self.agentFeedbackConsumptionFixtureBlockedByMaxAgents = agentFeedbackConsumptionFixtureBlockedByMaxAgents
+        self.agentFeedbackConsumptionFixtureDuplicateFeedback = agentFeedbackConsumptionFixtureDuplicateFeedback
+        self.agentFeedbackConsumptionFixtureMemoryUpdated = agentFeedbackConsumptionFixtureMemoryUpdated
+        self.agentFeedbackConsumptionFixtureGoalChanged = agentFeedbackConsumptionFixtureGoalChanged
+        self.agentFeedbackConsumptionFixturePathfindingPerformed = agentFeedbackConsumptionFixturePathfindingPerformed
+        self.agentFeedbackConsumptionFixtureReplanningPerformed = agentFeedbackConsumptionFixtureReplanningPerformed
+        self.agentFeedbackConsumptionFixtureAvoidancePerformed = agentFeedbackConsumptionFixtureAvoidancePerformed
+        self.agentFeedbackConsumptionFixtureReservationRuntimeUsed = agentFeedbackConsumptionFixtureReservationRuntimeUsed
+        self.agentFeedbackConsumptionFixtureMovementApplied = agentFeedbackConsumptionFixtureMovementApplied
+        self.agentFeedbackConsumptionFixtureCollisionRead = agentFeedbackConsumptionFixtureCollisionRead
+        self.agentFeedbackConsumptionFixtureIntentProduced = agentFeedbackConsumptionFixtureIntentProduced
+        self.agentFeedbackConsumptionFixtureWorldUsed = agentFeedbackConsumptionFixtureWorldUsed
+        self.agentFeedbackConsumptionFixtureMutationPerformed = agentFeedbackConsumptionFixtureMutationPerformed
+        self.agentFeedbackConsumptionFixtureSuccess = agentFeedbackConsumptionFixtureSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

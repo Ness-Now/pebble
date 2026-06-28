@@ -1301,3 +1301,31 @@ reservation runtime, movement application, collision reads, route following,
 physics, gameplay movement, and terrain/world mutation remain out of scope.
 
 Next recommended step: Phase 4.22B - Feedback Consumption Fixture Smoke.
+
+## Phase 4.22B - Feedback Consumption Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: add the first fixture-only feedback consumption smoke so synthetic
+movement feedback can be observed, normalized, and converted into bounded
+agent feedback contexts without invoking intent production or movement ticks.
+
+The scenario `agent_feedback_consumption_fixture_smoke` consumes six
+intentionally unordered fixture feedback inputs. Four known feedback kinds are
+accepted (`moved`, `approvedForMovement`, `blockedByCollision`, and
+`blockedByAgentConflict`), one duplicate `agent_0` feedback is ignored and
+counted, and one malformed feedback is rejected. The accepted observations and
+contexts are sorted by stable `agentId`, and v0 accepts at most one feedback
+item per agent.
+
+It writes `agent_feedback_consumption_fixture_report.json`,
+`agent_feedback_consumption_fixture_invariant_report.json`,
+`agent_feedback_contexts.json`, `agentFeedbackConsumptionFixture*` metrics,
+and one aggregate `lab_agent_feedback_consumption_fixture_recorded` event.
+
+Intent production integration, behavior adaptation, memory update, goal
+selection, pathfinding, replanning, avoidance, reservation runtime, route
+following, movement application, collision reads, physics, gameplay movement,
+and terrain/world mutation remain out of scope.
+
+Next recommended step: Phase 4.22C - Feedback Consumption Hardening.
