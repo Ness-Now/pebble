@@ -973,6 +973,52 @@ struct RunMetrics: Encodable {
     let feedbackAwareIntentToTickLiveReadonlyWorldMutated: Bool?
     let feedbackAwareIntentToTickLiveReadonlyMutationPerformed: Bool?
     let feedbackAwareIntentToTickLiveReadonlySuccess: Bool?
+    let feedbackAwareIntentToTickApprovedApplicationContexts: Int?
+    let feedbackAwareIntentToTickApprovedApplicationContextsWithFeedback: Int?
+    let feedbackAwareIntentToTickApprovedApplicationContextsWithoutFeedback: Int?
+    let feedbackAwareIntentToTickApprovedApplicationBaselineProposals: Int?
+    let feedbackAwareIntentToTickApprovedApplicationFeedbackAwareProposals: Int?
+    let feedbackAwareIntentToTickApprovedApplicationBaselineMovementIntentInputs: Int?
+    let feedbackAwareIntentToTickApprovedApplicationFeedbackAwareMovementIntentInputs: Int?
+    let feedbackAwareIntentToTickApprovedApplicationMovementIntentReduction: Int?
+    let feedbackAwareIntentToTickApprovedApplicationNoIntentFilteredOut: Int?
+    let feedbackAwareIntentToTickApprovedApplicationFeedbackAwareAcceptedIntents: Int?
+    let feedbackAwareIntentToTickApprovedApplicationFeedbackAwareRejectedProposals: Int?
+    let feedbackAwareIntentToTickApprovedApplicationFeedbackAwareNoIntent: Int?
+    let feedbackAwareIntentToTickApprovedApplicationFeedbackAwareInvalidOneEdgeProposals: Int?
+    let feedbackAwareIntentToTickApprovedApplicationBehaviorChangedByFeedback: Bool?
+    let feedbackAwareIntentToTickApprovedApplicationBehaviorChangedCount: Int?
+    let feedbackAwareIntentToTickApprovedApplicationTickIntents: Int?
+    let feedbackAwareIntentToTickApprovedApplicationTickApproved: Int?
+    let feedbackAwareIntentToTickApprovedApplicationTickDenied: Int?
+    let feedbackAwareIntentToTickApprovedApplicationTickDeniedSameDestinationConflict: Int?
+    let feedbackAwareIntentToTickApprovedApplicationTickDeniedCollision: Int?
+    let feedbackAwareIntentToTickApprovedApplicationTickFeedbackEmitted: Int?
+    let feedbackAwareIntentToTickApprovedApplicationOccupableDestinations: Int?
+    let feedbackAwareIntentToTickApprovedApplicationNonOccupableDestinations: Int?
+    let feedbackAwareIntentToTickApprovedApplicationApprovedAgentsMoved: Int?
+    let feedbackAwareIntentToTickApprovedApplicationDeniedAgentsPreserved: Int?
+    let feedbackAwareIntentToTickApprovedApplicationNoIntentAgentsPreserved: Int?
+    let feedbackAwareIntentToTickApprovedApplicationDisplacementsApplied: Int?
+    let feedbackAwareIntentToTickApprovedApplicationAbstractPositionsChanged: Int?
+    let feedbackAwareIntentToTickApprovedApplicationPhysicalPositionsChanged: Int?
+    let feedbackAwareIntentToTickApprovedApplicationAbstractPhysicalDivergenceBefore: Int?
+    let feedbackAwareIntentToTickApprovedApplicationAbstractPhysicalDivergenceAfter: Int?
+    let feedbackAwareIntentToTickApprovedApplicationPolicyReadCollision: Bool?
+    let feedbackAwareIntentToTickApprovedApplicationTickReadCollision: Bool?
+    let feedbackAwareIntentToTickApprovedApplicationPolicyWorldUsed: Bool?
+    let feedbackAwareIntentToTickApprovedApplicationTickWorldReadOnlyUsed: Bool?
+    let feedbackAwareIntentToTickApprovedApplicationMovementApplied: Bool?
+    let feedbackAwareIntentToTickApprovedApplicationMemoryUpdated: Bool?
+    let feedbackAwareIntentToTickApprovedApplicationGoalChanged: Bool?
+    let feedbackAwareIntentToTickApprovedApplicationPathfindingPerformed: Bool?
+    let feedbackAwareIntentToTickApprovedApplicationReplanningPerformed: Bool?
+    let feedbackAwareIntentToTickApprovedApplicationAvoidancePerformed: Bool?
+    let feedbackAwareIntentToTickApprovedApplicationReservationRuntimeUsed: Bool?
+    let feedbackAwareIntentToTickApprovedApplicationRouteFollowingUsed: Bool?
+    let feedbackAwareIntentToTickApprovedApplicationWorldMutated: Bool?
+    let feedbackAwareIntentToTickApprovedApplicationMutationPerformed: Bool?
+    let feedbackAwareIntentToTickApprovedApplicationSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -1946,6 +1992,52 @@ struct RunMetrics: Encodable {
         feedbackAwareIntentToTickLiveReadonlyWorldMutated: Bool? = nil,
         feedbackAwareIntentToTickLiveReadonlyMutationPerformed: Bool? = nil,
         feedbackAwareIntentToTickLiveReadonlySuccess: Bool? = nil,
+        feedbackAwareIntentToTickApprovedApplicationContexts: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationContextsWithFeedback: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationContextsWithoutFeedback: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationBaselineProposals: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationFeedbackAwareProposals: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationBaselineMovementIntentInputs: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationFeedbackAwareMovementIntentInputs: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationMovementIntentReduction: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationNoIntentFilteredOut: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationFeedbackAwareAcceptedIntents: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationFeedbackAwareRejectedProposals: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationFeedbackAwareNoIntent: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationFeedbackAwareInvalidOneEdgeProposals: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationBehaviorChangedByFeedback: Bool? = nil,
+        feedbackAwareIntentToTickApprovedApplicationBehaviorChangedCount: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationTickIntents: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationTickApproved: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationTickDenied: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationTickDeniedSameDestinationConflict: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationTickDeniedCollision: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationTickFeedbackEmitted: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationOccupableDestinations: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationNonOccupableDestinations: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationApprovedAgentsMoved: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationDeniedAgentsPreserved: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationNoIntentAgentsPreserved: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationDisplacementsApplied: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationAbstractPositionsChanged: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationPhysicalPositionsChanged: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationAbstractPhysicalDivergenceBefore: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationAbstractPhysicalDivergenceAfter: Int? = nil,
+        feedbackAwareIntentToTickApprovedApplicationPolicyReadCollision: Bool? = nil,
+        feedbackAwareIntentToTickApprovedApplicationTickReadCollision: Bool? = nil,
+        feedbackAwareIntentToTickApprovedApplicationPolicyWorldUsed: Bool? = nil,
+        feedbackAwareIntentToTickApprovedApplicationTickWorldReadOnlyUsed: Bool? = nil,
+        feedbackAwareIntentToTickApprovedApplicationMovementApplied: Bool? = nil,
+        feedbackAwareIntentToTickApprovedApplicationMemoryUpdated: Bool? = nil,
+        feedbackAwareIntentToTickApprovedApplicationGoalChanged: Bool? = nil,
+        feedbackAwareIntentToTickApprovedApplicationPathfindingPerformed: Bool? = nil,
+        feedbackAwareIntentToTickApprovedApplicationReplanningPerformed: Bool? = nil,
+        feedbackAwareIntentToTickApprovedApplicationAvoidancePerformed: Bool? = nil,
+        feedbackAwareIntentToTickApprovedApplicationReservationRuntimeUsed: Bool? = nil,
+        feedbackAwareIntentToTickApprovedApplicationRouteFollowingUsed: Bool? = nil,
+        feedbackAwareIntentToTickApprovedApplicationWorldMutated: Bool? = nil,
+        feedbackAwareIntentToTickApprovedApplicationMutationPerformed: Bool? = nil,
+        feedbackAwareIntentToTickApprovedApplicationSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -2918,6 +3010,52 @@ struct RunMetrics: Encodable {
         self.feedbackAwareIntentToTickLiveReadonlyWorldMutated = feedbackAwareIntentToTickLiveReadonlyWorldMutated
         self.feedbackAwareIntentToTickLiveReadonlyMutationPerformed = feedbackAwareIntentToTickLiveReadonlyMutationPerformed
         self.feedbackAwareIntentToTickLiveReadonlySuccess = feedbackAwareIntentToTickLiveReadonlySuccess
+        self.feedbackAwareIntentToTickApprovedApplicationContexts = feedbackAwareIntentToTickApprovedApplicationContexts
+        self.feedbackAwareIntentToTickApprovedApplicationContextsWithFeedback = feedbackAwareIntentToTickApprovedApplicationContextsWithFeedback
+        self.feedbackAwareIntentToTickApprovedApplicationContextsWithoutFeedback = feedbackAwareIntentToTickApprovedApplicationContextsWithoutFeedback
+        self.feedbackAwareIntentToTickApprovedApplicationBaselineProposals = feedbackAwareIntentToTickApprovedApplicationBaselineProposals
+        self.feedbackAwareIntentToTickApprovedApplicationFeedbackAwareProposals = feedbackAwareIntentToTickApprovedApplicationFeedbackAwareProposals
+        self.feedbackAwareIntentToTickApprovedApplicationBaselineMovementIntentInputs = feedbackAwareIntentToTickApprovedApplicationBaselineMovementIntentInputs
+        self.feedbackAwareIntentToTickApprovedApplicationFeedbackAwareMovementIntentInputs = feedbackAwareIntentToTickApprovedApplicationFeedbackAwareMovementIntentInputs
+        self.feedbackAwareIntentToTickApprovedApplicationMovementIntentReduction = feedbackAwareIntentToTickApprovedApplicationMovementIntentReduction
+        self.feedbackAwareIntentToTickApprovedApplicationNoIntentFilteredOut = feedbackAwareIntentToTickApprovedApplicationNoIntentFilteredOut
+        self.feedbackAwareIntentToTickApprovedApplicationFeedbackAwareAcceptedIntents = feedbackAwareIntentToTickApprovedApplicationFeedbackAwareAcceptedIntents
+        self.feedbackAwareIntentToTickApprovedApplicationFeedbackAwareRejectedProposals = feedbackAwareIntentToTickApprovedApplicationFeedbackAwareRejectedProposals
+        self.feedbackAwareIntentToTickApprovedApplicationFeedbackAwareNoIntent = feedbackAwareIntentToTickApprovedApplicationFeedbackAwareNoIntent
+        self.feedbackAwareIntentToTickApprovedApplicationFeedbackAwareInvalidOneEdgeProposals = feedbackAwareIntentToTickApprovedApplicationFeedbackAwareInvalidOneEdgeProposals
+        self.feedbackAwareIntentToTickApprovedApplicationBehaviorChangedByFeedback = feedbackAwareIntentToTickApprovedApplicationBehaviorChangedByFeedback
+        self.feedbackAwareIntentToTickApprovedApplicationBehaviorChangedCount = feedbackAwareIntentToTickApprovedApplicationBehaviorChangedCount
+        self.feedbackAwareIntentToTickApprovedApplicationTickIntents = feedbackAwareIntentToTickApprovedApplicationTickIntents
+        self.feedbackAwareIntentToTickApprovedApplicationTickApproved = feedbackAwareIntentToTickApprovedApplicationTickApproved
+        self.feedbackAwareIntentToTickApprovedApplicationTickDenied = feedbackAwareIntentToTickApprovedApplicationTickDenied
+        self.feedbackAwareIntentToTickApprovedApplicationTickDeniedSameDestinationConflict = feedbackAwareIntentToTickApprovedApplicationTickDeniedSameDestinationConflict
+        self.feedbackAwareIntentToTickApprovedApplicationTickDeniedCollision = feedbackAwareIntentToTickApprovedApplicationTickDeniedCollision
+        self.feedbackAwareIntentToTickApprovedApplicationTickFeedbackEmitted = feedbackAwareIntentToTickApprovedApplicationTickFeedbackEmitted
+        self.feedbackAwareIntentToTickApprovedApplicationOccupableDestinations = feedbackAwareIntentToTickApprovedApplicationOccupableDestinations
+        self.feedbackAwareIntentToTickApprovedApplicationNonOccupableDestinations = feedbackAwareIntentToTickApprovedApplicationNonOccupableDestinations
+        self.feedbackAwareIntentToTickApprovedApplicationApprovedAgentsMoved = feedbackAwareIntentToTickApprovedApplicationApprovedAgentsMoved
+        self.feedbackAwareIntentToTickApprovedApplicationDeniedAgentsPreserved = feedbackAwareIntentToTickApprovedApplicationDeniedAgentsPreserved
+        self.feedbackAwareIntentToTickApprovedApplicationNoIntentAgentsPreserved = feedbackAwareIntentToTickApprovedApplicationNoIntentAgentsPreserved
+        self.feedbackAwareIntentToTickApprovedApplicationDisplacementsApplied = feedbackAwareIntentToTickApprovedApplicationDisplacementsApplied
+        self.feedbackAwareIntentToTickApprovedApplicationAbstractPositionsChanged = feedbackAwareIntentToTickApprovedApplicationAbstractPositionsChanged
+        self.feedbackAwareIntentToTickApprovedApplicationPhysicalPositionsChanged = feedbackAwareIntentToTickApprovedApplicationPhysicalPositionsChanged
+        self.feedbackAwareIntentToTickApprovedApplicationAbstractPhysicalDivergenceBefore = feedbackAwareIntentToTickApprovedApplicationAbstractPhysicalDivergenceBefore
+        self.feedbackAwareIntentToTickApprovedApplicationAbstractPhysicalDivergenceAfter = feedbackAwareIntentToTickApprovedApplicationAbstractPhysicalDivergenceAfter
+        self.feedbackAwareIntentToTickApprovedApplicationPolicyReadCollision = feedbackAwareIntentToTickApprovedApplicationPolicyReadCollision
+        self.feedbackAwareIntentToTickApprovedApplicationTickReadCollision = feedbackAwareIntentToTickApprovedApplicationTickReadCollision
+        self.feedbackAwareIntentToTickApprovedApplicationPolicyWorldUsed = feedbackAwareIntentToTickApprovedApplicationPolicyWorldUsed
+        self.feedbackAwareIntentToTickApprovedApplicationTickWorldReadOnlyUsed = feedbackAwareIntentToTickApprovedApplicationTickWorldReadOnlyUsed
+        self.feedbackAwareIntentToTickApprovedApplicationMovementApplied = feedbackAwareIntentToTickApprovedApplicationMovementApplied
+        self.feedbackAwareIntentToTickApprovedApplicationMemoryUpdated = feedbackAwareIntentToTickApprovedApplicationMemoryUpdated
+        self.feedbackAwareIntentToTickApprovedApplicationGoalChanged = feedbackAwareIntentToTickApprovedApplicationGoalChanged
+        self.feedbackAwareIntentToTickApprovedApplicationPathfindingPerformed = feedbackAwareIntentToTickApprovedApplicationPathfindingPerformed
+        self.feedbackAwareIntentToTickApprovedApplicationReplanningPerformed = feedbackAwareIntentToTickApprovedApplicationReplanningPerformed
+        self.feedbackAwareIntentToTickApprovedApplicationAvoidancePerformed = feedbackAwareIntentToTickApprovedApplicationAvoidancePerformed
+        self.feedbackAwareIntentToTickApprovedApplicationReservationRuntimeUsed = feedbackAwareIntentToTickApprovedApplicationReservationRuntimeUsed
+        self.feedbackAwareIntentToTickApprovedApplicationRouteFollowingUsed = feedbackAwareIntentToTickApprovedApplicationRouteFollowingUsed
+        self.feedbackAwareIntentToTickApprovedApplicationWorldMutated = feedbackAwareIntentToTickApprovedApplicationWorldMutated
+        self.feedbackAwareIntentToTickApprovedApplicationMutationPerformed = feedbackAwareIntentToTickApprovedApplicationMutationPerformed
+        self.feedbackAwareIntentToTickApprovedApplicationSuccess = feedbackAwareIntentToTickApprovedApplicationSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

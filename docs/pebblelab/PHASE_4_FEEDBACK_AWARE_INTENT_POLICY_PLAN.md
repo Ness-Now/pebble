@@ -671,3 +671,90 @@ terrain/world mutation.
 
 Next recommended step: Phase 4.23E - Feedback-Aware Intent To Tick Approved
 Application Smoke.
+
+## Phase 4.23E Implementation Status
+
+Status: implemented and validated.
+
+Phase 4.23E adds
+`feedback_aware_intent_to_tick_approved_application_smoke`, the first
+feedback-aware v1 handoff that reads live collision at tick level and then
+applies only approved lab displacements.
+
+The scenario reuses the seven-context 4.23D fixture. V1 remains opt-in and v0
+remains unchanged:
+
+- no feedback keeps baseline movement;
+- `moved` keeps baseline movement;
+- `approvedForMovement` keeps baseline movement;
+- `blockedByCollision` becomes `noIntent`;
+- `blockedByAgentConflict` becomes `noIntent`;
+- `blockedByInvalidEdge` becomes `noIntent`.
+
+The v0 baseline sends six movement intents. The feedback-aware handoff sends
+four movement intents, filters three `noIntent` proposals before tick input,
+and records `movementIntentReduction = 2`.
+
+The tick layer reads collision read-only and owns final approval/denial:
+
+- `agent_0_no_feedback` approved;
+- `agent_1_moved` denied same-destination conflict;
+- `agent_4_approved` approved;
+- `agent_6_live_collision` denied collision.
+
+Approved movement is then applied only to lab abstract/physical position maps:
+
+- `agent_0_no_feedback`: `(0,64,0) -> (1,64,0)`;
+- `agent_4_approved`: `(9,64,7) -> (9,64,8)`.
+
+Denied and noIntent agents are preserved:
+
+- `agent_1_moved`: `(2,64,0)`;
+- `agent_2_collision_feedback`: `(7,64,8)`;
+- `agent_3_conflict_feedback`: `(4,64,0)`;
+- `agent_5_invalid_edge_feedback`: `(8,64,0)`;
+- `agent_6_live_collision`: `(7,64,8)`.
+
+Validated counters include:
+
+- `contexts = 7`;
+- `contextsWithFeedback = 5`;
+- `contextsWithoutFeedback = 2`;
+- `feedbackAwareAcceptedIntents = 4`;
+- `feedbackAwareNoIntent = 3`;
+- `feedbackAwareInvalidOneEdgeProposals = 0`;
+- `tickApproved = 2`;
+- `tickDenied = 2`;
+- `tickDeniedSameDestinationConflict = 1`;
+- `tickDeniedCollision = 1`;
+- `tickFeedbackEmitted = 4`;
+- `approvedAgentsMoved = 2`;
+- `deniedAgentsPreserved = 2`;
+- `noIntentAgentsPreserved = 3`;
+- `displacementsApplied = 2`;
+- `abstractPositionsChanged = 2`;
+- `physicalPositionsChanged = 2`;
+- `abstractPhysicalDivergenceBefore = 0`;
+- `abstractPhysicalDivergenceAfter = 0`;
+- `policyReadCollision = false`;
+- `policyWorldUsed = false`;
+- `tickReadCollision = true`;
+- `tickWorldReadOnlyUsed = true`;
+- `worldMutated = false`.
+
+Outputs produced:
+
+- `feedback_aware_intent_to_tick_approved_application_report.json`;
+- `feedback_aware_intent_to_tick_approved_application_invariant_report.json`;
+- `feedback_aware_intent_to_tick_approved_application_handoff.json`;
+- `feedbackAwareIntentToTickApprovedApplication*` metrics;
+- aggregate event
+  `lab_feedback_aware_intent_to_tick_approved_application_recorded`.
+
+Limits remain explicit: no policy collision read, no policy World access, no
+terrain or World mutation, no route following, no memory update, no goal
+change, no pathfinding, no replanning, no avoidance, no reservation runtime,
+and no autonomous gameplay movement.
+
+Next recommended step: Phase 4.24A - Multi-Tick Closed Loop Planning
+Docs-Only.

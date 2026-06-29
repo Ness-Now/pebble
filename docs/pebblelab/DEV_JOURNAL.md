@@ -6993,3 +6993,166 @@ runtime, gameplay movement, terrain mutation, or world mutation was added.
 ### Next Step
 
 Phase 4.23E — Feedback-Aware Intent To Tick Approved Application Smoke.
+
+## 2026-06-29 — Phase 4.23E feedback-aware intent to tick approved application
+
+### Objective
+
+Connect the opt-in feedback-aware v1 policy to the live read-only tick layer,
+then apply only approved movement displacements to lab position maps.
+
+### Starting Point
+
+Phase 4.23D already proved that feedback-aware v1 proposals can feed live
+read-only tick arbitration: policy stays World-blind and collision-blind,
+tick reads collision evidence, two intents are approved, one is denied by
+agent conflict, one is denied by collision, and no movement is applied.
+
+### Files Created Or Modified
+
+- `Sources/PebbleLab/LabAgentIntentProduction.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_FEEDBACK_AWARE_INTENT_POLICY_PLAN.md`
+
+### Why Approved Application
+
+This phase proves the final single-tick handoff before multi-tick planning:
+v1 proposes, tick reads collision and arbitrates, and only approved moves are
+applied to lab abstract/physical position maps. Denied and noIntent agents are
+preserved, and terrain/World mutation remains forbidden.
+
+### v1 Opt-In And v0 Unchanged
+
+The scenario computes v0 baseline proposals only for comparison. Runtime
+handoff uses explicit `produceAgentIntentProposalFeedbackAwareV1` decisions.
+`produceAgentIntentProposalV0` remains unchanged and v1 is not made implicit.
+
+### Contexts
+
+The seven deliberately unordered contexts match 4.23D:
+
+- `agent_0_no_feedback`: no feedback, v1 keeps baseline move east;
+- `agent_1_moved`: `moved`, v1 keeps baseline move west to the same
+  destination as `agent_0_no_feedback`;
+- `agent_2_collision_feedback`: `blockedByCollision`, v1 becomes `noIntent`;
+- `agent_3_conflict_feedback`: `blockedByAgentConflict`, v1 becomes
+  `noIntent`;
+- `agent_4_approved`: `approvedForMovement`, v1 keeps baseline move south;
+- `agent_5_invalid_edge_feedback`: `blockedByInvalidEdge`, v1 becomes
+  `noIntent`;
+- `agent_6_live_collision`: no feedback, v1 keeps baseline move east and tick
+  denies it by live collision evidence.
+
+### Baseline Versus Feedback-Aware Handoff
+
+The v0 baseline has seven proposals and six movement intent inputs. The v1
+handoff has seven proposals and four movement intent inputs. Three `noIntent`
+proposals are filtered before tick input, reducing movement attempts by two.
+
+### Tick Collision Read Only At Tick Layer
+
+The policy does not read collision or World. The tick approved-application
+helper reads live collision evidence for the four accepted v1 movement intents.
+It approves `agent_0_no_feedback` and `agent_4_approved`, denies
+`agent_1_moved` by same-destination conflict, and denies
+`agent_6_live_collision` by collision.
+
+### Approved Movement Application
+
+Approved movement is applied only to lab position maps. `agent_0_no_feedback`
+moves to `(1,64,0)` and `agent_4_approved` moves to `(9,64,8)`.
+`displacementsApplied = 2`, `abstractPositionsChanged = 2`, and
+`physicalPositionsChanged = 2`.
+
+### Denied And noIntent Preserved
+
+Denied agents remain at their original positions:
+
+- `agent_1_moved`: `(2,64,0)`;
+- `agent_6_live_collision`: `(7,64,8)`.
+
+Filtered noIntent agents also remain unchanged:
+
+- `agent_2_collision_feedback`: `(7,64,8)`;
+- `agent_3_conflict_feedback`: `(4,64,0)`;
+- `agent_5_invalid_edge_feedback`: `(8,64,0)`.
+
+Abstract/physical divergence remains zero before and after application.
+
+### Outputs, Invariants, Metrics, And Event
+
+The scenario writes:
+
+- `feedback_aware_intent_to_tick_approved_application_report.json`;
+- `feedback_aware_intent_to_tick_approved_application_invariant_report.json`;
+- `feedback_aware_intent_to_tick_approved_application_handoff.json`;
+- `feedbackAwareIntentToTickApprovedApplication*` metrics;
+- aggregate event
+  `lab_feedback_aware_intent_to_tick_approved_application_recorded`.
+
+### Boundaries Confirmed
+
+No policy collision read, policy World access, route following, memory update,
+goal change, pathfinding, replanning, avoidance, reservation runtime,
+terrain mutation, or world mutation was added.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_approved_application_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_intent_to_tick_approved_application`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_live_readonly_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_intent_to_tick_live_readonly_after_approved_application`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_intent_to_tick_fixture_after_approved_application`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_hardening_after_approved_application`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_fixture_after_approved_application`
+- `swift run -c release PebbleLab -- --scenario feedback_to_agent_intent_context_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_to_context_hardening_after_approved_application`
+- `swift run -c release PebbleLab -- --scenario feedback_to_agent_intent_context_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_to_context_fixture_after_approved_application`
+- `swift run -c release PebbleLab -- --scenario agent_feedback_consumption_hardening_smoke --seed 42 --ticks 0 --out runs/check_agent_feedback_hardening_after_approved_application`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_fixture_after_approved_application`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_approved_application_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_to_tick_approved_application_after_feedback_aware_approved_application`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_feedback_aware_approved_application`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- `feedback_aware_intent_to_tick_approved_application_smoke` passes.
+- Report success true.
+- Invariant report success true.
+- `contexts = 7`.
+- `contextsWithFeedback = 5`.
+- `contextsWithoutFeedback = 2`.
+- `baselineMovementIntentInputs = 6`.
+- `feedbackAwareMovementIntentInputs = 4`.
+- `movementIntentReduction = 2`.
+- `noIntentFilteredOut = 3`.
+- `tickApproved = 2`.
+- `tickDenied = 2`.
+- `tickDeniedSameDestinationConflict = 1`.
+- `tickDeniedCollision = 1`.
+- `tickFeedbackEmitted = 4`.
+- `approvedAgentsMoved = 2`.
+- `deniedAgentsPreserved = 2`.
+- `noIntentAgentsPreserved = 3`.
+- `displacementsApplied = 2`.
+- `abstractPositionsChanged = 2`.
+- `physicalPositionsChanged = 2`.
+- `abstractPhysicalDivergenceBefore = 0`.
+- `abstractPhysicalDivergenceAfter = 0`.
+- `policyReadCollision = false`.
+- `policyWorldUsed = false`.
+- `tickReadCollision = true`.
+- `tickWorldReadOnlyUsed = true`.
+- `worldMutated = false`.
+
+### Next Step
+
+Phase 4.24A — Multi-Tick Closed Loop Planning Docs-Only.

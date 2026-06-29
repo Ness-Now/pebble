@@ -1638,3 +1638,48 @@ out of scope.
 
 Next recommended step: Phase 4.23E - Feedback-Aware Intent To Tick Approved
 Application Smoke.
+
+## Phase 4.23E - Feedback-Aware Intent To Tick Approved Application Smoke
+
+Status: implemented and validated.
+
+Goal: connect the opt-in feedback-aware v1 policy to live read-only tick
+arbitration, then apply only approved movements to lab abstract/physical
+position maps without mutating terrain or World.
+
+The scenario `feedback_aware_intent_to_tick_approved_application_smoke` uses
+the seven-context 4.23D fixture. V1 keeps baseline moves for no feedback,
+`moved`, and `approvedForMovement`, while blocked feedback contexts become
+`noIntent` and are filtered before tick input.
+
+The v0 baseline would send six movement intents. The feedback-aware v1 handoff
+sends four movement intents, producing a movement-input reduction of two while
+keeping v0 unchanged and v1 opt-in.
+
+The tick layer reads live collision evidence and arbitrates the remaining
+same-destination conflict. It approves `agent_0_no_feedback` and
+`agent_4_approved`, denies `agent_1_moved` by same-destination conflict, and
+denies `agent_6_live_collision` by collision.
+
+Approved application moves only the two approved lab positions:
+
+- `agent_0_no_feedback`: `(0,64,0) -> (1,64,0)`;
+- `agent_4_approved`: `(9,64,7) -> (9,64,8)`.
+
+Denied and noIntent agents remain unchanged, `displacementsApplied = 2`,
+abstract/physical divergence remains zero, and no terrain or World mutation is
+performed.
+
+The scenario writes
+`feedback_aware_intent_to_tick_approved_application_report.json`,
+`feedback_aware_intent_to_tick_approved_application_invariant_report.json`,
+`feedback_aware_intent_to_tick_approved_application_handoff.json`,
+`feedbackAwareIntentToTickApprovedApplication*` metrics, and one aggregate
+`lab_feedback_aware_intent_to_tick_approved_application_recorded` event.
+
+Pathfinding, replanning, avoidance, reservation runtime, route following live,
+autonomous gameplay movement, memory/goals, and world mutation remain out of
+scope.
+
+Next recommended step: Phase 4.24A - Multi-Tick Closed Loop Planning
+Docs-Only.

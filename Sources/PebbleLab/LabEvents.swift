@@ -280,6 +280,14 @@ struct RunEvent: Encodable {
     let policyWorldUsed: Bool?
     let tickWorldReadOnlyUsed: Bool?
     let worldMutated: Bool?
+    let approvedAgentsMoved: Int?
+    let deniedAgentsPreserved: Int?
+    let noIntentAgentsPreserved: Int?
+    let abstractPositionsChanged: Int?
+    let physicalPositionsChanged: Int?
+    let abstractPhysicalDivergenceBefore: Int?
+    let abstractPhysicalDivergenceAfter: Int?
+    let routeFollowingUsed: Bool?
     let movedFeedback: Int?
     let approvedForMovementFeedback: Int?
     let blockedByCollisionFeedback: Int?
@@ -634,6 +642,14 @@ struct RunEvent: Encodable {
         policyWorldUsed: Bool? = nil,
         tickWorldReadOnlyUsed: Bool? = nil,
         worldMutated: Bool? = nil,
+        approvedAgentsMoved: Int? = nil,
+        deniedAgentsPreserved: Int? = nil,
+        noIntentAgentsPreserved: Int? = nil,
+        abstractPositionsChanged: Int? = nil,
+        physicalPositionsChanged: Int? = nil,
+        abstractPhysicalDivergenceBefore: Int? = nil,
+        abstractPhysicalDivergenceAfter: Int? = nil,
+        routeFollowingUsed: Bool? = nil,
         movedFeedback: Int? = nil,
         approvedForMovementFeedback: Int? = nil,
         blockedByCollisionFeedback: Int? = nil,
@@ -987,6 +1003,14 @@ struct RunEvent: Encodable {
         self.policyWorldUsed = policyWorldUsed
         self.tickWorldReadOnlyUsed = tickWorldReadOnlyUsed
         self.worldMutated = worldMutated
+        self.approvedAgentsMoved = approvedAgentsMoved
+        self.deniedAgentsPreserved = deniedAgentsPreserved
+        self.noIntentAgentsPreserved = noIntentAgentsPreserved
+        self.abstractPositionsChanged = abstractPositionsChanged
+        self.physicalPositionsChanged = physicalPositionsChanged
+        self.abstractPhysicalDivergenceBefore = abstractPhysicalDivergenceBefore
+        self.abstractPhysicalDivergenceAfter = abstractPhysicalDivergenceAfter
+        self.routeFollowingUsed = routeFollowingUsed
         self.movedFeedback = movedFeedback
         self.approvedForMovementFeedback = approvedForMovementFeedback
         self.blockedByCollisionFeedback = blockedByCollisionFeedback

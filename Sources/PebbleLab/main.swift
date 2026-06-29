@@ -48,6 +48,8 @@ let isFeedbackAwareIntentToTickFixtureScenario = options.scenario
     == "feedback_aware_intent_to_tick_fixture_smoke"
 let isFeedbackAwareIntentToTickLiveReadonlyScenario = options.scenario
     == "feedback_aware_intent_to_tick_live_readonly_smoke"
+let isFeedbackAwareIntentToTickApprovedApplicationScenario = options.scenario
+    == "feedback_aware_intent_to_tick_approved_application_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -66,7 +68,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isFeedbackAwareIntentPolicyFixtureScenario
     || isFeedbackAwareIntentPolicyHardeningScenario
     || isFeedbackAwareIntentToTickFixtureScenario
-    || isFeedbackAwareIntentToTickLiveReadonlyScenario)
+    || isFeedbackAwareIntentToTickLiveReadonlyScenario
+    || isFeedbackAwareIntentToTickApprovedApplicationScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -718,7 +721,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isFeedbackAwareIntentPolicyFixtureScenario
     || isFeedbackAwareIntentPolicyHardeningScenario
     || isFeedbackAwareIntentToTickFixtureScenario
-    || isFeedbackAwareIntentToTickLiveReadonlyScenario {
+    || isFeedbackAwareIntentToTickLiveReadonlyScenario
+    || isFeedbackAwareIntentToTickApprovedApplicationScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -2171,6 +2175,83 @@ let feedbackAwareIntentToTickLiveReadonlySuccess =
             && feedbackAwareIntentToTickLiveReadonlySummary?.worldMutated == false
             && feedbackAwareIntentToTickLiveReadonlySummary?.mutationPerformed == false)
         : nil
+let feedbackAwareIntentToTickApprovedApplicationReport =
+    isFeedbackAwareIntentToTickApprovedApplicationScenario
+        ? makeFeedbackAwareIntentToTickApprovedApplicationReport(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticksCompleted: ticksCompleted
+        )
+        : nil
+let feedbackAwareIntentToTickApprovedApplicationInvariantReport =
+    isFeedbackAwareIntentToTickApprovedApplicationScenario
+        ? makeFeedbackAwareIntentToTickApprovedApplicationInvariantReport(
+            report: feedbackAwareIntentToTickApprovedApplicationReport,
+            scenario: options.scenario,
+            seed: options.seed
+        )
+        : nil
+let feedbackAwareIntentToTickApprovedApplicationSummary =
+    feedbackAwareIntentToTickApprovedApplicationReport?.summary
+let feedbackAwareIntentToTickApprovedApplicationSuccess =
+    isFeedbackAwareIntentToTickApprovedApplicationScenario
+        ? ((feedbackAwareIntentToTickApprovedApplicationReport?.success ?? false)
+            && (feedbackAwareIntentToTickApprovedApplicationInvariantReport?.success ?? false)
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.contexts == 7
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.contextsWithFeedback == 5
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.contextsWithoutFeedback == 2
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.feedbackAwareProposals == 7
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.feedbackAwareAcceptedIntents == 4
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.feedbackAwareNoIntent == 3
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.feedbackAwareInvalidOneEdgeProposals == 0
+            && (feedbackAwareIntentToTickApprovedApplicationSummary?.baselineMovementIntentInputs ?? 0)
+                > (feedbackAwareIntentToTickApprovedApplicationSummary?.feedbackAwareMovementIntentInputs ?? 0)
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.feedbackAwareMovementIntentInputs == 4
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.noIntentFilteredOut == 3
+            && (feedbackAwareIntentToTickApprovedApplicationSummary?.movementIntentReduction ?? 0) >= 2
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.tickIntents == 4
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.tickApproved == 2
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.tickDenied == 2
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.tickDeniedSameDestinationConflict == 1
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.tickDeniedCollision == 1
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.tickFeedbackEmitted == 4
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.approvedAgentsMoved == 2
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.deniedAgentsPreserved == 2
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.noIntentAgentsPreserved == 3
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.displacementsApplied == 2
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.abstractPositionsChanged == 2
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.physicalPositionsChanged == 2
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.abstractPhysicalDivergenceBefore == 0
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.abstractPhysicalDivergenceAfter == 0
+            && feedbackAwareIntentToTickApprovedApplicationReport?.finalPositions["agent_0_no_feedback"]
+                == LabTerrainPathNodeKey(x: 1, y: 64, z: 0)
+            && feedbackAwareIntentToTickApprovedApplicationReport?.finalPositions["agent_4_approved"]
+                == LabTerrainPathNodeKey(x: 9, y: 64, z: 8)
+            && feedbackAwareIntentToTickApprovedApplicationReport?.finalPositions["agent_1_moved"]
+                == LabTerrainPathNodeKey(x: 2, y: 64, z: 0)
+            && feedbackAwareIntentToTickApprovedApplicationReport?.finalPositions["agent_6_live_collision"]
+                == LabTerrainPathNodeKey(x: 7, y: 64, z: 8)
+            && feedbackAwareIntentToTickApprovedApplicationReport?.finalPositions["agent_2_collision_feedback"]
+                == LabTerrainPathNodeKey(x: 7, y: 64, z: 8)
+            && feedbackAwareIntentToTickApprovedApplicationReport?.finalPositions["agent_3_conflict_feedback"]
+                == LabTerrainPathNodeKey(x: 4, y: 64, z: 0)
+            && feedbackAwareIntentToTickApprovedApplicationReport?.finalPositions["agent_5_invalid_edge_feedback"]
+                == LabTerrainPathNodeKey(x: 8, y: 64, z: 0)
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.policyReadCollision == false
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.policyWorldUsed == false
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.tickReadCollision == true
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.tickWorldReadOnlyUsed == true
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.movementApplied == true
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.memoryUpdated == false
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.goalChanged == false
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.pathfindingPerformed == false
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.replanningPerformed == false
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.avoidancePerformed == false
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.reservationRuntimeUsed == false
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.routeFollowingUsed == false
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.worldMutated == false
+            && feedbackAwareIntentToTickApprovedApplicationSummary?.mutationPerformed == false)
+        : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
@@ -2562,6 +2643,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (feedbackAwareIntentPolicyHardeningSuccess ?? true)
     && (feedbackAwareIntentToTickFixtureSuccess ?? true)
     && (feedbackAwareIntentToTickLiveReadonlySuccess ?? true)
+    && (feedbackAwareIntentToTickApprovedApplicationSuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -3585,6 +3667,70 @@ if options.outPath != nil {
                 replanningPerformed: summary.replanningPerformed
             ))
         }
+        if let feedbackAwareIntentToTickApprovedApplicationReport {
+            let summary = feedbackAwareIntentToTickApprovedApplicationReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_feedback_aware_intent_to_tick_approved_application_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: feedbackAwareIntentToTickApprovedApplicationSuccess,
+                displacementsApplied: summary.displacementsApplied,
+                contexts: summary.contexts,
+                proposals: summary.feedbackAwareProposals,
+                baselineProposals: summary.baselineProposals,
+                feedbackAwareProposals: summary.feedbackAwareProposals,
+                acceptedIntents: summary.feedbackAwareAcceptedIntents,
+                rejectedProposals: summary.feedbackAwareRejectedProposals,
+                noIntent: summary.feedbackAwareNoIntent,
+                invalidOneEdgeProposals: summary.feedbackAwareInvalidOneEdgeProposals,
+                tickIntents: summary.tickIntents,
+                tickFeedback: summary.tickFeedbackEmitted,
+                tickApproved: summary.tickApproved,
+                tickDenied: summary.tickDenied,
+                sameDestinationConflicts: summary.tickDeniedSameDestinationConflict,
+                intentContexts: summary.contexts,
+                contextsWithFeedback: summary.contextsWithFeedback,
+                contextsWithoutFeedback: summary.contextsWithoutFeedback,
+                behaviorChangedByFeedback: summary.behaviorChangedByFeedback,
+                behaviorChangedCount: summary.behaviorChangedCount,
+                baselineMovementIntentInputs: summary.baselineMovementIntentInputs,
+                feedbackAwareMovementIntentInputs: summary.feedbackAwareMovementIntentInputs,
+                movementIntentReduction: summary.movementIntentReduction,
+                noIntentFilteredOut: summary.noIntentFilteredOut,
+                feedbackAwareAcceptedIntents: summary.feedbackAwareAcceptedIntents,
+                feedbackAwareRejectedProposals: summary.feedbackAwareRejectedProposals,
+                feedbackAwareNoIntent: summary.feedbackAwareNoIntent,
+                tickDeniedSameDestinationConflict: summary.tickDeniedSameDestinationConflict,
+                tickFeedbackEmitted: summary.tickFeedbackEmitted,
+                policyReadCollision: summary.policyReadCollision,
+                policyWorldUsed: summary.policyWorldUsed,
+                tickWorldReadOnlyUsed: summary.tickWorldReadOnlyUsed,
+                worldMutated: summary.worldMutated,
+                approvedAgentsMoved: summary.approvedAgentsMoved,
+                deniedAgentsPreserved: summary.deniedAgentsPreserved,
+                noIntentAgentsPreserved: summary.noIntentAgentsPreserved,
+                abstractPositionsChanged: summary.abstractPositionsChanged,
+                physicalPositionsChanged: summary.physicalPositionsChanged,
+                abstractPhysicalDivergenceBefore: summary.abstractPhysicalDivergenceBefore,
+                abstractPhysicalDivergenceAfter: summary.abstractPhysicalDivergenceAfter,
+                routeFollowingUsed: summary.routeFollowingUsed,
+                occupableDestinations: summary.occupableDestinations,
+                nonOccupableDestinations: summary.nonOccupableDestinations,
+                collisionDenied: summary.tickDeniedCollision,
+                productionReadCollision: summary.policyReadCollision,
+                tickReadCollision: summary.tickReadCollision,
+                worldUsed: summary.policyWorldUsed || summary.tickWorldReadOnlyUsed,
+                collisionRead: summary.policyReadCollision || summary.tickReadCollision,
+                movementApplied: summary.movementApplied,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                avoidancePerformed: summary.avoidancePerformed,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
+                replanningPerformed: summary.replanningPerformed
+            ))
+        }
         if let routeFollowingLiveSnapshot {
             try appendEvent(RunEvent(
                 type: "lab_route_following_recorded",
@@ -4434,6 +4580,22 @@ if let outPath = options.outPath {
             try writeJSON(
                 feedbackAwareIntentToTickLiveReadonlyInvariantReport,
                 to: outURL.appendingPathComponent("feedback_aware_intent_to_tick_live_readonly_invariant_report.json")
+            )
+        }
+        if let feedbackAwareIntentToTickApprovedApplicationReport {
+            try writeJSON(
+                feedbackAwareIntentToTickApprovedApplicationReport,
+                to: outURL.appendingPathComponent("feedback_aware_intent_to_tick_approved_application_report.json")
+            )
+            try writeJSON(
+                feedbackAwareIntentToTickApprovedApplicationReport.handoff,
+                to: outURL.appendingPathComponent("feedback_aware_intent_to_tick_approved_application_handoff.json")
+            )
+        }
+        if let feedbackAwareIntentToTickApprovedApplicationInvariantReport {
+            try writeJSON(
+                feedbackAwareIntentToTickApprovedApplicationInvariantReport,
+                to: outURL.appendingPathComponent("feedback_aware_intent_to_tick_approved_application_invariant_report.json")
             )
         }
         if let routeFollowingLiveSnapshot {
@@ -5488,6 +5650,52 @@ if let outPath = options.outPath {
             feedbackAwareIntentToTickLiveReadonlyWorldMutated: feedbackAwareIntentToTickLiveReadonlyReport?.summary.worldMutated,
             feedbackAwareIntentToTickLiveReadonlyMutationPerformed: feedbackAwareIntentToTickLiveReadonlyReport?.summary.mutationPerformed,
             feedbackAwareIntentToTickLiveReadonlySuccess: feedbackAwareIntentToTickLiveReadonlySuccess,
+            feedbackAwareIntentToTickApprovedApplicationContexts: feedbackAwareIntentToTickApprovedApplicationReport?.summary.contexts,
+            feedbackAwareIntentToTickApprovedApplicationContextsWithFeedback: feedbackAwareIntentToTickApprovedApplicationReport?.summary.contextsWithFeedback,
+            feedbackAwareIntentToTickApprovedApplicationContextsWithoutFeedback: feedbackAwareIntentToTickApprovedApplicationReport?.summary.contextsWithoutFeedback,
+            feedbackAwareIntentToTickApprovedApplicationBaselineProposals: feedbackAwareIntentToTickApprovedApplicationReport?.summary.baselineProposals,
+            feedbackAwareIntentToTickApprovedApplicationFeedbackAwareProposals: feedbackAwareIntentToTickApprovedApplicationReport?.summary.feedbackAwareProposals,
+            feedbackAwareIntentToTickApprovedApplicationBaselineMovementIntentInputs: feedbackAwareIntentToTickApprovedApplicationReport?.summary.baselineMovementIntentInputs,
+            feedbackAwareIntentToTickApprovedApplicationFeedbackAwareMovementIntentInputs: feedbackAwareIntentToTickApprovedApplicationReport?.summary.feedbackAwareMovementIntentInputs,
+            feedbackAwareIntentToTickApprovedApplicationMovementIntentReduction: feedbackAwareIntentToTickApprovedApplicationReport?.summary.movementIntentReduction,
+            feedbackAwareIntentToTickApprovedApplicationNoIntentFilteredOut: feedbackAwareIntentToTickApprovedApplicationReport?.summary.noIntentFilteredOut,
+            feedbackAwareIntentToTickApprovedApplicationFeedbackAwareAcceptedIntents: feedbackAwareIntentToTickApprovedApplicationReport?.summary.feedbackAwareAcceptedIntents,
+            feedbackAwareIntentToTickApprovedApplicationFeedbackAwareRejectedProposals: feedbackAwareIntentToTickApprovedApplicationReport?.summary.feedbackAwareRejectedProposals,
+            feedbackAwareIntentToTickApprovedApplicationFeedbackAwareNoIntent: feedbackAwareIntentToTickApprovedApplicationReport?.summary.feedbackAwareNoIntent,
+            feedbackAwareIntentToTickApprovedApplicationFeedbackAwareInvalidOneEdgeProposals: feedbackAwareIntentToTickApprovedApplicationReport?.summary.feedbackAwareInvalidOneEdgeProposals,
+            feedbackAwareIntentToTickApprovedApplicationBehaviorChangedByFeedback: feedbackAwareIntentToTickApprovedApplicationReport?.summary.behaviorChangedByFeedback,
+            feedbackAwareIntentToTickApprovedApplicationBehaviorChangedCount: feedbackAwareIntentToTickApprovedApplicationReport?.summary.behaviorChangedCount,
+            feedbackAwareIntentToTickApprovedApplicationTickIntents: feedbackAwareIntentToTickApprovedApplicationReport?.summary.tickIntents,
+            feedbackAwareIntentToTickApprovedApplicationTickApproved: feedbackAwareIntentToTickApprovedApplicationReport?.summary.tickApproved,
+            feedbackAwareIntentToTickApprovedApplicationTickDenied: feedbackAwareIntentToTickApprovedApplicationReport?.summary.tickDenied,
+            feedbackAwareIntentToTickApprovedApplicationTickDeniedSameDestinationConflict: feedbackAwareIntentToTickApprovedApplicationReport?.summary.tickDeniedSameDestinationConflict,
+            feedbackAwareIntentToTickApprovedApplicationTickDeniedCollision: feedbackAwareIntentToTickApprovedApplicationReport?.summary.tickDeniedCollision,
+            feedbackAwareIntentToTickApprovedApplicationTickFeedbackEmitted: feedbackAwareIntentToTickApprovedApplicationReport?.summary.tickFeedbackEmitted,
+            feedbackAwareIntentToTickApprovedApplicationOccupableDestinations: feedbackAwareIntentToTickApprovedApplicationReport?.summary.occupableDestinations,
+            feedbackAwareIntentToTickApprovedApplicationNonOccupableDestinations: feedbackAwareIntentToTickApprovedApplicationReport?.summary.nonOccupableDestinations,
+            feedbackAwareIntentToTickApprovedApplicationApprovedAgentsMoved: feedbackAwareIntentToTickApprovedApplicationReport?.summary.approvedAgentsMoved,
+            feedbackAwareIntentToTickApprovedApplicationDeniedAgentsPreserved: feedbackAwareIntentToTickApprovedApplicationReport?.summary.deniedAgentsPreserved,
+            feedbackAwareIntentToTickApprovedApplicationNoIntentAgentsPreserved: feedbackAwareIntentToTickApprovedApplicationReport?.summary.noIntentAgentsPreserved,
+            feedbackAwareIntentToTickApprovedApplicationDisplacementsApplied: feedbackAwareIntentToTickApprovedApplicationReport?.summary.displacementsApplied,
+            feedbackAwareIntentToTickApprovedApplicationAbstractPositionsChanged: feedbackAwareIntentToTickApprovedApplicationReport?.summary.abstractPositionsChanged,
+            feedbackAwareIntentToTickApprovedApplicationPhysicalPositionsChanged: feedbackAwareIntentToTickApprovedApplicationReport?.summary.physicalPositionsChanged,
+            feedbackAwareIntentToTickApprovedApplicationAbstractPhysicalDivergenceBefore: feedbackAwareIntentToTickApprovedApplicationReport?.summary.abstractPhysicalDivergenceBefore,
+            feedbackAwareIntentToTickApprovedApplicationAbstractPhysicalDivergenceAfter: feedbackAwareIntentToTickApprovedApplicationReport?.summary.abstractPhysicalDivergenceAfter,
+            feedbackAwareIntentToTickApprovedApplicationPolicyReadCollision: feedbackAwareIntentToTickApprovedApplicationReport?.summary.policyReadCollision,
+            feedbackAwareIntentToTickApprovedApplicationTickReadCollision: feedbackAwareIntentToTickApprovedApplicationReport?.summary.tickReadCollision,
+            feedbackAwareIntentToTickApprovedApplicationPolicyWorldUsed: feedbackAwareIntentToTickApprovedApplicationReport?.summary.policyWorldUsed,
+            feedbackAwareIntentToTickApprovedApplicationTickWorldReadOnlyUsed: feedbackAwareIntentToTickApprovedApplicationReport?.summary.tickWorldReadOnlyUsed,
+            feedbackAwareIntentToTickApprovedApplicationMovementApplied: feedbackAwareIntentToTickApprovedApplicationReport?.summary.movementApplied,
+            feedbackAwareIntentToTickApprovedApplicationMemoryUpdated: feedbackAwareIntentToTickApprovedApplicationReport?.summary.memoryUpdated,
+            feedbackAwareIntentToTickApprovedApplicationGoalChanged: feedbackAwareIntentToTickApprovedApplicationReport?.summary.goalChanged,
+            feedbackAwareIntentToTickApprovedApplicationPathfindingPerformed: feedbackAwareIntentToTickApprovedApplicationReport?.summary.pathfindingPerformed,
+            feedbackAwareIntentToTickApprovedApplicationReplanningPerformed: feedbackAwareIntentToTickApprovedApplicationReport?.summary.replanningPerformed,
+            feedbackAwareIntentToTickApprovedApplicationAvoidancePerformed: feedbackAwareIntentToTickApprovedApplicationReport?.summary.avoidancePerformed,
+            feedbackAwareIntentToTickApprovedApplicationReservationRuntimeUsed: feedbackAwareIntentToTickApprovedApplicationReport?.summary.reservationRuntimeUsed,
+            feedbackAwareIntentToTickApprovedApplicationRouteFollowingUsed: feedbackAwareIntentToTickApprovedApplicationReport?.summary.routeFollowingUsed,
+            feedbackAwareIntentToTickApprovedApplicationWorldMutated: feedbackAwareIntentToTickApprovedApplicationReport?.summary.worldMutated,
+            feedbackAwareIntentToTickApprovedApplicationMutationPerformed: feedbackAwareIntentToTickApprovedApplicationReport?.summary.mutationPerformed,
+            feedbackAwareIntentToTickApprovedApplicationSuccess: feedbackAwareIntentToTickApprovedApplicationSuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,
