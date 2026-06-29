@@ -1451,3 +1451,31 @@ out of scope.
 
 Next recommended step: Phase 4.22F - Feedback-Aware Intent Policy Planning
 Docs-Only.
+
+## Phase 4.22F - Feedback-Aware Intent Policy Planning Docs-Only
+
+Status: implemented and validated.
+
+Goal: document the future opt-in feedback-aware intent policy before adding
+behavior.
+
+The document `PHASE_4_FEEDBACK_AWARE_INTENT_POLICY_PLAN.md` defines how a
+future `produceAgentIntentProposalFeedbackAwareV1` policy may use
+`LabAgentIntentContext.lastFeedback` while staying deterministic, bounded, and
+inspectable. It keeps v0 unchanged and opt-in, recommends baseline behavior
+for no feedback, `moved`, and `approvedForMovement`, and recommends `noIntent`
+for blocked feedback kinds in the first v1 smoke.
+
+The plan defines the policy boundary, feedback reaction table, proposed future
+types, v1 rules, future scenario sequence, outputs, metrics, aggregate event,
+54 future invariants, explicit out-of-scope boundaries, a risk table, and the
+recommended Phase 4.23A contract.
+
+No runtime feedback-aware policy is implemented. Behavior adaptation, memory
+update, goal selection, pathfinding, replanning, avoidance, reservation
+runtime, route following, movement application, collision reads, physics,
+gameplay movement, autonomous multi-tick loops, replacing v0 globally, and
+terrain/world mutation remain out of scope.
+
+Next recommended step: Phase 4.23A - Bounded Feedback-Aware Intent Policy
+Fixture Smoke.

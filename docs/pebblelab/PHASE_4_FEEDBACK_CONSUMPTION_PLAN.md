@@ -746,3 +746,21 @@ terrain/world.
 
 Next recommended step: Phase 4.22F — Feedback-Aware Intent Policy Planning
 Docs-Only.
+
+## Phase 4.22F Follow-up Plan
+
+Phase 4.22F creates the dedicated planning document
+`PHASE_4_FEEDBACK_AWARE_INTENT_POLICY_PLAN.md`.
+
+That follow-up plan defines the boundary for a future opt-in
+`produceAgentIntentProposalFeedbackAwareV1` policy. It keeps v0 unchanged,
+recommends baseline behavior for no feedback, `moved`, and
+`approvedForMovement`, and recommends `noIntent` for blocked feedback kinds in
+the first feedback-aware smoke.
+
+The follow-up plan also documents future outputs, metrics, event shape,
+invariants, risk mitigations, and the recommended Phase 4.23A contract.
+Feedback-aware behavior, memory mutation, goal mutation, pathfinding,
+replanning, avoidance, reservation runtime, live collision reads, movement
+application, World access, social behavior, communication, learning, and
+multi-tick autonomy remain out of scope for 4.22F.

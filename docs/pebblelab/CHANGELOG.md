@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Documented PebbleLab feedback-aware intent policy plan.
 - Added feedback to agent intent context hardening smoke.
 - Added feedback to agent intent context fixture smoke.
 - Added agent feedback consumption hardening smoke.

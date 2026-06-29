@@ -6327,3 +6327,119 @@ World use, and terrain/world mutation remain out of scope.
 ### Next Step
 
 Phase 4.22F — Feedback-Aware Intent Policy Planning Docs-Only.
+
+## 2026-06-29 — Phase 4.22F feedback-aware intent policy planning docs-only
+
+### Objective
+
+Create a docs-only plan for the future feedback-aware intent policy. The phase
+prepares the transition from `LabAgentIntentContext.lastFeedback` to a bounded
+deterministic feedback-aware policy without implementing that policy.
+
+### Starting Point
+
+Phases 4.22A-E validated feedback consumption, hardening, and injection into
+`LabAgentIntentContext.lastFeedback`. The current policy v0 still ignores
+feedback deliberately, with `behaviorChangedByFeedback = false` and
+`feedbackUsedForDecision = false`.
+
+### Why Docs-Only
+
+The next step is behavioral. Before adding behavior, the plan locks the policy
+boundary, feedback reactions, outputs, metrics, events, invariants, risks, and
+recommended 4.23A contract. No Swift, runner, metric, event, or scenario is
+added in this phase.
+
+### New Document
+
+Created `docs/pebblelab/PHASE_4_FEEDBACK_AWARE_INTENT_POLICY_PLAN.md`.
+
+### Policy Boundary
+
+Future v1 may read `lastFeedback`, position, role, and local hints; keep v0;
+produce `noIntent`; or later choose a deterministic bounded local hint. It may
+not read World or collision, apply movement, mutate memory or goals, pathfind,
+replan, avoid, reserve, learn, call LLM/RL/Python, communicate, run a
+multi-tick loop, or mutate terrain/world.
+
+### Feedback Reaction Table
+
+The table defines planned reactions for `moved`, `approvedForMovement`, and
+every `blockedBy*` kind. The recommended first smoke keeps baseline behavior
+for `moved` and `approvedForMovement`, and maps blocked feedback to
+`noIntent`.
+
+### Proposed v1 Policy
+
+The proposed policy is `produceAgentIntentProposalFeedbackAwareV1`. It is
+opt-in, computes the v0 baseline first, returns baseline for no feedback,
+`moved`, and `approvedForMovement`, and returns `noIntent` for blocked
+feedback in 4.23A. Directional alternatives are deferred.
+
+### Future Phases
+
+The plan recommends:
+
+- Phase 4.23A - Bounded Feedback-Aware Intent Policy Fixture Smoke;
+- Phase 4.23B - Feedback-Aware Intent Policy Hardening;
+- Phase 4.23C - Feedback-Aware Intent To Tick Fixture Smoke;
+- Phase 4.23D - Feedback-Aware Intent To Tick Live Read-Only Smoke;
+- Phase 4.23E - Feedback-Aware Intent To Tick Approved Application Smoke;
+- Phase 4.24A - Multi-Tick Closed Loop Planning Docs-Only.
+
+### Outputs, Metrics, Event, and Invariants
+
+Future outputs are `feedback_aware_intent_policy_report.json`,
+`feedback_aware_intent_policy_invariant_report.json`,
+`feedback_aware_intent_policy_decisions.json`, `metrics.json`, and
+`events.ndjson`. Metrics use the `feedbackAwareIntentPolicy*` prefix, and the
+future aggregate event is `lab_feedback_aware_intent_policy_recorded`.
+
+The plan lists 54 future invariants covering v0 stability, opt-in v1,
+baseline comparison, feedback reactions, no World/collision/movement/memory/
+goals/pathfinding/replanning/avoidance/reservation/learning/social behavior,
+and artifact writing.
+
+### Out Of Scope
+
+Pathfinding, dynamic replanning, avoidance, reservation runtime, social
+coordination, communication, learning, reward updates, RL, LLM/Python, memory
+mutation, goal mutation, live collision reads, movement application, World
+access, terrain/world mutation, inventory/mining/construction, autonomous
+multi-tick loops, and replacing v0 globally remain out of scope.
+
+### Risk Table
+
+The risk table covers v1 replacing v0, feedback becoming pathfinding, hidden
+collision reads, social behavior, movement suppression, invalid-edge masking,
+scheduler/reservation leakage, repair loops, nondeterministic alternates,
+metrics drift, and reports hiding behavior changes.
+
+### Recommended 4.23A Contract
+
+Phase 4.23A should implement opt-in `produceAgentIntentProposalFeedbackAwareV1`
+with v0 unchanged. No feedback, `moved`, and `approvedForMovement` return
+baseline. All blocked feedback kinds return `noIntent`. The smoke compares v1
+with v0 baseline and permits `behaviorChangedByFeedback = true` only for
+intended blocked feedback cases.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+- `git status`
+
+### Results
+
+- Plan document created.
+- CHANGELOG updated.
+- DEV_JOURNAL updated.
+- ROADMAP updated.
+- Feedback consumption plan cross-linked.
+- No Swift files modified.
+
+### Next Step
+
+Phase 4.23A — Bounded Feedback-Aware Intent Policy Fixture Smoke.
