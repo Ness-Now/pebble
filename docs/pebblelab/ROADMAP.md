@@ -1852,3 +1852,60 @@ and terrain/world mutation remain out of scope.
 
 Next recommended step: Phase 4.24E - Multi-Tick Closed Loop Approved
 Application Smoke.
+
+## Phase 4.24E - Multi-Tick Closed Loop Approved Application Smoke
+
+Status: implemented and validated.
+
+Goal: connect the bounded three-tick closed loop to the approved application
+tick layer so approved outputs update only lab abstract/physical position maps
+and feedback from those ticks drives the next tick.
+
+The scenario `multi_tick_closed_loop_approved_application_smoke` runs five
+fixed agents across three ticks. Tick `0` emits conflict and collision
+feedback and applies only approved lab-map movements. Tick `1` consumes only
+tick `0` feedback, converts the blocked agents to `noIntent`, filters those
+before tick input, and applies the surviving approved movements. Tick `2`
+consumes only tick `1` feedback, uses the updated lab positions for contexts,
+and preserves denied/noIntent agents.
+
+Validated totals:
+
+- `requestedTicks = 3`;
+- `executedTicks = 3`;
+- `agents = 5`;
+- `contextsTotal = 15`;
+- `contextsWithFeedbackTotal = 6`;
+- `contextsWithoutFeedbackTotal = 9`;
+- `movementIntentInputsTotal = 10`;
+- `tickApprovedTotal = 6`;
+- `tickDeniedTotal = 4`;
+- `tickDeniedConflictTotal = 2`;
+- `tickDeniedCollisionTotal = 2`;
+- `tickFeedbackEmittedTotal = 10`;
+- `feedbackConsumedTotal = 6`;
+- `feedbackCarriedToNextTickTotal = 10`;
+- `approvedApplicationsTotal = 6`;
+- `approvedAgentsMovedTotal = 6`;
+- `deniedAgentsPreservedTotal = 4`;
+- `noIntentAgentsPreservedTotal = 5`;
+- `displacementsAppliedTotal = 6`;
+- `abstractPhysicalDivergenceAfterMax = 0`;
+- `sameTickFeedbackConsumedTotal = 0`;
+- `crossAgentFeedbackLeaksTotal = 0`;
+- `futureFeedbackConsumedTotal = 0`.
+
+The scenario writes `multi_tick_closed_loop_approved_application_report.json`,
+`multi_tick_closed_loop_approved_application_invariant_report.json`,
+`multi_tick_closed_loop_approved_application_ticks.json`,
+`multi_tick_closed_loop_approved_application_feedback.json`,
+`multiTickClosedLoopApprovedApplication*` metrics, and one aggregate
+`lab_multi_tick_closed_loop_approved_application_recorded` event.
+
+Policy live collision reads, policy World access, pathfinding, replanning,
+avoidance, reservation runtime, route following, memory/goals, alternate hints,
+autonomous gameplay movement, physical placeholder movement, core entity
+movement, and terrain/world mutation remain out of scope.
+
+Next recommended step: Phase 4.25A - Deterministic Bounded Alternate Local
+Hint Planning Docs-Only.

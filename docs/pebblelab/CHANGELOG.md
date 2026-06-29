@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added multi-tick closed loop approved application smoke.
 - Added multi-tick closed loop live read-only smoke.
 - Added multi-tick closed loop hardening smoke.
 - Added multi-tick closed loop fixture smoke.

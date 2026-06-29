@@ -1212,6 +1212,150 @@ struct LabMultiTickClosedLoopLiveReadonlyInvariantReport: Codable {
     let notes: [String]
 }
 
+struct LabMultiTickClosedLoopApprovedApplicationTickSummary: Codable {
+    let tick: Int
+    let agents: Int
+    let feedbackAvailableFromPreviousTick: Int
+    let feedbackConsumed: Int
+    let contexts: Int
+    let contextsWithFeedback: Int
+    let contextsWithoutFeedback: Int
+    let proposals: Int
+    let acceptedIntents: Int
+    let noIntent: Int
+    let noIntentFromBlockedFeedback: Int
+    let movementIntentInputs: Int
+    let tickApproved: Int
+    let tickDenied: Int
+    let tickDeniedConflict: Int
+    let tickDeniedCollision: Int
+    let tickFeedbackEmitted: Int
+    let feedbackCarriedToNextTick: Int
+    let occupableDestinations: Int
+    let nonOccupableDestinations: Int
+    let approvedAgentsMoved: Int
+    let deniedAgentsPreserved: Int
+    let noIntentAgentsPreserved: Int
+    let displacementsApplied: Int
+    let abstractPositionsChanged: Int
+    let physicalPositionsChanged: Int
+    let abstractPhysicalDivergenceBefore: Int
+    let abstractPhysicalDivergenceAfter: Int
+    let sameTickFeedbackConsumed: Int
+    let crossAgentFeedbackLeaks: Int
+    let futureFeedbackConsumed: Int
+    let policyReadCollision: Bool
+    let tickReadCollision: Bool
+    let policyWorldUsed: Bool
+    let tickWorldReadOnlyUsed: Bool
+    let movementApplied: Bool
+    let memoryUpdated: Bool
+    let goalChanged: Bool
+    let pathfindingPerformed: Bool
+    let replanningPerformed: Bool
+    let avoidancePerformed: Bool
+    let reservationRuntimeUsed: Bool
+    let routeFollowingUsed: Bool
+    let worldMutated: Bool
+    let mutationPerformed: Bool
+    let success: Bool
+}
+
+struct LabMultiTickClosedLoopApprovedApplicationTickRecord: Codable {
+    let tick: Int
+    let inputFeedbackByAgent: [String: LabMovementFeedback]
+    let contexts: [LabAgentIntentContext]
+    let policyDecisions: [LabAgentIntentFeedbackPolicyDecision]
+    let proposals: [LabAgentIntentProposal]
+    let noIntentFilteredOut: [LabAgentIntentProposal]
+    let tickInput: LabMultiAgentMovementTickInput
+    let tickOutput: LabMultiAgentMovementTickApprovedApplicationOutput
+    let approvedApplications: [LabMultiAgentMovementTickApprovedApplicationResolution]
+    let deniedPreservedAgents: [LabMultiAgentMovementTickApprovedApplicationResolution]
+    let noIntentPreservedAgents: [String]
+    let collisionEvidence: [LabMultiAgentMovementTickApprovedApplicationResolution]
+    let emittedFeedback: [LabMovementFeedback]
+    let feedbackForNextTick: [String: LabMovementFeedback]
+    let positionsBefore: [String: LabTerrainPathNodeKey]
+    let positionsAfter: [String: LabTerrainPathNodeKey]
+    let summary: LabMultiTickClosedLoopApprovedApplicationTickSummary
+}
+
+typealias LabMultiTickClosedLoopApprovedApplicationFeedbackLedger =
+    LabMultiTickClosedLoopLiveReadonlyFeedbackLedger
+
+struct LabMultiTickClosedLoopApprovedApplicationSummary: Codable {
+    let requestedTicks: Int
+    let executedTicks: Int
+    let agents: Int
+    let contextsTotal: Int
+    let feedbackConsumedTotal: Int
+    let feedbackCarriedToNextTickTotal: Int
+    let contextsWithFeedbackTotal: Int
+    let contextsWithoutFeedbackTotal: Int
+    let proposalsTotal: Int
+    let acceptedIntentsTotal: Int
+    let noIntentTotal: Int
+    let noIntentFromBlockedFeedbackTotal: Int
+    let movementIntentInputsTotal: Int
+    let tickApprovedTotal: Int
+    let tickDeniedTotal: Int
+    let tickDeniedConflictTotal: Int
+    let tickDeniedCollisionTotal: Int
+    let tickFeedbackEmittedTotal: Int
+    let occupableDestinationsTotal: Int
+    let nonOccupableDestinationsTotal: Int
+    let approvedApplicationsTotal: Int
+    let approvedAgentsMovedTotal: Int
+    let deniedAgentsPreservedTotal: Int
+    let noIntentAgentsPreservedTotal: Int
+    let displacementsAppliedTotal: Int
+    let abstractPositionsChangedTotal: Int
+    let physicalPositionsChangedTotal: Int
+    let abstractPhysicalDivergenceBeforeMax: Int
+    let abstractPhysicalDivergenceAfterMax: Int
+    let sameTickFeedbackConsumedTotal: Int
+    let crossAgentFeedbackLeaksTotal: Int
+    let futureFeedbackConsumedTotal: Int
+    let policyReadCollision: Bool
+    let tickReadCollision: Bool
+    let policyWorldUsed: Bool
+    let tickWorldReadOnlyUsed: Bool
+    let movementApplied: Bool
+    let memoryUpdated: Bool
+    let goalChanged: Bool
+    let pathfindingPerformed: Bool
+    let replanningPerformed: Bool
+    let avoidancePerformed: Bool
+    let reservationRuntimeUsed: Bool
+    let routeFollowingUsed: Bool
+    let worldMutated: Bool
+    let mutationPerformed: Bool
+    let success: Bool
+}
+
+struct LabMultiTickClosedLoopApprovedApplicationReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let requestedTicks: Int
+    let executedTicks: Int
+    let success: Bool
+    let initialAgents: [String: LabTerrainPathNodeKey]
+    let finalAgents: [String: LabTerrainPathNodeKey]
+    let tickRecords: [LabMultiTickClosedLoopApprovedApplicationTickRecord]
+    let feedbackLedger: LabMultiTickClosedLoopApprovedApplicationFeedbackLedger
+    let summary: LabMultiTickClosedLoopApprovedApplicationSummary
+}
+
+struct LabMultiTickClosedLoopApprovedApplicationInvariantReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: LabMultiAgentMovementFixtureInvariantSummary
+    let checks: [LabMultiAgentMovementFixtureInvariantCheck]
+    let notes: [String]
+}
+
 func produceAgentIntentProposalV0(
     context: LabAgentIntentContext
 ) -> LabAgentIntentProposal {

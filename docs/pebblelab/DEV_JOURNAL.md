@@ -7651,3 +7651,171 @@ mutate terrain/World. v1 remains opt-in and v0 remains available.
 ### Next Step
 
 Phase 4.24E — Multi-Tick Closed Loop Approved Application Smoke.
+
+## 2026-06-29 — Phase 4.24E multi-tick closed loop approved application
+
+### Objective
+
+Add the first approved-application variant of the bounded multi-tick closed
+loop. The scenario proves that feedback-aware v1 proposals can flow through a
+live read-only tick, apply only approved movement to lab abstract/physical
+position maps, carry feedback to the next tick, and keep denied and `noIntent`
+agents preserved.
+
+### Starting Point
+
+Phase 4.24D validated the three-tick live read-only loop: feedback from tick
+`N` is consumed only at tick `N+1`, the policy never reads collision or World,
+and the tick layer can read collision evidence without applying movement.
+Phase 4.23E had already validated single-tick approved application for
+feedback-aware intent handoff.
+
+### Files Created Or Modified
+
+- `Sources/PebbleLab/LabAgentIntentProduction.swift`
+- `Sources/PebbleLab/LabMultiTickClosedLoopApprovedApplication.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_MULTI_TICK_CLOSED_LOOP_PLAN.md`
+
+### Why Approved Application
+
+The closed loop needs one more proof before larger loop planning: approved
+tick outputs can update the lab position maps across ticks, and the next
+tick's agent contexts are built from those updated positions. This remains a
+lab-only application boundary. It does not move physical placeholders, core
+entities, terrain, or World state.
+
+### Fixed Three-Tick Loop
+
+The scenario `multi_tick_closed_loop_approved_application_smoke` runs exactly
+three ticks over five agents:
+
+- `agent_0_winner`: participates in a same-destination conflict and wins by
+  stable agent id when the conflict exists;
+- `agent_1_loser`: loses the same-destination conflict and receives
+  `blockedByAgentConflict`;
+- `agent_2_free`: receives approved movement and demonstrates map updates
+  across ticks;
+- `agent_3_collision`: targets a non-occupable destination and receives
+  `blockedByCollision`;
+- `agent_4_idle`: remains a `noIntent` preservation control.
+
+Tick `0` starts without feedback and emits both conflict and collision
+feedback. Tick `1` consumes only tick `0` feedback, converts the blocked agents
+to `noIntent`, and applies only approved lab-map movements. Tick `2` consumes
+only tick `1` feedback, showing memoryless previous-tick-only behavior while
+continuing approved map application.
+
+### Feedback Carryover And Causality
+
+Feedback emitted at tick `N` is available only to tick `N+1`. The scenario
+records zero same-tick feedback consumption, zero future feedback consumption,
+and zero cross-agent feedback leaks. Feedback is keyed by stable `agentId`,
+and only the owning agent receives its prior tick feedback.
+
+### Conflict And Collision
+
+The policy does not arbitrate same-destination conflicts and does not inspect
+occupancy. Remaining conflicts are handled by the tick layer. The tick layer
+also reads collision/World in read-only mode only for accepted movement intents
+that survive `noIntent` filtering.
+
+### Approved Application Result
+
+Approved tick outputs update both lab abstract and physical position maps.
+Denied agents and `noIntent` agents are preserved. The validated totals are:
+
+- `requestedTicks = 3`;
+- `executedTicks = 3`;
+- `agents = 5`;
+- `contextsTotal = 15`;
+- `contextsWithFeedbackTotal = 6`;
+- `contextsWithoutFeedbackTotal = 9`;
+- `movementIntentInputsTotal = 10`;
+- `tickApprovedTotal = 6`;
+- `tickDeniedTotal = 4`;
+- `tickDeniedConflictTotal = 2`;
+- `tickDeniedCollisionTotal = 2`;
+- `tickFeedbackEmittedTotal = 10`;
+- `feedbackConsumedTotal = 6`;
+- `feedbackCarriedToNextTickTotal = 10`;
+- `approvedApplicationsTotal = 6`;
+- `approvedAgentsMovedTotal = 6`;
+- `deniedAgentsPreservedTotal = 4`;
+- `noIntentAgentsPreservedTotal = 5`;
+- `displacementsAppliedTotal = 6`;
+- `abstractPositionsChangedTotal = 6`;
+- `physicalPositionsChangedTotal = 6`;
+- `abstractPhysicalDivergenceBeforeMax = 0`;
+- `abstractPhysicalDivergenceAfterMax = 0`.
+
+### Outputs, Invariants, Metrics, Event
+
+The scenario writes:
+
+- `multi_tick_closed_loop_approved_application_report.json`;
+- `multi_tick_closed_loop_approved_application_invariant_report.json`;
+- `multi_tick_closed_loop_approved_application_ticks.json`;
+- `multi_tick_closed_loop_approved_application_feedback.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Metrics use the `multiTickClosedLoopApprovedApplication*` prefix, and the
+aggregate event is `lab_multi_tick_closed_loop_approved_application_recorded`.
+The invariant report validates 90 checks covering fixed tick count, updated
+positions in later contexts, feedback carryover, no same-tick/future/cross-agent
+feedback consumption, conflict and collision feedback, approved-only lab map
+movement, denied/noIntent preservation, zero divergence, policy no
+collision/World access, tick read-only collision/World access, and artifact
+writing.
+
+### Boundary Confirmation
+
+The phase keeps v1 opt-in and leaves v0 unchanged. It does not perform
+pathfinding, replanning, avoidance, reservation runtime, route following,
+physics, learning, LLM/RL/Python integration, memory updates, goal changes,
+physical placeholder movement, core entity movement, terrain mutation, or World
+mutation.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_approved_application_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_approved_application`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_live_readonly_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_live_readonly_after_approved_application`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_hardening_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_hardening_after_approved_application`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_fixture_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_fixture_after_approved_application`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_approved_application_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_approved_application_after_multi_tick_approved_application`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_live_readonly_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_live_readonly_after_multi_tick_approved_application`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_intent_to_tick_fixture_after_multi_tick_approved_application`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_hardening_after_multi_tick_approved_application`
+- `swift run -c release PebbleLab -- --scenario feedback_to_agent_intent_context_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_to_context_hardening_after_multi_tick_approved_application`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_fixture_after_multi_tick_approved_application`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_approved_application_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_to_tick_approved_application_after_multi_tick_approved_application`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_multi_tick_approved_application`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- `swift build` passed.
+- `swift build -c release --product Pebble` passed.
+- `multi_tick_closed_loop_approved_application_smoke` passed with report
+  success true.
+- Invariant report success true with 90 passed, 0 failed.
+- Outputs, metrics, and aggregate event were written.
+- Listed non-regressions passed.
+- `swift run -c release pebsmoke` passed with 456 passed, 0 failed.
+- `git diff --check` passed.
+
+### Next Step
+
+Phase 4.25A — Deterministic Bounded Alternate Local Hint Planning Docs-Only.

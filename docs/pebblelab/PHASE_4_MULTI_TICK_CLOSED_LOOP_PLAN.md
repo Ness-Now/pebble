@@ -662,3 +662,114 @@ Still out of scope:
 
 Next recommended step: Phase 4.24E - Multi-Tick Closed Loop Approved
 Application Smoke.
+
+## Phase 4.24E Implementation Status
+
+Status: implemented and validated.
+
+Phase 4.24E added the approved application scenario
+`multi_tick_closed_loop_approved_application_smoke`.
+
+The scenario executes a fixed three-tick loop over five agents and preserves
+the causality contract established by the fixture and live read-only phases:
+
+- tick `0` starts with an empty feedback store, sends four movement intents to
+  the approved application tick layer, emits one same-destination conflict
+  feedback and one collision feedback, and applies only approved lab-map
+  movements;
+- tick `1` consumes only tick `0` feedback, injects
+  `blockedByAgentConflict` into `agent_1_loser` and `blockedByCollision` into
+  `agent_3_collision`, converts both to `noIntent`, filters both before tick
+  input, applies approved lab-map movements for the remaining approved agents,
+  and emits feedback for tick `2`;
+- tick `2` consumes only tick `1` feedback, builds contexts from the updated
+  lab positions, preserves memoryless previous-tick-only behavior, and applies
+  only approved lab-map movements again.
+
+Approved application is intentionally scoped to PebbleLab maps:
+
+- approved tick outputs update the lab abstract position map;
+- approved tick outputs update the lab physical position map;
+- denied agents keep their prior lab positions;
+- `noIntent` agents keep their prior lab positions;
+- abstract and physical maps remain synchronized;
+- no terrain or World mutation occurs.
+
+Validated aggregate totals:
+
+- `requestedTicks = 3`;
+- `executedTicks = 3`;
+- `agents = 5`;
+- `contextsTotal = 15`;
+- `contextsWithFeedbackTotal = 6`;
+- `contextsWithoutFeedbackTotal = 9`;
+- `proposalsTotal = 15`;
+- `acceptedIntentsTotal = 10`;
+- `noIntentTotal = 5`;
+- `noIntentFromBlockedFeedbackTotal = 2`;
+- `movementIntentInputsTotal = 10`;
+- `tickApprovedTotal = 6`;
+- `tickDeniedTotal = 4`;
+- `tickDeniedConflictTotal = 2`;
+- `tickDeniedCollisionTotal = 2`;
+- `tickFeedbackEmittedTotal = 10`;
+- `feedbackConsumedTotal = 6`;
+- `feedbackCarriedToNextTickTotal = 10`;
+- `approvedApplicationsTotal = 6`;
+- `approvedAgentsMovedTotal = 6`;
+- `deniedAgentsPreservedTotal = 4`;
+- `noIntentAgentsPreservedTotal = 5`;
+- `displacementsAppliedTotal = 6`;
+- `abstractPositionsChangedTotal = 6`;
+- `physicalPositionsChangedTotal = 6`;
+- `abstractPhysicalDivergenceBeforeMax = 0`;
+- `abstractPhysicalDivergenceAfterMax = 0`;
+- `sameTickFeedbackConsumedTotal = 0`;
+- `crossAgentFeedbackLeaksTotal = 0`;
+- `futureFeedbackConsumedTotal = 0`.
+
+The policy boundary remains explicit: feedback-aware v1 is opt-in, v0 remains
+available, the policy never reads collision or World, and the tick layer reads
+collision/World in read-only mode only for movement intents that survive
+`noIntent` filtering.
+
+The scenario writes:
+
+- `multi_tick_closed_loop_approved_application_report.json`;
+- `multi_tick_closed_loop_approved_application_invariant_report.json`;
+- `multi_tick_closed_loop_approved_application_ticks.json`;
+- `multi_tick_closed_loop_approved_application_feedback.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Metrics use the `multiTickClosedLoopApprovedApplication*` prefix. The scenario
+emits one aggregate
+`lab_multi_tick_closed_loop_approved_application_recorded` event.
+
+The invariant report contains 90 checks and validates fixed tick count,
+deterministic ordering, previous-tick-only feedback consumption, no
+same-tick/future/cross-agent feedback consumption, conflict feedback carryover,
+collision feedback carryover, updated positions used by later contexts,
+approved-only lab map application, denied/noIntent preservation, zero
+abstract/physical divergence, policy no collision/World access, tick read-only
+collision/World access, artifact writing, and the success contract.
+
+Still out of scope:
+
+- policy live collision reads;
+- policy World access;
+- physical placeholder movement;
+- core entity movement;
+- route following;
+- pathfinding;
+- replanning;
+- avoidance;
+- reservation runtime;
+- memory updates;
+- goal changes;
+- alternate hints;
+- autonomous gameplay movement;
+- terrain/world mutation.
+
+Next recommended step: Phase 4.25A - Deterministic Bounded Alternate Local
+Hint Planning Docs-Only.

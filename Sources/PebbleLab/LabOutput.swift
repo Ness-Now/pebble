@@ -1141,6 +1141,53 @@ struct RunMetrics: Encodable {
     let multiTickClosedLoopLiveReadonlyWorldMutated: Bool?
     let multiTickClosedLoopLiveReadonlyMutationPerformed: Bool?
     let multiTickClosedLoopLiveReadonlySuccess: Bool?
+    let multiTickClosedLoopApprovedApplicationRequestedTicks: Int?
+    let multiTickClosedLoopApprovedApplicationExecutedTicks: Int?
+    let multiTickClosedLoopApprovedApplicationAgents: Int?
+    let multiTickClosedLoopApprovedApplicationContextsTotal: Int?
+    let multiTickClosedLoopApprovedApplicationFeedbackConsumedTotal: Int?
+    let multiTickClosedLoopApprovedApplicationFeedbackCarriedToNextTickTotal: Int?
+    let multiTickClosedLoopApprovedApplicationContextsWithFeedbackTotal: Int?
+    let multiTickClosedLoopApprovedApplicationContextsWithoutFeedbackTotal: Int?
+    let multiTickClosedLoopApprovedApplicationProposalsTotal: Int?
+    let multiTickClosedLoopApprovedApplicationAcceptedIntentsTotal: Int?
+    let multiTickClosedLoopApprovedApplicationNoIntentTotal: Int?
+    let multiTickClosedLoopApprovedApplicationNoIntentFromBlockedFeedbackTotal: Int?
+    let multiTickClosedLoopApprovedApplicationMovementIntentInputsTotal: Int?
+    let multiTickClosedLoopApprovedApplicationTickApprovedTotal: Int?
+    let multiTickClosedLoopApprovedApplicationTickDeniedTotal: Int?
+    let multiTickClosedLoopApprovedApplicationTickDeniedConflictTotal: Int?
+    let multiTickClosedLoopApprovedApplicationTickDeniedCollisionTotal: Int?
+    let multiTickClosedLoopApprovedApplicationTickFeedbackEmittedTotal: Int?
+    let multiTickClosedLoopApprovedApplicationOccupableDestinationsTotal: Int?
+    let multiTickClosedLoopApprovedApplicationNonOccupableDestinationsTotal: Int?
+    let multiTickClosedLoopApprovedApplicationApprovedApplicationsTotal: Int?
+    let multiTickClosedLoopApprovedApplicationApprovedAgentsMovedTotal: Int?
+    let multiTickClosedLoopApprovedApplicationDeniedAgentsPreservedTotal: Int?
+    let multiTickClosedLoopApprovedApplicationNoIntentAgentsPreservedTotal: Int?
+    let multiTickClosedLoopApprovedApplicationDisplacementsAppliedTotal: Int?
+    let multiTickClosedLoopApprovedApplicationAbstractPositionsChangedTotal: Int?
+    let multiTickClosedLoopApprovedApplicationPhysicalPositionsChangedTotal: Int?
+    let multiTickClosedLoopApprovedApplicationAbstractPhysicalDivergenceBeforeMax: Int?
+    let multiTickClosedLoopApprovedApplicationAbstractPhysicalDivergenceAfterMax: Int?
+    let multiTickClosedLoopApprovedApplicationSameTickFeedbackConsumedTotal: Int?
+    let multiTickClosedLoopApprovedApplicationCrossAgentFeedbackLeaksTotal: Int?
+    let multiTickClosedLoopApprovedApplicationFutureFeedbackConsumedTotal: Int?
+    let multiTickClosedLoopApprovedApplicationPolicyReadCollision: Bool?
+    let multiTickClosedLoopApprovedApplicationTickReadCollision: Bool?
+    let multiTickClosedLoopApprovedApplicationPolicyWorldUsed: Bool?
+    let multiTickClosedLoopApprovedApplicationTickWorldReadOnlyUsed: Bool?
+    let multiTickClosedLoopApprovedApplicationMovementApplied: Bool?
+    let multiTickClosedLoopApprovedApplicationMemoryUpdated: Bool?
+    let multiTickClosedLoopApprovedApplicationGoalChanged: Bool?
+    let multiTickClosedLoopApprovedApplicationPathfindingPerformed: Bool?
+    let multiTickClosedLoopApprovedApplicationReplanningPerformed: Bool?
+    let multiTickClosedLoopApprovedApplicationAvoidancePerformed: Bool?
+    let multiTickClosedLoopApprovedApplicationReservationRuntimeUsed: Bool?
+    let multiTickClosedLoopApprovedApplicationRouteFollowingUsed: Bool?
+    let multiTickClosedLoopApprovedApplicationWorldMutated: Bool?
+    let multiTickClosedLoopApprovedApplicationMutationPerformed: Bool?
+    let multiTickClosedLoopApprovedApplicationSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -2282,6 +2329,53 @@ struct RunMetrics: Encodable {
         multiTickClosedLoopLiveReadonlyWorldMutated: Bool? = nil,
         multiTickClosedLoopLiveReadonlyMutationPerformed: Bool? = nil,
         multiTickClosedLoopLiveReadonlySuccess: Bool? = nil,
+        multiTickClosedLoopApprovedApplicationRequestedTicks: Int? = nil,
+        multiTickClosedLoopApprovedApplicationExecutedTicks: Int? = nil,
+        multiTickClosedLoopApprovedApplicationAgents: Int? = nil,
+        multiTickClosedLoopApprovedApplicationContextsTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationFeedbackConsumedTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationFeedbackCarriedToNextTickTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationContextsWithFeedbackTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationContextsWithoutFeedbackTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationProposalsTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationAcceptedIntentsTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationNoIntentTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationNoIntentFromBlockedFeedbackTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationMovementIntentInputsTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationTickApprovedTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationTickDeniedTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationTickDeniedConflictTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationTickDeniedCollisionTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationTickFeedbackEmittedTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationOccupableDestinationsTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationNonOccupableDestinationsTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationApprovedApplicationsTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationApprovedAgentsMovedTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationDeniedAgentsPreservedTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationNoIntentAgentsPreservedTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationDisplacementsAppliedTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationAbstractPositionsChangedTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationPhysicalPositionsChangedTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationAbstractPhysicalDivergenceBeforeMax: Int? = nil,
+        multiTickClosedLoopApprovedApplicationAbstractPhysicalDivergenceAfterMax: Int? = nil,
+        multiTickClosedLoopApprovedApplicationSameTickFeedbackConsumedTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationCrossAgentFeedbackLeaksTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationFutureFeedbackConsumedTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationPolicyReadCollision: Bool? = nil,
+        multiTickClosedLoopApprovedApplicationTickReadCollision: Bool? = nil,
+        multiTickClosedLoopApprovedApplicationPolicyWorldUsed: Bool? = nil,
+        multiTickClosedLoopApprovedApplicationTickWorldReadOnlyUsed: Bool? = nil,
+        multiTickClosedLoopApprovedApplicationMovementApplied: Bool? = nil,
+        multiTickClosedLoopApprovedApplicationMemoryUpdated: Bool? = nil,
+        multiTickClosedLoopApprovedApplicationGoalChanged: Bool? = nil,
+        multiTickClosedLoopApprovedApplicationPathfindingPerformed: Bool? = nil,
+        multiTickClosedLoopApprovedApplicationReplanningPerformed: Bool? = nil,
+        multiTickClosedLoopApprovedApplicationAvoidancePerformed: Bool? = nil,
+        multiTickClosedLoopApprovedApplicationReservationRuntimeUsed: Bool? = nil,
+        multiTickClosedLoopApprovedApplicationRouteFollowingUsed: Bool? = nil,
+        multiTickClosedLoopApprovedApplicationWorldMutated: Bool? = nil,
+        multiTickClosedLoopApprovedApplicationMutationPerformed: Bool? = nil,
+        multiTickClosedLoopApprovedApplicationSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -3422,6 +3516,53 @@ struct RunMetrics: Encodable {
         self.multiTickClosedLoopLiveReadonlyWorldMutated = multiTickClosedLoopLiveReadonlyWorldMutated
         self.multiTickClosedLoopLiveReadonlyMutationPerformed = multiTickClosedLoopLiveReadonlyMutationPerformed
         self.multiTickClosedLoopLiveReadonlySuccess = multiTickClosedLoopLiveReadonlySuccess
+        self.multiTickClosedLoopApprovedApplicationRequestedTicks = multiTickClosedLoopApprovedApplicationRequestedTicks
+        self.multiTickClosedLoopApprovedApplicationExecutedTicks = multiTickClosedLoopApprovedApplicationExecutedTicks
+        self.multiTickClosedLoopApprovedApplicationAgents = multiTickClosedLoopApprovedApplicationAgents
+        self.multiTickClosedLoopApprovedApplicationContextsTotal = multiTickClosedLoopApprovedApplicationContextsTotal
+        self.multiTickClosedLoopApprovedApplicationFeedbackConsumedTotal = multiTickClosedLoopApprovedApplicationFeedbackConsumedTotal
+        self.multiTickClosedLoopApprovedApplicationFeedbackCarriedToNextTickTotal = multiTickClosedLoopApprovedApplicationFeedbackCarriedToNextTickTotal
+        self.multiTickClosedLoopApprovedApplicationContextsWithFeedbackTotal = multiTickClosedLoopApprovedApplicationContextsWithFeedbackTotal
+        self.multiTickClosedLoopApprovedApplicationContextsWithoutFeedbackTotal = multiTickClosedLoopApprovedApplicationContextsWithoutFeedbackTotal
+        self.multiTickClosedLoopApprovedApplicationProposalsTotal = multiTickClosedLoopApprovedApplicationProposalsTotal
+        self.multiTickClosedLoopApprovedApplicationAcceptedIntentsTotal = multiTickClosedLoopApprovedApplicationAcceptedIntentsTotal
+        self.multiTickClosedLoopApprovedApplicationNoIntentTotal = multiTickClosedLoopApprovedApplicationNoIntentTotal
+        self.multiTickClosedLoopApprovedApplicationNoIntentFromBlockedFeedbackTotal = multiTickClosedLoopApprovedApplicationNoIntentFromBlockedFeedbackTotal
+        self.multiTickClosedLoopApprovedApplicationMovementIntentInputsTotal = multiTickClosedLoopApprovedApplicationMovementIntentInputsTotal
+        self.multiTickClosedLoopApprovedApplicationTickApprovedTotal = multiTickClosedLoopApprovedApplicationTickApprovedTotal
+        self.multiTickClosedLoopApprovedApplicationTickDeniedTotal = multiTickClosedLoopApprovedApplicationTickDeniedTotal
+        self.multiTickClosedLoopApprovedApplicationTickDeniedConflictTotal = multiTickClosedLoopApprovedApplicationTickDeniedConflictTotal
+        self.multiTickClosedLoopApprovedApplicationTickDeniedCollisionTotal = multiTickClosedLoopApprovedApplicationTickDeniedCollisionTotal
+        self.multiTickClosedLoopApprovedApplicationTickFeedbackEmittedTotal = multiTickClosedLoopApprovedApplicationTickFeedbackEmittedTotal
+        self.multiTickClosedLoopApprovedApplicationOccupableDestinationsTotal = multiTickClosedLoopApprovedApplicationOccupableDestinationsTotal
+        self.multiTickClosedLoopApprovedApplicationNonOccupableDestinationsTotal = multiTickClosedLoopApprovedApplicationNonOccupableDestinationsTotal
+        self.multiTickClosedLoopApprovedApplicationApprovedApplicationsTotal = multiTickClosedLoopApprovedApplicationApprovedApplicationsTotal
+        self.multiTickClosedLoopApprovedApplicationApprovedAgentsMovedTotal = multiTickClosedLoopApprovedApplicationApprovedAgentsMovedTotal
+        self.multiTickClosedLoopApprovedApplicationDeniedAgentsPreservedTotal = multiTickClosedLoopApprovedApplicationDeniedAgentsPreservedTotal
+        self.multiTickClosedLoopApprovedApplicationNoIntentAgentsPreservedTotal = multiTickClosedLoopApprovedApplicationNoIntentAgentsPreservedTotal
+        self.multiTickClosedLoopApprovedApplicationDisplacementsAppliedTotal = multiTickClosedLoopApprovedApplicationDisplacementsAppliedTotal
+        self.multiTickClosedLoopApprovedApplicationAbstractPositionsChangedTotal = multiTickClosedLoopApprovedApplicationAbstractPositionsChangedTotal
+        self.multiTickClosedLoopApprovedApplicationPhysicalPositionsChangedTotal = multiTickClosedLoopApprovedApplicationPhysicalPositionsChangedTotal
+        self.multiTickClosedLoopApprovedApplicationAbstractPhysicalDivergenceBeforeMax = multiTickClosedLoopApprovedApplicationAbstractPhysicalDivergenceBeforeMax
+        self.multiTickClosedLoopApprovedApplicationAbstractPhysicalDivergenceAfterMax = multiTickClosedLoopApprovedApplicationAbstractPhysicalDivergenceAfterMax
+        self.multiTickClosedLoopApprovedApplicationSameTickFeedbackConsumedTotal = multiTickClosedLoopApprovedApplicationSameTickFeedbackConsumedTotal
+        self.multiTickClosedLoopApprovedApplicationCrossAgentFeedbackLeaksTotal = multiTickClosedLoopApprovedApplicationCrossAgentFeedbackLeaksTotal
+        self.multiTickClosedLoopApprovedApplicationFutureFeedbackConsumedTotal = multiTickClosedLoopApprovedApplicationFutureFeedbackConsumedTotal
+        self.multiTickClosedLoopApprovedApplicationPolicyReadCollision = multiTickClosedLoopApprovedApplicationPolicyReadCollision
+        self.multiTickClosedLoopApprovedApplicationTickReadCollision = multiTickClosedLoopApprovedApplicationTickReadCollision
+        self.multiTickClosedLoopApprovedApplicationPolicyWorldUsed = multiTickClosedLoopApprovedApplicationPolicyWorldUsed
+        self.multiTickClosedLoopApprovedApplicationTickWorldReadOnlyUsed = multiTickClosedLoopApprovedApplicationTickWorldReadOnlyUsed
+        self.multiTickClosedLoopApprovedApplicationMovementApplied = multiTickClosedLoopApprovedApplicationMovementApplied
+        self.multiTickClosedLoopApprovedApplicationMemoryUpdated = multiTickClosedLoopApprovedApplicationMemoryUpdated
+        self.multiTickClosedLoopApprovedApplicationGoalChanged = multiTickClosedLoopApprovedApplicationGoalChanged
+        self.multiTickClosedLoopApprovedApplicationPathfindingPerformed = multiTickClosedLoopApprovedApplicationPathfindingPerformed
+        self.multiTickClosedLoopApprovedApplicationReplanningPerformed = multiTickClosedLoopApprovedApplicationReplanningPerformed
+        self.multiTickClosedLoopApprovedApplicationAvoidancePerformed = multiTickClosedLoopApprovedApplicationAvoidancePerformed
+        self.multiTickClosedLoopApprovedApplicationReservationRuntimeUsed = multiTickClosedLoopApprovedApplicationReservationRuntimeUsed
+        self.multiTickClosedLoopApprovedApplicationRouteFollowingUsed = multiTickClosedLoopApprovedApplicationRouteFollowingUsed
+        self.multiTickClosedLoopApprovedApplicationWorldMutated = multiTickClosedLoopApprovedApplicationWorldMutated
+        self.multiTickClosedLoopApprovedApplicationMutationPerformed = multiTickClosedLoopApprovedApplicationMutationPerformed
+        self.multiTickClosedLoopApprovedApplicationSuccess = multiTickClosedLoopApprovedApplicationSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed
