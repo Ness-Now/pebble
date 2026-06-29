@@ -499,3 +499,77 @@ The fixture keeps the strict 4.24 boundary:
 - no terrain/world mutation.
 
 Next recommended step: Phase 4.24C - Multi-Tick Closed Loop Hardening.
+
+## Phase 4.24C Implementation Status
+
+Status: implemented and validated.
+
+Phase 4.24C added the fixture-only hardening scenario
+`multi_tick_closed_loop_hardening_smoke`.
+
+The scenario validates 13 deterministic cases:
+
+- `baseline_memoryless_fixture_loop`;
+- `missing_feedback_allowed`;
+- `duplicate_feedback_same_agent_same_tick`;
+- `stale_feedback_ignored`;
+- `future_feedback_ignored`;
+- `same_tick_feedback_ignored`;
+- `cross_agent_feedback_ignored`;
+- `unknown_agent_feedback_ignored`;
+- `malformed_feedback_ignored`;
+- `blocked_feedback_only_affects_owner`;
+- `all_agents_missing_feedback_stays_baseline`;
+- `repeatability_stable_ordering`;
+- `max_tick_bound_enforced`.
+
+The hardening filter uses a candidate feedback list rather than an unvalidated
+dictionary. A candidate is eligible only when it is well formed, targets a
+known agent, belongs to the same agent, and has `feedback.tick == consumingTick
+- 1`. Eligible duplicates for the same target and source tick are deduped
+deterministically. Missing feedback is allowed. Stale, future, same-tick,
+cross-agent, unknown-agent, and malformed feedback candidates are ignored and
+counted.
+
+Validated aggregate behavior includes:
+
+- `cases = 13`;
+- `passed = 13`;
+- `failed = 0`;
+- `crossAgentFeedbackLeaksTotal = 0`;
+- `sameTickFeedbackConsumedTotal = 0`;
+- `futureFeedbackConsumedTotal = 0`;
+- `tickDeniedCollisionTotal = 0`;
+- `repeatabilityChecks = 1`;
+- `repeatabilityFailures = 0`.
+
+The scenario writes:
+
+- `multi_tick_closed_loop_hardening_report.json`;
+- `multi_tick_closed_loop_hardening_invariant_report.json`;
+- `multi_tick_closed_loop_hardening_cases.json`;
+- `multi_tick_closed_loop_hardening_feedback.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Metrics use the `multiTickClosedLoopHardening*` prefix, and the event is the
+aggregate `lab_multi_tick_closed_loop_hardening_recorded`.
+
+The hardening scenario keeps the 4.24 boundary intact:
+
+- no World;
+- no live collision read;
+- no movement application;
+- no approved lab map movement;
+- no memory update;
+- no goal change;
+- no pathfinding;
+- no replanning;
+- no avoidance;
+- no reservation runtime;
+- no route following;
+- no physics;
+- no terrain/world mutation.
+
+Next recommended step: Phase 4.24D - Multi-Tick Closed Loop Live Read-Only
+Smoke.

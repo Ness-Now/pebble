@@ -1057,6 +1057,51 @@ struct RunMetrics: Encodable {
     let multiTickClosedLoopWorldMutated: Bool?
     let multiTickClosedLoopMutationPerformed: Bool?
     let multiTickClosedLoopSuccess: Bool?
+    let multiTickClosedLoopHardeningCases: Int?
+    let multiTickClosedLoopHardeningPassed: Int?
+    let multiTickClosedLoopHardeningFailed: Int?
+    let multiTickClosedLoopHardeningRequestedTicksTotal: Int?
+    let multiTickClosedLoopHardeningExecutedTicksTotal: Int?
+    let multiTickClosedLoopHardeningAgentsTotal: Int?
+    let multiTickClosedLoopHardeningContextsTotal: Int?
+    let multiTickClosedLoopHardeningFeedbackCandidatesTotal: Int?
+    let multiTickClosedLoopHardeningFeedbackConsumedTotal: Int?
+    let multiTickClosedLoopHardeningFeedbackIgnoredTotal: Int?
+    let multiTickClosedLoopHardeningFeedbackDedupedTotal: Int?
+    let multiTickClosedLoopHardeningMissingFeedbackAllowedTotal: Int?
+    let multiTickClosedLoopHardeningStaleFeedbackIgnoredTotal: Int?
+    let multiTickClosedLoopHardeningFutureFeedbackIgnoredTotal: Int?
+    let multiTickClosedLoopHardeningSameTickFeedbackIgnoredTotal: Int?
+    let multiTickClosedLoopHardeningCrossAgentLeakAttemptsTotal: Int?
+    let multiTickClosedLoopHardeningCrossAgentFeedbackLeaksTotal: Int?
+    let multiTickClosedLoopHardeningUnknownAgentFeedbackIgnoredTotal: Int?
+    let multiTickClosedLoopHardeningMalformedFeedbackIgnoredTotal: Int?
+    let multiTickClosedLoopHardeningNoIntentFromBlockedFeedbackTotal: Int?
+    let multiTickClosedLoopHardeningMovementIntentInputsTotal: Int?
+    let multiTickClosedLoopHardeningTickApprovedTotal: Int?
+    let multiTickClosedLoopHardeningTickDeniedTotal: Int?
+    let multiTickClosedLoopHardeningTickDeniedConflictTotal: Int?
+    let multiTickClosedLoopHardeningTickDeniedCollisionTotal: Int?
+    let multiTickClosedLoopHardeningFeedbackEmittedTotal: Int?
+    let multiTickClosedLoopHardeningSameTickFeedbackConsumedTotal: Int?
+    let multiTickClosedLoopHardeningFutureFeedbackConsumedTotal: Int?
+    let multiTickClosedLoopHardeningRepeatabilityChecks: Int?
+    let multiTickClosedLoopHardeningRepeatabilityFailures: Int?
+    let multiTickClosedLoopHardeningPolicyReadCollision: Bool?
+    let multiTickClosedLoopHardeningTickReadCollision: Bool?
+    let multiTickClosedLoopHardeningPolicyWorldUsed: Bool?
+    let multiTickClosedLoopHardeningTickWorldReadOnlyUsed: Bool?
+    let multiTickClosedLoopHardeningMovementApplied: Bool?
+    let multiTickClosedLoopHardeningMemoryUpdated: Bool?
+    let multiTickClosedLoopHardeningGoalChanged: Bool?
+    let multiTickClosedLoopHardeningPathfindingPerformed: Bool?
+    let multiTickClosedLoopHardeningReplanningPerformed: Bool?
+    let multiTickClosedLoopHardeningAvoidancePerformed: Bool?
+    let multiTickClosedLoopHardeningReservationRuntimeUsed: Bool?
+    let multiTickClosedLoopHardeningRouteFollowingUsed: Bool?
+    let multiTickClosedLoopHardeningWorldMutated: Bool?
+    let multiTickClosedLoopHardeningMutationPerformed: Bool?
+    let multiTickClosedLoopHardeningSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -2114,6 +2159,51 @@ struct RunMetrics: Encodable {
         multiTickClosedLoopWorldMutated: Bool? = nil,
         multiTickClosedLoopMutationPerformed: Bool? = nil,
         multiTickClosedLoopSuccess: Bool? = nil,
+        multiTickClosedLoopHardeningCases: Int? = nil,
+        multiTickClosedLoopHardeningPassed: Int? = nil,
+        multiTickClosedLoopHardeningFailed: Int? = nil,
+        multiTickClosedLoopHardeningRequestedTicksTotal: Int? = nil,
+        multiTickClosedLoopHardeningExecutedTicksTotal: Int? = nil,
+        multiTickClosedLoopHardeningAgentsTotal: Int? = nil,
+        multiTickClosedLoopHardeningContextsTotal: Int? = nil,
+        multiTickClosedLoopHardeningFeedbackCandidatesTotal: Int? = nil,
+        multiTickClosedLoopHardeningFeedbackConsumedTotal: Int? = nil,
+        multiTickClosedLoopHardeningFeedbackIgnoredTotal: Int? = nil,
+        multiTickClosedLoopHardeningFeedbackDedupedTotal: Int? = nil,
+        multiTickClosedLoopHardeningMissingFeedbackAllowedTotal: Int? = nil,
+        multiTickClosedLoopHardeningStaleFeedbackIgnoredTotal: Int? = nil,
+        multiTickClosedLoopHardeningFutureFeedbackIgnoredTotal: Int? = nil,
+        multiTickClosedLoopHardeningSameTickFeedbackIgnoredTotal: Int? = nil,
+        multiTickClosedLoopHardeningCrossAgentLeakAttemptsTotal: Int? = nil,
+        multiTickClosedLoopHardeningCrossAgentFeedbackLeaksTotal: Int? = nil,
+        multiTickClosedLoopHardeningUnknownAgentFeedbackIgnoredTotal: Int? = nil,
+        multiTickClosedLoopHardeningMalformedFeedbackIgnoredTotal: Int? = nil,
+        multiTickClosedLoopHardeningNoIntentFromBlockedFeedbackTotal: Int? = nil,
+        multiTickClosedLoopHardeningMovementIntentInputsTotal: Int? = nil,
+        multiTickClosedLoopHardeningTickApprovedTotal: Int? = nil,
+        multiTickClosedLoopHardeningTickDeniedTotal: Int? = nil,
+        multiTickClosedLoopHardeningTickDeniedConflictTotal: Int? = nil,
+        multiTickClosedLoopHardeningTickDeniedCollisionTotal: Int? = nil,
+        multiTickClosedLoopHardeningFeedbackEmittedTotal: Int? = nil,
+        multiTickClosedLoopHardeningSameTickFeedbackConsumedTotal: Int? = nil,
+        multiTickClosedLoopHardeningFutureFeedbackConsumedTotal: Int? = nil,
+        multiTickClosedLoopHardeningRepeatabilityChecks: Int? = nil,
+        multiTickClosedLoopHardeningRepeatabilityFailures: Int? = nil,
+        multiTickClosedLoopHardeningPolicyReadCollision: Bool? = nil,
+        multiTickClosedLoopHardeningTickReadCollision: Bool? = nil,
+        multiTickClosedLoopHardeningPolicyWorldUsed: Bool? = nil,
+        multiTickClosedLoopHardeningTickWorldReadOnlyUsed: Bool? = nil,
+        multiTickClosedLoopHardeningMovementApplied: Bool? = nil,
+        multiTickClosedLoopHardeningMemoryUpdated: Bool? = nil,
+        multiTickClosedLoopHardeningGoalChanged: Bool? = nil,
+        multiTickClosedLoopHardeningPathfindingPerformed: Bool? = nil,
+        multiTickClosedLoopHardeningReplanningPerformed: Bool? = nil,
+        multiTickClosedLoopHardeningAvoidancePerformed: Bool? = nil,
+        multiTickClosedLoopHardeningReservationRuntimeUsed: Bool? = nil,
+        multiTickClosedLoopHardeningRouteFollowingUsed: Bool? = nil,
+        multiTickClosedLoopHardeningWorldMutated: Bool? = nil,
+        multiTickClosedLoopHardeningMutationPerformed: Bool? = nil,
+        multiTickClosedLoopHardeningSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -3170,6 +3260,51 @@ struct RunMetrics: Encodable {
         self.multiTickClosedLoopWorldMutated = multiTickClosedLoopWorldMutated
         self.multiTickClosedLoopMutationPerformed = multiTickClosedLoopMutationPerformed
         self.multiTickClosedLoopSuccess = multiTickClosedLoopSuccess
+        self.multiTickClosedLoopHardeningCases = multiTickClosedLoopHardeningCases
+        self.multiTickClosedLoopHardeningPassed = multiTickClosedLoopHardeningPassed
+        self.multiTickClosedLoopHardeningFailed = multiTickClosedLoopHardeningFailed
+        self.multiTickClosedLoopHardeningRequestedTicksTotal = multiTickClosedLoopHardeningRequestedTicksTotal
+        self.multiTickClosedLoopHardeningExecutedTicksTotal = multiTickClosedLoopHardeningExecutedTicksTotal
+        self.multiTickClosedLoopHardeningAgentsTotal = multiTickClosedLoopHardeningAgentsTotal
+        self.multiTickClosedLoopHardeningContextsTotal = multiTickClosedLoopHardeningContextsTotal
+        self.multiTickClosedLoopHardeningFeedbackCandidatesTotal = multiTickClosedLoopHardeningFeedbackCandidatesTotal
+        self.multiTickClosedLoopHardeningFeedbackConsumedTotal = multiTickClosedLoopHardeningFeedbackConsumedTotal
+        self.multiTickClosedLoopHardeningFeedbackIgnoredTotal = multiTickClosedLoopHardeningFeedbackIgnoredTotal
+        self.multiTickClosedLoopHardeningFeedbackDedupedTotal = multiTickClosedLoopHardeningFeedbackDedupedTotal
+        self.multiTickClosedLoopHardeningMissingFeedbackAllowedTotal = multiTickClosedLoopHardeningMissingFeedbackAllowedTotal
+        self.multiTickClosedLoopHardeningStaleFeedbackIgnoredTotal = multiTickClosedLoopHardeningStaleFeedbackIgnoredTotal
+        self.multiTickClosedLoopHardeningFutureFeedbackIgnoredTotal = multiTickClosedLoopHardeningFutureFeedbackIgnoredTotal
+        self.multiTickClosedLoopHardeningSameTickFeedbackIgnoredTotal = multiTickClosedLoopHardeningSameTickFeedbackIgnoredTotal
+        self.multiTickClosedLoopHardeningCrossAgentLeakAttemptsTotal = multiTickClosedLoopHardeningCrossAgentLeakAttemptsTotal
+        self.multiTickClosedLoopHardeningCrossAgentFeedbackLeaksTotal = multiTickClosedLoopHardeningCrossAgentFeedbackLeaksTotal
+        self.multiTickClosedLoopHardeningUnknownAgentFeedbackIgnoredTotal = multiTickClosedLoopHardeningUnknownAgentFeedbackIgnoredTotal
+        self.multiTickClosedLoopHardeningMalformedFeedbackIgnoredTotal = multiTickClosedLoopHardeningMalformedFeedbackIgnoredTotal
+        self.multiTickClosedLoopHardeningNoIntentFromBlockedFeedbackTotal = multiTickClosedLoopHardeningNoIntentFromBlockedFeedbackTotal
+        self.multiTickClosedLoopHardeningMovementIntentInputsTotal = multiTickClosedLoopHardeningMovementIntentInputsTotal
+        self.multiTickClosedLoopHardeningTickApprovedTotal = multiTickClosedLoopHardeningTickApprovedTotal
+        self.multiTickClosedLoopHardeningTickDeniedTotal = multiTickClosedLoopHardeningTickDeniedTotal
+        self.multiTickClosedLoopHardeningTickDeniedConflictTotal = multiTickClosedLoopHardeningTickDeniedConflictTotal
+        self.multiTickClosedLoopHardeningTickDeniedCollisionTotal = multiTickClosedLoopHardeningTickDeniedCollisionTotal
+        self.multiTickClosedLoopHardeningFeedbackEmittedTotal = multiTickClosedLoopHardeningFeedbackEmittedTotal
+        self.multiTickClosedLoopHardeningSameTickFeedbackConsumedTotal = multiTickClosedLoopHardeningSameTickFeedbackConsumedTotal
+        self.multiTickClosedLoopHardeningFutureFeedbackConsumedTotal = multiTickClosedLoopHardeningFutureFeedbackConsumedTotal
+        self.multiTickClosedLoopHardeningRepeatabilityChecks = multiTickClosedLoopHardeningRepeatabilityChecks
+        self.multiTickClosedLoopHardeningRepeatabilityFailures = multiTickClosedLoopHardeningRepeatabilityFailures
+        self.multiTickClosedLoopHardeningPolicyReadCollision = multiTickClosedLoopHardeningPolicyReadCollision
+        self.multiTickClosedLoopHardeningTickReadCollision = multiTickClosedLoopHardeningTickReadCollision
+        self.multiTickClosedLoopHardeningPolicyWorldUsed = multiTickClosedLoopHardeningPolicyWorldUsed
+        self.multiTickClosedLoopHardeningTickWorldReadOnlyUsed = multiTickClosedLoopHardeningTickWorldReadOnlyUsed
+        self.multiTickClosedLoopHardeningMovementApplied = multiTickClosedLoopHardeningMovementApplied
+        self.multiTickClosedLoopHardeningMemoryUpdated = multiTickClosedLoopHardeningMemoryUpdated
+        self.multiTickClosedLoopHardeningGoalChanged = multiTickClosedLoopHardeningGoalChanged
+        self.multiTickClosedLoopHardeningPathfindingPerformed = multiTickClosedLoopHardeningPathfindingPerformed
+        self.multiTickClosedLoopHardeningReplanningPerformed = multiTickClosedLoopHardeningReplanningPerformed
+        self.multiTickClosedLoopHardeningAvoidancePerformed = multiTickClosedLoopHardeningAvoidancePerformed
+        self.multiTickClosedLoopHardeningReservationRuntimeUsed = multiTickClosedLoopHardeningReservationRuntimeUsed
+        self.multiTickClosedLoopHardeningRouteFollowingUsed = multiTickClosedLoopHardeningRouteFollowingUsed
+        self.multiTickClosedLoopHardeningWorldMutated = multiTickClosedLoopHardeningWorldMutated
+        self.multiTickClosedLoopHardeningMutationPerformed = multiTickClosedLoopHardeningMutationPerformed
+        self.multiTickClosedLoopHardeningSuccess = multiTickClosedLoopHardeningSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added multi-tick closed loop hardening smoke.
 - Added multi-tick closed loop fixture smoke.
 - Documented PebbleLab multi-tick closed loop plan.
 - Added feedback-aware intent to tick approved application smoke.

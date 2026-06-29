@@ -9,6 +9,8 @@ struct RunEvent: Encodable {
     let ticksRequested: Int?
     let requestedTicks: Int?
     let executedTicks: Int?
+    let requestedTicksTotal: Int?
+    let executedTicksTotal: Int?
     let worldTime: Int?
     let success: Bool?
     let chunksTouched: Int?
@@ -275,6 +277,7 @@ struct RunEvent: Encodable {
     let blockedByMaxAgentsNoIntentTotal: Int?
     let baselineMovementIntentInputs: Int?
     let feedbackAwareMovementIntentInputs: Int?
+    let agentsTotal: Int?
     let movementIntentInputsTotal: Int?
     let movementIntentReduction: Int?
     let noIntentFilteredOut: Int?
@@ -298,9 +301,20 @@ struct RunEvent: Encodable {
     let deniedPreservedTotal: Int?
     let noIntentAgentsPreserved: Int?
     let noIntentPreservedTotal: Int?
+    let feedbackCandidatesTotal: Int?
+    let feedbackDedupedTotal: Int?
+    let missingFeedbackAllowedTotal: Int?
+    let staleFeedbackIgnoredTotal: Int?
+    let futureFeedbackIgnoredTotal: Int?
+    let sameTickFeedbackIgnoredTotal: Int?
+    let crossAgentLeakAttemptsTotal: Int?
+    let unknownAgentFeedbackIgnoredTotal: Int?
+    let malformedFeedbackIgnoredTotal: Int?
     let sameTickFeedbackConsumedTotal: Int?
     let crossAgentFeedbackLeaksTotal: Int?
     let futureFeedbackConsumedTotal: Int?
+    let repeatabilityChecks: Int?
+    let repeatabilityFailures: Int?
     let abstractPositionsChanged: Int?
     let physicalPositionsChanged: Int?
     let abstractPhysicalDivergenceBefore: Int?
@@ -389,6 +403,8 @@ struct RunEvent: Encodable {
         ticksRequested: Int? = nil,
         requestedTicks: Int? = nil,
         executedTicks: Int? = nil,
+        requestedTicksTotal: Int? = nil,
+        executedTicksTotal: Int? = nil,
         worldTime: Int? = nil,
         success: Bool? = nil,
         chunksTouched: Int? = nil,
@@ -655,6 +671,7 @@ struct RunEvent: Encodable {
         blockedByMaxAgentsNoIntentTotal: Int? = nil,
         baselineMovementIntentInputs: Int? = nil,
         feedbackAwareMovementIntentInputs: Int? = nil,
+        agentsTotal: Int? = nil,
         movementIntentInputsTotal: Int? = nil,
         movementIntentReduction: Int? = nil,
         noIntentFilteredOut: Int? = nil,
@@ -678,9 +695,20 @@ struct RunEvent: Encodable {
         deniedPreservedTotal: Int? = nil,
         noIntentAgentsPreserved: Int? = nil,
         noIntentPreservedTotal: Int? = nil,
+        feedbackCandidatesTotal: Int? = nil,
+        feedbackDedupedTotal: Int? = nil,
+        missingFeedbackAllowedTotal: Int? = nil,
+        staleFeedbackIgnoredTotal: Int? = nil,
+        futureFeedbackIgnoredTotal: Int? = nil,
+        sameTickFeedbackIgnoredTotal: Int? = nil,
+        crossAgentLeakAttemptsTotal: Int? = nil,
+        unknownAgentFeedbackIgnoredTotal: Int? = nil,
+        malformedFeedbackIgnoredTotal: Int? = nil,
         sameTickFeedbackConsumedTotal: Int? = nil,
         crossAgentFeedbackLeaksTotal: Int? = nil,
         futureFeedbackConsumedTotal: Int? = nil,
+        repeatabilityChecks: Int? = nil,
+        repeatabilityFailures: Int? = nil,
         abstractPositionsChanged: Int? = nil,
         physicalPositionsChanged: Int? = nil,
         abstractPhysicalDivergenceBefore: Int? = nil,
@@ -768,6 +796,8 @@ struct RunEvent: Encodable {
         self.ticksRequested = ticksRequested
         self.requestedTicks = requestedTicks
         self.executedTicks = executedTicks
+        self.requestedTicksTotal = requestedTicksTotal
+        self.executedTicksTotal = executedTicksTotal
         self.worldTime = worldTime
         self.success = success
         self.chunksTouched = chunksTouched
@@ -1034,6 +1064,7 @@ struct RunEvent: Encodable {
         self.blockedByMaxAgentsNoIntentTotal = blockedByMaxAgentsNoIntentTotal
         self.baselineMovementIntentInputs = baselineMovementIntentInputs
         self.feedbackAwareMovementIntentInputs = feedbackAwareMovementIntentInputs
+        self.agentsTotal = agentsTotal
         self.movementIntentInputsTotal = movementIntentInputsTotal
         self.movementIntentReduction = movementIntentReduction
         self.noIntentFilteredOut = noIntentFilteredOut
@@ -1057,9 +1088,20 @@ struct RunEvent: Encodable {
         self.deniedPreservedTotal = deniedPreservedTotal
         self.noIntentAgentsPreserved = noIntentAgentsPreserved
         self.noIntentPreservedTotal = noIntentPreservedTotal
+        self.feedbackCandidatesTotal = feedbackCandidatesTotal
+        self.feedbackDedupedTotal = feedbackDedupedTotal
+        self.missingFeedbackAllowedTotal = missingFeedbackAllowedTotal
+        self.staleFeedbackIgnoredTotal = staleFeedbackIgnoredTotal
+        self.futureFeedbackIgnoredTotal = futureFeedbackIgnoredTotal
+        self.sameTickFeedbackIgnoredTotal = sameTickFeedbackIgnoredTotal
+        self.crossAgentLeakAttemptsTotal = crossAgentLeakAttemptsTotal
+        self.unknownAgentFeedbackIgnoredTotal = unknownAgentFeedbackIgnoredTotal
+        self.malformedFeedbackIgnoredTotal = malformedFeedbackIgnoredTotal
         self.sameTickFeedbackConsumedTotal = sameTickFeedbackConsumedTotal
         self.crossAgentFeedbackLeaksTotal = crossAgentFeedbackLeaksTotal
         self.futureFeedbackConsumedTotal = futureFeedbackConsumedTotal
+        self.repeatabilityChecks = repeatabilityChecks
+        self.repeatabilityFailures = repeatabilityFailures
         self.abstractPositionsChanged = abstractPositionsChanged
         self.physicalPositionsChanged = physicalPositionsChanged
         self.abstractPhysicalDivergenceBefore = abstractPhysicalDivergenceBefore

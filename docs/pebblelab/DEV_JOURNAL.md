@@ -7383,3 +7383,132 @@ terrain/world.
 ### Next Step
 
 Phase 4.24C — Multi-Tick Closed Loop Hardening.
+
+## 2026-06-29 — Phase 4.24C multi-tick closed loop hardening
+
+### Objective
+
+Add a fixture-only hardening scenario for the bounded multi-tick closed loop:
+`multi_tick_closed_loop_hardening_smoke`.
+
+### Starting Point
+
+Phase 4.24B validated a three-tick fixture loop where feedback emitted by tick
+`N` is consumed only at tick `N+1`, injected into opt-in feedback-aware v1
+contexts, filtered before the fixture tick, and emitted again as structured
+feedback. The loop stayed memoryless, deterministic, and fixture-only.
+
+### Files Created/Modified
+
+- `Sources/PebbleLab/LabAgentIntentProduction.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_MULTI_TICK_CLOSED_LOOP_PLAN.md`
+
+### Why Hardening
+
+The fixture loop needs explicit guardrails before any live read-only or
+approved application closed-loop variant. 4.24C keeps the loop synthetic and
+exercises bad feedback timing, duplicate feedback, malformed feedback,
+cross-agent leak attempts, unknown agents, missing feedback, repeatability,
+and tick bounds without adding autonomy.
+
+### Hardening Cases
+
+The scenario covers 13 cases:
+
+- `baseline_memoryless_fixture_loop`;
+- `missing_feedback_allowed`;
+- `duplicate_feedback_same_agent_same_tick`;
+- `stale_feedback_ignored`;
+- `future_feedback_ignored`;
+- `same_tick_feedback_ignored`;
+- `cross_agent_feedback_ignored`;
+- `unknown_agent_feedback_ignored`;
+- `malformed_feedback_ignored`;
+- `blocked_feedback_only_affects_owner`;
+- `all_agents_missing_feedback_stays_baseline`;
+- `repeatability_stable_ordering`;
+- `max_tick_bound_enforced`.
+
+### Feedback Policy
+
+Feedback candidates are sorted deterministically by tick, target agent, source
+agent, kind, and reason. A candidate is eligible only when it targets a known
+agent, carries a well-formed feedback value, belongs to the same agent, and
+comes from exactly the previous tick. Duplicate eligible candidates for the
+same target and source tick are deduped deterministically. Missing feedback is
+allowed and keeps baseline behavior.
+
+Stale, future, same-tick, cross-agent, unknown-agent, and malformed feedback
+are ignored and counted. Same-tick and future feedback are never consumed.
+Cross-agent leak attempts are counted but never injected.
+
+### Outputs, Invariants, Metrics, Event
+
+The scenario writes:
+
+- `multi_tick_closed_loop_hardening_report.json`;
+- `multi_tick_closed_loop_hardening_invariant_report.json`;
+- `multi_tick_closed_loop_hardening_cases.json`;
+- `multi_tick_closed_loop_hardening_feedback.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Metrics use the `multiTickClosedLoopHardening*` prefix. The scenario emits one
+aggregate `lab_multi_tick_closed_loop_hardening_recorded` event and no
+per-feedback/per-case event stream.
+
+The invariant report validates case existence, deterministic ordering,
+previous-tick-only consumption, duplicate dedupe, stale/future/same-tick
+ignores, cross-agent leak prevention, unknown/malformed ignores, owner-only
+blocked feedback behavior, repeatability, fixture tick arbitration, and output
+writing.
+
+### Boundary Confirmation
+
+The hardening scenario does not use World, read collision, apply movement,
+update memory, change goals, pathfind, replan, avoid, use reservation runtime,
+use route following, perform physics, or mutate terrain/world. v1 remains
+opt-in and v0 remains available.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_hardening_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_hardening`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_fixture_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_fixture_after_hardening`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_approved_application_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_approved_application_after_multi_tick_hardening`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_live_readonly_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_live_readonly_after_multi_tick_hardening`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_intent_to_tick_fixture_after_multi_tick_hardening`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_hardening_after_multi_tick_hardening`
+- `swift run -c release PebbleLab -- --scenario feedback_to_agent_intent_context_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_to_context_hardening_after_multi_tick_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_fixture_after_multi_tick_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_to_tick_fixture_after_multi_tick_hardening`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_multi_tick_hardening`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- `swift build` passed.
+- `multi_tick_closed_loop_hardening_smoke` passed in the initial check with
+  13 cases, 13 passed, 0 failed.
+- Report success true.
+- Invariant report success true.
+- Outputs, metrics, and aggregate event were written.
+- `swift build -c release --product Pebble` passed.
+- Listed non-regressions passed.
+- `swift run -c release pebsmoke` passed with 456 passed, 0 failed.
+- `git diff --check` passed.
+
+### Next Step
+
+Phase 4.24D — Multi-Tick Closed Loop Live Read-Only Smoke.

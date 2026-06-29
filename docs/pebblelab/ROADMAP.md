@@ -1757,3 +1757,45 @@ runtime, route following, physics, terrain/world mutation, and autonomous
 gameplay movement remain out of scope.
 
 Next recommended step: Phase 4.24C - Multi-Tick Closed Loop Hardening.
+
+## Phase 4.24C - Multi-Tick Closed Loop Hardening
+
+Status: implemented and validated.
+
+Goal: harden the bounded fixture-only multi-tick closed loop before adding
+live read-only collision or approved application closed-loop variants.
+
+The scenario `multi_tick_closed_loop_hardening_smoke` runs 13 deterministic
+cases covering baseline memoryless behavior, missing feedback, duplicate
+feedback, stale feedback, future feedback, same-tick feedback, cross-agent
+feedback, unknown-agent feedback, malformed feedback, owner-only blocked
+feedback, all-missing-feedback baseline behavior, repeatability, and max tick
+bound enforcement.
+
+Validated hardening behavior:
+
+- feedback can be consumed only from exactly the previous tick;
+- missing feedback keeps baseline behavior;
+- duplicate eligible feedback is deduped deterministically;
+- stale, future, same-tick, cross-agent, unknown-agent, and malformed feedback
+  are ignored and counted;
+- cross-agent feedback leak attempts never inject `lastFeedback`;
+- same-tick and future feedback are never consumed;
+- blocked feedback affects only the owning agent;
+- fixture tick arbitration remains responsible for movement conflicts;
+- repeatability checks pass with stable ordering.
+
+The scenario writes `multi_tick_closed_loop_hardening_report.json`,
+`multi_tick_closed_loop_hardening_invariant_report.json`,
+`multi_tick_closed_loop_hardening_cases.json`,
+`multi_tick_closed_loop_hardening_feedback.json`,
+`multiTickClosedLoopHardening*` metrics, and one aggregate
+`lab_multi_tick_closed_loop_hardening_recorded` event.
+
+Live collision, World access, movement application, approved lab map movement,
+memory updates, goal changes, pathfinding, replanning, avoidance, reservation
+runtime, route following, physics, terrain/world mutation, and autonomous
+gameplay movement remain out of scope.
+
+Next recommended step: Phase 4.24D - Multi-Tick Closed Loop Live Read-Only
+Smoke.

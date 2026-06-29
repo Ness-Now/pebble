@@ -52,6 +52,8 @@ let isFeedbackAwareIntentToTickApprovedApplicationScenario = options.scenario
     == "feedback_aware_intent_to_tick_approved_application_smoke"
 let isMultiTickClosedLoopFixtureScenario = options.scenario
     == "multi_tick_closed_loop_fixture_smoke"
+let isMultiTickClosedLoopHardeningScenario = options.scenario
+    == "multi_tick_closed_loop_hardening_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -72,7 +74,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isFeedbackAwareIntentToTickFixtureScenario
     || isFeedbackAwareIntentToTickLiveReadonlyScenario
     || isFeedbackAwareIntentToTickApprovedApplicationScenario
-    || isMultiTickClosedLoopFixtureScenario)
+    || isMultiTickClosedLoopFixtureScenario
+    || isMultiTickClosedLoopHardeningScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -726,7 +729,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isFeedbackAwareIntentToTickFixtureScenario
     || isFeedbackAwareIntentToTickLiveReadonlyScenario
     || isFeedbackAwareIntentToTickApprovedApplicationScenario
-    || isMultiTickClosedLoopFixtureScenario {
+    || isMultiTickClosedLoopFixtureScenario
+    || isMultiTickClosedLoopHardeningScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -2313,6 +2317,66 @@ let multiTickClosedLoopSuccess = isMultiTickClosedLoopFixtureScenario
         && multiTickClosedLoopSummary?.worldMutated == false
         && multiTickClosedLoopSummary?.mutationPerformed == false)
     : nil
+let multiTickClosedLoopHardeningReport = isMultiTickClosedLoopHardeningScenario
+    ? makeMultiTickClosedLoopHardeningReport(
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let multiTickClosedLoopHardeningInvariantReport = isMultiTickClosedLoopHardeningScenario
+    ? makeMultiTickClosedLoopHardeningInvariantReport(
+        report: multiTickClosedLoopHardeningReport,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let multiTickClosedLoopHardeningFeedbackReport = multiTickClosedLoopHardeningReport.map {
+    makeMultiTickClosedLoopHardeningFeedbackReport(report: $0)
+}
+let multiTickClosedLoopHardeningSummary = multiTickClosedLoopHardeningReport?.summary
+let multiTickClosedLoopHardeningSuccess = isMultiTickClosedLoopHardeningScenario
+    ? ((multiTickClosedLoopHardeningReport?.success ?? false)
+        && (multiTickClosedLoopHardeningInvariantReport?.success ?? false)
+        && (multiTickClosedLoopHardeningSummary?.cases ?? 0) >= 12
+        && multiTickClosedLoopHardeningSummary?.passed == multiTickClosedLoopHardeningSummary?.cases
+        && multiTickClosedLoopHardeningSummary?.failed == 0
+        && (multiTickClosedLoopHardeningSummary?.feedbackCandidatesTotal ?? 0) > 0
+        && (multiTickClosedLoopHardeningSummary?.feedbackConsumedTotal ?? 0) > 0
+        && (multiTickClosedLoopHardeningSummary?.feedbackIgnoredTotal ?? 0) > 0
+        && (multiTickClosedLoopHardeningSummary?.feedbackDedupedTotal ?? 0) > 0
+        && (multiTickClosedLoopHardeningSummary?.staleFeedbackIgnoredTotal ?? 0) > 0
+        && (multiTickClosedLoopHardeningSummary?.futureFeedbackIgnoredTotal ?? 0) > 0
+        && (multiTickClosedLoopHardeningSummary?.sameTickFeedbackIgnoredTotal ?? 0) > 0
+        && (multiTickClosedLoopHardeningSummary?.crossAgentLeakAttemptsTotal ?? 0) > 0
+        && multiTickClosedLoopHardeningSummary?.crossAgentFeedbackLeaksTotal == 0
+        && (multiTickClosedLoopHardeningSummary?.unknownAgentFeedbackIgnoredTotal ?? 0) > 0
+        && (multiTickClosedLoopHardeningSummary?.malformedFeedbackIgnoredTotal ?? 0) > 0
+        && (multiTickClosedLoopHardeningSummary?.missingFeedbackAllowedTotal ?? 0) > 0
+        && (multiTickClosedLoopHardeningSummary?.noIntentFromBlockedFeedbackTotal ?? 0) > 0
+        && (multiTickClosedLoopHardeningSummary?.movementIntentInputsTotal ?? 0) > 0
+        && (multiTickClosedLoopHardeningSummary?.tickApprovedTotal ?? 0) > 0
+        && (multiTickClosedLoopHardeningSummary?.tickDeniedConflictTotal ?? 0) > 0
+        && multiTickClosedLoopHardeningSummary?.tickDeniedCollisionTotal == 0
+        && (multiTickClosedLoopHardeningSummary?.feedbackEmittedTotal ?? 0) > 0
+        && multiTickClosedLoopHardeningSummary?.sameTickFeedbackConsumedTotal == 0
+        && multiTickClosedLoopHardeningSummary?.futureFeedbackConsumedTotal == 0
+        && (multiTickClosedLoopHardeningSummary?.repeatabilityChecks ?? 0) >= 1
+        && multiTickClosedLoopHardeningSummary?.repeatabilityFailures == 0
+        && multiTickClosedLoopHardeningSummary?.policyReadCollision == false
+        && multiTickClosedLoopHardeningSummary?.tickReadCollision == false
+        && multiTickClosedLoopHardeningSummary?.policyWorldUsed == false
+        && multiTickClosedLoopHardeningSummary?.tickWorldReadOnlyUsed == false
+        && multiTickClosedLoopHardeningSummary?.movementApplied == false
+        && multiTickClosedLoopHardeningSummary?.memoryUpdated == false
+        && multiTickClosedLoopHardeningSummary?.goalChanged == false
+        && multiTickClosedLoopHardeningSummary?.pathfindingPerformed == false
+        && multiTickClosedLoopHardeningSummary?.replanningPerformed == false
+        && multiTickClosedLoopHardeningSummary?.avoidancePerformed == false
+        && multiTickClosedLoopHardeningSummary?.reservationRuntimeUsed == false
+        && multiTickClosedLoopHardeningSummary?.routeFollowingUsed == false
+        && multiTickClosedLoopHardeningSummary?.worldMutated == false
+        && multiTickClosedLoopHardeningSummary?.mutationPerformed == false)
+    : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
@@ -2706,6 +2770,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (feedbackAwareIntentToTickLiveReadonlySuccess ?? true)
     && (feedbackAwareIntentToTickApprovedApplicationSuccess ?? true)
     && (multiTickClosedLoopSuccess ?? true)
+    && (multiTickClosedLoopHardeningSuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -3845,6 +3910,63 @@ if options.outPath != nil {
                 replanningPerformed: summary.replanningPerformed
             ))
         }
+        if let multiTickClosedLoopHardeningReport {
+            let summary = multiTickClosedLoopHardeningReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_multi_tick_closed_loop_hardening_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                requestedTicks: summary.requestedTicksTotal,
+                executedTicks: summary.executedTicksTotal,
+                requestedTicksTotal: summary.requestedTicksTotal,
+                executedTicksTotal: summary.executedTicksTotal,
+                success: multiTickClosedLoopHardeningSuccess,
+                passed: summary.passed,
+                failed: summary.failed,
+                cases: summary.cases,
+                feedbackIgnoredTotal: summary.feedbackIgnoredTotal,
+                contextsTotal: summary.contextsTotal,
+                feedbackConsumedTotal: summary.feedbackConsumedTotal,
+                noIntentFromBlockedFeedbackTotal: summary.noIntentFromBlockedFeedbackTotal,
+                agentsTotal: summary.agentsTotal,
+                movementIntentInputsTotal: summary.movementIntentInputsTotal,
+                tickDeniedConflictTotal: summary.tickDeniedConflictTotal,
+                tickDeniedCollisionTotal: summary.tickDeniedCollisionTotal,
+                tickApprovedTotal: summary.tickApprovedTotal,
+                tickDeniedTotal: summary.tickDeniedTotal,
+                feedbackEmittedTotal: summary.feedbackEmittedTotal,
+                policyReadCollision: summary.policyReadCollision,
+                policyWorldUsed: summary.policyWorldUsed,
+                tickWorldReadOnlyUsed: summary.tickWorldReadOnlyUsed,
+                worldMutated: summary.worldMutated,
+                feedbackCandidatesTotal: summary.feedbackCandidatesTotal,
+                feedbackDedupedTotal: summary.feedbackDedupedTotal,
+                missingFeedbackAllowedTotal: summary.missingFeedbackAllowedTotal,
+                staleFeedbackIgnoredTotal: summary.staleFeedbackIgnoredTotal,
+                futureFeedbackIgnoredTotal: summary.futureFeedbackIgnoredTotal,
+                sameTickFeedbackIgnoredTotal: summary.sameTickFeedbackIgnoredTotal,
+                crossAgentLeakAttemptsTotal: summary.crossAgentLeakAttemptsTotal,
+                unknownAgentFeedbackIgnoredTotal: summary.unknownAgentFeedbackIgnoredTotal,
+                malformedFeedbackIgnoredTotal: summary.malformedFeedbackIgnoredTotal,
+                sameTickFeedbackConsumedTotal: summary.sameTickFeedbackConsumedTotal,
+                crossAgentFeedbackLeaksTotal: summary.crossAgentFeedbackLeaksTotal,
+                futureFeedbackConsumedTotal: summary.futureFeedbackConsumedTotal,
+                repeatabilityChecks: summary.repeatabilityChecks,
+                repeatabilityFailures: summary.repeatabilityFailures,
+                routeFollowingUsed: summary.routeFollowingUsed,
+                tickReadCollision: summary.tickReadCollision,
+                worldUsed: summary.policyWorldUsed || summary.tickWorldReadOnlyUsed,
+                collisionRead: summary.policyReadCollision || summary.tickReadCollision,
+                movementApplied: summary.movementApplied,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                avoidancePerformed: summary.avoidancePerformed,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
+                replanningPerformed: summary.replanningPerformed
+            ))
+        }
         if let routeFollowingLiveSnapshot {
             try appendEvent(RunEvent(
                 type: "lab_route_following_recorded",
@@ -4730,6 +4852,28 @@ if let outPath = options.outPath {
             try writeJSON(
                 multiTickClosedLoopInvariantReport,
                 to: outURL.appendingPathComponent("multi_tick_closed_loop_invariant_report.json")
+            )
+        }
+        if let multiTickClosedLoopHardeningReport {
+            try writeJSON(
+                multiTickClosedLoopHardeningReport,
+                to: outURL.appendingPathComponent("multi_tick_closed_loop_hardening_report.json")
+            )
+            try writeJSON(
+                multiTickClosedLoopHardeningReport.cases,
+                to: outURL.appendingPathComponent("multi_tick_closed_loop_hardening_cases.json")
+            )
+        }
+        if let multiTickClosedLoopHardeningInvariantReport {
+            try writeJSON(
+                multiTickClosedLoopHardeningInvariantReport,
+                to: outURL.appendingPathComponent("multi_tick_closed_loop_hardening_invariant_report.json")
+            )
+        }
+        if let multiTickClosedLoopHardeningFeedbackReport {
+            try writeJSON(
+                multiTickClosedLoopHardeningFeedbackReport,
+                to: outURL.appendingPathComponent("multi_tick_closed_loop_hardening_feedback.json")
             )
         }
         if let routeFollowingLiveSnapshot {
@@ -5868,6 +6012,51 @@ if let outPath = options.outPath {
             multiTickClosedLoopWorldMutated: multiTickClosedLoopReport?.summary.worldMutated,
             multiTickClosedLoopMutationPerformed: multiTickClosedLoopReport?.summary.mutationPerformed,
             multiTickClosedLoopSuccess: multiTickClosedLoopSuccess,
+            multiTickClosedLoopHardeningCases: multiTickClosedLoopHardeningReport?.summary.cases,
+            multiTickClosedLoopHardeningPassed: multiTickClosedLoopHardeningReport?.summary.passed,
+            multiTickClosedLoopHardeningFailed: multiTickClosedLoopHardeningReport?.summary.failed,
+            multiTickClosedLoopHardeningRequestedTicksTotal: multiTickClosedLoopHardeningReport?.summary.requestedTicksTotal,
+            multiTickClosedLoopHardeningExecutedTicksTotal: multiTickClosedLoopHardeningReport?.summary.executedTicksTotal,
+            multiTickClosedLoopHardeningAgentsTotal: multiTickClosedLoopHardeningReport?.summary.agentsTotal,
+            multiTickClosedLoopHardeningContextsTotal: multiTickClosedLoopHardeningReport?.summary.contextsTotal,
+            multiTickClosedLoopHardeningFeedbackCandidatesTotal: multiTickClosedLoopHardeningReport?.summary.feedbackCandidatesTotal,
+            multiTickClosedLoopHardeningFeedbackConsumedTotal: multiTickClosedLoopHardeningReport?.summary.feedbackConsumedTotal,
+            multiTickClosedLoopHardeningFeedbackIgnoredTotal: multiTickClosedLoopHardeningReport?.summary.feedbackIgnoredTotal,
+            multiTickClosedLoopHardeningFeedbackDedupedTotal: multiTickClosedLoopHardeningReport?.summary.feedbackDedupedTotal,
+            multiTickClosedLoopHardeningMissingFeedbackAllowedTotal: multiTickClosedLoopHardeningReport?.summary.missingFeedbackAllowedTotal,
+            multiTickClosedLoopHardeningStaleFeedbackIgnoredTotal: multiTickClosedLoopHardeningReport?.summary.staleFeedbackIgnoredTotal,
+            multiTickClosedLoopHardeningFutureFeedbackIgnoredTotal: multiTickClosedLoopHardeningReport?.summary.futureFeedbackIgnoredTotal,
+            multiTickClosedLoopHardeningSameTickFeedbackIgnoredTotal: multiTickClosedLoopHardeningReport?.summary.sameTickFeedbackIgnoredTotal,
+            multiTickClosedLoopHardeningCrossAgentLeakAttemptsTotal: multiTickClosedLoopHardeningReport?.summary.crossAgentLeakAttemptsTotal,
+            multiTickClosedLoopHardeningCrossAgentFeedbackLeaksTotal: multiTickClosedLoopHardeningReport?.summary.crossAgentFeedbackLeaksTotal,
+            multiTickClosedLoopHardeningUnknownAgentFeedbackIgnoredTotal: multiTickClosedLoopHardeningReport?.summary.unknownAgentFeedbackIgnoredTotal,
+            multiTickClosedLoopHardeningMalformedFeedbackIgnoredTotal: multiTickClosedLoopHardeningReport?.summary.malformedFeedbackIgnoredTotal,
+            multiTickClosedLoopHardeningNoIntentFromBlockedFeedbackTotal: multiTickClosedLoopHardeningReport?.summary.noIntentFromBlockedFeedbackTotal,
+            multiTickClosedLoopHardeningMovementIntentInputsTotal: multiTickClosedLoopHardeningReport?.summary.movementIntentInputsTotal,
+            multiTickClosedLoopHardeningTickApprovedTotal: multiTickClosedLoopHardeningReport?.summary.tickApprovedTotal,
+            multiTickClosedLoopHardeningTickDeniedTotal: multiTickClosedLoopHardeningReport?.summary.tickDeniedTotal,
+            multiTickClosedLoopHardeningTickDeniedConflictTotal: multiTickClosedLoopHardeningReport?.summary.tickDeniedConflictTotal,
+            multiTickClosedLoopHardeningTickDeniedCollisionTotal: multiTickClosedLoopHardeningReport?.summary.tickDeniedCollisionTotal,
+            multiTickClosedLoopHardeningFeedbackEmittedTotal: multiTickClosedLoopHardeningReport?.summary.feedbackEmittedTotal,
+            multiTickClosedLoopHardeningSameTickFeedbackConsumedTotal: multiTickClosedLoopHardeningReport?.summary.sameTickFeedbackConsumedTotal,
+            multiTickClosedLoopHardeningFutureFeedbackConsumedTotal: multiTickClosedLoopHardeningReport?.summary.futureFeedbackConsumedTotal,
+            multiTickClosedLoopHardeningRepeatabilityChecks: multiTickClosedLoopHardeningReport?.summary.repeatabilityChecks,
+            multiTickClosedLoopHardeningRepeatabilityFailures: multiTickClosedLoopHardeningReport?.summary.repeatabilityFailures,
+            multiTickClosedLoopHardeningPolicyReadCollision: multiTickClosedLoopHardeningReport?.summary.policyReadCollision,
+            multiTickClosedLoopHardeningTickReadCollision: multiTickClosedLoopHardeningReport?.summary.tickReadCollision,
+            multiTickClosedLoopHardeningPolicyWorldUsed: multiTickClosedLoopHardeningReport?.summary.policyWorldUsed,
+            multiTickClosedLoopHardeningTickWorldReadOnlyUsed: multiTickClosedLoopHardeningReport?.summary.tickWorldReadOnlyUsed,
+            multiTickClosedLoopHardeningMovementApplied: multiTickClosedLoopHardeningReport?.summary.movementApplied,
+            multiTickClosedLoopHardeningMemoryUpdated: multiTickClosedLoopHardeningReport?.summary.memoryUpdated,
+            multiTickClosedLoopHardeningGoalChanged: multiTickClosedLoopHardeningReport?.summary.goalChanged,
+            multiTickClosedLoopHardeningPathfindingPerformed: multiTickClosedLoopHardeningReport?.summary.pathfindingPerformed,
+            multiTickClosedLoopHardeningReplanningPerformed: multiTickClosedLoopHardeningReport?.summary.replanningPerformed,
+            multiTickClosedLoopHardeningAvoidancePerformed: multiTickClosedLoopHardeningReport?.summary.avoidancePerformed,
+            multiTickClosedLoopHardeningReservationRuntimeUsed: multiTickClosedLoopHardeningReport?.summary.reservationRuntimeUsed,
+            multiTickClosedLoopHardeningRouteFollowingUsed: multiTickClosedLoopHardeningReport?.summary.routeFollowingUsed,
+            multiTickClosedLoopHardeningWorldMutated: multiTickClosedLoopHardeningReport?.summary.worldMutated,
+            multiTickClosedLoopHardeningMutationPerformed: multiTickClosedLoopHardeningReport?.summary.mutationPerformed,
+            multiTickClosedLoopHardeningSuccess: multiTickClosedLoopHardeningSuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,
