@@ -865,6 +865,43 @@ struct RunMetrics: Encodable {
     let feedbackAwareIntentPolicyFixtureWorldUsed: Bool?
     let feedbackAwareIntentPolicyFixtureMutationPerformed: Bool?
     let feedbackAwareIntentPolicyFixtureSuccess: Bool?
+    let feedbackAwareIntentPolicyHardeningCases: Int?
+    let feedbackAwareIntentPolicyHardeningPassed: Int?
+    let feedbackAwareIntentPolicyHardeningFailed: Int?
+    let feedbackAwareIntentPolicyHardeningContextsTotal: Int?
+    let feedbackAwareIntentPolicyHardeningContextsWithFeedbackTotal: Int?
+    let feedbackAwareIntentPolicyHardeningContextsWithoutFeedbackTotal: Int?
+    let feedbackAwareIntentPolicyHardeningBaselineProposalsTotal: Int?
+    let feedbackAwareIntentPolicyHardeningFeedbackAwareProposalsTotal: Int?
+    let feedbackAwareIntentPolicyHardeningAcceptedIntentsTotal: Int?
+    let feedbackAwareIntentPolicyHardeningRejectedProposalsTotal: Int?
+    let feedbackAwareIntentPolicyHardeningNoIntentTotal: Int?
+    let feedbackAwareIntentPolicyHardeningInvalidOneEdgeProposalsTotal: Int?
+    let feedbackAwareIntentPolicyHardeningFeedbackReactionsTotal: Int?
+    let feedbackAwareIntentPolicyHardeningBehaviorChangedByFeedback: Bool?
+    let feedbackAwareIntentPolicyHardeningBehaviorChangedCountTotal: Int?
+    let feedbackAwareIntentPolicyHardeningNoFeedbackBaselineKeptTotal: Int?
+    let feedbackAwareIntentPolicyHardeningMovedBaselineKeptTotal: Int?
+    let feedbackAwareIntentPolicyHardeningApprovedForMovementBaselineKeptTotal: Int?
+    let feedbackAwareIntentPolicyHardeningBlockedByCollisionNoIntentTotal: Int?
+    let feedbackAwareIntentPolicyHardeningBlockedByAgentConflictNoIntentTotal: Int?
+    let feedbackAwareIntentPolicyHardeningBlockedBySourceMismatchNoIntentTotal: Int?
+    let feedbackAwareIntentPolicyHardeningBlockedByDivergenceNoIntentTotal: Int?
+    let feedbackAwareIntentPolicyHardeningBlockedByStaleIntentNoIntentTotal: Int?
+    let feedbackAwareIntentPolicyHardeningBlockedByInvalidEdgeNoIntentTotal: Int?
+    let feedbackAwareIntentPolicyHardeningBlockedByMaxAgentsNoIntentTotal: Int?
+    let feedbackAwareIntentPolicyHardeningFeedbackUsedForDecision: Bool?
+    let feedbackAwareIntentPolicyHardeningCollisionRead: Bool?
+    let feedbackAwareIntentPolicyHardeningMovementApplied: Bool?
+    let feedbackAwareIntentPolicyHardeningMemoryUpdated: Bool?
+    let feedbackAwareIntentPolicyHardeningGoalChanged: Bool?
+    let feedbackAwareIntentPolicyHardeningPathfindingPerformed: Bool?
+    let feedbackAwareIntentPolicyHardeningReplanningPerformed: Bool?
+    let feedbackAwareIntentPolicyHardeningAvoidancePerformed: Bool?
+    let feedbackAwareIntentPolicyHardeningReservationRuntimeUsed: Bool?
+    let feedbackAwareIntentPolicyHardeningWorldUsed: Bool?
+    let feedbackAwareIntentPolicyHardeningMutationPerformed: Bool?
+    let feedbackAwareIntentPolicyHardeningSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -1730,6 +1767,43 @@ struct RunMetrics: Encodable {
         feedbackAwareIntentPolicyFixtureWorldUsed: Bool? = nil,
         feedbackAwareIntentPolicyFixtureMutationPerformed: Bool? = nil,
         feedbackAwareIntentPolicyFixtureSuccess: Bool? = nil,
+        feedbackAwareIntentPolicyHardeningCases: Int? = nil,
+        feedbackAwareIntentPolicyHardeningPassed: Int? = nil,
+        feedbackAwareIntentPolicyHardeningFailed: Int? = nil,
+        feedbackAwareIntentPolicyHardeningContextsTotal: Int? = nil,
+        feedbackAwareIntentPolicyHardeningContextsWithFeedbackTotal: Int? = nil,
+        feedbackAwareIntentPolicyHardeningContextsWithoutFeedbackTotal: Int? = nil,
+        feedbackAwareIntentPolicyHardeningBaselineProposalsTotal: Int? = nil,
+        feedbackAwareIntentPolicyHardeningFeedbackAwareProposalsTotal: Int? = nil,
+        feedbackAwareIntentPolicyHardeningAcceptedIntentsTotal: Int? = nil,
+        feedbackAwareIntentPolicyHardeningRejectedProposalsTotal: Int? = nil,
+        feedbackAwareIntentPolicyHardeningNoIntentTotal: Int? = nil,
+        feedbackAwareIntentPolicyHardeningInvalidOneEdgeProposalsTotal: Int? = nil,
+        feedbackAwareIntentPolicyHardeningFeedbackReactionsTotal: Int? = nil,
+        feedbackAwareIntentPolicyHardeningBehaviorChangedByFeedback: Bool? = nil,
+        feedbackAwareIntentPolicyHardeningBehaviorChangedCountTotal: Int? = nil,
+        feedbackAwareIntentPolicyHardeningNoFeedbackBaselineKeptTotal: Int? = nil,
+        feedbackAwareIntentPolicyHardeningMovedBaselineKeptTotal: Int? = nil,
+        feedbackAwareIntentPolicyHardeningApprovedForMovementBaselineKeptTotal: Int? = nil,
+        feedbackAwareIntentPolicyHardeningBlockedByCollisionNoIntentTotal: Int? = nil,
+        feedbackAwareIntentPolicyHardeningBlockedByAgentConflictNoIntentTotal: Int? = nil,
+        feedbackAwareIntentPolicyHardeningBlockedBySourceMismatchNoIntentTotal: Int? = nil,
+        feedbackAwareIntentPolicyHardeningBlockedByDivergenceNoIntentTotal: Int? = nil,
+        feedbackAwareIntentPolicyHardeningBlockedByStaleIntentNoIntentTotal: Int? = nil,
+        feedbackAwareIntentPolicyHardeningBlockedByInvalidEdgeNoIntentTotal: Int? = nil,
+        feedbackAwareIntentPolicyHardeningBlockedByMaxAgentsNoIntentTotal: Int? = nil,
+        feedbackAwareIntentPolicyHardeningFeedbackUsedForDecision: Bool? = nil,
+        feedbackAwareIntentPolicyHardeningCollisionRead: Bool? = nil,
+        feedbackAwareIntentPolicyHardeningMovementApplied: Bool? = nil,
+        feedbackAwareIntentPolicyHardeningMemoryUpdated: Bool? = nil,
+        feedbackAwareIntentPolicyHardeningGoalChanged: Bool? = nil,
+        feedbackAwareIntentPolicyHardeningPathfindingPerformed: Bool? = nil,
+        feedbackAwareIntentPolicyHardeningReplanningPerformed: Bool? = nil,
+        feedbackAwareIntentPolicyHardeningAvoidancePerformed: Bool? = nil,
+        feedbackAwareIntentPolicyHardeningReservationRuntimeUsed: Bool? = nil,
+        feedbackAwareIntentPolicyHardeningWorldUsed: Bool? = nil,
+        feedbackAwareIntentPolicyHardeningMutationPerformed: Bool? = nil,
+        feedbackAwareIntentPolicyHardeningSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -2594,6 +2668,43 @@ struct RunMetrics: Encodable {
         self.feedbackAwareIntentPolicyFixtureWorldUsed = feedbackAwareIntentPolicyFixtureWorldUsed
         self.feedbackAwareIntentPolicyFixtureMutationPerformed = feedbackAwareIntentPolicyFixtureMutationPerformed
         self.feedbackAwareIntentPolicyFixtureSuccess = feedbackAwareIntentPolicyFixtureSuccess
+        self.feedbackAwareIntentPolicyHardeningCases = feedbackAwareIntentPolicyHardeningCases
+        self.feedbackAwareIntentPolicyHardeningPassed = feedbackAwareIntentPolicyHardeningPassed
+        self.feedbackAwareIntentPolicyHardeningFailed = feedbackAwareIntentPolicyHardeningFailed
+        self.feedbackAwareIntentPolicyHardeningContextsTotal = feedbackAwareIntentPolicyHardeningContextsTotal
+        self.feedbackAwareIntentPolicyHardeningContextsWithFeedbackTotal = feedbackAwareIntentPolicyHardeningContextsWithFeedbackTotal
+        self.feedbackAwareIntentPolicyHardeningContextsWithoutFeedbackTotal = feedbackAwareIntentPolicyHardeningContextsWithoutFeedbackTotal
+        self.feedbackAwareIntentPolicyHardeningBaselineProposalsTotal = feedbackAwareIntentPolicyHardeningBaselineProposalsTotal
+        self.feedbackAwareIntentPolicyHardeningFeedbackAwareProposalsTotal = feedbackAwareIntentPolicyHardeningFeedbackAwareProposalsTotal
+        self.feedbackAwareIntentPolicyHardeningAcceptedIntentsTotal = feedbackAwareIntentPolicyHardeningAcceptedIntentsTotal
+        self.feedbackAwareIntentPolicyHardeningRejectedProposalsTotal = feedbackAwareIntentPolicyHardeningRejectedProposalsTotal
+        self.feedbackAwareIntentPolicyHardeningNoIntentTotal = feedbackAwareIntentPolicyHardeningNoIntentTotal
+        self.feedbackAwareIntentPolicyHardeningInvalidOneEdgeProposalsTotal = feedbackAwareIntentPolicyHardeningInvalidOneEdgeProposalsTotal
+        self.feedbackAwareIntentPolicyHardeningFeedbackReactionsTotal = feedbackAwareIntentPolicyHardeningFeedbackReactionsTotal
+        self.feedbackAwareIntentPolicyHardeningBehaviorChangedByFeedback = feedbackAwareIntentPolicyHardeningBehaviorChangedByFeedback
+        self.feedbackAwareIntentPolicyHardeningBehaviorChangedCountTotal = feedbackAwareIntentPolicyHardeningBehaviorChangedCountTotal
+        self.feedbackAwareIntentPolicyHardeningNoFeedbackBaselineKeptTotal = feedbackAwareIntentPolicyHardeningNoFeedbackBaselineKeptTotal
+        self.feedbackAwareIntentPolicyHardeningMovedBaselineKeptTotal = feedbackAwareIntentPolicyHardeningMovedBaselineKeptTotal
+        self.feedbackAwareIntentPolicyHardeningApprovedForMovementBaselineKeptTotal = feedbackAwareIntentPolicyHardeningApprovedForMovementBaselineKeptTotal
+        self.feedbackAwareIntentPolicyHardeningBlockedByCollisionNoIntentTotal = feedbackAwareIntentPolicyHardeningBlockedByCollisionNoIntentTotal
+        self.feedbackAwareIntentPolicyHardeningBlockedByAgentConflictNoIntentTotal = feedbackAwareIntentPolicyHardeningBlockedByAgentConflictNoIntentTotal
+        self.feedbackAwareIntentPolicyHardeningBlockedBySourceMismatchNoIntentTotal = feedbackAwareIntentPolicyHardeningBlockedBySourceMismatchNoIntentTotal
+        self.feedbackAwareIntentPolicyHardeningBlockedByDivergenceNoIntentTotal = feedbackAwareIntentPolicyHardeningBlockedByDivergenceNoIntentTotal
+        self.feedbackAwareIntentPolicyHardeningBlockedByStaleIntentNoIntentTotal = feedbackAwareIntentPolicyHardeningBlockedByStaleIntentNoIntentTotal
+        self.feedbackAwareIntentPolicyHardeningBlockedByInvalidEdgeNoIntentTotal = feedbackAwareIntentPolicyHardeningBlockedByInvalidEdgeNoIntentTotal
+        self.feedbackAwareIntentPolicyHardeningBlockedByMaxAgentsNoIntentTotal = feedbackAwareIntentPolicyHardeningBlockedByMaxAgentsNoIntentTotal
+        self.feedbackAwareIntentPolicyHardeningFeedbackUsedForDecision = feedbackAwareIntentPolicyHardeningFeedbackUsedForDecision
+        self.feedbackAwareIntentPolicyHardeningCollisionRead = feedbackAwareIntentPolicyHardeningCollisionRead
+        self.feedbackAwareIntentPolicyHardeningMovementApplied = feedbackAwareIntentPolicyHardeningMovementApplied
+        self.feedbackAwareIntentPolicyHardeningMemoryUpdated = feedbackAwareIntentPolicyHardeningMemoryUpdated
+        self.feedbackAwareIntentPolicyHardeningGoalChanged = feedbackAwareIntentPolicyHardeningGoalChanged
+        self.feedbackAwareIntentPolicyHardeningPathfindingPerformed = feedbackAwareIntentPolicyHardeningPathfindingPerformed
+        self.feedbackAwareIntentPolicyHardeningReplanningPerformed = feedbackAwareIntentPolicyHardeningReplanningPerformed
+        self.feedbackAwareIntentPolicyHardeningAvoidancePerformed = feedbackAwareIntentPolicyHardeningAvoidancePerformed
+        self.feedbackAwareIntentPolicyHardeningReservationRuntimeUsed = feedbackAwareIntentPolicyHardeningReservationRuntimeUsed
+        self.feedbackAwareIntentPolicyHardeningWorldUsed = feedbackAwareIntentPolicyHardeningWorldUsed
+        self.feedbackAwareIntentPolicyHardeningMutationPerformed = feedbackAwareIntentPolicyHardeningMutationPerformed
+        self.feedbackAwareIntentPolicyHardeningSuccess = feedbackAwareIntentPolicyHardeningSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

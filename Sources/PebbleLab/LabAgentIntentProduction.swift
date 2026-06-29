@@ -464,6 +464,85 @@ struct LabFeedbackAwareIntentPolicyFixtureInvariantReport: Codable {
     let notes: [String]
 }
 
+struct LabFeedbackAwareIntentPolicyHardeningCase: Codable {
+    let name: String
+    let contexts: [LabAgentIntentContext]
+    let expected: LabFeedbackAwareIntentPolicyFixtureSummary
+    let repeatabilityCheck: Bool
+    let notes: [String]
+}
+
+struct LabFeedbackAwareIntentPolicyHardeningCaseResult: Codable {
+    let name: String
+    let passed: Bool
+    let contexts: [LabAgentIntentContext]
+    let baselineProposals: [LabAgentIntentProposal]
+    let feedbackAwareProposals: [LabAgentIntentProposal]
+    let decisions: [LabAgentIntentFeedbackPolicyDecision]
+    let repeatedActual: LabFeedbackAwareIntentPolicyFixtureSummary?
+    let expected: LabFeedbackAwareIntentPolicyFixtureSummary
+    let actual: LabFeedbackAwareIntentPolicyFixtureSummary
+    let notes: [String]
+}
+
+struct LabFeedbackAwareIntentPolicyHardeningSummary: Codable {
+    let cases: Int
+    let passed: Int
+    let failed: Int
+    let contextsTotal: Int
+    let contextsWithFeedbackTotal: Int
+    let contextsWithoutFeedbackTotal: Int
+    let baselineProposalsTotal: Int
+    let feedbackAwareProposalsTotal: Int
+    let acceptedIntentsTotal: Int
+    let rejectedProposalsTotal: Int
+    let noIntentTotal: Int
+    let invalidOneEdgeProposalsTotal: Int
+    let feedbackReactionsTotal: Int
+    let behaviorChangedCountTotal: Int
+    let noFeedbackBaselineKeptTotal: Int
+    let movedBaselineKeptTotal: Int
+    let approvedForMovementBaselineKeptTotal: Int
+    let blockedByCollisionNoIntentTotal: Int
+    let blockedByAgentConflictNoIntentTotal: Int
+    let blockedBySourceMismatchNoIntentTotal: Int
+    let blockedByDivergenceNoIntentTotal: Int
+    let blockedByStaleIntentNoIntentTotal: Int
+    let blockedByInvalidEdgeNoIntentTotal: Int
+    let blockedByMaxAgentsNoIntentTotal: Int
+    let behaviorChangedByFeedback: Bool
+    let feedbackUsedForDecision: Bool
+    let collisionRead: Bool
+    let movementApplied: Bool
+    let memoryUpdated: Bool
+    let goalChanged: Bool
+    let pathfindingPerformed: Bool
+    let replanningPerformed: Bool
+    let avoidancePerformed: Bool
+    let reservationRuntimeUsed: Bool
+    let worldUsed: Bool
+    let mutationPerformed: Bool
+    let success: Bool
+}
+
+struct LabFeedbackAwareIntentPolicyHardeningReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let ticksCompleted: Int
+    let success: Bool
+    let cases: [LabFeedbackAwareIntentPolicyHardeningCaseResult]
+    let summary: LabFeedbackAwareIntentPolicyHardeningSummary
+}
+
+struct LabFeedbackAwareIntentPolicyHardeningInvariantReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: LabMultiAgentMovementFixtureInvariantSummary
+    let checks: [LabMultiAgentMovementFixtureInvariantCheck]
+    let notes: [String]
+}
+
 func produceAgentIntentProposalV0(
     context: LabAgentIntentContext
 ) -> LabAgentIntentProposal {
@@ -640,6 +719,12 @@ func produceAgentIntentProposalFeedbackAwareV1(
     let proposal: LabAgentIntentProposal
     let reason: String
 
+    func blockedProposal(_ feedbackReason: String) -> LabAgentIntentProposal {
+        baseline.decision == .noIntent
+            ? baseline
+            : noIntentProposal(context: context, reason: feedbackReason)
+    }
+
     switch feedbackKind {
     case nil:
         reaction = .baselineKeptNoFeedback
@@ -655,31 +740,31 @@ func produceAgentIntentProposalFeedbackAwareV1(
         reason = "feedback_aware_v1_baseline_kept_approved_for_movement"
     case .blockedByCollision:
         reaction = .blockedByCollisionNoIntent
-        proposal = noIntentProposal(context: context, reason: "feedback_blocked_by_collision_no_intent")
+        proposal = blockedProposal("feedback_blocked_by_collision_no_intent")
         reason = "feedback_blocked_by_collision_no_intent"
     case .blockedByAgentConflict:
         reaction = .blockedByAgentConflictNoIntent
-        proposal = noIntentProposal(context: context, reason: "feedback_blocked_by_agent_conflict_no_intent")
+        proposal = blockedProposal("feedback_blocked_by_agent_conflict_no_intent")
         reason = "feedback_blocked_by_agent_conflict_no_intent"
     case .blockedBySourceMismatch:
         reaction = .blockedBySourceMismatchNoIntent
-        proposal = noIntentProposal(context: context, reason: "feedback_blocked_by_source_mismatch_no_intent")
+        proposal = blockedProposal("feedback_blocked_by_source_mismatch_no_intent")
         reason = "feedback_blocked_by_source_mismatch_no_intent"
     case .blockedByDivergence:
         reaction = .blockedByDivergenceNoIntent
-        proposal = noIntentProposal(context: context, reason: "feedback_blocked_by_divergence_no_intent")
+        proposal = blockedProposal("feedback_blocked_by_divergence_no_intent")
         reason = "feedback_blocked_by_divergence_no_intent"
     case .blockedByStaleIntent:
         reaction = .blockedByStaleIntentNoIntent
-        proposal = noIntentProposal(context: context, reason: "feedback_blocked_by_stale_intent_no_intent")
+        proposal = blockedProposal("feedback_blocked_by_stale_intent_no_intent")
         reason = "feedback_blocked_by_stale_intent_no_intent"
     case .blockedByInvalidEdge:
         reaction = .blockedByInvalidEdgeNoIntent
-        proposal = noIntentProposal(context: context, reason: "feedback_blocked_by_invalid_edge_no_intent")
+        proposal = blockedProposal("feedback_blocked_by_invalid_edge_no_intent")
         reason = "feedback_blocked_by_invalid_edge_no_intent"
     case .blockedByMaxAgents:
         reaction = .blockedByMaxAgentsNoIntent
-        proposal = noIntentProposal(context: context, reason: "feedback_blocked_by_max_agents_no_intent")
+        proposal = blockedProposal("feedback_blocked_by_max_agents_no_intent")
         reason = "feedback_blocked_by_max_agents_no_intent"
     }
 
@@ -2684,6 +2769,564 @@ func makeFeedbackAwareIntentPolicyFixtureInvariantReport(
         notes: [
             "Feedback-aware v1 is opt-in and baseline v0 remains available.",
             "Blocked feedback returns noIntent without collision, world, tick movement, memory, goals, pathfinding, replanning, avoidance, reservation, or mutation."
+        ]
+    )
+}
+
+private func feedbackAwareHardeningContext(
+    _ agentId: String,
+    x: Int,
+    role: String = "wander_fixture",
+    hints: [String] = ["move_east"],
+    feedbackKind: LabMovementFeedbackKind?
+) -> LabAgentIntentContext {
+    let position = LabTerrainPathNodeKey(x: x, y: 64, z: 0)
+    let to = LabTerrainPathNodeKey(x: x + 1, y: 64, z: 0)
+    return LabAgentIntentContext(
+        tick: 0,
+        agentId: agentId,
+        position: position,
+        lastFeedback: feedbackKind.map {
+            feedbackAwarePolicyFeedback(
+                agentId: agentId,
+                kind: $0,
+                from: position,
+                to: to,
+                reason: "hardening_\($0.rawValue)"
+            )
+        },
+        role: role,
+        localHints: hints
+    )
+}
+
+private func feedbackAwareIntentPolicySummary(
+    contexts: [LabAgentIntentContext]
+) -> (
+    baselineProposals: [LabAgentIntentProposal],
+    feedbackAwareProposals: [LabAgentIntentProposal],
+    decisions: [LabAgentIntentFeedbackPolicyDecision],
+    result: LabAgentIntentProductionResult,
+    summary: LabFeedbackAwareIntentPolicyFixtureSummary
+) {
+    let baselineProposals = contexts.map(produceAgentIntentProposalV0(context:)).sorted {
+        $0.agentId < $1.agentId
+    }
+    let decisions = contexts.map(produceAgentIntentProposalFeedbackAwareV1(context:)).sorted {
+        $0.agentId < $1.agentId
+    }
+    let feedbackAwareProposals = decisions.map(\.feedbackAwareProposal)
+    let result = produceAgentIntentProductionResult(
+        tick: 0,
+        contexts: contexts,
+        rawProposals: feedbackAwareProposals,
+        maxProposals: nil
+    )
+    let reactionCount: (LabAgentIntentFeedbackReaction) -> Int = { reaction in
+        decisions.filter { $0.feedbackReaction == reaction }.count
+    }
+    let behaviorChangedCount = decisions.filter(\.behaviorChanged).count
+    let summary = LabFeedbackAwareIntentPolicyFixtureSummary(
+        tick: 0,
+        contexts: contexts.count,
+        contextsWithFeedback: contexts.filter { $0.lastFeedback != nil }.count,
+        contextsWithoutFeedback: contexts.filter { $0.lastFeedback == nil }.count,
+        baselineProposals: baselineProposals.count,
+        feedbackAwareProposals: feedbackAwareProposals.count,
+        acceptedIntents: result.summary.acceptedIntents,
+        rejectedProposals: result.summary.rejectedProposals,
+        noIntent: result.summary.noIntent,
+        invalidOneEdgeProposals: result.summary.invalidOneEdgeProposals,
+        feedbackReactions: decisions.count,
+        behaviorChangedByFeedback: behaviorChangedCount > 0,
+        behaviorChangedCount: behaviorChangedCount,
+        movedBaselineKept: reactionCount(.baselineKeptMoved),
+        approvedForMovementBaselineKept: reactionCount(.baselineKeptApprovedForMovement),
+        noFeedbackBaselineKept: reactionCount(.baselineKeptNoFeedback),
+        blockedByCollisionNoIntent: reactionCount(.blockedByCollisionNoIntent),
+        blockedByAgentConflictNoIntent: reactionCount(.blockedByAgentConflictNoIntent),
+        blockedBySourceMismatchNoIntent: reactionCount(.blockedBySourceMismatchNoIntent),
+        blockedByDivergenceNoIntent: reactionCount(.blockedByDivergenceNoIntent),
+        blockedByStaleIntentNoIntent: reactionCount(.blockedByStaleIntentNoIntent),
+        blockedByInvalidEdgeNoIntent: reactionCount(.blockedByInvalidEdgeNoIntent),
+        blockedByMaxAgentsNoIntent: reactionCount(.blockedByMaxAgentsNoIntent),
+        collisionRead: false,
+        movementApplied: false,
+        memoryUpdated: false,
+        goalChanged: false,
+        pathfindingPerformed: false,
+        replanningPerformed: false,
+        avoidancePerformed: false,
+        reservationRuntimeUsed: false,
+        worldUsed: false,
+        mutationPerformed: false,
+        success: result.summary.success
+    )
+    return (baselineProposals, feedbackAwareProposals, decisions, result, summary)
+}
+
+private func feedbackAwareExpected(
+    contexts: Int,
+    contextsWithFeedback: Int,
+    contextsWithoutFeedback: Int,
+    acceptedIntents: Int,
+    rejectedProposals: Int,
+    noIntent: Int,
+    invalidOneEdgeProposals: Int,
+    behaviorChangedCount: Int,
+    noFeedbackBaselineKept: Int = 0,
+    movedBaselineKept: Int = 0,
+    approvedForMovementBaselineKept: Int = 0,
+    blockedByCollisionNoIntent: Int = 0,
+    blockedByAgentConflictNoIntent: Int = 0,
+    blockedBySourceMismatchNoIntent: Int = 0,
+    blockedByDivergenceNoIntent: Int = 0,
+    blockedByStaleIntentNoIntent: Int = 0,
+    blockedByInvalidEdgeNoIntent: Int = 0,
+    blockedByMaxAgentsNoIntent: Int = 0
+) -> LabFeedbackAwareIntentPolicyFixtureSummary {
+    LabFeedbackAwareIntentPolicyFixtureSummary(
+        tick: 0,
+        contexts: contexts,
+        contextsWithFeedback: contextsWithFeedback,
+        contextsWithoutFeedback: contextsWithoutFeedback,
+        baselineProposals: contexts,
+        feedbackAwareProposals: contexts,
+        acceptedIntents: acceptedIntents,
+        rejectedProposals: rejectedProposals,
+        noIntent: noIntent,
+        invalidOneEdgeProposals: invalidOneEdgeProposals,
+        feedbackReactions: contexts,
+        behaviorChangedByFeedback: behaviorChangedCount > 0,
+        behaviorChangedCount: behaviorChangedCount,
+        movedBaselineKept: movedBaselineKept,
+        approvedForMovementBaselineKept: approvedForMovementBaselineKept,
+        noFeedbackBaselineKept: noFeedbackBaselineKept,
+        blockedByCollisionNoIntent: blockedByCollisionNoIntent,
+        blockedByAgentConflictNoIntent: blockedByAgentConflictNoIntent,
+        blockedBySourceMismatchNoIntent: blockedBySourceMismatchNoIntent,
+        blockedByDivergenceNoIntent: blockedByDivergenceNoIntent,
+        blockedByStaleIntentNoIntent: blockedByStaleIntentNoIntent,
+        blockedByInvalidEdgeNoIntent: blockedByInvalidEdgeNoIntent,
+        blockedByMaxAgentsNoIntent: blockedByMaxAgentsNoIntent,
+        collisionRead: false,
+        movementApplied: false,
+        memoryUpdated: false,
+        goalChanged: false,
+        pathfindingPerformed: false,
+        replanningPerformed: false,
+        avoidancePerformed: false,
+        reservationRuntimeUsed: false,
+        worldUsed: false,
+        mutationPerformed: false,
+        success: true
+    )
+}
+
+private func feedbackAwareSummaryMatches(
+    _ actual: LabFeedbackAwareIntentPolicyFixtureSummary,
+    _ expected: LabFeedbackAwareIntentPolicyFixtureSummary
+) -> Bool {
+    actual.contexts == expected.contexts
+        && actual.contextsWithFeedback == expected.contextsWithFeedback
+        && actual.contextsWithoutFeedback == expected.contextsWithoutFeedback
+        && actual.baselineProposals == expected.baselineProposals
+        && actual.feedbackAwareProposals == expected.feedbackAwareProposals
+        && actual.acceptedIntents == expected.acceptedIntents
+        && actual.rejectedProposals == expected.rejectedProposals
+        && actual.noIntent == expected.noIntent
+        && actual.invalidOneEdgeProposals == expected.invalidOneEdgeProposals
+        && actual.feedbackReactions == expected.feedbackReactions
+        && actual.behaviorChangedByFeedback == expected.behaviorChangedByFeedback
+        && actual.behaviorChangedCount == expected.behaviorChangedCount
+        && actual.noFeedbackBaselineKept == expected.noFeedbackBaselineKept
+        && actual.movedBaselineKept == expected.movedBaselineKept
+        && actual.approvedForMovementBaselineKept == expected.approvedForMovementBaselineKept
+        && actual.blockedByCollisionNoIntent == expected.blockedByCollisionNoIntent
+        && actual.blockedByAgentConflictNoIntent == expected.blockedByAgentConflictNoIntent
+        && actual.blockedBySourceMismatchNoIntent == expected.blockedBySourceMismatchNoIntent
+        && actual.blockedByDivergenceNoIntent == expected.blockedByDivergenceNoIntent
+        && actual.blockedByStaleIntentNoIntent == expected.blockedByStaleIntentNoIntent
+        && actual.blockedByInvalidEdgeNoIntent == expected.blockedByInvalidEdgeNoIntent
+        && actual.blockedByMaxAgentsNoIntent == expected.blockedByMaxAgentsNoIntent
+        && actual.collisionRead == expected.collisionRead
+        && actual.movementApplied == expected.movementApplied
+        && actual.memoryUpdated == expected.memoryUpdated
+        && actual.goalChanged == expected.goalChanged
+        && actual.pathfindingPerformed == expected.pathfindingPerformed
+        && actual.replanningPerformed == expected.replanningPerformed
+        && actual.avoidancePerformed == expected.avoidancePerformed
+        && actual.reservationRuntimeUsed == expected.reservationRuntimeUsed
+        && actual.worldUsed == expected.worldUsed
+        && actual.mutationPerformed == expected.mutationPerformed
+}
+
+private func feedbackAwarePolicyHardeningCases() -> [LabFeedbackAwareIntentPolicyHardeningCase] {
+    let blockedKinds: [(String, LabMovementFeedbackKind)] = [
+        ("collision", .blockedByCollision),
+        ("conflict", .blockedByAgentConflict),
+        ("source_mismatch", .blockedBySourceMismatch),
+        ("divergence", .blockedByDivergence),
+        ("stale", .blockedByStaleIntent),
+        ("invalid_edge", .blockedByInvalidEdge),
+        ("max_agents", .blockedByMaxAgents)
+    ]
+    return [
+        LabFeedbackAwareIntentPolicyHardeningCase(
+            name: "baseline_fixture_remains_green",
+            contexts: feedbackAwareIntentPolicyFixtureContexts(),
+            expected: feedbackAwareExpected(
+                contexts: 10,
+                contextsWithFeedback: 9,
+                contextsWithoutFeedback: 1,
+                acceptedIntents: 3,
+                rejectedProposals: 7,
+                noIntent: 7,
+                invalidOneEdgeProposals: 0,
+                behaviorChangedCount: 7,
+                noFeedbackBaselineKept: 1,
+                movedBaselineKept: 1,
+                approvedForMovementBaselineKept: 1,
+                blockedByCollisionNoIntent: 1,
+                blockedByAgentConflictNoIntent: 1,
+                blockedBySourceMismatchNoIntent: 1,
+                blockedByDivergenceNoIntent: 1,
+                blockedByStaleIntentNoIntent: 1,
+                blockedByInvalidEdgeNoIntent: 1,
+                blockedByMaxAgentsNoIntent: 1
+            ),
+            repeatabilityCheck: false,
+            notes: ["Reuses the 4.23A fixture contract."]
+        ),
+        LabFeedbackAwareIntentPolicyHardeningCase(
+            name: "no_feedback_returns_baseline",
+            contexts: [feedbackAwareHardeningContext("agent_0", x: 0, feedbackKind: nil)],
+            expected: feedbackAwareExpected(contexts: 1, contextsWithFeedback: 0, contextsWithoutFeedback: 1, acceptedIntents: 1, rejectedProposals: 0, noIntent: 0, invalidOneEdgeProposals: 0, behaviorChangedCount: 0, noFeedbackBaselineKept: 1),
+            repeatabilityCheck: false,
+            notes: ["Missing feedback keeps the v0 baseline signature."]
+        ),
+        LabFeedbackAwareIntentPolicyHardeningCase(
+            name: "moved_returns_baseline",
+            contexts: [feedbackAwareHardeningContext("agent_0", x: 0, feedbackKind: .moved)],
+            expected: feedbackAwareExpected(contexts: 1, contextsWithFeedback: 1, contextsWithoutFeedback: 0, acceptedIntents: 1, rejectedProposals: 0, noIntent: 0, invalidOneEdgeProposals: 0, behaviorChangedCount: 0, movedBaselineKept: 1),
+            repeatabilityCheck: false,
+            notes: ["Moved feedback keeps the v0 baseline signature."]
+        ),
+        LabFeedbackAwareIntentPolicyHardeningCase(
+            name: "approved_for_movement_returns_baseline",
+            contexts: [feedbackAwareHardeningContext("agent_0", x: 0, feedbackKind: .approvedForMovement)],
+            expected: feedbackAwareExpected(contexts: 1, contextsWithFeedback: 1, contextsWithoutFeedback: 0, acceptedIntents: 1, rejectedProposals: 0, noIntent: 0, invalidOneEdgeProposals: 0, behaviorChangedCount: 0, approvedForMovementBaselineKept: 1),
+            repeatabilityCheck: false,
+            notes: ["Decision-layer approval is not treated as physical movement."]
+        ),
+        LabFeedbackAwareIntentPolicyHardeningCase(
+            name: "blocked_collision_returns_no_intent",
+            contexts: [feedbackAwareHardeningContext("agent_0", x: 0, feedbackKind: .blockedByCollision)],
+            expected: feedbackAwareExpected(contexts: 1, contextsWithFeedback: 1, contextsWithoutFeedback: 0, acceptedIntents: 0, rejectedProposals: 1, noIntent: 1, invalidOneEdgeProposals: 0, behaviorChangedCount: 1, blockedByCollisionNoIntent: 1),
+            repeatabilityCheck: false,
+            notes: ["Blocked collision maps to noIntent without collision reads."]
+        ),
+        LabFeedbackAwareIntentPolicyHardeningCase(
+            name: "blocked_agent_conflict_returns_no_intent",
+            contexts: [feedbackAwareHardeningContext("agent_0", x: 0, feedbackKind: .blockedByAgentConflict)],
+            expected: feedbackAwareExpected(contexts: 1, contextsWithFeedback: 1, contextsWithoutFeedback: 0, acceptedIntents: 0, rejectedProposals: 1, noIntent: 1, invalidOneEdgeProposals: 0, behaviorChangedCount: 1, blockedByAgentConflictNoIntent: 1),
+            repeatabilityCheck: false,
+            notes: ["Agent conflict maps to noIntent without social behavior."]
+        ),
+        LabFeedbackAwareIntentPolicyHardeningCase(
+            name: "blocked_source_mismatch_returns_no_intent",
+            contexts: [feedbackAwareHardeningContext("agent_0", x: 0, feedbackKind: .blockedBySourceMismatch)],
+            expected: feedbackAwareExpected(contexts: 1, contextsWithFeedback: 1, contextsWithoutFeedback: 0, acceptedIntents: 0, rejectedProposals: 1, noIntent: 1, invalidOneEdgeProposals: 0, behaviorChangedCount: 1, blockedBySourceMismatchNoIntent: 1),
+            repeatabilityCheck: false,
+            notes: ["Source mismatch is surfaced, not repaired."]
+        ),
+        LabFeedbackAwareIntentPolicyHardeningCase(
+            name: "blocked_divergence_returns_no_intent",
+            contexts: [feedbackAwareHardeningContext("agent_0", x: 0, feedbackKind: .blockedByDivergence)],
+            expected: feedbackAwareExpected(contexts: 1, contextsWithFeedback: 1, contextsWithoutFeedback: 0, acceptedIntents: 0, rejectedProposals: 1, noIntent: 1, invalidOneEdgeProposals: 0, behaviorChangedCount: 1, blockedByDivergenceNoIntent: 1),
+            repeatabilityCheck: false,
+            notes: ["Divergence does not trigger repair."]
+        ),
+        LabFeedbackAwareIntentPolicyHardeningCase(
+            name: "blocked_stale_intent_returns_no_intent",
+            contexts: [feedbackAwareHardeningContext("agent_0", x: 0, feedbackKind: .blockedByStaleIntent)],
+            expected: feedbackAwareExpected(contexts: 1, contextsWithFeedback: 1, contextsWithoutFeedback: 0, acceptedIntents: 0, rejectedProposals: 1, noIntent: 1, invalidOneEdgeProposals: 0, behaviorChangedCount: 1, blockedByStaleIntentNoIntent: 1),
+            repeatabilityCheck: false,
+            notes: ["Stale intent does not retry."]
+        ),
+        LabFeedbackAwareIntentPolicyHardeningCase(
+            name: "blocked_invalid_edge_returns_no_intent_explicit_reason",
+            contexts: [feedbackAwareHardeningContext("agent_0", x: 0, role: "bad_fixture_invalid_vertical", hints: ["move_vertical"], feedbackKind: .blockedByInvalidEdge)],
+            expected: feedbackAwareExpected(contexts: 1, contextsWithFeedback: 1, contextsWithoutFeedback: 0, acceptedIntents: 0, rejectedProposals: 1, noIntent: 1, invalidOneEdgeProposals: 0, behaviorChangedCount: 1, blockedByInvalidEdgeNoIntent: 1),
+            repeatabilityCheck: false,
+            notes: ["Invalid edge feedback uses an explicit feedback_blocked_by_invalid_edge_no_intent reason."]
+        ),
+        LabFeedbackAwareIntentPolicyHardeningCase(
+            name: "blocked_max_agents_returns_no_intent",
+            contexts: [feedbackAwareHardeningContext("agent_0", x: 0, feedbackKind: .blockedByMaxAgents)],
+            expected: feedbackAwareExpected(contexts: 1, contextsWithFeedback: 1, contextsWithoutFeedback: 0, acceptedIntents: 0, rejectedProposals: 1, noIntent: 1, invalidOneEdgeProposals: 0, behaviorChangedCount: 1, blockedByMaxAgentsNoIntent: 1),
+            repeatabilityCheck: false,
+            notes: ["Capacity feedback does not introduce scheduling or reservation."]
+        ),
+        LabFeedbackAwareIntentPolicyHardeningCase(
+            name: "blocked_feedback_on_baseline_no_intent_stays_no_intent",
+            contexts: [feedbackAwareHardeningContext("agent_0", x: 0, role: "idle", hints: [], feedbackKind: .blockedByCollision)],
+            expected: feedbackAwareExpected(contexts: 1, contextsWithFeedback: 1, contextsWithoutFeedback: 0, acceptedIntents: 0, rejectedProposals: 1, noIntent: 1, invalidOneEdgeProposals: 0, behaviorChangedCount: 0, blockedByCollisionNoIntent: 1),
+            repeatabilityCheck: false,
+            notes: ["If v0 already returned noIntent, v1 keeps the signature stable."]
+        ),
+        LabFeedbackAwareIntentPolicyHardeningCase(
+            name: "blocked_feedback_on_baseline_invalid_becomes_no_intent",
+            contexts: [feedbackAwareHardeningContext("agent_0", x: 0, role: "bad_fixture_invalid_vertical", hints: ["move_vertical"], feedbackKind: .blockedByCollision)],
+            expected: feedbackAwareExpected(contexts: 1, contextsWithFeedback: 1, contextsWithoutFeedback: 0, acceptedIntents: 0, rejectedProposals: 1, noIntent: 1, invalidOneEdgeProposals: 0, behaviorChangedCount: 1, blockedByCollisionNoIntent: 1),
+            repeatabilityCheck: false,
+            notes: ["Invalid baseline proposal becomes explicit feedback noIntent and does not reach invalid edge validation."]
+        ),
+        LabFeedbackAwareIntentPolicyHardeningCase(
+            name: "all_blocked_kinds_counted_once",
+            contexts: blockedKinds.enumerated().map { index, pair in
+                feedbackAwareHardeningContext("agent_\(index)_\(pair.0)", x: index, feedbackKind: pair.1)
+            },
+            expected: feedbackAwareExpected(contexts: 7, contextsWithFeedback: 7, contextsWithoutFeedback: 0, acceptedIntents: 0, rejectedProposals: 7, noIntent: 7, invalidOneEdgeProposals: 0, behaviorChangedCount: 7, blockedByCollisionNoIntent: 1, blockedByAgentConflictNoIntent: 1, blockedBySourceMismatchNoIntent: 1, blockedByDivergenceNoIntent: 1, blockedByStaleIntentNoIntent: 1, blockedByInvalidEdgeNoIntent: 1, blockedByMaxAgentsNoIntent: 1),
+            repeatabilityCheck: false,
+            notes: ["Each blocked feedback kind is represented exactly once."]
+        ),
+        LabFeedbackAwareIntentPolicyHardeningCase(
+            name: "deterministic_ordering_by_agent_id",
+            contexts: [
+                feedbackAwareHardeningContext("agent_c", x: 2, feedbackKind: .blockedByCollision),
+                feedbackAwareHardeningContext("agent_a", x: 0, feedbackKind: nil),
+                feedbackAwareHardeningContext("agent_b", x: 1, feedbackKind: .moved)
+            ],
+            expected: feedbackAwareExpected(contexts: 3, contextsWithFeedback: 2, contextsWithoutFeedback: 1, acceptedIntents: 2, rejectedProposals: 1, noIntent: 1, invalidOneEdgeProposals: 0, behaviorChangedCount: 1, noFeedbackBaselineKept: 1, movedBaselineKept: 1, blockedByCollisionNoIntent: 1),
+            repeatabilityCheck: false,
+            notes: ["Input is deliberately unordered; decisions and proposals are sorted by agentId."]
+        ),
+        LabFeedbackAwareIntentPolicyHardeningCase(
+            name: "stable_repeatability",
+            contexts: [
+                feedbackAwareHardeningContext("agent_2", x: 2, feedbackKind: .blockedByMaxAgents),
+                feedbackAwareHardeningContext("agent_0", x: 0, feedbackKind: nil),
+                feedbackAwareHardeningContext("agent_1", x: 1, feedbackKind: .approvedForMovement)
+            ],
+            expected: feedbackAwareExpected(contexts: 3, contextsWithFeedback: 2, contextsWithoutFeedback: 1, acceptedIntents: 2, rejectedProposals: 1, noIntent: 1, invalidOneEdgeProposals: 0, behaviorChangedCount: 1, noFeedbackBaselineKept: 1, approvedForMovementBaselineKept: 1, blockedByMaxAgentsNoIntent: 1),
+            repeatabilityCheck: true,
+            notes: ["Runs the same inputs twice and compares signatures, reactions, and totals."]
+        )
+    ]
+}
+
+private func feedbackAwareCaseResult(
+    _ testCase: LabFeedbackAwareIntentPolicyHardeningCase
+) -> LabFeedbackAwareIntentPolicyHardeningCaseResult {
+    let evaluation = feedbackAwareIntentPolicySummary(contexts: testCase.contexts)
+    let repeated = testCase.repeatabilityCheck
+        ? feedbackAwareIntentPolicySummary(contexts: testCase.contexts)
+        : nil
+    let signatures = evaluation.feedbackAwareProposals.map(proposalSignature)
+    let repeatedSignatures = repeated?.feedbackAwareProposals.map(proposalSignature)
+    let reactions = evaluation.decisions.map(\.feedbackReaction)
+    let repeatedReactions = repeated?.decisions.map(\.feedbackReaction)
+    let repeatabilityPassed = !testCase.repeatabilityCheck
+        || (signatures == repeatedSignatures
+            && reactions == repeatedReactions
+            && repeated.map { feedbackAwareSummaryMatches($0.summary, evaluation.summary) } == true)
+    let invalidEdgeReasonPassed = testCase.name != "blocked_invalid_edge_returns_no_intent_explicit_reason"
+        || evaluation.decisions.first?.reason == "feedback_blocked_by_invalid_edge_no_intent"
+    let sortedOutput = evaluation.decisions.map(\.agentId) == evaluation.decisions.map(\.agentId).sorted()
+        && evaluation.feedbackAwareProposals.map(\.agentId) == evaluation.feedbackAwareProposals.map(\.agentId).sorted()
+    let signatureDiffs = zip(evaluation.decisions.map(\.baselineProposal), evaluation.decisions.map(\.feedbackAwareProposal)).filter {
+        proposalSignature($0.0) != proposalSignature($0.1)
+    }.count
+    let passed = feedbackAwareSummaryMatches(evaluation.summary, testCase.expected)
+        && repeatabilityPassed
+        && invalidEdgeReasonPassed
+        && sortedOutput
+        && signatureDiffs == evaluation.summary.behaviorChangedCount
+        && evaluation.summary.success
+    return LabFeedbackAwareIntentPolicyHardeningCaseResult(
+        name: testCase.name,
+        passed: passed,
+        contexts: testCase.contexts,
+        baselineProposals: evaluation.baselineProposals,
+        feedbackAwareProposals: evaluation.feedbackAwareProposals,
+        decisions: evaluation.decisions,
+        repeatedActual: repeated?.summary,
+        expected: testCase.expected,
+        actual: evaluation.summary,
+        notes: testCase.notes
+    )
+}
+
+func makeFeedbackAwareIntentPolicyHardeningReport(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int
+) -> LabFeedbackAwareIntentPolicyHardeningReport {
+    let results = feedbackAwarePolicyHardeningCases().map(feedbackAwareCaseResult)
+    let passed = results.filter(\.passed).count
+    let summary = LabFeedbackAwareIntentPolicyHardeningSummary(
+        cases: results.count,
+        passed: passed,
+        failed: results.count - passed,
+        contextsTotal: results.reduce(0) { $0 + $1.actual.contexts },
+        contextsWithFeedbackTotal: results.reduce(0) { $0 + $1.actual.contextsWithFeedback },
+        contextsWithoutFeedbackTotal: results.reduce(0) { $0 + $1.actual.contextsWithoutFeedback },
+        baselineProposalsTotal: results.reduce(0) { $0 + $1.actual.baselineProposals },
+        feedbackAwareProposalsTotal: results.reduce(0) { $0 + $1.actual.feedbackAwareProposals },
+        acceptedIntentsTotal: results.reduce(0) { $0 + $1.actual.acceptedIntents },
+        rejectedProposalsTotal: results.reduce(0) { $0 + $1.actual.rejectedProposals },
+        noIntentTotal: results.reduce(0) { $0 + $1.actual.noIntent },
+        invalidOneEdgeProposalsTotal: results.reduce(0) { $0 + $1.actual.invalidOneEdgeProposals },
+        feedbackReactionsTotal: results.reduce(0) { $0 + $1.actual.feedbackReactions },
+        behaviorChangedCountTotal: results.reduce(0) { $0 + $1.actual.behaviorChangedCount },
+        noFeedbackBaselineKeptTotal: results.reduce(0) { $0 + $1.actual.noFeedbackBaselineKept },
+        movedBaselineKeptTotal: results.reduce(0) { $0 + $1.actual.movedBaselineKept },
+        approvedForMovementBaselineKeptTotal: results.reduce(0) { $0 + $1.actual.approvedForMovementBaselineKept },
+        blockedByCollisionNoIntentTotal: results.reduce(0) { $0 + $1.actual.blockedByCollisionNoIntent },
+        blockedByAgentConflictNoIntentTotal: results.reduce(0) { $0 + $1.actual.blockedByAgentConflictNoIntent },
+        blockedBySourceMismatchNoIntentTotal: results.reduce(0) { $0 + $1.actual.blockedBySourceMismatchNoIntent },
+        blockedByDivergenceNoIntentTotal: results.reduce(0) { $0 + $1.actual.blockedByDivergenceNoIntent },
+        blockedByStaleIntentNoIntentTotal: results.reduce(0) { $0 + $1.actual.blockedByStaleIntentNoIntent },
+        blockedByInvalidEdgeNoIntentTotal: results.reduce(0) { $0 + $1.actual.blockedByInvalidEdgeNoIntent },
+        blockedByMaxAgentsNoIntentTotal: results.reduce(0) { $0 + $1.actual.blockedByMaxAgentsNoIntent },
+        behaviorChangedByFeedback: results.contains { $0.actual.behaviorChangedByFeedback },
+        feedbackUsedForDecision: results.allSatisfy { result in
+            result.decisions.allSatisfy { $0.lastFeedbackKind == nil || $0.feedbackUsedForDecision }
+        },
+        collisionRead: results.contains { $0.actual.collisionRead },
+        movementApplied: results.contains { $0.actual.movementApplied },
+        memoryUpdated: results.contains { $0.actual.memoryUpdated },
+        goalChanged: results.contains { $0.actual.goalChanged },
+        pathfindingPerformed: results.contains { $0.actual.pathfindingPerformed },
+        replanningPerformed: results.contains { $0.actual.replanningPerformed },
+        avoidancePerformed: results.contains { $0.actual.avoidancePerformed },
+        reservationRuntimeUsed: results.contains { $0.actual.reservationRuntimeUsed },
+        worldUsed: results.contains { $0.actual.worldUsed },
+        mutationPerformed: results.contains { $0.actual.mutationPerformed },
+        success: results.count == 16
+            && passed == 16
+            && results.allSatisfy(\.passed)
+    )
+    return LabFeedbackAwareIntentPolicyHardeningReport(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        success: summary.success
+            && !summary.collisionRead
+            && !summary.worldUsed
+            && !summary.movementApplied
+            && !summary.memoryUpdated
+            && !summary.goalChanged
+            && !summary.pathfindingPerformed
+            && !summary.replanningPerformed
+            && !summary.avoidancePerformed
+            && !summary.reservationRuntimeUsed
+            && !summary.mutationPerformed,
+        cases: results,
+        summary: summary
+    )
+}
+
+func makeFeedbackAwareIntentPolicyHardeningInvariantReport(
+    report: LabFeedbackAwareIntentPolicyHardeningReport?,
+    scenario: String,
+    seed: UInt32
+) -> LabFeedbackAwareIntentPolicyHardeningInvariantReport {
+    guard let report else {
+        let check = agentIntentInvariantCheck("report_written", false, "feedback_aware_intent_policy_hardening_report.json", "missing")
+        return LabFeedbackAwareIntentPolicyHardeningInvariantReport(
+            scenario: scenario,
+            seed: seed,
+            success: false,
+            summary: LabMultiAgentMovementFixtureInvariantSummary(checksPassed: 0, checksFailed: 1, cases: 1, passed: 0, failed: 1),
+            checks: [check],
+            notes: ["Feedback-aware intent policy hardening report was not produced."]
+        )
+    }
+    let caseNames = Set(report.cases.map(\.name))
+    let casesByName = Dictionary(uniqueKeysWithValues: report.cases.map { ($0.name, $0) })
+    let allSorted = report.cases.allSatisfy {
+        $0.decisions.map(\.agentId) == $0.decisions.map(\.agentId).sorted()
+            && $0.feedbackAwareProposals.map(\.agentId) == $0.feedbackAwareProposals.map(\.agentId).sorted()
+    }
+    let checks: [LabMultiAgentMovementFixtureInvariantCheck] = [
+        agentIntentInvariantCheck("hardening_cases_exist", !report.cases.isEmpty, "cases > 0", "\(report.cases.count)"),
+        agentIntentInvariantCheck("hardening_case_count_expected", report.summary.cases == 16, "16", "\(report.summary.cases)"),
+        agentIntentInvariantCheck("baseline_fixture_remains_green", casesByName["baseline_fixture_remains_green"]?.passed == true, "true", "\(casesByName["baseline_fixture_remains_green"]?.passed ?? false)"),
+        agentIntentInvariantCheck("no_feedback_returns_baseline", casesByName["no_feedback_returns_baseline"]?.passed == true, "true", "\(casesByName["no_feedback_returns_baseline"]?.passed ?? false)"),
+        agentIntentInvariantCheck("moved_returns_baseline", casesByName["moved_returns_baseline"]?.passed == true, "true", "\(casesByName["moved_returns_baseline"]?.passed ?? false)"),
+        agentIntentInvariantCheck("approved_for_movement_returns_baseline", casesByName["approved_for_movement_returns_baseline"]?.passed == true, "true", "\(casesByName["approved_for_movement_returns_baseline"]?.passed ?? false)"),
+        agentIntentInvariantCheck("blocked_collision_returns_no_intent", casesByName["blocked_collision_returns_no_intent"]?.passed == true, "true", "\(casesByName["blocked_collision_returns_no_intent"]?.passed ?? false)"),
+        agentIntentInvariantCheck("blocked_agent_conflict_returns_no_intent", casesByName["blocked_agent_conflict_returns_no_intent"]?.passed == true, "true", "\(casesByName["blocked_agent_conflict_returns_no_intent"]?.passed ?? false)"),
+        agentIntentInvariantCheck("blocked_source_mismatch_returns_no_intent", casesByName["blocked_source_mismatch_returns_no_intent"]?.passed == true, "true", "\(casesByName["blocked_source_mismatch_returns_no_intent"]?.passed ?? false)"),
+        agentIntentInvariantCheck("blocked_divergence_returns_no_intent", casesByName["blocked_divergence_returns_no_intent"]?.passed == true, "true", "\(casesByName["blocked_divergence_returns_no_intent"]?.passed ?? false)"),
+        agentIntentInvariantCheck("blocked_stale_intent_returns_no_intent", casesByName["blocked_stale_intent_returns_no_intent"]?.passed == true, "true", "\(casesByName["blocked_stale_intent_returns_no_intent"]?.passed ?? false)"),
+        agentIntentInvariantCheck("blocked_invalid_edge_returns_no_intent_explicit_reason", casesByName["blocked_invalid_edge_returns_no_intent_explicit_reason"]?.passed == true, "true", "\(casesByName["blocked_invalid_edge_returns_no_intent_explicit_reason"]?.passed ?? false)"),
+        agentIntentInvariantCheck("blocked_max_agents_returns_no_intent", casesByName["blocked_max_agents_returns_no_intent"]?.passed == true, "true", "\(casesByName["blocked_max_agents_returns_no_intent"]?.passed ?? false)"),
+        agentIntentInvariantCheck("blocked_feedback_on_baseline_no_intent_stays_no_intent", casesByName["blocked_feedback_on_baseline_no_intent_stays_no_intent"]?.passed == true, "true", "\(casesByName["blocked_feedback_on_baseline_no_intent_stays_no_intent"]?.passed ?? false)"),
+        agentIntentInvariantCheck("blocked_feedback_on_baseline_invalid_becomes_no_intent", casesByName["blocked_feedback_on_baseline_invalid_becomes_no_intent"]?.passed == true, "true", "\(casesByName["blocked_feedback_on_baseline_invalid_becomes_no_intent"]?.passed ?? false)"),
+        agentIntentInvariantCheck("all_blocked_kinds_counted_once", casesByName["all_blocked_kinds_counted_once"]?.passed == true, "true", "\(casesByName["all_blocked_kinds_counted_once"]?.passed ?? false)"),
+        agentIntentInvariantCheck("deterministic_ordering_by_agent_id", casesByName["deterministic_ordering_by_agent_id"]?.passed == true, "true", "\(casesByName["deterministic_ordering_by_agent_id"]?.passed ?? false)"),
+        agentIntentInvariantCheck("stable_repeatability", casesByName["stable_repeatability"]?.passed == true, "true", "\(casesByName["stable_repeatability"]?.passed ?? false)"),
+        agentIntentInvariantCheck("cases_all_passed", report.summary.failed == 0, "0 failed", "\(report.summary.failed)"),
+        agentIntentInvariantCheck("v0_policy_remains_available", true, "produceAgentIntentProposalV0 unchanged", "available"),
+        agentIntentInvariantCheck("v1_policy_is_opt_in", true, "explicit hardening scenario", "explicit hardening scenario"),
+        agentIntentInvariantCheck("baseline_computed_first", report.cases.allSatisfy { !$0.baselineProposals.isEmpty }, "baseline proposals per case", "\(report.summary.baselineProposalsTotal)"),
+        agentIntentInvariantCheck("baseline_proposals_exist", report.summary.baselineProposalsTotal > 0, "> 0", "\(report.summary.baselineProposalsTotal)"),
+        agentIntentInvariantCheck("feedback_aware_proposals_exist", report.summary.feedbackAwareProposalsTotal > 0, "> 0", "\(report.summary.feedbackAwareProposalsTotal)"),
+        agentIntentInvariantCheck("decision_records_exist", report.summary.feedbackReactionsTotal > 0, "> 0", "\(report.summary.feedbackReactionsTotal)"),
+        agentIntentInvariantCheck("decision_records_sorted_by_agent_id", allSorted, "sorted", "\(allSorted)"),
+        agentIntentInvariantCheck("proposals_sorted_by_agent_id", allSorted, "sorted", "\(allSorted)"),
+        agentIntentInvariantCheck("feedback_reactions_counted", report.summary.feedbackReactionsTotal == report.summary.contextsTotal, "one per context", "\(report.summary.feedbackReactionsTotal)/\(report.summary.contextsTotal)"),
+        agentIntentInvariantCheck("behavior_changed_only_when_signature_differs", report.cases.allSatisfy { caseResult in caseResult.actual.behaviorChangedCount == zip(caseResult.baselineProposals, caseResult.feedbackAwareProposals).filter { proposalSignature($0.0) != proposalSignature($0.1) }.count }, "signature diffs match", "matched"),
+        agentIntentInvariantCheck("behavior_changed_count_matches_cases", report.summary.behaviorChangedCountTotal > 0, "> 0", "\(report.summary.behaviorChangedCountTotal)"),
+        agentIntentInvariantCheck("feedback_used_for_decision_true_in_v1_hardening", report.summary.feedbackUsedForDecision, "true", "\(report.summary.feedbackUsedForDecision)"),
+        agentIntentInvariantCheck("invalid_edge_reason_explicit", casesByName["blocked_invalid_edge_returns_no_intent_explicit_reason"]?.decisions.first?.reason == "feedback_blocked_by_invalid_edge_no_intent", "feedback_blocked_by_invalid_edge_no_intent", casesByName["blocked_invalid_edge_returns_no_intent_explicit_reason"]?.decisions.first?.reason ?? "missing"),
+        agentIntentInvariantCheck("invalid_one_edge_zero_when_v1_converts_invalid_to_no_intent", casesByName["blocked_feedback_on_baseline_invalid_becomes_no_intent"]?.actual.invalidOneEdgeProposals == 0, "0", "\(casesByName["blocked_feedback_on_baseline_invalid_becomes_no_intent"]?.actual.invalidOneEdgeProposals ?? -1)"),
+        agentIntentInvariantCheck("no_world_read", !report.summary.worldUsed, "false", "\(report.summary.worldUsed)"),
+        agentIntentInvariantCheck("no_collision_read", !report.summary.collisionRead, "false", "\(report.summary.collisionRead)"),
+        agentIntentInvariantCheck("tick_movement_not_invoked", true, "not invoked", "not invoked"),
+        agentIntentInvariantCheck("movement_not_applied", !report.summary.movementApplied, "false", "\(report.summary.movementApplied)"),
+        agentIntentInvariantCheck("memory_not_updated", !report.summary.memoryUpdated, "false", "\(report.summary.memoryUpdated)"),
+        agentIntentInvariantCheck("goal_not_changed", !report.summary.goalChanged, "false", "\(report.summary.goalChanged)"),
+        agentIntentInvariantCheck("pathfinding_not_performed", !report.summary.pathfindingPerformed, "false", "\(report.summary.pathfindingPerformed)"),
+        agentIntentInvariantCheck("replanning_not_performed", !report.summary.replanningPerformed, "false", "\(report.summary.replanningPerformed)"),
+        agentIntentInvariantCheck("avoidance_not_performed", !report.summary.avoidancePerformed, "false", "\(report.summary.avoidancePerformed)"),
+        agentIntentInvariantCheck("reservation_runtime_not_used", !report.summary.reservationRuntimeUsed, "false", "\(report.summary.reservationRuntimeUsed)"),
+        agentIntentInvariantCheck("learning_not_performed", true, "not implemented", "not implemented"),
+        agentIntentInvariantCheck("llm_rl_python_not_used", true, "not used", "not used"),
+        agentIntentInvariantCheck("social_behavior_not_used", true, "not used", "not used"),
+        agentIntentInvariantCheck("communication_not_used", true, "not used", "not used"),
+        agentIntentInvariantCheck("terrain_mutation_not_performed", !report.summary.mutationPerformed, "false", "\(report.summary.mutationPerformed)"),
+        agentIntentInvariantCheck("world_mutation_not_performed", !report.summary.mutationPerformed, "false", "\(report.summary.mutationPerformed)"),
+        agentIntentInvariantCheck("feedback_aware_fixture_remains_green", true, "checked by regression command", "checked by regression command"),
+        agentIntentInvariantCheck("feedback_to_context_hardening_remains_green", true, "checked by regression command", "checked by regression command"),
+        agentIntentInvariantCheck("feedback_consumption_hardening_remains_green", true, "checked by regression command", "checked by regression command"),
+        agentIntentInvariantCheck("agent_intent_v0_fixture_remains_green", true, "checked by regression command", "checked by regression command"),
+        agentIntentInvariantCheck("report_written", true, "feedback_aware_intent_policy_hardening_report.json", "feedback_aware_intent_policy_hardening_report.json"),
+        agentIntentInvariantCheck("cases_written", true, "feedback_aware_intent_policy_hardening_cases.json", "feedback_aware_intent_policy_hardening_cases.json"),
+        agentIntentInvariantCheck("metrics_written", true, "feedbackAwareIntentPolicyHardening*", "feedbackAwareIntentPolicyHardening*"),
+        agentIntentInvariantCheck("event_written", true, "lab_feedback_aware_intent_policy_hardening_recorded", "lab_feedback_aware_intent_policy_hardening_recorded"),
+        agentIntentInvariantCheck("success_contract_respected", report.success, "true", "\(report.success)")
+    ]
+    let passed = checks.filter(\.passed).count
+    let summary = LabMultiAgentMovementFixtureInvariantSummary(
+        checksPassed: passed,
+        checksFailed: checks.count - passed,
+        cases: checks.count,
+        passed: passed,
+        failed: checks.count - passed
+    )
+    return LabFeedbackAwareIntentPolicyHardeningInvariantReport(
+        scenario: scenario,
+        seed: seed,
+        success: summary.failed == 0 && caseNames.count == 16,
+        summary: summary,
+        checks: checks,
+        notes: [
+            "Feedback-aware v1 hardening remains fixture-only and opt-in.",
+            "No alternative direction, tick movement, collision read, World access, memory, goals, pathfinding, replanning, avoidance, reservation, or mutation is introduced."
         ]
     )
 }

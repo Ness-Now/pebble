@@ -42,6 +42,8 @@ let isFeedbackToAgentIntentContextHardeningScenario = options.scenario
     == "feedback_to_agent_intent_context_hardening_smoke"
 let isFeedbackAwareIntentPolicyFixtureScenario = options.scenario
     == "feedback_aware_intent_policy_fixture_smoke"
+let isFeedbackAwareIntentPolicyHardeningScenario = options.scenario
+    == "feedback_aware_intent_policy_hardening_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -57,7 +59,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isAgentFeedbackConsumptionHardeningScenario
     || isFeedbackToAgentIntentContextFixtureScenario
     || isFeedbackToAgentIntentContextHardeningScenario
-    || isFeedbackAwareIntentPolicyFixtureScenario)
+    || isFeedbackAwareIntentPolicyFixtureScenario
+    || isFeedbackAwareIntentPolicyHardeningScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -706,7 +709,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isAgentFeedbackConsumptionHardeningScenario
     || isFeedbackToAgentIntentContextFixtureScenario
     || isFeedbackToAgentIntentContextHardeningScenario
-    || isFeedbackAwareIntentPolicyFixtureScenario {
+    || isFeedbackAwareIntentPolicyFixtureScenario
+    || isFeedbackAwareIntentPolicyHardeningScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -2009,6 +2013,50 @@ let feedbackAwareIntentPolicyFixtureSuccess =
             && feedbackAwareIntentPolicyFixtureSummary?.reservationRuntimeUsed == false
             && feedbackAwareIntentPolicyFixtureSummary?.mutationPerformed == false)
         : nil
+let feedbackAwareIntentPolicyHardeningReport =
+    isFeedbackAwareIntentPolicyHardeningScenario
+        ? makeFeedbackAwareIntentPolicyHardeningReport(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticksCompleted: ticksCompleted
+        )
+        : nil
+let feedbackAwareIntentPolicyHardeningInvariantReport =
+    isFeedbackAwareIntentPolicyHardeningScenario
+        ? makeFeedbackAwareIntentPolicyHardeningInvariantReport(
+            report: feedbackAwareIntentPolicyHardeningReport,
+            scenario: options.scenario,
+            seed: options.seed
+        )
+        : nil
+let feedbackAwareIntentPolicyHardeningSummary = feedbackAwareIntentPolicyHardeningReport?.summary
+let feedbackAwareIntentPolicyHardeningSuccess =
+    isFeedbackAwareIntentPolicyHardeningScenario
+        ? ((feedbackAwareIntentPolicyHardeningReport?.success ?? false)
+            && (feedbackAwareIntentPolicyHardeningInvariantReport?.success ?? false)
+            && feedbackAwareIntentPolicyHardeningSummary?.cases == 16
+            && feedbackAwareIntentPolicyHardeningSummary?.passed == 16
+            && feedbackAwareIntentPolicyHardeningSummary?.failed == 0
+            && feedbackAwareIntentPolicyHardeningSummary?.feedbackUsedForDecision == true
+            && (feedbackAwareIntentPolicyHardeningSummary?.behaviorChangedCountTotal ?? 0) > 0
+            && (feedbackAwareIntentPolicyHardeningSummary?.blockedByCollisionNoIntentTotal ?? 0) > 0
+            && (feedbackAwareIntentPolicyHardeningSummary?.blockedByAgentConflictNoIntentTotal ?? 0) > 0
+            && (feedbackAwareIntentPolicyHardeningSummary?.blockedBySourceMismatchNoIntentTotal ?? 0) > 0
+            && (feedbackAwareIntentPolicyHardeningSummary?.blockedByDivergenceNoIntentTotal ?? 0) > 0
+            && (feedbackAwareIntentPolicyHardeningSummary?.blockedByStaleIntentNoIntentTotal ?? 0) > 0
+            && (feedbackAwareIntentPolicyHardeningSummary?.blockedByInvalidEdgeNoIntentTotal ?? 0) > 0
+            && (feedbackAwareIntentPolicyHardeningSummary?.blockedByMaxAgentsNoIntentTotal ?? 0) > 0
+            && feedbackAwareIntentPolicyHardeningSummary?.collisionRead == false
+            && feedbackAwareIntentPolicyHardeningSummary?.worldUsed == false
+            && feedbackAwareIntentPolicyHardeningSummary?.movementApplied == false
+            && feedbackAwareIntentPolicyHardeningSummary?.memoryUpdated == false
+            && feedbackAwareIntentPolicyHardeningSummary?.goalChanged == false
+            && feedbackAwareIntentPolicyHardeningSummary?.pathfindingPerformed == false
+            && feedbackAwareIntentPolicyHardeningSummary?.replanningPerformed == false
+            && feedbackAwareIntentPolicyHardeningSummary?.avoidancePerformed == false
+            && feedbackAwareIntentPolicyHardeningSummary?.reservationRuntimeUsed == false
+            && feedbackAwareIntentPolicyHardeningSummary?.mutationPerformed == false)
+        : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
@@ -2397,6 +2445,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (feedbackToAgentIntentContextFixtureSuccess ?? true)
     && (feedbackToAgentIntentContextHardeningSuccess ?? true)
     && (feedbackAwareIntentPolicyFixtureSuccess ?? true)
+    && (feedbackAwareIntentPolicyHardeningSuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -3247,6 +3296,73 @@ if options.outPath != nil {
                 replanningPerformed: summary.replanningPerformed
             ))
         }
+        if let feedbackAwareIntentPolicyHardeningReport {
+            let summary = feedbackAwareIntentPolicyHardeningReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_feedback_aware_intent_policy_hardening_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: feedbackAwareIntentPolicyHardeningSuccess,
+                passed: summary.passed,
+                failed: summary.failed,
+                cases: summary.cases,
+                contexts: summary.contextsTotal,
+                baselineProposals: summary.baselineProposalsTotal,
+                feedbackAwareProposals: summary.feedbackAwareProposalsTotal,
+                acceptedIntents: summary.acceptedIntentsTotal,
+                rejectedProposals: summary.rejectedProposalsTotal,
+                noIntent: summary.noIntentTotal,
+                invalidOneEdgeProposals: summary.invalidOneEdgeProposalsTotal,
+                intentContexts: summary.contextsTotal,
+                contextsWithFeedback: summary.contextsWithFeedbackTotal,
+                contextsWithoutFeedback: summary.contextsWithoutFeedbackTotal,
+                behaviorChangedByFeedback: summary.behaviorChangedByFeedback,
+                behaviorChangedCount: summary.behaviorChangedCountTotal,
+                feedbackUsedForDecision: summary.feedbackUsedForDecision,
+                feedbackReactions: summary.feedbackReactionsTotal,
+                noFeedbackBaselineKept: summary.noFeedbackBaselineKeptTotal,
+                movedBaselineKept: summary.movedBaselineKeptTotal,
+                approvedForMovementBaselineKept: summary.approvedForMovementBaselineKeptTotal,
+                blockedByCollisionNoIntent: summary.blockedByCollisionNoIntentTotal,
+                blockedByAgentConflictNoIntent: summary.blockedByAgentConflictNoIntentTotal,
+                blockedBySourceMismatchNoIntent: summary.blockedBySourceMismatchNoIntentTotal,
+                blockedByDivergenceNoIntent: summary.blockedByDivergenceNoIntentTotal,
+                blockedByStaleIntentNoIntent: summary.blockedByStaleIntentNoIntentTotal,
+                blockedByInvalidEdgeNoIntent: summary.blockedByInvalidEdgeNoIntentTotal,
+                blockedByMaxAgentsNoIntent: summary.blockedByMaxAgentsNoIntentTotal,
+                intentContextsTotal: summary.contextsTotal,
+                contextsWithFeedbackTotal: summary.contextsWithFeedbackTotal,
+                contextsWithoutFeedbackTotal: summary.contextsWithoutFeedbackTotal,
+                baselineProposalsTotal: summary.baselineProposalsTotal,
+                feedbackAwareProposalsTotal: summary.feedbackAwareProposalsTotal,
+                acceptedIntentsTotal: summary.acceptedIntentsTotal,
+                rejectedProposalsTotal: summary.rejectedProposalsTotal,
+                noIntentTotal: summary.noIntentTotal,
+                invalidOneEdgeProposalsTotal: summary.invalidOneEdgeProposalsTotal,
+                feedbackReactionsTotal: summary.feedbackReactionsTotal,
+                behaviorChangedCountTotal: summary.behaviorChangedCountTotal,
+                noFeedbackBaselineKeptTotal: summary.noFeedbackBaselineKeptTotal,
+                movedBaselineKeptTotal: summary.movedBaselineKeptTotal,
+                approvedForMovementBaselineKeptTotal: summary.approvedForMovementBaselineKeptTotal,
+                blockedByCollisionNoIntentTotal: summary.blockedByCollisionNoIntentTotal,
+                blockedByAgentConflictNoIntentTotal: summary.blockedByAgentConflictNoIntentTotal,
+                blockedBySourceMismatchNoIntentTotal: summary.blockedBySourceMismatchNoIntentTotal,
+                blockedByDivergenceNoIntentTotal: summary.blockedByDivergenceNoIntentTotal,
+                blockedByStaleIntentNoIntentTotal: summary.blockedByStaleIntentNoIntentTotal,
+                blockedByInvalidEdgeNoIntentTotal: summary.blockedByInvalidEdgeNoIntentTotal,
+                blockedByMaxAgentsNoIntentTotal: summary.blockedByMaxAgentsNoIntentTotal,
+                worldUsed: summary.worldUsed,
+                collisionRead: summary.collisionRead,
+                movementApplied: summary.movementApplied,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                avoidancePerformed: summary.avoidancePerformed,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
+                replanningPerformed: summary.replanningPerformed
+            ))
+        }
         if let routeFollowingLiveSnapshot {
             try appendEvent(RunEvent(
                 type: "lab_route_following_recorded",
@@ -4048,6 +4164,22 @@ if let outPath = options.outPath {
             try writeJSON(
                 feedbackAwareIntentPolicyFixtureInvariantReport,
                 to: outURL.appendingPathComponent("feedback_aware_intent_policy_fixture_invariant_report.json")
+            )
+        }
+        if let feedbackAwareIntentPolicyHardeningReport {
+            try writeJSON(
+                feedbackAwareIntentPolicyHardeningReport,
+                to: outURL.appendingPathComponent("feedback_aware_intent_policy_hardening_report.json")
+            )
+            try writeJSON(
+                feedbackAwareIntentPolicyHardeningReport.cases,
+                to: outURL.appendingPathComponent("feedback_aware_intent_policy_hardening_cases.json")
+            )
+        }
+        if let feedbackAwareIntentPolicyHardeningInvariantReport {
+            try writeJSON(
+                feedbackAwareIntentPolicyHardeningInvariantReport,
+                to: outURL.appendingPathComponent("feedback_aware_intent_policy_hardening_invariant_report.json")
             )
         }
         if let routeFollowingLiveSnapshot {
@@ -4994,6 +5126,43 @@ if let outPath = options.outPath {
             feedbackAwareIntentPolicyFixtureWorldUsed: feedbackAwareIntentPolicyFixtureReport?.summary.worldUsed,
             feedbackAwareIntentPolicyFixtureMutationPerformed: feedbackAwareIntentPolicyFixtureReport?.summary.mutationPerformed,
             feedbackAwareIntentPolicyFixtureSuccess: feedbackAwareIntentPolicyFixtureSuccess,
+            feedbackAwareIntentPolicyHardeningCases: feedbackAwareIntentPolicyHardeningReport?.summary.cases,
+            feedbackAwareIntentPolicyHardeningPassed: feedbackAwareIntentPolicyHardeningReport?.summary.passed,
+            feedbackAwareIntentPolicyHardeningFailed: feedbackAwareIntentPolicyHardeningReport?.summary.failed,
+            feedbackAwareIntentPolicyHardeningContextsTotal: feedbackAwareIntentPolicyHardeningReport?.summary.contextsTotal,
+            feedbackAwareIntentPolicyHardeningContextsWithFeedbackTotal: feedbackAwareIntentPolicyHardeningReport?.summary.contextsWithFeedbackTotal,
+            feedbackAwareIntentPolicyHardeningContextsWithoutFeedbackTotal: feedbackAwareIntentPolicyHardeningReport?.summary.contextsWithoutFeedbackTotal,
+            feedbackAwareIntentPolicyHardeningBaselineProposalsTotal: feedbackAwareIntentPolicyHardeningReport?.summary.baselineProposalsTotal,
+            feedbackAwareIntentPolicyHardeningFeedbackAwareProposalsTotal: feedbackAwareIntentPolicyHardeningReport?.summary.feedbackAwareProposalsTotal,
+            feedbackAwareIntentPolicyHardeningAcceptedIntentsTotal: feedbackAwareIntentPolicyHardeningReport?.summary.acceptedIntentsTotal,
+            feedbackAwareIntentPolicyHardeningRejectedProposalsTotal: feedbackAwareIntentPolicyHardeningReport?.summary.rejectedProposalsTotal,
+            feedbackAwareIntentPolicyHardeningNoIntentTotal: feedbackAwareIntentPolicyHardeningReport?.summary.noIntentTotal,
+            feedbackAwareIntentPolicyHardeningInvalidOneEdgeProposalsTotal: feedbackAwareIntentPolicyHardeningReport?.summary.invalidOneEdgeProposalsTotal,
+            feedbackAwareIntentPolicyHardeningFeedbackReactionsTotal: feedbackAwareIntentPolicyHardeningReport?.summary.feedbackReactionsTotal,
+            feedbackAwareIntentPolicyHardeningBehaviorChangedByFeedback: feedbackAwareIntentPolicyHardeningReport?.summary.behaviorChangedByFeedback,
+            feedbackAwareIntentPolicyHardeningBehaviorChangedCountTotal: feedbackAwareIntentPolicyHardeningReport?.summary.behaviorChangedCountTotal,
+            feedbackAwareIntentPolicyHardeningNoFeedbackBaselineKeptTotal: feedbackAwareIntentPolicyHardeningReport?.summary.noFeedbackBaselineKeptTotal,
+            feedbackAwareIntentPolicyHardeningMovedBaselineKeptTotal: feedbackAwareIntentPolicyHardeningReport?.summary.movedBaselineKeptTotal,
+            feedbackAwareIntentPolicyHardeningApprovedForMovementBaselineKeptTotal: feedbackAwareIntentPolicyHardeningReport?.summary.approvedForMovementBaselineKeptTotal,
+            feedbackAwareIntentPolicyHardeningBlockedByCollisionNoIntentTotal: feedbackAwareIntentPolicyHardeningReport?.summary.blockedByCollisionNoIntentTotal,
+            feedbackAwareIntentPolicyHardeningBlockedByAgentConflictNoIntentTotal: feedbackAwareIntentPolicyHardeningReport?.summary.blockedByAgentConflictNoIntentTotal,
+            feedbackAwareIntentPolicyHardeningBlockedBySourceMismatchNoIntentTotal: feedbackAwareIntentPolicyHardeningReport?.summary.blockedBySourceMismatchNoIntentTotal,
+            feedbackAwareIntentPolicyHardeningBlockedByDivergenceNoIntentTotal: feedbackAwareIntentPolicyHardeningReport?.summary.blockedByDivergenceNoIntentTotal,
+            feedbackAwareIntentPolicyHardeningBlockedByStaleIntentNoIntentTotal: feedbackAwareIntentPolicyHardeningReport?.summary.blockedByStaleIntentNoIntentTotal,
+            feedbackAwareIntentPolicyHardeningBlockedByInvalidEdgeNoIntentTotal: feedbackAwareIntentPolicyHardeningReport?.summary.blockedByInvalidEdgeNoIntentTotal,
+            feedbackAwareIntentPolicyHardeningBlockedByMaxAgentsNoIntentTotal: feedbackAwareIntentPolicyHardeningReport?.summary.blockedByMaxAgentsNoIntentTotal,
+            feedbackAwareIntentPolicyHardeningFeedbackUsedForDecision: feedbackAwareIntentPolicyHardeningReport?.summary.feedbackUsedForDecision,
+            feedbackAwareIntentPolicyHardeningCollisionRead: feedbackAwareIntentPolicyHardeningReport?.summary.collisionRead,
+            feedbackAwareIntentPolicyHardeningMovementApplied: feedbackAwareIntentPolicyHardeningReport?.summary.movementApplied,
+            feedbackAwareIntentPolicyHardeningMemoryUpdated: feedbackAwareIntentPolicyHardeningReport?.summary.memoryUpdated,
+            feedbackAwareIntentPolicyHardeningGoalChanged: feedbackAwareIntentPolicyHardeningReport?.summary.goalChanged,
+            feedbackAwareIntentPolicyHardeningPathfindingPerformed: feedbackAwareIntentPolicyHardeningReport?.summary.pathfindingPerformed,
+            feedbackAwareIntentPolicyHardeningReplanningPerformed: feedbackAwareIntentPolicyHardeningReport?.summary.replanningPerformed,
+            feedbackAwareIntentPolicyHardeningAvoidancePerformed: feedbackAwareIntentPolicyHardeningReport?.summary.avoidancePerformed,
+            feedbackAwareIntentPolicyHardeningReservationRuntimeUsed: feedbackAwareIntentPolicyHardeningReport?.summary.reservationRuntimeUsed,
+            feedbackAwareIntentPolicyHardeningWorldUsed: feedbackAwareIntentPolicyHardeningReport?.summary.worldUsed,
+            feedbackAwareIntentPolicyHardeningMutationPerformed: feedbackAwareIntentPolicyHardeningReport?.summary.mutationPerformed,
+            feedbackAwareIntentPolicyHardeningSuccess: feedbackAwareIntentPolicyHardeningSuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,

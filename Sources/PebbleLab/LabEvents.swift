@@ -249,10 +249,24 @@ struct RunEvent: Encodable {
     let contextsWithFeedbackTotal: Int?
     let contextsWithoutFeedbackTotal: Int?
     let proposalsTotal: Int?
+    let baselineProposalsTotal: Int?
+    let feedbackAwareProposalsTotal: Int?
     let acceptedIntentsTotal: Int?
     let rejectedProposalsTotal: Int?
     let noIntentTotal: Int?
     let invalidOneEdgeProposalsTotal: Int?
+    let feedbackReactionsTotal: Int?
+    let behaviorChangedCountTotal: Int?
+    let noFeedbackBaselineKeptTotal: Int?
+    let movedBaselineKeptTotal: Int?
+    let approvedForMovementBaselineKeptTotal: Int?
+    let blockedByCollisionNoIntentTotal: Int?
+    let blockedByAgentConflictNoIntentTotal: Int?
+    let blockedBySourceMismatchNoIntentTotal: Int?
+    let blockedByDivergenceNoIntentTotal: Int?
+    let blockedByStaleIntentNoIntentTotal: Int?
+    let blockedByInvalidEdgeNoIntentTotal: Int?
+    let blockedByMaxAgentsNoIntentTotal: Int?
     let movedFeedback: Int?
     let approvedForMovementFeedback: Int?
     let blockedByCollisionFeedback: Int?
@@ -576,10 +590,24 @@ struct RunEvent: Encodable {
         contextsWithFeedbackTotal: Int? = nil,
         contextsWithoutFeedbackTotal: Int? = nil,
         proposalsTotal: Int? = nil,
+        baselineProposalsTotal: Int? = nil,
+        feedbackAwareProposalsTotal: Int? = nil,
         acceptedIntentsTotal: Int? = nil,
         rejectedProposalsTotal: Int? = nil,
         noIntentTotal: Int? = nil,
         invalidOneEdgeProposalsTotal: Int? = nil,
+        feedbackReactionsTotal: Int? = nil,
+        behaviorChangedCountTotal: Int? = nil,
+        noFeedbackBaselineKeptTotal: Int? = nil,
+        movedBaselineKeptTotal: Int? = nil,
+        approvedForMovementBaselineKeptTotal: Int? = nil,
+        blockedByCollisionNoIntentTotal: Int? = nil,
+        blockedByAgentConflictNoIntentTotal: Int? = nil,
+        blockedBySourceMismatchNoIntentTotal: Int? = nil,
+        blockedByDivergenceNoIntentTotal: Int? = nil,
+        blockedByStaleIntentNoIntentTotal: Int? = nil,
+        blockedByInvalidEdgeNoIntentTotal: Int? = nil,
+        blockedByMaxAgentsNoIntentTotal: Int? = nil,
         movedFeedback: Int? = nil,
         approvedForMovementFeedback: Int? = nil,
         blockedByCollisionFeedback: Int? = nil,
@@ -902,10 +930,24 @@ struct RunEvent: Encodable {
         self.contextsWithFeedbackTotal = contextsWithFeedbackTotal
         self.contextsWithoutFeedbackTotal = contextsWithoutFeedbackTotal
         self.proposalsTotal = proposalsTotal
+        self.baselineProposalsTotal = baselineProposalsTotal
+        self.feedbackAwareProposalsTotal = feedbackAwareProposalsTotal
         self.acceptedIntentsTotal = acceptedIntentsTotal
         self.rejectedProposalsTotal = rejectedProposalsTotal
         self.noIntentTotal = noIntentTotal
         self.invalidOneEdgeProposalsTotal = invalidOneEdgeProposalsTotal
+        self.feedbackReactionsTotal = feedbackReactionsTotal
+        self.behaviorChangedCountTotal = behaviorChangedCountTotal
+        self.noFeedbackBaselineKeptTotal = noFeedbackBaselineKeptTotal
+        self.movedBaselineKeptTotal = movedBaselineKeptTotal
+        self.approvedForMovementBaselineKeptTotal = approvedForMovementBaselineKeptTotal
+        self.blockedByCollisionNoIntentTotal = blockedByCollisionNoIntentTotal
+        self.blockedByAgentConflictNoIntentTotal = blockedByAgentConflictNoIntentTotal
+        self.blockedBySourceMismatchNoIntentTotal = blockedBySourceMismatchNoIntentTotal
+        self.blockedByDivergenceNoIntentTotal = blockedByDivergenceNoIntentTotal
+        self.blockedByStaleIntentNoIntentTotal = blockedByStaleIntentNoIntentTotal
+        self.blockedByInvalidEdgeNoIntentTotal = blockedByInvalidEdgeNoIntentTotal
+        self.blockedByMaxAgentsNoIntentTotal = blockedByMaxAgentsNoIntentTotal
         self.movedFeedback = movedFeedback
         self.approvedForMovementFeedback = approvedForMovementFeedback
         self.blockedByCollisionFeedback = blockedByCollisionFeedback

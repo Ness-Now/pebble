@@ -6582,3 +6582,133 @@ world mutation was added.
 ### Next Step
 
 Phase 4.23B — Feedback-Aware Intent Policy Hardening.
+
+## 2026-06-29 — Phase 4.23B feedback-aware intent policy hardening
+
+### Objective
+
+Implement `feedback_aware_intent_policy_hardening_smoke`, a fixture-only
+hardening scenario for the opt-in feedback-aware v1 intent policy.
+
+### Starting Point
+
+Phase 4.23A introduced `produceAgentIntentProposalFeedbackAwareV1` as an
+explicit opt-in policy. It computes v0 first, keeps v0 for no feedback,
+`moved`, and `approvedForMovement`, and maps blocked feedback kinds to
+`noIntent`. The v0 policy remains unchanged and existing v0 scenarios still
+call v0 directly.
+
+### Files Created Or Modified
+
+- `Sources/PebbleLab/LabAgentIntentProduction.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_FEEDBACK_AWARE_INTENT_POLICY_PLAN.md`
+
+### Why Hardening
+
+The fixture smoke proved the basic v1 contract. This phase adds focused edge
+coverage around every feedback reaction, baseline preservation, invalid v0
+proposals, existing v0 noIntent decisions, deterministic ordering, and stable
+repeatability before any tick integration is attempted.
+
+### Cases Covered
+
+- `baseline_fixture_remains_green`;
+- `no_feedback_returns_baseline`;
+- `moved_returns_baseline`;
+- `approved_for_movement_returns_baseline`;
+- `blocked_collision_returns_no_intent`;
+- `blocked_agent_conflict_returns_no_intent`;
+- `blocked_source_mismatch_returns_no_intent`;
+- `blocked_divergence_returns_no_intent`;
+- `blocked_stale_intent_returns_no_intent`;
+- `blocked_invalid_edge_returns_no_intent_explicit_reason`;
+- `blocked_max_agents_returns_no_intent`;
+- `blocked_feedback_on_baseline_no_intent_stays_no_intent`;
+- `blocked_feedback_on_baseline_invalid_becomes_no_intent`;
+- `all_blocked_kinds_counted_once`;
+- `deterministic_ordering_by_agent_id`;
+- `stable_repeatability`.
+
+### v0 Unchanged And v1 Opt-In
+
+The v1 hardening path still computes baseline v0 proposals first. The existing
+v0 producer is not replaced globally. The hardening scenario is the only new
+caller, and v0 fixture/hardening scenarios remain independent.
+
+### Feedback Reaction Policy
+
+No feedback, `moved`, and `approvedForMovement` preserve the v0 baseline.
+Blocked feedback kinds produce `noIntent` when baseline v0 would move or emit
+an invalid proposal. If v0 already returns `noIntent`, the baseline signature is
+preserved while the blocked reaction is still counted. `blockedByInvalidEdge`
+keeps an explicit invalid-edge noIntent reason.
+
+### Deterministic Ordering And Repeatability
+
+Outputs are sorted by stable `agentId`. The repeatability case evaluates the
+same inputs twice and requires matching proposal signatures and summary totals.
+
+### Outputs, Invariants, Metrics, And Event
+
+The scenario writes:
+
+- `feedback_aware_intent_policy_hardening_report.json`;
+- `feedback_aware_intent_policy_hardening_invariant_report.json`;
+- `feedback_aware_intent_policy_hardening_cases.json`;
+- `feedbackAwareIntentPolicyHardening*` metrics;
+- aggregate event `lab_feedback_aware_intent_policy_hardening_recorded`.
+
+The invariant report covers 58 checks across case existence, all cases passed,
+baseline retention, blocked feedback noIntent behavior, sorted outputs,
+repeatability, no World/collision/movement/memory/goals/pathfinding/
+replanning/avoidance/reservation/mutation, artifact writing, and the success
+contract.
+
+### Out Of Scope Confirmed
+
+No tick movement, movement application, collision read, World access, memory
+update, goal change, pathfinding, replanning, avoidance, reservation runtime,
+learning, LLM/RL/Python, social behavior, communication, terrain mutation, or
+world mutation was added.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_intent_policy_hardening`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_intent_policy_fixture_after_hardening`
+- `swift run -c release PebbleLab -- --scenario feedback_to_agent_intent_context_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_to_agent_intent_context_hardening_after_policy_hardening`
+- `swift run -c release PebbleLab -- --scenario feedback_to_agent_intent_context_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_to_agent_intent_context_fixture_after_policy_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_feedback_consumption_hardening_smoke --seed 42 --ticks 0 --out runs/check_agent_feedback_hardening_after_policy_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_feedback_consumption_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_feedback_fixture_after_policy_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_fixture_after_policy_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_hardening_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_hardening_after_policy_hardening`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_policy_hardening`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- `feedback_aware_intent_policy_hardening_smoke` passes.
+- Report success true.
+- Invariant report success true.
+- `cases = 16`.
+- `passed = 16`.
+- `failed = 0`.
+- All feedback reaction hardening cases are covered.
+- Deterministic ordering and stable repeatability are verified.
+- `feedbackAwareIntentPolicyHardening*` metrics are present.
+- `lab_feedback_aware_intent_policy_hardening_recorded` event is present.
+
+### Next Step
+
+Phase 4.23C — Feedback-Aware Intent To Tick Fixture Smoke.

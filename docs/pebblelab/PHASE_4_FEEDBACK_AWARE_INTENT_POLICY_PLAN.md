@@ -484,3 +484,49 @@ replanning, no avoidance, no reservation runtime, no learning, no social
 behavior, no communication, and no terrain/world mutation.
 
 Next recommended step: Phase 4.23B - Feedback-Aware Intent Policy Hardening.
+
+## Phase 4.23B Implementation Status
+
+Status: implemented and validated.
+
+Phase 4.23B adds `feedback_aware_intent_policy_hardening_smoke`, a
+fixture-only hardening scenario for the opt-in feedback-aware v1 policy. The
+v0 policy remains unchanged and is not replaced globally.
+
+Validated hardening cases:
+
+- baseline fixture remains green;
+- no feedback returns baseline;
+- `moved` returns baseline;
+- `approvedForMovement` returns baseline;
+- `blockedByCollision` returns `noIntent`;
+- `blockedByAgentConflict` returns `noIntent`;
+- `blockedBySourceMismatch` returns `noIntent`;
+- `blockedByDivergence` returns `noIntent`;
+- `blockedByStaleIntent` returns `noIntent`;
+- `blockedByInvalidEdge` returns `noIntent` with an explicit reason;
+- `blockedByMaxAgents` returns `noIntent`;
+- blocked feedback over a baseline `noIntent` preserves the baseline
+  signature;
+- blocked feedback over a baseline invalid proposal becomes `noIntent`;
+- all blocked kinds are counted once;
+- deterministic output ordering by stable `agentId`;
+- stable repeatability.
+
+The scenario records baseline proposals, feedback-aware proposals, decisions,
+expected and actual summaries, and repeatability evidence per case. It writes:
+
+- `feedback_aware_intent_policy_hardening_report.json`;
+- `feedback_aware_intent_policy_hardening_invariant_report.json`;
+- `feedback_aware_intent_policy_hardening_cases.json`;
+- `feedbackAwareIntentPolicyHardening*` metrics;
+- aggregate event `lab_feedback_aware_intent_policy_hardening_recorded`.
+
+The validated contract remains intentionally narrow: no tick movement, no live
+collision read, no World access, no movement application, no memory update, no
+goal change, no pathfinding, no replanning, no avoidance, no reservation
+runtime, no learning, no social behavior, no communication, and no
+terrain/world mutation.
+
+Next recommended step: Phase 4.23C - Feedback-Aware Intent To Tick Fixture
+Smoke.
