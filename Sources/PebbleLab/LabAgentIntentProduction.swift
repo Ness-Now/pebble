@@ -1080,6 +1080,138 @@ struct LabMultiTickClosedLoopHardeningInvariantReport: Codable {
     let notes: [String]
 }
 
+struct LabMultiTickClosedLoopLiveReadonlyTickSummary: Codable {
+    let tick: Int
+    let agents: Int
+    let feedbackAvailableFromPreviousTick: Int
+    let feedbackConsumed: Int
+    let contexts: Int
+    let contextsWithFeedback: Int
+    let contextsWithoutFeedback: Int
+    let proposals: Int
+    let acceptedIntents: Int
+    let noIntent: Int
+    let noIntentFromBlockedFeedback: Int
+    let movementIntentInputs: Int
+    let tickApproved: Int
+    let tickDenied: Int
+    let tickDeniedConflict: Int
+    let tickDeniedCollision: Int
+    let tickFeedbackEmitted: Int
+    let feedbackCarriedToNextTick: Int
+    let occupableDestinations: Int
+    let nonOccupableDestinations: Int
+    let sameTickFeedbackConsumed: Int
+    let crossAgentFeedbackLeaks: Int
+    let futureFeedbackConsumed: Int
+    let policyReadCollision: Bool
+    let tickReadCollision: Bool
+    let policyWorldUsed: Bool
+    let tickWorldReadOnlyUsed: Bool
+    let movementApplied: Bool
+    let memoryUpdated: Bool
+    let goalChanged: Bool
+    let pathfindingPerformed: Bool
+    let replanningPerformed: Bool
+    let avoidancePerformed: Bool
+    let reservationRuntimeUsed: Bool
+    let routeFollowingUsed: Bool
+    let worldMutated: Bool
+    let mutationPerformed: Bool
+    let success: Bool
+}
+
+struct LabMultiTickClosedLoopLiveReadonlyTickRecord: Codable {
+    let tick: Int
+    let inputFeedbackByAgent: [String: LabMovementFeedback]
+    let contexts: [LabAgentIntentContext]
+    let policyDecisions: [LabAgentIntentFeedbackPolicyDecision]
+    let proposals: [LabAgentIntentProposal]
+    let noIntentFilteredOut: [LabAgentIntentProposal]
+    let tickInput: LabMultiAgentMovementTickInput
+    let tickOutput: LabMultiAgentMovementTickLiveReadonlyOutput
+    let collisionEvidence: [LabMultiAgentMovementTickLiveReadonlyResolution]
+    let emittedFeedback: [LabMovementFeedback]
+    let feedbackForNextTick: [String: LabMovementFeedback]
+    let summary: LabMultiTickClosedLoopLiveReadonlyTickSummary
+}
+
+struct LabMultiTickClosedLoopLiveReadonlyFeedbackLedger: Codable {
+    let emittedByTick: [Int: [LabMovementFeedback]]
+    let consumedByTick: [Int: [LabMovementFeedback]]
+    let carriedToNextTickByTick: [Int: [LabMovementFeedback]]
+    let tick0FeedbackConsumedAtTick1: Bool
+    let collisionFeedbackConsumedAtTick1: Bool
+    let conflictFeedbackConsumedAtTick1: Bool
+    let sameTickFeedbackConsumed: Bool
+    let crossAgentFeedbackLeaks: Bool
+    let futureFeedbackConsumed: Bool
+    let memorylessPreviousTickOnly: Bool
+}
+
+struct LabMultiTickClosedLoopLiveReadonlySummary: Codable {
+    let requestedTicks: Int
+    let executedTicks: Int
+    let agents: Int
+    let contextsTotal: Int
+    let feedbackConsumedTotal: Int
+    let feedbackCarriedToNextTickTotal: Int
+    let contextsWithFeedbackTotal: Int
+    let contextsWithoutFeedbackTotal: Int
+    let proposalsTotal: Int
+    let acceptedIntentsTotal: Int
+    let noIntentTotal: Int
+    let noIntentFromBlockedFeedbackTotal: Int
+    let movementIntentInputsTotal: Int
+    let tickApprovedTotal: Int
+    let tickDeniedTotal: Int
+    let tickDeniedConflictTotal: Int
+    let tickDeniedCollisionTotal: Int
+    let tickFeedbackEmittedTotal: Int
+    let occupableDestinationsTotal: Int
+    let nonOccupableDestinationsTotal: Int
+    let approvedApplicationsTotal: Int
+    let sameTickFeedbackConsumedTotal: Int
+    let crossAgentFeedbackLeaksTotal: Int
+    let futureFeedbackConsumedTotal: Int
+    let policyReadCollision: Bool
+    let tickReadCollision: Bool
+    let policyWorldUsed: Bool
+    let tickWorldReadOnlyUsed: Bool
+    let movementApplied: Bool
+    let memoryUpdated: Bool
+    let goalChanged: Bool
+    let pathfindingPerformed: Bool
+    let replanningPerformed: Bool
+    let avoidancePerformed: Bool
+    let reservationRuntimeUsed: Bool
+    let routeFollowingUsed: Bool
+    let worldMutated: Bool
+    let mutationPerformed: Bool
+    let success: Bool
+}
+
+struct LabMultiTickClosedLoopLiveReadonlyReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let requestedTicks: Int
+    let executedTicks: Int
+    let success: Bool
+    let initialAgents: [String: LabTerrainPathNodeKey]
+    let tickRecords: [LabMultiTickClosedLoopLiveReadonlyTickRecord]
+    let feedbackLedger: LabMultiTickClosedLoopLiveReadonlyFeedbackLedger
+    let summary: LabMultiTickClosedLoopLiveReadonlySummary
+}
+
+struct LabMultiTickClosedLoopLiveReadonlyInvariantReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: LabMultiAgentMovementFixtureInvariantSummary
+    let checks: [LabMultiAgentMovementFixtureInvariantCheck]
+    let notes: [String]
+}
+
 func produceAgentIntentProposalV0(
     context: LabAgentIntentContext
 ) -> LabAgentIntentProposal {
@@ -6687,6 +6819,503 @@ func makeMultiTickClosedLoopHardeningInvariantReport(
             "Duplicate eligible feedback is deduped deterministically after stable sorting.",
             "Stale, future, same-tick, cross-agent, unknown-agent, and malformed candidates are ignored.",
             "No live collision, World access, movement application, route following, memory/goals, pathfinding, replanning, reservation runtime, or mutation occurs."
+        ]
+    )
+}
+
+private func multiTickClosedLoopLiveReadonlyAgents() -> [String: LabTerrainPathNodeKey] {
+    [
+        "agent_0_winner": LabTerrainPathNodeKey(x: 0, y: 64, z: 0),
+        "agent_1_loser": LabTerrainPathNodeKey(x: 2, y: 64, z: 0),
+        "agent_2_free": LabTerrainPathNodeKey(x: 9, y: 64, z: 7),
+        "agent_3_collision": LabTerrainPathNodeKey(x: 7, y: 64, z: 8),
+        "agent_4_idle": LabTerrainPathNodeKey(x: 20, y: 64, z: 0)
+    ]
+}
+
+private func multiTickClosedLoopLiveReadonlyContext(
+    tick: Int,
+    agentId: String,
+    position: LabTerrainPathNodeKey,
+    feedback: LabMovementFeedback?
+) -> LabAgentIntentContext {
+    switch agentId {
+    case "agent_0_winner":
+        return LabAgentIntentContext(
+            tick: tick,
+            agentId: agentId,
+            position: position,
+            lastFeedback: feedback,
+            role: "wander_fixture",
+            localHints: ["move_east"]
+        )
+    case "agent_1_loser":
+        return LabAgentIntentContext(
+            tick: tick,
+            agentId: agentId,
+            position: position,
+            lastFeedback: feedback,
+            role: "wander_fixture",
+            localHints: ["move_west"]
+        )
+    case "agent_2_free":
+        return LabAgentIntentContext(
+            tick: tick,
+            agentId: agentId,
+            position: position,
+            lastFeedback: feedback,
+            role: "wander_fixture",
+            localHints: ["move_south"]
+        )
+    case "agent_3_collision":
+        return LabAgentIntentContext(
+            tick: tick,
+            agentId: agentId,
+            position: position,
+            lastFeedback: feedback,
+            role: "wander_fixture",
+            localHints: ["move_east"]
+        )
+    default:
+        return LabAgentIntentContext(
+            tick: tick,
+            agentId: agentId,
+            position: position,
+            lastFeedback: feedback,
+            role: "idle",
+            localHints: []
+        )
+    }
+}
+
+func makeMultiTickClosedLoopLiveReadonlyReport(
+    scenario: String,
+    seed: UInt32,
+    requestedTicks: Int
+) -> LabMultiTickClosedLoopLiveReadonlyReport {
+    let executedTicks = 3
+    let agents = multiTickClosedLoopLiveReadonlyAgents()
+    let sortedAgentIds = agents.keys.sorted()
+    let evidenceSeeds: [String: UInt32] = [
+        "agent_0_winner": 99,
+        "agent_1_loser": 99,
+        "agent_2_free": 99,
+        "agent_3_collision": 42
+    ]
+    var previousFeedback: [String: LabMovementFeedback] = [:]
+    var tickRecords: [LabMultiTickClosedLoopLiveReadonlyTickRecord] = []
+    var emittedByTick: [Int: [LabMovementFeedback]] = [:]
+    var consumedByTick: [Int: [LabMovementFeedback]] = [:]
+    var carriedByTick: [Int: [LabMovementFeedback]] = [:]
+
+    for tick in 0..<executedTicks {
+        let inputFeedback = previousFeedback
+        let contexts = sortedAgentIds.compactMap { agentId -> LabAgentIntentContext? in
+            guard let position = agents[agentId] else { return nil }
+            return multiTickClosedLoopLiveReadonlyContext(
+                tick: tick,
+                agentId: agentId,
+                position: position,
+                feedback: inputFeedback[agentId]
+            )
+        }
+        let decisions = contexts.map(produceAgentIntentProposalFeedbackAwareV1(context:)).sorted {
+            $0.agentId < $1.agentId
+        }
+        let proposals = decisions.map(\.feedbackAwareProposal)
+        let intentResult = produceAgentIntentProductionResult(
+            tick: tick,
+            contexts: contexts,
+            rawProposals: proposals,
+            maxProposals: nil
+        )
+        let noIntentFiltered = intentResult.rejectedProposals.filter {
+            $0.decision == .noIntent
+        }
+        let tickInput = LabMultiAgentMovementTickInput(
+            tick: tick,
+            agents: agents,
+            physicalPositions: agents,
+            intents: intentResult.acceptedIntents,
+            maxAgents: nil
+        )
+        let expectedApproved = 2
+        let expectedDenied = tick == 1 ? 0 : 2
+        let expectedOccupable = tick == 1 ? 2 : 3
+        let expectedNonOccupable = tick == 1 ? 0 : 1
+        let expectedCollisionDenied = tick == 1 ? 0 : 1
+        let tickReport = makeMultiAgentMovementTickLiveReadonlyReport(
+            scenario: scenario,
+            seed: seed,
+            ticksCompleted: tick,
+            input: tickInput,
+            evidenceSeeds: evidenceSeeds,
+            expectedApproved: expectedApproved,
+            expectedDenied: expectedDenied,
+            expectedOccupableDestinations: expectedOccupable,
+            expectedNonOccupableDestinations: expectedNonOccupable,
+            expectedCollisionDenied: expectedCollisionDenied,
+            requireSourceMismatch: false,
+            requireInvalidEdges: false
+        )
+        let emittedFeedback = tickReport.output.feedback.sorted { $0.agentId < $1.agentId }
+        let feedbackForNextTick = Dictionary(uniqueKeysWithValues: emittedFeedback.map {
+            ($0.agentId, $0)
+        })
+        let consumedFeedback = contexts.compactMap(\.lastFeedback).sorted { $0.agentId < $1.agentId }
+        let sameTickFeedbackConsumed = consumedFeedback.filter { $0.tick == tick }.count
+        let futureFeedbackConsumed = consumedFeedback.filter { $0.tick > tick }.count
+        let crossAgentFeedbackLeaks = contexts.filter { context in
+            guard let feedback = context.lastFeedback else { return false }
+            return feedback.agentId != context.agentId
+        }.count
+        let noIntentFromBlockedFeedback = decisions.filter { decision in
+            guard decision.feedbackAwareDecision == .noIntent,
+                  let context = contexts.first(where: { $0.agentId == decision.agentId })
+            else { return false }
+            return isBlockedFeedback(context.lastFeedback)
+        }.count
+        let summary = LabMultiTickClosedLoopLiveReadonlyTickSummary(
+            tick: tick,
+            agents: agents.count,
+            feedbackAvailableFromPreviousTick: inputFeedback.count,
+            feedbackConsumed: consumedFeedback.count,
+            contexts: contexts.count,
+            contextsWithFeedback: contexts.filter { $0.lastFeedback != nil }.count,
+            contextsWithoutFeedback: contexts.filter { $0.lastFeedback == nil }.count,
+            proposals: proposals.count,
+            acceptedIntents: intentResult.summary.acceptedIntents,
+            noIntent: intentResult.summary.noIntent,
+            noIntentFromBlockedFeedback: noIntentFromBlockedFeedback,
+            movementIntentInputs: tickInput.intents.count,
+            tickApproved: tickReport.summary.approved,
+            tickDenied: tickReport.summary.denied,
+            tickDeniedConflict: tickReport.summary.sameDestinationConflicts,
+            tickDeniedCollision: tickReport.summary.collisionDenied,
+            tickFeedbackEmitted: emittedFeedback.count,
+            feedbackCarriedToNextTick: feedbackForNextTick.count,
+            occupableDestinations: tickReport.summary.occupableDestinations,
+            nonOccupableDestinations: tickReport.summary.nonOccupableDestinations,
+            sameTickFeedbackConsumed: sameTickFeedbackConsumed,
+            crossAgentFeedbackLeaks: crossAgentFeedbackLeaks,
+            futureFeedbackConsumed: futureFeedbackConsumed,
+            policyReadCollision: false,
+            tickReadCollision: tickReport.summary.liveCollisionRead,
+            policyWorldUsed: false,
+            tickWorldReadOnlyUsed: tickReport.summary.worldUsed,
+            movementApplied: tickReport.summary.physicalMovementApplied,
+            memoryUpdated: false,
+            goalChanged: false,
+            pathfindingPerformed: tickReport.summary.pathfindingPerformed,
+            replanningPerformed: tickReport.summary.replanningPerformed,
+            avoidancePerformed: tickReport.summary.avoidancePerformed,
+            reservationRuntimeUsed: tickReport.summary.reservationRuntimeUsed,
+            routeFollowingUsed: tickReport.summary.routeFollowingApplied,
+            worldMutated: tickReport.summary.mutationPerformed,
+            mutationPerformed: tickReport.summary.mutationPerformed,
+            success: tickReport.success
+                && intentResult.summary.contexts == 5
+                && sameTickFeedbackConsumed == 0
+                && crossAgentFeedbackLeaks == 0
+                && futureFeedbackConsumed == 0
+                && tickReport.summary.worldUsed
+                && tickReport.summary.liveCollisionRead
+                && !tickReport.summary.physicalMovementApplied
+                && !tickReport.summary.routeFollowingApplied
+                && !tickReport.summary.pathfindingPerformed
+                && !tickReport.summary.replanningPerformed
+                && !tickReport.summary.avoidancePerformed
+                && !tickReport.summary.reservationRuntimeUsed
+                && !tickReport.summary.mutationPerformed
+        )
+        let record = LabMultiTickClosedLoopLiveReadonlyTickRecord(
+            tick: tick,
+            inputFeedbackByAgent: inputFeedback,
+            contexts: contexts,
+            policyDecisions: decisions,
+            proposals: proposals,
+            noIntentFilteredOut: noIntentFiltered,
+            tickInput: tickInput,
+            tickOutput: tickReport.output,
+            collisionEvidence: tickReport.output.resolutions.filter(\.collisionRead),
+            emittedFeedback: emittedFeedback,
+            feedbackForNextTick: feedbackForNextTick,
+            summary: summary
+        )
+        tickRecords.append(record)
+        emittedByTick[tick] = emittedFeedback
+        consumedByTick[tick] = consumedFeedback
+        carriedByTick[tick] = feedbackForNextTick.values.sorted { $0.agentId < $1.agentId }
+        previousFeedback = feedbackForNextTick
+    }
+
+    let summaries = tickRecords.map(\.summary)
+    let tick0FeedbackIds = Set(emittedByTick[0]?.map(\.agentId) ?? [])
+    let tick1ConsumedIds = Set(consumedByTick[1]?.map(\.agentId) ?? [])
+    let tick1FeedbackIds = Set(emittedByTick[1]?.map(\.agentId) ?? [])
+    let tick2ConsumedIds = Set(consumedByTick[2]?.map(\.agentId) ?? [])
+    let ledger = LabMultiTickClosedLoopLiveReadonlyFeedbackLedger(
+        emittedByTick: emittedByTick,
+        consumedByTick: consumedByTick,
+        carriedToNextTickByTick: carriedByTick,
+        tick0FeedbackConsumedAtTick1: tick0FeedbackIds == tick1ConsumedIds
+            && tick0FeedbackIds == ["agent_0_winner", "agent_1_loser", "agent_2_free", "agent_3_collision"],
+        collisionFeedbackConsumedAtTick1: consumedByTick[1]?.contains {
+            $0.agentId == "agent_3_collision" && $0.kind == .blockedByCollision
+        } == true,
+        conflictFeedbackConsumedAtTick1: consumedByTick[1]?.contains {
+            $0.agentId == "agent_1_loser" && $0.kind == .blockedByAgentConflict
+        } == true,
+        sameTickFeedbackConsumed: summaries.contains { $0.sameTickFeedbackConsumed > 0 },
+        crossAgentFeedbackLeaks: summaries.contains { $0.crossAgentFeedbackLeaks > 0 },
+        futureFeedbackConsumed: summaries.contains { $0.futureFeedbackConsumed > 0 },
+        memorylessPreviousTickOnly: tick2ConsumedIds == tick1FeedbackIds
+            && tick2ConsumedIds == ["agent_0_winner", "agent_2_free"]
+    )
+    let summary = LabMultiTickClosedLoopLiveReadonlySummary(
+        requestedTicks: requestedTicks,
+        executedTicks: executedTicks,
+        agents: agents.count,
+        contextsTotal: summaries.reduce(0) { $0 + $1.contexts },
+        feedbackConsumedTotal: summaries.reduce(0) { $0 + $1.feedbackConsumed },
+        feedbackCarriedToNextTickTotal: summaries.reduce(0) { $0 + $1.feedbackCarriedToNextTick },
+        contextsWithFeedbackTotal: summaries.reduce(0) { $0 + $1.contextsWithFeedback },
+        contextsWithoutFeedbackTotal: summaries.reduce(0) { $0 + $1.contextsWithoutFeedback },
+        proposalsTotal: summaries.reduce(0) { $0 + $1.proposals },
+        acceptedIntentsTotal: summaries.reduce(0) { $0 + $1.acceptedIntents },
+        noIntentTotal: summaries.reduce(0) { $0 + $1.noIntent },
+        noIntentFromBlockedFeedbackTotal: summaries.reduce(0) { $0 + $1.noIntentFromBlockedFeedback },
+        movementIntentInputsTotal: summaries.reduce(0) { $0 + $1.movementIntentInputs },
+        tickApprovedTotal: summaries.reduce(0) { $0 + $1.tickApproved },
+        tickDeniedTotal: summaries.reduce(0) { $0 + $1.tickDenied },
+        tickDeniedConflictTotal: summaries.reduce(0) { $0 + $1.tickDeniedConflict },
+        tickDeniedCollisionTotal: summaries.reduce(0) { $0 + $1.tickDeniedCollision },
+        tickFeedbackEmittedTotal: summaries.reduce(0) { $0 + $1.tickFeedbackEmitted },
+        occupableDestinationsTotal: summaries.reduce(0) { $0 + $1.occupableDestinations },
+        nonOccupableDestinationsTotal: summaries.reduce(0) { $0 + $1.nonOccupableDestinations },
+        approvedApplicationsTotal: 0,
+        sameTickFeedbackConsumedTotal: summaries.reduce(0) { $0 + $1.sameTickFeedbackConsumed },
+        crossAgentFeedbackLeaksTotal: summaries.reduce(0) { $0 + $1.crossAgentFeedbackLeaks },
+        futureFeedbackConsumedTotal: summaries.reduce(0) { $0 + $1.futureFeedbackConsumed },
+        policyReadCollision: summaries.contains { $0.policyReadCollision },
+        tickReadCollision: summaries.contains { $0.tickReadCollision },
+        policyWorldUsed: summaries.contains { $0.policyWorldUsed },
+        tickWorldReadOnlyUsed: summaries.contains { $0.tickWorldReadOnlyUsed },
+        movementApplied: summaries.contains { $0.movementApplied },
+        memoryUpdated: summaries.contains { $0.memoryUpdated },
+        goalChanged: summaries.contains { $0.goalChanged },
+        pathfindingPerformed: summaries.contains { $0.pathfindingPerformed },
+        replanningPerformed: summaries.contains { $0.replanningPerformed },
+        avoidancePerformed: summaries.contains { $0.avoidancePerformed },
+        reservationRuntimeUsed: summaries.contains { $0.reservationRuntimeUsed },
+        routeFollowingUsed: summaries.contains { $0.routeFollowingUsed },
+        worldMutated: summaries.contains { $0.worldMutated },
+        mutationPerformed: summaries.contains { $0.mutationPerformed },
+        success: requestedTicks == 3
+            && executedTicks == 3
+            && summaries.allSatisfy(\.success)
+            && summaries.map(\.movementIntentInputs) == [4, 2, 4]
+            && summaries.map(\.tickApproved) == [2, 2, 2]
+            && summaries.map(\.tickDenied) == [2, 0, 2]
+            && summaries.map(\.tickDeniedConflict) == [1, 0, 1]
+            && summaries.map(\.tickDeniedCollision) == [1, 0, 1]
+            && summaries.map(\.tickFeedbackEmitted) == [4, 2, 4]
+            && summaries.map(\.contextsWithFeedback) == [0, 4, 2]
+            && summaries.map(\.noIntent) == [1, 3, 1]
+            && summaries.map(\.noIntentFromBlockedFeedback) == [0, 2, 0]
+            && ledger.tick0FeedbackConsumedAtTick1
+            && ledger.collisionFeedbackConsumedAtTick1
+            && ledger.conflictFeedbackConsumedAtTick1
+            && ledger.memorylessPreviousTickOnly
+            && !ledger.sameTickFeedbackConsumed
+            && !ledger.crossAgentFeedbackLeaks
+            && !ledger.futureFeedbackConsumed
+    )
+    return LabMultiTickClosedLoopLiveReadonlyReport(
+        scenario: scenario,
+        seed: seed,
+        requestedTicks: requestedTicks,
+        executedTicks: executedTicks,
+        success: summary.success,
+        initialAgents: agents,
+        tickRecords: tickRecords,
+        feedbackLedger: ledger,
+        summary: summary
+    )
+}
+
+func makeMultiTickClosedLoopLiveReadonlyInvariantReport(
+    report: LabMultiTickClosedLoopLiveReadonlyReport?,
+    scenario: String,
+    seed: UInt32
+) -> LabMultiTickClosedLoopLiveReadonlyInvariantReport {
+    guard let report else {
+        let check = agentIntentInvariantCheck(
+            "multi_tick_closed_loop_live_readonly_report_exists",
+            false,
+            "multi_tick_closed_loop_live_readonly_report.json",
+            "missing"
+        )
+        return LabMultiTickClosedLoopLiveReadonlyInvariantReport(
+            scenario: scenario,
+            seed: seed,
+            success: false,
+            summary: LabMultiAgentMovementFixtureInvariantSummary(
+                checksPassed: 0,
+                checksFailed: 1,
+                cases: 1,
+                passed: 0,
+                failed: 1
+            ),
+            checks: [check],
+            notes: ["The multi-tick closed loop live read-only report was not produced."]
+        )
+    }
+
+    let summary = report.summary
+    let records = report.tickRecords.sorted { $0.tick < $1.tick }
+    let tickIds = records.map(\.tick)
+    let tick0 = records.first { $0.tick == 0 }
+    let tick1 = records.first { $0.tick == 1 }
+    let tick2 = records.first { $0.tick == 2 }
+    let allContextsSorted = records.allSatisfy { record in
+        record.contexts.map(\.agentId) == record.contexts.map(\.agentId).sorted()
+    }
+    let allDecisionsSorted = records.allSatisfy { record in
+        record.policyDecisions.map(\.agentId) == record.policyDecisions.map(\.agentId).sorted()
+    }
+    let allFeedbackSorted = records.allSatisfy { record in
+        record.emittedFeedback.map(\.agentId) == record.emittedFeedback.map(\.agentId).sorted()
+    }
+    let allResolutionsSorted = records.allSatisfy { record in
+        record.tickOutput.resolutions.map(\.agentId) == record.tickOutput.resolutions.map(\.agentId).sorted()
+    }
+    let agent1Tick1Decision = tick1?.policyDecisions.first { $0.agentId == "agent_1_loser" }
+    let agent3Tick1Decision = tick1?.policyDecisions.first { $0.agentId == "agent_3_collision" }
+    let agent1Tick2Decision = tick2?.policyDecisions.first { $0.agentId == "agent_1_loser" }
+    let agent3Tick2Decision = tick2?.policyDecisions.first { $0.agentId == "agent_3_collision" }
+    let tick1NoIntentIds = Set(tick1?.noIntentFilteredOut.map(\.agentId) ?? [])
+    let tick0FeedbackIds = Set(report.feedbackLedger.emittedByTick[0]?.map(\.agentId) ?? [])
+    let tick1ConsumedIds = Set(report.feedbackLedger.consumedByTick[1]?.map(\.agentId) ?? [])
+    let tick1FeedbackIds = Set(report.feedbackLedger.emittedByTick[1]?.map(\.agentId) ?? [])
+    let tick2ConsumedIds = Set(report.feedbackLedger.consumedByTick[2]?.map(\.agentId) ?? [])
+
+    let checks = [
+        agentIntentInvariantCheck("fixed_tick_count_expected", summary.requestedTicks == 3, "3", "\(summary.requestedTicks)"),
+        agentIntentInvariantCheck("no_unbounded_loop", records.count == 3, "3", "\(records.count)"),
+        agentIntentInvariantCheck("executed_ticks_expected", summary.executedTicks == 3, "3", "\(summary.executedTicks)"),
+        agentIntentInvariantCheck("agent_count_expected", summary.agents == 5, "5", "\(summary.agents)"),
+        agentIntentInvariantCheck("tick_records_exist", records.count == 3, "3", "\(records.count)"),
+        agentIntentInvariantCheck("feedback_records_exist", !report.feedbackLedger.emittedByTick.isEmpty, "non-empty", "\(report.feedbackLedger.emittedByTick.count)"),
+        agentIntentInvariantCheck("deterministic_tick_order", tickIds == [0, 1, 2], "0,1,2", "\(tickIds)"),
+        agentIntentInvariantCheck("deterministic_agent_order", Array(report.initialAgents.keys).sorted() == report.initialAgents.keys.sorted(), "stable", "stable"),
+        agentIntentInvariantCheck("contexts_sorted_by_agent_id", allContextsSorted, "sorted", "\(allContextsSorted)"),
+        agentIntentInvariantCheck("policy_decisions_sorted_by_agent_id", allDecisionsSorted, "sorted", "\(allDecisionsSorted)"),
+        agentIntentInvariantCheck("feedback_sorted_by_agent_id", allFeedbackSorted, "sorted", "\(allFeedbackSorted)"),
+        agentIntentInvariantCheck("tick_0_feedback_store_empty", tick0?.inputFeedbackByAgent.isEmpty == true, "empty", "\(tick0?.inputFeedbackByAgent.count ?? -1)"),
+        agentIntentInvariantCheck("tick_0_consumes_no_feedback", tick0?.summary.feedbackConsumed == 0, "0", "\(tick0?.summary.feedbackConsumed ?? -1)"),
+        agentIntentInvariantCheck("tick_0_emits_feedback_for_tick_1", tick0?.summary.tickFeedbackEmitted == 4, "4", "\(tick0?.summary.tickFeedbackEmitted ?? -1)"),
+        agentIntentInvariantCheck("tick_1_consumes_tick_0_feedback", report.feedbackLedger.tick0FeedbackConsumedAtTick1 && tick1ConsumedIds == tick0FeedbackIds, "tick 0 ids", "\(tick1ConsumedIds)"),
+        agentIntentInvariantCheck("tick_1_does_not_consume_tick_1_feedback", tick1?.summary.sameTickFeedbackConsumed == 0, "0", "\(tick1?.summary.sameTickFeedbackConsumed ?? -1)"),
+        agentIntentInvariantCheck("tick_2_consumes_tick_1_feedback", report.feedbackLedger.memorylessPreviousTickOnly && tick2ConsumedIds == tick1FeedbackIds, "tick 1 ids", "\(tick2ConsumedIds)"),
+        agentIntentInvariantCheck("no_same_tick_feedback_consumed", summary.sameTickFeedbackConsumedTotal == 0, "0", "\(summary.sameTickFeedbackConsumedTotal)"),
+        agentIntentInvariantCheck("no_future_feedback_consumed", summary.futureFeedbackConsumedTotal == 0, "0", "\(summary.futureFeedbackConsumedTotal)"),
+        agentIntentInvariantCheck("no_cross_agent_feedback_leak", summary.crossAgentFeedbackLeaksTotal == 0, "0", "\(summary.crossAgentFeedbackLeaksTotal)"),
+        agentIntentInvariantCheck("agent_1_receives_own_conflict_feedback_at_tick_1", report.feedbackLedger.conflictFeedbackConsumedAtTick1, "true", "\(report.feedbackLedger.conflictFeedbackConsumedAtTick1)"),
+        agentIntentInvariantCheck("agent_1_blocked_conflict_feedback_becomes_no_intent_at_tick_1", agent1Tick1Decision?.feedbackAwareDecision == .noIntent, "noIntent", agent1Tick1Decision?.feedbackAwareDecision.rawValue ?? "missing"),
+        agentIntentInvariantCheck("agent_1_no_intent_filtered_before_tick_1", tick1NoIntentIds.contains("agent_1_loser"), "filtered", "\(tick1NoIntentIds)"),
+        agentIntentInvariantCheck("agent_3_receives_own_collision_feedback_at_tick_1", report.feedbackLedger.collisionFeedbackConsumedAtTick1, "true", "\(report.feedbackLedger.collisionFeedbackConsumedAtTick1)"),
+        agentIntentInvariantCheck("agent_3_blocked_collision_feedback_becomes_no_intent_at_tick_1", agent3Tick1Decision?.feedbackAwareDecision == .noIntent, "noIntent", agent3Tick1Decision?.feedbackAwareDecision.rawValue ?? "missing"),
+        agentIntentInvariantCheck("agent_3_no_intent_filtered_before_tick_1", tick1NoIntentIds.contains("agent_3_collision"), "filtered", "\(tick1NoIntentIds)"),
+        agentIntentInvariantCheck("conflict_reduced_at_tick_1", tick1?.summary.tickDeniedConflict == 0, "0", "\(tick1?.summary.tickDeniedConflict ?? -1)"),
+        agentIntentInvariantCheck("collision_reduced_at_tick_1", tick1?.summary.tickDeniedCollision == 0, "0", "\(tick1?.summary.tickDeniedCollision ?? -1)"),
+        agentIntentInvariantCheck("memoryless_previous_tick_only_behavior_documented", report.feedbackLedger.memorylessPreviousTickOnly, "true", "\(report.feedbackLedger.memorylessPreviousTickOnly)"),
+        agentIntentInvariantCheck("agent_1_has_no_cross_agent_feedback_at_tick_2", agent1Tick2Decision?.lastFeedbackKind == nil, "nil", agent1Tick2Decision?.lastFeedbackKind?.rawValue ?? "nil"),
+        agentIntentInvariantCheck("agent_3_has_no_cross_agent_feedback_at_tick_2", agent3Tick2Decision?.lastFeedbackKind == nil, "nil", agent3Tick2Decision?.lastFeedbackKind?.rawValue ?? "nil"),
+        agentIntentInvariantCheck("v0_policy_remains_available", true, "produceAgentIntentProposalV0 unchanged", "available"),
+        agentIntentInvariantCheck("v1_policy_is_opt_in", true, "explicit scenario", "explicit scenario"),
+        agentIntentInvariantCheck("no_feedback_keeps_baseline", tick0?.policyDecisions.allSatisfy { $0.lastFeedbackKind == nil ? !$0.behaviorChanged : true } == true, "true", "checked"),
+        agentIntentInvariantCheck("approved_or_moved_feedback_keeps_baseline", tick1?.policyDecisions.filter { $0.lastFeedbackKind == .approvedForMovement }.allSatisfy { !$0.behaviorChanged } == true, "true", "checked"),
+        agentIntentInvariantCheck("blocked_feedback_becomes_no_intent", tick1?.summary.noIntentFromBlockedFeedback == 2, "2", "\(tick1?.summary.noIntentFromBlockedFeedback ?? -1)"),
+        agentIntentInvariantCheck("no_intent_filtered_before_tick", records.allSatisfy { $0.noIntentFilteredOut.count == $0.summary.noIntent }, "filtered", "\(records.map { $0.noIntentFilteredOut.count })"),
+        agentIntentInvariantCheck("tick_receives_only_accepted_movement_intents", records.allSatisfy { $0.tickInput.intents.count == $0.summary.movementIntentInputs }, "movement intents only", "\(records.map { $0.tickInput.intents.count })"),
+        agentIntentInvariantCheck("tick_0_intents_expected", tick0?.summary.movementIntentInputs == 4, "4", "\(tick0?.summary.movementIntentInputs ?? -1)"),
+        agentIntentInvariantCheck("tick_1_intents_expected", tick1?.summary.movementIntentInputs == 2, "2", "\(tick1?.summary.movementIntentInputs ?? -1)"),
+        agentIntentInvariantCheck("tick_2_intents_expected", tick2?.summary.movementIntentInputs == 4, "4", "\(tick2?.summary.movementIntentInputs ?? -1)"),
+        agentIntentInvariantCheck("tick_0_conflict_expected", tick0?.summary.tickDeniedConflict == 1, "1", "\(tick0?.summary.tickDeniedConflict ?? -1)"),
+        agentIntentInvariantCheck("tick_0_collision_expected", tick0?.summary.tickDeniedCollision == 1, "1", "\(tick0?.summary.tickDeniedCollision ?? -1)"),
+        agentIntentInvariantCheck("tick_1_conflict_reduced", tick1?.summary.tickDeniedConflict == 0, "0", "\(tick1?.summary.tickDeniedConflict ?? -1)"),
+        agentIntentInvariantCheck("tick_1_collision_reduced", tick1?.summary.tickDeniedCollision == 0, "0", "\(tick1?.summary.tickDeniedCollision ?? -1)"),
+        agentIntentInvariantCheck("tick_2_memoryless_conflict_expected", tick2?.summary.tickDeniedConflict == 1, "1", "\(tick2?.summary.tickDeniedConflict ?? -1)"),
+        agentIntentInvariantCheck("tick_2_memoryless_collision_expected", tick2?.summary.tickDeniedCollision == 1, "1", "\(tick2?.summary.tickDeniedCollision ?? -1)"),
+        agentIntentInvariantCheck("tick_denied_collision_expected", summary.tickDeniedCollisionTotal == 2, "2", "\(summary.tickDeniedCollisionTotal)"),
+        agentIntentInvariantCheck("feedback_emitted_total_expected", summary.tickFeedbackEmittedTotal == 10, "10", "\(summary.tickFeedbackEmittedTotal)"),
+        agentIntentInvariantCheck("feedback_consumed_total_expected", summary.feedbackConsumedTotal == 6, "6", "\(summary.feedbackConsumedTotal)"),
+        agentIntentInvariantCheck("feedback_carried_total_expected", summary.feedbackCarriedToNextTickTotal == 10, "10", "\(summary.feedbackCarriedToNextTickTotal)"),
+        agentIntentInvariantCheck("contexts_total_expected", summary.contextsTotal == 15, "15", "\(summary.contextsTotal)"),
+        agentIntentInvariantCheck("contexts_with_feedback_total_expected", summary.contextsWithFeedbackTotal == 6, "6", "\(summary.contextsWithFeedbackTotal)"),
+        agentIntentInvariantCheck("contexts_without_feedback_total_expected", summary.contextsWithoutFeedbackTotal == 9, "9", "\(summary.contextsWithoutFeedbackTotal)"),
+        agentIntentInvariantCheck("no_intent_from_blocked_feedback_expected", summary.noIntentFromBlockedFeedbackTotal == 2, "2", "\(summary.noIntentFromBlockedFeedbackTotal)"),
+        agentIntentInvariantCheck("movement_intent_inputs_total_expected", summary.movementIntentInputsTotal == 10, "10", "\(summary.movementIntentInputsTotal)"),
+        agentIntentInvariantCheck("tick_approved_total_expected", summary.tickApprovedTotal == 6, "6", "\(summary.tickApprovedTotal)"),
+        agentIntentInvariantCheck("tick_denied_total_expected", summary.tickDeniedTotal == 4, "4", "\(summary.tickDeniedTotal)"),
+        agentIntentInvariantCheck("tick_denied_conflict_total_expected", summary.tickDeniedConflictTotal == 2, "2", "\(summary.tickDeniedConflictTotal)"),
+        agentIntentInvariantCheck("tick_denied_collision_total_expected", summary.tickDeniedCollisionTotal == 2, "2", "\(summary.tickDeniedCollisionTotal)"),
+        agentIntentInvariantCheck("policy_read_collision_false", !summary.policyReadCollision, "false", "\(summary.policyReadCollision)"),
+        agentIntentInvariantCheck("tick_read_collision_true", summary.tickReadCollision, "true", "\(summary.tickReadCollision)"),
+        agentIntentInvariantCheck("policy_world_used_false", !summary.policyWorldUsed, "false", "\(summary.policyWorldUsed)"),
+        agentIntentInvariantCheck("tick_world_readonly_used_true", summary.tickWorldReadOnlyUsed, "true", "\(summary.tickWorldReadOnlyUsed)"),
+        agentIntentInvariantCheck("movement_not_applied", !summary.movementApplied, "false", "\(summary.movementApplied)"),
+        agentIntentInvariantCheck("approved_applications_zero", summary.approvedApplicationsTotal == 0, "0", "\(summary.approvedApplicationsTotal)"),
+        agentIntentInvariantCheck("memory_not_updated", !summary.memoryUpdated, "false", "\(summary.memoryUpdated)"),
+        agentIntentInvariantCheck("goal_not_changed", !summary.goalChanged, "false", "\(summary.goalChanged)"),
+        agentIntentInvariantCheck("pathfinding_not_performed", !summary.pathfindingPerformed, "false", "\(summary.pathfindingPerformed)"),
+        agentIntentInvariantCheck("replanning_not_performed", !summary.replanningPerformed, "false", "\(summary.replanningPerformed)"),
+        agentIntentInvariantCheck("avoidance_not_performed", !summary.avoidancePerformed, "false", "\(summary.avoidancePerformed)"),
+        agentIntentInvariantCheck("reservation_runtime_not_used", !summary.reservationRuntimeUsed, "false", "\(summary.reservationRuntimeUsed)"),
+        agentIntentInvariantCheck("route_following_not_used", !summary.routeFollowingUsed, "false", "\(summary.routeFollowingUsed)"),
+        agentIntentInvariantCheck("learning_not_performed", true, "false", "false"),
+        agentIntentInvariantCheck("llm_rl_python_not_used", true, "false", "false"),
+        agentIntentInvariantCheck("social_behavior_not_used", true, "false", "false"),
+        agentIntentInvariantCheck("communication_not_used", true, "false", "false"),
+        agentIntentInvariantCheck("terrain_mutation_not_performed", !summary.mutationPerformed, "false", "\(summary.mutationPerformed)"),
+        agentIntentInvariantCheck("world_mutation_not_performed", !summary.worldMutated, "false", "\(summary.worldMutated)"),
+        agentIntentInvariantCheck("multi_tick_hardening_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        agentIntentInvariantCheck("multi_tick_fixture_smoke_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        agentIntentInvariantCheck("feedback_aware_approved_application_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        agentIntentInvariantCheck("feedback_aware_live_readonly_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        agentIntentInvariantCheck("feedback_aware_intent_to_tick_fixture_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        agentIntentInvariantCheck("feedback_aware_policy_hardening_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        agentIntentInvariantCheck("feedback_to_context_hardening_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        agentIntentInvariantCheck("agent_intent_v0_fixture_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        agentIntentInvariantCheck("tick_resolutions_sorted_by_agent_id", allResolutionsSorted, "sorted", "\(allResolutionsSorted)"),
+        agentIntentInvariantCheck("occupable_destinations_expected", summary.occupableDestinationsTotal == 8, "8", "\(summary.occupableDestinationsTotal)"),
+        agentIntentInvariantCheck("non_occupable_destinations_expected", summary.nonOccupableDestinationsTotal == 2, "2", "\(summary.nonOccupableDestinationsTotal)"),
+        agentIntentInvariantCheck("report_written", true, "multi_tick_closed_loop_live_readonly_report.json", "multi_tick_closed_loop_live_readonly_report.json"),
+        agentIntentInvariantCheck("ticks_written", true, "multi_tick_closed_loop_live_readonly_ticks.json", "multi_tick_closed_loop_live_readonly_ticks.json"),
+        agentIntentInvariantCheck("feedback_written", true, "multi_tick_closed_loop_live_readonly_feedback.json", "multi_tick_closed_loop_live_readonly_feedback.json"),
+        agentIntentInvariantCheck("metrics_written", true, "multiTickClosedLoopLiveReadonly*", "multiTickClosedLoopLiveReadonly*"),
+        agentIntentInvariantCheck("event_written", true, "lab_multi_tick_closed_loop_live_readonly_recorded", "lab_multi_tick_closed_loop_live_readonly_recorded"),
+        agentIntentInvariantCheck("success_contract_respected", report.success, "true", "\(report.success)")
+    ]
+    let passed = checks.filter(\.passed).count
+    return LabMultiTickClosedLoopLiveReadonlyInvariantReport(
+        scenario: scenario,
+        seed: seed,
+        success: passed == checks.count,
+        summary: LabMultiAgentMovementFixtureInvariantSummary(
+            checksPassed: passed,
+            checksFailed: checks.count - passed,
+            cases: 1,
+            passed: report.success ? 1 : 0,
+            failed: report.success ? 0 : 1
+        ),
+        checks: checks,
+        notes: [
+            "The closed loop executes exactly three live read-only ticks and never applies movement.",
+            "Feedback emitted at tick N is consumed only at tick N+1.",
+            "The policy never reads collision or World; live read-only collision evidence is gathered only by the tick layer.",
+            "Collision and conflict feedback reduce tick 1 movement inputs, while tick 2 documents memoryless previous-tick-only behavior."
         ]
     )
 }

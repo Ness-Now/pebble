@@ -1102,6 +1102,45 @@ struct RunMetrics: Encodable {
     let multiTickClosedLoopHardeningWorldMutated: Bool?
     let multiTickClosedLoopHardeningMutationPerformed: Bool?
     let multiTickClosedLoopHardeningSuccess: Bool?
+    let multiTickClosedLoopLiveReadonlyRequestedTicks: Int?
+    let multiTickClosedLoopLiveReadonlyExecutedTicks: Int?
+    let multiTickClosedLoopLiveReadonlyAgents: Int?
+    let multiTickClosedLoopLiveReadonlyContextsTotal: Int?
+    let multiTickClosedLoopLiveReadonlyFeedbackConsumedTotal: Int?
+    let multiTickClosedLoopLiveReadonlyFeedbackCarriedToNextTickTotal: Int?
+    let multiTickClosedLoopLiveReadonlyContextsWithFeedbackTotal: Int?
+    let multiTickClosedLoopLiveReadonlyContextsWithoutFeedbackTotal: Int?
+    let multiTickClosedLoopLiveReadonlyProposalsTotal: Int?
+    let multiTickClosedLoopLiveReadonlyAcceptedIntentsTotal: Int?
+    let multiTickClosedLoopLiveReadonlyNoIntentTotal: Int?
+    let multiTickClosedLoopLiveReadonlyNoIntentFromBlockedFeedbackTotal: Int?
+    let multiTickClosedLoopLiveReadonlyMovementIntentInputsTotal: Int?
+    let multiTickClosedLoopLiveReadonlyTickApprovedTotal: Int?
+    let multiTickClosedLoopLiveReadonlyTickDeniedTotal: Int?
+    let multiTickClosedLoopLiveReadonlyTickDeniedConflictTotal: Int?
+    let multiTickClosedLoopLiveReadonlyTickDeniedCollisionTotal: Int?
+    let multiTickClosedLoopLiveReadonlyTickFeedbackEmittedTotal: Int?
+    let multiTickClosedLoopLiveReadonlyOccupableDestinationsTotal: Int?
+    let multiTickClosedLoopLiveReadonlyNonOccupableDestinationsTotal: Int?
+    let multiTickClosedLoopLiveReadonlyApprovedApplicationsTotal: Int?
+    let multiTickClosedLoopLiveReadonlySameTickFeedbackConsumedTotal: Int?
+    let multiTickClosedLoopLiveReadonlyCrossAgentFeedbackLeaksTotal: Int?
+    let multiTickClosedLoopLiveReadonlyFutureFeedbackConsumedTotal: Int?
+    let multiTickClosedLoopLiveReadonlyPolicyReadCollision: Bool?
+    let multiTickClosedLoopLiveReadonlyTickReadCollision: Bool?
+    let multiTickClosedLoopLiveReadonlyPolicyWorldUsed: Bool?
+    let multiTickClosedLoopLiveReadonlyTickWorldReadOnlyUsed: Bool?
+    let multiTickClosedLoopLiveReadonlyMovementApplied: Bool?
+    let multiTickClosedLoopLiveReadonlyMemoryUpdated: Bool?
+    let multiTickClosedLoopLiveReadonlyGoalChanged: Bool?
+    let multiTickClosedLoopLiveReadonlyPathfindingPerformed: Bool?
+    let multiTickClosedLoopLiveReadonlyReplanningPerformed: Bool?
+    let multiTickClosedLoopLiveReadonlyAvoidancePerformed: Bool?
+    let multiTickClosedLoopLiveReadonlyReservationRuntimeUsed: Bool?
+    let multiTickClosedLoopLiveReadonlyRouteFollowingUsed: Bool?
+    let multiTickClosedLoopLiveReadonlyWorldMutated: Bool?
+    let multiTickClosedLoopLiveReadonlyMutationPerformed: Bool?
+    let multiTickClosedLoopLiveReadonlySuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -2204,6 +2243,45 @@ struct RunMetrics: Encodable {
         multiTickClosedLoopHardeningWorldMutated: Bool? = nil,
         multiTickClosedLoopHardeningMutationPerformed: Bool? = nil,
         multiTickClosedLoopHardeningSuccess: Bool? = nil,
+        multiTickClosedLoopLiveReadonlyRequestedTicks: Int? = nil,
+        multiTickClosedLoopLiveReadonlyExecutedTicks: Int? = nil,
+        multiTickClosedLoopLiveReadonlyAgents: Int? = nil,
+        multiTickClosedLoopLiveReadonlyContextsTotal: Int? = nil,
+        multiTickClosedLoopLiveReadonlyFeedbackConsumedTotal: Int? = nil,
+        multiTickClosedLoopLiveReadonlyFeedbackCarriedToNextTickTotal: Int? = nil,
+        multiTickClosedLoopLiveReadonlyContextsWithFeedbackTotal: Int? = nil,
+        multiTickClosedLoopLiveReadonlyContextsWithoutFeedbackTotal: Int? = nil,
+        multiTickClosedLoopLiveReadonlyProposalsTotal: Int? = nil,
+        multiTickClosedLoopLiveReadonlyAcceptedIntentsTotal: Int? = nil,
+        multiTickClosedLoopLiveReadonlyNoIntentTotal: Int? = nil,
+        multiTickClosedLoopLiveReadonlyNoIntentFromBlockedFeedbackTotal: Int? = nil,
+        multiTickClosedLoopLiveReadonlyMovementIntentInputsTotal: Int? = nil,
+        multiTickClosedLoopLiveReadonlyTickApprovedTotal: Int? = nil,
+        multiTickClosedLoopLiveReadonlyTickDeniedTotal: Int? = nil,
+        multiTickClosedLoopLiveReadonlyTickDeniedConflictTotal: Int? = nil,
+        multiTickClosedLoopLiveReadonlyTickDeniedCollisionTotal: Int? = nil,
+        multiTickClosedLoopLiveReadonlyTickFeedbackEmittedTotal: Int? = nil,
+        multiTickClosedLoopLiveReadonlyOccupableDestinationsTotal: Int? = nil,
+        multiTickClosedLoopLiveReadonlyNonOccupableDestinationsTotal: Int? = nil,
+        multiTickClosedLoopLiveReadonlyApprovedApplicationsTotal: Int? = nil,
+        multiTickClosedLoopLiveReadonlySameTickFeedbackConsumedTotal: Int? = nil,
+        multiTickClosedLoopLiveReadonlyCrossAgentFeedbackLeaksTotal: Int? = nil,
+        multiTickClosedLoopLiveReadonlyFutureFeedbackConsumedTotal: Int? = nil,
+        multiTickClosedLoopLiveReadonlyPolicyReadCollision: Bool? = nil,
+        multiTickClosedLoopLiveReadonlyTickReadCollision: Bool? = nil,
+        multiTickClosedLoopLiveReadonlyPolicyWorldUsed: Bool? = nil,
+        multiTickClosedLoopLiveReadonlyTickWorldReadOnlyUsed: Bool? = nil,
+        multiTickClosedLoopLiveReadonlyMovementApplied: Bool? = nil,
+        multiTickClosedLoopLiveReadonlyMemoryUpdated: Bool? = nil,
+        multiTickClosedLoopLiveReadonlyGoalChanged: Bool? = nil,
+        multiTickClosedLoopLiveReadonlyPathfindingPerformed: Bool? = nil,
+        multiTickClosedLoopLiveReadonlyReplanningPerformed: Bool? = nil,
+        multiTickClosedLoopLiveReadonlyAvoidancePerformed: Bool? = nil,
+        multiTickClosedLoopLiveReadonlyReservationRuntimeUsed: Bool? = nil,
+        multiTickClosedLoopLiveReadonlyRouteFollowingUsed: Bool? = nil,
+        multiTickClosedLoopLiveReadonlyWorldMutated: Bool? = nil,
+        multiTickClosedLoopLiveReadonlyMutationPerformed: Bool? = nil,
+        multiTickClosedLoopLiveReadonlySuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -3305,6 +3383,45 @@ struct RunMetrics: Encodable {
         self.multiTickClosedLoopHardeningWorldMutated = multiTickClosedLoopHardeningWorldMutated
         self.multiTickClosedLoopHardeningMutationPerformed = multiTickClosedLoopHardeningMutationPerformed
         self.multiTickClosedLoopHardeningSuccess = multiTickClosedLoopHardeningSuccess
+        self.multiTickClosedLoopLiveReadonlyRequestedTicks = multiTickClosedLoopLiveReadonlyRequestedTicks
+        self.multiTickClosedLoopLiveReadonlyExecutedTicks = multiTickClosedLoopLiveReadonlyExecutedTicks
+        self.multiTickClosedLoopLiveReadonlyAgents = multiTickClosedLoopLiveReadonlyAgents
+        self.multiTickClosedLoopLiveReadonlyContextsTotal = multiTickClosedLoopLiveReadonlyContextsTotal
+        self.multiTickClosedLoopLiveReadonlyFeedbackConsumedTotal = multiTickClosedLoopLiveReadonlyFeedbackConsumedTotal
+        self.multiTickClosedLoopLiveReadonlyFeedbackCarriedToNextTickTotal = multiTickClosedLoopLiveReadonlyFeedbackCarriedToNextTickTotal
+        self.multiTickClosedLoopLiveReadonlyContextsWithFeedbackTotal = multiTickClosedLoopLiveReadonlyContextsWithFeedbackTotal
+        self.multiTickClosedLoopLiveReadonlyContextsWithoutFeedbackTotal = multiTickClosedLoopLiveReadonlyContextsWithoutFeedbackTotal
+        self.multiTickClosedLoopLiveReadonlyProposalsTotal = multiTickClosedLoopLiveReadonlyProposalsTotal
+        self.multiTickClosedLoopLiveReadonlyAcceptedIntentsTotal = multiTickClosedLoopLiveReadonlyAcceptedIntentsTotal
+        self.multiTickClosedLoopLiveReadonlyNoIntentTotal = multiTickClosedLoopLiveReadonlyNoIntentTotal
+        self.multiTickClosedLoopLiveReadonlyNoIntentFromBlockedFeedbackTotal = multiTickClosedLoopLiveReadonlyNoIntentFromBlockedFeedbackTotal
+        self.multiTickClosedLoopLiveReadonlyMovementIntentInputsTotal = multiTickClosedLoopLiveReadonlyMovementIntentInputsTotal
+        self.multiTickClosedLoopLiveReadonlyTickApprovedTotal = multiTickClosedLoopLiveReadonlyTickApprovedTotal
+        self.multiTickClosedLoopLiveReadonlyTickDeniedTotal = multiTickClosedLoopLiveReadonlyTickDeniedTotal
+        self.multiTickClosedLoopLiveReadonlyTickDeniedConflictTotal = multiTickClosedLoopLiveReadonlyTickDeniedConflictTotal
+        self.multiTickClosedLoopLiveReadonlyTickDeniedCollisionTotal = multiTickClosedLoopLiveReadonlyTickDeniedCollisionTotal
+        self.multiTickClosedLoopLiveReadonlyTickFeedbackEmittedTotal = multiTickClosedLoopLiveReadonlyTickFeedbackEmittedTotal
+        self.multiTickClosedLoopLiveReadonlyOccupableDestinationsTotal = multiTickClosedLoopLiveReadonlyOccupableDestinationsTotal
+        self.multiTickClosedLoopLiveReadonlyNonOccupableDestinationsTotal = multiTickClosedLoopLiveReadonlyNonOccupableDestinationsTotal
+        self.multiTickClosedLoopLiveReadonlyApprovedApplicationsTotal = multiTickClosedLoopLiveReadonlyApprovedApplicationsTotal
+        self.multiTickClosedLoopLiveReadonlySameTickFeedbackConsumedTotal = multiTickClosedLoopLiveReadonlySameTickFeedbackConsumedTotal
+        self.multiTickClosedLoopLiveReadonlyCrossAgentFeedbackLeaksTotal = multiTickClosedLoopLiveReadonlyCrossAgentFeedbackLeaksTotal
+        self.multiTickClosedLoopLiveReadonlyFutureFeedbackConsumedTotal = multiTickClosedLoopLiveReadonlyFutureFeedbackConsumedTotal
+        self.multiTickClosedLoopLiveReadonlyPolicyReadCollision = multiTickClosedLoopLiveReadonlyPolicyReadCollision
+        self.multiTickClosedLoopLiveReadonlyTickReadCollision = multiTickClosedLoopLiveReadonlyTickReadCollision
+        self.multiTickClosedLoopLiveReadonlyPolicyWorldUsed = multiTickClosedLoopLiveReadonlyPolicyWorldUsed
+        self.multiTickClosedLoopLiveReadonlyTickWorldReadOnlyUsed = multiTickClosedLoopLiveReadonlyTickWorldReadOnlyUsed
+        self.multiTickClosedLoopLiveReadonlyMovementApplied = multiTickClosedLoopLiveReadonlyMovementApplied
+        self.multiTickClosedLoopLiveReadonlyMemoryUpdated = multiTickClosedLoopLiveReadonlyMemoryUpdated
+        self.multiTickClosedLoopLiveReadonlyGoalChanged = multiTickClosedLoopLiveReadonlyGoalChanged
+        self.multiTickClosedLoopLiveReadonlyPathfindingPerformed = multiTickClosedLoopLiveReadonlyPathfindingPerformed
+        self.multiTickClosedLoopLiveReadonlyReplanningPerformed = multiTickClosedLoopLiveReadonlyReplanningPerformed
+        self.multiTickClosedLoopLiveReadonlyAvoidancePerformed = multiTickClosedLoopLiveReadonlyAvoidancePerformed
+        self.multiTickClosedLoopLiveReadonlyReservationRuntimeUsed = multiTickClosedLoopLiveReadonlyReservationRuntimeUsed
+        self.multiTickClosedLoopLiveReadonlyRouteFollowingUsed = multiTickClosedLoopLiveReadonlyRouteFollowingUsed
+        self.multiTickClosedLoopLiveReadonlyWorldMutated = multiTickClosedLoopLiveReadonlyWorldMutated
+        self.multiTickClosedLoopLiveReadonlyMutationPerformed = multiTickClosedLoopLiveReadonlyMutationPerformed
+        self.multiTickClosedLoopLiveReadonlySuccess = multiTickClosedLoopLiveReadonlySuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

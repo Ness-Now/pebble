@@ -7512,3 +7512,142 @@ opt-in and v0 remains available.
 ### Next Step
 
 Phase 4.24D — Multi-Tick Closed Loop Live Read-Only Smoke.
+
+## 2026-06-29 — Phase 4.24D multi-tick closed loop live read-only
+
+### Objective
+
+Add the first live read-only multi-tick closed loop scenario:
+`multi_tick_closed_loop_live_readonly_smoke`.
+
+### Starting Point
+
+Phase 4.24B validated the first bounded fixture-only three-tick loop, and
+Phase 4.24C hardened previous-tick-only feedback consumption against stale,
+future, same-tick, duplicate, malformed, unknown-agent, and cross-agent
+feedback. Neither phase used World or live collision.
+
+### Files Created/Modified
+
+- `Sources/PebbleLab/LabAgentIntentProduction.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_MULTI_TICK_CLOSED_LOOP_PLAN.md`
+
+### Why Live Read-Only
+
+The closed loop needs to prove that live collision feedback can be emitted by
+the tick layer and consumed by the next policy tick without giving the policy
+direct collision or World access. This phase keeps the tick live read-only,
+does not apply movement, and does not update lab position maps.
+
+### Fixed Three Ticks And Agents
+
+The smoke executes exactly three ticks over five agents:
+
+- `agent_0_winner`: baseline east move, stable winner for same-destination
+  conflict;
+- `agent_1_loser`: baseline west move to the same destination, receives
+  `blockedByAgentConflict`;
+- `agent_2_free`: live read-only occupable south move;
+- `agent_3_collision`: live read-only non-occupable east move, receives
+  `blockedByCollision`;
+- `agent_4_idle`: baseline `noIntent` missing-feedback control.
+
+### Feedback Carryover
+
+Feedback emitted at tick `N` is consumed only at tick `N+1`.
+
+- Tick `0`: consumes no feedback, emits four feedback records.
+- Tick `1`: consumes only tick `0` feedback; `agent_1_loser` and
+  `agent_3_collision` become `noIntent` and are filtered before tick input.
+- Tick `2`: consumes only tick `1` feedback; agents without tick `1` feedback
+  return to baseline, documenting memoryless previous-tick-only behavior.
+
+There is no same-tick feedback consumption, no future feedback consumption,
+and no cross-agent feedback leak.
+
+### Conflict And Collision Feedback
+
+At tick `0`, `agent_1_loser` gets `blockedByAgentConflict` and
+`agent_3_collision` gets `blockedByCollision`. At tick `1`, both feedback
+kinds are visible only to their owning agents and v1 converts both agents to
+`noIntent`. The tick therefore receives two movement intents instead of four,
+and both conflict and collision are reduced for that tick.
+
+### Tick Read-Only Boundary
+
+The feedback-aware policy does not read collision or World. The tick layer
+reads live collision/World in read-only mode only for accepted movement
+intents that survive `noIntent` filtering. No movement is applied and no lab
+position maps, terrain, or World state are mutated.
+
+### Outputs, Invariants, Metrics, Event
+
+The scenario writes:
+
+- `multi_tick_closed_loop_live_readonly_report.json`;
+- `multi_tick_closed_loop_live_readonly_invariant_report.json`;
+- `multi_tick_closed_loop_live_readonly_ticks.json`;
+- `multi_tick_closed_loop_live_readonly_feedback.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Metrics use the `multiTickClosedLoopLiveReadonly*` prefix, and the event is
+the aggregate `lab_multi_tick_closed_loop_live_readonly_recorded`.
+
+The invariant report validates 96 checks, including fixed tick count,
+deterministic ordering, previous-tick-only feedback consumption, no
+same-tick/future/cross-agent feedback consumption, conflict feedback carryover,
+collision feedback carryover, tick `1` reduction, tick `2` memoryless behavior,
+policy no collision/World access, tick read-only collision/World access, no
+movement, and artifact writing.
+
+### Boundary Confirmation
+
+The implementation does not apply movement, update memory, change goals,
+pathfind, replan, avoid, use reservation runtime, use route following, perform
+physics, use learning/LLM/RL/Python, use social/communication behavior, or
+mutate terrain/World. v1 remains opt-in and v0 remains available.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_live_readonly_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_live_readonly`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_hardening_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_hardening_after_live_readonly`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_fixture_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_fixture_after_live_readonly`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_approved_application_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_approved_application_after_multi_tick_live_readonly`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_live_readonly_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_live_readonly_after_multi_tick_live_readonly`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_intent_to_tick_fixture_after_multi_tick_live_readonly`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_hardening_after_multi_tick_live_readonly`
+- `swift run -c release PebbleLab -- --scenario feedback_to_agent_intent_context_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_to_context_hardening_after_multi_tick_live_readonly`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_fixture_after_multi_tick_live_readonly`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_live_readonly_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_to_tick_live_readonly_after_multi_tick_live_readonly`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_multi_tick_live_readonly`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- `swift build` passed.
+- `multi_tick_closed_loop_live_readonly_smoke` passed with report success true.
+- Invariant report success true with 96 passed, 0 failed.
+- Tick `1` reduced both same-destination conflict and collision by consuming
+  tick `0` feedback.
+- Outputs, metrics, and aggregate event were written.
+- Listed non-regressions passed.
+- `swift build -c release --product Pebble` passed.
+- `swift run -c release pebsmoke` passed with 456 passed, 0 failed.
+- `git diff --check` passed.
+
+### Next Step
+
+Phase 4.24E — Multi-Tick Closed Loop Approved Application Smoke.

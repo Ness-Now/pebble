@@ -573,3 +573,92 @@ The hardening scenario keeps the 4.24 boundary intact:
 
 Next recommended step: Phase 4.24D - Multi-Tick Closed Loop Live Read-Only
 Smoke.
+
+## Phase 4.24D Implementation Status
+
+Status: implemented and validated.
+
+Phase 4.24D added the live read-only scenario
+`multi_tick_closed_loop_live_readonly_smoke`.
+
+The scenario executes a fixed three-tick loop over five agents. It keeps v1
+opt-in, leaves v0 available, and preserves the previous-tick-only causality
+rule:
+
+- tick `0` starts with an empty feedback store, sends four movement intents to
+  the live read-only tick layer, emits one same-destination conflict feedback
+  and one collision feedback, and applies no movement;
+- tick `1` consumes only tick `0` feedback, injects `blockedByAgentConflict`
+  into `agent_1_loser` and `blockedByCollision` into
+  `agent_3_collision`, converts both to `noIntent`, filters both before tick
+  input, and reduces conflict and collision;
+- tick `2` consumes only tick `1` feedback, documents memoryless
+  previous-tick-only behavior, and lets agents without tick `1` feedback return
+  to baseline.
+
+The policy boundary is explicit: the feedback-aware policy never reads
+collision or World. The tick layer reads collision/World in read-only mode only
+for movement intents that survive `noIntent` filtering. No movement is applied,
+no lab position maps are changed, and no terrain or World mutation occurs.
+
+Validated aggregate totals:
+
+- `requestedTicks = 3`;
+- `executedTicks = 3`;
+- `agents = 5`;
+- `contextsTotal = 15`;
+- `contextsWithFeedbackTotal = 6`;
+- `contextsWithoutFeedbackTotal = 9`;
+- `proposalsTotal = 15`;
+- `acceptedIntentsTotal = 10`;
+- `noIntentTotal = 5`;
+- `noIntentFromBlockedFeedbackTotal = 2`;
+- `movementIntentInputsTotal = 10`;
+- `tickApprovedTotal = 6`;
+- `tickDeniedTotal = 4`;
+- `tickDeniedConflictTotal = 2`;
+- `tickDeniedCollisionTotal = 2`;
+- `tickFeedbackEmittedTotal = 10`;
+- `feedbackConsumedTotal = 6`;
+- `feedbackCarriedToNextTickTotal = 10`;
+- `sameTickFeedbackConsumedTotal = 0`;
+- `crossAgentFeedbackLeaksTotal = 0`;
+- `futureFeedbackConsumedTotal = 0`;
+- `approvedApplicationsTotal = 0`.
+
+The scenario writes:
+
+- `multi_tick_closed_loop_live_readonly_report.json`;
+- `multi_tick_closed_loop_live_readonly_invariant_report.json`;
+- `multi_tick_closed_loop_live_readonly_ticks.json`;
+- `multi_tick_closed_loop_live_readonly_feedback.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Metrics use the `multiTickClosedLoopLiveReadonly*` prefix. The scenario emits
+one aggregate `lab_multi_tick_closed_loop_live_readonly_recorded` event.
+
+The invariant report contains 96 checks and validates fixed tick count,
+deterministic ordering, no same-tick/future/cross-agent feedback consumption,
+conflict feedback carryover, collision feedback carryover, tick `1`
+conflict/collision reduction, tick `2` memoryless return, v1 opt-in behavior,
+policy no collision/World access, tick live read-only collision/World access,
+artifact writing, and the success contract.
+
+Still out of scope:
+
+- movement application;
+- approved lab position map movement;
+- pathfinding;
+- replanning;
+- avoidance;
+- reservation runtime;
+- route following;
+- memory updates;
+- goal changes;
+- alternate hints;
+- autonomous gameplay movement;
+- terrain/world mutation.
+
+Next recommended step: Phase 4.24E - Multi-Tick Closed Loop Approved
+Application Smoke.

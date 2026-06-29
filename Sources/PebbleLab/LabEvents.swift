@@ -288,6 +288,9 @@ struct RunEvent: Encodable {
     let tickDeniedConflictTotal: Int?
     let tickDeniedCollisionTotal: Int?
     let tickFeedbackEmitted: Int?
+    let tickFeedbackEmittedTotal: Int?
+    let occupableDestinationsTotal: Int?
+    let nonOccupableDestinationsTotal: Int?
     let tickApprovedTotal: Int?
     let tickDeniedTotal: Int?
     let feedbackEmittedTotal: Int?
@@ -682,6 +685,9 @@ struct RunEvent: Encodable {
         tickDeniedConflictTotal: Int? = nil,
         tickDeniedCollisionTotal: Int? = nil,
         tickFeedbackEmitted: Int? = nil,
+        tickFeedbackEmittedTotal: Int? = nil,
+        occupableDestinationsTotal: Int? = nil,
+        nonOccupableDestinationsTotal: Int? = nil,
         tickApprovedTotal: Int? = nil,
         tickDeniedTotal: Int? = nil,
         feedbackEmittedTotal: Int? = nil,
@@ -1075,6 +1081,9 @@ struct RunEvent: Encodable {
         self.tickDeniedConflictTotal = tickDeniedConflictTotal
         self.tickDeniedCollisionTotal = tickDeniedCollisionTotal
         self.tickFeedbackEmitted = tickFeedbackEmitted
+        self.tickFeedbackEmittedTotal = tickFeedbackEmittedTotal
+        self.occupableDestinationsTotal = occupableDestinationsTotal
+        self.nonOccupableDestinationsTotal = nonOccupableDestinationsTotal
         self.tickApprovedTotal = tickApprovedTotal
         self.tickDeniedTotal = tickDeniedTotal
         self.feedbackEmittedTotal = feedbackEmittedTotal

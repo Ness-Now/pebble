@@ -54,6 +54,8 @@ let isMultiTickClosedLoopFixtureScenario = options.scenario
     == "multi_tick_closed_loop_fixture_smoke"
 let isMultiTickClosedLoopHardeningScenario = options.scenario
     == "multi_tick_closed_loop_hardening_smoke"
+let isMultiTickClosedLoopLiveReadonlyScenario = options.scenario
+    == "multi_tick_closed_loop_live_readonly_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -75,7 +77,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isFeedbackAwareIntentToTickLiveReadonlyScenario
     || isFeedbackAwareIntentToTickApprovedApplicationScenario
     || isMultiTickClosedLoopFixtureScenario
-    || isMultiTickClosedLoopHardeningScenario)
+    || isMultiTickClosedLoopHardeningScenario
+    || isMultiTickClosedLoopLiveReadonlyScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -730,7 +733,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isFeedbackAwareIntentToTickLiveReadonlyScenario
     || isFeedbackAwareIntentToTickApprovedApplicationScenario
     || isMultiTickClosedLoopFixtureScenario
-    || isMultiTickClosedLoopHardeningScenario {
+    || isMultiTickClosedLoopHardeningScenario
+    || isMultiTickClosedLoopLiveReadonlyScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -2377,6 +2381,60 @@ let multiTickClosedLoopHardeningSuccess = isMultiTickClosedLoopHardeningScenario
         && multiTickClosedLoopHardeningSummary?.worldMutated == false
         && multiTickClosedLoopHardeningSummary?.mutationPerformed == false)
     : nil
+let multiTickClosedLoopLiveReadonlyReport = isMultiTickClosedLoopLiveReadonlyScenario
+    ? makeMultiTickClosedLoopLiveReadonlyReport(
+        scenario: options.scenario,
+        seed: options.seed,
+        requestedTicks: options.ticks
+    )
+    : nil
+let multiTickClosedLoopLiveReadonlyInvariantReport = isMultiTickClosedLoopLiveReadonlyScenario
+    ? makeMultiTickClosedLoopLiveReadonlyInvariantReport(
+        report: multiTickClosedLoopLiveReadonlyReport,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let multiTickClosedLoopLiveReadonlySummary = multiTickClosedLoopLiveReadonlyReport?.summary
+let multiTickClosedLoopLiveReadonlySuccess = isMultiTickClosedLoopLiveReadonlyScenario
+    ? ((multiTickClosedLoopLiveReadonlyReport?.success ?? false)
+        && (multiTickClosedLoopLiveReadonlyInvariantReport?.success ?? false)
+        && multiTickClosedLoopLiveReadonlySummary?.requestedTicks == 3
+        && multiTickClosedLoopLiveReadonlySummary?.executedTicks == 3
+        && multiTickClosedLoopLiveReadonlySummary?.agents == 5
+        && multiTickClosedLoopLiveReadonlySummary?.contextsTotal == 15
+        && multiTickClosedLoopLiveReadonlySummary?.contextsWithFeedbackTotal == 6
+        && multiTickClosedLoopLiveReadonlySummary?.contextsWithoutFeedbackTotal == 9
+        && multiTickClosedLoopLiveReadonlySummary?.proposalsTotal == 15
+        && multiTickClosedLoopLiveReadonlySummary?.noIntentTotal == 5
+        && multiTickClosedLoopLiveReadonlySummary?.noIntentFromBlockedFeedbackTotal == 2
+        && multiTickClosedLoopLiveReadonlySummary?.movementIntentInputsTotal == 10
+        && multiTickClosedLoopLiveReadonlySummary?.tickApprovedTotal == 6
+        && multiTickClosedLoopLiveReadonlySummary?.tickDeniedTotal == 4
+        && multiTickClosedLoopLiveReadonlySummary?.tickDeniedConflictTotal == 2
+        && multiTickClosedLoopLiveReadonlySummary?.tickDeniedCollisionTotal == 2
+        && multiTickClosedLoopLiveReadonlySummary?.tickFeedbackEmittedTotal == 10
+        && multiTickClosedLoopLiveReadonlySummary?.feedbackConsumedTotal == 6
+        && multiTickClosedLoopLiveReadonlySummary?.feedbackCarriedToNextTickTotal == 10
+        && multiTickClosedLoopLiveReadonlySummary?.approvedApplicationsTotal == 0
+        && multiTickClosedLoopLiveReadonlySummary?.sameTickFeedbackConsumedTotal == 0
+        && multiTickClosedLoopLiveReadonlySummary?.crossAgentFeedbackLeaksTotal == 0
+        && multiTickClosedLoopLiveReadonlySummary?.futureFeedbackConsumedTotal == 0
+        && multiTickClosedLoopLiveReadonlySummary?.policyReadCollision == false
+        && multiTickClosedLoopLiveReadonlySummary?.tickReadCollision == true
+        && multiTickClosedLoopLiveReadonlySummary?.policyWorldUsed == false
+        && multiTickClosedLoopLiveReadonlySummary?.tickWorldReadOnlyUsed == true
+        && multiTickClosedLoopLiveReadonlySummary?.movementApplied == false
+        && multiTickClosedLoopLiveReadonlySummary?.memoryUpdated == false
+        && multiTickClosedLoopLiveReadonlySummary?.goalChanged == false
+        && multiTickClosedLoopLiveReadonlySummary?.pathfindingPerformed == false
+        && multiTickClosedLoopLiveReadonlySummary?.replanningPerformed == false
+        && multiTickClosedLoopLiveReadonlySummary?.avoidancePerformed == false
+        && multiTickClosedLoopLiveReadonlySummary?.reservationRuntimeUsed == false
+        && multiTickClosedLoopLiveReadonlySummary?.routeFollowingUsed == false
+        && multiTickClosedLoopLiveReadonlySummary?.worldMutated == false
+        && multiTickClosedLoopLiveReadonlySummary?.mutationPerformed == false)
+    : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
@@ -2771,6 +2829,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (feedbackAwareIntentToTickApprovedApplicationSuccess ?? true)
     && (multiTickClosedLoopSuccess ?? true)
     && (multiTickClosedLoopHardeningSuccess ?? true)
+    && (multiTickClosedLoopLiveReadonlySuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -3967,6 +4026,56 @@ if options.outPath != nil {
                 replanningPerformed: summary.replanningPerformed
             ))
         }
+        if let multiTickClosedLoopLiveReadonlyReport {
+            let summary = multiTickClosedLoopLiveReadonlyReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_multi_tick_closed_loop_live_readonly_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                requestedTicks: summary.requestedTicks,
+                executedTicks: summary.executedTicks,
+                success: multiTickClosedLoopLiveReadonlySuccess,
+                agents: summary.agents,
+                contextsTotal: summary.contextsTotal,
+                contextsWithFeedbackTotal: summary.contextsWithFeedbackTotal,
+                contextsWithoutFeedbackTotal: summary.contextsWithoutFeedbackTotal,
+                feedbackConsumedTotal: summary.feedbackConsumedTotal,
+                feedbackCarriedToNextTickTotal: summary.feedbackCarriedToNextTickTotal,
+                proposalsTotal: summary.proposalsTotal,
+                acceptedIntentsTotal: summary.acceptedIntentsTotal,
+                noIntentTotal: summary.noIntentTotal,
+                noIntentFromBlockedFeedbackTotal: summary.noIntentFromBlockedFeedbackTotal,
+                movementIntentInputsTotal: summary.movementIntentInputsTotal,
+                tickDeniedConflictTotal: summary.tickDeniedConflictTotal,
+                tickDeniedCollisionTotal: summary.tickDeniedCollisionTotal,
+                tickFeedbackEmittedTotal: summary.tickFeedbackEmittedTotal,
+                occupableDestinationsTotal: summary.occupableDestinationsTotal,
+                nonOccupableDestinationsTotal: summary.nonOccupableDestinationsTotal,
+                tickApprovedTotal: summary.tickApprovedTotal,
+                tickDeniedTotal: summary.tickDeniedTotal,
+                feedbackEmittedTotal: summary.tickFeedbackEmittedTotal,
+                policyReadCollision: summary.policyReadCollision,
+                policyWorldUsed: summary.policyWorldUsed,
+                tickWorldReadOnlyUsed: summary.tickWorldReadOnlyUsed,
+                worldMutated: summary.worldMutated,
+                approvedApplicationsTotal: summary.approvedApplicationsTotal,
+                sameTickFeedbackConsumedTotal: summary.sameTickFeedbackConsumedTotal,
+                crossAgentFeedbackLeaksTotal: summary.crossAgentFeedbackLeaksTotal,
+                futureFeedbackConsumedTotal: summary.futureFeedbackConsumedTotal,
+                routeFollowingUsed: summary.routeFollowingUsed,
+                tickReadCollision: summary.tickReadCollision,
+                worldUsed: summary.policyWorldUsed || summary.tickWorldReadOnlyUsed,
+                collisionRead: summary.policyReadCollision || summary.tickReadCollision,
+                movementApplied: summary.movementApplied,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                avoidancePerformed: summary.avoidancePerformed,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
+                replanningPerformed: summary.replanningPerformed
+            ))
+        }
         if let routeFollowingLiveSnapshot {
             try appendEvent(RunEvent(
                 type: "lab_route_following_recorded",
@@ -4874,6 +4983,26 @@ if let outPath = options.outPath {
             try writeJSON(
                 multiTickClosedLoopHardeningFeedbackReport,
                 to: outURL.appendingPathComponent("multi_tick_closed_loop_hardening_feedback.json")
+            )
+        }
+        if let multiTickClosedLoopLiveReadonlyReport {
+            try writeJSON(
+                multiTickClosedLoopLiveReadonlyReport,
+                to: outURL.appendingPathComponent("multi_tick_closed_loop_live_readonly_report.json")
+            )
+            try writeJSON(
+                multiTickClosedLoopLiveReadonlyReport.tickRecords,
+                to: outURL.appendingPathComponent("multi_tick_closed_loop_live_readonly_ticks.json")
+            )
+            try writeJSON(
+                multiTickClosedLoopLiveReadonlyReport.feedbackLedger,
+                to: outURL.appendingPathComponent("multi_tick_closed_loop_live_readonly_feedback.json")
+            )
+        }
+        if let multiTickClosedLoopLiveReadonlyInvariantReport {
+            try writeJSON(
+                multiTickClosedLoopLiveReadonlyInvariantReport,
+                to: outURL.appendingPathComponent("multi_tick_closed_loop_live_readonly_invariant_report.json")
             )
         }
         if let routeFollowingLiveSnapshot {
@@ -6057,6 +6186,45 @@ if let outPath = options.outPath {
             multiTickClosedLoopHardeningWorldMutated: multiTickClosedLoopHardeningReport?.summary.worldMutated,
             multiTickClosedLoopHardeningMutationPerformed: multiTickClosedLoopHardeningReport?.summary.mutationPerformed,
             multiTickClosedLoopHardeningSuccess: multiTickClosedLoopHardeningSuccess,
+            multiTickClosedLoopLiveReadonlyRequestedTicks: multiTickClosedLoopLiveReadonlyReport?.summary.requestedTicks,
+            multiTickClosedLoopLiveReadonlyExecutedTicks: multiTickClosedLoopLiveReadonlyReport?.summary.executedTicks,
+            multiTickClosedLoopLiveReadonlyAgents: multiTickClosedLoopLiveReadonlyReport?.summary.agents,
+            multiTickClosedLoopLiveReadonlyContextsTotal: multiTickClosedLoopLiveReadonlyReport?.summary.contextsTotal,
+            multiTickClosedLoopLiveReadonlyFeedbackConsumedTotal: multiTickClosedLoopLiveReadonlyReport?.summary.feedbackConsumedTotal,
+            multiTickClosedLoopLiveReadonlyFeedbackCarriedToNextTickTotal: multiTickClosedLoopLiveReadonlyReport?.summary.feedbackCarriedToNextTickTotal,
+            multiTickClosedLoopLiveReadonlyContextsWithFeedbackTotal: multiTickClosedLoopLiveReadonlyReport?.summary.contextsWithFeedbackTotal,
+            multiTickClosedLoopLiveReadonlyContextsWithoutFeedbackTotal: multiTickClosedLoopLiveReadonlyReport?.summary.contextsWithoutFeedbackTotal,
+            multiTickClosedLoopLiveReadonlyProposalsTotal: multiTickClosedLoopLiveReadonlyReport?.summary.proposalsTotal,
+            multiTickClosedLoopLiveReadonlyAcceptedIntentsTotal: multiTickClosedLoopLiveReadonlyReport?.summary.acceptedIntentsTotal,
+            multiTickClosedLoopLiveReadonlyNoIntentTotal: multiTickClosedLoopLiveReadonlyReport?.summary.noIntentTotal,
+            multiTickClosedLoopLiveReadonlyNoIntentFromBlockedFeedbackTotal: multiTickClosedLoopLiveReadonlyReport?.summary.noIntentFromBlockedFeedbackTotal,
+            multiTickClosedLoopLiveReadonlyMovementIntentInputsTotal: multiTickClosedLoopLiveReadonlyReport?.summary.movementIntentInputsTotal,
+            multiTickClosedLoopLiveReadonlyTickApprovedTotal: multiTickClosedLoopLiveReadonlyReport?.summary.tickApprovedTotal,
+            multiTickClosedLoopLiveReadonlyTickDeniedTotal: multiTickClosedLoopLiveReadonlyReport?.summary.tickDeniedTotal,
+            multiTickClosedLoopLiveReadonlyTickDeniedConflictTotal: multiTickClosedLoopLiveReadonlyReport?.summary.tickDeniedConflictTotal,
+            multiTickClosedLoopLiveReadonlyTickDeniedCollisionTotal: multiTickClosedLoopLiveReadonlyReport?.summary.tickDeniedCollisionTotal,
+            multiTickClosedLoopLiveReadonlyTickFeedbackEmittedTotal: multiTickClosedLoopLiveReadonlyReport?.summary.tickFeedbackEmittedTotal,
+            multiTickClosedLoopLiveReadonlyOccupableDestinationsTotal: multiTickClosedLoopLiveReadonlyReport?.summary.occupableDestinationsTotal,
+            multiTickClosedLoopLiveReadonlyNonOccupableDestinationsTotal: multiTickClosedLoopLiveReadonlyReport?.summary.nonOccupableDestinationsTotal,
+            multiTickClosedLoopLiveReadonlyApprovedApplicationsTotal: multiTickClosedLoopLiveReadonlyReport?.summary.approvedApplicationsTotal,
+            multiTickClosedLoopLiveReadonlySameTickFeedbackConsumedTotal: multiTickClosedLoopLiveReadonlyReport?.summary.sameTickFeedbackConsumedTotal,
+            multiTickClosedLoopLiveReadonlyCrossAgentFeedbackLeaksTotal: multiTickClosedLoopLiveReadonlyReport?.summary.crossAgentFeedbackLeaksTotal,
+            multiTickClosedLoopLiveReadonlyFutureFeedbackConsumedTotal: multiTickClosedLoopLiveReadonlyReport?.summary.futureFeedbackConsumedTotal,
+            multiTickClosedLoopLiveReadonlyPolicyReadCollision: multiTickClosedLoopLiveReadonlyReport?.summary.policyReadCollision,
+            multiTickClosedLoopLiveReadonlyTickReadCollision: multiTickClosedLoopLiveReadonlyReport?.summary.tickReadCollision,
+            multiTickClosedLoopLiveReadonlyPolicyWorldUsed: multiTickClosedLoopLiveReadonlyReport?.summary.policyWorldUsed,
+            multiTickClosedLoopLiveReadonlyTickWorldReadOnlyUsed: multiTickClosedLoopLiveReadonlyReport?.summary.tickWorldReadOnlyUsed,
+            multiTickClosedLoopLiveReadonlyMovementApplied: multiTickClosedLoopLiveReadonlyReport?.summary.movementApplied,
+            multiTickClosedLoopLiveReadonlyMemoryUpdated: multiTickClosedLoopLiveReadonlyReport?.summary.memoryUpdated,
+            multiTickClosedLoopLiveReadonlyGoalChanged: multiTickClosedLoopLiveReadonlyReport?.summary.goalChanged,
+            multiTickClosedLoopLiveReadonlyPathfindingPerformed: multiTickClosedLoopLiveReadonlyReport?.summary.pathfindingPerformed,
+            multiTickClosedLoopLiveReadonlyReplanningPerformed: multiTickClosedLoopLiveReadonlyReport?.summary.replanningPerformed,
+            multiTickClosedLoopLiveReadonlyAvoidancePerformed: multiTickClosedLoopLiveReadonlyReport?.summary.avoidancePerformed,
+            multiTickClosedLoopLiveReadonlyReservationRuntimeUsed: multiTickClosedLoopLiveReadonlyReport?.summary.reservationRuntimeUsed,
+            multiTickClosedLoopLiveReadonlyRouteFollowingUsed: multiTickClosedLoopLiveReadonlyReport?.summary.routeFollowingUsed,
+            multiTickClosedLoopLiveReadonlyWorldMutated: multiTickClosedLoopLiveReadonlyReport?.summary.worldMutated,
+            multiTickClosedLoopLiveReadonlyMutationPerformed: multiTickClosedLoopLiveReadonlyReport?.summary.mutationPerformed,
+            multiTickClosedLoopLiveReadonlySuccess: multiTickClosedLoopLiveReadonlySuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,

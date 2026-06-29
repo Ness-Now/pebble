@@ -1799,3 +1799,56 @@ gameplay movement remain out of scope.
 
 Next recommended step: Phase 4.24D - Multi-Tick Closed Loop Live Read-Only
 Smoke.
+
+## Phase 4.24D - Multi-Tick Closed Loop Live Read-Only Smoke
+
+Status: implemented and validated.
+
+Goal: connect the bounded three-tick closed loop to the live read-only tick
+collision layer while keeping the feedback-aware policy away from collision,
+World access, movement application, memory, goals, pathfinding, replanning,
+avoidance, reservation runtime, route following, and mutation.
+
+The scenario `multi_tick_closed_loop_live_readonly_smoke` runs five fixed
+agents across three ticks. Tick `0` emits same-destination conflict feedback
+for `agent_1_loser` and collision feedback for `agent_3_collision`. Tick `1`
+consumes only tick `0` feedback, converts those two blocked agents to
+`noIntent`, filters them before tick input, and reduces both conflict and
+collision. Tick `2` consumes only tick `1` feedback, documents memoryless
+previous-tick-only behavior, and allows the conflict/collision pattern to
+return.
+
+Validated totals:
+
+- `requestedTicks = 3`;
+- `executedTicks = 3`;
+- `agents = 5`;
+- `contextsTotal = 15`;
+- `contextsWithFeedbackTotal = 6`;
+- `contextsWithoutFeedbackTotal = 9`;
+- `movementIntentInputsTotal = 10`;
+- `tickApprovedTotal = 6`;
+- `tickDeniedTotal = 4`;
+- `tickDeniedConflictTotal = 2`;
+- `tickDeniedCollisionTotal = 2`;
+- `feedbackConsumedTotal = 6`;
+- `feedbackCarriedToNextTickTotal = 10`;
+- `tickReadCollision = true`;
+- `tickWorldReadOnlyUsed = true`;
+- `policyReadCollision = false`;
+- `policyWorldUsed = false`;
+- `movementApplied = false`.
+
+The scenario writes `multi_tick_closed_loop_live_readonly_report.json`,
+`multi_tick_closed_loop_live_readonly_invariant_report.json`,
+`multi_tick_closed_loop_live_readonly_ticks.json`,
+`multi_tick_closed_loop_live_readonly_feedback.json`,
+`multiTickClosedLoopLiveReadonly*` metrics, and one aggregate
+`lab_multi_tick_closed_loop_live_readonly_recorded` event.
+
+Approved application, pathfinding, replanning, avoidance, reservation runtime,
+route following, memory/goals, alternate hints, autonomous gameplay movement,
+and terrain/world mutation remain out of scope.
+
+Next recommended step: Phase 4.24E - Multi-Tick Closed Loop Approved
+Application Smoke.
