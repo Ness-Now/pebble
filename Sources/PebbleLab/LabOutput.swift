@@ -935,6 +935,44 @@ struct RunMetrics: Encodable {
     let feedbackAwareIntentToTickFixtureWorldUsed: Bool?
     let feedbackAwareIntentToTickFixtureMutationPerformed: Bool?
     let feedbackAwareIntentToTickFixtureSuccess: Bool?
+    let feedbackAwareIntentToTickLiveReadonlyContexts: Int?
+    let feedbackAwareIntentToTickLiveReadonlyContextsWithFeedback: Int?
+    let feedbackAwareIntentToTickLiveReadonlyContextsWithoutFeedback: Int?
+    let feedbackAwareIntentToTickLiveReadonlyBaselineProposals: Int?
+    let feedbackAwareIntentToTickLiveReadonlyFeedbackAwareProposals: Int?
+    let feedbackAwareIntentToTickLiveReadonlyBaselineMovementIntentInputs: Int?
+    let feedbackAwareIntentToTickLiveReadonlyFeedbackAwareMovementIntentInputs: Int?
+    let feedbackAwareIntentToTickLiveReadonlyMovementIntentReduction: Int?
+    let feedbackAwareIntentToTickLiveReadonlyNoIntentFilteredOut: Int?
+    let feedbackAwareIntentToTickLiveReadonlyFeedbackAwareAcceptedIntents: Int?
+    let feedbackAwareIntentToTickLiveReadonlyFeedbackAwareRejectedProposals: Int?
+    let feedbackAwareIntentToTickLiveReadonlyFeedbackAwareNoIntent: Int?
+    let feedbackAwareIntentToTickLiveReadonlyFeedbackAwareInvalidOneEdgeProposals: Int?
+    let feedbackAwareIntentToTickLiveReadonlyBehaviorChangedByFeedback: Bool?
+    let feedbackAwareIntentToTickLiveReadonlyBehaviorChangedCount: Int?
+    let feedbackAwareIntentToTickLiveReadonlyTickIntents: Int?
+    let feedbackAwareIntentToTickLiveReadonlyTickApproved: Int?
+    let feedbackAwareIntentToTickLiveReadonlyTickDenied: Int?
+    let feedbackAwareIntentToTickLiveReadonlyTickDeniedSameDestinationConflict: Int?
+    let feedbackAwareIntentToTickLiveReadonlyTickDeniedCollision: Int?
+    let feedbackAwareIntentToTickLiveReadonlyTickFeedbackEmitted: Int?
+    let feedbackAwareIntentToTickLiveReadonlyOccupableDestinations: Int?
+    let feedbackAwareIntentToTickLiveReadonlyNonOccupableDestinations: Int?
+    let feedbackAwareIntentToTickLiveReadonlyDisplacementsApplied: Int?
+    let feedbackAwareIntentToTickLiveReadonlyPolicyReadCollision: Bool?
+    let feedbackAwareIntentToTickLiveReadonlyTickReadCollision: Bool?
+    let feedbackAwareIntentToTickLiveReadonlyPolicyWorldUsed: Bool?
+    let feedbackAwareIntentToTickLiveReadonlyTickWorldReadOnlyUsed: Bool?
+    let feedbackAwareIntentToTickLiveReadonlyMovementApplied: Bool?
+    let feedbackAwareIntentToTickLiveReadonlyMemoryUpdated: Bool?
+    let feedbackAwareIntentToTickLiveReadonlyGoalChanged: Bool?
+    let feedbackAwareIntentToTickLiveReadonlyPathfindingPerformed: Bool?
+    let feedbackAwareIntentToTickLiveReadonlyReplanningPerformed: Bool?
+    let feedbackAwareIntentToTickLiveReadonlyAvoidancePerformed: Bool?
+    let feedbackAwareIntentToTickLiveReadonlyReservationRuntimeUsed: Bool?
+    let feedbackAwareIntentToTickLiveReadonlyWorldMutated: Bool?
+    let feedbackAwareIntentToTickLiveReadonlyMutationPerformed: Bool?
+    let feedbackAwareIntentToTickLiveReadonlySuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -1870,6 +1908,44 @@ struct RunMetrics: Encodable {
         feedbackAwareIntentToTickFixtureWorldUsed: Bool? = nil,
         feedbackAwareIntentToTickFixtureMutationPerformed: Bool? = nil,
         feedbackAwareIntentToTickFixtureSuccess: Bool? = nil,
+        feedbackAwareIntentToTickLiveReadonlyContexts: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyContextsWithFeedback: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyContextsWithoutFeedback: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyBaselineProposals: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyFeedbackAwareProposals: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyBaselineMovementIntentInputs: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyFeedbackAwareMovementIntentInputs: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyMovementIntentReduction: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyNoIntentFilteredOut: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyFeedbackAwareAcceptedIntents: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyFeedbackAwareRejectedProposals: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyFeedbackAwareNoIntent: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyFeedbackAwareInvalidOneEdgeProposals: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyBehaviorChangedByFeedback: Bool? = nil,
+        feedbackAwareIntentToTickLiveReadonlyBehaviorChangedCount: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyTickIntents: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyTickApproved: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyTickDenied: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyTickDeniedSameDestinationConflict: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyTickDeniedCollision: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyTickFeedbackEmitted: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyOccupableDestinations: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyNonOccupableDestinations: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyDisplacementsApplied: Int? = nil,
+        feedbackAwareIntentToTickLiveReadonlyPolicyReadCollision: Bool? = nil,
+        feedbackAwareIntentToTickLiveReadonlyTickReadCollision: Bool? = nil,
+        feedbackAwareIntentToTickLiveReadonlyPolicyWorldUsed: Bool? = nil,
+        feedbackAwareIntentToTickLiveReadonlyTickWorldReadOnlyUsed: Bool? = nil,
+        feedbackAwareIntentToTickLiveReadonlyMovementApplied: Bool? = nil,
+        feedbackAwareIntentToTickLiveReadonlyMemoryUpdated: Bool? = nil,
+        feedbackAwareIntentToTickLiveReadonlyGoalChanged: Bool? = nil,
+        feedbackAwareIntentToTickLiveReadonlyPathfindingPerformed: Bool? = nil,
+        feedbackAwareIntentToTickLiveReadonlyReplanningPerformed: Bool? = nil,
+        feedbackAwareIntentToTickLiveReadonlyAvoidancePerformed: Bool? = nil,
+        feedbackAwareIntentToTickLiveReadonlyReservationRuntimeUsed: Bool? = nil,
+        feedbackAwareIntentToTickLiveReadonlyWorldMutated: Bool? = nil,
+        feedbackAwareIntentToTickLiveReadonlyMutationPerformed: Bool? = nil,
+        feedbackAwareIntentToTickLiveReadonlySuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -2804,6 +2880,44 @@ struct RunMetrics: Encodable {
         self.feedbackAwareIntentToTickFixtureWorldUsed = feedbackAwareIntentToTickFixtureWorldUsed
         self.feedbackAwareIntentToTickFixtureMutationPerformed = feedbackAwareIntentToTickFixtureMutationPerformed
         self.feedbackAwareIntentToTickFixtureSuccess = feedbackAwareIntentToTickFixtureSuccess
+        self.feedbackAwareIntentToTickLiveReadonlyContexts = feedbackAwareIntentToTickLiveReadonlyContexts
+        self.feedbackAwareIntentToTickLiveReadonlyContextsWithFeedback = feedbackAwareIntentToTickLiveReadonlyContextsWithFeedback
+        self.feedbackAwareIntentToTickLiveReadonlyContextsWithoutFeedback = feedbackAwareIntentToTickLiveReadonlyContextsWithoutFeedback
+        self.feedbackAwareIntentToTickLiveReadonlyBaselineProposals = feedbackAwareIntentToTickLiveReadonlyBaselineProposals
+        self.feedbackAwareIntentToTickLiveReadonlyFeedbackAwareProposals = feedbackAwareIntentToTickLiveReadonlyFeedbackAwareProposals
+        self.feedbackAwareIntentToTickLiveReadonlyBaselineMovementIntentInputs = feedbackAwareIntentToTickLiveReadonlyBaselineMovementIntentInputs
+        self.feedbackAwareIntentToTickLiveReadonlyFeedbackAwareMovementIntentInputs = feedbackAwareIntentToTickLiveReadonlyFeedbackAwareMovementIntentInputs
+        self.feedbackAwareIntentToTickLiveReadonlyMovementIntentReduction = feedbackAwareIntentToTickLiveReadonlyMovementIntentReduction
+        self.feedbackAwareIntentToTickLiveReadonlyNoIntentFilteredOut = feedbackAwareIntentToTickLiveReadonlyNoIntentFilteredOut
+        self.feedbackAwareIntentToTickLiveReadonlyFeedbackAwareAcceptedIntents = feedbackAwareIntentToTickLiveReadonlyFeedbackAwareAcceptedIntents
+        self.feedbackAwareIntentToTickLiveReadonlyFeedbackAwareRejectedProposals = feedbackAwareIntentToTickLiveReadonlyFeedbackAwareRejectedProposals
+        self.feedbackAwareIntentToTickLiveReadonlyFeedbackAwareNoIntent = feedbackAwareIntentToTickLiveReadonlyFeedbackAwareNoIntent
+        self.feedbackAwareIntentToTickLiveReadonlyFeedbackAwareInvalidOneEdgeProposals = feedbackAwareIntentToTickLiveReadonlyFeedbackAwareInvalidOneEdgeProposals
+        self.feedbackAwareIntentToTickLiveReadonlyBehaviorChangedByFeedback = feedbackAwareIntentToTickLiveReadonlyBehaviorChangedByFeedback
+        self.feedbackAwareIntentToTickLiveReadonlyBehaviorChangedCount = feedbackAwareIntentToTickLiveReadonlyBehaviorChangedCount
+        self.feedbackAwareIntentToTickLiveReadonlyTickIntents = feedbackAwareIntentToTickLiveReadonlyTickIntents
+        self.feedbackAwareIntentToTickLiveReadonlyTickApproved = feedbackAwareIntentToTickLiveReadonlyTickApproved
+        self.feedbackAwareIntentToTickLiveReadonlyTickDenied = feedbackAwareIntentToTickLiveReadonlyTickDenied
+        self.feedbackAwareIntentToTickLiveReadonlyTickDeniedSameDestinationConflict = feedbackAwareIntentToTickLiveReadonlyTickDeniedSameDestinationConflict
+        self.feedbackAwareIntentToTickLiveReadonlyTickDeniedCollision = feedbackAwareIntentToTickLiveReadonlyTickDeniedCollision
+        self.feedbackAwareIntentToTickLiveReadonlyTickFeedbackEmitted = feedbackAwareIntentToTickLiveReadonlyTickFeedbackEmitted
+        self.feedbackAwareIntentToTickLiveReadonlyOccupableDestinations = feedbackAwareIntentToTickLiveReadonlyOccupableDestinations
+        self.feedbackAwareIntentToTickLiveReadonlyNonOccupableDestinations = feedbackAwareIntentToTickLiveReadonlyNonOccupableDestinations
+        self.feedbackAwareIntentToTickLiveReadonlyDisplacementsApplied = feedbackAwareIntentToTickLiveReadonlyDisplacementsApplied
+        self.feedbackAwareIntentToTickLiveReadonlyPolicyReadCollision = feedbackAwareIntentToTickLiveReadonlyPolicyReadCollision
+        self.feedbackAwareIntentToTickLiveReadonlyTickReadCollision = feedbackAwareIntentToTickLiveReadonlyTickReadCollision
+        self.feedbackAwareIntentToTickLiveReadonlyPolicyWorldUsed = feedbackAwareIntentToTickLiveReadonlyPolicyWorldUsed
+        self.feedbackAwareIntentToTickLiveReadonlyTickWorldReadOnlyUsed = feedbackAwareIntentToTickLiveReadonlyTickWorldReadOnlyUsed
+        self.feedbackAwareIntentToTickLiveReadonlyMovementApplied = feedbackAwareIntentToTickLiveReadonlyMovementApplied
+        self.feedbackAwareIntentToTickLiveReadonlyMemoryUpdated = feedbackAwareIntentToTickLiveReadonlyMemoryUpdated
+        self.feedbackAwareIntentToTickLiveReadonlyGoalChanged = feedbackAwareIntentToTickLiveReadonlyGoalChanged
+        self.feedbackAwareIntentToTickLiveReadonlyPathfindingPerformed = feedbackAwareIntentToTickLiveReadonlyPathfindingPerformed
+        self.feedbackAwareIntentToTickLiveReadonlyReplanningPerformed = feedbackAwareIntentToTickLiveReadonlyReplanningPerformed
+        self.feedbackAwareIntentToTickLiveReadonlyAvoidancePerformed = feedbackAwareIntentToTickLiveReadonlyAvoidancePerformed
+        self.feedbackAwareIntentToTickLiveReadonlyReservationRuntimeUsed = feedbackAwareIntentToTickLiveReadonlyReservationRuntimeUsed
+        self.feedbackAwareIntentToTickLiveReadonlyWorldMutated = feedbackAwareIntentToTickLiveReadonlyWorldMutated
+        self.feedbackAwareIntentToTickLiveReadonlyMutationPerformed = feedbackAwareIntentToTickLiveReadonlyMutationPerformed
+        self.feedbackAwareIntentToTickLiveReadonlySuccess = feedbackAwareIntentToTickLiveReadonlySuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

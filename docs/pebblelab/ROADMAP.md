@@ -1598,3 +1598,43 @@ and terrain/world mutation remain out of scope.
 
 Next recommended step: Phase 4.23D - Feedback-Aware Intent To Tick Live
 Read-Only Smoke.
+
+## Phase 4.23D - Feedback-Aware Intent To Tick Live Read-Only Smoke
+
+Status: implemented and validated.
+
+Goal: connect the opt-in feedback-aware v1 intent policy to the live
+read-only movement tick contract while keeping collision and World access
+strictly inside the tick layer.
+
+The scenario `feedback_aware_intent_to_tick_live_readonly_smoke` uses seven
+deliberately unordered intent contexts. Four contexts keep baseline movement
+proposals (`no feedback`, `moved`, `approvedForMovement`, and a no-feedback
+live-collision candidate). Three blocked feedback contexts become `noIntent`
+(`blockedByCollision`, `blockedByAgentConflict`, and `blockedByInvalidEdge`)
+and are filtered before tick input.
+
+The v0 baseline would send six movement intents. The feedback-aware v1 handoff
+sends four movement intents, producing a movement-input reduction of two while
+keeping v0 unchanged and v1 opt-in. The remaining same-destination conflict is
+not arbitrated by policy; the live read-only tick layer resolves it.
+
+The tick live read-only layer reads collision evidence only at tick level. It
+approves `agent_0_no_feedback` and `agent_4_approved`, denies `agent_1_moved`
+for the same-destination conflict, and denies `agent_6_live_collision` for a
+non-occupable destination. No movement is applied and positions remain
+unchanged.
+
+The scenario writes `feedback_aware_intent_to_tick_live_readonly_report.json`,
+`feedback_aware_intent_to_tick_live_readonly_invariant_report.json`,
+`feedback_aware_intent_to_tick_live_readonly_handoff.json`,
+`feedbackAwareIntentToTickLiveReadonly*` metrics, and one aggregate
+`lab_feedback_aware_intent_to_tick_live_readonly_recorded` event.
+
+Live collision reads by policy, pathfinding, replanning, avoidance,
+reservation runtime, route following, autonomous gameplay movement, movement
+application, memory update, goal selection, and terrain/world mutation remain
+out of scope.
+
+Next recommended step: Phase 4.23E - Feedback-Aware Intent To Tick Approved
+Application Smoke.

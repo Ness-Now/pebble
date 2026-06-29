@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added feedback-aware intent to tick live read-only smoke.
 - Added feedback-aware intent to tick fixture smoke.
 - Added feedback-aware intent policy hardening smoke.
 - Added bounded feedback-aware intent policy fixture smoke.

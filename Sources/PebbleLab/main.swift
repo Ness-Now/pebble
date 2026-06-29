@@ -46,6 +46,8 @@ let isFeedbackAwareIntentPolicyHardeningScenario = options.scenario
     == "feedback_aware_intent_policy_hardening_smoke"
 let isFeedbackAwareIntentToTickFixtureScenario = options.scenario
     == "feedback_aware_intent_to_tick_fixture_smoke"
+let isFeedbackAwareIntentToTickLiveReadonlyScenario = options.scenario
+    == "feedback_aware_intent_to_tick_live_readonly_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -63,7 +65,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isFeedbackToAgentIntentContextHardeningScenario
     || isFeedbackAwareIntentPolicyFixtureScenario
     || isFeedbackAwareIntentPolicyHardeningScenario
-    || isFeedbackAwareIntentToTickFixtureScenario)
+    || isFeedbackAwareIntentToTickFixtureScenario
+    || isFeedbackAwareIntentToTickLiveReadonlyScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -714,7 +717,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isFeedbackToAgentIntentContextHardeningScenario
     || isFeedbackAwareIntentPolicyFixtureScenario
     || isFeedbackAwareIntentPolicyHardeningScenario
-    || isFeedbackAwareIntentToTickFixtureScenario {
+    || isFeedbackAwareIntentToTickFixtureScenario
+    || isFeedbackAwareIntentToTickLiveReadonlyScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -2112,6 +2116,61 @@ let feedbackAwareIntentToTickFixtureSuccess =
             && feedbackAwareIntentToTickFixtureSummary?.worldUsed == false
             && feedbackAwareIntentToTickFixtureSummary?.mutationPerformed == false)
         : nil
+let feedbackAwareIntentToTickLiveReadonlyReport =
+    isFeedbackAwareIntentToTickLiveReadonlyScenario
+        ? makeFeedbackAwareIntentToTickLiveReadonlyReport(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticksCompleted: ticksCompleted
+        )
+        : nil
+let feedbackAwareIntentToTickLiveReadonlyInvariantReport =
+    isFeedbackAwareIntentToTickLiveReadonlyScenario
+        ? makeFeedbackAwareIntentToTickLiveReadonlyInvariantReport(
+            report: feedbackAwareIntentToTickLiveReadonlyReport,
+            scenario: options.scenario,
+            seed: options.seed
+        )
+        : nil
+let feedbackAwareIntentToTickLiveReadonlySummary =
+    feedbackAwareIntentToTickLiveReadonlyReport?.summary
+let feedbackAwareIntentToTickLiveReadonlySuccess =
+    isFeedbackAwareIntentToTickLiveReadonlyScenario
+        ? ((feedbackAwareIntentToTickLiveReadonlyReport?.success ?? false)
+            && (feedbackAwareIntentToTickLiveReadonlyInvariantReport?.success ?? false)
+            && feedbackAwareIntentToTickLiveReadonlySummary?.contexts == 7
+            && feedbackAwareIntentToTickLiveReadonlySummary?.feedbackAwareProposals == 7
+            && feedbackAwareIntentToTickLiveReadonlySummary?.feedbackAwareAcceptedIntents == 4
+            && feedbackAwareIntentToTickLiveReadonlySummary?.feedbackAwareNoIntent == 3
+            && feedbackAwareIntentToTickLiveReadonlySummary?.feedbackAwareInvalidOneEdgeProposals == 0
+            && (feedbackAwareIntentToTickLiveReadonlySummary?.baselineMovementIntentInputs ?? 0)
+                > (feedbackAwareIntentToTickLiveReadonlySummary?.feedbackAwareMovementIntentInputs ?? 0)
+            && feedbackAwareIntentToTickLiveReadonlySummary?.feedbackAwareMovementIntentInputs == 4
+            && feedbackAwareIntentToTickLiveReadonlySummary?.noIntentFilteredOut == 3
+            && (feedbackAwareIntentToTickLiveReadonlySummary?.movementIntentReduction ?? 0) >= 2
+            && feedbackAwareIntentToTickLiveReadonlySummary?.tickIntents == 4
+            && feedbackAwareIntentToTickLiveReadonlySummary?.tickApproved == 2
+            && feedbackAwareIntentToTickLiveReadonlySummary?.tickDenied == 2
+            && feedbackAwareIntentToTickLiveReadonlySummary?.tickDeniedSameDestinationConflict == 1
+            && feedbackAwareIntentToTickLiveReadonlySummary?.tickDeniedCollision == 1
+            && feedbackAwareIntentToTickLiveReadonlySummary?.tickFeedbackEmitted == 4
+            && feedbackAwareIntentToTickLiveReadonlySummary?.occupableDestinations == 2
+            && feedbackAwareIntentToTickLiveReadonlySummary?.nonOccupableDestinations == 1
+            && feedbackAwareIntentToTickLiveReadonlySummary?.displacementsApplied == 0
+            && feedbackAwareIntentToTickLiveReadonlySummary?.policyReadCollision == false
+            && feedbackAwareIntentToTickLiveReadonlySummary?.policyWorldUsed == false
+            && feedbackAwareIntentToTickLiveReadonlySummary?.tickReadCollision == true
+            && feedbackAwareIntentToTickLiveReadonlySummary?.tickWorldReadOnlyUsed == true
+            && feedbackAwareIntentToTickLiveReadonlySummary?.movementApplied == false
+            && feedbackAwareIntentToTickLiveReadonlySummary?.memoryUpdated == false
+            && feedbackAwareIntentToTickLiveReadonlySummary?.goalChanged == false
+            && feedbackAwareIntentToTickLiveReadonlySummary?.pathfindingPerformed == false
+            && feedbackAwareIntentToTickLiveReadonlySummary?.replanningPerformed == false
+            && feedbackAwareIntentToTickLiveReadonlySummary?.avoidancePerformed == false
+            && feedbackAwareIntentToTickLiveReadonlySummary?.reservationRuntimeUsed == false
+            && feedbackAwareIntentToTickLiveReadonlySummary?.worldMutated == false
+            && feedbackAwareIntentToTickLiveReadonlySummary?.mutationPerformed == false)
+        : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
@@ -2502,6 +2561,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (feedbackAwareIntentPolicyFixtureSuccess ?? true)
     && (feedbackAwareIntentPolicyHardeningSuccess ?? true)
     && (feedbackAwareIntentToTickFixtureSuccess ?? true)
+    && (feedbackAwareIntentToTickLiveReadonlySuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -3469,6 +3529,62 @@ if options.outPath != nil {
                 replanningPerformed: summary.replanningPerformed
             ))
         }
+        if let feedbackAwareIntentToTickLiveReadonlyReport {
+            let summary = feedbackAwareIntentToTickLiveReadonlyReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_feedback_aware_intent_to_tick_live_readonly_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: feedbackAwareIntentToTickLiveReadonlySuccess,
+                displacementsApplied: summary.displacementsApplied,
+                contexts: summary.contexts,
+                proposals: summary.feedbackAwareProposals,
+                baselineProposals: summary.baselineProposals,
+                feedbackAwareProposals: summary.feedbackAwareProposals,
+                acceptedIntents: summary.feedbackAwareAcceptedIntents,
+                rejectedProposals: summary.feedbackAwareRejectedProposals,
+                noIntent: summary.feedbackAwareNoIntent,
+                invalidOneEdgeProposals: summary.feedbackAwareInvalidOneEdgeProposals,
+                tickIntents: summary.tickIntents,
+                tickFeedback: summary.tickFeedbackEmitted,
+                tickApproved: summary.tickApproved,
+                tickDenied: summary.tickDenied,
+                sameDestinationConflicts: summary.tickDeniedSameDestinationConflict,
+                intentContexts: summary.contexts,
+                contextsWithFeedback: summary.contextsWithFeedback,
+                contextsWithoutFeedback: summary.contextsWithoutFeedback,
+                behaviorChangedByFeedback: summary.behaviorChangedByFeedback,
+                behaviorChangedCount: summary.behaviorChangedCount,
+                baselineMovementIntentInputs: summary.baselineMovementIntentInputs,
+                feedbackAwareMovementIntentInputs: summary.feedbackAwareMovementIntentInputs,
+                movementIntentReduction: summary.movementIntentReduction,
+                noIntentFilteredOut: summary.noIntentFilteredOut,
+                feedbackAwareAcceptedIntents: summary.feedbackAwareAcceptedIntents,
+                feedbackAwareRejectedProposals: summary.feedbackAwareRejectedProposals,
+                feedbackAwareNoIntent: summary.feedbackAwareNoIntent,
+                tickDeniedSameDestinationConflict: summary.tickDeniedSameDestinationConflict,
+                tickFeedbackEmitted: summary.tickFeedbackEmitted,
+                policyReadCollision: summary.policyReadCollision,
+                policyWorldUsed: summary.policyWorldUsed,
+                tickWorldReadOnlyUsed: summary.tickWorldReadOnlyUsed,
+                worldMutated: summary.worldMutated,
+                occupableDestinations: summary.occupableDestinations,
+                nonOccupableDestinations: summary.nonOccupableDestinations,
+                collisionDenied: summary.tickDeniedCollision,
+                productionReadCollision: summary.policyReadCollision,
+                tickReadCollision: summary.tickReadCollision,
+                worldUsed: summary.policyWorldUsed || summary.tickWorldReadOnlyUsed,
+                collisionRead: summary.policyReadCollision || summary.tickReadCollision,
+                movementApplied: summary.movementApplied,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                avoidancePerformed: summary.avoidancePerformed,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
+                replanningPerformed: summary.replanningPerformed
+            ))
+        }
         if let routeFollowingLiveSnapshot {
             try appendEvent(RunEvent(
                 type: "lab_route_following_recorded",
@@ -4302,6 +4418,22 @@ if let outPath = options.outPath {
             try writeJSON(
                 feedbackAwareIntentToTickFixtureInvariantReport,
                 to: outURL.appendingPathComponent("feedback_aware_intent_to_tick_fixture_invariant_report.json")
+            )
+        }
+        if let feedbackAwareIntentToTickLiveReadonlyReport {
+            try writeJSON(
+                feedbackAwareIntentToTickLiveReadonlyReport,
+                to: outURL.appendingPathComponent("feedback_aware_intent_to_tick_live_readonly_report.json")
+            )
+            try writeJSON(
+                feedbackAwareIntentToTickLiveReadonlyReport.handoff,
+                to: outURL.appendingPathComponent("feedback_aware_intent_to_tick_live_readonly_handoff.json")
+            )
+        }
+        if let feedbackAwareIntentToTickLiveReadonlyInvariantReport {
+            try writeJSON(
+                feedbackAwareIntentToTickLiveReadonlyInvariantReport,
+                to: outURL.appendingPathComponent("feedback_aware_intent_to_tick_live_readonly_invariant_report.json")
             )
         }
         if let routeFollowingLiveSnapshot {
@@ -5318,6 +5450,44 @@ if let outPath = options.outPath {
             feedbackAwareIntentToTickFixtureWorldUsed: feedbackAwareIntentToTickFixtureReport?.summary.worldUsed,
             feedbackAwareIntentToTickFixtureMutationPerformed: feedbackAwareIntentToTickFixtureReport?.summary.mutationPerformed,
             feedbackAwareIntentToTickFixtureSuccess: feedbackAwareIntentToTickFixtureSuccess,
+            feedbackAwareIntentToTickLiveReadonlyContexts: feedbackAwareIntentToTickLiveReadonlyReport?.summary.contexts,
+            feedbackAwareIntentToTickLiveReadonlyContextsWithFeedback: feedbackAwareIntentToTickLiveReadonlyReport?.summary.contextsWithFeedback,
+            feedbackAwareIntentToTickLiveReadonlyContextsWithoutFeedback: feedbackAwareIntentToTickLiveReadonlyReport?.summary.contextsWithoutFeedback,
+            feedbackAwareIntentToTickLiveReadonlyBaselineProposals: feedbackAwareIntentToTickLiveReadonlyReport?.summary.baselineProposals,
+            feedbackAwareIntentToTickLiveReadonlyFeedbackAwareProposals: feedbackAwareIntentToTickLiveReadonlyReport?.summary.feedbackAwareProposals,
+            feedbackAwareIntentToTickLiveReadonlyBaselineMovementIntentInputs: feedbackAwareIntentToTickLiveReadonlyReport?.summary.baselineMovementIntentInputs,
+            feedbackAwareIntentToTickLiveReadonlyFeedbackAwareMovementIntentInputs: feedbackAwareIntentToTickLiveReadonlyReport?.summary.feedbackAwareMovementIntentInputs,
+            feedbackAwareIntentToTickLiveReadonlyMovementIntentReduction: feedbackAwareIntentToTickLiveReadonlyReport?.summary.movementIntentReduction,
+            feedbackAwareIntentToTickLiveReadonlyNoIntentFilteredOut: feedbackAwareIntentToTickLiveReadonlyReport?.summary.noIntentFilteredOut,
+            feedbackAwareIntentToTickLiveReadonlyFeedbackAwareAcceptedIntents: feedbackAwareIntentToTickLiveReadonlyReport?.summary.feedbackAwareAcceptedIntents,
+            feedbackAwareIntentToTickLiveReadonlyFeedbackAwareRejectedProposals: feedbackAwareIntentToTickLiveReadonlyReport?.summary.feedbackAwareRejectedProposals,
+            feedbackAwareIntentToTickLiveReadonlyFeedbackAwareNoIntent: feedbackAwareIntentToTickLiveReadonlyReport?.summary.feedbackAwareNoIntent,
+            feedbackAwareIntentToTickLiveReadonlyFeedbackAwareInvalidOneEdgeProposals: feedbackAwareIntentToTickLiveReadonlyReport?.summary.feedbackAwareInvalidOneEdgeProposals,
+            feedbackAwareIntentToTickLiveReadonlyBehaviorChangedByFeedback: feedbackAwareIntentToTickLiveReadonlyReport?.summary.behaviorChangedByFeedback,
+            feedbackAwareIntentToTickLiveReadonlyBehaviorChangedCount: feedbackAwareIntentToTickLiveReadonlyReport?.summary.behaviorChangedCount,
+            feedbackAwareIntentToTickLiveReadonlyTickIntents: feedbackAwareIntentToTickLiveReadonlyReport?.summary.tickIntents,
+            feedbackAwareIntentToTickLiveReadonlyTickApproved: feedbackAwareIntentToTickLiveReadonlyReport?.summary.tickApproved,
+            feedbackAwareIntentToTickLiveReadonlyTickDenied: feedbackAwareIntentToTickLiveReadonlyReport?.summary.tickDenied,
+            feedbackAwareIntentToTickLiveReadonlyTickDeniedSameDestinationConflict: feedbackAwareIntentToTickLiveReadonlyReport?.summary.tickDeniedSameDestinationConflict,
+            feedbackAwareIntentToTickLiveReadonlyTickDeniedCollision: feedbackAwareIntentToTickLiveReadonlyReport?.summary.tickDeniedCollision,
+            feedbackAwareIntentToTickLiveReadonlyTickFeedbackEmitted: feedbackAwareIntentToTickLiveReadonlyReport?.summary.tickFeedbackEmitted,
+            feedbackAwareIntentToTickLiveReadonlyOccupableDestinations: feedbackAwareIntentToTickLiveReadonlyReport?.summary.occupableDestinations,
+            feedbackAwareIntentToTickLiveReadonlyNonOccupableDestinations: feedbackAwareIntentToTickLiveReadonlyReport?.summary.nonOccupableDestinations,
+            feedbackAwareIntentToTickLiveReadonlyDisplacementsApplied: feedbackAwareIntentToTickLiveReadonlyReport?.summary.displacementsApplied,
+            feedbackAwareIntentToTickLiveReadonlyPolicyReadCollision: feedbackAwareIntentToTickLiveReadonlyReport?.summary.policyReadCollision,
+            feedbackAwareIntentToTickLiveReadonlyTickReadCollision: feedbackAwareIntentToTickLiveReadonlyReport?.summary.tickReadCollision,
+            feedbackAwareIntentToTickLiveReadonlyPolicyWorldUsed: feedbackAwareIntentToTickLiveReadonlyReport?.summary.policyWorldUsed,
+            feedbackAwareIntentToTickLiveReadonlyTickWorldReadOnlyUsed: feedbackAwareIntentToTickLiveReadonlyReport?.summary.tickWorldReadOnlyUsed,
+            feedbackAwareIntentToTickLiveReadonlyMovementApplied: feedbackAwareIntentToTickLiveReadonlyReport?.summary.movementApplied,
+            feedbackAwareIntentToTickLiveReadonlyMemoryUpdated: feedbackAwareIntentToTickLiveReadonlyReport?.summary.memoryUpdated,
+            feedbackAwareIntentToTickLiveReadonlyGoalChanged: feedbackAwareIntentToTickLiveReadonlyReport?.summary.goalChanged,
+            feedbackAwareIntentToTickLiveReadonlyPathfindingPerformed: feedbackAwareIntentToTickLiveReadonlyReport?.summary.pathfindingPerformed,
+            feedbackAwareIntentToTickLiveReadonlyReplanningPerformed: feedbackAwareIntentToTickLiveReadonlyReport?.summary.replanningPerformed,
+            feedbackAwareIntentToTickLiveReadonlyAvoidancePerformed: feedbackAwareIntentToTickLiveReadonlyReport?.summary.avoidancePerformed,
+            feedbackAwareIntentToTickLiveReadonlyReservationRuntimeUsed: feedbackAwareIntentToTickLiveReadonlyReport?.summary.reservationRuntimeUsed,
+            feedbackAwareIntentToTickLiveReadonlyWorldMutated: feedbackAwareIntentToTickLiveReadonlyReport?.summary.worldMutated,
+            feedbackAwareIntentToTickLiveReadonlyMutationPerformed: feedbackAwareIntentToTickLiveReadonlyReport?.summary.mutationPerformed,
+            feedbackAwareIntentToTickLiveReadonlySuccess: feedbackAwareIntentToTickLiveReadonlySuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,

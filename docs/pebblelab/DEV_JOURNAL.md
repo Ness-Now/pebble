@@ -6846,3 +6846,150 @@ following, gameplay movement, terrain mutation, or world mutation was added.
 ### Next Step
 
 Phase 4.23D — Feedback-Aware Intent To Tick Live Read-Only Smoke.
+
+## 2026-06-29 — Phase 4.23D feedback-aware intent to tick live read-only
+
+### Objective
+
+Implement `feedback_aware_intent_to_tick_live_readonly_smoke`, the first
+handoff from opt-in feedback-aware v1 intent policy into the live read-only
+movement tick contract.
+
+### Starting Point
+
+Phase 4.23A introduced the opt-in v1 policy. Phase 4.23B hardened the policy.
+Phase 4.23C proved that v1 proposals can feed the fixture tick contract while
+filtering `noIntent` proposals before tick input. Live collision was still out
+of scope in 4.23C.
+
+### Files Created Or Modified
+
+- `Sources/PebbleLab/LabAgentIntentProduction.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_FEEDBACK_AWARE_INTENT_POLICY_PLAN.md`
+
+### Why Live Read-Only
+
+This phase proves the next boundary: the policy proposes without reading World
+or collision, then the tick layer reads live collision evidence read-only and
+emits approval/denial feedback without applying movement.
+
+### v1 Opt-In And v0 Unchanged
+
+The scenario computes v0 baseline proposals for comparison only. Runtime
+handoff uses explicit v1 decisions. `produceAgentIntentProposalV0` remains
+unchanged, and v1 is not made implicit.
+
+### Fixture Contexts
+
+The seven deliberately unordered contexts are:
+
+- `agent_0_no_feedback`: no feedback, baseline move kept;
+- `agent_1_moved`: `moved`, baseline move kept;
+- `agent_2_collision_feedback`: `blockedByCollision`, converted to `noIntent`;
+- `agent_3_conflict_feedback`: `blockedByAgentConflict`, converted to
+  `noIntent`;
+- `agent_4_approved`: `approvedForMovement`, baseline move kept;
+- `agent_5_invalid_edge_feedback`: `blockedByInvalidEdge` over an invalid
+  vertical baseline proposal, converted to `noIntent`;
+- `agent_6_live_collision`: no feedback, baseline move kept, later denied by
+  tick live collision evidence.
+
+### Baseline Versus Feedback-Aware Handoff
+
+The v0 baseline has seven proposals and six valid movement intents. The v1
+handoff has seven proposals and four movement intents. Three `noIntent`
+proposals are filtered before tick input, producing a movement intent reduction
+of two.
+
+### Remaining Conflict And Live Collision
+
+The policy does not arbitrate the remaining same-destination conflict between
+`agent_0_no_feedback` and `agent_1_moved`. The live read-only tick layer
+resolves it by stable `agentId`: `agent_0_no_feedback` is approved and
+`agent_1_moved` is denied same-destination conflict.
+
+The tick layer reads collision evidence for the accepted movement intents.
+`agent_4_approved` is approved on an occupable destination.
+`agent_6_live_collision` is denied collision on a non-occupable destination.
+The policy does not know either result in advance.
+
+### Outputs, Invariants, Metrics, And Event
+
+The scenario writes:
+
+- `feedback_aware_intent_to_tick_live_readonly_report.json`;
+- `feedback_aware_intent_to_tick_live_readonly_invariant_report.json`;
+- `feedback_aware_intent_to_tick_live_readonly_handoff.json`;
+- `feedbackAwareIntentToTickLiveReadonly*` metrics;
+- aggregate event `lab_feedback_aware_intent_to_tick_live_readonly_recorded`.
+
+The invariant report covers contexts, sorted decisions, v0/v1 boundaries,
+filtered `noIntent`, reduced movement input, live read-only collision at tick
+layer only, same-destination conflict arbitration by tick, collision denial,
+unchanged positions, no movement application, no memory/goals, no
+pathfinding/replanning/avoidance/reservation, no route following, no mutation,
+artifact writing, and the success contract.
+
+### Out Of Scope Confirmed
+
+No collision or World read by policy, movement application, route following,
+memory update, goal change, pathfinding, replanning, avoidance, reservation
+runtime, gameplay movement, terrain mutation, or world mutation was added.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_live_readonly_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_intent_to_tick_live_readonly`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_intent_to_tick_fixture_after_live_readonly`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_hardening_after_live_readonly`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_fixture_after_live_readonly`
+- `swift run -c release PebbleLab -- --scenario feedback_to_agent_intent_context_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_to_context_hardening_after_live_readonly`
+- `swift run -c release PebbleLab -- --scenario feedback_to_agent_intent_context_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_to_context_fixture_after_live_readonly`
+- `swift run -c release PebbleLab -- --scenario agent_feedback_consumption_hardening_smoke --seed 42 --ticks 0 --out runs/check_agent_feedback_hardening_after_live_readonly`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_fixture_after_live_readonly`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_live_readonly_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_to_tick_live_readonly_after_feedback_aware_live_readonly`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_feedback_aware_live_readonly`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- `feedback_aware_intent_to_tick_live_readonly_smoke` passes.
+- Report success true.
+- Invariant report success true.
+- `contexts = 7`.
+- `contextsWithFeedback = 5`.
+- `contextsWithoutFeedback = 2`.
+- `baselineMovementIntentInputs = 6`.
+- `feedbackAwareMovementIntentInputs = 4`.
+- `movementIntentReduction = 2`.
+- `noIntentFilteredOut = 3`.
+- `tickApproved = 2`.
+- `tickDenied = 2`.
+- `tickDeniedSameDestinationConflict = 1`.
+- `tickDeniedCollision = 1`.
+- `tickFeedbackEmitted = 4`.
+- `occupableDestinations = 2`.
+- `nonOccupableDestinations = 1`.
+- `displacementsApplied = 0`.
+- `policyReadCollision = false`.
+- `policyWorldUsed = false`.
+- `tickReadCollision = true`.
+- `tickWorldReadOnlyUsed = true`.
+- `worldMutated = false`.
+- `feedbackAwareIntentToTickLiveReadonly*` metrics are present.
+- `lab_feedback_aware_intent_to_tick_live_readonly_recorded` event is present.
+
+### Next Step
+
+Phase 4.23E — Feedback-Aware Intent To Tick Approved Application Smoke.

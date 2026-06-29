@@ -277,6 +277,9 @@ struct RunEvent: Encodable {
     let tickDeniedSameDestinationConflict: Int?
     let tickFeedbackEmitted: Int?
     let policyReadCollision: Bool?
+    let policyWorldUsed: Bool?
+    let tickWorldReadOnlyUsed: Bool?
+    let worldMutated: Bool?
     let movedFeedback: Int?
     let approvedForMovementFeedback: Int?
     let blockedByCollisionFeedback: Int?
@@ -628,6 +631,9 @@ struct RunEvent: Encodable {
         tickDeniedSameDestinationConflict: Int? = nil,
         tickFeedbackEmitted: Int? = nil,
         policyReadCollision: Bool? = nil,
+        policyWorldUsed: Bool? = nil,
+        tickWorldReadOnlyUsed: Bool? = nil,
+        worldMutated: Bool? = nil,
         movedFeedback: Int? = nil,
         approvedForMovementFeedback: Int? = nil,
         blockedByCollisionFeedback: Int? = nil,
@@ -978,6 +984,9 @@ struct RunEvent: Encodable {
         self.tickDeniedSameDestinationConflict = tickDeniedSameDestinationConflict
         self.tickFeedbackEmitted = tickFeedbackEmitted
         self.policyReadCollision = policyReadCollision
+        self.policyWorldUsed = policyWorldUsed
+        self.tickWorldReadOnlyUsed = tickWorldReadOnlyUsed
+        self.worldMutated = worldMutated
         self.movedFeedback = movedFeedback
         self.approvedForMovementFeedback = approvedForMovementFeedback
         self.blockedByCollisionFeedback = blockedByCollisionFeedback

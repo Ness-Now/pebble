@@ -597,3 +597,77 @@ mutation.
 
 Next recommended step: Phase 4.23D - Feedback-Aware Intent To Tick Live
 Read-Only Smoke.
+
+## Phase 4.23D Implementation Status
+
+Status: implemented and validated.
+
+Phase 4.23D adds `feedback_aware_intent_to_tick_live_readonly_smoke`, the
+first handoff from the opt-in feedback-aware v1 policy into the live read-only
+movement tick contract. The policy remains World-blind and collision-blind;
+only the tick layer reads collision evidence.
+
+The scenario builds seven intentionally unordered agent intent contexts:
+
+- two contexts without feedback that keep the v0 baseline move;
+- one `moved` context that keeps the v0 baseline move;
+- one `approvedForMovement` context that keeps the v0 baseline move;
+- one `blockedByCollision` context that becomes `noIntent`;
+- one `blockedByAgentConflict` context that becomes `noIntent`;
+- one `blockedByInvalidEdge` context that becomes `noIntent` before the
+  invalid vertical baseline proposal can reach tick input.
+
+The report computes the v0 baseline only for comparison, then feeds only the
+accepted feedback-aware v1 movement intents into live read-only tick
+arbitration. `noIntent` proposals are filtered before tick handoff. This
+reduces movement intent input from six baseline movement attempts to four
+feedback-aware movement attempts.
+
+Validated live read-only handoff contract:
+
+- `contexts = 7`;
+- `contextsWithFeedback = 5`;
+- `contextsWithoutFeedback = 2`;
+- `feedbackAwareProposals = 7`;
+- `feedbackAwareAcceptedIntents = 4`;
+- `feedbackAwareNoIntent = 3`;
+- `feedbackAwareInvalidOneEdgeProposals = 0`;
+- `baselineMovementIntentInputs = 6`;
+- `feedbackAwareMovementIntentInputs = 4`;
+- `movementIntentReduction = 2`;
+- `noIntentFilteredOut = 3`;
+- `tickIntents = 4`;
+- `tickApproved = 2`;
+- `tickDenied = 2`;
+- `tickDeniedSameDestinationConflict = 1`;
+- `tickDeniedCollision = 1`;
+- `tickFeedbackEmitted = 4`;
+- `occupableDestinations = 2`;
+- `nonOccupableDestinations = 1`;
+- `displacementsApplied = 0`;
+- `policyReadCollision = false`;
+- `policyWorldUsed = false`;
+- `tickReadCollision = true`;
+- `tickWorldReadOnlyUsed = true`;
+- `worldMutated = false`.
+
+The policy does not arbitrate the remaining same-destination conflict. The
+live read-only tick layer resolves it deterministically and also denies the
+non-occupable live-collision candidate. The scenario records both the compact
+summary counters and the tick collision evidence in the handoff JSON.
+
+Outputs produced:
+
+- `feedback_aware_intent_to_tick_live_readonly_report.json`;
+- `feedback_aware_intent_to_tick_live_readonly_invariant_report.json`;
+- `feedback_aware_intent_to_tick_live_readonly_handoff.json`;
+- `feedbackAwareIntentToTickLiveReadonly*` metrics;
+- aggregate event `lab_feedback_aware_intent_to_tick_live_readonly_recorded`.
+
+Limits remain explicit: no collision or World read by policy, no movement
+application, no route following, no memory update, no goal change, no
+pathfinding, no replanning, no avoidance, no reservation runtime, and no
+terrain/world mutation.
+
+Next recommended step: Phase 4.23E - Feedback-Aware Intent To Tick Approved
+Application Smoke.
