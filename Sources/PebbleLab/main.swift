@@ -40,6 +40,8 @@ let isFeedbackToAgentIntentContextFixtureScenario = options.scenario
     == "feedback_to_agent_intent_context_fixture_smoke"
 let isFeedbackToAgentIntentContextHardeningScenario = options.scenario
     == "feedback_to_agent_intent_context_hardening_smoke"
+let isFeedbackAwareIntentPolicyFixtureScenario = options.scenario
+    == "feedback_aware_intent_policy_fixture_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -54,7 +56,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isAgentFeedbackConsumptionFixtureScenario
     || isAgentFeedbackConsumptionHardeningScenario
     || isFeedbackToAgentIntentContextFixtureScenario
-    || isFeedbackToAgentIntentContextHardeningScenario)
+    || isFeedbackToAgentIntentContextHardeningScenario
+    || isFeedbackAwareIntentPolicyFixtureScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -702,7 +705,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isAgentFeedbackConsumptionFixtureScenario
     || isAgentFeedbackConsumptionHardeningScenario
     || isFeedbackToAgentIntentContextFixtureScenario
-    || isFeedbackToAgentIntentContextHardeningScenario {
+    || isFeedbackToAgentIntentContextHardeningScenario
+    || isFeedbackAwareIntentPolicyFixtureScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -1944,6 +1948,67 @@ let feedbackToAgentIntentContextHardeningSuccess =
             && feedbackToAgentIntentContextHardeningSummary?.worldUsed == false
             && feedbackToAgentIntentContextHardeningSummary?.mutationPerformed == false)
         : nil
+let feedbackAwareIntentPolicyFixtureReport =
+    isFeedbackAwareIntentPolicyFixtureScenario
+        ? makeFeedbackAwareIntentPolicyFixtureReport(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticksCompleted: ticksCompleted
+        )
+        : nil
+let feedbackAwareIntentPolicyFixtureInvariantReport =
+    isFeedbackAwareIntentPolicyFixtureScenario
+        ? makeFeedbackAwareIntentPolicyFixtureInvariantReport(
+            report: feedbackAwareIntentPolicyFixtureReport,
+            scenario: options.scenario,
+            seed: options.seed
+        )
+        : nil
+let feedbackAwareIntentPolicyFixtureSummary = feedbackAwareIntentPolicyFixtureReport?.summary
+let feedbackAwareIntentPolicyFixtureSuccess =
+    isFeedbackAwareIntentPolicyFixtureScenario
+        ? ((feedbackAwareIntentPolicyFixtureReport?.success ?? false)
+            && (feedbackAwareIntentPolicyFixtureInvariantReport?.success ?? false)
+            && feedbackAwareIntentPolicyFixtureReport?.baselinePolicyMode == .baselineV0
+            && feedbackAwareIntentPolicyFixtureReport?.feedbackAwarePolicyMode == .feedbackAwareV1
+            && feedbackAwareIntentPolicyFixtureSummary?.contexts == 10
+            && feedbackAwareIntentPolicyFixtureSummary?.contextsWithFeedback == 9
+            && feedbackAwareIntentPolicyFixtureSummary?.contextsWithoutFeedback == 1
+            && feedbackAwareIntentPolicyFixtureSummary?.baselineProposals == 10
+            && feedbackAwareIntentPolicyFixtureSummary?.feedbackAwareProposals == 10
+            && feedbackAwareIntentPolicyFixtureSummary?.acceptedIntents == 3
+            && feedbackAwareIntentPolicyFixtureSummary?.rejectedProposals == 7
+            && feedbackAwareIntentPolicyFixtureSummary?.noIntent == 7
+            && feedbackAwareIntentPolicyFixtureSummary?.invalidOneEdgeProposals == 0
+            && feedbackAwareIntentPolicyFixtureSummary?.behaviorChangedByFeedback == true
+            && feedbackAwareIntentPolicyFixtureSummary?.behaviorChangedCount == 7
+            && feedbackAwareIntentPolicyFixtureSummary?.noFeedbackBaselineKept == 1
+            && feedbackAwareIntentPolicyFixtureSummary?.movedBaselineKept == 1
+            && feedbackAwareIntentPolicyFixtureSummary?.approvedForMovementBaselineKept == 1
+            && feedbackAwareIntentPolicyFixtureSummary?.blockedByCollisionNoIntent == 1
+            && feedbackAwareIntentPolicyFixtureSummary?.blockedByAgentConflictNoIntent == 1
+            && feedbackAwareIntentPolicyFixtureSummary?.blockedBySourceMismatchNoIntent == 1
+            && feedbackAwareIntentPolicyFixtureSummary?.blockedByDivergenceNoIntent == 1
+            && feedbackAwareIntentPolicyFixtureSummary?.blockedByStaleIntentNoIntent == 1
+            && feedbackAwareIntentPolicyFixtureSummary?.blockedByInvalidEdgeNoIntent == 1
+            && feedbackAwareIntentPolicyFixtureSummary?.blockedByMaxAgentsNoIntent == 1
+            && feedbackAwareIntentPolicyFixtureReport?.decisions.allSatisfy { decision in
+                decision.lastFeedbackKind == nil || decision.feedbackUsedForDecision
+            } == true
+            && feedbackAwareIntentPolicyFixtureReport?.decisions.first {
+                $0.agentId == "agent_8_invalid_edge"
+            }?.reason == "feedback_blocked_by_invalid_edge_no_intent"
+            && feedbackAwareIntentPolicyFixtureSummary?.collisionRead == false
+            && feedbackAwareIntentPolicyFixtureSummary?.worldUsed == false
+            && feedbackAwareIntentPolicyFixtureSummary?.movementApplied == false
+            && feedbackAwareIntentPolicyFixtureSummary?.memoryUpdated == false
+            && feedbackAwareIntentPolicyFixtureSummary?.goalChanged == false
+            && feedbackAwareIntentPolicyFixtureSummary?.pathfindingPerformed == false
+            && feedbackAwareIntentPolicyFixtureSummary?.replanningPerformed == false
+            && feedbackAwareIntentPolicyFixtureSummary?.avoidancePerformed == false
+            && feedbackAwareIntentPolicyFixtureSummary?.reservationRuntimeUsed == false
+            && feedbackAwareIntentPolicyFixtureSummary?.mutationPerformed == false)
+        : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
@@ -2331,6 +2396,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (agentFeedbackConsumptionHardeningSuccess ?? true)
     && (feedbackToAgentIntentContextFixtureSuccess ?? true)
     && (feedbackToAgentIntentContextHardeningSuccess ?? true)
+    && (feedbackAwareIntentPolicyFixtureSuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -3137,6 +3203,50 @@ if options.outPath != nil {
                 replanningPerformed: summary.replanningPerformed
             ))
         }
+        if let feedbackAwareIntentPolicyFixtureReport {
+            let summary = feedbackAwareIntentPolicyFixtureReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_feedback_aware_intent_policy_fixture_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: feedbackAwareIntentPolicyFixtureSuccess,
+                policyMode: feedbackAwareIntentPolicyFixtureReport.feedbackAwarePolicyMode.rawValue,
+                contexts: summary.contexts,
+                proposals: summary.feedbackAwareProposals,
+                baselineProposals: summary.baselineProposals,
+                feedbackAwareProposals: summary.feedbackAwareProposals,
+                acceptedIntents: summary.acceptedIntents,
+                rejectedProposals: summary.rejectedProposals,
+                noIntent: summary.noIntent,
+                invalidOneEdgeProposals: summary.invalidOneEdgeProposals,
+                intentContexts: summary.contexts,
+                contextsWithFeedback: summary.contextsWithFeedback,
+                contextsWithoutFeedback: summary.contextsWithoutFeedback,
+                behaviorChangedByFeedback: summary.behaviorChangedByFeedback,
+                behaviorChangedCount: summary.behaviorChangedCount,
+                feedbackReactions: summary.feedbackReactions,
+                noFeedbackBaselineKept: summary.noFeedbackBaselineKept,
+                movedBaselineKept: summary.movedBaselineKept,
+                approvedForMovementBaselineKept: summary.approvedForMovementBaselineKept,
+                blockedByCollisionNoIntent: summary.blockedByCollisionNoIntent,
+                blockedByAgentConflictNoIntent: summary.blockedByAgentConflictNoIntent,
+                blockedBySourceMismatchNoIntent: summary.blockedBySourceMismatchNoIntent,
+                blockedByDivergenceNoIntent: summary.blockedByDivergenceNoIntent,
+                blockedByStaleIntentNoIntent: summary.blockedByStaleIntentNoIntent,
+                blockedByInvalidEdgeNoIntent: summary.blockedByInvalidEdgeNoIntent,
+                blockedByMaxAgentsNoIntent: summary.blockedByMaxAgentsNoIntent,
+                worldUsed: summary.worldUsed,
+                collisionRead: summary.collisionRead,
+                movementApplied: summary.movementApplied,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                avoidancePerformed: summary.avoidancePerformed,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
+                replanningPerformed: summary.replanningPerformed
+            ))
+        }
         if let routeFollowingLiveSnapshot {
             try appendEvent(RunEvent(
                 type: "lab_route_following_recorded",
@@ -3922,6 +4032,22 @@ if let outPath = options.outPath {
             try writeJSON(
                 feedbackToAgentIntentContextHardeningInvariantReport,
                 to: outURL.appendingPathComponent("feedback_to_agent_intent_context_hardening_invariant_report.json")
+            )
+        }
+        if let feedbackAwareIntentPolicyFixtureReport {
+            try writeJSON(
+                feedbackAwareIntentPolicyFixtureReport,
+                to: outURL.appendingPathComponent("feedback_aware_intent_policy_fixture_report.json")
+            )
+            try writeJSON(
+                feedbackAwareIntentPolicyFixtureReport,
+                to: outURL.appendingPathComponent("feedback_aware_intent_policy_decisions.json")
+            )
+        }
+        if let feedbackAwareIntentPolicyFixtureInvariantReport {
+            try writeJSON(
+                feedbackAwareIntentPolicyFixtureInvariantReport,
+                to: outURL.appendingPathComponent("feedback_aware_intent_policy_fixture_invariant_report.json")
             )
         }
         if let routeFollowingLiveSnapshot {
@@ -4835,6 +4961,39 @@ if let outPath = options.outPath {
             feedbackToAgentIntentContextHardeningWorldUsed: feedbackToAgentIntentContextHardeningReport?.summary.worldUsed,
             feedbackToAgentIntentContextHardeningMutationPerformed: feedbackToAgentIntentContextHardeningReport?.summary.mutationPerformed,
             feedbackToAgentIntentContextHardeningSuccess: feedbackToAgentIntentContextHardeningSuccess,
+            feedbackAwareIntentPolicyFixtureContexts: feedbackAwareIntentPolicyFixtureReport?.summary.contexts,
+            feedbackAwareIntentPolicyFixtureContextsWithFeedback: feedbackAwareIntentPolicyFixtureReport?.summary.contextsWithFeedback,
+            feedbackAwareIntentPolicyFixtureContextsWithoutFeedback: feedbackAwareIntentPolicyFixtureReport?.summary.contextsWithoutFeedback,
+            feedbackAwareIntentPolicyFixtureBaselineProposals: feedbackAwareIntentPolicyFixtureReport?.summary.baselineProposals,
+            feedbackAwareIntentPolicyFixtureFeedbackAwareProposals: feedbackAwareIntentPolicyFixtureReport?.summary.feedbackAwareProposals,
+            feedbackAwareIntentPolicyFixtureAcceptedIntents: feedbackAwareIntentPolicyFixtureReport?.summary.acceptedIntents,
+            feedbackAwareIntentPolicyFixtureRejectedProposals: feedbackAwareIntentPolicyFixtureReport?.summary.rejectedProposals,
+            feedbackAwareIntentPolicyFixtureNoIntent: feedbackAwareIntentPolicyFixtureReport?.summary.noIntent,
+            feedbackAwareIntentPolicyFixtureInvalidOneEdgeProposals: feedbackAwareIntentPolicyFixtureReport?.summary.invalidOneEdgeProposals,
+            feedbackAwareIntentPolicyFixtureFeedbackReactions: feedbackAwareIntentPolicyFixtureReport?.summary.feedbackReactions,
+            feedbackAwareIntentPolicyFixtureBehaviorChangedByFeedback: feedbackAwareIntentPolicyFixtureReport?.summary.behaviorChangedByFeedback,
+            feedbackAwareIntentPolicyFixtureBehaviorChangedCount: feedbackAwareIntentPolicyFixtureReport?.summary.behaviorChangedCount,
+            feedbackAwareIntentPolicyFixtureNoFeedbackBaselineKept: feedbackAwareIntentPolicyFixtureReport?.summary.noFeedbackBaselineKept,
+            feedbackAwareIntentPolicyFixtureMovedBaselineKept: feedbackAwareIntentPolicyFixtureReport?.summary.movedBaselineKept,
+            feedbackAwareIntentPolicyFixtureApprovedForMovementBaselineKept: feedbackAwareIntentPolicyFixtureReport?.summary.approvedForMovementBaselineKept,
+            feedbackAwareIntentPolicyFixtureBlockedByCollisionNoIntent: feedbackAwareIntentPolicyFixtureReport?.summary.blockedByCollisionNoIntent,
+            feedbackAwareIntentPolicyFixtureBlockedByAgentConflictNoIntent: feedbackAwareIntentPolicyFixtureReport?.summary.blockedByAgentConflictNoIntent,
+            feedbackAwareIntentPolicyFixtureBlockedBySourceMismatchNoIntent: feedbackAwareIntentPolicyFixtureReport?.summary.blockedBySourceMismatchNoIntent,
+            feedbackAwareIntentPolicyFixtureBlockedByDivergenceNoIntent: feedbackAwareIntentPolicyFixtureReport?.summary.blockedByDivergenceNoIntent,
+            feedbackAwareIntentPolicyFixtureBlockedByStaleIntentNoIntent: feedbackAwareIntentPolicyFixtureReport?.summary.blockedByStaleIntentNoIntent,
+            feedbackAwareIntentPolicyFixtureBlockedByInvalidEdgeNoIntent: feedbackAwareIntentPolicyFixtureReport?.summary.blockedByInvalidEdgeNoIntent,
+            feedbackAwareIntentPolicyFixtureBlockedByMaxAgentsNoIntent: feedbackAwareIntentPolicyFixtureReport?.summary.blockedByMaxAgentsNoIntent,
+            feedbackAwareIntentPolicyFixtureCollisionRead: feedbackAwareIntentPolicyFixtureReport?.summary.collisionRead,
+            feedbackAwareIntentPolicyFixtureMovementApplied: feedbackAwareIntentPolicyFixtureReport?.summary.movementApplied,
+            feedbackAwareIntentPolicyFixtureMemoryUpdated: feedbackAwareIntentPolicyFixtureReport?.summary.memoryUpdated,
+            feedbackAwareIntentPolicyFixtureGoalChanged: feedbackAwareIntentPolicyFixtureReport?.summary.goalChanged,
+            feedbackAwareIntentPolicyFixturePathfindingPerformed: feedbackAwareIntentPolicyFixtureReport?.summary.pathfindingPerformed,
+            feedbackAwareIntentPolicyFixtureReplanningPerformed: feedbackAwareIntentPolicyFixtureReport?.summary.replanningPerformed,
+            feedbackAwareIntentPolicyFixtureAvoidancePerformed: feedbackAwareIntentPolicyFixtureReport?.summary.avoidancePerformed,
+            feedbackAwareIntentPolicyFixtureReservationRuntimeUsed: feedbackAwareIntentPolicyFixtureReport?.summary.reservationRuntimeUsed,
+            feedbackAwareIntentPolicyFixtureWorldUsed: feedbackAwareIntentPolicyFixtureReport?.summary.worldUsed,
+            feedbackAwareIntentPolicyFixtureMutationPerformed: feedbackAwareIntentPolicyFixtureReport?.summary.mutationPerformed,
+            feedbackAwareIntentPolicyFixtureSuccess: feedbackAwareIntentPolicyFixtureSuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,

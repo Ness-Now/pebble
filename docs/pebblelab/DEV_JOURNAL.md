@@ -6443,3 +6443,142 @@ intended blocked feedback cases.
 ### Next Step
 
 Phase 4.23A — Bounded Feedback-Aware Intent Policy Fixture Smoke.
+
+## 2026-06-29 — Phase 4.23A bounded feedback-aware intent policy fixture
+
+### Objective
+
+Implement the first opt-in feedback-aware agent intent policy fixture:
+`feedback_aware_intent_policy_fixture_smoke`.
+
+### Starting Point
+
+Phase 4.22F documented the feedback-aware policy plan. At the start of this
+phase, `LabAgentIntentContext.lastFeedback` was already available from the
+feedback-to-context plumbing, but policy v0 intentionally ignored it.
+
+### Files Created Or Modified
+
+- `Sources/PebbleLab/LabAgentIntentProduction.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_FEEDBACK_AWARE_INTENT_POLICY_PLAN.md`
+
+### Why Opt-In
+
+The existing v0 fixture and production scenarios are baseline contracts. The
+new v1 policy is exposed only through
+`feedback_aware_intent_policy_fixture_smoke`; v0 remains unchanged and is not
+replaced globally.
+
+### v0 Unchanged
+
+The v1 policy computes `produceAgentIntentProposalV0(context:)` first and keeps
+the baseline proposal for no feedback, `moved`, and `approvedForMovement`.
+Existing v0 scenarios continue to call v0 directly.
+
+### v1 Rules
+
+- no feedback -> baseline;
+- `moved` -> baseline;
+- `approvedForMovement` -> baseline;
+- `blockedByCollision` -> `noIntent`;
+- `blockedByAgentConflict` -> `noIntent`;
+- `blockedBySourceMismatch` -> `noIntent`;
+- `blockedByDivergence` -> `noIntent`;
+- `blockedByStaleIntent` -> `noIntent`;
+- `blockedByInvalidEdge` -> `noIntent`;
+- `blockedByMaxAgents` -> `noIntent`.
+
+### Fixture Contexts
+
+The fixture uses 10 deliberately unordered contexts:
+
+- `agent_0_no_feedback`;
+- `agent_1_moved`;
+- `agent_2_approved`;
+- `agent_3_collision`;
+- `agent_4_conflict`;
+- `agent_5_source_mismatch`;
+- `agent_6_divergence`;
+- `agent_7_stale`;
+- `agent_8_invalid_edge`;
+- `agent_9_max_agents`.
+
+### Baseline Comparison
+
+Every v1 decision stores its baseline v0 proposal and feedback-aware proposal.
+The output decisions are sorted by stable `agentId`.
+
+### Behavior Changed Only For Blocked Feedback
+
+No feedback, `moved`, and `approvedForMovement` preserve the baseline. The
+seven blocking feedback contexts change to explicit `noIntent`, so
+`behaviorChangedByFeedback = true` and `behaviorChangedCount = 7`.
+
+### Outputs, Invariants, Metrics, And Event
+
+The scenario writes:
+
+- `feedback_aware_intent_policy_fixture_report.json`;
+- `feedback_aware_intent_policy_fixture_invariant_report.json`;
+- `feedback_aware_intent_policy_decisions.json`;
+- `feedbackAwareIntentPolicyFixture*` metrics;
+- aggregate event `lab_feedback_aware_intent_policy_fixture_recorded`.
+
+The invariant report includes 57 checks covering v0 availability, opt-in v1,
+baseline-first evaluation, baseline retention, blocked feedback noIntent
+reactions, explicit invalid-edge reason, sorted outputs, no World/collision/
+movement/memory/goals/pathfinding/replanning/avoidance/reservation/mutation,
+artifact writing, and success contract.
+
+### Out Of Scope Confirmed
+
+No tick movement, movement application, collision read, World access, memory
+update, goal change, pathfinding, replanning, avoidance, reservation runtime,
+learning, LLM/RL/Python, social behavior, communication, terrain mutation, or
+world mutation was added.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_intent_policy_fixture`
+- `swift run -c release PebbleLab -- --scenario feedback_to_agent_intent_context_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_to_agent_intent_context_hardening_after_feedback_aware_policy`
+- `swift run -c release PebbleLab -- --scenario feedback_to_agent_intent_context_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_to_agent_intent_context_fixture_after_feedback_aware_policy`
+- `swift run -c release PebbleLab -- --scenario agent_feedback_consumption_hardening_smoke --seed 42 --ticks 0 --out runs/check_agent_feedback_hardening_after_feedback_aware_policy`
+- `swift run -c release PebbleLab -- --scenario agent_feedback_consumption_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_feedback_fixture_after_feedback_aware_policy`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_fixture_after_feedback_aware_policy`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_hardening_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_hardening_after_feedback_aware_policy`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_feedback_aware_policy`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- `feedback_aware_intent_policy_fixture_smoke` passes.
+- Report success true.
+- Invariant report success true.
+- `contexts = 10`.
+- `contextsWithFeedback = 9`.
+- `contextsWithoutFeedback = 1`.
+- `baselineProposals = 10`.
+- `feedbackAwareProposals = 10`.
+- `acceptedIntents = 3`.
+- `rejectedProposals = 7`.
+- `noIntent = 7`.
+- `invalidOneEdgeProposals = 0`.
+- `behaviorChangedCount = 7`.
+- `feedbackAwareIntentPolicyFixture*` metrics are present.
+- `lab_feedback_aware_intent_policy_fixture_recorded` event is present.
+
+### Next Step
+
+Phase 4.23B — Feedback-Aware Intent Policy Hardening.

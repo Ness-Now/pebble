@@ -1479,3 +1479,46 @@ terrain/world mutation remain out of scope.
 
 Next recommended step: Phase 4.23A - Bounded Feedback-Aware Intent Policy
 Fixture Smoke.
+
+## Phase 4.23A - Bounded Feedback-Aware Intent Policy Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: add the first opt-in feedback-aware intent policy fixture while keeping
+the original v0 policy unchanged and globally unmodified.
+
+The scenario `feedback_aware_intent_policy_fixture_smoke` introduces
+`produceAgentIntentProposalFeedbackAwareV1` as an explicit opt-in policy. It
+computes the baseline v0 proposal first, compares every v1 decision to that
+baseline, and records per-agent feedback reactions.
+
+The fixture uses 10 deliberately unordered contexts. One has no feedback, one
+has `moved`, one has `approvedForMovement`, and seven cover the blocking
+feedback kinds: `blockedByCollision`, `blockedByAgentConflict`,
+`blockedBySourceMismatch`, `blockedByDivergence`, `blockedByStaleIntent`,
+`blockedByInvalidEdge`, and `blockedByMaxAgents`.
+
+No feedback, `moved`, and `approvedForMovement` keep the baseline v0 behavior.
+Every blocking feedback kind returns `noIntent`. The invalid-edge feedback case
+uses an explicit `feedback_blocked_by_invalid_edge_no_intent` reason so the
+policy bug signal is visible rather than silently hidden.
+
+Validated totals: `contexts = 10`, `contextsWithFeedback = 9`,
+`contextsWithoutFeedback = 1`, `baselineProposals = 10`,
+`feedbackAwareProposals = 10`, `acceptedIntents = 3`,
+`rejectedProposals = 7`, `noIntent = 7`, `invalidOneEdgeProposals = 0`,
+`feedbackReactions = 10`, and `behaviorChangedCount = 7`.
+
+The scenario writes `feedback_aware_intent_policy_fixture_report.json`,
+`feedback_aware_intent_policy_fixture_invariant_report.json`,
+`feedback_aware_intent_policy_decisions.json`,
+`feedbackAwareIntentPolicyFixture*` metrics, and one aggregate
+`lab_feedback_aware_intent_policy_fixture_recorded` event.
+
+Alternative direction selection, pathfinding, replanning, avoidance,
+reservation runtime, route following, movement application, collision reads,
+World access, memory update, goal change, learning, social behavior,
+communication, gameplay movement, and terrain/world mutation remain out of
+scope.
+
+Next recommended step: Phase 4.23B - Feedback-Aware Intent Policy Hardening.

@@ -437,3 +437,50 @@ Phase 4.22F succeeds when:
 - `swift run -c release pebsmoke` passes;
 - `git diff --check` passes;
 - a single documentation commit is created.
+
+## Phase 4.23A Implementation Status
+
+Status: implemented and validated.
+
+Phase 4.23A adds the opt-in `produceAgentIntentProposalFeedbackAwareV1` policy
+and the fixture-only scenario `feedback_aware_intent_policy_fixture_smoke`.
+The original v0 policy remains unchanged and is still used by existing v0
+smokes.
+
+The fixture computes baseline v0 proposals first, then applies v1. No
+feedback, `moved`, and `approvedForMovement` return the baseline proposal.
+`blockedByCollision`, `blockedByAgentConflict`, `blockedBySourceMismatch`,
+`blockedByDivergence`, `blockedByStaleIntent`, `blockedByInvalidEdge`, and
+`blockedByMaxAgents` return explicit `noIntent` proposals. The
+`blockedByInvalidEdge` reaction keeps an explicit
+`feedback_blocked_by_invalid_edge_no_intent` reason.
+
+Validated totals:
+
+- `contexts = 10`;
+- `contextsWithFeedback = 9`;
+- `contextsWithoutFeedback = 1`;
+- `baselineProposals = 10`;
+- `feedbackAwareProposals = 10`;
+- `acceptedIntents = 3`;
+- `rejectedProposals = 7`;
+- `noIntent = 7`;
+- `invalidOneEdgeProposals = 0`;
+- `feedbackReactions = 10`;
+- `behaviorChangedByFeedback = true`;
+- `behaviorChangedCount = 7`.
+
+Outputs produced:
+
+- `feedback_aware_intent_policy_fixture_report.json`;
+- `feedback_aware_intent_policy_fixture_invariant_report.json`;
+- `feedback_aware_intent_policy_decisions.json`;
+- `feedbackAwareIntentPolicyFixture*` metrics;
+- aggregate event `lab_feedback_aware_intent_policy_fixture_recorded`.
+
+Limits remain explicit: no tick movement, no live collision, no World, no
+movement application, no memory update, no goal change, no pathfinding, no
+replanning, no avoidance, no reservation runtime, no learning, no social
+behavior, no communication, and no terrain/world mutation.
+
+Next recommended step: Phase 4.23B - Feedback-Aware Intent Policy Hardening.

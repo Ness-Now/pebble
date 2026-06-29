@@ -832,6 +832,39 @@ struct RunMetrics: Encodable {
     let feedbackToAgentIntentContextHardeningWorldUsed: Bool?
     let feedbackToAgentIntentContextHardeningMutationPerformed: Bool?
     let feedbackToAgentIntentContextHardeningSuccess: Bool?
+    let feedbackAwareIntentPolicyFixtureContexts: Int?
+    let feedbackAwareIntentPolicyFixtureContextsWithFeedback: Int?
+    let feedbackAwareIntentPolicyFixtureContextsWithoutFeedback: Int?
+    let feedbackAwareIntentPolicyFixtureBaselineProposals: Int?
+    let feedbackAwareIntentPolicyFixtureFeedbackAwareProposals: Int?
+    let feedbackAwareIntentPolicyFixtureAcceptedIntents: Int?
+    let feedbackAwareIntentPolicyFixtureRejectedProposals: Int?
+    let feedbackAwareIntentPolicyFixtureNoIntent: Int?
+    let feedbackAwareIntentPolicyFixtureInvalidOneEdgeProposals: Int?
+    let feedbackAwareIntentPolicyFixtureFeedbackReactions: Int?
+    let feedbackAwareIntentPolicyFixtureBehaviorChangedByFeedback: Bool?
+    let feedbackAwareIntentPolicyFixtureBehaviorChangedCount: Int?
+    let feedbackAwareIntentPolicyFixtureNoFeedbackBaselineKept: Int?
+    let feedbackAwareIntentPolicyFixtureMovedBaselineKept: Int?
+    let feedbackAwareIntentPolicyFixtureApprovedForMovementBaselineKept: Int?
+    let feedbackAwareIntentPolicyFixtureBlockedByCollisionNoIntent: Int?
+    let feedbackAwareIntentPolicyFixtureBlockedByAgentConflictNoIntent: Int?
+    let feedbackAwareIntentPolicyFixtureBlockedBySourceMismatchNoIntent: Int?
+    let feedbackAwareIntentPolicyFixtureBlockedByDivergenceNoIntent: Int?
+    let feedbackAwareIntentPolicyFixtureBlockedByStaleIntentNoIntent: Int?
+    let feedbackAwareIntentPolicyFixtureBlockedByInvalidEdgeNoIntent: Int?
+    let feedbackAwareIntentPolicyFixtureBlockedByMaxAgentsNoIntent: Int?
+    let feedbackAwareIntentPolicyFixtureCollisionRead: Bool?
+    let feedbackAwareIntentPolicyFixtureMovementApplied: Bool?
+    let feedbackAwareIntentPolicyFixtureMemoryUpdated: Bool?
+    let feedbackAwareIntentPolicyFixtureGoalChanged: Bool?
+    let feedbackAwareIntentPolicyFixturePathfindingPerformed: Bool?
+    let feedbackAwareIntentPolicyFixtureReplanningPerformed: Bool?
+    let feedbackAwareIntentPolicyFixtureAvoidancePerformed: Bool?
+    let feedbackAwareIntentPolicyFixtureReservationRuntimeUsed: Bool?
+    let feedbackAwareIntentPolicyFixtureWorldUsed: Bool?
+    let feedbackAwareIntentPolicyFixtureMutationPerformed: Bool?
+    let feedbackAwareIntentPolicyFixtureSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -1664,6 +1697,39 @@ struct RunMetrics: Encodable {
         feedbackToAgentIntentContextHardeningWorldUsed: Bool? = nil,
         feedbackToAgentIntentContextHardeningMutationPerformed: Bool? = nil,
         feedbackToAgentIntentContextHardeningSuccess: Bool? = nil,
+        feedbackAwareIntentPolicyFixtureContexts: Int? = nil,
+        feedbackAwareIntentPolicyFixtureContextsWithFeedback: Int? = nil,
+        feedbackAwareIntentPolicyFixtureContextsWithoutFeedback: Int? = nil,
+        feedbackAwareIntentPolicyFixtureBaselineProposals: Int? = nil,
+        feedbackAwareIntentPolicyFixtureFeedbackAwareProposals: Int? = nil,
+        feedbackAwareIntentPolicyFixtureAcceptedIntents: Int? = nil,
+        feedbackAwareIntentPolicyFixtureRejectedProposals: Int? = nil,
+        feedbackAwareIntentPolicyFixtureNoIntent: Int? = nil,
+        feedbackAwareIntentPolicyFixtureInvalidOneEdgeProposals: Int? = nil,
+        feedbackAwareIntentPolicyFixtureFeedbackReactions: Int? = nil,
+        feedbackAwareIntentPolicyFixtureBehaviorChangedByFeedback: Bool? = nil,
+        feedbackAwareIntentPolicyFixtureBehaviorChangedCount: Int? = nil,
+        feedbackAwareIntentPolicyFixtureNoFeedbackBaselineKept: Int? = nil,
+        feedbackAwareIntentPolicyFixtureMovedBaselineKept: Int? = nil,
+        feedbackAwareIntentPolicyFixtureApprovedForMovementBaselineKept: Int? = nil,
+        feedbackAwareIntentPolicyFixtureBlockedByCollisionNoIntent: Int? = nil,
+        feedbackAwareIntentPolicyFixtureBlockedByAgentConflictNoIntent: Int? = nil,
+        feedbackAwareIntentPolicyFixtureBlockedBySourceMismatchNoIntent: Int? = nil,
+        feedbackAwareIntentPolicyFixtureBlockedByDivergenceNoIntent: Int? = nil,
+        feedbackAwareIntentPolicyFixtureBlockedByStaleIntentNoIntent: Int? = nil,
+        feedbackAwareIntentPolicyFixtureBlockedByInvalidEdgeNoIntent: Int? = nil,
+        feedbackAwareIntentPolicyFixtureBlockedByMaxAgentsNoIntent: Int? = nil,
+        feedbackAwareIntentPolicyFixtureCollisionRead: Bool? = nil,
+        feedbackAwareIntentPolicyFixtureMovementApplied: Bool? = nil,
+        feedbackAwareIntentPolicyFixtureMemoryUpdated: Bool? = nil,
+        feedbackAwareIntentPolicyFixtureGoalChanged: Bool? = nil,
+        feedbackAwareIntentPolicyFixturePathfindingPerformed: Bool? = nil,
+        feedbackAwareIntentPolicyFixtureReplanningPerformed: Bool? = nil,
+        feedbackAwareIntentPolicyFixtureAvoidancePerformed: Bool? = nil,
+        feedbackAwareIntentPolicyFixtureReservationRuntimeUsed: Bool? = nil,
+        feedbackAwareIntentPolicyFixtureWorldUsed: Bool? = nil,
+        feedbackAwareIntentPolicyFixtureMutationPerformed: Bool? = nil,
+        feedbackAwareIntentPolicyFixtureSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -2495,6 +2561,39 @@ struct RunMetrics: Encodable {
         self.feedbackToAgentIntentContextHardeningWorldUsed = feedbackToAgentIntentContextHardeningWorldUsed
         self.feedbackToAgentIntentContextHardeningMutationPerformed = feedbackToAgentIntentContextHardeningMutationPerformed
         self.feedbackToAgentIntentContextHardeningSuccess = feedbackToAgentIntentContextHardeningSuccess
+        self.feedbackAwareIntentPolicyFixtureContexts = feedbackAwareIntentPolicyFixtureContexts
+        self.feedbackAwareIntentPolicyFixtureContextsWithFeedback = feedbackAwareIntentPolicyFixtureContextsWithFeedback
+        self.feedbackAwareIntentPolicyFixtureContextsWithoutFeedback = feedbackAwareIntentPolicyFixtureContextsWithoutFeedback
+        self.feedbackAwareIntentPolicyFixtureBaselineProposals = feedbackAwareIntentPolicyFixtureBaselineProposals
+        self.feedbackAwareIntentPolicyFixtureFeedbackAwareProposals = feedbackAwareIntentPolicyFixtureFeedbackAwareProposals
+        self.feedbackAwareIntentPolicyFixtureAcceptedIntents = feedbackAwareIntentPolicyFixtureAcceptedIntents
+        self.feedbackAwareIntentPolicyFixtureRejectedProposals = feedbackAwareIntentPolicyFixtureRejectedProposals
+        self.feedbackAwareIntentPolicyFixtureNoIntent = feedbackAwareIntentPolicyFixtureNoIntent
+        self.feedbackAwareIntentPolicyFixtureInvalidOneEdgeProposals = feedbackAwareIntentPolicyFixtureInvalidOneEdgeProposals
+        self.feedbackAwareIntentPolicyFixtureFeedbackReactions = feedbackAwareIntentPolicyFixtureFeedbackReactions
+        self.feedbackAwareIntentPolicyFixtureBehaviorChangedByFeedback = feedbackAwareIntentPolicyFixtureBehaviorChangedByFeedback
+        self.feedbackAwareIntentPolicyFixtureBehaviorChangedCount = feedbackAwareIntentPolicyFixtureBehaviorChangedCount
+        self.feedbackAwareIntentPolicyFixtureNoFeedbackBaselineKept = feedbackAwareIntentPolicyFixtureNoFeedbackBaselineKept
+        self.feedbackAwareIntentPolicyFixtureMovedBaselineKept = feedbackAwareIntentPolicyFixtureMovedBaselineKept
+        self.feedbackAwareIntentPolicyFixtureApprovedForMovementBaselineKept = feedbackAwareIntentPolicyFixtureApprovedForMovementBaselineKept
+        self.feedbackAwareIntentPolicyFixtureBlockedByCollisionNoIntent = feedbackAwareIntentPolicyFixtureBlockedByCollisionNoIntent
+        self.feedbackAwareIntentPolicyFixtureBlockedByAgentConflictNoIntent = feedbackAwareIntentPolicyFixtureBlockedByAgentConflictNoIntent
+        self.feedbackAwareIntentPolicyFixtureBlockedBySourceMismatchNoIntent = feedbackAwareIntentPolicyFixtureBlockedBySourceMismatchNoIntent
+        self.feedbackAwareIntentPolicyFixtureBlockedByDivergenceNoIntent = feedbackAwareIntentPolicyFixtureBlockedByDivergenceNoIntent
+        self.feedbackAwareIntentPolicyFixtureBlockedByStaleIntentNoIntent = feedbackAwareIntentPolicyFixtureBlockedByStaleIntentNoIntent
+        self.feedbackAwareIntentPolicyFixtureBlockedByInvalidEdgeNoIntent = feedbackAwareIntentPolicyFixtureBlockedByInvalidEdgeNoIntent
+        self.feedbackAwareIntentPolicyFixtureBlockedByMaxAgentsNoIntent = feedbackAwareIntentPolicyFixtureBlockedByMaxAgentsNoIntent
+        self.feedbackAwareIntentPolicyFixtureCollisionRead = feedbackAwareIntentPolicyFixtureCollisionRead
+        self.feedbackAwareIntentPolicyFixtureMovementApplied = feedbackAwareIntentPolicyFixtureMovementApplied
+        self.feedbackAwareIntentPolicyFixtureMemoryUpdated = feedbackAwareIntentPolicyFixtureMemoryUpdated
+        self.feedbackAwareIntentPolicyFixtureGoalChanged = feedbackAwareIntentPolicyFixtureGoalChanged
+        self.feedbackAwareIntentPolicyFixturePathfindingPerformed = feedbackAwareIntentPolicyFixturePathfindingPerformed
+        self.feedbackAwareIntentPolicyFixtureReplanningPerformed = feedbackAwareIntentPolicyFixtureReplanningPerformed
+        self.feedbackAwareIntentPolicyFixtureAvoidancePerformed = feedbackAwareIntentPolicyFixtureAvoidancePerformed
+        self.feedbackAwareIntentPolicyFixtureReservationRuntimeUsed = feedbackAwareIntentPolicyFixtureReservationRuntimeUsed
+        self.feedbackAwareIntentPolicyFixtureWorldUsed = feedbackAwareIntentPolicyFixtureWorldUsed
+        self.feedbackAwareIntentPolicyFixtureMutationPerformed = feedbackAwareIntentPolicyFixtureMutationPerformed
+        self.feedbackAwareIntentPolicyFixtureSuccess = feedbackAwareIntentPolicyFixtureSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

@@ -66,6 +66,7 @@ struct RunEvent: Encodable {
     let fearAfter: Int?
     let stateBefore: String?
     let stateAfter: String?
+    let policyMode: String?
     let dx: Int?
     let dy: Int?
     let dz: Int?
@@ -187,6 +188,8 @@ struct RunEvent: Encodable {
     let blockedByMaxAgentsTotal: Int?
     let contexts: Int?
     let proposals: Int?
+    let baselineProposals: Int?
+    let feedbackAwareProposals: Int?
     let acceptedIntents: Int?
     let rejectedProposals: Int?
     let noIntent: Int?
@@ -229,7 +232,19 @@ struct RunEvent: Encodable {
     let contextsWithFeedback: Int?
     let contextsWithoutFeedback: Int?
     let behaviorChangedByFeedback: Bool?
+    let behaviorChangedCount: Int?
     let feedbackUsedForDecision: Bool?
+    let feedbackReactions: Int?
+    let noFeedbackBaselineKept: Int?
+    let movedBaselineKept: Int?
+    let approvedForMovementBaselineKept: Int?
+    let blockedByCollisionNoIntent: Int?
+    let blockedByAgentConflictNoIntent: Int?
+    let blockedBySourceMismatchNoIntent: Int?
+    let blockedByDivergenceNoIntent: Int?
+    let blockedByStaleIntentNoIntent: Int?
+    let blockedByInvalidEdgeNoIntent: Int?
+    let blockedByMaxAgentsNoIntent: Int?
     let intentContextsTotal: Int?
     let contextsWithFeedbackTotal: Int?
     let contextsWithoutFeedbackTotal: Int?
@@ -378,6 +393,7 @@ struct RunEvent: Encodable {
         fearAfter: Int? = nil,
         stateBefore: String? = nil,
         stateAfter: String? = nil,
+        policyMode: String? = nil,
         dx: Int? = nil,
         dy: Int? = nil,
         dz: Int? = nil,
@@ -499,6 +515,8 @@ struct RunEvent: Encodable {
         blockedByMaxAgentsTotal: Int? = nil,
         contexts: Int? = nil,
         proposals: Int? = nil,
+        baselineProposals: Int? = nil,
+        feedbackAwareProposals: Int? = nil,
         acceptedIntents: Int? = nil,
         rejectedProposals: Int? = nil,
         noIntent: Int? = nil,
@@ -541,7 +559,19 @@ struct RunEvent: Encodable {
         contextsWithFeedback: Int? = nil,
         contextsWithoutFeedback: Int? = nil,
         behaviorChangedByFeedback: Bool? = nil,
+        behaviorChangedCount: Int? = nil,
         feedbackUsedForDecision: Bool? = nil,
+        feedbackReactions: Int? = nil,
+        noFeedbackBaselineKept: Int? = nil,
+        movedBaselineKept: Int? = nil,
+        approvedForMovementBaselineKept: Int? = nil,
+        blockedByCollisionNoIntent: Int? = nil,
+        blockedByAgentConflictNoIntent: Int? = nil,
+        blockedBySourceMismatchNoIntent: Int? = nil,
+        blockedByDivergenceNoIntent: Int? = nil,
+        blockedByStaleIntentNoIntent: Int? = nil,
+        blockedByInvalidEdgeNoIntent: Int? = nil,
+        blockedByMaxAgentsNoIntent: Int? = nil,
         intentContextsTotal: Int? = nil,
         contextsWithFeedbackTotal: Int? = nil,
         contextsWithoutFeedbackTotal: Int? = nil,
@@ -689,6 +719,7 @@ struct RunEvent: Encodable {
         self.fearAfter = fearAfter
         self.stateBefore = stateBefore
         self.stateAfter = stateAfter
+        self.policyMode = policyMode
         self.dx = dx
         self.dy = dy
         self.dz = dz
@@ -810,6 +841,8 @@ struct RunEvent: Encodable {
         self.blockedByMaxAgentsTotal = blockedByMaxAgentsTotal
         self.contexts = contexts
         self.proposals = proposals
+        self.baselineProposals = baselineProposals
+        self.feedbackAwareProposals = feedbackAwareProposals
         self.acceptedIntents = acceptedIntents
         self.rejectedProposals = rejectedProposals
         self.noIntent = noIntent
@@ -852,7 +885,19 @@ struct RunEvent: Encodable {
         self.contextsWithFeedback = contextsWithFeedback
         self.contextsWithoutFeedback = contextsWithoutFeedback
         self.behaviorChangedByFeedback = behaviorChangedByFeedback
+        self.behaviorChangedCount = behaviorChangedCount
         self.feedbackUsedForDecision = feedbackUsedForDecision
+        self.feedbackReactions = feedbackReactions
+        self.noFeedbackBaselineKept = noFeedbackBaselineKept
+        self.movedBaselineKept = movedBaselineKept
+        self.approvedForMovementBaselineKept = approvedForMovementBaselineKept
+        self.blockedByCollisionNoIntent = blockedByCollisionNoIntent
+        self.blockedByAgentConflictNoIntent = blockedByAgentConflictNoIntent
+        self.blockedBySourceMismatchNoIntent = blockedBySourceMismatchNoIntent
+        self.blockedByDivergenceNoIntent = blockedByDivergenceNoIntent
+        self.blockedByStaleIntentNoIntent = blockedByStaleIntentNoIntent
+        self.blockedByInvalidEdgeNoIntent = blockedByInvalidEdgeNoIntent
+        self.blockedByMaxAgentsNoIntent = blockedByMaxAgentsNoIntent
         self.intentContextsTotal = intentContextsTotal
         self.contextsWithFeedbackTotal = contextsWithFeedbackTotal
         self.contextsWithoutFeedbackTotal = contextsWithoutFeedbackTotal
