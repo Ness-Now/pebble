@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Documented PebbleLab multi-tick closed loop plan.
 - Added feedback-aware intent to tick approved application smoke.
 - Added feedback-aware intent to tick live read-only smoke.
 - Added feedback-aware intent to tick fixture smoke.

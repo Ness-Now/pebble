@@ -7156,3 +7156,109 @@ terrain mutation, or world mutation was added.
 ### Next Step
 
 Phase 4.24A — Multi-Tick Closed Loop Planning Docs-Only.
+
+## 2026-06-29 — Phase 4.24A multi-tick closed loop planning docs-only
+
+### Objective
+
+Document the future bounded multi-tick closed loop before implementing any
+loop runner, scenario, metrics, or event code.
+
+### Starting Point
+
+Phases 4.19 through 4.23 validated the single-tick building blocks:
+multi-agent movement primitives, tick feedback, agent intent production,
+feedback consumption/injection, feedback-aware v1 policy, live read-only tick
+handoff, and approved lab position map application. The current system can
+produce feedback, consume it, inject it into `LabAgentIntentContext`, and use
+v1 to shape the next proposal in isolated smokes. It does not yet run an
+autonomous multi-tick loop.
+
+### Why Docs-Only
+
+The next feature combines several validated layers. A docs-only phase locks
+the boundary before adding orchestration, especially the causality rule that
+feedback emitted at tick `N` may only be consumed at tick `N+1`.
+
+### New Document
+
+Created `docs/pebblelab/PHASE_4_MULTI_TICK_CLOSED_LOOP_PLAN.md`.
+
+### Closed Loop Boundary
+
+Allowed future behavior is limited to fixed small tick counts, previous tick
+feedback consumption, `lastFeedback` injection, explicit v1 policy calls,
+`noIntent` filtering, selected tick contract execution, optional approved lab
+position map application in approved-application phases, structured feedback
+carryover, reports, metrics, events, and deterministic ordering.
+
+Forbidden behavior remains pathfinding, replanning, avoidance, reservation
+runtime, route following, gameplay autonomy, memory/goals, learning, RL,
+Python/LLM calls, social behavior, communication, physics, terrain/world
+mutation, renderer/resource/shader changes, registries, save/load, goldens,
+and replacing v0 globally.
+
+### Future Phases
+
+The plan recommends:
+
+- Phase 4.24B — Multi-Tick Closed Loop Fixture Smoke;
+- Phase 4.24C — Multi-Tick Closed Loop Hardening;
+- Phase 4.24D — Multi-Tick Closed Loop Live Read-Only Smoke;
+- Phase 4.24E — Multi-Tick Closed Loop Approved Application Smoke;
+- Phase 4.25A — Deterministic Bounded Alternate Local Hint Planning Docs-Only.
+
+### Reports, Metrics, And Event
+
+Future outputs are planned as:
+
+- `multi_tick_closed_loop_report.json`;
+- `multi_tick_closed_loop_invariant_report.json`;
+- `multi_tick_closed_loop_ticks.json`;
+- `multi_tick_closed_loop_feedback.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Future metrics use the `multiTickClosedLoop*` prefix, and the aggregate event
+is planned as `lab_multi_tick_closed_loop_recorded`.
+
+### Invariants
+
+The plan lists 85 future invariants covering fixed tick count, no unbounded
+loop, deterministic ordering, feedback consumed only on the next tick, no
+future/cross-agent feedback leak, duplicate/stale/malformed feedback handling,
+v1 opt-in, v0 availability, feedback-aware reactions, tick boundaries,
+approved application boundaries, no mutation, no memory/goals, no
+pathfinding/replanning/avoidance/reservation/route following, artifact
+writing, and repeatability.
+
+### Out Of Scope
+
+Out of scope remains pathfinding, replanning, avoidance, reservation runtime,
+route following, terrain/world mutation, core entity movement, physical
+placeholder movement, renderer/resources/shaders, save/load, registries,
+goldens, mining/construction/inventory, physics, learning/RL, LLM/Python,
+social/communication, and autonomous gameplay loops beyond fixed smoke ticks.
+
+### Validation Commands
+
+- `git status`
+- verify no Swift files changed
+- `swift build`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+- `git status`
+
+### Results
+
+- Plan document created.
+- CHANGELOG updated.
+- DEV_JOURNAL updated.
+- ROADMAP updated.
+- Feedback-aware intent policy plan cross-linked.
+- No Swift files modified.
+- Validation commands pass.
+
+### Next Step
+
+Phase 4.24B — Multi-Tick Closed Loop Fixture Smoke.

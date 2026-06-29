@@ -758,3 +758,30 @@ and no autonomous gameplay movement.
 
 Next recommended step: Phase 4.24A - Multi-Tick Closed Loop Planning
 Docs-Only.
+
+## Transition To Multi-Tick Closed Loop
+
+Phase 4.23 completed the single-tick feedback-aware intent chain through
+approved application:
+
+- feedback is visible in `LabAgentIntentContext.lastFeedback`;
+- v1 is opt-in and v0 remains unchanged;
+- blocked feedback can produce `noIntent`;
+- v1 proposals can feed fixture tick, live read-only tick, and approved
+  application tick layers;
+- approved movements can update only lab abstract/physical position maps;
+- denied and `noIntent` agents are preserved;
+- the policy does not read collision or World;
+- the tick layer owns collision evidence and movement application boundaries;
+- no terrain or World mutation occurs.
+
+Phase 4.24A documents the next orchestration boundary in
+`PHASE_4_MULTI_TICK_CLOSED_LOOP_PLAN.md` before implementation. The future
+multi-tick loop must carry feedback from tick `N` to tick `N+1`, consume it,
+inject it into contexts, call opt-in v1, run the selected tick contract, emit
+new feedback, and stop after a fixed bounded tick count.
+
+The same limits remain in force: no pathfinding, replanning, avoidance,
+reservation runtime, route following, memory update, goal change, learning,
+social behavior, communication, policy World/collision reads, terrain
+mutation, or World mutation.

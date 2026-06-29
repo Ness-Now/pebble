@@ -1683,3 +1683,34 @@ scope.
 
 Next recommended step: Phase 4.24A - Multi-Tick Closed Loop Planning
 Docs-Only.
+
+## Phase 4.24A - Multi-Tick Closed Loop Planning Docs-Only
+
+Status: implemented and validated.
+
+Goal: document the future bounded multi-tick closed loop before adding any
+loop runner, executable scenario, runtime metrics, or runtime event code.
+
+The plan `PHASE_4_MULTI_TICK_CLOSED_LOOP_PLAN.md` defines how PebbleLab should
+later connect feedback-aware intent production, tick arbitration/live
+read-only collision, approved lab position map application, structured
+feedback emission, feedback consumption, and `lastFeedback` injection across
+multiple fixed ticks.
+
+The central causality rule is explicit: feedback emitted at tick `N` may only
+be consumed at tick `N+1`. The plan also preserves v1 as opt-in and keeps v0
+available.
+
+The future sequence is:
+
+- Phase 4.24B - Multi-Tick Closed Loop Fixture Smoke;
+- Phase 4.24C - Multi-Tick Closed Loop Hardening;
+- Phase 4.24D - Multi-Tick Closed Loop Live Read-Only Smoke;
+- Phase 4.24E - Multi-Tick Closed Loop Approved Application Smoke;
+- Phase 4.25A - Deterministic Bounded Alternate Local Hint Planning Docs-Only.
+
+Pathfinding, replanning, avoidance, reservation runtime, route following,
+autonomous gameplay movement, memory/goals, learning, social/communication,
+physics, and terrain/world mutation remain out of scope.
+
+Next recommended step: Phase 4.24B - Multi-Tick Closed Loop Fixture Smoke.
