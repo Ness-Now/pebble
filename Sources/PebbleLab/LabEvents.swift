@@ -230,6 +230,14 @@ struct RunEvent: Encodable {
     let contextsWithoutFeedback: Int?
     let behaviorChangedByFeedback: Bool?
     let feedbackUsedForDecision: Bool?
+    let intentContextsTotal: Int?
+    let contextsWithFeedbackTotal: Int?
+    let contextsWithoutFeedbackTotal: Int?
+    let proposalsTotal: Int?
+    let acceptedIntentsTotal: Int?
+    let rejectedProposalsTotal: Int?
+    let noIntentTotal: Int?
+    let invalidOneEdgeProposalsTotal: Int?
     let movedFeedback: Int?
     let approvedForMovementFeedback: Int?
     let blockedByCollisionFeedback: Int?
@@ -534,6 +542,14 @@ struct RunEvent: Encodable {
         contextsWithoutFeedback: Int? = nil,
         behaviorChangedByFeedback: Bool? = nil,
         feedbackUsedForDecision: Bool? = nil,
+        intentContextsTotal: Int? = nil,
+        contextsWithFeedbackTotal: Int? = nil,
+        contextsWithoutFeedbackTotal: Int? = nil,
+        proposalsTotal: Int? = nil,
+        acceptedIntentsTotal: Int? = nil,
+        rejectedProposalsTotal: Int? = nil,
+        noIntentTotal: Int? = nil,
+        invalidOneEdgeProposalsTotal: Int? = nil,
         movedFeedback: Int? = nil,
         approvedForMovementFeedback: Int? = nil,
         blockedByCollisionFeedback: Int? = nil,
@@ -837,6 +853,14 @@ struct RunEvent: Encodable {
         self.contextsWithoutFeedback = contextsWithoutFeedback
         self.behaviorChangedByFeedback = behaviorChangedByFeedback
         self.feedbackUsedForDecision = feedbackUsedForDecision
+        self.intentContextsTotal = intentContextsTotal
+        self.contextsWithFeedbackTotal = contextsWithFeedbackTotal
+        self.contextsWithoutFeedbackTotal = contextsWithoutFeedbackTotal
+        self.proposalsTotal = proposalsTotal
+        self.acceptedIntentsTotal = acceptedIntentsTotal
+        self.rejectedProposalsTotal = rejectedProposalsTotal
+        self.noIntentTotal = noIntentTotal
+        self.invalidOneEdgeProposalsTotal = invalidOneEdgeProposalsTotal
         self.movedFeedback = movedFeedback
         self.approvedForMovementFeedback = approvedForMovementFeedback
         self.blockedByCollisionFeedback = blockedByCollisionFeedback

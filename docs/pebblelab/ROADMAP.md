@@ -1412,3 +1412,42 @@ out of scope.
 
 Next recommended step: Phase 4.22E - Feedback To Agent Intent Context
 Hardening.
+
+## Phase 4.22E - Feedback To Agent Intent Context Hardening
+
+Status: implemented and validated.
+
+Goal: harden the fixture-only plumbing from accepted feedback contexts to
+`LabAgentIntentContext.lastFeedback` while keeping policy v0 behavior
+unchanged.
+
+The scenario `feedback_to_agent_intent_context_hardening_smoke` validates 14
+cases covering the baseline fixture, missing feedback, partial feedback, all
+known feedback kinds, blocked collision, moved, agent conflict, invalid edge,
+duplicate selection, malformed feedback, tick mismatch, max feedback bounds,
+deterministic ordering, and stable repeatability.
+
+All 14 cases pass. Aggregate totals include `feedbackObservedTotal = 34`,
+`feedbackAcceptedTotal = 28`, `feedbackIgnoredTotal = 3`,
+`invalidFeedbackTotal = 3`, `contextsProducedTotal = 28`,
+`intentContextsTotal = 40`, `contextsWithFeedbackTotal = 28`,
+`contextsWithoutFeedbackTotal = 12`, `proposalsTotal = 40`,
+`acceptedIntentsTotal = 33`, and `rejectedProposalsTotal = 7`.
+
+Every case compares proposal signatures against a nil-feedback baseline.
+`behaviorChangedByFeedback = false` and `feedbackUsedForDecision = false`,
+including blocked collision, moved, conflict, and invalid-edge feedback cases.
+
+The scenario writes `feedback_to_agent_intent_context_hardening_report.json`,
+`feedback_to_agent_intent_context_hardening_invariant_report.json`,
+`feedback_to_agent_intent_context_hardening_cases.json`,
+`feedbackToAgentIntentContextHardening*` metrics, and one aggregate
+`lab_feedback_to_agent_intent_context_hardening_recorded` event.
+
+Behavior adaptation, memory update, goal selection, pathfinding, replanning,
+avoidance, reservation runtime, route following, movement application,
+collision reads, physics, gameplay movement, and terrain/world mutation remain
+out of scope.
+
+Next recommended step: Phase 4.22F - Feedback-Aware Intent Policy Planning
+Docs-Only.

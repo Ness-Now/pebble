@@ -38,6 +38,8 @@ let isAgentFeedbackConsumptionHardeningScenario = options.scenario
     == "agent_feedback_consumption_hardening_smoke"
 let isFeedbackToAgentIntentContextFixtureScenario = options.scenario
     == "feedback_to_agent_intent_context_fixture_smoke"
+let isFeedbackToAgentIntentContextHardeningScenario = options.scenario
+    == "feedback_to_agent_intent_context_hardening_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -51,7 +53,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isAgentIntentToTickApprovedApplicationScenario
     || isAgentFeedbackConsumptionFixtureScenario
     || isAgentFeedbackConsumptionHardeningScenario
-    || isFeedbackToAgentIntentContextFixtureScenario)
+    || isFeedbackToAgentIntentContextFixtureScenario
+    || isFeedbackToAgentIntentContextHardeningScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -698,7 +701,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isAgentIntentToTickApprovedApplicationScenario
     || isAgentFeedbackConsumptionFixtureScenario
     || isAgentFeedbackConsumptionHardeningScenario
-    || isFeedbackToAgentIntentContextFixtureScenario {
+    || isFeedbackToAgentIntentContextFixtureScenario
+    || isFeedbackToAgentIntentContextHardeningScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -1891,6 +1895,55 @@ let feedbackToAgentIntentContextFixtureSuccess =
             && feedbackToAgentIntentContextFixtureSummary?.worldUsed == false
             && feedbackToAgentIntentContextFixtureSummary?.mutationPerformed == false)
         : nil
+let feedbackToAgentIntentContextHardeningReport =
+    isFeedbackToAgentIntentContextHardeningScenario
+        ? makeFeedbackToAgentIntentContextHardeningReport(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticksCompleted: ticksCompleted
+        )
+        : nil
+let feedbackToAgentIntentContextHardeningInvariantReport =
+    isFeedbackToAgentIntentContextHardeningScenario
+        ? makeFeedbackToAgentIntentContextHardeningInvariantReport(
+            report: feedbackToAgentIntentContextHardeningReport,
+            scenario: options.scenario,
+            seed: options.seed
+        )
+        : nil
+let feedbackToAgentIntentContextHardeningSummary = feedbackToAgentIntentContextHardeningReport?.summary
+let feedbackToAgentIntentContextHardeningSuccess =
+    isFeedbackToAgentIntentContextHardeningScenario
+        ? ((feedbackToAgentIntentContextHardeningReport?.success ?? false)
+            && (feedbackToAgentIntentContextHardeningInvariantReport?.success ?? false)
+            && feedbackToAgentIntentContextHardeningSummary?.cases == 14
+            && feedbackToAgentIntentContextHardeningSummary?.passed == 14
+            && feedbackToAgentIntentContextHardeningSummary?.failed == 0
+            && feedbackToAgentIntentContextHardeningReport?.cases.allSatisfy {
+                $0.passed && $0.proposalSignatures == $0.baselineProposalSignatures
+            } == true
+            && (feedbackToAgentIntentContextHardeningSummary?.feedbackAcceptedTotal ?? 0) > 0
+            && (feedbackToAgentIntentContextHardeningSummary?.feedbackIgnoredTotal ?? 0) > 0
+            && (feedbackToAgentIntentContextHardeningSummary?.invalidFeedbackTotal ?? 0) > 0
+            && (feedbackToAgentIntentContextHardeningSummary?.contextsProducedTotal ?? 0) > 0
+            && (feedbackToAgentIntentContextHardeningSummary?.contextsWithFeedbackTotal ?? 0) > 0
+            && (feedbackToAgentIntentContextHardeningSummary?.contextsWithoutFeedbackTotal ?? 0) > 0
+            && (feedbackToAgentIntentContextHardeningSummary?.duplicateFeedbackTotal ?? 0) > 0
+            && (feedbackToAgentIntentContextHardeningSummary?.maxFeedbackExceededTotal ?? 0) > 0
+            && (feedbackToAgentIntentContextHardeningSummary?.tickMismatchFeedbackTotal ?? 0) > 0
+            && feedbackToAgentIntentContextHardeningSummary?.behaviorChangedByFeedback == false
+            && feedbackToAgentIntentContextHardeningSummary?.feedbackUsedForDecision == false
+            && feedbackToAgentIntentContextHardeningSummary?.collisionRead == false
+            && feedbackToAgentIntentContextHardeningSummary?.movementApplied == false
+            && feedbackToAgentIntentContextHardeningSummary?.memoryUpdated == false
+            && feedbackToAgentIntentContextHardeningSummary?.goalChanged == false
+            && feedbackToAgentIntentContextHardeningSummary?.pathfindingPerformed == false
+            && feedbackToAgentIntentContextHardeningSummary?.replanningPerformed == false
+            && feedbackToAgentIntentContextHardeningSummary?.avoidancePerformed == false
+            && feedbackToAgentIntentContextHardeningSummary?.reservationRuntimeUsed == false
+            && feedbackToAgentIntentContextHardeningSummary?.worldUsed == false
+            && feedbackToAgentIntentContextHardeningSummary?.mutationPerformed == false)
+        : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
@@ -2277,6 +2330,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (agentFeedbackConsumptionFixtureSuccess ?? true)
     && (agentFeedbackConsumptionHardeningSuccess ?? true)
     && (feedbackToAgentIntentContextFixtureSuccess ?? true)
+    && (feedbackToAgentIntentContextHardeningSuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -3031,6 +3085,46 @@ if options.outPath != nil {
                 behaviorChangedByFeedback: summary.behaviorChangedByFeedback,
                 feedbackUsedForDecision: summary.feedbackUsedForDecision,
                 intentProduced: summary.intentProduced,
+                worldUsed: summary.worldUsed,
+                collisionRead: summary.collisionRead,
+                movementApplied: summary.movementApplied,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                avoidancePerformed: summary.avoidancePerformed,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
+                replanningPerformed: summary.replanningPerformed
+            ))
+        }
+        if let feedbackToAgentIntentContextHardeningReport {
+            let summary = feedbackToAgentIntentContextHardeningReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_feedback_to_agent_intent_context_hardening_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: feedbackToAgentIntentContextHardeningSuccess,
+                passed: summary.passed,
+                failed: summary.failed,
+                cases: summary.cases,
+                feedbackObservedTotal: summary.feedbackObservedTotal,
+                feedbackAcceptedTotal: summary.feedbackAcceptedTotal,
+                feedbackIgnoredTotal: summary.feedbackIgnoredTotal,
+                invalidFeedbackTotal: summary.invalidFeedbackTotal,
+                contextsProducedTotal: summary.contextsProducedTotal,
+                duplicateFeedbackTotal: summary.duplicateFeedbackTotal,
+                maxFeedbackExceededTotal: summary.maxFeedbackExceededTotal,
+                tickMismatchFeedbackTotal: summary.tickMismatchFeedbackTotal,
+                behaviorChangedByFeedback: summary.behaviorChangedByFeedback,
+                feedbackUsedForDecision: summary.feedbackUsedForDecision,
+                intentContextsTotal: summary.intentContextsTotal,
+                contextsWithFeedbackTotal: summary.contextsWithFeedbackTotal,
+                contextsWithoutFeedbackTotal: summary.contextsWithoutFeedbackTotal,
+                proposalsTotal: summary.proposalsTotal,
+                acceptedIntentsTotal: summary.acceptedIntentsTotal,
+                rejectedProposalsTotal: summary.rejectedProposalsTotal,
+                noIntentTotal: summary.noIntentTotal,
+                invalidOneEdgeProposalsTotal: summary.invalidOneEdgeProposalsTotal,
                 worldUsed: summary.worldUsed,
                 collisionRead: summary.collisionRead,
                 movementApplied: summary.movementApplied,
@@ -3812,6 +3906,22 @@ if let outPath = options.outPath {
             try writeJSON(
                 feedbackToAgentIntentContextFixtureInvariantReport,
                 to: outURL.appendingPathComponent("feedback_to_agent_intent_context_fixture_invariant_report.json")
+            )
+        }
+        if let feedbackToAgentIntentContextHardeningReport {
+            try writeJSON(
+                feedbackToAgentIntentContextHardeningReport,
+                to: outURL.appendingPathComponent("feedback_to_agent_intent_context_hardening_report.json")
+            )
+            try writeJSON(
+                feedbackToAgentIntentContextHardeningReport.cases,
+                to: outURL.appendingPathComponent("feedback_to_agent_intent_context_hardening_cases.json")
+            )
+        }
+        if let feedbackToAgentIntentContextHardeningInvariantReport {
+            try writeJSON(
+                feedbackToAgentIntentContextHardeningInvariantReport,
+                to: outURL.appendingPathComponent("feedback_to_agent_intent_context_hardening_invariant_report.json")
             )
         }
         if let routeFollowingLiveSnapshot {
@@ -4693,6 +4803,38 @@ if let outPath = options.outPath {
             feedbackToAgentIntentContextFixtureWorldUsed: feedbackToAgentIntentContextFixtureReport?.summary.worldUsed,
             feedbackToAgentIntentContextFixtureMutationPerformed: feedbackToAgentIntentContextFixtureReport?.summary.mutationPerformed,
             feedbackToAgentIntentContextFixtureSuccess: feedbackToAgentIntentContextFixtureSuccess,
+            feedbackToAgentIntentContextHardeningCases: feedbackToAgentIntentContextHardeningReport?.summary.cases,
+            feedbackToAgentIntentContextHardeningPassed: feedbackToAgentIntentContextHardeningReport?.summary.passed,
+            feedbackToAgentIntentContextHardeningFailed: feedbackToAgentIntentContextHardeningReport?.summary.failed,
+            feedbackToAgentIntentContextHardeningFeedbackObservedTotal: feedbackToAgentIntentContextHardeningReport?.summary.feedbackObservedTotal,
+            feedbackToAgentIntentContextHardeningFeedbackAcceptedTotal: feedbackToAgentIntentContextHardeningReport?.summary.feedbackAcceptedTotal,
+            feedbackToAgentIntentContextHardeningFeedbackIgnoredTotal: feedbackToAgentIntentContextHardeningReport?.summary.feedbackIgnoredTotal,
+            feedbackToAgentIntentContextHardeningInvalidFeedbackTotal: feedbackToAgentIntentContextHardeningReport?.summary.invalidFeedbackTotal,
+            feedbackToAgentIntentContextHardeningContextsProducedTotal: feedbackToAgentIntentContextHardeningReport?.summary.contextsProducedTotal,
+            feedbackToAgentIntentContextHardeningDuplicateFeedbackTotal: feedbackToAgentIntentContextHardeningReport?.summary.duplicateFeedbackTotal,
+            feedbackToAgentIntentContextHardeningMaxFeedbackExceededTotal: feedbackToAgentIntentContextHardeningReport?.summary.maxFeedbackExceededTotal,
+            feedbackToAgentIntentContextHardeningTickMismatchFeedbackTotal: feedbackToAgentIntentContextHardeningReport?.summary.tickMismatchFeedbackTotal,
+            feedbackToAgentIntentContextHardeningIntentContextsTotal: feedbackToAgentIntentContextHardeningReport?.summary.intentContextsTotal,
+            feedbackToAgentIntentContextHardeningContextsWithFeedbackTotal: feedbackToAgentIntentContextHardeningReport?.summary.contextsWithFeedbackTotal,
+            feedbackToAgentIntentContextHardeningContextsWithoutFeedbackTotal: feedbackToAgentIntentContextHardeningReport?.summary.contextsWithoutFeedbackTotal,
+            feedbackToAgentIntentContextHardeningProposalsTotal: feedbackToAgentIntentContextHardeningReport?.summary.proposalsTotal,
+            feedbackToAgentIntentContextHardeningAcceptedIntentsTotal: feedbackToAgentIntentContextHardeningReport?.summary.acceptedIntentsTotal,
+            feedbackToAgentIntentContextHardeningRejectedProposalsTotal: feedbackToAgentIntentContextHardeningReport?.summary.rejectedProposalsTotal,
+            feedbackToAgentIntentContextHardeningNoIntentTotal: feedbackToAgentIntentContextHardeningReport?.summary.noIntentTotal,
+            feedbackToAgentIntentContextHardeningInvalidOneEdgeProposalsTotal: feedbackToAgentIntentContextHardeningReport?.summary.invalidOneEdgeProposalsTotal,
+            feedbackToAgentIntentContextHardeningBehaviorChangedByFeedback: feedbackToAgentIntentContextHardeningReport?.summary.behaviorChangedByFeedback,
+            feedbackToAgentIntentContextHardeningFeedbackUsedForDecision: feedbackToAgentIntentContextHardeningReport?.summary.feedbackUsedForDecision,
+            feedbackToAgentIntentContextHardeningMovementApplied: feedbackToAgentIntentContextHardeningReport?.summary.movementApplied,
+            feedbackToAgentIntentContextHardeningCollisionRead: feedbackToAgentIntentContextHardeningReport?.summary.collisionRead,
+            feedbackToAgentIntentContextHardeningMemoryUpdated: feedbackToAgentIntentContextHardeningReport?.summary.memoryUpdated,
+            feedbackToAgentIntentContextHardeningGoalChanged: feedbackToAgentIntentContextHardeningReport?.summary.goalChanged,
+            feedbackToAgentIntentContextHardeningPathfindingPerformed: feedbackToAgentIntentContextHardeningReport?.summary.pathfindingPerformed,
+            feedbackToAgentIntentContextHardeningReplanningPerformed: feedbackToAgentIntentContextHardeningReport?.summary.replanningPerformed,
+            feedbackToAgentIntentContextHardeningAvoidancePerformed: feedbackToAgentIntentContextHardeningReport?.summary.avoidancePerformed,
+            feedbackToAgentIntentContextHardeningReservationRuntimeUsed: feedbackToAgentIntentContextHardeningReport?.summary.reservationRuntimeUsed,
+            feedbackToAgentIntentContextHardeningWorldUsed: feedbackToAgentIntentContextHardeningReport?.summary.worldUsed,
+            feedbackToAgentIntentContextHardeningMutationPerformed: feedbackToAgentIntentContextHardeningReport?.summary.mutationPerformed,
+            feedbackToAgentIntentContextHardeningSuccess: feedbackToAgentIntentContextHardeningSuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,

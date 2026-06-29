@@ -6182,3 +6182,148 @@ create a `World`, or mutate terrain/world.
 ### Next Step
 
 Phase 4.22E — Feedback To Agent Intent Context Hardening.
+
+## 2026-06-29 — Phase 4.22E feedback to agent intent context hardening
+
+### Objective
+
+Implement `feedback_to_agent_intent_context_hardening_smoke`, a fixture-only
+hardening scenario for the handoff from `LabAgentFeedbackContext` to
+`LabAgentIntentContext.lastFeedback`.
+
+### Starting Point
+
+Phase 4.22D proved the first plumbing fixture: feedback contexts can be
+injected into `lastFeedback`, policy v0 can still run for verification, and
+the baseline without feedback produces identical proposal signatures.
+
+### Files Created or Modified
+
+- Updated `Sources/PebbleLab/LabAgentFeedbackConsumption.swift`.
+- Updated `Sources/PebbleLab/LabEvents.swift`.
+- Updated `Sources/PebbleLab/LabOptions.swift`.
+- Updated `Sources/PebbleLab/LabOutput.swift`.
+- Updated `Sources/PebbleLab/LabScenarios.swift`.
+- Updated `Sources/PebbleLab/main.swift`.
+- Updated `docs/pebblelab/CHANGELOG.md`.
+- Updated `docs/pebblelab/DEV_JOURNAL.md`.
+- Updated `docs/pebblelab/ROADMAP.md`.
+- Updated `docs/pebblelab/PHASE_4_FEEDBACK_CONSUMPTION_PLAN.md`.
+
+### Why Hardening
+
+The fixture proved the data path. This phase checks the edge cases that could
+accidentally turn feedback into behavior: missing feedback, partial feedback,
+all feedback kinds, duplicate selection, malformed feedback, tick mismatch,
+max feedback bounds, and repeatability.
+
+### Cases List
+
+The scenario validates 14 cases:
+
+1. `baseline_fixture_remains_green`;
+2. `missing_feedback_context_allowed`;
+3. `partial_feedback_contexts_allowed`;
+4. `all_feedback_kinds_preserved`;
+5. `blocked_collision_does_not_change_to_wait`;
+6. `moved_feedback_does_not_suppress_next_move`;
+7. `agent_conflict_does_not_trigger_coordination`;
+8. `invalid_edge_feedback_does_not_hide_invalid_policy`;
+9. `duplicate_feedback_context_selection_stable`;
+10. `malformed_feedback_not_injected`;
+11. `tick_mismatch_feedback_not_injected`;
+12. `max_feedback_bound_keeps_contexts_bounded`;
+13. `deterministic_ordering_by_agent_id`;
+14. `stable_repeatability`.
+
+### Missing, Partial, and All Kinds
+
+Missing feedback contexts are allowed and keep `lastFeedback = nil`. Partial
+feedback is injected only for agents with accepted feedback. The all-kinds case
+preserves `moved`, `approvedForMovement`, `blockedByCollision`,
+`blockedByAgentConflict`, `blockedBySourceMismatch`, `blockedByDivergence`,
+`blockedByStaleIntent`, `blockedByInvalidEdge`, and `blockedByMaxAgents`.
+
+### Behavior Unchanged Cases
+
+`blockedByCollision` does not become wait/noIntent. `moved` does not suppress
+the next move. `blockedByAgentConflict` does not trigger coordination or
+communication. `blockedByInvalidEdge` does not hide an invalid vertical policy
+proposal.
+
+### Duplicate, Malformed, Tick, and Max Policies
+
+Duplicate feedback uses the first stable accepted feedback and counts the
+duplicate. Malformed feedback and tick-mismatch feedback are rejected and not
+injected. `maxFeedback` caps accepted contexts and counts the excess feedback.
+
+### Baseline Comparison
+
+Every case runs the feedback-bearing contexts and a baseline with identical
+positions, roles, and hints but nil `lastFeedback`. Proposal signatures must
+match exactly.
+
+### Deterministic Ordering and Repeatability
+
+Feedback inputs and context specs may be unordered, but observations and
+proposals are sorted by stable `agentId`. The repeatability case runs twice
+and compares feedback context ids, preserved feedback kinds, proposal
+signatures, and summary totals.
+
+### Outputs, Invariants, Metrics, and Event
+
+The scenario writes:
+
+- `feedback_to_agent_intent_context_hardening_report.json`;
+- `feedback_to_agent_intent_context_hardening_invariant_report.json`;
+- `feedback_to_agent_intent_context_hardening_cases.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Metrics use `feedbackToAgentIntentContextHardening*`, and the aggregate event
+is `lab_feedback_to_agent_intent_context_hardening_recorded`.
+
+### Boundaries Confirmed
+
+No movement is applied. Neither consumption nor integration reads collision.
+No tick movement is invoked. Memory, goals, pathfinding, replanning, avoidance,
+reservation runtime, learning, LLM/RL/Python, social behavior, communication,
+World use, and terrain/world mutation remain out of scope.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario feedback_to_agent_intent_context_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_to_agent_intent_context_hardening`
+- `swift run -c release PebbleLab -- --scenario feedback_to_agent_intent_context_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_to_agent_intent_context_fixture_after_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_feedback_consumption_hardening_smoke --seed 42 --ticks 0 --out runs/check_agent_feedback_hardening_after_feedback_to_context_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_feedback_consumption_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_feedback_fixture_after_feedback_to_context_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_fixture_after_feedback_to_context_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_hardening_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_hardening_after_feedback_to_context_hardening`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_feedback_to_context_hardening`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- `cases = 14`.
+- `passed = 14`.
+- `failed = 0`.
+- `feedbackObservedTotal = 34`.
+- `feedbackAcceptedTotal = 28`.
+- `feedbackIgnoredTotal = 3`.
+- `invalidFeedbackTotal = 3`.
+- `contextsProducedTotal = 28`.
+- `intentContextsTotal = 40`.
+- `contextsWithFeedbackTotal = 28`.
+- `contextsWithoutFeedbackTotal = 12`.
+- `proposalsTotal = 40`.
+- `acceptedIntentsTotal = 33`.
+- `rejectedProposalsTotal = 7`.
+- `behaviorChangedByFeedback = false`.
+- `feedbackUsedForDecision = false`.
+
+### Next Step
+
+Phase 4.22F — Feedback-Aware Intent Policy Planning Docs-Only.

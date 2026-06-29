@@ -800,6 +800,38 @@ struct RunMetrics: Encodable {
     let feedbackToAgentIntentContextFixtureWorldUsed: Bool?
     let feedbackToAgentIntentContextFixtureMutationPerformed: Bool?
     let feedbackToAgentIntentContextFixtureSuccess: Bool?
+    let feedbackToAgentIntentContextHardeningCases: Int?
+    let feedbackToAgentIntentContextHardeningPassed: Int?
+    let feedbackToAgentIntentContextHardeningFailed: Int?
+    let feedbackToAgentIntentContextHardeningFeedbackObservedTotal: Int?
+    let feedbackToAgentIntentContextHardeningFeedbackAcceptedTotal: Int?
+    let feedbackToAgentIntentContextHardeningFeedbackIgnoredTotal: Int?
+    let feedbackToAgentIntentContextHardeningInvalidFeedbackTotal: Int?
+    let feedbackToAgentIntentContextHardeningContextsProducedTotal: Int?
+    let feedbackToAgentIntentContextHardeningDuplicateFeedbackTotal: Int?
+    let feedbackToAgentIntentContextHardeningMaxFeedbackExceededTotal: Int?
+    let feedbackToAgentIntentContextHardeningTickMismatchFeedbackTotal: Int?
+    let feedbackToAgentIntentContextHardeningIntentContextsTotal: Int?
+    let feedbackToAgentIntentContextHardeningContextsWithFeedbackTotal: Int?
+    let feedbackToAgentIntentContextHardeningContextsWithoutFeedbackTotal: Int?
+    let feedbackToAgentIntentContextHardeningProposalsTotal: Int?
+    let feedbackToAgentIntentContextHardeningAcceptedIntentsTotal: Int?
+    let feedbackToAgentIntentContextHardeningRejectedProposalsTotal: Int?
+    let feedbackToAgentIntentContextHardeningNoIntentTotal: Int?
+    let feedbackToAgentIntentContextHardeningInvalidOneEdgeProposalsTotal: Int?
+    let feedbackToAgentIntentContextHardeningBehaviorChangedByFeedback: Bool?
+    let feedbackToAgentIntentContextHardeningFeedbackUsedForDecision: Bool?
+    let feedbackToAgentIntentContextHardeningMovementApplied: Bool?
+    let feedbackToAgentIntentContextHardeningCollisionRead: Bool?
+    let feedbackToAgentIntentContextHardeningMemoryUpdated: Bool?
+    let feedbackToAgentIntentContextHardeningGoalChanged: Bool?
+    let feedbackToAgentIntentContextHardeningPathfindingPerformed: Bool?
+    let feedbackToAgentIntentContextHardeningReplanningPerformed: Bool?
+    let feedbackToAgentIntentContextHardeningAvoidancePerformed: Bool?
+    let feedbackToAgentIntentContextHardeningReservationRuntimeUsed: Bool?
+    let feedbackToAgentIntentContextHardeningWorldUsed: Bool?
+    let feedbackToAgentIntentContextHardeningMutationPerformed: Bool?
+    let feedbackToAgentIntentContextHardeningSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -1600,6 +1632,38 @@ struct RunMetrics: Encodable {
         feedbackToAgentIntentContextFixtureWorldUsed: Bool? = nil,
         feedbackToAgentIntentContextFixtureMutationPerformed: Bool? = nil,
         feedbackToAgentIntentContextFixtureSuccess: Bool? = nil,
+        feedbackToAgentIntentContextHardeningCases: Int? = nil,
+        feedbackToAgentIntentContextHardeningPassed: Int? = nil,
+        feedbackToAgentIntentContextHardeningFailed: Int? = nil,
+        feedbackToAgentIntentContextHardeningFeedbackObservedTotal: Int? = nil,
+        feedbackToAgentIntentContextHardeningFeedbackAcceptedTotal: Int? = nil,
+        feedbackToAgentIntentContextHardeningFeedbackIgnoredTotal: Int? = nil,
+        feedbackToAgentIntentContextHardeningInvalidFeedbackTotal: Int? = nil,
+        feedbackToAgentIntentContextHardeningContextsProducedTotal: Int? = nil,
+        feedbackToAgentIntentContextHardeningDuplicateFeedbackTotal: Int? = nil,
+        feedbackToAgentIntentContextHardeningMaxFeedbackExceededTotal: Int? = nil,
+        feedbackToAgentIntentContextHardeningTickMismatchFeedbackTotal: Int? = nil,
+        feedbackToAgentIntentContextHardeningIntentContextsTotal: Int? = nil,
+        feedbackToAgentIntentContextHardeningContextsWithFeedbackTotal: Int? = nil,
+        feedbackToAgentIntentContextHardeningContextsWithoutFeedbackTotal: Int? = nil,
+        feedbackToAgentIntentContextHardeningProposalsTotal: Int? = nil,
+        feedbackToAgentIntentContextHardeningAcceptedIntentsTotal: Int? = nil,
+        feedbackToAgentIntentContextHardeningRejectedProposalsTotal: Int? = nil,
+        feedbackToAgentIntentContextHardeningNoIntentTotal: Int? = nil,
+        feedbackToAgentIntentContextHardeningInvalidOneEdgeProposalsTotal: Int? = nil,
+        feedbackToAgentIntentContextHardeningBehaviorChangedByFeedback: Bool? = nil,
+        feedbackToAgentIntentContextHardeningFeedbackUsedForDecision: Bool? = nil,
+        feedbackToAgentIntentContextHardeningMovementApplied: Bool? = nil,
+        feedbackToAgentIntentContextHardeningCollisionRead: Bool? = nil,
+        feedbackToAgentIntentContextHardeningMemoryUpdated: Bool? = nil,
+        feedbackToAgentIntentContextHardeningGoalChanged: Bool? = nil,
+        feedbackToAgentIntentContextHardeningPathfindingPerformed: Bool? = nil,
+        feedbackToAgentIntentContextHardeningReplanningPerformed: Bool? = nil,
+        feedbackToAgentIntentContextHardeningAvoidancePerformed: Bool? = nil,
+        feedbackToAgentIntentContextHardeningReservationRuntimeUsed: Bool? = nil,
+        feedbackToAgentIntentContextHardeningWorldUsed: Bool? = nil,
+        feedbackToAgentIntentContextHardeningMutationPerformed: Bool? = nil,
+        feedbackToAgentIntentContextHardeningSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -2399,6 +2463,38 @@ struct RunMetrics: Encodable {
         self.feedbackToAgentIntentContextFixtureWorldUsed = feedbackToAgentIntentContextFixtureWorldUsed
         self.feedbackToAgentIntentContextFixtureMutationPerformed = feedbackToAgentIntentContextFixtureMutationPerformed
         self.feedbackToAgentIntentContextFixtureSuccess = feedbackToAgentIntentContextFixtureSuccess
+        self.feedbackToAgentIntentContextHardeningCases = feedbackToAgentIntentContextHardeningCases
+        self.feedbackToAgentIntentContextHardeningPassed = feedbackToAgentIntentContextHardeningPassed
+        self.feedbackToAgentIntentContextHardeningFailed = feedbackToAgentIntentContextHardeningFailed
+        self.feedbackToAgentIntentContextHardeningFeedbackObservedTotal = feedbackToAgentIntentContextHardeningFeedbackObservedTotal
+        self.feedbackToAgentIntentContextHardeningFeedbackAcceptedTotal = feedbackToAgentIntentContextHardeningFeedbackAcceptedTotal
+        self.feedbackToAgentIntentContextHardeningFeedbackIgnoredTotal = feedbackToAgentIntentContextHardeningFeedbackIgnoredTotal
+        self.feedbackToAgentIntentContextHardeningInvalidFeedbackTotal = feedbackToAgentIntentContextHardeningInvalidFeedbackTotal
+        self.feedbackToAgentIntentContextHardeningContextsProducedTotal = feedbackToAgentIntentContextHardeningContextsProducedTotal
+        self.feedbackToAgentIntentContextHardeningDuplicateFeedbackTotal = feedbackToAgentIntentContextHardeningDuplicateFeedbackTotal
+        self.feedbackToAgentIntentContextHardeningMaxFeedbackExceededTotal = feedbackToAgentIntentContextHardeningMaxFeedbackExceededTotal
+        self.feedbackToAgentIntentContextHardeningTickMismatchFeedbackTotal = feedbackToAgentIntentContextHardeningTickMismatchFeedbackTotal
+        self.feedbackToAgentIntentContextHardeningIntentContextsTotal = feedbackToAgentIntentContextHardeningIntentContextsTotal
+        self.feedbackToAgentIntentContextHardeningContextsWithFeedbackTotal = feedbackToAgentIntentContextHardeningContextsWithFeedbackTotal
+        self.feedbackToAgentIntentContextHardeningContextsWithoutFeedbackTotal = feedbackToAgentIntentContextHardeningContextsWithoutFeedbackTotal
+        self.feedbackToAgentIntentContextHardeningProposalsTotal = feedbackToAgentIntentContextHardeningProposalsTotal
+        self.feedbackToAgentIntentContextHardeningAcceptedIntentsTotal = feedbackToAgentIntentContextHardeningAcceptedIntentsTotal
+        self.feedbackToAgentIntentContextHardeningRejectedProposalsTotal = feedbackToAgentIntentContextHardeningRejectedProposalsTotal
+        self.feedbackToAgentIntentContextHardeningNoIntentTotal = feedbackToAgentIntentContextHardeningNoIntentTotal
+        self.feedbackToAgentIntentContextHardeningInvalidOneEdgeProposalsTotal = feedbackToAgentIntentContextHardeningInvalidOneEdgeProposalsTotal
+        self.feedbackToAgentIntentContextHardeningBehaviorChangedByFeedback = feedbackToAgentIntentContextHardeningBehaviorChangedByFeedback
+        self.feedbackToAgentIntentContextHardeningFeedbackUsedForDecision = feedbackToAgentIntentContextHardeningFeedbackUsedForDecision
+        self.feedbackToAgentIntentContextHardeningMovementApplied = feedbackToAgentIntentContextHardeningMovementApplied
+        self.feedbackToAgentIntentContextHardeningCollisionRead = feedbackToAgentIntentContextHardeningCollisionRead
+        self.feedbackToAgentIntentContextHardeningMemoryUpdated = feedbackToAgentIntentContextHardeningMemoryUpdated
+        self.feedbackToAgentIntentContextHardeningGoalChanged = feedbackToAgentIntentContextHardeningGoalChanged
+        self.feedbackToAgentIntentContextHardeningPathfindingPerformed = feedbackToAgentIntentContextHardeningPathfindingPerformed
+        self.feedbackToAgentIntentContextHardeningReplanningPerformed = feedbackToAgentIntentContextHardeningReplanningPerformed
+        self.feedbackToAgentIntentContextHardeningAvoidancePerformed = feedbackToAgentIntentContextHardeningAvoidancePerformed
+        self.feedbackToAgentIntentContextHardeningReservationRuntimeUsed = feedbackToAgentIntentContextHardeningReservationRuntimeUsed
+        self.feedbackToAgentIntentContextHardeningWorldUsed = feedbackToAgentIntentContextHardeningWorldUsed
+        self.feedbackToAgentIntentContextHardeningMutationPerformed = feedbackToAgentIntentContextHardeningMutationPerformed
+        self.feedbackToAgentIntentContextHardeningSuccess = feedbackToAgentIntentContextHardeningSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

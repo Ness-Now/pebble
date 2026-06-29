@@ -665,3 +665,84 @@ The scenario writes:
 
 Next recommended step: Phase 4.22E — Feedback To Agent Intent Context
 Hardening.
+
+## Phase 4.22E Implementation Status
+
+Phase 4.22E implements the fixture-only hardening smoke:
+`feedback_to_agent_intent_context_hardening_smoke`.
+
+The hardening report validates 14 cases:
+
+1. `baseline_fixture_remains_green`;
+2. `missing_feedback_context_allowed`;
+3. `partial_feedback_contexts_allowed`;
+4. `all_feedback_kinds_preserved`;
+5. `blocked_collision_does_not_change_to_wait`;
+6. `moved_feedback_does_not_suppress_next_move`;
+7. `agent_conflict_does_not_trigger_coordination`;
+8. `invalid_edge_feedback_does_not_hide_invalid_policy`;
+9. `duplicate_feedback_context_selection_stable`;
+10. `malformed_feedback_not_injected`;
+11. `tick_mismatch_feedback_not_injected`;
+12. `max_feedback_bound_keeps_contexts_bounded`;
+13. `deterministic_ordering_by_agent_id`;
+14. `stable_repeatability`.
+
+All 14 cases pass. The aggregate summary validates:
+
+- `feedbackObservedTotal = 34`;
+- `feedbackAcceptedTotal = 28`;
+- `feedbackIgnoredTotal = 3`;
+- `invalidFeedbackTotal = 3`;
+- `contextsProducedTotal = 28`;
+- `duplicateFeedbackTotal = 2`;
+- `maxFeedbackExceededTotal = 1`;
+- `tickMismatchFeedbackTotal = 1`;
+- `intentContextsTotal = 40`;
+- `contextsWithFeedbackTotal = 28`;
+- `contextsWithoutFeedbackTotal = 12`;
+- `proposalsTotal = 40`;
+- `acceptedIntentsTotal = 33`;
+- `rejectedProposalsTotal = 7`;
+- `noIntentTotal = 3`;
+- `invalidOneEdgeProposalsTotal = 4`.
+
+Every known feedback kind is preserved in `lastFeedback` in the all-kinds case:
+`moved`, `approvedForMovement`, `blockedByCollision`,
+`blockedByAgentConflict`, `blockedBySourceMismatch`, `blockedByDivergence`,
+`blockedByStaleIntent`, `blockedByInvalidEdge`, and `blockedByMaxAgents`.
+
+Every case compares policy v0 proposal signatures with a baseline where the
+same positions, roles, and hints have nil `lastFeedback`. The hardening
+contract requires `behaviorChangedByFeedback = false` and
+`feedbackUsedForDecision = false`.
+
+The cases confirm:
+
+- missing feedback remains allowed;
+- partial feedback only injects accepted feedback;
+- duplicate feedback selection is stable;
+- malformed and tick-mismatch feedback are not injected;
+- max feedback bounds cap contexts;
+- blocked collision does not become wait/noIntent;
+- moved feedback does not suppress the next move;
+- agent conflict does not trigger coordination or communication;
+- invalid-edge feedback does not hide invalid policy output;
+- repeatability is stable across identical inputs.
+
+The scenario writes:
+
+- `feedback_to_agent_intent_context_hardening_report.json`;
+- `feedback_to_agent_intent_context_hardening_invariant_report.json`;
+- `feedback_to_agent_intent_context_hardening_cases.json`;
+- `metrics.json` with `feedbackToAgentIntentContextHardening*` fields;
+- `events.ndjson` with `lab_feedback_to_agent_intent_context_hardening_recorded`.
+
+No tick movement is invoked. Neither consumption nor integration reads
+collision. The phase does not apply movement, update memory, change goals,
+pathfind, replan, avoid, use reservation runtime, create a `World`, learn,
+invoke LLM/RL/Python, create social behavior, communicate, or mutate
+terrain/world.
+
+Next recommended step: Phase 4.22F — Feedback-Aware Intent Policy Planning
+Docs-Only.
