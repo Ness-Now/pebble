@@ -902,6 +902,39 @@ struct RunMetrics: Encodable {
     let feedbackAwareIntentPolicyHardeningWorldUsed: Bool?
     let feedbackAwareIntentPolicyHardeningMutationPerformed: Bool?
     let feedbackAwareIntentPolicyHardeningSuccess: Bool?
+    let feedbackAwareIntentToTickFixtureContexts: Int?
+    let feedbackAwareIntentToTickFixtureContextsWithFeedback: Int?
+    let feedbackAwareIntentToTickFixtureContextsWithoutFeedback: Int?
+    let feedbackAwareIntentToTickFixtureBaselineProposals: Int?
+    let feedbackAwareIntentToTickFixtureFeedbackAwareProposals: Int?
+    let feedbackAwareIntentToTickFixtureBaselineMovementIntentInputs: Int?
+    let feedbackAwareIntentToTickFixtureFeedbackAwareMovementIntentInputs: Int?
+    let feedbackAwareIntentToTickFixtureMovementIntentReduction: Int?
+    let feedbackAwareIntentToTickFixtureNoIntentFilteredOut: Int?
+    let feedbackAwareIntentToTickFixtureFeedbackAwareAcceptedIntents: Int?
+    let feedbackAwareIntentToTickFixtureFeedbackAwareRejectedProposals: Int?
+    let feedbackAwareIntentToTickFixtureFeedbackAwareNoIntent: Int?
+    let feedbackAwareIntentToTickFixtureFeedbackAwareInvalidOneEdgeProposals: Int?
+    let feedbackAwareIntentToTickFixtureBehaviorChangedByFeedback: Bool?
+    let feedbackAwareIntentToTickFixtureBehaviorChangedCount: Int?
+    let feedbackAwareIntentToTickFixtureTickIntents: Int?
+    let feedbackAwareIntentToTickFixtureTickApproved: Int?
+    let feedbackAwareIntentToTickFixtureTickDenied: Int?
+    let feedbackAwareIntentToTickFixtureTickDeniedSameDestinationConflict: Int?
+    let feedbackAwareIntentToTickFixtureTickFeedbackEmitted: Int?
+    let feedbackAwareIntentToTickFixtureDisplacementsApplied: Int?
+    let feedbackAwareIntentToTickFixturePolicyReadCollision: Bool?
+    let feedbackAwareIntentToTickFixtureTickReadCollision: Bool?
+    let feedbackAwareIntentToTickFixtureMovementApplied: Bool?
+    let feedbackAwareIntentToTickFixtureMemoryUpdated: Bool?
+    let feedbackAwareIntentToTickFixtureGoalChanged: Bool?
+    let feedbackAwareIntentToTickFixturePathfindingPerformed: Bool?
+    let feedbackAwareIntentToTickFixtureReplanningPerformed: Bool?
+    let feedbackAwareIntentToTickFixtureAvoidancePerformed: Bool?
+    let feedbackAwareIntentToTickFixtureReservationRuntimeUsed: Bool?
+    let feedbackAwareIntentToTickFixtureWorldUsed: Bool?
+    let feedbackAwareIntentToTickFixtureMutationPerformed: Bool?
+    let feedbackAwareIntentToTickFixtureSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -1804,6 +1837,39 @@ struct RunMetrics: Encodable {
         feedbackAwareIntentPolicyHardeningWorldUsed: Bool? = nil,
         feedbackAwareIntentPolicyHardeningMutationPerformed: Bool? = nil,
         feedbackAwareIntentPolicyHardeningSuccess: Bool? = nil,
+        feedbackAwareIntentToTickFixtureContexts: Int? = nil,
+        feedbackAwareIntentToTickFixtureContextsWithFeedback: Int? = nil,
+        feedbackAwareIntentToTickFixtureContextsWithoutFeedback: Int? = nil,
+        feedbackAwareIntentToTickFixtureBaselineProposals: Int? = nil,
+        feedbackAwareIntentToTickFixtureFeedbackAwareProposals: Int? = nil,
+        feedbackAwareIntentToTickFixtureBaselineMovementIntentInputs: Int? = nil,
+        feedbackAwareIntentToTickFixtureFeedbackAwareMovementIntentInputs: Int? = nil,
+        feedbackAwareIntentToTickFixtureMovementIntentReduction: Int? = nil,
+        feedbackAwareIntentToTickFixtureNoIntentFilteredOut: Int? = nil,
+        feedbackAwareIntentToTickFixtureFeedbackAwareAcceptedIntents: Int? = nil,
+        feedbackAwareIntentToTickFixtureFeedbackAwareRejectedProposals: Int? = nil,
+        feedbackAwareIntentToTickFixtureFeedbackAwareNoIntent: Int? = nil,
+        feedbackAwareIntentToTickFixtureFeedbackAwareInvalidOneEdgeProposals: Int? = nil,
+        feedbackAwareIntentToTickFixtureBehaviorChangedByFeedback: Bool? = nil,
+        feedbackAwareIntentToTickFixtureBehaviorChangedCount: Int? = nil,
+        feedbackAwareIntentToTickFixtureTickIntents: Int? = nil,
+        feedbackAwareIntentToTickFixtureTickApproved: Int? = nil,
+        feedbackAwareIntentToTickFixtureTickDenied: Int? = nil,
+        feedbackAwareIntentToTickFixtureTickDeniedSameDestinationConflict: Int? = nil,
+        feedbackAwareIntentToTickFixtureTickFeedbackEmitted: Int? = nil,
+        feedbackAwareIntentToTickFixtureDisplacementsApplied: Int? = nil,
+        feedbackAwareIntentToTickFixturePolicyReadCollision: Bool? = nil,
+        feedbackAwareIntentToTickFixtureTickReadCollision: Bool? = nil,
+        feedbackAwareIntentToTickFixtureMovementApplied: Bool? = nil,
+        feedbackAwareIntentToTickFixtureMemoryUpdated: Bool? = nil,
+        feedbackAwareIntentToTickFixtureGoalChanged: Bool? = nil,
+        feedbackAwareIntentToTickFixturePathfindingPerformed: Bool? = nil,
+        feedbackAwareIntentToTickFixtureReplanningPerformed: Bool? = nil,
+        feedbackAwareIntentToTickFixtureAvoidancePerformed: Bool? = nil,
+        feedbackAwareIntentToTickFixtureReservationRuntimeUsed: Bool? = nil,
+        feedbackAwareIntentToTickFixtureWorldUsed: Bool? = nil,
+        feedbackAwareIntentToTickFixtureMutationPerformed: Bool? = nil,
+        feedbackAwareIntentToTickFixtureSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -2705,6 +2771,39 @@ struct RunMetrics: Encodable {
         self.feedbackAwareIntentPolicyHardeningWorldUsed = feedbackAwareIntentPolicyHardeningWorldUsed
         self.feedbackAwareIntentPolicyHardeningMutationPerformed = feedbackAwareIntentPolicyHardeningMutationPerformed
         self.feedbackAwareIntentPolicyHardeningSuccess = feedbackAwareIntentPolicyHardeningSuccess
+        self.feedbackAwareIntentToTickFixtureContexts = feedbackAwareIntentToTickFixtureContexts
+        self.feedbackAwareIntentToTickFixtureContextsWithFeedback = feedbackAwareIntentToTickFixtureContextsWithFeedback
+        self.feedbackAwareIntentToTickFixtureContextsWithoutFeedback = feedbackAwareIntentToTickFixtureContextsWithoutFeedback
+        self.feedbackAwareIntentToTickFixtureBaselineProposals = feedbackAwareIntentToTickFixtureBaselineProposals
+        self.feedbackAwareIntentToTickFixtureFeedbackAwareProposals = feedbackAwareIntentToTickFixtureFeedbackAwareProposals
+        self.feedbackAwareIntentToTickFixtureBaselineMovementIntentInputs = feedbackAwareIntentToTickFixtureBaselineMovementIntentInputs
+        self.feedbackAwareIntentToTickFixtureFeedbackAwareMovementIntentInputs = feedbackAwareIntentToTickFixtureFeedbackAwareMovementIntentInputs
+        self.feedbackAwareIntentToTickFixtureMovementIntentReduction = feedbackAwareIntentToTickFixtureMovementIntentReduction
+        self.feedbackAwareIntentToTickFixtureNoIntentFilteredOut = feedbackAwareIntentToTickFixtureNoIntentFilteredOut
+        self.feedbackAwareIntentToTickFixtureFeedbackAwareAcceptedIntents = feedbackAwareIntentToTickFixtureFeedbackAwareAcceptedIntents
+        self.feedbackAwareIntentToTickFixtureFeedbackAwareRejectedProposals = feedbackAwareIntentToTickFixtureFeedbackAwareRejectedProposals
+        self.feedbackAwareIntentToTickFixtureFeedbackAwareNoIntent = feedbackAwareIntentToTickFixtureFeedbackAwareNoIntent
+        self.feedbackAwareIntentToTickFixtureFeedbackAwareInvalidOneEdgeProposals = feedbackAwareIntentToTickFixtureFeedbackAwareInvalidOneEdgeProposals
+        self.feedbackAwareIntentToTickFixtureBehaviorChangedByFeedback = feedbackAwareIntentToTickFixtureBehaviorChangedByFeedback
+        self.feedbackAwareIntentToTickFixtureBehaviorChangedCount = feedbackAwareIntentToTickFixtureBehaviorChangedCount
+        self.feedbackAwareIntentToTickFixtureTickIntents = feedbackAwareIntentToTickFixtureTickIntents
+        self.feedbackAwareIntentToTickFixtureTickApproved = feedbackAwareIntentToTickFixtureTickApproved
+        self.feedbackAwareIntentToTickFixtureTickDenied = feedbackAwareIntentToTickFixtureTickDenied
+        self.feedbackAwareIntentToTickFixtureTickDeniedSameDestinationConflict = feedbackAwareIntentToTickFixtureTickDeniedSameDestinationConflict
+        self.feedbackAwareIntentToTickFixtureTickFeedbackEmitted = feedbackAwareIntentToTickFixtureTickFeedbackEmitted
+        self.feedbackAwareIntentToTickFixtureDisplacementsApplied = feedbackAwareIntentToTickFixtureDisplacementsApplied
+        self.feedbackAwareIntentToTickFixturePolicyReadCollision = feedbackAwareIntentToTickFixturePolicyReadCollision
+        self.feedbackAwareIntentToTickFixtureTickReadCollision = feedbackAwareIntentToTickFixtureTickReadCollision
+        self.feedbackAwareIntentToTickFixtureMovementApplied = feedbackAwareIntentToTickFixtureMovementApplied
+        self.feedbackAwareIntentToTickFixtureMemoryUpdated = feedbackAwareIntentToTickFixtureMemoryUpdated
+        self.feedbackAwareIntentToTickFixtureGoalChanged = feedbackAwareIntentToTickFixtureGoalChanged
+        self.feedbackAwareIntentToTickFixturePathfindingPerformed = feedbackAwareIntentToTickFixturePathfindingPerformed
+        self.feedbackAwareIntentToTickFixtureReplanningPerformed = feedbackAwareIntentToTickFixtureReplanningPerformed
+        self.feedbackAwareIntentToTickFixtureAvoidancePerformed = feedbackAwareIntentToTickFixtureAvoidancePerformed
+        self.feedbackAwareIntentToTickFixtureReservationRuntimeUsed = feedbackAwareIntentToTickFixtureReservationRuntimeUsed
+        self.feedbackAwareIntentToTickFixtureWorldUsed = feedbackAwareIntentToTickFixtureWorldUsed
+        self.feedbackAwareIntentToTickFixtureMutationPerformed = feedbackAwareIntentToTickFixtureMutationPerformed
+        self.feedbackAwareIntentToTickFixtureSuccess = feedbackAwareIntentToTickFixtureSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

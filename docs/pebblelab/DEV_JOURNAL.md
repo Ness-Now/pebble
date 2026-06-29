@@ -6712,3 +6712,137 @@ world mutation was added.
 ### Next Step
 
 Phase 4.23C — Feedback-Aware Intent To Tick Fixture Smoke.
+
+## 2026-06-29 — Phase 4.23C feedback-aware intent to tick fixture
+
+### Objective
+
+Implement `feedback_aware_intent_to_tick_fixture_smoke`, the first fixture-only
+handoff from opt-in feedback-aware v1 intent policy into the multi-agent
+movement tick fixture contract.
+
+### Starting Point
+
+Phase 4.23A added `produceAgentIntentProposalFeedbackAwareV1`. Phase 4.23B
+hardened its opt-in behavior over 16 cases. v0 remained unchanged, and no
+tick movement integration had yet consumed v1 proposals.
+
+### Files Created Or Modified
+
+- `Sources/PebbleLab/LabAgentIntentProduction.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_FEEDBACK_AWARE_INTENT_POLICY_PLAN.md`
+
+### Why Fixture-Only
+
+This phase tests the data handoff only. The tick layer is the existing fixture
+arbitration path: no World, no live collision evidence, no movement
+application, no route following, and no multi-tick loop.
+
+### v1 Opt-In And v0 Unchanged
+
+The scenario computes baseline v0 proposals for comparison, but runtime handoff
+uses only explicit v1 decisions. `produceAgentIntentProposalV0` is not modified
+and v1 remains scenario-specific.
+
+### Fixture Contexts
+
+The six deliberately unordered contexts are:
+
+- `agent_0_no_feedback`: baseline east move, kept by v1;
+- `agent_1_moved`: baseline west move, kept by v1;
+- `agent_2_collision`: `blockedByCollision`, converted to `noIntent`;
+- `agent_3_conflict`: `blockedByAgentConflict`, converted to `noIntent`;
+- `agent_4_approved`: baseline east move, kept by v1;
+- `agent_5_invalid_edge`: `blockedByInvalidEdge` over invalid vertical v0
+  proposal, converted to `noIntent`.
+
+### Baseline Versus Feedback-Aware Handoff
+
+The v0 baseline has six proposals and five valid movement intents. The v1
+handoff has six proposals and three movement intents. The reduction is two
+movement inputs, with three `noIntent` proposals filtered before tick input.
+
+### NoIntent Filtered Before Tick
+
+The blocked collision, blocked agent-conflict, and blocked invalid-edge agents
+do not enter the tick as movement intents. Their `noIntent` proposals remain in
+the report and handoff JSON for auditability.
+
+### Remaining Conflict Handled By Tick
+
+The policy intentionally does not arbitrate the remaining same-destination
+conflict between `agent_0_no_feedback` and `agent_1_moved`. Both intents target
+`(1,64,0)`. The tick fixture resolves the conflict by stable `agentId`:
+`agent_0_no_feedback` is approved and `agent_1_moved` is denied
+same-destination conflict. `agent_4_approved` is also approved.
+
+### Outputs, Invariants, Metrics, And Event
+
+The scenario writes:
+
+- `feedback_aware_intent_to_tick_fixture_report.json`;
+- `feedback_aware_intent_to_tick_fixture_invariant_report.json`;
+- `feedback_aware_intent_to_tick_handoff.json`;
+- `feedbackAwareIntentToTickFixture*` metrics;
+- aggregate event `lab_feedback_aware_intent_to_tick_fixture_recorded`.
+
+The invariant report covers contexts, v0/v1 boundaries, sorted decisions,
+filtered `noIntent`, movement intent reduction, tick input/output, remaining
+conflict arbitration, unchanged positions, no live collision, no movement,
+no World, no memory/goals, no pathfinding/replanning/avoidance/reservation,
+no route following, artifact writing, and the success contract.
+
+### Out Of Scope Confirmed
+
+No live collision, movement application, World access, memory update, goal
+change, pathfinding, replanning, avoidance, reservation runtime, route
+following, gameplay movement, terrain mutation, or world mutation was added.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_intent_to_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_hardening_after_intent_to_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_fixture_after_intent_to_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario feedback_to_agent_intent_context_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_to_context_hardening_after_intent_to_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario feedback_to_agent_intent_context_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_to_context_fixture_after_intent_to_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario agent_feedback_consumption_hardening_smoke --seed 42 --ticks 0 --out runs/check_agent_feedback_hardening_after_intent_to_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_fixture_after_intent_to_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_to_tick_fixture_after_feedback_aware_intent_to_tick`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_feedback_aware_intent_to_tick_fixture`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- `feedback_aware_intent_to_tick_fixture_smoke` passes.
+- Report success true.
+- Invariant report success true.
+- `contexts = 6`.
+- `contextsWithFeedback = 5`.
+- `contextsWithoutFeedback = 1`.
+- `baselineMovementIntentInputs = 5`.
+- `feedbackAwareMovementIntentInputs = 3`.
+- `movementIntentReduction = 2`.
+- `noIntentFilteredOut = 3`.
+- `tickApproved = 2`.
+- `tickDenied = 1`.
+- `tickDeniedSameDestinationConflict = 1`.
+- `tickFeedbackEmitted = 3`.
+- `displacementsApplied = 0`.
+- `feedbackAwareIntentToTickFixture*` metrics are present.
+- `lab_feedback_aware_intent_to_tick_fixture_recorded` event is present.
+
+### Next Step
+
+Phase 4.23D — Feedback-Aware Intent To Tick Live Read-Only Smoke.

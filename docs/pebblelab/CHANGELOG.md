@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added feedback-aware intent to tick fixture smoke.
 - Added feedback-aware intent policy hardening smoke.
 - Added bounded feedback-aware intent policy fixture smoke.
 - Documented PebbleLab feedback-aware intent policy plan.

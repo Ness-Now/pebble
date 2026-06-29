@@ -530,3 +530,70 @@ terrain/world mutation.
 
 Next recommended step: Phase 4.23C - Feedback-Aware Intent To Tick Fixture
 Smoke.
+
+## Phase 4.23C Implementation Status
+
+Status: implemented and validated.
+
+Phase 4.23C adds `feedback_aware_intent_to_tick_fixture_smoke`, the first
+fixture-only handoff from the opt-in feedback-aware v1 intent policy into the
+multi-agent movement tick fixture contract. The v0 policy remains available and
+unchanged, and v1 remains explicit rather than global.
+
+The scenario builds six intentionally unordered agent intent contexts:
+
+- one context without feedback that keeps the v0 baseline move;
+- one `moved` context that keeps the v0 baseline move;
+- one `approvedForMovement` context that keeps the v0 baseline move;
+- one `blockedByCollision` context that becomes `noIntent`;
+- one `blockedByAgentConflict` context that becomes `noIntent`;
+- one `blockedByInvalidEdge` context that becomes `noIntent` before the
+  invalid vertical baseline proposal can reach tick input.
+
+The report computes the v0 baseline only for comparison, then feeds only the
+accepted feedback-aware v1 movement intents into fixture tick arbitration.
+`noIntent` proposals are filtered before tick handoff. This reduces movement
+intent input from five baseline movement attempts to three feedback-aware
+movement attempts, while preserving one remaining same-destination conflict for
+the tick fixture to arbitrate.
+
+Validated handoff contract:
+
+- `contexts = 6`;
+- `contextsWithFeedback = 5`;
+- `contextsWithoutFeedback = 1`;
+- `feedbackAwareProposals = 6`;
+- `feedbackAwareAcceptedIntents = 3`;
+- `feedbackAwareNoIntent = 3`;
+- `feedbackAwareInvalidOneEdgeProposals = 0`;
+- `baselineMovementIntentInputs = 5`;
+- `feedbackAwareMovementIntentInputs = 3`;
+- `movementIntentReduction = 2`;
+- `noIntentFilteredOut = 3`;
+- `tickIntents = 3`;
+- `tickApproved = 2`;
+- `tickDenied = 1`;
+- `tickDeniedSameDestinationConflict = 1`;
+- `tickFeedbackEmitted = 3`;
+- `displacementsApplied = 0`.
+
+The policy does not arbitrate the remaining same-destination conflict. The
+fixture tick layer handles it deterministically, approving
+`agent_0_no_feedback`, denying `agent_1_moved` for the same-destination
+conflict, and approving `agent_4_approved`.
+
+Outputs produced:
+
+- `feedback_aware_intent_to_tick_fixture_report.json`;
+- `feedback_aware_intent_to_tick_fixture_invariant_report.json`;
+- `feedback_aware_intent_to_tick_handoff.json`;
+- `feedbackAwareIntentToTickFixture*` metrics;
+- aggregate event `lab_feedback_aware_intent_to_tick_fixture_recorded`.
+
+Limits remain explicit: no live collision, no World, no movement application,
+no route following, no memory update, no goal change, no pathfinding, no
+replanning, no avoidance, no reservation runtime, and no terrain/world
+mutation.
+
+Next recommended step: Phase 4.23D - Feedback-Aware Intent To Tick Live
+Read-Only Smoke.

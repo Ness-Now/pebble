@@ -1560,3 +1560,41 @@ scope.
 
 Next recommended step: Phase 4.23C - Feedback-Aware Intent To Tick Fixture
 Smoke.
+
+## Phase 4.23C - Feedback-Aware Intent To Tick Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: connect the opt-in feedback-aware v1 intent policy to the existing
+multi-agent movement tick fixture contract without live collision, World
+access, or movement application.
+
+The scenario `feedback_aware_intent_to_tick_fixture_smoke` uses six deliberately
+unordered intent contexts. Three contexts keep baseline movement proposals
+(`no feedback`, `moved`, and `approvedForMovement`). Three blocked feedback
+contexts become `noIntent` (`blockedByCollision`, `blockedByAgentConflict`,
+and `blockedByInvalidEdge`) and are filtered before tick input.
+
+The report compares the v0 baseline handoff with the feedback-aware v1 handoff.
+Baseline would send five valid movement intents to the tick; v1 sends three.
+The two filtered movement attempts prove the first bounded feedback-aware
+reduction while keeping v0 unchanged and v1 opt-in.
+
+The remaining `agent_0_no_feedback` and `agent_1_moved` same-destination
+conflict is intentionally not arbitrated by policy. It is resolved by the tick
+fixture layer: `agent_0_no_feedback` is approved, `agent_1_moved` is denied
+same-destination conflict, and `agent_4_approved` is approved.
+
+The scenario writes `feedback_aware_intent_to_tick_fixture_report.json`,
+`feedback_aware_intent_to_tick_fixture_invariant_report.json`,
+`feedback_aware_intent_to_tick_handoff.json`,
+`feedbackAwareIntentToTickFixture*` metrics, and one aggregate
+`lab_feedback_aware_intent_to_tick_fixture_recorded` event.
+
+Live collision reads by policy, live collision reads by tick, movement
+application, route following, memory update, goal selection, pathfinding,
+replanning, avoidance, reservation runtime, gameplay movement, World access,
+and terrain/world mutation remain out of scope.
+
+Next recommended step: Phase 4.23D - Feedback-Aware Intent To Tick Live
+Read-Only Smoke.

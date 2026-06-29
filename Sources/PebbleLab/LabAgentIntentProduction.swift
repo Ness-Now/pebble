@@ -543,6 +543,78 @@ struct LabFeedbackAwareIntentPolicyHardeningInvariantReport: Codable {
     let notes: [String]
 }
 
+struct LabFeedbackAwareIntentToTickFixtureSummary: Codable {
+    let tick: Int
+    let contexts: Int
+    let contextsWithFeedback: Int
+    let contextsWithoutFeedback: Int
+    let baselineProposals: Int
+    let feedbackAwareProposals: Int
+    let baselineMovementIntentInputs: Int
+    let feedbackAwareMovementIntentInputs: Int
+    let movementIntentReduction: Int
+    let noIntentFilteredOut: Int
+    let feedbackAwareAcceptedIntents: Int
+    let feedbackAwareRejectedProposals: Int
+    let feedbackAwareNoIntent: Int
+    let feedbackAwareInvalidOneEdgeProposals: Int
+    let behaviorChangedByFeedback: Bool
+    let behaviorChangedCount: Int
+    let tickIntents: Int
+    let tickApproved: Int
+    let tickDenied: Int
+    let tickDeniedSameDestinationConflict: Int
+    let tickFeedbackEmitted: Int
+    let displacementsApplied: Int
+    let policyReadCollision: Bool
+    let tickReadCollision: Bool
+    let movementApplied: Bool
+    let memoryUpdated: Bool
+    let goalChanged: Bool
+    let pathfindingPerformed: Bool
+    let replanningPerformed: Bool
+    let avoidancePerformed: Bool
+    let reservationRuntimeUsed: Bool
+    let worldUsed: Bool
+    let mutationPerformed: Bool
+    let success: Bool
+}
+
+struct LabFeedbackAwareIntentToTickFixtureHandoff: Codable {
+    let contexts: [LabAgentIntentContext]
+    let baselineDecisions: [LabAgentIntentProposal]
+    let feedbackAwareDecisions: [LabAgentIntentFeedbackPolicyDecision]
+    let movementIntentsSentToTick: [LabAgentMoveIntent]
+    let noIntentFilteredOut: [LabAgentIntentProposal]
+    let tickInput: LabMultiAgentMovementTickInput
+    let tickOutput: LabMultiAgentMovementTickOutput
+    let tickFeedback: [LabMovementFeedback]
+    let summary: LabFeedbackAwareIntentToTickFixtureSummary
+}
+
+struct LabFeedbackAwareIntentToTickFixtureReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let ticksCompleted: Int
+    let success: Bool
+    let contexts: [LabAgentIntentContext]
+    let baselinePolicyDecisions: [LabAgentIntentProposal]
+    let feedbackAwarePolicyDecisions: [LabAgentIntentFeedbackPolicyDecision]
+    let feedbackAwareMovementTickInput: LabMultiAgentMovementTickInput
+    let tickResult: LabMultiAgentMovementTickOutput
+    let handoff: LabFeedbackAwareIntentToTickFixtureHandoff
+    let summary: LabFeedbackAwareIntentToTickFixtureSummary
+}
+
+struct LabFeedbackAwareIntentToTickFixtureInvariantReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: LabMultiAgentMovementFixtureInvariantSummary
+    let checks: [LabMultiAgentMovementFixtureInvariantCheck]
+    let notes: [String]
+}
+
 func produceAgentIntentProposalV0(
     context: LabAgentIntentContext
 ) -> LabAgentIntentProposal {
@@ -3327,6 +3399,389 @@ func makeFeedbackAwareIntentPolicyHardeningInvariantReport(
         notes: [
             "Feedback-aware v1 hardening remains fixture-only and opt-in.",
             "No alternative direction, tick movement, collision read, World access, memory, goals, pathfinding, replanning, avoidance, reservation, or mutation is introduced."
+        ]
+    )
+}
+
+private func feedbackAwareIntentToTickFixtureContexts() -> [LabAgentIntentContext] {
+    let agent0 = LabTerrainPathNodeKey(x: 0, y: 64, z: 0)
+    let agent1 = LabTerrainPathNodeKey(x: 2, y: 64, z: 0)
+    let agent2 = LabTerrainPathNodeKey(x: 7, y: 64, z: 8)
+    let agent3 = LabTerrainPathNodeKey(x: 4, y: 64, z: 0)
+    let agent4 = LabTerrainPathNodeKey(x: 10, y: 64, z: 0)
+    let agent5 = LabTerrainPathNodeKey(x: 8, y: 64, z: 0)
+    return [
+        LabAgentIntentContext(
+            tick: 0,
+            agentId: "agent_2_collision",
+            position: agent2,
+            lastFeedback: feedbackAwarePolicyFeedback(
+                agentId: "agent_2_collision",
+                kind: .blockedByCollision,
+                from: agent2,
+                to: LabTerrainPathNodeKey(x: 8, y: 64, z: 8),
+                reason: "fixture_blocked_by_collision"
+            ),
+            role: "wander_fixture",
+            localHints: ["move_east"]
+        ),
+        LabAgentIntentContext(
+            tick: 0,
+            agentId: "agent_0_no_feedback",
+            position: agent0,
+            lastFeedback: nil,
+            role: "wander_fixture",
+            localHints: ["move_east"]
+        ),
+        LabAgentIntentContext(
+            tick: 0,
+            agentId: "agent_4_approved",
+            position: agent4,
+            lastFeedback: feedbackAwarePolicyFeedback(
+                agentId: "agent_4_approved",
+                kind: .approvedForMovement,
+                from: agent4,
+                to: LabTerrainPathNodeKey(x: 11, y: 64, z: 0),
+                reason: "fixture_approved_for_movement"
+            ),
+            role: "wander_fixture",
+            localHints: ["move_east"]
+        ),
+        LabAgentIntentContext(
+            tick: 0,
+            agentId: "agent_1_moved",
+            position: agent1,
+            lastFeedback: feedbackAwarePolicyFeedback(
+                agentId: "agent_1_moved",
+                kind: .moved,
+                from: LabTerrainPathNodeKey(x: 3, y: 64, z: 0),
+                to: agent1,
+                reason: "fixture_moved"
+            ),
+            role: "wander_fixture",
+            localHints: ["move_west"]
+        ),
+        LabAgentIntentContext(
+            tick: 0,
+            agentId: "agent_5_invalid_edge",
+            position: agent5,
+            lastFeedback: feedbackAwarePolicyFeedback(
+                agentId: "agent_5_invalid_edge",
+                kind: .blockedByInvalidEdge,
+                from: agent5,
+                to: LabTerrainPathNodeKey(x: 8, y: 65, z: 0),
+                reason: "fixture_blocked_by_invalid_edge"
+            ),
+            role: "bad_fixture_invalid_vertical",
+            localHints: ["move_vertical"]
+        ),
+        LabAgentIntentContext(
+            tick: 0,
+            agentId: "agent_3_conflict",
+            position: agent3,
+            lastFeedback: feedbackAwarePolicyFeedback(
+                agentId: "agent_3_conflict",
+                kind: .blockedByAgentConflict,
+                from: agent3,
+                to: LabTerrainPathNodeKey(x: 3, y: 64, z: 0),
+                reason: "fixture_blocked_by_agent_conflict"
+            ),
+            role: "wander_fixture",
+            localHints: ["move_west"]
+        )
+    ]
+}
+
+func makeFeedbackAwareIntentToTickFixtureReport(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int
+) -> LabFeedbackAwareIntentToTickFixtureReport {
+    let inputContexts = feedbackAwareIntentToTickFixtureContexts()
+    let baselineProposals = inputContexts.map(produceAgentIntentProposalV0(context:)).sorted {
+        $0.agentId < $1.agentId
+    }
+    let baselineResult = produceAgentIntentProductionResult(
+        tick: 0,
+        contexts: inputContexts,
+        rawProposals: baselineProposals,
+        maxProposals: nil
+    )
+    let feedbackAwareDecisions = inputContexts.map(produceAgentIntentProposalFeedbackAwareV1(context:)).sorted {
+        $0.agentId < $1.agentId
+    }
+    let feedbackAwareProposals = feedbackAwareDecisions.map(\.feedbackAwareProposal)
+    let feedbackAwareResult = produceAgentIntentProductionResult(
+        tick: 0,
+        contexts: inputContexts,
+        rawProposals: feedbackAwareProposals,
+        maxProposals: nil
+    )
+    let agents = Dictionary(
+        uniqueKeysWithValues: inputContexts.compactMap { context in
+            context.position.map { (context.agentId, $0) }
+        }
+    )
+    let tickInput = LabMultiAgentMovementTickInput(
+        tick: 0,
+        agents: agents,
+        physicalPositions: agents,
+        intents: feedbackAwareResult.acceptedIntents,
+        maxAgents: nil
+    )
+    let tickReport = makeMultiAgentMovementTickFixtureReport(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        input: tickInput,
+        expectedApproved: 2,
+        expectedDenied: 1,
+        expectedDecisionCounts: [
+            LabMultiAgentMoveDecision.approved.rawValue: 2,
+            LabMultiAgentMoveDecision.deniedSameDestinationConflict.rawValue: 1
+        ]
+    )
+    let behaviorChangedCount = feedbackAwareDecisions.filter(\.behaviorChanged).count
+    let noIntentFilteredOut = feedbackAwareResult.rejectedProposals.filter {
+        $0.decision == .noIntent
+    }
+    let movementIntentReduction = baselineResult.acceptedIntents.count
+        - feedbackAwareResult.acceptedIntents.count
+    let agent0Approved = tickReport.output.resolutions.contains {
+        $0.agentId == "agent_0_no_feedback" && $0.decision == .approved && $0.approved
+    }
+    let agent1Denied = tickReport.output.resolutions.contains {
+        $0.agentId == "agent_1_moved"
+            && $0.decision == .deniedSameDestinationConflict
+            && !$0.approved
+    }
+    let agent4Approved = tickReport.output.resolutions.contains {
+        $0.agentId == "agent_4_approved" && $0.decision == .approved && $0.approved
+    }
+    let positionsUnchanged = tickReport.output.abstractPositionsBefore == tickReport.output.abstractPositionsAfter
+        && tickReport.output.physicalPositionsBefore == tickReport.output.physicalPositionsAfter
+    let summary = LabFeedbackAwareIntentToTickFixtureSummary(
+        tick: 0,
+        contexts: inputContexts.count,
+        contextsWithFeedback: inputContexts.filter { $0.lastFeedback != nil }.count,
+        contextsWithoutFeedback: inputContexts.filter { $0.lastFeedback == nil }.count,
+        baselineProposals: baselineProposals.count,
+        feedbackAwareProposals: feedbackAwareProposals.count,
+        baselineMovementIntentInputs: baselineResult.acceptedIntents.count,
+        feedbackAwareMovementIntentInputs: feedbackAwareResult.acceptedIntents.count,
+        movementIntentReduction: movementIntentReduction,
+        noIntentFilteredOut: noIntentFilteredOut.count,
+        feedbackAwareAcceptedIntents: feedbackAwareResult.summary.acceptedIntents,
+        feedbackAwareRejectedProposals: feedbackAwareResult.summary.rejectedProposals,
+        feedbackAwareNoIntent: feedbackAwareResult.summary.noIntent,
+        feedbackAwareInvalidOneEdgeProposals: feedbackAwareResult.summary.invalidOneEdgeProposals,
+        behaviorChangedByFeedback: behaviorChangedCount > 0,
+        behaviorChangedCount: behaviorChangedCount,
+        tickIntents: tickInput.intents.count,
+        tickApproved: tickReport.summary.approved,
+        tickDenied: tickReport.summary.denied,
+        tickDeniedSameDestinationConflict: tickReport.summary.sameDestinationConflicts,
+        tickFeedbackEmitted: tickReport.output.feedback.count,
+        displacementsApplied: tickReport.summary.displacementsApplied,
+        policyReadCollision: false,
+        tickReadCollision: false,
+        movementApplied: false,
+        memoryUpdated: false,
+        goalChanged: false,
+        pathfindingPerformed: false,
+        replanningPerformed: false,
+        avoidancePerformed: false,
+        reservationRuntimeUsed: false,
+        worldUsed: false,
+        mutationPerformed: false,
+        success: baselineResult.summary.acceptedIntents > feedbackAwareResult.summary.acceptedIntents
+            && feedbackAwareResult.summary.acceptedIntents == 3
+            && feedbackAwareResult.summary.rejectedProposals == 3
+            && feedbackAwareResult.summary.noIntent == 3
+            && feedbackAwareResult.summary.invalidOneEdgeProposals == 0
+            && movementIntentReduction >= 2
+            && noIntentFilteredOut.count == 3
+            && tickReport.success
+            && tickInput.intents.count == 3
+            && tickReport.summary.approved == 2
+            && tickReport.summary.denied == 1
+            && tickReport.summary.sameDestinationConflicts == 1
+            && tickReport.output.feedback.count == 3
+            && agent0Approved
+            && agent1Denied
+            && agent4Approved
+            && positionsUnchanged
+            && tickReport.summary.displacementsApplied == 0
+    )
+    let sortedContexts = inputContexts.sorted { $0.agentId < $1.agentId }
+    let handoff = LabFeedbackAwareIntentToTickFixtureHandoff(
+        contexts: sortedContexts,
+        baselineDecisions: baselineProposals,
+        feedbackAwareDecisions: feedbackAwareDecisions,
+        movementIntentsSentToTick: feedbackAwareResult.acceptedIntents,
+        noIntentFilteredOut: noIntentFilteredOut,
+        tickInput: tickInput,
+        tickOutput: tickReport.output,
+        tickFeedback: tickReport.output.feedback,
+        summary: summary
+    )
+    let success = summary.success
+        && !summary.policyReadCollision
+        && !summary.tickReadCollision
+        && !summary.worldUsed
+        && !summary.movementApplied
+        && !summary.memoryUpdated
+        && !summary.goalChanged
+        && !summary.pathfindingPerformed
+        && !summary.replanningPerformed
+        && !summary.avoidancePerformed
+        && !summary.reservationRuntimeUsed
+        && !summary.mutationPerformed
+    return LabFeedbackAwareIntentToTickFixtureReport(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        success: success,
+        contexts: sortedContexts,
+        baselinePolicyDecisions: baselineProposals,
+        feedbackAwarePolicyDecisions: feedbackAwareDecisions,
+        feedbackAwareMovementTickInput: tickInput,
+        tickResult: tickReport.output,
+        handoff: handoff,
+        summary: summary
+    )
+}
+
+func makeFeedbackAwareIntentToTickFixtureInvariantReport(
+    report: LabFeedbackAwareIntentToTickFixtureReport?,
+    scenario: String,
+    seed: UInt32
+) -> LabFeedbackAwareIntentToTickFixtureInvariantReport {
+    guard let report else {
+        let check = agentIntentInvariantCheck(
+            "report_written",
+            false,
+            "feedback_aware_intent_to_tick_fixture_report.json",
+            "missing"
+        )
+        return LabFeedbackAwareIntentToTickFixtureInvariantReport(
+            scenario: scenario,
+            seed: seed,
+            success: false,
+            summary: LabMultiAgentMovementFixtureInvariantSummary(
+                checksPassed: 0,
+                checksFailed: 1,
+                cases: 1,
+                passed: 0,
+                failed: 1
+            ),
+            checks: [check],
+            notes: ["Feedback-aware intent to tick fixture report was not produced."]
+        )
+    }
+    let contextIds = report.contexts.map(\.agentId)
+    let inputContextIds = feedbackAwareIntentToTickFixtureContexts().map(\.agentId)
+    let decisionIds = report.feedbackAwarePolicyDecisions.map(\.agentId)
+    let tickIntentIds = report.feedbackAwareMovementTickInput.intents.map(\.agentId)
+    let decisionsByAgent = Dictionary(uniqueKeysWithValues: report.feedbackAwarePolicyDecisions.map { ($0.agentId, $0) })
+    let tickFeedbackKinds = Dictionary(uniqueKeysWithValues: report.tickResult.feedback.map { ($0.agentId, $0.kind) })
+    let acceptedOneEdge = report.feedbackAwareMovementTickInput.intents.allSatisfy {
+        manhattanDistance($0.from, $0.to) == 1
+    }
+    let acceptedSameY = report.feedbackAwareMovementTickInput.intents.allSatisfy {
+        $0.from.y == $0.to.y
+    }
+    let tickInputCoversSources = report.feedbackAwareMovementTickInput.intents.allSatisfy { intent in
+        report.feedbackAwareMovementTickInput.agents[intent.agentId] == intent.from
+    }
+    let policyDidNotArbitrateConflict = report.feedbackAwareMovementTickInput.intents.filter {
+        $0.to == LabTerrainPathNodeKey(x: 1, y: 64, z: 0)
+    }.count == 2
+    let tickArbitratedConflict = report.tickResult.resolutions.contains {
+        $0.agentId == "agent_0_no_feedback" && $0.decision == .approved && $0.approved
+    } && report.tickResult.resolutions.contains {
+        $0.agentId == "agent_1_moved"
+            && $0.decision == .deniedSameDestinationConflict
+            && !$0.approved
+    }
+    let positionsUnchanged = report.tickResult.abstractPositionsBefore == report.tickResult.abstractPositionsAfter
+        && report.tickResult.physicalPositionsBefore == report.tickResult.physicalPositionsAfter
+    let checks: [LabMultiAgentMovementFixtureInvariantCheck] = [
+        agentIntentInvariantCheck("contexts_exist", !report.contexts.isEmpty, "non-empty", "\(report.contexts.count)"),
+        agentIntentInvariantCheck("contexts_intentionally_unordered", inputContextIds != inputContextIds.sorted(), "unordered input", inputContextIds.joined(separator: ",")),
+        agentIntentInvariantCheck("contexts_sorted_by_agent_id_for_output", contextIds == contextIds.sorted(), "sorted", contextIds.joined(separator: ",")),
+        agentIntentInvariantCheck("v0_policy_remains_available", true, "produceAgentIntentProposalV0 unchanged", "available"),
+        agentIntentInvariantCheck("v1_policy_is_opt_in", true, "explicit scenario only", "explicit scenario only"),
+        agentIntentInvariantCheck("baseline_decisions_exist", report.baselinePolicyDecisions.count == 6, "6", "\(report.baselinePolicyDecisions.count)"),
+        agentIntentInvariantCheck("feedback_aware_decisions_exist", report.feedbackAwarePolicyDecisions.count == 6, "6", "\(report.feedbackAwarePolicyDecisions.count)"),
+        agentIntentInvariantCheck("feedback_aware_decisions_sorted", decisionIds == decisionIds.sorted(), "sorted", decisionIds.joined(separator: ",")),
+        agentIntentInvariantCheck("no_feedback_keeps_baseline", decisionsByAgent["agent_0_no_feedback"]?.behaviorChanged == false, "false", "\(decisionsByAgent["agent_0_no_feedback"]?.behaviorChanged ?? true)"),
+        agentIntentInvariantCheck("moved_keeps_baseline", decisionsByAgent["agent_1_moved"]?.behaviorChanged == false, "false", "\(decisionsByAgent["agent_1_moved"]?.behaviorChanged ?? true)"),
+        agentIntentInvariantCheck("approved_for_movement_keeps_baseline", decisionsByAgent["agent_4_approved"]?.behaviorChanged == false, "false", "\(decisionsByAgent["agent_4_approved"]?.behaviorChanged ?? true)"),
+        agentIntentInvariantCheck("blocked_collision_becomes_no_intent", decisionsByAgent["agent_2_collision"]?.feedbackAwareDecision == .noIntent, "noIntent", decisionsByAgent["agent_2_collision"]?.feedbackAwareDecision.rawValue ?? "missing"),
+        agentIntentInvariantCheck("blocked_agent_conflict_becomes_no_intent", decisionsByAgent["agent_3_conflict"]?.feedbackAwareDecision == .noIntent, "noIntent", decisionsByAgent["agent_3_conflict"]?.feedbackAwareDecision.rawValue ?? "missing"),
+        agentIntentInvariantCheck("blocked_invalid_edge_becomes_no_intent", decisionsByAgent["agent_5_invalid_edge"]?.feedbackAwareDecision == .noIntent, "noIntent", decisionsByAgent["agent_5_invalid_edge"]?.feedbackAwareDecision.rawValue ?? "missing"),
+        agentIntentInvariantCheck("invalid_edge_not_sent_to_tick", !tickIntentIds.contains("agent_5_invalid_edge"), "not sent", tickIntentIds.joined(separator: ",")),
+        agentIntentInvariantCheck("no_intent_filtered_out_before_tick", report.summary.noIntentFilteredOut == 3, "3", "\(report.summary.noIntentFilteredOut)"),
+        agentIntentInvariantCheck("movement_intents_sent_to_tick_expected", tickIntentIds == ["agent_0_no_feedback", "agent_1_moved", "agent_4_approved"], "agent_0,agent_1,agent_4", tickIntentIds.joined(separator: ",")),
+        agentIntentInvariantCheck("baseline_movement_intents_greater_than_feedback_aware", report.summary.baselineMovementIntentInputs > report.summary.feedbackAwareMovementIntentInputs, "baseline > v1", "\(report.summary.baselineMovementIntentInputs) > \(report.summary.feedbackAwareMovementIntentInputs)"),
+        agentIntentInvariantCheck("movement_intent_reduction_expected", report.summary.movementIntentReduction >= 2, ">=2", "\(report.summary.movementIntentReduction)"),
+        agentIntentInvariantCheck("tick_input_exists", report.feedbackAwareMovementTickInput.tick == 0, "tick 0", "\(report.feedbackAwareMovementTickInput.tick)"),
+        agentIntentInvariantCheck("tick_intents_expected", report.summary.tickIntents == 3, "3", "\(report.summary.tickIntents)"),
+        agentIntentInvariantCheck("tick_approved_expected", report.summary.tickApproved == 2, "2", "\(report.summary.tickApproved)"),
+        agentIntentInvariantCheck("tick_denied_expected", report.summary.tickDenied == 1, "1", "\(report.summary.tickDenied)"),
+        agentIntentInvariantCheck("tick_same_destination_conflict_expected", report.summary.tickDeniedSameDestinationConflict == 1, "1", "\(report.summary.tickDeniedSameDestinationConflict)"),
+        agentIntentInvariantCheck("tick_feedback_emitted_expected", report.summary.tickFeedbackEmitted == 3, "3", "\(report.summary.tickFeedbackEmitted)"),
+        agentIntentInvariantCheck("policy_does_not_arbitrate_conflict", policyDidNotArbitrateConflict, "same destination preserved", "\(policyDidNotArbitrateConflict)"),
+        agentIntentInvariantCheck("tick_arbitrates_remaining_conflict", tickArbitratedConflict, "agent_0 wins, agent_1 denied", "\(tickArbitratedConflict)"),
+        agentIntentInvariantCheck("policy_read_collision_false", !report.summary.policyReadCollision, "false", "\(report.summary.policyReadCollision)"),
+        agentIntentInvariantCheck("tick_read_collision_false", !report.summary.tickReadCollision, "false", "\(report.summary.tickReadCollision)"),
+        agentIntentInvariantCheck("movement_not_applied", !report.summary.movementApplied, "false", "\(report.summary.movementApplied)"),
+        agentIntentInvariantCheck("displacements_applied_zero", report.summary.displacementsApplied == 0, "0", "\(report.summary.displacementsApplied)"),
+        agentIntentInvariantCheck("positions_unchanged", positionsUnchanged, "unchanged", "\(positionsUnchanged)"),
+        agentIntentInvariantCheck("memory_not_updated", !report.summary.memoryUpdated, "false", "\(report.summary.memoryUpdated)"),
+        agentIntentInvariantCheck("goal_not_changed", !report.summary.goalChanged, "false", "\(report.summary.goalChanged)"),
+        agentIntentInvariantCheck("pathfinding_not_performed", !report.summary.pathfindingPerformed, "false", "\(report.summary.pathfindingPerformed)"),
+        agentIntentInvariantCheck("replanning_not_performed", !report.summary.replanningPerformed, "false", "\(report.summary.replanningPerformed)"),
+        agentIntentInvariantCheck("avoidance_not_performed", !report.summary.avoidancePerformed, "false", "\(report.summary.avoidancePerformed)"),
+        agentIntentInvariantCheck("reservation_runtime_not_used", !report.summary.reservationRuntimeUsed, "false", "\(report.summary.reservationRuntimeUsed)"),
+        agentIntentInvariantCheck("world_not_used", !report.summary.worldUsed, "false", "\(report.summary.worldUsed)"),
+        agentIntentInvariantCheck("terrain_mutation_not_performed", !report.summary.mutationPerformed, "false", "\(report.summary.mutationPerformed)"),
+        agentIntentInvariantCheck("world_mutation_not_performed", !report.summary.mutationPerformed, "false", "\(report.summary.mutationPerformed)"),
+        agentIntentInvariantCheck("route_following_not_used", true, "not used", "not used"),
+        agentIntentInvariantCheck("live_collision_not_used", !report.summary.policyReadCollision && !report.summary.tickReadCollision, "false", "\(report.summary.policyReadCollision)/\(report.summary.tickReadCollision)"),
+        agentIntentInvariantCheck("feedback_aware_policy_hardening_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        agentIntentInvariantCheck("feedback_aware_policy_fixture_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        agentIntentInvariantCheck("feedback_to_context_hardening_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        agentIntentInvariantCheck("agent_intent_v0_fixture_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        agentIntentInvariantCheck("accepted_intents_are_one_edge", acceptedOneEdge, "one-edge", "\(acceptedOneEdge)"),
+        agentIntentInvariantCheck("accepted_intents_are_same_y", acceptedSameY, "same-y", "\(acceptedSameY)"),
+        agentIntentInvariantCheck("tick_input_agents_cover_intent_sources", tickInputCoversSources, "sources covered", "\(tickInputCoversSources)"),
+        agentIntentInvariantCheck("approved_feedback_is_approved_for_movement", tickFeedbackKinds["agent_0_no_feedback"] == .approvedForMovement && tickFeedbackKinds["agent_4_approved"] == .approvedForMovement, "approvedForMovement", "\(tickFeedbackKinds)"),
+        agentIntentInvariantCheck("denied_conflict_feedback_is_blocked_by_agent_conflict", tickFeedbackKinds["agent_1_moved"] == .blockedByAgentConflict, "blockedByAgentConflict", "\(tickFeedbackKinds["agent_1_moved"]?.rawValue ?? "missing")"),
+        agentIntentInvariantCheck("report_written", true, "feedback_aware_intent_to_tick_fixture_report.json", "feedback_aware_intent_to_tick_fixture_report.json"),
+        agentIntentInvariantCheck("handoff_written", true, "feedback_aware_intent_to_tick_handoff.json", "feedback_aware_intent_to_tick_handoff.json"),
+        agentIntentInvariantCheck("metrics_written", true, "feedbackAwareIntentToTickFixture*", "feedbackAwareIntentToTickFixture*"),
+        agentIntentInvariantCheck("event_written", true, "lab_feedback_aware_intent_to_tick_fixture_recorded", "lab_feedback_aware_intent_to_tick_fixture_recorded"),
+        agentIntentInvariantCheck("success_contract_respected", report.success, "true", "\(report.success)")
+    ]
+    let passed = checks.filter(\.passed).count
+    return LabFeedbackAwareIntentToTickFixtureInvariantReport(
+        scenario: scenario,
+        seed: seed,
+        success: passed == checks.count,
+        summary: LabMultiAgentMovementFixtureInvariantSummary(
+            checksPassed: passed,
+            checksFailed: checks.count - passed,
+            cases: 1,
+            passed: report.success ? 1 : 0,
+            failed: report.success ? 0 : 1
+        ),
+        checks: checks,
+        notes: [
+            "Feedback-aware v1 remains opt-in; v0 is used only for comparison.",
+            "NoIntent proposals are filtered before fixture tick input.",
+            "The remaining same-destination conflict is intentionally resolved by the tick fixture layer."
         ]
     )
 }

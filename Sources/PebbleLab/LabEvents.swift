@@ -267,6 +267,16 @@ struct RunEvent: Encodable {
     let blockedByStaleIntentNoIntentTotal: Int?
     let blockedByInvalidEdgeNoIntentTotal: Int?
     let blockedByMaxAgentsNoIntentTotal: Int?
+    let baselineMovementIntentInputs: Int?
+    let feedbackAwareMovementIntentInputs: Int?
+    let movementIntentReduction: Int?
+    let noIntentFilteredOut: Int?
+    let feedbackAwareAcceptedIntents: Int?
+    let feedbackAwareRejectedProposals: Int?
+    let feedbackAwareNoIntent: Int?
+    let tickDeniedSameDestinationConflict: Int?
+    let tickFeedbackEmitted: Int?
+    let policyReadCollision: Bool?
     let movedFeedback: Int?
     let approvedForMovementFeedback: Int?
     let blockedByCollisionFeedback: Int?
@@ -608,6 +618,16 @@ struct RunEvent: Encodable {
         blockedByStaleIntentNoIntentTotal: Int? = nil,
         blockedByInvalidEdgeNoIntentTotal: Int? = nil,
         blockedByMaxAgentsNoIntentTotal: Int? = nil,
+        baselineMovementIntentInputs: Int? = nil,
+        feedbackAwareMovementIntentInputs: Int? = nil,
+        movementIntentReduction: Int? = nil,
+        noIntentFilteredOut: Int? = nil,
+        feedbackAwareAcceptedIntents: Int? = nil,
+        feedbackAwareRejectedProposals: Int? = nil,
+        feedbackAwareNoIntent: Int? = nil,
+        tickDeniedSameDestinationConflict: Int? = nil,
+        tickFeedbackEmitted: Int? = nil,
+        policyReadCollision: Bool? = nil,
         movedFeedback: Int? = nil,
         approvedForMovementFeedback: Int? = nil,
         blockedByCollisionFeedback: Int? = nil,
@@ -948,6 +968,16 @@ struct RunEvent: Encodable {
         self.blockedByStaleIntentNoIntentTotal = blockedByStaleIntentNoIntentTotal
         self.blockedByInvalidEdgeNoIntentTotal = blockedByInvalidEdgeNoIntentTotal
         self.blockedByMaxAgentsNoIntentTotal = blockedByMaxAgentsNoIntentTotal
+        self.baselineMovementIntentInputs = baselineMovementIntentInputs
+        self.feedbackAwareMovementIntentInputs = feedbackAwareMovementIntentInputs
+        self.movementIntentReduction = movementIntentReduction
+        self.noIntentFilteredOut = noIntentFilteredOut
+        self.feedbackAwareAcceptedIntents = feedbackAwareAcceptedIntents
+        self.feedbackAwareRejectedProposals = feedbackAwareRejectedProposals
+        self.feedbackAwareNoIntent = feedbackAwareNoIntent
+        self.tickDeniedSameDestinationConflict = tickDeniedSameDestinationConflict
+        self.tickFeedbackEmitted = tickFeedbackEmitted
+        self.policyReadCollision = policyReadCollision
         self.movedFeedback = movedFeedback
         self.approvedForMovementFeedback = approvedForMovementFeedback
         self.blockedByCollisionFeedback = blockedByCollisionFeedback
