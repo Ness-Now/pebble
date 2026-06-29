@@ -616,3 +616,52 @@ terrain/world mutation.
 
 Next recommended step: Phase 4.22D — Feedback To Agent Intent Context Fixture
 Smoke.
+
+## Phase 4.22D Implementation Status
+
+Phase 4.22D implements the plumbing-only fixture smoke:
+`feedback_to_agent_intent_context_fixture_smoke`.
+
+The scenario consumes the same bounded fixture feedback shape used by 4.22B:
+six feedback inputs, four accepted contexts, one duplicate ignored, and one
+malformed input rejected. Accepted feedback contexts are then converted into
+`LabMovementFeedback` values and injected into `LabAgentIntentContext.lastFeedback`.
+
+The resulting agent intent contexts validate:
+
+- `intentContexts = 5`;
+- `contextsWithFeedback = 4`;
+- `contextsWithoutFeedback = 1`;
+- `agent_0` preserves `moved`;
+- `agent_1` preserves `approvedForMovement`;
+- `agent_2` preserves `blockedByCollision`;
+- `agent_3` preserves `blockedByAgentConflict`;
+- `agent_4` has no feedback.
+
+The scenario also builds a baseline with identical positions, roles, and hints
+but `lastFeedback = nil`. Existing policy v0 proposals are compared by
+deterministic signature, and the fixture requires:
+
+- `proposals = 5`;
+- `acceptedIntents = 3`;
+- `rejectedProposals = 2`;
+- `noIntent = 1`;
+- `invalidOneEdgeProposals = 1`;
+- `behaviorChangedByFeedback = false`;
+- `feedbackUsedForDecision = false`.
+
+This confirms that feedback is now visible as context but is not yet consumed
+for behavior adaptation. The phase does not call tick movement, read collision,
+apply movement, update memory, change goals, pathfind, replan, avoid, use
+reservation runtime, create a `World`, or mutate terrain/world.
+
+The scenario writes:
+
+- `feedback_to_agent_intent_context_fixture_report.json`;
+- `feedback_to_agent_intent_context_fixture_invariant_report.json`;
+- `feedback_to_agent_intent_contexts.json`;
+- `metrics.json` with `feedbackToAgentIntentContextFixture*` fields;
+- `events.ndjson` with `lab_feedback_to_agent_intent_context_fixture_recorded`.
+
+Next recommended step: Phase 4.22E — Feedback To Agent Intent Context
+Hardening.

@@ -772,6 +772,34 @@ struct RunMetrics: Encodable {
     let agentFeedbackConsumptionHardeningWorldUsed: Bool?
     let agentFeedbackConsumptionHardeningMutationPerformed: Bool?
     let agentFeedbackConsumptionHardeningSuccess: Bool?
+    let feedbackToAgentIntentContextFixtureFeedbackObserved: Int?
+    let feedbackToAgentIntentContextFixtureFeedbackAccepted: Int?
+    let feedbackToAgentIntentContextFixtureFeedbackIgnored: Int?
+    let feedbackToAgentIntentContextFixtureInvalidFeedback: Int?
+    let feedbackToAgentIntentContextFixtureContextsProduced: Int?
+    let feedbackToAgentIntentContextFixtureDuplicateFeedback: Int?
+    let feedbackToAgentIntentContextFixtureIntentContexts: Int?
+    let feedbackToAgentIntentContextFixtureContextsWithFeedback: Int?
+    let feedbackToAgentIntentContextFixtureContextsWithoutFeedback: Int?
+    let feedbackToAgentIntentContextFixtureProposals: Int?
+    let feedbackToAgentIntentContextFixtureAcceptedIntents: Int?
+    let feedbackToAgentIntentContextFixtureRejectedProposals: Int?
+    let feedbackToAgentIntentContextFixtureNoIntent: Int?
+    let feedbackToAgentIntentContextFixtureInvalidOneEdgeProposals: Int?
+    let feedbackToAgentIntentContextFixtureBehaviorChangedByFeedback: Bool?
+    let feedbackToAgentIntentContextFixtureFeedbackUsedForDecision: Bool?
+    let feedbackToAgentIntentContextFixtureMovementApplied: Bool?
+    let feedbackToAgentIntentContextFixtureCollisionRead: Bool?
+    let feedbackToAgentIntentContextFixtureIntentProduced: Bool?
+    let feedbackToAgentIntentContextFixtureMemoryUpdated: Bool?
+    let feedbackToAgentIntentContextFixtureGoalChanged: Bool?
+    let feedbackToAgentIntentContextFixturePathfindingPerformed: Bool?
+    let feedbackToAgentIntentContextFixtureReplanningPerformed: Bool?
+    let feedbackToAgentIntentContextFixtureAvoidancePerformed: Bool?
+    let feedbackToAgentIntentContextFixtureReservationRuntimeUsed: Bool?
+    let feedbackToAgentIntentContextFixtureWorldUsed: Bool?
+    let feedbackToAgentIntentContextFixtureMutationPerformed: Bool?
+    let feedbackToAgentIntentContextFixtureSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -1544,6 +1572,34 @@ struct RunMetrics: Encodable {
         agentFeedbackConsumptionHardeningWorldUsed: Bool? = nil,
         agentFeedbackConsumptionHardeningMutationPerformed: Bool? = nil,
         agentFeedbackConsumptionHardeningSuccess: Bool? = nil,
+        feedbackToAgentIntentContextFixtureFeedbackObserved: Int? = nil,
+        feedbackToAgentIntentContextFixtureFeedbackAccepted: Int? = nil,
+        feedbackToAgentIntentContextFixtureFeedbackIgnored: Int? = nil,
+        feedbackToAgentIntentContextFixtureInvalidFeedback: Int? = nil,
+        feedbackToAgentIntentContextFixtureContextsProduced: Int? = nil,
+        feedbackToAgentIntentContextFixtureDuplicateFeedback: Int? = nil,
+        feedbackToAgentIntentContextFixtureIntentContexts: Int? = nil,
+        feedbackToAgentIntentContextFixtureContextsWithFeedback: Int? = nil,
+        feedbackToAgentIntentContextFixtureContextsWithoutFeedback: Int? = nil,
+        feedbackToAgentIntentContextFixtureProposals: Int? = nil,
+        feedbackToAgentIntentContextFixtureAcceptedIntents: Int? = nil,
+        feedbackToAgentIntentContextFixtureRejectedProposals: Int? = nil,
+        feedbackToAgentIntentContextFixtureNoIntent: Int? = nil,
+        feedbackToAgentIntentContextFixtureInvalidOneEdgeProposals: Int? = nil,
+        feedbackToAgentIntentContextFixtureBehaviorChangedByFeedback: Bool? = nil,
+        feedbackToAgentIntentContextFixtureFeedbackUsedForDecision: Bool? = nil,
+        feedbackToAgentIntentContextFixtureMovementApplied: Bool? = nil,
+        feedbackToAgentIntentContextFixtureCollisionRead: Bool? = nil,
+        feedbackToAgentIntentContextFixtureIntentProduced: Bool? = nil,
+        feedbackToAgentIntentContextFixtureMemoryUpdated: Bool? = nil,
+        feedbackToAgentIntentContextFixtureGoalChanged: Bool? = nil,
+        feedbackToAgentIntentContextFixturePathfindingPerformed: Bool? = nil,
+        feedbackToAgentIntentContextFixtureReplanningPerformed: Bool? = nil,
+        feedbackToAgentIntentContextFixtureAvoidancePerformed: Bool? = nil,
+        feedbackToAgentIntentContextFixtureReservationRuntimeUsed: Bool? = nil,
+        feedbackToAgentIntentContextFixtureWorldUsed: Bool? = nil,
+        feedbackToAgentIntentContextFixtureMutationPerformed: Bool? = nil,
+        feedbackToAgentIntentContextFixtureSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -2315,6 +2371,34 @@ struct RunMetrics: Encodable {
         self.agentFeedbackConsumptionHardeningWorldUsed = agentFeedbackConsumptionHardeningWorldUsed
         self.agentFeedbackConsumptionHardeningMutationPerformed = agentFeedbackConsumptionHardeningMutationPerformed
         self.agentFeedbackConsumptionHardeningSuccess = agentFeedbackConsumptionHardeningSuccess
+        self.feedbackToAgentIntentContextFixtureFeedbackObserved = feedbackToAgentIntentContextFixtureFeedbackObserved
+        self.feedbackToAgentIntentContextFixtureFeedbackAccepted = feedbackToAgentIntentContextFixtureFeedbackAccepted
+        self.feedbackToAgentIntentContextFixtureFeedbackIgnored = feedbackToAgentIntentContextFixtureFeedbackIgnored
+        self.feedbackToAgentIntentContextFixtureInvalidFeedback = feedbackToAgentIntentContextFixtureInvalidFeedback
+        self.feedbackToAgentIntentContextFixtureContextsProduced = feedbackToAgentIntentContextFixtureContextsProduced
+        self.feedbackToAgentIntentContextFixtureDuplicateFeedback = feedbackToAgentIntentContextFixtureDuplicateFeedback
+        self.feedbackToAgentIntentContextFixtureIntentContexts = feedbackToAgentIntentContextFixtureIntentContexts
+        self.feedbackToAgentIntentContextFixtureContextsWithFeedback = feedbackToAgentIntentContextFixtureContextsWithFeedback
+        self.feedbackToAgentIntentContextFixtureContextsWithoutFeedback = feedbackToAgentIntentContextFixtureContextsWithoutFeedback
+        self.feedbackToAgentIntentContextFixtureProposals = feedbackToAgentIntentContextFixtureProposals
+        self.feedbackToAgentIntentContextFixtureAcceptedIntents = feedbackToAgentIntentContextFixtureAcceptedIntents
+        self.feedbackToAgentIntentContextFixtureRejectedProposals = feedbackToAgentIntentContextFixtureRejectedProposals
+        self.feedbackToAgentIntentContextFixtureNoIntent = feedbackToAgentIntentContextFixtureNoIntent
+        self.feedbackToAgentIntentContextFixtureInvalidOneEdgeProposals = feedbackToAgentIntentContextFixtureInvalidOneEdgeProposals
+        self.feedbackToAgentIntentContextFixtureBehaviorChangedByFeedback = feedbackToAgentIntentContextFixtureBehaviorChangedByFeedback
+        self.feedbackToAgentIntentContextFixtureFeedbackUsedForDecision = feedbackToAgentIntentContextFixtureFeedbackUsedForDecision
+        self.feedbackToAgentIntentContextFixtureMovementApplied = feedbackToAgentIntentContextFixtureMovementApplied
+        self.feedbackToAgentIntentContextFixtureCollisionRead = feedbackToAgentIntentContextFixtureCollisionRead
+        self.feedbackToAgentIntentContextFixtureIntentProduced = feedbackToAgentIntentContextFixtureIntentProduced
+        self.feedbackToAgentIntentContextFixtureMemoryUpdated = feedbackToAgentIntentContextFixtureMemoryUpdated
+        self.feedbackToAgentIntentContextFixtureGoalChanged = feedbackToAgentIntentContextFixtureGoalChanged
+        self.feedbackToAgentIntentContextFixturePathfindingPerformed = feedbackToAgentIntentContextFixturePathfindingPerformed
+        self.feedbackToAgentIntentContextFixtureReplanningPerformed = feedbackToAgentIntentContextFixtureReplanningPerformed
+        self.feedbackToAgentIntentContextFixtureAvoidancePerformed = feedbackToAgentIntentContextFixtureAvoidancePerformed
+        self.feedbackToAgentIntentContextFixtureReservationRuntimeUsed = feedbackToAgentIntentContextFixtureReservationRuntimeUsed
+        self.feedbackToAgentIntentContextFixtureWorldUsed = feedbackToAgentIntentContextFixtureWorldUsed
+        self.feedbackToAgentIntentContextFixtureMutationPerformed = feedbackToAgentIntentContextFixtureMutationPerformed
+        self.feedbackToAgentIntentContextFixtureSuccess = feedbackToAgentIntentContextFixtureSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

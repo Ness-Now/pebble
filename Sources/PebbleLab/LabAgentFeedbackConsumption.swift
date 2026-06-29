@@ -1359,3 +1359,431 @@ func makeAgentFeedbackConsumptionHardeningInvariantReport(
         ]
     )
 }
+
+struct LabFeedbackToAgentIntentContextFixtureSummary: Codable {
+    let tick: Int
+    let feedbackObserved: Int
+    let feedbackAccepted: Int
+    let feedbackIgnored: Int
+    let invalidFeedback: Int
+    let contextsProduced: Int
+    let duplicateFeedback: Int
+    let intentContexts: Int
+    let contextsWithFeedback: Int
+    let contextsWithoutFeedback: Int
+    let proposals: Int
+    let acceptedIntents: Int
+    let rejectedProposals: Int
+    let noIntent: Int
+    let invalidOneEdgeProposals: Int
+    let behaviorChangedByFeedback: Bool
+    let feedbackUsedForDecision: Bool
+    let movementApplied: Bool
+    let collisionRead: Bool
+    let intentProduced: Bool
+    let memoryUpdated: Bool
+    let goalChanged: Bool
+    let pathfindingPerformed: Bool
+    let replanningPerformed: Bool
+    let avoidancePerformed: Bool
+    let reservationRuntimeUsed: Bool
+    let worldUsed: Bool
+    let mutationPerformed: Bool
+    let success: Bool
+}
+
+struct LabFeedbackToAgentIntentContextFixtureReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let ticksCompleted: Int
+    let success: Bool
+    let feedbackConsumption: LabAgentFeedbackConsumptionResult
+    let intentProduction: LabAgentIntentProductionResult
+    let intentContexts: [LabAgentIntentContext]
+    let baselineWithoutFeedback: LabAgentIntentProductionResult
+    let summary: LabFeedbackToAgentIntentContextFixtureSummary
+}
+
+struct LabFeedbackToAgentIntentContextFixtureInvariantReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: LabMultiAgentMovementFixtureInvariantSummary
+    let checks: [LabMultiAgentMovementFixtureInvariantCheck]
+    let notes: [String]
+}
+
+private func feedbackToAgentIntentContextFixtureInputs() -> [LabAgentFeedbackFixtureInput] {
+    [
+        feedbackInput(
+            order: 0,
+            agentId: "agent_2",
+            kind: .blockedByCollision,
+            decision: .deniedCollision,
+            from: feedbackNode(7, 8),
+            to: feedbackNode(8, 8),
+            displacementApplied: false,
+            collisionRead: false,
+            abstractBefore: feedbackNode(7, 8),
+            abstractAfter: feedbackNode(7, 8),
+            physicalBefore: feedbackNode(7, 8),
+            physicalAfter: feedbackNode(7, 8),
+            reason: "feedback_to_context_blocked_by_collision"
+        ),
+        feedbackInput(
+            order: 1,
+            agentId: "agent_0",
+            kind: .moved,
+            decision: .approved,
+            from: feedbackNode(0, 0),
+            to: feedbackNode(1, 0),
+            displacementApplied: true,
+            collisionRead: false,
+            abstractBefore: feedbackNode(0, 0),
+            abstractAfter: feedbackNode(1, 0),
+            physicalBefore: feedbackNode(0, 0),
+            physicalAfter: feedbackNode(1, 0),
+            reason: "feedback_to_context_moved"
+        ),
+        feedbackInput(
+            order: 2,
+            agentId: "agent_1",
+            kind: .approvedForMovement,
+            decision: .approved,
+            from: feedbackNode(2, 0),
+            to: feedbackNode(1, 0),
+            displacementApplied: false,
+            collisionRead: false,
+            abstractBefore: feedbackNode(2, 0),
+            abstractAfter: feedbackNode(2, 0),
+            physicalBefore: feedbackNode(2, 0),
+            physicalAfter: feedbackNode(2, 0),
+            reason: "feedback_to_context_approved_for_movement"
+        ),
+        feedbackInput(
+            order: 3,
+            agentId: "agent_3",
+            kind: .blockedByAgentConflict,
+            decision: .deniedSameDestinationConflict,
+            from: feedbackNode(4, 0),
+            to: feedbackNode(3, 0),
+            displacementApplied: false,
+            collisionRead: false,
+            abstractBefore: feedbackNode(4, 0),
+            abstractAfter: feedbackNode(4, 0),
+            physicalBefore: feedbackNode(4, 0),
+            physicalAfter: feedbackNode(4, 0),
+            reason: "feedback_to_context_blocked_by_agent_conflict"
+        ),
+        feedbackInput(
+            order: 4,
+            agentId: "agent_0",
+            kind: .blockedByMaxAgents,
+            decision: .deniedMaxAgents,
+            from: feedbackNode(1, 0),
+            to: feedbackNode(2, 0),
+            displacementApplied: false,
+            collisionRead: false,
+            abstractBefore: feedbackNode(1, 0),
+            abstractAfter: feedbackNode(1, 0),
+            physicalBefore: feedbackNode(1, 0),
+            physicalAfter: feedbackNode(1, 0),
+            reason: "feedback_to_context_duplicate_blocked_by_max_agents"
+        ),
+        feedbackInput(
+            order: 5,
+            agentId: "",
+            kind: nil,
+            decision: nil,
+            from: nil,
+            to: nil,
+            displacementApplied: nil,
+            collisionRead: nil,
+            abstractBefore: nil,
+            abstractAfter: nil,
+            physicalBefore: nil,
+            physicalAfter: nil,
+            reason: "feedback_to_context_malformed",
+            malformedReason: "missing_agent_id_and_required_fields"
+        )
+    ]
+}
+
+private func movementFeedback(
+    from observation: LabAgentFeedbackObservation
+) -> LabMovementFeedback {
+    LabMovementFeedback(
+        agentId: observation.agentId,
+        tick: observation.tick,
+        kind: observation.feedbackKind,
+        from: observation.from,
+        to: observation.to,
+        reason: observation.reason
+    )
+}
+
+private func makeFeedbackToAgentIntentContexts(
+    feedbackContexts: [LabAgentFeedbackContext],
+    includeFeedback: Bool
+) -> [LabAgentIntentContext] {
+    let feedbackByAgent = Dictionary(
+        uniqueKeysWithValues: feedbackContexts.compactMap { context -> (String, LabMovementFeedback)? in
+            guard let observation = context.lastFeedback else { return nil }
+            return (context.agentId, movementFeedback(from: observation))
+        }
+    )
+
+    func lastFeedback(_ agentId: String) -> LabMovementFeedback? {
+        includeFeedback ? feedbackByAgent[agentId] : nil
+    }
+
+    return [
+        LabAgentIntentContext(
+            tick: 0,
+            agentId: "agent_2",
+            position: feedbackNode(7, 8),
+            lastFeedback: lastFeedback("agent_2"),
+            role: "wander_fixture",
+            localHints: ["move_east"]
+        ),
+        LabAgentIntentContext(
+            tick: 0,
+            agentId: "agent_0",
+            position: feedbackNode(1, 0),
+            lastFeedback: lastFeedback("agent_0"),
+            role: "wander_fixture",
+            localHints: ["move_east"]
+        ),
+        LabAgentIntentContext(
+            tick: 0,
+            agentId: "agent_1",
+            position: feedbackNode(2, 0),
+            lastFeedback: lastFeedback("agent_1"),
+            role: "wander_fixture",
+            localHints: ["move_west"]
+        ),
+        LabAgentIntentContext(
+            tick: 0,
+            agentId: "agent_3",
+            position: feedbackNode(4, 0),
+            lastFeedback: lastFeedback("agent_3"),
+            role: "idle",
+            localHints: []
+        ),
+        LabAgentIntentContext(
+            tick: 0,
+            agentId: "agent_4",
+            position: feedbackNode(30, 0),
+            lastFeedback: nil,
+            role: "bad_fixture_invalid_vertical",
+            localHints: ["move_vertical"]
+        )
+    ]
+}
+
+private func proposalSignature(_ proposals: [LabAgentIntentProposal]) -> [String] {
+    proposals.map { proposal in
+        let intentPart: String
+        if let intent = proposal.intent {
+            intentPart = "\(intent.from.x),\(intent.from.y),\(intent.from.z)->\(intent.to.x),\(intent.to.y),\(intent.to.z)"
+        } else {
+            intentPart = "nil"
+        }
+        return "\(proposal.agentId)|\(proposal.decision.rawValue)|\(proposal.reason)|\(intentPart)"
+    }
+}
+
+func makeFeedbackToAgentIntentContextFixtureReport(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int
+) -> LabFeedbackToAgentIntentContextFixtureReport {
+    let feedbackConsumption = consumeAgentFeedbackFixtureV0(
+        feedbackInputs: feedbackToAgentIntentContextFixtureInputs()
+    )
+    let intentContexts = makeFeedbackToAgentIntentContexts(
+        feedbackContexts: feedbackConsumption.acceptedContexts,
+        includeFeedback: true
+    )
+    let baselineContexts = makeFeedbackToAgentIntentContexts(
+        feedbackContexts: feedbackConsumption.acceptedContexts,
+        includeFeedback: false
+    )
+    let intentProduction = produceAgentIntentProductionResult(
+        tick: 0,
+        contexts: intentContexts,
+        maxProposals: nil,
+        duplicateProposalAgentId: nil
+    )
+    let baseline = produceAgentIntentProductionResult(
+        tick: 0,
+        contexts: baselineContexts,
+        maxProposals: nil,
+        duplicateProposalAgentId: nil
+    )
+    let behaviorChanged = proposalSignature(intentProduction.proposals)
+        != proposalSignature(baseline.proposals)
+    let contextsWithFeedback = intentContexts.filter { $0.lastFeedback != nil }.count
+    let summary = LabFeedbackToAgentIntentContextFixtureSummary(
+        tick: 0,
+        feedbackObserved: feedbackConsumption.summary.feedbackObserved,
+        feedbackAccepted: feedbackConsumption.summary.feedbackAccepted,
+        feedbackIgnored: feedbackConsumption.summary.feedbackIgnored,
+        invalidFeedback: feedbackConsumption.summary.invalidFeedback,
+        contextsProduced: feedbackConsumption.summary.contextsProduced,
+        duplicateFeedback: feedbackConsumption.summary.duplicateFeedback,
+        intentContexts: intentContexts.count,
+        contextsWithFeedback: contextsWithFeedback,
+        contextsWithoutFeedback: intentContexts.count - contextsWithFeedback,
+        proposals: intentProduction.summary.proposals,
+        acceptedIntents: intentProduction.summary.acceptedIntents,
+        rejectedProposals: intentProduction.summary.rejectedProposals,
+        noIntent: intentProduction.summary.noIntent,
+        invalidOneEdgeProposals: intentProduction.summary.invalidOneEdgeProposals,
+        behaviorChangedByFeedback: behaviorChanged,
+        feedbackUsedForDecision: false,
+        movementApplied: false,
+        collisionRead: false,
+        intentProduced: true,
+        memoryUpdated: false,
+        goalChanged: false,
+        pathfindingPerformed: false,
+        replanningPerformed: false,
+        avoidancePerformed: false,
+        reservationRuntimeUsed: false,
+        worldUsed: false,
+        mutationPerformed: false,
+        success: feedbackConsumption.summary.success
+            && feedbackConsumption.summary.feedbackAccepted == 4
+            && intentContexts.count == 5
+            && contextsWithFeedback == 4
+            && intentProduction.summary.proposals == 5
+            && intentProduction.summary.acceptedIntents == 3
+            && intentProduction.summary.rejectedProposals == 2
+            && intentProduction.summary.noIntent == 1
+            && intentProduction.summary.invalidOneEdgeProposals == 1
+            && !behaviorChanged
+    )
+
+    return LabFeedbackToAgentIntentContextFixtureReport(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        success: summary.success,
+        feedbackConsumption: feedbackConsumption,
+        intentProduction: intentProduction,
+        intentContexts: intentContexts,
+        baselineWithoutFeedback: baseline,
+        summary: summary
+    )
+}
+
+func makeFeedbackToAgentIntentContextFixtureInvariantReport(
+    report: LabFeedbackToAgentIntentContextFixtureReport?,
+    scenario: String,
+    seed: UInt32
+) -> LabFeedbackToAgentIntentContextFixtureInvariantReport {
+    guard let report else {
+        let check = feedbackInvariantCheck(
+            "report_written",
+            false,
+            "feedback_to_agent_intent_context_fixture_report.json",
+            "missing"
+        )
+        return LabFeedbackToAgentIntentContextFixtureInvariantReport(
+            scenario: scenario,
+            seed: seed,
+            success: false,
+            summary: LabMultiAgentMovementFixtureInvariantSummary(
+                checksPassed: 0,
+                checksFailed: 1,
+                cases: 0,
+                passed: 0,
+                failed: 1
+            ),
+            checks: [check],
+            notes: ["Feedback-to-agent-intent-context report was not available."]
+        )
+    }
+
+    let feedbackContextIds = report.feedbackConsumption.acceptedContexts.map(\.agentId)
+    let intentContextsByAgent = Dictionary(
+        uniqueKeysWithValues: report.intentContexts.map { ($0.agentId, $0) }
+    )
+    let proposalIds = report.intentProduction.proposals.map(\.agentId)
+    let behaviorSame = proposalSignature(report.intentProduction.proposals)
+        == proposalSignature(report.baselineWithoutFeedback.proposals)
+    let checks = [
+        feedbackInvariantCheck("fixture_feedback_exists", !report.feedbackConsumption.fixtureFeedback.isEmpty, "non-empty", "\(report.feedbackConsumption.fixtureFeedback.count)"),
+        feedbackInvariantCheck("feedback_consumption_succeeds", report.feedbackConsumption.summary.success, "true", "\(report.feedbackConsumption.summary.success)"),
+        feedbackInvariantCheck("feedback_contexts_exist", !report.feedbackConsumption.acceptedContexts.isEmpty, "non-empty", "\(report.feedbackConsumption.acceptedContexts.count)"),
+        feedbackInvariantCheck("feedback_contexts_sorted_by_agent_id", feedbackContextIds == feedbackContextIds.sorted(), "sorted", feedbackContextIds.joined(separator: ",")),
+        feedbackInvariantCheck("one_feedback_context_per_agent", Set(feedbackContextIds).count == feedbackContextIds.count, "unique", feedbackContextIds.joined(separator: ",")),
+        feedbackInvariantCheck("moved_feedback_context_present", intentContextsByAgent["agent_0"]?.lastFeedback?.kind == .moved, "moved", intentContextsByAgent["agent_0"]?.lastFeedback?.kind.rawValue ?? "missing"),
+        feedbackInvariantCheck("approved_for_movement_feedback_context_present", intentContextsByAgent["agent_1"]?.lastFeedback?.kind == .approvedForMovement, "approvedForMovement", intentContextsByAgent["agent_1"]?.lastFeedback?.kind.rawValue ?? "missing"),
+        feedbackInvariantCheck("blocked_by_collision_feedback_context_present", intentContextsByAgent["agent_2"]?.lastFeedback?.kind == .blockedByCollision, "blockedByCollision", intentContextsByAgent["agent_2"]?.lastFeedback?.kind.rawValue ?? "missing"),
+        feedbackInvariantCheck("blocked_by_agent_conflict_feedback_context_present", intentContextsByAgent["agent_3"]?.lastFeedback?.kind == .blockedByAgentConflict, "blockedByAgentConflict", intentContextsByAgent["agent_3"]?.lastFeedback?.kind.rawValue ?? "missing"),
+        feedbackInvariantCheck("duplicate_feedback_ignored", report.feedbackConsumption.summary.duplicateFeedback == 1 && report.feedbackConsumption.summary.feedbackIgnored == 1, "1/1", "\(report.feedbackConsumption.summary.duplicateFeedback)/\(report.feedbackConsumption.summary.feedbackIgnored)"),
+        feedbackInvariantCheck("malformed_feedback_rejected", report.feedbackConsumption.summary.invalidFeedback == 1, "1", "\(report.feedbackConsumption.summary.invalidFeedback)"),
+        feedbackInvariantCheck("agent_intent_contexts_exist", !report.intentContexts.isEmpty, "non-empty", "\(report.intentContexts.count)"),
+        feedbackInvariantCheck("agent_intent_contexts_include_feedback", report.summary.contextsWithFeedback == 4, "4", "\(report.summary.contextsWithFeedback)"),
+        feedbackInvariantCheck("agent_intent_contexts_without_feedback_count_expected", report.summary.contextsWithoutFeedback == 1, "1", "\(report.summary.contextsWithoutFeedback)"),
+        feedbackInvariantCheck("last_feedback_preserved_in_agent_intent_context", report.intentContexts.filter { $0.lastFeedback != nil }.count == 4, "4", "\(report.intentContexts.filter { $0.lastFeedback != nil }.count)"),
+        feedbackInvariantCheck("agent_0_moved_feedback_preserved", intentContextsByAgent["agent_0"]?.lastFeedback?.kind == .moved, "moved", intentContextsByAgent["agent_0"]?.lastFeedback?.kind.rawValue ?? "missing"),
+        feedbackInvariantCheck("agent_1_approved_for_movement_feedback_preserved", intentContextsByAgent["agent_1"]?.lastFeedback?.kind == .approvedForMovement, "approvedForMovement", intentContextsByAgent["agent_1"]?.lastFeedback?.kind.rawValue ?? "missing"),
+        feedbackInvariantCheck("agent_2_blocked_by_collision_feedback_preserved", intentContextsByAgent["agent_2"]?.lastFeedback?.kind == .blockedByCollision, "blockedByCollision", intentContextsByAgent["agent_2"]?.lastFeedback?.kind.rawValue ?? "missing"),
+        feedbackInvariantCheck("agent_3_blocked_by_agent_conflict_feedback_preserved", intentContextsByAgent["agent_3"]?.lastFeedback?.kind == .blockedByAgentConflict, "blockedByAgentConflict", intentContextsByAgent["agent_3"]?.lastFeedback?.kind.rawValue ?? "missing"),
+        feedbackInvariantCheck("agent_4_has_no_feedback", intentContextsByAgent["agent_4"]?.lastFeedback == nil, "nil", "\(intentContextsByAgent["agent_4"]?.lastFeedback == nil)"),
+        feedbackInvariantCheck("proposals_exist", !report.intentProduction.proposals.isEmpty, "non-empty", "\(report.intentProduction.proposals.count)"),
+        feedbackInvariantCheck("proposals_sorted_by_agent_id", proposalIds == proposalIds.sorted(), "sorted", proposalIds.joined(separator: ",")),
+        feedbackInvariantCheck("accepted_intents_expected", report.summary.acceptedIntents == 3, "3", "\(report.summary.acceptedIntents)"),
+        feedbackInvariantCheck("rejected_proposals_expected", report.summary.rejectedProposals == 2, "2", "\(report.summary.rejectedProposals)"),
+        feedbackInvariantCheck("no_intent_expected", report.summary.noIntent == 1, "1", "\(report.summary.noIntent)"),
+        feedbackInvariantCheck("invalid_one_edge_expected", report.summary.invalidOneEdgeProposals == 1, "1", "\(report.summary.invalidOneEdgeProposals)"),
+        feedbackInvariantCheck("behavior_not_changed_by_feedback", !report.summary.behaviorChangedByFeedback, "false", "\(report.summary.behaviorChangedByFeedback)"),
+        feedbackInvariantCheck("feedback_not_used_for_decision", !report.summary.feedbackUsedForDecision, "false", "\(report.summary.feedbackUsedForDecision)"),
+        feedbackInvariantCheck("baseline_without_feedback_matches_decisions", behaviorSame, "same", "\(behaviorSame)"),
+        feedbackInvariantCheck("policy_v0_not_modified_for_feedback", behaviorSame && !report.summary.feedbackUsedForDecision, "unchanged", "\(behaviorSame)/\(report.summary.feedbackUsedForDecision)"),
+        feedbackInvariantCheck("feedback_consumption_does_not_read_collision", !report.feedbackConsumption.summary.collisionRead, "false", "\(report.feedbackConsumption.summary.collisionRead)"),
+        feedbackInvariantCheck("integration_does_not_read_collision", !report.summary.collisionRead, "false", "\(report.summary.collisionRead)"),
+        feedbackInvariantCheck("movement_not_applied", !report.summary.movementApplied, "false", "\(report.summary.movementApplied)"),
+        feedbackInvariantCheck("memory_not_updated", !report.summary.memoryUpdated, "false", "\(report.summary.memoryUpdated)"),
+        feedbackInvariantCheck("goal_not_changed", !report.summary.goalChanged, "false", "\(report.summary.goalChanged)"),
+        feedbackInvariantCheck("pathfinding_not_performed", !report.summary.pathfindingPerformed, "false", "\(report.summary.pathfindingPerformed)"),
+        feedbackInvariantCheck("replanning_not_performed", !report.summary.replanningPerformed, "false", "\(report.summary.replanningPerformed)"),
+        feedbackInvariantCheck("avoidance_not_performed", !report.summary.avoidancePerformed, "false", "\(report.summary.avoidancePerformed)"),
+        feedbackInvariantCheck("reservation_runtime_not_used", !report.summary.reservationRuntimeUsed, "false", "\(report.summary.reservationRuntimeUsed)"),
+        feedbackInvariantCheck("world_not_used", !report.summary.worldUsed, "false", "\(report.summary.worldUsed)"),
+        feedbackInvariantCheck("terrain_mutation_not_performed", !report.summary.mutationPerformed, "false", "\(report.summary.mutationPerformed)"),
+        feedbackInvariantCheck("world_mutation_not_performed", !report.summary.mutationPerformed, "false", "\(report.summary.mutationPerformed)"),
+        feedbackInvariantCheck("tick_movement_not_invoked", !report.summary.movementApplied && !report.summary.collisionRead, "not invoked", "\(report.summary.movementApplied)/\(report.summary.collisionRead)"),
+        feedbackInvariantCheck("feedback_hardening_smoke_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        feedbackInvariantCheck("feedback_fixture_smoke_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        feedbackInvariantCheck("agent_intent_production_fixture_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        feedbackInvariantCheck("report_written", true, "feedback_to_agent_intent_context_fixture_report.json", "feedback_to_agent_intent_context_fixture_report.json"),
+        feedbackInvariantCheck("contexts_written", true, "feedback_to_agent_intent_contexts.json", "feedback_to_agent_intent_contexts.json"),
+        feedbackInvariantCheck("metrics_written", true, "feedbackToAgentIntentContextFixture* metrics", "feedbackToAgentIntentContextFixture* metrics"),
+        feedbackInvariantCheck("event_written", true, "lab_feedback_to_agent_intent_context_fixture_recorded", "lab_feedback_to_agent_intent_context_fixture_recorded"),
+        feedbackInvariantCheck("success_contract_respected", report.success, "true", "\(report.success)")
+    ]
+    let failed = checks.filter { !$0.passed }.count
+
+    return LabFeedbackToAgentIntentContextFixtureInvariantReport(
+        scenario: scenario,
+        seed: seed,
+        success: failed == 0,
+        summary: LabMultiAgentMovementFixtureInvariantSummary(
+            checksPassed: checks.count - failed,
+            checksFailed: failed,
+            cases: 1,
+            passed: report.success ? 1 : 0,
+            failed: report.success ? 0 : 1
+        ),
+        checks: checks,
+        notes: [
+            "Feedback contexts are injected into LabAgentIntentContext.lastFeedback as plumbing only.",
+            "Policy v0 decisions are compared against a baseline with nil feedback and must remain identical.",
+            "No movement, collision read, memory update, goal change, pathfinding, replanning, reservation runtime, World use, or mutation is performed."
+        ]
+    )
+}

@@ -6060,3 +6060,125 @@ behavior, communicate, create a `World`, or mutate terrain/world.
 ### Next Step
 
 Phase 4.22D — Feedback To Agent Intent Context Fixture Smoke.
+
+## 2026-06-28 — Phase 4.22D feedback to agent intent context fixture
+
+### Objective
+
+Implement `feedback_to_agent_intent_context_fixture_smoke`, a plumbing-only
+fixture that carries accepted feedback contexts into
+`LabAgentIntentContext.lastFeedback` without changing the agent intent policy
+decision.
+
+### Starting Point
+
+Phase 4.22B added the fixture-only feedback consumption smoke. Phase 4.22C
+hardened duplicate, malformed, max-feedback, tick-mismatch, ordering, and
+repeatability behavior. Phase 4.21B-F validated agent intent production through
+approved application, but feedback was still not visible to the intent context.
+
+### Files Created or Modified
+
+- Updated `Sources/PebbleLab/LabAgentFeedbackConsumption.swift`.
+- Updated `Sources/PebbleLab/LabAgentIntentProduction.swift`.
+- Updated `Sources/PebbleLab/LabOptions.swift`.
+- Updated `Sources/PebbleLab/LabScenarios.swift`.
+- Updated `Sources/PebbleLab/LabOutput.swift`.
+- Updated `Sources/PebbleLab/LabEvents.swift`.
+- Updated `Sources/PebbleLab/main.swift`.
+- Updated `docs/pebblelab/CHANGELOG.md`.
+- Updated `docs/pebblelab/DEV_JOURNAL.md`.
+- Updated `docs/pebblelab/ROADMAP.md`.
+- Updated `docs/pebblelab/PHASE_4_FEEDBACK_CONSUMPTION_PLAN.md`.
+
+### Why Plumbing-Only
+
+The phase proves that feedback can become bounded input data for a future
+policy without making it behavioral yet. `lastFeedback` is preserved in the
+agent intent context, but policy v0 is compared against a baseline with nil
+feedback and must produce identical decisions.
+
+### Feedback Fixture Inputs
+
+The fixture uses six intentionally unordered feedback inputs: `agent_0` moved,
+`agent_1` approved for movement, `agent_2` blocked by collision, `agent_3`
+blocked by agent conflict, one duplicate `agent_0` blocked by max agents, and
+one malformed feedback input.
+
+### Feedback Consumption Summary
+
+Consumption observes six feedback inputs, accepts four, ignores one duplicate,
+rejects one malformed input, produces four feedback contexts, and preserves
+stable `agentId` ordering. The consumption layer still reports
+`collisionRead = false`, `movementApplied = false`, and `intentProduced = false`.
+
+### Intent Context Injection
+
+Five `LabAgentIntentContext` records are built. Four contain `lastFeedback`
+for `agent_0` through `agent_3`, while `agent_4` has no feedback. The fixture
+then runs the existing policy v0 only to verify plumbing behavior.
+
+### Baseline Without Feedback
+
+The same context shape is evaluated with `lastFeedback = nil`. Proposal
+signatures must match exactly, proving `behaviorChangedByFeedback = false` and
+`feedbackUsedForDecision = false`.
+
+### Policy Behavior Unchanged
+
+The policy still accepts three one-edge same-y intents, rejects two proposals
+(`idle` and invalid vertical), and does not adapt to `moved`,
+`approvedForMovement`, `blockedByCollision`, or `blockedByAgentConflict`.
+
+### Outputs, Invariants, Metrics, and Event
+
+The scenario writes:
+
+- `feedback_to_agent_intent_context_fixture_report.json`;
+- `feedback_to_agent_intent_context_fixture_invariant_report.json`;
+- `feedback_to_agent_intent_contexts.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Metrics use the `feedbackToAgentIntentContextFixture*` prefix, and the
+aggregate event is `lab_feedback_to_agent_intent_context_fixture_recorded`.
+
+### Boundaries Confirmed
+
+The integration does not call tick movement, read collision, apply movement,
+update memory, change goals, pathfind, replan, avoid, use reservation runtime,
+create a `World`, or mutate terrain/world.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario feedback_to_agent_intent_context_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_to_agent_intent_context_fixture`
+- `swift run -c release PebbleLab -- --scenario agent_feedback_consumption_hardening_smoke --seed 42 --ticks 0 --out runs/check_agent_feedback_hardening_after_feedback_to_context`
+- `swift run -c release PebbleLab -- --scenario agent_feedback_consumption_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_feedback_fixture_after_feedback_to_context`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_fixture_after_feedback_to_context`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_hardening_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_hardening_after_feedback_to_context`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_feedback_to_context`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- `feedbackObserved = 6`.
+- `feedbackAccepted = 4`.
+- `feedbackIgnored = 1`.
+- `invalidFeedback = 1`.
+- `contextsProduced = 4`.
+- `intentContexts = 5`.
+- `contextsWithFeedback = 4`.
+- `contextsWithoutFeedback = 1`.
+- `proposals = 5`.
+- `acceptedIntents = 3`.
+- `rejectedProposals = 2`.
+- `behaviorChangedByFeedback = false`.
+- `feedbackUsedForDecision = false`.
+
+### Next Step
+
+Phase 4.22E — Feedback To Agent Intent Context Hardening.

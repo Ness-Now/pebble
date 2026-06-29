@@ -225,6 +225,11 @@ struct RunEvent: Encodable {
     let blockedByAgentConflict: Int?
     let blockedByMaxAgents: Int?
     let duplicateFeedback: Int?
+    let intentContexts: Int?
+    let contextsWithFeedback: Int?
+    let contextsWithoutFeedback: Int?
+    let behaviorChangedByFeedback: Bool?
+    let feedbackUsedForDecision: Bool?
     let movedFeedback: Int?
     let approvedForMovementFeedback: Int?
     let blockedByCollisionFeedback: Int?
@@ -524,6 +529,11 @@ struct RunEvent: Encodable {
         blockedByAgentConflict: Int? = nil,
         blockedByMaxAgents: Int? = nil,
         duplicateFeedback: Int? = nil,
+        intentContexts: Int? = nil,
+        contextsWithFeedback: Int? = nil,
+        contextsWithoutFeedback: Int? = nil,
+        behaviorChangedByFeedback: Bool? = nil,
+        feedbackUsedForDecision: Bool? = nil,
         movedFeedback: Int? = nil,
         approvedForMovementFeedback: Int? = nil,
         blockedByCollisionFeedback: Int? = nil,
@@ -822,6 +832,11 @@ struct RunEvent: Encodable {
         self.blockedByAgentConflict = blockedByAgentConflict
         self.blockedByMaxAgents = blockedByMaxAgents
         self.duplicateFeedback = duplicateFeedback
+        self.intentContexts = intentContexts
+        self.contextsWithFeedback = contextsWithFeedback
+        self.contextsWithoutFeedback = contextsWithoutFeedback
+        self.behaviorChangedByFeedback = behaviorChangedByFeedback
+        self.feedbackUsedForDecision = feedbackUsedForDecision
         self.movedFeedback = movedFeedback
         self.approvedForMovementFeedback = approvedForMovementFeedback
         self.blockedByCollisionFeedback = blockedByCollisionFeedback

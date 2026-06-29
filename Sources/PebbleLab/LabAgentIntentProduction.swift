@@ -2101,7 +2101,7 @@ private func agentIntentContext(
     )
 }
 
-private func produceAgentIntentProductionResult(
+func produceAgentIntentProductionResult(
     tick: Int,
     contexts: [LabAgentIntentContext],
     maxProposals: Int?,

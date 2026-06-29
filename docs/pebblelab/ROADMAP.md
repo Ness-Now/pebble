@@ -1375,3 +1375,40 @@ out of scope.
 
 Next recommended step: Phase 4.22D - Feedback To Agent Intent Context Fixture
 Smoke.
+
+## Phase 4.22D - Feedback To Agent Intent Context Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: connect accepted `LabAgentFeedbackContext` records to
+`LabAgentIntentContext.lastFeedback` without introducing feedback-aware
+behavior.
+
+The scenario `feedback_to_agent_intent_context_fixture_smoke` consumes six
+fixture feedback inputs, accepts four, ignores one duplicate, rejects one
+malformed input, and then builds five agent intent contexts. Four contexts
+carry preserved `lastFeedback` values:
+
+- `agent_0`: `moved`;
+- `agent_1`: `approvedForMovement`;
+- `agent_2`: `blockedByCollision`;
+- `agent_3`: `blockedByAgentConflict`.
+
+`agent_4` has no feedback. The existing policy v0 is then run against the
+feedback-bearing contexts and a nil-feedback baseline. Both produce the same
+proposal signatures, proving `behaviorChangedByFeedback = false` and
+`feedbackUsedForDecision = false`.
+
+The fixture writes `feedback_to_agent_intent_context_fixture_report.json`,
+`feedback_to_agent_intent_context_fixture_invariant_report.json`,
+`feedback_to_agent_intent_contexts.json`,
+`feedbackToAgentIntentContextFixture*` metrics, and one aggregate
+`lab_feedback_to_agent_intent_context_fixture_recorded` event.
+
+Behavior adaptation, memory update, goal selection, pathfinding, replanning,
+avoidance, reservation runtime, route following, movement application,
+collision reads, physics, gameplay movement, and terrain/world mutation remain
+out of scope.
+
+Next recommended step: Phase 4.22E - Feedback To Agent Intent Context
+Hardening.

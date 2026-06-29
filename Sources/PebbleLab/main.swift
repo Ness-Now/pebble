@@ -36,6 +36,8 @@ let isAgentFeedbackConsumptionFixtureScenario = options.scenario
     == "agent_feedback_consumption_fixture_smoke"
 let isAgentFeedbackConsumptionHardeningScenario = options.scenario
     == "agent_feedback_consumption_hardening_smoke"
+let isFeedbackToAgentIntentContextFixtureScenario = options.scenario
+    == "feedback_to_agent_intent_context_fixture_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -48,7 +50,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isAgentIntentToTickLiveReadonlyScenario
     || isAgentIntentToTickApprovedApplicationScenario
     || isAgentFeedbackConsumptionFixtureScenario
-    || isAgentFeedbackConsumptionHardeningScenario)
+    || isAgentFeedbackConsumptionHardeningScenario
+    || isFeedbackToAgentIntentContextFixtureScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -694,7 +697,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isAgentIntentToTickLiveReadonlyScenario
     || isAgentIntentToTickApprovedApplicationScenario
     || isAgentFeedbackConsumptionFixtureScenario
-    || isAgentFeedbackConsumptionHardeningScenario {
+    || isAgentFeedbackConsumptionHardeningScenario
+    || isFeedbackToAgentIntentContextFixtureScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -1825,6 +1829,68 @@ let agentFeedbackConsumptionHardeningSuccess =
             && agentFeedbackConsumptionHardeningSummary?.worldUsed == false
             && agentFeedbackConsumptionHardeningSummary?.mutationPerformed == false)
         : nil
+let feedbackToAgentIntentContextFixtureReport =
+    isFeedbackToAgentIntentContextFixtureScenario
+        ? makeFeedbackToAgentIntentContextFixtureReport(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticksCompleted: ticksCompleted
+        )
+        : nil
+let feedbackToAgentIntentContextFixtureInvariantReport =
+    isFeedbackToAgentIntentContextFixtureScenario
+        ? makeFeedbackToAgentIntentContextFixtureInvariantReport(
+            report: feedbackToAgentIntentContextFixtureReport,
+            scenario: options.scenario,
+            seed: options.seed
+        )
+        : nil
+let feedbackToAgentIntentContextFixtureSummary = feedbackToAgentIntentContextFixtureReport?.summary
+let feedbackToAgentIntentContextProposalIds =
+    feedbackToAgentIntentContextFixtureReport?.intentProduction.proposals.map(\.agentId) ?? []
+let feedbackToAgentIntentContextContextsByAgent = Dictionary(
+    uniqueKeysWithValues: (feedbackToAgentIntentContextFixtureReport?.intentContexts ?? []).map {
+        ($0.agentId, $0)
+    }
+)
+let feedbackToAgentIntentContextFixtureSuccess =
+    isFeedbackToAgentIntentContextFixtureScenario
+        ? ((feedbackToAgentIntentContextFixtureReport?.success ?? false)
+            && (feedbackToAgentIntentContextFixtureInvariantReport?.success ?? false)
+            && feedbackToAgentIntentContextFixtureSummary?.feedbackObserved == 6
+            && feedbackToAgentIntentContextFixtureSummary?.feedbackAccepted == 4
+            && feedbackToAgentIntentContextFixtureSummary?.feedbackIgnored == 1
+            && feedbackToAgentIntentContextFixtureSummary?.invalidFeedback == 1
+            && feedbackToAgentIntentContextFixtureSummary?.contextsProduced == 4
+            && feedbackToAgentIntentContextFixtureSummary?.duplicateFeedback == 1
+            && feedbackToAgentIntentContextFixtureSummary?.intentContexts == 5
+            && feedbackToAgentIntentContextFixtureSummary?.contextsWithFeedback == 4
+            && feedbackToAgentIntentContextFixtureSummary?.contextsWithoutFeedback == 1
+            && feedbackToAgentIntentContextFixtureSummary?.proposals == 5
+            && feedbackToAgentIntentContextFixtureSummary?.acceptedIntents == 3
+            && feedbackToAgentIntentContextFixtureSummary?.rejectedProposals == 2
+            && feedbackToAgentIntentContextFixtureSummary?.noIntent == 1
+            && feedbackToAgentIntentContextFixtureSummary?.invalidOneEdgeProposals == 1
+            && feedbackToAgentIntentContextProposalIds == feedbackToAgentIntentContextProposalIds.sorted()
+            && feedbackToAgentIntentContextContextsByAgent["agent_0"]?.lastFeedback?.kind == .moved
+            && feedbackToAgentIntentContextContextsByAgent["agent_1"]?.lastFeedback?.kind == .approvedForMovement
+            && feedbackToAgentIntentContextContextsByAgent["agent_2"]?.lastFeedback?.kind == .blockedByCollision
+            && feedbackToAgentIntentContextContextsByAgent["agent_3"]?.lastFeedback?.kind == .blockedByAgentConflict
+            && feedbackToAgentIntentContextContextsByAgent["agent_4"]?.lastFeedback == nil
+            && feedbackToAgentIntentContextFixtureSummary?.behaviorChangedByFeedback == false
+            && feedbackToAgentIntentContextFixtureSummary?.feedbackUsedForDecision == false
+            && feedbackToAgentIntentContextFixtureReport?.feedbackConsumption.summary.collisionRead == false
+            && feedbackToAgentIntentContextFixtureSummary?.collisionRead == false
+            && feedbackToAgentIntentContextFixtureSummary?.movementApplied == false
+            && feedbackToAgentIntentContextFixtureSummary?.memoryUpdated == false
+            && feedbackToAgentIntentContextFixtureSummary?.goalChanged == false
+            && feedbackToAgentIntentContextFixtureSummary?.pathfindingPerformed == false
+            && feedbackToAgentIntentContextFixtureSummary?.replanningPerformed == false
+            && feedbackToAgentIntentContextFixtureSummary?.avoidancePerformed == false
+            && feedbackToAgentIntentContextFixtureSummary?.reservationRuntimeUsed == false
+            && feedbackToAgentIntentContextFixtureSummary?.worldUsed == false
+            && feedbackToAgentIntentContextFixtureSummary?.mutationPerformed == false)
+        : nil
 let routeFollowingLiveSnapshot = isRouteFollowingDeniedLiveScenario
     ? makeRouteFollowingDeniedLiveSnapshot(
         scenario: options.scenario,
@@ -2210,6 +2276,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (agentIntentToTickApprovedApplicationSuccess ?? true)
     && (agentFeedbackConsumptionFixtureSuccess ?? true)
     && (agentFeedbackConsumptionHardeningSuccess ?? true)
+    && (feedbackToAgentIntentContextFixtureSuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
 
@@ -2927,6 +2994,42 @@ if options.outPath != nil {
                 blockedByStaleIntentTotal: summary.blockedByStaleIntentTotal,
                 blockedByInvalidEdgeTotal: summary.blockedByInvalidEdgeTotal,
                 blockedByMaxAgentsTotal: summary.blockedByMaxAgentsTotal,
+                intentProduced: summary.intentProduced,
+                worldUsed: summary.worldUsed,
+                collisionRead: summary.collisionRead,
+                movementApplied: summary.movementApplied,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                avoidancePerformed: summary.avoidancePerformed,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
+                replanningPerformed: summary.replanningPerformed
+            ))
+        }
+        if let feedbackToAgentIntentContextFixtureReport {
+            let summary = feedbackToAgentIntentContextFixtureReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_feedback_to_agent_intent_context_fixture_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: feedbackToAgentIntentContextFixtureSuccess,
+                feedbackObserved: summary.feedbackObserved,
+                feedbackAccepted: summary.feedbackAccepted,
+                feedbackIgnored: summary.feedbackIgnored,
+                invalidFeedback: summary.invalidFeedback,
+                contextsProduced: summary.contextsProduced,
+                proposals: summary.proposals,
+                acceptedIntents: summary.acceptedIntents,
+                rejectedProposals: summary.rejectedProposals,
+                noIntent: summary.noIntent,
+                invalidOneEdgeProposals: summary.invalidOneEdgeProposals,
+                duplicateFeedback: summary.duplicateFeedback,
+                intentContexts: summary.intentContexts,
+                contextsWithFeedback: summary.contextsWithFeedback,
+                contextsWithoutFeedback: summary.contextsWithoutFeedback,
+                behaviorChangedByFeedback: summary.behaviorChangedByFeedback,
+                feedbackUsedForDecision: summary.feedbackUsedForDecision,
                 intentProduced: summary.intentProduced,
                 worldUsed: summary.worldUsed,
                 collisionRead: summary.collisionRead,
@@ -3693,6 +3796,22 @@ if let outPath = options.outPath {
             try writeJSON(
                 agentFeedbackConsumptionHardeningInvariantReport,
                 to: outURL.appendingPathComponent("agent_feedback_consumption_hardening_invariant_report.json")
+            )
+        }
+        if let feedbackToAgentIntentContextFixtureReport {
+            try writeJSON(
+                feedbackToAgentIntentContextFixtureReport,
+                to: outURL.appendingPathComponent("feedback_to_agent_intent_context_fixture_report.json")
+            )
+            try writeJSON(
+                feedbackToAgentIntentContextFixtureReport,
+                to: outURL.appendingPathComponent("feedback_to_agent_intent_contexts.json")
+            )
+        }
+        if let feedbackToAgentIntentContextFixtureInvariantReport {
+            try writeJSON(
+                feedbackToAgentIntentContextFixtureInvariantReport,
+                to: outURL.appendingPathComponent("feedback_to_agent_intent_context_fixture_invariant_report.json")
             )
         }
         if let routeFollowingLiveSnapshot {
@@ -4546,6 +4665,34 @@ if let outPath = options.outPath {
             agentFeedbackConsumptionHardeningWorldUsed: agentFeedbackConsumptionHardeningReport?.summary.worldUsed,
             agentFeedbackConsumptionHardeningMutationPerformed: agentFeedbackConsumptionHardeningReport?.summary.mutationPerformed,
             agentFeedbackConsumptionHardeningSuccess: agentFeedbackConsumptionHardeningSuccess,
+            feedbackToAgentIntentContextFixtureFeedbackObserved: feedbackToAgentIntentContextFixtureReport?.summary.feedbackObserved,
+            feedbackToAgentIntentContextFixtureFeedbackAccepted: feedbackToAgentIntentContextFixtureReport?.summary.feedbackAccepted,
+            feedbackToAgentIntentContextFixtureFeedbackIgnored: feedbackToAgentIntentContextFixtureReport?.summary.feedbackIgnored,
+            feedbackToAgentIntentContextFixtureInvalidFeedback: feedbackToAgentIntentContextFixtureReport?.summary.invalidFeedback,
+            feedbackToAgentIntentContextFixtureContextsProduced: feedbackToAgentIntentContextFixtureReport?.summary.contextsProduced,
+            feedbackToAgentIntentContextFixtureDuplicateFeedback: feedbackToAgentIntentContextFixtureReport?.summary.duplicateFeedback,
+            feedbackToAgentIntentContextFixtureIntentContexts: feedbackToAgentIntentContextFixtureReport?.summary.intentContexts,
+            feedbackToAgentIntentContextFixtureContextsWithFeedback: feedbackToAgentIntentContextFixtureReport?.summary.contextsWithFeedback,
+            feedbackToAgentIntentContextFixtureContextsWithoutFeedback: feedbackToAgentIntentContextFixtureReport?.summary.contextsWithoutFeedback,
+            feedbackToAgentIntentContextFixtureProposals: feedbackToAgentIntentContextFixtureReport?.summary.proposals,
+            feedbackToAgentIntentContextFixtureAcceptedIntents: feedbackToAgentIntentContextFixtureReport?.summary.acceptedIntents,
+            feedbackToAgentIntentContextFixtureRejectedProposals: feedbackToAgentIntentContextFixtureReport?.summary.rejectedProposals,
+            feedbackToAgentIntentContextFixtureNoIntent: feedbackToAgentIntentContextFixtureReport?.summary.noIntent,
+            feedbackToAgentIntentContextFixtureInvalidOneEdgeProposals: feedbackToAgentIntentContextFixtureReport?.summary.invalidOneEdgeProposals,
+            feedbackToAgentIntentContextFixtureBehaviorChangedByFeedback: feedbackToAgentIntentContextFixtureReport?.summary.behaviorChangedByFeedback,
+            feedbackToAgentIntentContextFixtureFeedbackUsedForDecision: feedbackToAgentIntentContextFixtureReport?.summary.feedbackUsedForDecision,
+            feedbackToAgentIntentContextFixtureMovementApplied: feedbackToAgentIntentContextFixtureReport?.summary.movementApplied,
+            feedbackToAgentIntentContextFixtureCollisionRead: feedbackToAgentIntentContextFixtureReport?.summary.collisionRead,
+            feedbackToAgentIntentContextFixtureIntentProduced: feedbackToAgentIntentContextFixtureReport?.summary.intentProduced,
+            feedbackToAgentIntentContextFixtureMemoryUpdated: feedbackToAgentIntentContextFixtureReport?.summary.memoryUpdated,
+            feedbackToAgentIntentContextFixtureGoalChanged: feedbackToAgentIntentContextFixtureReport?.summary.goalChanged,
+            feedbackToAgentIntentContextFixturePathfindingPerformed: feedbackToAgentIntentContextFixtureReport?.summary.pathfindingPerformed,
+            feedbackToAgentIntentContextFixtureReplanningPerformed: feedbackToAgentIntentContextFixtureReport?.summary.replanningPerformed,
+            feedbackToAgentIntentContextFixtureAvoidancePerformed: feedbackToAgentIntentContextFixtureReport?.summary.avoidancePerformed,
+            feedbackToAgentIntentContextFixtureReservationRuntimeUsed: feedbackToAgentIntentContextFixtureReport?.summary.reservationRuntimeUsed,
+            feedbackToAgentIntentContextFixtureWorldUsed: feedbackToAgentIntentContextFixtureReport?.summary.worldUsed,
+            feedbackToAgentIntentContextFixtureMutationPerformed: feedbackToAgentIntentContextFixtureReport?.summary.mutationPerformed,
+            feedbackToAgentIntentContextFixtureSuccess: feedbackToAgentIntentContextFixtureSuccess,
             routeFollowingFixtureCases: routeFollowingFixtureReport?.summary.cases,
             routeFollowingFixturePassed: routeFollowingFixtureReport?.summary.passed,
             routeFollowingFixtureFailed: routeFollowingFixtureReport?.summary.failed,
