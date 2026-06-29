@@ -7262,3 +7262,124 @@ social/communication, and autonomous gameplay loops beyond fixed smoke ticks.
 ### Next Step
 
 Phase 4.24B — Multi-Tick Closed Loop Fixture Smoke.
+
+## 2026-06-29 — Phase 4.24B multi-tick closed loop fixture smoke
+
+### Objective
+
+Implement the first fixture-only closed loop over multiple ticks:
+`feedback-aware intent -> fixture tick -> feedback -> next tick feedback
+context -> feedback-aware intent`.
+
+### Starting Point
+
+Phase 4.24A documented the bounded closed-loop contract after 4.23 validated
+single-tick feedback-aware intent through approved application. The current
+validated runtime pieces were single-tick and manually orchestrated; no
+autonomous multi-tick loop existed.
+
+### Files Created/Modified
+
+- `Sources/PebbleLab/LabAgentIntentProduction.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_MULTI_TICK_CLOSED_LOOP_PLAN.md`
+
+### Why Fixture-Only
+
+The first closed-loop smoke validates causality and handoff semantics without
+live collision, World access, movement application, route following, or
+terrain mutation. It proves the loop wiring before introducing read-only live
+collision or approved application variants.
+
+### Loop Contract
+
+The scenario `multi_tick_closed_loop_fixture_smoke` runs exactly three ticks
+with four synthetic agents. It keeps positions fixed and stores only the
+feedback emitted by tick `N` for consumption at tick `N+1`.
+
+Tick `0` starts without feedback. `agent_0_winner` and `agent_1_loser` both
+target `(1,64,0)`, so the fixture tick approves the stable `agent_0_winner`
+and denies `agent_1_loser` with `blockedByAgentConflict`. `agent_2_free` is
+approved and `agent_3_idle` remains `noIntent`.
+
+Tick `1` consumes only tick `0` feedback. The losing agent now has
+`blockedByAgentConflict`, so opt-in v1 converts it to `noIntent`; the conflict
+is reduced and the tick approves the remaining two movement intents.
+
+Tick `2` consumes only tick `1` feedback. Because the loop is memoryless beyond
+the previous feedback ledger, `agent_1_loser` has no tick `1` feedback and
+returns to baseline movement, recreating the same-destination conflict.
+
+### Feedback Carryover
+
+The report records `feedbackConsumedTotal = 5`,
+`feedbackCarriedToNextTickTotal = 8`, `sameTickFeedbackConsumedTotal = 0`,
+`crossAgentFeedbackLeaksTotal = 0`, and `futureFeedbackConsumedTotal = 0`.
+This confirms that feedback emitted at tick `N` is never consumed in the same
+tick or leaked to another agent.
+
+### Outputs, Invariants, Metrics, Event
+
+The scenario writes:
+
+- `multi_tick_closed_loop_report.json`
+- `multi_tick_closed_loop_invariant_report.json`
+- `multi_tick_closed_loop_ticks.json`
+- `multi_tick_closed_loop_feedback.json`
+- `metrics.json`
+- `events.ndjson`
+
+The invariant report passes 87 checks, including fixed tick count, deterministic
+tick and agent ordering, previous-tick-only feedback consumption, conflict
+reduction at tick `1`, memoryless return to conflict at tick `2`, fixture tick
+no-collision behavior, no movement application, and no mutation.
+
+Metrics use the `multiTickClosedLoop*` prefix, and the event is the aggregate
+`lab_multi_tick_closed_loop_recorded`.
+
+### Boundary Confirmation
+
+The implementation does not use World, read live collision, apply movement,
+consume same-tick feedback, update memory, change goals, pathfind, replan,
+avoid, use reservation runtime, use route following, perform physics, or mutate
+terrain/world.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_fixture_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_fixture`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_approved_application_smoke --seed 42 --ticks 5 --out runs/check_feedback_aware_approved_application_after_multi_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_live_readonly_smoke --seed 42 --ticks 5 --out runs/check_feedback_aware_live_readonly_after_multi_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_intent_to_tick_fixture_after_multi_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_hardening_after_multi_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario feedback_to_agent_intent_context_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_to_context_hardening_after_multi_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_fixture_after_multi_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_to_tick_fixture_after_multi_tick_fixture`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_multi_tick_fixture`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- `swift build` passed.
+- `swift build -c release --product Pebble` passed.
+- `multi_tick_closed_loop_fixture_smoke` passed.
+- Report success true.
+- Invariant report success true with 87 passed, 0 failed.
+- Outputs, metrics, and event were written.
+- Listed non-regressions passed.
+- `swift run -c release pebsmoke` passed with 456 passed, 0 failed.
+- `git diff --check` passed.
+
+### Next Step
+
+Phase 4.24C — Multi-Tick Closed Loop Hardening.

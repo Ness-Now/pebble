@@ -1714,3 +1714,46 @@ autonomous gameplay movement, memory/goals, learning, social/communication,
 physics, and terrain/world mutation remain out of scope.
 
 Next recommended step: Phase 4.24B - Multi-Tick Closed Loop Fixture Smoke.
+
+## Phase 4.24B - Multi-Tick Closed Loop Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: validate the first bounded fixture-only closed loop across three ticks,
+where feedback emitted by tick `N` is consumed only at tick `N+1` and injected
+into opt-in feedback-aware v1 intent contexts.
+
+The scenario `multi_tick_closed_loop_fixture_smoke` runs four synthetic agents
+for three fixed ticks. Tick `0` creates a same-destination conflict, tick `1`
+uses the previous `blockedByAgentConflict` feedback to convert the losing agent
+to `noIntent`, and tick `2` proves the loop is memoryless beyond previous-tick
+feedback by allowing the same conflict to return.
+
+Validated totals:
+
+- `requestedTicks = 3`;
+- `executedTicks = 3`;
+- `contextsTotal = 12`;
+- `feedbackConsumedTotal = 5`;
+- `feedbackCarriedToNextTickTotal = 8`;
+- `movementIntentInputsTotal = 8`;
+- `tickApprovedTotal = 6`;
+- `tickDeniedTotal = 2`;
+- `tickDeniedConflictTotal = 2`;
+- `feedbackEmittedTotal = 8`;
+- `sameTickFeedbackConsumedTotal = 0`;
+- `crossAgentFeedbackLeaksTotal = 0`;
+- `futureFeedbackConsumedTotal = 0`.
+
+The scenario writes `multi_tick_closed_loop_report.json`,
+`multi_tick_closed_loop_invariant_report.json`,
+`multi_tick_closed_loop_ticks.json`, `multi_tick_closed_loop_feedback.json`,
+`multiTickClosedLoop*` metrics, and one aggregate
+`lab_multi_tick_closed_loop_recorded` event.
+
+Live collision, World access, movement application, approved lab map movement,
+memory updates, goal changes, pathfinding, replanning, avoidance, reservation
+runtime, route following, physics, terrain/world mutation, and autonomous
+gameplay movement remain out of scope.
+
+Next recommended step: Phase 4.24C - Multi-Tick Closed Loop Hardening.

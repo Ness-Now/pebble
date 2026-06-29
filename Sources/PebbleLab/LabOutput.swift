@@ -1019,6 +1019,44 @@ struct RunMetrics: Encodable {
     let feedbackAwareIntentToTickApprovedApplicationWorldMutated: Bool?
     let feedbackAwareIntentToTickApprovedApplicationMutationPerformed: Bool?
     let feedbackAwareIntentToTickApprovedApplicationSuccess: Bool?
+    let multiTickClosedLoopTicks: Int?
+    let multiTickClosedLoopAgents: Int?
+    let multiTickClosedLoopContextsTotal: Int?
+    let multiTickClosedLoopFeedbackConsumedTotal: Int?
+    let multiTickClosedLoopFeedbackCarriedToNextTickTotal: Int?
+    let multiTickClosedLoopContextsWithFeedbackTotal: Int?
+    let multiTickClosedLoopContextsWithoutFeedbackTotal: Int?
+    let multiTickClosedLoopProposalsTotal: Int?
+    let multiTickClosedLoopAcceptedIntentsTotal: Int?
+    let multiTickClosedLoopNoIntentTotal: Int?
+    let multiTickClosedLoopNoIntentFromBlockedFeedbackTotal: Int?
+    let multiTickClosedLoopMovementIntentInputsTotal: Int?
+    let multiTickClosedLoopTickApprovedTotal: Int?
+    let multiTickClosedLoopTickDeniedTotal: Int?
+    let multiTickClosedLoopTickDeniedConflictTotal: Int?
+    let multiTickClosedLoopTickDeniedCollisionTotal: Int?
+    let multiTickClosedLoopFeedbackEmittedTotal: Int?
+    let multiTickClosedLoopApprovedApplicationsTotal: Int?
+    let multiTickClosedLoopDeniedPreservedTotal: Int?
+    let multiTickClosedLoopNoIntentPreservedTotal: Int?
+    let multiTickClosedLoopSameTickFeedbackConsumedTotal: Int?
+    let multiTickClosedLoopCrossAgentFeedbackLeaksTotal: Int?
+    let multiTickClosedLoopFutureFeedbackConsumedTotal: Int?
+    let multiTickClosedLoopPolicyReadCollision: Bool?
+    let multiTickClosedLoopTickReadCollision: Bool?
+    let multiTickClosedLoopPolicyWorldUsed: Bool?
+    let multiTickClosedLoopTickWorldReadOnlyUsed: Bool?
+    let multiTickClosedLoopMovementApplied: Bool?
+    let multiTickClosedLoopMemoryUpdated: Bool?
+    let multiTickClosedLoopGoalChanged: Bool?
+    let multiTickClosedLoopPathfindingPerformed: Bool?
+    let multiTickClosedLoopReplanningPerformed: Bool?
+    let multiTickClosedLoopAvoidancePerformed: Bool?
+    let multiTickClosedLoopReservationRuntimeUsed: Bool?
+    let multiTickClosedLoopRouteFollowingUsed: Bool?
+    let multiTickClosedLoopWorldMutated: Bool?
+    let multiTickClosedLoopMutationPerformed: Bool?
+    let multiTickClosedLoopSuccess: Bool?
     let routeFollowingFixtureCases: Int?
     let routeFollowingFixturePassed: Int?
     let routeFollowingFixtureFailed: Int?
@@ -2038,6 +2076,44 @@ struct RunMetrics: Encodable {
         feedbackAwareIntentToTickApprovedApplicationWorldMutated: Bool? = nil,
         feedbackAwareIntentToTickApprovedApplicationMutationPerformed: Bool? = nil,
         feedbackAwareIntentToTickApprovedApplicationSuccess: Bool? = nil,
+        multiTickClosedLoopTicks: Int? = nil,
+        multiTickClosedLoopAgents: Int? = nil,
+        multiTickClosedLoopContextsTotal: Int? = nil,
+        multiTickClosedLoopFeedbackConsumedTotal: Int? = nil,
+        multiTickClosedLoopFeedbackCarriedToNextTickTotal: Int? = nil,
+        multiTickClosedLoopContextsWithFeedbackTotal: Int? = nil,
+        multiTickClosedLoopContextsWithoutFeedbackTotal: Int? = nil,
+        multiTickClosedLoopProposalsTotal: Int? = nil,
+        multiTickClosedLoopAcceptedIntentsTotal: Int? = nil,
+        multiTickClosedLoopNoIntentTotal: Int? = nil,
+        multiTickClosedLoopNoIntentFromBlockedFeedbackTotal: Int? = nil,
+        multiTickClosedLoopMovementIntentInputsTotal: Int? = nil,
+        multiTickClosedLoopTickApprovedTotal: Int? = nil,
+        multiTickClosedLoopTickDeniedTotal: Int? = nil,
+        multiTickClosedLoopTickDeniedConflictTotal: Int? = nil,
+        multiTickClosedLoopTickDeniedCollisionTotal: Int? = nil,
+        multiTickClosedLoopFeedbackEmittedTotal: Int? = nil,
+        multiTickClosedLoopApprovedApplicationsTotal: Int? = nil,
+        multiTickClosedLoopDeniedPreservedTotal: Int? = nil,
+        multiTickClosedLoopNoIntentPreservedTotal: Int? = nil,
+        multiTickClosedLoopSameTickFeedbackConsumedTotal: Int? = nil,
+        multiTickClosedLoopCrossAgentFeedbackLeaksTotal: Int? = nil,
+        multiTickClosedLoopFutureFeedbackConsumedTotal: Int? = nil,
+        multiTickClosedLoopPolicyReadCollision: Bool? = nil,
+        multiTickClosedLoopTickReadCollision: Bool? = nil,
+        multiTickClosedLoopPolicyWorldUsed: Bool? = nil,
+        multiTickClosedLoopTickWorldReadOnlyUsed: Bool? = nil,
+        multiTickClosedLoopMovementApplied: Bool? = nil,
+        multiTickClosedLoopMemoryUpdated: Bool? = nil,
+        multiTickClosedLoopGoalChanged: Bool? = nil,
+        multiTickClosedLoopPathfindingPerformed: Bool? = nil,
+        multiTickClosedLoopReplanningPerformed: Bool? = nil,
+        multiTickClosedLoopAvoidancePerformed: Bool? = nil,
+        multiTickClosedLoopReservationRuntimeUsed: Bool? = nil,
+        multiTickClosedLoopRouteFollowingUsed: Bool? = nil,
+        multiTickClosedLoopWorldMutated: Bool? = nil,
+        multiTickClosedLoopMutationPerformed: Bool? = nil,
+        multiTickClosedLoopSuccess: Bool? = nil,
         routeFollowingFixtureCases: Int? = nil,
         routeFollowingFixturePassed: Int? = nil,
         routeFollowingFixtureFailed: Int? = nil,
@@ -3056,6 +3132,44 @@ struct RunMetrics: Encodable {
         self.feedbackAwareIntentToTickApprovedApplicationWorldMutated = feedbackAwareIntentToTickApprovedApplicationWorldMutated
         self.feedbackAwareIntentToTickApprovedApplicationMutationPerformed = feedbackAwareIntentToTickApprovedApplicationMutationPerformed
         self.feedbackAwareIntentToTickApprovedApplicationSuccess = feedbackAwareIntentToTickApprovedApplicationSuccess
+        self.multiTickClosedLoopTicks = multiTickClosedLoopTicks
+        self.multiTickClosedLoopAgents = multiTickClosedLoopAgents
+        self.multiTickClosedLoopContextsTotal = multiTickClosedLoopContextsTotal
+        self.multiTickClosedLoopFeedbackConsumedTotal = multiTickClosedLoopFeedbackConsumedTotal
+        self.multiTickClosedLoopFeedbackCarriedToNextTickTotal = multiTickClosedLoopFeedbackCarriedToNextTickTotal
+        self.multiTickClosedLoopContextsWithFeedbackTotal = multiTickClosedLoopContextsWithFeedbackTotal
+        self.multiTickClosedLoopContextsWithoutFeedbackTotal = multiTickClosedLoopContextsWithoutFeedbackTotal
+        self.multiTickClosedLoopProposalsTotal = multiTickClosedLoopProposalsTotal
+        self.multiTickClosedLoopAcceptedIntentsTotal = multiTickClosedLoopAcceptedIntentsTotal
+        self.multiTickClosedLoopNoIntentTotal = multiTickClosedLoopNoIntentTotal
+        self.multiTickClosedLoopNoIntentFromBlockedFeedbackTotal = multiTickClosedLoopNoIntentFromBlockedFeedbackTotal
+        self.multiTickClosedLoopMovementIntentInputsTotal = multiTickClosedLoopMovementIntentInputsTotal
+        self.multiTickClosedLoopTickApprovedTotal = multiTickClosedLoopTickApprovedTotal
+        self.multiTickClosedLoopTickDeniedTotal = multiTickClosedLoopTickDeniedTotal
+        self.multiTickClosedLoopTickDeniedConflictTotal = multiTickClosedLoopTickDeniedConflictTotal
+        self.multiTickClosedLoopTickDeniedCollisionTotal = multiTickClosedLoopTickDeniedCollisionTotal
+        self.multiTickClosedLoopFeedbackEmittedTotal = multiTickClosedLoopFeedbackEmittedTotal
+        self.multiTickClosedLoopApprovedApplicationsTotal = multiTickClosedLoopApprovedApplicationsTotal
+        self.multiTickClosedLoopDeniedPreservedTotal = multiTickClosedLoopDeniedPreservedTotal
+        self.multiTickClosedLoopNoIntentPreservedTotal = multiTickClosedLoopNoIntentPreservedTotal
+        self.multiTickClosedLoopSameTickFeedbackConsumedTotal = multiTickClosedLoopSameTickFeedbackConsumedTotal
+        self.multiTickClosedLoopCrossAgentFeedbackLeaksTotal = multiTickClosedLoopCrossAgentFeedbackLeaksTotal
+        self.multiTickClosedLoopFutureFeedbackConsumedTotal = multiTickClosedLoopFutureFeedbackConsumedTotal
+        self.multiTickClosedLoopPolicyReadCollision = multiTickClosedLoopPolicyReadCollision
+        self.multiTickClosedLoopTickReadCollision = multiTickClosedLoopTickReadCollision
+        self.multiTickClosedLoopPolicyWorldUsed = multiTickClosedLoopPolicyWorldUsed
+        self.multiTickClosedLoopTickWorldReadOnlyUsed = multiTickClosedLoopTickWorldReadOnlyUsed
+        self.multiTickClosedLoopMovementApplied = multiTickClosedLoopMovementApplied
+        self.multiTickClosedLoopMemoryUpdated = multiTickClosedLoopMemoryUpdated
+        self.multiTickClosedLoopGoalChanged = multiTickClosedLoopGoalChanged
+        self.multiTickClosedLoopPathfindingPerformed = multiTickClosedLoopPathfindingPerformed
+        self.multiTickClosedLoopReplanningPerformed = multiTickClosedLoopReplanningPerformed
+        self.multiTickClosedLoopAvoidancePerformed = multiTickClosedLoopAvoidancePerformed
+        self.multiTickClosedLoopReservationRuntimeUsed = multiTickClosedLoopReservationRuntimeUsed
+        self.multiTickClosedLoopRouteFollowingUsed = multiTickClosedLoopRouteFollowingUsed
+        self.multiTickClosedLoopWorldMutated = multiTickClosedLoopWorldMutated
+        self.multiTickClosedLoopMutationPerformed = multiTickClosedLoopMutationPerformed
+        self.multiTickClosedLoopSuccess = multiTickClosedLoopSuccess
         self.routeFollowingFixtureCases = routeFollowingFixtureCases
         self.routeFollowingFixturePassed = routeFollowingFixturePassed
         self.routeFollowingFixtureFailed = routeFollowingFixtureFailed

@@ -424,3 +424,78 @@ Recommended first smoke:
 - social behavior;
 - communication;
 - autonomous gameplay loop beyond fixed smoke ticks.
+
+## Phase 4.24B Implementation Status
+
+Status: implemented and validated.
+
+Phase 4.24B added the fixture-only scenario
+`multi_tick_closed_loop_fixture_smoke`.
+
+The scenario executes exactly three ticks over four synthetic agents:
+
+- tick `0`: no previous feedback exists; two agents conflict on the same
+  destination and the fixture tick emits feedback;
+- tick `1`: tick `0` feedback is consumed; the losing agent observes
+  `blockedByAgentConflict`, v1 converts it to `noIntent`, and the conflict is
+  reduced;
+- tick `2`: only tick `1` feedback is consumed; the losing agent has no
+  previous-tick feedback, returns to baseline, and the same conflict appears
+  again.
+
+Validated aggregate totals:
+
+- `requestedTicks = 3`;
+- `executedTicks = 3`;
+- `agents = 4`;
+- `contextsTotal = 12`;
+- `contextsWithFeedbackTotal = 5`;
+- `contextsWithoutFeedbackTotal = 7`;
+- `feedbackConsumedTotal = 5`;
+- `feedbackCarriedToNextTickTotal = 8`;
+- `proposalsTotal = 12`;
+- `acceptedIntentsTotal = 8`;
+- `noIntentTotal = 4`;
+- `noIntentFromBlockedFeedbackTotal = 1`;
+- `movementIntentInputsTotal = 8`;
+- `tickApprovedTotal = 6`;
+- `tickDeniedTotal = 2`;
+- `tickDeniedConflictTotal = 2`;
+- `tickDeniedCollisionTotal = 0`;
+- `feedbackEmittedTotal = 8`;
+- `sameTickFeedbackConsumedTotal = 0`;
+- `crossAgentFeedbackLeaksTotal = 0`;
+- `futureFeedbackConsumedTotal = 0`.
+
+The scenario writes:
+
+- `multi_tick_closed_loop_report.json`;
+- `multi_tick_closed_loop_invariant_report.json`;
+- `multi_tick_closed_loop_ticks.json`;
+- `multi_tick_closed_loop_feedback.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+The invariant report contains 87 checks and validates fixed tick count,
+deterministic tick/agent ordering, previous-tick-only feedback consumption,
+no same-tick/future/cross-agent feedback consumption, tick `1` conflict
+reduction, tick `2` memoryless return to conflict, fixture tick conflict
+arbitration, and artifact writing.
+
+The fixture keeps the strict 4.24 boundary:
+
+- no World;
+- no live collision read;
+- no movement application;
+- no approved lab position map movement;
+- no memory update;
+- no goal change;
+- no pathfinding;
+- no replanning;
+- no avoidance;
+- no reservation runtime;
+- no route following;
+- no physics;
+- no terrain/world mutation.
+
+Next recommended step: Phase 4.24C - Multi-Tick Closed Loop Hardening.

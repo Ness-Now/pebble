@@ -7,6 +7,8 @@ struct RunEvent: Encodable {
     let scenario: String?
     let seed: UInt32?
     let ticksRequested: Int?
+    let requestedTicks: Int?
+    let executedTicks: Int?
     let worldTime: Int?
     let success: Bool?
     let chunksTouched: Int?
@@ -246,14 +248,18 @@ struct RunEvent: Encodable {
     let blockedByInvalidEdgeNoIntent: Int?
     let blockedByMaxAgentsNoIntent: Int?
     let intentContextsTotal: Int?
+    let contextsTotal: Int?
     let contextsWithFeedbackTotal: Int?
     let contextsWithoutFeedbackTotal: Int?
+    let feedbackConsumedTotal: Int?
+    let feedbackCarriedToNextTickTotal: Int?
     let proposalsTotal: Int?
     let baselineProposalsTotal: Int?
     let feedbackAwareProposalsTotal: Int?
     let acceptedIntentsTotal: Int?
     let rejectedProposalsTotal: Int?
     let noIntentTotal: Int?
+    let noIntentFromBlockedFeedbackTotal: Int?
     let invalidOneEdgeProposalsTotal: Int?
     let feedbackReactionsTotal: Int?
     let behaviorChangedCountTotal: Int?
@@ -269,20 +275,32 @@ struct RunEvent: Encodable {
     let blockedByMaxAgentsNoIntentTotal: Int?
     let baselineMovementIntentInputs: Int?
     let feedbackAwareMovementIntentInputs: Int?
+    let movementIntentInputsTotal: Int?
     let movementIntentReduction: Int?
     let noIntentFilteredOut: Int?
     let feedbackAwareAcceptedIntents: Int?
     let feedbackAwareRejectedProposals: Int?
     let feedbackAwareNoIntent: Int?
     let tickDeniedSameDestinationConflict: Int?
+    let tickDeniedConflictTotal: Int?
+    let tickDeniedCollisionTotal: Int?
     let tickFeedbackEmitted: Int?
+    let tickApprovedTotal: Int?
+    let tickDeniedTotal: Int?
+    let feedbackEmittedTotal: Int?
     let policyReadCollision: Bool?
     let policyWorldUsed: Bool?
     let tickWorldReadOnlyUsed: Bool?
     let worldMutated: Bool?
     let approvedAgentsMoved: Int?
+    let approvedApplicationsTotal: Int?
     let deniedAgentsPreserved: Int?
+    let deniedPreservedTotal: Int?
     let noIntentAgentsPreserved: Int?
+    let noIntentPreservedTotal: Int?
+    let sameTickFeedbackConsumedTotal: Int?
+    let crossAgentFeedbackLeaksTotal: Int?
+    let futureFeedbackConsumedTotal: Int?
     let abstractPositionsChanged: Int?
     let physicalPositionsChanged: Int?
     let abstractPhysicalDivergenceBefore: Int?
@@ -369,6 +387,8 @@ struct RunEvent: Encodable {
         scenario: String? = nil,
         seed: UInt32? = nil,
         ticksRequested: Int? = nil,
+        requestedTicks: Int? = nil,
+        executedTicks: Int? = nil,
         worldTime: Int? = nil,
         success: Bool? = nil,
         chunksTouched: Int? = nil,
@@ -608,14 +628,18 @@ struct RunEvent: Encodable {
         blockedByInvalidEdgeNoIntent: Int? = nil,
         blockedByMaxAgentsNoIntent: Int? = nil,
         intentContextsTotal: Int? = nil,
+        contextsTotal: Int? = nil,
         contextsWithFeedbackTotal: Int? = nil,
         contextsWithoutFeedbackTotal: Int? = nil,
+        feedbackConsumedTotal: Int? = nil,
+        feedbackCarriedToNextTickTotal: Int? = nil,
         proposalsTotal: Int? = nil,
         baselineProposalsTotal: Int? = nil,
         feedbackAwareProposalsTotal: Int? = nil,
         acceptedIntentsTotal: Int? = nil,
         rejectedProposalsTotal: Int? = nil,
         noIntentTotal: Int? = nil,
+        noIntentFromBlockedFeedbackTotal: Int? = nil,
         invalidOneEdgeProposalsTotal: Int? = nil,
         feedbackReactionsTotal: Int? = nil,
         behaviorChangedCountTotal: Int? = nil,
@@ -631,20 +655,32 @@ struct RunEvent: Encodable {
         blockedByMaxAgentsNoIntentTotal: Int? = nil,
         baselineMovementIntentInputs: Int? = nil,
         feedbackAwareMovementIntentInputs: Int? = nil,
+        movementIntentInputsTotal: Int? = nil,
         movementIntentReduction: Int? = nil,
         noIntentFilteredOut: Int? = nil,
         feedbackAwareAcceptedIntents: Int? = nil,
         feedbackAwareRejectedProposals: Int? = nil,
         feedbackAwareNoIntent: Int? = nil,
         tickDeniedSameDestinationConflict: Int? = nil,
+        tickDeniedConflictTotal: Int? = nil,
+        tickDeniedCollisionTotal: Int? = nil,
         tickFeedbackEmitted: Int? = nil,
+        tickApprovedTotal: Int? = nil,
+        tickDeniedTotal: Int? = nil,
+        feedbackEmittedTotal: Int? = nil,
         policyReadCollision: Bool? = nil,
         policyWorldUsed: Bool? = nil,
         tickWorldReadOnlyUsed: Bool? = nil,
         worldMutated: Bool? = nil,
         approvedAgentsMoved: Int? = nil,
+        approvedApplicationsTotal: Int? = nil,
         deniedAgentsPreserved: Int? = nil,
+        deniedPreservedTotal: Int? = nil,
         noIntentAgentsPreserved: Int? = nil,
+        noIntentPreservedTotal: Int? = nil,
+        sameTickFeedbackConsumedTotal: Int? = nil,
+        crossAgentFeedbackLeaksTotal: Int? = nil,
+        futureFeedbackConsumedTotal: Int? = nil,
         abstractPositionsChanged: Int? = nil,
         physicalPositionsChanged: Int? = nil,
         abstractPhysicalDivergenceBefore: Int? = nil,
@@ -730,6 +766,8 @@ struct RunEvent: Encodable {
         self.scenario = scenario
         self.seed = seed
         self.ticksRequested = ticksRequested
+        self.requestedTicks = requestedTicks
+        self.executedTicks = executedTicks
         self.worldTime = worldTime
         self.success = success
         self.chunksTouched = chunksTouched
@@ -969,14 +1007,18 @@ struct RunEvent: Encodable {
         self.blockedByInvalidEdgeNoIntent = blockedByInvalidEdgeNoIntent
         self.blockedByMaxAgentsNoIntent = blockedByMaxAgentsNoIntent
         self.intentContextsTotal = intentContextsTotal
+        self.contextsTotal = contextsTotal
         self.contextsWithFeedbackTotal = contextsWithFeedbackTotal
         self.contextsWithoutFeedbackTotal = contextsWithoutFeedbackTotal
+        self.feedbackConsumedTotal = feedbackConsumedTotal
+        self.feedbackCarriedToNextTickTotal = feedbackCarriedToNextTickTotal
         self.proposalsTotal = proposalsTotal
         self.baselineProposalsTotal = baselineProposalsTotal
         self.feedbackAwareProposalsTotal = feedbackAwareProposalsTotal
         self.acceptedIntentsTotal = acceptedIntentsTotal
         self.rejectedProposalsTotal = rejectedProposalsTotal
         self.noIntentTotal = noIntentTotal
+        self.noIntentFromBlockedFeedbackTotal = noIntentFromBlockedFeedbackTotal
         self.invalidOneEdgeProposalsTotal = invalidOneEdgeProposalsTotal
         self.feedbackReactionsTotal = feedbackReactionsTotal
         self.behaviorChangedCountTotal = behaviorChangedCountTotal
@@ -992,20 +1034,32 @@ struct RunEvent: Encodable {
         self.blockedByMaxAgentsNoIntentTotal = blockedByMaxAgentsNoIntentTotal
         self.baselineMovementIntentInputs = baselineMovementIntentInputs
         self.feedbackAwareMovementIntentInputs = feedbackAwareMovementIntentInputs
+        self.movementIntentInputsTotal = movementIntentInputsTotal
         self.movementIntentReduction = movementIntentReduction
         self.noIntentFilteredOut = noIntentFilteredOut
         self.feedbackAwareAcceptedIntents = feedbackAwareAcceptedIntents
         self.feedbackAwareRejectedProposals = feedbackAwareRejectedProposals
         self.feedbackAwareNoIntent = feedbackAwareNoIntent
         self.tickDeniedSameDestinationConflict = tickDeniedSameDestinationConflict
+        self.tickDeniedConflictTotal = tickDeniedConflictTotal
+        self.tickDeniedCollisionTotal = tickDeniedCollisionTotal
         self.tickFeedbackEmitted = tickFeedbackEmitted
+        self.tickApprovedTotal = tickApprovedTotal
+        self.tickDeniedTotal = tickDeniedTotal
+        self.feedbackEmittedTotal = feedbackEmittedTotal
         self.policyReadCollision = policyReadCollision
         self.policyWorldUsed = policyWorldUsed
         self.tickWorldReadOnlyUsed = tickWorldReadOnlyUsed
         self.worldMutated = worldMutated
         self.approvedAgentsMoved = approvedAgentsMoved
+        self.approvedApplicationsTotal = approvedApplicationsTotal
         self.deniedAgentsPreserved = deniedAgentsPreserved
+        self.deniedPreservedTotal = deniedPreservedTotal
         self.noIntentAgentsPreserved = noIntentAgentsPreserved
+        self.noIntentPreservedTotal = noIntentPreservedTotal
+        self.sameTickFeedbackConsumedTotal = sameTickFeedbackConsumedTotal
+        self.crossAgentFeedbackLeaksTotal = crossAgentFeedbackLeaksTotal
+        self.futureFeedbackConsumedTotal = futureFeedbackConsumedTotal
         self.abstractPositionsChanged = abstractPositionsChanged
         self.physicalPositionsChanged = physicalPositionsChanged
         self.abstractPhysicalDivergenceBefore = abstractPhysicalDivergenceBefore
