@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Documented PebbleLab deterministic bounded alternate local hint plan.
 - Added multi-tick closed loop approved application smoke.
 - Added multi-tick closed loop live read-only smoke.
 - Added multi-tick closed loop hardening smoke.

@@ -773,3 +773,40 @@ Still out of scope:
 
 Next recommended step: Phase 4.25A - Deterministic Bounded Alternate Local
 Hint Planning Docs-Only.
+
+## Transition To Alternate Local Hints
+
+Phase 4.24 completed the bounded multi-tick closed loop through fixture,
+hardening, live read-only, and approved application scenarios. The validated
+chain now proves:
+
+- feedback from tick `N` is consumed only at tick `N+1`;
+- same-tick, future, and cross-agent feedback leaks are rejected;
+- feedback-aware v1 remains opt-in;
+- v0 remains available;
+- blocked feedback currently becomes `noIntent`;
+- tick remains responsible for arbitration and collision;
+- approved application updates only PebbleLab abstract/physical maps;
+- denied and `noIntent` agents are preserved;
+- terrain and World are not mutated.
+
+Phase 4.25A moves into docs-only planning for deterministic bounded alternate
+local hints. The dedicated plan is
+`docs/pebblelab/PHASE_4_ALTERNATE_LOCAL_HINT_PLAN.md`.
+
+The future alternate hint mechanism must remain bounded and local:
+
+- no pathfinding;
+- no replanning;
+- no avoidance;
+- no reservation runtime;
+- no route following;
+- no memory mutation;
+- no goal mutation;
+- no policy World read;
+- no policy collision read;
+- no terrain/World mutation.
+
+The tick layer remains responsible for arbitration and collision. Approved
+application remains lab-map-only. Any future behavior should be explicit and
+opt-in, preferably via a future v2 policy rather than changing v0 or v1.

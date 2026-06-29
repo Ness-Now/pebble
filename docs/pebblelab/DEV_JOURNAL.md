@@ -7819,3 +7819,133 @@ mutation.
 ### Next Step
 
 Phase 4.25A — Deterministic Bounded Alternate Local Hint Planning Docs-Only.
+
+## 2026-06-29 — Phase 4.25A deterministic bounded alternate local hint planning docs-only
+
+### Objective
+
+Create a docs-only plan for deterministic bounded alternate local hints before
+adding any implementation. The plan defines how future PebbleLab phases may
+move from `blockedBy* -> noIntent` to a tiny opt-in local alternate hint rule
+without becoming pathfinding, replanning, avoidance, reservation runtime,
+memory, goals, or gameplay autonomy.
+
+### Starting Point
+
+Phase 4.23 introduced feedback-aware v1 as an opt-in policy while leaving v0
+unchanged. Phase 4.24 validated a bounded three-tick closed loop through
+fixture, hardening, live read-only, and approved application variants. Feedback
+from tick `N` is consumed only at tick `N+1`; same-tick, future, and cross-agent
+feedback leaks are rejected; tick handles arbitration and collision; approved
+application updates only lab maps.
+
+### Why Docs-Only
+
+Alternate local hints are close enough to pathfinding and replanning that the
+boundary needs to be locked before code exists. The phase therefore adds no
+Swift, no scenarios, no runner behavior, no runtime metrics, and no events.
+
+### New Document
+
+Created `docs/pebblelab/PHASE_4_ALTERNATE_LOCAL_HINT_PLAN.md`.
+
+### Boundary
+
+Allowed future behavior is deliberately small: given previous-tick blocked
+feedback, produce at most a fixed small number of deterministic one-edge local
+hint candidates from a fixed table, then pass the selected hint through the
+normal intent/tick pipeline. The policy must not read World, read collision,
+inspect other agents directly, reserve cells, mutate memory/goals, or apply
+movement.
+
+### Non-Goals
+
+The plan explicitly states that alternate local hints are not pathfinding,
+replanning, avoidance, reservation runtime, long route following, gameplay
+autonomy, learning, social behavior, LLM/RL/Python, World mutation, or terrain
+mutation.
+
+### Proposed Deterministic Rule
+
+For blocked feedback, future v2 may read the original local hint, exclude the
+failed direction, and choose from a fixed ordered table:
+
+- failed `move_east` or `move_west` -> `[move_north, move_south]`;
+- failed `move_north` or `move_south` -> `[move_east, move_west]`;
+- unknown or empty hint -> no alternate.
+
+The table does not read World, collision, terrain, other agents, or longer
+routes. Tick remains responsible for final arbitration and collision denial.
+
+### v2 Recommendation
+
+The plan compares a pre-policy hint adapter with an explicit opt-in v2 policy.
+It recommends future `produceAgentIntentProposalFeedbackAwareV2` because v0 and
+v1 remain unchanged, behavior changes are visible in reports, and policy mode
+can be asserted in invariants.
+
+### Future Phases
+
+- Phase 4.25B — Alternate Local Hint Fixture Smoke;
+- Phase 4.25C — Alternate Local Hint Hardening;
+- Phase 4.25D — Alternate Local Hint Live Read-Only Smoke;
+- Phase 4.25E — Alternate Local Hint Approved Application Smoke;
+- Phase 4.25F — Alternate Local Hint Multi-Tick Regression/Replay.
+
+### Reports, Metrics, Event
+
+Future outputs are planned as `alternate_local_hint_report.json`,
+`alternate_local_hint_invariant_report.json`,
+`alternate_local_hint_handoff.json`,
+`alternate_local_hint_decisions.json`, `metrics.json`, and `events.ndjson`.
+Metrics use the `alternateLocalHint*` prefix. The future aggregate event is
+`lab_alternate_local_hint_recorded`.
+
+### Invariants
+
+The plan lists 82 future invariants covering v0/v1 stability, v2 opt-in,
+bounded max alternates, deterministic candidate ordering, duplicate removal,
+failed-direction exclusion, unknown/empty hint handling, one-edge local hints,
+no route/search/pathfinding/replanning/avoidance/reservation, no policy
+World/collision reads, tick-owned arbitration/collision, approved application
+lab-map-only behavior, no terrain/World mutation, deterministic reports,
+metrics, events, repeatability, and compatibility with 4.24B-E.
+
+### Risk Table
+
+The risk table covers alternate hints becoming pathfinding or replanning,
+policy World/collision reads, unbounded candidates, route following,
+reservation runtime, memory/goals mutation, v2 replacing v1 globally, v1
+behavior drift, hidden blocked feedback, nondeterministic ordering, oscillation,
+approved application drifting into gameplay movement, accidental live mutation,
+and metrics hiding boundary violations.
+
+### Out Of Scope
+
+Pathfinding, replanning, avoidance, reservation runtime, route following,
+multi-step routes, terrain/world mutation, core entity movement, physical
+placeholder movement, renderer/resources/shaders, save/load, registries,
+goldens, mining/construction/inventory, physics, learning/RL, LLM/Python,
+social/communication, and autonomous gameplay loops remain out of scope.
+
+### Validation Commands
+
+- `git status`
+- verify no Swift files changed
+- `swift build`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+- `git status`
+
+### Results
+
+- Plan document created.
+- CHANGELOG, DEV_JOURNAL, ROADMAP, and multi-tick plan cross-link updated.
+- No Swift files modified.
+- `swift build` passed.
+- `swift run -c release pebsmoke` passed with 456 passed, 0 failed.
+- `git diff --check` passed.
+
+### Next Step
+
+Phase 4.25B — Alternate Local Hint Fixture Smoke.

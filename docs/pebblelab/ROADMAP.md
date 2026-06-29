@@ -1909,3 +1909,31 @@ movement, and terrain/world mutation remain out of scope.
 
 Next recommended step: Phase 4.25A - Deterministic Bounded Alternate Local
 Hint Planning Docs-Only.
+
+## Phase 4.25A - Deterministic Bounded Alternate Local Hint Planning Docs-Only
+
+Status: implemented and validated.
+
+Goal: document the future deterministic bounded alternate local hint mechanism
+before implementation. The plan preserves the Phase 4.24 boundary: feedback
+from tick `N` is consumed only at tick `N+1`, the policy does not read
+collision or World, tick remains responsible for arbitration/collision, and
+approved application remains lab-map-only.
+
+The new document `PHASE_4_ALTERNATE_LOCAL_HINT_PLAN.md` defines:
+
+- why `blockedBy* -> noIntent` is safe but can pause agents frequently;
+- a non-goal statement separating local hints from pathfinding, replanning,
+  avoidance, reservation runtime, route following, gameplay autonomy, learning,
+  social behavior, LLM/RL/Python, and terrain/World mutation;
+- the allowed and forbidden alternate local hint boundary;
+- a fixed deterministic candidate table that excludes the failed direction;
+- the recommendation to add a future opt-in v2 policy instead of changing v0
+  or v1;
+- future reports, metrics, events, and 82 invariants;
+- the recommended Phase 4.25B fixture smoke contract.
+
+No Swift, runtime scenario, runner, metric/event implementation, renderer,
+resources, registries, save/load, or goldens were modified.
+
+Next recommended step: Phase 4.25B - Alternate Local Hint Fixture Smoke.
