@@ -8262,3 +8262,110 @@ The report confirms `movementApplied=false`, `memoryUpdated=false`,
 ### Next Step
 
 Phase 4.25E — Alternate Local Hint Approved Application Smoke.
+
+## 2026-06-30 — Phase 4.25E alternate local hint approved application
+
+### Objective
+
+Connect the explicit opt-in deterministic bounded alternate local hint v2 policy
+to the tick approved application contract, applying only approved lab position
+map movements while preserving denied and noIntent agents.
+
+### Starting Point
+
+Phase 4.25B introduced the v2 fixture handoff, Phase 4.25C hardened the v2
+policy, and Phase 4.25D connected v2 movement intents to tick live read-only
+collision evidence. v0 and v1 remained unchanged, v2 stayed opt-in, policy did
+not read World/collision, and approved application was still out of scope.
+
+### Files Created/Modified
+
+- Modified `Sources/PebbleLab/LabAgentAlternateLocalHint.swift`.
+- Updated `Sources/PebbleLab/LabOptions.swift`, `LabScenarios.swift`,
+  `LabOutput.swift`, `LabEvents.swift`, and `main.swift`.
+- Updated `CHANGELOG.md`, `DEV_JOURNAL.md`, `ROADMAP.md`, and
+  `PHASE_4_ALTERNATE_LOCAL_HINT_PLAN.md`.
+
+### Why Approved Application
+
+The live read-only phase proved that selected alternates can be checked by the
+tick collision layer. This phase proves the next boundary: tick-approved
+alternate and baseline intents can update the lab abstract/physical position
+maps, while collision-denied and noIntent agents remain preserved.
+
+### Fixture Contexts And Policy
+
+The scenario reuses six deliberately unordered alternate-hint contexts. One
+agent has no feedback and keeps baseline, one has `approvedForMovement` and
+keeps baseline, two blocked agents select deterministic `move_north`
+alternates from the fixed table, one blocked agent has an empty hint, and one
+blocked agent has an unknown hint. v0 and v1 remain unchanged; v2 is explicit
+opt-in with `maxAlternates = 2`.
+
+### Tick Approved Application Result
+
+Four movement intents enter the approved application tick. The tick reads
+collision read-only, approves three occupable destinations, denies one
+non-occupable alternate by collision, applies three lab-map displacements, and
+emits four feedback records. The collision-denied agent and both noIntent
+agents keep their positions.
+
+### Outputs, Invariants, Metrics, Event
+
+The scenario writes `alternate_local_hint_approved_application_report.json`,
+`alternate_local_hint_approved_application_invariant_report.json`,
+`alternate_local_hint_approved_application_decisions.json`,
+`alternate_local_hint_approved_application_handoff.json`,
+`alternate_local_hint_approved_application_positions.json`, `metrics.json`,
+and `events.ndjson`. Metrics use `alternateLocalHintApprovedApplication*`; the
+aggregate event is `lab_alternate_local_hint_approved_application_recorded`.
+The invariant report records 87 checks passed and 0 failed.
+
+### Boundary Confirmation
+
+The report confirms `policyReadCollision=false`, `policyWorldUsed=false`,
+`tickReadCollision=true`, `tickWorldReadOnlyUsed=true`, `movementApplied=true`
+for lab maps only, `memoryUpdated=false`, `goalChanged=false`,
+`pathfindingPerformed=false`, `replanningPerformed=false`,
+`avoidancePerformed=false`, `reservationRuntimeUsed=false`,
+`routeFollowingUsed=false`, `worldMutated=false`, and
+`mutationPerformed=false`.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_approved_application_smoke --seed 42 --ticks 0 --out runs/check_alternate_local_hint_approved_application`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_live_readonly_smoke --seed 42 --ticks 0 --out runs/check_alternate_local_hint_live_readonly_after_approved_application`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_hardening_smoke --seed 42 --ticks 0 --out runs/check_alternate_local_hint_hardening_after_approved_application`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_fixture_smoke --seed 42 --ticks 0 --out runs/check_alternate_local_hint_fixture_after_approved_application`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_approved_application_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_approved_application_after_alternate_hint_approved_application`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_live_readonly_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_live_readonly_after_alternate_hint_approved_application`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_hardening_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_hardening_after_alternate_hint_approved_application`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_fixture_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_fixture_after_alternate_hint_approved_application`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_approved_application_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_approved_application_after_alternate_hint_approved_application`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_live_readonly_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_live_readonly_after_alternate_hint_approved_application`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_intent_to_tick_fixture_after_alternate_hint_approved_application`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_hardening_after_alternate_hint_approved_application`
+- `swift run -c release PebbleLab -- --scenario feedback_to_agent_intent_context_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_to_context_hardening_after_alternate_hint_approved_application`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_fixture_after_alternate_hint_approved_application`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_approved_application_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_to_tick_approved_application_after_alternate_hint_approved_application`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_alternate_hint_approved_application`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- `swift build` passed.
+- `alternate_local_hint_approved_application_smoke` passed with report and
+  invariant success.
+- The smoke produced 6 contexts, 6 decisions, 4 movement intent inputs, 3 tick
+  approvals, 1 tick collision denial, 3 approved lab-map applications, 1 denied
+  agent preserved, and 2 noIntent agents preserved.
+- Metrics and event were written with the expected approved-application
+  prefix/type.
+
+### Next Step
+
+Phase 4.25F — Alternate Local Hint Multi-Tick Regression/Replay.

@@ -682,3 +682,64 @@ Limits:
 
 Next recommended step: Phase 4.25E - Alternate Local Hint Approved Application
 Smoke.
+
+## Phase 4.25E Implementation Status
+
+Status: implemented and validated.
+
+Phase 4.25E added `alternate_local_hint_approved_application_smoke`, connecting
+explicit opt-in alternate local hint v2 decisions to the tick approved
+application contract.
+
+Validated implementation:
+
+- v0 remains unchanged;
+- v1 remains unchanged;
+- v2 remains explicit opt-in;
+- six contexts produce six deterministic decisions;
+- one no-feedback context keeps baseline;
+- one `approvedForMovement` context keeps baseline;
+- two blocked contexts select deterministic alternates from the fixed table;
+- empty and unknown blocked hints produce no alternate and become `noIntent`;
+- `maxAlternates = 2`;
+- four candidates are produced and two are selected;
+- failed directions are excluded;
+- selected alternates are one-edge same-y intents;
+- two noIntent proposals are filtered before tick;
+- four movement intents enter the tick approved application contract;
+- tick collision evidence approves three occupable destinations;
+- tick collision evidence denies one non-occupable destination by collision;
+- approved moves update only lab abstract/physical position maps;
+- three approved agents move;
+- one collision-denied agent is preserved;
+- two noIntent agents are preserved;
+- abstract/physical divergence remains zero before and after application;
+- policy reads no World and no collision;
+- tick reads World/collision read-only;
+- no memory/goals, pathfinding, replanning, avoidance, reservation runtime,
+  route following, or terrain/world mutation occur.
+
+Produced outputs:
+
+- `alternate_local_hint_approved_application_report.json`;
+- `alternate_local_hint_approved_application_invariant_report.json`;
+- `alternate_local_hint_approved_application_decisions.json`;
+- `alternate_local_hint_approved_application_handoff.json`;
+- `alternate_local_hint_approved_application_positions.json`;
+- `metrics.json` with `alternateLocalHintApprovedApplication*`;
+- `events.ndjson` with
+  `lab_alternate_local_hint_approved_application_recorded`.
+
+Limits:
+
+- approved application is limited to lab position maps;
+- no core entity movement;
+- no physical placeholder live movement;
+- no route following;
+- no pathfinding, replanning, avoidance, or reservation runtime;
+- no memory/goals;
+- no terrain/world mutation;
+- no v2 global replacement.
+
+Next recommended step: Phase 4.25F - Alternate Local Hint Multi-Tick
+Regression/Replay.

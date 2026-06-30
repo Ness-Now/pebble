@@ -2062,3 +2062,52 @@ gameplay movement, and world mutation.
 
 Next recommended step: Phase 4.25E - Alternate Local Hint Approved Application
 Smoke.
+
+## Phase 4.25E - Alternate Local Hint Approved Application Smoke
+
+Status: implemented and validated.
+
+Goal: connect explicit opt-in alternate local hint v2 decisions to the tick
+approved application contract while keeping v0 and v1 unchanged and preserving
+the policy boundary.
+
+Validated scope:
+
+- `alternate_local_hint_approved_application_smoke`;
+- v2 remains explicit opt-in;
+- v0 and v1 remain unchanged;
+- six contexts and six decisions;
+- four blocked-feedback contexts;
+- four candidates produced and two selected;
+- two noIntent proposals filtered before tick;
+- four movement intents sent to tick approved application;
+- three occupable destinations approved and one non-occupable destination
+  denied by collision;
+- three approved applications update only lab abstract/physical position maps;
+- one denied collision agent is preserved;
+- two noIntent agents are preserved;
+- three displacements applied;
+- abstract/physical divergence remains zero before and after application;
+- policy reads no World and no collision;
+- tick reads World/collision read-only;
+- no memory/goals;
+- no pathfinding, replanning, avoidance, reservation runtime, or route
+  following;
+- no terrain/world mutation.
+
+Outputs:
+
+- `alternate_local_hint_approved_application_report.json`;
+- `alternate_local_hint_approved_application_invariant_report.json`;
+- `alternate_local_hint_approved_application_decisions.json`;
+- `alternate_local_hint_approved_application_handoff.json`;
+- `alternate_local_hint_approved_application_positions.json`;
+- `alternateLocalHintApprovedApplication*` metrics;
+- `lab_alternate_local_hint_approved_application_recorded` event.
+
+Out of scope for this phase: pathfinding, replanning, avoidance, reservation
+runtime, route following, memory/goals, core entity movement, physical
+placeholder movement, gameplay movement, and terrain/world mutation.
+
+Next recommended step: Phase 4.25F - Alternate Local Hint Multi-Tick
+Regression/Replay.
