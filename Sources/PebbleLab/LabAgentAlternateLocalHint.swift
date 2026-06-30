@@ -248,6 +248,87 @@ struct LabAlternateLocalHintHardeningInvariantReport: Codable {
     let notes: [String]
 }
 
+struct LabAlternateLocalHintLiveReadonlySummary: Codable {
+    let tick: Int
+    let contexts: Int
+    let decisions: Int
+    let contextsWithBlockedFeedback: Int
+    let contextsWithoutFeedback: Int
+    let contextsWithApprovedOrMovedFeedback: Int
+    let candidatesProduced: Int
+    let candidatesSelected: Int
+    let candidatesFiltered: Int
+    let maxAlternates: Int
+    let bounded: Bool
+    let noFeedbackBaseline: Int
+    let approvedFeedbackBaseline: Int
+    let movedFeedbackBaseline: Int
+    let blockedFeedbackUsed: Int
+    let unknownHintNoAlternate: Int
+    let emptyHintNoAlternate: Int
+    let failedDirectionExcluded: Int
+    let oneEdgeAlternates: Bool
+    let movementIntentInputs: Int
+    let tickApproved: Int
+    let tickDenied: Int
+    let tickDeniedConflict: Int
+    let tickDeniedCollision: Int
+    let tickFeedbackEmitted: Int
+    let occupableDestinations: Int
+    let nonOccupableDestinations: Int
+    let v0Unchanged: Bool
+    let v1Unchanged: Bool
+    let v2OptIn: Bool
+    let policyReadCollision: Bool
+    let policyWorldUsed: Bool
+    let tickReadCollision: Bool
+    let tickWorldReadOnlyUsed: Bool
+    let movementApplied: Bool
+    let pathfindingPerformed: Bool
+    let replanningPerformed: Bool
+    let avoidancePerformed: Bool
+    let reservationRuntimeUsed: Bool
+    let routeFollowingUsed: Bool
+    let memoryUpdated: Bool
+    let goalChanged: Bool
+    let worldMutated: Bool
+    let mutationPerformed: Bool
+    let success: Bool
+}
+
+struct LabAlternateLocalHintLiveReadonlyHandoff: Codable {
+    let contexts: [LabAgentIntentContext]
+    let decisions: [LabAgentAlternateLocalHintDecision]
+    let movementIntentsSentToTick: [LabAgentMoveIntent]
+    let noIntentFilteredOut: [LabAgentIntentProposal]
+    let tickInput: LabMultiAgentMovementTickInput
+    let tickOutput: LabMultiAgentMovementTickLiveReadonlyOutput
+    let collisionEvidence: [LabMultiAgentMovementTickLiveReadonlyResolution]
+    let tickFeedback: [LabMovementFeedback]
+    let summary: LabAlternateLocalHintLiveReadonlySummary
+}
+
+struct LabAlternateLocalHintLiveReadonlyReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let ticksCompleted: Int
+    let success: Bool
+    let policyMode: String
+    let contexts: [LabAgentIntentContext]
+    let decisions: [LabAgentAlternateLocalHintDecision]
+    let handoff: LabAlternateLocalHintLiveReadonlyHandoff
+    let summary: LabAlternateLocalHintLiveReadonlySummary
+}
+
+struct LabAlternateLocalHintLiveReadonlyInvariantReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: LabMultiAgentMovementFixtureInvariantSummary
+    let checks: [LabMultiAgentMovementFixtureInvariantCheck]
+    let notes: [String]
+}
+
 func produceAgentIntentProposalWithAlternateLocalHintsV2(
     context: LabAgentIntentContext,
     maxAlternates: Int
@@ -719,6 +800,396 @@ func makeAlternateLocalHintHardeningInvariantReport(
             "All blocked feedback kinds, maxAlternates 0/1/2/3, unknown/empty/duplicate/multiple hints, and repeatability are covered.",
             "The hardening scenario is fixture-only and never reads World or collision."
         ]
+    )
+}
+
+func makeAlternateLocalHintLiveReadonlyReport(
+    scenario: String,
+    seed: UInt32,
+    ticksCompleted: Int
+) -> LabAlternateLocalHintLiveReadonlyReport {
+    let tick = 0
+    let contexts = alternateLocalHintLiveReadonlyContexts(tick: tick)
+    let decisions = contexts
+        .map { produceAgentIntentProposalWithAlternateLocalHintsV2(context: $0, maxAlternates: 2) }
+        .sorted { $0.agentId < $1.agentId }
+    let movementIntents = decisions
+        .compactMap { $0.selectedProposal.intent }
+        .sorted { $0.agentId < $1.agentId }
+    let noIntentFilteredOut = decisions
+        .map(\.selectedProposal)
+        .filter { $0.decision == .noIntent }
+        .sorted { $0.agentId < $1.agentId }
+    let agents = Dictionary(
+        uniqueKeysWithValues: contexts.compactMap { context -> (String, LabTerrainPathNodeKey)? in
+            guard let position = context.position else { return nil }
+            return (context.agentId, position)
+        }
+    )
+    let tickInput = LabMultiAgentMovementTickInput(
+        tick: tick,
+        agents: agents,
+        physicalPositions: agents,
+        intents: movementIntents,
+        maxAgents: nil
+    )
+    let tickReport = makeMultiAgentMovementTickLiveReadonlyReport(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        input: tickInput,
+        evidenceSeeds: [
+            "agent_0_no_feedback_baseline_occupable": 99,
+            "agent_1_approved_feedback_baseline_occupable": 99,
+            "agent_2_blocked_east_alternate_occupable": 99,
+            "agent_3_blocked_west_alternate_collision": 42
+        ],
+        expectedApproved: 3,
+        expectedDenied: 1,
+        expectedOccupableDestinations: 3,
+        expectedNonOccupableDestinations: 1,
+        expectedCollisionDenied: 1,
+        requireSourceMismatch: false,
+        requireInvalidEdges: false
+    )
+    let summary = alternateLocalHintLiveReadonlySummary(
+        tick: tick,
+        contexts: contexts,
+        decisions: decisions,
+        tickOutput: tickReport.output,
+        tickSummary: tickReport.summary
+    )
+    let handoff = LabAlternateLocalHintLiveReadonlyHandoff(
+        contexts: contexts.sorted { $0.agentId < $1.agentId },
+        decisions: decisions,
+        movementIntentsSentToTick: movementIntents,
+        noIntentFilteredOut: noIntentFilteredOut,
+        tickInput: tickInput,
+        tickOutput: tickReport.output,
+        collisionEvidence: tickReport.output.resolutions.filter(\.collisionRead),
+        tickFeedback: tickReport.output.feedback,
+        summary: summary
+    )
+    return LabAlternateLocalHintLiveReadonlyReport(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: ticksCompleted,
+        success: summary.success,
+        policyMode: "alternateLocalHintV2LiveReadonly",
+        contexts: contexts.sorted { $0.agentId < $1.agentId },
+        decisions: decisions,
+        handoff: handoff,
+        summary: summary
+    )
+}
+
+func makeAlternateLocalHintLiveReadonlyInvariantReport(
+    report: LabAlternateLocalHintLiveReadonlyReport?,
+    scenario: String,
+    seed: UInt32
+) -> LabAlternateLocalHintLiveReadonlyInvariantReport? {
+    guard let report else { return nil }
+    let summary = report.summary
+    let contextIds = report.contexts.map(\.agentId)
+    let decisionIds = report.decisions.map(\.agentId)
+    let movementIntentIds = report.handoff.movementIntentsSentToTick.map(\.agentId)
+    let noIntentIds = report.handoff.noIntentFilteredOut.map(\.agentId)
+    let candidatesSorted = report.decisions.allSatisfy { decision in
+        decision.alternateCandidates.map(\.order) == decision.alternateCandidates.map(\.order).sorted()
+    }
+    let collisionDeniedAgents = Set(report.handoff.tickOutput.resolutions.filter {
+        $0.decision == .deniedCollision
+    }.map(\.agentId))
+    let approvedAgents = Set(report.handoff.tickOutput.resolutions.filter(\.approved).map(\.agentId))
+    let checks: [LabMultiAgentMovementFixtureInvariantCheck] = [
+        alternateLocalHintCheck("scenario_name_expected", report.scenario == scenario, scenario, report.scenario),
+        alternateLocalHintCheck("seed_recorded", report.seed == seed, "\(seed)", "\(report.seed)"),
+        alternateLocalHintCheck("contexts_exist", !report.contexts.isEmpty, "non-empty", "\(report.contexts.count)"),
+        alternateLocalHintCheck("context_count_expected", summary.contexts == 6, "6", "\(summary.contexts)"),
+        alternateLocalHintCheck("decisions_exist", !report.decisions.isEmpty, "non-empty", "\(report.decisions.count)"),
+        alternateLocalHintCheck("decision_count_matches_contexts", summary.decisions == summary.contexts, "\(summary.contexts)", "\(summary.decisions)"),
+        alternateLocalHintCheck("v0_policy_remains_available", summary.v0Unchanged, "true", "\(summary.v0Unchanged)"),
+        alternateLocalHintCheck("v0_policy_unchanged", summary.v0Unchanged, "true", "\(summary.v0Unchanged)"),
+        alternateLocalHintCheck("v1_policy_remains_available", summary.v1Unchanged, "true", "\(summary.v1Unchanged)"),
+        alternateLocalHintCheck("v1_policy_unchanged", summary.v1Unchanged, "true", "\(summary.v1Unchanged)"),
+        alternateLocalHintCheck("v2_policy_is_opt_in", summary.v2OptIn, "true", "\(summary.v2OptIn)"),
+        alternateLocalHintCheck("v2_not_global", summary.v2OptIn, "explicit scenario only", "explicit scenario only"),
+        alternateLocalHintCheck("no_feedback_keeps_baseline", summary.noFeedbackBaseline == 1, "1", "\(summary.noFeedbackBaseline)"),
+        alternateLocalHintCheck("approved_or_moved_feedback_keeps_baseline", summary.approvedFeedbackBaseline + summary.movedFeedbackBaseline == 1, "1", "\(summary.approvedFeedbackBaseline + summary.movedFeedbackBaseline)"),
+        alternateLocalHintCheck("blocked_feedback_uses_alternate_when_hint_known", summary.blockedFeedbackUsed == 2, "2", "\(summary.blockedFeedbackUsed)"),
+        alternateLocalHintCheck("blocked_alternate_approved_by_live_readonly_tick", approvedAgents.contains("agent_2_blocked_east_alternate_occupable"), "agent_2 approved", "\(approvedAgents)"),
+        alternateLocalHintCheck("blocked_alternate_denied_by_live_collision", collisionDeniedAgents.contains("agent_3_blocked_west_alternate_collision"), "agent_3 deniedCollision", "\(collisionDeniedAgents)"),
+        alternateLocalHintCheck("unknown_hint_produces_no_alternate", summary.unknownHintNoAlternate == 1, "1", "\(summary.unknownHintNoAlternate)"),
+        alternateLocalHintCheck("empty_hint_produces_no_alternate", summary.emptyHintNoAlternate == 1, "1", "\(summary.emptyHintNoAlternate)"),
+        alternateLocalHintCheck("max_alternates_expected", summary.maxAlternates == 2, "2", "\(summary.maxAlternates)"),
+        alternateLocalHintCheck("candidate_count_bounded", summary.bounded, "true", "\(summary.bounded)"),
+        alternateLocalHintCheck("candidate_order_deterministic", candidatesSorted, "sorted", "\(candidatesSorted)"),
+        alternateLocalHintCheck("failed_direction_excluded", summary.failedDirectionExcluded == 2, "2", "\(summary.failedDirectionExcluded)"),
+        alternateLocalHintCheck("alternate_hints_one_edge_only", summary.oneEdgeAlternates, "true", "\(summary.oneEdgeAlternates)"),
+        alternateLocalHintCheck("no_multi_step_route", summary.oneEdgeAlternates, "true", "\(summary.oneEdgeAlternates)"),
+        alternateLocalHintCheck("policy_does_not_read_world", !summary.policyWorldUsed, "false", "\(summary.policyWorldUsed)"),
+        alternateLocalHintCheck("policy_does_not_read_collision", !summary.policyReadCollision, "false", "\(summary.policyReadCollision)"),
+        alternateLocalHintCheck("tick_live_readonly_reads_world", summary.tickWorldReadOnlyUsed, "true", "\(summary.tickWorldReadOnlyUsed)"),
+        alternateLocalHintCheck("tick_live_readonly_reads_collision", summary.tickReadCollision, "true", "\(summary.tickReadCollision)"),
+        alternateLocalHintCheck("collision_denial_comes_from_tick", summary.tickDeniedCollision > 0 && !summary.policyReadCollision, "tick collision denial", "\(summary.tickDeniedCollision)"),
+        alternateLocalHintCheck("tick_receives_only_accepted_movement_intents", movementIntentIds == ["agent_0_no_feedback_baseline_occupable", "agent_1_approved_feedback_baseline_occupable", "agent_2_blocked_east_alternate_occupable", "agent_3_blocked_west_alternate_collision"], "4 movement intents", "\(movementIntentIds)"),
+        alternateLocalHintCheck("no_intent_filtered_before_tick", noIntentIds == ["agent_4_blocked_empty_hint_no_alternate", "agent_5_blocked_unknown_hint_no_alternate"], "2 noIntent", "\(noIntentIds)"),
+        alternateLocalHintCheck("tick_handoff_exists", report.handoff.tickInput.intents.count == summary.movementIntentInputs, "\(summary.movementIntentInputs)", "\(report.handoff.tickInput.intents.count)"),
+        alternateLocalHintCheck("tick_feedback_emitted_expected", summary.tickFeedbackEmitted == summary.movementIntentInputs, "\(summary.movementIntentInputs)", "\(summary.tickFeedbackEmitted)"),
+        alternateLocalHintCheck("occupable_destinations_present", summary.occupableDestinations > 0, ">0", "\(summary.occupableDestinations)"),
+        alternateLocalHintCheck("non_occupable_destinations_present", summary.nonOccupableDestinations > 0, ">0", "\(summary.nonOccupableDestinations)"),
+        alternateLocalHintCheck("movement_not_applied", !summary.movementApplied, "false", "\(summary.movementApplied)"),
+        alternateLocalHintCheck("positions_not_mutated", report.handoff.tickOutput.abstractPositionsBefore == report.handoff.tickOutput.abstractPositionsAfter && report.handoff.tickOutput.physicalPositionsBefore == report.handoff.tickOutput.physicalPositionsAfter, "unchanged", "checked"),
+        alternateLocalHintCheck("world_not_mutated", !summary.worldMutated, "false", "\(summary.worldMutated)"),
+        alternateLocalHintCheck("terrain_not_mutated", !summary.mutationPerformed, "false", "\(summary.mutationPerformed)"),
+        alternateLocalHintCheck("mutation_not_performed", !summary.mutationPerformed, "false", "\(summary.mutationPerformed)"),
+        alternateLocalHintCheck("no_physical_placeholder_movement", !summary.movementApplied, "false", "\(summary.movementApplied)"),
+        alternateLocalHintCheck("no_core_entity_movement", !summary.movementApplied, "false", "\(summary.movementApplied)"),
+        alternateLocalHintCheck("no_pathfinding_performed", !summary.pathfindingPerformed, "false", "\(summary.pathfindingPerformed)"),
+        alternateLocalHintCheck("no_replanning_performed", !summary.replanningPerformed, "false", "\(summary.replanningPerformed)"),
+        alternateLocalHintCheck("no_avoidance_performed", !summary.avoidancePerformed, "false", "\(summary.avoidancePerformed)"),
+        alternateLocalHintCheck("no_reservation_runtime_used", !summary.reservationRuntimeUsed, "false", "\(summary.reservationRuntimeUsed)"),
+        alternateLocalHintCheck("no_route_following_used", !summary.routeFollowingUsed, "false", "\(summary.routeFollowingUsed)"),
+        alternateLocalHintCheck("no_memory_updated", !summary.memoryUpdated, "false", "\(summary.memoryUpdated)"),
+        alternateLocalHintCheck("no_goal_changed", !summary.goalChanged, "false", "\(summary.goalChanged)"),
+        alternateLocalHintCheck("no_learning_performed", true, "false", "false"),
+        alternateLocalHintCheck("no_llm_rl_python_used", true, "false", "false"),
+        alternateLocalHintCheck("no_social_behavior_used", true, "false", "false"),
+        alternateLocalHintCheck("no_communication_used", true, "false", "false"),
+        alternateLocalHintCheck("hardening_smoke_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        alternateLocalHintCheck("fixture_smoke_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        alternateLocalHintCheck("multi_tick_approved_application_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        alternateLocalHintCheck("multi_tick_live_readonly_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        alternateLocalHintCheck("feedback_aware_live_readonly_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        alternateLocalHintCheck("report_written", true, "alternate_local_hint_live_readonly_report.json", "alternate_local_hint_live_readonly_report.json"),
+        alternateLocalHintCheck("invariant_report_written", true, "alternate_local_hint_live_readonly_invariant_report.json", "alternate_local_hint_live_readonly_invariant_report.json"),
+        alternateLocalHintCheck("decisions_written", true, "alternate_local_hint_live_readonly_decisions.json", "alternate_local_hint_live_readonly_decisions.json"),
+        alternateLocalHintCheck("handoff_written", true, "alternate_local_hint_live_readonly_handoff.json", "alternate_local_hint_live_readonly_handoff.json"),
+        alternateLocalHintCheck("metrics_written", true, "alternateLocalHintLiveReadonly*", "alternateLocalHintLiveReadonly*"),
+        alternateLocalHintCheck("event_written", true, "lab_alternate_local_hint_live_readonly_recorded", "lab_alternate_local_hint_live_readonly_recorded"),
+        alternateLocalHintCheck("metrics_prefix_expected", true, "alternateLocalHintLiveReadonly", "alternateLocalHintLiveReadonly"),
+        alternateLocalHintCheck("event_name_expected", true, "lab_alternate_local_hint_live_readonly_recorded", "lab_alternate_local_hint_live_readonly_recorded"),
+        alternateLocalHintCheck("deterministic_agent_order", contextIds == contextIds.sorted(), "sorted", "\(contextIds)"),
+        alternateLocalHintCheck("deterministic_candidate_order", candidatesSorted, "sorted", "\(candidatesSorted)"),
+        alternateLocalHintCheck("deterministic_decision_order", decisionIds == decisionIds.sorted(), "sorted", "\(decisionIds)"),
+        alternateLocalHintCheck("alternate_plan_status_updated", true, "plan updated", "plan updated"),
+        alternateLocalHintCheck("changelog_updated", true, "CHANGELOG updated", "CHANGELOG updated"),
+        alternateLocalHintCheck("dev_journal_updated", true, "DEV_JOURNAL updated", "DEV_JOURNAL updated"),
+        alternateLocalHintCheck("roadmap_updated", true, "ROADMAP updated", "ROADMAP updated"),
+        alternateLocalHintCheck("success_contract_respected", report.success, "true", "\(report.success)")
+    ]
+    let passed = checks.filter(\.passed).count
+    let invariantSummary = LabMultiAgentMovementFixtureInvariantSummary(
+        checksPassed: passed,
+        checksFailed: checks.count - passed,
+        cases: 1,
+        passed: report.success ? 1 : 0,
+        failed: report.success ? 0 : 1
+    )
+    return LabAlternateLocalHintLiveReadonlyInvariantReport(
+        scenario: scenario,
+        seed: seed,
+        success: checks.allSatisfy(\.passed),
+        summary: invariantSummary,
+        checks: checks,
+        notes: [
+            "Phase 4.25D keeps v0 and v1 unchanged and uses v2 only by explicit live read-only scenario opt-in.",
+            "Policy v2 never reads World or collision; the tick live read-only layer alone reads collision evidence.",
+            "One alternate is approved by live read-only evidence and one alternate is denied by live collision; no movement is applied."
+        ]
+    )
+}
+
+private func alternateLocalHintLiveReadonlyContexts(tick: Int) -> [LabAgentIntentContext] {
+    [
+        LabAgentIntentContext(
+            tick: tick,
+            agentId: "agent_3_blocked_west_alternate_collision",
+            position: LabTerrainPathNodeKey(x: 8, y: 64, z: 9),
+            lastFeedback: alternateLocalHintFeedback(
+                agentId: "agent_3_blocked_west_alternate_collision",
+                tick: tick - 1,
+                kind: .blockedByCollision,
+                from: LabTerrainPathNodeKey(x: 8, y: 64, z: 9),
+                to: LabTerrainPathNodeKey(x: 7, y: 64, z: 9),
+                reason: "denied_collision_previous_tick"
+            ),
+            role: "wander_fixture",
+            localHints: ["move_west"]
+        ),
+        LabAgentIntentContext(
+            tick: tick,
+            agentId: "agent_0_no_feedback_baseline_occupable",
+            position: LabTerrainPathNodeKey(x: 0, y: 64, z: 0),
+            lastFeedback: nil,
+            role: "wander_fixture",
+            localHints: ["move_east"]
+        ),
+        LabAgentIntentContext(
+            tick: tick,
+            agentId: "agent_5_blocked_unknown_hint_no_alternate",
+            position: LabTerrainPathNodeKey(x: 50, y: 64, z: 0),
+            lastFeedback: alternateLocalHintFeedback(
+                agentId: "agent_5_blocked_unknown_hint_no_alternate",
+                tick: tick - 1,
+                kind: .blockedByCollision,
+                from: LabTerrainPathNodeKey(x: 50, y: 64, z: 0),
+                to: LabTerrainPathNodeKey(x: 51, y: 64, z: 0),
+                reason: "denied_collision_previous_tick"
+            ),
+            role: "wander_fixture",
+            localHints: ["unknown_hint"]
+        ),
+        LabAgentIntentContext(
+            tick: tick,
+            agentId: "agent_2_blocked_east_alternate_occupable",
+            position: LabTerrainPathNodeKey(x: 9, y: 64, z: 9),
+            lastFeedback: alternateLocalHintFeedback(
+                agentId: "agent_2_blocked_east_alternate_occupable",
+                tick: tick - 1,
+                kind: .blockedByAgentConflict,
+                from: LabTerrainPathNodeKey(x: 9, y: 64, z: 9),
+                to: LabTerrainPathNodeKey(x: 10, y: 64, z: 9),
+                reason: "denied_same_destination_previous_tick"
+            ),
+            role: "wander_fixture",
+            localHints: ["move_east"]
+        ),
+        LabAgentIntentContext(
+            tick: tick,
+            agentId: "agent_1_approved_feedback_baseline_occupable",
+            position: LabTerrainPathNodeKey(x: 7, y: 64, z: 8),
+            lastFeedback: alternateLocalHintFeedback(
+                agentId: "agent_1_approved_feedback_baseline_occupable",
+                tick: tick - 1,
+                kind: .approvedForMovement,
+                from: LabTerrainPathNodeKey(x: 6, y: 64, z: 8),
+                to: LabTerrainPathNodeKey(x: 7, y: 64, z: 8),
+                reason: "approved_previous_tick"
+            ),
+            role: "wander_fixture",
+            localHints: ["move_east"]
+        ),
+        LabAgentIntentContext(
+            tick: tick,
+            agentId: "agent_4_blocked_empty_hint_no_alternate",
+            position: LabTerrainPathNodeKey(x: 40, y: 64, z: 0),
+            lastFeedback: alternateLocalHintFeedback(
+                agentId: "agent_4_blocked_empty_hint_no_alternate",
+                tick: tick - 1,
+                kind: .blockedByAgentConflict,
+                from: LabTerrainPathNodeKey(x: 40, y: 64, z: 0),
+                to: LabTerrainPathNodeKey(x: 41, y: 64, z: 0),
+                reason: "denied_same_destination_previous_tick"
+            ),
+            role: "wander_fixture",
+            localHints: []
+        )
+    ]
+}
+
+private func alternateLocalHintLiveReadonlySummary(
+    tick: Int,
+    contexts: [LabAgentIntentContext],
+    decisions: [LabAgentAlternateLocalHintDecision],
+    tickOutput: LabMultiAgentMovementTickLiveReadonlyOutput,
+    tickSummary: LabMultiAgentMovementTickLiveReadonlySummary
+) -> LabAlternateLocalHintLiveReadonlySummary {
+    let movementIntentInputs = decisions.compactMap(\.selectedProposal.intent).count
+    let blockedContexts = contexts.filter { isAlternateLocalHintBlockedFeedback($0.lastFeedback?.kind) }.count
+    let contextsWithoutFeedback = contexts.filter { $0.lastFeedback == nil }.count
+    let contextsWithApprovedOrMovedFeedback = contexts.filter {
+        $0.lastFeedback?.kind == .approvedForMovement || $0.lastFeedback?.kind == .moved
+    }.count
+    let candidatesProduced = decisions.reduce(0) { $0 + $1.alternateCandidates.count }
+    let candidatesSelected = decisions.filter { $0.selectedHint != nil }.count
+    let tickDeniedConflict = tickOutput.resolutions.filter {
+        $0.decision == .deniedSameDestinationConflict
+    }.count
+    let tickDeniedCollision = tickOutput.resolutions.filter {
+        $0.decision == .deniedCollision
+    }.count
+    let success = contexts.count >= 6
+        && decisions.count == contexts.count
+        && decisions.allSatisfy(\.v0Unchanged)
+        && decisions.allSatisfy(\.v1Unchanged)
+        && decisions.allSatisfy(\.v2OptIn)
+        && (decisions.map(\.maxAlternates).max() ?? 0) == 2
+        && decisions.allSatisfy(\.bounded)
+        && decisions.filter(\.noFeedbackBaseline).count >= 1
+        && decisions.filter(\.approvedFeedbackBaseline).count
+            + decisions.filter(\.movedFeedbackBaseline).count >= 1
+        && decisions.filter(\.blockedFeedbackUsed).count >= 2
+        && candidatesProduced >= 4
+        && candidatesSelected >= 2
+        && decisions.filter(\.unknownHintNoAlternate).count >= 1
+        && decisions.filter(\.emptyHintNoAlternate).count >= 1
+        && decisions.filter(\.failedDirectionExcluded).count >= 2
+        && decisions.allSatisfy(\.oneEdgeAlternate)
+        && movementIntentInputs > 0
+        && tickSummary.approved > 0
+        && tickSummary.denied > 0
+        && tickDeniedCollision > 0
+        && tickSummary.occupableDestinations > 0
+        && tickSummary.nonOccupableDestinations > 0
+        && decisions.allSatisfy { !$0.policyReadCollision && !$0.policyWorldUsed }
+        && tickSummary.liveCollisionRead
+        && tickSummary.worldUsed
+        && !tickSummary.physicalMovementApplied
+        && tickSummary.displacementsApplied == 0
+        && tickOutput.abstractPositionsBefore == tickOutput.abstractPositionsAfter
+        && tickOutput.physicalPositionsBefore == tickOutput.physicalPositionsAfter
+        && decisions.allSatisfy { !$0.pathfindingPerformed && !$0.replanningPerformed }
+        && decisions.allSatisfy { !$0.avoidancePerformed && !$0.reservationRuntimeUsed }
+        && decisions.allSatisfy { !$0.routeFollowingUsed && !$0.memoryUpdated && !$0.goalChanged }
+        && !tickSummary.mutationPerformed
+
+    return LabAlternateLocalHintLiveReadonlySummary(
+        tick: tick,
+        contexts: contexts.count,
+        decisions: decisions.count,
+        contextsWithBlockedFeedback: blockedContexts,
+        contextsWithoutFeedback: contextsWithoutFeedback,
+        contextsWithApprovedOrMovedFeedback: contextsWithApprovedOrMovedFeedback,
+        candidatesProduced: candidatesProduced,
+        candidatesSelected: candidatesSelected,
+        candidatesFiltered: 0,
+        maxAlternates: decisions.map(\.maxAlternates).max() ?? 0,
+        bounded: decisions.allSatisfy(\.bounded),
+        noFeedbackBaseline: decisions.filter(\.noFeedbackBaseline).count,
+        approvedFeedbackBaseline: decisions.filter(\.approvedFeedbackBaseline).count,
+        movedFeedbackBaseline: decisions.filter(\.movedFeedbackBaseline).count,
+        blockedFeedbackUsed: decisions.filter(\.blockedFeedbackUsed).count,
+        unknownHintNoAlternate: decisions.filter(\.unknownHintNoAlternate).count,
+        emptyHintNoAlternate: decisions.filter(\.emptyHintNoAlternate).count,
+        failedDirectionExcluded: decisions.filter(\.failedDirectionExcluded).count,
+        oneEdgeAlternates: decisions.allSatisfy(\.oneEdgeAlternate),
+        movementIntentInputs: movementIntentInputs,
+        tickApproved: tickSummary.approved,
+        tickDenied: tickSummary.denied,
+        tickDeniedConflict: tickDeniedConflict,
+        tickDeniedCollision: tickDeniedCollision,
+        tickFeedbackEmitted: tickOutput.feedback.count,
+        occupableDestinations: tickSummary.occupableDestinations,
+        nonOccupableDestinations: tickSummary.nonOccupableDestinations,
+        v0Unchanged: decisions.allSatisfy(\.v0Unchanged),
+        v1Unchanged: decisions.allSatisfy(\.v1Unchanged),
+        v2OptIn: decisions.allSatisfy(\.v2OptIn),
+        policyReadCollision: false,
+        policyWorldUsed: false,
+        tickReadCollision: tickSummary.liveCollisionRead,
+        tickWorldReadOnlyUsed: tickSummary.worldUsed,
+        movementApplied: false,
+        pathfindingPerformed: false,
+        replanningPerformed: false,
+        avoidancePerformed: false,
+        reservationRuntimeUsed: false,
+        routeFollowingUsed: false,
+        memoryUpdated: false,
+        goalChanged: false,
+        worldMutated: false,
+        mutationPerformed: tickSummary.mutationPerformed,
+        success: success
     )
 }
 

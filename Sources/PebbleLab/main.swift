@@ -62,6 +62,8 @@ let isAlternateLocalHintFixtureScenario = options.scenario
     == "alternate_local_hint_fixture_smoke"
 let isAlternateLocalHintHardeningScenario = options.scenario
     == "alternate_local_hint_hardening_smoke"
+let isAlternateLocalHintLiveReadonlyScenario = options.scenario
+    == "alternate_local_hint_live_readonly_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -87,7 +89,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isMultiTickClosedLoopLiveReadonlyScenario
     || isMultiTickClosedLoopApprovedApplicationScenario
     || isAlternateLocalHintFixtureScenario
-    || isAlternateLocalHintHardeningScenario)
+    || isAlternateLocalHintHardeningScenario
+    || isAlternateLocalHintLiveReadonlyScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -2392,6 +2395,62 @@ let alternateLocalHintHardeningSuccess = isAlternateLocalHintHardeningScenario
         && alternateLocalHintHardeningSummary?.worldMutated == false
         && alternateLocalHintHardeningSummary?.mutationPerformed == false)
     : nil
+let alternateLocalHintLiveReadonlyReport = isAlternateLocalHintLiveReadonlyScenario
+    ? makeAlternateLocalHintLiveReadonlyReport(
+        scenario: options.scenario,
+        seed: options.seed,
+        ticksCompleted: ticksCompleted
+    )
+    : nil
+let alternateLocalHintLiveReadonlyInvariantReport = isAlternateLocalHintLiveReadonlyScenario
+    ? makeAlternateLocalHintLiveReadonlyInvariantReport(
+        report: alternateLocalHintLiveReadonlyReport,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let alternateLocalHintLiveReadonlySummary = alternateLocalHintLiveReadonlyReport?.summary
+let alternateLocalHintLiveReadonlySuccess = isAlternateLocalHintLiveReadonlyScenario
+    ? ((alternateLocalHintLiveReadonlyReport?.success ?? false)
+        && (alternateLocalHintLiveReadonlyInvariantReport?.success ?? false)
+        && (alternateLocalHintLiveReadonlySummary?.contexts ?? 0) >= 6
+        && alternateLocalHintLiveReadonlySummary?.decisions == alternateLocalHintLiveReadonlySummary?.contexts
+        && alternateLocalHintLiveReadonlySummary?.v0Unchanged == true
+        && alternateLocalHintLiveReadonlySummary?.v1Unchanged == true
+        && alternateLocalHintLiveReadonlySummary?.v2OptIn == true
+        && alternateLocalHintLiveReadonlySummary?.maxAlternates == 2
+        && alternateLocalHintLiveReadonlySummary?.bounded == true
+        && (alternateLocalHintLiveReadonlySummary?.noFeedbackBaseline ?? 0) >= 1
+        && ((alternateLocalHintLiveReadonlySummary?.approvedFeedbackBaseline ?? 0)
+            + (alternateLocalHintLiveReadonlySummary?.movedFeedbackBaseline ?? 0)) >= 1
+        && (alternateLocalHintLiveReadonlySummary?.blockedFeedbackUsed ?? 0) >= 2
+        && (alternateLocalHintLiveReadonlySummary?.candidatesProduced ?? 0) >= 4
+        && (alternateLocalHintLiveReadonlySummary?.candidatesSelected ?? 0) >= 2
+        && (alternateLocalHintLiveReadonlySummary?.unknownHintNoAlternate ?? 0) >= 1
+        && (alternateLocalHintLiveReadonlySummary?.emptyHintNoAlternate ?? 0) >= 1
+        && (alternateLocalHintLiveReadonlySummary?.failedDirectionExcluded ?? 0) >= 2
+        && alternateLocalHintLiveReadonlySummary?.oneEdgeAlternates == true
+        && (alternateLocalHintLiveReadonlySummary?.movementIntentInputs ?? 0) > 0
+        && (alternateLocalHintLiveReadonlySummary?.tickApproved ?? 0) > 0
+        && (alternateLocalHintLiveReadonlySummary?.tickDenied ?? 0) > 0
+        && (alternateLocalHintLiveReadonlySummary?.tickDeniedCollision ?? 0) > 0
+        && (alternateLocalHintLiveReadonlySummary?.occupableDestinations ?? 0) > 0
+        && (alternateLocalHintLiveReadonlySummary?.nonOccupableDestinations ?? 0) > 0
+        && alternateLocalHintLiveReadonlySummary?.policyReadCollision == false
+        && alternateLocalHintLiveReadonlySummary?.policyWorldUsed == false
+        && alternateLocalHintLiveReadonlySummary?.tickReadCollision == true
+        && alternateLocalHintLiveReadonlySummary?.tickWorldReadOnlyUsed == true
+        && alternateLocalHintLiveReadonlySummary?.movementApplied == false
+        && alternateLocalHintLiveReadonlySummary?.pathfindingPerformed == false
+        && alternateLocalHintLiveReadonlySummary?.replanningPerformed == false
+        && alternateLocalHintLiveReadonlySummary?.avoidancePerformed == false
+        && alternateLocalHintLiveReadonlySummary?.reservationRuntimeUsed == false
+        && alternateLocalHintLiveReadonlySummary?.routeFollowingUsed == false
+        && alternateLocalHintLiveReadonlySummary?.memoryUpdated == false
+        && alternateLocalHintLiveReadonlySummary?.goalChanged == false
+        && alternateLocalHintLiveReadonlySummary?.worldMutated == false
+        && alternateLocalHintLiveReadonlySummary?.mutationPerformed == false)
+    : nil
 let multiTickClosedLoopReport = isMultiTickClosedLoopFixtureScenario
     ? makeMultiTickClosedLoopFixtureReport(
         scenario: options.scenario,
@@ -3018,6 +3077,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (feedbackAwareIntentToTickApprovedApplicationSuccess ?? true)
     && (alternateLocalHintSuccess ?? true)
     && (alternateLocalHintHardeningSuccess ?? true)
+    && (alternateLocalHintLiveReadonlySuccess ?? true)
     && (multiTickClosedLoopSuccess ?? true)
     && (multiTickClosedLoopHardeningSuccess ?? true)
     && (multiTickClosedLoopLiveReadonlySuccess ?? true)
@@ -4232,6 +4292,62 @@ if options.outPath != nil {
                 replanningPerformed: summary.replanningPerformed
             ))
         }
+        if let alternateLocalHintLiveReadonlyReport {
+            let summary = alternateLocalHintLiveReadonlyReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_alternate_local_hint_live_readonly_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: alternateLocalHintLiveReadonlySuccess,
+                candidates: summary.candidatesProduced,
+                decisions: summary.decisions,
+                contextsWithBlockedFeedback: summary.contextsWithBlockedFeedback,
+                contextsWithApprovedOrMovedFeedback: summary.contextsWithApprovedOrMovedFeedback,
+                candidatesProduced: summary.candidatesProduced,
+                candidatesSelected: summary.candidatesSelected,
+                candidatesFiltered: summary.candidatesFiltered,
+                maxAlternates: summary.maxAlternates,
+                bounded: summary.bounded,
+                noFeedbackBaseline: summary.noFeedbackBaseline,
+                approvedFeedbackBaseline: summary.approvedFeedbackBaseline,
+                movedFeedbackBaseline: summary.movedFeedbackBaseline,
+                blockedFeedbackUsed: summary.blockedFeedbackUsed,
+                unknownHintNoAlternate: summary.unknownHintNoAlternate,
+                emptyHintNoAlternate: summary.emptyHintNoAlternate,
+                failedDirectionExcluded: summary.failedDirectionExcluded,
+                oneEdgeAlternates: summary.oneEdgeAlternates,
+                movementIntentInputs: summary.movementIntentInputs,
+                tickDeniedConflict: summary.tickDeniedConflict,
+                tickDeniedCollision: summary.tickDeniedCollision,
+                v0Unchanged: summary.v0Unchanged,
+                v1Unchanged: summary.v1Unchanged,
+                v2OptIn: summary.v2OptIn,
+                contexts: summary.contexts,
+                tickFeedback: summary.tickFeedbackEmitted,
+                tickApproved: summary.tickApproved,
+                tickDenied: summary.tickDenied,
+                contextsWithoutFeedback: summary.contextsWithoutFeedback,
+                tickFeedbackEmitted: summary.tickFeedbackEmitted,
+                policyReadCollision: summary.policyReadCollision,
+                policyWorldUsed: summary.policyWorldUsed,
+                tickWorldReadOnlyUsed: summary.tickWorldReadOnlyUsed,
+                worldMutated: summary.worldMutated,
+                routeFollowingUsed: summary.routeFollowingUsed,
+                occupableDestinations: summary.occupableDestinations,
+                nonOccupableDestinations: summary.nonOccupableDestinations,
+                tickReadCollision: summary.tickReadCollision,
+                worldUsed: summary.policyWorldUsed || summary.tickWorldReadOnlyUsed,
+                collisionRead: summary.policyReadCollision || summary.tickReadCollision,
+                movementApplied: summary.movementApplied,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                avoidancePerformed: summary.avoidancePerformed,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
+                replanningPerformed: summary.replanningPerformed
+            ))
+        }
         if let multiTickClosedLoopReport {
             let summary = multiTickClosedLoopReport.summary
             try appendEvent(RunEvent(
@@ -5360,6 +5476,26 @@ if let outPath = options.outPath {
             try writeJSON(
                 alternateLocalHintHardeningInvariantReport,
                 to: outURL.appendingPathComponent("alternate_local_hint_hardening_invariant_report.json")
+            )
+        }
+        if let alternateLocalHintLiveReadonlyReport {
+            try writeJSON(
+                alternateLocalHintLiveReadonlyReport,
+                to: outURL.appendingPathComponent("alternate_local_hint_live_readonly_report.json")
+            )
+            try writeJSON(
+                alternateLocalHintLiveReadonlyReport.handoff,
+                to: outURL.appendingPathComponent("alternate_local_hint_live_readonly_handoff.json")
+            )
+            try writeJSON(
+                alternateLocalHintLiveReadonlyReport.decisions,
+                to: outURL.appendingPathComponent("alternate_local_hint_live_readonly_decisions.json")
+            )
+        }
+        if let alternateLocalHintLiveReadonlyInvariantReport {
+            try writeJSON(
+                alternateLocalHintLiveReadonlyInvariantReport,
+                to: outURL.appendingPathComponent("alternate_local_hint_live_readonly_invariant_report.json")
             )
         }
         if let multiTickClosedLoopReport {
@@ -6639,6 +6775,50 @@ if let outPath = options.outPath {
             alternateLocalHintHardeningWorldMutated: alternateLocalHintHardeningReport?.summary.worldMutated,
             alternateLocalHintHardeningMutationPerformed: alternateLocalHintHardeningReport?.summary.mutationPerformed,
             alternateLocalHintHardeningSuccess: alternateLocalHintHardeningSuccess,
+            alternateLocalHintLiveReadonlyContexts: alternateLocalHintLiveReadonlyReport?.summary.contexts,
+            alternateLocalHintLiveReadonlyDecisions: alternateLocalHintLiveReadonlyReport?.summary.decisions,
+            alternateLocalHintLiveReadonlyContextsWithBlockedFeedback: alternateLocalHintLiveReadonlyReport?.summary.contextsWithBlockedFeedback,
+            alternateLocalHintLiveReadonlyContextsWithoutFeedback: alternateLocalHintLiveReadonlyReport?.summary.contextsWithoutFeedback,
+            alternateLocalHintLiveReadonlyContextsWithApprovedOrMovedFeedback: alternateLocalHintLiveReadonlyReport?.summary.contextsWithApprovedOrMovedFeedback,
+            alternateLocalHintLiveReadonlyCandidatesProduced: alternateLocalHintLiveReadonlyReport?.summary.candidatesProduced,
+            alternateLocalHintLiveReadonlyCandidatesSelected: alternateLocalHintLiveReadonlyReport?.summary.candidatesSelected,
+            alternateLocalHintLiveReadonlyCandidatesFiltered: alternateLocalHintLiveReadonlyReport?.summary.candidatesFiltered,
+            alternateLocalHintLiveReadonlyMaxAlternates: alternateLocalHintLiveReadonlyReport?.summary.maxAlternates,
+            alternateLocalHintLiveReadonlyBounded: alternateLocalHintLiveReadonlyReport?.summary.bounded,
+            alternateLocalHintLiveReadonlyNoFeedbackBaseline: alternateLocalHintLiveReadonlyReport?.summary.noFeedbackBaseline,
+            alternateLocalHintLiveReadonlyApprovedFeedbackBaseline: alternateLocalHintLiveReadonlyReport?.summary.approvedFeedbackBaseline,
+            alternateLocalHintLiveReadonlyMovedFeedbackBaseline: alternateLocalHintLiveReadonlyReport?.summary.movedFeedbackBaseline,
+            alternateLocalHintLiveReadonlyBlockedFeedbackUsed: alternateLocalHintLiveReadonlyReport?.summary.blockedFeedbackUsed,
+            alternateLocalHintLiveReadonlyUnknownHintNoAlternate: alternateLocalHintLiveReadonlyReport?.summary.unknownHintNoAlternate,
+            alternateLocalHintLiveReadonlyEmptyHintNoAlternate: alternateLocalHintLiveReadonlyReport?.summary.emptyHintNoAlternate,
+            alternateLocalHintLiveReadonlyFailedDirectionExcluded: alternateLocalHintLiveReadonlyReport?.summary.failedDirectionExcluded,
+            alternateLocalHintLiveReadonlyOneEdgeAlternates: alternateLocalHintLiveReadonlyReport?.summary.oneEdgeAlternates,
+            alternateLocalHintLiveReadonlyMovementIntentInputs: alternateLocalHintLiveReadonlyReport?.summary.movementIntentInputs,
+            alternateLocalHintLiveReadonlyTickApproved: alternateLocalHintLiveReadonlyReport?.summary.tickApproved,
+            alternateLocalHintLiveReadonlyTickDenied: alternateLocalHintLiveReadonlyReport?.summary.tickDenied,
+            alternateLocalHintLiveReadonlyTickDeniedConflict: alternateLocalHintLiveReadonlyReport?.summary.tickDeniedConflict,
+            alternateLocalHintLiveReadonlyTickDeniedCollision: alternateLocalHintLiveReadonlyReport?.summary.tickDeniedCollision,
+            alternateLocalHintLiveReadonlyTickFeedbackEmitted: alternateLocalHintLiveReadonlyReport?.summary.tickFeedbackEmitted,
+            alternateLocalHintLiveReadonlyOccupableDestinations: alternateLocalHintLiveReadonlyReport?.summary.occupableDestinations,
+            alternateLocalHintLiveReadonlyNonOccupableDestinations: alternateLocalHintLiveReadonlyReport?.summary.nonOccupableDestinations,
+            alternateLocalHintLiveReadonlyV0Unchanged: alternateLocalHintLiveReadonlyReport?.summary.v0Unchanged,
+            alternateLocalHintLiveReadonlyV1Unchanged: alternateLocalHintLiveReadonlyReport?.summary.v1Unchanged,
+            alternateLocalHintLiveReadonlyV2OptIn: alternateLocalHintLiveReadonlyReport?.summary.v2OptIn,
+            alternateLocalHintLiveReadonlyPolicyReadCollision: alternateLocalHintLiveReadonlyReport?.summary.policyReadCollision,
+            alternateLocalHintLiveReadonlyPolicyWorldUsed: alternateLocalHintLiveReadonlyReport?.summary.policyWorldUsed,
+            alternateLocalHintLiveReadonlyTickReadCollision: alternateLocalHintLiveReadonlyReport?.summary.tickReadCollision,
+            alternateLocalHintLiveReadonlyTickWorldReadOnlyUsed: alternateLocalHintLiveReadonlyReport?.summary.tickWorldReadOnlyUsed,
+            alternateLocalHintLiveReadonlyMovementApplied: alternateLocalHintLiveReadonlyReport?.summary.movementApplied,
+            alternateLocalHintLiveReadonlyPathfindingPerformed: alternateLocalHintLiveReadonlyReport?.summary.pathfindingPerformed,
+            alternateLocalHintLiveReadonlyReplanningPerformed: alternateLocalHintLiveReadonlyReport?.summary.replanningPerformed,
+            alternateLocalHintLiveReadonlyAvoidancePerformed: alternateLocalHintLiveReadonlyReport?.summary.avoidancePerformed,
+            alternateLocalHintLiveReadonlyReservationRuntimeUsed: alternateLocalHintLiveReadonlyReport?.summary.reservationRuntimeUsed,
+            alternateLocalHintLiveReadonlyRouteFollowingUsed: alternateLocalHintLiveReadonlyReport?.summary.routeFollowingUsed,
+            alternateLocalHintLiveReadonlyMemoryUpdated: alternateLocalHintLiveReadonlyReport?.summary.memoryUpdated,
+            alternateLocalHintLiveReadonlyGoalChanged: alternateLocalHintLiveReadonlyReport?.summary.goalChanged,
+            alternateLocalHintLiveReadonlyWorldMutated: alternateLocalHintLiveReadonlyReport?.summary.worldMutated,
+            alternateLocalHintLiveReadonlyMutationPerformed: alternateLocalHintLiveReadonlyReport?.summary.mutationPerformed,
+            alternateLocalHintLiveReadonlySuccess: alternateLocalHintLiveReadonlySuccess,
             multiTickClosedLoopTicks: multiTickClosedLoopReport?.summary.executedTicks,
             multiTickClosedLoopAgents: multiTickClosedLoopReport?.summary.agents,
             multiTickClosedLoopContextsTotal: multiTickClosedLoopReport?.summary.contextsTotal,

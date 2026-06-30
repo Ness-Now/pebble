@@ -626,3 +626,59 @@ Limits:
 - no alternate route, search, reservation, or avoidance behavior.
 
 Next recommended step: Phase 4.25D - Alternate Local Hint Live Read-Only Smoke.
+
+## Phase 4.25D Implementation Status
+
+Status: implemented and validated.
+
+Phase 4.25D added `alternate_local_hint_live_readonly_smoke`, the first
+live-read-only tick handoff for deterministic bounded alternate local hints.
+
+Validated implementation:
+
+- v0 remains unchanged;
+- v1 remains unchanged;
+- v2 remains explicit opt-in;
+- six contexts produce six deterministic decisions;
+- one no-feedback context keeps baseline;
+- one `approvedForMovement` context keeps baseline;
+- two blocked contexts select deterministic alternates from the fixed table;
+- empty and unknown blocked hints produce no alternate and become `noIntent`;
+- `maxAlternates = 2`;
+- four candidates are produced and two are selected;
+- failed directions are excluded;
+- selected alternates are one-edge same-y intents;
+- two noIntent proposals are filtered before tick;
+- four movement intents enter the tick live read-only contract;
+- tick live read-only approves three occupable destinations;
+- tick live read-only denies one non-occupable destination by collision;
+- collision denial comes from tick evidence, not policy;
+- policy reads no World and no collision;
+- tick reads World/collision read-only;
+- no movement is applied;
+- no lab position maps are mutated;
+- no memory/goals, pathfinding, replanning, avoidance, reservation runtime,
+  route following, or terrain/world mutation occur.
+
+Produced outputs:
+
+- `alternate_local_hint_live_readonly_report.json`;
+- `alternate_local_hint_live_readonly_invariant_report.json`;
+- `alternate_local_hint_live_readonly_decisions.json`;
+- `alternate_local_hint_live_readonly_handoff.json`;
+- `metrics.json` with `alternateLocalHintLiveReadonly*`;
+- `events.ndjson` with `lab_alternate_local_hint_live_readonly_recorded`.
+
+Limits:
+
+- live read-only only;
+- no approved application;
+- no movement application;
+- no route following;
+- no pathfinding, replanning, avoidance, or reservation runtime;
+- no memory/goals;
+- no terrain/world mutation;
+- no v2 global replacement.
+
+Next recommended step: Phase 4.25E - Alternate Local Hint Approved Application
+Smoke.

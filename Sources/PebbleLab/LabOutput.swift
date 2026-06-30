@@ -1116,6 +1116,50 @@ struct RunMetrics: Encodable {
     let alternateLocalHintHardeningWorldMutated: Bool?
     let alternateLocalHintHardeningMutationPerformed: Bool?
     let alternateLocalHintHardeningSuccess: Bool?
+    let alternateLocalHintLiveReadonlyContexts: Int?
+    let alternateLocalHintLiveReadonlyDecisions: Int?
+    let alternateLocalHintLiveReadonlyContextsWithBlockedFeedback: Int?
+    let alternateLocalHintLiveReadonlyContextsWithoutFeedback: Int?
+    let alternateLocalHintLiveReadonlyContextsWithApprovedOrMovedFeedback: Int?
+    let alternateLocalHintLiveReadonlyCandidatesProduced: Int?
+    let alternateLocalHintLiveReadonlyCandidatesSelected: Int?
+    let alternateLocalHintLiveReadonlyCandidatesFiltered: Int?
+    let alternateLocalHintLiveReadonlyMaxAlternates: Int?
+    let alternateLocalHintLiveReadonlyBounded: Bool?
+    let alternateLocalHintLiveReadonlyNoFeedbackBaseline: Int?
+    let alternateLocalHintLiveReadonlyApprovedFeedbackBaseline: Int?
+    let alternateLocalHintLiveReadonlyMovedFeedbackBaseline: Int?
+    let alternateLocalHintLiveReadonlyBlockedFeedbackUsed: Int?
+    let alternateLocalHintLiveReadonlyUnknownHintNoAlternate: Int?
+    let alternateLocalHintLiveReadonlyEmptyHintNoAlternate: Int?
+    let alternateLocalHintLiveReadonlyFailedDirectionExcluded: Int?
+    let alternateLocalHintLiveReadonlyOneEdgeAlternates: Bool?
+    let alternateLocalHintLiveReadonlyMovementIntentInputs: Int?
+    let alternateLocalHintLiveReadonlyTickApproved: Int?
+    let alternateLocalHintLiveReadonlyTickDenied: Int?
+    let alternateLocalHintLiveReadonlyTickDeniedConflict: Int?
+    let alternateLocalHintLiveReadonlyTickDeniedCollision: Int?
+    let alternateLocalHintLiveReadonlyTickFeedbackEmitted: Int?
+    let alternateLocalHintLiveReadonlyOccupableDestinations: Int?
+    let alternateLocalHintLiveReadonlyNonOccupableDestinations: Int?
+    let alternateLocalHintLiveReadonlyV0Unchanged: Bool?
+    let alternateLocalHintLiveReadonlyV1Unchanged: Bool?
+    let alternateLocalHintLiveReadonlyV2OptIn: Bool?
+    let alternateLocalHintLiveReadonlyPolicyReadCollision: Bool?
+    let alternateLocalHintLiveReadonlyPolicyWorldUsed: Bool?
+    let alternateLocalHintLiveReadonlyTickReadCollision: Bool?
+    let alternateLocalHintLiveReadonlyTickWorldReadOnlyUsed: Bool?
+    let alternateLocalHintLiveReadonlyMovementApplied: Bool?
+    let alternateLocalHintLiveReadonlyPathfindingPerformed: Bool?
+    let alternateLocalHintLiveReadonlyReplanningPerformed: Bool?
+    let alternateLocalHintLiveReadonlyAvoidancePerformed: Bool?
+    let alternateLocalHintLiveReadonlyReservationRuntimeUsed: Bool?
+    let alternateLocalHintLiveReadonlyRouteFollowingUsed: Bool?
+    let alternateLocalHintLiveReadonlyMemoryUpdated: Bool?
+    let alternateLocalHintLiveReadonlyGoalChanged: Bool?
+    let alternateLocalHintLiveReadonlyWorldMutated: Bool?
+    let alternateLocalHintLiveReadonlyMutationPerformed: Bool?
+    let alternateLocalHintLiveReadonlySuccess: Bool?
     let multiTickClosedLoopTicks: Int?
     let multiTickClosedLoopAgents: Int?
     let multiTickClosedLoopContextsTotal: Int?
@@ -2401,6 +2445,50 @@ struct RunMetrics: Encodable {
         alternateLocalHintHardeningWorldMutated: Bool? = nil,
         alternateLocalHintHardeningMutationPerformed: Bool? = nil,
         alternateLocalHintHardeningSuccess: Bool? = nil,
+        alternateLocalHintLiveReadonlyContexts: Int? = nil,
+        alternateLocalHintLiveReadonlyDecisions: Int? = nil,
+        alternateLocalHintLiveReadonlyContextsWithBlockedFeedback: Int? = nil,
+        alternateLocalHintLiveReadonlyContextsWithoutFeedback: Int? = nil,
+        alternateLocalHintLiveReadonlyContextsWithApprovedOrMovedFeedback: Int? = nil,
+        alternateLocalHintLiveReadonlyCandidatesProduced: Int? = nil,
+        alternateLocalHintLiveReadonlyCandidatesSelected: Int? = nil,
+        alternateLocalHintLiveReadonlyCandidatesFiltered: Int? = nil,
+        alternateLocalHintLiveReadonlyMaxAlternates: Int? = nil,
+        alternateLocalHintLiveReadonlyBounded: Bool? = nil,
+        alternateLocalHintLiveReadonlyNoFeedbackBaseline: Int? = nil,
+        alternateLocalHintLiveReadonlyApprovedFeedbackBaseline: Int? = nil,
+        alternateLocalHintLiveReadonlyMovedFeedbackBaseline: Int? = nil,
+        alternateLocalHintLiveReadonlyBlockedFeedbackUsed: Int? = nil,
+        alternateLocalHintLiveReadonlyUnknownHintNoAlternate: Int? = nil,
+        alternateLocalHintLiveReadonlyEmptyHintNoAlternate: Int? = nil,
+        alternateLocalHintLiveReadonlyFailedDirectionExcluded: Int? = nil,
+        alternateLocalHintLiveReadonlyOneEdgeAlternates: Bool? = nil,
+        alternateLocalHintLiveReadonlyMovementIntentInputs: Int? = nil,
+        alternateLocalHintLiveReadonlyTickApproved: Int? = nil,
+        alternateLocalHintLiveReadonlyTickDenied: Int? = nil,
+        alternateLocalHintLiveReadonlyTickDeniedConflict: Int? = nil,
+        alternateLocalHintLiveReadonlyTickDeniedCollision: Int? = nil,
+        alternateLocalHintLiveReadonlyTickFeedbackEmitted: Int? = nil,
+        alternateLocalHintLiveReadonlyOccupableDestinations: Int? = nil,
+        alternateLocalHintLiveReadonlyNonOccupableDestinations: Int? = nil,
+        alternateLocalHintLiveReadonlyV0Unchanged: Bool? = nil,
+        alternateLocalHintLiveReadonlyV1Unchanged: Bool? = nil,
+        alternateLocalHintLiveReadonlyV2OptIn: Bool? = nil,
+        alternateLocalHintLiveReadonlyPolicyReadCollision: Bool? = nil,
+        alternateLocalHintLiveReadonlyPolicyWorldUsed: Bool? = nil,
+        alternateLocalHintLiveReadonlyTickReadCollision: Bool? = nil,
+        alternateLocalHintLiveReadonlyTickWorldReadOnlyUsed: Bool? = nil,
+        alternateLocalHintLiveReadonlyMovementApplied: Bool? = nil,
+        alternateLocalHintLiveReadonlyPathfindingPerformed: Bool? = nil,
+        alternateLocalHintLiveReadonlyReplanningPerformed: Bool? = nil,
+        alternateLocalHintLiveReadonlyAvoidancePerformed: Bool? = nil,
+        alternateLocalHintLiveReadonlyReservationRuntimeUsed: Bool? = nil,
+        alternateLocalHintLiveReadonlyRouteFollowingUsed: Bool? = nil,
+        alternateLocalHintLiveReadonlyMemoryUpdated: Bool? = nil,
+        alternateLocalHintLiveReadonlyGoalChanged: Bool? = nil,
+        alternateLocalHintLiveReadonlyWorldMutated: Bool? = nil,
+        alternateLocalHintLiveReadonlyMutationPerformed: Bool? = nil,
+        alternateLocalHintLiveReadonlySuccess: Bool? = nil,
         multiTickClosedLoopTicks: Int? = nil,
         multiTickClosedLoopAgents: Int? = nil,
         multiTickClosedLoopContextsTotal: Int? = nil,
@@ -3685,6 +3773,50 @@ struct RunMetrics: Encodable {
         self.alternateLocalHintHardeningWorldMutated = alternateLocalHintHardeningWorldMutated
         self.alternateLocalHintHardeningMutationPerformed = alternateLocalHintHardeningMutationPerformed
         self.alternateLocalHintHardeningSuccess = alternateLocalHintHardeningSuccess
+        self.alternateLocalHintLiveReadonlyContexts = alternateLocalHintLiveReadonlyContexts
+        self.alternateLocalHintLiveReadonlyDecisions = alternateLocalHintLiveReadonlyDecisions
+        self.alternateLocalHintLiveReadonlyContextsWithBlockedFeedback = alternateLocalHintLiveReadonlyContextsWithBlockedFeedback
+        self.alternateLocalHintLiveReadonlyContextsWithoutFeedback = alternateLocalHintLiveReadonlyContextsWithoutFeedback
+        self.alternateLocalHintLiveReadonlyContextsWithApprovedOrMovedFeedback = alternateLocalHintLiveReadonlyContextsWithApprovedOrMovedFeedback
+        self.alternateLocalHintLiveReadonlyCandidatesProduced = alternateLocalHintLiveReadonlyCandidatesProduced
+        self.alternateLocalHintLiveReadonlyCandidatesSelected = alternateLocalHintLiveReadonlyCandidatesSelected
+        self.alternateLocalHintLiveReadonlyCandidatesFiltered = alternateLocalHintLiveReadonlyCandidatesFiltered
+        self.alternateLocalHintLiveReadonlyMaxAlternates = alternateLocalHintLiveReadonlyMaxAlternates
+        self.alternateLocalHintLiveReadonlyBounded = alternateLocalHintLiveReadonlyBounded
+        self.alternateLocalHintLiveReadonlyNoFeedbackBaseline = alternateLocalHintLiveReadonlyNoFeedbackBaseline
+        self.alternateLocalHintLiveReadonlyApprovedFeedbackBaseline = alternateLocalHintLiveReadonlyApprovedFeedbackBaseline
+        self.alternateLocalHintLiveReadonlyMovedFeedbackBaseline = alternateLocalHintLiveReadonlyMovedFeedbackBaseline
+        self.alternateLocalHintLiveReadonlyBlockedFeedbackUsed = alternateLocalHintLiveReadonlyBlockedFeedbackUsed
+        self.alternateLocalHintLiveReadonlyUnknownHintNoAlternate = alternateLocalHintLiveReadonlyUnknownHintNoAlternate
+        self.alternateLocalHintLiveReadonlyEmptyHintNoAlternate = alternateLocalHintLiveReadonlyEmptyHintNoAlternate
+        self.alternateLocalHintLiveReadonlyFailedDirectionExcluded = alternateLocalHintLiveReadonlyFailedDirectionExcluded
+        self.alternateLocalHintLiveReadonlyOneEdgeAlternates = alternateLocalHintLiveReadonlyOneEdgeAlternates
+        self.alternateLocalHintLiveReadonlyMovementIntentInputs = alternateLocalHintLiveReadonlyMovementIntentInputs
+        self.alternateLocalHintLiveReadonlyTickApproved = alternateLocalHintLiveReadonlyTickApproved
+        self.alternateLocalHintLiveReadonlyTickDenied = alternateLocalHintLiveReadonlyTickDenied
+        self.alternateLocalHintLiveReadonlyTickDeniedConflict = alternateLocalHintLiveReadonlyTickDeniedConflict
+        self.alternateLocalHintLiveReadonlyTickDeniedCollision = alternateLocalHintLiveReadonlyTickDeniedCollision
+        self.alternateLocalHintLiveReadonlyTickFeedbackEmitted = alternateLocalHintLiveReadonlyTickFeedbackEmitted
+        self.alternateLocalHintLiveReadonlyOccupableDestinations = alternateLocalHintLiveReadonlyOccupableDestinations
+        self.alternateLocalHintLiveReadonlyNonOccupableDestinations = alternateLocalHintLiveReadonlyNonOccupableDestinations
+        self.alternateLocalHintLiveReadonlyV0Unchanged = alternateLocalHintLiveReadonlyV0Unchanged
+        self.alternateLocalHintLiveReadonlyV1Unchanged = alternateLocalHintLiveReadonlyV1Unchanged
+        self.alternateLocalHintLiveReadonlyV2OptIn = alternateLocalHintLiveReadonlyV2OptIn
+        self.alternateLocalHintLiveReadonlyPolicyReadCollision = alternateLocalHintLiveReadonlyPolicyReadCollision
+        self.alternateLocalHintLiveReadonlyPolicyWorldUsed = alternateLocalHintLiveReadonlyPolicyWorldUsed
+        self.alternateLocalHintLiveReadonlyTickReadCollision = alternateLocalHintLiveReadonlyTickReadCollision
+        self.alternateLocalHintLiveReadonlyTickWorldReadOnlyUsed = alternateLocalHintLiveReadonlyTickWorldReadOnlyUsed
+        self.alternateLocalHintLiveReadonlyMovementApplied = alternateLocalHintLiveReadonlyMovementApplied
+        self.alternateLocalHintLiveReadonlyPathfindingPerformed = alternateLocalHintLiveReadonlyPathfindingPerformed
+        self.alternateLocalHintLiveReadonlyReplanningPerformed = alternateLocalHintLiveReadonlyReplanningPerformed
+        self.alternateLocalHintLiveReadonlyAvoidancePerformed = alternateLocalHintLiveReadonlyAvoidancePerformed
+        self.alternateLocalHintLiveReadonlyReservationRuntimeUsed = alternateLocalHintLiveReadonlyReservationRuntimeUsed
+        self.alternateLocalHintLiveReadonlyRouteFollowingUsed = alternateLocalHintLiveReadonlyRouteFollowingUsed
+        self.alternateLocalHintLiveReadonlyMemoryUpdated = alternateLocalHintLiveReadonlyMemoryUpdated
+        self.alternateLocalHintLiveReadonlyGoalChanged = alternateLocalHintLiveReadonlyGoalChanged
+        self.alternateLocalHintLiveReadonlyWorldMutated = alternateLocalHintLiveReadonlyWorldMutated
+        self.alternateLocalHintLiveReadonlyMutationPerformed = alternateLocalHintLiveReadonlyMutationPerformed
+        self.alternateLocalHintLiveReadonlySuccess = alternateLocalHintLiveReadonlySuccess
         self.multiTickClosedLoopTicks = multiTickClosedLoopTicks
         self.multiTickClosedLoopAgents = multiTickClosedLoopAgents
         self.multiTickClosedLoopContextsTotal = multiTickClosedLoopContextsTotal

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added alternate local hint live read-only smoke.
 - Added alternate local hint hardening smoke.
 - Added alternate local hint fixture smoke.
 - Documented PebbleLab deterministic bounded alternate local hint plan.

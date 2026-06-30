@@ -8162,3 +8162,103 @@ The report confirms `policyReadCollision=false`, `policyWorldUsed=false`,
 ### Next Step
 
 Phase 4.25D — Alternate Local Hint Live Read-Only Smoke.
+
+## 2026-06-30 — Phase 4.25D alternate local hint live read-only
+
+### Objective
+
+Connect the opt-in deterministic bounded alternate local hint v2 policy to the
+tick live read-only collision contract without applying movement.
+
+### Starting Point
+
+Phase 4.25B introduced `alternate_local_hint_fixture_smoke`; Phase 4.25C
+hardened v2 with 22 fixture-only cases. v0 and v1 remained unchanged, v2 stayed
+explicit opt-in, known blocked feedback could produce bounded one-edge
+alternates, and empty/unknown hints remained `noIntent`.
+
+### Files Created/Modified
+
+- Modified `Sources/PebbleLab/LabAgentAlternateLocalHint.swift`.
+- Updated `Sources/PebbleLab/LabOptions.swift`, `LabScenarios.swift`,
+  `LabOutput.swift`, `LabEvents.swift`, and `main.swift`.
+- Updated `CHANGELOG.md`, `DEV_JOURNAL.md`, `ROADMAP.md`, and
+  `PHASE_4_ALTERNATE_LOCAL_HINT_PLAN.md`.
+
+### Why Live Read-Only
+
+The fixture and hardening phases proved candidate generation and fixture tick
+handoff. This phase proves the boundary with live collision evidence: the policy
+still never reads World or collision, while the tick live read-only layer may
+approve or deny the resulting movement intents.
+
+### Policy And Contexts
+
+The scenario uses six deliberately unordered contexts. One has no feedback and
+keeps baseline, one has `approvedForMovement` and keeps baseline, two blocked
+contexts select deterministic `move_north` alternates from the fixed table, one
+blocked context has empty hints, and one blocked context has an unknown hint.
+`maxAlternates` remains 2; four candidates are produced, two are selected, and
+two noIntent proposals are filtered before tick.
+
+### Live Read-Only Result
+
+Four movement intents enter the tick live read-only contract. The tick approves
+three occupable destinations and denies one non-occupable alternate with
+`deniedCollision`. `tickReadCollision=true` and `tickWorldReadOnlyUsed=true`;
+`policyReadCollision=false` and `policyWorldUsed=false`.
+
+### Outputs, Invariants, Metrics, Event
+
+The scenario writes `alternate_local_hint_live_readonly_report.json`,
+`alternate_local_hint_live_readonly_invariant_report.json`,
+`alternate_local_hint_live_readonly_decisions.json`,
+`alternate_local_hint_live_readonly_handoff.json`, `metrics.json`, and
+`events.ndjson`. Metrics use `alternateLocalHintLiveReadonly*`; the aggregate
+event is `lab_alternate_local_hint_live_readonly_recorded`. The invariant report
+records 75 checks passed and 0 failed.
+
+### Boundary Confirmation
+
+The report confirms `movementApplied=false`, `memoryUpdated=false`,
+`goalChanged=false`, `pathfindingPerformed=false`, `replanningPerformed=false`,
+`avoidancePerformed=false`, `reservationRuntimeUsed=false`,
+`routeFollowingUsed=false`, `worldMutated=false`, and
+`mutationPerformed=false`.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_live_readonly_smoke --seed 42 --ticks 0 --out runs/check_alternate_local_hint_live_readonly`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_hardening_smoke --seed 42 --ticks 0 --out runs/check_alternate_local_hint_hardening_after_live_readonly`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_fixture_smoke --seed 42 --ticks 0 --out runs/check_alternate_local_hint_fixture_after_live_readonly`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_approved_application_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_approved_application_after_alternate_hint_live_readonly`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_live_readonly_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_live_readonly_after_alternate_hint_live_readonly`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_hardening_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_hardening_after_alternate_hint_live_readonly`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_fixture_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_fixture_after_alternate_hint_live_readonly`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_approved_application_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_approved_application_after_alternate_hint_live_readonly`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_live_readonly_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_live_readonly_after_alternate_hint_live_readonly`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_intent_to_tick_fixture_after_alternate_hint_live_readonly`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_hardening_after_alternate_hint_live_readonly`
+- `swift run -c release PebbleLab -- --scenario feedback_to_agent_intent_context_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_to_context_hardening_after_alternate_hint_live_readonly`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_fixture_after_alternate_hint_live_readonly`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_live_readonly_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_to_tick_live_readonly_after_alternate_hint_live_readonly`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_alternate_hint_live_readonly`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- `swift build` passed.
+- `alternate_local_hint_live_readonly_smoke` passed with report and invariant
+  success.
+- The smoke produced 6 contexts, 6 decisions, 4 movement intent inputs, 3 tick
+  approvals, 1 tick collision denial, 3 occupable destinations, and 1
+  non-occupable destination.
+- Metrics and event were written with the expected live-readonly prefix/type.
+
+### Next Step
+
+Phase 4.25E — Alternate Local Hint Approved Application Smoke.

@@ -2017,3 +2017,48 @@ Outputs:
 - `lab_alternate_local_hint_hardening_recorded` event.
 
 Next recommended step: Phase 4.25D - Alternate Local Hint Live Read-Only Smoke.
+
+## Phase 4.25D - Alternate Local Hint Live Read-Only Smoke
+
+Status: implemented and validated.
+
+Goal: connect explicit opt-in alternate local hint v2 decisions to the tick
+live read-only collision contract while keeping v0 and v1 unchanged and
+preserving the policy boundary.
+
+Validated scope:
+
+- `alternate_local_hint_live_readonly_smoke`;
+- v2 remains explicit opt-in;
+- v0 and v1 remain unchanged;
+- six contexts and six decisions;
+- four blocked-feedback contexts;
+- four candidates produced and two selected;
+- two noIntent proposals filtered before tick;
+- four movement intents sent to tick live read-only;
+- three tick approvals and one tick collision denial;
+- three occupable destinations and one non-occupable destination;
+- tick reads World/collision read-only;
+- policy reads no World and no collision;
+- zero displacements applied;
+- no movement application;
+- no memory/goals;
+- no pathfinding, replanning, avoidance, reservation runtime, or route
+  following;
+- no terrain/world mutation.
+
+Outputs:
+
+- `alternate_local_hint_live_readonly_report.json`;
+- `alternate_local_hint_live_readonly_invariant_report.json`;
+- `alternate_local_hint_live_readonly_decisions.json`;
+- `alternate_local_hint_live_readonly_handoff.json`;
+- `alternateLocalHintLiveReadonly*` metrics;
+- `lab_alternate_local_hint_live_readonly_recorded` event.
+
+Out of scope for this phase: approved application, pathfinding, replanning,
+avoidance, reservation runtime, route following, memory/goals, autonomous
+gameplay movement, and world mutation.
+
+Next recommended step: Phase 4.25E - Alternate Local Hint Approved Application
+Smoke.
