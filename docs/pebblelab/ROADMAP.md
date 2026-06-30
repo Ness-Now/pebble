@@ -1937,3 +1937,42 @@ No Swift, runtime scenario, runner, metric/event implementation, renderer,
 resources, registries, save/load, or goldens were modified.
 
 Next recommended step: Phase 4.25B - Alternate Local Hint Fixture Smoke.
+
+## Phase 4.25B - Alternate Local Hint Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: add the first fixture-only alternate local hint proof with an explicit
+opt-in v2 policy while leaving v0 and v1 unchanged. Known blocked east/west
+feedback is converted into deterministic bounded local north/south candidates;
+empty and unknown hints produce no alternate and remain `noIntent`.
+
+Validated scope:
+
+- `alternate_local_hint_fixture_smoke`;
+- `maxAlternates = 2`;
+- six contexts and six decisions;
+- four blocked-feedback contexts;
+- four candidates produced and two selected;
+- two noIntent proposals filtered before tick;
+- four movement intents sent to fixture tick;
+- four tick approvals, zero denials, four feedback records;
+- zero displacements applied;
+- no policy or tick collision read;
+- no World usage;
+- no movement application;
+- no memory/goals;
+- no pathfinding, replanning, avoidance, reservation runtime, or route
+  following;
+- no terrain/world mutation.
+
+Outputs:
+
+- `alternate_local_hint_report.json`;
+- `alternate_local_hint_invariant_report.json`;
+- `alternate_local_hint_handoff.json`;
+- `alternate_local_hint_decisions.json`;
+- `alternateLocalHint*` metrics;
+- `lab_alternate_local_hint_recorded` event.
+
+Next recommended step: Phase 4.25C - Alternate Local Hint Hardening.

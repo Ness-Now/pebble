@@ -161,6 +161,29 @@ struct RunEvent: Encodable {
     let pathLength: Int?
     let visited: Int?
     let candidates: Int?
+    let decisions: Int?
+    let contextsWithBlockedFeedback: Int?
+    let contextsWithApprovedOrMovedFeedback: Int?
+    let candidatesProduced: Int?
+    let candidatesSelected: Int?
+    let candidatesFiltered: Int?
+    let maxAlternates: Int?
+    let bounded: Bool?
+    let noFeedbackBaseline: Int?
+    let approvedFeedbackBaseline: Int?
+    let movedFeedbackBaseline: Int?
+    let blockedFeedbackUsed: Int?
+    let unknownHintNoAlternate: Int?
+    let emptyHintNoAlternate: Int?
+    let failedDirectionExcluded: Int?
+    let oneEdgeAlternates: Bool?
+    let movementIntentInputs: Int?
+    let tickDeniedConflict: Int?
+    let tickDeniedCollision: Int?
+    let v0Unchanged: Bool?
+    let v1Unchanged: Bool?
+    let v2OptIn: Bool?
+    let tickWorldUsed: Bool?
     let cases: Int?
     let tickCount: Int?
     let agentCount: Int?
@@ -558,6 +581,29 @@ struct RunEvent: Encodable {
         pathLength: Int? = nil,
         visited: Int? = nil,
         candidates: Int? = nil,
+        decisions: Int? = nil,
+        contextsWithBlockedFeedback: Int? = nil,
+        contextsWithApprovedOrMovedFeedback: Int? = nil,
+        candidatesProduced: Int? = nil,
+        candidatesSelected: Int? = nil,
+        candidatesFiltered: Int? = nil,
+        maxAlternates: Int? = nil,
+        bounded: Bool? = nil,
+        noFeedbackBaseline: Int? = nil,
+        approvedFeedbackBaseline: Int? = nil,
+        movedFeedbackBaseline: Int? = nil,
+        blockedFeedbackUsed: Int? = nil,
+        unknownHintNoAlternate: Int? = nil,
+        emptyHintNoAlternate: Int? = nil,
+        failedDirectionExcluded: Int? = nil,
+        oneEdgeAlternates: Bool? = nil,
+        movementIntentInputs: Int? = nil,
+        tickDeniedConflict: Int? = nil,
+        tickDeniedCollision: Int? = nil,
+        v0Unchanged: Bool? = nil,
+        v1Unchanged: Bool? = nil,
+        v2OptIn: Bool? = nil,
+        tickWorldUsed: Bool? = nil,
         cases: Int? = nil,
         tickCount: Int? = nil,
         agentCount: Int? = nil,
@@ -954,6 +1000,29 @@ struct RunEvent: Encodable {
         self.pathLength = pathLength
         self.visited = visited
         self.candidates = candidates
+        self.decisions = decisions
+        self.contextsWithBlockedFeedback = contextsWithBlockedFeedback
+        self.contextsWithApprovedOrMovedFeedback = contextsWithApprovedOrMovedFeedback
+        self.candidatesProduced = candidatesProduced
+        self.candidatesSelected = candidatesSelected
+        self.candidatesFiltered = candidatesFiltered
+        self.maxAlternates = maxAlternates
+        self.bounded = bounded
+        self.noFeedbackBaseline = noFeedbackBaseline
+        self.approvedFeedbackBaseline = approvedFeedbackBaseline
+        self.movedFeedbackBaseline = movedFeedbackBaseline
+        self.blockedFeedbackUsed = blockedFeedbackUsed
+        self.unknownHintNoAlternate = unknownHintNoAlternate
+        self.emptyHintNoAlternate = emptyHintNoAlternate
+        self.failedDirectionExcluded = failedDirectionExcluded
+        self.oneEdgeAlternates = oneEdgeAlternates
+        self.movementIntentInputs = movementIntentInputs
+        self.tickDeniedConflict = tickDeniedConflict
+        self.tickDeniedCollision = tickDeniedCollision
+        self.v0Unchanged = v0Unchanged
+        self.v1Unchanged = v1Unchanged
+        self.v2OptIn = v2OptIn
+        self.tickWorldUsed = tickWorldUsed
         self.cases = cases
         self.tickCount = tickCount
         self.agentCount = agentCount

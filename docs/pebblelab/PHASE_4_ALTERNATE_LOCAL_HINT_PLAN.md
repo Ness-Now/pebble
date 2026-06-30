@@ -522,3 +522,54 @@ pre-policy adapter.
 - social behavior;
 - communication;
 - autonomous gameplay loops beyond fixed smoke ticks.
+
+## Phase 4.25B Implementation Status
+
+Status: implemented and validated.
+
+Phase 4.25B added `alternate_local_hint_fixture_smoke`, the first
+fixture-only implementation of the deterministic bounded alternate local hint
+contract.
+
+Validated implementation:
+
+- v0 remains unchanged;
+- v1 remains unchanged;
+- v2 is explicit opt-in via the alternate local hint fixture;
+- six fixture contexts produce six deterministic decisions;
+- no feedback keeps baseline;
+- `approvedForMovement` keeps baseline;
+- blocked east and west feedback use the fixed ordered alternate table;
+- failed directions are excluded;
+- `maxAlternates = 2`;
+- four candidates are produced and two are selected;
+- empty and unknown hints produce no alternate and become `noIntent`;
+- alternates are one-edge same-y movement intents;
+- noIntent proposals are filtered before tick;
+- four movement intents enter the tick fixture;
+- tick fixture approves all four movement intents;
+- no live collision is read;
+- no World is used;
+- no movement is applied;
+- no memory/goals, pathfinding, replanning, avoidance, reservation runtime,
+  route following, or terrain/world mutation occur.
+
+Produced outputs:
+
+- `alternate_local_hint_report.json`;
+- `alternate_local_hint_invariant_report.json`;
+- `alternate_local_hint_handoff.json`;
+- `alternate_local_hint_decisions.json`;
+- `metrics.json` with `alternateLocalHint*`;
+- `events.ndjson` with `lab_alternate_local_hint_recorded`.
+
+Limits:
+
+- fixture-only;
+- no live read-only collision;
+- no approved application;
+- no multi-tick alternate replay;
+- no alternate hardening yet;
+- no v2 global replacement.
+
+Next recommended step: Phase 4.25C - Alternate Local Hint Hardening.

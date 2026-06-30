@@ -58,6 +58,8 @@ let isMultiTickClosedLoopLiveReadonlyScenario = options.scenario
     == "multi_tick_closed_loop_live_readonly_smoke"
 let isMultiTickClosedLoopApprovedApplicationScenario = options.scenario
     == "multi_tick_closed_loop_approved_application_smoke"
+let isAlternateLocalHintFixtureScenario = options.scenario
+    == "alternate_local_hint_fixture_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -81,7 +83,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isMultiTickClosedLoopFixtureScenario
     || isMultiTickClosedLoopHardeningScenario
     || isMultiTickClosedLoopLiveReadonlyScenario
-    || isMultiTickClosedLoopApprovedApplicationScenario)
+    || isMultiTickClosedLoopApprovedApplicationScenario
+    || isAlternateLocalHintFixtureScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -2268,6 +2271,64 @@ let feedbackAwareIntentToTickApprovedApplicationSuccess =
             && feedbackAwareIntentToTickApprovedApplicationSummary?.worldMutated == false
             && feedbackAwareIntentToTickApprovedApplicationSummary?.mutationPerformed == false)
         : nil
+let alternateLocalHintReport = isAlternateLocalHintFixtureScenario
+    ? makeAlternateLocalHintFixtureReport(
+        scenario: options.scenario,
+        seed: options.seed,
+        ticksCompleted: ticksCompleted
+    )
+    : nil
+let alternateLocalHintInvariantReport = isAlternateLocalHintFixtureScenario
+    ? makeAlternateLocalHintFixtureInvariantReport(
+        report: alternateLocalHintReport,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let alternateLocalHintSummary = alternateLocalHintReport?.summary
+let alternateLocalHintSuccess = isAlternateLocalHintFixtureScenario
+    ? ((alternateLocalHintReport?.success ?? false)
+        && (alternateLocalHintInvariantReport?.success ?? false)
+        && alternateLocalHintSummary?.contexts == 6
+        && alternateLocalHintSummary?.decisions == 6
+        && alternateLocalHintSummary?.contextsWithBlockedFeedback == 4
+        && alternateLocalHintSummary?.contextsWithoutFeedback == 1
+        && alternateLocalHintSummary?.contextsWithApprovedOrMovedFeedback == 1
+        && alternateLocalHintSummary?.candidatesProduced == 4
+        && alternateLocalHintSummary?.candidatesSelected == 2
+        && alternateLocalHintSummary?.maxAlternates == 2
+        && alternateLocalHintSummary?.bounded == true
+        && alternateLocalHintSummary?.noFeedbackBaseline == 1
+        && alternateLocalHintSummary?.approvedFeedbackBaseline == 1
+        && alternateLocalHintSummary?.blockedFeedbackUsed == 2
+        && alternateLocalHintSummary?.unknownHintNoAlternate == 1
+        && alternateLocalHintSummary?.emptyHintNoAlternate == 1
+        && alternateLocalHintSummary?.failedDirectionExcluded == 2
+        && alternateLocalHintSummary?.oneEdgeAlternates == true
+        && alternateLocalHintSummary?.movementIntentInputs == 4
+        && alternateLocalHintSummary?.tickApproved == 4
+        && alternateLocalHintSummary?.tickDenied == 0
+        && alternateLocalHintSummary?.tickDeniedConflict == 0
+        && alternateLocalHintSummary?.tickDeniedCollision == 0
+        && alternateLocalHintSummary?.tickFeedbackEmitted == 4
+        && alternateLocalHintSummary?.v0Unchanged == true
+        && alternateLocalHintSummary?.v1Unchanged == true
+        && alternateLocalHintSummary?.v2OptIn == true
+        && alternateLocalHintSummary?.policyReadCollision == false
+        && alternateLocalHintSummary?.policyWorldUsed == false
+        && alternateLocalHintSummary?.tickReadCollision == false
+        && alternateLocalHintSummary?.tickWorldUsed == false
+        && alternateLocalHintSummary?.movementApplied == false
+        && alternateLocalHintSummary?.pathfindingPerformed == false
+        && alternateLocalHintSummary?.replanningPerformed == false
+        && alternateLocalHintSummary?.avoidancePerformed == false
+        && alternateLocalHintSummary?.reservationRuntimeUsed == false
+        && alternateLocalHintSummary?.routeFollowingUsed == false
+        && alternateLocalHintSummary?.memoryUpdated == false
+        && alternateLocalHintSummary?.goalChanged == false
+        && alternateLocalHintSummary?.worldMutated == false
+        && alternateLocalHintSummary?.mutationPerformed == false)
+    : nil
 let multiTickClosedLoopReport = isMultiTickClosedLoopFixtureScenario
     ? makeMultiTickClosedLoopFixtureReport(
         scenario: options.scenario,
@@ -2892,6 +2953,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (feedbackAwareIntentToTickFixtureSuccess ?? true)
     && (feedbackAwareIntentToTickLiveReadonlySuccess ?? true)
     && (feedbackAwareIntentToTickApprovedApplicationSuccess ?? true)
+    && (alternateLocalHintSuccess ?? true)
     && (multiTickClosedLoopSuccess ?? true)
     && (multiTickClosedLoopHardeningSuccess ?? true)
     && (multiTickClosedLoopLiveReadonlySuccess ?? true)
@@ -3972,6 +4034,61 @@ if options.outPath != nil {
                 productionReadCollision: summary.policyReadCollision,
                 tickReadCollision: summary.tickReadCollision,
                 worldUsed: summary.policyWorldUsed || summary.tickWorldReadOnlyUsed,
+                collisionRead: summary.policyReadCollision || summary.tickReadCollision,
+                movementApplied: summary.movementApplied,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                avoidancePerformed: summary.avoidancePerformed,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
+                replanningPerformed: summary.replanningPerformed
+            ))
+        }
+        if let alternateLocalHintReport {
+            let summary = alternateLocalHintReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_alternate_local_hint_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: alternateLocalHintSuccess,
+                candidates: summary.candidatesProduced,
+                decisions: summary.decisions,
+                contextsWithBlockedFeedback: summary.contextsWithBlockedFeedback,
+                contextsWithApprovedOrMovedFeedback: summary.contextsWithApprovedOrMovedFeedback,
+                candidatesProduced: summary.candidatesProduced,
+                candidatesSelected: summary.candidatesSelected,
+                candidatesFiltered: summary.candidatesFiltered,
+                maxAlternates: summary.maxAlternates,
+                bounded: summary.bounded,
+                noFeedbackBaseline: summary.noFeedbackBaseline,
+                approvedFeedbackBaseline: summary.approvedFeedbackBaseline,
+                movedFeedbackBaseline: summary.movedFeedbackBaseline,
+                blockedFeedbackUsed: summary.blockedFeedbackUsed,
+                unknownHintNoAlternate: summary.unknownHintNoAlternate,
+                emptyHintNoAlternate: summary.emptyHintNoAlternate,
+                failedDirectionExcluded: summary.failedDirectionExcluded,
+                oneEdgeAlternates: summary.oneEdgeAlternates,
+                movementIntentInputs: summary.movementIntentInputs,
+                tickDeniedConflict: summary.tickDeniedConflict,
+                tickDeniedCollision: summary.tickDeniedCollision,
+                v0Unchanged: summary.v0Unchanged,
+                v1Unchanged: summary.v1Unchanged,
+                v2OptIn: summary.v2OptIn,
+                tickWorldUsed: summary.tickWorldUsed,
+                contexts: summary.contexts,
+                tickFeedback: summary.tickFeedbackEmitted,
+                tickApproved: summary.tickApproved,
+                tickDenied: summary.tickDenied,
+                contextsWithoutFeedback: summary.contextsWithoutFeedback,
+                movementIntentInputsTotal: summary.movementIntentInputs,
+                tickFeedbackEmitted: summary.tickFeedbackEmitted,
+                policyReadCollision: summary.policyReadCollision,
+                policyWorldUsed: summary.policyWorldUsed,
+                worldMutated: summary.worldMutated,
+                routeFollowingUsed: summary.routeFollowingUsed,
+                tickReadCollision: summary.tickReadCollision,
+                worldUsed: summary.policyWorldUsed || summary.tickWorldUsed,
                 collisionRead: summary.policyReadCollision || summary.tickReadCollision,
                 movementApplied: summary.movementApplied,
                 memoryUpdated: summary.memoryUpdated,
@@ -5067,6 +5184,26 @@ if let outPath = options.outPath {
             try writeJSON(
                 feedbackAwareIntentToTickApprovedApplicationInvariantReport,
                 to: outURL.appendingPathComponent("feedback_aware_intent_to_tick_approved_application_invariant_report.json")
+            )
+        }
+        if let alternateLocalHintReport {
+            try writeJSON(
+                alternateLocalHintReport,
+                to: outURL.appendingPathComponent("alternate_local_hint_report.json")
+            )
+            try writeJSON(
+                alternateLocalHintReport.handoff,
+                to: outURL.appendingPathComponent("alternate_local_hint_handoff.json")
+            )
+            try writeJSON(
+                alternateLocalHintReport.decisions,
+                to: outURL.appendingPathComponent("alternate_local_hint_decisions.json")
+            )
+        }
+        if let alternateLocalHintInvariantReport {
+            try writeJSON(
+                alternateLocalHintInvariantReport,
+                to: outURL.appendingPathComponent("alternate_local_hint_invariant_report.json")
             )
         }
         if let multiTickClosedLoopReport {
@@ -6249,6 +6386,48 @@ if let outPath = options.outPath {
             feedbackAwareIntentToTickApprovedApplicationWorldMutated: feedbackAwareIntentToTickApprovedApplicationReport?.summary.worldMutated,
             feedbackAwareIntentToTickApprovedApplicationMutationPerformed: feedbackAwareIntentToTickApprovedApplicationReport?.summary.mutationPerformed,
             feedbackAwareIntentToTickApprovedApplicationSuccess: feedbackAwareIntentToTickApprovedApplicationSuccess,
+            alternateLocalHintContexts: alternateLocalHintReport?.summary.contexts,
+            alternateLocalHintDecisions: alternateLocalHintReport?.summary.decisions,
+            alternateLocalHintContextsWithBlockedFeedback: alternateLocalHintReport?.summary.contextsWithBlockedFeedback,
+            alternateLocalHintContextsWithoutFeedback: alternateLocalHintReport?.summary.contextsWithoutFeedback,
+            alternateLocalHintContextsWithApprovedOrMovedFeedback: alternateLocalHintReport?.summary.contextsWithApprovedOrMovedFeedback,
+            alternateLocalHintCandidatesProduced: alternateLocalHintReport?.summary.candidatesProduced,
+            alternateLocalHintCandidatesSelected: alternateLocalHintReport?.summary.candidatesSelected,
+            alternateLocalHintCandidatesFiltered: alternateLocalHintReport?.summary.candidatesFiltered,
+            alternateLocalHintMaxAlternates: alternateLocalHintReport?.summary.maxAlternates,
+            alternateLocalHintBounded: alternateLocalHintReport?.summary.bounded,
+            alternateLocalHintNoFeedbackBaseline: alternateLocalHintReport?.summary.noFeedbackBaseline,
+            alternateLocalHintApprovedFeedbackBaseline: alternateLocalHintReport?.summary.approvedFeedbackBaseline,
+            alternateLocalHintMovedFeedbackBaseline: alternateLocalHintReport?.summary.movedFeedbackBaseline,
+            alternateLocalHintBlockedFeedbackUsed: alternateLocalHintReport?.summary.blockedFeedbackUsed,
+            alternateLocalHintUnknownHintNoAlternate: alternateLocalHintReport?.summary.unknownHintNoAlternate,
+            alternateLocalHintEmptyHintNoAlternate: alternateLocalHintReport?.summary.emptyHintNoAlternate,
+            alternateLocalHintFailedDirectionExcluded: alternateLocalHintReport?.summary.failedDirectionExcluded,
+            alternateLocalHintOneEdgeAlternates: alternateLocalHintReport?.summary.oneEdgeAlternates,
+            alternateLocalHintMovementIntentInputs: alternateLocalHintReport?.summary.movementIntentInputs,
+            alternateLocalHintTickApproved: alternateLocalHintReport?.summary.tickApproved,
+            alternateLocalHintTickDenied: alternateLocalHintReport?.summary.tickDenied,
+            alternateLocalHintTickDeniedConflict: alternateLocalHintReport?.summary.tickDeniedConflict,
+            alternateLocalHintTickDeniedCollision: alternateLocalHintReport?.summary.tickDeniedCollision,
+            alternateLocalHintTickFeedbackEmitted: alternateLocalHintReport?.summary.tickFeedbackEmitted,
+            alternateLocalHintV0Unchanged: alternateLocalHintReport?.summary.v0Unchanged,
+            alternateLocalHintV1Unchanged: alternateLocalHintReport?.summary.v1Unchanged,
+            alternateLocalHintV2OptIn: alternateLocalHintReport?.summary.v2OptIn,
+            alternateLocalHintPolicyReadCollision: alternateLocalHintReport?.summary.policyReadCollision,
+            alternateLocalHintPolicyWorldUsed: alternateLocalHintReport?.summary.policyWorldUsed,
+            alternateLocalHintTickReadCollision: alternateLocalHintReport?.summary.tickReadCollision,
+            alternateLocalHintTickWorldUsed: alternateLocalHintReport?.summary.tickWorldUsed,
+            alternateLocalHintMovementApplied: alternateLocalHintReport?.summary.movementApplied,
+            alternateLocalHintPathfindingPerformed: alternateLocalHintReport?.summary.pathfindingPerformed,
+            alternateLocalHintReplanningPerformed: alternateLocalHintReport?.summary.replanningPerformed,
+            alternateLocalHintAvoidancePerformed: alternateLocalHintReport?.summary.avoidancePerformed,
+            alternateLocalHintReservationRuntimeUsed: alternateLocalHintReport?.summary.reservationRuntimeUsed,
+            alternateLocalHintRouteFollowingUsed: alternateLocalHintReport?.summary.routeFollowingUsed,
+            alternateLocalHintMemoryUpdated: alternateLocalHintReport?.summary.memoryUpdated,
+            alternateLocalHintGoalChanged: alternateLocalHintReport?.summary.goalChanged,
+            alternateLocalHintWorldMutated: alternateLocalHintReport?.summary.worldMutated,
+            alternateLocalHintMutationPerformed: alternateLocalHintReport?.summary.mutationPerformed,
+            alternateLocalHintSuccess: alternateLocalHintSuccess,
             multiTickClosedLoopTicks: multiTickClosedLoopReport?.summary.executedTicks,
             multiTickClosedLoopAgents: multiTickClosedLoopReport?.summary.agents,
             multiTickClosedLoopContextsTotal: multiTickClosedLoopReport?.summary.contextsTotal,

@@ -7949,3 +7949,108 @@ social/communication, and autonomous gameplay loops remain out of scope.
 ### Next Step
 
 Phase 4.25B — Alternate Local Hint Fixture Smoke.
+
+## 2026-06-30 — Phase 4.25B alternate local hint fixture smoke
+
+### Objective
+
+Implement the first fixture-only proof for deterministic bounded alternate
+local hints. The phase adds an explicit opt-in v2 policy path while preserving
+`produceAgentIntentProposalV0` and `produceAgentIntentProposalFeedbackAwareV1`.
+
+### Starting Point
+
+Phase 4.25A documented the alternate local hint boundary. Phase 4.24 had
+validated multi-tick feedback flow through approved application, with blocked
+feedback currently becoming `noIntent` in v1. This phase keeps the policy
+World/collision boundary intact and exercises only a single fixture tick.
+
+### Files Created/Modified
+
+- Created `Sources/PebbleLab/LabAgentAlternateLocalHint.swift`.
+- Updated `Sources/PebbleLab/LabOptions.swift`, `LabScenarios.swift`,
+  `LabOutput.swift`, `LabEvents.swift`, and `main.swift`.
+- Updated `CHANGELOG.md`, `DEV_JOURNAL.md`, `ROADMAP.md`, and
+  `PHASE_4_ALTERNATE_LOCAL_HINT_PLAN.md`.
+
+### Why Fixture-Only
+
+The first implementation proves the local hint handoff without live collision,
+World access, movement application, route following, pathfinding, replanning,
+avoidance, reservation runtime, memory/goals, or terrain/world mutation.
+
+### v2 Opt-In
+
+The new fixture calls `produceAgentIntentProposalWithAlternateLocalHintsV2`
+directly. v0 remains the baseline producer and v1 remains the blocked-feedback
+to `noIntent` policy. v2 is not global and is only used by the new scenario.
+
+### Fixture Contexts
+
+The fixture uses six deterministic contexts:
+
+- no feedback keeps baseline `move_east`;
+- `approvedForMovement` keeps baseline `move_east`;
+- blocked east feedback selects deterministic alternate `move_north`;
+- blocked west feedback selects deterministic alternate `move_north`;
+- blocked feedback with an empty hint becomes `noIntent`;
+- blocked feedback with an unknown hint becomes `noIntent`.
+
+### Deterministic Rule
+
+Known failed directions use a fixed table capped at `maxAlternates = 2`:
+east/west produce `[move_north, move_south]`, north/south produce
+`[move_east, move_west]`. The failed direction is excluded, candidate order is
+stable, and the first candidate is selected for the fixture.
+
+### Tick Handoff
+
+Only accepted movement proposals enter the fixture tick input. The two
+`noIntent` proposals are filtered before tick. The tick fixture approves all
+four movement intents, emits four feedback records, and applies zero
+displacements.
+
+### Outputs, Invariants, Metrics, Event
+
+The scenario writes `alternate_local_hint_report.json`,
+`alternate_local_hint_invariant_report.json`,
+`alternate_local_hint_handoff.json`, `alternate_local_hint_decisions.json`,
+`metrics.json`, and `events.ndjson`. Metrics use the `alternateLocalHint*`
+prefix. The aggregate event is `lab_alternate_local_hint_recorded`.
+
+### Boundary Confirmation
+
+The fixture reports `policyReadCollision=false`, `policyWorldUsed=false`,
+`tickReadCollision=false`, `tickWorldUsed=false`, `movementApplied=false`,
+`memoryUpdated=false`, `goalChanged=false`, `pathfindingPerformed=false`,
+`replanningPerformed=false`, `avoidancePerformed=false`,
+`reservationRuntimeUsed=false`, `routeFollowingUsed=false`,
+`worldMutated=false`, and `mutationPerformed=false`.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_fixture_smoke --seed 42 --ticks 0 --out runs/check_alternate_local_hint_fixture`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_approved_application_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_approved_after_alternate_hint_fixture`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_live_readonly_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_live_readonly_after_alternate_hint_fixture`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_hardening_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_hardening_after_alternate_hint_fixture`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_approved_application_smoke --seed 42 --ticks 5 --out runs/check_feedback_aware_approved_after_alternate_hint_fixture`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_hardening_after_alternate_hint_fixture`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_alternate_hint_fixture`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- `swift build` passed.
+- `swift build -c release --product Pebble` passed.
+- `alternate_local_hint_fixture_smoke` passed with report and invariant success.
+- Non-regressions passed.
+- `swift run -c release pebsmoke` passed with 456 passed, 0 failed.
+- `git diff --check` passed.
+
+### Next Step
+
+Phase 4.25C — Alternate Local Hint Hardening.

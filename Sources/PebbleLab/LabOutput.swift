@@ -1019,6 +1019,48 @@ struct RunMetrics: Encodable {
     let feedbackAwareIntentToTickApprovedApplicationWorldMutated: Bool?
     let feedbackAwareIntentToTickApprovedApplicationMutationPerformed: Bool?
     let feedbackAwareIntentToTickApprovedApplicationSuccess: Bool?
+    let alternateLocalHintContexts: Int?
+    let alternateLocalHintDecisions: Int?
+    let alternateLocalHintContextsWithBlockedFeedback: Int?
+    let alternateLocalHintContextsWithoutFeedback: Int?
+    let alternateLocalHintContextsWithApprovedOrMovedFeedback: Int?
+    let alternateLocalHintCandidatesProduced: Int?
+    let alternateLocalHintCandidatesSelected: Int?
+    let alternateLocalHintCandidatesFiltered: Int?
+    let alternateLocalHintMaxAlternates: Int?
+    let alternateLocalHintBounded: Bool?
+    let alternateLocalHintNoFeedbackBaseline: Int?
+    let alternateLocalHintApprovedFeedbackBaseline: Int?
+    let alternateLocalHintMovedFeedbackBaseline: Int?
+    let alternateLocalHintBlockedFeedbackUsed: Int?
+    let alternateLocalHintUnknownHintNoAlternate: Int?
+    let alternateLocalHintEmptyHintNoAlternate: Int?
+    let alternateLocalHintFailedDirectionExcluded: Int?
+    let alternateLocalHintOneEdgeAlternates: Bool?
+    let alternateLocalHintMovementIntentInputs: Int?
+    let alternateLocalHintTickApproved: Int?
+    let alternateLocalHintTickDenied: Int?
+    let alternateLocalHintTickDeniedConflict: Int?
+    let alternateLocalHintTickDeniedCollision: Int?
+    let alternateLocalHintTickFeedbackEmitted: Int?
+    let alternateLocalHintV0Unchanged: Bool?
+    let alternateLocalHintV1Unchanged: Bool?
+    let alternateLocalHintV2OptIn: Bool?
+    let alternateLocalHintPolicyReadCollision: Bool?
+    let alternateLocalHintPolicyWorldUsed: Bool?
+    let alternateLocalHintTickReadCollision: Bool?
+    let alternateLocalHintTickWorldUsed: Bool?
+    let alternateLocalHintMovementApplied: Bool?
+    let alternateLocalHintPathfindingPerformed: Bool?
+    let alternateLocalHintReplanningPerformed: Bool?
+    let alternateLocalHintAvoidancePerformed: Bool?
+    let alternateLocalHintReservationRuntimeUsed: Bool?
+    let alternateLocalHintRouteFollowingUsed: Bool?
+    let alternateLocalHintMemoryUpdated: Bool?
+    let alternateLocalHintGoalChanged: Bool?
+    let alternateLocalHintWorldMutated: Bool?
+    let alternateLocalHintMutationPerformed: Bool?
+    let alternateLocalHintSuccess: Bool?
     let multiTickClosedLoopTicks: Int?
     let multiTickClosedLoopAgents: Int?
     let multiTickClosedLoopContextsTotal: Int?
@@ -2207,6 +2249,48 @@ struct RunMetrics: Encodable {
         feedbackAwareIntentToTickApprovedApplicationWorldMutated: Bool? = nil,
         feedbackAwareIntentToTickApprovedApplicationMutationPerformed: Bool? = nil,
         feedbackAwareIntentToTickApprovedApplicationSuccess: Bool? = nil,
+        alternateLocalHintContexts: Int? = nil,
+        alternateLocalHintDecisions: Int? = nil,
+        alternateLocalHintContextsWithBlockedFeedback: Int? = nil,
+        alternateLocalHintContextsWithoutFeedback: Int? = nil,
+        alternateLocalHintContextsWithApprovedOrMovedFeedback: Int? = nil,
+        alternateLocalHintCandidatesProduced: Int? = nil,
+        alternateLocalHintCandidatesSelected: Int? = nil,
+        alternateLocalHintCandidatesFiltered: Int? = nil,
+        alternateLocalHintMaxAlternates: Int? = nil,
+        alternateLocalHintBounded: Bool? = nil,
+        alternateLocalHintNoFeedbackBaseline: Int? = nil,
+        alternateLocalHintApprovedFeedbackBaseline: Int? = nil,
+        alternateLocalHintMovedFeedbackBaseline: Int? = nil,
+        alternateLocalHintBlockedFeedbackUsed: Int? = nil,
+        alternateLocalHintUnknownHintNoAlternate: Int? = nil,
+        alternateLocalHintEmptyHintNoAlternate: Int? = nil,
+        alternateLocalHintFailedDirectionExcluded: Int? = nil,
+        alternateLocalHintOneEdgeAlternates: Bool? = nil,
+        alternateLocalHintMovementIntentInputs: Int? = nil,
+        alternateLocalHintTickApproved: Int? = nil,
+        alternateLocalHintTickDenied: Int? = nil,
+        alternateLocalHintTickDeniedConflict: Int? = nil,
+        alternateLocalHintTickDeniedCollision: Int? = nil,
+        alternateLocalHintTickFeedbackEmitted: Int? = nil,
+        alternateLocalHintV0Unchanged: Bool? = nil,
+        alternateLocalHintV1Unchanged: Bool? = nil,
+        alternateLocalHintV2OptIn: Bool? = nil,
+        alternateLocalHintPolicyReadCollision: Bool? = nil,
+        alternateLocalHintPolicyWorldUsed: Bool? = nil,
+        alternateLocalHintTickReadCollision: Bool? = nil,
+        alternateLocalHintTickWorldUsed: Bool? = nil,
+        alternateLocalHintMovementApplied: Bool? = nil,
+        alternateLocalHintPathfindingPerformed: Bool? = nil,
+        alternateLocalHintReplanningPerformed: Bool? = nil,
+        alternateLocalHintAvoidancePerformed: Bool? = nil,
+        alternateLocalHintReservationRuntimeUsed: Bool? = nil,
+        alternateLocalHintRouteFollowingUsed: Bool? = nil,
+        alternateLocalHintMemoryUpdated: Bool? = nil,
+        alternateLocalHintGoalChanged: Bool? = nil,
+        alternateLocalHintWorldMutated: Bool? = nil,
+        alternateLocalHintMutationPerformed: Bool? = nil,
+        alternateLocalHintSuccess: Bool? = nil,
         multiTickClosedLoopTicks: Int? = nil,
         multiTickClosedLoopAgents: Int? = nil,
         multiTickClosedLoopContextsTotal: Int? = nil,
@@ -3394,6 +3478,48 @@ struct RunMetrics: Encodable {
         self.feedbackAwareIntentToTickApprovedApplicationWorldMutated = feedbackAwareIntentToTickApprovedApplicationWorldMutated
         self.feedbackAwareIntentToTickApprovedApplicationMutationPerformed = feedbackAwareIntentToTickApprovedApplicationMutationPerformed
         self.feedbackAwareIntentToTickApprovedApplicationSuccess = feedbackAwareIntentToTickApprovedApplicationSuccess
+        self.alternateLocalHintContexts = alternateLocalHintContexts
+        self.alternateLocalHintDecisions = alternateLocalHintDecisions
+        self.alternateLocalHintContextsWithBlockedFeedback = alternateLocalHintContextsWithBlockedFeedback
+        self.alternateLocalHintContextsWithoutFeedback = alternateLocalHintContextsWithoutFeedback
+        self.alternateLocalHintContextsWithApprovedOrMovedFeedback = alternateLocalHintContextsWithApprovedOrMovedFeedback
+        self.alternateLocalHintCandidatesProduced = alternateLocalHintCandidatesProduced
+        self.alternateLocalHintCandidatesSelected = alternateLocalHintCandidatesSelected
+        self.alternateLocalHintCandidatesFiltered = alternateLocalHintCandidatesFiltered
+        self.alternateLocalHintMaxAlternates = alternateLocalHintMaxAlternates
+        self.alternateLocalHintBounded = alternateLocalHintBounded
+        self.alternateLocalHintNoFeedbackBaseline = alternateLocalHintNoFeedbackBaseline
+        self.alternateLocalHintApprovedFeedbackBaseline = alternateLocalHintApprovedFeedbackBaseline
+        self.alternateLocalHintMovedFeedbackBaseline = alternateLocalHintMovedFeedbackBaseline
+        self.alternateLocalHintBlockedFeedbackUsed = alternateLocalHintBlockedFeedbackUsed
+        self.alternateLocalHintUnknownHintNoAlternate = alternateLocalHintUnknownHintNoAlternate
+        self.alternateLocalHintEmptyHintNoAlternate = alternateLocalHintEmptyHintNoAlternate
+        self.alternateLocalHintFailedDirectionExcluded = alternateLocalHintFailedDirectionExcluded
+        self.alternateLocalHintOneEdgeAlternates = alternateLocalHintOneEdgeAlternates
+        self.alternateLocalHintMovementIntentInputs = alternateLocalHintMovementIntentInputs
+        self.alternateLocalHintTickApproved = alternateLocalHintTickApproved
+        self.alternateLocalHintTickDenied = alternateLocalHintTickDenied
+        self.alternateLocalHintTickDeniedConflict = alternateLocalHintTickDeniedConflict
+        self.alternateLocalHintTickDeniedCollision = alternateLocalHintTickDeniedCollision
+        self.alternateLocalHintTickFeedbackEmitted = alternateLocalHintTickFeedbackEmitted
+        self.alternateLocalHintV0Unchanged = alternateLocalHintV0Unchanged
+        self.alternateLocalHintV1Unchanged = alternateLocalHintV1Unchanged
+        self.alternateLocalHintV2OptIn = alternateLocalHintV2OptIn
+        self.alternateLocalHintPolicyReadCollision = alternateLocalHintPolicyReadCollision
+        self.alternateLocalHintPolicyWorldUsed = alternateLocalHintPolicyWorldUsed
+        self.alternateLocalHintTickReadCollision = alternateLocalHintTickReadCollision
+        self.alternateLocalHintTickWorldUsed = alternateLocalHintTickWorldUsed
+        self.alternateLocalHintMovementApplied = alternateLocalHintMovementApplied
+        self.alternateLocalHintPathfindingPerformed = alternateLocalHintPathfindingPerformed
+        self.alternateLocalHintReplanningPerformed = alternateLocalHintReplanningPerformed
+        self.alternateLocalHintAvoidancePerformed = alternateLocalHintAvoidancePerformed
+        self.alternateLocalHintReservationRuntimeUsed = alternateLocalHintReservationRuntimeUsed
+        self.alternateLocalHintRouteFollowingUsed = alternateLocalHintRouteFollowingUsed
+        self.alternateLocalHintMemoryUpdated = alternateLocalHintMemoryUpdated
+        self.alternateLocalHintGoalChanged = alternateLocalHintGoalChanged
+        self.alternateLocalHintWorldMutated = alternateLocalHintWorldMutated
+        self.alternateLocalHintMutationPerformed = alternateLocalHintMutationPerformed
+        self.alternateLocalHintSuccess = alternateLocalHintSuccess
         self.multiTickClosedLoopTicks = multiTickClosedLoopTicks
         self.multiTickClosedLoopAgents = multiTickClosedLoopAgents
         self.multiTickClosedLoopContextsTotal = multiTickClosedLoopContextsTotal
