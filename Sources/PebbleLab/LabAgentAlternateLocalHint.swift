@@ -436,6 +436,207 @@ struct LabAlternateLocalHintApprovedApplicationInvariantReport: Codable {
     let notes: [String]
 }
 
+struct LabAlternateLocalHintMultiTickReplayTickSummary: Codable {
+    let tick: Int
+    let agents: Int
+    let contexts: Int
+    let decisions: Int
+    let contextsWithBlockedFeedback: Int
+    let contextsWithoutFeedback: Int
+    let contextsWithApprovedOrMovedFeedback: Int
+    let feedbackConsumed: Int
+    let feedbackCarriedToNextTick: Int
+    let sameTickFeedbackConsumed: Int
+    let futureFeedbackConsumed: Int
+    let crossAgentFeedbackLeaks: Int
+    let candidatesProduced: Int
+    let candidatesSelected: Int
+    let candidatesFiltered: Int
+    let noFeedbackBaseline: Int
+    let approvedFeedbackBaseline: Int
+    let movedFeedbackBaseline: Int
+    let blockedFeedbackUsed: Int
+    let unknownHintNoAlternate: Int
+    let emptyHintNoAlternate: Int
+    let failedDirectionExcluded: Int
+    let movementIntentInputs: Int
+    let tickApproved: Int
+    let tickDenied: Int
+    let tickDeniedConflict: Int
+    let tickDeniedCollision: Int
+    let tickFeedbackEmitted: Int
+    let approvedApplications: Int
+    let approvedAgentsMoved: Int
+    let deniedAgentsPreserved: Int
+    let noIntentAgentsPreserved: Int
+    let displacementsApplied: Int
+    let abstractPositionsChanged: Int
+    let physicalPositionsChanged: Int
+    let abstractPhysicalDivergenceBefore: Int
+    let abstractPhysicalDivergenceAfter: Int
+    let policyReadCollision: Bool
+    let policyWorldUsed: Bool
+    let tickReadCollision: Bool
+    let tickWorldReadOnlyUsed: Bool
+    let movementApplied: Bool
+    let pathfindingPerformed: Bool
+    let replanningPerformed: Bool
+    let avoidancePerformed: Bool
+    let reservationRuntimeUsed: Bool
+    let routeFollowingUsed: Bool
+    let memoryUpdated: Bool
+    let goalChanged: Bool
+    let worldMutated: Bool
+    let mutationPerformed: Bool
+    let success: Bool
+}
+
+struct LabAlternateLocalHintMultiTickReplayTickRecord: Codable {
+    let tick: Int
+    let contexts: [LabAgentIntentContext]
+    let inputFeedbackByAgent: [String: LabMovementFeedback]
+    let decisions: [LabAgentAlternateLocalHintDecision]
+    let movementIntentsSentToTick: [LabAgentMoveIntent]
+    let noIntentFilteredOut: [LabAgentIntentProposal]
+    let tickInput: LabMultiAgentMovementTickInput
+    let tickOutput: LabMultiAgentMovementTickApprovedApplicationOutput
+    let approvedApplications: [LabMultiAgentMovementTickApprovedApplicationResolution]
+    let deniedPreservedAgents: [LabMultiAgentMovementTickApprovedApplicationResolution]
+    let noIntentPreservedAgents: [String]
+    let emittedFeedback: [LabMovementFeedback]
+    let feedbackForNextTick: [String: LabMovementFeedback]
+    let positionsBefore: [String: LabTerrainPathNodeKey]
+    let positionsAfter: [String: LabTerrainPathNodeKey]
+    let physicalPositionsBefore: [String: LabTerrainPathNodeKey]
+    let physicalPositionsAfter: [String: LabTerrainPathNodeKey]
+    let summary: LabAlternateLocalHintMultiTickReplayTickSummary
+}
+
+struct LabAlternateLocalHintMultiTickReplayFeedbackLedger: Codable {
+    let emittedByTick: [Int: [LabMovementFeedback]]
+    let consumedByTick: [Int: [LabMovementFeedback]]
+    let carriedToNextTickByTick: [Int: [LabMovementFeedback]]
+    let sameTickConsumed: Int
+    let futureConsumed: Int
+    let crossAgentLeaks: Int
+    let tick0FeedbackConsumedAtTick1: Bool
+    let tick1FeedbackConsumedAtTick2: Bool
+}
+
+struct LabAlternateLocalHintMultiTickReplaySummary: Codable {
+    let requestedTicks: Int
+    let executedTicks: Int
+    let agents: Int
+    let contextsTotal: Int
+    let decisionsTotal: Int
+    let contextsWithBlockedFeedbackTotal: Int
+    let contextsWithoutFeedbackTotal: Int
+    let contextsWithApprovedOrMovedFeedbackTotal: Int
+    let feedbackConsumedTotal: Int
+    let feedbackCarriedToNextTickTotal: Int
+    let sameTickFeedbackConsumedTotal: Int
+    let futureFeedbackConsumedTotal: Int
+    let crossAgentFeedbackLeaksTotal: Int
+    let candidatesProducedTotal: Int
+    let candidatesSelectedTotal: Int
+    let candidatesFilteredTotal: Int
+    let maxAlternates: Int
+    let bounded: Bool
+    let noFeedbackBaselineTotal: Int
+    let approvedFeedbackBaselineTotal: Int
+    let movedFeedbackBaselineTotal: Int
+    let blockedFeedbackUsedTotal: Int
+    let unknownHintNoAlternateTotal: Int
+    let emptyHintNoAlternateTotal: Int
+    let failedDirectionExcludedTotal: Int
+    let oneEdgeAlternates: Bool
+    let movementIntentInputsTotal: Int
+    let tickApprovedTotal: Int
+    let tickDeniedTotal: Int
+    let tickDeniedConflictTotal: Int
+    let tickDeniedCollisionTotal: Int
+    let tickFeedbackEmittedTotal: Int
+    let approvedApplicationsTotal: Int
+    let approvedAgentsMovedTotal: Int
+    let deniedAgentsPreservedTotal: Int
+    let noIntentAgentsPreservedTotal: Int
+    let displacementsAppliedTotal: Int
+    let abstractPositionsChangedTotal: Int
+    let physicalPositionsChangedTotal: Int
+    let abstractPhysicalDivergenceBeforeMax: Int
+    let abstractPhysicalDivergenceAfterMax: Int
+    let replayRuns: Int
+    let replayDigestsEqual: Bool
+    let repeatabilityFailures: Int
+    let deterministicAgentOrder: Bool
+    let deterministicCandidateOrder: Bool
+    let deterministicDecisionOrder: Bool
+    let deterministicJsonOutput: Bool
+    let v0Unchanged: Bool
+    let v1Unchanged: Bool
+    let v2OptIn: Bool
+    let policyReadCollision: Bool
+    let policyWorldUsed: Bool
+    let tickReadCollision: Bool
+    let tickWorldReadOnlyUsed: Bool
+    let movementApplied: Bool
+    let pathfindingPerformed: Bool
+    let replanningPerformed: Bool
+    let avoidancePerformed: Bool
+    let reservationRuntimeUsed: Bool
+    let routeFollowingUsed: Bool
+    let memoryUpdated: Bool
+    let goalChanged: Bool
+    let worldMutated: Bool
+    let mutationPerformed: Bool
+    let success: Bool
+}
+
+struct LabAlternateLocalHintMultiTickReplayDigest: Codable {
+    let replayDigest: String
+    let replayDigestRepeat: String
+    let replayDigestsEqual: Bool
+    let repeatabilityFailures: Int
+}
+
+struct LabAlternateLocalHintMultiTickReplayPositions: Codable {
+    let initialAgents: [String: LabTerrainPathNodeKey]
+    let finalAgents: [String: LabTerrainPathNodeKey]
+    let positionsByTick: [Int: [String: LabTerrainPathNodeKey]]
+    let physicalPositionsByTick: [Int: [String: LabTerrainPathNodeKey]]
+    let approvedAgentsByTick: [Int: [String]]
+    let deniedAgentsByTick: [Int: [String]]
+    let noIntentAgentsByTick: [Int: [String]]
+    let divergenceByTick: [Int: Int]
+    let summary: LabAlternateLocalHintMultiTickReplaySummary
+}
+
+struct LabAlternateLocalHintMultiTickReplayReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let requestedTicks: Int
+    let executedTicks: Int
+    let success: Bool
+    let policyMode: String
+    let initialAgents: [String: LabTerrainPathNodeKey]
+    let finalAgents: [String: LabTerrainPathNodeKey]
+    let tickRecords: [LabAlternateLocalHintMultiTickReplayTickRecord]
+    let feedbackLedger: LabAlternateLocalHintMultiTickReplayFeedbackLedger
+    let positions: LabAlternateLocalHintMultiTickReplayPositions
+    let replayDigest: String
+    let replayDigestRepeat: String
+    let summary: LabAlternateLocalHintMultiTickReplaySummary
+}
+
+struct LabAlternateLocalHintMultiTickReplayInvariantReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: LabMultiAgentMovementFixtureInvariantSummary
+    let checks: [LabMultiAgentMovementFixtureInvariantCheck]
+    let notes: [String]
+}
+
 func produceAgentIntentProposalWithAlternateLocalHintsV2(
     context: LabAgentIntentContext,
     maxAlternates: Int

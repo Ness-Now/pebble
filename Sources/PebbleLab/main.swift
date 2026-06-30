@@ -66,6 +66,8 @@ let isAlternateLocalHintLiveReadonlyScenario = options.scenario
     == "alternate_local_hint_live_readonly_smoke"
 let isAlternateLocalHintApprovedApplicationScenario = options.scenario
     == "alternate_local_hint_approved_application_smoke"
+let isAlternateLocalHintMultiTickReplayScenario = options.scenario
+    == "alternate_local_hint_multi_tick_replay_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -93,7 +95,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isAlternateLocalHintFixtureScenario
     || isAlternateLocalHintHardeningScenario
     || isAlternateLocalHintLiveReadonlyScenario
-    || isAlternateLocalHintApprovedApplicationScenario)
+    || isAlternateLocalHintApprovedApplicationScenario
+    || isAlternateLocalHintMultiTickReplayScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -750,7 +753,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isMultiTickClosedLoopFixtureScenario
     || isMultiTickClosedLoopHardeningScenario
     || isMultiTickClosedLoopLiveReadonlyScenario
-    || isMultiTickClosedLoopApprovedApplicationScenario {
+    || isMultiTickClosedLoopApprovedApplicationScenario
+    || isAlternateLocalHintMultiTickReplayScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -2522,6 +2526,90 @@ let alternateLocalHintApprovedApplicationSuccess = isAlternateLocalHintApprovedA
         && alternateLocalHintApprovedApplicationSummary?.worldMutated == false
         && alternateLocalHintApprovedApplicationSummary?.mutationPerformed == false)
     : nil
+let alternateLocalHintMultiTickReplayReport = isAlternateLocalHintMultiTickReplayScenario
+    ? makeAlternateLocalHintMultiTickReplayReport(
+        scenario: options.scenario,
+        seed: options.seed,
+        requestedTicks: options.ticks
+    )
+    : nil
+let alternateLocalHintMultiTickReplayInvariantReport = isAlternateLocalHintMultiTickReplayScenario
+    ? makeAlternateLocalHintMultiTickReplayInvariantReport(
+        report: alternateLocalHintMultiTickReplayReport,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let alternateLocalHintMultiTickReplayDigest = makeAlternateLocalHintMultiTickReplayDigest(
+    report: alternateLocalHintMultiTickReplayReport
+)
+let alternateLocalHintMultiTickReplaySummary = alternateLocalHintMultiTickReplayReport?.summary
+let alternateLocalHintMultiTickReplaySuccess = isAlternateLocalHintMultiTickReplayScenario
+    ? ((alternateLocalHintMultiTickReplayReport?.success ?? false)
+        && (alternateLocalHintMultiTickReplayInvariantReport?.success ?? false)
+        && alternateLocalHintMultiTickReplaySummary?.requestedTicks == options.ticks
+        && alternateLocalHintMultiTickReplaySummary?.executedTicks == 3
+        && alternateLocalHintMultiTickReplaySummary?.agents == 6
+        && alternateLocalHintMultiTickReplaySummary?.contextsTotal == 18
+        && alternateLocalHintMultiTickReplaySummary?.decisionsTotal == 18
+        && (alternateLocalHintMultiTickReplaySummary?.feedbackConsumedTotal ?? 0) > 0
+        && (alternateLocalHintMultiTickReplaySummary?.feedbackCarriedToNextTickTotal ?? 0) > 0
+        && alternateLocalHintMultiTickReplaySummary?.sameTickFeedbackConsumedTotal == 0
+        && alternateLocalHintMultiTickReplaySummary?.futureFeedbackConsumedTotal == 0
+        && alternateLocalHintMultiTickReplaySummary?.crossAgentFeedbackLeaksTotal == 0
+        && alternateLocalHintMultiTickReplayReport?.feedbackLedger.tick0FeedbackConsumedAtTick1 == true
+        && alternateLocalHintMultiTickReplayReport?.feedbackLedger.tick1FeedbackConsumedAtTick2 == true
+        && (alternateLocalHintMultiTickReplaySummary?.candidatesProducedTotal ?? 0) > 0
+        && (alternateLocalHintMultiTickReplaySummary?.candidatesSelectedTotal ?? 0) > 0
+        && alternateLocalHintMultiTickReplaySummary?.maxAlternates == 2
+        && alternateLocalHintMultiTickReplaySummary?.bounded == true
+        && (alternateLocalHintMultiTickReplaySummary?.blockedFeedbackUsedTotal ?? 0) > 0
+        && (alternateLocalHintMultiTickReplaySummary?.unknownHintNoAlternateTotal ?? 0) > 0
+        && (alternateLocalHintMultiTickReplaySummary?.emptyHintNoAlternateTotal ?? 0) > 0
+        && (alternateLocalHintMultiTickReplaySummary?.failedDirectionExcludedTotal ?? 0) > 0
+        && alternateLocalHintMultiTickReplaySummary?.oneEdgeAlternates == true
+        && (alternateLocalHintMultiTickReplaySummary?.movementIntentInputsTotal ?? 0) > 0
+        && (alternateLocalHintMultiTickReplaySummary?.tickApprovedTotal ?? 0) > 0
+        && (alternateLocalHintMultiTickReplaySummary?.tickDeniedTotal ?? 0) > 0
+        && (alternateLocalHintMultiTickReplaySummary?.tickDeniedCollisionTotal ?? 0) > 0
+        && (alternateLocalHintMultiTickReplaySummary?.tickFeedbackEmittedTotal ?? 0) > 0
+        && alternateLocalHintMultiTickReplaySummary?.approvedApplicationsTotal
+            == alternateLocalHintMultiTickReplaySummary?.displacementsAppliedTotal
+        && alternateLocalHintMultiTickReplaySummary?.approvedAgentsMovedTotal
+            == alternateLocalHintMultiTickReplaySummary?.approvedApplicationsTotal
+        && (alternateLocalHintMultiTickReplaySummary?.deniedAgentsPreservedTotal ?? 0) > 0
+        && (alternateLocalHintMultiTickReplaySummary?.noIntentAgentsPreservedTotal ?? 0) > 0
+        && alternateLocalHintMultiTickReplaySummary?.abstractPositionsChangedTotal
+            == alternateLocalHintMultiTickReplaySummary?.displacementsAppliedTotal
+        && alternateLocalHintMultiTickReplaySummary?.physicalPositionsChangedTotal
+            == alternateLocalHintMultiTickReplaySummary?.displacementsAppliedTotal
+        && alternateLocalHintMultiTickReplaySummary?.abstractPhysicalDivergenceBeforeMax == 0
+        && alternateLocalHintMultiTickReplaySummary?.abstractPhysicalDivergenceAfterMax == 0
+        && alternateLocalHintMultiTickReplaySummary?.replayRuns == 2
+        && alternateLocalHintMultiTickReplaySummary?.replayDigestsEqual == true
+        && alternateLocalHintMultiTickReplaySummary?.repeatabilityFailures == 0
+        && alternateLocalHintMultiTickReplaySummary?.deterministicAgentOrder == true
+        && alternateLocalHintMultiTickReplaySummary?.deterministicCandidateOrder == true
+        && alternateLocalHintMultiTickReplaySummary?.deterministicDecisionOrder == true
+        && alternateLocalHintMultiTickReplaySummary?.deterministicJsonOutput == true
+        && alternateLocalHintMultiTickReplaySummary?.v0Unchanged == true
+        && alternateLocalHintMultiTickReplaySummary?.v1Unchanged == true
+        && alternateLocalHintMultiTickReplaySummary?.v2OptIn == true
+        && alternateLocalHintMultiTickReplaySummary?.policyReadCollision == false
+        && alternateLocalHintMultiTickReplaySummary?.policyWorldUsed == false
+        && alternateLocalHintMultiTickReplaySummary?.tickReadCollision == true
+        && alternateLocalHintMultiTickReplaySummary?.tickWorldReadOnlyUsed == true
+        && alternateLocalHintMultiTickReplaySummary?.movementApplied == true
+        && alternateLocalHintMultiTickReplaySummary?.pathfindingPerformed == false
+        && alternateLocalHintMultiTickReplaySummary?.replanningPerformed == false
+        && alternateLocalHintMultiTickReplaySummary?.avoidancePerformed == false
+        && alternateLocalHintMultiTickReplaySummary?.reservationRuntimeUsed == false
+        && alternateLocalHintMultiTickReplaySummary?.routeFollowingUsed == false
+        && alternateLocalHintMultiTickReplaySummary?.memoryUpdated == false
+        && alternateLocalHintMultiTickReplaySummary?.goalChanged == false
+        && alternateLocalHintMultiTickReplaySummary?.worldMutated == false
+        && alternateLocalHintMultiTickReplaySummary?.mutationPerformed == false)
+    : nil
 let multiTickClosedLoopReport = isMultiTickClosedLoopFixtureScenario
     ? makeMultiTickClosedLoopFixtureReport(
         scenario: options.scenario,
@@ -3150,6 +3238,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (alternateLocalHintHardeningSuccess ?? true)
     && (alternateLocalHintLiveReadonlySuccess ?? true)
     && (alternateLocalHintApprovedApplicationSuccess ?? true)
+    && (alternateLocalHintMultiTickReplaySuccess ?? true)
     && (multiTickClosedLoopSuccess ?? true)
     && (multiTickClosedLoopHardeningSuccess ?? true)
     && (multiTickClosedLoopLiveReadonlySuccess ?? true)
@@ -4485,6 +4574,76 @@ if options.outPath != nil {
                 replanningPerformed: summary.replanningPerformed
             ))
         }
+        if let alternateLocalHintMultiTickReplayReport {
+            let summary = alternateLocalHintMultiTickReplayReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_alternate_local_hint_multi_tick_replay_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                requestedTicks: summary.requestedTicks,
+                executedTicks: summary.executedTicks,
+                success: alternateLocalHintMultiTickReplaySuccess,
+                agents: summary.agents,
+                displacementsApplied: summary.displacementsAppliedTotal,
+                candidatesProduced: summary.candidatesProducedTotal,
+                candidatesSelected: summary.candidatesSelectedTotal,
+                candidatesFiltered: summary.candidatesFilteredTotal,
+                maxAlternates: summary.maxAlternates,
+                bounded: summary.bounded,
+                noFeedbackBaseline: summary.noFeedbackBaselineTotal,
+                approvedFeedbackBaseline: summary.approvedFeedbackBaselineTotal,
+                movedFeedbackBaseline: summary.movedFeedbackBaselineTotal,
+                blockedFeedbackUsed: summary.blockedFeedbackUsedTotal,
+                unknownHintNoAlternate: summary.unknownHintNoAlternateTotal,
+                emptyHintNoAlternate: summary.emptyHintNoAlternateTotal,
+                failedDirectionExcluded: summary.failedDirectionExcludedTotal,
+                oneEdgeAlternates: summary.oneEdgeAlternates,
+                v0Unchanged: summary.v0Unchanged,
+                v1Unchanged: summary.v1Unchanged,
+                v2OptIn: summary.v2OptIn,
+                contextsTotal: summary.contextsTotal,
+                contextsWithFeedbackTotal: summary.contextsWithBlockedFeedbackTotal
+                    + summary.contextsWithApprovedOrMovedFeedbackTotal,
+                contextsWithoutFeedbackTotal: summary.contextsWithoutFeedbackTotal,
+                feedbackConsumedTotal: summary.feedbackConsumedTotal,
+                feedbackCarriedToNextTickTotal: summary.feedbackCarriedToNextTickTotal,
+                movementIntentInputsTotal: summary.movementIntentInputsTotal,
+                tickDeniedConflictTotal: summary.tickDeniedConflictTotal,
+                tickDeniedCollisionTotal: summary.tickDeniedCollisionTotal,
+                tickFeedbackEmittedTotal: summary.tickFeedbackEmittedTotal,
+                tickApprovedTotal: summary.tickApprovedTotal,
+                tickDeniedTotal: summary.tickDeniedTotal,
+                policyReadCollision: summary.policyReadCollision,
+                policyWorldUsed: summary.policyWorldUsed,
+                tickWorldReadOnlyUsed: summary.tickWorldReadOnlyUsed,
+                worldMutated: summary.worldMutated,
+                approvedAgentsMoved: summary.approvedAgentsMovedTotal,
+                approvedApplicationsTotal: summary.approvedApplicationsTotal,
+                deniedPreservedTotal: summary.deniedAgentsPreservedTotal,
+                noIntentPreservedTotal: summary.noIntentAgentsPreservedTotal,
+                sameTickFeedbackConsumedTotal: summary.sameTickFeedbackConsumedTotal,
+                crossAgentFeedbackLeaksTotal: summary.crossAgentFeedbackLeaksTotal,
+                futureFeedbackConsumedTotal: summary.futureFeedbackConsumedTotal,
+                repeatabilityChecks: summary.replayRuns,
+                repeatabilityFailures: summary.repeatabilityFailures,
+                abstractPositionsChanged: summary.abstractPositionsChangedTotal,
+                physicalPositionsChanged: summary.physicalPositionsChangedTotal,
+                abstractPhysicalDivergenceBefore: summary.abstractPhysicalDivergenceBeforeMax,
+                abstractPhysicalDivergenceAfter: summary.abstractPhysicalDivergenceAfterMax,
+                routeFollowingUsed: summary.routeFollowingUsed,
+                tickReadCollision: summary.tickReadCollision,
+                worldUsed: summary.policyWorldUsed || summary.tickWorldReadOnlyUsed,
+                collisionRead: summary.policyReadCollision || summary.tickReadCollision,
+                movementApplied: summary.movementApplied,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                avoidancePerformed: summary.avoidancePerformed,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
+                replanningPerformed: summary.replanningPerformed
+            ))
+        }
         if let multiTickClosedLoopReport {
             let summary = multiTickClosedLoopReport.summary
             try appendEvent(RunEvent(
@@ -5657,6 +5816,36 @@ if let outPath = options.outPath {
             try writeJSON(
                 alternateLocalHintApprovedApplicationInvariantReport,
                 to: outURL.appendingPathComponent("alternate_local_hint_approved_application_invariant_report.json")
+            )
+        }
+        if let alternateLocalHintMultiTickReplayReport {
+            try writeJSON(
+                alternateLocalHintMultiTickReplayReport,
+                to: outURL.appendingPathComponent("alternate_local_hint_multi_tick_replay_report.json")
+            )
+            try writeJSON(
+                alternateLocalHintMultiTickReplayReport.tickRecords,
+                to: outURL.appendingPathComponent("alternate_local_hint_multi_tick_replay_ticks.json")
+            )
+            try writeJSON(
+                alternateLocalHintMultiTickReplayReport.feedbackLedger,
+                to: outURL.appendingPathComponent("alternate_local_hint_multi_tick_replay_feedback.json")
+            )
+            try writeJSON(
+                alternateLocalHintMultiTickReplayReport.positions,
+                to: outURL.appendingPathComponent("alternate_local_hint_multi_tick_replay_positions.json")
+            )
+        }
+        if let alternateLocalHintMultiTickReplayDigest {
+            try writeJSON(
+                alternateLocalHintMultiTickReplayDigest,
+                to: outURL.appendingPathComponent("alternate_local_hint_multi_tick_replay_digest.json")
+            )
+        }
+        if let alternateLocalHintMultiTickReplayInvariantReport {
+            try writeJSON(
+                alternateLocalHintMultiTickReplayInvariantReport,
+                to: outURL.appendingPathComponent("alternate_local_hint_multi_tick_replay_invariant_report.json")
             )
         }
         if let multiTickClosedLoopReport {
@@ -7033,6 +7222,72 @@ if let outPath = options.outPath {
             alternateLocalHintApprovedApplicationWorldMutated: alternateLocalHintApprovedApplicationReport?.summary.worldMutated,
             alternateLocalHintApprovedApplicationMutationPerformed: alternateLocalHintApprovedApplicationReport?.summary.mutationPerformed,
             alternateLocalHintApprovedApplicationSuccess: alternateLocalHintApprovedApplicationSuccess,
+            alternateLocalHintMultiTickReplayRequestedTicks: alternateLocalHintMultiTickReplayReport?.summary.requestedTicks,
+            alternateLocalHintMultiTickReplayExecutedTicks: alternateLocalHintMultiTickReplayReport?.summary.executedTicks,
+            alternateLocalHintMultiTickReplayAgents: alternateLocalHintMultiTickReplayReport?.summary.agents,
+            alternateLocalHintMultiTickReplayContextsTotal: alternateLocalHintMultiTickReplayReport?.summary.contextsTotal,
+            alternateLocalHintMultiTickReplayDecisionsTotal: alternateLocalHintMultiTickReplayReport?.summary.decisionsTotal,
+            alternateLocalHintMultiTickReplayContextsWithBlockedFeedbackTotal: alternateLocalHintMultiTickReplayReport?.summary.contextsWithBlockedFeedbackTotal,
+            alternateLocalHintMultiTickReplayContextsWithoutFeedbackTotal: alternateLocalHintMultiTickReplayReport?.summary.contextsWithoutFeedbackTotal,
+            alternateLocalHintMultiTickReplayContextsWithApprovedOrMovedFeedbackTotal: alternateLocalHintMultiTickReplayReport?.summary.contextsWithApprovedOrMovedFeedbackTotal,
+            alternateLocalHintMultiTickReplayFeedbackConsumedTotal: alternateLocalHintMultiTickReplayReport?.summary.feedbackConsumedTotal,
+            alternateLocalHintMultiTickReplayFeedbackCarriedToNextTickTotal: alternateLocalHintMultiTickReplayReport?.summary.feedbackCarriedToNextTickTotal,
+            alternateLocalHintMultiTickReplaySameTickFeedbackConsumedTotal: alternateLocalHintMultiTickReplayReport?.summary.sameTickFeedbackConsumedTotal,
+            alternateLocalHintMultiTickReplayFutureFeedbackConsumedTotal: alternateLocalHintMultiTickReplayReport?.summary.futureFeedbackConsumedTotal,
+            alternateLocalHintMultiTickReplayCrossAgentFeedbackLeaksTotal: alternateLocalHintMultiTickReplayReport?.summary.crossAgentFeedbackLeaksTotal,
+            alternateLocalHintMultiTickReplayCandidatesProducedTotal: alternateLocalHintMultiTickReplayReport?.summary.candidatesProducedTotal,
+            alternateLocalHintMultiTickReplayCandidatesSelectedTotal: alternateLocalHintMultiTickReplayReport?.summary.candidatesSelectedTotal,
+            alternateLocalHintMultiTickReplayCandidatesFilteredTotal: alternateLocalHintMultiTickReplayReport?.summary.candidatesFilteredTotal,
+            alternateLocalHintMultiTickReplayMaxAlternates: alternateLocalHintMultiTickReplayReport?.summary.maxAlternates,
+            alternateLocalHintMultiTickReplayBounded: alternateLocalHintMultiTickReplayReport?.summary.bounded,
+            alternateLocalHintMultiTickReplayNoFeedbackBaselineTotal: alternateLocalHintMultiTickReplayReport?.summary.noFeedbackBaselineTotal,
+            alternateLocalHintMultiTickReplayApprovedFeedbackBaselineTotal: alternateLocalHintMultiTickReplayReport?.summary.approvedFeedbackBaselineTotal,
+            alternateLocalHintMultiTickReplayMovedFeedbackBaselineTotal: alternateLocalHintMultiTickReplayReport?.summary.movedFeedbackBaselineTotal,
+            alternateLocalHintMultiTickReplayBlockedFeedbackUsedTotal: alternateLocalHintMultiTickReplayReport?.summary.blockedFeedbackUsedTotal,
+            alternateLocalHintMultiTickReplayUnknownHintNoAlternateTotal: alternateLocalHintMultiTickReplayReport?.summary.unknownHintNoAlternateTotal,
+            alternateLocalHintMultiTickReplayEmptyHintNoAlternateTotal: alternateLocalHintMultiTickReplayReport?.summary.emptyHintNoAlternateTotal,
+            alternateLocalHintMultiTickReplayFailedDirectionExcludedTotal: alternateLocalHintMultiTickReplayReport?.summary.failedDirectionExcludedTotal,
+            alternateLocalHintMultiTickReplayOneEdgeAlternates: alternateLocalHintMultiTickReplayReport?.summary.oneEdgeAlternates,
+            alternateLocalHintMultiTickReplayMovementIntentInputsTotal: alternateLocalHintMultiTickReplayReport?.summary.movementIntentInputsTotal,
+            alternateLocalHintMultiTickReplayTickApprovedTotal: alternateLocalHintMultiTickReplayReport?.summary.tickApprovedTotal,
+            alternateLocalHintMultiTickReplayTickDeniedTotal: alternateLocalHintMultiTickReplayReport?.summary.tickDeniedTotal,
+            alternateLocalHintMultiTickReplayTickDeniedConflictTotal: alternateLocalHintMultiTickReplayReport?.summary.tickDeniedConflictTotal,
+            alternateLocalHintMultiTickReplayTickDeniedCollisionTotal: alternateLocalHintMultiTickReplayReport?.summary.tickDeniedCollisionTotal,
+            alternateLocalHintMultiTickReplayTickFeedbackEmittedTotal: alternateLocalHintMultiTickReplayReport?.summary.tickFeedbackEmittedTotal,
+            alternateLocalHintMultiTickReplayApprovedApplicationsTotal: alternateLocalHintMultiTickReplayReport?.summary.approvedApplicationsTotal,
+            alternateLocalHintMultiTickReplayApprovedAgentsMovedTotal: alternateLocalHintMultiTickReplayReport?.summary.approvedAgentsMovedTotal,
+            alternateLocalHintMultiTickReplayDeniedAgentsPreservedTotal: alternateLocalHintMultiTickReplayReport?.summary.deniedAgentsPreservedTotal,
+            alternateLocalHintMultiTickReplayNoIntentAgentsPreservedTotal: alternateLocalHintMultiTickReplayReport?.summary.noIntentAgentsPreservedTotal,
+            alternateLocalHintMultiTickReplayDisplacementsAppliedTotal: alternateLocalHintMultiTickReplayReport?.summary.displacementsAppliedTotal,
+            alternateLocalHintMultiTickReplayAbstractPositionsChangedTotal: alternateLocalHintMultiTickReplayReport?.summary.abstractPositionsChangedTotal,
+            alternateLocalHintMultiTickReplayPhysicalPositionsChangedTotal: alternateLocalHintMultiTickReplayReport?.summary.physicalPositionsChangedTotal,
+            alternateLocalHintMultiTickReplayAbstractPhysicalDivergenceBeforeMax: alternateLocalHintMultiTickReplayReport?.summary.abstractPhysicalDivergenceBeforeMax,
+            alternateLocalHintMultiTickReplayAbstractPhysicalDivergenceAfterMax: alternateLocalHintMultiTickReplayReport?.summary.abstractPhysicalDivergenceAfterMax,
+            alternateLocalHintMultiTickReplayReplayRuns: alternateLocalHintMultiTickReplayReport?.summary.replayRuns,
+            alternateLocalHintMultiTickReplayReplayDigestsEqual: alternateLocalHintMultiTickReplayReport?.summary.replayDigestsEqual,
+            alternateLocalHintMultiTickReplayRepeatabilityFailures: alternateLocalHintMultiTickReplayReport?.summary.repeatabilityFailures,
+            alternateLocalHintMultiTickReplayDeterministicAgentOrder: alternateLocalHintMultiTickReplayReport?.summary.deterministicAgentOrder,
+            alternateLocalHintMultiTickReplayDeterministicCandidateOrder: alternateLocalHintMultiTickReplayReport?.summary.deterministicCandidateOrder,
+            alternateLocalHintMultiTickReplayDeterministicDecisionOrder: alternateLocalHintMultiTickReplayReport?.summary.deterministicDecisionOrder,
+            alternateLocalHintMultiTickReplayDeterministicJsonOutput: alternateLocalHintMultiTickReplayReport?.summary.deterministicJsonOutput,
+            alternateLocalHintMultiTickReplayV0Unchanged: alternateLocalHintMultiTickReplayReport?.summary.v0Unchanged,
+            alternateLocalHintMultiTickReplayV1Unchanged: alternateLocalHintMultiTickReplayReport?.summary.v1Unchanged,
+            alternateLocalHintMultiTickReplayV2OptIn: alternateLocalHintMultiTickReplayReport?.summary.v2OptIn,
+            alternateLocalHintMultiTickReplayPolicyReadCollision: alternateLocalHintMultiTickReplayReport?.summary.policyReadCollision,
+            alternateLocalHintMultiTickReplayPolicyWorldUsed: alternateLocalHintMultiTickReplayReport?.summary.policyWorldUsed,
+            alternateLocalHintMultiTickReplayTickReadCollision: alternateLocalHintMultiTickReplayReport?.summary.tickReadCollision,
+            alternateLocalHintMultiTickReplayTickWorldReadOnlyUsed: alternateLocalHintMultiTickReplayReport?.summary.tickWorldReadOnlyUsed,
+            alternateLocalHintMultiTickReplayMovementApplied: alternateLocalHintMultiTickReplayReport?.summary.movementApplied,
+            alternateLocalHintMultiTickReplayPathfindingPerformed: alternateLocalHintMultiTickReplayReport?.summary.pathfindingPerformed,
+            alternateLocalHintMultiTickReplayReplanningPerformed: alternateLocalHintMultiTickReplayReport?.summary.replanningPerformed,
+            alternateLocalHintMultiTickReplayAvoidancePerformed: alternateLocalHintMultiTickReplayReport?.summary.avoidancePerformed,
+            alternateLocalHintMultiTickReplayReservationRuntimeUsed: alternateLocalHintMultiTickReplayReport?.summary.reservationRuntimeUsed,
+            alternateLocalHintMultiTickReplayRouteFollowingUsed: alternateLocalHintMultiTickReplayReport?.summary.routeFollowingUsed,
+            alternateLocalHintMultiTickReplayMemoryUpdated: alternateLocalHintMultiTickReplayReport?.summary.memoryUpdated,
+            alternateLocalHintMultiTickReplayGoalChanged: alternateLocalHintMultiTickReplayReport?.summary.goalChanged,
+            alternateLocalHintMultiTickReplayWorldMutated: alternateLocalHintMultiTickReplayReport?.summary.worldMutated,
+            alternateLocalHintMultiTickReplayMutationPerformed: alternateLocalHintMultiTickReplayReport?.summary.mutationPerformed,
+            alternateLocalHintMultiTickReplaySuccess: alternateLocalHintMultiTickReplaySuccess,
             multiTickClosedLoopTicks: multiTickClosedLoopReport?.summary.executedTicks,
             multiTickClosedLoopAgents: multiTickClosedLoopReport?.summary.agents,
             multiTickClosedLoopContextsTotal: multiTickClosedLoopReport?.summary.contextsTotal,

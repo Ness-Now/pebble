@@ -1213,6 +1213,72 @@ struct RunMetrics: Encodable {
     let alternateLocalHintApprovedApplicationWorldMutated: Bool?
     let alternateLocalHintApprovedApplicationMutationPerformed: Bool?
     let alternateLocalHintApprovedApplicationSuccess: Bool?
+    let alternateLocalHintMultiTickReplayRequestedTicks: Int?
+    let alternateLocalHintMultiTickReplayExecutedTicks: Int?
+    let alternateLocalHintMultiTickReplayAgents: Int?
+    let alternateLocalHintMultiTickReplayContextsTotal: Int?
+    let alternateLocalHintMultiTickReplayDecisionsTotal: Int?
+    let alternateLocalHintMultiTickReplayContextsWithBlockedFeedbackTotal: Int?
+    let alternateLocalHintMultiTickReplayContextsWithoutFeedbackTotal: Int?
+    let alternateLocalHintMultiTickReplayContextsWithApprovedOrMovedFeedbackTotal: Int?
+    let alternateLocalHintMultiTickReplayFeedbackConsumedTotal: Int?
+    let alternateLocalHintMultiTickReplayFeedbackCarriedToNextTickTotal: Int?
+    let alternateLocalHintMultiTickReplaySameTickFeedbackConsumedTotal: Int?
+    let alternateLocalHintMultiTickReplayFutureFeedbackConsumedTotal: Int?
+    let alternateLocalHintMultiTickReplayCrossAgentFeedbackLeaksTotal: Int?
+    let alternateLocalHintMultiTickReplayCandidatesProducedTotal: Int?
+    let alternateLocalHintMultiTickReplayCandidatesSelectedTotal: Int?
+    let alternateLocalHintMultiTickReplayCandidatesFilteredTotal: Int?
+    let alternateLocalHintMultiTickReplayMaxAlternates: Int?
+    let alternateLocalHintMultiTickReplayBounded: Bool?
+    let alternateLocalHintMultiTickReplayNoFeedbackBaselineTotal: Int?
+    let alternateLocalHintMultiTickReplayApprovedFeedbackBaselineTotal: Int?
+    let alternateLocalHintMultiTickReplayMovedFeedbackBaselineTotal: Int?
+    let alternateLocalHintMultiTickReplayBlockedFeedbackUsedTotal: Int?
+    let alternateLocalHintMultiTickReplayUnknownHintNoAlternateTotal: Int?
+    let alternateLocalHintMultiTickReplayEmptyHintNoAlternateTotal: Int?
+    let alternateLocalHintMultiTickReplayFailedDirectionExcludedTotal: Int?
+    let alternateLocalHintMultiTickReplayOneEdgeAlternates: Bool?
+    let alternateLocalHintMultiTickReplayMovementIntentInputsTotal: Int?
+    let alternateLocalHintMultiTickReplayTickApprovedTotal: Int?
+    let alternateLocalHintMultiTickReplayTickDeniedTotal: Int?
+    let alternateLocalHintMultiTickReplayTickDeniedConflictTotal: Int?
+    let alternateLocalHintMultiTickReplayTickDeniedCollisionTotal: Int?
+    let alternateLocalHintMultiTickReplayTickFeedbackEmittedTotal: Int?
+    let alternateLocalHintMultiTickReplayApprovedApplicationsTotal: Int?
+    let alternateLocalHintMultiTickReplayApprovedAgentsMovedTotal: Int?
+    let alternateLocalHintMultiTickReplayDeniedAgentsPreservedTotal: Int?
+    let alternateLocalHintMultiTickReplayNoIntentAgentsPreservedTotal: Int?
+    let alternateLocalHintMultiTickReplayDisplacementsAppliedTotal: Int?
+    let alternateLocalHintMultiTickReplayAbstractPositionsChangedTotal: Int?
+    let alternateLocalHintMultiTickReplayPhysicalPositionsChangedTotal: Int?
+    let alternateLocalHintMultiTickReplayAbstractPhysicalDivergenceBeforeMax: Int?
+    let alternateLocalHintMultiTickReplayAbstractPhysicalDivergenceAfterMax: Int?
+    let alternateLocalHintMultiTickReplayReplayRuns: Int?
+    let alternateLocalHintMultiTickReplayReplayDigestsEqual: Bool?
+    let alternateLocalHintMultiTickReplayRepeatabilityFailures: Int?
+    let alternateLocalHintMultiTickReplayDeterministicAgentOrder: Bool?
+    let alternateLocalHintMultiTickReplayDeterministicCandidateOrder: Bool?
+    let alternateLocalHintMultiTickReplayDeterministicDecisionOrder: Bool?
+    let alternateLocalHintMultiTickReplayDeterministicJsonOutput: Bool?
+    let alternateLocalHintMultiTickReplayV0Unchanged: Bool?
+    let alternateLocalHintMultiTickReplayV1Unchanged: Bool?
+    let alternateLocalHintMultiTickReplayV2OptIn: Bool?
+    let alternateLocalHintMultiTickReplayPolicyReadCollision: Bool?
+    let alternateLocalHintMultiTickReplayPolicyWorldUsed: Bool?
+    let alternateLocalHintMultiTickReplayTickReadCollision: Bool?
+    let alternateLocalHintMultiTickReplayTickWorldReadOnlyUsed: Bool?
+    let alternateLocalHintMultiTickReplayMovementApplied: Bool?
+    let alternateLocalHintMultiTickReplayPathfindingPerformed: Bool?
+    let alternateLocalHintMultiTickReplayReplanningPerformed: Bool?
+    let alternateLocalHintMultiTickReplayAvoidancePerformed: Bool?
+    let alternateLocalHintMultiTickReplayReservationRuntimeUsed: Bool?
+    let alternateLocalHintMultiTickReplayRouteFollowingUsed: Bool?
+    let alternateLocalHintMultiTickReplayMemoryUpdated: Bool?
+    let alternateLocalHintMultiTickReplayGoalChanged: Bool?
+    let alternateLocalHintMultiTickReplayWorldMutated: Bool?
+    let alternateLocalHintMultiTickReplayMutationPerformed: Bool?
+    let alternateLocalHintMultiTickReplaySuccess: Bool?
     let multiTickClosedLoopTicks: Int?
     let multiTickClosedLoopAgents: Int?
     let multiTickClosedLoopContextsTotal: Int?
@@ -2595,6 +2661,72 @@ struct RunMetrics: Encodable {
         alternateLocalHintApprovedApplicationWorldMutated: Bool? = nil,
         alternateLocalHintApprovedApplicationMutationPerformed: Bool? = nil,
         alternateLocalHintApprovedApplicationSuccess: Bool? = nil,
+        alternateLocalHintMultiTickReplayRequestedTicks: Int? = nil,
+        alternateLocalHintMultiTickReplayExecutedTicks: Int? = nil,
+        alternateLocalHintMultiTickReplayAgents: Int? = nil,
+        alternateLocalHintMultiTickReplayContextsTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayDecisionsTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayContextsWithBlockedFeedbackTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayContextsWithoutFeedbackTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayContextsWithApprovedOrMovedFeedbackTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayFeedbackConsumedTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayFeedbackCarriedToNextTickTotal: Int? = nil,
+        alternateLocalHintMultiTickReplaySameTickFeedbackConsumedTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayFutureFeedbackConsumedTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayCrossAgentFeedbackLeaksTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayCandidatesProducedTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayCandidatesSelectedTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayCandidatesFilteredTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayMaxAlternates: Int? = nil,
+        alternateLocalHintMultiTickReplayBounded: Bool? = nil,
+        alternateLocalHintMultiTickReplayNoFeedbackBaselineTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayApprovedFeedbackBaselineTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayMovedFeedbackBaselineTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayBlockedFeedbackUsedTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayUnknownHintNoAlternateTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayEmptyHintNoAlternateTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayFailedDirectionExcludedTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayOneEdgeAlternates: Bool? = nil,
+        alternateLocalHintMultiTickReplayMovementIntentInputsTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayTickApprovedTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayTickDeniedTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayTickDeniedConflictTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayTickDeniedCollisionTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayTickFeedbackEmittedTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayApprovedApplicationsTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayApprovedAgentsMovedTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayDeniedAgentsPreservedTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayNoIntentAgentsPreservedTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayDisplacementsAppliedTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayAbstractPositionsChangedTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayPhysicalPositionsChangedTotal: Int? = nil,
+        alternateLocalHintMultiTickReplayAbstractPhysicalDivergenceBeforeMax: Int? = nil,
+        alternateLocalHintMultiTickReplayAbstractPhysicalDivergenceAfterMax: Int? = nil,
+        alternateLocalHintMultiTickReplayReplayRuns: Int? = nil,
+        alternateLocalHintMultiTickReplayReplayDigestsEqual: Bool? = nil,
+        alternateLocalHintMultiTickReplayRepeatabilityFailures: Int? = nil,
+        alternateLocalHintMultiTickReplayDeterministicAgentOrder: Bool? = nil,
+        alternateLocalHintMultiTickReplayDeterministicCandidateOrder: Bool? = nil,
+        alternateLocalHintMultiTickReplayDeterministicDecisionOrder: Bool? = nil,
+        alternateLocalHintMultiTickReplayDeterministicJsonOutput: Bool? = nil,
+        alternateLocalHintMultiTickReplayV0Unchanged: Bool? = nil,
+        alternateLocalHintMultiTickReplayV1Unchanged: Bool? = nil,
+        alternateLocalHintMultiTickReplayV2OptIn: Bool? = nil,
+        alternateLocalHintMultiTickReplayPolicyReadCollision: Bool? = nil,
+        alternateLocalHintMultiTickReplayPolicyWorldUsed: Bool? = nil,
+        alternateLocalHintMultiTickReplayTickReadCollision: Bool? = nil,
+        alternateLocalHintMultiTickReplayTickWorldReadOnlyUsed: Bool? = nil,
+        alternateLocalHintMultiTickReplayMovementApplied: Bool? = nil,
+        alternateLocalHintMultiTickReplayPathfindingPerformed: Bool? = nil,
+        alternateLocalHintMultiTickReplayReplanningPerformed: Bool? = nil,
+        alternateLocalHintMultiTickReplayAvoidancePerformed: Bool? = nil,
+        alternateLocalHintMultiTickReplayReservationRuntimeUsed: Bool? = nil,
+        alternateLocalHintMultiTickReplayRouteFollowingUsed: Bool? = nil,
+        alternateLocalHintMultiTickReplayMemoryUpdated: Bool? = nil,
+        alternateLocalHintMultiTickReplayGoalChanged: Bool? = nil,
+        alternateLocalHintMultiTickReplayWorldMutated: Bool? = nil,
+        alternateLocalHintMultiTickReplayMutationPerformed: Bool? = nil,
+        alternateLocalHintMultiTickReplaySuccess: Bool? = nil,
         multiTickClosedLoopTicks: Int? = nil,
         multiTickClosedLoopAgents: Int? = nil,
         multiTickClosedLoopContextsTotal: Int? = nil,
@@ -3976,6 +4108,72 @@ struct RunMetrics: Encodable {
         self.alternateLocalHintApprovedApplicationWorldMutated = alternateLocalHintApprovedApplicationWorldMutated
         self.alternateLocalHintApprovedApplicationMutationPerformed = alternateLocalHintApprovedApplicationMutationPerformed
         self.alternateLocalHintApprovedApplicationSuccess = alternateLocalHintApprovedApplicationSuccess
+        self.alternateLocalHintMultiTickReplayRequestedTicks = alternateLocalHintMultiTickReplayRequestedTicks
+        self.alternateLocalHintMultiTickReplayExecutedTicks = alternateLocalHintMultiTickReplayExecutedTicks
+        self.alternateLocalHintMultiTickReplayAgents = alternateLocalHintMultiTickReplayAgents
+        self.alternateLocalHintMultiTickReplayContextsTotal = alternateLocalHintMultiTickReplayContextsTotal
+        self.alternateLocalHintMultiTickReplayDecisionsTotal = alternateLocalHintMultiTickReplayDecisionsTotal
+        self.alternateLocalHintMultiTickReplayContextsWithBlockedFeedbackTotal = alternateLocalHintMultiTickReplayContextsWithBlockedFeedbackTotal
+        self.alternateLocalHintMultiTickReplayContextsWithoutFeedbackTotal = alternateLocalHintMultiTickReplayContextsWithoutFeedbackTotal
+        self.alternateLocalHintMultiTickReplayContextsWithApprovedOrMovedFeedbackTotal = alternateLocalHintMultiTickReplayContextsWithApprovedOrMovedFeedbackTotal
+        self.alternateLocalHintMultiTickReplayFeedbackConsumedTotal = alternateLocalHintMultiTickReplayFeedbackConsumedTotal
+        self.alternateLocalHintMultiTickReplayFeedbackCarriedToNextTickTotal = alternateLocalHintMultiTickReplayFeedbackCarriedToNextTickTotal
+        self.alternateLocalHintMultiTickReplaySameTickFeedbackConsumedTotal = alternateLocalHintMultiTickReplaySameTickFeedbackConsumedTotal
+        self.alternateLocalHintMultiTickReplayFutureFeedbackConsumedTotal = alternateLocalHintMultiTickReplayFutureFeedbackConsumedTotal
+        self.alternateLocalHintMultiTickReplayCrossAgentFeedbackLeaksTotal = alternateLocalHintMultiTickReplayCrossAgentFeedbackLeaksTotal
+        self.alternateLocalHintMultiTickReplayCandidatesProducedTotal = alternateLocalHintMultiTickReplayCandidatesProducedTotal
+        self.alternateLocalHintMultiTickReplayCandidatesSelectedTotal = alternateLocalHintMultiTickReplayCandidatesSelectedTotal
+        self.alternateLocalHintMultiTickReplayCandidatesFilteredTotal = alternateLocalHintMultiTickReplayCandidatesFilteredTotal
+        self.alternateLocalHintMultiTickReplayMaxAlternates = alternateLocalHintMultiTickReplayMaxAlternates
+        self.alternateLocalHintMultiTickReplayBounded = alternateLocalHintMultiTickReplayBounded
+        self.alternateLocalHintMultiTickReplayNoFeedbackBaselineTotal = alternateLocalHintMultiTickReplayNoFeedbackBaselineTotal
+        self.alternateLocalHintMultiTickReplayApprovedFeedbackBaselineTotal = alternateLocalHintMultiTickReplayApprovedFeedbackBaselineTotal
+        self.alternateLocalHintMultiTickReplayMovedFeedbackBaselineTotal = alternateLocalHintMultiTickReplayMovedFeedbackBaselineTotal
+        self.alternateLocalHintMultiTickReplayBlockedFeedbackUsedTotal = alternateLocalHintMultiTickReplayBlockedFeedbackUsedTotal
+        self.alternateLocalHintMultiTickReplayUnknownHintNoAlternateTotal = alternateLocalHintMultiTickReplayUnknownHintNoAlternateTotal
+        self.alternateLocalHintMultiTickReplayEmptyHintNoAlternateTotal = alternateLocalHintMultiTickReplayEmptyHintNoAlternateTotal
+        self.alternateLocalHintMultiTickReplayFailedDirectionExcludedTotal = alternateLocalHintMultiTickReplayFailedDirectionExcludedTotal
+        self.alternateLocalHintMultiTickReplayOneEdgeAlternates = alternateLocalHintMultiTickReplayOneEdgeAlternates
+        self.alternateLocalHintMultiTickReplayMovementIntentInputsTotal = alternateLocalHintMultiTickReplayMovementIntentInputsTotal
+        self.alternateLocalHintMultiTickReplayTickApprovedTotal = alternateLocalHintMultiTickReplayTickApprovedTotal
+        self.alternateLocalHintMultiTickReplayTickDeniedTotal = alternateLocalHintMultiTickReplayTickDeniedTotal
+        self.alternateLocalHintMultiTickReplayTickDeniedConflictTotal = alternateLocalHintMultiTickReplayTickDeniedConflictTotal
+        self.alternateLocalHintMultiTickReplayTickDeniedCollisionTotal = alternateLocalHintMultiTickReplayTickDeniedCollisionTotal
+        self.alternateLocalHintMultiTickReplayTickFeedbackEmittedTotal = alternateLocalHintMultiTickReplayTickFeedbackEmittedTotal
+        self.alternateLocalHintMultiTickReplayApprovedApplicationsTotal = alternateLocalHintMultiTickReplayApprovedApplicationsTotal
+        self.alternateLocalHintMultiTickReplayApprovedAgentsMovedTotal = alternateLocalHintMultiTickReplayApprovedAgentsMovedTotal
+        self.alternateLocalHintMultiTickReplayDeniedAgentsPreservedTotal = alternateLocalHintMultiTickReplayDeniedAgentsPreservedTotal
+        self.alternateLocalHintMultiTickReplayNoIntentAgentsPreservedTotal = alternateLocalHintMultiTickReplayNoIntentAgentsPreservedTotal
+        self.alternateLocalHintMultiTickReplayDisplacementsAppliedTotal = alternateLocalHintMultiTickReplayDisplacementsAppliedTotal
+        self.alternateLocalHintMultiTickReplayAbstractPositionsChangedTotal = alternateLocalHintMultiTickReplayAbstractPositionsChangedTotal
+        self.alternateLocalHintMultiTickReplayPhysicalPositionsChangedTotal = alternateLocalHintMultiTickReplayPhysicalPositionsChangedTotal
+        self.alternateLocalHintMultiTickReplayAbstractPhysicalDivergenceBeforeMax = alternateLocalHintMultiTickReplayAbstractPhysicalDivergenceBeforeMax
+        self.alternateLocalHintMultiTickReplayAbstractPhysicalDivergenceAfterMax = alternateLocalHintMultiTickReplayAbstractPhysicalDivergenceAfterMax
+        self.alternateLocalHintMultiTickReplayReplayRuns = alternateLocalHintMultiTickReplayReplayRuns
+        self.alternateLocalHintMultiTickReplayReplayDigestsEqual = alternateLocalHintMultiTickReplayReplayDigestsEqual
+        self.alternateLocalHintMultiTickReplayRepeatabilityFailures = alternateLocalHintMultiTickReplayRepeatabilityFailures
+        self.alternateLocalHintMultiTickReplayDeterministicAgentOrder = alternateLocalHintMultiTickReplayDeterministicAgentOrder
+        self.alternateLocalHintMultiTickReplayDeterministicCandidateOrder = alternateLocalHintMultiTickReplayDeterministicCandidateOrder
+        self.alternateLocalHintMultiTickReplayDeterministicDecisionOrder = alternateLocalHintMultiTickReplayDeterministicDecisionOrder
+        self.alternateLocalHintMultiTickReplayDeterministicJsonOutput = alternateLocalHintMultiTickReplayDeterministicJsonOutput
+        self.alternateLocalHintMultiTickReplayV0Unchanged = alternateLocalHintMultiTickReplayV0Unchanged
+        self.alternateLocalHintMultiTickReplayV1Unchanged = alternateLocalHintMultiTickReplayV1Unchanged
+        self.alternateLocalHintMultiTickReplayV2OptIn = alternateLocalHintMultiTickReplayV2OptIn
+        self.alternateLocalHintMultiTickReplayPolicyReadCollision = alternateLocalHintMultiTickReplayPolicyReadCollision
+        self.alternateLocalHintMultiTickReplayPolicyWorldUsed = alternateLocalHintMultiTickReplayPolicyWorldUsed
+        self.alternateLocalHintMultiTickReplayTickReadCollision = alternateLocalHintMultiTickReplayTickReadCollision
+        self.alternateLocalHintMultiTickReplayTickWorldReadOnlyUsed = alternateLocalHintMultiTickReplayTickWorldReadOnlyUsed
+        self.alternateLocalHintMultiTickReplayMovementApplied = alternateLocalHintMultiTickReplayMovementApplied
+        self.alternateLocalHintMultiTickReplayPathfindingPerformed = alternateLocalHintMultiTickReplayPathfindingPerformed
+        self.alternateLocalHintMultiTickReplayReplanningPerformed = alternateLocalHintMultiTickReplayReplanningPerformed
+        self.alternateLocalHintMultiTickReplayAvoidancePerformed = alternateLocalHintMultiTickReplayAvoidancePerformed
+        self.alternateLocalHintMultiTickReplayReservationRuntimeUsed = alternateLocalHintMultiTickReplayReservationRuntimeUsed
+        self.alternateLocalHintMultiTickReplayRouteFollowingUsed = alternateLocalHintMultiTickReplayRouteFollowingUsed
+        self.alternateLocalHintMultiTickReplayMemoryUpdated = alternateLocalHintMultiTickReplayMemoryUpdated
+        self.alternateLocalHintMultiTickReplayGoalChanged = alternateLocalHintMultiTickReplayGoalChanged
+        self.alternateLocalHintMultiTickReplayWorldMutated = alternateLocalHintMultiTickReplayWorldMutated
+        self.alternateLocalHintMultiTickReplayMutationPerformed = alternateLocalHintMultiTickReplayMutationPerformed
+        self.alternateLocalHintMultiTickReplaySuccess = alternateLocalHintMultiTickReplaySuccess
         self.multiTickClosedLoopTicks = multiTickClosedLoopTicks
         self.multiTickClosedLoopAgents = multiTickClosedLoopAgents
         self.multiTickClosedLoopContextsTotal = multiTickClosedLoopContextsTotal

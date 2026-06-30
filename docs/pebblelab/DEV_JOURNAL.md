@@ -8369,3 +8369,137 @@ for lab maps only, `memoryUpdated=false`, `goalChanged=false`,
 ### Next Step
 
 Phase 4.25F — Alternate Local Hint Multi-Tick Regression/Replay.
+
+## 2026-06-30 — Phase 4.25F alternate local hint multi-tick replay
+
+### Objective
+
+Add a deterministic multi-tick replay smoke for the explicit opt-in alternate
+local hint v2 policy, proving stable feedback carryover, lab-map approved
+application, replay digest repeatability, and preserved phase boundaries over
+three fixed ticks.
+
+### Starting Point
+
+Phase 4.25E connected alternate local hint v2 decisions to tick approved
+application. Approved movements updated only lab abstract/physical position
+maps, denied and noIntent agents were preserved, policy did not read
+World/collision, tick collision evidence stayed read-only, and no
+terrain/world mutation occurred.
+
+### Files Created/Modified
+
+- Added `Sources/PebbleLab/LabAgentAlternateLocalHintMultiTickReplay.swift`.
+- Modified `Sources/PebbleLab/LabAgentAlternateLocalHint.swift`.
+- Updated `Sources/PebbleLab/LabOptions.swift`, `LabScenarios.swift`,
+  `LabOutput.swift`, and `main.swift`.
+- Updated `CHANGELOG.md`, `DEV_JOURNAL.md`, `ROADMAP.md`, and
+  `PHASE_4_ALTERNATE_LOCAL_HINT_PLAN.md`.
+
+### Why Multi-Tick Replay
+
+The prior smokes validated single-tick fixture, hardening, live read-only, and
+approved application behavior. This phase adds the regression/replay boundary:
+feedback emitted at tick N is consumed only at tick N+1, deterministic v2
+alternate decisions can repeat across ticks, and a second internal replay must
+produce the same stable digest.
+
+### Replay Fixture
+
+The replay uses six agents over three fixed ticks:
+
+- `agent_0_no_feedback_baseline_occupable`;
+- `agent_1_approved_feedback_baseline_occupable`;
+- `agent_2_blocked_east_alternate_occupable`;
+- `agent_3_blocked_west_alternate_collision`;
+- `agent_4_blocked_empty_hint_no_alternate`;
+- `agent_5_blocked_unknown_hint_no_alternate`.
+
+The initial tick has no feedback for agent 0, approved feedback for agent 1,
+blocked feedback with known hints for agents 2 and 3, and blocked feedback with
+empty/unknown hints for agents 4 and 5. Subsequent ticks consume only feedback
+emitted by the previous tick.
+
+### Replay And Digest Policy
+
+The scenario runs the same deterministic replay twice. The digest includes
+tick order, agent order, selected hints, movement intents, noIntent agents,
+approved/denied agents, consumed/emitted feedback, positions, and tick
+summaries. The replay succeeds only when both digests are identical.
+
+### Feedback Carryover And Leak Checks
+
+The report verifies:
+
+- `sameTickFeedbackConsumedTotal = 0`;
+- `futureFeedbackConsumedTotal = 0`;
+- `crossAgentFeedbackLeaksTotal = 0`;
+- tick 0 feedback is consumed at tick 1;
+- tick 1 feedback is consumed at tick 2.
+
+### Outputs, Invariants, Metrics, Event
+
+The scenario writes `alternate_local_hint_multi_tick_replay_report.json`,
+`alternate_local_hint_multi_tick_replay_invariant_report.json`,
+`alternate_local_hint_multi_tick_replay_ticks.json`,
+`alternate_local_hint_multi_tick_replay_feedback.json`,
+`alternate_local_hint_multi_tick_replay_positions.json`,
+`alternate_local_hint_multi_tick_replay_digest.json`, `metrics.json`, and
+`events.ndjson`. Metrics use `alternateLocalHintMultiTickReplay*`; the aggregate
+event is `lab_alternate_local_hint_multi_tick_replay_recorded`. The invariant
+report records 93 checks passed and 0 failed.
+
+### Results
+
+The smoke executed three ticks with 18 contexts and 18 decisions, consumed 13
+feedback records, carried 12 feedback records to the next tick, produced 10
+alternate candidates, selected 5, sent 12 movement intents to tick, approved 8,
+denied 4 by collision, emitted 12 feedback records, applied 8 lab-map
+displacements, preserved 4 denied agents and 6 noIntent agents, and kept
+abstract/physical divergence at zero.
+
+### Boundary Confirmation
+
+The report confirms v0 and v1 unchanged, v2 opt-in, policy
+`policyReadCollision=false`, policy `policyWorldUsed=false`, tick
+`tickReadCollision=true`, tick `tickWorldReadOnlyUsed=true`,
+`movementApplied=true` for lab maps only, `memoryUpdated=false`,
+`goalChanged=false`, `pathfindingPerformed=false`, `replanningPerformed=false`,
+`avoidancePerformed=false`, `reservationRuntimeUsed=false`,
+`routeFollowingUsed=false`, `worldMutated=false`, and `mutationPerformed=false`.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_multi_tick_replay_smoke --seed 42 --ticks 3 --out runs/check_alternate_local_hint_multi_tick_replay`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_approved_application_smoke --seed 42 --ticks 0 --out runs/check_alternate_local_hint_approved_application_after_multi_tick_replay`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_live_readonly_smoke --seed 42 --ticks 0 --out runs/check_alternate_local_hint_live_readonly_after_multi_tick_replay`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_hardening_smoke --seed 42 --ticks 0 --out runs/check_alternate_local_hint_hardening_after_multi_tick_replay`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_fixture_smoke --seed 42 --ticks 0 --out runs/check_alternate_local_hint_fixture_after_multi_tick_replay`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_approved_application_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_approved_application_after_alternate_hint_replay`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_live_readonly_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_live_readonly_after_alternate_hint_replay`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_hardening_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_hardening_after_alternate_hint_replay`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_fixture_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_fixture_after_alternate_hint_replay`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_approved_application_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_approved_application_after_alternate_hint_replay`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_live_readonly_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_live_readonly_after_alternate_hint_replay`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_intent_to_tick_fixture_after_alternate_hint_replay`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_hardening_after_alternate_hint_replay`
+- `swift run -c release PebbleLab -- --scenario feedback_to_agent_intent_context_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_to_context_hardening_after_alternate_hint_replay`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_fixture_after_alternate_hint_replay`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_approved_application_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_to_tick_approved_application_after_alternate_hint_replay`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_alternate_hint_replay`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results Summary
+
+- `swift build` passed.
+- `alternate_local_hint_multi_tick_replay_smoke` passed with report and
+  invariant success.
+- Metrics and event were written with the expected replay prefix/type.
+
+### Next Step
+
+Phase 4.26A — Agent Movement Policy Consolidation Plan Docs-Only.

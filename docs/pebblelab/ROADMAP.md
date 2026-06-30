@@ -2111,3 +2111,57 @@ placeholder movement, gameplay movement, and terrain/world mutation.
 
 Next recommended step: Phase 4.25F - Alternate Local Hint Multi-Tick
 Regression/Replay.
+
+## Phase 4.25F - Alternate Local Hint Multi-Tick Regression/Replay
+
+Status: implemented and validated.
+
+Goal: replay the explicit opt-in alternate local hint v2 policy across three
+fixed ticks with approved lab-map application, previous-tick feedback
+carryover, deterministic digest comparison, and no boundary expansion.
+
+Validated scope:
+
+- `alternate_local_hint_multi_tick_replay_smoke`;
+- v0 remains unchanged;
+- v1 remains unchanged;
+- v2 remains explicit opt-in;
+- three executed ticks;
+- six agents;
+- eighteen contexts and eighteen decisions;
+- feedback from tick N is consumed only at tick N+1;
+- same-tick, future, and cross-agent feedback leaks are zero;
+- ten alternate candidates are produced and five selected;
+- empty and unknown hints produce no alternate;
+- failed directions are excluded;
+- alternates remain bounded to `maxAlternates = 2` and one-edge same-y;
+- twelve movement intent inputs enter tick approved application;
+- tick collision evidence approves eight and denies four by collision;
+- eight approved applications update only lab abstract/physical maps;
+- four denied agents and six noIntent agents are preserved;
+- abstract/physical divergence remains zero before and after each tick;
+- replay runs twice and produces identical digests;
+- policy reads no World and no collision;
+- tick reads World/collision read-only;
+- no memory/goals;
+- no pathfinding, replanning, avoidance, reservation runtime, or route
+  following;
+- no terrain/world mutation.
+
+Outputs:
+
+- `alternate_local_hint_multi_tick_replay_report.json`;
+- `alternate_local_hint_multi_tick_replay_invariant_report.json`;
+- `alternate_local_hint_multi_tick_replay_ticks.json`;
+- `alternate_local_hint_multi_tick_replay_feedback.json`;
+- `alternate_local_hint_multi_tick_replay_positions.json`;
+- `alternate_local_hint_multi_tick_replay_digest.json`;
+- `alternateLocalHintMultiTickReplay*` metrics;
+- `lab_alternate_local_hint_multi_tick_replay_recorded` event.
+
+Out of scope for this phase: pathfinding, replanning, avoidance, reservation
+runtime, route following, memory/goals, core entity movement, physical
+placeholder movement, gameplay movement, and terrain/world mutation.
+
+Next recommended step: Phase 4.26A - Agent Movement Policy Consolidation Plan
+Docs-Only.

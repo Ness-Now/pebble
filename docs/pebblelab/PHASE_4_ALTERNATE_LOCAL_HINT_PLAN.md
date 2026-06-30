@@ -743,3 +743,68 @@ Limits:
 
 Next recommended step: Phase 4.25F - Alternate Local Hint Multi-Tick
 Regression/Replay.
+
+## Phase 4.25F Implementation Status
+
+Status: implemented and validated.
+
+Phase 4.25F added `alternate_local_hint_multi_tick_replay_smoke`, a
+deterministic three-tick replay for explicit opt-in alternate local hint v2
+policy decisions feeding tick approved application.
+
+Validated implementation:
+
+- v0 remains unchanged;
+- v1 remains unchanged;
+- v2 remains explicit opt-in;
+- three fixed ticks execute regardless of requested run-loop autonomy;
+- six agents produce eighteen contexts and eighteen decisions;
+- feedback emitted at tick N is consumed only at tick N+1;
+- same-tick feedback consumption is zero;
+- future feedback consumption is zero;
+- cross-agent feedback leaks are zero;
+- tick 0 feedback is consumed at tick 1;
+- tick 1 feedback is consumed at tick 2;
+- blocked feedback with known local hints produces bounded alternates;
+- empty and unknown blocked hints produce no alternate;
+- ten candidates are produced and five are selected across the replay;
+- failed directions are excluded;
+- alternates are one-edge same-y intents;
+- twelve movement intents enter tick approved application;
+- tick collision evidence approves eight intents and denies four by collision;
+- approved moves update only lab abstract/physical position maps;
+- four denied agents are preserved;
+- six noIntent agents are preserved;
+- abstract/physical divergence remains zero before and after each tick;
+- replay runs twice and the stable digests match;
+- deterministic agent, candidate, decision, and JSON-output ordering are
+  verified;
+- policy reads no World and no collision;
+- tick reads World/collision read-only;
+- no route following, pathfinding, replanning, avoidance, reservation runtime,
+  memory/goals, or terrain/world mutation occurs.
+
+Produced outputs:
+
+- `alternate_local_hint_multi_tick_replay_report.json`;
+- `alternate_local_hint_multi_tick_replay_invariant_report.json`;
+- `alternate_local_hint_multi_tick_replay_ticks.json`;
+- `alternate_local_hint_multi_tick_replay_feedback.json`;
+- `alternate_local_hint_multi_tick_replay_positions.json`;
+- `alternate_local_hint_multi_tick_replay_digest.json`;
+- `metrics.json` with `alternateLocalHintMultiTickReplay*`;
+- `events.ndjson` with `lab_alternate_local_hint_multi_tick_replay_recorded`.
+
+Limits:
+
+- approved application remains lab-map-only;
+- no core entity movement;
+- no physical placeholder live movement;
+- no route following;
+- no pathfinding, replanning, avoidance, or reservation runtime;
+- no memory/goals;
+- no terrain/world mutation;
+- no v2 global replacement.
+
+Next recommended step: Phase 4.26A - Agent Movement Policy Consolidation Plan
+Docs-Only.

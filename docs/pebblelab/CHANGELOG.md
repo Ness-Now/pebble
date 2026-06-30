@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added alternate local hint multi-tick replay smoke.
 - Added alternate local hint approved application smoke.
 - Added alternate local hint live read-only smoke.
 - Added alternate local hint hardening smoke.
