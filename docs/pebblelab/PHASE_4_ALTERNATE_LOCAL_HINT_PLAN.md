@@ -573,3 +573,56 @@ Limits:
 - no v2 global replacement.
 
 Next recommended step: Phase 4.25C - Alternate Local Hint Hardening.
+
+## Phase 4.25C Implementation Status
+
+Status: implemented and validated.
+
+Phase 4.25C added `alternate_local_hint_hardening_smoke`, a fixture-only
+hardening scenario for deterministic bounded alternate local hints.
+
+Validated hardening:
+
+- 22 cases;
+- 22 passed;
+- 0 failed;
+- v0 remains unchanged;
+- v1 remains unchanged;
+- v2 remains explicit opt-in;
+- all seven blocked feedback kinds are covered;
+- `maxAlternates` bounds cover 0, 1, 2, and 3;
+- candidate order is deterministic;
+- duplicate hints are handled deterministically;
+- empty and unknown hints produce no alternate;
+- failed directions are excluded;
+- alternates remain one-edge same-y intents;
+- repeatability is verified with 0 failures;
+- noIntent outcomes are filtered before fixture tick;
+- movement intents sent to tick are regular accepted intents;
+- fixture tick approves the hardening handoff;
+- no live collision is read;
+- no World is used;
+- no movement is applied;
+- no route following, pathfinding, replanning, avoidance, reservation runtime,
+  memory/goals, or terrain/world mutation occurs.
+
+Produced outputs:
+
+- `alternate_local_hint_hardening_report.json`;
+- `alternate_local_hint_hardening_invariant_report.json`;
+- `alternate_local_hint_hardening_cases.json`;
+- `alternate_local_hint_hardening_decisions.json`;
+- `alternate_local_hint_hardening_handoff.json`;
+- `metrics.json` with `alternateLocalHintHardening*`;
+- `events.ndjson` with `lab_alternate_local_hint_hardening_recorded`.
+
+Limits:
+
+- fixture-only;
+- no live read-only collision;
+- no approved application;
+- no multi-tick alternate replay;
+- no v2 global replacement;
+- no alternate route, search, reservation, or avoidance behavior.
+
+Next recommended step: Phase 4.25D - Alternate Local Hint Live Read-Only Smoke.

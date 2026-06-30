@@ -1976,3 +1976,44 @@ Outputs:
 - `lab_alternate_local_hint_recorded` event.
 
 Next recommended step: Phase 4.25C - Alternate Local Hint Hardening.
+
+## Phase 4.25C - Alternate Local Hint Hardening
+
+Status: implemented and validated.
+
+Goal: harden the opt-in alternate local hint v2 policy without changing v0 or
+v1 and without introducing live collision, World access, movement application,
+route following, pathfinding, replanning, avoidance, reservation runtime,
+memory/goals, or terrain/world mutation.
+
+Validated scope:
+
+- `alternate_local_hint_hardening_smoke`;
+- 22 hardening cases;
+- 22 passed, 0 failed;
+- baseline no-feedback, approved feedback, and moved feedback remain baseline;
+- all seven blocked feedback kinds are covered;
+- `maxAlternates` 0, 1, 2, and 3 are covered;
+- empty and unknown hints produce no alternate;
+- duplicate hints are handled deterministically;
+- failed directions are excluded;
+- one-edge alternate intents are preserved;
+- repeatability has 1 check and 0 failures;
+- 18 movement intent inputs reach fixture tick;
+- tick fixture approves 18, denies 0, emits 18 feedback records;
+- policy and tick collision reads are false;
+- policy and tick World usage are false;
+- no movement, memory/goals, pathfinding, replanning, avoidance, reservation
+  runtime, route following, or terrain/world mutation occurs.
+
+Outputs:
+
+- `alternate_local_hint_hardening_report.json`;
+- `alternate_local_hint_hardening_invariant_report.json`;
+- `alternate_local_hint_hardening_cases.json`;
+- `alternate_local_hint_hardening_decisions.json`;
+- `alternate_local_hint_hardening_handoff.json`;
+- `alternateLocalHintHardening*` metrics;
+- `lab_alternate_local_hint_hardening_recorded` event.
+
+Next recommended step: Phase 4.25D - Alternate Local Hint Live Read-Only Smoke.

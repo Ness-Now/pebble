@@ -8054,3 +8054,111 @@ The fixture reports `policyReadCollision=false`, `policyWorldUsed=false`,
 ### Next Step
 
 Phase 4.25C — Alternate Local Hint Hardening.
+
+## 2026-06-30 — Phase 4.25C alternate local hint hardening
+
+### Objective
+
+Harden the deterministic bounded alternate local hint policy with fixture-only
+cases that stress ordering, max alternate bounds, blocked feedback kinds,
+empty/unknown/duplicate hints, repeatability, and tick fixture handoff.
+
+### Starting Point
+
+Phase 4.25B added `alternate_local_hint_fixture_smoke` with explicit opt-in v2
+behavior. v0 and v1 remained unchanged, blocked east/west feedback could
+produce bounded local alternatives, and the tick fixture accepted only normal
+one-edge movement intents.
+
+### Files Created/Modified
+
+- Modified `Sources/PebbleLab/LabAgentAlternateLocalHint.swift`.
+- Updated `Sources/PebbleLab/LabOptions.swift`, `LabScenarios.swift`,
+  `LabOutput.swift`, `LabEvents.swift`, and `main.swift`.
+- Updated `CHANGELOG.md`, `DEV_JOURNAL.md`, `ROADMAP.md`, and
+  `PHASE_4_ALTERNATE_LOCAL_HINT_PLAN.md`.
+
+### Why Hardening
+
+The fixture smoke proved the happy path. This phase makes the v2 boundary
+harder to accidentally widen: no global v0/v1 replacement, no route following,
+no pathfinding, no replanning, no avoidance, no reservation runtime, no live
+collision, no World, and no movement application.
+
+### Cases
+
+The hardening smoke validates 22 deterministic cases:
+
+- baseline no-feedback, approved feedback, and moved feedback;
+- blocked collision, agent conflict, source mismatch, divergence, stale intent,
+  invalid edge, and max agents feedback;
+- `maxAlternates` 0, 1, 2, and 3;
+- empty and unknown hints;
+- duplicate hint handling;
+- multiple hint handling using the first attempted hint;
+- repeatability with identical signatures across repeated runs;
+- tick handoff with all distinct approved fixture intents;
+- no-intent filtering before tick;
+- stable ordering after shuffled inputs;
+- failed-direction exclusion for all cardinal directions.
+
+### Policy
+
+v2 remains explicit opt-in through
+`produceAgentIntentProposalWithAlternateLocalHintsV2`. v0 and v1 stay
+available and unchanged. Candidate generation uses a fixed ordered table,
+excludes the failed direction, caps candidates by `maxAlternates`, and selects
+the first candidate when one is available.
+
+### Outputs, Invariants, Metrics, Event
+
+The scenario writes `alternate_local_hint_hardening_report.json`,
+`alternate_local_hint_hardening_invariant_report.json`,
+`alternate_local_hint_hardening_cases.json`,
+`alternate_local_hint_hardening_decisions.json`,
+`alternate_local_hint_hardening_handoff.json`, `metrics.json`, and
+`events.ndjson`. Metrics use `alternateLocalHintHardening*`; the aggregate
+event is `lab_alternate_local_hint_hardening_recorded`.
+
+### Boundary Confirmation
+
+The report confirms `policyReadCollision=false`, `policyWorldUsed=false`,
+`tickReadCollision=false`, `tickWorldUsed=false`, `movementApplied=false`,
+`memoryUpdated=false`, `goalChanged=false`, `pathfindingPerformed=false`,
+`replanningPerformed=false`, `avoidancePerformed=false`,
+`reservationRuntimeUsed=false`, `routeFollowingUsed=false`,
+`worldMutated=false`, and `mutationPerformed=false`.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_hardening_smoke --seed 42 --ticks 0 --out runs/check_alternate_local_hint_hardening`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_fixture_smoke --seed 42 --ticks 0 --out runs/check_alternate_local_hint_fixture_after_hardening`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_approved_application_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_approved_after_alternate_hint_hardening`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_live_readonly_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_live_readonly_after_alternate_hint_hardening`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_hardening_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_hardening_after_alternate_hint_hardening`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_fixture_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_fixture_after_alternate_hint_hardening`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_approved_application_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_approved_after_alternate_hint_hardening`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_live_readonly_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_live_readonly_after_alternate_hint_hardening`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_to_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_intent_to_tick_fixture_after_alternate_hint_hardening`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_hardening_after_alternate_hint_hardening`
+- `swift run -c release PebbleLab -- --scenario feedback_to_agent_intent_context_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_to_context_hardening_after_alternate_hint_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_intent_production_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_fixture_after_alternate_hint_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_intent_to_tick_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_intent_to_tick_fixture_after_alternate_hint_hardening`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_alternate_hint_hardening`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+- `swift build` passed.
+- `alternate_local_hint_hardening_smoke` passed with 22 cases, 22 passed, 0
+  failed.
+- Hardening report and invariant report both reported `success=true`.
+- Metrics and event were written with the expected hardening prefix/type.
+
+### Next Step
+
+Phase 4.25D — Alternate Local Hint Live Read-Only Smoke.

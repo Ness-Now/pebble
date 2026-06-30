@@ -168,6 +168,17 @@ struct RunEvent: Encodable {
     let candidatesSelected: Int?
     let candidatesFiltered: Int?
     let maxAlternates: Int?
+    let blockedFeedbackKindsCovered: Int?
+    let maxAlternatesMin: Int?
+    let maxAlternatesMax: Int?
+    let maxAlternatesZeroCases: Int?
+    let maxAlternatesOneCases: Int?
+    let maxAlternatesTwoCases: Int?
+    let maxAlternatesThreeCases: Int?
+    let boundedCases: Int?
+    let deterministicOrderingCases: Int?
+    let duplicateHintCases: Int?
+    let duplicateHintsFiltered: Int?
     let bounded: Bool?
     let noFeedbackBaseline: Int?
     let approvedFeedbackBaseline: Int?
@@ -588,6 +599,17 @@ struct RunEvent: Encodable {
         candidatesSelected: Int? = nil,
         candidatesFiltered: Int? = nil,
         maxAlternates: Int? = nil,
+        blockedFeedbackKindsCovered: Int? = nil,
+        maxAlternatesMin: Int? = nil,
+        maxAlternatesMax: Int? = nil,
+        maxAlternatesZeroCases: Int? = nil,
+        maxAlternatesOneCases: Int? = nil,
+        maxAlternatesTwoCases: Int? = nil,
+        maxAlternatesThreeCases: Int? = nil,
+        boundedCases: Int? = nil,
+        deterministicOrderingCases: Int? = nil,
+        duplicateHintCases: Int? = nil,
+        duplicateHintsFiltered: Int? = nil,
         bounded: Bool? = nil,
         noFeedbackBaseline: Int? = nil,
         approvedFeedbackBaseline: Int? = nil,
@@ -1007,6 +1029,17 @@ struct RunEvent: Encodable {
         self.candidatesSelected = candidatesSelected
         self.candidatesFiltered = candidatesFiltered
         self.maxAlternates = maxAlternates
+        self.blockedFeedbackKindsCovered = blockedFeedbackKindsCovered
+        self.maxAlternatesMin = maxAlternatesMin
+        self.maxAlternatesMax = maxAlternatesMax
+        self.maxAlternatesZeroCases = maxAlternatesZeroCases
+        self.maxAlternatesOneCases = maxAlternatesOneCases
+        self.maxAlternatesTwoCases = maxAlternatesTwoCases
+        self.maxAlternatesThreeCases = maxAlternatesThreeCases
+        self.boundedCases = boundedCases
+        self.deterministicOrderingCases = deterministicOrderingCases
+        self.duplicateHintCases = duplicateHintCases
+        self.duplicateHintsFiltered = duplicateHintsFiltered
         self.bounded = bounded
         self.noFeedbackBaseline = noFeedbackBaseline
         self.approvedFeedbackBaseline = approvedFeedbackBaseline

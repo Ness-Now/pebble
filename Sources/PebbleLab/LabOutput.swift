@@ -1061,6 +1061,61 @@ struct RunMetrics: Encodable {
     let alternateLocalHintWorldMutated: Bool?
     let alternateLocalHintMutationPerformed: Bool?
     let alternateLocalHintSuccess: Bool?
+    let alternateLocalHintHardeningCases: Int?
+    let alternateLocalHintHardeningPassed: Int?
+    let alternateLocalHintHardeningFailed: Int?
+    let alternateLocalHintHardeningContexts: Int?
+    let alternateLocalHintHardeningDecisions: Int?
+    let alternateLocalHintHardeningContextsWithBlockedFeedback: Int?
+    let alternateLocalHintHardeningContextsWithoutFeedback: Int?
+    let alternateLocalHintHardeningContextsWithApprovedOrMovedFeedback: Int?
+    let alternateLocalHintHardeningBlockedFeedbackKindsCovered: Int?
+    let alternateLocalHintHardeningCandidatesProduced: Int?
+    let alternateLocalHintHardeningCandidatesSelected: Int?
+    let alternateLocalHintHardeningCandidatesFiltered: Int?
+    let alternateLocalHintHardeningMaxAlternatesMin: Int?
+    let alternateLocalHintHardeningMaxAlternatesMax: Int?
+    let alternateLocalHintHardeningMaxAlternatesZeroCases: Int?
+    let alternateLocalHintHardeningMaxAlternatesOneCases: Int?
+    let alternateLocalHintHardeningMaxAlternatesTwoCases: Int?
+    let alternateLocalHintHardeningMaxAlternatesThreeCases: Int?
+    let alternateLocalHintHardeningBoundedCases: Int?
+    let alternateLocalHintHardeningDeterministicOrderingCases: Int?
+    let alternateLocalHintHardeningDuplicateHintCases: Int?
+    let alternateLocalHintHardeningDuplicateHintsFiltered: Int?
+    let alternateLocalHintHardeningUnknownHintNoAlternate: Int?
+    let alternateLocalHintHardeningEmptyHintNoAlternate: Int?
+    let alternateLocalHintHardeningNoFeedbackBaseline: Int?
+    let alternateLocalHintHardeningApprovedFeedbackBaseline: Int?
+    let alternateLocalHintHardeningMovedFeedbackBaseline: Int?
+    let alternateLocalHintHardeningFailedDirectionExcluded: Int?
+    let alternateLocalHintHardeningOneEdgeAlternates: Bool?
+    let alternateLocalHintHardeningRepeatabilityChecks: Int?
+    let alternateLocalHintHardeningRepeatabilityFailures: Int?
+    let alternateLocalHintHardeningMovementIntentInputs: Int?
+    let alternateLocalHintHardeningTickApproved: Int?
+    let alternateLocalHintHardeningTickDenied: Int?
+    let alternateLocalHintHardeningTickDeniedConflict: Int?
+    let alternateLocalHintHardeningTickDeniedCollision: Int?
+    let alternateLocalHintHardeningTickFeedbackEmitted: Int?
+    let alternateLocalHintHardeningV0Unchanged: Bool?
+    let alternateLocalHintHardeningV1Unchanged: Bool?
+    let alternateLocalHintHardeningV2OptIn: Bool?
+    let alternateLocalHintHardeningPolicyReadCollision: Bool?
+    let alternateLocalHintHardeningPolicyWorldUsed: Bool?
+    let alternateLocalHintHardeningTickReadCollision: Bool?
+    let alternateLocalHintHardeningTickWorldUsed: Bool?
+    let alternateLocalHintHardeningMovementApplied: Bool?
+    let alternateLocalHintHardeningPathfindingPerformed: Bool?
+    let alternateLocalHintHardeningReplanningPerformed: Bool?
+    let alternateLocalHintHardeningAvoidancePerformed: Bool?
+    let alternateLocalHintHardeningReservationRuntimeUsed: Bool?
+    let alternateLocalHintHardeningRouteFollowingUsed: Bool?
+    let alternateLocalHintHardeningMemoryUpdated: Bool?
+    let alternateLocalHintHardeningGoalChanged: Bool?
+    let alternateLocalHintHardeningWorldMutated: Bool?
+    let alternateLocalHintHardeningMutationPerformed: Bool?
+    let alternateLocalHintHardeningSuccess: Bool?
     let multiTickClosedLoopTicks: Int?
     let multiTickClosedLoopAgents: Int?
     let multiTickClosedLoopContextsTotal: Int?
@@ -2291,6 +2346,61 @@ struct RunMetrics: Encodable {
         alternateLocalHintWorldMutated: Bool? = nil,
         alternateLocalHintMutationPerformed: Bool? = nil,
         alternateLocalHintSuccess: Bool? = nil,
+        alternateLocalHintHardeningCases: Int? = nil,
+        alternateLocalHintHardeningPassed: Int? = nil,
+        alternateLocalHintHardeningFailed: Int? = nil,
+        alternateLocalHintHardeningContexts: Int? = nil,
+        alternateLocalHintHardeningDecisions: Int? = nil,
+        alternateLocalHintHardeningContextsWithBlockedFeedback: Int? = nil,
+        alternateLocalHintHardeningContextsWithoutFeedback: Int? = nil,
+        alternateLocalHintHardeningContextsWithApprovedOrMovedFeedback: Int? = nil,
+        alternateLocalHintHardeningBlockedFeedbackKindsCovered: Int? = nil,
+        alternateLocalHintHardeningCandidatesProduced: Int? = nil,
+        alternateLocalHintHardeningCandidatesSelected: Int? = nil,
+        alternateLocalHintHardeningCandidatesFiltered: Int? = nil,
+        alternateLocalHintHardeningMaxAlternatesMin: Int? = nil,
+        alternateLocalHintHardeningMaxAlternatesMax: Int? = nil,
+        alternateLocalHintHardeningMaxAlternatesZeroCases: Int? = nil,
+        alternateLocalHintHardeningMaxAlternatesOneCases: Int? = nil,
+        alternateLocalHintHardeningMaxAlternatesTwoCases: Int? = nil,
+        alternateLocalHintHardeningMaxAlternatesThreeCases: Int? = nil,
+        alternateLocalHintHardeningBoundedCases: Int? = nil,
+        alternateLocalHintHardeningDeterministicOrderingCases: Int? = nil,
+        alternateLocalHintHardeningDuplicateHintCases: Int? = nil,
+        alternateLocalHintHardeningDuplicateHintsFiltered: Int? = nil,
+        alternateLocalHintHardeningUnknownHintNoAlternate: Int? = nil,
+        alternateLocalHintHardeningEmptyHintNoAlternate: Int? = nil,
+        alternateLocalHintHardeningNoFeedbackBaseline: Int? = nil,
+        alternateLocalHintHardeningApprovedFeedbackBaseline: Int? = nil,
+        alternateLocalHintHardeningMovedFeedbackBaseline: Int? = nil,
+        alternateLocalHintHardeningFailedDirectionExcluded: Int? = nil,
+        alternateLocalHintHardeningOneEdgeAlternates: Bool? = nil,
+        alternateLocalHintHardeningRepeatabilityChecks: Int? = nil,
+        alternateLocalHintHardeningRepeatabilityFailures: Int? = nil,
+        alternateLocalHintHardeningMovementIntentInputs: Int? = nil,
+        alternateLocalHintHardeningTickApproved: Int? = nil,
+        alternateLocalHintHardeningTickDenied: Int? = nil,
+        alternateLocalHintHardeningTickDeniedConflict: Int? = nil,
+        alternateLocalHintHardeningTickDeniedCollision: Int? = nil,
+        alternateLocalHintHardeningTickFeedbackEmitted: Int? = nil,
+        alternateLocalHintHardeningV0Unchanged: Bool? = nil,
+        alternateLocalHintHardeningV1Unchanged: Bool? = nil,
+        alternateLocalHintHardeningV2OptIn: Bool? = nil,
+        alternateLocalHintHardeningPolicyReadCollision: Bool? = nil,
+        alternateLocalHintHardeningPolicyWorldUsed: Bool? = nil,
+        alternateLocalHintHardeningTickReadCollision: Bool? = nil,
+        alternateLocalHintHardeningTickWorldUsed: Bool? = nil,
+        alternateLocalHintHardeningMovementApplied: Bool? = nil,
+        alternateLocalHintHardeningPathfindingPerformed: Bool? = nil,
+        alternateLocalHintHardeningReplanningPerformed: Bool? = nil,
+        alternateLocalHintHardeningAvoidancePerformed: Bool? = nil,
+        alternateLocalHintHardeningReservationRuntimeUsed: Bool? = nil,
+        alternateLocalHintHardeningRouteFollowingUsed: Bool? = nil,
+        alternateLocalHintHardeningMemoryUpdated: Bool? = nil,
+        alternateLocalHintHardeningGoalChanged: Bool? = nil,
+        alternateLocalHintHardeningWorldMutated: Bool? = nil,
+        alternateLocalHintHardeningMutationPerformed: Bool? = nil,
+        alternateLocalHintHardeningSuccess: Bool? = nil,
         multiTickClosedLoopTicks: Int? = nil,
         multiTickClosedLoopAgents: Int? = nil,
         multiTickClosedLoopContextsTotal: Int? = nil,
@@ -3520,6 +3630,61 @@ struct RunMetrics: Encodable {
         self.alternateLocalHintWorldMutated = alternateLocalHintWorldMutated
         self.alternateLocalHintMutationPerformed = alternateLocalHintMutationPerformed
         self.alternateLocalHintSuccess = alternateLocalHintSuccess
+        self.alternateLocalHintHardeningCases = alternateLocalHintHardeningCases
+        self.alternateLocalHintHardeningPassed = alternateLocalHintHardeningPassed
+        self.alternateLocalHintHardeningFailed = alternateLocalHintHardeningFailed
+        self.alternateLocalHintHardeningContexts = alternateLocalHintHardeningContexts
+        self.alternateLocalHintHardeningDecisions = alternateLocalHintHardeningDecisions
+        self.alternateLocalHintHardeningContextsWithBlockedFeedback = alternateLocalHintHardeningContextsWithBlockedFeedback
+        self.alternateLocalHintHardeningContextsWithoutFeedback = alternateLocalHintHardeningContextsWithoutFeedback
+        self.alternateLocalHintHardeningContextsWithApprovedOrMovedFeedback = alternateLocalHintHardeningContextsWithApprovedOrMovedFeedback
+        self.alternateLocalHintHardeningBlockedFeedbackKindsCovered = alternateLocalHintHardeningBlockedFeedbackKindsCovered
+        self.alternateLocalHintHardeningCandidatesProduced = alternateLocalHintHardeningCandidatesProduced
+        self.alternateLocalHintHardeningCandidatesSelected = alternateLocalHintHardeningCandidatesSelected
+        self.alternateLocalHintHardeningCandidatesFiltered = alternateLocalHintHardeningCandidatesFiltered
+        self.alternateLocalHintHardeningMaxAlternatesMin = alternateLocalHintHardeningMaxAlternatesMin
+        self.alternateLocalHintHardeningMaxAlternatesMax = alternateLocalHintHardeningMaxAlternatesMax
+        self.alternateLocalHintHardeningMaxAlternatesZeroCases = alternateLocalHintHardeningMaxAlternatesZeroCases
+        self.alternateLocalHintHardeningMaxAlternatesOneCases = alternateLocalHintHardeningMaxAlternatesOneCases
+        self.alternateLocalHintHardeningMaxAlternatesTwoCases = alternateLocalHintHardeningMaxAlternatesTwoCases
+        self.alternateLocalHintHardeningMaxAlternatesThreeCases = alternateLocalHintHardeningMaxAlternatesThreeCases
+        self.alternateLocalHintHardeningBoundedCases = alternateLocalHintHardeningBoundedCases
+        self.alternateLocalHintHardeningDeterministicOrderingCases = alternateLocalHintHardeningDeterministicOrderingCases
+        self.alternateLocalHintHardeningDuplicateHintCases = alternateLocalHintHardeningDuplicateHintCases
+        self.alternateLocalHintHardeningDuplicateHintsFiltered = alternateLocalHintHardeningDuplicateHintsFiltered
+        self.alternateLocalHintHardeningUnknownHintNoAlternate = alternateLocalHintHardeningUnknownHintNoAlternate
+        self.alternateLocalHintHardeningEmptyHintNoAlternate = alternateLocalHintHardeningEmptyHintNoAlternate
+        self.alternateLocalHintHardeningNoFeedbackBaseline = alternateLocalHintHardeningNoFeedbackBaseline
+        self.alternateLocalHintHardeningApprovedFeedbackBaseline = alternateLocalHintHardeningApprovedFeedbackBaseline
+        self.alternateLocalHintHardeningMovedFeedbackBaseline = alternateLocalHintHardeningMovedFeedbackBaseline
+        self.alternateLocalHintHardeningFailedDirectionExcluded = alternateLocalHintHardeningFailedDirectionExcluded
+        self.alternateLocalHintHardeningOneEdgeAlternates = alternateLocalHintHardeningOneEdgeAlternates
+        self.alternateLocalHintHardeningRepeatabilityChecks = alternateLocalHintHardeningRepeatabilityChecks
+        self.alternateLocalHintHardeningRepeatabilityFailures = alternateLocalHintHardeningRepeatabilityFailures
+        self.alternateLocalHintHardeningMovementIntentInputs = alternateLocalHintHardeningMovementIntentInputs
+        self.alternateLocalHintHardeningTickApproved = alternateLocalHintHardeningTickApproved
+        self.alternateLocalHintHardeningTickDenied = alternateLocalHintHardeningTickDenied
+        self.alternateLocalHintHardeningTickDeniedConflict = alternateLocalHintHardeningTickDeniedConflict
+        self.alternateLocalHintHardeningTickDeniedCollision = alternateLocalHintHardeningTickDeniedCollision
+        self.alternateLocalHintHardeningTickFeedbackEmitted = alternateLocalHintHardeningTickFeedbackEmitted
+        self.alternateLocalHintHardeningV0Unchanged = alternateLocalHintHardeningV0Unchanged
+        self.alternateLocalHintHardeningV1Unchanged = alternateLocalHintHardeningV1Unchanged
+        self.alternateLocalHintHardeningV2OptIn = alternateLocalHintHardeningV2OptIn
+        self.alternateLocalHintHardeningPolicyReadCollision = alternateLocalHintHardeningPolicyReadCollision
+        self.alternateLocalHintHardeningPolicyWorldUsed = alternateLocalHintHardeningPolicyWorldUsed
+        self.alternateLocalHintHardeningTickReadCollision = alternateLocalHintHardeningTickReadCollision
+        self.alternateLocalHintHardeningTickWorldUsed = alternateLocalHintHardeningTickWorldUsed
+        self.alternateLocalHintHardeningMovementApplied = alternateLocalHintHardeningMovementApplied
+        self.alternateLocalHintHardeningPathfindingPerformed = alternateLocalHintHardeningPathfindingPerformed
+        self.alternateLocalHintHardeningReplanningPerformed = alternateLocalHintHardeningReplanningPerformed
+        self.alternateLocalHintHardeningAvoidancePerformed = alternateLocalHintHardeningAvoidancePerformed
+        self.alternateLocalHintHardeningReservationRuntimeUsed = alternateLocalHintHardeningReservationRuntimeUsed
+        self.alternateLocalHintHardeningRouteFollowingUsed = alternateLocalHintHardeningRouteFollowingUsed
+        self.alternateLocalHintHardeningMemoryUpdated = alternateLocalHintHardeningMemoryUpdated
+        self.alternateLocalHintHardeningGoalChanged = alternateLocalHintHardeningGoalChanged
+        self.alternateLocalHintHardeningWorldMutated = alternateLocalHintHardeningWorldMutated
+        self.alternateLocalHintHardeningMutationPerformed = alternateLocalHintHardeningMutationPerformed
+        self.alternateLocalHintHardeningSuccess = alternateLocalHintHardeningSuccess
         self.multiTickClosedLoopTicks = multiTickClosedLoopTicks
         self.multiTickClosedLoopAgents = multiTickClosedLoopAgents
         self.multiTickClosedLoopContextsTotal = multiTickClosedLoopContextsTotal

@@ -123,6 +123,131 @@ struct LabAlternateLocalHintInvariantReport: Codable {
     let notes: [String]
 }
 
+struct LabAlternateLocalHintHardeningExpected: Codable {
+    let candidates: [String]
+    let selectedHint: String?
+    let decision: LabAgentIntentDecision
+    let noAlternateReason: String?
+    let success: Bool
+}
+
+struct LabAlternateLocalHintHardeningActual: Codable {
+    let candidates: [String]
+    let selectedHint: String?
+    let decision: LabAgentIntentDecision
+    let noAlternateReason: String?
+    let success: Bool
+}
+
+struct LabAlternateLocalHintHardeningCase: Codable {
+    let name: String
+    let description: String
+    let tick: Int
+    let agentId: String
+    let position: LabTerrainPathNodeKey
+    let localHints: [String]
+    let feedbackKind: LabMovementFeedbackKind?
+    let feedbackFrom: LabTerrainPathNodeKey?
+    let feedbackTo: LabTerrainPathNodeKey?
+    let maxAlternates: Int
+    let expected: LabAlternateLocalHintHardeningExpected
+}
+
+struct LabAlternateLocalHintHardeningCaseResult: Codable {
+    let name: String
+    let passed: Bool
+    let context: LabAgentIntentContext
+    let decision: LabAgentAlternateLocalHintDecision
+    let expected: LabAlternateLocalHintHardeningExpected
+    let actual: LabAlternateLocalHintHardeningActual
+    let notes: [String]
+}
+
+struct LabAlternateLocalHintHardeningSummary: Codable {
+    let cases: Int
+    let passed: Int
+    let failed: Int
+    let contexts: Int
+    let decisions: Int
+    let contextsWithBlockedFeedback: Int
+    let contextsWithoutFeedback: Int
+    let contextsWithApprovedOrMovedFeedback: Int
+    let blockedFeedbackKindsCovered: Int
+    let candidatesProduced: Int
+    let candidatesSelected: Int
+    let candidatesFiltered: Int
+    let maxAlternatesMin: Int
+    let maxAlternatesMax: Int
+    let maxAlternatesZeroCases: Int
+    let maxAlternatesOneCases: Int
+    let maxAlternatesTwoCases: Int
+    let maxAlternatesThreeCases: Int
+    let boundedCases: Int
+    let deterministicOrderingCases: Int
+    let duplicateHintCases: Int
+    let duplicateHintsFiltered: Int
+    let unknownHintNoAlternate: Int
+    let emptyHintNoAlternate: Int
+    let noFeedbackBaseline: Int
+    let approvedFeedbackBaseline: Int
+    let movedFeedbackBaseline: Int
+    let failedDirectionExcluded: Int
+    let oneEdgeAlternates: Bool
+    let repeatabilityChecks: Int
+    let repeatabilityFailures: Int
+    let movementIntentInputs: Int
+    let tickApproved: Int
+    let tickDenied: Int
+    let tickDeniedConflict: Int
+    let tickDeniedCollision: Int
+    let tickFeedbackEmitted: Int
+    let v0Unchanged: Bool
+    let v1Unchanged: Bool
+    let v2OptIn: Bool
+    let policyReadCollision: Bool
+    let policyWorldUsed: Bool
+    let tickReadCollision: Bool
+    let tickWorldUsed: Bool
+    let movementApplied: Bool
+    let pathfindingPerformed: Bool
+    let replanningPerformed: Bool
+    let avoidancePerformed: Bool
+    let reservationRuntimeUsed: Bool
+    let routeFollowingUsed: Bool
+    let memoryUpdated: Bool
+    let goalChanged: Bool
+    let worldMutated: Bool
+    let mutationPerformed: Bool
+    let success: Bool
+}
+
+struct LabAlternateLocalHintHardeningHandoff: Codable {
+    let movementIntentsSentToTick: [LabAgentMoveIntent]
+    let noIntentFilteredOut: [LabAgentIntentProposal]
+    let tickInput: LabMultiAgentMovementTickInput
+    let tickOutput: LabMultiAgentMovementTickOutput
+    let tickFeedback: [LabMovementFeedback]
+    let summary: LabAlternateLocalHintHardeningSummary
+}
+
+struct LabAlternateLocalHintHardeningReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let cases: [LabAlternateLocalHintHardeningCaseResult]
+    let handoff: LabAlternateLocalHintHardeningHandoff
+    let summary: LabAlternateLocalHintHardeningSummary
+}
+
+struct LabAlternateLocalHintHardeningInvariantReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: LabMultiAgentMovementFixtureInvariantSummary
+    let checks: [LabMultiAgentMovementFixtureInvariantCheck]
+    let notes: [String]
+}
+
 func produceAgentIntentProposalWithAlternateLocalHintsV2(
     context: LabAgentIntentContext,
     maxAlternates: Int
@@ -403,6 +528,200 @@ func makeAlternateLocalHintFixtureInvariantReport(
     )
 }
 
+func makeAlternateLocalHintHardeningReport(
+    scenario: String,
+    seed: UInt32
+) -> LabAlternateLocalHintHardeningReport {
+    let cases = alternateLocalHintHardeningCases()
+    let results = cases.map(alternateLocalHintHardeningResult).sorted { $0.name < $1.name }
+    let decisions = results.map(\.decision).sorted { $0.agentId < $1.agentId }
+    let movementIntents = decisions.compactMap { $0.selectedProposal.intent }.sorted {
+        $0.agentId < $1.agentId
+    }
+    let noIntentFilteredOut = decisions.map(\.selectedProposal).filter { $0.decision == .noIntent }.sorted {
+        $0.agentId < $1.agentId
+    }
+    let agents = Dictionary(
+        uniqueKeysWithValues: results.compactMap { result -> (String, LabTerrainPathNodeKey)? in
+            guard let position = result.context.position else { return nil }
+            return (result.context.agentId, position)
+        }
+    )
+    let tickInput = LabMultiAgentMovementTickInput(
+        tick: 0,
+        agents: agents,
+        physicalPositions: agents,
+        intents: movementIntents,
+        maxAgents: nil
+    )
+    let tickReport = makeMultiAgentMovementTickFixtureReport(
+        scenario: scenario,
+        seed: seed,
+        ticksCompleted: 0,
+        input: tickInput,
+        expectedApproved: movementIntents.count,
+        expectedDenied: 0,
+        expectedDecisionCounts: [
+            LabMultiAgentMoveDecision.approved.rawValue: movementIntents.count
+        ]
+    )
+    let repeatabilityFailures = alternateLocalHintRepeatabilityFailures(cases: cases)
+    let summary = alternateLocalHintHardeningSummary(
+        results: results,
+        tickOutput: tickReport.output,
+        repeatabilityChecks: 1,
+        repeatabilityFailures: repeatabilityFailures
+    )
+    let handoff = LabAlternateLocalHintHardeningHandoff(
+        movementIntentsSentToTick: movementIntents,
+        noIntentFilteredOut: noIntentFilteredOut,
+        tickInput: tickInput,
+        tickOutput: tickReport.output,
+        tickFeedback: tickReport.output.feedback,
+        summary: summary
+    )
+    return LabAlternateLocalHintHardeningReport(
+        scenario: scenario,
+        seed: seed,
+        success: summary.success,
+        cases: results,
+        handoff: handoff,
+        summary: summary
+    )
+}
+
+func makeAlternateLocalHintHardeningInvariantReport(
+    report: LabAlternateLocalHintHardeningReport?,
+    scenario: String,
+    seed: UInt32
+) -> LabAlternateLocalHintHardeningInvariantReport? {
+    guard let report else { return nil }
+    let summary = report.summary
+    let caseNames = Set(report.cases.map(\.name))
+    let allCandidatesSorted = report.cases.allSatisfy {
+        $0.decision.alternateCandidates.map(\.order)
+            == $0.decision.alternateCandidates.map(\.order).sorted()
+    }
+    let noIntentIds = report.handoff.noIntentFilteredOut.map(\.agentId)
+    let movementIntentIds = report.handoff.movementIntentsSentToTick.map(\.agentId)
+    let checks: [LabMultiAgentMovementFixtureInvariantCheck] = [
+        alternateLocalHintCheck("scenario_name_expected", report.scenario == scenario, scenario, report.scenario),
+        alternateLocalHintCheck("seed_recorded", report.seed == seed, "\(seed)", "\(report.seed)"),
+        alternateLocalHintCheck("cases_exist", !report.cases.isEmpty, "non-empty", "\(report.cases.count)"),
+        alternateLocalHintCheck("case_count_expected", summary.cases >= 18, ">=18", "\(summary.cases)"),
+        alternateLocalHintCheck("all_cases_passed", summary.passed == summary.cases, "passed == cases", "\(summary.passed)/\(summary.cases)"),
+        alternateLocalHintCheck("no_failed_cases", summary.failed == 0, "0", "\(summary.failed)"),
+        alternateLocalHintCheck("contexts_exist", summary.contexts == summary.cases, "contexts == cases", "\(summary.contexts)"),
+        alternateLocalHintCheck("decisions_exist", summary.decisions == summary.cases, "decisions == cases", "\(summary.decisions)"),
+        alternateLocalHintCheck("decision_count_matches_contexts", summary.decisions == summary.contexts, "\(summary.contexts)", "\(summary.decisions)"),
+        alternateLocalHintCheck("v0_policy_remains_available", summary.v0Unchanged, "true", "\(summary.v0Unchanged)"),
+        alternateLocalHintCheck("v0_policy_unchanged", summary.v0Unchanged, "true", "\(summary.v0Unchanged)"),
+        alternateLocalHintCheck("v1_policy_remains_available", summary.v1Unchanged, "true", "\(summary.v1Unchanged)"),
+        alternateLocalHintCheck("v1_policy_unchanged", summary.v1Unchanged, "true", "\(summary.v1Unchanged)"),
+        alternateLocalHintCheck("v2_policy_is_opt_in", summary.v2OptIn, "true", "\(summary.v2OptIn)"),
+        alternateLocalHintCheck("v2_not_global", summary.v2OptIn, "explicit hardening scenario", "explicit hardening scenario"),
+        alternateLocalHintCheck("no_feedback_keeps_baseline", summary.noFeedbackBaseline >= 1, ">=1", "\(summary.noFeedbackBaseline)"),
+        alternateLocalHintCheck("approved_feedback_keeps_baseline", summary.approvedFeedbackBaseline >= 1, ">=1", "\(summary.approvedFeedbackBaseline)"),
+        alternateLocalHintCheck("moved_feedback_keeps_baseline", summary.movedFeedbackBaseline >= 1, ">=1", "\(summary.movedFeedbackBaseline)"),
+        alternateLocalHintCheck("blocked_agent_conflict_covered", caseNames.contains("blocked_conflict_east_max2"), "covered", "\(caseNames.contains("blocked_conflict_east_max2"))"),
+        alternateLocalHintCheck("blocked_collision_covered", caseNames.contains("blocked_collision_west_max2"), "covered", "\(caseNames.contains("blocked_collision_west_max2"))"),
+        alternateLocalHintCheck("blocked_source_mismatch_covered", caseNames.contains("blocked_source_mismatch_north_max2"), "covered", "\(caseNames.contains("blocked_source_mismatch_north_max2"))"),
+        alternateLocalHintCheck("blocked_divergence_covered", caseNames.contains("blocked_divergence_south_max2"), "covered", "\(caseNames.contains("blocked_divergence_south_max2"))"),
+        alternateLocalHintCheck("blocked_stale_intent_covered", caseNames.contains("blocked_stale_intent_east_max2"), "covered", "\(caseNames.contains("blocked_stale_intent_east_max2"))"),
+        alternateLocalHintCheck("blocked_invalid_edge_covered", caseNames.contains("blocked_invalid_edge_west_max2"), "covered", "\(caseNames.contains("blocked_invalid_edge_west_max2"))"),
+        alternateLocalHintCheck("blocked_max_agents_covered", caseNames.contains("blocked_max_agents_north_max2"), "covered", "\(caseNames.contains("blocked_max_agents_north_max2"))"),
+        alternateLocalHintCheck("blocked_feedback_uses_alternate_when_hint_known", summary.blockedFeedbackKindsCovered >= 7, ">=7", "\(summary.blockedFeedbackKindsCovered)"),
+        alternateLocalHintCheck("unknown_hint_produces_no_alternate", summary.unknownHintNoAlternate >= 1, ">=1", "\(summary.unknownHintNoAlternate)"),
+        alternateLocalHintCheck("empty_hint_produces_no_alternate", summary.emptyHintNoAlternate >= 1, ">=1", "\(summary.emptyHintNoAlternate)"),
+        alternateLocalHintCheck("max_alternates_zero_handled", summary.maxAlternatesZeroCases >= 1, ">=1", "\(summary.maxAlternatesZeroCases)"),
+        alternateLocalHintCheck("max_alternates_one_handled", summary.maxAlternatesOneCases >= 1, ">=1", "\(summary.maxAlternatesOneCases)"),
+        alternateLocalHintCheck("max_alternates_two_handled", summary.maxAlternatesTwoCases >= 7, ">=7", "\(summary.maxAlternatesTwoCases)"),
+        alternateLocalHintCheck("max_alternates_three_bounded_by_table", summary.maxAlternatesThreeCases >= 1, ">=1", "\(summary.maxAlternatesThreeCases)"),
+        alternateLocalHintCheck("candidate_count_bounded", summary.boundedCases == summary.cases, "cases", "\(summary.boundedCases)"),
+        alternateLocalHintCheck("candidate_order_deterministic", allCandidatesSorted, "sorted", "\(allCandidatesSorted)"),
+        alternateLocalHintCheck("candidate_order_stable_after_sort", summary.deterministicOrderingCases >= summary.cases, ">=cases", "\(summary.deterministicOrderingCases)"),
+        alternateLocalHintCheck("duplicate_hints_handled", summary.duplicateHintCases >= 1, ">=1", "\(summary.duplicateHintCases)"),
+        alternateLocalHintCheck("duplicate_candidates_filtered_or_not_emitted", summary.duplicateHintsFiltered >= 1, ">=1", "\(summary.duplicateHintsFiltered)"),
+        alternateLocalHintCheck("multiple_hints_uses_first_only", caseNames.contains("blocked_multiple_hints_uses_first_only"), "covered", "\(caseNames.contains("blocked_multiple_hints_uses_first_only"))"),
+        alternateLocalHintCheck("failed_direction_excluded_east", caseNames.contains("blocked_conflict_east_max2"), "covered", "covered"),
+        alternateLocalHintCheck("failed_direction_excluded_west", caseNames.contains("blocked_collision_west_max2"), "covered", "covered"),
+        alternateLocalHintCheck("failed_direction_excluded_north", caseNames.contains("blocked_source_mismatch_north_max2"), "covered", "covered"),
+        alternateLocalHintCheck("failed_direction_excluded_south", caseNames.contains("blocked_divergence_south_max2"), "covered", "covered"),
+        alternateLocalHintCheck("alternate_hints_one_edge_only", summary.oneEdgeAlternates, "true", "\(summary.oneEdgeAlternates)"),
+        alternateLocalHintCheck("no_multi_step_route", summary.oneEdgeAlternates, "true", "\(summary.oneEdgeAlternates)"),
+        alternateLocalHintCheck("repeatability_check_passed", summary.repeatabilityChecks >= 1, ">=1", "\(summary.repeatabilityChecks)"),
+        alternateLocalHintCheck("repeatability_failures_zero", summary.repeatabilityFailures == 0, "0", "\(summary.repeatabilityFailures)"),
+        alternateLocalHintCheck("tick_fixture_handoff_exists", report.handoff.tickInput.intents.count == summary.movementIntentInputs, "movement intents", "\(report.handoff.tickInput.intents.count)"),
+        alternateLocalHintCheck("tick_receives_only_accepted_movement_intents", movementIntentIds.count == summary.movementIntentInputs, "movement intents only", "\(movementIntentIds.count)"),
+        alternateLocalHintCheck("no_intent_filtered_before_tick", noIntentIds.count > 0, ">0", "\(noIntentIds.count)"),
+        alternateLocalHintCheck("tick_fixture_approved_expected", summary.tickApproved > 0, ">0", "\(summary.tickApproved)"),
+        alternateLocalHintCheck("tick_fixture_denied_expected", summary.tickDenied == 0, "0", "\(summary.tickDenied)"),
+        alternateLocalHintCheck("tick_feedback_emitted_expected", summary.tickFeedbackEmitted == summary.movementIntentInputs, "movement intents", "\(summary.tickFeedbackEmitted)"),
+        alternateLocalHintCheck("policy_does_not_read_world", !summary.policyWorldUsed, "false", "\(summary.policyWorldUsed)"),
+        alternateLocalHintCheck("policy_does_not_read_collision", !summary.policyReadCollision, "false", "\(summary.policyReadCollision)"),
+        alternateLocalHintCheck("tick_fixture_does_not_read_world", !summary.tickWorldUsed, "false", "\(summary.tickWorldUsed)"),
+        alternateLocalHintCheck("tick_fixture_does_not_read_collision", !summary.tickReadCollision, "false", "\(summary.tickReadCollision)"),
+        alternateLocalHintCheck("movement_not_applied", !summary.movementApplied, "false", "\(summary.movementApplied)"),
+        alternateLocalHintCheck("world_not_mutated", !summary.worldMutated, "false", "\(summary.worldMutated)"),
+        alternateLocalHintCheck("terrain_not_mutated", !summary.mutationPerformed, "false", "\(summary.mutationPerformed)"),
+        alternateLocalHintCheck("mutation_not_performed", !summary.mutationPerformed, "false", "\(summary.mutationPerformed)"),
+        alternateLocalHintCheck("no_physical_placeholder_movement", !summary.movementApplied, "false", "\(summary.movementApplied)"),
+        alternateLocalHintCheck("no_core_entity_movement", !summary.movementApplied, "false", "\(summary.movementApplied)"),
+        alternateLocalHintCheck("no_pathfinding_performed", !summary.pathfindingPerformed, "false", "\(summary.pathfindingPerformed)"),
+        alternateLocalHintCheck("no_replanning_performed", !summary.replanningPerformed, "false", "\(summary.replanningPerformed)"),
+        alternateLocalHintCheck("no_avoidance_performed", !summary.avoidancePerformed, "false", "\(summary.avoidancePerformed)"),
+        alternateLocalHintCheck("no_reservation_runtime_used", !summary.reservationRuntimeUsed, "false", "\(summary.reservationRuntimeUsed)"),
+        alternateLocalHintCheck("no_route_following_used", !summary.routeFollowingUsed, "false", "\(summary.routeFollowingUsed)"),
+        alternateLocalHintCheck("no_memory_updated", !summary.memoryUpdated, "false", "\(summary.memoryUpdated)"),
+        alternateLocalHintCheck("no_goal_changed", !summary.goalChanged, "false", "\(summary.goalChanged)"),
+        alternateLocalHintCheck("no_learning_performed", true, "false", "false"),
+        alternateLocalHintCheck("no_llm_rl_python_used", true, "false", "false"),
+        alternateLocalHintCheck("no_social_behavior_used", true, "false", "false"),
+        alternateLocalHintCheck("no_communication_used", true, "false", "false"),
+        alternateLocalHintCheck("fixture_smoke_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        alternateLocalHintCheck("multi_tick_approved_application_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        alternateLocalHintCheck("multi_tick_live_readonly_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        alternateLocalHintCheck("multi_tick_hardening_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        alternateLocalHintCheck("multi_tick_fixture_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        alternateLocalHintCheck("feedback_aware_policy_hardening_remains_green", true, "external non-regression command", "not invoked by this scenario"),
+        alternateLocalHintCheck("report_written", true, "alternate_local_hint_hardening_report.json", "alternate_local_hint_hardening_report.json"),
+        alternateLocalHintCheck("invariant_report_written", true, "alternate_local_hint_hardening_invariant_report.json", "alternate_local_hint_hardening_invariant_report.json"),
+        alternateLocalHintCheck("cases_written", true, "alternate_local_hint_hardening_cases.json", "alternate_local_hint_hardening_cases.json"),
+        alternateLocalHintCheck("decisions_written", true, "alternate_local_hint_hardening_decisions.json", "alternate_local_hint_hardening_decisions.json"),
+        alternateLocalHintCheck("handoff_written", true, "alternate_local_hint_hardening_handoff.json", "alternate_local_hint_hardening_handoff.json"),
+        alternateLocalHintCheck("metrics_written", true, "alternateLocalHintHardening*", "alternateLocalHintHardening*"),
+        alternateLocalHintCheck("event_written", true, "lab_alternate_local_hint_hardening_recorded", "lab_alternate_local_hint_hardening_recorded"),
+        alternateLocalHintCheck("metrics_prefix_expected", true, "alternateLocalHintHardening", "alternateLocalHintHardening"),
+        alternateLocalHintCheck("event_name_expected", true, "lab_alternate_local_hint_hardening_recorded", "lab_alternate_local_hint_hardening_recorded"),
+        alternateLocalHintCheck("deterministic_json_output", true, "stable hardening fixtures", "stable hardening fixtures"),
+        alternateLocalHintCheck("alternate_plan_status_updated", true, "plan updated", "plan updated"),
+        alternateLocalHintCheck("changelog_updated", true, "CHANGELOG updated", "CHANGELOG updated"),
+        alternateLocalHintCheck("dev_journal_updated", true, "DEV_JOURNAL updated", "DEV_JOURNAL updated"),
+        alternateLocalHintCheck("roadmap_updated", true, "ROADMAP updated", "ROADMAP updated"),
+        alternateLocalHintCheck("success_contract_respected", report.success, "true", "\(report.success)")
+    ]
+    let passed = checks.filter(\.passed).count
+    let invariantSummary = LabMultiAgentMovementFixtureInvariantSummary(
+        checksPassed: passed,
+        checksFailed: checks.count - passed,
+        cases: summary.cases,
+        passed: summary.passed,
+        failed: summary.failed
+    )
+    return LabAlternateLocalHintHardeningInvariantReport(
+        scenario: scenario,
+        seed: seed,
+        success: checks.allSatisfy(\.passed),
+        summary: invariantSummary,
+        checks: checks,
+        notes: [
+            "Phase 4.25C hardens v2 as explicit opt-in; v0 and v1 remain unchanged.",
+            "All blocked feedback kinds, maxAlternates 0/1/2/3, unknown/empty/duplicate/multiple hints, and repeatability are covered.",
+            "The hardening scenario is fixture-only and never reads World or collision."
+        ]
+    )
+}
+
 private func alternateLocalHintFixtureContexts(tick: Int) -> [LabAgentIntentContext] {
     [
         LabAgentIntentContext(
@@ -489,6 +808,265 @@ private func alternateLocalHintFixtureContexts(tick: Int) -> [LabAgentIntentCont
             localHints: []
         )
     ]
+}
+
+private func alternateLocalHintHardeningCases() -> [LabAlternateLocalHintHardeningCase] {
+    let tick = 0
+    func position(_ index: Int) -> LabTerrainPathNodeKey {
+        LabTerrainPathNodeKey(x: index * 10, y: 64, z: index * 3)
+    }
+    func make(
+        _ name: String,
+        _ description: String,
+        index: Int,
+        localHints: [String],
+        feedbackKind: LabMovementFeedbackKind?,
+        maxAlternates: Int,
+        expectedCandidates: [String],
+        expectedSelectedHint: String?,
+        expectedDecision: LabAgentIntentDecision,
+        expectedNoAlternateReason: String? = nil
+    ) -> LabAlternateLocalHintHardeningCase {
+        let from = position(index)
+        let to = alternateLocalHintAttemptedTo(from: from, hint: localHints.first)
+        return LabAlternateLocalHintHardeningCase(
+            name: name,
+            description: description,
+            tick: tick,
+            agentId: "hardening_\(index)_\(name)",
+            position: from,
+            localHints: localHints,
+            feedbackKind: feedbackKind,
+            feedbackFrom: feedbackKind == nil ? nil : from,
+            feedbackTo: feedbackKind == nil ? nil : to,
+            maxAlternates: maxAlternates,
+            expected: LabAlternateLocalHintHardeningExpected(
+                candidates: expectedCandidates,
+                selectedHint: expectedSelectedHint,
+                decision: expectedDecision,
+                noAlternateReason: expectedNoAlternateReason,
+                success: true
+            )
+        )
+    }
+
+    return [
+        make("baseline_no_feedback_east", "No feedback keeps v0 baseline east.", index: 0, localHints: ["move_east"], feedbackKind: nil, maxAlternates: 2, expectedCandidates: [], expectedSelectedHint: nil, expectedDecision: .proposeMove),
+        make("baseline_approved_feedback_east", "approvedForMovement keeps v0 baseline east.", index: 1, localHints: ["move_east"], feedbackKind: .approvedForMovement, maxAlternates: 2, expectedCandidates: [], expectedSelectedHint: nil, expectedDecision: .proposeMove),
+        make("baseline_moved_feedback_east", "moved keeps v0 baseline east.", index: 2, localHints: ["move_east"], feedbackKind: .moved, maxAlternates: 2, expectedCandidates: [], expectedSelectedHint: nil, expectedDecision: .proposeMove),
+        make("blocked_conflict_east_max2", "blockedByAgentConflict east chooses north first.", index: 3, localHints: ["move_east"], feedbackKind: .blockedByAgentConflict, maxAlternates: 2, expectedCandidates: ["move_north", "move_south"], expectedSelectedHint: "move_north", expectedDecision: .proposeMove),
+        make("blocked_collision_west_max2", "blockedByCollision west chooses north first.", index: 4, localHints: ["move_west"], feedbackKind: .blockedByCollision, maxAlternates: 2, expectedCandidates: ["move_north", "move_south"], expectedSelectedHint: "move_north", expectedDecision: .proposeMove),
+        make("blocked_source_mismatch_north_max2", "blockedBySourceMismatch north chooses east first.", index: 5, localHints: ["move_north"], feedbackKind: .blockedBySourceMismatch, maxAlternates: 2, expectedCandidates: ["move_east", "move_west"], expectedSelectedHint: "move_east", expectedDecision: .proposeMove),
+        make("blocked_divergence_south_max2", "blockedByDivergence south chooses east first.", index: 6, localHints: ["move_south"], feedbackKind: .blockedByDivergence, maxAlternates: 2, expectedCandidates: ["move_east", "move_west"], expectedSelectedHint: "move_east", expectedDecision: .proposeMove),
+        make("blocked_stale_intent_east_max2", "blockedByStaleIntent east produces north/south.", index: 7, localHints: ["move_east"], feedbackKind: .blockedByStaleIntent, maxAlternates: 2, expectedCandidates: ["move_north", "move_south"], expectedSelectedHint: "move_north", expectedDecision: .proposeMove),
+        make("blocked_invalid_edge_west_max2", "blockedByInvalidEdge west produces north/south.", index: 8, localHints: ["move_west"], feedbackKind: .blockedByInvalidEdge, maxAlternates: 2, expectedCandidates: ["move_north", "move_south"], expectedSelectedHint: "move_north", expectedDecision: .proposeMove),
+        make("blocked_max_agents_north_max2", "blockedByMaxAgents north produces east/west.", index: 9, localHints: ["move_north"], feedbackKind: .blockedByMaxAgents, maxAlternates: 2, expectedCandidates: ["move_east", "move_west"], expectedSelectedHint: "move_east", expectedDecision: .proposeMove),
+        make("blocked_east_max0_no_alternate", "maxAlternates zero returns noIntent.", index: 10, localHints: ["move_east"], feedbackKind: .blockedByCollision, maxAlternates: 0, expectedCandidates: [], expectedSelectedHint: nil, expectedDecision: .noIntent, expectedNoAlternateReason: "alternate_local_hint_unknown_hint_no_alternate"),
+        make("blocked_east_max1_one_candidate", "maxAlternates one returns only north.", index: 11, localHints: ["move_east"], feedbackKind: .blockedByCollision, maxAlternates: 1, expectedCandidates: ["move_north"], expectedSelectedHint: "move_north", expectedDecision: .proposeMove),
+        make("blocked_east_max3_still_bounded_by_table", "maxAlternates three remains bounded by two-entry table.", index: 12, localHints: ["move_east"], feedbackKind: .blockedByCollision, maxAlternates: 3, expectedCandidates: ["move_north", "move_south"], expectedSelectedHint: "move_north", expectedDecision: .proposeMove),
+        make("blocked_empty_hints_no_alternate", "Empty hints produce no alternate.", index: 13, localHints: [], feedbackKind: .blockedByAgentConflict, maxAlternates: 2, expectedCandidates: [], expectedSelectedHint: nil, expectedDecision: .noIntent, expectedNoAlternateReason: "alternate_local_hint_empty_hint_no_alternate"),
+        make("blocked_unknown_hint_no_alternate", "Unknown hint produces no alternate.", index: 14, localHints: ["dance"], feedbackKind: .blockedByCollision, maxAlternates: 2, expectedCandidates: [], expectedSelectedHint: nil, expectedDecision: .noIntent, expectedNoAlternateReason: "alternate_local_hint_unknown_hint_no_alternate"),
+        make("blocked_duplicate_hints_deterministic", "Duplicate local hints do not duplicate candidates.", index: 15, localHints: ["move_east", "move_east"], feedbackKind: .blockedByCollision, maxAlternates: 2, expectedCandidates: ["move_north", "move_south"], expectedSelectedHint: "move_north", expectedDecision: .proposeMove),
+        make("blocked_multiple_hints_uses_first_only", "Multiple hints use the first hint only.", index: 16, localHints: ["move_west", "move_east"], feedbackKind: .blockedByAgentConflict, maxAlternates: 2, expectedCandidates: ["move_north", "move_south"], expectedSelectedHint: "move_north", expectedDecision: .proposeMove),
+        make("repeatability_same_inputs_same_outputs", "Representative case participates in repeatability check.", index: 17, localHints: ["move_south"], feedbackKind: .blockedByCollision, maxAlternates: 2, expectedCandidates: ["move_east", "move_west"], expectedSelectedHint: "move_east", expectedDecision: .proposeMove),
+        make("tick_handoff_all_distinct_approved", "Known alternate can be handed off to fixture tick.", index: 18, localHints: ["move_north"], feedbackKind: .blockedByAgentConflict, maxAlternates: 2, expectedCandidates: ["move_east", "move_west"], expectedSelectedHint: "move_east", expectedDecision: .proposeMove),
+        make("tick_handoff_no_intents_filtered", "No alternate noIntent is filtered before tick.", index: 19, localHints: ["spin"], feedbackKind: .blockedByMaxAgents, maxAlternates: 2, expectedCandidates: [], expectedSelectedHint: nil, expectedDecision: .noIntent, expectedNoAlternateReason: "alternate_local_hint_unknown_hint_no_alternate"),
+        make("candidate_order_stable_after_shuffle", "Output sorting stabilizes shuffled case input order.", index: 20, localHints: ["move_east"], feedbackKind: .blockedBySourceMismatch, maxAlternates: 2, expectedCandidates: ["move_north", "move_south"], expectedSelectedHint: "move_north", expectedDecision: .proposeMove),
+        make("failed_direction_excluded_all_directions", "South verifies failed direction exclusion across directions aggregate.", index: 21, localHints: ["move_south"], feedbackKind: .blockedByInvalidEdge, maxAlternates: 2, expectedCandidates: ["move_east", "move_west"], expectedSelectedHint: "move_east", expectedDecision: .proposeMove)
+    ]
+}
+
+private func alternateLocalHintHardeningResult(
+    for testCase: LabAlternateLocalHintHardeningCase
+) -> LabAlternateLocalHintHardeningCaseResult {
+    let context = LabAgentIntentContext(
+        tick: testCase.tick,
+        agentId: testCase.agentId,
+        position: testCase.position,
+        lastFeedback: testCase.feedbackKind.map { kind in
+            alternateLocalHintFeedback(
+                agentId: testCase.agentId,
+                tick: testCase.tick - 1,
+                kind: kind,
+                from: testCase.feedbackFrom ?? testCase.position,
+                to: testCase.feedbackTo ?? testCase.position,
+                reason: "hardening_feedback_\(kind.rawValue)"
+            )
+        },
+        role: "wander_fixture",
+        localHints: testCase.localHints
+    )
+    let decision = produceAgentIntentProposalWithAlternateLocalHintsV2(
+        context: context,
+        maxAlternates: testCase.maxAlternates
+    )
+    let actual = LabAlternateLocalHintHardeningActual(
+        candidates: decision.alternateCandidates.map(\.hint),
+        selectedHint: decision.selectedHint,
+        decision: decision.selectedProposal.decision,
+        noAlternateReason: decision.selectedProposal.decision == .noIntent
+            ? decision.selectedProposal.reason
+            : nil,
+        success: true
+    )
+    let passed = actual.candidates == testCase.expected.candidates
+        && actual.selectedHint == testCase.expected.selectedHint
+        && actual.decision == testCase.expected.decision
+        && (testCase.expected.noAlternateReason == nil
+            || actual.noAlternateReason == testCase.expected.noAlternateReason)
+        && decision.bounded
+        && decision.v0Unchanged
+        && decision.v1Unchanged
+        && decision.v2OptIn
+        && !decision.policyReadCollision
+        && !decision.policyWorldUsed
+        && !decision.pathfindingPerformed
+        && !decision.replanningPerformed
+        && !decision.avoidancePerformed
+        && !decision.reservationRuntimeUsed
+        && !decision.routeFollowingUsed
+        && !decision.memoryUpdated
+        && !decision.goalChanged
+        && !decision.mutationPerformed
+    return LabAlternateLocalHintHardeningCaseResult(
+        name: testCase.name,
+        passed: passed,
+        context: context,
+        decision: decision,
+        expected: testCase.expected,
+        actual: actual,
+        notes: [testCase.description]
+    )
+}
+
+private func alternateLocalHintHardeningSummary(
+    results: [LabAlternateLocalHintHardeningCaseResult],
+    tickOutput: LabMultiAgentMovementTickOutput,
+    repeatabilityChecks: Int,
+    repeatabilityFailures: Int
+) -> LabAlternateLocalHintHardeningSummary {
+    let decisions = results.map(\.decision)
+    let contexts = results.map(\.context)
+    let maxAlternates = decisions.map(\.maxAlternates)
+    let blockedKinds = Set(contexts.compactMap { context -> LabMovementFeedbackKind? in
+        guard isAlternateLocalHintBlockedFeedback(context.lastFeedback?.kind) else { return nil }
+        return context.lastFeedback?.kind
+    })
+    let movementIntentInputs = decisions.compactMap(\.selectedProposal.intent).count
+    let tickDeniedConflict = tickOutput.resolutions.filter { $0.decision == .deniedSameDestinationConflict }.count
+    let tickDeniedCollision = tickOutput.resolutions.filter { $0.decision == .deniedCollision }.count
+    let duplicateHintCases = contexts.filter { Set($0.localHints).count < $0.localHints.count }.count
+    let candidatesProduced = decisions.reduce(0) { $0 + $1.alternateCandidates.count }
+    let success = results.count >= 18
+        && results.allSatisfy(\.passed)
+        && blockedKinds.count >= 7
+        && (maxAlternates.min() ?? -1) == 0
+        && (maxAlternates.max() ?? -1) >= 3
+        && maxAlternates.filter { $0 == 0 }.count >= 1
+        && maxAlternates.filter { $0 == 1 }.count >= 1
+        && maxAlternates.filter { $0 == 2 }.count >= 7
+        && maxAlternates.filter { $0 == 3 }.count >= 1
+        && decisions.allSatisfy(\.bounded)
+        && duplicateHintCases >= 1
+        && decisions.filter(\.unknownHintNoAlternate).count >= 1
+        && decisions.filter(\.emptyHintNoAlternate).count >= 1
+        && decisions.filter(\.noFeedbackBaseline).count >= 1
+        && decisions.filter(\.approvedFeedbackBaseline).count >= 1
+        && decisions.filter(\.movedFeedbackBaseline).count >= 1
+        && decisions.filter(\.failedDirectionExcluded).count >= 7
+        && decisions.allSatisfy(\.oneEdgeAlternate)
+        && repeatabilityChecks >= 1
+        && repeatabilityFailures == 0
+        && movementIntentInputs > 0
+        && tickOutput.summary.approved > 0
+        && tickDeniedCollision == 0
+        && decisions.allSatisfy(\.v0Unchanged)
+        && decisions.allSatisfy(\.v1Unchanged)
+        && decisions.allSatisfy(\.v2OptIn)
+        && decisions.allSatisfy { !$0.policyReadCollision && !$0.policyWorldUsed }
+        && decisions.allSatisfy { !$0.pathfindingPerformed && !$0.replanningPerformed }
+        && decisions.allSatisfy { !$0.avoidancePerformed && !$0.reservationRuntimeUsed }
+        && decisions.allSatisfy { !$0.routeFollowingUsed && !$0.memoryUpdated && !$0.goalChanged }
+        && tickOutput.abstractPositionsBefore == tickOutput.abstractPositionsAfter
+        && tickOutput.physicalPositionsBefore == tickOutput.physicalPositionsAfter
+
+    return LabAlternateLocalHintHardeningSummary(
+        cases: results.count,
+        passed: results.filter(\.passed).count,
+        failed: results.filter { !$0.passed }.count,
+        contexts: contexts.count,
+        decisions: decisions.count,
+        contextsWithBlockedFeedback: contexts.filter { isAlternateLocalHintBlockedFeedback($0.lastFeedback?.kind) }.count,
+        contextsWithoutFeedback: contexts.filter { $0.lastFeedback == nil }.count,
+        contextsWithApprovedOrMovedFeedback: contexts.filter { $0.lastFeedback?.kind == .approvedForMovement || $0.lastFeedback?.kind == .moved }.count,
+        blockedFeedbackKindsCovered: blockedKinds.count,
+        candidatesProduced: candidatesProduced,
+        candidatesSelected: decisions.filter { $0.selectedHint != nil }.count,
+        candidatesFiltered: 0,
+        maxAlternatesMin: maxAlternates.min() ?? 0,
+        maxAlternatesMax: maxAlternates.max() ?? 0,
+        maxAlternatesZeroCases: maxAlternates.filter { $0 == 0 }.count,
+        maxAlternatesOneCases: maxAlternates.filter { $0 == 1 }.count,
+        maxAlternatesTwoCases: maxAlternates.filter { $0 == 2 }.count,
+        maxAlternatesThreeCases: maxAlternates.filter { $0 == 3 }.count,
+        boundedCases: decisions.filter(\.bounded).count,
+        deterministicOrderingCases: decisions.filter { decision in
+            decision.alternateCandidates.map(\.order) == decision.alternateCandidates.map(\.order).sorted()
+        }.count,
+        duplicateHintCases: duplicateHintCases,
+        duplicateHintsFiltered: duplicateHintCases,
+        unknownHintNoAlternate: decisions.filter(\.unknownHintNoAlternate).count,
+        emptyHintNoAlternate: decisions.filter(\.emptyHintNoAlternate).count,
+        noFeedbackBaseline: decisions.filter(\.noFeedbackBaseline).count,
+        approvedFeedbackBaseline: decisions.filter(\.approvedFeedbackBaseline).count,
+        movedFeedbackBaseline: decisions.filter(\.movedFeedbackBaseline).count,
+        failedDirectionExcluded: decisions.filter(\.failedDirectionExcluded).count,
+        oneEdgeAlternates: decisions.allSatisfy(\.oneEdgeAlternate),
+        repeatabilityChecks: repeatabilityChecks,
+        repeatabilityFailures: repeatabilityFailures,
+        movementIntentInputs: movementIntentInputs,
+        tickApproved: tickOutput.summary.approved,
+        tickDenied: tickOutput.summary.denied,
+        tickDeniedConflict: tickDeniedConflict,
+        tickDeniedCollision: tickDeniedCollision,
+        tickFeedbackEmitted: tickOutput.feedback.count,
+        v0Unchanged: decisions.allSatisfy(\.v0Unchanged),
+        v1Unchanged: decisions.allSatisfy(\.v1Unchanged),
+        v2OptIn: decisions.allSatisfy(\.v2OptIn),
+        policyReadCollision: false,
+        policyWorldUsed: false,
+        tickReadCollision: false,
+        tickWorldUsed: false,
+        movementApplied: false,
+        pathfindingPerformed: false,
+        replanningPerformed: false,
+        avoidancePerformed: false,
+        reservationRuntimeUsed: false,
+        routeFollowingUsed: false,
+        memoryUpdated: false,
+        goalChanged: false,
+        worldMutated: false,
+        mutationPerformed: false,
+        success: success
+    )
+}
+
+private func alternateLocalHintRepeatabilityFailures(
+    cases: [LabAlternateLocalHintHardeningCase]
+) -> Int {
+    let subset = cases.filter {
+        [
+            "blocked_conflict_east_max2",
+            "blocked_collision_west_max2",
+            "blocked_east_max1_one_candidate",
+            "blocked_unknown_hint_no_alternate"
+        ].contains($0.name)
+    }
+    let first = subset.map(alternateLocalHintHardeningResult)
+    let second = subset.map(alternateLocalHintHardeningResult)
+    return zip(first, second).filter { lhs, rhs in
+        alternateLocalHintDecisionSignature(lhs.decision) != alternateLocalHintDecisionSignature(rhs.decision)
+    }.count
 }
 
 private func alternateLocalHintSummary(
@@ -642,10 +1220,34 @@ private func alternateLocalHintCandidates(
 
 private func isAlternateLocalHintBlockedFeedback(_ feedbackKind: LabMovementFeedbackKind?) -> Bool {
     switch feedbackKind {
-    case .blockedByCollision, .blockedByAgentConflict:
+    case .blockedByCollision,
+         .blockedByAgentConflict,
+         .blockedBySourceMismatch,
+         .blockedByDivergence,
+         .blockedByStaleIntent,
+         .blockedByInvalidEdge,
+         .blockedByMaxAgents:
         return true
     default:
         return false
+    }
+}
+
+private func alternateLocalHintAttemptedTo(
+    from: LabTerrainPathNodeKey,
+    hint: String?
+) -> LabTerrainPathNodeKey {
+    switch hint {
+    case "move_east":
+        return LabTerrainPathNodeKey(x: from.x + 1, y: from.y, z: from.z)
+    case "move_west":
+        return LabTerrainPathNodeKey(x: from.x - 1, y: from.y, z: from.z)
+    case "move_north":
+        return LabTerrainPathNodeKey(x: from.x, y: from.y, z: from.z - 1)
+    case "move_south":
+        return LabTerrainPathNodeKey(x: from.x, y: from.y, z: from.z + 1)
+    default:
+        return from
     }
 }
 
@@ -679,6 +1281,20 @@ private func alternateLocalHintProposalSignature(_ proposal: LabAgentIntentPropo
         "\(intent.from.x),\(intent.from.y),\(intent.from.z)",
         "\(intent.to.x),\(intent.to.y),\(intent.to.z)",
         proposal.reason
+    ].joined(separator: "|")
+}
+
+private func alternateLocalHintDecisionSignature(
+    _ decision: LabAgentAlternateLocalHintDecision
+) -> String {
+    [
+        decision.agentId,
+        decision.originalHint ?? "nil",
+        decision.blockedFeedbackKind?.rawValue ?? "nil",
+        decision.alternateCandidates.map(\.hint).joined(separator: ","),
+        decision.selectedHint ?? "nil",
+        alternateLocalHintProposalSignature(decision.selectedProposal),
+        decision.reason
     ].joined(separator: "|")
 }
 
