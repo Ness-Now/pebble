@@ -2694,3 +2694,56 @@ Outputs:
 Route following and full-route execution remain out of scope.
 
 Next recommended step: Phase 4.28C - Stack Contract Boundary Hardening.
+
+## Phase 4.28C - Stack Contract Boundary Hardening
+
+Status: implemented and validated.
+
+Goal: harden the AgentMovementStack contract with fixture-only, audit-only
+negative samples that prove malformed stack records and forbidden boundary
+flags are detected without executing dangerous runtime behavior.
+
+Validated scope:
+
+- `agent_movement_stack_contract_boundary_hardening_smoke`;
+- 42 cases;
+- 42 passed;
+- 0 failed;
+- 1 valid baseline sample accepted;
+- 41 negative samples rejected;
+- expected violations total = 41;
+- detected violations total = 41;
+- missed violations = 0;
+- false positive violations = 0;
+- missing/duplicate/out-of-order/disabled/malformed/dirty layer violations
+  detected;
+- missing/duplicate/global/hidden/v4 policy violations detected;
+- v4 reserved-only enforcement validated;
+- same-tick, future, and cross-agent feedback leaks detected;
+- advisory-step, second-step, persistent-route, full-route, and route-following
+  violations detected;
+- forbidden World/collision, pathfinding, replanning, reservation, memory,
+  goals, mutation, renderer/resource/registry/golden flags detected;
+- no runtime dangerous behavior executed;
+- runtime World/collision live reads remain false;
+- route following and full-route execution remain false;
+- Core entity and physical placeholder movement remain false;
+- terrain/World mutation remains false;
+- digest repeatability true;
+- baseline stack contract remains green.
+
+Outputs:
+
+- `agent_movement_stack_boundary_hardening_report.json`;
+- `agent_movement_stack_boundary_hardening_invariant_report.json`;
+- `agent_movement_stack_boundary_hardening_cases.json`;
+- `agent_movement_stack_boundary_hardening_negative_samples.json`;
+- `agent_movement_stack_boundary_hardening_audits.json`;
+- `agent_movement_stack_boundary_hardening_boundary.json`;
+- `agent_movement_stack_boundary_hardening_digest.json`;
+- `agentMovementStackBoundaryHardening*` metrics;
+- `lab_agent_movement_stack_boundary_hardening_recorded` event.
+
+Route following and full-route execution remain out of scope.
+
+Next recommended step: Phase 4.28D - Stack Replay Regression Adapter.

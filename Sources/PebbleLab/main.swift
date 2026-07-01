@@ -86,6 +86,8 @@ let isBoundedPathPlanningMultiTickReplayScenario = options.scenario
     == "bounded_path_planning_multi_tick_replay_smoke"
 let isAgentMovementStackContractScenario = options.scenario
     == "agent_movement_stack_contract_fixture_smoke"
+let isAgentMovementStackBoundaryHardeningScenario = options.scenario
+    == "agent_movement_stack_contract_boundary_hardening_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -123,7 +125,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isBoundedPathPlanningToTickFirstStepScenario
     || isBoundedPathPlanningApprovedApplicationScenario
     || isBoundedPathPlanningMultiTickReplayScenario
-    || isAgentMovementStackContractScenario)
+    || isAgentMovementStackContractScenario
+    || isAgentMovementStackBoundaryHardeningScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -790,7 +793,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isBoundedPathPlanningToTickFirstStepScenario
     || isBoundedPathPlanningApprovedApplicationScenario
     || isBoundedPathPlanningMultiTickReplayScenario
-    || isAgentMovementStackContractScenario {
+    || isAgentMovementStackContractScenario
+    || isAgentMovementStackBoundaryHardeningScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -3114,6 +3118,75 @@ let agentMovementStackContractSuccess = isAgentMovementStackContractScenario
     ? ((agentMovementStackContractReport?.success ?? false)
         && (agentMovementStackContractInvariantReport?.success ?? false))
     : nil
+let agentMovementStackBoundaryHardeningReport = isAgentMovementStackBoundaryHardeningScenario
+    ? makeAgentMovementStackBoundaryHardeningReport(
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let agentMovementStackBoundaryHardeningInvariantReport = isAgentMovementStackBoundaryHardeningScenario
+    ? makeAgentMovementStackBoundaryHardeningInvariantReport(
+        report: agentMovementStackBoundaryHardeningReport,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let agentMovementStackBoundaryHardeningSummary =
+    agentMovementStackBoundaryHardeningReport?.summary
+let agentMovementStackBoundaryHardeningSuccess = isAgentMovementStackBoundaryHardeningScenario
+    ? ((agentMovementStackBoundaryHardeningReport?.success ?? false)
+        && (agentMovementStackBoundaryHardeningInvariantReport?.success ?? false)
+        && (agentMovementStackBoundaryHardeningSummary?.cases ?? 0) >= 42
+        && agentMovementStackBoundaryHardeningSummary?.casesPassed == agentMovementStackBoundaryHardeningSummary?.cases
+        && agentMovementStackBoundaryHardeningSummary?.casesFailed == 0
+        && (agentMovementStackBoundaryHardeningSummary?.validCases ?? 0) >= 1
+        && (agentMovementStackBoundaryHardeningSummary?.negativeCases ?? 0) >= 41
+        && agentMovementStackBoundaryHardeningSummary?.validBaselineAccepted == true
+        && agentMovementStackBoundaryHardeningSummary?.allNegativeSamplesRejected == true
+        && (agentMovementStackBoundaryHardeningSummary?.expectedViolationsTotal ?? 0) >= 41
+        && agentMovementStackBoundaryHardeningSummary?.detectedViolationsTotal == agentMovementStackBoundaryHardeningSummary?.expectedViolationsTotal
+        && agentMovementStackBoundaryHardeningSummary?.missedViolations == 0
+        && agentMovementStackBoundaryHardeningSummary?.falsePositiveViolations == 0
+        && agentMovementStackBoundaryHardeningSummary?.requiredLayersAudited == true
+        && agentMovementStackBoundaryHardeningSummary?.policyVersionsAudited == true
+        && agentMovementStackBoundaryHardeningSummary?.feedbackContractAudited == true
+        && agentMovementStackBoundaryHardeningSummary?.firstStepContractAudited == true
+        && agentMovementStackBoundaryHardeningSummary?.routeContractAudited == true
+        && agentMovementStackBoundaryHardeningSummary?.boundaryFlagsAudited == true
+        && agentMovementStackBoundaryHardeningSummary?.v4ReservedOnlyEnforced == true
+        && agentMovementStackBoundaryHardeningSummary?.noRuntimeDangerExecuted == true
+        && agentMovementStackBoundaryHardeningSummary?.fixtureOnlyAudit == true
+        && agentMovementStackBoundaryHardeningSummary?.deterministicCaseOrder == true
+        && agentMovementStackBoundaryHardeningSummary?.deterministicViolationOrder == true
+        && agentMovementStackBoundaryHardeningSummary?.deterministicDigest == true
+        && agentMovementStackBoundaryHardeningSummary?.digestsEqual == true
+        && agentMovementStackBoundaryHardeningSummary?.repeatabilityFailures == 0
+        && agentMovementStackBoundaryHardeningSummary?.baselineScenarioStillPasses == true
+        && agentMovementStackBoundaryHardeningSummary?.runtimeWorldRead == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimeCollisionRead == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimeTickWorldReadOnlyUsed == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimeTickReadCollision == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimeRouteFollowingUsed == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimeFullRouteExecutionUsed == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimePersistentRouteCommitmentUsed == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimeAdvisoryStepsApplied == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimeSecondStepAutoApplied == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimePathfindingLiveUsed == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimeUnboundedSearchUsed == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimeDynamicReplanningUsed == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimeReservationRuntimeUsed == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimeMemoryUpdated == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimeGoalChanged == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimeTerrainMutated == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimeWorldMutated == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimeCoreEntityMoved == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimePhysicalPlaceholderMoved == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimeMutationPerformed == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimeRendererTouched == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimeResourcesTouched == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimeRegistriesTouched == false
+        && agentMovementStackBoundaryHardeningSummary?.runtimeGoldensTouched == false)
+    : nil
 let multiTickClosedLoopReport = isMultiTickClosedLoopFixtureScenario
     ? makeMultiTickClosedLoopFixtureReport(
         scenario: options.scenario,
@@ -3752,6 +3825,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (boundedPathPlanningApprovedApplicationSuccess ?? true)
     && (boundedPathPlanningMultiTickReplaySuccess ?? true)
     && (agentMovementStackContractSuccess ?? true)
+    && (agentMovementStackBoundaryHardeningSuccess ?? true)
     && (multiTickClosedLoopSuccess ?? true)
     && (multiTickClosedLoopHardeningSuccess ?? true)
     && (multiTickClosedLoopLiveReadonlySuccess ?? true)
@@ -5645,6 +5719,36 @@ if options.outPath != nil {
                 replanningPerformed: summary.dynamicReplanningUsed
             ))
         }
+        if let agentMovementStackBoundaryHardeningReport {
+            let summary = agentMovementStackBoundaryHardeningReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_agent_movement_stack_boundary_hardening_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                seed: options.seed,
+                success: agentMovementStackBoundaryHardeningSuccess,
+                count: summary.cases,
+                fixtures: summary.validCases,
+                passed: summary.casesPassed,
+                failed: summary.casesFailed,
+                candidates: summary.negativeCases,
+                decisions: summary.detectedViolationsTotal,
+                hiddenActivationDetected: false,
+                repeatabilityChecks: summary.digestsEqual ? 1 : 0,
+                repeatabilityFailures: summary.repeatabilityFailures,
+                routeFollowingUsed: summary.runtimeRouteFollowingUsed,
+                tickReadCollision: summary.runtimeTickReadCollision,
+                worldUsed: summary.runtimeWorldRead || summary.runtimeTickWorldReadOnlyUsed,
+                collisionRead: summary.runtimeCollisionRead || summary.runtimeTickReadCollision,
+                movementApplied: false,
+                memoryUpdated: summary.runtimeMemoryUpdated,
+                goalChanged: summary.runtimeGoalChanged,
+                reservationRuntimeUsed: summary.runtimeReservationRuntimeUsed,
+                mutationPerformed: summary.runtimeMutationPerformed,
+                pathfindingPerformed: summary.runtimePathfindingLiveUsed,
+                replanningPerformed: summary.runtimeDynamicReplanningUsed
+            ))
+        }
         if let multiTickClosedLoopReport {
             let summary = multiTickClosedLoopReport.summary
             try appendEvent(RunEvent(
@@ -7173,6 +7277,38 @@ if let outPath = options.outPath {
             try writeJSON(
                 agentMovementStackContractInvariantReport,
                 to: outURL.appendingPathComponent("agent_movement_stack_contract_invariant_report.json")
+            )
+        }
+        if let agentMovementStackBoundaryHardeningReport {
+            try writeJSON(
+                agentMovementStackBoundaryHardeningReport,
+                to: outURL.appendingPathComponent("agent_movement_stack_boundary_hardening_report.json")
+            )
+            try writeJSON(
+                agentMovementStackBoundaryHardeningReport.cases,
+                to: outURL.appendingPathComponent("agent_movement_stack_boundary_hardening_cases.json")
+            )
+            try writeJSON(
+                agentMovementStackBoundaryHardeningReport.negativeSamples,
+                to: outURL.appendingPathComponent("agent_movement_stack_boundary_hardening_negative_samples.json")
+            )
+            try writeJSON(
+                agentMovementStackBoundaryHardeningReport.audits,
+                to: outURL.appendingPathComponent("agent_movement_stack_boundary_hardening_audits.json")
+            )
+            try writeJSON(
+                agentMovementStackBoundaryHardeningReport.boundary,
+                to: outURL.appendingPathComponent("agent_movement_stack_boundary_hardening_boundary.json")
+            )
+            try writeJSON(
+                agentMovementStackBoundaryHardeningReport.digest,
+                to: outURL.appendingPathComponent("agent_movement_stack_boundary_hardening_digest.json")
+            )
+        }
+        if let agentMovementStackBoundaryHardeningInvariantReport {
+            try writeJSON(
+                agentMovementStackBoundaryHardeningInvariantReport,
+                to: outURL.appendingPathComponent("agent_movement_stack_boundary_hardening_invariant_report.json")
             )
         }
         if let multiTickClosedLoopReport {
@@ -9135,7 +9271,15 @@ if let outPath = options.outPath {
             routeFollowingLiveHardeningSuccess: routeFollowingLiveHardeningSuccess,
             successCriteria: successCriteria
         )
-        if let agentMovementStackContractReport {
+        if let agentMovementStackBoundaryHardeningReport {
+            try writeJSON(
+                makeAgentMovementStackBoundaryHardeningMetrics(
+                    report: agentMovementStackBoundaryHardeningReport,
+                    success: agentMovementStackBoundaryHardeningSuccess
+                ),
+                to: outURL.appendingPathComponent("metrics.json")
+            )
+        } else if let agentMovementStackContractReport {
             try writeJSON(
                 makeAgentMovementStackContractMetrics(
                     report: agentMovementStackContractReport,

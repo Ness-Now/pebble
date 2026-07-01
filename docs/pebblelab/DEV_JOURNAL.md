@@ -9738,3 +9738,82 @@ feedback records consumed, equal digests, and all boundary-forbidden flags
 false. The invariant report shows 97 passed and 0 failed.
 
 Next step: Phase 4.28C — Stack Contract Boundary Hardening.
+
+## 2026-07-02 — Phase 4.28C agent movement stack boundary hardening smoke
+
+Objective: add `agent_movement_stack_contract_boundary_hardening_smoke`, a
+fixture-only and audit-only hardening scenario for the 4.28B stack contract.
+The scenario proves that malformed stack records and forbidden boundary flags
+are rejected deterministically while the valid 4.28B baseline remains
+accepted.
+
+Starting point: 4.28B represented the conceptual AgentMovementStack with 11
+layers, opt-in v0/v1/v2/v3 evidence, reserved-only v4 metadata, first-step-only
+handoff, lab-map-only application, feedback N to N+1, and clean boundary
+flags.
+
+Hardening fixture-only/audit-only design: negative samples are synthetic data
+records. They represent forbidden states such as World reads, route following,
+or Core movement without executing those behaviors. The runtime boundary flags
+therefore remain false for the scenario itself.
+
+Negative samples covered:
+
+- missing, duplicate, out-of-order, disabled, malformed, and dirty layers;
+- missing v0/v3, duplicate policy version, global activation, hidden
+  activation, v4 execution, and v4 no-longer-reserved states;
+- same-tick, future, and cross-agent feedback leaks;
+- advisory steps sent/applied, second-step auto-application, persistent route
+  commitment, full-route execution, and route following;
+- World/collision reads, tick World/collision reads, live pathfinding,
+  unbounded search, dynamic replanning, reservation runtime, memory/goals,
+  terrain/World mutation, Core entity movement, physical placeholder movement,
+  renderer/resource/registry/golden touches.
+
+Results: 42 cases ran, 42 passed, 0 failed. The scenario accepted 1 valid
+baseline sample, rejected 41 negative samples, detected 41 expected violations,
+missed 0 violations, and produced 0 false positives. Digest repeatability is
+true and the baseline 4.28B stack contract remains green.
+
+Outputs, invariants, metrics, and event:
+
+- `agent_movement_stack_boundary_hardening_report.json`;
+- `agent_movement_stack_boundary_hardening_invariant_report.json`;
+- `agent_movement_stack_boundary_hardening_cases.json`;
+- `agent_movement_stack_boundary_hardening_negative_samples.json`;
+- `agent_movement_stack_boundary_hardening_audits.json`;
+- `agent_movement_stack_boundary_hardening_boundary.json`;
+- `agent_movement_stack_boundary_hardening_digest.json`;
+- `agentMovementStackBoundaryHardening*` metrics;
+- `lab_agent_movement_stack_boundary_hardening_recorded` event.
+
+Boundary confirmations: no World/collision live read, no route following, no
+full-route execution, no Core entity movement, no physical placeholder
+movement, no memory/goals, no reservation runtime, no terrain/World mutation,
+and no renderer/resource/registry/golden touch occurred at runtime.
+
+Validation commands:
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario agent_movement_stack_contract_boundary_hardening_smoke --seed 42 --ticks 0 --out runs/check_agent_movement_stack_boundary_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_movement_stack_contract_fixture_smoke --seed 42 --ticks 3 --out runs/check_stack_contract_fixture_after_boundary_hardening`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_fixture_smoke --seed 42 --ticks 0 --out runs/check_bounded_path_fixture_after_stack_boundary_hardening`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_multi_tick_replay_smoke --seed 42 --ticks 3 --out runs/check_bounded_path_multi_tick_replay_after_stack_boundary_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_consolidation_fixture_smoke --seed 42 --ticks 0 --out runs/check_policy_consolidation_fixture_after_stack_boundary_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_boundary_hardening_smoke --seed 42 --ticks 0 --out runs/check_policy_boundary_hardening_after_stack_boundary_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_consolidated_replay_regression_smoke --seed 42 --ticks 3 --out runs/check_policy_consolidated_replay_after_stack_boundary_hardening`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_multi_tick_replay_smoke --seed 42 --ticks 3 --out runs/check_alternate_local_hint_multi_tick_replay_after_stack_boundary_hardening`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_approved_application_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_approved_application_after_stack_boundary_hardening`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_hardening_after_stack_boundary_hardening`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_stack_boundary_hardening`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+Results: `swift build` passed. Local debug scenario validation passed with 116
+invariant checks passed and 0 failed. Release validation remains best-effort in
+this environment because production builds can stall without additional log
+output.
+
+Next step: Phase 4.28D — Stack Replay Regression Adapter.

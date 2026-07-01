@@ -700,3 +700,72 @@ Limits:
 - route following and full-route execution remain out of scope.
 
 Next step: Phase 4.28C — Stack Contract Boundary Hardening.
+
+## Phase 4.28C Implementation Status
+
+Phase 4.28C added
+`agent_movement_stack_contract_boundary_hardening_smoke`, a fixture-only and
+audit-only hardening scenario for the stack contract introduced in 4.28B.
+
+Boundary hardening smoke:
+
+- accepts the valid 4.28B baseline stack contract;
+- rejects synthetic negative samples;
+- treats forbidden behaviors as data for audit, not as runtime behavior to
+  execute;
+- keeps the runner fixture-only with no World creation.
+
+Negative samples:
+
+- missing, duplicate, out-of-order, disabled, malformed, and dirty layer
+  records;
+- missing v0/v3 policy records, duplicate policy versions, global activation,
+  hidden activation, v4 execution, and v4 not reserved-only;
+- same-tick, future, and cross-agent feedback leaks;
+- advisory steps sent/applied, second-step auto-application, persistent route
+  commitment, full-route execution, and route following;
+- World/collision reads, tick World/collision reads, live pathfinding,
+  unbounded search, dynamic replanning, reservation runtime, memory/goals,
+  terrain/World mutation, Core entity movement, physical placeholder movement,
+  renderer/resource/registry/golden touches.
+
+Validation summary:
+
+- cases = 42;
+- cases passed = 42;
+- cases failed = 0;
+- valid baseline accepted = true;
+- all negative samples rejected = true;
+- expected violations total = 41;
+- detected violations total = 41;
+- missed violations = 0;
+- false positive violations = 0;
+- v4 reserved-only enforcement = true;
+- no runtime danger executed = true;
+- fixture-only audit = true;
+- digest repeatability = true;
+- baseline stack contract remains green.
+
+Outputs produced:
+
+- `agent_movement_stack_boundary_hardening_report.json`;
+- `agent_movement_stack_boundary_hardening_invariant_report.json`;
+- `agent_movement_stack_boundary_hardening_cases.json`;
+- `agent_movement_stack_boundary_hardening_negative_samples.json`;
+- `agent_movement_stack_boundary_hardening_audits.json`;
+- `agent_movement_stack_boundary_hardening_boundary.json`;
+- `agent_movement_stack_boundary_hardening_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Limits:
+
+- no World or live collision reads are executed;
+- no route following, full-route execution, persistent route commitment, or
+  second-step auto-application is executed;
+- no Core entity or physical placeholder movement is executed;
+- no memory/goals/reservation runtime is used;
+- no terrain/World mutation occurs;
+- renderer, resources, registries, and goldens remain untouched.
+
+Next step: Phase 4.28D — Stack Replay Regression Adapter.
