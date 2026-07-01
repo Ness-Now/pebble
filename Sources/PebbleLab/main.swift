@@ -68,6 +68,8 @@ let isAlternateLocalHintApprovedApplicationScenario = options.scenario
     == "alternate_local_hint_approved_application_smoke"
 let isAlternateLocalHintMultiTickReplayScenario = options.scenario
     == "alternate_local_hint_multi_tick_replay_smoke"
+let isAgentMovementPolicyConsolidationFixtureScenario = options.scenario
+    == "agent_movement_policy_consolidation_fixture_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -96,7 +98,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isAlternateLocalHintHardeningScenario
     || isAlternateLocalHintLiveReadonlyScenario
     || isAlternateLocalHintApprovedApplicationScenario
-    || isAlternateLocalHintMultiTickReplayScenario)
+    || isAlternateLocalHintMultiTickReplayScenario
+    || isAgentMovementPolicyConsolidationFixtureScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -754,7 +757,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isMultiTickClosedLoopHardeningScenario
     || isMultiTickClosedLoopLiveReadonlyScenario
     || isMultiTickClosedLoopApprovedApplicationScenario
-    || isAlternateLocalHintMultiTickReplayScenario {
+    || isAlternateLocalHintMultiTickReplayScenario
+    || isAgentMovementPolicyConsolidationFixtureScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -2610,6 +2614,68 @@ let alternateLocalHintMultiTickReplaySuccess = isAlternateLocalHintMultiTickRepl
         && alternateLocalHintMultiTickReplaySummary?.worldMutated == false
         && alternateLocalHintMultiTickReplaySummary?.mutationPerformed == false)
     : nil
+let agentMovementPolicyConsolidationReport = isAgentMovementPolicyConsolidationFixtureScenario
+    ? makeAgentMovementPolicyConsolidationReport(
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let agentMovementPolicyConsolidationInvariantReport = isAgentMovementPolicyConsolidationFixtureScenario
+    ? makeAgentMovementPolicyConsolidationInvariantReport(
+        report: agentMovementPolicyConsolidationReport,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let agentMovementPolicyConsolidationSignatures = agentMovementPolicyConsolidationReport.map {
+    makeAgentMovementPolicyConsolidationSignatures(report: $0)
+}
+let agentMovementPolicyConsolidationSummary = agentMovementPolicyConsolidationReport?.summary
+let agentMovementPolicyConsolidationSuccess = isAgentMovementPolicyConsolidationFixtureScenario
+    ? ((agentMovementPolicyConsolidationReport?.success ?? false)
+        && (agentMovementPolicyConsolidationInvariantReport?.success ?? false)
+        && agentMovementPolicyConsolidationSummary?.contexts == 8
+        && agentMovementPolicyConsolidationSummary?.policyVersions == 3
+        && agentMovementPolicyConsolidationSummary?.signaturesCompared == 24
+        && agentMovementPolicyConsolidationSummary?.signaturesMatched == 24
+        && agentMovementPolicyConsolidationSummary?.signatureMismatches == 0
+        && agentMovementPolicyConsolidationSummary?.v0SignatureMismatches == 0
+        && agentMovementPolicyConsolidationSummary?.v1SignatureMismatches == 0
+        && agentMovementPolicyConsolidationSummary?.v2SignatureMismatches == 0
+        && agentMovementPolicyConsolidationSummary?.v0Unchanged == true
+        && agentMovementPolicyConsolidationSummary?.v1Unchanged == true
+        && agentMovementPolicyConsolidationSummary?.v2OptIn == true
+        && agentMovementPolicyConsolidationSummary?.v2NotGlobal == true
+        && agentMovementPolicyConsolidationSummary?.hiddenActivationDetected == false
+        && (agentMovementPolicyConsolidationSummary?.noFeedbackBaseline ?? 0) >= 1
+        && (agentMovementPolicyConsolidationSummary?.approvedFeedbackBaseline ?? 0) >= 1
+        && (agentMovementPolicyConsolidationSummary?.movedFeedbackBaseline ?? 0) >= 1
+        && (agentMovementPolicyConsolidationSummary?.blockedFeedbackNoIntentV1 ?? 0) >= 2
+        && (agentMovementPolicyConsolidationSummary?.blockedFeedbackAlternateV2 ?? 0) >= 2
+        && (agentMovementPolicyConsolidationSummary?.emptyHintNoIntent ?? 0) >= 1
+        && (agentMovementPolicyConsolidationSummary?.unknownHintNoIntent ?? 0) >= 1
+        && (agentMovementPolicyConsolidationSummary?.candidatesProduced ?? 0) >= 4
+        && (agentMovementPolicyConsolidationSummary?.candidatesSelected ?? 0) >= 2
+        && agentMovementPolicyConsolidationSummary?.maxAlternates == 2
+        && agentMovementPolicyConsolidationSummary?.bounded == true
+        && agentMovementPolicyConsolidationSummary?.policyReadCollision == false
+        && agentMovementPolicyConsolidationSummary?.policyWorldUsed == false
+        && agentMovementPolicyConsolidationSummary?.tickReadCollision == false
+        && agentMovementPolicyConsolidationSummary?.tickWorldReadOnlyUsed == false
+        && agentMovementPolicyConsolidationSummary?.movementApplied == false
+        && agentMovementPolicyConsolidationSummary?.worldMutated == false
+        && agentMovementPolicyConsolidationSummary?.terrainMutated == false
+        && agentMovementPolicyConsolidationSummary?.coreEntityMoved == false
+        && agentMovementPolicyConsolidationSummary?.physicalPlaceholderMoved == false
+        && agentMovementPolicyConsolidationSummary?.pathfindingPerformed == false
+        && agentMovementPolicyConsolidationSummary?.replanningPerformed == false
+        && agentMovementPolicyConsolidationSummary?.avoidancePerformed == false
+        && agentMovementPolicyConsolidationSummary?.reservationRuntimeUsed == false
+        && agentMovementPolicyConsolidationSummary?.routeFollowingUsed == false
+        && agentMovementPolicyConsolidationSummary?.memoryUpdated == false
+        && agentMovementPolicyConsolidationSummary?.goalChanged == false
+        && agentMovementPolicyConsolidationSummary?.mutationPerformed == false)
+    : nil
 let multiTickClosedLoopReport = isMultiTickClosedLoopFixtureScenario
     ? makeMultiTickClosedLoopFixtureReport(
         scenario: options.scenario,
@@ -3239,6 +3305,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (alternateLocalHintLiveReadonlySuccess ?? true)
     && (alternateLocalHintApprovedApplicationSuccess ?? true)
     && (alternateLocalHintMultiTickReplaySuccess ?? true)
+    && (agentMovementPolicyConsolidationSuccess ?? true)
     && (multiTickClosedLoopSuccess ?? true)
     && (multiTickClosedLoopHardeningSuccess ?? true)
     && (multiTickClosedLoopLiveReadonlySuccess ?? true)
@@ -4644,6 +4711,63 @@ if options.outPath != nil {
                 replanningPerformed: summary.replanningPerformed
             ))
         }
+        if let agentMovementPolicyConsolidationReport {
+            let summary = agentMovementPolicyConsolidationReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_agent_movement_policy_consolidation_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: agentMovementPolicyConsolidationSuccess,
+                candidatesProduced: summary.candidatesProduced,
+                candidatesSelected: summary.candidatesSelected,
+                maxAlternates: summary.maxAlternates,
+                bounded: summary.bounded,
+                noFeedbackBaseline: summary.noFeedbackBaseline,
+                approvedFeedbackBaseline: summary.approvedFeedbackBaseline,
+                movedFeedbackBaseline: summary.movedFeedbackBaseline,
+                unknownHintNoAlternate: summary.unknownHintNoIntent,
+                emptyHintNoAlternate: summary.emptyHintNoIntent,
+                v0Unchanged: summary.v0Unchanged,
+                v1Unchanged: summary.v1Unchanged,
+                v2OptIn: summary.v2OptIn,
+                v2NotGlobal: summary.v2NotGlobal,
+                hiddenActivationDetected: summary.hiddenActivationDetected,
+                policyVersions: summary.policyVersions,
+                directDecisions: summary.directDecisions,
+                consolidatedDecisions: summary.consolidatedDecisions,
+                signaturesCompared: summary.signaturesCompared,
+                signaturesMatched: summary.signaturesMatched,
+                signatureMismatches: summary.signatureMismatches,
+                v0Contexts: summary.v0Contexts,
+                v1Contexts: summary.v1Contexts,
+                v2Contexts: summary.v2Contexts,
+                v0SignatureMismatches: summary.v0SignatureMismatches,
+                v1SignatureMismatches: summary.v1SignatureMismatches,
+                v2SignatureMismatches: summary.v2SignatureMismatches,
+                blockedFeedbackNoIntentV1: summary.blockedFeedbackNoIntentV1,
+                blockedFeedbackAlternateV2: summary.blockedFeedbackAlternateV2,
+                terrainMutated: summary.terrainMutated,
+                coreEntityMoved: summary.coreEntityMoved,
+                physicalPlaceholderMoved: summary.physicalPlaceholderMoved,
+                contexts: summary.contexts,
+                policyReadCollision: summary.policyReadCollision,
+                policyWorldUsed: summary.policyWorldUsed,
+                tickWorldReadOnlyUsed: summary.tickWorldReadOnlyUsed,
+                worldMutated: summary.worldMutated,
+                routeFollowingUsed: summary.routeFollowingUsed,
+                tickReadCollision: summary.tickReadCollision,
+                worldUsed: summary.policyWorldUsed || summary.tickWorldReadOnlyUsed,
+                collisionRead: summary.policyReadCollision || summary.tickReadCollision,
+                movementApplied: summary.movementApplied,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                avoidancePerformed: summary.avoidancePerformed,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
+                replanningPerformed: summary.replanningPerformed
+            ))
+        }
         if let multiTickClosedLoopReport {
             let summary = multiTickClosedLoopReport.summary
             try appendEvent(RunEvent(
@@ -5846,6 +5970,28 @@ if let outPath = options.outPath {
             try writeJSON(
                 alternateLocalHintMultiTickReplayInvariantReport,
                 to: outURL.appendingPathComponent("alternate_local_hint_multi_tick_replay_invariant_report.json")
+            )
+        }
+        if let agentMovementPolicyConsolidationReport {
+            try writeJSON(
+                agentMovementPolicyConsolidationReport,
+                to: outURL.appendingPathComponent("agent_movement_policy_consolidation_report.json")
+            )
+            try writeJSON(
+                agentMovementPolicyConsolidationReport.decisions,
+                to: outURL.appendingPathComponent("agent_movement_policy_consolidation_decisions.json")
+            )
+        }
+        if let agentMovementPolicyConsolidationSignatures {
+            try writeJSON(
+                agentMovementPolicyConsolidationSignatures,
+                to: outURL.appendingPathComponent("agent_movement_policy_consolidation_signatures.json")
+            )
+        }
+        if let agentMovementPolicyConsolidationInvariantReport {
+            try writeJSON(
+                agentMovementPolicyConsolidationInvariantReport,
+                to: outURL.appendingPathComponent("agent_movement_policy_consolidation_invariant_report.json")
             )
         }
         if let multiTickClosedLoopReport {
@@ -7288,6 +7434,56 @@ if let outPath = options.outPath {
             alternateLocalHintMultiTickReplayWorldMutated: alternateLocalHintMultiTickReplayReport?.summary.worldMutated,
             alternateLocalHintMultiTickReplayMutationPerformed: alternateLocalHintMultiTickReplayReport?.summary.mutationPerformed,
             alternateLocalHintMultiTickReplaySuccess: alternateLocalHintMultiTickReplaySuccess,
+            agentMovementPolicyConsolidationContexts: agentMovementPolicyConsolidationReport?.summary.contexts,
+            agentMovementPolicyConsolidationPolicyVersions: agentMovementPolicyConsolidationReport?.summary.policyVersions,
+            agentMovementPolicyConsolidationDirectDecisions: agentMovementPolicyConsolidationReport?.summary.directDecisions,
+            agentMovementPolicyConsolidationConsolidatedDecisions: agentMovementPolicyConsolidationReport?.summary.consolidatedDecisions,
+            agentMovementPolicyConsolidationSignaturesCompared: agentMovementPolicyConsolidationReport?.summary.signaturesCompared,
+            agentMovementPolicyConsolidationSignaturesMatched: agentMovementPolicyConsolidationReport?.summary.signaturesMatched,
+            agentMovementPolicyConsolidationSignatureMismatches: agentMovementPolicyConsolidationReport?.summary.signatureMismatches,
+            agentMovementPolicyConsolidationV0Contexts: agentMovementPolicyConsolidationReport?.summary.v0Contexts,
+            agentMovementPolicyConsolidationV1Contexts: agentMovementPolicyConsolidationReport?.summary.v1Contexts,
+            agentMovementPolicyConsolidationV2Contexts: agentMovementPolicyConsolidationReport?.summary.v2Contexts,
+            agentMovementPolicyConsolidationV0SignaturesCompared: agentMovementPolicyConsolidationReport?.summary.v0SignaturesCompared,
+            agentMovementPolicyConsolidationV1SignaturesCompared: agentMovementPolicyConsolidationReport?.summary.v1SignaturesCompared,
+            agentMovementPolicyConsolidationV2SignaturesCompared: agentMovementPolicyConsolidationReport?.summary.v2SignaturesCompared,
+            agentMovementPolicyConsolidationV0SignatureMismatches: agentMovementPolicyConsolidationReport?.summary.v0SignatureMismatches,
+            agentMovementPolicyConsolidationV1SignatureMismatches: agentMovementPolicyConsolidationReport?.summary.v1SignatureMismatches,
+            agentMovementPolicyConsolidationV2SignatureMismatches: agentMovementPolicyConsolidationReport?.summary.v2SignatureMismatches,
+            agentMovementPolicyConsolidationNoFeedbackBaseline: agentMovementPolicyConsolidationReport?.summary.noFeedbackBaseline,
+            agentMovementPolicyConsolidationApprovedFeedbackBaseline: agentMovementPolicyConsolidationReport?.summary.approvedFeedbackBaseline,
+            agentMovementPolicyConsolidationMovedFeedbackBaseline: agentMovementPolicyConsolidationReport?.summary.movedFeedbackBaseline,
+            agentMovementPolicyConsolidationBlockedFeedbackNoIntentV1: agentMovementPolicyConsolidationReport?.summary.blockedFeedbackNoIntentV1,
+            agentMovementPolicyConsolidationBlockedFeedbackAlternateV2: agentMovementPolicyConsolidationReport?.summary.blockedFeedbackAlternateV2,
+            agentMovementPolicyConsolidationEmptyHintNoIntent: agentMovementPolicyConsolidationReport?.summary.emptyHintNoIntent,
+            agentMovementPolicyConsolidationUnknownHintNoIntent: agentMovementPolicyConsolidationReport?.summary.unknownHintNoIntent,
+            agentMovementPolicyConsolidationCandidatesProduced: agentMovementPolicyConsolidationReport?.summary.candidatesProduced,
+            agentMovementPolicyConsolidationCandidatesSelected: agentMovementPolicyConsolidationReport?.summary.candidatesSelected,
+            agentMovementPolicyConsolidationMaxAlternates: agentMovementPolicyConsolidationReport?.summary.maxAlternates,
+            agentMovementPolicyConsolidationBounded: agentMovementPolicyConsolidationReport?.summary.bounded,
+            agentMovementPolicyConsolidationV0Unchanged: agentMovementPolicyConsolidationReport?.summary.v0Unchanged,
+            agentMovementPolicyConsolidationV1Unchanged: agentMovementPolicyConsolidationReport?.summary.v1Unchanged,
+            agentMovementPolicyConsolidationV2OptIn: agentMovementPolicyConsolidationReport?.summary.v2OptIn,
+            agentMovementPolicyConsolidationV2NotGlobal: agentMovementPolicyConsolidationReport?.summary.v2NotGlobal,
+            agentMovementPolicyConsolidationHiddenActivationDetected: agentMovementPolicyConsolidationReport?.summary.hiddenActivationDetected,
+            agentMovementPolicyConsolidationPolicyReadCollision: agentMovementPolicyConsolidationReport?.summary.policyReadCollision,
+            agentMovementPolicyConsolidationPolicyWorldUsed: agentMovementPolicyConsolidationReport?.summary.policyWorldUsed,
+            agentMovementPolicyConsolidationTickReadCollision: agentMovementPolicyConsolidationReport?.summary.tickReadCollision,
+            agentMovementPolicyConsolidationTickWorldReadOnlyUsed: agentMovementPolicyConsolidationReport?.summary.tickWorldReadOnlyUsed,
+            agentMovementPolicyConsolidationMovementApplied: agentMovementPolicyConsolidationReport?.summary.movementApplied,
+            agentMovementPolicyConsolidationWorldMutated: agentMovementPolicyConsolidationReport?.summary.worldMutated,
+            agentMovementPolicyConsolidationTerrainMutated: agentMovementPolicyConsolidationReport?.summary.terrainMutated,
+            agentMovementPolicyConsolidationCoreEntityMoved: agentMovementPolicyConsolidationReport?.summary.coreEntityMoved,
+            agentMovementPolicyConsolidationPhysicalPlaceholderMoved: agentMovementPolicyConsolidationReport?.summary.physicalPlaceholderMoved,
+            agentMovementPolicyConsolidationPathfindingPerformed: agentMovementPolicyConsolidationReport?.summary.pathfindingPerformed,
+            agentMovementPolicyConsolidationReplanningPerformed: agentMovementPolicyConsolidationReport?.summary.replanningPerformed,
+            agentMovementPolicyConsolidationAvoidancePerformed: agentMovementPolicyConsolidationReport?.summary.avoidancePerformed,
+            agentMovementPolicyConsolidationReservationRuntimeUsed: agentMovementPolicyConsolidationReport?.summary.reservationRuntimeUsed,
+            agentMovementPolicyConsolidationRouteFollowingUsed: agentMovementPolicyConsolidationReport?.summary.routeFollowingUsed,
+            agentMovementPolicyConsolidationMemoryUpdated: agentMovementPolicyConsolidationReport?.summary.memoryUpdated,
+            agentMovementPolicyConsolidationGoalChanged: agentMovementPolicyConsolidationReport?.summary.goalChanged,
+            agentMovementPolicyConsolidationMutationPerformed: agentMovementPolicyConsolidationReport?.summary.mutationPerformed,
+            agentMovementPolicyConsolidationSuccess: agentMovementPolicyConsolidationSuccess,
             multiTickClosedLoopTicks: multiTickClosedLoopReport?.summary.executedTicks,
             multiTickClosedLoopAgents: multiTickClosedLoopReport?.summary.agents,
             multiTickClosedLoopContextsTotal: multiTickClosedLoopReport?.summary.contextsTotal,

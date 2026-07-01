@@ -634,3 +634,54 @@ Recommended contract:
 - core entity movement;
 - physical placeholder movement;
 - autonomous gameplay loop.
+
+## Phase 4.26B Implementation Status
+
+Phase 4.26B implemented the first consolidation fixture smoke without changing
+policy behavior.
+
+Validated status:
+
+- added `agent_movement_policy_consolidation_fixture_smoke`;
+- added a fixture-only consolidated adapter/report layer;
+- compared direct v0 policy output with `.baselineV0` consolidated output;
+- compared direct v1 policy output with `.feedbackAwareV1` consolidated
+  output;
+- compared direct v2 policy output with `.alternateLocalHintV2` consolidated
+  output;
+- used eight deterministic contexts and three explicit policy versions;
+- compared twenty-four direct signatures with twenty-four consolidated
+  signatures;
+- observed zero signature mismatches;
+- preserved v0 behavior;
+- preserved v1 behavior;
+- kept v2 explicit opt-in and not global;
+- detected no hidden activation;
+- kept `maxAlternates = 2`;
+- kept bounded alternate candidates deterministic;
+- kept empty and unknown hints as noIntent;
+- kept policy World/collision reads false;
+- did not invoke tick live paths;
+- did not apply movement;
+- did not update memory or goals;
+- did not perform pathfinding, replanning, avoidance, reservation runtime, or
+  route following;
+- did not mutate terrain or World.
+
+Outputs produced:
+
+- `agent_movement_policy_consolidation_report.json`;
+- `agent_movement_policy_consolidation_invariant_report.json`;
+- `agent_movement_policy_consolidation_decisions.json`;
+- `agent_movement_policy_consolidation_signatures.json`;
+- `agentMovementPolicyConsolidation*` metrics;
+- `lab_agent_movement_policy_consolidation_recorded` event.
+
+Limits:
+
+- the scenario is a fixture-only adapter/report smoke;
+- it does not consolidate runtime behavior;
+- it does not introduce pathfinding, planning, route following, memory, goals,
+  collision reads, World reads, movement application, or mutation.
+
+Next step: Phase 4.26C — Policy Boundary Hardening.

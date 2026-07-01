@@ -8640,3 +8640,112 @@ World/collision/pathfinding/replanning/avoidance/reservation/route following.
 ### Next Step
 
 Phase 4.26B — Agent Movement Policy Consolidation Fixture Smoke.
+
+## 2026-07-01 — Phase 4.26B agent movement policy consolidation fixture smoke
+
+### Objective
+
+Implement a fixture-only, no-behavior-change consolidation smoke for the agent
+movement policy stack. The scenario compares direct v0, v1, and v2 policy calls
+with an explicit consolidated adapter and fails if any stable signatures drift.
+
+### Starting Point
+
+4.26A documented the consolidation boundary after validated v0 baseline intent
+production, opt-in feedback-aware v1, opt-in alternate local hint v2,
+multi-tick replay, and lab-map-only approved application. The policy stack was
+validated, but no unified adapter/report proved the direct policy outputs could
+be represented without changing behavior.
+
+### Why No-Behavior-Change
+
+This phase intentionally adds a reporting adapter only. It does not change
+`produceAgentIntentProposalV0`, `produceAgentIntentProposalFeedbackAwareV1`, or
+`produceAgentIntentProposalWithAlternateLocalHintsV2`. It does not make v2
+implicit, replace v0/v1 globally, call tick movement, read collision, read
+World, or apply movement.
+
+### Files Created/Modified
+
+- `Sources/PebbleLab/LabAgentMovementPolicyConsolidation.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_AGENT_MOVEMENT_POLICY_CONSOLIDATION_PLAN.md`
+
+### Adapter And Signatures
+
+The scenario `agent_movement_policy_consolidation_fixture_smoke` builds eight
+deterministic contexts covering no feedback, unknown hints, approved feedback,
+moved feedback, blocked conflicts, blocked collision, empty hints, and unknown
+blocked hints. It runs three explicit policy versions for each context:
+
+- v0 direct vs `.baselineV0` consolidated;
+- v1 direct vs `.feedbackAwareV1` consolidated;
+- v2 direct vs `.alternateLocalHintV2` consolidated.
+
+Each comparison records direct and consolidated stable signatures containing
+agent id, tick, decision, reason, intent edge, selected hint, and alternate
+candidates where relevant.
+
+### Expected Results
+
+- contexts: 8;
+- policy versions: 3;
+- direct decisions: 24;
+- consolidated decisions: 24;
+- signatures compared: 24;
+- signatures matched: 24;
+- signature mismatches: 0;
+- v0/v1/v2 signature mismatches: 0;
+- v0 unchanged, v1 unchanged, v2 opt-in, v2 not global;
+- hidden activation false;
+- blocked v1 contexts become noIntent;
+- blocked v2 known hints produce bounded alternates;
+- empty/unknown hints remain noIntent;
+- max alternates remains 2.
+
+### Boundary Flags
+
+The report asserts no World, no policy collision read, no tick collision read,
+no tick live path, no movement application, no terrain/world mutation, no core
+entity movement, no physical placeholder movement, no memory/goals, no
+pathfinding, no replanning, no avoidance, no reservation runtime, no route
+following, no learning, no LLM/RL/Python, no social behavior, and no
+communication.
+
+### Outputs, Metrics, And Event
+
+The scenario writes:
+
+- `agent_movement_policy_consolidation_report.json`;
+- `agent_movement_policy_consolidation_invariant_report.json`;
+- `agent_movement_policy_consolidation_decisions.json`;
+- `agent_movement_policy_consolidation_signatures.json`;
+- `agentMovementPolicyConsolidation*` metrics;
+- one aggregate `lab_agent_movement_policy_consolidation_recorded` event.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_consolidation_fixture_smoke --seed 42 --ticks 0 --out runs/check_agent_movement_policy_consolidation_fixture`
+- required 4.26B non-regression PebbleLab scenarios
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+Implementation added the no-behavior-change fixture, report, invariant report,
+decisions/signatures JSON, metrics, and event. Validation results are recorded
+in the 4.26B commit notes.
+
+### Next Step
+
+Phase 4.26C — Policy Boundary Hardening.

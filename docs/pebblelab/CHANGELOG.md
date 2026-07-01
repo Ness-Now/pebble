@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added agent movement policy consolidation fixture smoke.
 - Documented PebbleLab agent movement policy consolidation plan.
 - Added alternate local hint multi-tick replay smoke.
 - Added alternate local hint approved application smoke.

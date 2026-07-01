@@ -194,6 +194,25 @@ struct RunEvent: Encodable {
     let v0Unchanged: Bool?
     let v1Unchanged: Bool?
     let v2OptIn: Bool?
+    let v2NotGlobal: Bool?
+    let hiddenActivationDetected: Bool?
+    let policyVersions: Int?
+    let directDecisions: Int?
+    let consolidatedDecisions: Int?
+    let signaturesCompared: Int?
+    let signaturesMatched: Int?
+    let signatureMismatches: Int?
+    let v0Contexts: Int?
+    let v1Contexts: Int?
+    let v2Contexts: Int?
+    let v0SignatureMismatches: Int?
+    let v1SignatureMismatches: Int?
+    let v2SignatureMismatches: Int?
+    let blockedFeedbackNoIntentV1: Int?
+    let blockedFeedbackAlternateV2: Int?
+    let terrainMutated: Bool?
+    let coreEntityMoved: Bool?
+    let physicalPlaceholderMoved: Bool?
     let tickWorldUsed: Bool?
     let cases: Int?
     let tickCount: Int?
@@ -625,6 +644,25 @@ struct RunEvent: Encodable {
         v0Unchanged: Bool? = nil,
         v1Unchanged: Bool? = nil,
         v2OptIn: Bool? = nil,
+        v2NotGlobal: Bool? = nil,
+        hiddenActivationDetected: Bool? = nil,
+        policyVersions: Int? = nil,
+        directDecisions: Int? = nil,
+        consolidatedDecisions: Int? = nil,
+        signaturesCompared: Int? = nil,
+        signaturesMatched: Int? = nil,
+        signatureMismatches: Int? = nil,
+        v0Contexts: Int? = nil,
+        v1Contexts: Int? = nil,
+        v2Contexts: Int? = nil,
+        v0SignatureMismatches: Int? = nil,
+        v1SignatureMismatches: Int? = nil,
+        v2SignatureMismatches: Int? = nil,
+        blockedFeedbackNoIntentV1: Int? = nil,
+        blockedFeedbackAlternateV2: Int? = nil,
+        terrainMutated: Bool? = nil,
+        coreEntityMoved: Bool? = nil,
+        physicalPlaceholderMoved: Bool? = nil,
         tickWorldUsed: Bool? = nil,
         cases: Int? = nil,
         tickCount: Int? = nil,
@@ -1055,6 +1093,25 @@ struct RunEvent: Encodable {
         self.v0Unchanged = v0Unchanged
         self.v1Unchanged = v1Unchanged
         self.v2OptIn = v2OptIn
+        self.v2NotGlobal = v2NotGlobal
+        self.hiddenActivationDetected = hiddenActivationDetected
+        self.policyVersions = policyVersions
+        self.directDecisions = directDecisions
+        self.consolidatedDecisions = consolidatedDecisions
+        self.signaturesCompared = signaturesCompared
+        self.signaturesMatched = signaturesMatched
+        self.signatureMismatches = signatureMismatches
+        self.v0Contexts = v0Contexts
+        self.v1Contexts = v1Contexts
+        self.v2Contexts = v2Contexts
+        self.v0SignatureMismatches = v0SignatureMismatches
+        self.v1SignatureMismatches = v1SignatureMismatches
+        self.v2SignatureMismatches = v2SignatureMismatches
+        self.blockedFeedbackNoIntentV1 = blockedFeedbackNoIntentV1
+        self.blockedFeedbackAlternateV2 = blockedFeedbackAlternateV2
+        self.terrainMutated = terrainMutated
+        self.coreEntityMoved = coreEntityMoved
+        self.physicalPlaceholderMoved = physicalPlaceholderMoved
         self.tickWorldUsed = tickWorldUsed
         self.cases = cases
         self.tickCount = tickCount

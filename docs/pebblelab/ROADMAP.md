@@ -2197,3 +2197,50 @@ terrain/world mutation.
 
 Next recommended step: Phase 4.26B - Agent Movement Policy Consolidation
 Fixture Smoke.
+
+## Phase 4.26B - Agent Movement Policy Consolidation Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: add a fixture-only, no-behavior-change consolidation smoke that compares
+direct v0/v1/v2 policy outputs with an explicit consolidated adapter.
+
+Validated scope:
+
+- `agent_movement_policy_consolidation_fixture_smoke`;
+- eight deterministic representative contexts;
+- three explicit policy versions;
+- twenty-four direct decisions;
+- twenty-four consolidated decisions;
+- twenty-four stable signatures compared;
+- zero signature mismatches;
+- v0 remains unchanged;
+- v1 remains unchanged;
+- v2 remains explicit opt-in and not global;
+- hidden activation is not detected;
+- v1 blocked feedback remains noIntent;
+- v2 blocked known hints produce deterministic bounded alternates;
+- empty and unknown hints remain noIntent;
+- no tick live path is invoked;
+- policy reads no World and no collision;
+- tick reads no World and no collision;
+- no movement application;
+- no memory/goals;
+- no pathfinding, replanning, avoidance, reservation runtime, or route
+  following;
+- no terrain/world mutation.
+
+Outputs:
+
+- `agent_movement_policy_consolidation_report.json`;
+- `agent_movement_policy_consolidation_invariant_report.json`;
+- `agent_movement_policy_consolidation_decisions.json`;
+- `agent_movement_policy_consolidation_signatures.json`;
+- `agentMovementPolicyConsolidation*` metrics;
+- `lab_agent_movement_policy_consolidation_recorded` event.
+
+Pathfinding, path planning, route planning, replanning, avoidance,
+reservation runtime, route following, memory/goals, gameplay autonomy,
+physical/core entity movement, and terrain/world mutation remain out of scope.
+
+Next recommended step: Phase 4.26C - Policy Boundary Hardening.

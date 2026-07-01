@@ -1279,6 +1279,56 @@ struct RunMetrics: Encodable {
     let alternateLocalHintMultiTickReplayWorldMutated: Bool?
     let alternateLocalHintMultiTickReplayMutationPerformed: Bool?
     let alternateLocalHintMultiTickReplaySuccess: Bool?
+    let agentMovementPolicyConsolidationContexts: Int?
+    let agentMovementPolicyConsolidationPolicyVersions: Int?
+    let agentMovementPolicyConsolidationDirectDecisions: Int?
+    let agentMovementPolicyConsolidationConsolidatedDecisions: Int?
+    let agentMovementPolicyConsolidationSignaturesCompared: Int?
+    let agentMovementPolicyConsolidationSignaturesMatched: Int?
+    let agentMovementPolicyConsolidationSignatureMismatches: Int?
+    let agentMovementPolicyConsolidationV0Contexts: Int?
+    let agentMovementPolicyConsolidationV1Contexts: Int?
+    let agentMovementPolicyConsolidationV2Contexts: Int?
+    let agentMovementPolicyConsolidationV0SignaturesCompared: Int?
+    let agentMovementPolicyConsolidationV1SignaturesCompared: Int?
+    let agentMovementPolicyConsolidationV2SignaturesCompared: Int?
+    let agentMovementPolicyConsolidationV0SignatureMismatches: Int?
+    let agentMovementPolicyConsolidationV1SignatureMismatches: Int?
+    let agentMovementPolicyConsolidationV2SignatureMismatches: Int?
+    let agentMovementPolicyConsolidationNoFeedbackBaseline: Int?
+    let agentMovementPolicyConsolidationApprovedFeedbackBaseline: Int?
+    let agentMovementPolicyConsolidationMovedFeedbackBaseline: Int?
+    let agentMovementPolicyConsolidationBlockedFeedbackNoIntentV1: Int?
+    let agentMovementPolicyConsolidationBlockedFeedbackAlternateV2: Int?
+    let agentMovementPolicyConsolidationEmptyHintNoIntent: Int?
+    let agentMovementPolicyConsolidationUnknownHintNoIntent: Int?
+    let agentMovementPolicyConsolidationCandidatesProduced: Int?
+    let agentMovementPolicyConsolidationCandidatesSelected: Int?
+    let agentMovementPolicyConsolidationMaxAlternates: Int?
+    let agentMovementPolicyConsolidationBounded: Bool?
+    let agentMovementPolicyConsolidationV0Unchanged: Bool?
+    let agentMovementPolicyConsolidationV1Unchanged: Bool?
+    let agentMovementPolicyConsolidationV2OptIn: Bool?
+    let agentMovementPolicyConsolidationV2NotGlobal: Bool?
+    let agentMovementPolicyConsolidationHiddenActivationDetected: Bool?
+    let agentMovementPolicyConsolidationPolicyReadCollision: Bool?
+    let agentMovementPolicyConsolidationPolicyWorldUsed: Bool?
+    let agentMovementPolicyConsolidationTickReadCollision: Bool?
+    let agentMovementPolicyConsolidationTickWorldReadOnlyUsed: Bool?
+    let agentMovementPolicyConsolidationMovementApplied: Bool?
+    let agentMovementPolicyConsolidationWorldMutated: Bool?
+    let agentMovementPolicyConsolidationTerrainMutated: Bool?
+    let agentMovementPolicyConsolidationCoreEntityMoved: Bool?
+    let agentMovementPolicyConsolidationPhysicalPlaceholderMoved: Bool?
+    let agentMovementPolicyConsolidationPathfindingPerformed: Bool?
+    let agentMovementPolicyConsolidationReplanningPerformed: Bool?
+    let agentMovementPolicyConsolidationAvoidancePerformed: Bool?
+    let agentMovementPolicyConsolidationReservationRuntimeUsed: Bool?
+    let agentMovementPolicyConsolidationRouteFollowingUsed: Bool?
+    let agentMovementPolicyConsolidationMemoryUpdated: Bool?
+    let agentMovementPolicyConsolidationGoalChanged: Bool?
+    let agentMovementPolicyConsolidationMutationPerformed: Bool?
+    let agentMovementPolicyConsolidationSuccess: Bool?
     let multiTickClosedLoopTicks: Int?
     let multiTickClosedLoopAgents: Int?
     let multiTickClosedLoopContextsTotal: Int?
@@ -2727,6 +2777,56 @@ struct RunMetrics: Encodable {
         alternateLocalHintMultiTickReplayWorldMutated: Bool? = nil,
         alternateLocalHintMultiTickReplayMutationPerformed: Bool? = nil,
         alternateLocalHintMultiTickReplaySuccess: Bool? = nil,
+        agentMovementPolicyConsolidationContexts: Int? = nil,
+        agentMovementPolicyConsolidationPolicyVersions: Int? = nil,
+        agentMovementPolicyConsolidationDirectDecisions: Int? = nil,
+        agentMovementPolicyConsolidationConsolidatedDecisions: Int? = nil,
+        agentMovementPolicyConsolidationSignaturesCompared: Int? = nil,
+        agentMovementPolicyConsolidationSignaturesMatched: Int? = nil,
+        agentMovementPolicyConsolidationSignatureMismatches: Int? = nil,
+        agentMovementPolicyConsolidationV0Contexts: Int? = nil,
+        agentMovementPolicyConsolidationV1Contexts: Int? = nil,
+        agentMovementPolicyConsolidationV2Contexts: Int? = nil,
+        agentMovementPolicyConsolidationV0SignaturesCompared: Int? = nil,
+        agentMovementPolicyConsolidationV1SignaturesCompared: Int? = nil,
+        agentMovementPolicyConsolidationV2SignaturesCompared: Int? = nil,
+        agentMovementPolicyConsolidationV0SignatureMismatches: Int? = nil,
+        agentMovementPolicyConsolidationV1SignatureMismatches: Int? = nil,
+        agentMovementPolicyConsolidationV2SignatureMismatches: Int? = nil,
+        agentMovementPolicyConsolidationNoFeedbackBaseline: Int? = nil,
+        agentMovementPolicyConsolidationApprovedFeedbackBaseline: Int? = nil,
+        agentMovementPolicyConsolidationMovedFeedbackBaseline: Int? = nil,
+        agentMovementPolicyConsolidationBlockedFeedbackNoIntentV1: Int? = nil,
+        agentMovementPolicyConsolidationBlockedFeedbackAlternateV2: Int? = nil,
+        agentMovementPolicyConsolidationEmptyHintNoIntent: Int? = nil,
+        agentMovementPolicyConsolidationUnknownHintNoIntent: Int? = nil,
+        agentMovementPolicyConsolidationCandidatesProduced: Int? = nil,
+        agentMovementPolicyConsolidationCandidatesSelected: Int? = nil,
+        agentMovementPolicyConsolidationMaxAlternates: Int? = nil,
+        agentMovementPolicyConsolidationBounded: Bool? = nil,
+        agentMovementPolicyConsolidationV0Unchanged: Bool? = nil,
+        agentMovementPolicyConsolidationV1Unchanged: Bool? = nil,
+        agentMovementPolicyConsolidationV2OptIn: Bool? = nil,
+        agentMovementPolicyConsolidationV2NotGlobal: Bool? = nil,
+        agentMovementPolicyConsolidationHiddenActivationDetected: Bool? = nil,
+        agentMovementPolicyConsolidationPolicyReadCollision: Bool? = nil,
+        agentMovementPolicyConsolidationPolicyWorldUsed: Bool? = nil,
+        agentMovementPolicyConsolidationTickReadCollision: Bool? = nil,
+        agentMovementPolicyConsolidationTickWorldReadOnlyUsed: Bool? = nil,
+        agentMovementPolicyConsolidationMovementApplied: Bool? = nil,
+        agentMovementPolicyConsolidationWorldMutated: Bool? = nil,
+        agentMovementPolicyConsolidationTerrainMutated: Bool? = nil,
+        agentMovementPolicyConsolidationCoreEntityMoved: Bool? = nil,
+        agentMovementPolicyConsolidationPhysicalPlaceholderMoved: Bool? = nil,
+        agentMovementPolicyConsolidationPathfindingPerformed: Bool? = nil,
+        agentMovementPolicyConsolidationReplanningPerformed: Bool? = nil,
+        agentMovementPolicyConsolidationAvoidancePerformed: Bool? = nil,
+        agentMovementPolicyConsolidationReservationRuntimeUsed: Bool? = nil,
+        agentMovementPolicyConsolidationRouteFollowingUsed: Bool? = nil,
+        agentMovementPolicyConsolidationMemoryUpdated: Bool? = nil,
+        agentMovementPolicyConsolidationGoalChanged: Bool? = nil,
+        agentMovementPolicyConsolidationMutationPerformed: Bool? = nil,
+        agentMovementPolicyConsolidationSuccess: Bool? = nil,
         multiTickClosedLoopTicks: Int? = nil,
         multiTickClosedLoopAgents: Int? = nil,
         multiTickClosedLoopContextsTotal: Int? = nil,
@@ -4174,6 +4274,56 @@ struct RunMetrics: Encodable {
         self.alternateLocalHintMultiTickReplayWorldMutated = alternateLocalHintMultiTickReplayWorldMutated
         self.alternateLocalHintMultiTickReplayMutationPerformed = alternateLocalHintMultiTickReplayMutationPerformed
         self.alternateLocalHintMultiTickReplaySuccess = alternateLocalHintMultiTickReplaySuccess
+        self.agentMovementPolicyConsolidationContexts = agentMovementPolicyConsolidationContexts
+        self.agentMovementPolicyConsolidationPolicyVersions = agentMovementPolicyConsolidationPolicyVersions
+        self.agentMovementPolicyConsolidationDirectDecisions = agentMovementPolicyConsolidationDirectDecisions
+        self.agentMovementPolicyConsolidationConsolidatedDecisions = agentMovementPolicyConsolidationConsolidatedDecisions
+        self.agentMovementPolicyConsolidationSignaturesCompared = agentMovementPolicyConsolidationSignaturesCompared
+        self.agentMovementPolicyConsolidationSignaturesMatched = agentMovementPolicyConsolidationSignaturesMatched
+        self.agentMovementPolicyConsolidationSignatureMismatches = agentMovementPolicyConsolidationSignatureMismatches
+        self.agentMovementPolicyConsolidationV0Contexts = agentMovementPolicyConsolidationV0Contexts
+        self.agentMovementPolicyConsolidationV1Contexts = agentMovementPolicyConsolidationV1Contexts
+        self.agentMovementPolicyConsolidationV2Contexts = agentMovementPolicyConsolidationV2Contexts
+        self.agentMovementPolicyConsolidationV0SignaturesCompared = agentMovementPolicyConsolidationV0SignaturesCompared
+        self.agentMovementPolicyConsolidationV1SignaturesCompared = agentMovementPolicyConsolidationV1SignaturesCompared
+        self.agentMovementPolicyConsolidationV2SignaturesCompared = agentMovementPolicyConsolidationV2SignaturesCompared
+        self.agentMovementPolicyConsolidationV0SignatureMismatches = agentMovementPolicyConsolidationV0SignatureMismatches
+        self.agentMovementPolicyConsolidationV1SignatureMismatches = agentMovementPolicyConsolidationV1SignatureMismatches
+        self.agentMovementPolicyConsolidationV2SignatureMismatches = agentMovementPolicyConsolidationV2SignatureMismatches
+        self.agentMovementPolicyConsolidationNoFeedbackBaseline = agentMovementPolicyConsolidationNoFeedbackBaseline
+        self.agentMovementPolicyConsolidationApprovedFeedbackBaseline = agentMovementPolicyConsolidationApprovedFeedbackBaseline
+        self.agentMovementPolicyConsolidationMovedFeedbackBaseline = agentMovementPolicyConsolidationMovedFeedbackBaseline
+        self.agentMovementPolicyConsolidationBlockedFeedbackNoIntentV1 = agentMovementPolicyConsolidationBlockedFeedbackNoIntentV1
+        self.agentMovementPolicyConsolidationBlockedFeedbackAlternateV2 = agentMovementPolicyConsolidationBlockedFeedbackAlternateV2
+        self.agentMovementPolicyConsolidationEmptyHintNoIntent = agentMovementPolicyConsolidationEmptyHintNoIntent
+        self.agentMovementPolicyConsolidationUnknownHintNoIntent = agentMovementPolicyConsolidationUnknownHintNoIntent
+        self.agentMovementPolicyConsolidationCandidatesProduced = agentMovementPolicyConsolidationCandidatesProduced
+        self.agentMovementPolicyConsolidationCandidatesSelected = agentMovementPolicyConsolidationCandidatesSelected
+        self.agentMovementPolicyConsolidationMaxAlternates = agentMovementPolicyConsolidationMaxAlternates
+        self.agentMovementPolicyConsolidationBounded = agentMovementPolicyConsolidationBounded
+        self.agentMovementPolicyConsolidationV0Unchanged = agentMovementPolicyConsolidationV0Unchanged
+        self.agentMovementPolicyConsolidationV1Unchanged = agentMovementPolicyConsolidationV1Unchanged
+        self.agentMovementPolicyConsolidationV2OptIn = agentMovementPolicyConsolidationV2OptIn
+        self.agentMovementPolicyConsolidationV2NotGlobal = agentMovementPolicyConsolidationV2NotGlobal
+        self.agentMovementPolicyConsolidationHiddenActivationDetected = agentMovementPolicyConsolidationHiddenActivationDetected
+        self.agentMovementPolicyConsolidationPolicyReadCollision = agentMovementPolicyConsolidationPolicyReadCollision
+        self.agentMovementPolicyConsolidationPolicyWorldUsed = agentMovementPolicyConsolidationPolicyWorldUsed
+        self.agentMovementPolicyConsolidationTickReadCollision = agentMovementPolicyConsolidationTickReadCollision
+        self.agentMovementPolicyConsolidationTickWorldReadOnlyUsed = agentMovementPolicyConsolidationTickWorldReadOnlyUsed
+        self.agentMovementPolicyConsolidationMovementApplied = agentMovementPolicyConsolidationMovementApplied
+        self.agentMovementPolicyConsolidationWorldMutated = agentMovementPolicyConsolidationWorldMutated
+        self.agentMovementPolicyConsolidationTerrainMutated = agentMovementPolicyConsolidationTerrainMutated
+        self.agentMovementPolicyConsolidationCoreEntityMoved = agentMovementPolicyConsolidationCoreEntityMoved
+        self.agentMovementPolicyConsolidationPhysicalPlaceholderMoved = agentMovementPolicyConsolidationPhysicalPlaceholderMoved
+        self.agentMovementPolicyConsolidationPathfindingPerformed = agentMovementPolicyConsolidationPathfindingPerformed
+        self.agentMovementPolicyConsolidationReplanningPerformed = agentMovementPolicyConsolidationReplanningPerformed
+        self.agentMovementPolicyConsolidationAvoidancePerformed = agentMovementPolicyConsolidationAvoidancePerformed
+        self.agentMovementPolicyConsolidationReservationRuntimeUsed = agentMovementPolicyConsolidationReservationRuntimeUsed
+        self.agentMovementPolicyConsolidationRouteFollowingUsed = agentMovementPolicyConsolidationRouteFollowingUsed
+        self.agentMovementPolicyConsolidationMemoryUpdated = agentMovementPolicyConsolidationMemoryUpdated
+        self.agentMovementPolicyConsolidationGoalChanged = agentMovementPolicyConsolidationGoalChanged
+        self.agentMovementPolicyConsolidationMutationPerformed = agentMovementPolicyConsolidationMutationPerformed
+        self.agentMovementPolicyConsolidationSuccess = agentMovementPolicyConsolidationSuccess
         self.multiTickClosedLoopTicks = multiTickClosedLoopTicks
         self.multiTickClosedLoopAgents = multiTickClosedLoopAgents
         self.multiTickClosedLoopContextsTotal = multiTickClosedLoopContextsTotal
