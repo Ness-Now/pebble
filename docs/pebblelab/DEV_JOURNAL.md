@@ -9559,3 +9559,86 @@ handoff/application, abstract/physical divergence zero, and digest
 repeatability true.
 
 Next step: Phase 4.28A — Agent Movement Stack Consolidation Docs-Only.
+
+## 2026-07-02 — Phase 4.28A agent movement stack consolidation plan
+
+Objective: document the future AgentMovementStack consolidation boundary before
+adding any new runtime adapter or behavior.
+
+Docs-only scope: this phase created a plan document and updated the changelog,
+dev journal, and roadmap only. No Swift, scenarios, runners, metrics, events,
+PebbleCore, renderer, resources, registries, save/load, or goldens were
+modified.
+
+Starting point summary:
+
+- 4.21 validated agent intent production, intent-to-tick fixture/live
+  read-only, and approved lab-map application;
+- 4.22 validated feedback consumption and injection into
+  `LabAgentIntentContext.lastFeedback`;
+- 4.23 added opt-in feedback-aware v1 policy while preserving v0;
+- 4.24 validated multi-tick closed-loop feedback N to N+1 semantics;
+- 4.25 added opt-in alternate local hint v2 and replay coverage;
+- 4.26 consolidated movement policy signatures and boundary hardening;
+- 4.27 added fixture-first bounded planning, first-step handoff,
+  lab-map-only approved application, and multi-tick replay regression.
+
+Target stack: the plan defines conceptual layers for agent snapshots, feedback
+ledger, intent contexts, movement policy, bounded planning, first-step handoff,
+tick arbitration, approved application, replay regression, boundary audit, and
+metrics/events/reports.
+
+Policy versions: v0 remains baseline local-hint intent production, v1 remains
+feedback-aware blocked-to-noIntent filtering, v2 remains deterministic bounded
+alternate local hints, and v3 remains bounded fixture planning. All modes must
+remain opt-in. A future v4 is reserved and not implemented.
+
+Feedback contract: feedback emitted at tick N may be consumed only at tick
+N+1. Same-tick, future, and cross-agent feedback leaks remain forbidden.
+Duplicate, malformed, and unknown feedback must stay deterministic and must
+not mutate memory/goals.
+
+Bounded planning contract: fixture planning remains bounded by current
+`maxSteps <= 4` and `maxNodes <= 32`, one-edge, same-y, deterministic, and
+first-step-only. Advisory steps must not be sent, applied, persisted, or used
+as route-following state.
+
+Application contract: only tick-approved first steps may mutate lab abstract
+and physical position maps. Denied, noPath, zero-step, source mismatch, stale,
+and conflict agents are preserved. World, terrain, Core entities, and live
+physical placeholders remain untouched.
+
+Boundary contract: flags such as `worldRead`, `collisionRead`,
+`routeFollowingUsed`, `fullRouteExecutionUsed`,
+`persistentRouteCommitmentUsed`, `advisoryStepsApplied`,
+`secondStepAutoApplied`, `pathfindingLiveUsed`, `unboundedSearchUsed`,
+`dynamicReplanningUsed`, `reservationRuntimeUsed`, `memoryUpdated`,
+`goalChanged`, `terrainMutated`, `worldMutated`, `coreEntityMoved`,
+`physicalPlaceholderMoved`, and `mutationPerformed` must remain false unless a
+future phase explicitly documents an exception. Tick fixture use and lab-map
+approved application are the only current allowed runtime exceptions.
+
+Roadmap 4.28B-F:
+
+- 4.28B Stack Contract Fixture Smoke;
+- 4.28C Stack Contract Boundary Hardening;
+- 4.28D Stack Replay Regression Adapter;
+- 4.28E Stack Metrics/Event Compatibility Smoke;
+- 4.28F Stack Consolidated Multi-Tick Replay Regression.
+
+Future route following gate: route following remains out of scope. Before it
+can be considered, the stack must be consolidated, replay deterministic,
+feedback ledger stable, lab maps synchronized, first-step-only behavior proven,
+and a separate docs-only route-following spec approved explicitly.
+
+Validation commands:
+
+- `git status`
+- `git diff --stat`
+- `git diff --name-only`
+- `git diff --check`
+
+Results: docs-only validation passed with documentation-only changes and
+`git diff --check` clean.
+
+Next step: Phase 4.28B — Stack Contract Fixture Smoke.

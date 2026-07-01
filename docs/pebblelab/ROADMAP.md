@@ -2611,3 +2611,40 @@ Route following and full-route execution remain out of scope.
 
 Next recommended step: Phase 4.28A - Agent Movement Stack Consolidation
 Docs-Only.
+
+## Phase 4.28A - Agent Movement Stack Consolidation Plan
+
+Status: implemented.
+
+Goal: document a future AgentMovementStack consolidation layer without adding
+runtime code or changing behavior.
+
+Validated scope:
+
+- documentation-only;
+- no Swift changes;
+- no scenario changes;
+- no runner, metrics, or event changes;
+- no PebbleCore, renderer, resource, registry, save/load, or golden changes;
+- no behavior change to v0/v1/v2/v3;
+- no route following or full-route execution;
+- no live pathfinding, reservation runtime, memory, goals, social behavior, or
+  communication;
+- no World/terrain mutation.
+
+Plan coverage:
+
+- current stack summary from 4.21 through 4.27;
+- conceptual layers for snapshots, feedback ledger, intent contexts, movement
+  policy, bounded planning, first-step handoff, tick arbitration, approved
+  application, replay regression, boundary audit, and reporting;
+- policy version boundaries for v0, v1, v2, v3, and reserved future v4;
+- bounded planning, feedback, approved application, and boundary contracts;
+- consolidation risks;
+- 4.28B-F roadmap;
+- future route-following gate.
+
+Next recommended step: Phase 4.28B - Stack Contract Fixture Smoke.
+
+Route following remains out of scope until after stack consolidation and a
+separate docs-only route-following gate with explicit approval.
