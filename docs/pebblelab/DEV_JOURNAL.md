@@ -9157,3 +9157,118 @@ false.
 ### Next Step
 
 Phase 4.27C — Bounded Path Planning Hardening.
+
+## 2026-07-01 — Phase 4.27C bounded path planning hardening
+
+### Objective
+
+Harden the fixture-only bounded path planner with edge cases around step bounds,
+node bounds, blocked cells, blocked directions, duplicate inputs, deterministic
+tie-breaks, and digest repeatability without adding any live behavior.
+
+### Starting Point
+
+Phase 4.27B added `bounded_path_planning_fixture_smoke`: a deterministic tiny
+BFS over an abstract grid, max `maxSteps` 4, max `maxNodes` 32, fixed neighbor
+order, nine passing cases, repeatable digest, v3 fixture opt-in, v3 not global,
+and no World/collision/tick/movement/route following/memory/goals/reservation
+runtime or terrain/World mutation.
+
+### Why Hardening
+
+The fixture smoke proved the happy path and core boundary. The hardening smoke
+adds enough limit and malformed-layout pressure to make future planning
+handoffs harder to accidentally turn into live pathfinding, route following, or
+autonomous movement.
+
+### Planner Fixture-Only
+
+The scenario reuses the existing fixture planner and abstract grid context. It
+does not introduce `World`, collision reads, tick handoff, approved
+application, route following, memory/goals, reservation runtime, or mutation.
+
+### Bounds Coverage
+
+`maxSteps` values 0, 1, 2, 3, and 4 are covered. `maxNodes` values 1, 2, and
+32 are covered. The report verifies all plans stay within both bounds.
+
+### Blocked Inputs
+
+The hardening cases cover start surrounded by blocked cells, target surrounded
+by blocked cells, target listed as blocked, blocked direction `move_east`, an
+only-north/south allowed direction subset, duplicate blocked cells, and a
+blocked start cell. The blocked start case documents that the start is an
+allowed initial node in the fixture planner.
+
+### Duplicate And Coordinate Cases
+
+Duplicate input cases produce identical digests. Duplicate blocked cells remain
+stable after `Set` normalization. Negative-coordinate detours remain
+deterministic.
+
+### Same-Y And Tie-Break
+
+The same-y-only case uses a vertical target that cannot be reached by the
+planner, proving no y-changing escape is emitted. The equal-shortest-path case
+selects `move_north` first, matching the fixed neighbor order.
+
+### Digest Repeatability
+
+The scenario runs the hardening fixtures twice and compares aggregate digests.
+`digestsEqual` is true and repeatability failures remain zero.
+
+### v3 Opt-In And Hidden Activation
+
+v3 remains represented only as fixture opt-in. v0, v1, and v2 remain unchanged;
+v3 is not global; hidden activation is false.
+
+### Outputs, Invariants, Metrics, Event
+
+Outputs:
+
+- `bounded_path_planning_hardening_report.json`;
+- `bounded_path_planning_hardening_invariant_report.json`;
+- `bounded_path_planning_hardening_cases.json`;
+- `bounded_path_planning_hardening_plans.json`;
+- `bounded_path_planning_hardening_digest.json`;
+- `bounded_path_planning_hardening_boundary.json`;
+- `boundedPathPlanningHardening*` metrics;
+- `lab_bounded_path_planning_hardening_recorded` event.
+
+The invariant report records 92 checks for coverage, bounds, determinism,
+repeatability, v0/v1/v2 stability, v3 opt-in/not-global status, and boundary
+flags.
+
+### Boundary Confirmation
+
+The scenario confirms no World read, no collision read, no tick, no movement
+application, no lab position map mutation, no route following, no live
+pathfinding, no unbounded search, no dynamic replanning, no reservation runtime,
+no memory update, no goal change, no terrain/World mutation, no core entity
+movement, and no physical placeholder movement.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_hardening_smoke --seed 42 --ticks 0 --out runs/check_bounded_path_planning_hardening`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_fixture_smoke --seed 42 --ticks 0 --out runs/check_bounded_path_fixture_after_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_consolidation_fixture_smoke --seed 42 --ticks 0 --out runs/check_policy_consolidation_fixture_after_bounded_path_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_boundary_hardening_smoke --seed 42 --ticks 0 --out runs/check_policy_boundary_hardening_after_bounded_path_hardening`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_consolidated_replay_regression_smoke --seed 42 --ticks 3 --out runs/check_policy_consolidated_replay_after_bounded_path_hardening`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_multi_tick_replay_smoke --seed 42 --ticks 3 --out runs/check_alternate_local_hint_multi_tick_replay_after_bounded_path_hardening`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_approved_application_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_approved_application_after_bounded_path_hardening`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_hardening_after_bounded_path_hardening`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_bounded_path_hardening`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+Validation passed. Hardening report and invariant report both show success true,
+all hardening cases pass, digests match, and boundary flags remain false.
+
+### Next Step
+
+Phase 4.27D — Planning To Tick First-Step Handoff.

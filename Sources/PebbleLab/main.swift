@@ -76,6 +76,8 @@ let isAgentMovementPolicyConsolidatedReplayScenario = options.scenario
     == "agent_movement_policy_consolidated_replay_regression_smoke"
 let isBoundedPathPlanningFixtureScenario = options.scenario
     == "bounded_path_planning_fixture_smoke"
+let isBoundedPathPlanningHardeningScenario = options.scenario
+    == "bounded_path_planning_hardening_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -108,7 +110,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isAgentMovementPolicyConsolidationFixtureScenario
     || isAgentMovementPolicyBoundaryHardeningScenario
     || isAgentMovementPolicyConsolidatedReplayScenario
-    || isBoundedPathPlanningFixtureScenario)
+    || isBoundedPathPlanningFixtureScenario
+    || isBoundedPathPlanningHardeningScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -770,7 +773,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isAgentMovementPolicyConsolidationFixtureScenario
     || isAgentMovementPolicyBoundaryHardeningScenario
     || isAgentMovementPolicyConsolidatedReplayScenario
-    || isBoundedPathPlanningFixtureScenario {
+    || isBoundedPathPlanningFixtureScenario
+    || isBoundedPathPlanningHardeningScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -2912,6 +2916,96 @@ let boundedPathPlanningFixtureSuccess = isBoundedPathPlanningFixtureScenario
         && boundedPathPlanningFixtureSummary?.physicalPlaceholderMoved == false
         && boundedPathPlanningFixtureSummary?.mutationPerformed == false)
     : nil
+let boundedPathPlanningHardeningReport = isBoundedPathPlanningHardeningScenario
+    ? makeBoundedPathPlanningHardeningReport(
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let boundedPathPlanningHardeningInvariantReport = isBoundedPathPlanningHardeningScenario
+    ? makeBoundedPathPlanningHardeningInvariantReport(
+        report: boundedPathPlanningHardeningReport,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let boundedPathPlanningHardeningDigest = boundedPathPlanningHardeningReport.map {
+    makeBoundedPathPlanningHardeningDigest(report: $0)
+}
+let boundedPathPlanningHardeningBoundary = boundedPathPlanningHardeningReport.map {
+    makeBoundedPathPlanningHardeningBoundaryReport(report: $0)
+}
+let boundedPathPlanningHardeningSummary = boundedPathPlanningHardeningReport?.summary
+let boundedPathPlanningHardeningSuccess = isBoundedPathPlanningHardeningScenario
+    ? ((boundedPathPlanningHardeningReport?.success ?? false)
+        && (boundedPathPlanningHardeningInvariantReport?.success ?? false)
+        && (boundedPathPlanningHardeningSummary?.cases ?? 0) >= 20
+        && boundedPathPlanningHardeningSummary?.casesPassed == boundedPathPlanningHardeningSummary?.cases
+        && boundedPathPlanningHardeningSummary?.casesFailed == 0
+        && boundedPathPlanningHardeningSummary?.plansProduced == boundedPathPlanningHardeningSummary?.cases
+        && (boundedPathPlanningHardeningSummary?.reachedTargetPlans ?? 0) > 0
+        && (boundedPathPlanningHardeningSummary?.noPathPlans ?? 0) > 0
+        && (boundedPathPlanningHardeningSummary?.truncatedPlans ?? 0) > 0
+        && (boundedPathPlanningHardeningSummary?.selectedFirstSteps ?? 0) > 0
+        && (boundedPathPlanningHardeningSummary?.maxStepsZeroCases ?? 0) >= 2
+        && (boundedPathPlanningHardeningSummary?.maxStepsOneCases ?? 0) >= 2
+        && (boundedPathPlanningHardeningSummary?.maxStepsTwoCases ?? 0) >= 1
+        && (boundedPathPlanningHardeningSummary?.maxStepsThreeCases ?? 0) >= 1
+        && (boundedPathPlanningHardeningSummary?.maxStepsFourCases ?? 0) >= 1
+        && (boundedPathPlanningHardeningSummary?.maxNodesOneCases ?? 0) >= 1
+        && (boundedPathPlanningHardeningSummary?.maxNodesTwoCases ?? 0) >= 1
+        && (boundedPathPlanningHardeningSummary?.maxNodesFullCases ?? 0) >= 1
+        && (boundedPathPlanningHardeningSummary?.blockedStartCases ?? 0) >= 1
+        && (boundedPathPlanningHardeningSummary?.blockedTargetCases ?? 0) >= 1
+        && (boundedPathPlanningHardeningSummary?.blockedDirectionCases ?? 0) >= 1
+        && (boundedPathPlanningHardeningSummary?.duplicateBlockedCellCases ?? 0) >= 1
+        && (boundedPathPlanningHardeningSummary?.duplicateInputCases ?? 0) >= 2
+        && boundedPathPlanningHardeningSummary?.duplicateInputDigestsEqual == true
+        && (boundedPathPlanningHardeningSummary?.negativeCoordinateCases ?? 0) >= 1
+        && (boundedPathPlanningHardeningSummary?.sameYOnlyCases ?? 0) >= 1
+        && (boundedPathPlanningHardeningSummary?.tieBreakCases ?? 0) >= 1
+        && boundedPathPlanningHardeningSummary?.tieBreakSelectedExpectedFirstHint == true
+        && (boundedPathPlanningHardeningSummary?.maxStepsMax ?? 999) <= 4
+        && (boundedPathPlanningHardeningSummary?.maxNodesMax ?? 999) <= 32
+        && (boundedPathPlanningHardeningSummary?.nodesVisitedMax ?? 999)
+            <= (boundedPathPlanningHardeningSummary?.maxNodesMax ?? -1)
+        && (boundedPathPlanningHardeningSummary?.stepsMax ?? 999)
+            <= (boundedPathPlanningHardeningSummary?.maxStepsMax ?? -1)
+        && boundedPathPlanningHardeningSummary?.stepsWithinMax == true
+        && boundedPathPlanningHardeningSummary?.nodesWithinMax == true
+        && boundedPathPlanningHardeningSummary?.oneEdgeSteps == true
+        && boundedPathPlanningHardeningSummary?.sameYSteps == true
+        && boundedPathPlanningHardeningSummary?.blockedDirectionsRespected == true
+        && boundedPathPlanningHardeningSummary?.abstractBlockedCellsRespected == true
+        && boundedPathPlanningHardeningSummary?.deterministicCaseOrder == true
+        && boundedPathPlanningHardeningSummary?.deterministicNeighborOrder == true
+        && boundedPathPlanningHardeningSummary?.deterministicTieBreak == true
+        && boundedPathPlanningHardeningSummary?.digestsEqual == true
+        && boundedPathPlanningHardeningSummary?.repeatabilityFailures == 0
+        && boundedPathPlanningHardeningSummary?.v0Unchanged == true
+        && boundedPathPlanningHardeningSummary?.v1Unchanged == true
+        && boundedPathPlanningHardeningSummary?.v2Unchanged == true
+        && boundedPathPlanningHardeningSummary?.v3OptIn == true
+        && boundedPathPlanningHardeningSummary?.v3NotGlobal == true
+        && boundedPathPlanningHardeningSummary?.hiddenActivationDetected == false
+        && boundedPathPlanningHardeningSummary?.worldRead == false
+        && boundedPathPlanningHardeningSummary?.collisionRead == false
+        && boundedPathPlanningHardeningSummary?.tickUsed == false
+        && boundedPathPlanningHardeningSummary?.movementApplied == false
+        && boundedPathPlanningHardeningSummary?.labPositionMapMutated == false
+        && boundedPathPlanningHardeningSummary?.routeFollowingUsed == false
+        && boundedPathPlanningHardeningSummary?.pathfindingLiveUsed == false
+        && boundedPathPlanningHardeningSummary?.unboundedSearchUsed == false
+        && boundedPathPlanningHardeningSummary?.dynamicReplanningUsed == false
+        && boundedPathPlanningHardeningSummary?.reservationRuntimeUsed == false
+        && boundedPathPlanningHardeningSummary?.memoryUpdated == false
+        && boundedPathPlanningHardeningSummary?.goalChanged == false
+        && boundedPathPlanningHardeningSummary?.terrainMutated == false
+        && boundedPathPlanningHardeningSummary?.worldMutated == false
+        && boundedPathPlanningHardeningSummary?.coreEntityMoved == false
+        && boundedPathPlanningHardeningSummary?.physicalPlaceholderMoved == false
+        && boundedPathPlanningHardeningSummary?.mutationPerformed == false)
+    : nil
 let multiTickClosedLoopReport = isMultiTickClosedLoopFixtureScenario
     ? makeMultiTickClosedLoopFixtureReport(
         scenario: options.scenario,
@@ -3545,6 +3639,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (agentMovementPolicyBoundaryHardeningSuccess ?? true)
     && (agentMovementPolicyConsolidatedReplaySuccess ?? true)
     && (boundedPathPlanningFixtureSuccess ?? true)
+    && (boundedPathPlanningHardeningSuccess ?? true)
     && (multiTickClosedLoopSuccess ?? true)
     && (multiTickClosedLoopHardeningSuccess ?? true)
     && (multiTickClosedLoopLiveReadonlySuccess ?? true)
@@ -5184,6 +5279,59 @@ if options.outPath != nil {
                 replanningPerformed: summary.dynamicReplanningUsed
             ))
         }
+        if let boundedPathPlanningHardeningReport {
+            let summary = boundedPathPlanningHardeningReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_bounded_path_planning_hardening_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                seed: options.seed,
+                success: boundedPathPlanningHardeningSuccess,
+                passed: summary.casesPassed,
+                failed: summary.casesFailed,
+                completed: summary.selectedFirstSteps,
+                pathsFound: summary.reachedTargetPlans,
+                pathsNotFound: summary.noPathPlans,
+                searchLimitReached: summary.truncatedPlans + summary.exhaustedPlans,
+                nodes: summary.nodesVisitedMax,
+                pathLength: summary.stepsMax,
+                candidates: summary.plansProduced,
+                decisions: summary.plansProduced,
+                maxAlternatesMin: summary.maxStepsMin,
+                maxAlternatesMax: summary.maxStepsMax,
+                maxAlternatesZeroCases: summary.maxStepsZeroCases,
+                maxAlternatesOneCases: summary.maxStepsOneCases,
+                maxAlternatesTwoCases: summary.maxStepsTwoCases,
+                boundedCases: summary.maxStepsThreeCases + summary.maxStepsFourCases,
+                duplicateHintCases: summary.duplicateBlockedCellCases,
+                duplicateCandidatesFiltered: summary.duplicateInputCases,
+                bounded: summary.stepsWithinMax && summary.nodesWithinMax,
+                failedDirectionExcluded: summary.blockedDirectionCases,
+                oneEdgeAlternates: summary.oneEdgeSteps && summary.sameYSteps,
+                v0Unchanged: summary.v0Unchanged,
+                v1Unchanged: summary.v1Unchanged,
+                v2OptIn: summary.v3OptIn,
+                v2NotGlobal: summary.v3NotGlobal,
+                hiddenActivationDetected: summary.hiddenActivationDetected,
+                terrainMutated: summary.terrainMutated,
+                coreEntityMoved: summary.coreEntityMoved,
+                physicalPlaceholderMoved: summary.physicalPlaceholderMoved,
+                cases: summary.cases,
+                worldMutated: summary.worldMutated,
+                repeatabilityChecks: 2,
+                repeatabilityFailures: summary.repeatabilityFailures,
+                routeFollowingUsed: summary.routeFollowingUsed,
+                worldUsed: summary.worldRead,
+                collisionRead: summary.collisionRead,
+                movementApplied: summary.movementApplied,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingLiveUsed,
+                replanningPerformed: summary.dynamicReplanningUsed
+            ))
+        }
         if let multiTickClosedLoopReport {
             let summary = multiTickClosedLoopReport.summary
             try appendEvent(RunEvent(
@@ -6508,6 +6656,38 @@ if let outPath = options.outPath {
             try writeJSON(
                 boundedPathPlanningFixtureInvariantReport,
                 to: outURL.appendingPathComponent("bounded_path_planning_fixture_invariant_report.json")
+            )
+        }
+        if let boundedPathPlanningHardeningReport {
+            try writeJSON(
+                boundedPathPlanningHardeningReport,
+                to: outURL.appendingPathComponent("bounded_path_planning_hardening_report.json")
+            )
+            try writeJSON(
+                boundedPathPlanningHardeningReport.cases,
+                to: outURL.appendingPathComponent("bounded_path_planning_hardening_cases.json")
+            )
+            try writeJSON(
+                boundedPathPlanningHardeningReport.plans,
+                to: outURL.appendingPathComponent("bounded_path_planning_hardening_plans.json")
+            )
+        }
+        if let boundedPathPlanningHardeningDigest {
+            try writeJSON(
+                boundedPathPlanningHardeningDigest,
+                to: outURL.appendingPathComponent("bounded_path_planning_hardening_digest.json")
+            )
+        }
+        if let boundedPathPlanningHardeningBoundary {
+            try writeJSON(
+                boundedPathPlanningHardeningBoundary,
+                to: outURL.appendingPathComponent("bounded_path_planning_hardening_boundary.json")
+            )
+        }
+        if let boundedPathPlanningHardeningInvariantReport {
+            try writeJSON(
+                boundedPathPlanningHardeningInvariantReport,
+                to: outURL.appendingPathComponent("bounded_path_planning_hardening_invariant_report.json")
             )
         }
         if let multiTickClosedLoopReport {
@@ -8171,6 +8351,75 @@ if let outPath = options.outPath {
             boundedPathPlanningFixturePhysicalPlaceholderMoved: boundedPathPlanningFixtureReport?.summary.physicalPlaceholderMoved,
             boundedPathPlanningFixtureMutationPerformed: boundedPathPlanningFixtureReport?.summary.mutationPerformed,
             boundedPathPlanningFixtureSuccess: boundedPathPlanningFixtureSuccess,
+            boundedPathPlanningHardeningCases: boundedPathPlanningHardeningReport?.summary.cases,
+            boundedPathPlanningHardeningCasesPassed: boundedPathPlanningHardeningReport?.summary.casesPassed,
+            boundedPathPlanningHardeningCasesFailed: boundedPathPlanningHardeningReport?.summary.casesFailed,
+            boundedPathPlanningHardeningPlansProduced: boundedPathPlanningHardeningReport?.summary.plansProduced,
+            boundedPathPlanningHardeningNoPathPlans: boundedPathPlanningHardeningReport?.summary.noPathPlans,
+            boundedPathPlanningHardeningReachedTargetPlans: boundedPathPlanningHardeningReport?.summary.reachedTargetPlans,
+            boundedPathPlanningHardeningTruncatedPlans: boundedPathPlanningHardeningReport?.summary.truncatedPlans,
+            boundedPathPlanningHardeningExhaustedPlans: boundedPathPlanningHardeningReport?.summary.exhaustedPlans,
+            boundedPathPlanningHardeningSelectedFirstSteps: boundedPathPlanningHardeningReport?.summary.selectedFirstSteps,
+            boundedPathPlanningHardeningMaxStepsZeroCases: boundedPathPlanningHardeningReport?.summary.maxStepsZeroCases,
+            boundedPathPlanningHardeningMaxStepsOneCases: boundedPathPlanningHardeningReport?.summary.maxStepsOneCases,
+            boundedPathPlanningHardeningMaxStepsTwoCases: boundedPathPlanningHardeningReport?.summary.maxStepsTwoCases,
+            boundedPathPlanningHardeningMaxStepsThreeCases: boundedPathPlanningHardeningReport?.summary.maxStepsThreeCases,
+            boundedPathPlanningHardeningMaxStepsFourCases: boundedPathPlanningHardeningReport?.summary.maxStepsFourCases,
+            boundedPathPlanningHardeningMaxNodesOneCases: boundedPathPlanningHardeningReport?.summary.maxNodesOneCases,
+            boundedPathPlanningHardeningMaxNodesTwoCases: boundedPathPlanningHardeningReport?.summary.maxNodesTwoCases,
+            boundedPathPlanningHardeningMaxNodesFullCases: boundedPathPlanningHardeningReport?.summary.maxNodesFullCases,
+            boundedPathPlanningHardeningBlockedStartCases: boundedPathPlanningHardeningReport?.summary.blockedStartCases,
+            boundedPathPlanningHardeningBlockedTargetCases: boundedPathPlanningHardeningReport?.summary.blockedTargetCases,
+            boundedPathPlanningHardeningBlockedDirectionCases: boundedPathPlanningHardeningReport?.summary.blockedDirectionCases,
+            boundedPathPlanningHardeningDuplicateBlockedCellCases: boundedPathPlanningHardeningReport?.summary.duplicateBlockedCellCases,
+            boundedPathPlanningHardeningDuplicateInputCases: boundedPathPlanningHardeningReport?.summary.duplicateInputCases,
+            boundedPathPlanningHardeningDuplicateInputDigestsEqual: boundedPathPlanningHardeningReport?.summary.duplicateInputDigestsEqual,
+            boundedPathPlanningHardeningNegativeCoordinateCases: boundedPathPlanningHardeningReport?.summary.negativeCoordinateCases,
+            boundedPathPlanningHardeningSameYOnlyCases: boundedPathPlanningHardeningReport?.summary.sameYOnlyCases,
+            boundedPathPlanningHardeningTieBreakCases: boundedPathPlanningHardeningReport?.summary.tieBreakCases,
+            boundedPathPlanningHardeningTieBreakSelectedExpectedFirstHint: boundedPathPlanningHardeningReport?.summary.tieBreakSelectedExpectedFirstHint,
+            boundedPathPlanningHardeningMaxStepsMin: boundedPathPlanningHardeningReport?.summary.maxStepsMin,
+            boundedPathPlanningHardeningMaxStepsMax: boundedPathPlanningHardeningReport?.summary.maxStepsMax,
+            boundedPathPlanningHardeningMaxNodesMin: boundedPathPlanningHardeningReport?.summary.maxNodesMin,
+            boundedPathPlanningHardeningMaxNodesMax: boundedPathPlanningHardeningReport?.summary.maxNodesMax,
+            boundedPathPlanningHardeningNodesVisitedMax: boundedPathPlanningHardeningReport?.summary.nodesVisitedMax,
+            boundedPathPlanningHardeningStepsTotal: boundedPathPlanningHardeningReport?.summary.stepsTotal,
+            boundedPathPlanningHardeningStepsMax: boundedPathPlanningHardeningReport?.summary.stepsMax,
+            boundedPathPlanningHardeningStepsWithinMax: boundedPathPlanningHardeningReport?.summary.stepsWithinMax,
+            boundedPathPlanningHardeningNodesWithinMax: boundedPathPlanningHardeningReport?.summary.nodesWithinMax,
+            boundedPathPlanningHardeningOneEdgeSteps: boundedPathPlanningHardeningReport?.summary.oneEdgeSteps,
+            boundedPathPlanningHardeningSameYSteps: boundedPathPlanningHardeningReport?.summary.sameYSteps,
+            boundedPathPlanningHardeningBlockedDirectionsRespected: boundedPathPlanningHardeningReport?.summary.blockedDirectionsRespected,
+            boundedPathPlanningHardeningAbstractBlockedCellsRespected: boundedPathPlanningHardeningReport?.summary.abstractBlockedCellsRespected,
+            boundedPathPlanningHardeningDeterministicCaseOrder: boundedPathPlanningHardeningReport?.summary.deterministicCaseOrder,
+            boundedPathPlanningHardeningDeterministicNeighborOrder: boundedPathPlanningHardeningReport?.summary.deterministicNeighborOrder,
+            boundedPathPlanningHardeningDeterministicTieBreak: boundedPathPlanningHardeningReport?.summary.deterministicTieBreak,
+            boundedPathPlanningHardeningDigestsEqual: boundedPathPlanningHardeningReport?.summary.digestsEqual,
+            boundedPathPlanningHardeningRepeatabilityFailures: boundedPathPlanningHardeningReport?.summary.repeatabilityFailures,
+            boundedPathPlanningHardeningV0Unchanged: boundedPathPlanningHardeningReport?.summary.v0Unchanged,
+            boundedPathPlanningHardeningV1Unchanged: boundedPathPlanningHardeningReport?.summary.v1Unchanged,
+            boundedPathPlanningHardeningV2Unchanged: boundedPathPlanningHardeningReport?.summary.v2Unchanged,
+            boundedPathPlanningHardeningV3OptIn: boundedPathPlanningHardeningReport?.summary.v3OptIn,
+            boundedPathPlanningHardeningV3NotGlobal: boundedPathPlanningHardeningReport?.summary.v3NotGlobal,
+            boundedPathPlanningHardeningHiddenActivationDetected: boundedPathPlanningHardeningReport?.summary.hiddenActivationDetected,
+            boundedPathPlanningHardeningWorldRead: boundedPathPlanningHardeningReport?.summary.worldRead,
+            boundedPathPlanningHardeningCollisionRead: boundedPathPlanningHardeningReport?.summary.collisionRead,
+            boundedPathPlanningHardeningTickUsed: boundedPathPlanningHardeningReport?.summary.tickUsed,
+            boundedPathPlanningHardeningMovementApplied: boundedPathPlanningHardeningReport?.summary.movementApplied,
+            boundedPathPlanningHardeningLabPositionMapMutated: boundedPathPlanningHardeningReport?.summary.labPositionMapMutated,
+            boundedPathPlanningHardeningRouteFollowingUsed: boundedPathPlanningHardeningReport?.summary.routeFollowingUsed,
+            boundedPathPlanningHardeningPathfindingLiveUsed: boundedPathPlanningHardeningReport?.summary.pathfindingLiveUsed,
+            boundedPathPlanningHardeningUnboundedSearchUsed: boundedPathPlanningHardeningReport?.summary.unboundedSearchUsed,
+            boundedPathPlanningHardeningDynamicReplanningUsed: boundedPathPlanningHardeningReport?.summary.dynamicReplanningUsed,
+            boundedPathPlanningHardeningReservationRuntimeUsed: boundedPathPlanningHardeningReport?.summary.reservationRuntimeUsed,
+            boundedPathPlanningHardeningMemoryUpdated: boundedPathPlanningHardeningReport?.summary.memoryUpdated,
+            boundedPathPlanningHardeningGoalChanged: boundedPathPlanningHardeningReport?.summary.goalChanged,
+            boundedPathPlanningHardeningTerrainMutated: boundedPathPlanningHardeningReport?.summary.terrainMutated,
+            boundedPathPlanningHardeningWorldMutated: boundedPathPlanningHardeningReport?.summary.worldMutated,
+            boundedPathPlanningHardeningCoreEntityMoved: boundedPathPlanningHardeningReport?.summary.coreEntityMoved,
+            boundedPathPlanningHardeningPhysicalPlaceholderMoved: boundedPathPlanningHardeningReport?.summary.physicalPlaceholderMoved,
+            boundedPathPlanningHardeningMutationPerformed: boundedPathPlanningHardeningReport?.summary.mutationPerformed,
+            boundedPathPlanningHardeningSuccess: boundedPathPlanningHardeningSuccess,
             multiTickClosedLoopTicks: multiTickClosedLoopReport?.summary.executedTicks,
             multiTickClosedLoopAgents: multiTickClosedLoopReport?.summary.agents,
             multiTickClosedLoopContextsTotal: multiTickClosedLoopReport?.summary.contextsTotal,

@@ -1500,6 +1500,75 @@ struct RunMetrics: Encodable {
     let boundedPathPlanningFixturePhysicalPlaceholderMoved: Bool?
     let boundedPathPlanningFixtureMutationPerformed: Bool?
     let boundedPathPlanningFixtureSuccess: Bool?
+    let boundedPathPlanningHardeningCases: Int?
+    let boundedPathPlanningHardeningCasesPassed: Int?
+    let boundedPathPlanningHardeningCasesFailed: Int?
+    let boundedPathPlanningHardeningPlansProduced: Int?
+    let boundedPathPlanningHardeningNoPathPlans: Int?
+    let boundedPathPlanningHardeningReachedTargetPlans: Int?
+    let boundedPathPlanningHardeningTruncatedPlans: Int?
+    let boundedPathPlanningHardeningExhaustedPlans: Int?
+    let boundedPathPlanningHardeningSelectedFirstSteps: Int?
+    let boundedPathPlanningHardeningMaxStepsZeroCases: Int?
+    let boundedPathPlanningHardeningMaxStepsOneCases: Int?
+    let boundedPathPlanningHardeningMaxStepsTwoCases: Int?
+    let boundedPathPlanningHardeningMaxStepsThreeCases: Int?
+    let boundedPathPlanningHardeningMaxStepsFourCases: Int?
+    let boundedPathPlanningHardeningMaxNodesOneCases: Int?
+    let boundedPathPlanningHardeningMaxNodesTwoCases: Int?
+    let boundedPathPlanningHardeningMaxNodesFullCases: Int?
+    let boundedPathPlanningHardeningBlockedStartCases: Int?
+    let boundedPathPlanningHardeningBlockedTargetCases: Int?
+    let boundedPathPlanningHardeningBlockedDirectionCases: Int?
+    let boundedPathPlanningHardeningDuplicateBlockedCellCases: Int?
+    let boundedPathPlanningHardeningDuplicateInputCases: Int?
+    let boundedPathPlanningHardeningDuplicateInputDigestsEqual: Bool?
+    let boundedPathPlanningHardeningNegativeCoordinateCases: Int?
+    let boundedPathPlanningHardeningSameYOnlyCases: Int?
+    let boundedPathPlanningHardeningTieBreakCases: Int?
+    let boundedPathPlanningHardeningTieBreakSelectedExpectedFirstHint: Bool?
+    let boundedPathPlanningHardeningMaxStepsMin: Int?
+    let boundedPathPlanningHardeningMaxStepsMax: Int?
+    let boundedPathPlanningHardeningMaxNodesMin: Int?
+    let boundedPathPlanningHardeningMaxNodesMax: Int?
+    let boundedPathPlanningHardeningNodesVisitedMax: Int?
+    let boundedPathPlanningHardeningStepsTotal: Int?
+    let boundedPathPlanningHardeningStepsMax: Int?
+    let boundedPathPlanningHardeningStepsWithinMax: Bool?
+    let boundedPathPlanningHardeningNodesWithinMax: Bool?
+    let boundedPathPlanningHardeningOneEdgeSteps: Bool?
+    let boundedPathPlanningHardeningSameYSteps: Bool?
+    let boundedPathPlanningHardeningBlockedDirectionsRespected: Bool?
+    let boundedPathPlanningHardeningAbstractBlockedCellsRespected: Bool?
+    let boundedPathPlanningHardeningDeterministicCaseOrder: Bool?
+    let boundedPathPlanningHardeningDeterministicNeighborOrder: Bool?
+    let boundedPathPlanningHardeningDeterministicTieBreak: Bool?
+    let boundedPathPlanningHardeningDigestsEqual: Bool?
+    let boundedPathPlanningHardeningRepeatabilityFailures: Int?
+    let boundedPathPlanningHardeningV0Unchanged: Bool?
+    let boundedPathPlanningHardeningV1Unchanged: Bool?
+    let boundedPathPlanningHardeningV2Unchanged: Bool?
+    let boundedPathPlanningHardeningV3OptIn: Bool?
+    let boundedPathPlanningHardeningV3NotGlobal: Bool?
+    let boundedPathPlanningHardeningHiddenActivationDetected: Bool?
+    let boundedPathPlanningHardeningWorldRead: Bool?
+    let boundedPathPlanningHardeningCollisionRead: Bool?
+    let boundedPathPlanningHardeningTickUsed: Bool?
+    let boundedPathPlanningHardeningMovementApplied: Bool?
+    let boundedPathPlanningHardeningLabPositionMapMutated: Bool?
+    let boundedPathPlanningHardeningRouteFollowingUsed: Bool?
+    let boundedPathPlanningHardeningPathfindingLiveUsed: Bool?
+    let boundedPathPlanningHardeningUnboundedSearchUsed: Bool?
+    let boundedPathPlanningHardeningDynamicReplanningUsed: Bool?
+    let boundedPathPlanningHardeningReservationRuntimeUsed: Bool?
+    let boundedPathPlanningHardeningMemoryUpdated: Bool?
+    let boundedPathPlanningHardeningGoalChanged: Bool?
+    let boundedPathPlanningHardeningTerrainMutated: Bool?
+    let boundedPathPlanningHardeningWorldMutated: Bool?
+    let boundedPathPlanningHardeningCoreEntityMoved: Bool?
+    let boundedPathPlanningHardeningPhysicalPlaceholderMoved: Bool?
+    let boundedPathPlanningHardeningMutationPerformed: Bool?
+    let boundedPathPlanningHardeningSuccess: Bool?
     let multiTickClosedLoopTicks: Int?
     let multiTickClosedLoopAgents: Int?
     let multiTickClosedLoopContextsTotal: Int?
@@ -3169,6 +3238,75 @@ struct RunMetrics: Encodable {
         boundedPathPlanningFixturePhysicalPlaceholderMoved: Bool? = nil,
         boundedPathPlanningFixtureMutationPerformed: Bool? = nil,
         boundedPathPlanningFixtureSuccess: Bool? = nil,
+        boundedPathPlanningHardeningCases: Int? = nil,
+        boundedPathPlanningHardeningCasesPassed: Int? = nil,
+        boundedPathPlanningHardeningCasesFailed: Int? = nil,
+        boundedPathPlanningHardeningPlansProduced: Int? = nil,
+        boundedPathPlanningHardeningNoPathPlans: Int? = nil,
+        boundedPathPlanningHardeningReachedTargetPlans: Int? = nil,
+        boundedPathPlanningHardeningTruncatedPlans: Int? = nil,
+        boundedPathPlanningHardeningExhaustedPlans: Int? = nil,
+        boundedPathPlanningHardeningSelectedFirstSteps: Int? = nil,
+        boundedPathPlanningHardeningMaxStepsZeroCases: Int? = nil,
+        boundedPathPlanningHardeningMaxStepsOneCases: Int? = nil,
+        boundedPathPlanningHardeningMaxStepsTwoCases: Int? = nil,
+        boundedPathPlanningHardeningMaxStepsThreeCases: Int? = nil,
+        boundedPathPlanningHardeningMaxStepsFourCases: Int? = nil,
+        boundedPathPlanningHardeningMaxNodesOneCases: Int? = nil,
+        boundedPathPlanningHardeningMaxNodesTwoCases: Int? = nil,
+        boundedPathPlanningHardeningMaxNodesFullCases: Int? = nil,
+        boundedPathPlanningHardeningBlockedStartCases: Int? = nil,
+        boundedPathPlanningHardeningBlockedTargetCases: Int? = nil,
+        boundedPathPlanningHardeningBlockedDirectionCases: Int? = nil,
+        boundedPathPlanningHardeningDuplicateBlockedCellCases: Int? = nil,
+        boundedPathPlanningHardeningDuplicateInputCases: Int? = nil,
+        boundedPathPlanningHardeningDuplicateInputDigestsEqual: Bool? = nil,
+        boundedPathPlanningHardeningNegativeCoordinateCases: Int? = nil,
+        boundedPathPlanningHardeningSameYOnlyCases: Int? = nil,
+        boundedPathPlanningHardeningTieBreakCases: Int? = nil,
+        boundedPathPlanningHardeningTieBreakSelectedExpectedFirstHint: Bool? = nil,
+        boundedPathPlanningHardeningMaxStepsMin: Int? = nil,
+        boundedPathPlanningHardeningMaxStepsMax: Int? = nil,
+        boundedPathPlanningHardeningMaxNodesMin: Int? = nil,
+        boundedPathPlanningHardeningMaxNodesMax: Int? = nil,
+        boundedPathPlanningHardeningNodesVisitedMax: Int? = nil,
+        boundedPathPlanningHardeningStepsTotal: Int? = nil,
+        boundedPathPlanningHardeningStepsMax: Int? = nil,
+        boundedPathPlanningHardeningStepsWithinMax: Bool? = nil,
+        boundedPathPlanningHardeningNodesWithinMax: Bool? = nil,
+        boundedPathPlanningHardeningOneEdgeSteps: Bool? = nil,
+        boundedPathPlanningHardeningSameYSteps: Bool? = nil,
+        boundedPathPlanningHardeningBlockedDirectionsRespected: Bool? = nil,
+        boundedPathPlanningHardeningAbstractBlockedCellsRespected: Bool? = nil,
+        boundedPathPlanningHardeningDeterministicCaseOrder: Bool? = nil,
+        boundedPathPlanningHardeningDeterministicNeighborOrder: Bool? = nil,
+        boundedPathPlanningHardeningDeterministicTieBreak: Bool? = nil,
+        boundedPathPlanningHardeningDigestsEqual: Bool? = nil,
+        boundedPathPlanningHardeningRepeatabilityFailures: Int? = nil,
+        boundedPathPlanningHardeningV0Unchanged: Bool? = nil,
+        boundedPathPlanningHardeningV1Unchanged: Bool? = nil,
+        boundedPathPlanningHardeningV2Unchanged: Bool? = nil,
+        boundedPathPlanningHardeningV3OptIn: Bool? = nil,
+        boundedPathPlanningHardeningV3NotGlobal: Bool? = nil,
+        boundedPathPlanningHardeningHiddenActivationDetected: Bool? = nil,
+        boundedPathPlanningHardeningWorldRead: Bool? = nil,
+        boundedPathPlanningHardeningCollisionRead: Bool? = nil,
+        boundedPathPlanningHardeningTickUsed: Bool? = nil,
+        boundedPathPlanningHardeningMovementApplied: Bool? = nil,
+        boundedPathPlanningHardeningLabPositionMapMutated: Bool? = nil,
+        boundedPathPlanningHardeningRouteFollowingUsed: Bool? = nil,
+        boundedPathPlanningHardeningPathfindingLiveUsed: Bool? = nil,
+        boundedPathPlanningHardeningUnboundedSearchUsed: Bool? = nil,
+        boundedPathPlanningHardeningDynamicReplanningUsed: Bool? = nil,
+        boundedPathPlanningHardeningReservationRuntimeUsed: Bool? = nil,
+        boundedPathPlanningHardeningMemoryUpdated: Bool? = nil,
+        boundedPathPlanningHardeningGoalChanged: Bool? = nil,
+        boundedPathPlanningHardeningTerrainMutated: Bool? = nil,
+        boundedPathPlanningHardeningWorldMutated: Bool? = nil,
+        boundedPathPlanningHardeningCoreEntityMoved: Bool? = nil,
+        boundedPathPlanningHardeningPhysicalPlaceholderMoved: Bool? = nil,
+        boundedPathPlanningHardeningMutationPerformed: Bool? = nil,
+        boundedPathPlanningHardeningSuccess: Bool? = nil,
         multiTickClosedLoopTicks: Int? = nil,
         multiTickClosedLoopAgents: Int? = nil,
         multiTickClosedLoopContextsTotal: Int? = nil,
@@ -4837,6 +4975,75 @@ struct RunMetrics: Encodable {
         self.boundedPathPlanningFixturePhysicalPlaceholderMoved = boundedPathPlanningFixturePhysicalPlaceholderMoved
         self.boundedPathPlanningFixtureMutationPerformed = boundedPathPlanningFixtureMutationPerformed
         self.boundedPathPlanningFixtureSuccess = boundedPathPlanningFixtureSuccess
+        self.boundedPathPlanningHardeningCases = boundedPathPlanningHardeningCases
+        self.boundedPathPlanningHardeningCasesPassed = boundedPathPlanningHardeningCasesPassed
+        self.boundedPathPlanningHardeningCasesFailed = boundedPathPlanningHardeningCasesFailed
+        self.boundedPathPlanningHardeningPlansProduced = boundedPathPlanningHardeningPlansProduced
+        self.boundedPathPlanningHardeningNoPathPlans = boundedPathPlanningHardeningNoPathPlans
+        self.boundedPathPlanningHardeningReachedTargetPlans = boundedPathPlanningHardeningReachedTargetPlans
+        self.boundedPathPlanningHardeningTruncatedPlans = boundedPathPlanningHardeningTruncatedPlans
+        self.boundedPathPlanningHardeningExhaustedPlans = boundedPathPlanningHardeningExhaustedPlans
+        self.boundedPathPlanningHardeningSelectedFirstSteps = boundedPathPlanningHardeningSelectedFirstSteps
+        self.boundedPathPlanningHardeningMaxStepsZeroCases = boundedPathPlanningHardeningMaxStepsZeroCases
+        self.boundedPathPlanningHardeningMaxStepsOneCases = boundedPathPlanningHardeningMaxStepsOneCases
+        self.boundedPathPlanningHardeningMaxStepsTwoCases = boundedPathPlanningHardeningMaxStepsTwoCases
+        self.boundedPathPlanningHardeningMaxStepsThreeCases = boundedPathPlanningHardeningMaxStepsThreeCases
+        self.boundedPathPlanningHardeningMaxStepsFourCases = boundedPathPlanningHardeningMaxStepsFourCases
+        self.boundedPathPlanningHardeningMaxNodesOneCases = boundedPathPlanningHardeningMaxNodesOneCases
+        self.boundedPathPlanningHardeningMaxNodesTwoCases = boundedPathPlanningHardeningMaxNodesTwoCases
+        self.boundedPathPlanningHardeningMaxNodesFullCases = boundedPathPlanningHardeningMaxNodesFullCases
+        self.boundedPathPlanningHardeningBlockedStartCases = boundedPathPlanningHardeningBlockedStartCases
+        self.boundedPathPlanningHardeningBlockedTargetCases = boundedPathPlanningHardeningBlockedTargetCases
+        self.boundedPathPlanningHardeningBlockedDirectionCases = boundedPathPlanningHardeningBlockedDirectionCases
+        self.boundedPathPlanningHardeningDuplicateBlockedCellCases = boundedPathPlanningHardeningDuplicateBlockedCellCases
+        self.boundedPathPlanningHardeningDuplicateInputCases = boundedPathPlanningHardeningDuplicateInputCases
+        self.boundedPathPlanningHardeningDuplicateInputDigestsEqual = boundedPathPlanningHardeningDuplicateInputDigestsEqual
+        self.boundedPathPlanningHardeningNegativeCoordinateCases = boundedPathPlanningHardeningNegativeCoordinateCases
+        self.boundedPathPlanningHardeningSameYOnlyCases = boundedPathPlanningHardeningSameYOnlyCases
+        self.boundedPathPlanningHardeningTieBreakCases = boundedPathPlanningHardeningTieBreakCases
+        self.boundedPathPlanningHardeningTieBreakSelectedExpectedFirstHint = boundedPathPlanningHardeningTieBreakSelectedExpectedFirstHint
+        self.boundedPathPlanningHardeningMaxStepsMin = boundedPathPlanningHardeningMaxStepsMin
+        self.boundedPathPlanningHardeningMaxStepsMax = boundedPathPlanningHardeningMaxStepsMax
+        self.boundedPathPlanningHardeningMaxNodesMin = boundedPathPlanningHardeningMaxNodesMin
+        self.boundedPathPlanningHardeningMaxNodesMax = boundedPathPlanningHardeningMaxNodesMax
+        self.boundedPathPlanningHardeningNodesVisitedMax = boundedPathPlanningHardeningNodesVisitedMax
+        self.boundedPathPlanningHardeningStepsTotal = boundedPathPlanningHardeningStepsTotal
+        self.boundedPathPlanningHardeningStepsMax = boundedPathPlanningHardeningStepsMax
+        self.boundedPathPlanningHardeningStepsWithinMax = boundedPathPlanningHardeningStepsWithinMax
+        self.boundedPathPlanningHardeningNodesWithinMax = boundedPathPlanningHardeningNodesWithinMax
+        self.boundedPathPlanningHardeningOneEdgeSteps = boundedPathPlanningHardeningOneEdgeSteps
+        self.boundedPathPlanningHardeningSameYSteps = boundedPathPlanningHardeningSameYSteps
+        self.boundedPathPlanningHardeningBlockedDirectionsRespected = boundedPathPlanningHardeningBlockedDirectionsRespected
+        self.boundedPathPlanningHardeningAbstractBlockedCellsRespected = boundedPathPlanningHardeningAbstractBlockedCellsRespected
+        self.boundedPathPlanningHardeningDeterministicCaseOrder = boundedPathPlanningHardeningDeterministicCaseOrder
+        self.boundedPathPlanningHardeningDeterministicNeighborOrder = boundedPathPlanningHardeningDeterministicNeighborOrder
+        self.boundedPathPlanningHardeningDeterministicTieBreak = boundedPathPlanningHardeningDeterministicTieBreak
+        self.boundedPathPlanningHardeningDigestsEqual = boundedPathPlanningHardeningDigestsEqual
+        self.boundedPathPlanningHardeningRepeatabilityFailures = boundedPathPlanningHardeningRepeatabilityFailures
+        self.boundedPathPlanningHardeningV0Unchanged = boundedPathPlanningHardeningV0Unchanged
+        self.boundedPathPlanningHardeningV1Unchanged = boundedPathPlanningHardeningV1Unchanged
+        self.boundedPathPlanningHardeningV2Unchanged = boundedPathPlanningHardeningV2Unchanged
+        self.boundedPathPlanningHardeningV3OptIn = boundedPathPlanningHardeningV3OptIn
+        self.boundedPathPlanningHardeningV3NotGlobal = boundedPathPlanningHardeningV3NotGlobal
+        self.boundedPathPlanningHardeningHiddenActivationDetected = boundedPathPlanningHardeningHiddenActivationDetected
+        self.boundedPathPlanningHardeningWorldRead = boundedPathPlanningHardeningWorldRead
+        self.boundedPathPlanningHardeningCollisionRead = boundedPathPlanningHardeningCollisionRead
+        self.boundedPathPlanningHardeningTickUsed = boundedPathPlanningHardeningTickUsed
+        self.boundedPathPlanningHardeningMovementApplied = boundedPathPlanningHardeningMovementApplied
+        self.boundedPathPlanningHardeningLabPositionMapMutated = boundedPathPlanningHardeningLabPositionMapMutated
+        self.boundedPathPlanningHardeningRouteFollowingUsed = boundedPathPlanningHardeningRouteFollowingUsed
+        self.boundedPathPlanningHardeningPathfindingLiveUsed = boundedPathPlanningHardeningPathfindingLiveUsed
+        self.boundedPathPlanningHardeningUnboundedSearchUsed = boundedPathPlanningHardeningUnboundedSearchUsed
+        self.boundedPathPlanningHardeningDynamicReplanningUsed = boundedPathPlanningHardeningDynamicReplanningUsed
+        self.boundedPathPlanningHardeningReservationRuntimeUsed = boundedPathPlanningHardeningReservationRuntimeUsed
+        self.boundedPathPlanningHardeningMemoryUpdated = boundedPathPlanningHardeningMemoryUpdated
+        self.boundedPathPlanningHardeningGoalChanged = boundedPathPlanningHardeningGoalChanged
+        self.boundedPathPlanningHardeningTerrainMutated = boundedPathPlanningHardeningTerrainMutated
+        self.boundedPathPlanningHardeningWorldMutated = boundedPathPlanningHardeningWorldMutated
+        self.boundedPathPlanningHardeningCoreEntityMoved = boundedPathPlanningHardeningCoreEntityMoved
+        self.boundedPathPlanningHardeningPhysicalPlaceholderMoved = boundedPathPlanningHardeningPhysicalPlaceholderMoved
+        self.boundedPathPlanningHardeningMutationPerformed = boundedPathPlanningHardeningMutationPerformed
+        self.boundedPathPlanningHardeningSuccess = boundedPathPlanningHardeningSuccess
         self.multiTickClosedLoopTicks = multiTickClosedLoopTicks
         self.multiTickClosedLoopAgents = multiTickClosedLoopAgents
         self.multiTickClosedLoopContextsTotal = multiTickClosedLoopContextsTotal

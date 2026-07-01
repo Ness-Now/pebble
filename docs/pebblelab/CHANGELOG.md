@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added bounded path planning hardening smoke.
 - Added bounded path planning fixture smoke.
 - Documented PebbleLab bounded path planning plan.
 - Added agent movement policy consolidated replay regression smoke.

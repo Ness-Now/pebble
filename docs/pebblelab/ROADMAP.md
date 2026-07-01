@@ -2417,3 +2417,46 @@ Outputs:
 - `lab_bounded_path_planning_fixture_recorded` event.
 
 Next recommended step: Phase 4.27C - Bounded Path Planning Hardening.
+
+## Phase 4.27C - Bounded Path Planning Hardening
+
+Status: implemented and validated.
+
+Goal: stress the fixture-only bounded path planner with max step/node bounds,
+blocked inputs, duplicate inputs, negative coordinates, same-y-only constraints,
+and deterministic tie-breaks without adding live behavior.
+
+Validated scope:
+
+- `bounded_path_planning_hardening_smoke`;
+- 24 deterministic hardening cases;
+- `maxSteps` 0, 1, 2, 3, and 4 covered;
+- `maxNodes` 1, 2, and 32 covered;
+- blocked start/target cases covered;
+- blocked directions and allowed direction subset covered;
+- duplicate blocked cells and duplicate input digests covered;
+- negative coordinates covered;
+- same-y-only vertical escape rejection covered;
+- equal-shortest-path tie-break selects `move_north`;
+- digest repeatability true;
+- v0/v1/v2 unchanged;
+- v3 fixture opt-in and not global;
+- hidden activation false;
+- no World/collision/tick/movement/application/route following;
+- no memory/goals/reservation runtime;
+- no terrain/world mutation.
+
+Outputs:
+
+- `bounded_path_planning_hardening_report.json`;
+- `bounded_path_planning_hardening_invariant_report.json`;
+- `bounded_path_planning_hardening_cases.json`;
+- `bounded_path_planning_hardening_plans.json`;
+- `bounded_path_planning_hardening_digest.json`;
+- `bounded_path_planning_hardening_boundary.json`;
+- `boundedPathPlanningHardening*` metrics;
+- `lab_bounded_path_planning_hardening_recorded` event.
+
+Route following and live execution remain out of scope.
+
+Next recommended step: Phase 4.27D - Planning To Tick First-Step Handoff.

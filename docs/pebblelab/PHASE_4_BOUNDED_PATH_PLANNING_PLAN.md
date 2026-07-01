@@ -489,3 +489,54 @@ following, no memory/goals, no reservation runtime, no live pathfinding, no
 unbounded search, and no terrain/World mutation.
 
 Next step: Phase 4.27C — Bounded Path Planning Hardening.
+
+## Phase 4.27C Implementation Status
+
+Status: implemented and validated.
+
+Phase 4.27C added `bounded_path_planning_hardening_smoke` as a fixture-only
+hardening scenario for the bounded planner. It reuses the abstract grid planner
+from 4.27B and does not add live behavior.
+
+Coverage:
+
+- `maxSteps` 0, 1, 2, 3, and 4;
+- `maxNodes` 1, 2, and 32;
+- start surrounded by blocked cells;
+- target surrounded by blocked cells;
+- blocked target cell;
+- blocked direction `move_east`;
+- allowed direction subset via north/south-only context;
+- duplicate blocked cells;
+- duplicate identical inputs with equal digests;
+- negative-coordinate detour;
+- same-y-only vertical escape rejection;
+- equal-shortest-path deterministic tie-break.
+
+The hardening report verifies all plans remain within `maxSteps` and `maxNodes`,
+all emitted steps are one-edge and same-y, blocked directions are not used, and
+abstract blocked cells are not stepped into. Digest repeatability is checked by
+repeating the same fixtures and comparing aggregate digests.
+
+v3 remains fixture opt-in and not global. v0, v1, and v2 remain unchanged.
+Hidden activation is false.
+
+No World/collision/tick/movement/application behavior is introduced. No route
+following, memory/goals, reservation runtime, live pathfinding, unbounded
+search, dynamic replanning, core entity movement, physical placeholder movement,
+terrain mutation, or World mutation is used.
+
+Outputs produced:
+
+- `bounded_path_planning_hardening_report.json`
+- `bounded_path_planning_hardening_invariant_report.json`
+- `bounded_path_planning_hardening_cases.json`
+- `bounded_path_planning_hardening_plans.json`
+- `bounded_path_planning_hardening_digest.json`
+- `bounded_path_planning_hardening_boundary.json`
+- `metrics.json`
+- `events.ndjson`
+
+Limits remain explicit: route following and live execution stay out of scope.
+
+Next step: Phase 4.27D — Planning To Tick First-Step Handoff.
