@@ -70,6 +70,8 @@ let isAlternateLocalHintMultiTickReplayScenario = options.scenario
     == "alternate_local_hint_multi_tick_replay_smoke"
 let isAgentMovementPolicyConsolidationFixtureScenario = options.scenario
     == "agent_movement_policy_consolidation_fixture_smoke"
+let isAgentMovementPolicyBoundaryHardeningScenario = options.scenario
+    == "agent_movement_policy_boundary_hardening_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -99,7 +101,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isAlternateLocalHintLiveReadonlyScenario
     || isAlternateLocalHintApprovedApplicationScenario
     || isAlternateLocalHintMultiTickReplayScenario
-    || isAgentMovementPolicyConsolidationFixtureScenario)
+    || isAgentMovementPolicyConsolidationFixtureScenario
+    || isAgentMovementPolicyBoundaryHardeningScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -758,7 +761,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isMultiTickClosedLoopLiveReadonlyScenario
     || isMultiTickClosedLoopApprovedApplicationScenario
     || isAlternateLocalHintMultiTickReplayScenario
-    || isAgentMovementPolicyConsolidationFixtureScenario {
+    || isAgentMovementPolicyConsolidationFixtureScenario
+    || isAgentMovementPolicyBoundaryHardeningScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -2676,6 +2680,87 @@ let agentMovementPolicyConsolidationSuccess = isAgentMovementPolicyConsolidation
         && agentMovementPolicyConsolidationSummary?.goalChanged == false
         && agentMovementPolicyConsolidationSummary?.mutationPerformed == false)
     : nil
+let agentMovementPolicyBoundaryHardeningReport = isAgentMovementPolicyBoundaryHardeningScenario
+    ? makeAgentMovementPolicyBoundaryHardeningReport(
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let agentMovementPolicyBoundaryHardeningInvariantReport = isAgentMovementPolicyBoundaryHardeningScenario
+    ? makeAgentMovementPolicyBoundaryHardeningInvariantReport(
+        report: agentMovementPolicyBoundaryHardeningReport,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let agentMovementPolicyBoundaryHardeningSignatures = agentMovementPolicyBoundaryHardeningReport.map {
+    makeAgentMovementPolicyBoundaryHardeningSignatures(report: $0)
+}
+let agentMovementPolicyBoundaryHardeningBoundary = agentMovementPolicyBoundaryHardeningReport.map {
+    makeAgentMovementPolicyBoundaryHardeningBoundaryReport(report: $0)
+}
+let agentMovementPolicyBoundaryHardeningSummary = agentMovementPolicyBoundaryHardeningReport?.summary
+let agentMovementPolicyBoundaryHardeningSuccess = isAgentMovementPolicyBoundaryHardeningScenario
+    ? ((agentMovementPolicyBoundaryHardeningReport?.success ?? false)
+        && (agentMovementPolicyBoundaryHardeningInvariantReport?.success ?? false)
+        && (agentMovementPolicyBoundaryHardeningSummary?.cases ?? 0) >= 18
+        && agentMovementPolicyBoundaryHardeningSummary?.policyVersions == 3
+        && agentMovementPolicyBoundaryHardeningSummary?.decisions
+            == (agentMovementPolicyBoundaryHardeningSummary?.cases ?? 0) * 3
+        && agentMovementPolicyBoundaryHardeningSummary?.signaturesCompared
+            == agentMovementPolicyBoundaryHardeningSummary?.decisions
+        && agentMovementPolicyBoundaryHardeningSummary?.signaturesMatched
+            == agentMovementPolicyBoundaryHardeningSummary?.signaturesCompared
+        && agentMovementPolicyBoundaryHardeningSummary?.signatureMismatches == 0
+        && agentMovementPolicyBoundaryHardeningSummary?.v0SignatureMismatches == 0
+        && agentMovementPolicyBoundaryHardeningSummary?.v1SignatureMismatches == 0
+        && agentMovementPolicyBoundaryHardeningSummary?.v2SignatureMismatches == 0
+        && agentMovementPolicyBoundaryHardeningSummary?.v0Unchanged == true
+        && agentMovementPolicyBoundaryHardeningSummary?.v1Unchanged == true
+        && agentMovementPolicyBoundaryHardeningSummary?.v2OptIn == true
+        && agentMovementPolicyBoundaryHardeningSummary?.v2NotGlobal == true
+        && agentMovementPolicyBoundaryHardeningSummary?.hiddenActivationDetected == false
+        && (agentMovementPolicyBoundaryHardeningSummary?.blockedFeedbackKindsCovered ?? 0) >= 7
+        && (agentMovementPolicyBoundaryHardeningSummary?.maxAlternatesZeroCases ?? 0) >= 1
+        && (agentMovementPolicyBoundaryHardeningSummary?.maxAlternatesOneCases ?? 0) >= 1
+        && (agentMovementPolicyBoundaryHardeningSummary?.maxAlternatesTwoCases ?? 0) >= 7
+        && (agentMovementPolicyBoundaryHardeningSummary?.maxAlternatesThreeCases ?? 0) >= 1
+        && (agentMovementPolicyBoundaryHardeningSummary?.candidatesProduced ?? 0) > 0
+        && (agentMovementPolicyBoundaryHardeningSummary?.candidatesSelected ?? 0) > 0
+        && (agentMovementPolicyBoundaryHardeningSummary?.duplicateHintCases ?? 0) >= 1
+        && (agentMovementPolicyBoundaryHardeningSummary?.multipleHintCases ?? 0) >= 1
+        && (agentMovementPolicyBoundaryHardeningSummary?.unknownHintNoIntent ?? 0) >= 1
+        && (agentMovementPolicyBoundaryHardeningSummary?.emptyHintNoIntent ?? 0) >= 1
+        && (agentMovementPolicyBoundaryHardeningSummary?.noFeedbackBaseline ?? 0) >= 4
+        && (agentMovementPolicyBoundaryHardeningSummary?.approvedFeedbackBaseline ?? 0) >= 1
+        && (agentMovementPolicyBoundaryHardeningSummary?.movedFeedbackBaseline ?? 0) >= 1
+        && (agentMovementPolicyBoundaryHardeningSummary?.blockedFeedbackNoIntentV1 ?? 0) >= 7
+        && (agentMovementPolicyBoundaryHardeningSummary?.blockedFeedbackAlternateV2 ?? 0) >= 7
+        && (agentMovementPolicyBoundaryHardeningSummary?.failedDirectionExcluded ?? 0) >= 7
+        && agentMovementPolicyBoundaryHardeningSummary?.oneEdgeAlternates == true
+        && agentMovementPolicyBoundaryHardeningSummary?.bounded == true
+        && agentMovementPolicyBoundaryHardeningSummary?.deterministicContextOrder == true
+        && agentMovementPolicyBoundaryHardeningSummary?.deterministicPolicyOrder == true
+        && agentMovementPolicyBoundaryHardeningSummary?.deterministicDecisionOrder == true
+        && agentMovementPolicyBoundaryHardeningSummary?.deterministicSignatureOrder == true
+        && agentMovementPolicyBoundaryHardeningSummary?.policyReadCollision == false
+        && agentMovementPolicyBoundaryHardeningSummary?.policyWorldUsed == false
+        && agentMovementPolicyBoundaryHardeningSummary?.tickReadCollision == false
+        && agentMovementPolicyBoundaryHardeningSummary?.tickWorldReadOnlyUsed == false
+        && agentMovementPolicyBoundaryHardeningSummary?.movementApplied == false
+        && agentMovementPolicyBoundaryHardeningSummary?.worldMutated == false
+        && agentMovementPolicyBoundaryHardeningSummary?.terrainMutated == false
+        && agentMovementPolicyBoundaryHardeningSummary?.coreEntityMoved == false
+        && agentMovementPolicyBoundaryHardeningSummary?.physicalPlaceholderMoved == false
+        && agentMovementPolicyBoundaryHardeningSummary?.pathfindingPerformed == false
+        && agentMovementPolicyBoundaryHardeningSummary?.replanningPerformed == false
+        && agentMovementPolicyBoundaryHardeningSummary?.avoidancePerformed == false
+        && agentMovementPolicyBoundaryHardeningSummary?.reservationRuntimeUsed == false
+        && agentMovementPolicyBoundaryHardeningSummary?.routeFollowingUsed == false
+        && agentMovementPolicyBoundaryHardeningSummary?.memoryUpdated == false
+        && agentMovementPolicyBoundaryHardeningSummary?.goalChanged == false
+        && agentMovementPolicyBoundaryHardeningSummary?.mutationPerformed == false)
+    : nil
 let multiTickClosedLoopReport = isMultiTickClosedLoopFixtureScenario
     ? makeMultiTickClosedLoopFixtureReport(
         scenario: options.scenario,
@@ -3306,6 +3391,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (alternateLocalHintApprovedApplicationSuccess ?? true)
     && (alternateLocalHintMultiTickReplaySuccess ?? true)
     && (agentMovementPolicyConsolidationSuccess ?? true)
+    && (agentMovementPolicyBoundaryHardeningSuccess ?? true)
     && (multiTickClosedLoopSuccess ?? true)
     && (multiTickClosedLoopHardeningSuccess ?? true)
     && (multiTickClosedLoopLiveReadonlySuccess ?? true)
@@ -4768,6 +4854,69 @@ if options.outPath != nil {
                 replanningPerformed: summary.replanningPerformed
             ))
         }
+        if let agentMovementPolicyBoundaryHardeningReport {
+            let summary = agentMovementPolicyBoundaryHardeningReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_agent_movement_policy_boundary_hardening_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                success: agentMovementPolicyBoundaryHardeningSuccess,
+                decisions: summary.decisions,
+                candidatesProduced: summary.candidatesProduced,
+                candidatesSelected: summary.candidatesSelected,
+                candidatesFiltered: summary.candidatesFiltered,
+                blockedFeedbackKindsCovered: summary.blockedFeedbackKindsCovered,
+                maxAlternatesZeroCases: summary.maxAlternatesZeroCases,
+                maxAlternatesOneCases: summary.maxAlternatesOneCases,
+                maxAlternatesTwoCases: summary.maxAlternatesTwoCases,
+                maxAlternatesThreeCases: summary.maxAlternatesThreeCases,
+                duplicateHintCases: summary.duplicateHintCases,
+                duplicateCandidatesFiltered: summary.duplicateCandidatesFiltered,
+                multipleHintCases: summary.multipleHintCases,
+                bounded: summary.bounded,
+                noFeedbackBaseline: summary.noFeedbackBaseline,
+                approvedFeedbackBaseline: summary.approvedFeedbackBaseline,
+                movedFeedbackBaseline: summary.movedFeedbackBaseline,
+                unknownHintNoAlternate: summary.unknownHintNoIntent,
+                emptyHintNoAlternate: summary.emptyHintNoIntent,
+                failedDirectionExcluded: summary.failedDirectionExcluded,
+                oneEdgeAlternates: summary.oneEdgeAlternates,
+                v0Unchanged: summary.v0Unchanged,
+                v1Unchanged: summary.v1Unchanged,
+                v2OptIn: summary.v2OptIn,
+                v2NotGlobal: summary.v2NotGlobal,
+                hiddenActivationDetected: summary.hiddenActivationDetected,
+                policyVersions: summary.policyVersions,
+                signaturesCompared: summary.signaturesCompared,
+                signaturesMatched: summary.signaturesMatched,
+                signatureMismatches: summary.signatureMismatches,
+                v0SignatureMismatches: summary.v0SignatureMismatches,
+                v1SignatureMismatches: summary.v1SignatureMismatches,
+                v2SignatureMismatches: summary.v2SignatureMismatches,
+                blockedFeedbackNoIntentV1: summary.blockedFeedbackNoIntentV1,
+                blockedFeedbackAlternateV2: summary.blockedFeedbackAlternateV2,
+                terrainMutated: summary.terrainMutated,
+                coreEntityMoved: summary.coreEntityMoved,
+                physicalPlaceholderMoved: summary.physicalPlaceholderMoved,
+                cases: summary.cases,
+                policyReadCollision: summary.policyReadCollision,
+                policyWorldUsed: summary.policyWorldUsed,
+                tickWorldReadOnlyUsed: summary.tickWorldReadOnlyUsed,
+                worldMutated: summary.worldMutated,
+                routeFollowingUsed: summary.routeFollowingUsed,
+                tickReadCollision: summary.tickReadCollision,
+                worldUsed: summary.policyWorldUsed || summary.tickWorldReadOnlyUsed,
+                collisionRead: summary.policyReadCollision || summary.tickReadCollision,
+                movementApplied: summary.movementApplied,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                avoidancePerformed: summary.avoidancePerformed,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
+                replanningPerformed: summary.replanningPerformed
+            ))
+        }
         if let multiTickClosedLoopReport {
             let summary = multiTickClosedLoopReport.summary
             try appendEvent(RunEvent(
@@ -5992,6 +6141,38 @@ if let outPath = options.outPath {
             try writeJSON(
                 agentMovementPolicyConsolidationInvariantReport,
                 to: outURL.appendingPathComponent("agent_movement_policy_consolidation_invariant_report.json")
+            )
+        }
+        if let agentMovementPolicyBoundaryHardeningReport {
+            try writeJSON(
+                agentMovementPolicyBoundaryHardeningReport,
+                to: outURL.appendingPathComponent("agent_movement_policy_boundary_hardening_report.json")
+            )
+            try writeJSON(
+                agentMovementPolicyBoundaryHardeningReport.cases,
+                to: outURL.appendingPathComponent("agent_movement_policy_boundary_hardening_cases.json")
+            )
+            try writeJSON(
+                agentMovementPolicyBoundaryHardeningReport.decisions,
+                to: outURL.appendingPathComponent("agent_movement_policy_boundary_hardening_decisions.json")
+            )
+        }
+        if let agentMovementPolicyBoundaryHardeningSignatures {
+            try writeJSON(
+                agentMovementPolicyBoundaryHardeningSignatures,
+                to: outURL.appendingPathComponent("agent_movement_policy_boundary_hardening_signatures.json")
+            )
+        }
+        if let agentMovementPolicyBoundaryHardeningBoundary {
+            try writeJSON(
+                agentMovementPolicyBoundaryHardeningBoundary,
+                to: outURL.appendingPathComponent("agent_movement_policy_boundary_hardening_boundary.json")
+            )
+        }
+        if let agentMovementPolicyBoundaryHardeningInvariantReport {
+            try writeJSON(
+                agentMovementPolicyBoundaryHardeningInvariantReport,
+                to: outURL.appendingPathComponent("agent_movement_policy_boundary_hardening_invariant_report.json")
             )
         }
         if let multiTickClosedLoopReport {
@@ -7484,6 +7665,63 @@ if let outPath = options.outPath {
             agentMovementPolicyConsolidationGoalChanged: agentMovementPolicyConsolidationReport?.summary.goalChanged,
             agentMovementPolicyConsolidationMutationPerformed: agentMovementPolicyConsolidationReport?.summary.mutationPerformed,
             agentMovementPolicyConsolidationSuccess: agentMovementPolicyConsolidationSuccess,
+            agentMovementPolicyBoundaryHardeningCases: agentMovementPolicyBoundaryHardeningReport?.summary.cases,
+            agentMovementPolicyBoundaryHardeningPolicyVersions: agentMovementPolicyBoundaryHardeningReport?.summary.policyVersions,
+            agentMovementPolicyBoundaryHardeningDecisions: agentMovementPolicyBoundaryHardeningReport?.summary.decisions,
+            agentMovementPolicyBoundaryHardeningSignaturesCompared: agentMovementPolicyBoundaryHardeningReport?.summary.signaturesCompared,
+            agentMovementPolicyBoundaryHardeningSignaturesMatched: agentMovementPolicyBoundaryHardeningReport?.summary.signaturesMatched,
+            agentMovementPolicyBoundaryHardeningSignatureMismatches: agentMovementPolicyBoundaryHardeningReport?.summary.signatureMismatches,
+            agentMovementPolicyBoundaryHardeningV0SignatureMismatches: agentMovementPolicyBoundaryHardeningReport?.summary.v0SignatureMismatches,
+            agentMovementPolicyBoundaryHardeningV1SignatureMismatches: agentMovementPolicyBoundaryHardeningReport?.summary.v1SignatureMismatches,
+            agentMovementPolicyBoundaryHardeningV2SignatureMismatches: agentMovementPolicyBoundaryHardeningReport?.summary.v2SignatureMismatches,
+            agentMovementPolicyBoundaryHardeningV0Unchanged: agentMovementPolicyBoundaryHardeningReport?.summary.v0Unchanged,
+            agentMovementPolicyBoundaryHardeningV1Unchanged: agentMovementPolicyBoundaryHardeningReport?.summary.v1Unchanged,
+            agentMovementPolicyBoundaryHardeningV2OptIn: agentMovementPolicyBoundaryHardeningReport?.summary.v2OptIn,
+            agentMovementPolicyBoundaryHardeningV2NotGlobal: agentMovementPolicyBoundaryHardeningReport?.summary.v2NotGlobal,
+            agentMovementPolicyBoundaryHardeningHiddenActivationDetected: agentMovementPolicyBoundaryHardeningReport?.summary.hiddenActivationDetected,
+            agentMovementPolicyBoundaryHardeningBlockedFeedbackKindsCovered: agentMovementPolicyBoundaryHardeningReport?.summary.blockedFeedbackKindsCovered,
+            agentMovementPolicyBoundaryHardeningMaxAlternatesZeroCases: agentMovementPolicyBoundaryHardeningReport?.summary.maxAlternatesZeroCases,
+            agentMovementPolicyBoundaryHardeningMaxAlternatesOneCases: agentMovementPolicyBoundaryHardeningReport?.summary.maxAlternatesOneCases,
+            agentMovementPolicyBoundaryHardeningMaxAlternatesTwoCases: agentMovementPolicyBoundaryHardeningReport?.summary.maxAlternatesTwoCases,
+            agentMovementPolicyBoundaryHardeningMaxAlternatesThreeCases: agentMovementPolicyBoundaryHardeningReport?.summary.maxAlternatesThreeCases,
+            agentMovementPolicyBoundaryHardeningCandidatesProduced: agentMovementPolicyBoundaryHardeningReport?.summary.candidatesProduced,
+            agentMovementPolicyBoundaryHardeningCandidatesSelected: agentMovementPolicyBoundaryHardeningReport?.summary.candidatesSelected,
+            agentMovementPolicyBoundaryHardeningCandidatesFiltered: agentMovementPolicyBoundaryHardeningReport?.summary.candidatesFiltered,
+            agentMovementPolicyBoundaryHardeningDuplicateHintCases: agentMovementPolicyBoundaryHardeningReport?.summary.duplicateHintCases,
+            agentMovementPolicyBoundaryHardeningDuplicateCandidatesFiltered: agentMovementPolicyBoundaryHardeningReport?.summary.duplicateCandidatesFiltered,
+            agentMovementPolicyBoundaryHardeningMultipleHintCases: agentMovementPolicyBoundaryHardeningReport?.summary.multipleHintCases,
+            agentMovementPolicyBoundaryHardeningUnknownHintNoIntent: agentMovementPolicyBoundaryHardeningReport?.summary.unknownHintNoIntent,
+            agentMovementPolicyBoundaryHardeningEmptyHintNoIntent: agentMovementPolicyBoundaryHardeningReport?.summary.emptyHintNoIntent,
+            agentMovementPolicyBoundaryHardeningNoFeedbackBaseline: agentMovementPolicyBoundaryHardeningReport?.summary.noFeedbackBaseline,
+            agentMovementPolicyBoundaryHardeningApprovedFeedbackBaseline: agentMovementPolicyBoundaryHardeningReport?.summary.approvedFeedbackBaseline,
+            agentMovementPolicyBoundaryHardeningMovedFeedbackBaseline: agentMovementPolicyBoundaryHardeningReport?.summary.movedFeedbackBaseline,
+            agentMovementPolicyBoundaryHardeningBlockedFeedbackNoIntentV1: agentMovementPolicyBoundaryHardeningReport?.summary.blockedFeedbackNoIntentV1,
+            agentMovementPolicyBoundaryHardeningBlockedFeedbackAlternateV2: agentMovementPolicyBoundaryHardeningReport?.summary.blockedFeedbackAlternateV2,
+            agentMovementPolicyBoundaryHardeningFailedDirectionExcluded: agentMovementPolicyBoundaryHardeningReport?.summary.failedDirectionExcluded,
+            agentMovementPolicyBoundaryHardeningOneEdgeAlternates: agentMovementPolicyBoundaryHardeningReport?.summary.oneEdgeAlternates,
+            agentMovementPolicyBoundaryHardeningBounded: agentMovementPolicyBoundaryHardeningReport?.summary.bounded,
+            agentMovementPolicyBoundaryHardeningDeterministicContextOrder: agentMovementPolicyBoundaryHardeningReport?.summary.deterministicContextOrder,
+            agentMovementPolicyBoundaryHardeningDeterministicPolicyOrder: agentMovementPolicyBoundaryHardeningReport?.summary.deterministicPolicyOrder,
+            agentMovementPolicyBoundaryHardeningDeterministicDecisionOrder: agentMovementPolicyBoundaryHardeningReport?.summary.deterministicDecisionOrder,
+            agentMovementPolicyBoundaryHardeningDeterministicSignatureOrder: agentMovementPolicyBoundaryHardeningReport?.summary.deterministicSignatureOrder,
+            agentMovementPolicyBoundaryHardeningPolicyReadCollision: agentMovementPolicyBoundaryHardeningReport?.summary.policyReadCollision,
+            agentMovementPolicyBoundaryHardeningPolicyWorldUsed: agentMovementPolicyBoundaryHardeningReport?.summary.policyWorldUsed,
+            agentMovementPolicyBoundaryHardeningTickReadCollision: agentMovementPolicyBoundaryHardeningReport?.summary.tickReadCollision,
+            agentMovementPolicyBoundaryHardeningTickWorldReadOnlyUsed: agentMovementPolicyBoundaryHardeningReport?.summary.tickWorldReadOnlyUsed,
+            agentMovementPolicyBoundaryHardeningMovementApplied: agentMovementPolicyBoundaryHardeningReport?.summary.movementApplied,
+            agentMovementPolicyBoundaryHardeningWorldMutated: agentMovementPolicyBoundaryHardeningReport?.summary.worldMutated,
+            agentMovementPolicyBoundaryHardeningTerrainMutated: agentMovementPolicyBoundaryHardeningReport?.summary.terrainMutated,
+            agentMovementPolicyBoundaryHardeningCoreEntityMoved: agentMovementPolicyBoundaryHardeningReport?.summary.coreEntityMoved,
+            agentMovementPolicyBoundaryHardeningPhysicalPlaceholderMoved: agentMovementPolicyBoundaryHardeningReport?.summary.physicalPlaceholderMoved,
+            agentMovementPolicyBoundaryHardeningPathfindingPerformed: agentMovementPolicyBoundaryHardeningReport?.summary.pathfindingPerformed,
+            agentMovementPolicyBoundaryHardeningReplanningPerformed: agentMovementPolicyBoundaryHardeningReport?.summary.replanningPerformed,
+            agentMovementPolicyBoundaryHardeningAvoidancePerformed: agentMovementPolicyBoundaryHardeningReport?.summary.avoidancePerformed,
+            agentMovementPolicyBoundaryHardeningReservationRuntimeUsed: agentMovementPolicyBoundaryHardeningReport?.summary.reservationRuntimeUsed,
+            agentMovementPolicyBoundaryHardeningRouteFollowingUsed: agentMovementPolicyBoundaryHardeningReport?.summary.routeFollowingUsed,
+            agentMovementPolicyBoundaryHardeningMemoryUpdated: agentMovementPolicyBoundaryHardeningReport?.summary.memoryUpdated,
+            agentMovementPolicyBoundaryHardeningGoalChanged: agentMovementPolicyBoundaryHardeningReport?.summary.goalChanged,
+            agentMovementPolicyBoundaryHardeningMutationPerformed: agentMovementPolicyBoundaryHardeningReport?.summary.mutationPerformed,
+            agentMovementPolicyBoundaryHardeningSuccess: agentMovementPolicyBoundaryHardeningSuccess,
             multiTickClosedLoopTicks: multiTickClosedLoopReport?.summary.executedTicks,
             multiTickClosedLoopAgents: multiTickClosedLoopReport?.summary.agents,
             multiTickClosedLoopContextsTotal: multiTickClosedLoopReport?.summary.contextsTotal,

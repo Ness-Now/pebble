@@ -685,3 +685,59 @@ Limits:
   collision reads, World reads, movement application, or mutation.
 
 Next step: Phase 4.26C — Policy Boundary Hardening.
+
+## Phase 4.26C Implementation Status
+
+Phase 4.26C implemented fixture-only hardening for the consolidated policy
+boundary without changing v0, v1, or v2 behavior.
+
+Validated status:
+
+- added `agent_movement_policy_boundary_hardening_smoke`;
+- reused the explicit consolidated adapter from 4.26B;
+- compared direct v0 policy output with `.baselineV0` consolidated output;
+- compared direct v1 policy output with `.feedbackAwareV1` consolidated
+  output;
+- compared direct v2 policy output with `.alternateLocalHintV2` consolidated
+  output;
+- used twenty-two deterministic hardening contexts;
+- covered no feedback, approved feedback, moved feedback, all blocked feedback
+  kinds, duplicate hints, multiple hints, empty hints, unknown hints, and
+  `maxAlternates` 0, 1, 2, and 3;
+- compared sixty-six direct signatures with sixty-six consolidated signatures;
+- observed zero signature mismatches;
+- preserved v0 behavior;
+- preserved v1 behavior;
+- kept v2 explicit opt-in and not global;
+- detected no hidden activation;
+- kept alternate candidates bounded, deterministic, and one-edge same-y;
+- kept failed directions excluded;
+- kept empty and unknown hints as noIntent;
+- kept policy World/collision reads false;
+- did not invoke tick live paths;
+- did not apply movement or approved application;
+- did not update memory or goals;
+- did not perform pathfinding, replanning, avoidance, reservation runtime, or
+  route following;
+- did not mutate terrain or World.
+
+Outputs produced:
+
+- `agent_movement_policy_boundary_hardening_report.json`;
+- `agent_movement_policy_boundary_hardening_invariant_report.json`;
+- `agent_movement_policy_boundary_hardening_cases.json`;
+- `agent_movement_policy_boundary_hardening_decisions.json`;
+- `agent_movement_policy_boundary_hardening_signatures.json`;
+- `agent_movement_policy_boundary_hardening_boundary.json`;
+- `agentMovementPolicyBoundaryHardening*` metrics;
+- `lab_agent_movement_policy_boundary_hardening_recorded` event.
+
+Limits:
+
+- the scenario is fixture-only;
+- it does not consolidate runtime execution;
+- it does not introduce pathfinding, planning, route following, memory, goals,
+  collision reads, World reads, movement application, approved application, or
+  mutation.
+
+Next step: Phase 4.26D — Consolidated Replay Regression.

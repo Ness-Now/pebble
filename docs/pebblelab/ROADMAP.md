@@ -2244,3 +2244,54 @@ reservation runtime, route following, memory/goals, gameplay autonomy,
 physical/core entity movement, and terrain/world mutation remain out of scope.
 
 Next recommended step: Phase 4.26C - Policy Boundary Hardening.
+
+## Phase 4.26C - Policy Boundary Hardening
+
+Status: implemented and validated.
+
+Goal: harden the consolidated agent movement policy boundary without changing
+v0, v1, or v2 behavior.
+
+Validated scope:
+
+- `agent_movement_policy_boundary_hardening_smoke`;
+- twenty-two fixture-only contexts;
+- three explicit policy versions;
+- direct signatures match consolidated signatures;
+- zero signature mismatches for v0, v1, and v2;
+- v0 remains unchanged;
+- v1 remains unchanged;
+- v2 remains explicit opt-in and not global;
+- hidden activation is not detected;
+- all seven blocked feedback kinds are covered;
+- `maxAlternates` 0, 1, 2, and 3 are covered;
+- duplicate, multiple, empty, and unknown hints remain deterministic;
+- v1 blocked feedback stays noIntent;
+- v2 blocked known hints produce bounded one-edge alternates;
+- failed directions are excluded;
+- no tick live path is invoked;
+- policy reads no World and no collision;
+- tick reads no World and no collision;
+- no movement application;
+- no memory/goals;
+- no pathfinding, replanning, avoidance, reservation runtime, or route
+  following;
+- no terrain/world mutation.
+
+Outputs:
+
+- `agent_movement_policy_boundary_hardening_report.json`;
+- `agent_movement_policy_boundary_hardening_invariant_report.json`;
+- `agent_movement_policy_boundary_hardening_cases.json`;
+- `agent_movement_policy_boundary_hardening_decisions.json`;
+- `agent_movement_policy_boundary_hardening_signatures.json`;
+- `agent_movement_policy_boundary_hardening_boundary.json`;
+- `agentMovementPolicyBoundaryHardening*` metrics;
+- `lab_agent_movement_policy_boundary_hardening_recorded` event.
+
+Pathfinding and path planning remain out of scope until after policy
+consolidation. Route planning, route following, replanning, avoidance,
+reservation runtime, memory/goals, gameplay autonomy, physical/core entity
+movement, and terrain/world mutation remain out of scope.
+
+Next recommended step: Phase 4.26D - Consolidated Replay Regression.

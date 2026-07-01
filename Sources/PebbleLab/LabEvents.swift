@@ -179,6 +179,8 @@ struct RunEvent: Encodable {
     let deterministicOrderingCases: Int?
     let duplicateHintCases: Int?
     let duplicateHintsFiltered: Int?
+    let duplicateCandidatesFiltered: Int?
+    let multipleHintCases: Int?
     let bounded: Bool?
     let noFeedbackBaseline: Int?
     let approvedFeedbackBaseline: Int?
@@ -629,6 +631,8 @@ struct RunEvent: Encodable {
         deterministicOrderingCases: Int? = nil,
         duplicateHintCases: Int? = nil,
         duplicateHintsFiltered: Int? = nil,
+        duplicateCandidatesFiltered: Int? = nil,
+        multipleHintCases: Int? = nil,
         bounded: Bool? = nil,
         noFeedbackBaseline: Int? = nil,
         approvedFeedbackBaseline: Int? = nil,
@@ -1078,6 +1082,8 @@ struct RunEvent: Encodable {
         self.deterministicOrderingCases = deterministicOrderingCases
         self.duplicateHintCases = duplicateHintCases
         self.duplicateHintsFiltered = duplicateHintsFiltered
+        self.duplicateCandidatesFiltered = duplicateCandidatesFiltered
+        self.multipleHintCases = multipleHintCases
         self.bounded = bounded
         self.noFeedbackBaseline = noFeedbackBaseline
         self.approvedFeedbackBaseline = approvedFeedbackBaseline

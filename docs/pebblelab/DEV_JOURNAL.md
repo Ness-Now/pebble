@@ -8749,3 +8749,96 @@ in the 4.26B commit notes.
 ### Next Step
 
 Phase 4.26C — Policy Boundary Hardening.
+
+## 2026-07-01 — Phase 4.26C agent movement policy boundary hardening
+
+### Objective
+
+Add a fixture-only hardening scenario for the consolidated agent movement
+policy boundary. The scenario expands the representative contexts from 4.26B
+and verifies that direct v0, v1, and v2 calls still match the consolidated
+adapter without changing behavior.
+
+### Starting Point
+
+4.26B added `agent_movement_policy_consolidation_fixture_smoke` with eight
+contexts, three explicit policy versions, twenty-four signature comparisons,
+zero mismatches, v0/v1 unchanged, v2 opt-in, and no World, collision, tick live,
+movement application, memory/goals, pathfinding, replanning, reservation, route
+following, or mutation.
+
+### Why Hardening
+
+The policy stack is now broad enough that negative and edge cases matter. 4.26C
+keeps the adapter fixture-only and checks more contexts, more feedback kinds,
+bounded `maxAlternates` values, duplicate/multiple/empty/unknown hints, and all
+boundary flags before any future replay consolidation or path-planning planning.
+
+### Files Created/Modified
+
+- `Sources/PebbleLab/LabAgentMovementPolicyConsolidation.swift`
+- `Sources/PebbleLab/LabEvents.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_AGENT_MOVEMENT_POLICY_CONSOLIDATION_PLAN.md`
+
+### No-Behavior-Change
+
+The hardening scenario does not modify `produceAgentIntentProposalV0`,
+`produceAgentIntentProposalFeedbackAwareV1`, or
+`produceAgentIntentProposalWithAlternateLocalHintsV2`. It calls direct and
+consolidated policy paths for comparison only, and v2 remains explicit opt-in
+and not global.
+
+### Cases Covered
+
+The scenario covers twenty-two contexts: four no-feedback cardinal movement
+hints, no-feedback empty/unknown hints, approved and moved feedback baselines,
+all seven blocked feedback kinds, blocked empty/unknown hints,
+duplicate/multiple hints, and `maxAlternates` 0, 1, 2, and 3.
+
+### Boundary Flags
+
+All policy and tick/application boundary flags remain false: no World read, no
+collision read, no tick live path, no movement application, no terrain/world
+mutation, no core entity movement, no physical placeholder movement, no
+memory/goals, no pathfinding, no replanning, no avoidance, no reservation
+runtime, and no route following.
+
+### Outputs, Metrics, And Event
+
+The scenario writes:
+
+- `agent_movement_policy_boundary_hardening_report.json`;
+- `agent_movement_policy_boundary_hardening_invariant_report.json`;
+- `agent_movement_policy_boundary_hardening_cases.json`;
+- `agent_movement_policy_boundary_hardening_decisions.json`;
+- `agent_movement_policy_boundary_hardening_signatures.json`;
+- `agent_movement_policy_boundary_hardening_boundary.json`;
+- `agentMovementPolicyBoundaryHardening*` metrics;
+- one aggregate `lab_agent_movement_policy_boundary_hardening_recorded` event.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_boundary_hardening_smoke --seed 42 --ticks 0 --out runs/check_agent_movement_policy_boundary_hardening`
+- required 4.26C non-regression PebbleLab scenarios
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+Implementation added the boundary hardening scenario, report, invariant report,
+cases/decisions/signatures/boundary JSON, metrics, and event. Validation
+results are recorded in the 4.26C commit notes.
+
+### Next Step
+
+Phase 4.26D — Consolidated Replay Regression.

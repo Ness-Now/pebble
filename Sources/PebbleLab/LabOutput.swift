@@ -1329,6 +1329,63 @@ struct RunMetrics: Encodable {
     let agentMovementPolicyConsolidationGoalChanged: Bool?
     let agentMovementPolicyConsolidationMutationPerformed: Bool?
     let agentMovementPolicyConsolidationSuccess: Bool?
+    let agentMovementPolicyBoundaryHardeningCases: Int?
+    let agentMovementPolicyBoundaryHardeningPolicyVersions: Int?
+    let agentMovementPolicyBoundaryHardeningDecisions: Int?
+    let agentMovementPolicyBoundaryHardeningSignaturesCompared: Int?
+    let agentMovementPolicyBoundaryHardeningSignaturesMatched: Int?
+    let agentMovementPolicyBoundaryHardeningSignatureMismatches: Int?
+    let agentMovementPolicyBoundaryHardeningV0SignatureMismatches: Int?
+    let agentMovementPolicyBoundaryHardeningV1SignatureMismatches: Int?
+    let agentMovementPolicyBoundaryHardeningV2SignatureMismatches: Int?
+    let agentMovementPolicyBoundaryHardeningV0Unchanged: Bool?
+    let agentMovementPolicyBoundaryHardeningV1Unchanged: Bool?
+    let agentMovementPolicyBoundaryHardeningV2OptIn: Bool?
+    let agentMovementPolicyBoundaryHardeningV2NotGlobal: Bool?
+    let agentMovementPolicyBoundaryHardeningHiddenActivationDetected: Bool?
+    let agentMovementPolicyBoundaryHardeningBlockedFeedbackKindsCovered: Int?
+    let agentMovementPolicyBoundaryHardeningMaxAlternatesZeroCases: Int?
+    let agentMovementPolicyBoundaryHardeningMaxAlternatesOneCases: Int?
+    let agentMovementPolicyBoundaryHardeningMaxAlternatesTwoCases: Int?
+    let agentMovementPolicyBoundaryHardeningMaxAlternatesThreeCases: Int?
+    let agentMovementPolicyBoundaryHardeningCandidatesProduced: Int?
+    let agentMovementPolicyBoundaryHardeningCandidatesSelected: Int?
+    let agentMovementPolicyBoundaryHardeningCandidatesFiltered: Int?
+    let agentMovementPolicyBoundaryHardeningDuplicateHintCases: Int?
+    let agentMovementPolicyBoundaryHardeningDuplicateCandidatesFiltered: Int?
+    let agentMovementPolicyBoundaryHardeningMultipleHintCases: Int?
+    let agentMovementPolicyBoundaryHardeningUnknownHintNoIntent: Int?
+    let agentMovementPolicyBoundaryHardeningEmptyHintNoIntent: Int?
+    let agentMovementPolicyBoundaryHardeningNoFeedbackBaseline: Int?
+    let agentMovementPolicyBoundaryHardeningApprovedFeedbackBaseline: Int?
+    let agentMovementPolicyBoundaryHardeningMovedFeedbackBaseline: Int?
+    let agentMovementPolicyBoundaryHardeningBlockedFeedbackNoIntentV1: Int?
+    let agentMovementPolicyBoundaryHardeningBlockedFeedbackAlternateV2: Int?
+    let agentMovementPolicyBoundaryHardeningFailedDirectionExcluded: Int?
+    let agentMovementPolicyBoundaryHardeningOneEdgeAlternates: Bool?
+    let agentMovementPolicyBoundaryHardeningBounded: Bool?
+    let agentMovementPolicyBoundaryHardeningDeterministicContextOrder: Bool?
+    let agentMovementPolicyBoundaryHardeningDeterministicPolicyOrder: Bool?
+    let agentMovementPolicyBoundaryHardeningDeterministicDecisionOrder: Bool?
+    let agentMovementPolicyBoundaryHardeningDeterministicSignatureOrder: Bool?
+    let agentMovementPolicyBoundaryHardeningPolicyReadCollision: Bool?
+    let agentMovementPolicyBoundaryHardeningPolicyWorldUsed: Bool?
+    let agentMovementPolicyBoundaryHardeningTickReadCollision: Bool?
+    let agentMovementPolicyBoundaryHardeningTickWorldReadOnlyUsed: Bool?
+    let agentMovementPolicyBoundaryHardeningMovementApplied: Bool?
+    let agentMovementPolicyBoundaryHardeningWorldMutated: Bool?
+    let agentMovementPolicyBoundaryHardeningTerrainMutated: Bool?
+    let agentMovementPolicyBoundaryHardeningCoreEntityMoved: Bool?
+    let agentMovementPolicyBoundaryHardeningPhysicalPlaceholderMoved: Bool?
+    let agentMovementPolicyBoundaryHardeningPathfindingPerformed: Bool?
+    let agentMovementPolicyBoundaryHardeningReplanningPerformed: Bool?
+    let agentMovementPolicyBoundaryHardeningAvoidancePerformed: Bool?
+    let agentMovementPolicyBoundaryHardeningReservationRuntimeUsed: Bool?
+    let agentMovementPolicyBoundaryHardeningRouteFollowingUsed: Bool?
+    let agentMovementPolicyBoundaryHardeningMemoryUpdated: Bool?
+    let agentMovementPolicyBoundaryHardeningGoalChanged: Bool?
+    let agentMovementPolicyBoundaryHardeningMutationPerformed: Bool?
+    let agentMovementPolicyBoundaryHardeningSuccess: Bool?
     let multiTickClosedLoopTicks: Int?
     let multiTickClosedLoopAgents: Int?
     let multiTickClosedLoopContextsTotal: Int?
@@ -2827,6 +2884,63 @@ struct RunMetrics: Encodable {
         agentMovementPolicyConsolidationGoalChanged: Bool? = nil,
         agentMovementPolicyConsolidationMutationPerformed: Bool? = nil,
         agentMovementPolicyConsolidationSuccess: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningCases: Int? = nil,
+        agentMovementPolicyBoundaryHardeningPolicyVersions: Int? = nil,
+        agentMovementPolicyBoundaryHardeningDecisions: Int? = nil,
+        agentMovementPolicyBoundaryHardeningSignaturesCompared: Int? = nil,
+        agentMovementPolicyBoundaryHardeningSignaturesMatched: Int? = nil,
+        agentMovementPolicyBoundaryHardeningSignatureMismatches: Int? = nil,
+        agentMovementPolicyBoundaryHardeningV0SignatureMismatches: Int? = nil,
+        agentMovementPolicyBoundaryHardeningV1SignatureMismatches: Int? = nil,
+        agentMovementPolicyBoundaryHardeningV2SignatureMismatches: Int? = nil,
+        agentMovementPolicyBoundaryHardeningV0Unchanged: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningV1Unchanged: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningV2OptIn: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningV2NotGlobal: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningHiddenActivationDetected: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningBlockedFeedbackKindsCovered: Int? = nil,
+        agentMovementPolicyBoundaryHardeningMaxAlternatesZeroCases: Int? = nil,
+        agentMovementPolicyBoundaryHardeningMaxAlternatesOneCases: Int? = nil,
+        agentMovementPolicyBoundaryHardeningMaxAlternatesTwoCases: Int? = nil,
+        agentMovementPolicyBoundaryHardeningMaxAlternatesThreeCases: Int? = nil,
+        agentMovementPolicyBoundaryHardeningCandidatesProduced: Int? = nil,
+        agentMovementPolicyBoundaryHardeningCandidatesSelected: Int? = nil,
+        agentMovementPolicyBoundaryHardeningCandidatesFiltered: Int? = nil,
+        agentMovementPolicyBoundaryHardeningDuplicateHintCases: Int? = nil,
+        agentMovementPolicyBoundaryHardeningDuplicateCandidatesFiltered: Int? = nil,
+        agentMovementPolicyBoundaryHardeningMultipleHintCases: Int? = nil,
+        agentMovementPolicyBoundaryHardeningUnknownHintNoIntent: Int? = nil,
+        agentMovementPolicyBoundaryHardeningEmptyHintNoIntent: Int? = nil,
+        agentMovementPolicyBoundaryHardeningNoFeedbackBaseline: Int? = nil,
+        agentMovementPolicyBoundaryHardeningApprovedFeedbackBaseline: Int? = nil,
+        agentMovementPolicyBoundaryHardeningMovedFeedbackBaseline: Int? = nil,
+        agentMovementPolicyBoundaryHardeningBlockedFeedbackNoIntentV1: Int? = nil,
+        agentMovementPolicyBoundaryHardeningBlockedFeedbackAlternateV2: Int? = nil,
+        agentMovementPolicyBoundaryHardeningFailedDirectionExcluded: Int? = nil,
+        agentMovementPolicyBoundaryHardeningOneEdgeAlternates: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningBounded: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningDeterministicContextOrder: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningDeterministicPolicyOrder: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningDeterministicDecisionOrder: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningDeterministicSignatureOrder: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningPolicyReadCollision: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningPolicyWorldUsed: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningTickReadCollision: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningTickWorldReadOnlyUsed: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningMovementApplied: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningWorldMutated: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningTerrainMutated: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningCoreEntityMoved: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningPhysicalPlaceholderMoved: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningPathfindingPerformed: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningReplanningPerformed: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningAvoidancePerformed: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningReservationRuntimeUsed: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningRouteFollowingUsed: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningMemoryUpdated: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningGoalChanged: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningMutationPerformed: Bool? = nil,
+        agentMovementPolicyBoundaryHardeningSuccess: Bool? = nil,
         multiTickClosedLoopTicks: Int? = nil,
         multiTickClosedLoopAgents: Int? = nil,
         multiTickClosedLoopContextsTotal: Int? = nil,
@@ -4324,6 +4438,63 @@ struct RunMetrics: Encodable {
         self.agentMovementPolicyConsolidationGoalChanged = agentMovementPolicyConsolidationGoalChanged
         self.agentMovementPolicyConsolidationMutationPerformed = agentMovementPolicyConsolidationMutationPerformed
         self.agentMovementPolicyConsolidationSuccess = agentMovementPolicyConsolidationSuccess
+        self.agentMovementPolicyBoundaryHardeningCases = agentMovementPolicyBoundaryHardeningCases
+        self.agentMovementPolicyBoundaryHardeningPolicyVersions = agentMovementPolicyBoundaryHardeningPolicyVersions
+        self.agentMovementPolicyBoundaryHardeningDecisions = agentMovementPolicyBoundaryHardeningDecisions
+        self.agentMovementPolicyBoundaryHardeningSignaturesCompared = agentMovementPolicyBoundaryHardeningSignaturesCompared
+        self.agentMovementPolicyBoundaryHardeningSignaturesMatched = agentMovementPolicyBoundaryHardeningSignaturesMatched
+        self.agentMovementPolicyBoundaryHardeningSignatureMismatches = agentMovementPolicyBoundaryHardeningSignatureMismatches
+        self.agentMovementPolicyBoundaryHardeningV0SignatureMismatches = agentMovementPolicyBoundaryHardeningV0SignatureMismatches
+        self.agentMovementPolicyBoundaryHardeningV1SignatureMismatches = agentMovementPolicyBoundaryHardeningV1SignatureMismatches
+        self.agentMovementPolicyBoundaryHardeningV2SignatureMismatches = agentMovementPolicyBoundaryHardeningV2SignatureMismatches
+        self.agentMovementPolicyBoundaryHardeningV0Unchanged = agentMovementPolicyBoundaryHardeningV0Unchanged
+        self.agentMovementPolicyBoundaryHardeningV1Unchanged = agentMovementPolicyBoundaryHardeningV1Unchanged
+        self.agentMovementPolicyBoundaryHardeningV2OptIn = agentMovementPolicyBoundaryHardeningV2OptIn
+        self.agentMovementPolicyBoundaryHardeningV2NotGlobal = agentMovementPolicyBoundaryHardeningV2NotGlobal
+        self.agentMovementPolicyBoundaryHardeningHiddenActivationDetected = agentMovementPolicyBoundaryHardeningHiddenActivationDetected
+        self.agentMovementPolicyBoundaryHardeningBlockedFeedbackKindsCovered = agentMovementPolicyBoundaryHardeningBlockedFeedbackKindsCovered
+        self.agentMovementPolicyBoundaryHardeningMaxAlternatesZeroCases = agentMovementPolicyBoundaryHardeningMaxAlternatesZeroCases
+        self.agentMovementPolicyBoundaryHardeningMaxAlternatesOneCases = agentMovementPolicyBoundaryHardeningMaxAlternatesOneCases
+        self.agentMovementPolicyBoundaryHardeningMaxAlternatesTwoCases = agentMovementPolicyBoundaryHardeningMaxAlternatesTwoCases
+        self.agentMovementPolicyBoundaryHardeningMaxAlternatesThreeCases = agentMovementPolicyBoundaryHardeningMaxAlternatesThreeCases
+        self.agentMovementPolicyBoundaryHardeningCandidatesProduced = agentMovementPolicyBoundaryHardeningCandidatesProduced
+        self.agentMovementPolicyBoundaryHardeningCandidatesSelected = agentMovementPolicyBoundaryHardeningCandidatesSelected
+        self.agentMovementPolicyBoundaryHardeningCandidatesFiltered = agentMovementPolicyBoundaryHardeningCandidatesFiltered
+        self.agentMovementPolicyBoundaryHardeningDuplicateHintCases = agentMovementPolicyBoundaryHardeningDuplicateHintCases
+        self.agentMovementPolicyBoundaryHardeningDuplicateCandidatesFiltered = agentMovementPolicyBoundaryHardeningDuplicateCandidatesFiltered
+        self.agentMovementPolicyBoundaryHardeningMultipleHintCases = agentMovementPolicyBoundaryHardeningMultipleHintCases
+        self.agentMovementPolicyBoundaryHardeningUnknownHintNoIntent = agentMovementPolicyBoundaryHardeningUnknownHintNoIntent
+        self.agentMovementPolicyBoundaryHardeningEmptyHintNoIntent = agentMovementPolicyBoundaryHardeningEmptyHintNoIntent
+        self.agentMovementPolicyBoundaryHardeningNoFeedbackBaseline = agentMovementPolicyBoundaryHardeningNoFeedbackBaseline
+        self.agentMovementPolicyBoundaryHardeningApprovedFeedbackBaseline = agentMovementPolicyBoundaryHardeningApprovedFeedbackBaseline
+        self.agentMovementPolicyBoundaryHardeningMovedFeedbackBaseline = agentMovementPolicyBoundaryHardeningMovedFeedbackBaseline
+        self.agentMovementPolicyBoundaryHardeningBlockedFeedbackNoIntentV1 = agentMovementPolicyBoundaryHardeningBlockedFeedbackNoIntentV1
+        self.agentMovementPolicyBoundaryHardeningBlockedFeedbackAlternateV2 = agentMovementPolicyBoundaryHardeningBlockedFeedbackAlternateV2
+        self.agentMovementPolicyBoundaryHardeningFailedDirectionExcluded = agentMovementPolicyBoundaryHardeningFailedDirectionExcluded
+        self.agentMovementPolicyBoundaryHardeningOneEdgeAlternates = agentMovementPolicyBoundaryHardeningOneEdgeAlternates
+        self.agentMovementPolicyBoundaryHardeningBounded = agentMovementPolicyBoundaryHardeningBounded
+        self.agentMovementPolicyBoundaryHardeningDeterministicContextOrder = agentMovementPolicyBoundaryHardeningDeterministicContextOrder
+        self.agentMovementPolicyBoundaryHardeningDeterministicPolicyOrder = agentMovementPolicyBoundaryHardeningDeterministicPolicyOrder
+        self.agentMovementPolicyBoundaryHardeningDeterministicDecisionOrder = agentMovementPolicyBoundaryHardeningDeterministicDecisionOrder
+        self.agentMovementPolicyBoundaryHardeningDeterministicSignatureOrder = agentMovementPolicyBoundaryHardeningDeterministicSignatureOrder
+        self.agentMovementPolicyBoundaryHardeningPolicyReadCollision = agentMovementPolicyBoundaryHardeningPolicyReadCollision
+        self.agentMovementPolicyBoundaryHardeningPolicyWorldUsed = agentMovementPolicyBoundaryHardeningPolicyWorldUsed
+        self.agentMovementPolicyBoundaryHardeningTickReadCollision = agentMovementPolicyBoundaryHardeningTickReadCollision
+        self.agentMovementPolicyBoundaryHardeningTickWorldReadOnlyUsed = agentMovementPolicyBoundaryHardeningTickWorldReadOnlyUsed
+        self.agentMovementPolicyBoundaryHardeningMovementApplied = agentMovementPolicyBoundaryHardeningMovementApplied
+        self.agentMovementPolicyBoundaryHardeningWorldMutated = agentMovementPolicyBoundaryHardeningWorldMutated
+        self.agentMovementPolicyBoundaryHardeningTerrainMutated = agentMovementPolicyBoundaryHardeningTerrainMutated
+        self.agentMovementPolicyBoundaryHardeningCoreEntityMoved = agentMovementPolicyBoundaryHardeningCoreEntityMoved
+        self.agentMovementPolicyBoundaryHardeningPhysicalPlaceholderMoved = agentMovementPolicyBoundaryHardeningPhysicalPlaceholderMoved
+        self.agentMovementPolicyBoundaryHardeningPathfindingPerformed = agentMovementPolicyBoundaryHardeningPathfindingPerformed
+        self.agentMovementPolicyBoundaryHardeningReplanningPerformed = agentMovementPolicyBoundaryHardeningReplanningPerformed
+        self.agentMovementPolicyBoundaryHardeningAvoidancePerformed = agentMovementPolicyBoundaryHardeningAvoidancePerformed
+        self.agentMovementPolicyBoundaryHardeningReservationRuntimeUsed = agentMovementPolicyBoundaryHardeningReservationRuntimeUsed
+        self.agentMovementPolicyBoundaryHardeningRouteFollowingUsed = agentMovementPolicyBoundaryHardeningRouteFollowingUsed
+        self.agentMovementPolicyBoundaryHardeningMemoryUpdated = agentMovementPolicyBoundaryHardeningMemoryUpdated
+        self.agentMovementPolicyBoundaryHardeningGoalChanged = agentMovementPolicyBoundaryHardeningGoalChanged
+        self.agentMovementPolicyBoundaryHardeningMutationPerformed = agentMovementPolicyBoundaryHardeningMutationPerformed
+        self.agentMovementPolicyBoundaryHardeningSuccess = agentMovementPolicyBoundaryHardeningSuccess
         self.multiTickClosedLoopTicks = multiTickClosedLoopTicks
         self.multiTickClosedLoopAgents = multiTickClosedLoopAgents
         self.multiTickClosedLoopContextsTotal = multiTickClosedLoopContextsTotal
