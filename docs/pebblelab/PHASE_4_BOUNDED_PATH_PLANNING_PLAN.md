@@ -540,3 +540,48 @@ Outputs produced:
 Limits remain explicit: route following and live execution stay out of scope.
 
 Next step: Phase 4.27D — Planning To Tick First-Step Handoff.
+
+## Phase 4.27D Implementation Status
+
+Status: implemented and validated.
+
+Phase 4.27D added `bounded_path_planning_to_tick_first_step_smoke` as the
+first bridge from bounded fixture planning into the existing movement tick
+fixture. The bridge is intentionally first-step-only: `selectedFirstStep` is
+converted into a `LabAgentMoveIntent`, while any remaining plan steps stay
+advisory-only and are not sent to tick.
+
+The scenario covers:
+
+- direct one-step handoff approved by tick fixture;
+- two-step plan where only step 0 is sent;
+- detour plan where only the deterministic first step is sent;
+- no-path plan with no movement intent;
+- start-equals-target zero-step plan with no movement intent;
+- same-destination conflict resolved by tick fixture;
+- source mismatch denied by existing tick fixture behavior;
+- stale intent denied by existing tick fixture behavior.
+
+The tick layer remains responsible for one-edge arbitration. Planning does not
+arbitrate conflicts, does not read World, does not read collision, does not
+apply movement, and does not mutate lab maps. Tick mode is fixture-only:
+`tickReadCollision` and `tickWorldReadOnlyUsed` are false.
+
+Outputs produced:
+
+- `bounded_path_planning_to_tick_first_step_report.json`
+- `bounded_path_planning_to_tick_first_step_invariant_report.json`
+- `bounded_path_planning_to_tick_first_step_cases.json`
+- `bounded_path_planning_to_tick_first_step_plans.json`
+- `bounded_path_planning_to_tick_first_step_handoff.json`
+- `bounded_path_planning_to_tick_first_step_tick.json`
+- `bounded_path_planning_to_tick_first_step_digest.json`
+- `bounded_path_planning_to_tick_first_step_boundary.json`
+- `metrics.json`
+- `events.ndjson`
+
+Limits remain explicit: no live collision, no World use, no route following,
+no full-route execution, no movement application, no lab position map mutation,
+no memory/goals, no reservation runtime, and no terrain/World mutation.
+
+Next step: Phase 4.27E — Planning Approved Application Lab-Map Only.

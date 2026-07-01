@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added bounded path planning first-step tick handoff smoke.
 - Added bounded path planning hardening smoke.
 - Added bounded path planning fixture smoke.
 - Documented PebbleLab bounded path planning plan.

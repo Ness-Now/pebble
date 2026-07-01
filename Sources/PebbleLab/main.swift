@@ -78,6 +78,8 @@ let isBoundedPathPlanningFixtureScenario = options.scenario
     == "bounded_path_planning_fixture_smoke"
 let isBoundedPathPlanningHardeningScenario = options.scenario
     == "bounded_path_planning_hardening_smoke"
+let isBoundedPathPlanningToTickFirstStepScenario = options.scenario
+    == "bounded_path_planning_to_tick_first_step_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -111,7 +113,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isAgentMovementPolicyBoundaryHardeningScenario
     || isAgentMovementPolicyConsolidatedReplayScenario
     || isBoundedPathPlanningFixtureScenario
-    || isBoundedPathPlanningHardeningScenario)
+    || isBoundedPathPlanningHardeningScenario
+    || isBoundedPathPlanningToTickFirstStepScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -774,7 +777,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isAgentMovementPolicyBoundaryHardeningScenario
     || isAgentMovementPolicyConsolidatedReplayScenario
     || isBoundedPathPlanningFixtureScenario
-    || isBoundedPathPlanningHardeningScenario {
+    || isBoundedPathPlanningHardeningScenario
+    || isBoundedPathPlanningToTickFirstStepScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -3006,6 +3010,30 @@ let boundedPathPlanningHardeningSuccess = isBoundedPathPlanningHardeningScenario
         && boundedPathPlanningHardeningSummary?.physicalPlaceholderMoved == false
         && boundedPathPlanningHardeningSummary?.mutationPerformed == false)
     : nil
+let boundedPathPlanningToTickFirstStepReport = isBoundedPathPlanningToTickFirstStepScenario
+    ? makeBoundedPathPlanningToTickFirstStepReport(
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let boundedPathPlanningToTickFirstStepInvariantReport = isBoundedPathPlanningToTickFirstStepScenario
+    ? makeBoundedPathPlanningToTickFirstStepInvariantReport(
+        report: boundedPathPlanningToTickFirstStepReport,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let boundedPathPlanningToTickFirstStepDigest = boundedPathPlanningToTickFirstStepReport.map {
+    makeBoundedPathPlanningToTickFirstStepDigest(report: $0)
+}
+let boundedPathPlanningToTickFirstStepBoundary = boundedPathPlanningToTickFirstStepReport.map {
+    makeBoundedPathPlanningToTickFirstStepBoundaryReport(report: $0)
+}
+let boundedPathPlanningToTickFirstStepSummary = boundedPathPlanningToTickFirstStepReport?.summary
+let boundedPathPlanningToTickFirstStepSuccess = isBoundedPathPlanningToTickFirstStepScenario
+    ? ((boundedPathPlanningToTickFirstStepReport?.success ?? false)
+        && (boundedPathPlanningToTickFirstStepInvariantReport?.success ?? false))
+    : nil
 let multiTickClosedLoopReport = isMultiTickClosedLoopFixtureScenario
     ? makeMultiTickClosedLoopFixtureReport(
         scenario: options.scenario,
@@ -3640,6 +3668,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (agentMovementPolicyConsolidatedReplaySuccess ?? true)
     && (boundedPathPlanningFixtureSuccess ?? true)
     && (boundedPathPlanningHardeningSuccess ?? true)
+    && (boundedPathPlanningToTickFirstStepSuccess ?? true)
     && (multiTickClosedLoopSuccess ?? true)
     && (multiTickClosedLoopHardeningSuccess ?? true)
     && (multiTickClosedLoopLiveReadonlySuccess ?? true)
@@ -5332,6 +5361,56 @@ if options.outPath != nil {
                 replanningPerformed: summary.dynamicReplanningUsed
             ))
         }
+        if let boundedPathPlanningToTickFirstStepReport {
+            let summary = boundedPathPlanningToTickFirstStepReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_bounded_path_planning_to_tick_first_step_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                seed: options.seed,
+                success: boundedPathPlanningToTickFirstStepSuccess,
+                passed: summary.casesPassed,
+                failed: summary.casesFailed,
+                completed: summary.selectedFirstSteps,
+                pathsFound: summary.selectedFirstSteps,
+                pathsNotFound: summary.noPathPlans,
+                nodes: summary.nodesVisitedMax,
+                pathLength: summary.stepsMax,
+                candidates: summary.handoffIntents,
+                decisions: summary.movementIntentInputs,
+                maxAlternatesMax: summary.maxStepsMax,
+                bounded: summary.stepsWithinMax && summary.nodesWithinMax,
+                oneEdgeAlternates: summary.oneEdgeSteps && summary.sameYSteps,
+                v0Unchanged: summary.v0Unchanged,
+                v1Unchanged: summary.v1Unchanged,
+                v2OptIn: summary.v3OptIn,
+                v2NotGlobal: summary.v3NotGlobal,
+                hiddenActivationDetected: summary.hiddenActivationDetected,
+                terrainMutated: summary.terrainMutated,
+                coreEntityMoved: summary.coreEntityMoved,
+                physicalPlaceholderMoved: summary.physicalPlaceholderMoved,
+                cases: summary.cases,
+                movementIntentInputsTotal: summary.movementIntentInputs,
+                tickDeniedConflictTotal: summary.tickDeniedConflict,
+                tickApprovedTotal: summary.tickApproved,
+                tickDeniedTotal: summary.tickDenied,
+                tickWorldReadOnlyUsed: summary.tickWorldReadOnlyUsed,
+                worldMutated: summary.worldMutated,
+                repeatabilityChecks: 2,
+                repeatabilityFailures: summary.repeatabilityFailures,
+                routeFollowingUsed: summary.routeFollowingUsed,
+                tickReadCollision: summary.tickReadCollision,
+                worldUsed: summary.worldRead || summary.tickWorldReadOnlyUsed,
+                collisionRead: summary.collisionRead || summary.tickReadCollision,
+                movementApplied: summary.movementApplied,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingLiveUsed,
+                replanningPerformed: summary.dynamicReplanningUsed
+            ))
+        }
         if let multiTickClosedLoopReport {
             let summary = multiTickClosedLoopReport.summary
             try appendEvent(RunEvent(
@@ -6688,6 +6767,46 @@ if let outPath = options.outPath {
             try writeJSON(
                 boundedPathPlanningHardeningInvariantReport,
                 to: outURL.appendingPathComponent("bounded_path_planning_hardening_invariant_report.json")
+            )
+        }
+        if let boundedPathPlanningToTickFirstStepReport {
+            try writeJSON(
+                boundedPathPlanningToTickFirstStepReport,
+                to: outURL.appendingPathComponent("bounded_path_planning_to_tick_first_step_report.json")
+            )
+            try writeJSON(
+                boundedPathPlanningToTickFirstStepReport.cases,
+                to: outURL.appendingPathComponent("bounded_path_planning_to_tick_first_step_cases.json")
+            )
+            try writeJSON(
+                boundedPathPlanningToTickFirstStepReport.plans,
+                to: outURL.appendingPathComponent("bounded_path_planning_to_tick_first_step_plans.json")
+            )
+            try writeJSON(
+                boundedPathPlanningToTickFirstStepReport.handoffs,
+                to: outURL.appendingPathComponent("bounded_path_planning_to_tick_first_step_handoff.json")
+            )
+            try writeJSON(
+                boundedPathPlanningToTickFirstStepReport.tickReports,
+                to: outURL.appendingPathComponent("bounded_path_planning_to_tick_first_step_tick.json")
+            )
+        }
+        if let boundedPathPlanningToTickFirstStepDigest {
+            try writeJSON(
+                boundedPathPlanningToTickFirstStepDigest,
+                to: outURL.appendingPathComponent("bounded_path_planning_to_tick_first_step_digest.json")
+            )
+        }
+        if let boundedPathPlanningToTickFirstStepBoundary {
+            try writeJSON(
+                boundedPathPlanningToTickFirstStepBoundary,
+                to: outURL.appendingPathComponent("bounded_path_planning_to_tick_first_step_boundary.json")
+            )
+        }
+        if let boundedPathPlanningToTickFirstStepInvariantReport {
+            try writeJSON(
+                boundedPathPlanningToTickFirstStepInvariantReport,
+                to: outURL.appendingPathComponent("bounded_path_planning_to_tick_first_step_invariant_report.json")
             )
         }
         if let multiTickClosedLoopReport {
@@ -8650,7 +8769,17 @@ if let outPath = options.outPath {
             routeFollowingLiveHardeningSuccess: routeFollowingLiveHardeningSuccess,
             successCriteria: successCriteria
         )
-        try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))
+        if let boundedPathPlanningToTickFirstStepReport {
+            try writeJSON(
+                makeBoundedPathPlanningToTickFirstStepMetrics(
+                    report: boundedPathPlanningToTickFirstStepReport,
+                    success: boundedPathPlanningToTickFirstStepSuccess
+                ),
+                to: outURL.appendingPathComponent("metrics.json")
+            )
+        } else {
+            try writeJSON(metrics, to: outURL.appendingPathComponent("metrics.json"))
+        }
         if options.scenario == "regression_smoke" {
             try writeJSON(
                 makeRegressionReport(metrics: metrics, expectedAgents: labAgents.count),

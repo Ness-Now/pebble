@@ -9272,3 +9272,101 @@ all hardening cases pass, digests match, and boundary flags remain false.
 ### Next Step
 
 Phase 4.27D — Planning To Tick First-Step Handoff.
+
+## 2026-07-01 — Phase 4.27D planning to tick first-step handoff
+
+Objective: add the first handoff from bounded path planning to the existing
+multi-agent movement tick fixture, while sending only the selected first step.
+
+Starting point: Phase 4.27B introduced a fixture-only bounded planner over an
+abstract grid. Phase 4.27C hardened it across max step/node bounds, blocked
+inputs, duplicate inputs, negative coordinates, same-y-only constraints, and
+deterministic tie-breaks. Neither phase used World, collision, tick movement,
+movement application, route following, memory, goals, reservation runtime, or
+mutation.
+
+Files changed:
+
+- `Sources/PebbleLab/LabBoundedPathPlanning.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_BOUNDED_PATH_PLANNING_PLAN.md`
+
+Why first-step-only: bounded path planning must not become route following or
+full-route execution. This phase proves that a plan can select a first step,
+convert that one edge into `LabAgentMoveIntent`, and let the tick fixture own
+approval, denial, and conflict arbitration. Remaining plan steps stay
+advisory-only.
+
+Planner fixture: the scenario reuses the deterministic abstract-grid planner
+with `maxSteps <= 4`, `maxNodes <= 32`, one-edge same-y steps, and stable
+neighbor order. v3 remains explicit opt-in and not global. v0, v1, and v2
+remain unchanged.
+
+Conversion: every plan with `selectedFirstStep` creates one movement intent
+using the selected edge. No-path and zero-step plans create no movement intent.
+Source mismatch and stale intent cases reuse existing tick fixture denial
+behavior instead of inventing new tick semantics.
+
+Tick fixture: the scenario calls the existing fixture tick only. It covers
+approved movement intents, denied same-destination conflict, denied source
+mismatch, and denied stale intent. Tick fixture output emits feedback, but no
+feedback is consumed in this phase.
+
+Approved/denied/conflict: approved and denied decisions come from the tick
+fixture. Planning does not arbitrate same-destination conflicts. The conflict
+case sends two first-step intents to the same destination and verifies that
+tick deterministically approves one and denies one.
+
+Advisory steps not sent: multi-step plans retain their remaining route steps in
+the report, but those steps are not present in the tick input. This preserves
+the boundary between path planning and route following.
+
+Outputs, invariants, metrics, and event:
+
+- `bounded_path_planning_to_tick_first_step_report.json`
+- `bounded_path_planning_to_tick_first_step_invariant_report.json`
+- `bounded_path_planning_to_tick_first_step_cases.json`
+- `bounded_path_planning_to_tick_first_step_plans.json`
+- `bounded_path_planning_to_tick_first_step_handoff.json`
+- `bounded_path_planning_to_tick_first_step_tick.json`
+- `bounded_path_planning_to_tick_first_step_digest.json`
+- `bounded_path_planning_to_tick_first_step_boundary.json`
+- `boundedPathPlanningToTickFirstStep*` metrics
+- `lab_bounded_path_planning_to_tick_first_step_recorded`
+
+Boundary confirmation: no live collision, no World read, no movement
+application, no lab position map mutation, no route following, no full route
+execution, no live pathfinding, no unbounded search, no dynamic replanning, no
+reservation runtime, no memory update, no goal change, no terrain/World
+mutation, no core entity movement, and no physical placeholder movement.
+
+Validation commands:
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_to_tick_first_step_smoke --seed 42 --ticks 0 --out runs/check_bounded_path_planning_to_tick_first_step`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_fixture_smoke --seed 42 --ticks 0 --out runs/check_bounded_path_fixture_after_first_step_handoff`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_hardening_smoke --seed 42 --ticks 0 --out runs/check_bounded_path_hardening_after_first_step_handoff`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_consolidation_fixture_smoke --seed 42 --ticks 0 --out runs/check_policy_consolidation_fixture_after_first_step_handoff`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_boundary_hardening_smoke --seed 42 --ticks 0 --out runs/check_policy_boundary_hardening_after_first_step_handoff`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_consolidated_replay_regression_smoke --seed 42 --ticks 3 --out runs/check_policy_consolidated_replay_after_first_step_handoff`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_multi_tick_replay_smoke --seed 42 --ticks 3 --out runs/check_alternate_local_hint_multi_tick_replay_after_first_step_handoff`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_approved_application_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_approved_application_after_first_step_handoff`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_hardening_after_first_step_handoff`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_first_step_handoff`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+Results: validation passed. The first-step handoff report and invariant report
+show success true, first-step-only handoff true, advisory steps not sent true,
+tick fixture used true, live collision false, movement application false, and
+digest repeatability true.
+
+Next step: Phase 4.27E — Planning Approved Application Lab-Map Only.

@@ -2460,3 +2460,51 @@ Outputs:
 Route following and live execution remain out of scope.
 
 Next recommended step: Phase 4.27D - Planning To Tick First-Step Handoff.
+
+## Phase 4.27D - Planning To Tick First-Step Handoff
+
+Status: implemented and validated.
+
+Goal: convert only the selected first step from a bounded fixture path plan into
+a movement intent for the existing tick fixture, while leaving the rest of the
+planned route advisory-only.
+
+Validated scope:
+
+- `bounded_path_planning_to_tick_first_step_smoke`;
+- fixture-only bounded planning remains max-step/max-node bounded;
+- selected first step is converted to `LabAgentMoveIntent`;
+- advisory route steps are not sent to tick;
+- tick fixture owns approved/denied/conflict decisions;
+- same-destination conflict denial covered;
+- source mismatch and stale intent denial covered through existing tick fixture
+  behavior;
+- no live collision read;
+- no World use;
+- no movement application;
+- no lab position map mutation;
+- no route following or full-route execution;
+- no memory/goals/reservation runtime;
+- no terrain/world mutation;
+- v0/v1/v2 unchanged;
+- v3 opt-in and not global;
+- digest repeatability true.
+
+Outputs:
+
+- `bounded_path_planning_to_tick_first_step_report.json`;
+- `bounded_path_planning_to_tick_first_step_invariant_report.json`;
+- `bounded_path_planning_to_tick_first_step_cases.json`;
+- `bounded_path_planning_to_tick_first_step_plans.json`;
+- `bounded_path_planning_to_tick_first_step_handoff.json`;
+- `bounded_path_planning_to_tick_first_step_tick.json`;
+- `bounded_path_planning_to_tick_first_step_digest.json`;
+- `bounded_path_planning_to_tick_first_step_boundary.json`;
+- `boundedPathPlanningToTickFirstStep*` metrics;
+- `lab_bounded_path_planning_to_tick_first_step_recorded` event.
+
+Route following, full-route execution, live World/collision, movement
+application, lab map mutation, memory, goals, and reservation runtime remain
+out of scope.
+
+Next recommended step: Phase 4.27E - Planning Approved Application Lab-Map Only.
