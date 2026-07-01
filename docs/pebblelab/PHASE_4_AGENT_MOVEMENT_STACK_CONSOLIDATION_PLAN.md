@@ -636,3 +636,67 @@ This phase is docs-only and does not require a release build.
 - `git status` clean after commit.
 - Commit message:
   `Document PebbleLab agent movement stack consolidation plan`
+
+## Phase 4.28B Implementation Status
+
+Phase 4.28B added `agent_movement_stack_contract_fixture_smoke`, the first
+runtime fixture contract for the conceptual AgentMovementStack.
+
+Validated stack contract:
+
+- all 11 layers are present and enabled;
+- layer order is deterministic;
+- layer boundaries are clean;
+- v0, v1, v2, and v3 are covered as opt-in policy/planning evidence;
+- v4 is reserved metadata only with no runtime path;
+- no policy is globally activated;
+- no hidden activation is detected.
+
+Fixture-only orchestration:
+
+- the contract reuses policy consolidation evidence for v0/v1/v2;
+- the contract reuses bounded planning multi-tick replay evidence for v3,
+  first-step handoff, tick arbitration, lab-map-only application, feedback
+  ledger, replay digest, and boundary audit;
+- it does not replace existing scenarios.
+
+First-step-only and feedback:
+
+- only `selectedFirstStep` is handed to tick;
+- advisory steps are not sent and not applied;
+- feedback emitted at tick N is consumed only at tick N+1;
+- same-tick, future, and cross-agent feedback leaks remain zero.
+
+Application and boundaries:
+
+- approved movement applies only to lab abstract/physical maps;
+- abstract/physical divergence after application remains zero;
+- no World or live collision is read;
+- no route following, full-route execution, persistent route commitment, or
+  second-step auto-application is used;
+- no Core entity or physical placeholder is moved;
+- no memory/goals/reservation runtime is used;
+- no terrain/World mutation occurs;
+- renderer, resources, registries, and goldens are untouched.
+
+Outputs produced:
+
+- `agent_movement_stack_contract_report.json`;
+- `agent_movement_stack_contract_invariant_report.json`;
+- `agent_movement_stack_contract_layers.json`;
+- `agent_movement_stack_contract_policies.json`;
+- `agent_movement_stack_contract_replay.json`;
+- `agent_movement_stack_contract_boundary.json`;
+- `agent_movement_stack_contract_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Limits:
+
+- this is still fixture-only;
+- the event uses the existing aggregate `RunEvent` shape while the detailed
+  stack-specific data lives in the report and `agentMovementStackContract*`
+  metrics;
+- route following and full-route execution remain out of scope.
+
+Next step: Phase 4.28C — Stack Contract Boundary Hardening.

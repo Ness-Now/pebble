@@ -84,6 +84,8 @@ let isBoundedPathPlanningApprovedApplicationScenario = options.scenario
     == "bounded_path_planning_approved_application_smoke"
 let isBoundedPathPlanningMultiTickReplayScenario = options.scenario
     == "bounded_path_planning_multi_tick_replay_smoke"
+let isAgentMovementStackContractScenario = options.scenario
+    == "agent_movement_stack_contract_fixture_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -120,7 +122,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isBoundedPathPlanningHardeningScenario
     || isBoundedPathPlanningToTickFirstStepScenario
     || isBoundedPathPlanningApprovedApplicationScenario
-    || isBoundedPathPlanningMultiTickReplayScenario)
+    || isBoundedPathPlanningMultiTickReplayScenario
+    || isAgentMovementStackContractScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -786,7 +789,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isBoundedPathPlanningHardeningScenario
     || isBoundedPathPlanningToTickFirstStepScenario
     || isBoundedPathPlanningApprovedApplicationScenario
-    || isBoundedPathPlanningMultiTickReplayScenario {
+    || isBoundedPathPlanningMultiTickReplayScenario
+    || isAgentMovementStackContractScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -3091,6 +3095,25 @@ let boundedPathPlanningMultiTickReplaySuccess = isBoundedPathPlanningMultiTickRe
     ? ((boundedPathPlanningMultiTickReplayReport?.success ?? false)
         && (boundedPathPlanningMultiTickReplayInvariantReport?.success ?? false))
     : nil
+let agentMovementStackContractReport = isAgentMovementStackContractScenario
+    ? makeAgentMovementStackContractReport(
+        scenario: options.scenario,
+        seed: options.seed,
+        requestedTicks: options.ticks
+    )
+    : nil
+let agentMovementStackContractInvariantReport = isAgentMovementStackContractScenario
+    ? makeAgentMovementStackContractInvariantReport(
+        report: agentMovementStackContractReport,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let agentMovementStackContractSummary = agentMovementStackContractReport?.summary
+let agentMovementStackContractSuccess = isAgentMovementStackContractScenario
+    ? ((agentMovementStackContractReport?.success ?? false)
+        && (agentMovementStackContractInvariantReport?.success ?? false))
+    : nil
 let multiTickClosedLoopReport = isMultiTickClosedLoopFixtureScenario
     ? makeMultiTickClosedLoopFixtureReport(
         scenario: options.scenario,
@@ -3728,6 +3751,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (boundedPathPlanningToTickFirstStepSuccess ?? true)
     && (boundedPathPlanningApprovedApplicationSuccess ?? true)
     && (boundedPathPlanningMultiTickReplaySuccess ?? true)
+    && (agentMovementStackContractSuccess ?? true)
     && (multiTickClosedLoopSuccess ?? true)
     && (multiTickClosedLoopHardeningSuccess ?? true)
     && (multiTickClosedLoopLiveReadonlySuccess ?? true)
@@ -5578,6 +5602,49 @@ if options.outPath != nil {
                 replanningPerformed: summary.dynamicReplanningUsed
             ))
         }
+        if let agentMovementStackContractReport {
+            let summary = agentMovementStackContractReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_agent_movement_stack_contract_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                seed: options.seed,
+                ticksRequested: summary.ticks,
+                requestedTicks: summary.ticks,
+                executedTicks: summary.ticks,
+                success: agentMovementStackContractSuccess,
+                agents: summary.agents,
+                count: summary.layersTotal,
+                pathsFound: summary.selectedFirstSteps,
+                candidates: summary.handoffIntents,
+                decisions: summary.contextsTotal,
+                policyVersions: summary.policyVersionsDocumented,
+                contextsTotal: summary.contextsTotal,
+                feedbackConsumedTotal: summary.feedbackConsumedTotal,
+                movementIntentInputsTotal: summary.handoffIntents,
+                tickDeniedConflictTotal: summary.tickDeniedConflict,
+                tickApprovedTotal: summary.tickApproved,
+                tickDeniedTotal: summary.tickDenied,
+                feedbackEmittedTotal: summary.feedbackEmittedTotal,
+                approvedApplicationsTotal: summary.approvedApplications,
+                sameTickFeedbackConsumedTotal: summary.sameTickFeedbackConsumedTotal,
+                crossAgentFeedbackLeaksTotal: summary.crossAgentFeedbackLeaksTotal,
+                futureFeedbackConsumedTotal: summary.futureFeedbackConsumedTotal,
+                repeatabilityChecks: summary.replayRuns,
+                repeatabilityFailures: summary.repeatabilityFailures,
+                routeFollowingUsed: summary.routeFollowingUsed,
+                tickReadCollision: summary.tickReadCollision,
+                worldUsed: summary.worldRead || summary.tickWorldReadOnlyUsed,
+                collisionRead: summary.collisionRead || summary.tickReadCollision,
+                movementApplied: summary.movementApplied,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingLiveUsed,
+                replanningPerformed: summary.dynamicReplanningUsed
+            ))
+        }
         if let multiTickClosedLoopReport {
             let summary = multiTickClosedLoopReport.summary
             try appendEvent(RunEvent(
@@ -7074,6 +7141,38 @@ if let outPath = options.outPath {
             try writeJSON(
                 boundedPathPlanningMultiTickReplayInvariantReport,
                 to: outURL.appendingPathComponent("bounded_path_planning_multi_tick_replay_invariant_report.json")
+            )
+        }
+        if let agentMovementStackContractReport {
+            try writeJSON(
+                agentMovementStackContractReport,
+                to: outURL.appendingPathComponent("agent_movement_stack_contract_report.json")
+            )
+            try writeJSON(
+                agentMovementStackContractReport.layers,
+                to: outURL.appendingPathComponent("agent_movement_stack_contract_layers.json")
+            )
+            try writeJSON(
+                agentMovementStackContractReport.policies,
+                to: outURL.appendingPathComponent("agent_movement_stack_contract_policies.json")
+            )
+            try writeJSON(
+                agentMovementStackContractReport.replay,
+                to: outURL.appendingPathComponent("agent_movement_stack_contract_replay.json")
+            )
+            try writeJSON(
+                agentMovementStackContractReport.boundary,
+                to: outURL.appendingPathComponent("agent_movement_stack_contract_boundary.json")
+            )
+            try writeJSON(
+                agentMovementStackContractReport.digest,
+                to: outURL.appendingPathComponent("agent_movement_stack_contract_digest.json")
+            )
+        }
+        if let agentMovementStackContractInvariantReport {
+            try writeJSON(
+                agentMovementStackContractInvariantReport,
+                to: outURL.appendingPathComponent("agent_movement_stack_contract_invariant_report.json")
             )
         }
         if let multiTickClosedLoopReport {
@@ -9036,7 +9135,15 @@ if let outPath = options.outPath {
             routeFollowingLiveHardeningSuccess: routeFollowingLiveHardeningSuccess,
             successCriteria: successCriteria
         )
-        if let boundedPathPlanningMultiTickReplayReport {
+        if let agentMovementStackContractReport {
+            try writeJSON(
+                makeAgentMovementStackContractMetrics(
+                    report: agentMovementStackContractReport,
+                    success: agentMovementStackContractSuccess
+                ),
+                to: outURL.appendingPathComponent("metrics.json")
+            )
+        } else if let boundedPathPlanningMultiTickReplayReport {
             try writeJSON(
                 makeBoundedPathPlanningMultiTickReplayMetrics(
                     report: boundedPathPlanningMultiTickReplayReport,

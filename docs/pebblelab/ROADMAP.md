@@ -2648,3 +2648,49 @@ Next recommended step: Phase 4.28B - Stack Contract Fixture Smoke.
 
 Route following remains out of scope until after stack consolidation and a
 separate docs-only route-following gate with explicit approval.
+
+## Phase 4.28B - Stack Contract Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: add the first fixture-only AgentMovementStack contract smoke, proving the
+stack layers can be represented as deterministic orchestration of existing
+policy, planning, handoff, tick, application, replay, boundary, and reporting
+evidence.
+
+Validated scope:
+
+- `agent_movement_stack_contract_fixture_smoke`;
+- 11 required conceptual layers present and enabled;
+- deterministic layer order and clean layer boundaries;
+- policy versions documented: v0, v1, v2, v3, and reserved v4;
+- policy versions executed: v0, v1, v2, and v3;
+- v4 reserved-only with no runtime path;
+- all policy modes opt-in;
+- no global policy activation and no hidden activation;
+- first-step-only handoff and application;
+- feedback N to N+1 with zero same-tick/future/cross-agent leaks;
+- approved application remains lab-map-only;
+- digest repeatability true;
+- no World/collision live;
+- no route following or full-route execution;
+- no Core entity or physical placeholder movement;
+- no memory/goals/reservation runtime;
+- no terrain/world mutation;
+- no renderer/resource/registry/golden touch.
+
+Outputs:
+
+- `agent_movement_stack_contract_report.json`;
+- `agent_movement_stack_contract_invariant_report.json`;
+- `agent_movement_stack_contract_layers.json`;
+- `agent_movement_stack_contract_policies.json`;
+- `agent_movement_stack_contract_replay.json`;
+- `agent_movement_stack_contract_boundary.json`;
+- `agent_movement_stack_contract_digest.json`;
+- `agentMovementStackContract*` metrics;
+- `lab_agent_movement_stack_contract_recorded` event.
+
+Route following and full-route execution remain out of scope.
+
+Next recommended step: Phase 4.28C - Stack Contract Boundary Hardening.

@@ -9642,3 +9642,99 @@ Results: docs-only validation passed with documentation-only changes and
 `git diff --check` clean.
 
 Next step: Phase 4.28B — Stack Contract Fixture Smoke.
+
+## 2026-07-02 — Phase 4.28B agent movement stack contract fixture smoke
+
+Objective: add the first fixture-only AgentMovementStack contract smoke,
+proving the stack can be represented as deterministic orchestration of existing
+layers without changing v0/v1/v2/v3 behavior or introducing route following.
+
+Starting point: 4.28A documented the conceptual stack layers, policy version
+boundaries, feedback contract, bounded planning contract, application contract,
+and boundary flags. Existing validated runtime evidence already covered policy
+consolidation and bounded path planning multi-tick replay.
+
+Relation to the 4.28A plan: this phase implements only the first fixture
+contract adapter. It aggregates existing policy consolidation evidence and
+bounded planning replay evidence into a stack-shaped report. It does not
+replace existing scenarios and does not make any policy global.
+
+Stack layers validated:
+
+- `AgentSnapshotLayer`;
+- `FeedbackLedgerLayer`;
+- `IntentContextLayer`;
+- `MovementPolicyLayer`;
+- `BoundedPlanningLayer`;
+- `FirstStepHandoffLayer`;
+- `TickArbitrationLayer`;
+- `ApprovedApplicationLayer`;
+- `ReplayRegressionLayer`;
+- `BoundaryAuditLayer`;
+- `MetricsEventsReportsLayer`.
+
+Policy versions: v0 baseline, v1 feedback-aware, v2 alternate local hint, and
+v3 bounded planning are covered as opt-in evidence. v4 is present only as
+reserved metadata with no runtime path, no global activation, and no hidden
+activation.
+
+First-step-only contract: bounded planning evidence remains first-step-only.
+`selectedFirstStep` is the only handoff to tick, advisory steps are not sent,
+and advisory steps are not applied.
+
+Feedback contract: feedback is consumed from tick N to tick N+1 only. Same-tick
+feedback consumption, future feedback consumption, and cross-agent feedback
+leaks remain zero.
+
+Lab-map-only application: approved applications mutate only lab abstract and
+physical position maps. Abstract/physical divergence after application remains
+zero. Core entities and live physical placeholders are not moved.
+
+Boundary contract: no World read, no live collision read, no tick World
+read-only use, no tick collision read, no route following, no full-route
+execution, no persistent route commitment, no second-step auto-application, no
+live pathfinding, no unbounded search, no dynamic replanning, no reservation
+runtime, no memory/goals, no terrain/World mutation, and no
+renderer/resource/registry/golden touch.
+
+Outputs, invariants, metrics, and event:
+
+- `agent_movement_stack_contract_report.json`;
+- `agent_movement_stack_contract_invariant_report.json`;
+- `agent_movement_stack_contract_layers.json`;
+- `agent_movement_stack_contract_policies.json`;
+- `agent_movement_stack_contract_replay.json`;
+- `agent_movement_stack_contract_boundary.json`;
+- `agent_movement_stack_contract_digest.json`;
+- `agentMovementStackContract*` metrics;
+- `lab_agent_movement_stack_contract_recorded` event.
+
+Validation commands:
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario agent_movement_stack_contract_fixture_smoke --seed 42 --ticks 3 --out runs/check_agent_movement_stack_contract_fixture`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_fixture_smoke --seed 42 --ticks 0 --out runs/check_bounded_path_fixture_after_stack_contract`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_hardening_smoke --seed 42 --ticks 0 --out runs/check_bounded_path_hardening_after_stack_contract`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_to_tick_first_step_smoke --seed 42 --ticks 0 --out runs/check_bounded_path_first_step_handoff_after_stack_contract`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_approved_application_smoke --seed 42 --ticks 0 --out runs/check_bounded_path_approved_application_after_stack_contract`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_multi_tick_replay_smoke --seed 42 --ticks 3 --out runs/check_bounded_path_multi_tick_replay_after_stack_contract`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_consolidation_fixture_smoke --seed 42 --ticks 0 --out runs/check_policy_consolidation_fixture_after_stack_contract`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_boundary_hardening_smoke --seed 42 --ticks 0 --out runs/check_policy_boundary_hardening_after_stack_contract`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_consolidated_replay_regression_smoke --seed 42 --ticks 3 --out runs/check_policy_consolidated_replay_after_stack_contract`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_multi_tick_replay_smoke --seed 42 --ticks 3 --out runs/check_alternate_local_hint_multi_tick_replay_after_stack_contract`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_approved_application_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_approved_application_after_stack_contract`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_hardening_after_stack_contract`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_stack_contract`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+Results: local debug validation passed. The stack contract report shows
+success true, 11 layers enabled, 5 policy versions documented, 4 policy
+versions executed, v4 reserved-only true, 9 agents, 27 contexts/plans, 18
+handoff intents, 9 tick approvals, 9 tick denials, 9 approved applications, 13
+feedback records consumed, equal digests, and all boundary-forbidden flags
+false. The invariant report shows 97 passed and 0 failed.
+
+Next step: Phase 4.28C — Stack Contract Boundary Hardening.
