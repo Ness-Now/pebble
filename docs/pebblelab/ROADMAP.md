@@ -2351,3 +2351,32 @@ memory/goals, gameplay autonomy, physical/core entity movement, and
 terrain/world mutation remain out of scope.
 
 Next recommended step: Phase 4.27A - Bounded Path Planning Plan Docs-Only.
+
+## Phase 4.27A - Bounded Path Planning Plan Docs-Only
+
+Status: implemented and validated.
+
+Goal: document bounded path planning before implementation and define how a
+future explicit v3 planner can remain deterministic, fixture-first, bounded,
+and separate from tick arbitration and approved application.
+
+Documented scope:
+
+- bounded path planning definition;
+- policy, planning, tick, approved application, and replay layer placement;
+- future v3 policy versioning proposal;
+- planning context proposal;
+- planning output proposal;
+- fixed-depth deterministic algorithm boundary;
+- explicit prohibition of route following, dynamic replanning, reservation
+  runtime, memory/goals, live World reads, physical movement, and terrain/world
+  mutation;
+- future scenario sequence for 4.27B through 4.27F;
+- 110 future invariants;
+- risk table;
+- recommended 4.27B contract.
+
+No Swift, scenario, runner, metric, or event runtime file is modified in 4.27A.
+Path planning is only documented, not implemented.
+
+Next recommended step: Phase 4.27B - Bounded Path Planning Fixture Smoke.

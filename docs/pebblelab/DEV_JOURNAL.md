@@ -8923,3 +8923,129 @@ digests, and all boundary flags clean.
 ### Next Step
 
 Phase 4.27A — Bounded Path Planning Plan Docs-Only.
+
+## 2026-07-01 — Phase 4.27A bounded path planning planning docs-only
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Create a docs-only bounded path planning plan before adding any planner,
+scenario, runner, metric, or event runtime code.
+
+### Validated Starting Point
+
+PebbleLab already validates v0 baseline one-step intent proposals, v1
+feedback-aware blocked-to-noIntent behavior, v2 deterministic alternate local
+hints, policy consolidation, boundary hardening, consolidated replay
+regression, feedback N to N+1, stable replay digests, and lab-map-only approved
+application. Terrain and World mutation remain out of scope.
+
+### Why Docs-Only
+
+Path planning is the first feature that could accidentally become route
+following, gameplay autonomy, memory/goals, reservation runtime, or live World
+navigation. The phase locks the vocabulary, boundaries, invariants, and future
+scenario sequence before implementation.
+
+### New Document
+
+`docs/pebblelab/PHASE_4_BOUNDED_PATH_PLANNING_PLAN.md`
+
+### Definition Of Bounded Path Planning
+
+Bounded path planning means producing a small abstract plan with fixed
+`maxSteps` and fixed node limits in a fixture or abstract grid. It is
+deterministic and does not execute movement, follow routes, read live World or
+collision, mutate terrain/World, update memory/goals, or create autonomous
+gameplay.
+
+### Layer Placement
+
+The future planner sits between policy and tick as an explicit opt-in planning
+layer. Policy remains one-step and no-World/no-collision. Tick still owns
+conflict and collision approval. Approved application applies only an approved
+first step to lab maps. Replay proves deterministic plan output and digest
+stability.
+
+### v3 Proposal
+
+The plan proposes a future v3 bounded path planning policy mode. v3 must be
+explicit opt-in, fixture-first, bounded, deterministic, and must not replace
+v0, v1, or v2 globally.
+
+### Planning Context And Output Proposals
+
+The plan documents future `LabAgentBoundedPathPlanningContext` and
+`LabAgentBoundedPathPlan` shapes, including tick, agent, start, target/local
+objective, `maxSteps`, abstract grid/occupancy, allowed/blocked directions,
+selected first step, no-path reason, deterministic digest, and boundary flags.
+
+### Algorithm Boundary
+
+Allowed later: fixed-depth deterministic search or tiny BFS over a fixture grid
+with fixed max steps, fixed max nodes, and stable tie-breaks. Forbidden:
+unbounded A*, unbounded BFS, Dijkstra over live World, live World queries,
+dynamic replanning, reservations, route following, mining/building, memory,
+goals, RL, LLM, and Python.
+
+### Safety And Scope Boundaries
+
+The plan explicitly excludes gameplay autonomy, player-like bots,
+mining/building, inventory, combat, social communication, economic behavior,
+persistent goals, cross-tick route commitment in the first implementation, and
+hidden activation by existing scenarios.
+
+### Future Scenario Plan
+
+- Phase 4.27B — Bounded Path Planning Fixture Smoke.
+- Phase 4.27C — Bounded Path Planning Hardening.
+- Phase 4.27D — Planning To Tick First-Step Handoff.
+- Phase 4.27E — Planning Approved Application Lab-Map Only.
+- Phase 4.27F — Planning Multi-Tick Replay Regression.
+
+### Invariants
+
+The plan records 110 future invariants covering v0/v1/v2 stability, future v3
+opt-in, maxSteps/maxNodes bounds, deterministic ordering and tie-breaks,
+first-step-only handoff, no route following, no persistent route commitment, no
+World/collision reads from policy, no memory/goals, no reservation runtime, no
+terrain/world mutation, feedback N to N+1, replay digest stability, and 4.26
+regression coverage.
+
+### Risk Table
+
+The risk table covers bounded planning becoming unbounded pathfinding, fixture
+grids drifting into live World scans, full-route execution, v3 replacing v2,
+hidden activation, dynamic replanning, reservation runtime, memory/goals,
+nondeterministic tie-breaks, digest instability, terrain mutation, physical
+movement, and reports hiding boundary drift.
+
+### Recommended 4.27B Contract
+
+The first implementation should be fixture-only: no World, no collision, no
+tick, no movement application, no lab position mutation, no route following, no
+memory/goals, no reservation runtime, no terrain/world mutation, no v0/v1/v2
+behavior change, explicit opt-in future v3, small abstract grid, fixed
+`maxSteps`, fixed `maxNodes`, deterministic plans, and report/invariant/metrics
+/event output.
+
+### Validation Commands
+
+- `git status`
+- `git diff --name-only`
+- verify no Swift files changed
+- `swift build`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+- `git status`
+
+### Results
+
+Validation passed for docs-only changes. No Swift files, runtime scenarios,
+runners, metrics/events, PebbleCore, renderer/shader/resource, registry,
+save-load, or golden files were modified.
+
+### Next Step
+
+Phase 4.27B — Bounded Path Planning Fixture Smoke.

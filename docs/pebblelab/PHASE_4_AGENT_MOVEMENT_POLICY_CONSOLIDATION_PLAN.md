@@ -798,3 +798,23 @@ Limits:
   goals, reservation runtime, or mutation.
 
 Next step: Phase 4.27A — Bounded Path Planning Plan Docs-Only.
+
+## Transition To Bounded Path Planning
+
+Phase 4.26 completed policy consolidation through fixture comparison, boundary
+hardening, and consolidated replay regression. Phase 4.27A documents bounded
+path planning before any implementation.
+
+The transition is intentionally conservative:
+
+- v0, v1, and v2 remain stable;
+- any future v3 planner must be explicit opt-in;
+- existing policy scenarios must not activate planning implicitly;
+- policy must still avoid live World and collision reads;
+- tick remains responsible for conflict and collision approval;
+- approved application remains lab-map-only;
+- no route following, dynamic replanning, reservation runtime, memory, or goals
+  are introduced by the planning documentation.
+
+See `PHASE_4_BOUNDED_PATH_PLANNING_PLAN.md` for the 4.27A contract and the
+recommended 4.27B fixture smoke.
