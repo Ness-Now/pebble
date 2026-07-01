@@ -451,3 +451,41 @@ Recommended outputs for 4.27B:
 - performance optimization;
 - renderer/shaders/resources;
 - save/load/goldens.
+
+## Phase 4.27B Implementation Status
+
+Status: implemented and validated.
+
+Phase 4.27B added `bounded_path_planning_fixture_smoke` as the first
+fixture-only bounded path planning scenario. The implementation uses an
+abstract grid supplied by fixture contexts, fixed `maxSteps`, fixed `maxNodes`,
+and a tiny deterministic bounded search. It does not read `World`, read live
+collision, invoke tick movement, call approved application, apply movement,
+mutate lab position maps, or perform route following.
+
+The planner records neighbor order as `move_north`, `move_east`, `move_south`,
+`move_west` and records a stable tie-break label. Cases cover direct one-step
+planning, two-step planning, deterministic detour, no path, max steps too
+short, max nodes too small, start equals target, negative coordinates, and
+same-y-only behavior.
+
+Digest repeatability is validated by running the same fixture inputs twice and
+comparing aggregate digests. v0, v1, and v2 remain unchanged; v3 is represented
+only as `boundedPathPlanningV3FixtureOptIn`; v3 is not global; hidden activation
+is false.
+
+Outputs produced:
+
+- `bounded_path_planning_fixture_report.json`
+- `bounded_path_planning_fixture_invariant_report.json`
+- `bounded_path_planning_fixture_cases.json`
+- `bounded_path_planning_fixture_plans.json`
+- `bounded_path_planning_fixture_digest.json`
+- `metrics.json`
+- `events.ndjson`
+
+Limits remain explicit: no World/collision/tick/movement/application, no route
+following, no memory/goals, no reservation runtime, no live pathfinding, no
+unbounded search, and no terrain/World mutation.
+
+Next step: Phase 4.27C — Bounded Path Planning Hardening.

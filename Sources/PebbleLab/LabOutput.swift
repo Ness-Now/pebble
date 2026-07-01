@@ -1451,6 +1451,55 @@ struct RunMetrics: Encodable {
     let agentMovementPolicyConsolidatedReplayGoalChanged: Bool?
     let agentMovementPolicyConsolidatedReplayMutationPerformed: Bool?
     let agentMovementPolicyConsolidatedReplaySuccess: Bool?
+    let boundedPathPlanningFixtureCases: Int?
+    let boundedPathPlanningFixtureCasesPassed: Int?
+    let boundedPathPlanningFixtureCasesFailed: Int?
+    let boundedPathPlanningFixturePlansProduced: Int?
+    let boundedPathPlanningFixtureNoPathPlans: Int?
+    let boundedPathPlanningFixtureReachedTargetPlans: Int?
+    let boundedPathPlanningFixtureTruncatedPlans: Int?
+    let boundedPathPlanningFixtureExhaustedPlans: Int?
+    let boundedPathPlanningFixtureSelectedFirstSteps: Int?
+    let boundedPathPlanningFixtureMaxStepsMin: Int?
+    let boundedPathPlanningFixtureMaxStepsMax: Int?
+    let boundedPathPlanningFixtureMaxNodesMin: Int?
+    let boundedPathPlanningFixtureMaxNodesMax: Int?
+    let boundedPathPlanningFixtureNodesVisitedMax: Int?
+    let boundedPathPlanningFixtureStepsTotal: Int?
+    let boundedPathPlanningFixtureStepsMax: Int?
+    let boundedPathPlanningFixtureStepsWithinMax: Bool?
+    let boundedPathPlanningFixtureNodesWithinMax: Bool?
+    let boundedPathPlanningFixtureOneEdgeSteps: Bool?
+    let boundedPathPlanningFixtureSameYSteps: Bool?
+    let boundedPathPlanningFixtureDeterministicCaseOrder: Bool?
+    let boundedPathPlanningFixtureDeterministicNeighborOrder: Bool?
+    let boundedPathPlanningFixtureDeterministicTieBreak: Bool?
+    let boundedPathPlanningFixtureDigestsEqual: Bool?
+    let boundedPathPlanningFixtureRepeatabilityFailures: Int?
+    let boundedPathPlanningFixtureV0Unchanged: Bool?
+    let boundedPathPlanningFixtureV1Unchanged: Bool?
+    let boundedPathPlanningFixtureV2Unchanged: Bool?
+    let boundedPathPlanningFixtureV3OptIn: Bool?
+    let boundedPathPlanningFixtureV3NotGlobal: Bool?
+    let boundedPathPlanningFixtureHiddenActivationDetected: Bool?
+    let boundedPathPlanningFixtureWorldRead: Bool?
+    let boundedPathPlanningFixtureCollisionRead: Bool?
+    let boundedPathPlanningFixtureTickUsed: Bool?
+    let boundedPathPlanningFixtureMovementApplied: Bool?
+    let boundedPathPlanningFixtureLabPositionMapMutated: Bool?
+    let boundedPathPlanningFixtureRouteFollowingUsed: Bool?
+    let boundedPathPlanningFixturePathfindingLiveUsed: Bool?
+    let boundedPathPlanningFixtureUnboundedSearchUsed: Bool?
+    let boundedPathPlanningFixtureDynamicReplanningUsed: Bool?
+    let boundedPathPlanningFixtureReservationRuntimeUsed: Bool?
+    let boundedPathPlanningFixtureMemoryUpdated: Bool?
+    let boundedPathPlanningFixtureGoalChanged: Bool?
+    let boundedPathPlanningFixtureTerrainMutated: Bool?
+    let boundedPathPlanningFixtureWorldMutated: Bool?
+    let boundedPathPlanningFixtureCoreEntityMoved: Bool?
+    let boundedPathPlanningFixturePhysicalPlaceholderMoved: Bool?
+    let boundedPathPlanningFixtureMutationPerformed: Bool?
+    let boundedPathPlanningFixtureSuccess: Bool?
     let multiTickClosedLoopTicks: Int?
     let multiTickClosedLoopAgents: Int?
     let multiTickClosedLoopContextsTotal: Int?
@@ -3071,6 +3120,55 @@ struct RunMetrics: Encodable {
         agentMovementPolicyConsolidatedReplayGoalChanged: Bool? = nil,
         agentMovementPolicyConsolidatedReplayMutationPerformed: Bool? = nil,
         agentMovementPolicyConsolidatedReplaySuccess: Bool? = nil,
+        boundedPathPlanningFixtureCases: Int? = nil,
+        boundedPathPlanningFixtureCasesPassed: Int? = nil,
+        boundedPathPlanningFixtureCasesFailed: Int? = nil,
+        boundedPathPlanningFixturePlansProduced: Int? = nil,
+        boundedPathPlanningFixtureNoPathPlans: Int? = nil,
+        boundedPathPlanningFixtureReachedTargetPlans: Int? = nil,
+        boundedPathPlanningFixtureTruncatedPlans: Int? = nil,
+        boundedPathPlanningFixtureExhaustedPlans: Int? = nil,
+        boundedPathPlanningFixtureSelectedFirstSteps: Int? = nil,
+        boundedPathPlanningFixtureMaxStepsMin: Int? = nil,
+        boundedPathPlanningFixtureMaxStepsMax: Int? = nil,
+        boundedPathPlanningFixtureMaxNodesMin: Int? = nil,
+        boundedPathPlanningFixtureMaxNodesMax: Int? = nil,
+        boundedPathPlanningFixtureNodesVisitedMax: Int? = nil,
+        boundedPathPlanningFixtureStepsTotal: Int? = nil,
+        boundedPathPlanningFixtureStepsMax: Int? = nil,
+        boundedPathPlanningFixtureStepsWithinMax: Bool? = nil,
+        boundedPathPlanningFixtureNodesWithinMax: Bool? = nil,
+        boundedPathPlanningFixtureOneEdgeSteps: Bool? = nil,
+        boundedPathPlanningFixtureSameYSteps: Bool? = nil,
+        boundedPathPlanningFixtureDeterministicCaseOrder: Bool? = nil,
+        boundedPathPlanningFixtureDeterministicNeighborOrder: Bool? = nil,
+        boundedPathPlanningFixtureDeterministicTieBreak: Bool? = nil,
+        boundedPathPlanningFixtureDigestsEqual: Bool? = nil,
+        boundedPathPlanningFixtureRepeatabilityFailures: Int? = nil,
+        boundedPathPlanningFixtureV0Unchanged: Bool? = nil,
+        boundedPathPlanningFixtureV1Unchanged: Bool? = nil,
+        boundedPathPlanningFixtureV2Unchanged: Bool? = nil,
+        boundedPathPlanningFixtureV3OptIn: Bool? = nil,
+        boundedPathPlanningFixtureV3NotGlobal: Bool? = nil,
+        boundedPathPlanningFixtureHiddenActivationDetected: Bool? = nil,
+        boundedPathPlanningFixtureWorldRead: Bool? = nil,
+        boundedPathPlanningFixtureCollisionRead: Bool? = nil,
+        boundedPathPlanningFixtureTickUsed: Bool? = nil,
+        boundedPathPlanningFixtureMovementApplied: Bool? = nil,
+        boundedPathPlanningFixtureLabPositionMapMutated: Bool? = nil,
+        boundedPathPlanningFixtureRouteFollowingUsed: Bool? = nil,
+        boundedPathPlanningFixturePathfindingLiveUsed: Bool? = nil,
+        boundedPathPlanningFixtureUnboundedSearchUsed: Bool? = nil,
+        boundedPathPlanningFixtureDynamicReplanningUsed: Bool? = nil,
+        boundedPathPlanningFixtureReservationRuntimeUsed: Bool? = nil,
+        boundedPathPlanningFixtureMemoryUpdated: Bool? = nil,
+        boundedPathPlanningFixtureGoalChanged: Bool? = nil,
+        boundedPathPlanningFixtureTerrainMutated: Bool? = nil,
+        boundedPathPlanningFixtureWorldMutated: Bool? = nil,
+        boundedPathPlanningFixtureCoreEntityMoved: Bool? = nil,
+        boundedPathPlanningFixturePhysicalPlaceholderMoved: Bool? = nil,
+        boundedPathPlanningFixtureMutationPerformed: Bool? = nil,
+        boundedPathPlanningFixtureSuccess: Bool? = nil,
         multiTickClosedLoopTicks: Int? = nil,
         multiTickClosedLoopAgents: Int? = nil,
         multiTickClosedLoopContextsTotal: Int? = nil,
@@ -4690,6 +4788,55 @@ struct RunMetrics: Encodable {
         self.agentMovementPolicyConsolidatedReplayGoalChanged = agentMovementPolicyConsolidatedReplayGoalChanged
         self.agentMovementPolicyConsolidatedReplayMutationPerformed = agentMovementPolicyConsolidatedReplayMutationPerformed
         self.agentMovementPolicyConsolidatedReplaySuccess = agentMovementPolicyConsolidatedReplaySuccess
+        self.boundedPathPlanningFixtureCases = boundedPathPlanningFixtureCases
+        self.boundedPathPlanningFixtureCasesPassed = boundedPathPlanningFixtureCasesPassed
+        self.boundedPathPlanningFixtureCasesFailed = boundedPathPlanningFixtureCasesFailed
+        self.boundedPathPlanningFixturePlansProduced = boundedPathPlanningFixturePlansProduced
+        self.boundedPathPlanningFixtureNoPathPlans = boundedPathPlanningFixtureNoPathPlans
+        self.boundedPathPlanningFixtureReachedTargetPlans = boundedPathPlanningFixtureReachedTargetPlans
+        self.boundedPathPlanningFixtureTruncatedPlans = boundedPathPlanningFixtureTruncatedPlans
+        self.boundedPathPlanningFixtureExhaustedPlans = boundedPathPlanningFixtureExhaustedPlans
+        self.boundedPathPlanningFixtureSelectedFirstSteps = boundedPathPlanningFixtureSelectedFirstSteps
+        self.boundedPathPlanningFixtureMaxStepsMin = boundedPathPlanningFixtureMaxStepsMin
+        self.boundedPathPlanningFixtureMaxStepsMax = boundedPathPlanningFixtureMaxStepsMax
+        self.boundedPathPlanningFixtureMaxNodesMin = boundedPathPlanningFixtureMaxNodesMin
+        self.boundedPathPlanningFixtureMaxNodesMax = boundedPathPlanningFixtureMaxNodesMax
+        self.boundedPathPlanningFixtureNodesVisitedMax = boundedPathPlanningFixtureNodesVisitedMax
+        self.boundedPathPlanningFixtureStepsTotal = boundedPathPlanningFixtureStepsTotal
+        self.boundedPathPlanningFixtureStepsMax = boundedPathPlanningFixtureStepsMax
+        self.boundedPathPlanningFixtureStepsWithinMax = boundedPathPlanningFixtureStepsWithinMax
+        self.boundedPathPlanningFixtureNodesWithinMax = boundedPathPlanningFixtureNodesWithinMax
+        self.boundedPathPlanningFixtureOneEdgeSteps = boundedPathPlanningFixtureOneEdgeSteps
+        self.boundedPathPlanningFixtureSameYSteps = boundedPathPlanningFixtureSameYSteps
+        self.boundedPathPlanningFixtureDeterministicCaseOrder = boundedPathPlanningFixtureDeterministicCaseOrder
+        self.boundedPathPlanningFixtureDeterministicNeighborOrder = boundedPathPlanningFixtureDeterministicNeighborOrder
+        self.boundedPathPlanningFixtureDeterministicTieBreak = boundedPathPlanningFixtureDeterministicTieBreak
+        self.boundedPathPlanningFixtureDigestsEqual = boundedPathPlanningFixtureDigestsEqual
+        self.boundedPathPlanningFixtureRepeatabilityFailures = boundedPathPlanningFixtureRepeatabilityFailures
+        self.boundedPathPlanningFixtureV0Unchanged = boundedPathPlanningFixtureV0Unchanged
+        self.boundedPathPlanningFixtureV1Unchanged = boundedPathPlanningFixtureV1Unchanged
+        self.boundedPathPlanningFixtureV2Unchanged = boundedPathPlanningFixtureV2Unchanged
+        self.boundedPathPlanningFixtureV3OptIn = boundedPathPlanningFixtureV3OptIn
+        self.boundedPathPlanningFixtureV3NotGlobal = boundedPathPlanningFixtureV3NotGlobal
+        self.boundedPathPlanningFixtureHiddenActivationDetected = boundedPathPlanningFixtureHiddenActivationDetected
+        self.boundedPathPlanningFixtureWorldRead = boundedPathPlanningFixtureWorldRead
+        self.boundedPathPlanningFixtureCollisionRead = boundedPathPlanningFixtureCollisionRead
+        self.boundedPathPlanningFixtureTickUsed = boundedPathPlanningFixtureTickUsed
+        self.boundedPathPlanningFixtureMovementApplied = boundedPathPlanningFixtureMovementApplied
+        self.boundedPathPlanningFixtureLabPositionMapMutated = boundedPathPlanningFixtureLabPositionMapMutated
+        self.boundedPathPlanningFixtureRouteFollowingUsed = boundedPathPlanningFixtureRouteFollowingUsed
+        self.boundedPathPlanningFixturePathfindingLiveUsed = boundedPathPlanningFixturePathfindingLiveUsed
+        self.boundedPathPlanningFixtureUnboundedSearchUsed = boundedPathPlanningFixtureUnboundedSearchUsed
+        self.boundedPathPlanningFixtureDynamicReplanningUsed = boundedPathPlanningFixtureDynamicReplanningUsed
+        self.boundedPathPlanningFixtureReservationRuntimeUsed = boundedPathPlanningFixtureReservationRuntimeUsed
+        self.boundedPathPlanningFixtureMemoryUpdated = boundedPathPlanningFixtureMemoryUpdated
+        self.boundedPathPlanningFixtureGoalChanged = boundedPathPlanningFixtureGoalChanged
+        self.boundedPathPlanningFixtureTerrainMutated = boundedPathPlanningFixtureTerrainMutated
+        self.boundedPathPlanningFixtureWorldMutated = boundedPathPlanningFixtureWorldMutated
+        self.boundedPathPlanningFixtureCoreEntityMoved = boundedPathPlanningFixtureCoreEntityMoved
+        self.boundedPathPlanningFixturePhysicalPlaceholderMoved = boundedPathPlanningFixturePhysicalPlaceholderMoved
+        self.boundedPathPlanningFixtureMutationPerformed = boundedPathPlanningFixtureMutationPerformed
+        self.boundedPathPlanningFixtureSuccess = boundedPathPlanningFixtureSuccess
         self.multiTickClosedLoopTicks = multiTickClosedLoopTicks
         self.multiTickClosedLoopAgents = multiTickClosedLoopAgents
         self.multiTickClosedLoopContextsTotal = multiTickClosedLoopContextsTotal

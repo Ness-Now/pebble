@@ -9049,3 +9049,111 @@ save-load, or golden files were modified.
 ### Next Step
 
 Phase 4.27B — Bounded Path Planning Fixture Smoke.
+
+## 2026-07-01 — Phase 4.27B bounded path planning fixture smoke
+
+### Objective
+
+Add the first fixture-only bounded path planning smoke without introducing live
+pathfinding, tick handoff, movement application, route following, memory/goals,
+reservation runtime, or terrain/World mutation.
+
+### Starting Point
+
+Phase 4.27A documented bounded path planning as a future explicit v3 planning
+mode. The validated baseline already includes v0/v1/v2 movement policies,
+policy consolidation fixture coverage, boundary hardening, consolidated replay
+regression, feedback N to N+1 replay semantics, lab-map-only approved
+application, and deterministic digest checks.
+
+### Why Fixture-Only
+
+The first implementation keeps planning inside an abstract fixture grid so the
+boundary is inspectable before any tick, live collision, approved application,
+or replay integration. The planner produces plans, not movement execution.
+
+### Planner
+
+The fixture planner introduces bounded planning contexts and plans for a future
+v3 opt-in mode. It uses a tiny deterministic fixed-bound BFS over supplied
+fixture cells only. It does not inspect `World`, live collision, agents, memory,
+goals, or terrain.
+
+### Grid And Bounds
+
+Cases use an abstract same-y grid with fixed `maxSteps` and fixed `maxNodes`.
+The smoke verifies `maxStepsMax <= 4`, `maxNodesMax <= 32`, nodes visited within
+the node bound, and step count within the step bound.
+
+### Neighbor Order And Tie-Break
+
+Neighbor order is fixed as `move_north`, `move_east`, `move_south`,
+`move_west`. The context records a stable tie-break label, and the invariant
+report verifies deterministic case order, neighbor order, and tie-break.
+
+### Cases Covered
+
+The fixture covers direct one-step planning, two-step planning, a deterministic
+detour around a blocked cell, no path, max steps too short, max nodes too small,
+start equals target, negative coordinates, and same-y-only behavior.
+
+### Digest Repeatability
+
+Each plan records a deterministic digest. The report repeats the same fixture
+inputs and verifies the aggregate digest matches with zero repeatability
+failures.
+
+### v3 Opt-In And Hidden Activation
+
+The smoke represents v3 as `boundedPathPlanningV3FixtureOptIn` only. v0, v1,
+and v2 remain unchanged; v3 is not global; hidden activation is reported false.
+
+### Outputs, Invariants, Metrics, Event
+
+Outputs:
+
+- `bounded_path_planning_fixture_report.json`;
+- `bounded_path_planning_fixture_invariant_report.json`;
+- `bounded_path_planning_fixture_cases.json`;
+- `bounded_path_planning_fixture_plans.json`;
+- `bounded_path_planning_fixture_digest.json`;
+- `boundedPathPlanningFixture*` metrics;
+- `lab_bounded_path_planning_fixture_recorded` event.
+
+The invariant report records 74 checks, including max bounds, one-edge same-y
+steps, deterministic ordering, digest repeatability, v0/v1/v2 stability, v3
+opt-in/not-global status, and all boundary flags.
+
+### Boundary Confirmation
+
+The smoke confirms no World read, no collision read, no tick, no movement
+application, no lab position map mutation, no route following, no live
+pathfinding, no unbounded search, no dynamic replanning, no reservation runtime,
+no memory update, no goal change, no core entity or physical placeholder
+movement, and no terrain/World mutation.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_fixture_smoke --seed 42 --ticks 0 --out runs/check_bounded_path_planning_fixture`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_consolidation_fixture_smoke --seed 42 --ticks 0 --out runs/check_policy_consolidation_fixture_after_bounded_path_fixture`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_boundary_hardening_smoke --seed 42 --ticks 0 --out runs/check_policy_boundary_hardening_after_bounded_path_fixture`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_consolidated_replay_regression_smoke --seed 42 --ticks 3 --out runs/check_policy_consolidated_replay_after_bounded_path_fixture`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_multi_tick_replay_smoke --seed 42 --ticks 3 --out runs/check_alternate_local_hint_multi_tick_replay_after_bounded_path_fixture`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_approved_application_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_approved_application_after_bounded_path_fixture`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_hardening_after_bounded_path_fixture`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_bounded_path_fixture`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+Validation passed. The scenario report and invariant report both show success
+true, all fixture cases pass, digests match, and all boundary flags remain
+false.
+
+### Next Step
+
+Phase 4.27C — Bounded Path Planning Hardening.

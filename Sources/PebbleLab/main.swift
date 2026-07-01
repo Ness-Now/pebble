@@ -74,6 +74,8 @@ let isAgentMovementPolicyBoundaryHardeningScenario = options.scenario
     == "agent_movement_policy_boundary_hardening_smoke"
 let isAgentMovementPolicyConsolidatedReplayScenario = options.scenario
     == "agent_movement_policy_consolidated_replay_regression_smoke"
+let isBoundedPathPlanningFixtureScenario = options.scenario
+    == "bounded_path_planning_fixture_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -105,7 +107,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isAlternateLocalHintMultiTickReplayScenario
     || isAgentMovementPolicyConsolidationFixtureScenario
     || isAgentMovementPolicyBoundaryHardeningScenario
-    || isAgentMovementPolicyConsolidatedReplayScenario)
+    || isAgentMovementPolicyConsolidatedReplayScenario
+    || isBoundedPathPlanningFixtureScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -766,7 +769,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isAlternateLocalHintMultiTickReplayScenario
     || isAgentMovementPolicyConsolidationFixtureScenario
     || isAgentMovementPolicyBoundaryHardeningScenario
-    || isAgentMovementPolicyConsolidatedReplayScenario {
+    || isAgentMovementPolicyConsolidatedReplayScenario
+    || isBoundedPathPlanningFixtureScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -2842,6 +2846,72 @@ let agentMovementPolicyConsolidatedReplaySuccess = isAgentMovementPolicyConsolid
         && agentMovementPolicyConsolidatedReplaySummary?.goalChanged == false
         && agentMovementPolicyConsolidatedReplaySummary?.mutationPerformed == false)
     : nil
+let boundedPathPlanningFixtureReport = isBoundedPathPlanningFixtureScenario
+    ? makeBoundedPathPlanningFixtureReport(
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let boundedPathPlanningFixtureInvariantReport = isBoundedPathPlanningFixtureScenario
+    ? makeBoundedPathPlanningFixtureInvariantReport(
+        report: boundedPathPlanningFixtureReport,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let boundedPathPlanningFixtureDigest = boundedPathPlanningFixtureReport.map {
+    makeBoundedPathPlanningFixtureDigest(report: $0)
+}
+let boundedPathPlanningFixtureSummary = boundedPathPlanningFixtureReport?.summary
+let boundedPathPlanningFixtureSuccess = isBoundedPathPlanningFixtureScenario
+    ? ((boundedPathPlanningFixtureReport?.success ?? false)
+        && (boundedPathPlanningFixtureInvariantReport?.success ?? false)
+        && (boundedPathPlanningFixtureSummary?.cases ?? 0) >= 8
+        && boundedPathPlanningFixtureSummary?.casesPassed == boundedPathPlanningFixtureSummary?.cases
+        && boundedPathPlanningFixtureSummary?.casesFailed == 0
+        && boundedPathPlanningFixtureSummary?.plansProduced == boundedPathPlanningFixtureSummary?.cases
+        && (boundedPathPlanningFixtureSummary?.reachedTargetPlans ?? 0) > 0
+        && (boundedPathPlanningFixtureSummary?.noPathPlans ?? 0) > 0
+        && (boundedPathPlanningFixtureSummary?.selectedFirstSteps ?? 0) > 0
+        && (boundedPathPlanningFixtureSummary?.maxStepsMax ?? 999) <= 4
+        && (boundedPathPlanningFixtureSummary?.maxNodesMax ?? 999) <= 32
+        && (boundedPathPlanningFixtureSummary?.nodesVisitedMax ?? 999)
+            <= (boundedPathPlanningFixtureSummary?.maxNodesMax ?? -1)
+        && (boundedPathPlanningFixtureSummary?.stepsMax ?? 999)
+            <= (boundedPathPlanningFixtureSummary?.maxStepsMax ?? -1)
+        && boundedPathPlanningFixtureSummary?.stepsWithinMax == true
+        && boundedPathPlanningFixtureSummary?.nodesWithinMax == true
+        && boundedPathPlanningFixtureSummary?.oneEdgeSteps == true
+        && boundedPathPlanningFixtureSummary?.sameYSteps == true
+        && boundedPathPlanningFixtureSummary?.deterministicCaseOrder == true
+        && boundedPathPlanningFixtureSummary?.deterministicNeighborOrder == true
+        && boundedPathPlanningFixtureSummary?.deterministicTieBreak == true
+        && boundedPathPlanningFixtureSummary?.digestsEqual == true
+        && boundedPathPlanningFixtureSummary?.repeatabilityFailures == 0
+        && boundedPathPlanningFixtureSummary?.v0Unchanged == true
+        && boundedPathPlanningFixtureSummary?.v1Unchanged == true
+        && boundedPathPlanningFixtureSummary?.v2Unchanged == true
+        && boundedPathPlanningFixtureSummary?.v3OptIn == true
+        && boundedPathPlanningFixtureSummary?.v3NotGlobal == true
+        && boundedPathPlanningFixtureSummary?.hiddenActivationDetected == false
+        && boundedPathPlanningFixtureSummary?.worldRead == false
+        && boundedPathPlanningFixtureSummary?.collisionRead == false
+        && boundedPathPlanningFixtureSummary?.tickUsed == false
+        && boundedPathPlanningFixtureSummary?.movementApplied == false
+        && boundedPathPlanningFixtureSummary?.labPositionMapMutated == false
+        && boundedPathPlanningFixtureSummary?.routeFollowingUsed == false
+        && boundedPathPlanningFixtureSummary?.pathfindingLiveUsed == false
+        && boundedPathPlanningFixtureSummary?.unboundedSearchUsed == false
+        && boundedPathPlanningFixtureSummary?.dynamicReplanningUsed == false
+        && boundedPathPlanningFixtureSummary?.reservationRuntimeUsed == false
+        && boundedPathPlanningFixtureSummary?.memoryUpdated == false
+        && boundedPathPlanningFixtureSummary?.goalChanged == false
+        && boundedPathPlanningFixtureSummary?.terrainMutated == false
+        && boundedPathPlanningFixtureSummary?.worldMutated == false
+        && boundedPathPlanningFixtureSummary?.coreEntityMoved == false
+        && boundedPathPlanningFixtureSummary?.physicalPlaceholderMoved == false
+        && boundedPathPlanningFixtureSummary?.mutationPerformed == false)
+    : nil
 let multiTickClosedLoopReport = isMultiTickClosedLoopFixtureScenario
     ? makeMultiTickClosedLoopFixtureReport(
         scenario: options.scenario,
@@ -3474,6 +3544,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (agentMovementPolicyConsolidationSuccess ?? true)
     && (agentMovementPolicyBoundaryHardeningSuccess ?? true)
     && (agentMovementPolicyConsolidatedReplaySuccess ?? true)
+    && (boundedPathPlanningFixtureSuccess ?? true)
     && (multiTickClosedLoopSuccess ?? true)
     && (multiTickClosedLoopHardeningSuccess ?? true)
     && (multiTickClosedLoopLiveReadonlySuccess ?? true)
@@ -5067,6 +5138,52 @@ if options.outPath != nil {
                 replanningPerformed: summary.replanningPerformed
             ))
         }
+        if let boundedPathPlanningFixtureReport {
+            let summary = boundedPathPlanningFixtureReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_bounded_path_planning_fixture_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                seed: options.seed,
+                success: boundedPathPlanningFixtureSuccess,
+                passed: summary.casesPassed,
+                failed: summary.casesFailed,
+                completed: summary.selectedFirstSteps,
+                pathsFound: summary.reachedTargetPlans,
+                pathsNotFound: summary.noPathPlans,
+                searchLimitReached: summary.truncatedPlans + summary.exhaustedPlans,
+                nodes: summary.nodesVisitedMax,
+                pathLength: summary.stepsMax,
+                candidates: summary.plansProduced,
+                decisions: summary.plansProduced,
+                maxAlternatesMin: summary.maxStepsMin,
+                maxAlternatesMax: summary.maxStepsMax,
+                bounded: summary.stepsWithinMax && summary.nodesWithinMax,
+                oneEdgeAlternates: summary.oneEdgeSteps && summary.sameYSteps,
+                v0Unchanged: summary.v0Unchanged,
+                v1Unchanged: summary.v1Unchanged,
+                v2OptIn: summary.v3OptIn,
+                v2NotGlobal: summary.v3NotGlobal,
+                hiddenActivationDetected: summary.hiddenActivationDetected,
+                terrainMutated: summary.terrainMutated,
+                coreEntityMoved: summary.coreEntityMoved,
+                physicalPlaceholderMoved: summary.physicalPlaceholderMoved,
+                cases: summary.cases,
+                worldMutated: summary.worldMutated,
+                repeatabilityChecks: 2,
+                repeatabilityFailures: summary.repeatabilityFailures,
+                routeFollowingUsed: summary.routeFollowingUsed,
+                worldUsed: summary.worldRead,
+                collisionRead: summary.collisionRead,
+                movementApplied: summary.movementApplied,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingLiveUsed,
+                replanningPerformed: summary.dynamicReplanningUsed
+            ))
+        }
         if let multiTickClosedLoopReport {
             let summary = multiTickClosedLoopReport.summary
             try appendEvent(RunEvent(
@@ -6365,6 +6482,32 @@ if let outPath = options.outPath {
             try writeJSON(
                 agentMovementPolicyConsolidatedReplayInvariantReport,
                 to: outURL.appendingPathComponent("agent_movement_policy_consolidated_replay_invariant_report.json")
+            )
+        }
+        if let boundedPathPlanningFixtureReport {
+            try writeJSON(
+                boundedPathPlanningFixtureReport,
+                to: outURL.appendingPathComponent("bounded_path_planning_fixture_report.json")
+            )
+            try writeJSON(
+                boundedPathPlanningFixtureReport.cases,
+                to: outURL.appendingPathComponent("bounded_path_planning_fixture_cases.json")
+            )
+            try writeJSON(
+                boundedPathPlanningFixtureReport.plans,
+                to: outURL.appendingPathComponent("bounded_path_planning_fixture_plans.json")
+            )
+        }
+        if let boundedPathPlanningFixtureDigest {
+            try writeJSON(
+                boundedPathPlanningFixtureDigest,
+                to: outURL.appendingPathComponent("bounded_path_planning_fixture_digest.json")
+            )
+        }
+        if let boundedPathPlanningFixtureInvariantReport {
+            try writeJSON(
+                boundedPathPlanningFixtureInvariantReport,
+                to: outURL.appendingPathComponent("bounded_path_planning_fixture_invariant_report.json")
             )
         }
         if let multiTickClosedLoopReport {
@@ -7979,6 +8122,55 @@ if let outPath = options.outPath {
             agentMovementPolicyConsolidatedReplayGoalChanged: agentMovementPolicyConsolidatedReplayReport?.summary.goalChanged,
             agentMovementPolicyConsolidatedReplayMutationPerformed: agentMovementPolicyConsolidatedReplayReport?.summary.mutationPerformed,
             agentMovementPolicyConsolidatedReplaySuccess: agentMovementPolicyConsolidatedReplaySuccess,
+            boundedPathPlanningFixtureCases: boundedPathPlanningFixtureReport?.summary.cases,
+            boundedPathPlanningFixtureCasesPassed: boundedPathPlanningFixtureReport?.summary.casesPassed,
+            boundedPathPlanningFixtureCasesFailed: boundedPathPlanningFixtureReport?.summary.casesFailed,
+            boundedPathPlanningFixturePlansProduced: boundedPathPlanningFixtureReport?.summary.plansProduced,
+            boundedPathPlanningFixtureNoPathPlans: boundedPathPlanningFixtureReport?.summary.noPathPlans,
+            boundedPathPlanningFixtureReachedTargetPlans: boundedPathPlanningFixtureReport?.summary.reachedTargetPlans,
+            boundedPathPlanningFixtureTruncatedPlans: boundedPathPlanningFixtureReport?.summary.truncatedPlans,
+            boundedPathPlanningFixtureExhaustedPlans: boundedPathPlanningFixtureReport?.summary.exhaustedPlans,
+            boundedPathPlanningFixtureSelectedFirstSteps: boundedPathPlanningFixtureReport?.summary.selectedFirstSteps,
+            boundedPathPlanningFixtureMaxStepsMin: boundedPathPlanningFixtureReport?.summary.maxStepsMin,
+            boundedPathPlanningFixtureMaxStepsMax: boundedPathPlanningFixtureReport?.summary.maxStepsMax,
+            boundedPathPlanningFixtureMaxNodesMin: boundedPathPlanningFixtureReport?.summary.maxNodesMin,
+            boundedPathPlanningFixtureMaxNodesMax: boundedPathPlanningFixtureReport?.summary.maxNodesMax,
+            boundedPathPlanningFixtureNodesVisitedMax: boundedPathPlanningFixtureReport?.summary.nodesVisitedMax,
+            boundedPathPlanningFixtureStepsTotal: boundedPathPlanningFixtureReport?.summary.stepsTotal,
+            boundedPathPlanningFixtureStepsMax: boundedPathPlanningFixtureReport?.summary.stepsMax,
+            boundedPathPlanningFixtureStepsWithinMax: boundedPathPlanningFixtureReport?.summary.stepsWithinMax,
+            boundedPathPlanningFixtureNodesWithinMax: boundedPathPlanningFixtureReport?.summary.nodesWithinMax,
+            boundedPathPlanningFixtureOneEdgeSteps: boundedPathPlanningFixtureReport?.summary.oneEdgeSteps,
+            boundedPathPlanningFixtureSameYSteps: boundedPathPlanningFixtureReport?.summary.sameYSteps,
+            boundedPathPlanningFixtureDeterministicCaseOrder: boundedPathPlanningFixtureReport?.summary.deterministicCaseOrder,
+            boundedPathPlanningFixtureDeterministicNeighborOrder: boundedPathPlanningFixtureReport?.summary.deterministicNeighborOrder,
+            boundedPathPlanningFixtureDeterministicTieBreak: boundedPathPlanningFixtureReport?.summary.deterministicTieBreak,
+            boundedPathPlanningFixtureDigestsEqual: boundedPathPlanningFixtureReport?.summary.digestsEqual,
+            boundedPathPlanningFixtureRepeatabilityFailures: boundedPathPlanningFixtureReport?.summary.repeatabilityFailures,
+            boundedPathPlanningFixtureV0Unchanged: boundedPathPlanningFixtureReport?.summary.v0Unchanged,
+            boundedPathPlanningFixtureV1Unchanged: boundedPathPlanningFixtureReport?.summary.v1Unchanged,
+            boundedPathPlanningFixtureV2Unchanged: boundedPathPlanningFixtureReport?.summary.v2Unchanged,
+            boundedPathPlanningFixtureV3OptIn: boundedPathPlanningFixtureReport?.summary.v3OptIn,
+            boundedPathPlanningFixtureV3NotGlobal: boundedPathPlanningFixtureReport?.summary.v3NotGlobal,
+            boundedPathPlanningFixtureHiddenActivationDetected: boundedPathPlanningFixtureReport?.summary.hiddenActivationDetected,
+            boundedPathPlanningFixtureWorldRead: boundedPathPlanningFixtureReport?.summary.worldRead,
+            boundedPathPlanningFixtureCollisionRead: boundedPathPlanningFixtureReport?.summary.collisionRead,
+            boundedPathPlanningFixtureTickUsed: boundedPathPlanningFixtureReport?.summary.tickUsed,
+            boundedPathPlanningFixtureMovementApplied: boundedPathPlanningFixtureReport?.summary.movementApplied,
+            boundedPathPlanningFixtureLabPositionMapMutated: boundedPathPlanningFixtureReport?.summary.labPositionMapMutated,
+            boundedPathPlanningFixtureRouteFollowingUsed: boundedPathPlanningFixtureReport?.summary.routeFollowingUsed,
+            boundedPathPlanningFixturePathfindingLiveUsed: boundedPathPlanningFixtureReport?.summary.pathfindingLiveUsed,
+            boundedPathPlanningFixtureUnboundedSearchUsed: boundedPathPlanningFixtureReport?.summary.unboundedSearchUsed,
+            boundedPathPlanningFixtureDynamicReplanningUsed: boundedPathPlanningFixtureReport?.summary.dynamicReplanningUsed,
+            boundedPathPlanningFixtureReservationRuntimeUsed: boundedPathPlanningFixtureReport?.summary.reservationRuntimeUsed,
+            boundedPathPlanningFixtureMemoryUpdated: boundedPathPlanningFixtureReport?.summary.memoryUpdated,
+            boundedPathPlanningFixtureGoalChanged: boundedPathPlanningFixtureReport?.summary.goalChanged,
+            boundedPathPlanningFixtureTerrainMutated: boundedPathPlanningFixtureReport?.summary.terrainMutated,
+            boundedPathPlanningFixtureWorldMutated: boundedPathPlanningFixtureReport?.summary.worldMutated,
+            boundedPathPlanningFixtureCoreEntityMoved: boundedPathPlanningFixtureReport?.summary.coreEntityMoved,
+            boundedPathPlanningFixturePhysicalPlaceholderMoved: boundedPathPlanningFixtureReport?.summary.physicalPlaceholderMoved,
+            boundedPathPlanningFixtureMutationPerformed: boundedPathPlanningFixtureReport?.summary.mutationPerformed,
+            boundedPathPlanningFixtureSuccess: boundedPathPlanningFixtureSuccess,
             multiTickClosedLoopTicks: multiTickClosedLoopReport?.summary.executedTicks,
             multiTickClosedLoopAgents: multiTickClosedLoopReport?.summary.agents,
             multiTickClosedLoopContextsTotal: multiTickClosedLoopReport?.summary.contextsTotal,

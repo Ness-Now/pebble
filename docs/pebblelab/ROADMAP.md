@@ -2380,3 +2380,40 @@ No Swift, scenario, runner, metric, or event runtime file is modified in 4.27A.
 Path planning is only documented, not implemented.
 
 Next recommended step: Phase 4.27B - Bounded Path Planning Fixture Smoke.
+
+## Phase 4.27B - Bounded Path Planning Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: add the first fixture-only bounded path planner over an abstract grid
+without World access, collision reads, tick handoff, movement application, route
+following, memory/goals, reservation runtime, or terrain/World mutation.
+
+Validated scope:
+
+- `bounded_path_planning_fixture_smoke`;
+- nine deterministic fixture cases;
+- fixed `maxSteps` and `maxNodes`;
+- deterministic neighbor order `move_north`, `move_east`, `move_south`,
+  `move_west`;
+- one-edge same-y steps only;
+- selected first step reported but not sent to tick;
+- deterministic digest repeatability;
+- v0/v1/v2 unchanged;
+- v3 represented only as fixture opt-in and not global;
+- no hidden activation;
+- no World/collision/tick/movement/application/route following;
+- no memory/goals/reservation runtime;
+- no terrain/world mutation.
+
+Outputs:
+
+- `bounded_path_planning_fixture_report.json`;
+- `bounded_path_planning_fixture_invariant_report.json`;
+- `bounded_path_planning_fixture_cases.json`;
+- `bounded_path_planning_fixture_plans.json`;
+- `bounded_path_planning_fixture_digest.json`;
+- `boundedPathPlanningFixture*` metrics;
+- `lab_bounded_path_planning_fixture_recorded` event.
+
+Next recommended step: Phase 4.27C - Bounded Path Planning Hardening.
