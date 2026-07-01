@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added agent movement policy consolidated replay regression smoke.
 - Added agent movement policy boundary hardening smoke.
 - Added agent movement policy consolidation fixture smoke.
 - Documented PebbleLab agent movement policy consolidation plan.

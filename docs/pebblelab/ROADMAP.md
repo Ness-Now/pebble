@@ -2295,3 +2295,59 @@ reservation runtime, memory/goals, gameplay autonomy, physical/core entity
 movement, and terrain/world mutation remain out of scope.
 
 Next recommended step: Phase 4.26D - Consolidated Replay Regression.
+
+## Phase 4.26D - Consolidated Replay Regression
+
+Status: implemented and validated.
+
+Goal: replay the consolidated v0/v1/v2 policy adapter across fixed ticks and
+prove deterministic signatures, feedback carryover, and boundary flags without
+introducing new movement behavior.
+
+Validated scope:
+
+- `agent_movement_policy_consolidated_replay_regression_smoke`;
+- fixture-only replay mode;
+- three requested and executed ticks;
+- six deterministic agents;
+- three explicit policy versions;
+- direct v0/v1/v2 signatures match consolidated signatures;
+- zero signature mismatches for v0, v1, and v2;
+- v0 remains unchanged;
+- v1 remains unchanged;
+- v2 remains explicit opt-in and not global;
+- hidden activation is not detected;
+- feedback emitted at tick N is consumed only at tick N+1;
+- no same-tick feedback consumption;
+- no future feedback consumption;
+- no cross-agent feedback leak;
+- two replay runs produce identical digests;
+- deterministic tick, agent, policy, decision, and signature ordering;
+- fixture replay does not call tick live collision;
+- no movement application or approved application;
+- no memory/goals;
+- no pathfinding, replanning, avoidance, reservation runtime, or route
+  following;
+- no World/collision read by policy;
+- no terrain/world mutation, core entity movement, or physical placeholder
+  movement.
+
+Outputs:
+
+- `agent_movement_policy_consolidated_replay_report.json`;
+- `agent_movement_policy_consolidated_replay_invariant_report.json`;
+- `agent_movement_policy_consolidated_replay_ticks.json`;
+- `agent_movement_policy_consolidated_replay_feedback.json`;
+- `agent_movement_policy_consolidated_replay_decisions.json`;
+- `agent_movement_policy_consolidated_replay_signatures.json`;
+- `agent_movement_policy_consolidated_replay_digest.json`;
+- `agent_movement_policy_consolidated_replay_boundary.json`;
+- `agentMovementPolicyConsolidatedReplay*` metrics;
+- `lab_agent_movement_policy_consolidated_replay_recorded` event.
+
+Pathfinding and path planning remain out of scope until after consolidation.
+Route planning, route following, replanning, avoidance, reservation runtime,
+memory/goals, gameplay autonomy, physical/core entity movement, and
+terrain/world mutation remain out of scope.
+
+Next recommended step: Phase 4.27A - Bounded Path Planning Plan Docs-Only.

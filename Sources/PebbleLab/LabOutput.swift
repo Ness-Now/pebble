@@ -1386,6 +1386,71 @@ struct RunMetrics: Encodable {
     let agentMovementPolicyBoundaryHardeningGoalChanged: Bool?
     let agentMovementPolicyBoundaryHardeningMutationPerformed: Bool?
     let agentMovementPolicyBoundaryHardeningSuccess: Bool?
+    let agentMovementPolicyConsolidatedReplayRequestedTicks: Int?
+    let agentMovementPolicyConsolidatedReplayExecutedTicks: Int?
+    let agentMovementPolicyConsolidatedReplayAgents: Int?
+    let agentMovementPolicyConsolidatedReplayPolicyVersions: Int?
+    let agentMovementPolicyConsolidatedReplayContextsTotal: Int?
+    let agentMovementPolicyConsolidatedReplayDecisionsTotal: Int?
+    let agentMovementPolicyConsolidatedReplaySignaturesCompared: Int?
+    let agentMovementPolicyConsolidatedReplaySignaturesMatched: Int?
+    let agentMovementPolicyConsolidatedReplaySignatureMismatches: Int?
+    let agentMovementPolicyConsolidatedReplayV0SignatureMismatches: Int?
+    let agentMovementPolicyConsolidatedReplayV1SignatureMismatches: Int?
+    let agentMovementPolicyConsolidatedReplayV2SignatureMismatches: Int?
+    let agentMovementPolicyConsolidatedReplayFeedbackConsumedTotal: Int?
+    let agentMovementPolicyConsolidatedReplayFeedbackCarriedToNextTickTotal: Int?
+    let agentMovementPolicyConsolidatedReplaySameTickFeedbackConsumedTotal: Int?
+    let agentMovementPolicyConsolidatedReplayFutureFeedbackConsumedTotal: Int?
+    let agentMovementPolicyConsolidatedReplayCrossAgentFeedbackLeaksTotal: Int?
+    let agentMovementPolicyConsolidatedReplayCandidatesProducedTotal: Int?
+    let agentMovementPolicyConsolidatedReplayCandidatesSelectedTotal: Int?
+    let agentMovementPolicyConsolidatedReplayMaxAlternates: Int?
+    let agentMovementPolicyConsolidatedReplayBounded: Bool?
+    let agentMovementPolicyConsolidatedReplayBlockedFeedbackUsedTotal: Int?
+    let agentMovementPolicyConsolidatedReplayUnknownHintNoIntentTotal: Int?
+    let agentMovementPolicyConsolidatedReplayEmptyHintNoIntentTotal: Int?
+    let agentMovementPolicyConsolidatedReplayMovementIntentInputsTotal: Int?
+    let agentMovementPolicyConsolidatedReplayTickApprovedTotal: Int?
+    let agentMovementPolicyConsolidatedReplayTickDeniedTotal: Int?
+    let agentMovementPolicyConsolidatedReplayTickDeniedCollisionTotal: Int?
+    let agentMovementPolicyConsolidatedReplayApprovedApplicationsTotal: Int?
+    let agentMovementPolicyConsolidatedReplayDeniedAgentsPreservedTotal: Int?
+    let agentMovementPolicyConsolidatedReplayNoIntentAgentsPreservedTotal: Int?
+    let agentMovementPolicyConsolidatedReplayDisplacementsAppliedTotal: Int?
+    let agentMovementPolicyConsolidatedReplayAbstractPhysicalDivergenceBeforeMax: Int?
+    let agentMovementPolicyConsolidatedReplayAbstractPhysicalDivergenceAfterMax: Int?
+    let agentMovementPolicyConsolidatedReplayReplayRuns: Int?
+    let agentMovementPolicyConsolidatedReplayReplayDigestsEqual: Bool?
+    let agentMovementPolicyConsolidatedReplayRepeatabilityFailures: Int?
+    let agentMovementPolicyConsolidatedReplayDeterministicTickOrder: Bool?
+    let agentMovementPolicyConsolidatedReplayDeterministicAgentOrder: Bool?
+    let agentMovementPolicyConsolidatedReplayDeterministicPolicyOrder: Bool?
+    let agentMovementPolicyConsolidatedReplayDeterministicDecisionOrder: Bool?
+    let agentMovementPolicyConsolidatedReplayDeterministicSignatureOrder: Bool?
+    let agentMovementPolicyConsolidatedReplayV0Unchanged: Bool?
+    let agentMovementPolicyConsolidatedReplayV1Unchanged: Bool?
+    let agentMovementPolicyConsolidatedReplayV2OptIn: Bool?
+    let agentMovementPolicyConsolidatedReplayV2NotGlobal: Bool?
+    let agentMovementPolicyConsolidatedReplayHiddenActivationDetected: Bool?
+    let agentMovementPolicyConsolidatedReplayPolicyReadCollision: Bool?
+    let agentMovementPolicyConsolidatedReplayPolicyWorldUsed: Bool?
+    let agentMovementPolicyConsolidatedReplayTickReadCollision: Bool?
+    let agentMovementPolicyConsolidatedReplayTickWorldReadOnlyUsed: Bool?
+    let agentMovementPolicyConsolidatedReplayMovementApplied: Bool?
+    let agentMovementPolicyConsolidatedReplayWorldMutated: Bool?
+    let agentMovementPolicyConsolidatedReplayTerrainMutated: Bool?
+    let agentMovementPolicyConsolidatedReplayCoreEntityMoved: Bool?
+    let agentMovementPolicyConsolidatedReplayPhysicalPlaceholderMoved: Bool?
+    let agentMovementPolicyConsolidatedReplayPathfindingPerformed: Bool?
+    let agentMovementPolicyConsolidatedReplayReplanningPerformed: Bool?
+    let agentMovementPolicyConsolidatedReplayAvoidancePerformed: Bool?
+    let agentMovementPolicyConsolidatedReplayReservationRuntimeUsed: Bool?
+    let agentMovementPolicyConsolidatedReplayRouteFollowingUsed: Bool?
+    let agentMovementPolicyConsolidatedReplayMemoryUpdated: Bool?
+    let agentMovementPolicyConsolidatedReplayGoalChanged: Bool?
+    let agentMovementPolicyConsolidatedReplayMutationPerformed: Bool?
+    let agentMovementPolicyConsolidatedReplaySuccess: Bool?
     let multiTickClosedLoopTicks: Int?
     let multiTickClosedLoopAgents: Int?
     let multiTickClosedLoopContextsTotal: Int?
@@ -2941,6 +3006,71 @@ struct RunMetrics: Encodable {
         agentMovementPolicyBoundaryHardeningGoalChanged: Bool? = nil,
         agentMovementPolicyBoundaryHardeningMutationPerformed: Bool? = nil,
         agentMovementPolicyBoundaryHardeningSuccess: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayRequestedTicks: Int? = nil,
+        agentMovementPolicyConsolidatedReplayExecutedTicks: Int? = nil,
+        agentMovementPolicyConsolidatedReplayAgents: Int? = nil,
+        agentMovementPolicyConsolidatedReplayPolicyVersions: Int? = nil,
+        agentMovementPolicyConsolidatedReplayContextsTotal: Int? = nil,
+        agentMovementPolicyConsolidatedReplayDecisionsTotal: Int? = nil,
+        agentMovementPolicyConsolidatedReplaySignaturesCompared: Int? = nil,
+        agentMovementPolicyConsolidatedReplaySignaturesMatched: Int? = nil,
+        agentMovementPolicyConsolidatedReplaySignatureMismatches: Int? = nil,
+        agentMovementPolicyConsolidatedReplayV0SignatureMismatches: Int? = nil,
+        agentMovementPolicyConsolidatedReplayV1SignatureMismatches: Int? = nil,
+        agentMovementPolicyConsolidatedReplayV2SignatureMismatches: Int? = nil,
+        agentMovementPolicyConsolidatedReplayFeedbackConsumedTotal: Int? = nil,
+        agentMovementPolicyConsolidatedReplayFeedbackCarriedToNextTickTotal: Int? = nil,
+        agentMovementPolicyConsolidatedReplaySameTickFeedbackConsumedTotal: Int? = nil,
+        agentMovementPolicyConsolidatedReplayFutureFeedbackConsumedTotal: Int? = nil,
+        agentMovementPolicyConsolidatedReplayCrossAgentFeedbackLeaksTotal: Int? = nil,
+        agentMovementPolicyConsolidatedReplayCandidatesProducedTotal: Int? = nil,
+        agentMovementPolicyConsolidatedReplayCandidatesSelectedTotal: Int? = nil,
+        agentMovementPolicyConsolidatedReplayMaxAlternates: Int? = nil,
+        agentMovementPolicyConsolidatedReplayBounded: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayBlockedFeedbackUsedTotal: Int? = nil,
+        agentMovementPolicyConsolidatedReplayUnknownHintNoIntentTotal: Int? = nil,
+        agentMovementPolicyConsolidatedReplayEmptyHintNoIntentTotal: Int? = nil,
+        agentMovementPolicyConsolidatedReplayMovementIntentInputsTotal: Int? = nil,
+        agentMovementPolicyConsolidatedReplayTickApprovedTotal: Int? = nil,
+        agentMovementPolicyConsolidatedReplayTickDeniedTotal: Int? = nil,
+        agentMovementPolicyConsolidatedReplayTickDeniedCollisionTotal: Int? = nil,
+        agentMovementPolicyConsolidatedReplayApprovedApplicationsTotal: Int? = nil,
+        agentMovementPolicyConsolidatedReplayDeniedAgentsPreservedTotal: Int? = nil,
+        agentMovementPolicyConsolidatedReplayNoIntentAgentsPreservedTotal: Int? = nil,
+        agentMovementPolicyConsolidatedReplayDisplacementsAppliedTotal: Int? = nil,
+        agentMovementPolicyConsolidatedReplayAbstractPhysicalDivergenceBeforeMax: Int? = nil,
+        agentMovementPolicyConsolidatedReplayAbstractPhysicalDivergenceAfterMax: Int? = nil,
+        agentMovementPolicyConsolidatedReplayReplayRuns: Int? = nil,
+        agentMovementPolicyConsolidatedReplayReplayDigestsEqual: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayRepeatabilityFailures: Int? = nil,
+        agentMovementPolicyConsolidatedReplayDeterministicTickOrder: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayDeterministicAgentOrder: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayDeterministicPolicyOrder: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayDeterministicDecisionOrder: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayDeterministicSignatureOrder: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayV0Unchanged: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayV1Unchanged: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayV2OptIn: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayV2NotGlobal: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayHiddenActivationDetected: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayPolicyReadCollision: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayPolicyWorldUsed: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayTickReadCollision: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayTickWorldReadOnlyUsed: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayMovementApplied: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayWorldMutated: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayTerrainMutated: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayCoreEntityMoved: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayPhysicalPlaceholderMoved: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayPathfindingPerformed: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayReplanningPerformed: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayAvoidancePerformed: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayReservationRuntimeUsed: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayRouteFollowingUsed: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayMemoryUpdated: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayGoalChanged: Bool? = nil,
+        agentMovementPolicyConsolidatedReplayMutationPerformed: Bool? = nil,
+        agentMovementPolicyConsolidatedReplaySuccess: Bool? = nil,
         multiTickClosedLoopTicks: Int? = nil,
         multiTickClosedLoopAgents: Int? = nil,
         multiTickClosedLoopContextsTotal: Int? = nil,
@@ -4495,6 +4625,71 @@ struct RunMetrics: Encodable {
         self.agentMovementPolicyBoundaryHardeningGoalChanged = agentMovementPolicyBoundaryHardeningGoalChanged
         self.agentMovementPolicyBoundaryHardeningMutationPerformed = agentMovementPolicyBoundaryHardeningMutationPerformed
         self.agentMovementPolicyBoundaryHardeningSuccess = agentMovementPolicyBoundaryHardeningSuccess
+        self.agentMovementPolicyConsolidatedReplayRequestedTicks = agentMovementPolicyConsolidatedReplayRequestedTicks
+        self.agentMovementPolicyConsolidatedReplayExecutedTicks = agentMovementPolicyConsolidatedReplayExecutedTicks
+        self.agentMovementPolicyConsolidatedReplayAgents = agentMovementPolicyConsolidatedReplayAgents
+        self.agentMovementPolicyConsolidatedReplayPolicyVersions = agentMovementPolicyConsolidatedReplayPolicyVersions
+        self.agentMovementPolicyConsolidatedReplayContextsTotal = agentMovementPolicyConsolidatedReplayContextsTotal
+        self.agentMovementPolicyConsolidatedReplayDecisionsTotal = agentMovementPolicyConsolidatedReplayDecisionsTotal
+        self.agentMovementPolicyConsolidatedReplaySignaturesCompared = agentMovementPolicyConsolidatedReplaySignaturesCompared
+        self.agentMovementPolicyConsolidatedReplaySignaturesMatched = agentMovementPolicyConsolidatedReplaySignaturesMatched
+        self.agentMovementPolicyConsolidatedReplaySignatureMismatches = agentMovementPolicyConsolidatedReplaySignatureMismatches
+        self.agentMovementPolicyConsolidatedReplayV0SignatureMismatches = agentMovementPolicyConsolidatedReplayV0SignatureMismatches
+        self.agentMovementPolicyConsolidatedReplayV1SignatureMismatches = agentMovementPolicyConsolidatedReplayV1SignatureMismatches
+        self.agentMovementPolicyConsolidatedReplayV2SignatureMismatches = agentMovementPolicyConsolidatedReplayV2SignatureMismatches
+        self.agentMovementPolicyConsolidatedReplayFeedbackConsumedTotal = agentMovementPolicyConsolidatedReplayFeedbackConsumedTotal
+        self.agentMovementPolicyConsolidatedReplayFeedbackCarriedToNextTickTotal = agentMovementPolicyConsolidatedReplayFeedbackCarriedToNextTickTotal
+        self.agentMovementPolicyConsolidatedReplaySameTickFeedbackConsumedTotal = agentMovementPolicyConsolidatedReplaySameTickFeedbackConsumedTotal
+        self.agentMovementPolicyConsolidatedReplayFutureFeedbackConsumedTotal = agentMovementPolicyConsolidatedReplayFutureFeedbackConsumedTotal
+        self.agentMovementPolicyConsolidatedReplayCrossAgentFeedbackLeaksTotal = agentMovementPolicyConsolidatedReplayCrossAgentFeedbackLeaksTotal
+        self.agentMovementPolicyConsolidatedReplayCandidatesProducedTotal = agentMovementPolicyConsolidatedReplayCandidatesProducedTotal
+        self.agentMovementPolicyConsolidatedReplayCandidatesSelectedTotal = agentMovementPolicyConsolidatedReplayCandidatesSelectedTotal
+        self.agentMovementPolicyConsolidatedReplayMaxAlternates = agentMovementPolicyConsolidatedReplayMaxAlternates
+        self.agentMovementPolicyConsolidatedReplayBounded = agentMovementPolicyConsolidatedReplayBounded
+        self.agentMovementPolicyConsolidatedReplayBlockedFeedbackUsedTotal = agentMovementPolicyConsolidatedReplayBlockedFeedbackUsedTotal
+        self.agentMovementPolicyConsolidatedReplayUnknownHintNoIntentTotal = agentMovementPolicyConsolidatedReplayUnknownHintNoIntentTotal
+        self.agentMovementPolicyConsolidatedReplayEmptyHintNoIntentTotal = agentMovementPolicyConsolidatedReplayEmptyHintNoIntentTotal
+        self.agentMovementPolicyConsolidatedReplayMovementIntentInputsTotal = agentMovementPolicyConsolidatedReplayMovementIntentInputsTotal
+        self.agentMovementPolicyConsolidatedReplayTickApprovedTotal = agentMovementPolicyConsolidatedReplayTickApprovedTotal
+        self.agentMovementPolicyConsolidatedReplayTickDeniedTotal = agentMovementPolicyConsolidatedReplayTickDeniedTotal
+        self.agentMovementPolicyConsolidatedReplayTickDeniedCollisionTotal = agentMovementPolicyConsolidatedReplayTickDeniedCollisionTotal
+        self.agentMovementPolicyConsolidatedReplayApprovedApplicationsTotal = agentMovementPolicyConsolidatedReplayApprovedApplicationsTotal
+        self.agentMovementPolicyConsolidatedReplayDeniedAgentsPreservedTotal = agentMovementPolicyConsolidatedReplayDeniedAgentsPreservedTotal
+        self.agentMovementPolicyConsolidatedReplayNoIntentAgentsPreservedTotal = agentMovementPolicyConsolidatedReplayNoIntentAgentsPreservedTotal
+        self.agentMovementPolicyConsolidatedReplayDisplacementsAppliedTotal = agentMovementPolicyConsolidatedReplayDisplacementsAppliedTotal
+        self.agentMovementPolicyConsolidatedReplayAbstractPhysicalDivergenceBeforeMax = agentMovementPolicyConsolidatedReplayAbstractPhysicalDivergenceBeforeMax
+        self.agentMovementPolicyConsolidatedReplayAbstractPhysicalDivergenceAfterMax = agentMovementPolicyConsolidatedReplayAbstractPhysicalDivergenceAfterMax
+        self.agentMovementPolicyConsolidatedReplayReplayRuns = agentMovementPolicyConsolidatedReplayReplayRuns
+        self.agentMovementPolicyConsolidatedReplayReplayDigestsEqual = agentMovementPolicyConsolidatedReplayReplayDigestsEqual
+        self.agentMovementPolicyConsolidatedReplayRepeatabilityFailures = agentMovementPolicyConsolidatedReplayRepeatabilityFailures
+        self.agentMovementPolicyConsolidatedReplayDeterministicTickOrder = agentMovementPolicyConsolidatedReplayDeterministicTickOrder
+        self.agentMovementPolicyConsolidatedReplayDeterministicAgentOrder = agentMovementPolicyConsolidatedReplayDeterministicAgentOrder
+        self.agentMovementPolicyConsolidatedReplayDeterministicPolicyOrder = agentMovementPolicyConsolidatedReplayDeterministicPolicyOrder
+        self.agentMovementPolicyConsolidatedReplayDeterministicDecisionOrder = agentMovementPolicyConsolidatedReplayDeterministicDecisionOrder
+        self.agentMovementPolicyConsolidatedReplayDeterministicSignatureOrder = agentMovementPolicyConsolidatedReplayDeterministicSignatureOrder
+        self.agentMovementPolicyConsolidatedReplayV0Unchanged = agentMovementPolicyConsolidatedReplayV0Unchanged
+        self.agentMovementPolicyConsolidatedReplayV1Unchanged = agentMovementPolicyConsolidatedReplayV1Unchanged
+        self.agentMovementPolicyConsolidatedReplayV2OptIn = agentMovementPolicyConsolidatedReplayV2OptIn
+        self.agentMovementPolicyConsolidatedReplayV2NotGlobal = agentMovementPolicyConsolidatedReplayV2NotGlobal
+        self.agentMovementPolicyConsolidatedReplayHiddenActivationDetected = agentMovementPolicyConsolidatedReplayHiddenActivationDetected
+        self.agentMovementPolicyConsolidatedReplayPolicyReadCollision = agentMovementPolicyConsolidatedReplayPolicyReadCollision
+        self.agentMovementPolicyConsolidatedReplayPolicyWorldUsed = agentMovementPolicyConsolidatedReplayPolicyWorldUsed
+        self.agentMovementPolicyConsolidatedReplayTickReadCollision = agentMovementPolicyConsolidatedReplayTickReadCollision
+        self.agentMovementPolicyConsolidatedReplayTickWorldReadOnlyUsed = agentMovementPolicyConsolidatedReplayTickWorldReadOnlyUsed
+        self.agentMovementPolicyConsolidatedReplayMovementApplied = agentMovementPolicyConsolidatedReplayMovementApplied
+        self.agentMovementPolicyConsolidatedReplayWorldMutated = agentMovementPolicyConsolidatedReplayWorldMutated
+        self.agentMovementPolicyConsolidatedReplayTerrainMutated = agentMovementPolicyConsolidatedReplayTerrainMutated
+        self.agentMovementPolicyConsolidatedReplayCoreEntityMoved = agentMovementPolicyConsolidatedReplayCoreEntityMoved
+        self.agentMovementPolicyConsolidatedReplayPhysicalPlaceholderMoved = agentMovementPolicyConsolidatedReplayPhysicalPlaceholderMoved
+        self.agentMovementPolicyConsolidatedReplayPathfindingPerformed = agentMovementPolicyConsolidatedReplayPathfindingPerformed
+        self.agentMovementPolicyConsolidatedReplayReplanningPerformed = agentMovementPolicyConsolidatedReplayReplanningPerformed
+        self.agentMovementPolicyConsolidatedReplayAvoidancePerformed = agentMovementPolicyConsolidatedReplayAvoidancePerformed
+        self.agentMovementPolicyConsolidatedReplayReservationRuntimeUsed = agentMovementPolicyConsolidatedReplayReservationRuntimeUsed
+        self.agentMovementPolicyConsolidatedReplayRouteFollowingUsed = agentMovementPolicyConsolidatedReplayRouteFollowingUsed
+        self.agentMovementPolicyConsolidatedReplayMemoryUpdated = agentMovementPolicyConsolidatedReplayMemoryUpdated
+        self.agentMovementPolicyConsolidatedReplayGoalChanged = agentMovementPolicyConsolidatedReplayGoalChanged
+        self.agentMovementPolicyConsolidatedReplayMutationPerformed = agentMovementPolicyConsolidatedReplayMutationPerformed
+        self.agentMovementPolicyConsolidatedReplaySuccess = agentMovementPolicyConsolidatedReplaySuccess
         self.multiTickClosedLoopTicks = multiTickClosedLoopTicks
         self.multiTickClosedLoopAgents = multiTickClosedLoopAgents
         self.multiTickClosedLoopContextsTotal = multiTickClosedLoopContextsTotal

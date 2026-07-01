@@ -8842,3 +8842,84 @@ results are recorded in the 4.26C commit notes.
 ### Next Step
 
 Phase 4.26D — Consolidated Replay Regression.
+
+## 2026-07-01 — Phase 4.26D agent movement policy consolidated replay regression
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Add a consolidated replay regression smoke that proves v0, v1, and v2 direct
+policy signatures still match the consolidated adapter over a fixed multi-tick
+fixture replay.
+
+### Starting Point
+
+Phase 4.26B added the no-behavior-change consolidated policy fixture smoke.
+Phase 4.26C hardened the policy boundary across twenty-two contexts. The next
+gap was deterministic replay coverage: feedback had to move from tick N to
+tick N+1 without same-tick, future, or cross-agent leaks while signatures
+remained identical.
+
+### Files Modified
+
+- `Sources/PebbleLab/LabAgentMovementPolicyConsolidation.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/LabOutput.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_AGENT_MOVEMENT_POLICY_CONSOLIDATION_PLAN.md`
+
+### Replay Contract
+
+The scenario uses fixture-only policy replay, not tick live execution. It runs
+three fixed ticks over six deterministic agents and three explicit policy
+versions. Each tick builds contexts from previous-tick feedback, evaluates
+direct and consolidated policy decisions, compares signatures, emits synthetic
+feedback for the next tick, and appends a deterministic digest line.
+
+### Determinism And Boundaries
+
+The replay checks deterministic tick, agent, policy, decision, and signature
+ordering. It records two identical replay digests and zero signature
+mismatches. v0 remains unchanged, v1 remains unchanged, and v2 stays opt-in and
+not global. No hidden activation is allowed.
+
+### Outputs, Metrics, And Event
+
+The scenario writes report, invariant report, tick records, feedback ledger,
+decisions, signatures, digest, boundary JSON, `agentMovementPolicyConsolidatedReplay*`
+metrics, and one aggregate `lab_agent_movement_policy_consolidated_replay_recorded`
+event.
+
+### Guardrails
+
+The fixture replay does not read World or collision, does not call tick live
+collision, does not apply movement, does not move core entities or physical
+placeholders, does not update memory or goals, does not perform pathfinding,
+replanning, avoidance, reservation runtime, or route following, and does not
+mutate terrain or World.
+
+### Validation Commands
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_consolidated_replay_regression_smoke --seed 42 --ticks 3 --out runs/check_agent_movement_policy_consolidated_replay`
+- required 4.26D non-regression PebbleLab scenarios
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+### Results
+
+The consolidated replay regression passed with three executed ticks, six
+agents, three policy versions, fifty-four decisions/signatures compared, zero
+mismatches, feedback carried only to the next tick, zero leaks, identical replay
+digests, and all boundary flags clean.
+
+### Next Step
+
+Phase 4.27A — Bounded Path Planning Plan Docs-Only.

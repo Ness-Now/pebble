@@ -72,6 +72,8 @@ let isAgentMovementPolicyConsolidationFixtureScenario = options.scenario
     == "agent_movement_policy_consolidation_fixture_smoke"
 let isAgentMovementPolicyBoundaryHardeningScenario = options.scenario
     == "agent_movement_policy_boundary_hardening_smoke"
+let isAgentMovementPolicyConsolidatedReplayScenario = options.scenario
+    == "agent_movement_policy_consolidated_replay_regression_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -102,7 +104,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isAlternateLocalHintApprovedApplicationScenario
     || isAlternateLocalHintMultiTickReplayScenario
     || isAgentMovementPolicyConsolidationFixtureScenario
-    || isAgentMovementPolicyBoundaryHardeningScenario)
+    || isAgentMovementPolicyBoundaryHardeningScenario
+    || isAgentMovementPolicyConsolidatedReplayScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -762,7 +765,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isMultiTickClosedLoopApprovedApplicationScenario
     || isAlternateLocalHintMultiTickReplayScenario
     || isAgentMovementPolicyConsolidationFixtureScenario
-    || isAgentMovementPolicyBoundaryHardeningScenario {
+    || isAgentMovementPolicyBoundaryHardeningScenario
+    || isAgentMovementPolicyConsolidatedReplayScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -2761,6 +2765,83 @@ let agentMovementPolicyBoundaryHardeningSuccess = isAgentMovementPolicyBoundaryH
         && agentMovementPolicyBoundaryHardeningSummary?.goalChanged == false
         && agentMovementPolicyBoundaryHardeningSummary?.mutationPerformed == false)
     : nil
+let agentMovementPolicyConsolidatedReplayReport = isAgentMovementPolicyConsolidatedReplayScenario
+    ? makeAgentMovementPolicyConsolidatedReplayReport(
+        scenario: options.scenario,
+        seed: options.seed,
+        requestedTicks: options.ticks
+    )
+    : nil
+let agentMovementPolicyConsolidatedReplayInvariantReport = isAgentMovementPolicyConsolidatedReplayScenario
+    ? makeAgentMovementPolicyConsolidatedReplayInvariantReport(
+        report: agentMovementPolicyConsolidatedReplayReport,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let agentMovementPolicyConsolidatedReplaySignatures = agentMovementPolicyConsolidatedReplayReport.map {
+    makeAgentMovementPolicyConsolidatedReplaySignatures(report: $0)
+}
+let agentMovementPolicyConsolidatedReplayDigest = agentMovementPolicyConsolidatedReplayReport.map {
+    makeAgentMovementPolicyConsolidatedReplayDigest(report: $0)
+}
+let agentMovementPolicyConsolidatedReplayBoundary = agentMovementPolicyConsolidatedReplayReport.map {
+    makeAgentMovementPolicyConsolidatedReplayBoundaryReport(report: $0)
+}
+let agentMovementPolicyConsolidatedReplaySummary = agentMovementPolicyConsolidatedReplayReport?.summary
+let agentMovementPolicyConsolidatedReplaySuccess = isAgentMovementPolicyConsolidatedReplayScenario
+    ? ((agentMovementPolicyConsolidatedReplayReport?.success ?? false)
+        && (agentMovementPolicyConsolidatedReplayInvariantReport?.success ?? false)
+        && agentMovementPolicyConsolidatedReplaySummary?.executedTicks == 3
+        && (agentMovementPolicyConsolidatedReplaySummary?.agents ?? 0) >= 6
+        && agentMovementPolicyConsolidatedReplaySummary?.policyVersions == 3
+        && agentMovementPolicyConsolidatedReplaySummary?.contextsTotal
+            == (agentMovementPolicyConsolidatedReplaySummary?.agents ?? 0)
+                * (agentMovementPolicyConsolidatedReplaySummary?.executedTicks ?? 0)
+        && agentMovementPolicyConsolidatedReplaySummary?.decisionsTotal
+            == (agentMovementPolicyConsolidatedReplaySummary?.contextsTotal ?? 0)
+                * (agentMovementPolicyConsolidatedReplaySummary?.policyVersions ?? 0)
+        && agentMovementPolicyConsolidatedReplaySummary?.signaturesCompared
+            == agentMovementPolicyConsolidatedReplaySummary?.decisionsTotal
+        && agentMovementPolicyConsolidatedReplaySummary?.signaturesMatched
+            == agentMovementPolicyConsolidatedReplaySummary?.signaturesCompared
+        && agentMovementPolicyConsolidatedReplaySummary?.signatureMismatches == 0
+        && agentMovementPolicyConsolidatedReplaySummary?.v0SignatureMismatches == 0
+        && agentMovementPolicyConsolidatedReplaySummary?.v1SignatureMismatches == 0
+        && agentMovementPolicyConsolidatedReplaySummary?.v2SignatureMismatches == 0
+        && (agentMovementPolicyConsolidatedReplaySummary?.feedbackConsumedTotal ?? 0) > 0
+        && (agentMovementPolicyConsolidatedReplaySummary?.feedbackCarriedToNextTickTotal ?? 0) > 0
+        && agentMovementPolicyConsolidatedReplaySummary?.sameTickFeedbackConsumedTotal == 0
+        && agentMovementPolicyConsolidatedReplaySummary?.futureFeedbackConsumedTotal == 0
+        && agentMovementPolicyConsolidatedReplaySummary?.crossAgentFeedbackLeaksTotal == 0
+        && agentMovementPolicyConsolidatedReplaySummary?.replayRuns == 2
+        && agentMovementPolicyConsolidatedReplaySummary?.replayDigestsEqual == true
+        && agentMovementPolicyConsolidatedReplaySummary?.repeatabilityFailures == 0
+        && agentMovementPolicyConsolidatedReplaySummary?.deterministicTickOrder == true
+        && agentMovementPolicyConsolidatedReplaySummary?.deterministicAgentOrder == true
+        && agentMovementPolicyConsolidatedReplaySummary?.deterministicPolicyOrder == true
+        && agentMovementPolicyConsolidatedReplaySummary?.deterministicDecisionOrder == true
+        && agentMovementPolicyConsolidatedReplaySummary?.deterministicSignatureOrder == true
+        && agentMovementPolicyConsolidatedReplaySummary?.v0Unchanged == true
+        && agentMovementPolicyConsolidatedReplaySummary?.v1Unchanged == true
+        && agentMovementPolicyConsolidatedReplaySummary?.v2OptIn == true
+        && agentMovementPolicyConsolidatedReplaySummary?.v2NotGlobal == true
+        && agentMovementPolicyConsolidatedReplaySummary?.hiddenActivationDetected == false
+        && agentMovementPolicyConsolidatedReplaySummary?.policyReadCollision == false
+        && agentMovementPolicyConsolidatedReplaySummary?.policyWorldUsed == false
+        && agentMovementPolicyConsolidatedReplaySummary?.worldMutated == false
+        && agentMovementPolicyConsolidatedReplaySummary?.terrainMutated == false
+        && agentMovementPolicyConsolidatedReplaySummary?.coreEntityMoved == false
+        && agentMovementPolicyConsolidatedReplaySummary?.physicalPlaceholderMoved == false
+        && agentMovementPolicyConsolidatedReplaySummary?.pathfindingPerformed == false
+        && agentMovementPolicyConsolidatedReplaySummary?.replanningPerformed == false
+        && agentMovementPolicyConsolidatedReplaySummary?.avoidancePerformed == false
+        && agentMovementPolicyConsolidatedReplaySummary?.reservationRuntimeUsed == false
+        && agentMovementPolicyConsolidatedReplaySummary?.routeFollowingUsed == false
+        && agentMovementPolicyConsolidatedReplaySummary?.memoryUpdated == false
+        && agentMovementPolicyConsolidatedReplaySummary?.goalChanged == false
+        && agentMovementPolicyConsolidatedReplaySummary?.mutationPerformed == false)
+    : nil
 let multiTickClosedLoopReport = isMultiTickClosedLoopFixtureScenario
     ? makeMultiTickClosedLoopFixtureReport(
         scenario: options.scenario,
@@ -3392,6 +3473,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (alternateLocalHintMultiTickReplaySuccess ?? true)
     && (agentMovementPolicyConsolidationSuccess ?? true)
     && (agentMovementPolicyBoundaryHardeningSuccess ?? true)
+    && (agentMovementPolicyConsolidatedReplaySuccess ?? true)
     && (multiTickClosedLoopSuccess ?? true)
     && (multiTickClosedLoopHardeningSuccess ?? true)
     && (multiTickClosedLoopLiveReadonlySuccess ?? true)
@@ -4917,6 +4999,74 @@ if options.outPath != nil {
                 replanningPerformed: summary.replanningPerformed
             ))
         }
+        if let agentMovementPolicyConsolidatedReplayReport {
+            let summary = agentMovementPolicyConsolidatedReplayReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_agent_movement_policy_consolidated_replay_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                requestedTicks: summary.requestedTicks,
+                executedTicks: summary.executedTicks,
+                success: agentMovementPolicyConsolidatedReplaySuccess,
+                agents: summary.agents,
+                decisions: summary.decisionsTotal,
+                candidatesProduced: summary.candidatesProducedTotal,
+                candidatesSelected: summary.candidatesSelectedTotal,
+                maxAlternates: summary.maxAlternates,
+                bounded: summary.bounded,
+                blockedFeedbackUsed: summary.blockedFeedbackUsedTotal,
+                unknownHintNoAlternate: summary.unknownHintNoIntentTotal,
+                emptyHintNoAlternate: summary.emptyHintNoIntentTotal,
+                v0Unchanged: summary.v0Unchanged,
+                v1Unchanged: summary.v1Unchanged,
+                v2OptIn: summary.v2OptIn,
+                v2NotGlobal: summary.v2NotGlobal,
+                hiddenActivationDetected: summary.hiddenActivationDetected,
+                policyVersions: summary.policyVersions,
+                signaturesCompared: summary.signaturesCompared,
+                signaturesMatched: summary.signaturesMatched,
+                signatureMismatches: summary.signatureMismatches,
+                v0SignatureMismatches: summary.v0SignatureMismatches,
+                v1SignatureMismatches: summary.v1SignatureMismatches,
+                v2SignatureMismatches: summary.v2SignatureMismatches,
+                terrainMutated: summary.terrainMutated,
+                coreEntityMoved: summary.coreEntityMoved,
+                physicalPlaceholderMoved: summary.physicalPlaceholderMoved,
+                contextsTotal: summary.contextsTotal,
+                feedbackConsumedTotal: summary.feedbackConsumedTotal,
+                feedbackCarriedToNextTickTotal: summary.feedbackCarriedToNextTickTotal,
+                movementIntentInputsTotal: summary.movementIntentInputsTotal,
+                tickDeniedCollisionTotal: summary.tickDeniedCollisionTotal,
+                tickApprovedTotal: summary.tickApprovedTotal,
+                tickDeniedTotal: summary.tickDeniedTotal,
+                policyReadCollision: summary.policyReadCollision,
+                policyWorldUsed: summary.policyWorldUsed,
+                tickWorldReadOnlyUsed: summary.tickWorldReadOnlyUsed,
+                worldMutated: summary.worldMutated,
+                approvedApplicationsTotal: summary.approvedApplicationsTotal,
+                deniedPreservedTotal: summary.deniedAgentsPreservedTotal,
+                noIntentPreservedTotal: summary.noIntentAgentsPreservedTotal,
+                sameTickFeedbackConsumedTotal: summary.sameTickFeedbackConsumedTotal,
+                crossAgentFeedbackLeaksTotal: summary.crossAgentFeedbackLeaksTotal,
+                futureFeedbackConsumedTotal: summary.futureFeedbackConsumedTotal,
+                repeatabilityChecks: summary.replayRuns,
+                repeatabilityFailures: summary.repeatabilityFailures,
+                abstractPhysicalDivergenceBefore: summary.abstractPhysicalDivergenceBeforeMax,
+                abstractPhysicalDivergenceAfter: summary.abstractPhysicalDivergenceAfterMax,
+                routeFollowingUsed: summary.routeFollowingUsed,
+                tickReadCollision: summary.tickReadCollision,
+                worldUsed: summary.policyWorldUsed || summary.tickWorldReadOnlyUsed,
+                collisionRead: summary.policyReadCollision || summary.tickReadCollision,
+                movementApplied: summary.movementApplied,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                avoidancePerformed: summary.avoidancePerformed,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingPerformed,
+                replanningPerformed: summary.replanningPerformed
+            ))
+        }
         if let multiTickClosedLoopReport {
             let summary = multiTickClosedLoopReport.summary
             try appendEvent(RunEvent(
@@ -6173,6 +6323,48 @@ if let outPath = options.outPath {
             try writeJSON(
                 agentMovementPolicyBoundaryHardeningInvariantReport,
                 to: outURL.appendingPathComponent("agent_movement_policy_boundary_hardening_invariant_report.json")
+            )
+        }
+        if let agentMovementPolicyConsolidatedReplayReport {
+            try writeJSON(
+                agentMovementPolicyConsolidatedReplayReport,
+                to: outURL.appendingPathComponent("agent_movement_policy_consolidated_replay_report.json")
+            )
+            try writeJSON(
+                agentMovementPolicyConsolidatedReplayReport.tickRecords,
+                to: outURL.appendingPathComponent("agent_movement_policy_consolidated_replay_ticks.json")
+            )
+            try writeJSON(
+                agentMovementPolicyConsolidatedReplayReport.feedbackLedger,
+                to: outURL.appendingPathComponent("agent_movement_policy_consolidated_replay_feedback.json")
+            )
+            try writeJSON(
+                agentMovementPolicyConsolidatedReplayReport.tickRecords.flatMap(\.decisions),
+                to: outURL.appendingPathComponent("agent_movement_policy_consolidated_replay_decisions.json")
+            )
+        }
+        if let agentMovementPolicyConsolidatedReplaySignatures {
+            try writeJSON(
+                agentMovementPolicyConsolidatedReplaySignatures,
+                to: outURL.appendingPathComponent("agent_movement_policy_consolidated_replay_signatures.json")
+            )
+        }
+        if let agentMovementPolicyConsolidatedReplayDigest {
+            try writeJSON(
+                agentMovementPolicyConsolidatedReplayDigest,
+                to: outURL.appendingPathComponent("agent_movement_policy_consolidated_replay_digest.json")
+            )
+        }
+        if let agentMovementPolicyConsolidatedReplayBoundary {
+            try writeJSON(
+                agentMovementPolicyConsolidatedReplayBoundary,
+                to: outURL.appendingPathComponent("agent_movement_policy_consolidated_replay_boundary.json")
+            )
+        }
+        if let agentMovementPolicyConsolidatedReplayInvariantReport {
+            try writeJSON(
+                agentMovementPolicyConsolidatedReplayInvariantReport,
+                to: outURL.appendingPathComponent("agent_movement_policy_consolidated_replay_invariant_report.json")
             )
         }
         if let multiTickClosedLoopReport {
@@ -7722,6 +7914,71 @@ if let outPath = options.outPath {
             agentMovementPolicyBoundaryHardeningGoalChanged: agentMovementPolicyBoundaryHardeningReport?.summary.goalChanged,
             agentMovementPolicyBoundaryHardeningMutationPerformed: agentMovementPolicyBoundaryHardeningReport?.summary.mutationPerformed,
             agentMovementPolicyBoundaryHardeningSuccess: agentMovementPolicyBoundaryHardeningSuccess,
+            agentMovementPolicyConsolidatedReplayRequestedTicks: agentMovementPolicyConsolidatedReplayReport?.summary.requestedTicks,
+            agentMovementPolicyConsolidatedReplayExecutedTicks: agentMovementPolicyConsolidatedReplayReport?.summary.executedTicks,
+            agentMovementPolicyConsolidatedReplayAgents: agentMovementPolicyConsolidatedReplayReport?.summary.agents,
+            agentMovementPolicyConsolidatedReplayPolicyVersions: agentMovementPolicyConsolidatedReplayReport?.summary.policyVersions,
+            agentMovementPolicyConsolidatedReplayContextsTotal: agentMovementPolicyConsolidatedReplayReport?.summary.contextsTotal,
+            agentMovementPolicyConsolidatedReplayDecisionsTotal: agentMovementPolicyConsolidatedReplayReport?.summary.decisionsTotal,
+            agentMovementPolicyConsolidatedReplaySignaturesCompared: agentMovementPolicyConsolidatedReplayReport?.summary.signaturesCompared,
+            agentMovementPolicyConsolidatedReplaySignaturesMatched: agentMovementPolicyConsolidatedReplayReport?.summary.signaturesMatched,
+            agentMovementPolicyConsolidatedReplaySignatureMismatches: agentMovementPolicyConsolidatedReplayReport?.summary.signatureMismatches,
+            agentMovementPolicyConsolidatedReplayV0SignatureMismatches: agentMovementPolicyConsolidatedReplayReport?.summary.v0SignatureMismatches,
+            agentMovementPolicyConsolidatedReplayV1SignatureMismatches: agentMovementPolicyConsolidatedReplayReport?.summary.v1SignatureMismatches,
+            agentMovementPolicyConsolidatedReplayV2SignatureMismatches: agentMovementPolicyConsolidatedReplayReport?.summary.v2SignatureMismatches,
+            agentMovementPolicyConsolidatedReplayFeedbackConsumedTotal: agentMovementPolicyConsolidatedReplayReport?.summary.feedbackConsumedTotal,
+            agentMovementPolicyConsolidatedReplayFeedbackCarriedToNextTickTotal: agentMovementPolicyConsolidatedReplayReport?.summary.feedbackCarriedToNextTickTotal,
+            agentMovementPolicyConsolidatedReplaySameTickFeedbackConsumedTotal: agentMovementPolicyConsolidatedReplayReport?.summary.sameTickFeedbackConsumedTotal,
+            agentMovementPolicyConsolidatedReplayFutureFeedbackConsumedTotal: agentMovementPolicyConsolidatedReplayReport?.summary.futureFeedbackConsumedTotal,
+            agentMovementPolicyConsolidatedReplayCrossAgentFeedbackLeaksTotal: agentMovementPolicyConsolidatedReplayReport?.summary.crossAgentFeedbackLeaksTotal,
+            agentMovementPolicyConsolidatedReplayCandidatesProducedTotal: agentMovementPolicyConsolidatedReplayReport?.summary.candidatesProducedTotal,
+            agentMovementPolicyConsolidatedReplayCandidatesSelectedTotal: agentMovementPolicyConsolidatedReplayReport?.summary.candidatesSelectedTotal,
+            agentMovementPolicyConsolidatedReplayMaxAlternates: agentMovementPolicyConsolidatedReplayReport?.summary.maxAlternates,
+            agentMovementPolicyConsolidatedReplayBounded: agentMovementPolicyConsolidatedReplayReport?.summary.bounded,
+            agentMovementPolicyConsolidatedReplayBlockedFeedbackUsedTotal: agentMovementPolicyConsolidatedReplayReport?.summary.blockedFeedbackUsedTotal,
+            agentMovementPolicyConsolidatedReplayUnknownHintNoIntentTotal: agentMovementPolicyConsolidatedReplayReport?.summary.unknownHintNoIntentTotal,
+            agentMovementPolicyConsolidatedReplayEmptyHintNoIntentTotal: agentMovementPolicyConsolidatedReplayReport?.summary.emptyHintNoIntentTotal,
+            agentMovementPolicyConsolidatedReplayMovementIntentInputsTotal: agentMovementPolicyConsolidatedReplayReport?.summary.movementIntentInputsTotal,
+            agentMovementPolicyConsolidatedReplayTickApprovedTotal: agentMovementPolicyConsolidatedReplayReport?.summary.tickApprovedTotal,
+            agentMovementPolicyConsolidatedReplayTickDeniedTotal: agentMovementPolicyConsolidatedReplayReport?.summary.tickDeniedTotal,
+            agentMovementPolicyConsolidatedReplayTickDeniedCollisionTotal: agentMovementPolicyConsolidatedReplayReport?.summary.tickDeniedCollisionTotal,
+            agentMovementPolicyConsolidatedReplayApprovedApplicationsTotal: agentMovementPolicyConsolidatedReplayReport?.summary.approvedApplicationsTotal,
+            agentMovementPolicyConsolidatedReplayDeniedAgentsPreservedTotal: agentMovementPolicyConsolidatedReplayReport?.summary.deniedAgentsPreservedTotal,
+            agentMovementPolicyConsolidatedReplayNoIntentAgentsPreservedTotal: agentMovementPolicyConsolidatedReplayReport?.summary.noIntentAgentsPreservedTotal,
+            agentMovementPolicyConsolidatedReplayDisplacementsAppliedTotal: agentMovementPolicyConsolidatedReplayReport?.summary.displacementsAppliedTotal,
+            agentMovementPolicyConsolidatedReplayAbstractPhysicalDivergenceBeforeMax: agentMovementPolicyConsolidatedReplayReport?.summary.abstractPhysicalDivergenceBeforeMax,
+            agentMovementPolicyConsolidatedReplayAbstractPhysicalDivergenceAfterMax: agentMovementPolicyConsolidatedReplayReport?.summary.abstractPhysicalDivergenceAfterMax,
+            agentMovementPolicyConsolidatedReplayReplayRuns: agentMovementPolicyConsolidatedReplayReport?.summary.replayRuns,
+            agentMovementPolicyConsolidatedReplayReplayDigestsEqual: agentMovementPolicyConsolidatedReplayReport?.summary.replayDigestsEqual,
+            agentMovementPolicyConsolidatedReplayRepeatabilityFailures: agentMovementPolicyConsolidatedReplayReport?.summary.repeatabilityFailures,
+            agentMovementPolicyConsolidatedReplayDeterministicTickOrder: agentMovementPolicyConsolidatedReplayReport?.summary.deterministicTickOrder,
+            agentMovementPolicyConsolidatedReplayDeterministicAgentOrder: agentMovementPolicyConsolidatedReplayReport?.summary.deterministicAgentOrder,
+            agentMovementPolicyConsolidatedReplayDeterministicPolicyOrder: agentMovementPolicyConsolidatedReplayReport?.summary.deterministicPolicyOrder,
+            agentMovementPolicyConsolidatedReplayDeterministicDecisionOrder: agentMovementPolicyConsolidatedReplayReport?.summary.deterministicDecisionOrder,
+            agentMovementPolicyConsolidatedReplayDeterministicSignatureOrder: agentMovementPolicyConsolidatedReplayReport?.summary.deterministicSignatureOrder,
+            agentMovementPolicyConsolidatedReplayV0Unchanged: agentMovementPolicyConsolidatedReplayReport?.summary.v0Unchanged,
+            agentMovementPolicyConsolidatedReplayV1Unchanged: agentMovementPolicyConsolidatedReplayReport?.summary.v1Unchanged,
+            agentMovementPolicyConsolidatedReplayV2OptIn: agentMovementPolicyConsolidatedReplayReport?.summary.v2OptIn,
+            agentMovementPolicyConsolidatedReplayV2NotGlobal: agentMovementPolicyConsolidatedReplayReport?.summary.v2NotGlobal,
+            agentMovementPolicyConsolidatedReplayHiddenActivationDetected: agentMovementPolicyConsolidatedReplayReport?.summary.hiddenActivationDetected,
+            agentMovementPolicyConsolidatedReplayPolicyReadCollision: agentMovementPolicyConsolidatedReplayReport?.summary.policyReadCollision,
+            agentMovementPolicyConsolidatedReplayPolicyWorldUsed: agentMovementPolicyConsolidatedReplayReport?.summary.policyWorldUsed,
+            agentMovementPolicyConsolidatedReplayTickReadCollision: agentMovementPolicyConsolidatedReplayReport?.summary.tickReadCollision,
+            agentMovementPolicyConsolidatedReplayTickWorldReadOnlyUsed: agentMovementPolicyConsolidatedReplayReport?.summary.tickWorldReadOnlyUsed,
+            agentMovementPolicyConsolidatedReplayMovementApplied: agentMovementPolicyConsolidatedReplayReport?.summary.movementApplied,
+            agentMovementPolicyConsolidatedReplayWorldMutated: agentMovementPolicyConsolidatedReplayReport?.summary.worldMutated,
+            agentMovementPolicyConsolidatedReplayTerrainMutated: agentMovementPolicyConsolidatedReplayReport?.summary.terrainMutated,
+            agentMovementPolicyConsolidatedReplayCoreEntityMoved: agentMovementPolicyConsolidatedReplayReport?.summary.coreEntityMoved,
+            agentMovementPolicyConsolidatedReplayPhysicalPlaceholderMoved: agentMovementPolicyConsolidatedReplayReport?.summary.physicalPlaceholderMoved,
+            agentMovementPolicyConsolidatedReplayPathfindingPerformed: agentMovementPolicyConsolidatedReplayReport?.summary.pathfindingPerformed,
+            agentMovementPolicyConsolidatedReplayReplanningPerformed: agentMovementPolicyConsolidatedReplayReport?.summary.replanningPerformed,
+            agentMovementPolicyConsolidatedReplayAvoidancePerformed: agentMovementPolicyConsolidatedReplayReport?.summary.avoidancePerformed,
+            agentMovementPolicyConsolidatedReplayReservationRuntimeUsed: agentMovementPolicyConsolidatedReplayReport?.summary.reservationRuntimeUsed,
+            agentMovementPolicyConsolidatedReplayRouteFollowingUsed: agentMovementPolicyConsolidatedReplayReport?.summary.routeFollowingUsed,
+            agentMovementPolicyConsolidatedReplayMemoryUpdated: agentMovementPolicyConsolidatedReplayReport?.summary.memoryUpdated,
+            agentMovementPolicyConsolidatedReplayGoalChanged: agentMovementPolicyConsolidatedReplayReport?.summary.goalChanged,
+            agentMovementPolicyConsolidatedReplayMutationPerformed: agentMovementPolicyConsolidatedReplayReport?.summary.mutationPerformed,
+            agentMovementPolicyConsolidatedReplaySuccess: agentMovementPolicyConsolidatedReplaySuccess,
             multiTickClosedLoopTicks: multiTickClosedLoopReport?.summary.executedTicks,
             multiTickClosedLoopAgents: multiTickClosedLoopReport?.summary.agents,
             multiTickClosedLoopContextsTotal: multiTickClosedLoopReport?.summary.contextsTotal,

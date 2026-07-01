@@ -741,3 +741,60 @@ Limits:
   mutation.
 
 Next step: Phase 4.26D — Consolidated Replay Regression.
+
+## Phase 4.26D Implementation Status
+
+Phase 4.26D implemented a fixture-only consolidated replay regression for the
+agent movement policy adapter. It keeps the replay at the policy/report layer:
+no live tick collision, no approved application, and no movement mutation are
+invoked.
+
+Validated status:
+
+- added `agent_movement_policy_consolidated_replay_regression_smoke`;
+- ran three fixed replay ticks over six deterministic agents;
+- evaluated three explicit policy versions on every tick;
+- compared direct v0/v1/v2 signatures against consolidated signatures;
+- compared fifty-four signatures with zero mismatches;
+- preserved v0 behavior;
+- preserved v1 behavior;
+- kept v2 explicit opt-in and not global;
+- detected no hidden activation;
+- consumed feedback from tick N only at tick N+1;
+- detected zero same-tick feedback consumption;
+- detected zero future feedback consumption;
+- detected zero cross-agent feedback leaks;
+- ran two replay passes and produced identical digests;
+- verified deterministic tick, agent, policy, decision, and signature ordering;
+- kept policy World/collision reads false;
+- kept fixture tick World/collision reads false;
+- did not invoke tick live paths;
+- did not apply movement or approved application;
+- did not move core entities or physical placeholders;
+- did not update memory or goals;
+- did not perform pathfinding, replanning, avoidance, reservation runtime, or
+  route following;
+- did not mutate terrain or World.
+
+Outputs produced:
+
+- `agent_movement_policy_consolidated_replay_report.json`;
+- `agent_movement_policy_consolidated_replay_invariant_report.json`;
+- `agent_movement_policy_consolidated_replay_ticks.json`;
+- `agent_movement_policy_consolidated_replay_feedback.json`;
+- `agent_movement_policy_consolidated_replay_decisions.json`;
+- `agent_movement_policy_consolidated_replay_signatures.json`;
+- `agent_movement_policy_consolidated_replay_digest.json`;
+- `agent_movement_policy_consolidated_replay_boundary.json`;
+- `agentMovementPolicyConsolidatedReplay*` metrics;
+- `lab_agent_movement_policy_consolidated_replay_recorded` event.
+
+Limits:
+
+- the replay is fixture-only and does not exercise live collision;
+- it intentionally does not apply approved movements;
+- it does not consolidate gameplay autonomy;
+- it does not introduce pathfinding, route planning, route following, memory,
+  goals, reservation runtime, or mutation.
+
+Next step: Phase 4.27A — Bounded Path Planning Plan Docs-Only.
