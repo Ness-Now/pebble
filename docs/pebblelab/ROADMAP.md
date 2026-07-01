@@ -2508,3 +2508,53 @@ application, lab map mutation, memory, goals, and reservation runtime remain
 out of scope.
 
 Next recommended step: Phase 4.27E - Planning Approved Application Lab-Map Only.
+
+## Phase 4.27E - Planning Approved Application Lab-Map Only
+
+Status: implemented and validated.
+
+Goal: apply only tick-approved bounded path first steps to lab abstract and
+physical position maps, while keeping denied/no-path/zero-step agents
+unchanged and leaving advisory route steps unused.
+
+Validated scope:
+
+- `bounded_path_planning_approved_application_smoke`;
+- fixture-only bounded planning with `maxSteps <= 4` and `maxNodes <= 32`;
+- selected first steps are handed to the existing tick fixture;
+- only tick-approved first steps mutate lab position maps;
+- abstract and physical lab maps remain synchronized after application;
+- denied same-destination conflict, source mismatch, and stale intent agents
+  are preserved;
+- no-path and zero-step plans are preserved;
+- advisory steps are not sent to tick and are not applied;
+- no full-route execution or route following;
+- no live collision read and no World use;
+- no core entity movement or physical placeholder movement;
+- no memory/goals/reservation runtime;
+- no terrain/world mutation;
+- v0/v1/v2 unchanged;
+- v3 opt-in and not global;
+- digest repeatability true.
+
+Outputs:
+
+- `bounded_path_planning_approved_application_report.json`;
+- `bounded_path_planning_approved_application_invariant_report.json`;
+- `bounded_path_planning_approved_application_cases.json`;
+- `bounded_path_planning_approved_application_plans.json`;
+- `bounded_path_planning_approved_application_handoff.json`;
+- `bounded_path_planning_approved_application_tick.json`;
+- `bounded_path_planning_approved_application_application.json`;
+- `bounded_path_planning_approved_application_positions.json`;
+- `bounded_path_planning_approved_application_digest.json`;
+- `bounded_path_planning_approved_application_boundary.json`;
+- `boundedPathPlanningApprovedApplication*` metrics;
+- `lab_bounded_path_planning_approved_application_recorded` event.
+
+Live World, live collision, full-route execution, route following, memory,
+goals, reservation runtime, core/placeholder movement, and terrain/World
+mutation remain out of scope.
+
+Next recommended step: Phase 4.27F - Bounded Path Planning Multi-Tick Replay
+Regression.

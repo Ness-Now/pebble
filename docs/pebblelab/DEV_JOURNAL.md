@@ -9370,3 +9370,103 @@ tick fixture used true, live collision false, movement application false, and
 digest repeatability true.
 
 Next step: Phase 4.27E — Planning Approved Application Lab-Map Only.
+
+## 2026-07-01 — Phase 4.27E planning approved application lab-map only
+
+Objective: add the first bounded path planning approved-application smoke that
+applies only tick-approved selected first steps to lab position maps.
+
+Starting point: Phase 4.27B introduced fixture-only bounded plans, Phase 4.27C
+hardened the planner, and Phase 4.27D handed only `selectedFirstStep` to the
+existing tick fixture. At the start of this phase, no bounded path plan could
+apply an approved first step to lab maps.
+
+Files changed:
+
+- `Sources/PebbleLab/LabBoundedPathPlanning.swift`
+- `Sources/PebbleLab/LabOptions.swift`
+- `Sources/PebbleLab/LabScenarios.swift`
+- `Sources/PebbleLab/main.swift`
+- `docs/pebblelab/CHANGELOG.md`
+- `docs/pebblelab/DEV_JOURNAL.md`
+- `docs/pebblelab/ROADMAP.md`
+- `docs/pebblelab/PHASE_4_BOUNDED_PATH_PLANNING_PLAN.md`
+
+Why lab-map-only: approved application must remain a controlled PebbleLab
+artifact, not gameplay movement. The scenario updates only synthetic abstract
+and physical position maps after tick approval. It does not move core entities,
+physical placeholders, or terrain/World state.
+
+Planner and handoff: the scenario reuses the bounded fixture planner with
+`maxSteps <= 4`, `maxNodes <= 32`, one-edge same-y steps, deterministic neighbor
+order, and explicit v3 opt-in. Only selected first steps become tick intents.
+Advisory route steps remain in reports and are not sent to tick.
+
+Tick fixture: the existing fixture tick remains responsible for approval,
+denial, and same-destination conflict arbitration. It does not read live
+collision or use `World`. Source mismatch and stale intent denials reuse the
+existing tick contract.
+
+Application semantics: approved first steps update both abstract and physical
+lab maps to the selected first-step destination. Denied agents, no-path agents,
+and zero-step agents are preserved. Abstract/physical divergence remains zero
+before and after application.
+
+Cases covered:
+
+- direct one-step approved application;
+- two-step plan with only step 0 applied;
+- detour plan with only step 0 applied;
+- no-path unchanged;
+- zero-step unchanged;
+- same-destination conflict denied and preserved;
+- source mismatch denied and preserved;
+- stale intent denied and preserved.
+
+Outputs, invariants, metrics, and event:
+
+- `bounded_path_planning_approved_application_report.json`
+- `bounded_path_planning_approved_application_invariant_report.json`
+- `bounded_path_planning_approved_application_cases.json`
+- `bounded_path_planning_approved_application_plans.json`
+- `bounded_path_planning_approved_application_handoff.json`
+- `bounded_path_planning_approved_application_tick.json`
+- `bounded_path_planning_approved_application_application.json`
+- `bounded_path_planning_approved_application_positions.json`
+- `bounded_path_planning_approved_application_digest.json`
+- `bounded_path_planning_approved_application_boundary.json`
+- `boundedPathPlanningApprovedApplication*` metrics
+- `lab_bounded_path_planning_approved_application_recorded`
+
+Boundary confirmation: no World read, no live collision read, no full-route
+execution, no route following, no advisory step application, no second-step
+auto-application, no memory/goals, no reservation runtime, no live pathfinding,
+no unbounded search, no dynamic replanning, no core entity movement, no
+physical placeholder movement, and no terrain/World mutation.
+
+Validation commands:
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_approved_application_smoke --seed 42 --ticks 0 --out runs/check_bounded_path_planning_approved_application`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_fixture_smoke --seed 42 --ticks 0 --out runs/check_bounded_path_fixture_after_approved_application`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_hardening_smoke --seed 42 --ticks 0 --out runs/check_bounded_path_hardening_after_approved_application`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_to_tick_first_step_smoke --seed 42 --ticks 0 --out runs/check_bounded_path_to_tick_first_step_after_approved_application`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_consolidation_fixture_smoke --seed 42 --ticks 0 --out runs/check_policy_consolidation_fixture_after_bounded_path_approved_application`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_boundary_hardening_smoke --seed 42 --ticks 0 --out runs/check_policy_boundary_hardening_after_bounded_path_approved_application`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_consolidated_replay_regression_smoke --seed 42 --ticks 3 --out runs/check_policy_consolidated_replay_after_bounded_path_approved_application`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_multi_tick_replay_smoke --seed 42 --ticks 3 --out runs/check_alternate_local_hint_multi_tick_replay_after_bounded_path_approved_application`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_approved_application_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_approved_application_after_bounded_path_approved_application`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_hardening_after_bounded_path_approved_application`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_bounded_path_approved_application`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+Results: validation passed. The approved-application report and invariant
+report show success true, first-step-only application true, advisory steps not
+applied true, approved applications equal tick approvals, denied/no-path/zero
+step agents preserved, abstract/physical divergence zero, and digest
+repeatability true.
+
+Next step: Phase 4.27F — Bounded Path Planning Multi-Tick Replay Regression.

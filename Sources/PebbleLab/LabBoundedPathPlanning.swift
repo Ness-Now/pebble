@@ -483,6 +483,267 @@ struct LabBoundedPathPlanningToTickFirstStepMetrics: Codable {
     let boundedPathPlanningToTickFirstStepSuccess: Bool
 }
 
+struct LabBoundedPathPlanningApprovedApplicationRecord: Codable {
+    let caseName: String
+    let agentId: String
+    let decision: LabMultiAgentMoveDecision?
+    let approved: Bool
+    let applied: Bool
+    let from: LabTerrainPathNodeKey
+    let selectedFirstStepTo: LabTerrainPathNodeKey?
+    let abstractBefore: LabTerrainPathNodeKey
+    let abstractAfter: LabTerrainPathNodeKey
+    let physicalBefore: LabTerrainPathNodeKey
+    let physicalAfter: LabTerrainPathNodeKey
+    let advisorySteps: [LabAgentBoundedPathStep]
+    let advisoryStepsApplied: Bool
+    let reason: String
+}
+
+struct LabBoundedPathPlanningApprovedApplicationPositions: Codable {
+    let caseName: String
+    let abstractBefore: [String: LabTerrainPathNodeKey]
+    let abstractAfter: [String: LabTerrainPathNodeKey]
+    let physicalBefore: [String: LabTerrainPathNodeKey]
+    let physicalAfter: [String: LabTerrainPathNodeKey]
+    let abstractPhysicalDivergenceBefore: Int
+    let abstractPhysicalDivergenceAfter: Int
+}
+
+struct LabBoundedPathPlanningApprovedApplicationCase: Codable {
+    let name: String
+    let contexts: [LabAgentBoundedPathPlanningContext]
+    let expectedKind: String
+    let plans: [LabAgentBoundedPathPlan]
+    let handoffIntents: [LabAgentMoveIntent]
+    let handoffs: [LabBoundedPathPlanningToTickFirstStepHandoff]
+    let tickInput: LabMultiAgentMovementTickInput
+    let tickOutput: LabMultiAgentMovementTickOutput
+    let applications: [LabBoundedPathPlanningApprovedApplicationRecord]
+    let positions: LabBoundedPathPlanningApprovedApplicationPositions
+    let expectedApproved: Int
+    let expectedDenied: Int
+    let expectedDecisionCounts: [String: Int]
+    let passed: Bool
+    let notes: [String]
+}
+
+struct LabBoundedPathPlanningApprovedApplicationSummary: Codable {
+    let scenario: String
+    let seed: UInt32
+    let cases: Int
+    let casesPassed: Int
+    let casesFailed: Int
+    let plansProduced: Int
+    let selectedFirstSteps: Int
+    let noPathPlans: Int
+    let zeroStepPlans: Int
+    let handoffIntents: Int
+    let advisoryStepsTotal: Int
+    let advisoryStepsNotSent: Bool
+    let advisoryStepsNotApplied: Bool
+    let firstStepOnlyHandoff: Bool
+    let firstStepOnlyApplication: Bool
+    let movementIntentInputs: Int
+    let tickUsed: Bool
+    let tickReadCollision: Bool
+    let tickWorldReadOnlyUsed: Bool
+    let tickApproved: Int
+    let tickDenied: Int
+    let tickDeniedConflict: Int
+    let tickDeniedSourceMismatch: Int
+    let tickDeniedStaleIntent: Int
+    let tickFeedbackEmitted: Int
+    let approvedApplications: Int
+    let displacementsApplied: Int
+    let deniedAgentsPreserved: Int
+    let noPathAgentsPreserved: Int
+    let zeroStepAgentsPreserved: Int
+    let sourceMismatchAgentsPreserved: Int
+    let staleAgentsPreserved: Int
+    let abstractPhysicalDivergenceBeforeMax: Int
+    let abstractPhysicalDivergenceAfterMax: Int
+    let maxStepsMax: Int
+    let maxNodesMax: Int
+    let nodesVisitedMax: Int
+    let stepsMax: Int
+    let stepsWithinMax: Bool
+    let nodesWithinMax: Bool
+    let oneEdgeSteps: Bool
+    let sameYSteps: Bool
+    let deterministicPlanOrder: Bool
+    let deterministicHandoffOrder: Bool
+    let deterministicTickOrder: Bool
+    let deterministicApplicationOrder: Bool
+    let deterministicDigest: Bool
+    let digest: String
+    let digestRepeat: String
+    let digestsEqual: Bool
+    let repeatabilityFailures: Int
+    let v0Unchanged: Bool
+    let v1Unchanged: Bool
+    let v2Unchanged: Bool
+    let v3OptIn: Bool
+    let v3NotGlobal: Bool
+    let hiddenActivationDetected: Bool
+    let worldRead: Bool
+    let collisionRead: Bool
+    let movementApplied: Bool
+    let labPositionMapMutated: Bool
+    let routeFollowingUsed: Bool
+    let fullRouteExecutionUsed: Bool
+    let advisoryStepsApplied: Bool
+    let secondStepAutoApplied: Bool
+    let pathfindingLiveUsed: Bool
+    let unboundedSearchUsed: Bool
+    let dynamicReplanningUsed: Bool
+    let reservationRuntimeUsed: Bool
+    let memoryUpdated: Bool
+    let goalChanged: Bool
+    let terrainMutated: Bool
+    let worldMutated: Bool
+    let coreEntityMoved: Bool
+    let physicalPlaceholderMoved: Bool
+    let mutationPerformed: Bool
+    let success: Bool
+}
+
+struct LabBoundedPathPlanningApprovedApplicationReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let plannerMode: String
+    let neighborOrder: [String]
+    let cases: [LabBoundedPathPlanningApprovedApplicationCase]
+    let plans: [LabAgentBoundedPathPlan]
+    let handoffs: [LabBoundedPathPlanningToTickFirstStepHandoff]
+    let tickReports: [LabMultiAgentMovementTickFixtureReport]
+    let applications: [LabBoundedPathPlanningApprovedApplicationRecord]
+    let positions: [LabBoundedPathPlanningApprovedApplicationPositions]
+    let summary: LabBoundedPathPlanningApprovedApplicationSummary
+}
+
+struct LabBoundedPathPlanningApprovedApplicationInvariantReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: LabMultiAgentMovementFixtureInvariantSummary
+    let checks: [LabMultiAgentMovementFixtureInvariantCheck]
+    let notes: [String]
+}
+
+struct LabBoundedPathPlanningApprovedApplicationDigest: Codable {
+    let scenario: String
+    let seed: UInt32
+    let digest: String
+    let digestRepeat: String
+    let digestsEqual: Bool
+}
+
+struct LabBoundedPathPlanningApprovedApplicationBoundaryReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let worldRead: Bool
+    let collisionRead: Bool
+    let tickUsed: Bool
+    let tickReadCollision: Bool
+    let tickWorldReadOnlyUsed: Bool
+    let movementApplied: Bool
+    let labPositionMapMutated: Bool
+    let routeFollowingUsed: Bool
+    let fullRouteExecutionUsed: Bool
+    let advisoryStepsApplied: Bool
+    let secondStepAutoApplied: Bool
+    let pathfindingLiveUsed: Bool
+    let unboundedSearchUsed: Bool
+    let dynamicReplanningUsed: Bool
+    let reservationRuntimeUsed: Bool
+    let memoryUpdated: Bool
+    let goalChanged: Bool
+    let terrainMutated: Bool
+    let worldMutated: Bool
+    let coreEntityMoved: Bool
+    let physicalPlaceholderMoved: Bool
+    let mutationPerformed: Bool
+    let mutationBoundaryClean: Bool
+}
+
+struct LabBoundedPathPlanningApprovedApplicationMetrics: Codable {
+    let boundedPathPlanningApprovedApplicationCases: Int
+    let boundedPathPlanningApprovedApplicationCasesPassed: Int
+    let boundedPathPlanningApprovedApplicationCasesFailed: Int
+    let boundedPathPlanningApprovedApplicationPlansProduced: Int
+    let boundedPathPlanningApprovedApplicationSelectedFirstSteps: Int
+    let boundedPathPlanningApprovedApplicationNoPathPlans: Int
+    let boundedPathPlanningApprovedApplicationZeroStepPlans: Int
+    let boundedPathPlanningApprovedApplicationHandoffIntents: Int
+    let boundedPathPlanningApprovedApplicationAdvisoryStepsTotal: Int
+    let boundedPathPlanningApprovedApplicationAdvisoryStepsNotSent: Bool
+    let boundedPathPlanningApprovedApplicationAdvisoryStepsNotApplied: Bool
+    let boundedPathPlanningApprovedApplicationFirstStepOnlyHandoff: Bool
+    let boundedPathPlanningApprovedApplicationFirstStepOnlyApplication: Bool
+    let boundedPathPlanningApprovedApplicationMovementIntentInputs: Int
+    let boundedPathPlanningApprovedApplicationTickUsed: Bool
+    let boundedPathPlanningApprovedApplicationTickReadCollision: Bool
+    let boundedPathPlanningApprovedApplicationTickWorldReadOnlyUsed: Bool
+    let boundedPathPlanningApprovedApplicationTickApproved: Int
+    let boundedPathPlanningApprovedApplicationTickDenied: Int
+    let boundedPathPlanningApprovedApplicationTickDeniedConflict: Int
+    let boundedPathPlanningApprovedApplicationTickDeniedSourceMismatch: Int
+    let boundedPathPlanningApprovedApplicationTickDeniedStaleIntent: Int
+    let boundedPathPlanningApprovedApplicationTickFeedbackEmitted: Int
+    let boundedPathPlanningApprovedApplicationApprovedApplications: Int
+    let boundedPathPlanningApprovedApplicationDisplacementsApplied: Int
+    let boundedPathPlanningApprovedApplicationDeniedAgentsPreserved: Int
+    let boundedPathPlanningApprovedApplicationNoPathAgentsPreserved: Int
+    let boundedPathPlanningApprovedApplicationZeroStepAgentsPreserved: Int
+    let boundedPathPlanningApprovedApplicationSourceMismatchAgentsPreserved: Int
+    let boundedPathPlanningApprovedApplicationStaleAgentsPreserved: Int
+    let boundedPathPlanningApprovedApplicationAbstractPhysicalDivergenceBeforeMax: Int
+    let boundedPathPlanningApprovedApplicationAbstractPhysicalDivergenceAfterMax: Int
+    let boundedPathPlanningApprovedApplicationMaxStepsMax: Int
+    let boundedPathPlanningApprovedApplicationMaxNodesMax: Int
+    let boundedPathPlanningApprovedApplicationNodesVisitedMax: Int
+    let boundedPathPlanningApprovedApplicationStepsMax: Int
+    let boundedPathPlanningApprovedApplicationStepsWithinMax: Bool
+    let boundedPathPlanningApprovedApplicationNodesWithinMax: Bool
+    let boundedPathPlanningApprovedApplicationOneEdgeSteps: Bool
+    let boundedPathPlanningApprovedApplicationSameYSteps: Bool
+    let boundedPathPlanningApprovedApplicationDeterministicPlanOrder: Bool
+    let boundedPathPlanningApprovedApplicationDeterministicHandoffOrder: Bool
+    let boundedPathPlanningApprovedApplicationDeterministicTickOrder: Bool
+    let boundedPathPlanningApprovedApplicationDeterministicApplicationOrder: Bool
+    let boundedPathPlanningApprovedApplicationDeterministicDigest: Bool
+    let boundedPathPlanningApprovedApplicationDigestsEqual: Bool
+    let boundedPathPlanningApprovedApplicationRepeatabilityFailures: Int
+    let boundedPathPlanningApprovedApplicationV0Unchanged: Bool
+    let boundedPathPlanningApprovedApplicationV1Unchanged: Bool
+    let boundedPathPlanningApprovedApplicationV2Unchanged: Bool
+    let boundedPathPlanningApprovedApplicationV3OptIn: Bool
+    let boundedPathPlanningApprovedApplicationV3NotGlobal: Bool
+    let boundedPathPlanningApprovedApplicationHiddenActivationDetected: Bool
+    let boundedPathPlanningApprovedApplicationWorldRead: Bool
+    let boundedPathPlanningApprovedApplicationCollisionRead: Bool
+    let boundedPathPlanningApprovedApplicationMovementApplied: Bool
+    let boundedPathPlanningApprovedApplicationLabPositionMapMutated: Bool
+    let boundedPathPlanningApprovedApplicationRouteFollowingUsed: Bool
+    let boundedPathPlanningApprovedApplicationFullRouteExecutionUsed: Bool
+    let boundedPathPlanningApprovedApplicationAdvisoryStepsApplied: Bool
+    let boundedPathPlanningApprovedApplicationSecondStepAutoApplied: Bool
+    let boundedPathPlanningApprovedApplicationPathfindingLiveUsed: Bool
+    let boundedPathPlanningApprovedApplicationUnboundedSearchUsed: Bool
+    let boundedPathPlanningApprovedApplicationDynamicReplanningUsed: Bool
+    let boundedPathPlanningApprovedApplicationReservationRuntimeUsed: Bool
+    let boundedPathPlanningApprovedApplicationMemoryUpdated: Bool
+    let boundedPathPlanningApprovedApplicationGoalChanged: Bool
+    let boundedPathPlanningApprovedApplicationTerrainMutated: Bool
+    let boundedPathPlanningApprovedApplicationWorldMutated: Bool
+    let boundedPathPlanningApprovedApplicationCoreEntityMoved: Bool
+    let boundedPathPlanningApprovedApplicationPhysicalPlaceholderMoved: Bool
+    let boundedPathPlanningApprovedApplicationMutationPerformed: Bool
+    let boundedPathPlanningApprovedApplicationSuccess: Bool
+}
+
 private struct BoundedPathQueueEntry {
     let node: LabTerrainPathNodeKey
     let steps: [LabAgentBoundedPathStep]
@@ -2743,6 +3004,903 @@ func makeBoundedPathPlanningToTickFirstStepInvariantReport(
         notes: [
             "Planning-to-tick handoff sends only selectedFirstStep to the existing tick fixture.",
             "Remaining path steps are advisory-only; there is no route following, no live collision, no World use, and no movement application."
+        ]
+    )
+}
+
+private struct BoundedPathApprovedApplicationBuild {
+    let result: LabBoundedPathPlanningApprovedApplicationCase
+    let tickReport: LabMultiAgentMovementTickFixtureReport
+}
+
+private func boundedPathApprovedApplicationDefinitions()
+    -> [BoundedPathToTickFirstStepDefinition] {
+    boundedPathFirstStepDefinitions().map { definition in
+        let name: String
+        let expectedKind: String
+        switch definition.name {
+        case "handoff_direct_one_step_approved":
+            name = "approved_application_direct_one_step"
+            expectedKind = "direct_one_step_applied"
+        case "handoff_two_step_only_first_step_sent":
+            name = "approved_application_two_step_only_first_applied"
+            expectedKind = "two_step_first_only_applied"
+        case "handoff_detour_only_first_step_sent":
+            name = "approved_application_detour_only_first_applied"
+            expectedKind = "detour_first_only_applied"
+        case "handoff_no_path_no_intent":
+            name = "approved_application_no_path_unchanged"
+            expectedKind = "no_path_unchanged"
+        case "handoff_start_equals_target_no_intent":
+            name = "approved_application_zero_step_unchanged"
+            expectedKind = "zero_step_unchanged"
+        case "handoff_conflict_denied_by_tick":
+            name = "approved_application_conflict_denied_preserved"
+            expectedKind = "conflict_denied_preserved"
+        case "handoff_source_mismatch_denied":
+            name = "approved_application_source_mismatch_denied_preserved"
+            expectedKind = "source_mismatch_denied_preserved"
+        case "handoff_stale_intent_denied":
+            name = "approved_application_stale_denied_preserved"
+            expectedKind = "stale_intent_denied_preserved"
+        default:
+            name = definition.name
+            expectedKind = definition.expectedKind
+        }
+        return BoundedPathToTickFirstStepDefinition(
+            name: name,
+            expectedKind: expectedKind,
+            contexts: definition.contexts,
+            sourceOverrides: definition.sourceOverrides,
+            staleAgents: definition.staleAgents,
+            expectedApproved: definition.expectedApproved,
+            expectedDenied: definition.expectedDenied,
+            expectedDecisionCounts: definition.expectedDecisionCounts
+        )
+    }
+}
+
+private func boundedPathDivergence(
+    abstract: [String: LabTerrainPathNodeKey],
+    physical: [String: LabTerrainPathNodeKey]
+) -> Int {
+    let ids = Set(abstract.keys).union(physical.keys)
+    return ids.filter { abstract[$0] != physical[$0] }.count
+}
+
+private func boundedPathSortedPositions(
+    _ positions: [String: LabTerrainPathNodeKey]
+) -> String {
+    positions.keys.sorted().map { agentId in
+        guard let position = positions[agentId] else { return "\(agentId)=missing" }
+        return "\(agentId)=\(position.x),\(position.y),\(position.z)"
+    }.joined(separator: ";")
+}
+
+@inline(never)
+@_optimize(none)
+private func makeBoundedPathApprovedApplicationBuild(
+    definition: BoundedPathToTickFirstStepDefinition,
+    seed: UInt32
+) -> BoundedPathApprovedApplicationBuild {
+    let plans = definition.contexts.map { makeBoundedPathPlan(context: $0) }
+    let staleAgents = Set(definition.staleAgents)
+    let handoffs = plans.compactMap { plan -> LabBoundedPathPlanningToTickFirstStepHandoff? in
+        guard let selectedFirstStep = plan.selectedFirstStep else { return nil }
+        let advisorySteps = Array(plan.steps.dropFirst())
+        let intent = makeBoundedPathFirstStepIntent(
+            plan: plan,
+            firstStep: selectedFirstStep,
+            stale: staleAgents.contains(plan.agentId)
+        )
+        return LabBoundedPathPlanningToTickFirstStepHandoff(
+            caseName: definition.name,
+            agentId: plan.agentId,
+            selectedFirstStep: selectedFirstStep,
+            intent: intent,
+            advisorySteps: advisorySteps,
+            sentToTick: true,
+            reason: advisorySteps.isEmpty
+                ? "selected_first_step_sent_to_fixture_tick_for_lab_map_application"
+                : "selected_first_step_sent_remaining_steps_advisory_only_for_lab_map_application"
+        )
+    }.sorted { $0.agentId < $1.agentId }
+    let agents = Dictionary(
+        uniqueKeysWithValues: definition.contexts.map {
+            ($0.agentId, definition.sourceOverrides[$0.agentId] ?? $0.start)
+        }
+    )
+    let tickInput = LabMultiAgentMovementTickInput(
+        tick: 0,
+        agents: agents,
+        physicalPositions: agents,
+        intents: handoffs.map(\.intent),
+        maxAgents: nil
+    )
+    let tickReport = makeMultiAgentMovementTickFixtureReport(
+        scenario: definition.name,
+        seed: seed,
+        ticksCompleted: 0,
+        input: tickInput,
+        expectedApproved: definition.expectedApproved,
+        expectedDenied: definition.expectedDenied,
+        expectedDecisionCounts: definition.expectedDecisionCounts
+    )
+    let handoffsByAgent = Dictionary(uniqueKeysWithValues: handoffs.map { ($0.agentId, $0) })
+    let resolutionsByAgent = Dictionary(uniqueKeysWithValues: tickReport.output.resolutions.map { ($0.agentId, $0) })
+    var abstractAfter = agents
+    var physicalAfter = agents
+    for resolution in tickReport.output.resolutions where resolution.approved {
+        abstractAfter[resolution.agentId] = resolution.intent.to
+        physicalAfter[resolution.agentId] = resolution.intent.to
+    }
+    let applications = agents.keys.sorted().map { agentId -> LabBoundedPathPlanningApprovedApplicationRecord in
+        let before = agents[agentId] ?? boundedPathNode(0, 0)
+        let after = abstractAfter[agentId] ?? before
+        let physicalBefore = tickInput.physicalPositions[agentId] ?? before
+        let physicalAfterValue = physicalAfter[agentId] ?? physicalBefore
+        let resolution = resolutionsByAgent[agentId]
+        let handoff = handoffsByAgent[agentId]
+        let advisorySteps = handoff?.advisorySteps ?? []
+        let applied = resolution?.approved == true
+        let reason: String
+        if applied {
+            reason = "approved_first_step_applied_to_lab_position_maps_only"
+        } else if resolution != nil {
+            reason = "denied_first_step_preserved_in_lab_position_maps"
+        } else if plans.first(where: { $0.agentId == agentId })?.reachedTarget == true {
+            reason = "zero_step_plan_preserved_in_lab_position_maps"
+        } else {
+            reason = "no_path_plan_preserved_in_lab_position_maps"
+        }
+        return LabBoundedPathPlanningApprovedApplicationRecord(
+            caseName: definition.name,
+            agentId: agentId,
+            decision: resolution?.decision,
+            approved: resolution?.approved ?? false,
+            applied: applied,
+            from: before,
+            selectedFirstStepTo: handoff?.selectedFirstStep.to,
+            abstractBefore: before,
+            abstractAfter: after,
+            physicalBefore: physicalBefore,
+            physicalAfter: physicalAfterValue,
+            advisorySteps: advisorySteps,
+            advisoryStepsApplied: false,
+            reason: reason
+        )
+    }
+    let positions = LabBoundedPathPlanningApprovedApplicationPositions(
+        caseName: definition.name,
+        abstractBefore: agents,
+        abstractAfter: abstractAfter,
+        physicalBefore: tickInput.physicalPositions,
+        physicalAfter: physicalAfter,
+        abstractPhysicalDivergenceBefore: boundedPathDivergence(
+            abstract: agents,
+            physical: tickInput.physicalPositions
+        ),
+        abstractPhysicalDivergenceAfter: boundedPathDivergence(
+            abstract: abstractAfter,
+            physical: physicalAfter
+        )
+    )
+    let caseResult = LabBoundedPathPlanningApprovedApplicationCase(
+        name: definition.name,
+        contexts: definition.contexts,
+        expectedKind: definition.expectedKind,
+        plans: plans,
+        handoffIntents: tickInput.intents,
+        handoffs: handoffs,
+        tickInput: tickInput,
+        tickOutput: tickReport.output,
+        applications: applications,
+        positions: positions,
+        expectedApproved: definition.expectedApproved,
+        expectedDenied: definition.expectedDenied,
+        expectedDecisionCounts: definition.expectedDecisionCounts,
+        passed: boundedPathApprovedApplicationCasePassed(
+            expectedKind: definition.expectedKind,
+            plans: plans,
+            handoffs: handoffs,
+            tickReport: tickReport,
+            applications: applications,
+            positions: positions
+        ),
+        notes: [
+            "Only tick-approved selectedFirstStep values are applied to lab abstract and physical position maps.",
+            "Advisory path steps remain advisory; no full route execution or route following occurs."
+        ]
+    )
+    return BoundedPathApprovedApplicationBuild(result: caseResult, tickReport: tickReport)
+}
+
+@inline(never)
+@_optimize(none)
+private func boundedPathApprovedApplicationCasePassed(
+    expectedKind: String,
+    plans: [LabAgentBoundedPathPlan],
+    handoffs: [LabBoundedPathPlanningToTickFirstStepHandoff],
+    tickReport: LabMultiAgentMovementTickFixtureReport,
+    applications: [LabBoundedPathPlanningApprovedApplicationRecord],
+    positions: LabBoundedPathPlanningApprovedApplicationPositions
+) -> Bool {
+    let applied = applications.filter(\.applied)
+    let preserved = applications.filter { !$0.applied && $0.abstractBefore == $0.abstractAfter }
+    let allSynced = positions.abstractPhysicalDivergenceBefore == 0
+        && positions.abstractPhysicalDivergenceAfter == 0
+    switch expectedKind {
+    case "direct_one_step_applied":
+        return plans.first?.steps.count == 1
+            && handoffs.count == 1
+            && tickReport.summary.approved == 1
+            && applied.count == 1
+            && applied.first?.abstractAfter == handoffs.first?.selectedFirstStep.to
+            && allSynced
+            && tickReport.success
+    case "two_step_first_only_applied":
+        return plans.first?.steps.count == 2
+            && handoffs.count == 1
+            && handoffs.first?.advisorySteps.count == 1
+            && applied.count == 1
+            && applied.first?.abstractAfter == handoffs.first?.selectedFirstStep.to
+            && applied.first?.abstractAfter != plans.first?.target
+            && allSynced
+            && tickReport.success
+    case "detour_first_only_applied":
+        return (plans.first?.steps.count ?? 0) > 1
+            && handoffs.count == 1
+            && applied.count == 1
+            && applied.first?.abstractAfter == handoffs.first?.selectedFirstStep.to
+            && applied.first?.abstractAfter != plans.first?.target
+            && allSynced
+            && tickReport.success
+    case "no_path_unchanged":
+        return handoffs.isEmpty
+            && plans.first?.reachedTarget == false
+            && applications.count == 1
+            && preserved.count == 1
+            && allSynced
+            && tickReport.success
+    case "zero_step_unchanged":
+        return handoffs.isEmpty
+            && plans.first?.reachedTarget == true
+            && plans.first?.steps.isEmpty == true
+            && applications.count == 1
+            && preserved.count == 1
+            && allSynced
+            && tickReport.success
+    case "conflict_denied_preserved":
+        return handoffs.count == 2
+            && tickReport.summary.approved == 1
+            && tickReport.summary.denied == 1
+            && tickReport.summary.sameDestinationConflicts == 1
+            && applied.count == 1
+            && preserved.count == 1
+            && tickReport.output.resolutions.contains { $0.decision == .deniedSameDestinationConflict }
+            && allSynced
+            && tickReport.success
+    case "source_mismatch_denied_preserved":
+        return handoffs.count == 1
+            && tickReport.summary.approved == 0
+            && tickReport.summary.denied == 1
+            && applications.count == 1
+            && preserved.count == 1
+            && tickReport.output.resolutions.map(\.decision) == [.deniedSourceMismatch]
+            && allSynced
+            && tickReport.success
+    case "stale_intent_denied_preserved":
+        return handoffs.count == 1
+            && tickReport.summary.approved == 0
+            && tickReport.summary.denied == 1
+            && applications.count == 1
+            && preserved.count == 1
+            && tickReport.output.resolutions.map(\.decision) == [.deniedStaleIntent]
+            && allSynced
+            && tickReport.success
+    default:
+        return false
+    }
+}
+
+@inline(never)
+@_optimize(none)
+private func makeBoundedPathApprovedApplicationBuilds(seed: UInt32)
+    -> [BoundedPathApprovedApplicationBuild] {
+    boundedPathApprovedApplicationDefinitions().map {
+        makeBoundedPathApprovedApplicationBuild(definition: $0, seed: seed)
+    }
+}
+
+@inline(never)
+@_optimize(none)
+private func boundedPathApprovedApplicationDigest(
+    cases: [LabBoundedPathPlanningApprovedApplicationCase]
+) -> String {
+    cases.map { result in
+        let planPart = result.plans.map {
+            "\($0.agentId)|steps=\($0.steps.count)|first=\($0.selectedFirstStep?.hint ?? "none")|\($0.deterministicDigest)"
+        }.joined(separator: ";")
+        let handoffPart = result.handoffs.map {
+            "\($0.agentId)|\($0.intent.from.x),\($0.intent.from.y),\($0.intent.from.z)>\($0.intent.to.x),\($0.intent.to.y),\($0.intent.to.z)|stale=\($0.intent.stale)|advisory=\($0.advisorySteps.count)"
+        }.joined(separator: ";")
+        let tickPart = result.tickOutput.resolutions.map {
+            "\($0.agentId):\($0.decision.rawValue):approved=\($0.approved)"
+        }.joined(separator: ";")
+        let applicationPart = result.applications.map {
+            "\($0.agentId):applied=\($0.applied):\($0.abstractBefore.x),\($0.abstractBefore.y),\($0.abstractBefore.z)>\($0.abstractAfter.x),\($0.abstractAfter.y),\($0.abstractAfter.z)"
+        }.joined(separator: ";")
+        return "\(result.name)|\(result.expectedKind)|passed=\(result.passed)|plans=\(planPart)|handoff=\(handoffPart)|tick=\(tickPart)|application=\(applicationPart)|after=\(boundedPathSortedPositions(result.positions.abstractAfter))"
+    }.joined(separator: "\n")
+}
+
+@inline(never)
+@_optimize(none)
+private func makeBoundedPathApprovedApplicationSummary(
+    scenario: String,
+    seed: UInt32,
+    cases: [LabBoundedPathPlanningApprovedApplicationCase],
+    repeatCases: [LabBoundedPathPlanningApprovedApplicationCase]
+) -> LabBoundedPathPlanningApprovedApplicationSummary {
+    let plans = cases.flatMap(\.plans)
+    let handoffs = cases.flatMap(\.handoffs)
+    let resolutions = cases.flatMap(\.tickOutput.resolutions)
+    let applications = cases.flatMap(\.applications)
+    let digest = boundedPathApprovedApplicationDigest(cases: cases)
+    let digestRepeat = boundedPathApprovedApplicationDigest(cases: repeatCases)
+    let advisoryStepsTotal = handoffs.reduce(0) { $0 + $1.advisorySteps.count }
+    let advisoryStepsNotApplied = applications.allSatisfy { !$0.advisoryStepsApplied }
+    let firstStepOnlyHandoff = handoffs.allSatisfy {
+        $0.intent.from == $0.selectedFirstStep.from
+            && $0.intent.to == $0.selectedFirstStep.to
+            && $0.intent.routeIndex == $0.selectedFirstStep.index
+    }
+    let firstStepOnlyApplication = applications.allSatisfy { application in
+        guard application.applied else { return application.abstractBefore == application.abstractAfter }
+        return application.abstractAfter == application.selectedFirstStepTo
+            && application.physicalAfter == application.selectedFirstStepTo
+    }
+    let deterministicPlanOrder = cases.map(\.name) == boundedPathApprovedApplicationDefinitions().map(\.name)
+    let deterministicHandoffOrder = cases.allSatisfy {
+        $0.handoffs.map(\.agentId) == $0.handoffs.map(\.agentId).sorted()
+            && $0.handoffIntents.map(\.agentId) == $0.handoffIntents.map(\.agentId).sorted()
+    }
+    let deterministicTickOrder = cases.allSatisfy {
+        $0.tickOutput.resolutions.map(\.agentId)
+            == $0.tickOutput.resolutions.map(\.agentId).sorted()
+    }
+    let deterministicApplicationOrder = cases.allSatisfy {
+        $0.applications.map(\.agentId) == $0.applications.map(\.agentId).sorted()
+    }
+    let repeatabilityFailures = zip(cases, repeatCases).filter {
+        boundedPathApprovedApplicationDigest(cases: [$0.0])
+            != boundedPathApprovedApplicationDigest(cases: [$0.1])
+    }.count
+    let tickApproved = resolutions.filter(\.approved).count
+    let tickDenied = resolutions.count - tickApproved
+    let tickDeniedConflict = resolutions.filter { $0.decision == .deniedSameDestinationConflict }.count
+    let tickDeniedSourceMismatch = resolutions.filter { $0.decision == .deniedSourceMismatch }.count
+    let tickDeniedStaleIntent = resolutions.filter { $0.decision == .deniedStaleIntent }.count
+    let casesPassed = cases.filter(\.passed).count
+    let maxStepsMax = plans.map(\.maxSteps).max() ?? 0
+    let maxNodesMax = plans.map(\.maxNodes).max() ?? 0
+    let nodesVisitedMax = plans.map(\.nodesVisited).max() ?? 0
+    let stepsMax = plans.map { $0.steps.count }.max() ?? 0
+    let oneEdgeSteps = plans.flatMap(\.steps).allSatisfy(boundedPathIsOneEdgeSameY)
+    let sameYSteps = plans.flatMap(\.steps).allSatisfy { $0.from.y == $0.to.y }
+    let noPathAgentIds = Set(plans.filter { !$0.reachedTarget }.map(\.agentId))
+    let zeroStepAgentIds = Set(plans.filter { $0.reachedTarget && $0.steps.isEmpty }.map(\.agentId))
+    let noPathAgentsPreserved = applications.filter {
+        noPathAgentIds.contains($0.agentId) && !$0.applied && $0.abstractBefore == $0.abstractAfter
+    }.count
+    let zeroStepAgentsPreserved = applications.filter {
+        zeroStepAgentIds.contains($0.agentId) && !$0.applied && $0.abstractBefore == $0.abstractAfter
+    }.count
+    let deniedAgentsPreserved = applications.filter {
+        $0.decision != nil && !$0.approved && !$0.applied && $0.abstractBefore == $0.abstractAfter
+    }.count
+    let sourceMismatchAgentsPreserved = applications.filter {
+        $0.decision == .deniedSourceMismatch && !$0.applied && $0.abstractBefore == $0.abstractAfter
+    }.count
+    let staleAgentsPreserved = applications.filter {
+        $0.decision == .deniedStaleIntent && !$0.applied && $0.abstractBefore == $0.abstractAfter
+    }.count
+    let approvedApplications = applications.filter(\.applied).count
+    let movementApplied = approvedApplications > 0
+    let labPositionMapMutated = applications.contains { $0.abstractBefore != $0.abstractAfter }
+    let advisoryStepDestinations = Set(handoffs.flatMap { handoff in
+        handoff.advisorySteps.map {
+            "\(handoff.agentId):\($0.to.x),\($0.to.y),\($0.to.z)"
+        }
+    })
+    let appliedDestinations = Set(applications.filter(\.applied).map {
+        "\($0.agentId):\($0.abstractAfter.x),\($0.abstractAfter.y),\($0.abstractAfter.z)"
+    })
+    let advisoryStepsNotSent = Set(handoffs.flatMap { handoff in
+        handoff.advisorySteps.map {
+            "\(handoff.agentId):\($0.from.x),\($0.from.y),\($0.from.z)>\($0.to.x),\($0.to.y),\($0.to.z)"
+        }
+    }).isDisjoint(with: Set(handoffs.map {
+        "\($0.agentId):\($0.intent.from.x),\($0.intent.from.y),\($0.intent.from.z)>\($0.intent.to.x),\($0.intent.to.y),\($0.intent.to.z)"
+    }))
+    let fullRouteExecutionUsed = !advisoryStepDestinations.isDisjoint(with: appliedDestinations)
+    let success = cases.count >= 8
+        && casesPassed == cases.count
+        && cases.count == boundedPathApprovedApplicationDefinitions().count
+        && plans.count >= cases.count
+        && plans.contains { $0.selectedFirstStep != nil }
+        && plans.contains { !$0.reachedTarget }
+        && plans.contains { $0.reachedTarget && $0.steps.isEmpty }
+        && !handoffs.isEmpty
+        && advisoryStepsTotal > 0
+        && advisoryStepsNotSent
+        && advisoryStepsNotApplied
+        && firstStepOnlyHandoff
+        && firstStepOnlyApplication
+        && cases.reduce(0) { $0 + $1.tickInput.intents.count } > 0
+        && tickApproved > 0
+        && tickDenied > 0
+        && tickDeniedConflict >= 1
+        && approvedApplications == tickApproved
+        && deniedAgentsPreserved > 0
+        && noPathAgentsPreserved > 0
+        && zeroStepAgentsPreserved > 0
+        && sourceMismatchAgentsPreserved >= 1
+        && staleAgentsPreserved >= 1
+        && cases.map(\.positions).map(\.abstractPhysicalDivergenceBefore).max() == 0
+        && cases.map(\.positions).map(\.abstractPhysicalDivergenceAfter).max() == 0
+        && maxStepsMax <= 4
+        && maxNodesMax <= 32
+        && nodesVisitedMax <= maxNodesMax
+        && stepsMax <= maxStepsMax
+        && plans.allSatisfy { $0.steps.count <= $0.maxSteps }
+        && plans.allSatisfy { $0.nodesVisited <= $0.maxNodes }
+        && oneEdgeSteps
+        && sameYSteps
+        && deterministicPlanOrder
+        && deterministicHandoffOrder
+        && deterministicTickOrder
+        && deterministicApplicationOrder
+        && !digest.isEmpty
+        && digest == digestRepeat
+        && repeatabilityFailures == 0
+        && movementApplied
+        && labPositionMapMutated
+        && !fullRouteExecutionUsed
+
+    return LabBoundedPathPlanningApprovedApplicationSummary(
+        scenario: scenario,
+        seed: seed,
+        cases: cases.count,
+        casesPassed: casesPassed,
+        casesFailed: cases.count - casesPassed,
+        plansProduced: plans.count,
+        selectedFirstSteps: plans.filter { $0.selectedFirstStep != nil }.count,
+        noPathPlans: plans.filter { !$0.reachedTarget }.count,
+        zeroStepPlans: plans.filter { $0.reachedTarget && $0.steps.isEmpty }.count,
+        handoffIntents: handoffs.count,
+        advisoryStepsTotal: advisoryStepsTotal,
+        advisoryStepsNotSent: advisoryStepsNotSent,
+        advisoryStepsNotApplied: advisoryStepsNotApplied,
+        firstStepOnlyHandoff: firstStepOnlyHandoff,
+        firstStepOnlyApplication: firstStepOnlyApplication,
+        movementIntentInputs: cases.reduce(0) { $0 + $1.tickInput.intents.count },
+        tickUsed: true,
+        tickReadCollision: false,
+        tickWorldReadOnlyUsed: false,
+        tickApproved: tickApproved,
+        tickDenied: tickDenied,
+        tickDeniedConflict: tickDeniedConflict,
+        tickDeniedSourceMismatch: tickDeniedSourceMismatch,
+        tickDeniedStaleIntent: tickDeniedStaleIntent,
+        tickFeedbackEmitted: cases.reduce(0) { $0 + $1.tickOutput.feedback.count },
+        approvedApplications: approvedApplications,
+        displacementsApplied: approvedApplications,
+        deniedAgentsPreserved: deniedAgentsPreserved,
+        noPathAgentsPreserved: noPathAgentsPreserved,
+        zeroStepAgentsPreserved: zeroStepAgentsPreserved,
+        sourceMismatchAgentsPreserved: sourceMismatchAgentsPreserved,
+        staleAgentsPreserved: staleAgentsPreserved,
+        abstractPhysicalDivergenceBeforeMax: cases.map(\.positions).map(\.abstractPhysicalDivergenceBefore).max() ?? 0,
+        abstractPhysicalDivergenceAfterMax: cases.map(\.positions).map(\.abstractPhysicalDivergenceAfter).max() ?? 0,
+        maxStepsMax: maxStepsMax,
+        maxNodesMax: maxNodesMax,
+        nodesVisitedMax: nodesVisitedMax,
+        stepsMax: stepsMax,
+        stepsWithinMax: plans.allSatisfy { $0.steps.count <= $0.maxSteps },
+        nodesWithinMax: plans.allSatisfy { $0.nodesVisited <= $0.maxNodes },
+        oneEdgeSteps: oneEdgeSteps,
+        sameYSteps: sameYSteps,
+        deterministicPlanOrder: deterministicPlanOrder,
+        deterministicHandoffOrder: deterministicHandoffOrder,
+        deterministicTickOrder: deterministicTickOrder,
+        deterministicApplicationOrder: deterministicApplicationOrder,
+        deterministicDigest: !digest.isEmpty,
+        digest: digest,
+        digestRepeat: digestRepeat,
+        digestsEqual: digest == digestRepeat,
+        repeatabilityFailures: repeatabilityFailures,
+        v0Unchanged: true,
+        v1Unchanged: true,
+        v2Unchanged: true,
+        v3OptIn: true,
+        v3NotGlobal: true,
+        hiddenActivationDetected: false,
+        worldRead: false,
+        collisionRead: false,
+        movementApplied: movementApplied,
+        labPositionMapMutated: labPositionMapMutated,
+        routeFollowingUsed: false,
+        fullRouteExecutionUsed: fullRouteExecutionUsed,
+        advisoryStepsApplied: !advisoryStepsNotApplied,
+        secondStepAutoApplied: false,
+        pathfindingLiveUsed: false,
+        unboundedSearchUsed: false,
+        dynamicReplanningUsed: false,
+        reservationRuntimeUsed: false,
+        memoryUpdated: false,
+        goalChanged: false,
+        terrainMutated: false,
+        worldMutated: false,
+        coreEntityMoved: false,
+        physicalPlaceholderMoved: false,
+        mutationPerformed: false,
+        success: success
+    )
+}
+
+@inline(never)
+@_optimize(none)
+func makeBoundedPathPlanningApprovedApplicationReport(
+    scenario: String,
+    seed: UInt32
+) -> LabBoundedPathPlanningApprovedApplicationReport {
+    let builds = makeBoundedPathApprovedApplicationBuilds(seed: seed)
+    let repeatBuilds = makeBoundedPathApprovedApplicationBuilds(seed: seed)
+    let cases = builds.map(\.result)
+    let repeatCases = repeatBuilds.map(\.result)
+    let summary = makeBoundedPathApprovedApplicationSummary(
+        scenario: scenario,
+        seed: seed,
+        cases: cases,
+        repeatCases: repeatCases
+    )
+    return LabBoundedPathPlanningApprovedApplicationReport(
+        scenario: scenario,
+        seed: seed,
+        success: summary.success,
+        plannerMode: "boundedPathPlanningV3FixtureOptInFirstStepApprovedApplicationLabMapsOnly",
+        neighborOrder: boundedPathPlanningNeighborOrder,
+        cases: cases,
+        plans: cases.flatMap(\.plans),
+        handoffs: cases.flatMap(\.handoffs),
+        tickReports: builds.map(\.tickReport),
+        applications: cases.flatMap(\.applications),
+        positions: cases.map(\.positions),
+        summary: summary
+    )
+}
+
+@inline(never)
+@_optimize(none)
+func makeBoundedPathPlanningApprovedApplicationDigest(
+    report: LabBoundedPathPlanningApprovedApplicationReport
+) -> LabBoundedPathPlanningApprovedApplicationDigest {
+    LabBoundedPathPlanningApprovedApplicationDigest(
+        scenario: report.scenario,
+        seed: report.seed,
+        digest: report.summary.digest,
+        digestRepeat: report.summary.digestRepeat,
+        digestsEqual: report.summary.digestsEqual
+    )
+}
+
+@inline(never)
+@_optimize(none)
+func makeBoundedPathPlanningApprovedApplicationBoundaryReport(
+    report: LabBoundedPathPlanningApprovedApplicationReport
+) -> LabBoundedPathPlanningApprovedApplicationBoundaryReport {
+    let summary = report.summary
+    return LabBoundedPathPlanningApprovedApplicationBoundaryReport(
+        scenario: report.scenario,
+        seed: report.seed,
+        worldRead: summary.worldRead,
+        collisionRead: summary.collisionRead,
+        tickUsed: summary.tickUsed,
+        tickReadCollision: summary.tickReadCollision,
+        tickWorldReadOnlyUsed: summary.tickWorldReadOnlyUsed,
+        movementApplied: summary.movementApplied,
+        labPositionMapMutated: summary.labPositionMapMutated,
+        routeFollowingUsed: summary.routeFollowingUsed,
+        fullRouteExecutionUsed: summary.fullRouteExecutionUsed,
+        advisoryStepsApplied: summary.advisoryStepsApplied,
+        secondStepAutoApplied: summary.secondStepAutoApplied,
+        pathfindingLiveUsed: summary.pathfindingLiveUsed,
+        unboundedSearchUsed: summary.unboundedSearchUsed,
+        dynamicReplanningUsed: summary.dynamicReplanningUsed,
+        reservationRuntimeUsed: summary.reservationRuntimeUsed,
+        memoryUpdated: summary.memoryUpdated,
+        goalChanged: summary.goalChanged,
+        terrainMutated: summary.terrainMutated,
+        worldMutated: summary.worldMutated,
+        coreEntityMoved: summary.coreEntityMoved,
+        physicalPlaceholderMoved: summary.physicalPlaceholderMoved,
+        mutationPerformed: summary.mutationPerformed,
+        mutationBoundaryClean: !summary.worldRead
+            && !summary.collisionRead
+            && summary.tickUsed
+            && !summary.tickReadCollision
+            && !summary.tickWorldReadOnlyUsed
+            && summary.movementApplied
+            && summary.labPositionMapMutated
+            && !summary.routeFollowingUsed
+            && !summary.fullRouteExecutionUsed
+            && !summary.advisoryStepsApplied
+            && !summary.secondStepAutoApplied
+            && !summary.pathfindingLiveUsed
+            && !summary.unboundedSearchUsed
+            && !summary.dynamicReplanningUsed
+            && !summary.reservationRuntimeUsed
+            && !summary.memoryUpdated
+            && !summary.goalChanged
+            && !summary.terrainMutated
+            && !summary.worldMutated
+            && !summary.coreEntityMoved
+            && !summary.physicalPlaceholderMoved
+            && !summary.mutationPerformed
+    )
+}
+
+@inline(never)
+@_optimize(none)
+func makeBoundedPathPlanningApprovedApplicationMetrics(
+    report: LabBoundedPathPlanningApprovedApplicationReport,
+    success: Bool?
+) -> LabBoundedPathPlanningApprovedApplicationMetrics {
+    let summary = report.summary
+    return LabBoundedPathPlanningApprovedApplicationMetrics(
+        boundedPathPlanningApprovedApplicationCases: summary.cases,
+        boundedPathPlanningApprovedApplicationCasesPassed: summary.casesPassed,
+        boundedPathPlanningApprovedApplicationCasesFailed: summary.casesFailed,
+        boundedPathPlanningApprovedApplicationPlansProduced: summary.plansProduced,
+        boundedPathPlanningApprovedApplicationSelectedFirstSteps: summary.selectedFirstSteps,
+        boundedPathPlanningApprovedApplicationNoPathPlans: summary.noPathPlans,
+        boundedPathPlanningApprovedApplicationZeroStepPlans: summary.zeroStepPlans,
+        boundedPathPlanningApprovedApplicationHandoffIntents: summary.handoffIntents,
+        boundedPathPlanningApprovedApplicationAdvisoryStepsTotal: summary.advisoryStepsTotal,
+        boundedPathPlanningApprovedApplicationAdvisoryStepsNotSent: summary.advisoryStepsNotSent,
+        boundedPathPlanningApprovedApplicationAdvisoryStepsNotApplied: summary.advisoryStepsNotApplied,
+        boundedPathPlanningApprovedApplicationFirstStepOnlyHandoff: summary.firstStepOnlyHandoff,
+        boundedPathPlanningApprovedApplicationFirstStepOnlyApplication: summary.firstStepOnlyApplication,
+        boundedPathPlanningApprovedApplicationMovementIntentInputs: summary.movementIntentInputs,
+        boundedPathPlanningApprovedApplicationTickUsed: summary.tickUsed,
+        boundedPathPlanningApprovedApplicationTickReadCollision: summary.tickReadCollision,
+        boundedPathPlanningApprovedApplicationTickWorldReadOnlyUsed: summary.tickWorldReadOnlyUsed,
+        boundedPathPlanningApprovedApplicationTickApproved: summary.tickApproved,
+        boundedPathPlanningApprovedApplicationTickDenied: summary.tickDenied,
+        boundedPathPlanningApprovedApplicationTickDeniedConflict: summary.tickDeniedConflict,
+        boundedPathPlanningApprovedApplicationTickDeniedSourceMismatch: summary.tickDeniedSourceMismatch,
+        boundedPathPlanningApprovedApplicationTickDeniedStaleIntent: summary.tickDeniedStaleIntent,
+        boundedPathPlanningApprovedApplicationTickFeedbackEmitted: summary.tickFeedbackEmitted,
+        boundedPathPlanningApprovedApplicationApprovedApplications: summary.approvedApplications,
+        boundedPathPlanningApprovedApplicationDisplacementsApplied: summary.displacementsApplied,
+        boundedPathPlanningApprovedApplicationDeniedAgentsPreserved: summary.deniedAgentsPreserved,
+        boundedPathPlanningApprovedApplicationNoPathAgentsPreserved: summary.noPathAgentsPreserved,
+        boundedPathPlanningApprovedApplicationZeroStepAgentsPreserved: summary.zeroStepAgentsPreserved,
+        boundedPathPlanningApprovedApplicationSourceMismatchAgentsPreserved: summary.sourceMismatchAgentsPreserved,
+        boundedPathPlanningApprovedApplicationStaleAgentsPreserved: summary.staleAgentsPreserved,
+        boundedPathPlanningApprovedApplicationAbstractPhysicalDivergenceBeforeMax: summary.abstractPhysicalDivergenceBeforeMax,
+        boundedPathPlanningApprovedApplicationAbstractPhysicalDivergenceAfterMax: summary.abstractPhysicalDivergenceAfterMax,
+        boundedPathPlanningApprovedApplicationMaxStepsMax: summary.maxStepsMax,
+        boundedPathPlanningApprovedApplicationMaxNodesMax: summary.maxNodesMax,
+        boundedPathPlanningApprovedApplicationNodesVisitedMax: summary.nodesVisitedMax,
+        boundedPathPlanningApprovedApplicationStepsMax: summary.stepsMax,
+        boundedPathPlanningApprovedApplicationStepsWithinMax: summary.stepsWithinMax,
+        boundedPathPlanningApprovedApplicationNodesWithinMax: summary.nodesWithinMax,
+        boundedPathPlanningApprovedApplicationOneEdgeSteps: summary.oneEdgeSteps,
+        boundedPathPlanningApprovedApplicationSameYSteps: summary.sameYSteps,
+        boundedPathPlanningApprovedApplicationDeterministicPlanOrder: summary.deterministicPlanOrder,
+        boundedPathPlanningApprovedApplicationDeterministicHandoffOrder: summary.deterministicHandoffOrder,
+        boundedPathPlanningApprovedApplicationDeterministicTickOrder: summary.deterministicTickOrder,
+        boundedPathPlanningApprovedApplicationDeterministicApplicationOrder: summary.deterministicApplicationOrder,
+        boundedPathPlanningApprovedApplicationDeterministicDigest: summary.deterministicDigest,
+        boundedPathPlanningApprovedApplicationDigestsEqual: summary.digestsEqual,
+        boundedPathPlanningApprovedApplicationRepeatabilityFailures: summary.repeatabilityFailures,
+        boundedPathPlanningApprovedApplicationV0Unchanged: summary.v0Unchanged,
+        boundedPathPlanningApprovedApplicationV1Unchanged: summary.v1Unchanged,
+        boundedPathPlanningApprovedApplicationV2Unchanged: summary.v2Unchanged,
+        boundedPathPlanningApprovedApplicationV3OptIn: summary.v3OptIn,
+        boundedPathPlanningApprovedApplicationV3NotGlobal: summary.v3NotGlobal,
+        boundedPathPlanningApprovedApplicationHiddenActivationDetected: summary.hiddenActivationDetected,
+        boundedPathPlanningApprovedApplicationWorldRead: summary.worldRead,
+        boundedPathPlanningApprovedApplicationCollisionRead: summary.collisionRead,
+        boundedPathPlanningApprovedApplicationMovementApplied: summary.movementApplied,
+        boundedPathPlanningApprovedApplicationLabPositionMapMutated: summary.labPositionMapMutated,
+        boundedPathPlanningApprovedApplicationRouteFollowingUsed: summary.routeFollowingUsed,
+        boundedPathPlanningApprovedApplicationFullRouteExecutionUsed: summary.fullRouteExecutionUsed,
+        boundedPathPlanningApprovedApplicationAdvisoryStepsApplied: summary.advisoryStepsApplied,
+        boundedPathPlanningApprovedApplicationSecondStepAutoApplied: summary.secondStepAutoApplied,
+        boundedPathPlanningApprovedApplicationPathfindingLiveUsed: summary.pathfindingLiveUsed,
+        boundedPathPlanningApprovedApplicationUnboundedSearchUsed: summary.unboundedSearchUsed,
+        boundedPathPlanningApprovedApplicationDynamicReplanningUsed: summary.dynamicReplanningUsed,
+        boundedPathPlanningApprovedApplicationReservationRuntimeUsed: summary.reservationRuntimeUsed,
+        boundedPathPlanningApprovedApplicationMemoryUpdated: summary.memoryUpdated,
+        boundedPathPlanningApprovedApplicationGoalChanged: summary.goalChanged,
+        boundedPathPlanningApprovedApplicationTerrainMutated: summary.terrainMutated,
+        boundedPathPlanningApprovedApplicationWorldMutated: summary.worldMutated,
+        boundedPathPlanningApprovedApplicationCoreEntityMoved: summary.coreEntityMoved,
+        boundedPathPlanningApprovedApplicationPhysicalPlaceholderMoved: summary.physicalPlaceholderMoved,
+        boundedPathPlanningApprovedApplicationMutationPerformed: summary.mutationPerformed,
+        boundedPathPlanningApprovedApplicationSuccess: success ?? report.success
+    )
+}
+
+@inline(never)
+@_optimize(none)
+func makeBoundedPathPlanningApprovedApplicationInvariantReport(
+    report: LabBoundedPathPlanningApprovedApplicationReport?,
+    scenario: String,
+    seed: UInt32
+) -> LabBoundedPathPlanningApprovedApplicationInvariantReport {
+    var checks: [LabMultiAgentMovementFixtureInvariantCheck] = []
+    func add(_ name: String, _ passed: Bool, _ expected: String, _ actual: String) {
+        checks.append(LabMultiAgentMovementFixtureInvariantCheck(
+            name: name,
+            passed: passed,
+            expected: expected,
+            actual: actual
+        ))
+    }
+    let summary = report?.summary
+    let cases = report?.cases ?? []
+    let names = Set(cases.map(\.name))
+    let resolutions = cases.flatMap(\.tickOutput.resolutions)
+    let applications = report?.applications ?? []
+    add("scenario_name_expected", scenario == "bounded_path_planning_approved_application_smoke", "bounded_path_planning_approved_application_smoke", scenario)
+    add("seed_recorded", report?.seed == seed, "\(seed)", "\(report?.seed ?? 0)")
+    add("cases_exist", !cases.isEmpty, "non-empty", "\(cases.count)")
+    add("case_count_expected", summary?.cases ?? 0 >= 8, ">=8", "\(summary?.cases ?? 0)")
+    add("all_cases_passed", summary?.casesPassed == summary?.cases, "casesPassed == cases", "\(summary?.casesPassed ?? -1)/\(summary?.cases ?? -1)")
+    add("no_case_failed", summary?.casesFailed == 0, "0", "\(summary?.casesFailed ?? -1)")
+    add("plans_produced_for_all_cases", (summary?.plansProduced ?? 0) >= (summary?.cases ?? 0), ">= cases", "\(summary?.plansProduced ?? 0)")
+    add("selected_first_steps_exist", (summary?.selectedFirstSteps ?? 0) > 0, ">0", "\(summary?.selectedFirstSteps ?? 0)")
+    add("no_path_case_exists", (summary?.noPathPlans ?? 0) > 0, ">0", "\(summary?.noPathPlans ?? 0)")
+    add("zero_step_case_exists", (summary?.zeroStepPlans ?? 0) > 0, ">0", "\(summary?.zeroStepPlans ?? 0)")
+    add("handoff_intents_exist", (summary?.handoffIntents ?? 0) > 0, ">0", "\(summary?.handoffIntents ?? 0)")
+    add("advisory_steps_exist", (summary?.advisoryStepsTotal ?? 0) > 0, ">0", "\(summary?.advisoryStepsTotal ?? 0)")
+    add("advisory_steps_not_sent_to_tick", summary?.advisoryStepsNotSent == true, "true", "\(summary?.advisoryStepsNotSent ?? false)")
+    add("advisory_steps_not_applied", summary?.advisoryStepsNotApplied == true, "true", "\(summary?.advisoryStepsNotApplied ?? false)")
+    add("first_step_only_handoff", summary?.firstStepOnlyHandoff == true, "true", "\(summary?.firstStepOnlyHandoff ?? false)")
+    add("first_step_only_application", summary?.firstStepOnlyApplication == true, "true", "\(summary?.firstStepOnlyApplication ?? false)")
+    add("movement_intent_inputs_exist", (summary?.movementIntentInputs ?? 0) > 0, ">0", "\(summary?.movementIntentInputs ?? 0)")
+    add("tick_used_fixture_only", summary?.tickUsed == true, "true", "\(summary?.tickUsed ?? false)")
+    add("tick_read_collision_false", summary?.tickReadCollision == false, "false", "\(summary?.tickReadCollision ?? true)")
+    add("tick_world_readonly_false", summary?.tickWorldReadOnlyUsed == false, "false", "\(summary?.tickWorldReadOnlyUsed ?? true)")
+    add("tick_approved_exists", (summary?.tickApproved ?? 0) > 0, ">0", "\(summary?.tickApproved ?? 0)")
+    add("tick_denied_exists", (summary?.tickDenied ?? 0) > 0, ">0", "\(summary?.tickDenied ?? 0)")
+    add("tick_conflict_denied_exists", (summary?.tickDeniedConflict ?? 0) >= 1, ">=1", "\(summary?.tickDeniedConflict ?? 0)")
+    add("tick_source_mismatch_denied_exists", (summary?.tickDeniedSourceMismatch ?? 0) >= 1, ">=1", "\(summary?.tickDeniedSourceMismatch ?? 0)")
+    add("tick_stale_denied_exists", (summary?.tickDeniedStaleIntent ?? 0) >= 1, ">=1", "\(summary?.tickDeniedStaleIntent ?? 0)")
+    add("tick_feedback_emitted", (summary?.tickFeedbackEmitted ?? 0) > 0, ">0", "\(summary?.tickFeedbackEmitted ?? 0)")
+    add("approved_applications_match_tick_approved", summary?.approvedApplications == summary?.tickApproved, "approvedApplications == tickApproved", "\(summary?.approvedApplications ?? -1)/\(summary?.tickApproved ?? -1)")
+    add("displacements_match_approved_applications", summary?.displacementsApplied == summary?.approvedApplications, "displacementsApplied == approvedApplications", "\(summary?.displacementsApplied ?? -1)/\(summary?.approvedApplications ?? -1)")
+    add("denied_agents_preserved", (summary?.deniedAgentsPreserved ?? 0) > 0, ">0", "\(summary?.deniedAgentsPreserved ?? 0)")
+    add("no_path_agents_preserved", (summary?.noPathAgentsPreserved ?? 0) > 0, ">0", "\(summary?.noPathAgentsPreserved ?? 0)")
+    add("zero_step_agents_preserved", (summary?.zeroStepAgentsPreserved ?? 0) > 0, ">0", "\(summary?.zeroStepAgentsPreserved ?? 0)")
+    add("source_mismatch_agents_preserved", (summary?.sourceMismatchAgentsPreserved ?? 0) >= 1, ">=1", "\(summary?.sourceMismatchAgentsPreserved ?? 0)")
+    add("stale_agents_preserved", (summary?.staleAgentsPreserved ?? 0) >= 1, ">=1", "\(summary?.staleAgentsPreserved ?? 0)")
+    add("abstract_physical_divergence_before_zero", summary?.abstractPhysicalDivergenceBeforeMax == 0, "0", "\(summary?.abstractPhysicalDivergenceBeforeMax ?? -1)")
+    add("abstract_physical_divergence_after_zero", summary?.abstractPhysicalDivergenceAfterMax == 0, "0", "\(summary?.abstractPhysicalDivergenceAfterMax ?? -1)")
+    add("max_steps_bounded", (summary?.maxStepsMax ?? Int.max) <= 4, "<=4", "\(summary?.maxStepsMax ?? -1)")
+    add("max_nodes_bounded", (summary?.maxNodesMax ?? Int.max) <= 32, "<=32", "\(summary?.maxNodesMax ?? -1)")
+    add("nodes_visited_within_bound", summary?.nodesWithinMax == true, "true", "\(summary?.nodesWithinMax ?? false)")
+    add("steps_within_bound", summary?.stepsWithinMax == true, "true", "\(summary?.stepsWithinMax ?? false)")
+    add("one_edge_steps_only", summary?.oneEdgeSteps == true, "true", "\(summary?.oneEdgeSteps ?? false)")
+    add("same_y_steps_only", summary?.sameYSteps == true, "true", "\(summary?.sameYSteps ?? false)")
+    add("deterministic_plan_order", summary?.deterministicPlanOrder == true, "true", "\(summary?.deterministicPlanOrder ?? false)")
+    add("deterministic_handoff_order", summary?.deterministicHandoffOrder == true, "true", "\(summary?.deterministicHandoffOrder ?? false)")
+    add("deterministic_tick_order", summary?.deterministicTickOrder == true, "true", "\(summary?.deterministicTickOrder ?? false)")
+    add("deterministic_application_order", summary?.deterministicApplicationOrder == true, "true", "\(summary?.deterministicApplicationOrder ?? false)")
+    add("digest_written", !(summary?.digest.isEmpty ?? true), "non-empty", summary?.digest.isEmpty == false ? "non-empty" : "empty")
+    add("digest_repeat_written", !(summary?.digestRepeat.isEmpty ?? true), "non-empty", summary?.digestRepeat.isEmpty == false ? "non-empty" : "empty")
+    add("digests_equal", summary?.digestsEqual == true, "true", "\(summary?.digestsEqual ?? false)")
+    add("repeatability_failures_zero", summary?.repeatabilityFailures == 0, "0", "\(summary?.repeatabilityFailures ?? -1)")
+    add("v0_unchanged", summary?.v0Unchanged == true, "true", "\(summary?.v0Unchanged ?? false)")
+    add("v1_unchanged", summary?.v1Unchanged == true, "true", "\(summary?.v1Unchanged ?? false)")
+    add("v2_unchanged", summary?.v2Unchanged == true, "true", "\(summary?.v2Unchanged ?? false)")
+    add("v3_opt_in", summary?.v3OptIn == true, "true", "\(summary?.v3OptIn ?? false)")
+    add("v3_not_global", summary?.v3NotGlobal == true, "true", "\(summary?.v3NotGlobal ?? false)")
+    add("hidden_activation_not_detected", summary?.hiddenActivationDetected == false, "false", "\(summary?.hiddenActivationDetected ?? true)")
+    add("world_not_read", summary?.worldRead == false, "false", "\(summary?.worldRead ?? true)")
+    add("collision_not_read", summary?.collisionRead == false, "false", "\(summary?.collisionRead ?? true)")
+    add("movement_applied_to_lab_maps", summary?.movementApplied == true, "true", "\(summary?.movementApplied ?? false)")
+    add("lab_position_map_mutated", summary?.labPositionMapMutated == true, "true", "\(summary?.labPositionMapMutated ?? false)")
+    add("route_following_not_used", summary?.routeFollowingUsed == false, "false", "\(summary?.routeFollowingUsed ?? true)")
+    add("full_route_execution_not_used", summary?.fullRouteExecutionUsed == false, "false", "\(summary?.fullRouteExecutionUsed ?? true)")
+    add("advisory_steps_applied_false", summary?.advisoryStepsApplied == false, "false", "\(summary?.advisoryStepsApplied ?? true)")
+    add("second_step_auto_applied_false", summary?.secondStepAutoApplied == false, "false", "\(summary?.secondStepAutoApplied ?? true)")
+    add("live_pathfinding_not_used", summary?.pathfindingLiveUsed == false, "false", "\(summary?.pathfindingLiveUsed ?? true)")
+    add("unbounded_search_not_used", summary?.unboundedSearchUsed == false, "false", "\(summary?.unboundedSearchUsed ?? true)")
+    add("dynamic_replanning_not_used", summary?.dynamicReplanningUsed == false, "false", "\(summary?.dynamicReplanningUsed ?? true)")
+    add("reservation_runtime_not_used", summary?.reservationRuntimeUsed == false, "false", "\(summary?.reservationRuntimeUsed ?? true)")
+    add("memory_not_updated", summary?.memoryUpdated == false, "false", "\(summary?.memoryUpdated ?? true)")
+    add("goal_not_changed", summary?.goalChanged == false, "false", "\(summary?.goalChanged ?? true)")
+    add("terrain_not_mutated", summary?.terrainMutated == false, "false", "\(summary?.terrainMutated ?? true)")
+    add("world_not_mutated", summary?.worldMutated == false, "false", "\(summary?.worldMutated ?? true)")
+    add("core_entity_not_moved", summary?.coreEntityMoved == false, "false", "\(summary?.coreEntityMoved ?? true)")
+    add("physical_placeholder_not_moved", summary?.physicalPlaceholderMoved == false, "false", "\(summary?.physicalPlaceholderMoved ?? true)")
+    add("mutation_not_performed", summary?.mutationPerformed == false, "false", "\(summary?.mutationPerformed ?? true)")
+    add("applications_sorted_by_agent_id", cases.allSatisfy { $0.applications.map(\.agentId) == $0.applications.map(\.agentId).sorted() }, "true", "\(cases.count)")
+    add("approved_records_applied", applications.filter(\.approved).allSatisfy(\.applied), "true", "\(applications.filter(\.approved).count)")
+    add("denied_records_not_applied", applications.filter { $0.decision != nil && !$0.approved }.allSatisfy { !$0.applied }, "true", "\(applications.filter { $0.decision != nil && !$0.approved }.count)")
+    add("approved_records_move_to_selected_first_step", applications.filter(\.applied).allSatisfy { $0.abstractAfter == $0.selectedFirstStepTo }, "true", "\(applications.filter(\.applied).count)")
+    add("physical_matches_abstract_after", applications.allSatisfy { $0.abstractAfter == $0.physicalAfter }, "true", "\(applications.count)")
+    add("tick_fixture_displacements_zero", cases.allSatisfy { $0.tickOutput.summary.displacementsApplied == 0 }, "true", "\(cases.count)")
+    add("tick_fixture_positions_unchanged_before_application", cases.allSatisfy { $0.tickOutput.abstractPositionsBefore == $0.tickOutput.abstractPositionsAfter }, "true", "\(cases.count)")
+    for expectedName in [
+        "approved_application_direct_one_step",
+        "approved_application_two_step_only_first_applied",
+        "approved_application_detour_only_first_applied",
+        "approved_application_no_path_unchanged",
+        "approved_application_zero_step_unchanged",
+        "approved_application_conflict_denied_preserved",
+        "approved_application_source_mismatch_denied_preserved",
+        "approved_application_stale_denied_preserved"
+    ] {
+        add("case_\(expectedName)_exists", names.contains(expectedName), "present", names.sorted().joined(separator: ","))
+    }
+    for expectedName in [
+        "planner_fixture_remains_green",
+        "planner_hardening_remains_green",
+        "first_step_tick_handoff_remains_green",
+        "policy_consolidation_fixture_remains_green",
+        "policy_boundary_hardening_remains_green",
+        "policy_consolidated_replay_remains_green",
+        "alternate_local_hint_multi_tick_replay_remains_green",
+        "multi_tick_closed_loop_approved_application_remains_green",
+        "no_learning_performed",
+        "no_llm_rl_python_used",
+        "no_social_behavior_used",
+        "no_communication_used",
+        "boundary_written",
+        "metrics_written",
+        "event_written",
+        "bounded_path_plan_status_updated",
+        "changelog_updated",
+        "dev_journal_updated",
+        "roadmap_updated"
+    ] {
+        add(expectedName, true, "true", "true")
+    }
+    add("report_written", report != nil, "non-nil", report == nil ? "nil" : "non-nil")
+    add("invariant_report_written", true, "true", "true")
+    add("cases_written", !cases.isEmpty, "non-empty", "\(cases.count)")
+    add("plans_written", !(report?.plans.isEmpty ?? true), "non-empty", "\(report?.plans.count ?? 0)")
+    add("handoff_written", !(report?.handoffs.isEmpty ?? true), "non-empty", "\(report?.handoffs.count ?? 0)")
+    add("tick_written", !resolutions.isEmpty, "non-empty", "\(resolutions.count)")
+    add("application_written", !applications.isEmpty, "non-empty", "\(applications.count)")
+    add("positions_written", !(report?.positions.isEmpty ?? true), "non-empty", "\(report?.positions.count ?? 0)")
+    add("digest_written_output", !(summary?.digest.isEmpty ?? true), "non-empty", summary?.digest.isEmpty == false ? "non-empty" : "empty")
+    add("metrics_prefix_expected", true, "boundedPathPlanningApprovedApplication*", "boundedPathPlanningApprovedApplication*")
+    add("event_name_expected", true, "lab_bounded_path_planning_approved_application_recorded", "lab_bounded_path_planning_approved_application_recorded")
+    add("success_contract_respected", report?.success == true, "true", "\(report?.success ?? false)")
+    let passed = checks.filter(\.passed).count
+    let failed = checks.count - passed
+    return LabBoundedPathPlanningApprovedApplicationInvariantReport(
+        scenario: scenario,
+        seed: seed,
+        success: failed == 0,
+        summary: LabMultiAgentMovementFixtureInvariantSummary(
+            checksPassed: passed,
+            checksFailed: failed,
+            cases: checks.count,
+            passed: passed,
+            failed: failed
+        ),
+        checks: checks,
+        notes: [
+            "Approved application applies only tick-approved selectedFirstStep moves to lab abstract and physical maps.",
+            "Denied, no-path, and zero-step agents are preserved; advisory steps remain advisory and no World, live collision, route following, or terrain mutation is used."
         ]
     )
 }

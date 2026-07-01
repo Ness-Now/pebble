@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added bounded path planning approved application smoke.
 - Added bounded path planning first-step tick handoff smoke.
 - Added bounded path planning hardening smoke.
 - Added bounded path planning fixture smoke.

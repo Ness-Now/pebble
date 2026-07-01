@@ -585,3 +585,55 @@ no full-route execution, no movement application, no lab position map mutation,
 no memory/goals, no reservation runtime, and no terrain/World mutation.
 
 Next step: Phase 4.27E — Planning Approved Application Lab-Map Only.
+
+## Phase 4.27E Implementation Status
+
+Status: implemented and validated.
+
+Phase 4.27E added `bounded_path_planning_approved_application_smoke` as the
+first lab-map-only approved application scenario for bounded path planning. It
+builds on 4.27D: bounded fixture plans produce selected first-step handoffs,
+the existing tick fixture approves or denies those one-edge intents, and the
+application layer mutates only lab abstract and physical position maps for
+approved first steps.
+
+The scenario covers:
+
+- direct one-step approved application;
+- two-step plan where only the first step is applied;
+- detour plan where only the first step is applied;
+- no-path plan preserved unchanged;
+- start-equals-target zero-step plan preserved unchanged;
+- same-destination conflict denied by tick and preserved;
+- source mismatch denied by tick and preserved;
+- stale intent denied by tick and preserved.
+
+Boundary rules remain explicit. Advisory path steps are not sent to tick and
+are not applied. There is no full-route execution, no route following, no live
+collision read, no `World` use, no core entity movement, no physical
+placeholder movement, no memory/goals, no reservation runtime, and no
+terrain/World mutation. The only mutation is the controlled lab position map
+update for tick-approved first steps, with abstract and physical maps kept in
+sync.
+
+Outputs produced:
+
+- `bounded_path_planning_approved_application_report.json`
+- `bounded_path_planning_approved_application_invariant_report.json`
+- `bounded_path_planning_approved_application_cases.json`
+- `bounded_path_planning_approved_application_plans.json`
+- `bounded_path_planning_approved_application_handoff.json`
+- `bounded_path_planning_approved_application_tick.json`
+- `bounded_path_planning_approved_application_application.json`
+- `bounded_path_planning_approved_application_positions.json`
+- `bounded_path_planning_approved_application_digest.json`
+- `bounded_path_planning_approved_application_boundary.json`
+- `metrics.json`
+- `events.ndjson`
+
+Digest repeatability is checked by repeating the same fixture inputs and
+comparing aggregate planning, tick, application, and position-map signatures.
+v0, v1, and v2 remain unchanged. v3 remains fixture opt-in and not global.
+Hidden activation is false.
+
+Next step: Phase 4.27F — Bounded Path Planning Multi-Tick Replay Regression.

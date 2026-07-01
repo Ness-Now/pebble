@@ -80,6 +80,8 @@ let isBoundedPathPlanningHardeningScenario = options.scenario
     == "bounded_path_planning_hardening_smoke"
 let isBoundedPathPlanningToTickFirstStepScenario = options.scenario
     == "bounded_path_planning_to_tick_first_step_smoke"
+let isBoundedPathPlanningApprovedApplicationScenario = options.scenario
+    == "bounded_path_planning_approved_application_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -114,7 +116,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isAgentMovementPolicyConsolidatedReplayScenario
     || isBoundedPathPlanningFixtureScenario
     || isBoundedPathPlanningHardeningScenario
-    || isBoundedPathPlanningToTickFirstStepScenario)
+    || isBoundedPathPlanningToTickFirstStepScenario
+    || isBoundedPathPlanningApprovedApplicationScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -778,7 +781,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isAgentMovementPolicyConsolidatedReplayScenario
     || isBoundedPathPlanningFixtureScenario
     || isBoundedPathPlanningHardeningScenario
-    || isBoundedPathPlanningToTickFirstStepScenario {
+    || isBoundedPathPlanningToTickFirstStepScenario
+    || isBoundedPathPlanningApprovedApplicationScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -3034,6 +3038,30 @@ let boundedPathPlanningToTickFirstStepSuccess = isBoundedPathPlanningToTickFirst
     ? ((boundedPathPlanningToTickFirstStepReport?.success ?? false)
         && (boundedPathPlanningToTickFirstStepInvariantReport?.success ?? false))
     : nil
+let boundedPathPlanningApprovedApplicationReport = isBoundedPathPlanningApprovedApplicationScenario
+    ? makeBoundedPathPlanningApprovedApplicationReport(
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let boundedPathPlanningApprovedApplicationInvariantReport = isBoundedPathPlanningApprovedApplicationScenario
+    ? makeBoundedPathPlanningApprovedApplicationInvariantReport(
+        report: boundedPathPlanningApprovedApplicationReport,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let boundedPathPlanningApprovedApplicationDigest = boundedPathPlanningApprovedApplicationReport.map {
+    makeBoundedPathPlanningApprovedApplicationDigest(report: $0)
+}
+let boundedPathPlanningApprovedApplicationBoundary = boundedPathPlanningApprovedApplicationReport.map {
+    makeBoundedPathPlanningApprovedApplicationBoundaryReport(report: $0)
+}
+let boundedPathPlanningApprovedApplicationSummary = boundedPathPlanningApprovedApplicationReport?.summary
+let boundedPathPlanningApprovedApplicationSuccess = isBoundedPathPlanningApprovedApplicationScenario
+    ? ((boundedPathPlanningApprovedApplicationReport?.success ?? false)
+        && (boundedPathPlanningApprovedApplicationInvariantReport?.success ?? false))
+    : nil
 let multiTickClosedLoopReport = isMultiTickClosedLoopFixtureScenario
     ? makeMultiTickClosedLoopFixtureReport(
         scenario: options.scenario,
@@ -3669,6 +3697,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (boundedPathPlanningFixtureSuccess ?? true)
     && (boundedPathPlanningHardeningSuccess ?? true)
     && (boundedPathPlanningToTickFirstStepSuccess ?? true)
+    && (boundedPathPlanningApprovedApplicationSuccess ?? true)
     && (multiTickClosedLoopSuccess ?? true)
     && (multiTickClosedLoopHardeningSuccess ?? true)
     && (multiTickClosedLoopLiveReadonlySuccess ?? true)
@@ -5411,6 +5440,57 @@ if options.outPath != nil {
                 replanningPerformed: summary.dynamicReplanningUsed
             ))
         }
+        if let boundedPathPlanningApprovedApplicationReport {
+            let summary = boundedPathPlanningApprovedApplicationReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_bounded_path_planning_approved_application_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                seed: options.seed,
+                success: boundedPathPlanningApprovedApplicationSuccess,
+                passed: summary.casesPassed,
+                failed: summary.casesFailed,
+                completed: summary.approvedApplications,
+                displacementsApplied: summary.displacementsApplied,
+                pathsFound: summary.selectedFirstSteps,
+                pathsNotFound: summary.noPathPlans,
+                nodes: summary.nodesVisitedMax,
+                pathLength: summary.stepsMax,
+                candidates: summary.handoffIntents,
+                decisions: summary.movementIntentInputs,
+                maxAlternatesMax: summary.maxStepsMax,
+                bounded: summary.stepsWithinMax && summary.nodesWithinMax,
+                oneEdgeAlternates: summary.oneEdgeSteps && summary.sameYSteps,
+                v0Unchanged: summary.v0Unchanged,
+                v1Unchanged: summary.v1Unchanged,
+                v2OptIn: summary.v3OptIn,
+                v2NotGlobal: summary.v3NotGlobal,
+                hiddenActivationDetected: summary.hiddenActivationDetected,
+                terrainMutated: summary.terrainMutated,
+                coreEntityMoved: summary.coreEntityMoved,
+                physicalPlaceholderMoved: summary.physicalPlaceholderMoved,
+                cases: summary.cases,
+                movementIntentInputsTotal: summary.movementIntentInputs,
+                tickDeniedConflictTotal: summary.tickDeniedConflict,
+                tickApprovedTotal: summary.tickApproved,
+                tickDeniedTotal: summary.tickDenied,
+                tickWorldReadOnlyUsed: summary.tickWorldReadOnlyUsed,
+                worldMutated: summary.worldMutated,
+                repeatabilityChecks: 2,
+                repeatabilityFailures: summary.repeatabilityFailures,
+                routeFollowingUsed: summary.routeFollowingUsed,
+                tickReadCollision: summary.tickReadCollision,
+                worldUsed: summary.worldRead || summary.tickWorldReadOnlyUsed,
+                collisionRead: summary.collisionRead || summary.tickReadCollision,
+                movementApplied: summary.movementApplied,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingLiveUsed,
+                replanningPerformed: summary.dynamicReplanningUsed
+            ))
+        }
         if let multiTickClosedLoopReport {
             let summary = multiTickClosedLoopReport.summary
             try appendEvent(RunEvent(
@@ -6807,6 +6887,54 @@ if let outPath = options.outPath {
             try writeJSON(
                 boundedPathPlanningToTickFirstStepInvariantReport,
                 to: outURL.appendingPathComponent("bounded_path_planning_to_tick_first_step_invariant_report.json")
+            )
+        }
+        if let boundedPathPlanningApprovedApplicationReport {
+            try writeJSON(
+                boundedPathPlanningApprovedApplicationReport,
+                to: outURL.appendingPathComponent("bounded_path_planning_approved_application_report.json")
+            )
+            try writeJSON(
+                boundedPathPlanningApprovedApplicationReport.cases,
+                to: outURL.appendingPathComponent("bounded_path_planning_approved_application_cases.json")
+            )
+            try writeJSON(
+                boundedPathPlanningApprovedApplicationReport.plans,
+                to: outURL.appendingPathComponent("bounded_path_planning_approved_application_plans.json")
+            )
+            try writeJSON(
+                boundedPathPlanningApprovedApplicationReport.handoffs,
+                to: outURL.appendingPathComponent("bounded_path_planning_approved_application_handoff.json")
+            )
+            try writeJSON(
+                boundedPathPlanningApprovedApplicationReport.tickReports,
+                to: outURL.appendingPathComponent("bounded_path_planning_approved_application_tick.json")
+            )
+            try writeJSON(
+                boundedPathPlanningApprovedApplicationReport.applications,
+                to: outURL.appendingPathComponent("bounded_path_planning_approved_application_application.json")
+            )
+            try writeJSON(
+                boundedPathPlanningApprovedApplicationReport.positions,
+                to: outURL.appendingPathComponent("bounded_path_planning_approved_application_positions.json")
+            )
+        }
+        if let boundedPathPlanningApprovedApplicationDigest {
+            try writeJSON(
+                boundedPathPlanningApprovedApplicationDigest,
+                to: outURL.appendingPathComponent("bounded_path_planning_approved_application_digest.json")
+            )
+        }
+        if let boundedPathPlanningApprovedApplicationBoundary {
+            try writeJSON(
+                boundedPathPlanningApprovedApplicationBoundary,
+                to: outURL.appendingPathComponent("bounded_path_planning_approved_application_boundary.json")
+            )
+        }
+        if let boundedPathPlanningApprovedApplicationInvariantReport {
+            try writeJSON(
+                boundedPathPlanningApprovedApplicationInvariantReport,
+                to: outURL.appendingPathComponent("bounded_path_planning_approved_application_invariant_report.json")
             )
         }
         if let multiTickClosedLoopReport {
@@ -8769,7 +8897,15 @@ if let outPath = options.outPath {
             routeFollowingLiveHardeningSuccess: routeFollowingLiveHardeningSuccess,
             successCriteria: successCriteria
         )
-        if let boundedPathPlanningToTickFirstStepReport {
+        if let boundedPathPlanningApprovedApplicationReport {
+            try writeJSON(
+                makeBoundedPathPlanningApprovedApplicationMetrics(
+                    report: boundedPathPlanningApprovedApplicationReport,
+                    success: boundedPathPlanningApprovedApplicationSuccess
+                ),
+                to: outURL.appendingPathComponent("metrics.json")
+            )
+        } else if let boundedPathPlanningToTickFirstStepReport {
             try writeJSON(
                 makeBoundedPathPlanningToTickFirstStepMetrics(
                     report: boundedPathPlanningToTickFirstStepReport,
