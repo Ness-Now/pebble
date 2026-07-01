@@ -810,3 +810,13 @@ The future alternate hint mechanism must remain bounded and local:
 The tick layer remains responsible for arbitration and collision. Approved
 application remains lab-map-only. Any future behavior should be explicit and
 opt-in, preferably via a future v2 policy rather than changing v0 or v1.
+
+## Transition To Policy Consolidation
+
+Phase 4.26A extends this closed-loop boundary planning with a dedicated agent
+movement policy consolidation plan:
+`docs/pebblelab/PHASE_4_AGENT_MOVEMENT_POLICY_CONSOLIDATION_PLAN.md`.
+
+That follow-up keeps v0/v1/v2 explicit, preserves policy/tick/application
+separation, and still excludes pathfinding, replanning, avoidance, reservation
+runtime, route following, memory/goals, and terrain/world mutation.

@@ -2165,3 +2165,35 @@ placeholder movement, gameplay movement, and terrain/world mutation.
 
 Next recommended step: Phase 4.26A - Agent Movement Policy Consolidation Plan
 Docs-Only.
+
+## Phase 4.26A - Agent Movement Policy Consolidation Plan Docs-Only
+
+Status: implemented and validated.
+
+Goal: document how PebbleLab should consolidate the existing agent movement
+policy stack before adding new movement capabilities or refactoring behavior.
+
+Validated planning scope:
+
+- current v0 baseline policy documented;
+- current v1 feedback-aware opt-in policy documented;
+- current v2 alternate local hint opt-in policy documented;
+- policy, intent production, tick, approved application, and replay boundaries
+  documented;
+- consolidation goals defined;
+- non-goals explicitly listed;
+- future naming plan proposed;
+- report, metrics, and event consolidation plans proposed;
+- 108 future invariants documented;
+- risk table documented;
+- future phase breakdown documented;
+- recommended 4.26B contract documented;
+- no Swift or runtime files modified.
+
+Out of scope for this phase and until after consolidation: pathfinding, path
+planning, route planning, route following, replanning, avoidance, reservation
+runtime, memory/goals, gameplay autonomy, physical/core entity movement, and
+terrain/world mutation.
+
+Next recommended step: Phase 4.26B - Agent Movement Policy Consolidation
+Fixture Smoke.

@@ -808,3 +808,26 @@ Limits:
 
 Next recommended step: Phase 4.26A - Agent Movement Policy Consolidation Plan
 Docs-Only.
+
+## Transition To Policy Consolidation
+
+Phase 4.25 completed deterministic bounded alternate local hints through
+fixture, hardening, live read-only, approved application, and multi-tick replay.
+The validated v2 policy remains explicit opt-in, v0 and v1 remain unchanged,
+and replay proves deterministic feedback carryover with stable digests.
+
+Phase 4.26A documents agent movement policy consolidation before any new
+behavior or path planning work. The dedicated plan is
+`docs/pebblelab/PHASE_4_AGENT_MOVEMENT_POLICY_CONSOLIDATION_PLAN.md`.
+
+The consolidation boundary remains:
+
+- v2 opt-in only;
+- no pathfinding;
+- no route planning;
+- no route following;
+- no replanning;
+- no avoidance;
+- no reservation runtime;
+- no memory/goals;
+- no terrain/world mutation.

@@ -8503,3 +8503,140 @@ The report confirms v0 and v1 unchanged, v2 opt-in, policy
 ### Next Step
 
 Phase 4.26A — Agent Movement Policy Consolidation Plan Docs-Only.
+
+## 2026-07-01 — Phase 4.26A agent movement policy consolidation planning docs-only
+
+### Objective
+
+Document the agent movement policy consolidation plan before adding any new
+behavior or refactoring. The phase records the current v0/v1/v2 stack,
+policy/tick/application boundaries, naming recommendations, report/metrics/event
+consolidation direction, invariants, risks, and the recommended 4.26B contract.
+
+### Validated Starting Point
+
+The starting point includes agent intent production, feedback consumption,
+feedback injection into `LabAgentIntentContext.lastFeedback`, feedback-aware v1,
+alternate local hint v2, tick fixture arbitration, tick live read-only
+collision evidence, tick approved application, multi-tick closed loop, and
+alternate local hint replay/determinism. The latest validated scenario is
+`alternate_local_hint_multi_tick_replay_smoke`.
+
+### Why Docs-Only
+
+The policy surface has accumulated cleanly, but it now has several versions,
+scenario families, report shapes, metrics, events, and replay summaries. Before
+adding path planning or broader movement intelligence, the boundary between
+policy, feedback, tick arbitration, collision evidence, approved application,
+and replay needs to be documented without changing runtime behavior.
+
+### New Document
+
+Created `docs/pebblelab/PHASE_4_AGENT_MOVEMENT_POLICY_CONSOLIDATION_PLAN.md`.
+
+### Current Policy Stack
+
+- v0: baseline deterministic intent proposal using context/local hints only.
+- v1: explicit opt-in feedback-aware policy; no feedback, `moved`, and
+  `approvedForMovement` keep baseline; blocked feedback becomes `noIntent`.
+- v2: explicit opt-in alternate local hint policy; known blocked hints can
+  produce bounded deterministic alternates, while empty/unknown hints become
+  `noIntent`.
+
+All three policies keep policy reads separate from World/collision, memory,
+goals, route following, pathfinding, replanning, avoidance, reservation runtime,
+and movement application.
+
+### Layer Boundary
+
+The plan separates:
+
+- policy layer: context plus feedback plus local hints to proposal;
+- intent production layer: deterministic proposal collection and filtering;
+- tick layer: conflict arbitration, optional read-only collision evidence, and
+  feedback;
+- approved application layer: lab-map-only movement for approved resolutions;
+- replay layer: previous-tick feedback carryover and digest repeatability.
+
+### Consolidation Goals
+
+The plan recommends clearer naming, standardized boundary flags, common report
+sections, common summary fields, stable metrics/event conventions, digest-based
+replay checks, and no behavior change to v0, v1, or v2.
+
+### Non-Goals
+
+4.26A explicitly excludes pathfinding, route planning, route following,
+replanning, avoidance, reservation runtime, memory, goals, learning,
+LLM/RL/Python, gameplay autonomy, physical entity movement, terrain mutation,
+World mutation, and any behavior change to v0/v1/v2.
+
+### Naming Plan
+
+The plan proposes future names such as `LabAgentMovementPolicyVersion`,
+`LabAgentMovementPolicyDecision`, `LabAgentMovementPolicyBoundary`, and
+`LabAgentMovementTickBoundary`. These are documented only; no Swift types are
+added in 4.26A.
+
+### Report, Metrics, And Event Consolidation
+
+The plan proposes common report sections for scenario, seed, requested/executed
+ticks, policy mode, contexts, decisions, tick records, feedback ledger,
+positions, replay digest, summary, boundary, and invariants. Metrics should use
+stable family prefixes and common names for common totals. Events should remain
+aggregate, include policy mode and boundary fields, and avoid hidden feature
+activation.
+
+### Invariants
+
+The plan lists 108 future invariants covering policy version stability,
+explicit opt-in behavior, no hidden activation, policy/tick/application
+boundaries, feedback N-to-N+1 carryover, replay digest stability, no
+pathfinding/replanning/avoidance/reservation/route following, no memory/goals,
+no physical/core movement, no terrain/world mutation, and prior scenario
+regressions.
+
+### Risk Table
+
+The risk table covers v2 replacing v1, v1/v0 drift, report and metrics drift,
+policy World/collision reads, tick read-only modes applying movement,
+approved application mutating World, replay becoming a gameplay loop,
+alternate hints becoming pathfinding, consolidation becoming behavior refactor,
+nondeterministic outputs, duplicate summary disagreement, and path planning
+sneaking into consolidation.
+
+### Future Phase Breakdown
+
+- Phase 4.26B: Agent Movement Policy Consolidation Fixture Smoke.
+- Phase 4.26C: Policy Boundary Hardening.
+- Phase 4.26D: Consolidated Replay Regression.
+- Phase 4.27A: Bounded Path Planning Plan Docs-Only.
+
+### Recommended 4.26B Contract
+
+4.26B should be a no-behavior-change fixture smoke. It may introduce a
+consolidated report adapter, run representative v0/v1/v2 contexts, compare
+signatures against direct policy outputs, prove no policy drift, and keep no
+World/collision/pathfinding/replanning/avoidance/reservation/route following.
+
+### Validation Commands
+
+- `git status`
+- `git diff --name-only`
+- verify no Swift files changed
+- `swift build`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+- `git status`
+
+### Results
+
+- Docs-only edits were made.
+- No Swift files were modified.
+- `swift build` passed.
+- `swift run -c release pebsmoke` passed with 456 passed and 0 failed.
+- `git diff --check` passed.
+
+### Next Step
+
+Phase 4.26B — Agent Movement Policy Consolidation Fixture Smoke.
