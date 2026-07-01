@@ -9470,3 +9470,92 @@ step agents preserved, abstract/physical divergence zero, and digest
 repeatability true.
 
 Next step: Phase 4.27F — Bounded Path Planning Multi-Tick Replay Regression.
+
+## 2026-07-01 — Phase 4.27F bounded path planning multi-tick replay regression
+
+Objective: add a deterministic bounded path planning replay over multiple
+ticks while proving there is no persistent route following.
+
+Starting point: 4.27B introduced fixture-only bounded planning, 4.27C hardened
+the planner, 4.27D handed only selected first steps to tick fixture, and 4.27E
+applied only approved first steps to lab abstract/physical maps. No prior
+bounded planning scenario replayed the loop across ticks.
+
+Why multi-tick replay: the next risk is accidentally treating a bounded plan as
+a route to follow. This phase locks the opposite behavior: every tick rebuilds
+contexts from current lab maps and replans from scratch. Advisory path steps
+are recorded for inspection only and are not carried as executable state.
+
+Implementation summary:
+
+- added `bounded_path_planning_multi_tick_replay_smoke`;
+- fixed replay length is three ticks;
+- nine fixture agents cover direct progress, multi-step progress, detour,
+  same-destination conflict, no path, zero step, source mismatch, and stale
+  intent;
+- contexts are rebuilt from current lab abstract positions each tick;
+- planner v3 remains explicit fixture opt-in and not global;
+- only current `selectedFirstStep` becomes a movement intent;
+- tick fixture owns approval/denial/conflict/source/stale decisions;
+- only approved first steps mutate lab abstract and physical maps;
+- denied/no-path/zero-step/source/stale/conflict agents are preserved.
+
+Feedback ledger: tick feedback is stored per emitting tick and consumed only by
+the next tick. The report proves feedback from tick 0 is consumed at tick 1 and
+feedback from tick 1 is consumed at tick 2. Same-tick feedback consumption,
+future feedback consumption, and cross-agent feedback leaks are all zero.
+
+Digest repeatability: the scenario runs the same replay twice and compares the
+aggregate tick/context/plan/handoff/tick-decision/application/feedback digest.
+The digests match and repeatability failures are zero.
+
+Outputs, invariants, metrics, and event:
+
+- `bounded_path_planning_multi_tick_replay_report.json`
+- `bounded_path_planning_multi_tick_replay_invariant_report.json`
+- `bounded_path_planning_multi_tick_replay_ticks.json`
+- `bounded_path_planning_multi_tick_replay_feedback.json`
+- `bounded_path_planning_multi_tick_replay_plans.json`
+- `bounded_path_planning_multi_tick_replay_handoff.json`
+- `bounded_path_planning_multi_tick_replay_tick.json`
+- `bounded_path_planning_multi_tick_replay_application.json`
+- `bounded_path_planning_multi_tick_replay_positions.json`
+- `bounded_path_planning_multi_tick_replay_digest.json`
+- `bounded_path_planning_multi_tick_replay_boundary.json`
+- `boundedPathPlanningMultiTickReplay*` metrics
+- `lab_bounded_path_planning_multi_tick_replay_recorded`
+
+Boundary confirmation: no World read, no live collision read, no live tick, no
+route following, no full-route execution, no persistent route commitment, no
+advisory step application, no second-step auto-application, no memory/goals, no
+reservation runtime, no live pathfinding, no unbounded search, no dynamic
+replanning, no core entity movement, no physical placeholder movement, and no
+terrain/World mutation.
+
+Validation commands:
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_multi_tick_replay_smoke --seed 42 --ticks 3 --out runs/check_bounded_path_planning_multi_tick_replay`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_fixture_smoke --seed 42 --ticks 0 --out runs/check_bounded_path_fixture_after_multi_tick_replay`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_hardening_smoke --seed 42 --ticks 0 --out runs/check_bounded_path_hardening_after_multi_tick_replay`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_to_tick_first_step_smoke --seed 42 --ticks 0 --out runs/check_bounded_path_first_step_handoff_after_multi_tick_replay`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_approved_application_smoke --seed 42 --ticks 0 --out runs/check_bounded_path_approved_application_after_multi_tick_replay`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_consolidation_fixture_smoke --seed 42 --ticks 0 --out runs/check_policy_consolidation_fixture_after_bounded_path_multi_tick_replay`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_boundary_hardening_smoke --seed 42 --ticks 0 --out runs/check_policy_boundary_hardening_after_bounded_path_multi_tick_replay`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_consolidated_replay_regression_smoke --seed 42 --ticks 3 --out runs/check_policy_consolidated_replay_after_bounded_path_multi_tick_replay`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_multi_tick_replay_smoke --seed 42 --ticks 3 --out runs/check_alternate_local_hint_multi_tick_replay_after_bounded_path_multi_tick_replay`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_approved_application_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_approved_application_after_bounded_path_multi_tick_replay`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_hardening_after_bounded_path_multi_tick_replay`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_bounded_path_multi_tick_replay`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+Results: validation passed in the local debug toolchain. The replay report and
+invariant report show success true, requested/executed ticks 3, feedback
+N-to-N+1 with zero same/future/cross-agent leaks, first-step-only
+handoff/application, abstract/physical divergence zero, and digest
+repeatability true.
+
+Next step: Phase 4.28A — Agent Movement Stack Consolidation Docs-Only.

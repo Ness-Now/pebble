@@ -637,3 +637,58 @@ v0, v1, and v2 remain unchanged. v3 remains fixture opt-in and not global.
 Hidden activation is false.
 
 Next step: Phase 4.27F — Bounded Path Planning Multi-Tick Replay Regression.
+
+## Phase 4.27F Implementation Status
+
+Status: implemented and validated.
+
+Phase 4.27F added `bounded_path_planning_multi_tick_replay_smoke`, a
+deterministic fixed-length replay that runs bounded path planning across three
+ticks without route following or persistent route commitment.
+
+At each tick, the scenario rebuilds planning contexts from the current lab
+abstract position map, replans bounded paths, sends only each current
+`selectedFirstStep` to the existing tick fixture, applies only tick-approved
+first steps to lab abstract and physical maps, emits tick feedback, and carries
+that feedback to the next tick. No route or advisory step is retained as
+executable state.
+
+The replay validates:
+
+- replan each tick from current lab positions;
+- no persistent route commitment;
+- first-step-only handoff and application;
+- advisory route steps are not sent and not applied;
+- feedback tick N is consumed only at tick N+1;
+- same-tick, future, and cross-agent feedback leaks are zero;
+- denied, no-path, zero-step, source mismatch, stale, and conflict agents are
+  preserved;
+- abstract and physical lab maps stay synchronized;
+- digest repeatability across two identical replay runs.
+
+Boundary rules remain explicit. The scenario does not use `World`, read live
+collision, call live tick, move core entities, move physical placeholders, use
+route following, execute full routes, update memory/goals, use reservation
+runtime, or mutate terrain/World.
+
+Outputs produced:
+
+- `bounded_path_planning_multi_tick_replay_report.json`
+- `bounded_path_planning_multi_tick_replay_invariant_report.json`
+- `bounded_path_planning_multi_tick_replay_ticks.json`
+- `bounded_path_planning_multi_tick_replay_feedback.json`
+- `bounded_path_planning_multi_tick_replay_plans.json`
+- `bounded_path_planning_multi_tick_replay_handoff.json`
+- `bounded_path_planning_multi_tick_replay_tick.json`
+- `bounded_path_planning_multi_tick_replay_application.json`
+- `bounded_path_planning_multi_tick_replay_positions.json`
+- `bounded_path_planning_multi_tick_replay_digest.json`
+- `bounded_path_planning_multi_tick_replay_boundary.json`
+- `metrics.json`
+- `events.ndjson`
+
+Limits remain explicit: route following, full-route execution, persistent route
+commitment, live World/collision, memory/goals, reservation runtime, and
+terrain/World mutation remain out of scope.
+
+Next step: Phase 4.28A — Agent Movement Stack Consolidation Docs-Only.
