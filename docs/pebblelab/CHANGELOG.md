@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added PebbleLab goal selection from retrieved memory hardening smoke.
 - Added PebbleLab goal selection from retrieved memory fixture smoke.
 - Documented PebbleLab goal selection from retrieved memory plan.
 - Added PebbleLab memory retrieval hardening smoke.

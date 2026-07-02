@@ -410,3 +410,29 @@ movement-stack feedback, embeddings, Python, LLM, or RL.
 
 The recommended next phase is Phase 5.4C - Goal Selection From Retrieved
 Memory Hardening.
+
+## Phase 5.4C Status
+
+Phase 5.4C implemented `goal_selection_from_memory_hardening_smoke`, a
+fixture-only hardening scenario for goal selection from retrieved memory.
+
+The scenario validates 23 cases covering baseline compatibility, safety,
+curiosity, nearby-agent, and idle mappings, empty retrieval, currentGoal
+continuity, duplicate candidate merge, maxCandidates bounds and clamping,
+bounded scores, deterministic tie-breaks, unsorted input, conflicting
+safety/curiosity memories, low-confidence memory, unknown memory types,
+unknown goals, unchanged goals, memory influence reasons, no behavior action
+execution, no memory mutation, no retrieval rerun, and digest repeatability.
+The validated debug run produced 22 decisions, 43 candidates, 15 goal changes,
+7 unchanged goals, 15 memory-influenced decisions, 3 empty retrieval decisions,
+70 invariant checks passed, 0 invariant checks failed, and matching
+digest/repeat digest values.
+
+The scenario does not execute behavior actions, write or mutate memory, rerun
+retrieval, create a World, call the movement stack, mutate terrain, move Core
+entities, move physical placeholders, add behavior-loop integration, mood,
+emotional memory, relationships, trust, communication, community state,
+movement-stack feedback, embeddings, Python, LLM, or RL.
+
+The recommended next phase is Phase 5.5A - Behavior Loop Memory-Goal Bridge
+Planning.

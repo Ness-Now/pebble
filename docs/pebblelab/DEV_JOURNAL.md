@@ -11661,3 +11661,165 @@ limit, but production `PebbleLab` compilation stalled after planning/source
 emission and was interrupted as in prior runtime fixture phases.
 
 Next step: Phase 5.4C — Goal Selection From Retrieved Memory Hardening.
+
+## 2026-07-02 — Phase 5.4C goal selection from retrieved memory hardening smoke
+
+Objective: harden `LabGoalSelectionMemory` with a bounded fixture scenario
+covering the main edge cases before any behavior-loop integration.
+
+Starting point: branch `lab/pebblelab-v1`, commit
+`32890bee02c47a4716766406453fbebcf68b8a8e`, with Phase 5.4B complete.
+Phase 5.4B proved the first fixture-only bridge from provided retrieved
+memories to goal candidates and selected goal proposals. Phase 5.4C keeps the
+same boundary and expands coverage.
+
+Scenario name: `goal_selection_from_memory_hardening_smoke`.
+
+Hardening cases:
+
+- baseline fixture compatibility with 5.4B;
+- `safety_reaction` selects `seekSafety`;
+- `curiosity_reaction` selects `explore`;
+- `nearby_agent_observed` selects `observeOtherAgent`;
+- `idle_tick_summary` selects `idle`;
+- empty retrieval keeps currentGoal;
+- currentGoal continuity bonus;
+- duplicate candidate merge;
+- maxCandidates respected;
+- maxCandidates above the v0 limit is clamped to 5;
+- scores bounded;
+- deterministic tie-break;
+- unsorted input stable output;
+- conflicting safety and curiosity prioritizes safety when fear is high;
+- low-confidence memory does not override stronger currentGoal pressure;
+- unknown memory type ignored;
+- unknown goal not selected;
+- unchanged goal covered;
+- memory influence reason required;
+- behavior action not executed;
+- memory not mutated;
+- retrieval not rerun;
+- digest repeatability.
+
+Memory-to-goal mapping:
+
+- `safety_reaction` -> `seekSafety`;
+- `curiosity_reaction` -> `explore`;
+- `nearby_agent_observed` -> `observeOtherAgent`;
+- `idle_tick_summary` -> `idle`;
+- `goal_confirmed` / `goal_changed` remain limited to known current goals;
+- `behavior_action` / `effect_applied` only map through direct safe v0 string
+  matches.
+
+Candidates and decisions:
+
+- 23 cases;
+- 22 decisions;
+- 43 candidates;
+- selectedGoals = 22;
+- goalChanges = 15;
+- unchangedGoals = 7;
+- memoryInfluencedDecisions = 15;
+- emptyRetrievalDecisions = 3;
+- duplicate goals are merged and supportingMemoryCount increases.
+
+Scoring:
+
+- candidate score = memory score component + need/fear component +
+  currentGoal continuity component + source priority component;
+- score is bounded to 0...3;
+- safety/fear can outrank curiosity;
+- currentGoal continuity is a bonus, not a hard lock;
+- stable tie-break by score, priority, goal, source, and supporting memory
+  types;
+- no random, embeddings, LLM, or semantic guessing.
+
+Conflict handling: a case with safety and curiosity memories plus high fear
+selects `seekSafety`.
+
+Unknown memory/goal handling: unknown memory types are ignored, and the
+hardening fixture sanitizes unknown current goals to the known v0 fallback
+`idle` so an unknown goal is never selected.
+
+Metrics: `metrics.json` emits `goalSelectionMemoryHardening*`, including
+success, case counts, decisions, candidates, selected goals, goal changes,
+unchanged goals, influenced decisions, empty retrieval decisions,
+maxCandidates, bounded, deterministic order, behavior action execution,
+memory mutation, retrieval rerun, movement stack usage, World/terrain mutation,
+digest equality, and repeatability failures.
+
+Events:
+
+- `lab_goal_selection_memory_hardening_recorded`.
+
+Invariant report: `goal_selection_memory_hardening_invariant_report.json`
+includes 70 checks. Validated debug run result: 70 passed, 0 failed.
+
+Digest: `goal_selection_memory_hardening_digest.json` records digest
+`d5001cc2acdd000a`, repeat digest `d5001cc2acdd000a`, deterministicDigest
+true, and digestsEqual true.
+
+Boundary confirmations:
+
+- behaviorActionExecuted = false;
+- memoryMutated = false;
+- retrievalRerun = false;
+- movementStackUsed = false;
+- worldMutated = false;
+- terrainMutated = false;
+- no World is created for the scenario;
+- no behavior-loop integration, memory write, mood, relationships, trust,
+  communication, community, task board, route following, pathfinding,
+  reservation runtime, embeddings, Python, LLM, or RL is added.
+
+Outputs:
+
+- `goal_selection_memory_hardening_report.json`;
+- `goal_selection_memory_hardening_invariant_report.json`;
+- `goal_selection_memory_hardening_cases.json`;
+- `goal_selection_memory_hardening_candidates.json`;
+- `goal_selection_memory_hardening_decisions.json`;
+- `goal_selection_memory_hardening_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Validation commands:
+
+- `git status`;
+- `git branch --show-current`;
+- `git pull origin lab/pebblelab-v1`;
+- `git log --oneline -12`;
+- `swift build`;
+- `swift run PebbleLab -- --scenario goal_selection_from_memory_hardening_smoke --seed 42 --ticks 3 --out runs/check_goal_selection_memory_hardening`;
+- `swift run PebbleLab -- --scenario goal_selection_from_memory_fixture_smoke --seed 42 --ticks 3 --out runs/check_goal_selection_memory_fixture_after_hardening`;
+- `swift run PebbleLab -- --scenario memory_retrieval_fixture_smoke --seed 42 --ticks 3 --out runs/check_memory_retrieval_fixture_after_goal_selection_memory_hardening`;
+- `swift run PebbleLab -- --scenario memory_retrieval_hardening_smoke --seed 42 --ticks 3 --out runs/check_memory_retrieval_hardening_after_goal_selection_memory_hardening`;
+- `swift run PebbleLab -- --scenario memory_update_from_behavior_result_fixture_smoke --seed 42 --ticks 3 --out runs/check_memory_update_fixture_after_goal_selection_memory_hardening`;
+- `swift run PebbleLab -- --scenario memory_update_hardening_smoke --seed 42 --ticks 3 --out runs/check_memory_update_hardening_after_goal_selection_memory_hardening`;
+- `swift run PebbleLab -- --scenario behavior_loop_contract_fixture_smoke --seed 42 --ticks 3 --out runs/check_behavior_loop_contract_after_goal_selection_memory_hardening`;
+- `swift run PebbleLab -- --scenario behavior_loop_hardening_smoke --seed 42 --ticks 3 --out runs/check_behavior_loop_hardening_after_goal_selection_memory_hardening`;
+- `swift run PebbleLab -- --scenario agents_basic --seed 42 --agents 3 --ticks 3 --out runs/check_agents_basic_after_goal_selection_memory_hardening`;
+- `swift run PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_goal_selection_memory_hardening`;
+- `swift build -c release --product Pebble`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results: the goal selection from memory hardening scenario passed in debug
+with report success true, 23 cases, 23 cases passed, 0 cases failed, 22
+decisions, 43 candidates, 22 selected goals, 15 goal changes, 7 unchanged
+goals, 15 memory-influenced decisions, 3 empty retrieval decisions,
+maxCandidates 4, behaviorActionExecuted false, memoryMutated false,
+retrievalRerun false, movementStackUsed false, worldMutated false,
+terrainMutated false, 70 invariant checks passed, stable digest
+`d5001cc2acdd000a`, and `goalSelectionMemoryHardening*` metrics/events
+written. Non-regression scenarios for goal selection fixture, memory
+retrieval fixture/hardening, memory update fixture/hardening, behavior loop
+contract/hardening, `agents_basic`, and `regression_smoke` passed in debug.
+`swift build`, `swift build -c release --product Pebble`, and `swift run -c
+release pebsmoke` passed, with `pebsmoke` reporting 456 passed, 0 failed.
+Direct release `PebbleLab` scenario validation was attempted with a local
+timeout, but production `PebbleLab` compilation again stalled silently and was
+interrupted as in prior runtime fixture phases.
+
+Next step: Phase 5.5A — Behavior Loop Memory-Goal Bridge Planning.

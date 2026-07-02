@@ -108,6 +108,8 @@ let isMemoryRetrievalHardeningScenario = options.scenario
     == memoryRetrievalHardeningScenarioName
 let isGoalSelectionMemoryScenario = options.scenario
     == goalSelectionMemoryScenarioName
+let isGoalSelectionMemoryHardeningScenario = options.scenario
+    == goalSelectionMemoryHardeningScenarioName
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -156,7 +158,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isMemoryUpdateHardeningScenario
     || isMemoryRetrievalScenario
     || isMemoryRetrievalHardeningScenario
-    || isGoalSelectionMemoryScenario)
+    || isGoalSelectionMemoryScenario
+    || isGoalSelectionMemoryHardeningScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -834,7 +837,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isMemoryUpdateHardeningScenario
     || isMemoryRetrievalScenario
     || isMemoryRetrievalHardeningScenario
-    || isGoalSelectionMemoryScenario {
+    || isGoalSelectionMemoryScenario
+    || isGoalSelectionMemoryHardeningScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -4136,6 +4140,21 @@ let goalSelectionMemoryFixture: LabGoalSelectionFromMemoryFixture? = {
 let goalSelectionMemorySuccess = goalSelectionMemoryFixture.map {
     $0.report.success && $0.invariantReport.success
 }
+let goalSelectionMemoryHardeningFixture: LabGoalSelectionMemoryHardeningFixture? = {
+    guard isGoalSelectionMemoryHardeningScenario else { return nil }
+    do {
+        return try makeGoalSelectionMemoryHardeningFixture(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticks: ticksCompleted
+        )
+    } catch {
+        fail("failed to build goal selection from memory hardening fixture: \(error)")
+    }
+}()
+let goalSelectionMemoryHardeningSuccess = goalSelectionMemoryHardeningFixture.map {
+    $0.report.success && $0.invariantReport.success
+}
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
     && successCriteria.agentTicksRecorded
@@ -4215,6 +4234,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (memoryRetrievalSuccess ?? true)
     && (memoryRetrievalHardeningSuccess ?? true)
     && (goalSelectionMemorySuccess ?? true)
+    && (goalSelectionMemoryHardeningSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -8082,6 +8102,33 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("goal_selection_memory_digest.json")
             )
         }
+        if let goalSelectionMemoryHardeningFixture {
+            appendEventLines(goalSelectionMemoryHardeningFixture.eventLines)
+            try writeJSON(
+                goalSelectionMemoryHardeningFixture.report,
+                to: outURL.appendingPathComponent("goal_selection_memory_hardening_report.json")
+            )
+            try writeJSON(
+                goalSelectionMemoryHardeningFixture.invariantReport,
+                to: outURL.appendingPathComponent("goal_selection_memory_hardening_invariant_report.json")
+            )
+            try writeJSON(
+                goalSelectionMemoryHardeningFixture.cases,
+                to: outURL.appendingPathComponent("goal_selection_memory_hardening_cases.json")
+            )
+            try writeJSON(
+                goalSelectionMemoryHardeningFixture.candidates,
+                to: outURL.appendingPathComponent("goal_selection_memory_hardening_candidates.json")
+            )
+            try writeJSON(
+                goalSelectionMemoryHardeningFixture.decisions,
+                to: outURL.appendingPathComponent("goal_selection_memory_hardening_decisions.json")
+            )
+            try writeJSON(
+                goalSelectionMemoryHardeningFixture.digest,
+                to: outURL.appendingPathComponent("goal_selection_memory_hardening_digest.json")
+            )
+        }
         if let multiTickClosedLoopReport {
             try writeJSON(
                 multiTickClosedLoopReport,
@@ -10042,7 +10089,12 @@ if let outPath = options.outPath {
             routeFollowingLiveHardeningSuccess: routeFollowingLiveHardeningSuccess,
             successCriteria: successCriteria
         )
-        if let goalSelectionMemoryFixture {
+        if let goalSelectionMemoryHardeningFixture {
+            try writeJSON(
+                goalSelectionMemoryHardeningFixture.metrics,
+                to: outURL.appendingPathComponent("metrics.json")
+            )
+        } else if let goalSelectionMemoryFixture {
             try writeJSON(
                 goalSelectionMemoryFixture.metrics,
                 to: outURL.appendingPathComponent("metrics.json")

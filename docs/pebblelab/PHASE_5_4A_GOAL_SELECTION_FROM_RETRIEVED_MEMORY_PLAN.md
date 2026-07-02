@@ -749,3 +749,144 @@ Limitations:
   embeddings, Python, LLM, or RL.
 
 Next phase: Phase 5.4C - Goal Selection From Retrieved Memory Hardening.
+
+## Phase 5.4C Implementation Status
+
+Phase 5.4C added `goal_selection_from_memory_hardening_smoke`, a fixture-only
+hardening scenario for the goal-selection-from-retrieved-memory contract.
+
+Scenario:
+
+- `goal_selection_from_memory_hardening_smoke`;
+- fixture-only, no World created;
+- consumes provided retrieved-memory records;
+- does not rerun retrieval;
+- does not execute behavior actions;
+- does not write or mutate memory;
+- does not call the movement stack.
+
+Cases:
+
+- baseline compatible with Phase 5.4B;
+- safety memory selects `seekSafety`;
+- curiosity memory selects `explore`;
+- nearby memory selects `observeOtherAgent`;
+- idle memory selects `idle`;
+- empty retrieval keeps currentGoal;
+- currentGoal continuity bonus;
+- duplicate candidate merge;
+- maxCandidates respected;
+- maxCandidates above the v0 limit is clamped to 5;
+- scores remain bounded;
+- deterministic tie-break;
+- unsorted input produces stable output;
+- conflicting safety and curiosity prioritizes safety when fear is high;
+- low-confidence memory does not override stronger currentGoal pressure;
+- unknown memory type is ignored;
+- unknown goal is not selected;
+- unchanged goal is covered;
+- memory influence reason is required;
+- behavior action execution remains false;
+- memory mutation remains false;
+- retrieval rerun remains false;
+- digest repeatability is stable.
+
+Memory-to-goal mapping remains the explicit v0 table:
+
+- `safety_reaction` -> `seekSafety`;
+- `curiosity_reaction` -> `explore`;
+- `nearby_agent_observed` -> `observeOtherAgent`;
+- `idle_tick_summary` -> `idle`;
+- `goal_confirmed` and `goal_changed` remain limited to known current goals;
+- `behavior_action` and `effect_applied` only use direct safe v0 matches.
+
+Candidates and decisions:
+
+- `goal_selection_memory_hardening_candidates.json`;
+- `goal_selection_memory_hardening_decisions.json`;
+- 22 decisions in the validated debug run;
+- 43 candidates;
+- selectedGoals = 22;
+- goalChanges = 15;
+- unchangedGoals = 7;
+- memoryInfluencedDecisions = 15;
+- emptyRetrievalDecisions = 3.
+
+Scoring:
+
+- memory score component;
+- need/fear component;
+- currentGoal continuity component;
+- source priority component;
+- scores bounded to 0...3;
+- stable tie-break by score, priority, goal, source, and supporting memory
+  types;
+- no random, embeddings, LLM, semantic guessing, or unordered-container
+  influence.
+
+Report:
+
+- `goal_selection_memory_hardening_report.json`;
+- success true in validated debug run;
+- cases = 23;
+- casesPassed = 23;
+- casesFailed = 0;
+- decisions = 22;
+- candidates = 43;
+- maxCandidates = 4;
+- bounded = true;
+- deterministicOrder = true;
+- behaviorActionExecuted = false;
+- memoryMutated = false;
+- retrievalRerun = false;
+- movementStackUsed = false;
+- worldMutated = false;
+- terrainMutated = false.
+
+Invariant:
+
+- `goal_selection_memory_hardening_invariant_report.json`;
+- 70 checks passed;
+- 0 checks failed;
+- covers scenario, seed, all required cases, selected goal presence, known v0
+  goals, goal changes, unchanged goals, memory influence, empty retrieval,
+  maxCandidates, duplicate merges, score bounds, deterministic order, selected
+  candidate membership, influence reasons, boundary flags, digest equality,
+  outputs, metrics/events, docs, and success contract.
+
+Digest:
+
+- `goal_selection_memory_hardening_digest.json`;
+- digest `d5001cc2acdd000a`;
+- repeat digest `d5001cc2acdd000a`;
+- repeatabilityFailures = 0.
+
+Metrics:
+
+- `metrics.json`;
+- emits `goalSelectionMemoryHardening*` metrics for success, cases, decisions,
+  candidates, selected goals, goal changes, unchanged goals, influenced
+  decisions, empty retrieval decisions, maxCandidates, bounded,
+  deterministic order, behavior action execution, memory mutation, retrieval
+  rerun, movement stack usage, World/terrain mutation, digest equality, and
+  repeatability failures.
+
+Events:
+
+- `lab_goal_selection_memory_hardening_recorded`.
+
+Limitations:
+
+- no behavior-loop integration;
+- no behavior action execution;
+- no memory write or mutation;
+- no retrieval rerun;
+- no mood, emotional memory, relationships, trust, communication, community,
+  social memory, or task board;
+- no movement stack feedback source;
+- no World or terrain mutation;
+- no physical placeholder or Core entity creation/movement;
+- no route following, full-route execution, pathfinding, reservation runtime,
+  embeddings, Python, LLM, or RL.
+
+Next phase: Phase 5.5A - Behavior Loop Memory-Goal Bridge Planning.

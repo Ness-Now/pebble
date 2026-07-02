@@ -3446,9 +3446,62 @@ Hardening.
 
 ## Phase 5.4C - Goal Selection From Retrieved Memory Hardening
 
-Status: planned.
+Status: implemented and validated.
 
 Goal: harden goal selection from retrieved memory with boundary cases for
 needs overriding memory, empty retrieval, duplicate merges, candidate bounds,
 score ties, invalid memory-to-goal mappings, deterministic ordering, and
 read-only guarantees before any behavior-loop integration.
+
+Implemented as `goal_selection_from_memory_hardening_smoke`.
+
+Validation:
+
+- 23 hardening cases passed, 0 failed;
+- 22 decisions;
+- 43 candidates;
+- selectedGoals = decisions;
+- goalChanges = 15;
+- unchangedGoals = 7;
+- memoryInfluencedDecisions = 15;
+- emptyRetrievalDecisions = 3;
+- maxCandidates = 4, bounded under the v0 limit of 5;
+- baseline compatibility with Phase 5.4B;
+- safety memory selects `seekSafety`;
+- curiosity memory selects `explore`;
+- nearby memory selects `observeOtherAgent`;
+- idle memory selects `idle`;
+- empty retrieval keeps currentGoal;
+- duplicate candidates are merged;
+- out-of-bounds maxCandidates is clamped;
+- conflicting safety/curiosity favors safety when fear is high;
+- low-confidence memory does not override a stronger current goal;
+- unknown memory types are ignored;
+- unknown goals are not selected;
+- behaviorActionExecuted = false;
+- memoryMutated = false;
+- retrievalRerun = false;
+- movementStackUsed = false;
+- worldMutated = false;
+- terrainMutated = false;
+- deterministic digest and repeat digest equal;
+- repeatabilityFailures = 0;
+- `goalSelectionMemoryHardening*` metrics emitted;
+- `lab_goal_selection_memory_hardening_recorded` emitted.
+
+Behavior-loop integration, behavior action execution, memory writes, retrieval
+reruns, mood, relationships, trust, communication, social memory, society
+runtime, movement stack feedback, World mutation, Python, LLM, embeddings, and
+RL remain out of scope.
+
+Next recommended step: Phase 5.5A - Behavior Loop Memory-Goal Bridge
+Planning.
+
+## Phase 5.5A - Behavior Loop Memory-Goal Bridge Planning
+
+Status: planned.
+
+Goal: define how the behavior loop may later consume retrieved-memory goal
+selection decisions as an input, without yet executing actions from memory,
+mutating World/terrain, calling the movement stack, or adding mood,
+relationships, communication, social memory, Python, LLM, or RL.
