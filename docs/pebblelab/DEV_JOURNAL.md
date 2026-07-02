@@ -11530,3 +11530,134 @@ PebbleCore files were modified. `swift build`, `swift build -c release
 `pebsmoke` was not run because this phase is docs-only.
 
 Next step: Phase 5.4B — Goal Selection From Retrieved Memory Fixture Smoke.
+
+## 2026-07-02 — Phase 5.4B goal selection from retrieved memory fixture smoke
+
+Objective: implement the first fixture-only runtime layer that turns
+controlled retrieved memories into bounded goal candidates and selected goal
+proposals, without executing behavior actions or integrating into normal
+behavior runtime.
+
+Starting point: branch `lab/pebblelab-v1`, commit
+`b9605601cbaaaca1abafe1ebab25f32a6587456a`, with Phase 5.4A complete.
+Phase 5.4A defined the contract for retrieved memories -> goal candidates ->
+selected goal proposal. Phase 5.4B implements that contract as an isolated
+fixture.
+
+Scenario name: `goal_selection_from_memory_fixture_smoke`.
+
+Memory-to-goal mapping:
+
+- `safety_reaction` -> `seekSafety`;
+- `curiosity_reaction` -> `explore`;
+- `nearby_agent_observed` -> `observeOtherAgent`;
+- `idle_tick_summary` -> `idle`;
+- `goal_confirmed` / `goal_changed` remain limited to known current/confirmed
+  goals;
+- `behavior_action` / `effect_applied` only map through direct safe v0 matches
+  in the fixture.
+
+Candidates and decisions:
+
+- 5 controlled agent inputs;
+- 5 decisions;
+- 9 candidates;
+- selectedGoals = 5;
+- goalChanges = 4;
+- unchangedGoals = 1;
+- memoryInfluencedDecisions = 4;
+- emptyRetrievalDecisions = 1;
+- duplicate `explore` candidates merge into one candidate with increased
+  supportingMemoryCount.
+
+Scoring:
+
+- candidate score = memory score component + need/fear component +
+  currentGoal continuity component + source priority component;
+- score is bounded;
+- safety/fear can outrank curiosity;
+- currentGoal continuity is a bonus, not a hard lock;
+- stable tie-break by score, priority, goal, source, and supporting memory
+  types;
+- no random, embeddings, LLM, or semantic guessing.
+
+Empty retrieval: the empty retrieval fixture input keeps its current `explore`
+goal, producing `goalChanged = false` and `memoryInfluenceApplied = false`.
+
+Metrics: `metrics.json` emits `goalSelectionMemory*`, including success,
+agent/decision/candidate counts, selected goals, goal changes, unchanged goals,
+memory-influenced decisions, empty retrieval decisions, maxCandidates, bounded,
+deterministic order, digest equality, repeatability failures, memory mutation,
+World/terrain mutation, movement stack usage, and behavior action execution.
+
+Events:
+
+- `lab_goal_selection_memory_recorded`;
+- `lab_goal_selection_memory_summary_recorded`.
+
+Invariant report: `goal_selection_memory_invariant_report.json` includes 42
+checks. Validated debug run result: 42 passed, 0 failed.
+
+Digest: `goal_selection_memory_digest.json` records digest
+`bad8ecf0fcfa0738`, repeat digest `bad8ecf0fcfa0738`, deterministicDigest
+true, and digestsEqual true.
+
+Boundary confirmations:
+
+- behaviorActionExecuted = false;
+- memoryMutated = false;
+- movementStackUsed = false;
+- worldMutated = false;
+- terrainMutated = false;
+- no World is created for the scenario;
+- no retrieval rerun, behavior-loop integration, memory write, mood,
+  relationships, trust, communication, community, task board, route following,
+  pathfinding, reservation runtime, embeddings, Python, LLM, or RL is added.
+
+Outputs:
+
+- `goal_selection_memory_report.json`;
+- `goal_selection_memory_invariant_report.json`;
+- `goal_selection_memory_candidates.json`;
+- `goal_selection_memory_decisions.json`;
+- `goal_selection_memory_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Validation commands:
+
+- `git status`;
+- `git branch --show-current`;
+- `git pull origin lab/pebblelab-v1`;
+- `git log --oneline -12`;
+- `swift build`;
+- `swift run PebbleLab -- --scenario goal_selection_from_memory_fixture_smoke --seed 42 --ticks 3 --out runs/check_goal_selection_memory_fixture`;
+- `swift run PebbleLab -- --scenario memory_retrieval_fixture_smoke --seed 42 --ticks 3 --out runs/check_memory_retrieval_fixture_after_goal_selection_memory`;
+- `swift run PebbleLab -- --scenario memory_retrieval_hardening_smoke --seed 42 --ticks 3 --out runs/check_memory_retrieval_hardening_after_goal_selection_memory`;
+- `swift run PebbleLab -- --scenario memory_update_from_behavior_result_fixture_smoke --seed 42 --ticks 3 --out runs/check_memory_update_fixture_after_goal_selection_memory`;
+- `swift run PebbleLab -- --scenario memory_update_hardening_smoke --seed 42 --ticks 3 --out runs/check_memory_update_hardening_after_goal_selection_memory`;
+- `swift run PebbleLab -- --scenario behavior_loop_contract_fixture_smoke --seed 42 --ticks 3 --out runs/check_behavior_loop_contract_after_goal_selection_memory`;
+- `swift run PebbleLab -- --scenario behavior_loop_hardening_smoke --seed 42 --ticks 3 --out runs/check_behavior_loop_hardening_after_goal_selection_memory`;
+- `swift run PebbleLab -- --scenario agents_basic --seed 42 --agents 3 --ticks 3 --out runs/check_agents_basic_after_goal_selection_memory`;
+- `swift run PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_goal_selection_memory`;
+- `swift build -c release --product Pebble`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results: the goal selection from memory fixture passed in debug with report
+success true, 5 agents, 5 decisions, 9 candidates, 5 selected goals, 4 goal
+changes, 1 unchanged goal, 4 memory-influenced decisions, 1 empty retrieval
+decision, maxCandidates 5, memoryMutated false, behaviorActionExecuted false,
+42 invariant checks passed, stable digest `bad8ecf0fcfa0738`, and
+`goalSelectionMemory*` metrics/events written. The memory retrieval fixture,
+memory retrieval hardening, memory update fixture, memory update hardening,
+behavior loop contract fixture, behavior loop hardening, `agents_basic`, and
+`regression_smoke` non-regressions passed in debug. `swift build`,
+`swift build -c release --product Pebble`, and `swift run -c release
+pebsmoke` passed, with `pebsmoke` reporting 456 passed, 0 failed. Direct
+release `PebbleLab` scenario validation was attempted with a 90 second local
+limit, but production `PebbleLab` compilation stalled after planning/source
+emission and was interrupted as in prior runtime fixture phases.
+
+Next step: Phase 5.4C — Goal Selection From Retrieved Memory Hardening.

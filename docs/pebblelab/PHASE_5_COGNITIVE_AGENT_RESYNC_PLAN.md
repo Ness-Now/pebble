@@ -389,3 +389,24 @@ and RL out of scope.
 
 The recommended next phase is Phase 5.4B - Goal Selection From Retrieved
 Memory Fixture Smoke.
+
+## Phase 5.4B Status
+
+Phase 5.4B implemented `goal_selection_from_memory_fixture_smoke`, the first
+fixture-only runtime layer that turns controlled retrieved memories into goal
+candidates and selected goal proposals.
+
+The fixture validates safety, curiosity, nearby-agent, empty retrieval, and
+duplicate-merge cases. The validated debug run produced 5 agent inputs, 5
+decisions, 9 candidates, 4 goal changes, 1 unchanged goal, 4
+memory-influenced decisions, 1 empty retrieval decision, 42 invariant checks
+passed, 0 invariant checks failed, and matching digest/repeat digest values.
+
+The scenario does not execute behavior actions, write or mutate memory, rerun
+retrieval, create a World, call the movement stack, mutate terrain, move Core
+entities, move physical placeholders, add behavior-loop integration, mood,
+emotional memory, relationships, trust, communication, community state,
+movement-stack feedback, embeddings, Python, LLM, or RL.
+
+The recommended next phase is Phase 5.4C - Goal Selection From Retrieved
+Memory Hardening.

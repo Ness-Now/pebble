@@ -620,3 +620,132 @@ Key risks:
 - `swift build -c release --product Pebble` passes;
 - `git diff --check` passes;
 - next phase 5.4B is clearly specified.
+
+## Phase 5.4B Implementation Status
+
+Phase 5.4B added `goal_selection_from_memory_fixture_smoke`, a fixture-only
+smoke that consumes controlled retrieved memories and produces bounded goal
+candidates plus selected goal decisions.
+
+Scenario:
+
+- `goal_selection_from_memory_fixture_smoke`;
+- fixture-only, no World created;
+- no behavior action execution;
+- no memory write;
+- no memory mutation;
+- no retrieval rerun;
+- no movement stack.
+
+Memory-to-goal mapping:
+
+- `safety_reaction` -> `seekSafety`;
+- `curiosity_reaction` -> `explore`;
+- `nearby_agent_observed` -> `observeOtherAgent`;
+- `idle_tick_summary` -> `idle`;
+- `goal_confirmed` and `goal_changed` stay limited to known current/confirmed
+  goals;
+- `behavior_action` and `effect_applied` only map through direct, safe v0
+  string matches in the fixture.
+
+Candidates:
+
+- `goal_selection_memory_candidates.json`;
+- 9 candidates in the validated debug run;
+- duplicate `explore` candidates are merged for the duplicate-memory fixture
+  case;
+- candidates carry goal, source, score, priority, supporting memory types,
+  supporting memory count, reason, and whether they would change currentGoal.
+
+Decisions:
+
+- `goal_selection_memory_decisions.json`;
+- 5 decisions in the validated debug run;
+- selected goals cover `seekSafety`, `explore`, and `observeOtherAgent`;
+- empty retrieval keeps the current `explore` goal;
+- selectedGoals = decisions;
+- goalChanges = 4;
+- unchangedGoals = 1;
+- memoryInfluencedDecisions = 4;
+- emptyRetrievalDecisions = 1.
+
+Scoring:
+
+- bounded memory score component;
+- need/fear component;
+- currentGoal continuity component;
+- source priority component;
+- stable tie-break by score, priority, goal, source, and supporting memory
+  types;
+- no random, embeddings, LLM, semantic guessing, or unordered-container
+  influence.
+
+Report:
+
+- `goal_selection_memory_report.json`;
+- success true in validated debug run;
+- agents = 5;
+- decisions = 5;
+- candidates = 9;
+- selectedGoals = 5;
+- goalChanges = 4;
+- unchangedGoals = 1;
+- memoryInfluencedDecisions = 4;
+- emptyRetrievalDecisions = 1;
+- maxCandidates = 5;
+- bounded = true;
+- deterministicOrder = true;
+- memoryMutated = false;
+- behaviorActionExecuted = false;
+- movementStackUsed = false;
+- worldMutated = false;
+- terrainMutated = false.
+
+Invariant:
+
+- `goal_selection_memory_invariant_report.json`;
+- 42 checks passed;
+- 0 checks failed;
+- covers scenario, seed, decisions/candidates, selected goal presence, known
+  goals, goal changes, unchanged goals, memory-influenced decisions, empty
+  retrieval, maxCandidates, duplicate merge, bounded scores, deterministic
+  order, selected candidate membership, memory influence reasons, boundary
+  flags, digest equality, outputs, metrics/events, docs, and success contract.
+
+Digest:
+
+- `goal_selection_memory_digest.json`;
+- digest `bad8ecf0fcfa0738`;
+- repeat digest `bad8ecf0fcfa0738`;
+- repeatabilityFailures = 0.
+
+Metrics:
+
+- `metrics.json`;
+- emits `goalSelectionMemory*` metrics including success, agents, decisions,
+  candidates, selected goals, goal changes, unchanged goals, influenced
+  decisions, empty retrieval decisions, max candidates, bounded,
+  deterministic order, digest equality, repeatability failures, memory
+  mutation, World/terrain mutation, movement stack usage, and behavior action
+  execution.
+
+Events:
+
+- `lab_goal_selection_memory_recorded`;
+- `lab_goal_selection_memory_summary_recorded`.
+
+Limitations:
+
+- no behavior-loop integration;
+- no behavior action execution;
+- no memory write or mutation;
+- no retrieval rerun;
+- no mood, emotional memory, relationships, trust, communication, community,
+  social memory, or task board;
+- no movement stack feedback source;
+- no World or terrain mutation;
+- no physical placeholder or Core entity creation/movement;
+- no route following, full-route execution, pathfinding, reservation runtime,
+  embeddings, Python, LLM, or RL.
+
+Next phase: Phase 5.4C - Goal Selection From Retrieved Memory Hardening.

@@ -3402,8 +3402,53 @@ Fixture Smoke.
 
 ## Phase 5.4B - Goal Selection From Retrieved Memory Fixture Smoke
 
-Status: planned.
+Status: implemented and validated with debug PebbleLab fixture runs and release
+core smoke. Direct release `PebbleLab` scenario validation was attempted with a
+90 second local limit, but production `PebbleLab` compilation stalled after
+planning/source emission and was interrupted as in prior phases.
 
 Goal: implement a fixture-only smoke that consumes controlled retrieval results
 and produces bounded goal candidates plus selected goal decisions without
 executing behavior actions or integrating into normal behavior runtime.
+
+Validated scope:
+
+- `goal_selection_from_memory_fixture_smoke`;
+- fixture-only, no World created;
+- 5 controlled agent inputs;
+- 5 goal decisions;
+- 9 goal candidates;
+- selectedGoals = decisions;
+- safety memory -> `seekSafety`;
+- curiosity memory -> `explore`;
+- nearby-agent memory -> `observeOtherAgent`;
+- empty retrieval keeps current goal;
+- duplicate `explore` candidates are merged;
+- maxCandidates = 5;
+- bounded = true;
+- deterministicOrder = true;
+- memoryMutated = false;
+- behaviorActionExecuted = false;
+- movementStackUsed = false;
+- worldMutated = false;
+- terrainMutated = false;
+- deterministic digest and repeat digest equal;
+- repeatabilityFailures = 0;
+- `goalSelectionMemory*` metrics emitted;
+- `lab_goal_selection_memory_recorded` and summary events emitted.
+
+Behavior-loop integration, behavior action execution, mood, relationships,
+trust, communication, social memory, society runtime, movement stack feedback,
+World mutation, Python, LLM, embeddings, and RL remain out of scope.
+
+Next recommended step: Phase 5.4C - Goal Selection From Retrieved Memory
+Hardening.
+
+## Phase 5.4C - Goal Selection From Retrieved Memory Hardening
+
+Status: planned.
+
+Goal: harden goal selection from retrieved memory with boundary cases for
+needs overriding memory, empty retrieval, duplicate merges, candidate bounds,
+score ties, invalid memory-to-goal mappings, deterministic ordering, and
+read-only guarantees before any behavior-loop integration.
