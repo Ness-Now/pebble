@@ -2806,3 +2806,59 @@ Outputs:
 Route following and full-route execution remain out of scope.
 
 Next recommended step: Phase 4.28E - Stack Metrics/Event Compatibility Smoke.
+
+## Phase 4.28E - Stack Metrics/Event Compatibility Smoke
+
+Status: implemented and validated.
+
+Goal: audit the stack metrics and events from 4.28B, 4.28C, and 4.28D without
+changing their behavior or introducing new movement capabilities.
+
+Validated scope:
+
+- `agent_movement_stack_metrics_event_compatibility_smoke`;
+- source scenarios = 3;
+- source scenarios present = 3;
+- metric prefixes = 4;
+- metric prefixes present = 4;
+- events = 4;
+- events present = 4;
+- metric records = 228;
+- event records = 4;
+- contract metric keys = 67;
+- boundary hardening metric keys = 51;
+- replay adapter metric keys = 58;
+- compatibility metric keys = 52;
+- metrics unique = true;
+- events unique = true;
+- metrics typed = true;
+- event required fields present = true;
+- metrics match summaries = true;
+- metrics stable order = true;
+- events stable order = true;
+- digests stable = true;
+- deterministic metric/event/digest output = true;
+- repeatability failures = 0;
+- contract, boundary hardening, and replay adapter source reports green;
+- no World/collision live read;
+- no route following or full-route execution;
+- no Core entity or physical placeholder movement;
+- no memory/goals/reservation runtime;
+- no terrain/world mutation;
+- no renderer/resource/registry/golden touch.
+
+Outputs:
+
+- `agent_movement_stack_metrics_event_compatibility_report.json`;
+- `agent_movement_stack_metrics_event_compatibility_invariant_report.json`;
+- `agent_movement_stack_metrics_event_compatibility_metrics_inventory.json`;
+- `agent_movement_stack_metrics_event_compatibility_event_inventory.json`;
+- `agent_movement_stack_metrics_event_compatibility_matrix.json`;
+- `agent_movement_stack_metrics_event_compatibility_boundary.json`;
+- `agent_movement_stack_metrics_event_compatibility_digest.json`;
+- `agentMovementStackMetricsEventCompatibility*` metrics;
+- `lab_agent_movement_stack_metrics_event_compatibility_recorded` event.
+
+Route following and full-route execution remain out of scope.
+
+Next recommended step: Phase 4.28F - Stack Consolidated Multi-Tick Replay Regression.

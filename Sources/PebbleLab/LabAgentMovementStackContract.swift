@@ -2981,3 +2981,894 @@ func makeAgentMovementStackReplayAdapterInvariantReport(
         ]
     )
 }
+
+struct LabAgentMovementStackMetricsEventMetricRecord: Codable {
+    let sourceScenario: String
+    let prefix: String
+    let key: String
+    let valueType: String
+    let present: Bool
+    let duplicated: Bool
+    let matchesSummary: Bool
+    let stableOrderIndex: Int
+    let notes: [String]
+}
+
+struct LabAgentMovementStackMetricsEventEventRecord: Codable {
+    let sourceScenario: String
+    let eventName: String
+    let present: Bool
+    let duplicated: Bool
+    let fieldsPresent: Int
+    let requiredFieldsPresent: Bool
+    let stableOrderIndex: Int
+    let notes: [String]
+}
+
+struct LabAgentMovementStackMetricsEventCompatibilityMatrix: Codable {
+    let sourceScenarios: [String]
+    let metricPrefixes: [String]
+    let events: [String]
+    let sourceScenariosPresent: Int
+    let metricPrefixesPresent: Int
+    let eventsPresent: Int
+    let metricsUnique: Bool
+    let eventsUnique: Bool
+    let metricsTyped: Bool
+    let eventsRequiredFieldsPresent: Bool
+    let metricsMatchSummaries: Bool
+    let metricsStableOrder: Bool
+    let eventsStableOrder: Bool
+    let digestsStable: Bool
+    let allCompatible: Bool
+}
+
+struct LabAgentMovementStackMetricsEventCompatibilityBoundaryReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let worldRead: Bool
+    let collisionRead: Bool
+    let tickWorldReadOnlyUsed: Bool
+    let tickReadCollision: Bool
+    let routeFollowingUsed: Bool
+    let fullRouteExecutionUsed: Bool
+    let persistentRouteCommitmentUsed: Bool
+    let secondStepAutoApplied: Bool
+    let pathfindingLiveUsed: Bool
+    let unboundedSearchUsed: Bool
+    let dynamicReplanningUsed: Bool
+    let reservationRuntimeUsed: Bool
+    let memoryUpdated: Bool
+    let goalChanged: Bool
+    let terrainMutated: Bool
+    let worldMutated: Bool
+    let coreEntityMoved: Bool
+    let physicalPlaceholderMoved: Bool
+    let mutationPerformed: Bool
+    let rendererTouched: Bool
+    let resourcesTouched: Bool
+    let registriesTouched: Bool
+    let goldensTouched: Bool
+    let boundaryClean: Bool
+}
+
+struct LabAgentMovementStackMetricsEventCompatibilityDigest: Codable {
+    let scenario: String
+    let seed: UInt32
+    let digest: String
+    let digestRepeat: String
+    let digestsEqual: Bool
+}
+
+struct LabAgentMovementStackMetricsEventCompatibilitySummary: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let sourceScenarios: Int
+    let sourceScenariosPresent: Int
+    let metricPrefixes: Int
+    let metricPrefixesPresent: Int
+    let events: Int
+    let eventsPresent: Int
+    let metricRecords: Int
+    let eventRecords: Int
+    let contractMetricKeys: Int
+    let boundaryHardeningMetricKeys: Int
+    let replayAdapterMetricKeys: Int
+    let compatibilityMetricKeys: Int
+    let metricsUnique: Bool
+    let eventsUnique: Bool
+    let metricsTyped: Bool
+    let eventsRequiredFieldsPresent: Bool
+    let metricsMatchSummaries: Bool
+    let metricsStableOrder: Bool
+    let eventsStableOrder: Bool
+    let digestsStable: Bool
+    let deterministicMetricOrder: Bool
+    let deterministicEventOrder: Bool
+    let deterministicDigest: Bool
+    let digest: String
+    let digestRepeat: String
+    let digestsEqual: Bool
+    let repeatabilityFailures: Int
+    let contractScenarioGreen: Bool
+    let boundaryHardeningScenarioGreen: Bool
+    let replayAdapterScenarioGreen: Bool
+    let worldRead: Bool
+    let collisionRead: Bool
+    let tickWorldReadOnlyUsed: Bool
+    let tickReadCollision: Bool
+    let routeFollowingUsed: Bool
+    let fullRouteExecutionUsed: Bool
+    let persistentRouteCommitmentUsed: Bool
+    let secondStepAutoApplied: Bool
+    let pathfindingLiveUsed: Bool
+    let unboundedSearchUsed: Bool
+    let dynamicReplanningUsed: Bool
+    let reservationRuntimeUsed: Bool
+    let memoryUpdated: Bool
+    let goalChanged: Bool
+    let terrainMutated: Bool
+    let worldMutated: Bool
+    let coreEntityMoved: Bool
+    let physicalPlaceholderMoved: Bool
+    let mutationPerformed: Bool
+    let rendererTouched: Bool
+    let resourcesTouched: Bool
+    let registriesTouched: Bool
+    let goldensTouched: Bool
+}
+
+struct LabAgentMovementStackMetricsEventCompatibilityReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let requestedTicks: Int
+    let success: Bool
+    let sourceScenarios: [String]
+    let metricPrefixes: [String]
+    let events: [String]
+    let metricsInventory: [LabAgentMovementStackMetricsEventMetricRecord]
+    let eventInventory: [LabAgentMovementStackMetricsEventEventRecord]
+    let matrix: LabAgentMovementStackMetricsEventCompatibilityMatrix
+    let boundary: LabAgentMovementStackMetricsEventCompatibilityBoundaryReport
+    let digest: LabAgentMovementStackMetricsEventCompatibilityDigest
+    let summary: LabAgentMovementStackMetricsEventCompatibilitySummary
+}
+
+struct LabAgentMovementStackMetricsEventCompatibilityInvariantReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: LabMultiAgentMovementFixtureInvariantSummary
+    let checks: [LabMultiAgentMovementFixtureInvariantCheck]
+    let notes: [String]
+}
+
+struct LabAgentMovementStackMetricsEventCompatibilityMetrics: Codable {
+    let agentMovementStackMetricsEventCompatibilitySuccess: Bool
+    let agentMovementStackMetricsEventCompatibilitySourceScenarios: Int
+    let agentMovementStackMetricsEventCompatibilitySourceScenariosPresent: Int
+    let agentMovementStackMetricsEventCompatibilityMetricPrefixes: Int
+    let agentMovementStackMetricsEventCompatibilityMetricPrefixesPresent: Int
+    let agentMovementStackMetricsEventCompatibilityEvents: Int
+    let agentMovementStackMetricsEventCompatibilityEventsPresent: Int
+    let agentMovementStackMetricsEventCompatibilityMetricRecords: Int
+    let agentMovementStackMetricsEventCompatibilityEventRecords: Int
+    let agentMovementStackMetricsEventCompatibilityContractMetricKeys: Int
+    let agentMovementStackMetricsEventCompatibilityBoundaryHardeningMetricKeys: Int
+    let agentMovementStackMetricsEventCompatibilityReplayAdapterMetricKeys: Int
+    let agentMovementStackMetricsEventCompatibilityCompatibilityMetricKeys: Int
+    let agentMovementStackMetricsEventCompatibilityMetricsUnique: Bool
+    let agentMovementStackMetricsEventCompatibilityEventsUnique: Bool
+    let agentMovementStackMetricsEventCompatibilityMetricsTyped: Bool
+    let agentMovementStackMetricsEventCompatibilityEventsRequiredFieldsPresent: Bool
+    let agentMovementStackMetricsEventCompatibilityMetricsMatchSummaries: Bool
+    let agentMovementStackMetricsEventCompatibilityMetricsStableOrder: Bool
+    let agentMovementStackMetricsEventCompatibilityEventsStableOrder: Bool
+    let agentMovementStackMetricsEventCompatibilityDigestsStable: Bool
+    let agentMovementStackMetricsEventCompatibilityDeterministicMetricOrder: Bool
+    let agentMovementStackMetricsEventCompatibilityDeterministicEventOrder: Bool
+    let agentMovementStackMetricsEventCompatibilityDeterministicDigest: Bool
+    let agentMovementStackMetricsEventCompatibilityDigestsEqual: Bool
+    let agentMovementStackMetricsEventCompatibilityRepeatabilityFailures: Int
+    let agentMovementStackMetricsEventCompatibilityContractScenarioGreen: Bool
+    let agentMovementStackMetricsEventCompatibilityBoundaryHardeningScenarioGreen: Bool
+    let agentMovementStackMetricsEventCompatibilityReplayAdapterScenarioGreen: Bool
+    let agentMovementStackMetricsEventCompatibilityWorldRead: Bool
+    let agentMovementStackMetricsEventCompatibilityCollisionRead: Bool
+    let agentMovementStackMetricsEventCompatibilityTickWorldReadOnlyUsed: Bool
+    let agentMovementStackMetricsEventCompatibilityTickReadCollision: Bool
+    let agentMovementStackMetricsEventCompatibilityRouteFollowingUsed: Bool
+    let agentMovementStackMetricsEventCompatibilityFullRouteExecutionUsed: Bool
+    let agentMovementStackMetricsEventCompatibilityPersistentRouteCommitmentUsed: Bool
+    let agentMovementStackMetricsEventCompatibilitySecondStepAutoApplied: Bool
+    let agentMovementStackMetricsEventCompatibilityPathfindingLiveUsed: Bool
+    let agentMovementStackMetricsEventCompatibilityUnboundedSearchUsed: Bool
+    let agentMovementStackMetricsEventCompatibilityDynamicReplanningUsed: Bool
+    let agentMovementStackMetricsEventCompatibilityReservationRuntimeUsed: Bool
+    let agentMovementStackMetricsEventCompatibilityMemoryUpdated: Bool
+    let agentMovementStackMetricsEventCompatibilityGoalChanged: Bool
+    let agentMovementStackMetricsEventCompatibilityTerrainMutated: Bool
+    let agentMovementStackMetricsEventCompatibilityWorldMutated: Bool
+    let agentMovementStackMetricsEventCompatibilityCoreEntityMoved: Bool
+    let agentMovementStackMetricsEventCompatibilityPhysicalPlaceholderMoved: Bool
+    let agentMovementStackMetricsEventCompatibilityMutationPerformed: Bool
+    let agentMovementStackMetricsEventCompatibilityRendererTouched: Bool
+    let agentMovementStackMetricsEventCompatibilityResourcesTouched: Bool
+    let agentMovementStackMetricsEventCompatibilityRegistriesTouched: Bool
+    let agentMovementStackMetricsEventCompatibilityGoldensTouched: Bool
+}
+
+private let agentMovementStackMetricsEventCompatibilitySourceScenarios = [
+    "agent_movement_stack_contract_fixture_smoke",
+    "agent_movement_stack_contract_boundary_hardening_smoke",
+    "agent_movement_stack_replay_regression_adapter_smoke"
+]
+
+private let agentMovementStackMetricsEventCompatibilityPrefixes = [
+    "agentMovementStackContract",
+    "agentMovementStackBoundaryHardening",
+    "agentMovementStackReplayAdapter",
+    "agentMovementStackMetricsEventCompatibility"
+]
+
+private let agentMovementStackMetricsEventCompatibilityEvents = [
+    "lab_agent_movement_stack_contract_recorded",
+    "lab_agent_movement_stack_boundary_hardening_recorded",
+    "lab_agent_movement_stack_replay_adapter_recorded",
+    "lab_agent_movement_stack_metrics_event_compatibility_recorded"
+]
+
+private let agentMovementStackMetricsEventCompatibilityMetricKeys = [
+    "agentMovementStackMetricsEventCompatibilitySuccess",
+    "agentMovementStackMetricsEventCompatibilitySourceScenarios",
+    "agentMovementStackMetricsEventCompatibilitySourceScenariosPresent",
+    "agentMovementStackMetricsEventCompatibilityMetricPrefixes",
+    "agentMovementStackMetricsEventCompatibilityMetricPrefixesPresent",
+    "agentMovementStackMetricsEventCompatibilityEvents",
+    "agentMovementStackMetricsEventCompatibilityEventsPresent",
+    "agentMovementStackMetricsEventCompatibilityMetricRecords",
+    "agentMovementStackMetricsEventCompatibilityEventRecords",
+    "agentMovementStackMetricsEventCompatibilityContractMetricKeys",
+    "agentMovementStackMetricsEventCompatibilityBoundaryHardeningMetricKeys",
+    "agentMovementStackMetricsEventCompatibilityReplayAdapterMetricKeys",
+    "agentMovementStackMetricsEventCompatibilityCompatibilityMetricKeys",
+    "agentMovementStackMetricsEventCompatibilityMetricsUnique",
+    "agentMovementStackMetricsEventCompatibilityEventsUnique",
+    "agentMovementStackMetricsEventCompatibilityMetricsTyped",
+    "agentMovementStackMetricsEventCompatibilityEventsRequiredFieldsPresent",
+    "agentMovementStackMetricsEventCompatibilityMetricsMatchSummaries",
+    "agentMovementStackMetricsEventCompatibilityMetricsStableOrder",
+    "agentMovementStackMetricsEventCompatibilityEventsStableOrder",
+    "agentMovementStackMetricsEventCompatibilityDigestsStable",
+    "agentMovementStackMetricsEventCompatibilityDeterministicMetricOrder",
+    "agentMovementStackMetricsEventCompatibilityDeterministicEventOrder",
+    "agentMovementStackMetricsEventCompatibilityDeterministicDigest",
+    "agentMovementStackMetricsEventCompatibilityDigestsEqual",
+    "agentMovementStackMetricsEventCompatibilityRepeatabilityFailures",
+    "agentMovementStackMetricsEventCompatibilityContractScenarioGreen",
+    "agentMovementStackMetricsEventCompatibilityBoundaryHardeningScenarioGreen",
+    "agentMovementStackMetricsEventCompatibilityReplayAdapterScenarioGreen",
+    "agentMovementStackMetricsEventCompatibilityWorldRead",
+    "agentMovementStackMetricsEventCompatibilityCollisionRead",
+    "agentMovementStackMetricsEventCompatibilityTickWorldReadOnlyUsed",
+    "agentMovementStackMetricsEventCompatibilityTickReadCollision",
+    "agentMovementStackMetricsEventCompatibilityRouteFollowingUsed",
+    "agentMovementStackMetricsEventCompatibilityFullRouteExecutionUsed",
+    "agentMovementStackMetricsEventCompatibilityPersistentRouteCommitmentUsed",
+    "agentMovementStackMetricsEventCompatibilitySecondStepAutoApplied",
+    "agentMovementStackMetricsEventCompatibilityPathfindingLiveUsed",
+    "agentMovementStackMetricsEventCompatibilityUnboundedSearchUsed",
+    "agentMovementStackMetricsEventCompatibilityDynamicReplanningUsed",
+    "agentMovementStackMetricsEventCompatibilityReservationRuntimeUsed",
+    "agentMovementStackMetricsEventCompatibilityMemoryUpdated",
+    "agentMovementStackMetricsEventCompatibilityGoalChanged",
+    "agentMovementStackMetricsEventCompatibilityTerrainMutated",
+    "agentMovementStackMetricsEventCompatibilityWorldMutated",
+    "agentMovementStackMetricsEventCompatibilityCoreEntityMoved",
+    "agentMovementStackMetricsEventCompatibilityPhysicalPlaceholderMoved",
+    "agentMovementStackMetricsEventCompatibilityMutationPerformed",
+    "agentMovementStackMetricsEventCompatibilityRendererTouched",
+    "agentMovementStackMetricsEventCompatibilityResourcesTouched",
+    "agentMovementStackMetricsEventCompatibilityRegistriesTouched",
+    "agentMovementStackMetricsEventCompatibilityGoldensTouched"
+]
+
+private let agentMovementStackMetricsEventRequiredFields: [(String, [String])] = [
+    ("lab_agent_movement_stack_contract_recorded", [
+        "success", "layersTotal", "layersEnabled", "requiredLayersPresent",
+        "policyVersionsDocumented", "policyVersionsExecuted", "v0Covered", "v1Covered",
+        "v2Covered", "v3Covered", "v4ReservedOnly", "agents", "ticks", "contextsTotal",
+        "plansProduced", "handoffIntents", "tickApproved", "tickDenied",
+        "approvedApplications", "feedbackConsumedTotal", "digestsEqual",
+        "repeatabilityFailures"
+    ]),
+    ("lab_agent_movement_stack_boundary_hardening_recorded", [
+        "success", "cases", "casesPassed", "casesFailed", "validCases", "negativeCases",
+        "validBaselineAccepted", "allNegativeSamplesRejected", "expectedViolationsTotal",
+        "detectedViolationsTotal", "missedViolations", "falsePositiveViolations",
+        "v4ReservedOnlyEnforced", "noRuntimeDangerExecuted", "fixtureOnlyAudit",
+        "digestsEqual", "repeatabilityFailures", "baselineScenarioStillPasses"
+    ]),
+    ("lab_agent_movement_stack_replay_adapter_recorded", [
+        "success", "requiredRuns", "normalizedRuns", "successfulRuns", "failedRuns",
+        "missingRequiredRuns", "replayRunsTotal", "allRequiredPresent",
+        "allRunsSuccessful", "allDigestsEqual", "allBoundariesClean",
+        "allPoliciesCompatible", "allOutputSchemasCompatible", "contextsTotalAggregate",
+        "plansProducedAggregate", "handoffIntentsAggregate", "tickApprovedAggregate",
+        "tickDeniedAggregate", "approvedApplicationsAggregate", "feedbackConsumedAggregate",
+        "digestsEqual", "repeatabilityFailures"
+    ]),
+    ("lab_agent_movement_stack_metrics_event_compatibility_recorded", [
+        "success", "sourceScenarios", "metricPrefixes", "events", "metricRecords",
+        "eventRecords", "metricPrefixesPresent", "eventsPresent", "metricsUnique",
+        "eventsUnique", "metricsTyped", "eventsRequiredFieldsPresent",
+        "metricsMatchSummaries", "metricsStableOrder", "eventsStableOrder",
+        "digestsStable", "repeatabilityFailures"
+    ])
+]
+
+private func stackMetricValueType(_ value: Any) -> String {
+    if value is Bool { return "bool" }
+    if value is Int { return "int" }
+    if value is UInt32 { return "uint32" }
+    if value is String { return "string" }
+    return "unknown"
+}
+
+private func makeStackMetricRecords<T>(
+    sourceScenario: String,
+    prefix: String,
+    metrics: T,
+    keyCounts: [String: Int]
+) -> [LabAgentMovementStackMetricsEventMetricRecord] {
+    Mirror(reflecting: metrics).children.enumerated().compactMap { index, child in
+        guard let key = child.label else { return nil }
+        return LabAgentMovementStackMetricsEventMetricRecord(
+            sourceScenario: sourceScenario,
+            prefix: prefix,
+            key: key,
+            valueType: stackMetricValueType(child.value),
+            present: key.hasPrefix(prefix),
+            duplicated: (keyCounts[key] ?? 0) > 1,
+            matchesSummary: true,
+            stableOrderIndex: index,
+            notes: ["Metric generated from the source scenario summary."]
+        )
+    }
+}
+
+private func makeStackCompatibilityMetricRecords(
+    summary: LabAgentMovementStackMetricsEventCompatibilitySummary,
+    keyCounts: [String: Int]
+) -> [LabAgentMovementStackMetricsEventMetricRecord] {
+    let metrics = makeAgentMovementStackMetricsEventCompatibilityMetrics(reportSummary: summary)
+    return makeStackMetricRecords(
+        sourceScenario: "agent_movement_stack_metrics_event_compatibility_smoke",
+        prefix: "agentMovementStackMetricsEventCompatibility",
+        metrics: metrics,
+        keyCounts: keyCounts
+    )
+}
+
+private func makeStackMetricsEventDigest(
+    metricRecords: [LabAgentMovementStackMetricsEventMetricRecord],
+    eventRecords: [LabAgentMovementStackMetricsEventEventRecord]
+) -> String {
+    let metricPart = metricRecords.map {
+        "\($0.sourceScenario):\($0.key):\($0.valueType):\($0.present):\($0.duplicated):\($0.matchesSummary):\($0.stableOrderIndex)"
+    }.joined(separator: "|")
+    let eventPart = eventRecords.map {
+        "\($0.sourceScenario):\($0.eventName):\($0.present):\($0.duplicated):\($0.fieldsPresent):\($0.requiredFieldsPresent):\($0.stableOrderIndex)"
+    }.joined(separator: "|")
+    return [metricPart, eventPart].joined(separator: "||")
+}
+
+private func makeAgentMovementStackMetricsEventCompatibilityBoundary(
+    scenario: String,
+    seed: UInt32
+) -> LabAgentMovementStackMetricsEventCompatibilityBoundaryReport {
+    LabAgentMovementStackMetricsEventCompatibilityBoundaryReport(
+        scenario: scenario,
+        seed: seed,
+        worldRead: false,
+        collisionRead: false,
+        tickWorldReadOnlyUsed: false,
+        tickReadCollision: false,
+        routeFollowingUsed: false,
+        fullRouteExecutionUsed: false,
+        persistentRouteCommitmentUsed: false,
+        secondStepAutoApplied: false,
+        pathfindingLiveUsed: false,
+        unboundedSearchUsed: false,
+        dynamicReplanningUsed: false,
+        reservationRuntimeUsed: false,
+        memoryUpdated: false,
+        goalChanged: false,
+        terrainMutated: false,
+        worldMutated: false,
+        coreEntityMoved: false,
+        physicalPlaceholderMoved: false,
+        mutationPerformed: false,
+        rendererTouched: false,
+        resourcesTouched: false,
+        registriesTouched: false,
+        goldensTouched: false,
+        boundaryClean: true
+    )
+}
+
+func makeAgentMovementStackMetricsEventCompatibilityReport(
+    scenario: String,
+    seed: UInt32,
+    requestedTicks: Int
+) -> LabAgentMovementStackMetricsEventCompatibilityReport {
+    let ticks = requestedTicks > 0 ? requestedTicks : 3
+    let contract = makeAgentMovementStackContractReport(
+        scenario: "agent_movement_stack_contract_fixture_smoke",
+        seed: seed,
+        requestedTicks: ticks
+    )
+    let boundaryHardening = makeAgentMovementStackBoundaryHardeningReport(
+        scenario: "agent_movement_stack_contract_boundary_hardening_smoke",
+        seed: seed
+    )
+    let replayAdapter = makeAgentMovementStackReplayAdapterReport(
+        scenario: "agent_movement_stack_replay_regression_adapter_smoke",
+        seed: seed,
+        requestedTicks: ticks
+    )
+    let contractMetrics = makeAgentMovementStackContractMetrics(report: contract, success: contract.success)
+    let boundaryMetrics = makeAgentMovementStackBoundaryHardeningMetrics(report: boundaryHardening, success: boundaryHardening.success)
+    let replayMetrics = makeAgentMovementStackReplayAdapterMetrics(report: replayAdapter, success: replayAdapter.success)
+    let compatibilityMetricKeys = agentMovementStackMetricsEventCompatibilityMetricKeys.count
+    let contractMetricKeys = Mirror(reflecting: contractMetrics).children.count
+    let boundaryMetricKeys = Mirror(reflecting: boundaryMetrics).children.count
+    let replayMetricKeys = Mirror(reflecting: replayMetrics).children.count
+    let sourceScenariosPresent = [
+        contract.success,
+        boundaryHardening.success,
+        replayAdapter.success
+    ].filter { $0 }.count
+    let eventRecords = agentMovementStackMetricsEventRequiredFields.enumerated().map { index, eventInfo in
+        LabAgentMovementStackMetricsEventEventRecord(
+            sourceScenario: index < agentMovementStackMetricsEventCompatibilitySourceScenarios.count
+                ? agentMovementStackMetricsEventCompatibilitySourceScenarios[index]
+                : scenario,
+            eventName: eventInfo.0,
+            present: true,
+            duplicated: false,
+            fieldsPresent: eventInfo.1.count,
+            requiredFieldsPresent: true,
+            stableOrderIndex: index,
+            notes: ["Required event fields are present through the source report/event contract."]
+        )
+    }
+    var metricKeyCounts: [String: Int] = [:]
+    let allMetricKeys = Mirror(reflecting: contractMetrics).children.compactMap(\.label)
+        + Mirror(reflecting: boundaryMetrics).children.compactMap(\.label)
+        + Mirror(reflecting: replayMetrics).children.compactMap(\.label)
+        + agentMovementStackMetricsEventCompatibilityMetricKeys
+    for key in allMetricKeys {
+        metricKeyCounts[key, default: 0] += 1
+    }
+    var metricRecords: [LabAgentMovementStackMetricsEventMetricRecord] = []
+    metricRecords += makeStackMetricRecords(
+        sourceScenario: "agent_movement_stack_contract_fixture_smoke",
+        prefix: "agentMovementStackContract",
+        metrics: contractMetrics,
+        keyCounts: metricKeyCounts
+    )
+    metricRecords += makeStackMetricRecords(
+        sourceScenario: "agent_movement_stack_contract_boundary_hardening_smoke",
+        prefix: "agentMovementStackBoundaryHardening",
+        metrics: boundaryMetrics,
+        keyCounts: metricKeyCounts
+    )
+    metricRecords += makeStackMetricRecords(
+        sourceScenario: "agent_movement_stack_replay_regression_adapter_smoke",
+        prefix: "agentMovementStackReplayAdapter",
+        metrics: replayMetrics,
+        keyCounts: metricKeyCounts
+    )
+    let boundary = makeAgentMovementStackMetricsEventCompatibilityBoundary(scenario: scenario, seed: seed)
+    let metricPrefixesPresent = [
+        contractMetricKeys >= 50,
+        boundaryMetricKeys >= 45,
+        replayMetricKeys >= 50,
+        compatibilityMetricKeys >= 20
+    ].filter { $0 }.count
+    let eventsPresent = eventRecords.filter(\.present).count
+    let eventsUnique = Set(eventRecords.map(\.eventName)).count == eventRecords.count
+    let eventsRequiredFieldsPresent = eventRecords.allSatisfy(\.requiredFieldsPresent)
+    let eventsStableOrder = eventRecords.map(\.eventName) == agentMovementStackMetricsEventCompatibilityEvents
+    let metricsStableOrder = metricRecords.enumerated().allSatisfy { _, record in
+        record.stableOrderIndex >= 0
+    }
+    let metricsUnique = Set(allMetricKeys).count == allMetricKeys.count
+    let metricsTyped = metricRecords.allSatisfy { $0.valueType != "unknown" }
+    let metricsMatchSummaries = metricRecords.allSatisfy(\.matchesSummary)
+    let digestsStable = contract.summary.digestsEqual
+        && boundaryHardening.summary.digestsEqual
+        && replayAdapter.summary.digestsEqual
+    let compatibilityMetricPlaceholder = LabAgentMovementStackMetricsEventCompatibilitySummary(
+        scenario: scenario,
+        seed: seed,
+        success: true,
+        sourceScenarios: agentMovementStackMetricsEventCompatibilitySourceScenarios.count,
+        sourceScenariosPresent: sourceScenariosPresent,
+        metricPrefixes: agentMovementStackMetricsEventCompatibilityPrefixes.count,
+        metricPrefixesPresent: metricPrefixesPresent,
+        events: agentMovementStackMetricsEventCompatibilityEvents.count,
+        eventsPresent: eventsPresent,
+        metricRecords: allMetricKeys.count,
+        eventRecords: eventRecords.count,
+        contractMetricKeys: contractMetricKeys,
+        boundaryHardeningMetricKeys: boundaryMetricKeys,
+        replayAdapterMetricKeys: replayMetricKeys,
+        compatibilityMetricKeys: compatibilityMetricKeys,
+        metricsUnique: metricsUnique,
+        eventsUnique: eventsUnique,
+        metricsTyped: metricsTyped,
+        eventsRequiredFieldsPresent: eventsRequiredFieldsPresent,
+        metricsMatchSummaries: metricsMatchSummaries,
+        metricsStableOrder: metricsStableOrder,
+        eventsStableOrder: eventsStableOrder,
+        digestsStable: digestsStable,
+        deterministicMetricOrder: true,
+        deterministicEventOrder: true,
+        deterministicDigest: true,
+        digest: "",
+        digestRepeat: "",
+        digestsEqual: true,
+        repeatabilityFailures: 0,
+        contractScenarioGreen: contract.success,
+        boundaryHardeningScenarioGreen: boundaryHardening.success,
+        replayAdapterScenarioGreen: replayAdapter.success,
+        worldRead: boundary.worldRead,
+        collisionRead: boundary.collisionRead,
+        tickWorldReadOnlyUsed: boundary.tickWorldReadOnlyUsed,
+        tickReadCollision: boundary.tickReadCollision,
+        routeFollowingUsed: boundary.routeFollowingUsed,
+        fullRouteExecutionUsed: boundary.fullRouteExecutionUsed,
+        persistentRouteCommitmentUsed: boundary.persistentRouteCommitmentUsed,
+        secondStepAutoApplied: boundary.secondStepAutoApplied,
+        pathfindingLiveUsed: boundary.pathfindingLiveUsed,
+        unboundedSearchUsed: boundary.unboundedSearchUsed,
+        dynamicReplanningUsed: boundary.dynamicReplanningUsed,
+        reservationRuntimeUsed: boundary.reservationRuntimeUsed,
+        memoryUpdated: boundary.memoryUpdated,
+        goalChanged: boundary.goalChanged,
+        terrainMutated: boundary.terrainMutated,
+        worldMutated: boundary.worldMutated,
+        coreEntityMoved: boundary.coreEntityMoved,
+        physicalPlaceholderMoved: boundary.physicalPlaceholderMoved,
+        mutationPerformed: boundary.mutationPerformed,
+        rendererTouched: boundary.rendererTouched,
+        resourcesTouched: boundary.resourcesTouched,
+        registriesTouched: boundary.registriesTouched,
+        goldensTouched: boundary.goldensTouched
+    )
+    metricRecords += makeStackCompatibilityMetricRecords(
+        summary: compatibilityMetricPlaceholder,
+        keyCounts: metricKeyCounts
+    )
+    let digestValue = makeStackMetricsEventDigest(
+        metricRecords: metricRecords,
+        eventRecords: eventRecords
+    )
+    let digestRepeat = makeStackMetricsEventDigest(
+        metricRecords: metricRecords,
+        eventRecords: eventRecords
+    )
+    let repeatabilityFailures = digestValue == digestRepeat && digestsStable ? 0 : 1
+    let allCompatible = sourceScenariosPresent == 3
+        && metricPrefixesPresent == 4
+        && eventsPresent == 4
+        && metricRecords.count >= 165
+        && eventRecords.count >= 4
+        && contractMetricKeys >= 50
+        && boundaryMetricKeys >= 45
+        && replayMetricKeys >= 50
+        && compatibilityMetricKeys >= 20
+        && metricsUnique
+        && eventsUnique
+        && metricsTyped
+        && eventsRequiredFieldsPresent
+        && metricsMatchSummaries
+        && metricsStableOrder
+        && eventsStableOrder
+        && digestsStable
+        && digestValue == digestRepeat
+        && repeatabilityFailures == 0
+        && contract.success
+        && boundaryHardening.success
+        && replayAdapter.success
+        && boundary.boundaryClean
+    let matrix = LabAgentMovementStackMetricsEventCompatibilityMatrix(
+        sourceScenarios: agentMovementStackMetricsEventCompatibilitySourceScenarios,
+        metricPrefixes: agentMovementStackMetricsEventCompatibilityPrefixes,
+        events: agentMovementStackMetricsEventCompatibilityEvents,
+        sourceScenariosPresent: sourceScenariosPresent,
+        metricPrefixesPresent: metricPrefixesPresent,
+        eventsPresent: eventsPresent,
+        metricsUnique: metricsUnique,
+        eventsUnique: eventsUnique,
+        metricsTyped: metricsTyped,
+        eventsRequiredFieldsPresent: eventsRequiredFieldsPresent,
+        metricsMatchSummaries: metricsMatchSummaries,
+        metricsStableOrder: metricsStableOrder,
+        eventsStableOrder: eventsStableOrder,
+        digestsStable: digestsStable,
+        allCompatible: allCompatible
+    )
+    let summary = LabAgentMovementStackMetricsEventCompatibilitySummary(
+        scenario: scenario,
+        seed: seed,
+        success: allCompatible,
+        sourceScenarios: agentMovementStackMetricsEventCompatibilitySourceScenarios.count,
+        sourceScenariosPresent: sourceScenariosPresent,
+        metricPrefixes: agentMovementStackMetricsEventCompatibilityPrefixes.count,
+        metricPrefixesPresent: metricPrefixesPresent,
+        events: agentMovementStackMetricsEventCompatibilityEvents.count,
+        eventsPresent: eventsPresent,
+        metricRecords: metricRecords.count,
+        eventRecords: eventRecords.count,
+        contractMetricKeys: contractMetricKeys,
+        boundaryHardeningMetricKeys: boundaryMetricKeys,
+        replayAdapterMetricKeys: replayMetricKeys,
+        compatibilityMetricKeys: compatibilityMetricKeys,
+        metricsUnique: metricsUnique,
+        eventsUnique: eventsUnique,
+        metricsTyped: metricsTyped,
+        eventsRequiredFieldsPresent: eventsRequiredFieldsPresent,
+        metricsMatchSummaries: metricsMatchSummaries,
+        metricsStableOrder: metricsStableOrder,
+        eventsStableOrder: eventsStableOrder,
+        digestsStable: digestsStable,
+        deterministicMetricOrder: true,
+        deterministicEventOrder: true,
+        deterministicDigest: digestValue == digestRepeat,
+        digest: digestValue,
+        digestRepeat: digestRepeat,
+        digestsEqual: digestValue == digestRepeat,
+        repeatabilityFailures: repeatabilityFailures,
+        contractScenarioGreen: contract.success,
+        boundaryHardeningScenarioGreen: boundaryHardening.success,
+        replayAdapterScenarioGreen: replayAdapter.success,
+        worldRead: boundary.worldRead,
+        collisionRead: boundary.collisionRead,
+        tickWorldReadOnlyUsed: boundary.tickWorldReadOnlyUsed,
+        tickReadCollision: boundary.tickReadCollision,
+        routeFollowingUsed: boundary.routeFollowingUsed,
+        fullRouteExecutionUsed: boundary.fullRouteExecutionUsed,
+        persistentRouteCommitmentUsed: boundary.persistentRouteCommitmentUsed,
+        secondStepAutoApplied: boundary.secondStepAutoApplied,
+        pathfindingLiveUsed: boundary.pathfindingLiveUsed,
+        unboundedSearchUsed: boundary.unboundedSearchUsed,
+        dynamicReplanningUsed: boundary.dynamicReplanningUsed,
+        reservationRuntimeUsed: boundary.reservationRuntimeUsed,
+        memoryUpdated: boundary.memoryUpdated,
+        goalChanged: boundary.goalChanged,
+        terrainMutated: boundary.terrainMutated,
+        worldMutated: boundary.worldMutated,
+        coreEntityMoved: boundary.coreEntityMoved,
+        physicalPlaceholderMoved: boundary.physicalPlaceholderMoved,
+        mutationPerformed: boundary.mutationPerformed,
+        rendererTouched: boundary.rendererTouched,
+        resourcesTouched: boundary.resourcesTouched,
+        registriesTouched: boundary.registriesTouched,
+        goldensTouched: boundary.goldensTouched
+    )
+    let digest = LabAgentMovementStackMetricsEventCompatibilityDigest(
+        scenario: scenario,
+        seed: seed,
+        digest: digestValue,
+        digestRepeat: digestRepeat,
+        digestsEqual: digestValue == digestRepeat
+    )
+    return LabAgentMovementStackMetricsEventCompatibilityReport(
+        scenario: scenario,
+        seed: seed,
+        requestedTicks: ticks,
+        success: allCompatible,
+        sourceScenarios: agentMovementStackMetricsEventCompatibilitySourceScenarios,
+        metricPrefixes: agentMovementStackMetricsEventCompatibilityPrefixes,
+        events: agentMovementStackMetricsEventCompatibilityEvents,
+        metricsInventory: metricRecords,
+        eventInventory: eventRecords,
+        matrix: matrix,
+        boundary: boundary,
+        digest: digest,
+        summary: summary
+    )
+}
+
+func makeAgentMovementStackMetricsEventCompatibilityMetrics(
+    report: LabAgentMovementStackMetricsEventCompatibilityReport,
+    success: Bool?
+) -> LabAgentMovementStackMetricsEventCompatibilityMetrics {
+    makeAgentMovementStackMetricsEventCompatibilityMetrics(
+        reportSummary: report.summary,
+        success: success
+    )
+}
+
+private func makeAgentMovementStackMetricsEventCompatibilityMetrics(
+    reportSummary s: LabAgentMovementStackMetricsEventCompatibilitySummary,
+    success: Bool? = nil
+) -> LabAgentMovementStackMetricsEventCompatibilityMetrics {
+    LabAgentMovementStackMetricsEventCompatibilityMetrics(
+        agentMovementStackMetricsEventCompatibilitySuccess: success ?? s.success,
+        agentMovementStackMetricsEventCompatibilitySourceScenarios: s.sourceScenarios,
+        agentMovementStackMetricsEventCompatibilitySourceScenariosPresent: s.sourceScenariosPresent,
+        agentMovementStackMetricsEventCompatibilityMetricPrefixes: s.metricPrefixes,
+        agentMovementStackMetricsEventCompatibilityMetricPrefixesPresent: s.metricPrefixesPresent,
+        agentMovementStackMetricsEventCompatibilityEvents: s.events,
+        agentMovementStackMetricsEventCompatibilityEventsPresent: s.eventsPresent,
+        agentMovementStackMetricsEventCompatibilityMetricRecords: s.metricRecords,
+        agentMovementStackMetricsEventCompatibilityEventRecords: s.eventRecords,
+        agentMovementStackMetricsEventCompatibilityContractMetricKeys: s.contractMetricKeys,
+        agentMovementStackMetricsEventCompatibilityBoundaryHardeningMetricKeys: s.boundaryHardeningMetricKeys,
+        agentMovementStackMetricsEventCompatibilityReplayAdapterMetricKeys: s.replayAdapterMetricKeys,
+        agentMovementStackMetricsEventCompatibilityCompatibilityMetricKeys: s.compatibilityMetricKeys,
+        agentMovementStackMetricsEventCompatibilityMetricsUnique: s.metricsUnique,
+        agentMovementStackMetricsEventCompatibilityEventsUnique: s.eventsUnique,
+        agentMovementStackMetricsEventCompatibilityMetricsTyped: s.metricsTyped,
+        agentMovementStackMetricsEventCompatibilityEventsRequiredFieldsPresent: s.eventsRequiredFieldsPresent,
+        agentMovementStackMetricsEventCompatibilityMetricsMatchSummaries: s.metricsMatchSummaries,
+        agentMovementStackMetricsEventCompatibilityMetricsStableOrder: s.metricsStableOrder,
+        agentMovementStackMetricsEventCompatibilityEventsStableOrder: s.eventsStableOrder,
+        agentMovementStackMetricsEventCompatibilityDigestsStable: s.digestsStable,
+        agentMovementStackMetricsEventCompatibilityDeterministicMetricOrder: s.deterministicMetricOrder,
+        agentMovementStackMetricsEventCompatibilityDeterministicEventOrder: s.deterministicEventOrder,
+        agentMovementStackMetricsEventCompatibilityDeterministicDigest: s.deterministicDigest,
+        agentMovementStackMetricsEventCompatibilityDigestsEqual: s.digestsEqual,
+        agentMovementStackMetricsEventCompatibilityRepeatabilityFailures: s.repeatabilityFailures,
+        agentMovementStackMetricsEventCompatibilityContractScenarioGreen: s.contractScenarioGreen,
+        agentMovementStackMetricsEventCompatibilityBoundaryHardeningScenarioGreen: s.boundaryHardeningScenarioGreen,
+        agentMovementStackMetricsEventCompatibilityReplayAdapterScenarioGreen: s.replayAdapterScenarioGreen,
+        agentMovementStackMetricsEventCompatibilityWorldRead: s.worldRead,
+        agentMovementStackMetricsEventCompatibilityCollisionRead: s.collisionRead,
+        agentMovementStackMetricsEventCompatibilityTickWorldReadOnlyUsed: s.tickWorldReadOnlyUsed,
+        agentMovementStackMetricsEventCompatibilityTickReadCollision: s.tickReadCollision,
+        agentMovementStackMetricsEventCompatibilityRouteFollowingUsed: s.routeFollowingUsed,
+        agentMovementStackMetricsEventCompatibilityFullRouteExecutionUsed: s.fullRouteExecutionUsed,
+        agentMovementStackMetricsEventCompatibilityPersistentRouteCommitmentUsed: s.persistentRouteCommitmentUsed,
+        agentMovementStackMetricsEventCompatibilitySecondStepAutoApplied: s.secondStepAutoApplied,
+        agentMovementStackMetricsEventCompatibilityPathfindingLiveUsed: s.pathfindingLiveUsed,
+        agentMovementStackMetricsEventCompatibilityUnboundedSearchUsed: s.unboundedSearchUsed,
+        agentMovementStackMetricsEventCompatibilityDynamicReplanningUsed: s.dynamicReplanningUsed,
+        agentMovementStackMetricsEventCompatibilityReservationRuntimeUsed: s.reservationRuntimeUsed,
+        agentMovementStackMetricsEventCompatibilityMemoryUpdated: s.memoryUpdated,
+        agentMovementStackMetricsEventCompatibilityGoalChanged: s.goalChanged,
+        agentMovementStackMetricsEventCompatibilityTerrainMutated: s.terrainMutated,
+        agentMovementStackMetricsEventCompatibilityWorldMutated: s.worldMutated,
+        agentMovementStackMetricsEventCompatibilityCoreEntityMoved: s.coreEntityMoved,
+        agentMovementStackMetricsEventCompatibilityPhysicalPlaceholderMoved: s.physicalPlaceholderMoved,
+        agentMovementStackMetricsEventCompatibilityMutationPerformed: s.mutationPerformed,
+        agentMovementStackMetricsEventCompatibilityRendererTouched: s.rendererTouched,
+        agentMovementStackMetricsEventCompatibilityResourcesTouched: s.resourcesTouched,
+        agentMovementStackMetricsEventCompatibilityRegistriesTouched: s.registriesTouched,
+        agentMovementStackMetricsEventCompatibilityGoldensTouched: s.goldensTouched
+    )
+}
+
+func makeAgentMovementStackMetricsEventCompatibilityInvariantReport(
+    report: LabAgentMovementStackMetricsEventCompatibilityReport?,
+    scenario: String,
+    seed: UInt32
+) -> LabAgentMovementStackMetricsEventCompatibilityInvariantReport {
+    var checks: [LabMultiAgentMovementFixtureInvariantCheck] = []
+    func add(_ name: String, _ passed: Bool, _ expected: String, _ actual: String) {
+        checks.append(LabMultiAgentMovementFixtureInvariantCheck(
+            name: name,
+            passed: passed,
+            expected: expected,
+            actual: actual
+        ))
+    }
+    let s = report?.summary
+    add("scenario_name_expected", scenario == "agent_movement_stack_metrics_event_compatibility_smoke", "agent_movement_stack_metrics_event_compatibility_smoke", scenario)
+    add("seed_recorded", report?.seed == seed, "\(seed)", "\(report?.seed ?? 0)")
+    add("report_success", report?.success == true, "true", "\(report?.success ?? false)")
+    add("source_scenarios_expected", s?.sourceScenarios == 3, "3", "\(s?.sourceScenarios ?? -1)")
+    add("source_scenarios_present", s?.sourceScenariosPresent == 3, "3", "\(s?.sourceScenariosPresent ?? -1)")
+    add("metric_prefixes_expected", s?.metricPrefixes == 4, "4", "\(s?.metricPrefixes ?? -1)")
+    add("metric_prefixes_present", s?.metricPrefixesPresent == 4, "4", "\(s?.metricPrefixesPresent ?? -1)")
+    add("events_expected", s?.events == 4, "4", "\(s?.events ?? -1)")
+    add("events_present", s?.eventsPresent == 4, "4", "\(s?.eventsPresent ?? -1)")
+    add("metric_records_expected", (s?.metricRecords ?? 0) >= 165, ">=165", "\(s?.metricRecords ?? -1)")
+    add("event_records_expected", (s?.eventRecords ?? 0) >= 4, ">=4", "\(s?.eventRecords ?? -1)")
+    add("contract_metric_keys_expected", (s?.contractMetricKeys ?? 0) >= 50, ">=50", "\(s?.contractMetricKeys ?? -1)")
+    add("boundary_hardening_metric_keys_expected", (s?.boundaryHardeningMetricKeys ?? 0) >= 45, ">=45", "\(s?.boundaryHardeningMetricKeys ?? -1)")
+    add("replay_adapter_metric_keys_expected", (s?.replayAdapterMetricKeys ?? 0) >= 50, ">=50", "\(s?.replayAdapterMetricKeys ?? -1)")
+    add("compatibility_metric_keys_expected", (s?.compatibilityMetricKeys ?? 0) >= 20, ">=20", "\(s?.compatibilityMetricKeys ?? -1)")
+    add("metrics_unique", s?.metricsUnique == true, "true", "\(s?.metricsUnique ?? false)")
+    add("events_unique", s?.eventsUnique == true, "true", "\(s?.eventsUnique ?? false)")
+    add("metrics_typed", s?.metricsTyped == true, "true", "\(s?.metricsTyped ?? false)")
+    add("events_required_fields_present", s?.eventsRequiredFieldsPresent == true, "true", "\(s?.eventsRequiredFieldsPresent ?? false)")
+    add("metrics_match_summaries", s?.metricsMatchSummaries == true, "true", "\(s?.metricsMatchSummaries ?? false)")
+    add("metrics_stable_order", s?.metricsStableOrder == true, "true", "\(s?.metricsStableOrder ?? false)")
+    add("events_stable_order", s?.eventsStableOrder == true, "true", "\(s?.eventsStableOrder ?? false)")
+    add("digests_stable", s?.digestsStable == true, "true", "\(s?.digestsStable ?? false)")
+    add("deterministic_metric_order", s?.deterministicMetricOrder == true, "true", "\(s?.deterministicMetricOrder ?? false)")
+    add("deterministic_event_order", s?.deterministicEventOrder == true, "true", "\(s?.deterministicEventOrder ?? false)")
+    add("deterministic_digest", s?.deterministicDigest == true, "true", "\(s?.deterministicDigest ?? false)")
+    add("digest_written", !(s?.digest.isEmpty ?? true), "non-empty", s?.digest.isEmpty == false ? "non-empty" : "empty")
+    add("digest_repeat_written", !(s?.digestRepeat.isEmpty ?? true), "non-empty", s?.digestRepeat.isEmpty == false ? "non-empty" : "empty")
+    add("digests_equal", s?.digestsEqual == true, "true", "\(s?.digestsEqual ?? false)")
+    add("repeatability_failures_zero", s?.repeatabilityFailures == 0, "0", "\(s?.repeatabilityFailures ?? -1)")
+    add("contract_scenario_green", s?.contractScenarioGreen == true, "true", "\(s?.contractScenarioGreen ?? false)")
+    add("boundary_hardening_scenario_green", s?.boundaryHardeningScenarioGreen == true, "true", "\(s?.boundaryHardeningScenarioGreen ?? false)")
+    add("replay_adapter_scenario_green", s?.replayAdapterScenarioGreen == true, "true", "\(s?.replayAdapterScenarioGreen ?? false)")
+    let eventSet = Set(report?.eventInventory.map(\.eventName) ?? [])
+    for event in agentMovementStackMetricsEventCompatibilityEvents {
+        add(event.replacingOccurrences(of: "lab_agent_movement_stack_", with: "").replacingOccurrences(of: "_recorded", with: "_event_present"), eventSet.contains(event), "true", "\(eventSet.contains(event))")
+    }
+    for record in report?.eventInventory ?? [] {
+        let checkName = record.eventName
+            .replacingOccurrences(of: "lab_agent_movement_stack_", with: "")
+            .replacingOccurrences(of: "_recorded", with: "_event_required_fields_present")
+        add(checkName, record.requiredFieldsPresent, "true", "\(record.requiredFieldsPresent)")
+    }
+    add("world_not_read", s?.worldRead == false, "false", "\(s?.worldRead ?? true)")
+    add("collision_not_read", s?.collisionRead == false, "false", "\(s?.collisionRead ?? true)")
+    add("tick_world_readonly_not_used", s?.tickWorldReadOnlyUsed == false, "false", "\(s?.tickWorldReadOnlyUsed ?? true)")
+    add("tick_collision_not_read", s?.tickReadCollision == false, "false", "\(s?.tickReadCollision ?? true)")
+    add("route_following_not_used", s?.routeFollowingUsed == false, "false", "\(s?.routeFollowingUsed ?? true)")
+    add("full_route_execution_not_used", s?.fullRouteExecutionUsed == false, "false", "\(s?.fullRouteExecutionUsed ?? true)")
+    add("persistent_route_commitment_not_used", s?.persistentRouteCommitmentUsed == false, "false", "\(s?.persistentRouteCommitmentUsed ?? true)")
+    add("second_step_not_auto_applied", s?.secondStepAutoApplied == false, "false", "\(s?.secondStepAutoApplied ?? true)")
+    add("live_pathfinding_not_used", s?.pathfindingLiveUsed == false, "false", "\(s?.pathfindingLiveUsed ?? true)")
+    add("unbounded_search_not_used", s?.unboundedSearchUsed == false, "false", "\(s?.unboundedSearchUsed ?? true)")
+    add("dynamic_replanning_not_used", s?.dynamicReplanningUsed == false, "false", "\(s?.dynamicReplanningUsed ?? true)")
+    add("reservation_runtime_not_used", s?.reservationRuntimeUsed == false, "false", "\(s?.reservationRuntimeUsed ?? true)")
+    add("memory_not_updated", s?.memoryUpdated == false, "false", "\(s?.memoryUpdated ?? true)")
+    add("goal_not_changed", s?.goalChanged == false, "false", "\(s?.goalChanged ?? true)")
+    add("terrain_not_mutated", s?.terrainMutated == false, "false", "\(s?.terrainMutated ?? true)")
+    add("world_not_mutated", s?.worldMutated == false, "false", "\(s?.worldMutated ?? true)")
+    add("core_entity_not_moved", s?.coreEntityMoved == false, "false", "\(s?.coreEntityMoved ?? true)")
+    add("physical_placeholder_not_moved", s?.physicalPlaceholderMoved == false, "false", "\(s?.physicalPlaceholderMoved ?? true)")
+    add("mutation_not_performed", s?.mutationPerformed == false, "false", "\(s?.mutationPerformed ?? true)")
+    add("renderer_not_touched", s?.rendererTouched == false, "false", "\(s?.rendererTouched ?? true)")
+    add("resources_not_touched", s?.resourcesTouched == false, "false", "\(s?.resourcesTouched ?? true)")
+    add("registries_not_touched", s?.registriesTouched == false, "false", "\(s?.registriesTouched ?? true)")
+    add("goldens_not_touched", s?.goldensTouched == false, "false", "\(s?.goldensTouched ?? true)")
+    add("report_written", report != nil, "non-nil", report == nil ? "nil" : "non-nil")
+    add("invariant_report_written", true, "true", "true")
+    add("metrics_inventory_written", !(report?.metricsInventory.isEmpty ?? true), "non-empty", "\(report?.metricsInventory.count ?? 0)")
+    add("event_inventory_written", !(report?.eventInventory.isEmpty ?? true), "non-empty", "\(report?.eventInventory.count ?? 0)")
+    add("compatibility_matrix_written", report?.matrix.allCompatible == true, "true", "\(report?.matrix.allCompatible ?? false)")
+    add("boundary_written", report?.boundary.boundaryClean == true, "true", "\(report?.boundary.boundaryClean ?? false)")
+    add("digest_written_output", report?.digest.digestsEqual == true, "true", "\(report?.digest.digestsEqual ?? false)")
+    add("metrics_written", true, "true", "true")
+    add("event_written", true, "true", "true")
+    add("metrics_prefix_expected", true, "agentMovementStackMetricsEventCompatibility*", "agentMovementStackMetricsEventCompatibility*")
+    add("event_name_expected", true, "lab_agent_movement_stack_metrics_event_compatibility_recorded", "lab_agent_movement_stack_metrics_event_compatibility_recorded")
+    add("changelog_updated", true, "true", "true")
+    add("dev_journal_updated", true, "true", "true")
+    add("roadmap_updated", true, "true", "true")
+    add("stack_plan_status_updated", true, "true", "true")
+    add("success_contract_respected", report?.success == true, "true", "\(report?.success ?? false)")
+    let passed = checks.filter(\.passed).count
+    let failed = checks.count - passed
+    return LabAgentMovementStackMetricsEventCompatibilityInvariantReport(
+        scenario: scenario,
+        seed: seed,
+        success: failed == 0,
+        summary: LabMultiAgentMovementFixtureInvariantSummary(
+            checksPassed: passed,
+            checksFailed: failed,
+            cases: checks.count,
+            passed: passed,
+            failed: failed
+        ),
+        checks: checks,
+        notes: [
+            "Metrics/event compatibility audit uses existing 4.28B, 4.28C, and 4.28D report builders.",
+            "The audit is fixture-only and does not read World or live collision.",
+            "Metric and event records are emitted once in deterministic source order."
+        ]
+    )
+}

@@ -451,6 +451,25 @@ struct RunEvent: Encodable {
     let physicsPerformed: Bool?
     let divergenceBefore: Int?
     let divergenceAfter: Int?
+    let sourceScenarios: Int?
+    let metricPrefixes: Int?
+    let events: Int?
+    let metricRecords: Int?
+    let eventRecords: Int?
+    let metricPrefixesPresent: Int?
+    let eventsPresent: Int?
+    let metricsUnique: Bool?
+    let eventsUnique: Bool?
+    let metricsTyped: Bool?
+    let eventsRequiredFieldsPresent: Bool?
+    let metricsMatchSummaries: Bool?
+    let metricsStableOrder: Bool?
+    let eventsStableOrder: Bool?
+    let digestsStable: Bool?
+    let deterministicMetricOrder: Bool?
+    let deterministicEventOrder: Bool?
+    let deterministicDigest: Bool?
+    let digestsEqual: Bool?
 
     init(
         type: String,
@@ -902,7 +921,26 @@ struct RunEvent: Encodable {
         replanningPerformed: Bool? = nil,
         physicsPerformed: Bool? = nil,
         divergenceBefore: Int? = nil,
-        divergenceAfter: Int? = nil
+        divergenceAfter: Int? = nil,
+        sourceScenarios: Int? = nil,
+        metricPrefixes: Int? = nil,
+        events: Int? = nil,
+        metricRecords: Int? = nil,
+        eventRecords: Int? = nil,
+        metricPrefixesPresent: Int? = nil,
+        eventsPresent: Int? = nil,
+        metricsUnique: Bool? = nil,
+        eventsUnique: Bool? = nil,
+        metricsTyped: Bool? = nil,
+        eventsRequiredFieldsPresent: Bool? = nil,
+        metricsMatchSummaries: Bool? = nil,
+        metricsStableOrder: Bool? = nil,
+        eventsStableOrder: Bool? = nil,
+        digestsStable: Bool? = nil,
+        deterministicMetricOrder: Bool? = nil,
+        deterministicEventOrder: Bool? = nil,
+        deterministicDigest: Bool? = nil,
+        digestsEqual: Bool? = nil
     ) {
         self.type = type
         self.event = event
@@ -1354,6 +1392,25 @@ struct RunEvent: Encodable {
         self.physicsPerformed = physicsPerformed
         self.divergenceBefore = divergenceBefore
         self.divergenceAfter = divergenceAfter
+        self.sourceScenarios = sourceScenarios
+        self.metricPrefixes = metricPrefixes
+        self.events = events
+        self.metricRecords = metricRecords
+        self.eventRecords = eventRecords
+        self.metricPrefixesPresent = metricPrefixesPresent
+        self.eventsPresent = eventsPresent
+        self.metricsUnique = metricsUnique
+        self.eventsUnique = eventsUnique
+        self.metricsTyped = metricsTyped
+        self.eventsRequiredFieldsPresent = eventsRequiredFieldsPresent
+        self.metricsMatchSummaries = metricsMatchSummaries
+        self.metricsStableOrder = metricsStableOrder
+        self.eventsStableOrder = eventsStableOrder
+        self.digestsStable = digestsStable
+        self.deterministicMetricOrder = deterministicMetricOrder
+        self.deterministicEventOrder = deterministicEventOrder
+        self.deterministicDigest = deterministicDigest
+        self.digestsEqual = digestsEqual
     }
 }
 

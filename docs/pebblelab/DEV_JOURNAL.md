@@ -9914,3 +9914,103 @@ stall in this environment, while `Pebble` and `pebsmoke` release products have
 been validated in prior 4.28 work.
 
 Next step: Phase 4.28E — Stack Metrics/Event Compatibility Smoke.
+
+## 2026-07-02 — Phase 4.28E agent movement stack metrics/event compatibility smoke
+
+Objective: add `agent_movement_stack_metrics_event_compatibility_smoke`, a
+fixture-only audit that checks the stack metrics and events emitted by the
+4.28B stack contract, 4.28C boundary hardening, and 4.28D replay adapter
+families.
+
+Starting point: 4.28B/C/D already prove the stack contract, boundary audit, and
+replay adapter. Phase 4.28E does not change those source scenarios; it builds
+their reports in memory and verifies their metrics/events are present, typed,
+stable, unique, digestable, and consistent with summaries.
+
+Source scenarios audited:
+
+- `agent_movement_stack_contract_fixture_smoke`;
+- `agent_movement_stack_contract_boundary_hardening_smoke`;
+- `agent_movement_stack_replay_regression_adapter_smoke`.
+
+Metric prefixes audited:
+
+- `agentMovementStackContract*`;
+- `agentMovementStackBoundaryHardening*`;
+- `agentMovementStackReplayAdapter*`;
+- `agentMovementStackMetricsEventCompatibility*`.
+
+Events audited:
+
+- `lab_agent_movement_stack_contract_recorded`;
+- `lab_agent_movement_stack_boundary_hardening_recorded`;
+- `lab_agent_movement_stack_replay_adapter_recorded`;
+- `lab_agent_movement_stack_metrics_event_compatibility_recorded`.
+
+Metrics inventory and event inventory:
+
+- source scenarios present = 3;
+- metric prefixes present = 4;
+- events present = 4;
+- metric records = 228;
+- event records = 4;
+- contract metric keys = 67;
+- boundary hardening metric keys = 51;
+- replay adapter metric keys = 58;
+- compatibility metric keys = 52;
+- metrics unique/typed/matching summaries = true;
+- events unique/required fields present = true.
+
+Compatibility matrix and ordering:
+
+- metrics stable order = true;
+- events stable order = true;
+- deterministic metric order = true;
+- deterministic event order = true;
+- source digests stable = true;
+- aggregate digest equals repeat digest = true;
+- repeatability failures = 0.
+
+Boundary confirmations: 4.28E does not read World or live collision, does not
+execute route following or full-route execution, does not move Core entities or
+physical placeholders, does not mutate memory/goals, does not use reservation
+runtime, and does not mutate terrain/World. Renderer, resources, registries,
+and goldens remain untouched.
+
+Outputs, invariants, metrics, and event:
+
+- `agent_movement_stack_metrics_event_compatibility_report.json`;
+- `agent_movement_stack_metrics_event_compatibility_invariant_report.json`;
+- `agent_movement_stack_metrics_event_compatibility_metrics_inventory.json`;
+- `agent_movement_stack_metrics_event_compatibility_event_inventory.json`;
+- `agent_movement_stack_metrics_event_compatibility_matrix.json`;
+- `agent_movement_stack_metrics_event_compatibility_boundary.json`;
+- `agent_movement_stack_metrics_event_compatibility_digest.json`;
+- `agentMovementStackMetricsEventCompatibility*` metrics;
+- `lab_agent_movement_stack_metrics_event_compatibility_recorded` event.
+
+Validation commands:
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario agent_movement_stack_metrics_event_compatibility_smoke --seed 42 --ticks 3 --out runs/check_agent_movement_stack_metrics_event_compatibility`
+- `swift run -c release PebbleLab -- --scenario agent_movement_stack_contract_fixture_smoke --seed 42 --ticks 3 --out runs/check_stack_contract_fixture_after_metrics_event_compatibility`
+- `swift run -c release PebbleLab -- --scenario agent_movement_stack_contract_boundary_hardening_smoke --seed 42 --ticks 0 --out runs/check_stack_boundary_hardening_after_metrics_event_compatibility`
+- `swift run -c release PebbleLab -- --scenario agent_movement_stack_replay_regression_adapter_smoke --seed 42 --ticks 3 --out runs/check_stack_replay_adapter_after_metrics_event_compatibility`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_multi_tick_replay_smoke --seed 42 --ticks 3 --out runs/check_bounded_path_multi_tick_replay_after_metrics_event_compatibility`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_consolidated_replay_regression_smoke --seed 42 --ticks 3 --out runs/check_policy_consolidated_replay_after_metrics_event_compatibility`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_multi_tick_replay_smoke --seed 42 --ticks 3 --out runs/check_alternate_hint_replay_after_metrics_event_compatibility`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_approved_application_smoke --seed 42 --ticks 3 --out runs/check_closed_loop_after_metrics_event_compatibility`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_metrics_event_compatibility`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+Results: local debug scenario validation passed with `success = true`, 228
+metric records, 4 event records, 52 compatibility metrics, and 80 invariant
+checks passed with 0 failed. Release validation remains best-effort in this
+environment because production `PebbleLab` runs can stall, while normal
+`swift build`, `Pebble` release, and `pebsmoke` release are still used as
+structural validation.
+
+Next step: Phase 4.28F — Stack Consolidated Multi-Tick Replay Regression.

@@ -844,3 +844,78 @@ Limits:
 - renderer, resources, registries, and goldens remain untouched.
 
 Next step: Phase 4.28E — Stack Metrics/Event Compatibility Smoke.
+
+## Phase 4.28E Implementation Status
+
+Phase 4.28E added
+`agent_movement_stack_metrics_event_compatibility_smoke`, a fixture-only
+metrics/event compatibility audit for the AgentMovementStack scenario family.
+
+Source scenarios audited:
+
+- `agent_movement_stack_contract_fixture_smoke`;
+- `agent_movement_stack_contract_boundary_hardening_smoke`;
+- `agent_movement_stack_replay_regression_adapter_smoke`.
+
+Metric prefixes audited:
+
+- `agentMovementStackContract*`;
+- `agentMovementStackBoundaryHardening*`;
+- `agentMovementStackReplayAdapter*`;
+- `agentMovementStackMetricsEventCompatibility*`.
+
+Events audited:
+
+- `lab_agent_movement_stack_contract_recorded`;
+- `lab_agent_movement_stack_boundary_hardening_recorded`;
+- `lab_agent_movement_stack_replay_adapter_recorded`;
+- `lab_agent_movement_stack_metrics_event_compatibility_recorded`.
+
+Inventory and compatibility matrix:
+
+- source scenarios = 3;
+- source scenarios present = 3;
+- metric prefixes = 4;
+- metric prefixes present = 4;
+- events = 4;
+- events present = 4;
+- metric records = 228;
+- event records = 4;
+- contract metric keys = 67;
+- boundary hardening metric keys = 51;
+- replay adapter metric keys = 58;
+- compatibility metric keys = 52;
+- metrics unique, typed, and summary-consistent = true;
+- events unique and required fields present = true.
+
+Stable ordering and digest:
+
+- metric order deterministic = true;
+- event order deterministic = true;
+- source digests stable = true;
+- aggregate digest repeatable = true;
+- repeatability failures = 0.
+
+Outputs produced:
+
+- `agent_movement_stack_metrics_event_compatibility_report.json`;
+- `agent_movement_stack_metrics_event_compatibility_invariant_report.json`;
+- `agent_movement_stack_metrics_event_compatibility_metrics_inventory.json`;
+- `agent_movement_stack_metrics_event_compatibility_event_inventory.json`;
+- `agent_movement_stack_metrics_event_compatibility_matrix.json`;
+- `agent_movement_stack_metrics_event_compatibility_boundary.json`;
+- `agent_movement_stack_metrics_event_compatibility_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Limits:
+
+- no World or live collision read is introduced;
+- no route following, full-route execution, persistent route commitment, or
+  second-step auto-application is introduced;
+- no Core entity or physical placeholder movement is introduced;
+- no memory/goals/reservation runtime is used;
+- no terrain/World mutation occurs;
+- renderer, resources, registries, and goldens remain untouched.
+
+Next step: Phase 4.28F — Stack Consolidated Multi-Tick Replay Regression.

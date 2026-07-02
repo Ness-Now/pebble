@@ -90,6 +90,8 @@ let isAgentMovementStackBoundaryHardeningScenario = options.scenario
     == "agent_movement_stack_contract_boundary_hardening_smoke"
 let isAgentMovementStackReplayAdapterScenario = options.scenario
     == "agent_movement_stack_replay_regression_adapter_smoke"
+let isAgentMovementStackMetricsEventCompatibilityScenario = options.scenario
+    == "agent_movement_stack_metrics_event_compatibility_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -129,7 +131,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isBoundedPathPlanningMultiTickReplayScenario
     || isAgentMovementStackContractScenario
     || isAgentMovementStackBoundaryHardeningScenario
-    || isAgentMovementStackReplayAdapterScenario)
+    || isAgentMovementStackReplayAdapterScenario
+    || isAgentMovementStackMetricsEventCompatibilityScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -798,7 +801,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isBoundedPathPlanningMultiTickReplayScenario
     || isAgentMovementStackContractScenario
     || isAgentMovementStackBoundaryHardeningScenario
-    || isAgentMovementStackReplayAdapterScenario {
+    || isAgentMovementStackReplayAdapterScenario
+    || isAgentMovementStackMetricsEventCompatibilityScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -3267,6 +3271,80 @@ let agentMovementStackReplayAdapterSuccess = isAgentMovementStackReplayAdapterSc
         && agentMovementStackReplayAdapterSummary?.registriesTouched == false
         && agentMovementStackReplayAdapterSummary?.goldensTouched == false)
     : nil
+let agentMovementStackMetricsEventCompatibilityReport =
+    isAgentMovementStackMetricsEventCompatibilityScenario
+    ? makeAgentMovementStackMetricsEventCompatibilityReport(
+        scenario: options.scenario,
+        seed: options.seed,
+        requestedTicks: options.ticks
+    )
+    : nil
+let agentMovementStackMetricsEventCompatibilityInvariantReport =
+    isAgentMovementStackMetricsEventCompatibilityScenario
+    ? makeAgentMovementStackMetricsEventCompatibilityInvariantReport(
+        report: agentMovementStackMetricsEventCompatibilityReport,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let agentMovementStackMetricsEventCompatibilitySummary =
+    agentMovementStackMetricsEventCompatibilityReport?.summary
+let agentMovementStackMetricsEventCompatibilitySuccess =
+    isAgentMovementStackMetricsEventCompatibilityScenario
+    ? ((agentMovementStackMetricsEventCompatibilityReport?.success ?? false)
+        && (agentMovementStackMetricsEventCompatibilityInvariantReport?.success ?? false)
+        && agentMovementStackMetricsEventCompatibilitySummary?.sourceScenarios == 3
+        && agentMovementStackMetricsEventCompatibilitySummary?.sourceScenariosPresent == 3
+        && agentMovementStackMetricsEventCompatibilitySummary?.metricPrefixes == 4
+        && agentMovementStackMetricsEventCompatibilitySummary?.metricPrefixesPresent == 4
+        && agentMovementStackMetricsEventCompatibilitySummary?.events == 4
+        && agentMovementStackMetricsEventCompatibilitySummary?.eventsPresent == 4
+        && (agentMovementStackMetricsEventCompatibilitySummary?.metricRecords ?? 0) >= 165
+        && (agentMovementStackMetricsEventCompatibilitySummary?.eventRecords ?? 0) >= 4
+        && (agentMovementStackMetricsEventCompatibilitySummary?.contractMetricKeys ?? 0) >= 50
+        && (agentMovementStackMetricsEventCompatibilitySummary?.boundaryHardeningMetricKeys ?? 0) >= 45
+        && (agentMovementStackMetricsEventCompatibilitySummary?.replayAdapterMetricKeys ?? 0) >= 50
+        && (agentMovementStackMetricsEventCompatibilitySummary?.compatibilityMetricKeys ?? 0) >= 20
+        && agentMovementStackMetricsEventCompatibilitySummary?.metricsUnique == true
+        && agentMovementStackMetricsEventCompatibilitySummary?.eventsUnique == true
+        && agentMovementStackMetricsEventCompatibilitySummary?.metricsTyped == true
+        && agentMovementStackMetricsEventCompatibilitySummary?.eventsRequiredFieldsPresent == true
+        && agentMovementStackMetricsEventCompatibilitySummary?.metricsMatchSummaries == true
+        && agentMovementStackMetricsEventCompatibilitySummary?.metricsStableOrder == true
+        && agentMovementStackMetricsEventCompatibilitySummary?.eventsStableOrder == true
+        && agentMovementStackMetricsEventCompatibilitySummary?.digestsStable == true
+        && agentMovementStackMetricsEventCompatibilitySummary?.deterministicMetricOrder == true
+        && agentMovementStackMetricsEventCompatibilitySummary?.deterministicEventOrder == true
+        && agentMovementStackMetricsEventCompatibilitySummary?.deterministicDigest == true
+        && agentMovementStackMetricsEventCompatibilitySummary?.digestsEqual == true
+        && agentMovementStackMetricsEventCompatibilitySummary?.repeatabilityFailures == 0
+        && agentMovementStackMetricsEventCompatibilitySummary?.contractScenarioGreen == true
+        && agentMovementStackMetricsEventCompatibilitySummary?.boundaryHardeningScenarioGreen == true
+        && agentMovementStackMetricsEventCompatibilitySummary?.replayAdapterScenarioGreen == true
+        && agentMovementStackMetricsEventCompatibilitySummary?.worldRead == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.collisionRead == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.tickWorldReadOnlyUsed == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.tickReadCollision == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.routeFollowingUsed == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.fullRouteExecutionUsed == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.persistentRouteCommitmentUsed == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.secondStepAutoApplied == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.pathfindingLiveUsed == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.unboundedSearchUsed == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.dynamicReplanningUsed == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.reservationRuntimeUsed == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.memoryUpdated == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.goalChanged == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.terrainMutated == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.worldMutated == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.coreEntityMoved == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.physicalPlaceholderMoved == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.mutationPerformed == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.rendererTouched == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.resourcesTouched == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.registriesTouched == false
+        && agentMovementStackMetricsEventCompatibilitySummary?.goldensTouched == false)
+    : nil
 let multiTickClosedLoopReport = isMultiTickClosedLoopFixtureScenario
     ? makeMultiTickClosedLoopFixtureReport(
         scenario: options.scenario,
@@ -3907,6 +3985,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (agentMovementStackContractSuccess ?? true)
     && (agentMovementStackBoundaryHardeningSuccess ?? true)
     && (agentMovementStackReplayAdapterSuccess ?? true)
+    && (agentMovementStackMetricsEventCompatibilitySuccess ?? true)
     && (multiTickClosedLoopSuccess ?? true)
     && (multiTickClosedLoopHardeningSuccess ?? true)
     && (multiTickClosedLoopLiveReadonlySuccess ?? true)
@@ -5865,6 +5944,53 @@ if options.outPath != nil {
                 replanningPerformed: summary.dynamicReplanningUsed
             ))
         }
+        if let agentMovementStackMetricsEventCompatibilityReport {
+            let summary = agentMovementStackMetricsEventCompatibilityReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_agent_movement_stack_metrics_event_compatibility_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                seed: options.seed,
+                requestedTicks: agentMovementStackMetricsEventCompatibilityReport.requestedTicks,
+                executedTicks: agentMovementStackMetricsEventCompatibilityReport.requestedTicks,
+                success: agentMovementStackMetricsEventCompatibilitySuccess,
+                count: summary.metricRecords,
+                passed: summary.sourceScenariosPresent,
+                failed: summary.sourceScenarios - summary.sourceScenariosPresent,
+                candidates: summary.metricPrefixes,
+                decisions: summary.events,
+                repeatabilityFailures: summary.repeatabilityFailures,
+                routeFollowingUsed: summary.routeFollowingUsed,
+                tickReadCollision: summary.tickReadCollision,
+                worldUsed: summary.worldRead || summary.tickWorldReadOnlyUsed,
+                collisionRead: summary.collisionRead || summary.tickReadCollision,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingLiveUsed,
+                replanningPerformed: summary.dynamicReplanningUsed,
+                sourceScenarios: summary.sourceScenarios,
+                metricPrefixes: summary.metricPrefixes,
+                events: summary.events,
+                metricRecords: summary.metricRecords,
+                eventRecords: summary.eventRecords,
+                metricPrefixesPresent: summary.metricPrefixesPresent,
+                eventsPresent: summary.eventsPresent,
+                metricsUnique: summary.metricsUnique,
+                eventsUnique: summary.eventsUnique,
+                metricsTyped: summary.metricsTyped,
+                eventsRequiredFieldsPresent: summary.eventsRequiredFieldsPresent,
+                metricsMatchSummaries: summary.metricsMatchSummaries,
+                metricsStableOrder: summary.metricsStableOrder,
+                eventsStableOrder: summary.eventsStableOrder,
+                digestsStable: summary.digestsStable,
+                deterministicMetricOrder: summary.deterministicMetricOrder,
+                deterministicEventOrder: summary.deterministicEventOrder,
+                deterministicDigest: summary.deterministicDigest,
+                digestsEqual: summary.digestsEqual
+            ))
+        }
         if let multiTickClosedLoopReport {
             let summary = multiTickClosedLoopReport.summary
             try appendEvent(RunEvent(
@@ -7453,6 +7579,38 @@ if let outPath = options.outPath {
             try writeJSON(
                 agentMovementStackReplayAdapterInvariantReport,
                 to: outURL.appendingPathComponent("agent_movement_stack_replay_adapter_invariant_report.json")
+            )
+        }
+        if let agentMovementStackMetricsEventCompatibilityReport {
+            try writeJSON(
+                agentMovementStackMetricsEventCompatibilityReport,
+                to: outURL.appendingPathComponent("agent_movement_stack_metrics_event_compatibility_report.json")
+            )
+            try writeJSON(
+                agentMovementStackMetricsEventCompatibilityReport.metricsInventory,
+                to: outURL.appendingPathComponent("agent_movement_stack_metrics_event_compatibility_metrics_inventory.json")
+            )
+            try writeJSON(
+                agentMovementStackMetricsEventCompatibilityReport.eventInventory,
+                to: outURL.appendingPathComponent("agent_movement_stack_metrics_event_compatibility_event_inventory.json")
+            )
+            try writeJSON(
+                agentMovementStackMetricsEventCompatibilityReport.matrix,
+                to: outURL.appendingPathComponent("agent_movement_stack_metrics_event_compatibility_matrix.json")
+            )
+            try writeJSON(
+                agentMovementStackMetricsEventCompatibilityReport.boundary,
+                to: outURL.appendingPathComponent("agent_movement_stack_metrics_event_compatibility_boundary.json")
+            )
+            try writeJSON(
+                agentMovementStackMetricsEventCompatibilityReport.digest,
+                to: outURL.appendingPathComponent("agent_movement_stack_metrics_event_compatibility_digest.json")
+            )
+        }
+        if let agentMovementStackMetricsEventCompatibilityInvariantReport {
+            try writeJSON(
+                agentMovementStackMetricsEventCompatibilityInvariantReport,
+                to: outURL.appendingPathComponent("agent_movement_stack_metrics_event_compatibility_invariant_report.json")
             )
         }
         if let multiTickClosedLoopReport {
@@ -9415,7 +9573,15 @@ if let outPath = options.outPath {
             routeFollowingLiveHardeningSuccess: routeFollowingLiveHardeningSuccess,
             successCriteria: successCriteria
         )
-        if let agentMovementStackReplayAdapterReport {
+        if let agentMovementStackMetricsEventCompatibilityReport {
+            try writeJSON(
+                makeAgentMovementStackMetricsEventCompatibilityMetrics(
+                    report: agentMovementStackMetricsEventCompatibilityReport,
+                    success: agentMovementStackMetricsEventCompatibilitySuccess
+                ),
+                to: outURL.appendingPathComponent("metrics.json")
+            )
+        } else if let agentMovementStackReplayAdapterReport {
             try writeJSON(
                 makeAgentMovementStackReplayAdapterMetrics(
                     report: agentMovementStackReplayAdapterReport,
