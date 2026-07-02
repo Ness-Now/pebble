@@ -3630,3 +3630,46 @@ Validated scope:
 - no scenario added.
 
 Next recommended step: Phase 5.6B - Cognitive Loop Integration Fixture Smoke.
+
+## Phase 5.6B - Cognitive Loop Integration Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: create the first fixture-only scenario that orchestrates memory
+retrieval, goal selection from retrieved memory, the memory-goal bridge,
+abstract behavior result production, and memory update without live side
+effects.
+
+Implemented as `cognitive_loop_integration_fixture_smoke`.
+
+Validated scope:
+
+- creates five synthetic integrated agents for safety, curiosity, nearby
+  observation, empty retrieval/currentGoal continuity, and duplicate write
+  rejection;
+- reads initial memory snapshots through bounded retrieval before memory
+  update;
+- produces selected goals and abstract selected actions;
+- produces behavior result summaries without executing actions;
+- runs bounded memory update after behavior result production;
+- writes before/after memory snapshots;
+- emits `cognitiveLoopIntegration*` metrics and
+  `lab_cognitive_loop_integration_recorded` events;
+- writes `cognitive_loop_integration_report.json`,
+  `cognitive_loop_integration_invariant_report.json`,
+  `cognitive_loop_integration_trace.json`,
+  `cognitive_loop_integration_decisions.json`,
+  `cognitive_loop_integration_memory_snapshot.json`, and
+  `cognitive_loop_integration_digest.json`;
+- keeps `behaviorActionExecuted=false`;
+- keeps `memoryMutatedOutsideUpdate=false`;
+- keeps `retrievalRerunUnexpected=false`;
+- keeps `movementStackUsed=false`;
+- keeps `worldMutated=false` and `terrainMutated=false`;
+- leaves `agents_basic` live runtime behavior unchanged.
+
+Live `agents_basic` integration, iterative cognitive loops, mood,
+relationships, LLM, social memory, and movement stack feedback remain out of
+scope.
+
+Next recommended step: Phase 5.6C - Cognitive Loop Integration Hardening.

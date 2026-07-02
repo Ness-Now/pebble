@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added PebbleLab cognitive loop integration fixture smoke.
 - Documented PebbleLab cognitive loop integration plan.
 - Added PebbleLab behavior loop memory-goal bridge hardening smoke.
 - Added PebbleLab behavior loop memory-goal bridge fixture smoke.

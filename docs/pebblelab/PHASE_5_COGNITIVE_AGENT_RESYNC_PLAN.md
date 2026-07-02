@@ -529,3 +529,28 @@ communication, community state, embeddings, Python, LLM, and RL out of scope.
 
 The recommended next phase is Phase 5.6B - Cognitive Loop Integration Fixture
 Smoke.
+
+## Phase 5.6B Status
+
+Phase 5.6B implemented `cognitive_loop_integration_fixture_smoke`, the first
+fixture-only integrated cognitive loop smoke.
+
+The scenario creates five synthetic agent/memory snapshots, runs retrieval
+against the initial memories, selects memory-informed goals, bridges those
+goals into abstract selected actions and behavior result summaries, runs
+bounded memory update after the behavior results, and writes before/after
+memory snapshots. It covers safety, curiosity, nearby-agent observation, empty
+retrieval/currentGoal continuity, and a duplicate rejected memory write.
+
+The scenario emits `cognitiveLoopIntegration*` metrics,
+`lab_cognitive_loop_integration_recorded` events, trace/decision/snapshot
+outputs, invariant reports, and a stable digest.
+
+It does not execute behavior actions, mutate memory outside the update step,
+rerun retrieval after update, use the movement stack, create or mutate a
+World, mutate terrain, move Core entities, move physical placeholders, alter
+`agents_basic`, add iterative cognition, mood, relationships, communication,
+community state, embeddings, Python, LLM, or RL.
+
+The recommended next phase is Phase 5.6C - Cognitive Loop Integration
+Hardening.

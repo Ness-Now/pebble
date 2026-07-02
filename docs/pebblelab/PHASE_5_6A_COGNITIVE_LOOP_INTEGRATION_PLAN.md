@@ -596,3 +596,80 @@ Future outputs:
 - `swift build -c release --product Pebble` passes;
 - `git diff --check` passes;
 - next phase 5.6B is clearly specified.
+
+## Phase 5.6B Implementation Status
+
+Phase 5.6B implemented the fixture-only scenario
+`cognitive_loop_integration_fixture_smoke`.
+
+Integrated flow:
+
+- build synthetic agent state and initial memory snapshots;
+- run bounded retrieval against the initial memory snapshots;
+- select goals from retrieved memories;
+- bridge selected goals into abstract selected actions;
+- produce behavior result summaries;
+- run memory update after behavior result production;
+- write before/after memory snapshots;
+- emit integrated report, invariant report, trace, decisions, digest, metrics,
+  and events.
+
+Retrieval:
+
+- reads only the initial memory snapshot;
+- covers safety, curiosity, nearby-agent, and empty retrieval cases;
+- does not rerun after memory update.
+
+Goal selection:
+
+- safety memory selects `seekSafety`;
+- curiosity memory selects `explore`;
+- nearby-agent memory selects `observeOtherAgent`;
+- empty retrieval preserves currentGoal.
+
+Bridge:
+
+- `seekSafety` -> `seekSafety`;
+- `explore` -> `explore`;
+- `observeOtherAgent` -> `observeAgent`;
+- currentGoal continuity keeps the current selected action mapping.
+
+Memory update:
+
+- runs only after behavior result summaries exist;
+- accepts bounded writes;
+- rejects a controlled duplicate write;
+- keeps max 1 accepted write per agent/tick;
+- records before/after memory counts.
+
+Outputs:
+
+- `cognitive_loop_integration_report.json`;
+- `cognitive_loop_integration_invariant_report.json`;
+- `cognitive_loop_integration_trace.json`;
+- `cognitive_loop_integration_decisions.json`;
+- `cognitive_loop_integration_memory_snapshot.json`;
+- `cognitive_loop_integration_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Metrics/events:
+
+- metrics use the `cognitiveLoopIntegration*` prefix;
+- the primary event is `lab_cognitive_loop_integration_recorded`;
+- a summary event `lab_cognitive_loop_integration_summary_recorded` is also
+  emitted.
+
+Limitations:
+
+- no behavior action execution;
+- no memory mutation outside memory update;
+- no retrieval rerun after update;
+- no movement intent or movement stack;
+- no World or terrain mutation;
+- no live `agents_basic` integration;
+- no iterative cognitive loop;
+- no mood, relationships, communication, social memory, Python, LLM,
+  embeddings, or RL.
+
+Next phase: Phase 5.6C - Cognitive Loop Integration Hardening.
