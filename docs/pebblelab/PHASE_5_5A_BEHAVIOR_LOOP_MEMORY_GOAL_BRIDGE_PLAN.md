@@ -720,3 +720,21 @@ Limitations:
   embeddings, or RL.
 
 Next phase: Phase 5.6A - Cognitive Loop Integration Planning.
+
+## Phase 5.6A Follow-up Note
+
+Phase 5.6A is documented as
+`PHASE_5_6A_COGNITIVE_LOOP_INTEGRATION_PLAN.md`.
+
+It defines the next contract above this bridge: an integrated fixture-only
+cognitive loop that consumes memory snapshots, runs retrieval, runs goal
+selection from retrieved memory, uses this bridge to produce a selected action
+and behavior result summary, and then passes that result to memory update.
+
+The integration plan keeps the bridge side-effect-free. It does not change
+`LabBehaviorLoopMemoryGoalBridge.swift`, does not modify `main.swift`, does not
+add a scenario, does not execute behavior actions, does not write memory inside
+the bridge, does not rerun retrieval after update, does not call the movement
+stack, and does not touch World or terrain.
+
+Next phase: Phase 5.6B - Cognitive Loop Integration Fixture Smoke.

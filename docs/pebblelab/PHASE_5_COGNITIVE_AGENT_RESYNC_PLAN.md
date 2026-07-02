@@ -506,3 +506,26 @@ add communication, or connect Python, LLM, embeddings, or RL.
 
 The recommended next phase is Phase 5.6A - Cognitive Loop Integration
 Planning.
+
+## Phase 5.6A Status
+
+Phase 5.6A is implemented as
+`PHASE_5_6A_COGNITIVE_LOOP_INTEGRATION_PLAN.md`.
+
+The plan defines the future integrated cognitive loop contract that will
+orchestrate memory retrieval, goal selection from retrieved memory, the
+behavior-loop memory-goal bridge, behavior result production, and memory update
+inside a fixture-only chain. It records current component ownership
+boundaries, proposed integration input/trace/decision/report types, memory
+update rules, goal/action rules, determinism rules, future
+`cognitiveLoopIntegration*` metrics, future
+`lab_cognitive_loop_integration_recorded` events, and invariant expectations
+for Phase 5.6B.
+
+The plan keeps `agents_basic` integration, live agent behavior mutation,
+behavior action execution, World/terrain mutation, movement stack usage,
+retrieval-after-update loops, mood, emotional memory, relationships, trust,
+communication, community state, embeddings, Python, LLM, and RL out of scope.
+
+The recommended next phase is Phase 5.6B - Cognitive Loop Integration Fixture
+Smoke.

@@ -1,5 +1,82 @@
 # PebbleLab Development Journal
 
+## 2026-07-02 — Phase 5.6A cognitive loop integration planning
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Document the v0 contract for integrating the isolated cognitive fixtures into
+one bounded cognitive loop:
+
+```text
+memory snapshot
+-> retrieval
+-> goal selection
+-> bridge
+-> behavior result
+-> memory update
+```
+
+### Starting Point
+
+Phase 5.1B/5.1C created and hardened the behavior-loop fixture. Phase
+5.2B/5.2C created and hardened memory update from behavior result. Phase
+5.3B/5.3C created and hardened read-only memory retrieval. Phase 5.4B/5.4C
+created and hardened goal selection from retrieved memory. Phase 5.5B/5.5C
+created and hardened the behavior-loop memory-goal bridge.
+
+All components remain fixture-only and side-effect clean. Phase 5.6A plans how
+to orchestrate them without modifying `agents_basic`.
+
+### Planning
+
+- Created `PHASE_5_6A_COGNITIVE_LOOP_INTEGRATION_PLAN.md`.
+- Defined the current component boundaries for `LabBehaviorLoop`,
+  `LabMemoryUpdate`, `LabMemoryRetrieval`, `LabGoalSelectionMemory`, and
+  `LabBehaviorLoopMemoryGoalBridge`.
+- Proposed `LabCognitiveLoopIntegrationInput`,
+  `LabCognitiveLoopIntegrationStepTrace`,
+  `LabCognitiveLoopIntegrationDecision`, and
+  `LabCognitiveLoopIntegrationReport`.
+- Defined the v0 integrated flow: retrieval before goal selection, bridge
+  before behavior result, memory update after behavior result.
+- Specified that retrieval does not rerun after memory update in v0.
+- Specified that memory mutation is allowed only through `LabMemoryUpdate` in
+  the future fixture.
+- Defined future `cognitiveLoopIntegration*` metrics and
+  `lab_cognitive_loop_integration_recorded` events.
+- Defined the Phase 5.6B fixture outputs and invariant expectations.
+
+### Boundaries
+
+- Docs-only.
+- No Swift files changed.
+- No runtime behavior changed.
+- No scenario added.
+- No runtime metrics or events added.
+- No `LabAgent`, `main.swift`, behavior-loop, memory update, retrieval, goal
+  selection, bridge, movement stack, World, renderer, resource, registry,
+  save/load, or golden changes.
+- No mood, relationships, trust, communication, community, Python, LLM,
+  embeddings, or RL.
+
+### Validation
+
+Commands requested for this docs-only phase:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results are recorded in the Phase 5.6A commit summary.
+
+### Next Step
+
+Phase 5.6B — Cognitive Loop Integration Fixture Smoke.
+
 ## 2026-07-02 — Phase 5.5C behavior loop memory-goal bridge hardening smoke
 
 Branch: `lab/pebblelab-v1`

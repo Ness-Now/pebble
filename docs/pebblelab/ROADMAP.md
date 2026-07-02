@@ -3595,3 +3595,38 @@ Validated scope:
   relationships, LLM, social memory, and movement stack feedback out of scope.
 
 Next recommended step: Phase 5.6A - Cognitive Loop Integration Planning.
+
+## Phase 5.6A - Cognitive Loop Integration Planning
+
+Status: implemented and validated as docs-only.
+
+Goal: define the v0 integration contract for orchestrating behavior loop,
+memory retrieval, goal selection from retrieved memory, memory-goal bridge, and
+memory update into one fixture-only cognitive loop.
+
+Implemented as `PHASE_5_6A_COGNITIVE_LOOP_INTEGRATION_PLAN.md`.
+
+Validated scope:
+
+- documents the integrated flow from synthetic memory snapshot to retrieval,
+  goal selection, bridge, behavior result, and memory update;
+- defines proposed `LabCognitiveLoopIntegrationInput`,
+  `LabCognitiveLoopIntegrationStepTrace`,
+  `LabCognitiveLoopIntegrationDecision`, and
+  `LabCognitiveLoopIntegrationReport` types;
+- defines ownership boundaries so a future `LabCognitiveLoopIntegration.swift`
+  orchestrates without absorbing component logic;
+- keeps `main.swift` as scenario/output dispatcher only;
+- defines v0 memory update rules, goal/action rules, determinism rules, future
+  `cognitiveLoopIntegration*` metrics, future
+  `lab_cognitive_loop_integration_recorded` events, and invariant
+  expectations;
+- keeps `agents_basic`, live agent mutation, action execution, World/terrain
+  mutation, movement stack, movement intent, retrieval-after-update loops,
+  mood, relationships, communication, Python, LLM, embeddings, and RL out of
+  scope;
+- no Swift files changed;
+- no runtime behavior changed;
+- no scenario added.
+
+Next recommended step: Phase 5.6B - Cognitive Loop Integration Fixture Smoke.
