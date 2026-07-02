@@ -606,3 +606,26 @@ Limitations:
 - the hardening remains fixture-only and does not make agents "intelligent."
 
 Next phase: Phase 5.2A - Memory Update From Behavior Result Planning.
+
+## Phase 5.2A Planning Status
+
+Phase 5.2A is implemented as
+`PHASE_5_2A_MEMORY_UPDATE_FROM_BEHAVIOR_RESULT_PLAN.md`.
+
+It defines the future memory contract that consumes behavior-loop results
+without changing the behavior-loop runtime:
+
+- behavior result to memory update input;
+- memory update proposal;
+- accepted/rejected bounded memory write;
+- before/after memory counts;
+- future `memoryUpdate*` metrics;
+- future `lab_memory_update_recorded` event;
+- fixture-only Phase 5.2B path.
+
+This keeps the Phase 5.1 behavior loop responsible for decisions/results while
+reserving memory semantics for a separate memory update layer. Movement stack
+feedback, retrieval, mood, relationships, trust, communication, Python, LLM,
+and RL remain out of scope.
+
+Next phase: Phase 5.2B - Memory Update From Behavior Result Fixture Smoke.

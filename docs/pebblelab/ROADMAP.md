@@ -3113,9 +3113,52 @@ Planning.
 
 ## Phase 5.2A - Memory Update From Behavior Result Planning
 
-Status: planned.
+Status: implemented and validated as docs-only.
 
 Goal: define how bounded behavior-loop results should become deterministic
 memory updates before implementing memory retrieval, emotional memory,
 relationships, communication, society runtime, movement stack bridging,
 Python, LLM, or RL.
+
+Phase 5.2A documents the v0 memory update contract:
+
+- behavior result to memory update input;
+- memory update proposal;
+- accepted/rejected write decision;
+- max 1 accepted behavior memory per agent per tick;
+- deterministic summaries and bounded importance;
+- stable ordering by tick, agent id, and memory type;
+- report/invariant/digest/metrics/event expectations for the future fixture;
+- explicit separation between behavior result, memory write, and future
+  retrieval.
+
+Allowed future v0 memory types are deliberately small:
+
+- `behavior_action`;
+- `goal_confirmed`;
+- `goal_changed`;
+- `effect_applied`;
+- `nearby_agent_observed`;
+- `safety_reaction`;
+- `curiosity_reaction`;
+- `idle_tick_summary`.
+
+Validated outputs:
+
+- `PHASE_5_2A_MEMORY_UPDATE_FROM_BEHAVIOR_RESULT_PLAN.md`;
+- changelog, development journal, roadmap, Phase 5 resync plan, and behavior
+  loop contract plan updates;
+- no Swift, runtime, scenario, movement stack, World, renderer, resource,
+  registry, save/load, or golden changes.
+
+Next recommended step: Phase 5.2B - Memory Update From Behavior Result Fixture
+Smoke.
+
+## Phase 5.2B - Memory Update From Behavior Result Fixture Smoke
+
+Status: planned.
+
+Goal: implement a fixture-only memory update smoke that converts controlled
+behavior-loop results into memory update proposals, accepted/rejected writes,
+before/after memory snapshots, report, invariant report, digest, metrics, and
+events while preserving all no-World/no-movement-stack boundaries.

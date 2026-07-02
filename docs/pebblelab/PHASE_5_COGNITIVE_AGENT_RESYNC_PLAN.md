@@ -248,3 +248,20 @@ community state, Python, LLM, or RL.
 
 The recommended next phase is Phase 5.2A - Memory Update From Behavior Result
 Planning.
+
+## Phase 5.2A Status
+
+Phase 5.2A is implemented as
+`PHASE_5_2A_MEMORY_UPDATE_FROM_BEHAVIOR_RESULT_PLAN.md`.
+
+The plan defines how future behavior-loop results should become deterministic,
+bounded memory update proposals before any runtime implementation. It separates
+behavior results from memory proposal/acceptance/rejection, keeps v0 memory
+writes bounded to max 1 accepted behavior memory per agent per tick, defines
+allowed v0 memory types, proposes `memoryUpdate*` metrics and
+`lab_memory_update_recorded` events, and keeps memory retrieval, emotional
+memory, mood, relationships, trust, communication, movement stack feedback,
+Python, LLM, and RL out of scope.
+
+The recommended next phase is Phase 5.2B - Memory Update From Behavior Result
+Fixture Smoke.

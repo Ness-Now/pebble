@@ -10674,3 +10674,106 @@ Results:
 - diff checks passed.
 
 Next step: Phase 5.2A — Memory Update From Behavior Result Planning.
+
+## 2026-07-02 — Phase 5.2A memory update from behavior result planning
+
+Objective: define the docs-only contract for turning behavior-loop results
+into deterministic, bounded memory update proposals before implementing any
+new runtime memory system.
+
+Starting point: branch `lab/pebblelab-v1`, commit
+`b283a0d779e5efa60d6b0fd29ee89f0d6e05ef26`, with Phase 5.1B and Phase 5.1C
+complete. Phase 5.1B proved the behavior-loop contract fixture; Phase 5.1C
+hardened it across 12 deterministic cases. Both already report
+`memoryEntriesWritten`, but memory does not yet have a dedicated proposal,
+acceptance, rejection, write-budget, or retrieval boundary contract.
+
+Current memory audit:
+
+- `LabAgent` stores `memory: [LabMemoryEntry]`;
+- `LabMemoryEntry` has `tick`, `type`, `summary`, and `importance`;
+- `remember(tick:type:summary:importance:)` appends directly;
+- encoded agent snapshots include `memoryCount` and the last 10 entries as
+  `recentMemory`;
+- current memory is append-only and has no retrieval, query, decay, emotional
+  memory, relationship memory, social trust, LLM context, or movement-stack
+  feedback bridge.
+
+New planning document:
+
+- `docs/pebblelab/PHASE_5_2A_MEMORY_UPDATE_FROM_BEHAVIOR_RESULT_PLAN.md`.
+
+Contract summary:
+
+- input: behavior-loop result plus tick, agent id, goal/action/effect,
+  previous memory count, optional nearby/inventory summaries, and reason;
+- output: memory update proposal, accepted/rejected state, rejection reason,
+  appendable memory entry when accepted, bounded write count, and before/after
+  memory counts;
+- v0 write budget: max 1 accepted behavior memory per agent per tick;
+- stable ordering: tick, agent id, memory type;
+- summaries and importance must be deterministic and bounded.
+
+Future types proposed:
+
+- `LabMemoryUpdateInput`;
+- `LabMemoryUpdateProposal`;
+- `LabMemoryUpdateResult`;
+- `LabMemoryUpdateReport`.
+
+Future memory types v0:
+
+- `behavior_action`;
+- `goal_confirmed`;
+- `goal_changed`;
+- `effect_applied`;
+- `nearby_agent_observed`;
+- `safety_reaction`;
+- `curiosity_reaction`;
+- `idle_tick_summary`.
+
+Future metrics/events:
+
+- `memoryUpdate*` metrics;
+- `lab_memory_update_recorded`;
+- optional `lab_memory_update_summary_recorded`.
+
+Explicit exclusions:
+
+- no Swift runtime change;
+- no scenario;
+- no runtime metric or event;
+- no `LabAgent` change;
+- no `LabBehaviorLoop.swift` change;
+- no `main.swift` change;
+- no movement stack change;
+- no memory retrieval;
+- no emotional memory;
+- no mood, relationships, trust, communication, community, Python, LLM, or RL;
+- no World/terrain mutation;
+- no Core entity or physical placeholder movement.
+
+Validation commands:
+
+- `git status`;
+- `git branch --show-current`;
+- `git pull origin lab/pebblelab-v1`;
+- `git log --oneline -12`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Expected result: docs-only changes keep Swift behavior unchanged. `pebsmoke`
+is optional because this phase changes no runtime code, scenario, movement
+stack, renderer, resources, registries, save/load, or goldens.
+
+Results:
+
+- `swift build` passed;
+- `swift build -c release --product Pebble` passed;
+- `git diff --check` passed;
+- `git diff --cached --check` passed;
+- `pebsmoke` was not run for this docs-only phase.
+
+Next step: Phase 5.2B — Memory Update From Behavior Result Fixture Smoke.
