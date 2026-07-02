@@ -919,3 +919,72 @@ Limits:
 - renderer, resources, registries, and goldens remain untouched.
 
 Next step: Phase 4.28F — Stack Consolidated Multi-Tick Replay Regression.
+
+## Phase 4.28F Implementation Status
+
+Phase 4.28F added
+`agent_movement_stack_consolidated_multi_tick_replay_smoke`, the final
+fixture-only/audit-only replay consolidation proof for the current
+AgentMovementStack family.
+
+Required runs aggregated:
+
+- `agent_movement_stack_contract_fixture_smoke`;
+- `agent_movement_stack_contract_boundary_hardening_smoke`;
+- `agent_movement_stack_replay_regression_adapter_smoke`;
+- `agent_movement_stack_metrics_event_compatibility_smoke`;
+- `bounded_path_planning_multi_tick_replay_smoke`;
+- `alternate_local_hint_multi_tick_replay_smoke`;
+- `multi_tick_closed_loop_approved_application_smoke`;
+- `agent_movement_policy_consolidated_replay_regression_smoke`.
+
+Compatibility matrix:
+
+- required runs = 8;
+- required runs present = 8;
+- successful runs = 8;
+- failed runs = 0;
+- missing required runs = 0;
+- multi-tick runs present >= 4;
+- stack contract, boundary hardening, replay adapter, and metrics/event
+  compatibility reports are present;
+- all required, digest, boundary, policy, metrics/events, output schema, and
+  multi-tick compatibility checks pass.
+
+Aggregate replay evidence:
+
+- replay runs total >= 10;
+- contexts, plans, selected first steps, handoff intents, tick approvals,
+  tick denials, approved applications, and feedback consumed are all non-zero;
+- deterministic run order = true;
+- deterministic digest = true;
+- digest repeat equals digest;
+- repeatability failures = 0.
+
+Outputs produced:
+
+- `agent_movement_stack_consolidated_replay_report.json`;
+- `agent_movement_stack_consolidated_replay_invariant_report.json`;
+- `agent_movement_stack_consolidated_replay_runs.json`;
+- `agent_movement_stack_consolidated_replay_matrix.json`;
+- `agent_movement_stack_consolidated_replay_boundary.json`;
+- `agent_movement_stack_consolidated_replay_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Limits:
+
+- the 4.28F aggregator does not create/read World or live collision;
+- source reports retain ownership of their own already-audited evidence;
+- no route following, full-route execution, persistent route commitment, or
+  second-step auto-application is introduced;
+- no v4 behavior is implemented and v0/v1/v2/v3 remain unchanged;
+- no live pathfinding, unbounded search, dynamic replanning, reservation
+  runtime, memory, goals, social behavior, communication, Python, LLM, or RL is
+  introduced;
+- no Core entity or physical placeholder movement is introduced;
+- terrain/World, renderer, resources, registries, save/load, and goldens remain
+  untouched.
+
+Next step: Phase 4.28G — Agent Movement Stack Closure And Roadmap Resync, or
+return to the Phase 3 roadmap after closing the Phase 4 movement stack.

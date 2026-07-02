@@ -470,6 +470,31 @@ struct RunEvent: Encodable {
     let deterministicEventOrder: Bool?
     let deterministicDigest: Bool?
     let digestsEqual: Bool?
+    let requiredRuns: Int?
+    let requiredRunsPresent: Int?
+    let successfulRuns: Int?
+    let failedRuns: Int?
+    let missingRequiredRuns: Int?
+    let multiTickRuns: Int?
+    let multiTickRunsPresent: Int?
+    let replayRunsTotal: Int?
+    let contextsTotalAggregate: Int?
+    let plansProducedAggregate: Int?
+    let selectedFirstStepsAggregate: Int?
+    let handoffIntentsAggregate: Int?
+    let tickApprovedAggregate: Int?
+    let tickDeniedAggregate: Int?
+    let approvedApplicationsAggregate: Int?
+    let feedbackConsumedAggregate: Int?
+    let allRequiredPresent: Bool?
+    let allRunsSuccessful: Bool?
+    let allDigestsEqual: Bool?
+    let allBoundariesClean: Bool?
+    let allPoliciesCompatible: Bool?
+    let allMetricsEventsCompatible: Bool?
+    let allOutputSchemasCompatible: Bool?
+    let allMultiTickCompatible: Bool?
+    let deterministicRunOrder: Bool?
 
     init(
         type: String,
@@ -940,7 +965,32 @@ struct RunEvent: Encodable {
         deterministicMetricOrder: Bool? = nil,
         deterministicEventOrder: Bool? = nil,
         deterministicDigest: Bool? = nil,
-        digestsEqual: Bool? = nil
+        digestsEqual: Bool? = nil,
+        requiredRuns: Int? = nil,
+        requiredRunsPresent: Int? = nil,
+        successfulRuns: Int? = nil,
+        failedRuns: Int? = nil,
+        missingRequiredRuns: Int? = nil,
+        multiTickRuns: Int? = nil,
+        multiTickRunsPresent: Int? = nil,
+        replayRunsTotal: Int? = nil,
+        contextsTotalAggregate: Int? = nil,
+        plansProducedAggregate: Int? = nil,
+        selectedFirstStepsAggregate: Int? = nil,
+        handoffIntentsAggregate: Int? = nil,
+        tickApprovedAggregate: Int? = nil,
+        tickDeniedAggregate: Int? = nil,
+        approvedApplicationsAggregate: Int? = nil,
+        feedbackConsumedAggregate: Int? = nil,
+        allRequiredPresent: Bool? = nil,
+        allRunsSuccessful: Bool? = nil,
+        allDigestsEqual: Bool? = nil,
+        allBoundariesClean: Bool? = nil,
+        allPoliciesCompatible: Bool? = nil,
+        allMetricsEventsCompatible: Bool? = nil,
+        allOutputSchemasCompatible: Bool? = nil,
+        allMultiTickCompatible: Bool? = nil,
+        deterministicRunOrder: Bool? = nil
     ) {
         self.type = type
         self.event = event
@@ -1411,6 +1461,31 @@ struct RunEvent: Encodable {
         self.deterministicEventOrder = deterministicEventOrder
         self.deterministicDigest = deterministicDigest
         self.digestsEqual = digestsEqual
+        self.requiredRuns = requiredRuns
+        self.requiredRunsPresent = requiredRunsPresent
+        self.successfulRuns = successfulRuns
+        self.failedRuns = failedRuns
+        self.missingRequiredRuns = missingRequiredRuns
+        self.multiTickRuns = multiTickRuns
+        self.multiTickRunsPresent = multiTickRunsPresent
+        self.replayRunsTotal = replayRunsTotal
+        self.contextsTotalAggregate = contextsTotalAggregate
+        self.plansProducedAggregate = plansProducedAggregate
+        self.selectedFirstStepsAggregate = selectedFirstStepsAggregate
+        self.handoffIntentsAggregate = handoffIntentsAggregate
+        self.tickApprovedAggregate = tickApprovedAggregate
+        self.tickDeniedAggregate = tickDeniedAggregate
+        self.approvedApplicationsAggregate = approvedApplicationsAggregate
+        self.feedbackConsumedAggregate = feedbackConsumedAggregate
+        self.allRequiredPresent = allRequiredPresent
+        self.allRunsSuccessful = allRunsSuccessful
+        self.allDigestsEqual = allDigestsEqual
+        self.allBoundariesClean = allBoundariesClean
+        self.allPoliciesCompatible = allPoliciesCompatible
+        self.allMetricsEventsCompatible = allMetricsEventsCompatible
+        self.allOutputSchemasCompatible = allOutputSchemasCompatible
+        self.allMultiTickCompatible = allMultiTickCompatible
+        self.deterministicRunOrder = deterministicRunOrder
     }
 }
 

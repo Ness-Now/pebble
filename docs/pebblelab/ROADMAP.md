@@ -2862,3 +2862,56 @@ Outputs:
 Route following and full-route execution remain out of scope.
 
 Next recommended step: Phase 4.28F - Stack Consolidated Multi-Tick Replay Regression.
+
+## Phase 4.28F - Stack Consolidated Multi-Tick Replay Regression
+
+Status: implemented and validated.
+
+Goal: add a final fixture-only/audit-only consolidation replay for the
+AgentMovementStack that aggregates the stack contract, boundary hardening,
+replay adapter, metrics/event compatibility, and core multi-tick movement
+replay families into one compatibility proof.
+
+Validated scope:
+
+- `agent_movement_stack_consolidated_multi_tick_replay_smoke`;
+- required runs = 8;
+- required runs present = 8;
+- successful runs = 8;
+- failed runs = 0;
+- missing required runs = 0;
+- multi-tick runs present >= 4;
+- stack contract, boundary hardening, replay adapter, and metrics/event
+  compatibility source reports present;
+- all required, digest, boundary, policy, metrics/events, output schema, and
+  multi-tick compatibility checks pass;
+- aggregate contexts, plans, selected first steps, handoff intents, tick
+  approvals/denials, approved applications, and feedback consumed remain
+  non-zero;
+- deterministic run order and digest repeatability remain true;
+- repeatability failures = 0;
+- no World/collision live read in the 4.28F aggregator;
+- no route following, full-route execution, persistent route commitment, or
+  second-step auto-application;
+- no Core entity or physical placeholder movement;
+- no memory/goals/reservation runtime;
+- no terrain/World mutation;
+- no renderer/resource/registry/golden touch.
+
+Outputs:
+
+- `agent_movement_stack_consolidated_replay_report.json`;
+- `agent_movement_stack_consolidated_replay_invariant_report.json`;
+- `agent_movement_stack_consolidated_replay_runs.json`;
+- `agent_movement_stack_consolidated_replay_matrix.json`;
+- `agent_movement_stack_consolidated_replay_boundary.json`;
+- `agent_movement_stack_consolidated_replay_digest.json`;
+- `agentMovementStackConsolidatedReplay*` metrics;
+- `lab_agent_movement_stack_consolidated_replay_recorded` event.
+
+Route following, full-route execution, v4 behavior, live pathfinding, memory,
+goals, reservation runtime, and gameplay autonomy remain out of scope.
+
+Next recommended step: Phase 4.28G - Agent Movement Stack Closure And Roadmap
+Resync, or return to the Phase 3 roadmap after closing the Phase 4 movement
+stack.

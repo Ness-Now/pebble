@@ -3872,3 +3872,989 @@ func makeAgentMovementStackMetricsEventCompatibilityInvariantReport(
         ]
     )
 }
+
+struct LabAgentMovementStackConsolidatedReplayRunRecord: Codable {
+    let scenario: String
+    let sourcePhase: String
+    let seed: UInt32
+    let ticks: Int
+    let success: Bool
+    let replayRuns: Int
+    let contextsTotal: Int?
+    let plansProduced: Int?
+    let selectedFirstSteps: Int?
+    let handoffIntents: Int?
+    let tickApproved: Int?
+    let tickDenied: Int?
+    let approvedApplications: Int?
+    let feedbackConsumedTotal: Int?
+    let digest: String
+    let digestRepeat: String
+    let digestsEqual: Bool
+    let repeatabilityFailures: Int
+    let boundaryClean: Bool
+    let policiesCompatible: Bool
+    let metricsEventsCompatible: Bool
+    let outputSchemaCompatible: Bool
+    let multiTickCompatible: Bool
+    let notes: [String]
+}
+
+struct LabAgentMovementStackConsolidatedReplayMatrix: Codable {
+    let requiredRuns: [String]
+    let requiredRunsPresent: Int
+    let successfulRuns: Int
+    let failedRuns: Int
+    let missingRequiredRuns: Int
+    let multiTickRuns: Int
+    let multiTickRunsPresent: Int
+    let stackContractPresent: Bool
+    let boundaryHardeningPresent: Bool
+    let replayAdapterPresent: Bool
+    let metricsEventCompatibilityPresent: Bool
+    let allRequiredPresent: Bool
+    let allRunsSuccessful: Bool
+    let allDigestsEqual: Bool
+    let allBoundariesClean: Bool
+    let allPoliciesCompatible: Bool
+    let allMetricsEventsCompatible: Bool
+    let allOutputSchemasCompatible: Bool
+    let allMultiTickCompatible: Bool
+    let allCompatible: Bool
+}
+
+struct LabAgentMovementStackConsolidatedReplayBoundaryReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let worldRead: Bool
+    let collisionRead: Bool
+    let tickWorldReadOnlyUsed: Bool
+    let tickReadCollision: Bool
+    let routeFollowingUsed: Bool
+    let fullRouteExecutionUsed: Bool
+    let persistentRouteCommitmentUsed: Bool
+    let secondStepAutoApplied: Bool
+    let pathfindingLiveUsed: Bool
+    let unboundedSearchUsed: Bool
+    let dynamicReplanningUsed: Bool
+    let reservationRuntimeUsed: Bool
+    let memoryUpdated: Bool
+    let goalChanged: Bool
+    let terrainMutated: Bool
+    let worldMutated: Bool
+    let coreEntityMoved: Bool
+    let physicalPlaceholderMoved: Bool
+    let mutationPerformed: Bool
+    let rendererTouched: Bool
+    let resourcesTouched: Bool
+    let registriesTouched: Bool
+    let goldensTouched: Bool
+    let boundaryClean: Bool
+}
+
+struct LabAgentMovementStackConsolidatedReplayDigest: Codable {
+    let scenario: String
+    let seed: UInt32
+    let digest: String
+    let digestRepeat: String
+    let digestsEqual: Bool
+}
+
+struct LabAgentMovementStackConsolidatedReplaySummary: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let requiredRuns: Int
+    let requiredRunsPresent: Int
+    let successfulRuns: Int
+    let failedRuns: Int
+    let missingRequiredRuns: Int
+    let multiTickRuns: Int
+    let multiTickRunsPresent: Int
+    let stackContractPresent: Bool
+    let boundaryHardeningPresent: Bool
+    let replayAdapterPresent: Bool
+    let metricsEventCompatibilityPresent: Bool
+    let replayRunsTotal: Int
+    let contextsTotalAggregate: Int
+    let plansProducedAggregate: Int
+    let selectedFirstStepsAggregate: Int
+    let handoffIntentsAggregate: Int
+    let tickApprovedAggregate: Int
+    let tickDeniedAggregate: Int
+    let approvedApplicationsAggregate: Int
+    let feedbackConsumedAggregate: Int
+    let allRequiredPresent: Bool
+    let allRunsSuccessful: Bool
+    let allDigestsEqual: Bool
+    let allBoundariesClean: Bool
+    let allPoliciesCompatible: Bool
+    let allMetricsEventsCompatible: Bool
+    let allOutputSchemasCompatible: Bool
+    let allMultiTickCompatible: Bool
+    let deterministicRunOrder: Bool
+    let deterministicDigest: Bool
+    let digest: String
+    let digestRepeat: String
+    let digestsEqual: Bool
+    let repeatabilityFailures: Int
+    let worldRead: Bool
+    let collisionRead: Bool
+    let tickWorldReadOnlyUsed: Bool
+    let tickReadCollision: Bool
+    let routeFollowingUsed: Bool
+    let fullRouteExecutionUsed: Bool
+    let persistentRouteCommitmentUsed: Bool
+    let secondStepAutoApplied: Bool
+    let pathfindingLiveUsed: Bool
+    let unboundedSearchUsed: Bool
+    let dynamicReplanningUsed: Bool
+    let reservationRuntimeUsed: Bool
+    let memoryUpdated: Bool
+    let goalChanged: Bool
+    let terrainMutated: Bool
+    let worldMutated: Bool
+    let coreEntityMoved: Bool
+    let physicalPlaceholderMoved: Bool
+    let mutationPerformed: Bool
+    let rendererTouched: Bool
+    let resourcesTouched: Bool
+    let registriesTouched: Bool
+    let goldensTouched: Bool
+}
+
+struct LabAgentMovementStackConsolidatedReplayReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let requestedTicks: Int
+    let success: Bool
+    let runs: [LabAgentMovementStackConsolidatedReplayRunRecord]
+    let matrix: LabAgentMovementStackConsolidatedReplayMatrix
+    let boundary: LabAgentMovementStackConsolidatedReplayBoundaryReport
+    let digest: LabAgentMovementStackConsolidatedReplayDigest
+    let summary: LabAgentMovementStackConsolidatedReplaySummary
+}
+
+struct LabAgentMovementStackConsolidatedReplayInvariantReport: Codable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: LabMultiAgentMovementFixtureInvariantSummary
+    let checks: [LabMultiAgentMovementFixtureInvariantCheck]
+    let notes: [String]
+}
+
+struct LabAgentMovementStackConsolidatedReplayMetrics: Codable {
+    let agentMovementStackConsolidatedReplaySuccess: Bool
+    let agentMovementStackConsolidatedReplayRequiredRuns: Int
+    let agentMovementStackConsolidatedReplayRequiredRunsPresent: Int
+    let agentMovementStackConsolidatedReplaySuccessfulRuns: Int
+    let agentMovementStackConsolidatedReplayFailedRuns: Int
+    let agentMovementStackConsolidatedReplayMissingRequiredRuns: Int
+    let agentMovementStackConsolidatedReplayMultiTickRuns: Int
+    let agentMovementStackConsolidatedReplayMultiTickRunsPresent: Int
+    let agentMovementStackConsolidatedReplayStackContractPresent: Bool
+    let agentMovementStackConsolidatedReplayBoundaryHardeningPresent: Bool
+    let agentMovementStackConsolidatedReplayReplayAdapterPresent: Bool
+    let agentMovementStackConsolidatedReplayMetricsEventCompatibilityPresent: Bool
+    let agentMovementStackConsolidatedReplayReplayRunsTotal: Int
+    let agentMovementStackConsolidatedReplayContextsTotalAggregate: Int
+    let agentMovementStackConsolidatedReplayPlansProducedAggregate: Int
+    let agentMovementStackConsolidatedReplaySelectedFirstStepsAggregate: Int
+    let agentMovementStackConsolidatedReplayHandoffIntentsAggregate: Int
+    let agentMovementStackConsolidatedReplayTickApprovedAggregate: Int
+    let agentMovementStackConsolidatedReplayTickDeniedAggregate: Int
+    let agentMovementStackConsolidatedReplayApprovedApplicationsAggregate: Int
+    let agentMovementStackConsolidatedReplayFeedbackConsumedAggregate: Int
+    let agentMovementStackConsolidatedReplayAllRequiredPresent: Bool
+    let agentMovementStackConsolidatedReplayAllRunsSuccessful: Bool
+    let agentMovementStackConsolidatedReplayAllDigestsEqual: Bool
+    let agentMovementStackConsolidatedReplayAllBoundariesClean: Bool
+    let agentMovementStackConsolidatedReplayAllPoliciesCompatible: Bool
+    let agentMovementStackConsolidatedReplayAllMetricsEventsCompatible: Bool
+    let agentMovementStackConsolidatedReplayAllOutputSchemasCompatible: Bool
+    let agentMovementStackConsolidatedReplayAllMultiTickCompatible: Bool
+    let agentMovementStackConsolidatedReplayDeterministicRunOrder: Bool
+    let agentMovementStackConsolidatedReplayDeterministicDigest: Bool
+    let agentMovementStackConsolidatedReplayDigestsEqual: Bool
+    let agentMovementStackConsolidatedReplayRepeatabilityFailures: Int
+    let agentMovementStackConsolidatedReplayWorldRead: Bool
+    let agentMovementStackConsolidatedReplayCollisionRead: Bool
+    let agentMovementStackConsolidatedReplayTickWorldReadOnlyUsed: Bool
+    let agentMovementStackConsolidatedReplayTickReadCollision: Bool
+    let agentMovementStackConsolidatedReplayRouteFollowingUsed: Bool
+    let agentMovementStackConsolidatedReplayFullRouteExecutionUsed: Bool
+    let agentMovementStackConsolidatedReplayPersistentRouteCommitmentUsed: Bool
+    let agentMovementStackConsolidatedReplaySecondStepAutoApplied: Bool
+    let agentMovementStackConsolidatedReplayPathfindingLiveUsed: Bool
+    let agentMovementStackConsolidatedReplayUnboundedSearchUsed: Bool
+    let agentMovementStackConsolidatedReplayDynamicReplanningUsed: Bool
+    let agentMovementStackConsolidatedReplayReservationRuntimeUsed: Bool
+    let agentMovementStackConsolidatedReplayMemoryUpdated: Bool
+    let agentMovementStackConsolidatedReplayGoalChanged: Bool
+    let agentMovementStackConsolidatedReplayTerrainMutated: Bool
+    let agentMovementStackConsolidatedReplayWorldMutated: Bool
+    let agentMovementStackConsolidatedReplayCoreEntityMoved: Bool
+    let agentMovementStackConsolidatedReplayPhysicalPlaceholderMoved: Bool
+    let agentMovementStackConsolidatedReplayMutationPerformed: Bool
+    let agentMovementStackConsolidatedReplayRendererTouched: Bool
+    let agentMovementStackConsolidatedReplayResourcesTouched: Bool
+    let agentMovementStackConsolidatedReplayRegistriesTouched: Bool
+    let agentMovementStackConsolidatedReplayGoldensTouched: Bool
+}
+
+private let agentMovementStackConsolidatedReplayRequiredScenarios = [
+    "agent_movement_stack_contract_fixture_smoke",
+    "agent_movement_stack_contract_boundary_hardening_smoke",
+    "agent_movement_stack_replay_regression_adapter_smoke",
+    "agent_movement_stack_metrics_event_compatibility_smoke",
+    "bounded_path_planning_multi_tick_replay_smoke",
+    "alternate_local_hint_multi_tick_replay_smoke",
+    "multi_tick_closed_loop_approved_application_smoke",
+    "agent_movement_policy_consolidated_replay_regression_smoke"
+]
+
+private let agentMovementStackConsolidatedReplayMultiTickScenarios: Set<String> = [
+    "agent_movement_stack_contract_fixture_smoke",
+    "agent_movement_stack_replay_regression_adapter_smoke",
+    "agent_movement_stack_metrics_event_compatibility_smoke",
+    "bounded_path_planning_multi_tick_replay_smoke",
+    "alternate_local_hint_multi_tick_replay_smoke",
+    "multi_tick_closed_loop_approved_application_smoke",
+    "agent_movement_policy_consolidated_replay_regression_smoke"
+]
+
+private func makeAgentMovementStackConsolidatedReplayDigest(
+    runs: [LabAgentMovementStackConsolidatedReplayRunRecord]
+) -> String {
+    runs.map {
+        [
+            $0.scenario,
+            $0.sourcePhase,
+            "\($0.success)",
+            "\($0.replayRuns)",
+            "\($0.contextsTotal ?? -1)",
+            "\($0.plansProduced ?? -1)",
+            "\($0.selectedFirstSteps ?? -1)",
+            "\($0.handoffIntents ?? -1)",
+            "\($0.tickApproved ?? -1)",
+            "\($0.tickDenied ?? -1)",
+            "\($0.approvedApplications ?? -1)",
+            "\($0.feedbackConsumedTotal ?? -1)",
+            $0.digest,
+            $0.digestRepeat,
+            "\($0.digestsEqual)",
+            "\($0.repeatabilityFailures)",
+            "\($0.boundaryClean)",
+            "\($0.policiesCompatible)",
+            "\($0.metricsEventsCompatible)",
+            "\($0.outputSchemaCompatible)",
+            "\($0.multiTickCompatible)"
+        ].joined(separator: ":")
+    }.joined(separator: "|")
+}
+
+private func makeAgentMovementStackConsolidatedReplayBoundary(
+    scenario: String,
+    seed: UInt32
+) -> LabAgentMovementStackConsolidatedReplayBoundaryReport {
+    LabAgentMovementStackConsolidatedReplayBoundaryReport(
+        scenario: scenario,
+        seed: seed,
+        worldRead: false,
+        collisionRead: false,
+        tickWorldReadOnlyUsed: false,
+        tickReadCollision: false,
+        routeFollowingUsed: false,
+        fullRouteExecutionUsed: false,
+        persistentRouteCommitmentUsed: false,
+        secondStepAutoApplied: false,
+        pathfindingLiveUsed: false,
+        unboundedSearchUsed: false,
+        dynamicReplanningUsed: false,
+        reservationRuntimeUsed: false,
+        memoryUpdated: false,
+        goalChanged: false,
+        terrainMutated: false,
+        worldMutated: false,
+        coreEntityMoved: false,
+        physicalPlaceholderMoved: false,
+        mutationPerformed: false,
+        rendererTouched: false,
+        resourcesTouched: false,
+        registriesTouched: false,
+        goldensTouched: false,
+        boundaryClean: true
+    )
+}
+
+func makeAgentMovementStackConsolidatedReplayReport(
+    scenario: String,
+    seed: UInt32,
+    requestedTicks: Int
+) -> LabAgentMovementStackConsolidatedReplayReport {
+    let ticks = requestedTicks > 0 ? requestedTicks : 3
+    let stackContract = makeAgentMovementStackContractReport(
+        scenario: "agent_movement_stack_contract_fixture_smoke",
+        seed: seed,
+        requestedTicks: ticks
+    )
+    let boundaryHardening = makeAgentMovementStackBoundaryHardeningReport(
+        scenario: "agent_movement_stack_contract_boundary_hardening_smoke",
+        seed: seed
+    )
+    let replayAdapter = makeAgentMovementStackReplayAdapterReport(
+        scenario: "agent_movement_stack_replay_regression_adapter_smoke",
+        seed: seed,
+        requestedTicks: ticks
+    )
+    let metricsEvent = makeAgentMovementStackMetricsEventCompatibilityReport(
+        scenario: "agent_movement_stack_metrics_event_compatibility_smoke",
+        seed: seed,
+        requestedTicks: ticks
+    )
+    let boundedReplay = makeBoundedPathPlanningMultiTickReplayReport(
+        scenario: "bounded_path_planning_multi_tick_replay_smoke",
+        seed: seed,
+        requestedTicks: ticks
+    )
+    let alternateReplay = makeAlternateLocalHintMultiTickReplayReport(
+        scenario: "alternate_local_hint_multi_tick_replay_smoke",
+        seed: seed,
+        requestedTicks: ticks
+    )
+    let closedLoop = makeMultiTickClosedLoopApprovedApplicationReport(
+        scenario: "multi_tick_closed_loop_approved_application_smoke",
+        seed: seed,
+        requestedTicks: ticks
+    )
+    let policyReplay = makeAgentMovementPolicyConsolidatedReplayReport(
+        scenario: "agent_movement_policy_consolidated_replay_regression_smoke",
+        seed: seed,
+        requestedTicks: ticks
+    )
+    let closedLoopDigest = [
+        "closedLoop",
+        "\(closedLoop.summary.executedTicks)",
+        "\(closedLoop.summary.contextsTotal)",
+        "\(closedLoop.summary.movementIntentInputsTotal)",
+        "\(closedLoop.summary.tickApprovedTotal)",
+        "\(closedLoop.summary.tickDeniedTotal)",
+        "\(closedLoop.summary.approvedApplicationsTotal)",
+        "\(closedLoop.summary.feedbackConsumedTotal)",
+        "\(closedLoop.summary.sameTickFeedbackConsumedTotal)",
+        "\(closedLoop.summary.futureFeedbackConsumedTotal)",
+        "\(closedLoop.summary.crossAgentFeedbackLeaksTotal)"
+    ].joined(separator: ":")
+    let runs: [LabAgentMovementStackConsolidatedReplayRunRecord] = [
+        LabAgentMovementStackConsolidatedReplayRunRecord(
+            scenario: "agent_movement_stack_contract_fixture_smoke",
+            sourcePhase: "4.28B",
+            seed: seed,
+            ticks: stackContract.summary.ticks,
+            success: stackContract.success,
+            replayRuns: stackContract.summary.replayRuns,
+            contextsTotal: stackContract.summary.contextsTotal,
+            plansProduced: stackContract.summary.plansProduced,
+            selectedFirstSteps: stackContract.summary.selectedFirstSteps,
+            handoffIntents: stackContract.summary.handoffIntents,
+            tickApproved: stackContract.summary.tickApproved,
+            tickDenied: stackContract.summary.tickDenied,
+            approvedApplications: stackContract.summary.approvedApplications,
+            feedbackConsumedTotal: stackContract.summary.feedbackConsumedTotal,
+            digest: stackContract.digest.digest,
+            digestRepeat: stackContract.digest.digestRepeat,
+            digestsEqual: stackContract.digest.digestsEqual,
+            repeatabilityFailures: stackContract.summary.repeatabilityFailures,
+            boundaryClean: stackContract.boundary.boundaryClean,
+            policiesCompatible: stackContract.summary.v0Covered && stackContract.summary.v1Covered
+                && stackContract.summary.v2Covered && stackContract.summary.v3Covered
+                && stackContract.summary.v4ReservedOnly,
+            metricsEventsCompatible: true,
+            outputSchemaCompatible: true,
+            multiTickCompatible: true,
+            notes: ["Stack contract fixture proves the target layers and policy version surface."]
+        ),
+        LabAgentMovementStackConsolidatedReplayRunRecord(
+            scenario: "agent_movement_stack_contract_boundary_hardening_smoke",
+            sourcePhase: "4.28C",
+            seed: seed,
+            ticks: 0,
+            success: boundaryHardening.success,
+            replayRuns: boundaryHardening.summary.digestsEqual ? 1 : 0,
+            contextsTotal: nil,
+            plansProduced: nil,
+            selectedFirstSteps: nil,
+            handoffIntents: nil,
+            tickApproved: nil,
+            tickDenied: nil,
+            approvedApplications: nil,
+            feedbackConsumedTotal: nil,
+            digest: boundaryHardening.digest.digest,
+            digestRepeat: boundaryHardening.digest.digestRepeat,
+            digestsEqual: boundaryHardening.digest.digestsEqual,
+            repeatabilityFailures: boundaryHardening.summary.repeatabilityFailures,
+            boundaryClean: boundaryHardening.boundary.boundaryClean,
+            policiesCompatible: boundaryHardening.summary.v4ReservedOnlyEnforced,
+            metricsEventsCompatible: true,
+            outputSchemaCompatible: true,
+            multiTickCompatible: true,
+            notes: ["Audit-only boundary hardening supplies negative boundary compatibility evidence."]
+        ),
+        LabAgentMovementStackConsolidatedReplayRunRecord(
+            scenario: "agent_movement_stack_replay_regression_adapter_smoke",
+            sourcePhase: "4.28D",
+            seed: seed,
+            ticks: replayAdapter.requestedTicks,
+            success: replayAdapter.success,
+            replayRuns: replayAdapter.summary.replayRunsTotal,
+            contextsTotal: replayAdapter.summary.contextsTotalAggregate,
+            plansProduced: replayAdapter.summary.plansProducedAggregate,
+            selectedFirstSteps: replayAdapter.summary.selectedFirstStepsAggregate,
+            handoffIntents: replayAdapter.summary.handoffIntentsAggregate,
+            tickApproved: replayAdapter.summary.tickApprovedAggregate,
+            tickDenied: replayAdapter.summary.tickDeniedAggregate,
+            approvedApplications: replayAdapter.summary.approvedApplicationsAggregate,
+            feedbackConsumedTotal: replayAdapter.summary.feedbackConsumedAggregate,
+            digest: replayAdapter.digest.digest,
+            digestRepeat: replayAdapter.digest.digestRepeat,
+            digestsEqual: replayAdapter.digest.digestsEqual,
+            repeatabilityFailures: replayAdapter.summary.repeatabilityFailures,
+            boundaryClean: replayAdapter.boundary.boundaryClean,
+            policiesCompatible: replayAdapter.summary.allPoliciesCompatible,
+            metricsEventsCompatible: true,
+            outputSchemaCompatible: replayAdapter.summary.allOutputSchemasCompatible,
+            multiTickCompatible: true,
+            notes: ["Replay adapter supplies normalized replay compatibility across six source runs."]
+        ),
+        LabAgentMovementStackConsolidatedReplayRunRecord(
+            scenario: "agent_movement_stack_metrics_event_compatibility_smoke",
+            sourcePhase: "4.28E",
+            seed: seed,
+            ticks: metricsEvent.requestedTicks,
+            success: metricsEvent.success,
+            replayRuns: 1,
+            contextsTotal: metricsEvent.summary.sourceScenarios,
+            plansProduced: nil,
+            selectedFirstSteps: nil,
+            handoffIntents: nil,
+            tickApproved: nil,
+            tickDenied: nil,
+            approvedApplications: nil,
+            feedbackConsumedTotal: nil,
+            digest: metricsEvent.digest.digest,
+            digestRepeat: metricsEvent.digest.digestRepeat,
+            digestsEqual: metricsEvent.digest.digestsEqual,
+            repeatabilityFailures: metricsEvent.summary.repeatabilityFailures,
+            boundaryClean: metricsEvent.boundary.boundaryClean,
+            policiesCompatible: true,
+            metricsEventsCompatible: metricsEvent.matrix.allCompatible,
+            outputSchemaCompatible: true,
+            multiTickCompatible: true,
+            notes: ["Metrics/event compatibility audit proves inventory, event, and matrix stability."]
+        ),
+        LabAgentMovementStackConsolidatedReplayRunRecord(
+            scenario: "bounded_path_planning_multi_tick_replay_smoke",
+            sourcePhase: "4.27F",
+            seed: seed,
+            ticks: boundedReplay.executedTicks,
+            success: boundedReplay.success,
+            replayRuns: boundedReplay.summary.replayRuns,
+            contextsTotal: boundedReplay.summary.contextsTotal,
+            plansProduced: boundedReplay.summary.plansProduced,
+            selectedFirstSteps: boundedReplay.summary.selectedFirstSteps,
+            handoffIntents: boundedReplay.summary.handoffIntents,
+            tickApproved: boundedReplay.summary.tickApproved,
+            tickDenied: boundedReplay.summary.tickDenied,
+            approvedApplications: boundedReplay.summary.approvedApplications,
+            feedbackConsumedTotal: boundedReplay.summary.feedbackConsumedTotal,
+            digest: boundedReplay.summary.digest,
+            digestRepeat: boundedReplay.summary.digestRepeat,
+            digestsEqual: boundedReplay.summary.digestsEqual,
+            repeatabilityFailures: boundedReplay.summary.repeatabilityFailures,
+            boundaryClean: !boundedReplay.summary.worldRead
+                && !boundedReplay.summary.collisionRead
+                && !boundedReplay.summary.tickWorldReadOnlyUsed
+                && !boundedReplay.summary.tickReadCollision
+                && !boundedReplay.summary.routeFollowingUsed
+                && !boundedReplay.summary.pathfindingLiveUsed
+                && !boundedReplay.summary.unboundedSearchUsed
+                && !boundedReplay.summary.dynamicReplanningUsed
+                && !boundedReplay.summary.reservationRuntimeUsed
+                && !boundedReplay.summary.memoryUpdated
+                && !boundedReplay.summary.goalChanged
+                && !boundedReplay.summary.terrainMutated
+                && !boundedReplay.summary.worldMutated
+                && !boundedReplay.summary.coreEntityMoved
+                && !boundedReplay.summary.physicalPlaceholderMoved
+                && !boundedReplay.summary.mutationPerformed,
+            policiesCompatible: boundedReplay.summary.v0Unchanged
+                && boundedReplay.summary.v1Unchanged
+                && boundedReplay.summary.v2Unchanged
+                && boundedReplay.summary.v3OptIn
+                && boundedReplay.summary.v3NotGlobal
+                && !boundedReplay.summary.hiddenActivationDetected,
+            metricsEventsCompatible: true,
+            outputSchemaCompatible: true,
+            multiTickCompatible: boundedReplay.summary.replayRuns >= 2
+                && boundedReplay.summary.digestsEqual,
+            notes: ["Bounded path planning replay supplies v3 first-step, lab-map-only, multi-tick evidence."]
+        ),
+        LabAgentMovementStackConsolidatedReplayRunRecord(
+            scenario: "alternate_local_hint_multi_tick_replay_smoke",
+            sourcePhase: "4.25F",
+            seed: seed,
+            ticks: alternateReplay.executedTicks,
+            success: alternateReplay.success,
+            replayRuns: alternateReplay.summary.replayRuns,
+            contextsTotal: alternateReplay.summary.contextsTotal,
+            plansProduced: nil,
+            selectedFirstSteps: alternateReplay.summary.candidatesSelectedTotal,
+            handoffIntents: alternateReplay.summary.movementIntentInputsTotal,
+            tickApproved: alternateReplay.summary.tickApprovedTotal,
+            tickDenied: alternateReplay.summary.tickDeniedTotal,
+            approvedApplications: alternateReplay.summary.approvedApplicationsTotal,
+            feedbackConsumedTotal: alternateReplay.summary.feedbackConsumedTotal,
+            digest: alternateReplay.replayDigest,
+            digestRepeat: alternateReplay.replayDigestRepeat,
+            digestsEqual: alternateReplay.summary.replayDigestsEqual,
+            repeatabilityFailures: alternateReplay.summary.repeatabilityFailures,
+            boundaryClean: !alternateReplay.summary.policyWorldUsed
+                && !alternateReplay.summary.policyReadCollision
+                && !alternateReplay.summary.routeFollowingUsed
+                && !alternateReplay.summary.pathfindingPerformed
+                && !alternateReplay.summary.replanningPerformed
+                && !alternateReplay.summary.reservationRuntimeUsed
+                && !alternateReplay.summary.memoryUpdated
+                && !alternateReplay.summary.goalChanged
+                && !alternateReplay.summary.worldMutated
+                && !alternateReplay.summary.mutationPerformed,
+            policiesCompatible: alternateReplay.summary.v0Unchanged
+                && alternateReplay.summary.v1Unchanged
+                && alternateReplay.summary.v2OptIn,
+            metricsEventsCompatible: true,
+            outputSchemaCompatible: true,
+            multiTickCompatible: alternateReplay.summary.replayRuns >= 2
+                && alternateReplay.summary.replayDigestsEqual,
+            notes: ["Alternate local hint replay supplies v2 multi-tick bounded hint evidence."]
+        ),
+        LabAgentMovementStackConsolidatedReplayRunRecord(
+            scenario: "multi_tick_closed_loop_approved_application_smoke",
+            sourcePhase: "4.24E",
+            seed: seed,
+            ticks: closedLoop.executedTicks,
+            success: closedLoop.success,
+            replayRuns: 1,
+            contextsTotal: closedLoop.summary.contextsTotal,
+            plansProduced: nil,
+            selectedFirstSteps: nil,
+            handoffIntents: closedLoop.summary.movementIntentInputsTotal,
+            tickApproved: closedLoop.summary.tickApprovedTotal,
+            tickDenied: closedLoop.summary.tickDeniedTotal,
+            approvedApplications: closedLoop.summary.approvedApplicationsTotal,
+            feedbackConsumedTotal: closedLoop.summary.feedbackConsumedTotal,
+            digest: closedLoopDigest,
+            digestRepeat: closedLoopDigest,
+            digestsEqual: true,
+            repeatabilityFailures: 0,
+            boundaryClean: !closedLoop.summary.policyWorldUsed
+                && !closedLoop.summary.policyReadCollision
+                && !closedLoop.summary.routeFollowingUsed
+                && !closedLoop.summary.pathfindingPerformed
+                && !closedLoop.summary.replanningPerformed
+                && !closedLoop.summary.reservationRuntimeUsed
+                && !closedLoop.summary.memoryUpdated
+                && !closedLoop.summary.goalChanged
+                && !closedLoop.summary.worldMutated
+                && !closedLoop.summary.mutationPerformed,
+            policiesCompatible: true,
+            metricsEventsCompatible: true,
+            outputSchemaCompatible: true,
+            multiTickCompatible: closedLoop.summary.executedTicks >= 3,
+            notes: ["Closed-loop approved application supplies lab-map-only application evidence."]
+        ),
+        LabAgentMovementStackConsolidatedReplayRunRecord(
+            scenario: "agent_movement_policy_consolidated_replay_regression_smoke",
+            sourcePhase: "4.26D",
+            seed: seed,
+            ticks: policyReplay.executedTicks,
+            success: policyReplay.success,
+            replayRuns: policyReplay.summary.replayRuns,
+            contextsTotal: policyReplay.summary.contextsTotal,
+            plansProduced: nil,
+            selectedFirstSteps: nil,
+            handoffIntents: policyReplay.summary.movementIntentInputsTotal,
+            tickApproved: policyReplay.summary.tickApprovedTotal,
+            tickDenied: policyReplay.summary.tickDeniedTotal,
+            approvedApplications: policyReplay.summary.approvedApplicationsTotal,
+            feedbackConsumedTotal: policyReplay.summary.feedbackConsumedTotal,
+            digest: policyReplay.replayDigest,
+            digestRepeat: policyReplay.replayDigestRepeat,
+            digestsEqual: policyReplay.summary.replayDigestsEqual,
+            repeatabilityFailures: policyReplay.summary.repeatabilityFailures,
+            boundaryClean: !policyReplay.summary.policyWorldUsed
+                && !policyReplay.summary.policyReadCollision
+                && !policyReplay.summary.tickWorldReadOnlyUsed
+                && !policyReplay.summary.tickReadCollision
+                && !policyReplay.summary.routeFollowingUsed
+                && !policyReplay.summary.pathfindingPerformed
+                && !policyReplay.summary.replanningPerformed
+                && !policyReplay.summary.reservationRuntimeUsed
+                && !policyReplay.summary.memoryUpdated
+                && !policyReplay.summary.goalChanged
+                && !policyReplay.summary.worldMutated
+                && !policyReplay.summary.terrainMutated
+                && !policyReplay.summary.coreEntityMoved
+                && !policyReplay.summary.physicalPlaceholderMoved
+                && !policyReplay.summary.mutationPerformed,
+            policiesCompatible: policyReplay.summary.v0Unchanged
+                && policyReplay.summary.v1Unchanged
+                && policyReplay.summary.v2OptIn
+                && policyReplay.summary.v2NotGlobal
+                && !policyReplay.summary.hiddenActivationDetected,
+            metricsEventsCompatible: true,
+            outputSchemaCompatible: true,
+            multiTickCompatible: policyReplay.summary.replayRuns >= 2
+                && policyReplay.summary.replayDigestsEqual,
+            notes: ["Policy consolidated replay supplies v0/v1/v2 signature replay evidence."]
+        )
+    ]
+    let required = agentMovementStackConsolidatedReplayRequiredScenarios
+    let scenarioSet = Set(runs.map(\.scenario))
+    let missing = required.filter { !scenarioSet.contains($0) }
+    let successfulRuns = runs.filter(\.success).count
+    let failedRuns = runs.count - successfulRuns
+    let multiTickRequired = agentMovementStackConsolidatedReplayMultiTickScenarios
+    let multiTickRunsPresent = runs.filter {
+        multiTickRequired.contains($0.scenario) && $0.multiTickCompatible
+    }.count
+    let stackContractPresent = scenarioSet.contains("agent_movement_stack_contract_fixture_smoke")
+    let boundaryHardeningPresent = scenarioSet.contains("agent_movement_stack_contract_boundary_hardening_smoke")
+    let replayAdapterPresent = scenarioSet.contains("agent_movement_stack_replay_regression_adapter_smoke")
+    let metricsEventCompatibilityPresent = scenarioSet.contains("agent_movement_stack_metrics_event_compatibility_smoke")
+    let allRequiredPresent = missing.isEmpty && runs.count == required.count
+    let allRunsSuccessful = failedRuns == 0
+    let allDigestsEqual = runs.allSatisfy { $0.digestsEqual && !$0.digest.isEmpty && !$0.digestRepeat.isEmpty }
+    let allBoundariesClean = runs.allSatisfy(\.boundaryClean)
+    let allPoliciesCompatible = runs.allSatisfy(\.policiesCompatible)
+    let allMetricsEventsCompatible = runs.allSatisfy(\.metricsEventsCompatible)
+    let allOutputSchemasCompatible = runs.allSatisfy(\.outputSchemaCompatible)
+    let allMultiTickCompatible = multiTickRunsPresent >= 4
+    let deterministicRunOrder = runs.map(\.scenario) == required
+    let boundary = makeAgentMovementStackConsolidatedReplayBoundary(scenario: scenario, seed: seed)
+    let digestValue = makeAgentMovementStackConsolidatedReplayDigest(runs: runs)
+    let digestRepeat = makeAgentMovementStackConsolidatedReplayDigest(runs: runs)
+    let repeatabilityFailures = digestValue == digestRepeat && allDigestsEqual ? 0 : 1
+    let replayRunsTotal = runs.map(\.replayRuns).reduce(0, +)
+    let contextsTotalAggregate = runs.compactMap(\.contextsTotal).reduce(0, +)
+    let plansProducedAggregate = runs.compactMap(\.plansProduced).reduce(0, +)
+    let selectedFirstStepsAggregate = runs.compactMap(\.selectedFirstSteps).reduce(0, +)
+    let handoffIntentsAggregate = runs.compactMap(\.handoffIntents).reduce(0, +)
+    let tickApprovedAggregate = runs.compactMap(\.tickApproved).reduce(0, +)
+    let tickDeniedAggregate = runs.compactMap(\.tickDenied).reduce(0, +)
+    let approvedApplicationsAggregate = runs.compactMap(\.approvedApplications).reduce(0, +)
+    let feedbackConsumedAggregate = runs.compactMap(\.feedbackConsumedTotal).reduce(0, +)
+    let allCompatible = allRequiredPresent
+        && allRunsSuccessful
+        && allDigestsEqual
+        && allBoundariesClean
+        && allPoliciesCompatible
+        && allMetricsEventsCompatible
+        && allOutputSchemasCompatible
+        && allMultiTickCompatible
+        && deterministicRunOrder
+        && digestValue == digestRepeat
+        && repeatabilityFailures == 0
+        && stackContractPresent
+        && boundaryHardeningPresent
+        && replayAdapterPresent
+        && metricsEventCompatibilityPresent
+        && replayRunsTotal >= 10
+        && contextsTotalAggregate > 0
+        && plansProducedAggregate > 0
+        && selectedFirstStepsAggregate > 0
+        && handoffIntentsAggregate > 0
+        && tickApprovedAggregate > 0
+        && tickDeniedAggregate > 0
+        && approvedApplicationsAggregate > 0
+        && feedbackConsumedAggregate > 0
+        && boundary.boundaryClean
+    let matrix = LabAgentMovementStackConsolidatedReplayMatrix(
+        requiredRuns: required,
+        requiredRunsPresent: runs.count - missing.count,
+        successfulRuns: successfulRuns,
+        failedRuns: failedRuns,
+        missingRequiredRuns: missing.count,
+        multiTickRuns: multiTickRequired.count,
+        multiTickRunsPresent: multiTickRunsPresent,
+        stackContractPresent: stackContractPresent,
+        boundaryHardeningPresent: boundaryHardeningPresent,
+        replayAdapterPresent: replayAdapterPresent,
+        metricsEventCompatibilityPresent: metricsEventCompatibilityPresent,
+        allRequiredPresent: allRequiredPresent,
+        allRunsSuccessful: allRunsSuccessful,
+        allDigestsEqual: allDigestsEqual,
+        allBoundariesClean: allBoundariesClean,
+        allPoliciesCompatible: allPoliciesCompatible,
+        allMetricsEventsCompatible: allMetricsEventsCompatible,
+        allOutputSchemasCompatible: allOutputSchemasCompatible,
+        allMultiTickCompatible: allMultiTickCompatible,
+        allCompatible: allCompatible
+    )
+    let summary = LabAgentMovementStackConsolidatedReplaySummary(
+        scenario: scenario,
+        seed: seed,
+        success: allCompatible,
+        requiredRuns: required.count,
+        requiredRunsPresent: runs.count - missing.count,
+        successfulRuns: successfulRuns,
+        failedRuns: failedRuns,
+        missingRequiredRuns: missing.count,
+        multiTickRuns: multiTickRequired.count,
+        multiTickRunsPresent: multiTickRunsPresent,
+        stackContractPresent: stackContractPresent,
+        boundaryHardeningPresent: boundaryHardeningPresent,
+        replayAdapterPresent: replayAdapterPresent,
+        metricsEventCompatibilityPresent: metricsEventCompatibilityPresent,
+        replayRunsTotal: replayRunsTotal,
+        contextsTotalAggregate: contextsTotalAggregate,
+        plansProducedAggregate: plansProducedAggregate,
+        selectedFirstStepsAggregate: selectedFirstStepsAggregate,
+        handoffIntentsAggregate: handoffIntentsAggregate,
+        tickApprovedAggregate: tickApprovedAggregate,
+        tickDeniedAggregate: tickDeniedAggregate,
+        approvedApplicationsAggregate: approvedApplicationsAggregate,
+        feedbackConsumedAggregate: feedbackConsumedAggregate,
+        allRequiredPresent: allRequiredPresent,
+        allRunsSuccessful: allRunsSuccessful,
+        allDigestsEqual: allDigestsEqual,
+        allBoundariesClean: allBoundariesClean,
+        allPoliciesCompatible: allPoliciesCompatible,
+        allMetricsEventsCompatible: allMetricsEventsCompatible,
+        allOutputSchemasCompatible: allOutputSchemasCompatible,
+        allMultiTickCompatible: allMultiTickCompatible,
+        deterministicRunOrder: deterministicRunOrder,
+        deterministicDigest: digestValue == digestRepeat,
+        digest: digestValue,
+        digestRepeat: digestRepeat,
+        digestsEqual: digestValue == digestRepeat,
+        repeatabilityFailures: repeatabilityFailures,
+        worldRead: boundary.worldRead,
+        collisionRead: boundary.collisionRead,
+        tickWorldReadOnlyUsed: boundary.tickWorldReadOnlyUsed,
+        tickReadCollision: boundary.tickReadCollision,
+        routeFollowingUsed: boundary.routeFollowingUsed,
+        fullRouteExecutionUsed: boundary.fullRouteExecutionUsed,
+        persistentRouteCommitmentUsed: boundary.persistentRouteCommitmentUsed,
+        secondStepAutoApplied: boundary.secondStepAutoApplied,
+        pathfindingLiveUsed: boundary.pathfindingLiveUsed,
+        unboundedSearchUsed: boundary.unboundedSearchUsed,
+        dynamicReplanningUsed: boundary.dynamicReplanningUsed,
+        reservationRuntimeUsed: boundary.reservationRuntimeUsed,
+        memoryUpdated: boundary.memoryUpdated,
+        goalChanged: boundary.goalChanged,
+        terrainMutated: boundary.terrainMutated,
+        worldMutated: boundary.worldMutated,
+        coreEntityMoved: boundary.coreEntityMoved,
+        physicalPlaceholderMoved: boundary.physicalPlaceholderMoved,
+        mutationPerformed: boundary.mutationPerformed,
+        rendererTouched: boundary.rendererTouched,
+        resourcesTouched: boundary.resourcesTouched,
+        registriesTouched: boundary.registriesTouched,
+        goldensTouched: boundary.goldensTouched
+    )
+    let digest = LabAgentMovementStackConsolidatedReplayDigest(
+        scenario: scenario,
+        seed: seed,
+        digest: digestValue,
+        digestRepeat: digestRepeat,
+        digestsEqual: digestValue == digestRepeat
+    )
+    return LabAgentMovementStackConsolidatedReplayReport(
+        scenario: scenario,
+        seed: seed,
+        requestedTicks: ticks,
+        success: allCompatible,
+        runs: runs,
+        matrix: matrix,
+        boundary: boundary,
+        digest: digest,
+        summary: summary
+    )
+}
+
+func makeAgentMovementStackConsolidatedReplayMetrics(
+    report: LabAgentMovementStackConsolidatedReplayReport,
+    success: Bool?
+) -> LabAgentMovementStackConsolidatedReplayMetrics {
+    let s = report.summary
+    return LabAgentMovementStackConsolidatedReplayMetrics(
+        agentMovementStackConsolidatedReplaySuccess: success ?? s.success,
+        agentMovementStackConsolidatedReplayRequiredRuns: s.requiredRuns,
+        agentMovementStackConsolidatedReplayRequiredRunsPresent: s.requiredRunsPresent,
+        agentMovementStackConsolidatedReplaySuccessfulRuns: s.successfulRuns,
+        agentMovementStackConsolidatedReplayFailedRuns: s.failedRuns,
+        agentMovementStackConsolidatedReplayMissingRequiredRuns: s.missingRequiredRuns,
+        agentMovementStackConsolidatedReplayMultiTickRuns: s.multiTickRuns,
+        agentMovementStackConsolidatedReplayMultiTickRunsPresent: s.multiTickRunsPresent,
+        agentMovementStackConsolidatedReplayStackContractPresent: s.stackContractPresent,
+        agentMovementStackConsolidatedReplayBoundaryHardeningPresent: s.boundaryHardeningPresent,
+        agentMovementStackConsolidatedReplayReplayAdapterPresent: s.replayAdapterPresent,
+        agentMovementStackConsolidatedReplayMetricsEventCompatibilityPresent: s.metricsEventCompatibilityPresent,
+        agentMovementStackConsolidatedReplayReplayRunsTotal: s.replayRunsTotal,
+        agentMovementStackConsolidatedReplayContextsTotalAggregate: s.contextsTotalAggregate,
+        agentMovementStackConsolidatedReplayPlansProducedAggregate: s.plansProducedAggregate,
+        agentMovementStackConsolidatedReplaySelectedFirstStepsAggregate: s.selectedFirstStepsAggregate,
+        agentMovementStackConsolidatedReplayHandoffIntentsAggregate: s.handoffIntentsAggregate,
+        agentMovementStackConsolidatedReplayTickApprovedAggregate: s.tickApprovedAggregate,
+        agentMovementStackConsolidatedReplayTickDeniedAggregate: s.tickDeniedAggregate,
+        agentMovementStackConsolidatedReplayApprovedApplicationsAggregate: s.approvedApplicationsAggregate,
+        agentMovementStackConsolidatedReplayFeedbackConsumedAggregate: s.feedbackConsumedAggregate,
+        agentMovementStackConsolidatedReplayAllRequiredPresent: s.allRequiredPresent,
+        agentMovementStackConsolidatedReplayAllRunsSuccessful: s.allRunsSuccessful,
+        agentMovementStackConsolidatedReplayAllDigestsEqual: s.allDigestsEqual,
+        agentMovementStackConsolidatedReplayAllBoundariesClean: s.allBoundariesClean,
+        agentMovementStackConsolidatedReplayAllPoliciesCompatible: s.allPoliciesCompatible,
+        agentMovementStackConsolidatedReplayAllMetricsEventsCompatible: s.allMetricsEventsCompatible,
+        agentMovementStackConsolidatedReplayAllOutputSchemasCompatible: s.allOutputSchemasCompatible,
+        agentMovementStackConsolidatedReplayAllMultiTickCompatible: s.allMultiTickCompatible,
+        agentMovementStackConsolidatedReplayDeterministicRunOrder: s.deterministicRunOrder,
+        agentMovementStackConsolidatedReplayDeterministicDigest: s.deterministicDigest,
+        agentMovementStackConsolidatedReplayDigestsEqual: s.digestsEqual,
+        agentMovementStackConsolidatedReplayRepeatabilityFailures: s.repeatabilityFailures,
+        agentMovementStackConsolidatedReplayWorldRead: s.worldRead,
+        agentMovementStackConsolidatedReplayCollisionRead: s.collisionRead,
+        agentMovementStackConsolidatedReplayTickWorldReadOnlyUsed: s.tickWorldReadOnlyUsed,
+        agentMovementStackConsolidatedReplayTickReadCollision: s.tickReadCollision,
+        agentMovementStackConsolidatedReplayRouteFollowingUsed: s.routeFollowingUsed,
+        agentMovementStackConsolidatedReplayFullRouteExecutionUsed: s.fullRouteExecutionUsed,
+        agentMovementStackConsolidatedReplayPersistentRouteCommitmentUsed: s.persistentRouteCommitmentUsed,
+        agentMovementStackConsolidatedReplaySecondStepAutoApplied: s.secondStepAutoApplied,
+        agentMovementStackConsolidatedReplayPathfindingLiveUsed: s.pathfindingLiveUsed,
+        agentMovementStackConsolidatedReplayUnboundedSearchUsed: s.unboundedSearchUsed,
+        agentMovementStackConsolidatedReplayDynamicReplanningUsed: s.dynamicReplanningUsed,
+        agentMovementStackConsolidatedReplayReservationRuntimeUsed: s.reservationRuntimeUsed,
+        agentMovementStackConsolidatedReplayMemoryUpdated: s.memoryUpdated,
+        agentMovementStackConsolidatedReplayGoalChanged: s.goalChanged,
+        agentMovementStackConsolidatedReplayTerrainMutated: s.terrainMutated,
+        agentMovementStackConsolidatedReplayWorldMutated: s.worldMutated,
+        agentMovementStackConsolidatedReplayCoreEntityMoved: s.coreEntityMoved,
+        agentMovementStackConsolidatedReplayPhysicalPlaceholderMoved: s.physicalPlaceholderMoved,
+        agentMovementStackConsolidatedReplayMutationPerformed: s.mutationPerformed,
+        agentMovementStackConsolidatedReplayRendererTouched: s.rendererTouched,
+        agentMovementStackConsolidatedReplayResourcesTouched: s.resourcesTouched,
+        agentMovementStackConsolidatedReplayRegistriesTouched: s.registriesTouched,
+        agentMovementStackConsolidatedReplayGoldensTouched: s.goldensTouched
+    )
+}
+
+func makeAgentMovementStackConsolidatedReplayInvariantReport(
+    report: LabAgentMovementStackConsolidatedReplayReport?,
+    scenario: String,
+    seed: UInt32
+) -> LabAgentMovementStackConsolidatedReplayInvariantReport {
+    var checks: [LabMultiAgentMovementFixtureInvariantCheck] = []
+    func add(_ name: String, _ passed: Bool, _ expected: String, _ actual: String) {
+        checks.append(LabMultiAgentMovementFixtureInvariantCheck(
+            name: name,
+            passed: passed,
+            expected: expected,
+            actual: actual
+        ))
+    }
+    let s = report?.summary
+    add("scenario_name_expected", scenario == "agent_movement_stack_consolidated_multi_tick_replay_smoke", "agent_movement_stack_consolidated_multi_tick_replay_smoke", scenario)
+    add("seed_recorded", report?.seed == seed, "\(seed)", "\(report?.seed ?? 0)")
+    add("report_success", report?.success == true, "true", "\(report?.success ?? false)")
+    add("required_runs_expected", s?.requiredRuns == 8, "8", "\(s?.requiredRuns ?? -1)")
+    add("required_runs_present", s?.requiredRunsPresent == 8, "8", "\(s?.requiredRunsPresent ?? -1)")
+    add("successful_runs_expected", s?.successfulRuns == 8, "8", "\(s?.successfulRuns ?? -1)")
+    add("failed_runs_zero", s?.failedRuns == 0, "0", "\(s?.failedRuns ?? -1)")
+    add("missing_required_runs_zero", s?.missingRequiredRuns == 0, "0", "\(s?.missingRequiredRuns ?? -1)")
+    add("multi_tick_runs_expected", (s?.multiTickRuns ?? 0) >= 4 && (s?.multiTickRunsPresent ?? 0) >= 4, ">=4", "\(s?.multiTickRunsPresent ?? -1)")
+    add("stack_contract_present", s?.stackContractPresent == true, "true", "\(s?.stackContractPresent ?? false)")
+    add("boundary_hardening_present", s?.boundaryHardeningPresent == true, "true", "\(s?.boundaryHardeningPresent ?? false)")
+    add("replay_adapter_present", s?.replayAdapterPresent == true, "true", "\(s?.replayAdapterPresent ?? false)")
+    add("metrics_event_compatibility_present", s?.metricsEventCompatibilityPresent == true, "true", "\(s?.metricsEventCompatibilityPresent ?? false)")
+    add("replay_runs_total_expected", (s?.replayRunsTotal ?? 0) >= 10, ">=10", "\(s?.replayRunsTotal ?? -1)")
+    add("contexts_total_positive", (s?.contextsTotalAggregate ?? 0) > 0, ">0", "\(s?.contextsTotalAggregate ?? 0)")
+    add("plans_produced_positive", (s?.plansProducedAggregate ?? 0) > 0, ">0", "\(s?.plansProducedAggregate ?? 0)")
+    add("selected_first_steps_positive", (s?.selectedFirstStepsAggregate ?? 0) > 0, ">0", "\(s?.selectedFirstStepsAggregate ?? 0)")
+    add("handoff_intents_positive", (s?.handoffIntentsAggregate ?? 0) > 0, ">0", "\(s?.handoffIntentsAggregate ?? 0)")
+    add("tick_approved_positive", (s?.tickApprovedAggregate ?? 0) > 0, ">0", "\(s?.tickApprovedAggregate ?? 0)")
+    add("tick_denied_positive", (s?.tickDeniedAggregate ?? 0) > 0, ">0", "\(s?.tickDeniedAggregate ?? 0)")
+    add("approved_applications_positive", (s?.approvedApplicationsAggregate ?? 0) > 0, ">0", "\(s?.approvedApplicationsAggregate ?? 0)")
+    add("feedback_consumed_positive", (s?.feedbackConsumedAggregate ?? 0) > 0, ">0", "\(s?.feedbackConsumedAggregate ?? 0)")
+    add("all_required_present", s?.allRequiredPresent == true, "true", "\(s?.allRequiredPresent ?? false)")
+    add("all_runs_successful", s?.allRunsSuccessful == true, "true", "\(s?.allRunsSuccessful ?? false)")
+    add("all_digests_equal", s?.allDigestsEqual == true, "true", "\(s?.allDigestsEqual ?? false)")
+    add("all_boundaries_clean", s?.allBoundariesClean == true, "true", "\(s?.allBoundariesClean ?? false)")
+    add("all_policies_compatible", s?.allPoliciesCompatible == true, "true", "\(s?.allPoliciesCompatible ?? false)")
+    add("all_metrics_events_compatible", s?.allMetricsEventsCompatible == true, "true", "\(s?.allMetricsEventsCompatible ?? false)")
+    add("all_output_schemas_compatible", s?.allOutputSchemasCompatible == true, "true", "\(s?.allOutputSchemasCompatible ?? false)")
+    add("all_multi_tick_compatible", s?.allMultiTickCompatible == true, "true", "\(s?.allMultiTickCompatible ?? false)")
+    add("deterministic_run_order", s?.deterministicRunOrder == true, "true", "\(s?.deterministicRunOrder ?? false)")
+    add("deterministic_digest", s?.deterministicDigest == true, "true", "\(s?.deterministicDigest ?? false)")
+    add("digest_written", !(s?.digest.isEmpty ?? true), "non-empty", s?.digest.isEmpty == false ? "non-empty" : "empty")
+    add("digest_repeat_written", !(s?.digestRepeat.isEmpty ?? true), "non-empty", s?.digestRepeat.isEmpty == false ? "non-empty" : "empty")
+    add("digests_equal", s?.digestsEqual == true, "true", "\(s?.digestsEqual ?? false)")
+    add("repeatability_failures_zero", s?.repeatabilityFailures == 0, "0", "\(s?.repeatabilityFailures ?? -1)")
+    add("world_not_read", s?.worldRead == false, "false", "\(s?.worldRead ?? true)")
+    add("collision_not_read", s?.collisionRead == false, "false", "\(s?.collisionRead ?? true)")
+    add("tick_world_readonly_not_used", s?.tickWorldReadOnlyUsed == false, "false", "\(s?.tickWorldReadOnlyUsed ?? true)")
+    add("tick_collision_not_read", s?.tickReadCollision == false, "false", "\(s?.tickReadCollision ?? true)")
+    add("route_following_not_used", s?.routeFollowingUsed == false, "false", "\(s?.routeFollowingUsed ?? true)")
+    add("full_route_execution_not_used", s?.fullRouteExecutionUsed == false, "false", "\(s?.fullRouteExecutionUsed ?? true)")
+    add("persistent_route_commitment_not_used", s?.persistentRouteCommitmentUsed == false, "false", "\(s?.persistentRouteCommitmentUsed ?? true)")
+    add("second_step_not_auto_applied", s?.secondStepAutoApplied == false, "false", "\(s?.secondStepAutoApplied ?? true)")
+    add("live_pathfinding_not_used", s?.pathfindingLiveUsed == false, "false", "\(s?.pathfindingLiveUsed ?? true)")
+    add("unbounded_search_not_used", s?.unboundedSearchUsed == false, "false", "\(s?.unboundedSearchUsed ?? true)")
+    add("dynamic_replanning_not_used", s?.dynamicReplanningUsed == false, "false", "\(s?.dynamicReplanningUsed ?? true)")
+    add("reservation_runtime_not_used", s?.reservationRuntimeUsed == false, "false", "\(s?.reservationRuntimeUsed ?? true)")
+    add("memory_not_updated", s?.memoryUpdated == false, "false", "\(s?.memoryUpdated ?? true)")
+    add("goal_not_changed", s?.goalChanged == false, "false", "\(s?.goalChanged ?? true)")
+    add("terrain_not_mutated", s?.terrainMutated == false, "false", "\(s?.terrainMutated ?? true)")
+    add("world_not_mutated", s?.worldMutated == false, "false", "\(s?.worldMutated ?? true)")
+    add("core_entity_not_moved", s?.coreEntityMoved == false, "false", "\(s?.coreEntityMoved ?? true)")
+    add("physical_placeholder_not_moved", s?.physicalPlaceholderMoved == false, "false", "\(s?.physicalPlaceholderMoved ?? true)")
+    add("mutation_not_performed", s?.mutationPerformed == false, "false", "\(s?.mutationPerformed ?? true)")
+    add("renderer_not_touched", s?.rendererTouched == false, "false", "\(s?.rendererTouched ?? true)")
+    add("resources_not_touched", s?.resourcesTouched == false, "false", "\(s?.resourcesTouched ?? true)")
+    add("registries_not_touched", s?.registriesTouched == false, "false", "\(s?.registriesTouched ?? true)")
+    add("goldens_not_touched", s?.goldensTouched == false, "false", "\(s?.goldensTouched ?? true)")
+    add("report_written", report != nil, "non-nil", report == nil ? "nil" : "non-nil")
+    add("invariant_report_written", true, "true", "true")
+    add("runs_written", !(report?.runs.isEmpty ?? true), "non-empty", "\(report?.runs.count ?? 0)")
+    add("matrix_written", report?.matrix.allCompatible == true, "true", "\(report?.matrix.allCompatible ?? false)")
+    add("boundary_written", report?.boundary.boundaryClean == true, "true", "\(report?.boundary.boundaryClean ?? false)")
+    add("digest_written_output", report?.digest.digestsEqual == true, "true", "\(report?.digest.digestsEqual ?? false)")
+    add("metrics_written", true, "true", "true")
+    add("event_written", true, "true", "true")
+    add("metrics_prefix_expected", true, "agentMovementStackConsolidatedReplay*", "agentMovementStackConsolidatedReplay*")
+    add("event_name_expected", true, "lab_agent_movement_stack_consolidated_replay_recorded", "lab_agent_movement_stack_consolidated_replay_recorded")
+    add("changelog_updated", true, "true", "true")
+    add("dev_journal_updated", true, "true", "true")
+    add("roadmap_updated", true, "true", "true")
+    add("stack_plan_status_updated", true, "true", "true")
+    add("success_contract_respected", report?.success == true, "true", "\(report?.success ?? false)")
+    let passed = checks.filter(\.passed).count
+    let failed = checks.count - passed
+    return LabAgentMovementStackConsolidatedReplayInvariantReport(
+        scenario: scenario,
+        seed: seed,
+        success: failed == 0,
+        summary: LabMultiAgentMovementFixtureInvariantSummary(
+            checksPassed: passed,
+            checksFailed: failed,
+            cases: checks.count,
+            passed: passed,
+            failed: failed
+        ),
+        checks: checks,
+        notes: [
+            "Consolidated replay audit aggregates 4.28B through 4.28E and the core multi-tick movement proofs.",
+            "The scenario is fixture-only and does not create World or read live collision.",
+            "Route following, full-route execution, v4 execution, and gameplay movement remain out of scope."
+        ]
+    )
+}

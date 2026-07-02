@@ -10014,3 +10014,111 @@ environment because production `PebbleLab` runs can stall, while normal
 structural validation.
 
 Next step: Phase 4.28F — Stack Consolidated Multi-Tick Replay Regression.
+
+## 2026-07-02 — Phase 4.28F agent movement stack consolidated multi-tick replay smoke
+
+Objective: add
+`agent_movement_stack_consolidated_multi_tick_replay_smoke`, a fixture-only
+final consolidation replay that aggregates the 4.28B/C/D/E stack proofs and
+the principal multi-tick movement replay scenarios into one boundary-clean
+compatibility report.
+
+Starting point: 4.28B proves the stack contract, 4.28C hardens the boundary
+audit, 4.28D normalizes replay regression evidence, and 4.28E audits
+metrics/events. Earlier 4.24-4.27 scenarios already prove multi-tick feedback,
+alternate local hints, bounded planning, first-step handoff, and lab-map-only
+approved application.
+
+Why fixture-only: 4.28F is an audit and compatibility aggregator. It calls
+existing report builders in memory and does not create a World, read live
+collision, call route following, execute a full route, apply new movement, or
+mutate terrain/World/Core/physical placeholders.
+
+Required runs aggregated:
+
+- `agent_movement_stack_contract_fixture_smoke`;
+- `agent_movement_stack_contract_boundary_hardening_smoke`;
+- `agent_movement_stack_replay_regression_adapter_smoke`;
+- `agent_movement_stack_metrics_event_compatibility_smoke`;
+- `bounded_path_planning_multi_tick_replay_smoke`;
+- `alternate_local_hint_multi_tick_replay_smoke`;
+- `multi_tick_closed_loop_approved_application_smoke`;
+- `agent_movement_policy_consolidated_replay_regression_smoke`.
+
+Compatibility matrix:
+
+- required runs = 8;
+- required runs present = 8;
+- successful runs = 8;
+- failed runs = 0;
+- missing required runs = 0;
+- multi-tick runs present >= 4;
+- stack contract, boundary hardening, replay adapter, and metrics/event
+  compatibility runs present;
+- all required, digest, boundary, policy, metrics/events, output schema, and
+  multi-tick compatibility checks pass.
+
+Aggregate evidence:
+
+- replay runs total >= 10;
+- contexts aggregate > 0;
+- plans aggregate > 0;
+- selected first steps aggregate > 0;
+- handoff intents aggregate > 0;
+- tick approved aggregate > 0;
+- tick denied aggregate > 0;
+- approved applications aggregate > 0;
+- feedback consumed aggregate > 0;
+- deterministic run order = true;
+- deterministic digest = true;
+- aggregate digest equals repeat digest;
+- repeatability failures = 0.
+
+Boundary confirmations: the 4.28F aggregator itself does not read World or live
+collision, does not use route following, full-route execution, persistent route
+commitment, second-step auto-application, live pathfinding, unbounded search,
+dynamic replanning, reservation runtime, memory, or goals. It does not move
+Core entities or physical placeholders, does not mutate terrain/World, and does
+not touch renderer, resources, registries, or goldens.
+
+Outputs, invariants, metrics, and event:
+
+- `agent_movement_stack_consolidated_replay_report.json`;
+- `agent_movement_stack_consolidated_replay_invariant_report.json`;
+- `agent_movement_stack_consolidated_replay_runs.json`;
+- `agent_movement_stack_consolidated_replay_matrix.json`;
+- `agent_movement_stack_consolidated_replay_boundary.json`;
+- `agent_movement_stack_consolidated_replay_digest.json`;
+- `agentMovementStackConsolidatedReplay*` metrics;
+- `lab_agent_movement_stack_consolidated_replay_recorded` event.
+
+Validation commands:
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario agent_movement_stack_consolidated_multi_tick_replay_smoke --seed 42 --ticks 3 --out runs/check_agent_movement_stack_consolidated_multi_tick_replay`
+- `swift run -c release PebbleLab -- --scenario agent_movement_stack_metrics_event_compatibility_smoke --seed 42 --ticks 3 --out runs/check_stack_metrics_event_after_consolidated_replay`
+- `swift run -c release PebbleLab -- --scenario agent_movement_stack_replay_regression_adapter_smoke --seed 42 --ticks 3 --out runs/check_stack_replay_adapter_after_consolidated_replay`
+- `swift run -c release PebbleLab -- --scenario agent_movement_stack_contract_boundary_hardening_smoke --seed 42 --ticks 0 --out runs/check_stack_boundary_hardening_after_consolidated_replay`
+- `swift run -c release PebbleLab -- --scenario agent_movement_stack_contract_fixture_smoke --seed 42 --ticks 3 --out runs/check_stack_contract_fixture_after_consolidated_replay`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_multi_tick_replay_smoke --seed 42 --ticks 3 --out runs/check_bounded_path_multi_tick_replay_after_stack_consolidated_replay`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_multi_tick_replay_smoke --seed 42 --ticks 3 --out runs/check_alternate_hint_replay_after_stack_consolidated_replay`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_approved_application_smoke --seed 42 --ticks 3 --out runs/check_closed_loop_after_stack_consolidated_replay`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_consolidated_replay_regression_smoke --seed 42 --ticks 3 --out runs/check_policy_consolidated_replay_after_stack_consolidated_replay`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_stack_consolidated_replay`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+Results: validation passed. The release 4.28F scenario produced `success =
+true`, 8 required runs present, 8 successful runs, 0 failed runs, aggregate
+contexts/plans/handoff/tick/application/feedback evidence, 56
+`agentMovementStackConsolidatedReplay*` metrics, the
+`lab_agent_movement_stack_consolidated_replay_recorded` event, and invariant
+report success. `swift build`, `swift build -c release --product Pebble`,
+listed release non-regressions, `swift run -c release pebsmoke`, and
+`git diff --check` passed.
+
+Next step: Phase 4.28G — Agent Movement Stack Closure And Roadmap Resync, or
+return to the Phase 3 roadmap once the Phase 4 movement stack is considered
+closed.
