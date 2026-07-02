@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Documented PebbleLab behavior loop memory-goal bridge plan.
 - Added PebbleLab goal selection from retrieved memory hardening smoke.
 - Added PebbleLab goal selection from retrieved memory fixture smoke.
 - Documented PebbleLab goal selection from retrieved memory plan.

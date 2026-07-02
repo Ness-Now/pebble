@@ -436,3 +436,25 @@ movement-stack feedback, embeddings, Python, LLM, or RL.
 
 The recommended next phase is Phase 5.5A - Behavior Loop Memory-Goal Bridge
 Planning.
+
+## Phase 5.5A Status
+
+Phase 5.5A is implemented as
+`PHASE_5_5A_BEHAVIOR_LOOP_MEMORY_GOAL_BRIDGE_PLAN.md`.
+
+The plan defines the future bridge from behavior-loop input plus provided
+retrieval/goal-selection evidence to a selected goal for behavior-loop action
+selection. It proposes bridge input, decision, and report types, defines v0
+flow, goal override rules, action selection rules, future
+`behaviorLoopMemoryGoalBridge*` metrics, future
+`lab_behavior_loop_memory_goal_bridge_recorded` events, and invariant
+expectations for a fixture-only Phase 5.5B.
+
+The plan keeps `agents_basic` integration, live behavior-loop mutation,
+behavior action execution, memory writes, memory mutation, retrieval reruns,
+movement stack usage, World/terrain mutation, mood, emotional memory,
+relationships, trust, communication, community state, embeddings, Python, LLM,
+and RL out of scope.
+
+The recommended next phase is Phase 5.5B - Behavior Loop Memory-Goal Bridge
+Fixture Smoke.

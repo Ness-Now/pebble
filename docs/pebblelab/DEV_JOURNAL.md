@@ -11525,9 +11525,12 @@ Validation commands:
 Results: docs-only phase. No Swift files were modified, no runtime behavior was
 changed, no scenario was added, no metrics/events runtime were added, and no
 movement stack, World, renderer, resource, registry, save/load, golden, or
-PebbleCore files were modified. `swift build`, `swift build -c release
---product Pebble`, `git diff --check`, and `git diff --cached --check` passed.
-`pebsmoke` was not run because this phase is docs-only.
+PebbleCore files were modified. `swift build -c release --product Pebble`,
+`git diff --check`, and `git diff --cached --check` passed. `swift build` was
+attempted twice, compiled through the PebbleLab sources, then remained
+silent after PebbleLab compile/link output and was interrupted to avoid leaving
+a stuck local process. No Swift file was changed in this phase. `pebsmoke` was
+not run because this phase is docs-only.
 
 Next step: Phase 5.4B — Goal Selection From Retrieved Memory Fixture Smoke.
 
@@ -11823,3 +11826,139 @@ timeout, but production `PebbleLab` compilation again stalled silently and was
 interrupted as in prior runtime fixture phases.
 
 Next step: Phase 5.5A — Behavior Loop Memory-Goal Bridge Planning.
+
+## 2026-07-02 — Phase 5.5A behavior loop memory-goal bridge planning
+
+Objective: define the docs-only contract for a future bridge that lets the
+behavior loop consume provided retrieved-memory goal-selection evidence and
+produce a memory-informed selected goal, abstract action, and behavior result.
+
+Starting point: branch `lab/pebblelab-v1`, commit
+`00830b23cbe0515745c7a39542484b4a9d17e3ae`, with Phase 5.4C complete.
+Phase 5.1B/5.1C created and hardened the behavior loop fixtures. Phase
+5.2B/5.2C created and hardened memory update. Phase 5.3B/5.3C created and
+hardened read-only retrieval. Phase 5.4B/5.4C created and hardened goal
+selection from retrieved memory. These components are still isolated fixtures.
+
+New document:
+
+- `PHASE_5_5A_BEHAVIOR_LOOP_MEMORY_GOAL_BRIDGE_PLAN.md`.
+
+Bridge contract v0:
+
+- input: agent snapshot, behavior-loop input, optional retrieved memory result
+  summary, optional goal selection memory decision, currentGoal,
+  needs/fear/health summary, tick, maxCandidates, maxRetrievedMemories;
+- output: bridge decision, goalBefore, memorySuggestedGoal,
+  selectedGoalForBehaviorLoop, goalChangedByMemory, selectedAction,
+  actionReason, behavior result summary, memory influence summary, empty
+  retrieval marker, boundary flags, deterministic digest;
+- no behavior action execution;
+- no memory write or mutation;
+- no retrieval rerun;
+- no movement stack;
+- no World/terrain mutation.
+
+Proposed future types:
+
+- `LabBehaviorLoopMemoryGoalBridgeInput`;
+- `LabBehaviorLoopMemoryGoalBridgeDecision`;
+- `LabBehaviorLoopMemoryGoalBridgeReport`.
+
+Flow v0:
+
+1. Build behavior-loop input.
+2. Consume provided retrieval result summary.
+3. Consume provided goal-selection-from-memory decision.
+4. Decide `selectedGoalForBehaviorLoop`.
+5. Select an abstract action using existing behavior-loop action rules.
+6. Produce a bounded behavior result/effect summary.
+7. Do not update memory.
+8. Do not execute movement/action in World.
+9. Emit report, invariants, metrics, events, and digest.
+
+Goal override rules:
+
+- safety/fear can override currentGoal;
+- empty retrieval keeps currentGoal;
+- weak or low-confidence memory does not override currentGoal;
+- currentGoal continuity is allowed;
+- memorySuggestedGoal must be a known v0 goal;
+- selectedGoalForBehaviorLoop must always be present;
+- goalChangedByMemory must be explicit;
+- memory influence reason must be non-empty when influence is applied.
+
+Action selection rules:
+
+- `seekSafety` -> `seekSafety`;
+- `explore` -> `explore`;
+- `observeOtherAgent` -> `observeAgent`;
+- `idle` -> `idle`;
+- `rest` -> `rest` if the fixture preserves existing rest handling;
+- action selection is abstract only and must not execute side effects.
+
+Future metrics/events:
+
+- metric prefix `behaviorLoopMemoryGoalBridge*`;
+- primary future event `lab_behavior_loop_memory_goal_bridge_recorded`;
+- optional summary event
+  `lab_behavior_loop_memory_goal_bridge_summary_recorded`.
+
+Future invariant contract:
+
+- expected scenario name and seed;
+- positive bridge decisions;
+- selected goals and selected actions present;
+- known v0 goals only;
+- goal changes by memory covered;
+- unchanged goals covered;
+- memory influence and empty retrieval covered;
+- behavior result present;
+- behavior action not executed;
+- memory not mutated;
+- retrieval not rerun;
+- movement stack not used;
+- no World/terrain mutation;
+- bounded deterministic order;
+- digest repeatability;
+- report/invariant/decisions/digest/metrics/events written.
+
+Recommended next phase:
+
+- Phase 5.5B — Behavior Loop Memory-Goal Bridge Fixture Smoke;
+- probable scenario `behavior_loop_memory_goal_bridge_fixture_smoke`;
+- fixture should cover safety, curiosity, nearby, empty retrieval, and
+  low-confidence memory cases.
+
+Out of scope:
+
+- no `agents_basic` integration;
+- no live behavior loop mutation;
+- no behavior action execution;
+- no memory write;
+- no memory mutation;
+- no retrieval rerun;
+- no movement stack;
+- no World or terrain mutation;
+- no mood, emotional memory, relationships, trust, communication, community,
+  task board, construction, mining, Python, LLM, embeddings, or RL.
+
+Validation commands:
+
+- `git status`;
+- `git branch --show-current`;
+- `git pull origin lab/pebblelab-v1`;
+- `git log --oneline -12`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results: docs-only phase. No Swift files were modified, no runtime behavior was
+changed, no scenario was added, no metrics/events runtime were added, and no
+movement stack, World, renderer, resource, registry, save/load, golden, or
+PebbleCore files were modified. `swift build`, `swift build -c release
+--product Pebble`, `git diff --check`, and `git diff --cached --check` passed.
+`pebsmoke` was not run because this phase is docs-only.
+
+Next step: Phase 5.5B — Behavior Loop Memory-Goal Bridge Fixture Smoke.

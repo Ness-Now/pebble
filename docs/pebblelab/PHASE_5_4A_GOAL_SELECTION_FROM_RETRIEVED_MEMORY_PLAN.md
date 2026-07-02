@@ -890,3 +890,17 @@ Limitations:
   embeddings, Python, LLM, or RL.
 
 Next phase: Phase 5.5A - Behavior Loop Memory-Goal Bridge Planning.
+
+## Phase 5.5A Planning Status
+
+Phase 5.5A is implemented as
+`PHASE_5_5A_BEHAVIOR_LOOP_MEMORY_GOAL_BRIDGE_PLAN.md`.
+
+It defines the future contract for consuming
+`LabGoalSelectionFromMemoryDecision`-style evidence inside a behavior-loop
+bridge. The bridge remains fixture-only in the next implementation phase: it
+may choose a selected goal for behavior-loop action selection, but it must not
+execute actions, write or mutate memory, rerun retrieval, call the movement
+stack, mutate World/terrain, or integrate directly into `agents_basic`.
+
+Next phase: Phase 5.5B - Behavior Loop Memory-Goal Bridge Fixture Smoke.

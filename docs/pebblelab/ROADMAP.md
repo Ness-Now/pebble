@@ -3499,9 +3499,43 @@ Planning.
 
 ## Phase 5.5A - Behavior Loop Memory-Goal Bridge Planning
 
-Status: planned.
+Status: implemented and validated as docs-only.
 
 Goal: define how the behavior loop may later consume retrieved-memory goal
 selection decisions as an input, without yet executing actions from memory,
 mutating World/terrain, calling the movement stack, or adding mood,
 relationships, communication, social memory, Python, LLM, or RL.
+
+Implemented as `PHASE_5_5A_BEHAVIOR_LOOP_MEMORY_GOAL_BRIDGE_PLAN.md`.
+
+Validated scope:
+
+- documents the bridge from behavior-loop input plus retrieved-memory goal
+  decisions to a selected goal for behavior-loop action selection;
+- defines `LabBehaviorLoopMemoryGoalBridgeInput`,
+  `LabBehaviorLoopMemoryGoalBridgeDecision`, and
+  `LabBehaviorLoopMemoryGoalBridgeReport` as proposed future types;
+- defines v0 bridge flow, goal override rules, abstract action selection
+  rules, future `behaviorLoopMemoryGoalBridge*` metrics, future
+  `lab_behavior_loop_memory_goal_bridge_recorded` events, and invariant
+  expectations;
+- keeps the bridge fixture-only and side-effect-free;
+- keeps `agents_basic`, live behavior loop mutation, memory writes, retrieval
+  reruns, behavior action execution, movement stack, World/terrain mutation,
+  mood, relationships, social trust, communication, Python, LLM, embeddings,
+  and RL out of scope;
+- no Swift files changed;
+- no runtime behavior changed;
+- no scenario added.
+
+Next recommended step: Phase 5.5B - Behavior Loop Memory-Goal Bridge Fixture
+Smoke.
+
+## Phase 5.5B - Behavior Loop Memory-Goal Bridge Fixture Smoke
+
+Status: planned.
+
+Goal: create a fixture-only scenario that consumes controlled
+goal-selection-from-memory decisions and produces memory-informed behavior-loop
+decisions/results without writing memory, rerunning retrieval, executing
+actions, calling the movement stack, or mutating World/terrain.
