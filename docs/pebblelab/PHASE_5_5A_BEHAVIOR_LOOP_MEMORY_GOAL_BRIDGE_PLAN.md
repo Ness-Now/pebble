@@ -654,3 +654,69 @@ Limitations:
   embeddings, or RL.
 
 Next phase: Phase 5.5C - Behavior Loop Memory-Goal Bridge Hardening.
+
+## Phase 5.5C Implementation Status
+
+Phase 5.5C implemented the fixture-only scenario
+`behavior_loop_memory_goal_bridge_hardening_smoke`.
+
+Hardening cases:
+
+- baseline fixture compatibility;
+- safety memory-goal bridge;
+- curiosity memory-goal bridge;
+- nearby/observe bridge;
+- idle mapping;
+- empty retrieval keeps currentGoal;
+- low-confidence memory does not override currentGoal;
+- currentGoal continuity;
+- unknown suggested goal sanitized;
+- missing memorySuggestedGoal handled;
+- selected action and behavior result presence;
+- deterministic action mapping;
+- safety/fear priority over curiosity;
+- known v0 goals only;
+- no behavior action execution;
+- no memory mutation or write;
+- no retrieval rerun;
+- no movement stack;
+- no World/terrain mutation;
+- deterministic order;
+- digest repeatability.
+
+Bridge flow:
+
+- consume controlled goal-selection summaries;
+- sanitize or accept a memory suggested goal;
+- choose `selectedGoalForBehaviorLoop`;
+- map that selected goal to an abstract selected action;
+- produce a bounded behavior result summary;
+- emit report, invariant, cases, decisions, digest, metrics, and events.
+
+Selected goals/actions/results:
+
+- `seekSafety` -> `seekSafety`;
+- `explore` -> `explore`;
+- `observeOtherAgent` -> `observeAgent`;
+- `idle` -> `idle`;
+- `rest` -> `rest`;
+- every decision has a bounded `abstract_result:<action>:prepared_without_execution`.
+
+Metrics/events:
+
+- metrics use the `behaviorLoopMemoryGoalBridgeHardening*` prefix;
+- the aggregate event is
+  `lab_behavior_loop_memory_goal_bridge_hardening_recorded`.
+
+Limitations:
+
+- no behavior action execution;
+- no memory write or mutation;
+- no retrieval rerun;
+- no movement intent or movement stack;
+- no World or terrain mutation;
+- no live `agents_basic` integration;
+- no mood, relationships, communication, social memory, Python, LLM,
+  embeddings, or RL.
+
+Next phase: Phase 5.6A - Cognitive Loop Integration Planning.

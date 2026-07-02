@@ -482,3 +482,27 @@ communication, or connect Python, LLM, embeddings, or RL.
 
 The recommended next phase is Phase 5.5C - Behavior Loop Memory-Goal Bridge
 Hardening.
+
+## Phase 5.5C Status
+
+Phase 5.5C implemented `behavior_loop_memory_goal_bridge_hardening_smoke`, a
+fixture-only hardening scenario for the behavior-loop memory-goal bridge.
+
+The scenario validates 23 cases covering baseline compatibility, safety,
+curiosity, nearby-agent observation, idle mapping, empty retrieval,
+low-confidence memory, currentGoal continuity, unknown suggested goals,
+missing suggested goals, selected action/result presence, deterministic action
+mapping, safety/fear priority over curiosity, known v0 goals, deterministic
+order, boundary flags, and digest repeatability.
+
+Unknown suggested goals are sanitized to the current known goal or the idle
+fallback. Safety/fear priority is enforced before memory suggestions can
+override the selected goal.
+
+The scenario does not execute behavior actions, write or mutate memory, rerun
+retrieval, use the movement stack, create or mutate a World, mutate terrain,
+move Core entities, move physical placeholders, add mood, add relationships,
+add communication, or connect Python, LLM, embeddings, or RL.
+
+The recommended next phase is Phase 5.6A - Cognitive Loop Integration
+Planning.

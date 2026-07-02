@@ -3564,3 +3564,34 @@ Validated scope:
 Next recommended step: Phase 5.5C - Behavior Loop Memory-Goal Bridge
 Hardening. Live `agents_basic` integration, memory write loops, mood,
 relations, LLM, social memory, and movement stack feedback remain out of scope.
+
+## Phase 5.5C - Behavior Loop Memory-Goal Bridge Hardening
+
+Status: implemented and validated.
+
+Goal: harden the fixture-only memory-goal bridge against controlled edge cases
+without executing behavior actions, writing memory, rerunning retrieval,
+calling the movement stack, or mutating World/terrain.
+
+Implemented as `behavior_loop_memory_goal_bridge_hardening_smoke`.
+
+Validated scope:
+
+- covers 23 hardening cases, including baseline compatibility, safety,
+  curiosity, nearby observation, idle mapping, empty retrieval, low-confidence
+  memory, currentGoal continuity, unknown suggested goals, missing suggested
+  goals, deterministic action mapping, safety/fear priority over curiosity,
+  deterministic order, and digest repeatability;
+- produces bridge decisions with selected goals, selected actions, behavior
+  result summaries, and explicit boundary flags;
+- writes `behavior_loop_memory_goal_bridge_hardening_report.json`,
+  `behavior_loop_memory_goal_bridge_hardening_invariant_report.json`,
+  `behavior_loop_memory_goal_bridge_hardening_cases.json`,
+  `behavior_loop_memory_goal_bridge_hardening_decisions.json`, and
+  `behavior_loop_memory_goal_bridge_hardening_digest.json`;
+- emits `behaviorLoopMemoryGoalBridgeHardening*` metrics and
+  `lab_behavior_loop_memory_goal_bridge_hardening_recorded`;
+- keeps live `agents_basic` integration, memory write loops, mood,
+  relationships, LLM, social memory, and movement stack feedback out of scope.
+
+Next recommended step: Phase 5.6A - Cognitive Loop Integration Planning.

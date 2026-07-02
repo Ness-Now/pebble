@@ -112,6 +112,8 @@ let isGoalSelectionMemoryHardeningScenario = options.scenario
     == goalSelectionMemoryHardeningScenarioName
 let isBehaviorLoopMemoryGoalBridgeScenario = options.scenario
     == behaviorLoopMemoryGoalBridgeScenarioName
+let isBehaviorLoopMemoryGoalBridgeHardeningScenario = options.scenario
+    == behaviorLoopMemoryGoalBridgeHardeningScenarioName
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -162,7 +164,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isMemoryRetrievalHardeningScenario
     || isGoalSelectionMemoryScenario
     || isGoalSelectionMemoryHardeningScenario
-    || isBehaviorLoopMemoryGoalBridgeScenario)
+    || isBehaviorLoopMemoryGoalBridgeScenario
+    || isBehaviorLoopMemoryGoalBridgeHardeningScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -842,7 +845,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isMemoryRetrievalHardeningScenario
     || isGoalSelectionMemoryScenario
     || isGoalSelectionMemoryHardeningScenario
-    || isBehaviorLoopMemoryGoalBridgeScenario {
+    || isBehaviorLoopMemoryGoalBridgeScenario
+    || isBehaviorLoopMemoryGoalBridgeHardeningScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -4174,6 +4178,21 @@ let behaviorLoopMemoryGoalBridgeFixture: LabBehaviorLoopMemoryGoalBridgeFixture?
 let behaviorLoopMemoryGoalBridgeSuccess = behaviorLoopMemoryGoalBridgeFixture.map {
     $0.report.success && $0.invariantReport.success
 }
+let behaviorLoopMemoryGoalBridgeHardeningFixture: LabBehaviorLoopMemoryGoalBridgeHardeningFixture? = {
+    guard isBehaviorLoopMemoryGoalBridgeHardeningScenario else { return nil }
+    do {
+        return try makeBehaviorLoopMemoryGoalBridgeHardeningFixture(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticks: ticksCompleted
+        )
+    } catch {
+        fail("failed to build behavior loop memory-goal bridge hardening fixture: \(error)")
+    }
+}()
+let behaviorLoopMemoryGoalBridgeHardeningSuccess = behaviorLoopMemoryGoalBridgeHardeningFixture.map {
+    $0.report.success && $0.invariantReport.success
+}
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
     && successCriteria.agentTicksRecorded
@@ -4255,6 +4274,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (goalSelectionMemorySuccess ?? true)
     && (goalSelectionMemoryHardeningSuccess ?? true)
     && (behaviorLoopMemoryGoalBridgeSuccess ?? true)
+    && (behaviorLoopMemoryGoalBridgeHardeningSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -8168,6 +8188,29 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("behavior_loop_memory_goal_bridge_digest.json")
             )
         }
+        if let behaviorLoopMemoryGoalBridgeHardeningFixture {
+            appendEventLines(behaviorLoopMemoryGoalBridgeHardeningFixture.eventLines)
+            try writeJSON(
+                behaviorLoopMemoryGoalBridgeHardeningFixture.report,
+                to: outURL.appendingPathComponent("behavior_loop_memory_goal_bridge_hardening_report.json")
+            )
+            try writeJSON(
+                behaviorLoopMemoryGoalBridgeHardeningFixture.invariantReport,
+                to: outURL.appendingPathComponent("behavior_loop_memory_goal_bridge_hardening_invariant_report.json")
+            )
+            try writeJSON(
+                behaviorLoopMemoryGoalBridgeHardeningFixture.cases,
+                to: outURL.appendingPathComponent("behavior_loop_memory_goal_bridge_hardening_cases.json")
+            )
+            try writeJSON(
+                behaviorLoopMemoryGoalBridgeHardeningFixture.decisions,
+                to: outURL.appendingPathComponent("behavior_loop_memory_goal_bridge_hardening_decisions.json")
+            )
+            try writeJSON(
+                behaviorLoopMemoryGoalBridgeHardeningFixture.digest,
+                to: outURL.appendingPathComponent("behavior_loop_memory_goal_bridge_hardening_digest.json")
+            )
+        }
         if let multiTickClosedLoopReport {
             try writeJSON(
                 multiTickClosedLoopReport,
@@ -10128,7 +10171,12 @@ if let outPath = options.outPath {
             routeFollowingLiveHardeningSuccess: routeFollowingLiveHardeningSuccess,
             successCriteria: successCriteria
         )
-        if let behaviorLoopMemoryGoalBridgeFixture {
+        if let behaviorLoopMemoryGoalBridgeHardeningFixture {
+            try writeJSON(
+                behaviorLoopMemoryGoalBridgeHardeningFixture.metrics,
+                to: outURL.appendingPathComponent("metrics.json")
+            )
+        } else if let behaviorLoopMemoryGoalBridgeFixture {
             try writeJSON(
                 behaviorLoopMemoryGoalBridgeFixture.metrics,
                 to: outURL.appendingPathComponent("metrics.json")

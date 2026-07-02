@@ -1,5 +1,69 @@
 # PebbleLab Development Journal
 
+## 2026-07-02 — Phase 5.5C behavior loop memory-goal bridge hardening smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Harden the fixture-only behavior-loop memory-goal bridge with the scenario
+`behavior_loop_memory_goal_bridge_hardening_smoke`.
+
+### Starting Point
+
+Phase 5.5B added the first bridge fixture connecting controlled
+goal-selection-from-memory decisions to abstract selected goals/actions/results.
+It produced five bridge decisions and kept behavior action execution, memory
+writes, retrieval reruns, movement stack, World, and terrain out of scope.
+
+### Implementation
+
+- Added hardening types, report, invariant report, metrics, digest, and event
+  support in `LabBehaviorLoopMemoryGoalBridge.swift`.
+- Added 23 hardening cases for baseline compatibility, safety, curiosity,
+  nearby observation, idle mapping, empty retrieval, low-confidence memory,
+  currentGoal continuity, unknown suggested goals, missing suggested goals,
+  selected action/result presence, deterministic action mapping,
+  safety/curiosity conflict, known v0 goals, deterministic order, and boundary
+  flags.
+- Enforced safety/fear priority before memory suggestions can override the
+  selected goal.
+- Sanitized unknown suggested goals to the current known goal or idle fallback.
+- Added `behaviorLoopMemoryGoalBridgeHardening*` metrics.
+- Added `lab_behavior_loop_memory_goal_bridge_hardening_recorded`.
+
+### Boundaries
+
+- No behavior action execution.
+- No memory mutation or write.
+- No retrieval rerun.
+- No movement stack or movement intent.
+- No World or terrain mutation.
+- No Core entity or physical placeholder movement.
+- No live `agents_basic` bridge integration.
+- No mood, relationships, communication, Python, LLM, embeddings, or RL.
+
+### Validation
+
+Commands requested for this phase:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `swift run PebbleLab -- --scenario behavior_loop_memory_goal_bridge_hardening_smoke --seed 42 --ticks 3 --out runs/check_behavior_loop_memory_goal_bridge_hardening`;
+- debug non-regression runs for bridge fixture, goal selection, memory
+  retrieval, memory update, behavior loop, `agents_basic`, and
+  `regression_smoke`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results are recorded in the Phase 5.5C commit summary.
+
+### Next Step
+
+Phase 5.6A — Cognitive Loop Integration Planning.
+
 ## 2026-07-02 — Phase 5.5B behavior loop memory-goal bridge fixture smoke
 
 Branch: `lab/pebblelab-v1`
