@@ -9817,3 +9817,100 @@ this environment because production builds can stall without additional log
 output.
 
 Next step: Phase 4.28D — Stack Replay Regression Adapter.
+
+## 2026-07-02 — Phase 4.28D agent movement stack replay regression adapter
+
+Objective: add `agent_movement_stack_replay_regression_adapter_smoke`, a
+fixture-only replay regression adapter that normalizes several existing stack,
+policy, planning, hint, and closed-loop proofs into one common replay report.
+
+Starting point: 4.28B introduced the valid stack contract fixture and 4.28C
+hardened its boundary audit with synthetic negative samples. Both remain green
+and are used as adapter inputs rather than rewritten.
+
+Adapter normalized runs:
+
+- `agent_movement_stack_contract_fixture_smoke`;
+- `agent_movement_stack_contract_boundary_hardening_smoke`;
+- `agent_movement_policy_consolidated_replay_regression_smoke`;
+- `bounded_path_planning_multi_tick_replay_smoke`;
+- `alternate_local_hint_multi_tick_replay_smoke`;
+- `multi_tick_closed_loop_approved_application_smoke`.
+
+Compatibility matrix: the adapter records required runs, normalized runs,
+success/failure totals, missing runs, digest compatibility, boundary
+compatibility, policy compatibility, and output schema compatibility. Optional
+fields are used where a source scenario has no direct contexts, plans, handoff,
+tick, application, feedback, policy, or layer count.
+
+Digest compatibility: each source run must provide a digest and matching repeat
+digest. The adapter also creates a deterministic aggregate digest from the
+normalized run order and verifies the aggregate repeat digest matches.
+
+Boundary compatibility: 4.28D itself does not read World/collision or execute
+route following/full-route behavior. Source runs that legitimately perform
+tick-layer read-only evidence or lab-map approved application remain normalized
+as compatible when they preserve stack boundaries: no policy World/collision,
+no route following, no full-route execution, no Core/placeholder movement, no
+memory/goals/reservation runtime, and no terrain/World mutation.
+
+Policy and output schema compatibility: the adapter records compatible policy
+evidence for v0/v1/v2/v3 where available, preserves v4 as reserved through the
+stack contract, and verifies all six normalized runs expose the common report
+shape.
+
+Aggregate totals from validation:
+
+- required runs = 6;
+- normalized runs = 6;
+- successful runs = 6;
+- failed runs = 0;
+- missing required runs = 0;
+- replay runs total = 10;
+- digest compatible runs = 6;
+- boundary compatible runs = 6;
+- policy compatible runs = 6;
+- output schema compatible runs = 6;
+- contexts aggregate = 105;
+- plans aggregate = 54;
+- handoff intents aggregate = 70;
+- tick approved aggregate = 32;
+- tick denied aggregate = 26;
+- approved applications aggregate = 32;
+- feedback consumed aggregate = 57;
+- invariant checks = 80 passed, 0 failed.
+
+Outputs, invariants, metrics, and event:
+
+- `agent_movement_stack_replay_adapter_report.json`;
+- `agent_movement_stack_replay_adapter_invariant_report.json`;
+- `agent_movement_stack_replay_adapter_runs.json`;
+- `agent_movement_stack_replay_adapter_compatibility.json`;
+- `agent_movement_stack_replay_adapter_boundary.json`;
+- `agent_movement_stack_replay_adapter_digest.json`;
+- `agentMovementStackReplayAdapter*` metrics;
+- `lab_agent_movement_stack_replay_adapter_recorded` event.
+
+Validation commands:
+
+- `git status`
+- `swift build`
+- `swift build -c release --product Pebble`
+- `swift run -c release PebbleLab -- --scenario agent_movement_stack_replay_regression_adapter_smoke --seed 42 --ticks 3 --out runs/check_agent_movement_stack_replay_adapter`
+- `swift run -c release PebbleLab -- --scenario agent_movement_stack_contract_fixture_smoke --seed 42 --ticks 3 --out runs/check_stack_contract_fixture_after_replay_adapter`
+- `swift run -c release PebbleLab -- --scenario agent_movement_stack_contract_boundary_hardening_smoke --seed 42 --ticks 0 --out runs/check_stack_boundary_hardening_after_replay_adapter`
+- `swift run -c release PebbleLab -- --scenario agent_movement_policy_consolidated_replay_regression_smoke --seed 42 --ticks 3 --out runs/check_policy_consolidated_replay_after_stack_replay_adapter`
+- `swift run -c release PebbleLab -- --scenario bounded_path_planning_multi_tick_replay_smoke --seed 42 --ticks 3 --out runs/check_bounded_path_multi_tick_replay_after_stack_replay_adapter`
+- `swift run -c release PebbleLab -- --scenario alternate_local_hint_multi_tick_replay_smoke --seed 42 --ticks 3 --out runs/check_alternate_local_hint_multi_tick_replay_after_stack_replay_adapter`
+- `swift run -c release PebbleLab -- --scenario multi_tick_closed_loop_approved_application_smoke --seed 42 --ticks 3 --out runs/check_multi_tick_closed_loop_approved_application_after_stack_replay_adapter`
+- `swift run -c release PebbleLab -- --scenario feedback_aware_intent_policy_hardening_smoke --seed 42 --ticks 0 --out runs/check_feedback_aware_policy_hardening_after_stack_replay_adapter`
+- `swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_stack_replay_adapter`
+- `swift run -c release pebsmoke`
+- `git diff --check`
+
+Results: local debug scenario validation passed. `swift build` passes. Release
+validation is still tracked separately because production `PebbleLab` runs can
+stall in this environment, while `Pebble` and `pebsmoke` release products have
+been validated in prior 4.28 work.
+
+Next step: Phase 4.28E — Stack Metrics/Event Compatibility Smoke.

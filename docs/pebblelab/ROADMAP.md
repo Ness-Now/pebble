@@ -2747,3 +2747,62 @@ Outputs:
 Route following and full-route execution remain out of scope.
 
 Next recommended step: Phase 4.28D - Stack Replay Regression Adapter.
+
+## Phase 4.28D - Stack Replay Regression Adapter
+
+Status: implemented and validated.
+
+Goal: add a replay regression adapter that normalizes multiple existing stack,
+policy, planning, hint, and closed-loop proofs into one aggregate replay
+contract without changing those source scenarios.
+
+Validated scope:
+
+- `agent_movement_stack_replay_regression_adapter_smoke`;
+- required runs = 6;
+- normalized runs = 6;
+- successful runs = 6;
+- failed runs = 0;
+- missing required runs = 0;
+- replay runs total = 10;
+- digest compatible runs = 6;
+- boundary compatible runs = 6;
+- policy compatible runs = 6;
+- output schema compatible runs = 6;
+- all required runs present;
+- all runs successful;
+- all digests equal to their repeat digests;
+- all boundaries compatible;
+- all policies compatible;
+- all output schemas compatible;
+- contexts aggregate = 105;
+- plans aggregate = 54;
+- handoff intents aggregate = 70;
+- tick approved aggregate = 32;
+- tick denied aggregate = 26;
+- approved applications aggregate = 32;
+- feedback consumed aggregate = 57;
+- deterministic run order true;
+- deterministic aggregate digest true;
+- repeatability failures = 0;
+- no World/collision live read by the adapter;
+- no route following or full-route execution;
+- no Core entity or physical placeholder movement;
+- no memory/goals/reservation runtime;
+- no terrain/world mutation;
+- no renderer/resource/registry/golden touch.
+
+Outputs:
+
+- `agent_movement_stack_replay_adapter_report.json`;
+- `agent_movement_stack_replay_adapter_invariant_report.json`;
+- `agent_movement_stack_replay_adapter_runs.json`;
+- `agent_movement_stack_replay_adapter_compatibility.json`;
+- `agent_movement_stack_replay_adapter_boundary.json`;
+- `agent_movement_stack_replay_adapter_digest.json`;
+- `agentMovementStackReplayAdapter*` metrics;
+- `lab_agent_movement_stack_replay_adapter_recorded` event.
+
+Route following and full-route execution remain out of scope.
+
+Next recommended step: Phase 4.28E - Stack Metrics/Event Compatibility Smoke.

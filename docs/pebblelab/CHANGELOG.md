@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added PebbleLab agent movement stack replay regression adapter smoke.
 - Added PebbleLab agent movement stack boundary hardening smoke.
 - Added PebbleLab agent movement stack contract fixture smoke.
 - Documented the PebbleLab agent movement stack consolidation plan.

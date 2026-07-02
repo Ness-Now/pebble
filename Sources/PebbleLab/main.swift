@@ -88,6 +88,8 @@ let isAgentMovementStackContractScenario = options.scenario
     == "agent_movement_stack_contract_fixture_smoke"
 let isAgentMovementStackBoundaryHardeningScenario = options.scenario
     == "agent_movement_stack_contract_boundary_hardening_smoke"
+let isAgentMovementStackReplayAdapterScenario = options.scenario
+    == "agent_movement_stack_replay_regression_adapter_smoke"
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -126,7 +128,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isBoundedPathPlanningApprovedApplicationScenario
     || isBoundedPathPlanningMultiTickReplayScenario
     || isAgentMovementStackContractScenario
-    || isAgentMovementStackBoundaryHardeningScenario)
+    || isAgentMovementStackBoundaryHardeningScenario
+    || isAgentMovementStackReplayAdapterScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -794,7 +797,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isBoundedPathPlanningApprovedApplicationScenario
     || isBoundedPathPlanningMultiTickReplayScenario
     || isAgentMovementStackContractScenario
-    || isAgentMovementStackBoundaryHardeningScenario {
+    || isAgentMovementStackBoundaryHardeningScenario
+    || isAgentMovementStackReplayAdapterScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -3187,6 +3191,82 @@ let agentMovementStackBoundaryHardeningSuccess = isAgentMovementStackBoundaryHar
         && agentMovementStackBoundaryHardeningSummary?.runtimeRegistriesTouched == false
         && agentMovementStackBoundaryHardeningSummary?.runtimeGoldensTouched == false)
     : nil
+let agentMovementStackReplayAdapterReport = isAgentMovementStackReplayAdapterScenario
+    ? makeAgentMovementStackReplayAdapterReport(
+        scenario: options.scenario,
+        seed: options.seed,
+        requestedTicks: options.ticks
+    )
+    : nil
+let agentMovementStackReplayAdapterInvariantReport = isAgentMovementStackReplayAdapterScenario
+    ? makeAgentMovementStackReplayAdapterInvariantReport(
+        report: agentMovementStackReplayAdapterReport,
+        scenario: options.scenario,
+        seed: options.seed
+    )
+    : nil
+let agentMovementStackReplayAdapterSummary =
+    agentMovementStackReplayAdapterReport?.summary
+let agentMovementStackReplayAdapterSuccess = isAgentMovementStackReplayAdapterScenario
+    ? ((agentMovementStackReplayAdapterReport?.success ?? false)
+        && (agentMovementStackReplayAdapterInvariantReport?.success ?? false)
+        && agentMovementStackReplayAdapterSummary?.requiredRuns == 6
+        && agentMovementStackReplayAdapterSummary?.normalizedRuns == 6
+        && agentMovementStackReplayAdapterSummary?.successfulRuns == 6
+        && agentMovementStackReplayAdapterSummary?.failedRuns == 0
+        && agentMovementStackReplayAdapterSummary?.missingRequiredRuns == 0
+        && agentMovementStackReplayAdapterSummary?.allRequiredPresent == true
+        && agentMovementStackReplayAdapterSummary?.allRunsSuccessful == true
+        && (agentMovementStackReplayAdapterSummary?.replayRunsTotal ?? 0) >= 6
+        && agentMovementStackReplayAdapterSummary?.digestCompatibleRuns == 6
+        && agentMovementStackReplayAdapterSummary?.boundaryCompatibleRuns == 6
+        && (agentMovementStackReplayAdapterSummary?.policyCompatibleRuns ?? 0) >= 3
+        && agentMovementStackReplayAdapterSummary?.outputSchemaCompatibleRuns == 6
+        && agentMovementStackReplayAdapterSummary?.allDigestsEqual == true
+        && agentMovementStackReplayAdapterSummary?.allBoundariesClean == true
+        && agentMovementStackReplayAdapterSummary?.allPoliciesCompatible == true
+        && agentMovementStackReplayAdapterSummary?.allOutputSchemasCompatible == true
+        && (agentMovementStackReplayAdapterSummary?.contextsTotalAggregate ?? 0) > 0
+        && (agentMovementStackReplayAdapterSummary?.plansProducedAggregate ?? 0) > 0
+        && (agentMovementStackReplayAdapterSummary?.handoffIntentsAggregate ?? 0) > 0
+        && (agentMovementStackReplayAdapterSummary?.tickApprovedAggregate ?? 0) > 0
+        && (agentMovementStackReplayAdapterSummary?.tickDeniedAggregate ?? 0) > 0
+        && (agentMovementStackReplayAdapterSummary?.approvedApplicationsAggregate ?? 0) > 0
+        && (agentMovementStackReplayAdapterSummary?.feedbackConsumedAggregate ?? 0) > 0
+        && agentMovementStackReplayAdapterSummary?.deterministicRunOrder == true
+        && agentMovementStackReplayAdapterSummary?.deterministicDigest == true
+        && agentMovementStackReplayAdapterSummary?.digestsEqual == true
+        && agentMovementStackReplayAdapterSummary?.repeatabilityFailures == 0
+        && agentMovementStackReplayAdapterSummary?.stackContractFixtureIncluded == true
+        && agentMovementStackReplayAdapterSummary?.boundaryHardeningIncluded == true
+        && agentMovementStackReplayAdapterSummary?.policyReplayIncluded == true
+        && agentMovementStackReplayAdapterSummary?.boundedReplayIncluded == true
+        && agentMovementStackReplayAdapterSummary?.alternateHintReplayIncluded == true
+        && agentMovementStackReplayAdapterSummary?.closedLoopReplayIncluded == true
+        && agentMovementStackReplayAdapterSummary?.worldRead == false
+        && agentMovementStackReplayAdapterSummary?.collisionRead == false
+        && agentMovementStackReplayAdapterSummary?.tickWorldReadOnlyUsed == false
+        && agentMovementStackReplayAdapterSummary?.tickReadCollision == false
+        && agentMovementStackReplayAdapterSummary?.routeFollowingUsed == false
+        && agentMovementStackReplayAdapterSummary?.fullRouteExecutionUsed == false
+        && agentMovementStackReplayAdapterSummary?.persistentRouteCommitmentUsed == false
+        && agentMovementStackReplayAdapterSummary?.secondStepAutoApplied == false
+        && agentMovementStackReplayAdapterSummary?.pathfindingLiveUsed == false
+        && agentMovementStackReplayAdapterSummary?.unboundedSearchUsed == false
+        && agentMovementStackReplayAdapterSummary?.dynamicReplanningUsed == false
+        && agentMovementStackReplayAdapterSummary?.reservationRuntimeUsed == false
+        && agentMovementStackReplayAdapterSummary?.memoryUpdated == false
+        && agentMovementStackReplayAdapterSummary?.goalChanged == false
+        && agentMovementStackReplayAdapterSummary?.terrainMutated == false
+        && agentMovementStackReplayAdapterSummary?.worldMutated == false
+        && agentMovementStackReplayAdapterSummary?.coreEntityMoved == false
+        && agentMovementStackReplayAdapterSummary?.physicalPlaceholderMoved == false
+        && agentMovementStackReplayAdapterSummary?.mutationPerformed == false
+        && agentMovementStackReplayAdapterSummary?.rendererTouched == false
+        && agentMovementStackReplayAdapterSummary?.resourcesTouched == false
+        && agentMovementStackReplayAdapterSummary?.registriesTouched == false
+        && agentMovementStackReplayAdapterSummary?.goldensTouched == false)
+    : nil
 let multiTickClosedLoopReport = isMultiTickClosedLoopFixtureScenario
     ? makeMultiTickClosedLoopFixtureReport(
         scenario: options.scenario,
@@ -3826,6 +3906,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (boundedPathPlanningMultiTickReplaySuccess ?? true)
     && (agentMovementStackContractSuccess ?? true)
     && (agentMovementStackBoundaryHardeningSuccess ?? true)
+    && (agentMovementStackReplayAdapterSuccess ?? true)
     && (multiTickClosedLoopSuccess ?? true)
     && (multiTickClosedLoopHardeningSuccess ?? true)
     && (multiTickClosedLoopLiveReadonlySuccess ?? true)
@@ -5749,6 +5830,41 @@ if options.outPath != nil {
                 replanningPerformed: summary.runtimeDynamicReplanningUsed
             ))
         }
+        if let agentMovementStackReplayAdapterReport {
+            let summary = agentMovementStackReplayAdapterReport.summary
+            try appendEvent(RunEvent(
+                type: "lab_agent_movement_stack_replay_adapter_recorded",
+                tick: ticksCompleted,
+                scenario: options.scenario,
+                seed: options.seed,
+                requestedTicks: agentMovementStackReplayAdapterReport.requestedTicks,
+                executedTicks: agentMovementStackReplayAdapterReport.requestedTicks,
+                success: agentMovementStackReplayAdapterSuccess,
+                count: summary.normalizedRuns,
+                passed: summary.successfulRuns,
+                failed: summary.failedRuns,
+                candidates: summary.requiredRuns,
+                decisions: summary.normalizedRuns,
+                contextsTotal: summary.contextsTotalAggregate,
+                feedbackConsumedTotal: summary.feedbackConsumedAggregate,
+                movementIntentInputsTotal: summary.handoffIntentsAggregate,
+                tickApprovedTotal: summary.tickApprovedAggregate,
+                tickDeniedTotal: summary.tickDeniedAggregate,
+                approvedApplicationsTotal: summary.approvedApplicationsAggregate,
+                repeatabilityChecks: summary.replayRunsTotal,
+                repeatabilityFailures: summary.repeatabilityFailures,
+                routeFollowingUsed: summary.routeFollowingUsed,
+                tickReadCollision: summary.tickReadCollision,
+                worldUsed: summary.worldRead || summary.tickWorldReadOnlyUsed,
+                collisionRead: summary.collisionRead || summary.tickReadCollision,
+                memoryUpdated: summary.memoryUpdated,
+                goalChanged: summary.goalChanged,
+                reservationRuntimeUsed: summary.reservationRuntimeUsed,
+                mutationPerformed: summary.mutationPerformed,
+                pathfindingPerformed: summary.pathfindingLiveUsed,
+                replanningPerformed: summary.dynamicReplanningUsed
+            ))
+        }
         if let multiTickClosedLoopReport {
             let summary = multiTickClosedLoopReport.summary
             try appendEvent(RunEvent(
@@ -7309,6 +7425,34 @@ if let outPath = options.outPath {
             try writeJSON(
                 agentMovementStackBoundaryHardeningInvariantReport,
                 to: outURL.appendingPathComponent("agent_movement_stack_boundary_hardening_invariant_report.json")
+            )
+        }
+        if let agentMovementStackReplayAdapterReport {
+            try writeJSON(
+                agentMovementStackReplayAdapterReport,
+                to: outURL.appendingPathComponent("agent_movement_stack_replay_adapter_report.json")
+            )
+            try writeJSON(
+                agentMovementStackReplayAdapterReport.runs,
+                to: outURL.appendingPathComponent("agent_movement_stack_replay_adapter_runs.json")
+            )
+            try writeJSON(
+                agentMovementStackReplayAdapterReport.compatibility,
+                to: outURL.appendingPathComponent("agent_movement_stack_replay_adapter_compatibility.json")
+            )
+            try writeJSON(
+                agentMovementStackReplayAdapterReport.boundary,
+                to: outURL.appendingPathComponent("agent_movement_stack_replay_adapter_boundary.json")
+            )
+            try writeJSON(
+                agentMovementStackReplayAdapterReport.digest,
+                to: outURL.appendingPathComponent("agent_movement_stack_replay_adapter_digest.json")
+            )
+        }
+        if let agentMovementStackReplayAdapterInvariantReport {
+            try writeJSON(
+                agentMovementStackReplayAdapterInvariantReport,
+                to: outURL.appendingPathComponent("agent_movement_stack_replay_adapter_invariant_report.json")
             )
         }
         if let multiTickClosedLoopReport {
@@ -9271,7 +9415,15 @@ if let outPath = options.outPath {
             routeFollowingLiveHardeningSuccess: routeFollowingLiveHardeningSuccess,
             successCriteria: successCriteria
         )
-        if let agentMovementStackBoundaryHardeningReport {
+        if let agentMovementStackReplayAdapterReport {
+            try writeJSON(
+                makeAgentMovementStackReplayAdapterMetrics(
+                    report: agentMovementStackReplayAdapterReport,
+                    success: agentMovementStackReplayAdapterSuccess
+                ),
+                to: outURL.appendingPathComponent("metrics.json")
+            )
+        } else if let agentMovementStackBoundaryHardeningReport {
             try writeJSON(
                 makeAgentMovementStackBoundaryHardeningMetrics(
                     report: agentMovementStackBoundaryHardeningReport,

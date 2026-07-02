@@ -769,3 +769,78 @@ Limits:
 - renderer, resources, registries, and goldens remain untouched.
 
 Next step: Phase 4.28D — Stack Replay Regression Adapter.
+
+## Phase 4.28D Implementation Status
+
+Phase 4.28D added
+`agent_movement_stack_replay_regression_adapter_smoke`, a fixture-only replay
+regression adapter for the AgentMovementStack evidence chain.
+
+Replay regression adapter:
+
+- does not change source scenarios;
+- calls existing report builders;
+- normalizes runs into a shared replay shape;
+- compares digest, boundary, policy, and output schema compatibility;
+- produces one aggregate digest and repeat digest.
+
+Normalized runs:
+
+- `agent_movement_stack_contract_fixture_smoke`;
+- `agent_movement_stack_contract_boundary_hardening_smoke`;
+- `agent_movement_policy_consolidated_replay_regression_smoke`;
+- `bounded_path_planning_multi_tick_replay_smoke`;
+- `alternate_local_hint_multi_tick_replay_smoke`;
+- `multi_tick_closed_loop_approved_application_smoke`.
+
+Compatibility matrix:
+
+- required runs = 6;
+- normalized runs = 6;
+- successful runs = 6;
+- failed runs = 0;
+- missing required runs = 0;
+- digest compatible runs = 6;
+- boundary compatible runs = 6;
+- policy compatible runs = 6;
+- output schema compatible runs = 6;
+- all required, digest, boundary, policy, and output schema checks pass.
+
+Aggregate totals:
+
+- replay runs total = 10;
+- contexts aggregate = 105;
+- plans aggregate = 54;
+- handoff intents aggregate = 70;
+- tick approved aggregate = 32;
+- tick denied aggregate = 26;
+- approved applications aggregate = 32;
+- feedback consumed aggregate = 57;
+- deterministic run order = true;
+- deterministic digest = true;
+- repeatability failures = 0.
+
+Outputs produced:
+
+- `agent_movement_stack_replay_adapter_report.json`;
+- `agent_movement_stack_replay_adapter_invariant_report.json`;
+- `agent_movement_stack_replay_adapter_runs.json`;
+- `agent_movement_stack_replay_adapter_compatibility.json`;
+- `agent_movement_stack_replay_adapter_boundary.json`;
+- `agent_movement_stack_replay_adapter_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Limits:
+
+- the adapter itself does not create/read World or collision;
+- source scenarios remain responsible for their own read-only tick evidence
+  where applicable;
+- no route following, full-route execution, persistent route commitment, or
+  second-step auto-application is introduced;
+- no Core entity or physical placeholder movement is introduced;
+- no memory/goals/reservation runtime is used;
+- no terrain/World mutation occurs;
+- renderer, resources, registries, and goldens remain untouched.
+
+Next step: Phase 4.28E — Stack Metrics/Event Compatibility Smoke.
