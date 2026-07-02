@@ -197,3 +197,17 @@ planning, learning, Python, LLM, and RL remain out of scope.
 
 The recommended next phase has been resynced to Phase 5.1A - Behavior Loop
 Contract Planning.
+
+## Phase 5.1A Status
+
+Phase 5.1A is implemented as
+`PHASE_5_1A_BEHAVIOR_LOOP_CONTRACT_PLAN.md`.
+
+The plan defines the future minimal behavior loop contract, proposed
+implementation types, ownership boundaries, future `behaviorLoop*` metrics,
+future behavior-loop events, invariants, and the next fixture-only scenario.
+It keeps movement stack integration as a later bridge and does not implement
+runtime behavior.
+
+The recommended next phase is Phase 5.1B - Behavior Loop Contract Fixture
+Smoke.

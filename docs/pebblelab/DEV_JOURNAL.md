@@ -10343,3 +10343,116 @@ Results: `swift build`, `swift build -c release --product Pebble`, and
 `git diff --check` passed. `pebsmoke` was not run.
 
 Next step: Phase 5.1A — Behavior Loop Contract Planning.
+
+## 2026-07-02 — Phase 5.1A behavior loop contract planning
+
+Objective: define the future minimal cognitive behavior-loop contract before
+adding runtime code, scenarios, metrics, events, or movement stack integration.
+
+Starting point: branch `lab/pebblelab-v1`, commit
+`b862cf9ed765fe06791b789e1152f9fe878406f1`, with Phase 5.0A complete. Phase
+4.28G closed the Agent Movement Stack; Phase 5.0A confirmed that PebbleLab has
+minimal abstract-agent cognition but no full behavior architecture.
+
+Design focus: keep cognition, movement, World observation, and physical
+representation separated. The behavior loop should become a small explicit
+contract before any fixture runtime is added, and `main.swift` should remain a
+runner/output dispatcher rather than the long-term owner of cognition.
+
+Target loop documented:
+
+```text
+perceive
+-> update needs
+-> read memory
+-> select goal
+-> select intended action
+-> optionally produce movement intent later
+-> apply abstract result
+-> consume feedback
+-> write memory
+-> emit metrics/events
+```
+
+Minimal v0 scope: consume bounded current `LabAgent` state, observation,
+nearby agents, needs, current goal, last action effect, memory count/summary,
+and tick. Produce a selected or confirmed goal, selected action, action effect,
+optional abstract movement result, bounded memory writes, and a behavior-loop
+decision record.
+
+Proposed future types:
+
+- `LabBehaviorLoopInput`;
+- `LabBehaviorLoopDecision`;
+- `LabBehaviorLoopResult`;
+- `LabBehaviorLoopReport`.
+
+Ownership boundaries:
+
+- `LabAgent` remains agent state;
+- `LabBehaviorLoop` owns cognitive orchestration;
+- `LabGoal` owns current objective shape;
+- `LabAction`/`LabAgentAction` represents abstract action;
+- `LabMemory` or future memory system owns append-only v0 memory first;
+- `LabMovementStackAdapter` is a later optional bridge;
+- `main.swift` remains runner/output plumbing;
+- movement stack remains a movement sub-layer, not the cognitive decider.
+
+Movement stack relationship: future flow may be goal/action to movement intent
+proposal, then movement stack, approved/denied feedback, and memory update.
+This is not part of 5.1A and should probably not be part of the first 5.1B
+fixture. The first implementation should prove a cognitive fixture without
+movement stack usage.
+
+Future metrics contract: reserve `behaviorLoop*`, including
+`behaviorLoopSuccess`, agents, ticks, decisions, goals selected, goal changes,
+actions selected, effects applied, memory entries written, movement intents
+produced, movement stack used, mutation flags, movement/physical flags, and
+repeatability failures.
+
+Future events contract: reserve `lab_behavior_loop_decision_recorded` and
+optionally `lab_behavior_loop_summary_recorded`, with fields for tick,
+scenario, agent id, goal before/after, selected action, reason, urgency,
+memory writes, movement intent produced, movement stack used, and success.
+
+Future invariant contract: scenario name, agent count, ticks, decisions,
+agent ids, selected actions, `goalAfter`, no World/terrain mutation, no Core
+entity or physical placeholder movement, no route following, no full-route
+execution, no v0 movement stack use, bounded memory writes, deterministic
+order/digest, and zero repeatability failures.
+
+Recommended next phase: Phase 5.1B — Behavior Loop Contract Fixture Smoke.
+Likely scenario name: `behavior_loop_contract_fixture_smoke`. The fixture
+should use two or three abstract agents, produce inputs/decisions/results,
+apply abstract effects, write bounded memory entries, produce report,
+invariant report, decisions, digest, metrics, and events, and avoid movement
+stack, World mutation, terrain mutation, physical placeholder movement, and
+Core entity movement.
+
+Files created or modified:
+
+- `docs/pebblelab/PHASE_5_1A_BEHAVIOR_LOOP_CONTRACT_PLAN.md`;
+- `docs/pebblelab/CHANGELOG.md`;
+- `docs/pebblelab/DEV_JOURNAL.md`;
+- `docs/pebblelab/ROADMAP.md`;
+- `docs/pebblelab/PHASE_5_COGNITIVE_AGENT_RESYNC_PLAN.md`.
+
+Validation commands:
+
+- `git status`;
+- `git branch --show-current`;
+- `git pull origin lab/pebblelab-v1`;
+- `git log --oneline -12`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Expected result: docs-only changes keep Swift behavior unchanged. `pebsmoke`
+remains optional because no core simulation, runtime, scenario, movement stack,
+renderer, resource, registry, save/load, or golden changed.
+
+Results: `swift build`, `swift build -c release --product Pebble`, and
+`git diff --check` passed. `pebsmoke` was not run.
+
+Next step: Phase 5.1B — Behavior Loop Contract Fixture Smoke.

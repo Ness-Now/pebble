@@ -2985,7 +2985,7 @@ Next recommended step: Phase 5.1A - Behavior Loop Contract Planning.
 
 ## Phase 5.1A - Behavior Loop Contract Planning
 
-Status: planned.
+Status: implemented and validated as docs-only.
 
 Goal: define a minimal fixture-only behavior-loop contract before adding new
 runtime behavior.
@@ -3004,3 +3004,33 @@ Phase 5.1A should remain docs-only. It must avoid World mutation, terrain
 mutation, route-following expansion, full-route execution, persistent route
 commitment, Python, LLM, RL, mining, construction, communication, society
 runtime, renderer changes, and save/load changes.
+
+Validated outputs:
+
+- `PHASE_5_1A_BEHAVIOR_LOOP_CONTRACT_PLAN.md`;
+- changelog, development journal, roadmap, and Phase 5 resync plan updates;
+- no Swift, runtime, scenario, movement stack, World, renderer, resource,
+  registry, save/load, or golden changes.
+
+Next recommended step: Phase 5.1B - Behavior Loop Contract Fixture Smoke.
+
+## Phase 5.1B - Behavior Loop Contract Fixture Smoke
+
+Status: planned.
+
+Goal: implement a fixture-only behavior loop contract smoke with two or three
+abstract agents, deterministic loop inputs, decisions, abstract effects,
+bounded memory writes, report/invariant/digest outputs, and no movement stack
+usage.
+
+The scenario should likely be named `behavior_loop_contract_fixture_smoke`.
+It should produce `behavior_loop_contract_report.json`,
+`behavior_loop_contract_invariant_report.json`,
+`behavior_loop_contract_decisions.json`, `behavior_loop_contract_digest.json`,
+`metrics.json`, and `events.ndjson`.
+
+Phase 5.1B must stay fixture-first: no World mutation, no terrain mutation, no
+route following, no full-route execution, no persistent route commitment, no
+Core entity movement, no physical placeholder movement, no social behavior
+runtime, no communication runtime, no Python, no LLM, no RL, no save/load
+changes, and no renderer changes.

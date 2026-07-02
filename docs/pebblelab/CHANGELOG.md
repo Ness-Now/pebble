@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Documented PebbleLab behavior loop contract plan.
 - Documented PebbleLab cognitive agent state audit and behavior loop resync.
 - Documented PebbleLab agent movement stack closure and roadmap resync.
 - Added PebbleLab agent movement stack consolidated multi-tick replay smoke.
