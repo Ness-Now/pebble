@@ -211,3 +211,19 @@ runtime behavior.
 
 The recommended next phase is Phase 5.1B - Behavior Loop Contract Fixture
 Smoke.
+
+## Phase 5.1B Status
+
+Phase 5.1B implemented `behavior_loop_contract_fixture_smoke`, the first
+fixture-only cognitive behavior-loop contract smoke.
+
+The fixture creates three abstract agents for three ticks, builds
+behavior-loop inputs, records decisions, applies bounded abstract effects,
+writes bounded memory entries, emits `behaviorLoop*` metrics, writes behavior
+loop reports/digests/invariants, and records
+`lab_behavior_loop_decision_recorded` events. It does not create a World, call
+the movement stack, mutate terrain, move Core entities, move physical
+placeholders, add social behavior, add communication, or connect Python, LLM,
+or RL.
+
+The recommended next phase is Phase 5.1C - Behavior Loop Hardening.

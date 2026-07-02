@@ -10456,3 +10456,110 @@ Results: `swift build`, `swift build -c release --product Pebble`, and
 `git diff --check` passed. `pebsmoke` was not run.
 
 Next step: Phase 5.1B — Behavior Loop Contract Fixture Smoke.
+
+## 2026-07-02 — Phase 5.1B behavior loop contract fixture smoke
+
+Objective: implement the first fixture-only cognitive behavior-loop contract
+smoke, proving the Phase 5.1A loop contract can be represented with bounded
+inputs, decisions, results, memory writes, reports, invariants, metrics, and
+events without using the movement stack or mutating World.
+
+Starting point: branch `lab/pebblelab-v1`, commit
+`601bde1e94839b2dde52d8763530afc206bf7770`, with Phase 5.1A complete.
+Phase 5.0A audited the current `LabAgent` cognition state; Phase 5.1A defined
+the behavior-loop contract and reserved movement stack integration for later.
+
+Scenario name: `behavior_loop_contract_fixture_smoke`.
+
+Fixture agents:
+
+- `agent_0`: safety/fear-driven, starts with `seekSafety`;
+- `agent_1`: curiosity-driven, starts with `explore`;
+- `agent_2`: nearby-agent-observation-driven, starts with
+  `observeOtherAgent`.
+
+Loop contract implemented:
+
+- `LabBehaviorLoopInput`;
+- `LabBehaviorLoopDecision`;
+- `LabBehaviorLoopResult`;
+- `LabBehaviorLoopReport`;
+- `LabBehaviorLoopInvariantReport`;
+- `LabBehaviorLoopDigest`;
+- `LabBehaviorLoopMetrics`;
+- `LabBehaviorLoopContractFixture`.
+
+Loop behavior: the fixture runs 3 ticks over 3 abstract agents, builds one
+input per agent per tick, records one decision per input, applies bounded
+abstract effects, writes one bounded memory entry per result, and keeps
+movement-intent production at zero.
+
+Metrics: `metrics.json` emits the `behaviorLoop*` prefix, including success,
+agents, ticks, decisions, goals selected, goal changes, actions selected,
+effects applied, memory entries written, movement intents produced, movement
+stack used, mutation flags, physical/Core movement flags, repeatability
+failures, and digest equality.
+
+Events:
+
+- `lab_behavior_loop_decision_recorded`;
+- `lab_behavior_loop_summary_recorded`.
+
+Invariant report: `behavior_loop_contract_invariant_report.json` includes 39
+checks. Validated debug run result: 39 passed, 0 failed.
+
+Digest: `behavior_loop_contract_digest.json` records digest
+`cf7de71959833d43`, repeat digest `cf7de71959833d43`, deterministicDigest
+true, and digestsEqual true.
+
+Boundary confirmations:
+
+- movementStackUsed = false;
+- worldMutated = false;
+- terrainMutated = false;
+- coreEntityMoved = false;
+- physicalPlaceholderMoved = false;
+- no route following;
+- no full-route execution;
+- no persistent route commitment;
+- no physical placeholder or Core entity creation;
+- no mood, relationships, trust, communication, community, task board,
+  Python, LLM, or RL.
+
+Outputs:
+
+- `behavior_loop_contract_report.json`;
+- `behavior_loop_contract_invariant_report.json`;
+- `behavior_loop_contract_decisions.json`;
+- `behavior_loop_contract_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Validation commands:
+
+- `git status`;
+- `git branch --show-current`;
+- `git pull origin lab/pebblelab-v1`;
+- `git log --oneline -12`;
+- `swift build`;
+- `swift run PebbleLab -- --scenario behavior_loop_contract_fixture_smoke --seed 42 --ticks 3 --out runs/check_behavior_loop_contract_fixture`;
+- `swift run PebbleLab -- --scenario agents_basic --seed 42 --agents 3 --ticks 3 --out runs/check_agents_basic_after_behavior_loop_contract`;
+- `swift run PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_behavior_loop_contract`;
+- `swift build -c release --product Pebble`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results:
+
+- `swift build` passed;
+- debug `behavior_loop_contract_fixture_smoke` passed with `success = true`;
+- debug `agents_basic` non-regression passed;
+- debug `regression_smoke` non-regression passed;
+- `swift build -c release --product Pebble` passed;
+- `swift run -c release pebsmoke` passed with 456 passed, 0 failed;
+- release `PebbleLab` scenario validation was attempted, but production
+  `PebbleLab` compilation stalled without further output and was interrupted;
+- `git diff --check` passed before staging.
+
+Next step: Phase 5.1C — Behavior Loop Hardening.

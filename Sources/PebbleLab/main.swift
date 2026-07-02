@@ -94,6 +94,8 @@ let isAgentMovementStackMetricsEventCompatibilityScenario = options.scenario
     == "agent_movement_stack_metrics_event_compatibility_smoke"
 let isAgentMovementStackConsolidatedReplayScenario = options.scenario
     == "agent_movement_stack_consolidated_multi_tick_replay_smoke"
+let isBehaviorLoopContractFixtureScenario = options.scenario
+    == behaviorLoopContractScenarioName
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -135,7 +137,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isAgentMovementStackBoundaryHardeningScenario
     || isAgentMovementStackReplayAdapterScenario
     || isAgentMovementStackMetricsEventCompatibilityScenario
-    || isAgentMovementStackConsolidatedReplayScenario)
+    || isAgentMovementStackConsolidatedReplayScenario
+    || isBehaviorLoopContractFixtureScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -806,7 +809,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isAgentMovementStackBoundaryHardeningScenario
     || isAgentMovementStackReplayAdapterScenario
     || isAgentMovementStackMetricsEventCompatibilityScenario
-    || isAgentMovementStackConsolidatedReplayScenario {
+    || isAgentMovementStackConsolidatedReplayScenario
+    || isBehaviorLoopContractFixtureScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -4003,6 +4007,21 @@ let terrainLiveMovementSuccess = isTerrainLiveMovementScenario
         && terrainLiveMovementSnapshot?.summary.collisionPerformed == false
         && terrainLiveMovementSnapshot?.summary.mutationPerformed == false)
     : nil
+let behaviorLoopContractFixture: LabBehaviorLoopContractFixture? = {
+    guard isBehaviorLoopContractFixtureScenario else { return nil }
+    do {
+        return try makeBehaviorLoopContractFixture(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticks: ticksCompleted
+        )
+    } catch {
+        fail("failed to build behavior loop contract fixture: \(error)")
+    }
+}()
+let behaviorLoopContractSuccess = behaviorLoopContractFixture.map {
+    $0.report.success && $0.invariantReport.success
+}
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
     && successCriteria.agentTicksRecorded
@@ -4075,6 +4094,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (multiTickClosedLoopApprovedApplicationSuccess ?? true)
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
+    && (behaviorLoopContractSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -7777,6 +7797,25 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("agent_movement_stack_consolidated_replay_invariant_report.json")
             )
         }
+        if let behaviorLoopContractFixture {
+            appendEventLines(behaviorLoopContractFixture.eventLines)
+            try writeJSON(
+                behaviorLoopContractFixture.report,
+                to: outURL.appendingPathComponent("behavior_loop_contract_report.json")
+            )
+            try writeJSON(
+                behaviorLoopContractFixture.invariantReport,
+                to: outURL.appendingPathComponent("behavior_loop_contract_invariant_report.json")
+            )
+            try writeJSON(
+                behaviorLoopContractFixture.decisions,
+                to: outURL.appendingPathComponent("behavior_loop_contract_decisions.json")
+            )
+            try writeJSON(
+                behaviorLoopContractFixture.digest,
+                to: outURL.appendingPathComponent("behavior_loop_contract_digest.json")
+            )
+        }
         if let multiTickClosedLoopReport {
             try writeJSON(
                 multiTickClosedLoopReport,
@@ -9737,7 +9776,12 @@ if let outPath = options.outPath {
             routeFollowingLiveHardeningSuccess: routeFollowingLiveHardeningSuccess,
             successCriteria: successCriteria
         )
-        if let agentMovementStackConsolidatedReplayReport {
+        if let behaviorLoopContractFixture {
+            try writeJSON(
+                behaviorLoopContractFixture.metrics,
+                to: outURL.appendingPathComponent("metrics.json")
+            )
+        } else if let agentMovementStackConsolidatedReplayReport {
             try writeJSON(
                 makeAgentMovementStackConsolidatedReplayMetrics(
                     report: agentMovementStackConsolidatedReplayReport,

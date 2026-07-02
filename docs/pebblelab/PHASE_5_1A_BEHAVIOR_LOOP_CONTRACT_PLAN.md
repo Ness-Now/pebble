@@ -425,3 +425,83 @@ Results:
 `pebsmoke` is optional because this phase changes no Swift, runtime behavior,
 scenario, movement stack code, Core simulation behavior, renderer, resources,
 registries, save/load, or goldens.
+
+## Phase 5.1B Implementation Status
+
+Phase 5.1B added `behavior_loop_contract_fixture_smoke`, a fixture-only
+behavior-loop contract smoke.
+
+Scenario:
+
+- `behavior_loop_contract_fixture_smoke`;
+- fixture-only, no World created;
+- fixed expected ticks: `3`;
+- fixed expected agents: `3`;
+- agents: safety/fear-driven `agent_0`, curiosity-driven `agent_1`, and
+  nearby-agent-observation `agent_2`.
+
+Report:
+
+- `behavior_loop_contract_report.json`;
+- success true in validated debug run;
+- decisions = 9;
+- goalsSelected = 9;
+- actionsSelected = 9;
+- effectsApplied = 9;
+- memoryEntriesWritten = 9;
+- movementIntentsProduced = 0;
+- movementStackUsed = false;
+- worldMutated = false;
+- terrainMutated = false;
+- coreEntityMoved = false;
+- physicalPlaceholderMoved = false.
+
+Invariant:
+
+- `behavior_loop_contract_invariant_report.json`;
+- 39 checks passed;
+- 0 checks failed;
+- covers scenario, seed, agent count, ticks, decisions, action/effect evidence,
+  bounded memory writes, zero movement intents, no movement stack, no
+  World/terrain mutation, no Core/placeholder movement, deterministic order,
+  digest presence, digest equality, metrics/event expectations, and docs
+  update expectations.
+
+Decisions:
+
+- `behavior_loop_contract_decisions.json`;
+- one decision per agent per tick;
+- selected actions: `seekSafety`, `explore`, and `observeAgent`;
+- no movement intent is produced.
+
+Digest:
+
+- `behavior_loop_contract_digest.json`;
+- digest and repeat digest match;
+- repeatabilityFailures = 0.
+
+Metrics:
+
+- `metrics.json`;
+- emits `behaviorLoop*` metrics including success, agents, ticks, decisions,
+  goals selected, actions selected, effects applied, memory entries written,
+  movement intents produced, movement stack used, mutation flags, physical/Core
+  movement flags, repeatability failures, and digest equality.
+
+Events:
+
+- `lab_behavior_loop_decision_recorded`;
+- `lab_behavior_loop_summary_recorded`.
+
+Limitations:
+
+- no movement stack bridge;
+- no World or terrain mutation;
+- no physical placeholder or Core entity creation/movement;
+- no mood, relationships, trust, communication, community, task board,
+  Python, LLM, or RL;
+- release `PebbleLab` validation could not complete locally because production
+  compilation stalled without further output, while debug scenario validation,
+  debug non-regressions, release `Pebble`, and release `pebsmoke` passed.
+
+Next phase: Phase 5.1C - Behavior Loop Hardening.

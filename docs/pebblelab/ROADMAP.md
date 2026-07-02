@@ -3016,7 +3016,9 @@ Next recommended step: Phase 5.1B - Behavior Loop Contract Fixture Smoke.
 
 ## Phase 5.1B - Behavior Loop Contract Fixture Smoke
 
-Status: planned.
+Status: implemented and validated with debug PebbleLab fixture run and release
+core smoke; release PebbleLab validation could not complete because production
+`PebbleLab` compilation stalled without further output in this environment.
 
 Goal: implement a fixture-only behavior loop contract smoke with two or three
 abstract agents, deterministic loop inputs, decisions, abstract effects,
@@ -3034,3 +3036,32 @@ route following, no full-route execution, no persistent route commitment, no
 Core entity movement, no physical placeholder movement, no social behavior
 runtime, no communication runtime, no Python, no LLM, no RL, no save/load
 changes, and no renderer changes.
+
+Validated scope:
+
+- `behavior_loop_contract_fixture_smoke`;
+- fixture-only, no World created;
+- 3 abstract agents;
+- 3 ticks;
+- 9 behavior-loop decisions;
+- 9 actions selected;
+- 9 effects applied;
+- 9 bounded memory entries written;
+- 0 movement intents produced;
+- movement stack not used;
+- World and terrain not mutated;
+- Core entity and physical placeholder not moved;
+- deterministic digest and repeat digest equal;
+- invariant report: 39 passed, 0 failed;
+- `behaviorLoop*` metrics emitted;
+- `lab_behavior_loop_decision_recorded` and summary events emitted.
+
+Next recommended step: Phase 5.1C - Behavior Loop Hardening.
+
+## Phase 5.1C - Behavior Loop Hardening
+
+Status: planned.
+
+Goal: harden the behavior-loop contract fixture with negative and boundary
+cases before connecting it to movement stack feedback, memory retrieval, mood,
+relationships, communication, community state, Python, LLM, or RL.

@@ -162,6 +162,16 @@ struct RunEvent: Encodable {
     let visited: Int?
     let candidates: Int?
     let decisions: Int?
+    let goalsSelected: Int?
+    let actionsSelected: Int?
+    let effectsApplied: Int?
+    let memoryEntriesWritten: Int?
+    let memoryWrites: Int?
+    let goalBefore: String?
+    let goalAfter: String?
+    let selectedAction: String?
+    let movementIntentProduced: Bool?
+    let movementStackUsed: Bool?
     let contextsWithBlockedFeedback: Int?
     let contextsWithApprovedOrMovedFeedback: Int?
     let candidatesProduced: Int?
@@ -658,6 +668,16 @@ struct RunEvent: Encodable {
         visited: Int? = nil,
         candidates: Int? = nil,
         decisions: Int? = nil,
+        goalsSelected: Int? = nil,
+        actionsSelected: Int? = nil,
+        effectsApplied: Int? = nil,
+        memoryEntriesWritten: Int? = nil,
+        memoryWrites: Int? = nil,
+        goalBefore: String? = nil,
+        goalAfter: String? = nil,
+        selectedAction: String? = nil,
+        movementIntentProduced: Bool? = nil,
+        movementStackUsed: Bool? = nil,
         contextsWithBlockedFeedback: Int? = nil,
         contextsWithApprovedOrMovedFeedback: Int? = nil,
         candidatesProduced: Int? = nil,
@@ -1153,6 +1173,16 @@ struct RunEvent: Encodable {
         self.visited = visited
         self.candidates = candidates
         self.decisions = decisions
+        self.goalsSelected = goalsSelected
+        self.actionsSelected = actionsSelected
+        self.effectsApplied = effectsApplied
+        self.memoryEntriesWritten = memoryEntriesWritten
+        self.memoryWrites = memoryWrites
+        self.goalBefore = goalBefore
+        self.goalAfter = goalAfter
+        self.selectedAction = selectedAction
+        self.movementIntentProduced = movementIntentProduced
+        self.movementStackUsed = movementStackUsed
         self.contextsWithBlockedFeedback = contextsWithBlockedFeedback
         self.contextsWithApprovedOrMovedFeedback = contextsWithApprovedOrMovedFeedback
         self.candidatesProduced = candidatesProduced
