@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added PebbleLab behavior loop hardening smoke.
 - Added PebbleLab behavior loop contract fixture smoke.
 - Documented PebbleLab behavior loop contract plan.
 - Documented PebbleLab cognitive agent state audit and behavior loop resync.

@@ -10563,3 +10563,114 @@ Results:
 - `git diff --check` passed before staging.
 
 Next step: Phase 5.1C — Behavior Loop Hardening.
+
+## 2026-07-02 — Phase 5.1C behavior loop hardening smoke
+
+Objective: harden the Phase 5.1B behavior-loop contract fixture with
+multiple deterministic cognitive v0 cases before any movement stack bridge,
+memory retrieval, mood, relationships, communication, community state,
+Python, LLM, or RL work.
+
+Starting point: branch `lab/pebblelab-v1`, commit
+`deb61d4c0e96af3e3543b9f86270202ebbbdceff`, with
+`behavior_loop_contract_fixture_smoke` validated in debug and release core
+smoke. Phase 5.1B proved a single contract-shaped fixture; Phase 5.1C checks
+that the same loop remains bounded and deterministic across controlled edge
+cases.
+
+Scenario name: `behavior_loop_hardening_smoke`.
+
+Hardening cases:
+
+- `baseline_contract_compatible`;
+- `seek_safety_priority`;
+- `explore_curiosity_priority`;
+- `observe_nearby_agent`;
+- `idle_fallback`;
+- `missing_goal_fallback`;
+- `empty_nearby_agents`;
+- `memory_already_present`;
+- `empty_inventory`;
+- `extreme_needs_bounded`;
+- `deterministic_order`;
+- `digest_repeatability`.
+
+Decisions: the validated debug run produced 22 deterministic decisions over
+12 cases. The decisions remain simple abstract actions: `seekSafety`,
+`explore`, `observeAgent`, `rest`, and `idle`. Decision records include the
+case name, case index, underlying behavior-loop decision, and bounded result.
+
+Metrics: `metrics.json` emits `behaviorLoopHardening*`, including success,
+cases, cases passed/failed, decisions, actions selected, effects applied,
+memory entries written, movement intents produced, movement stack usage,
+World/terrain mutation flags, Core/placeholder movement flags, deterministic
+decision order, deterministic digest, digest equality, and repeatability
+failures.
+
+Events: `events.ndjson` records the aggregate
+`lab_behavior_loop_hardening_recorded` event with success, case counts,
+decision/effect/memory totals, movement and mutation flags, digest equality,
+and repeatability failures.
+
+Invariant report: `behavior_loop_hardening_invariant_report.json` includes 52
+checks. Validated debug run result: 52 passed, 0 failed.
+
+Digest: `behavior_loop_hardening_digest.json` records digest
+`757ba317eefe5398`, repeat digest `757ba317eefe5398`, deterministicDigest
+true, and digestsEqual true.
+
+Boundary confirmations:
+
+- movementStackUsed = false;
+- movementIntentsProduced = 0;
+- worldMutated = false;
+- terrainMutated = false;
+- coreEntityMoved = false;
+- physicalPlaceholderMoved = false;
+- no World is created for the scenario;
+- no route following, full-route execution, pathfinding, reservation runtime,
+  mood, relationship, trust, communication, community, task board, Python,
+  LLM, or RL is added.
+
+Outputs:
+
+- `behavior_loop_hardening_report.json`;
+- `behavior_loop_hardening_invariant_report.json`;
+- `behavior_loop_hardening_cases.json`;
+- `behavior_loop_hardening_decisions.json`;
+- `behavior_loop_hardening_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Validation commands:
+
+- `git status`;
+- `git branch --show-current`;
+- `git pull origin lab/pebblelab-v1`;
+- `git log --oneline -12`;
+- `swift build`;
+- `swift run PebbleLab -- --scenario behavior_loop_hardening_smoke --seed 42 --ticks 3 --out runs/check_behavior_loop_hardening`;
+- `swift run PebbleLab -- --scenario behavior_loop_contract_fixture_smoke --seed 42 --ticks 3 --out runs/check_behavior_loop_contract_after_hardening`;
+- `swift run PebbleLab -- --scenario agents_basic --seed 42 --agents 3 --ticks 3 --out runs/check_agents_basic_after_behavior_loop_hardening`;
+- `swift run PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_behavior_loop_hardening`;
+- `swift build -c release --product Pebble`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results:
+
+- `swift build` passed;
+- debug `behavior_loop_hardening_smoke` passed with `success = true`;
+- debug `behavior_loop_contract_fixture_smoke` non-regression passed;
+- debug `agents_basic` non-regression passed;
+- debug `regression_smoke` non-regression passed;
+- release `Pebble` build passed;
+- release `pebsmoke` passed with 456 passed, 0 failed;
+- release `PebbleLab` hardening validation was attempted with a short local
+  time limit, reproduced the known silent production compilation stall after
+  writing `swift-version--1AB21518FC5DEDBE.txt`, and was terminated rather
+  than left running indefinitely;
+- diff checks passed.
+
+Next step: Phase 5.2A — Memory Update From Behavior Result Planning.

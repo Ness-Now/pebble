@@ -505,3 +505,104 @@ Limitations:
   debug non-regressions, release `Pebble`, and release `pebsmoke` passed.
 
 Next phase: Phase 5.1C - Behavior Loop Hardening.
+
+## Phase 5.1C Implementation Status
+
+Phase 5.1C added `behavior_loop_hardening_smoke`, a fixture-only hardening
+smoke for the v0 behavior-loop contract.
+
+Scenario:
+
+- `behavior_loop_hardening_smoke`;
+- fixture-only, no World created;
+- fixed expected ticks: `3`;
+- hardening cases: `12`;
+- validates baseline compatibility, safety priority, curiosity/explore
+  priority, nearby-agent observation, idle fallback, missing-goal fallback,
+  empty nearby-agent inputs, existing memory, empty inventory, extreme needs,
+  deterministic order, and digest repeatability.
+
+Cases:
+
+- `baseline_contract_compatible`;
+- `seek_safety_priority`;
+- `explore_curiosity_priority`;
+- `observe_nearby_agent`;
+- `idle_fallback`;
+- `missing_goal_fallback`;
+- `empty_nearby_agents`;
+- `memory_already_present`;
+- `empty_inventory`;
+- `extreme_needs_bounded`;
+- `deterministic_order`;
+- `digest_repeatability`.
+
+Report:
+
+- `behavior_loop_hardening_report.json`;
+- success true in validated debug run;
+- cases = 12;
+- casesPassed = 12;
+- casesFailed = 0;
+- decisions = 22;
+- actionsSelected = 22;
+- effectsApplied = 22;
+- memoryEntriesWritten = 22;
+- movementIntentsProduced = 0;
+- movementStackUsed = false;
+- worldMutated = false;
+- terrainMutated = false;
+- coreEntityMoved = false;
+- physicalPlaceholderMoved = false;
+- deterministicDecisionOrder = true.
+
+Invariant:
+
+- `behavior_loop_hardening_invariant_report.json`;
+- 52 checks passed;
+- 0 checks failed;
+- covers all hardening cases, decision fields, positive action/effect counts,
+  bounded memory writes, zero movement intents, no movement stack, no
+  World/terrain mutation, no Core/placeholder movement, deterministic order,
+  digest presence, digest equality, metrics/event expectations, and docs
+  update expectations.
+
+Decisions:
+
+- `behavior_loop_hardening_decisions.json`;
+- records include `caseName`, `caseIndex`, `decision`, and `result`;
+- selected abstract actions include `seekSafety`, `explore`, `observeAgent`,
+  `rest`, and `idle`;
+- no movement intent is produced.
+
+Digest:
+
+- `behavior_loop_hardening_digest.json`;
+- digest `757ba317eefe5398`;
+- repeat digest `757ba317eefe5398`;
+- repeatabilityFailures = 0.
+
+Metrics:
+
+- `metrics.json`;
+- emits `behaviorLoopHardening*` metrics including success, cases, cases
+  passed/failed, decisions, actions selected, effects applied, memory entries
+  written, movement intents produced, movement stack usage, mutation flags,
+  physical/Core movement flags, deterministic decision order, deterministic
+  digest, digest equality, and repeatability failures.
+
+Events:
+
+- `lab_behavior_loop_hardening_recorded`.
+
+Limitations:
+
+- no movement stack bridge;
+- no World or terrain mutation;
+- no physical placeholder or Core entity creation/movement;
+- no route following, full-route execution, pathfinding, reservation runtime,
+  mood, relationships, trust, communication, community, task board, Python,
+  LLM, or RL;
+- the hardening remains fixture-only and does not make agents "intelligent."
+
+Next phase: Phase 5.2A - Memory Update From Behavior Result Planning.

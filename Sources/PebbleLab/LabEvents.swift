@@ -167,6 +167,7 @@ struct RunEvent: Encodable {
     let effectsApplied: Int?
     let memoryEntriesWritten: Int?
     let memoryWrites: Int?
+    let movementIntentsProduced: Int?
     let goalBefore: String?
     let goalAfter: String?
     let selectedAction: String?
@@ -227,6 +228,8 @@ struct RunEvent: Encodable {
     let physicalPlaceholderMoved: Bool?
     let tickWorldUsed: Bool?
     let cases: Int?
+    let casesPassed: Int?
+    let casesFailed: Int?
     let tickCount: Int?
     let agentCount: Int?
     let agentsObserved: Int?
@@ -673,6 +676,7 @@ struct RunEvent: Encodable {
         effectsApplied: Int? = nil,
         memoryEntriesWritten: Int? = nil,
         memoryWrites: Int? = nil,
+        movementIntentsProduced: Int? = nil,
         goalBefore: String? = nil,
         goalAfter: String? = nil,
         selectedAction: String? = nil,
@@ -733,6 +737,8 @@ struct RunEvent: Encodable {
         physicalPlaceholderMoved: Bool? = nil,
         tickWorldUsed: Bool? = nil,
         cases: Int? = nil,
+        casesPassed: Int? = nil,
+        casesFailed: Int? = nil,
         tickCount: Int? = nil,
         agentCount: Int? = nil,
         agentsObserved: Int? = nil,
@@ -1178,6 +1184,7 @@ struct RunEvent: Encodable {
         self.effectsApplied = effectsApplied
         self.memoryEntriesWritten = memoryEntriesWritten
         self.memoryWrites = memoryWrites
+        self.movementIntentsProduced = movementIntentsProduced
         self.goalBefore = goalBefore
         self.goalAfter = goalAfter
         self.selectedAction = selectedAction
@@ -1238,6 +1245,8 @@ struct RunEvent: Encodable {
         self.physicalPlaceholderMoved = physicalPlaceholderMoved
         self.tickWorldUsed = tickWorldUsed
         self.cases = cases
+        self.casesPassed = casesPassed
+        self.casesFailed = casesFailed
         self.tickCount = tickCount
         self.agentCount = agentCount
         self.agentsObserved = agentsObserved

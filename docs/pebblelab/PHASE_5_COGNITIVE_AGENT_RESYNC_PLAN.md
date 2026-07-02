@@ -227,3 +227,24 @@ placeholders, add social behavior, add communication, or connect Python, LLM,
 or RL.
 
 The recommended next phase is Phase 5.1C - Behavior Loop Hardening.
+
+## Phase 5.1C Status
+
+Phase 5.1C implemented `behavior_loop_hardening_smoke`, a fixture-only
+hardening smoke for the minimal cognitive behavior-loop contract.
+
+The smoke covers 12 deterministic cases: baseline compatibility, seek safety,
+exploration, observing a nearby agent, idle fallback, missing goal fallback,
+empty nearby agents, existing memory, empty inventory, extreme needs,
+deterministic decision ordering, and digest repeatability. The validated debug
+run produced 22 decisions, 22 bounded effects, 22 bounded memory writes, 12
+cases passed, 0 cases failed, 52 invariant checks passed, 0 invariant checks
+failed, and matching digest/repeat digest values.
+
+The scenario does not create a World, call the movement stack, mutate terrain,
+move Core entities, move physical placeholders, add route following,
+pathfinding, reservation runtime, mood, relationships, trust, communication,
+community state, Python, LLM, or RL.
+
+The recommended next phase is Phase 5.2A - Memory Update From Behavior Result
+Planning.

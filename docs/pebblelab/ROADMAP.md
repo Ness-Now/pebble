@@ -3060,8 +3060,62 @@ Next recommended step: Phase 5.1C - Behavior Loop Hardening.
 
 ## Phase 5.1C - Behavior Loop Hardening
 
-Status: planned.
+Status: implemented and validated with debug PebbleLab fixture runs and release
+core smoke.
 
 Goal: harden the behavior-loop contract fixture with negative and boundary
 cases before connecting it to movement stack feedback, memory retrieval, mood,
 relationships, communication, community state, Python, LLM, or RL.
+
+Validated scope:
+
+- `behavior_loop_hardening_smoke`;
+- fixture-only, no World created;
+- 12 hardening cases;
+- 12 cases passed;
+- 0 cases failed;
+- 22 behavior-loop decisions;
+- 22 actions selected;
+- 22 effects applied;
+- 22 bounded memory entries written;
+- 0 movement intents produced;
+- movement stack not used;
+- World and terrain not mutated;
+- Core entity and physical placeholder not moved;
+- deterministic decision order true;
+- deterministic digest and repeat digest equal;
+- repeatabilityFailures = 0;
+- invariant report: 52 passed, 0 failed;
+- `behaviorLoopHardening*` metrics emitted;
+- `lab_behavior_loop_hardening_recorded` event emitted.
+
+Covered cases:
+
+- baseline compatible with Phase 5.1B;
+- seek-safety priority;
+- explore curiosity priority;
+- observe-nearby-agent priority;
+- idle fallback;
+- missing-goal fallback;
+- empty nearby agents;
+- memory already present;
+- empty inventory;
+- extreme needs bounded;
+- deterministic ordering;
+- digest repeatability.
+
+Movement stack bridge remains out of scope. The next phase should continue
+hardening cognitive ownership through memory/result planning before adding any
+movement stack adapter.
+
+Next recommended step: Phase 5.2A - Memory Update From Behavior Result
+Planning.
+
+## Phase 5.2A - Memory Update From Behavior Result Planning
+
+Status: planned.
+
+Goal: define how bounded behavior-loop results should become deterministic
+memory updates before implementing memory retrieval, emotional memory,
+relationships, communication, society runtime, movement stack bridging,
+Python, LLM, or RL.

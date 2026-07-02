@@ -96,6 +96,8 @@ let isAgentMovementStackConsolidatedReplayScenario = options.scenario
     == "agent_movement_stack_consolidated_multi_tick_replay_smoke"
 let isBehaviorLoopContractFixtureScenario = options.scenario
     == behaviorLoopContractScenarioName
+let isBehaviorLoopHardeningScenario = options.scenario
+    == behaviorLoopHardeningScenarioName
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -138,7 +140,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isAgentMovementStackReplayAdapterScenario
     || isAgentMovementStackMetricsEventCompatibilityScenario
     || isAgentMovementStackConsolidatedReplayScenario
-    || isBehaviorLoopContractFixtureScenario)
+    || isBehaviorLoopContractFixtureScenario
+    || isBehaviorLoopHardeningScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -810,7 +813,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isAgentMovementStackReplayAdapterScenario
     || isAgentMovementStackMetricsEventCompatibilityScenario
     || isAgentMovementStackConsolidatedReplayScenario
-    || isBehaviorLoopContractFixtureScenario {
+    || isBehaviorLoopContractFixtureScenario
+    || isBehaviorLoopHardeningScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -4022,6 +4026,21 @@ let behaviorLoopContractFixture: LabBehaviorLoopContractFixture? = {
 let behaviorLoopContractSuccess = behaviorLoopContractFixture.map {
     $0.report.success && $0.invariantReport.success
 }
+let behaviorLoopHardeningFixture: LabBehaviorLoopHardeningFixture? = {
+    guard isBehaviorLoopHardeningScenario else { return nil }
+    do {
+        return try makeBehaviorLoopHardeningFixture(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticks: ticksCompleted
+        )
+    } catch {
+        fail("failed to build behavior loop hardening fixture: \(error)")
+    }
+}()
+let behaviorLoopHardeningSuccess = behaviorLoopHardeningFixture.map {
+    $0.report.success && $0.invariantReport.success
+}
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
     && successCriteria.agentTicksRecorded
@@ -4095,6 +4114,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (routeFollowingLiveSuccess ?? true)
     && (routeFollowingLiveHardeningSuccess ?? true)
     && (behaviorLoopContractSuccess ?? true)
+    && (behaviorLoopHardeningSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -7816,6 +7836,29 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("behavior_loop_contract_digest.json")
             )
         }
+        if let behaviorLoopHardeningFixture {
+            appendEventLines(behaviorLoopHardeningFixture.eventLines)
+            try writeJSON(
+                behaviorLoopHardeningFixture.report,
+                to: outURL.appendingPathComponent("behavior_loop_hardening_report.json")
+            )
+            try writeJSON(
+                behaviorLoopHardeningFixture.invariantReport,
+                to: outURL.appendingPathComponent("behavior_loop_hardening_invariant_report.json")
+            )
+            try writeJSON(
+                behaviorLoopHardeningFixture.cases,
+                to: outURL.appendingPathComponent("behavior_loop_hardening_cases.json")
+            )
+            try writeJSON(
+                behaviorLoopHardeningFixture.decisions,
+                to: outURL.appendingPathComponent("behavior_loop_hardening_decisions.json")
+            )
+            try writeJSON(
+                behaviorLoopHardeningFixture.digest,
+                to: outURL.appendingPathComponent("behavior_loop_hardening_digest.json")
+            )
+        }
         if let multiTickClosedLoopReport {
             try writeJSON(
                 multiTickClosedLoopReport,
@@ -9776,7 +9819,12 @@ if let outPath = options.outPath {
             routeFollowingLiveHardeningSuccess: routeFollowingLiveHardeningSuccess,
             successCriteria: successCriteria
         )
-        if let behaviorLoopContractFixture {
+        if let behaviorLoopHardeningFixture {
+            try writeJSON(
+                behaviorLoopHardeningFixture.metrics,
+                to: outURL.appendingPathComponent("metrics.json")
+            )
+        } else if let behaviorLoopContractFixture {
             try writeJSON(
                 behaviorLoopContractFixture.metrics,
                 to: outURL.appendingPathComponent("metrics.json")
