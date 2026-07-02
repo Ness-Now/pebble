@@ -3156,9 +3156,50 @@ Smoke.
 
 ## Phase 5.2B - Memory Update From Behavior Result Fixture Smoke
 
-Status: planned.
+Status: implemented and validated with debug PebbleLab fixture runs and release
+core smoke. Direct release `PebbleLab` scenario validation was attempted with a
+short local limit, but production `PebbleLab` compilation stalled without
+further output in this environment.
 
 Goal: implement a fixture-only memory update smoke that converts controlled
 behavior-loop results into memory update proposals, accepted/rejected writes,
 before/after memory snapshots, report, invariant report, digest, metrics, and
 events while preserving all no-World/no-movement-stack boundaries.
+
+Validated scope:
+
+- `memory_update_from_behavior_result_fixture_smoke`;
+- fixture-only, no World created;
+- 3 abstract agents;
+- 3 controlled behavior results;
+- 4 memory update proposals;
+- 3 accepted writes;
+- 1 rejected duplicate write;
+- memoryCountBeforeTotal = 0;
+- memoryCountAfterTotal = 3;
+- maxWritesPerAgentTick = 1;
+- bounded = true;
+- deterministic proposal order true;
+- deterministic digest and repeat digest equal;
+- repeatabilityFailures = 0;
+- movement stack not used;
+- World and terrain not mutated;
+- Core entity and physical placeholder not moved;
+- invariant report: 40 passed, 0 failed;
+- `memoryUpdate*` metrics emitted;
+- `lab_memory_update_recorded` and summary events emitted.
+
+Memory retrieval, emotional memory, mood, relationships, trust,
+communication, society runtime, movement stack feedback, Python, LLM, and RL
+remain out of scope.
+
+Next recommended step: Phase 5.2C - Memory Update Hardening.
+
+## Phase 5.2C - Memory Update Hardening
+
+Status: planned.
+
+Goal: harden the memory update fixture with additional rejection, ordering,
+importance-boundary, duplicate, and snapshot cases before any retrieval,
+emotional memory, relationship memory, movement stack feedback, Python, LLM,
+or RL integration.

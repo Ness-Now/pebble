@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added PebbleLab memory update from behavior result fixture smoke.
 - Documented PebbleLab memory update from behavior result plan.
 - Added PebbleLab behavior loop hardening smoke.
 - Added PebbleLab behavior loop contract fixture smoke.

@@ -511,3 +511,109 @@ Results:
 - `git diff --cached --check` passed.
 
 `pebsmoke` was not run for this docs-only phase.
+
+## Phase 5.2B Implementation Status
+
+Phase 5.2B added `memory_update_from_behavior_result_fixture_smoke`, a
+fixture-only smoke that turns controlled behavior-loop results into memory
+update proposals and bounded memory writes.
+
+Scenario:
+
+- `memory_update_from_behavior_result_fixture_smoke`;
+- fixture-only, no World created;
+- fixed validation ticks: `3`;
+- agents: `agent_0`, `agent_1`, `agent_2`;
+- controlled behavior results: `seekSafety`, `explore`, and `observeAgent`.
+
+Report:
+
+- `memory_update_report.json`;
+- success true in validated debug run;
+- agents = 3;
+- behaviorResults = 3;
+- proposals = 4;
+- acceptedWrites = 3;
+- rejectedWrites = 1;
+- memoryCountBeforeTotal = 0;
+- memoryCountAfterTotal = 3;
+- maxWritesPerAgentTick = 1;
+- bounded = true;
+- deterministicOrder = true;
+- movementStackUsed = false;
+- worldMutated = false;
+- terrainMutated = false;
+- coreEntityMoved = false;
+- physicalPlaceholderMoved = false.
+
+Invariant:
+
+- `memory_update_invariant_report.json`;
+- 40 checks passed;
+- 0 checks failed;
+- covers scenario, seed, agent/tick expectations, behavior results, proposals,
+  accepted/rejected writes, before/after counts, max write budget, bounded
+  importance, allowed memory types, non-empty summaries, deterministic order,
+  no movement stack, no World/terrain mutation, no Core/placeholder movement,
+  digest equality, output writing, metrics/events expectations, and docs
+  update expectations.
+
+Proposals:
+
+- `memory_update_proposals.json`;
+- accepted `safety_reaction` for `agent_0`;
+- rejected duplicate `safety_reaction` for `agent_0`;
+- accepted `curiosity_reaction` for `agent_1`;
+- accepted `nearby_agent_observed` for `agent_2`.
+
+Memory snapshot:
+
+- `memory_update_agent_memory_snapshot.json`;
+- each agent records before/after memory counts;
+- accepted proposals append one `LabMemoryEntry`;
+- rejected proposals do not append memory.
+
+Digest:
+
+- `memory_update_digest.json`;
+- digest `f789a61fc3a3babe`;
+- repeat digest `f789a61fc3a3babe`;
+- repeatabilityFailures = 0.
+
+Validation:
+
+- debug `memory_update_from_behavior_result_fixture_smoke` passed;
+- debug behavior-loop contract, behavior-loop hardening, `agents_basic`, and
+  `regression_smoke` non-regressions passed;
+- `swift build`, `swift build -c release --product Pebble`, and
+  `swift run -c release pebsmoke` passed;
+- direct release `PebbleLab` scenario validation was attempted with a short
+  local limit and interrupted after production compilation stalled without
+  further output.
+
+Metrics:
+
+- `metrics.json`;
+- emits `memoryUpdate*` metrics including success, agents, ticks, behavior
+  results, proposals, accepted writes, rejected writes, before/after memory
+  counts, max writes per agent tick, bounded, deterministic order, digest
+  equality, repeatability failures, mutation flags, movement stack usage, and
+  Core/placeholder movement flags.
+
+Events:
+
+- `lab_memory_update_recorded`;
+- `lab_memory_update_summary_recorded`.
+
+Limitations:
+
+- no memory retrieval;
+- no emotional memory;
+- no mood, relationships, trust, communication, community, or task board;
+- no movement stack feedback source;
+- no World or terrain mutation;
+- no physical placeholder or Core entity creation/movement;
+- no route following, full-route execution, pathfinding, reservation runtime,
+  Python, LLM, or RL.
+
+Next phase: Phase 5.2C - Memory Update Hardening.

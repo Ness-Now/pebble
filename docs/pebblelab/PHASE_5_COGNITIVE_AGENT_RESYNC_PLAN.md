@@ -265,3 +265,24 @@ Python, LLM, and RL out of scope.
 
 The recommended next phase is Phase 5.2B - Memory Update From Behavior Result
 Fixture Smoke.
+
+## Phase 5.2B Status
+
+Phase 5.2B implemented
+`memory_update_from_behavior_result_fixture_smoke`, the first fixture-only
+memory update layer from controlled behavior-loop results.
+
+The fixture creates three controlled behavior results, turns them into four
+memory update proposals, accepts three writes, rejects one duplicate same
+tick/agent/type proposal, writes before/after memory snapshots, emits
+`memoryUpdate*` metrics, records `lab_memory_update_recorded` events, and
+validates a stable digest. The validated debug run produced 3 accepted writes,
+1 rejected write, memory count total 0 -> 3, 40 invariant checks passed, and
+0 invariant checks failed.
+
+The scenario does not create a World, call the movement stack, mutate terrain,
+move Core entities, move physical placeholders, add retrieval, emotional
+memory, mood, relationships, trust, communication, community state,
+movement-stack feedback, Python, LLM, or RL.
+
+The recommended next phase is Phase 5.2C - Memory Update Hardening.

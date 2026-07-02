@@ -10777,3 +10777,120 @@ Results:
 - `pebsmoke` was not run for this docs-only phase.
 
 Next step: Phase 5.2B — Memory Update From Behavior Result Fixture Smoke.
+
+## 2026-07-02 — Phase 5.2B memory update from behavior result fixture smoke
+
+Objective: implement the first fixture-only memory update layer from
+controlled behavior-loop results, proving result-to-proposal-to-bounded-write
+ownership before any retrieval, mood, relationship, movement stack feedback,
+communication, Python, LLM, or RL work.
+
+Starting point: branch `lab/pebblelab-v1`, commit
+`2de928d58b75d578497867eafb53158fdb777fb4`, with Phase 5.2A complete.
+Phase 5.2A defined the v0 contract: behavior result to memory update input,
+proposal, accepted/rejected decision, bounded append, before/after snapshot,
+report, invariant, digest, metrics, and events.
+
+Scenario name: `memory_update_from_behavior_result_fixture_smoke`.
+
+Behavior results:
+
+- `agent_0`: `seekSafety`, effect `fear -1`;
+- `agent_1`: `explore`, effect `curiosity -0.005`;
+- `agent_2`: `observeAgent`, effect `curiosity +0.01`.
+
+Proposals:
+
+- accepted `safety_reaction` for `agent_0`;
+- rejected duplicate `safety_reaction` for `agent_0` with
+  `duplicate_same_tick_agent_memory_type`;
+- accepted `curiosity_reaction` for `agent_1`;
+- accepted `nearby_agent_observed` for `agent_2`.
+
+Accepted/rejected writes:
+
+- proposals = 4;
+- acceptedWrites = 3;
+- rejectedWrites = 1;
+- maxWritesPerAgentTick = 1;
+- bounded = true.
+
+Memory before/after:
+
+- memoryCountBeforeTotal = 0;
+- memoryCountAfterTotal = 3;
+- each accepted write appends exactly one `LabMemoryEntry`;
+- rejected proposal does not append memory.
+
+Metrics: `metrics.json` emits `memoryUpdate*`, including success, agents,
+ticks, behavior results, proposals, accepted/rejected writes, before/after
+totals, max writes per agent tick, bounded, deterministic order, digest
+equality, repeatability failures, mutation flags, movement stack usage, and
+Core/placeholder movement flags.
+
+Events:
+
+- `lab_memory_update_recorded`;
+- `lab_memory_update_summary_recorded`.
+
+Invariant report: `memory_update_invariant_report.json` includes 40 checks.
+Validated debug run result: 40 passed, 0 failed.
+
+Digest: `memory_update_digest.json` records digest `f789a61fc3a3babe`, repeat
+digest `f789a61fc3a3babe`, deterministicDigest true, and digestsEqual true.
+
+Boundary confirmations:
+
+- movementStackUsed = false;
+- worldMutated = false;
+- terrainMutated = false;
+- coreEntityMoved = false;
+- physicalPlaceholderMoved = false;
+- no World is created for the scenario;
+- no retrieval, emotional memory, mood, relationships, trust, communication,
+  community, task board, route following, pathfinding, reservation runtime,
+  Python, LLM, or RL is added.
+
+Outputs:
+
+- `memory_update_report.json`;
+- `memory_update_invariant_report.json`;
+- `memory_update_proposals.json`;
+- `memory_update_agent_memory_snapshot.json`;
+- `memory_update_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Validation commands:
+
+- `git status`;
+- `git branch --show-current`;
+- `git pull origin lab/pebblelab-v1`;
+- `git log --oneline -12`;
+- `swift build`;
+- `swift run PebbleLab -- --scenario memory_update_from_behavior_result_fixture_smoke --seed 42 --ticks 3 --out runs/check_memory_update_from_behavior_result_fixture`;
+- `swift run PebbleLab -- --scenario behavior_loop_contract_fixture_smoke --seed 42 --ticks 3 --out runs/check_behavior_loop_contract_after_memory_update`;
+- `swift run PebbleLab -- --scenario behavior_loop_hardening_smoke --seed 42 --ticks 3 --out runs/check_behavior_loop_hardening_after_memory_update`;
+- `swift run PebbleLab -- --scenario agents_basic --seed 42 --agents 3 --ticks 3 --out runs/check_agents_basic_after_memory_update`;
+- `swift run PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_memory_update`;
+- `swift build -c release --product Pebble`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results:
+
+- the memory update fixture passed in debug with report success true, 3 agents,
+  3 behavior results, 4 proposals, 3 accepted writes, 1 rejected duplicate
+  write, memory count total `0 -> 3`, 40 invariant checks passed, stable digest
+  `f789a61fc3a3babe`, and `memoryUpdate*` metrics/events written;
+- behavior loop contract, behavior loop hardening, `agents_basic`, and
+  `regression_smoke` non-regressions passed in debug;
+- `swift build`, `swift build -c release --product Pebble`, and
+  `swift run -c release pebsmoke` passed, with `pebsmoke` reporting
+  456 passed, 0 failed;
+- release `PebbleLab` scenario validation was attempted with a 90 second local
+  limit, but production `PebbleLab` compilation stalled without further output
+  and was interrupted as in prior phases.
+
+Next step: Phase 5.2C — Memory Update Hardening.
