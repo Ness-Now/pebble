@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Documented PebbleLab agent movement stack closure and roadmap resync.
 - Added PebbleLab agent movement stack consolidated multi-tick replay smoke.
 - Added PebbleLab agent movement stack metrics/event compatibility smoke.
 - Added PebbleLab agent movement stack replay regression adapter smoke.

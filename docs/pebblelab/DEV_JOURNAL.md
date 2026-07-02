@@ -10122,3 +10122,95 @@ listed release non-regressions, `swift run -c release pebsmoke`, and
 Next step: Phase 4.28G — Agent Movement Stack Closure And Roadmap Resync, or
 return to the Phase 3 roadmap once the Phase 4 movement stack is considered
 closed.
+
+## 2026-07-02 — Phase 4.28G agent movement stack closure and roadmap resync
+
+Objective: close Phase 4.28 as a docs-only roadmap resync after the 4.28F
+consolidated replay, and point the next work back toward cognitive agents,
+behavior loops, and society simulation.
+
+Starting point: commit `a016846` (`Add PebbleLab agent movement stack
+consolidated replay smoke`) is the visible head of the branch. Phase 4.28F
+validated the final consolidated multi-tick replay over the stack contract,
+boundary hardening, replay adapter, metrics/event compatibility, bounded path
+planning replay, alternate local hint replay, multi-tick closed loop approved
+application, and policy consolidated replay families.
+
+Phase 4.28A-F recap:
+
+- 4.28A documented the Agent Movement Stack consolidation plan;
+- 4.28B added the stack contract fixture smoke;
+- 4.28C hardened the boundary audit with negative samples;
+- 4.28D normalized replay regression evidence;
+- 4.28E audited metrics/event compatibility;
+- 4.28F aggregated the final consolidated multi-tick replay.
+
+What the stack now guarantees: policies v0/v1/v2/v3 remain explicit opt-in
+modes, v4 remains reserved-only, feedback from tick N is consumed only at
+N+1, same-tick/future/cross-agent feedback leaks are rejected, first-step-only
+handoff is preserved, advisory steps are never applied, and approved movement
+application remains lab-map-only. The stack also proves deterministic replay,
+stable digests, stable metrics/events, green invariant reports, no global
+activation, no hidden policy activation, no route following, no full-route
+execution, no persistent route commitment, no World/terrain mutation, no Core
+entity movement, and no physical placeholder movement.
+
+What the stack does not guarantee: it is not a complete cognitive-agent
+system. It does not own memory, needs, mood, goal selection runtime, social
+behavior, communication, inventory gameplay, construction, mining, physical
+gameplay autonomy, Python, LLM, RL, or society simulation. Movement intent,
+policy, feedback, planning, arbitration, and replay are infrastructure for
+future cognition, not proof that agents understand goals or remember outcomes.
+
+Movement stack versus agent cognition: the consolidated stack can now serve as
+a bounded sub-layer under future behavior. The cognitive loop still needs
+explicit ownership over perception, memory, needs, mood, goals, intent, action
+result handling, feedback interpretation, and memory updates.
+
+Why not continue immediately into more movement: adding route following,
+runtime movement expansion, full-route execution, dynamic replanning, live
+pathfinding, or reservation runtime now would deepen infrastructure before the
+agent model says why an agent moves. That risks coupling policy mechanics to
+missing cognitive semantics and making replay coverage look like behavior.
+
+Why return to cognition and society: PebbleLab's objective is usable AI agents
+and simulation. The movement stack is now solid enough to stop treating
+movement as the main frontier. The next important uncertainty is the agent
+behavior loop: what the current model already represents, what memory and
+goals own, how needs and mood influence decisions, how social perception feeds
+future behavior, and where inventory state becomes meaningful.
+
+Risk if infrastructure continues too long: the project may accumulate more
+movement adapters, metrics, and compatibility reports while the agent remains
+mostly reactive. It could also blur boundaries between planner output and
+agent intention, or between feedback logs and actual memory.
+
+Next recommended step: Phase 5.0A — Cognitive Agent Resync Planning. It should
+be docs-only and audit current `LabAgent`, `LabGoal`, `LabMemoryEntry`, needs,
+inventory, social perception, movement stack entry points, reports, preserved
+scenarios, and the next concrete fixture after planning.
+
+Files created or modified:
+
+- `docs/pebblelab/CHANGELOG.md`;
+- `docs/pebblelab/DEV_JOURNAL.md`;
+- `docs/pebblelab/ROADMAP.md`;
+- `docs/pebblelab/PHASE_4_AGENT_MOVEMENT_STACK_CONSOLIDATION_PLAN.md`;
+- `docs/pebblelab/PHASE_5_COGNITIVE_AGENT_RESYNC_PLAN.md`.
+
+Validation commands:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `git diff --check`.
+
+Expected validation result: docs-only changes should keep build products
+unchanged. `pebsmoke` is optional for this phase because no core simulation,
+scenario, runtime metric, runtime event, or Swift behavior changed.
+
+Strategic closure: Phase 4.28 is closed. The official recommendation is not to
+continue immediately toward route following/runtime movement, not to begin
+Python/LLM/RL, and not to start mining/construction/inventory gameplay. Return
+instead to cognitive agents, behavior loop ownership, social perception, needs,
+goals, memory, inventory meaning, and later society simulation.

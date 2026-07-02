@@ -988,3 +988,74 @@ Limits:
 
 Next step: Phase 4.28G — Agent Movement Stack Closure And Roadmap Resync, or
 return to the Phase 3 roadmap after closing the Phase 4 movement stack.
+
+## Phase 4.28G Closure Status
+
+Phase 4.28G closes the current Agent Movement Stack consolidation chapter as a
+documentation-only roadmap resync. It adds no Swift runtime behavior, no
+scenario, no metrics, no events, and no changes to
+`LabAgentMovementStackContract.swift`.
+
+Completed 4.28 chain:
+
+- 4.28A - Agent Movement Stack Consolidation Plan;
+- 4.28B - Stack Contract Fixture Smoke;
+- 4.28C - Stack Contract Boundary Hardening;
+- 4.28D - Stack Replay Regression Adapter;
+- 4.28E - Stack Metrics/Event Compatibility Smoke;
+- 4.28F - Stack Consolidated Multi-Tick Replay Regression.
+
+Final consolidated replay status: green. The 4.28F replay aggregated eight
+required runs, found all eight present and successful, preserved deterministic
+digest repeatability, kept compatibility checks green, and retained non-zero
+evidence for contexts, plans, selected first steps, handoff intents, tick
+approvals/denials, approved applications, and feedback consumed.
+
+Stack scope now proven:
+
+- deterministic agent intent production;
+- bounded previous-tick feedback consumption;
+- feedback-aware policy behavior;
+- deterministic alternate local hints;
+- multi-tick closed-loop replay;
+- movement policy consolidation;
+- bounded fixture planning;
+- selected first-step handoff;
+- tick arbitration;
+- lab-map-only approved application;
+- replay regression;
+- boundary hardening;
+- metrics/events compatibility;
+- consolidated multi-tick replay.
+
+Stack non-scope remains explicit:
+
+- no global policy activation or hidden policy activation;
+- no v4 behavior beyond reserved metadata;
+- no same-tick, future, or cross-agent feedback leak;
+- no advisory-step application;
+- no route following, full-route execution, or persistent route commitment;
+- no live World scan, live collision read, live pathfinding, unbounded search,
+  dynamic replanning, or reservation runtime;
+- no terrain/World mutation, save/load change, renderer/resource/registry/golden
+  touch, Core entity movement, or physical placeholder movement;
+- no goal selection runtime, memory runtime, social behavior, communication,
+  Python, LLM, RL, mining, construction, or inventory gameplay.
+
+Closure decision: the abstract movement/intention/feedback/planning/
+arbitration/replay stack is consolidated enough to serve as a sub-layer for
+future cognitive behavior. It is not itself a completed cognitive-agent system.
+Memory, needs, mood, goal ownership, social perception, inventory meaning,
+behavior-loop ownership, and society simulation still need a deliberate Phase
+5 resync.
+
+Do not continue immediately into route following, runtime movement expansion,
+full-route execution, or broader physical gameplay. Extending movement further
+before a cognitive resync risks turning infrastructure into the product,
+coupling policy details to future behavior semantics, and hiding missing
+cognition behind increasingly elaborate replay fixtures.
+
+Recommended next phase: Phase 5.0A - Cognitive Agent Resync Planning. It should
+be docs-only and should audit the existing agent model, needs, goals, memory,
+inventory, social perception, movement stack integration boundaries, reports,
+and preserved scenarios before any new behavior-loop fixture is implemented.

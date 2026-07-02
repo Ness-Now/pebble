@@ -2915,3 +2915,66 @@ goals, reservation runtime, and gameplay autonomy remain out of scope.
 Next recommended step: Phase 4.28G - Agent Movement Stack Closure And Roadmap
 Resync, or return to the Phase 3 roadmap after closing the Phase 4 movement
 stack.
+
+## Phase 4.28G - Agent Movement Stack Closure And Roadmap Resync
+
+Status: implemented and validated as docs-only.
+
+Goal: close Agent Movement Stack consolidation after 4.28F and realign next
+work toward cognitive agents and society simulation.
+
+Closure summary:
+
+- Phase 4.28A documented the consolidation plan;
+- Phase 4.28B proved the stack contract fixture;
+- Phase 4.28C hardened boundary auditing;
+- Phase 4.28D normalized replay regression evidence;
+- Phase 4.28E audited metrics/event compatibility;
+- Phase 4.28F validated the consolidated multi-tick replay regression.
+
+The movement stack now provides a deterministic, opt-in foundation for intent,
+feedback, local policy selection, bounded fixture planning, first-step handoff,
+tick arbitration, lab-map-only approved application, replay regression, and
+boundary reporting. Policies v0/v1/v2/v3 remain explicit and opt-in. v4 remains
+reserved-only. Feedback from tick N is consumed at tick N+1 without same-tick,
+future, or cross-agent leaks. Bounded planning remains first-step-only, with
+advisory steps never applied and no persistent route commitment.
+
+The closure does not mean cognitive agents are finished. The abstract movement
+stack is infrastructure for future behavior; it does not yet own memory, needs,
+mood, goals, social behavior, communication, inventory gameplay, society
+simulation, Python, LLM, RL, or physical gameplay autonomy.
+
+Strategic decision:
+
+- do not continue immediately into route-following or broader runtime movement;
+- do not begin Python, LLM, or RL integration;
+- do not begin mining, construction, inventory gameplay, or physical gameplay
+  mutation;
+- return to agent cognition and society planning, using the consolidated
+  movement stack as a bounded sub-layer.
+
+No Swift, scenario, runtime, metric, event, World, renderer, resource, registry,
+save/load, golden, or `LabAgentMovementStackContract.swift` change is part of
+4.28G.
+
+Next recommended step: Phase 5.0A - Cognitive Agent Resync Planning.
+
+## Phase 5.0A - Cognitive Agent Resync Planning
+
+Status: planned.
+
+Goal: audit the current agent cognition state and define the next safe bridge
+from consolidated movement stack to behavior loop.
+
+Phase 5.0A should be docs-only. It should audit current `LabAgent`,
+`LabGoal`, `LabMemoryEntry`, needs, inventory, social perception, movement
+stack entry points, behavior loop ownership, existing reports, and scenarios to
+preserve. It should explicitly separate what is already implemented from what
+exists only as movement-stack infrastructure.
+
+Recommended direction after planning: define a small behavior-loop contract
+that connects perception, memory, needs, mood, goal, intent, movement stack,
+action result, feedback, and memory update without treating route-following,
+pathfinding, world mutation, Python, LLM, RL, mining, construction, or complex
+society simulation as immediate scope.
