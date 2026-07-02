@@ -458,3 +458,27 @@ and RL out of scope.
 
 The recommended next phase is Phase 5.5B - Behavior Loop Memory-Goal Bridge
 Fixture Smoke.
+
+## Phase 5.5B Status
+
+Phase 5.5B implemented `behavior_loop_memory_goal_bridge_fixture_smoke`, a
+fixture-only bridge from controlled goal-selection-from-memory decisions into
+abstract behavior-loop goal/action/result summaries.
+
+The fixture uses five synthetic agent snapshots:
+
+- safety memory selects `seekSafety` and abstract action `seekSafety`;
+- curiosity memory selects `explore` and abstract action `explore`;
+- nearby-agent memory selects `observeOtherAgent` and abstract action
+  `observeAgent`;
+- empty retrieval preserves the current goal;
+- low-confidence memory preserves current `seekSafety` continuity.
+
+The scenario writes report, invariant, decisions, digest, metrics, and events.
+It does not execute behavior actions, write or mutate memory, rerun retrieval,
+use the movement stack, create or mutate a World, mutate terrain, move Core
+entities, move physical placeholders, add mood, add relationships, add
+communication, or connect Python, LLM, embeddings, or RL.
+
+The recommended next phase is Phase 5.5C - Behavior Loop Memory-Goal Bridge
+Hardening.

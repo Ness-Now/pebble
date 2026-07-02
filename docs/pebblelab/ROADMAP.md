@@ -3533,9 +3533,34 @@ Smoke.
 
 ## Phase 5.5B - Behavior Loop Memory-Goal Bridge Fixture Smoke
 
-Status: planned.
+Status: implemented and validated.
 
 Goal: create a fixture-only scenario that consumes controlled
 goal-selection-from-memory decisions and produces memory-informed behavior-loop
 decisions/results without writing memory, rerunning retrieval, executing
 actions, calling the movement stack, or mutating World/terrain.
+
+Implemented as `behavior_loop_memory_goal_bridge_fixture_smoke`.
+
+Validated scope:
+
+- creates five synthetic bridge inputs covering safety, curiosity,
+  nearby-agent observation, empty retrieval, and low-confidence/currentGoal
+  continuity;
+- produces five bridge decisions with selected goals, abstract selected
+  actions, and bounded behavior result summaries;
+- writes `behavior_loop_memory_goal_bridge_report.json`,
+  `behavior_loop_memory_goal_bridge_invariant_report.json`,
+  `behavior_loop_memory_goal_bridge_decisions.json`, and
+  `behavior_loop_memory_goal_bridge_digest.json`;
+- emits `behaviorLoopMemoryGoalBridge*` metrics and
+  `lab_behavior_loop_memory_goal_bridge_recorded` events;
+- keeps behavior action execution, memory mutation/write, retrieval rerun,
+  movement stack usage, World mutation, terrain mutation, Core entity movement,
+  physical placeholder movement, mood, relationships, communication, Python,
+  LLM, embeddings, and RL out of scope;
+- leaves `agents_basic` live runtime behavior unchanged.
+
+Next recommended step: Phase 5.5C - Behavior Loop Memory-Goal Bridge
+Hardening. Live `agents_basic` integration, memory write loops, mood,
+relations, LLM, social memory, and movement stack feedback remain out of scope.

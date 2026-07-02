@@ -1,5 +1,66 @@
 # PebbleLab Development Journal
 
+## 2026-07-02 — Phase 5.5B behavior loop memory-goal bridge fixture smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Implement the first fixture-only behavior-loop memory-goal bridge scenario:
+`behavior_loop_memory_goal_bridge_fixture_smoke`.
+
+### Starting Point
+
+Phase 5.5A defined the bridge contract after the behavior loop, memory update,
+memory retrieval, and goal-selection-from-memory fixtures had each been created
+and hardened in isolation.
+
+### Implementation
+
+- Added `LabBehaviorLoopMemoryGoalBridge.swift`.
+- Added five synthetic bridge inputs for safety, curiosity, nearby-agent
+  observation, empty retrieval, and low-confidence/currentGoal continuity.
+- Produced bridge decisions with `selectedGoalForBehaviorLoop`,
+  abstract `selectedAction`, action reason, memory influence reason, and
+  bounded behavior result summaries.
+- Added scenario support for `behavior_loop_memory_goal_bridge_fixture_smoke`.
+- Wrote `behavior_loop_memory_goal_bridge_report.json`,
+  `behavior_loop_memory_goal_bridge_invariant_report.json`,
+  `behavior_loop_memory_goal_bridge_decisions.json`, and
+  `behavior_loop_memory_goal_bridge_digest.json`.
+- Added `behaviorLoopMemoryGoalBridge*` metrics.
+- Added `lab_behavior_loop_memory_goal_bridge_recorded` and summary events.
+
+### Boundaries
+
+- No behavior action execution.
+- No memory mutation or memory write.
+- No retrieval rerun.
+- No movement intent or movement stack.
+- No World or terrain mutation.
+- No Core entity or physical placeholder movement.
+- No mood, relationships, communication, Python, LLM, embeddings, or RL.
+
+### Validation
+
+Commands requested for this phase:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `swift run PebbleLab -- --scenario behavior_loop_memory_goal_bridge_fixture_smoke --seed 42 --ticks 3 --out runs/check_behavior_loop_memory_goal_bridge_fixture`;
+- debug non-regression runs for goal selection, memory retrieval, memory
+  update, behavior loop, `agents_basic`, and `regression_smoke`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results are recorded in the Phase 5.5B commit summary.
+
+### Next Step
+
+Phase 5.5C — Behavior Loop Memory-Goal Bridge Hardening.
+
 ## 2026-06-19 - Phase 4.8B Terrain Scan Smoke
 
 Branch: `lab/pebblelab-v1`

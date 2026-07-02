@@ -604,3 +604,53 @@ Future outputs:
 - `swift build -c release --product Pebble` passes if launched;
 - `git diff --check` passes;
 - next phase 5.5B is clearly specified.
+
+## Phase 5.5B Implementation Status
+
+Phase 5.5B implemented the fixture-only scenario
+`behavior_loop_memory_goal_bridge_fixture_smoke`.
+
+Bridge flow:
+
+- consume controlled memory retrieval and goal-selection summaries;
+- choose `selectedGoalForBehaviorLoop`;
+- map that goal to an abstract `selectedAction`;
+- produce a bounded `behaviorResultSummary`;
+- write report, invariant, decisions, digest, metrics, and events.
+
+Selected goals and actions:
+
+- `seekSafety` -> `seekSafety`;
+- `explore` -> `explore`;
+- `observeOtherAgent` -> `observeAgent`;
+- empty retrieval keeps the current goal;
+- low-confidence memory keeps currentGoal continuity.
+
+Outputs:
+
+- `behavior_loop_memory_goal_bridge_report.json`;
+- `behavior_loop_memory_goal_bridge_invariant_report.json`;
+- `behavior_loop_memory_goal_bridge_decisions.json`;
+- `behavior_loop_memory_goal_bridge_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Metrics/events:
+
+- metrics use the `behaviorLoopMemoryGoalBridge*` prefix;
+- the primary event is `lab_behavior_loop_memory_goal_bridge_recorded`;
+- a summary event `lab_behavior_loop_memory_goal_bridge_summary_recorded` is
+  also emitted.
+
+Limitations:
+
+- no behavior action execution;
+- no memory write or mutation;
+- no retrieval rerun;
+- no movement intent or movement stack;
+- no World or terrain mutation;
+- no live `agents_basic` integration;
+- no mood, relationships, communication, social memory, Python, LLM,
+  embeddings, or RL.
+
+Next phase: Phase 5.5C - Behavior Loop Memory-Goal Bridge Hardening.
