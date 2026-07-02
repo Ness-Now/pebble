@@ -564,3 +564,117 @@ Results:
 - `git diff --cached --check` passed.
 
 `pebsmoke` was not run for this docs-only phase.
+
+## Phase 5.3B Implementation Status
+
+Phase 5.3B added `memory_retrieval_fixture_smoke`, a fixture-only smoke that
+retrieves ranked memories from controlled memory snapshots.
+
+Scenario:
+
+- `memory_retrieval_fixture_smoke`;
+- fixture-only, no World created;
+- fixed validation ticks: `3`;
+- agents: `agent_0`, `agent_1`, `agent_2`.
+
+Query kinds:
+
+- `recent`;
+- `important`;
+- `by_type`;
+- `safety_related`;
+- `curiosity_related`;
+- `nearby_agent_related`.
+
+Report:
+
+- `memory_retrieval_report.json`;
+- success true in validated debug run;
+- agents = 3;
+- queries = 7;
+- availableMemories = 8;
+- consideredMemories = 8;
+- retrievedMemories = 7;
+- emptyResults = 1;
+- maxResults = 2;
+- bounded = true;
+- deterministicOrder = true;
+- memoryMutated = false;
+- movementStackUsed = false;
+- worldMutated = false;
+- terrainMutated = false.
+
+Invariant:
+
+- `memory_retrieval_invariant_report.json`;
+- 39 checks passed;
+- 0 checks failed;
+- covers scenario, seed, agent/query expectations, available/considered/
+  retrieved memory counts, empty result coverage, max results, ranks,
+  bounded scores, allowed query kinds, deterministic order, read-only memory,
+  no movement stack, no World/terrain mutation, digest equality, output
+  writing, metrics/events expectations, and docs update expectations.
+
+Queries:
+
+- `memory_retrieval_queries.json`;
+- includes recent, important, by-type, safety, curiosity, nearby-agent, and
+  empty-result queries;
+- maxResults is bounded to `2` in the fixture.
+
+Results:
+
+- `memory_retrieval_results.json`;
+- retrieved records include memory index, type, summary, importance, age,
+  score, rank, and reasonMatched;
+- ranks are contiguous from 1;
+- scores are bounded and deterministic;
+- one query returns an explicit empty result.
+
+Digest:
+
+- `memory_retrieval_digest.json`;
+- digest `a82037f649caf921`;
+- repeat digest `a82037f649caf921`;
+- repeatabilityFailures = 0.
+
+Validation:
+
+- debug `memory_retrieval_fixture_smoke` passed;
+- debug memory update fixture, memory update hardening, behavior-loop
+  contract, behavior-loop hardening, `agents_basic`, and `regression_smoke`
+  non-regressions passed;
+- `swift build`, `swift build -c release --product Pebble`, and
+  `swift run -c release pebsmoke` passed;
+- direct release `PebbleLab` scenario validation was attempted with a short
+  local limit and interrupted after production compilation stalled without
+  further output.
+
+Metrics:
+
+- `metrics.json`;
+- emits `memoryRetrieval*` metrics including success, agents, queries,
+  available/considered/retrieved memories, empty results, max results,
+  bounded, deterministic order, digest equality, repeatability failures,
+  memory mutation flag, World/terrain mutation flags, and movement stack
+  usage.
+
+Events:
+
+- `lab_memory_retrieval_recorded`;
+- `lab_memory_retrieval_summary_recorded`.
+
+Limitations:
+
+- no memory write;
+- no memory mutation;
+- no behavior-loop goal influence;
+- no mood, emotional memory, relationships, trust, communication, community,
+  or task board;
+- no movement stack feedback source;
+- no World or terrain mutation;
+- no physical placeholder or Core entity creation/movement;
+- no route following, full-route execution, pathfinding, reservation runtime,
+  embeddings, Python, LLM, or RL.
+
+Next phase: Phase 5.3C - Memory Retrieval Hardening.

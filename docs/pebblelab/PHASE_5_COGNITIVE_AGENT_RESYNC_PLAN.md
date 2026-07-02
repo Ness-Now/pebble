@@ -323,3 +323,25 @@ relationships, no trust, no communication, no Python, no LLM, no embeddings,
 and no RL.
 
 The recommended next phase is Phase 5.3B - Memory Retrieval Fixture Smoke.
+
+## Phase 5.3B Status
+
+Phase 5.3B implemented `memory_retrieval_fixture_smoke`, the first
+fixture-only memory retrieval smoke.
+
+The fixture creates controlled memory snapshots for three agents, executes
+seven bounded retrieval queries across recent, important, by-type,
+safety-related, curiosity-related, and nearby-agent-related query kinds,
+produces ranked retrieval records, covers one empty result, emits
+`memoryRetrieval*` metrics, records `lab_memory_retrieval_recorded` events,
+and validates a stable digest. The validated debug run produced 8 available
+memories, 8 considered memories, 7 retrieved memories, 1 empty result, 39
+invariant checks passed, 0 invariant checks failed, and matching
+digest/repeat digest values.
+
+The scenario does not mutate memory, create a World, call the movement stack,
+mutate terrain, move Core entities, move physical placeholders, add goal
+influence, mood, emotional memory, relationships, trust, communication,
+community state, movement-stack feedback, embeddings, Python, LLM, or RL.
+
+The recommended next phase is Phase 5.3C - Memory Retrieval Hardening.

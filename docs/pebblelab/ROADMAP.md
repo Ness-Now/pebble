@@ -3276,9 +3276,52 @@ Next recommended step: Phase 5.3B - Memory Retrieval Fixture Smoke.
 
 ## Phase 5.3B - Memory Retrieval Fixture Smoke
 
-Status: planned.
+Status: implemented and validated with debug PebbleLab fixture runs and release
+core smoke. Direct release `PebbleLab` scenario validation was attempted with a
+short local limit, but production `PebbleLab` compilation stalled without
+further output in this environment.
 
 Goal: implement a fixture-only memory retrieval smoke using controlled memory
 snapshots, bounded queries, ranked results, empty-result coverage, digest,
 report, invariant report, `memoryRetrieval*` metrics, and retrieval events
 without mutating memory or integrating retrieval into behavior-loop decisions.
+
+Validated scope:
+
+- `memory_retrieval_fixture_smoke`;
+- fixture-only, no World created;
+- 3 agents;
+- 8 controlled memory entries;
+- 7 retrieval queries;
+- query kinds: `recent`, `important`, `by_type`, `safety_related`,
+  `curiosity_related`, `nearby_agent_related`;
+- 8 considered memories;
+- 7 retrieved memories;
+- 1 empty result;
+- maxResults = 2;
+- ranks contiguous;
+- scores bounded;
+- deterministic order true;
+- deterministic digest and repeat digest equal;
+- repeatabilityFailures = 0;
+- memory not mutated;
+- movement stack not used;
+- World and terrain not mutated;
+- invariant report: 39 passed, 0 failed;
+- `memoryRetrieval*` metrics emitted;
+- `lab_memory_retrieval_recorded` and summary events emitted.
+
+Goal influence, mood, emotional memory, relationships, trust, communication,
+society runtime, movement stack feedback, Python, LLM, embeddings, and RL
+remain out of scope.
+
+Next recommended step: Phase 5.3C - Memory Retrieval Hardening.
+
+## Phase 5.3C - Memory Retrieval Hardening
+
+Status: planned.
+
+Goal: harden the memory retrieval fixture with boundary cases for empty
+results, maxResults, scoring ties, type filters, recency windows, deterministic
+ordering, and memory read-only guarantees before retrieval is connected to
+behavior-loop goal selection or mood/social systems.

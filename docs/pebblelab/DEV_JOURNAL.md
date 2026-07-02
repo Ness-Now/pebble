@@ -11123,3 +11123,130 @@ Results:
 - `pebsmoke` was not run for this docs-only phase.
 
 Next step: Phase 5.3B — Memory Retrieval Fixture Smoke.
+
+## 2026-07-02 — Phase 5.3B memory retrieval fixture smoke
+
+Objective: implement the first fixture-only memory retrieval layer from
+controlled memory snapshots, proving deterministic read-only query, scoring,
+ranking, reporting, metrics, events, and digest behavior before retrieval can
+influence goals, mood, relationships, movement stack feedback, Python, LLM,
+embeddings, or RL.
+
+Starting point: branch `lab/pebblelab-v1`, commit
+`1923b23dc916af7a0fe8a7c1c4c0b7f7b629c877`, with Phase 5.3A complete.
+Phase 5.3A defined the retrieval contract: memory entries to query, ranked
+retrieved records, retrieval summary, bounded results, stable scoring,
+read-only memory, and future `memoryRetrieval*` metrics/events.
+
+Scenario name: `memory_retrieval_fixture_smoke`.
+
+Memory snapshots:
+
+- 3 agents;
+- 8 total memories;
+- `agent_0`: `safety_reaction`, `behavior_action`, `idle_tick_summary`;
+- `agent_1`: `curiosity_reaction`, `effect_applied`, `goal_confirmed`;
+- `agent_2`: `nearby_agent_observed`, `behavior_action`.
+
+Query kinds:
+
+- `recent`;
+- `important`;
+- `by_type`;
+- `safety_related`;
+- `curiosity_related`;
+- `nearby_agent_related`.
+
+Scoring:
+
+- score = bounded importance + bounded recency bonus + fixed type-match bonus;
+- no random values;
+- no embeddings;
+- no LLM summary;
+- stable tie-breaks by score, age, memory index, memory type, and summary.
+
+Retrieval results:
+
+- queries = 7;
+- availableMemories = 8;
+- consideredMemories = 8;
+- retrievedMemories = 7;
+- maxResults = 2;
+- ranks are contiguous;
+- scores are bounded;
+- deterministicOrder = true.
+
+Empty result: one `by_type` query for `agent_2` requests `safety_reaction`
+and returns no records, with `emptyResult = true`.
+
+Metrics: `metrics.json` emits `memoryRetrieval*`, including success, agents,
+queries, available/considered/retrieved memories, empty results, max results,
+bounded, deterministic order, digest equality, repeatability failures, memory
+mutation, mutation flags, and movement stack usage.
+
+Events:
+
+- `lab_memory_retrieval_recorded`;
+- `lab_memory_retrieval_summary_recorded`.
+
+Invariant report: `memory_retrieval_invariant_report.json` includes 39 checks.
+Validated debug run result: 39 passed, 0 failed.
+
+Digest: `memory_retrieval_digest.json` records digest
+`a82037f649caf921`, repeat digest `a82037f649caf921`, deterministicDigest
+true, and digestsEqual true.
+
+Boundary confirmations:
+
+- memoryMutated = false;
+- movementStackUsed = false;
+- worldMutated = false;
+- terrainMutated = false;
+- no World is created for the scenario;
+- no memory write, mood, relationships, trust, communication, community, task
+  board, route following, pathfinding, reservation runtime, embeddings,
+  Python, LLM, or RL is added.
+
+Outputs:
+
+- `memory_retrieval_report.json`;
+- `memory_retrieval_invariant_report.json`;
+- `memory_retrieval_queries.json`;
+- `memory_retrieval_results.json`;
+- `memory_retrieval_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Validation commands:
+
+- `git status`;
+- `git branch --show-current`;
+- `git pull origin lab/pebblelab-v1`;
+- `git log --oneline -12`;
+- `swift build`;
+- `swift run PebbleLab -- --scenario memory_retrieval_fixture_smoke --seed 42 --ticks 3 --out runs/check_memory_retrieval_fixture`;
+- `swift run PebbleLab -- --scenario memory_update_from_behavior_result_fixture_smoke --seed 42 --ticks 3 --out runs/check_memory_update_fixture_after_retrieval`;
+- `swift run PebbleLab -- --scenario memory_update_hardening_smoke --seed 42 --ticks 3 --out runs/check_memory_update_hardening_after_retrieval`;
+- `swift run PebbleLab -- --scenario behavior_loop_contract_fixture_smoke --seed 42 --ticks 3 --out runs/check_behavior_loop_contract_after_memory_retrieval`;
+- `swift run PebbleLab -- --scenario behavior_loop_hardening_smoke --seed 42 --ticks 3 --out runs/check_behavior_loop_hardening_after_memory_retrieval`;
+- `swift run PebbleLab -- --scenario agents_basic --seed 42 --agents 3 --ticks 3 --out runs/check_agents_basic_after_memory_retrieval`;
+- `swift run PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_memory_retrieval`;
+- `swift build -c release --product Pebble`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results: the memory retrieval fixture passed in debug with report success
+true, 3 agents, 7 queries, 8 available memories, 8 considered memories, 7
+retrieved memories, 1 empty result, maxResults 2, memoryMutated false, 39
+invariant checks passed, stable digest `a82037f649caf921`, and
+`memoryRetrieval*` metrics/events written. The memory update fixture, memory
+update hardening, behavior loop contract fixture, behavior loop hardening,
+`agents_basic`, and `regression_smoke` non-regressions passed in debug.
+`swift build`, `swift build -c release --product Pebble`, and
+`swift run -c release pebsmoke` passed, with `pebsmoke` reporting 456 passed,
+0 failed. Release `PebbleLab` scenario validation was attempted with a 90
+second local limit, but production `PebbleLab` compilation stalled without
+further output and was interrupted as in prior phases.
+
+Next step: Phase 5.3C — Memory Retrieval Hardening.
