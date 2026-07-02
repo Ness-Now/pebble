@@ -617,3 +617,115 @@ Limitations:
   Python, LLM, or RL.
 
 Next phase: Phase 5.2C - Memory Update Hardening.
+
+## Phase 5.2C Implementation Status
+
+Phase 5.2C added `memory_update_hardening_smoke`, a fixture-only hardening
+smoke for the memory update contract introduced in Phase 5.2B.
+
+Scenario:
+
+- `memory_update_hardening_smoke`;
+- fixture-only, no World created;
+- validation ticks: `3`;
+- cases: 13.
+
+Cases:
+
+- `baseline_fixture_compatible`;
+- `accepted_safety_reaction`;
+- `accepted_curiosity_reaction`;
+- `accepted_nearby_agent_observed`;
+- `duplicate_same_tick_agent_memory_type_rejected`;
+- `max_one_write_per_agent_tick_enforced`;
+- `invalid_memory_type_rejected`;
+- `empty_summary_rejected`;
+- `importance_below_bounds_rejected_or_clamped`;
+- `importance_above_bounds_rejected_or_clamped`;
+- `memory_count_before_after_consistent`;
+- `deterministic_order`;
+- `digest_repeatability`.
+
+Report:
+
+- `memory_update_hardening_report.json`;
+- success true in validated debug run;
+- cases = 13;
+- casesPassed = 13;
+- casesFailed = 0;
+- proposals = 21;
+- acceptedWrites = 14;
+- rejectedWrites = 7;
+- memoryCountBeforeTotal = 0;
+- memoryCountAfterTotal = 14;
+- maxWritesPerAgentTick = 1;
+- bounded = true;
+- deterministicOrder = true;
+- movementStackUsed = false;
+- worldMutated = false;
+- terrainMutated = false;
+- coreEntityMoved = false;
+- physicalPlaceholderMoved = false.
+
+Invariant:
+
+- `memory_update_hardening_invariant_report.json`;
+- 55 checks passed;
+- 0 checks failed;
+- covers scenario, seed, hardening cases, accepted/rejected writes,
+  before/after counts, max write budget, accepted importance bounds, accepted
+  memory type allowlist, rejected writes not appended, non-empty accepted
+  summaries, deterministic order, no movement stack, no World/terrain
+  mutation, no Core/placeholder movement, digest equality, output writing,
+  metrics/events expectations, and docs update expectations.
+
+Proposals:
+
+- `memory_update_hardening_proposals.json`;
+- accepted v0 memory types remain in the allowlist;
+- duplicate same tick/agent/type is rejected;
+- second valid memory for the same agent/tick is rejected with
+  `max_one_write_per_agent_tick`;
+- invalid memory type is rejected;
+- empty summary is rejected;
+- importance below 0.0 and above 1.0 is rejected, not clamped.
+
+Memory snapshot:
+
+- `memory_update_hardening_agent_memory_snapshot.json`;
+- each case records before/after memory counts;
+- accepted proposals append `LabMemoryEntry`;
+- rejected proposals do not append memory.
+
+Digest:
+
+- `memory_update_hardening_digest.json`;
+- digest `dd497b88e34002f9`;
+- repeat digest `dd497b88e34002f9`;
+- repeatabilityFailures = 0.
+
+Metrics:
+
+- `metrics.json`;
+- emits `memoryUpdateHardening*` metrics including success, cases,
+  proposals, accepted writes, rejected writes, before/after memory counts, max
+  writes per agent tick, bounded, deterministic order, digest equality,
+  repeatability failures, mutation flags, movement stack usage, and
+  Core/placeholder movement flags.
+
+Events:
+
+- `lab_memory_update_hardening_recorded`.
+
+Limitations:
+
+- no memory retrieval;
+- no emotional memory;
+- no mood, relationships, trust, communication, community, or task board;
+- no movement stack feedback source;
+- no World or terrain mutation;
+- no physical placeholder or Core entity creation/movement;
+- no route following, full-route execution, pathfinding, reservation runtime,
+  Python, LLM, or RL.
+
+Next phase: Phase 5.3A - Memory Retrieval Planning.

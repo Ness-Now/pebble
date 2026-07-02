@@ -286,3 +286,25 @@ memory, mood, relationships, trust, communication, community state,
 movement-stack feedback, Python, LLM, or RL.
 
 The recommended next phase is Phase 5.2C - Memory Update Hardening.
+
+## Phase 5.2C Status
+
+Phase 5.2C implemented `memory_update_hardening_smoke`, a fixture-only
+hardening smoke for the memory update layer.
+
+The smoke covers 13 deterministic cases: baseline compatibility, accepted
+safety reaction, accepted curiosity reaction, accepted nearby-agent
+observation, duplicate rejection, max one accepted write per agent/tick,
+invalid memory type rejection, empty summary rejection, low/high importance
+rejection, memory count consistency, deterministic proposal ordering, and
+digest repeatability. The validated debug run produced 21 proposals, 14
+accepted writes, 7 rejected writes, memory count total 0 -> 14, 13 cases
+passed, 0 cases failed, 55 invariant checks passed, 0 invariant checks failed,
+and matching digest/repeat digest values.
+
+The scenario does not create a World, call the movement stack, mutate terrain,
+move Core entities, move physical placeholders, add retrieval, emotional
+memory, mood, relationships, trust, communication, community state,
+movement-stack feedback, Python, LLM, or RL.
+
+The recommended next phase is Phase 5.3A - Memory Retrieval Planning.

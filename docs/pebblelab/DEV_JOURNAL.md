@@ -10894,3 +10894,123 @@ Results:
   and was interrupted as in prior phases.
 
 Next step: Phase 5.2C — Memory Update Hardening.
+
+## 2026-07-02 — Phase 5.2C memory update hardening smoke
+
+Objective: harden the Phase 5.2B memory update layer with deterministic
+fixture-only edge cases before any retrieval, emotional memory, relationship
+memory, movement stack feedback, communication, Python, LLM, or RL work.
+
+Starting point: branch `lab/pebblelab-v1`, commit
+`ff069b20a509f56ff7828953bc9a995619851cfe`, with Phase 5.2B complete.
+Phase 5.2B proved behavior result to memory proposal to bounded write for 3
+agents, 4 proposals, 3 accepted writes, and 1 duplicate rejection.
+
+Scenario name: `memory_update_hardening_smoke`.
+
+Hardening cases:
+
+- `baseline_fixture_compatible`;
+- `accepted_safety_reaction`;
+- `accepted_curiosity_reaction`;
+- `accepted_nearby_agent_observed`;
+- `duplicate_same_tick_agent_memory_type_rejected`;
+- `max_one_write_per_agent_tick_enforced`;
+- `invalid_memory_type_rejected`;
+- `empty_summary_rejected`;
+- `importance_below_bounds_rejected_or_clamped`;
+- `importance_above_bounds_rejected_or_clamped`;
+- `memory_count_before_after_consistent`;
+- `deterministic_order`;
+- `digest_repeatability`.
+
+Proposals and writes:
+
+- proposals = 21;
+- acceptedWrites = 14;
+- rejectedWrites = 7;
+- rejected reasons cover duplicate same tick/agent/type, max one write per
+  agent/tick, invalid memory type, empty summary, and out-of-bounds
+  importance;
+- Phase 5.2C chooses rejection, not clamping, for importance outside
+  `0.0...1.0`.
+
+Memory before/after:
+
+- memoryCountBeforeTotal = 0;
+- memoryCountAfterTotal = 14;
+- rejected writes do not append memory;
+- maxWritesPerAgentTick = 1;
+- bounded = true by tick/agent, not by total agent history.
+
+Metrics: `metrics.json` emits `memoryUpdateHardening*`, including success,
+case counts, proposals, accepted/rejected writes, before/after totals, max
+writes per agent tick, bounded, deterministic order, digest equality,
+repeatability failures, mutation flags, movement stack usage, and
+Core/placeholder movement flags.
+
+Events:
+
+- `lab_memory_update_hardening_recorded`.
+
+Invariant report: `memory_update_hardening_invariant_report.json` includes 55
+checks. Validated debug run result: 55 passed, 0 failed.
+
+Digest: `memory_update_hardening_digest.json` records digest
+`dd497b88e34002f9`, repeat digest `dd497b88e34002f9`, deterministicDigest
+true, and digestsEqual true.
+
+Boundary confirmations:
+
+- movementStackUsed = false;
+- worldMutated = false;
+- terrainMutated = false;
+- coreEntityMoved = false;
+- physicalPlaceholderMoved = false;
+- no World is created for the scenario;
+- no retrieval, emotional memory, mood, relationships, trust, communication,
+  community, task board, route following, pathfinding, reservation runtime,
+  Python, LLM, or RL is added.
+
+Outputs:
+
+- `memory_update_hardening_report.json`;
+- `memory_update_hardening_invariant_report.json`;
+- `memory_update_hardening_cases.json`;
+- `memory_update_hardening_proposals.json`;
+- `memory_update_hardening_agent_memory_snapshot.json`;
+- `memory_update_hardening_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Validation commands:
+
+- `git status`;
+- `git branch --show-current`;
+- `git pull origin lab/pebblelab-v1`;
+- `git log --oneline -12`;
+- `swift build`;
+- `swift run PebbleLab -- --scenario memory_update_hardening_smoke --seed 42 --ticks 3 --out runs/check_memory_update_hardening`;
+- `swift run PebbleLab -- --scenario memory_update_from_behavior_result_fixture_smoke --seed 42 --ticks 3 --out runs/check_memory_update_fixture_after_hardening`;
+- `swift run PebbleLab -- --scenario behavior_loop_contract_fixture_smoke --seed 42 --ticks 3 --out runs/check_behavior_loop_contract_after_memory_hardening`;
+- `swift run PebbleLab -- --scenario behavior_loop_hardening_smoke --seed 42 --ticks 3 --out runs/check_behavior_loop_hardening_after_memory_hardening`;
+- `swift run PebbleLab -- --scenario agents_basic --seed 42 --agents 3 --ticks 3 --out runs/check_agents_basic_after_memory_hardening`;
+- `swift run PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_memory_hardening`;
+- `swift build -c release --product Pebble`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results: the memory update hardening fixture passed in debug with report
+success true, 13 cases, 13 passed, 0 failed, 21 proposals, 14 accepted writes,
+7 rejected writes, memory count total `0 -> 14`, 55 invariant checks passed,
+stable digest `dd497b88e34002f9`, and `memoryUpdateHardening*` metrics/event
+written. The memory update fixture, behavior loop contract fixture, behavior
+loop hardening, `agents_basic`, and `regression_smoke` non-regressions passed
+in debug. `swift build`, `swift build -c release --product Pebble`, and
+`swift run -c release pebsmoke` passed, with `pebsmoke` reporting 456 passed,
+0 failed. Release `PebbleLab` scenario validation was attempted with a 90
+second local limit, but production `PebbleLab` compilation stalled without
+further output and was interrupted as in prior phases.
+
+Next step: Phase 5.3A — Memory Retrieval Planning.

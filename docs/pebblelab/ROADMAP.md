@@ -3197,9 +3197,53 @@ Next recommended step: Phase 5.2C - Memory Update Hardening.
 
 ## Phase 5.2C - Memory Update Hardening
 
-Status: planned.
+Status: implemented and validated with debug PebbleLab fixture runs and release
+core smoke. Direct release `PebbleLab` scenario validation was attempted with a
+short local limit, but production `PebbleLab` compilation stalled without
+further output in this environment.
 
 Goal: harden the memory update fixture with additional rejection, ordering,
 importance-boundary, duplicate, and snapshot cases before any retrieval,
 emotional memory, relationship memory, movement stack feedback, Python, LLM,
 or RL integration.
+
+Validated scope:
+
+- `memory_update_hardening_smoke`;
+- fixture-only, no World created;
+- 13 hardening cases;
+- 13 cases passed;
+- 0 cases failed;
+- 21 memory update proposals;
+- 14 accepted writes;
+- 7 rejected writes;
+- duplicate same tick/agent/type rejection;
+- max 1 accepted write per agent/tick enforced;
+- invalid memory type rejection;
+- empty summary rejection;
+- out-of-bounds importance rejection;
+- memoryCountBeforeTotal = 0;
+- memoryCountAfterTotal = 14;
+- deterministic proposal order true;
+- deterministic digest and repeat digest equal;
+- repeatabilityFailures = 0;
+- movement stack not used;
+- World and terrain not mutated;
+- Core entity and physical placeholder not moved;
+- invariant report: 55 passed, 0 failed;
+- `memoryUpdateHardening*` metrics emitted;
+- `lab_memory_update_hardening_recorded` event emitted.
+
+Memory retrieval, emotional memory, mood, relationships, trust,
+communication, society runtime, movement stack feedback, Python, LLM, and RL
+remain out of scope.
+
+Next recommended step: Phase 5.3A - Memory Retrieval Planning.
+
+## Phase 5.3A - Memory Retrieval Planning
+
+Status: planned.
+
+Goal: define a docs-only contract for bounded, deterministic memory retrieval
+from the append-only memory update layer before memory influences goal
+selection, mood, relationships, movement stack feedback, Python, LLM, or RL.
