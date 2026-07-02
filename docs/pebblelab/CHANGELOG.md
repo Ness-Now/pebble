@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Documented PebbleLab cognitive agent state audit and behavior loop resync.
 - Documented PebbleLab agent movement stack closure and roadmap resync.
 - Added PebbleLab agent movement stack consolidated multi-tick replay smoke.
 - Added PebbleLab agent movement stack metrics/event compatibility smoke.

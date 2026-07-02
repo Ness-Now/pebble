@@ -10214,3 +10214,132 @@ continue immediately toward route following/runtime movement, not to begin
 Python/LLM/RL, and not to start mining/construction/inventory gameplay. Return
 instead to cognitive agents, behavior loop ownership, social perception, needs,
 goals, memory, inventory meaning, and later society simulation.
+
+## 2026-07-02 — Phase 5.0A cognitive agent state audit and behavior loop resync
+
+Objective: audit the real current PebbleLab agent cognition state after the
+4.28G movement stack closure, then resync the roadmap toward a future behavior
+loop contract without changing Swift runtime behavior.
+
+Starting point: branch `lab/pebblelab-v1`, commit
+`688c109ace7ddb92de1a39168a41c3726c516dc0`, with 4.28G complete and the
+Agent Movement Stack officially closed as infrastructure. The movement stack
+remains deterministic and boundary-clean, but it is not the cognitive agent
+system.
+
+Files audited:
+
+- `Sources/PebbleLab/LabAgent.swift`;
+- `Sources/PebbleLab/LabEvents.swift`;
+- `Sources/PebbleLab/LabOptions.swift`;
+- `Sources/PebbleLab/LabScenarios.swift`;
+- `Sources/PebbleLab/LabOutput.swift`;
+- `Sources/PebbleLab/main.swift`;
+- `Sources/PebbleLab/LabPhysical.swift`;
+- movement stack files by inventory, without modification;
+- `docs/pebblelab/PHASE_5_COGNITIVE_AGENT_RESYNC_PLAN.md`.
+
+Current `LabAgent` state: `LabAgent` already owns id, type, string state,
+position, needs, health, fear, home position, inventory, optional World
+observation, nearby-agent observations, current goal, last action, last action
+effect, last abstract movement, append-only memory entries, creation/alive
+ticks, and counters for observation, nearby perception, goals, actions,
+effects, movement, distance, and return-home progress.
+
+Current cognitive loop: scenario setup creates agents and optional initial
+inventory/physical representation. Initial output records spawned memory,
+World observation, nearby-agent observation, goal selection, and events.
+Per tick, current agent scenarios run World tick, agent tick, World
+observation, nearby-agent observation, goal selection, action selection,
+action-effect application, abstract movement application, optional physical
+placeholder sync, optional core entity sync, events, metrics, and snapshots.
+
+What exists as true minimal cognition:
+
+- needs: hunger, fatigue, curiosity, safety;
+- health/fear/home position and distance-from-home reasoning;
+- deterministic goal selection for idle, rest, seekSafety, explore, and
+  observeOtherAgent;
+- abstract action selection from the current goal;
+- action effects that mutate fatigue, fear, curiosity, and state;
+- append-only memory entries for spawn, observation, action, action effect, and
+  movement;
+- nearby-agent perception by relative offset and Manhattan distance;
+- abstract inventory state;
+- abstract movement records and counters;
+- reports, metrics, and events around those concepts.
+
+What does not exist yet: mood, emotional memory, relationship model, social
+trust, communication, task board, community state, shared goals, long-term
+planning, learning, memory retrieval, inventory gameplay, crafting, mining,
+construction, goal persistence, a separate behavior-loop module, a clean
+movement-stack adapter from cognition, Python, LLM, or RL.
+
+Movement stack relationship: future cognition can produce a movement intent
+that passes through the stack, receives approved/denied feedback, and later
+updates memory. That bridge does not exist yet as a cognitive loop, and 5.0A
+does not add it.
+
+Relevant scenarios grouped in the audit:
+
+- cognitive/abstract: `agent_smoke`, `agents_basic`, `seek_safety_smoke`,
+  `long_run_smoke`, `regression_smoke`;
+- physical/representation: `physical_placeholder_smoke`,
+  `physical_sync_smoke`, `core_entity_smoke`, `physical_behavior_smoke`,
+  `physical_behavior_multi_smoke`;
+- movement stack: `agent_intent_*`, `feedback_*`,
+  `multi_tick_closed_loop_*`, `alternate_local_hint_*`,
+  `agent_movement_policy_*`, `bounded_path_planning_*`,
+  `agent_movement_stack_*`;
+- World observation: `world_observation_*`, `terrain_scan_*`,
+  `terrain_column_scan_*`, `terrain_semantics_*`,
+  `terrain_traversability_*`, `terrain_pathfinding_*`,
+  `terrain_path_movement_*`, and terrain collision scenarios.
+
+Static inventory notes: `main.swift` is about 9827 lines,
+`LabAgentIntentProduction.swift` about 7642 lines, `LabMultiAgentMovement.swift`
+about 5939 lines, `LabOutput.swift` about 5312 lines,
+`LabBoundedPathPlanning.swift` about 5217 lines, and
+`LabAgentMovementStackContract.swift` about 4860 lines. These files should be
+watched before adding more orchestration or movement-stack scope.
+
+Risks identified: continuing movement smokes without returning to agent
+cognition, adding behavior runtime before the contract is named, wiring goals
+directly to World mutation, confusing green reports with intelligence, making
+`main.swift` or `LabAgentMovementStackContract.swift` larger, mixing cognition,
+movement, World observation, and physical representation, treating inventory
+as gameplay too soon, or treating nearby perception as social behavior before
+relationships/communication exist.
+
+Recommended next architecture: keep `LabAgent` as state, introduce future
+`LabCognition` or equivalent for need/goal/action decisions, future
+`LabBehaviorLoop` for orchestration, future `LabMovementStackAdapter` for the
+movement bridge, future `LabMemorySystem` for memory ownership, and later
+`LabSocialModel` and `LabCommunity`.
+
+Files created or modified:
+
+- `docs/pebblelab/PHASE_5_0A_COGNITIVE_AGENT_STATE_AUDIT.md`;
+- `docs/pebblelab/CHANGELOG.md`;
+- `docs/pebblelab/DEV_JOURNAL.md`;
+- `docs/pebblelab/ROADMAP.md`;
+- `docs/pebblelab/PHASE_5_COGNITIVE_AGENT_RESYNC_PLAN.md`.
+
+Validation commands:
+
+- `git status`;
+- `git branch --show-current`;
+- `git pull origin lab/pebblelab-v1`;
+- `git log --oneline -12`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `git diff --check`.
+
+Expected result: docs/audit-only changes keep Swift behavior unchanged.
+`pebsmoke` remains optional because no core simulation, runtime, scenario,
+movement stack, renderer, resource, registry, save/load, or golden changed.
+
+Results: `swift build`, `swift build -c release --product Pebble`, and
+`git diff --check` passed. `pebsmoke` was not run.
+
+Next step: Phase 5.1A — Behavior Loop Contract Planning.

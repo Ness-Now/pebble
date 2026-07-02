@@ -181,3 +181,19 @@ mining, inventory gameplay, or Python/LLM/RL integration.
 - no runtime metrics or events;
 - no tests required beyond build/docs sanity;
 - next prompt can start from Phase 5.0B.
+
+## Phase 5.0A Status
+
+Phase 5.0A is implemented as
+`PHASE_5_0A_COGNITIVE_AGENT_STATE_AUDIT.md`.
+
+The audit confirms that PebbleLab already has a minimal abstract-agent
+cognitive loop with needs, goal selection, action choice, action effects,
+memory entries, nearby-agent perception, inventory state, home/safety/fear
+state, abstract movement, and reporting. It also confirms that this loop is
+not yet a full behavior architecture: mood, emotional memory, relationship
+modeling, social trust, communication, task boards, community state, long-term
+planning, learning, Python, LLM, and RL remain out of scope.
+
+The recommended next phase has been resynced to Phase 5.1A - Behavior Loop
+Contract Planning.

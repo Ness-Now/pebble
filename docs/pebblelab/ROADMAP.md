@@ -2960,21 +2960,47 @@ save/load, golden, or `LabAgentMovementStackContract.swift` change is part of
 
 Next recommended step: Phase 5.0A - Cognitive Agent Resync Planning.
 
-## Phase 5.0A - Cognitive Agent Resync Planning
+## Phase 5.0A - Cognitive Agent State Audit And Behavior Loop Resync
 
-Status: planned.
+Status: implemented and validated as docs/audit-only.
 
 Goal: audit the current agent cognition state and define the next safe bridge
 from consolidated movement stack to behavior loop.
 
-Phase 5.0A should be docs-only. It should audit current `LabAgent`,
-`LabGoal`, `LabMemoryEntry`, needs, inventory, social perception, movement
-stack entry points, behavior loop ownership, existing reports, and scenarios to
-preserve. It should explicitly separate what is already implemented from what
-exists only as movement-stack infrastructure.
+Phase 5.0A is docs/audit-only. It audits current `LabAgent`, `LabGoal`,
+`LabMemoryEntry`, needs, inventory, nearby-agent perception, abstract actions,
+agent scenarios, physical representation history, movement stack boundaries,
+current loop ownership, file-size risks, preserved scenarios, and the next safe
+behavior-loop contract. It explicitly separates implemented cognition from
+movement-stack infrastructure.
 
-Recommended direction after planning: define a small behavior-loop contract
-that connects perception, memory, needs, mood, goal, intent, movement stack,
-action result, feedback, and memory update without treating route-following,
-pathfinding, world mutation, Python, LLM, RL, mining, construction, or complex
-society simulation as immediate scope.
+Validated outputs:
+
+- `PHASE_5_0A_COGNITIVE_AGENT_STATE_AUDIT.md`;
+- changelog, development journal, roadmap, and Phase 5 resync plan updates;
+- no Swift, runtime, scenario, movement stack, World, renderer, resource,
+  registry, save/load, or golden changes.
+
+Next recommended step: Phase 5.1A - Behavior Loop Contract Planning.
+
+## Phase 5.1A - Behavior Loop Contract Planning
+
+Status: planned.
+
+Goal: define a minimal fixture-only behavior-loop contract before adding new
+runtime behavior.
+
+The contract should describe:
+
+- needs -> goal;
+- goal -> intended abstract action;
+- optional movement intent;
+- later movement stack adapter boundary;
+- result;
+- feedback;
+- memory update.
+
+Phase 5.1A should remain docs-only. It must avoid World mutation, terrain
+mutation, route-following expansion, full-route execution, persistent route
+commitment, Python, LLM, RL, mining, construction, communication, society
+runtime, renderer changes, and save/load changes.
