@@ -3319,9 +3319,53 @@ Next recommended step: Phase 5.3C - Memory Retrieval Hardening.
 
 ## Phase 5.3C - Memory Retrieval Hardening
 
-Status: planned.
+Status: implemented and validated with debug PebbleLab fixture runs and release
+core smoke. Direct release `PebbleLab` scenario validation was attempted with a
+90 second local limit, but production `PebbleLab` compilation stalled after
+planning/source emission and was interrupted as in prior phases.
 
 Goal: harden the memory retrieval fixture with boundary cases for empty
 results, maxResults, scoring ties, type filters, recency windows, deterministic
 ordering, and memory read-only guarantees before retrieval is connected to
 behavior-loop goal selection or mood/social systems.
+
+Validated scope:
+
+- `memory_retrieval_hardening_smoke`;
+- fixture-only, no World created;
+- 19 hardening cases;
+- baseline compatibility with 5.3B;
+- recent, important, by-type, safety, curiosity, and nearby-agent queries;
+- empty result coverage;
+- maxResults respected and out-of-bounds maxResults clamped to the v0 limit
+  of 5;
+- minImportance and recency window filters;
+- scores bounded;
+- ranks contiguous;
+- deterministic tie-breaks;
+- unsorted input with stable output;
+- invalid query kind rejected with a failed query result inside a passing
+  expected hardening case;
+- memory not mutated;
+- no memory write;
+- movement stack not used;
+- World and terrain not mutated;
+- deterministic digest and repeat digest equal;
+- repeatabilityFailures = 0;
+- `memoryRetrievalHardening*` metrics emitted;
+- `lab_memory_retrieval_hardening_recorded` event emitted.
+
+Goal influence, mood, emotional memory, relationships, trust, communication,
+social memory, society runtime, movement stack feedback, Python, LLM,
+embeddings, and RL remain out of scope.
+
+Next recommended step: Phase 5.4A - Goal Selection From Retrieved Memory
+Planning.
+
+## Phase 5.4A - Goal Selection From Retrieved Memory Planning
+
+Status: planned.
+
+Goal: define a docs-only contract for letting retrieved memory summaries
+influence future goal selection without adding mood, relationships, LLM,
+movement stack feedback, World mutation, or social runtime yet.

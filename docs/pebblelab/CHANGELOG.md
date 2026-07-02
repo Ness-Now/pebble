@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added PebbleLab memory retrieval hardening smoke.
 - Added PebbleLab memory retrieval fixture smoke.
 - Documented PebbleLab memory retrieval plan.
 - Added PebbleLab memory update hardening smoke.

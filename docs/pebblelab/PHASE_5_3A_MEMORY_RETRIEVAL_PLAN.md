@@ -678,3 +678,133 @@ Limitations:
   embeddings, Python, LLM, or RL.
 
 Next phase: Phase 5.3C - Memory Retrieval Hardening.
+
+## Phase 5.3C Implementation Status
+
+Phase 5.3C added `memory_retrieval_hardening_smoke`, a fixture-only hardening
+scenario for the memory retrieval v0 contract.
+
+Scenario:
+
+- `memory_retrieval_hardening_smoke`;
+- fixture-only, no World created;
+- no memory write;
+- no memory mutation;
+- no movement stack;
+- no World or terrain mutation.
+
+Cases:
+
+- baseline compatibility with 5.3B;
+- recent query ordering;
+- important query ordering;
+- by-type filtering;
+- safety, curiosity, and nearby-agent related queries;
+- valid empty result;
+- maxResults bound;
+- out-of-bounds maxResults clamped to the v0 limit of 5;
+- minImportance filter;
+- recency window filter;
+- bounded scores;
+- contiguous ranks;
+- deterministic tie-break;
+- unsorted input with stable output;
+- invalid query kind rejection;
+- memory read-only proof;
+- digest repeatability.
+
+Query kinds:
+
+- `recent`;
+- `important`;
+- `by_type`;
+- `safety_related`;
+- `curiosity_related`;
+- `nearby_agent_related`;
+- one intentionally invalid query kind, rejected as an expected hardening case.
+
+Scoring:
+
+- bounded importance component;
+- bounded recency bonus;
+- fixed type/query match bonus;
+- stable tie-break by score, age, memory index, memory type, and summary;
+- no random, embeddings, LLM summary, or semantic retrieval.
+
+Report:
+
+- `memory_retrieval_hardening_report.json`;
+- success true in validated debug run;
+- cases = 19;
+- casesPassed = 19;
+- casesFailed = 0;
+- queries = 23;
+- availableMemories = 56;
+- consideredMemories = 37;
+- retrievedMemories = 34;
+- emptyResults = 3;
+- maxResults = 5;
+- bounded = true;
+- deterministicOrder = true;
+- memoryMutated = false;
+- movementStackUsed = false;
+- worldMutated = false;
+- terrainMutated = false.
+
+Validation note: direct release `PebbleLab` scenario validation was attempted
+with a 90 second local limit, but production `PebbleLab` compilation stalled
+after planning/source emission and was interrupted. Debug `PebbleLab` scenario
+validation, release `Pebble` build, and release `pebsmoke` passed.
+
+Invariant:
+
+- `memory_retrieval_hardening_invariant_report.json`;
+- 61 checks passed;
+- 0 checks failed;
+- covers scenario, seed, case expectations, query/result counts, empty result,
+  max results, rank contiguity, score bounds, invalid query rejection,
+  deterministic order, read-only memory, no movement stack, no World/terrain
+  mutation, digest equality, output files, metrics/events, docs, and success
+  contract.
+
+Queries and results:
+
+- `memory_retrieval_hardening_queries.json`;
+- `memory_retrieval_hardening_results.json`;
+- retrieved records retain memory index, type, summary, importance, age, score,
+  rank, and reasonMatched;
+- invalid query returns no considered memories, no retrieved memories, and a
+  failed query result while the expected hardening case passes.
+
+Digest:
+
+- `memory_retrieval_hardening_digest.json`;
+- digest `e72e89cc8c24a53e`;
+- repeat digest `e72e89cc8c24a53e`;
+- repeatabilityFailures = 0.
+
+Metrics:
+
+- `metrics.json`;
+- emits `memoryRetrievalHardening*` metrics including success, cases, queries,
+  available/considered/retrieved memories, empty results, max results,
+  bounded, deterministic order, mutation flags, digest equality, and
+  repeatability failures.
+
+Events:
+
+- `lab_memory_retrieval_hardening_recorded`.
+
+Limitations:
+
+- no goal selection influence yet;
+- no mood, emotional memory, relationships, trust, communication, community,
+  social memory, or task board;
+- no memory write or memory mutation;
+- no movement stack feedback source;
+- no World or terrain mutation;
+- no physical placeholder or Core entity creation/movement;
+- no route following, full-route execution, pathfinding, reservation runtime,
+  embeddings, Python, LLM, or RL.
+
+Next phase: Phase 5.4A - Goal Selection From Retrieved Memory Planning.

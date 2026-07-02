@@ -345,3 +345,25 @@ influence, mood, emotional memory, relationships, trust, communication,
 community state, movement-stack feedback, embeddings, Python, LLM, or RL.
 
 The recommended next phase is Phase 5.3C - Memory Retrieval Hardening.
+
+## Phase 5.3C Status
+
+Phase 5.3C implemented `memory_retrieval_hardening_smoke`, a fixture-only
+hardening scenario for memory retrieval v0.
+
+The scenario validates 19 cases covering baseline compatibility, query kinds,
+empty results, maxResults bounds, out-of-bounds maxResults clamping to 5,
+minImportance, recency windows, score bounds, rank contiguity, deterministic
+tie-breaks, unsorted input, invalid query rejection, memory read-only behavior,
+and digest repeatability. The validated debug run produced 23 queries, 56
+available memories, 37 considered memories, 34 retrieved memories, 3 empty
+results, 61 invariant checks passed, 0 invariant checks failed, and matching
+digest/repeat digest values.
+
+The scenario does not write or mutate memory, create a World, call the movement
+stack, mutate terrain, move Core entities, move physical placeholders, add goal
+influence, mood, emotional memory, relationships, trust, communication,
+community state, movement-stack feedback, embeddings, Python, LLM, or RL.
+
+The recommended next phase is Phase 5.4A - Goal Selection From Retrieved
+Memory Planning.

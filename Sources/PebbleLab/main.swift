@@ -104,6 +104,8 @@ let isMemoryUpdateHardeningScenario = options.scenario
     == memoryUpdateHardeningScenarioName
 let isMemoryRetrievalScenario = options.scenario
     == memoryRetrievalScenarioName
+let isMemoryRetrievalHardeningScenario = options.scenario
+    == memoryRetrievalHardeningScenarioName
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -150,7 +152,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isBehaviorLoopHardeningScenario
     || isMemoryUpdateFromBehaviorResultScenario
     || isMemoryUpdateHardeningScenario
-    || isMemoryRetrievalScenario)
+    || isMemoryRetrievalScenario
+    || isMemoryRetrievalHardeningScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -826,7 +829,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isBehaviorLoopHardeningScenario
     || isMemoryUpdateFromBehaviorResultScenario
     || isMemoryUpdateHardeningScenario
-    || isMemoryRetrievalScenario {
+    || isMemoryRetrievalScenario
+    || isMemoryRetrievalHardeningScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -4098,6 +4102,21 @@ let memoryRetrievalFixture: LabMemoryRetrievalFixture? = {
 let memoryRetrievalSuccess = memoryRetrievalFixture.map {
     $0.report.success && $0.invariantReport.success
 }
+let memoryRetrievalHardeningFixture: LabMemoryRetrievalHardeningFixture? = {
+    guard isMemoryRetrievalHardeningScenario else { return nil }
+    do {
+        return try makeMemoryRetrievalHardeningFixture(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticks: ticksCompleted
+        )
+    } catch {
+        fail("failed to build memory retrieval hardening fixture: \(error)")
+    }
+}()
+let memoryRetrievalHardeningSuccess = memoryRetrievalHardeningFixture.map {
+    $0.report.success && $0.invariantReport.success
+}
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
     && successCriteria.agentTicksRecorded
@@ -4175,6 +4194,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (memoryUpdateSuccess ?? true)
     && (memoryUpdateHardeningSuccess ?? true)
     && (memoryRetrievalSuccess ?? true)
+    && (memoryRetrievalHardeningSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -7992,6 +8012,33 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("memory_retrieval_digest.json")
             )
         }
+        if let memoryRetrievalHardeningFixture {
+            appendEventLines(memoryRetrievalHardeningFixture.eventLines)
+            try writeJSON(
+                memoryRetrievalHardeningFixture.report,
+                to: outURL.appendingPathComponent("memory_retrieval_hardening_report.json")
+            )
+            try writeJSON(
+                memoryRetrievalHardeningFixture.invariantReport,
+                to: outURL.appendingPathComponent("memory_retrieval_hardening_invariant_report.json")
+            )
+            try writeJSON(
+                memoryRetrievalHardeningFixture.cases,
+                to: outURL.appendingPathComponent("memory_retrieval_hardening_cases.json")
+            )
+            try writeJSON(
+                memoryRetrievalHardeningFixture.queries,
+                to: outURL.appendingPathComponent("memory_retrieval_hardening_queries.json")
+            )
+            try writeJSON(
+                memoryRetrievalHardeningFixture.results,
+                to: outURL.appendingPathComponent("memory_retrieval_hardening_results.json")
+            )
+            try writeJSON(
+                memoryRetrievalHardeningFixture.digest,
+                to: outURL.appendingPathComponent("memory_retrieval_hardening_digest.json")
+            )
+        }
         if let multiTickClosedLoopReport {
             try writeJSON(
                 multiTickClosedLoopReport,
@@ -9952,7 +9999,12 @@ if let outPath = options.outPath {
             routeFollowingLiveHardeningSuccess: routeFollowingLiveHardeningSuccess,
             successCriteria: successCriteria
         )
-        if let memoryRetrievalFixture {
+        if let memoryRetrievalHardeningFixture {
+            try writeJSON(
+                memoryRetrievalHardeningFixture.metrics,
+                to: outURL.appendingPathComponent("metrics.json")
+            )
+        } else if let memoryRetrievalFixture {
             try writeJSON(
                 memoryRetrievalFixture.metrics,
                 to: outURL.appendingPathComponent("metrics.json")
