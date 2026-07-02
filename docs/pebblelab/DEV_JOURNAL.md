@@ -11014,3 +11014,112 @@ second local limit, but production `PebbleLab` compilation stalled without
 further output and was interrupted as in prior phases.
 
 Next step: Phase 5.3A — Memory Retrieval Planning.
+
+## 2026-07-02 — Phase 5.3A memory retrieval planning
+
+Objective: define the docs-only contract for bounded, deterministic memory
+retrieval before any runtime retrieval fixture, behavior-loop integration,
+mood, relationships, movement stack feedback, Python, LLM, embeddings, or RL.
+
+Starting point: branch `lab/pebblelab-v1`, commit
+`52b6fa6913a0919b1b08c5b2b3db88fa6b713fdd`, with Phase 5.2C complete.
+Phase 5.2B added fixture-only memory update from behavior results, and Phase
+5.2C hardened accepted/rejected writes, max one write per agent/tick, allowed
+types, importance bounds, stable ordering, snapshots, digest, metrics, and
+events.
+
+Current memory write state:
+
+- `LabAgent.memory` is `[LabMemoryEntry]`;
+- `LabMemoryEntry` has `tick`, `type`, `summary`, and `importance`;
+- `remember(tick:type:summary:importance:)` appends entries;
+- encoded agent output includes `memoryCount` and `recentMemory`;
+- memory update fixtures can now produce accepted/rejected proposals and
+  before/after memory snapshots.
+
+Memory retrieval v0 contract:
+
+- input: agent id, tick, memory entries, query kind, optional type filter,
+  max results, recency window, importance threshold, and deterministic sort
+  config;
+- output: ranked retrieved records, retrieval summary, empty-result support,
+  and deterministic digest;
+- read-only boundary: no memory writes and no memory mutation.
+
+Proposed types:
+
+- `LabMemoryRetrievalQuery`;
+- `LabMemoryRetrievedRecord`;
+- `LabMemoryRetrievalResult`;
+- `LabMemoryRetrievalReport`.
+
+Query kinds v0:
+
+- `recent`;
+- `important`;
+- `by_type`;
+- `safety_related`;
+- `curiosity_related`;
+- `nearby_agent_related`.
+
+Scoring v0: deterministic score from bounded importance, bounded recency
+bonus, and fixed type-match bonus. Stable tie-breaks should use score, tick,
+memory index, memory type, and summary. No random values, embeddings, LLM
+calls, or unordered-container iteration are allowed.
+
+Bounded retrieval rules:
+
+- maxResults bounded, recommended `1...5`;
+- max considered memories bounded in the fixture;
+- ranks contiguous;
+- empty result covered;
+- retrieval is read-only;
+- no World, terrain, movement stack, Core entity, physical placeholder, save,
+  load, renderer, resource, registry, or golden changes.
+
+Future metrics/events:
+
+- `memoryRetrieval*` metrics;
+- `lab_memory_retrieval_recorded`;
+- optional `lab_memory_retrieval_summary_recorded`.
+
+Future invariant report: should cover scenario, seed, positive queries,
+bounded considered/retrieved memory counts, empty result coverage, maxResults,
+contiguous ranks, bounded scores, deterministic order, digest equality,
+repeatability failures zero, memory not mutated, no World/terrain mutation, no
+movement stack, outputs, metrics, events, and success contract.
+
+Relationship notes:
+
+- memory update owns accepted/rejected writes;
+- retrieval only reads accepted memory entries or controlled snapshots;
+- behavior loop may later receive retrieval summaries, but not in Phase 5.3A
+  and probably not in the first 5.3B fixture;
+- mood, emotional memory, relationships, trust, social memory, LLM context,
+  Python, and RL remain later systems.
+
+Validation commands:
+
+- `git status`;
+- `git branch --show-current`;
+- `git pull origin lab/pebblelab-v1`;
+- `git log --oneline -12`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Expected result: docs-only changes keep Swift runtime behavior unchanged.
+`pebsmoke` is optional and not required unless extra confidence is needed.
+
+Results:
+
+- `swift build` passed;
+- `swift build -c release --product Pebble` passed;
+- `git diff --check` passed;
+- `git diff --cached --check` passed;
+- no Swift, runtime, scenario, movement stack, renderer, resource, registry,
+  save/load, golden, or PebbleCore files were modified;
+- `pebsmoke` was not run for this docs-only phase.
+
+Next step: Phase 5.3B — Memory Retrieval Fixture Smoke.

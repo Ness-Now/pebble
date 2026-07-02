@@ -729,3 +729,27 @@ Limitations:
   Python, LLM, or RL.
 
 Next phase: Phase 5.3A - Memory Retrieval Planning.
+
+## Phase 5.3A Planning Status
+
+Phase 5.3A is documented in
+`PHASE_5_3A_MEMORY_RETRIEVAL_PLAN.md`.
+
+The memory update layer now has fixture coverage for accepted writes,
+rejected writes, snapshots, ordering, bounds, and digest repeatability. Phase
+5.3A defines the next read-side contract:
+
+```text
+accepted memory entries
+-> retrieval query
+-> ranked retrieved memories
+-> retrieval summary
+-> future behavior-loop input
+```
+
+The retrieval contract remains read-only. It does not mutate memories, write
+new memories, influence goals, introduce mood or relationships, call movement
+stack, access World, use embeddings, connect LLM/Python/RL, or alter
+`agents_basic`.
+
+Next phase: Phase 5.3B - Memory Retrieval Fixture Smoke.

@@ -3242,8 +3242,43 @@ Next recommended step: Phase 5.3A - Memory Retrieval Planning.
 
 ## Phase 5.3A - Memory Retrieval Planning
 
-Status: planned.
+Status: implemented and validated as docs-only.
 
 Goal: define a docs-only contract for bounded, deterministic memory retrieval
 from the append-only memory update layer before memory influences goal
 selection, mood, relationships, movement stack feedback, Python, LLM, or RL.
+
+Phase 5.3A documents the v0 memory retrieval contract:
+
+- memory entries to retrieval query;
+- query kinds for recent, important, by-type, safety-related,
+  curiosity-related, and nearby-agent-related recall;
+- ranked retrieved memory records;
+- deterministic scoring from importance, recency, and type-match components;
+- stable tie-breaks by score, tick, memory index, type, and summary;
+- bounded `maxResults` and considered-memory counts;
+- explicit read-only memory boundary;
+- future `memoryRetrieval*` metrics and `lab_memory_retrieval_recorded`
+  events;
+- invariant expectations for a future fixture;
+- no memory mutation, World mutation, movement stack, mood, relationships,
+  communication, Python, LLM, embeddings, or RL.
+
+Validated outputs:
+
+- `PHASE_5_3A_MEMORY_RETRIEVAL_PLAN.md`;
+- changelog, development journal, roadmap, Phase 5 resync plan, and memory
+  update plan updates;
+- no Swift, runtime, scenario, movement stack, World, renderer, resource,
+  registry, save/load, or golden changes.
+
+Next recommended step: Phase 5.3B - Memory Retrieval Fixture Smoke.
+
+## Phase 5.3B - Memory Retrieval Fixture Smoke
+
+Status: planned.
+
+Goal: implement a fixture-only memory retrieval smoke using controlled memory
+snapshots, bounded queries, ranked results, empty-result coverage, digest,
+report, invariant report, `memoryRetrieval*` metrics, and retrieval events
+without mutating memory or integrating retrieval into behavior-loop decisions.

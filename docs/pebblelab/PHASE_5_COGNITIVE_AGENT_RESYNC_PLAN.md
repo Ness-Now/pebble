@@ -308,3 +308,18 @@ memory, mood, relationships, trust, communication, community state,
 movement-stack feedback, Python, LLM, or RL.
 
 The recommended next phase is Phase 5.3A - Memory Retrieval Planning.
+
+## Phase 5.3A Status
+
+Phase 5.3A is implemented as
+`PHASE_5_3A_MEMORY_RETRIEVAL_PLAN.md`.
+
+The plan defines the future v0 retrieval contract for reading accepted memory
+entries through bounded queries, ranked retrieved records, deterministic
+scoring, stable ordering, retrieval summaries, reports, invariants, metrics,
+and events. It keeps retrieval read-only: no memory write, no memory mutation,
+no World, no movement stack, no behavior-loop goal influence, no mood, no
+relationships, no trust, no communication, no Python, no LLM, no embeddings,
+and no RL.
+
+The recommended next phase is Phase 5.3B - Memory Retrieval Fixture Smoke.
