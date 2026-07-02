@@ -11391,3 +11391,142 @@ limit, but production `PebbleLab` compilation stalled after planning/source
 emission and was interrupted as in prior phases.
 
 Next step: Phase 5.4A — Goal Selection From Retrieved Memory Planning.
+
+## 2026-07-02 — Phase 5.4A goal selection from retrieved memory planning
+
+Objective: define the docs-only contract for turning ranked retrieved memories
+into bounded goal candidates and a selected goal proposal, without modifying
+runtime behavior.
+
+Starting point: branch `lab/pebblelab-v1`, commit
+`7bb00a314837d6035da346b1bec5050af307a6fa`, with Phase 5.3C complete.
+Phase 5.3C proved memory retrieval can be read-only, bounded, deterministic,
+ranked, and auditable. Phase 5.4A prepares the next bridge:
+
+```text
+retrieved memories
+-> goal candidates
+-> ranked goal candidates
+-> selected goal proposal
+-> future behavior loop integration
+```
+
+Current goal state from code:
+
+- `LabAgent.currentGoal: LabGoal`;
+- `LabGoalKind`: `idle`, `rest`, `seekSafety`, `explore`,
+  `observeOtherAgent`;
+- `LabGoal`: `kind`, `reason`, `startedAtTick`, `urgency`;
+- `LabAgent.selectGoal(tick:)` is deterministic and priority-ordered by
+  health, fear, safety, fatigue, curiosity, nearby agents, and idle fallback;
+- `selectGoal` currently does not read retrieved memories;
+- behavior-loop fixtures use string goal decisions, but do not consume memory
+  retrieval results.
+
+Contract defined:
+
+- `LabGoalSelectionFromMemoryInput`;
+- `LabGoalCandidate`;
+- `LabGoalSelectionFromMemoryDecision`;
+- `LabGoalSelectionFromMemoryReport`.
+
+Memory-to-goal mapping v0:
+
+- `safety_reaction` -> `seekSafety`;
+- `curiosity_reaction` -> `explore`;
+- `nearby_agent_observed` -> `observeOtherAgent`;
+- `idle_tick_summary` -> `idle`;
+- `goal_confirmed` -> current or confirmed goal when explicitly known;
+- `goal_changed` -> prior selected goal only when safely represented;
+- `behavior_action` -> known v0 goal only for direct safe mappings;
+- `effect_applied` -> known v0 goal only for direct safe mappings.
+
+Scoring v0:
+
+- bounded memory score component;
+- need/fear component;
+- currentGoal continuity component;
+- source priority component;
+- stable tie-break by score, priority, goal, source, and supporting memory
+  types;
+- no random, embeddings, LLM, semantic guessing, or unordered-container
+  influence.
+
+Bounded candidate rules:
+
+- maxCandidates should be bounded, likely `1...5`;
+- duplicate goals merged;
+- selectedGoal always present;
+- unchanged goal and empty retrieval allowed;
+- no memory mutation;
+- no behavior action execution;
+- no movement stack;
+- no World or terrain mutation.
+
+Relationship to memory retrieval: goal selection consumes retrieval outputs and
+does not rerun retrieval. Retrieval remains responsible for query/ranking;
+goal selection owns candidate mapping/scoring.
+
+Relationship to behavior loop: future behavior-loop input may receive a
+selectedGoal, reason, memoryInfluenceSummary, currentGoal continuity decision,
+and supporting memory counts. Phase 5.4B should remain fixture-only before
+normal behavior-loop integration.
+
+Relationship to mood/relations/LLM: goal selection from memory is a prerequisite
+for mood, emotional memory, relationships, trust, social plans, and LLM context
+building, but none of those systems are part of this phase or the immediate
+fixture.
+
+Future metrics prefix: `goalSelectionMemory*`.
+
+Future events:
+
+- `lab_goal_selection_memory_recorded`;
+- optional `lab_goal_selection_memory_summary_recorded`.
+
+Future invariant areas:
+
+- scenario and seed;
+- decisions and candidates;
+- selected goal present and known;
+- goal changes and unchanged goals;
+- memory-influenced and empty-retrieval cases;
+- maxCandidates;
+- duplicate merge;
+- bounded scores;
+- deterministic ordering;
+- digest equality;
+- memory not mutated;
+- no World/terrain mutation;
+- no movement stack;
+- no behavior action execution;
+- outputs, metrics, and events written.
+
+Outputs:
+
+- `PHASE_5_4A_GOAL_SELECTION_FROM_RETRIEVED_MEMORY_PLAN.md`;
+- updated changelog;
+- updated dev journal;
+- updated roadmap;
+- updated Phase 5 cognitive resync plan;
+- updated Phase 5.3A memory retrieval plan.
+
+Validation commands:
+
+- `git status`;
+- `git branch --show-current`;
+- `git pull origin lab/pebblelab-v1`;
+- `git log --oneline -12`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results: docs-only phase. No Swift files were modified, no runtime behavior was
+changed, no scenario was added, no metrics/events runtime were added, and no
+movement stack, World, renderer, resource, registry, save/load, golden, or
+PebbleCore files were modified. `swift build`, `swift build -c release
+--product Pebble`, `git diff --check`, and `git diff --cached --check` passed.
+`pebsmoke` was not run because this phase is docs-only.
+
+Next step: Phase 5.4B — Goal Selection From Retrieved Memory Fixture Smoke.

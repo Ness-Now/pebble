@@ -367,3 +367,25 @@ community state, movement-stack feedback, embeddings, Python, LLM, or RL.
 
 The recommended next phase is Phase 5.4A - Goal Selection From Retrieved
 Memory Planning.
+
+## Phase 5.4A Status
+
+Phase 5.4A is implemented as
+`PHASE_5_4A_GOAL_SELECTION_FROM_RETRIEVED_MEMORY_PLAN.md`.
+
+The plan defines how retrieved memories may later become bounded goal
+candidates and a selected goal proposal. It documents the current real
+`LabGoal`/`currentGoal` state, the existing priority order in
+`LabAgent.selectGoal`, a v0 memory-to-goal mapping, deterministic candidate
+scoring, maxCandidates bounds, duplicate candidate merging, unchanged-goal and
+empty-retrieval cases, future `goalSelectionMemory*` metrics, future
+`lab_goal_selection_memory_recorded` events, and invariant expectations for a
+fixture-only Phase 5.4B.
+
+The plan keeps behavior action execution, behavior-loop integration, memory
+write/mutation, World access, movement stack, mood, emotional memory,
+relationships, trust, communication, community state, embeddings, Python, LLM,
+and RL out of scope.
+
+The recommended next phase is Phase 5.4B - Goal Selection From Retrieved
+Memory Fixture Smoke.

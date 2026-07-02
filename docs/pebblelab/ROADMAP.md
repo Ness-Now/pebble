@@ -3364,8 +3364,46 @@ Planning.
 
 ## Phase 5.4A - Goal Selection From Retrieved Memory Planning
 
-Status: planned.
+Status: implemented and validated as docs-only.
 
 Goal: define a docs-only contract for letting retrieved memory summaries
 influence future goal selection without adding mood, relationships, LLM,
 movement stack feedback, World mutation, or social runtime yet.
+
+Phase 5.4A documents the future v0 goal-selection-from-memory contract:
+
+- retrieved memories to bounded goal candidates;
+- explicit memory-to-goal mapping for `safety_reaction`,
+  `curiosity_reaction`, `nearby_agent_observed`, `idle_tick_summary`,
+  `goal_confirmed`, `goal_changed`, `behavior_action`, and `effect_applied`;
+- deterministic candidate scoring from memory score, needs/fear,
+  currentGoal continuity, and source priority;
+- stable tie-breaks;
+- maxCandidates bounds;
+- duplicate goal candidate merge;
+- unchanged goal and empty retrieval cases;
+- future `goalSelectionMemory*` metrics and
+  `lab_goal_selection_memory_recorded` events;
+- invariant expectations for a future fixture;
+- no behavior action execution, no behavior-loop integration, no memory
+  mutation, no World, no movement stack, no mood, no relationships, no LLM, no
+  embeddings, no Python, and no RL.
+
+Validated outputs:
+
+- `PHASE_5_4A_GOAL_SELECTION_FROM_RETRIEVED_MEMORY_PLAN.md`;
+- changelog, development journal, roadmap, Phase 5 resync plan, and memory
+  retrieval plan updates;
+- no Swift, runtime, scenario, movement stack, World, renderer, resource,
+  registry, save/load, or golden changes.
+
+Next recommended step: Phase 5.4B - Goal Selection From Retrieved Memory
+Fixture Smoke.
+
+## Phase 5.4B - Goal Selection From Retrieved Memory Fixture Smoke
+
+Status: planned.
+
+Goal: implement a fixture-only smoke that consumes controlled retrieval results
+and produces bounded goal candidates plus selected goal decisions without
+executing behavior actions or integrating into normal behavior runtime.

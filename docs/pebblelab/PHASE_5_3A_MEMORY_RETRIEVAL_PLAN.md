@@ -808,3 +808,17 @@ Limitations:
   embeddings, Python, LLM, or RL.
 
 Next phase: Phase 5.4A - Goal Selection From Retrieved Memory Planning.
+
+## Phase 5.4A Planning Note
+
+Phase 5.4A defines the next contract after retrieval: how ranked retrieved
+memories may later become bounded goal candidates and a selected goal proposal.
+
+That contract is documented in
+`PHASE_5_4A_GOAL_SELECTION_FROM_RETRIEVED_MEMORY_PLAN.md`.
+
+The retrieval layer remains read-only. Goal selection from memory should
+consume retrieval outputs; it should not rerun retrieval, mutate memory, write
+memory, execute behavior actions, call movement stack, create or mutate World,
+or introduce mood, relationships, trust, communication, embeddings, LLM,
+Python, or RL.
