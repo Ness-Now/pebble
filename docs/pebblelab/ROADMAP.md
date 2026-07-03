@@ -4040,3 +4040,30 @@ relationships, LLM, and social systems remain out of scope.
 
 Next recommended step: Phase 5.10A - Goal Application Snapshot Mutation
 Planning.
+
+## Phase 5.10A - Goal Application Snapshot Mutation Planning
+
+Status: implemented and validated as docs-only.
+
+Goal: define the first copied-state mutation contract for applying a goal
+change to a snapshot while proving the live agent remains unchanged.
+
+Planned runtime scope:
+
+- consumes `LabGoalApplicationDryRunDecision`-style would-apply decisions;
+- separates original live goal, read-only snapshot goal, and copied mutable
+  snapshot goal;
+- audits `originalLiveGoalBefore`, `snapshotGoalBefore`, `targetGoal`,
+  `snapshotGoalAfter`, and `liveGoalAfter`;
+- allows `appliedToSnapshot=true` only for copied state;
+- requires `appliedToLive=false` and `liveAgentMutated=false`;
+- covers no-op, rejected, and deferred mutation decisions;
+- defines future `goalSnapshotMutation*` metrics and
+  `lab_goal_snapshot_mutation_recorded` events.
+
+Live `agents_basic` integration, live applied goal changes, actions, memory
+writes, live memory updates, movement stack, World/terrain mutation, mood,
+relationships, LLM, and social systems remain out of scope.
+
+Next recommended step: Phase 5.10B - Goal Application Snapshot Mutation
+Fixture Smoke.

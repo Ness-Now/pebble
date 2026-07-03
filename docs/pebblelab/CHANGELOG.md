@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Documented PebbleLab goal application snapshot mutation plan.
 - Added PebbleLab goal application dry-run hardening smoke.
 - Added PebbleLab goal application dry-run fixture smoke.
 - Documented PebbleLab goal application dry-run plan.

@@ -750,3 +750,18 @@ Limitations:
 Next phase:
 
 - Phase 5.10A — Goal Application Snapshot Mutation Planning.
+
+## Phase 5.10A Planning Note
+
+Phase 5.10A defines the first planned mutation step after goal application
+dry-run: copied/snapshot goal mutation.
+
+The dry-run layer remains the source of `wouldApplyGoalChange`,
+`goalBefore`, `targetGoal`, rejected reasons, and deferred reasons. The future
+snapshot mutation layer must consume those decisions, mutate only copied state,
+audit `snapshotGoalBefore` and `snapshotGoalAfter`, and prove the live goal
+remains unchanged with `appliedToLive=false` and `liveAgentMutated=false`.
+
+No live `LabAgent` mutation, `agents_basic` integration, action application,
+memory write, movement stack call, World mutation, or terrain mutation is
+introduced by 5.10A.

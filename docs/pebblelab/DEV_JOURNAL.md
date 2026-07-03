@@ -1,5 +1,65 @@
 # PebbleLab Development Journal
 
+## 2026-07-03 — Phase 5.10A goal application snapshot mutation planning
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Document the v0 contract for applying a goal change to copied/snapshot state
+only, using goal application dry-run decisions as input.
+
+### Starting Point
+
+Phase 5.9B and Phase 5.9C created and hardened
+`LabGoalApplicationDryRun.swift`. The dry-run layer audits `goalBefore`,
+`targetGoal`, `goalKnown`, `goalChanged`, rejected/deferred reasons, and
+`wouldApplyGoalChange`, while keeping `appliedGoalChange=false` and all live
+mutation boundaries clean.
+
+### Implementation
+
+- Created `PHASE_5_10A_GOAL_APPLICATION_SNAPSHOT_MUTATION_PLAN.md`.
+- Defined the difference between live agent state, read-only snapshot state,
+  and copied mutable snapshot state.
+- Defined the snapshot mutation contract from dry-run goal decisions to
+  copied-state before/after goal evidence.
+- Proposed `LabGoalSnapshotMutationPolicy`,
+  `LabGoalSnapshotMutationInput`, `LabGoalSnapshotMutationDecision`, and
+  `LabGoalSnapshotMutationReport`.
+- Defined v0 mutation modes, eligibility rules, rejection rules, no-op rules,
+  deferral rules, and applied rules.
+- Required `appliedToSnapshot` to mean copied-state mutation only.
+- Required `appliedToLive=false`, `liveAgentMutated=false`,
+  `memoryMutated=false`, `movementStackUsed=false`, `worldMutated=false`, and
+  `terrainMutated=false`.
+- Defined future `goalSnapshotMutation*` metrics and
+  `lab_goal_snapshot_mutation_recorded` events.
+- Defined future invariant checks for Phase 5.10B.
+- Added roadmap and cognitive resync references.
+
+### Validation
+
+Commands:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results:
+
+- Docs-only change.
+- No Swift files changed.
+- No runtime behavior changed.
+- No scenarios added.
+- Validation passed.
+
+### Next Step
+
+Phase 5.10B — Goal Application Snapshot Mutation Fixture Smoke.
+
 ## 2026-07-03 — Phase 5.9C goal application dry-run hardening smoke
 
 Branch: `lab/pebblelab-v1`

@@ -811,3 +811,29 @@ state, embeddings, Python, LLM, and RL remain out of scope.
 
 The recommended next phase is Phase 5.10A - Goal Application Snapshot Mutation
 Planning.
+
+## Phase 5.10A Status
+
+Phase 5.10A is implemented as
+`PHASE_5_10A_GOAL_APPLICATION_SNAPSHOT_MUTATION_PLAN.md`, a docs-only plan for
+the first copied-state goal mutation layer.
+
+The plan consumes Phase 5.9B/5.9C goal application dry-run decisions and
+defines how a future fixture can change only a copied snapshot goal while
+proving `appliedToLive=false`, `liveAgentMutated=false`, and live goal state
+unchanged.
+
+It defines proposed policy, input, decision, and report types; snapshot
+mutation modes; eligibility, rejection, deferral, no-op, and applied rules;
+future `goalSnapshotMutation*` metrics; future
+`lab_goal_snapshot_mutation_recorded` events; and invariant checks for Phase
+5.10B.
+
+It keeps live agents unmutated, memory unmutated, movement stack unused,
+World/terrain unmutated, action application out of scope, memory write
+application out of scope, and `agents_basic` unchanged. Mood, relationships,
+communication, community state, embeddings, Python, LLM, and RL remain out of
+scope.
+
+The recommended next phase is Phase 5.10B - Goal Application Snapshot Mutation
+Fixture Smoke.
