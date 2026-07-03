@@ -767,3 +767,23 @@ RL remain out of scope.
 
 The recommended next phase is Phase 5.9B - Goal Application Dry-Run Fixture
 Smoke.
+
+## Phase 5.9B Status
+
+Phase 5.9B implemented `goal_application_dry_run_fixture_smoke`, the first
+fixture-only goal application dry-run layer.
+
+The scenario creates nine goal application inputs and decisions. It covers two
+would-apply goal changes, one no-op goal, five rejected goal applications, and
+one audit-only deferred goal application.
+
+It emits `goalApplicationDryRun*` metrics,
+`lab_goal_application_dry_run_recorded`, policies, inputs, decisions,
+invariant reports, and a stable digest.
+
+It keeps `dryRun=true`, `appliedGoalChange=false` for every decision, live
+agents unmutated, memory unmutated, movement stack unused, World/terrain
+unmutated, and `agents_basic` unchanged. Mood, relationships, communication,
+community state, embeddings, Python, LLM, and RL remain out of scope.
+
+The recommended next phase is Phase 5.9C - Goal Application Dry-Run Hardening.

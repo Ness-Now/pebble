@@ -587,3 +587,80 @@ Future outputs:
 - `swift build -c release --product Pebble` passes.
 - `git diff --check` passes.
 - Next phase 5.9B is clearly specified.
+
+## Phase 5.9B Implementation Status
+
+Phase 5.9B implemented `goal_application_dry_run_fixture_smoke`.
+
+Scenario:
+
+- `goal_application_dry_run_fixture_smoke`.
+
+Policies:
+
+- mode `goal_dry_run_only` for normal dry-run decisions;
+- mode `goal_eligibility_audit` for deferred audit-only coverage;
+- bounded allowed goals;
+- `maxGoalChangesPerTick` coverage;
+- explicit dry-run false rejection coverage.
+
+Inputs:
+
+- nine goal application dry-run inputs;
+- two eligible goal changes;
+- one no-op goal;
+- one unknown target goal;
+- one missing reason;
+- one snapshot-not-read-only case;
+- one audit-only deferred case;
+- one max-goal-changes rejection;
+- one dry-run false rejection.
+
+Decisions:
+
+- two `wouldApplyGoalChange=true` decisions;
+- one no-op decision with empty rejected/deferred reasons;
+- five rejected decisions;
+- one deferred decision;
+- all `appliedGoalChange=false`.
+
+Would/applied rules:
+
+- would-apply is allowed only for known, eligible, changed goals with a reason,
+  read-only snapshot, dry-run mode, and available goal-change capacity;
+- applied goal changes remain zero.
+
+Report:
+
+- `goal_application_dry_run_report.json`.
+
+Invariant:
+
+- `goal_application_dry_run_invariant_report.json`.
+
+Digest:
+
+- `goal_application_dry_run_digest.json`.
+
+Metrics:
+
+- `goalApplicationDryRun*`.
+
+Events:
+
+- `lab_goal_application_dry_run_recorded`;
+- optional `lab_goal_application_dry_run_summary_recorded`.
+
+Limitations:
+
+- no live `agents_basic` integration;
+- no live agent mutation;
+- no applied goal changes;
+- no action application;
+- no memory write application;
+- no movement stack;
+- no World or terrain mutation.
+
+Next phase:
+
+- Phase 5.9C — Goal Application Dry-Run Hardening.

@@ -3968,3 +3968,37 @@ World/terrain mutation, mood, relationships, LLM, and social systems remain
 out of scope.
 
 Next recommended step: Phase 5.9B - Goal Application Dry-Run Fixture Smoke.
+
+## Phase 5.9B - Goal Application Dry-Run Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: add the first fixture-only goal application dry-run layer that consumes
+goal-related controlled application decisions and produces would-apply,
+no-op, rejected, deferred, and applied-false decisions.
+
+Implemented scenario:
+
+- `goal_application_dry_run_fixture_smoke`.
+
+Validated runtime scope:
+
+- creates goal dry-run policies, inputs, decisions, report, invariant, digest,
+  metrics, and events;
+- covers eligible safety and explore goal changes;
+- covers no-op goal handling;
+- covers unknown target goal, missing reason, snapshot-not-read-only,
+  dry-run false, and max goal changes rejections;
+- covers audit-only deferred goal application;
+- keeps `appliedGoalChange=false` for every decision;
+- keeps `dryRun=true`, `liveAgentMutated=false`, `memoryMutated=false`,
+  `movementStackUsed=false`, `worldMutated=false`, and
+  `terrainMutated=false`;
+- emits `goalApplicationDryRun*` metrics and
+  `lab_goal_application_dry_run_recorded` events.
+
+Live `agents_basic` integration, real applied goal changes, actions, memory
+writes, live memory updates, movement stack, World/terrain mutation, mood,
+relationships, LLM, and social systems remain out of scope.
+
+Next recommended step: Phase 5.9C - Goal Application Dry-Run Hardening.

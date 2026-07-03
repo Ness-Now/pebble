@@ -1,5 +1,88 @@
 # PebbleLab Development Journal
 
+## 2026-07-03 — Phase 5.9B goal application dry-run fixture smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Implement the first specialized goal application dry-run fixture:
+`goal_application_dry_run_fixture_smoke`.
+
+### Starting Point
+
+Phase 5.8B and Phase 5.8C added and hardened `LabControlledApplication.swift`.
+The controlled application layer produces policies, eligibilities, controlled
+decisions, rejected/deferred reasons, and zero applied flags.
+
+### Link With 5.9A
+
+Phase 5.9A defined the goal application dry-run contract. Phase 5.9B
+implements that contract as a fixture-only scenario that audits
+`goalBefore`, `targetGoal`, reason, would-apply status, no-op handling,
+rejections, deferrals, and dry-run boundaries.
+
+### Implementation
+
+- Added `LabGoalApplicationDryRun.swift`.
+- Added `goal_application_dry_run_fixture_smoke`.
+- Added goal dry-run policies, inputs, decisions, report, invariant report,
+  digest, metrics, and events.
+- Covered eligible safety and explore goal changes.
+- Covered no-op goal handling.
+- Covered unknown target goal rejection.
+- Covered missing reason rejection.
+- Covered snapshot-not-read-only rejection.
+- Covered dry-run false rejection.
+- Covered max goal changes rejection.
+- Covered audit-only deferred goal application.
+- Kept `appliedGoalChange=false` for every decision.
+- Kept `liveAgentMutated=false`, `memoryMutated=false`,
+  `movementStackUsed=false`, `worldMutated=false`, and
+  `terrainMutated=false`.
+
+### Outputs
+
+- `goal_application_dry_run_report.json`;
+- `goal_application_dry_run_invariant_report.json`;
+- `goal_application_dry_run_policies.json`;
+- `goal_application_dry_run_inputs.json`;
+- `goal_application_dry_run_decisions.json`;
+- `goal_application_dry_run_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+### Validation
+
+Commands:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `swift run PebbleLab -- --scenario goal_application_dry_run_fixture_smoke --seed 42 --ticks 3 --out runs/check_goal_application_dry_run_fixture`;
+- non-regression PebbleLab scenario runs;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results:
+
+- `swift build` passed;
+- `swift build -c release --product Pebble` passed;
+- `goal_application_dry_run_fixture_smoke` passed in debug;
+- controlled application, live adapter, cognitive loop integration,
+  behavior-loop bridge, goal selection memory, memory retrieval, memory
+  update, behavior loop, `agents_basic`, and `regression_smoke`
+  non-regressions passed in debug;
+- `swift run -c release pebsmoke` passed with 456 passed, 0 failed;
+- `swift run -c release PebbleLab -- --scenario goal_application_dry_run_fixture_smoke ...`
+  was attempted and interrupted after a silent release build stall, with no
+  matching Swift/PebbleLab child process left running.
+
+### Next Step
+
+Phase 5.9C — Goal Application Dry-Run Hardening.
+
 ## 2026-07-03 — Phase 5.9A goal application dry-run planning
 
 Branch: `lab/pebblelab-v1`

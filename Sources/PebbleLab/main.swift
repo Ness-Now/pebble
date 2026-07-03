@@ -126,6 +126,8 @@ let isControlledApplicationScenario = options.scenario
     == controlledApplicationScenarioName
 let isControlledApplicationHardeningScenario = options.scenario
     == controlledApplicationHardeningScenarioName
+let isGoalApplicationDryRunScenario = options.scenario
+    == goalApplicationDryRunScenarioName
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -4307,6 +4309,21 @@ let controlledApplicationHardeningFixture: LabControlledApplicationHardeningFixt
 let controlledApplicationHardeningSuccess = controlledApplicationHardeningFixture.map {
     $0.report.success && $0.invariantReport.success
 }
+let goalApplicationDryRunFixture: LabGoalApplicationDryRunFixture? = {
+    guard isGoalApplicationDryRunScenario else { return nil }
+    do {
+        return try makeGoalApplicationDryRunFixture(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticks: ticksCompleted
+        )
+    } catch {
+        fail("failed to build goal application dry-run fixture: \(error)")
+    }
+}()
+let goalApplicationDryRunSuccess = goalApplicationDryRunFixture.map {
+    $0.report.success && $0.invariantReport.success
+}
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
     && successCriteria.agentTicksRecorded
@@ -4395,6 +4412,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (liveCognitiveLoopAdapterHardeningSuccess ?? true)
     && (controlledApplicationSuccess ?? true)
     && (controlledApplicationHardeningSuccess ?? true)
+    && (goalApplicationDryRunSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -8497,6 +8515,33 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("controlled_application_hardening_digest.json")
             )
         }
+        if let goalApplicationDryRunFixture {
+            appendEventLines(goalApplicationDryRunFixture.eventLines)
+            try writeJSON(
+                goalApplicationDryRunFixture.report,
+                to: outURL.appendingPathComponent("goal_application_dry_run_report.json")
+            )
+            try writeJSON(
+                goalApplicationDryRunFixture.invariantReport,
+                to: outURL.appendingPathComponent("goal_application_dry_run_invariant_report.json")
+            )
+            try writeJSON(
+                goalApplicationDryRunFixture.policies,
+                to: outURL.appendingPathComponent("goal_application_dry_run_policies.json")
+            )
+            try writeJSON(
+                goalApplicationDryRunFixture.inputs,
+                to: outURL.appendingPathComponent("goal_application_dry_run_inputs.json")
+            )
+            try writeJSON(
+                goalApplicationDryRunFixture.decisions,
+                to: outURL.appendingPathComponent("goal_application_dry_run_decisions.json")
+            )
+            try writeJSON(
+                goalApplicationDryRunFixture.digest,
+                to: outURL.appendingPathComponent("goal_application_dry_run_digest.json")
+            )
+        }
         if let multiTickClosedLoopReport {
             try writeJSON(
                 multiTickClosedLoopReport,
@@ -10457,7 +10502,12 @@ if let outPath = options.outPath {
             routeFollowingLiveHardeningSuccess: routeFollowingLiveHardeningSuccess,
             successCriteria: successCriteria
         )
-        if let controlledApplicationHardeningFixture {
+        if let goalApplicationDryRunFixture {
+            try writeJSON(
+                goalApplicationDryRunFixture.metrics,
+                to: outURL.appendingPathComponent("metrics.json")
+            )
+        } else if let controlledApplicationHardeningFixture {
             try writeJSON(
                 controlledApplicationHardeningFixture.metrics,
                 to: outURL.appendingPathComponent("metrics.json")
