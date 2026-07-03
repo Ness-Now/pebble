@@ -706,3 +706,97 @@ Limitations:
 Next phase:
 
 - Phase 5.12C — Fake-Live Goal Application Hardening.
+
+## Phase 5.12C Implementation Status
+
+Phase 5.12C implemented `fake_live_goal_application_hardening_smoke`.
+
+Scenario:
+
+- `fake_live_goal_application_hardening_smoke`.
+
+Cases:
+
+- 29 hardening cases;
+- baseline compatibility with 5.12B;
+- safety, explore, and observe fake-live applications;
+- fake-live no-op allowed and no-op disallowed;
+- unknown target, target not allowed, missing fake-live goal, missing target,
+  missing reason, `wouldApplyToLive=false`, prior applied-to-live, prior
+  rejected/deferred reasons, `agentsBasicTouchedBefore=true`, policy disallow,
+  and max fake-live applications rejected;
+- audit-only deferred;
+- rejected/deferred reason presence;
+- before/target/after audit;
+- deterministic order, bounded report shape, and digest repeatability.
+
+Policies:
+
+- default `fake_live_goal_apply`;
+- `fake_live_goal_audit_only` deferred mode;
+- no-op allowed policy;
+- target restriction policy;
+- fake-live application disallow policy;
+- max fake-live applications policy.
+
+Inputs:
+
+- 18 fake-live goal application inputs;
+- stable order by tick and agent id;
+- guarded-decision-style fields preserved.
+
+Decisions:
+
+- 18 decisions;
+- three `fakeLiveApplyEligible=true`;
+- 14 `fakeLiveWouldChange=true`;
+- three `appliedToFakeLive=true`;
+- three `fakeLiveGoalChanged=true`;
+- one fake-live no-op;
+- 13 rejected fake-live applications;
+- one deferred fake-live application.
+
+Fake-live application:
+
+- applies goals only to scenario-owned fake-live values;
+- does not apply to `agents_basic`;
+- keeps `appliedToAgentsBasic=0`;
+- keeps `agentsBasicTouched=false`;
+- keeps `liveRuntimeTouched=false`.
+
+Report:
+
+- `fake_live_goal_application_hardening_report.json`.
+
+Invariant:
+
+- `fake_live_goal_application_hardening_invariant_report.json`;
+- 90 checks passed, 0 failed.
+
+Digest:
+
+- `fake_live_goal_application_hardening_digest.json`;
+- digest `a716132d0d8a6f68`;
+- digest repeat equals digest.
+
+Metrics:
+
+- `fakeLiveGoalApplicationHardening*`.
+
+Events:
+
+- `lab_fake_live_goal_application_hardening_recorded`.
+
+Limitations:
+
+- no `agents_basic` integration;
+- no uncontrolled live runtime mutation;
+- no action application;
+- no memory write application;
+- no movement stack;
+- no World or terrain mutation;
+- no mood, relationships, LLM, Python, embeddings, or RL.
+
+Next phase:
+
+- Phase 5.13A — Agents Basic Goal Integration Planning.

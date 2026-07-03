@@ -1006,3 +1006,25 @@ It emits `fakeLiveGoalApplication*` metrics and
 
 The recommended next phase is Phase 5.12C - Fake-Live Goal Application
 Hardening.
+
+## Phase 5.12C Status
+
+Phase 5.12C implemented `fake_live_goal_application_hardening_smoke`, a
+fixture-only hardening scenario for fake-live goal application.
+
+The scenario covers 29 hardening cases, 18 policies, 18 inputs, and 18
+decisions. It covers baseline compatibility with 5.12B, safety/explore/observe
+applications to fake-live state, no-op allowed and no-op rejected, unknown and
+not-allowed targets, missing fake-live goal, missing target, missing reason,
+`wouldApplyToLive=false`, prior applied/rejected/deferred conditions,
+`agentsBasicTouchedBefore=true`, policy disallow, max application rejection,
+and audit-only deferred behavior.
+
+It emits `fakeLiveGoalApplicationHardening*` metrics and
+`lab_fake_live_goal_application_hardening_recorded`, while keeping
+`appliedToAgentsBasic=0`, `agentsBasicTouched=false`,
+`liveRuntimeTouched=false`, `memoryMutated=false`, `movementStackUsed=false`,
+`worldMutated=false`, and `terrainMutated=false`.
+
+The recommended next phase is Phase 5.13A - Agents Basic Goal Integration
+Planning.

@@ -1,5 +1,98 @@
 # PebbleLab Development Journal
 
+## 2026-07-03 — Phase 5.12C fake-live goal application hardening smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Harden `LabFakeLiveGoalApplication.swift` with
+`fake_live_goal_application_hardening_smoke`, a runtime fixture that covers the
+main fake-live goal application edge cases while keeping `agents_basic`, the
+live runtime, memory, movement stack, World, and terrain untouched.
+
+### Starting Point
+
+Phase 5.12B introduced `fake_live_goal_application_fixture_smoke` with 13
+agents, 13 inputs, 13 decisions, two fake-live applications, one no-op, nine
+rejections, one deferred decision, `appliedToAgentsBasic=0`,
+`agentsBasicTouched=false`, `liveRuntimeTouched=false`, and stable digest
+`9e0d5a3a700940f9`.
+
+### Implementation
+
+- Added `fake_live_goal_application_hardening_smoke`.
+- Reused `LabFakeLiveGoalApplicationPolicy`,
+  `LabFakeLiveGoalApplicationInput`, `LabFakeLiveGoalApplicationDecision`, and
+  the existing decision helper.
+- Added hardening case, case result, report, invariant report, metrics, event,
+  and digest helpers.
+- Covered 29 hardening cases: baseline compatibility, safety/explore/observe
+  fake-live applications, no-op allowed, no-op rejected, unknown target,
+  target not allowed, missing fake-live goal, missing target, missing reason,
+  `wouldApplyToLive=false`, prior applied-to-live, prior rejected/deferred
+  reasons, `agentsBasicTouchedBefore=true`, policy disallow, max applications,
+  audit-only deferred, rejected/deferred reason presence, before/target/after
+  audit, deterministic order, bounded shape, and digest repeatability.
+- Produced 18 policies, 18 inputs, and 18 decisions.
+- Recorded `fakeLiveApplyEligible=3`, `appliedToFakeLive=3`,
+  `fakeLiveGoalChanged=3`, one no-op, 13 rejected decisions, and one deferred
+  decision.
+- Kept `appliedToAgentsBasic=0`, `agentsBasicTouched=false`,
+  `liveRuntimeTouched=false`, `memoryMutated=false`,
+  `movementStackUsed=false`, `worldMutated=false`, and
+  `terrainMutated=false`.
+
+### Outputs
+
+- `fake_live_goal_application_hardening_report.json`;
+- `fake_live_goal_application_hardening_invariant_report.json`;
+- `fake_live_goal_application_hardening_cases.json`;
+- `fake_live_goal_application_hardening_policies.json`;
+- `fake_live_goal_application_hardening_inputs.json`;
+- `fake_live_goal_application_hardening_decisions.json`;
+- `fake_live_goal_application_hardening_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+### Validation
+
+Commands:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `swift run PebbleLab -- --scenario fake_live_goal_application_hardening_smoke --seed 42 --ticks 3 --out runs/check_fake_live_goal_application_hardening`.
+- debug non-regression runs for fake-live fixture, guarded live goal
+  application, snapshot mutation, goal dry-run, controlled application, live
+  adapter, cognitive loop integration, behavior-loop bridge, goal selection
+  memory, memory retrieval, memory update, behavior loop, `agents_basic`, and
+  `regression_smoke`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- release PebbleLab scenario attempt for
+  `fake_live_goal_application_hardening_smoke`.
+
+Results:
+
+- The new hardening scenario passed in debug with success=true, 29 cases,
+  29 passed, 0 failed, 18 agents, 18 inputs, 18 decisions, three eligible
+  fake-live applications, three fake-live goal changes, one no-op, 13 rejected
+  decisions, one deferred decision, and digest `a716132d0d8a6f68`.
+- The invariant report passed with 90 checks passed and 0 failed.
+- `fakeLiveGoalApplicationHardening*` metrics and
+  `lab_fake_live_goal_application_hardening_recorded` were written.
+- All requested debug non-regression scenarios passed.
+- `swift build`, `swift build -c release --product Pebble`,
+  `swift run -c release pebsmoke`, and `git diff --check` passed.
+- `swift run -c release PebbleLab ... fake_live_goal_application_hardening_smoke`
+  stalled silently after `Building for production...` and was interrupted
+  after a bounded 90 second wait, matching the known Phase 5.12B compromise.
+
+### Next Step
+
+Phase 5.13A — Agents Basic Goal Integration Planning.
+
 ## 2026-07-03 — Phase 5.12B fake-live goal application fixture smoke
 
 Branch: `lab/pebblelab-v1`
