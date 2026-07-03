@@ -661,3 +661,105 @@ Limitations:
 Next phase:
 
 - Phase 5.10C — Goal Application Snapshot Mutation Hardening.
+
+## Phase 5.10C Implementation Status
+
+Phase 5.10C implemented
+`goal_application_snapshot_mutation_hardening_smoke`.
+
+Scenario:
+
+- `goal_application_snapshot_mutation_hardening_smoke`.
+
+Cases:
+
+- 28 hardening cases;
+- baseline fixture compatibility;
+- applied-to-snapshot safety, explore, and observe goals;
+- snapshot no-op allowed;
+- snapshot no-op rejected;
+- unknown target rejected;
+- target not allowed rejected;
+- missing snapshot goal rejected;
+- missing target goal rejected;
+- missing reason rejected;
+- `wouldApplyGoalChange=false` rejected;
+- prior dry-run rejected/deferred reasons rejected;
+- `dryRun=false` rejected;
+- policy-disallowed snapshot mutation rejected;
+- max snapshot mutations rejected;
+- audit-only deferred;
+- live goal unchanged for applied and rejected decisions;
+- applied-to-live zero;
+- deterministic order;
+- digest repeatability.
+
+Policies:
+
+- normal `snapshot_goal_mutation_dry_run`;
+- no-op allowed/disallowed policies;
+- target allow-list policy;
+- `dryRun=false` rejection policy;
+- snapshot mutation disallow policy;
+- max snapshot mutation rejection policy;
+- `snapshot_goal_mutation_audit` deferred policy.
+
+Inputs:
+
+- 28 hardening inputs;
+- one input per hardening case;
+- stable order by tick and agent id.
+
+Decisions:
+
+- 28 decisions;
+- 11 `appliedToSnapshot=true`;
+- 11 `snapshotGoalChanged=true`;
+- one snapshot no-op;
+- 14 rejected snapshot mutations;
+- two deferred snapshot mutations;
+- `appliedToLiveCount=0`.
+
+Snapshot/live separation:
+
+- copied snapshot goal state changes only when eligible;
+- live goal remains unchanged for every decision;
+- `liveGoalAfter == originalLiveGoalBefore` for every decision;
+- no live agent mutation.
+
+Report:
+
+- `goal_snapshot_mutation_hardening_report.json`.
+
+Invariant:
+
+- `goal_snapshot_mutation_hardening_invariant_report.json`;
+- 89 checks passed, 0 failed.
+
+Digest:
+
+- `goal_snapshot_mutation_hardening_digest.json`;
+- digest `6d142b7e2437726c`;
+- digest repeat equals digest.
+
+Metrics:
+
+- `goalSnapshotMutationHardening*`.
+
+Events:
+
+- `lab_goal_snapshot_mutation_hardening_recorded`.
+
+Limitations:
+
+- no live `agents_basic` integration;
+- no live applied goal changes;
+- no action application;
+- no memory write application;
+- no movement stack;
+- no World or terrain mutation;
+- no mood, relationships, LLM, Python, embeddings, or RL.
+
+Next phase:
+
+- Phase 5.11A — Live Goal Application Planning.

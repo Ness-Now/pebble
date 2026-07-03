@@ -860,3 +860,31 @@ scope.
 
 The recommended next phase is Phase 5.10C - Goal Application Snapshot Mutation
 Hardening.
+
+## Phase 5.10C Status
+
+Phase 5.10C implemented
+`goal_application_snapshot_mutation_hardening_smoke`, hardening copied/snapshot
+goal mutation without applying anything to live agent state.
+
+The scenario covers 28 hardening cases, including 5.10B baseline compatibility,
+applied-to-snapshot safety/explore/observe goals, snapshot no-op allowed,
+snapshot no-op rejected, unknown target rejection, target-not-allowed
+rejection, missing snapshot goal, missing target goal, missing reason,
+`wouldApplyGoalChange=false`, prior rejected/deferred dry-run reasons,
+`dryRun=false`, policy-disallowed mutation, max snapshot mutation rejection,
+audit-only deferred decisions, live goal unchanged checks, deterministic order,
+and digest repeatability.
+
+The hardening report records 28 cases, 28 passed, 0 failed, 28 inputs, 28
+decisions, 11 applied-to-snapshot mutations, 11 snapshot goal changes, one
+snapshot no-op, 14 rejected snapshot mutations, two deferred snapshot
+mutations, and `appliedToLiveCount=0`.
+
+It emits `goalSnapshotMutationHardening*` metrics and
+`lab_goal_snapshot_mutation_hardening_recorded`, while keeping
+`liveAgentMutated=false`, `memoryMutated=false`, `movementStackUsed=false`,
+`worldMutated=false`, and `terrainMutated=false`. `agents_basic` remains
+unchanged.
+
+The recommended next phase is Phase 5.11A - Live Goal Application Planning.

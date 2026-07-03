@@ -1,5 +1,92 @@
 # PebbleLab Development Journal
 
+## 2026-07-03 — Phase 5.10C goal snapshot mutation hardening smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Harden copied/snapshot goal mutation with
+`goal_application_snapshot_mutation_hardening_smoke`.
+
+### Starting Point
+
+Phase 5.10B added `LabGoalSnapshotMutation.swift` and the first fixture smoke.
+It proved that copied snapshot goals can change while live goals remain
+unchanged, with `appliedToLive=false` and all live mutation boundaries clean.
+
+### Link With 5.10B
+
+Phase 5.10C keeps the 5.10B fixture compatible and expands coverage to 28
+named hardening cases. The hardening scenario still uses only copied/snapshot
+state and does not touch live `LabAgent` state, memory, movement stack, World,
+or terrain.
+
+### Implementation
+
+- Added `goal_application_snapshot_mutation_hardening_smoke`.
+- Added hardening cases, case results, report, invariant report, digest,
+  metrics, and aggregate event support to `LabGoalSnapshotMutation.swift`.
+- Covered baseline fixture compatibility.
+- Covered applied-to-snapshot safety, explore, and observe goals.
+- Covered `snapshotGoalChanged=true`.
+- Covered snapshot no-op allowed and no-op rejected.
+- Covered unknown target and target-not-allowed rejection.
+- Covered missing snapshot goal, missing target goal, and missing reason.
+- Covered `wouldApplyGoalChange=false`.
+- Covered prior dry-run rejected/deferred reasons.
+- Covered `dryRun=false`, policy-disallowed snapshot mutation, and max
+  snapshot mutations rejection.
+- Covered audit-only deferred mutation.
+- Proved live goals remain unchanged for applied and rejected decisions.
+- Kept `appliedToLiveCount=0`, `liveAgentMutated=false`,
+  `memoryMutated=false`, `movementStackUsed=false`, `worldMutated=false`, and
+  `terrainMutated=false`.
+
+### Outputs
+
+- `goal_snapshot_mutation_hardening_report.json`;
+- `goal_snapshot_mutation_hardening_invariant_report.json`;
+- `goal_snapshot_mutation_hardening_cases.json`;
+- `goal_snapshot_mutation_hardening_policies.json`;
+- `goal_snapshot_mutation_hardening_inputs.json`;
+- `goal_snapshot_mutation_hardening_decisions.json`;
+- `goal_snapshot_mutation_hardening_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+### Validation
+
+Commands:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `swift run PebbleLab -- --scenario goal_application_snapshot_mutation_hardening_smoke --seed 42 --ticks 3 --out runs/check_goal_snapshot_mutation_hardening`;
+- debug non-regression runs for goal snapshot mutation fixture, goal
+  application dry-run, controlled application, live adapter, cognitive loop
+  integration, behavior-loop bridge, goal selection memory, memory retrieval,
+  memory update, behavior loop, `agents_basic`, and `regression_smoke`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results:
+
+- `swift build` passed.
+- `goal_application_snapshot_mutation_hardening_smoke` passed in debug with
+  28 cases, 28 passed, 0 failed, 28 inputs, 28 decisions, 11
+  applied-to-snapshot mutations, 11 snapshot goal changes, one no-op, 14
+  rejected mutations, two deferred mutations, and zero applied-to-live
+  mutations.
+- The invariant report passed with 89 checks passed and 0 failed.
+- The digest was stable: `6d142b7e2437726c`.
+- Boundary flags stayed clean.
+
+### Next Step
+
+Phase 5.11A — Live Goal Application Planning.
+
 ## 2026-07-03 — Phase 5.10B goal snapshot mutation fixture smoke
 
 Branch: `lab/pebblelab-v1`

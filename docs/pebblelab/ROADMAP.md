@@ -4105,3 +4105,40 @@ relationships, LLM, and social systems remain out of scope.
 
 Next recommended step: Phase 5.10C - Goal Application Snapshot Mutation
 Hardening.
+
+## Phase 5.10C - Goal Application Snapshot Mutation Hardening
+
+Status: implemented and validated.
+
+Goal: harden copied/snapshot goal mutation with boundary, rejection,
+deferral, audit, deterministic ordering, and digest repeatability coverage.
+
+Implemented scenario:
+
+- `goal_application_snapshot_mutation_hardening_smoke`.
+
+Validated runtime scope:
+
+- covers 28 hardening cases;
+- keeps 5.10B fixture compatibility;
+- covers applied-to-snapshot safety, explore, and observe targets;
+- covers `snapshotGoalChanged=true`;
+- covers snapshot no-op allowed and no-op rejected;
+- covers unknown target, target not allowed, missing snapshot goal, missing
+  target goal, and missing reason rejection;
+- covers `wouldApplyGoalChange=false`, prior rejected/deferred dry-run
+  reasons, `dryRun=false`, policy disallow, and max snapshot mutation
+  rejection;
+- covers audit-only deferred snapshot mutation;
+- proves live goal remains unchanged for applied and rejected decisions;
+- keeps `appliedToLiveCount=0`, `liveAgentMutated=false`,
+  `memoryMutated=false`, `movementStackUsed=false`, `worldMutated=false`, and
+  `terrainMutated=false`;
+- emits `goalSnapshotMutationHardening*` metrics and
+  `lab_goal_snapshot_mutation_hardening_recorded`.
+
+Live `agents_basic` integration, uncontrolled live applied goal changes,
+actions, memory writes, mood, relationships, LLM, social systems, movement
+stack, World mutation, and terrain mutation remain out of scope.
+
+Next recommended step: Phase 5.11A - Live Goal Application Planning.
