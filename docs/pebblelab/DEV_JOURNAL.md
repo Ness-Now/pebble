@@ -1,5 +1,84 @@
 # PebbleLab Development Journal
 
+## 2026-07-03 — Phase 5.13B agents_basic goal integration guarded fixture smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Add `agents_basic_goal_integration_guarded_fixture_smoke`, a candidate-only
+runtime fixture proving that validated fake-live goal applications can be
+converted into guarded `agents_basic` integration candidates without touching
+the normal `agents_basic` runtime.
+
+### Starting Point
+
+Phase 5.13A documented the `agents_basic` goal integration contract. The
+starting implementation already had fake-live decisions with
+`appliedToFakeLive`, `fakeLiveGoalChanged`, rejected/deferred reasons,
+`appliedToAgentsBasic=0`, `agentsBasicTouched=false`, and
+`liveRuntimeTouched=false`.
+
+### Implementation
+
+- Added `LabAgentsBasicGoalIntegration.swift`.
+- Added scenario `agents_basic_goal_integration_guarded_fixture_smoke`.
+- Added policies for guarded dry-run, no-op, target allow-list, audit-only, and
+  max-application rejection.
+- Added 16 inputs and 16 decisions covering safety/explore candidates, no-op,
+  unknown target, target not allowed, `appliedToFakeLive=false`,
+  `fakeLiveGoalChanged=false`, prior `appliedToAgentsBasic`, prior
+  `agentsBasicTouched`, prior live runtime touch, prior rejected/deferred
+  reasons, audit-only deferred, missing reason, max applications, and missing
+  dedicated scenario flag.
+- Recorded `agentsBasicApplyEligible`, `wouldApplyToAgentsBasic`, and
+  `agentsBasicGoalWouldChange` while keeping `appliedToAgentsBasic=0`.
+- Kept `agentsBasicTouched=false` and `runtimeBehaviorChanged=false`.
+- Kept `memoryMutated=false`, `movementStackUsed=false`, `worldMutated=false`,
+  and `terrainMutated=false`.
+- Added report, invariant report, policies, inputs, decisions, digest,
+  `agentsBasicGoalIntegration*` metrics, and
+  `lab_agents_basic_goal_integration_recorded` events.
+
+### Outputs
+
+- `agents_basic_goal_integration_report.json`;
+- `agents_basic_goal_integration_invariant_report.json`;
+- `agents_basic_goal_integration_policies.json`;
+- `agents_basic_goal_integration_inputs.json`;
+- `agents_basic_goal_integration_decisions.json`;
+- `agents_basic_goal_integration_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+### Validation
+
+Commands:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `swift run PebbleLab -- --scenario agents_basic_goal_integration_guarded_fixture_smoke --seed 42 --ticks 3 --out runs/check_agents_basic_goal_integration_fixture`;
+- requested cognitive and goal-application non-regression scenarios;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results:
+
+- `swift build` passed.
+- `swift build -c release --product Pebble` passed.
+- The new fixture and requested debug non-regressions passed.
+- `swift run -c release pebsmoke` passed with 456 passed, 0 failed.
+- `git diff --check` and `git diff --cached --check` passed.
+- `swift run -c release PebbleLab -- --scenario agents_basic_goal_integration_guarded_fixture_smoke --seed 42 --ticks 3 --out runs/check_agents_basic_goal_integration_fixture_release`
+  was attempted and interrupted after a local silence limit; no Swift child
+  process remained.
+
+### Next Step
+
+Phase 5.13C — Agents Basic Goal Integration Guarded Hardening.
+
 ## 2026-07-03 — Phase 5.13A agents_basic goal integration planning
 
 Branch: `lab/pebblelab-v1`

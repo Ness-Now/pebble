@@ -1055,3 +1055,22 @@ state, embeddings, Python, LLM, and RL remain out of scope.
 
 The recommended next phase is Phase 5.13B - Agents Basic Goal Integration
 Guarded Fixture Smoke.
+
+## Phase 5.13B Status
+
+Phase 5.13B implemented `agents_basic_goal_integration_guarded_fixture_smoke`,
+a guarded candidate-only fixture for the future bridge from fake-live goal
+application evidence toward `agents_basic`.
+
+The fixture produces policies, inputs, decisions, report, invariant report,
+digest, metrics, and events. It covers eligible `agents_basic` candidates,
+`wouldApplyToAgentsBasic`, `agentsBasicGoalWouldChange`, no-op, rejected
+decisions, and an audit-only deferred decision.
+
+The fixture keeps `appliedToAgentsBasic=0`, `agentsBasicTouched=false`,
+`runtimeBehaviorChanged=false`, `memoryMutated=false`,
+`movementStackUsed=false`, `worldMutated=false`, and `terrainMutated=false`.
+The normal `agents_basic` runtime remains unchanged.
+
+The recommended next phase is Phase 5.13C - Agents Basic Goal Integration
+Guarded Hardening.

@@ -4379,3 +4379,32 @@ LLM, Python, embeddings, and RL remain out of scope.
 
 Next recommended step: Phase 5.13B - Agents Basic Goal Integration Guarded
 Fixture Smoke.
+
+## Phase 5.13B - Agents Basic Goal Integration Guarded Fixture Smoke
+
+Status: implemented and validated.
+
+Implemented scenario:
+
+- `agents_basic_goal_integration_guarded_fixture_smoke`.
+
+Validated fixture scope:
+
+- consumes fake-live goal application evidence;
+- produces guarded `agents_basic` integration policies, inputs, decisions,
+  report, invariant report, digest, metrics, and events;
+- covers `agentsBasicApplyEligible`, `wouldApplyToAgentsBasic`,
+  `agentsBasicGoalWouldChange`, no-op, rejected decisions, and deferred
+  audit-only decision;
+- keeps `appliedToAgentsBasic=0`;
+- keeps `agentsBasicTouched=false`;
+- keeps `runtimeBehaviorChanged=false`;
+- keeps memory, movement stack, World, and terrain untouched;
+- keeps normal `agents_basic` runtime behavior unchanged.
+
+`agents_basic` live application, applied actions, applied memory writes, mood,
+relationships, LLM, Python, embeddings, RL, and movement stack remain out of
+scope.
+
+Next recommended step: Phase 5.13C - Agents Basic Goal Integration Guarded
+Hardening.

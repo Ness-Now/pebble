@@ -637,3 +637,33 @@ Future outputs:
 - `swift build -c release --product Pebble` passes.
 - `git diff --check` passes.
 - Next phase 5.13B is clearly specified.
+
+## Phase 5.13B Implementation Status
+
+Phase 5.13B implemented the planned guarded fixture:
+
+- scenario: `agents_basic_goal_integration_guarded_fixture_smoke`;
+- policies: guarded dry-run, no-op, target allow-list, audit-only, and max
+  application rejection;
+- inputs: safety/explore candidates, no-op, unknown target, target not allowed,
+  missing fake-live application, missing fake-live goal change, prior
+  `agents_basic` application, prior `agents_basic` touch, prior runtime touch,
+  prior rejected/deferred reasons, audit-only deferred, missing reason, max
+  applications, and missing dedicated scenario flag;
+- decisions: candidate-only `agentsBasicApplyEligible`,
+  `wouldApplyToAgentsBasic`, `agentsBasicGoalWouldChange`, no-op, rejected, and
+  deferred coverage;
+- candidate-only integration: `wouldApplyToAgentsBasic` can be true, but
+  `appliedToAgentsBasic` remains zero;
+- boundary flags: `agentsBasicTouched=false`,
+  `runtimeBehaviorChanged=false`, `memoryMutated=false`,
+  `movementStackUsed=false`, `worldMutated=false`, and
+  `terrainMutated=false`;
+- report: `agents_basic_goal_integration_report.json`;
+- invariant: `agents_basic_goal_integration_invariant_report.json`;
+- digest: `agents_basic_goal_integration_digest.json`;
+- metrics: `agentsBasicGoalIntegration*`;
+- events: `lab_agents_basic_goal_integration_recorded` plus summary event;
+- limitations: no `agents_basic` live application, no action application, no
+  memory write, no movement stack, no World or terrain mutation;
+- next phase: Phase 5.13C - Agents Basic Goal Integration Guarded Hardening.
