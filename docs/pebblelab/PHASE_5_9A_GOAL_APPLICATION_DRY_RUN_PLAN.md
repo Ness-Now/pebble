@@ -664,3 +664,89 @@ Limitations:
 Next phase:
 
 - Phase 5.9C — Goal Application Dry-Run Hardening.
+
+## Phase 5.9C Implementation Status
+
+Phase 5.9C implemented `goal_application_dry_run_hardening_smoke`.
+
+Scenario:
+
+- `goal_application_dry_run_hardening_smoke`.
+
+Cases:
+
+- 27 hardening cases;
+- baseline compatibility;
+- eligible `seekSafety`, `explore`, and `observeOtherAgent`;
+- no-op allowed and no-op disallowed;
+- unknown and not-allowed target goals;
+- missing current goal, missing target goal, and missing reason;
+- snapshot-not-read-only, dry-run false, goalChangeEligible false, policy
+  denied, and max-goal-changes rejections;
+- audit-only deferred;
+- rejected/deferred reason presence;
+- `goalBefore`/`targetGoal`, `goalKnown`, and `goalChanged` audit;
+- applied goal changes zero;
+- deterministic order, bounded output, and digest repeatability.
+
+Policies:
+
+- mode `goal_dry_run_only` for normal dry-run decisions;
+- mode `goal_eligibility_audit` for deferred coverage;
+- bounded allowed goals;
+- known-but-not-allowed target goal policy coverage;
+- `maxGoalChangesPerTick` rejection coverage;
+- dry-run false rejection coverage.
+
+Inputs:
+
+- 16 goal application dry-run inputs in the hardening run.
+
+Decisions:
+
+- three `wouldApplyGoalChange=true` decisions;
+- one no-op decision;
+- eleven rejected decisions;
+- one deferred decision;
+- all `appliedGoalChange=false`.
+
+Would/applied rules:
+
+- would-apply is allowed only for known, allowed, eligible, changed goals with
+  a reason, read-only snapshot, dry-run mode, and available goal-change
+  capacity;
+- applied goal changes remain zero.
+
+Report:
+
+- `goal_application_dry_run_hardening_report.json`.
+
+Invariant:
+
+- `goal_application_dry_run_hardening_invariant_report.json`.
+
+Digest:
+
+- `goal_application_dry_run_hardening_digest.json`.
+
+Metrics:
+
+- `goalApplicationDryRunHardening*`.
+
+Events:
+
+- `lab_goal_application_dry_run_hardening_recorded`.
+
+Limitations:
+
+- no live `agents_basic` integration;
+- no live agent mutation;
+- no applied goal changes;
+- no action application;
+- no memory write application;
+- no movement stack;
+- no World or terrain mutation.
+
+Next phase:
+
+- Phase 5.10A — Goal Application Snapshot Mutation Planning.

@@ -1,5 +1,108 @@
 # PebbleLab Development Journal
 
+## 2026-07-03 — Phase 5.9C goal application dry-run hardening smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Harden the goal application dry-run layer with
+`goal_application_dry_run_hardening_smoke`.
+
+### Starting Point
+
+Phase 5.9B added `LabGoalApplicationDryRun.swift` and the first goal
+application dry-run fixture. It produced policies, inputs, decisions, report,
+invariant, digest, `goalApplicationDryRun*` metrics, and
+`lab_goal_application_dry_run_recorded`, while keeping
+`appliedGoalChange=false` and all mutation boundaries clean.
+
+### Link With 5.9B
+
+Phase 5.9C reuses the Phase 5.9B policy/input/decision/report contract and
+adds hardening cases for edge conditions before any snapshot or live goal
+mutation exists.
+
+### Implementation
+
+- Added `goal_application_dry_run_hardening_smoke`.
+- Added hardening case/result/report/invariant/metrics/event helpers to
+  `LabGoalApplicationDryRun.swift`.
+- Covered baseline compatibility with 5.9B.
+- Covered eligible `seekSafety`, `explore`, and `observeOtherAgent` goal
+  changes.
+- Covered no-op allowed and no-op disallowed rejection.
+- Covered unknown target goal and known-but-not-allowed target goal rejection.
+- Covered missing current goal, missing target goal, and missing reason
+  rejection.
+- Covered snapshot-not-read-only, dry-run false, goalChangeEligible false,
+  policy-disallows-goal-application, and max-goal-changes rejection.
+- Covered audit-only deferred decisions.
+- Verified rejected and deferred reasons are present.
+- Verified `goalBefore`, `targetGoal`, `goalKnown`, and `goalChanged` audit
+  fields.
+- Kept `appliedGoalChange=false` for every decision.
+- Kept `liveAgentMutated=false`, `memoryMutated=false`,
+  `movementStackUsed=false`, `worldMutated=false`, and
+  `terrainMutated=false`.
+
+### Outputs
+
+- `goal_application_dry_run_hardening_report.json`;
+- `goal_application_dry_run_hardening_invariant_report.json`;
+- `goal_application_dry_run_hardening_cases.json`;
+- `goal_application_dry_run_hardening_policies.json`;
+- `goal_application_dry_run_hardening_inputs.json`;
+- `goal_application_dry_run_hardening_decisions.json`;
+- `goal_application_dry_run_hardening_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+### Validation
+
+Commands:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `swift run PebbleLab -- --scenario goal_application_dry_run_hardening_smoke --seed 42 --ticks 3 --out runs/check_goal_application_dry_run_hardening`;
+- debug non-regression runs for goal application dry-run fixture, controlled
+  application, live adapter, cognitive loop integration, behavior-loop bridge,
+  goal selection memory, memory retrieval, memory update, behavior loop,
+  `agents_basic`, and `regression_smoke`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results:
+
+- `swift build` passed.
+- `swift build -c release --product Pebble` passed.
+- `goal_application_dry_run_hardening_smoke` passed in debug.
+- Debug non-regressions passed for goal application dry-run fixture,
+  controlled application fixture/hardening, live adapter fixture/hardening,
+  cognitive loop integration fixture/hardening, behavior-loop memory-goal
+  bridge fixture/hardening, goal selection memory fixture/hardening, memory
+  retrieval fixture/hardening, memory update fixture/hardening, behavior loop
+  fixture/hardening, `agents_basic`, and `regression_smoke`.
+- `swift run -c release PebbleLab -- --scenario
+  goal_application_dry_run_hardening_smoke ...` was attempted, reached the
+  known silent release PebbleLab stall, was interrupted after roughly one
+  minute, and left no PebbleLab child process running.
+- `swift run -c release pebsmoke` passed with 456 passed, 0 failed.
+- `git diff --check` passed.
+- `git diff --cached --check` passed.
+
+Hardening report summary: success=true, cases=27, casesPassed=27,
+casesFailed=0, inputs=16, decisions=16, eligibleInputs=15,
+wouldApplyGoalChanges=3, noopGoalChanges=1, rejectedGoalApplications=11,
+deferredGoalApplications=1, appliedGoalChanges=0, dryRun=true,
+digestsEqual=true.
+
+### Next Step
+
+Phase 5.10A — Goal Application Snapshot Mutation Planning.
+
 ## 2026-07-03 — Phase 5.9B goal application dry-run fixture smoke
 
 Branch: `lab/pebblelab-v1`

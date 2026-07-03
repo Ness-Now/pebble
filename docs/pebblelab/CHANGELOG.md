@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added PebbleLab goal application dry-run hardening smoke.
 - Added PebbleLab goal application dry-run fixture smoke.
 - Documented PebbleLab goal application dry-run plan.
 - Added PebbleLab live cognitive loop controlled application hardening smoke.

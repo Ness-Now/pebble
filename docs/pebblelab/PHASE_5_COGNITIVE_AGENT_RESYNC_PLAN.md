@@ -787,3 +787,27 @@ unmutated, and `agents_basic` unchanged. Mood, relationships, communication,
 community state, embeddings, Python, LLM, and RL remain out of scope.
 
 The recommended next phase is Phase 5.9C - Goal Application Dry-Run Hardening.
+
+## Phase 5.9C Status
+
+Phase 5.9C implemented `goal_application_dry_run_hardening_smoke`, a
+fixture-only hardening layer for goal application dry-run.
+
+The scenario validates 27 hardening cases. It preserves the 5.9B baseline and
+covers eligible goal changes, no-op handling, unknown and not-allowed target
+goals, missing current/target/reason rejection, snapshot and dry-run
+rejection, goalChangeEligible false rejection, policy rejection, max goal
+changes rejection, audit-only deferral, deterministic order, bounded output,
+and digest repeatability.
+
+It emits `goalApplicationDryRunHardening*` metrics,
+`lab_goal_application_dry_run_hardening_recorded`, cases, policies, inputs,
+decisions, invariant reports, and a stable digest.
+
+It keeps `dryRun=true`, every applied goal change false, live agents
+unmutated, memory unmutated, movement stack unused, World/terrain unmutated,
+and `agents_basic` unchanged. Mood, relationships, communication, community
+state, embeddings, Python, LLM, and RL remain out of scope.
+
+The recommended next phase is Phase 5.10A - Goal Application Snapshot Mutation
+Planning.

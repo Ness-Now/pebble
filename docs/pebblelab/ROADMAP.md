@@ -4002,3 +4002,41 @@ writes, live memory updates, movement stack, World/terrain mutation, mood,
 relationships, LLM, and social systems remain out of scope.
 
 Next recommended step: Phase 5.9C - Goal Application Dry-Run Hardening.
+
+## Phase 5.9C - Goal Application Dry-Run Hardening
+
+Status: implemented and validated.
+
+Goal: harden the goal application dry-run layer before any future snapshot or
+live goal mutation path exists.
+
+Implemented scenario:
+
+- `goal_application_dry_run_hardening_smoke`.
+
+Validated runtime scope:
+
+- covers 27 hardening cases;
+- preserves compatibility with the Phase 5.9B fixture;
+- covers eligible `seekSafety`, `explore`, and `observeOtherAgent` goal
+  changes;
+- covers no-op allowed and no-op disallowed rejection;
+- covers unknown target goals and known-but-not-allowed target goals;
+- covers missing current goal, missing target goal, missing reason,
+  snapshot-not-read-only, dry-run false, goalChangeEligible false,
+  policy-disallows-goal-application, and max-goal-changes rejections;
+- covers audit-only deferred goal application;
+- audits `goalBefore`, `targetGoal`, `goalKnown`, and `goalChanged`;
+- keeps `appliedGoalChange=false` for every decision;
+- keeps `dryRun=true`, `liveAgentMutated=false`, `memoryMutated=false`,
+  `movementStackUsed=false`, `worldMutated=false`, and
+  `terrainMutated=false`;
+- emits `goalApplicationDryRunHardening*` metrics and
+  `lab_goal_application_dry_run_hardening_recorded`.
+
+Live `agents_basic` integration, live applied goal changes, actions, memory
+writes, live memory updates, movement stack, World/terrain mutation, mood,
+relationships, LLM, and social systems remain out of scope.
+
+Next recommended step: Phase 5.10A - Goal Application Snapshot Mutation
+Planning.
