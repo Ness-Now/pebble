@@ -767,3 +767,95 @@ Limitations:
 
 Next phase: Phase 5.8C - Live Cognitive Loop Controlled Application
 Hardening.
+
+## Phase 5.8C Implementation Status
+
+Scenario:
+
+- `live_cognitive_loop_controlled_application_hardening_smoke`.
+
+Cases:
+
+- 25 hardening cases;
+- baseline compatibility with the Phase 5.8B fixture;
+- goal/action/memory-write eligibility;
+- policy goal/action/memory rejection;
+- unknown goal/action rejection;
+- missing reason rejection;
+- snapshot-not-read-only rejection;
+- max applications and max memory writes rejection;
+- dry-run false rejection;
+- audit-only deferral;
+- no-write and unchanged-goal no-op coverage;
+- rejected/deferred reason presence;
+- applied flags zero;
+- no mutation boundaries;
+- deterministic order, bounded output, and digest repeatability.
+
+Policies:
+
+- eligibility-only policies remain dry-run;
+- audit-only policies defer decisions;
+- negative policies exercise denied goal/action/memory permissions and
+  rejected dry-run or snapshot states.
+
+Eligibilities:
+
+- `eligibleGoalChanges=1`;
+- `eligibleActions=1`;
+- `eligibleMemoryWrites=1`;
+- rejected applications and deferred applications are both covered.
+
+Controlled decisions:
+
+- every decision remains audit-only / eligibility-only;
+- no decision applies a goal, action, or memory write.
+
+Applied rules:
+
+- `appliedGoalChange=false`;
+- `appliedAction=false`;
+- `appliedMemoryWrite=false`;
+- `appliedAnything=false`.
+
+Outputs:
+
+- `controlled_application_hardening_report.json`;
+- `controlled_application_hardening_invariant_report.json`;
+- `controlled_application_hardening_cases.json`;
+- `controlled_application_hardening_policies.json`;
+- `controlled_application_hardening_eligibilities.json`;
+- `controlled_application_hardening_decisions.json`;
+- `controlled_application_hardening_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Metrics/events:
+
+- metrics use the `controlledApplicationHardening*` prefix;
+- the primary event is
+  `lab_controlled_application_hardening_recorded`.
+
+Boundary flags:
+
+- `dryRun=true`;
+- `liveAgentMutated=false`;
+- `memoryMutated=false`;
+- `movementStackUsed=false`;
+- `worldMutated=false`;
+- `terrainMutated=false`.
+
+Limitations:
+
+- no live `agents_basic` integration;
+- no live agent mutation;
+- no applied goal changes;
+- no applied actions;
+- no applied memory writes;
+- no live memory update;
+- no movement stack;
+- no World or terrain mutation;
+- no mood, relationships, communication, community state, Python, LLM,
+  embeddings, or RL.
+
+Next phase: Phase 5.9A - Goal Application Dry-Run Planning.

@@ -3893,3 +3893,40 @@ out of scope.
 
 Next recommended step: Phase 5.8C - Live Cognitive Loop Controlled Application
 Hardening.
+
+## Phase 5.8C - Live Cognitive Loop Controlled Application Hardening
+
+Status: implemented and validated.
+
+Goal: harden the eligibility-only controlled application layer with explicit
+edge cases before any future real application path exists.
+
+Implemented scenario:
+
+- `live_cognitive_loop_controlled_application_hardening_smoke`.
+
+Validated runtime scope:
+
+- covers 25 hardening cases;
+- preserves compatibility with the Phase 5.8B fixture;
+- covers goal, action, and memory-write eligibility;
+- covers policy goal/action/memory rejections;
+- covers unknown goal/action rejections, missing reason rejection,
+  snapshot-not-read-only rejection, max applications rejection, max memory
+  writes rejection, and dry-run false rejection;
+- covers audit-only deferred decisions, no-write no-op, unchanged-goal no-op,
+  rejected reason presence, and deferred reason presence;
+- keeps `appliedGoalChange=false`, `appliedAction=false`,
+  `appliedMemoryWrite=false`, and `appliedAnything=false`;
+- keeps `dryRun=true`, `liveAgentMutated=false`, `memoryMutated=false`,
+  `movementStackUsed=false`, `worldMutated=false`, and
+  `terrainMutated=false`;
+- emits `controlledApplicationHardening*` metrics,
+  `lab_controlled_application_hardening_recorded`, report, invariant, cases,
+  policies, eligibilities, decisions, and digest outputs.
+
+Live `agents_basic` integration, real applied goal changes, real actions,
+real memory writes, live memory updates, movement stack, World/terrain
+mutation, mood, relationships, LLM, and social systems remain out of scope.
+
+Next recommended step: Phase 5.9A - Goal Application Dry-Run Planning.

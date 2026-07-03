@@ -1,5 +1,71 @@
 # PebbleLab Development Journal
 
+## 2026-07-02 — Phase 5.8C live cognitive loop controlled application hardening smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Harden the eligibility-only controlled application layer with
+`live_cognitive_loop_controlled_application_hardening_smoke`.
+
+### Starting Point
+
+Phase 5.8B added `LabControlledApplication.swift` and the first controlled
+application fixture. It produced policies, inputs, eligibilities, controlled
+decisions, report, invariant, digest, `controlledApplication*` metrics, and
+`lab_controlled_application_recorded`, while keeping all applied flags false
+and all live mutation boundaries clean.
+
+### Implementation
+
+- Added hardening case/result/report/invariant/metrics/event helpers to
+  `LabControlledApplication.swift`.
+- Added `live_cognitive_loop_controlled_application_hardening_smoke`.
+- Covered baseline compatibility, goal/action/memory eligibility, policy
+  goal/action/memory rejections, unknown goal/action rejections, missing
+  reason rejection, snapshot-not-read-only rejection, max applications per tick
+  rejection, max memory writes per tick rejection, dry-run false rejection,
+  audit-only deferral, no-write no-op, unchanged-goal no-op, rejected/deferred
+  reason presence, deterministic order, bounded output, and digest
+  repeatability.
+- Kept every controlled decision eligibility-only: no applied goal change, no
+  applied action, no applied memory write, and `appliedAnything=false`.
+- Kept `dryRun=true`, `liveAgentMutated=false`, `memoryMutated=false`,
+  `movementStackUsed=false`, `worldMutated=false`, and `terrainMutated=false`.
+- Wrote hardening report, invariant report, cases, policies, eligibilities,
+  decisions, digest, metrics, and events.
+
+### Results
+
+- Cases: 25.
+- Inputs/eligibilities/decisions: 15/15/15.
+- Eligible goal/action/memory write decisions: 1/1/1.
+- Rejected/deferred applications: 10/1.
+- Applied goal/action/memory writes: 0/0/0.
+- `appliedAnything=false`.
+- `checksPassed=87`, `checksFailed=0`.
+
+### Validation
+
+Commands requested for this phase:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `swift run PebbleLab -- --scenario live_cognitive_loop_controlled_application_hardening_smoke --seed 42 --ticks 3 --out runs/check_controlled_application_hardening`;
+- debug non-regression runs for controlled application fixture, live adapter,
+  cognitive loop integration, behavior-loop memory-goal bridge, goal
+  selection, memory retrieval, memory update, behavior loop, `agents_basic`,
+  and `regression_smoke`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+### Next Step
+
+Phase 5.9A — Goal Application Dry-Run Planning.
+
 ## 2026-07-02 — Phase 5.8B live cognitive loop controlled application fixture smoke
 
 Branch: `lab/pebblelab-v1`

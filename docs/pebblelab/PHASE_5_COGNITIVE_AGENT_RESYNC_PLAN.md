@@ -717,3 +717,28 @@ embeddings, Python, LLM, and RL remain out of scope.
 
 The recommended next phase is Phase 5.8C - Live Cognitive Loop Controlled
 Application Hardening.
+
+## Phase 5.8C Status
+
+Phase 5.8C implemented
+`live_cognitive_loop_controlled_application_hardening_smoke`, a fixture-only
+hardening layer for controlled application eligibility.
+
+The scenario validates 25 hardening cases. It preserves the 5.8B baseline and
+covers goal, action, and memory-write eligibility; policy goal/action/memory
+rejection; unknown goal/action rejection; missing reason rejection;
+snapshot-not-read-only rejection; max applications and max memory writes
+rejections; dry-run false rejection; audit-only deferral; no-write no-op;
+unchanged-goal no-op; reason presence; deterministic order; bounded output;
+and digest repeatability.
+
+It emits `controlledApplicationHardening*` metrics,
+`lab_controlled_application_hardening_recorded`, cases, policies,
+eligibilities, decisions, invariant reports, and a stable digest.
+
+It keeps `dryRun=true`, every applied flag false, live agents unmutated,
+memory unmutated, movement stack unused, World/terrain unmutated, and
+`agents_basic` unchanged. Mood, relationships, communication, community state,
+embeddings, Python, LLM, and RL remain out of scope.
+
+The recommended next phase is Phase 5.9A - Goal Application Dry-Run Planning.
