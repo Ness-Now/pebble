@@ -118,6 +118,8 @@ let isCognitiveLoopIntegrationScenario = options.scenario
     == cognitiveLoopIntegrationScenarioName
 let isCognitiveLoopIntegrationHardeningScenario = options.scenario
     == cognitiveLoopIntegrationHardeningScenarioName
+let isLiveCognitiveLoopAdapterScenario = options.scenario
+    == liveCognitiveLoopAdapterScenarioName
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -171,7 +173,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isBehaviorLoopMemoryGoalBridgeScenario
     || isBehaviorLoopMemoryGoalBridgeHardeningScenario
     || isCognitiveLoopIntegrationScenario
-    || isCognitiveLoopIntegrationHardeningScenario)
+    || isCognitiveLoopIntegrationHardeningScenario
+    || isLiveCognitiveLoopAdapterScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -854,7 +857,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isBehaviorLoopMemoryGoalBridgeScenario
     || isBehaviorLoopMemoryGoalBridgeHardeningScenario
     || isCognitiveLoopIntegrationScenario
-    || isCognitiveLoopIntegrationHardeningScenario {
+    || isCognitiveLoopIntegrationHardeningScenario
+    || isLiveCognitiveLoopAdapterScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -4231,6 +4235,21 @@ let cognitiveLoopIntegrationHardeningFixture: LabCognitiveLoopIntegrationHardeni
 let cognitiveLoopIntegrationHardeningSuccess = cognitiveLoopIntegrationHardeningFixture.map {
     $0.report.success && $0.invariantReport.success
 }
+let liveCognitiveLoopAdapterFixture: LabLiveCognitiveLoopAdapterFixture? = {
+    guard isLiveCognitiveLoopAdapterScenario else { return nil }
+    do {
+        return try makeLiveCognitiveLoopAdapterFixture(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticks: ticksCompleted
+        )
+    } catch {
+        fail("failed to build live cognitive loop adapter fixture: \(error)")
+    }
+}()
+let liveCognitiveLoopAdapterSuccess = liveCognitiveLoopAdapterFixture.map {
+    $0.report.success && $0.invariantReport.success
+}
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
     && successCriteria.agentTicksRecorded
@@ -4315,6 +4334,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (behaviorLoopMemoryGoalBridgeHardeningSuccess ?? true)
     && (cognitiveLoopIntegrationSuccess ?? true)
     && (cognitiveLoopIntegrationHardeningSuccess ?? true)
+    && (liveCognitiveLoopAdapterSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -8309,6 +8329,29 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("cognitive_loop_integration_hardening_digest.json")
             )
         }
+        if let liveCognitiveLoopAdapterFixture {
+            appendEventLines(liveCognitiveLoopAdapterFixture.eventLines)
+            try writeJSON(
+                liveCognitiveLoopAdapterFixture.report,
+                to: outURL.appendingPathComponent("live_cognitive_loop_adapter_report.json")
+            )
+            try writeJSON(
+                liveCognitiveLoopAdapterFixture.invariantReport,
+                to: outURL.appendingPathComponent("live_cognitive_loop_adapter_invariant_report.json")
+            )
+            try writeJSON(
+                liveCognitiveLoopAdapterFixture.snapshots,
+                to: outURL.appendingPathComponent("live_cognitive_loop_adapter_snapshots.json")
+            )
+            try writeJSON(
+                liveCognitiveLoopAdapterFixture.applicationPlans,
+                to: outURL.appendingPathComponent("live_cognitive_loop_adapter_application_plans.json")
+            )
+            try writeJSON(
+                liveCognitiveLoopAdapterFixture.digest,
+                to: outURL.appendingPathComponent("live_cognitive_loop_adapter_digest.json")
+            )
+        }
         if let multiTickClosedLoopReport {
             try writeJSON(
                 multiTickClosedLoopReport,
@@ -10269,7 +10312,12 @@ if let outPath = options.outPath {
             routeFollowingLiveHardeningSuccess: routeFollowingLiveHardeningSuccess,
             successCriteria: successCriteria
         )
-        if let cognitiveLoopIntegrationHardeningFixture {
+        if let liveCognitiveLoopAdapterFixture {
+            try writeJSON(
+                liveCognitiveLoopAdapterFixture.metrics,
+                to: outURL.appendingPathComponent("metrics.json")
+            )
+        } else if let cognitiveLoopIntegrationHardeningFixture {
             try writeJSON(
                 cognitiveLoopIntegrationHardeningFixture.metrics,
                 to: outURL.appendingPathComponent("metrics.json")

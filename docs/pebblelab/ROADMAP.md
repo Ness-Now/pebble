@@ -3741,3 +3741,41 @@ Validated scope:
 - no scenario added.
 
 Next recommended step: Phase 5.7B - Live Cognitive Loop Adapter Fixture Smoke.
+
+## Phase 5.7B - Live Cognitive Loop Adapter Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: create the first adapter-only dry-run fixture that reads live-like agent
+state into read-only snapshots and emits safe application plans without
+mutating live agents.
+
+Implemented as `live_cognitive_loop_adapter_fixture_smoke`.
+
+Validated scope:
+
+- creates five live-like adapter agents for safety, curiosity, nearby-agent
+  observation, unchanged goal continuity, and no-write empty memory;
+- writes read-only snapshots and dry-run application plans;
+- covers `wouldChangeGoal`, `wouldSelectAction`, and `wouldWriteMemory`;
+- keeps `appliedGoalChange=0`, `appliedAction=0`, and
+  `appliedMemoryWrite=0`;
+- emits `liveCognitiveLoopAdapter*` metrics and
+  `lab_live_cognitive_loop_adapter_recorded` events;
+- writes `live_cognitive_loop_adapter_report.json`,
+  `live_cognitive_loop_adapter_invariant_report.json`,
+  `live_cognitive_loop_adapter_snapshots.json`,
+  `live_cognitive_loop_adapter_application_plans.json`, and
+  `live_cognitive_loop_adapter_digest.json`;
+- keeps `dryRun=true`;
+- keeps `liveAgentMutated=false`;
+- keeps `memoryMutated=false`;
+- keeps `movementStackUsed=false`;
+- keeps `worldMutated=false` and `terrainMutated=false`;
+- leaves `agents_basic` live runtime behavior unchanged.
+
+Live `agents_basic` integration, applied goal changes, applied actions,
+applied memory writes, mood, relationships, LLM, social memory, and movement
+stack feedback remain out of scope.
+
+Next recommended step: Phase 5.7C - Live Cognitive Loop Adapter Hardening.

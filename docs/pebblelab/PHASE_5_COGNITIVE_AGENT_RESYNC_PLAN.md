@@ -609,3 +609,31 @@ embeddings, Python, LLM, or RL.
 
 The recommended next phase is Phase 5.7B - Live Cognitive Loop Adapter Fixture
 Smoke.
+
+## Phase 5.7B Status
+
+Phase 5.7B implemented `live_cognitive_loop_adapter_fixture_smoke`, the first
+adapter-only dry-run smoke for the future live cognitive loop boundary.
+
+The scenario creates five live-like adapter agents, extracts read-only
+snapshots, builds cognitive-loop-compatible inputs, and emits dry-run
+application plans. It covers safety -> `seekSafety`, curiosity -> `explore`,
+nearby observation -> `observeOtherAgent`, unchanged `explore` continuity, and
+an `idle` no-write plan.
+
+The scenario records `wouldChangeGoal`, `wouldSelectAction`, and
+`wouldWriteMemory` coverage while keeping `appliedGoalChange=0`,
+`appliedAction=0`, and `appliedMemoryWrite=0`.
+
+It emits `liveCognitiveLoopAdapter*` metrics,
+`lab_live_cognitive_loop_adapter_recorded` events, snapshots, application
+plans, invariant reports, and a stable digest.
+
+It does not mutate live agents, mutate live memory, write live memory, apply
+selected goals, apply selected actions, use the movement stack, create or
+mutate a World, mutate terrain, alter `agents_basic`, add iterative cognition,
+mood, relationships, communication, community state, embeddings, Python, LLM,
+or RL.
+
+The recommended next phase is Phase 5.7C - Live Cognitive Loop Adapter
+Hardening.

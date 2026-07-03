@@ -630,3 +630,78 @@ Future outputs:
 - `swift build -c release --product Pebble` passes;
 - `git diff --check` passes;
 - next phase 5.7B is clearly specified.
+
+## Phase 5.7B Implementation Status
+
+Phase 5.7B implemented the adapter-only dry-run scenario
+`live_cognitive_loop_adapter_fixture_smoke`.
+
+Snapshots:
+
+- five live-like adapter agents are represented;
+- each produces a read-only adapter snapshot;
+- snapshots include agent id/type, position summary, current goal, needs
+  summary, fear, health, memory count, nearby-agent count, observation
+  availability, and `snapshotReadOnly=true`.
+
+Application plans:
+
+- safety dry-run computes `seekSafety` / `seekSafety`;
+- curiosity dry-run computes `explore` / `explore`;
+- nearby-agent dry-run computes `observeOtherAgent` / `observeAgent`;
+- unchanged-goal dry-run keeps `explore`;
+- no-write dry-run keeps `idle` and proposes zero memory writes.
+
+Dry-run rules:
+
+- `dryRun=true`;
+- `appliedGoalChange=false`;
+- `appliedAction=false`;
+- `appliedMemoryWrite=false`;
+- `liveAgentMutated=false`;
+- `memoryMutated=false`;
+- `movementStackUsed=false`;
+- `worldMutated=false`;
+- `terrainMutated=false`.
+
+Report:
+
+- agents: 5;
+- snapshots: 5;
+- decisions: 5;
+- application plans: 5;
+- `wouldChangeGoals`: 3;
+- `wouldSelectActions`: 5;
+- `wouldWriteMemories`: 4;
+- applied goal/action/memory counts: 0/0/0.
+
+Outputs:
+
+- `live_cognitive_loop_adapter_report.json`;
+- `live_cognitive_loop_adapter_invariant_report.json`;
+- `live_cognitive_loop_adapter_snapshots.json`;
+- `live_cognitive_loop_adapter_application_plans.json`;
+- `live_cognitive_loop_adapter_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Metrics/events:
+
+- metrics use the `liveCognitiveLoopAdapter*` prefix;
+- the primary event is `lab_live_cognitive_loop_adapter_recorded`;
+- a summary event `lab_live_cognitive_loop_adapter_summary_recorded` is also
+  emitted.
+
+Limitations:
+
+- no live `agents_basic` integration;
+- no live agent mutation;
+- no live memory write or mutation;
+- no applied goal changes;
+- no applied actions;
+- no movement stack;
+- no World or terrain mutation;
+- no mood, relationships, communication, social memory, Python, LLM,
+  embeddings, or RL.
+
+Next phase: Phase 5.7C - Live Cognitive Loop Adapter Hardening.
