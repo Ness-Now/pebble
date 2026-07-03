@@ -667,3 +667,36 @@ Phase 5.13B implemented the planned guarded fixture:
 - limitations: no `agents_basic` live application, no action application, no
   memory write, no movement stack, no World or terrain mutation;
 - next phase: Phase 5.13C - Agents Basic Goal Integration Guarded Hardening.
+
+## Phase 5.13C Implementation Status
+
+Phase 5.13C implemented the planned guarded hardening fixture:
+
+- scenario: `agents_basic_goal_integration_guarded_hardening_smoke`;
+- cases: 32 hardening cases covering baseline compatibility, safety/explore/
+  observe candidates, no-op allowed, no-op rejected, unknown target, target not
+  allowed, missing `agents_basic` goal, missing target, missing reason,
+  `appliedToFakeLive=false`, `fakeLiveGoalChanged=false`, prior
+  `appliedToAgentsBasic`, prior `agentsBasicTouched`, prior runtime touch,
+  prior rejected/deferred reasons, policy disallow, dedicated scenario false,
+  max applications, audit-only deferred, audit presence, boundary flags,
+  deterministic order, bounded shape, and digest repeatability;
+- policies: guarded dry-run, no-op, target allow-list, policy disallow,
+  audit-only, and max-application rejection;
+- inputs: 21 hardening inputs;
+- decisions: 21 candidate-only decisions;
+- candidate-only integration: `wouldApplyToAgentsBasic` can be true, but
+  `appliedToAgentsBasic` remains zero;
+- boundary flags: `agentsBasicTouched=false`,
+  `runtimeBehaviorChanged=false`, `memoryMutated=false`,
+  `movementStackUsed=false`, `worldMutated=false`, and
+  `terrainMutated=false`;
+- report: `agents_basic_goal_integration_hardening_report.json`;
+- invariant: `agents_basic_goal_integration_hardening_invariant_report.json`;
+- digest: `agents_basic_goal_integration_hardening_digest.json`;
+- metrics: `agentsBasicGoalIntegrationHardening*`;
+- events: `lab_agents_basic_goal_integration_hardening_recorded`;
+- limitations: no effective `agents_basic` live application, no action
+  application, no memory write, no movement stack, no World or terrain
+  mutation;
+- next phase: Phase 5.14A - Agents Basic Goal Apply Planning.

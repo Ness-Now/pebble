@@ -1,5 +1,93 @@
 # PebbleLab Development Journal
 
+## 2026-07-03 — Phase 5.13C agents_basic goal integration guarded hardening smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Harden `LabAgentsBasicGoalIntegration.swift` with
+`agents_basic_goal_integration_guarded_hardening_smoke`, a candidate-only
+fixture that covers the main edge cases around future `agents_basic` goal
+integration while preserving the normal runtime.
+
+### Starting Point
+
+Phase 5.13B added `agents_basic_goal_integration_guarded_fixture_smoke` with
+16 agents, 16 inputs, 16 decisions, two eligible/would-apply candidates, one
+no-op, 12 rejected decisions, one deferred decision,
+`appliedToAgentsBasic=0`, `agentsBasicTouched=false`,
+`runtimeBehaviorChanged=false`, clean mutation boundaries, and digest
+`adbc23059305d2b8`.
+
+### Implementation
+
+- Added `agents_basic_goal_integration_guarded_hardening_smoke`.
+- Reused `LabAgentsBasicGoalIntegrationPolicy`,
+  `LabAgentsBasicGoalIntegrationInput`, `LabAgentsBasicGoalIntegrationDecision`,
+  and the existing decision helper.
+- Added hardening case, case result, report, invariant report, metrics, event,
+  and digest helpers.
+- Covered 32 hardening cases: baseline compatibility, safety/explore/observe
+  candidates, no-op allowed, no-op rejected, unknown target, target not allowed,
+  missing `agents_basic` goal, missing target, missing reason,
+  `appliedToFakeLive=false`, `fakeLiveGoalChanged=false`, prior
+  `appliedToAgentsBasic`, prior `agentsBasicTouched`, prior runtime touch,
+  prior rejected/deferred reasons, policy disallow, dedicated scenario false,
+  max applications, audit-only deferred, rejected/deferred reason presence,
+  before/target/candidate audit, zero application, untouched runtime,
+  mutation boundaries, bounded shape, deterministic order, and digest
+  repeatability.
+- Produced 21 policies, 21 inputs, and 21 decisions.
+- Recorded `agentsBasicApplyEligible=3`, `wouldApplyToAgentsBasic=3`,
+  `agentsBasicGoalWouldChange=17`, one no-op, 16 rejected decisions, and one
+  deferred decision.
+- Kept `appliedToAgentsBasic=0`, `agentsBasicTouched=false`,
+  `runtimeBehaviorChanged=false`, `memoryMutated=false`,
+  `movementStackUsed=false`, `worldMutated=false`, and `terrainMutated=false`.
+- Added `agentsBasicGoalIntegrationHardening*` metrics and
+  `lab_agents_basic_goal_integration_hardening_recorded`.
+
+### Outputs
+
+- `agents_basic_goal_integration_hardening_report.json`;
+- `agents_basic_goal_integration_hardening_invariant_report.json`;
+- `agents_basic_goal_integration_hardening_cases.json`;
+- `agents_basic_goal_integration_hardening_policies.json`;
+- `agents_basic_goal_integration_hardening_inputs.json`;
+- `agents_basic_goal_integration_hardening_decisions.json`;
+- `agents_basic_goal_integration_hardening_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+### Validation
+
+Commands:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `swift run PebbleLab -- --scenario agents_basic_goal_integration_guarded_hardening_smoke --seed 42 --ticks 3 --out runs/check_agents_basic_goal_integration_hardening`;
+- requested cognitive and goal-application non-regression scenarios;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results:
+
+- `swift build` passed.
+- `swift build -c release --product Pebble` passed.
+- The hardening scenario and requested debug non-regressions passed.
+- `swift run -c release pebsmoke` passed with 456 passed, 0 failed.
+- `git diff --check` and `git diff --cached --check` passed.
+- `swift run -c release PebbleLab -- --scenario agents_basic_goal_integration_guarded_hardening_smoke --seed 42 --ticks 3 --out runs/check_agents_basic_goal_integration_hardening_release`
+  was attempted and interrupted after a local silence limit; no Swift child
+  process remained.
+
+### Next Step
+
+Phase 5.14A — Agents Basic Goal Apply Planning.
+
 ## 2026-07-03 — Phase 5.13B agents_basic goal integration guarded fixture smoke
 
 Branch: `lab/pebblelab-v1`

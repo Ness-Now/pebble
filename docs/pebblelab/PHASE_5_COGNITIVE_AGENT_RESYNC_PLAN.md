@@ -1074,3 +1074,27 @@ The normal `agents_basic` runtime remains unchanged.
 
 The recommended next phase is Phase 5.13C - Agents Basic Goal Integration
 Guarded Hardening.
+
+## Phase 5.13C Status
+
+Phase 5.13C implemented
+`agents_basic_goal_integration_guarded_hardening_smoke`, a candidate-only
+hardening fixture for the guarded bridge from fake-live goal application
+evidence toward `agents_basic`.
+
+The scenario covers 32 hardening cases, 21 policies, 21 inputs, and 21
+decisions. It covers baseline compatibility with 5.13B, safety/explore/observe
+`agents_basic` candidates, no-op allowed, no-op rejected, unknown target,
+target not allowed, missing `agents_basic` goal, missing target, missing
+reason, `appliedToFakeLive=false`, `fakeLiveGoalChanged=false`, prior
+`appliedToAgentsBasic`, prior `agentsBasicTouched`, prior runtime touch, prior
+rejected/deferred reasons, policy disallow, dedicated scenario false, max
+applications, and audit-only deferred behavior.
+
+It emits `agentsBasicGoalIntegrationHardening*` metrics and
+`lab_agents_basic_goal_integration_hardening_recorded`, while keeping
+`appliedToAgentsBasic=0`, `agentsBasicTouched=false`,
+`runtimeBehaviorChanged=false`, `memoryMutated=false`,
+`movementStackUsed=false`, `worldMutated=false`, and `terrainMutated=false`.
+
+The recommended next phase is Phase 5.14A - Agents Basic Goal Apply Planning.

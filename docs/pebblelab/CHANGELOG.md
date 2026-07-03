@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added PebbleLab agents_basic goal integration guarded hardening smoke.
 - Added PebbleLab agents_basic goal integration guarded fixture smoke.
 - Documented PebbleLab agents_basic goal integration plan.
 - Added PebbleLab fake-live goal application hardening smoke.

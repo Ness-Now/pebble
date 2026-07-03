@@ -4408,3 +4408,38 @@ scope.
 
 Next recommended step: Phase 5.13C - Agents Basic Goal Integration Guarded
 Hardening.
+
+## Phase 5.13C - Agents Basic Goal Integration Guarded Hardening
+
+Status: implemented and validated.
+
+Implemented scenario:
+
+- `agents_basic_goal_integration_guarded_hardening_smoke`.
+
+Validated fixture scope:
+
+- hardens the guarded `agents_basic` integration candidate layer;
+- covers 32 hardening cases;
+- covers baseline compatibility with 5.13B;
+- covers safety, explore, and observe `agents_basic` candidates;
+- covers no-op allowed and no-op rejected;
+- covers unknown target, target not allowed, missing `agents_basic` goal,
+  missing target, missing reason, `appliedToFakeLive=false`,
+  `fakeLiveGoalChanged=false`, prior `appliedToAgentsBasic`, prior
+  `agentsBasicTouched`, prior runtime touch, prior rejected/deferred reasons,
+  policy disallow, dedicated scenario false, and max application rejection;
+- covers audit-only deferred;
+- keeps `appliedToAgentsBasic=0`;
+- keeps `agentsBasicTouched=false`;
+- keeps `runtimeBehaviorChanged=false`;
+- keeps memory, movement stack, World, and terrain untouched;
+- keeps normal `agents_basic` runtime behavior unchanged;
+- emits `agentsBasicGoalIntegrationHardening*` metrics and
+  `lab_agents_basic_goal_integration_hardening_recorded`.
+
+Effective `agents_basic` live application, actions, memory writes, mood,
+relationships, LLM, Python, embeddings, RL, and movement stack remain out of
+scope.
+
+Next recommended step: Phase 5.14A - Agents Basic Goal Apply Planning.
