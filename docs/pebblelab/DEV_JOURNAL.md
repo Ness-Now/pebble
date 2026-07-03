@@ -13901,3 +13901,95 @@ PebbleCore files were modified. `swift build`, `swift build -c release
 `pebsmoke` was not run because this phase is docs-only.
 
 Next step: Phase 5.5B — Behavior Loop Memory-Goal Bridge Fixture Smoke.
+
+## 2026-07-03 — Phase 5.14A agents_basic goal apply planning
+
+Objective: define the docs-only contract for the first real, guarded goal
+application into `agents_basic`, without implementing the runtime scenario in
+this phase.
+
+Starting point: branch `lab/pebblelab-v1`, commit
+`b8a07cbb1c6cc591a4320658e97fb1294100e590`, with Phase 5.13C complete.
+Phase 5.13C validated
+`agents_basic_goal_integration_guarded_hardening_smoke` as candidate-only
+evidence: 32 cases, 32 passed, 21 inputs/decisions,
+`agentsBasicApplyEligible=3`, `wouldApplyToAgentsBasic=3`,
+`appliedToAgentsBasic=0`, `agentsBasicGoalWouldChange=17`, 16 rejected
+decisions, 1 deferred decision, digest `701e6b3c6278c27a`, and `pebsmoke`
+456 passed, 0 failed.
+
+New document:
+
+- `PHASE_5_14A_AGENTS_BASIC_GOAL_APPLY_PLAN.md`.
+
+Planning contract:
+
+- Phase 5.14B must implement
+  `agents_basic_goal_apply_guarded_fixture_smoke`;
+- Phase 5.14B must produce `appliedToAgentsBasic > 0`;
+- Phase 5.14B must produce `agentsBasicGoalChanged > 0`;
+- Phase 5.14B must not be candidate-only, dry-run-only, or another
+  `wouldApply` layer;
+- Phase 5.14C may harden the apply only after 5.14B proves a real guarded
+  apply.
+
+Future apply rule: the only allowed mutation is `LabAgent.currentGoal` on
+targeted `agents_basic` agents. The future fixture must record before/after
+snapshots, count `appliedToAgentsBasic`, count `agentsBasicGoalChanged`, set
+`runtimeBehaviorChanged=true` only for the controlled goal apply, and prove
+that every forbidden boundary remains unchanged.
+
+Future boundaries:
+
+- no selectedAction application;
+- no action execution;
+- no behavior loop multi-pass;
+- no movement stack call;
+- no movement intent;
+- no route following;
+- no live pathfinding;
+- no reservation runtime;
+- no dynamic replanning;
+- no memory write or memory mutation;
+- no World mutation;
+- no terrain mutation;
+- no physical placeholder creation or movement;
+- no Core entity creation or movement;
+- no renderer, shader, resource, registry, save/load, golden, or PebbleCore
+  change.
+
+Roadmap and resync notes: `ROADMAP.md` was already more current than
+`PHASE_5_COGNITIVE_AGENT_RESYNC_PLAN.md` for 5.13C. This phase lightly
+resynchronized the resync plan with 5.13B, 5.13C, and 5.14A, without rewriting
+the whole roadmap. It also recorded that `main.swift` is now a giant scenario
+router/output writer, but that router cleanup should wait until after the
+first applied `agents_basic` goal evidence.
+
+Files created or modified:
+
+- `docs/pebblelab/PHASE_5_14A_AGENTS_BASIC_GOAL_APPLY_PLAN.md`;
+- `docs/pebblelab/CHANGELOG.md`;
+- `docs/pebblelab/DEV_JOURNAL.md`;
+- `docs/pebblelab/ROADMAP.md`;
+- `docs/pebblelab/PHASE_5_COGNITIVE_AGENT_RESYNC_PLAN.md`;
+- `docs/pebblelab/PHASE_5_13A_AGENTS_BASIC_GOAL_INTEGRATION_PLAN.md`.
+
+Validation commands:
+
+- `git status`;
+- `git branch --show-current`;
+- `git pull origin lab/pebblelab-v1`;
+- `git log --oneline -12`;
+- `git diff --check`;
+- `git diff --cached --check`;
+- `swift build`;
+- `swift build -c release --product Pebble`.
+
+Expected result: docs-only changes should leave Swift behavior unchanged.
+`pebsmoke` is not required for Phase 5.14A because no runtime scenario,
+runtime metric, runtime event, PebbleCore, movement stack, renderer, resource,
+registry, save/load, or golden changed.
+
+Next step: Phase 5.14B — Agents Basic Goal Apply Guarded Fixture Smoke.
+It must implement `agents_basic_goal_apply_guarded_fixture_smoke` and produce
+`appliedToAgentsBasic > 0`.

@@ -4443,3 +4443,38 @@ relationships, LLM, Python, embeddings, RL, and movement stack remain out of
 scope.
 
 Next recommended step: Phase 5.14A - Agents Basic Goal Apply Planning.
+
+## Phase 5.14A - Agents Basic Goal Apply Planning
+
+Status: implemented and validated as docs-only planning.
+
+Goal: prepare the first real, guarded `agents_basic` goal application without
+implementing runtime apply behavior in this phase.
+
+Implemented document:
+
+- `PHASE_5_14A_AGENTS_BASIC_GOAL_APPLY_PLAN.md`.
+
+Validated planning scope:
+
+- records Phase 5.13C as candidate-only evidence with
+  `agentsBasicApplyEligible=3`, `wouldApplyToAgentsBasic=3`, and
+  `appliedToAgentsBasic=0`;
+- states that `would apply` is no longer sufficient after 5.14A;
+- requires Phase 5.14B to implement the opt-in scenario
+  `agents_basic_goal_apply_guarded_fixture_smoke`;
+- requires Phase 5.14B to produce `appliedToAgentsBasic > 0` and
+  `agentsBasicGoalChanged > 0`;
+- limits the future allowed mutation to `LabAgent.currentGoal` on targeted
+  `agents_basic` agents;
+- keeps actions, selectedAction application, memory writes, movement stack,
+  route following, live pathfinding, World mutation, terrain mutation,
+  physical placeholders, Core entities, renderer, resources, registries,
+  save/load, goldens, Python, LLM, embeddings, and RL out of scope;
+- records `main.swift` router debt, but defers cleanup until after the first
+  applied `agents_basic` goal evidence.
+
+Next recommended step: Phase 5.14B - Agents Basic Goal Apply Guarded Fixture
+Smoke. It must implement `agents_basic_goal_apply_guarded_fixture_smoke` and
+must produce `appliedToAgentsBasic > 0`; it must not be candidate-only or
+dry-run-only.

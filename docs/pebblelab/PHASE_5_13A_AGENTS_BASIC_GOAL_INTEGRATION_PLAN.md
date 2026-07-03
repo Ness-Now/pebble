@@ -700,3 +700,21 @@ Phase 5.13C implemented the planned guarded hardening fixture:
   application, no memory write, no movement stack, no World or terrain
   mutation;
 - next phase: Phase 5.14A - Agents Basic Goal Apply Planning.
+
+## Next Apply Planning
+
+Phase 5.14A is implemented as
+`PHASE_5_14A_AGENTS_BASIC_GOAL_APPLY_PLAN.md`. It closes the candidate-only
+planning loop and makes the next runtime step explicit.
+
+After 5.14A, the next phase must be Phase 5.14B - Agents Basic Goal Apply
+Guarded Fixture Smoke, with scenario
+`agents_basic_goal_apply_guarded_fixture_smoke`. Phase 5.14B must perform a
+real guarded apply to `agents_basic` and produce `appliedToAgentsBasic > 0`.
+It must not be another candidate-only bridge, dry run, or `wouldApply` layer.
+
+The future apply is limited to `LabAgent.currentGoal` on targeted
+`agents_basic` agents. Actions, selectedAction application, memory writes,
+movement stack usage, route following, live pathfinding, World mutation,
+terrain mutation, physical placeholder movement, and Core entity movement
+remain forbidden.

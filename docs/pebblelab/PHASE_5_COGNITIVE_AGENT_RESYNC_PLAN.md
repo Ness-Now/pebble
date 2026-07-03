@@ -1098,3 +1098,28 @@ It emits `agentsBasicGoalIntegrationHardening*` metrics and
 `movementStackUsed=false`, `worldMutated=false`, and `terrainMutated=false`.
 
 The recommended next phase is Phase 5.14A - Agents Basic Goal Apply Planning.
+
+## Phase 5.14A Status
+
+Phase 5.14A is implemented as
+`PHASE_5_14A_AGENTS_BASIC_GOAL_APPLY_PLAN.md`, a docs-only plan for the first
+real, guarded goal apply into `agents_basic`.
+
+This lightly resynchronizes the resync plan with the already validated
+5.13B/5.13C state: Phase 5.13B and 5.13C proved candidate-only eligibility for
+`agents_basic`, including 5.13C evidence of `agentsBasicApplyEligible=3`,
+`wouldApplyToAgentsBasic=3`, `appliedToAgentsBasic=0`,
+`agentsBasicGoalWouldChange=17`, 16 rejected decisions, 1 deferred decision,
+and digest `701e6b3c6278c27a`.
+
+The plan states that `wouldApplyToAgentsBasic` is no longer enough. The next
+runtime proof must be a bounded mutation of `LabAgent.currentGoal` for targeted
+`agents_basic` agents in a strict opt-in scenario, while preserving memory,
+movement stack, World, terrain, physical placeholders, Core entities, and
+normal `agents_basic` behavior.
+
+The recommended next phase is Phase 5.14B - Agents Basic Goal Apply Guarded
+Fixture Smoke. It must implement
+`agents_basic_goal_apply_guarded_fixture_smoke`, must produce
+`appliedToAgentsBasic > 0` and `agentsBasicGoalChanged > 0`, and must not be
+candidate-only or dry-run-only.
