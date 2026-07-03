@@ -683,3 +683,96 @@ Limitations:
 Next phase:
 
 - Phase 5.11C — Live Goal Application Guarded Hardening.
+
+## Phase 5.11C Implementation Status
+
+Phase 5.11C implemented `live_goal_application_guarded_hardening_smoke`.
+
+Scenario:
+
+- `live_goal_application_guarded_hardening_smoke`.
+
+Cases:
+
+- 32 hardening cases;
+- 5.11B baseline compatibility;
+- eligible safety, explore, and observe candidates;
+- no-op allowed and no-op disallowed;
+- unknown target, target not allowed, missing live goal, missing original live
+  goal, missing target, missing reason, live goal mismatch, prior
+  applied/rejected/deferred reasons, missing snapshot application, unchanged
+  snapshot for non-noop, policy disallow, dedicated scenario false, max live
+  applications, and audit-only deferred;
+- aggregate checks for rejected/deferred reasons, audit fields,
+  `appliedToLive=0`, no mutation boundaries, deterministic order, bounded
+  shape, and digest repeatability.
+
+Policies:
+
+- default `live_goal_guarded_dry_run`;
+- `live_goal_audit_only` deferred mode;
+- no-op allowed policy;
+- allowed-goal restriction policy;
+- live application disallow policy;
+- dedicated-scenario rejection policy;
+- max live applications rejection policy.
+
+Inputs:
+
+- 35 inputs including the reused 5.11B baseline inputs;
+- stable order by tick and agent id.
+
+Decisions:
+
+- 35 decisions;
+- five `liveApplyEligible=true`;
+- five `wouldApplyToLive=true`;
+- 29 live-goal-would-change decisions;
+- two live no-ops;
+- 26 rejected live applications;
+- two deferred live applications;
+- `appliedToLive=0`.
+
+Guarded live goal application:
+
+- produces guarded candidates only;
+- does not apply to live agents;
+- keeps `liveAgentMutated=false`;
+- records `agentsBasicTouched=false`.
+
+Report:
+
+- `live_goal_application_hardening_report.json`.
+
+Invariant:
+
+- `live_goal_application_hardening_invariant_report.json`;
+- 95 checks passed, 0 failed.
+
+Digest:
+
+- `live_goal_application_hardening_digest.json`;
+- digest `da4f68cecea2990a`;
+- digest repeat equals digest.
+
+Metrics:
+
+- `liveGoalApplicationHardening*`.
+
+Events:
+
+- `lab_live_goal_application_hardening_recorded`.
+
+Limitations:
+
+- no `agents_basic` integration;
+- no live applied goal changes;
+- no action application;
+- no memory write application;
+- no movement stack;
+- no World or terrain mutation;
+- no mood, relationships, LLM, Python, embeddings, or RL.
+
+Next phase:
+
+- Phase 5.12A — Fake-Live Goal Application Planning.

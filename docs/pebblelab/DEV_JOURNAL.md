@@ -1,5 +1,85 @@
 # PebbleLab Development Journal
 
+## 2026-07-03 — Phase 5.11C guarded live goal application hardening smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Harden `LabLiveGoalApplication.swift` with
+`live_goal_application_guarded_hardening_smoke`, a fixture-only scenario for
+guarded live goal application candidates.
+
+### Starting Point
+
+Phase 5.11B added the guarded live goal application fixture with 14 inputs,
+14 decisions, two eligible/would-apply candidates, one no-op, 10 rejected
+applications, one deferred application, `appliedToLive=0`, and
+`agentsBasicTouched=false`.
+
+### Implementation
+
+- Added `live_goal_application_guarded_hardening_smoke`.
+- Reused the 5.11B fixture as `baseline_fixture_compatible`.
+- Added 32 hardening case results covering policies, inputs, decisions,
+  `liveApplyEligible`, `wouldApplyToLive`, live goal would-change, no-op
+  allowed/disallowed, rejected and deferred decisions, and audit fields.
+- Covered unknown target, target not allowed, missing live goal, missing
+  original live goal, missing target, missing reason, live goal mismatch,
+  prior applied-to-live, prior rejected/deferred reasons,
+  `appliedToSnapshot=false`, `snapshotGoalChanged=false`, policy disallow,
+  dedicated scenario false, and max live applications.
+- Added hardening report, invariant report, cases, policies, inputs,
+  decisions, digest, `liveGoalApplicationHardening*` metrics, and
+  `lab_live_goal_application_hardening_recorded`.
+- Kept `appliedToLive=0`, `liveAgentMutated=false`,
+  `agentsBasicTouched=false`, `memoryMutated=false`,
+  `movementStackUsed=false`, `worldMutated=false`, and
+  `terrainMutated=false`.
+
+### Outputs
+
+- `live_goal_application_hardening_report.json`;
+- `live_goal_application_hardening_invariant_report.json`;
+- `live_goal_application_hardening_cases.json`;
+- `live_goal_application_hardening_policies.json`;
+- `live_goal_application_hardening_inputs.json`;
+- `live_goal_application_hardening_decisions.json`;
+- `live_goal_application_hardening_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+### Validation
+
+Commands:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `swift run PebbleLab -- --scenario live_goal_application_guarded_hardening_smoke --seed 42 --ticks 3 --out runs/check_live_goal_application_hardening`;
+- debug non-regression runs for live goal application fixture, goal snapshot
+  mutation, goal application dry-run, controlled application, live adapter,
+  cognitive loop integration, behavior-loop bridge, goal selection memory,
+  memory retrieval, memory update, behavior loop, `agents_basic`, and
+  `regression_smoke`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results:
+
+- `live_goal_application_guarded_hardening_smoke` passed in debug with
+  success=true, 32 cases, 32 passed, 0 failed, 35 inputs, 35 decisions,
+  five eligible decisions, five would-apply decisions, 29 live goal
+  would-change decisions, two no-ops, 26 rejected decisions, two deferred
+  decisions, `appliedToLive=0`, and `agentsBasicTouched=false`.
+- The invariant report passed with 95 checks passed and 0 failed.
+- The digest was stable: `da4f68cecea2990a`.
+
+### Next Step
+
+Phase 5.12A — Fake-Live Goal Application Planning.
+
 ## 2026-07-03 — Phase 5.11B guarded live goal application fixture smoke
 
 Branch: `lab/pebblelab-v1`

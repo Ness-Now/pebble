@@ -936,3 +936,26 @@ It emits `liveGoalApplication*` metrics and
 
 The recommended next phase is Phase 5.11C - Live Goal Application Guarded
 Hardening.
+
+## Phase 5.11C Status
+
+Phase 5.11C implemented `live_goal_application_guarded_hardening_smoke`, the
+hardening scenario for guarded live goal application candidates.
+
+The scenario keeps the layer fixture-only and isolated from `agents_basic`. It
+records 32 hardening cases, 35 inputs, and 35 decisions. Coverage includes the
+5.11B baseline, live-apply eligibility, `wouldApplyToLive`, live goal
+would-change, no-op allowed/disallowed, rejected unknown/not-allowed/missing
+targets, missing live/original live goals, missing reason, live goal mismatch,
+prior applied/rejected/deferred reasons, missing snapshot application,
+unchanged snapshot for non-noop, policy disallow, dedicated scenario false,
+max live applications, and audit-only deferred.
+
+The scenario emits `liveGoalApplicationHardening*` metrics and
+`lab_live_goal_application_hardening_recorded`, while keeping
+`appliedToLive=0`, `liveAgentMutated=false`, `memoryMutated=false`,
+`movementStackUsed=false`, `worldMutated=false`, `terrainMutated=false`, and
+`agentsBasicTouched=false`.
+
+The recommended next phase is Phase 5.12A - Fake-Live Goal Application
+Planning.

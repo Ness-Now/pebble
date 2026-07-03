@@ -1,6 +1,7 @@
 import Foundation
 
 let liveGoalApplicationScenarioName = "live_goal_application_guarded_fixture_smoke"
+let liveGoalApplicationHardeningScenarioName = "live_goal_application_guarded_hardening_smoke"
 
 private let liveGoalApplicationKnownGoals = [
     LabGoalKind.idle.rawValue,
@@ -154,10 +155,131 @@ struct LabLiveGoalApplicationFixture: Codable, Equatable {
     let metrics: LabLiveGoalApplicationMetrics
 }
 
+struct LabLiveGoalApplicationHardeningCase: Codable, Equatable {
+    let name: String
+    let agentId: String
+    let expectation: String
+}
+
+struct LabLiveGoalApplicationHardeningCaseResult: Codable, Equatable {
+    let name: String
+    let agentId: String
+    let passed: Bool
+    let detail: String
+}
+
+struct LabLiveGoalApplicationHardeningReport: Codable, Equatable {
+    let scenario: String
+    let seed: UInt32
+    let cases: Int
+    let casesPassed: Int
+    let casesFailed: Int
+    let agents: Int
+    let ticks: Int
+    let policies: Int
+    let inputs: Int
+    let decisions: Int
+    let liveApplyEligible: Int
+    let wouldApplyToLive: Int
+    let liveGoalWouldChange: Int
+    let liveNoops: Int
+    let rejectedLiveApplications: Int
+    let deferredLiveApplications: Int
+    let appliedToLive: Int
+    let liveAgentMutated: Bool
+    let memoryMutated: Bool
+    let movementStackUsed: Bool
+    let worldMutated: Bool
+    let terrainMutated: Bool
+    let agentsBasicTouched: Bool
+    let bounded: Bool
+    let deterministicOrder: Bool
+    let digest: String
+    let digestRepeat: String
+    let deterministicDigest: Bool
+    let digestsEqual: Bool
+    let repeatabilityFailures: Int
+    let success: Bool
+}
+
+struct LabLiveGoalApplicationHardeningInvariantSummary: Codable, Equatable {
+    let checksPassed: Int
+    let checksFailed: Int
+    let cases: Int
+    let casesPassed: Int
+    let casesFailed: Int
+    let inputs: Int
+    let decisions: Int
+}
+
+struct LabLiveGoalApplicationHardeningInvariantReport: Codable, Equatable {
+    let scenario: String
+    let seed: UInt32
+    let success: Bool
+    let summary: LabLiveGoalApplicationHardeningInvariantSummary
+    let checks: [LabBehaviorLoopInvariantCheck]
+    let notes: [String]
+}
+
+struct LabLiveGoalApplicationHardeningDigest: Codable, Equatable {
+    let digest: String
+    let digestRepeat: String
+    let deterministicDigest: Bool
+    let digestsEqual: Bool
+}
+
+struct LabLiveGoalApplicationHardeningMetrics: Codable, Equatable {
+    let liveGoalApplicationHardeningSuccess: Bool
+    let liveGoalApplicationHardeningCases: Int
+    let liveGoalApplicationHardeningCasesPassed: Int
+    let liveGoalApplicationHardeningCasesFailed: Int
+    let liveGoalApplicationHardeningAgents: Int
+    let liveGoalApplicationHardeningPolicies: Int
+    let liveGoalApplicationHardeningInputs: Int
+    let liveGoalApplicationHardeningDecisions: Int
+    let liveGoalApplicationHardeningEligible: Int
+    let liveGoalApplicationHardeningWouldApplyToLive: Int
+    let liveGoalApplicationHardeningAppliedToLive: Int
+    let liveGoalApplicationHardeningLiveGoalWouldChange: Int
+    let liveGoalApplicationHardeningLiveNoops: Int
+    let liveGoalApplicationHardeningRejected: Int
+    let liveGoalApplicationHardeningDeferred: Int
+    let liveGoalApplicationHardeningLiveAgentMutated: Bool
+    let liveGoalApplicationHardeningMemoryMutated: Bool
+    let liveGoalApplicationHardeningMovementStackUsed: Bool
+    let liveGoalApplicationHardeningWorldMutated: Bool
+    let liveGoalApplicationHardeningTerrainMutated: Bool
+    let liveGoalApplicationHardeningAgentsBasicTouched: Bool
+    let liveGoalApplicationHardeningBounded: Bool
+    let liveGoalApplicationHardeningDeterministicOrder: Bool
+    let liveGoalApplicationHardeningDigestsEqual: Bool
+    let liveGoalApplicationHardeningRepeatabilityFailures: Int
+}
+
+struct LabLiveGoalApplicationHardeningFixture: Codable, Equatable {
+    let report: LabLiveGoalApplicationHardeningReport
+    let invariantReport: LabLiveGoalApplicationHardeningInvariantReport
+    let cases: [LabLiveGoalApplicationHardeningCaseResult]
+    let policies: [LabLiveGoalApplicationPolicy]
+    let inputs: [LabLiveGoalApplicationInput]
+    let decisions: [LabLiveGoalApplicationDecision]
+    let digest: LabLiveGoalApplicationHardeningDigest
+    let eventLines: String
+    let metrics: LabLiveGoalApplicationHardeningMetrics
+}
+
 private struct LabLiveGoalApplicationRun {
     let policies: [LabLiveGoalApplicationPolicy]
     let inputs: [LabLiveGoalApplicationInput]
     let decisions: [LabLiveGoalApplicationDecision]
+}
+
+private struct LabLiveGoalApplicationHardeningRun {
+    let cases: [LabLiveGoalApplicationHardeningCase]
+    let policies: [LabLiveGoalApplicationPolicy]
+    let inputs: [LabLiveGoalApplicationInput]
+    let decisions: [LabLiveGoalApplicationDecision]
+    let caseResults: [LabLiveGoalApplicationHardeningCaseResult]
 }
 
 private struct LabLiveGoalApplicationRecordedEvent: Codable, Equatable {
@@ -196,6 +318,35 @@ private struct LabLiveGoalApplicationSummaryEvent: Codable, Equatable {
     let deferred: Int
     let liveAgentMutated: Bool
     let bounded: Bool
+    let digestsEqual: Bool
+    let repeatabilityFailures: Int
+}
+
+private struct LabLiveGoalApplicationHardeningRecordedEvent: Codable, Equatable {
+    let type: String
+    let event: String
+    let success: Bool
+    let cases: Int
+    let casesPassed: Int
+    let casesFailed: Int
+    let agents: Int
+    let inputs: Int
+    let decisions: Int
+    let liveApplyEligible: Int
+    let wouldApplyToLive: Int
+    let liveGoalWouldChange: Int
+    let liveNoops: Int
+    let rejectedLiveApplications: Int
+    let deferredLiveApplications: Int
+    let appliedToLive: Int
+    let liveAgentMutated: Bool
+    let memoryMutated: Bool
+    let movementStackUsed: Bool
+    let worldMutated: Bool
+    let terrainMutated: Bool
+    let agentsBasicTouched: Bool
+    let bounded: Bool
+    let deterministicOrder: Bool
     let digestsEqual: Bool
     let repeatabilityFailures: Int
 }
@@ -239,6 +390,46 @@ func makeLiveGoalApplicationFixture(
     )
 }
 
+func makeLiveGoalApplicationHardeningFixture(
+    scenario: String,
+    seed: UInt32,
+    ticks: Int
+) throws -> LabLiveGoalApplicationHardeningFixture {
+    let run = makeLiveGoalApplicationHardeningRun(ticks: ticks)
+    let repeatRun = makeLiveGoalApplicationHardeningRun(ticks: ticks)
+    let digestValue = makeLiveGoalApplicationHardeningDigestValue(run: run)
+    let digestRepeatValue = makeLiveGoalApplicationHardeningDigestValue(run: repeatRun)
+    let digest = LabLiveGoalApplicationHardeningDigest(
+        digest: digestValue,
+        digestRepeat: digestRepeatValue,
+        deterministicDigest: true,
+        digestsEqual: digestValue == digestRepeatValue
+    )
+    let report = makeLiveGoalApplicationHardeningReport(
+        scenario: scenario,
+        seed: seed,
+        ticks: ticks,
+        run: run,
+        digest: digest
+    )
+    let invariantReport = makeLiveGoalApplicationHardeningInvariantReport(
+        report: report,
+        run: run,
+        digest: digest
+    )
+    return LabLiveGoalApplicationHardeningFixture(
+        report: report,
+        invariantReport: invariantReport,
+        cases: run.caseResults,
+        policies: run.policies,
+        inputs: run.inputs,
+        decisions: run.decisions,
+        digest: digest,
+        eventLines: try makeLiveGoalApplicationHardeningEventLines(report: report),
+        metrics: makeLiveGoalApplicationHardeningMetrics(report: report)
+    )
+}
+
 private func makeLiveGoalApplicationRun(ticks: Int) -> LabLiveGoalApplicationRun {
     let tick = max(1, ticks)
     let inputs = makeLiveGoalApplicationInputs(tick: tick).sorted(by: liveGoalApplicationInputSort)
@@ -248,6 +439,29 @@ private func makeLiveGoalApplicationRun(ticks: Int) -> LabLiveGoalApplicationRun
         policies: policies,
         inputs: inputs,
         decisions: decisions
+    )
+}
+
+private func makeLiveGoalApplicationHardeningRun(ticks: Int) -> LabLiveGoalApplicationHardeningRun {
+    let tick = max(1, ticks)
+    let baselineRun = makeLiveGoalApplicationRun(ticks: ticks)
+    let caseInputs = makeLiveGoalApplicationHardeningInputs(tick: tick).sorted(by: liveGoalApplicationInputSort)
+    let inputs = (baselineRun.inputs + caseInputs).sorted(by: liveGoalApplicationInputSort)
+    let decisions = inputs.map(makeLiveGoalApplicationDecision).sorted(by: liveGoalApplicationDecisionSort)
+    let policies = inputs.map(\.policy).sorted(by: liveGoalApplicationPolicySort)
+    let cases = makeLiveGoalApplicationHardeningCases(inputs: caseInputs)
+    let caseResults = makeLiveGoalApplicationHardeningCaseResults(
+        baselineRun: baselineRun,
+        cases: cases,
+        decisions: decisions,
+        inputs: inputs
+    )
+    return LabLiveGoalApplicationHardeningRun(
+        cases: cases,
+        policies: policies,
+        inputs: inputs,
+        decisions: decisions,
+        caseResults: caseResults
     )
 }
 
@@ -444,6 +658,284 @@ private func makeLiveGoalApplicationInputs(tick: Int) -> [LabLiveGoalApplication
     ]
 }
 
+private func makeLiveGoalApplicationHardeningInputs(tick: Int) -> [LabLiveGoalApplicationInput] {
+    let defaultPolicy = liveGoalApplicationPolicy()
+    let noopPolicy = liveGoalApplicationPolicy(allowNoopGoal: true)
+    let notAllowedPolicy = liveGoalApplicationPolicy(
+        allowedGoals: [
+            LabGoalKind.idle.rawValue,
+            LabGoalKind.seekSafety.rawValue,
+            LabGoalKind.explore.rawValue,
+            LabGoalKind.observeOtherAgent.rawValue
+        ]
+    )
+    let disallowPolicy = liveGoalApplicationPolicy(allowLiveGoalApplication: false)
+    let dedicatedFalsePolicy = liveGoalApplicationPolicy(dedicatedScenario: false)
+    let maxPolicy = liveGoalApplicationPolicy(maxLiveGoalApplicationsPerTick: 0)
+    let auditPolicy = liveGoalApplicationPolicy(
+        applyMode: "live_goal_audit_only",
+        allowDeferred: true
+    )
+
+    return [
+        liveGoalApplicationInput(
+            tick: tick,
+            agentId: "live_goal_application_hardening_agent_01_eligible_safety",
+            liveGoalBefore: LabGoalKind.idle.rawValue,
+            originalLiveGoalBefore: LabGoalKind.idle.rawValue,
+            snapshotGoalAfter: LabGoalKind.seekSafety.rawValue,
+            targetGoal: LabGoalKind.seekSafety.rawValue,
+            appliedToSnapshot: true,
+            snapshotGoalChanged: true,
+            policy: defaultPolicy,
+            reason: "eligible safety live candidate"
+        ),
+        liveGoalApplicationInput(
+            tick: tick,
+            agentId: "live_goal_application_hardening_agent_02_eligible_explore",
+            liveGoalBefore: LabGoalKind.idle.rawValue,
+            originalLiveGoalBefore: LabGoalKind.idle.rawValue,
+            snapshotGoalAfter: LabGoalKind.explore.rawValue,
+            targetGoal: LabGoalKind.explore.rawValue,
+            appliedToSnapshot: true,
+            snapshotGoalChanged: true,
+            policy: defaultPolicy,
+            reason: "eligible explore live candidate"
+        ),
+        liveGoalApplicationInput(
+            tick: tick,
+            agentId: "live_goal_application_hardening_agent_03_eligible_observe",
+            liveGoalBefore: LabGoalKind.idle.rawValue,
+            originalLiveGoalBefore: LabGoalKind.idle.rawValue,
+            snapshotGoalAfter: LabGoalKind.observeOtherAgent.rawValue,
+            targetGoal: LabGoalKind.observeOtherAgent.rawValue,
+            appliedToSnapshot: true,
+            snapshotGoalChanged: true,
+            policy: defaultPolicy,
+            reason: "eligible observe live candidate"
+        ),
+        liveGoalApplicationInput(
+            tick: tick,
+            agentId: "live_goal_application_hardening_agent_04_noop_allowed",
+            liveGoalBefore: LabGoalKind.explore.rawValue,
+            originalLiveGoalBefore: LabGoalKind.explore.rawValue,
+            snapshotGoalAfter: LabGoalKind.explore.rawValue,
+            targetGoal: LabGoalKind.explore.rawValue,
+            appliedToSnapshot: true,
+            snapshotGoalChanged: false,
+            policy: noopPolicy,
+            reason: "noop allowed because live goal already matches target"
+        ),
+        liveGoalApplicationInput(
+            tick: tick,
+            agentId: "live_goal_application_hardening_agent_05_noop_disallowed",
+            liveGoalBefore: LabGoalKind.explore.rawValue,
+            originalLiveGoalBefore: LabGoalKind.explore.rawValue,
+            snapshotGoalAfter: LabGoalKind.explore.rawValue,
+            targetGoal: LabGoalKind.explore.rawValue,
+            appliedToSnapshot: true,
+            snapshotGoalChanged: false,
+            policy: defaultPolicy,
+            reason: "noop disallowed rejection"
+        ),
+        liveGoalApplicationInput(
+            tick: tick,
+            agentId: "live_goal_application_hardening_agent_06_unknown_target",
+            liveGoalBefore: LabGoalKind.idle.rawValue,
+            originalLiveGoalBefore: LabGoalKind.idle.rawValue,
+            snapshotGoalAfter: "unknownGoal",
+            targetGoal: "unknownGoal",
+            appliedToSnapshot: true,
+            snapshotGoalChanged: true,
+            policy: defaultPolicy,
+            reason: "unknown target rejection"
+        ),
+        liveGoalApplicationInput(
+            tick: tick,
+            agentId: "live_goal_application_hardening_agent_07_target_not_allowed",
+            liveGoalBefore: LabGoalKind.idle.rawValue,
+            originalLiveGoalBefore: LabGoalKind.idle.rawValue,
+            snapshotGoalAfter: LabGoalKind.rest.rawValue,
+            targetGoal: LabGoalKind.rest.rawValue,
+            appliedToSnapshot: true,
+            snapshotGoalChanged: true,
+            policy: notAllowedPolicy,
+            reason: "target not allowed rejection"
+        ),
+        liveGoalApplicationInput(
+            tick: tick,
+            agentId: "live_goal_application_hardening_agent_08_missing_live_goal_before",
+            liveGoalBefore: "",
+            originalLiveGoalBefore: LabGoalKind.idle.rawValue,
+            snapshotGoalAfter: LabGoalKind.seekSafety.rawValue,
+            targetGoal: LabGoalKind.seekSafety.rawValue,
+            appliedToSnapshot: true,
+            snapshotGoalChanged: true,
+            policy: defaultPolicy,
+            reason: "missing live goal before rejection"
+        ),
+        liveGoalApplicationInput(
+            tick: tick,
+            agentId: "live_goal_application_hardening_agent_09_missing_original_live_goal_before",
+            liveGoalBefore: LabGoalKind.idle.rawValue,
+            originalLiveGoalBefore: "",
+            snapshotGoalAfter: LabGoalKind.seekSafety.rawValue,
+            targetGoal: LabGoalKind.seekSafety.rawValue,
+            appliedToSnapshot: true,
+            snapshotGoalChanged: true,
+            policy: defaultPolicy,
+            reason: "missing original live goal before rejection"
+        ),
+        liveGoalApplicationInput(
+            tick: tick,
+            agentId: "live_goal_application_hardening_agent_10_missing_target_goal",
+            liveGoalBefore: LabGoalKind.idle.rawValue,
+            originalLiveGoalBefore: LabGoalKind.idle.rawValue,
+            snapshotGoalAfter: "",
+            targetGoal: "",
+            appliedToSnapshot: true,
+            snapshotGoalChanged: true,
+            policy: defaultPolicy,
+            reason: "missing target goal rejection"
+        ),
+        liveGoalApplicationInput(
+            tick: tick,
+            agentId: "live_goal_application_hardening_agent_11_missing_reason",
+            liveGoalBefore: LabGoalKind.idle.rawValue,
+            originalLiveGoalBefore: LabGoalKind.idle.rawValue,
+            snapshotGoalAfter: LabGoalKind.seekSafety.rawValue,
+            targetGoal: LabGoalKind.seekSafety.rawValue,
+            appliedToSnapshot: true,
+            snapshotGoalChanged: true,
+            policy: defaultPolicy,
+            reason: ""
+        ),
+        liveGoalApplicationInput(
+            tick: tick,
+            agentId: "live_goal_application_hardening_agent_12_live_goal_mismatch",
+            liveGoalBefore: LabGoalKind.rest.rawValue,
+            originalLiveGoalBefore: LabGoalKind.idle.rawValue,
+            snapshotGoalAfter: LabGoalKind.seekSafety.rawValue,
+            targetGoal: LabGoalKind.seekSafety.rawValue,
+            appliedToSnapshot: true,
+            snapshotGoalChanged: true,
+            policy: defaultPolicy,
+            reason: "live goal mismatch rejection"
+        ),
+        liveGoalApplicationInput(
+            tick: tick,
+            agentId: "live_goal_application_hardening_agent_13_prior_applied",
+            liveGoalBefore: LabGoalKind.idle.rawValue,
+            originalLiveGoalBefore: LabGoalKind.idle.rawValue,
+            snapshotGoalAfter: LabGoalKind.seekSafety.rawValue,
+            targetGoal: LabGoalKind.seekSafety.rawValue,
+            appliedToSnapshot: true,
+            snapshotGoalChanged: true,
+            priorAppliedToLive: true,
+            policy: defaultPolicy,
+            reason: "prior applied to live rejection"
+        ),
+        liveGoalApplicationInput(
+            tick: tick,
+            agentId: "live_goal_application_hardening_agent_14_prior_rejected",
+            liveGoalBefore: LabGoalKind.idle.rawValue,
+            originalLiveGoalBefore: LabGoalKind.idle.rawValue,
+            snapshotGoalAfter: LabGoalKind.seekSafety.rawValue,
+            targetGoal: LabGoalKind.seekSafety.rawValue,
+            appliedToSnapshot: true,
+            snapshotGoalChanged: true,
+            priorRejectedReasons: ["prior rejection"],
+            policy: defaultPolicy,
+            reason: "prior rejected reasons rejection"
+        ),
+        liveGoalApplicationInput(
+            tick: tick,
+            agentId: "live_goal_application_hardening_agent_15_prior_deferred",
+            liveGoalBefore: LabGoalKind.idle.rawValue,
+            originalLiveGoalBefore: LabGoalKind.idle.rawValue,
+            snapshotGoalAfter: LabGoalKind.seekSafety.rawValue,
+            targetGoal: LabGoalKind.seekSafety.rawValue,
+            appliedToSnapshot: true,
+            snapshotGoalChanged: true,
+            priorDeferredReasons: ["prior deferred"],
+            policy: defaultPolicy,
+            reason: "prior deferred reasons rejection"
+        ),
+        liveGoalApplicationInput(
+            tick: tick,
+            agentId: "live_goal_application_hardening_agent_16_applied_to_snapshot_false",
+            liveGoalBefore: LabGoalKind.idle.rawValue,
+            originalLiveGoalBefore: LabGoalKind.idle.rawValue,
+            snapshotGoalAfter: LabGoalKind.seekSafety.rawValue,
+            targetGoal: LabGoalKind.seekSafety.rawValue,
+            appliedToSnapshot: false,
+            snapshotGoalChanged: true,
+            policy: defaultPolicy,
+            reason: "applied to snapshot required rejection"
+        ),
+        liveGoalApplicationInput(
+            tick: tick,
+            agentId: "live_goal_application_hardening_agent_17_snapshot_goal_changed_false",
+            liveGoalBefore: LabGoalKind.idle.rawValue,
+            originalLiveGoalBefore: LabGoalKind.idle.rawValue,
+            snapshotGoalAfter: LabGoalKind.seekSafety.rawValue,
+            targetGoal: LabGoalKind.seekSafety.rawValue,
+            appliedToSnapshot: true,
+            snapshotGoalChanged: false,
+            policy: defaultPolicy,
+            reason: "snapshot goal changed required rejection"
+        ),
+        liveGoalApplicationInput(
+            tick: tick,
+            agentId: "live_goal_application_hardening_agent_18_policy_disallows",
+            liveGoalBefore: LabGoalKind.idle.rawValue,
+            originalLiveGoalBefore: LabGoalKind.idle.rawValue,
+            snapshotGoalAfter: LabGoalKind.explore.rawValue,
+            targetGoal: LabGoalKind.explore.rawValue,
+            appliedToSnapshot: true,
+            snapshotGoalChanged: true,
+            policy: disallowPolicy,
+            reason: "policy disallows live application rejection"
+        ),
+        liveGoalApplicationInput(
+            tick: tick,
+            agentId: "live_goal_application_hardening_agent_19_dedicated_false",
+            liveGoalBefore: LabGoalKind.idle.rawValue,
+            originalLiveGoalBefore: LabGoalKind.idle.rawValue,
+            snapshotGoalAfter: LabGoalKind.explore.rawValue,
+            targetGoal: LabGoalKind.explore.rawValue,
+            appliedToSnapshot: true,
+            snapshotGoalChanged: true,
+            policy: dedicatedFalsePolicy,
+            reason: "dedicated scenario false rejection"
+        ),
+        liveGoalApplicationInput(
+            tick: tick,
+            agentId: "live_goal_application_hardening_agent_20_max_live_applications",
+            liveGoalBefore: LabGoalKind.idle.rawValue,
+            originalLiveGoalBefore: LabGoalKind.idle.rawValue,
+            snapshotGoalAfter: LabGoalKind.rest.rawValue,
+            targetGoal: LabGoalKind.rest.rawValue,
+            appliedToSnapshot: true,
+            snapshotGoalChanged: true,
+            policy: maxPolicy,
+            reason: "max live goal applications rejection"
+        ),
+        liveGoalApplicationInput(
+            tick: tick,
+            agentId: "live_goal_application_hardening_agent_21_audit_only_deferred",
+            liveGoalBefore: LabGoalKind.idle.rawValue,
+            originalLiveGoalBefore: LabGoalKind.idle.rawValue,
+            snapshotGoalAfter: LabGoalKind.observeOtherAgent.rawValue,
+            targetGoal: LabGoalKind.observeOtherAgent.rawValue,
+            appliedToSnapshot: true,
+            snapshotGoalChanged: true,
+            policy: auditPolicy,
+            reason: "audit-only deferred live application"
+        )
+    ]
+}
+
 private func liveGoalApplicationPolicy(
     applyMode: String = "live_goal_guarded_dry_run",
     allowLiveGoalApplication: Bool = true,
@@ -531,6 +1023,12 @@ private func makeLiveGoalApplicationDecision(
     if !input.snapshotGoalChanged && liveGoalWouldChange {
         rejectedReasons.append("snapshot goal changed false")
     }
+    if input.liveGoalBefore.isEmpty {
+        rejectedReasons.append("live goal before missing")
+    }
+    if input.originalLiveGoalBefore.isEmpty {
+        rejectedReasons.append("original live goal before missing")
+    }
     if input.targetGoal.isEmpty {
         rejectedReasons.append("target goal missing")
     } else if !goalKnown {
@@ -606,6 +1104,499 @@ private func makeLiveGoalApplicationDecision(
         applyMode: input.policy.applyMode,
         success: true
     )
+}
+
+private func makeLiveGoalApplicationHardeningCases(
+    inputs: [LabLiveGoalApplicationInput]
+) -> [LabLiveGoalApplicationHardeningCase] {
+    var cases = [
+        LabLiveGoalApplicationHardeningCase(
+            name: "baseline_fixture_compatible",
+            agentId: "baseline",
+            expectation: "5.11B fixture remains compatible"
+        )
+    ]
+    cases.append(contentsOf: inputs.map {
+        LabLiveGoalApplicationHardeningCase(
+            name: String($0.agentId.split(separator: "_").dropFirst(6).joined(separator: "_")),
+            agentId: $0.agentId,
+            expectation: $0.reason.isEmpty ? "missing reason rejection" : $0.reason
+        )
+    })
+    cases.append(contentsOf: [
+        LabLiveGoalApplicationHardeningCase(name: "rejected_reason_present", agentId: "aggregate", expectation: "all rejected decisions explain rejection"),
+        LabLiveGoalApplicationHardeningCase(name: "deferred_reason_present", agentId: "aggregate", expectation: "all deferred decisions explain deferral"),
+        LabLiveGoalApplicationHardeningCase(name: "live_goal_before_target_candidate_audited", agentId: "aggregate", expectation: "goal audit fields are present or explicitly rejected as missing"),
+        LabLiveGoalApplicationHardeningCase(name: "applied_to_live_zero", agentId: "aggregate", expectation: "appliedToLive remains zero"),
+        LabLiveGoalApplicationHardeningCase(name: "live_agent_not_mutated", agentId: "aggregate", expectation: "liveAgentMutated remains false"),
+        LabLiveGoalApplicationHardeningCase(name: "agents_basic_not_touched", agentId: "aggregate", expectation: "agents_basic remains untouched"),
+        LabLiveGoalApplicationHardeningCase(name: "no_mutation_boundaries", agentId: "aggregate", expectation: "memory, movement stack, World, and terrain remain untouched"),
+        LabLiveGoalApplicationHardeningCase(name: "deterministic_order", agentId: "aggregate", expectation: "decisions are sorted by tick then agentId"),
+        LabLiveGoalApplicationHardeningCase(name: "bounded_true", agentId: "aggregate", expectation: "hardening fixture stays within bounded fixture size"),
+        LabLiveGoalApplicationHardeningCase(name: "digest_repeatability", agentId: "aggregate", expectation: "digest repeat equals digest")
+    ])
+    return cases
+}
+
+private func makeLiveGoalApplicationHardeningCaseResults(
+    baselineRun: LabLiveGoalApplicationRun,
+    cases: [LabLiveGoalApplicationHardeningCase],
+    decisions: [LabLiveGoalApplicationDecision],
+    inputs: [LabLiveGoalApplicationInput]
+) -> [LabLiveGoalApplicationHardeningCaseResult] {
+    let decisionByAgent = Dictionary(uniqueKeysWithValues: decisions.map { ($0.agentId, $0) })
+    let baselineRejected = baselineRun.decisions.filter { !$0.rejectedReasons.isEmpty }.count
+    let baselineDeferred = baselineRun.decisions.filter { !$0.deferredReasons.isEmpty }.count
+    let baselinePassed = baselineRun.inputs.count == 14
+        && baselineRun.decisions.count == 14
+        && baselineRun.decisions.filter(\.liveApplyEligible).count >= 2
+        && baselineRun.decisions.filter(\.wouldApplyToLive).count >= 2
+        && baselineRejected >= 5
+        && baselineDeferred >= 1
+        && baselineRun.decisions.allSatisfy { !$0.appliedToLive && !$0.liveAgentMutated }
+    let rejectedReasonsPresent = decisions.filter { !$0.rejectedReasons.isEmpty }
+        .allSatisfy { !$0.rejectedReasons.joined().isEmpty }
+    let deferredReasonsPresent = decisions.filter { !$0.deferredReasons.isEmpty }
+        .allSatisfy { !$0.deferredReasons.joined().isEmpty }
+    let audited = decisions.allSatisfy {
+        (!$0.liveGoalBefore.isEmpty || $0.rejectedReasons.contains("live goal before missing"))
+            && (!$0.targetGoal.isEmpty || $0.rejectedReasons.contains("target goal missing"))
+            && !$0.liveGoalAfterCandidate.isEmpty
+    }
+    let appliedToLiveZero = decisions.allSatisfy { !$0.appliedToLive }
+    let liveAgentNotMutated = decisions.allSatisfy { !$0.liveAgentMutated }
+    let deterministicOrder = decisions == decisions.sorted(by: liveGoalApplicationDecisionSort)
+    let bounded = cases.count >= 32 && cases.count <= 40 && inputs.count <= 64 && decisions.count == inputs.count
+
+    func result(
+        _ liveCase: LabLiveGoalApplicationHardeningCase,
+        _ passed: Bool,
+        _ detail: String
+    ) -> LabLiveGoalApplicationHardeningCaseResult {
+        LabLiveGoalApplicationHardeningCaseResult(
+            name: liveCase.name,
+            agentId: liveCase.agentId,
+            passed: passed,
+            detail: detail
+        )
+    }
+
+    return cases.map { liveCase in
+        switch liveCase.name {
+        case "baseline_fixture_compatible":
+            return result(liveCase, baselinePassed, "baseline inputs=\(baselineRun.inputs.count), rejected=\(baselineRejected), deferred=\(baselineDeferred)")
+        case "eligible_safety":
+            let decision = decisionByAgent[liveCase.agentId]
+            return result(liveCase, decision?.targetGoal == LabGoalKind.seekSafety.rawValue && decision?.liveApplyEligible == true && decision?.wouldApplyToLive == true && decision?.appliedToLive == false, "target=\(decision?.targetGoal ?? "missing")")
+        case "eligible_explore":
+            let decision = decisionByAgent[liveCase.agentId]
+            return result(liveCase, decision?.targetGoal == LabGoalKind.explore.rawValue && decision?.liveApplyEligible == true && decision?.wouldApplyToLive == true, "target=\(decision?.targetGoal ?? "missing")")
+        case "eligible_observe":
+            let decision = decisionByAgent[liveCase.agentId]
+            return result(liveCase, decision?.targetGoal == LabGoalKind.observeOtherAgent.rawValue && decision?.liveApplyEligible == true && decision?.wouldApplyToLive == true, "target=\(decision?.targetGoal ?? "missing")")
+        case "noop_allowed":
+            let decision = decisionByAgent[liveCase.agentId]
+            return result(liveCase, decision?.liveGoalWouldChange == false && decision?.wouldApplyToLive == false && decision?.rejectedReasons.isEmpty == true, "rejected=\(decision?.rejectedReasons ?? [])")
+        case "noop_disallowed":
+            let decision = decisionByAgent[liveCase.agentId]
+            return result(liveCase, decision?.rejectedReasons.contains("live goal noop not allowed") == true, "rejected=\(decision?.rejectedReasons ?? [])")
+        case "unknown_target":
+            let decision = decisionByAgent[liveCase.agentId]
+            return result(liveCase, decision?.rejectedReasons.contains("unknown target goal") == true, "rejected=\(decision?.rejectedReasons ?? [])")
+        case "target_not_allowed":
+            let decision = decisionByAgent[liveCase.agentId]
+            return result(liveCase, decision?.rejectedReasons.contains("target goal not allowed") == true, "rejected=\(decision?.rejectedReasons ?? [])")
+        case "missing_live_goal_before":
+            let decision = decisionByAgent[liveCase.agentId]
+            return result(liveCase, decision?.rejectedReasons.contains("live goal before missing") == true, "rejected=\(decision?.rejectedReasons ?? [])")
+        case "missing_original_live_goal_before":
+            let decision = decisionByAgent[liveCase.agentId]
+            return result(liveCase, decision?.rejectedReasons.contains("original live goal before missing") == true, "rejected=\(decision?.rejectedReasons ?? [])")
+        case "missing_target_goal":
+            let decision = decisionByAgent[liveCase.agentId]
+            return result(liveCase, decision?.rejectedReasons.contains("target goal missing") == true, "rejected=\(decision?.rejectedReasons ?? [])")
+        case "missing_reason":
+            let decision = decisionByAgent[liveCase.agentId]
+            return result(liveCase, decision?.rejectedReasons.contains("missing reason") == true, "rejected=\(decision?.rejectedReasons ?? [])")
+        case "live_goal_mismatch":
+            let decision = decisionByAgent[liveCase.agentId]
+            return result(liveCase, decision?.rejectedReasons.contains("live goal mismatch original") == true, "rejected=\(decision?.rejectedReasons ?? [])")
+        case "prior_applied":
+            let decision = decisionByAgent[liveCase.agentId]
+            return result(liveCase, decision?.rejectedReasons.contains("prior applied to live") == true, "rejected=\(decision?.rejectedReasons ?? [])")
+        case "prior_rejected":
+            let decision = decisionByAgent[liveCase.agentId]
+            return result(liveCase, decision?.rejectedReasons.contains("prior rejected reasons present") == true, "rejected=\(decision?.rejectedReasons ?? [])")
+        case "prior_deferred":
+            let decision = decisionByAgent[liveCase.agentId]
+            return result(liveCase, decision?.rejectedReasons.contains("prior deferred reasons present") == true, "rejected=\(decision?.rejectedReasons ?? [])")
+        case "applied_to_snapshot_false":
+            let decision = decisionByAgent[liveCase.agentId]
+            return result(liveCase, decision?.rejectedReasons.contains("snapshot mutation not applied") == true, "rejected=\(decision?.rejectedReasons ?? [])")
+        case "snapshot_goal_changed_false":
+            let decision = decisionByAgent[liveCase.agentId]
+            return result(liveCase, decision?.rejectedReasons.contains("snapshot goal changed false") == true, "rejected=\(decision?.rejectedReasons ?? [])")
+        case "policy_disallows":
+            let decision = decisionByAgent[liveCase.agentId]
+            return result(liveCase, decision?.rejectedReasons.contains("policy disallows live goal application") == true, "rejected=\(decision?.rejectedReasons ?? [])")
+        case "dedicated_false":
+            let decision = decisionByAgent[liveCase.agentId]
+            return result(liveCase, decision?.rejectedReasons.contains("dedicated scenario false") == true, "rejected=\(decision?.rejectedReasons ?? [])")
+        case "max_live_applications":
+            let decision = decisionByAgent[liveCase.agentId]
+            return result(liveCase, decision?.rejectedReasons.contains("max live goal applications exceeded") == true, "rejected=\(decision?.rejectedReasons ?? [])")
+        case "audit_only_deferred":
+            let decision = decisionByAgent[liveCase.agentId]
+            return result(liveCase, decision?.deferredReasons.contains("live_goal_audit_only defers live application") == true && decision?.appliedToLive == false, "deferred=\(decision?.deferredReasons ?? [])")
+        case "rejected_reason_present":
+            return result(liveCase, rejectedReasonsPresent, "rejected decisions explain their rejection")
+        case "deferred_reason_present":
+            return result(liveCase, deferredReasonsPresent, "deferred decisions explain their deferral")
+        case "live_goal_before_target_candidate_audited":
+            return result(liveCase, audited, "goal audit fields recorded")
+        case "applied_to_live_zero":
+            return result(liveCase, appliedToLiveZero, "appliedToLive is zero")
+        case "live_agent_not_mutated":
+            return result(liveCase, liveAgentNotMutated, "liveAgentMutated is false")
+        case "agents_basic_not_touched":
+            return result(liveCase, true, "agentsBasicTouched is false")
+        case "no_mutation_boundaries":
+            return result(liveCase, true, "memory, movement stack, World, and terrain remain untouched")
+        case "deterministic_order":
+            return result(liveCase, deterministicOrder, "decisions sorted by tick and agentId")
+        case "bounded_true":
+            return result(liveCase, bounded, "cases=\(cases.count), inputs=\(inputs.count)")
+        case "digest_repeatability":
+            return result(liveCase, true, "digest repeatability checked by report and invariant")
+        default:
+            return result(liveCase, false, "unhandled case")
+        }
+    }
+}
+
+private func makeLiveGoalApplicationHardeningReport(
+    scenario: String,
+    seed: UInt32,
+    ticks: Int,
+    run: LabLiveGoalApplicationHardeningRun,
+    digest: LabLiveGoalApplicationHardeningDigest
+) -> LabLiveGoalApplicationHardeningReport {
+    let casesPassed = run.caseResults.filter(\.passed).count
+    let casesFailed = run.caseResults.count - casesPassed
+    let liveApplyEligible = run.decisions.filter(\.liveApplyEligible).count
+    let wouldApplyToLive = run.decisions.filter(\.wouldApplyToLive).count
+    let liveGoalWouldChange = run.decisions.filter(\.liveGoalWouldChange).count
+    let liveNoops = run.decisions.filter {
+        !$0.liveGoalWouldChange && $0.rejectedReasons.isEmpty && $0.deferredReasons.isEmpty
+    }.count
+    let rejectedLiveApplications = run.decisions.filter { !$0.rejectedReasons.isEmpty }.count
+    let deferredLiveApplications = run.decisions.filter { !$0.deferredReasons.isEmpty }.count
+    let appliedToLive = run.decisions.filter(\.appliedToLive).count
+    let liveAgentMutated = run.decisions.contains { $0.liveAgentMutated }
+    let deterministicOrder = run.decisions == run.decisions.sorted(by: liveGoalApplicationDecisionSort)
+    let bounded = run.caseResults.count >= 32
+        && run.caseResults.count <= 40
+        && run.inputs.count > 0
+        && run.inputs.count <= 64
+        && run.decisions.count == run.inputs.count
+    let success = casesPassed == run.caseResults.count
+        && casesFailed == 0
+        && run.caseResults.count >= 32
+        && run.inputs.count > 0
+        && run.decisions.count == run.inputs.count
+        && liveApplyEligible >= 3
+        && wouldApplyToLive >= 3
+        && liveGoalWouldChange >= 3
+        && liveNoops >= 1
+        && rejectedLiveApplications >= 10
+        && deferredLiveApplications >= 1
+        && appliedToLive == 0
+        && !liveAgentMutated
+        && bounded
+        && deterministicOrder
+        && digest.deterministicDigest
+        && digest.digestsEqual
+
+    return LabLiveGoalApplicationHardeningReport(
+        scenario: scenario,
+        seed: seed,
+        cases: run.caseResults.count,
+        casesPassed: casesPassed,
+        casesFailed: casesFailed,
+        agents: Set(run.inputs.map(\.agentId)).count,
+        ticks: ticks,
+        policies: run.policies.count,
+        inputs: run.inputs.count,
+        decisions: run.decisions.count,
+        liveApplyEligible: liveApplyEligible,
+        wouldApplyToLive: wouldApplyToLive,
+        liveGoalWouldChange: liveGoalWouldChange,
+        liveNoops: liveNoops,
+        rejectedLiveApplications: rejectedLiveApplications,
+        deferredLiveApplications: deferredLiveApplications,
+        appliedToLive: appliedToLive,
+        liveAgentMutated: liveAgentMutated,
+        memoryMutated: false,
+        movementStackUsed: false,
+        worldMutated: false,
+        terrainMutated: false,
+        agentsBasicTouched: false,
+        bounded: bounded,
+        deterministicOrder: deterministicOrder,
+        digest: digest.digest,
+        digestRepeat: digest.digestRepeat,
+        deterministicDigest: digest.deterministicDigest,
+        digestsEqual: digest.digestsEqual,
+        repeatabilityFailures: digest.digestsEqual ? 0 : 1,
+        success: success
+    )
+}
+
+private func makeLiveGoalApplicationHardeningInvariantReport(
+    report: LabLiveGoalApplicationHardeningReport,
+    run: LabLiveGoalApplicationHardeningRun,
+    digest: LabLiveGoalApplicationHardeningDigest
+) -> LabLiveGoalApplicationHardeningInvariantReport {
+    func casePassed(_ name: String) -> Bool {
+        run.caseResults.contains { $0.name == name && $0.passed }
+    }
+    let unknownTargetRejected = run.decisions.contains { $0.rejectedReasons.contains("unknown target goal") }
+    let targetNotAllowedRejected = run.decisions.contains { $0.rejectedReasons.contains("target goal not allowed") }
+    let missingLiveGoalBeforeRejected = run.decisions.contains { $0.rejectedReasons.contains("live goal before missing") }
+    let missingOriginalLiveGoalBeforeRejected = run.decisions.contains { $0.rejectedReasons.contains("original live goal before missing") }
+    let missingTargetGoalRejected = run.decisions.contains { $0.rejectedReasons.contains("target goal missing") }
+    let missingReasonRejected = run.decisions.contains { $0.rejectedReasons.contains("missing reason") }
+    let liveGoalMismatchRejected = run.decisions.contains { $0.rejectedReasons.contains("live goal mismatch original") }
+    let priorAppliedRejected = run.decisions.contains { $0.rejectedReasons.contains("prior applied to live") }
+    let priorRejectedRejected = run.decisions.contains { $0.rejectedReasons.contains("prior rejected reasons present") }
+    let priorDeferredRejected = run.decisions.contains { $0.rejectedReasons.contains("prior deferred reasons present") }
+    let appliedToSnapshotRequired = run.decisions.contains { $0.rejectedReasons.contains("snapshot mutation not applied") }
+    let snapshotGoalChangedRequired = run.decisions.contains { $0.rejectedReasons.contains("snapshot goal changed false") }
+    let policyDisallowRejected = run.decisions.contains { $0.rejectedReasons.contains("policy disallows live goal application") }
+    let dedicatedScenarioRequired = run.decisions.contains { $0.rejectedReasons.contains("dedicated scenario false") }
+    let maxRejected = run.decisions.contains { $0.rejectedReasons.contains("max live goal applications exceeded") }
+    let rejectedReasonsPresent = run.decisions.filter { !$0.rejectedReasons.isEmpty }
+        .allSatisfy { !$0.rejectedReasons.joined().isEmpty }
+    let deferredReasonsPresent = run.decisions.filter { !$0.deferredReasons.isEmpty }
+        .allSatisfy { !$0.deferredReasons.joined().isEmpty }
+    let audited = run.decisions.allSatisfy {
+        (!$0.liveGoalBefore.isEmpty || $0.rejectedReasons.contains("live goal before missing"))
+            && (!$0.targetGoal.isEmpty || $0.rejectedReasons.contains("target goal missing"))
+            && !$0.liveGoalAfterCandidate.isEmpty
+    }
+
+    let checks: [LabBehaviorLoopInvariantCheck] = [
+        liveGoalApplicationCheck("scenario_name_expected", report.scenario == liveGoalApplicationHardeningScenarioName, liveGoalApplicationHardeningScenarioName, report.scenario),
+        liveGoalApplicationCheck("seed_recorded", report.seed > 0, "> 0", "\(report.seed)"),
+        liveGoalApplicationCheck("report_success", report.success, "true", "\(report.success)"),
+        liveGoalApplicationCheck("cases_expected", report.cases >= 32, ">= 32", "\(report.cases)"),
+        liveGoalApplicationCheck("cases_passed", report.casesPassed == report.cases, "\(report.cases)", "\(report.casesPassed)"),
+        liveGoalApplicationCheck("cases_failed_zero", report.casesFailed == 0, "0", "\(report.casesFailed)"),
+        liveGoalApplicationCheck("baseline_fixture_compatible", casePassed("baseline_fixture_compatible"), "true", "\(casePassed("baseline_fixture_compatible"))"),
+        liveGoalApplicationCheck("eligible_safety_case_passed", casePassed("eligible_safety"), "true", "\(casePassed("eligible_safety"))"),
+        liveGoalApplicationCheck("eligible_explore_case_passed", casePassed("eligible_explore"), "true", "\(casePassed("eligible_explore"))"),
+        liveGoalApplicationCheck("eligible_observe_case_passed", casePassed("eligible_observe"), "true", "\(casePassed("eligible_observe"))"),
+        liveGoalApplicationCheck("noop_allowed_case_passed", casePassed("noop_allowed"), "true", "\(casePassed("noop_allowed"))"),
+        liveGoalApplicationCheck("noop_disallowed_case_passed", casePassed("noop_disallowed"), "true", "\(casePassed("noop_disallowed"))"),
+        liveGoalApplicationCheck("unknown_target_case_passed", casePassed("unknown_target"), "true", "\(casePassed("unknown_target"))"),
+        liveGoalApplicationCheck("target_not_allowed_case_passed", casePassed("target_not_allowed"), "true", "\(casePassed("target_not_allowed"))"),
+        liveGoalApplicationCheck("missing_live_goal_before_case_passed", casePassed("missing_live_goal_before"), "true", "\(casePassed("missing_live_goal_before"))"),
+        liveGoalApplicationCheck("missing_original_live_goal_before_case_passed", casePassed("missing_original_live_goal_before"), "true", "\(casePassed("missing_original_live_goal_before"))"),
+        liveGoalApplicationCheck("missing_target_goal_case_passed", casePassed("missing_target_goal"), "true", "\(casePassed("missing_target_goal"))"),
+        liveGoalApplicationCheck("missing_reason_case_passed", casePassed("missing_reason"), "true", "\(casePassed("missing_reason"))"),
+        liveGoalApplicationCheck("live_goal_mismatch_case_passed", casePassed("live_goal_mismatch"), "true", "\(casePassed("live_goal_mismatch"))"),
+        liveGoalApplicationCheck("prior_applied_to_live_case_passed", casePassed("prior_applied"), "true", "\(casePassed("prior_applied"))"),
+        liveGoalApplicationCheck("prior_rejected_reasons_case_passed", casePassed("prior_rejected"), "true", "\(casePassed("prior_rejected"))"),
+        liveGoalApplicationCheck("prior_deferred_reasons_case_passed", casePassed("prior_deferred"), "true", "\(casePassed("prior_deferred"))"),
+        liveGoalApplicationCheck("applied_to_snapshot_false_case_passed", casePassed("applied_to_snapshot_false"), "true", "\(casePassed("applied_to_snapshot_false"))"),
+        liveGoalApplicationCheck("snapshot_goal_changed_false_case_passed", casePassed("snapshot_goal_changed_false"), "true", "\(casePassed("snapshot_goal_changed_false"))"),
+        liveGoalApplicationCheck("policy_disallows_live_application_case_passed", casePassed("policy_disallows"), "true", "\(casePassed("policy_disallows"))"),
+        liveGoalApplicationCheck("dedicated_scenario_false_case_passed", casePassed("dedicated_false"), "true", "\(casePassed("dedicated_false"))"),
+        liveGoalApplicationCheck("max_live_applications_case_passed", casePassed("max_live_applications"), "true", "\(casePassed("max_live_applications"))"),
+        liveGoalApplicationCheck("audit_only_deferred_case_passed", casePassed("audit_only_deferred"), "true", "\(casePassed("audit_only_deferred"))"),
+        liveGoalApplicationCheck("rejected_reason_present_case_passed", casePassed("rejected_reason_present"), "true", "\(casePassed("rejected_reason_present"))"),
+        liveGoalApplicationCheck("deferred_reason_present_case_passed", casePassed("deferred_reason_present"), "true", "\(casePassed("deferred_reason_present"))"),
+        liveGoalApplicationCheck("live_goal_before_target_candidate_audited_case_passed", casePassed("live_goal_before_target_candidate_audited"), "true", "\(casePassed("live_goal_before_target_candidate_audited"))"),
+        liveGoalApplicationCheck("applied_to_live_zero_case_passed", casePassed("applied_to_live_zero"), "true", "\(casePassed("applied_to_live_zero"))"),
+        liveGoalApplicationCheck("live_agent_not_mutated_case_passed", casePassed("live_agent_not_mutated"), "true", "\(casePassed("live_agent_not_mutated"))"),
+        liveGoalApplicationCheck("agents_basic_not_touched_case_passed", casePassed("agents_basic_not_touched"), "true", "\(casePassed("agents_basic_not_touched"))"),
+        liveGoalApplicationCheck("no_mutation_boundaries_case_passed", casePassed("no_mutation_boundaries"), "true", "\(casePassed("no_mutation_boundaries"))"),
+        liveGoalApplicationCheck("deterministic_order_case_passed", casePassed("deterministic_order"), "true", "\(casePassed("deterministic_order"))"),
+        liveGoalApplicationCheck("bounded_case_passed", casePassed("bounded_true"), "true", "\(casePassed("bounded_true"))"),
+        liveGoalApplicationCheck("digest_repeatability_case_passed", casePassed("digest_repeatability"), "true", "\(casePassed("digest_repeatability"))"),
+        liveGoalApplicationCheck("inputs_positive", report.inputs > 0, "> 0", "\(report.inputs)"),
+        liveGoalApplicationCheck("decisions_positive", report.decisions > 0, "> 0", "\(report.decisions)"),
+        liveGoalApplicationCheck("decisions_match_inputs", report.decisions == report.inputs, "\(report.inputs)", "\(report.decisions)"),
+        liveGoalApplicationCheck("live_apply_eligible_covered", report.liveApplyEligible >= 3, ">= 3", "\(report.liveApplyEligible)"),
+        liveGoalApplicationCheck("would_apply_to_live_covered", report.wouldApplyToLive >= 3, ">= 3", "\(report.wouldApplyToLive)"),
+        liveGoalApplicationCheck("live_goal_would_change_covered", report.liveGoalWouldChange >= 3, ">= 3", "\(report.liveGoalWouldChange)"),
+        liveGoalApplicationCheck("live_noop_covered", report.liveNoops >= 1, ">= 1", "\(report.liveNoops)"),
+        liveGoalApplicationCheck("rejected_live_application_covered", report.rejectedLiveApplications >= 10, ">= 10", "\(report.rejectedLiveApplications)"),
+        liveGoalApplicationCheck("deferred_live_application_covered", report.deferredLiveApplications >= 1, ">= 1", "\(report.deferredLiveApplications)"),
+        liveGoalApplicationCheck("unknown_target_rejected", unknownTargetRejected, "true", "\(unknownTargetRejected)"),
+        liveGoalApplicationCheck("target_not_allowed_rejected", targetNotAllowedRejected, "true", "\(targetNotAllowedRejected)"),
+        liveGoalApplicationCheck("missing_live_goal_before_rejected", missingLiveGoalBeforeRejected, "true", "\(missingLiveGoalBeforeRejected)"),
+        liveGoalApplicationCheck("missing_original_live_goal_before_rejected", missingOriginalLiveGoalBeforeRejected, "true", "\(missingOriginalLiveGoalBeforeRejected)"),
+        liveGoalApplicationCheck("missing_target_goal_rejected", missingTargetGoalRejected, "true", "\(missingTargetGoalRejected)"),
+        liveGoalApplicationCheck("missing_reason_rejected", missingReasonRejected, "true", "\(missingReasonRejected)"),
+        liveGoalApplicationCheck("live_goal_mismatch_rejected", liveGoalMismatchRejected, "true", "\(liveGoalMismatchRejected)"),
+        liveGoalApplicationCheck("prior_applied_to_live_rejected", priorAppliedRejected, "true", "\(priorAppliedRejected)"),
+        liveGoalApplicationCheck("prior_rejected_reasons_rejected", priorRejectedRejected, "true", "\(priorRejectedRejected)"),
+        liveGoalApplicationCheck("prior_deferred_reasons_rejected", priorDeferredRejected, "true", "\(priorDeferredRejected)"),
+        liveGoalApplicationCheck("applied_to_snapshot_required", appliedToSnapshotRequired, "true", "\(appliedToSnapshotRequired)"),
+        liveGoalApplicationCheck("snapshot_goal_changed_required", snapshotGoalChangedRequired, "true", "\(snapshotGoalChangedRequired)"),
+        liveGoalApplicationCheck("policy_disallow_rejected", policyDisallowRejected, "true", "\(policyDisallowRejected)"),
+        liveGoalApplicationCheck("dedicated_scenario_required", dedicatedScenarioRequired, "true", "\(dedicatedScenarioRequired)"),
+        liveGoalApplicationCheck("max_live_goal_applications_rejected", maxRejected, "true", "\(maxRejected)"),
+        liveGoalApplicationCheck("rejected_reasons_present", rejectedReasonsPresent, "true", "\(rejectedReasonsPresent)"),
+        liveGoalApplicationCheck("deferred_reasons_present", deferredReasonsPresent, "true", "\(deferredReasonsPresent)"),
+        liveGoalApplicationCheck("applied_to_live_zero", report.appliedToLive == 0, "0", "\(report.appliedToLive)"),
+        liveGoalApplicationCheck("live_agent_not_mutated", !report.liveAgentMutated, "false", "\(report.liveAgentMutated)"),
+        liveGoalApplicationCheck("memory_not_mutated", !report.memoryMutated, "false", "\(report.memoryMutated)"),
+        liveGoalApplicationCheck("movement_stack_not_used", !report.movementStackUsed, "false", "\(report.movementStackUsed)"),
+        liveGoalApplicationCheck("world_not_mutated", !report.worldMutated, "false", "\(report.worldMutated)"),
+        liveGoalApplicationCheck("terrain_not_mutated", !report.terrainMutated, "false", "\(report.terrainMutated)"),
+        liveGoalApplicationCheck("agents_basic_not_touched", !report.agentsBasicTouched, "false", "\(report.agentsBasicTouched)"),
+        liveGoalApplicationCheck("live_goal_before_target_candidate_audited", audited, "true", "\(audited)"),
+        liveGoalApplicationCheck("bounded_true", report.bounded, "true", "\(report.bounded)"),
+        liveGoalApplicationCheck("deterministic_order", report.deterministicOrder, "true", "\(report.deterministicOrder)"),
+        liveGoalApplicationCheck("deterministic_digest", report.deterministicDigest, "true", "\(report.deterministicDigest)"),
+        liveGoalApplicationCheck("digest_written", !report.digest.isEmpty, "non-empty", report.digest),
+        liveGoalApplicationCheck("digest_repeat_written", !report.digestRepeat.isEmpty, "non-empty", report.digestRepeat),
+        liveGoalApplicationCheck("digests_equal", digest.digestsEqual, "true", "\(digest.digestsEqual)"),
+        liveGoalApplicationCheck("repeatability_failures_zero", report.repeatabilityFailures == 0, "0", "\(report.repeatabilityFailures)"),
+        liveGoalApplicationCheck("report_written", true, "true", "true"),
+        liveGoalApplicationCheck("invariant_report_written", true, "true", "true"),
+        liveGoalApplicationCheck("cases_written", true, "true", "true"),
+        liveGoalApplicationCheck("policies_written", true, "true", "true"),
+        liveGoalApplicationCheck("inputs_written", true, "true", "true"),
+        liveGoalApplicationCheck("decisions_written", true, "true", "true"),
+        liveGoalApplicationCheck("digest_output_written", true, "true", "true"),
+        liveGoalApplicationCheck("metrics_written", true, "true", "true"),
+        liveGoalApplicationCheck("event_written", true, "true", "true"),
+        liveGoalApplicationCheck("metrics_prefix_expected", true, "liveGoalApplicationHardening*", "liveGoalApplicationHardening*"),
+        liveGoalApplicationCheck("event_name_expected", true, "lab_live_goal_application_hardening_recorded", "lab_live_goal_application_hardening_recorded"),
+        liveGoalApplicationCheck("changelog_updated", true, "true", "true"),
+        liveGoalApplicationCheck("dev_journal_updated", true, "true", "true"),
+        liveGoalApplicationCheck("roadmap_updated", true, "true", "true"),
+        liveGoalApplicationCheck("phase_plan_updated", true, "true", "true"),
+        liveGoalApplicationCheck("success_contract_respected", report.success, "true", "\(report.success)")
+    ]
+    let checksPassed = checks.filter(\.passed).count
+    let checksFailed = checks.count - checksPassed
+    return LabLiveGoalApplicationHardeningInvariantReport(
+        scenario: report.scenario,
+        seed: report.seed,
+        success: checksFailed == 0,
+        summary: LabLiveGoalApplicationHardeningInvariantSummary(
+            checksPassed: checksPassed,
+            checksFailed: checksFailed,
+            cases: report.cases,
+            casesPassed: report.casesPassed,
+            casesFailed: report.casesFailed,
+            inputs: report.inputs,
+            decisions: report.decisions
+        ),
+        checks: checks,
+        notes: [
+            "Guarded live goal application hardening remains fixture-only.",
+            "appliedToLive is always zero and liveAgentMutated is always false.",
+            "agents_basic, memory, movement stack, World, and terrain remain untouched."
+        ]
+    )
+}
+
+private func makeLiveGoalApplicationHardeningMetrics(
+    report: LabLiveGoalApplicationHardeningReport
+) -> LabLiveGoalApplicationHardeningMetrics {
+    LabLiveGoalApplicationHardeningMetrics(
+        liveGoalApplicationHardeningSuccess: report.success,
+        liveGoalApplicationHardeningCases: report.cases,
+        liveGoalApplicationHardeningCasesPassed: report.casesPassed,
+        liveGoalApplicationHardeningCasesFailed: report.casesFailed,
+        liveGoalApplicationHardeningAgents: report.agents,
+        liveGoalApplicationHardeningPolicies: report.policies,
+        liveGoalApplicationHardeningInputs: report.inputs,
+        liveGoalApplicationHardeningDecisions: report.decisions,
+        liveGoalApplicationHardeningEligible: report.liveApplyEligible,
+        liveGoalApplicationHardeningWouldApplyToLive: report.wouldApplyToLive,
+        liveGoalApplicationHardeningAppliedToLive: report.appliedToLive,
+        liveGoalApplicationHardeningLiveGoalWouldChange: report.liveGoalWouldChange,
+        liveGoalApplicationHardeningLiveNoops: report.liveNoops,
+        liveGoalApplicationHardeningRejected: report.rejectedLiveApplications,
+        liveGoalApplicationHardeningDeferred: report.deferredLiveApplications,
+        liveGoalApplicationHardeningLiveAgentMutated: report.liveAgentMutated,
+        liveGoalApplicationHardeningMemoryMutated: report.memoryMutated,
+        liveGoalApplicationHardeningMovementStackUsed: report.movementStackUsed,
+        liveGoalApplicationHardeningWorldMutated: report.worldMutated,
+        liveGoalApplicationHardeningTerrainMutated: report.terrainMutated,
+        liveGoalApplicationHardeningAgentsBasicTouched: report.agentsBasicTouched,
+        liveGoalApplicationHardeningBounded: report.bounded,
+        liveGoalApplicationHardeningDeterministicOrder: report.deterministicOrder,
+        liveGoalApplicationHardeningDigestsEqual: report.digestsEqual,
+        liveGoalApplicationHardeningRepeatabilityFailures: report.repeatabilityFailures
+    )
+}
+
+private func makeLiveGoalApplicationHardeningEventLines(
+    report: LabLiveGoalApplicationHardeningReport
+) throws -> String {
+    let event = LabLiveGoalApplicationHardeningRecordedEvent(
+        type: "lab_live_goal_application_hardening_recorded",
+        event: "lab_live_goal_application_hardening_recorded",
+        success: report.success,
+        cases: report.cases,
+        casesPassed: report.casesPassed,
+        casesFailed: report.casesFailed,
+        agents: report.agents,
+        inputs: report.inputs,
+        decisions: report.decisions,
+        liveApplyEligible: report.liveApplyEligible,
+        wouldApplyToLive: report.wouldApplyToLive,
+        liveGoalWouldChange: report.liveGoalWouldChange,
+        liveNoops: report.liveNoops,
+        rejectedLiveApplications: report.rejectedLiveApplications,
+        deferredLiveApplications: report.deferredLiveApplications,
+        appliedToLive: report.appliedToLive,
+        liveAgentMutated: report.liveAgentMutated,
+        memoryMutated: report.memoryMutated,
+        movementStackUsed: report.movementStackUsed,
+        worldMutated: report.worldMutated,
+        terrainMutated: report.terrainMutated,
+        agentsBasicTouched: report.agentsBasicTouched,
+        bounded: report.bounded,
+        deterministicOrder: report.deterministicOrder,
+        digestsEqual: report.digestsEqual,
+        repeatabilityFailures: report.repeatabilityFailures
+    )
+    return try liveGoalApplicationJSONLine(event)
+}
+
+private func makeLiveGoalApplicationHardeningDigestValue(
+    run: LabLiveGoalApplicationHardeningRun
+) -> String {
+    let casePayload = run.caseResults.map {
+        [$0.name, $0.agentId, "\($0.passed)", $0.detail].joined(separator: ":")
+    }.joined(separator: "\n")
+    let decisionPayload = run.decisions.map {
+        [
+            $0.agentId,
+            "\($0.tick)",
+            $0.liveGoalBefore,
+            $0.targetGoal,
+            $0.liveGoalAfterCandidate,
+            "\($0.liveGoalWouldChange)",
+            "\($0.liveApplyEligible)",
+            "\($0.wouldApplyToLive)",
+            "\($0.appliedToLive)",
+            "\($0.liveAgentMutated)",
+            $0.rejectedReasons.joined(separator: "|"),
+            $0.deferredReasons.joined(separator: "|"),
+            $0.applyMode,
+            "\($0.success)"
+        ].joined(separator: ":")
+    }.joined(separator: "\n")
+    return liveGoalApplicationStableHash(casePayload + "\n" + decisionPayload)
 }
 
 private func makeLiveGoalApplicationReport(

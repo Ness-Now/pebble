@@ -136,6 +136,8 @@ let isGoalSnapshotMutationHardeningScenario = options.scenario
     == goalSnapshotMutationHardeningScenarioName
 let isLiveGoalApplicationScenario = options.scenario
     == liveGoalApplicationScenarioName
+let isLiveGoalApplicationHardeningScenario = options.scenario
+    == liveGoalApplicationHardeningScenarioName
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -196,7 +198,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isControlledApplicationHardeningScenario
     || isGoalSnapshotMutationScenario
     || isGoalSnapshotMutationHardeningScenario
-    || isLiveGoalApplicationScenario)
+    || isLiveGoalApplicationScenario
+    || isLiveGoalApplicationHardeningScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -886,7 +889,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isControlledApplicationHardeningScenario
     || isGoalSnapshotMutationScenario
     || isGoalSnapshotMutationHardeningScenario
-    || isLiveGoalApplicationScenario {
+    || isLiveGoalApplicationScenario
+    || isLiveGoalApplicationHardeningScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -4398,6 +4402,21 @@ let liveGoalApplicationFixture: LabLiveGoalApplicationFixture? = {
 let liveGoalApplicationSuccess = liveGoalApplicationFixture.map {
     $0.report.success && $0.invariantReport.success
 }
+let liveGoalApplicationHardeningFixture: LabLiveGoalApplicationHardeningFixture? = {
+    guard isLiveGoalApplicationHardeningScenario else { return nil }
+    do {
+        return try makeLiveGoalApplicationHardeningFixture(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticks: ticksCompleted
+        )
+    } catch {
+        fail("failed to build live goal application hardening fixture: \(error)")
+    }
+}()
+let liveGoalApplicationHardeningSuccess = liveGoalApplicationHardeningFixture.map {
+    $0.report.success && $0.invariantReport.success
+}
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
     && successCriteria.agentTicksRecorded
@@ -4491,6 +4510,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (goalSnapshotMutationSuccess ?? true)
     && (goalSnapshotMutationHardeningSuccess ?? true)
     && (liveGoalApplicationSuccess ?? true)
+    && (liveGoalApplicationHardeningSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -8736,6 +8756,37 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("live_goal_application_digest.json")
             )
         }
+        if let liveGoalApplicationHardeningFixture {
+            appendEventLines(liveGoalApplicationHardeningFixture.eventLines)
+            try writeJSON(
+                liveGoalApplicationHardeningFixture.report,
+                to: outURL.appendingPathComponent("live_goal_application_hardening_report.json")
+            )
+            try writeJSON(
+                liveGoalApplicationHardeningFixture.invariantReport,
+                to: outURL.appendingPathComponent("live_goal_application_hardening_invariant_report.json")
+            )
+            try writeJSON(
+                liveGoalApplicationHardeningFixture.cases,
+                to: outURL.appendingPathComponent("live_goal_application_hardening_cases.json")
+            )
+            try writeJSON(
+                liveGoalApplicationHardeningFixture.policies,
+                to: outURL.appendingPathComponent("live_goal_application_hardening_policies.json")
+            )
+            try writeJSON(
+                liveGoalApplicationHardeningFixture.inputs,
+                to: outURL.appendingPathComponent("live_goal_application_hardening_inputs.json")
+            )
+            try writeJSON(
+                liveGoalApplicationHardeningFixture.decisions,
+                to: outURL.appendingPathComponent("live_goal_application_hardening_decisions.json")
+            )
+            try writeJSON(
+                liveGoalApplicationHardeningFixture.digest,
+                to: outURL.appendingPathComponent("live_goal_application_hardening_digest.json")
+            )
+        }
         if let multiTickClosedLoopReport {
             try writeJSON(
                 multiTickClosedLoopReport,
@@ -10696,7 +10747,12 @@ if let outPath = options.outPath {
             routeFollowingLiveHardeningSuccess: routeFollowingLiveHardeningSuccess,
             successCriteria: successCriteria
         )
-        if let liveGoalApplicationFixture {
+        if let liveGoalApplicationHardeningFixture {
+            try writeJSON(
+                liveGoalApplicationHardeningFixture.metrics,
+                to: outURL.appendingPathComponent("metrics.json")
+            )
+        } else if let liveGoalApplicationFixture {
             try writeJSON(
                 liveGoalApplicationFixture.metrics,
                 to: outURL.appendingPathComponent("metrics.json")

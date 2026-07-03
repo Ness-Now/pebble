@@ -4213,3 +4213,40 @@ application, memory writes, movement stack, World/terrain mutation, mood,
 relationships, LLM, and social systems remain out of scope.
 
 Next recommended step: Phase 5.11C - Live Goal Application Guarded Hardening.
+
+## Phase 5.11C - Live Goal Application Guarded Hardening
+
+Status: implemented and validated.
+
+Goal: harden the guarded live goal application candidate layer while keeping
+it isolated from normal runtime agents.
+
+Implemented scenario:
+
+- `live_goal_application_guarded_hardening_smoke`.
+
+Validated runtime scope:
+
+- reuses the 5.11B fixture as a baseline-compatible case;
+- covers 32 hardening cases;
+- covers live-apply eligibility, `wouldApplyToLive`, live goal would-change,
+  no-op allowed, no-op disallowed, rejected decisions, deferred decisions, and
+  goal audit fields;
+- covers unknown target, target not allowed, missing live goal, missing
+  original live goal, missing target, missing reason, live goal mismatch,
+  prior applied-to-live, prior rejected/deferred reasons,
+  `appliedToSnapshot=false`, `snapshotGoalChanged=false`, policy disallow,
+  dedicated scenario false, and max live applications;
+- keeps `appliedToLive=0`;
+- keeps `liveAgentMutated=false`, `memoryMutated=false`,
+  `movementStackUsed=false`, `worldMutated=false`, and
+  `terrainMutated=false`;
+- records `agentsBasicTouched=false`;
+- emits `liveGoalApplicationHardening*` metrics and
+  `lab_live_goal_application_hardening_recorded`.
+
+`agents_basic` integration, uncontrolled live applied goal changes, action
+application, memory writes, movement stack, World/terrain mutation, mood,
+relationships, LLM, and social systems remain out of scope.
+
+Next recommended step: Phase 5.12A - Fake-Live Goal Application Planning.
