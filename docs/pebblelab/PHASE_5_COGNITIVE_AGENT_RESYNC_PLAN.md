@@ -959,3 +959,28 @@ The scenario emits `liveGoalApplicationHardening*` metrics and
 
 The recommended next phase is Phase 5.12A - Fake-Live Goal Application
 Planning.
+
+## Phase 5.12A Status
+
+Phase 5.12A is implemented as
+`PHASE_5_12A_FAKE_LIVE_GOAL_APPLICATION_PLAN.md`, a docs-only plan for the
+first effective goal mutation on scenario-owned fake-live state.
+
+The plan consumes guarded live goal application decisions from
+`LabLiveGoalApplication` where `liveApplyEligible=true` and
+`wouldApplyToLive=true`, then defines how Phase 5.12B can mutate a fake-live
+goal value while proving `appliedToAgentsBasic=false`,
+`agentsBasicTouched=false`, and `liveRuntimeTouched=false`.
+
+It defines proposed policy, input, decision, and report types; fake-live
+application modes; eligibility, rejection, deferral, no-op, and applied rules;
+future `fakeLiveGoalApplication*` metrics; future
+`lab_fake_live_goal_application_recorded` events; and invariant checks for
+Phase 5.12B.
+
+Normal runtime agents remain unchanged. Action application, memory writes,
+movement stack, World/terrain mutation, mood, relationships, communication,
+community state, embeddings, Python, LLM, and RL remain out of scope.
+
+The recommended next phase is Phase 5.12B - Fake-Live Goal Application
+Fixture Smoke.

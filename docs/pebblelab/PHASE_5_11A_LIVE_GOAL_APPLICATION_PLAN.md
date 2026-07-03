@@ -776,3 +776,22 @@ Limitations:
 Next phase:
 
 - Phase 5.12A — Fake-Live Goal Application Planning.
+
+## Phase 5.12A Planning Note
+
+Phase 5.12A defines the next contract after guarded live goal application:
+the first effective goal application is allowed only on scenario-owned
+fake-live state.
+
+The planned fake-live layer consumes `LabLiveGoalApplication` decisions where
+`liveApplyEligible=true`, `wouldApplyToLive=true`, `appliedToLive=false`,
+`liveAgentMutated=false`, and `agentsBasicTouched=false`. It may produce
+`appliedToFakeLive=true` and `fakeLiveGoalChanged=true`, but must keep
+`appliedToAgentsBasic=false`, `agentsBasicTouched=false`,
+`liveRuntimeTouched=false`, `memoryMutated=false`,
+`movementStackUsed=false`, `worldMutated=false`, and `terrainMutated=false`.
+
+Phase 5.12B should implement this in a dedicated scenario,
+`fake_live_goal_application_fixture_smoke`, without branching `agents_basic`
+or applying any action, memory write, movement intent, World mutation, or
+terrain mutation.

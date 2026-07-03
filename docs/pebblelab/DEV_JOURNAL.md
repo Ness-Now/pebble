@@ -1,5 +1,68 @@
 # PebbleLab Development Journal
 
+## 2026-07-03 — Phase 5.12A fake-live goal application planning
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Document the v0 contract for applying a goal to scenario-owned fake-live state
+after guarded live goal application candidates.
+
+### Starting Point
+
+Phase 5.11B and Phase 5.11C added and hardened
+`LabLiveGoalApplication.swift`. The guarded layer now covers
+`liveApplyEligible`, `wouldApplyToLive`, live goal would-change, no-op,
+rejected/deferred decisions, `appliedToLive=0`,
+`liveAgentMutated=false`, `agentsBasicTouched=false`, clean mutation
+boundaries, and deterministic digest repeatability.
+
+### Implementation
+
+- Created `PHASE_5_12A_FAKE_LIVE_GOAL_APPLICATION_PLAN.md`.
+- Defined the difference between `agents_basic`, fake-live state, live-like
+  fixture state, copied snapshot state, and guarded live candidates.
+- Audited current `LabLiveGoalApplication` policies, inputs, decisions,
+  reports, metrics, events, hardening coverage, and limitations.
+- Defined the fake-live goal application v0 contract.
+- Proposed `LabFakeLiveGoalApplicationPolicy`,
+  `LabFakeLiveGoalApplicationInput`,
+  `LabFakeLiveGoalApplicationDecision`, and
+  `LabFakeLiveGoalApplicationReport`.
+- Defined v0 modes: `fake_live_goal_apply`,
+  `fake_live_goal_audit_only`, `fake_live_goal_candidate_only`, and future
+  `guarded_agents_basic_goal_apply`.
+- Defined eligibility, rejection, deferral, no-op, and applied rules.
+- Proposed future `fakeLiveGoalApplication*` metrics and
+  `lab_fake_live_goal_application_recorded` events.
+- Defined future invariants for Phase 5.12B.
+- Kept Swift runtime, scenarios, metrics, events, `LabAgent`, `main.swift`,
+  movement stack, `agents_basic`, memory writes, World/terrain mutation, mood,
+  relationships, Python, LLM, embeddings, and RL out of scope.
+
+### Validation
+
+Commands:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results:
+
+- Docs-only change.
+- No Swift files changed.
+- `swift build` passed.
+- `swift build -c release --product Pebble` passed.
+- Diff checks passed.
+
+### Next Step
+
+Phase 5.12B — Fake-Live Goal Application Fixture Smoke.
+
 ## 2026-07-03 — Phase 5.11C guarded live goal application hardening smoke
 
 Branch: `lab/pebblelab-v1`

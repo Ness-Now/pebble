@@ -4250,3 +4250,28 @@ application, memory writes, movement stack, World/terrain mutation, mood,
 relationships, LLM, and social systems remain out of scope.
 
 Next recommended step: Phase 5.12A - Fake-Live Goal Application Planning.
+
+## Phase 5.12A - Fake-Live Goal Application Planning
+
+Status: implemented and validated as docs-only.
+
+Goal: define the contract for the first effective goal mutation on
+scenario-owned fake-live state, without touching `agents_basic`.
+
+Documented scope:
+
+- consumes guarded live goal application decisions from
+  `LabLiveGoalApplication`;
+- distinguishes fake-live state from `agents_basic`, live-like fixture state,
+  and copied snapshot state;
+- defines fake-live goal before/target/after audit;
+- allows `appliedToFakeLive=true` only for scenario-owned fake-live state;
+- requires `appliedToAgentsBasic=false`, `agentsBasicTouched=false`, and
+  `liveRuntimeTouched=false`;
+- keeps memory writes, movement stack, World/terrain mutation, action
+  application, mood, relationships, LLM, Python, embeddings, and RL out of
+  scope;
+- proposes `fakeLiveGoalApplication*` metrics,
+  `lab_fake_live_goal_application_recorded`, and future invariants.
+
+Next recommended step: Phase 5.12B - Fake-Live Goal Application Fixture Smoke.
