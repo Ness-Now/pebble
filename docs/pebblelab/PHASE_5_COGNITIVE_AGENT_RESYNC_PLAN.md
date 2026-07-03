@@ -837,3 +837,26 @@ scope.
 
 The recommended next phase is Phase 5.10B - Goal Application Snapshot Mutation
 Fixture Smoke.
+
+## Phase 5.10B Status
+
+Phase 5.10B implemented `goal_application_snapshot_mutation_fixture_smoke`,
+the first fixture-only copied-state goal mutation layer.
+
+The scenario creates eight snapshot mutation inputs and decisions. It covers
+two applied-to-snapshot mutations, two snapshot goal changes, one snapshot
+no-op, four rejected snapshot mutations, and one deferred snapshot mutation.
+
+It emits `goalSnapshotMutation*` metrics,
+`lab_goal_snapshot_mutation_recorded`, policies, inputs, decisions, invariant
+reports, and a stable digest.
+
+It keeps `appliedToLive=false` for every decision, proves
+`liveGoalAfter == originalLiveGoalBefore` for every decision, keeps live
+agents unmutated, memory unmutated, movement stack unused, World/terrain
+unmutated, and `agents_basic` unchanged. Mood, relationships,
+communication, community state, embeddings, Python, LLM, and RL remain out of
+scope.
+
+The recommended next phase is Phase 5.10C - Goal Application Snapshot Mutation
+Hardening.

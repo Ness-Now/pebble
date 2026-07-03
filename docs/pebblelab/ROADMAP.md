@@ -4067,3 +4067,41 @@ relationships, LLM, and social systems remain out of scope.
 
 Next recommended step: Phase 5.10B - Goal Application Snapshot Mutation
 Fixture Smoke.
+
+## Phase 5.10B - Goal Application Snapshot Mutation Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: add the first fixture-only copied/snapshot goal mutation layer after
+goal application dry-run.
+
+Implemented scenario:
+
+- `goal_application_snapshot_mutation_fixture_smoke`.
+
+Validated runtime scope:
+
+- creates snapshot mutation policies, inputs, decisions, report, invariant,
+  digest, metrics, and events;
+- covers `appliedToSnapshot=true`;
+- covers `snapshotGoalChanged=true`;
+- covers snapshot no-op;
+- covers rejected unknown target goal, `wouldApplyGoalChange=false`, prior
+  dry-run rejected reasons, and max snapshot mutation limits;
+- covers audit-only deferred snapshot mutation;
+- audits original live goal, snapshot goal before/after, target goal, and live
+  goal after;
+- keeps `appliedToLive=false` for every decision;
+- proves live goals remain unchanged;
+- keeps `liveAgentMutated=false`, `memoryMutated=false`,
+  `movementStackUsed=false`, `worldMutated=false`, and
+  `terrainMutated=false`;
+- emits `goalSnapshotMutation*` metrics and
+  `lab_goal_snapshot_mutation_recorded`.
+
+Live `agents_basic` integration, live applied goal changes, actions, memory
+writes, live memory updates, movement stack, World/terrain mutation, mood,
+relationships, LLM, and social systems remain out of scope.
+
+Next recommended step: Phase 5.10C - Goal Application Snapshot Mutation
+Hardening.

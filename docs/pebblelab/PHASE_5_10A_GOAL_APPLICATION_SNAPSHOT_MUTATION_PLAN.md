@@ -592,3 +592,72 @@ Future outputs:
 - `swift build -c release --product Pebble` passes.
 - `git diff --check` passes.
 - Next phase 5.10B is clearly specified.
+
+## Phase 5.10B Implementation Status
+
+Phase 5.10B implemented `goal_application_snapshot_mutation_fixture_smoke`.
+
+Scenario:
+
+- `goal_application_snapshot_mutation_fixture_smoke`.
+
+Policies:
+
+- mode `snapshot_goal_mutation_dry_run` for normal copied-state mutation;
+- mode `snapshot_goal_mutation_audit` for deferred coverage;
+- bounded allowed goals;
+- max snapshot mutation rejection coverage.
+
+Inputs:
+
+- eight snapshot mutation inputs.
+
+Decisions:
+
+- two `appliedToSnapshot=true` decisions;
+- two `snapshotGoalChanged=true` decisions;
+- one snapshot no-op;
+- four rejected snapshot mutations;
+- one deferred snapshot mutation;
+- all `appliedToLive=false`.
+
+Snapshot/live separation:
+
+- copied snapshot goals can change;
+- live goals remain unchanged for every decision;
+- `liveAgentMutated=false`.
+
+Report:
+
+- `goal_snapshot_mutation_report.json`.
+
+Invariant:
+
+- `goal_snapshot_mutation_invariant_report.json`.
+
+Digest:
+
+- `goal_snapshot_mutation_digest.json`.
+
+Metrics:
+
+- `goalSnapshotMutation*`.
+
+Events:
+
+- `lab_goal_snapshot_mutation_recorded`;
+- optional `lab_goal_snapshot_mutation_summary_recorded`.
+
+Limitations:
+
+- no live `agents_basic` integration;
+- no live agent mutation;
+- no live applied goal changes;
+- no action application;
+- no memory write application;
+- no movement stack;
+- no World or terrain mutation.
+
+Next phase:
+
+- Phase 5.10C — Goal Application Snapshot Mutation Hardening.

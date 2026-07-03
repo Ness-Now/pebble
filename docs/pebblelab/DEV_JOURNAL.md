@@ -1,5 +1,106 @@
 # PebbleLab Development Journal
 
+## 2026-07-03 — Phase 5.10B goal snapshot mutation fixture smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Implement the first fixture-only goal snapshot mutation layer:
+`goal_application_snapshot_mutation_fixture_smoke`.
+
+### Starting Point
+
+Phase 5.10A defined the copied/snapshot mutation contract after goal
+application dry-run. Phase 5.9B and 5.9C already produce goal dry-run
+decisions with `wouldApplyGoalChange`, `goalBefore`, `targetGoal`,
+rejected/deferred reasons, and zero live applied flags.
+
+### Link With 5.10A
+
+Phase 5.10B implements the 5.10A contract as a bounded fixture. It mutates only
+copied snapshot goal state, audits before/after values, and proves the live
+goal remains unchanged.
+
+### Implementation
+
+- Added `LabGoalSnapshotMutation.swift`.
+- Added `goal_application_snapshot_mutation_fixture_smoke`.
+- Added snapshot mutation policies, inputs, decisions, report, invariant
+  report, digest, metrics, and events.
+- Covered `appliedToSnapshot=true` for safety and explore target goals.
+- Covered `snapshotGoalChanged=true`.
+- Covered snapshot no-op.
+- Covered rejected unknown target goal.
+- Covered rejected `wouldApplyGoalChange=false`.
+- Covered rejected prior dry-run rejected reasons.
+- Covered audit-only deferred snapshot mutation.
+- Covered max snapshot mutations rejection.
+- Audited `originalLiveGoalBefore`, `snapshotGoalBefore`, `targetGoal`,
+  `snapshotGoalAfter`, and `liveGoalAfter`.
+- Kept `appliedToLive=false` for every decision.
+- Proved `liveGoalAfter == originalLiveGoalBefore` for every decision.
+- Kept `liveAgentMutated=false`, `memoryMutated=false`,
+  `movementStackUsed=false`, `worldMutated=false`, and
+  `terrainMutated=false`.
+
+### Outputs
+
+- `goal_snapshot_mutation_report.json`;
+- `goal_snapshot_mutation_invariant_report.json`;
+- `goal_snapshot_mutation_policies.json`;
+- `goal_snapshot_mutation_inputs.json`;
+- `goal_snapshot_mutation_decisions.json`;
+- `goal_snapshot_mutation_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+### Validation
+
+Commands:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `swift run PebbleLab -- --scenario goal_application_snapshot_mutation_fixture_smoke --seed 42 --ticks 3 --out runs/check_goal_snapshot_mutation_fixture`;
+- debug non-regression runs for goal application dry-run, controlled
+  application, live adapter, cognitive loop integration, behavior-loop bridge,
+  goal selection memory, memory retrieval, memory update, behavior loop,
+  `agents_basic`, and `regression_smoke`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results:
+
+- `swift build` passed.
+- `swift build -c release --product Pebble` passed.
+- `goal_application_snapshot_mutation_fixture_smoke` passed in debug.
+- Debug non-regressions passed for goal application dry-run
+  fixture/hardening, controlled application fixture/hardening, live adapter
+  fixture/hardening, cognitive loop integration fixture/hardening,
+  behavior-loop memory-goal bridge fixture/hardening, goal selection memory
+  fixture/hardening, memory retrieval fixture/hardening, memory update
+  fixture/hardening, behavior loop fixture/hardening, `agents_basic`, and
+  `regression_smoke`.
+- `swift run -c release PebbleLab -- --scenario
+  goal_application_snapshot_mutation_fixture_smoke ...` was attempted,
+  reached the known silent release PebbleLab stall, was interrupted after
+  roughly one minute, and left no PebbleLab child process running.
+- `swift run -c release pebsmoke` passed with 456 passed, 0 failed.
+- `git diff --check` passed.
+- `git diff --cached --check` passed.
+
+Fixture report summary: success=true, agents=8, inputs=8, decisions=8,
+snapshotMutationsAttempted=7, snapshotMutationsApplied=2,
+snapshotGoalChanged=2, snapshotNoops=1, rejectedSnapshotMutations=4,
+deferredSnapshotMutations=1, appliedToLiveCount=0,
+liveGoalsUnchanged=true, digest=`0f89855e1a98d519`.
+
+### Next Step
+
+Phase 5.10C — Goal Application Snapshot Mutation Hardening.
+
 ## 2026-07-03 — Phase 5.10A goal application snapshot mutation planning
 
 Branch: `lab/pebblelab-v1`
