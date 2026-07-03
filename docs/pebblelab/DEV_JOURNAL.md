@@ -1,5 +1,67 @@
 # PebbleLab Development Journal
 
+## 2026-07-03 — Phase 5.9A goal application dry-run planning
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Document the v0 contract for a specialized goal application dry-run layer.
+
+### Starting Point
+
+Phase 5.8B and Phase 5.8C created and hardened the controlled application
+layer. That layer can report eligible, rejected, and deferred application
+decisions while keeping all applied flags false and preserving dry-run
+boundaries.
+
+### Link With 5.8A
+
+Phase 5.8A defined the broad safety gate between dry-run application plans and
+future controlled application. Phase 5.9A narrows the first future application
+path to goal changes only.
+
+### Planning Scope
+
+- Created `PHASE_5_9A_GOAL_APPLICATION_DRY_RUN_PLAN.md`.
+- Defined the goal application dry-run contract.
+- Proposed `LabGoalApplicationDryRunPolicy`,
+  `LabGoalApplicationDryRunInput`, `LabGoalApplicationDryRunDecision`, and
+  `LabGoalApplicationDryRunReport`.
+- Defined v0 modes: `goal_dry_run_only`, `goal_eligibility_audit`,
+  `goal_noop_audit`, and future inactive apply modes.
+- Defined eligibility, rejection, deferral, no-op, and applied rules.
+- Required `appliedGoalChange=false`, `liveAgentMutated=false`,
+  `memoryMutated=false`, `movementStackUsed=false`, `worldMutated=false`, and
+  `terrainMutated=false`.
+- Kept selected action application and memory write application out of scope.
+- Proposed `goalApplicationDryRun*` metrics.
+- Proposed `lab_goal_application_dry_run_recorded` events.
+- Proposed invariant checks for eligible, would-apply, no-op, rejected,
+  deferred, and boundary cases.
+- Specified the future `goal_application_dry_run_fixture_smoke` scenario.
+
+### Validation
+
+Commands:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results:
+
+- `swift build` passed;
+- `swift build -c release --product Pebble` passed;
+- `git diff --check` passed;
+- `git diff --cached --check` passed before staging.
+
+### Next Step
+
+Phase 5.9B — Goal Application Dry-Run Fixture Smoke.
+
 ## 2026-07-02 — Phase 5.8C live cognitive loop controlled application hardening smoke
 
 Branch: `lab/pebblelab-v1`

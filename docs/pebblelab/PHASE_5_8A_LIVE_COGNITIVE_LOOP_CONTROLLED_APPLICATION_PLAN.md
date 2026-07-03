@@ -859,3 +859,18 @@ Limitations:
   embeddings, or RL.
 
 Next phase: Phase 5.9A - Goal Application Dry-Run Planning.
+
+## Phase 5.9A Planning Link
+
+Phase 5.9A specializes the first future application path after controlled
+application: goal application dry-run.
+
+It consumes controlled application decisions where `goalChangeEligible=true`
+and defines how Phase 5.9B should audit `goalBefore`, `targetGoal`, reason,
+rejected/deferred status, and `wouldApplyGoalChange`, while keeping
+`appliedGoalChange=false`, live agents unmutated, memory unmutated, movement
+stack unused, World/terrain unmutated, and `agents_basic` unchanged.
+
+Recommended next implementation after this planning layer:
+
+- Phase 5.9B — Goal Application Dry-Run Fixture Smoke.

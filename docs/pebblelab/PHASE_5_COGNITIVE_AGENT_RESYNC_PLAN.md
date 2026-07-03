@@ -742,3 +742,28 @@ memory unmutated, movement stack unused, World/terrain unmutated, and
 embeddings, Python, LLM, and RL remain out of scope.
 
 The recommended next phase is Phase 5.9A - Goal Application Dry-Run Planning.
+
+## Phase 5.9A Status
+
+Phase 5.9A is implemented as
+`PHASE_5_9A_GOAL_APPLICATION_DRY_RUN_PLAN.md`, a docs-only plan for the first
+specialized future application path: goal application dry-run.
+
+The plan consumes controlled application decisions from Phase 5.8B/5.8C and
+defines how an eligible goal change becomes a `wouldApplyGoalChange` dry-run
+decision while keeping `appliedGoalChange=false`.
+
+It defines proposed policy, input, decision, and report types; v0 modes;
+eligibility, rejection, deferral, no-op, and applied rules; future
+`goalApplicationDryRun*` metrics; future
+`lab_goal_application_dry_run_recorded` events; and invariant checks for
+Phase 5.9B.
+
+It keeps live agents unmutated, memory unmutated, movement stack unused,
+World/terrain unmutated, selected action application out of scope, memory
+write application out of scope, and `agents_basic` unchanged. Mood,
+relationships, communication, community state, embeddings, Python, LLM, and
+RL remain out of scope.
+
+The recommended next phase is Phase 5.9B - Goal Application Dry-Run Fixture
+Smoke.

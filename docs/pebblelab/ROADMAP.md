@@ -3930,3 +3930,41 @@ real memory writes, live memory updates, movement stack, World/terrain
 mutation, mood, relationships, LLM, and social systems remain out of scope.
 
 Next recommended step: Phase 5.9A - Goal Application Dry-Run Planning.
+
+## Phase 5.9A - Goal Application Dry-Run Planning
+
+Status: implemented and validated as docs-only.
+
+Goal: define the first specialized dry-run application contract for future
+goal changes, without mutating a live agent.
+
+Documented in `PHASE_5_9A_GOAL_APPLICATION_DRY_RUN_PLAN.md`.
+
+Validated planning scope:
+
+- audits the current `LabControlledApplication` policy, input, eligibility,
+  decision, report, applied flag, rejected/deferred reason, and boundary
+  fields;
+- defines a goal application dry-run contract that consumes controlled
+  application decisions and produces would-apply goal decisions;
+- separates eligible, would-apply, no-op, rejected, deferred, and applied
+  states;
+- defines v0 modes: `goal_dry_run_only`, `goal_eligibility_audit`,
+  `goal_noop_audit`, and future inactive apply modes;
+- defines goal application eligibility, rejection, deferral, no-op, and
+  applied rules;
+- requires Phase 5.9B to keep `appliedGoalChange=false`;
+- proposes `LabGoalApplicationDryRunPolicy`,
+  `LabGoalApplicationDryRunInput`, `LabGoalApplicationDryRunDecision`, and
+  `LabGoalApplicationDryRunReport`;
+- defines future `goalApplicationDryRun*` metrics and
+  `lab_goal_application_dry_run_recorded` events;
+- defines future invariant checks and the recommended
+  `goal_application_dry_run_fixture_smoke` scenario.
+
+Live `agents_basic` integration, live agent mutation, applied goal changes,
+applied actions, applied memory writes, live memory updates, movement stack,
+World/terrain mutation, mood, relationships, LLM, and social systems remain
+out of scope.
+
+Next recommended step: Phase 5.9B - Goal Application Dry-Run Fixture Smoke.
