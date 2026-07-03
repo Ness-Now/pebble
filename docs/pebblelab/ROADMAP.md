@@ -3673,3 +3673,37 @@ relationships, LLM, social memory, and movement stack feedback remain out of
 scope.
 
 Next recommended step: Phase 5.6C - Cognitive Loop Integration Hardening.
+
+## Phase 5.6C - Cognitive Loop Integration Hardening
+
+Status: implemented and validated.
+
+Goal: harden the fixture-only integrated cognitive loop against controlled
+edge cases while keeping live behavior, World mutation, movement, and
+iterative cognition out of scope.
+
+Implemented as `cognitive_loop_integration_hardening_smoke`.
+
+Validated scope:
+
+- covers 23 hardening cases, including baseline compatibility, safety,
+  curiosity, nearby observation, empty retrieval, low-confidence/no override,
+  duplicate rejected writes, memory count consistency, retrieval-before-update,
+  memory-update-after-behavior-result, deterministic order, boundary flags, and
+  digest repeatability;
+- produces integrated trace, decisions, before/after memory snapshots, cases,
+  report, invariant report, and digest outputs;
+- emits `cognitiveLoopIntegrationHardening*` metrics and
+  `lab_cognitive_loop_integration_hardening_recorded`;
+- keeps `behaviorActionExecuted=false`;
+- keeps `memoryMutatedOutsideUpdate=false`;
+- keeps `retrievalRerunUnexpected=false`;
+- keeps `movementStackUsed=false`;
+- keeps `worldMutated=false` and `terrainMutated=false`;
+- leaves `agents_basic` live runtime behavior unchanged.
+
+Live `agents_basic` integration, iterative cognitive loops, mood,
+relationships, LLM, social memory, and movement stack feedback remain out of
+scope.
+
+Next recommended step: Phase 5.7A - Live Cognitive Loop Adapter Planning.

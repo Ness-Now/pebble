@@ -673,3 +673,100 @@ Limitations:
   embeddings, or RL.
 
 Next phase: Phase 5.6C - Cognitive Loop Integration Hardening.
+
+## Phase 5.6C Implementation Status
+
+Phase 5.6C implemented the fixture-only hardening scenario
+`cognitive_loop_integration_hardening_smoke`.
+
+Cases:
+
+- baseline compatibility with `cognitive_loop_integration_fixture_smoke`;
+- safety loop selects `seekSafety` and writes bounded memory;
+- curiosity loop selects `explore` and writes bounded memory;
+- nearby-agent loop selects `observeOtherAgent` and `observeAgent`;
+- empty retrieval keeps currentGoal;
+- low-confidence memory does not override currentGoal;
+- duplicate write rejection is audited;
+- before/after memory counts remain coherent;
+- max one accepted write per agent/tick is enforced;
+- retrieval remains before memory update;
+- retrieval is not rerun after memory update;
+- memory update remains after behavior result production;
+- selected goal, selected action, and behavior result are always present;
+- memory mutation is only represented through the memory update step;
+- deterministic order and digest repeatability are checked.
+
+Integrated flow:
+
+- build synthetic agent state and initial memory snapshots;
+- run bounded retrieval against initial memory snapshots;
+- select goals from retrieved memories;
+- bridge selected goals into abstract selected actions;
+- produce behavior result summaries;
+- run bounded memory update after behavior result production;
+- write before/after memory snapshots;
+- emit hardening report, invariant report, cases, trace, decisions, digest,
+  metrics, and events.
+
+Retrieval:
+
+- reads only the initial memory snapshot;
+- covers safety, curiosity, nearby-agent, empty retrieval, and low-confidence
+  cases;
+- does not rerun after memory update.
+
+Goal selection:
+
+- safety memory selects `seekSafety`;
+- curiosity memory selects `explore`;
+- nearby-agent memory selects `observeOtherAgent`;
+- empty retrieval preserves currentGoal;
+- low-confidence memories preserve currentGoal.
+
+Bridge:
+
+- `seekSafety` -> `seekSafety`;
+- `explore` -> `explore`;
+- `observeOtherAgent` -> `observeAgent`;
+- preserved currentGoal maps to a bounded abstract selected action.
+
+Memory update:
+
+- runs only after behavior result summaries exist;
+- accepts bounded writes;
+- rejects controlled duplicate writes;
+- keeps max 1 accepted write per agent/tick;
+- records accepted/rejected writes in decisions and memory snapshots.
+
+Outputs:
+
+- `cognitive_loop_integration_hardening_report.json`;
+- `cognitive_loop_integration_hardening_invariant_report.json`;
+- `cognitive_loop_integration_hardening_cases.json`;
+- `cognitive_loop_integration_hardening_trace.json`;
+- `cognitive_loop_integration_hardening_decisions.json`;
+- `cognitive_loop_integration_hardening_memory_snapshot.json`;
+- `cognitive_loop_integration_hardening_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Metrics/events:
+
+- metrics use the `cognitiveLoopIntegrationHardening*` prefix;
+- the primary event is
+  `lab_cognitive_loop_integration_hardening_recorded`.
+
+Limitations:
+
+- no behavior action execution;
+- no memory mutation outside memory update;
+- no retrieval rerun after update;
+- no movement intent or movement stack;
+- no World or terrain mutation;
+- no live `agents_basic` integration;
+- no iterative cognitive loop;
+- no mood, relationships, communication, social memory, Python, LLM,
+  embeddings, or RL.
+
+Next phase: Phase 5.7A - Live Cognitive Loop Adapter Planning.

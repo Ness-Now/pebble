@@ -1,5 +1,68 @@
 # PebbleLab Development Journal
 
+## 2026-07-02 — Phase 5.6C cognitive loop integration hardening smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Harden the fixture-only integrated cognitive loop with deterministic boundary
+cases in `cognitive_loop_integration_hardening_smoke`.
+
+### Starting Point
+
+Phase 5.6B added the first integrated cognitive loop fixture, chaining memory
+snapshot retrieval, goal selection, memory-goal bridge, behavior result
+summary, and memory update without live side effects.
+
+### Implementation
+
+- Added `cognitive_loop_integration_hardening_smoke`.
+- Reused `LabCognitiveLoopIntegration.swift` and the 5.6B fixture inputs.
+- Added hardening coverage for baseline compatibility, safety, curiosity,
+  nearby observation, empty retrieval, low-confidence/no override, duplicate
+  rejected write, max one accepted write per agent/tick, trace ordering, and
+  digest repeatability.
+- Kept retrieval strictly before memory update.
+- Kept behavior result production before memory update.
+- Audited rejected writes in decisions and before/after memory snapshots.
+- Added `cognitiveLoopIntegrationHardening*` metrics.
+- Added `lab_cognitive_loop_integration_hardening_recorded`.
+- Wrote report, invariant report, cases, trace, decisions, memory snapshot,
+  digest, metrics, and events.
+
+### Boundaries
+
+- No behavior action execution.
+- No memory mutation outside the memory update step.
+- No retrieval rerun after memory update.
+- No movement intent or movement stack.
+- No World or terrain mutation.
+- No Core entity or physical placeholder movement.
+- No live `agents_basic` integration.
+- No iterative multi-pass cognitive loop.
+- No mood, relationships, communication, community, Python, LLM, embeddings,
+  or RL.
+
+### Validation
+
+Commands requested for this phase:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `swift run PebbleLab -- --scenario cognitive_loop_integration_hardening_smoke --seed 42 --ticks 3 --out runs/check_cognitive_loop_integration_hardening`;
+- debug non-regression runs for cognitive loop integration, behavior-loop
+  memory-goal bridge, goal selection, memory retrieval, memory update,
+  behavior loop, `agents_basic`, and `regression_smoke`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+### Next Step
+
+Phase 5.7A — Live Cognitive Loop Adapter Planning.
+
 ## 2026-07-02 — Phase 5.6B cognitive loop integration fixture smoke
 
 Branch: `lab/pebblelab-v1`

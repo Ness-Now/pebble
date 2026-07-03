@@ -554,3 +554,28 @@ community state, embeddings, Python, LLM, or RL.
 
 The recommended next phase is Phase 5.6C - Cognitive Loop Integration
 Hardening.
+
+## Phase 5.6C Status
+
+Phase 5.6C implemented `cognitive_loop_integration_hardening_smoke`, a
+fixture-only hardening scenario for the integrated cognitive loop.
+
+The scenario reuses the Phase 5.6B integrated flow and validates 23 cases
+covering baseline compatibility, safety, curiosity, nearby-agent observation,
+empty retrieval, low-confidence/no override, duplicate rejected writes, memory
+count consistency, max one accepted write per agent/tick, retrieval before
+memory update, memory update after behavior result, selected goal/action/result
+presence, deterministic order, boundary flags, and digest repeatability.
+
+The scenario emits `cognitiveLoopIntegrationHardening*` metrics,
+`lab_cognitive_loop_integration_hardening_recorded`, cases, trace, decision,
+memory snapshot, invariant, and digest outputs.
+
+It does not execute behavior actions, mutate memory outside the memory update
+step, rerun retrieval after update, use the movement stack, create or mutate a
+World, mutate terrain, move Core entities, move physical placeholders, alter
+`agents_basic`, add iterative cognition, mood, relationships, communication,
+community state, embeddings, Python, LLM, or RL.
+
+The recommended next phase is Phase 5.7A - Live Cognitive Loop Adapter
+Planning.
