@@ -1,5 +1,82 @@
 # PebbleLab Development Journal
 
+## 2026-07-02 — Phase 5.7A live cognitive loop adapter planning
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Document the v0 contract for a live/dry-run adapter between live-like
+`LabAgent` state, cognitive loop integration, and a future safe application
+plan.
+
+### Starting Point
+
+Phase 5.6B and Phase 5.6C created and hardened the fixture-only integrated
+cognitive loop:
+
+```text
+memory snapshot
+-> retrieval
+-> goal selection
+-> bridge
+-> behavior result
+-> memory update
+```
+
+That chain is deterministic, bounded, and side-effect clean, but it still uses
+synthetic snapshots instead of reading live `LabAgent` state.
+
+### Planning
+
+- Created `PHASE_5_7A_LIVE_COGNITIVE_LOOP_ADAPTER_PLAN.md`.
+- Audited the current `LabAgent` live state: id, type, state, position, needs,
+  health, fear, home position, inventory, observation, nearby agents,
+  currentGoal, last action/effect/movement, memory, and counters.
+- Defined an adapter contract that extracts a read-only snapshot, converts it
+  into cognitive-loop-compatible input, receives cognitive output, and emits a
+  dry-run application plan.
+- Proposed `LabLiveCognitiveLoopAdapterInput`,
+  `LabLiveCognitiveLoopAdapterSnapshot`,
+  `LabLiveCognitiveLoopApplicationPlan`,
+  `LabLiveCognitiveLoopAdapterDecision`, and
+  `LabLiveCognitiveLoopAdapterReport`.
+- Defined dry-run rules: no applied goal changes, no applied actions, no
+  applied memory writes, no live agent mutation, no live memory mutation, no
+  movement stack, no World mutation, and no terrain mutation.
+- Defined future `liveCognitiveLoopAdapter*` metrics and
+  `lab_live_cognitive_loop_adapter_recorded` events.
+- Defined Phase 5.7B fixture outputs and invariant expectations.
+
+### Boundaries
+
+- Docs-only.
+- No Swift files changed.
+- No runtime behavior changed.
+- No scenario added.
+- No runtime metrics or events added.
+- No `LabAgent`, cognitive loop, memory update, retrieval, goal selection,
+  bridge, movement stack, World, renderer, resource, registry, save/load, or
+  golden changes.
+- No `agents_basic` integration.
+- No selectedGoal/action/memory application on live agents.
+- No mood, relationships, trust, communication, community, Python, LLM,
+  embeddings, or RL.
+
+### Validation
+
+Commands requested for this docs-only phase:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+### Next Step
+
+Phase 5.7B — Live Cognitive Loop Adapter Fixture Smoke.
+
 ## 2026-07-02 — Phase 5.6C cognitive loop integration hardening smoke
 
 Branch: `lab/pebblelab-v1`

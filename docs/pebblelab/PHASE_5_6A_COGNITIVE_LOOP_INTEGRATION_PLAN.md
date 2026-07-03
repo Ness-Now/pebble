@@ -770,3 +770,28 @@ Limitations:
   embeddings, or RL.
 
 Next phase: Phase 5.7A - Live Cognitive Loop Adapter Planning.
+
+## Phase 5.7A Planning Link
+
+Phase 5.7A is documented in
+`PHASE_5_7A_LIVE_COGNITIVE_LOOP_ADAPTER_PLAN.md`.
+
+It prepares the next boundary after the fixture-only cognitive loop
+integration: reading live-like `LabAgent` state into a read-only adapter
+snapshot, converting that snapshot into cognitive-loop-compatible input, and
+turning the cognitive output into a dry-run application plan.
+
+The adapter plan explicitly keeps `agents_basic` unchanged and keeps every
+application flag false in v0:
+
+- no applied goal change;
+- no applied action;
+- no applied memory write;
+- no live agent mutation;
+- no live memory mutation;
+- no movement stack;
+- no World or terrain mutation.
+
+Phase 5.7B should implement a dedicated
+`live_cognitive_loop_adapter_fixture_smoke` scenario rather than integrating
+the cognitive loop into normal live agent runtime.

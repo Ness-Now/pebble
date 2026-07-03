@@ -3707,3 +3707,37 @@ relationships, LLM, social memory, and movement stack feedback remain out of
 scope.
 
 Next recommended step: Phase 5.7A - Live Cognitive Loop Adapter Planning.
+
+## Phase 5.7A - Live Cognitive Loop Adapter Planning
+
+Status: implemented and validated as docs-only.
+
+Goal: define the v0 contract for a live/dry-run adapter between live-like
+`LabAgent` state, the fixture-proven cognitive loop integration, and a future
+safe application plan.
+
+Implemented as `PHASE_5_7A_LIVE_COGNITIVE_LOOP_ADAPTER_PLAN.md`.
+
+Validated scope:
+
+- audits current `LabAgent` live fields and mutating methods;
+- defines read-only adapter snapshots;
+- defines conversion from live-like state to cognitive-loop-compatible input;
+- defines dry-run application plans with computed-vs-applied flags;
+- proposes `LabLiveCognitiveLoopAdapterInput`,
+  `LabLiveCognitiveLoopAdapterSnapshot`,
+  `LabLiveCognitiveLoopApplicationPlan`,
+  `LabLiveCognitiveLoopAdapterDecision`, and
+  `LabLiveCognitiveLoopAdapterReport`;
+- defines future `liveCognitiveLoopAdapter*` metrics,
+  `lab_live_cognitive_loop_adapter_recorded` events, and invariant
+  expectations;
+- keeps `agents_basic`, live agent mutation, applied goal changes, applied
+  actions, applied memory writes, live memory update, movement stack, World
+  mutation, terrain mutation, mood, relationships, communication, Python, LLM,
+  embeddings, and RL out of scope;
+- no Swift files changed;
+- no runtime behavior changed;
+- no scenario added.
+
+Next recommended step: Phase 5.7B - Live Cognitive Loop Adapter Fixture Smoke.

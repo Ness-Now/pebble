@@ -579,3 +579,33 @@ community state, embeddings, Python, LLM, or RL.
 
 The recommended next phase is Phase 5.7A - Live Cognitive Loop Adapter
 Planning.
+
+## Phase 5.7A Status
+
+Phase 5.7A is implemented as
+`PHASE_5_7A_LIVE_COGNITIVE_LOOP_ADAPTER_PLAN.md`.
+
+The plan defines the future live/dry-run adapter contract between live-like
+`LabAgent` state, cognitive loop integration, and a safe application plan. It
+audits current `LabAgent` state and mutating methods, defines read-only adapter
+snapshots, proposes adapter input/snapshot/application-plan/decision/report
+types, and records dry-run rules that keep computed decisions separate from
+applied decisions.
+
+The adapter contract keeps `dryRun=true`, `appliedGoalChange=false`,
+`appliedAction=false`, `appliedMemoryWrite=false`,
+`liveAgentMutated=false`, `memoryMutated=false`, `movementStackUsed=false`,
+`worldMutated=false`, and `terrainMutated=false` for v0.
+
+The plan defines future `liveCognitiveLoopAdapter*` metrics,
+`lab_live_cognitive_loop_adapter_recorded` events, invariant expectations, and
+the dedicated Phase 5.7B scenario
+`live_cognitive_loop_adapter_fixture_smoke`.
+
+It does not modify Swift runtime, add scenarios, branch `agents_basic`, apply
+selected goals/actions/memory writes to live agents, call the movement stack,
+mutate World/terrain, add mood, relationships, communication, community state,
+embeddings, Python, LLM, or RL.
+
+The recommended next phase is Phase 5.7B - Live Cognitive Loop Adapter Fixture
+Smoke.
