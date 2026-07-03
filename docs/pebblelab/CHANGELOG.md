@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added PebbleLab live cognitive loop adapter hardening smoke.
 - Added PebbleLab live cognitive loop adapter fixture smoke.
 - Documented PebbleLab live cognitive loop adapter plan.
 - Added PebbleLab cognitive loop integration hardening smoke.

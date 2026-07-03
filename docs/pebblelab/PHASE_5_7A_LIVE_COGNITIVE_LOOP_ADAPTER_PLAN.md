@@ -705,3 +705,90 @@ Limitations:
   embeddings, or RL.
 
 Next phase: Phase 5.7C - Live Cognitive Loop Adapter Hardening.
+
+## Phase 5.7C Implementation Status
+
+Phase 5.7C implemented the adapter-only dry-run hardening scenario
+`live_cognitive_loop_adapter_hardening_smoke`.
+
+Cases:
+
+- 23 hardening cases;
+- baseline compatibility with the 5.7B fixture;
+- read-only snapshots;
+- `wouldChangeGoal` true and false;
+- `wouldSelectAction`;
+- `wouldWriteMemory` true and false;
+- all applied flags zero;
+- forced `dryRun=true`;
+- no live agent mutation;
+- no memory mutation;
+- no movement stack;
+- no World or terrain mutation;
+- unknown computed goal handling;
+- missing computed action handling;
+- no-write application plan;
+- unchanged current goal;
+- deterministic order;
+- bounded output;
+- digest repeatability;
+- explicit boundary flags.
+
+Snapshots:
+
+- seven live-like adapter snapshots are emitted;
+- all snapshots are read-only;
+- no snapshot is used to mutate a live agent.
+
+Application plans:
+
+- safety, curiosity, nearby-agent observation, unchanged-goal, and no-write
+  baseline plans remain covered;
+- unknown computed goals are sanitized to `idle` and never applied;
+- missing computed actions use an `idle` fallback and are never applied;
+- all plans remain dry-run;
+- `appliedGoalChange=false`, `appliedAction=false`, and
+  `appliedMemoryWrite=false`.
+
+Report:
+
+- `live_cognitive_loop_adapter_hardening_report.json`;
+- `live_cognitive_loop_adapter_hardening_invariant_report.json`;
+- `live_cognitive_loop_adapter_hardening_cases.json`;
+- `live_cognitive_loop_adapter_hardening_snapshots.json`;
+- `live_cognitive_loop_adapter_hardening_application_plans.json`;
+- `live_cognitive_loop_adapter_hardening_digest.json`.
+
+Invariant:
+
+- validates the 23 cases;
+- validates positive snapshots/decisions/application plans;
+- validates all applied counts are zero;
+- validates read-only snapshots, no-write coverage, unchanged-goal coverage,
+  deterministic order, bounded output, explicit boundary flags, and digest
+  repeatability.
+
+Digest:
+
+- deterministic digest is written;
+- digest repeat equals digest;
+- repeatability failures remain zero.
+
+Metrics/events:
+
+- metrics use the `liveCognitiveLoopAdapterHardening*` prefix;
+- the primary event is `lab_live_cognitive_loop_adapter_hardening_recorded`.
+
+Limitations:
+
+- no live `agents_basic` integration;
+- no applied goal changes;
+- no applied actions;
+- no applied memory writes;
+- no live memory mutation;
+- no movement stack;
+- no World or terrain mutation;
+- no mood, relationships, communication, social memory, Python, LLM,
+  embeddings, or RL.
+
+Next phase: Phase 5.8A - Live Cognitive Loop Controlled Application Planning.

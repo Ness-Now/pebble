@@ -637,3 +637,33 @@ or RL.
 
 The recommended next phase is Phase 5.7C - Live Cognitive Loop Adapter
 Hardening.
+
+## Phase 5.7C Status
+
+Phase 5.7C implemented `live_cognitive_loop_adapter_hardening_smoke`, an
+adapter-only dry-run hardening scenario for the future live cognitive loop
+boundary.
+
+The scenario reuses the 5.7B baseline and adds controlled edge cases for an
+unknown computed goal and a missing computed action. Unknown computed goals are
+sanitized to `idle` and never applied. Missing computed actions use an `idle`
+fallback and are never applied.
+
+The scenario covers 23 hardening cases, including read-only snapshots,
+`wouldChangeGoal` true/false, `wouldSelectAction`, `wouldWriteMemory`
+true/false, all applied flags zero, forced dry-run, no-write plans, unchanged
+goal plans, deterministic order, bounded output, explicit boundary flags, and
+digest repeatability.
+
+It emits `liveCognitiveLoopAdapterHardening*` metrics,
+`lab_live_cognitive_loop_adapter_hardening_recorded`, cases, snapshots,
+application plans, invariant reports, and a stable digest.
+
+It does not mutate live agents, mutate memory, write live memory, apply
+selected goals, apply selected actions, use the movement stack, create or
+mutate a World, mutate terrain, alter `agents_basic`, add iterative cognition,
+mood, relationships, communication, community state, embeddings, Python, LLM,
+or RL.
+
+The recommended next phase is Phase 5.8A - Live Cognitive Loop Controlled
+Application Planning.

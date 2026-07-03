@@ -3779,3 +3779,44 @@ applied memory writes, mood, relationships, LLM, social memory, and movement
 stack feedback remain out of scope.
 
 Next recommended step: Phase 5.7C - Live Cognitive Loop Adapter Hardening.
+
+## Phase 5.7C - Live Cognitive Loop Adapter Hardening
+
+Status: implemented and validated.
+
+Goal: harden the live cognitive loop adapter dry-run fixture with boundary and
+edge-case coverage before any live application phase.
+
+Implemented as `live_cognitive_loop_adapter_hardening_smoke`.
+
+Validated scope:
+
+- reuses the 5.7B baseline with seven live-like adapter snapshots and dry-run
+  application plans;
+- covers 23 hardening cases for read-only snapshots, `would*` flags, applied
+  flags zero, forced dry-run, no-write plans, unchanged goals, deterministic
+  ordering, bounded output, explicit boundary flags, and digest repeatability;
+- sanitizes unknown computed goals to `idle` and never applies them;
+- handles missing computed actions with an `idle` fallback and never applies
+  them;
+- emits `liveCognitiveLoopAdapterHardening*` metrics and
+  `lab_live_cognitive_loop_adapter_hardening_recorded`;
+- writes `live_cognitive_loop_adapter_hardening_report.json`,
+  `live_cognitive_loop_adapter_hardening_invariant_report.json`,
+  `live_cognitive_loop_adapter_hardening_cases.json`,
+  `live_cognitive_loop_adapter_hardening_snapshots.json`,
+  `live_cognitive_loop_adapter_hardening_application_plans.json`, and
+  `live_cognitive_loop_adapter_hardening_digest.json`;
+- keeps `dryRun=true`;
+- keeps `appliedGoalChanges=0`, `appliedActions=0`, and
+  `appliedMemoryWrites=0`;
+- keeps `liveAgentMutated=false`, `memoryMutated=false`,
+  `movementStackUsed=false`, `worldMutated=false`, and
+  `terrainMutated=false`.
+
+Live `agents_basic` integration, applied goal changes, applied actions,
+applied memory writes, mood, relationships, LLM, social memory, and movement
+stack feedback remain out of scope.
+
+Next recommended step: Phase 5.8A - Live Cognitive Loop Controlled Application
+Planning.

@@ -1,5 +1,81 @@
 # PebbleLab Development Journal
 
+## 2026-07-02 — Phase 5.7C live cognitive loop adapter hardening smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Harden the adapter-only dry-run live cognitive loop boundary with
+`live_cognitive_loop_adapter_hardening_smoke`.
+
+### Starting Point
+
+Phase 5.7B added `LabLiveCognitiveLoopAdapter.swift` and the first dry-run
+adapter fixture. It produced read-only snapshots, cognitive-loop-compatible
+inputs, dry-run application plans, `would*` flags, all-applied-false flags,
+metrics, events, and a stable digest without mutating live state.
+
+### Implementation
+
+- Added hardening case/result/report/invariant/metrics helpers to
+  `LabLiveCognitiveLoopAdapter.swift`.
+- Added `live_cognitive_loop_adapter_hardening_smoke`.
+- Reused the 5.7B baseline agents and added controlled cases for unknown
+  computed goal handling and missing computed action fallback.
+- Covered snapshot read-only, wouldChangeGoal true/false,
+  wouldSelectAction, wouldWriteMemory true/false, all applied flags zero,
+  forced dry-run, no-write plans, unchanged-goal plans, deterministic order,
+  bounded output, boundary flags, and digest repeatability.
+- Unknown computed goals are sanitized to `idle` and never applied.
+- Missing computed actions use an `idle` fallback and are never applied.
+- Added `liveCognitiveLoopAdapterHardening*` metrics.
+- Added `lab_live_cognitive_loop_adapter_hardening_recorded`.
+- Wrote report, invariant report, cases, snapshots, application plans,
+  digest, metrics, and events.
+
+### Results
+
+- Cases: 23.
+- Agents/snapshots/decisions/application plans: 7/7/7/7.
+- `wouldChangeGoals`: 3.
+- `wouldSelectActions`: 7.
+- `wouldWriteMemories`: 4.
+- Applied goal changes/actions/memory writes: 0/0/0.
+- `dryRun=true`.
+
+### Boundaries
+
+- No live agent mutation.
+- No memory mutation or live memory write.
+- No applied goal change.
+- No applied action.
+- No movement intent or movement stack.
+- No World or terrain mutation.
+- No `agents_basic` integration.
+- No mood, relationships, trust, communication, community, Python, LLM,
+  embeddings, or RL.
+
+### Validation
+
+Commands requested for this phase:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `swift run PebbleLab -- --scenario live_cognitive_loop_adapter_hardening_smoke --seed 42 --ticks 3 --out runs/check_live_cognitive_loop_adapter_hardening`;
+- debug non-regression runs for live adapter fixture, cognitive loop
+  integration, behavior-loop memory-goal bridge, goal selection, memory
+  retrieval, memory update, behavior loop, `agents_basic`, and
+  `regression_smoke`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+### Next Step
+
+Phase 5.8A — Live Cognitive Loop Controlled Application Planning.
+
 ## 2026-07-02 — Phase 5.7B live cognitive loop adapter fixture smoke
 
 Branch: `lab/pebblelab-v1`
