@@ -763,3 +763,19 @@ Limitations:
 Next phase:
 
 - Phase 5.11A — Live Goal Application Planning.
+
+## Phase 5.11A Planning Note
+
+Phase 5.11A adds the docs-only bridge from validated snapshot mutation to a
+future guarded live goal application layer.
+
+The live goal application plan consumes `LabGoalSnapshotMutation` decisions
+where `appliedToSnapshot=true`, `snapshotGoalChanged=true`,
+`appliedToLive=false`, and live goal state remains unchanged. It defines the
+future guard policy, apply modes, eligibility rules, audit fields, metrics,
+events, and invariants needed before any dedicated scenario can consider live
+goal application.
+
+`agents_basic` remains out of scope. The recommended Phase 5.11B remains a
+dedicated guarded fixture with no action application, no memory write, no
+movement stack, and no World or terrain mutation.

@@ -1,5 +1,67 @@
 # PebbleLab Development Journal
 
+## 2026-07-03 — Phase 5.11A guarded live goal application planning
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Document the v0 contract for a guarded live goal application layer after
+snapshot goal mutation.
+
+### Starting Point
+
+Phase 5.10B and Phase 5.10C added and hardened
+`LabGoalSnapshotMutation.swift`. Snapshot mutation now proves copied-state goal
+changes with `appliedToSnapshot=true`, `snapshotGoalChanged=true`,
+`appliedToLiveCount=0`, `liveGoalAfter == originalLiveGoalBefore`, and clean
+boundary flags.
+
+### Implementation
+
+- Created `PHASE_5_11A_LIVE_GOAL_APPLICATION_PLAN.md`.
+- Defined the difference between validated snapshot mutation and guarded live
+  goal application.
+- Audited current `LabGoalSnapshotMutation` policies, inputs, decisions,
+  reports, metrics, events, and limitations.
+- Proposed `LabLiveGoalApplicationPolicy`,
+  `LabLiveGoalApplicationInput`, `LabLiveGoalApplicationDecision`, and
+  `LabLiveGoalApplicationReport`.
+- Defined v0 apply modes:
+  `live_goal_audit_only`, `live_goal_guarded_dry_run`,
+  `live_goal_candidate_only`, and future guarded apply modes.
+- Defined eligibility, rejection, deferral, no-op, and applied rules.
+- Recommended the safest 5.11B rule:
+  `appliedToLive=false` and `liveAgentMutated=false`.
+- Defined future `liveGoalApplication*` metrics and
+  `lab_live_goal_application_recorded` events.
+- Defined invariant checks for Phase 5.11B.
+- Kept `agents_basic`, action application, memory writes, movement stack,
+  World/terrain mutation, mood, relationships, Python, LLM, embeddings, and
+  RL out of scope.
+
+### Validation
+
+Commands:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results:
+
+- Docs-only change.
+- No Swift files changed.
+- No runtime behavior changed.
+- No scenarios added.
+- Validation passed.
+
+### Next Step
+
+Phase 5.11B — Live Goal Application Guarded Fixture Smoke.
+
 ## 2026-07-03 — Phase 5.10C goal snapshot mutation hardening smoke
 
 Branch: `lab/pebblelab-v1`

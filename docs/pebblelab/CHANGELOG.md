@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Documented PebbleLab guarded live goal application plan.
 - Added PebbleLab goal snapshot mutation hardening smoke.
 - Added PebbleLab goal snapshot mutation fixture smoke.
 - Documented PebbleLab goal application snapshot mutation plan.

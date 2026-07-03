@@ -888,3 +888,29 @@ It emits `goalSnapshotMutationHardening*` metrics and
 unchanged.
 
 The recommended next phase is Phase 5.11A - Live Goal Application Planning.
+
+## Phase 5.11A Status
+
+Phase 5.11A is implemented as
+`PHASE_5_11A_LIVE_GOAL_APPLICATION_PLAN.md`, a docs-only plan for the first
+guarded live goal application layer after copied/snapshot goal mutation.
+
+The plan consumes validated `LabGoalSnapshotMutation` decisions and defines
+how a future dedicated scenario can produce guarded live goal application
+candidates without branching `agents_basic`.
+
+It defines proposed policy, input, decision, and report types; live goal
+application modes; eligibility, rejection, deferral, no-op, and applied rules;
+future `liveGoalApplication*` metrics; future
+`lab_live_goal_application_recorded` events; and invariant checks for Phase
+5.11B.
+
+The safest recommended 5.11B rule keeps `appliedToLive=false` and
+`liveAgentMutated=false`, unless a later implementation explicitly uses a
+scenario-owned fake-live copy. Normal runtime agents remain unchanged. Action
+application, memory writes, movement stack, World/terrain mutation, mood,
+relationships, communication, community state, embeddings, Python, LLM, and RL
+remain out of scope.
+
+The recommended next phase is Phase 5.11B - Live Goal Application Guarded
+Fixture Smoke.

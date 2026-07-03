@@ -4142,3 +4142,36 @@ actions, memory writes, mood, relationships, LLM, social systems, movement
 stack, World mutation, and terrain mutation remain out of scope.
 
 Next recommended step: Phase 5.11A - Live Goal Application Planning.
+
+## Phase 5.11A - Live Goal Application Planning
+
+Status: implemented and validated as docs-only.
+
+Goal: define the guarded live goal application contract after copied/snapshot
+goal mutation.
+
+Documented plan:
+
+- `PHASE_5_11A_LIVE_GOAL_APPLICATION_PLAN.md`.
+
+Defined scope:
+
+- consumes validated snapshot mutation decisions;
+- separates snapshot mutation from live goal application;
+- defines guarded `applyMode` values;
+- defines live eligibility, rejection, deferral, no-op, and applied rules;
+- keeps `wouldApplyToLive` separate from `appliedToLive`;
+- recommends `appliedToLive=false` and `liveAgentMutated=false` for 5.11B;
+- proposes `LabLiveGoalApplicationPolicy`,
+  `LabLiveGoalApplicationInput`, `LabLiveGoalApplicationDecision`, and
+  `LabLiveGoalApplicationReport`;
+- defines future `liveGoalApplication*` metrics and
+  `lab_live_goal_application_recorded` events;
+- defines invariant checks for a guarded fixture.
+
+`agents_basic` integration, uncontrolled live applied goal changes, action
+application, memory writes, movement stack, World/terrain mutation, mood,
+relationships, LLM, and social systems remain out of scope.
+
+Next recommended step: Phase 5.11B - Live Goal Application Guarded Fixture
+Smoke.
