@@ -604,3 +604,82 @@ Future outputs:
 - `swift build -c release --product Pebble` passes.
 - `git diff --check` passes.
 - Next phase 5.11B is clearly specified.
+
+## Phase 5.11B Implementation Status
+
+Phase 5.11B implemented `live_goal_application_guarded_fixture_smoke`.
+
+Scenario:
+
+- `live_goal_application_guarded_fixture_smoke`.
+
+Policies:
+
+- default `live_goal_guarded_dry_run`;
+- `live_goal_audit_only` deferred mode;
+- allowed-goal restriction policy;
+- dedicated-scenario rejection policy;
+- max live goal applications rejection policy;
+- no-op allowed policy.
+
+Inputs:
+
+- 14 guarded live goal application inputs;
+- inputs derived from validated snapshot mutation-style fields;
+- stable order by tick and agent id.
+
+Decisions:
+
+- 14 decisions;
+- two `liveApplyEligible=true`;
+- two `wouldApplyToLive=true`;
+- 12 `liveGoalWouldChange=true`;
+- one live no-op;
+- 10 rejected live applications;
+- one deferred live application;
+- `appliedToLive=0`.
+
+Guarded live goal application:
+
+- produces candidates only;
+- does not apply to live agents;
+- keeps `liveAgentMutated=false`;
+- records `agentsBasicTouched=false`.
+
+Report:
+
+- `live_goal_application_report.json`.
+
+Invariant:
+
+- `live_goal_application_invariant_report.json`;
+- 57 checks passed, 0 failed.
+
+Digest:
+
+- `live_goal_application_digest.json`;
+- digest `4126b7241f1cc167`;
+- digest repeat equals digest.
+
+Metrics:
+
+- `liveGoalApplication*`.
+
+Events:
+
+- `lab_live_goal_application_recorded`;
+- optional `lab_live_goal_application_summary_recorded`.
+
+Limitations:
+
+- no `agents_basic` integration;
+- no live applied goal changes;
+- no action application;
+- no memory write application;
+- no movement stack;
+- no World or terrain mutation;
+- no mood, relationships, LLM, Python, embeddings, or RL.
+
+Next phase:
+
+- Phase 5.11C — Live Goal Application Guarded Hardening.

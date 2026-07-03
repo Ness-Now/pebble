@@ -4175,3 +4175,41 @@ relationships, LLM, and social systems remain out of scope.
 
 Next recommended step: Phase 5.11B - Live Goal Application Guarded Fixture
 Smoke.
+
+## Phase 5.11B - Live Goal Application Guarded Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: add the first fixture-only guarded live goal application candidate layer
+after snapshot mutation.
+
+Implemented scenario:
+
+- `live_goal_application_guarded_fixture_smoke`.
+
+Validated runtime scope:
+
+- creates guarded live goal application policies, inputs, decisions, report,
+  invariant report, digest, metrics, and events;
+- covers `liveApplyEligible=true`;
+- covers `wouldApplyToLive=true`;
+- covers live goal would change;
+- covers live no-op;
+- covers rejected unknown target, target not allowed, live goal mismatch,
+  prior applied-to-live, prior rejected/deferred reasons, missing snapshot
+  application, unchanged snapshot for non-noop, dedicated scenario false, and
+  max live applications;
+- covers audit-only deferred;
+- keeps `appliedToLive=0`;
+- keeps `liveAgentMutated=false`, `memoryMutated=false`,
+  `movementStackUsed=false`, `worldMutated=false`, and
+  `terrainMutated=false`;
+- records `agentsBasicTouched=false`;
+- emits `liveGoalApplication*` metrics and
+  `lab_live_goal_application_recorded`.
+
+`agents_basic` integration, uncontrolled live applied goal changes, action
+application, memory writes, movement stack, World/terrain mutation, mood,
+relationships, LLM, and social systems remain out of scope.
+
+Next recommended step: Phase 5.11C - Live Goal Application Guarded Hardening.

@@ -914,3 +914,25 @@ remain out of scope.
 
 The recommended next phase is Phase 5.11B - Live Goal Application Guarded
 Fixture Smoke.
+
+## Phase 5.11B Status
+
+Phase 5.11B implemented `live_goal_application_guarded_fixture_smoke`, the
+first guarded live goal application candidate fixture.
+
+The scenario creates 14 policies, 14 inputs, and 14 decisions. It covers
+eligible safety and explore candidates, `wouldApplyToLive=true`, live goal
+would-change evidence, one no-op, unknown target rejection, target-not-allowed
+rejection, live goal mismatch rejection, prior applied-to-live rejection, prior
+rejected/deferred reason rejection, `appliedToSnapshot=false` rejection,
+`snapshotGoalChanged=false` rejection, dedicated scenario false rejection, max
+live applications rejection, and audit-only deferred decisions.
+
+It emits `liveGoalApplication*` metrics and
+`lab_live_goal_application_recorded`, while keeping `appliedToLive=0`,
+`liveAgentMutated=false`, `memoryMutated=false`, `movementStackUsed=false`,
+`worldMutated=false`, `terrainMutated=false`, and
+`agentsBasicTouched=false`.
+
+The recommended next phase is Phase 5.11C - Live Goal Application Guarded
+Hardening.

@@ -1,5 +1,81 @@
 # PebbleLab Development Journal
 
+## 2026-07-03 — Phase 5.11B guarded live goal application fixture smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Implement `live_goal_application_guarded_fixture_smoke`, the first guarded
+live-goal application candidate fixture after snapshot mutation.
+
+### Starting Point
+
+Phase 5.11A defined the guarded live goal application contract. Phase 5.10B
+and Phase 5.10C already proved copied snapshot goal mutation while keeping
+`appliedToLiveCount=0`, live goals unchanged, and all live mutation boundaries
+clean.
+
+### Implementation
+
+- Added `LabLiveGoalApplication.swift`.
+- Added `live_goal_application_guarded_fixture_smoke`.
+- Added live goal application policies, inputs, decisions, report, invariant
+  report, digest, metrics, and events.
+- Covered `liveApplyEligible=true` and `wouldApplyToLive=true` for safety and
+  explore candidates.
+- Kept `appliedToLive=0` and `liveAgentMutated=false`.
+- Covered a live no-op.
+- Covered rejected unknown target, target not allowed, live goal mismatch,
+  prior applied-to-live, prior rejected/deferred reasons,
+  `appliedToSnapshot=false`, `snapshotGoalChanged=false`, dedicated scenario
+  false, and max live applications.
+- Covered audit-only deferred.
+- Recorded `agentsBasicTouched=false`.
+- Kept memory unmutated, movement stack unused, World unmutated, and terrain
+  unmutated.
+
+### Outputs
+
+- `live_goal_application_report.json`;
+- `live_goal_application_invariant_report.json`;
+- `live_goal_application_policies.json`;
+- `live_goal_application_inputs.json`;
+- `live_goal_application_decisions.json`;
+- `live_goal_application_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+### Validation
+
+Commands:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `swift run PebbleLab -- --scenario live_goal_application_guarded_fixture_smoke --seed 42 --ticks 3 --out runs/check_live_goal_application_fixture`;
+- debug non-regression runs for goal snapshot mutation, goal application
+  dry-run, controlled application, live adapter, cognitive loop integration,
+  behavior-loop bridge, goal selection memory, memory retrieval, memory
+  update, behavior loop, `agents_basic`, and `regression_smoke`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results:
+
+- `live_goal_application_guarded_fixture_smoke` passed in debug with
+  success=true, 14 agents, 14 inputs, 14 decisions, two eligible decisions,
+  two would-apply decisions, 12 live-goal-would-change decisions, one no-op,
+  10 rejected decisions, one deferred decision, `appliedToLive=0`,
+  `liveAgentMutated=false`, and `agentsBasicTouched=false`.
+- The invariant report passed with 57 checks passed and 0 failed.
+- The digest was stable: `4126b7241f1cc167`.
+
+### Next Step
+
+Phase 5.11C — Live Goal Application Guarded Hardening.
+
 ## 2026-07-03 — Phase 5.11A guarded live goal application planning
 
 Branch: `lab/pebblelab-v1`
