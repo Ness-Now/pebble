@@ -3857,3 +3857,39 @@ out of scope.
 
 Next recommended step: Phase 5.8B - Live Cognitive Loop Controlled Application
 Fixture Smoke.
+
+## Phase 5.8B - Live Cognitive Loop Controlled Application Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: add the first eligibility-only controlled application fixture that
+turns dry-run application plans into eligibility, rejection, deferred, and
+controlled decision records without applying anything.
+
+Implemented scenario:
+
+- `live_cognitive_loop_controlled_application_fixture_smoke`.
+
+Validated runtime scope:
+
+- creates controlled application policies and dry-run application-plan inputs;
+- covers goal-change eligibility, action-selection eligibility, and
+  memory-write eligibility;
+- covers policy rejection, unknown goal rejection, unknown action rejection,
+  missing reason rejection, no-write plan handling, and audit-only deferral;
+- keeps `appliedGoalChange=false`, `appliedAction=false`,
+  `appliedMemoryWrite=false`, and `appliedAnything=false`;
+- keeps `dryRun=true`, `liveAgentMutated=false`, `memoryMutated=false`,
+  `movementStackUsed=false`, `worldMutated=false`, and
+  `terrainMutated=false`;
+- emits `controlledApplication*` metrics,
+  `lab_controlled_application_recorded`, report, invariant, policies,
+  eligibilities, decisions, and digest outputs.
+
+Live `agents_basic` integration, live agent mutation, applied goal changes,
+applied actions, applied memory writes, live memory updates, movement stack,
+World/terrain mutation, mood, relationships, LLM, and social systems remain
+out of scope.
+
+Next recommended step: Phase 5.8C - Live Cognitive Loop Controlled Application
+Hardening.

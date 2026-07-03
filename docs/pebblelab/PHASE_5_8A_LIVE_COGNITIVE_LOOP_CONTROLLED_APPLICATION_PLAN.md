@@ -691,3 +691,79 @@ Future outputs:
 - `swift build -c release --product Pebble` passes;
 - `git diff --check` passes;
 - next phase 5.8B is clearly specified.
+
+## Phase 5.8B Implementation Status
+
+Scenario:
+
+- `live_cognitive_loop_controlled_application_fixture_smoke`.
+
+Policies and inputs:
+
+- creates controlled application policies for eligibility-only, policy-denied,
+  and audit-only flows;
+- creates dry-run application-plan-shaped inputs covering goal changes, action
+  selection, memory writes, no-write plans, unknown values, and missing
+  reasons.
+
+Eligibilities:
+
+- covers goal-change eligibility;
+- covers action-selection eligibility;
+- covers memory-write eligibility;
+- covers policy rejection;
+- covers unknown goal rejection;
+- covers unknown action rejection;
+- covers missing reason rejection;
+- covers audit-only deferral.
+
+Controlled decisions:
+
+- every decision remains dry-run;
+- `appliedGoalChange=false`;
+- `appliedAction=false`;
+- `appliedMemoryWrite=false`;
+- `appliedAnything=false`.
+
+Outputs:
+
+- `controlled_application_report.json`;
+- `controlled_application_invariant_report.json`;
+- `controlled_application_policies.json`;
+- `controlled_application_eligibilities.json`;
+- `controlled_application_decisions.json`;
+- `controlled_application_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Metrics/events:
+
+- metrics use the `controlledApplication*` prefix;
+- the primary event is `lab_controlled_application_recorded`;
+- the optional summary event is
+  `lab_controlled_application_summary_recorded`.
+
+Boundary flags:
+
+- `dryRun=true`;
+- `liveAgentMutated=false`;
+- `memoryMutated=false`;
+- `movementStackUsed=false`;
+- `worldMutated=false`;
+- `terrainMutated=false`.
+
+Limitations:
+
+- no live `agents_basic` integration;
+- no live agent mutation;
+- no applied goal changes;
+- no applied actions;
+- no applied memory writes;
+- no live memory update;
+- no movement stack;
+- no World or terrain mutation;
+- no mood, relationships, communication, community state, Python, LLM,
+  embeddings, or RL.
+
+Next phase: Phase 5.8C - Live Cognitive Loop Controlled Application
+Hardening.

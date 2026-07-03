@@ -1,5 +1,55 @@
 # PebbleLab Development Journal
 
+## 2026-07-02 — Phase 5.8B live cognitive loop controlled application fixture smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Implement the first eligibility-only controlled application fixture:
+`live_cognitive_loop_controlled_application_fixture_smoke`.
+
+### Starting Point
+
+Phase 5.8A defined the safety-gate contract after the live cognitive loop
+adapter. Phase 5.7B/5.7C already produce dry-run application plans with
+`wouldChangeGoal`, `wouldSelectAction`, and `wouldWriteMemory`, while all
+applied flags stay false.
+
+### Implementation
+
+- Added `LabControlledApplication.swift` with fixture-only policy, input,
+  eligibility, decision, report, invariant, digest, metrics, and event helpers.
+- Added `live_cognitive_loop_controlled_application_fixture_smoke`.
+- Covered eligibility for goal changes, action selection, and memory writes.
+- Covered policy rejection, unknown goal rejection, unknown action rejection,
+  missing reason rejection, a no-write plan, and an audit-only deferred plan.
+- Kept every applied flag false: no goal change, no action, no memory write,
+  and no applied-anything state.
+- Kept `dryRun=true`, `liveAgentMutated=false`, `memoryMutated=false`,
+  `movementStackUsed=false`, `worldMutated=false`, and `terrainMutated=false`.
+- Wrote report, invariant report, policies, eligibilities, decisions, digest,
+  metrics, and events.
+
+### Validation
+
+Commands requested for this phase:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `swift run PebbleLab -- --scenario live_cognitive_loop_controlled_application_fixture_smoke --seed 42 --ticks 3 --out runs/check_controlled_application_fixture`;
+- debug non-regression runs for live adapter, cognitive loop integration,
+  behavior-loop memory-goal bridge, goal selection, memory retrieval, memory
+  update, behavior loop, `agents_basic`, and `regression_smoke`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+### Next Step
+
+Phase 5.8C — Live Cognitive Loop Controlled Application Hardening.
+
 ## 2026-07-02 — Phase 5.8A live cognitive loop controlled application planning
 
 Branch: `lab/pebblelab-v1`

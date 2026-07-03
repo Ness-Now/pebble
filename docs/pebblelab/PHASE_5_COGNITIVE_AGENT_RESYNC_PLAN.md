@@ -692,3 +692,28 @@ communication, community state, embeddings, Python, LLM, and RL out of scope.
 
 The recommended next phase is Phase 5.8B - Live Cognitive Loop Controlled
 Application Fixture Smoke.
+
+## Phase 5.8B Status
+
+Phase 5.8B implemented
+`live_cognitive_loop_controlled_application_fixture_smoke`, the first
+eligibility-only controlled application fixture.
+
+The scenario consumes dry-run application-plan-shaped inputs and controlled
+policies, then emits eligibility decisions and controlled decisions. It covers
+goal-change eligibility, action-selection eligibility, memory-write
+eligibility, policy rejection, unknown goal rejection, unknown action
+rejection, missing reason rejection, a no-write plan, and an audit-only
+deferred plan.
+
+It emits `controlledApplication*` metrics,
+`lab_controlled_application_recorded`, policies, eligibilities, decisions,
+invariant reports, and a stable digest.
+
+It keeps `dryRun=true`, every applied flag false, live agents unmutated,
+memory unmutated, movement stack unused, World/terrain unmutated, and
+`agents_basic` unchanged. Mood, relationships, communication, community state,
+embeddings, Python, LLM, and RL remain out of scope.
+
+The recommended next phase is Phase 5.8C - Live Cognitive Loop Controlled
+Application Hardening.
