@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Documented PebbleLab agents_basic goal integration plan.
 - Added PebbleLab fake-live goal application hardening smoke.
 - Added PebbleLab fake-live goal application fixture smoke.
 - Documented PebbleLab fake-live goal application plan.

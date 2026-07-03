@@ -4348,3 +4348,34 @@ Uncontrolled `agents_basic` live applied goal changes, actions, memory writes,
 mood, relationships, LLM, and movement stack remain out of scope.
 
 Next recommended step: Phase 5.13A - Agents Basic Goal Integration Planning.
+
+## Phase 5.13A - Agents Basic Goal Integration Planning
+
+Status: implemented and validated as docs-only.
+
+Goal: define a guarded, candidate-only contract for bridging validated
+fake-live goal application evidence toward `agents_basic` without activating
+runtime integration.
+
+Implemented document:
+
+- `PHASE_5_13A_AGENTS_BASIC_GOAL_INTEGRATION_PLAN.md`.
+
+Validated planning scope:
+
+- consumes validated fake-live goal application decisions;
+- defines `agentsBasicGoalBefore`, `targetGoal`,
+  `agentsBasicGoalAfterCandidate`, `agentsBasicApplyEligible`,
+  `wouldApplyToAgentsBasic`, and `appliedToAgentsBasic`;
+- keeps Phase 5.13B candidate-only with `appliedToAgentsBasic=false`,
+  `agentsBasicTouched=false`, and `runtimeBehaviorChanged=false`;
+- defines policies, inputs, decisions, reports, modes, eligibility rules,
+  applied rules, future metrics, future events, and future invariants;
+- recommends `agents_basic_goal_integration_guarded_fixture_smoke`.
+
+`agents_basic` live application, uncontrolled live agent mutation, actions,
+memory writes, movement stack, World/terrain mutation, mood, relationships,
+LLM, Python, embeddings, and RL remain out of scope.
+
+Next recommended step: Phase 5.13B - Agents Basic Goal Integration Guarded
+Fixture Smoke.

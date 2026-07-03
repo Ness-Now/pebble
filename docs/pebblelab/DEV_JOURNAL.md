@@ -1,5 +1,83 @@
 # PebbleLab Development Journal
 
+## 2026-07-03 — Phase 5.13A agents_basic goal integration planning
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Document the controlled future bridge from validated fake-live goal
+application to an `agents_basic` integration candidate, without modifying
+Swift runtime, `LabAgent`, `agents_basic`, scenarios, metrics, events, memory,
+movement stack, World, or terrain.
+
+### Starting Point
+
+Phase 5.12B and Phase 5.12C added and hardened
+`LabFakeLiveGoalApplication.swift`. The fake-live layer now covers
+`appliedToFakeLive`, `fakeLiveGoalChanged`, fake-live no-op, rejected/deferred
+decisions, `appliedToAgentsBasic=0`, `agentsBasicTouched=false`,
+`liveRuntimeTouched=false`, clean mutation boundaries, 29 hardening cases, and
+deterministic digest repeatability.
+
+### Implementation
+
+- Created `PHASE_5_13A_AGENTS_BASIC_GOAL_INTEGRATION_PLAN.md`.
+- Defined the v0 `agents_basic` goal integration contract.
+- Audited the current fake-live policy, input, decision, report, metrics, and
+  boundary fields.
+- Proposed future `LabAgentsBasicGoalIntegrationPolicy`,
+  `LabAgentsBasicGoalIntegrationInput`,
+  `LabAgentsBasicGoalIntegrationDecision`, and
+  `LabAgentsBasicGoalIntegrationReport`.
+- Defined integration modes:
+  `agents_basic_goal_integration_audit_only`,
+  `agents_basic_goal_integration_guarded_dry_run`,
+  `agents_basic_goal_integration_candidate_only`, and future
+  `agents_basic_goal_apply_guarded`.
+- Defined eligibility, rejection, deferral, no-op, and applied rules.
+- Kept Phase 5.13B candidate-only: `wouldApplyToAgentsBasic` may be true,
+  but `appliedToAgentsBasic=false`, `agentsBasicTouched=false`, and
+  `runtimeBehaviorChanged=false`.
+- Defined future `agentsBasicGoalIntegration*` metrics and
+  `lab_agents_basic_goal_integration_recorded` events.
+- Defined future invariant checks and the recommended
+  `agents_basic_goal_integration_guarded_fixture_smoke` scenario.
+
+### Scope Boundaries
+
+- No Swift files changed.
+- No runtime behavior changed.
+- No scenario added.
+- No `agents_basic` integration activated.
+- No `LabAgent` mutation path added.
+- No action application.
+- No memory write.
+- No movement stack call.
+- No World or terrain mutation.
+- No mood, relationships, LLM, Python, embeddings, or RL.
+
+### Validation
+
+Commands:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results:
+
+- Docs-only validation passed.
+- `swift build` passed.
+- `swift build -c release --product Pebble` passed.
+- Diff checks passed.
+
+### Next Step
+
+Phase 5.13B — Agents Basic Goal Integration Guarded Fixture Smoke.
+
 ## 2026-07-03 — Phase 5.12C fake-live goal application hardening smoke
 
 Branch: `lab/pebblelab-v1`

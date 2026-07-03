@@ -1028,3 +1028,30 @@ It emits `fakeLiveGoalApplicationHardening*` metrics and
 
 The recommended next phase is Phase 5.13A - Agents Basic Goal Integration
 Planning.
+
+## Phase 5.13A Status
+
+Phase 5.13A is implemented as
+`PHASE_5_13A_AGENTS_BASIC_GOAL_INTEGRATION_PLAN.md`, a docs-only plan for a
+guarded bridge from fake-live goal application evidence toward `agents_basic`.
+
+The plan consumes validated fake-live decisions where `appliedToFakeLive=true`,
+`fakeLiveGoalChanged=true`, `appliedToAgentsBasic=0`,
+`agentsBasicTouched=false`, and `liveRuntimeTouched=false`. It defines a
+future candidate-only integration layer with `agentsBasicGoalBefore`,
+`targetGoal`, `agentsBasicGoalAfterCandidate`, `agentsBasicApplyEligible`,
+`wouldApplyToAgentsBasic`, `appliedToAgentsBasic=false`,
+`agentsBasicTouched=false`, and `runtimeBehaviorChanged=false`.
+
+It defines proposed policy, input, decision, and report types; integration
+modes; eligibility, rejection, deferral, no-op, and applied rules; future
+`agentsBasicGoalIntegration*` metrics; future
+`lab_agents_basic_goal_integration_recorded` events; and invariant checks for
+Phase 5.13B.
+
+`agents_basic` remains unchanged. Action application, memory writes, movement
+stack, World/terrain mutation, mood, relationships, communication, community
+state, embeddings, Python, LLM, and RL remain out of scope.
+
+The recommended next phase is Phase 5.13B - Agents Basic Goal Integration
+Guarded Fixture Smoke.

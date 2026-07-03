@@ -800,3 +800,18 @@ Limitations:
 Next phase:
 
 - Phase 5.13A — Agents Basic Goal Integration Planning.
+
+## Phase 5.13A Planning Note
+
+Phase 5.13A adds the docs-only plan for a guarded `agents_basic` goal
+integration bridge.
+
+It does not activate runtime integration. It uses the validated fake-live goal
+application evidence from Phase 5.12B and Phase 5.12C as the input contract
+for a future candidate-only layer that may compute
+`wouldApplyToAgentsBasic=true` while keeping `appliedToAgentsBasic=false`,
+`agentsBasicTouched=false`, and `runtimeBehaviorChanged=false`.
+
+The next implementation phase remains isolated from `agents_basic` live
+mutation and is recommended as Phase 5.13B - Agents Basic Goal Integration
+Guarded Fixture Smoke.
