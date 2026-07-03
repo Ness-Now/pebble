@@ -485,3 +485,27 @@ Do not perform a broad historical rewrite.
 - `git diff --check` passes.
 - `git diff --cached --check` passes.
 - Commit created locally.
+
+## Phase 5.14B Implementation Status
+
+Phase 5.14B implemented the planned runtime fixture:
+
+- scenario: `agents_basic_goal_apply_guarded_fixture_smoke`;
+- implementation owner: `Sources/PebbleLab/LabAgentsBasicGoalApply.swift`;
+- fixture shape: compact worldless `agents_basic`-equivalent state with five
+  deterministic `LabAgent` values;
+- real applies: `agent_0 idle -> seekSafety`,
+  `agent_1 idle -> explore`, and `agent_2 idle -> observeOtherAgent`;
+- no-op: `agent_3 explore -> explore`, accepted as audited no-op with
+  `appliedToAgentsBasic=false`;
+- rejected: `agent_4` unknown target, with `appliedToAgentsBasic=false`;
+- result: `appliedToAgentsBasic=3`, `agentsBasicGoalChanged=3`,
+  `runtimeBehaviorChanged=true`, and
+  `runtimeBehaviorChangedReason=controlledGoalApplyOnly`;
+- allowed mutation: `LabAgent.currentGoal` fields only;
+- forbidden mutations: memory, movement stack, World, terrain, position, needs,
+  inventory, lastAction, lastActionEffect, lastMovement, memory count, counters,
+  physical placeholders, and Core entities remain unchanged.
+
+Phase 5.14B is not candidate-only and not dry-run-only. The next recommended
+phase is Phase 5.14C - Agents Basic Goal Apply Hardening.

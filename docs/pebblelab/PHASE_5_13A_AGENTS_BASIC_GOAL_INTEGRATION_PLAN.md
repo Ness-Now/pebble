@@ -718,3 +718,19 @@ The future apply is limited to `LabAgent.currentGoal` on targeted
 movement stack usage, route following, live pathfinding, World mutation,
 terrain mutation, physical placeholder movement, and Core entity movement
 remain forbidden.
+
+## Phase 5.14B Apply Implementation Status
+
+Phase 5.14B implemented the apply step that 5.13A/5.13B/5.13C intentionally
+did not perform.
+
+- scenario: `agents_basic_goal_apply_guarded_fixture_smoke`;
+- status: real guarded apply implemented;
+- `appliedToAgentsBasic=3`;
+- `agentsBasicGoalChanged=3`;
+- `runtimeBehaviorChanged=true` only for `controlledGoalApplyOnly`;
+- `LabAgent.currentGoal` is the only mutated agent state;
+- candidate-only integration remains preserved for
+  `agents_basic_goal_integration_guarded_fixture_smoke` and
+  `agents_basic_goal_integration_guarded_hardening_smoke`;
+- next phase: Phase 5.14C - Agents Basic Goal Apply Hardening.

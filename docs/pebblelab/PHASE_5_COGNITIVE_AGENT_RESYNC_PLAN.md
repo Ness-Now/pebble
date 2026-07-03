@@ -1123,3 +1123,25 @@ Fixture Smoke. It must implement
 `agents_basic_goal_apply_guarded_fixture_smoke`, must produce
 `appliedToAgentsBasic > 0` and `agentsBasicGoalChanged > 0`, and must not be
 candidate-only or dry-run-only.
+
+## Phase 5.14B Status
+
+Phase 5.14B implemented
+`agents_basic_goal_apply_guarded_fixture_smoke`, the first opt-in runtime
+fixture that applies validated goal candidates to real `LabAgent.currentGoal`
+state in an `agents_basic`-equivalent fixture.
+
+The fixture uses five deterministic agents. It applies three goals:
+`agent_0` changes `idle -> seekSafety`, `agent_1` changes `idle -> explore`,
+and `agent_2` changes `idle -> observeOtherAgent`. It also records one
+allowed no-op for `agent_3` and one rejected unknown target for `agent_4`.
+
+Validated result: `appliedToAgentsBasic=3`,
+`agentsBasicGoalChanged=3`, `runtimeBehaviorChanged=true`,
+`runtimeBehaviorChangedReason=controlledGoalApplyOnly`,
+`memoryMutated=false`, `movementStackUsed=false`, `worldMutated=false`,
+`terrainMutated=false`, and no position, needs, inventory, last-action,
+last-effect, last-movement, memory-count, counter, physical-placeholder, or
+Core-entity mutation.
+
+The recommended next phase is Phase 5.14C - Agents Basic Goal Apply Hardening.

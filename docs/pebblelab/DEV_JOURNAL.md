@@ -13993,3 +13993,137 @@ registry, save/load, or golden changed.
 Next step: Phase 5.14B — Agents Basic Goal Apply Guarded Fixture Smoke.
 It must implement `agents_basic_goal_apply_guarded_fixture_smoke` and produce
 `appliedToAgentsBasic > 0`.
+
+## 2026-07-03 — Phase 5.14B agents_basic goal apply guarded fixture smoke
+
+Objective: implement the first real, guarded `LabAgent.currentGoal` apply into
+an opt-in `agents_basic` or `agents_basic`-equivalent fixture, without action
+execution, selectedAction application, movement stack, memory writes, World
+mutation, or terrain mutation.
+
+Starting point: branch `lab/pebblelab-v1`, commit
+`c14d4e48e8bab063a3d1b1f3cc1a2d1b60fae8fc`, with Phase 5.14A complete.
+Phase 5.14A explicitly required Phase 5.14B to implement
+`agents_basic_goal_apply_guarded_fixture_smoke` and produce
+`appliedToAgentsBasic > 0`.
+
+Implemented scenario:
+
+- `agents_basic_goal_apply_guarded_fixture_smoke`.
+
+Implementation shape:
+
+- new dedicated file `Sources/PebbleLab/LabAgentsBasicGoalApply.swift`;
+- compact worldless `agents_basic`-equivalent fixture with five deterministic
+  `LabAgent` values;
+- `main.swift` remains dispatcher/output writer only;
+- no normal `agents_basic` runtime behavior is changed.
+
+Apply decisions:
+
+- `agent_0`: `idle -> seekSafety`, applied;
+- `agent_1`: `idle -> explore`, applied;
+- `agent_2`: `idle -> observeOtherAgent`, applied;
+- `agent_3`: `explore -> explore`, audited no-op;
+- `agent_4`: unknown target rejected.
+
+Validated central result:
+
+- `inputs=5`;
+- `decisions=5`;
+- `agentsBasicGoalApplyEligible=4`;
+- `wouldApplyToAgentsBasic=4`;
+- `appliedToAgentsBasic=3`;
+- `agentsBasicGoalChanged=3`;
+- `agentsBasicGoalNoops=1`;
+- `rejectedAgentsBasicGoalApplies=1`;
+- `deferredAgentsBasicGoalApplies=0`;
+- `runtimeBehaviorChanged=true`;
+- `runtimeBehaviorChangedReason=controlledGoalApplyOnly`;
+- `digest=75b63ecd8ded9ddd`;
+- `digestsEqual=true`;
+- `repeatabilityFailures=0`.
+
+Boundary result:
+
+- only `currentGoalKind`, `currentGoalReason`, `currentGoalStartedAtTick`, and
+  `currentGoalUrgency` change on applied agents;
+- `memoryMutated=false`;
+- `movementStackUsed=false`;
+- `worldMutated=false`;
+- `terrainMutated=false`;
+- `positionMutated=false`;
+- `needsMutated=false`;
+- `inventoryMutated=false`;
+- `lastActionMutated=false`;
+- `lastActionEffectMutated=false`;
+- `lastMovementMutated=false`;
+- `memoryCountMutated=false`;
+- `countersMutated=false`;
+- `physicalPlaceholderMutated=false`;
+- `coreEntityMutated=false`.
+
+Outputs:
+
+- `agents_basic_goal_apply_report.json`;
+- `agents_basic_goal_apply_invariant_report.json`;
+- `agents_basic_goal_apply_inputs.json`;
+- `agents_basic_goal_apply_decisions.json`;
+- `agents_basic_goal_apply_before_after.json`;
+- `agents_basic_goal_apply_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Metrics/events:
+
+- metrics prefix `agentsBasicGoalApply*`;
+- aggregate event `lab_agents_basic_goal_apply_recorded`;
+- optional decision event `lab_agents_basic_goal_apply_decision_recorded`.
+
+Files created or modified:
+
+- `Sources/PebbleLab/LabAgentsBasicGoalApply.swift`;
+- `Sources/PebbleLab/LabOptions.swift`;
+- `Sources/PebbleLab/LabScenarios.swift`;
+- `Sources/PebbleLab/main.swift`;
+- `docs/pebblelab/CHANGELOG.md`;
+- `docs/pebblelab/DEV_JOURNAL.md`;
+- `docs/pebblelab/ROADMAP.md`;
+- `docs/pebblelab/PHASE_5_COGNITIVE_AGENT_RESYNC_PLAN.md`;
+- `docs/pebblelab/PHASE_5_14A_AGENTS_BASIC_GOAL_APPLY_PLAN.md`;
+- `docs/pebblelab/PHASE_5_13A_AGENTS_BASIC_GOAL_INTEGRATION_PLAN.md`.
+
+Validation commands:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `swift run PebbleLab -- --scenario agents_basic_goal_apply_guarded_fixture_smoke --seed 42 --ticks 3 --out runs/check_agents_basic_goal_apply_fixture`;
+- `swift run PebbleLab -- --scenario agents_basic --seed 42 --agents 3 --ticks 3 --out runs/check_agents_basic_after_goal_apply`;
+- `swift run PebbleLab -- --scenario agents_basic_goal_integration_guarded_fixture_smoke --seed 42 --ticks 3 --out runs/check_agents_basic_goal_integration_fixture_after_goal_apply`;
+- `swift run PebbleLab -- --scenario agents_basic_goal_integration_guarded_hardening_smoke --seed 42 --ticks 3 --out runs/check_agents_basic_goal_integration_hardening_after_goal_apply`;
+- `swift run PebbleLab -- --scenario fake_live_goal_application_fixture_smoke --seed 42 --ticks 3 --out runs/check_fake_live_goal_application_fixture_after_goal_apply`;
+- `swift run PebbleLab -- --scenario fake_live_goal_application_hardening_smoke --seed 42 --ticks 3 --out runs/check_fake_live_goal_application_hardening_after_goal_apply`;
+- `swift run PebbleLab -- --scenario regression_smoke --seed 42 --out runs/check_regression_after_goal_apply`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Expected validation result: the new scenario succeeds with real
+`appliedToAgentsBasic` evidence, all targeted non-regressions pass, and
+`pebsmoke` remains green.
+
+Results: `swift build`, `swift build -c release --product Pebble`, the 5.14B
+fixture, `agents_basic`, 5.13B integration fixture, 5.13C integration
+hardening, fake-live goal application fixture, fake-live goal application
+hardening, and `regression_smoke` passed. `swift run -c release pebsmoke`
+passed with 456 passed, 0 failed. `git diff --check` and
+`git diff --cached --check` passed.
+
+Optional release `PebbleLab` validation for
+`agents_basic_goal_apply_guarded_fixture_smoke` was attempted, but release
+`PebbleLab` compilation stayed silent for roughly 90 seconds after source and
+swift-version output. It was interrupted cleanly, and a process check confirmed
+no Swift or PebbleLab child process remained.
+
+Next step: Phase 5.14C — Agents Basic Goal Apply Hardening.

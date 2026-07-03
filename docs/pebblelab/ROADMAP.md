@@ -4478,3 +4478,37 @@ Next recommended step: Phase 5.14B - Agents Basic Goal Apply Guarded Fixture
 Smoke. It must implement `agents_basic_goal_apply_guarded_fixture_smoke` and
 must produce `appliedToAgentsBasic > 0`; it must not be candidate-only or
 dry-run-only.
+
+## Phase 5.14B - Agents Basic Goal Apply Guarded Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: perform the first real guarded goal apply into an opt-in
+`agents_basic`-equivalent fixture while preserving all non-goal boundaries.
+
+Implemented scenario:
+
+- `agents_basic_goal_apply_guarded_fixture_smoke`.
+
+Validated fixture scope:
+
+- builds a compact worldless `agents_basic`-equivalent fixture with 5 agents;
+- applies `LabAgent.currentGoal` directly for three guarded decisions:
+  `idle -> seekSafety`, `idle -> explore`, and
+  `idle -> observeOtherAgent`;
+- does not call `selectGoal`, action selection, action effects, movement,
+  memory writes, movement stack, route following, or live pathfinding;
+- produces `appliedToAgentsBasic=3` and `agentsBasicGoalChanged=3`;
+- records one audited no-op and one rejected unknown target;
+- sets `runtimeBehaviorChanged=true` only with reason
+  `controlledGoalApplyOnly`;
+- keeps memory, movement stack, World, terrain, position, needs, inventory,
+  lastAction, lastActionEffect, lastMovement, memory count, counters,
+  physical placeholders, and Core entities unchanged;
+- emits `agentsBasicGoalApply*` metrics,
+  `lab_agents_basic_goal_apply_recorded`, and optional decision events.
+
+This is the first real controlled `agents_basic` goal apply. It is not
+candidate-only, not dry-run-only, and not a new `wouldApply` layer.
+
+Next recommended step: Phase 5.14C - Agents Basic Goal Apply Hardening.
