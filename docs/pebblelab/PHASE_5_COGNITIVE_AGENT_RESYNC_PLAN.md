@@ -667,3 +667,28 @@ or RL.
 
 The recommended next phase is Phase 5.8A - Live Cognitive Loop Controlled
 Application Planning.
+
+## Phase 5.8A Status
+
+Phase 5.8A is implemented as
+`PHASE_5_8A_LIVE_COGNITIVE_LOOP_CONTROLLED_APPLICATION_PLAN.md`.
+
+The plan defines the future controlled application safety gate between
+dry-run application plans and any later live application. It consumes the
+`wouldChangeGoal`, `wouldSelectAction`, and `wouldWriteMemory` outputs from
+the live cognitive loop adapter and turns them into eligibility, rejection, or
+deferred decisions without applying anything.
+
+The plan proposes policy, input, eligibility, decision, and report types. It
+defines v0 application modes, goal/action/memory-write eligibility rules,
+applied rules that keep every applied flag false, future
+`controlledApplication*` metrics, `lab_controlled_application_recorded`
+events, and invariant expectations.
+
+It explicitly keeps `agents_basic` unchanged, live agents unmutated, live
+memory unmutated, selected goals/actions/memory writes unapplied, movement
+stack unused, World/terrain unmutated, and mood, relationships,
+communication, community state, embeddings, Python, LLM, and RL out of scope.
+
+The recommended next phase is Phase 5.8B - Live Cognitive Loop Controlled
+Application Fixture Smoke.

@@ -1,5 +1,72 @@
 # PebbleLab Development Journal
 
+## 2026-07-02 — Phase 5.8A live cognitive loop controlled application planning
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Document the v0 contract for a controlled application layer between dry-run
+live cognitive loop application plans and future live application.
+
+### Starting Point
+
+Phase 5.7B and Phase 5.7C created and hardened the live cognitive loop
+adapter boundary. The adapter emits read-only snapshots, cognitive-loop-shaped
+inputs, decisions, and dry-run application plans with `wouldChangeGoal`,
+`wouldSelectAction`, and `wouldWriteMemory`, while keeping every applied flag
+false and all live mutation flags false.
+
+### Planning
+
+- Created `PHASE_5_8A_LIVE_COGNITIVE_LOOP_CONTROLLED_APPLICATION_PLAN.md`.
+- Audited `LabLiveCognitiveLoopAdapter.swift` and documented the real input,
+  snapshot, application-plan, report, metrics, event, and hardening fields.
+- Defined a controlled application contract that consumes dry-run application
+  plans and produces eligibility decisions.
+- Proposed policy, input, eligibility, decision, and report types for a future
+  fixture implementation.
+- Defined v0 application modes: `dry_run_only`, `eligibility_only`,
+  `audit_only`, and future inactive apply modes.
+- Defined eligibility rules for goal changes, action selection, and memory
+  writes.
+- Defined applied rules for 5.8B: no applied goal change, no applied action,
+  no applied memory write, no live agent mutation, no memory mutation, no
+  movement stack, no World mutation, and no terrain mutation.
+- Proposed future `controlledApplication*` metrics and
+  `lab_controlled_application_recorded` events.
+- Defined future invariant checks and the recommended
+  `live_cognitive_loop_controlled_application_fixture_smoke` scenario.
+
+### Boundaries
+
+- Docs-only.
+- No Swift runtime changes.
+- No new scenario.
+- No runtime metrics or events.
+- No `agents_basic` integration.
+- No selected goal/action/memory application.
+- No live agent mutation.
+- No memory mutation.
+- No movement stack.
+- No World or terrain mutation.
+- No mood, relationships, trust, communication, community, Python, LLM,
+  embeddings, or RL.
+
+### Validation
+
+Commands requested for this phase:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+### Next Step
+
+Phase 5.8B — Live Cognitive Loop Controlled Application Fixture Smoke.
+
 ## 2026-07-02 — Phase 5.7C live cognitive loop adapter hardening smoke
 
 Branch: `lab/pebblelab-v1`

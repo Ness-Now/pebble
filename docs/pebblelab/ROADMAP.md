@@ -3820,3 +3820,40 @@ stack feedback remain out of scope.
 
 Next recommended step: Phase 5.8A - Live Cognitive Loop Controlled Application
 Planning.
+
+## Phase 5.8A - Live Cognitive Loop Controlled Application Planning
+
+Status: implemented and validated as docs-only.
+
+Goal: define the safety-gate contract between dry-run application plans and
+future controlled live application.
+
+Documented in
+`PHASE_5_8A_LIVE_COGNITIVE_LOOP_CONTROLLED_APPLICATION_PLAN.md`.
+
+Validated planning scope:
+
+- audits the current `LabLiveCognitiveLoopAdapter` input, snapshot,
+  application-plan, report, metrics, event, and hardening boundary fields;
+- defines a controlled application contract that consumes dry-run application
+  plans and produces eligibility decisions;
+- separates computed, eligible, rejected, deferred, and applied states;
+- defines v0 modes: `dry_run_only`, `eligibility_only`, `audit_only`, and
+  future inactive apply modes;
+- defines goal, action, and memory-write eligibility rules;
+- requires Phase 5.8B to keep all applied flags false;
+- proposes `LabControlledApplicationPolicy`,
+  `LabControlledApplicationInput`, `LabControlledApplicationEligibility`,
+  `LabControlledApplicationDecision`, and `LabControlledApplicationReport`;
+- defines future `controlledApplication*` metrics and
+  `lab_controlled_application_recorded` events;
+- defines future invariant checks and the recommended
+  `live_cognitive_loop_controlled_application_fixture_smoke` scenario.
+
+Live `agents_basic` integration, live agent mutation, applied goal changes,
+applied actions, applied memory writes, live memory updates, movement stack,
+World/terrain mutation, mood, relationships, LLM, and social systems remain
+out of scope.
+
+Next recommended step: Phase 5.8B - Live Cognitive Loop Controlled Application
+Fixture Smoke.

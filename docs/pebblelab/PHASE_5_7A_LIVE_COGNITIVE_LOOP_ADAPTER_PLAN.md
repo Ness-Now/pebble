@@ -792,3 +792,23 @@ Limitations:
   embeddings, or RL.
 
 Next phase: Phase 5.8A - Live Cognitive Loop Controlled Application Planning.
+
+## Phase 5.8A Planning Link
+
+Phase 5.8A is documented in
+`PHASE_5_8A_LIVE_COGNITIVE_LOOP_CONTROLLED_APPLICATION_PLAN.md`.
+
+It prepares the next boundary after the live cognitive loop adapter: a
+controlled application safety gate that consumes dry-run application plans and
+produces eligibility, rejection, or deferred decisions.
+
+The controlled application plan keeps Phase 5.8B fixture-only and dry-run-like:
+
+- no applied goal changes;
+- no applied actions;
+- no applied memory writes;
+- no live agent mutation;
+- no live memory mutation;
+- no movement stack;
+- no World or terrain mutation;
+- no `agents_basic` integration.
