@@ -627,3 +627,82 @@ Future outputs:
 - `swift build -c release --product Pebble` passes.
 - `git diff --check` passes.
 - Next phase 5.12B is clearly specified.
+
+## Phase 5.12B Implementation Status
+
+Phase 5.12B implemented `fake_live_goal_application_fixture_smoke`.
+
+Scenario:
+
+- `fake_live_goal_application_fixture_smoke`.
+
+Policies:
+
+- default `fake_live_goal_apply`;
+- `fake_live_goal_audit_only` deferred mode;
+- allowed-goal restriction policy;
+- no-op allowed policy;
+- max fake-live applications rejection policy.
+
+Inputs:
+
+- 13 fake-live goal application inputs;
+- inputs derived from guarded live goal decision-style fields;
+- stable order by tick and agent id.
+
+Decisions:
+
+- 13 decisions;
+- two `fakeLiveApplyEligible=true`;
+- two `appliedToFakeLive=true`;
+- two `fakeLiveGoalChanged=true`;
+- 11 `fakeLiveWouldChange=true`;
+- one fake-live no-op;
+- nine rejected fake-live applications;
+- one deferred fake-live application;
+- `appliedToAgentsBasic=0`.
+
+Fake-live application:
+
+- applies goals only to scenario-owned fake-live values;
+- does not apply to `agents_basic`;
+- keeps `agentsBasicTouched=false`;
+- keeps `liveRuntimeTouched=false`.
+
+Report:
+
+- `fake_live_goal_application_report.json`.
+
+Invariant:
+
+- `fake_live_goal_application_invariant_report.json`;
+- 56 checks passed, 0 failed.
+
+Digest:
+
+- `fake_live_goal_application_digest.json`;
+- digest `9e0d5a3a700940f9`;
+- digest repeat equals digest.
+
+Metrics:
+
+- `fakeLiveGoalApplication*`.
+
+Events:
+
+- `lab_fake_live_goal_application_recorded`;
+- optional `lab_fake_live_goal_application_summary_recorded`.
+
+Limitations:
+
+- no `agents_basic` integration;
+- no true live runtime mutation;
+- no action application;
+- no memory write application;
+- no movement stack;
+- no World or terrain mutation;
+- no mood, relationships, LLM, Python, embeddings, or RL.
+
+Next phase:
+
+- Phase 5.12C — Fake-Live Goal Application Hardening.

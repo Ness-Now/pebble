@@ -984,3 +984,25 @@ community state, embeddings, Python, LLM, and RL remain out of scope.
 
 The recommended next phase is Phase 5.12B - Fake-Live Goal Application
 Fixture Smoke.
+
+## Phase 5.12B Status
+
+Phase 5.12B implemented `fake_live_goal_application_fixture_smoke`, the first
+fixture that applies goal changes to scenario-owned fake-live state.
+
+The scenario creates 13 policies, 13 inputs, and 13 decisions. It covers
+eligible fake-live safety and explore applications, `appliedToFakeLive=true`,
+`fakeLiveGoalChanged=true`, one fake-live no-op, unknown target rejection,
+target-not-allowed rejection, `wouldApplyToLive=false` rejection, prior
+applied-to-live rejection, prior rejected/deferred reason rejection,
+`agentsBasicTouchedBefore=true` rejection, missing reason rejection, max
+fake-live applications rejection, and audit-only deferred decisions.
+
+It emits `fakeLiveGoalApplication*` metrics and
+`lab_fake_live_goal_application_recorded`, while keeping
+`appliedToAgentsBasic=0`, `agentsBasicTouched=false`,
+`liveRuntimeTouched=false`, `memoryMutated=false`, `movementStackUsed=false`,
+`worldMutated=false`, and `terrainMutated=false`.
+
+The recommended next phase is Phase 5.12C - Fake-Live Goal Application
+Hardening.

@@ -1,5 +1,82 @@
 # PebbleLab Development Journal
 
+## 2026-07-03 — Phase 5.12B fake-live goal application fixture smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Implement `fake_live_goal_application_fixture_smoke`, the first fixture that
+applies a goal to scenario-owned fake-live state while proving `agents_basic`
+and the normal runtime remain untouched.
+
+### Starting Point
+
+Phase 5.12A defined the fake-live goal application contract. Phase 5.11B and
+Phase 5.11C already produce guarded live goal application decisions with
+`liveApplyEligible`, `wouldApplyToLive`, rejected/deferred decisions,
+`appliedToLive=0`, `liveAgentMutated=false`, and
+`agentsBasicTouched=false`.
+
+### Implementation
+
+- Added `LabFakeLiveGoalApplication.swift`.
+- Added `fake_live_goal_application_fixture_smoke`.
+- Added fake-live application policies, inputs, decisions, report, invariant
+  report, digest, metrics, and events.
+- Covered `fakeLiveApplyEligible`, `appliedToFakeLive`,
+  `fakeLiveGoalChanged`, and fake-live no-op.
+- Covered rejected unknown target, target not allowed,
+  `wouldApplyToLive=false`, prior rejected/deferred reasons,
+  prior applied-to-live, `agentsBasicTouchedBefore=true`, missing reason, and
+  max fake-live applications.
+- Covered audit-only deferred.
+- Kept `appliedToAgentsBasic=0`, `agentsBasicTouched=false`,
+  `liveRuntimeTouched=false`, `memoryMutated=false`,
+  `movementStackUsed=false`, `worldMutated=false`, and
+  `terrainMutated=false`.
+
+### Outputs
+
+- `fake_live_goal_application_report.json`;
+- `fake_live_goal_application_invariant_report.json`;
+- `fake_live_goal_application_policies.json`;
+- `fake_live_goal_application_inputs.json`;
+- `fake_live_goal_application_decisions.json`;
+- `fake_live_goal_application_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+### Validation
+
+Commands:
+
+- `git status`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `swift run PebbleLab -- --scenario fake_live_goal_application_fixture_smoke --seed 42 --ticks 3 --out runs/check_fake_live_goal_application_fixture`;
+- debug non-regression runs for guarded live goal application, snapshot
+  mutation, goal dry-run, controlled application, live adapter, cognitive loop
+  integration, behavior-loop bridge, goal selection memory, memory retrieval,
+  memory update, behavior loop, `agents_basic`, and `regression_smoke`;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results:
+
+- `fake_live_goal_application_fixture_smoke` passed in debug with
+  success=true, 13 agents, 13 inputs, 13 decisions, two eligible decisions,
+  two fake-live applications, two fake-live goal changes, one no-op, nine
+  rejected decisions, one deferred decision, `appliedToAgentsBasic=0`,
+  `agentsBasicTouched=false`, and `liveRuntimeTouched=false`.
+- The invariant report passed with 56 checks passed and 0 failed.
+- The digest was stable: `9e0d5a3a700940f9`.
+
+### Next Step
+
+Phase 5.12C — Fake-Live Goal Application Hardening.
+
 ## 2026-07-03 — Phase 5.12A fake-live goal application planning
 
 Branch: `lab/pebblelab-v1`

@@ -4275,3 +4275,40 @@ Documented scope:
   `lab_fake_live_goal_application_recorded`, and future invariants.
 
 Next recommended step: Phase 5.12B - Fake-Live Goal Application Fixture Smoke.
+
+## Phase 5.12B - Fake-Live Goal Application Fixture Smoke
+
+Status: implemented and validated.
+
+Goal: apply goals to scenario-owned fake-live state while proving
+`agents_basic` and the normal runtime remain untouched.
+
+Implemented scenario:
+
+- `fake_live_goal_application_fixture_smoke`.
+
+Validated runtime scope:
+
+- creates fake-live goal application policies, inputs, decisions, report,
+  invariant report, digest, metrics, and events;
+- covers `fakeLiveApplyEligible`;
+- covers `appliedToFakeLive=true`;
+- covers `fakeLiveGoalChanged=true`;
+- covers fake-live no-op;
+- covers rejected unknown target, target not allowed,
+  `wouldApplyToLive=false`, prior rejected/deferred reasons,
+  prior applied-to-live, `agentsBasicTouchedBefore=true`, missing reason, and
+  max fake-live applications;
+- covers audit-only deferred;
+- keeps `appliedToAgentsBasic=0`;
+- keeps `agentsBasicTouched=false`, `liveRuntimeTouched=false`,
+  `memoryMutated=false`, `movementStackUsed=false`, `worldMutated=false`, and
+  `terrainMutated=false`;
+- emits `fakeLiveGoalApplication*` metrics and
+  `lab_fake_live_goal_application_recorded`.
+
+`agents_basic` integration, uncontrolled live applied goal changes, action
+application, memory writes, movement stack, World/terrain mutation, mood,
+relationships, LLM, and social systems remain out of scope.
+
+Next recommended step: Phase 5.12C - Fake-Live Goal Application Hardening.

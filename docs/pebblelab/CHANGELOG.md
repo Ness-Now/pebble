@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added PebbleLab fake-live goal application fixture smoke.
 - Documented PebbleLab fake-live goal application plan.
 - Added PebbleLab guarded live goal application hardening smoke.
 - Added PebbleLab guarded live goal application fixture smoke.
