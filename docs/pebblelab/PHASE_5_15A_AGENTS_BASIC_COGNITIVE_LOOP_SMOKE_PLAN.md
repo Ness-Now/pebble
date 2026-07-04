@@ -464,3 +464,42 @@ that router risk is blocking the cognitive-loop smoke.
 - `git diff --check` passes.
 - `git diff --cached --check` passes.
 - Local commit created.
+
+## Phase 5.15B Status
+
+Phase 5.15B implemented the planned runtime scenario:
+
+- `agents_basic_cognitive_loop_fixture_smoke`.
+
+It follows the 5.15A contract as a strict opt-in, worldless runtime fixture.
+The fixture creates three `agents_basic`-equivalent agents and records one
+readable cognitive trace per agent:
+
+- fixture perception;
+- fixture memory seed and retrieval summary;
+- goal candidate;
+- guarded `currentGoal` apply;
+- action dry-run only;
+- fixture-only memory update;
+- human-readable summary.
+
+The first three fixture paths are:
+
+- `agent_0`: safety path, `idle -> seekSafety`;
+- `agent_1`: curiosity path, `idle -> explore`;
+- `agent_2`: social/observe path, `idle -> observeOtherAgent`.
+
+Phase 5.15B keeps the promised boundaries: no live memory write, no movement,
+no movement stack, no selected action application, no live observe, no route
+following, no live pathfinding, no World mutation, no terrain mutation, no
+physical placeholder or Core entity mutation, no mood, no relationships, no
+communication, no Python, no LLM, no embeddings, and no RL.
+
+The only live mutation is guarded `LabAgent.currentGoal`. The reported runtime
+behavior change is explicit:
+
+- `runtimeBehaviorChanged = true`;
+- `runtimeBehaviorChangedReason = controlledCognitiveGoalApplyOnly`.
+
+Recommended next phase after 5.15B: Phase 5.15C — `agents_basic` Cognitive
+Loop Fixture Hardening.

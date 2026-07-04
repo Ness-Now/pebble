@@ -150,6 +150,8 @@ let isAgentsBasicGoalApplyScenario = options.scenario
     == agentsBasicGoalApplyScenarioName
 let isAgentsBasicGoalApplyHardeningScenario = options.scenario
     == agentsBasicGoalApplyHardeningScenarioName
+let isAgentsBasicCognitiveLoopScenario = options.scenario
+    == agentsBasicCognitiveLoopScenarioName
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -217,7 +219,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isAgentsBasicGoalIntegrationScenario
     || isAgentsBasicGoalIntegrationHardeningScenario
     || isAgentsBasicGoalApplyScenario
-    || isAgentsBasicGoalApplyHardeningScenario)
+    || isAgentsBasicGoalApplyHardeningScenario
+    || isAgentsBasicCognitiveLoopScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -914,7 +917,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isAgentsBasicGoalIntegrationScenario
     || isAgentsBasicGoalIntegrationHardeningScenario
     || isAgentsBasicGoalApplyScenario
-    || isAgentsBasicGoalApplyHardeningScenario {
+    || isAgentsBasicGoalApplyHardeningScenario
+    || isAgentsBasicCognitiveLoopScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -4531,6 +4535,21 @@ let agentsBasicGoalApplyHardeningFixture: LabAgentsBasicGoalApplyHardeningFixtur
 let agentsBasicGoalApplyHardeningSuccess = agentsBasicGoalApplyHardeningFixture.map {
     $0.report.success && $0.invariantReport.success
 }
+let agentsBasicCognitiveLoopFixture: LabAgentsBasicCognitiveLoopFixture? = {
+    guard isAgentsBasicCognitiveLoopScenario else { return nil }
+    do {
+        return try makeAgentsBasicCognitiveLoopFixture(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticks: ticksCompleted
+        )
+    } catch {
+        fail("failed to build agents_basic cognitive loop fixture: \(error)")
+    }
+}()
+let agentsBasicCognitiveLoopSuccess = agentsBasicCognitiveLoopFixture.map {
+    $0.report.success && $0.invariantReport.success
+}
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
     && successCriteria.agentTicksRecorded
@@ -4631,6 +4650,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (agentsBasicGoalIntegrationHardeningSuccess ?? true)
     && (agentsBasicGoalApplySuccess ?? true)
     && (agentsBasicGoalApplyHardeningSuccess ?? true)
+    && (agentsBasicCognitiveLoopSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -9081,6 +9101,38 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("agents_basic_goal_apply_hardening_digest.json")
             )
         }
+        if let agentsBasicCognitiveLoopFixture {
+            appendEventLines(agentsBasicCognitiveLoopFixture.eventLines)
+            try writeJSON(
+                agentsBasicCognitiveLoopFixture.report,
+                to: outURL.appendingPathComponent("agents_basic_cognitive_loop_report.json")
+            )
+            try writeJSON(
+                agentsBasicCognitiveLoopFixture.invariantReport,
+                to: outURL.appendingPathComponent("agents_basic_cognitive_loop_invariant_report.json")
+            )
+            try writeJSON(
+                agentsBasicCognitiveLoopFixture.inputs,
+                to: outURL.appendingPathComponent("agents_basic_cognitive_loop_inputs.json")
+            )
+            try writeJSON(
+                agentsBasicCognitiveLoopFixture.traces,
+                to: outURL.appendingPathComponent("agents_basic_cognitive_loop_traces.json")
+            )
+            try writeJSON(
+                agentsBasicCognitiveLoopFixture.beforeAfter,
+                to: outURL.appendingPathComponent("agents_basic_cognitive_loop_before_after.json")
+            )
+            try writeJSON(
+                agentsBasicCognitiveLoopFixture.digest,
+                to: outURL.appendingPathComponent("agents_basic_cognitive_loop_digest.json")
+            )
+            try agentsBasicCognitiveLoopFixture.summaryMarkdown.write(
+                to: outURL.appendingPathComponent("agents_basic_cognitive_loop_summary.md"),
+                atomically: true,
+                encoding: .utf8
+            )
+        }
         if let multiTickClosedLoopReport {
             try writeJSON(
                 multiTickClosedLoopReport,
@@ -11041,7 +11093,12 @@ if let outPath = options.outPath {
             routeFollowingLiveHardeningSuccess: routeFollowingLiveHardeningSuccess,
             successCriteria: successCriteria
         )
-        if let agentsBasicGoalApplyHardeningFixture {
+        if let agentsBasicCognitiveLoopFixture {
+            try writeJSON(
+                agentsBasicCognitiveLoopFixture.metrics,
+                to: outURL.appendingPathComponent("metrics.json")
+            )
+        } else if let agentsBasicGoalApplyHardeningFixture {
             try writeJSON(
                 agentsBasicGoalApplyHardeningFixture.metrics,
                 to: outURL.appendingPathComponent("metrics.json")

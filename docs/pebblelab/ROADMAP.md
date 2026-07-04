@@ -4618,3 +4618,57 @@ Planning scope:
 Next recommended step: Phase 5.15B - agents_basic Cognitive Loop Fixture
 Smoke. It must be runtime-facing, must not be docs-only, must not be only
 candidate-only, and must produce a visible cognitive trace.
+
+## Phase 5.15B - agents_basic Cognitive Loop Fixture Smoke
+
+Status: implemented and validated as a runtime fixture smoke.
+
+Goal: add the first visible, bounded `agents_basic` cognitive-loop smoke
+without changing normal `agents_basic` behavior or connecting a full live
+cognitive loop.
+
+Implemented scenario:
+
+- `agents_basic_cognitive_loop_fixture_smoke`.
+
+Runtime evidence:
+
+- 3 worldless `agents_basic`-equivalent agents;
+- 3 inputs and 3 traces;
+- 3 fixture perception steps;
+- 3 fixture memory/retrieval steps;
+- 3 goal candidates;
+- 3 guarded `currentGoal` applies;
+- 3 action dry-runs;
+- fixture-only memory update records;
+- human-readable summary output.
+
+Boundaries:
+
+- `runtimeBehaviorChanged = true`;
+- `runtimeBehaviorChangedReason = controlledCognitiveGoalApplyOnly`;
+- the only live mutation is guarded `LabAgent.currentGoal`;
+- no selected action application;
+- no live `decideAction`, `applyLastActionEffect`, `applyAbstractMovement`,
+  `observe`, `observeNearbyAgents`, or `remember` calls;
+- no live memory writes, memory mutation, movement, movement stack, route
+  following, live pathfinding, World mutation, terrain mutation, physical
+  placeholder mutation, Core entity mutation, mood, relationships,
+  communication, Python, LLM, embeddings, or RL.
+
+Outputs:
+
+- `agents_basic_cognitive_loop_report.json`;
+- `agents_basic_cognitive_loop_invariant_report.json`;
+- `agents_basic_cognitive_loop_inputs.json`;
+- `agents_basic_cognitive_loop_traces.json`;
+- `agents_basic_cognitive_loop_before_after.json`;
+- `agents_basic_cognitive_loop_digest.json`;
+- `agents_basic_cognitive_loop_summary.md`;
+- `metrics.json`;
+- `events.ndjson`.
+
+Next recommended step: Phase 5.15C - agents_basic Cognitive Loop Fixture
+Hardening. It should harden the new cognitive-loop fixture boundaries without
+turning on live memory writes, live movement, World mutation, terrain mutation,
+communication, mood, relationships, LLM, Python, embeddings, or RL.

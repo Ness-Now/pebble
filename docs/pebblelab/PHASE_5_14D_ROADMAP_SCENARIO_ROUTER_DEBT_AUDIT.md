@@ -280,3 +280,23 @@ only if adding 5.15B produces concrete router risk that blocks the smoke.
 
 5.15B must be runtime-facing, must not be docs-only, must not be only
 candidate-only, and must produce a visible cognitive trace.
+
+## Phase 5.15B Status
+
+Phase 5.15B implemented `agents_basic_cognitive_loop_fixture_smoke` with a
+small, localized route through the existing `main.swift` dispatcher. The router
+debt remains real, but it did not block the first visible `agents_basic`
+cognitive-loop smoke.
+
+The implementation kept the cognitive-loop logic out of `main.swift` in
+`Sources/PebbleLab/LabAgentsBasicCognitiveLoop.swift`. `main.swift` only
+recognizes the scenario, keeps it worldless, skips the normal tick loop, builds
+the fixture, writes outputs, appends events, and selects metrics.
+
+This confirms the 5.14D recommendation: do not launch Phase 5.R1/R2/R3 just to
+avoid a narrow cognitive-loop smoke. Revisit router cleanup only after the
+5.15 smoke/hardening path if the next runtime work produces concrete routing
+risk.
+
+Recommended next phase after 5.15B: Phase 5.15C — `agents_basic` Cognitive Loop
+Fixture Hardening.

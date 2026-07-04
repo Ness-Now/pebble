@@ -1,5 +1,55 @@
 # PebbleLab Development Journal
 
+## 2026-07-04 — Phase 5.15B agents_basic cognitive loop fixture smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Implement the first visible, bounded `agents_basic` cognitive-loop smoke as a
+strict opt-in worldless fixture.
+
+### Implementation
+
+- Added `agents_basic_cognitive_loop_fixture_smoke`.
+- Added `Sources/PebbleLab/LabAgentsBasicCognitiveLoop.swift` to own the
+  scenario constant, policy, inputs, trace steps, before/after snapshots,
+  report, invariant report, digest, metrics, events, and summary markdown.
+- Built three `agents_basic`-equivalent fixture agents:
+  - `agent_0`: safety fixture path, `idle -> seekSafety`;
+  - `agent_1`: curiosity fixture path, `idle -> explore`;
+  - `agent_2`: social/observe fixture path, `idle -> observeOtherAgent`.
+- Recorded fixture perception, fixture memory/retrieval, goal candidate,
+  guarded `currentGoal` apply, action dry-run, fixture-only memory update, and
+  human-readable summary for each agent.
+- Kept action decisions dry-run only: no `lastAction`, no action effect, no
+  movement, no movement stack, no route following, no live pathfinding, and no
+  World or terrain mutation.
+- Kept memory update fixture-only: no `remember` call and no live
+  `LabAgent.memory` mutation.
+- Added dedicated outputs:
+  `agents_basic_cognitive_loop_report.json`,
+  `agents_basic_cognitive_loop_invariant_report.json`,
+  `agents_basic_cognitive_loop_inputs.json`,
+  `agents_basic_cognitive_loop_traces.json`,
+  `agents_basic_cognitive_loop_before_after.json`,
+  `agents_basic_cognitive_loop_digest.json`,
+  `agents_basic_cognitive_loop_summary.md`, `metrics.json`, and
+  `events.ndjson`.
+
+### Boundaries
+
+The only live mutation is guarded `LabAgent.currentGoal` on the three fixture
+agents. Position, needs, inventory, observation, nearby-agent observations,
+last action, last action effect, last movement, memory, memory count, counters,
+physical placeholders, Core entities, World, terrain, movement stack, mood,
+relationships, communication, Python, LLM, embeddings, and RL remain untouched.
+
+### Next Step
+
+Recommended next phase: Phase 5.15C — `agents_basic` Cognitive Loop Fixture
+Hardening.
+
 ## 2026-07-04 — Phase 5.15A agents_basic cognitive loop smoke planning
 
 Branch: `lab/pebblelab-v1`

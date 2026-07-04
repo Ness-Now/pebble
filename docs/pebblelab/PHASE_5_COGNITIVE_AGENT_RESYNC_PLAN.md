@@ -1227,3 +1227,34 @@ RL.
 
 The recommended next phase is Phase 5.15B - `agents_basic` Cognitive Loop
 Fixture Smoke.
+
+## Phase 5.15B Status
+
+Phase 5.15B implemented `agents_basic_cognitive_loop_fixture_smoke`, the first
+visible bounded `agents_basic` cognitive-loop smoke.
+
+The scenario is worldless and strict opt-in. It creates three
+`agents_basic`-equivalent fixture agents and records, for each one, fixture
+perception, fixture memory/retrieval, goal candidate selection, guarded
+`currentGoal` apply, action dry-run, fixture-only memory update, and a human
+readable summary.
+
+The three guarded applies are:
+
+- `agent_0`: `idle -> seekSafety`;
+- `agent_1`: `idle -> explore`;
+- `agent_2`: `idle -> observeOtherAgent`.
+
+The only live mutation is `LabAgent.currentGoal`. Phase 5.15B does not call
+live `decideAction`, `applyLastActionEffect`, `applyAbstractMovement`,
+`observe`, `observeNearbyAgents`, or `remember`. It does not mutate live memory,
+move agents, use the movement stack, follow routes, run live pathfinding,
+mutate World or terrain, move physical placeholders or Core entities, or add
+mood, relationships, communication, Python, LLM, embeddings, or RL.
+
+It records `runtimeBehaviorChanged = true` with
+`runtimeBehaviorChangedReason = controlledCognitiveGoalApplyOnly`, making the
+behavior change explicit and bounded to the guarded goal apply.
+
+The recommended next phase is Phase 5.15C - `agents_basic` Cognitive Loop
+Fixture Hardening.
