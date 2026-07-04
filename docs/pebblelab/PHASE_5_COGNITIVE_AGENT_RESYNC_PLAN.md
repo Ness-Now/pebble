@@ -1174,3 +1174,27 @@ and Core entities remain unchanged.
 The recommended next phase is Phase 5.14D - Roadmap and Scenario Router Debt
 Audit, a docs-only/planning-only inventory of the growing `main.swift` scenario
 router before any broad refactor.
+
+## Phase 5.14D Status
+
+Phase 5.14D is implemented as
+`PHASE_5_14D_ROADMAP_SCENARIO_ROUTER_DEBT_AUDIT.md`, a docs-only audit of the
+roadmap and scenario router after the first real `agents_basic` goal apply.
+
+The audit confirms that 5.14B and 5.14C already proved the required bounded
+apply evidence: `appliedToAgentsBasic=3`, `agentsBasicGoalChanged=3`,
+`runtimeBehaviorChanged=true`, and
+`runtimeBehaviorChangedReason=controlledGoalApplyOnly`, while preserving the
+`currentGoal`-only mutation boundary and avoiding memory, movement stack,
+World, and terrain mutation.
+
+The audit also confirms that `main.swift` has real routing debt: many
+top-level scenario booleans, long worldless and tick-loop skip conditions, a
+long `runSuccess` chain, centralized output writing, and a long metrics
+dispatch chain. `LabScenarios.swift` and `LabOptions.swift` also duplicate a
+large flat scenario list.
+
+No structural blocker was found. The recommended next phase is Phase 5.15A -
+`agents_basic` Cognitive Loop Smoke Planning. A router cleanup planning phase,
+Phase 5.R1, should be used only if router risk becomes concrete enough to
+block that milestone.

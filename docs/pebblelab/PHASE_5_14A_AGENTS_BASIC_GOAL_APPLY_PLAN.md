@@ -543,3 +543,25 @@ World mutation, or terrain mutation.
 Recommended next step: Phase 5.14D - Roadmap and Scenario Router Debt Audit,
 kept as a small docs-only/planning-only inventory of `main.swift` router debt
 before any risky broad cleanup.
+
+## Phase 5.14D Audit Status
+
+Phase 5.14D implemented the planned docs-only router audit:
+
+- document:
+  `PHASE_5_14D_ROADMAP_SCENARIO_ROUTER_DEBT_AUDIT.md`;
+- confirms 5.14B produced the first real guarded `agents_basic` goal apply;
+- confirms 5.14C hardened that apply with 28 passing cases, 20 decisions,
+  `appliedToAgentsBasic=3`, `agentsBasicGoalChanged=3`, and digest
+  `d14fe26adf8e1071`;
+- confirms the bounded mutation remains `LabAgent.currentGoal` only;
+- confirms no further 5.14E apply hardening is recommended;
+- records that `main.swift` has real router debt but no structural blocker for
+  the next planning phase;
+- recommends Phase 5.15A - `agents_basic` Cognitive Loop Smoke Planning as
+  the next productive milestone;
+- keeps Phase 5.R1 - PebbleLab Scenario Routing Contract Planning as an
+  alternative only if router risk becomes concrete enough to block 5.15A.
+
+Phase 5.14D did not modify Swift, add scenarios, add runtime metrics/events,
+or change any runtime behavior.

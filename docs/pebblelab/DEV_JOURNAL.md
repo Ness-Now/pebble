@@ -1,5 +1,56 @@
 # PebbleLab Development Journal
 
+## 2026-07-04 — Phase 5.14D roadmap and scenario router debt audit
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Create a docs-only audit of `main.swift` and scenario-router debt before
+planning the first visible `agents_basic` cognitive-loop smoke.
+
+### Starting Point
+
+Phase 5.14B proved the first real guarded `agents_basic` goal apply with
+`appliedToAgentsBasic=3`, `agentsBasicGoalChanged=3`, and
+`runtimeBehaviorChangedReason=controlledGoalApplyOnly`.
+
+Phase 5.14C hardened that apply path with 28 passing cases, 20 inputs, 20
+decisions, `appliedToAgentsBasic=3`, `agentsBasicGoalChanged=3`, one audited
+no-op, 16 rejected decisions, 0 deferred decisions, digest
+`d14fe26adf8e1071`, and 75 invariant checks passed.
+
+### Audit
+
+- Created `PHASE_5_14D_ROADMAP_SCENARIO_ROUTER_DEBT_AUDIT.md`.
+- Classified scenario families: core/world smoke, abstract agents, physical
+  bridge/Core entity bridge, terrain/collision/pathfinding, movement stack,
+  behavior loop, memory update/retrieval, goal selection, cognitive loop, live
+  adapter/controlled application, goal application layers, `agents_basic`
+  integration, `agents_basic` goal apply, and future `agents_basic` cognitive
+  loop.
+- Audited worldless/worldful routing and recommended that the first 5.15
+  runtime-facing work remain worldless or setup-only.
+- Recorded `main.swift` debt: many scenario booleans, long worldless and
+  tick-loop skip conditions, long `runSuccess` chain, centralized output
+  writing, long metrics dispatch, and duplicated scenario lists in
+  `LabScenarios.swift` and `LabOptions.swift`.
+- Found no structural blocker for 5.15A.
+- Explicitly avoided recommending a new 5.14E goal-apply hardening phase.
+
+### Result
+
+Phase 5.14D is docs-only. It changes no Swift files, adds no runtime scenario,
+adds no runtime metrics or events, and does not refactor `main.swift`.
+
+### Next Step
+
+Recommended next phase: Phase 5.15A — `agents_basic` Cognitive Loop Smoke
+Planning.
+
+Alternative only if router risk becomes concrete enough to block 5.15A:
+Phase 5.R1 — PebbleLab Scenario Routing Contract Planning.
+
 ## 2026-07-04 — Phase 5.14C agents_basic goal apply hardening smoke
 
 Branch: `lab/pebblelab-v1`

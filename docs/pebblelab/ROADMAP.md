@@ -4555,3 +4555,35 @@ This is hardening for the 5.14B apply path, not a broader cognitive loop.
 Next recommended step: Phase 5.14D - Roadmap and Scenario Router Debt Audit.
 Keep it docs-only/planning-only and inventory the `main.swift` scenario router
 before any broader cleanup.
+
+## Phase 5.14D - Roadmap and Scenario Router Debt Audit
+
+Status: implemented and validated as docs-only audit.
+
+Goal: pause briefly after the first real guarded `agents_basic` goal apply and
+its hardening to audit `main.swift` and scenario-router debt before planning
+the first visible `agents_basic` cognitive-loop smoke.
+
+Implemented document:
+
+- `PHASE_5_14D_ROADMAP_SCENARIO_ROUTER_DEBT_AUDIT.md`.
+
+Audit summary:
+
+- Phase 5.14B and 5.14C already proved real guarded apply evidence:
+  `appliedToAgentsBasic=3`, `agentsBasicGoalChanged=3`, and
+  `runtimeBehaviorChangedReason=controlledGoalApplyOnly`;
+- no additional 5.14E goal-apply hardening phase is recommended;
+- `main.swift` is now a giant scenario router with many `isScenario` flags,
+  repeated worldless/tick-loop conditions, a long `runSuccess` chain,
+  centralized output writing, and a long metrics dispatch chain;
+- `LabScenarios.swift` and `LabOptions.swift` duplicate a long flat scenario
+  list;
+- the debt is real but not a structural blocker for 5.15A;
+- a broad router refactor before 5.15A would be riskier than useful.
+
+Recommended next step: Phase 5.15A - agents_basic Cognitive Loop Smoke
+Planning.
+
+Alternative only if router risk becomes too high: Phase 5.R1 - PebbleLab
+Scenario Routing Contract Planning.
