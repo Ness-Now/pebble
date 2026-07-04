@@ -509,3 +509,37 @@ Phase 5.14B implemented the planned runtime fixture:
 
 Phase 5.14B is not candidate-only and not dry-run-only. The next recommended
 phase is Phase 5.14C - Agents Basic Goal Apply Hardening.
+
+## Phase 5.14C Implementation Status
+
+Phase 5.14C implemented the hardening scenario planned after the first guarded
+apply:
+
+- scenario: `agents_basic_goal_apply_hardening_smoke`;
+- owner: `Sources/PebbleLab/LabAgentsBasicGoalApply.swift`;
+- shape: worldless, opt-in, deterministic hardening fixture;
+- coverage: 28 cases, 20 inputs, and 20 decisions;
+- real applies: three successful `LabAgent.currentGoal` changes to
+  `seekSafety`, `explore`, and `observeOtherAgent`;
+- result: `appliedToAgentsBasic=3`, `agentsBasicGoalChanged=3`,
+  `agentsBasicGoalNoops=1`, `rejectedAgentsBasicGoalApplies=16`,
+  `deferredAgentsBasicGoalApplies=0`;
+- runtime audit: `runtimeBehaviorChanged=true` only for controlled goal apply,
+  with `runtimeBehaviorChangedReason=controlledGoalApplyOnly`;
+- boundaries: rejected decisions and no-op decisions do not mutate snapshots;
+  applied decisions mutate only `currentGoal` fields; memory, movement stack,
+  World, terrain, position, needs, inventory, lastAction, lastActionEffect,
+  lastMovement, memory count, counters, physical placeholders, and Core
+  entities remain unchanged;
+- outputs: hardening report, invariant report, cases, inputs, decisions,
+  before/after, digest, `metrics.json`, and `events.ndjson`;
+- events: `lab_agents_basic_goal_apply_hardening_recorded`, decision events,
+  and case events.
+
+Phase 5.14C hardens the bounded apply bridge. It is still not the full
+cognitive loop and does not call selected actions, movement, memory, pathing,
+World mutation, or terrain mutation.
+
+Recommended next step: Phase 5.14D - Roadmap and Scenario Router Debt Audit,
+kept as a small docs-only/planning-only inventory of `main.swift` router debt
+before any risky broad cleanup.

@@ -1145,3 +1145,32 @@ last-effect, last-movement, memory-count, counter, physical-placeholder, or
 Core-entity mutation.
 
 The recommended next phase is Phase 5.14C - Agents Basic Goal Apply Hardening.
+
+## Phase 5.14C Status
+
+Phase 5.14C implemented `agents_basic_goal_apply_hardening_smoke`, a strict
+opt-in hardening scenario for the first real guarded `agents_basic` goal apply
+path introduced in 5.14B.
+
+Validated result: 28 cases, 20 inputs, 20 decisions,
+`appliedToAgentsBasic=3`, `agentsBasicGoalChanged=3`, one audited no-op, 16
+rejected decisions, `deferredAgentsBasicGoalApplies=0`,
+`runtimeBehaviorChanged=true`, and
+`runtimeBehaviorChangedReason=controlledGoalApplyOnly`.
+
+The hardening covers positive safety/explore/observe applies, no-op allowed,
+no-op disallowed, missing agent, goal-before mismatch, missing target, unknown
+target, target not allowed, `wouldApplyToAgentsBasic=false`,
+`agentsBasicApplyEligible=false`, prior rejected/deferred/applied evidence,
+non-dedicated scenario, policy disallow, missing reason, max applications
+exceeded, wrong apply mode, rejected/no-op non-mutation, deterministic order,
+and digest repeatability.
+
+The only allowed applied mutation remains `LabAgent.currentGoal`. Memory,
+movement stack, World, terrain, position, needs, inventory, lastAction,
+lastActionEffect, lastMovement, memory count, counters, physical placeholders,
+and Core entities remain unchanged.
+
+The recommended next phase is Phase 5.14D - Roadmap and Scenario Router Debt
+Audit, a docs-only/planning-only inventory of the growing `main.swift` scenario
+router before any broad refactor.

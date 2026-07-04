@@ -4512,3 +4512,46 @@ This is the first real controlled `agents_basic` goal apply. It is not
 candidate-only, not dry-run-only, and not a new `wouldApply` layer.
 
 Next recommended step: Phase 5.14C - Agents Basic Goal Apply Hardening.
+
+## Phase 5.14C - Agents Basic Goal Apply Hardening
+
+Status: implemented and validated.
+
+Goal: harden the first real guarded `agents_basic` goal apply with explicit
+positive, no-op, rejection, boundary, deterministic-order, and digest
+repeatability evidence.
+
+Implemented scenario:
+
+- `agents_basic_goal_apply_hardening_smoke`.
+
+Validated fixture scope:
+
+- covers 28 hardening cases;
+- produces 20 inputs and 20 decisions;
+- applies three real guarded goal changes:
+  `idle -> seekSafety`, `idle -> explore`, and
+  `idle -> observeOtherAgent`;
+- produces `appliedToAgentsBasic=3` and `agentsBasicGoalChanged=3`;
+- records one audited no-op and 16 rejected decisions;
+- rejects missing agent, before mismatch, missing target, unknown target,
+  target not allowed, `wouldApplyToAgentsBasic=false`,
+  `agentsBasicApplyEligible=false`, prior rejected/deferred/applied evidence,
+  non-dedicated scenario, policy disallow, missing reason, max applications
+  exceeded, wrong apply mode, and no-op disallowed;
+- sets `runtimeBehaviorChanged=true` only with reason
+  `controlledGoalApplyOnly`;
+- proves rejected and no-op decisions do not mutate agent snapshots;
+- keeps the only applied mutation bounded to `LabAgent.currentGoal` fields;
+- keeps memory, movement stack, World, terrain, position, needs, inventory,
+  lastAction, lastActionEffect, lastMovement, memory count, counters,
+  physical placeholders, and Core entities unchanged;
+- emits `agentsBasicGoalApplyHardening*` metrics,
+  `lab_agents_basic_goal_apply_hardening_recorded`, decision events, and case
+  events.
+
+This is hardening for the 5.14B apply path, not a broader cognitive loop.
+
+Next recommended step: Phase 5.14D - Roadmap and Scenario Router Debt Audit.
+Keep it docs-only/planning-only and inventory the `main.swift` scenario router
+before any broader cleanup.

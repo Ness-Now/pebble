@@ -1,5 +1,107 @@
 # PebbleLab Development Journal
 
+## 2026-07-04 — Phase 5.14C agents_basic goal apply hardening smoke
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Harden the first real guarded `agents_basic` goal apply path with
+`agents_basic_goal_apply_hardening_smoke`, while preserving the strict
+currentGoal-only mutation boundary from Phase 5.14B.
+
+### Starting Point
+
+Phase 5.14B added `agents_basic_goal_apply_guarded_fixture_smoke`, which
+applies three guarded goal candidates into a compact worldless
+`agents_basic`-equivalent fixture and produces `appliedToAgentsBasic=3`,
+`agentsBasicGoalChanged=3`, and
+`runtimeBehaviorChangedReason=controlledGoalApplyOnly`.
+
+### Implementation
+
+- Added `agents_basic_goal_apply_hardening_smoke`.
+- Reused the guarded apply policy, input, decision, snapshot, and before/after
+  helpers from `LabAgentsBasicGoalApply.swift`.
+- Covered 28 hardening cases with 20 inputs and 20 decisions.
+- Applied three real goal changes: safety, explore, and observe.
+- Recorded one allowed no-op and 16 rejected decisions.
+- Covered missing agent, goal-before mismatch, missing target, unknown target,
+  target not allowed, `wouldApplyToAgentsBasic=false`,
+  `agentsBasicApplyEligible=false`, prior rejected/deferred/applied evidence,
+  non-dedicated scenario, policy disallow, missing reason, max applications
+  exceeded, wrong apply mode, and no-op disallowed.
+- Proved rejected and no-op decisions do not mutate snapshots.
+- Kept applied mutations bounded to `LabAgent.currentGoal` fields only.
+- Added `agentsBasicGoalApplyHardening*` metrics,
+  `lab_agents_basic_goal_apply_hardening_recorded`, decision events, case
+  events, digest, report, invariant report, inputs, decisions, cases, and
+  before/after outputs.
+
+### Result
+
+- Cases: 28.
+- Cases passed: 28.
+- Inputs: 20.
+- Decisions: 20.
+- `appliedToAgentsBasic=3`.
+- `agentsBasicGoalChanged=3`.
+- `agentsBasicGoalNoops=1`.
+- `rejectedAgentsBasicGoalApplies=16`.
+- `deferredAgentsBasicGoalApplies=0`.
+- `runtimeBehaviorChanged=true`.
+- `runtimeBehaviorChangedReason=controlledGoalApplyOnly`.
+- `memoryMutated=false`.
+- `movementStackUsed=false`.
+- `worldMutated=false`.
+- `terrainMutated=false`.
+- `positionMutated=false`.
+- `needsMutated=false`.
+- `inventoryMutated=false`.
+- `lastActionMutated=false`.
+- `lastActionEffectMutated=false`.
+- `lastMovementMutated=false`.
+- `memoryCountMutated=false`.
+- `countersMutated=false`.
+- Digest: `d14fe26adf8e1071`.
+
+### Outputs
+
+- `agents_basic_goal_apply_hardening_report.json`;
+- `agents_basic_goal_apply_hardening_invariant_report.json`;
+- `agents_basic_goal_apply_hardening_cases.json`;
+- `agents_basic_goal_apply_hardening_inputs.json`;
+- `agents_basic_goal_apply_hardening_decisions.json`;
+- `agents_basic_goal_apply_hardening_before_after.json`;
+- `agents_basic_goal_apply_hardening_digest.json`;
+- `metrics.json`;
+- `events.ndjson`.
+
+### Validation
+
+Commands:
+
+- `git status`;
+- `git branch --show-current`;
+- `git pull origin lab/pebblelab-v1`;
+- `git log --oneline -12`;
+- `swift build`;
+- `swift build -c release --product Pebble`;
+- `swift run PebbleLab -- --scenario agents_basic_goal_apply_guarded_fixture_smoke --seed 42 --ticks 3 --out runs/check_agents_basic_goal_apply_fixture_after_hardening`;
+- `swift run PebbleLab -- --scenario agents_basic_goal_apply_hardening_smoke --seed 42 --ticks 3 --out runs/check_agents_basic_goal_apply_hardening`;
+- requested `agents_basic`, `agents_basic` goal integration, fake-live goal
+  application, and regression non-regression scenarios;
+- `swift run -c release pebsmoke`;
+- `git diff --check`;
+- `git diff --cached --check`.
+
+Results are recorded in the Phase 5.14C commit summary.
+
+### Next Step
+
+Phase 5.14D — Roadmap and Scenario Router Debt Audit, kept docs-only/planning
+only.
+
 ## 2026-07-03 — Phase 5.13C agents_basic goal integration guarded hardening smoke
 
 Branch: `lab/pebblelab-v1`

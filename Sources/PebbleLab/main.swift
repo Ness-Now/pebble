@@ -148,6 +148,8 @@ let isAgentsBasicGoalIntegrationHardeningScenario = options.scenario
     == agentsBasicGoalIntegrationHardeningScenarioName
 let isAgentsBasicGoalApplyScenario = options.scenario
     == agentsBasicGoalApplyScenarioName
+let isAgentsBasicGoalApplyHardeningScenario = options.scenario
+    == agentsBasicGoalApplyHardeningScenarioName
 let world = (isMultiAgentMovementFixtureScenario
     || isMultiAgentMovementFixtureHardeningScenario
     || isMultiAgentMovementTickFixtureScenario
@@ -214,7 +216,8 @@ let world = (isMultiAgentMovementFixtureScenario
     || isFakeLiveGoalApplicationHardeningScenario
     || isAgentsBasicGoalIntegrationScenario
     || isAgentsBasicGoalIntegrationHardeningScenario
-    || isAgentsBasicGoalApplyScenario)
+    || isAgentsBasicGoalApplyScenario
+    || isAgentsBasicGoalApplyHardeningScenario)
     ? nil
     : World(dim: .overworld, seed: options.seed)
 let scenarioResult = world.map { prepareScenario(options, world: $0) } ?? ScenarioResult()
@@ -910,7 +913,8 @@ if isMultiAgentMovementTickLiveReadonlyScenario
     || isFakeLiveGoalApplicationHardeningScenario
     || isAgentsBasicGoalIntegrationScenario
     || isAgentsBasicGoalIntegrationHardeningScenario
-    || isAgentsBasicGoalApplyScenario {
+    || isAgentsBasicGoalApplyScenario
+    || isAgentsBasicGoalApplyHardeningScenario {
     ticksCompleted = options.ticks
 } else {
     for _ in 0..<options.ticks {
@@ -4512,6 +4516,21 @@ let agentsBasicGoalApplyFixture: LabAgentsBasicGoalApplyFixture? = {
 let agentsBasicGoalApplySuccess = agentsBasicGoalApplyFixture.map {
     $0.report.success && $0.invariantReport.success
 }
+let agentsBasicGoalApplyHardeningFixture: LabAgentsBasicGoalApplyHardeningFixture? = {
+    guard isAgentsBasicGoalApplyHardeningScenario else { return nil }
+    do {
+        return try makeAgentsBasicGoalApplyHardeningFixture(
+            scenario: options.scenario,
+            seed: options.seed,
+            ticks: ticksCompleted
+        )
+    } catch {
+        fail("failed to build agents_basic goal apply hardening fixture: \(error)")
+    }
+}()
+let agentsBasicGoalApplyHardeningSuccess = agentsBasicGoalApplyHardeningFixture.map {
+    $0.report.success && $0.invariantReport.success
+}
 let runSuccess = successCriteria.ticksCompleted
     && successCriteria.agentsSpawned
     && successCriteria.agentTicksRecorded
@@ -4611,6 +4630,7 @@ let runSuccess = successCriteria.ticksCompleted
     && (agentsBasicGoalIntegrationSuccess ?? true)
     && (agentsBasicGoalIntegrationHardeningSuccess ?? true)
     && (agentsBasicGoalApplySuccess ?? true)
+    && (agentsBasicGoalApplyHardeningSuccess ?? true)
 
 if options.outPath != nil {
     do {
@@ -9030,6 +9050,37 @@ if let outPath = options.outPath {
                 to: outURL.appendingPathComponent("agents_basic_goal_apply_digest.json")
             )
         }
+        if let agentsBasicGoalApplyHardeningFixture {
+            appendEventLines(agentsBasicGoalApplyHardeningFixture.eventLines)
+            try writeJSON(
+                agentsBasicGoalApplyHardeningFixture.report,
+                to: outURL.appendingPathComponent("agents_basic_goal_apply_hardening_report.json")
+            )
+            try writeJSON(
+                agentsBasicGoalApplyHardeningFixture.invariantReport,
+                to: outURL.appendingPathComponent("agents_basic_goal_apply_hardening_invariant_report.json")
+            )
+            try writeJSON(
+                agentsBasicGoalApplyHardeningFixture.cases,
+                to: outURL.appendingPathComponent("agents_basic_goal_apply_hardening_cases.json")
+            )
+            try writeJSON(
+                agentsBasicGoalApplyHardeningFixture.inputs,
+                to: outURL.appendingPathComponent("agents_basic_goal_apply_hardening_inputs.json")
+            )
+            try writeJSON(
+                agentsBasicGoalApplyHardeningFixture.decisions,
+                to: outURL.appendingPathComponent("agents_basic_goal_apply_hardening_decisions.json")
+            )
+            try writeJSON(
+                agentsBasicGoalApplyHardeningFixture.beforeAfter,
+                to: outURL.appendingPathComponent("agents_basic_goal_apply_hardening_before_after.json")
+            )
+            try writeJSON(
+                agentsBasicGoalApplyHardeningFixture.digest,
+                to: outURL.appendingPathComponent("agents_basic_goal_apply_hardening_digest.json")
+            )
+        }
         if let multiTickClosedLoopReport {
             try writeJSON(
                 multiTickClosedLoopReport,
@@ -10990,7 +11041,12 @@ if let outPath = options.outPath {
             routeFollowingLiveHardeningSuccess: routeFollowingLiveHardeningSuccess,
             successCriteria: successCriteria
         )
-        if let agentsBasicGoalApplyFixture {
+        if let agentsBasicGoalApplyHardeningFixture {
+            try writeJSON(
+                agentsBasicGoalApplyHardeningFixture.metrics,
+                to: outURL.appendingPathComponent("metrics.json")
+            )
+        } else if let agentsBasicGoalApplyFixture {
             try writeJSON(
                 agentsBasicGoalApplyFixture.metrics,
                 to: outURL.appendingPathComponent("metrics.json")
