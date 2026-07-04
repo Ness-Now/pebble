@@ -1,5 +1,63 @@
 # PebbleLab Development Journal
 
+## 2026-07-04 — Phase 5.15A agents_basic cognitive loop smoke planning
+
+Branch: `lab/pebblelab-v1`
+
+### Objective
+
+Plan the first visible, bounded `agents_basic` cognitive-loop smoke without
+implementing runtime behavior.
+
+### Starting Point
+
+Phase 5.14B proved real guarded `currentGoal` apply into an
+`agents_basic`-equivalent fixture with `appliedToAgentsBasic=3` and
+`agentsBasicGoalChanged=3`.
+
+Phase 5.14C hardened that apply path with 28 passing cases, 20 decisions,
+`agentsBasicGoalNoops=1`, 16 rejected decisions, 0 deferred decisions, digest
+`d14fe26adf8e1071`, and 75 invariant checks passed.
+
+Phase 5.14D audited the scenario router and found real `main.swift` debt, but
+no structural blocker for planning the cognitive-loop smoke.
+
+### Planning
+
+- Created `PHASE_5_15A_AGENTS_BASIC_COGNITIVE_LOOP_SMOKE_PLAN.md`.
+- Defined the future runtime scenario
+  `agents_basic_cognitive_loop_fixture_smoke`.
+- Required the first 5.15B runtime smoke to produce a visible cognitive trace,
+  not another candidate-only bridge.
+- Planned a bounded future chain: fixture state, memory seed or controlled
+  retrieval, goal candidate, guarded `currentGoal` apply, action decision
+  dry-run only, optional fixture-only memory update, and human-readable
+  summary.
+- Proposed future ownership in
+  `Sources/PebbleLab/LabAgentsBasicCognitiveLoop.swift`, with `main.swift`
+  limited to dispatch and output writing.
+- Defined future outputs, `agentsBasicCognitiveLoop*` metrics,
+  `lab_agents_basic_cognitive_loop_recorded`, trace events, invariants, and
+  boundary rules.
+
+### Boundaries
+
+5.15A is docs-only. It changes no Swift files, adds no runtime scenario, adds
+no runtime metrics or events, and does not refactor `main.swift`.
+
+The future 5.15B smoke must not call live `decideAction`,
+`applyLastActionEffect`, `applyAbstractMovement`, movement stack, route
+following, live pathfinding, World mutation, terrain mutation, live memory
+writes, mood, relationships, communication, Python, LLM, embeddings, or RL.
+
+### Next Step
+
+Recommended next phase: Phase 5.15B —
+`agents_basic` Cognitive Loop Fixture Smoke.
+
+5.15B must be runtime-facing, must not be docs-only, must not be only
+candidate-only, and must produce a visible cognitive trace.
+
 ## 2026-07-04 — Phase 5.14D roadmap and scenario router debt audit
 
 Branch: `lab/pebblelab-v1`

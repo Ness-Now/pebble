@@ -1198,3 +1198,32 @@ No structural blocker was found. The recommended next phase is Phase 5.15A -
 `agents_basic` Cognitive Loop Smoke Planning. A router cleanup planning phase,
 Phase 5.R1, should be used only if router risk becomes concrete enough to
 block that milestone.
+
+## Phase 5.15A Status
+
+Phase 5.15A is implemented as
+`PHASE_5_15A_AGENTS_BASIC_COGNITIVE_LOOP_SMOKE_PLAN.md`, a docs-only plan for
+the first visible `agents_basic` cognitive-loop smoke.
+
+The plan starts from the validated 5.14B/5.14C apply evidence:
+`appliedToAgentsBasic=3`, `agentsBasicGoalChanged=3`, and the
+`currentGoal`-only mutation boundary. It also accepts the 5.14D router audit:
+`main.swift` debt is real, but not a blocker for planning or for a narrow
+5.15B smoke.
+
+The planned Phase 5.15B scenario is
+`agents_basic_cognitive_loop_fixture_smoke`. It should be a strict opt-in,
+worldless or setup-only runtime fixture that produces a readable cognitive
+trace: initial state, fixture perception or observation summary, memory seed or
+controlled retrieval, goal candidate, guarded `currentGoal` apply, action
+decision dry-run only, optional fixture-only memory update, and human-readable
+summary.
+
+5.15B must not be docs-only and must not be only candidate-only. It must not
+call live `decideAction`, `applyLastActionEffect`, `applyAbstractMovement`,
+the movement stack, live pathfinding, World mutation, terrain mutation, live
+memory writes, communication, mood, relationships, Python, LLM, embeddings, or
+RL.
+
+The recommended next phase is Phase 5.15B - `agents_basic` Cognitive Loop
+Fixture Smoke.

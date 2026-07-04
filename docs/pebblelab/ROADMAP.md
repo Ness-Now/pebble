@@ -4587,3 +4587,34 @@ Planning.
 
 Alternative only if router risk becomes too high: Phase 5.R1 - PebbleLab
 Scenario Routing Contract Planning.
+
+## Phase 5.15A - agents_basic Cognitive Loop Smoke Planning
+
+Status: implemented and validated as docs-only planning.
+
+Goal: prepare the first visible, bounded `agents_basic` cognitive-loop smoke
+without implementing it yet.
+
+Implemented document:
+
+- `PHASE_5_15A_AGENTS_BASIC_COGNITIVE_LOOP_SMOKE_PLAN.md`.
+
+Planning scope:
+
+- confirms 5.14B and 5.14C already proved real guarded `currentGoal` apply
+  with `appliedToAgentsBasic=3` and `agentsBasicGoalChanged=3`;
+- uses 5.14D router audit as context, but does not launch a router refactor;
+- defines the future runtime scenario
+  `agents_basic_cognitive_loop_fixture_smoke`;
+- requires the future 5.15B scenario to produce a visible cognitive trace;
+- defines a bounded chain: fixture state, memory seed or retrieval, goal
+  candidate, guarded `currentGoal` apply, action decision dry-run only,
+  optional fixture-only memory update, and human-readable summary;
+- keeps live memory writes, live movement, movement stack, route following,
+  live pathfinding, World mutation, terrain mutation, Core entity mutation,
+  physical placeholder mutation, communication, mood, relationships, trust,
+  LLM, Python, embeddings, and RL out of scope.
+
+Next recommended step: Phase 5.15B - agents_basic Cognitive Loop Fixture
+Smoke. It must be runtime-facing, must not be docs-only, must not be only
+candidate-only, and must produce a visible cognitive trace.

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Documented PebbleLab agents_basic cognitive loop smoke planning.
 - Documented PebbleLab roadmap and scenario router debt audit.
 - Added PebbleLab agents_basic goal apply hardening smoke.
 - Added PebbleLab agents_basic goal apply guarded fixture smoke.

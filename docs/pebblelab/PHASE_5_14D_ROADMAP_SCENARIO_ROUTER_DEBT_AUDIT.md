@@ -263,3 +263,20 @@ smoke, planned first by Phase 5.15A.
 - `git diff --check` passes.
 - `git diff --cached --check` passes.
 - Local commit created.
+
+## Phase 5.15A Status
+
+Phase 5.15A followed this audit recommendation and created
+`PHASE_5_15A_AGENTS_BASIC_COGNITIVE_LOOP_SMOKE_PLAN.md`.
+
+The 5.15A plan keeps router cleanup out of the immediate path. It accepts a
+small future `main.swift` addition for 5.15B if necessary, while recommending
+that the cognitive-loop implementation itself live in a dedicated future file,
+`Sources/PebbleLab/LabAgentsBasicCognitiveLoop.swift`.
+
+No structural router blocker was found. The next expected phase remains Phase
+5.15B - `agents_basic` Cognitive Loop Fixture Smoke. Phase 5.R1 should be used
+only if adding 5.15B produces concrete router risk that blocks the smoke.
+
+5.15B must be runtime-facing, must not be docs-only, must not be only
+candidate-only, and must produce a visible cognitive trace.
