@@ -27,7 +27,7 @@ let package = Package(
         // the app: AppKit + MTKView shell
         .executableTarget(
             name: "Pebble",
-            dependencies: ["PebbleCore"],
+            dependencies: ["PebbleCore", "PebbleAgents"],
             path: "Sources/Pebble",
             swiftSettings: [
                 .swiftLanguageMode(.v5),

@@ -31,6 +31,9 @@ func runCommand(_ game: GameCore, _ raw: String) {
         if ProcessInfo.processInfo.environment["PEBBLELAB_APP_PROBES"] == "1" {
             commands += ", labprobe"
         }
+        if ProcessInfo.processInfo.environment["PEBBLELAB_APP_AGENTS"] == "1" {
+            commands += ", lab"
+        }
         ok(commands)
     case "give":
         guard let itemName = arg(0) else { return fail("Usage: /give <item> [count]") }
@@ -298,6 +301,12 @@ func runCommand(_ game: GameCore, _ raw: String) {
         default:
             fail("Usage: /labprobe <status|spawn|clear>")
         }
+    case "lab":
+        guard let controller = gAppDelegate?.agentController else {
+            return fail("PebbleAgents controller unavailable.")
+        }
+        let result = controller.handleCommand(args, world: world, player: p)
+        if result.succeeded { ok(result.message) } else { fail(result.message) }
     case "meshmode":
         let mode = arg(0)
         guard mode == "simple" || mode == "greedy" else { return fail("Usage: /meshmode <simple|greedy>") }

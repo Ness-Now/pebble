@@ -3,6 +3,7 @@
 // GameCore to the UI stack (title/menus/HUD/screens) and renderer.
 
 import AppKit
+import ImageIO
 import MetalKit
 import PebbleCore
 
@@ -371,6 +372,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     var game: GameCore!
     var ui: UIManager!
     let hud = HUD()
+    let agentController = PebbleAgentController()
     let audio = AudioEngineM()
     private var lastFrame = CACurrentMediaTime()
     private var startTime = CACurrentMediaTime()
@@ -386,6 +388,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     private var pendingCmdDelay = 0
     // test hook: PEBBLE_SHOT="/tmp/x.png@300" captures the frame N frames after load
     private var shotQuitFrames = 0
+    private var pendingCompositedCapturePath: String?
     private var pendingShot: (path: String, frames: Int)? = {
         guard let v = ProcessInfo.processInfo.environment["PEBBLE_SHOT"] else { return nil }
         let parts = v.components(separatedBy: "@")
@@ -487,6 +490,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        agentController.shutdown()
         game.clearLabCoreAgentProbes()
         if game.hasWorld() { game.saveAndFlush(synchronous: true) }
     }
@@ -623,13 +627,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
             hud.hideGui = true
             pendingShot = (shot.path, shot.frames - 1)
             if shot.frames <= 0 {
-                renderer.requestCapture(path: shot.path)
+                pendingCompositedCapturePath = shot.path
                 pendingShot = nil
                 hud.hideGui = false
-                print("[shot] captured \(shot.path)")
-                fflush(stdout)
                 // scripted-shot runs quit on their own — leave a beat for the
-                // async blit + PNG write to land before terminating
+                // final UI-composited window capture to land before terminating
                 shotQuitFrames = 120
             }
         }
@@ -641,12 +643,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         let enc: MTLRenderCommandEncoder
         if game.hasWorld() {
             let partial = game.frame(dtMs: dt)
+            agentController.update(world: game.world, player: game.player)
             bot?.tick()
             booth?.tickBooth()
             renderer.particles.tick(game.world)
             let cam = game.camState(partial, timeSec: timeSec)
             enc = renderer.render(cmd: cmd, rpd: rpd, game: game, cam: cam, partial: partial, timeSec: timeSec)
         } else {
+            agentController.update(world: nil, player: nil)
             enc = renderer.renderTitle(cmd: cmd, rpd: rpd)
         }
 
@@ -655,6 +659,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         let screen = ui.current()
         if game.hasWorld() && (screen == nil || screen!.showHUD || !screen!.pausesGame) {
             hud.draw(ui, game, 0)
+            if !hud.hideGui, let state = agentController.debugState(f3Visible: hud.debugVisible) {
+                hud.drawPebbleAgentOverlay(ui, state)
+            }
             if !(screen is ChatScreen) { drawChatOverlay(ui) }
         }
         screen?.draw(ui, game, 0)
@@ -662,8 +669,62 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         ui.cv.flush(enc, pipeline: renderer.uiPipeline)
 
         enc.endEncoding()
+        if let capturePath = pendingCompositedCapturePath {
+            pendingCompositedCapturePath = nil
+            encodeCompositedCapture(cmd, from: drawable.texture, to: capturePath)
+        }
         cmd.present(drawable)
         cmd.commit()
+    }
+
+    private func encodeCompositedCapture(_ cmd: MTLCommandBuffer, from texture: MTLTexture, to path: String) {
+        let width = texture.width
+        let height = texture.height
+        let bytesPerRow = width * 4
+        guard !texture.isFramebufferOnly,
+              let device = gameView.device,
+              let buffer = device.makeBuffer(length: bytesPerRow * height, options: .storageModeShared),
+              let blit = cmd.makeBlitCommandEncoder() else { return }
+        blit.copy(
+            from: texture,
+            sourceSlice: 0,
+            sourceLevel: 0,
+            sourceOrigin: MTLOrigin(x: 0, y: 0, z: 0),
+            sourceSize: MTLSize(width: width, height: height, depth: 1),
+            to: buffer,
+            destinationOffset: 0,
+            destinationBytesPerRow: bytesPerRow,
+            destinationBytesPerImage: bytesPerRow * height
+        )
+        blit.endEncoding()
+        cmd.addCompletedHandler { _ in
+            let data = Data(bytes: buffer.contents(), count: bytesPerRow * height)
+            guard let provider = CGDataProvider(data: data as CFData),
+                  let image = CGImage(
+                      width: width,
+                      height: height,
+                      bitsPerComponent: 8,
+                      bitsPerPixel: 32,
+                      bytesPerRow: bytesPerRow,
+                      space: CGColorSpaceCreateDeviceRGB(),
+                      bitmapInfo: CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue
+                          | CGImageAlphaInfo.noneSkipFirst.rawValue),
+                      provider: provider,
+                      decode: nil,
+                      shouldInterpolate: false,
+                      intent: .defaultIntent
+                  ),
+                  let destination = CGImageDestinationCreateWithURL(
+                      URL(fileURLWithPath: path) as CFURL,
+                      "public.png" as CFString,
+                      1,
+                      nil
+                  ) else { return }
+            CGImageDestinationAddImage(destination, image, nil)
+            CGImageDestinationFinalize(destination)
+            print("[shot] captured \(path)")
+            fflush(stdout)
+        }
     }
 }
 

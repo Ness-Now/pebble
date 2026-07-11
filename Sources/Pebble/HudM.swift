@@ -388,6 +388,26 @@ final class HUD {
             cv.drawText(line, 3, 3 + Double(i) * 10, 1, "#e8e8e8", shadow: false)
         }
     }
+
+    func drawPebbleAgentOverlay(_ ui: UIManager, _ state: PebbleAgentDebugState) {
+        let cv = ui.cv
+        let rawLines = state.globalLines + [""] + state.focusedAgentLines
+        let lines = rawLines.map { $0.count > 45 ? String($0.prefix(44)) + "~" : $0 }
+        let textScale = 0.72
+        let lineHeight = 7.5
+        let panelWidth = min(208.0, max(190.0, Double(lines.map(textWidth).max() ?? 0) * textScale + 10))
+        let panelHeight = Double(lines.count) * lineHeight + 8
+        let x = max(4, ui.width - panelWidth - 4)
+        let y = 30.0
+        cv.setFill("rgba(10,14,20,0.82)")
+        cv.fillRect(x, y, panelWidth, panelHeight)
+        cv.setStroke("rgba(110,190,255,0.75)")
+        cv.strokeRect(x, y, panelWidth, panelHeight)
+        for (index, line) in lines.enumerated() where !line.isEmpty {
+            let color = index == 0 ? "#7fd8ff" : "#e8e8e8"
+            cv.drawText(line, x + 5, y + 4 + Double(index) * lineHeight, textScale, color, shadow: false)
+        }
+    }
 }
 
 private func facingName(_ yaw: Double) -> String {
