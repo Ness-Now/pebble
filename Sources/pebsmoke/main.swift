@@ -2755,5 +2755,320 @@ do {
               && boundedSession.snapshot().agents[0].recentMemory.map { $0.tick } == [7, 8, 9])
 }
 
+// ---------------------------------------------------------------------------
+section("PebbleAgents read-only World perception")
+do {
+    let basePosition = AgentPosition(x: 10, y: 64, z: 20)
+
+    func perceptionColumn(
+        _ position: AgentPosition,
+        ready: Bool = true,
+        surface: Int? = 64,
+        ground: Bool = true,
+        feet: Bool = true,
+        head: Bool = true
+    ) -> AgentWorldColumnObservation {
+        AgentWorldColumnObservation(
+            position: position,
+            chunkReady: ready,
+            surfaceY: ready ? surface : nil,
+            height: ready ? surface : nil,
+            blockBelow: ready ? (ground ? 16 : 0) : nil,
+            blockAtFeet: ready ? (feet ? 0 : 16) : nil,
+            blockAtHead: ready ? (head ? 0 : 16) : nil,
+            groundPresent: ready && ground,
+            feetClear: ready && feet,
+            headClear: ready && head
+        )
+    }
+
+    func perceptionObservation(
+        position: AgentPosition = basePosition,
+        centerReady: Bool = true,
+        ground: Bool = true,
+        feet: Bool = true,
+        head: Bool = true,
+        traversable: [AgentCardinalDirection] = AgentCardinalDirection.allCases,
+        drops: [AgentCardinalDirection] = [],
+        light: Int? = 15,
+        varied: Bool = false,
+        worldTick: Int = 40
+    ) -> AgentWorldObservation {
+        let center = perceptionColumn(
+            position,
+            ready: centerReady,
+            surface: 64,
+            ground: ground,
+            feet: feet,
+            head: head
+        )
+        let neighbors = AgentCardinalDirection.allCases.reversed().map { direction -> AgentWorldNeighborObservation in
+            let isDrop = drops.contains(direction)
+            let delta = isDrop ? -2 : (varied && direction == .north ? 1 : 0)
+            let neighborPosition = AgentPosition(
+                x: position.x + direction.dx,
+                y: position.y,
+                z: position.z + direction.dz
+            )
+            return AgentWorldNeighborObservation(
+                direction: direction,
+                column: perceptionColumn(
+                    neighborPosition,
+                    surface: 64 + delta,
+                    ground: !isDrop
+                ),
+                stepDelta: delta,
+                traversable: traversable.contains(direction) && !isDrop,
+                dangerousDrop: isDrop
+            )
+        }
+        return try! AgentWorldObservation(
+            worldTick: worldTick,
+            position: position,
+            center: center,
+            neighbors: neighbors,
+            biomeId: centerReady ? 1 : nil,
+            biomeName: centerReady ? "plains" : nil,
+            combinedLight: centerReady ? light : nil,
+            skyLight: centerReady ? 15 : nil,
+            blockLight: centerReady ? 0 : nil,
+            dayTime: 6000,
+            raining: false,
+            thundering: false
+        )
+    }
+
+    check("world cardinal canonical order",
+          AgentCardinalDirection.allCases == [.north, .east, .south, .west])
+    check("world north offset", AgentCardinalDirection.north.dx == 0 && AgentCardinalDirection.north.dz == -1)
+    check("world east offset", AgentCardinalDirection.east.dx == 1 && AgentCardinalDirection.east.dz == 0)
+    check("world south offset", AgentCardinalDirection.south.dx == 0 && AgentCardinalDirection.south.dz == 1)
+    check("world west offset", AgentCardinalDirection.west.dx == -1 && AgentCardinalDirection.west.dz == 0)
+
+    let stableObservation = perceptionObservation()
+    check("world observation canonicalizes permuted neighbors",
+          stableObservation.neighbors.map(\.direction) == [.north, .east, .south, .west])
+    do {
+        var duplicated = stableObservation.neighbors
+        duplicated[3] = duplicated[0]
+        _ = try AgentWorldObservation(
+            worldTick: 1, position: basePosition, center: stableObservation.center,
+            neighbors: duplicated, biomeId: 1, biomeName: "plains",
+            combinedLight: 15, skyLight: 15, blockLight: 0,
+            dayTime: 0, raining: false, thundering: false
+        )
+        check("world observation duplicate direction refused", false)
+    } catch AgentWorldObservationError.duplicateDirection(.north) {
+        check("world observation duplicate direction refused", true)
+    } catch {
+        check("world observation duplicate direction refused", false, "unexpected \(error)")
+    }
+    do {
+        _ = try AgentWorldObservation(
+            worldTick: 1, position: basePosition, center: stableObservation.center,
+            neighbors: Array(stableObservation.neighbors.prefix(3)), biomeId: 1, biomeName: "plains",
+            combinedLight: 15, skyLight: 15, blockLight: 0,
+            dayTime: 0, raining: false, thundering: false
+        )
+        check("world observation missing neighbor refused", false)
+    } catch AgentWorldObservationError.invalidNeighborCount(3) {
+        check("world observation missing neighbor refused", true)
+    } catch {
+        check("world observation missing neighbor refused", false, "unexpected \(error)")
+    }
+    do {
+        var invalid = stableObservation.neighbors
+        invalid[0] = AgentWorldNeighborObservation(
+            direction: .north,
+            column: perceptionColumn(basePosition),
+            stepDelta: 0,
+            traversable: true,
+            dangerousDrop: false
+        )
+        _ = try AgentWorldObservation(
+            worldTick: 1, position: basePosition, center: stableObservation.center,
+            neighbors: invalid, biomeId: 1, biomeName: "plains",
+            combinedLight: 15, skyLight: 15, blockLight: 0,
+            dayTime: 0, raining: false, thundering: false
+        )
+        check("world observation invalid neighbor position refused", false)
+    } catch AgentWorldObservationError.invalidNeighborPosition(.north) {
+        check("world observation invalid neighbor position refused", true)
+    } catch {
+        check("world observation invalid neighbor position refused", false, "unexpected \(error)")
+    }
+    let countedObservation = perceptionObservation(
+        traversable: [.north, .south],
+        drops: [.east]
+    )
+    check("world observation counters exact",
+          countedObservation.traversableNeighborCount == 2
+              && countedObservation.blockedNeighborCount == 2
+              && countedObservation.dangerousDropCount == 1)
+    let worldEncoder = JSONEncoder()
+    worldEncoder.outputFormatting = [.sortedKeys]
+    let worldJSON1 = try? worldEncoder.encode(stableObservation)
+    let worldJSON2 = try? worldEncoder.encode(stableObservation)
+    check("world observation JSON deterministic", worldJSON1 != nil && worldJSON1 == worldJSON2)
+    check("world observation equality", stableObservation == perceptionObservation())
+
+    func interpreted(
+        _ observation: AgentWorldObservation,
+        curiosity: Double = 0.2,
+        safety: Double = 1,
+        fear: Int = 10
+    ) -> AgentWorldPerceptionEffect {
+        AgentWorldPerceptionInterpreter.interpret(
+            agentId: "agent_0",
+            tick: 1,
+            observation: observation,
+            needs: AgentNeeds(hunger: 0.3, fatigue: 0.4, curiosity: curiosity, safety: safety),
+            fear: fear
+        )
+    }
+
+    let unavailableEffect = interpreted(perceptionObservation(centerReady: false))
+    check("world interpreter chunk unavailable", unavailableEffect.reason == "center chunk unavailable" && unavailableEffect.safetyAfter == 0.20 && unavailableEffect.fearAfter == 18)
+    let noGroundEffect = interpreted(perceptionObservation(ground: false))
+    check("world interpreter no ground", noGroundEffect.reason == "no ground below" && noGroundEffect.safetyAfter == 0.10 && abs(noGroundEffect.curiosityAfter - 0.21) < 1e-12)
+    let blockedEffect = interpreted(perceptionObservation(feet: false))
+    check("world interpreter body blocked", blockedEffect.reason == "body space blocked" && blockedEffect.safetyAfter == 0.25)
+    let multipleDropsEffect = interpreted(perceptionObservation(drops: [.north, .east]))
+    check("world interpreter multiple drops", multipleDropsEffect.reason == "multiple nearby drops" && multipleDropsEffect.fearAfter == 15)
+    let noTraversalEffect = interpreted(perceptionObservation(traversable: []))
+    check("world interpreter no traversable neighbor", noTraversalEffect.reason == "no traversable neighbor" && noTraversalEffect.safetyAfter == 0.35)
+    let oneDropEffect = interpreted(perceptionObservation(drops: [.west]))
+    check("world interpreter one drop", oneDropEffect.reason == "nearby drop" && oneDropEffect.safetyAfter == 0.65)
+    let darkEffect = interpreted(perceptionObservation(light: 3))
+    check("world interpreter very low light", darkEffect.reason == "very low light" && darkEffect.fearAfter == 14)
+    let flatEffect = interpreted(stableObservation)
+    check("world interpreter stable flat terrain", flatEffect.reason == "local terrain stable" && abs(flatEffect.curiosityAfter - 0.205) < 1e-12)
+    let variedEffect = interpreted(perceptionObservation(varied: true))
+    check("world interpreter stable varied terrain", variedEffect.reason == "local terrain stable" && variedEffect.curiosityAfter == 0.22)
+    check("world interpreter fear clamp zero", interpreted(stableObservation, fear: 0).fearAfter == 0)
+    check("world interpreter fear clamp one hundred", interpreted(perceptionObservation(ground: false), fear: 99).fearAfter == 100)
+    check("world interpreter curiosity clamp one", interpreted(perceptionObservation(drops: [.west]), curiosity: 0.99).curiosityAfter == 1)
+    let immutableNeeds = AgentNeeds(hunger: 0.3, fatigue: 0.4, curiosity: 0.2, safety: 1)
+    _ = AgentWorldPerceptionInterpreter.interpret(agentId: "agent_0", tick: 1, observation: stableObservation, needs: immutableNeeds, fear: 10)
+    check("world interpreter hunger unchanged", immutableNeeds.hunger == 0.3)
+    check("world interpreter fatigue unchanged", immutableNeeds.fatigue == 0.4)
+    check("world interpreter memory summary deterministic",
+          flatEffect.memorySummary == "agent_0 observed world: local terrain stable; traversable=4/4 blocked=0 drops=0 light=15")
+    check("world interpreter importance critical", noGroundEffect.memoryImportance == 0.50)
+    check("world interpreter importance caution", oneDropEffect.memoryImportance == 0.30)
+    check("world interpreter importance stable", flatEffect.memoryImportance == 0.20)
+
+    func phaseCState(id: String = "agent_0", memory: [AgentMemoryEntry] = []) -> AgentSessionAgentState {
+        AgentSessionAgentState(
+            id: id,
+            state: "idle",
+            position: basePosition,
+            needs: AgentNeeds(hunger: 0, fatigue: 0, curiosity: 0.2, safety: 1),
+            health: 100,
+            fear: 10,
+            homePosition: basePosition,
+            nearbyAgents: [],
+            currentGoal: AgentGoal(kind: .idle, reason: "initial goal", startedAtTick: 0, urgency: 0),
+            lastAction: nil,
+            lastActionEffect: nil,
+            memory: memory,
+            tickCreated: 0,
+            ticksAlive: 0,
+            observationCount: 0,
+            nearbyObservationCount: 0,
+            goalSelectionCount: 0,
+            goalChangeCount: 0,
+            actionCount: 0,
+            actionEffectCount: 0,
+            movementCount: 0,
+            totalManhattanDistanceMoved: 0,
+            returnHomeMoveCount: 0,
+            totalDistanceReducedTowardHome: 0
+        )
+    }
+
+    func phaseCSession(
+        policy: AgentMemoryPolicy = .legacyUnbounded
+    ) -> AgentSimulationSession {
+        let configuration = try! AgentSessionConfiguration(
+            seed: 99,
+            nearbyRadius: 8,
+            recentMemorySnapshotLimit: 10,
+            memoryPolicy: policy
+        )
+        return try! AgentSimulationSession(configuration: configuration, agents: [phaseCState()])
+    }
+
+    var worldSession = phaseCSession()
+    let oldSnapshot = worldSession.snapshot()
+    let worldResult = try! worldSession.advanceTick(perceptions: [
+        AgentPerceptionInput(agentId: "agent_0", worldObservation: noGroundEffect.reason == "no ground below" ? perceptionObservation(ground: false) : stableObservation),
+    ])
+    let perceived = worldSession.snapshot().agents[0]
+    check("world session stores observation", perceived.lastWorldObservation?.worldTick == 40)
+    check("world session stores effect", perceived.lastWorldPerceptionEffect?.reason == "no ground below")
+    check("world session observation count automatic", perceived.observationCount == 1)
+    check("world session safety before goal", perceived.needs.safety == 0.10)
+    check("world session danger selects safety goal", perceived.currentGoal.kind == .seekSafety && perceived.currentGoal.reason == "safety < 0.5")
+    check("world session adds observed memory", perceived.recentMemory.contains { $0.type == "world_observed" })
+    check("world session memory order",
+          worldResult.agents[0].memoriesAdded.map(\.type) == ["world_observed", "action_chosen", "action_effect_applied"])
+    check("world session result contains effect", worldResult.agents[0].worldPerceptionEffect?.reason == "no ground below")
+    check("world session snapshot contains perception", perceived.lastWorldObservation != nil && perceived.lastWorldPerceptionEffect != nil)
+    check("world session old snapshot immutable", oldSnapshot.agents[0].lastWorldObservation == nil && oldSnapshot.agents[0].observationCount == 0)
+
+    var mismatchSession = phaseCSession()
+    let mismatchBefore = mismatchSession.snapshot()
+    let mismatchObservation = perceptionObservation(position: AgentPosition(x: 11, y: 64, z: 20))
+    do {
+        _ = try mismatchSession.advanceTick(perceptions: [
+            AgentPerceptionInput(agentId: "agent_0", worldObservation: mismatchObservation),
+        ])
+        check("world session position mismatch refused", false)
+    } catch AgentSessionError.worldObservationPositionMismatch("agent_0") {
+        check("world session position mismatch refused", true)
+    } catch {
+        check("world session position mismatch refused", false, "unexpected \(error)")
+    }
+    check("world session mismatch leaves tick unchanged", mismatchSession.snapshot().tick == 0)
+    check("world session mismatch leaves state unchanged", mismatchSession.snapshot() == mismatchBefore)
+
+    var legacyPathSession = phaseCSession()
+    let legacyResult = try! legacyPathSession.advanceTick()
+    check("world session absent observation preserves path",
+          legacyResult.agents[0].worldPerceptionEffect == nil
+              && legacyPathSession.snapshot().agents[0].lastWorldObservation == nil)
+    let legacySnapshotJSON = (try? worldEncoder.encode(legacyPathSession.snapshot())).flatMap {
+        String(data: $0, encoding: .utf8)
+    } ?? ""
+    check("world session absent observation omits new JSON keys",
+          !legacySnapshotJSON.contains("lastWorldObservation")
+              && !legacySnapshotJSON.contains("lastWorldPerceptionEffect"))
+    var historicalInputSession = phaseCSession()
+    _ = try! historicalInputSession.advanceTick(perceptions: [
+        AgentPerceptionInput(agentId: "agent_0", observationCountIncrement: 2),
+    ])
+    check("world session historical observation increment", historicalInputSession.snapshot().agents[0].observationCount == 2)
+
+    var boundedWorldSession = phaseCSession(policy: .bounded(maxEntries: 2))
+    _ = try! boundedWorldSession.advanceTick(perceptions: [
+        AgentPerceptionInput(agentId: "agent_0", worldObservation: stableObservation),
+    ])
+    check("world session bounded memory still truncates",
+          boundedWorldSession.snapshot().agents[0].memoryCount == 2
+              && boundedWorldSession.snapshot().agents[0].recentMemory.map(\.type) == ["action_chosen", "action_effect_applied"])
+
+    var deterministicWorldSession1 = phaseCSession()
+    var deterministicWorldSession2 = phaseCSession()
+    _ = try! deterministicWorldSession1.advanceTick(perceptions: [
+        AgentPerceptionInput(agentId: "agent_0", worldObservation: stableObservation),
+    ])
+    _ = try! deterministicWorldSession2.advanceTick(perceptions: [
+        AgentPerceptionInput(agentId: "agent_0", worldObservation: stableObservation),
+    ])
+    check("world session deterministic identical inputs",
+          deterministicWorldSession1.snapshot() == deterministicWorldSession2.snapshot())
+}
+
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)

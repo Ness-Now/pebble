@@ -35,9 +35,27 @@ struct PebbleAgentDebugState {
             "(\($0.dx.map(String.init) ?? "nil"), \($0.dy.map(String.init) ?? "nil"), \($0.dz.map(String.init) ?? "nil"))"
         } ?? "n/a"
         let nearby = agent.nearbyAgents.map(\.id).joined(separator: ", ")
+        let worldLines: [String]
+        if let observation = agent.lastWorldObservation,
+           let effect = agent.lastWorldPerceptionEffect {
+            let weather = observation.thundering ? "thunder" : observation.raining ? "rain" : "clear"
+            worldLines = [
+                "world tick: \(observation.worldTick)  biome: \(observation.biomeName ?? "unknown")",
+                "light c/s/b: \(observation.combinedLight.map(String.init) ?? "?")/\(observation.skyLight.map(String.init) ?? "?")/\(observation.blockLight.map(String.init) ?? "?")  time: \(observation.dayTime) \(weather)",
+                "center ready: \(observation.center.chunkReady)  surfaceY: \(observation.center.surfaceY.map(String.init) ?? "?")",
+                "ground: \(observation.center.groundPresent)  feet/head clear: \(observation.center.feetClear)/\(observation.center.headClear)",
+                "neighbors t/b/d: \(observation.traversableNeighborCount)/\(observation.blockedNeighborCount)/\(observation.dangerousDropCount)",
+                "perception: \(Self.short(effect.reason))",
+                String(format: "safety %.2f>%.2f fear %d>%d", effect.safetyBefore, effect.safetyAfter, effect.fearBefore, effect.fearAfter),
+                String(format: "curiosity %.3f>%.3f observations: %d", effect.curiosityBefore, effect.curiosityAfter, agent.observationCount),
+            ]
+        } else {
+            worldLines = ["world perception: none  observations: \(agent.observationCount)"]
+        }
         var lines = [
             "FOCUS - \(agent.id)",
             "position: \(agent.position.x), \(agent.position.y), \(agent.position.z)  state: \(agent.state)",
+        ] + worldLines + [
             String(format: "needs h %.3f  f %.3f  c %.3f  s %.3f", agent.needs.hunger, agent.needs.fatigue, agent.needs.curiosity, agent.needs.safety),
             "dominant: \(Self.dominantNeed(agent.needs))  fear: \(agent.fear)  health: \(agent.health)",
             "goal: \(agent.currentGoal.kind.rawValue)  urgency: \(agent.currentGoal.urgency)",

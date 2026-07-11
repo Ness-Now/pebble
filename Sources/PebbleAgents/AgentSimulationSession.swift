@@ -11,6 +11,7 @@ public enum AgentSessionError: Error, Equatable {
     case duplicateAgentId(String)
     case duplicatePerceptionInput(String)
     case unknownAgentId(String)
+    case worldObservationPositionMismatch(String)
 }
 
 public struct AgentSessionConfiguration {
@@ -66,6 +67,8 @@ public struct AgentSessionAgentState {
     public internal(set) var totalManhattanDistanceMoved: Int
     public internal(set) var returnHomeMoveCount: Int
     public internal(set) var totalDistanceReducedTowardHome: Int
+    public internal(set) var lastWorldObservation: AgentWorldObservation?
+    public internal(set) var lastWorldPerceptionEffect: AgentWorldPerceptionEffect?
 
     public init(
         id: String,
@@ -91,7 +94,9 @@ public struct AgentSessionAgentState {
         movementCount: Int,
         totalManhattanDistanceMoved: Int,
         returnHomeMoveCount: Int,
-        totalDistanceReducedTowardHome: Int
+        totalDistanceReducedTowardHome: Int,
+        lastWorldObservation: AgentWorldObservation? = nil,
+        lastWorldPerceptionEffect: AgentWorldPerceptionEffect? = nil
     ) {
         self.id = id
         self.state = state
@@ -117,6 +122,8 @@ public struct AgentSessionAgentState {
         self.totalManhattanDistanceMoved = totalManhattanDistanceMoved
         self.returnHomeMoveCount = returnHomeMoveCount
         self.totalDistanceReducedTowardHome = totalDistanceReducedTowardHome
+        self.lastWorldObservation = lastWorldObservation
+        self.lastWorldPerceptionEffect = lastWorldPerceptionEffect
     }
 }
 
@@ -124,15 +131,18 @@ public struct AgentPerceptionInput {
     public let agentId: String
     public let observationCountIncrement: Int
     public let externalMemoryEntries: [AgentMemoryEntry]
+    public let worldObservation: AgentWorldObservation?
 
     public init(
         agentId: String,
         observationCountIncrement: Int = 0,
-        externalMemoryEntries: [AgentMemoryEntry] = []
+        externalMemoryEntries: [AgentMemoryEntry] = [],
+        worldObservation: AgentWorldObservation? = nil
     ) {
         self.agentId = agentId
         self.observationCountIncrement = observationCountIncrement
         self.externalMemoryEntries = externalMemoryEntries
+        self.worldObservation = worldObservation
     }
 }
 
@@ -170,6 +180,7 @@ public struct AgentSessionAgentTickResult {
     public let action: AgentAction
     public let actionEffect: AgentActionEffect
     public let memoriesAdded: [AgentMemoryEntry]
+    public let worldPerceptionEffect: AgentWorldPerceptionEffect?
     public let snapshot: AgentSnapshot
 
     init(
@@ -178,6 +189,7 @@ public struct AgentSessionAgentTickResult {
         action: AgentAction,
         actionEffect: AgentActionEffect,
         memoriesAdded: [AgentMemoryEntry],
+        worldPerceptionEffect: AgentWorldPerceptionEffect?,
         snapshot: AgentSnapshot
     ) {
         self.agentId = agentId
@@ -185,6 +197,7 @@ public struct AgentSessionAgentTickResult {
         self.action = action
         self.actionEffect = actionEffect
         self.memoriesAdded = memoriesAdded
+        self.worldPerceptionEffect = worldPerceptionEffect
         self.snapshot = snapshot
     }
 }
@@ -255,6 +268,10 @@ public struct AgentSimulationSession {
             guard perceptionsById[perception.agentId] == nil else {
                 throw AgentSessionError.duplicatePerceptionInput(perception.agentId)
             }
+            if let observation = perception.worldObservation,
+               observation.position != statesById[perception.agentId]?.position {
+                throw AgentSessionError.worldObservationPositionMismatch(perception.agentId)
+            }
             perceptionsById[perception.agentId] = perception
         }
 
@@ -275,8 +292,33 @@ public struct AgentSimulationSession {
             state.state = tickTransition.state
             state.ticksAlive += 1
 
-            state.observationCount += perception?.observationCountIncrement ?? 0
             appendMemories(memoriesAdded, to: &state.memory)
+            var worldPerceptionEffect: AgentWorldPerceptionEffect?
+            if let observation = perception?.worldObservation {
+                let effect = AgentWorldPerceptionInterpreter.interpret(
+                    agentId: id,
+                    tick: nextTick,
+                    observation: observation,
+                    needs: state.needs,
+                    fear: state.fear
+                )
+                state.lastWorldObservation = observation
+                state.lastWorldPerceptionEffect = effect
+                state.needs.safety = effect.safetyAfter
+                state.needs.curiosity = effect.curiosityAfter
+                state.fear = effect.fearAfter
+                state.observationCount += 1
+                let worldMemory = AgentMemoryEntry(
+                    tick: nextTick,
+                    type: "world_observed",
+                    summary: effect.memorySummary,
+                    importance: effect.memoryImportance
+                )
+                appendMemory(worldMemory, to: &state.memory)
+                memoriesAdded.append(worldMemory)
+                worldPerceptionEffect = effect
+            }
+            state.observationCount += perception?.observationCountIncrement ?? 0
 
             state.nearbyAgents = AgentCognitiveTransitions.observeNearbyAgents(
                 observerId: id,
@@ -348,6 +390,7 @@ public struct AgentSimulationSession {
                 action: action,
                 actionEffect: effectResult.actionEffect,
                 memoriesAdded: memoriesAdded,
+                worldPerceptionEffect: worldPerceptionEffect,
                 snapshot: AgentSnapshot(
                     state: state,
                     recentMemoryLimit: configuration.recentMemorySnapshotLimit

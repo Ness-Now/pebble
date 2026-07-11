@@ -22,6 +22,7 @@ final class PebbleAgentController {
     private var observedGoalKinds = Set<String>()
     private var activeWorld: World?
     private var overlayEnabledByCommand = false
+    private let worldSensor = PebbleAgentWorldSensor()
 
     private let environment = ProcessInfo.processInfo.environment
     private var featureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS"] == "1" }
@@ -60,7 +61,7 @@ final class PebbleAgentController {
         for _ in previousTick..<worldTick {
             credit += cognitiveHz
             while credit >= 20 {
-                guard advanceOneTick() else { return }
+                guard advanceOneTick(world: world) else { return }
                 credit -= 20
             }
         }
@@ -103,7 +104,7 @@ final class PebbleAgentController {
             return success("PebbleAgents resumed at \(cognitiveHz) Hz.")
         case "step":
             guard session != nil else { return failure("No active PebbleAgents session.") }
-            guard advanceOneTick() else { return failure(lastError ?? "Cognitive step failed.") }
+            guard advanceOneTick(world: world) else { return failure(lastError ?? "Cognitive step failed.") }
             trace("step tick=\(session?.tick ?? 0)")
             return success("PebbleAgents stepped to tick \(session?.tick ?? 0).")
         case "speed":
@@ -125,7 +126,7 @@ final class PebbleAgentController {
                 return success("PebbleAgents inactive (gate \(featureEnabled ? "enabled" : "disabled")).")
             }
             let snapshot = session.snapshot()
-            let positions = snapshot.agents.map { "\($0.id)=\($0.position.x),\($0.position.y),\($0.position.z)/m\($0.movementCount)" }.joined(separator: " ")
+            let positions = snapshot.agents.map { "\($0.id)=\($0.position.x),\($0.position.y),\($0.position.z)/m\($0.movementCount)/o\($0.observationCount)" }.joined(separator: " ")
             let message = "PebbleAgents \(isPaused ? "paused" : "running") tick=\(snapshot.tick) hz=\(cognitiveHz) probes=\(probesByAgentId.count) focus=\(focusedAgentId ?? "none") \(positions)"
             trace("status \(message)")
             return success(message)
@@ -263,15 +264,24 @@ final class PebbleAgentController {
         }
     }
 
-    private func advanceOneTick() -> Bool {
-        guard var session else { return false }
+    private func advanceOneTick(world: World) -> Bool {
+        guard activeWorld === world, var session else { return false }
         do {
-            let result = try session.advanceTick()
+            let perceptions = try session.snapshot().agents.map { agent in
+                AgentPerceptionInput(
+                    agentId: agent.id,
+                    worldObservation: try worldSensor.observe(world: world, agent: agent)
+                )
+            }
+            let result = try session.advanceTick(perceptions: perceptions)
             self.session = session
             lastTickResult = result
             for agent in result.agents {
                 observedGoalKinds.insert(agent.snapshot.currentGoal.kind.rawValue)
-                guard agent.snapshot.position == agent.snapshot.homePosition,
+                guard agent.snapshot.lastWorldObservation != nil,
+                      agent.snapshot.lastWorldPerceptionEffect != nil,
+                      agent.snapshot.observationCount >= result.tick,
+                      agent.snapshot.position == agent.snapshot.homePosition,
                       agent.snapshot.distanceFromHome == 0,
                       agent.snapshot.movementCount == 0 else {
                     throw ControllerError.movementBoundary(agent.agentId)
@@ -279,7 +289,11 @@ final class PebbleAgentController {
             }
             let focus = result.agents.first { $0.agentId == focusedAgentId } ?? result.agents.first
             let goals = result.agents.map { "\($0.agentId):\($0.snapshot.currentGoal.kind.rawValue)" }.joined(separator: ",")
-            trace("tick=\(result.tick) goals=\(goals) focus=\(focus?.agentId ?? "none") action=\(focus?.action.name ?? "none") memory=\(focus?.snapshot.memoryCount ?? 0)")
+            let perception = focus?.snapshot.lastWorldObservation
+            let safety = focus?.worldPerceptionEffect?.safetyAfter ?? 0
+            let perceptionSummary = "t\(perception?.traversableNeighborCount ?? 0)/b\(perception?.blockedNeighborCount ?? 0)/d\(perception?.dangerousDropCount ?? 0)/s\(String(format: "%.2f", safety))"
+            let observations = result.agents.map { "\($0.agentId):\($0.snapshot.observationCount)" }.joined(separator: ",")
+            trace("tick=\(result.tick) goals=\(goals) focus=\(focus?.agentId ?? "none") action=\(focus?.action.name ?? "none") memory=\(focus?.snapshot.memoryCount ?? 0) world_observed=1 perception=\(perceptionSummary) observations=\(observations)")
             return true
         } catch {
             lastError = String(describing: error)

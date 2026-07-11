@@ -27,6 +27,8 @@ public struct AgentSnapshot: Encodable, Equatable {
     public let currentGoal: AgentGoal
     public let lastAction: AgentAction?
     public let lastActionEffect: AgentActionEffect?
+    public let lastWorldObservation: AgentWorldObservation?
+    public let lastWorldPerceptionEffect: AgentWorldPerceptionEffect?
 
     public let ticksAlive: Int
     public let observationCount: Int
@@ -59,6 +61,8 @@ public struct AgentSnapshot: Encodable, Equatable {
         currentGoal = state.currentGoal
         lastAction = state.lastAction
         lastActionEffect = state.lastActionEffect
+        lastWorldObservation = state.lastWorldObservation
+        lastWorldPerceptionEffect = state.lastWorldPerceptionEffect
         ticksAlive = state.ticksAlive
         observationCount = state.observationCount
         nearbyObservationCount = state.nearbyObservationCount
@@ -88,6 +92,8 @@ public struct AgentSnapshot: Encodable, Equatable {
             && lhs.currentGoal == rhs.currentGoal
             && actionsEqual(lhs.lastAction, rhs.lastAction)
             && effectsEqual(lhs.lastActionEffect, rhs.lastActionEffect)
+            && lhs.lastWorldObservation == rhs.lastWorldObservation
+            && lhs.lastWorldPerceptionEffect == rhs.lastWorldPerceptionEffect
             && lhs.ticksAlive == rhs.ticksAlive
             && lhs.observationCount == rhs.observationCount
             && lhs.nearbyObservationCount == rhs.nearbyObservationCount
@@ -101,6 +107,48 @@ public struct AgentSnapshot: Encodable, Equatable {
             && lhs.totalDistanceReducedTowardHome == rhs.totalDistanceReducedTowardHome
             && lhs.memoryCount == rhs.memoryCount
             && memoriesEqual(lhs.recentMemory, rhs.recentMemory)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, state, position, needs, health, isAlive, fear, homePosition, distanceFromHome
+        case nearbyAgents, currentGoal, lastAction, lastActionEffect
+        case lastWorldObservation, lastWorldPerceptionEffect
+        case ticksAlive, observationCount, nearbyObservationCount, goalSelectionCount
+        case goalChangeCount, actionCount, actionEffectCount, movementCount
+        case totalManhattanDistanceMoved, returnHomeMoveCount, totalDistanceReducedTowardHome
+        case memoryCount, recentMemory
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(state, forKey: .state)
+        try container.encode(position, forKey: .position)
+        try container.encode(needs, forKey: .needs)
+        try container.encode(health, forKey: .health)
+        try container.encode(isAlive, forKey: .isAlive)
+        try container.encode(fear, forKey: .fear)
+        try container.encode(homePosition, forKey: .homePosition)
+        try container.encode(distanceFromHome, forKey: .distanceFromHome)
+        try container.encode(nearbyAgents, forKey: .nearbyAgents)
+        try container.encode(currentGoal, forKey: .currentGoal)
+        try container.encodeIfPresent(lastAction, forKey: .lastAction)
+        try container.encodeIfPresent(lastActionEffect, forKey: .lastActionEffect)
+        try container.encodeIfPresent(lastWorldObservation, forKey: .lastWorldObservation)
+        try container.encodeIfPresent(lastWorldPerceptionEffect, forKey: .lastWorldPerceptionEffect)
+        try container.encode(ticksAlive, forKey: .ticksAlive)
+        try container.encode(observationCount, forKey: .observationCount)
+        try container.encode(nearbyObservationCount, forKey: .nearbyObservationCount)
+        try container.encode(goalSelectionCount, forKey: .goalSelectionCount)
+        try container.encode(goalChangeCount, forKey: .goalChangeCount)
+        try container.encode(actionCount, forKey: .actionCount)
+        try container.encode(actionEffectCount, forKey: .actionEffectCount)
+        try container.encode(movementCount, forKey: .movementCount)
+        try container.encode(totalManhattanDistanceMoved, forKey: .totalManhattanDistanceMoved)
+        try container.encode(returnHomeMoveCount, forKey: .returnHomeMoveCount)
+        try container.encode(totalDistanceReducedTowardHome, forKey: .totalDistanceReducedTowardHome)
+        try container.encode(memoryCount, forKey: .memoryCount)
+        try container.encode(recentMemory, forKey: .recentMemory)
     }
 }
 
