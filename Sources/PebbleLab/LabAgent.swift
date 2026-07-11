@@ -1,5 +1,11 @@
 import Foundation
+import PebbleAgents
 import PebbleCore
+
+typealias LabAgentPosition = AgentPosition
+typealias LabGoalKind = AgentGoalKind
+typealias LabGoal = AgentGoal
+typealias LabAgentAction = AgentAction
 
 struct LabAgent: Encodable {
     let id: String
@@ -156,38 +162,13 @@ struct LabAgent: Encodable {
     }
 
     mutating func decideAction(tick: Int) {
-        let action: LabAgentAction
-        switch currentGoal.kind {
-        case .seekSafety:
-            if let step = movementStepTowardHome() {
-                action = LabAgentAction(
-                    name: "move_abstract",
-                    reason: "goal seekSafety",
-                    tick: tick,
-                    dx: step.dx,
-                    dy: 0,
-                    dz: step.dz
-                )
-            } else {
-                action = LabAgentAction(name: "wait", reason: "goal seekSafety at home", tick: tick)
-            }
-        case .rest:
-            action = LabAgentAction(name: "rest", reason: "goal rest", tick: tick)
-        case .observeOtherAgent:
-            action = LabAgentAction(name: "observe_area", reason: "goal observeOtherAgent", tick: tick)
-        case .explore:
-            let direction = movementDirectionForAgent(id: id, tick: tick)
-            action = LabAgentAction(
-                name: "move_abstract",
-                reason: "goal explore",
-                tick: tick,
-                dx: direction.dx,
-                dy: 0,
-                dz: direction.dz
-            )
-        case .idle:
-            action = LabAgentAction(name: "wait", reason: "goal idle", tick: tick)
-        }
+        let action = AgentActionDecider.decide(AgentActionDecisionInput(
+            agentId: id,
+            tick: tick,
+            goalKind: currentGoal.kind,
+            position: position,
+            homePosition: homePosition
+        ))
 
         lastAction = action
         actionCount += 1
@@ -327,25 +308,6 @@ struct LabAgent: Encodable {
         return movement
     }
 
-    func movementStepTowardHome() -> (dx: Int, dz: Int)? {
-        let dxToHome = homePosition.x - position.x
-        let dzToHome = homePosition.z - position.z
-
-        if dxToHome == 0 && dzToHome == 0 {
-            return nil
-        }
-
-        if abs(dxToHome) >= abs(dzToHome), dxToHome != 0 {
-            return (dxToHome > 0 ? 1 : -1, 0)
-        }
-
-        if dzToHome != 0 {
-            return (0, dzToHome > 0 ? 1 : -1)
-        }
-
-        return nil
-    }
-
     mutating func remember(tick: Int, type: String, summary: String, importance: Double) {
         memory.append(LabMemoryEntry(
             tick: tick,
@@ -421,26 +383,6 @@ struct LabAgent: Encodable {
         try container.encode(memory.count, forKey: .memoryCount)
         try container.encode(Array(memory.suffix(10)), forKey: .recentMemory)
     }
-}
-
-func movementDirectionForAgent(id: String, tick: Int) -> (dx: Int, dz: Int) {
-    let suffix = id.split(separator: "_").last.flatMap { Int($0) } ?? 0
-    switch (suffix + tick) % 4 {
-    case 0:
-        return (1, 0)
-    case 1:
-        return (0, 1)
-    case 2:
-        return (-1, 0)
-    default:
-        return (0, -1)
-    }
-}
-
-struct LabAgentPosition: Codable, Equatable {
-    let x: Int
-    let y: Int
-    let z: Int
 }
 
 struct LabAgentNeeds: Encodable {
@@ -526,43 +468,10 @@ struct LabNearbyAgentObservation: Codable, Equatable {
     let distanceManhattan: Int
 }
 
-enum LabGoalKind: String, Codable, Equatable {
-    case idle
-    case rest
-    case seekSafety
-    case explore
-    case observeOtherAgent
-}
-
-struct LabGoal: Codable, Equatable {
-    let kind: LabGoalKind
-    let reason: String
-    let startedAtTick: Int
-    let urgency: Int
-}
-
 struct LabGoalChange {
     let from: LabGoalKind
     let to: LabGoalKind
     let goal: LabGoal
-}
-
-struct LabAgentAction: Encodable {
-    let name: String
-    let reason: String
-    let tick: Int
-    let dx: Int?
-    let dy: Int?
-    let dz: Int?
-
-    init(name: String, reason: String, tick: Int, dx: Int? = nil, dy: Int? = nil, dz: Int? = nil) {
-        self.name = name
-        self.reason = reason
-        self.tick = tick
-        self.dx = dx
-        self.dy = dy
-        self.dz = dz
-    }
 }
 
 struct LabAgentActionEffect: Encodable {

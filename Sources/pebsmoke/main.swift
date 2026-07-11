@@ -4,6 +4,7 @@
 
 import Foundation
 import simd
+import PebbleAgents
 import PebbleCore
 
 var passed = 0
@@ -2093,6 +2094,136 @@ do {
         check("ice glide = \(String(format: "%.3f", perTick * 20)) b/s",
               abs(perTick - expect) < 1e-6)
     }
+}
+
+// ---------------------------------------------------------------------------
+section("PebbleAgents action decision")
+do {
+    func decide(
+        agentId: String = "agent_0",
+        tick: Int = 7,
+        goalKind: AgentGoalKind,
+        position: AgentPosition = AgentPosition(x: 0, y: 64, z: 0),
+        homePosition: AgentPosition = AgentPosition(x: 0, y: 64, z: 0)
+    ) -> AgentAction {
+        AgentActionDecider.decide(AgentActionDecisionInput(
+            agentId: agentId,
+            tick: tick,
+            goalKind: goalKind,
+            position: position,
+            homePosition: homePosition
+        ))
+    }
+
+    func position(_ x: Int, _ z: Int) -> AgentPosition {
+        AgentPosition(x: x, y: 64, z: z)
+    }
+
+    let idle = decide(goalKind: .idle)
+    check("agent action idle waits",
+          idle.name == "wait" && idle.reason == "goal idle")
+
+    let rest = decide(goalKind: .rest)
+    check("agent action rest",
+          rest.name == "rest" && rest.reason == "goal rest")
+
+    let observe = decide(goalKind: .observeOtherAgent)
+    check("agent action observes other agent",
+          observe.name == "observe_area" && observe.reason == "goal observeOtherAgent")
+
+    let exploreEast = decide(tick: 0, goalKind: .explore)
+    check("agent action explore east",
+          exploreEast.name == "move_abstract" && exploreEast.reason == "goal explore"
+              && exploreEast.dx == 1 && exploreEast.dy == 0 && exploreEast.dz == 0)
+
+    let exploreSouth = decide(tick: 1, goalKind: .explore)
+    check("agent action explore south",
+          exploreSouth.dx == 0 && exploreSouth.dy == 0 && exploreSouth.dz == 1)
+
+    let exploreWest = decide(tick: 2, goalKind: .explore)
+    check("agent action explore west",
+          exploreWest.dx == -1 && exploreWest.dy == 0 && exploreWest.dz == 0)
+
+    let exploreNorth = decide(tick: 3, goalKind: .explore)
+    check("agent action explore north",
+          exploreNorth.dx == 0 && exploreNorth.dy == 0 && exploreNorth.dz == -1)
+
+    let exploreFallback = decide(agentId: "agent_alpha", tick: 0, goalKind: .explore)
+    check("agent action explore id fallback",
+          exploreFallback.dx == 1 && exploreFallback.dy == 0 && exploreFallback.dz == 0)
+
+    let home = position(4, 9)
+    let atHome = decide(goalKind: .seekSafety, position: home, homePosition: home)
+    check("agent action seek safety at home waits",
+          atHome.name == "wait" && atHome.reason == "goal seekSafety at home"
+              && atHome.dx == nil && atHome.dy == nil && atHome.dz == nil)
+
+    let positiveX = decide(
+        goalKind: .seekSafety,
+        position: position(0, 0),
+        homePosition: position(3, 1)
+    )
+    check("agent action seek safety positive x",
+          positiveX.name == "move_abstract" && positiveX.reason == "goal seekSafety"
+              && positiveX.dx == 1 && positiveX.dy == 0 && positiveX.dz == 0)
+
+    let negativeX = decide(
+        goalKind: .seekSafety,
+        position: position(3, 1),
+        homePosition: position(0, 0)
+    )
+    check("agent action seek safety negative x",
+          negativeX.dx == -1 && negativeX.dy == 0 && negativeX.dz == 0)
+
+    let positiveZ = decide(
+        goalKind: .seekSafety,
+        position: position(0, 0),
+        homePosition: position(1, 3)
+    )
+    check("agent action seek safety positive z",
+          positiveZ.dx == 0 && positiveZ.dy == 0 && positiveZ.dz == 1)
+
+    let negativeZ = decide(
+        goalKind: .seekSafety,
+        position: position(1, 3),
+        homePosition: position(0, 0)
+    )
+    check("agent action seek safety negative z",
+          negativeZ.dx == 0 && negativeZ.dy == 0 && negativeZ.dz == -1)
+
+    let tie = decide(
+        goalKind: .seekSafety,
+        position: position(0, 0),
+        homePosition: position(-2, 2)
+    )
+    check("agent action seek safety tie prefers x",
+          tie.dx == -1 && tie.dy == 0 && tie.dz == 0)
+
+    let contractAction = AgentAction(
+        name: "move_abstract",
+        reason: "goal explore",
+        tick: 9,
+        dx: -1,
+        dy: 0,
+        dz: 0
+    )
+    let contractData = try? JSONEncoder().encode(contractAction)
+    let contractObject = contractData.flatMap {
+        try? JSONSerialization.jsonObject(with: $0) as? [String: Any]
+    }
+    let preservedTick = decide(tick: 123, goalKind: .rest).tick
+    check("agent action tick reason deltas and JSON contract",
+          preservedTick == 123
+              && idle.dx == nil && idle.dy == nil && idle.dz == nil
+              && contractAction.tick == 9 && contractAction.reason == "goal explore"
+              && contractAction.dx == -1 && contractAction.dy == 0 && contractAction.dz == 0
+              && Set(contractObject?.keys.map { $0 } ?? []) == Set(["name", "reason", "tick", "dx", "dy", "dz"])
+              && contractObject?["name"] as? String == "move_abstract"
+              && contractObject?["reason"] as? String == "goal explore"
+              && contractObject?["tick"] as? Int == 9
+              && contractObject?["dx"] as? Int == -1
+              && contractObject?["dy"] as? Int == 0
+              && contractObject?["dz"] as? Int == 0)
 }
 
 print("\n\(passed) passed, \(failed) failed")

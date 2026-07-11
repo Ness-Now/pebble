@@ -16,6 +16,14 @@ let package = Package(
                 .swiftLanguageMode(.v5),
             ]
         ),
+        // shared deterministic agent runtime slices
+        .target(
+            name: "PebbleAgents",
+            path: "Sources/PebbleAgents",
+            swiftSettings: [
+                .swiftLanguageMode(.v5),
+            ]
+        ),
         // the app: AppKit + MTKView shell
         .executableTarget(
             name: "Pebble",
@@ -35,14 +43,14 @@ let package = Package(
         // headless smoke tests against the frozen golden baselines
         .executableTarget(
             name: "pebsmoke",
-            dependencies: ["PebbleCore"],
+            dependencies: ["PebbleCore", "PebbleAgents"],
             path: "Sources/pebsmoke",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         // headless simulation laboratory runner
         .executableTarget(
             name: "PebbleLab",
-            dependencies: ["PebbleCore"],
+            dependencies: ["PebbleCore", "PebbleAgents"],
             path: "Sources/PebbleLab",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
