@@ -2226,5 +2226,239 @@ do {
               && contractObject?["dz"] as? Int == 0)
 }
 
+// ---------------------------------------------------------------------------
+section("PebbleAgents cognitive transitions")
+do {
+    func needs(
+        hunger: Double = 0.1,
+        fatigue: Double = 0.01,
+        curiosity: Double = 0.4,
+        safety: Double = 1
+    ) -> AgentNeeds {
+        AgentNeeds(hunger: hunger, fatigue: fatigue, curiosity: curiosity, safety: safety)
+    }
+
+    let tickNeeds = needs(hunger: 0.2, fatigue: 0.01, curiosity: 0.7, safety: 0.6)
+    let tickResult = AgentCognitiveTransitions.advanceTick(needs: tickNeeds)
+    check("cognitive tick hunger +0.01", abs(tickResult.needs.hunger - 0.21) <= 1e-12)
+    check("cognitive tick fatigue +0.005", tickResult.needs.fatigue == 0.015)
+    check("cognitive tick curiosity unchanged", tickResult.needs.curiosity == 0.7)
+    check("cognitive tick safety unchanged", tickResult.needs.safety == 0.6)
+    check("cognitive tick state idle", tickResult.state == "idle")
+
+    let observerPosition = AgentPosition(x: 10, y: 64, z: 10)
+    let nearby = AgentCognitiveTransitions.observeNearbyAgents(
+        observerId: "observer",
+        observerPosition: observerPosition,
+        peers: [
+            AgentPeerSnapshot(id: "observer", position: observerPosition),
+            AgentPeerSnapshot(id: "near_b", position: AgentPosition(x: 12, y: 65, z: 8)),
+            AgentPeerSnapshot(id: "edge", position: AgentPosition(x: 18, y: 64, z: 10)),
+            AgentPeerSnapshot(id: "outside", position: AgentPosition(x: 19, y: 64, z: 10)),
+            AgentPeerSnapshot(id: "near_a", position: AgentPosition(x: 9, y: 64, z: 10)),
+        ],
+        radius: 8
+    )
+    check("cognitive nearby excludes self", !nearby.contains { $0.id == "observer" })
+    check("cognitive nearby includes in radius", nearby.contains { $0.id == "near_b" })
+    check("cognitive nearby includes exact radius", nearby.contains { $0.id == "edge" })
+    check("cognitive nearby excludes outside radius", !nearby.contains { $0.id == "outside" })
+    check("cognitive nearby deltas exact",
+          nearby.first?.dx == 2 && nearby.first?.dy == 1 && nearby.first?.dz == -2)
+    check("cognitive nearby Manhattan exact", nearby.first?.distanceManhattan == 5)
+    check("cognitive nearby preserves input order", nearby.map(\.id) == ["near_b", "edge", "near_a"])
+
+    func selectGoal(
+        tick: Int = 42,
+        health: Int = 100,
+        fear: Int = 0,
+        needs selectedNeeds: AgentNeeds = AgentNeeds(
+            hunger: 0,
+            fatigue: 0,
+            curiosity: 0,
+            safety: 1
+        ),
+        hasNearbyAgents: Bool = false,
+        currentGoalKind: AgentGoalKind = .idle
+    ) -> AgentGoalChange? {
+        AgentCognitiveTransitions.selectGoal(AgentGoalSelectionInput(
+            tick: tick,
+            health: health,
+            fear: fear,
+            needs: selectedNeeds,
+            hasNearbyAgents: hasNearbyAgents,
+            currentGoalKind: currentGoalKind
+        ))
+    }
+
+    let healthGoal = selectGoal(health: 25)
+    check("cognitive goal health path",
+          healthGoal?.to == .seekSafety && healthGoal?.goal.reason == "health <= 25"
+              && healthGoal?.goal.urgency == 100 && healthGoal?.goal.startedAtTick == 42)
+
+    let fearGoal = selectGoal(fear: 70)
+    check("cognitive goal fear path",
+          fearGoal?.to == .seekSafety && fearGoal?.goal.reason == "fear >= 70"
+              && fearGoal?.goal.urgency == 85 && fearGoal?.goal.startedAtTick == 42)
+
+    let safetyGoal = selectGoal(needs: needs(safety: 0.49))
+    check("cognitive goal safety path",
+          safetyGoal?.to == .seekSafety && safetyGoal?.goal.reason == "safety < 0.5"
+              && safetyGoal?.goal.urgency == 90 && safetyGoal?.goal.startedAtTick == 42)
+
+    let fatigueGoal = selectGoal(needs: needs(fatigue: 0.02))
+    check("cognitive goal fatigue path",
+          fatigueGoal?.to == .rest && fatigueGoal?.goal.reason == "fatigue >= 0.02"
+              && fatigueGoal?.goal.urgency == 70 && fatigueGoal?.goal.startedAtTick == 42)
+
+    let highCuriosityGoal = selectGoal(needs: needs(curiosity: 0.8))
+    check("cognitive goal high curiosity path",
+          highCuriosityGoal?.to == .explore
+              && highCuriosityGoal?.goal.reason == "curiosity >= 0.8"
+              && highCuriosityGoal?.goal.urgency == 60
+              && highCuriosityGoal?.goal.startedAtTick == 42)
+
+    let nearbyGoal = selectGoal(hasNearbyAgents: true)
+    check("cognitive goal nearby path",
+          nearbyGoal?.to == .observeOtherAgent
+              && nearbyGoal?.goal.reason == "nearby agent detected"
+              && nearbyGoal?.goal.urgency == 50 && nearbyGoal?.goal.startedAtTick == 42)
+
+    let lowCuriosityGoal = selectGoal(needs: needs(curiosity: 0.5))
+    check("cognitive goal low curiosity path",
+          lowCuriosityGoal?.to == .explore
+              && lowCuriosityGoal?.goal.reason == "curiosity >= 0.5"
+              && lowCuriosityGoal?.goal.urgency == 40
+              && lowCuriosityGoal?.goal.startedAtTick == 42)
+
+    let idleGoal = selectGoal(currentGoalKind: .explore)
+    check("cognitive goal idle path",
+          idleGoal?.to == .idle && idleGoal?.goal.reason == "no active need"
+              && idleGoal?.goal.urgency == 0 && idleGoal?.goal.startedAtTick == 42)
+
+    check("cognitive goal same kind returns nil", selectGoal(health: 25, currentGoalKind: .seekSafety) == nil)
+    check("cognitive goal health priority over fear",
+          selectGoal(health: 20, fear: 80)?.goal.reason == "health <= 25")
+    check("cognitive goal fear priority over safety",
+          selectGoal(fear: 80, needs: needs(safety: 0))?.goal.reason == "fear >= 70")
+    check("cognitive goal fatigue priority over curiosity",
+          selectGoal(needs: needs(fatigue: 0.02, curiosity: 0.9))?.goal.reason == "fatigue >= 0.02")
+    check("cognitive goal high curiosity priority over nearby",
+          selectGoal(needs: needs(curiosity: 0.9), hasNearbyAgents: true)?.goal.reason == "curiosity >= 0.8")
+
+    func applyEffect(
+        actionName: String,
+        goalKind: AgentGoalKind = .idle,
+        distanceFromHome: Int = 5,
+        needs effectNeeds: AgentNeeds = AgentNeeds(
+            hunger: 0.3,
+            fatigue: 0.03,
+            curiosity: 0.5,
+            safety: 0.8
+        ),
+        fear: Int = 5,
+        state: String = "before",
+        tick: Int = 17
+    ) -> AgentActionEffectResult {
+        AgentCognitiveTransitions.applyActionEffect(AgentActionEffectInput(
+            action: AgentAction(name: actionName, reason: "test", tick: tick),
+            goalKind: goalKind,
+            distanceFromHome: distanceFromHome,
+            needs: effectNeeds,
+            fear: fear,
+            state: state,
+            tick: tick
+        ))
+    }
+
+    let restEffect = applyEffect(actionName: "rest")
+    check("cognitive effect rest",
+          restEffect.needs.fatigue == 0.009999999999999998 && restEffect.fear == 4
+              && restEffect.state == "resting"
+              && restEffect.actionEffect.effect == "fatigue -0.02, fear -1")
+    check("cognitive effect rest clamps fatigue",
+          applyEffect(actionName: "rest", needs: needs(fatigue: 0.01)).needs.fatigue == 0)
+    check("cognitive effect rest clamps fear",
+          applyEffect(actionName: "rest", fear: 0).fear == 0)
+
+    let observeEffect = applyEffect(actionName: "observe_area")
+    check("cognitive effect observe area",
+          observeEffect.needs.curiosity == 0.51 && observeEffect.state == "observing"
+              && observeEffect.actionEffect.effect == "curiosity +0.01")
+    check("cognitive effect observe clamps curiosity",
+          applyEffect(actionName: "observe_area", needs: needs(curiosity: 0.999)).needs.curiosity == 1)
+
+    let safeMoveEffect = applyEffect(actionName: "move_abstract", goalKind: .seekSafety)
+    check("cognitive effect move seek safety",
+          safeMoveEffect.fear == 4 && safeMoveEffect.state == "moving"
+              && safeMoveEffect.actionEffect.effect == "fear -1")
+
+    let exploreMoveEffect = applyEffect(actionName: "move_abstract", goalKind: .explore)
+    check("cognitive effect move explore",
+          exploreMoveEffect.needs.curiosity == 0.495 && exploreMoveEffect.state == "moving"
+              && exploreMoveEffect.actionEffect.effect == "curiosity -0.005")
+    check("cognitive effect move clamps curiosity",
+          applyEffect(
+              actionName: "move_abstract",
+              goalKind: .explore,
+              needs: needs(curiosity: 0.001)
+          ).needs.curiosity == 0)
+
+    let nearWaitEffect = applyEffect(actionName: "wait", goalKind: .seekSafety, distanceFromHome: 1)
+    check("cognitive effect wait safety near",
+          nearWaitEffect.fear == 3 && nearWaitEffect.state == "waiting"
+              && nearWaitEffect.actionEffect.effect == "fear -2")
+
+    let farWaitEffect = applyEffect(actionName: "wait", goalKind: .seekSafety, distanceFromHome: 2)
+    check("cognitive effect wait safety far",
+          farWaitEffect.fear == 4 && farWaitEffect.actionEffect.effect == "fear -1")
+
+    let idleWaitEffect = applyEffect(actionName: "wait", goalKind: .idle)
+    check("cognitive effect wait non safety",
+          idleWaitEffect.fear == 5 && idleWaitEffect.needs.curiosity == 0.5
+              && idleWaitEffect.state == "waiting"
+              && idleWaitEffect.actionEffect.effect == "no need change")
+
+    let unknownEffect = applyEffect(actionName: "unknown", state: "custom")
+    check("cognitive effect unknown preserves values",
+          unknownEffect.fear == 5 && unknownEffect.needs.hunger == 0.3
+              && unknownEffect.needs.fatigue == 0.03 && unknownEffect.needs.curiosity == 0.5
+              && unknownEffect.needs.safety == 0.8 && unknownEffect.actionEffect.effect == "no effect")
+    check("cognitive effect unknown preserves state", unknownEffect.state == "custom")
+    check("cognitive effect before after fields exact",
+          restEffect.actionEffect.action == "rest" && restEffect.actionEffect.tick == 17
+              && restEffect.actionEffect.hungerBefore == 0.3
+              && restEffect.actionEffect.hungerAfter == 0.3
+              && restEffect.actionEffect.fatigueBefore == 0.03
+              && restEffect.actionEffect.fatigueAfter == 0.009999999999999998
+              && restEffect.actionEffect.curiosityBefore == 0.5
+              && restEffect.actionEffect.curiosityAfter == 0.5
+              && restEffect.actionEffect.safetyBefore == 0.8
+              && restEffect.actionEffect.safetyAfter == 0.8
+              && restEffect.actionEffect.fearBefore == 5
+              && restEffect.actionEffect.fearAfter == 4
+              && restEffect.actionEffect.stateBefore == "before"
+              && restEffect.actionEffect.stateAfter == "resting")
+
+    let firstMemory = AgentMemoryEntry(tick: 1, type: "first", summary: "one", importance: 0.1)
+    let secondMemory = AgentMemoryEntry(tick: 2, type: "second", summary: "two", importance: 0.2)
+    var memory: [AgentMemoryEntry] = []
+    AgentCognitiveTransitions.appendLegacyUnboundedMemory(firstMemory, to: &memory)
+    check("cognitive memory append adds one", memory.count == 1)
+    AgentCognitiveTransitions.appendLegacyUnboundedMemory(secondMemory, to: &memory)
+    check("cognitive memory append preserves order", memory.map(\.type) == ["first", "second"])
+    for tick in 3...22 {
+        AgentCognitiveTransitions.appendLegacyUnboundedMemory(
+            AgentMemoryEntry(tick: tick, type: "extra", summary: "entry", importance: 0.3),
+            to: &memory
+        )
+    }
+    check("cognitive memory append remains unbounded", memory.count == 22)
+    AgentCognitiveTransitions.appendLegacyUnboundedMemory(firstMemory, to: &memory)
+    AgentCognitiveTransitions.appendLegacyUnboundedMemory(firstMemory, to: &memory)
+    check("cognitive memory append does not deduplicate",
+          memory.count == 24 && memory.suffix(2).allSatisfy { $0.type == "first" })
+}
+
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)

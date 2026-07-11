@@ -6,6 +6,11 @@ typealias LabAgentPosition = AgentPosition
 typealias LabGoalKind = AgentGoalKind
 typealias LabGoal = AgentGoal
 typealias LabAgentAction = AgentAction
+typealias LabAgentNeeds = AgentNeeds
+typealias LabNearbyAgentObservation = AgentNearbyObservation
+typealias LabGoalChange = AgentGoalChange
+typealias LabAgentActionEffect = AgentActionEffect
+typealias LabMemoryEntry = AgentMemoryEntry
 
 struct LabAgent: Encodable {
     let id: String
@@ -75,9 +80,9 @@ struct LabAgent: Encodable {
     }
 
     mutating func tick() {
-        needs.hunger += 0.01
-        needs.fatigue += 0.005
-        state = "idle"
+        let result = AgentCognitiveTransitions.advanceTick(needs: needs)
+        needs = result.needs
+        state = result.state
         ticksAlive += 1
     }
 
@@ -111,52 +116,29 @@ struct LabAgent: Encodable {
     }
 
     mutating func observeNearbyAgents(_ agents: [LabAgent], radius: Int = 8) {
-        nearbyAgents = agents.compactMap { other in
-            guard other.id != id else { return nil }
-
-            let dx = other.position.x - position.x
-            let dy = other.position.y - position.y
-            let dz = other.position.z - position.z
-            let distanceManhattan = abs(dx) + abs(dy) + abs(dz)
-            guard distanceManhattan <= radius else { return nil }
-
-            return LabNearbyAgentObservation(
-                id: other.id,
-                dx: dx,
-                dy: dy,
-                dz: dz,
-                distanceManhattan: distanceManhattan
-            )
+        let peers = agents.map { other in
+            AgentPeerSnapshot(id: other.id, position: other.position)
         }
+        nearbyAgents = AgentCognitiveTransitions.observeNearbyAgents(
+            observerId: id,
+            observerPosition: position,
+            peers: peers,
+            radius: radius
+        )
         nearbyObservationCount += nearbyAgents.count
     }
 
     mutating func selectGoal(tick: Int) -> LabGoalChange? {
         goalSelectionCount += 1
-
-        let nextGoal: LabGoal
-        if health <= 25 {
-            nextGoal = LabGoal(kind: .seekSafety, reason: "health <= 25", startedAtTick: tick, urgency: 100)
-        } else if fear >= 70 {
-            nextGoal = LabGoal(kind: .seekSafety, reason: "fear >= 70", startedAtTick: tick, urgency: 85)
-        } else if needs.safety < 0.5 {
-            nextGoal = LabGoal(kind: .seekSafety, reason: "safety < 0.5", startedAtTick: tick, urgency: 90)
-        } else if needs.fatigue >= 0.02 {
-            nextGoal = LabGoal(kind: .rest, reason: "fatigue >= 0.02", startedAtTick: tick, urgency: 70)
-        } else if needs.curiosity >= 0.8 {
-            nextGoal = LabGoal(kind: .explore, reason: "curiosity >= 0.8", startedAtTick: tick, urgency: 60)
-        } else if !nearbyAgents.isEmpty {
-            nextGoal = LabGoal(kind: .observeOtherAgent, reason: "nearby agent detected", startedAtTick: tick, urgency: 50)
-        } else if needs.curiosity >= 0.5 {
-            nextGoal = LabGoal(kind: .explore, reason: "curiosity >= 0.5", startedAtTick: tick, urgency: 40)
-        } else {
-            nextGoal = LabGoal(kind: .idle, reason: "no active need", startedAtTick: tick, urgency: 0)
-        }
-
-        guard nextGoal.kind != currentGoal.kind else { return nil }
-
-        let change = LabGoalChange(from: currentGoal.kind, to: nextGoal.kind, goal: nextGoal)
-        currentGoal = nextGoal
+        guard let change = AgentCognitiveTransitions.selectGoal(AgentGoalSelectionInput(
+            tick: tick,
+            health: health,
+            fear: fear,
+            needs: needs,
+            hasNearbyAgents: !nearbyAgents.isEmpty,
+            currentGoalKind: currentGoal.kind
+        )) else { return nil }
+        currentGoal = change.goal
         goalChangeCount += 1
         return change
     }
@@ -182,64 +164,19 @@ struct LabAgent: Encodable {
 
     mutating func applyLastActionEffect(tick: Int) {
         guard let action = lastAction else { return }
-
-        let hungerBefore = needs.hunger
-        let fatigueBefore = needs.fatigue
-        let curiosityBefore = needs.curiosity
-        let safetyBefore = needs.safety
-        let fearBefore = fear
-        let stateBefore = state
-        let effect: String
-
-        switch action.name {
-        case "rest":
-            needs.fatigue = max(0, needs.fatigue - 0.02)
-            fear = max(0, fear - 1)
-            state = "resting"
-            effect = "fatigue -0.02, fear -1"
-        case "observe_area":
-            needs.curiosity = min(1, needs.curiosity + 0.01)
-            state = "observing"
-            effect = "curiosity +0.01"
-        case "move_abstract":
-            if currentGoal.kind == .seekSafety {
-                fear = max(0, fear - 1)
-                effect = "fear -1"
-            } else {
-                needs.curiosity = max(0, needs.curiosity - 0.005)
-                effect = "curiosity -0.005"
-            }
-            state = "moving"
-        case "wait":
-            if currentGoal.kind == .seekSafety {
-                let reduction = distanceFromHome <= 1 ? 2 : 1
-                fear = max(0, fear - reduction)
-            }
-            state = "waiting"
-            effect = currentGoal.kind == .seekSafety
-                ? (distanceFromHome <= 1 ? "fear -2" : "fear -1")
-                : "no need change"
-        default:
-            effect = "no effect"
-        }
-
-        lastActionEffect = LabAgentActionEffect(
-            action: action.name,
-            effect: effect,
+        let result = AgentCognitiveTransitions.applyActionEffect(AgentActionEffectInput(
+            action: action,
+            goalKind: currentGoal.kind,
+            distanceFromHome: distanceFromHome,
+            needs: needs,
+            fear: fear,
+            state: state,
             tick: tick,
-            hungerBefore: hungerBefore,
-            hungerAfter: needs.hunger,
-            fatigueBefore: fatigueBefore,
-            fatigueAfter: needs.fatigue,
-            curiosityBefore: curiosityBefore,
-            curiosityAfter: needs.curiosity,
-            safetyBefore: safetyBefore,
-            safetyAfter: needs.safety,
-            fearBefore: fearBefore,
-            fearAfter: fear,
-            stateBefore: stateBefore,
-            stateAfter: state
-        )
+        ))
+        needs = result.needs
+        fear = result.fear
+        state = result.state
+        lastActionEffect = result.actionEffect
         actionEffectCount += 1
         remember(
             tick: tick,
@@ -309,12 +246,12 @@ struct LabAgent: Encodable {
     }
 
     mutating func remember(tick: Int, type: String, summary: String, importance: Double) {
-        memory.append(LabMemoryEntry(
+        AgentCognitiveTransitions.appendLegacyUnboundedMemory(AgentMemoryEntry(
             tick: tick,
             type: type,
             summary: summary,
             importance: importance
-        ))
+        ), to: &memory)
     }
 
     enum CodingKeys: String, CodingKey {
@@ -385,13 +322,6 @@ struct LabAgent: Encodable {
     }
 }
 
-struct LabAgentNeeds: Encodable {
-    var hunger: Double
-    var fatigue: Double
-    var curiosity: Double
-    var safety: Double
-}
-
 struct LabInventory: Codable, Equatable {
     private(set) var items: [String: Int]
 
@@ -460,38 +390,6 @@ struct LabAgentObservation: Encodable {
     let blockAtFeet: Int?
 }
 
-struct LabNearbyAgentObservation: Codable, Equatable {
-    let id: String
-    let dx: Int
-    let dy: Int
-    let dz: Int
-    let distanceManhattan: Int
-}
-
-struct LabGoalChange {
-    let from: LabGoalKind
-    let to: LabGoalKind
-    let goal: LabGoal
-}
-
-struct LabAgentActionEffect: Encodable {
-    let action: String
-    let effect: String
-    let tick: Int
-    let hungerBefore: Double
-    let hungerAfter: Double
-    let fatigueBefore: Double
-    let fatigueAfter: Double
-    let curiosityBefore: Double
-    let curiosityAfter: Double
-    let safetyBefore: Double
-    let safetyAfter: Double
-    let fearBefore: Int
-    let fearAfter: Int
-    let stateBefore: String
-    let stateAfter: String
-}
-
 struct LabAgentMovement: Encodable {
     let tick: Int
     let fromX: Int
@@ -512,11 +410,4 @@ struct LabAgentMovement: Encodable {
     let distanceFromHomeBefore: Int
     let distanceFromHomeAfter: Int
     let distanceReducedTowardHome: Int
-}
-
-struct LabMemoryEntry: Encodable {
-    let tick: Int
-    let type: String
-    let summary: String
-    let importance: Double
 }
