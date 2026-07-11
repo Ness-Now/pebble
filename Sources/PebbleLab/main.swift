@@ -556,7 +556,6 @@ func encodeSpawnAndInitialObservation(agent: inout LabAgent, allAgents: [LabAgen
 }
 
 func tickAndEncodeAgent(_ agent: inout LabAgent, allAgents: [LabAgent]) throws -> String {
-    var lines = ""
     let memoryStart = agent.memory.count
     agent.tick()
     agent.observe(world: requireWorld(), tick: ticksCompleted)
@@ -565,6 +564,21 @@ func tickAndEncodeAgent(_ agent: inout LabAgent, allAgents: [LabAgent]) throws -
     agent.decideAction(tick: ticksCompleted)
     agent.applyLastActionEffect(tick: ticksCompleted)
     let movement = agent.applyAbstractMovement(tick: ticksCompleted)
+    return try encodeAgentTick(
+        agent,
+        goalChange: goalChange,
+        movement: movement,
+        memoryStart: memoryStart
+    )
+}
+
+func encodeAgentTick(
+    _ agent: LabAgent,
+    goalChange: LabGoalChange?,
+    movement: LabAgentMovement?,
+    memoryStart: Int
+) throws -> String {
+    var lines = ""
     lines += try encodeEventLine(RunEvent(
         type: "agent_tick",
         tick: ticksCompleted,
@@ -860,6 +874,19 @@ if options.outPath != nil {
     }
 }
 
+var agentsBasicSessionAdapter: LabAgentSessionAdapter?
+if options.scenario == "agents_basic" {
+    do {
+        agentsBasicSessionAdapter = try LabAgentSessionAdapter(
+            seed: options.seed,
+            agents: labAgents,
+            initialTick: ticksCompleted
+        )
+    } catch {
+        fail("failed to create agents_basic shared session: \(error)")
+    }
+}
+
 if isMultiAgentMovementTickLiveReadonlyScenario
     || isMultiAgentMovementTickApprovedApplicationScenario
     || isMultiAgentMovementTickHardeningScenario
@@ -925,7 +952,27 @@ if isMultiAgentMovementTickLiveReadonlyScenario
         requireWorld().tick()
         ticksCompleted += 1
 
-        if !labAgents.isEmpty {
+        if let agentsBasicSessionAdapter {
+            do {
+                let sessionOutputs = try agentsBasicSessionAdapter.tick(
+                    agents: &labAgents,
+                    world: requireWorld(),
+                    tick: ticksCompleted
+                )
+                if options.outPath != nil {
+                    for output in sessionOutputs {
+                        appendEventLines(try encodeAgentTick(
+                            labAgents[output.facadeIndex],
+                            goalChange: output.goalChange,
+                            movement: output.movement,
+                            memoryStart: output.memoryStart
+                        ))
+                    }
+                }
+            } catch {
+                fail("agents_basic shared session tick failed: \(error)")
+            }
+        } else if !labAgents.isEmpty {
             let allAgents = labAgents
             for index in labAgents.indices {
                 if options.outPath != nil {

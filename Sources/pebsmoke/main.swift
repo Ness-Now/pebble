@@ -2460,5 +2460,300 @@ do {
           memory.count == 24 && memory.suffix(2).allSatisfy { $0.type == "first" })
 }
 
+// ---------------------------------------------------------------------------
+section("PebbleAgents multi-agent session and snapshots")
+do {
+    func sessionConfiguration(
+        seed: UInt32 = 77,
+        nearbyRadius: Int = 8,
+        recentMemorySnapshotLimit: Int = 3,
+        memoryPolicy: AgentMemoryPolicy = .legacyUnbounded
+    ) -> AgentSessionConfiguration {
+        try! AgentSessionConfiguration(
+            seed: seed,
+            nearbyRadius: nearbyRadius,
+            recentMemorySnapshotLimit: recentMemorySnapshotLimit,
+            memoryPolicy: memoryPolicy
+        )
+    }
+
+    func sessionMemory(_ tick: Int, type: String? = nil) -> AgentMemoryEntry {
+        AgentMemoryEntry(
+            tick: tick,
+            type: type ?? "memory_\(tick)",
+            summary: "memory \(tick)",
+            importance: Double(tick) / 100
+        )
+    }
+
+    func sessionState(
+        id: String,
+        x: Int = 0,
+        health: Int = 100,
+        curiosity: Double = 0.9,
+        memory: [AgentMemoryEntry] = []
+    ) -> AgentSessionAgentState {
+        let position = AgentPosition(x: x, y: 64, z: 0)
+        return AgentSessionAgentState(
+            id: id,
+            state: "idle",
+            position: position,
+            needs: AgentNeeds(hunger: 0, fatigue: 0, curiosity: curiosity, safety: 1),
+            health: health,
+            fear: 10,
+            homePosition: AgentPosition(x: 0, y: 64, z: 0),
+            nearbyAgents: [],
+            currentGoal: AgentGoal(kind: .idle, reason: "initial goal", startedAtTick: 0, urgency: 0),
+            lastAction: nil,
+            lastActionEffect: nil,
+            memory: memory,
+            tickCreated: 0,
+            ticksAlive: 0,
+            observationCount: 0,
+            nearbyObservationCount: 0,
+            goalSelectionCount: 0,
+            goalChangeCount: 0,
+            actionCount: 0,
+            actionEffectCount: 0,
+            movementCount: 0,
+            totalManhattanDistanceMoved: 0,
+            returnHomeMoveCount: 0,
+            totalDistanceReducedTowardHome: 0
+        )
+    }
+
+    func session(
+        _ states: [AgentSessionAgentState],
+        configuration: AgentSessionConfiguration = sessionConfiguration(),
+        initialTick: Int = 0
+    ) -> AgentSimulationSession {
+        try! AgentSimulationSession(
+            configuration: configuration,
+            agents: states,
+            initialTick: initialTick
+        )
+    }
+
+    let emptySession = session([])
+    check("session construction empty accepted", emptySession.snapshot().agentCount == 0)
+
+    let oneSession = session([sessionState(id: "agent_0")])
+    check("session construction one agent", oneSession.snapshot().agentCount == 1)
+
+    let threeStates = (0..<3).map { sessionState(id: "agent_\($0)", x: $0 * 2) }
+    let threeSession = session(threeStates)
+    check("session construction three agents", threeSession.snapshot().agentCount == 3)
+
+    let tenStates = (0..<10).map { sessionState(id: "agent_\($0)", x: $0) }
+    let tenSession = session(tenStates)
+    check("session construction ten agents", tenSession.snapshot().agentCount == 10)
+    check("session construction seed preserved", threeSession.snapshot().seed == 77)
+
+    let initialTickSession = session([], initialTick: 12)
+    check("session construction initial tick exact", initialTickSession.snapshot().tick == 12)
+
+    do {
+        _ = try AgentSimulationSession(
+            configuration: sessionConfiguration(),
+            agents: [sessionState(id: "duplicate"), sessionState(id: "duplicate")]
+        )
+        check("session construction duplicate id refused", false)
+    } catch AgentSessionError.duplicateAgentId("duplicate") {
+        check("session construction duplicate id refused", true)
+    } catch {
+        check("session construction duplicate id refused", false, "unexpected \(error)")
+    }
+
+    check("session configuration legacy explicit",
+          sessionConfiguration().memoryPolicy == .legacyUnbounded)
+    check("session configuration bounded valid",
+          sessionConfiguration(memoryPolicy: .bounded(maxEntries: 4)).memoryPolicy
+              == .bounded(maxEntries: 4))
+    do {
+        _ = try AgentSessionConfiguration(
+            seed: 1,
+            nearbyRadius: 8,
+            recentMemorySnapshotLimit: 3,
+            memoryPolicy: .bounded(maxEntries: 0)
+        )
+        check("session configuration bounded invalid refused", false)
+    } catch AgentSessionError.invalidMemoryBound(0) {
+        check("session configuration bounded invalid refused", true)
+    } catch {
+        check("session configuration bounded invalid refused", false, "unexpected \(error)")
+    }
+
+    let permutedStates = [
+        sessionState(id: "agent_c", x: 4),
+        sessionState(id: "agent_a", x: 0),
+        sessionState(id: "agent_b", x: 2),
+    ]
+    var orderedSession = session(permutedStates)
+    check("session order accepts permuted input", orderedSession.snapshot().agentCount == 3)
+    check("session order snapshot sorted",
+          orderedSession.snapshot().agents.map(\.id) == ["agent_a", "agent_b", "agent_c"])
+    let orderedTick1 = try! orderedSession.advanceTick()
+    check("session order tick result sorted",
+          orderedTick1.agents.map(\.agentId) == ["agent_a", "agent_b", "agent_c"])
+    let orderedTick2 = try! orderedSession.advanceTick()
+    check("session order stable multiple ticks",
+          orderedTick2.agents.map(\.agentId) == ["agent_a", "agent_b", "agent_c"])
+    let reverseSession = session(Array(permutedStates.reversed()))
+    check("session order independent from source order",
+          reverseSession.snapshot() == session(permutedStates).snapshot())
+
+    let snapshotMemories = (1...5).map { sessionMemory($0) }
+    let snapshotSession = session([
+        sessionState(id: "snapshot", x: 3, memory: snapshotMemories),
+    ])
+    let snapshot = snapshotSession.snapshot()
+    let snapshotAgent = snapshot.agents[0]
+    check("session snapshot agentCount exact", snapshot.agentCount == 1)
+    check("session snapshot properties exact",
+          snapshotAgent.id == "snapshot" && snapshotAgent.position == AgentPosition(x: 3, y: 64, z: 0))
+
+    let deadSnapshot = session([sessionState(id: "dead", health: 0)]).snapshot().agents[0]
+    check("session snapshot isAlive derived", !deadSnapshot.isAlive)
+    check("session snapshot distance home exact", snapshotAgent.distanceFromHome == 3)
+    check("session snapshot memoryCount exact", snapshotAgent.memoryCount == 5)
+    check("session snapshot recent memory limited", snapshotAgent.recentMemory.count == 3)
+    check("session snapshot recent memory order",
+          snapshotAgent.recentMemory.map { $0.tick } == [3, 4, 5])
+
+    var mutableSource = snapshotMemories
+    let independentSnapshot = session([
+        sessionState(id: "copy", memory: mutableSource),
+    ]).snapshot()
+    mutableSource.append(sessionMemory(6))
+    check("session snapshot independent source copy",
+          independentSnapshot.agents[0].memoryCount == 5 && mutableSource.count == 6)
+    check("session snapshot deterministic equality", snapshotSession.snapshot() == snapshotSession.snapshot())
+
+    let snapshotEncoder = JSONEncoder()
+    snapshotEncoder.outputFormatting = [.sortedKeys]
+    let snapshotJSON1 = try? snapshotEncoder.encode(snapshotSession.snapshot())
+    let snapshotJSON2 = try? snapshotEncoder.encode(snapshotSession.snapshot())
+    check("session snapshot JSON deterministic", snapshotJSON1 != nil && snapshotJSON1 == snapshotJSON2)
+
+    var tickSession = session([
+        sessionState(id: "agent_b", x: 4, curiosity: 0.1),
+        sessionState(id: "agent_a", x: 0, curiosity: 0.9),
+    ])
+    let tickBefore = tickSession.snapshot()
+    let tickResult = try! tickSession.advanceTick(perceptions: [
+        AgentPerceptionInput(
+            agentId: "agent_a",
+            observationCountIncrement: 1,
+            externalMemoryEntries: [sessionMemory(1, type: "observed")]
+        ),
+        AgentPerceptionInput(
+            agentId: "agent_b",
+            observationCountIncrement: 1,
+            externalMemoryEntries: [sessionMemory(1, type: "observed")]
+        ),
+    ])
+    let tickAfter = tickSession.snapshot()
+    check("session tick increments once", tickResult.tick == 1 && tickAfter.tick == 1)
+    check("session tick evolves needs",
+          tickAfter.agents[0].needs.hunger == tickBefore.agents[0].needs.hunger + 0.01)
+    check("session tick nearby from start snapshot",
+          tickAfter.agents.allSatisfy { $0.nearbyAgents.count == 1 })
+    check("session tick nearby excludes same id",
+          tickAfter.agents.allSatisfy { agent in
+              !agent.nearbyAgents.contains { $0.id == agent.id }
+          })
+    check("session tick selects goal", tickAfter.agents[0].currentGoal.kind == .explore)
+    check("session tick chooses action", tickAfter.agents[0].lastAction?.name == "move_abstract")
+    check("session tick applies effect",
+          tickAfter.agents[0].lastActionEffect?.effect == "curiosity -0.005")
+    check("session tick increments counters",
+          tickAfter.agents.allSatisfy {
+              $0.ticksAlive == 1 && $0.observationCount == 1
+                  && $0.goalSelectionCount == 1 && $0.actionCount == 1
+                  && $0.actionEffectCount == 1
+          })
+    check("session tick appends action memory",
+          tickAfter.agents[0].recentMemory.contains { $0.type == "action_chosen" })
+    check("session tick appends effect memory",
+          tickAfter.agents[0].recentMemory.contains { $0.type == "action_effect_applied" })
+
+    var identicalSession1 = session(threeStates)
+    var identicalSession2 = session(threeStates)
+    _ = try! identicalSession1.advanceTick()
+    _ = try! identicalSession2.advanceTick()
+    check("session tick identical sessions deterministic",
+          identicalSession1.snapshot() == identicalSession2.snapshot())
+
+    var permutedSession1 = session(permutedStates)
+    var permutedSession2 = session(Array(permutedStates.reversed()))
+    _ = try! permutedSession1.advanceTick()
+    _ = try! permutedSession2.advanceTick()
+    check("session tick permuted input deterministic",
+          permutedSession1.snapshot() == permutedSession2.snapshot())
+    check("session tick earlier agent does not alter later perception",
+          tickAfter.agents[0].nearbyAgents.first?.id == "agent_b"
+              && tickAfter.agents[1].nearbyAgents.first?.id == "agent_a")
+
+    var externalSession = session([
+        sessionState(id: "external_a", x: 0, memory: [sessionMemory(0)]),
+        sessionState(id: "external_b", x: 2),
+    ])
+    try! externalSession.applyExternalUpdate(AgentExternalUpdate(
+        agentId: "external_a",
+        position: AgentPosition(x: 5, y: 64, z: 0),
+        memoryEntries: [sessionMemory(1, type: "moved_abstract")],
+        movementCount: 1,
+        totalManhattanDistanceMoved: 5,
+        returnHomeMoveCount: 1,
+        totalDistanceReducedTowardHome: 2
+    ))
+    let externalSnapshot = externalSession.snapshot()
+    let externalA = externalSnapshot.agents.first { $0.id == "external_a" }!
+    let externalB = externalSnapshot.agents.first { $0.id == "external_b" }!
+    check("session external position synchronized", externalA.position.x == 5)
+    check("session external memory synchronized", externalA.memoryCount == 2)
+    check("session external movement count synchronized", externalA.movementCount == 1)
+    check("session external distance home updated", externalA.distanceFromHome == 5)
+    check("session external next snapshot reflects update",
+          externalA.totalManhattanDistanceMoved == 5
+              && externalA.returnHomeMoveCount == 1
+              && externalA.totalDistanceReducedTowardHome == 2)
+    do {
+        try externalSession.applyExternalUpdate(AgentExternalUpdate(agentId: "unknown"))
+        check("session external unknown agent refused", false)
+    } catch AgentSessionError.unknownAgentId("unknown") {
+        check("session external unknown agent refused", true)
+    } catch {
+        check("session external unknown agent refused", false, "unexpected \(error)")
+    }
+    check("session external update isolates other agents",
+          externalB.position.x == 2 && externalB.memoryCount == 0 && externalB.movementCount == 0)
+
+    let manyMemories = (1...8).map { sessionMemory($0) }
+    let legacySession = session([
+        sessionState(id: "legacy", memory: manyMemories),
+    ], configuration: sessionConfiguration(memoryPolicy: .legacyUnbounded))
+    check("session memory legacy does not truncate", legacySession.snapshot().agents[0].memoryCount == 8)
+
+    let boundedConfiguration = sessionConfiguration(
+        recentMemorySnapshotLimit: 5,
+        memoryPolicy: .bounded(maxEntries: 3)
+    )
+    var boundedSession = session([
+        sessionState(id: "bounded", memory: manyMemories),
+    ], configuration: boundedConfiguration)
+    check("session memory bounded truncates maximum", boundedSession.snapshot().agents[0].memoryCount == 3)
+    check("session memory bounded keeps latest",
+          boundedSession.snapshot().agents[0].recentMemory.map { $0.tick } == [6, 7, 8])
+    let boundedBefore = boundedSession.snapshot()
+    try! boundedSession.applyExternalUpdate(AgentExternalUpdate(
+        agentId: "bounded",
+        memoryEntries: [sessionMemory(9)]
+    ))
+    check("session memory bounded remains deterministic",
+          boundedBefore.agents[0].recentMemory.map { $0.tick } == [6, 7, 8]
+              && boundedSession.snapshot().agents[0].recentMemory.map { $0.tick } == [7, 8, 9])
+}
+
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)
