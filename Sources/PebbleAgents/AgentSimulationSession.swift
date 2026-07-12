@@ -12,6 +12,21 @@ public enum AgentSessionError: Error, Equatable {
     case duplicatePerceptionInput(String)
     case unknownAgentId(String)
     case worldObservationPositionMismatch(String)
+    case movementOutcomeCountMismatch(expected: Int, actual: Int)
+    case duplicateMovementOutcome(String)
+    case missingMovementOutcome(String)
+    case movementTickMismatch(String)
+    case movementFromPositionMismatch(String)
+    case movementGoalMismatch(String)
+    case duplicateMovementDestination
+    case occupiedMovementDestination(String)
+    case inconsistentMovementDelta(String)
+    case invalidCardinalMovement(String)
+    case invalidVerticalMovement(String)
+    case invalidStationaryMovement(String)
+    case movementActionMismatch(String)
+    case movementDirectionMismatch(String)
+    case movementHomeMetricsMismatch(String)
 }
 
 public struct AgentSessionConfiguration {
@@ -69,6 +84,7 @@ public struct AgentSessionAgentState {
     public internal(set) var totalDistanceReducedTowardHome: Int
     public internal(set) var lastWorldObservation: AgentWorldObservation?
     public internal(set) var lastWorldPerceptionEffect: AgentWorldPerceptionEffect?
+    public internal(set) var lastMovementOutcome: AgentMovementOutcome?
 
     public init(
         id: String,
@@ -96,7 +112,8 @@ public struct AgentSessionAgentState {
         returnHomeMoveCount: Int,
         totalDistanceReducedTowardHome: Int,
         lastWorldObservation: AgentWorldObservation? = nil,
-        lastWorldPerceptionEffect: AgentWorldPerceptionEffect? = nil
+        lastWorldPerceptionEffect: AgentWorldPerceptionEffect? = nil,
+        lastMovementOutcome: AgentMovementOutcome? = nil
     ) {
         self.id = id
         self.state = state
@@ -124,6 +141,7 @@ public struct AgentSessionAgentState {
         self.totalDistanceReducedTowardHome = totalDistanceReducedTowardHome
         self.lastWorldObservation = lastWorldObservation
         self.lastWorldPerceptionEffect = lastWorldPerceptionEffect
+        self.lastMovementOutcome = lastMovementOutcome
     }
 }
 
@@ -425,6 +443,125 @@ public struct AgentSimulationSession {
         statesById[update.agentId] = state
     }
 
+    public mutating func applyMovementOutcomes(_ outcomes: [AgentMovementOutcome]) throws {
+        let ids = sortedIds
+        guard outcomes.count == ids.count else {
+            throw AgentSessionError.movementOutcomeCountMismatch(expected: ids.count, actual: outcomes.count)
+        }
+        var byId: [String: AgentMovementOutcome] = [:]
+        for outcome in outcomes {
+            guard statesById[outcome.agentId] != nil else {
+                throw AgentSessionError.unknownAgentId(outcome.agentId)
+            }
+            guard byId[outcome.agentId] == nil else {
+                throw AgentSessionError.duplicateMovementOutcome(outcome.agentId)
+            }
+            byId[outcome.agentId] = outcome
+        }
+        for id in ids where byId[id] == nil {
+            throw AgentSessionError.missingMovementOutcome(id)
+        }
+
+        let initialPositions = statesById.mapValues(\.position)
+        var destinationKeys = [String]()
+        for id in ids {
+            guard let state = statesById[id], let outcome = byId[id] else { continue }
+            guard outcome.tick == tick else { throw AgentSessionError.movementTickMismatch(id) }
+            guard outcome.fromPosition == state.position else {
+                throw AgentSessionError.movementFromPositionMismatch(id)
+            }
+            guard outcome.goalKind == state.currentGoal.kind else {
+                throw AgentSessionError.movementGoalMismatch(id)
+            }
+            let dx = outcome.toPosition.x - outcome.fromPosition.x
+            let dy = outcome.toPosition.y - outcome.fromPosition.y
+            let dz = outcome.toPosition.z - outcome.fromPosition.z
+            switch outcome.status {
+            case .moved:
+                guard dx == outcome.appliedDX, dy == outcome.appliedDY, dz == outcome.appliedDZ else {
+                    throw AgentSessionError.inconsistentMovementDelta(id)
+                }
+                guard abs(dx) + abs(dz) == 1 else {
+                    throw AgentSessionError.invalidCardinalMovement(id)
+                }
+                guard (-1...1).contains(dy) else {
+                    throw AgentSessionError.invalidVerticalMovement(id)
+                }
+                guard let action = state.lastAction,
+                      action.name == "move_abstract",
+                      outcome.requestedDX == (action.dx ?? 0),
+                      outcome.requestedDY == (action.dy ?? 0),
+                      outcome.requestedDZ == (action.dz ?? 0),
+                      outcome.actionReason == action.reason,
+                      outcome.appliedDX == outcome.requestedDX,
+                      outcome.appliedDZ == outcome.requestedDZ else {
+                    throw AgentSessionError.movementActionMismatch(id)
+                }
+                guard outcome.requestedDirection?.dx == outcome.appliedDX,
+                      outcome.requestedDirection?.dz == outcome.appliedDZ else {
+                    throw AgentSessionError.movementDirectionMismatch(id)
+                }
+                let destinationKey = positionKey(outcome.toPosition)
+                guard !destinationKeys.contains(destinationKey) else {
+                    throw AgentSessionError.duplicateMovementDestination
+                }
+                destinationKeys.append(destinationKey)
+                if initialPositions.contains(where: { otherId, position in
+                    otherId != id && position == outcome.toPosition
+                }) {
+                    throw AgentSessionError.occupiedMovementDestination(id)
+                }
+            case .blocked, .notRequested:
+                guard outcome.toPosition == outcome.fromPosition,
+                      outcome.appliedDX == 0,
+                      outcome.appliedDY == 0,
+                      outcome.appliedDZ == 0 else {
+                    throw AgentSessionError.invalidStationaryMovement(id)
+                }
+            }
+            let distanceBefore = manhattanDistance(outcome.fromPosition, state.homePosition)
+            let distanceAfter = manhattanDistance(outcome.toPosition, state.homePosition)
+            guard outcome.distanceFromHomeBefore == distanceBefore,
+                  outcome.distanceFromHomeAfter == distanceAfter,
+                  outcome.distanceReducedTowardHome == max(0, distanceBefore - distanceAfter) else {
+                throw AgentSessionError.movementHomeMetricsMismatch(id)
+            }
+        }
+
+        var updated = statesById
+        for id in ids {
+            guard var state = updated[id], let outcome = byId[id] else { continue }
+            state.lastMovementOutcome = outcome
+            switch outcome.status {
+            case .moved:
+                state.position = outcome.toPosition
+                state.movementCount += 1
+                state.totalManhattanDistanceMoved += abs(outcome.appliedDX) + abs(outcome.appliedDZ)
+                if state.currentGoal.kind == .seekSafety, outcome.distanceReducedTowardHome > 0 {
+                    state.returnHomeMoveCount += 1
+                    state.totalDistanceReducedTowardHome += outcome.distanceReducedTowardHome
+                }
+                appendMemory(AgentMemoryEntry(
+                    tick: tick,
+                    type: "moved_live",
+                    summary: "\(id) moved live from \(positionText(outcome.fromPosition)) to \(positionText(outcome.toPosition)) because \(outcome.actionReason)",
+                    importance: 0.20
+                ), to: &state.memory)
+            case .blocked:
+                appendMemory(AgentMemoryEntry(
+                    tick: tick,
+                    type: "movement_blocked",
+                    summary: "\(id) movement blocked: \(outcome.resolutionReason)",
+                    importance: 0.25
+                ), to: &state.memory)
+            case .notRequested:
+                break
+            }
+            updated[id] = state
+        }
+        statesById = updated
+    }
+
     private var sortedIds: [String] {
         statesById.keys.sorted()
     }
@@ -433,6 +570,18 @@ public struct AgentSimulationSession {
         abs(state.position.x - state.homePosition.x)
             + abs(state.position.y - state.homePosition.y)
             + abs(state.position.z - state.homePosition.z)
+    }
+
+    private func positionKey(_ position: AgentPosition) -> String {
+        "\(position.x),\(position.y),\(position.z)"
+    }
+
+    private func positionText(_ position: AgentPosition) -> String {
+        "(\(position.x),\(position.y),\(position.z))"
+    }
+
+    private func manhattanDistance(_ lhs: AgentPosition, _ rhs: AgentPosition) -> Int {
+        abs(lhs.x - rhs.x) + abs(lhs.y - rhs.y) + abs(lhs.z - rhs.z)
     }
 
     private func appendMemory(

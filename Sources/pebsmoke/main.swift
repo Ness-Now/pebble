@@ -3070,5 +3070,444 @@ do {
           deterministicWorldSession1.snapshot() == deterministicWorldSession2.snapshot())
 }
 
+// ---------------------------------------------------------------------------
+section("PebbleAgents safe cardinal movement")
+do {
+    let origin = AgentPosition(x: 0, y: 64, z: 0)
+
+    func movementColumn(
+        _ position: AgentPosition,
+        ready: Bool = true,
+        ground: Bool = true,
+        feet: Bool = true,
+        head: Bool = true
+    ) -> AgentWorldColumnObservation {
+        AgentWorldColumnObservation(
+            position: position,
+            chunkReady: ready,
+            surfaceY: ready ? position.y : nil,
+            height: ready ? position.y : nil,
+            blockBelow: ready ? (ground ? 1 : 0) : nil,
+            blockAtFeet: ready ? (feet ? 0 : 1) : nil,
+            blockAtHead: ready ? (head ? 0 : 1) : nil,
+            groundPresent: ready && ground,
+            feetClear: ready && feet,
+            headClear: ready && head
+        )
+    }
+
+    func movementObservation(
+        position: AgentPosition = origin,
+        target: AgentCardinalDirection = .east,
+        ready: Bool = true,
+        ground: Bool = true,
+        feet: Bool = true,
+        head: Bool = true,
+        step: Int? = 0,
+        traversable: Bool = true,
+        drop: Bool = false,
+        worldTick: Int = 7
+    ) -> AgentWorldObservation {
+        let neighbors = AgentCardinalDirection.allCases.map { direction in
+            let neighborPosition = AgentPosition(
+                x: position.x + direction.dx,
+                y: position.y,
+                z: position.z + direction.dz
+            )
+            let customized = direction == target
+            return AgentWorldNeighborObservation(
+                direction: direction,
+                column: movementColumn(
+                    neighborPosition,
+                    ready: customized ? ready : true,
+                    ground: customized ? ground : true,
+                    feet: customized ? feet : true,
+                    head: customized ? head : true
+                ),
+                stepDelta: customized ? step : 0,
+                traversable: customized ? traversable : true,
+                dangerousDrop: customized ? drop : false
+            )
+        }
+        return try! AgentWorldObservation(
+            worldTick: worldTick,
+            position: position,
+            center: movementColumn(position),
+            neighbors: neighbors,
+            biomeId: 1,
+            biomeName: "plains",
+            combinedLight: 15,
+            skyLight: 15,
+            blockLight: 0,
+            dayTime: 0,
+            raining: false,
+            thundering: false
+        )
+    }
+
+    func movementState(
+        id: String = "agent_a",
+        position: AgentPosition = origin,
+        home: AgentPosition = origin,
+        goal: AgentGoalKind = .explore,
+        action: AgentAction? = AgentAction(
+            name: "move_abstract", reason: "goal explore", tick: 0, dx: 1, dy: 0, dz: 0
+        ),
+        observation: AgentWorldObservation? = movementObservation()
+    ) -> AgentSessionAgentState {
+        AgentSessionAgentState(
+            id: id,
+            state: "moving",
+            position: position,
+            needs: AgentNeeds(hunger: 0.2, fatigue: 0.1, curiosity: 0.8, safety: 0.9),
+            health: 90,
+            fear: 12,
+            homePosition: home,
+            nearbyAgents: [],
+            currentGoal: AgentGoal(kind: goal, reason: "test", startedAtTick: 0, urgency: 1),
+            lastAction: action,
+            lastActionEffect: nil,
+            memory: [],
+            tickCreated: 0,
+            ticksAlive: 0,
+            observationCount: 0,
+            nearbyObservationCount: 0,
+            goalSelectionCount: 0,
+            goalChangeCount: 0,
+            actionCount: 3,
+            actionEffectCount: 2,
+            movementCount: 0,
+            totalManhattanDistanceMoved: 0,
+            returnHomeMoveCount: 0,
+            totalDistanceReducedTowardHome: 0,
+            lastWorldObservation: observation
+        )
+    }
+
+    func movementSession(
+        _ states: [AgentSessionAgentState],
+        policy: AgentMemoryPolicy = .legacyUnbounded
+    ) -> AgentSimulationSession {
+        let configuration = try! AgentSessionConfiguration(
+            seed: 7,
+            recentMemorySnapshotLimit: 20,
+            memoryPolicy: policy
+        )
+        return try! AgentSimulationSession(configuration: configuration, agents: states)
+    }
+
+    func resolved(_ state: AgentSessionAgentState) -> AgentMovementOutcome {
+        AgentMovementCoordinator.resolve(snapshot: movementSession([state]).snapshot())[0]
+    }
+
+    let noAction = resolved(movementState(action: nil))
+    check("movement no action not requested", noAction.status == .notRequested)
+    check("movement no action reason", noAction.resolutionReason == "no movement intent")
+    let waitAction = AgentAction(name: "wait", reason: "goal idle", tick: 0)
+    check("movement non movement action not requested", resolved(movementState(action: waitAction)).status == .notRequested)
+
+    func invalidAction(dx: Int?, dy: Int?, dz: Int?) -> AgentMovementOutcome {
+        resolved(movementState(action: AgentAction(
+            name: "move_abstract", reason: "invalid", tick: 0, dx: dx, dy: dy, dz: dz
+        )))
+    }
+    check("movement zero delta blocked", invalidAction(dx: 0, dy: 0, dz: 0).resolutionReason == "invalid movement intent")
+    check("movement diagonal blocked", invalidAction(dx: 1, dy: 0, dz: 1).status == .blocked)
+    check("movement multi case blocked", invalidAction(dx: 2, dy: 0, dz: 0).status == .blocked)
+    check("movement vertical blocked", invalidAction(dx: 0, dy: 1, dz: 0).status == .blocked)
+    check("movement missing observation blocked", resolved(movementState(observation: nil)).resolutionReason == "missing world observation")
+    let stale = movementObservation(position: AgentPosition(x: 4, y: 64, z: 0))
+    check("movement stale observation blocked", resolved(movementState(observation: stale)).resolutionReason == "stale world observation")
+
+    let directions: [(AgentCardinalDirection, Int, Int)] = [
+        (.north, 0, -1), (.east, 1, 0), (.south, 0, 1), (.west, -1, 0),
+    ]
+    var directionOutcomes: [AgentMovementOutcome] = []
+    for (direction, dx, dz) in directions {
+        let outcome = resolved(movementState(
+            action: AgentAction(name: "move_abstract", reason: "direction", tick: 0, dx: dx, dy: 0, dz: dz),
+            observation: movementObservation(target: direction)
+        ))
+        directionOutcomes.append(outcome)
+    }
+    check("movement north direction", directionOutcomes[0].requestedDirection == .north && directionOutcomes[0].toPosition.z == -1)
+    check("movement east direction", directionOutcomes[1].requestedDirection == .east && directionOutcomes[1].toPosition.x == 1)
+    check("movement south direction", directionOutcomes[2].requestedDirection == .south && directionOutcomes[2].toPosition.z == 1)
+    check("movement west direction", directionOutcomes[3].requestedDirection == .west && directionOutcomes[3].toPosition.x == -1)
+
+    check("movement unavailable chunk blocked",
+          resolved(movementState(observation: movementObservation(ready: false))).resolutionReason == "target chunk unavailable")
+    check("movement dangerous drop blocked",
+          resolved(movementState(observation: movementObservation(drop: true))).resolutionReason == "dangerous drop")
+    check("movement no ground blocked",
+          resolved(movementState(observation: movementObservation(ground: false))).resolutionReason == "no ground at target")
+    check("movement feet blocked",
+          resolved(movementState(observation: movementObservation(feet: false))).resolutionReason == "target body space blocked")
+    check("movement head blocked",
+          resolved(movementState(observation: movementObservation(head: false))).resolutionReason == "target body space blocked")
+    check("movement unknown step blocked",
+          resolved(movementState(observation: movementObservation(step: nil))).resolutionReason == "unknown target step")
+    check("movement low step blocked",
+          resolved(movementState(observation: movementObservation(step: -2))).resolutionReason == "target step out of range")
+    check("movement high step blocked",
+          resolved(movementState(observation: movementObservation(step: 2))).resolutionReason == "target step out of range")
+    check("movement non traversable blocked",
+          resolved(movementState(observation: movementObservation(traversable: false))).resolutionReason == "neighbor not traversable")
+
+    let flat = resolved(movementState())
+    check("movement flat cardinal moved", flat.status == .moved && flat.appliedDX == 1 && flat.appliedDY == 0 && flat.appliedDZ == 0)
+    let up = resolved(movementState(observation: movementObservation(step: 1)))
+    check("movement step up", up.status == .moved && up.toPosition.y == 65 && up.appliedDY == 1)
+    let down = resolved(movementState(observation: movementObservation(step: -1)))
+    check("movement step down", down.status == .moved && down.toPosition.y == 63 && down.appliedDY == -1)
+
+    let towardHome = resolved(movementState(
+        position: origin,
+        home: AgentPosition(x: 2, y: 64, z: 0),
+        goal: .seekSafety,
+        action: AgentAction(name: "move_abstract", reason: "goal seekSafety", tick: 0, dx: 1, dy: 0, dz: 0)
+    ))
+    check("movement distance home before", towardHome.distanceFromHomeBefore == 2)
+    check("movement distance home after", towardHome.distanceFromHomeAfter == 1)
+    check("movement distance reduced home", towardHome.distanceReducedTowardHome == 1)
+    check("movement stationary distance unchanged",
+          noAction.distanceFromHomeBefore == noAction.distanceFromHomeAfter && noAction.distanceReducedTowardHome == 0)
+
+    let occupiedStates = [
+        movementState(id: "agent_a"),
+        movementState(id: "agent_b", position: AgentPosition(x: 1, y: 64, z: 0), home: AgentPosition(x: 1, y: 64, z: 0), action: nil,
+                      observation: movementObservation(position: AgentPosition(x: 1, y: 64, z: 0))),
+    ]
+    let occupiedOutcomes = AgentMovementCoordinator.resolve(snapshot: movementSession(occupiedStates).snapshot())
+    check("movement occupied target blocked", occupiedOutcomes[0].resolutionReason == "target occupied")
+
+    let swapStates = [
+        movementState(id: "agent_a"),
+        movementState(
+            id: "agent_b",
+            position: AgentPosition(x: 1, y: 64, z: 0),
+            home: AgentPosition(x: 1, y: 64, z: 0),
+            action: AgentAction(name: "move_abstract", reason: "swap", tick: 0, dx: -1, dy: 0, dz: 0),
+            observation: movementObservation(position: AgentPosition(x: 1, y: 64, z: 0), target: .west)
+        ),
+    ]
+    let swap = AgentMovementCoordinator.resolve(snapshot: movementSession(swapStates).snapshot())
+    check("movement swap first blocked", swap[0].resolutionReason == "target occupied")
+    check("movement swap second blocked", swap[1].resolutionReason == "target occupied")
+
+    let conflictStates = [
+        movementState(id: "agent_b", position: AgentPosition(x: 1, y: 64, z: 0), home: AgentPosition(x: 1, y: 64, z: 0),
+                      action: AgentAction(name: "move_abstract", reason: "west", tick: 0, dx: -1, dy: 0, dz: 0),
+                      observation: movementObservation(position: AgentPosition(x: 1, y: 64, z: 0), target: .west)),
+        movementState(id: "agent_a", position: AgentPosition(x: -1, y: 64, z: 0), home: AgentPosition(x: -1, y: 64, z: 0),
+                      action: AgentAction(name: "move_abstract", reason: "east", tick: 0, dx: 1, dy: 0, dz: 0),
+                      observation: movementObservation(position: AgentPosition(x: -1, y: 64, z: 0))),
+    ]
+    let conflict = AgentMovementCoordinator.resolve(snapshot: movementSession(conflictStates).snapshot())
+    let conflictPermuted = AgentMovementCoordinator.resolve(snapshot: movementSession(Array(conflictStates.reversed())).snapshot())
+    check("movement conflict results sorted", conflict.map(\.agentId) == ["agent_a", "agent_b"])
+    check("movement conflict lexical winner", conflict[0].status == .moved)
+    check("movement conflict loser blocked", conflict[1].status == .blocked && conflict[1].resolutionReason == "target conflict")
+    check("movement conflict source order independent", conflict == conflictPermuted)
+    check("movement coordinator deterministic", conflict == AgentMovementCoordinator.resolve(snapshot: movementSession(conflictStates).snapshot()))
+
+    var applySession = movementSession([movementState()])
+    let applyBefore = applySession.snapshot()
+    try! applySession.applyMovementOutcomes([flat])
+    let applied = applySession.snapshot().agents[0]
+    check("movement apply updates position", applied.position == AgentPosition(x: 1, y: 64, z: 0))
+    check("movement apply increments count", applied.movementCount == 1)
+    check("movement apply horizontal distance one", applied.totalManhattanDistanceMoved == 1)
+    check("movement apply moved memory", applied.recentMemory.last?.type == "moved_live")
+    check("movement apply stores outcome", applied.lastMovementOutcome == flat)
+    check("movement snapshot exposes outcome", applySession.snapshot().agents[0].lastMovementOutcome?.status == .moved)
+    check("movement old snapshot immutable", applyBefore.agents[0].position == origin && applyBefore.agents[0].lastMovementOutcome == nil)
+    check("movement apply needs unchanged", applied.needs == applyBefore.agents[0].needs)
+    check("movement apply fear unchanged", applied.fear == applyBefore.agents[0].fear)
+    check("movement apply action counters unchanged", applied.actionCount == 3 && applied.actionEffectCount == 2)
+
+    var verticalSession = movementSession([movementState(observation: movementObservation(step: 1))])
+    try! verticalSession.applyMovementOutcomes([up])
+    check("movement vertical still distance one", verticalSession.snapshot().agents[0].totalManhattanDistanceMoved == 1)
+
+    var homeSession = movementSession([movementState(
+        home: AgentPosition(x: 2, y: 64, z: 0),
+        goal: .seekSafety,
+        action: AgentAction(name: "move_abstract", reason: "goal seekSafety", tick: 0, dx: 1, dy: 0, dz: 0)
+    )])
+    try! homeSession.applyMovementOutcomes([towardHome])
+    let homeApplied = homeSession.snapshot().agents[0]
+    check("movement return home count", homeApplied.returnHomeMoveCount == 1)
+    check("movement return home reduced total", homeApplied.totalDistanceReducedTowardHome == 1)
+    check("movement explore no return home count", applied.returnHomeMoveCount == 0)
+
+    var blockedSession = movementSession([movementState(observation: movementObservation(drop: true))])
+    let blockedOutcome = resolved(movementState(observation: movementObservation(drop: true)))
+    try! blockedSession.applyMovementOutcomes([blockedOutcome])
+    let blockedApplied = blockedSession.snapshot().agents[0]
+    check("movement blocked preserves position", blockedApplied.position == origin)
+    check("movement blocked preserves count", blockedApplied.movementCount == 0)
+    check("movement blocked memory", blockedApplied.recentMemory.last?.type == "movement_blocked")
+
+    var idleSession = movementSession([movementState(action: nil)])
+    try! idleSession.applyMovementOutcomes([noAction])
+    check("movement not requested no memory", idleSession.snapshot().agents[0].memoryCount == 0)
+
+    var boundedMovement = movementSession([movementState()], policy: .bounded(maxEntries: 1))
+    try! boundedMovement.applyMovementOutcomes([flat])
+    check("movement bounded memory respected", boundedMovement.snapshot().agents[0].memoryCount == 1)
+
+    var twoAgentSession = movementSession(conflictStates)
+    let twoBefore = twoAgentSession.snapshot()
+    do {
+        try twoAgentSession.applyMovementOutcomes([conflict[0], conflict[0]])
+        check("movement duplicate outcome refused", false)
+    } catch AgentSessionError.duplicateMovementOutcome("agent_a") {
+        check("movement duplicate outcome refused", true)
+    } catch {
+        check("movement duplicate outcome refused", false, "unexpected \(error)")
+    }
+    check("movement duplicate error tick unchanged", twoAgentSession.tick == 0)
+    check("movement duplicate error state unchanged", twoAgentSession.snapshot() == twoBefore)
+
+    let forcedConflictB = AgentMovementOutcome(
+        agentId: "agent_b", tick: 0, status: .moved,
+        fromPosition: AgentPosition(x: 1, y: 64, z: 0), toPosition: origin,
+        requestedDirection: .west, requestedDX: -1, requestedDY: 0, requestedDZ: 0,
+        appliedDX: -1, appliedDY: 0, appliedDZ: 0,
+        goalKind: .explore, actionReason: "west", resolutionReason: "safe cardinal movement",
+        worldTickObserved: 7, distanceFromHomeBefore: 0, distanceFromHomeAfter: 1,
+        distanceReducedTowardHome: 0
+    )
+    do {
+        try twoAgentSession.applyMovementOutcomes([conflict[0], forcedConflictB])
+        check("movement duplicate destination refused", false)
+    } catch AgentSessionError.duplicateMovementDestination {
+        check("movement duplicate destination refused", true)
+    } catch {
+        check("movement duplicate destination refused", false, "unexpected \(error)")
+    }
+
+    let forcedOccupiedA = AgentMovementOutcome(
+        agentId: "agent_a", tick: 0, status: .moved,
+        fromPosition: origin, toPosition: AgentPosition(x: 1, y: 64, z: 0),
+        requestedDirection: .east, requestedDX: 1, requestedDY: 0, requestedDZ: 0,
+        appliedDX: 1, appliedDY: 0, appliedDZ: 0,
+        goalKind: .explore, actionReason: "goal explore", resolutionReason: "safe cardinal movement",
+        worldTickObserved: 7, distanceFromHomeBefore: 0, distanceFromHomeAfter: 1,
+        distanceReducedTowardHome: 0
+    )
+    let stationaryB = AgentMovementCoordinator.resolve(snapshot: movementSession(occupiedStates).snapshot())[1]
+    var occupiedApplySession = movementSession(occupiedStates)
+    do {
+        try occupiedApplySession.applyMovementOutcomes([forcedOccupiedA, stationaryB])
+        check("movement occupied destination apply refused", false)
+    } catch AgentSessionError.occupiedMovementDestination("agent_a") {
+        check("movement occupied destination apply refused", true)
+    } catch {
+        check("movement occupied destination apply refused", false, "unexpected \(error)")
+    }
+
+    do {
+        try twoAgentSession.applyMovementOutcomes([conflict[0]])
+        check("movement missing outcome refused", false)
+    } catch AgentSessionError.movementOutcomeCountMismatch(expected: 2, actual: 1) {
+        check("movement missing outcome refused", true)
+    } catch {
+        check("movement missing outcome refused", false, "unexpected \(error)")
+    }
+
+    let unknown = AgentMovementOutcome(
+        agentId: "unknown", tick: flat.tick, status: flat.status,
+        fromPosition: flat.fromPosition, toPosition: flat.toPosition,
+        requestedDirection: flat.requestedDirection,
+        requestedDX: flat.requestedDX, requestedDY: flat.requestedDY, requestedDZ: flat.requestedDZ,
+        appliedDX: flat.appliedDX, appliedDY: flat.appliedDY, appliedDZ: flat.appliedDZ,
+        goalKind: flat.goalKind, actionReason: flat.actionReason, resolutionReason: flat.resolutionReason,
+        worldTickObserved: flat.worldTickObserved,
+        distanceFromHomeBefore: flat.distanceFromHomeBefore,
+        distanceFromHomeAfter: flat.distanceFromHomeAfter,
+        distanceReducedTowardHome: flat.distanceReducedTowardHome
+    )
+    var unknownSession = movementSession([movementState()])
+    do {
+        try unknownSession.applyMovementOutcomes([unknown])
+        check("movement unknown agent refused", false)
+    } catch AgentSessionError.unknownAgentId("unknown") {
+        check("movement unknown agent refused", true)
+    } catch {
+        check("movement unknown agent refused", false, "unexpected \(error)")
+    }
+
+    func altered(
+        _ source: AgentMovementOutcome,
+        tick: Int? = nil,
+        from: AgentPosition? = nil,
+        to: AgentPosition? = nil,
+        goal: AgentGoalKind? = nil,
+        appliedDX: Int? = nil
+    ) -> AgentMovementOutcome {
+        AgentMovementOutcome(
+            agentId: source.agentId,
+            tick: tick ?? source.tick,
+            status: source.status,
+            fromPosition: from ?? source.fromPosition,
+            toPosition: to ?? source.toPosition,
+            requestedDirection: source.requestedDirection,
+            requestedDX: source.requestedDX,
+            requestedDY: source.requestedDY,
+            requestedDZ: source.requestedDZ,
+            appliedDX: appliedDX ?? source.appliedDX,
+            appliedDY: source.appliedDY,
+            appliedDZ: source.appliedDZ,
+            goalKind: goal ?? source.goalKind,
+            actionReason: source.actionReason,
+            resolutionReason: source.resolutionReason,
+            worldTickObserved: source.worldTickObserved,
+            distanceFromHomeBefore: source.distanceFromHomeBefore,
+            distanceFromHomeAfter: source.distanceFromHomeAfter,
+            distanceReducedTowardHome: source.distanceReducedTowardHome
+        )
+    }
+
+    func rejected(_ outcome: AgentMovementOutcome) -> Bool {
+        var candidate = movementSession([movementState()])
+        do {
+            try candidate.applyMovementOutcomes([outcome])
+            return false
+        } catch {
+            return candidate.snapshot() == movementSession([movementState()]).snapshot()
+        }
+    }
+    check("movement tick mismatch refused", rejected(altered(flat, tick: 1)))
+    check("movement from mismatch refused", rejected(altered(flat, from: AgentPosition(x: 9, y: 64, z: 0))))
+    check("movement goal mismatch refused", rejected(altered(flat, goal: .rest)))
+    check("movement delta mismatch refused", rejected(altered(flat, appliedDX: 0)))
+
+    let occupiedInvalid = AgentMovementOutcome(
+        agentId: "agent_a", tick: 0, status: .moved,
+        fromPosition: AgentPosition(x: -1, y: 64, z: 0),
+        toPosition: AgentPosition(x: 1, y: 64, z: 0),
+        requestedDirection: .east, requestedDX: 1, requestedDY: 0, requestedDZ: 0,
+        appliedDX: 2, appliedDY: 0, appliedDZ: 0,
+        goalKind: .explore, actionReason: "east", resolutionReason: "invalid",
+        worldTickObserved: 7, distanceFromHomeBefore: 0, distanceFromHomeAfter: 2,
+        distanceReducedTowardHome: 0
+    )
+    check("movement multi cardinal apply refused", {
+        var candidate = movementSession([conflictStates[1]])
+        do { try candidate.applyMovementOutcomes([occupiedInvalid]); return false } catch { return true }
+    }())
+
+    let legacyMovementPath = movementSession([movementState()])
+    let legacyMovementBefore = legacyMovementPath.snapshot()
+    check("movement old path outcome nil", legacyMovementPath.snapshot().agents[0].lastMovementOutcome == nil)
+    check("movement old path unchanged without apply", legacyMovementPath.snapshot() == legacyMovementBefore)
+    let movementEncoder = JSONEncoder()
+    movementEncoder.outputFormatting = [.sortedKeys]
+    let legacyJSON = String(data: try! movementEncoder.encode(legacyMovementPath.snapshot()), encoding: .utf8)!
+    check("movement old snapshot omits outcome JSON", !legacyJSON.contains("lastMovementOutcome"))
+}
+
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)

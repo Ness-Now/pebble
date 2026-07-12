@@ -10,6 +10,7 @@ struct PebbleAgentDebugState {
         snapshot: AgentSessionSnapshot,
         paused: Bool,
         cognitiveHz: Int,
+        movementEnabled: Bool,
         focusedAgentId: String?,
         observedGoalKinds: [String],
         lastError: String?
@@ -19,7 +20,7 @@ struct PebbleAgentDebugState {
         statusSummary = "status=\(status) tick=\(snapshot.tick) hz=\(cognitiveHz) agents=\(snapshot.agentCount)"
         globalLines = [
             "PEBBLE AGENTS - LIVE OBSERVER",
-            "movement: disabled / intent only",
+            movementEnabled ? "movement: enabled / safe cardinal steps" : "movement: disabled / intent only",
             "status: \(status)",
             "seed: \(snapshot.seed)  tick: \(snapshot.tick)  cognitive: \(cognitiveHz) Hz",
             "agents: \(snapshot.agentCount)  focus: \(focus?.id ?? "none")",
@@ -40,10 +41,10 @@ struct PebbleAgentDebugState {
            let effect = agent.lastWorldPerceptionEffect {
             let weather = observation.thundering ? "thunder" : observation.raining ? "rain" : "clear"
             worldLines = [
-                "world tick: \(observation.worldTick)  biome: \(observation.biomeName ?? "unknown")",
-                "light c/s/b: \(observation.combinedLight.map(String.init) ?? "?")/\(observation.skyLight.map(String.init) ?? "?")/\(observation.blockLight.map(String.init) ?? "?")  time: \(observation.dayTime) \(weather)",
-                "center ready: \(observation.center.chunkReady)  surfaceY: \(observation.center.surfaceY.map(String.init) ?? "?")",
-                "ground: \(observation.center.groundPresent)  feet/head clear: \(observation.center.feetClear)/\(observation.center.headClear)",
+                "world sensed from: \(observation.position.x),\(observation.position.y),\(observation.position.z)  tick: \(observation.worldTick)",
+                "biome: \(observation.biomeName ?? "unknown")  time: \(observation.dayTime) \(weather)",
+                "light c/s/b: \(observation.combinedLight.map(String.init) ?? "?")/\(observation.skyLight.map(String.init) ?? "?")/\(observation.blockLight.map(String.init) ?? "?")  surfaceY: \(observation.center.surfaceY.map(String.init) ?? "?")",
+                "center ready/ground: \(observation.center.chunkReady)/\(observation.center.groundPresent)  feet/head: \(observation.center.feetClear)/\(observation.center.headClear)",
                 "neighbors t/b/d: \(observation.traversableNeighborCount)/\(observation.blockedNeighborCount)/\(observation.dangerousDropCount)",
                 "perception: \(Self.short(effect.reason))",
                 String(format: "safety %.2f>%.2f fear %d>%d", effect.safetyBefore, effect.safetyAfter, effect.fearBefore, effect.fearAfter),
@@ -54,25 +55,29 @@ struct PebbleAgentDebugState {
         }
         var lines = [
             "FOCUS - \(agent.id)",
-            "position: \(agent.position.x), \(agent.position.y), \(agent.position.z)  state: \(agent.state)",
+            "current position: \(agent.position.x),\(agent.position.y),\(agent.position.z)  state: \(agent.state)",
+            "home position: \(agent.homePosition.x),\(agent.homePosition.y),\(agent.homePosition.z)  distance: \(agent.distanceFromHome)",
         ] + worldLines + [
             String(format: "needs h %.3f  f %.3f  c %.3f  s %.3f", agent.needs.hunger, agent.needs.fatigue, agent.needs.curiosity, agent.needs.safety),
             "dominant: \(Self.dominantNeed(agent.needs))  fear: \(agent.fear)  health: \(agent.health)",
             "goal: \(agent.currentGoal.kind.rawValue)  urgency: \(agent.currentGoal.urgency)",
             "goal reason: \(Self.short(agent.currentGoal.reason))",
             "action: \(action?.name ?? "none")  deltas: \(deltas)",
-            "action reason: \(Self.short(action?.reason ?? "none"))",
-            "action effect: \(Self.short(agent.lastActionEffect?.effect ?? "none"))",
+            "reason/effect: \(Self.short(action?.reason ?? "none", limit: 18)) / \(Self.short(agent.lastActionEffect?.effect ?? "none", limit: 18))",
             "nearby: \(nearby.isEmpty ? "none" : nearby)  memory: \(agent.memoryCount)",
         ]
-        for memory in agent.recentMemory.suffix(3) {
+        if let movement = agent.lastMovementOutcome {
+            lines.append("last move: \(movement.status.rawValue)  request: \(movement.requestedDirection?.rawValue ?? "none")")
+            lines.append("move from/to: \(Self.position(movement.fromPosition)) > \(Self.position(movement.toPosition))")
+            lines.append("applied: \(movement.appliedDX),\(movement.appliedDY),\(movement.appliedDZ)  \(Self.short(movement.resolutionReason, limit: 22))")
+        } else {
+            lines.append("last movement: none")
+        }
+        lines.append("move count/dist/home/reduced: \(agent.movementCount)/\(agent.totalManhattanDistanceMoved)/\(agent.returnHomeMoveCount)/\(agent.totalDistanceReducedTowardHome)")
+        for memory in agent.recentMemory.suffix(2) {
             lines.append("memory[\(memory.tick)]: \(Self.short(memory.summary, limit: 24))")
         }
-        lines.append("ticks: \(agent.ticksAlive)  goals: \(agent.goalChangeCount)  actions: \(agent.actionCount)  effects: \(agent.actionEffectCount)")
-        lines.append("movementCount: \(agent.movementCount)  distanceHome: \(agent.distanceFromHome)")
-        if action?.name == "move_abstract" {
-            lines.append("move_abstract intent / fixed position")
-        }
+        lines.append("ticks: \(agent.ticksAlive) goals: \(agent.goalChangeCount) actions/effects: \(agent.actionCount)/\(agent.actionEffectCount)")
         focusedAgentLines = lines
     }
 
@@ -105,5 +110,9 @@ struct PebbleAgentDebugState {
     private static func short(_ text: String, limit: Int = 32) -> String {
         guard text.count > limit else { return text }
         return String(text.prefix(limit - 1)) + "~"
+    }
+
+    private static func position(_ position: AgentPosition) -> String {
+        "\(position.x),\(position.y),\(position.z)"
     }
 }

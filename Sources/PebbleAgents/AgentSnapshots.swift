@@ -29,6 +29,7 @@ public struct AgentSnapshot: Encodable, Equatable {
     public let lastActionEffect: AgentActionEffect?
     public let lastWorldObservation: AgentWorldObservation?
     public let lastWorldPerceptionEffect: AgentWorldPerceptionEffect?
+    public let lastMovementOutcome: AgentMovementOutcome?
 
     public let ticksAlive: Int
     public let observationCount: Int
@@ -63,6 +64,7 @@ public struct AgentSnapshot: Encodable, Equatable {
         lastActionEffect = state.lastActionEffect
         lastWorldObservation = state.lastWorldObservation
         lastWorldPerceptionEffect = state.lastWorldPerceptionEffect
+        lastMovementOutcome = state.lastMovementOutcome
         ticksAlive = state.ticksAlive
         observationCount = state.observationCount
         nearbyObservationCount = state.nearbyObservationCount
@@ -94,6 +96,7 @@ public struct AgentSnapshot: Encodable, Equatable {
             && effectsEqual(lhs.lastActionEffect, rhs.lastActionEffect)
             && lhs.lastWorldObservation == rhs.lastWorldObservation
             && lhs.lastWorldPerceptionEffect == rhs.lastWorldPerceptionEffect
+            && lhs.lastMovementOutcome == rhs.lastMovementOutcome
             && lhs.ticksAlive == rhs.ticksAlive
             && lhs.observationCount == rhs.observationCount
             && lhs.nearbyObservationCount == rhs.nearbyObservationCount
@@ -112,7 +115,7 @@ public struct AgentSnapshot: Encodable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case id, state, position, needs, health, isAlive, fear, homePosition, distanceFromHome
         case nearbyAgents, currentGoal, lastAction, lastActionEffect
-        case lastWorldObservation, lastWorldPerceptionEffect
+        case lastWorldObservation, lastWorldPerceptionEffect, lastMovementOutcome
         case ticksAlive, observationCount, nearbyObservationCount, goalSelectionCount
         case goalChangeCount, actionCount, actionEffectCount, movementCount
         case totalManhattanDistanceMoved, returnHomeMoveCount, totalDistanceReducedTowardHome
@@ -136,6 +139,7 @@ public struct AgentSnapshot: Encodable, Equatable {
         try container.encodeIfPresent(lastActionEffect, forKey: .lastActionEffect)
         try container.encodeIfPresent(lastWorldObservation, forKey: .lastWorldObservation)
         try container.encodeIfPresent(lastWorldPerceptionEffect, forKey: .lastWorldPerceptionEffect)
+        try container.encodeIfPresent(lastMovementOutcome, forKey: .lastMovementOutcome)
         try container.encode(ticksAlive, forKey: .ticksAlive)
         try container.encode(observationCount, forKey: .observationCount)
         try container.encode(nearbyObservationCount, forKey: .nearbyObservationCount)

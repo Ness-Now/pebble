@@ -19,15 +19,20 @@ final class PebbleAgentController {
     private(set) var probesByAgentId: [String: LabCoreAgentEntity] = [:]
     private(set) var lastTickResult: AgentSessionTickResult?
     private(set) var lastError: String?
+    private(set) var movementEnabled = false
+    private(set) var lastMovementOutcomes: [AgentMovementOutcome] = []
     private var observedGoalKinds = Set<String>()
+    private var movementWasEverEnabledSinceReset = false
     private var activeWorld: World?
     private var overlayEnabledByCommand = false
     private let worldSensor = PebbleAgentWorldSensor()
+    private let movementExecutor = PebbleAgentMovementExecutor()
 
     private let environment = ProcessInfo.processInfo.environment
     private var featureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS"] == "1" }
     private var traceEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_TRACE"] == "1" }
     private var overlayEnabledByEnvironment: Bool { environment["PEBBLELAB_APP_AGENTS_OVERLAY"] == "1" }
+    private var movementFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_MOVE"] == "1" }
 
     func update(world: World?, player: Player?) {
         guard let world else {
@@ -74,6 +79,7 @@ final class PebbleAgentController {
             snapshot: session.snapshot(),
             paused: isPaused,
             cognitiveHz: cognitiveHz,
+            movementEnabled: movementEnabled,
             focusedAgentId: focusedAgentId,
             observedGoalKinds: observedGoalKinds.sorted(),
             lastError: lastError
@@ -120,6 +126,23 @@ final class PebbleAgentController {
                 return failure("No active PebbleAgents session.")
             }
             return rebuild(world: world, anchor: anchor, seed: seed, resetSpeed: false)
+        case "movement":
+            guard session != nil else { return failure("No active PebbleAgents session.") }
+            guard arguments.count == 2, arguments[1] == "on" || arguments[1] == "off" else {
+                return failure("Usage: /lab movement <on|off>")
+            }
+            if arguments[1] == "on" {
+                guard movementFeatureEnabled else {
+                    return failure("PebbleAgents movement disabled. Set PEBBLELAB_APP_AGENTS_MOVE=1 before launch.")
+                }
+                movementEnabled = true
+                movementWasEverEnabledSinceReset = true
+            } else {
+                movementEnabled = false
+            }
+            let movementStatus = movementEnabled ? "on" : "off"
+            trace("movement=\(movementStatus) tick=\(session?.tick ?? 0)")
+            return success("PebbleAgents movement \(movementStatus).")
         case "status":
             guard let session else {
                 trace("status inactive gate=\(featureEnabled ? "enabled" : "disabled")")
@@ -127,7 +150,7 @@ final class PebbleAgentController {
             }
             let snapshot = session.snapshot()
             let positions = snapshot.agents.map { "\($0.id)=\($0.position.x),\($0.position.y),\($0.position.z)/m\($0.movementCount)/o\($0.observationCount)" }.joined(separator: " ")
-            let message = "PebbleAgents \(isPaused ? "paused" : "running") tick=\(snapshot.tick) hz=\(cognitiveHz) probes=\(probesByAgentId.count) focus=\(focusedAgentId ?? "none") \(positions)"
+            let message = "PebbleAgents \(isPaused ? "paused" : "running") tick=\(snapshot.tick) hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") probes=\(probesByAgentId.count) focus=\(focusedAgentId ?? "none") \(positions)"
             trace("status \(message)")
             return success(message)
         case "focus":
@@ -144,7 +167,7 @@ final class PebbleAgentController {
             overlayEnabledByCommand = arguments[1] == "on"
             return success("PebbleAgents overlay \(arguments[1]).")
         default:
-            return failure("Usage: /lab <start|stop|clear|pause|resume|step|speed|reset|status|focus|next|overlay>")
+            return failure("Usage: /lab <start|stop|clear|pause|resume|step|speed|reset|movement|status|focus|next|overlay>")
         }
     }
 
@@ -168,6 +191,7 @@ final class PebbleAgentController {
     }
 
     private func rebuild(world: World, anchor: AgentPosition, seed: UInt32, resetSpeed: Bool) -> PebbleAgentCommandResult {
+        let preservedMovementEnabled = movementEnabled
         _ = clearLabCoreAgentProbes(in: world)
         probesByAgentId.removeAll()
         do {
@@ -186,7 +210,14 @@ final class PebbleAgentController {
             self.anchor = anchor
             activeWorld = world
             isPaused = false
-            if resetSpeed { cognitiveHz = 4 }
+            if resetSpeed {
+                cognitiveHz = 4
+                movementEnabled = movementFeatureEnabled
+            } else {
+                movementEnabled = preservedMovementEnabled
+            }
+            movementWasEverEnabledSinceReset = movementEnabled
+            lastMovementOutcomes = []
             credit = 0
             lastWorldTick = world.time
             focusedAgentId = "agent_0"
@@ -195,7 +226,7 @@ final class PebbleAgentController {
             observedGoalKinds = [AgentGoalKind.idle.rawValue]
             try createProbes(in: world)
             let verb = resetSpeed ? "start" : "reset"
-            trace("\(verb) seed=\(seed) agents=3 tick=0 hz=\(cognitiveHz)")
+            trace("\(verb) seed=\(seed) agents=3 tick=0 hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off")")
             return success(resetSpeed ? "PebbleAgents started: 3 agents at 4 Hz." : "PebbleAgents reset to tick 0.")
         } catch {
             lastError = String(describing: error)
@@ -267,39 +298,93 @@ final class PebbleAgentController {
     private func advanceOneTick(world: World) -> Bool {
         guard activeWorld === world, var session else { return false }
         do {
-            let perceptions = try session.snapshot().agents.map { agent in
+            let preCognitive = session.snapshot()
+            let perceptions = try preCognitive.agents.map { agent in
                 AgentPerceptionInput(
                     agentId: agent.id,
                     worldObservation: try worldSensor.observe(world: world, agent: agent)
                 )
             }
             let result = try session.advanceTick(perceptions: perceptions)
+            if movementEnabled {
+                let outcomes = AgentMovementCoordinator.resolve(snapshot: session.snapshot())
+                try session.applyMovementOutcomes(outcomes)
+                try movementExecutor.apply(outcomes: outcomes, probesByAgentId: probesByAgentId)
+                lastMovementOutcomes = outcomes
+            } else {
+                lastMovementOutcomes = []
+            }
+            let finalSnapshot = session.snapshot()
+            try validatePostTick(snapshot: finalSnapshot, result: result)
             self.session = session
             lastTickResult = result
-            for agent in result.agents {
-                observedGoalKinds.insert(agent.snapshot.currentGoal.kind.rawValue)
-                guard agent.snapshot.lastWorldObservation != nil,
-                      agent.snapshot.lastWorldPerceptionEffect != nil,
-                      agent.snapshot.observationCount >= result.tick,
-                      agent.snapshot.position == agent.snapshot.homePosition,
-                      agent.snapshot.distanceFromHome == 0,
-                      agent.snapshot.movementCount == 0 else {
-                    throw ControllerError.movementBoundary(agent.agentId)
-                }
-            }
-            let focus = result.agents.first { $0.agentId == focusedAgentId } ?? result.agents.first
-            let goals = result.agents.map { "\($0.agentId):\($0.snapshot.currentGoal.kind.rawValue)" }.joined(separator: ",")
-            let perception = focus?.snapshot.lastWorldObservation
-            let safety = focus?.worldPerceptionEffect?.safetyAfter ?? 0
+            for agent in finalSnapshot.agents { observedGoalKinds.insert(agent.currentGoal.kind.rawValue) }
+            let focus = finalSnapshot.agents.first { $0.id == focusedAgentId } ?? finalSnapshot.agents.first
+            let goals = finalSnapshot.agents.map { "\($0.id):\($0.currentGoal.kind.rawValue)" }.joined(separator: ",")
+            let perception = focus?.lastWorldObservation
+            let safety = focus?.lastWorldPerceptionEffect?.safetyAfter ?? 0
             let perceptionSummary = "t\(perception?.traversableNeighborCount ?? 0)/b\(perception?.blockedNeighborCount ?? 0)/d\(perception?.dangerousDropCount ?? 0)/s\(String(format: "%.2f", safety))"
-            let observations = result.agents.map { "\($0.agentId):\($0.snapshot.observationCount)" }.joined(separator: ",")
-            trace("tick=\(result.tick) goals=\(goals) focus=\(focus?.agentId ?? "none") action=\(focus?.action.name ?? "none") memory=\(focus?.snapshot.memoryCount ?? 0) world_observed=1 perception=\(perceptionSummary) observations=\(observations)")
+            let observations = finalSnapshot.agents.map { "\($0.id):\($0.observationCount)" }.joined(separator: ",")
+            let moved = lastMovementOutcomes.filter { $0.status == .moved }.count
+            let blocked = lastMovementOutcomes.filter { $0.status == .blocked }.count
+            let outcomes = lastMovementOutcomes.map { "\($0.agentId):\($0.status.rawValue)" }.joined(separator: ",")
+            let positions = finalSnapshot.agents.map { "\($0.id):\($0.position.x),\($0.position.y),\($0.position.z)/m\($0.movementCount)" }.joined(separator: ";")
+            let focusMovement = focus?.lastMovementOutcome.map { outcome in
+                if outcome.status == .blocked { return "blocked:\(outcome.resolutionReason)" }
+                let direction = outcome.requestedDirection?.rawValue ?? "none"
+                return "\(outcome.status.rawValue):\(direction):from=\(positionText(outcome.fromPosition)):to=\(positionText(outcome.toPosition))"
+            } ?? "none"
+            trace("tick=\(result.tick) movement=\(movementEnabled ? "on" : "off") moved=\(moved) blocked=\(blocked) outcomes=\(outcomes) positions=\(positions) goals=\(goals) focus=\(focus?.id ?? "none") action=\(focus?.lastAction?.name ?? "none") focusMove=\(focusMovement) memory=\(focus?.memoryCount ?? 0) world_observed=1 perception=\(perceptionSummary) observations=\(observations)")
             return true
         } catch {
             lastError = String(describing: error)
             trace("error \(error)")
             return false
         }
+    }
+
+    private func validatePostTick(snapshot: AgentSessionSnapshot, result: AgentSessionTickResult) throws {
+        var positions = Set<String>()
+        for agent in snapshot.agents {
+            guard agent.lastWorldObservation != nil,
+                  agent.lastWorldPerceptionEffect != nil,
+                  agent.observationCount >= result.tick,
+                  positions.insert(positionText(agent.position)).inserted,
+                  let probe = probesByAgentId[agent.id],
+                  probe.labAgentId == agent.id,
+                  probe.x == Double(agent.position.x) + 0.5,
+                  probe.y == Double(agent.position.y),
+                  probe.z == Double(agent.position.z) + 0.5 else {
+                throw ControllerError.movementBoundary(agent.id)
+            }
+            if !movementWasEverEnabledSinceReset {
+                guard agent.position == agent.homePosition,
+                      agent.distanceFromHome == 0,
+                      agent.movementCount == 0 else {
+                    throw ControllerError.movementBoundary(agent.id)
+                }
+            }
+            if let outcome = agent.lastMovementOutcome,
+               outcome.tick == result.tick,
+               outcome.status == .moved {
+                guard agent.movementCount > 0,
+                      let observation = agent.lastWorldObservation,
+                      let direction = outcome.requestedDirection,
+                      let neighbor = observation.neighbors.first(where: { $0.direction == direction }),
+                      neighbor.traversable,
+                      !neighbor.dangerousDrop,
+                      neighbor.column.chunkReady else {
+                    throw ControllerError.unsafeMovement(agent.id)
+                }
+            }
+        }
+        guard probesByAgentId.count == snapshot.agentCount else {
+            throw ControllerError.invalidProbeSet(probesByAgentId.keys.sorted())
+        }
+    }
+
+    private func positionText(_ position: AgentPosition) -> String {
+        "\(position.x),\(position.y),\(position.z)"
     }
 
     private func setFocus(_ requested: String) -> PebbleAgentCommandResult {
@@ -329,6 +414,9 @@ final class PebbleAgentController {
         anchor = nil
         focusedAgentId = nil
         lastTickResult = nil
+        movementEnabled = false
+        movementWasEverEnabledSinceReset = false
+        lastMovementOutcomes = []
         observedGoalKinds.removeAll()
         overlayEnabledByCommand = false
         trace("stop probesRemoved=\(removed) reason=\(reason)")
@@ -356,5 +444,6 @@ final class PebbleAgentController {
         case persistableProbe(String)
         case invalidProbeSet([String])
         case movementBoundary(String)
+        case unsafeMovement(String)
     }
 }
