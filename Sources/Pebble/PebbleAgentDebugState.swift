@@ -13,6 +13,7 @@ struct PebbleAgentDebugState {
         movementEnabled: Bool,
         focusedAgentId: String?,
         observedGoalKinds: [String],
+        lastInfluencedDecisionTrace: AgentFeedbackDecisionTrace?,
         lastError: String?
     ) {
         let focus = snapshot.agents.first { $0.id == focusedAgentId } ?? snapshot.agents.first
@@ -53,11 +54,40 @@ struct PebbleAgentDebugState {
         } else {
             worldLines = ["world perception: none  observations: \(agent.observationCount)"]
         }
+        var feedbackLines = [
+            "feedback write/dedup/retrieved/used: \(agent.feedbackMemoryWriteCount)/\(agent.feedbackMemoryDeduplicatedCount)/\(agent.memoryRetrievalCount)/\(agent.memoryInfluencedDecisionCount)",
+        ]
+        let feedbackDecision = agent.lastFeedbackDecisionTrace.flatMap {
+            $0.memoryRecordsUsed.isEmpty ? nil : $0
+        } ?? lastInfluencedDecisionTrace
+        if let decision = feedbackDecision, let memory = decision.memoryRecordsUsed.first {
+            feedbackLines.append("memory used: \(memory.type)@\(memory.tick) age \(memory.ageTicks)")
+            feedbackLines.append("memory summary: \(Self.short(memory.summary, limit: 26))")
+            let base = decision.baseDirection?.rawValue ?? decision.baseAction.name
+            let final = decision.finalDirection?.rawValue ?? decision.finalAction.name
+            feedbackLines.append("decision: \(base) > \(final) changed")
+            feedbackLines.append("dominant: \(decision.dominantFactor.kind.rawValue)")
+            feedbackLines.append("feedback reason: \(Self.short(decision.reason, limit: 30))")
+        } else {
+            feedbackLines.append("memory used: none  dominant: basePolicy")
+            feedbackLines.append("decision: base action retained")
+        }
+
+        var movementLines: [String] = []
+        if let movement = agent.lastMovementOutcome {
+            movementLines.append("last move: \(movement.status.rawValue)  request: \(movement.requestedDirection?.rawValue ?? "none")")
+            movementLines.append("move from/to: \(Self.position(movement.fromPosition)) > \(Self.position(movement.toPosition))")
+            movementLines.append("applied: \(movement.appliedDX),\(movement.appliedDY),\(movement.appliedDZ)  \(Self.short(movement.resolutionReason, limit: 22))")
+        } else {
+            movementLines.append("last movement: none")
+        }
+        movementLines.append("move count/dist/home/reduced: \(agent.movementCount)/\(agent.totalManhattanDistanceMoved)/\(agent.returnHomeMoveCount)/\(agent.totalDistanceReducedTowardHome)")
+
         var lines = [
             "FOCUS - \(agent.id)",
             "current position: \(agent.position.x),\(agent.position.y),\(agent.position.z)  state: \(agent.state)",
             "home position: \(agent.homePosition.x),\(agent.homePosition.y),\(agent.homePosition.z)  distance: \(agent.distanceFromHome)",
-        ] + worldLines + [
+        ] + feedbackLines + movementLines + worldLines + [
             String(format: "needs h %.3f  f %.3f  c %.3f  s %.3f", agent.needs.hunger, agent.needs.fatigue, agent.needs.curiosity, agent.needs.safety),
             "dominant: \(Self.dominantNeed(agent.needs))  fear: \(agent.fear)  health: \(agent.health)",
             "goal: \(agent.currentGoal.kind.rawValue)  urgency: \(agent.currentGoal.urgency)",
@@ -66,17 +96,6 @@ struct PebbleAgentDebugState {
             "reason/effect: \(Self.short(action?.reason ?? "none", limit: 18)) / \(Self.short(agent.lastActionEffect?.effect ?? "none", limit: 18))",
             "nearby: \(nearby.isEmpty ? "none" : nearby)  memory: \(agent.memoryCount)",
         ]
-        if let movement = agent.lastMovementOutcome {
-            lines.append("last move: \(movement.status.rawValue)  request: \(movement.requestedDirection?.rawValue ?? "none")")
-            lines.append("move from/to: \(Self.position(movement.fromPosition)) > \(Self.position(movement.toPosition))")
-            lines.append("applied: \(movement.appliedDX),\(movement.appliedDY),\(movement.appliedDZ)  \(Self.short(movement.resolutionReason, limit: 22))")
-        } else {
-            lines.append("last movement: none")
-        }
-        lines.append("move count/dist/home/reduced: \(agent.movementCount)/\(agent.totalManhattanDistanceMoved)/\(agent.returnHomeMoveCount)/\(agent.totalDistanceReducedTowardHome)")
-        for memory in agent.recentMemory.suffix(2) {
-            lines.append("memory[\(memory.tick)]: \(Self.short(memory.summary, limit: 24))")
-        }
         lines.append("ticks: \(agent.ticksAlive) goals: \(agent.goalChangeCount) actions/effects: \(agent.actionCount)/\(agent.actionEffectCount)")
         focusedAgentLines = lines
     }

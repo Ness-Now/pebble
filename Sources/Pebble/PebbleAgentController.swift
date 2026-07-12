@@ -22,6 +22,7 @@ final class PebbleAgentController {
     private(set) var movementEnabled = false
     private(set) var lastMovementOutcomes: [AgentMovementOutcome] = []
     private var observedGoalKinds = Set<String>()
+    private var lastInfluencedTracesByAgentId: [String: AgentFeedbackDecisionTrace] = [:]
     private var movementWasEverEnabledSinceReset = false
     private var activeWorld: World?
     private var overlayEnabledByCommand = false
@@ -82,6 +83,9 @@ final class PebbleAgentController {
             movementEnabled: movementEnabled,
             focusedAgentId: focusedAgentId,
             observedGoalKinds: observedGoalKinds.sorted(),
+            lastInfluencedDecisionTrace: focusedAgentId.flatMap {
+                lastInfluencedTracesByAgentId[$0]
+            },
             lastError: lastError
         )
     }
@@ -218,6 +222,7 @@ final class PebbleAgentController {
             }
             movementWasEverEnabledSinceReset = movementEnabled
             lastMovementOutcomes = []
+            lastInfluencedTracesByAgentId.removeAll()
             credit = 0
             lastWorldTick = world.time
             focusedAgentId = "agent_0"
@@ -319,6 +324,13 @@ final class PebbleAgentController {
             self.session = session
             lastTickResult = result
             for agent in finalSnapshot.agents { observedGoalKinds.insert(agent.currentGoal.kind.rawValue) }
+            for agent in finalSnapshot.agents {
+                if let trace = agent.lastFeedbackDecisionTrace,
+                   trace.actionChanged,
+                   !trace.memoryRecordsUsed.isEmpty {
+                    lastInfluencedTracesByAgentId[agent.id] = trace
+                }
+            }
             let focus = finalSnapshot.agents.first { $0.id == focusedAgentId } ?? finalSnapshot.agents.first
             let goals = finalSnapshot.agents.map { "\($0.id):\($0.currentGoal.kind.rawValue)" }.joined(separator: ",")
             let perception = focus?.lastWorldObservation
@@ -334,7 +346,23 @@ final class PebbleAgentController {
                 let direction = outcome.requestedDirection?.rawValue ?? "none"
                 return "\(outcome.status.rawValue):\(direction):from=\(positionText(outcome.fromPosition)):to=\(positionText(outcome.toPosition))"
             } ?? "none"
-            trace("tick=\(result.tick) movement=\(movementEnabled ? "on" : "off") moved=\(moved) blocked=\(blocked) outcomes=\(outcomes) positions=\(positions) goals=\(goals) focus=\(focus?.id ?? "none") action=\(focus?.lastAction?.name ?? "none") focusMove=\(focusMovement) memory=\(focus?.memoryCount ?? 0) world_observed=1 perception=\(perceptionSummary) observations=\(observations)")
+            let retrieved = finalSnapshot.agents.reduce(0) { $0 + $1.memoryRetrievalCount }
+            let influenced = finalSnapshot.agents.reduce(0) { $0 + $1.memoryInfluencedDecisionCount }
+            let deduplicated = finalSnapshot.agents.reduce(0) { $0 + $1.feedbackMemoryDeduplicatedCount }
+            let currentInfluenced = finalSnapshot.agents.first {
+                $0.lastFeedbackDecisionTrace?.actionChanged == true
+                    && !($0.lastFeedbackDecisionTrace?.memoryRecordsUsed.isEmpty ?? true)
+            }
+            let decisionAgent = (
+                focus?.lastFeedbackDecisionTrace?.actionChanged == true ? focus : currentInfluenced
+            ) ?? focus
+            let decision = decisionAgent?.lastFeedbackDecisionTrace
+            let memoryUsed = decision?.memoryRecordsUsed.first.map { "\($0.type)@\($0.tick)" } ?? "none"
+            let baseMove = decision?.baseDirection?.rawValue ?? decision?.baseAction.name ?? "none"
+            let finalMove = decision?.finalDirection?.rawValue ?? decision?.finalAction.name ?? "none"
+            let dominant = decision?.dominantFactor.kind.rawValue ?? "none"
+            let decisionReason = decision?.reason.replacingOccurrences(of: " ", with: "_") ?? "none"
+            trace("tick=\(result.tick) movement=\(movementEnabled ? "on" : "off") moved=\(moved) blocked=\(blocked) outcomes=\(outcomes) positions=\(positions) goals=\(goals) focus=\(focus?.id ?? "none") action=\(focus?.lastAction?.name ?? "none") focusMove=\(focusMovement) memory=\(focus?.memoryCount ?? 0) retrieved=\(retrieved) influenced=\(influenced) dedup=\(deduplicated) decisionAgent=\(decisionAgent?.id ?? "none") memoryUsed=\(memoryUsed) decisionChanged=\(decision?.actionChanged == true ? 1 : 0) baseMove=\(baseMove) finalMove=\(finalMove) dominant=\(dominant) decisionReason=\(decisionReason) world_observed=1 perception=\(perceptionSummary) observations=\(observations)")
             return true
         } catch {
             lastError = String(describing: error)
@@ -356,6 +384,20 @@ final class PebbleAgentController {
                   probe.y == Double(agent.position.y),
                   probe.z == Double(agent.position.z) + 0.5 else {
                 throw ControllerError.movementBoundary(agent.id)
+            }
+            guard agent.memoryCount <= 128,
+                  agent.memoryRetrievalCount >= agent.memoryInfluencedDecisionCount,
+                  let decision = agent.lastFeedbackDecisionTrace else {
+                throw ControllerError.feedbackBoundary(agent.id)
+            }
+            if !decision.memoryRecordsUsed.isEmpty {
+                guard decision.actionChanged,
+                      decision.dominantFactor.kind == .movementFeedback else {
+                    throw ControllerError.feedbackBoundary(agent.id)
+                }
+            }
+            if movementEnabled, agent.distanceFromHome > 8 {
+                throw ControllerError.feedbackBoundary(agent.id)
             }
             if !movementWasEverEnabledSinceReset {
                 guard agent.position == agent.homePosition,
@@ -417,6 +459,7 @@ final class PebbleAgentController {
         movementEnabled = false
         movementWasEverEnabledSinceReset = false
         lastMovementOutcomes = []
+        lastInfluencedTracesByAgentId.removeAll()
         observedGoalKinds.removeAll()
         overlayEnabledByCommand = false
         trace("stop probesRemoved=\(removed) reason=\(reason)")
@@ -445,5 +488,6 @@ final class PebbleAgentController {
         case invalidProbeSet([String])
         case movementBoundary(String)
         case unsafeMovement(String)
+        case feedbackBoundary(String)
     }
 }

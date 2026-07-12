@@ -30,6 +30,7 @@ public struct AgentSnapshot: Encodable, Equatable {
     public let lastWorldObservation: AgentWorldObservation?
     public let lastWorldPerceptionEffect: AgentWorldPerceptionEffect?
     public let lastMovementOutcome: AgentMovementOutcome?
+    public let lastFeedbackDecisionTrace: AgentFeedbackDecisionTrace?
 
     public let ticksAlive: Int
     public let observationCount: Int
@@ -42,6 +43,10 @@ public struct AgentSnapshot: Encodable, Equatable {
     public let totalManhattanDistanceMoved: Int
     public let returnHomeMoveCount: Int
     public let totalDistanceReducedTowardHome: Int
+    public let feedbackMemoryWriteCount: Int
+    public let feedbackMemoryDeduplicatedCount: Int
+    public let memoryRetrievalCount: Int
+    public let memoryInfluencedDecisionCount: Int
 
     public let memoryCount: Int
     public let recentMemory: [AgentMemoryEntry]
@@ -65,6 +70,7 @@ public struct AgentSnapshot: Encodable, Equatable {
         lastWorldObservation = state.lastWorldObservation
         lastWorldPerceptionEffect = state.lastWorldPerceptionEffect
         lastMovementOutcome = state.lastMovementOutcome
+        lastFeedbackDecisionTrace = state.lastFeedbackDecisionTrace
         ticksAlive = state.ticksAlive
         observationCount = state.observationCount
         nearbyObservationCount = state.nearbyObservationCount
@@ -76,6 +82,10 @@ public struct AgentSnapshot: Encodable, Equatable {
         totalManhattanDistanceMoved = state.totalManhattanDistanceMoved
         returnHomeMoveCount = state.returnHomeMoveCount
         totalDistanceReducedTowardHome = state.totalDistanceReducedTowardHome
+        feedbackMemoryWriteCount = state.feedbackMemoryWriteCount
+        feedbackMemoryDeduplicatedCount = state.feedbackMemoryDeduplicatedCount
+        memoryRetrievalCount = state.memoryRetrievalCount
+        memoryInfluencedDecisionCount = state.memoryInfluencedDecisionCount
         memoryCount = state.memory.count
         recentMemory = Array(state.memory.suffix(recentMemoryLimit))
     }
@@ -97,6 +107,7 @@ public struct AgentSnapshot: Encodable, Equatable {
             && lhs.lastWorldObservation == rhs.lastWorldObservation
             && lhs.lastWorldPerceptionEffect == rhs.lastWorldPerceptionEffect
             && lhs.lastMovementOutcome == rhs.lastMovementOutcome
+            && lhs.lastFeedbackDecisionTrace == rhs.lastFeedbackDecisionTrace
             && lhs.ticksAlive == rhs.ticksAlive
             && lhs.observationCount == rhs.observationCount
             && lhs.nearbyObservationCount == rhs.nearbyObservationCount
@@ -108,6 +119,10 @@ public struct AgentSnapshot: Encodable, Equatable {
             && lhs.totalManhattanDistanceMoved == rhs.totalManhattanDistanceMoved
             && lhs.returnHomeMoveCount == rhs.returnHomeMoveCount
             && lhs.totalDistanceReducedTowardHome == rhs.totalDistanceReducedTowardHome
+            && lhs.feedbackMemoryWriteCount == rhs.feedbackMemoryWriteCount
+            && lhs.feedbackMemoryDeduplicatedCount == rhs.feedbackMemoryDeduplicatedCount
+            && lhs.memoryRetrievalCount == rhs.memoryRetrievalCount
+            && lhs.memoryInfluencedDecisionCount == rhs.memoryInfluencedDecisionCount
             && lhs.memoryCount == rhs.memoryCount
             && memoriesEqual(lhs.recentMemory, rhs.recentMemory)
     }
@@ -116,9 +131,12 @@ public struct AgentSnapshot: Encodable, Equatable {
         case id, state, position, needs, health, isAlive, fear, homePosition, distanceFromHome
         case nearbyAgents, currentGoal, lastAction, lastActionEffect
         case lastWorldObservation, lastWorldPerceptionEffect, lastMovementOutcome
+        case lastFeedbackDecisionTrace
         case ticksAlive, observationCount, nearbyObservationCount, goalSelectionCount
         case goalChangeCount, actionCount, actionEffectCount, movementCount
         case totalManhattanDistanceMoved, returnHomeMoveCount, totalDistanceReducedTowardHome
+        case feedbackMemoryWriteCount, feedbackMemoryDeduplicatedCount
+        case memoryRetrievalCount, memoryInfluencedDecisionCount
         case memoryCount, recentMemory
     }
 
@@ -140,6 +158,9 @@ public struct AgentSnapshot: Encodable, Equatable {
         try container.encodeIfPresent(lastWorldObservation, forKey: .lastWorldObservation)
         try container.encodeIfPresent(lastWorldPerceptionEffect, forKey: .lastWorldPerceptionEffect)
         try container.encodeIfPresent(lastMovementOutcome, forKey: .lastMovementOutcome)
+        if lastMovementOutcome != nil {
+            try container.encodeIfPresent(lastFeedbackDecisionTrace, forKey: .lastFeedbackDecisionTrace)
+        }
         try container.encode(ticksAlive, forKey: .ticksAlive)
         try container.encode(observationCount, forKey: .observationCount)
         try container.encode(nearbyObservationCount, forKey: .nearbyObservationCount)
@@ -151,6 +172,18 @@ public struct AgentSnapshot: Encodable, Equatable {
         try container.encode(totalManhattanDistanceMoved, forKey: .totalManhattanDistanceMoved)
         try container.encode(returnHomeMoveCount, forKey: .returnHomeMoveCount)
         try container.encode(totalDistanceReducedTowardHome, forKey: .totalDistanceReducedTowardHome)
+        if feedbackMemoryWriteCount != 0 {
+            try container.encode(feedbackMemoryWriteCount, forKey: .feedbackMemoryWriteCount)
+        }
+        if feedbackMemoryDeduplicatedCount != 0 {
+            try container.encode(feedbackMemoryDeduplicatedCount, forKey: .feedbackMemoryDeduplicatedCount)
+        }
+        if memoryRetrievalCount != 0 {
+            try container.encode(memoryRetrievalCount, forKey: .memoryRetrievalCount)
+        }
+        if memoryInfluencedDecisionCount != 0 {
+            try container.encode(memoryInfluencedDecisionCount, forKey: .memoryInfluencedDecisionCount)
+        }
         try container.encode(memoryCount, forKey: .memoryCount)
         try container.encode(recentMemory, forKey: .recentMemory)
     }

@@ -34,12 +34,14 @@ public struct AgentSessionConfiguration {
     public let nearbyRadius: Int
     public let recentMemorySnapshotLimit: Int
     public let memoryPolicy: AgentMemoryPolicy
+    public let feedbackLoopConfiguration: AgentFeedbackLoopConfiguration
 
     public init(
         seed: UInt32,
         nearbyRadius: Int = 8,
         recentMemorySnapshotLimit: Int = 10,
-        memoryPolicy: AgentMemoryPolicy
+        memoryPolicy: AgentMemoryPolicy,
+        feedbackLoopConfiguration: AgentFeedbackLoopConfiguration = .live
     ) throws {
         guard nearbyRadius >= 0 else {
             throw AgentSessionError.invalidNearbyRadius(nearbyRadius)
@@ -54,6 +56,7 @@ public struct AgentSessionConfiguration {
         self.nearbyRadius = nearbyRadius
         self.recentMemorySnapshotLimit = recentMemorySnapshotLimit
         self.memoryPolicy = memoryPolicy
+        self.feedbackLoopConfiguration = feedbackLoopConfiguration
     }
 }
 
@@ -85,6 +88,11 @@ public struct AgentSessionAgentState {
     public internal(set) var lastWorldObservation: AgentWorldObservation?
     public internal(set) var lastWorldPerceptionEffect: AgentWorldPerceptionEffect?
     public internal(set) var lastMovementOutcome: AgentMovementOutcome?
+    public internal(set) var lastFeedbackDecisionTrace: AgentFeedbackDecisionTrace?
+    public internal(set) var feedbackMemoryWriteCount: Int
+    public internal(set) var feedbackMemoryDeduplicatedCount: Int
+    public internal(set) var memoryRetrievalCount: Int
+    public internal(set) var memoryInfluencedDecisionCount: Int
 
     public init(
         id: String,
@@ -113,7 +121,12 @@ public struct AgentSessionAgentState {
         totalDistanceReducedTowardHome: Int,
         lastWorldObservation: AgentWorldObservation? = nil,
         lastWorldPerceptionEffect: AgentWorldPerceptionEffect? = nil,
-        lastMovementOutcome: AgentMovementOutcome? = nil
+        lastMovementOutcome: AgentMovementOutcome? = nil,
+        lastFeedbackDecisionTrace: AgentFeedbackDecisionTrace? = nil,
+        feedbackMemoryWriteCount: Int = 0,
+        feedbackMemoryDeduplicatedCount: Int = 0,
+        memoryRetrievalCount: Int = 0,
+        memoryInfluencedDecisionCount: Int = 0
     ) {
         self.id = id
         self.state = state
@@ -142,6 +155,11 @@ public struct AgentSessionAgentState {
         self.lastWorldObservation = lastWorldObservation
         self.lastWorldPerceptionEffect = lastWorldPerceptionEffect
         self.lastMovementOutcome = lastMovementOutcome
+        self.lastFeedbackDecisionTrace = lastFeedbackDecisionTrace
+        self.feedbackMemoryWriteCount = feedbackMemoryWriteCount
+        self.feedbackMemoryDeduplicatedCount = feedbackMemoryDeduplicatedCount
+        self.memoryRetrievalCount = memoryRetrievalCount
+        self.memoryInfluencedDecisionCount = memoryInfluencedDecisionCount
     }
 }
 
@@ -360,13 +378,40 @@ public struct AgentSimulationSession {
                 state.goalChangeCount += 1
             }
 
-            let action = AgentActionDecider.decide(AgentActionDecisionInput(
+            let baseAction = AgentActionDecider.decide(AgentActionDecisionInput(
                 agentId: id,
                 tick: nextTick,
                 goalKind: state.currentGoal.kind,
                 position: state.position,
                 homePosition: state.homePosition
             ))
+            let retrievedMemories = AgentFeedbackLoop.retrieveMovementMemories(
+                memory: state.memory,
+                currentTick: nextTick,
+                lastMovementOutcome: state.lastMovementOutcome,
+                configuration: configuration.feedbackLoopConfiguration
+            )
+            if !retrievedMemories.isEmpty {
+                state.memoryRetrievalCount += 1
+            }
+            let decisionTrace = AgentFeedbackLoop.adjustAction(
+                agentId: id,
+                tick: nextTick,
+                position: state.position,
+                homePosition: state.homePosition,
+                goal: state.currentGoal,
+                baseAction: baseAction,
+                worldObservation: state.lastWorldObservation,
+                occupiedPositions: peers.map(\.position),
+                lastMovementOutcome: state.lastMovementOutcome,
+                retrievedMemories: retrievedMemories,
+                configuration: configuration.feedbackLoopConfiguration
+            )
+            let action = decisionTrace.finalAction
+            state.lastFeedbackDecisionTrace = decisionTrace
+            if decisionTrace.actionChanged && !decisionTrace.memoryRecordsUsed.isEmpty {
+                state.memoryInfluencedDecisionCount += 1
+            }
             state.lastAction = action
             state.actionCount += 1
             let actionMemory = AgentMemoryEntry(
@@ -541,19 +586,24 @@ public struct AgentSimulationSession {
                     state.returnHomeMoveCount += 1
                     state.totalDistanceReducedTowardHome += outcome.distanceReducedTowardHome
                 }
-                appendMemory(AgentMemoryEntry(
-                    tick: tick,
-                    type: "moved_live",
-                    summary: "\(id) moved live from \(positionText(outcome.fromPosition)) to \(positionText(outcome.toPosition)) because \(outcome.actionReason)",
-                    importance: 0.20
-                ), to: &state.memory)
+                if let entry = AgentFeedbackLoop.movementMemoryEntry(outcome: outcome) {
+                    appendMemory(entry, to: &state.memory)
+                    state.feedbackMemoryWriteCount += 1
+                }
             case .blocked:
-                appendMemory(AgentMemoryEntry(
-                    tick: tick,
-                    type: "movement_blocked",
-                    summary: "\(id) movement blocked: \(outcome.resolutionReason)",
-                    importance: 0.25
-                ), to: &state.memory)
+                if let entry = AgentFeedbackLoop.movementMemoryEntry(outcome: outcome) {
+                    if AgentFeedbackLoop.isDuplicateBlockedMemory(
+                        candidate: entry,
+                        memory: state.memory,
+                        currentTick: tick,
+                        configuration: configuration.feedbackLoopConfiguration
+                    ) {
+                        state.feedbackMemoryDeduplicatedCount += 1
+                    } else {
+                        appendMemory(entry, to: &state.memory)
+                        state.feedbackMemoryWriteCount += 1
+                    }
+                }
             case .notRequested:
                 break
             }

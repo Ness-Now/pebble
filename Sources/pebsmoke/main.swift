@@ -3509,5 +3509,702 @@ do {
     check("movement old snapshot omits outcome JSON", !legacyJSON.contains("lastMovementOutcome"))
 }
 
+// ---------------------------------------------------------------------------
+section("PebbleAgents closed feedback-memory-decision loop")
+do {
+    let feedbackConfig = AgentFeedbackLoopConfiguration.live
+    let feedbackOrigin = AgentPosition(x: 0, y: 64, z: 0)
+
+    func feedbackColumn(
+        _ position: AgentPosition,
+        ready: Bool = true,
+        ground: Bool = true,
+        feet: Bool = true,
+        head: Bool = true
+    ) -> AgentWorldColumnObservation {
+        AgentWorldColumnObservation(
+            position: position,
+            chunkReady: ready,
+            surfaceY: ready ? position.y : nil,
+            height: ready ? position.y : nil,
+            blockBelow: ready ? (ground ? 1 : 0) : nil,
+            blockAtFeet: ready ? (feet ? 0 : 1) : nil,
+            blockAtHead: ready ? (head ? 0 : 1) : nil,
+            groundPresent: ready && ground,
+            feetClear: ready && feet,
+            headClear: ready && head
+        )
+    }
+
+    struct FeedbackNeighborRule {
+        let ready: Bool
+        let ground: Bool
+        let feet: Bool
+        let head: Bool
+        let step: Int?
+        let traversable: Bool
+        let drop: Bool
+
+        static let safe = FeedbackNeighborRule(
+            ready: true, ground: true, feet: true, head: true,
+            step: 0, traversable: true, drop: false
+        )
+    }
+
+    func feedbackObservation(
+        position: AgentPosition = feedbackOrigin,
+        rules: [AgentCardinalDirection: FeedbackNeighborRule] = [:],
+        tick: Int = 1
+    ) -> AgentWorldObservation {
+        let neighbors = AgentCardinalDirection.allCases.map { direction in
+            let rule = rules[direction] ?? .safe
+            let neighborPosition = AgentPosition(
+                x: position.x + direction.dx,
+                y: position.y,
+                z: position.z + direction.dz
+            )
+            return AgentWorldNeighborObservation(
+                direction: direction,
+                column: feedbackColumn(
+                    neighborPosition,
+                    ready: rule.ready,
+                    ground: rule.ground,
+                    feet: rule.feet,
+                    head: rule.head
+                ),
+                stepDelta: rule.step,
+                traversable: rule.traversable,
+                dangerousDrop: rule.drop
+            )
+        }
+        return try! AgentWorldObservation(
+            worldTick: tick,
+            position: position,
+            center: feedbackColumn(position),
+            neighbors: neighbors,
+            biomeId: 1,
+            biomeName: "plains",
+            combinedLight: 15,
+            skyLight: 15,
+            blockLight: 0,
+            dayTime: tick,
+            raining: false,
+            thundering: false
+        )
+    }
+
+    func feedbackOutcome(
+        id: String = "agent_0",
+        tick: Int = 4,
+        status: AgentMovementStatus,
+        from: AgentPosition = feedbackOrigin,
+        to: AgentPosition? = nil,
+        direction: AgentCardinalDirection? = .east,
+        reason: String = "target body space blocked",
+        goal: AgentGoalKind = .explore
+    ) -> AgentMovementOutcome {
+        let destination: AgentPosition
+        if let to {
+            destination = to
+        } else if status == .moved, let direction {
+            destination = AgentPosition(
+                x: from.x + direction.dx,
+                y: from.y,
+                z: from.z + direction.dz
+            )
+        } else {
+            destination = from
+        }
+        let before = abs(from.x) + abs(from.y - 64) + abs(from.z)
+        let after = abs(destination.x) + abs(destination.y - 64) + abs(destination.z)
+        return AgentMovementOutcome(
+            agentId: id,
+            tick: tick,
+            status: status,
+            fromPosition: from,
+            toPosition: destination,
+            requestedDirection: direction,
+            requestedDX: direction?.dx ?? 0,
+            requestedDY: 0,
+            requestedDZ: direction?.dz ?? 0,
+            appliedDX: status == .moved ? (direction?.dx ?? 0) : 0,
+            appliedDY: 0,
+            appliedDZ: status == .moved ? (direction?.dz ?? 0) : 0,
+            goalKind: goal,
+            actionReason: goal == .explore ? "goal explore" : "goal seekSafety",
+            resolutionReason: reason,
+            worldTickObserved: tick,
+            distanceFromHomeBefore: before,
+            distanceFromHomeAfter: after,
+            distanceReducedTowardHome: max(0, before - after)
+        )
+    }
+
+    let notRequestedFeedback = feedbackOutcome(status: .notRequested, direction: nil)
+    let movedFeedback = feedbackOutcome(status: .moved)
+    let blockedFeedback = feedbackOutcome(status: .blocked)
+    let movedMemory = AgentFeedbackLoop.movementMemoryEntry(outcome: movedFeedback)
+    let blockedMemory = AgentFeedbackLoop.movementMemoryEntry(outcome: blockedFeedback)
+    check("feedback writer not requested nil",
+          AgentFeedbackLoop.movementMemoryEntry(outcome: notRequestedFeedback) == nil)
+    check("feedback writer moved type", movedMemory?.type == "moved_live")
+    check("feedback writer blocked type", blockedMemory?.type == "movement_blocked")
+    check("feedback writer moved summary",
+          movedMemory?.summary == "agent_0 moved live from (0,64,0) to (1,64,0) toward east")
+    check("feedback writer blocked summary",
+          blockedMemory?.summary == "agent_0 movement blocked at (0,64,0) toward east: target body space blocked")
+    check("feedback writer moved importance", movedMemory?.importance == 0.20)
+    check("feedback writer blocked importance", blockedMemory?.importance == 0.25)
+    let unknownDirection = AgentFeedbackLoop.movementMemoryEntry(
+        outcome: feedbackOutcome(status: .blocked, direction: nil)
+    )
+    check("feedback writer unknown direction", unknownDirection?.summary.contains("toward unknown") == true)
+
+    let priorBlocked = AgentMemoryEntry(
+        tick: 2,
+        type: blockedMemory!.type,
+        summary: blockedMemory!.summary,
+        importance: blockedMemory!.importance
+    )
+    check("feedback dedup exact blocked",
+          AgentFeedbackLoop.isDuplicateBlockedMemory(
+            candidate: blockedMemory!, memory: [priorBlocked], currentTick: 4,
+            configuration: feedbackConfig
+          ))
+    let otherPositionMemory = AgentFeedbackLoop.movementMemoryEntry(
+        outcome: feedbackOutcome(status: .blocked, from: AgentPosition(x: 1, y: 64, z: 0))
+    )!
+    check("feedback dedup position discriminates",
+          !AgentFeedbackLoop.isDuplicateBlockedMemory(
+            candidate: otherPositionMemory, memory: [priorBlocked], currentTick: 4,
+            configuration: feedbackConfig
+          ))
+    let otherDirectionMemory = AgentFeedbackLoop.movementMemoryEntry(
+        outcome: feedbackOutcome(status: .blocked, direction: .south)
+    )!
+    check("feedback dedup direction discriminates",
+          !AgentFeedbackLoop.isDuplicateBlockedMemory(
+            candidate: otherDirectionMemory, memory: [priorBlocked], currentTick: 4,
+            configuration: feedbackConfig
+          ))
+    let otherReasonMemory = AgentFeedbackLoop.movementMemoryEntry(
+        outcome: feedbackOutcome(status: .blocked, reason: "dangerous drop")
+    )!
+    check("feedback dedup reason discriminates",
+          !AgentFeedbackLoop.isDuplicateBlockedMemory(
+            candidate: otherReasonMemory, memory: [priorBlocked], currentTick: 4,
+            configuration: feedbackConfig
+          ))
+    check("feedback dedup outside window accepted",
+          !AgentFeedbackLoop.isDuplicateBlockedMemory(
+            candidate: blockedMemory!,
+            memory: [AgentMemoryEntry(tick: -5, type: priorBlocked.type, summary: priorBlocked.summary, importance: 0.25)],
+            currentTick: 4,
+            configuration: feedbackConfig
+          ))
+    check("feedback moved never deduplicated",
+          !AgentFeedbackLoop.isDuplicateBlockedMemory(
+            candidate: movedMemory!, memory: [movedMemory!], currentTick: 5,
+            configuration: feedbackConfig
+          ))
+
+    do {
+        _ = try AgentFeedbackLoopConfiguration(maxRetrievedRecords: 0)
+        check("feedback invalid retrieval max refused", false)
+    } catch AgentFeedbackLoopConfigurationError.invalidMaxRetrievedRecords(0) {
+        check("feedback invalid retrieval max refused", true)
+    } catch {
+        check("feedback invalid retrieval max refused", false)
+    }
+    do {
+        _ = try AgentFeedbackLoopConfiguration(maxMemoryAgeTicks: 0)
+        check("feedback invalid age refused", false)
+    } catch AgentFeedbackLoopConfigurationError.invalidMaxMemoryAgeTicks(0) {
+        check("feedback invalid age refused", true)
+    } catch {
+        check("feedback invalid age refused", false)
+    }
+    do {
+        _ = try AgentFeedbackLoopConfiguration(duplicateWindowTicks: -1)
+        check("feedback invalid dedup window refused", false)
+    } catch AgentFeedbackLoopConfigurationError.invalidDuplicateWindowTicks(-1) {
+        check("feedback invalid dedup window refused", true)
+    } catch {
+        check("feedback invalid dedup window refused", false)
+    }
+    do {
+        _ = try AgentFeedbackLoopConfiguration(maxExploreDistanceFromHome: 0)
+        check("feedback invalid explore bound refused", false)
+    } catch AgentFeedbackLoopConfigurationError.invalidMaxExploreDistanceFromHome(0) {
+        check("feedback invalid explore bound refused", true)
+    } catch {
+        check("feedback invalid explore bound refused", false)
+    }
+    check("feedback live defaults exact",
+          feedbackConfig.maxRetrievedRecords == 3
+              && feedbackConfig.maxMemoryAgeTicks == 16
+              && feedbackConfig.duplicateWindowTicks == 8
+              && feedbackConfig.maxExploreDistanceFromHome == 8)
+
+    let retrievalSource = [
+        AgentMemoryEntry(tick: 9, type: "other", summary: "excluded", importance: 1),
+        AgentMemoryEntry(tick: 4, type: "movement_blocked", summary: "exact", importance: 0.25),
+        AgentMemoryEntry(tick: 8, type: "moved_live", summary: "recent", importance: 0.20),
+        AgentMemoryEntry(tick: 7, type: "movement_blocked", summary: "important", importance: 0.90),
+        AgentMemoryEntry(tick: -20, type: "moved_live", summary: "old", importance: 1),
+        AgentMemoryEntry(tick: 11, type: "moved_live", summary: "future", importance: 1),
+    ]
+    let retrievalBefore = retrievalSource.map(\.summary)
+    let retrieved = AgentFeedbackLoop.retrieveMovementMemories(
+        memory: retrievalSource,
+        currentTick: 10,
+        lastMovementOutcome: blockedFeedback,
+        configuration: feedbackConfig
+    )
+    check("feedback retrieval excludes unrelated", !retrieved.contains { $0.type == "other" })
+    check("feedback retrieval excludes old", !retrieved.contains { $0.summary == "old" })
+    check("feedback retrieval excludes future", !retrieved.contains { $0.summary == "future" })
+    check("feedback retrieval exact first", retrieved.first?.summary == "exact")
+    check("feedback retrieval exact matched", retrieved.first?.matchedCurrentFeedback == true)
+    check("feedback retrieval exact age", retrieved.first?.ageTicks == 6)
+    check("feedback retrieval limit", retrieved.count == 3)
+    check("feedback retrieval source immutable", retrievalSource.map(\.summary) == retrievalBefore)
+    check("feedback retrieval deterministic",
+          retrieved == AgentFeedbackLoop.retrieveMovementMemories(
+            memory: retrievalSource, currentTick: 10,
+            lastMovementOutcome: blockedFeedback, configuration: feedbackConfig
+          ))
+    check("feedback retrieval importance after exact", retrieved.dropFirst().first?.summary == "important")
+
+    let tieMemories = [
+        AgentMemoryEntry(tick: 5, type: "moved_live", summary: "z", importance: 0.5),
+        AgentMemoryEntry(tick: 5, type: "movement_blocked", summary: "z", importance: 0.5),
+        AgentMemoryEntry(tick: 5, type: "movement_blocked", summary: "a", importance: 0.5),
+        AgentMemoryEntry(tick: 6, type: "moved_live", summary: "newer", importance: 0.5),
+    ]
+    let tied = AgentFeedbackLoop.retrieveMovementMemories(
+        memory: tieMemories,
+        currentTick: 8,
+        lastMovementOutcome: nil,
+        configuration: feedbackConfig
+    )
+    check("feedback retrieval tick descending", tied[0].summary == "newer")
+    check("feedback retrieval type tie break", tied[1].type == "moved_live")
+    let tieConfig = try! AgentFeedbackLoopConfiguration(maxRetrievedRecords: 4)
+    let allTied = AgentFeedbackLoop.retrieveMovementMemories(
+        memory: tieMemories,
+        currentTick: 8,
+        lastMovementOutcome: nil,
+        configuration: tieConfig
+    )
+    check("feedback retrieval summary tie break",
+          allTied[2].summary == "a" && allTied[3].summary == "z")
+    check("feedback retrieval unmatched exact false", tied.allSatisfy { !$0.matchedCurrentFeedback })
+
+    func feedbackTrace(
+        position: AgentPosition = feedbackOrigin,
+        home: AgentPosition = feedbackOrigin,
+        goal: AgentGoalKind = .explore,
+        baseDirection: AgentCardinalDirection = .east,
+        observation: AgentWorldObservation? = feedbackObservation(),
+        occupied: [AgentPosition] = [],
+        outcome: AgentMovementOutcome? = nil,
+        memories: [AgentRetrievedMemory] = []
+    ) -> AgentFeedbackDecisionTrace {
+        AgentFeedbackLoop.adjustAction(
+            agentId: "agent_0",
+            tick: 5,
+            position: position,
+            homePosition: home,
+            goal: AgentGoal(kind: goal, reason: "test", startedAtTick: 1, urgency: 1),
+            baseAction: AgentAction(
+                name: "move_abstract", reason: "goal \(goal.rawValue)", tick: 5,
+                dx: baseDirection.dx, dy: 0, dz: baseDirection.dz
+            ),
+            worldObservation: observation,
+            occupiedPositions: occupied,
+            lastMovementOutcome: outcome,
+            retrievedMemories: memories,
+            configuration: feedbackConfig
+        )
+    }
+
+    let baseTrace = feedbackTrace()
+    check("feedback adjust no memory base retained", !baseTrace.actionChanged)
+    check("feedback adjust no memory reason", baseTrace.reason == "base policy retained")
+    check("feedback adjust base factor", baseTrace.decisionFactors == [
+        AgentDecisionFactor(kind: .basePolicy, weight: 10, summary: "base policy action")
+    ])
+    check("feedback adjust base dominant", baseTrace.dominantFactor.kind == .basePolicy)
+    let outcomeOnlyTrace = feedbackTrace(outcome: blockedFeedback)
+    check("feedback adjust outcome without memory retained", !outcomeOnlyTrace.actionChanged)
+
+    let exactBlockedRecord = AgentRetrievedMemory(
+        tick: 4, type: "movement_blocked", summary: blockedMemory!.summary,
+        importance: 0.25, ageTicks: 1, matchedCurrentFeedback: true
+    )
+    let blockedTrace = feedbackTrace(outcome: blockedFeedback, memories: [exactBlockedRecord])
+    check("feedback blocked explore alternate south", blockedTrace.finalDirection == .south)
+    check("feedback blocked excludes east", blockedTrace.finalDirection != .east)
+    check("feedback blocked reason exact",
+          blockedTrace.reason == "feedback memory avoided east; alternate south")
+    check("feedback blocked action changed", blockedTrace.actionChanged)
+    check("feedback blocked record used", blockedTrace.memoryRecordsUsed == [exactBlockedRecord])
+    check("feedback blocked movement factor",
+          blockedTrace.decisionFactors.contains { $0.kind == .movementFeedback && $0.weight == 100 })
+    check("feedback blocked dominant", blockedTrace.dominantFactor.kind == .movementFeedback)
+
+    let southOccupied = AgentPosition(x: 0, y: 64, z: 1)
+    let occupiedTrace = feedbackTrace(
+        occupied: [southOccupied],
+        outcome: blockedFeedback,
+        memories: [exactBlockedRecord]
+    )
+    check("feedback alternate occupied excluded", occupiedTrace.finalDirection == .west)
+    let dropRule = FeedbackNeighborRule(
+        ready: true, ground: false, feet: true, head: true,
+        step: -2, traversable: false, drop: true
+    )
+    let dropTrace = feedbackTrace(
+        observation: feedbackObservation(rules: [.south: dropRule]),
+        outcome: blockedFeedback,
+        memories: [exactBlockedRecord]
+    )
+    check("feedback alternate drop excluded", dropTrace.finalDirection == .west)
+    let unavailableRule = FeedbackNeighborRule(
+        ready: false, ground: false, feet: false, head: false,
+        step: nil, traversable: false, drop: false
+    )
+    let unavailableTrace = feedbackTrace(
+        observation: feedbackObservation(rules: [.south: unavailableRule]),
+        outcome: blockedFeedback,
+        memories: [exactBlockedRecord]
+    )
+    check("feedback alternate chunk excluded", unavailableTrace.finalDirection == .west)
+    let invalidStepRule = FeedbackNeighborRule(
+        ready: true, ground: true, feet: true, head: true,
+        step: 2, traversable: true, drop: false
+    )
+    let invalidStepTrace = feedbackTrace(
+        observation: feedbackObservation(rules: [.south: invalidStepRule]),
+        outcome: blockedFeedback,
+        memories: [exactBlockedRecord]
+    )
+    check("feedback alternate invalid step excluded", invalidStepTrace.finalDirection == .west)
+    let noSafeRules = Dictionary(
+        uniqueKeysWithValues: AgentCardinalDirection.allCases.map { ($0, unavailableRule) }
+    )
+    let noAlternateTrace = feedbackTrace(
+        observation: feedbackObservation(rules: noSafeRules),
+        outcome: blockedFeedback,
+        memories: [exactBlockedRecord]
+    )
+    check("feedback blocked no alternate waits", noAlternateTrace.finalAction.name == "wait")
+    check("feedback blocked no alternate reason",
+          noAlternateTrace.reason == "feedback memory blocked east; no safe alternate")
+
+    let safetyPosition = AgentPosition(x: 2, y: 64, z: 2)
+    let safetyOutcome = feedbackOutcome(
+        tick: 4, status: .blocked, from: safetyPosition, direction: .east,
+        goal: .seekSafety
+    )
+    let safetyRecord = AgentRetrievedMemory(
+        tick: 4, type: "movement_blocked", summary: "safety",
+        importance: 0.25, ageTicks: 1, matchedCurrentFeedback: true
+    )
+    let safetyTrace = feedbackTrace(
+        position: safetyPosition,
+        home: feedbackOrigin,
+        goal: .seekSafety,
+        observation: feedbackObservation(position: safetyPosition),
+        outcome: safetyOutcome,
+        memories: [safetyRecord]
+    )
+    check("feedback safety reduces home", safetyTrace.finalDirection == .north)
+    check("feedback safety tie canonical", safetyTrace.finalDirection == .north)
+    let noReductionTrace = feedbackTrace(
+        position: safetyPosition,
+        home: feedbackOrigin,
+        goal: .seekSafety,
+        observation: feedbackObservation(position: safetyPosition, rules: [
+            .north: unavailableRule, .west: unavailableRule,
+        ]),
+        outcome: safetyOutcome,
+        memories: [safetyRecord]
+    )
+    check("feedback safety no reduction waits", noReductionTrace.finalAction.name == "wait")
+    check("feedback safety no reduction reason",
+          noReductionTrace.reason == "feedback memory found no safer home step")
+
+    let movedRecord = AgentRetrievedMemory(
+        tick: 4, type: "moved_live", summary: movedMemory!.summary,
+        importance: 0.20, ageTicks: 1, matchedCurrentFeedback: true
+    )
+    let movedCurrent = movedFeedback.toPosition
+    let continued = feedbackTrace(
+        position: movedCurrent,
+        home: feedbackOrigin,
+        baseDirection: .south,
+        observation: feedbackObservation(position: movedCurrent),
+        outcome: movedFeedback,
+        memories: [movedRecord]
+    )
+    check("feedback moved success continues", continued.finalDirection == .east)
+    check("feedback moved success modifies base", continued.actionChanged)
+    check("feedback moved success reason",
+          continued.reason == "movement success memory continued east")
+    let continuationOccupied = feedbackTrace(
+        position: movedCurrent,
+        home: feedbackOrigin,
+        baseDirection: .south,
+        observation: feedbackObservation(position: movedCurrent),
+        occupied: [AgentPosition(x: 2, y: 64, z: 0)],
+        outcome: movedFeedback,
+        memories: [movedRecord]
+    )
+    check("feedback continuation occupied refused", continuationOccupied.finalDirection == .south)
+    let continuationDrop = feedbackTrace(
+        position: movedCurrent,
+        home: feedbackOrigin,
+        baseDirection: .south,
+        observation: feedbackObservation(position: movedCurrent, rules: [.east: dropRule]),
+        outcome: movedFeedback,
+        memories: [movedRecord]
+    )
+    check("feedback continuation dangerous refused", continuationDrop.finalDirection == .south)
+
+    let boundaryPosition = AgentPosition(x: 8, y: 64, z: 0)
+    let boundaryTrace = feedbackTrace(
+        position: boundaryPosition,
+        home: feedbackOrigin,
+        baseDirection: .east,
+        observation: feedbackObservation(position: boundaryPosition),
+        outcome: movedFeedback
+    )
+    check("feedback boundary redirects home", boundaryTrace.finalDirection == .west)
+    check("feedback boundary factor", boundaryTrace.dominantFactor.kind == .explorationBoundary)
+    check("feedback boundary reason",
+          boundaryTrace.reason == "exploration boundary redirected toward home")
+    check("feedback boundary not memory influenced", boundaryTrace.memoryRecordsUsed.isEmpty)
+    let boundaryWait = feedbackTrace(
+        position: boundaryPosition,
+        home: feedbackOrigin,
+        observation: feedbackObservation(position: boundaryPosition, rules: [.west: unavailableRule]),
+        outcome: movedFeedback
+    )
+    check("feedback boundary no return waits", boundaryWait.finalAction.name == "wait")
+
+    func feedbackState(
+        id: String = "agent_0",
+        position: AgentPosition = feedbackOrigin,
+        home: AgentPosition = feedbackOrigin,
+        observation: AgentWorldObservation? = nil
+    ) -> AgentSessionAgentState {
+        AgentSessionAgentState(
+            id: id,
+            state: "idle",
+            position: position,
+            needs: AgentNeeds(hunger: 0, fatigue: 0, curiosity: 0.9, safety: 1),
+            health: 100,
+            fear: 0,
+            homePosition: home,
+            nearbyAgents: [],
+            currentGoal: AgentGoal(kind: .explore, reason: "initial", startedAtTick: 0, urgency: 60),
+            lastAction: nil,
+            lastActionEffect: nil,
+            memory: [],
+            tickCreated: 0,
+            ticksAlive: 0,
+            observationCount: 0,
+            nearbyObservationCount: 0,
+            goalSelectionCount: 0,
+            goalChangeCount: 0,
+            actionCount: 0,
+            actionEffectCount: 0,
+            movementCount: 0,
+            totalManhattanDistanceMoved: 0,
+            returnHomeMoveCount: 0,
+            totalDistanceReducedTowardHome: 0,
+            lastWorldObservation: observation
+        )
+    }
+
+    func feedbackSession(
+        states: [AgentSessionAgentState],
+        memoryLimit: Int = 64
+    ) -> AgentSimulationSession {
+        try! AgentSimulationSession(
+            configuration: try! AgentSessionConfiguration(
+                seed: 42,
+                recentMemorySnapshotLimit: 16,
+                memoryPolicy: .bounded(maxEntries: memoryLimit)
+            ),
+            agents: states
+        )
+    }
+
+    let southBlockedObservation = feedbackObservation(rules: [
+        .south: unavailableRule,
+        .west: unavailableRule,
+    ])
+    var closedSession = feedbackSession(states: [feedbackState()])
+    let firstTick = try! closedSession.advanceTick(perceptions: [
+        AgentPerceptionInput(agentId: "agent_0", worldObservation: southBlockedObservation),
+    ])
+    let firstOutcomes = AgentMovementCoordinator.resolve(snapshot: closedSession.snapshot())
+    check("feedback session first action south", firstTick.agents[0].action.dz == 1)
+    check("feedback session first outcome blocked", firstOutcomes[0].status == .blocked)
+    try! closedSession.applyMovementOutcomes(firstOutcomes)
+    let afterBlocked = closedSession.snapshot().agents[0]
+    check("feedback session writes real blocked memory",
+          afterBlocked.recentMemory.contains { $0.type == "movement_blocked" })
+    check("feedback session write counter", afterBlocked.feedbackMemoryWriteCount == 1)
+    let oldFeedbackSnapshot = closedSession.snapshot()
+    let secondTick = try! closedSession.advanceTick(perceptions: [
+        AgentPerceptionInput(agentId: "agent_0", worldObservation: southBlockedObservation),
+    ])
+    let afterInfluence = closedSession.snapshot().agents[0]
+    check("feedback session retrieves next tick", afterInfluence.memoryRetrievalCount == 1)
+    check("feedback session influences next tick", afterInfluence.memoryInfluencedDecisionCount == 1)
+    check("feedback session final action modified", secondTick.agents[0].action.dz == -1)
+    check("feedback session last action final", afterInfluence.lastAction?.dz == -1)
+    check("feedback session action chosen final",
+          afterInfluence.recentMemory.contains {
+              $0.type == "action_chosen" && $0.summary.contains("feedback memory avoided south; alternate north")
+          })
+    check("feedback session effect final",
+          secondTick.agents[0].actionEffect.action == "move_abstract")
+    check("feedback session action count once", afterInfluence.actionCount == 2)
+    check("feedback session trace exposed", afterInfluence.lastFeedbackDecisionTrace?.actionChanged == true)
+    check("feedback session old snapshot immutable",
+          oldFeedbackSnapshot.agents[0].memoryRetrievalCount == 0
+              && oldFeedbackSnapshot.agents[0].lastFeedbackDecisionTrace?.tick == 1)
+    let secondOutcomes = AgentMovementCoordinator.resolve(snapshot: closedSession.snapshot())
+    check("feedback session alternate movement succeeds", secondOutcomes[0].status == .moved)
+    try! closedSession.applyMovementOutcomes(secondOutcomes)
+    check("feedback session bounded memory", closedSession.snapshot().agents[0].memoryCount <= 64)
+
+    var legacyFeedbackSession = feedbackSession(states: [feedbackState()])
+    _ = try! legacyFeedbackSession.advanceTick()
+    let legacyFeedbackSnapshot = legacyFeedbackSession.snapshot().agents[0]
+    check("feedback session no outcome retrieval zero", legacyFeedbackSnapshot.memoryRetrievalCount == 0)
+    check("feedback session no outcome influence zero", legacyFeedbackSnapshot.memoryInfluencedDecisionCount == 0)
+    check("feedback session no outcome base trace",
+          legacyFeedbackSnapshot.lastFeedbackDecisionTrace?.reason == "base policy retained")
+    let feedbackEncoder = JSONEncoder()
+    feedbackEncoder.outputFormatting = [.sortedKeys]
+    let legacyFeedbackJSON = String(
+        data: try! feedbackEncoder.encode(legacyFeedbackSession.snapshot()),
+        encoding: .utf8
+    )!
+    check("feedback session historical JSON omits trace",
+          !legacyFeedbackJSON.contains("lastFeedbackDecisionTrace")
+              && !legacyFeedbackJSON.contains("memoryRetrievalCount"))
+
+    struct SyntheticFeedbackRun {
+        let snapshot: AgentSessionSnapshot
+        let influenced: [String]
+        let positions: [String]
+        let blockedOutcomes: Int
+        let alternateMoves: Int
+        let dangerousMoves: Int
+        let movedAgents: Int
+        let maximumDistance: Int
+        let maximumMemory: Int
+        let deduplicated: Int
+    }
+
+    func syntheticObservation(position: AgentPosition, tick: Int) -> AgentWorldObservation {
+        var rules: [AgentCardinalDirection: FeedbackNeighborRule] = [
+            .north: unavailableRule,
+            .south: dropRule,
+        ]
+        if position.x >= 1 { rules[.east] = unavailableRule }
+        if position.x <= -1 { rules[.west] = unavailableRule }
+        return feedbackObservation(position: position, rules: rules, tick: tick)
+    }
+
+    func runSyntheticFeedback() -> SyntheticFeedbackRun {
+        var session = feedbackSession(states: [
+            feedbackState(id: "agent_0", position: AgentPosition(x: -1, y: 64, z: 0), home: AgentPosition(x: -1, y: 64, z: 0)),
+            feedbackState(id: "agent_1", position: AgentPosition(x: 0, y: 64, z: -1), home: AgentPosition(x: 0, y: 64, z: -1)),
+            feedbackState(id: "agent_2", position: AgentPosition(x: 1, y: 64, z: 0), home: AgentPosition(x: 1, y: 64, z: 0)),
+        ])
+        var influenced: [String] = []
+        var positions: [String] = []
+        var maximumDistance = 0
+        var maximumMemory = 0
+        var blockedOutcomes = 0
+        var alternateMoves = 0
+        var dangerousMoves = 0
+        for tick in 1...240 {
+            let before = session.snapshot()
+            let perceptions = before.agents.map {
+                AgentPerceptionInput(
+                    agentId: $0.id,
+                    worldObservation: syntheticObservation(position: $0.position, tick: tick)
+                )
+            }
+            _ = try! session.advanceTick(perceptions: perceptions)
+            let cognitive = session.snapshot()
+            for agent in cognitive.agents where agent.lastFeedbackDecisionTrace?.actionChanged == true {
+                influenced.append("\(tick):\(agent.id):\(agent.lastFeedbackDecisionTrace?.reason ?? "")")
+            }
+            let outcomes = AgentMovementCoordinator.resolve(snapshot: cognitive)
+            blockedOutcomes += outcomes.filter { $0.status == .blocked }.count
+            dangerousMoves += outcomes.filter {
+                $0.status == .moved && $0.requestedDirection == .south
+            }.count
+            alternateMoves += outcomes.filter { outcome in
+                guard outcome.status == .moved,
+                      let agent = cognitive.agents.first(where: { $0.id == outcome.agentId }),
+                      let trace = agent.lastFeedbackDecisionTrace else { return false }
+                return trace.actionChanged && !trace.memoryRecordsUsed.isEmpty
+            }.count
+            try! session.applyMovementOutcomes(outcomes)
+            let final = session.snapshot()
+            positions.append(final.agents.map {
+                "\($0.id)=\($0.position.x),\($0.position.y),\($0.position.z)"
+            }.joined(separator: ";"))
+            maximumDistance = max(maximumDistance, final.agents.map(\.distanceFromHome).max() ?? 0)
+            maximumMemory = max(maximumMemory, final.agents.map(\.memoryCount).max() ?? 0)
+            check("feedback synthetic unique positions tick \(tick)",
+                  Set(final.agents.map { "\($0.position.x),\($0.position.y),\($0.position.z)" }).count == 3)
+        }
+        let final = session.snapshot()
+        return SyntheticFeedbackRun(
+            snapshot: final,
+            influenced: influenced,
+            positions: positions,
+            blockedOutcomes: blockedOutcomes,
+            alternateMoves: alternateMoves,
+            dangerousMoves: dangerousMoves,
+            movedAgents: final.agents.filter { $0.movementCount > 0 }.count,
+            maximumDistance: maximumDistance,
+            maximumMemory: maximumMemory,
+            deduplicated: final.agents.reduce(0) { $0 + $1.feedbackMemoryDeduplicatedCount }
+        )
+    }
+
+    let synthetic1 = runSyntheticFeedback()
+    let synthetic2 = runSyntheticFeedback()
+    check("feedback synthetic reaches 240 ticks", synthetic1.snapshot.tick == 240)
+    check("feedback synthetic writes movement feedback",
+          synthetic1.snapshot.agents.reduce(0) { $0 + $1.feedbackMemoryWriteCount } > 0)
+    check("feedback synthetic records blocked outcomes", synthetic1.blockedOutcomes > 0)
+    check("feedback synthetic retrieves memory",
+          synthetic1.snapshot.agents.reduce(0) { $0 + $1.memoryRetrievalCount } > 0)
+    check("feedback synthetic influences decisions", !synthetic1.influenced.isEmpty)
+    check("feedback synthetic alternate succeeds", synthetic1.alternateMoves > 0)
+    check("feedback synthetic executes no dangerous move", synthetic1.dangerousMoves == 0)
+    check("feedback synthetic moves two agents", synthetic1.movedAgents >= 2)
+    check("feedback synthetic distance bounded", synthetic1.maximumDistance <= 8)
+    check("feedback synthetic memory bounded", synthetic1.maximumMemory <= 64)
+    check("feedback synthetic deduplicates", synthetic1.deduplicated > 0)
+    check("feedback synthetic deterministic snapshot", synthetic1.snapshot == synthetic2.snapshot)
+    check("feedback synthetic deterministic influences", synthetic1.influenced == synthetic2.influenced)
+    check("feedback synthetic deterministic positions", synthetic1.positions == synthetic2.positions)
+}
+
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)
