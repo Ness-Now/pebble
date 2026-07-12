@@ -26,7 +26,8 @@ struct PebbleAgentDebugState {
         lastInfluencedDecisionAgentId: String?,
         runtimeErrorCount: Int,
         droppedCatchUpSteps: Int,
-        lastError: String?
+        lastError: String?,
+        interaction: PebbleAgentInteractionState
     ) {
         let focus = snapshot.agents.first { $0.id == focusedAgentId } ?? snapshot.agents.first
         let status = paused ? "paused" : "running"
@@ -64,6 +65,11 @@ struct PebbleAgentDebugState {
             } ?? "none"
             let factor = currentFeedback?.dominantFactor.kind.rawValue ?? "basePolicy"
             let reason = currentFeedback?.reason ?? agent.lastAction?.reason ?? "none"
+            let interactionTarget = interaction.target.map(Self.position) ?? "none"
+            let interactionOutcome = agent.lastInteractionOutcome
+            let interactionMemory = agent.recentMemory.last { memory in
+                memory.type == "resource_harvested" || memory.type == "interaction_blocked" || memory.type == "inventory_full"
+            }?.type ?? "none"
             focusedAgentLines = [
                 "FOCUS \(agent.id) pos \(Self.position(agent.position)) home d=\(agent.distanceFromHome)",
                 "need: \(Self.dominantNeed(agent.needs))  goal: \(agent.currentGoal.kind.rawValue)",
@@ -74,6 +80,10 @@ struct PebbleAgentDebugState {
                 "factor: \(factor)",
                 "reason: \(Self.short(reason, limit: 38))",
                 "memory/retrieved/influenced/dedup: \(decisionAgent.memoryCount)/\(decisionAgent.memoryRetrievalCount)/\(decisionAgent.memoryInfluencedDecisionCount)/\(decisionAgent.feedbackMemoryDeduplicatedCount)",
+                "inventory: \(agent.resourceInventory.totalCount)/\(agent.resourceInventory.capacity) sandboxResource=\(agent.resourceInventory.count(of: .sandboxResource))",
+                "interaction: \(interaction.active ? (interaction.harvested ? "harvested" : "ready") : "inactive") target \(interactionTarget)",
+                "outcome: \(interactionOutcome?.status.rawValue ?? "none") delta \(interactionOutcome?.inventoryDelta.quantity ?? 0) memory \(interactionMemory)",
+                "rollback: \(interaction.rollbackCount) \(Self.short(interaction.lastRollback, limit: 30))",
                 "errors: \(runtimeErrorCount)  catchup dropped: \(droppedCatchUpSteps)",
             ]
             return
@@ -152,6 +162,11 @@ struct PebbleAgentDebugState {
             "action: \(action?.name ?? "none") deltas: \(deltas)",
             "reason/effect: \(Self.short(action?.reason ?? "none", limit: 18)) / \(Self.short(agent.lastActionEffect?.effect ?? "none", limit: 18))",
             "nearby: \(nearby.isEmpty ? "none" : nearby) memory: \(agent.memoryCount)",
+            "inventory: \(agent.resourceInventory.totalCount)/\(agent.resourceInventory.capacity) sandboxResource: \(agent.resourceInventory.count(of: .sandboxResource))",
+            "interaction target/status: \(interaction.target.map(Self.position) ?? "none") / \(interaction.active ? (interaction.harvested ? "harvested" : "ready") : "inactive")",
+            "interaction outcome: \(agent.lastInteractionOutcome?.status.rawValue ?? "none") reason: \(Self.short(agent.lastInteractionOutcome?.reason ?? "none", limit: 24))",
+            "interaction delta/memory: \(agent.lastInteractionOutcome?.inventoryDelta.quantity ?? 0) / \(agent.recentMemory.last?.type ?? "none")",
+            "interaction rollback: \(interaction.rollbackCount) \(Self.short(interaction.lastRollback, limit: 28))",
         ]
         lines.append("ticks: \(agent.ticksAlive) goals: \(agent.goalChangeCount) actions/effects: \(agent.actionCount)/\(agent.actionEffectCount)")
         focusedAgentLines = lines

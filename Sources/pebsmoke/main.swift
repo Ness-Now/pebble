@@ -4273,6 +4273,177 @@ do {
         check("endurance checkpoint \(checkpoint + 1) unique",
               Set(endurance1.positions[checkpoint].components(separatedBy: ";")).count == 3)
     }
+
+    section("PebbleAgents transactional interaction G1")
+    var inventory = AgentResourceInventory(capacity: 3)
+    check("G1 inventory initially empty", inventory.isEmpty && inventory.totalCount == 0)
+    check("G1 inventory accepts one", inventory.add(.sandboxResource))
+    check("G1 inventory count exact", inventory.count(of: .sandboxResource) == 1)
+    check("G1 inventory reaches exact capacity", inventory.add(.sandboxResource, quantity: 2) && inventory.totalCount == 3)
+    let fullBefore = inventory
+    check("G1 inventory overflow rejected", !inventory.add(.sandboxResource))
+    check("G1 inventory overflow no partial mutation", inventory == fullBefore)
+    let inventoryEncoder = JSONEncoder()
+    inventoryEncoder.outputFormatting = [.sortedKeys]
+    let inventoryJSON1 = try! inventoryEncoder.encode(inventory)
+    let inventoryJSON2 = try! inventoryEncoder.encode(inventory)
+    check("G1 inventory deterministic encoding", inventoryJSON1 == inventoryJSON2)
+    let sandboxAnchor = AgentPosition(x: 0, y: 64, z: 0)
+    check("G1 sandbox boundary included",
+          AgentInteractionSandbox.contains(
+              target: AgentPosition(x: 8, y: 80, z: -8),
+              anchor: sandboxAnchor,
+              horizontalRadius: 8
+          ))
+    check("G1 outside sandbox rejected",
+          !AgentInteractionSandbox.contains(
+              target: AgentPosition(x: 9, y: 64, z: 0),
+              anchor: sandboxAnchor,
+              horizontalRadius: 8
+          ))
+    check("G1 adjacent cardinal accepted",
+          AgentInteractionSandbox.isCardinalAdjacent(
+              target: AgentPosition(x: 1, y: 64, z: 0),
+              actor: sandboxAnchor
+          ))
+    check("G1 non-adjacent target rejected",
+          !AgentInteractionSandbox.isCardinalAdjacent(
+              target: AgentPosition(x: 2, y: 64, z: 0),
+              actor: sandboxAnchor
+          ))
+    check("G1 vertical target rejected",
+          !AgentInteractionSandbox.isCardinalAdjacent(
+              target: AgentPosition(x: 1, y: 65, z: 0),
+              actor: sandboxAnchor
+          ))
+
+    func interactionState(
+        id: String = "agent_0",
+        inventory: AgentResourceInventory = AgentResourceInventory()
+    ) -> AgentSessionAgentState {
+        AgentSessionAgentState(
+            id: id,
+            state: "idle",
+            position: AgentPosition(x: 0, y: 64, z: 0),
+            needs: AgentNeeds(hunger: 0, fatigue: 0, curiosity: 0, safety: 1),
+            health: 100,
+            fear: 0,
+            homePosition: AgentPosition(x: 0, y: 64, z: 0),
+            nearbyAgents: [],
+            currentGoal: AgentGoal(kind: .idle, reason: "initial", startedAtTick: 0, urgency: 0),
+            lastAction: nil,
+            lastActionEffect: nil,
+            memory: [],
+            tickCreated: 0,
+            ticksAlive: 0,
+            observationCount: 0,
+            nearbyObservationCount: 0,
+            goalSelectionCount: 0,
+            goalChangeCount: 0,
+            actionCount: 0,
+            actionEffectCount: 0,
+            movementCount: 0,
+            totalManhattanDistanceMoved: 0,
+            returnHomeMoveCount: 0,
+            totalDistanceReducedTowardHome: 0,
+            resourceInventory: inventory
+        )
+    }
+
+    func interactionSession(inventory: AgentResourceInventory = AgentResourceInventory()) -> AgentSimulationSession {
+        try! AgentSimulationSession(
+            configuration: try! AgentSessionConfiguration(seed: 7, memoryPolicy: .bounded(maxEntries: 16)),
+            agents: [interactionState(inventory: inventory)]
+        )
+    }
+
+    let interactionTarget = AgentPosition(x: 1, y: 64, z: 0)
+    func intent(_ id: String = "harvest-1", agentId: String = "agent_0", tick: Int = 0) -> AgentInteractionIntent {
+        AgentInteractionIntent(
+            interactionId: id,
+            agentId: agentId,
+            tick: tick,
+            target: interactionTarget,
+            resource: .sandboxResource
+        )
+    }
+    func outcome(
+        _ id: String = "harvest-1",
+        status: AgentInteractionStatus = .succeeded,
+        quantity: Int = 1,
+        tick: Int = 0,
+        agentId: String = "agent_0"
+    ) -> AgentInteractionOutcome {
+        AgentInteractionOutcome(
+            interactionId: id,
+            agentId: agentId,
+            tick: tick,
+            target: interactionTarget,
+            resource: .sandboxResource,
+            status: status,
+            inventoryDelta: AgentInventoryDelta(resource: .sandboxResource, quantity: quantity),
+            reason: status == .succeeded ? "sandbox resource harvested" : "test blocked"
+        )
+    }
+
+    var interaction = interactionSession()
+    check("G1 session prevalidation succeeds", (try? interaction.prevalidateInteraction(intent())) != nil)
+    let interactionBefore = interaction.snapshot().agents[0]
+    try! interaction.applyInteractionOutcome(outcome())
+    let interactionAfter = interaction.snapshot().agents[0]
+    check("G1 successful outcome adds exactly one", interactionAfter.resourceInventory.totalCount == 1)
+    check("G1 successful outcome exposed", interactionAfter.lastInteractionOutcome?.status == .succeeded)
+    check("G1 success writes one memory", interactionAfter.memoryCount == interactionBefore.memoryCount + 1)
+    check("G1 success memory type exact", interactionAfter.recentMemory.last?.type == "resource_harvested")
+    check("G1 duplicate outcome rejected", {
+        do { try interaction.applyInteractionOutcome(outcome()); return false }
+        catch AgentSessionError.duplicateInteraction { return true }
+        catch { return false }
+    }())
+    check("G1 unknown agent rejected", {
+        do { try interaction.prevalidateInteraction(intent("unknown", agentId: "missing")); return false }
+        catch AgentSessionError.unknownAgentId { return true }
+        catch { return false }
+    }())
+    check("G1 wrong tick rejected", {
+        do { try interaction.prevalidateInteraction(intent("wrong-tick", tick: 1)); return false }
+        catch AgentSessionError.interactionTickMismatch { return true }
+        catch { return false }
+    }())
+
+    var blockedSession = interactionSession()
+    try! blockedSession.applyInteractionOutcome(outcome("blocked", status: .blocked, quantity: 0))
+    let blockedSnapshot = blockedSession.snapshot().agents[0]
+    check("G1 blocked outcome adds no inventory", blockedSnapshot.resourceInventory.isEmpty)
+    check("G1 blocked outcome writes blocked memory", blockedSnapshot.recentMemory.last?.type == "interaction_blocked")
+    check("G1 blocked outcome writes no success memory",
+          !blockedSnapshot.recentMemory.contains { $0.type == "resource_harvested" })
+
+    var fullInventory = AgentResourceInventory(capacity: 1)
+    _ = fullInventory.add(.sandboxResource)
+    var fullSession = interactionSession(inventory: fullInventory)
+    check("G1 full inventory prevalidation rejected", {
+        do { try fullSession.prevalidateInteraction(intent("full")); return false }
+        catch AgentSessionError.inventoryFull { return true }
+        catch { return false }
+    }())
+    try! fullSession.applyInteractionOutcome(outcome("full", status: .inventoryFull, quantity: 0))
+    let fullSnapshot = fullSession.snapshot().agents[0]
+    check("G1 full outcome preserves capacity", fullSnapshot.resourceInventory.totalCount == 1)
+    check("G1 full outcome memory type", fullSnapshot.recentMemory.last?.type == "inventory_full")
+
+    var invalidSession = interactionSession()
+    let invalidBefore = invalidSession.snapshot().agents[0]
+    check("G1 successful outcome exact delta enforced", {
+        do { try invalidSession.applyInteractionOutcome(outcome("invalid", quantity: 2)); return false }
+        catch AgentSessionError.invalidInteractionOutcome { return true }
+        catch { return false }
+    }())
+    let invalidAfter = invalidSession.snapshot().agents[0]
+    check("G1 invalid success has no partial mutation",
+          invalidAfter.resourceInventory == invalidBefore.resourceInventory
+              && invalidAfter.memoryCount == invalidBefore.memoryCount
+              && invalidAfter.lastInteractionOutcome == nil)
 }
 
 print("\n\(passed) passed, \(failed) failed")

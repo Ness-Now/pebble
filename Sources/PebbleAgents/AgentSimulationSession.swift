@@ -27,6 +27,11 @@ public enum AgentSessionError: Error, Equatable {
     case movementActionMismatch(String)
     case movementDirectionMismatch(String)
     case movementHomeMetricsMismatch(String)
+    case invalidInteractionQuantity(String)
+    case interactionTickMismatch(String)
+    case duplicateInteraction(String)
+    case inventoryFull(String)
+    case invalidInteractionOutcome(String)
 }
 
 public struct AgentSessionConfiguration {
@@ -93,6 +98,8 @@ public struct AgentSessionAgentState {
     public internal(set) var feedbackMemoryDeduplicatedCount: Int
     public internal(set) var memoryRetrievalCount: Int
     public internal(set) var memoryInfluencedDecisionCount: Int
+    public internal(set) var resourceInventory: AgentResourceInventory
+    public internal(set) var lastInteractionOutcome: AgentInteractionOutcome?
 
     public init(
         id: String,
@@ -126,7 +133,9 @@ public struct AgentSessionAgentState {
         feedbackMemoryWriteCount: Int = 0,
         feedbackMemoryDeduplicatedCount: Int = 0,
         memoryRetrievalCount: Int = 0,
-        memoryInfluencedDecisionCount: Int = 0
+        memoryInfluencedDecisionCount: Int = 0,
+        resourceInventory: AgentResourceInventory = AgentResourceInventory(),
+        lastInteractionOutcome: AgentInteractionOutcome? = nil
     ) {
         self.id = id
         self.state = state
@@ -160,6 +169,8 @@ public struct AgentSessionAgentState {
         self.feedbackMemoryDeduplicatedCount = feedbackMemoryDeduplicatedCount
         self.memoryRetrievalCount = memoryRetrievalCount
         self.memoryInfluencedDecisionCount = memoryInfluencedDecisionCount
+        self.resourceInventory = resourceInventory
+        self.lastInteractionOutcome = lastInteractionOutcome
     }
 }
 
@@ -252,6 +263,7 @@ public struct AgentSimulationSession {
     public let configuration: AgentSessionConfiguration
     public private(set) var tick: Int
     private var statesById: [String: AgentSessionAgentState]
+    private var processedInteractionIds: Set<String>
 
     public init(
         configuration: AgentSessionConfiguration,
@@ -272,6 +284,7 @@ public struct AgentSimulationSession {
         self.configuration = configuration
         tick = initialTick
         statesById = states
+        processedInteractionIds = []
     }
 
     public func snapshot() -> AgentSessionSnapshot {
@@ -291,6 +304,78 @@ public struct AgentSimulationSession {
             throw AgentSessionError.unknownAgentId(agentId)
         }
         return state
+    }
+
+    public func prevalidateInteraction(_ intent: AgentInteractionIntent) throws {
+        guard let state = statesById[intent.agentId] else {
+            throw AgentSessionError.unknownAgentId(intent.agentId)
+        }
+        guard intent.tick == tick else {
+            throw AgentSessionError.interactionTickMismatch(intent.interactionId)
+        }
+        guard intent.quantity == 1 else {
+            throw AgentSessionError.invalidInteractionQuantity(intent.interactionId)
+        }
+        guard !processedInteractionIds.contains(intent.interactionId) else {
+            throw AgentSessionError.duplicateInteraction(intent.interactionId)
+        }
+        guard state.resourceInventory.canAdd(intent.resource, quantity: intent.quantity) else {
+            throw AgentSessionError.inventoryFull(intent.agentId)
+        }
+    }
+
+    public mutating func applyInteractionOutcome(_ outcome: AgentInteractionOutcome) throws {
+        guard var state = statesById[outcome.agentId] else {
+            throw AgentSessionError.unknownAgentId(outcome.agentId)
+        }
+        guard outcome.tick == tick else {
+            throw AgentSessionError.interactionTickMismatch(outcome.interactionId)
+        }
+        guard !processedInteractionIds.contains(outcome.interactionId) else {
+            throw AgentSessionError.duplicateInteraction(outcome.interactionId)
+        }
+
+        let memory: AgentMemoryEntry
+        switch outcome.status {
+        case .succeeded:
+            guard outcome.inventoryDelta.resource == outcome.resource,
+                  outcome.inventoryDelta.quantity == 1,
+                  state.resourceInventory.add(outcome.resource, quantity: 1) else {
+                throw AgentSessionError.invalidInteractionOutcome(outcome.interactionId)
+            }
+            memory = AgentMemoryEntry(
+                tick: tick,
+                type: "resource_harvested",
+                summary: "\(outcome.agentId) harvested 1 \(outcome.resource.rawValue)",
+                importance: 0.40
+            )
+        case .blocked:
+            guard outcome.inventoryDelta.quantity == 0 else {
+                throw AgentSessionError.invalidInteractionOutcome(outcome.interactionId)
+            }
+            memory = AgentMemoryEntry(
+                tick: tick,
+                type: "interaction_blocked",
+                summary: "\(outcome.agentId) interaction blocked: \(outcome.reason)",
+                importance: 0.25
+            )
+        case .inventoryFull:
+            guard outcome.inventoryDelta.quantity == 0,
+                  !state.resourceInventory.canAdd(outcome.resource) else {
+                throw AgentSessionError.invalidInteractionOutcome(outcome.interactionId)
+            }
+            memory = AgentMemoryEntry(
+                tick: tick,
+                type: "inventory_full",
+                summary: "\(outcome.agentId) inventory full for \(outcome.resource.rawValue)",
+                importance: 0.30
+            )
+        }
+
+        appendMemory(memory, to: &state.memory)
+        state.lastInteractionOutcome = outcome
+        statesById[outcome.agentId] = state
+        processedInteractionIds.insert(outcome.interactionId)
     }
 
     public mutating func advanceTick(

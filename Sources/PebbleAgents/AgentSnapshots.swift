@@ -50,6 +50,8 @@ public struct AgentSnapshot: Encodable, Equatable {
 
     public let memoryCount: Int
     public let recentMemory: [AgentMemoryEntry]
+    public let resourceInventory: AgentResourceInventory
+    public let lastInteractionOutcome: AgentInteractionOutcome?
 
     init(state: AgentSessionAgentState, recentMemoryLimit: Int) {
         id = state.id
@@ -88,6 +90,8 @@ public struct AgentSnapshot: Encodable, Equatable {
         memoryInfluencedDecisionCount = state.memoryInfluencedDecisionCount
         memoryCount = state.memory.count
         recentMemory = Array(state.memory.suffix(recentMemoryLimit))
+        resourceInventory = state.resourceInventory
+        lastInteractionOutcome = state.lastInteractionOutcome
     }
 
     public static func == (lhs: AgentSnapshot, rhs: AgentSnapshot) -> Bool {
@@ -125,6 +129,8 @@ public struct AgentSnapshot: Encodable, Equatable {
             && lhs.memoryInfluencedDecisionCount == rhs.memoryInfluencedDecisionCount
             && lhs.memoryCount == rhs.memoryCount
             && memoriesEqual(lhs.recentMemory, rhs.recentMemory)
+            && lhs.resourceInventory == rhs.resourceInventory
+            && lhs.lastInteractionOutcome == rhs.lastInteractionOutcome
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -138,6 +144,7 @@ public struct AgentSnapshot: Encodable, Equatable {
         case feedbackMemoryWriteCount, feedbackMemoryDeduplicatedCount
         case memoryRetrievalCount, memoryInfluencedDecisionCount
         case memoryCount, recentMemory
+        case resourceInventory, lastInteractionOutcome
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -186,6 +193,10 @@ public struct AgentSnapshot: Encodable, Equatable {
         }
         try container.encode(memoryCount, forKey: .memoryCount)
         try container.encode(recentMemory, forKey: .recentMemory)
+        if !resourceInventory.isEmpty || lastInteractionOutcome != nil {
+            try container.encode(resourceInventory, forKey: .resourceInventory)
+            try container.encodeIfPresent(lastInteractionOutcome, forKey: .lastInteractionOutcome)
+        }
     }
 }
 

@@ -38,6 +38,7 @@ final class PebbleAgentController {
     private let worldSensor = PebbleAgentWorldSensor()
     private let movementExecutor = PebbleAgentMovementExecutor()
     private let cameraFollow = PebbleAgentCameraFollow()
+    private var interactionExecutor = PebbleAgentInteractionExecutor()
 
     private let environment = ProcessInfo.processInfo.environment
     private var featureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS"] == "1" }
@@ -46,6 +47,7 @@ final class PebbleAgentController {
     private var movementFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_MOVE"] == "1" }
     private var probesFeatureEnabled: Bool { environment["PEBBLELAB_APP_PROBES"] == "1" }
     private var debugEntitiesEnabled: Bool { environment["PEBBLELAB_DEBUG_ENTITIES"] == "1" }
+    private var interactionFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_INTERACT"] == "1" }
     private var traceEvery: Int {
         guard let raw = environment["PEBBLELAB_APP_AGENTS_TRACE_EVERY"],
               let value = Int(raw), (1...1000).contains(value) else { return 1 }
@@ -121,7 +123,8 @@ final class PebbleAgentController {
             lastInfluencedDecisionAgentId: focusedInfluenced == nil ? latestInfluenced?.key : focusedAgentId,
             runtimeErrorCount: runtimeErrorCount,
             droppedCatchUpSteps: droppedCatchUpSteps,
-            lastError: lastError
+            lastError: lastError,
+            interaction: interactionExecutor.state(gateEnabled: interactionFeatureEnabled)
         )
     }
 
@@ -130,7 +133,7 @@ final class PebbleAgentController {
         switch command {
         case "help":
             guard arguments.count == 1 else { return failure("Usage: /lab help") }
-            return success("/lab lifecycle: start stop clear | time control: pause resume step speed <1|2|4|8> reset | inspection: status focus <agentId|next> next follow <agentId|focus|next|off> overlay <off|compact|full> | movement: movement <on|off> | demo: demo [start|stop|status]")
+            return success("/lab lifecycle: start stop clear | time control: pause resume step speed <1|2|4|8> reset | inspection: status focus <agentId|next> next follow <agentId|focus|next|off> overlay <off|compact|full> | movement: movement <on|off> | interaction: interaction <setup|harvest|status> | demo: demo [start|stop|status]")
         case "demo":
             return handleDemo(Array(arguments.dropFirst()), world: world, player: player)
         case "start":
@@ -193,6 +196,8 @@ final class PebbleAgentController {
             let movementStatus = movementEnabled ? "on" : "off"
             trace("movement=\(movementStatus) tick=\(session?.tick ?? 0)")
             return success("PebbleAgents movement \(movementStatus).")
+        case "interaction":
+            return handleInteraction(Array(arguments.dropFirst()), world: world, player: player)
         case "status":
             guard arguments.count == 1 else { return failure("Usage: /lab status") }
             guard let session else {
@@ -274,6 +279,9 @@ final class PebbleAgentController {
         let preservedFocus = focusedAgentId
         let preservedFollowMode = followMode
         let preservedDemoActive = demoActive
+        guard interactionExecutor.cleanup(world: world) else {
+            return failure("PebbleAgents rebuild refused: interaction sandbox cleanup failed.")
+        }
         _ = clearLabCoreAgentProbes(in: world)
         probesByAgentId.removeAll()
         do {
@@ -590,6 +598,145 @@ final class PebbleAgentController {
         }
     }
 
+    private func handleInteraction(
+        _ arguments: [String],
+        world: World,
+        player: Player
+    ) -> PebbleAgentCommandResult {
+        guard arguments.count == 1 else {
+            return failure("Usage: /lab interaction <setup|harvest|status>")
+        }
+        let subcommand = arguments[0].lowercased()
+        if subcommand == "status" {
+            let state = interactionExecutor.state(gateEnabled: interactionFeatureEnabled)
+            let target = state.target.map(positionText) ?? "none"
+            let snapshot = session?.snapshot()
+            let actor = state.actorId ?? focusedAgentId
+            let inventory = snapshot?.agents.first { $0.id == actor }?.resourceInventory
+            let outcome = snapshot?.agents.first { $0.id == actor }?.lastInteractionOutcome
+            let message = "interaction gate=\(state.gateEnabled ? "enabled" : "disabled") sandbox=\(state.active ? "active" : "inactive") actor=\(actor ?? "none") target=\(target) resourceBlock=\(state.resourceBlockName) originalBlock=\(state.originalBlock.map(String.init) ?? "none") harvested=\(state.harvested ? "yes" : "no") inventory=\(inventory?.totalCount ?? 0)/\(inventory?.capacity ?? 0) outcome=\(outcome?.status.rawValue ?? "none") reason=\(outcome?.reason ?? "none") rollback=\(state.rollbackCount):\(state.lastRollback)"
+            trace(message)
+            return success(message)
+        }
+
+        guard subcommand == "setup" || subcommand == "harvest" else {
+            return failure("Usage: /lab interaction <setup|harvest|status>")
+        }
+        guard featureEnabled else {
+            return failure("PebbleAgents disabled. Set PEBBLELAB_APP_AGENTS=1 before launch.")
+        }
+        guard interactionFeatureEnabled else {
+            return failure("PebbleAgents interaction disabled. Set PEBBLELAB_APP_AGENTS_INTERACT=1 before launch.")
+        }
+        guard var session, activeWorld === world, let anchor else {
+            return failure("No active PebbleAgents session for this World.")
+        }
+        guard isPaused else { return failure("Interaction requires a paused PebbleAgents session.") }
+        guard !movementEnabled else { return failure("Interaction requires movement off.") }
+        guard let actorId = focusedAgentId,
+              let actor = session.snapshot().agents.first(where: { $0.id == actorId }) else {
+            return failure("Interaction requires a valid focused agent.")
+        }
+        let occupied = session.snapshot().agents.filter { $0.id != actorId }.map(\.position)
+        let playerPosition = AgentPosition(
+            x: Int(player.x.rounded(.down)),
+            y: Int(player.y.rounded(.down)),
+            z: Int(player.z.rounded(.down))
+        )
+
+        do {
+            if subcommand == "setup" {
+                let target = try interactionExecutor.setup(
+                    world: world,
+                    actor: actor,
+                    anchor: anchor,
+                    occupiedAgentPositions: occupied,
+                    playerPosition: playerPosition
+                )
+                trace("interaction setup actor=\(actorId) target=\(positionText(target)) block=\(PebbleAgentInteractionExecutor.resourceBlockName)")
+                return success("Interaction sandbox ready for \(actorId) at \(positionText(target)); block=\(PebbleAgentInteractionExecutor.resourceBlockName).")
+            }
+
+            guard let target = interactionExecutor.state(gateEnabled: true).target else {
+                return failure("Interaction sandbox inactive. Use /lab interaction setup.")
+            }
+            let interactionId = "g1:\(actorId):\(session.tick):\(positionText(target))"
+            let intent = AgentInteractionIntent(
+                interactionId: interactionId,
+                agentId: actorId,
+                tick: session.tick,
+                target: target,
+                resource: .sandboxResource
+            )
+            let before = session.snapshot().agents.first { $0.id == actorId }!
+            let outcome = AgentInteractionOutcome(
+                interactionId: interactionId,
+                agentId: actorId,
+                tick: session.tick,
+                target: target,
+                resource: .sandboxResource,
+                status: .succeeded,
+                inventoryDelta: AgentInventoryDelta(resource: .sandboxResource, quantity: 1),
+                reason: "sandbox resource harvested"
+            )
+            try interactionExecutor.harvest(
+                world: world,
+                actor: actor,
+                anchor: anchor,
+                occupiedAgentPositions: occupied,
+                playerPosition: playerPosition,
+                prevalidate: { try session.prevalidateInteraction(intent) },
+                applyAndVerify: {
+                    try session.applyInteractionOutcome(outcome)
+                    if environment["PEBBLELAB_APP_AGENTS_INTERACT_FAIL_AFTER_WORLD"] == "1" {
+                        throw ControllerError.interactionBoundary("injected post-World failure")
+                    }
+                    let after = session.snapshot().agents.first { $0.id == actorId }!
+                    let expectedMemoryCount: Int
+                    switch session.configuration.memoryPolicy {
+                    case .legacyUnbounded:
+                        expectedMemoryCount = before.memoryCount + 1
+                    case let .bounded(maxEntries):
+                        expectedMemoryCount = min(maxEntries, before.memoryCount + 1)
+                    }
+                    guard after.resourceInventory.totalCount == before.resourceInventory.totalCount + 1,
+                          after.resourceInventory.count(of: .sandboxResource) == before.resourceInventory.count(of: .sandboxResource) + 1,
+                          after.lastInteractionOutcome == outcome,
+                          after.memoryCount == expectedMemoryCount,
+                          after.recentMemory.last?.type == "resource_harvested" else {
+                        throw ControllerError.interactionBoundary(actorId)
+                    }
+                }
+            )
+            self.session = session
+            trace("interaction harvest actor=\(actorId) target=\(positionText(target)) inventory=\(before.resourceInventory.totalCount + 1)/\(before.resourceInventory.capacity) memory=resource_harvested outcome=succeeded")
+            return success("\(actorId) harvested sandboxResource; inventory \(before.resourceInventory.totalCount + 1)/\(before.resourceInventory.capacity).")
+        } catch AgentSessionError.inventoryFull {
+            guard let target = interactionExecutor.state(gateEnabled: true).target else {
+                return failure("Inventory full.")
+            }
+            let outcome = AgentInteractionOutcome(
+                interactionId: "g1-full:\(actorId):\(session.tick):\(positionText(target))",
+                agentId: actorId,
+                tick: session.tick,
+                target: target,
+                resource: .sandboxResource,
+                status: .inventoryFull,
+                inventoryDelta: AgentInventoryDelta(resource: .sandboxResource, quantity: 0),
+                reason: "inventory capacity reached"
+            )
+            do {
+                try session.applyInteractionOutcome(outcome)
+                self.session = session
+            } catch {
+                return failure("Inventory full; failed to record outcome: \(error)")
+            }
+            return failure("Inventory full; World unchanged.")
+        } catch {
+            return failure("Interaction failed: \(error)")
+        }
+    }
+
     private func effectiveOverlayMode(f3Visible: Bool) -> PebbleAgentOverlayMode {
         overlayModeByCommand
             ?? (f3Visible ? .full : overlayEnabledByEnvironment ? .compact : .off)
@@ -629,13 +776,20 @@ final class PebbleAgentController {
         let followStatus = followMode.statusText
         let wasDemo = demoActive
         let cleanupWorld = activeWorld ?? fallbackWorld
+        let interactionBeforeCleanup = interactionExecutor.state(gateEnabled: interactionFeatureEnabled)
+        let interactionRestored = cleanupWorld.map { interactionExecutor.cleanup(world: $0) }
+            ?? !interactionBeforeCleanup.active
+        if !interactionRestored {
+            runtimeErrorCount += 1
+            trace("error interaction cleanup failed reason=\(reason.replacingOccurrences(of: " ", with: "_"))")
+        }
         let removed = cleanupWorld.map { clearLabCoreAgentProbes(in: $0) } ?? 0
         if let snapshot {
             let movementCount = snapshot.agents.reduce(0) { $0 + $1.movementCount }
             let retrieved = snapshot.agents.reduce(0) { $0 + $1.memoryRetrievalCount }
             let influenced = snapshot.agents.reduce(0) { $0 + $1.memoryInfluencedDecisionCount }
             let dedup = snapshot.agents.reduce(0) { $0 + $1.feedbackMemoryDeduplicatedCount }
-            trace("summary reason=\(reason.replacingOccurrences(of: " ", with: "_")) seed=\(seed) ticks=\(successfulCognitiveTicks) hz=\(cognitiveHz) agents=\(snapshot.agentCount) movementCount=\(movementCount) blocked=\(blockedMovementOutcomeCount) memoryMax=\(maxObservedMemoryCount) retrieved=\(retrieved) influenced=\(influenced) dedup=\(dedup) maxDistanceHome=\(maxObservedDistanceFromHome) runtimeErrors=\(runtimeErrorCount) catchupDropped=\(droppedCatchUpSteps) probesRemoved=\(removed) follow=\(followStatus) demo=\(wasDemo ? 1 : 0)")
+            trace("summary reason=\(reason.replacingOccurrences(of: " ", with: "_")) seed=\(seed) ticks=\(successfulCognitiveTicks) hz=\(cognitiveHz) agents=\(snapshot.agentCount) movementCount=\(movementCount) blocked=\(blockedMovementOutcomeCount) memoryMax=\(maxObservedMemoryCount) retrieved=\(retrieved) influenced=\(influenced) dedup=\(dedup) maxDistanceHome=\(maxObservedDistanceFromHome) runtimeErrors=\(runtimeErrorCount) catchupDropped=\(droppedCatchUpSteps) probesRemoved=\(removed) follow=\(followStatus) demo=\(wasDemo ? 1 : 0) interactionRestored=\(interactionRestored ? 1 : 0) interactionTarget=\(interactionBeforeCleanup.target.map(positionText) ?? "none")")
         }
         session = nil
         activeWorld = nil
@@ -687,5 +841,6 @@ final class PebbleAgentController {
         case movementBoundary(String)
         case unsafeMovement(String)
         case feedbackBoundary(String)
+        case interactionBoundary(String)
     }
 }
