@@ -4105,6 +4105,10 @@ do {
         let snapshot: AgentSessionSnapshot
         let influenced: [String]
         let positions: [String]
+        let actions: [String]
+        let outcomes: [String]
+        let memoryCounters: [String]
+        let goalKinds: Set<String>
         let blockedOutcomes: Int
         let alternateMoves: Int
         let dangerousMoves: Int
@@ -4124,20 +4128,28 @@ do {
         return feedbackObservation(position: position, rules: rules, tick: tick)
     }
 
-    func runSyntheticFeedback() -> SyntheticFeedbackRun {
+    func runSyntheticFeedback(
+        ticks: Int = 240,
+        memoryLimit: Int = 64,
+        checkUniquePositions: Bool = true
+    ) -> SyntheticFeedbackRun {
         var session = feedbackSession(states: [
             feedbackState(id: "agent_0", position: AgentPosition(x: -1, y: 64, z: 0), home: AgentPosition(x: -1, y: 64, z: 0)),
             feedbackState(id: "agent_1", position: AgentPosition(x: 0, y: 64, z: -1), home: AgentPosition(x: 0, y: 64, z: -1)),
             feedbackState(id: "agent_2", position: AgentPosition(x: 1, y: 64, z: 0), home: AgentPosition(x: 1, y: 64, z: 0)),
-        ])
+        ], memoryLimit: memoryLimit)
         var influenced: [String] = []
         var positions: [String] = []
+        var actions: [String] = []
+        var outcomeTimeline: [String] = []
+        var memoryCounters: [String] = []
+        var goalKinds = Set<String>()
         var maximumDistance = 0
         var maximumMemory = 0
         var blockedOutcomes = 0
         var alternateMoves = 0
         var dangerousMoves = 0
-        for tick in 1...240 {
+        for tick in 1...ticks {
             let before = session.snapshot()
             let perceptions = before.agents.map {
                 AgentPerceptionInput(
@@ -4147,10 +4159,18 @@ do {
             }
             _ = try! session.advanceTick(perceptions: perceptions)
             let cognitive = session.snapshot()
+            goalKinds.formUnion(cognitive.agents.map { $0.currentGoal.kind.rawValue })
+            actions.append(cognitive.agents.map {
+                let trace = $0.lastFeedbackDecisionTrace
+                return "\($0.id):\(trace?.finalAction.name ?? "none"):\(trace?.finalDirection?.rawValue ?? "none"):\(trace?.actionChanged == true ? 1 : 0)"
+            }.joined(separator: ";"))
             for agent in cognitive.agents where agent.lastFeedbackDecisionTrace?.actionChanged == true {
                 influenced.append("\(tick):\(agent.id):\(agent.lastFeedbackDecisionTrace?.reason ?? "")")
             }
             let outcomes = AgentMovementCoordinator.resolve(snapshot: cognitive)
+            outcomeTimeline.append(outcomes.map {
+                "\($0.agentId):\($0.status.rawValue):\($0.requestedDirection?.rawValue ?? "none"):\($0.toPosition.x),\($0.toPosition.y),\($0.toPosition.z)"
+            }.joined(separator: ";"))
             blockedOutcomes += outcomes.filter { $0.status == .blocked }.count
             dangerousMoves += outcomes.filter {
                 $0.status == .moved && $0.requestedDirection == .south
@@ -4168,14 +4188,23 @@ do {
             }.joined(separator: ";"))
             maximumDistance = max(maximumDistance, final.agents.map(\.distanceFromHome).max() ?? 0)
             maximumMemory = max(maximumMemory, final.agents.map(\.memoryCount).max() ?? 0)
-            check("feedback synthetic unique positions tick \(tick)",
-                  Set(final.agents.map { "\($0.position.x),\($0.position.y),\($0.position.z)" }).count == 3)
+            memoryCounters.append(final.agents.map {
+                "\($0.id):\($0.memoryCount):\($0.memoryRetrievalCount):\($0.memoryInfluencedDecisionCount):\($0.feedbackMemoryDeduplicatedCount)"
+            }.joined(separator: ";"))
+            if checkUniquePositions {
+                check("feedback synthetic unique positions tick \(tick)",
+                      Set(final.agents.map { "\($0.position.x),\($0.position.y),\($0.position.z)" }).count == 3)
+            }
         }
         let final = session.snapshot()
         return SyntheticFeedbackRun(
             snapshot: final,
             influenced: influenced,
             positions: positions,
+            actions: actions,
+            outcomes: outcomeTimeline,
+            memoryCounters: memoryCounters,
+            goalKinds: goalKinds,
             blockedOutcomes: blockedOutcomes,
             alternateMoves: alternateMoves,
             dangerousMoves: dangerousMoves,
@@ -4204,6 +4233,46 @@ do {
     check("feedback synthetic deterministic snapshot", synthetic1.snapshot == synthetic2.snapshot)
     check("feedback synthetic deterministic influences", synthetic1.influenced == synthetic2.influenced)
     check("feedback synthetic deterministic positions", synthetic1.positions == synthetic2.positions)
+
+    section("PebbleAgents stabilized prototype endurance")
+    let endurance1 = runSyntheticFeedback(ticks: 1200, memoryLimit: 128, checkUniquePositions: false)
+    let endurance2 = runSyntheticFeedback(ticks: 1200, memoryLimit: 128, checkUniquePositions: false)
+    let enduranceRetrieved = endurance1.snapshot.agents.reduce(0) { $0 + $1.memoryRetrievalCount }
+    let enduranceInfluenced = endurance1.snapshot.agents.reduce(0) { $0 + $1.memoryInfluencedDecisionCount }
+    let enduranceWrites = endurance1.snapshot.agents.reduce(0) { $0 + $1.feedbackMemoryWriteCount }
+    check("endurance reaches 1200 ticks", endurance1.snapshot.tick == 1200)
+    check("endurance three agents", endurance1.snapshot.agentCount == 3)
+    check("endurance memory bounded 128", endurance1.maximumMemory <= 128)
+    check("endurance distance bounded 8", endurance1.maximumDistance <= 8)
+    check("endurance no dangerous drop", endurance1.dangerousMoves == 0)
+    check("endurance all positions unique", endurance1.positions.allSatisfy {
+        Set($0.components(separatedBy: ";")).count == 3
+    })
+    check("endurance retrieves memory", enduranceRetrieved > 0)
+    check("endurance influences decisions", enduranceInfluenced > 0)
+    check("endurance deduplicates feedback", endurance1.deduplicated > 0)
+    check("endurance writes feedback", enduranceWrites > 0)
+    check("endurance records blocked outcomes", endurance1.blockedOutcomes > 0)
+    check("endurance executes influenced alternate", endurance1.alternateMoves > 0)
+    check("endurance moves multiple agents", endurance1.movedAgents >= 2)
+    check("endurance observes multiple goals", endurance1.goalKinds.count >= 2)
+    check("endurance position timeline complete", endurance1.positions.count == 1200)
+    check("endurance action timeline complete", endurance1.actions.count == 1200)
+    check("endurance outcome timeline complete", endurance1.outcomes.count == 1200)
+    check("endurance memory timeline complete", endurance1.memoryCounters.count == 1200)
+    check("endurance deterministic snapshot", endurance1.snapshot == endurance2.snapshot)
+    check("endurance deterministic positions", endurance1.positions == endurance2.positions)
+    check("endurance deterministic actions", endurance1.actions == endurance2.actions)
+    check("endurance deterministic outcomes", endurance1.outcomes == endurance2.outcomes)
+    check("endurance deterministic memory counters", endurance1.memoryCounters == endurance2.memoryCounters)
+    check("endurance deterministic influences", endurance1.influenced == endurance2.influenced)
+    check("endurance deterministic goals", endurance1.goalKinds == endurance2.goalKinds)
+    for checkpoint in stride(from: 59, to: 1200, by: 60) {
+        check("endurance checkpoint \(checkpoint + 1) deterministic",
+              endurance1.positions[checkpoint] == endurance2.positions[checkpoint])
+        check("endurance checkpoint \(checkpoint + 1) unique",
+              Set(endurance1.positions[checkpoint].components(separatedBy: ";")).count == 3)
+    }
 }
 
 print("\n\(passed) passed, \(failed) failed")

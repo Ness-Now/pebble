@@ -8,6 +8,7 @@ struct PebbleAgentCommandResult {
 }
 
 final class PebbleAgentController {
+    private static let maxCognitiveStepsPerUpdate = 8
     private(set) var session: AgentSimulationSession?
     private(set) var isPaused = false
     private(set) var cognitiveHz = 4
@@ -25,15 +26,31 @@ final class PebbleAgentController {
     private var lastInfluencedTracesByAgentId: [String: AgentFeedbackDecisionTrace] = [:]
     private var movementWasEverEnabledSinceReset = false
     private var activeWorld: World?
-    private var overlayEnabledByCommand = false
+    private var overlayModeByCommand: PebbleAgentOverlayMode?
+    private(set) var followMode: PebbleAgentFollowMode = .off
+    private(set) var demoActive = false
+    private(set) var successfulCognitiveTicks = 0
+    private(set) var blockedMovementOutcomeCount = 0
+    private(set) var runtimeErrorCount = 0
+    private(set) var droppedCatchUpSteps = 0
+    private(set) var maxObservedMemoryCount = 0
+    private(set) var maxObservedDistanceFromHome = 0
     private let worldSensor = PebbleAgentWorldSensor()
     private let movementExecutor = PebbleAgentMovementExecutor()
+    private let cameraFollow = PebbleAgentCameraFollow()
 
     private let environment = ProcessInfo.processInfo.environment
     private var featureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS"] == "1" }
     private var traceEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_TRACE"] == "1" }
     private var overlayEnabledByEnvironment: Bool { environment["PEBBLELAB_APP_AGENTS_OVERLAY"] == "1" }
     private var movementFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_MOVE"] == "1" }
+    private var probesFeatureEnabled: Bool { environment["PEBBLELAB_APP_PROBES"] == "1" }
+    private var debugEntitiesEnabled: Bool { environment["PEBBLELAB_DEBUG_ENTITIES"] == "1" }
+    private var traceEvery: Int {
+        guard let raw = environment["PEBBLELAB_APP_AGENTS_TRACE_EVERY"],
+              let value = Int(raw), (1...1000).contains(value) else { return 1 }
+        return value
+    }
 
     func update(world: World?, player: Player?) {
         guard let world else {
@@ -45,10 +62,11 @@ final class PebbleAgentController {
             return
         }
         guard session != nil else { return }
-        guard player != nil else {
+        guard let player else {
             stop(reason: "player unavailable")
             return
         }
+        applyFollow(player: player)
 
         let worldTick = world.time
         guard let previousTick = lastWorldTick else {
@@ -64,28 +82,45 @@ final class PebbleAgentController {
             credit = 0
             return
         }
-        for _ in previousTick..<worldTick {
-            credit += cognitiveHz
-            while credit >= 20 {
-                guard advanceOneTick(world: world) else { return }
-                credit -= 20
-            }
+        let elapsedWorldTicks = worldTick - previousTick
+        credit += elapsedWorldTicks * cognitiveHz
+        let availableSteps = credit / 20
+        let executedSteps = min(availableSteps, Self.maxCognitiveStepsPerUpdate)
+        for _ in 0..<executedSteps {
+            guard advanceOneTick(world: world) else { return }
+            credit -= 20
+        }
+        if availableSteps > Self.maxCognitiveStepsPerUpdate {
+            let dropped = availableSteps - Self.maxCognitiveStepsPerUpdate
+            droppedCatchUpSteps += dropped
+            credit %= 20
+            trace("catchup dropped=\(dropped) total=\(droppedCatchUpSteps)")
         }
     }
 
     func debugState(f3Visible: Bool) -> PebbleAgentDebugState? {
-        guard let session,
-              f3Visible || overlayEnabledByEnvironment || overlayEnabledByCommand else { return nil }
+        let mode = overlayModeByCommand
+            ?? (f3Visible ? .full : overlayEnabledByEnvironment ? .compact : .off)
+        guard let session, mode != .off else { return nil }
+        let latestInfluenced = lastInfluencedTracesByAgentId.sorted {
+            if $0.value.tick != $1.value.tick { return $0.value.tick > $1.value.tick }
+            return $0.key < $1.key
+        }.first
+        let focusedInfluenced = focusedAgentId.flatMap { lastInfluencedTracesByAgentId[$0] }
         return PebbleAgentDebugState(
             snapshot: session.snapshot(),
+            mode: mode,
             paused: isPaused,
             cognitiveHz: cognitiveHz,
             movementEnabled: movementEnabled,
+            followMode: followMode,
+            demoActive: demoActive,
             focusedAgentId: focusedAgentId,
             observedGoalKinds: observedGoalKinds.sorted(),
-            lastInfluencedDecisionTrace: focusedAgentId.flatMap {
-                lastInfluencedTracesByAgentId[$0]
-            },
+            lastInfluencedDecisionTrace: focusedInfluenced ?? latestInfluenced?.value,
+            lastInfluencedDecisionAgentId: focusedInfluenced == nil ? latestInfluenced?.key : focusedAgentId,
+            runtimeErrorCount: runtimeErrorCount,
+            droppedCatchUpSteps: droppedCatchUpSteps,
             lastError: lastError
         )
     }
@@ -93,12 +128,20 @@ final class PebbleAgentController {
     func handleCommand(_ arguments: [String], world: World, player: Player) -> PebbleAgentCommandResult {
         let command = arguments.first?.lowercased() ?? "status"
         switch command {
+        case "help":
+            guard arguments.count == 1 else { return failure("Usage: /lab help") }
+            return success("/lab lifecycle: start stop clear | time control: pause resume step speed <1|2|4|8> reset | inspection: status focus <agentId|next> next follow <agentId|focus|next|off> overlay <off|compact|full> | movement: movement <on|off> | demo: demo [start|stop|status]")
+        case "demo":
+            return handleDemo(Array(arguments.dropFirst()), world: world, player: player)
         case "start":
+            guard arguments.count == 1 else { return failure("Usage: /lab start") }
             return start(world: world, player: player)
         case "stop", "clear":
-            let removed = stop(reason: command)
+            guard arguments.count == 1 else { return failure("Usage: /lab \(command)") }
+            let removed = stop(reason: command, fallbackWorld: world)
             return success("PebbleAgents stopped; probes removed: \(removed)")
         case "pause":
+            guard arguments.count == 1 else { return failure("Usage: /lab pause") }
             guard session != nil else { return failure("No active PebbleAgents session.") }
             isPaused = true
             lastWorldTick = world.time
@@ -106,6 +149,7 @@ final class PebbleAgentController {
             trace("pause tick=\(session?.tick ?? 0)")
             return success("PebbleAgents paused at tick \(session?.tick ?? 0).")
         case "resume":
+            guard arguments.count == 1 else { return failure("Usage: /lab resume") }
             guard session != nil else { return failure("No active PebbleAgents session.") }
             isPaused = false
             lastWorldTick = world.time
@@ -113,6 +157,7 @@ final class PebbleAgentController {
             trace("resume tick=\(session?.tick ?? 0)")
             return success("PebbleAgents resumed at \(cognitiveHz) Hz.")
         case "step":
+            guard arguments.count == 1 else { return failure("Usage: /lab step") }
             guard session != nil else { return failure("No active PebbleAgents session.") }
             guard advanceOneTick(world: world) else { return failure(lastError ?? "Cognitive step failed.") }
             trace("step tick=\(session?.tick ?? 0)")
@@ -126,6 +171,7 @@ final class PebbleAgentController {
             credit = 0
             return success("PebbleAgents speed set to \(hz) Hz.")
         case "reset":
+            guard arguments.count == 1 else { return failure("Usage: /lab reset") }
             guard session != nil, activeWorld === world, let anchor else {
                 return failure("No active PebbleAgents session.")
             }
@@ -148,13 +194,15 @@ final class PebbleAgentController {
             trace("movement=\(movementStatus) tick=\(session?.tick ?? 0)")
             return success("PebbleAgents movement \(movementStatus).")
         case "status":
+            guard arguments.count == 1 else { return failure("Usage: /lab status") }
             guard let session else {
                 trace("status inactive gate=\(featureEnabled ? "enabled" : "disabled")")
                 return success("PebbleAgents inactive (gate \(featureEnabled ? "enabled" : "disabled")).")
             }
             let snapshot = session.snapshot()
             let positions = snapshot.agents.map { "\($0.id)=\($0.position.x),\($0.position.y),\($0.position.z)/m\($0.movementCount)/o\($0.observationCount)" }.joined(separator: " ")
-            let message = "PebbleAgents \(isPaused ? "paused" : "running") tick=\(snapshot.tick) hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") probes=\(probesByAgentId.count) focus=\(focusedAgentId ?? "none") \(positions)"
+            let overlay = effectiveOverlayMode(f3Visible: false).rawValue
+            let message = "PebbleAgents \(isPaused ? "paused" : "running") tick=\(snapshot.tick) hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") probes=\(probesByAgentId.count) focus=\(focusedAgentId ?? "none") follow=\(followMode.statusText) overlay=\(overlay) demo=\(demoActive ? "on" : "off") catchupDropped=\(droppedCatchUpSteps) \(positions)"
             trace("status \(message)")
             return success(message)
         case "focus":
@@ -162,16 +210,43 @@ final class PebbleAgentController {
             guard arguments.count == 2 else { return failure("Usage: /lab focus <agentId|next>") }
             return setFocus(arguments[1])
         case "next":
+            guard arguments.count == 1 else { return failure("Usage: /lab next") }
             guard session != nil else { return failure("No active PebbleAgents session.") }
             return setFocus("next")
-        case "overlay":
-            guard arguments.count == 2, arguments[1] == "on" || arguments[1] == "off" else {
-                return failure("Usage: /lab overlay <on|off>")
+        case "follow":
+            guard session != nil else { return failure("No active PebbleAgents session.") }
+            guard arguments.count == 2 else { return failure("Usage: /lab follow <agentId|focus|next|off>") }
+            let requested = arguments[1]
+            switch requested.lowercased() {
+            case "off":
+                followMode = .off
+            case "focus":
+                followMode = .focusedAgent
+            case "next":
+                let result = setFocus("next")
+                guard result.succeeded else { return result }
+                followMode = .focusedAgent
+            default:
+                guard probesByAgentId[requested] != nil else { return failure("Unknown agent id: \(requested)") }
+                followMode = .fixedAgent(requested)
             }
-            overlayEnabledByCommand = arguments[1] == "on"
-            return success("PebbleAgents overlay \(arguments[1]).")
+            trace("follow=\(followMode.statusText) tick=\(session?.tick ?? 0)")
+            applyFollow(player: player)
+            return success("PebbleAgents follow: \(followMode.statusText).")
+        case "overlay":
+            guard arguments.count == 2 else {
+                return failure("Usage: /lab overlay <off|compact|full>")
+            }
+            let requested = arguments[1].lowercased()
+            switch requested {
+            case "off": overlayModeByCommand = .off
+            case "on", "compact": overlayModeByCommand = .compact
+            case "full": overlayModeByCommand = .full
+            default: return failure("Usage: /lab overlay <off|compact|full>")
+            }
+            return success("PebbleAgents overlay \(overlayModeByCommand!.rawValue).")
         default:
-            return failure("Usage: /lab <start|stop|clear|pause|resume|step|speed|reset|movement|status|focus|next|overlay>")
+            return failure("Unknown /lab command. Use /lab help.")
         }
     }
 
@@ -196,6 +271,9 @@ final class PebbleAgentController {
 
     private func rebuild(world: World, anchor: AgentPosition, seed: UInt32, resetSpeed: Bool) -> PebbleAgentCommandResult {
         let preservedMovementEnabled = movementEnabled
+        let preservedFocus = focusedAgentId
+        let preservedFollowMode = followMode
+        let preservedDemoActive = demoActive
         _ = clearLabCoreAgentProbes(in: world)
         probesByAgentId.removeAll()
         do {
@@ -225,11 +303,15 @@ final class PebbleAgentController {
             lastInfluencedTracesByAgentId.removeAll()
             credit = 0
             lastWorldTick = world.time
-            focusedAgentId = "agent_0"
+            focusedAgentId = resetSpeed ? "agent_0" : (preservedFocus ?? "agent_0")
+            followMode = resetSpeed ? .off : preservedFollowMode
+            demoActive = resetSpeed ? false : preservedDemoActive
             lastTickResult = nil
             lastError = nil
             observedGoalKinds = [AgentGoalKind.idle.rawValue]
+            resetRunCounters()
             try createProbes(in: world)
+            if followTargetId() == nil { followMode = .off }
             let verb = resetSpeed ? "start" : "reset"
             trace("\(verb) seed=\(seed) agents=3 tick=0 hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off")")
             return success(resetSpeed ? "PebbleAgents started: 3 agents at 4 Hz." : "PebbleAgents reset to tick 0.")
@@ -243,8 +325,8 @@ final class PebbleAgentController {
 
     private func initialAgentStates(anchor: AgentPosition) -> [AgentSessionAgentState] {
         let specifications: [(String, AgentPosition, Int, Double, Double)] = [
-            ("agent_0", AgentPosition(x: anchor.x - 2, y: anchor.y, z: anchor.z), 80, 0, 0.2),
-            ("agent_1", AgentPosition(x: anchor.x, y: anchor.y, z: anchor.z + 2), 10, 0.03, 0.2),
+            ("agent_0", AgentPosition(x: anchor.x + 6, y: anchor.y, z: anchor.z - 3), 80, 0, 0.2),
+            ("agent_1", AgentPosition(x: anchor.x + 7, y: anchor.y, z: anchor.z - 3), 10, 0.03, 0.2),
             ("agent_2", AgentPosition(x: anchor.x + 2, y: anchor.y, z: anchor.z), 10, 0, 0.9),
         ]
         return specifications.map { id, position, fear, fatigue, curiosity in
@@ -285,7 +367,9 @@ final class PebbleAgentController {
                 labAgentId: agent.id,
                 physicalId: "pebble_app_agent_\(agent.id)"
             )
-            guard !probe.shouldSaveToChunk else { throw ControllerError.persistableProbe(agent.id) }
+            guard !probe.shouldSaveToChunk, !probe.persistent else {
+                throw ControllerError.persistableProbe(agent.id)
+            }
             probe.setPos(Double(agent.position.x) + 0.5, Double(agent.position.y), Double(agent.position.z) + 0.5)
             probe.prevX = probe.x
             probe.prevY = probe.y
@@ -314,13 +398,20 @@ final class PebbleAgentController {
             if movementEnabled {
                 let outcomes = AgentMovementCoordinator.resolve(snapshot: session.snapshot())
                 try session.applyMovementOutcomes(outcomes)
-                try movementExecutor.apply(outcomes: outcomes, probesByAgentId: probesByAgentId)
+                let finalSnapshot = session.snapshot()
+                try movementExecutor.apply(
+                    outcomes: outcomes,
+                    probesByAgentId: probesByAgentId,
+                    postApplyValidation: {
+                        try validatePostTick(snapshot: finalSnapshot, result: result)
+                    }
+                )
                 lastMovementOutcomes = outcomes
             } else {
                 lastMovementOutcomes = []
+                try validatePostTick(snapshot: session.snapshot(), result: result)
             }
             let finalSnapshot = session.snapshot()
-            try validatePostTick(snapshot: finalSnapshot, result: result)
             self.session = session
             lastTickResult = result
             for agent in finalSnapshot.agents { observedGoalKinds.insert(agent.currentGoal.kind.rawValue) }
@@ -362,10 +453,16 @@ final class PebbleAgentController {
             let finalMove = decision?.finalDirection?.rawValue ?? decision?.finalAction.name ?? "none"
             let dominant = decision?.dominantFactor.kind.rawValue ?? "none"
             let decisionReason = decision?.reason.replacingOccurrences(of: " ", with: "_") ?? "none"
-            trace("tick=\(result.tick) movement=\(movementEnabled ? "on" : "off") moved=\(moved) blocked=\(blocked) outcomes=\(outcomes) positions=\(positions) goals=\(goals) focus=\(focus?.id ?? "none") action=\(focus?.lastAction?.name ?? "none") focusMove=\(focusMovement) memory=\(focus?.memoryCount ?? 0) retrieved=\(retrieved) influenced=\(influenced) dedup=\(deduplicated) decisionAgent=\(decisionAgent?.id ?? "none") memoryUsed=\(memoryUsed) decisionChanged=\(decision?.actionChanged == true ? 1 : 0) baseMove=\(baseMove) finalMove=\(finalMove) dominant=\(dominant) decisionReason=\(decisionReason) world_observed=1 perception=\(perceptionSummary) observations=\(observations)")
+            successfulCognitiveTicks += 1
+            blockedMovementOutcomeCount += blocked
+            maxObservedMemoryCount = max(maxObservedMemoryCount, finalSnapshot.agents.map(\.memoryCount).max() ?? 0)
+            maxObservedDistanceFromHome = max(maxObservedDistanceFromHome, finalSnapshot.agents.map(\.distanceFromHome).max() ?? 0)
+            let message = "tick=\(result.tick) movement=\(movementEnabled ? "on" : "off") moved=\(moved) blocked=\(blocked) outcomes=\(outcomes) positions=\(positions) goals=\(goals) focus=\(focus?.id ?? "none") action=\(focus?.lastAction?.name ?? "none") focusMove=\(focusMovement) memory=\(focus?.memoryCount ?? 0) retrieved=\(retrieved) influenced=\(influenced) dedup=\(deduplicated) decisionAgent=\(decisionAgent?.id ?? "none") memoryUsed=\(memoryUsed) decisionChanged=\(decision?.actionChanged == true ? 1 : 0) baseMove=\(baseMove) finalMove=\(finalMove) dominant=\(dominant) decisionReason=\(decisionReason) world_observed=1 perception=\(perceptionSummary) observations=\(observations)"
+            traceTick(message, tick: result.tick, important: decision?.actionChanged == true)
             return true
         } catch {
             lastError = String(describing: error)
+            runtimeErrorCount += 1
             trace("error \(error)")
             return false
         }
@@ -444,9 +541,102 @@ final class PebbleAgentController {
         return success("PebbleAgents focus: \(next).")
     }
 
+    private func handleDemo(
+        _ arguments: [String],
+        world: World,
+        player: Player
+    ) -> PebbleAgentCommandResult {
+        let subcommand = arguments.first?.lowercased() ?? "start"
+        guard arguments.count <= 1 else { return failure("Usage: /lab demo [start|stop|status]") }
+        switch subcommand {
+        case "start":
+            let gates = [
+                ("PEBBLELAB_APP_AGENTS=1", featureEnabled),
+                ("PEBBLELAB_APP_AGENTS_MOVE=1", movementFeatureEnabled),
+                ("PEBBLELAB_APP_PROBES=1", probesFeatureEnabled),
+                ("PEBBLELAB_DEBUG_ENTITIES=1", debugEntitiesEnabled),
+            ]
+            let missing = gates.filter { !$0.1 }.map(\.0)
+            guard missing.isEmpty else {
+                return failure("PebbleAgents demo refused; missing gates: \(missing.joined(separator: ", "))")
+            }
+            if session != nil || activeWorld != nil {
+                _ = stop(reason: "demo restart", fallbackWorld: world)
+            }
+            let result = start(world: world, player: player)
+            guard result.succeeded else { return result }
+            cognitiveHz = 4
+            isPaused = false
+            movementEnabled = true
+            movementWasEverEnabledSinceReset = true
+            focusedAgentId = "agent_2"
+            followMode = .focusedAgent
+            overlayModeByCommand = .compact
+            demoActive = true
+            credit = 0
+            lastWorldTick = world.time
+            applyFollow(player: player)
+            trace("demo start agents=3 hz=4 movement=on focus=agent_2 follow=focus overlay=compact")
+            return success("PebbleAgents demo active: 3 agents, 4 Hz, movement on, focus agent_2, follow focus, overlay compact.")
+        case "stop":
+            let removed = stop(reason: "demo stop", fallbackWorld: world)
+            trace("demo stop probesRemoved=\(removed)")
+            return success("PebbleAgents demo stopped; probes removed: \(removed).")
+        case "status":
+            let active = session != nil
+            return success("PebbleAgents demo \(demoActive && active ? "active" : "inactive") session=\(active ? "active" : "inactive") agents=\(session?.snapshot().agentCount ?? 0) hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") focus=\(focusedAgentId ?? "none") follow=\(followMode.statusText) overlay=\(effectiveOverlayMode(f3Visible: false).rawValue) probes=\(probesByAgentId.count).")
+        default:
+            return failure("Usage: /lab demo [start|stop|status]")
+        }
+    }
+
+    private func effectiveOverlayMode(f3Visible: Bool) -> PebbleAgentOverlayMode {
+        overlayModeByCommand
+            ?? (f3Visible ? .full : overlayEnabledByEnvironment ? .compact : .off)
+    }
+
+    private func followTargetId() -> String? {
+        switch followMode {
+        case .off: return nil
+        case .focusedAgent: return focusedAgentId
+        case let .fixedAgent(agentId): return agentId
+        }
+    }
+
+    private func applyFollow(player: Player) {
+        guard followMode != .off else { return }
+        guard let agentId = followTargetId(), let probe = probesByAgentId[agentId] else {
+            let prior = followMode.statusText
+            followMode = .off
+            trace("follow off reason=target unavailable target=\(prior)")
+            return
+        }
+        _ = cameraFollow.orient(player: player, toward: probe)
+    }
+
+    private func resetRunCounters() {
+        successfulCognitiveTicks = 0
+        blockedMovementOutcomeCount = 0
+        runtimeErrorCount = 0
+        droppedCatchUpSteps = 0
+        maxObservedMemoryCount = 0
+        maxObservedDistanceFromHome = 0
+    }
+
     @discardableResult
-    private func stop(reason: String) -> Int {
-        let removed = activeWorld.map { clearLabCoreAgentProbes(in: $0) } ?? 0
+    private func stop(reason: String, fallbackWorld: World? = nil) -> Int {
+        let snapshot = session?.snapshot()
+        let followStatus = followMode.statusText
+        let wasDemo = demoActive
+        let cleanupWorld = activeWorld ?? fallbackWorld
+        let removed = cleanupWorld.map { clearLabCoreAgentProbes(in: $0) } ?? 0
+        if let snapshot {
+            let movementCount = snapshot.agents.reduce(0) { $0 + $1.movementCount }
+            let retrieved = snapshot.agents.reduce(0) { $0 + $1.memoryRetrievalCount }
+            let influenced = snapshot.agents.reduce(0) { $0 + $1.memoryInfluencedDecisionCount }
+            let dedup = snapshot.agents.reduce(0) { $0 + $1.feedbackMemoryDeduplicatedCount }
+            trace("summary reason=\(reason.replacingOccurrences(of: " ", with: "_")) seed=\(seed) ticks=\(successfulCognitiveTicks) hz=\(cognitiveHz) agents=\(snapshot.agentCount) movementCount=\(movementCount) blocked=\(blockedMovementOutcomeCount) memoryMax=\(maxObservedMemoryCount) retrieved=\(retrieved) influenced=\(influenced) dedup=\(dedup) maxDistanceHome=\(maxObservedDistanceFromHome) runtimeErrors=\(runtimeErrorCount) catchupDropped=\(droppedCatchUpSteps) probesRemoved=\(removed) follow=\(followStatus) demo=\(wasDemo ? 1 : 0)")
+        }
         session = nil
         activeWorld = nil
         probesByAgentId.removeAll()
@@ -461,7 +651,10 @@ final class PebbleAgentController {
         lastMovementOutcomes = []
         lastInfluencedTracesByAgentId.removeAll()
         observedGoalKinds.removeAll()
-        overlayEnabledByCommand = false
+        overlayModeByCommand = nil
+        followMode = .off
+        demoActive = false
+        lastError = nil
         trace("stop probesRemoved=\(removed) reason=\(reason)")
         return removed
     }
@@ -480,6 +673,11 @@ final class PebbleAgentController {
         guard traceEnabled else { return }
         print("[lab-live] \(message)")
         fflush(stdout)
+    }
+
+    private func traceTick(_ message: String, tick: Int, important: Bool) {
+        guard important || tick % traceEvery == 0 else { return }
+        trace(message)
     }
 
     private enum ControllerError: Error {
