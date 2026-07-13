@@ -96,7 +96,8 @@ public enum AgentMovementCoordinator {
         guard let action = agent.lastAction,
               action.name == "move_abstract"
                 || action.name == "approach_resource"
-                || action.name == "return_home" else {
+                || action.name == "return_home"
+                || action.name == "approach_construction" else {
             return stationary(
                 agent: agent,
                 tick: tick,
@@ -111,7 +112,8 @@ public enum AgentMovementCoordinator {
         let dx = action.dx ?? 0
         let dy = action.dy ?? 0
         let dz = action.dz ?? 0
-        if action.name == "approach_resource" || action.name == "return_home",
+        if action.name == "approach_resource" || action.name == "return_home"
+            || action.name == "approach_construction",
            action.dx == nil || action.dz == nil
                 || !(action.dy == nil || (-1...1).contains(dy))
                 || abs(dx) + abs(dz) != 1 {
@@ -126,6 +128,7 @@ public enum AgentMovementCoordinator {
             )
         }
         let validVerticalIntent = action.name == "approach_resource" || action.name == "return_home"
+            || action.name == "approach_construction"
             ? (-1...1).contains(dy)
             : (action.dy == nil || action.dy == 0)
         guard validVerticalIntent, abs(dx) + abs(dz) == 1 else {
@@ -155,7 +158,8 @@ public enum AgentMovementCoordinator {
         }
 
         let step = neighbor.stepDelta!
-        if action.name == "approach_resource" || action.name == "return_home", step != dy {
+        if action.name == "approach_resource" || action.name == "return_home"
+            || action.name == "approach_construction", step != dy {
             return stationary(agent: agent, tick: tick, status: .blocked, action: action, direction: direction, reason: "route step height changed", worldTick: observation.worldTick)
         }
         let target = AgentPosition(

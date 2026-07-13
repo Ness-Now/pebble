@@ -17,6 +17,7 @@ public enum AgentGoalKind: String, Codable, Equatable {
     case collectResource
     case deliverResources
     case satisfyHunger
+    case buildShelter
     case explore
     case observeOtherAgent
 }
@@ -78,6 +79,7 @@ public struct AgentActionDecisionInput {
     public let resourceReservation: AgentResourceReservation?
     public let survivalEnabled: Bool
     public let hasFoodRaw: Bool
+    public let constructionProject: AgentConstructionProject?
 
     public init(
         agentId: String,
@@ -90,7 +92,8 @@ public struct AgentActionDecisionInput {
         navigationProgress: AgentNavigationProgress = AgentNavigationProgress(),
         resourceReservation: AgentResourceReservation? = nil,
         survivalEnabled: Bool = false,
-        hasFoodRaw: Bool = false
+        hasFoodRaw: Bool = false,
+        constructionProject: AgentConstructionProject? = nil
     ) {
         self.agentId = agentId
         self.tick = tick
@@ -103,6 +106,7 @@ public struct AgentActionDecisionInput {
         self.resourceReservation = resourceReservation
         self.survivalEnabled = survivalEnabled
         self.hasFoodRaw = hasFoodRaw
+        self.constructionProject = constructionProject
     }
 }
 
@@ -164,6 +168,8 @@ public enum AgentActionDecider {
             return resourceAction(foodInput, goalName: "satisfyHunger")
         case .deliverResources:
             return returnHomeAction(input, goalName: "deliverResources")
+        case .buildShelter:
+            return constructionAction(input)
         case .observeOtherAgent:
             return AgentAction(
                 name: "observe_area",
@@ -182,6 +188,89 @@ public enum AgentActionDecider {
             )
         case .idle:
             return AgentAction(name: "wait", reason: "goal idle", tick: input.tick)
+        }
+    }
+
+    private static func constructionAction(_ input: AgentActionDecisionInput) -> AgentAction {
+        guard let project = input.constructionProject,
+              project.builderAgentId == input.agentId else {
+            return AgentAction(
+                name: "wait",
+                reason: "goal buildShelter: project unavailable",
+                tick: input.tick
+            )
+        }
+        switch project.status {
+        case .readyToFund:
+            if input.position == input.homePosition {
+                return AgentAction(
+                    name: "fund_construction",
+                    reason: "goal buildShelter: materials ready at camp",
+                    tick: input.tick
+                )
+            }
+            return returnHomeAction(input, goalName: "buildShelter")
+        case .funded, .building:
+            guard let target = project.nextTarget,
+                  let workPosition = project.nextWorkPosition,
+                  let resource = project.nextCell?.resource else {
+                return AgentAction(
+                    name: "wait",
+                    reason: "goal buildShelter: completion verification pending",
+                    tick: input.tick
+                )
+            }
+            if input.position == workPosition {
+                return AgentAction(
+                    name: "place_block",
+                    reason: "goal buildShelter: place ordered blueprint cell",
+                    tick: input.tick,
+                    target: target,
+                    resource: resource
+                )
+            }
+            if let next = input.navigationProgress.nextStep {
+                let dx = next.x - input.position.x
+                let dy = next.y - input.position.y
+                let dz = next.z - input.position.z
+                if abs(dx) + abs(dz) == 1, (-1...1).contains(dy) {
+                    return AgentAction(
+                        name: "approach_construction",
+                        reason: "goal buildShelter: follow bounded work route",
+                        tick: input.tick,
+                        dx: dx,
+                        dy: dy,
+                        dz: dz,
+                        target: workPosition,
+                        resource: resource
+                    )
+                }
+            }
+            return AgentAction(
+                name: "approach_construction",
+                reason: "goal buildShelter: awaiting bounded work route",
+                tick: input.tick,
+                target: workPosition,
+                resource: resource
+            )
+        case .blocked:
+            return AgentAction(
+                name: "wait",
+                reason: "goal buildShelter: project blocked",
+                tick: input.tick
+            )
+        case .planned, .acquiringMaterials:
+            return AgentAction(
+                name: "wait",
+                reason: "goal buildShelter: materials still required",
+                tick: input.tick
+            )
+        case .completed:
+            return AgentAction(
+                name: "wait",
+                reason: "goal buildShelter: shelter completed",
+                tick: input.tick
+            )
         }
     }
 

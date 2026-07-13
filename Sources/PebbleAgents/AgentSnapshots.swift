@@ -252,6 +252,8 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
     public let conservation: AgentResourceConservationSnapshot
     public let survivalEnabled: Bool
     public let survivalConfiguration: AgentSurvivalConfiguration
+    public let buildAutoEnabled: Bool
+    public let constructionProject: AgentConstructionProject?
 
     init(
         seed: UInt32,
@@ -264,7 +266,9 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
         campStock: AgentCampStock,
         conservation: AgentResourceConservationSnapshot,
         survivalEnabled: Bool = false,
-        survivalConfiguration: AgentSurvivalConfiguration = .live
+        survivalConfiguration: AgentSurvivalConfiguration = .live,
+        buildAutoEnabled: Bool = false,
+        constructionProject: AgentConstructionProject? = nil
     ) {
         self.seed = seed
         self.tick = tick
@@ -278,12 +282,15 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
         self.conservation = conservation
         self.survivalEnabled = survivalEnabled
         self.survivalConfiguration = survivalConfiguration
+        self.buildAutoEnabled = buildAutoEnabled
+        self.constructionProject = constructionProject
     }
 
     private enum CodingKeys: String, CodingKey {
         case seed, tick, agentCount, agents, resourceReservations
         case economyEnabled, naturalResourcesEnabled, deliveryQuota, campStock, conservation
         case survivalEnabled, survivalConfiguration
+        case buildAutoEnabled, constructionProject
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -307,6 +314,15 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
         if survivalEnabled || conservation.consumedTotal > 0 {
             try container.encode(survivalEnabled, forKey: .survivalEnabled)
             try container.encode(survivalConfiguration, forKey: .survivalConfiguration)
+            if !economyEnabled && campStock.isEmpty && conservation.harvestedTotal == 0 {
+                try container.encode(conservation, forKey: .conservation)
+            }
+        }
+        if buildAutoEnabled || constructionProject != nil
+            || conservation.constructionEscrowTotal > 0
+            || conservation.constructedTotal > 0 {
+            try container.encode(buildAutoEnabled, forKey: .buildAutoEnabled)
+            try container.encodeIfPresent(constructionProject, forKey: .constructionProject)
             if !economyEnabled && campStock.isEmpty && conservation.harvestedTotal == 0 {
                 try container.encode(conservation, forKey: .conservation)
             }

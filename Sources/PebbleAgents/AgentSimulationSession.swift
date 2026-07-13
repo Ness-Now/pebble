@@ -54,6 +54,19 @@ public enum AgentSessionError: Error, Equatable {
     case invalidConsumptionOutcome(String)
     case survivalDisabled(String)
     case consumptionLimitReached
+    case constructionProjectAlreadyExists
+    case constructionProjectMissing
+    case constructionBuilderMismatch(String)
+    case constructionDisabled
+    case constructionFundingTickMismatch(String)
+    case duplicateConstructionFunding(String)
+    case invalidConstructionFunding(String)
+    case constructionPlacementTickMismatch(String)
+    case duplicateConstructionPlacement(String)
+    case invalidConstructionPlacement(String)
+    case constructionCompletionInvalid(String)
+    case constructionClearInvalid(String)
+    case constructionEventLimitReached
 }
 
 public struct AgentSessionConfiguration {
@@ -343,6 +356,7 @@ public struct AgentSessionTickResult {
 
 public struct AgentSimulationSession {
     public static let maximumConsumptionCount = AgentSurvivalProgress.maximumEventCount
+    public static let maximumConstructionEventCount = 64
     public let configuration: AgentSessionConfiguration
     public private(set) var tick: Int
     private var statesById: [String: AgentSessionAgentState]
@@ -357,6 +371,12 @@ public struct AgentSimulationSession {
     public private(set) var survivalEnabled: Bool
     private var consumedResourceTotals: AgentCampStock
     private var processedConsumptionIds: Set<String>
+    public private(set) var buildAutoEnabled: Bool
+    public private(set) var constructionProject: AgentConstructionProject?
+    private var processedConstructionFundingIds: Set<String>
+    private var processedConstructionPlacementIds: Set<String>
+    private var processedConstructionFailureIds: Set<String>
+    private var lastConstructionPlacementTick: Int?
 
     public init(
         configuration: AgentSessionConfiguration,
@@ -388,6 +408,12 @@ public struct AgentSimulationSession {
         survivalEnabled = false
         consumedResourceTotals = AgentCampStock(capacity: 4096)
         processedConsumptionIds = []
+        buildAutoEnabled = false
+        constructionProject = nil
+        processedConstructionFundingIds = []
+        processedConstructionPlacementIds = []
+        processedConstructionFailureIds = []
+        lastConstructionPlacementTick = nil
     }
 
     public func snapshot() -> AgentSessionSnapshot {
@@ -412,7 +438,9 @@ public struct AgentSimulationSession {
             campStock: campStock,
             conservation: conservationSnapshot(),
             survivalEnabled: survivalEnabled,
-            survivalConfiguration: configuration.survivalConfiguration
+            survivalConfiguration: configuration.survivalConfiguration,
+            buildAutoEnabled: buildAutoEnabled,
+            constructionProject: constructionProject
         )
     }
 
@@ -489,6 +517,361 @@ public struct AgentSimulationSession {
         }
     }
 
+    public mutating func createConstructionProject(_ project: AgentConstructionProject) throws {
+        guard constructionProject == nil else {
+            throw AgentSessionError.constructionProjectAlreadyExists
+        }
+        guard let builder = statesById[project.builderAgentId] else {
+            throw AgentSessionError.unknownAgentId(project.builderAgentId)
+        }
+        guard project.blueprint == .fixedLeanToV1,
+              project.previousHomePosition == builder.homePosition,
+              project.status == .acquiringMaterials,
+              project.placedCellIndices.isEmpty,
+              project.materialEscrow.total == 0,
+              project.placedMaterialTotals.total == 0 else {
+            throw AgentSessionError.constructionBuilderMismatch(project.builderAgentId)
+        }
+        constructionProject = project
+        buildAutoEnabled = false
+    }
+
+    public mutating func setBuildAutoEnabled(_ enabled: Bool) throws {
+        if enabled, constructionProject == nil {
+            throw AgentSessionError.constructionProjectMissing
+        }
+        if enabled, var project = constructionProject {
+            project.resumeAfterRecoverableFailure()
+            constructionProject = project
+        }
+        buildAutoEnabled = enabled
+        guard !enabled, let project = constructionProject,
+              var builder = statesById[project.builderAgentId] else { return }
+        if builder.currentGoal.kind == .buildShelter {
+            builder.currentGoal = AgentGoal(
+                kind: .idle,
+                reason: "construction suspended",
+                startedAtTick: tick,
+                urgency: 0
+            )
+            builder.navigationProgress = AgentNavigationProgress()
+        }
+        statesById[builder.id] = builder
+    }
+
+    public func constructionDemand() -> AgentConstructionDemand? {
+        guard let project = constructionProject,
+              let builder = statesById[project.builderAgentId],
+              project.status == .planned
+                || project.status == .acquiringMaterials
+                || project.status == .readyToFund else { return nil }
+        return AgentConstructionDemand(
+            projectId: project.projectId,
+            missing: project.missingMaterials(
+                campStock: campStock,
+                builderInventory: builder.resourceInventory
+            )
+        )
+    }
+
+    @discardableResult
+    public mutating func fundConstructionProject(
+        fundingId: String,
+        builderAgentId: String,
+        fundingTick: Int
+    ) throws -> AgentConstructionProject {
+        var candidate = self
+        let project = try candidate.fundConstructionProjectInPlace(
+            fundingId: fundingId,
+            builderAgentId: builderAgentId,
+            fundingTick: fundingTick
+        )
+        self = candidate
+        return project
+    }
+
+    private mutating func fundConstructionProjectInPlace(
+        fundingId: String,
+        builderAgentId: String,
+        fundingTick: Int
+    ) throws -> AgentConstructionProject {
+        guard buildAutoEnabled else { throw AgentSessionError.constructionDisabled }
+        guard fundingTick == tick else {
+            throw AgentSessionError.constructionFundingTickMismatch(fundingId)
+        }
+        guard !processedConstructionFundingIds.contains(fundingId) else {
+            throw AgentSessionError.duplicateConstructionFunding(fundingId)
+        }
+        guard processedConstructionFundingIds.count < Self.maximumConstructionEventCount else {
+            throw AgentSessionError.constructionEventLimitReached
+        }
+        guard var project = constructionProject else {
+            throw AgentSessionError.constructionProjectMissing
+        }
+        guard project.builderAgentId == builderAgentId,
+              statesById[builderAgentId]?.position == statesById[builderAgentId]?.homePosition,
+              project.status == .readyToFund || project.status == .acquiringMaterials,
+              project.placedCellIndices.isEmpty else {
+            throw AgentSessionError.invalidConstructionFunding(fundingId)
+        }
+        guard campStock.canRemove(project.materialRequirements) else {
+            throw AgentSessionError.invalidConstructionFunding(fundingId)
+        }
+        var nextStock = campStock
+        guard nextStock.remove(project.materialRequirements),
+              let escrow = try? AgentConstructionMaterialState(
+                  amounts: project.materialRequirements
+              ) else {
+            throw AgentSessionError.invalidConstructionFunding(fundingId)
+        }
+        project.fund(escrow)
+        campStock = nextStock
+        constructionProject = project
+        guard conservationSnapshot().balanced else {
+            throw AgentSessionError.invalidConstructionFunding(fundingId)
+        }
+        guard var builder = statesById[builderAgentId] else {
+            throw AgentSessionError.unknownAgentId(builderAgentId)
+        }
+        appendMemory(AgentMemoryEntry(
+            tick: tick,
+            type: "construction_funded",
+            summary: "\(project.projectId) funded with 6 wood and 3 stone",
+            importance: 0.60
+        ), to: &builder.memory)
+        statesById[builderAgentId] = builder
+        processedConstructionFundingIds.insert(fundingId)
+        return project
+    }
+
+    public func prevalidatePlacement(_ intent: AgentPlacementIntent) throws {
+        guard buildAutoEnabled else { throw AgentSessionError.constructionDisabled }
+        guard intent.tick == tick else {
+            throw AgentSessionError.constructionPlacementTickMismatch(intent.placementId)
+        }
+        guard !processedConstructionPlacementIds.contains(intent.placementId) else {
+            throw AgentSessionError.duplicateConstructionPlacement(intent.placementId)
+        }
+        guard lastConstructionPlacementTick != tick else {
+            throw AgentSessionError.invalidConstructionPlacement(intent.placementId)
+        }
+        guard processedConstructionPlacementIds.count < Self.maximumConstructionEventCount else {
+            throw AgentSessionError.constructionEventLimitReached
+        }
+        guard let project = constructionProject else {
+            throw AgentSessionError.constructionProjectMissing
+        }
+        guard project.projectId == intent.projectId,
+              project.builderAgentId == intent.builderAgentId,
+              project.status == .funded || project.status == .building,
+              project.nextCellIndex == intent.cellIndex,
+              let cell = project.nextCell,
+              cell.resource == intent.resource,
+              project.nextTarget == intent.target,
+              project.nextWorkPosition == intent.workPosition,
+              project.materialEscrow.canRemove(intent.resource),
+              statesById[intent.builderAgentId]?.position == intent.workPosition else {
+            throw AgentSessionError.invalidConstructionPlacement(intent.placementId)
+        }
+    }
+
+    public mutating func applyPlacementOutcome(_ outcome: AgentPlacementOutcome) throws {
+        var candidate = self
+        try candidate.applyPlacementOutcomeInPlace(outcome)
+        self = candidate
+    }
+
+    public mutating func recordConstructionFailure(
+        failureId: String,
+        projectId: String,
+        builderAgentId: String,
+        failure: AgentConstructionFailure,
+        reason: String
+    ) throws {
+        var candidate = self
+        try candidate.recordConstructionFailureInPlace(
+            failureId: failureId,
+            projectId: projectId,
+            builderAgentId: builderAgentId,
+            failure: failure,
+            reason: reason
+        )
+        self = candidate
+    }
+
+    private mutating func recordConstructionFailureInPlace(
+        failureId: String,
+        projectId: String,
+        builderAgentId: String,
+        failure: AgentConstructionFailure,
+        reason: String
+    ) throws {
+        guard !failureId.isEmpty,
+              !processedConstructionFailureIds.contains(failureId),
+              processedConstructionFailureIds.count < Self.maximumConstructionEventCount,
+              var project = constructionProject,
+              project.projectId == projectId,
+              project.builderAgentId == builderAgentId,
+              var builder = statesById[builderAgentId] else {
+            throw AgentSessionError.invalidConstructionPlacement(failureId)
+        }
+        project.recordFailure(failure)
+        appendMemory(AgentMemoryEntry(
+            tick: tick,
+            type: "construction_blocked",
+            summary: "\(projectId) blocked: \(reason)",
+            importance: 0.55
+        ), to: &builder.memory)
+        constructionProject = project
+        statesById[builderAgentId] = builder
+        processedConstructionFailureIds.insert(failureId)
+        guard conservationSnapshot().balanced else {
+            throw AgentSessionError.invalidConstructionPlacement(failureId)
+        }
+    }
+
+    private mutating func applyPlacementOutcomeInPlace(
+        _ outcome: AgentPlacementOutcome
+    ) throws {
+        guard outcome.tick == tick else {
+            throw AgentSessionError.constructionPlacementTickMismatch(outcome.placementId)
+        }
+        guard !processedConstructionPlacementIds.contains(outcome.placementId) else {
+            throw AgentSessionError.duplicateConstructionPlacement(outcome.placementId)
+        }
+        guard lastConstructionPlacementTick != tick else {
+            throw AgentSessionError.invalidConstructionPlacement(outcome.placementId)
+        }
+        guard processedConstructionPlacementIds.count < Self.maximumConstructionEventCount else {
+            throw AgentSessionError.constructionEventLimitReached
+        }
+        guard var project = constructionProject,
+              var builder = statesById[outcome.builderAgentId],
+              project.projectId == outcome.projectId,
+              project.builderAgentId == outcome.builderAgentId,
+              project.nextCellIndex == outcome.cellIndex,
+              project.nextTarget == outcome.target,
+              project.nextCell?.resource == outcome.resource else {
+            throw AgentSessionError.invalidConstructionPlacement(outcome.placementId)
+        }
+        guard outcome.status == .succeeded, project.applyPlacement(outcome) else {
+            throw AgentSessionError.invalidConstructionPlacement(outcome.placementId)
+        }
+        builder.navigationProgress = AgentNavigationProgress(lastInvalidation: .targetChanged)
+        appendMemory(AgentMemoryEntry(
+            tick: tick,
+            type: "construction_block_placed",
+            summary: "\(project.projectId) placed cell \(outcome.cellIndex) \(outcome.resource.rawValue)",
+            importance: 0.45
+        ), to: &builder.memory)
+        constructionProject = project
+        statesById[builder.id] = builder
+        processedConstructionPlacementIds.insert(outcome.placementId)
+        lastConstructionPlacementTick = tick
+        guard conservationSnapshot().balanced else {
+            throw AgentSessionError.invalidConstructionPlacement(outcome.placementId)
+        }
+    }
+
+    public mutating func completeConstructionProject(
+        projectId: String,
+        completionTick: Int
+    ) throws {
+        var candidate = self
+        try candidate.completeConstructionProjectInPlace(
+            projectId: projectId,
+            completionTick: completionTick
+        )
+        self = candidate
+    }
+
+    private mutating func completeConstructionProjectInPlace(
+        projectId: String,
+        completionTick: Int
+    ) throws {
+        guard completionTick == tick,
+              var project = constructionProject,
+              project.projectId == projectId,
+              project.status == .building,
+              project.nextCellIndex == project.blueprint.cells.count,
+              project.placedCellIndices == project.blueprint.cells.map(\.index),
+              project.materialEscrow.total == 0,
+              project.placedMaterialTotals.amounts == project.materialRequirements,
+              var builder = statesById[project.builderAgentId] else {
+            throw AgentSessionError.constructionCompletionInvalid(projectId)
+        }
+        project.complete(at: completionTick)
+        builder.homePosition = project.restPosition
+        builder.navigationProgress = AgentNavigationProgress()
+        appendMemory(AgentMemoryEntry(
+            tick: tick,
+            type: "shelter_completed",
+            summary: "\(project.projectId) completed; home moved to shelter rest cell",
+            importance: 0.80
+        ), to: &builder.memory)
+        constructionProject = project
+        statesById[builder.id] = builder
+        guard conservationSnapshot().balanced else {
+            throw AgentSessionError.constructionCompletionInvalid(projectId)
+        }
+    }
+
+    public func prevalidateConstructionClear(projectId: String) throws {
+        guard let project = constructionProject, project.projectId == projectId else {
+            throw AgentSessionError.constructionProjectMissing
+        }
+        let refund = AgentResourceAmounts.normalize(
+            project.materialEscrow.amounts + project.placedMaterialTotals.amounts
+        )
+        guard campStock.canAdd(refund) else {
+            throw AgentSessionError.constructionClearInvalid(projectId)
+        }
+    }
+
+    public mutating func clearConstructionProject(projectId: String) throws {
+        var candidate = self
+        try candidate.clearConstructionProjectInPlace(projectId: projectId)
+        self = candidate
+    }
+
+    private mutating func clearConstructionProjectInPlace(projectId: String) throws {
+        try prevalidateConstructionClear(projectId: projectId)
+        guard let project = constructionProject,
+              var builder = statesById[project.builderAgentId] else {
+            throw AgentSessionError.constructionClearInvalid(projectId)
+        }
+        let refund = AgentResourceAmounts.normalize(
+            project.materialEscrow.amounts + project.placedMaterialTotals.amounts
+        )
+        var nextStock = campStock
+        if !refund.isEmpty, !nextStock.add(refund) {
+            throw AgentSessionError.constructionClearInvalid(projectId)
+        }
+        builder.homePosition = project.previousHomePosition
+        builder.navigationProgress = AgentNavigationProgress()
+        if builder.currentGoal.kind == .buildShelter {
+            builder.currentGoal = AgentGoal(
+                kind: .idle,
+                reason: "construction cleared",
+                startedAtTick: tick,
+                urgency: 0
+            )
+        }
+        appendMemory(AgentMemoryEntry(
+            tick: tick,
+            type: "construction_cleared",
+            summary: "\(projectId) terrain and materials restored",
+            importance: 0.45
+        ), to: &builder.memory)
+        campStock = nextStock
+        constructionProject = nil
+        buildAutoEnabled = false
+        statesById[builder.id] = builder
+        guard conservationSnapshot().balanced else {
+            throw AgentSessionError.constructionClearInvalid(projectId)
+        }
+    }
+
     public func conservationSnapshot() -> AgentResourceConservationSnapshot {
         let carried = AgentResourceKind.allCases.map { resource in
             AgentResourceAmount(
@@ -502,7 +885,9 @@ public struct AgentSimulationSession {
             harvested: harvestedResourceTotals.amounts,
             carried: carried,
             campStock: campStock.amounts,
-            consumed: consumedResourceTotals.amounts
+            consumed: consumedResourceTotals.amounts,
+            constructionEscrow: constructionProject?.materialEscrow.amounts ?? [],
+            constructed: constructionProject?.placedMaterialTotals.amounts ?? []
         )
     }
 
@@ -913,6 +1298,7 @@ public struct AgentSimulationSession {
 
         let nextTick = tick + 1
         let ids = sortedIds
+        refreshConstructionProjectStatus()
         reservationsByTarget = reservationsByTarget.filter { !$0.value.isExpired(at: nextTick) }
         for id in ids {
             guard var state = statesById[id] else { continue }
@@ -934,6 +1320,8 @@ public struct AgentSimulationSession {
                 state.activeResourceTarget = nil
             } else if shouldDeliverResources(state) {
                 state.activeResourceTarget = nil
+            } else if isFundedConstructionBuilder(state) {
+                state.activeResourceTarget = nil
             } else if survivalEnabled && !economyEnabled {
                 state.activeResourceTarget = nil
             } else {
@@ -941,7 +1329,8 @@ public struct AgentSimulationSession {
                     current: previousTarget,
                     observations: state.lastResourceObservations,
                     inventory: state.resourceInventory,
-                    tick: nextTick
+                    tick: nextTick,
+                    eligibleResources: constructionEligibleResources(for: state)
                 )
             }
             if let previousTarget,
@@ -1030,6 +1419,8 @@ public struct AgentSimulationSession {
                     || state.currentGoal.kind == .satisfyHunger)
                     && reservation(for: state)?.agentId == id,
                 shouldDeliverResources: shouldDeliverResources(state),
+                shouldBuildShelter: shouldBuildShelter(state),
+                hasConstructionTask: hasActiveConstructionTask(state),
                 currentGoalKind: state.currentGoal.kind,
                 survivalEnabled: survivalEnabled,
                 hungryThreshold: configuration.survivalConfiguration.hungryThreshold,
@@ -1060,7 +1451,10 @@ public struct AgentSimulationSession {
                 navigationProgress: state.navigationProgress,
                 resourceReservation: reservation(for: state),
                 survivalEnabled: survivalEnabled,
-                hasFoodRaw: state.resourceInventory.count(of: .foodRaw) > 0
+                hasFoodRaw: state.resourceInventory.count(of: .foodRaw) > 0,
+                constructionProject: constructionProject?.builderAgentId == id
+                    ? constructionProject
+                    : nil
             ))
             let retrievedMemories = AgentFeedbackLoop.retrieveMovementMemories(
                 memory: state.memory,
@@ -1219,7 +1613,8 @@ public struct AgentSimulationSession {
                 guard let action = state.lastAction,
                       action.name == "move_abstract"
                         || action.name == "approach_resource"
-                        || action.name == "return_home",
+                        || action.name == "return_home"
+                        || action.name == "approach_construction",
                       outcome.requestedDX == (action.dx ?? 0),
                       outcome.requestedDY == (action.dy ?? 0),
                       outcome.requestedDZ == (action.dz ?? 0),
@@ -1276,7 +1671,8 @@ public struct AgentSimulationSession {
                     state.totalDistanceReducedTowardHome += outcome.distanceReducedTowardHome
                 }
                 if state.lastAction?.name == "approach_resource"
-                    || state.lastAction?.name == "return_home" {
+                    || state.lastAction?.name == "return_home"
+                    || state.lastAction?.name == "approach_construction" {
                     guard let route = state.navigationProgress.route,
                           state.navigationProgress.status == .active,
                           state.navigationProgress.nextStep == outcome.toPosition else {
@@ -1301,7 +1697,8 @@ public struct AgentSimulationSession {
                 }
             case .blocked:
                 if state.lastAction?.name == "approach_resource"
-                    || state.lastAction?.name == "return_home" {
+                    || state.lastAction?.name == "return_home"
+                    || state.lastAction?.name == "approach_construction" {
                     state.navigationProgress = AgentNavigationProgress(
                         status: state.navigationProgress.status,
                         route: state.navigationProgress.route,
@@ -1469,6 +1866,43 @@ public struct AgentSimulationSession {
             targetResource = nil
             goalMode = .exact
             if state.position == state.homePosition {
+                state.navigationProgress = AgentNavigationProgress(
+                    status: .arrived,
+                    route: state.navigationProgress.route,
+                    routeIndex: state.navigationProgress.route.map {
+                        max(0, $0.positions.count - 1)
+                    } ?? 0,
+                    replanCount: state.navigationProgress.replanCount,
+                    lastPlanTick: state.navigationProgress.lastPlanTick,
+                    lastInvalidation: state.navigationProgress.lastInvalidation
+                )
+                return
+            }
+        case .buildShelter:
+            guard buildAutoEnabled,
+                  let project = constructionProject,
+                  project.builderAgentId == state.id else {
+                releaseReservation(for: state)
+                state.navigationProgress = AgentNavigationProgress()
+                return
+            }
+            releaseReservation(for: state)
+            if project.status == .readyToFund {
+                purpose = .homeDelivery
+                targetPosition = state.homePosition
+                targetResource = nil
+                goalMode = .exact
+            } else if (project.status == .funded || project.status == .building),
+                      let workPosition = project.nextWorkPosition {
+                purpose = .constructionWork
+                targetPosition = workPosition
+                targetResource = project.nextCell?.resource
+                goalMode = .exact
+            } else {
+                state.navigationProgress = AgentNavigationProgress()
+                return
+            }
+            if state.position == targetPosition {
                 state.navigationProgress = AgentNavigationProgress(
                     status: .arrived,
                     route: state.navigationProgress.route,
@@ -1682,11 +2116,76 @@ public struct AgentSimulationSession {
     }
 
     private func shouldDeliverResources(_ state: AgentSessionAgentState) -> Bool {
-        economyEnabled
-            && !state.resourceInventory.isEmpty
-            && (state.currentGoal.kind == .deliverResources
-                || state.resourceInventory.totalCount >= configuration.deliveryQuota
-                || state.resourceInventory.isFull)
+        guard economyEnabled, !state.resourceInventory.isEmpty else { return false }
+        if state.currentGoal.kind == .deliverResources
+            || state.resourceInventory.totalCount >= configuration.deliveryQuota
+            || state.resourceInventory.isFull {
+            return true
+        }
+        guard buildAutoEnabled,
+              let project = constructionProject,
+              project.builderAgentId == state.id,
+              project.status == .acquiringMaterials || project.status == .readyToFund else {
+            return false
+        }
+        return project.missingMaterials(
+            campStock: campStock,
+            builderInventory: state.resourceInventory
+        ).isEmpty
+    }
+
+    private mutating func refreshConstructionProjectStatus() {
+        guard buildAutoEnabled, var project = constructionProject,
+              project.status == .planned || project.status == .acquiringMaterials else { return }
+        let ready = project.materialRequirements.allSatisfy {
+            campStock.count(of: $0.resource) >= $0.quantity
+        }
+        if ready {
+            project.markReadyToFund()
+            constructionProject = project
+        }
+    }
+
+    private func constructionEligibleResources(
+        for state: AgentSessionAgentState
+    ) -> [AgentResourceKind]? {
+        guard buildAutoEnabled,
+              let project = constructionProject,
+              project.builderAgentId == state.id,
+              project.status == .planned
+                || project.status == .acquiringMaterials
+                || project.status == .readyToFund else { return nil }
+        return project.missingMaterials(
+            campStock: campStock,
+            builderInventory: state.resourceInventory
+        ).map(\.resource)
+    }
+
+    private func isFundedConstructionBuilder(_ state: AgentSessionAgentState) -> Bool {
+        guard buildAutoEnabled,
+              let project = constructionProject,
+              project.builderAgentId == state.id else { return false }
+        return project.status == .funded
+            || project.status == .building
+            || project.status == .blocked
+            || project.status == .completed
+    }
+
+    private func hasActiveConstructionTask(_ state: AgentSessionAgentState) -> Bool {
+        guard buildAutoEnabled,
+              let project = constructionProject,
+              project.builderAgentId == state.id else { return false }
+        return project.status != .completed
+    }
+
+    private func shouldBuildShelter(_ state: AgentSessionAgentState) -> Bool {
+        guard hasActiveConstructionTask(state), let project = constructionProject else {
+            return false
+        }
+        return project.status == .readyToFund
+            || project.status == .funded
+            || project.status == .building
+            || project.status == .blocked
     }
 
     private func shouldSatisfyHunger(

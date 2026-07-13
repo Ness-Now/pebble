@@ -7196,6 +7196,790 @@ do {
     check("natural integration leaves survival conservation exact",
           hungryNatural.snapshot().conservation.balanced)
 
+    // -----------------------------------------------------------------------
+    section("PebbleAgents fixed shelter construction K")
+
+    let shelter = AgentBlueprint.fixedLeanToV1
+    check("K blueprint ID stable", shelter.blueprintId == "fixedLeanToV1")
+    check("K blueprint has exactly nine cells", shelter.cells.count == 9)
+    check("K blueprint indices continuous", shelter.cells.map(\.index) == Array(0..<9))
+    check("K blueprint order exact", shelter.cells.map(\.relativePosition) == [
+        AgentPosition(x: 0, y: 0, z: 2), AgentPosition(x: 1, y: 0, z: 2),
+        AgentPosition(x: 2, y: 0, z: 2), AgentPosition(x: 0, y: 1, z: 2),
+        AgentPosition(x: 1, y: 1, z: 2), AgentPosition(x: 2, y: 1, z: 2),
+        AgentPosition(x: 0, y: 2, z: 1), AgentPosition(x: 1, y: 2, z: 1),
+        AgentPosition(x: 2, y: 2, z: 1),
+    ])
+    check("K blueprint stone cost exact",
+          shelter.materialRequirements.first { $0.resource == .stone }?.quantity == 3)
+    check("K blueprint wood cost exact",
+          shelter.materialRequirements.first { $0.resource == .wood }?.quantity == 6)
+    check("K blueprint entrance reserved",
+          shelter.cells.allSatisfy { $0.relativePosition != shelter.entranceOffset })
+    check("K blueprint rest cell reserved",
+          shelter.cells.allSatisfy { $0.relativePosition != shelter.restOffset })
+    check("K blueprint fits three cubed bound", shelter.cells.allSatisfy {
+        (0...2).contains($0.relativePosition.x)
+            && (0...2).contains($0.relativePosition.y)
+            && (0...2).contains($0.relativePosition.z)
+    })
+    check("K blueprint repeated identically", shelter == AgentBlueprint.fixedLeanToV1)
+    check("K blueprint deterministic encoding",
+          try! economyEncoder.encode(shelter) == economyEncoder.encode(shelter))
+    check("K blueprint rejects reserved placement", {
+        do {
+            _ = try AgentBlueprint(
+                blueprintId: "invalid",
+                footprintWidth: 3,
+                footprintDepth: 3,
+                maximumHeight: 3,
+                cells: [AgentBlueprintCell(
+                    index: 0,
+                    relativePosition: AgentPosition(x: 1, y: 0, z: 0),
+                    resource: .wood,
+                    workOffset: AgentPosition(x: 1, y: 0, z: -1)
+                )],
+                entranceOffset: AgentPosition(x: 1, y: 0, z: 0),
+                restOffset: AgentPosition(x: 1, y: 0, z: 1),
+                materialRequirements: [AgentResourceAmount(resource: .wood, quantity: 1)]
+            )
+            return false
+        } catch AgentConstructionError.reservedCellOccupied { return true }
+        catch { return false }
+    }())
+    check("K blueprint rejects unsupported material", {
+        do {
+            _ = try AgentBlueprint(
+                blueprintId: "invalid",
+                footprintWidth: 3,
+                footprintDepth: 3,
+                maximumHeight: 3,
+                cells: [AgentBlueprintCell(
+                    index: 0,
+                    relativePosition: AgentPosition(x: 0, y: 0, z: 2),
+                    resource: .foodRaw,
+                    workOffset: AgentPosition(x: 0, y: 0, z: 3)
+                )],
+                entranceOffset: AgentPosition(x: 1, y: 0, z: 0),
+                restOffset: AgentPosition(x: 1, y: 0, z: 1),
+                materialRequirements: [AgentResourceAmount(resource: .foodRaw, quantity: 1)]
+            )
+            return false
+        } catch AgentConstructionError.unsupportedMaterial(.foodRaw) { return true }
+        catch { return false }
+    }())
+
+    let constructionHome = AgentPosition(x: 0, y: 64, z: 0)
+    let constructionOrigin = AgentPosition(x: 2, y: 64, z: 1)
+    let constructionFingerprints = shelter.cells.map {
+        AgentConstructionCellFingerprint(cellIndex: $0.index, originalFingerprint: 0)
+    }
+    func constructionProject(_ id: String = "shelter-k") -> AgentConstructionProject {
+        try! AgentConstructionProject(
+            projectId: id,
+            builderAgentId: "agent_economy",
+            origin: constructionOrigin,
+            createdAtTick: 0,
+            previousHomePosition: constructionHome,
+            originalFingerprints: constructionFingerprints
+        )
+    }
+    let projectContract = constructionProject()
+    check("K project starts acquiring materials", projectContract.status == .acquiringMaterials)
+    check("K project rest position exact",
+          projectContract.restPosition == AgentPosition(x: 3, y: 64, z: 2))
+    check("K project next index zero", projectContract.nextCellIndex == 0)
+    check("K project first target exact",
+          projectContract.nextTarget == AgentPosition(x: 2, y: 64, z: 3))
+    check("K project first work position exact",
+          projectContract.nextWorkPosition == AgentPosition(x: 2, y: 64, z: 4))
+    check("K project deterministic encoding",
+          try! economyEncoder.encode(projectContract) == economyEncoder.encode(projectContract))
+    let mutationBoundary = AgentConstructionMutationBoundary(project: projectContract)
+    check("K mutation boundary has nine unique cells",
+          mutationBoundary.isValid && mutationBoundary.permittedPositions.count == 9)
+    check("K mutation boundary rejects entrance",
+          !mutationBoundary.permits(AgentPosition(x: 3, y: 64, z: 1)))
+    check("K mutation boundary rejects rest",
+          !mutationBoundary.permits(projectContract.restPosition))
+    check("K mutation boundary rejects third party block",
+          !mutationBoundary.permits(AgentPosition(x: 9, y: 64, z: 9)))
+
+    func siteCandidate(
+        origin: AgentPosition,
+        index: Int,
+        valid: Bool,
+        positionsRead: Int = 36,
+        chunksReady: Bool? = nil,
+        solidFloor: Bool? = nil,
+        replaceableCells: Bool? = nil,
+        liquidFree: Bool? = nil,
+        naturalResourcesClear: Bool? = nil,
+        reservedSpacesClear: Bool? = nil,
+        workPositionsClear: Bool? = nil,
+        occupancyClear: Bool? = nil,
+        routeFound: Bool? = nil
+    ) -> AgentConstructionSiteCandidate {
+        AgentConstructionSiteCandidate(
+            origin: origin,
+            candidateIndex: index,
+            chunksReady: chunksReady ?? valid,
+            solidFloor: solidFloor ?? valid,
+            replaceableCells: replaceableCells ?? valid,
+            liquidFree: liquidFree ?? valid,
+            naturalResourcesClear: naturalResourcesClear ?? valid,
+            reservedSpacesClear: reservedSpacesClear ?? valid,
+            workPositionsClear: workPositionsClear ?? valid,
+            occupancyClear: occupancyClear ?? valid,
+            routeFound: routeFound ?? valid,
+            positionsRead: positionsRead,
+            originalFingerprints: constructionFingerprints
+        )
+    }
+    let deterministicSiteCandidates = [
+        siteCandidate(origin: AgentPosition(x: 2, y: 64, z: 0), index: 1, valid: true),
+        siteCandidate(origin: AgentPosition(x: 0, y: 64, z: -2), index: 0, valid: true),
+        siteCandidate(origin: AgentPosition(x: 1, y: 64, z: 0), index: 2, valid: false),
+    ]
+    let selectedSiteA = try! AgentConstructionSiteSelector.select(
+        home: constructionHome,
+        candidates: deterministicSiteCandidates
+    )
+    let selectedSiteB = try! AgentConstructionSiteSelector.select(
+        home: constructionHome,
+        candidates: deterministicSiteCandidates.reversed()
+    )
+    check("K site choice deterministic", selectedSiteA == selectedSiteB)
+    check("K site stable direction tie break",
+          selectedSiteA?.origin == AgentPosition(x: 0, y: 64, z: -2))
+    check("K invalid site rejected",
+          try! AgentConstructionSiteSelector.select(
+            home: constructionHome,
+            candidates: [siteCandidate(origin: constructionOrigin, index: 0, valid: false)]
+          ) == nil)
+    let validSiteOrigin = AgentPosition(x: 0, y: 64, z: -2)
+    func rejectsSite(_ candidate: AgentConstructionSiteCandidate) -> Bool {
+        (try? AgentConstructionSiteSelector.select(
+            home: constructionHome,
+            candidates: [candidate]
+        )) == nil
+    }
+    check("K site rejects unavailable chunk", rejectsSite(siteCandidate(
+        origin: validSiteOrigin, index: 0, valid: true, chunksReady: false
+    )))
+    check("K site rejects non-solid floor", rejectsSite(siteCandidate(
+        origin: validSiteOrigin, index: 0, valid: true, solidFloor: false
+    )))
+    check("K site rejects non-replaceable cell", rejectsSite(siteCandidate(
+        origin: validSiteOrigin, index: 0, valid: true, replaceableCells: false
+    )))
+    check("K site rejects liquid", rejectsSite(siteCandidate(
+        origin: validSiteOrigin, index: 0, valid: true, liquidFree: false
+    )))
+    check("K site rejects natural collectable overwrite", rejectsSite(siteCandidate(
+        origin: validSiteOrigin, index: 0, valid: true, naturalResourcesClear: false
+    )))
+    check("K site rejects blocked entrance or rest", rejectsSite(siteCandidate(
+        origin: validSiteOrigin, index: 0, valid: true, reservedSpacesClear: false
+    )))
+    check("K site rejects invalid work position", rejectsSite(siteCandidate(
+        origin: validSiteOrigin, index: 0, valid: true, workPositionsClear: false
+    )))
+    check("K site rejects player occupancy", rejectsSite(siteCandidate(
+        origin: validSiteOrigin, index: 0, valid: true, occupancyClear: false
+    )))
+    check("K site rejects agent occupancy", rejectsSite(siteCandidate(
+        origin: validSiteOrigin, index: 0, valid: true, occupancyClear: false
+    )))
+    check("K site rejects missing first work route", rejectsSite(siteCandidate(
+        origin: validSiteOrigin, index: 0, valid: true, routeFound: false
+    )))
+    let noSiteMutationCount = 0
+    let noSiteProject = try! AgentConstructionSiteSelector.select(
+        home: constructionHome,
+        candidates: [siteCandidate(origin: validSiteOrigin, index: 0, valid: false)]
+    )
+    check("K no safe site publishes no project and mutates nothing",
+          noSiteProject == nil && noSiteMutationCount == 0)
+    check("K site candidate budget rejects overflow", {
+        do {
+            _ = try AgentConstructionSiteSelector.select(
+                home: constructionHome,
+                candidates: (0...32).map {
+                    siteCandidate(origin: AgentPosition(x: $0, y: 64, z: 0), index: $0, valid: false)
+                }
+            )
+            return false
+        } catch AgentConstructionError.invalidSiteCandidateCount(33) { return true }
+        catch { return false }
+    }())
+
+    var demandStock = AgentCampStock(capacity: 16)
+    _ = demandStock.add(.wood, quantity: 6)
+    var demandInventory = AgentResourceInventory(capacity: 8)
+    _ = demandInventory.add(.foodRaw)
+    let stoneOnlyDeficit = projectContract.missingMaterials(
+        campStock: demandStock,
+        builderInventory: demandInventory
+    )
+    check("K project wood coverage independent of stone",
+          stoneOnlyDeficit == [AgentResourceAmount(resource: .stone, quantity: 3)])
+    let boundedDemand = AgentConstructionDemand(
+        projectId: projectContract.projectId,
+        missing: stoneOnlyDeficit + [AgentResourceAmount(resource: .foodRaw, quantity: 1)]
+    )
+    check("K construction demand excludes non-material resources",
+          boundedDemand.eligibleResources == [.stone])
+
+    var underfundedConstruction = economySession(states: [economyAgentState(
+        position: constructionHome,
+        home: constructionHome
+    )])
+    try! underfundedConstruction.createConstructionProject(constructionProject("underfunded"))
+    try! underfundedConstruction.setBuildAutoEnabled(true)
+    let underfundedBefore = underfundedConstruction.snapshot()
+    check("K funding missing material rejected", {
+        do {
+            _ = try underfundedConstruction.fundConstructionProject(
+                fundingId: "underfunded-attempt",
+                builderAgentId: "agent_economy",
+                fundingTick: underfundedConstruction.tick
+            )
+            return false
+        } catch AgentSessionError.invalidConstructionFunding { return true }
+        catch { return false }
+    }())
+    check("K failed funding is atomic",
+          underfundedConstruction.snapshot() == underfundedBefore)
+
+    var constructionSession = economySession(states: [economyAgentState(
+        position: constructionHome,
+        home: constructionHome
+    )])
+    func harvestConstructionMaterial(
+        _ resource: AgentResourceKind,
+        index: Int,
+        session: inout AgentSimulationSession
+    ) {
+        try! session.applyInteractionOutcome(AgentInteractionOutcome(
+            interactionId: "k-harvest-\(resource.rawValue)-\(index)",
+            agentId: "agent_economy",
+            tick: session.tick,
+            target: AgentPosition(x: 20 + index, y: 64, z: resource == .wood ? 0 : 1),
+            resource: resource,
+            status: .succeeded,
+            inventoryDelta: AgentInventoryDelta(resource: resource, quantity: 1),
+            reason: "K natural material fixture"
+        ))
+    }
+    for index in 0..<6 { harvestConstructionMaterial(.wood, index: index, session: &constructionSession) }
+    for index in 0..<2 { harvestConstructionMaterial(.stone, index: index, session: &constructionSession) }
+    _ = try! constructionSession.deliverResources(AgentDeliveryIntent(
+        deliveryId: "k-delivery-8",
+        agentId: "agent_economy",
+        tick: constructionSession.tick,
+        position: constructionHome
+    ))
+    harvestConstructionMaterial(.stone, index: 2, session: &constructionSession)
+    _ = try! constructionSession.deliverResources(AgentDeliveryIntent(
+        deliveryId: "k-delivery-1",
+        agentId: "agent_economy",
+        tick: constructionSession.tick,
+        position: constructionHome
+    ))
+    check("K natural materials reach exact camp cost",
+          constructionSession.snapshot().campStock.count(of: .wood) == 6
+            && constructionSession.snapshot().campStock.count(of: .stone) == 3)
+    try! constructionSession.createConstructionProject(constructionProject())
+    check("K project belongs to shared session",
+          constructionSession.snapshot().constructionProject?.projectId == "shelter-k")
+    check("K build auto disabled by default", !constructionSession.snapshot().buildAutoEnabled)
+    check("K duplicate project refused", {
+        do { try constructionSession.createConstructionProject(constructionProject("duplicate")); return false }
+        catch AgentSessionError.constructionProjectAlreadyExists { return true }
+        catch { return false }
+    }())
+    try! constructionSession.setBuildAutoEnabled(true)
+    let fundingTickResult = try! constructionSession.advanceTick()
+    check("K complete stock changes project to ready funding",
+          constructionSession.snapshot().constructionProject?.status == .readyToFund)
+    check("K ready project selects buildShelter",
+          fundingTickResult.agents[0].snapshot.currentGoal.kind == .buildShelter)
+    check("K ready project emits fund_construction",
+          fundingTickResult.agents[0].action.name == "fund_construction")
+    let beforeFunding = constructionSession.snapshot()
+    _ = try! constructionSession.fundConstructionProject(
+        fundingId: "k-funding",
+        builderAgentId: "agent_economy",
+        fundingTick: constructionSession.tick
+    )
+    let afterFunding = constructionSession.snapshot()
+    check("K funding debits camp stock exactly",
+          beforeFunding.campStock.totalCount == 9 && afterFunding.campStock.totalCount == 0)
+    check("K funding fills escrow exactly",
+          afterFunding.conservation.constructionEscrowTotal == 9
+            && afterFunding.constructionProject?.materialEscrow.wood == 6
+            && afterFunding.constructionProject?.materialEscrow.stone == 3)
+    check("K funding writes one memory",
+          afterFunding.agents[0].recentMemory.filter { $0.type == "construction_funded" }.count == 1)
+    check("K funding conservation exact",
+          afterFunding.conservation.harvestedTotal == 9
+            && afterFunding.conservation.campStockTotal == 0
+            && afterFunding.conservation.constructionEscrowTotal == 9
+            && afterFunding.conservation.constructedTotal == 0
+            && afterFunding.conservation.balanced)
+    let afterFirstFunding = constructionSession.snapshot()
+    check("K duplicate funding refused", {
+        do {
+            _ = try constructionSession.fundConstructionProject(
+                fundingId: "k-funding",
+                builderAgentId: "agent_economy",
+                fundingTick: constructionSession.tick
+            )
+            return false
+        } catch AgentSessionError.duplicateConstructionFunding { return true }
+        catch { return false }
+    }())
+    check("K duplicate funding has no mutation", constructionSession.snapshot() == afterFirstFunding)
+
+    func constructionNavigationCells(
+        center: AgentPosition,
+        radius: Int = 8,
+        blocked: Set<AgentPosition> = []
+    ) -> [AgentNavigationCell] {
+        var cells: [AgentNavigationCell] = []
+        for dx in -radius...radius {
+            for dz in -radius...radius where abs(dx) + abs(dz) <= radius {
+                let position = AgentPosition(x: center.x + dx, y: center.y, z: center.z + dz)
+                cells.append(AgentNavigationCell(
+                    position: position,
+                    status: blocked.contains(position) ? .blocked : .traversable
+                ))
+            }
+        }
+        return cells
+    }
+    var constructionRouteSession = constructionSession
+    let constructionWork = afterFunding.constructionProject!.nextWorkPosition!
+    let constructionRouteTick = try! constructionRouteSession.advanceTick(perceptions: [
+        AgentPerceptionInput(
+            agentId: "agent_economy",
+            worldObservation: worldObservation(constructionHome, worldTick: 900),
+            navigationObservation: AgentNavigationObservation(
+                worldTick: 900,
+                origin: constructionHome,
+                target: constructionWork,
+                radius: 8,
+                cells: constructionNavigationCells(center: constructionHome)
+            )
+        ),
+    ])
+    let routeBeforeMove = constructionRouteSession.snapshot().agents[0]
+    check("K navigation route targets first work position",
+          routeBeforeMove.navigationProgress.route?.target == constructionWork)
+    check("K navigation purpose constructionWork exact",
+          routeBeforeMove.navigationProgress.route?.purpose == .constructionWork)
+    check("K construction emits existing approach action",
+          constructionRouteTick.agents[0].action.name == "approach_construction")
+    let constructionMove = AgentMovementCoordinator.resolve(
+        snapshot: constructionRouteSession.snapshot()
+    )
+    try! constructionRouteSession.applyMovementOutcomes(constructionMove)
+    let constructionMovedPosition = constructionRouteSession.snapshot().agents[0].position
+    check("K construction movement advances one cardinal step",
+          abs(constructionMovedPosition.x - constructionHome.x)
+            + abs(constructionMovedPosition.z - constructionHome.z) == 1)
+
+    var blockedConstructionRoute = constructionSession
+    _ = try! blockedConstructionRoute.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: "agent_economy",
+        navigationObservation: AgentNavigationObservation(
+            worldTick: 901,
+            origin: constructionHome,
+            target: constructionWork,
+            radius: 8,
+            cells: constructionNavigationCells(center: constructionHome)
+        )
+    )])
+    let blockedConstructionBefore = blockedConstructionRoute.snapshot().agents[0]
+    let blockedConstructionOutcomes = AgentMovementCoordinator.resolve(
+        snapshot: blockedConstructionRoute.snapshot()
+    )
+    try! blockedConstructionRoute.applyMovementOutcomes(blockedConstructionOutcomes)
+    check("K blocked construction movement does not progress",
+          blockedConstructionRoute.snapshot().agents[0].position
+            == blockedConstructionBefore.position
+            && blockedConstructionRoute.snapshot().agents[0].navigationProgress.routeIndex
+                == blockedConstructionBefore.navigationProgress.routeIndex)
+    check("K constructed target can be excluded from future route", {
+        let partialBlock = projectContract.nextTarget!
+        let plan = AgentBoundedRoutePlanner.plan(AgentNavigationRequest(
+            start: constructionHome,
+            target: constructionWork,
+            goalMode: .exact,
+            cells: constructionNavigationCells(
+                center: constructionHome,
+                blocked: [partialBlock]
+            ),
+            radius: 8,
+            maxVisitedNodes: AgentBoundedRoutePlanner.maximumVisitedNodes,
+            maxSteps: AgentBoundedRoutePlanner.maximumRouteSteps
+        ))
+        return plan.found && !plan.positions.contains(partialBlock)
+    }())
+
+    let firstFundedProject = afterFunding.constructionProject!
+    let firstFundedCell = firstFundedProject.nextCell!
+    let firstFundedTarget = firstFundedProject.nextTarget!
+    let firstFundedWork = firstFundedProject.nextWorkPosition!
+    func firstPlacementIntent(
+        id: String,
+        cellIndex: Int = 0,
+        target: AgentPosition? = nil,
+        resource: AgentResourceKind? = nil
+    ) -> AgentPlacementIntent {
+        AgentPlacementIntent(
+            placementId: id,
+            projectId: firstFundedProject.projectId,
+            builderAgentId: firstFundedProject.builderAgentId,
+            tick: constructionSession.tick,
+            cellIndex: cellIndex,
+            target: target ?? firstFundedTarget,
+            workPosition: firstFundedWork,
+            resource: resource ?? firstFundedCell.resource
+        )
+    }
+    check("K placement away from work position refused", {
+        do { try constructionSession.prevalidatePlacement(firstPlacementIntent(id: "away")); return false }
+        catch AgentSessionError.invalidConstructionPlacement { return true }
+        catch { return false }
+    }())
+    var placementValidationSession = constructionSession
+    try! placementValidationSession.applyExternalUpdate(AgentExternalUpdate(
+        agentId: firstFundedProject.builderAgentId,
+        position: firstFundedWork
+    ))
+    check("K out-of-order placement refused", {
+        do {
+            try placementValidationSession.prevalidatePlacement(firstPlacementIntent(
+                id: "out-of-order", cellIndex: 1
+            ))
+            return false
+        } catch AgentSessionError.invalidConstructionPlacement { return true }
+        catch { return false }
+    }())
+    check("K placement target mismatch refused", {
+        do {
+            try placementValidationSession.prevalidatePlacement(firstPlacementIntent(
+                id: "wrong-target",
+                target: AgentPosition(x: 99, y: 64, z: 99)
+            ))
+            return false
+        } catch AgentSessionError.invalidConstructionPlacement { return true }
+        catch { return false }
+    }())
+    check("K placement resource mismatch refused", {
+        do {
+            try placementValidationSession.prevalidatePlacement(firstPlacementIntent(
+                id: "wrong-resource", resource: .wood
+            ))
+            return false
+        } catch AgentSessionError.invalidConstructionPlacement { return true }
+        catch { return false }
+    }())
+    check("K mutation boundary excludes target outside blueprint",
+          !mutationBoundary.permits(AgentPosition(x: 99, y: 64, z: 99)))
+    check("K mutation boundary keeps entrance and rest immutable",
+          !mutationBoundary.permits(AgentPosition(x: 3, y: 64, z: 1))
+            && !mutationBoundary.permits(projectContract.restPosition))
+    var recoverableFailureSession = constructionSession
+    try! recoverableFailureSession.recordConstructionFailure(
+        failureId: "k-occupied-failure",
+        projectId: firstFundedProject.projectId,
+        builderAgentId: firstFundedProject.builderAgentId,
+        failure: .occupied,
+        reason: "work position occupied"
+    )
+    check("K refused placement records explicit blocked project",
+          recoverableFailureSession.snapshot().constructionProject?.status == .blocked
+            && recoverableFailureSession.snapshot().constructionProject?.lastFailure == .occupied)
+    check("K refused placement writes blocked memory only",
+          recoverableFailureSession.snapshot().agents[0].recentMemory.last?.type
+            == "construction_blocked"
+            && recoverableFailureSession.snapshot().agents[0].recentMemory.filter {
+                $0.type == "construction_block_placed"
+            }.isEmpty)
+    let recordedFailureSnapshot = recoverableFailureSession.snapshot()
+    check("K duplicate failure event refused", {
+        do {
+            try recoverableFailureSession.recordConstructionFailure(
+                failureId: "k-occupied-failure",
+                projectId: firstFundedProject.projectId,
+                builderAgentId: firstFundedProject.builderAgentId,
+                failure: .occupied,
+                reason: "duplicate"
+            )
+            return false
+        } catch AgentSessionError.invalidConstructionPlacement { return true }
+        catch { return false }
+    }())
+    check("K duplicate failure event has no mutation",
+          recoverableFailureSession.snapshot() == recordedFailureSnapshot)
+    try! recoverableFailureSession.setBuildAutoEnabled(false)
+    try! recoverableFailureSession.setBuildAutoEnabled(true)
+    check("K recoverable failure resumes exact funded state",
+          recoverableFailureSession.snapshot().constructionProject?.status == .funded
+            && recoverableFailureSession.snapshot().constructionProject?.nextCellIndex == 0)
+
+    var partialConservation: AgentResourceConservationSnapshot?
+    var interruptionSnapshot: AgentSessionSnapshot?
+    for cellIndex in 0..<9 {
+        guard let project = constructionSession.snapshot().constructionProject,
+              let cell = project.nextCell,
+              let target = project.nextTarget,
+              let work = project.nextWorkPosition else { break }
+        try! constructionSession.applyExternalUpdate(AgentExternalUpdate(
+            agentId: project.builderAgentId,
+            position: work
+        ))
+        let intent = AgentPlacementIntent(
+            placementId: "k-place-\(cellIndex)",
+            projectId: project.projectId,
+            builderAgentId: project.builderAgentId,
+            tick: constructionSession.tick,
+            cellIndex: cell.index,
+            target: target,
+            workPosition: work,
+            resource: cell.resource
+        )
+        try! constructionSession.prevalidatePlacement(intent)
+        try! constructionSession.applyPlacementOutcome(AgentPlacementOutcome(
+            placementId: intent.placementId,
+            projectId: intent.projectId,
+            builderAgentId: intent.builderAgentId,
+            tick: intent.tick,
+            cellIndex: intent.cellIndex,
+            target: intent.target,
+            resource: intent.resource,
+            status: .succeeded,
+            reason: "ordered placement verified"
+        ))
+        if cellIndex == 0 {
+            check("K first placement advances exactly one cell",
+                  constructionSession.snapshot().constructionProject?.nextCellIndex == 1)
+            check("K second placement same tick refused", {
+                guard let next = constructionSession.snapshot().constructionProject,
+                      let nextCell = next.nextCell,
+                      let nextTarget = next.nextTarget,
+                      let nextWork = next.nextWorkPosition else { return false }
+                do {
+                    try constructionSession.prevalidatePlacement(AgentPlacementIntent(
+                        placementId: "k-same-tick",
+                        projectId: next.projectId,
+                        builderAgentId: next.builderAgentId,
+                        tick: constructionSession.tick,
+                        cellIndex: nextCell.index,
+                        target: nextTarget,
+                        workPosition: nextWork,
+                        resource: nextCell.resource
+                    ))
+                    return false
+                } catch AgentSessionError.invalidConstructionPlacement { return true }
+                catch { return false }
+            }())
+        }
+        if cellIndex == 2 {
+            partialConservation = constructionSession.snapshot().conservation
+            try! constructionSession.setBuildAutoEnabled(false)
+            interruptionSnapshot = constructionSession.snapshot()
+            _ = try! constructionSession.advanceTick()
+            _ = try! constructionSession.advanceTick()
+            check("K interruption places no extra cells",
+                  constructionSession.snapshot().constructionProject?.placedCellIndices == [0, 1, 2])
+            check("K interruption preserves escrow",
+                  constructionSession.snapshot().constructionProject?.materialEscrow.total == 6)
+            try! constructionSession.setBuildAutoEnabled(true)
+            check("K resume keeps exact next index",
+                  constructionSession.snapshot().constructionProject?.nextCellIndex == 3)
+        }
+        if cellIndex < 8 { _ = try! constructionSession.advanceTick() }
+    }
+    let beforeCompletion = constructionSession.snapshot()
+    check("K nine placements consume escrow", beforeCompletion.conservation.constructionEscrowTotal == 0)
+    check("K nine placements credit constructed exactly",
+          beforeCompletion.conservation.constructedTotal == 9
+            && beforeCompletion.constructionProject?.placedMaterialTotals.wood == 6
+            && beforeCompletion.constructionProject?.placedMaterialTotals.stone == 3)
+    check("K placement memories unique per cell",
+          beforeCompletion.agents[0].recentMemory.filter {
+              $0.type == "construction_block_placed"
+          }.count == 9)
+    check("K partial conservation exact",
+          partialConservation?.constructionEscrowTotal == 6
+            && partialConservation?.constructedTotal == 3
+            && partialConservation?.balanced == true)
+    check("K interrupted snapshot deterministic",
+          interruptionSnapshot.map { try! economyEncoder.encode($0) }
+            == interruptionSnapshot.map { try! economyEncoder.encode($0) })
+    try! constructionSession.completeConstructionProject(
+        projectId: "shelter-k",
+        completionTick: constructionSession.tick
+    )
+    let completedShelter = constructionSession.snapshot()
+    check("K completion status exact", completedShelter.constructionProject?.status == .completed)
+    check("K completion tick recorded",
+          completedShelter.constructionProject?.completedAtTick == constructionSession.tick)
+    check("K completion moves home to rest cell",
+          completedShelter.agents[0].homePosition == projectContract.restPosition)
+    check("K completion writes one shelter memory",
+          completedShelter.agents[0].recentMemory.filter { $0.type == "shelter_completed" }.count == 1)
+    check("K complete conservation exact",
+          completedShelter.conservation.harvestedTotal == 9
+            && completedShelter.conservation.constructedTotal == 9
+            && completedShelter.conservation.balanced)
+    let beforeDuplicateCompletion = constructionSession.snapshot()
+    check("K completion cannot publish twice", {
+        do {
+            try constructionSession.completeConstructionProject(
+                projectId: "shelter-k",
+                completionTick: constructionSession.tick
+            )
+            return false
+        } catch AgentSessionError.constructionCompletionInvalid { return true }
+        catch { return false }
+    }())
+    check("K duplicate completion has no mutation",
+          constructionSession.snapshot() == beforeDuplicateCompletion)
+    var shelterRestSession = survivalSession(states: [survivalAgentState(
+        position: projectContract.restPosition,
+        home: completedShelter.agents[0].homePosition,
+        fatigue: 0.9
+    )])
+    shelterRestSession.setSurvivalEnabled(true)
+    let shelterFatigueBefore = shelterRestSession.snapshot().agents[0].needs.fatigue
+    let shelterRestTick = try! shelterRestSession.advanceTick()
+    check("K completed rest cell is used as survival home",
+          shelterRestSession.snapshot().agents[0].homePosition == projectContract.restPosition
+            && shelterRestSession.snapshot().agents[0].position == projectContract.restPosition)
+    check("K survival rests inside completed shelter",
+          shelterRestTick.agents[0].action.name == "rest")
+    check("K shelter rest reduces fatigue",
+          shelterRestSession.snapshot().agents[0].needs.fatigue < shelterFatigueBefore)
+    check("K entrance remains outside construction mutation set",
+          !mutationBoundary.permits(AgentPosition(
+              x: constructionOrigin.x + shelter.entranceOffset.x,
+              y: constructionOrigin.y + shelter.entranceOffset.y,
+              z: constructionOrigin.z + shelter.entranceOffset.z
+          )))
+    let constructionSessionBeforeClear = constructionSession
+    try! constructionSession.clearConstructionProject(projectId: "shelter-k")
+    let clearedShelter = constructionSession.snapshot()
+    check("K clear removes project", clearedShelter.constructionProject == nil)
+    check("K clear disables build auto", !clearedShelter.buildAutoEnabled)
+    check("K clear restores previous home", clearedShelter.agents[0].homePosition == constructionHome)
+    check("K clear returns all materials to camp",
+          clearedShelter.campStock.count(of: .wood) == 6
+            && clearedShelter.campStock.count(of: .stone) == 3)
+    check("K clear resets escrow and constructed conservation",
+          clearedShelter.conservation.constructionEscrowTotal == 0
+            && clearedShelter.conservation.constructedTotal == 0)
+    check("K clear conservation exact",
+          clearedShelter.conservation.harvestedTotal == 9
+            && clearedShelter.conservation.campStockTotal == 9
+            && clearedShelter.conservation.balanced)
+
+    let rollbackTarget = projectContract.nextTarget!
+    let rollbackThirdParty = AgentPosition(x: rollbackTarget.x + 1, y: rollbackTarget.y, z: rollbackTarget.z)
+    let constructionRollbackWorld = World(dim: .overworld, seed: 404)
+    let constructionRollbackChunk = Chunk(
+        cx: rollbackTarget.x >> 4,
+        cz: rollbackTarget.z >> 4,
+        minY: constructionRollbackWorld.info.minY,
+        height: constructionRollbackWorld.info.height
+    )
+    constructionRollbackChunk.status = .generated
+    constructionRollbackWorld.setChunk(constructionRollbackChunk)
+    _ = constructionRollbackWorld.setBlock(
+        rollbackThirdParty.x, rollbackThirdParty.y, rollbackThirdParty.z, Int(B.dirt) << 4
+    )
+    let rollbackSessionBefore = clearedShelter
+    let originalConstructionBlock = constructionRollbackWorld.setBlock(
+        rollbackTarget.x, rollbackTarget.y, rollbackTarget.z, Int(B.stone) << 4
+    )
+    let placementWorldSucceeded = constructionRollbackWorld.getBlock(
+        rollbackTarget.x, rollbackTarget.y, rollbackTarget.z
+    ) == (Int(B.stone) << 4)
+    _ = constructionRollbackWorld.setBlock(
+        rollbackTarget.x, rollbackTarget.y, rollbackTarget.z, originalConstructionBlock
+    )
+    check("K forced publication failure mutates only target before rollback", placementWorldSucceeded)
+    check("K forced publication failure restores original fingerprint",
+          constructionRollbackWorld.getBlock(rollbackTarget.x, rollbackTarget.y, rollbackTarget.z)
+            == originalConstructionBlock)
+    check("K forced publication failure preserves third party block",
+          constructionRollbackWorld.getBlock(
+            rollbackThirdParty.x, rollbackThirdParty.y, rollbackThirdParty.z
+          ) == (Int(B.dirt) << 4))
+    check("K forced publication failure preserves session economy",
+          constructionSession.snapshot() == rollbackSessionBefore)
+
+    let clearRollbackWorld = World(dim: .overworld, seed: 405)
+    let clearRollbackChunk = Chunk(
+        cx: constructionOrigin.x >> 4,
+        cz: constructionOrigin.z >> 4,
+        minY: clearRollbackWorld.info.minY,
+        height: clearRollbackWorld.info.height
+    )
+    clearRollbackChunk.status = .generated
+    clearRollbackWorld.setChunk(clearRollbackChunk)
+    let clearCells = shelter.cells.map { blueprintCell -> (Int, AgentPosition, Int) in
+        let target = AgentPosition(
+            x: constructionOrigin.x + blueprintCell.relativePosition.x,
+            y: constructionOrigin.y + blueprintCell.relativePosition.y,
+            z: constructionOrigin.z + blueprintCell.relativePosition.z
+        )
+        let constructionFingerprint = blueprintCell.resource == .wood
+            ? oakFingerprint
+            : stoneFingerprint
+        _ = clearRollbackWorld.setBlock(
+            target.x, target.y, target.z, constructionFingerprint
+        )
+        return (blueprintCell.index, target, constructionFingerprint)
+    }
+    let clearOrder = clearCells.reversed().map { $0.0 }
+    for (_, target, _) in clearCells.reversed() {
+        _ = clearRollbackWorld.setBlock(target.x, target.y, target.z, 0)
+    }
+    let clearWorldRestored = clearCells.allSatisfy {
+        clearRollbackWorld.getBlock($0.1.x, $0.1.y, $0.1.z) == 0
+    }
+    for (_, target, fingerprint) in clearCells.reversed() {
+        _ = clearRollbackWorld.setBlock(target.x, target.y, target.z, fingerprint)
+    }
+    check("K clear restoration order is exact reverse blueprint order",
+          clearOrder == Array((0..<9).reversed()))
+    check("K clear World phase restores exact originals before publication",
+          clearWorldRestored)
+    check("K clear publication failure reapplies complete structure",
+          clearCells.allSatisfy {
+              clearRollbackWorld.getBlock($0.1.x, $0.1.y, $0.1.z) == $0.2
+          })
+    check("K clear publication failure preserves session project and economy",
+          constructionSessionBeforeClear.snapshot() == completedShelter)
+
+    let legacyConstructionSession = economySession(states: [economyAgentState(
+        position: constructionHome,
+        home: constructionHome
+    )])
+    let legacyConstructionText = String(
+        data: try! economyEncoder.encode(legacyConstructionSession.snapshot()),
+        encoding: .utf8
+    ) ?? ""
+    check("K legacy snapshot omits construction fields",
+          !legacyConstructionText.contains("constructionProject")
+            && !legacyConstructionText.contains("constructionEscrow")
+            && !legacyConstructionText.contains("constructedTotal"))
+
 
 }
 

@@ -139,6 +139,8 @@ public struct AgentGoalSelectionInput {
     public let hasInventoryCapacity: Bool
     public let hasCommittedResourceTask: Bool
     public let shouldDeliverResources: Bool
+    public let shouldBuildShelter: Bool
+    public let hasConstructionTask: Bool
     public let currentGoalKind: AgentGoalKind
     public let survivalEnabled: Bool
     public let hungryThreshold: Double
@@ -157,6 +159,8 @@ public struct AgentGoalSelectionInput {
         hasInventoryCapacity: Bool = false,
         hasCommittedResourceTask: Bool = false,
         shouldDeliverResources: Bool = false,
+        shouldBuildShelter: Bool = false,
+        hasConstructionTask: Bool = false,
         currentGoalKind: AgentGoalKind,
         survivalEnabled: Bool = false,
         hungryThreshold: Double = AgentSurvivalConfiguration.live.hungryThreshold,
@@ -174,6 +178,8 @@ public struct AgentGoalSelectionInput {
         self.hasInventoryCapacity = hasInventoryCapacity
         self.hasCommittedResourceTask = hasCommittedResourceTask
         self.shouldDeliverResources = shouldDeliverResources
+        self.shouldBuildShelter = shouldBuildShelter
+        self.hasConstructionTask = hasConstructionTask
         self.currentGoalKind = currentGoalKind
         self.survivalEnabled = survivalEnabled
         self.hungryThreshold = hungryThreshold

@@ -85,6 +85,13 @@ public enum AgentCognitiveTransitions {
                 startedAtTick: input.tick,
                 urgency: 81
             )
+        } else if input.shouldBuildShelter {
+            nextGoal = AgentGoal(
+                kind: .buildShelter,
+                reason: "funded shelter construction active",
+                startedAtTick: input.tick,
+                urgency: 80
+            )
         } else if input.shouldDeliverResources {
             nextGoal = AgentGoal(
                 kind: .deliverResources,
@@ -99,7 +106,8 @@ public enum AgentCognitiveTransitions {
                 startedAtTick: input.tick,
                 urgency: 75
             )
-        } else if !input.survivalEnabled && input.needs.fatigue >= 0.02 {
+        } else if !input.survivalEnabled && !input.hasConstructionTask
+                    && input.needs.fatigue >= 0.02 {
             nextGoal = AgentGoal(
                 kind: .rest,
                 reason: "fatigue >= 0.02",
@@ -179,6 +187,9 @@ public enum AgentCognitiveTransitions {
         case "approach_resource":
             state = "planning"
             effect = "awaiting bounded navigation"
+        case "approach_construction":
+            state = "planning"
+            effect = "awaiting bounded construction navigation"
         case "return_home":
             state = "planning"
             effect = "awaiting bounded navigation home"
@@ -188,6 +199,12 @@ public enum AgentCognitiveTransitions {
         case "consume_food":
             state = "consuming"
             effect = "awaiting consumption transaction"
+        case "fund_construction":
+            state = "working"
+            effect = "awaiting construction funding transaction"
+        case "place_block":
+            state = "working"
+            effect = "awaiting construction placement outcome"
         case "move_abstract":
             if input.goalKind == .seekSafety {
                 fear = max(0, fear - 1)

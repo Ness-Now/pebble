@@ -250,9 +250,12 @@ public enum AgentResourceTargeting {
         current: AgentResourceTarget?,
         observations: [AgentResourceObservation],
         inventory: AgentResourceInventory,
-        tick: Int
+        tick: Int,
+        eligibleResources: [AgentResourceKind]? = nil
     ) -> AgentResourceTarget? {
+        let eligible = eligibleResources
         if let current,
+           eligible?.contains(current.resource) != false,
            inventory.canAdd(current.resource),
            let retained = observations.first(where: {
                $0.target == current.target
@@ -270,7 +273,10 @@ public enum AgentResourceTargeting {
                 expectedBlockFingerprint: retained.expectedBlockFingerprint
             )
         }
-        guard let selected = observations.sorted(by: { lhs, rhs in
+        let eligibleObservations = observations.filter {
+            eligible?.contains($0.resource) != false
+        }
+        guard let selected = eligibleObservations.sorted(by: { lhs, rhs in
             let lhsCarried = inventory.count(of: lhs.resource)
             let rhsCarried = inventory.count(of: rhs.resource)
             if lhsCarried != rhsCarried { return lhsCarried < rhsCarried }
