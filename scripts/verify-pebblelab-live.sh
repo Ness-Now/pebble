@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -30,6 +30,7 @@ Options:
   --survival Run the Phase J hunger, consumption, and rest proof (default).
   --economy  Run the preserved Phase I closed-economy proof.
   --h2       Run the preserved H2 navigate-to-harvest proof.
+  --natural  Run natural wood/stone harvest and delivery with no fixtures.
   --help     Show this help and exit.
 EOF
 }
@@ -54,6 +55,7 @@ for option in "$@"; do
         --survival) MODE="survival"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --economy) MODE="economy"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --h2) MODE="h2"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --natural) MODE="natural"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --help|-h) usage; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$option" >&2; usage >&2; exit 2 ;;
     esac
@@ -61,7 +63,14 @@ done
 [ "$#" -le 2 ] || { usage >&2; exit 2; }
 [ "$MODE_OPTIONS" -le 1 ] || fail "choose only one live scenario"
 
-if [ "$MODE" = "h2" ]; then
+NATURAL_GATE=0
+if [ "$MODE" = "natural" ]; then
+    WORLD_SEED="46"
+    NATURAL_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-Natural-46"
+    CAPTURE_NAME="natural-wood-stone-harvest.png"
+    LAB_COMMANDS='/tp 19 68 -21;/lab start;/tp 19 71 -21;/lab pause;/lab movement off;/lab focus agent_2;/lab follow agent_2;/lab natural on;/lab economy auto on;/lab movement on;/lab overlay full;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab natural status;/lab economy status;/lab status'
+elif [ "$MODE" = "h2" ]; then
     WORLD_NAME="PebbleLab-Disposable-H2-12345"
     CAPTURE_NAME="h2-navigate-harvest.png"
     LAB_COMMANDS='/lab start;/lab pause;/lab movement off;/lab focus agent_2;/lab interaction setup distant 4;/lab interaction auto on;/lab movement on;/lab overlay full;/lab step;/lab step;/lab step;/lab step;/lab interaction status;/lab status'
@@ -106,6 +115,7 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_TRACE=1\n'
     printf '  PEBBLELAB_APP_AGENTS_TRACE_EVERY=1\n'
     printf '  PEBBLELAB_APP_AGENTS_INTERACT=1\n'
+    printf '  PEBBLELAB_APP_AGENTS_NATURAL=%s\n' "$NATURAL_GATE"
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
     printf '  PEBBLE_SHOT=%s@240\n' "$capture_path"
     printf '\nExisting /lab commands executed after the disposable World is ready:\n'
@@ -115,7 +125,10 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "h2" ]; then
+    if [ "$MODE" = "natural" ]; then
+        printf '  2. Confirm zero fixtures, bounded natural scans, oak_log then stone targets, and existing routes.\n'
+        printf '  3. Confirm both exact blocks become air permanently, stock wood/stone is 1/1, and conservation is exact.\n'
+    elif [ "$MODE" = "h2" ]; then
         printf '  2. Inspect four tick records: route/index progression, three single steps, then harvest_block.\n'
         printf '  3. Confirm target reservation, adjacent arrival, inventory 0->1, resource_harvested, and no runtime error.\n'
     elif [ "$MODE" = "economy" ]; then
@@ -176,12 +189,27 @@ PEBBLELAB_APP_AGENTS_OVERLAY=1 \
 PEBBLELAB_APP_AGENTS_TRACE=1 \
 PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
 PEBBLELAB_APP_AGENTS_INTERACT=1 \
+PEBBLELAB_APP_AGENTS_NATURAL="$NATURAL_GATE" \
 PEBBLE_CMD="$LAB_COMMANDS" \
 PEBBLE_SHOT="$CAPTURE_PATH@240" \
 swift run -c release Pebble 2>&1 | /usr/bin/tee "$TRACE_PATH"
 
 [ -s "$CAPTURE_PATH" ] || fail "capture was not written: $CAPTURE_PATH"
-if [ "$MODE" = "h2" ]; then
+if [ "$MODE" = "natural" ]; then
+    require_trace 'natural=on tick=0 mutation=none' 'natural mode was explicitly enabled without mutation'
+    require_trace 'tick=1 .*focus=agent_2 action=approach_resource .*resourceSeen=wood@24,68,-22:naturalWorld#1520 .*reservationOwner=agent_2 navigationPurpose=resource navigation=active' 'natural oak target lock, reservation, and route'
+    require_trace 'tick=3 .*focus=agent_2 action=approach_resource .*navigationPurpose=resource navigation=arrived' 'wood route arrives one step per tick'
+    require_trace 'natural harvest actor=agent_2 target=24,68,-22 resource=wood source=naturalWorld fingerprint=1520 blockAfter=0 cleanupRestore=0 inventoryCredit=1 memory=resource_harvested' 'oak block removed permanently and credited once'
+    require_trace 'tick=4 .*action=harvest_block .*naturalHarvests=1 .*inventoryByResource=.*wood:1.*conservation=1:1\+0\+0:exact' 'wood harvest state and conservation'
+    require_trace 'natural harvest actor=agent_2 target=24,68,-20 resource=stone source=naturalWorld fingerprint=48 blockAfter=0 cleanupRestore=0 inventoryCredit=1 memory=resource_harvested' 'adjacent stone block removed permanently and credited once'
+    require_trace 'tick=5 .*action=harvest_block .*resourceSeen=wood@24,67,-22:naturalWorld#1520 .*naturalHarvests=2 .*inventoryByResource=.*wood:1,stone:1.*conservation=2:2\+0\+0:exact' 'stone harvest reaches quota exactly'
+    require_trace 'tick=7 .*goals=.*agent_2:deliverResources.*action=return_home .*navigationPurpose=homeDelivery navigation=active' 'existing bounded home route starts one step per tick'
+    require_trace 'tick=9 .*goals=.*agent_2:deliverResources.*action=return_home .*navigationPurpose=homeDelivery navigation=arrived' 'existing bounded home route arrives'
+    require_trace 'tick=10 .*action=deliver_resource .*inventoryByResource=.*wood:0,stone:0.*campStock=.*wood:1,stone:1.*deliveryOutcome=succeeded .*conservation=2:0\+2\+0:exact' 'atomic delivery and exact conservation'
+    require_trace 'natural gate=enabled active=yes actor=agent_2 .*harvestCount=2 rollbackCount=0 fixtures=0 conservation=2:0\+2\+0:exact' 'natural status and zero fixtures'
+    require_trace 'summary .*runtimeErrors=0 .*interactionRestored=1 .*naturalHarvests=2 naturalRollbacks=0 naturalRestoredAfterSuccess=0 conservation=2:0\+2\+0:exact .*cleanupRestoredBlocks=0' 'clean runtime and no natural cleanup restoration'
+    printf '\nPASS: natural wood/stone live trace and capture evidence verified.\n'
+elif [ "$MODE" = "h2" ]; then
     require_trace 'interaction setup mode=distant distance=4 .*corridorObserved=9 corridorChanged=0 fixtureSetupMutations=1' 'setup changed only the final fixture block'
     require_trace 'tick=1 .*focus=agent_2 action=approach_resource .*reservationOwner=agent_2 navigationPurpose=resource navigation=active routeLength=4 routeIndex=1 stepsRemaining=2' 'tick 1 target reservation and first step'
     require_trace 'tick=2 .*focus=agent_2 action=approach_resource .*navigationPurpose=resource navigation=active routeLength=4 routeIndex=2 stepsRemaining=1' 'tick 2 single-step route progress'

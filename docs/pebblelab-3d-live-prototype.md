@@ -6,7 +6,7 @@ La maquette V0 rend trois agents PebbleLab observables dans l’application Pebb
 
 ## Prérequis et lancement
 
-Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy` et `--h2` conservent respectivement les preuves Phase I et H2. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
+Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2` et `--natural` conservent respectivement les preuves Phase I, H2 et la récolte naturelle J→K. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
 
 Depuis la racine du dépôt :
 
@@ -51,6 +51,7 @@ Commandes de démonstration :
 /lab interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off>
 /lab economy <setup|auto on|auto off|status|clear>
 /lab survival <on|off|status>
+/lab natural <on|off|status|scan>
 /lab status
 /lab focus <agentId|next>        /lab next
 /lab follow <agentId|focus|next|off>
@@ -73,7 +74,7 @@ Utiliser `/lab demo stop`, `/lab stop` ou `/lab clear`. Les probes transitoires 
 - mémoire bornée et distance au home toujours inférieure ou égale à 8 ;
 - aucune destination partagée et aucun dangerous drop exécuté ;
 - navigation de ressource bornée au rayon 8, route cardinale et un pas au plus par tick ;
-- seule la fixture transactionnelle peut être mutée puis restaurée ; aucun bloc naturel, mining général ou construction ;
+- hors gate naturelle explicite, seule la fixture transactionnelle peut être mutée puis restaurée ; la construction reste interdite ;
 - aucune société ou communication entre agents ;
 - aucune persistance agent ;
 - aucun contrôleur autonome du joueur.
@@ -123,3 +124,13 @@ Cette phase reste entièrement `sandboxFixture` : aucun bloc naturel n'est scann
 Une faim engagée cible exclusivement les fixtures `foodRaw` et réutilise le target lock, la réservation, la route H2, le movement stack et la récolte transactionnelle existants. Lorsque l'unité est portée, `consume_food` retire atomiquement un `foodRaw`, réduit la faim, écrit une seule mémoire `food_consumed` et étend l'invariant à `harvested = carried + campStock + consumed`. Sans nourriture, la période de grâce et les dégâts de famine sont déterministes ; la mort et le respawn restent hors scope.
 
 Une fatigue engagée conserve le goal `rest` jusqu'au seuil de récupération. Loin du home, la purpose `homeRest` réutilise le planner exact et `return_home`, à un pas maximum par tick. Au home, l'action `rest` réduit la fatigue avant la reprise des activités normales. Le mode live par défaut utilise `PebbleLab-Disposable-J-12345`, conserve les trois blocs-fixtures comme seules mutations World, vérifie zéro modification de corridor et restaure les trois fixtures au cleanup. La preuve négative de famine sans nourriture est structurée dans `pebsmoke`, car elle ne nécessite aucune mutation World ni validation pixel.
+
+## J→K — Natural Wood and Stone Harvest V1
+
+Le mode naturel reste désactivé par défaut et exige `PEBBLELAB_APP_AGENTS_NATURAL=1`, puis `/lab natural on`. Il n'active ni le mouvement, ni l'économie, ni la survie. Le mapping Pebble est volontairement fermé aux fingerprints metadata `0` déjà enregistrés et générés : `oak_log#1520` et `birch_log#2032` donnent `wood`, `stone#48` donne `stone`. Aucun bloc ne donne `foodRaw`; la nourriture de survie reste une fixture.
+
+Le scan read-only couvre un rayon horizontal maximal de 8 et la bande verticale `agentY-2...agentY+4`, au plus 1 008 positions cibles et 384 lectures d'approche, sans charger de chunk. Cette bande couvre les différences de niveau simples du movement stack et les troncs accessibles sans ouvrir un scan vertical général. Il émet au plus 32 candidats puis 8 observations dans un ordre stable. La session conserve la source `naturalWorld`, le fingerprint, le target lock et la réservation. Le planner H2 et le movement stack restent les seuls chemins de navigation.
+
+La récolte naturelle relit le fingerprint exact, prévalide la copie de session, remplace uniquement la cible par air, vérifie la mutation puis publie le crédit. Une publication refusée restaure immédiatement et vérifie le bloc exact; après succès, le bloc reste retiré et le cleanup ne le recrée pas. Les fixtures conservent leur ledger réversible séparé. L'invariant économique reste `harvested = carried + campStock + consumed`.
+
+La preuve permanente `scripts/verify-pebblelab-live.sh --natural` utilise le monde jetable `PebbleLab-Disposable-Natural-46`, la seed `46`, l'anchor joueur `(19,68,-21)`, zéro fixture et `agent_2` au home `(21,68,-21)`. Elle observe un `oak_log#1520` en `(24,68,-22)`, parcourt trois pas jusqu'à `(24,68,-21)`, récolte ensuite la pierre exposée adjacente `stone#48` en `(24,68,-20)`, revient au home en trois pas et livre `wood=1, stone=1`. La trace vérifie les deux blocs devenus air, `fixtures=0`, `naturalRestoredAfterSuccess=0`, la conservation `2=0+2+0`, zéro corridor modifié et zéro erreur runtime. La capture reste une preuve visuelle complémentaire; les fingerprints, la déduplication et le rollback injecté sont couverts par `pebsmoke`.

@@ -29,7 +29,9 @@ struct PebbleAgentDebugState {
         lastError: String?,
         interaction: PebbleAgentInteractionState,
         economyFixtures: PebbleAgentEconomyFixtureState,
-        economyReason: String
+        economyReason: String,
+        naturalGateEnabled: Bool,
+        naturalState: PebbleAgentNaturalResourceState
     ) {
         let focus = snapshot.agents.first { $0.id == focusedAgentId } ?? snapshot.agents.first
         let status = paused ? "paused" : "running"
@@ -72,7 +74,7 @@ struct PebbleAgentDebugState {
                 "\($0.resource.rawValue)@\(Self.position($0.target)) d=\($0.distanceManhattan)"
             } ?? "none"
             let activeTarget = agent.activeResourceTarget.map {
-                "\(Self.position($0.target)) s\($0.selectedAtTick)/l\($0.lastSeenAtTick)"
+                "\(Self.position($0.target)) \($0.source.rawValue) s\($0.selectedAtTick)/l\($0.lastSeenAtTick)"
             } ?? "none"
             let navigation = agent.navigationProgress
             let route = "\(navigation.status.rawValue) \(navigation.routeIndex)/\(max(0, (navigation.route?.positions.count ?? 1) - 1)) rem \(navigation.stepsRemaining)"
@@ -97,6 +99,7 @@ struct PebbleAgentDebugState {
                 "delivery/conservation: \(agent.lastDeliveryOutcome?.status.rawValue ?? "none") / \(snapshot.conservation.balanced ? "exact" : "diverged")",
                 String(format: "survival: %@ %@ h/f %.2f/%.2f hp %d consumed %d", snapshot.survivalEnabled ? "on" : "off", survival?.status.rawValue ?? "off", agent.needs.hunger, agent.needs.fatigue, agent.health, snapshot.conservation.consumedTotal),
                 "resourceSeen: \(resourceSeen)",
+                "natural: \(snapshot.naturalResourcesEnabled ? "on" : "off") gate \(naturalGateEnabled ? "on" : "off") scan \(naturalState.lastScan.worldBlockReadCount)/\(naturalState.lastScan.candidateCount)/\(naturalState.lastScan.observationsEmitted) harvest/rollback \(naturalState.harvestCount)/\(naturalState.rollbackCount)",
                 "activeTarget: \(activeTarget)",
                 "reservation: \(agent.resourceReservation?.agentId ?? "none")  navigation: \(route)",
                 "next/replans/failure: \(nextStep) / \(navigation.replanCount) / \(navigation.lastFailure?.rawValue ?? navigation.lastInvalidation?.rawValue ?? "none")",
@@ -170,10 +173,10 @@ struct PebbleAgentDebugState {
         movementLines.append("move count/dist/home/reduced: \(agent.movementCount)/\(agent.totalManhattanDistanceMoved)/\(agent.returnHomeMoveCount)/\(agent.totalDistanceReducedTowardHome)")
 
         let fullResourceSeen = agent.lastResourceObservations.first.map {
-            "\($0.resource.rawValue)@\(Self.position($0.target)) \($0.direction.rawValue) distance \($0.distanceManhattan)"
+            "\($0.resource.rawValue)@\(Self.position($0.target)) \($0.direction.rawValue) distance \($0.distanceManhattan) \($0.source.rawValue)#\($0.expectedBlockFingerprint.map(String.init) ?? "none")"
         } ?? "none"
         let fullActiveTarget = agent.activeResourceTarget.map {
-            "\(Self.position($0.target)) selected \($0.selectedAtTick) seen \($0.lastSeenAtTick)"
+            "\(Self.position($0.target)) \($0.source.rawValue)#\($0.expectedBlockFingerprint.map(String.init) ?? "none") selected \($0.selectedAtTick) seen \($0.lastSeenAtTick)"
         } ?? "none"
         let reservationExpiry = agent.resourceReservation.map { String($0.expiresAtTick) } ?? "none"
         let navigationNext = agent.navigationProgress.nextStep.map(Self.position) ?? "none"
@@ -202,6 +205,9 @@ struct PebbleAgentDebugState {
             "critical/food consumed/starvation damage: \(agent.survivalProgress?.consecutiveCriticalHungerTicks ?? 0)/\(agent.survivalProgress?.foodConsumedCount ?? 0)/\(agent.survivalProgress?.starvationDamageTaken ?? 0)",
             "consumption outcome/memory: \(agent.survivalProgress?.lastConsumptionOutcome?.status.rawValue ?? "none") / \(agent.survivalProgress?.lastMemoryType?.rawValue ?? agent.recentMemory.last { $0.type == "food_consumed" || $0.type == "consumption_blocked" || $0.type == "starvation_damage" }?.type ?? "none")",
             "conservation harvested=carried+stock+consumed: \(snapshot.conservation.harvestedTotal)=\(snapshot.conservation.carriedTotal)+\(snapshot.conservation.campStockTotal)+\(snapshot.conservation.consumedTotal) \(snapshot.conservation.balanced ? "exact" : "diverged")",
+            "natural gate/mode/radius/vertical: \(naturalGateEnabled ? "on" : "off") / \(snapshot.naturalResourcesEnabled ? "on" : "off") / \(PebbleAgentNaturalResourceAdapter.configuration.horizontalRadius) / -\(PebbleAgentNaturalResourceAdapter.configuration.verticalBelow)...+\(PebbleAgentNaturalResourceAdapter.configuration.verticalAbove)",
+            "natural scan read/candidate/emitted/mapped: \(naturalState.lastScan.worldBlockReadCount)/\(naturalState.lastScan.candidateCount)/\(naturalState.lastScan.observationsEmitted)/\(naturalState.lastScan.mappedBlockCount)",
+            "natural harvest/rollback/last: \(naturalState.harvestCount)/\(naturalState.rollbackCount) / \(Self.short(naturalState.lastHarvest, limit: 28)) / \(Self.short(naturalState.lastRollback, limit: 28))",
             "resource seen: \(fullResourceSeen)",
             "active resource target: \(fullActiveTarget)",
             "resource reservation owner: \(agent.resourceReservation?.agentId ?? "none") expires: \(reservationExpiry)",
