@@ -6,6 +6,8 @@ La maquette V0 rend trois agents PebbleLab observables dans l’application Pebb
 
 ## Prérequis et lancement
 
+Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session H1 reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Ce lanceur réutilise les hooks existants de commandes et de capture, impose un monde jetable préfixé `PebbleLab` avec seed fixe et conserve les traces/captures dans un dossier temporaire ; la vérification visuelle reste manuelle.
+
 Depuis la racine du dépôt :
 
 ```bash
