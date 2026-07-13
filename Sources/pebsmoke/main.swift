@@ -7101,9 +7101,41 @@ do {
         )]
     )])
     let rollbackBefore = rollbackNatural.snapshot()
-    var simulatedWorldBlock = oakFingerprint
+    let rollbackWorld = World(dim: .overworld, seed: 46)
+    let rollbackChunk = Chunk(
+        cx: naturalWoodTarget.x >> 4,
+        cz: naturalWoodTarget.z >> 4,
+        minY: rollbackWorld.info.minY,
+        height: rollbackWorld.info.height
+    )
+    rollbackChunk.status = .generated
+    rollbackWorld.setChunk(rollbackChunk)
+    let untouchedNaturalNeighbor = AgentPosition(x: 2, y: 64, z: 0)
+    _ = rollbackWorld.setBlock(
+        untouchedNaturalNeighbor.x,
+        untouchedNaturalNeighbor.y,
+        untouchedNaturalNeighbor.z,
+        Int(B.dirt) << 4
+    )
+    _ = rollbackWorld.setBlock(
+        naturalWoodTarget.x,
+        naturalWoodTarget.y,
+        naturalWoodTarget.z,
+        oakFingerprint
+    )
     var publicationCandidate = rollbackNatural
-    simulatedWorldBlock = 0
+    let removedNaturalFingerprint = rollbackWorld.setBlock(
+        naturalWoodTarget.x,
+        naturalWoodTarget.y,
+        naturalWoodTarget.z,
+        0
+    )
+    let naturalBlockWasRemoved = removedNaturalFingerprint == oakFingerprint
+        && rollbackWorld.getBlock(
+            naturalWoodTarget.x,
+            naturalWoodTarget.y,
+            naturalWoodTarget.z
+        ) == 0
     try! publicationCandidate.applyInteractionOutcome(AgentInteractionOutcome(
         interactionId: "natural-forced-publication-failure",
         agentId: "agent_economy",
@@ -7116,9 +7148,26 @@ do {
         source: .naturalWorld,
         expectedBlockFingerprint: oakFingerprint
     ))
-    simulatedWorldBlock = oakFingerprint
+    _ = rollbackWorld.setBlock(
+        naturalWoodTarget.x,
+        naturalWoodTarget.y,
+        naturalWoodTarget.z,
+        removedNaturalFingerprint
+    )
+    check("natural forced publication failure removes only exact target before rollback",
+          naturalBlockWasRemoved)
     check("natural forced publication failure restores exact fingerprint",
-          simulatedWorldBlock == oakFingerprint)
+          rollbackWorld.getBlock(
+            naturalWoodTarget.x,
+            naturalWoodTarget.y,
+            naturalWoodTarget.z
+          ) == oakFingerprint)
+    check("natural forced publication failure preserves third-party block",
+          rollbackWorld.getBlock(
+            untouchedNaturalNeighbor.x,
+            untouchedNaturalNeighbor.y,
+            untouchedNaturalNeighbor.z
+          ) == (Int(B.dirt) << 4))
     check("natural forced publication failure publishes no inventory",
           rollbackNatural.snapshot().agents[0].resourceInventory
             == rollbackBefore.agents[0].resourceInventory)
