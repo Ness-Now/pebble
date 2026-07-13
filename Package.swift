@@ -20,6 +20,7 @@ let package = Package(
         .target(
             name: "PebbleAgents",
             path: "Sources/PebbleAgents",
+            exclude: ["AGENTS.md"],
             swiftSettings: [
                 .swiftLanguageMode(.v5),
             ]
@@ -29,6 +30,7 @@ let package = Package(
             name: "Pebble",
             dependencies: ["PebbleCore", "PebbleAgents"],
             path: "Sources/Pebble",
+            exclude: ["AGENTS.md"],
             swiftSettings: [
                 .swiftLanguageMode(.v5),
             ],
@@ -45,6 +47,7 @@ let package = Package(
             name: "pebsmoke",
             dependencies: ["PebbleCore", "PebbleAgents"],
             path: "Sources/pebsmoke",
+            exclude: ["AGENTS.md"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         // headless simulation laboratory runner
@@ -52,6 +55,7 @@ let package = Package(
             name: "PebbleLab",
             dependencies: ["PebbleCore", "PebbleAgents"],
             path: "Sources/PebbleLab",
+            exclude: ["AGENTS.md"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
     ]
