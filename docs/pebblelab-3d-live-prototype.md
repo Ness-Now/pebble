@@ -6,13 +6,14 @@ La maquette V0 rend trois agents PebbleLab observables dans l’application Pebb
 
 ## Prérequis et lancement
 
-Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session H1 reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Ce lanceur réutilise les hooks existants de commandes et de capture, impose un monde jetable préfixé `PebbleLab` avec seed fixe et conserve les traces/captures dans un dossier temporaire ; la vérification visuelle reste manuelle.
+Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session H2 reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
 
 Depuis la racine du dépôt :
 
 ```bash
 PEBBLELAB_APP_AGENTS=1 \
 PEBBLELAB_APP_AGENTS_MOVE=1 \
+PEBBLELAB_APP_AGENTS_INTERACT=1 \
 PEBBLELAB_APP_PROBES=1 \
 PEBBLELAB_DEBUG_ENTITIES=1 \
 PEBBLELAB_APP_AGENTS_OVERLAY=1 \
@@ -47,6 +48,7 @@ Commandes de démonstration :
 /lab pause                       /lab resume        /lab step
 /lab speed <1|2|4|8>             /lab reset
 /lab movement <on|off>
+/lab interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off>
 /lab status
 /lab focus <agentId|next>        /lab next
 /lab follow <agentId|focus|next|off>
@@ -68,8 +70,8 @@ Utiliser `/lab demo stop`, `/lab stop` ou `/lab clear`. Les probes transitoires 
 - perception World en rayon 1 ;
 - mémoire bornée et distance au home toujours inférieure ou égale à 8 ;
 - aucune destination partagée et aucun dangerous drop exécuté ;
-- aucun pathfinding long, route, waypoint ou steering ;
-- aucune mutation de terrain, mining ou construction ;
+- navigation de ressource bornée au rayon 8, route cardinale et un pas au plus par tick ;
+- seule la fixture transactionnelle peut être mutée puis restaurée ; aucun bloc naturel, mining général ou construction ;
 - aucune société ou communication entre agents ;
 - aucune persistance agent ;
 - aucun contrôleur autonome du joueur.
@@ -93,3 +95,11 @@ G2 reste strictement adjacent-only : aucune navigation, aucun scan distant et au
 `/lab interaction setup distant <2...8>` place la même fixture `amethyst_block` du ledger, à une distance cardinale exacte et après validation d’un corridor direct sûr. Avec l’auto explicitement activé, la session live utilise un rayon borné à 8, sélectionne une `activeResourceTarget` déterministe et la conserve tant qu’elle reste visible et compatible avec l’inventaire. La perception reste ledger-only : aucun bloc naturel n’est scanné.
 
 Une cible distante produit `collectResource` puis l’action sèche `approach_resource`. H1 ne crée ni route, ni waypoint, ni pathfinding et ne déplace pas l’agent ; elle ne déclenche aucune interaction et ne crédite ni inventaire ni mémoire de récolte. La récolte manuelle distante reste refusée. Le setup adjacent historique demeure inchangé et continue à produire le chemin G2 `harvest_block`. Le déplacement borné vers la cible est réservé à H2.
+
+## H2 — Navigate-to-harvest
+
+Le lanceur live crée automatiquement `PebbleLab-Disposable-H2-424242` dans un home temporaire isolé, configure `agent_2`, une fixture distante à quatre blocs, l'auto-interaction et le mouvement, puis exécute exactement quatre `/lab step`. Pour rendre la preuve indépendante du relief de spawn sans affaiblir la priorité cognitive de sécurité, le setup ledgerise un apron cardinal immédiat et le corridor, soit au plus sept cellules (support, pieds, tête), vérifie chaque mutation, puis restaure et vérifie l'ensemble au cleanup. La session réserve la cible avec un tie-break stable, calcule une route cardinale dans un relevé World borné aux chunks déjà prêts, et remet uniquement le prochain pas à `AgentMovementCoordinator`. Les trois premiers ticks appliquent chacun au plus un pas par le movement stack existant. À distance Manhattan 1, le quatrième tick produit `harvest_block` et réutilise sans détour la transaction G1/G2.
+
+`/lab interaction status`, l'overlay full et chaque trace de tick exposent le propriétaire de réservation, le statut de navigation, la longueur et l'index de route, les pas restants, le prochain pas, le compteur de replan, la dernière invalidation/erreur, la distance actuelle et les derniers outcomes. La preuve attendue montre `inventory 0 -> 1`, une seule mémoire `resource_harvested`, aucune erreur runtime, puis la restauration de la fixture lors de la terminaison.
+
+La route est limitée au rayon 8, à 256 nœuds visités, à 16 pas et à trois replans espacés d'au moins un tick. Une cellule ou un chunk indisponible, un pas vertical hors `-1...1`, un dangerous drop, la perte de réservation ou la disparition de la cible invalide explicitement la route. Aucun chargement de chunk, pathfinding mondial, ressource naturelle ou persistance de route n'est ouvert.

@@ -471,7 +471,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         // PEBBLE_NEWWORLD=<seed> creates a fresh world instead (worldgen testing)
         if ProcessInfo.processInfo.environment["PEBBLE_AUTOLOAD"] != nil {
             if let seedText = ProcessInfo.processInfo.environment["PEBBLE_NEWWORLD"] {
-                game.createWorld(name: "WGTest-\(seedText)", seedText: seedText,
+                let requestedName = ProcessInfo.processInfo.environment["PEBBLE_NEWWORLD_NAME"]
+                if let requestedName {
+                    precondition(
+                        requestedName.hasPrefix("PebbleLab-Disposable-"),
+                        "PEBBLE_NEWWORLD_NAME must identify a PebbleLab disposable world"
+                    )
+                }
+                game.createWorld(name: requestedName ?? "WGTest-\(seedText)", seedText: seedText,
                                  mode: GameMode.survival, difficulty: 2)
             } else if let rec = game.listWorlds().sorted(by: { $0.lastPlayed > $1.lastPlayed }).first {
                 game.loadWorld(rec.id)

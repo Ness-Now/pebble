@@ -36,6 +36,7 @@ final class PebbleAgentController {
     private(set) var maxObservedMemoryCount = 0
     private(set) var maxObservedDistanceFromHome = 0
     private let worldSensor = PebbleAgentWorldSensor()
+    private let navigationAdapter = PebbleAgentNavigationAdapter()
     private let movementExecutor = PebbleAgentMovementExecutor()
     private let cameraFollow = PebbleAgentCameraFollow()
     private var interactionExecutor = PebbleAgentInteractionExecutor()
@@ -196,9 +197,6 @@ final class PebbleAgentController {
             if arguments[1] == "on" {
                 guard movementFeatureEnabled else {
                     return failure("PebbleAgents movement disabled. Set PEBBLELAB_APP_AGENTS_MOVE=1 before launch.")
-                }
-                guard !autoInteractionEnabled else {
-                    return failure("Movement cannot be enabled while automatic interaction is active.")
                 }
                 movementEnabled = true
                 movementWasEverEnabledSinceReset = true
@@ -430,10 +428,24 @@ final class PebbleAgentController {
                 } else {
                     resourceObservations = []
                 }
+                let navigationObservation: AgentNavigationObservation?
+                if movementEnabled, let target = resourceObservations.first?.target {
+                    navigationObservation = navigationAdapter.observe(
+                        world: world,
+                        agent: agent,
+                        target: target,
+                        occupiedAgentPositions: preCognitive.agents
+                            .filter { $0.id != agent.id }
+                            .map(\.position)
+                    )
+                } else {
+                    navigationObservation = nil
+                }
                 return AgentPerceptionInput(
                     agentId: agent.id,
                     worldObservation: try worldSensor.observe(world: world, agent: agent),
-                    resourceObservations: resourceObservations
+                    resourceObservations: resourceObservations,
+                    navigationObservation: navigationObservation
                 )
             }
             let result = try session.advanceTick(perceptions: perceptions)
@@ -496,6 +508,9 @@ final class PebbleAgentController {
             let activeResourceTarget = focus?.activeResourceTarget.map {
                 "\(positionText($0.target))@selected\($0.selectedAtTick)/seen\($0.lastSeenAtTick)"
             } ?? "none"
+            let navigation = focus?.navigationProgress
+            let reservationOwner = focus?.resourceReservation?.agentId ?? "none"
+            let routeNext = navigation?.nextStep.map(positionText) ?? "none"
             let moved = lastMovementOutcomes.filter { $0.status == .moved }.count
             let blocked = lastMovementOutcomes.filter { $0.status == .blocked }.count
             let outcomes = lastMovementOutcomes.map { "\($0.agentId):\($0.status.rawValue)" }.joined(separator: ",")
@@ -525,7 +540,7 @@ final class PebbleAgentController {
             blockedMovementOutcomeCount += blocked
             maxObservedMemoryCount = max(maxObservedMemoryCount, finalSnapshot.agents.map(\.memoryCount).max() ?? 0)
             maxObservedDistanceFromHome = max(maxObservedDistanceFromHome, finalSnapshot.agents.map(\.distanceFromHome).max() ?? 0)
-            let message = "tick=\(result.tick) movement=\(movementEnabled ? "on" : "off") moved=\(moved) blocked=\(blocked) outcomes=\(outcomes) positions=\(positions) goals=\(goals) focus=\(focus?.id ?? "none") action=\(focus?.lastAction?.name ?? "none") focusMove=\(focusMovement) memory=\(focus?.memoryCount ?? 0) retrieved=\(retrieved) influenced=\(influenced) dedup=\(deduplicated) decisionAgent=\(decisionAgent?.id ?? "none") memoryUsed=\(memoryUsed) decisionChanged=\(decision?.actionChanged == true ? 1 : 0) baseMove=\(baseMove) finalMove=\(finalMove) dominant=\(dominant) decisionReason=\(decisionReason) world_observed=1 perception=\(perceptionSummary) observations=\(observations) resourceSeen=\(resourceSeen) resourceDistance=\(resourceDistance) activeTarget=\(activeResourceTarget) autoInteraction=\(autoInteractionEnabled ? "on" : "off") interactionAttempted=\(lastInteractionAttempted ? 1 : 0) interactionSucceeded=\(lastInteractionSucceeded ? 1 : 0) interactionBlocked=\(lastInteractionBlocked ? 1 : 0)"
+            let message = "tick=\(result.tick) movement=\(movementEnabled ? "on" : "off") moved=\(moved) blocked=\(blocked) outcomes=\(outcomes) positions=\(positions) goals=\(goals) focus=\(focus?.id ?? "none") action=\(focus?.lastAction?.name ?? "none") focusMove=\(focusMovement) memory=\(focus?.memoryCount ?? 0) retrieved=\(retrieved) influenced=\(influenced) dedup=\(deduplicated) decisionAgent=\(decisionAgent?.id ?? "none") memoryUsed=\(memoryUsed) decisionChanged=\(decision?.actionChanged == true ? 1 : 0) baseMove=\(baseMove) finalMove=\(finalMove) dominant=\(dominant) decisionReason=\(decisionReason) world_observed=1 perception=\(perceptionSummary) observations=\(observations) resourceSeen=\(resourceSeen) resourceDistance=\(resourceDistance) activeTarget=\(activeResourceTarget) reservationOwner=\(reservationOwner) navigation=\(navigation?.status.rawValue ?? "idle") routeLength=\(navigation?.route?.positions.count ?? 0) routeIndex=\(navigation?.routeIndex ?? 0) stepsRemaining=\(navigation?.stepsRemaining ?? 0) nextStep=\(routeNext) replans=\(navigation?.replanCount ?? 0) invalidation=\(navigation?.lastInvalidation?.rawValue ?? "none") navigationFailure=\(navigation?.lastFailure?.rawValue ?? "none") autoInteraction=\(autoInteractionEnabled ? "on" : "off") interactionAttempted=\(lastInteractionAttempted ? 1 : 0) interactionSucceeded=\(lastInteractionSucceeded ? 1 : 0) interactionBlocked=\(lastInteractionBlocked ? 1 : 0)"
             traceTick(
                 message,
                 tick: result.tick,
@@ -687,10 +702,23 @@ final class PebbleAgentController {
             let inventory = snapshot?.agents.first { $0.id == actor }?.resourceInventory
             let actorSnapshot = snapshot?.agents.first { $0.id == actor }
             let outcome = actorSnapshot?.lastInteractionOutcome
+            let interactionMemory = actorSnapshot?.recentMemory.last {
+                $0.type == "resource_harvested"
+                    || $0.type == "interaction_blocked"
+                    || $0.type == "inventory_full"
+            }?.type ?? "none"
             let activeTarget = actorSnapshot?.activeResourceTarget.map {
                 "\(positionText($0.target))@selected\($0.selectedAtTick)/seen\($0.lastSeenAtTick)"
             } ?? "none"
-            let message = "interaction gate=\(state.gateEnabled ? "enabled" : "disabled") sandbox=\(state.active ? "active" : "inactive") setupMode=\(state.setupMode) configuredDistance=\(state.configuredDistance ?? 0) target=\(target) actualDistance=\(state.actualDistance ?? 0) actor=\(actor ?? "none") resourceBlock=\(state.resourceBlockName) originalBlock=\(state.originalBlock.map(String.init) ?? "none") harvested=\(state.harvested ? "yes" : "no") auto=\(state.autoEnabled ? "on" : "off") activeTarget=\(activeTarget) autoReason=\(state.autoReason.replacingOccurrences(of: " ", with: "_")) inventory=\(inventory?.totalCount ?? 0)/\(inventory?.capacity ?? 0) outcome=\(outcome?.status.rawValue ?? "none") reason=\(outcome?.reason ?? "none") rollback=\(state.rollbackCount):\(state.lastRollback)"
+            let navigation = actorSnapshot?.navigationProgress
+            let reservationOwner = snapshot?.resourceReservations.first {
+                $0.target == state.target
+            }?.agentId ?? "none"
+            let nextStep = navigation?.nextStep.map(positionText) ?? "none"
+            let currentDistance = actorSnapshot.flatMap { agent in
+                state.target.map { abs($0.x - agent.position.x) + abs($0.z - agent.position.z) }
+            } ?? 0
+            let message = "interaction gate=\(state.gateEnabled ? "enabled" : "disabled") sandbox=\(state.active ? "active" : "inactive") setupMode=\(state.setupMode) configuredDistance=\(state.configuredDistance ?? 0) target=\(target) actualDistance=\(currentDistance) actor=\(actor ?? "none") resourceBlock=\(state.resourceBlockName) originalBlock=\(state.originalBlock.map(String.init) ?? "none") harvested=\(state.harvested ? "yes" : "no") auto=\(state.autoEnabled ? "on" : "off") activeTarget=\(activeTarget) reservationOwner=\(reservationOwner) navigation=\(navigation?.status.rawValue ?? "idle") routeLength=\(navigation?.route?.positions.count ?? 0) routeIndex=\(navigation?.routeIndex ?? 0) stepsRemaining=\(navigation?.stepsRemaining ?? 0) nextStep=\(nextStep) replans=\(navigation?.replanCount ?? 0) invalidation=\(navigation?.lastInvalidation?.rawValue ?? "none") navigationFailure=\(navigation?.lastFailure?.rawValue ?? "none") movementOutcome=\(actorSnapshot?.lastMovementOutcome?.status.rawValue ?? "none") autoReason=\(state.autoReason.replacingOccurrences(of: " ", with: "_")) inventory=\(inventory?.totalCount ?? 0)/\(inventory?.capacity ?? 0) outcome=\(outcome?.status.rawValue ?? "none") memory=\(interactionMemory) reason=\(outcome?.reason ?? "none") rollback=\(state.rollbackCount):\(state.lastRollback)"
             trace(message)
             return success(message)
         }
@@ -714,9 +742,6 @@ final class PebbleAgentController {
             }
             guard session != nil, activeWorld === world else {
                 return failure("No active PebbleAgents session for this World.")
-            }
-            guard !movementEnabled else {
-                return failure("Automatic interaction requires movement off.")
             }
             let state = interactionExecutor.state(gateEnabled: true)
             guard state.active, !state.harvested, let actorId = state.actorId else {

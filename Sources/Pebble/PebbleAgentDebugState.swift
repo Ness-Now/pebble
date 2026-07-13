@@ -72,6 +72,9 @@ struct PebbleAgentDebugState {
             let activeTarget = agent.activeResourceTarget.map {
                 "\(Self.position($0.target)) s\($0.selectedAtTick)/l\($0.lastSeenAtTick)"
             } ?? "none"
+            let navigation = agent.navigationProgress
+            let route = "\(navigation.status.rawValue) \(navigation.routeIndex)/\(max(0, (navigation.route?.positions.count ?? 1) - 1)) rem \(navigation.stepsRemaining)"
+            let nextStep = navigation.nextStep.map(Self.position) ?? "none"
             let interactionOutcome = agent.lastInteractionOutcome
             let interactionMemory = agent.recentMemory.last { memory in
                 memory.type == "resource_harvested" || memory.type == "interaction_blocked" || memory.type == "inventory_full"
@@ -89,6 +92,8 @@ struct PebbleAgentDebugState {
                 "inventory: \(agent.resourceInventory.totalCount)/\(agent.resourceInventory.capacity) sandboxResource=\(agent.resourceInventory.count(of: .sandboxResource))",
                 "resourceSeen: \(resourceSeen)",
                 "activeTarget: \(activeTarget)",
+                "reservation: \(agent.resourceReservation?.agentId ?? "none")  navigation: \(route)",
+                "next/replans/failure: \(nextStep) / \(navigation.replanCount) / \(navigation.lastFailure?.rawValue ?? navigation.lastInvalidation?.rawValue ?? "none")",
                 "interaction: \(interaction.active ? (interaction.harvested ? "harvested" : "ready") : "inactive") target \(interactionTarget) auto \(interaction.autoEnabled ? "on" : "off")",
                 "outcome: \(interactionOutcome?.status.rawValue ?? "none") delta \(interactionOutcome?.inventoryDelta.quantity ?? 0) memory \(interactionMemory)",
                 "rollback: \(interaction.rollbackCount) \(Self.short(interaction.lastRollback, limit: 30))",
@@ -158,6 +163,14 @@ struct PebbleAgentDebugState {
         }
         movementLines.append("move count/dist/home/reduced: \(agent.movementCount)/\(agent.totalManhattanDistanceMoved)/\(agent.returnHomeMoveCount)/\(agent.totalDistanceReducedTowardHome)")
 
+        let fullResourceSeen = agent.lastResourceObservations.first.map {
+            "\($0.resource.rawValue)@\(Self.position($0.target)) \($0.direction.rawValue) distance \($0.distanceManhattan)"
+        } ?? "none"
+        let fullActiveTarget = agent.activeResourceTarget.map {
+            "\(Self.position($0.target)) selected \($0.selectedAtTick) seen \($0.lastSeenAtTick)"
+        } ?? "none"
+        let reservationExpiry = agent.resourceReservation.map { String($0.expiresAtTick) } ?? "none"
+        let navigationNext = agent.navigationProgress.nextStep.map(Self.position) ?? "none"
         var lines = [
             "FOCUS - \(agent.id)",
             "current position: \(Self.position(agent.position)) state: \(agent.state)",
@@ -172,8 +185,12 @@ struct PebbleAgentDebugState {
             "reason/effect: \(Self.short(action?.reason ?? "none", limit: 18)) / \(Self.short(agent.lastActionEffect?.effect ?? "none", limit: 18))",
             "nearby: \(nearby.isEmpty ? "none" : nearby) memory: \(agent.memoryCount)",
             "inventory: \(agent.resourceInventory.totalCount)/\(agent.resourceInventory.capacity) sandboxResource: \(agent.resourceInventory.count(of: .sandboxResource))",
-            "resource seen: \(agent.lastResourceObservations.first.map { "\($0.resource.rawValue)@\(Self.position($0.target)) \($0.direction.rawValue) distance \($0.distanceManhattan)" } ?? "none")",
-            "active resource target: \(agent.activeResourceTarget.map { "\(Self.position($0.target)) selected \($0.selectedAtTick) seen \($0.lastSeenAtTick)" } ?? "none")",
+            "resource seen: \(fullResourceSeen)",
+            "active resource target: \(fullActiveTarget)",
+            "resource reservation owner: \(agent.resourceReservation?.agentId ?? "none") expires: \(reservationExpiry)",
+            "navigation status/route/index: \(agent.navigationProgress.status.rawValue) / \(agent.navigationProgress.route?.positions.count ?? 0) / \(agent.navigationProgress.routeIndex)",
+            "navigation remaining/next/replans: \(agent.navigationProgress.stepsRemaining) / \(navigationNext) / \(agent.navigationProgress.replanCount)",
+            "navigation invalidation/failure: \(agent.navigationProgress.lastInvalidation?.rawValue ?? "none") / \(agent.navigationProgress.lastFailure?.rawValue ?? "none")",
             "interaction target/status: \(interaction.target.map(Self.position) ?? "none") / \(interaction.active ? (interaction.harvested ? "harvested" : "ready") : "inactive") auto: \(interaction.autoEnabled ? "on" : "off")",
             "interaction auto reason: \(Self.short(interaction.autoReason, limit: 28))",
             "interaction outcome: \(agent.lastInteractionOutcome?.status.rawValue ?? "none") reason: \(Self.short(agent.lastInteractionOutcome?.reason ?? "none", limit: 24))",

@@ -13,7 +13,9 @@ struct PebbleAgentWorldSensor {
             )
             let column = observeColumn(world: world, position: neighborPosition)
             let stepDelta: Int?
-            if let centerSurface = center.surfaceY, let neighborSurface = column.surfaceY {
+            if column.groundPresent && column.feetClear && column.headClear {
+                stepDelta = 0
+            } else if let centerSurface = center.surfaceY, let neighborSurface = column.surfaceY {
                 stepDelta = neighborSurface - centerSurface
             } else {
                 stepDelta = nil

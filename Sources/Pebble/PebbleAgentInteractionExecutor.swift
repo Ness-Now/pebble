@@ -63,7 +63,14 @@ struct PebbleAgentInteractionExecutor {
         let resourceBlock: Int
         let configuredDistance: Int
         let actorPosition: AgentPosition
+        let fixtureMutations: [FixtureMutation]
         var harvested: Bool
+    }
+
+    private struct FixtureMutation {
+        let position: AgentPosition
+        let originalBlock: Int
+        let fixtureBlock: Int
     }
 
     private var ledger: Ledger?
@@ -112,7 +119,7 @@ struct PebbleAgentInteractionExecutor {
             throw ExecutionError.chunkUnavailable
         }
         guard world.getBlock(ledger.target.x, ledger.target.y, ledger.target.z) == ledger.resourceBlock else {
-            throw ExecutionError.unexpectedBlock
+            return nil
         }
         guard let direction = AgentResourcePerception.direction(
             observerPosition: agent.position,
@@ -143,6 +150,7 @@ struct PebbleAgentInteractionExecutor {
             throw ExecutionError.invalidSetupDistance(distance)
         }
         let resourceBlock = Int(cell(B.amethyst_block))
+        let supportBlock = Int(cell(B.stone))
         for direction in AgentCardinalDirection.allCases {
             let target = AgentPosition(
                 x: actor.position.x + direction.dx * distance,
@@ -151,35 +159,27 @@ struct PebbleAgentInteractionExecutor {
             )
             guard isInsideSandbox(target, anchor: anchor),
                   horizontalDistance(target, actor.position) == distance,
-                  world.isChunkReady(target.x >> 4, target.z >> 4),
                   !occupiedAgentPositions.contains(target),
                   playerPosition != target,
-                  corridorIsClear(
+                  let mutations = fixtureMutations(
                       world: world,
                       actor: actor.position,
                       direction: direction,
                       distance: distance,
+                      resourceBlock: resourceBlock,
+                      supportBlock: supportBlock,
                       occupiedAgentPositions: occupiedAgentPositions,
                       playerPosition: playerPosition
                   ) else { continue }
-            let original = world.getBlock(target.x, target.y, target.z)
-            let originalId = original >> 4
-            let below = world.getBlock(target.x, target.y - 1, target.z)
-            let head = world.getBlock(target.x, target.y + 1, target.z)
-            guard blockDefs[originalId].replaceable,
-                  blockDefs[below >> 4].solid,
-                  isAir(UInt16(truncatingIfNeeded: head)) else { continue }
-
-            let returnedOriginal = world.setBlock(target.x, target.y, target.z, resourceBlock)
-            guard returnedOriginal == original,
-                  world.getBlock(target.x, target.y, target.z) == resourceBlock else {
-                _ = world.setBlock(target.x, target.y, target.z, original)
-                guard world.getBlock(target.x, target.y, target.z) == original else {
-                    throw ExecutionError.rollbackVerificationFailed
-                }
+            let original = mutations.first { $0.position == target }?.originalBlock
+                ?? world.getBlock(target.x, target.y, target.z)
+            do {
+                try applyFixtureMutations(world: world, mutations: mutations)
+            } catch {
+                try restoreFixtureMutations(world: world, mutations: mutations)
                 rollbackCount += 1
-                lastRollback = "setup restored original block"
-                throw ExecutionError.mutationVerificationFailed
+                lastRollback = "setup restored fixture corridor"
+                throw error
             }
             ledger = Ledger(
                 actorId: actor.id,
@@ -188,6 +188,7 @@ struct PebbleAgentInteractionExecutor {
                 resourceBlock: resourceBlock,
                 configuredDistance: distance,
                 actorPosition: actor.position,
+                fixtureMutations: mutations,
                 harvested: false
             )
             return target
@@ -241,21 +242,23 @@ struct PebbleAgentInteractionExecutor {
     @discardableResult
     mutating func cleanup(world: World) -> Bool {
         guard let ledger else { return true }
-        guard world.isChunkReady(ledger.target.x >> 4, ledger.target.z >> 4) else {
+        guard ledger.fixtureMutations.allSatisfy({
+            world.isChunkReady($0.position.x >> 4, $0.position.z >> 4)
+        }) else {
             rollbackCount += 1
-            lastRollback = "cleanup target chunk unavailable"
+            lastRollback = "cleanup fixture chunk unavailable"
             return false
         }
-        _ = world.setBlock(ledger.target.x, ledger.target.y, ledger.target.z, ledger.originalBlock)
-        let restored = world.getBlock(ledger.target.x, ledger.target.y, ledger.target.z) == ledger.originalBlock
-        if restored {
+        do {
+            try restoreFixtureMutations(world: world, mutations: ledger.fixtureMutations)
             self.ledger = nil
-            lastRollback = "cleanup restored original block"
-        } else {
+            lastRollback = "cleanup restored fixture corridor"
+            return true
+        } catch {
             rollbackCount += 1
             lastRollback = "cleanup restoration failed"
+            return false
         }
-        return restored
     }
 
     private mutating func rollbackResource(world: World, ledger: Ledger, reason: String) throws {
@@ -284,30 +287,116 @@ struct PebbleAgentInteractionExecutor {
         abs(lhs.x - rhs.x) + abs(lhs.z - rhs.z)
     }
 
-    private func corridorIsClear(
+    private func fixtureMutations(
         world: World,
         actor: AgentPosition,
         direction: AgentCardinalDirection,
         distance: Int,
+        resourceBlock: Int,
+        supportBlock: Int,
         occupiedAgentPositions: [AgentPosition],
         playerPosition: AgentPosition
-    ) -> Bool {
-        guard distance > 1 else { return true }
-        for step in 1..<distance {
-            let position = AgentPosition(
+    ) -> [FixtureMutation]? {
+        var mutations: [FixtureMutation] = []
+        var fixturePositions = [actor]
+        fixturePositions.append(contentsOf: AgentCardinalDirection.allCases.map { apronDirection in
+            AgentPosition(
+                x: actor.x + apronDirection.dx,
+                y: actor.y,
+                z: actor.z + apronDirection.dz
+            )
+        })
+        for step in 1...distance {
+            let routePosition = AgentPosition(
                 x: actor.x + direction.dx * step,
                 y: actor.y,
                 z: actor.z + direction.dz * step
             )
-            guard world.isChunkReady(position.x >> 4, position.z >> 4),
-                  !occupiedAgentPositions.contains(position),
-                  playerPosition != position,
-                  blockDefs[world.getBlock(position.x, position.y - 1, position.z) >> 4].solid,
-                  isAir(UInt16(truncatingIfNeeded: world.getBlock(position.x, position.y, position.z))),
-                  isAir(UInt16(truncatingIfNeeded: world.getBlock(position.x, position.y + 1, position.z))) else {
-                return false
+            if !fixturePositions.contains(routePosition) { fixturePositions.append(routePosition) }
+        }
+        let target = AgentPosition(
+            x: actor.x + direction.dx * distance,
+            y: actor.y,
+            z: actor.z + direction.dz * distance
+        )
+        for position in fixturePositions {
+            guard isInsideSandbox(position, anchor: actor),
+                  world.isChunkReady(position.x >> 4, position.z >> 4),
+                  (position == actor || !occupiedAgentPositions.contains(position)),
+                  playerPosition != position else {
+                return nil
+            }
+            let supportPosition = AgentPosition(x: position.x, y: position.y - 1, z: position.z)
+            let headPosition = AgentPosition(x: position.x, y: position.y + 1, z: position.z)
+            let supportOriginal = world.getBlock(supportPosition.x, supportPosition.y, supportPosition.z)
+            let feetOriginal = world.getBlock(position.x, position.y, position.z)
+            let headOriginal = world.getBlock(headPosition.x, headPosition.y, headPosition.z)
+            mutations.append(FixtureMutation(
+                position: supportPosition,
+                originalBlock: supportOriginal,
+                fixtureBlock: blockDefs[supportOriginal >> 4].solid ? supportOriginal : supportBlock
+            ))
+            mutations.append(FixtureMutation(
+                position: position,
+                originalBlock: feetOriginal,
+                fixtureBlock: position == target ? resourceBlock : 0
+            ))
+            mutations.append(FixtureMutation(
+                position: headPosition,
+                originalBlock: headOriginal,
+                fixtureBlock: 0
+            ))
+        }
+        return mutations
+    }
+
+    private func applyFixtureMutations(
+        world: World,
+        mutations: [FixtureMutation]
+    ) throws {
+        for mutation in mutations {
+            if mutation.originalBlock == mutation.fixtureBlock {
+                guard world.getBlock(
+                    mutation.position.x,
+                    mutation.position.y,
+                    mutation.position.z
+                ) == mutation.fixtureBlock else {
+                    throw ExecutionError.mutationVerificationFailed
+                }
+                continue
+            }
+            let prior = world.setBlock(
+                mutation.position.x,
+                mutation.position.y,
+                mutation.position.z,
+                mutation.fixtureBlock,
+                SET_NO_NEIGHBORS
+            )
+            guard prior == mutation.originalBlock,
+                  world.getBlock(mutation.position.x, mutation.position.y, mutation.position.z)
+                    == mutation.fixtureBlock else {
+                throw ExecutionError.mutationVerificationFailed
             }
         }
-        return true
+    }
+
+    private func restoreFixtureMutations(
+        world: World,
+        mutations: [FixtureMutation]
+    ) throws {
+        for mutation in mutations.reversed() {
+            _ = world.setBlock(
+                mutation.position.x,
+                mutation.position.y,
+                mutation.position.z,
+                mutation.originalBlock,
+                SET_NO_NEIGHBORS
+            )
+        }
+        guard mutations.allSatisfy({
+            world.getBlock($0.position.x, $0.position.y, $0.position.z) == $0.originalBlock
+        }) else {
+            throw ExecutionError.rollbackVerificationFailed
+        }
     }
 }
