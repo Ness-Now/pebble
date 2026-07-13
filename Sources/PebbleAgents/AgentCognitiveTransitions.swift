@@ -126,6 +126,9 @@ public enum AgentCognitiveTransitions {
         case "harvest_block":
             state = "interacting"
             effect = "awaiting interaction outcome"
+        case "approach_resource":
+            state = "planning"
+            effect = "awaiting bounded navigation"
         case "move_abstract":
             if input.goalKind == .seekSafety {
                 fear = max(0, fear - 1)

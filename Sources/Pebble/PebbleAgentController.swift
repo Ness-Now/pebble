@@ -142,7 +142,7 @@ final class PebbleAgentController {
         switch command {
         case "help":
             guard arguments.count == 1 else { return failure("Usage: /lab help") }
-            return success("/lab lifecycle: start stop clear | time control: pause resume step speed <1|2|4|8> reset | inspection: status focus <agentId|next> next follow <agentId|focus|next|off> overlay <off|compact|full> | movement: movement <on|off> | interaction: interaction <setup|harvest|status|auto on|auto off> | demo: demo [start|stop|status]")
+            return success("/lab lifecycle: start stop clear | time control: pause resume step speed <1|2|4|8> reset | inspection: status focus <agentId|next> next follow <agentId|focus|next|off> overlay <off|compact|full> | movement: movement <on|off> | interaction: interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off> | demo: demo [start|stop|status]")
         case "demo":
             return handleDemo(Array(arguments.dropFirst()), world: world, player: player)
         case "start":
@@ -300,6 +300,7 @@ final class PebbleAgentController {
             let configuration = try AgentSessionConfiguration(
                 seed: seed,
                 nearbyRadius: 8,
+                resourceObservationRadius: 8,
                 recentMemorySnapshotLimit: 6,
                 memoryPolicy: .bounded(maxEntries: 128)
             )
@@ -423,7 +424,8 @@ final class PebbleAgentController {
                     resourceObservations = try interactionExecutor.resourceObservation(
                         world: world,
                         agent: agent,
-                        anchor: anchor
+                        anchor: anchor,
+                        maximumDistance: session.configuration.resourceObservationRadius
                     ).map { [$0] } ?? []
                 } else {
                     resourceObservations = []
@@ -490,6 +492,10 @@ final class PebbleAgentController {
             let resourceSeen = focus?.lastResourceObservations.first.map {
                 "\($0.resource.rawValue)@\(positionText($0.target))"
             } ?? "none"
+            let resourceDistance = focus?.lastResourceObservations.first?.distanceManhattan ?? 0
+            let activeResourceTarget = focus?.activeResourceTarget.map {
+                "\(positionText($0.target))@selected\($0.selectedAtTick)/seen\($0.lastSeenAtTick)"
+            } ?? "none"
             let moved = lastMovementOutcomes.filter { $0.status == .moved }.count
             let blocked = lastMovementOutcomes.filter { $0.status == .blocked }.count
             let outcomes = lastMovementOutcomes.map { "\($0.agentId):\($0.status.rawValue)" }.joined(separator: ",")
@@ -519,7 +525,7 @@ final class PebbleAgentController {
             blockedMovementOutcomeCount += blocked
             maxObservedMemoryCount = max(maxObservedMemoryCount, finalSnapshot.agents.map(\.memoryCount).max() ?? 0)
             maxObservedDistanceFromHome = max(maxObservedDistanceFromHome, finalSnapshot.agents.map(\.distanceFromHome).max() ?? 0)
-            let message = "tick=\(result.tick) movement=\(movementEnabled ? "on" : "off") moved=\(moved) blocked=\(blocked) outcomes=\(outcomes) positions=\(positions) goals=\(goals) focus=\(focus?.id ?? "none") action=\(focus?.lastAction?.name ?? "none") focusMove=\(focusMovement) memory=\(focus?.memoryCount ?? 0) retrieved=\(retrieved) influenced=\(influenced) dedup=\(deduplicated) decisionAgent=\(decisionAgent?.id ?? "none") memoryUsed=\(memoryUsed) decisionChanged=\(decision?.actionChanged == true ? 1 : 0) baseMove=\(baseMove) finalMove=\(finalMove) dominant=\(dominant) decisionReason=\(decisionReason) world_observed=1 perception=\(perceptionSummary) observations=\(observations) resourceSeen=\(resourceSeen) autoInteraction=\(autoInteractionEnabled ? "on" : "off") interactionAttempted=\(lastInteractionAttempted ? 1 : 0) interactionSucceeded=\(lastInteractionSucceeded ? 1 : 0) interactionBlocked=\(lastInteractionBlocked ? 1 : 0)"
+            let message = "tick=\(result.tick) movement=\(movementEnabled ? "on" : "off") moved=\(moved) blocked=\(blocked) outcomes=\(outcomes) positions=\(positions) goals=\(goals) focus=\(focus?.id ?? "none") action=\(focus?.lastAction?.name ?? "none") focusMove=\(focusMovement) memory=\(focus?.memoryCount ?? 0) retrieved=\(retrieved) influenced=\(influenced) dedup=\(deduplicated) decisionAgent=\(decisionAgent?.id ?? "none") memoryUsed=\(memoryUsed) decisionChanged=\(decision?.actionChanged == true ? 1 : 0) baseMove=\(baseMove) finalMove=\(finalMove) dominant=\(dominant) decisionReason=\(decisionReason) world_observed=1 perception=\(perceptionSummary) observations=\(observations) resourceSeen=\(resourceSeen) resourceDistance=\(resourceDistance) activeTarget=\(activeResourceTarget) autoInteraction=\(autoInteractionEnabled ? "on" : "off") interactionAttempted=\(lastInteractionAttempted ? 1 : 0) interactionSucceeded=\(lastInteractionSucceeded ? 1 : 0) interactionBlocked=\(lastInteractionBlocked ? 1 : 0)"
             traceTick(
                 message,
                 tick: result.tick,
@@ -666,7 +672,7 @@ final class PebbleAgentController {
         world: World,
         player: Player
     ) -> PebbleAgentCommandResult {
-        let usage = "Usage: /lab interaction <setup|harvest|status|auto on|auto off>"
+        let usage = "Usage: /lab interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off>"
         guard let subcommand = arguments.first?.lowercased() else { return failure(usage) }
         if subcommand == "status" {
             guard arguments.count == 1 else { return failure(usage) }
@@ -679,8 +685,12 @@ final class PebbleAgentController {
             let snapshot = session?.snapshot()
             let actor = state.actorId ?? focusedAgentId
             let inventory = snapshot?.agents.first { $0.id == actor }?.resourceInventory
-            let outcome = snapshot?.agents.first { $0.id == actor }?.lastInteractionOutcome
-            let message = "interaction gate=\(state.gateEnabled ? "enabled" : "disabled") sandbox=\(state.active ? "active" : "inactive") actor=\(actor ?? "none") target=\(target) resourceBlock=\(state.resourceBlockName) originalBlock=\(state.originalBlock.map(String.init) ?? "none") harvested=\(state.harvested ? "yes" : "no") auto=\(state.autoEnabled ? "on" : "off") autoReason=\(state.autoReason.replacingOccurrences(of: " ", with: "_")) inventory=\(inventory?.totalCount ?? 0)/\(inventory?.capacity ?? 0) outcome=\(outcome?.status.rawValue ?? "none") reason=\(outcome?.reason ?? "none") rollback=\(state.rollbackCount):\(state.lastRollback)"
+            let actorSnapshot = snapshot?.agents.first { $0.id == actor }
+            let outcome = actorSnapshot?.lastInteractionOutcome
+            let activeTarget = actorSnapshot?.activeResourceTarget.map {
+                "\(positionText($0.target))@selected\($0.selectedAtTick)/seen\($0.lastSeenAtTick)"
+            } ?? "none"
+            let message = "interaction gate=\(state.gateEnabled ? "enabled" : "disabled") sandbox=\(state.active ? "active" : "inactive") setupMode=\(state.setupMode) configuredDistance=\(state.configuredDistance ?? 0) target=\(target) actualDistance=\(state.actualDistance ?? 0) actor=\(actor ?? "none") resourceBlock=\(state.resourceBlockName) originalBlock=\(state.originalBlock.map(String.init) ?? "none") harvested=\(state.harvested ? "yes" : "no") auto=\(state.autoEnabled ? "on" : "off") activeTarget=\(activeTarget) autoReason=\(state.autoReason.replacingOccurrences(of: " ", with: "_")) inventory=\(inventory?.totalCount ?? 0)/\(inventory?.capacity ?? 0) outcome=\(outcome?.status.rawValue ?? "none") reason=\(outcome?.reason ?? "none") rollback=\(state.rollbackCount):\(state.lastRollback)"
             trace(message)
             return success(message)
         }
@@ -721,7 +731,18 @@ final class PebbleAgentController {
             return success("PebbleAgents automatic interaction on for \(actorId).")
         }
 
-        guard arguments.count == 1, subcommand == "setup" || subcommand == "harvest" else {
+        let setupDistance: Int?
+        if subcommand == "setup", arguments.count == 1 {
+            setupDistance = 1
+        } else if subcommand == "setup", arguments.count == 3,
+                  arguments[1].lowercased() == "distant",
+                  let distance = Int(arguments[2]), (2...8).contains(distance) {
+            setupDistance = distance
+        } else {
+            setupDistance = nil
+        }
+        guard (subcommand == "setup" && setupDistance != nil)
+                || (subcommand == "harvest" && arguments.count == 1) else {
             return failure(usage)
         }
         guard featureEnabled else {
@@ -741,6 +762,7 @@ final class PebbleAgentController {
         }
         do {
             if subcommand == "setup" {
+                let distance = setupDistance ?? 1
                 let occupied = session.snapshot().agents.filter { $0.id != actorId }.map(\.position)
                 let playerPosition = AgentPosition(
                     x: Int(player.x.rounded(.down)),
@@ -752,10 +774,12 @@ final class PebbleAgentController {
                     actor: actor,
                     anchor: anchor,
                     occupiedAgentPositions: occupied,
-                    playerPosition: playerPosition
+                    playerPosition: playerPosition,
+                    distance: distance
                 )
-                trace("interaction setup actor=\(actorId) target=\(positionText(target)) block=\(PebbleAgentInteractionExecutor.resourceBlockName)")
-                return success("Interaction sandbox ready for \(actorId) at \(positionText(target)); block=\(PebbleAgentInteractionExecutor.resourceBlockName).")
+                let mode = distance == 1 ? "adjacent" : "distant"
+                trace("interaction setup mode=\(mode) distance=\(distance) actor=\(actorId) target=\(positionText(target)) block=\(PebbleAgentInteractionExecutor.resourceBlockName)")
+                return success("Interaction sandbox \(mode) distance \(distance) ready for \(actorId) at \(positionText(target)); block=\(PebbleAgentInteractionExecutor.resourceBlockName).")
             }
             let outcome = try performHarvestTransaction(
                 world: world,

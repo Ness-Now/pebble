@@ -10,6 +10,7 @@ public struct AgentResourceObservation: Codable, Equatable {
     public let resource: AgentResourceKind
     public let target: AgentPosition
     public let direction: AgentCardinalDirection
+    public let distanceManhattan: Int
     public let quantityAvailable: Int
     public let source: AgentResourceObservationSource
 
@@ -17,32 +18,43 @@ public struct AgentResourceObservation: Codable, Equatable {
         resource: AgentResourceKind,
         target: AgentPosition,
         direction: AgentCardinalDirection,
+        distanceManhattan: Int = 1,
         quantityAvailable: Int,
         source: AgentResourceObservationSource
     ) {
         self.resource = resource
         self.target = target
         self.direction = direction
+        self.distanceManhattan = distanceManhattan
         self.quantityAvailable = quantityAvailable
         self.source = source
     }
 }
 
 public enum AgentResourceObservationError: Error, Equatable {
+    case invalidMaximumDistance(Int)
     case tooManyObservations(Int)
     case nonPositiveQuantity(AgentPosition)
-    case nonAdjacentTarget(AgentPosition)
+    case targetMatchesObserver(AgentPosition)
+    case verticalDifference(AgentPosition)
+    case targetOutsideRadius(AgentPosition)
+    case distanceMismatch(AgentPosition)
     case directionMismatch(AgentPosition)
     case duplicateTarget(AgentPosition)
 }
 
 public enum AgentResourcePerception {
-    public static let maximumObservationCount = AgentCardinalDirection.allCases.count
+    public static let maximumObservationCount = 8
+    public static let maximumDistance = 8
 
     public static func normalize(
         observerPosition: AgentPosition,
-        observations: [AgentResourceObservation]
+        observations: [AgentResourceObservation],
+        maximumDistance: Int = 1
     ) throws -> [AgentResourceObservation] {
+        guard (1...Self.maximumDistance).contains(maximumDistance) else {
+            throw AgentResourceObservationError.invalidMaximumDistance(maximumDistance)
+        }
         guard observations.count <= maximumObservationCount else {
             throw AgentResourceObservationError.tooManyObservations(observations.count)
         }
@@ -51,18 +63,22 @@ public enum AgentResourcePerception {
             guard observation.quantityAvailable > 0 else {
                 throw AgentResourceObservationError.nonPositiveQuantity(observation.target)
             }
-            guard AgentInteractionSandbox.isCardinalAdjacent(
-                target: observation.target,
-                actor: observerPosition
-            ) else {
-                throw AgentResourceObservationError.nonAdjacentTarget(observation.target)
+            guard observation.target != observerPosition else {
+                throw AgentResourceObservationError.targetMatchesObserver(observation.target)
             }
-            let expectedTarget = AgentPosition(
-                x: observerPosition.x + observation.direction.dx,
-                y: observerPosition.y,
-                z: observerPosition.z + observation.direction.dz
-            )
-            guard observation.target == expectedTarget else {
+            guard observation.target.y == observerPosition.y else {
+                throw AgentResourceObservationError.verticalDifference(observation.target)
+            }
+            let distance = abs(observation.target.x - observerPosition.x)
+                + abs(observation.target.z - observerPosition.z)
+            guard distance <= maximumDistance else {
+                throw AgentResourceObservationError.targetOutsideRadius(observation.target)
+            }
+            guard observation.distanceManhattan == distance else {
+                throw AgentResourceObservationError.distanceMismatch(observation.target)
+            }
+            guard direction(observerPosition: observerPosition, target: observation.target)
+                    == observation.direction else {
                 throw AgentResourceObservationError.directionMismatch(observation.target)
             }
             let key = positionKey(observation.target)
@@ -70,18 +86,40 @@ public enum AgentResourcePerception {
                 throw AgentResourceObservationError.duplicateTarget(observation.target)
             }
         }
-        return observations.sorted {
-            let lhsDirection = directionIndex($0.direction)
-            let rhsDirection = directionIndex($1.direction)
-            if lhsDirection != rhsDirection { return lhsDirection < rhsDirection }
-            if $0.target.x != $1.target.x { return $0.target.x < $1.target.x }
-            if $0.target.y != $1.target.y { return $0.target.y < $1.target.y }
-            if $0.target.z != $1.target.z { return $0.target.z < $1.target.z }
-            if $0.resource.rawValue != $1.resource.rawValue {
-                return $0.resource.rawValue < $1.resource.rawValue
-            }
-            return $0.source.rawValue < $1.source.rawValue
+        return observations.sorted(by: sortsBefore)
+    }
+
+    fileprivate static func sortsBefore(
+        _ lhs: AgentResourceObservation,
+        _ rhs: AgentResourceObservation
+    ) -> Bool {
+        if lhs.distanceManhattan != rhs.distanceManhattan {
+            return lhs.distanceManhattan < rhs.distanceManhattan
         }
+        let lhsDirection = directionIndex(lhs.direction)
+        let rhsDirection = directionIndex(rhs.direction)
+        if lhsDirection != rhsDirection { return lhsDirection < rhsDirection }
+        if lhs.target.x != rhs.target.x { return lhs.target.x < rhs.target.x }
+        if lhs.target.y != rhs.target.y { return lhs.target.y < rhs.target.y }
+        if lhs.target.z != rhs.target.z { return lhs.target.z < rhs.target.z }
+        if lhs.resource.rawValue != rhs.resource.rawValue {
+            return lhs.resource.rawValue < rhs.resource.rawValue
+        }
+        return lhs.source.rawValue < rhs.source.rawValue
+    }
+
+    public static func direction(
+        observerPosition: AgentPosition,
+        target: AgentPosition
+    ) -> AgentCardinalDirection? {
+        guard observerPosition.y == target.y else { return nil }
+        let dx = target.x - observerPosition.x
+        let dz = target.z - observerPosition.z
+        guard dx != 0 || dz != 0 else { return nil }
+        if abs(dx) >= abs(dz), dx != 0 {
+            return dx > 0 ? .east : .west
+        }
+        return dz > 0 ? .south : .north
     }
 
     private static func directionIndex(_ direction: AgentCardinalDirection) -> Int {
@@ -90,6 +128,69 @@ public enum AgentResourcePerception {
 
     private static func positionKey(_ position: AgentPosition) -> String {
         "\(position.x),\(position.y),\(position.z)"
+    }
+}
+
+public struct AgentResourceTarget: Codable, Equatable {
+    public let resource: AgentResourceKind
+    public let target: AgentPosition
+    public let source: AgentResourceObservationSource
+    public let distanceManhattan: Int
+    public let selectedAtTick: Int
+    public let lastSeenAtTick: Int
+
+    public init(
+        resource: AgentResourceKind,
+        target: AgentPosition,
+        source: AgentResourceObservationSource,
+        distanceManhattan: Int,
+        selectedAtTick: Int,
+        lastSeenAtTick: Int
+    ) {
+        self.resource = resource
+        self.target = target
+        self.source = source
+        self.distanceManhattan = distanceManhattan
+        self.selectedAtTick = selectedAtTick
+        self.lastSeenAtTick = lastSeenAtTick
+    }
+}
+
+public enum AgentResourceTargeting {
+    public static func select(
+        current: AgentResourceTarget?,
+        observations: [AgentResourceObservation],
+        inventory: AgentResourceInventory,
+        tick: Int
+    ) -> AgentResourceTarget? {
+        if let current,
+           inventory.canAdd(current.resource),
+           let retained = observations.first(where: {
+               $0.target == current.target
+                   && $0.resource == current.resource
+                   && $0.source == current.source
+           }) {
+            return AgentResourceTarget(
+                resource: retained.resource,
+                target: retained.target,
+                source: retained.source,
+                distanceManhattan: retained.distanceManhattan,
+                selectedAtTick: current.selectedAtTick,
+                lastSeenAtTick: tick
+            )
+        }
+        guard let selected = observations.sorted(by: AgentResourcePerception.sortsBefore)
+            .first(where: { inventory.canAdd($0.resource) }) else {
+            return nil
+        }
+        return AgentResourceTarget(
+            resource: selected.resource,
+            target: selected.target,
+            source: selected.source,
+            distanceManhattan: selected.distanceManhattan,
+            selectedAtTick: tick,
+            lastSeenAtTick: tick
+        )
     }
 }
 

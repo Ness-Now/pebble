@@ -71,6 +71,7 @@ public struct AgentActionDecisionInput {
     public let position: AgentPosition
     public let homePosition: AgentPosition
     public let resourceObservations: [AgentResourceObservation]
+    public let activeResourceTarget: AgentResourceTarget?
 
     public init(
         agentId: String,
@@ -78,7 +79,8 @@ public struct AgentActionDecisionInput {
         goalKind: AgentGoalKind,
         position: AgentPosition,
         homePosition: AgentPosition,
-        resourceObservations: [AgentResourceObservation] = []
+        resourceObservations: [AgentResourceObservation] = [],
+        activeResourceTarget: AgentResourceTarget? = nil
     ) {
         self.agentId = agentId
         self.tick = tick
@@ -86,6 +88,7 @@ public struct AgentActionDecisionInput {
         self.position = position
         self.homePosition = homePosition
         self.resourceObservations = resourceObservations
+        self.activeResourceTarget = activeResourceTarget
     }
 }
 
@@ -116,21 +119,41 @@ public enum AgentActionDecider {
         case .collectResource:
             let observations = (try? AgentResourcePerception.normalize(
                 observerPosition: input.position,
-                observations: input.resourceObservations
+                observations: input.resourceObservations,
+                maximumDistance: AgentResourcePerception.maximumDistance
             )) ?? []
-            guard let observation = observations.first else {
+            let target = input.activeResourceTarget ?? observations.first.map {
+                AgentResourceTarget(
+                    resource: $0.resource,
+                    target: $0.target,
+                    source: $0.source,
+                    distanceManhattan: $0.distanceManhattan,
+                    selectedAtTick: input.tick,
+                    lastSeenAtTick: input.tick
+                )
+            }
+            guard let target else {
                 return AgentAction(
                     name: "wait",
                     reason: "goal collectResource: resource unavailable",
                     tick: input.tick
                 )
             }
+            if target.distanceManhattan > 1 {
+                return AgentAction(
+                    name: "approach_resource",
+                    reason: "goal collectResource: distant target selected",
+                    tick: input.tick,
+                    target: target.target,
+                    resource: target.resource
+                )
+            }
             return AgentAction(
                 name: "harvest_block",
                 reason: "goal collectResource: adjacent sandbox resource",
                 tick: input.tick,
-                target: observation.target,
-                resource: observation.resource
+                target: target.target,
+                resource: target.resource
             )
         case .observeOtherAgent:
             return AgentAction(

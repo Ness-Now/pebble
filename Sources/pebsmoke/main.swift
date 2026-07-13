@@ -4491,7 +4491,7 @@ do {
                 )]
             )
             return false
-        } catch AgentResourceObservationError.nonAdjacentTarget { return true }
+        } catch AgentResourceObservationError.targetOutsideRadius { return true }
         catch { return false }
     }())
     check("G2 inconsistent resource direction rejected", {
@@ -4711,6 +4711,330 @@ do {
     _ = try! deterministicA.advanceTick(perceptions: deterministicInput)
     _ = try! deterministicB.advanceTick(perceptions: deterministicInput)
     check("G2 identical runs are deterministic", deterministicA.snapshot() == deterministicB.snapshot())
+}
+
+// ---------------------------------------------------------------------------
+section("PebbleAgents distant resource survey and target lock H1")
+do {
+    let observer = AgentPosition(x: 20, y: 70, z: 20)
+    func observation(
+        _ direction: AgentCardinalDirection,
+        distance: Int,
+        target: AgentPosition? = nil,
+        reportedDistance: Int? = nil
+    ) -> AgentResourceObservation {
+        AgentResourceObservation(
+            resource: .sandboxResource,
+            target: target ?? AgentPosition(
+                x: observer.x + direction.dx * distance,
+                y: observer.y,
+                z: observer.z + direction.dz * distance
+            ),
+            direction: direction,
+            distanceManhattan: reportedDistance ?? distance,
+            quantityAvailable: 1,
+            source: .sandboxFixture
+        )
+    }
+
+    check("H1 resource radius default is one", {
+        let configuration = try! AgentSessionConfiguration(seed: 1, memoryPolicy: .legacyUnbounded)
+        return configuration.resourceObservationRadius == 1
+    }())
+    check("H1 resource radius zero rejected", {
+        do {
+            _ = try AgentSessionConfiguration(seed: 1, resourceObservationRadius: 0, memoryPolicy: .legacyUnbounded)
+            return false
+        } catch AgentSessionError.invalidResourceObservationRadius(0) { return true }
+        catch { return false }
+    }())
+    check("H1 resource radius nine rejected", {
+        do {
+            _ = try AgentSessionConfiguration(seed: 1, resourceObservationRadius: 9, memoryPolicy: .legacyUnbounded)
+            return false
+        } catch AgentSessionError.invalidResourceObservationRadius(9) { return true }
+        catch { return false }
+    }())
+    check("H1 resource radius one accepted",
+          (try? AgentSessionConfiguration(seed: 1, resourceObservationRadius: 1, memoryPolicy: .legacyUnbounded))?.resourceObservationRadius == 1)
+    check("H1 resource radius eight accepted",
+          (try? AgentSessionConfiguration(seed: 1, resourceObservationRadius: 8, memoryPolicy: .legacyUnbounded))?.resourceObservationRadius == 8)
+
+    let adjacent = observation(.north, distance: 1)
+    let northTwo = observation(.north, distance: 2)
+    let eastTwo = observation(.east, distance: 2)
+    let westFour = observation(.west, distance: 4)
+    let southEight = observation(.south, distance: 8)
+    check("H1 adjacent accepted at radius one",
+          (try? AgentResourcePerception.normalize(observerPosition: observer, observations: [adjacent], maximumDistance: 1)) == [adjacent])
+    check("H1 distance two refused at radius one", {
+        do {
+            _ = try AgentResourcePerception.normalize(observerPosition: observer, observations: [northTwo], maximumDistance: 1)
+            return false
+        } catch AgentResourceObservationError.targetOutsideRadius { return true }
+        catch { return false }
+    }())
+    check("H1 distance two accepted at radius eight",
+          (try? AgentResourcePerception.normalize(observerPosition: observer, observations: [northTwo], maximumDistance: 8)) == [northTwo])
+    check("H1 distance eight accepted",
+          (try? AgentResourcePerception.normalize(observerPosition: observer, observations: [southEight], maximumDistance: 8)) == [southEight])
+    check("H1 distance nine refused", {
+        do {
+            _ = try AgentResourcePerception.normalize(
+                observerPosition: observer,
+                observations: [observation(.east, distance: 9)],
+                maximumDistance: 8
+            )
+            return false
+        } catch AgentResourceObservationError.targetOutsideRadius { return true }
+        catch { return false }
+    }())
+    check("H1 vertical resource refused", {
+        let target = AgentPosition(x: observer.x + 2, y: observer.y + 1, z: observer.z)
+        do {
+            _ = try AgentResourcePerception.normalize(
+                observerPosition: observer,
+                observations: [observation(.east, distance: 2, target: target, reportedDistance: 2)],
+                maximumDistance: 8
+            )
+            return false
+        } catch AgentResourceObservationError.verticalDifference { return true }
+        catch { return false }
+    }())
+    check("H1 observer position resource refused", {
+        do {
+            _ = try AgentResourcePerception.normalize(
+                observerPosition: observer,
+                observations: [observation(.north, distance: 0, target: observer, reportedDistance: 0)],
+                maximumDistance: 8
+            )
+            return false
+        } catch AgentResourceObservationError.targetMatchesObserver { return true }
+        catch { return false }
+    }())
+    check("H1 reported distance mismatch refused", {
+        do {
+            _ = try AgentResourcePerception.normalize(
+                observerPosition: observer,
+                observations: [observation(.west, distance: 4, reportedDistance: 3)],
+                maximumDistance: 8
+            )
+            return false
+        } catch AgentResourceObservationError.distanceMismatch { return true }
+        catch { return false }
+    }())
+    check("H1 deterministic X priority direction",
+          AgentResourcePerception.direction(
+              observerPosition: observer,
+              target: AgentPosition(x: observer.x + 3, y: observer.y, z: observer.z + 3)
+          ) == .east)
+    check("H1 inconsistent distant direction refused", {
+        do {
+            _ = try AgentResourcePerception.normalize(
+                observerPosition: observer,
+                observations: [AgentResourceObservation(
+                    resource: .sandboxResource,
+                    target: eastTwo.target,
+                    direction: .west,
+                    distanceManhattan: 2,
+                    quantityAvailable: 1,
+                    source: .sandboxFixture
+                )],
+                maximumDistance: 8
+            )
+            return false
+        } catch AgentResourceObservationError.directionMismatch { return true }
+        catch { return false }
+    }())
+    check("H1 duplicate distant target refused", {
+        do {
+            _ = try AgentResourcePerception.normalize(
+                observerPosition: observer,
+                observations: [northTwo, northTwo],
+                maximumDistance: 8
+            )
+            return false
+        } catch AgentResourceObservationError.duplicateTarget { return true }
+        catch { return false }
+    }())
+    let ordered = try! AgentResourcePerception.normalize(
+        observerPosition: observer,
+        observations: [westFour, eastTwo, northTwo, adjacent],
+        maximumDistance: 8
+    )
+    check("H1 observations sorted by distance", ordered.map(\.distanceManhattan) == [1, 2, 2, 4])
+    check("H1 equal distance sorted by canonical direction", ordered[1].direction == .north && ordered[2].direction == .east)
+    check("H1 maximum observations enforced", {
+        let nine = (1...8).map { observation(.east, distance: $0) } + [observation(.west, distance: 1)]
+        do {
+            _ = try AgentResourcePerception.normalize(observerPosition: observer, observations: nine, maximumDistance: 8)
+            return false
+        } catch AgentResourceObservationError.tooManyObservations(9) { return true }
+        catch { return false }
+    }())
+
+    let emptyInventory = AgentResourceInventory()
+    let selected = AgentResourceTargeting.select(
+        current: nil,
+        observations: [westFour, eastTwo, adjacent, northTwo],
+        inventory: emptyInventory,
+        tick: 3
+    )
+    check("H1 closest target selected", selected?.target == adjacent.target)
+    check("H1 target timestamps initialized", selected?.selectedAtTick == 3 && selected?.lastSeenAtTick == 3)
+    let locked = AgentResourceTarget(
+        resource: .sandboxResource,
+        target: westFour.target,
+        source: .sandboxFixture,
+        distanceManhattan: 4,
+        selectedAtTick: 1,
+        lastSeenAtTick: 1
+    )
+    let retained = AgentResourceTargeting.select(
+        current: locked,
+        observations: ordered,
+        inventory: emptyInventory,
+        tick: 4
+    )
+    check("H1 existing target retained over closer candidate", retained?.target == westFour.target)
+    check("H1 selected tick stable while retained", retained?.selectedAtTick == 1)
+    check("H1 last seen tick advances", retained?.lastSeenAtTick == 4)
+    let replaced = AgentResourceTargeting.select(
+        current: locked,
+        observations: [northTwo, eastTwo],
+        inventory: emptyInventory,
+        tick: 5
+    )
+    check("H1 disappeared target replaced deterministically", replaced?.target == northTwo.target)
+    check("H1 no observation clears target",
+          AgentResourceTargeting.select(current: locked, observations: [], inventory: emptyInventory, tick: 5) == nil)
+    var fullInventory = AgentResourceInventory(capacity: 1)
+    _ = fullInventory.add(.sandboxResource)
+    check("H1 full inventory clears target",
+          AgentResourceTargeting.select(current: locked, observations: [westFour], inventory: fullInventory, tick: 5) == nil)
+
+    func state(
+        inventory: AgentResourceInventory = AgentResourceInventory(),
+        health: Int = 100,
+        fear: Int = 0,
+        fatigue: Double = 0,
+        safety: Double = 1
+    ) -> AgentSessionAgentState {
+        AgentSessionAgentState(
+            id: "agent_h1",
+            state: "idle",
+            position: observer,
+            needs: AgentNeeds(hunger: 0, fatigue: fatigue, curiosity: 0.9, safety: safety),
+            health: health,
+            fear: fear,
+            homePosition: observer,
+            nearbyAgents: [],
+            currentGoal: AgentGoal(kind: .idle, reason: "initial", startedAtTick: 0, urgency: 0),
+            lastAction: nil,
+            lastActionEffect: nil,
+            memory: [],
+            tickCreated: 0,
+            ticksAlive: 0,
+            observationCount: 0,
+            nearbyObservationCount: 0,
+            goalSelectionCount: 0,
+            goalChangeCount: 0,
+            actionCount: 0,
+            actionEffectCount: 0,
+            movementCount: 0,
+            totalManhattanDistanceMoved: 0,
+            returnHomeMoveCount: 0,
+            totalDistanceReducedTowardHome: 0,
+            resourceInventory: inventory
+        )
+    }
+    func session(_ initialState: AgentSessionAgentState = state()) -> AgentSimulationSession {
+        try! AgentSimulationSession(
+            configuration: try! AgentSessionConfiguration(
+                seed: 51,
+                resourceObservationRadius: 8,
+                memoryPolicy: .bounded(maxEntries: 32)
+            ),
+            agents: [initialState]
+        )
+    }
+    var distantSession = session()
+    let first = try! distantSession.advanceTick(perceptions: [
+        AgentPerceptionInput(agentId: "agent_h1", resourceObservations: [westFour]),
+    ])
+    let firstSnapshot = distantSession.snapshot().agents[0]
+    check("H1 distant target selects collect goal", firstSnapshot.currentGoal.kind == .collectResource)
+    check("H1 distant target produces approach action", first.agents[0].action.name == "approach_resource")
+    check("H1 approach target and resource exact",
+          first.agents[0].action.target == westFour.target && first.agents[0].action.resource == .sandboxResource)
+    check("H1 approach reason exact", first.agents[0].action.reason == "goal collectResource: distant target selected")
+    check("H1 approach has no movement deltas",
+          first.agents[0].action.dx == nil && first.agents[0].action.dy == nil && first.agents[0].action.dz == nil)
+    check("H1 approach cognitive effect exact",
+          firstSnapshot.state == "planning" && firstSnapshot.lastActionEffect?.effect == "awaiting bounded navigation")
+    let movement = AgentMovementCoordinator.resolve(snapshot: distantSession.snapshot())[0]
+    check("H1 approach movement not requested",
+          movement.status == .notRequested && movement.fromPosition == movement.toPosition)
+    check("H1 approach keeps inventory empty", firstSnapshot.resourceInventory.isEmpty)
+    check("H1 approach writes no harvest memory",
+          !firstSnapshot.recentMemory.contains { $0.type == "resource_harvested" })
+    check("H1 approach keeps movement and position unchanged",
+          firstSnapshot.movementCount == 0 && firstSnapshot.position == observer)
+    let selectedAt = firstSnapshot.activeResourceTarget?.selectedAtTick
+    _ = try! distantSession.advanceTick(perceptions: [
+        AgentPerceptionInput(agentId: "agent_h1", resourceObservations: [westFour]),
+    ])
+    let secondSnapshot = distantSession.snapshot().agents[0]
+    check("H1 second tick retains target", secondSnapshot.activeResourceTarget?.target == westFour.target)
+    check("H1 second tick selectedAt stable", secondSnapshot.activeResourceTarget?.selectedAtTick == selectedAt)
+    check("H1 second tick lastSeen advances", secondSnapshot.activeResourceTarget?.lastSeenAtTick == 2)
+    check("H1 second tick still no harvest or movement",
+          secondSnapshot.lastAction?.name == "approach_resource"
+              && secondSnapshot.resourceInventory.isEmpty
+              && secondSnapshot.movementCount == 0)
+    let third = try! distantSession.advanceTick(perceptions: [AgentPerceptionInput(agentId: "agent_h1")])
+    let thirdSnapshot = distantSession.snapshot().agents[0]
+    check("H1 missing observation clears target", thirdSnapshot.activeResourceTarget == nil)
+    check("H1 missing observation exits approach", third.agents[0].action.name != "approach_resource")
+    check("H1 distant sequence never harvested",
+          thirdSnapshot.resourceInventory.isEmpty
+              && !thirdSnapshot.recentMemory.contains { $0.type == "resource_harvested" })
+
+    let adjacentTarget = AgentResourceTarget(
+        resource: .sandboxResource,
+        target: adjacent.target,
+        source: .sandboxFixture,
+        distanceManhattan: 1,
+        selectedAtTick: 1,
+        lastSeenAtTick: 1
+    )
+    let adjacentAction = AgentActionDecider.decide(AgentActionDecisionInput(
+        agentId: "agent_h1",
+        tick: 1,
+        goalKind: .collectResource,
+        position: observer,
+        homePosition: observer,
+        activeResourceTarget: adjacentTarget
+    ))
+    check("H1 preserves G2 adjacent harvest action", adjacentAction.name == "harvest_block")
+
+    func priorityState(health: Int = 100, fear: Int = 0, fatigue: Double = 0) -> AgentSessionAgentState {
+        state(health: health, fear: fear, fatigue: fatigue)
+    }
+    for (label, initialState, expected) in [
+        ("health", priorityState(health: 25), AgentGoalKind.seekSafety),
+        ("fear", priorityState(fear: 70), AgentGoalKind.seekSafety),
+        ("safety", state(safety: 0.49), AgentGoalKind.seekSafety),
+        ("fatigue", priorityState(fatigue: 0.02), AgentGoalKind.rest),
+    ] {
+        var prioritySession = session(initialState)
+        _ = try! prioritySession.advanceTick(perceptions: [
+            AgentPerceptionInput(agentId: "agent_h1", resourceObservations: [westFour]),
+        ])
+        let prioritySnapshot = prioritySession.snapshot().agents[0]
+        check("H1 \(label) priority dominates target",
+              prioritySnapshot.currentGoal.kind == expected && prioritySnapshot.activeResourceTarget != nil)
+    }
 }
 
 print("\n\(passed) passed, \(failed) failed")

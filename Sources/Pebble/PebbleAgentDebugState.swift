@@ -67,7 +67,10 @@ struct PebbleAgentDebugState {
             let reason = currentFeedback?.reason ?? agent.lastAction?.reason ?? "none"
             let interactionTarget = interaction.target.map(Self.position) ?? "none"
             let resourceSeen = agent.lastResourceObservations.first.map {
-                "\($0.resource.rawValue)@\(Self.position($0.target))"
+                "\($0.resource.rawValue)@\(Self.position($0.target)) d=\($0.distanceManhattan)"
+            } ?? "none"
+            let activeTarget = agent.activeResourceTarget.map {
+                "\(Self.position($0.target)) s\($0.selectedAtTick)/l\($0.lastSeenAtTick)"
             } ?? "none"
             let interactionOutcome = agent.lastInteractionOutcome
             let interactionMemory = agent.recentMemory.last { memory in
@@ -85,6 +88,7 @@ struct PebbleAgentDebugState {
                 "memory/retrieved/influenced/dedup: \(decisionAgent.memoryCount)/\(decisionAgent.memoryRetrievalCount)/\(decisionAgent.memoryInfluencedDecisionCount)/\(decisionAgent.feedbackMemoryDeduplicatedCount)",
                 "inventory: \(agent.resourceInventory.totalCount)/\(agent.resourceInventory.capacity) sandboxResource=\(agent.resourceInventory.count(of: .sandboxResource))",
                 "resourceSeen: \(resourceSeen)",
+                "activeTarget: \(activeTarget)",
                 "interaction: \(interaction.active ? (interaction.harvested ? "harvested" : "ready") : "inactive") target \(interactionTarget) auto \(interaction.autoEnabled ? "on" : "off")",
                 "outcome: \(interactionOutcome?.status.rawValue ?? "none") delta \(interactionOutcome?.inventoryDelta.quantity ?? 0) memory \(interactionMemory)",
                 "rollback: \(interaction.rollbackCount) \(Self.short(interaction.lastRollback, limit: 30))",
@@ -168,7 +172,8 @@ struct PebbleAgentDebugState {
             "reason/effect: \(Self.short(action?.reason ?? "none", limit: 18)) / \(Self.short(agent.lastActionEffect?.effect ?? "none", limit: 18))",
             "nearby: \(nearby.isEmpty ? "none" : nearby) memory: \(agent.memoryCount)",
             "inventory: \(agent.resourceInventory.totalCount)/\(agent.resourceInventory.capacity) sandboxResource: \(agent.resourceInventory.count(of: .sandboxResource))",
-            "resource seen: \(agent.lastResourceObservations.first.map { "\($0.resource.rawValue)@\(Self.position($0.target)) \($0.direction.rawValue)" } ?? "none")",
+            "resource seen: \(agent.lastResourceObservations.first.map { "\($0.resource.rawValue)@\(Self.position($0.target)) \($0.direction.rawValue) distance \($0.distanceManhattan)" } ?? "none")",
+            "active resource target: \(agent.activeResourceTarget.map { "\(Self.position($0.target)) selected \($0.selectedAtTick) seen \($0.lastSeenAtTick)" } ?? "none")",
             "interaction target/status: \(interaction.target.map(Self.position) ?? "none") / \(interaction.active ? (interaction.harvested ? "harvested" : "ready") : "inactive") auto: \(interaction.autoEnabled ? "on" : "off")",
             "interaction auto reason: \(Self.short(interaction.autoReason, limit: 28))",
             "interaction outcome: \(agent.lastInteractionOutcome?.status.rawValue ?? "none") reason: \(Self.short(agent.lastInteractionOutcome?.reason ?? "none", limit: 24))",

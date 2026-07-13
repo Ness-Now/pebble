@@ -9,6 +9,9 @@ struct PebbleAgentInteractionState {
     let resourceBlockName: String
     let originalBlock: Int?
     let harvested: Bool
+    let setupMode: String
+    let configuredDistance: Int?
+    let actualDistance: Int?
     let rollbackCount: Int
     let lastRollback: String
     let autoEnabled: Bool
@@ -22,6 +25,8 @@ struct PebbleAgentInteractionExecutor {
     enum ExecutionError: Error, CustomStringConvertible {
         case sandboxAlreadyActive
         case noSafeAdjacentTarget
+        case noSafeDistantTarget(Int)
+        case invalidSetupDistance(Int)
         case outsideSandbox
         case nonAdjacentTarget
         case chunkUnavailable
@@ -36,6 +41,8 @@ struct PebbleAgentInteractionExecutor {
             switch self {
             case .sandboxAlreadyActive: return "interaction sandbox already active"
             case .noSafeAdjacentTarget: return "no safe adjacent sandbox target"
+            case let .noSafeDistantTarget(distance): return "no safe sandbox target at distance \(distance)"
+            case let .invalidSetupDistance(distance): return "invalid distant setup distance \(distance); expected 2...8"
             case .outsideSandbox: return "interaction target outside sandbox"
             case .nonAdjacentTarget: return "interaction target is not cardinal-adjacent"
             case .chunkUnavailable: return "interaction target chunk unavailable"
@@ -54,6 +61,8 @@ struct PebbleAgentInteractionExecutor {
         let target: AgentPosition
         let originalBlock: Int
         let resourceBlock: Int
+        let configuredDistance: Int
+        let actorPosition: AgentPosition
         var harvested: Bool
     }
 
@@ -74,6 +83,9 @@ struct PebbleAgentInteractionExecutor {
             resourceBlockName: Self.resourceBlockName,
             originalBlock: ledger?.originalBlock,
             harvested: ledger?.harvested ?? false,
+            setupMode: (ledger?.configuredDistance ?? 1) == 1 ? "adjacent" : "distant",
+            configuredDistance: ledger?.configuredDistance,
+            actualDistance: ledger.map { horizontalDistance($0.target, $0.actorPosition) },
             rollbackCount: rollbackCount,
             lastRollback: lastRollback,
             autoEnabled: autoEnabled,
@@ -84,13 +96,16 @@ struct PebbleAgentInteractionExecutor {
     func resourceObservation(
         world: World,
         agent: AgentSnapshot,
-        anchor: AgentPosition
+        anchor: AgentPosition,
+        maximumDistance: Int = 1
     ) throws -> AgentResourceObservation? {
         guard let ledger, !ledger.harvested, ledger.actorId == agent.id else { return nil }
         guard isInsideSandbox(ledger.target, anchor: anchor) else {
             throw ExecutionError.outsideSandbox
         }
-        guard isAdjacent(ledger.target, to: agent.position) else {
+        let distance = horizontalDistance(ledger.target, agent.position)
+        guard ledger.target.y == agent.position.y,
+              (1...maximumDistance).contains(distance) else {
             throw ExecutionError.nonAdjacentTarget
         }
         guard world.isChunkReady(ledger.target.x >> 4, ledger.target.z >> 4) else {
@@ -99,17 +114,17 @@ struct PebbleAgentInteractionExecutor {
         guard world.getBlock(ledger.target.x, ledger.target.y, ledger.target.z) == ledger.resourceBlock else {
             throw ExecutionError.unexpectedBlock
         }
-        guard let direction = AgentCardinalDirection.allCases.first(where: {
-            agent.position.x + $0.dx == ledger.target.x
-                && agent.position.y == ledger.target.y
-                && agent.position.z + $0.dz == ledger.target.z
-        }) else {
+        guard let direction = AgentResourcePerception.direction(
+            observerPosition: agent.position,
+            target: ledger.target
+        ) else {
             throw ExecutionError.nonAdjacentTarget
         }
         return AgentResourceObservation(
             resource: .sandboxResource,
             target: ledger.target,
             direction: direction,
+            distanceManhattan: distance,
             quantityAvailable: 1,
             source: .sandboxFixture
         )
@@ -120,21 +135,33 @@ struct PebbleAgentInteractionExecutor {
         actor: AgentSnapshot,
         anchor: AgentPosition,
         occupiedAgentPositions: [AgentPosition],
-        playerPosition: AgentPosition
+        playerPosition: AgentPosition,
+        distance: Int = 1
     ) throws -> AgentPosition {
         guard ledger == nil else { throw ExecutionError.sandboxAlreadyActive }
+        guard distance == 1 || (2...Self.sandboxRadius).contains(distance) else {
+            throw ExecutionError.invalidSetupDistance(distance)
+        }
         let resourceBlock = Int(cell(B.amethyst_block))
         for direction in AgentCardinalDirection.allCases {
             let target = AgentPosition(
-                x: actor.position.x + direction.dx,
+                x: actor.position.x + direction.dx * distance,
                 y: actor.position.y,
-                z: actor.position.z + direction.dz
+                z: actor.position.z + direction.dz * distance
             )
             guard isInsideSandbox(target, anchor: anchor),
-                  isAdjacent(target, to: actor.position),
+                  horizontalDistance(target, actor.position) == distance,
                   world.isChunkReady(target.x >> 4, target.z >> 4),
                   !occupiedAgentPositions.contains(target),
-                  playerPosition != target else { continue }
+                  playerPosition != target,
+                  corridorIsClear(
+                      world: world,
+                      actor: actor.position,
+                      direction: direction,
+                      distance: distance,
+                      occupiedAgentPositions: occupiedAgentPositions,
+                      playerPosition: playerPosition
+                  ) else { continue }
             let original = world.getBlock(target.x, target.y, target.z)
             let originalId = original >> 4
             let below = world.getBlock(target.x, target.y - 1, target.z)
@@ -159,11 +186,14 @@ struct PebbleAgentInteractionExecutor {
                 target: target,
                 originalBlock: original,
                 resourceBlock: resourceBlock,
+                configuredDistance: distance,
+                actorPosition: actor.position,
                 harvested: false
             )
             return target
         }
-        throw ExecutionError.noSafeAdjacentTarget
+        if distance == 1 { throw ExecutionError.noSafeAdjacentTarget }
+        throw ExecutionError.noSafeDistantTarget(distance)
     }
 
     mutating func harvest(
@@ -248,5 +278,36 @@ struct PebbleAgentInteractionExecutor {
 
     private func isAdjacent(_ target: AgentPosition, to actor: AgentPosition) -> Bool {
         AgentInteractionSandbox.isCardinalAdjacent(target: target, actor: actor)
+    }
+
+    private func horizontalDistance(_ lhs: AgentPosition, _ rhs: AgentPosition) -> Int {
+        abs(lhs.x - rhs.x) + abs(lhs.z - rhs.z)
+    }
+
+    private func corridorIsClear(
+        world: World,
+        actor: AgentPosition,
+        direction: AgentCardinalDirection,
+        distance: Int,
+        occupiedAgentPositions: [AgentPosition],
+        playerPosition: AgentPosition
+    ) -> Bool {
+        guard distance > 1 else { return true }
+        for step in 1..<distance {
+            let position = AgentPosition(
+                x: actor.x + direction.dx * step,
+                y: actor.y,
+                z: actor.z + direction.dz * step
+            )
+            guard world.isChunkReady(position.x >> 4, position.z >> 4),
+                  !occupiedAgentPositions.contains(position),
+                  playerPosition != position,
+                  blockDefs[world.getBlock(position.x, position.y - 1, position.z) >> 4].solid,
+                  isAir(UInt16(truncatingIfNeeded: world.getBlock(position.x, position.y, position.z))),
+                  isAir(UInt16(truncatingIfNeeded: world.getBlock(position.x, position.y + 1, position.z))) else {
+                return false
+            }
+        }
+        return true
     }
 }

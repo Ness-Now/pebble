@@ -51,6 +51,7 @@ public struct AgentSnapshot: Encodable, Equatable {
     public let memoryCount: Int
     public let recentMemory: [AgentMemoryEntry]
     public let lastResourceObservations: [AgentResourceObservation]
+    public let activeResourceTarget: AgentResourceTarget?
     public let resourceInventory: AgentResourceInventory
     public let lastInteractionOutcome: AgentInteractionOutcome?
 
@@ -92,6 +93,7 @@ public struct AgentSnapshot: Encodable, Equatable {
         memoryCount = state.memory.count
         recentMemory = Array(state.memory.suffix(recentMemoryLimit))
         lastResourceObservations = state.lastResourceObservations
+        activeResourceTarget = state.activeResourceTarget
         resourceInventory = state.resourceInventory
         lastInteractionOutcome = state.lastInteractionOutcome
     }
@@ -132,6 +134,7 @@ public struct AgentSnapshot: Encodable, Equatable {
             && lhs.memoryCount == rhs.memoryCount
             && memoriesEqual(lhs.recentMemory, rhs.recentMemory)
             && lhs.lastResourceObservations == rhs.lastResourceObservations
+            && lhs.activeResourceTarget == rhs.activeResourceTarget
             && lhs.resourceInventory == rhs.resourceInventory
             && lhs.lastInteractionOutcome == rhs.lastInteractionOutcome
     }
@@ -147,7 +150,7 @@ public struct AgentSnapshot: Encodable, Equatable {
         case feedbackMemoryWriteCount, feedbackMemoryDeduplicatedCount
         case memoryRetrievalCount, memoryInfluencedDecisionCount
         case memoryCount, recentMemory
-        case lastResourceObservations, resourceInventory, lastInteractionOutcome
+        case lastResourceObservations, activeResourceTarget, resourceInventory, lastInteractionOutcome
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -199,6 +202,7 @@ public struct AgentSnapshot: Encodable, Equatable {
         if !lastResourceObservations.isEmpty {
             try container.encode(lastResourceObservations, forKey: .lastResourceObservations)
         }
+        try container.encodeIfPresent(activeResourceTarget, forKey: .activeResourceTarget)
         if !resourceInventory.isEmpty || lastInteractionOutcome != nil {
             try container.encode(resourceInventory, forKey: .resourceInventory)
             try container.encodeIfPresent(lastInteractionOutcome, forKey: .lastInteractionOutcome)

@@ -5,6 +5,7 @@ public enum AgentMemoryPolicy: Equatable {
 
 public enum AgentSessionError: Error, Equatable {
     case invalidNearbyRadius(Int)
+    case invalidResourceObservationRadius(Int)
     case invalidRecentMemorySnapshotLimit(Int)
     case invalidMemoryBound(Int)
     case invalidInitialTick(Int)
@@ -37,6 +38,7 @@ public enum AgentSessionError: Error, Equatable {
 public struct AgentSessionConfiguration {
     public let seed: UInt32
     public let nearbyRadius: Int
+    public let resourceObservationRadius: Int
     public let recentMemorySnapshotLimit: Int
     public let memoryPolicy: AgentMemoryPolicy
     public let feedbackLoopConfiguration: AgentFeedbackLoopConfiguration
@@ -44,12 +46,16 @@ public struct AgentSessionConfiguration {
     public init(
         seed: UInt32,
         nearbyRadius: Int = 8,
+        resourceObservationRadius: Int = 1,
         recentMemorySnapshotLimit: Int = 10,
         memoryPolicy: AgentMemoryPolicy,
         feedbackLoopConfiguration: AgentFeedbackLoopConfiguration = .live
     ) throws {
         guard nearbyRadius >= 0 else {
             throw AgentSessionError.invalidNearbyRadius(nearbyRadius)
+        }
+        guard (1...AgentResourcePerception.maximumDistance).contains(resourceObservationRadius) else {
+            throw AgentSessionError.invalidResourceObservationRadius(resourceObservationRadius)
         }
         guard recentMemorySnapshotLimit >= 0 else {
             throw AgentSessionError.invalidRecentMemorySnapshotLimit(recentMemorySnapshotLimit)
@@ -59,6 +65,7 @@ public struct AgentSessionConfiguration {
         }
         self.seed = seed
         self.nearbyRadius = nearbyRadius
+        self.resourceObservationRadius = resourceObservationRadius
         self.recentMemorySnapshotLimit = recentMemorySnapshotLimit
         self.memoryPolicy = memoryPolicy
         self.feedbackLoopConfiguration = feedbackLoopConfiguration
@@ -99,6 +106,7 @@ public struct AgentSessionAgentState {
     public internal(set) var memoryRetrievalCount: Int
     public internal(set) var memoryInfluencedDecisionCount: Int
     public internal(set) var lastResourceObservations: [AgentResourceObservation]
+    public internal(set) var activeResourceTarget: AgentResourceTarget?
     public internal(set) var resourceInventory: AgentResourceInventory
     public internal(set) var lastInteractionOutcome: AgentInteractionOutcome?
 
@@ -136,6 +144,7 @@ public struct AgentSessionAgentState {
         memoryRetrievalCount: Int = 0,
         memoryInfluencedDecisionCount: Int = 0,
         lastResourceObservations: [AgentResourceObservation] = [],
+        activeResourceTarget: AgentResourceTarget? = nil,
         resourceInventory: AgentResourceInventory = AgentResourceInventory(),
         lastInteractionOutcome: AgentInteractionOutcome? = nil
     ) {
@@ -172,6 +181,7 @@ public struct AgentSessionAgentState {
         self.memoryRetrievalCount = memoryRetrievalCount
         self.memoryInfluencedDecisionCount = memoryInfluencedDecisionCount
         self.lastResourceObservations = lastResourceObservations
+        self.activeResourceTarget = activeResourceTarget
         self.resourceInventory = resourceInventory
         self.lastInteractionOutcome = lastInteractionOutcome
     }
@@ -403,7 +413,8 @@ public struct AgentSimulationSession {
             if let position = statesById[perception.agentId]?.position {
                 resourceObservationsById[perception.agentId] = try AgentResourcePerception.normalize(
                     observerPosition: position,
-                    observations: perception.resourceObservations
+                    observations: perception.resourceObservations,
+                    maximumDistance: configuration.resourceObservationRadius
                 )
             }
             perceptionsById[perception.agentId] = perception
@@ -421,6 +432,12 @@ public struct AgentSimulationSession {
             let perception = perceptionsById[id]
             var memoriesAdded = perception?.externalMemoryEntries ?? []
             state.lastResourceObservations = resourceObservationsById[id] ?? []
+            state.activeResourceTarget = AgentResourceTargeting.select(
+                current: state.activeResourceTarget,
+                observations: state.lastResourceObservations,
+                inventory: state.resourceInventory,
+                tick: nextTick
+            )
 
             let tickTransition = AgentCognitiveTransitions.advanceTick(needs: state.needs)
             state.needs = tickTransition.needs
@@ -470,8 +487,8 @@ public struct AgentSimulationSession {
                 fear: state.fear,
                 needs: state.needs,
                 hasNearbyAgents: !state.nearbyAgents.isEmpty,
-                hasCollectibleAdjacentResource: !state.lastResourceObservations.isEmpty,
-                hasInventoryCapacity: state.lastResourceObservations.first.map {
+                hasCollectibleAdjacentResource: state.activeResourceTarget != nil,
+                hasInventoryCapacity: state.activeResourceTarget.map {
                     state.resourceInventory.canAdd($0.resource)
                 } ?? false,
                 currentGoalKind: state.currentGoal.kind
@@ -487,7 +504,8 @@ public struct AgentSimulationSession {
                 goalKind: state.currentGoal.kind,
                 position: state.position,
                 homePosition: state.homePosition,
-                resourceObservations: state.lastResourceObservations
+                resourceObservations: state.lastResourceObservations,
+                activeResourceTarget: state.activeResourceTarget
             ))
             let retrievedMemories = AgentFeedbackLoop.retrieveMovementMemories(
                 memory: state.memory,
