@@ -78,6 +78,7 @@ struct PebbleAgentDebugState {
             let route = "\(navigation.status.rawValue) \(navigation.routeIndex)/\(max(0, (navigation.route?.positions.count ?? 1) - 1)) rem \(navigation.stepsRemaining)"
             let nextStep = navigation.nextStep.map(Self.position) ?? "none"
             let interactionOutcome = agent.lastInteractionOutcome
+            let survival = agent.survivalProgress
             let interactionMemory = agent.recentMemory.last { memory in
                 memory.type == "resource_harvested" || memory.type == "interaction_blocked" || memory.type == "inventory_full"
             }?.type ?? "none"
@@ -94,6 +95,7 @@ struct PebbleAgentDebugState {
                 "inventory: \(agent.resourceInventory.totalCount)/\(agent.resourceInventory.capacity) food/wood/stone \(agent.resourceInventory.count(of: .foodRaw))/\(agent.resourceInventory.count(of: .wood))/\(agent.resourceInventory.count(of: .stone))",
                 "economy: \(snapshot.economyEnabled ? "on" : "off") quota \(snapshot.deliveryQuota) stock \(snapshot.campStock.totalCount) fixtures \(economyFixtures.fixtures.filter { !$0.harvested }.count)/\(economyFixtures.fixtures.count)",
                 "delivery/conservation: \(agent.lastDeliveryOutcome?.status.rawValue ?? "none") / \(snapshot.conservation.balanced ? "exact" : "diverged")",
+                String(format: "survival: %@ %@ h/f %.2f/%.2f hp %d consumed %d", snapshot.survivalEnabled ? "on" : "off", survival?.status.rawValue ?? "off", agent.needs.hunger, agent.needs.fatigue, agent.health, snapshot.conservation.consumedTotal),
                 "resourceSeen: \(resourceSeen)",
                 "activeTarget: \(activeTarget)",
                 "reservation: \(agent.resourceReservation?.agentId ?? "none")  navigation: \(route)",
@@ -194,7 +196,12 @@ struct PebbleAgentDebugState {
             "camp stock sandbox/food/wood/stone: \(snapshot.campStock.count(of: .sandboxResource))/\(snapshot.campStock.count(of: .foodRaw))/\(snapshot.campStock.count(of: .wood))/\(snapshot.campStock.count(of: .stone))",
             "fixtures available/harvested: \(economyFixtures.fixtures.filter { !$0.harvested }.count)/\(economyFixtures.fixtures.filter(\.harvested).count)",
             "delivery outcome/memory: \(agent.lastDeliveryOutcome?.status.rawValue ?? "none") / \(agent.recentMemory.last { $0.type == "resource_delivered" }?.type ?? "none")",
-            "conservation harvested=carried+stock: \(snapshot.conservation.harvestedTotal)=\(snapshot.conservation.carriedTotal)+\(snapshot.conservation.campStockTotal) \(snapshot.conservation.balanced ? "exact" : "diverged")",
+            "survival/status: \(snapshot.survivalEnabled ? "on" : "off") / \(agent.survivalProgress?.status.rawValue ?? "off")",
+            String(format: "hunger %.2f threshold/recovery %.2f/%.2f", agent.needs.hunger, snapshot.survivalConfiguration.hungryThreshold, snapshot.survivalConfiguration.hungerRecoveryThreshold),
+            String(format: "fatigue %.2f threshold/recovery %.2f/%.2f health %d", agent.needs.fatigue, snapshot.survivalConfiguration.fatigueThreshold, snapshot.survivalConfiguration.fatigueRecoveryThreshold, agent.health),
+            "critical/food consumed/starvation damage: \(agent.survivalProgress?.consecutiveCriticalHungerTicks ?? 0)/\(agent.survivalProgress?.foodConsumedCount ?? 0)/\(agent.survivalProgress?.starvationDamageTaken ?? 0)",
+            "consumption outcome/memory: \(agent.survivalProgress?.lastConsumptionOutcome?.status.rawValue ?? "none") / \(agent.survivalProgress?.lastMemoryType?.rawValue ?? agent.recentMemory.last { $0.type == "food_consumed" || $0.type == "consumption_blocked" || $0.type == "starvation_damage" }?.type ?? "none")",
+            "conservation harvested=carried+stock+consumed: \(snapshot.conservation.harvestedTotal)=\(snapshot.conservation.carriedTotal)+\(snapshot.conservation.campStockTotal)+\(snapshot.conservation.consumedTotal) \(snapshot.conservation.balanced ? "exact" : "diverged")",
             "resource seen: \(fullResourceSeen)",
             "active resource target: \(fullActiveTarget)",
             "resource reservation owner: \(agent.resourceReservation?.agentId ?? "none") expires: \(reservationExpiry)",

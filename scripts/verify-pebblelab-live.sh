@@ -5,19 +5,19 @@ set -euo pipefail
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 ROOT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd -P)
 RUNBOOK="$ROOT_DIR/docs/pebblelab-3d-live-prototype.md"
-MODE="economy"
+MODE="survival"
 WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--h2]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2]
        scripts/verify-pebblelab-live.sh --help
 
-Launches Pebble for a reproducible, operator-verified Phase I live check. The app is
+Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
 given an isolated temporary Foundation home, so personal Pebble worlds are not
 visible. The existing autoload/new-world hook creates exactly one world with:
 
-  name: $WORLD_NAME
+  name: ${WORLD_NAME:-PebbleLab-Disposable-<mode>-12345}
   seed: $WORLD_SEED
 
 The launcher reuses Pebble's existing PEBBLE_AUTOLOAD, PEBBLE_NEWWORLD,
@@ -27,7 +27,9 @@ retained trace and capture using $RUNBOOK.
 
 Options:
   --dry-run  Print the environment, commands, and manual steps; do not launch.
-  --h2       Run the preserved H2 navigate-to-harvest proof instead of Phase I.
+  --survival Run the Phase J hunger, consumption, and rest proof (default).
+  --economy  Run the preserved Phase I closed-economy proof.
+  --h2       Run the preserved H2 navigate-to-harvest proof.
   --help     Show this help and exit.
 EOF
 }
@@ -45,24 +47,32 @@ require_trace() {
 }
 
 DRY_RUN=0
+MODE_OPTIONS=0
 for option in "$@"; do
     case "$option" in
         --dry-run) DRY_RUN=1 ;;
-        --h2) MODE="h2" ;;
+        --survival) MODE="survival"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --economy) MODE="economy"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --h2) MODE="h2"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --help|-h) usage; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$option" >&2; usage >&2; exit 2 ;;
     esac
 done
 [ "$#" -le 2 ] || { usage >&2; exit 2; }
+[ "$MODE_OPTIONS" -le 1 ] || fail "choose only one live scenario"
 
 if [ "$MODE" = "h2" ]; then
     WORLD_NAME="PebbleLab-Disposable-H2-12345"
     CAPTURE_NAME="h2-navigate-harvest.png"
     LAB_COMMANDS='/lab start;/lab pause;/lab movement off;/lab focus agent_2;/lab interaction setup distant 4;/lab interaction auto on;/lab movement on;/lab overlay full;/lab step;/lab step;/lab step;/lab step;/lab interaction status;/lab status'
-else
+elif [ "$MODE" = "economy" ]; then
     WORLD_NAME="PebbleLab-Disposable-I-12345"
     CAPTURE_NAME="phase-i-closed-economy.png"
     LAB_COMMANDS='/lab start;/lab pause;/lab movement off;/lab focus agent_2;/lab economy setup;/lab economy auto on;/lab movement on;/lab overlay full;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab economy status;/lab status'
+else
+    WORLD_NAME="PebbleLab-Disposable-J-12345"
+    CAPTURE_NAME="phase-j-autonomous-survival.png"
+    LAB_COMMANDS='/lab start;/lab pause;/lab movement off;/lab focus agent_2;/lab economy setup;/lab survival on;/lab overlay full;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab economy auto on;/lab movement on;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab survival status;/lab economy status;/lab status'
 fi
 
 if [ "${PEBBLE_REGOLD+x}" = x ]; then
@@ -108,9 +118,12 @@ print_plan() {
     if [ "$MODE" = "h2" ]; then
         printf '  2. Inspect four tick records: route/index progression, three single steps, then harvest_block.\n'
         printf '  3. Confirm target reservation, adjacent arrival, inventory 0->1, resource_harvested, and no runtime error.\n'
-    else
+    elif [ "$MODE" = "economy" ]; then
         printf '  2. Confirm two different fixtures are harvested before the delivery quota switches the goal.\n'
         printf '  3. Confirm bounded return_home steps, deliver_resource, empty inventory, camp stock 2, and exact conservation.\n'
+    else
+        printf '  2. Confirm hunger growth, satisfyHunger, food-only targeting, three route steps, harvest, and consume_food.\n'
+        printf '  3. Confirm consumed=1 conservation, fatigue-driven homeRest, rest recovery, normal goal resumption, and zero corridor changes.\n'
     fi
     printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
     printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
@@ -181,15 +194,32 @@ if [ "$MODE" = "h2" ]; then
     require_trace 'interaction gate=enabled .*actualDistance=1 .*harvested=yes .*inventory=1/8 outcome=succeeded memory=resource_harvested .*corridorObserved=9 corridorChangedSetup=0 corridorChangedNavigation=0 corridorChangedHarvest=0 fixtureSetupMutations=1' 'final inventory, memory, and read-only corridor'
     require_trace 'summary .*runtimeErrors=0 .*interactionRestored=1 .*corridorObserved=9 corridorChangedCleanup=0 cleanupRestoredBlocks=1' 'clean runtime and one-block cleanup'
     printf '\nPASS: H2 live trace and capture evidence verified.\n'
+elif [ "$MODE" = "economy" ]; then
+    require_trace 'economy setup actor=agent_2 fixtures=.*foodRaw.*wood.*stone.*corridorChanged=0 fixtureSetupMutations=3' 'three target-only fixtures were created'
+    require_trace 'action=harvest_block .*inventoryByResource=.*foodRaw:1.*fixtures=.*foodRaw:0:harvested.*conservation=1:1\+0\+0:exact' 'first resource harvested exactly once'
+    require_trace 'action=harvest_block .*inventoryByResource=.*foodRaw:1,wood:1.*fixtures=.*wood:1:harvested.*conservation=2:2\+0\+0:exact' 'second resource kind harvested exactly once'
+    require_trace 'goals=.*agent_2:deliverResources.*action=return_home .*navigationPurpose=homeDelivery' 'delivery goal uses bounded home route'
+    require_trace 'action=deliver_resource .*inventoryByResource=.*foodRaw:0,wood:0.*campStock=.*foodRaw:1,wood:1.*deliveryOutcome=succeeded .*conservation=2:0\+2\+0:exact' 'atomic delivery and exact conservation'
+    require_trace 'economy active=yes .*inventoryTotal=0/8 .*campStockTotal=2 .*deliveryOutcome=succeeded .*memory=resource_delivered .*conservation=2:0\+2\+0:exact .*corridorChangedSetup=0 corridorChangedNavigation=0 corridorChangedHarvest=0' 'final economy status'
+    require_trace 'summary .*runtimeErrors=0 .*interactionRestored=1 .*conservation=2:0\+2\+0:exact .*corridorChangedCleanup=0 cleanupRestoredBlocks=3' 'clean runtime and three-block cleanup'
+    printf '\nPASS: Phase I closed-economy live trace and capture evidence verified.\n'
 else
     require_trace 'economy setup actor=agent_2 fixtures=.*foodRaw.*wood.*stone.*corridorChanged=0 fixtureSetupMutations=3' 'three target-only fixtures were created'
-    require_trace 'action=harvest_block .*inventoryByResource=.*foodRaw:1.*fixtures=.*foodRaw:0:harvested.*conservation=1:1\+0:exact' 'first resource harvested exactly once'
-    require_trace 'action=harvest_block .*inventoryByResource=.*foodRaw:1,wood:1.*fixtures=.*wood:1:harvested.*conservation=2:2\+0:exact' 'second resource kind harvested exactly once'
-    require_trace 'goals=.*agent_2:deliverResources.*action=return_home .*navigationPurpose=homeDelivery' 'delivery goal uses bounded home route'
-    require_trace 'action=deliver_resource .*inventoryByResource=.*foodRaw:0,wood:0.*campStock=.*foodRaw:1,wood:1.*deliveryOutcome=succeeded .*conservation=2:0\+2:exact' 'atomic delivery and exact conservation'
-    require_trace 'economy active=yes .*inventoryTotal=0/8 .*campStockTotal=2 .*deliveryOutcome=succeeded .*memory=resource_delivered .*conservation=2:0\+2:exact .*corridorChangedSetup=0 corridorChangedNavigation=0 corridorChangedHarvest=0' 'final economy status'
-    require_trace 'summary .*runtimeErrors=0 .*interactionRestored=1 .*conservation=2:0\+2:exact .*corridorChangedCleanup=0 cleanupRestoredBlocks=3' 'clean runtime and three-block cleanup'
-    printf '\nPASS: Phase I closed-economy live trace and capture evidence verified.\n'
+    require_trace 'tick=1 .*movement=off .*survival=on .*hunger=0\.05 fatigue=0\.06 health=100' 'bounded survival need progression starts deterministically'
+    require_trace 'tick=7 .*movement=off .*survival=on .*hunger=0\.35 fatigue=0\.42 health=100' 'pre-hunger progression remains bounded without movement'
+    require_trace 'tick=8 .*action=approach_resource .*resourceSeen=foodRaw@.*reservationOwner=agent_2 navigationPurpose=resource navigation=active .*survival=on' 'threshold-crossing tick selects foodRaw and starts reserved navigation'
+    require_trace 'tick=9 .*goals=.*agent_2:satisfyHunger.*focus=agent_2 action=approach_resource .*resourceSeen=foodRaw@.*navigationPurpose=resource navigation=active' 'hunger goal engages and the food route progresses one step'
+    require_trace 'tick=10 .*focus=agent_2 action=approach_resource .*navigationPurpose=resource navigation=arrived' 'food route reaches cardinal adjacency'
+    require_trace 'tick=11 .*focus=agent_2 action=harvest_block .*interactionSucceeded=1 .*inventoryByResource=.*foodRaw:1.*conservation=1:1\+0\+0:exact' 'foodRaw harvest uses the existing transaction'
+    require_trace 'tick=12 .*focus=agent_2 action=consume_food .*hunger=0\.00 .*foodConsumed=1 .*consumptionOutcome=succeeded consumptionSucceeded=1 survivalMemory=food_consumed .*inventoryByResource=.*foodRaw:0.*conservation=1:0\+0\+1:exact' 'atomic food consumption and extended conservation'
+    require_trace 'tick=13 .*goals=.*agent_2:rest.*action=return_home .*survivalStatus=exhausted' 'fatigue switches to committed rest'
+    require_trace 'tick=14 .*focus=agent_2 action=return_home .*navigationPurpose=homeRest navigation=active' 'rest reuses bounded home route'
+    require_trace 'tick=16 .*focus=agent_2 action=return_home .*navigationPurpose=homeRest navigation=arrived' 'rest route arrives at home one step per tick'
+    require_trace 'tick=17 .*focus=agent_2 action=rest .*survivalStatus=stable .*fatigue=0\.00' 'rest recovers fatigue at home'
+    require_trace 'tick=18 .*goals=.*agent_2:collectResource.*survivalStatus=stable' 'normal economy goal resumes after recovery'
+    require_trace 'survival active=yes .*foodRaw=0 foodConsumed=1 .*consumptionOutcome=succeeded memory=food_consumed .*conservation=1:0\+0\+1:exact' 'survival status exposes the successful transaction'
+    require_trace 'summary .*runtimeErrors=0 .*interactionRestored=1 .*conservation=1:0\+0\+1:exact .*corridorChangedCleanup=0 cleanupRestoredBlocks=3' 'clean survival runtime and fixture-only cleanup'
+    printf '\nPASS: Phase J survival live trace and capture evidence verified.\n'
 fi
 printf 'The PNG still requires visual inspection; see %s\n' "$RUNBOOK"
 printf 'Retained isolated session: %s\n' "$SESSION_ROOT"

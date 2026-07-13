@@ -48,6 +48,8 @@ final class PebbleAgentController {
     private(set) var economyAutoEnabled = false
     private var lastEconomyReason = "none"
     private var lastDeliverySucceeded = false
+    private var lastConsumptionSucceeded = false
+    private var lastSurvivalReason = "none"
 
     private let environment = ProcessInfo.processInfo.environment
     private var featureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS"] == "1" }
@@ -148,7 +150,7 @@ final class PebbleAgentController {
         switch command {
         case "help":
             guard arguments.count == 1 else { return failure("Usage: /lab help") }
-            return success("/lab lifecycle: start stop clear | time control: pause resume step speed <1|2|4|8> reset | inspection: status focus <agentId|next> next follow <agentId|focus|next|off> overlay <off|compact|full> | movement: movement <on|off> | interaction: interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off> | economy: economy <setup|auto on|auto off|status|clear> | demo: demo [start|stop|status]")
+            return success("/lab lifecycle: start stop clear | time control: pause resume step speed <1|2|4|8> reset | inspection: status focus <agentId|next> next follow <agentId|focus|next|off> overlay <off|compact|full> | movement: movement <on|off> | interaction: interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off> | economy: economy <setup|auto on|auto off|status|clear> | survival: survival <on|off|status> | demo: demo [start|stop|status]")
         case "demo":
             return handleDemo(Array(arguments.dropFirst()), world: world, player: player)
         case "start":
@@ -215,6 +217,8 @@ final class PebbleAgentController {
             return handleInteraction(Array(arguments.dropFirst()), world: world, player: player)
         case "economy":
             return handleEconomy(Array(arguments.dropFirst()), world: world, player: player)
+        case "survival":
+            return handleSurvival(Array(arguments.dropFirst()))
         case "status":
             guard arguments.count == 1 else { return failure("Usage: /lab status") }
             guard let session else {
@@ -224,7 +228,7 @@ final class PebbleAgentController {
             let snapshot = session.snapshot()
             let positions = snapshot.agents.map { "\($0.id)=\($0.position.x),\($0.position.y),\($0.position.z)/m\($0.movementCount)/o\($0.observationCount)" }.joined(separator: " ")
             let overlay = effectiveOverlayMode(f3Visible: false).rawValue
-            let message = "PebbleAgents \(isPaused ? "paused" : "running") tick=\(snapshot.tick) hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") autoInteraction=\(autoInteractionEnabled ? "on" : "off") economy=\(snapshot.economyEnabled ? "on" : "off") probes=\(probesByAgentId.count) focus=\(focusedAgentId ?? "none") follow=\(followMode.statusText) overlay=\(overlay) demo=\(demoActive ? "on" : "off") catchupDropped=\(droppedCatchUpSteps) \(positions)"
+            let message = "PebbleAgents \(isPaused ? "paused" : "running") tick=\(snapshot.tick) hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") autoInteraction=\(autoInteractionEnabled ? "on" : "off") economy=\(snapshot.economyEnabled ? "on" : "off") survival=\(snapshot.survivalEnabled ? "on" : "off") probes=\(probesByAgentId.count) focus=\(focusedAgentId ?? "none") follow=\(followMode.statusText) overlay=\(overlay) demo=\(demoActive ? "on" : "off") catchupDropped=\(droppedCatchUpSteps) \(positions)"
             trace("status \(message)")
             return success(message)
         case "focus":
@@ -343,6 +347,8 @@ final class PebbleAgentController {
             economyAutoEnabled = false
             lastEconomyReason = "none"
             lastDeliverySucceeded = false
+            lastConsumptionSucceeded = false
+            lastSurvivalReason = "none"
             observedGoalKinds = [AgentGoalKind.idle.rawValue]
             resetRunCounters()
             try createProbes(in: world)
@@ -425,11 +431,13 @@ final class PebbleAgentController {
         lastInteractionSucceeded = false
         lastInteractionBlocked = false
         lastDeliverySucceeded = false
+        lastConsumptionSucceeded = false
         do {
             let preCognitive = session.snapshot()
             let perceptions = try preCognitive.agents.map { agent in
                 let resourceObservations: [AgentResourceObservation]
-                if autoInteractionEnabled || economyAutoEnabled {
+                if autoInteractionEnabled || economyAutoEnabled
+                    || (preCognitive.survivalEnabled && interactionFeatureEnabled) {
                     guard let anchor else { throw ControllerError.missingSession }
                     resourceObservations = try interactionExecutor.resourceObservations(
                         world: world,
@@ -443,8 +451,8 @@ final class PebbleAgentController {
                 let navigationObservation: AgentNavigationObservation?
                 let navigationTarget: AgentPosition?
                 let navigationGoalMode: AgentNavigationGoalMode
-                if agent.currentGoal.kind == .deliverResources,
-                   !agent.resourceInventory.isEmpty {
+                if (agent.currentGoal.kind == .deliverResources && !agent.resourceInventory.isEmpty)
+                    || (preCognitive.survivalEnabled && agent.currentGoal.kind == .rest) {
                     navigationTarget = agent.homePosition
                     navigationGoalMode = .exact
                 } else {
@@ -473,11 +481,24 @@ final class PebbleAgentController {
                 )
             }
             let result = try session.advanceTick(perceptions: perceptions)
+            let consumptionActions = result.agents
+                .filter { $0.action.name == "consume_food" }
+                .sorted { $0.agentId < $1.agentId }
+            for consumption in consumptionActions {
+                let outcome = try session.consumeFood(AgentConsumptionIntent(
+                    consumptionId: "survival-consumption:\(consumption.agentId):\(session.tick)",
+                    agentId: consumption.agentId,
+                    tick: session.tick
+                ))
+                lastConsumptionSucceeded = outcome.status == .succeeded
+                lastSurvivalReason = outcome.reason
+            }
             let interactionActions = result.agents
                 .filter { $0.action.name == "harvest_block" }
                 .sorted { $0.agentId < $1.agentId }
             if let interaction = interactionActions.first {
-                guard autoInteractionEnabled || economyAutoEnabled else {
+                guard autoInteractionEnabled || economyAutoEnabled
+                        || (session.survivalEnabled && interactionFeatureEnabled) else {
                     throw ControllerError.interactionBoundary("harvest action without automatic interaction")
                 }
                 lastInteractionAttempted = true
@@ -589,11 +610,18 @@ final class PebbleAgentController {
                 "\($0.rawValue):\(finalSnapshot.campStock.count(of: $0))"
             }.joined(separator: ",")
             let deliveryOutcome = focus?.lastDeliveryOutcome
+            let survivalProgress = focus?.survivalProgress
+            let consumptionOutcome = survivalProgress?.lastConsumptionOutcome
+            let survivalMemory = survivalProgress?.lastMemoryType?.rawValue ?? focus?.recentMemory.last { entry in
+                entry.type == "food_consumed"
+                    || entry.type == "consumption_blocked"
+                    || entry.type == "starvation_damage"
+            }?.type ?? "none"
             successfulCognitiveTicks += 1
             blockedMovementOutcomeCount += blocked
             maxObservedMemoryCount = max(maxObservedMemoryCount, finalSnapshot.agents.map(\.memoryCount).max() ?? 0)
             maxObservedDistanceFromHome = max(maxObservedDistanceFromHome, finalSnapshot.agents.map(\.distanceFromHome).max() ?? 0)
-            let message = "tick=\(result.tick) movement=\(movementEnabled ? "on" : "off") moved=\(moved) blocked=\(blocked) outcomes=\(outcomes) positions=\(positions) goals=\(goals) focus=\(focus?.id ?? "none") action=\(focus?.lastAction?.name ?? "none") focusMove=\(focusMovement) memory=\(focus?.memoryCount ?? 0) retrieved=\(retrieved) influenced=\(influenced) dedup=\(deduplicated) decisionAgent=\(decisionAgent?.id ?? "none") memoryUsed=\(memoryUsed) decisionChanged=\(decision?.actionChanged == true ? 1 : 0) baseMove=\(baseMove) finalMove=\(finalMove) dominant=\(dominant) decisionReason=\(decisionReason) world_observed=1 perception=\(perceptionSummary) observations=\(observations) resourceSeen=\(resourceSeen) resourceDistance=\(resourceDistance) activeTarget=\(activeResourceTarget) reservationOwner=\(reservationOwner) navigationPurpose=\(navigation?.route?.purpose.rawValue ?? "none") navigation=\(navigation?.status.rawValue ?? "idle") routeLength=\(navigation?.route?.positions.count ?? 0) routeIndex=\(navigation?.routeIndex ?? 0) stepsRemaining=\(navigation?.stepsRemaining ?? 0) nextStep=\(routeNext) replans=\(navigation?.replanCount ?? 0) invalidation=\(navigation?.lastInvalidation?.rawValue ?? "none") navigationFailure=\(navigation?.lastFailure?.rawValue ?? "none") autoInteraction=\(autoInteractionEnabled ? "on" : "off") interactionAttempted=\(lastInteractionAttempted ? 1 : 0) interactionSucceeded=\(lastInteractionSucceeded ? 1 : 0) interactionBlocked=\(lastInteractionBlocked ? 1 : 0) economy=\(finalSnapshot.economyEnabled ? "on" : "off") quota=\(finalSnapshot.deliveryQuota) inventoryByResource=\(inventorySummary) campStock=\(stockSummary) fixtures=\(fixtureSummary) deliveryOutcome=\(deliveryOutcome?.status.rawValue ?? "none") deliverySucceeded=\(lastDeliverySucceeded ? 1 : 0) conservation=\(finalSnapshot.conservation.harvestedTotal):\(finalSnapshot.conservation.carriedTotal)+\(finalSnapshot.conservation.campStockTotal):\(finalSnapshot.conservation.balanced ? "exact" : "diverged") corridorObserved=\(economyFixtures.corridorObservedBlockCount) corridorChanged=\(economyFixtures.corridorChangedDuringNavigation) fixtureSetupMutations=\(economyFixtures.setupMutatedBlockCount)"
+            let message = "tick=\(result.tick) movement=\(movementEnabled ? "on" : "off") moved=\(moved) blocked=\(blocked) outcomes=\(outcomes) positions=\(positions) goals=\(goals) focus=\(focus?.id ?? "none") action=\(focus?.lastAction?.name ?? "none") focusMove=\(focusMovement) memory=\(focus?.memoryCount ?? 0) retrieved=\(retrieved) influenced=\(influenced) dedup=\(deduplicated) decisionAgent=\(decisionAgent?.id ?? "none") memoryUsed=\(memoryUsed) decisionChanged=\(decision?.actionChanged == true ? 1 : 0) baseMove=\(baseMove) finalMove=\(finalMove) dominant=\(dominant) decisionReason=\(decisionReason) world_observed=1 perception=\(perceptionSummary) observations=\(observations) resourceSeen=\(resourceSeen) resourceDistance=\(resourceDistance) activeTarget=\(activeResourceTarget) reservationOwner=\(reservationOwner) navigationPurpose=\(navigation?.route?.purpose.rawValue ?? "none") navigation=\(navigation?.status.rawValue ?? "idle") routeLength=\(navigation?.route?.positions.count ?? 0) routeIndex=\(navigation?.routeIndex ?? 0) stepsRemaining=\(navigation?.stepsRemaining ?? 0) nextStep=\(routeNext) replans=\(navigation?.replanCount ?? 0) invalidation=\(navigation?.lastInvalidation?.rawValue ?? "none") navigationFailure=\(navigation?.lastFailure?.rawValue ?? "none") autoInteraction=\(autoInteractionEnabled ? "on" : "off") interactionAttempted=\(lastInteractionAttempted ? 1 : 0) interactionSucceeded=\(lastInteractionSucceeded ? 1 : 0) interactionBlocked=\(lastInteractionBlocked ? 1 : 0) economy=\(finalSnapshot.economyEnabled ? "on" : "off") survival=\(finalSnapshot.survivalEnabled ? "on" : "off") survivalStatus=\(survivalProgress?.status.rawValue ?? "off") hunger=\(String(format: "%.2f", focus?.needs.hunger ?? 0)) fatigue=\(String(format: "%.2f", focus?.needs.fatigue ?? 0)) health=\(focus?.health ?? 0) criticalHungerTicks=\(survivalProgress?.consecutiveCriticalHungerTicks ?? 0) foodConsumed=\(survivalProgress?.foodConsumedCount ?? 0) starvationDamage=\(survivalProgress?.starvationDamageTaken ?? 0) consumptionOutcome=\(consumptionOutcome?.status.rawValue ?? "none") consumptionSucceeded=\(lastConsumptionSucceeded ? 1 : 0) survivalMemory=\(survivalMemory) quota=\(finalSnapshot.deliveryQuota) inventoryByResource=\(inventorySummary) campStock=\(stockSummary) fixtures=\(fixtureSummary) deliveryOutcome=\(deliveryOutcome?.status.rawValue ?? "none") deliverySucceeded=\(lastDeliverySucceeded ? 1 : 0) conservation=\(finalSnapshot.conservation.harvestedTotal):\(finalSnapshot.conservation.carriedTotal)+\(finalSnapshot.conservation.campStockTotal)+\(finalSnapshot.conservation.consumedTotal):\(finalSnapshot.conservation.balanced ? "exact" : "diverged") corridorObserved=\(economyFixtures.corridorObservedBlockCount) corridorChanged=\(economyFixtures.corridorChangedDuringNavigation) fixtureSetupMutations=\(economyFixtures.setupMutatedBlockCount)"
             traceTick(
                 message,
                 tick: result.tick,
@@ -766,7 +794,7 @@ final class PebbleAgentController {
                 "\($0.agentId):\($0.resource.rawValue)@\(positionText($0.target))"
             }.joined(separator: ",") ?? ""
             let conservation = snapshot?.conservation
-            let message = "economy active=\(snapshot?.economyEnabled == true ? "yes" : "no") auto=\(economyAutoEnabled ? "on" : "off") quota=\(snapshot?.deliveryQuota ?? 0) actor=\(actor ?? "none") goal=\(agent?.currentGoal.kind.rawValue ?? "none") navigationDestination=\(agent?.navigationProgress.route?.purpose.rawValue ?? "none") inventory=\(inventory) inventoryTotal=\(agent?.resourceInventory.totalCount ?? 0)/\(agent?.resourceInventory.capacity ?? 0) campStock=\(stock) campStockTotal=\(snapshot?.campStock.totalCount ?? 0) fixtures=\(fixtureText) reservations=\(reservations.isEmpty ? "none" : reservations) deliveryOutcome=\(agent?.lastDeliveryOutcome?.status.rawValue ?? "none") memory=\(agent?.recentMemory.last?.type ?? "none") conservation=\(conservation?.harvestedTotal ?? 0):\(conservation?.carriedTotal ?? 0)+\(conservation?.campStockTotal ?? 0):\(conservation?.balanced == true ? "exact" : "diverged") corridorObserved=\(fixtures.corridorObservedBlockCount) corridorChangedSetup=\(fixtures.corridorChangedAfterSetup) corridorChangedNavigation=\(fixtures.corridorChangedDuringNavigation) corridorChangedHarvest=\(fixtures.corridorChangedAfterHarvest) corridorChangedCleanup=\(fixtures.corridorChangedAfterCleanup) fixtureSetupMutations=\(fixtures.setupMutatedBlockCount) cleanupRestoredBlocks=\(fixtures.cleanupRestoredBlockCount)"
+            let message = "economy active=\(snapshot?.economyEnabled == true ? "yes" : "no") auto=\(economyAutoEnabled ? "on" : "off") quota=\(snapshot?.deliveryQuota ?? 0) actor=\(actor ?? "none") goal=\(agent?.currentGoal.kind.rawValue ?? "none") navigationDestination=\(agent?.navigationProgress.route?.purpose.rawValue ?? "none") inventory=\(inventory) inventoryTotal=\(agent?.resourceInventory.totalCount ?? 0)/\(agent?.resourceInventory.capacity ?? 0) campStock=\(stock) campStockTotal=\(snapshot?.campStock.totalCount ?? 0) fixtures=\(fixtureText) reservations=\(reservations.isEmpty ? "none" : reservations) deliveryOutcome=\(agent?.lastDeliveryOutcome?.status.rawValue ?? "none") memory=\(agent?.recentMemory.last?.type ?? "none") conservation=\(conservation?.harvestedTotal ?? 0):\(conservation?.carriedTotal ?? 0)+\(conservation?.campStockTotal ?? 0)+\(conservation?.consumedTotal ?? 0):\(conservation?.balanced == true ? "exact" : "diverged") corridorObserved=\(fixtures.corridorObservedBlockCount) corridorChangedSetup=\(fixtures.corridorChangedAfterSetup) corridorChangedNavigation=\(fixtures.corridorChangedDuringNavigation) corridorChangedHarvest=\(fixtures.corridorChangedAfterHarvest) corridorChangedCleanup=\(fixtures.corridorChangedAfterCleanup) fixtureSetupMutations=\(fixtures.setupMutatedBlockCount) cleanupRestoredBlocks=\(fixtures.cleanupRestoredBlockCount)"
             trace(message)
             return success(message)
         }
@@ -874,6 +902,38 @@ final class PebbleAgentController {
             let boundary = interactionExecutor.economyState()
             return failure("Economy setup failed: \(error); setupMutations=\(boundary.setupMutatedBlockCount) rollback=\(boundary.lastRollback)")
         }
+    }
+
+    private func handleSurvival(_ arguments: [String]) -> PebbleAgentCommandResult {
+        let usage = "Usage: /lab survival <on|off|status>"
+        guard arguments.count == 1, let subcommand = arguments.first?.lowercased() else {
+            return failure(usage)
+        }
+        guard var session else {
+            return failure("No active PebbleAgents session.")
+        }
+        if subcommand == "on" || subcommand == "off" {
+            let enabled = subcommand == "on"
+            session.setSurvivalEnabled(enabled)
+            self.session = session
+            lastSurvivalReason = enabled ? "enabled by command" : "disabled by command"
+            trace("survival=\(enabled ? "on" : "off") tick=\(session.tick) reason=command")
+            return success("PebbleAgents survival \(enabled ? "on" : "off").")
+        }
+        guard subcommand == "status" else { return failure(usage) }
+        let snapshot = session.snapshot()
+        let agent = snapshot.agents.first { $0.id == focusedAgentId } ?? snapshot.agents.first
+        let progress = agent?.survivalProgress
+        let config = snapshot.survivalConfiguration
+        let conservation = snapshot.conservation
+        let memory = progress?.lastMemoryType?.rawValue ?? agent?.recentMemory.last { entry in
+            entry.type == "food_consumed"
+                || entry.type == "consumption_blocked"
+                || entry.type == "starvation_damage"
+        }?.type ?? "none"
+        let message = "survival active=\(snapshot.survivalEnabled ? "yes" : "no") actor=\(agent?.id ?? "none") status=\(progress?.status.rawValue ?? "off") goal=\(agent?.currentGoal.kind.rawValue ?? "none") hunger=\(String(format: "%.2f", agent?.needs.hunger ?? 0)) hungerThreshold=\(config.hungryThreshold) hungerRecovery=\(config.hungerRecoveryThreshold) fatigue=\(String(format: "%.2f", agent?.needs.fatigue ?? 0)) fatigueThreshold=\(config.fatigueThreshold) fatigueRecovery=\(config.fatigueRecoveryThreshold) health=\(agent?.health ?? 0) criticalHungerTicks=\(progress?.consecutiveCriticalHungerTicks ?? 0) foodRaw=\(agent?.resourceInventory.count(of: .foodRaw) ?? 0) foodConsumed=\(progress?.foodConsumedCount ?? 0) starvationDamage=\(progress?.starvationDamageTaken ?? 0) navigationPurpose=\(agent?.navigationProgress.route?.purpose.rawValue ?? "none") consumptionOutcome=\(progress?.lastConsumptionOutcome?.status.rawValue ?? "none") memory=\(memory) conservation=\(conservation.harvestedTotal):\(conservation.carriedTotal)+\(conservation.campStockTotal)+\(conservation.consumedTotal):\(conservation.balanced ? "exact" : "diverged") reason=\(lastSurvivalReason.replacingOccurrences(of: " ", with: "_"))"
+        trace(message)
+        return success(message)
     }
 
     private func handleInteraction(
@@ -1194,7 +1254,7 @@ final class PebbleAgentController {
             let retrieved = snapshot.agents.reduce(0) { $0 + $1.memoryRetrievalCount }
             let influenced = snapshot.agents.reduce(0) { $0 + $1.memoryInfluencedDecisionCount }
             let dedup = snapshot.agents.reduce(0) { $0 + $1.feedbackMemoryDeduplicatedCount }
-            trace("summary reason=\(reason.replacingOccurrences(of: " ", with: "_")) seed=\(seed) ticks=\(successfulCognitiveTicks) hz=\(cognitiveHz) agents=\(snapshot.agentCount) movementCount=\(movementCount) blocked=\(blockedMovementOutcomeCount) memoryMax=\(maxObservedMemoryCount) retrieved=\(retrieved) influenced=\(influenced) dedup=\(dedup) maxDistanceHome=\(maxObservedDistanceFromHome) runtimeErrors=\(runtimeErrorCount) catchupDropped=\(droppedCatchUpSteps) probesRemoved=\(removed) follow=\(followStatus) demo=\(wasDemo ? 1 : 0) interactionRestored=\(interactionRestored ? 1 : 0) interactionTarget=\(interactionBeforeCleanup.target.map(positionText) ?? "none") conservation=\(snapshot.conservation.harvestedTotal):\(snapshot.conservation.carriedTotal)+\(snapshot.conservation.campStockTotal):\(snapshot.conservation.balanced ? "exact" : "diverged") corridorObserved=\(interactionAfterCleanup.corridorObservedBlockCount) corridorChangedCleanup=\(interactionAfterCleanup.corridorChangedAfterCleanup) cleanupRestoredBlocks=\(interactionAfterCleanup.cleanupRestoredBlockCount)")
+            trace("summary reason=\(reason.replacingOccurrences(of: " ", with: "_")) seed=\(seed) ticks=\(successfulCognitiveTicks) hz=\(cognitiveHz) agents=\(snapshot.agentCount) movementCount=\(movementCount) blocked=\(blockedMovementOutcomeCount) memoryMax=\(maxObservedMemoryCount) retrieved=\(retrieved) influenced=\(influenced) dedup=\(dedup) maxDistanceHome=\(maxObservedDistanceFromHome) runtimeErrors=\(runtimeErrorCount) catchupDropped=\(droppedCatchUpSteps) probesRemoved=\(removed) follow=\(followStatus) demo=\(wasDemo ? 1 : 0) interactionRestored=\(interactionRestored ? 1 : 0) interactionTarget=\(interactionBeforeCleanup.target.map(positionText) ?? "none") conservation=\(snapshot.conservation.harvestedTotal):\(snapshot.conservation.carriedTotal)+\(snapshot.conservation.campStockTotal)+\(snapshot.conservation.consumedTotal):\(snapshot.conservation.balanced ? "exact" : "diverged") corridorObserved=\(interactionAfterCleanup.corridorObservedBlockCount) corridorChangedCleanup=\(interactionAfterCleanup.corridorChangedAfterCleanup) cleanupRestoredBlocks=\(interactionAfterCleanup.cleanupRestoredBlockCount)")
         }
         interactionExecutor.clearBoundaryAudit()
         session = nil
@@ -1222,6 +1282,8 @@ final class PebbleAgentController {
         economyAutoEnabled = false
         lastEconomyReason = "none"
         lastDeliverySucceeded = false
+        lastConsumptionSucceeded = false
+        lastSurvivalReason = "none"
         lastError = nil
         trace("stop probesRemoved=\(removed) reason=\(reason)")
         return removed
