@@ -315,3 +315,17 @@ public enum AgentInteractionSandbox {
             && abs(target.x - actor.x) + abs(target.z - actor.z) == 1
     }
 }
+
+public struct AgentSandboxFixtureMutationBoundary: Codable, Equatable {
+    public let target: AgentPosition
+
+    public var permittedPositions: [AgentPosition] { [target] }
+
+    public init(target: AgentPosition) {
+        self.target = target
+    }
+
+    public func permits(_ position: AgentPosition) -> Bool {
+        position == target
+    }
+}

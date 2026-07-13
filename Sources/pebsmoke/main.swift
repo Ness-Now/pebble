@@ -5134,6 +5134,27 @@ do {
     )).failure == .dangerousDrop)
     check("H2 repeated route identical", nominal == AgentBoundedRoutePlanner.plan(nominalRequest))
 
+    let fixtureBoundary = AgentSandboxFixtureMutationBoundary(target: target)
+    check("H2 fixture mutation boundary has one block",
+          fixtureBoundary.permittedPositions == [target])
+    check("H2 fixture mutation boundary permits target", fixtureBoundary.permits(target))
+    check("H2 fixture mutation boundary rejects route feet",
+          !fixtureBoundary.permits(AgentPosition(x: 1, y: 64, z: 0)))
+    check("H2 fixture mutation boundary rejects route support",
+          !fixtureBoundary.permits(AgentPosition(x: 1, y: 63, z: 0)))
+    check("H2 fixture mutation boundary rejects route head",
+          !fixtureBoundary.permits(AgentPosition(x: 1, y: 65, z: 0)))
+    check("H2 fixture mutation boundary rejects start",
+          !fixtureBoundary.permits(start))
+    let fixtureBoundaryEncoder = JSONEncoder()
+    fixtureBoundaryEncoder.outputFormatting = [.sortedKeys]
+    let fixtureBoundaryJSON = String(
+        data: try! fixtureBoundaryEncoder.encode(fixtureBoundary),
+        encoding: .utf8
+    )
+    check("H2 fixture mutation boundary encoding deterministic",
+          fixtureBoundaryJSON == "{\"target\":{\"x\":4,\"y\":64,\"z\":0}}")
+
     func h2State(id: String = "agent_h2", position: AgentPosition = start) -> AgentSessionAgentState {
         AgentSessionAgentState(
             id: id,

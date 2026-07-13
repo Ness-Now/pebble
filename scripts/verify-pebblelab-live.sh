@@ -5,8 +5,8 @@ set -euo pipefail
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 ROOT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd -P)
 RUNBOOK="$ROOT_DIR/docs/pebblelab-3d-live-prototype.md"
-WORLD_NAME="PebbleLab-Disposable-H2-424242"
-WORLD_SEED="424242"
+WORLD_NAME="PebbleLab-Disposable-H2-12345"
+WORLD_SEED="12345"
 LAB_COMMANDS='/lab start;/lab pause;/lab movement off;/lab focus agent_2;/lab interaction setup distant 4;/lab interaction auto on;/lab movement on;/lab overlay full;/lab step;/lab step;/lab step;/lab step;/lab interaction status;/lab status'
 
 usage() {
@@ -150,12 +150,17 @@ PEBBLE_SHOT="$CAPTURE_PATH@240" \
 swift run -c release Pebble 2>&1 | /usr/bin/tee "$TRACE_PATH"
 
 [ -s "$CAPTURE_PATH" ] || fail "capture was not written: $CAPTURE_PATH"
+require_trace 'interaction setup mode=distant distance=4 .*corridorObserved=9 corridorChanged=0 fixtureSetupMutations=1' 'setup changed only the final fixture block'
 require_trace 'tick=1 .*focus=agent_2 action=approach_resource .*reservationOwner=agent_2 navigation=active routeLength=4 routeIndex=1 stepsRemaining=2' 'tick 1 target reservation and first step'
 require_trace 'tick=2 .*focus=agent_2 action=approach_resource .*navigation=active routeLength=4 routeIndex=2 stepsRemaining=1' 'tick 2 single-step route progress'
 require_trace 'tick=3 .*focus=agent_2 action=approach_resource .*navigation=arrived routeLength=4 routeIndex=3 stepsRemaining=0' 'tick 3 adjacent arrival'
 require_trace 'tick=4 .*focus=agent_2 action=harvest_block .*navigation=idle routeLength=0 .*invalidation=harvested .*interactionSucceeded=1' 'tick 4 transactional harvest'
-require_trace 'interaction gate=enabled .*actualDistance=1 .*harvested=yes .*inventory=1/8 outcome=succeeded memory=resource_harvested' 'final inventory, outcome, and memory'
-require_trace 'summary .*runtimeErrors=0 .*interactionRestored=1' 'clean runtime and verified fixture restoration'
+require_trace 'tick=1 .*corridorObserved=9 corridorChanged=0 fixtureSetupMutations=1' 'corridor unchanged during tick 1'
+require_trace 'tick=2 .*corridorObserved=9 corridorChanged=0 fixtureSetupMutations=1' 'corridor unchanged during tick 2'
+require_trace 'tick=3 .*corridorObserved=9 corridorChanged=0 fixtureSetupMutations=1' 'corridor unchanged during tick 3'
+require_trace 'tick=4 .*corridorObserved=9 corridorChanged=0 fixtureSetupMutations=1' 'corridor unchanged after harvest'
+require_trace 'interaction gate=enabled .*actualDistance=1 .*harvested=yes .*inventory=1/8 outcome=succeeded memory=resource_harvested .*corridorObserved=9 corridorChangedSetup=0 corridorChangedNavigation=0 corridorChangedHarvest=0 fixtureSetupMutations=1' 'final inventory, memory, and read-only corridor'
+require_trace 'summary .*runtimeErrors=0 .*interactionRestored=1 .*corridorObserved=9 corridorChangedCleanup=0 cleanupRestoredBlocks=1' 'clean runtime and one-block cleanup'
 
 printf '\nPASS: H2 live trace and capture evidence verified.\n'
 printf 'The PNG still requires visual inspection; see %s\n' "$RUNBOOK"

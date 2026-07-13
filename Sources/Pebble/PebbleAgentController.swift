@@ -292,6 +292,7 @@ final class PebbleAgentController {
         guard interactionExecutor.cleanup(world: world) else {
             return failure("PebbleAgents rebuild refused: interaction sandbox cleanup failed.")
         }
+        interactionExecutor.clearBoundaryAudit()
         _ = clearLabCoreAgentProbes(in: world)
         probesByAgentId.removeAll()
         do {
@@ -536,11 +537,12 @@ final class PebbleAgentController {
             let finalMove = decision?.finalDirection?.rawValue ?? decision?.finalAction.name ?? "none"
             let dominant = decision?.dominantFactor.kind.rawValue ?? "none"
             let decisionReason = decision?.reason.replacingOccurrences(of: " ", with: "_") ?? "none"
+            let interactionBoundary = interactionExecutor.state(gateEnabled: interactionFeatureEnabled)
             successfulCognitiveTicks += 1
             blockedMovementOutcomeCount += blocked
             maxObservedMemoryCount = max(maxObservedMemoryCount, finalSnapshot.agents.map(\.memoryCount).max() ?? 0)
             maxObservedDistanceFromHome = max(maxObservedDistanceFromHome, finalSnapshot.agents.map(\.distanceFromHome).max() ?? 0)
-            let message = "tick=\(result.tick) movement=\(movementEnabled ? "on" : "off") moved=\(moved) blocked=\(blocked) outcomes=\(outcomes) positions=\(positions) goals=\(goals) focus=\(focus?.id ?? "none") action=\(focus?.lastAction?.name ?? "none") focusMove=\(focusMovement) memory=\(focus?.memoryCount ?? 0) retrieved=\(retrieved) influenced=\(influenced) dedup=\(deduplicated) decisionAgent=\(decisionAgent?.id ?? "none") memoryUsed=\(memoryUsed) decisionChanged=\(decision?.actionChanged == true ? 1 : 0) baseMove=\(baseMove) finalMove=\(finalMove) dominant=\(dominant) decisionReason=\(decisionReason) world_observed=1 perception=\(perceptionSummary) observations=\(observations) resourceSeen=\(resourceSeen) resourceDistance=\(resourceDistance) activeTarget=\(activeResourceTarget) reservationOwner=\(reservationOwner) navigation=\(navigation?.status.rawValue ?? "idle") routeLength=\(navigation?.route?.positions.count ?? 0) routeIndex=\(navigation?.routeIndex ?? 0) stepsRemaining=\(navigation?.stepsRemaining ?? 0) nextStep=\(routeNext) replans=\(navigation?.replanCount ?? 0) invalidation=\(navigation?.lastInvalidation?.rawValue ?? "none") navigationFailure=\(navigation?.lastFailure?.rawValue ?? "none") autoInteraction=\(autoInteractionEnabled ? "on" : "off") interactionAttempted=\(lastInteractionAttempted ? 1 : 0) interactionSucceeded=\(lastInteractionSucceeded ? 1 : 0) interactionBlocked=\(lastInteractionBlocked ? 1 : 0)"
+            let message = "tick=\(result.tick) movement=\(movementEnabled ? "on" : "off") moved=\(moved) blocked=\(blocked) outcomes=\(outcomes) positions=\(positions) goals=\(goals) focus=\(focus?.id ?? "none") action=\(focus?.lastAction?.name ?? "none") focusMove=\(focusMovement) memory=\(focus?.memoryCount ?? 0) retrieved=\(retrieved) influenced=\(influenced) dedup=\(deduplicated) decisionAgent=\(decisionAgent?.id ?? "none") memoryUsed=\(memoryUsed) decisionChanged=\(decision?.actionChanged == true ? 1 : 0) baseMove=\(baseMove) finalMove=\(finalMove) dominant=\(dominant) decisionReason=\(decisionReason) world_observed=1 perception=\(perceptionSummary) observations=\(observations) resourceSeen=\(resourceSeen) resourceDistance=\(resourceDistance) activeTarget=\(activeResourceTarget) reservationOwner=\(reservationOwner) navigation=\(navigation?.status.rawValue ?? "idle") routeLength=\(navigation?.route?.positions.count ?? 0) routeIndex=\(navigation?.routeIndex ?? 0) stepsRemaining=\(navigation?.stepsRemaining ?? 0) nextStep=\(routeNext) replans=\(navigation?.replanCount ?? 0) invalidation=\(navigation?.lastInvalidation?.rawValue ?? "none") navigationFailure=\(navigation?.lastFailure?.rawValue ?? "none") autoInteraction=\(autoInteractionEnabled ? "on" : "off") interactionAttempted=\(lastInteractionAttempted ? 1 : 0) interactionSucceeded=\(lastInteractionSucceeded ? 1 : 0) interactionBlocked=\(lastInteractionBlocked ? 1 : 0) corridorObserved=\(interactionBoundary.corridorObservedBlockCount) corridorChanged=\(interactionBoundary.corridorChangedDuringNavigation) fixtureSetupMutations=\(interactionBoundary.setupMutatedBlockCount)"
             traceTick(
                 message,
                 tick: result.tick,
@@ -718,7 +720,7 @@ final class PebbleAgentController {
             let currentDistance = actorSnapshot.flatMap { agent in
                 state.target.map { abs($0.x - agent.position.x) + abs($0.z - agent.position.z) }
             } ?? 0
-            let message = "interaction gate=\(state.gateEnabled ? "enabled" : "disabled") sandbox=\(state.active ? "active" : "inactive") setupMode=\(state.setupMode) configuredDistance=\(state.configuredDistance ?? 0) target=\(target) actualDistance=\(currentDistance) actor=\(actor ?? "none") resourceBlock=\(state.resourceBlockName) originalBlock=\(state.originalBlock.map(String.init) ?? "none") harvested=\(state.harvested ? "yes" : "no") auto=\(state.autoEnabled ? "on" : "off") activeTarget=\(activeTarget) reservationOwner=\(reservationOwner) navigation=\(navigation?.status.rawValue ?? "idle") routeLength=\(navigation?.route?.positions.count ?? 0) routeIndex=\(navigation?.routeIndex ?? 0) stepsRemaining=\(navigation?.stepsRemaining ?? 0) nextStep=\(nextStep) replans=\(navigation?.replanCount ?? 0) invalidation=\(navigation?.lastInvalidation?.rawValue ?? "none") navigationFailure=\(navigation?.lastFailure?.rawValue ?? "none") movementOutcome=\(actorSnapshot?.lastMovementOutcome?.status.rawValue ?? "none") autoReason=\(state.autoReason.replacingOccurrences(of: " ", with: "_")) inventory=\(inventory?.totalCount ?? 0)/\(inventory?.capacity ?? 0) outcome=\(outcome?.status.rawValue ?? "none") memory=\(interactionMemory) reason=\(outcome?.reason ?? "none") rollback=\(state.rollbackCount):\(state.lastRollback)"
+            let message = "interaction gate=\(state.gateEnabled ? "enabled" : "disabled") sandbox=\(state.active ? "active" : "inactive") setupMode=\(state.setupMode) configuredDistance=\(state.configuredDistance ?? 0) target=\(target) actualDistance=\(currentDistance) actor=\(actor ?? "none") resourceBlock=\(state.resourceBlockName) originalBlock=\(state.originalBlock.map(String.init) ?? "none") harvested=\(state.harvested ? "yes" : "no") auto=\(state.autoEnabled ? "on" : "off") activeTarget=\(activeTarget) reservationOwner=\(reservationOwner) navigation=\(navigation?.status.rawValue ?? "idle") routeLength=\(navigation?.route?.positions.count ?? 0) routeIndex=\(navigation?.routeIndex ?? 0) stepsRemaining=\(navigation?.stepsRemaining ?? 0) nextStep=\(nextStep) replans=\(navigation?.replanCount ?? 0) invalidation=\(navigation?.lastInvalidation?.rawValue ?? "none") navigationFailure=\(navigation?.lastFailure?.rawValue ?? "none") movementOutcome=\(actorSnapshot?.lastMovementOutcome?.status.rawValue ?? "none") autoReason=\(state.autoReason.replacingOccurrences(of: " ", with: "_")) inventory=\(inventory?.totalCount ?? 0)/\(inventory?.capacity ?? 0) outcome=\(outcome?.status.rawValue ?? "none") memory=\(interactionMemory) reason=\(outcome?.reason ?? "none") rollback=\(state.rollbackCount):\(state.lastRollback) corridorObserved=\(state.corridorObservedBlockCount) corridorChangedSetup=\(state.corridorChangedAfterSetup) corridorChangedNavigation=\(state.corridorChangedDuringNavigation) corridorChangedHarvest=\(state.corridorChangedAfterHarvest) fixtureSetupMutations=\(state.setupMutatedBlockCount)"
             trace(message)
             return success(message)
         }
@@ -800,10 +802,27 @@ final class PebbleAgentController {
                     anchor: anchor,
                     occupiedAgentPositions: occupied,
                     playerPosition: playerPosition,
-                    distance: distance
+                    distance: distance,
+                    routeToTarget: { target in
+                        let observation = self.navigationAdapter.observe(
+                            world: world,
+                            agent: actor,
+                            target: target,
+                            occupiedAgentPositions: occupied
+                        )
+                        return AgentBoundedRoutePlanner.plan(AgentNavigationRequest(
+                            start: actor.position,
+                            target: target,
+                            cells: observation.cells,
+                            radius: observation.radius,
+                            maxVisitedNodes: AgentBoundedRoutePlanner.maximumVisitedNodes,
+                            maxSteps: AgentBoundedRoutePlanner.maximumRouteSteps
+                        ))
+                    }
                 )
                 let mode = distance == 1 ? "adjacent" : "distant"
-                trace("interaction setup mode=\(mode) distance=\(distance) actor=\(actorId) target=\(positionText(target)) block=\(PebbleAgentInteractionExecutor.resourceBlockName)")
+                let boundary = interactionExecutor.state(gateEnabled: true)
+                trace("interaction setup mode=\(mode) distance=\(distance) actor=\(actorId) target=\(positionText(target)) block=\(PebbleAgentInteractionExecutor.resourceBlockName) corridorObserved=\(boundary.corridorObservedBlockCount) corridorChanged=\(boundary.corridorChangedAfterSetup) fixtureSetupMutations=\(boundary.setupMutatedBlockCount)")
                 return success("Interaction sandbox \(mode) distance \(distance) ready for \(actorId) at \(positionText(target)); block=\(PebbleAgentInteractionExecutor.resourceBlockName).")
             }
             let outcome = try performHarvestTransaction(
@@ -840,7 +859,8 @@ final class PebbleAgentController {
             }
             return failure("Inventory full; World unchanged.")
         } catch {
-            return failure("Interaction failed: \(error)")
+            let boundary = interactionExecutor.state(gateEnabled: true)
+            return failure("Interaction failed: \(error); setupMutations=\(boundary.setupMutatedBlockCount)")
         }
     }
 
@@ -963,6 +983,7 @@ final class PebbleAgentController {
         let interactionBeforeCleanup = interactionExecutor.state(gateEnabled: interactionFeatureEnabled)
         let interactionRestored = cleanupWorld.map { interactionExecutor.cleanup(world: $0) }
             ?? !interactionBeforeCleanup.active
+        let interactionAfterCleanup = interactionExecutor.state(gateEnabled: interactionFeatureEnabled)
         if !interactionRestored {
             runtimeErrorCount += 1
             trace("error interaction cleanup failed reason=\(reason.replacingOccurrences(of: " ", with: "_"))")
@@ -973,8 +994,9 @@ final class PebbleAgentController {
             let retrieved = snapshot.agents.reduce(0) { $0 + $1.memoryRetrievalCount }
             let influenced = snapshot.agents.reduce(0) { $0 + $1.memoryInfluencedDecisionCount }
             let dedup = snapshot.agents.reduce(0) { $0 + $1.feedbackMemoryDeduplicatedCount }
-            trace("summary reason=\(reason.replacingOccurrences(of: " ", with: "_")) seed=\(seed) ticks=\(successfulCognitiveTicks) hz=\(cognitiveHz) agents=\(snapshot.agentCount) movementCount=\(movementCount) blocked=\(blockedMovementOutcomeCount) memoryMax=\(maxObservedMemoryCount) retrieved=\(retrieved) influenced=\(influenced) dedup=\(dedup) maxDistanceHome=\(maxObservedDistanceFromHome) runtimeErrors=\(runtimeErrorCount) catchupDropped=\(droppedCatchUpSteps) probesRemoved=\(removed) follow=\(followStatus) demo=\(wasDemo ? 1 : 0) interactionRestored=\(interactionRestored ? 1 : 0) interactionTarget=\(interactionBeforeCleanup.target.map(positionText) ?? "none")")
+            trace("summary reason=\(reason.replacingOccurrences(of: " ", with: "_")) seed=\(seed) ticks=\(successfulCognitiveTicks) hz=\(cognitiveHz) agents=\(snapshot.agentCount) movementCount=\(movementCount) blocked=\(blockedMovementOutcomeCount) memoryMax=\(maxObservedMemoryCount) retrieved=\(retrieved) influenced=\(influenced) dedup=\(dedup) maxDistanceHome=\(maxObservedDistanceFromHome) runtimeErrors=\(runtimeErrorCount) catchupDropped=\(droppedCatchUpSteps) probesRemoved=\(removed) follow=\(followStatus) demo=\(wasDemo ? 1 : 0) interactionRestored=\(interactionRestored ? 1 : 0) interactionTarget=\(interactionBeforeCleanup.target.map(positionText) ?? "none") corridorObserved=\(interactionAfterCleanup.corridorObservedBlockCount) corridorChangedCleanup=\(interactionAfterCleanup.corridorChangedAfterCleanup) cleanupRestoredBlocks=\(interactionAfterCleanup.cleanupRestoredBlockCount)")
         }
+        interactionExecutor.clearBoundaryAudit()
         session = nil
         activeWorld = nil
         probesByAgentId.removeAll()
