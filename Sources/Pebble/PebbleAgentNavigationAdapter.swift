@@ -8,7 +8,8 @@ struct PebbleAgentNavigationAdapter {
         world: World,
         agent: AgentSnapshot,
         target: AgentPosition,
-        occupiedAgentPositions: [AgentPosition]
+        occupiedAgentPositions: [AgentPosition],
+        goalMode: AgentNavigationGoalMode = .cardinalAdjacent
     ) -> AgentNavigationObservation {
         var cells: [AgentNavigationCell] = []
         for dx in -Self.radius...Self.radius {
@@ -37,7 +38,8 @@ struct PebbleAgentNavigationAdapter {
                 let feet = world.getBlock(x, footY, z)
                 let head = world.getBlock(x, footY + 1, z)
                 let status: AgentNavigationCellStatus
-                if position == target || occupiedAgentPositions.contains(position) {
+                if (goalMode == .cardinalAdjacent && position == target)
+                    || occupiedAgentPositions.contains(position) {
                     status = .blocked
                 } else if !blockDefs[below >> 4].solid {
                     status = .dangerousDrop

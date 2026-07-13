@@ -6,7 +6,7 @@ La maquette V0 rend trois agents PebbleLab observables dans l’application Pebb
 
 ## Prérequis et lancement
 
-Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session H2 reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
+Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase I reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. L'option `--h2` conserve la preuve navigate-to-harvest historique. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
 
 Depuis la racine du dépôt :
 
@@ -49,6 +49,7 @@ Commandes de démonstration :
 /lab speed <1|2|4|8>             /lab reset
 /lab movement <on|off>
 /lab interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off>
+/lab economy <setup|auto on|auto off|status|clear>
 /lab status
 /lab focus <agentId|next>        /lab next
 /lab follow <agentId|focus|next|off>
@@ -103,3 +104,13 @@ Le lanceur live crée automatiquement `PebbleLab-Disposable-H2-12345` dans un ho
 `/lab interaction status`, l'overlay full et chaque trace de tick exposent le propriétaire de réservation, le statut de navigation, la longueur et l'index de route, les pas restants, le prochain pas, le compteur de replan, la dernière invalidation/erreur, la distance actuelle et les derniers outcomes. La preuve attendue montre `inventory 0 -> 1`, une seule mémoire `resource_harvested`, aucune erreur runtime, puis la restauration de la fixture lors de la terminaison.
 
 La route est limitée au rayon 8, à 256 nœuds visités, à 16 pas et à trois replans espacés d'au moins un tick. Une cellule ou un chunk indisponible, un pas vertical hors `-1...1`, un dangerous drop, la perte de réservation ou la disparition de la cible invalide explicitement la route. Aucun chargement de chunk, pathfinding mondial, ressource naturelle ou persistance de route n'est ouvert.
+
+## Phase I — Closed Resource Economy Sandbox V1
+
+`/lab economy setup` prépare au maximum trois fixtures réversibles pour `foodRaw`, `wood` et `stone`. Les blocs visuels sont respectivement `hay_block`, `oak_log` et `cobblestone`, déjà enregistrés ; ces blocs n'acquièrent aucune sémantique gameplay hors du ledger sandbox. Le setup inspecte le terrain réel, essaie des cibles dans un ordre stable, valide chaque route avec `AgentBoundedRoutePlanner`, puis mute uniquement les trois blocs-fixtures finaux. Les corridors, supports, pieds, têtes, obstacles et différences de hauteur restent en lecture seule.
+
+Après `/lab economy auto on` et `/lab movement on`, l'agent focalisé collecte les fixtures dans l'ordre déterministe `foodRaw`, `wood`, `stone`. Le quota V1 vaut 2. Une fois deux unités portées, la session passe au goal `deliverResources`, planifie une route `.exact` vers `homePosition`, émet au plus un `return_home` par tick, puis `deliver_resource`. La transaction pure de session vide atomiquement le seul `AgentResourceInventory`, crédite `AgentCampStock`, écrit une mémoire `resource_delivered` et expose l'invariant `harvested = carried + campStock` par ressource.
+
+Le scénario permanent utilise le monde `PebbleLab-Disposable-I-12345`, la seed `12345`, trois fixtures et dix ticks cognitifs. La preuve attendue montre `foodRaw 0→1`, `wood 0→1`, le retour au home, l'inventaire `2→0`, le stock `0→2`, la conservation exacte, zéro corridor modifié et trois blocs restaurés au cleanup. `/lab economy clear`, stop, reset, remplacement de World et terminaison restaurent et vérifient chaque bloc-fixture sans annuler les quantités économiques déjà produites.
+
+Cette phase reste entièrement `sandboxFixture` : aucun bloc naturel n'est scanné ou collecté, aucun drop physique, coffre, registre, save/load, consommation ou construction n'est ouvert.

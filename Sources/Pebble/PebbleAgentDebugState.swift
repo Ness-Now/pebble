@@ -27,7 +27,9 @@ struct PebbleAgentDebugState {
         runtimeErrorCount: Int,
         droppedCatchUpSteps: Int,
         lastError: String?,
-        interaction: PebbleAgentInteractionState
+        interaction: PebbleAgentInteractionState,
+        economyFixtures: PebbleAgentEconomyFixtureState,
+        economyReason: String
     ) {
         let focus = snapshot.agents.first { $0.id == focusedAgentId } ?? snapshot.agents.first
         let status = paused ? "paused" : "running"
@@ -89,7 +91,9 @@ struct PebbleAgentDebugState {
                 "factor: \(factor)",
                 "reason: \(Self.short(reason, limit: 38))",
                 "memory/retrieved/influenced/dedup: \(decisionAgent.memoryCount)/\(decisionAgent.memoryRetrievalCount)/\(decisionAgent.memoryInfluencedDecisionCount)/\(decisionAgent.feedbackMemoryDeduplicatedCount)",
-                "inventory: \(agent.resourceInventory.totalCount)/\(agent.resourceInventory.capacity) sandboxResource=\(agent.resourceInventory.count(of: .sandboxResource))",
+                "inventory: \(agent.resourceInventory.totalCount)/\(agent.resourceInventory.capacity) food/wood/stone \(agent.resourceInventory.count(of: .foodRaw))/\(agent.resourceInventory.count(of: .wood))/\(agent.resourceInventory.count(of: .stone))",
+                "economy: \(snapshot.economyEnabled ? "on" : "off") quota \(snapshot.deliveryQuota) stock \(snapshot.campStock.totalCount) fixtures \(economyFixtures.fixtures.filter { !$0.harvested }.count)/\(economyFixtures.fixtures.count)",
+                "delivery/conservation: \(agent.lastDeliveryOutcome?.status.rawValue ?? "none") / \(snapshot.conservation.balanced ? "exact" : "diverged")",
                 "resourceSeen: \(resourceSeen)",
                 "activeTarget: \(activeTarget)",
                 "reservation: \(agent.resourceReservation?.agentId ?? "none")  navigation: \(route)",
@@ -184,11 +188,18 @@ struct PebbleAgentDebugState {
             "action target/resource: \(action?.target.map(Self.position) ?? "none") / \(action?.resource?.rawValue ?? "none")",
             "reason/effect: \(Self.short(action?.reason ?? "none", limit: 18)) / \(Self.short(agent.lastActionEffect?.effect ?? "none", limit: 18))",
             "nearby: \(nearby.isEmpty ? "none" : nearby) memory: \(agent.memoryCount)",
-            "inventory: \(agent.resourceInventory.totalCount)/\(agent.resourceInventory.capacity) sandboxResource: \(agent.resourceInventory.count(of: .sandboxResource))",
+            "inventory total/capacity: \(agent.resourceInventory.totalCount)/\(agent.resourceInventory.capacity)",
+            "inventory sandbox/food/wood/stone: \(agent.resourceInventory.count(of: .sandboxResource))/\(agent.resourceInventory.count(of: .foodRaw))/\(agent.resourceInventory.count(of: .wood))/\(agent.resourceInventory.count(of: .stone))",
+            "economy/quota/reason: \(snapshot.economyEnabled ? "on" : "off") / \(snapshot.deliveryQuota) / \(Self.short(economyReason, limit: 22))",
+            "camp stock sandbox/food/wood/stone: \(snapshot.campStock.count(of: .sandboxResource))/\(snapshot.campStock.count(of: .foodRaw))/\(snapshot.campStock.count(of: .wood))/\(snapshot.campStock.count(of: .stone))",
+            "fixtures available/harvested: \(economyFixtures.fixtures.filter { !$0.harvested }.count)/\(economyFixtures.fixtures.filter(\.harvested).count)",
+            "delivery outcome/memory: \(agent.lastDeliveryOutcome?.status.rawValue ?? "none") / \(agent.recentMemory.last { $0.type == "resource_delivered" }?.type ?? "none")",
+            "conservation harvested=carried+stock: \(snapshot.conservation.harvestedTotal)=\(snapshot.conservation.carriedTotal)+\(snapshot.conservation.campStockTotal) \(snapshot.conservation.balanced ? "exact" : "diverged")",
             "resource seen: \(fullResourceSeen)",
             "active resource target: \(fullActiveTarget)",
             "resource reservation owner: \(agent.resourceReservation?.agentId ?? "none") expires: \(reservationExpiry)",
             "navigation status/route/index: \(agent.navigationProgress.status.rawValue) / \(agent.navigationProgress.route?.positions.count ?? 0) / \(agent.navigationProgress.routeIndex)",
+            "navigation destination: \(agent.navigationProgress.route?.purpose.rawValue ?? "none") @ \(agent.navigationProgress.route.map { Self.position($0.target) } ?? "none")",
             "navigation remaining/next/replans: \(agent.navigationProgress.stepsRemaining) / \(navigationNext) / \(agent.navigationProgress.replanCount)",
             "navigation invalidation/failure: \(agent.navigationProgress.lastInvalidation?.rawValue ?? "none") / \(agent.navigationProgress.lastFailure?.rawValue ?? "none")",
             "interaction target/status: \(interaction.target.map(Self.position) ?? "none") / \(interaction.active ? (interaction.harvested ? "harvested" : "ready") : "inactive") auto: \(interaction.autoEnabled ? "on" : "off")",

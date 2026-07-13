@@ -45,6 +45,9 @@ final class PebbleAgentController {
     private var lastInteractionAttempted = false
     private var lastInteractionSucceeded = false
     private var lastInteractionBlocked = false
+    private(set) var economyAutoEnabled = false
+    private var lastEconomyReason = "none"
+    private var lastDeliverySucceeded = false
 
     private let environment = ProcessInfo.processInfo.environment
     private var featureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS"] == "1" }
@@ -134,7 +137,9 @@ final class PebbleAgentController {
                 gateEnabled: interactionFeatureEnabled,
                 autoEnabled: autoInteractionEnabled,
                 autoReason: lastAutoInteractionReason
-            )
+            ),
+            economyFixtures: interactionExecutor.economyState(),
+            economyReason: lastEconomyReason
         )
     }
 
@@ -143,7 +148,7 @@ final class PebbleAgentController {
         switch command {
         case "help":
             guard arguments.count == 1 else { return failure("Usage: /lab help") }
-            return success("/lab lifecycle: start stop clear | time control: pause resume step speed <1|2|4|8> reset | inspection: status focus <agentId|next> next follow <agentId|focus|next|off> overlay <off|compact|full> | movement: movement <on|off> | interaction: interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off> | demo: demo [start|stop|status]")
+            return success("/lab lifecycle: start stop clear | time control: pause resume step speed <1|2|4|8> reset | inspection: status focus <agentId|next> next follow <agentId|focus|next|off> overlay <off|compact|full> | movement: movement <on|off> | interaction: interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off> | economy: economy <setup|auto on|auto off|status|clear> | demo: demo [start|stop|status]")
         case "demo":
             return handleDemo(Array(arguments.dropFirst()), world: world, player: player)
         case "start":
@@ -208,6 +213,8 @@ final class PebbleAgentController {
             return success("PebbleAgents movement \(movementStatus).")
         case "interaction":
             return handleInteraction(Array(arguments.dropFirst()), world: world, player: player)
+        case "economy":
+            return handleEconomy(Array(arguments.dropFirst()), world: world, player: player)
         case "status":
             guard arguments.count == 1 else { return failure("Usage: /lab status") }
             guard let session else {
@@ -217,7 +224,7 @@ final class PebbleAgentController {
             let snapshot = session.snapshot()
             let positions = snapshot.agents.map { "\($0.id)=\($0.position.x),\($0.position.y),\($0.position.z)/m\($0.movementCount)/o\($0.observationCount)" }.joined(separator: " ")
             let overlay = effectiveOverlayMode(f3Visible: false).rawValue
-            let message = "PebbleAgents \(isPaused ? "paused" : "running") tick=\(snapshot.tick) hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") autoInteraction=\(autoInteractionEnabled ? "on" : "off") probes=\(probesByAgentId.count) focus=\(focusedAgentId ?? "none") follow=\(followMode.statusText) overlay=\(overlay) demo=\(demoActive ? "on" : "off") catchupDropped=\(droppedCatchUpSteps) \(positions)"
+            let message = "PebbleAgents \(isPaused ? "paused" : "running") tick=\(snapshot.tick) hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") autoInteraction=\(autoInteractionEnabled ? "on" : "off") economy=\(snapshot.economyEnabled ? "on" : "off") probes=\(probesByAgentId.count) focus=\(focusedAgentId ?? "none") follow=\(followMode.statusText) overlay=\(overlay) demo=\(demoActive ? "on" : "off") catchupDropped=\(droppedCatchUpSteps) \(positions)"
             trace("status \(message)")
             return success(message)
         case "focus":
@@ -333,6 +340,9 @@ final class PebbleAgentController {
             lastInteractionAttempted = false
             lastInteractionSucceeded = false
             lastInteractionBlocked = false
+            economyAutoEnabled = false
+            lastEconomyReason = "none"
+            lastDeliverySucceeded = false
             observedGoalKinds = [AgentGoalKind.idle.rawValue]
             resetRunCounters()
             try createProbes(in: world)
@@ -414,30 +424,43 @@ final class PebbleAgentController {
         lastInteractionAttempted = false
         lastInteractionSucceeded = false
         lastInteractionBlocked = false
+        lastDeliverySucceeded = false
         do {
             let preCognitive = session.snapshot()
             let perceptions = try preCognitive.agents.map { agent in
                 let resourceObservations: [AgentResourceObservation]
-                if autoInteractionEnabled {
+                if autoInteractionEnabled || economyAutoEnabled {
                     guard let anchor else { throw ControllerError.missingSession }
-                    resourceObservations = try interactionExecutor.resourceObservation(
+                    resourceObservations = try interactionExecutor.resourceObservations(
                         world: world,
                         agent: agent,
                         anchor: anchor,
                         maximumDistance: session.configuration.resourceObservationRadius
-                    ).map { [$0] } ?? []
+                    )
                 } else {
                     resourceObservations = []
                 }
                 let navigationObservation: AgentNavigationObservation?
-                if movementEnabled, let target = resourceObservations.first?.target {
+                let navigationTarget: AgentPosition?
+                let navigationGoalMode: AgentNavigationGoalMode
+                if agent.currentGoal.kind == .deliverResources,
+                   !agent.resourceInventory.isEmpty {
+                    navigationTarget = agent.homePosition
+                    navigationGoalMode = .exact
+                } else {
+                    navigationTarget = agent.activeResourceTarget?.target
+                        ?? resourceObservations.first?.target
+                    navigationGoalMode = .cardinalAdjacent
+                }
+                if movementEnabled, let target = navigationTarget {
                     navigationObservation = navigationAdapter.observe(
                         world: world,
                         agent: agent,
                         target: target,
                         occupiedAgentPositions: preCognitive.agents
                             .filter { $0.id != agent.id }
-                            .map(\.position)
+                            .map(\.position),
+                        goalMode: navigationGoalMode
                     )
                 } else {
                     navigationObservation = nil
@@ -454,7 +477,7 @@ final class PebbleAgentController {
                 .filter { $0.action.name == "harvest_block" }
                 .sorted { $0.agentId < $1.agentId }
             if let interaction = interactionActions.first {
-                guard autoInteractionEnabled else {
+                guard autoInteractionEnabled || economyAutoEnabled else {
                     throw ControllerError.interactionBoundary("harvest action without automatic interaction")
                 }
                 lastInteractionAttempted = true
@@ -468,6 +491,24 @@ final class PebbleAgentController {
                 )
                 lastInteractionSucceeded = true
                 lastAutoInteractionReason = "automatic harvest succeeded"
+            }
+            let deliveryActions = result.agents
+                .filter { $0.action.name == "deliver_resource" }
+                .sorted { $0.agentId < $1.agentId }
+            if let delivery = deliveryActions.first {
+                guard economyAutoEnabled else {
+                    throw ControllerError.interactionBoundary("delivery action without automatic economy")
+                }
+                let actor = session.snapshot().agents.first { $0.id == delivery.agentId }!
+                let deliveryId = "economy-delivery:\(delivery.agentId):\(session.tick)"
+                let outcome = try session.deliverResources(AgentDeliveryIntent(
+                    deliveryId: deliveryId,
+                    agentId: delivery.agentId,
+                    tick: session.tick,
+                    position: actor.position
+                ))
+                lastDeliverySucceeded = outcome.status == .succeeded
+                lastEconomyReason = outcome.reason
             }
             if movementEnabled {
                 let outcomes = AgentMovementCoordinator.resolve(snapshot: session.snapshot())
@@ -537,12 +578,22 @@ final class PebbleAgentController {
             let finalMove = decision?.finalDirection?.rawValue ?? decision?.finalAction.name ?? "none"
             let dominant = decision?.dominantFactor.kind.rawValue ?? "none"
             let decisionReason = decision?.reason.replacingOccurrences(of: " ", with: "_") ?? "none"
-            let interactionBoundary = interactionExecutor.state(gateEnabled: interactionFeatureEnabled)
+            let economyFixtures = interactionExecutor.economyState()
+            let fixtureSummary = economyFixtures.fixtures.map {
+                "\($0.fixtureId):\($0.harvested ? "harvested" : "available")"
+            }.joined(separator: ",")
+            let inventorySummary = AgentResourceKind.allCases.map {
+                "\($0.rawValue):\(focus?.resourceInventory.count(of: $0) ?? 0)"
+            }.joined(separator: ",")
+            let stockSummary = AgentResourceKind.allCases.map {
+                "\($0.rawValue):\(finalSnapshot.campStock.count(of: $0))"
+            }.joined(separator: ",")
+            let deliveryOutcome = focus?.lastDeliveryOutcome
             successfulCognitiveTicks += 1
             blockedMovementOutcomeCount += blocked
             maxObservedMemoryCount = max(maxObservedMemoryCount, finalSnapshot.agents.map(\.memoryCount).max() ?? 0)
             maxObservedDistanceFromHome = max(maxObservedDistanceFromHome, finalSnapshot.agents.map(\.distanceFromHome).max() ?? 0)
-            let message = "tick=\(result.tick) movement=\(movementEnabled ? "on" : "off") moved=\(moved) blocked=\(blocked) outcomes=\(outcomes) positions=\(positions) goals=\(goals) focus=\(focus?.id ?? "none") action=\(focus?.lastAction?.name ?? "none") focusMove=\(focusMovement) memory=\(focus?.memoryCount ?? 0) retrieved=\(retrieved) influenced=\(influenced) dedup=\(deduplicated) decisionAgent=\(decisionAgent?.id ?? "none") memoryUsed=\(memoryUsed) decisionChanged=\(decision?.actionChanged == true ? 1 : 0) baseMove=\(baseMove) finalMove=\(finalMove) dominant=\(dominant) decisionReason=\(decisionReason) world_observed=1 perception=\(perceptionSummary) observations=\(observations) resourceSeen=\(resourceSeen) resourceDistance=\(resourceDistance) activeTarget=\(activeResourceTarget) reservationOwner=\(reservationOwner) navigation=\(navigation?.status.rawValue ?? "idle") routeLength=\(navigation?.route?.positions.count ?? 0) routeIndex=\(navigation?.routeIndex ?? 0) stepsRemaining=\(navigation?.stepsRemaining ?? 0) nextStep=\(routeNext) replans=\(navigation?.replanCount ?? 0) invalidation=\(navigation?.lastInvalidation?.rawValue ?? "none") navigationFailure=\(navigation?.lastFailure?.rawValue ?? "none") autoInteraction=\(autoInteractionEnabled ? "on" : "off") interactionAttempted=\(lastInteractionAttempted ? 1 : 0) interactionSucceeded=\(lastInteractionSucceeded ? 1 : 0) interactionBlocked=\(lastInteractionBlocked ? 1 : 0) corridorObserved=\(interactionBoundary.corridorObservedBlockCount) corridorChanged=\(interactionBoundary.corridorChangedDuringNavigation) fixtureSetupMutations=\(interactionBoundary.setupMutatedBlockCount)"
+            let message = "tick=\(result.tick) movement=\(movementEnabled ? "on" : "off") moved=\(moved) blocked=\(blocked) outcomes=\(outcomes) positions=\(positions) goals=\(goals) focus=\(focus?.id ?? "none") action=\(focus?.lastAction?.name ?? "none") focusMove=\(focusMovement) memory=\(focus?.memoryCount ?? 0) retrieved=\(retrieved) influenced=\(influenced) dedup=\(deduplicated) decisionAgent=\(decisionAgent?.id ?? "none") memoryUsed=\(memoryUsed) decisionChanged=\(decision?.actionChanged == true ? 1 : 0) baseMove=\(baseMove) finalMove=\(finalMove) dominant=\(dominant) decisionReason=\(decisionReason) world_observed=1 perception=\(perceptionSummary) observations=\(observations) resourceSeen=\(resourceSeen) resourceDistance=\(resourceDistance) activeTarget=\(activeResourceTarget) reservationOwner=\(reservationOwner) navigationPurpose=\(navigation?.route?.purpose.rawValue ?? "none") navigation=\(navigation?.status.rawValue ?? "idle") routeLength=\(navigation?.route?.positions.count ?? 0) routeIndex=\(navigation?.routeIndex ?? 0) stepsRemaining=\(navigation?.stepsRemaining ?? 0) nextStep=\(routeNext) replans=\(navigation?.replanCount ?? 0) invalidation=\(navigation?.lastInvalidation?.rawValue ?? "none") navigationFailure=\(navigation?.lastFailure?.rawValue ?? "none") autoInteraction=\(autoInteractionEnabled ? "on" : "off") interactionAttempted=\(lastInteractionAttempted ? 1 : 0) interactionSucceeded=\(lastInteractionSucceeded ? 1 : 0) interactionBlocked=\(lastInteractionBlocked ? 1 : 0) economy=\(finalSnapshot.economyEnabled ? "on" : "off") quota=\(finalSnapshot.deliveryQuota) inventoryByResource=\(inventorySummary) campStock=\(stockSummary) fixtures=\(fixtureSummary) deliveryOutcome=\(deliveryOutcome?.status.rawValue ?? "none") deliverySucceeded=\(lastDeliverySucceeded ? 1 : 0) conservation=\(finalSnapshot.conservation.harvestedTotal):\(finalSnapshot.conservation.carriedTotal)+\(finalSnapshot.conservation.campStockTotal):\(finalSnapshot.conservation.balanced ? "exact" : "diverged") corridorObserved=\(economyFixtures.corridorObservedBlockCount) corridorChanged=\(economyFixtures.corridorChangedDuringNavigation) fixtureSetupMutations=\(economyFixtures.setupMutatedBlockCount)"
             traceTick(
                 message,
                 tick: result.tick,
@@ -554,6 +605,10 @@ final class PebbleAgentController {
                 autoInteractionEnabled = false
                 lastInteractionBlocked = true
                 lastAutoInteractionReason = "disabled after blocking failure: \(error)"
+            }
+            if economyAutoEnabled {
+                economyAutoEnabled = false
+                lastEconomyReason = "disabled after blocking failure: \(error)"
             }
             lastError = String(describing: error)
             runtimeErrorCount += 1
@@ -681,6 +736,143 @@ final class PebbleAgentController {
             return success("PebbleAgents demo \(demoActive && active ? "active" : "inactive") session=\(active ? "active" : "inactive") agents=\(session?.snapshot().agentCount ?? 0) hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") focus=\(focusedAgentId ?? "none") follow=\(followMode.statusText) overlay=\(effectiveOverlayMode(f3Visible: false).rawValue) probes=\(probesByAgentId.count).")
         default:
             return failure("Usage: /lab demo [start|stop|status]")
+        }
+    }
+
+    private func handleEconomy(
+        _ arguments: [String],
+        world: World,
+        player: Player
+    ) -> PebbleAgentCommandResult {
+        let usage = "Usage: /lab economy <setup|auto on|auto off|status|clear>"
+        guard let subcommand = arguments.first?.lowercased() else { return failure(usage) }
+
+        if subcommand == "status" {
+            guard arguments.count == 1 else { return failure(usage) }
+            let fixtures = interactionExecutor.economyState()
+            let snapshot = session?.snapshot()
+            let actor = fixtures.fixtures.first?.actorId ?? focusedAgentId
+            let agent = snapshot?.agents.first { $0.id == actor }
+            let inventory = AgentResourceKind.allCases.map {
+                "\($0.rawValue):\(agent?.resourceInventory.count(of: $0) ?? 0)"
+            }.joined(separator: ",")
+            let stock = AgentResourceKind.allCases.map {
+                "\($0.rawValue):\(snapshot?.campStock.count(of: $0) ?? 0)"
+            }.joined(separator: ",")
+            let fixtureText = fixtures.fixtures.map {
+                "\($0.fixtureId)@\(positionText($0.target)):\($0.harvested ? "harvested" : "available")"
+            }.joined(separator: ",")
+            let reservations = snapshot?.resourceReservations.map {
+                "\($0.agentId):\($0.resource.rawValue)@\(positionText($0.target))"
+            }.joined(separator: ",") ?? ""
+            let conservation = snapshot?.conservation
+            let message = "economy active=\(snapshot?.economyEnabled == true ? "yes" : "no") auto=\(economyAutoEnabled ? "on" : "off") quota=\(snapshot?.deliveryQuota ?? 0) actor=\(actor ?? "none") goal=\(agent?.currentGoal.kind.rawValue ?? "none") navigationDestination=\(agent?.navigationProgress.route?.purpose.rawValue ?? "none") inventory=\(inventory) inventoryTotal=\(agent?.resourceInventory.totalCount ?? 0)/\(agent?.resourceInventory.capacity ?? 0) campStock=\(stock) campStockTotal=\(snapshot?.campStock.totalCount ?? 0) fixtures=\(fixtureText) reservations=\(reservations.isEmpty ? "none" : reservations) deliveryOutcome=\(agent?.lastDeliveryOutcome?.status.rawValue ?? "none") memory=\(agent?.recentMemory.last?.type ?? "none") conservation=\(conservation?.harvestedTotal ?? 0):\(conservation?.carriedTotal ?? 0)+\(conservation?.campStockTotal ?? 0):\(conservation?.balanced == true ? "exact" : "diverged") corridorObserved=\(fixtures.corridorObservedBlockCount) corridorChangedSetup=\(fixtures.corridorChangedAfterSetup) corridorChangedNavigation=\(fixtures.corridorChangedDuringNavigation) corridorChangedHarvest=\(fixtures.corridorChangedAfterHarvest) corridorChangedCleanup=\(fixtures.corridorChangedAfterCleanup) fixtureSetupMutations=\(fixtures.setupMutatedBlockCount) cleanupRestoredBlocks=\(fixtures.cleanupRestoredBlockCount)"
+            trace(message)
+            return success(message)
+        }
+
+        guard featureEnabled else {
+            return failure("PebbleAgents disabled. Set PEBBLELAB_APP_AGENTS=1 before launch.")
+        }
+        guard interactionFeatureEnabled else {
+            return failure("PebbleAgents interaction disabled. Set PEBBLELAB_APP_AGENTS_INTERACT=1 before launch.")
+        }
+        guard var session, activeWorld === world, let anchor else {
+            return failure("No active PebbleAgents session for this World.")
+        }
+
+        if subcommand == "auto" {
+            guard arguments.count == 2,
+                  arguments[1].lowercased() == "on" || arguments[1].lowercased() == "off" else {
+                return failure(usage)
+            }
+            if arguments[1].lowercased() == "off" {
+                session.setEconomyEnabled(false)
+                self.session = session
+                economyAutoEnabled = false
+                lastEconomyReason = "disabled by command"
+                trace("economy auto=off reason=command")
+                return success("PebbleAgents economy automatic mode off.")
+            }
+            guard movementFeatureEnabled else {
+                return failure("PebbleAgents movement disabled. Set PEBBLELAB_APP_AGENTS_MOVE=1 before launch.")
+            }
+            let fixtures = interactionExecutor.economyState().fixtures
+            guard fixtures.count == PebbleAgentInteractionExecutor.maximumFixtureCount,
+                  fixtures.contains(where: { !$0.harvested }),
+                  let actorId = fixtures.first?.actorId,
+                  focusedAgentId == actorId else {
+                return failure("Economy auto requires three fixtures and focus on their actor.")
+            }
+            session.setEconomyEnabled(true)
+            self.session = session
+            economyAutoEnabled = true
+            autoInteractionEnabled = false
+            lastEconomyReason = "enabled by command"
+            trace("economy auto=on actor=\(actorId) quota=\(session.configuration.deliveryQuota)")
+            return success("PebbleAgents economy automatic mode on for \(actorId), quota \(session.configuration.deliveryQuota).")
+        }
+
+        if subcommand == "clear" {
+            guard arguments.count == 1 else { return failure(usage) }
+            guard interactionExecutor.cleanup(world: world) else {
+                return failure("Economy cleanup failed; fixture ledger retained.")
+            }
+            session.setEconomyEnabled(false)
+            self.session = session
+            economyAutoEnabled = false
+            lastEconomyReason = "fixtures cleared"
+            let cleanup = interactionExecutor.economyState()
+            trace("economy clear cleanupRestoredBlocks=\(cleanup.cleanupRestoredBlockCount) corridorChangedCleanup=\(cleanup.corridorChangedAfterCleanup)")
+            return success("PebbleAgents economy fixtures restored and automatic mode off.")
+        }
+
+        guard subcommand == "setup", arguments.count == 1 else { return failure(usage) }
+        guard isPaused else { return failure("Economy setup requires a paused PebbleAgents session.") }
+        guard !movementEnabled else { return failure("Economy setup requires movement off.") }
+        guard let actorId = focusedAgentId,
+              let actor = session.snapshot().agents.first(where: { $0.id == actorId }) else {
+            return failure("Economy setup requires a valid focused agent.")
+        }
+        let occupied = session.snapshot().agents.filter { $0.id != actorId }.map(\.position)
+        let playerPosition = AgentPosition(
+            x: Int(player.x.rounded(.down)),
+            y: Int(player.y.rounded(.down)),
+            z: Int(player.z.rounded(.down))
+        )
+        do {
+            let fixtures = try interactionExecutor.setupEconomy(
+                world: world,
+                actor: actor,
+                anchor: anchor,
+                occupiedAgentPositions: occupied,
+                playerPosition: playerPosition,
+                routeToTarget: { target in
+                    let observation = self.navigationAdapter.observe(
+                        world: world,
+                        agent: actor,
+                        target: target,
+                        occupiedAgentPositions: occupied
+                    )
+                    return AgentBoundedRoutePlanner.plan(AgentNavigationRequest(
+                        start: actor.position,
+                        target: target,
+                        cells: observation.cells,
+                        radius: observation.radius,
+                        maxVisitedNodes: AgentBoundedRoutePlanner.maximumVisitedNodes,
+                        maxSteps: AgentBoundedRoutePlanner.maximumRouteSteps
+                    ))
+                }
+            )
+            let boundary = interactionExecutor.economyState()
+            let summary = fixtures.map {
+                "\($0.fixtureId)=\($0.resource.rawValue)@\(positionText($0.target))/\($0.resourceBlockName)"
+            }.joined(separator: ",")
+            trace("economy setup actor=\(actorId) fixtures=\(summary) corridorObserved=\(boundary.corridorObservedBlockCount) corridorChanged=\(boundary.corridorChangedAfterSetup) fixtureSetupMutations=\(boundary.setupMutatedBlockCount)")
+            return success("Economy sandbox ready: \(summary).")
+        } catch {
+            let boundary = interactionExecutor.economyState()
+            return failure("Economy setup failed: \(error); setupMutations=\(boundary.setupMutatedBlockCount) rollback=\(boundary.lastRollback)")
         }
     }
 
@@ -872,15 +1064,21 @@ final class PebbleAgentController {
         interactionPrefix: String,
         session: inout AgentSimulationSession
     ) throws -> AgentInteractionOutcome {
+        let availableFixtures = interactionExecutor.economyState().fixtures.filter {
+            $0.actorId == actorId && !$0.harvested
+        }
         guard let anchor,
               let actor = session.snapshot().agents.first(where: { $0.id == actorId }),
-              let target = interactionExecutor.state(gateEnabled: true).target else {
+              let target = expectedAction?.target ?? availableFixtures.first?.target,
+              let fixture = availableFixtures.first(where: { $0.target == target }),
+              let resource = expectedAction?.resource ?? Optional(fixture.resource) else {
             throw ControllerError.interactionBoundary("missing transaction boundary")
         }
         if let expectedAction {
             guard expectedAction.name == "harvest_block",
                   expectedAction.target == target,
-                  expectedAction.resource == .sandboxResource else {
+                  expectedAction.resource == resource,
+                  fixture.resource == resource else {
                 throw ControllerError.interactionBoundary("harvest action target mismatch")
             }
         }
@@ -896,7 +1094,7 @@ final class PebbleAgentController {
             agentId: actorId,
             tick: session.tick,
             target: target,
-            resource: .sandboxResource
+            resource: resource
         )
         let before = actor
         let outcome = AgentInteractionOutcome(
@@ -904,9 +1102,9 @@ final class PebbleAgentController {
             agentId: actorId,
             tick: session.tick,
             target: target,
-            resource: .sandboxResource,
+            resource: resource,
             status: .succeeded,
-            inventoryDelta: AgentInventoryDelta(resource: .sandboxResource, quantity: 1),
+            inventoryDelta: AgentInventoryDelta(resource: resource, quantity: 1),
             reason: "sandbox resource harvested"
         )
         try interactionExecutor.harvest(
@@ -915,6 +1113,8 @@ final class PebbleAgentController {
             anchor: anchor,
             occupiedAgentPositions: occupied,
             playerPosition: playerPosition,
+            expectedTarget: target,
+            expectedResource: resource,
             prevalidate: { try session.prevalidateInteraction(intent) },
             applyAndVerify: {
                 try session.applyInteractionOutcome(outcome)
@@ -930,7 +1130,7 @@ final class PebbleAgentController {
                     expectedMemoryCount = min(maxEntries, before.memoryCount + 1)
                 }
                 guard after.resourceInventory.totalCount == before.resourceInventory.totalCount + 1,
-                      after.resourceInventory.count(of: .sandboxResource) == before.resourceInventory.count(of: .sandboxResource) + 1,
+                      after.resourceInventory.count(of: resource) == before.resourceInventory.count(of: resource) + 1,
                       after.lastInteractionOutcome == outcome,
                       after.memoryCount == expectedMemoryCount,
                       after.recentMemory.last?.type == "resource_harvested" else {
@@ -994,7 +1194,7 @@ final class PebbleAgentController {
             let retrieved = snapshot.agents.reduce(0) { $0 + $1.memoryRetrievalCount }
             let influenced = snapshot.agents.reduce(0) { $0 + $1.memoryInfluencedDecisionCount }
             let dedup = snapshot.agents.reduce(0) { $0 + $1.feedbackMemoryDeduplicatedCount }
-            trace("summary reason=\(reason.replacingOccurrences(of: " ", with: "_")) seed=\(seed) ticks=\(successfulCognitiveTicks) hz=\(cognitiveHz) agents=\(snapshot.agentCount) movementCount=\(movementCount) blocked=\(blockedMovementOutcomeCount) memoryMax=\(maxObservedMemoryCount) retrieved=\(retrieved) influenced=\(influenced) dedup=\(dedup) maxDistanceHome=\(maxObservedDistanceFromHome) runtimeErrors=\(runtimeErrorCount) catchupDropped=\(droppedCatchUpSteps) probesRemoved=\(removed) follow=\(followStatus) demo=\(wasDemo ? 1 : 0) interactionRestored=\(interactionRestored ? 1 : 0) interactionTarget=\(interactionBeforeCleanup.target.map(positionText) ?? "none") corridorObserved=\(interactionAfterCleanup.corridorObservedBlockCount) corridorChangedCleanup=\(interactionAfterCleanup.corridorChangedAfterCleanup) cleanupRestoredBlocks=\(interactionAfterCleanup.cleanupRestoredBlockCount)")
+            trace("summary reason=\(reason.replacingOccurrences(of: " ", with: "_")) seed=\(seed) ticks=\(successfulCognitiveTicks) hz=\(cognitiveHz) agents=\(snapshot.agentCount) movementCount=\(movementCount) blocked=\(blockedMovementOutcomeCount) memoryMax=\(maxObservedMemoryCount) retrieved=\(retrieved) influenced=\(influenced) dedup=\(dedup) maxDistanceHome=\(maxObservedDistanceFromHome) runtimeErrors=\(runtimeErrorCount) catchupDropped=\(droppedCatchUpSteps) probesRemoved=\(removed) follow=\(followStatus) demo=\(wasDemo ? 1 : 0) interactionRestored=\(interactionRestored ? 1 : 0) interactionTarget=\(interactionBeforeCleanup.target.map(positionText) ?? "none") conservation=\(snapshot.conservation.harvestedTotal):\(snapshot.conservation.carriedTotal)+\(snapshot.conservation.campStockTotal):\(snapshot.conservation.balanced ? "exact" : "diverged") corridorObserved=\(interactionAfterCleanup.corridorObservedBlockCount) corridorChangedCleanup=\(interactionAfterCleanup.corridorChangedAfterCleanup) cleanupRestoredBlocks=\(interactionAfterCleanup.cleanupRestoredBlockCount)")
         }
         interactionExecutor.clearBoundaryAudit()
         session = nil
@@ -1019,6 +1219,9 @@ final class PebbleAgentController {
         lastInteractionAttempted = false
         lastInteractionSucceeded = false
         lastInteractionBlocked = false
+        economyAutoEnabled = false
+        lastEconomyReason = "none"
+        lastDeliverySucceeded = false
         lastError = nil
         trace("stop probesRemoved=\(removed) reason=\(reason)")
         return removed
