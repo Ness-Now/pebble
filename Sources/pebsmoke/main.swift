@@ -6550,6 +6550,604 @@ do {
     check("J disabling survival preserves inventory and consumed totals",
           twoAgentConservation.snapshot().agents.first { $0.id == "agent_b" }?.resourceInventory.count(of: .wood) == 1
             && twoAgentConservation.snapshot().conservation.consumedTotal == 1)
+
+    // -----------------------------------------------------------------------
+    section("PebbleAgents bounded natural wood and stone J to K")
+
+    let oakFingerprint = Int(B.oak_log) << 4
+    let birchFingerprint = Int(B.birch_log) << 4
+    let stoneFingerprint = Int(B.stone) << 4
+    let naturalMapping = try! AgentNaturalResourceFingerprintMapping(entries: [
+        AgentNaturalResourceFingerprintEntry(fingerprint: oakFingerprint, resource: .wood),
+        AgentNaturalResourceFingerprintEntry(fingerprint: birchFingerprint, resource: .wood),
+        AgentNaturalResourceFingerprintEntry(fingerprint: stoneFingerprint, resource: .stone),
+    ])
+    check("natural oak_log exact fingerprint maps to wood",
+          naturalMapping.resource(for: oakFingerprint) == .wood)
+    check("natural birch_log exact fingerprint maps to wood",
+          naturalMapping.resource(for: birchFingerprint) == .wood)
+    check("natural stone exact fingerprint maps to stone",
+          naturalMapping.resource(for: stoneFingerprint) == .stone)
+    check("natural unmapped block is ignored", naturalMapping.resource(for: Int(B.dirt) << 4) == nil)
+    check("natural mapping never produces foodRaw",
+          naturalMapping.entries.allSatisfy { $0.resource != .foodRaw })
+    check("natural mapping requires metadata zero",
+          [oakFingerprint, birchFingerprint, stoneFingerprint].allSatisfy { $0 & 15 == 0 })
+    check("natural mapping rejects nonzero metadata",
+          naturalMapping.resource(for: oakFingerprint | 1) == nil
+            && naturalMapping.resource(for: stoneFingerprint | 1) == nil)
+    check("natural audited internal block ids are stable",
+          oakFingerprint >> 4 == 95 && birchFingerprint >> 4 == 127 && stoneFingerprint >> 4 == 3)
+    check("natural mapping order deterministic",
+          naturalMapping.entries.map(\.fingerprint) == [stoneFingerprint, oakFingerprint, birchFingerprint])
+    check("natural mapping rejects foodRaw", {
+        do {
+            _ = try AgentNaturalResourceFingerprintMapping(entries: [
+                AgentNaturalResourceFingerprintEntry(fingerprint: 999, resource: .foodRaw),
+            ])
+            return false
+        } catch AgentNaturalResourceFingerprintMappingError.unsupportedResource(.foodRaw) { return true }
+        catch { return false }
+    }())
+    check("natural mapping rejects duplicate fingerprints", {
+        do {
+            _ = try AgentNaturalResourceFingerprintMapping(entries: [
+                AgentNaturalResourceFingerprintEntry(fingerprint: oakFingerprint, resource: .wood),
+                AgentNaturalResourceFingerprintEntry(fingerprint: oakFingerprint, resource: .stone),
+            ])
+            return false
+        } catch AgentNaturalResourceFingerprintMappingError.duplicateFingerprint(oakFingerprint) { return true }
+        catch { return false }
+    }())
+    check("natural mapping deterministic encoding",
+          try! economyEncoder.encode(naturalMapping) == economyEncoder.encode(naturalMapping))
+
+    func generatedNaturalFingerprint(seed: UInt32, position: AgentPosition) -> Int {
+        let cx = position.x >> 4
+        let cz = position.z >> 4
+        let generated = generateOverworldChunk(seed, cx, cz)
+        let world = World(dim: .overworld, seed: seed)
+        let chunk = Chunk(cx: cx, cz: cz, minY: world.info.minY, height: world.info.height)
+        chunk.blocks = generated.blocks
+        chunk.biomes = generated.biomes
+        chunk.buildHeightmap()
+        chunk.status = .generated
+        world.setChunk(chunk)
+        return world.getBlock(position.x, position.y, position.z)
+    }
+    let generatedOakFingerprint = generatedNaturalFingerprint(
+        seed: 46,
+        position: AgentPosition(x: 24, y: 68, z: -22)
+    )
+    let generatedStoneFingerprint = generatedNaturalFingerprint(
+        seed: 46,
+        position: AgentPosition(x: 24, y: 68, z: -20)
+    )
+    let generatedBirchFingerprint = generatedNaturalFingerprint(
+        seed: 45,
+        position: AgentPosition(x: 14, y: 67, z: -19)
+    )
+    check("natural live seed generates exact oak_log fingerprint",
+          generatedOakFingerprint == oakFingerprint)
+    check("natural live seed generates exact stone fingerprint",
+          generatedStoneFingerprint == stoneFingerprint)
+    check("natural audited seed generates exact birch_log fingerprint",
+          generatedBirchFingerprint == birchFingerprint)
+    check("natural generated blocks use only audited mapping",
+          [generatedOakFingerprint, generatedStoneFingerprint, generatedBirchFingerprint]
+            .allSatisfy { naturalMapping.resource(for: $0) != nil })
+
+    let naturalOrigin = AgentPosition(x: 0, y: 64, z: 0)
+    let scanConfiguration = AgentNaturalResourceScanConfiguration.live
+    let scanPositions = AgentNaturalResourceScanner.positions(
+        around: naturalOrigin,
+        configuration: scanConfiguration
+    )
+    check("natural scan radius fixed at eight", scanConfiguration.horizontalRadius == 8)
+    check("natural scan vertical band fixed and reduced",
+          scanConfiguration.verticalBelow == 2 && scanConfiguration.verticalAbove == 4)
+    check("natural scan maximum position budget exact",
+          scanConfiguration.maximumPositionCount == 1008 && scanPositions.count == 1008)
+    check("natural scan approach read budget exact",
+          scanConfiguration.maximumApproachBlockReadCount == 384)
+    check("natural scan total World read budget exact",
+          scanConfiguration.maximumWorldBlockReadCount == 1392)
+    check("natural scan positions unique", Set(scanPositions).count == scanPositions.count)
+    check("natural scan excludes origin column",
+          scanPositions.allSatisfy { $0.x != naturalOrigin.x || $0.z != naturalOrigin.z })
+    check("natural scan horizontal radius bounded", scanPositions.allSatisfy {
+        abs($0.x - naturalOrigin.x) + abs($0.z - naturalOrigin.z) <= 8
+    })
+    check("natural scan vertical range bounded", scanPositions.allSatisfy {
+        (-2...4).contains($0.y - naturalOrigin.y)
+    })
+    check("natural scan order repeated identically",
+          scanPositions == AgentNaturalResourceScanner.positions(around: naturalOrigin))
+    check("natural scan candidate limit explicit", scanConfiguration.maximumCandidates == 32)
+    check("natural scan observation limit shared",
+          scanConfiguration.maximumObservations == AgentResourcePerception.maximumObservationCount)
+    let saturatedNaturalScan = try! AgentNaturalResourceScanner.normalize(
+        observerPosition: naturalOrigin,
+        samples: scanPositions.prefix(40).enumerated().map { index, position in
+            AgentNaturalResourceScanSample(
+                position: position,
+                chunkReady: true,
+                fingerprint: index.isMultiple(of: 2) ? oakFingerprint : stoneFingerprint,
+                mappedResource: index.isMultiple(of: 2) ? .wood : .stone,
+                hasCardinalApproach: true
+            )
+        }
+    )
+    check("natural scan candidates capped at thirty two",
+          saturatedNaturalScan.diagnostics.candidateCount == 32)
+    check("natural scan observations capped at shared eight",
+          saturatedNaturalScan.observations.count == 8)
+
+    let naturalWoodTarget = AgentPosition(x: 1, y: 64, z: 0)
+    let naturalStoneTarget = AgentPosition(x: 0, y: 64, z: -2)
+    let naturalScanSamples = [
+        AgentNaturalResourceScanSample(
+            position: naturalWoodTarget,
+            chunkReady: true,
+            fingerprint: oakFingerprint,
+            mappedResource: .wood,
+            hasCardinalApproach: true
+        ),
+        AgentNaturalResourceScanSample(
+            position: naturalStoneTarget,
+            chunkReady: true,
+            fingerprint: stoneFingerprint,
+            mappedResource: .stone,
+            hasCardinalApproach: true
+        ),
+        AgentNaturalResourceScanSample(
+            position: AgentPosition(x: -1, y: 64, z: 0),
+            chunkReady: true,
+            fingerprint: Int(B.dirt) << 4,
+            mappedResource: nil,
+            hasCardinalApproach: false
+        ),
+        AgentNaturalResourceScanSample(
+            position: AgentPosition(x: 0, y: 64, z: 1),
+            chunkReady: false
+        ),
+    ]
+    let normalizedNaturalScan = try! AgentNaturalResourceScanner.normalize(
+        observerPosition: naturalOrigin,
+        samples: naturalScanSamples
+    )
+    check("natural scan emits wood and stone only",
+          normalizedNaturalScan.observations.map(\.resource) == [.wood, .stone])
+    check("natural scan emits naturalWorld source",
+          normalizedNaturalScan.observations.allSatisfy { $0.source == .naturalWorld })
+    check("natural scan preserves exact fingerprints",
+          normalizedNaturalScan.observations.map(\.expectedBlockFingerprint)
+            == [Optional(oakFingerprint), Optional(stoneFingerprint)])
+    check("natural scan ignores unmapped block",
+          normalizedNaturalScan.diagnostics.mappedBlockCount == 2)
+    check("natural scan ignores unavailable chunk",
+          normalizedNaturalScan.diagnostics.positionsRead == 3)
+    check("natural scan requires approach cell", {
+        let blocked = try! AgentNaturalResourceScanner.normalize(
+            observerPosition: naturalOrigin,
+            samples: [AgentNaturalResourceScanSample(
+                position: naturalWoodTarget,
+                chunkReady: true,
+                fingerprint: oakFingerprint,
+                mappedResource: .wood,
+                hasCardinalApproach: false
+            )]
+        )
+        return blocked.observations.isEmpty && blocked.diagnostics.candidateCount == 0
+    }())
+    check("natural scan rejects duplicate positions", {
+        do {
+            _ = try AgentNaturalResourceScanner.normalize(
+                observerPosition: naturalOrigin,
+                samples: [naturalScanSamples[0], naturalScanSamples[0]]
+            )
+            return false
+        } catch AgentNaturalResourceScanError.duplicatePosition(naturalWoodTarget) { return true }
+        catch { return false }
+    }())
+    check("natural scan rejects positions outside budget", {
+        do {
+            _ = try AgentNaturalResourceScanner.normalize(
+                observerPosition: naturalOrigin,
+                samples: [AgentNaturalResourceScanSample(
+                    position: AgentPosition(x: 9, y: 64, z: 0),
+                    chunkReady: true
+                )]
+            )
+            return false
+        } catch AgentNaturalResourceScanError.positionOutsidePlan { return true }
+        catch { return false }
+    }())
+    check("natural scan same input same output",
+          normalizedNaturalScan == (try! AgentNaturalResourceScanner.normalize(
+            observerPosition: naturalOrigin,
+            samples: naturalScanSamples
+          )))
+    check("natural scan deterministic encoding",
+          try! economyEncoder.encode(normalizedNaturalScan)
+            == economyEncoder.encode(normalizedNaturalScan))
+
+    let naturalIdentity = AgentResourceIdentity(
+        source: .naturalWorld,
+        position: naturalWoodTarget,
+        resource: .wood,
+        expectedBlockFingerprint: oakFingerprint
+    )
+    let naturalBoundary = AgentNaturalResourceMutationBoundary(identity: naturalIdentity)
+    check("natural identity stable key includes source and fingerprint",
+          naturalIdentity.stableKey.contains("naturalWorld:wood")
+            && naturalIdentity.stableKey.hasSuffix(":\(oakFingerprint)"))
+    check("natural mutation boundary permits target only",
+          naturalBoundary.isValid && naturalBoundary.permittedPositions == [naturalWoodTarget])
+    check("natural mutation boundary rejects corridor position",
+          !naturalBoundary.permits(AgentPosition(x: 0, y: 64, z: 0)))
+    check("natural fixture identity cannot enter natural mutation boundary",
+          !AgentNaturalResourceMutationBoundary(identity: AgentResourceIdentity(
+            source: .sandboxFixture,
+            position: naturalWoodTarget,
+            resource: .wood
+          )).isValid)
+
+    func naturalObservation(
+        _ resource: AgentResourceKind,
+        target: AgentPosition,
+        observer: AgentPosition,
+        fingerprint: Int
+    ) -> AgentResourceObservation {
+        AgentResourceObservation(
+            resource: resource,
+            target: target,
+            direction: AgentResourcePerception.direction(
+                observerPosition: observer,
+                target: target
+            )!,
+            distanceManhattan: abs(target.x - observer.x)
+                + abs(target.y - observer.y)
+                + abs(target.z - observer.z),
+            quantityAvailable: 1,
+            source: .naturalWorld,
+            expectedBlockFingerprint: fingerprint
+        )
+    }
+
+    var naturalSession = economySession(states: [economyAgentState(
+        position: naturalOrigin,
+        home: naturalOrigin
+    )])
+    check("natural mode disabled by default", !naturalSession.naturalResourcesEnabled
+          && !naturalSession.snapshot().naturalResourcesEnabled)
+    let naturalLegacyEncoding = String(
+        data: try! economyEncoder.encode(naturalSession.snapshot()),
+        encoding: .utf8
+    ) ?? ""
+    check("natural mode omitted from legacy snapshot",
+          !naturalLegacyEncoding.contains("naturalResourcesEnabled"))
+    naturalSession.setNaturalResourcesEnabled(true)
+    check("natural mode explicit enable stored in session",
+          naturalSession.naturalResourcesEnabled && naturalSession.snapshot().naturalResourcesEnabled)
+    let naturalTick = try! naturalSession.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: "agent_economy",
+        resourceObservations: [naturalObservation(
+            .wood,
+            target: naturalWoodTarget,
+            observer: naturalOrigin,
+            fingerprint: oakFingerprint
+        )]
+    )])
+    let lockedNatural = naturalSession.snapshot().agents[0]
+    check("natural target lock preserves source",
+          lockedNatural.activeResourceTarget?.source == .naturalWorld)
+    check("natural target lock preserves fingerprint",
+          lockedNatural.activeResourceTarget?.expectedBlockFingerprint == oakFingerprint)
+    check("natural reservation preserves identity",
+          lockedNatural.resourceReservation?.source == .naturalWorld
+            && lockedNatural.resourceReservation?.expectedBlockFingerprint == oakFingerprint)
+    check("natural adjacent target emits harvest_block", naturalTick.agents[0].action.name == "harvest_block")
+    let naturalIntent = AgentInteractionIntent(
+        interactionId: "natural-wood-1",
+        agentId: "agent_economy",
+        tick: naturalSession.tick,
+        target: naturalWoodTarget,
+        resource: .wood,
+        source: .naturalWorld,
+        expectedBlockFingerprint: oakFingerprint
+    )
+    check("natural transaction prevalidation accepts reserved identity", {
+        do { try naturalSession.prevalidateInteraction(naturalIntent); return true }
+        catch { return false }
+    }())
+    check("natural transaction rejects stale fingerprint before mutation", {
+        do {
+            try naturalSession.prevalidateInteraction(AgentInteractionIntent(
+                interactionId: "natural-stale-fingerprint",
+                agentId: naturalIntent.agentId,
+                tick: naturalIntent.tick,
+                target: naturalIntent.target,
+                resource: naturalIntent.resource,
+                source: .naturalWorld,
+                expectedBlockFingerprint: birchFingerprint
+            ))
+            return false
+        } catch AgentSessionError.invalidNaturalResourceIdentity { return true }
+        catch { return false }
+    }())
+    let naturalDisabledSession = economySession(states: [economyAgentState(
+        position: naturalOrigin,
+        home: naturalOrigin
+    )])
+    check("natural transaction rejects disabled mode before mutation", {
+        do {
+            try naturalDisabledSession.prevalidateInteraction(AgentInteractionIntent(
+                interactionId: "natural-disabled",
+                agentId: "agent_economy",
+                tick: naturalDisabledSession.tick,
+                target: naturalWoodTarget,
+                resource: .wood,
+                source: .naturalWorld,
+                expectedBlockFingerprint: oakFingerprint
+            ))
+            return false
+        } catch AgentSessionError.invalidNaturalResourceIdentity { return true }
+        catch { return false }
+    }())
+    let naturalWoodOutcome = AgentInteractionOutcome(
+        interactionId: naturalIntent.interactionId,
+        agentId: naturalIntent.agentId,
+        tick: naturalIntent.tick,
+        target: naturalIntent.target,
+        resource: naturalIntent.resource,
+        status: .succeeded,
+        inventoryDelta: AgentInventoryDelta(resource: .wood, quantity: 1),
+        reason: "natural wood harvested",
+        source: .naturalWorld,
+        expectedBlockFingerprint: oakFingerprint
+    )
+    try! naturalSession.applyInteractionOutcome(naturalWoodOutcome)
+    check("natural harvest credits wood exactly once",
+          naturalSession.snapshot().agents[0].resourceInventory.count(of: .wood) == 1)
+    check("natural harvest increments harvested exactly once",
+          naturalSession.snapshot().conservation.harvestedTotal == 1
+            && naturalSession.snapshot().conservation.balanced)
+    check("natural harvest writes one memory",
+          naturalSession.snapshot().agents[0].recentMemory.filter { $0.type == "resource_harvested" }.count == 1)
+    check("natural harvest releases reservation and route",
+          naturalSession.snapshot().resourceReservations.isEmpty
+            && naturalSession.snapshot().agents[0].navigationProgress.route == nil)
+    let afterNaturalWood = naturalSession.snapshot()
+    check("natural double credit rejected across interaction IDs", {
+        do {
+            try naturalSession.applyInteractionOutcome(AgentInteractionOutcome(
+                interactionId: "natural-wood-duplicate",
+                agentId: "agent_economy",
+                tick: naturalSession.tick,
+                target: naturalWoodTarget,
+                resource: .wood,
+                status: .succeeded,
+                inventoryDelta: AgentInventoryDelta(resource: .wood, quantity: 1),
+                reason: "duplicate natural wood",
+                source: .naturalWorld,
+                expectedBlockFingerprint: oakFingerprint
+            ))
+            return false
+        } catch AgentSessionError.duplicateResourceCredit { return true }
+        catch { return false }
+    }())
+    check("natural rejected duplicate has no mutation", naturalSession.snapshot() == afterNaturalWood)
+
+    var staleNatural = economySession(states: [economyAgentState(
+        position: naturalOrigin,
+        home: naturalOrigin
+    )])
+    staleNatural.setNaturalResourcesEnabled(true)
+    _ = try! staleNatural.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: "agent_economy",
+        resourceObservations: [naturalObservation(
+            .wood, target: naturalWoodTarget, observer: naturalOrigin, fingerprint: oakFingerprint
+        )]
+    )])
+    _ = try! staleNatural.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: "agent_economy",
+        resourceObservations: [naturalObservation(
+            .wood, target: naturalWoodTarget, observer: naturalOrigin, fingerprint: birchFingerprint
+        )]
+    )])
+    check("natural fingerprint change replaces target identity",
+          staleNatural.snapshot().agents[0].activeResourceTarget?.expectedBlockFingerprint == birchFingerprint)
+    check("natural fingerprint change invalidates prior route",
+          staleNatural.snapshot().agents[0].navigationProgress.lastInvalidation == .targetChanged)
+    staleNatural.setNaturalResourcesEnabled(false)
+    check("natural off releases target and reservation",
+          staleNatural.snapshot().agents[0].activeResourceTarget == nil
+            && staleNatural.snapshot().resourceReservations.isEmpty)
+    check("natural off preserves economy state", staleNatural.economyEnabled)
+
+    var carriedWood = AgentResourceInventory(capacity: 8)
+    _ = carriedWood.add(.wood)
+    var balancedSelection = economySession(states: [economyAgentState(
+        position: naturalOrigin,
+        home: naturalOrigin,
+        inventory: carriedWood
+    )])
+    balancedSelection.setNaturalResourcesEnabled(true)
+    _ = try! balancedSelection.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: "agent_economy",
+        resourceObservations: [
+            naturalObservation(.wood, target: naturalWoodTarget, observer: naturalOrigin, fingerprint: oakFingerprint),
+            naturalObservation(.stone, target: naturalStoneTarget, observer: naturalOrigin, fingerprint: stoneFingerprint),
+        ]
+    )])
+    check("natural selection prefers missing carried resource",
+          balancedSelection.snapshot().agents[0].activeResourceTarget?.resource == .stone)
+
+    let sharedNaturalTarget = AgentPosition(x: 2, y: 64, z: 0)
+    let naturalAgentA = economyAgentState(
+        id: "agent_a",
+        position: naturalOrigin,
+        home: naturalOrigin
+    )
+    let naturalAgentBPosition = AgentPosition(x: 0, y: 64, z: 1)
+    let naturalAgentB = economyAgentState(
+        id: "agent_b",
+        position: naturalAgentBPosition,
+        home: naturalAgentBPosition
+    )
+    var concurrentNatural = economySession(states: [naturalAgentB, naturalAgentA])
+    concurrentNatural.setNaturalResourcesEnabled(true)
+    _ = try! concurrentNatural.advanceTick(perceptions: [
+        AgentPerceptionInput(agentId: "agent_a", resourceObservations: [naturalObservation(
+            .stone, target: sharedNaturalTarget, observer: naturalOrigin, fingerprint: stoneFingerprint
+        )]),
+        AgentPerceptionInput(agentId: "agent_b", resourceObservations: [naturalObservation(
+            .stone, target: sharedNaturalTarget, observer: naturalAgentBPosition, fingerprint: stoneFingerprint
+        )]),
+    ])
+    check("natural concurrent reservation tie uses agentId",
+          concurrentNatural.snapshot().resourceReservations.count == 1
+            && concurrentNatural.snapshot().resourceReservations[0].agentId == "agent_a")
+    check("natural losing agent cannot prevalidate harvest", {
+        do {
+            try concurrentNatural.prevalidateInteraction(AgentInteractionIntent(
+                interactionId: "natural-loser",
+                agentId: "agent_b",
+                tick: concurrentNatural.tick,
+                target: sharedNaturalTarget,
+                resource: .stone,
+                source: .naturalWorld,
+                expectedBlockFingerprint: stoneFingerprint
+            ))
+            return false
+        } catch AgentSessionError.invalidNaturalResourceIdentity { return true }
+        catch { return false }
+    }())
+    try! concurrentNatural.applyInteractionOutcome(AgentInteractionOutcome(
+        interactionId: "natural-owner",
+        agentId: "agent_a",
+        tick: concurrentNatural.tick,
+        target: sharedNaturalTarget,
+        resource: .stone,
+        status: .succeeded,
+        inventoryDelta: AgentInventoryDelta(resource: .stone, quantity: 1),
+        reason: "natural owner harvested",
+        source: .naturalWorld,
+        expectedBlockFingerprint: stoneFingerprint
+    ))
+    check("natural concurrent harvest has one credit",
+          concurrentNatural.snapshot().conservation.harvestedTotal == 1
+            && concurrentNatural.snapshot().agents.reduce(0) {
+                $0 + $1.resourceInventory.count(of: .stone)
+            } == 1)
+    check("natural disappearance clears second target next tick", {
+        _ = try! concurrentNatural.advanceTick(perceptions: [
+            AgentPerceptionInput(agentId: "agent_a"),
+            AgentPerceptionInput(agentId: "agent_b"),
+        ])
+        return concurrentNatural.snapshot().agents.allSatisfy { $0.activeResourceTarget == nil }
+    }())
+
+    var naturalDelivery = economySession(states: [economyAgentState(
+        position: naturalOrigin,
+        home: naturalOrigin
+    )])
+    naturalDelivery.setNaturalResourcesEnabled(true)
+    for (id, resource, target, fingerprint) in [
+        ("natural-delivery-wood", AgentResourceKind.wood, naturalWoodTarget, oakFingerprint),
+        ("natural-delivery-stone", AgentResourceKind.stone, naturalStoneTarget, stoneFingerprint),
+    ] {
+        try! naturalDelivery.applyInteractionOutcome(AgentInteractionOutcome(
+            interactionId: id,
+            agentId: "agent_economy",
+            tick: naturalDelivery.tick,
+            target: target,
+            resource: resource,
+            status: .succeeded,
+            inventoryDelta: AgentInventoryDelta(resource: resource, quantity: 1),
+            reason: "natural delivery fixture",
+            source: .naturalWorld,
+            expectedBlockFingerprint: fingerprint
+        ))
+    }
+    check("natural wood and stone reach quota",
+          naturalDelivery.snapshot().agents[0].resourceInventory.totalCount == 2)
+    let naturalDeliveryOutcome = try! naturalDelivery.deliverResources(AgentDeliveryIntent(
+        deliveryId: "natural-delivery",
+        agentId: "agent_economy",
+        tick: naturalDelivery.tick,
+        position: naturalOrigin
+    ))
+    check("natural delivery succeeds atomically", naturalDeliveryOutcome.status == .succeeded)
+    check("natural delivery stock wood one stone one",
+          naturalDelivery.snapshot().campStock.count(of: .wood) == 1
+            && naturalDelivery.snapshot().campStock.count(of: .stone) == 1)
+    check("natural delivery conservation exact",
+          naturalDelivery.snapshot().conservation.harvestedTotal == 2
+            && naturalDelivery.snapshot().conservation.carriedTotal == 0
+            && naturalDelivery.snapshot().conservation.campStockTotal == 2
+            && naturalDelivery.snapshot().conservation.balanced)
+
+    var rollbackNatural = economySession(states: [economyAgentState(
+        position: naturalOrigin,
+        home: naturalOrigin
+    )])
+    rollbackNatural.setNaturalResourcesEnabled(true)
+    _ = try! rollbackNatural.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: "agent_economy",
+        resourceObservations: [naturalObservation(
+            .wood, target: naturalWoodTarget, observer: naturalOrigin, fingerprint: oakFingerprint
+        )]
+    )])
+    let rollbackBefore = rollbackNatural.snapshot()
+    var simulatedWorldBlock = oakFingerprint
+    var publicationCandidate = rollbackNatural
+    simulatedWorldBlock = 0
+    try! publicationCandidate.applyInteractionOutcome(AgentInteractionOutcome(
+        interactionId: "natural-forced-publication-failure",
+        agentId: "agent_economy",
+        tick: publicationCandidate.tick,
+        target: naturalWoodTarget,
+        resource: .wood,
+        status: .succeeded,
+        inventoryDelta: AgentInventoryDelta(resource: .wood, quantity: 1),
+        reason: "candidate publication",
+        source: .naturalWorld,
+        expectedBlockFingerprint: oakFingerprint
+    ))
+    simulatedWorldBlock = oakFingerprint
+    check("natural forced publication failure restores exact fingerprint",
+          simulatedWorldBlock == oakFingerprint)
+    check("natural forced publication failure publishes no inventory",
+          rollbackNatural.snapshot().agents[0].resourceInventory
+            == rollbackBefore.agents[0].resourceInventory)
+    check("natural forced publication failure publishes no harvested total",
+          rollbackNatural.snapshot().conservation == rollbackBefore.conservation)
+    check("natural forced publication failure writes no memory",
+          rollbackNatural.snapshot().agents[0].memoryCount == rollbackBefore.agents[0].memoryCount
+            && rollbackNatural.snapshot().agents[0].recentMemory.last?.type
+                == rollbackBefore.agents[0].recentMemory.last?.type)
+    check("natural candidate would have changed only before rejection",
+          publicationCandidate.snapshot().agents[0].resourceInventory.count(of: .wood) == 1)
+
+    var hungryNatural = survivalSession(states: [survivalAgentState(hunger: 0.5)], economy: true)
+    hungryNatural.setNaturalResourcesEnabled(true)
+    hungryNatural.setSurvivalEnabled(true)
+    let hungryNaturalTick = try! hungryNatural.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: "agent_survival",
+        resourceObservations: [
+            naturalObservation(.wood, target: naturalWoodTarget, observer: naturalOrigin, fingerprint: oakFingerprint),
+            naturalObservation(.stone, target: naturalStoneTarget, observer: naturalOrigin, fingerprint: stoneFingerprint),
+        ]
+    )])
+    check("natural wood and stone never satisfy hunger",
+          hungryNatural.snapshot().agents[0].activeResourceTarget == nil
+            && hungryNaturalTick.agents[0].action.name == "wait")
+    check("natural integration leaves survival conservation exact",
+          hungryNatural.snapshot().conservation.balanced)
+
+
 }
 
 print("\n\(passed) passed, \(failed) failed")

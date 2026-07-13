@@ -40,6 +40,7 @@ public enum AgentSessionError: Error, Equatable {
     case duplicateResourceCredit(String)
     case inventoryFull(String)
     case invalidInteractionOutcome(String)
+    case invalidNaturalResourceIdentity(String)
     case deliveryTickMismatch(String)
     case duplicateDelivery(String)
     case deliveryAwayFromHome(String)
@@ -349,6 +350,7 @@ public struct AgentSimulationSession {
     private var creditedResourceKeys: Set<String>
     private var reservationsByTarget: [String: AgentResourceReservation]
     public private(set) var economyEnabled: Bool
+    public private(set) var naturalResourcesEnabled: Bool
     public private(set) var campStock: AgentCampStock
     private var harvestedResourceTotals: AgentCampStock
     private var processedDeliveryIds: Set<String>
@@ -379,6 +381,7 @@ public struct AgentSimulationSession {
         creditedResourceKeys = []
         reservationsByTarget = [:]
         economyEnabled = false
+        naturalResourcesEnabled = false
         campStock = AgentCampStock(capacity: configuration.campStockCapacity)
         harvestedResourceTotals = AgentCampStock(capacity: 4096)
         processedDeliveryIds = []
@@ -404,6 +407,7 @@ public struct AgentSimulationSession {
             agents: agents,
             resourceReservations: reservationsByTarget.values.sorted(by: reservationSort),
             economyEnabled: economyEnabled,
+            naturalResourcesEnabled: naturalResourcesEnabled,
             deliveryQuota: configuration.deliveryQuota,
             campStock: campStock,
             conservation: conservationSnapshot(),
@@ -435,6 +439,21 @@ public struct AgentSimulationSession {
                     urgency: 0
                 )
             }
+            statesById[id] = state
+        }
+    }
+
+    public mutating func setNaturalResourcesEnabled(_ enabled: Bool) {
+        naturalResourcesEnabled = enabled
+        guard !enabled else { return }
+        reservationsByTarget = reservationsByTarget.filter { $0.value.source != .naturalWorld }
+        for id in sortedIds {
+            guard var state = statesById[id],
+                  state.activeResourceTarget?.source == .naturalWorld else { continue }
+            state.activeResourceTarget = nil
+            state.navigationProgress = AgentNavigationProgress(
+                lastInvalidation: .targetGone
+            )
             statesById[id] = state
         }
     }
@@ -747,6 +766,25 @@ public struct AgentSimulationSession {
         guard state.resourceInventory.canAdd(intent.resource, quantity: intent.quantity) else {
             throw AgentSessionError.inventoryFull(intent.agentId)
         }
+        switch intent.source {
+        case .sandboxFixture:
+            guard intent.expectedBlockFingerprint == nil else {
+                throw AgentSessionError.invalidNaturalResourceIdentity(intent.interactionId)
+            }
+        case .naturalWorld:
+            guard naturalResourcesEnabled,
+                  let fingerprint = intent.expectedBlockFingerprint,
+                  intent.resource == .wood || intent.resource == .stone,
+                  state.activeResourceTarget?.identity == AgentResourceIdentity(
+                      source: .naturalWorld,
+                      position: intent.target,
+                      resource: intent.resource,
+                      expectedBlockFingerprint: fingerprint
+                  ),
+                  reservation(for: state)?.agentId == intent.agentId else {
+                throw AgentSessionError.invalidNaturalResourceIdentity(intent.interactionId)
+            }
+        }
     }
 
     public mutating func applyInteractionOutcome(_ outcome: AgentInteractionOutcome) throws {
@@ -763,7 +801,24 @@ public struct AgentSimulationSession {
         let memory: AgentMemoryEntry
         switch outcome.status {
         case .succeeded:
-            let creditKey = reservationKey(target: outcome.target, resource: outcome.resource)
+            switch outcome.source {
+            case .sandboxFixture:
+                guard outcome.expectedBlockFingerprint == nil else {
+                    throw AgentSessionError.invalidInteractionOutcome(outcome.interactionId)
+                }
+            case .naturalWorld:
+                guard naturalResourcesEnabled,
+                      outcome.expectedBlockFingerprint != nil,
+                      outcome.resource == .wood || outcome.resource == .stone else {
+                    throw AgentSessionError.invalidInteractionOutcome(outcome.interactionId)
+                }
+            }
+            let creditKey = reservationKey(
+                target: outcome.target,
+                resource: outcome.resource,
+                source: outcome.source,
+                expectedBlockFingerprint: outcome.expectedBlockFingerprint
+            )
             guard !creditedResourceKeys.contains(creditKey) else {
                 throw AgentSessionError.duplicateResourceCredit(creditKey)
             }
@@ -785,7 +840,9 @@ public struct AgentSimulationSession {
             )
             reservationsByTarget.removeValue(forKey: reservationKey(
                 target: outcome.target,
-                resource: outcome.resource
+                resource: outcome.resource,
+                source: outcome.source,
+                expectedBlockFingerprint: outcome.expectedBlockFingerprint
             ))
             state.activeResourceTarget = nil
             state.navigationProgress = AgentNavigationProgress(
@@ -888,8 +945,7 @@ public struct AgentSimulationSession {
                 )
             }
             if let previousTarget,
-               state.activeResourceTarget?.target != previousTarget.target
-                    || state.activeResourceTarget?.resource != previousTarget.resource {
+               state.activeResourceTarget?.identity != previousTarget.identity {
                 state.navigationProgress = AgentNavigationProgress(
                     replanCount: 0,
                     lastInvalidation: state.activeResourceTarget == nil ? .targetGone : .targetChanged
@@ -1282,7 +1338,12 @@ public struct AgentSimulationSession {
         var candidateIdsByTarget: [String: [String]] = [:]
         for id in sortedIds {
             guard let target = statesById[id]?.activeResourceTarget else { continue }
-            candidateIdsByTarget[reservationKey(target: target.target, resource: target.resource), default: []]
+            candidateIdsByTarget[reservationKey(
+                target: target.target,
+                resource: target.resource,
+                source: target.source,
+                expectedBlockFingerprint: target.expectedBlockFingerprint
+            ), default: []]
                 .append(id)
         }
 
@@ -1297,6 +1358,8 @@ public struct AgentSimulationSession {
                 agentId: owner,
                 target: target.target,
                 resource: target.resource,
+                source: target.source,
+                expectedBlockFingerprint: target.expectedBlockFingerprint,
                 acquiredAtTick: prior?.agentId == owner ? prior!.acquiredAtTick : reservationTick,
                 expiresAtTick: reservationTick + configuration.reservationLifetimeTicks
             )
@@ -1552,28 +1615,58 @@ public struct AgentSimulationSession {
 
     private func reservation(for state: AgentSessionAgentState) -> AgentResourceReservation? {
         guard let target = state.activeResourceTarget else { return nil }
-        return reservationsByTarget[reservationKey(target: target.target, resource: target.resource)]
+        return reservationsByTarget[reservationKey(
+            target: target.target,
+            resource: target.resource,
+            source: target.source,
+            expectedBlockFingerprint: target.expectedBlockFingerprint
+        )]
             .flatMap { $0.agentId == state.id ? $0 : nil }
     }
 
     private mutating func releaseReservation(for state: AgentSessionAgentState) {
         guard let target = state.activeResourceTarget else { return }
-        let key = reservationKey(target: target.target, resource: target.resource)
+        let key = reservationKey(
+            target: target.target,
+            resource: target.resource,
+            source: target.source,
+            expectedBlockFingerprint: target.expectedBlockFingerprint
+        )
         if reservationsByTarget[key]?.agentId == state.id {
             reservationsByTarget.removeValue(forKey: key)
         }
     }
 
-    private func reservationKey(target: AgentPosition, resource: AgentResourceKind) -> String {
-        "\(resource.rawValue):\(target.x),\(target.y),\(target.z)"
+    private func reservationKey(
+        target: AgentPosition,
+        resource: AgentResourceKind,
+        source: AgentResourceObservationSource = .sandboxFixture,
+        expectedBlockFingerprint: Int? = nil
+    ) -> String {
+        AgentResourceIdentity(
+            source: source,
+            position: target,
+            resource: resource,
+            expectedBlockFingerprint: expectedBlockFingerprint
+        ).stableKey
     }
 
     private func reservationSort(
         _ lhs: AgentResourceReservation,
         _ rhs: AgentResourceReservation
     ) -> Bool {
-        let lhsKey = reservationKey(target: lhs.target, resource: lhs.resource)
-        let rhsKey = reservationKey(target: rhs.target, resource: rhs.resource)
+        let lhsKey = reservationKey(
+            target: lhs.target,
+            resource: lhs.resource,
+            source: lhs.source,
+            expectedBlockFingerprint: lhs.expectedBlockFingerprint
+        )
+        let rhsKey = reservationKey(
+            target: rhs.target,
+            resource: rhs.resource,
+            source: rhs.source,
+            expectedBlockFingerprint: rhs.expectedBlockFingerprint
+        )
         if lhsKey != rhsKey { return lhsKey < rhsKey }
         return lhs.agentId < rhs.agentId
     }

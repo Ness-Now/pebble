@@ -60,4 +60,31 @@ struct PebbleAgentNavigationAdapter {
             cells: cells
         )
     }
+
+    func hasCardinalApproach(
+        world: World,
+        target: AgentPosition,
+        occupiedAgentPositions: [AgentPosition]
+    ) -> (available: Bool, blockReads: Int) {
+        var blockReads = 0
+        for direction in AgentCardinalDirection.allCases {
+            let position = AgentPosition(
+                x: target.x + direction.dx,
+                y: target.y,
+                z: target.z + direction.dz
+            )
+            guard !occupiedAgentPositions.contains(position),
+                  world.isChunkReady(position.x >> 4, position.z >> 4) else { continue }
+            blockReads += 3
+            let below = world.getBlock(position.x, position.y - 1, position.z)
+            let feet = world.getBlock(position.x, position.y, position.z)
+            let head = world.getBlock(position.x, position.y + 1, position.z)
+            if blockDefs[below >> 4].solid,
+               isAir(UInt16(truncatingIfNeeded: feet)),
+               isAir(UInt16(truncatingIfNeeded: head)) {
+                return (true, blockReads)
+            }
+        }
+        return (false, blockReads)
+    }
 }

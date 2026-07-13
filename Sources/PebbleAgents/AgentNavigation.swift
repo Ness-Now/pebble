@@ -366,6 +366,8 @@ public struct AgentResourceReservation: Codable, Equatable {
     public let agentId: String
     public let target: AgentPosition
     public let resource: AgentResourceKind
+    public let source: AgentResourceObservationSource
+    public let expectedBlockFingerprint: Int?
     public let acquiredAtTick: Int
     public let expiresAtTick: Int
 
@@ -373,12 +375,16 @@ public struct AgentResourceReservation: Codable, Equatable {
         agentId: String,
         target: AgentPosition,
         resource: AgentResourceKind,
+        source: AgentResourceObservationSource = .sandboxFixture,
+        expectedBlockFingerprint: Int? = nil,
         acquiredAtTick: Int,
         expiresAtTick: Int
     ) {
         self.agentId = agentId
         self.target = target
         self.resource = resource
+        self.source = source
+        self.expectedBlockFingerprint = expectedBlockFingerprint
         self.acquiredAtTick = acquiredAtTick
         self.expiresAtTick = expiresAtTick
     }

@@ -16,8 +16,40 @@ public enum AgentResourceKind: String, Codable, Equatable, CaseIterable {
     }
 }
 
-public enum AgentResourceObservationSource: String, Codable, Equatable {
+public enum AgentResourceObservationSource: String, Codable, Equatable, CaseIterable {
     case sandboxFixture
+    case naturalWorld
+
+    fileprivate var selectionPriority: Int {
+        switch self {
+        case .sandboxFixture: return 0
+        case .naturalWorld: return 1
+        }
+    }
+}
+
+public struct AgentResourceIdentity: Codable, Equatable, Hashable {
+    public let source: AgentResourceObservationSource
+    public let position: AgentPosition
+    public let resource: AgentResourceKind
+    public let expectedBlockFingerprint: Int?
+
+    public init(
+        source: AgentResourceObservationSource,
+        position: AgentPosition,
+        resource: AgentResourceKind,
+        expectedBlockFingerprint: Int? = nil
+    ) {
+        self.source = source
+        self.position = position
+        self.resource = resource
+        self.expectedBlockFingerprint = expectedBlockFingerprint
+    }
+
+    public var stableKey: String {
+        let fingerprint = expectedBlockFingerprint.map(String.init) ?? "fixture"
+        return "\(source.rawValue):\(resource.rawValue):\(position.x),\(position.y),\(position.z):\(fingerprint)"
+    }
 }
 
 public struct AgentResourceObservation: Codable, Equatable {
@@ -27,6 +59,16 @@ public struct AgentResourceObservation: Codable, Equatable {
     public let distanceManhattan: Int
     public let quantityAvailable: Int
     public let source: AgentResourceObservationSource
+    public let expectedBlockFingerprint: Int?
+
+    public var identity: AgentResourceIdentity {
+        AgentResourceIdentity(
+            source: source,
+            position: target,
+            resource: resource,
+            expectedBlockFingerprint: expectedBlockFingerprint
+        )
+    }
 
     public init(
         resource: AgentResourceKind,
@@ -34,7 +76,8 @@ public struct AgentResourceObservation: Codable, Equatable {
         direction: AgentCardinalDirection,
         distanceManhattan: Int = 1,
         quantityAvailable: Int,
-        source: AgentResourceObservationSource
+        source: AgentResourceObservationSource,
+        expectedBlockFingerprint: Int? = nil
     ) {
         self.resource = resource
         self.target = target
@@ -42,6 +85,7 @@ public struct AgentResourceObservation: Codable, Equatable {
         self.distanceManhattan = distanceManhattan
         self.quantityAvailable = quantityAvailable
         self.source = source
+        self.expectedBlockFingerprint = expectedBlockFingerprint
     }
 }
 
@@ -55,6 +99,8 @@ public enum AgentResourceObservationError: Error, Equatable {
     case distanceMismatch(AgentPosition)
     case directionMismatch(AgentPosition)
     case duplicateTarget(AgentPosition)
+    case missingNaturalFingerprint(AgentPosition)
+    case unexpectedFixtureFingerprint(AgentPosition)
 }
 
 public enum AgentResourcePerception {
@@ -80,10 +126,12 @@ public enum AgentResourcePerception {
             guard observation.target != observerPosition else {
                 throw AgentResourceObservationError.targetMatchesObserver(observation.target)
             }
-            guard observation.target.y == observerPosition.y else {
+            if observation.source == .sandboxFixture,
+               observation.target.y != observerPosition.y {
                 throw AgentResourceObservationError.verticalDifference(observation.target)
             }
             let distance = abs(observation.target.x - observerPosition.x)
+                + abs(observation.target.y - observerPosition.y)
                 + abs(observation.target.z - observerPosition.z)
             guard distance <= maximumDistance else {
                 throw AgentResourceObservationError.targetOutsideRadius(observation.target)
@@ -95,6 +143,17 @@ public enum AgentResourcePerception {
                     == observation.direction else {
                 throw AgentResourceObservationError.directionMismatch(observation.target)
             }
+            switch observation.source {
+            case .sandboxFixture:
+                guard observation.expectedBlockFingerprint == nil else {
+                    throw AgentResourceObservationError.unexpectedFixtureFingerprint(observation.target)
+                }
+            case .naturalWorld:
+                guard observation.expectedBlockFingerprint != nil,
+                      observation.resource == .wood || observation.resource == .stone else {
+                    throw AgentResourceObservationError.missingNaturalFingerprint(observation.target)
+                }
+            }
             let key = positionKey(observation.target)
             guard targets.insert(key).inserted else {
                 throw AgentResourceObservationError.duplicateTarget(observation.target)
@@ -103,12 +162,15 @@ public enum AgentResourcePerception {
         return observations.sorted(by: sortsBefore)
     }
 
-    fileprivate static func sortsBefore(
+    public static func sortsBefore(
         _ lhs: AgentResourceObservation,
         _ rhs: AgentResourceObservation
     ) -> Bool {
         if lhs.resource.selectionPriority != rhs.resource.selectionPriority {
             return lhs.resource.selectionPriority < rhs.resource.selectionPriority
+        }
+        if lhs.source.selectionPriority != rhs.source.selectionPriority {
+            return lhs.source.selectionPriority < rhs.source.selectionPriority
         }
         if lhs.distanceManhattan != rhs.distanceManhattan {
             return lhs.distanceManhattan < rhs.distanceManhattan
@@ -119,17 +181,15 @@ public enum AgentResourcePerception {
         if lhs.target.x != rhs.target.x { return lhs.target.x < rhs.target.x }
         if lhs.target.y != rhs.target.y { return lhs.target.y < rhs.target.y }
         if lhs.target.z != rhs.target.z { return lhs.target.z < rhs.target.z }
-        if lhs.resource.rawValue != rhs.resource.rawValue {
-            return lhs.resource.rawValue < rhs.resource.rawValue
-        }
-        return lhs.source.rawValue < rhs.source.rawValue
+        let lhsFingerprint = lhs.expectedBlockFingerprint ?? -1
+        let rhsFingerprint = rhs.expectedBlockFingerprint ?? -1
+        return lhsFingerprint < rhsFingerprint
     }
 
     public static func direction(
         observerPosition: AgentPosition,
         target: AgentPosition
     ) -> AgentCardinalDirection? {
-        guard observerPosition.y == target.y else { return nil }
         let dx = target.x - observerPosition.x
         let dz = target.z - observerPosition.z
         guard dx != 0 || dz != 0 else { return nil }
@@ -155,6 +215,16 @@ public struct AgentResourceTarget: Codable, Equatable {
     public let distanceManhattan: Int
     public let selectedAtTick: Int
     public let lastSeenAtTick: Int
+    public let expectedBlockFingerprint: Int?
+
+    public var identity: AgentResourceIdentity {
+        AgentResourceIdentity(
+            source: source,
+            position: target,
+            resource: resource,
+            expectedBlockFingerprint: expectedBlockFingerprint
+        )
+    }
 
     public init(
         resource: AgentResourceKind,
@@ -162,7 +232,8 @@ public struct AgentResourceTarget: Codable, Equatable {
         source: AgentResourceObservationSource,
         distanceManhattan: Int,
         selectedAtTick: Int,
-        lastSeenAtTick: Int
+        lastSeenAtTick: Int,
+        expectedBlockFingerprint: Int? = nil
     ) {
         self.resource = resource
         self.target = target
@@ -170,6 +241,7 @@ public struct AgentResourceTarget: Codable, Equatable {
         self.distanceManhattan = distanceManhattan
         self.selectedAtTick = selectedAtTick
         self.lastSeenAtTick = lastSeenAtTick
+        self.expectedBlockFingerprint = expectedBlockFingerprint
     }
 }
 
@@ -186,6 +258,7 @@ public enum AgentResourceTargeting {
                $0.target == current.target
                    && $0.resource == current.resource
                    && $0.source == current.source
+                   && $0.expectedBlockFingerprint == current.expectedBlockFingerprint
            }) {
             return AgentResourceTarget(
                 resource: retained.resource,
@@ -193,10 +266,16 @@ public enum AgentResourceTargeting {
                 source: retained.source,
                 distanceManhattan: retained.distanceManhattan,
                 selectedAtTick: current.selectedAtTick,
-                lastSeenAtTick: tick
+                lastSeenAtTick: tick,
+                expectedBlockFingerprint: retained.expectedBlockFingerprint
             )
         }
-        guard let selected = observations.sorted(by: AgentResourcePerception.sortsBefore)
+        guard let selected = observations.sorted(by: { lhs, rhs in
+            let lhsCarried = inventory.count(of: lhs.resource)
+            let rhsCarried = inventory.count(of: rhs.resource)
+            if lhsCarried != rhsCarried { return lhsCarried < rhsCarried }
+            return AgentResourcePerception.sortsBefore(lhs, rhs)
+        })
             .first(where: { inventory.canAdd($0.resource) }) else {
             return nil
         }
@@ -206,7 +285,8 @@ public enum AgentResourceTargeting {
             source: selected.source,
             distanceManhattan: selected.distanceManhattan,
             selectedAtTick: tick,
-            lastSeenAtTick: tick
+            lastSeenAtTick: tick,
+            expectedBlockFingerprint: selected.expectedBlockFingerprint
         )
     }
 }
@@ -316,6 +396,8 @@ public struct AgentInteractionIntent: Equatable {
     public let target: AgentPosition
     public let resource: AgentResourceKind
     public let quantity: Int
+    public let source: AgentResourceObservationSource
+    public let expectedBlockFingerprint: Int?
 
     public init(
         interactionId: String,
@@ -323,7 +405,9 @@ public struct AgentInteractionIntent: Equatable {
         tick: Int,
         target: AgentPosition,
         resource: AgentResourceKind,
-        quantity: Int = 1
+        quantity: Int = 1,
+        source: AgentResourceObservationSource = .sandboxFixture,
+        expectedBlockFingerprint: Int? = nil
     ) {
         self.interactionId = interactionId
         self.agentId = agentId
@@ -331,6 +415,8 @@ public struct AgentInteractionIntent: Equatable {
         self.target = target
         self.resource = resource
         self.quantity = quantity
+        self.source = source
+        self.expectedBlockFingerprint = expectedBlockFingerprint
     }
 }
 
@@ -359,6 +445,8 @@ public struct AgentInteractionOutcome: Encodable, Equatable {
     public let status: AgentInteractionStatus
     public let inventoryDelta: AgentInventoryDelta
     public let reason: String
+    public let source: AgentResourceObservationSource
+    public let expectedBlockFingerprint: Int?
 
     public init(
         interactionId: String,
@@ -368,7 +456,9 @@ public struct AgentInteractionOutcome: Encodable, Equatable {
         resource: AgentResourceKind,
         status: AgentInteractionStatus,
         inventoryDelta: AgentInventoryDelta,
-        reason: String
+        reason: String,
+        source: AgentResourceObservationSource = .sandboxFixture,
+        expectedBlockFingerprint: Int? = nil
     ) {
         self.interactionId = interactionId
         self.agentId = agentId
@@ -378,6 +468,8 @@ public struct AgentInteractionOutcome: Encodable, Equatable {
         self.status = status
         self.inventoryDelta = inventoryDelta
         self.reason = reason
+        self.source = source
+        self.expectedBlockFingerprint = expectedBlockFingerprint
     }
 }
 
@@ -409,6 +501,26 @@ public struct AgentSandboxFixtureMutationBoundary: Codable, Equatable {
 
     public func permits(_ position: AgentPosition) -> Bool {
         position == target
+    }
+}
+
+public struct AgentNaturalResourceMutationBoundary: Codable, Equatable {
+    public let identity: AgentResourceIdentity
+
+    public var permittedPositions: [AgentPosition] { [identity.position] }
+
+    public var isValid: Bool {
+        identity.source == .naturalWorld
+            && identity.expectedBlockFingerprint != nil
+            && (identity.resource == .wood || identity.resource == .stone)
+    }
+
+    public init(identity: AgentResourceIdentity) {
+        self.identity = identity
+    }
+
+    public func permits(_ position: AgentPosition) -> Bool {
+        isValid && position == identity.position
     }
 }
 

@@ -246,6 +246,7 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
     public let agents: [AgentSnapshot]
     public let resourceReservations: [AgentResourceReservation]
     public let economyEnabled: Bool
+    public let naturalResourcesEnabled: Bool
     public let deliveryQuota: Int
     public let campStock: AgentCampStock
     public let conservation: AgentResourceConservationSnapshot
@@ -258,6 +259,7 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
         agents: [AgentSnapshot],
         resourceReservations: [AgentResourceReservation],
         economyEnabled: Bool,
+        naturalResourcesEnabled: Bool = false,
         deliveryQuota: Int,
         campStock: AgentCampStock,
         conservation: AgentResourceConservationSnapshot,
@@ -270,6 +272,7 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
         self.agents = agents
         self.resourceReservations = resourceReservations
         self.economyEnabled = economyEnabled
+        self.naturalResourcesEnabled = naturalResourcesEnabled
         self.deliveryQuota = deliveryQuota
         self.campStock = campStock
         self.conservation = conservation
@@ -279,7 +282,7 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case seed, tick, agentCount, agents, resourceReservations
-        case economyEnabled, deliveryQuota, campStock, conservation
+        case economyEnabled, naturalResourcesEnabled, deliveryQuota, campStock, conservation
         case survivalEnabled, survivalConfiguration
     }
 
@@ -297,6 +300,9 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
             try container.encode(deliveryQuota, forKey: .deliveryQuota)
             try container.encode(campStock, forKey: .campStock)
             try container.encode(conservation, forKey: .conservation)
+        }
+        if naturalResourcesEnabled {
+            try container.encode(naturalResourcesEnabled, forKey: .naturalResourcesEnabled)
         }
         if survivalEnabled || conservation.consumedTotal > 0 {
             try container.encode(survivalEnabled, forKey: .survivalEnabled)
