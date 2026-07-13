@@ -54,6 +54,13 @@ public enum AgentCognitiveTransitions {
                 startedAtTick: input.tick,
                 urgency: 90
             )
+        } else if input.hasCommittedResourceTask && input.hasInventoryCapacity {
+            nextGoal = AgentGoal(
+                kind: .collectResource,
+                reason: "reserved sandbox resource task active",
+                startedAtTick: input.tick,
+                urgency: 75
+            )
         } else if input.needs.fatigue >= 0.02 {
             nextGoal = AgentGoal(
                 kind: .rest,

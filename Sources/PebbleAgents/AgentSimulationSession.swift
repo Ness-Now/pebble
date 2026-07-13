@@ -8,11 +8,15 @@ public enum AgentSessionError: Error, Equatable {
     case invalidResourceObservationRadius(Int)
     case invalidRecentMemorySnapshotLimit(Int)
     case invalidMemoryBound(Int)
+    case invalidNavigationMaxReplans(Int)
+    case invalidNavigationReplanCooldown(Int)
+    case invalidReservationLifetime(Int)
     case invalidInitialTick(Int)
     case duplicateAgentId(String)
     case duplicatePerceptionInput(String)
     case unknownAgentId(String)
     case worldObservationPositionMismatch(String)
+    case invalidNavigationObservation(String)
     case movementOutcomeCountMismatch(expected: Int, actual: Int)
     case duplicateMovementOutcome(String)
     case missingMovementOutcome(String)
@@ -42,6 +46,9 @@ public struct AgentSessionConfiguration {
     public let recentMemorySnapshotLimit: Int
     public let memoryPolicy: AgentMemoryPolicy
     public let feedbackLoopConfiguration: AgentFeedbackLoopConfiguration
+    public let navigationMaxReplans: Int
+    public let navigationReplanCooldownTicks: Int
+    public let reservationLifetimeTicks: Int
 
     public init(
         seed: UInt32,
@@ -49,7 +56,10 @@ public struct AgentSessionConfiguration {
         resourceObservationRadius: Int = 1,
         recentMemorySnapshotLimit: Int = 10,
         memoryPolicy: AgentMemoryPolicy,
-        feedbackLoopConfiguration: AgentFeedbackLoopConfiguration = .live
+        feedbackLoopConfiguration: AgentFeedbackLoopConfiguration = .live,
+        navigationMaxReplans: Int = 3,
+        navigationReplanCooldownTicks: Int = 1,
+        reservationLifetimeTicks: Int = 4
     ) throws {
         guard nearbyRadius >= 0 else {
             throw AgentSessionError.invalidNearbyRadius(nearbyRadius)
@@ -63,12 +73,24 @@ public struct AgentSessionConfiguration {
         if case let .bounded(maxEntries) = memoryPolicy, maxEntries <= 0 {
             throw AgentSessionError.invalidMemoryBound(maxEntries)
         }
+        guard navigationMaxReplans >= 0 else {
+            throw AgentSessionError.invalidNavigationMaxReplans(navigationMaxReplans)
+        }
+        guard navigationReplanCooldownTicks >= 1 else {
+            throw AgentSessionError.invalidNavigationReplanCooldown(navigationReplanCooldownTicks)
+        }
+        guard reservationLifetimeTicks >= 1 else {
+            throw AgentSessionError.invalidReservationLifetime(reservationLifetimeTicks)
+        }
         self.seed = seed
         self.nearbyRadius = nearbyRadius
         self.resourceObservationRadius = resourceObservationRadius
         self.recentMemorySnapshotLimit = recentMemorySnapshotLimit
         self.memoryPolicy = memoryPolicy
         self.feedbackLoopConfiguration = feedbackLoopConfiguration
+        self.navigationMaxReplans = navigationMaxReplans
+        self.navigationReplanCooldownTicks = navigationReplanCooldownTicks
+        self.reservationLifetimeTicks = reservationLifetimeTicks
     }
 }
 
@@ -109,6 +131,7 @@ public struct AgentSessionAgentState {
     public internal(set) var activeResourceTarget: AgentResourceTarget?
     public internal(set) var resourceInventory: AgentResourceInventory
     public internal(set) var lastInteractionOutcome: AgentInteractionOutcome?
+    public internal(set) var navigationProgress: AgentNavigationProgress
 
     public init(
         id: String,
@@ -146,7 +169,8 @@ public struct AgentSessionAgentState {
         lastResourceObservations: [AgentResourceObservation] = [],
         activeResourceTarget: AgentResourceTarget? = nil,
         resourceInventory: AgentResourceInventory = AgentResourceInventory(),
-        lastInteractionOutcome: AgentInteractionOutcome? = nil
+        lastInteractionOutcome: AgentInteractionOutcome? = nil,
+        navigationProgress: AgentNavigationProgress = AgentNavigationProgress()
     ) {
         self.id = id
         self.state = state
@@ -184,6 +208,7 @@ public struct AgentSessionAgentState {
         self.activeResourceTarget = activeResourceTarget
         self.resourceInventory = resourceInventory
         self.lastInteractionOutcome = lastInteractionOutcome
+        self.navigationProgress = navigationProgress
     }
 }
 
@@ -193,19 +218,22 @@ public struct AgentPerceptionInput {
     public let externalMemoryEntries: [AgentMemoryEntry]
     public let worldObservation: AgentWorldObservation?
     public let resourceObservations: [AgentResourceObservation]
+    public let navigationObservation: AgentNavigationObservation?
 
     public init(
         agentId: String,
         observationCountIncrement: Int = 0,
         externalMemoryEntries: [AgentMemoryEntry] = [],
         worldObservation: AgentWorldObservation? = nil,
-        resourceObservations: [AgentResourceObservation] = []
+        resourceObservations: [AgentResourceObservation] = [],
+        navigationObservation: AgentNavigationObservation? = nil
     ) {
         self.agentId = agentId
         self.observationCountIncrement = observationCountIncrement
         self.externalMemoryEntries = externalMemoryEntries
         self.worldObservation = worldObservation
         self.resourceObservations = resourceObservations
+        self.navigationObservation = navigationObservation
     }
 }
 
@@ -280,6 +308,7 @@ public struct AgentSimulationSession {
     public private(set) var tick: Int
     private var statesById: [String: AgentSessionAgentState]
     private var processedInteractionIds: Set<String>
+    private var reservationsByTarget: [String: AgentResourceReservation]
 
     public init(
         configuration: AgentSessionConfiguration,
@@ -301,6 +330,7 @@ public struct AgentSimulationSession {
         tick = initialTick
         statesById = states
         processedInteractionIds = []
+        reservationsByTarget = [:]
     }
 
     public func snapshot() -> AgentSessionSnapshot {
@@ -308,11 +338,17 @@ public struct AgentSimulationSession {
             statesById[id].map {
                 AgentSnapshot(
                     state: $0,
-                    recentMemoryLimit: configuration.recentMemorySnapshotLimit
+                    recentMemoryLimit: configuration.recentMemorySnapshotLimit,
+                    resourceReservation: reservation(for: $0)
                 )
             }
         }
-        return AgentSessionSnapshot(seed: configuration.seed, tick: tick, agents: agents)
+        return AgentSessionSnapshot(
+            seed: configuration.seed,
+            tick: tick,
+            agents: agents,
+            resourceReservations: reservationsByTarget.values.sorted(by: reservationSort)
+        )
     }
 
     public func state(for agentId: String) throws -> AgentSessionAgentState {
@@ -364,6 +400,14 @@ public struct AgentSimulationSession {
                 type: "resource_harvested",
                 summary: "\(outcome.agentId) harvested 1 \(outcome.resource.rawValue)",
                 importance: 0.40
+            )
+            reservationsByTarget.removeValue(forKey: reservationKey(
+                target: outcome.target,
+                resource: outcome.resource
+            ))
+            state.activeResourceTarget = nil
+            state.navigationProgress = AgentNavigationProgress(
+                lastInvalidation: .harvested
             )
         case .blocked:
             guard outcome.inventoryDelta.quantity == 0 else {
@@ -417,11 +461,40 @@ public struct AgentSimulationSession {
                     maximumDistance: configuration.resourceObservationRadius
                 )
             }
+            if let navigation = perception.navigationObservation {
+                guard navigation.origin == statesById[perception.agentId]?.position,
+                      (1...AgentNavigationObservation.maximumRadius).contains(navigation.radius),
+                      navigation.cells.count <= AgentNavigationObservation.maximumCellCount else {
+                    throw AgentSessionError.invalidNavigationObservation(perception.agentId)
+                }
+            }
             perceptionsById[perception.agentId] = perception
         }
 
         let nextTick = tick + 1
         let ids = sortedIds
+        reservationsByTarget = reservationsByTarget.filter { !$0.value.isExpired(at: nextTick) }
+        for id in ids {
+            guard var state = statesById[id] else { continue }
+            let previousTarget = state.activeResourceTarget
+            state.lastResourceObservations = resourceObservationsById[id] ?? []
+            state.activeResourceTarget = AgentResourceTargeting.select(
+                current: previousTarget,
+                observations: state.lastResourceObservations,
+                inventory: state.resourceInventory,
+                tick: nextTick
+            )
+            if let previousTarget,
+               state.activeResourceTarget?.target != previousTarget.target
+                    || state.activeResourceTarget?.resource != previousTarget.resource {
+                state.navigationProgress = AgentNavigationProgress(
+                    replanCount: 0,
+                    lastInvalidation: state.activeResourceTarget == nil ? .targetGone : .targetChanged
+                )
+            }
+            statesById[id] = state
+        }
+        reconcileReservations(at: nextTick)
         let peers = ids.compactMap { id in
             statesById[id].map { AgentPeerSnapshot(id: id, position: $0.position) }
         }
@@ -431,13 +504,6 @@ public struct AgentSimulationSession {
             guard var state = statesById[id] else { continue }
             let perception = perceptionsById[id]
             var memoriesAdded = perception?.externalMemoryEntries ?? []
-            state.lastResourceObservations = resourceObservationsById[id] ?? []
-            state.activeResourceTarget = AgentResourceTargeting.select(
-                current: state.activeResourceTarget,
-                observations: state.lastResourceObservations,
-                inventory: state.resourceInventory,
-                tick: nextTick
-            )
 
             let tickTransition = AgentCognitiveTransitions.advanceTick(needs: state.needs)
             state.needs = tickTransition.needs
@@ -491,12 +557,20 @@ public struct AgentSimulationSession {
                 hasInventoryCapacity: state.activeResourceTarget.map {
                     state.resourceInventory.canAdd($0.resource)
                 } ?? false,
+                hasCommittedResourceTask: state.currentGoal.kind == .collectResource
+                    && reservation(for: state)?.agentId == id,
                 currentGoalKind: state.currentGoal.kind
             ))
             if let goalChange {
                 state.currentGoal = goalChange.goal
                 state.goalChangeCount += 1
             }
+
+            updateNavigation(
+                state: &state,
+                observation: perception?.navigationObservation,
+                tick: nextTick
+            )
 
             let baseAction = AgentActionDecider.decide(AgentActionDecisionInput(
                 agentId: id,
@@ -505,7 +579,9 @@ public struct AgentSimulationSession {
                 position: state.position,
                 homePosition: state.homePosition,
                 resourceObservations: state.lastResourceObservations,
-                activeResourceTarget: state.activeResourceTarget
+                activeResourceTarget: state.activeResourceTarget,
+                navigationProgress: state.navigationProgress,
+                resourceReservation: reservation(for: state)
             ))
             let retrievedMemories = AgentFeedbackLoop.retrieveMovementMemories(
                 memory: state.memory,
@@ -578,7 +654,8 @@ public struct AgentSimulationSession {
                 worldPerceptionEffect: worldPerceptionEffect,
                 snapshot: AgentSnapshot(
                     state: state,
-                    recentMemoryLimit: configuration.recentMemorySnapshotLimit
+                    recentMemoryLimit: configuration.recentMemorySnapshotLimit,
+                    resourceReservation: reservation(for: state)
                 )
             ))
         }
@@ -655,7 +732,7 @@ public struct AgentSimulationSession {
                     throw AgentSessionError.invalidVerticalMovement(id)
                 }
                 guard let action = state.lastAction,
-                      action.name == "move_abstract",
+                      action.name == "move_abstract" || action.name == "approach_resource",
                       outcome.requestedDX == (action.dx ?? 0),
                       outcome.requestedDY == (action.dy ?? 0),
                       outcome.requestedDZ == (action.dz ?? 0),
@@ -708,11 +785,42 @@ public struct AgentSimulationSession {
                     state.returnHomeMoveCount += 1
                     state.totalDistanceReducedTowardHome += outcome.distanceReducedTowardHome
                 }
+                if state.lastAction?.name == "approach_resource" {
+                    guard let route = state.navigationProgress.route,
+                          state.navigationProgress.status == .active,
+                          state.navigationProgress.nextStep == outcome.toPosition else {
+                        throw AgentSessionError.movementActionMismatch(id)
+                    }
+                    let nextIndex = state.navigationProgress.routeIndex + 1
+                    let arrived = nextIndex == route.positions.count - 1
+                    state.navigationProgress = AgentNavigationProgress(
+                        status: arrived ? .arrived : .active,
+                        route: route,
+                        routeIndex: nextIndex,
+                        replanCount: state.navigationProgress.replanCount,
+                        consecutiveBlockedMoves: 0,
+                        lastPlanTick: state.navigationProgress.lastPlanTick,
+                        lastInvalidation: state.navigationProgress.lastInvalidation,
+                        lastFailure: nil
+                    )
+                }
                 if let entry = AgentFeedbackLoop.movementMemoryEntry(outcome: outcome) {
                     appendMemory(entry, to: &state.memory)
                     state.feedbackMemoryWriteCount += 1
                 }
             case .blocked:
+                if state.lastAction?.name == "approach_resource" {
+                    state.navigationProgress = AgentNavigationProgress(
+                        status: state.navigationProgress.status,
+                        route: state.navigationProgress.route,
+                        routeIndex: state.navigationProgress.routeIndex,
+                        replanCount: state.navigationProgress.replanCount,
+                        consecutiveBlockedMoves: state.navigationProgress.consecutiveBlockedMoves + 1,
+                        lastPlanTick: state.navigationProgress.lastPlanTick,
+                        lastInvalidation: state.navigationProgress.lastInvalidation,
+                        lastFailure: .movementBlocked
+                    )
+                }
                 if let entry = AgentFeedbackLoop.movementMemoryEntry(outcome: outcome) {
                     if AgentFeedbackLoop.isDuplicateBlockedMemory(
                         candidate: entry,
@@ -732,6 +840,237 @@ public struct AgentSimulationSession {
             updated[id] = state
         }
         statesById = updated
+    }
+
+    private mutating func reconcileReservations(at reservationTick: Int) {
+        var candidateIdsByTarget: [String: [String]] = [:]
+        for id in sortedIds {
+            guard let target = statesById[id]?.activeResourceTarget else { continue }
+            candidateIdsByTarget[reservationKey(target: target.target, resource: target.resource), default: []]
+                .append(id)
+        }
+
+        var updated: [String: AgentResourceReservation] = [:]
+        for key in candidateIdsByTarget.keys.sorted() {
+            guard let ids = candidateIdsByTarget[key]?.sorted(),
+                  let firstId = ids.first,
+                  let target = statesById[firstId]?.activeResourceTarget else { continue }
+            let prior = reservationsByTarget[key]
+            let owner = prior.flatMap { ids.contains($0.agentId) ? $0.agentId : nil } ?? firstId
+            updated[key] = AgentResourceReservation(
+                agentId: owner,
+                target: target.target,
+                resource: target.resource,
+                acquiredAtTick: prior?.agentId == owner ? prior!.acquiredAtTick : reservationTick,
+                expiresAtTick: reservationTick + configuration.reservationLifetimeTicks
+            )
+            for id in ids where id != owner {
+                guard var state = statesById[id] else { continue }
+                state.navigationProgress = AgentNavigationProgress(
+                    status: .failed,
+                    replanCount: state.navigationProgress.replanCount,
+                    lastPlanTick: state.navigationProgress.lastPlanTick,
+                    lastInvalidation: .reservationConflict,
+                    lastFailure: .reservationConflict
+                )
+                statesById[id] = state
+            }
+        }
+        reservationsByTarget = updated
+    }
+
+    private mutating func updateNavigation(
+        state: inout AgentSessionAgentState,
+        observation: AgentNavigationObservation?,
+        tick navigationTick: Int
+    ) {
+        guard let target = state.activeResourceTarget else {
+            if state.navigationProgress.status != .idle || state.navigationProgress.route != nil {
+                state.navigationProgress = AgentNavigationProgress(
+                    lastInvalidation: state.navigationProgress.lastInvalidation ?? .targetMissing
+                )
+            }
+            return
+        }
+        guard state.currentGoal.kind == .collectResource else {
+            releaseReservation(for: state)
+            if state.navigationProgress.route != nil {
+                state.navigationProgress = AgentNavigationProgress(lastInvalidation: .reservationLost)
+            }
+            return
+        }
+        guard target.distanceManhattan > 1 else {
+            if let route = state.navigationProgress.route {
+                state.navigationProgress = AgentNavigationProgress(
+                    status: .arrived,
+                    route: route,
+                    routeIndex: min(state.navigationProgress.routeIndex, route.positions.count - 1),
+                    replanCount: state.navigationProgress.replanCount,
+                    consecutiveBlockedMoves: 0,
+                    lastPlanTick: state.navigationProgress.lastPlanTick,
+                    lastInvalidation: state.navigationProgress.lastInvalidation
+                )
+            }
+            return
+        }
+        guard let reservation = reservation(for: state), reservation.agentId == state.id else {
+            state.navigationProgress = AgentNavigationProgress(
+                status: .failed,
+                replanCount: state.navigationProgress.replanCount,
+                lastPlanTick: state.navigationProgress.lastPlanTick,
+                lastInvalidation: .reservationLost,
+                lastFailure: .reservationLost
+            )
+            return
+        }
+        guard let observation else {
+            if state.navigationProgress.route != nil {
+                state.navigationProgress = AgentNavigationProgress(
+                    replanCount: state.navigationProgress.replanCount,
+                    lastPlanTick: state.navigationProgress.lastPlanTick,
+                    lastInvalidation: .perceptionMissing,
+                    lastFailure: .perceptionMissing
+                )
+            }
+            return
+        }
+        guard observation.target == target.target else {
+            state.navigationProgress = AgentNavigationProgress(
+                status: .failed,
+                replanCount: state.navigationProgress.replanCount,
+                lastPlanTick: state.navigationProgress.lastPlanTick,
+                lastInvalidation: .targetChanged,
+                lastFailure: .targetChanged
+            )
+            return
+        }
+        if let worldTick = state.lastWorldObservation?.worldTick,
+           observation.worldTick != worldTick {
+            state.navigationProgress = AgentNavigationProgress(
+                status: .failed,
+                replanCount: state.navigationProgress.replanCount,
+                lastPlanTick: state.navigationProgress.lastPlanTick,
+                lastInvalidation: .perceptionStale,
+                lastFailure: .perceptionStale
+            )
+            return
+        }
+
+        var invalidation = state.navigationProgress.lastInvalidation
+        var shouldPlan = state.navigationProgress.route == nil
+        if let route = state.navigationProgress.route {
+            let routeMatches = route.target == target.target
+                && route.resource == target.resource
+                && route.positions.indices.contains(state.navigationProgress.routeIndex)
+                && route.positions[state.navigationProgress.routeIndex] == state.position
+            if !routeMatches {
+                shouldPlan = true
+                invalidation = .targetChanged
+            } else if state.navigationProgress.consecutiveBlockedMoves > 0 {
+                shouldPlan = true
+                invalidation = .movementBlocked
+            } else if let next = state.navigationProgress.nextStep,
+                      !observation.cells.contains(where: {
+                          $0.position == next && $0.status == .traversable
+                      }) {
+                shouldPlan = true
+                invalidation = .nextStepInvalid
+            } else {
+                state.navigationProgress = AgentNavigationProgress(
+                    status: state.navigationProgress.status,
+                    route: route,
+                    routeIndex: state.navigationProgress.routeIndex,
+                    replanCount: state.navigationProgress.replanCount,
+                    consecutiveBlockedMoves: state.navigationProgress.consecutiveBlockedMoves,
+                    lastPlanTick: state.navigationProgress.lastPlanTick,
+                    lastInvalidation: state.navigationProgress.lastInvalidation,
+                    lastFailure: nil
+                )
+                return
+            }
+        }
+        guard shouldPlan else { return }
+        if let lastPlanTick = state.navigationProgress.lastPlanTick,
+           navigationTick - lastPlanTick < configuration.navigationReplanCooldownTicks {
+            return
+        }
+        let isReplan = state.navigationProgress.lastPlanTick != nil
+        let nextReplanCount = state.navigationProgress.replanCount + (isReplan ? 1 : 0)
+        guard nextReplanCount <= configuration.navigationMaxReplans else {
+            state.navigationProgress = AgentNavigationProgress(
+                status: .failed,
+                replanCount: state.navigationProgress.replanCount,
+                lastPlanTick: state.navigationProgress.lastPlanTick,
+                lastInvalidation: invalidation,
+                lastFailure: .replanLimitReached
+            )
+            releaseReservation(for: state)
+            return
+        }
+
+        let plan = AgentBoundedRoutePlanner.plan(AgentNavigationRequest(
+            start: state.position,
+            target: target.target,
+            cells: observation.cells,
+            radius: observation.radius,
+            maxVisitedNodes: AgentBoundedRoutePlanner.maximumVisitedNodes,
+            maxSteps: AgentBoundedRoutePlanner.maximumRouteSteps
+        ))
+        guard plan.found else {
+            state.navigationProgress = AgentNavigationProgress(
+                status: .failed,
+                replanCount: nextReplanCount,
+                lastPlanTick: navigationTick,
+                lastInvalidation: invalidation,
+                lastFailure: plan.failure ?? .noRoute
+            )
+            return
+        }
+        let route = AgentNavigationRoute(
+            target: target.target,
+            resource: target.resource,
+            positions: plan.positions,
+            plannedAtTick: navigationTick,
+            visitedNodeCount: plan.visitedNodeCount
+        )
+        state.navigationProgress = AgentNavigationProgress(
+            status: route.positions.count == 1 ? .arrived : .active,
+            route: route,
+            routeIndex: 0,
+            replanCount: nextReplanCount,
+            consecutiveBlockedMoves: 0,
+            lastPlanTick: navigationTick,
+            lastInvalidation: invalidation,
+            lastFailure: nil
+        )
+    }
+
+    private func reservation(for state: AgentSessionAgentState) -> AgentResourceReservation? {
+        guard let target = state.activeResourceTarget else { return nil }
+        return reservationsByTarget[reservationKey(target: target.target, resource: target.resource)]
+            .flatMap { $0.agentId == state.id ? $0 : nil }
+    }
+
+    private mutating func releaseReservation(for state: AgentSessionAgentState) {
+        guard let target = state.activeResourceTarget else { return }
+        let key = reservationKey(target: target.target, resource: target.resource)
+        if reservationsByTarget[key]?.agentId == state.id {
+            reservationsByTarget.removeValue(forKey: key)
+        }
+    }
+
+    private func reservationKey(target: AgentPosition, resource: AgentResourceKind) -> String {
+        "\(resource.rawValue):\(target.x),\(target.y),\(target.z)"
+    }
+
+    private func reservationSort(
+        _ lhs: AgentResourceReservation,
+        _ rhs: AgentResourceReservation
+    ) -> Bool {
+        let lhsKey = reservationKey(target: lhs.target, resource: lhs.resource)
+        let rhsKey = reservationKey(target: rhs.target, resource: rhs.resource)
+        if lhsKey != rhsKey { return lhsKey < rhsKey }
+        return lhs.agentId < rhs.agentId
     }
 
     private var sortedIds: [String] {

@@ -93,7 +93,8 @@ public enum AgentMovementCoordinator {
         tick: Int,
         occupied: [String]
     ) -> AgentMovementOutcome {
-        guard let action = agent.lastAction, action.name == "move_abstract" else {
+        guard let action = agent.lastAction,
+              action.name == "move_abstract" || action.name == "approach_resource" else {
             return stationary(
                 agent: agent,
                 tick: tick,
@@ -108,7 +109,24 @@ public enum AgentMovementCoordinator {
         let dx = action.dx ?? 0
         let dy = action.dy ?? 0
         let dz = action.dz ?? 0
-        guard (action.dy == nil || action.dy == 0), abs(dx) + abs(dz) == 1 else {
+        if action.name == "approach_resource",
+           action.dx == nil || action.dz == nil
+                || !(action.dy == nil || (-1...1).contains(dy))
+                || abs(dx) + abs(dz) != 1 {
+            return stationary(
+                agent: agent,
+                tick: tick,
+                status: .notRequested,
+                action: action,
+                direction: nil,
+                reason: "approach has no valid route step",
+                worldTick: agent.lastWorldObservation?.worldTick
+            )
+        }
+        let validVerticalIntent = action.name == "approach_resource"
+            ? (-1...1).contains(dy)
+            : (action.dy == nil || action.dy == 0)
+        guard validVerticalIntent, abs(dx) + abs(dz) == 1 else {
             return stationary(agent: agent, tick: tick, status: .blocked, action: action, direction: nil, reason: "invalid movement intent", worldTick: agent.lastWorldObservation?.worldTick)
         }
         let direction = cardinalDirection(dx: dx, dz: dz)!
@@ -135,6 +153,9 @@ public enum AgentMovementCoordinator {
         }
 
         let step = neighbor.stepDelta!
+        if action.name == "approach_resource", step != dy {
+            return stationary(agent: agent, tick: tick, status: .blocked, action: action, direction: direction, reason: "route step height changed", worldTick: observation.worldTick)
+        }
         let target = AgentPosition(
             x: agent.position.x + direction.dx,
             y: agent.position.y + step,

@@ -5037,5 +5037,388 @@ do {
     }
 }
 
+// ---------------------------------------------------------------------------
+section("PebbleAgents navigate-to-harvest vertical H2")
+do {
+    let start = AgentPosition(x: 0, y: 64, z: 0)
+    let target = AgentPosition(x: 4, y: 64, z: 0)
+
+    func cell(
+        _ x: Int,
+        _ z: Int,
+        y: Int = 64,
+        status: AgentNavigationCellStatus = .traversable
+    ) -> AgentNavigationCell {
+        AgentNavigationCell(position: AgentPosition(x: x, y: y, z: z), status: status)
+    }
+
+    func flatCells(radius: Int = 4) -> [AgentNavigationCell] {
+        var result: [AgentNavigationCell] = []
+        for x in -radius...radius {
+            for z in -radius...radius where abs(x) + abs(z) <= radius {
+                result.append(cell(x, z))
+            }
+        }
+        return result
+    }
+
+    let nominalRequest = AgentNavigationRequest(
+        start: start,
+        target: target,
+        cells: flatCells(),
+        radius: 8,
+        maxVisitedNodes: 64,
+        maxSteps: 8
+    )
+    let nominal = AgentBoundedRoutePlanner.plan(nominalRequest)
+    check("H2 nominal route found", nominal.found)
+    check("H2 nominal route reaches adjacent goal", nominal.positions.last == AgentPosition(x: 3, y: 64, z: 0))
+    check("H2 nominal route cardinal", zip(nominal.positions, nominal.positions.dropFirst()).allSatisfy {
+        abs($0.0.x - $0.1.x) + abs($0.0.z - $0.1.z) == 1
+            && (-1...1).contains($0.1.y - $0.0.y)
+    })
+    check("H2 deterministic neighbor order",
+          AgentBoundedRoutePlanner.neighborOrder == [.north, .east, .south, .west])
+
+    let tieTarget = AgentPosition(x: 1, y: 64, z: -1)
+    let tie = AgentBoundedRoutePlanner.plan(AgentNavigationRequest(
+        start: start,
+        target: tieTarget,
+        cells: flatCells(radius: 2),
+        radius: 2,
+        maxVisitedNodes: 32,
+        maxSteps: 4
+    ))
+    check("H2 equal route tie deterministic", tie.positions == [start, AgentPosition(x: 0, y: 64, z: -1)])
+    check("H2 resource target excluded from occupiable route", !nominal.positions.contains(target))
+    check("H2 traversable resource cell still excluded", {
+        let plan = AgentBoundedRoutePlanner.plan(AgentNavigationRequest(
+            start: start, target: AgentPosition(x: 2, y: 64, z: 0),
+            cells: [cell(0, 0), cell(1, 0), cell(2, 0)], radius: 2,
+            maxVisitedNodes: 8, maxSteps: 4
+        ))
+        return plan.positions == [start, AgentPosition(x: 1, y: 64, z: 0)]
+    }())
+    check("H2 no route explicit", AgentBoundedRoutePlanner.plan(AgentNavigationRequest(
+        start: start, target: target,
+        cells: [cell(0, 0), cell(1, 0, status: .blocked)], radius: 8,
+        maxVisitedNodes: 16, maxSteps: 8
+    )).failure == .noRoute)
+    check("H2 radius exceeded explicit", AgentBoundedRoutePlanner.plan(AgentNavigationRequest(
+        start: start, target: AgentPosition(x: 9, y: 64, z: 0),
+        cells: [cell(0, 0)], radius: 8, maxVisitedNodes: 16, maxSteps: 8
+    )).failure == .radiusExceeded)
+    check("H2 node limit explicit", AgentBoundedRoutePlanner.plan(AgentNavigationRequest(
+        start: start, target: target, cells: flatCells(), radius: 8,
+        maxVisitedNodes: 1, maxSteps: 8
+    )).failure == .nodeLimitReached)
+    check("H2 unavailable cell explicit", AgentBoundedRoutePlanner.plan(AgentNavigationRequest(
+        start: start, target: target,
+        cells: [cell(0, 0), cell(1, 0, status: .unavailable)], radius: 8,
+        maxVisitedNodes: 16, maxSteps: 8
+    )).failure == .cellUnavailable)
+    check("H2 step too high rejected", AgentBoundedRoutePlanner.plan(AgentNavigationRequest(
+        start: start, target: target,
+        cells: [cell(0, 0), cell(1, 0, y: 66)], radius: 8,
+        maxVisitedNodes: 16, maxSteps: 8
+    )).failure == .stepOutOfRange)
+    check("H2 step too low rejected", AgentBoundedRoutePlanner.plan(AgentNavigationRequest(
+        start: start, target: target,
+        cells: [cell(0, 0), cell(1, 0, y: 62)], radius: 8,
+        maxVisitedNodes: 16, maxSteps: 8
+    )).failure == .stepOutOfRange)
+    check("H2 dangerous drop rejected", AgentBoundedRoutePlanner.plan(AgentNavigationRequest(
+        start: start, target: target,
+        cells: [cell(0, 0), cell(1, 0, status: .dangerousDrop)], radius: 8,
+        maxVisitedNodes: 16, maxSteps: 8
+    )).failure == .dangerousDrop)
+    check("H2 repeated route identical", nominal == AgentBoundedRoutePlanner.plan(nominalRequest))
+
+    func h2State(id: String = "agent_h2", position: AgentPosition = start) -> AgentSessionAgentState {
+        AgentSessionAgentState(
+            id: id,
+            state: "idle",
+            position: position,
+            needs: AgentNeeds(hunger: 0, fatigue: 0, curiosity: 0.9, safety: 1),
+            health: 100,
+            fear: 0,
+            homePosition: position,
+            nearbyAgents: [],
+            currentGoal: AgentGoal(kind: .idle, reason: "initial", startedAtTick: 0, urgency: 0),
+            lastAction: nil,
+            lastActionEffect: nil,
+            memory: [],
+            tickCreated: 0,
+            ticksAlive: 0,
+            observationCount: 0,
+            nearbyObservationCount: 0,
+            goalSelectionCount: 0,
+            goalChangeCount: 0,
+            actionCount: 0,
+            actionEffectCount: 0,
+            movementCount: 0,
+            totalManhattanDistanceMoved: 0,
+            returnHomeMoveCount: 0,
+            totalDistanceReducedTowardHome: 0
+        )
+    }
+
+    func h2Session(
+        states: [AgentSessionAgentState] = [h2State()],
+        maxReplans: Int = 3
+    ) -> AgentSimulationSession {
+        try! AgentSimulationSession(
+            configuration: try! AgentSessionConfiguration(
+                seed: 202,
+                resourceObservationRadius: 8,
+                recentMemorySnapshotLimit: 32,
+                memoryPolicy: .bounded(maxEntries: 128),
+                navigationMaxReplans: maxReplans,
+                navigationReplanCooldownTicks: 1,
+                reservationLifetimeTicks: 4
+            ),
+            agents: states
+        )
+    }
+
+    func resource(_ observer: AgentPosition, target: AgentPosition = target) -> AgentResourceObservation {
+        let distance = abs(target.x - observer.x) + abs(target.z - observer.z)
+        return AgentResourceObservation(
+            resource: .sandboxResource,
+            target: target,
+            direction: AgentResourcePerception.direction(observerPosition: observer, target: target)!,
+            distanceManhattan: distance,
+            quantityAvailable: 1,
+            source: .sandboxFixture
+        )
+    }
+
+    func worldObservation(
+        _ position: AgentPosition,
+        worldTick: Int,
+        blockedDirection: AgentCardinalDirection? = nil
+    ) -> AgentWorldObservation {
+        let center = AgentWorldColumnObservation(
+            position: position, chunkReady: true, surfaceY: position.y,
+            height: position.y, blockBelow: 1, blockAtFeet: 0, blockAtHead: 0,
+            groundPresent: true, feetClear: true, headClear: true
+        )
+        let neighbors = AgentCardinalDirection.allCases.map { direction in
+            let neighborPosition = AgentPosition(
+                x: position.x + direction.dx, y: position.y, z: position.z + direction.dz
+            )
+            let traversable = direction != blockedDirection
+            return AgentWorldNeighborObservation(
+                direction: direction,
+                column: AgentWorldColumnObservation(
+                    position: neighborPosition, chunkReady: true, surfaceY: position.y,
+                    height: position.y, blockBelow: 1, blockAtFeet: traversable ? 0 : 1,
+                    blockAtHead: 0, groundPresent: true,
+                    feetClear: traversable, headClear: true
+                ),
+                stepDelta: 0,
+                traversable: traversable,
+                dangerousDrop: false
+            )
+        }
+        return try! AgentWorldObservation(
+            worldTick: worldTick,
+            position: position,
+            center: center,
+            neighbors: neighbors,
+            biomeId: nil,
+            biomeName: nil,
+            combinedLight: nil,
+            skyLight: nil,
+            blockLight: nil,
+            dayTime: worldTick,
+            raining: false,
+            thundering: false
+        )
+    }
+
+    func navigationObservation(
+        _ position: AgentPosition,
+        target: AgentPosition = target,
+        worldTick: Int,
+        cells: [AgentNavigationCell] = flatCells()
+    ) -> AgentNavigationObservation {
+        AgentNavigationObservation(
+            worldTick: worldTick,
+            origin: position,
+            target: target,
+            radius: 8,
+            cells: cells
+        )
+    }
+
+    func perception(
+        _ agentId: String,
+        position: AgentPosition,
+        target: AgentPosition = target,
+        worldTick: Int,
+        cells: [AgentNavigationCell] = flatCells(),
+        blockedDirection: AgentCardinalDirection? = nil
+    ) -> AgentPerceptionInput {
+        AgentPerceptionInput(
+            agentId: agentId,
+            worldObservation: worldObservation(position, worldTick: worldTick, blockedDirection: blockedDirection),
+            resourceObservations: [resource(position, target: target)],
+            navigationObservation: navigationObservation(
+                position, target: target, worldTick: worldTick, cells: cells
+            )
+        )
+    }
+
+    var flow = h2Session()
+    let tick1 = try! flow.advanceTick(perceptions: [
+        perception("agent_h2", position: start, worldTick: 10),
+    ])
+    let planned = flow.snapshot().agents[0]
+    check("H2 session creates route", planned.navigationProgress.status == .active)
+    check("H2 session stores route", planned.navigationProgress.route?.positions == nominal.positions)
+    check("H2 session reserves target", planned.resourceReservation?.agentId == "agent_h2")
+    check("H2 approach carries one cardinal step",
+          tick1.agents[0].action.name == "approach_resource"
+              && tick1.agents[0].action.dx == 1
+              && tick1.agents[0].action.dy == 0
+              && tick1.agents[0].action.dz == 0)
+    let firstOutcomes = AgentMovementCoordinator.resolve(snapshot: flow.snapshot())
+    try! flow.applyMovementOutcomes(firstOutcomes)
+    let afterOne = flow.snapshot().agents[0]
+    check("H2 route advances exactly one", afterOne.position == AgentPosition(x: 1, y: 64, z: 0)
+          && afterOne.navigationProgress.routeIndex == 1
+          && afterOne.navigationProgress.stepsRemaining == 2)
+
+    for expectedX in 2...3 {
+        let before = flow.snapshot().agents[0]
+        _ = try! flow.advanceTick(perceptions: [
+            perception("agent_h2", position: before.position, worldTick: 10 + expectedX),
+        ])
+        let outcomes = AgentMovementCoordinator.resolve(snapshot: flow.snapshot())
+        try! flow.applyMovementOutcomes(outcomes)
+        check("H2 one step tick x\(expectedX)", flow.snapshot().agents[0].position.x == expectedX)
+    }
+    let arrived = flow.snapshot().agents[0]
+    check("H2 arrival adjacent explicit", arrived.navigationProgress.status == .arrived
+          && AgentInteractionSandbox.isCardinalAdjacent(target: target, actor: arrived.position))
+
+    let harvestTick = try! flow.advanceTick(perceptions: [
+        perception("agent_h2", position: arrived.position, worldTick: 14),
+    ])
+    check("H2 harvest occurs on next cognitive tick", harvestTick.agents[0].action.name == "harvest_block")
+    let beforeHarvest = flow.snapshot().agents[0]
+    let interactionId = "h2:agent_h2:\(flow.tick)"
+    try! flow.prevalidateInteraction(AgentInteractionIntent(
+        interactionId: interactionId,
+        agentId: "agent_h2",
+        tick: flow.tick,
+        target: target,
+        resource: .sandboxResource
+    ))
+    try! flow.applyInteractionOutcome(AgentInteractionOutcome(
+        interactionId: interactionId,
+        agentId: "agent_h2",
+        tick: flow.tick,
+        target: target,
+        resource: .sandboxResource,
+        status: .succeeded,
+        inventoryDelta: AgentInventoryDelta(resource: .sandboxResource, quantity: 1),
+        reason: "sandbox resource harvested"
+    ))
+    let harvested = flow.snapshot().agents[0]
+    check("H2 inventory credited exactly once", beforeHarvest.resourceInventory.totalCount == 0
+          && harvested.resourceInventory.totalCount == 1)
+    check("H2 writes one harvest memory",
+          harvested.recentMemory.filter { $0.type == "resource_harvested" }.count == 1)
+    check("H2 harvest releases reservation", flow.snapshot().resourceReservations.isEmpty)
+    check("H2 harvest clears route", harvested.navigationProgress.route == nil
+          && harvested.navigationProgress.lastInvalidation == .harvested)
+    let postHarvest = try! flow.advanceTick(perceptions: [
+        AgentPerceptionInput(
+            agentId: "agent_h2",
+            worldObservation: worldObservation(harvested.position, worldTick: 15)
+        ),
+    ])
+    check("H2 no repeated harvest", postHarvest.agents[0].action.name != "harvest_block"
+          && flow.snapshot().agents[0].resourceInventory.totalCount == 1
+          && flow.snapshot().agents[0].recentMemory.filter { $0.type == "resource_harvested" }.count == 1)
+
+    var blocked = h2Session()
+    _ = try! blocked.advanceTick(perceptions: [
+        perception("agent_h2", position: start, worldTick: 20, blockedDirection: .east),
+    ])
+    let blockedOutcomes = AgentMovementCoordinator.resolve(snapshot: blocked.snapshot())
+    check("H2 movement stack reports blocked", blockedOutcomes[0].status == .blocked)
+    try! blocked.applyMovementOutcomes(blockedOutcomes)
+    let blockedState = blocked.snapshot().agents[0]
+    check("H2 blocked move leaves route unchanged", blockedState.position == start
+          && blockedState.navigationProgress.routeIndex == 0
+          && blockedState.navigationProgress.consecutiveBlockedMoves == 1)
+    _ = try! blocked.advanceTick(perceptions: [
+        perception("agent_h2", position: start, worldTick: 21),
+    ])
+    check("H2 blocked route replans next tick", blocked.snapshot().agents[0].navigationProgress.replanCount == 1
+          && blocked.snapshot().agents[0].lastAction?.name == "approach_resource")
+
+    var noRoute = h2Session()
+    let isolated = [cell(0, 0), cell(1, 0, status: .blocked)]
+    for worldTick in 30...34 {
+        _ = try! noRoute.advanceTick(perceptions: [
+            perception("agent_h2", position: start, worldTick: worldTick, cells: isolated),
+        ])
+    }
+    check("H2 replan count bounded", noRoute.snapshot().agents[0].navigationProgress.replanCount == 3)
+    check("H2 terminal abandon after replan limit",
+          noRoute.snapshot().agents[0].navigationProgress.lastFailure == .replanLimitReached
+              && noRoute.snapshot().resourceReservations.isEmpty)
+
+    let conflictTarget = AgentPosition(x: 2, y: 64, z: 0)
+    let agentA = h2State(id: "agent_a", position: AgentPosition(x: 0, y: 64, z: 0))
+    let agentB = h2State(id: "agent_b", position: AgentPosition(x: 0, y: 64, z: 1))
+    var conflict = h2Session(states: [agentB, agentA])
+    _ = try! conflict.advanceTick(perceptions: [
+        AgentPerceptionInput(agentId: "agent_b", resourceObservations: [resource(agentB.position, target: conflictTarget)]),
+        AgentPerceptionInput(agentId: "agent_a", resourceObservations: [resource(agentA.position, target: conflictTarget)]),
+    ])
+    let conflictSnapshot = conflict.snapshot()
+    check("H2 reservation tie uses agentId", conflictSnapshot.resourceReservations.count == 1
+          && conflictSnapshot.resourceReservations[0].agentId == "agent_a")
+    check("H2 reservation prevents double pursuit",
+          conflictSnapshot.agents.first { $0.id == "agent_b" }?.lastAction?.name == "wait")
+    let reservation = conflictSnapshot.resourceReservations[0]
+    check("H2 reservation has bounded expiration", reservation.acquiredAtTick == 1
+          && reservation.expiresAtTick == 5
+          && !reservation.isExpired(at: 5)
+          && reservation.isExpired(at: 6))
+    _ = try! conflict.advanceTick(perceptions: [
+        AgentPerceptionInput(agentId: "agent_a"),
+        AgentPerceptionInput(agentId: "agent_b"),
+    ])
+    check("H2 disappearance releases reservation", conflict.snapshot().resourceReservations.isEmpty)
+    check("H2 disappearance invalidates routes", conflict.snapshot().agents.allSatisfy {
+        $0.activeResourceTarget == nil
+            && $0.navigationProgress.route == nil
+            && $0.navigationProgress.lastInvalidation == .targetGone
+    })
+
+    var changed = h2Session()
+    _ = try! changed.advanceTick(perceptions: [perception("agent_h2", position: start, worldTick: 40)])
+    let changedTarget = AgentPosition(x: 0, y: 64, z: 4)
+    _ = try! changed.advanceTick(perceptions: [
+        perception("agent_h2", position: start, target: changedTarget, worldTick: 41),
+    ])
+    check("H2 target change replaces route", changed.snapshot().agents[0].navigationProgress.route?.target == changedTarget)
+    check("H2 target change cause explicit", changed.snapshot().agents[0].navigationProgress.lastInvalidation == .targetChanged)
+
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
+    let encodedA = try! encoder.encode(changed.snapshot())
+    let encodedB = try! encoder.encode(changed.snapshot())
+    check("H2 snapshot deterministic encoding", encodedA == encodedB)
+    check("H2 snapshot exposes navigation and reservation", String(data: encodedA, encoding: .utf8)?.contains("navigationProgress") == true
+          && String(data: encodedA, encoding: .utf8)?.contains("resourceReservations") == true)
+}
+
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)

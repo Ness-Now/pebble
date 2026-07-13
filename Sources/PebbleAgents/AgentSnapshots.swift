@@ -54,8 +54,14 @@ public struct AgentSnapshot: Encodable, Equatable {
     public let activeResourceTarget: AgentResourceTarget?
     public let resourceInventory: AgentResourceInventory
     public let lastInteractionOutcome: AgentInteractionOutcome?
+    public let navigationProgress: AgentNavigationProgress
+    public let resourceReservation: AgentResourceReservation?
 
-    init(state: AgentSessionAgentState, recentMemoryLimit: Int) {
+    init(
+        state: AgentSessionAgentState,
+        recentMemoryLimit: Int,
+        resourceReservation: AgentResourceReservation?
+    ) {
         id = state.id
         self.state = state.state
         position = state.position
@@ -96,6 +102,8 @@ public struct AgentSnapshot: Encodable, Equatable {
         activeResourceTarget = state.activeResourceTarget
         resourceInventory = state.resourceInventory
         lastInteractionOutcome = state.lastInteractionOutcome
+        navigationProgress = state.navigationProgress
+        self.resourceReservation = resourceReservation
     }
 
     public static func == (lhs: AgentSnapshot, rhs: AgentSnapshot) -> Bool {
@@ -137,6 +145,8 @@ public struct AgentSnapshot: Encodable, Equatable {
             && lhs.activeResourceTarget == rhs.activeResourceTarget
             && lhs.resourceInventory == rhs.resourceInventory
             && lhs.lastInteractionOutcome == rhs.lastInteractionOutcome
+            && lhs.navigationProgress == rhs.navigationProgress
+            && lhs.resourceReservation == rhs.resourceReservation
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -151,6 +161,7 @@ public struct AgentSnapshot: Encodable, Equatable {
         case memoryRetrievalCount, memoryInfluencedDecisionCount
         case memoryCount, recentMemory
         case lastResourceObservations, activeResourceTarget, resourceInventory, lastInteractionOutcome
+        case navigationProgress, resourceReservation
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -207,6 +218,13 @@ public struct AgentSnapshot: Encodable, Equatable {
             try container.encode(resourceInventory, forKey: .resourceInventory)
             try container.encodeIfPresent(lastInteractionOutcome, forKey: .lastInteractionOutcome)
         }
+        if navigationProgress.status != .idle
+            || navigationProgress.route != nil
+            || navigationProgress.lastInvalidation != nil
+            || navigationProgress.lastFailure != nil {
+            try container.encode(navigationProgress, forKey: .navigationProgress)
+        }
+        try container.encodeIfPresent(resourceReservation, forKey: .resourceReservation)
     }
 }
 
@@ -215,12 +233,34 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
     public let tick: Int
     public let agentCount: Int
     public let agents: [AgentSnapshot]
+    public let resourceReservations: [AgentResourceReservation]
 
-    init(seed: UInt32, tick: Int, agents: [AgentSnapshot]) {
+    init(
+        seed: UInt32,
+        tick: Int,
+        agents: [AgentSnapshot],
+        resourceReservations: [AgentResourceReservation]
+    ) {
         self.seed = seed
         self.tick = tick
         agentCount = agents.count
         self.agents = agents
+        self.resourceReservations = resourceReservations
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case seed, tick, agentCount, agents, resourceReservations
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(seed, forKey: .seed)
+        try container.encode(tick, forKey: .tick)
+        try container.encode(agentCount, forKey: .agentCount)
+        try container.encode(agents, forKey: .agents)
+        if !resourceReservations.isEmpty {
+            try container.encode(resourceReservations, forKey: .resourceReservations)
+        }
     }
 }
 

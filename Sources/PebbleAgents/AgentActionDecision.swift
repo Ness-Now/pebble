@@ -1,4 +1,4 @@
-public struct AgentPosition: Codable, Equatable {
+public struct AgentPosition: Codable, Equatable, Hashable {
     public let x: Int
     public let y: Int
     public let z: Int
@@ -72,6 +72,8 @@ public struct AgentActionDecisionInput {
     public let homePosition: AgentPosition
     public let resourceObservations: [AgentResourceObservation]
     public let activeResourceTarget: AgentResourceTarget?
+    public let navigationProgress: AgentNavigationProgress
+    public let resourceReservation: AgentResourceReservation?
 
     public init(
         agentId: String,
@@ -80,7 +82,9 @@ public struct AgentActionDecisionInput {
         position: AgentPosition,
         homePosition: AgentPosition,
         resourceObservations: [AgentResourceObservation] = [],
-        activeResourceTarget: AgentResourceTarget? = nil
+        activeResourceTarget: AgentResourceTarget? = nil,
+        navigationProgress: AgentNavigationProgress = AgentNavigationProgress(),
+        resourceReservation: AgentResourceReservation? = nil
     ) {
         self.agentId = agentId
         self.tick = tick
@@ -89,6 +93,8 @@ public struct AgentActionDecisionInput {
         self.homePosition = homePosition
         self.resourceObservations = resourceObservations
         self.activeResourceTarget = activeResourceTarget
+        self.navigationProgress = navigationProgress
+        self.resourceReservation = resourceReservation
     }
 }
 
@@ -140,6 +146,35 @@ public enum AgentActionDecider {
                 )
             }
             if target.distanceManhattan > 1 {
+                if input.navigationProgress.lastFailure == .reservationConflict
+                    || input.navigationProgress.lastFailure == .reservationLost {
+                    return AgentAction(
+                        name: "wait",
+                        reason: "goal collectResource: reservation unavailable",
+                        tick: input.tick,
+                        target: target.target,
+                        resource: target.resource
+                    )
+                }
+                if input.resourceReservation?.agentId == input.agentId,
+                   input.resourceReservation?.target == target.target,
+                   let next = input.navigationProgress.nextStep {
+                    let dx = next.x - input.position.x
+                    let dy = next.y - input.position.y
+                    let dz = next.z - input.position.z
+                    if abs(dx) + abs(dz) == 1, (-1...1).contains(dy) {
+                        return AgentAction(
+                            name: "approach_resource",
+                            reason: "goal collectResource: follow bounded route",
+                            tick: input.tick,
+                            dx: dx,
+                            dy: dy,
+                            dz: dz,
+                            target: target.target,
+                            resource: target.resource
+                        )
+                    }
+                }
                 return AgentAction(
                     name: "approach_resource",
                     reason: "goal collectResource: distant target selected",

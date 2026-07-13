@@ -1,3 +1,5 @@
+import PebbleAgents
+
 enum LabTerrainPathfindingStatus: String, Codable {
     case found
     case notFound
@@ -194,63 +196,45 @@ func findTerrainPath(_ request: LabTerrainPathRequest) -> LabTerrainPathResult {
             reason: "goal_missing_or_not_traversable"
         )
     }
-    guard request.start != request.goal else {
+    let start = AgentPosition(x: request.start.x, y: request.start.y, z: request.start.z)
+    let goal = AgentPosition(x: request.goal.x, y: request.goal.y, z: request.goal.z)
+    let radius = max(1, request.nodes.map {
+        abs($0.x - request.start.x) + abs($0.z - request.start.z)
+    }.max() ?? 1)
+    let plan = AgentBoundedRoutePlanner.plan(AgentNavigationRequest(
+        start: start,
+        target: goal,
+        goalMode: .exact,
+        cells: request.nodes.map {
+            AgentNavigationCell(
+                position: AgentPosition(x: $0.x, y: $0.y, z: $0.z),
+                status: $0.traversability == .traversable ? .traversable : .blocked
+            )
+        },
+        radius: radius,
+        maxVisitedNodes: request.maxVisited,
+        maxSteps: AgentBoundedRoutePlanner.maximumRouteSteps
+    ))
+    if plan.found {
         return LabTerrainPathResult(
             status: .found,
-            path: [request.start],
-            visited: 1,
-            reason: "start_equals_goal"
+            path: plan.positions.map { LabTerrainPathNodeKey(x: $0.x, y: $0.y, z: $0.z) },
+            visited: plan.visitedNodeCount,
+            reason: request.start == request.goal ? "start_equals_goal" : "bounded_bfs_path_found"
         )
     }
-
-    var queue = [request.start]
-    var queueIndex = 0
-    var visited: Set<LabTerrainPathNodeKey> = [request.start]
-    var predecessor: [LabTerrainPathNodeKey: LabTerrainPathNodeKey] = [:]
-
-    while queueIndex < queue.count {
-        let current = queue[queueIndex]
-        queueIndex += 1
-
-        for neighbor in terrainPathNeighbors(of: current) {
-            guard !visited.contains(neighbor),
-                  let node = nodesByKey[neighbor],
-                  node.traversability == .traversable else {
-                continue
-            }
-            guard visited.count < request.maxVisited else {
-                return LabTerrainPathResult(
-                    status: .searchLimitReached,
-                    path: [],
-                    visited: visited.count,
-                    reason: "max_visited_reached"
-                )
-            }
-
-            visited.insert(neighbor)
-            predecessor[neighbor] = current
-            if neighbor == request.goal {
-                var path = [neighbor]
-                var cursor = neighbor
-                while let previous = predecessor[cursor] {
-                    path.append(previous)
-                    cursor = previous
-                }
-                return LabTerrainPathResult(
-                    status: .found,
-                    path: path.reversed(),
-                    visited: visited.count,
-                    reason: "bounded_bfs_path_found"
-                )
-            }
-            queue.append(neighbor)
-        }
+    if plan.failure == .nodeLimitReached || plan.failure == .invalidConfiguration {
+        return LabTerrainPathResult(
+            status: .searchLimitReached,
+            path: [],
+            visited: plan.visitedNodeCount,
+            reason: request.maxVisited <= 0 ? "non_positive_search_limit" : "max_visited_reached"
+        )
     }
-
     return LabTerrainPathResult(
         status: .notFound,
         path: [],
-        visited: visited.count,
+        visited: plan.visitedNodeCount,
         reason: "traversable_graph_exhausted"
     )
 }
