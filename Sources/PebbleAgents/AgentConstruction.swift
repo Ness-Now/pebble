@@ -13,6 +13,8 @@ public enum AgentConstructionError: Error, Equatable {
     case materialRequirementsMismatch
     case invalidFingerprintCount(Int)
     case fingerprintCellMismatch(Int)
+    case invalidWorkPositionCount(Int)
+    case invalidWorkPosition(Int)
     case invalidProject
     case invalidSiteCandidateCount(Int)
 }
@@ -332,6 +334,7 @@ public struct AgentConstructionProject: Codable, Equatable {
     public let previousHomePosition: AgentPosition
     public let restPosition: AgentPosition
     public let originalFingerprints: [AgentConstructionCellFingerprint]
+    public let workPositions: [AgentPosition]
     public let materialRequirements: [AgentResourceAmount]
     public private(set) var materialEscrow: AgentConstructionMaterialState
     public private(set) var placedMaterialTotals: AgentConstructionMaterialState
@@ -354,7 +357,8 @@ public struct AgentConstructionProject: Codable, Equatable {
         origin: AgentPosition,
         createdAtTick: Int,
         previousHomePosition: AgentPosition,
-        originalFingerprints: [AgentConstructionCellFingerprint]
+        originalFingerprints: [AgentConstructionCellFingerprint],
+        workPositions: [AgentPosition]? = nil
     ) throws {
         guard !projectId.isEmpty, !builderAgentId.isEmpty, createdAtTick >= 0 else {
             throw AgentConstructionError.invalidProject
@@ -368,6 +372,20 @@ public struct AgentConstructionProject: Codable, Equatable {
                 ordered.first?.cellIndex ?? -1
             )
         }
+        let resolvedWorkPositions = workPositions ?? blueprint.cells.map {
+            Self.offset(origin, by: $0.workOffset)
+        }
+        guard resolvedWorkPositions.count == blueprint.cells.count else {
+            throw AgentConstructionError.invalidWorkPositionCount(resolvedWorkPositions.count)
+        }
+        for (cell, work) in zip(blueprint.cells, resolvedWorkPositions) {
+            let target = Self.offset(origin, by: cell.relativePosition)
+            let horizontal = abs(target.x - work.x) + abs(target.z - work.z)
+            let vertical = target.y - work.y
+            guard horizontal == 1, (0...2).contains(vertical), target != work else {
+                throw AgentConstructionError.invalidWorkPosition(cell.index)
+            }
+        }
         self.projectId = projectId
         self.blueprint = blueprint
         self.builderAgentId = builderAgentId
@@ -378,6 +396,7 @@ public struct AgentConstructionProject: Codable, Equatable {
         self.previousHomePosition = previousHomePosition
         restPosition = Self.offset(origin, by: blueprint.restOffset)
         self.originalFingerprints = ordered
+        self.workPositions = resolvedWorkPositions
         materialRequirements = blueprint.materialRequirements
         materialEscrow = AgentConstructionMaterialState()
         placedMaterialTotals = AgentConstructionMaterialState()
@@ -392,7 +411,7 @@ public struct AgentConstructionProject: Codable, Equatable {
     }
 
     public func workPosition(for cell: AgentBlueprintCell) -> AgentPosition {
-        Self.offset(origin, by: cell.workOffset)
+        workPositions[cell.index]
     }
 
     public func originalFingerprint(for cellIndex: Int) -> Int? {
@@ -492,6 +511,43 @@ public struct AgentConstructionDemand: Codable, Equatable {
         self.missing = AgentResourceAmounts.normalize(missing).filter {
             $0.resource == .wood || $0.resource == .stone
         }
+    }
+}
+
+public enum AgentConstructionMaterialSurvey {
+    public static let maximumDistanceFromHome = 16
+    public static let stepDistance = 4
+
+    public static func horizontalTarget(
+        home: AgentPosition,
+        currentPosition: AgentPosition,
+        tick: Int
+    ) -> AgentPosition {
+        let easternLimit = home.x + maximumDistanceFromHome
+        let targetX = currentPosition.x >= easternLimit
+            ? easternLimit - stepDistance
+            : min(easternLimit, currentPosition.x + stepDistance)
+        return AgentPosition(
+            x: targetX,
+            y: home.y,
+            z: currentPosition.z
+        )
+    }
+
+    public static func permitsNormalizedTarget(
+        _ target: AgentPosition,
+        desiredTarget: AgentPosition,
+        home: AgentPosition,
+        currentPosition: AgentPosition
+    ) -> Bool {
+        let distanceFromDesired = abs(target.x - desiredTarget.x)
+            + abs(target.z - desiredTarget.z)
+        let distanceFromHome = abs(target.x - home.x) + abs(target.z - home.z)
+        let distanceFromCurrent = abs(target.x - currentPosition.x)
+            + abs(target.z - currentPosition.z)
+        return distanceFromDesired <= AgentNavigationObservation.maximumRadius
+            && distanceFromHome <= maximumDistanceFromHome
+            && distanceFromCurrent <= AgentNavigationObservation.maximumRadius
     }
 }
 

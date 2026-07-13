@@ -283,6 +283,51 @@ public enum AgentBoundedRoutePlanner {
     }
 }
 
+/// Selects deterministic intermediate goals while every physical route remains
+/// within the shared planner's radius. This is waypoint selection, not a second
+/// pathfinder: each leg is still planned by `AgentBoundedRoutePlanner`.
+public enum AgentBoundedTravel {
+    public static let stepDistance = 4
+
+    public static func desiredWaypoint(
+        from current: AgentPosition,
+        toward destination: AgentPosition
+    ) -> AgentPosition {
+        let deltaX = destination.x - current.x
+        if deltaX != 0 {
+            let step = min(abs(deltaX), stepDistance) * (deltaX < 0 ? -1 : 1)
+            return AgentPosition(x: current.x + step, y: destination.y, z: current.z)
+        }
+        let deltaZ = destination.z - current.z
+        let step = min(abs(deltaZ), stepDistance) * (deltaZ < 0 ? -1 : 1)
+        return AgentPosition(x: current.x, y: destination.y, z: current.z + step)
+    }
+
+    public static func requiresWaypoint(
+        from current: AgentPosition,
+        to destination: AgentPosition
+    ) -> Bool {
+        horizontalDistance(current, destination) > AgentNavigationObservation.maximumRadius
+    }
+
+    public static func permitsNormalizedWaypoint(
+        _ target: AgentPosition,
+        desiredWaypoint: AgentPosition,
+        current: AgentPosition,
+        destination: AgentPosition
+    ) -> Bool {
+        let currentDistance = horizontalDistance(current, destination)
+        return currentDistance > AgentNavigationObservation.maximumRadius
+            && horizontalDistance(current, target) <= AgentNavigationObservation.maximumRadius
+            && horizontalDistance(target, desiredWaypoint) <= AgentNavigationObservation.maximumRadius
+            && horizontalDistance(target, destination) < currentDistance
+    }
+
+    private static func horizontalDistance(_ lhs: AgentPosition, _ rhs: AgentPosition) -> Int {
+        abs(lhs.x - rhs.x) + abs(lhs.z - rhs.z)
+    }
+}
+
 public enum AgentNavigationStatus: String, Codable, Equatable {
     case idle
     case active
@@ -292,6 +337,7 @@ public enum AgentNavigationStatus: String, Codable, Equatable {
 
 public enum AgentNavigationPurpose: String, Codable, Equatable {
     case resource
+    case constructionSurvey
     case homeDelivery
     case homeRest
     case constructionWork

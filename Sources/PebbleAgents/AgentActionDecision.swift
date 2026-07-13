@@ -278,6 +278,30 @@ public enum AgentActionDecider {
         _ input: AgentActionDecisionInput,
         goalName: String
     ) -> AgentAction {
+            if input.navigationProgress.route?.purpose == .constructionSurvey {
+                if let next = input.navigationProgress.nextStep {
+                    let dx = next.x - input.position.x
+                    let dy = next.y - input.position.y
+                    let dz = next.z - input.position.z
+                    if abs(dx) + abs(dz) == 1, (-1...1).contains(dy) {
+                        return AgentAction(
+                            name: "approach_resource",
+                            reason: "goal \(goalName): bounded construction material survey",
+                            tick: input.tick,
+                            dx: dx,
+                            dy: dy,
+                            dz: dz,
+                            target: input.navigationProgress.route?.target
+                        )
+                    }
+                }
+                return AgentAction(
+                    name: "wait",
+                    reason: "goal \(goalName): construction survey waypoint reached",
+                    tick: input.tick,
+                    target: input.navigationProgress.route?.target
+                )
+            }
             let observations = (try? AgentResourcePerception.normalize(
                 observerPosition: input.position,
                 observations: input.resourceObservations,

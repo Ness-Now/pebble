@@ -383,14 +383,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     private var uncapTimer: Timer?
     var bot: PhysicsBot?
     var booth: PhotoBooth?
-    // test hook: PEBBLE_CMD="/tp 0 120 0;/time set 1000" runs once the world is up
-    private var pendingCmds = ProcessInfo.processInfo.environment["PEBBLE_CMD"]
+    // test hook: PEBBLE_CMD="/tp 0 120 0;/time set 1000" runs once the world is up.
+    // A vertical bar starts a second batch after another bounded world-ready delay.
+    private var pendingCmds: String? = {
+        ProcessInfo.processInfo.environment["PEBBLE_CMD"]?
+            .components(separatedBy: "|").first
+    }()
+    private var pendingCmdBatches: [String] = {
+        guard let value = ProcessInfo.processInfo.environment["PEBBLE_CMD"] else { return [] }
+        return Array(value.components(separatedBy: "|").dropFirst())
+    }()
     private var pendingCmdDelay = 0
-    // test hook: PEBBLE_SHOT="/tmp/x.png@300" captures the frame N frames after load
+    // test hook: PEBBLE_SHOT="/tmp/x.png@300" captures after all command batches.
+    // A `|`-separated list captures immediately after matching PEBBLE_CMD batches;
+    // use `-` to skip a batch. This remains a launch-only reproducibility hook.
     private var shotQuitFrames = 0
     private var pendingCompositedCapturePath: String?
+    private var pendingBatchShots: [String] = {
+        guard let value = ProcessInfo.processInfo.environment["PEBBLE_SHOT"],
+              value.contains("|") else { return [] }
+        return value.components(separatedBy: "|")
+    }()
+    private let usesBatchShots: Bool = {
+        ProcessInfo.processInfo.environment["PEBBLE_SHOT"]?.contains("|") == true
+    }()
     private var pendingShot: (path: String, frames: Int)? = {
         guard let v = ProcessInfo.processInfo.environment["PEBBLE_SHOT"] else { return nil }
+        guard !v.contains("|") else { return nil }
         let parts = v.components(separatedBy: "@")
         return (parts[0], parts.count > 1 ? Int(parts[1]) ?? 240 : 240)
     }()
@@ -622,12 +641,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
 
         if let cmds = pendingCmds, game.hasWorld(), let p = game.player {
             pendingCmdDelay += 1
-            if pendingCmdDelay > 90 {
+            if pendingCmdDelay > 240 {
                 if p.dead { game.respawnPlayer() }
                 for c in cmds.components(separatedBy: ";") where !c.isEmpty {
                     runCommand(game, c.trimmingCharacters(in: .whitespaces))
                 }
-                pendingCmds = nil
+                if usesBatchShots, !pendingBatchShots.isEmpty {
+                    let shot = pendingBatchShots.removeFirst()
+                    if shot != "-", !shot.isEmpty {
+                        pendingCompositedCapturePath = shot
+                    }
+                }
+                if pendingCmdBatches.isEmpty {
+                    pendingCmds = nil
+                    if usesBatchShots { shotQuitFrames = 120 }
+                } else {
+                    pendingCmds = pendingCmdBatches.removeFirst()
+                    pendingCmdDelay = 0
+                }
             }
         }
         if let shot = pendingShot, game.hasWorld(), pendingCmds == nil {

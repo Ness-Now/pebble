@@ -7590,6 +7590,54 @@ do {
           abs(constructionMovedPosition.x - constructionHome.x)
             + abs(constructionMovedPosition.z - constructionHome.z) == 1)
 
+    let distantConstructionHome = AgentPosition(
+        x: constructionHome.x + 16,
+        y: constructionHome.y,
+        z: constructionHome.z
+    )
+    let firstHomewardWaypoint = AgentBoundedTravel.desiredWaypoint(
+        from: constructionHome,
+        toward: distantConstructionHome
+    )
+    check("K bounded travel requires waypoint beyond planner radius",
+          AgentBoundedTravel.requiresWaypoint(
+              from: constructionHome,
+              to: distantConstructionHome
+          ))
+    check("K bounded travel first waypoint exact",
+          firstHomewardWaypoint == AgentPosition(
+              x: constructionHome.x + AgentBoundedTravel.stepDistance,
+              y: constructionHome.y,
+              z: constructionHome.z
+          ))
+    check("K bounded travel accepts deterministic progress",
+          AgentBoundedTravel.permitsNormalizedWaypoint(
+              firstHomewardWaypoint,
+              desiredWaypoint: firstHomewardWaypoint,
+              current: constructionHome,
+              destination: distantConstructionHome
+          ))
+    check("K bounded travel rejects non-progressing waypoint",
+          !AgentBoundedTravel.permitsNormalizedWaypoint(
+              AgentPosition(
+                  x: constructionHome.x - AgentBoundedTravel.stepDistance,
+                  y: constructionHome.y,
+                  z: constructionHome.z
+              ),
+              desiredWaypoint: firstHomewardWaypoint,
+              current: constructionHome,
+              destination: distantConstructionHome
+          ))
+    check("K bounded travel direct goal within planner radius",
+          !AgentBoundedTravel.requiresWaypoint(
+              from: constructionHome,
+              to: AgentPosition(
+                  x: constructionHome.x + AgentNavigationObservation.maximumRadius,
+                  y: constructionHome.y,
+                  z: constructionHome.z
+              )
+          ))
+
     var blockedConstructionRoute = constructionSession
     _ = try! blockedConstructionRoute.advanceTick(perceptions: [AgentPerceptionInput(
         agentId: "agent_economy",

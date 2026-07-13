@@ -31,7 +31,11 @@ struct PebbleAgentDebugState {
         economyFixtures: PebbleAgentEconomyFixtureState,
         economyReason: String,
         naturalGateEnabled: Bool,
-        naturalState: PebbleAgentNaturalResourceState
+        naturalState: PebbleAgentNaturalResourceState,
+        buildGateEnabled: Bool,
+        constructionState: PebbleAgentConstructionState,
+        constructionSiteDiagnostics: PebbleAgentConstructionSiteDiagnostics,
+        constructionReason: String
     ) {
         let focus = snapshot.agents.first { $0.id == focusedAgentId } ?? snapshot.agents.first
         let status = paused ? "paused" : "running"
@@ -97,6 +101,7 @@ struct PebbleAgentDebugState {
                 "inventory: \(agent.resourceInventory.totalCount)/\(agent.resourceInventory.capacity) food/wood/stone \(agent.resourceInventory.count(of: .foodRaw))/\(agent.resourceInventory.count(of: .wood))/\(agent.resourceInventory.count(of: .stone))",
                 "economy: \(snapshot.economyEnabled ? "on" : "off") quota \(snapshot.deliveryQuota) stock \(snapshot.campStock.totalCount) fixtures \(economyFixtures.fixtures.filter { !$0.harvested }.count)/\(economyFixtures.fixtures.count)",
                 "delivery/conservation: \(agent.lastDeliveryOutcome?.status.rawValue ?? "none") / \(snapshot.conservation.balanced ? "exact" : "diverged")",
+                "build: \(snapshot.buildAutoEnabled ? "on" : "off") \(snapshot.constructionProject?.status.rawValue ?? "none") cells \(snapshot.constructionProject?.placedCellIndices.count ?? 0)/9 next \(snapshot.constructionProject?.nextCellIndex ?? 0)",
                 String(format: "survival: %@ %@ h/f %.2f/%.2f hp %d consumed %d", snapshot.survivalEnabled ? "on" : "off", survival?.status.rawValue ?? "off", agent.needs.hunger, agent.needs.fatigue, agent.health, snapshot.conservation.consumedTotal),
                 "resourceSeen: \(resourceSeen)",
                 "natural: \(snapshot.naturalResourcesEnabled ? "on" : "off") gate \(naturalGateEnabled ? "on" : "off") scan \(naturalState.lastScan.worldBlockReadCount)/\(naturalState.lastScan.candidateCount)/\(naturalState.lastScan.observationsEmitted) harvest/rollback \(naturalState.harvestCount)/\(naturalState.rollbackCount)",
@@ -204,7 +209,16 @@ struct PebbleAgentDebugState {
             String(format: "fatigue %.2f threshold/recovery %.2f/%.2f health %d", agent.needs.fatigue, snapshot.survivalConfiguration.fatigueThreshold, snapshot.survivalConfiguration.fatigueRecoveryThreshold, agent.health),
             "critical/food consumed/starvation damage: \(agent.survivalProgress?.consecutiveCriticalHungerTicks ?? 0)/\(agent.survivalProgress?.foodConsumedCount ?? 0)/\(agent.survivalProgress?.starvationDamageTaken ?? 0)",
             "consumption outcome/memory: \(agent.survivalProgress?.lastConsumptionOutcome?.status.rawValue ?? "none") / \(agent.survivalProgress?.lastMemoryType?.rawValue ?? agent.recentMemory.last { $0.type == "food_consumed" || $0.type == "consumption_blocked" || $0.type == "starvation_damage" }?.type ?? "none")",
-            "conservation harvested=carried+stock+consumed: \(snapshot.conservation.harvestedTotal)=\(snapshot.conservation.carriedTotal)+\(snapshot.conservation.campStockTotal)+\(snapshot.conservation.consumedTotal) \(snapshot.conservation.balanced ? "exact" : "diverged")",
+            "conservation harvested=carried+stock+consumed+escrow+constructed: \(snapshot.conservation.harvestedTotal)=\(snapshot.conservation.carriedTotal)+\(snapshot.conservation.campStockTotal)+\(snapshot.conservation.consumedTotal)+\(snapshot.conservation.constructionEscrowTotal)+\(snapshot.conservation.constructedTotal) \(snapshot.conservation.balanced ? "exact" : "diverged")",
+            "build gate/auto/project: \(buildGateEnabled ? "on" : "off") / \(snapshot.buildAutoEnabled ? "on" : "off") / \(snapshot.constructionProject?.projectId ?? "none")",
+            "blueprint/status/origin: \(snapshot.constructionProject?.blueprintId ?? AgentBlueprint.fixedLeanToV1Id) / \(snapshot.constructionProject?.status.rawValue ?? "none") / \(snapshot.constructionProject.map { Self.position($0.origin) } ?? "none")",
+            "materials required wood/stone: 6/3 escrow \(snapshot.constructionProject?.materialEscrow.count(of: .wood) ?? 0)/\(snapshot.constructionProject?.materialEscrow.count(of: .stone) ?? 0)",
+            "constructed wood/stone: \(snapshot.constructionProject?.placedMaterialTotals.count(of: .wood) ?? 0)/\(snapshot.constructionProject?.placedMaterialTotals.count(of: .stone) ?? 0) cells \(snapshot.constructionProject?.placedCellIndices.count ?? 0)/9",
+            "next cell/target/work: \(snapshot.constructionProject?.nextCellIndex ?? 0) / \(snapshot.constructionProject?.nextTarget.map(Self.position) ?? "none") / \(snapshot.constructionProject?.nextWorkPosition.map(Self.position) ?? "none")",
+            "construction world placed/rollback: \(constructionState.placedCount)/\(constructionState.rollbackCount) last \(Self.short(constructionState.lastPlacement, limit: 26))",
+            "construction failure/clear: \(Self.short(snapshot.constructionProject?.lastFailure?.rawValue ?? constructionState.lastFailure, limit: 24)) / \(Self.short(constructionState.lastClear, limit: 24))",
+            "site candidates/reads/origin: \(constructionSiteDiagnostics.candidatesConsidered)/\(constructionSiteDiagnostics.positionsRead)/\(constructionSiteDiagnostics.selectedOrigin.map(Self.position) ?? "none")",
+            "shelter rest/home/reason: \(snapshot.constructionProject.map { Self.position($0.restPosition) } ?? "none") / \(Self.position(agent.homePosition)) / \(Self.short(constructionReason, limit: 24))",
             "natural gate/mode/radius/vertical: \(naturalGateEnabled ? "on" : "off") / \(snapshot.naturalResourcesEnabled ? "on" : "off") / \(PebbleAgentNaturalResourceAdapter.configuration.horizontalRadius) / -\(PebbleAgentNaturalResourceAdapter.configuration.verticalBelow)...+\(PebbleAgentNaturalResourceAdapter.configuration.verticalAbove)",
             "natural scan read/candidate/emitted/mapped: \(naturalState.lastScan.worldBlockReadCount)/\(naturalState.lastScan.candidateCount)/\(naturalState.lastScan.observationsEmitted)/\(naturalState.lastScan.mappedBlockCount)",
             "natural harvest/rollback/last: \(naturalState.harvestCount)/\(naturalState.rollbackCount) / \(Self.short(naturalState.lastHarvest, limit: 28)) / \(Self.short(naturalState.lastRollback, limit: 28))",

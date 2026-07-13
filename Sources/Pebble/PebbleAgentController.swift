@@ -38,10 +38,13 @@ final class PebbleAgentController {
     private let worldSensor = PebbleAgentWorldSensor()
     private let navigationAdapter = PebbleAgentNavigationAdapter()
     private let naturalResourceAdapter = PebbleAgentNaturalResourceAdapter()
+    private let constructionSiteAdapter = PebbleAgentConstructionSiteAdapter()
     private let movementExecutor = PebbleAgentMovementExecutor()
     private let cameraFollow = PebbleAgentCameraFollow()
     private var interactionExecutor = PebbleAgentInteractionExecutor()
     private var naturalResourceExecutor = PebbleAgentNaturalResourceExecutor()
+    private var constructionExecutor = PebbleAgentConstructionExecutor()
+    private var lastConstructionSiteDiagnostics = PebbleAgentConstructionSiteDiagnostics()
     private(set) var autoInteractionEnabled = false
     private var lastAutoInteractionReason = "none"
     private var lastInteractionAttempted = false
@@ -53,6 +56,7 @@ final class PebbleAgentController {
     private var lastConsumptionSucceeded = false
     private var lastSurvivalReason = "none"
     private var lastNaturalReason = "none"
+    private var lastConstructionReason = "none"
 
     private let environment = ProcessInfo.processInfo.environment
     private var featureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS"] == "1" }
@@ -63,6 +67,7 @@ final class PebbleAgentController {
     private var debugEntitiesEnabled: Bool { environment["PEBBLELAB_DEBUG_ENTITIES"] == "1" }
     private var interactionFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_INTERACT"] == "1" }
     private var naturalFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_NATURAL"] == "1" }
+    private var buildFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_BUILD"] == "1" }
     private var traceEvery: Int {
         guard let raw = environment["PEBBLELAB_APP_AGENTS_TRACE_EVERY"],
               let value = Int(raw), (1...1000).contains(value) else { return 1 }
@@ -147,7 +152,11 @@ final class PebbleAgentController {
             economyFixtures: interactionExecutor.economyState(),
             economyReason: lastEconomyReason,
             naturalGateEnabled: naturalFeatureEnabled,
-            naturalState: naturalResourceExecutor.state
+            naturalState: naturalResourceExecutor.state,
+            buildGateEnabled: buildFeatureEnabled,
+            constructionState: constructionExecutor.state,
+            constructionSiteDiagnostics: lastConstructionSiteDiagnostics,
+            constructionReason: lastConstructionReason
         )
     }
 
@@ -156,7 +165,7 @@ final class PebbleAgentController {
         switch command {
         case "help":
             guard arguments.count == 1 else { return failure("Usage: /lab help") }
-            return success("/lab lifecycle: start stop clear | time control: pause resume step speed <1|2|4|8> reset | inspection: status focus <agentId|next> next follow <agentId|focus|next|off> overlay <off|compact|full> | movement: movement <on|off> | interaction: interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off> | economy: economy <setup|auto on|auto off|status|clear> | survival: survival <on|off|status> | natural: natural <on|off|status|scan> | demo: demo [start|stop|status]")
+            return success("/lab lifecycle: start stop clear | time control: pause resume step speed <1|2|4|8> reset | inspection: status focus <agentId|next> next follow <agentId|focus|next|off> overlay <off|compact|full> | movement: movement <on|off> | interaction: interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off> | economy: economy <setup|auto on|auto off|status|clear> | survival: survival <on|off|status> | natural: natural <on|off|status|scan> | build: build <setup|auto on|auto off|status|clear> | demo: demo [start|stop|status]")
         case "demo":
             return handleDemo(Array(arguments.dropFirst()), world: world, player: player)
         case "start":
@@ -165,6 +174,9 @@ final class PebbleAgentController {
         case "stop", "clear":
             guard arguments.count == 1 else { return failure("Usage: /lab \(command)") }
             let removed = stop(reason: command, fallbackWorld: world)
+            guard session == nil else {
+                return failure(lastError ?? "PebbleAgents stop refused: verified cleanup failed.")
+            }
             return success("PebbleAgents stopped; probes removed: \(removed)")
         case "pause":
             guard arguments.count == 1 else { return failure("Usage: /lab pause") }
@@ -227,6 +239,8 @@ final class PebbleAgentController {
             return handleSurvival(Array(arguments.dropFirst()))
         case "natural":
             return handleNatural(Array(arguments.dropFirst()), world: world, player: player)
+        case "build":
+            return handleBuild(Array(arguments.dropFirst()), world: world, player: player)
         case "status":
             guard arguments.count == 1 else { return failure("Usage: /lab status") }
             guard let session else {
@@ -236,7 +250,7 @@ final class PebbleAgentController {
             let snapshot = session.snapshot()
             let positions = snapshot.agents.map { "\($0.id)=\($0.position.x),\($0.position.y),\($0.position.z)/m\($0.movementCount)/o\($0.observationCount)" }.joined(separator: " ")
             let overlay = effectiveOverlayMode(f3Visible: false).rawValue
-            let message = "PebbleAgents \(isPaused ? "paused" : "running") tick=\(snapshot.tick) hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") autoInteraction=\(autoInteractionEnabled ? "on" : "off") economy=\(snapshot.economyEnabled ? "on" : "off") survival=\(snapshot.survivalEnabled ? "on" : "off") natural=\(snapshot.naturalResourcesEnabled ? "on" : "off") probes=\(probesByAgentId.count) focus=\(focusedAgentId ?? "none") follow=\(followMode.statusText) overlay=\(overlay) demo=\(demoActive ? "on" : "off") catchupDropped=\(droppedCatchUpSteps) \(positions)"
+            let message = "PebbleAgents \(isPaused ? "paused" : "running") tick=\(snapshot.tick) hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") autoInteraction=\(autoInteractionEnabled ? "on" : "off") economy=\(snapshot.economyEnabled ? "on" : "off") survival=\(snapshot.survivalEnabled ? "on" : "off") natural=\(snapshot.naturalResourcesEnabled ? "on" : "off") build=\(snapshot.buildAutoEnabled ? "on" : "off") probes=\(probesByAgentId.count) focus=\(focusedAgentId ?? "none") follow=\(followMode.statusText) overlay=\(overlay) demo=\(demoActive ? "on" : "off") catchupDropped=\(droppedCatchUpSteps) \(positions)"
             trace("status \(message)")
             return success(message)
         case "focus":
@@ -308,6 +322,9 @@ final class PebbleAgentController {
         let preservedFocus = focusedAgentId
         let preservedFollowMode = followMode
         let preservedDemoActive = demoActive
+        guard constructionExecutor.cleanup(world: world) else {
+            return failure("PebbleAgents rebuild refused: construction cleanup failed.")
+        }
         guard interactionExecutor.cleanup(world: world) else {
             return failure("PebbleAgents rebuild refused: interaction sandbox cleanup failed.")
         }
@@ -359,6 +376,8 @@ final class PebbleAgentController {
             lastConsumptionSucceeded = false
             lastSurvivalReason = "none"
             lastNaturalReason = "none"
+            lastConstructionReason = "none"
+            lastConstructionSiteDiagnostics = PebbleAgentConstructionSiteDiagnostics()
             observedGoalKinds = [AgentGoalKind.idle.rawValue]
             resetRunCounters()
             try createProbes(in: world)
@@ -482,11 +501,80 @@ final class PebbleAgentController {
                     .filter { seenResourcePositions.insert($0.target).inserted }
                     .prefix(AgentResourcePerception.maximumObservationCount))
                 let navigationObservation: AgentNavigationObservation?
-                let navigationTarget: AgentPosition?
+                var preparedNavigationObservation: AgentNavigationObservation?
+                var navigationTarget: AgentPosition?
                 let navigationGoalMode: AgentNavigationGoalMode
-                if (agent.currentGoal.kind == .deliverResources && !agent.resourceInventory.isEmpty)
+                if agent.currentGoal.kind == .buildShelter,
+                   let project = preCognitive.constructionProject,
+                   project.builderAgentId == agent.id,
+                   project.status == .funded || project.status == .building,
+                   let work = project.nextWorkPosition {
+                    navigationTarget = work
+                    navigationGoalMode = .exact
+                } else if agent.currentGoal.kind == .buildShelter,
+                          preCognitive.constructionProject?.status == .readyToFund,
+                          agent.position != agent.homePosition {
+                    if agent.navigationProgress.status == .active,
+                       agent.navigationProgress.route?.purpose == .homeDelivery,
+                       let routeTarget = agent.navigationProgress.route?.target {
+                        navigationTarget = routeTarget
+                    } else if AgentBoundedTravel.requiresWaypoint(
+                        from: agent.position,
+                        to: agent.homePosition
+                    ) {
+                        preparedNavigationObservation = navigationAdapter.observeBoundedTravel(
+                            world: world,
+                            agent: agent,
+                            destination: agent.homePosition,
+                            occupiedAgentPositions: preCognitive.agents
+                                .filter { $0.id != agent.id }
+                                .map(\.position)
+                        )
+                    }
+                    if navigationTarget == nil {
+                        navigationTarget = preparedNavigationObservation?.target ?? agent.homePosition
+                    }
+                    navigationGoalMode = .exact
+                } else if (agent.currentGoal.kind == .deliverResources && !agent.resourceInventory.isEmpty)
                     || (preCognitive.survivalEnabled && agent.currentGoal.kind == .rest) {
-                    navigationTarget = agent.homePosition
+                    let expectedPurpose: AgentNavigationPurpose = agent.currentGoal.kind == .rest
+                        ? .homeRest
+                        : .homeDelivery
+                    if agent.navigationProgress.status == .active,
+                       agent.navigationProgress.route?.purpose == expectedPurpose,
+                       let routeTarget = agent.navigationProgress.route?.target {
+                        navigationTarget = routeTarget
+                    } else if AgentBoundedTravel.requiresWaypoint(
+                        from: agent.position,
+                        to: agent.homePosition
+                    ) {
+                        preparedNavigationObservation = navigationAdapter.observeBoundedTravel(
+                            world: world,
+                            agent: agent,
+                            destination: agent.homePosition,
+                            occupiedAgentPositions: preCognitive.agents
+                                .filter { $0.id != agent.id }
+                                .map(\.position)
+                        )
+                    }
+                    if navigationTarget == nil {
+                        navigationTarget = preparedNavigationObservation?.target ?? agent.homePosition
+                    }
+                    navigationGoalMode = .exact
+                } else if let horizontalSurvey = session.constructionMaterialSurveyTarget(
+                    for: agent.id,
+                    observations: resourceObservations,
+                    atTick: preCognitive.tick + 1
+                ) {
+                    preparedNavigationObservation = navigationAdapter.observeSurvey(
+                        world: world,
+                        agent: agent,
+                        desiredTarget: horizontalSurvey,
+                        occupiedAgentPositions: preCognitive.agents
+                            .filter { $0.id != agent.id }
+                            .map(\.position)
+                    )
+                    navigationTarget = preparedNavigationObservation?.target
                     navigationGoalMode = .exact
                 } else {
                     navigationTarget = agent.activeResourceTarget?.target
@@ -494,15 +582,16 @@ final class PebbleAgentController {
                     navigationGoalMode = .cardinalAdjacent
                 }
                 if movementEnabled, let target = navigationTarget {
-                    navigationObservation = navigationAdapter.observe(
-                        world: world,
-                        agent: agent,
-                        target: target,
-                        occupiedAgentPositions: preCognitive.agents
-                            .filter { $0.id != agent.id }
-                            .map(\.position),
-                        goalMode: navigationGoalMode
-                    )
+                    navigationObservation = preparedNavigationObservation
+                        ?? navigationAdapter.observe(
+                            world: world,
+                            agent: agent,
+                            target: target,
+                            occupiedAgentPositions: preCognitive.agents
+                                .filter { $0.id != agent.id }
+                                .map(\.position),
+                            goalMode: navigationGoalMode
+                        )
                 } else {
                     navigationObservation = nil
                 }
@@ -563,6 +652,166 @@ final class PebbleAgentController {
                 ))
                 lastDeliverySucceeded = outcome.status == .succeeded
                 lastEconomyReason = outcome.reason
+            }
+            let fundingActions = result.agents
+                .filter { $0.action.name == "fund_construction" }
+                .sorted { $0.agentId < $1.agentId }
+            if let funding = fundingActions.first {
+                guard buildFeatureEnabled, session.buildAutoEnabled else {
+                    throw ControllerError.constructionBoundary(
+                        "funding action without enabled construction gate and auto mode"
+                    )
+                }
+                let funded = try session.fundConstructionProject(
+                    fundingId: "construction-funding:\(funding.agentId):\(session.tick)",
+                    builderAgentId: funding.agentId,
+                    fundingTick: session.tick
+                )
+                lastConstructionReason = "funded \(funded.projectId)"
+            }
+            let placementActions = result.agents
+                .filter { $0.action.name == "place_block" }
+                .sorted { $0.agentId < $1.agentId }
+            if let placement = placementActions.first {
+                guard buildFeatureEnabled, session.buildAutoEnabled,
+                      let project = session.constructionProject,
+                      project.builderAgentId == placement.agentId,
+                      let cell = project.nextCell,
+                      let target = project.nextTarget,
+                      let workPosition = project.nextWorkPosition,
+                      placement.action.target == target,
+                      placement.action.resource == cell.resource,
+                      let actor = session.snapshot().agents.first(where: {
+                          $0.id == placement.agentId
+                      }) else {
+                    throw ControllerError.constructionBoundary(
+                        "placement action outside active ordered project"
+                    )
+                }
+                let intent = AgentPlacementIntent(
+                    placementId: "construction-placement:\(placement.agentId):\(session.tick):\(cell.index)",
+                    projectId: project.projectId,
+                    builderAgentId: placement.agentId,
+                    tick: session.tick,
+                    cellIndex: cell.index,
+                    target: target,
+                    workPosition: workPosition,
+                    resource: cell.resource
+                )
+                let outcome = AgentPlacementOutcome(
+                    placementId: intent.placementId,
+                    projectId: project.projectId,
+                    builderAgentId: placement.agentId,
+                    tick: session.tick,
+                    cellIndex: cell.index,
+                    target: target,
+                    resource: cell.resource,
+                    status: .succeeded,
+                    reason: "ordered fixed blueprint cell placed"
+                )
+                var candidate = session
+                let occupied = session.snapshot().agents
+                    .filter { $0.id != placement.agentId }
+                    .map(\.position)
+                let playerPosition = AgentPosition(
+                    x: Int(player.x.rounded(.down)),
+                    y: Int(player.y.rounded(.down)),
+                    z: Int(player.z.rounded(.down))
+                )
+                let navigationAdapter = self.navigationAdapter
+                let injectPublicationFailure = environment[
+                    "PEBBLELAB_APP_AGENTS_BUILD_FAIL_AFTER_WORLD"
+                ] == "1"
+                do {
+                    try constructionExecutor.place(
+                    world: world,
+                    actor: actor,
+                    project: project,
+                    intent: intent,
+                    occupiedAgentPositions: occupied,
+                    playerPosition: playerPosition,
+                    buildGateEnabled: buildFeatureEnabled,
+                    buildAutoEnabled: session.buildAutoEnabled,
+                    prevalidate: {
+                        try session.prevalidatePlacement(intent)
+                    },
+                    publishAndVerify: { finalCell in
+                        try candidate.applyPlacementOutcome(outcome)
+                        if injectPublicationFailure {
+                            throw ControllerError.constructionBoundary(
+                                "injected construction publication failure"
+                            )
+                        }
+                        if finalCell {
+                            guard let pending = candidate.constructionProject,
+                                  let builder = candidate.snapshot().agents.first(where: {
+                                      $0.id == placement.agentId
+                                  }) else {
+                                throw ControllerError.constructionBoundary(
+                                    "completion candidate unavailable"
+                                )
+                            }
+                            let observation = navigationAdapter.observe(
+                                world: world,
+                                agent: builder,
+                                target: pending.restPosition,
+                                occupiedAgentPositions: occupied + [playerPosition],
+                                goalMode: .exact
+                            )
+                            let entrance = AgentPosition(
+                                x: pending.origin.x + pending.blueprint.entranceOffset.x,
+                                y: pending.origin.y + pending.blueprint.entranceOffset.y,
+                                z: pending.origin.z + pending.blueprint.entranceOffset.z
+                            )
+                            let entranceRoute = AgentBoundedRoutePlanner.plan(AgentNavigationRequest(
+                                start: builder.position,
+                                target: entrance,
+                                goalMode: .exact,
+                                cells: observation.cells,
+                                radius: observation.radius,
+                                maxVisitedNodes: AgentBoundedRoutePlanner.maximumVisitedNodes,
+                                maxSteps: AgentBoundedRoutePlanner.maximumRouteSteps
+                            ))
+                            let restRoute = AgentBoundedRoutePlanner.plan(AgentNavigationRequest(
+                                start: entrance,
+                                target: pending.restPosition,
+                                goalMode: .exact,
+                                cells: observation.cells,
+                                radius: observation.radius,
+                                maxVisitedNodes: AgentBoundedRoutePlanner.maximumVisitedNodes,
+                                maxSteps: AgentBoundedRoutePlanner.maximumRouteSteps
+                            ))
+                            guard entranceRoute.found, restRoute.found else {
+                                throw ControllerError.constructionBoundary(
+                                    "completed shelter entrance or rest cell is not safely routable"
+                                )
+                            }
+                            try candidate.completeConstructionProject(
+                                projectId: pending.projectId,
+                                completionTick: candidate.tick
+                            )
+                        }
+                        guard candidate.conservationSnapshot().balanced,
+                              candidate.constructionProject?.placedCellIndices.contains(cell.index) == true else {
+                            throw ControllerError.constructionBoundary(
+                                "construction publication verification failed"
+                            )
+                        }
+                    }
+                    )
+                } catch {
+                    let failure = constructionFailure(for: error)
+                    try? session.recordConstructionFailure(
+                        failureId: "construction-failure:\(intent.placementId)",
+                        projectId: project.projectId,
+                        builderAgentId: project.builderAgentId,
+                        failure: failure,
+                        reason: String(describing: error)
+                    )
+                    throw error
+                }
+                session = candidate
+                lastConstructionReason = "placed cell \(cell.index) \(cell.resource.rawValue)"
             }
             if movementEnabled {
                 let outcomes = AgentMovementCoordinator.resolve(snapshot: session.snapshot())
@@ -651,15 +900,18 @@ final class PebbleAgentController {
                     || entry.type == "starvation_damage"
             }?.type ?? "none"
             let natural = naturalResourceExecutor.state
+            let construction = finalSnapshot.constructionProject
+            let constructionWorld = constructionExecutor.state
             successfulCognitiveTicks += 1
             blockedMovementOutcomeCount += blocked
             maxObservedMemoryCount = max(maxObservedMemoryCount, finalSnapshot.agents.map(\.memoryCount).max() ?? 0)
             maxObservedDistanceFromHome = max(maxObservedDistanceFromHome, finalSnapshot.agents.map(\.distanceFromHome).max() ?? 0)
-            let message = "tick=\(result.tick) movement=\(movementEnabled ? "on" : "off") moved=\(moved) blocked=\(blocked) outcomes=\(outcomes) positions=\(positions) goals=\(goals) focus=\(focus?.id ?? "none") action=\(focus?.lastAction?.name ?? "none") focusMove=\(focusMovement) memory=\(focus?.memoryCount ?? 0) retrieved=\(retrieved) influenced=\(influenced) dedup=\(deduplicated) decisionAgent=\(decisionAgent?.id ?? "none") memoryUsed=\(memoryUsed) decisionChanged=\(decision?.actionChanged == true ? 1 : 0) baseMove=\(baseMove) finalMove=\(finalMove) dominant=\(dominant) decisionReason=\(decisionReason) world_observed=1 perception=\(perceptionSummary) observations=\(observations) resourceSeen=\(resourceSeen) resourceDistance=\(resourceDistance) activeTarget=\(activeResourceTarget) reservationOwner=\(reservationOwner) navigationPurpose=\(navigation?.route?.purpose.rawValue ?? "none") navigation=\(navigation?.status.rawValue ?? "idle") routeLength=\(navigation?.route?.positions.count ?? 0) routeIndex=\(navigation?.routeIndex ?? 0) stepsRemaining=\(navigation?.stepsRemaining ?? 0) nextStep=\(routeNext) replans=\(navigation?.replanCount ?? 0) invalidation=\(navigation?.lastInvalidation?.rawValue ?? "none") navigationFailure=\(navigation?.lastFailure?.rawValue ?? "none") autoInteraction=\(autoInteractionEnabled ? "on" : "off") interactionAttempted=\(lastInteractionAttempted ? 1 : 0) interactionSucceeded=\(lastInteractionSucceeded ? 1 : 0) interactionBlocked=\(lastInteractionBlocked ? 1 : 0) economy=\(finalSnapshot.economyEnabled ? "on" : "off") natural=\(finalSnapshot.naturalResourcesEnabled ? "on" : "off") naturalReads=\(natural.lastScan.worldBlockReadCount) naturalCandidates=\(natural.lastScan.candidateCount) naturalObservations=\(natural.lastScan.observationsEmitted) naturalHarvests=\(natural.harvestCount) naturalRollbacks=\(natural.rollbackCount) survival=\(finalSnapshot.survivalEnabled ? "on" : "off") survivalStatus=\(survivalProgress?.status.rawValue ?? "off") hunger=\(String(format: "%.2f", focus?.needs.hunger ?? 0)) fatigue=\(String(format: "%.2f", focus?.needs.fatigue ?? 0)) health=\(focus?.health ?? 0) criticalHungerTicks=\(survivalProgress?.consecutiveCriticalHungerTicks ?? 0) foodConsumed=\(survivalProgress?.foodConsumedCount ?? 0) starvationDamage=\(survivalProgress?.starvationDamageTaken ?? 0) consumptionOutcome=\(consumptionOutcome?.status.rawValue ?? "none") consumptionSucceeded=\(lastConsumptionSucceeded ? 1 : 0) survivalMemory=\(survivalMemory) quota=\(finalSnapshot.deliveryQuota) inventoryByResource=\(inventorySummary) campStock=\(stockSummary) fixtures=\(fixtureSummary) deliveryOutcome=\(deliveryOutcome?.status.rawValue ?? "none") deliverySucceeded=\(lastDeliverySucceeded ? 1 : 0) conservation=\(finalSnapshot.conservation.harvestedTotal):\(finalSnapshot.conservation.carriedTotal)+\(finalSnapshot.conservation.campStockTotal)+\(finalSnapshot.conservation.consumedTotal):\(finalSnapshot.conservation.balanced ? "exact" : "diverged") corridorObserved=\(economyFixtures.corridorObservedBlockCount) corridorChanged=\(economyFixtures.corridorChangedDuringNavigation) fixtureSetupMutations=\(economyFixtures.setupMutatedBlockCount)"
+            let message = "tick=\(result.tick) movement=\(movementEnabled ? "on" : "off") moved=\(moved) blocked=\(blocked) outcomes=\(outcomes) positions=\(positions) goals=\(goals) focus=\(focus?.id ?? "none") action=\(focus?.lastAction?.name ?? "none") focusMove=\(focusMovement) memory=\(focus?.memoryCount ?? 0) retrieved=\(retrieved) influenced=\(influenced) dedup=\(deduplicated) decisionAgent=\(decisionAgent?.id ?? "none") memoryUsed=\(memoryUsed) decisionChanged=\(decision?.actionChanged == true ? 1 : 0) baseMove=\(baseMove) finalMove=\(finalMove) dominant=\(dominant) decisionReason=\(decisionReason) world_observed=1 perception=\(perceptionSummary) observations=\(observations) resourceSeen=\(resourceSeen) resourceDistance=\(resourceDistance) activeTarget=\(activeResourceTarget) reservationOwner=\(reservationOwner) navigationPurpose=\(navigation?.route?.purpose.rawValue ?? "none") navigation=\(navigation?.status.rawValue ?? "idle") routeLength=\(navigation?.route?.positions.count ?? 0) routeIndex=\(navigation?.routeIndex ?? 0) stepsRemaining=\(navigation?.stepsRemaining ?? 0) nextStep=\(routeNext) replans=\(navigation?.replanCount ?? 0) invalidation=\(navigation?.lastInvalidation?.rawValue ?? "none") navigationFailure=\(navigation?.lastFailure?.rawValue ?? "none") autoInteraction=\(autoInteractionEnabled ? "on" : "off") interactionAttempted=\(lastInteractionAttempted ? 1 : 0) interactionSucceeded=\(lastInteractionSucceeded ? 1 : 0) interactionBlocked=\(lastInteractionBlocked ? 1 : 0) economy=\(finalSnapshot.economyEnabled ? "on" : "off") natural=\(finalSnapshot.naturalResourcesEnabled ? "on" : "off") naturalReads=\(natural.lastScan.worldBlockReadCount) naturalCandidates=\(natural.lastScan.candidateCount) naturalObservations=\(natural.lastScan.observationsEmitted) naturalHarvests=\(natural.harvestCount) naturalRollbacks=\(natural.rollbackCount) survival=\(finalSnapshot.survivalEnabled ? "on" : "off") survivalStatus=\(survivalProgress?.status.rawValue ?? "off") hunger=\(String(format: "%.2f", focus?.needs.hunger ?? 0)) fatigue=\(String(format: "%.2f", focus?.needs.fatigue ?? 0)) health=\(focus?.health ?? 0) criticalHungerTicks=\(survivalProgress?.consecutiveCriticalHungerTicks ?? 0) foodConsumed=\(survivalProgress?.foodConsumedCount ?? 0) starvationDamage=\(survivalProgress?.starvationDamageTaken ?? 0) consumptionOutcome=\(consumptionOutcome?.status.rawValue ?? "none") consumptionSucceeded=\(lastConsumptionSucceeded ? 1 : 0) survivalMemory=\(survivalMemory) quota=\(finalSnapshot.deliveryQuota) inventoryByResource=\(inventorySummary) campStock=\(stockSummary) fixtures=\(fixtureSummary) deliveryOutcome=\(deliveryOutcome?.status.rawValue ?? "none") deliverySucceeded=\(lastDeliverySucceeded ? 1 : 0) build=\(finalSnapshot.buildAutoEnabled ? "on" : "off") buildProject=\(construction?.projectId ?? "none") buildStatus=\(construction?.status.rawValue ?? "none") buildOrigin=\(construction.map { positionText($0.origin) } ?? "none") buildPlaced=\(construction?.placedCellIndices.count ?? 0) buildNext=\(construction?.nextCellIndex ?? 0) buildWork=\(construction?.nextWorkPosition.map(positionText) ?? "none") buildLast=\(constructionWorld.lastPlacement) buildFailure=\(construction?.lastFailure?.rawValue ?? constructionWorld.lastFailure) buildRollback=\(constructionWorld.rollbackCount) home=\(focus.map { positionText($0.homePosition) } ?? "none") conservation=\(finalSnapshot.conservation.harvestedTotal):\(finalSnapshot.conservation.carriedTotal)+\(finalSnapshot.conservation.campStockTotal)+\(finalSnapshot.conservation.consumedTotal)+\(finalSnapshot.conservation.constructionEscrowTotal)+\(finalSnapshot.conservation.constructedTotal):\(finalSnapshot.conservation.balanced ? "exact" : "diverged") corridorObserved=\(economyFixtures.corridorObservedBlockCount) corridorChanged=\(economyFixtures.corridorChangedDuringNavigation) fixtureSetupMutations=\(economyFixtures.setupMutatedBlockCount)"
             traceTick(
                 message,
                 tick: result.tick,
                 important: decision?.actionChanged == true || lastInteractionAttempted
+                    || placementActions.first != nil || fundingActions.first != nil
             )
             return true
         } catch {
@@ -671,6 +923,11 @@ final class PebbleAgentController {
             if economyAutoEnabled {
                 economyAutoEnabled = false
                 lastEconomyReason = "disabled after blocking failure: \(error)"
+            }
+            if session.buildAutoEnabled {
+                try? session.setBuildAutoEnabled(false)
+                self.session = session
+                lastConstructionReason = "disabled after blocking failure: \(error)"
             }
             lastError = String(describing: error)
             runtimeErrorCount += 1
@@ -704,7 +961,13 @@ final class PebbleAgentController {
                     throw ControllerError.feedbackBoundary(agent.id)
                 }
             }
-            if movementEnabled, agent.distanceFromHome > 8 {
+            let movementBoundary = snapshot.buildAutoEnabled
+                    && snapshot.constructionProject?.builderAgentId == agent.id
+                    && (snapshot.constructionProject?.status == .planned
+                        || snapshot.constructionProject?.status == .acquiringMaterials)
+                ? AgentConstructionMaterialSurvey.maximumDistanceFromHome
+                : AgentNavigationObservation.maximumRadius
+            if movementEnabled, agent.distanceFromHome > movementBoundary {
                 throw ControllerError.feedbackBoundary(agent.id)
             }
             if !movementWasEverEnabledSinceReset {
@@ -735,6 +998,27 @@ final class PebbleAgentController {
 
     private func positionText(_ position: AgentPosition) -> String {
         "\(position.x),\(position.y),\(position.z)"
+    }
+
+    private func constructionFailure(for error: Error) -> AgentConstructionFailure {
+        guard let execution = error as? PebbleAgentConstructionExecutor.ExecutionError else {
+            return .publicationFailed
+        }
+        switch execution {
+        case .gateDisabled: return .gateDisabled
+        case .autoDisabled: return .autoDisabled
+        case .projectAlreadyActive: return .projectAlreadyExists
+        case .projectMissing: return .projectMissing
+        case .projectMismatch: return .invalidBuilder
+        case .invalidCell, .invalidMaterial, .invalidReach: return .invalidCell
+        case .chunkUnavailable: return .chunkUnavailable
+        case .occupied: return .occupied
+        case .staleFingerprint: return .staleFingerprint
+        case .previousCellChanged, .structureValidationFailed: return .structureChanged
+        case .mutationVerificationFailed: return .publicationFailed
+        case .rollbackVerificationFailed: return .rollbackFailed
+        case .clearVerificationFailed: return .clearFailed
+        }
     }
 
     private func setFocus(_ requested: String) -> PebbleAgentCommandResult {
@@ -791,6 +1075,9 @@ final class PebbleAgentController {
             return success("PebbleAgents demo active: 3 agents, 4 Hz, movement on, focus agent_2, follow focus, overlay compact.")
         case "stop":
             let removed = stop(reason: "demo stop", fallbackWorld: world)
+            guard session == nil else {
+                return failure(lastError ?? "PebbleAgents demo stop refused: verified cleanup failed.")
+            }
             trace("demo stop probesRemoved=\(removed)")
             return success("PebbleAgents demo stopped; probes removed: \(removed).")
         case "status":
@@ -828,7 +1115,7 @@ final class PebbleAgentController {
                 "\($0.agentId):\($0.resource.rawValue)@\(positionText($0.target))"
             }.joined(separator: ",") ?? ""
             let conservation = snapshot?.conservation
-            let message = "economy active=\(snapshot?.economyEnabled == true ? "yes" : "no") auto=\(economyAutoEnabled ? "on" : "off") quota=\(snapshot?.deliveryQuota ?? 0) actor=\(actor ?? "none") goal=\(agent?.currentGoal.kind.rawValue ?? "none") navigationDestination=\(agent?.navigationProgress.route?.purpose.rawValue ?? "none") inventory=\(inventory) inventoryTotal=\(agent?.resourceInventory.totalCount ?? 0)/\(agent?.resourceInventory.capacity ?? 0) campStock=\(stock) campStockTotal=\(snapshot?.campStock.totalCount ?? 0) fixtures=\(fixtureText) reservations=\(reservations.isEmpty ? "none" : reservations) deliveryOutcome=\(agent?.lastDeliveryOutcome?.status.rawValue ?? "none") memory=\(agent?.recentMemory.last?.type ?? "none") conservation=\(conservation?.harvestedTotal ?? 0):\(conservation?.carriedTotal ?? 0)+\(conservation?.campStockTotal ?? 0)+\(conservation?.consumedTotal ?? 0):\(conservation?.balanced == true ? "exact" : "diverged") corridorObserved=\(fixtures.corridorObservedBlockCount) corridorChangedSetup=\(fixtures.corridorChangedAfterSetup) corridorChangedNavigation=\(fixtures.corridorChangedDuringNavigation) corridorChangedHarvest=\(fixtures.corridorChangedAfterHarvest) corridorChangedCleanup=\(fixtures.corridorChangedAfterCleanup) fixtureSetupMutations=\(fixtures.setupMutatedBlockCount) cleanupRestoredBlocks=\(fixtures.cleanupRestoredBlockCount)"
+            let message = "economy active=\(snapshot?.economyEnabled == true ? "yes" : "no") auto=\(economyAutoEnabled ? "on" : "off") quota=\(snapshot?.deliveryQuota ?? 0) actor=\(actor ?? "none") goal=\(agent?.currentGoal.kind.rawValue ?? "none") navigationDestination=\(agent?.navigationProgress.route?.purpose.rawValue ?? "none") inventory=\(inventory) inventoryTotal=\(agent?.resourceInventory.totalCount ?? 0)/\(agent?.resourceInventory.capacity ?? 0) campStock=\(stock) campStockTotal=\(snapshot?.campStock.totalCount ?? 0) fixtures=\(fixtureText) reservations=\(reservations.isEmpty ? "none" : reservations) deliveryOutcome=\(agent?.lastDeliveryOutcome?.status.rawValue ?? "none") memory=\(agent?.recentMemory.last?.type ?? "none") conservation=\(conservation?.harvestedTotal ?? 0):\(conservation?.carriedTotal ?? 0)+\(conservation?.campStockTotal ?? 0)+\(conservation?.consumedTotal ?? 0)+\(conservation?.constructionEscrowTotal ?? 0)+\(conservation?.constructedTotal ?? 0):\(conservation?.balanced == true ? "exact" : "diverged") corridorObserved=\(fixtures.corridorObservedBlockCount) corridorChangedSetup=\(fixtures.corridorChangedAfterSetup) corridorChangedNavigation=\(fixtures.corridorChangedDuringNavigation) corridorChangedHarvest=\(fixtures.corridorChangedAfterHarvest) corridorChangedCleanup=\(fixtures.corridorChangedAfterCleanup) fixtureSetupMutations=\(fixtures.setupMutatedBlockCount) cleanupRestoredBlocks=\(fixtures.cleanupRestoredBlockCount)"
             trace(message)
             return success(message)
         }
@@ -946,6 +1233,176 @@ final class PebbleAgentController {
         }
     }
 
+    private func handleBuild(
+        _ arguments: [String],
+        world: World,
+        player: Player
+    ) -> PebbleAgentCommandResult {
+        let usage = "Usage: /lab build <setup|auto on|auto off|status|clear>"
+        guard let subcommand = arguments.first?.lowercased() else {
+            return failure(usage)
+        }
+        guard var session, activeWorld === world else {
+            return failure("No active PebbleAgents session for this World.")
+        }
+
+        if subcommand == "status" {
+            guard arguments.count == 1 else { return failure(usage) }
+            let snapshot = session.snapshot()
+            let project = snapshot.constructionProject
+            let builder = project.flatMap { active in
+                snapshot.agents.first { $0.id == active.builderAgentId }
+            }
+            let demand = session.constructionDemand()
+            let required = project?.materialRequirements.map {
+                "\($0.resource.rawValue):\($0.quantity)"
+            }.joined(separator: ",") ?? "wood:6,stone:3"
+            let missing = demand?.missing.map {
+                "\($0.resource.rawValue):\($0.quantity)"
+            }.joined(separator: ",") ?? "none"
+            let escrow = project.map {
+                "wood:\($0.materialEscrow.count(of: .wood)),stone:\($0.materialEscrow.count(of: .stone))"
+            } ?? "wood:0,stone:0"
+            let placed = project.map {
+                "wood:\($0.placedMaterialTotals.count(of: .wood)),stone:\($0.placedMaterialTotals.count(of: .stone))"
+            } ?? "wood:0,stone:0"
+            let stock = "wood:\(snapshot.campStock.count(of: .wood)),stone:\(snapshot.campStock.count(of: .stone))"
+            let conservation = snapshot.conservation
+            let executor = constructionExecutor.state
+            let message = "build gate=\(buildFeatureEnabled ? "enabled" : "disabled") auto=\(snapshot.buildAutoEnabled ? "on" : "off") project=\(project?.projectId ?? "none") blueprint=\(project?.blueprintId ?? AgentBlueprint.fixedLeanToV1Id) builder=\(project?.builderAgentId ?? "none") origin=\(project.map { positionText($0.origin) } ?? "none") status=\(project?.status.rawValue ?? "none") required=\(required) missing=\(missing.isEmpty ? "none" : missing) escrow=\(escrow) placedMaterials=\(placed) placed=\(project?.placedCellIndices.count ?? 0)/\(project?.blueprint.cells.count ?? 9) nextCell=\(project?.nextCellIndex ?? 0) nextTarget=\(project?.nextTarget.map(positionText) ?? "none") work=\(project?.nextWorkPosition.map(positionText) ?? "none") builderPosition=\(builder.map { positionText($0.position) } ?? "none") navigation=\(builder?.navigationProgress.status.rawValue ?? "idle") route=\(builder?.navigationProgress.route?.positions.count ?? 0):\(builder?.navigationProgress.routeIndex ?? 0) stock=\(stock) home=\(builder.map { positionText($0.homePosition) } ?? "none") rest=\(project.map { positionText($0.restPosition) } ?? "none") lastPlacement=\(project?.lastPlacementOutcome?.status.rawValue ?? executor.lastPlacement) failure=\(project?.lastFailure?.rawValue ?? executor.lastFailure) rollback=\(executor.rollbackCount) clear=\(executor.lastClear) siteCandidates=\(lastConstructionSiteDiagnostics.candidatesConsidered) siteReads=\(lastConstructionSiteDiagnostics.positionsRead) siteBest=\(lastConstructionSiteDiagnostics.maximumWorkPositionsFound)/9@\(lastConstructionSiteDiagnostics.bestOrigin.map(positionText) ?? "none"): \(lastConstructionSiteDiagnostics.bestFlags) siteRejects=chunk:\(lastConstructionSiteDiagnostics.chunkRejected),floor:\(lastConstructionSiteDiagnostics.floorRejected),replaceable:\(lastConstructionSiteDiagnostics.replaceableRejected),liquid:\(lastConstructionSiteDiagnostics.liquidRejected),natural:\(lastConstructionSiteDiagnostics.naturalRejected),reserved:\(lastConstructionSiteDiagnostics.reservedRejected),work:\(lastConstructionSiteDiagnostics.workRejected),occupancy:\(lastConstructionSiteDiagnostics.occupancyRejected),route:\(lastConstructionSiteDiagnostics.routeRejected) conservation=\(conservation.harvestedTotal):\(conservation.carriedTotal)+\(conservation.campStockTotal)+\(conservation.consumedTotal)+\(conservation.constructionEscrowTotal)+\(conservation.constructedTotal):\(conservation.balanced ? "exact" : "diverged") reason=\(lastConstructionReason.replacingOccurrences(of: " ", with: "_"))"
+            trace(message)
+            return success(message)
+        }
+
+        guard featureEnabled else {
+            return failure("PebbleAgents disabled. Set PEBBLELAB_APP_AGENTS=1 before launch.")
+        }
+        guard buildFeatureEnabled else {
+            return failure("PebbleAgents construction disabled. Set PEBBLELAB_APP_AGENTS_BUILD=1 before launch.")
+        }
+
+        if subcommand == "auto" {
+            guard arguments.count == 2,
+                  arguments[1].lowercased() == "on"
+                    || arguments[1].lowercased() == "off" else {
+                return failure(usage)
+            }
+            let enabled = arguments[1].lowercased() == "on"
+            if enabled, !movementFeatureEnabled {
+                return failure("PebbleAgents movement disabled. Set PEBBLELAB_APP_AGENTS_MOVE=1 before launch.")
+            }
+            do {
+                try session.setBuildAutoEnabled(enabled)
+                self.session = session
+                lastConstructionReason = enabled ? "enabled by command" : "suspended by command"
+                trace("build auto=\(enabled ? "on" : "off") tick=\(session.tick) mutation=none")
+                return success("PebbleAgents construction automatic mode \(enabled ? "on" : "off").")
+            } catch {
+                return failure("Construction auto mode failed: \(error)")
+            }
+        }
+
+        if subcommand == "clear" {
+            guard arguments.count == 1 else { return failure(usage) }
+            guard isPaused else {
+                return failure("Construction clear requires a paused PebbleAgents session.")
+            }
+            guard !movementEnabled else {
+                return failure("Construction clear requires movement off.")
+            }
+            guard let project = session.constructionProject else {
+                return failure("No construction project to clear.")
+            }
+            var candidate = session
+            let injectClearFailure = environment[
+                "PEBBLELAB_APP_AGENTS_BUILD_FAIL_CLEAR_AFTER_WORLD"
+            ] == "1"
+            do {
+                try constructionExecutor.clear(
+                    world: world,
+                    project: project,
+                    prevalidate: {
+                        try session.prevalidateConstructionClear(projectId: project.projectId)
+                    },
+                    publishAndVerify: {
+                        try candidate.clearConstructionProject(projectId: project.projectId)
+                        if injectClearFailure {
+                            throw ControllerError.constructionBoundary(
+                                "injected construction clear publication failure"
+                            )
+                        }
+                        guard candidate.constructionProject == nil,
+                              candidate.conservationSnapshot().balanced else {
+                            throw ControllerError.constructionBoundary(
+                                "construction clear publication verification failed"
+                            )
+                        }
+                    }
+                )
+                session = candidate
+                self.session = session
+                lastConstructionReason = "cleared and restored"
+                let restored = constructionExecutor.state.cleanupRestoredBlockCount
+                trace("build clear project=\(project.projectId) restored=\(restored) conservation=exact")
+                return success("Construction cleared; restored \(restored) project blocks and refunded materials.")
+            } catch {
+                return failure("Construction clear failed: \(error)")
+            }
+        }
+
+        guard subcommand == "setup", arguments.count == 1 else {
+            return failure(usage)
+        }
+        guard isPaused else {
+            return failure("Construction setup requires a paused PebbleAgents session.")
+        }
+        guard !movementEnabled else {
+            return failure("Construction setup requires movement off.")
+        }
+        guard session.constructionProject == nil else {
+            return failure("Construction setup refused: a project already exists.")
+        }
+        guard let builderId = focusedAgentId,
+              let builder = session.snapshot().agents.first(where: { $0.id == builderId }) else {
+            return failure("Construction setup requires a valid focused builder.")
+        }
+        let occupied = session.snapshot().agents
+            .filter { $0.id != builderId }
+            .map(\.position)
+        let playerPosition = AgentPosition(
+            x: Int(player.x.rounded(.down)),
+            y: Int(player.y.rounded(.down)),
+            z: Int(player.z.rounded(.down))
+        )
+        var siteDiagnostics = PebbleAgentConstructionSiteDiagnostics()
+        do {
+            let selection = try constructionSiteAdapter.select(
+                world: world,
+                builder: builder,
+                occupiedAgentPositions: occupied,
+                playerPosition: playerPosition,
+                tick: session.tick,
+                diagnostics: &siteDiagnostics
+            )
+            var candidate = session
+            try candidate.createConstructionProject(selection.project)
+            var executorCandidate = constructionExecutor
+            try executorCandidate.begin(project: selection.project)
+            session = candidate
+            constructionExecutor = executorCandidate
+            self.session = session
+            lastConstructionSiteDiagnostics = selection.diagnostics
+            lastConstructionReason = "safe site selected read-only"
+            trace("build setup project=\(selection.project.projectId) builder=\(builderId) origin=\(positionText(selection.project.origin)) candidates=\(selection.diagnostics.candidatesConsidered) positionsRead=\(selection.diagnostics.positionsRead) worldMutations=0")
+            return success("Construction project \(selection.project.projectId) planned at \(positionText(selection.project.origin)); setup mutations: 0.")
+        } catch {
+            siteDiagnostics.lastFailure = String(describing: error)
+            lastConstructionSiteDiagnostics = siteDiagnostics
+            lastConstructionReason = "setup failed without mutation"
+            return failure("Construction setup failed without World mutation: \(error)")
+        }
+    }
+
     private func handleNatural(
         _ arguments: [String],
         world: World,
@@ -1008,7 +1465,7 @@ final class PebbleAgentController {
             "\($0.blockName)#\($0.fingerprint):\($0.resource.rawValue)"
         }.joined(separator: ",")
         let conservation = refreshed.conservation
-        let message = "natural gate=\(naturalFeatureEnabled ? "enabled" : "disabled") active=\(refreshed.naturalResourcesEnabled ? "yes" : "no") actor=\(focused?.id ?? "none") radius=\(PebbleAgentNaturalResourceAdapter.configuration.horizontalRadius) vertical=-\(PebbleAgentNaturalResourceAdapter.configuration.verticalBelow)...+\(PebbleAgentNaturalResourceAdapter.configuration.verticalAbove) positionsConsidered=\(natural.lastScan.positionsConsidered) positionsRead=\(natural.lastScan.worldBlockReadCount) candidates=\(natural.lastScan.candidateCount) observations=\(natural.lastScan.observationsEmitted) mappedBlocks=\(natural.lastScan.mappedBlockCount) mapping=\(mapping) target=\(target.map { positionText($0.target) } ?? "none") source=\(target?.source.rawValue ?? "none") fingerprint=\(target?.expectedBlockFingerprint.map(String.init) ?? "none") distance=\(target?.distanceManhattan ?? 0) reservation=\(focused?.resourceReservation?.agentId ?? "none") route=\(focused?.navigationProgress.route?.positions.count ?? 0):\(focused?.navigationProgress.routeIndex ?? 0) lastHarvest=\(natural.lastHarvest) lastRollback=\(natural.lastRollback) harvestCount=\(natural.harvestCount) rollbackCount=\(natural.rollbackCount) fixtures=\(interactionExecutor.economyState().fixtures.count) conservation=\(conservation.harvestedTotal):\(conservation.carriedTotal)+\(conservation.campStockTotal)+\(conservation.consumedTotal):\(conservation.balanced ? "exact" : "diverged") reason=\(lastNaturalReason.replacingOccurrences(of: " ", with: "_"))"
+        let message = "natural gate=\(naturalFeatureEnabled ? "enabled" : "disabled") active=\(refreshed.naturalResourcesEnabled ? "yes" : "no") actor=\(focused?.id ?? "none") radius=\(PebbleAgentNaturalResourceAdapter.configuration.horizontalRadius) vertical=-\(PebbleAgentNaturalResourceAdapter.configuration.verticalBelow)...+\(PebbleAgentNaturalResourceAdapter.configuration.verticalAbove) positionsConsidered=\(natural.lastScan.positionsConsidered) positionsRead=\(natural.lastScan.worldBlockReadCount) candidates=\(natural.lastScan.candidateCount) observations=\(natural.lastScan.observationsEmitted) mappedBlocks=\(natural.lastScan.mappedBlockCount) mapping=\(mapping) target=\(target.map { positionText($0.target) } ?? "none") source=\(target?.source.rawValue ?? "none") fingerprint=\(target?.expectedBlockFingerprint.map(String.init) ?? "none") distance=\(target?.distanceManhattan ?? 0) reservation=\(focused?.resourceReservation?.agentId ?? "none") route=\(focused?.navigationProgress.route?.positions.count ?? 0):\(focused?.navigationProgress.routeIndex ?? 0) lastHarvest=\(natural.lastHarvest) lastRollback=\(natural.lastRollback) harvestCount=\(natural.harvestCount) rollbackCount=\(natural.rollbackCount) fixtures=\(interactionExecutor.economyState().fixtures.count) conservation=\(conservation.harvestedTotal):\(conservation.carriedTotal)+\(conservation.campStockTotal)+\(conservation.consumedTotal)+\(conservation.constructionEscrowTotal)+\(conservation.constructedTotal):\(conservation.balanced ? "exact" : "diverged") reason=\(lastNaturalReason.replacingOccurrences(of: " ", with: "_"))"
         trace(message)
         return success(message)
     }
@@ -1040,7 +1497,7 @@ final class PebbleAgentController {
                 || entry.type == "consumption_blocked"
                 || entry.type == "starvation_damage"
         }?.type ?? "none"
-        let message = "survival active=\(snapshot.survivalEnabled ? "yes" : "no") actor=\(agent?.id ?? "none") status=\(progress?.status.rawValue ?? "off") goal=\(agent?.currentGoal.kind.rawValue ?? "none") hunger=\(String(format: "%.2f", agent?.needs.hunger ?? 0)) hungerThreshold=\(config.hungryThreshold) hungerRecovery=\(config.hungerRecoveryThreshold) fatigue=\(String(format: "%.2f", agent?.needs.fatigue ?? 0)) fatigueThreshold=\(config.fatigueThreshold) fatigueRecovery=\(config.fatigueRecoveryThreshold) health=\(agent?.health ?? 0) criticalHungerTicks=\(progress?.consecutiveCriticalHungerTicks ?? 0) foodRaw=\(agent?.resourceInventory.count(of: .foodRaw) ?? 0) foodConsumed=\(progress?.foodConsumedCount ?? 0) starvationDamage=\(progress?.starvationDamageTaken ?? 0) navigationPurpose=\(agent?.navigationProgress.route?.purpose.rawValue ?? "none") consumptionOutcome=\(progress?.lastConsumptionOutcome?.status.rawValue ?? "none") memory=\(memory) conservation=\(conservation.harvestedTotal):\(conservation.carriedTotal)+\(conservation.campStockTotal)+\(conservation.consumedTotal):\(conservation.balanced ? "exact" : "diverged") reason=\(lastSurvivalReason.replacingOccurrences(of: " ", with: "_"))"
+        let message = "survival active=\(snapshot.survivalEnabled ? "yes" : "no") actor=\(agent?.id ?? "none") status=\(progress?.status.rawValue ?? "off") goal=\(agent?.currentGoal.kind.rawValue ?? "none") hunger=\(String(format: "%.2f", agent?.needs.hunger ?? 0)) hungerThreshold=\(config.hungryThreshold) hungerRecovery=\(config.hungerRecoveryThreshold) fatigue=\(String(format: "%.2f", agent?.needs.fatigue ?? 0)) fatigueThreshold=\(config.fatigueThreshold) fatigueRecovery=\(config.fatigueRecoveryThreshold) health=\(agent?.health ?? 0) criticalHungerTicks=\(progress?.consecutiveCriticalHungerTicks ?? 0) foodRaw=\(agent?.resourceInventory.count(of: .foodRaw) ?? 0) foodConsumed=\(progress?.foodConsumedCount ?? 0) starvationDamage=\(progress?.starvationDamageTaken ?? 0) navigationPurpose=\(agent?.navigationProgress.route?.purpose.rawValue ?? "none") consumptionOutcome=\(progress?.lastConsumptionOutcome?.status.rawValue ?? "none") memory=\(memory) conservation=\(conservation.harvestedTotal):\(conservation.carriedTotal)+\(conservation.campStockTotal)+\(conservation.consumedTotal)+\(conservation.constructionEscrowTotal)+\(conservation.constructedTotal):\(conservation.balanced ? "exact" : "diverged") reason=\(lastSurvivalReason.replacingOccurrences(of: " ", with: "_"))"
         trace(message)
         return success(message)
     }
@@ -1448,6 +1905,17 @@ final class PebbleAgentController {
         let followStatus = followMode.statusText
         let wasDemo = demoActive
         let cleanupWorld = activeWorld ?? fallbackWorld
+        let constructionBeforeCleanup = constructionExecutor.state
+        let constructionRestored = cleanupWorld.map {
+            constructionExecutor.cleanup(world: $0)
+        } ?? (constructionBeforeCleanup.projectId == nil)
+        guard constructionRestored else {
+            runtimeErrorCount += 1
+            lastError = "construction cleanup failed; session retained"
+            trace("error construction cleanup failed reason=\(reason.replacingOccurrences(of: " ", with: "_")) hardFailure=1")
+            return 0
+        }
+        let constructionAfterCleanup = constructionExecutor.state
         let interactionBeforeCleanup = interactionExecutor.state(gateEnabled: interactionFeatureEnabled)
         let interactionRestored = cleanupWorld.map { interactionExecutor.cleanup(world: $0) }
             ?? !interactionBeforeCleanup.active
@@ -1463,7 +1931,7 @@ final class PebbleAgentController {
             let influenced = snapshot.agents.reduce(0) { $0 + $1.memoryInfluencedDecisionCount }
             let dedup = snapshot.agents.reduce(0) { $0 + $1.feedbackMemoryDeduplicatedCount }
             let natural = naturalResourceExecutor.state
-            trace("summary reason=\(reason.replacingOccurrences(of: " ", with: "_")) seed=\(seed) ticks=\(successfulCognitiveTicks) hz=\(cognitiveHz) agents=\(snapshot.agentCount) movementCount=\(movementCount) blocked=\(blockedMovementOutcomeCount) memoryMax=\(maxObservedMemoryCount) retrieved=\(retrieved) influenced=\(influenced) dedup=\(dedup) maxDistanceHome=\(maxObservedDistanceFromHome) runtimeErrors=\(runtimeErrorCount) catchupDropped=\(droppedCatchUpSteps) probesRemoved=\(removed) follow=\(followStatus) demo=\(wasDemo ? 1 : 0) interactionRestored=\(interactionRestored ? 1 : 0) interactionTarget=\(interactionBeforeCleanup.target.map(positionText) ?? "none") natural=\(snapshot.naturalResourcesEnabled ? 1 : 0) naturalHarvests=\(natural.harvestCount) naturalRollbacks=\(natural.rollbackCount) naturalRestoredAfterSuccess=0 conservation=\(snapshot.conservation.harvestedTotal):\(snapshot.conservation.carriedTotal)+\(snapshot.conservation.campStockTotal)+\(snapshot.conservation.consumedTotal):\(snapshot.conservation.balanced ? "exact" : "diverged") corridorObserved=\(interactionAfterCleanup.corridorObservedBlockCount) corridorChangedCleanup=\(interactionAfterCleanup.corridorChangedAfterCleanup) cleanupRestoredBlocks=\(interactionAfterCleanup.cleanupRestoredBlockCount)")
+            trace("summary reason=\(reason.replacingOccurrences(of: " ", with: "_")) seed=\(seed) ticks=\(successfulCognitiveTicks) hz=\(cognitiveHz) agents=\(snapshot.agentCount) movementCount=\(movementCount) blocked=\(blockedMovementOutcomeCount) memoryMax=\(maxObservedMemoryCount) retrieved=\(retrieved) influenced=\(influenced) dedup=\(dedup) maxDistanceHome=\(maxObservedDistanceFromHome) runtimeErrors=\(runtimeErrorCount) catchupDropped=\(droppedCatchUpSteps) probesRemoved=\(removed) follow=\(followStatus) demo=\(wasDemo ? 1 : 0) interactionRestored=\(interactionRestored ? 1 : 0) interactionTarget=\(interactionBeforeCleanup.target.map(positionText) ?? "none") natural=\(snapshot.naturalResourcesEnabled ? 1 : 0) naturalHarvests=\(natural.harvestCount) naturalRollbacks=\(natural.rollbackCount) naturalRestoredAfterSuccess=0 buildProject=\(snapshot.constructionProject?.projectId ?? "none") buildPlaced=\(snapshot.constructionProject?.placedCellIndices.count ?? 0) buildRestored=\(constructionAfterCleanup.cleanupRestoredBlockCount) buildRollback=\(constructionAfterCleanup.rollbackCount) constructionRestored=1 conservation=\(snapshot.conservation.harvestedTotal):\(snapshot.conservation.carriedTotal)+\(snapshot.conservation.campStockTotal)+\(snapshot.conservation.consumedTotal)+\(snapshot.conservation.constructionEscrowTotal)+\(snapshot.conservation.constructedTotal):\(snapshot.conservation.balanced ? "exact" : "diverged") corridorObserved=\(interactionAfterCleanup.corridorObservedBlockCount) corridorChangedCleanup=\(interactionAfterCleanup.corridorChangedAfterCleanup) cleanupRestoredBlocks=\(interactionAfterCleanup.cleanupRestoredBlockCount)")
         }
         interactionExecutor.clearBoundaryAudit()
         naturalResourceExecutor.resetDiagnostics()
@@ -1495,6 +1963,8 @@ final class PebbleAgentController {
         lastConsumptionSucceeded = false
         lastSurvivalReason = "none"
         lastNaturalReason = "none"
+        lastConstructionReason = "none"
+        lastConstructionSiteDiagnostics = PebbleAgentConstructionSiteDiagnostics()
         lastError = nil
         trace("stop probesRemoved=\(removed) reason=\(reason)")
         return removed
@@ -1529,5 +1999,6 @@ final class PebbleAgentController {
         case unsafeMovement(String)
         case feedbackBoundary(String)
         case interactionBoundary(String)
+        case constructionBoundary(String)
     }
 }

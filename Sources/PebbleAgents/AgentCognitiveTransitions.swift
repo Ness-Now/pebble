@@ -102,7 +102,9 @@ public enum AgentCognitiveTransitions {
         } else if input.hasCommittedResourceTask && input.hasInventoryCapacity {
             nextGoal = AgentGoal(
                 kind: .collectResource,
-                reason: "reserved sandbox resource task active",
+                reason: input.hasConstructionTask
+                    ? "construction material acquisition active"
+                    : "reserved sandbox resource task active",
                 startedAtTick: input.tick,
                 urgency: 75
             )

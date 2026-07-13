@@ -11,12 +11,48 @@ struct PebbleAgentWorldSensor {
                 y: position.y,
                 z: position.z + direction.dz
             )
-            let column = observeColumn(world: world, position: neighborPosition)
+            let fixedColumn = observeColumn(world: world, position: neighborPosition)
+            let column: AgentWorldColumnObservation
+            let movementFootY: Int?
+            if fixedColumn.groundPresent && fixedColumn.feetClear && fixedColumn.headClear {
+                column = fixedColumn
+                movementFootY = position.y
+            } else if let surfaceY = fixedColumn.surfaceY {
+                let plannedY = agent.navigationProgress.nextStep.flatMap { next in
+                    next.x == neighborPosition.x && next.z == neighborPosition.z
+                        ? next.y
+                        : nil
+                }
+                let movementY = plannedY ?? surfaceY
+                let surfaceColumn = observeColumn(
+                    world: world,
+                    position: AgentPosition(
+                        x: neighborPosition.x,
+                        y: movementY,
+                        z: neighborPosition.z
+                    )
+                )
+                column = AgentWorldColumnObservation(
+                    position: neighborPosition,
+                    chunkReady: surfaceColumn.chunkReady,
+                    surfaceY: surfaceColumn.surfaceY,
+                    height: surfaceColumn.height,
+                    blockBelow: surfaceColumn.blockBelow,
+                    blockAtFeet: surfaceColumn.blockAtFeet,
+                    blockAtHead: surfaceColumn.blockAtHead,
+                    groundPresent: surfaceColumn.groundPresent,
+                    feetClear: surfaceColumn.feetClear,
+                    headClear: surfaceColumn.headClear
+                )
+                movementFootY = movementY
+            } else {
+                column = fixedColumn
+                movementFootY = nil
+            }
             let stepDelta: Int?
-            if column.groundPresent && column.feetClear && column.headClear {
-                stepDelta = 0
-            } else if let centerSurface = center.surfaceY, let neighborSurface = column.surfaceY {
-                stepDelta = neighborSurface - centerSurface
+            if column.groundPresent && column.feetClear && column.headClear,
+               let movementFootY {
+                stepDelta = movementFootY - position.y
             } else {
                 stepDelta = nil
             }

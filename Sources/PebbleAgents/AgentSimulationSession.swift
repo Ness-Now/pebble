@@ -357,12 +357,14 @@ public struct AgentSessionTickResult {
 public struct AgentSimulationSession {
     public static let maximumConsumptionCount = AgentSurvivalProgress.maximumEventCount
     public static let maximumConstructionEventCount = 64
+    public static let maximumFailedNaturalResourceTargetsPerAgent = 16
     public let configuration: AgentSessionConfiguration
     public private(set) var tick: Int
     private var statesById: [String: AgentSessionAgentState]
     private var processedInteractionIds: Set<String>
     private var creditedResourceKeys: Set<String>
     private var reservationsByTarget: [String: AgentResourceReservation]
+    private var failedNaturalResourceTargetKeysByAgentId: [String: [String]]
     public private(set) var economyEnabled: Bool
     public private(set) var naturalResourcesEnabled: Bool
     public private(set) var campStock: AgentCampStock
@@ -400,6 +402,7 @@ public struct AgentSimulationSession {
         processedInteractionIds = []
         creditedResourceKeys = []
         reservationsByTarget = [:]
+        failedNaturalResourceTargetKeysByAgentId = [:]
         economyEnabled = false
         naturalResourcesEnabled = false
         campStock = AgentCampStock(capacity: configuration.campStockCapacity)
@@ -474,6 +477,7 @@ public struct AgentSimulationSession {
     public mutating func setNaturalResourcesEnabled(_ enabled: Bool) {
         naturalResourcesEnabled = enabled
         guard !enabled else { return }
+        failedNaturalResourceTargetKeysByAgentId.removeAll()
         reservationsByTarget = reservationsByTarget.filter { $0.value.source != .naturalWorld }
         for id in sortedIds {
             guard var state = statesById[id],
@@ -571,6 +575,28 @@ public struct AgentSimulationSession {
                 campStock: campStock,
                 builderInventory: builder.resourceInventory
             )
+        )
+    }
+
+    public func constructionMaterialSurveyTarget(
+        for agentId: String,
+        observations: [AgentResourceObservation],
+        atTick surveyTick: Int
+    ) -> AgentPosition? {
+        guard let state = statesById[agentId],
+              let eligible = constructionEligibleResources(for: state),
+              !eligible.isEmpty else { return nil }
+        let failedKeys = Set(failedNaturalResourceTargetKeysByAgentId[agentId] ?? [])
+        let hasSelectableResource = observations.contains {
+            eligible.contains($0.resource)
+                && !failedKeys.contains($0.identity.stableKey)
+                && state.resourceInventory.canAdd($0.resource)
+        }
+        guard !hasSelectableResource else { return nil }
+        return AgentConstructionMaterialSurvey.horizontalTarget(
+            home: state.homePosition,
+            currentPosition: state.position,
+            tick: surveyTick
         )
     }
 
@@ -1325,9 +1351,15 @@ public struct AgentSimulationSession {
             } else if survivalEnabled && !economyEnabled {
                 state.activeResourceTarget = nil
             } else {
+                let failedKeys = Set(
+                    failedNaturalResourceTargetKeysByAgentId[id] ?? []
+                )
+                let selectableObservations = state.lastResourceObservations.filter {
+                    !failedKeys.contains($0.identity.stableKey)
+                }
                 state.activeResourceTarget = AgentResourceTargeting.select(
                     current: previousTarget,
-                    observations: state.lastResourceObservations,
+                    observations: selectableObservations,
                     inventory: state.resourceInventory,
                     tick: nextTick,
                     eligibleResources: constructionEligibleResources(for: state)
@@ -1357,8 +1389,17 @@ public struct AgentSimulationSession {
             if survivalEnabled {
                 survivalMemory = applySurvivalTick(to: &state, tick: nextTick)
             } else {
+                let hungerBeforeConstructionTick = state.needs.hunger
                 let tickTransition = AgentCognitiveTransitions.advanceTick(needs: state.needs)
                 state.needs = tickTransition.needs
+                if buildAutoEnabled,
+                   constructionProject?.builderAgentId == state.id {
+                    // Build validation deliberately keeps survival disabled while
+                    // legacy fatigue accumulates. Deferring hunger prevents an
+                    // off-mode counter from pre-empting the explicit post-build
+                    // rest proof when survival is enabled.
+                    state.needs.hunger = hungerBeforeConstructionTick
+                }
                 state.state = tickTransition.state
                 survivalMemory = nil
             }
@@ -1414,10 +1455,13 @@ public struct AgentSimulationSession {
                 hasCollectibleAdjacentResource: state.activeResourceTarget != nil,
                 hasInventoryCapacity: state.activeResourceTarget.map {
                     state.resourceInventory.canAdd($0.resource)
-                } ?? false,
-                hasCommittedResourceTask: (state.currentGoal.kind == .collectResource
+                } ?? (constructionEligibleResources(for: state)?.contains(where: {
+                    state.resourceInventory.canAdd($0)
+                }) == true),
+                hasCommittedResourceTask: ((state.currentGoal.kind == .collectResource
                     || state.currentGoal.kind == .satisfyHunger)
-                    && reservation(for: state)?.agentId == id,
+                    && reservation(for: state)?.agentId == id)
+                    || constructionEligibleResources(for: state)?.isEmpty == false,
                 shouldDeliverResources: shouldDeliverResources(state),
                 shouldBuildShelter: shouldBuildShelter(state),
                 hasConstructionTask: hasActiveConstructionTask(state),
@@ -1786,6 +1830,45 @@ public struct AgentSimulationSession {
         let goalMode: AgentNavigationGoalMode
         switch state.currentGoal.kind {
         case .collectResource, .satisfyHunger:
+            if state.activeResourceTarget == nil,
+               state.currentGoal.kind == .collectResource,
+               let observation,
+               let survey = constructionMaterialSurveyTarget(
+                   for: state.id,
+                   observations: state.lastResourceObservations,
+                   atTick: navigationTick
+               ),
+               AgentConstructionMaterialSurvey.permitsNormalizedTarget(
+                   observation.target,
+                   desiredTarget: survey,
+                   home: state.homePosition,
+                   currentPosition: state.position
+               ) {
+                purpose = .constructionSurvey
+                targetPosition = observation.target
+                targetResource = nil
+                goalMode = .exact
+                if state.navigationProgress.route?.purpose != .constructionSurvey
+                    || state.navigationProgress.route?.target != targetPosition {
+                    state.navigationProgress = AgentNavigationProgress(
+                        lastInvalidation: .targetChanged
+                    )
+                }
+                if state.position == targetPosition {
+                    state.navigationProgress = AgentNavigationProgress(
+                        status: .arrived,
+                        route: state.navigationProgress.route,
+                        routeIndex: state.navigationProgress.route.map {
+                            max(0, $0.positions.count - 1)
+                        } ?? 0,
+                        replanCount: state.navigationProgress.replanCount,
+                        lastPlanTick: state.navigationProgress.lastPlanTick,
+                        lastInvalidation: state.navigationProgress.lastInvalidation
+                    )
+                    return
+                }
+                break
+            }
             guard let target = state.activeResourceTarget else {
                 if state.navigationProgress.status != .idle || state.navigationProgress.route != nil {
                     state.navigationProgress = AgentNavigationProgress(
@@ -1838,7 +1921,10 @@ public struct AgentSimulationSession {
             }
             releaseReservation(for: state)
             purpose = .homeDelivery
-            targetPosition = state.homePosition
+            targetPosition = boundedHomeTarget(
+                state: state,
+                observation: observation
+            )
             targetResource = nil
             goalMode = .exact
             if state.position == state.homePosition {
@@ -1862,7 +1948,10 @@ public struct AgentSimulationSession {
             }
             releaseReservation(for: state)
             purpose = .homeRest
-            targetPosition = state.homePosition
+            targetPosition = boundedHomeTarget(
+                state: state,
+                observation: observation
+            )
             targetResource = nil
             goalMode = .exact
             if state.position == state.homePosition {
@@ -1889,7 +1978,10 @@ public struct AgentSimulationSession {
             releaseReservation(for: state)
             if project.status == .readyToFund {
                 purpose = .homeDelivery
-                targetPosition = state.homePosition
+                targetPosition = boundedHomeTarget(
+                    state: state,
+                    observation: observation
+                )
                 targetResource = nil
                 goalMode = .exact
             } else if (project.status == .funded || project.status == .building),
@@ -2004,7 +2096,10 @@ public struct AgentSimulationSession {
                 lastInvalidation: invalidation,
                 lastFailure: .replanLimitReached
             )
-            if purpose == .resource { releaseReservation(for: state) }
+            if purpose == .resource {
+                releaseReservation(for: state)
+                rememberFailedNaturalResourceTarget(for: state)
+            }
             return
         }
 
@@ -2047,6 +2142,34 @@ public struct AgentSimulationSession {
         )
     }
 
+    private func boundedHomeTarget(
+        state: AgentSessionAgentState,
+        observation: AgentNavigationObservation?
+    ) -> AgentPosition {
+        if state.navigationProgress.status == .active,
+           let route = state.navigationProgress.route,
+           route.purpose == .homeDelivery || route.purpose == .homeRest,
+           observation?.target == route.target {
+            return route.target
+        }
+        guard AgentBoundedTravel.requiresWaypoint(
+            from: state.position,
+            to: state.homePosition
+        ), let target = observation?.target else {
+            return state.homePosition
+        }
+        let desired = AgentBoundedTravel.desiredWaypoint(
+            from: state.position,
+            toward: state.homePosition
+        )
+        return AgentBoundedTravel.permitsNormalizedWaypoint(
+            target,
+            desiredWaypoint: desired,
+            current: state.position,
+            destination: state.homePosition
+        ) ? target : state.homePosition
+    }
+
     private func reservation(for state: AgentSessionAgentState) -> AgentResourceReservation? {
         guard let target = state.activeResourceTarget else { return nil }
         return reservationsByTarget[reservationKey(
@@ -2069,6 +2192,21 @@ public struct AgentSimulationSession {
         if reservationsByTarget[key]?.agentId == state.id {
             reservationsByTarget.removeValue(forKey: key)
         }
+    }
+
+    private mutating func rememberFailedNaturalResourceTarget(
+        for state: AgentSessionAgentState
+    ) {
+        guard let target = state.activeResourceTarget,
+              target.source == .naturalWorld else { return }
+        let key = target.identity.stableKey
+        var keys = failedNaturalResourceTargetKeysByAgentId[state.id] ?? []
+        guard !keys.contains(key) else { return }
+        keys.append(key)
+        if keys.count > Self.maximumFailedNaturalResourceTargetsPerAgent {
+            keys.removeFirst(keys.count - Self.maximumFailedNaturalResourceTargetsPerAgent)
+        }
+        failedNaturalResourceTargetKeysByAgentId[state.id] = keys
     }
 
     private func reservationKey(
@@ -2155,10 +2293,12 @@ public struct AgentSimulationSession {
               project.status == .planned
                 || project.status == .acquiringMaterials
                 || project.status == .readyToFund else { return nil }
-        return project.missingMaterials(
+        let missing = project.missingMaterials(
             campStock: campStock,
             builderInventory: state.resourceInventory
-        ).map(\.resource)
+        )
+        guard let maximumDeficit = missing.map(\.quantity).max() else { return [] }
+        return missing.filter { $0.quantity == maximumDeficit }.map(\.resource)
     }
 
     private func isFundedConstructionBuilder(_ state: AgentSessionAgentState) -> Bool {
