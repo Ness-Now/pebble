@@ -50,6 +50,7 @@ public struct AgentSnapshot: Encodable, Equatable {
 
     public let memoryCount: Int
     public let recentMemory: [AgentMemoryEntry]
+    public let lastResourceObservations: [AgentResourceObservation]
     public let resourceInventory: AgentResourceInventory
     public let lastInteractionOutcome: AgentInteractionOutcome?
 
@@ -90,6 +91,7 @@ public struct AgentSnapshot: Encodable, Equatable {
         memoryInfluencedDecisionCount = state.memoryInfluencedDecisionCount
         memoryCount = state.memory.count
         recentMemory = Array(state.memory.suffix(recentMemoryLimit))
+        lastResourceObservations = state.lastResourceObservations
         resourceInventory = state.resourceInventory
         lastInteractionOutcome = state.lastInteractionOutcome
     }
@@ -129,6 +131,7 @@ public struct AgentSnapshot: Encodable, Equatable {
             && lhs.memoryInfluencedDecisionCount == rhs.memoryInfluencedDecisionCount
             && lhs.memoryCount == rhs.memoryCount
             && memoriesEqual(lhs.recentMemory, rhs.recentMemory)
+            && lhs.lastResourceObservations == rhs.lastResourceObservations
             && lhs.resourceInventory == rhs.resourceInventory
             && lhs.lastInteractionOutcome == rhs.lastInteractionOutcome
     }
@@ -144,7 +147,7 @@ public struct AgentSnapshot: Encodable, Equatable {
         case feedbackMemoryWriteCount, feedbackMemoryDeduplicatedCount
         case memoryRetrievalCount, memoryInfluencedDecisionCount
         case memoryCount, recentMemory
-        case resourceInventory, lastInteractionOutcome
+        case lastResourceObservations, resourceInventory, lastInteractionOutcome
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -193,6 +196,9 @@ public struct AgentSnapshot: Encodable, Equatable {
         }
         try container.encode(memoryCount, forKey: .memoryCount)
         try container.encode(recentMemory, forKey: .recentMemory)
+        if !lastResourceObservations.isEmpty {
+            try container.encode(lastResourceObservations, forKey: .lastResourceObservations)
+        }
         if !resourceInventory.isEmpty || lastInteractionOutcome != nil {
             try container.encode(resourceInventory, forKey: .resourceInventory)
             try container.encodeIfPresent(lastInteractionOutcome, forKey: .lastInteractionOutcome)
@@ -225,6 +231,8 @@ private func actionsEqual(_ lhs: AgentAction?, _ rhs: AgentAction?) -> Bool {
             && lhs.dx == rhs.dx
             && lhs.dy == rhs.dy
             && lhs.dz == rhs.dz
+            && lhs.target == rhs.target
+            && lhs.resource == rhs.resource
     default:
         return false
     }

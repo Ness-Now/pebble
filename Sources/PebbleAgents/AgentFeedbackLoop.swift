@@ -452,6 +452,8 @@ private func actionsEqual(_ lhs: AgentAction, _ rhs: AgentAction) -> Bool {
         && lhs.dx == rhs.dx
         && lhs.dy == rhs.dy
         && lhs.dz == rhs.dz
+        && lhs.target == rhs.target
+        && lhs.resource == rhs.resource
 }
 
 private func actionsOperationallyEqual(_ lhs: AgentAction, _ rhs: AgentAction) -> Bool {
@@ -460,4 +462,6 @@ private func actionsOperationallyEqual(_ lhs: AgentAction, _ rhs: AgentAction) -
         && lhs.dx == rhs.dx
         && lhs.dy == rhs.dy
         && lhs.dz == rhs.dz
+        && lhs.target == rhs.target
+        && lhs.resource == rhs.resource
 }

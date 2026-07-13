@@ -11,6 +11,8 @@ struct PebbleAgentInteractionState {
     let harvested: Bool
     let rollbackCount: Int
     let lastRollback: String
+    let autoEnabled: Bool
+    let autoReason: String
 }
 
 struct PebbleAgentInteractionExecutor {
@@ -59,7 +61,11 @@ struct PebbleAgentInteractionExecutor {
     private(set) var rollbackCount = 0
     private(set) var lastRollback = "none"
 
-    func state(gateEnabled: Bool) -> PebbleAgentInteractionState {
+    func state(
+        gateEnabled: Bool,
+        autoEnabled: Bool = false,
+        autoReason: String = "none"
+    ) -> PebbleAgentInteractionState {
         PebbleAgentInteractionState(
             gateEnabled: gateEnabled,
             active: ledger != nil,
@@ -69,7 +75,43 @@ struct PebbleAgentInteractionExecutor {
             originalBlock: ledger?.originalBlock,
             harvested: ledger?.harvested ?? false,
             rollbackCount: rollbackCount,
-            lastRollback: lastRollback
+            lastRollback: lastRollback,
+            autoEnabled: autoEnabled,
+            autoReason: autoReason
+        )
+    }
+
+    func resourceObservation(
+        world: World,
+        agent: AgentSnapshot,
+        anchor: AgentPosition
+    ) throws -> AgentResourceObservation? {
+        guard let ledger, !ledger.harvested, ledger.actorId == agent.id else { return nil }
+        guard isInsideSandbox(ledger.target, anchor: anchor) else {
+            throw ExecutionError.outsideSandbox
+        }
+        guard isAdjacent(ledger.target, to: agent.position) else {
+            throw ExecutionError.nonAdjacentTarget
+        }
+        guard world.isChunkReady(ledger.target.x >> 4, ledger.target.z >> 4) else {
+            throw ExecutionError.chunkUnavailable
+        }
+        guard world.getBlock(ledger.target.x, ledger.target.y, ledger.target.z) == ledger.resourceBlock else {
+            throw ExecutionError.unexpectedBlock
+        }
+        guard let direction = AgentCardinalDirection.allCases.first(where: {
+            agent.position.x + $0.dx == ledger.target.x
+                && agent.position.y == ledger.target.y
+                && agent.position.z + $0.dz == ledger.target.z
+        }) else {
+            throw ExecutionError.nonAdjacentTarget
+        }
+        return AgentResourceObservation(
+            resource: .sandboxResource,
+            target: ledger.target,
+            direction: direction,
+            quantityAvailable: 1,
+            source: .sandboxFixture
         )
     }
 

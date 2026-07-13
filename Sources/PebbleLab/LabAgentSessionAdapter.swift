@@ -246,6 +246,8 @@ private func actionsEqual(_ lhs: AgentAction?, _ rhs: AgentAction?) -> Bool {
             && lhs.dx == rhs.dx
             && lhs.dy == rhs.dy
             && lhs.dz == rhs.dz
+            && lhs.target == rhs.target
+            && lhs.resource == rhs.resource
     default:
         return false
     }

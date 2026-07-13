@@ -61,6 +61,13 @@ public enum AgentCognitiveTransitions {
                 startedAtTick: input.tick,
                 urgency: 70
             )
+        } else if input.hasCollectibleAdjacentResource && input.hasInventoryCapacity {
+            nextGoal = AgentGoal(
+                kind: .collectResource,
+                reason: "adjacent sandbox resource available",
+                startedAtTick: input.tick,
+                urgency: 65
+            )
         } else if input.needs.curiosity >= 0.8 {
             nextGoal = AgentGoal(
                 kind: .explore,
@@ -116,6 +123,9 @@ public enum AgentCognitiveTransitions {
             needs.curiosity = min(1, needs.curiosity + 0.01)
             state = "observing"
             effect = "curiosity +0.01"
+        case "harvest_block":
+            state = "interacting"
+            effect = "awaiting interaction outcome"
         case "move_abstract":
             if input.goalKind == .seekSafety {
                 fear = max(0, fear - 1)

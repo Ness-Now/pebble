@@ -14,6 +14,7 @@ public enum AgentGoalKind: String, Codable, Equatable {
     case idle
     case rest
     case seekSafety
+    case collectResource
     case explore
     case observeOtherAgent
 }
@@ -39,6 +40,8 @@ public struct AgentAction: Encodable {
     public let dx: Int?
     public let dy: Int?
     public let dz: Int?
+    public let target: AgentPosition?
+    public let resource: AgentResourceKind?
 
     public init(
         name: String,
@@ -46,7 +49,9 @@ public struct AgentAction: Encodable {
         tick: Int,
         dx: Int? = nil,
         dy: Int? = nil,
-        dz: Int? = nil
+        dz: Int? = nil,
+        target: AgentPosition? = nil,
+        resource: AgentResourceKind? = nil
     ) {
         self.name = name
         self.reason = reason
@@ -54,6 +59,8 @@ public struct AgentAction: Encodable {
         self.dx = dx
         self.dy = dy
         self.dz = dz
+        self.target = target
+        self.resource = resource
     }
 }
 
@@ -63,19 +70,22 @@ public struct AgentActionDecisionInput {
     public let goalKind: AgentGoalKind
     public let position: AgentPosition
     public let homePosition: AgentPosition
+    public let resourceObservations: [AgentResourceObservation]
 
     public init(
         agentId: String,
         tick: Int,
         goalKind: AgentGoalKind,
         position: AgentPosition,
-        homePosition: AgentPosition
+        homePosition: AgentPosition,
+        resourceObservations: [AgentResourceObservation] = []
     ) {
         self.agentId = agentId
         self.tick = tick
         self.goalKind = goalKind
         self.position = position
         self.homePosition = homePosition
+        self.resourceObservations = resourceObservations
     }
 }
 
@@ -103,6 +113,25 @@ public enum AgentActionDecider {
             )
         case .rest:
             return AgentAction(name: "rest", reason: "goal rest", tick: input.tick)
+        case .collectResource:
+            let observations = (try? AgentResourcePerception.normalize(
+                observerPosition: input.position,
+                observations: input.resourceObservations
+            )) ?? []
+            guard let observation = observations.first else {
+                return AgentAction(
+                    name: "wait",
+                    reason: "goal collectResource: resource unavailable",
+                    tick: input.tick
+                )
+            }
+            return AgentAction(
+                name: "harvest_block",
+                reason: "goal collectResource: adjacent sandbox resource",
+                tick: input.tick,
+                target: observation.target,
+                resource: observation.resource
+            )
         case .observeOtherAgent:
             return AgentAction(
                 name: "observe_area",

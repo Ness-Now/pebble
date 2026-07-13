@@ -66,6 +66,9 @@ struct PebbleAgentDebugState {
             let factor = currentFeedback?.dominantFactor.kind.rawValue ?? "basePolicy"
             let reason = currentFeedback?.reason ?? agent.lastAction?.reason ?? "none"
             let interactionTarget = interaction.target.map(Self.position) ?? "none"
+            let resourceSeen = agent.lastResourceObservations.first.map {
+                "\($0.resource.rawValue)@\(Self.position($0.target))"
+            } ?? "none"
             let interactionOutcome = agent.lastInteractionOutcome
             let interactionMemory = agent.recentMemory.last { memory in
                 memory.type == "resource_harvested" || memory.type == "interaction_blocked" || memory.type == "inventory_full"
@@ -81,7 +84,8 @@ struct PebbleAgentDebugState {
                 "reason: \(Self.short(reason, limit: 38))",
                 "memory/retrieved/influenced/dedup: \(decisionAgent.memoryCount)/\(decisionAgent.memoryRetrievalCount)/\(decisionAgent.memoryInfluencedDecisionCount)/\(decisionAgent.feedbackMemoryDeduplicatedCount)",
                 "inventory: \(agent.resourceInventory.totalCount)/\(agent.resourceInventory.capacity) sandboxResource=\(agent.resourceInventory.count(of: .sandboxResource))",
-                "interaction: \(interaction.active ? (interaction.harvested ? "harvested" : "ready") : "inactive") target \(interactionTarget)",
+                "resourceSeen: \(resourceSeen)",
+                "interaction: \(interaction.active ? (interaction.harvested ? "harvested" : "ready") : "inactive") target \(interactionTarget) auto \(interaction.autoEnabled ? "on" : "off")",
                 "outcome: \(interactionOutcome?.status.rawValue ?? "none") delta \(interactionOutcome?.inventoryDelta.quantity ?? 0) memory \(interactionMemory)",
                 "rollback: \(interaction.rollbackCount) \(Self.short(interaction.lastRollback, limit: 30))",
                 "errors: \(runtimeErrorCount)  catchup dropped: \(droppedCatchUpSteps)",
@@ -160,10 +164,13 @@ struct PebbleAgentDebugState {
             "goal: \(agent.currentGoal.kind.rawValue) urgency: \(agent.currentGoal.urgency)",
             "goal reason: \(Self.short(agent.currentGoal.reason))",
             "action: \(action?.name ?? "none") deltas: \(deltas)",
+            "action target/resource: \(action?.target.map(Self.position) ?? "none") / \(action?.resource?.rawValue ?? "none")",
             "reason/effect: \(Self.short(action?.reason ?? "none", limit: 18)) / \(Self.short(agent.lastActionEffect?.effect ?? "none", limit: 18))",
             "nearby: \(nearby.isEmpty ? "none" : nearby) memory: \(agent.memoryCount)",
             "inventory: \(agent.resourceInventory.totalCount)/\(agent.resourceInventory.capacity) sandboxResource: \(agent.resourceInventory.count(of: .sandboxResource))",
-            "interaction target/status: \(interaction.target.map(Self.position) ?? "none") / \(interaction.active ? (interaction.harvested ? "harvested" : "ready") : "inactive")",
+            "resource seen: \(agent.lastResourceObservations.first.map { "\($0.resource.rawValue)@\(Self.position($0.target)) \($0.direction.rawValue)" } ?? "none")",
+            "interaction target/status: \(interaction.target.map(Self.position) ?? "none") / \(interaction.active ? (interaction.harvested ? "harvested" : "ready") : "inactive") auto: \(interaction.autoEnabled ? "on" : "off")",
+            "interaction auto reason: \(Self.short(interaction.autoReason, limit: 28))",
             "interaction outcome: \(agent.lastInteractionOutcome?.status.rawValue ?? "none") reason: \(Self.short(agent.lastInteractionOutcome?.reason ?? "none", limit: 24))",
             "interaction delta/memory: \(agent.lastInteractionOutcome?.inventoryDelta.quantity ?? 0) / \(agent.recentMemory.last?.type ?? "none")",
             "interaction rollback: \(interaction.rollbackCount) \(Self.short(interaction.lastRollback, limit: 28))",

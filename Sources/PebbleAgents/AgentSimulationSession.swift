@@ -98,6 +98,7 @@ public struct AgentSessionAgentState {
     public internal(set) var feedbackMemoryDeduplicatedCount: Int
     public internal(set) var memoryRetrievalCount: Int
     public internal(set) var memoryInfluencedDecisionCount: Int
+    public internal(set) var lastResourceObservations: [AgentResourceObservation]
     public internal(set) var resourceInventory: AgentResourceInventory
     public internal(set) var lastInteractionOutcome: AgentInteractionOutcome?
 
@@ -134,6 +135,7 @@ public struct AgentSessionAgentState {
         feedbackMemoryDeduplicatedCount: Int = 0,
         memoryRetrievalCount: Int = 0,
         memoryInfluencedDecisionCount: Int = 0,
+        lastResourceObservations: [AgentResourceObservation] = [],
         resourceInventory: AgentResourceInventory = AgentResourceInventory(),
         lastInteractionOutcome: AgentInteractionOutcome? = nil
     ) {
@@ -169,6 +171,7 @@ public struct AgentSessionAgentState {
         self.feedbackMemoryDeduplicatedCount = feedbackMemoryDeduplicatedCount
         self.memoryRetrievalCount = memoryRetrievalCount
         self.memoryInfluencedDecisionCount = memoryInfluencedDecisionCount
+        self.lastResourceObservations = lastResourceObservations
         self.resourceInventory = resourceInventory
         self.lastInteractionOutcome = lastInteractionOutcome
     }
@@ -179,17 +182,20 @@ public struct AgentPerceptionInput {
     public let observationCountIncrement: Int
     public let externalMemoryEntries: [AgentMemoryEntry]
     public let worldObservation: AgentWorldObservation?
+    public let resourceObservations: [AgentResourceObservation]
 
     public init(
         agentId: String,
         observationCountIncrement: Int = 0,
         externalMemoryEntries: [AgentMemoryEntry] = [],
-        worldObservation: AgentWorldObservation? = nil
+        worldObservation: AgentWorldObservation? = nil,
+        resourceObservations: [AgentResourceObservation] = []
     ) {
         self.agentId = agentId
         self.observationCountIncrement = observationCountIncrement
         self.externalMemoryEntries = externalMemoryEntries
         self.worldObservation = worldObservation
+        self.resourceObservations = resourceObservations
     }
 }
 
@@ -382,6 +388,7 @@ public struct AgentSimulationSession {
         perceptions: [AgentPerceptionInput] = []
     ) throws -> AgentSessionTickResult {
         var perceptionsById: [String: AgentPerceptionInput] = [:]
+        var resourceObservationsById: [String: [AgentResourceObservation]] = [:]
         for perception in perceptions {
             guard statesById[perception.agentId] != nil else {
                 throw AgentSessionError.unknownAgentId(perception.agentId)
@@ -392,6 +399,12 @@ public struct AgentSimulationSession {
             if let observation = perception.worldObservation,
                observation.position != statesById[perception.agentId]?.position {
                 throw AgentSessionError.worldObservationPositionMismatch(perception.agentId)
+            }
+            if let position = statesById[perception.agentId]?.position {
+                resourceObservationsById[perception.agentId] = try AgentResourcePerception.normalize(
+                    observerPosition: position,
+                    observations: perception.resourceObservations
+                )
             }
             perceptionsById[perception.agentId] = perception
         }
@@ -407,6 +420,7 @@ public struct AgentSimulationSession {
             guard var state = statesById[id] else { continue }
             let perception = perceptionsById[id]
             var memoriesAdded = perception?.externalMemoryEntries ?? []
+            state.lastResourceObservations = resourceObservationsById[id] ?? []
 
             let tickTransition = AgentCognitiveTransitions.advanceTick(needs: state.needs)
             state.needs = tickTransition.needs
@@ -456,6 +470,10 @@ public struct AgentSimulationSession {
                 fear: state.fear,
                 needs: state.needs,
                 hasNearbyAgents: !state.nearbyAgents.isEmpty,
+                hasCollectibleAdjacentResource: !state.lastResourceObservations.isEmpty,
+                hasInventoryCapacity: state.lastResourceObservations.first.map {
+                    state.resourceInventory.canAdd($0.resource)
+                } ?? false,
                 currentGoalKind: state.currentGoal.kind
             ))
             if let goalChange {
@@ -468,7 +486,8 @@ public struct AgentSimulationSession {
                 tick: nextTick,
                 goalKind: state.currentGoal.kind,
                 position: state.position,
-                homePosition: state.homePosition
+                homePosition: state.homePosition,
+                resourceObservations: state.lastResourceObservations
             ))
             let retrievedMemories = AgentFeedbackLoop.retrieveMovementMemories(
                 memory: state.memory,

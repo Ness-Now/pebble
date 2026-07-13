@@ -4446,5 +4446,272 @@ do {
               && invalidAfter.lastInteractionOutcome == nil)
 }
 
+// ---------------------------------------------------------------------------
+section("PebbleAgents autonomous adjacent resource harvest G2")
+do {
+    let observer = AgentPosition(x: 10, y: 64, z: 10)
+    func resourceObservation(
+        _ direction: AgentCardinalDirection,
+        target: AgentPosition? = nil,
+        quantity: Int = 1
+    ) -> AgentResourceObservation {
+        AgentResourceObservation(
+            resource: .sandboxResource,
+            target: target ?? AgentPosition(
+                x: observer.x + direction.dx,
+                y: observer.y,
+                z: observer.z + direction.dz
+            ),
+            direction: direction,
+            quantityAvailable: quantity,
+            source: .sandboxFixture
+        )
+    }
+
+    let north = resourceObservation(.north)
+    let south = resourceObservation(.south)
+    let normalized = try! AgentResourcePerception.normalize(
+        observerPosition: observer,
+        observations: [south, north]
+    )
+    check("G2 adjacent resource observation valid", normalized.count == 2)
+    check("G2 resource observation order deterministic",
+          normalized.map(\.direction) == [.north, .south])
+    check("G2 resource observation contract exact",
+          normalized[0].resource == .sandboxResource
+              && normalized[0].quantityAvailable == 1
+              && normalized[0].source == .sandboxFixture)
+    check("G2 non-adjacent resource rejected", {
+        do {
+            _ = try AgentResourcePerception.normalize(
+                observerPosition: observer,
+                observations: [resourceObservation(
+                    .east,
+                    target: AgentPosition(x: observer.x + 2, y: observer.y, z: observer.z)
+                )]
+            )
+            return false
+        } catch AgentResourceObservationError.nonAdjacentTarget { return true }
+        catch { return false }
+    }())
+    check("G2 inconsistent resource direction rejected", {
+        do {
+            _ = try AgentResourcePerception.normalize(
+                observerPosition: observer,
+                observations: [resourceObservation(.north, target: south.target)]
+            )
+            return false
+        } catch AgentResourceObservationError.directionMismatch { return true }
+        catch { return false }
+    }())
+    check("G2 duplicate resource target rejected", {
+        do {
+            _ = try AgentResourcePerception.normalize(
+                observerPosition: observer,
+                observations: [north, north]
+            )
+            return false
+        } catch AgentResourceObservationError.duplicateTarget { return true }
+        catch { return false }
+    }())
+    check("G2 non-positive resource quantity rejected", {
+        do {
+            _ = try AgentResourcePerception.normalize(
+                observerPosition: observer,
+                observations: [resourceObservation(.north, quantity: 0)]
+            )
+            return false
+        } catch AgentResourceObservationError.nonPositiveQuantity { return true }
+        catch { return false }
+    }())
+    check("G2 perception defaults to no resource",
+          AgentPerceptionInput(agentId: "agent_0").resourceObservations.isEmpty)
+
+    func needs(
+        fatigue: Double = 0,
+        curiosity: Double = 0,
+        safety: Double = 1
+    ) -> AgentNeeds {
+        AgentNeeds(hunger: 0, fatigue: fatigue, curiosity: curiosity, safety: safety)
+    }
+    func selectedGoal(
+        health: Int = 100,
+        fear: Int = 0,
+        needs: AgentNeeds = AgentNeeds(hunger: 0, fatigue: 0, curiosity: 0, safety: 1),
+        nearby: Bool = false,
+        resource: Bool = true,
+        capacity: Bool = true,
+        current: AgentGoalKind = .idle
+    ) -> AgentGoalChange? {
+        AgentCognitiveTransitions.selectGoal(AgentGoalSelectionInput(
+            tick: 9,
+            health: health,
+            fear: fear,
+            needs: needs,
+            hasNearbyAgents: nearby,
+            hasCollectibleAdjacentResource: resource,
+            hasInventoryCapacity: capacity,
+            currentGoalKind: current
+        ))
+    }
+    let collect = selectedGoal()
+    check("G2 resource with capacity selects collect",
+          collect?.goal.kind == .collectResource)
+    check("G2 collect goal contract exact",
+          collect?.goal.reason == "adjacent sandbox resource available"
+              && collect?.goal.urgency == 65
+              && collect?.goal.startedAtTick == 9)
+    check("G2 full inventory prevents collect",
+          selectedGoal(needs: needs(curiosity: 0.8), capacity: false)?.goal.kind == .explore)
+    check("G2 critical health outranks resource",
+          selectedGoal(health: 25)?.goal.kind == .seekSafety)
+    check("G2 high fear outranks resource",
+          selectedGoal(fear: 70)?.goal.kind == .seekSafety)
+    check("G2 low safety outranks resource",
+          selectedGoal(needs: needs(safety: 0.49))?.goal.kind == .seekSafety)
+    check("G2 fatigue outranks resource",
+          selectedGoal(needs: needs(fatigue: 0.02, curiosity: 0.9))?.goal.kind == .rest)
+    check("G2 resource outranks curiosity",
+          selectedGoal(needs: needs(curiosity: 0.9))?.goal.kind == .collectResource)
+    check("G2 resource outranks nearby agent",
+          selectedGoal(nearby: true)?.goal.kind == .collectResource)
+    check("G2 resource disappearance leaves collect goal",
+          selectedGoal(resource: false, current: .collectResource)?.goal.kind == .idle)
+
+    let harvest = AgentActionDecider.decide(AgentActionDecisionInput(
+        agentId: "agent_0",
+        tick: 9,
+        goalKind: .collectResource,
+        position: observer,
+        homePosition: observer,
+        resourceObservations: [south, north]
+    ))
+    check("G2 collect produces harvest action", harvest.name == "harvest_block")
+    check("G2 harvest target deterministic", harvest.target == north.target)
+    check("G2 harvest resource exact", harvest.resource == .sandboxResource)
+    check("G2 harvest reason exact",
+          harvest.reason == "goal collectResource: adjacent sandbox resource")
+    check("G2 harvest has no movement deltas",
+          harvest.dx == nil && harvest.dy == nil && harvest.dz == nil)
+    let harvestJSON = (try? JSONEncoder().encode(harvest)).flatMap {
+        try? JSONSerialization.jsonObject(with: $0) as? [String: Any]
+    }
+    check("G2 harvest JSON carries target and resource",
+          harvestJSON?["resource"] as? String == "sandboxResource"
+              && (harvestJSON?["target"] as? [String: Any])?["x"] as? Int == north.target.x)
+
+    func state(inventory: AgentResourceInventory = AgentResourceInventory()) -> AgentSessionAgentState {
+        AgentSessionAgentState(
+            id: "agent_0",
+            state: "idle",
+            position: observer,
+            needs: needs(curiosity: 0.2),
+            health: 100,
+            fear: 0,
+            homePosition: observer,
+            nearbyAgents: [],
+            currentGoal: AgentGoal(kind: .idle, reason: "initial", startedAtTick: 0, urgency: 0),
+            lastAction: nil,
+            lastActionEffect: nil,
+            memory: [],
+            tickCreated: 0,
+            ticksAlive: 0,
+            observationCount: 0,
+            nearbyObservationCount: 0,
+            goalSelectionCount: 0,
+            goalChangeCount: 0,
+            actionCount: 0,
+            actionEffectCount: 0,
+            movementCount: 0,
+            totalManhattanDistanceMoved: 0,
+            returnHomeMoveCount: 0,
+            totalDistanceReducedTowardHome: 0,
+            resourceInventory: inventory
+        )
+    }
+    func session(inventory: AgentResourceInventory = AgentResourceInventory()) -> AgentSimulationSession {
+        try! AgentSimulationSession(
+            configuration: try! AgentSessionConfiguration(
+                seed: 99,
+                memoryPolicy: .bounded(maxEntries: 32)
+            ),
+            agents: [state(inventory: inventory)]
+        )
+    }
+
+    var loop = session()
+    let inventoryBeforeTick = loop.snapshot().agents[0].resourceInventory
+    let firstTick = try! loop.advanceTick(perceptions: [
+        AgentPerceptionInput(agentId: "agent_0", resourceObservations: [north]),
+    ])
+    let afterDecision = loop.snapshot().agents[0]
+    check("G2 session tick selects collect and harvest",
+          firstTick.agents[0].goalChange?.to == .collectResource
+              && firstTick.agents[0].action.name == "harvest_block")
+    check("G2 advanceTick does not mutate inventory",
+          afterDecision.resourceInventory == inventoryBeforeTick)
+    check("G2 harvest cognitive effect awaits outcome",
+          afterDecision.state == "interacting"
+              && afterDecision.lastActionEffect?.effect == "awaiting interaction outcome")
+    check("G2 session snapshot exposes resource observation",
+          afterDecision.lastResourceObservations == [north])
+    let movement = AgentMovementCoordinator.resolve(snapshot: loop.snapshot())[0]
+    check("G2 harvest never becomes movement",
+          movement.status == .notRequested
+              && movement.fromPosition == movement.toPosition
+              && movement.appliedDX == 0 && movement.appliedDY == 0 && movement.appliedDZ == 0)
+    check("G2 harvest leaves movement count unchanged", afterDecision.movementCount == 0)
+
+    let interactionId = "g2:agent_0:1"
+    let successfulOutcome = AgentInteractionOutcome(
+        interactionId: interactionId,
+        agentId: "agent_0",
+        tick: 1,
+        target: north.target,
+        resource: .sandboxResource,
+        status: .succeeded,
+        inventoryDelta: AgentInventoryDelta(resource: .sandboxResource, quantity: 1),
+        reason: "sandbox resource harvested"
+    )
+    try! loop.prevalidateInteraction(AgentInteractionIntent(
+        interactionId: interactionId,
+        agentId: "agent_0",
+        tick: 1,
+        target: north.target,
+        resource: .sandboxResource
+    ))
+    try! loop.applyInteractionOutcome(successfulOutcome)
+    let afterOutcome = loop.snapshot().agents[0]
+    check("G2 external outcome credits exactly once",
+          afterOutcome.resourceInventory.totalCount == 1)
+    check("G2 external outcome writes one harvest memory",
+          afterOutcome.recentMemory.filter { $0.type == "resource_harvested" }.count == 1)
+    let secondTick = try! loop.advanceTick(perceptions: [AgentPerceptionInput(agentId: "agent_0")])
+    let afterSecondTick = loop.snapshot().agents[0]
+    check("G2 next tick does not repeat harvest",
+          secondTick.agents[0].action.name != "harvest_block"
+              && afterSecondTick.currentGoal.kind != .collectResource)
+    check("G2 next tick gives no second credit",
+          afterSecondTick.resourceInventory.totalCount == 1)
+    check("G2 next tick gives no second harvest memory",
+          afterSecondTick.recentMemory.filter { $0.type == "resource_harvested" }.count == 1)
+
+    var full = AgentResourceInventory(capacity: 1)
+    _ = full.add(.sandboxResource)
+    var fullLoop = session(inventory: full)
+    let fullTick = try! fullLoop.advanceTick(perceptions: [
+        AgentPerceptionInput(agentId: "agent_0", resourceObservations: [north]),
+    ])
+    check("G2 full session does not choose harvest",
+          fullTick.agents[0].action.name != "harvest_block")
+
+    var deterministicA = session()
+    var deterministicB = session()
+    let deterministicInput = [AgentPerceptionInput(agentId: "agent_0", resourceObservations: [south, north])]
+    _ = try! deterministicA.advanceTick(perceptions: deterministicInput)
+    _ = try! deterministicB.advanceTick(perceptions: deterministicInput)
+    check("G2 identical runs are deterministic", deterministicA.snapshot() == deterministicB.snapshot())
+}
+
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)

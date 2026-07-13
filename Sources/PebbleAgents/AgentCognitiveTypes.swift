@@ -135,6 +135,8 @@ public struct AgentGoalSelectionInput {
     public let fear: Int
     public let needs: AgentNeeds
     public let hasNearbyAgents: Bool
+    public let hasCollectibleAdjacentResource: Bool
+    public let hasInventoryCapacity: Bool
     public let currentGoalKind: AgentGoalKind
 
     public init(
@@ -143,6 +145,8 @@ public struct AgentGoalSelectionInput {
         fear: Int,
         needs: AgentNeeds,
         hasNearbyAgents: Bool,
+        hasCollectibleAdjacentResource: Bool = false,
+        hasInventoryCapacity: Bool = false,
         currentGoalKind: AgentGoalKind
     ) {
         self.tick = tick
@@ -150,6 +154,8 @@ public struct AgentGoalSelectionInput {
         self.fear = fear
         self.needs = needs
         self.hasNearbyAgents = hasNearbyAgents
+        self.hasCollectibleAdjacentResource = hasCollectibleAdjacentResource
+        self.hasInventoryCapacity = hasInventoryCapacity
         self.currentGoalKind = currentGoalKind
     }
 }

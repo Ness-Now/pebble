@@ -783,6 +783,8 @@ private func agentsBasicCognitiveLoopUrgency(for goal: LabGoalKind) -> Int {
         return 50
     case .rest:
         return 70
+    case .collectResource:
+        return 65
     case .idle:
         return 0
     }
