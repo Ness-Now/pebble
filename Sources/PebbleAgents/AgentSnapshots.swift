@@ -56,6 +56,7 @@ public struct AgentSnapshot: Encodable, Equatable {
     public let lastInteractionOutcome: AgentInteractionOutcome?
     public let navigationProgress: AgentNavigationProgress
     public let resourceReservation: AgentResourceReservation?
+    public let lastDeliveryOutcome: AgentDeliveryOutcome?
 
     init(
         state: AgentSessionAgentState,
@@ -104,6 +105,7 @@ public struct AgentSnapshot: Encodable, Equatable {
         lastInteractionOutcome = state.lastInteractionOutcome
         navigationProgress = state.navigationProgress
         self.resourceReservation = resourceReservation
+        lastDeliveryOutcome = state.lastDeliveryOutcome
     }
 
     public static func == (lhs: AgentSnapshot, rhs: AgentSnapshot) -> Bool {
@@ -147,6 +149,7 @@ public struct AgentSnapshot: Encodable, Equatable {
             && lhs.lastInteractionOutcome == rhs.lastInteractionOutcome
             && lhs.navigationProgress == rhs.navigationProgress
             && lhs.resourceReservation == rhs.resourceReservation
+            && lhs.lastDeliveryOutcome == rhs.lastDeliveryOutcome
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -162,6 +165,7 @@ public struct AgentSnapshot: Encodable, Equatable {
         case memoryCount, recentMemory
         case lastResourceObservations, activeResourceTarget, resourceInventory, lastInteractionOutcome
         case navigationProgress, resourceReservation
+        case lastDeliveryOutcome
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -225,6 +229,7 @@ public struct AgentSnapshot: Encodable, Equatable {
             try container.encode(navigationProgress, forKey: .navigationProgress)
         }
         try container.encodeIfPresent(resourceReservation, forKey: .resourceReservation)
+        try container.encodeIfPresent(lastDeliveryOutcome, forKey: .lastDeliveryOutcome)
     }
 }
 
@@ -234,22 +239,35 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
     public let agentCount: Int
     public let agents: [AgentSnapshot]
     public let resourceReservations: [AgentResourceReservation]
+    public let economyEnabled: Bool
+    public let deliveryQuota: Int
+    public let campStock: AgentCampStock
+    public let conservation: AgentResourceConservationSnapshot
 
     init(
         seed: UInt32,
         tick: Int,
         agents: [AgentSnapshot],
-        resourceReservations: [AgentResourceReservation]
+        resourceReservations: [AgentResourceReservation],
+        economyEnabled: Bool,
+        deliveryQuota: Int,
+        campStock: AgentCampStock,
+        conservation: AgentResourceConservationSnapshot
     ) {
         self.seed = seed
         self.tick = tick
         agentCount = agents.count
         self.agents = agents
         self.resourceReservations = resourceReservations
+        self.economyEnabled = economyEnabled
+        self.deliveryQuota = deliveryQuota
+        self.campStock = campStock
+        self.conservation = conservation
     }
 
     private enum CodingKeys: String, CodingKey {
         case seed, tick, agentCount, agents, resourceReservations
+        case economyEnabled, deliveryQuota, campStock, conservation
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -260,6 +278,12 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
         try container.encode(agents, forKey: .agents)
         if !resourceReservations.isEmpty {
             try container.encode(resourceReservations, forKey: .resourceReservations)
+        }
+        if economyEnabled || !campStock.isEmpty || conservation.harvestedTotal > 0 {
+            try container.encode(economyEnabled, forKey: .economyEnabled)
+            try container.encode(deliveryQuota, forKey: .deliveryQuota)
+            try container.encode(campStock, forKey: .campStock)
+            try container.encode(conservation, forKey: .conservation)
         }
     }
 }

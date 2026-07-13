@@ -15,6 +15,7 @@ public enum AgentGoalKind: String, Codable, Equatable {
     case rest
     case seekSafety
     case collectResource
+    case deliverResources
     case explore
     case observeOtherAgent
 }
@@ -189,6 +190,37 @@ public enum AgentActionDecider {
                 tick: input.tick,
                 target: target.target,
                 resource: target.resource
+            )
+        case .deliverResources:
+            if input.position == input.homePosition {
+                return AgentAction(
+                    name: "deliver_resource",
+                    reason: "goal deliverResources: at home",
+                    tick: input.tick,
+                    target: input.homePosition
+                )
+            }
+            if let next = input.navigationProgress.nextStep {
+                let dx = next.x - input.position.x
+                let dy = next.y - input.position.y
+                let dz = next.z - input.position.z
+                if abs(dx) + abs(dz) == 1, (-1...1).contains(dy) {
+                    return AgentAction(
+                        name: "return_home",
+                        reason: "goal deliverResources: follow bounded route",
+                        tick: input.tick,
+                        dx: dx,
+                        dy: dy,
+                        dz: dz,
+                        target: input.homePosition
+                    )
+                }
+            }
+            return AgentAction(
+                name: "return_home",
+                reason: "goal deliverResources: awaiting bounded route",
+                tick: input.tick,
+                target: input.homePosition
             )
         case .observeOtherAgent:
             return AgentAction(

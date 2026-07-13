@@ -5439,6 +5439,512 @@ do {
     check("H2 snapshot deterministic encoding", encodedA == encodedB)
     check("H2 snapshot exposes navigation and reservation", String(data: encodedA, encoding: .utf8)?.contains("navigationProgress") == true
           && String(data: encodedA, encoding: .utf8)?.contains("resourceReservations") == true)
+
+    // -----------------------------------------------------------------------
+    section("PebbleAgents closed resource economy Phase I")
+
+    var multiInventory = AgentResourceInventory(capacity: 4)
+    check("I inventory adds sandbox compatibility resource", multiInventory.add(.sandboxResource))
+    check("I inventory adds foodRaw", multiInventory.add(.foodRaw))
+    check("I inventory adds wood", multiInventory.add(.wood))
+    check("I inventory adds stone", multiInventory.add(.stone))
+    check("I inventory counts each resource exactly",
+          multiInventory.count(of: .sandboxResource) == 1
+            && multiInventory.count(of: .foodRaw) == 1
+            && multiInventory.count(of: .wood) == 1
+            && multiInventory.count(of: .stone) == 1)
+    check("I inventory total capacity exact", multiInventory.totalCount == 4 && multiInventory.isFull)
+    let fullMultiInventory = multiInventory
+    check("I inventory overflow rejected", !multiInventory.add(.foodRaw))
+    check("I inventory overflow has no mutation", multiInventory == fullMultiInventory)
+    check("I inventory removes foodRaw", multiInventory.remove(.foodRaw))
+    check("I inventory removes wood", multiInventory.remove(.wood))
+    check("I inventory removes stone", multiInventory.remove(.stone))
+    check("I inventory removes sandboxResource", multiInventory.remove(.sandboxResource))
+    check("I inventory never becomes negative", !multiInventory.remove(.stone) && multiInventory.isEmpty)
+    var allOrNothingInventory = AgentResourceInventory(capacity: 4)
+    _ = allOrNothingInventory.add(.foodRaw)
+    let beforeImpossibleRemoval = allOrNothingInventory
+    check("I inventory all-or-nothing removal rejects missing resource",
+          !allOrNothingInventory.removeAll([
+            AgentResourceAmount(resource: .foodRaw, quantity: 1),
+            AgentResourceAmount(resource: .wood, quantity: 1),
+          ]))
+    check("I inventory failed removal has no mutation", allOrNothingInventory == beforeImpossibleRemoval)
+    let economyEncoder = JSONEncoder()
+    economyEncoder.outputFormatting = [.sortedKeys]
+    let inventoryEncodingA = try! economyEncoder.encode(fullMultiInventory)
+    let inventoryEncodingB = try! economyEncoder.encode(fullMultiInventory)
+    check("I inventory deterministic encoding", inventoryEncodingA == inventoryEncodingB)
+    let legacyEmptyEncoding = String(
+        data: try! economyEncoder.encode(AgentResourceInventory(capacity: 3)),
+        encoding: .utf8
+    )
+    check("I inventory sandboxResource encoding compatibility",
+          legacyEmptyEncoding == "{\"capacity\":3,\"sandboxResourceCount\":0}")
+    check("I resource order stable",
+          AgentResourceKind.allCases == [.sandboxResource, .foodRaw, .wood, .stone]
+            && AgentResourceKind.economyFixtureOrder == [.foodRaw, .wood, .stone])
+    let fixtureTargets = [
+        AgentPosition(x: -4, y: 64, z: 0),
+        AgentPosition(x: 0, y: 64, z: -4),
+        AgentPosition(x: 4, y: 64, z: 0),
+    ]
+    let fixtureSetBoundary = AgentSandboxFixtureSetMutationBoundary(targets: fixtureTargets)
+    check("I fixture mutation boundary accepts three fixtures",
+          fixtureSetBoundary.isValid && fixtureSetBoundary.permittedPositions.count == 3)
+    check("I fixture mutation boundary accepts only final blocks",
+          fixtureTargets.allSatisfy(fixtureSetBoundary.permits))
+    check("I fixture mutation boundary rejects corridor cells",
+          !fixtureSetBoundary.permits(AgentPosition(x: 1, y: 64, z: 0)))
+    check("I fixture mutation boundary rejects more than three",
+          !AgentSandboxFixtureSetMutationBoundary(targets: fixtureTargets + [
+            AgentPosition(x: 0, y: 64, z: 4),
+          ]).isValid)
+
+    var campStock = AgentCampStock(capacity: 3)
+    check("I camp stock adds foodRaw", campStock.add(.foodRaw))
+    check("I camp stock adds wood", campStock.add(.wood))
+    check("I camp stock adds stone", campStock.add(.stone))
+    check("I camp stock multi-resource total exact", campStock.totalCount == 3)
+    let fullCampStock = campStock
+    check("I camp stock capacity rejects overflow", !campStock.add(.sandboxResource))
+    check("I camp stock rejection has no mutation", campStock == fullCampStock)
+    check("I camp stock stable amount order", campStock.amounts.map(\.resource) == [.foodRaw, .wood, .stone])
+    check("I camp stock deterministic encoding",
+          try! economyEncoder.encode(campStock) == economyEncoder.encode(campStock))
+    var atomicCampStock = AgentCampStock(capacity: 2)
+    let atomicCampBefore = atomicCampStock
+    check("I camp stock batch rejects over capacity", !atomicCampStock.add([
+        AgentResourceAmount(resource: .foodRaw, quantity: 1),
+        AgentResourceAmount(resource: .wood, quantity: 2),
+    ]))
+    check("I camp stock batch rejection has no mutation", atomicCampStock == atomicCampBefore)
+
+    func goalInput(
+        current: AgentGoalKind,
+        adjacent: Bool = true,
+        capacity: Bool = true,
+        committed: Bool = false,
+        deliver: Bool = false
+    ) -> AgentGoalSelectionInput {
+        AgentGoalSelectionInput(
+            tick: 1,
+            health: 100,
+            fear: 0,
+            needs: AgentNeeds(hunger: 0, fatigue: 0, curiosity: 0, safety: 1),
+            hasNearbyAgents: false,
+            hasCollectibleAdjacentResource: adjacent,
+            hasInventoryCapacity: capacity,
+            hasCommittedResourceTask: committed,
+            shouldDeliverResources: deliver,
+            currentGoalKind: current
+        )
+    }
+    check("I policy collects under quota",
+          AgentCognitiveTransitions.selectGoal(goalInput(current: .idle))?.to == .collectResource)
+    check("I policy delivers at quota",
+          AgentCognitiveTransitions.selectGoal(goalInput(current: .collectResource, deliver: true))?.to == .deliverResources)
+    check("I policy delivers when full",
+          AgentCognitiveTransitions.selectGoal(goalInput(current: .collectResource, capacity: false, deliver: true))?.to == .deliverResources)
+    check("I policy does not deliver empty inventory",
+          AgentCognitiveTransitions.selectGoal(goalInput(current: .idle, adjacent: false, deliver: false))?.to != .deliverResources)
+    check("I policy delivery hysteresis has no oscillation",
+          AgentCognitiveTransitions.selectGoal(goalInput(current: .deliverResources, deliver: true)) == nil)
+
+    func economyAgentState(
+        id: String = "agent_economy",
+        position: AgentPosition,
+        home: AgentPosition,
+        inventory: AgentResourceInventory = AgentResourceInventory(),
+        goal: AgentGoalKind = .idle
+    ) -> AgentSessionAgentState {
+        AgentSessionAgentState(
+            id: id,
+            state: "idle",
+            position: position,
+            needs: AgentNeeds(hunger: 0, fatigue: 0, curiosity: 0, safety: 1),
+            health: 100,
+            fear: 0,
+            homePosition: home,
+            nearbyAgents: [],
+            currentGoal: AgentGoal(kind: goal, reason: "economy fixture", startedAtTick: 0, urgency: 80),
+            lastAction: nil,
+            lastActionEffect: nil,
+            memory: [],
+            tickCreated: 0,
+            ticksAlive: 0,
+            observationCount: 0,
+            nearbyObservationCount: 0,
+            goalSelectionCount: 0,
+            goalChangeCount: 0,
+            actionCount: 0,
+            actionEffectCount: 0,
+            movementCount: 0,
+            totalManhattanDistanceMoved: 0,
+            returnHomeMoveCount: 0,
+            totalDistanceReducedTowardHome: 0,
+            resourceInventory: inventory
+        )
+    }
+
+    func economySession(
+        states: [AgentSessionAgentState],
+        campCapacity: Int = 64,
+        quota: Int = 2,
+        maxReplans: Int = 3
+    ) -> AgentSimulationSession {
+        var session = try! AgentSimulationSession(
+            configuration: try! AgentSessionConfiguration(
+                seed: 303,
+                resourceObservationRadius: 8,
+                recentMemorySnapshotLimit: 64,
+                memoryPolicy: .bounded(maxEntries: 128),
+                navigationMaxReplans: maxReplans,
+                deliveryQuota: quota,
+                campStockCapacity: campCapacity
+            ),
+            agents: states
+        )
+        session.setEconomyEnabled(true)
+        return session
+    }
+
+    var carried = AgentResourceInventory(capacity: 8)
+    _ = carried.add(.foodRaw)
+    _ = carried.add(.wood)
+    let economyHome = AgentPosition(x: 0, y: 64, z: 0)
+    let economyAway = AgentPosition(x: 3, y: 64, z: 0)
+    var homeRouteSession = economySession(states: [economyAgentState(
+        position: economyAway,
+        home: economyHome,
+        inventory: carried,
+        goal: .deliverResources
+    )])
+    func homePerception(_ position: AgentPosition, worldTick: Int, blocked: AgentCardinalDirection? = nil) -> AgentPerceptionInput {
+        AgentPerceptionInput(
+            agentId: "agent_economy",
+            worldObservation: worldObservation(position, worldTick: worldTick, blockedDirection: blocked),
+            navigationObservation: AgentNavigationObservation(
+                worldTick: worldTick,
+                origin: position,
+                target: economyHome,
+                radius: 8,
+                cells: flatCells()
+            )
+        )
+    }
+    let homeTick1 = try! homeRouteSession.advanceTick(perceptions: [homePerception(economyAway, worldTick: 61)])
+    check("I home route uses existing exact planner",
+          homeRouteSession.snapshot().agents[0].navigationProgress.route?.purpose == .homeDelivery
+            && homeRouteSession.snapshot().agents[0].navigationProgress.route?.positions
+                == [economyAway, AgentPosition(x: 2, y: 64, z: 0), AgentPosition(x: 1, y: 64, z: 0), economyHome])
+    check("I home route emits return_home", homeTick1.agents[0].action.name == "return_home")
+    let firstHomeOutcomes = AgentMovementCoordinator.resolve(snapshot: homeRouteSession.snapshot())
+    try! homeRouteSession.applyMovementOutcomes(firstHomeOutcomes)
+    check("I home route progresses one step",
+          homeRouteSession.snapshot().agents[0].position == AgentPosition(x: 2, y: 64, z: 0)
+            && homeRouteSession.snapshot().agents[0].navigationProgress.routeIndex == 1)
+    let blockedHomeBefore = homeRouteSession.snapshot().agents[0]
+    _ = try! homeRouteSession.advanceTick(perceptions: [homePerception(blockedHomeBefore.position, worldTick: 62, blocked: .west)])
+    let blockedHomeOutcomes = AgentMovementCoordinator.resolve(snapshot: homeRouteSession.snapshot())
+    try! homeRouteSession.applyMovementOutcomes(blockedHomeOutcomes)
+    check("I home blockage does not progress",
+          homeRouteSession.snapshot().agents[0].position == blockedHomeBefore.position
+            && homeRouteSession.snapshot().agents[0].navigationProgress.routeIndex == 1)
+    _ = try! homeRouteSession.advanceTick(perceptions: [homePerception(blockedHomeBefore.position, worldTick: 63)])
+    check("I home blockage replans bounded",
+          homeRouteSession.snapshot().agents[0].navigationProgress.replanCount == 1)
+    for worldTick in 64...65 {
+        let position = homeRouteSession.snapshot().agents[0].position
+        _ = try! homeRouteSession.advanceTick(perceptions: [homePerception(position, worldTick: worldTick)])
+        try! homeRouteSession.applyMovementOutcomes(
+            AgentMovementCoordinator.resolve(snapshot: homeRouteSession.snapshot())
+        )
+    }
+    let arrivedHome = homeRouteSession.snapshot().agents[0]
+    check("I home route arrives exactly", arrivedHome.position == economyHome
+          && arrivedHome.navigationProgress.status == .arrived)
+    let deliveryTick = try! homeRouteSession.advanceTick(perceptions: [homePerception(economyHome, worldTick: 66)])
+    check("I arrival emits deliver_resource", deliveryTick.agents[0].action.name == "deliver_resource")
+    let homeDelivery = try! homeRouteSession.deliverResources(AgentDeliveryIntent(
+        deliveryId: "delivery-home-route",
+        agentId: "agent_economy",
+        tick: homeRouteSession.tick,
+        position: economyHome
+    ))
+    check("I delivery succeeds atomically", homeDelivery.status == .succeeded)
+    check("I delivery empties inventory exactly", homeRouteSession.snapshot().agents[0].resourceInventory.isEmpty)
+    check("I delivery credits camp stock exactly",
+          homeRouteSession.snapshot().campStock.count(of: .foodRaw) == 1
+            && homeRouteSession.snapshot().campStock.count(of: .wood) == 1)
+    check("I delivery writes one success memory",
+          homeRouteSession.snapshot().agents[0].recentMemory.filter { $0.type == "resource_delivered" }.count == 1)
+
+    var failedHomeRouteSession = economySession(states: [economyAgentState(
+        position: economyAway,
+        home: economyHome,
+        inventory: carried,
+        goal: .deliverResources
+    )])
+    for worldTick in 70...74 {
+        let position = failedHomeRouteSession.snapshot().agents[0].position
+        let isolatedCells = [
+            AgentNavigationCell(position: position, status: .traversable),
+            AgentNavigationCell(
+                position: AgentPosition(x: position.x - 1, y: position.y, z: position.z),
+                status: .blocked
+            ),
+        ]
+        _ = try! failedHomeRouteSession.advanceTick(perceptions: [AgentPerceptionInput(
+            agentId: "agent_economy",
+            worldObservation: worldObservation(position, worldTick: worldTick),
+            navigationObservation: AgentNavigationObservation(
+                worldTick: worldTick,
+                origin: position,
+                target: economyHome,
+                radius: 8,
+                cells: isolatedCells
+            )
+        )])
+    }
+    check("I home replan count bounded",
+          failedHomeRouteSession.snapshot().agents[0].navigationProgress.replanCount == 3)
+    check("I home route terminal failure explicit",
+          failedHomeRouteSession.snapshot().agents[0].navigationProgress.lastFailure == .replanLimitReached)
+
+    var conservationSession = economySession(states: [economyAgentState(
+        position: economyHome,
+        home: economyHome
+    )])
+    func applyHarvest(
+        _ resource: AgentResourceKind,
+        target: AgentPosition,
+        id: String,
+        to session: inout AgentSimulationSession
+    ) throws {
+        let outcome = AgentInteractionOutcome(
+            interactionId: id,
+            agentId: "agent_economy",
+            tick: session.tick,
+            target: target,
+            resource: resource,
+            status: .succeeded,
+            inventoryDelta: AgentInventoryDelta(resource: resource, quantity: 1),
+            reason: "economy fixture harvested"
+        )
+        try session.applyInteractionOutcome(outcome)
+    }
+    try! applyHarvest(.foodRaw, target: AgentPosition(x: 1, y: 64, z: 0), id: "fixture-food", to: &conservationSession)
+    check("I conservation exact after one harvest",
+          conservationSession.snapshot().conservation.harvestedTotal == 1
+            && conservationSession.snapshot().conservation.carriedTotal == 1
+            && conservationSession.snapshot().conservation.balanced)
+    try! applyHarvest(.wood, target: AgentPosition(x: -1, y: 64, z: 0), id: "fixture-wood", to: &conservationSession)
+    check("I conservation exact after multiple harvests",
+          conservationSession.snapshot().conservation.harvestedTotal == 2
+            && conservationSession.snapshot().conservation.carriedTotal == 2
+            && conservationSession.snapshot().conservation.balanced)
+    let beforeDuplicateCredit = conservationSession.snapshot()
+    check("I fixture credit deduplicated across interaction IDs", {
+        do {
+            try applyHarvest(.foodRaw, target: AgentPosition(x: 1, y: 64, z: 0), id: "fixture-food-second-id", to: &conservationSession)
+            return false
+        } catch AgentSessionError.duplicateResourceCredit { return true }
+        catch { return false }
+    }())
+    check("I duplicate fixture credit has no mutation", conservationSession.snapshot() == beforeDuplicateCredit)
+    let conservedDelivery = try! conservationSession.deliverResources(AgentDeliveryIntent(
+        deliveryId: "delivery-conservation",
+        agentId: "agent_economy",
+        tick: conservationSession.tick,
+        position: economyHome
+    ))
+    check("I conservation delivery outcome exact", conservedDelivery.transferred.map(\.resource) == [.foodRaw, .wood])
+    check("I conservation exact after delivery",
+          conservationSession.snapshot().conservation.harvestedTotal == 2
+            && conservationSession.snapshot().conservation.carriedTotal == 0
+            && conservationSession.snapshot().conservation.campStockTotal == 2
+            && conservationSession.snapshot().conservation.balanced)
+    let afterConservedDelivery = conservationSession.snapshot()
+    check("I delivery ID deduplicated", {
+        do {
+            _ = try conservationSession.deliverResources(AgentDeliveryIntent(
+                deliveryId: "delivery-conservation",
+                agentId: "agent_economy",
+                tick: conservationSession.tick,
+                position: economyHome
+            ))
+            return false
+        } catch AgentSessionError.duplicateDelivery { return true }
+        catch { return false }
+    }())
+    check("I duplicate delivery has no mutation", conservationSession.snapshot() == afterConservedDelivery)
+    let resumedTarget = AgentPosition(x: 1, y: 64, z: 0)
+    let resumeTick = try! conservationSession.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: "agent_economy",
+        resourceObservations: [AgentResourceObservation(
+            resource: .stone,
+            target: resumedTarget,
+            direction: .east,
+            distanceManhattan: 1,
+            quantityAvailable: 1,
+            source: .sandboxFixture
+        )]
+    )])
+    check("I policy resumes collection after delivery",
+          resumeTick.agents[0].snapshot.currentGoal.kind == .collectResource
+            && resumeTick.agents[0].action.name == "harvest_block")
+
+    var invalidDeliveryInventory = AgentResourceInventory(capacity: 8)
+    _ = invalidDeliveryInventory.add(.foodRaw)
+    _ = invalidDeliveryInventory.add(.wood)
+    var invalidDeliverySession = economySession(states: [economyAgentState(
+        position: economyHome,
+        home: economyHome,
+        inventory: invalidDeliveryInventory,
+        goal: .deliverResources
+    )])
+    let beforeInvalidDelivery = invalidDeliverySession.snapshot()
+    check("I invalid delivery outcome rejected", {
+        do {
+            try invalidDeliverySession.applyDeliveryOutcome(AgentDeliveryOutcome(
+                deliveryId: "invalid-delivery",
+                agentId: "agent_economy",
+                tick: invalidDeliverySession.tick,
+                status: .succeeded,
+                transferred: [AgentResourceAmount(resource: .foodRaw, quantity: 1)],
+                reason: "invalid partial transfer"
+            ))
+            return false
+        } catch AgentSessionError.invalidDeliveryOutcome { return true }
+        catch { return false }
+    }())
+    check("I invalid delivery is atomic", invalidDeliverySession.snapshot() == beforeInvalidDelivery)
+    check("I failed delivery writes no success memory",
+          invalidDeliverySession.snapshot().agents[0].recentMemory.allSatisfy { $0.type != "resource_delivered" })
+
+    var awayDeliverySession = economySession(states: [economyAgentState(
+        position: economyAway,
+        home: economyHome,
+        inventory: invalidDeliveryInventory,
+        goal: .deliverResources
+    )])
+    let awayDeliveryBefore = awayDeliverySession.snapshot()
+    check("I delivery away from home rejected", {
+        do {
+            _ = try awayDeliverySession.deliverResources(AgentDeliveryIntent(
+                deliveryId: "away-delivery",
+                agentId: "agent_economy",
+                tick: awayDeliverySession.tick,
+                position: economyAway
+            ))
+            return false
+        } catch AgentSessionError.deliveryAwayFromHome { return true }
+        catch { return false }
+    }())
+    check("I delivery away from home has no mutation", awayDeliverySession.snapshot() == awayDeliveryBefore)
+
+    var oversizedInventory = AgentResourceInventory(capacity: 8)
+    _ = oversizedInventory.add(.foodRaw, quantity: 2)
+    _ = oversizedInventory.add(.wood)
+    var fullStockSession = economySession(
+        states: [economyAgentState(
+            position: economyHome,
+            home: economyHome,
+            inventory: oversizedInventory,
+            goal: .deliverResources
+        )],
+        campCapacity: 2
+    )
+    let stockFullBefore = fullStockSession.snapshot().agents[0].resourceInventory
+    let stockFullOutcome = try! fullStockSession.deliverResources(AgentDeliveryIntent(
+        deliveryId: "camp-full",
+        agentId: "agent_economy",
+        tick: fullStockSession.tick,
+        position: economyHome
+    ))
+    check("I camp stock full outcome explicit", stockFullOutcome.status == .campStockFull)
+    check("I camp stock full preserves inventory and stock",
+          fullStockSession.snapshot().agents[0].resourceInventory == stockFullBefore
+            && fullStockSession.snapshot().campStock.isEmpty)
+    check("I camp stock full writes failure memory only",
+          fullStockSession.snapshot().agents[0].recentMemory.last?.type == "camp_stock_full"
+            && fullStockSession.snapshot().agents[0].recentMemory.allSatisfy { $0.type != "resource_delivered" })
+
+    let sharedFixtureTarget = AgentPosition(x: 2, y: 64, z: 0)
+    let economyAgentA = economyAgentState(
+        id: "agent_a",
+        position: AgentPosition(x: 0, y: 64, z: 0),
+        home: AgentPosition(x: 0, y: 64, z: 0)
+    )
+    let economyAgentB = economyAgentState(
+        id: "agent_b",
+        position: AgentPosition(x: 0, y: 64, z: 1),
+        home: AgentPosition(x: 0, y: 64, z: 1)
+    )
+    var concurrentEconomy = economySession(states: [economyAgentB, economyAgentA])
+    _ = try! concurrentEconomy.advanceTick(perceptions: [
+        AgentPerceptionInput(agentId: "agent_a", resourceObservations: [AgentResourceObservation(
+            resource: .foodRaw,
+            target: sharedFixtureTarget,
+            direction: .east,
+            distanceManhattan: 2,
+            quantityAvailable: 1,
+            source: .sandboxFixture
+        )]),
+        AgentPerceptionInput(agentId: "agent_b", resourceObservations: [AgentResourceObservation(
+            resource: .foodRaw,
+            target: sharedFixtureTarget,
+            direction: .east,
+            distanceManhattan: 3,
+            quantityAvailable: 1,
+            source: .sandboxFixture
+        )]),
+    ])
+    check("I concurrent fixture reservation has one stable owner",
+          concurrentEconomy.snapshot().resourceReservations.count == 1
+            && concurrentEconomy.snapshot().resourceReservations[0].agentId == "agent_a")
+    try! concurrentEconomy.applyInteractionOutcome(AgentInteractionOutcome(
+        interactionId: "concurrent-owner",
+        agentId: "agent_a",
+        tick: concurrentEconomy.tick,
+        target: sharedFixtureTarget,
+        resource: .foodRaw,
+        status: .succeeded,
+        inventoryDelta: AgentInventoryDelta(resource: .foodRaw, quantity: 1),
+        reason: "reserved fixture harvested"
+    ))
+    check("I concurrent harvest conservation exact",
+          concurrentEconomy.snapshot().conservation.harvestedTotal == 1
+            && concurrentEconomy.snapshot().conservation.carriedTotal == 1
+            && concurrentEconomy.snapshot().conservation.balanced)
+    let concurrentBeforeLoser = concurrentEconomy.snapshot()
+    check("I concurrent loser cannot receive second fixture credit", {
+        do {
+            try concurrentEconomy.applyInteractionOutcome(AgentInteractionOutcome(
+                interactionId: "concurrent-loser",
+                agentId: "agent_b",
+                tick: concurrentEconomy.tick,
+                target: sharedFixtureTarget,
+                resource: .foodRaw,
+                status: .succeeded,
+                inventoryDelta: AgentInventoryDelta(resource: .foodRaw, quantity: 1),
+                reason: "duplicate fixture credit"
+            ))
+            return false
+        } catch AgentSessionError.duplicateResourceCredit { return true }
+        catch { return false }
+    }())
+    check("I concurrent loser rejection has no mutation", concurrentEconomy.snapshot() == concurrentBeforeLoser)
+
+    let economySnapshotEncodingA = try! economyEncoder.encode(conservationSession.snapshot())
+    let economySnapshotEncodingB = try! economyEncoder.encode(conservationSession.snapshot())
+    check("I economy snapshot deterministic encoding", economySnapshotEncodingA == economySnapshotEncodingB)
+    check("I economy snapshot exposes stock and conservation", {
+        let text = String(data: economySnapshotEncodingA, encoding: .utf8) ?? ""
+        return text.contains("campStock") && text.contains("conservation") && text.contains("deliveryQuota")
+    }())
 }
 
 print("\n\(passed) passed, \(failed) failed")

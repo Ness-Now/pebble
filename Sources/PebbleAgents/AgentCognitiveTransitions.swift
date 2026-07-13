@@ -54,6 +54,13 @@ public enum AgentCognitiveTransitions {
                 startedAtTick: input.tick,
                 urgency: 90
             )
+        } else if input.shouldDeliverResources {
+            nextGoal = AgentGoal(
+                kind: .deliverResources,
+                reason: "delivery quota reached or delivery committed",
+                startedAtTick: input.tick,
+                urgency: 80
+            )
         } else if input.hasCommittedResourceTask && input.hasInventoryCapacity {
             nextGoal = AgentGoal(
                 kind: .collectResource,
@@ -136,6 +143,12 @@ public enum AgentCognitiveTransitions {
         case "approach_resource":
             state = "planning"
             effect = "awaiting bounded navigation"
+        case "return_home":
+            state = "planning"
+            effect = "awaiting bounded navigation home"
+        case "deliver_resource":
+            state = "delivering"
+            effect = "awaiting delivery transaction"
         case "move_abstract":
             if input.goalKind == .seekSafety {
                 fear = max(0, fear - 1)

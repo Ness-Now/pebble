@@ -1,5 +1,19 @@
-public enum AgentResourceKind: String, Codable, Equatable {
+public enum AgentResourceKind: String, Codable, Equatable, CaseIterable {
     case sandboxResource
+    case foodRaw
+    case wood
+    case stone
+
+    public static let economyFixtureOrder: [AgentResourceKind] = [.foodRaw, .wood, .stone]
+
+    fileprivate var selectionPriority: Int {
+        switch self {
+        case .foodRaw: return 0
+        case .wood: return 1
+        case .stone: return 2
+        case .sandboxResource: return 3
+        }
+    }
 }
 
 public enum AgentResourceObservationSource: String, Codable, Equatable {
@@ -93,6 +107,9 @@ public enum AgentResourcePerception {
         _ lhs: AgentResourceObservation,
         _ rhs: AgentResourceObservation
     ) -> Bool {
+        if lhs.resource.selectionPriority != rhs.resource.selectionPriority {
+            return lhs.resource.selectionPriority < rhs.resource.selectionPriority
+        }
         if lhs.distanceManhattan != rhs.distanceManhattan {
             return lhs.distanceManhattan < rhs.distanceManhattan
         }
@@ -197,23 +214,41 @@ public enum AgentResourceTargeting {
 public struct AgentResourceInventory: Encodable, Equatable {
     public let capacity: Int
     public private(set) var sandboxResourceCount: Int
+    public private(set) var foodRawCount: Int
+    public private(set) var woodCount: Int
+    public private(set) var stoneCount: Int
 
-    public var totalCount: Int { sandboxResourceCount }
+    public var totalCount: Int {
+        sandboxResourceCount + foodRawCount + woodCount + stoneCount
+    }
     public var isEmpty: Bool { totalCount == 0 }
+    public var isFull: Bool { totalCount >= capacity }
+    public var amounts: [AgentResourceAmount] {
+        AgentResourceKind.allCases.compactMap { resource in
+            let quantity = count(of: resource)
+            return quantity > 0 ? AgentResourceAmount(resource: resource, quantity: quantity) : nil
+        }
+    }
 
     public init(capacity: Int = 8) {
         self.capacity = max(1, capacity)
         sandboxResourceCount = 0
+        foodRawCount = 0
+        woodCount = 0
+        stoneCount = 0
     }
 
     public func count(of resource: AgentResourceKind) -> Int {
         switch resource {
         case .sandboxResource: return sandboxResourceCount
+        case .foodRaw: return foodRawCount
+        case .wood: return woodCount
+        case .stone: return stoneCount
         }
     }
 
     public func canAdd(_ resource: AgentResourceKind, quantity: Int = 1) -> Bool {
-        quantity > 0 && totalCount <= capacity - quantity
+        quantity > 0 && quantity <= capacity - totalCount
     }
 
     @discardableResult
@@ -222,8 +257,55 @@ public struct AgentResourceInventory: Encodable, Equatable {
         switch resource {
         case .sandboxResource:
             sandboxResourceCount += quantity
+        case .foodRaw:
+            foodRawCount += quantity
+        case .wood:
+            woodCount += quantity
+        case .stone:
+            stoneCount += quantity
         }
         return true
+    }
+
+    public func canRemove(_ resource: AgentResourceKind, quantity: Int = 1) -> Bool {
+        quantity > 0 && count(of: resource) >= quantity
+    }
+
+    @discardableResult
+    public mutating func remove(_ resource: AgentResourceKind, quantity: Int = 1) -> Bool {
+        guard canRemove(resource, quantity: quantity) else { return false }
+        switch resource {
+        case .sandboxResource: sandboxResourceCount -= quantity
+        case .foodRaw: foodRawCount -= quantity
+        case .wood: woodCount -= quantity
+        case .stone: stoneCount -= quantity
+        }
+        return true
+    }
+
+    @discardableResult
+    public mutating func removeAll(_ amounts: [AgentResourceAmount]) -> Bool {
+        let normalized = AgentResourceAmounts.normalize(amounts)
+        guard normalized.allSatisfy({ canRemove($0.resource, quantity: $0.quantity) }) else {
+            return false
+        }
+        for amount in normalized {
+            guard remove(amount.resource, quantity: amount.quantity) else { return false }
+        }
+        return true
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case capacity, sandboxResourceCount, foodRawCount, woodCount, stoneCount
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(capacity, forKey: .capacity)
+        try container.encode(sandboxResourceCount, forKey: .sandboxResourceCount)
+        if foodRawCount != 0 { try container.encode(foodRawCount, forKey: .foodRawCount) }
+        if woodCount != 0 { try container.encode(woodCount, forKey: .woodCount) }
+        if stoneCount != 0 { try container.encode(stoneCount, forKey: .stoneCount) }
     }
 }
 
@@ -327,5 +409,28 @@ public struct AgentSandboxFixtureMutationBoundary: Codable, Equatable {
 
     public func permits(_ position: AgentPosition) -> Bool {
         position == target
+    }
+}
+
+public struct AgentSandboxFixtureSetMutationBoundary: Codable, Equatable {
+    public static let maximumFixtureCount = 3
+    public let permittedPositions: [AgentPosition]
+
+    public var isValid: Bool {
+        !permittedPositions.isEmpty
+            && permittedPositions.count <= Self.maximumFixtureCount
+            && Set(permittedPositions).count == permittedPositions.count
+    }
+
+    public init(targets: [AgentPosition]) {
+        permittedPositions = targets.sorted {
+            if $0.x != $1.x { return $0.x < $1.x }
+            if $0.y != $1.y { return $0.y < $1.y }
+            return $0.z < $1.z
+        }
+    }
+
+    public func permits(_ position: AgentPosition) -> Bool {
+        isValid && permittedPositions.contains(position)
     }
 }

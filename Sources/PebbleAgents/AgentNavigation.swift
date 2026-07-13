@@ -67,6 +67,7 @@ public enum AgentNavigationFailure: String, Codable, Equatable {
     case movementBlocked
     case replanLimitReached
     case harvested
+    case delivered
 }
 
 public struct AgentNavigationRequest {
@@ -289,20 +290,28 @@ public enum AgentNavigationStatus: String, Codable, Equatable {
     case failed
 }
 
+public enum AgentNavigationPurpose: String, Codable, Equatable {
+    case resource
+    case homeDelivery
+}
+
 public struct AgentNavigationRoute: Codable, Equatable {
+    public let purpose: AgentNavigationPurpose
     public let target: AgentPosition
-    public let resource: AgentResourceKind
+    public let resource: AgentResourceKind?
     public let positions: [AgentPosition]
     public let plannedAtTick: Int
     public let visitedNodeCount: Int
 
     public init(
+        purpose: AgentNavigationPurpose = .resource,
         target: AgentPosition,
-        resource: AgentResourceKind,
+        resource: AgentResourceKind? = nil,
         positions: [AgentPosition],
         plannedAtTick: Int,
         visitedNodeCount: Int
     ) {
+        self.purpose = purpose
         self.target = target
         self.resource = resource
         self.positions = positions
