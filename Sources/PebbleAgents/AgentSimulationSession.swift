@@ -46,6 +46,13 @@ public enum AgentSessionError: Error, Equatable {
     case emptyDelivery(String)
     case campStockFull(String)
     case invalidDeliveryOutcome(String)
+    case invalidConsumptionQuantity(String)
+    case invalidConsumptionResource(String)
+    case consumptionTickMismatch(String)
+    case duplicateConsumption(String)
+    case invalidConsumptionOutcome(String)
+    case survivalDisabled(String)
+    case consumptionLimitReached
 }
 
 public struct AgentSessionConfiguration {
@@ -60,6 +67,7 @@ public struct AgentSessionConfiguration {
     public let reservationLifetimeTicks: Int
     public let deliveryQuota: Int
     public let campStockCapacity: Int
+    public let survivalConfiguration: AgentSurvivalConfiguration
 
     public init(
         seed: UInt32,
@@ -72,7 +80,8 @@ public struct AgentSessionConfiguration {
         navigationReplanCooldownTicks: Int = 1,
         reservationLifetimeTicks: Int = 4,
         deliveryQuota: Int = 2,
-        campStockCapacity: Int = 64
+        campStockCapacity: Int = 64,
+        survivalConfiguration: AgentSurvivalConfiguration = .live
     ) throws {
         guard nearbyRadius >= 0 else {
             throw AgentSessionError.invalidNearbyRadius(nearbyRadius)
@@ -112,6 +121,7 @@ public struct AgentSessionConfiguration {
         self.reservationLifetimeTicks = reservationLifetimeTicks
         self.deliveryQuota = deliveryQuota
         self.campStockCapacity = campStockCapacity
+        self.survivalConfiguration = survivalConfiguration
     }
 }
 
@@ -154,6 +164,7 @@ public struct AgentSessionAgentState {
     public internal(set) var lastInteractionOutcome: AgentInteractionOutcome?
     public internal(set) var navigationProgress: AgentNavigationProgress
     public internal(set) var lastDeliveryOutcome: AgentDeliveryOutcome?
+    public internal(set) var survivalProgress: AgentSurvivalProgress?
 
     public init(
         id: String,
@@ -193,7 +204,8 @@ public struct AgentSessionAgentState {
         resourceInventory: AgentResourceInventory = AgentResourceInventory(),
         lastInteractionOutcome: AgentInteractionOutcome? = nil,
         navigationProgress: AgentNavigationProgress = AgentNavigationProgress(),
-        lastDeliveryOutcome: AgentDeliveryOutcome? = nil
+        lastDeliveryOutcome: AgentDeliveryOutcome? = nil,
+        survivalProgress: AgentSurvivalProgress? = nil
     ) {
         self.id = id
         self.state = state
@@ -233,6 +245,7 @@ public struct AgentSessionAgentState {
         self.lastInteractionOutcome = lastInteractionOutcome
         self.navigationProgress = navigationProgress
         self.lastDeliveryOutcome = lastDeliveryOutcome
+        self.survivalProgress = survivalProgress
     }
 }
 
@@ -328,6 +341,7 @@ public struct AgentSessionTickResult {
 }
 
 public struct AgentSimulationSession {
+    public static let maximumConsumptionCount = AgentSurvivalProgress.maximumEventCount
     public let configuration: AgentSessionConfiguration
     public private(set) var tick: Int
     private var statesById: [String: AgentSessionAgentState]
@@ -338,6 +352,9 @@ public struct AgentSimulationSession {
     public private(set) var campStock: AgentCampStock
     private var harvestedResourceTotals: AgentCampStock
     private var processedDeliveryIds: Set<String>
+    public private(set) var survivalEnabled: Bool
+    private var consumedResourceTotals: AgentCampStock
+    private var processedConsumptionIds: Set<String>
 
     public init(
         configuration: AgentSessionConfiguration,
@@ -365,6 +382,9 @@ public struct AgentSimulationSession {
         campStock = AgentCampStock(capacity: configuration.campStockCapacity)
         harvestedResourceTotals = AgentCampStock(capacity: 4096)
         processedDeliveryIds = []
+        survivalEnabled = false
+        consumedResourceTotals = AgentCampStock(capacity: 4096)
+        processedConsumptionIds = []
     }
 
     public func snapshot() -> AgentSessionSnapshot {
@@ -373,7 +393,8 @@ public struct AgentSimulationSession {
                 AgentSnapshot(
                     state: $0,
                     recentMemoryLimit: configuration.recentMemorySnapshotLimit,
-                    resourceReservation: reservation(for: $0)
+                    resourceReservation: reservation(for: $0),
+                    survivalEnabled: survivalEnabled
                 )
             }
         }
@@ -385,7 +406,9 @@ public struct AgentSimulationSession {
             economyEnabled: economyEnabled,
             deliveryQuota: configuration.deliveryQuota,
             campStock: campStock,
-            conservation: conservationSnapshot()
+            conservation: conservationSnapshot(),
+            survivalEnabled: survivalEnabled,
+            survivalConfiguration: configuration.survivalConfiguration
         )
     }
 
@@ -416,6 +439,37 @@ public struct AgentSimulationSession {
         }
     }
 
+    public mutating func setSurvivalEnabled(_ enabled: Bool) {
+        survivalEnabled = enabled
+        for id in sortedIds {
+            guard var state = statesById[id] else { continue }
+            if enabled {
+                if state.survivalProgress == nil {
+                    state.survivalProgress = AgentSurvivalProgress()
+                }
+            } else {
+                if state.currentGoal.kind == .satisfyHunger {
+                    releaseReservation(for: state)
+                    state.activeResourceTarget = nil
+                    state.navigationProgress = AgentNavigationProgress()
+                } else if state.currentGoal.kind == .rest,
+                          state.navigationProgress.route?.purpose == .homeRest {
+                    state.navigationProgress = AgentNavigationProgress()
+                }
+                if state.currentGoal.kind == .satisfyHunger || state.currentGoal.kind == .rest {
+                    state.currentGoal = AgentGoal(
+                        kind: .idle,
+                        reason: "survival disabled",
+                        startedAtTick: tick,
+                        urgency: 0
+                    )
+                }
+                state.survivalProgress = nil
+            }
+            statesById[id] = state
+        }
+    }
+
     public func conservationSnapshot() -> AgentResourceConservationSnapshot {
         let carried = AgentResourceKind.allCases.map { resource in
             AgentResourceAmount(
@@ -428,8 +482,150 @@ public struct AgentSimulationSession {
         return AgentResourceConservationSnapshot(
             harvested: harvestedResourceTotals.amounts,
             carried: carried,
-            campStock: campStock.amounts
+            campStock: campStock.amounts,
+            consumed: consumedResourceTotals.amounts
         )
+    }
+
+    public func prevalidateConsumption(_ intent: AgentConsumptionIntent) throws {
+        guard let state = statesById[intent.agentId] else {
+            throw AgentSessionError.unknownAgentId(intent.agentId)
+        }
+        guard survivalEnabled else {
+            throw AgentSessionError.survivalDisabled(intent.agentId)
+        }
+        guard intent.tick == tick else {
+            throw AgentSessionError.consumptionTickMismatch(intent.consumptionId)
+        }
+        guard !processedConsumptionIds.contains(intent.consumptionId) else {
+            throw AgentSessionError.duplicateConsumption(intent.consumptionId)
+        }
+        guard processedConsumptionIds.count < Self.maximumConsumptionCount else {
+            throw AgentSessionError.consumptionLimitReached
+        }
+        guard intent.resource == .foodRaw else {
+            throw AgentSessionError.invalidConsumptionResource(intent.consumptionId)
+        }
+        guard intent.quantity == 1 else {
+            throw AgentSessionError.invalidConsumptionQuantity(intent.consumptionId)
+        }
+        guard state.survivalProgress != nil else {
+            throw AgentSessionError.survivalDisabled(intent.agentId)
+        }
+    }
+
+    @discardableResult
+    public mutating func consumeFood(_ intent: AgentConsumptionIntent) throws -> AgentConsumptionOutcome {
+        try prevalidateConsumption(intent)
+        guard let state = statesById[intent.agentId] else {
+            throw AgentSessionError.unknownAgentId(intent.agentId)
+        }
+        let hasFood = state.resourceInventory.count(of: .foodRaw) >= intent.quantity
+        let hungerAfter = hasFood
+            ? max(0, state.needs.hunger - configuration.survivalConfiguration.foodNutrition)
+            : state.needs.hunger
+        let outcome = AgentConsumptionOutcome(
+            consumptionId: intent.consumptionId,
+            agentId: intent.agentId,
+            tick: tick,
+            resource: intent.resource,
+            quantity: intent.quantity,
+            status: hasFood ? .succeeded : .foodUnavailable,
+            hungerBefore: state.needs.hunger,
+            hungerAfter: hungerAfter,
+            reason: hasFood
+                ? "one carried foodRaw consumed atomically"
+                : "no carried foodRaw available"
+        )
+        try applyConsumptionOutcome(outcome)
+        return outcome
+    }
+
+    public mutating func applyConsumptionOutcome(_ outcome: AgentConsumptionOutcome) throws {
+        var candidate = self
+        try candidate.applyConsumptionOutcomeInPlace(outcome)
+        self = candidate
+    }
+
+    private mutating func applyConsumptionOutcomeInPlace(
+        _ outcome: AgentConsumptionOutcome
+    ) throws {
+        guard var state = statesById[outcome.agentId],
+              var progress = state.survivalProgress else {
+            throw AgentSessionError.unknownAgentId(outcome.agentId)
+        }
+        guard survivalEnabled else {
+            throw AgentSessionError.survivalDisabled(outcome.agentId)
+        }
+        guard outcome.tick == tick else {
+            throw AgentSessionError.consumptionTickMismatch(outcome.consumptionId)
+        }
+        guard !processedConsumptionIds.contains(outcome.consumptionId) else {
+            throw AgentSessionError.duplicateConsumption(outcome.consumptionId)
+        }
+        guard processedConsumptionIds.count < Self.maximumConsumptionCount else {
+            throw AgentSessionError.consumptionLimitReached
+        }
+        guard outcome.resource == .foodRaw else {
+            throw AgentSessionError.invalidConsumptionResource(outcome.consumptionId)
+        }
+        guard outcome.quantity == 1 else {
+            throw AgentSessionError.invalidConsumptionQuantity(outcome.consumptionId)
+        }
+
+        let memory: AgentMemoryEntry
+        switch outcome.status {
+        case .succeeded:
+            let expectedHunger = max(
+                0,
+                state.needs.hunger - configuration.survivalConfiguration.foodNutrition
+            )
+            var inventory = state.resourceInventory
+            var consumed = consumedResourceTotals
+            guard outcome.hungerBefore == state.needs.hunger,
+                  outcome.hungerAfter == expectedHunger,
+                  inventory.remove(.foodRaw, quantity: 1),
+                  consumed.add(.foodRaw, quantity: 1) else {
+                throw AgentSessionError.invalidConsumptionOutcome(outcome.consumptionId)
+            }
+            state.resourceInventory = inventory
+            state.needs.hunger = expectedHunger
+            consumedResourceTotals = consumed
+            progress.consecutiveCriticalHungerTicks = 0
+            progress.foodConsumedCount = min(
+                AgentSurvivalProgress.maximumEventCount,
+                progress.foodConsumedCount + 1
+            )
+            progress.status = expectedHunger <= configuration.survivalConfiguration.hungerRecoveryThreshold
+                ? .stable
+                : .hungry
+            memory = AgentMemoryEntry(
+                tick: tick,
+                type: "food_consumed",
+                summary: "\(outcome.agentId) consumed 1 foodRaw",
+                importance: 0.50
+            )
+        case .blocked, .foodUnavailable:
+            guard outcome.hungerBefore == state.needs.hunger,
+                  outcome.hungerAfter == state.needs.hunger else {
+                throw AgentSessionError.invalidConsumptionOutcome(outcome.consumptionId)
+            }
+            memory = AgentMemoryEntry(
+                tick: tick,
+                type: "consumption_blocked",
+                summary: "\(outcome.agentId) consumption blocked: \(outcome.reason)",
+                importance: 0.30
+            )
+        }
+        progress.lastConsumptionOutcome = outcome
+        progress.lastMemoryType = AgentSurvivalMemoryType(rawValue: memory.type)
+        state.survivalProgress = progress
+        appendMemory(memory, to: &state.memory)
+        statesById[outcome.agentId] = state
+        processedConsumptionIds.insert(outcome.consumptionId)
+        guard conservationSnapshot().balanced else {
+            throw AgentSessionError.invalidConsumptionOutcome(outcome.consumptionId)
+        }
     }
 
     public func prevalidateDelivery(_ intent: AgentDeliveryIntent) throws {
@@ -665,7 +861,23 @@ public struct AgentSimulationSession {
             guard var state = statesById[id] else { continue }
             let previousTarget = state.activeResourceTarget
             state.lastResourceObservations = resourceObservationsById[id] ?? []
-            if shouldDeliverResources(state) {
+            if shouldSatisfyHunger(state, projectedToNextTick: true) {
+                let foodObservations = state.lastResourceObservations.filter {
+                    $0.resource == .foodRaw
+                }
+                state.activeResourceTarget = state.resourceInventory.count(of: .foodRaw) > 0
+                    ? nil
+                    : AgentResourceTargeting.select(
+                        current: previousTarget?.resource == .foodRaw ? previousTarget : nil,
+                        observations: foodObservations,
+                        inventory: state.resourceInventory,
+                        tick: nextTick
+                    )
+            } else if shouldRest(state, projectedToNextTick: true) {
+                state.activeResourceTarget = nil
+            } else if shouldDeliverResources(state) {
+                state.activeResourceTarget = nil
+            } else if survivalEnabled && !economyEnabled {
                 state.activeResourceTarget = nil
             } else {
                 state.activeResourceTarget = AgentResourceTargeting.select(
@@ -696,12 +908,22 @@ public struct AgentSimulationSession {
             let perception = perceptionsById[id]
             var memoriesAdded = perception?.externalMemoryEntries ?? []
 
-            let tickTransition = AgentCognitiveTransitions.advanceTick(needs: state.needs)
-            state.needs = tickTransition.needs
-            state.state = tickTransition.state
+            let survivalMemory: AgentMemoryEntry?
+            if survivalEnabled {
+                survivalMemory = applySurvivalTick(to: &state, tick: nextTick)
+            } else {
+                let tickTransition = AgentCognitiveTransitions.advanceTick(needs: state.needs)
+                state.needs = tickTransition.needs
+                state.state = tickTransition.state
+                survivalMemory = nil
+            }
             state.ticksAlive += 1
 
             appendMemories(memoriesAdded, to: &state.memory)
+            if let survivalMemory {
+                appendMemory(survivalMemory, to: &state.memory)
+                memoriesAdded.append(survivalMemory)
+            }
             var worldPerceptionEffect: AgentWorldPerceptionEffect?
             if let observation = perception?.worldObservation {
                 let effect = AgentWorldPerceptionInterpreter.interpret(
@@ -748,10 +970,17 @@ public struct AgentSimulationSession {
                 hasInventoryCapacity: state.activeResourceTarget.map {
                     state.resourceInventory.canAdd($0.resource)
                 } ?? false,
-                hasCommittedResourceTask: state.currentGoal.kind == .collectResource
+                hasCommittedResourceTask: (state.currentGoal.kind == .collectResource
+                    || state.currentGoal.kind == .satisfyHunger)
                     && reservation(for: state)?.agentId == id,
                 shouldDeliverResources: shouldDeliverResources(state),
-                currentGoalKind: state.currentGoal.kind
+                currentGoalKind: state.currentGoal.kind,
+                survivalEnabled: survivalEnabled,
+                hungryThreshold: configuration.survivalConfiguration.hungryThreshold,
+                criticalHungerThreshold: configuration.survivalConfiguration.criticalHungerThreshold,
+                hungerRecoveryThreshold: configuration.survivalConfiguration.hungerRecoveryThreshold,
+                fatigueThreshold: configuration.survivalConfiguration.fatigueThreshold,
+                fatigueRecoveryThreshold: configuration.survivalConfiguration.fatigueRecoveryThreshold
             ))
             if let goalChange {
                 state.currentGoal = goalChange.goal
@@ -773,7 +1002,9 @@ public struct AgentSimulationSession {
                 resourceObservations: state.lastResourceObservations,
                 activeResourceTarget: state.activeResourceTarget,
                 navigationProgress: state.navigationProgress,
-                resourceReservation: reservation(for: state)
+                resourceReservation: reservation(for: state),
+                survivalEnabled: survivalEnabled,
+                hasFoodRaw: state.resourceInventory.count(of: .foodRaw) > 0
             ))
             let retrievedMemories = AgentFeedbackLoop.retrieveMovementMemories(
                 memory: state.memory,
@@ -820,13 +1051,18 @@ public struct AgentSimulationSession {
                 needs: state.needs,
                 fear: state.fear,
                 state: state.state,
-                tick: nextTick
+                tick: nextTick,
+                survivalEnabled: survivalEnabled,
+                restRecoveryPerTick: configuration.survivalConfiguration.restRecoveryPerTick
             ))
             state.needs = effectResult.needs
             state.fear = effectResult.fear
             state.state = effectResult.state
             state.lastActionEffect = effectResult.actionEffect
             state.actionEffectCount += 1
+            if survivalEnabled {
+                updateSurvivalProgress(for: &state, action: action)
+            }
             let effectMemory = AgentMemoryEntry(
                 tick: nextTick,
                 type: "action_effect_applied",
@@ -847,7 +1083,8 @@ public struct AgentSimulationSession {
                 snapshot: AgentSnapshot(
                     state: state,
                     recentMemoryLimit: configuration.recentMemorySnapshotLimit,
-                    resourceReservation: reservation(for: state)
+                    resourceReservation: reservation(for: state),
+                    survivalEnabled: survivalEnabled
                 )
             ))
         }
@@ -976,7 +1213,8 @@ public struct AgentSimulationSession {
                 state.movementCount += 1
                 state.totalManhattanDistanceMoved += abs(outcome.appliedDX) + abs(outcome.appliedDZ)
                 if (state.currentGoal.kind == .seekSafety
-                        || state.currentGoal.kind == .deliverResources),
+                        || state.currentGoal.kind == .deliverResources
+                        || (survivalEnabled && state.currentGoal.kind == .rest)),
                    outcome.distanceReducedTowardHome > 0 {
                     state.returnHomeMoveCount += 1
                     state.totalDistanceReducedTowardHome += outcome.distanceReducedTowardHome
@@ -1087,13 +1325,22 @@ public struct AgentSimulationSession {
         let targetResource: AgentResourceKind?
         let goalMode: AgentNavigationGoalMode
         switch state.currentGoal.kind {
-        case .collectResource:
+        case .collectResource, .satisfyHunger:
             guard let target = state.activeResourceTarget else {
                 if state.navigationProgress.status != .idle || state.navigationProgress.route != nil {
                     state.navigationProgress = AgentNavigationProgress(
                         lastInvalidation: state.navigationProgress.lastInvalidation ?? .targetMissing
                     )
                 }
+                return
+            }
+            if state.currentGoal.kind == .satisfyHunger, target.resource != .foodRaw {
+                releaseReservation(for: state)
+                state.activeResourceTarget = nil
+                state.navigationProgress = AgentNavigationProgress(
+                    lastInvalidation: .targetChanged,
+                    lastFailure: .targetChanged
+                )
                 return
             }
             purpose = .resource
@@ -1131,6 +1378,30 @@ public struct AgentSimulationSession {
             }
             releaseReservation(for: state)
             purpose = .homeDelivery
+            targetPosition = state.homePosition
+            targetResource = nil
+            goalMode = .exact
+            if state.position == state.homePosition {
+                state.navigationProgress = AgentNavigationProgress(
+                    status: .arrived,
+                    route: state.navigationProgress.route,
+                    routeIndex: state.navigationProgress.route.map {
+                        max(0, $0.positions.count - 1)
+                    } ?? 0,
+                    replanCount: state.navigationProgress.replanCount,
+                    lastPlanTick: state.navigationProgress.lastPlanTick,
+                    lastInvalidation: state.navigationProgress.lastInvalidation
+                )
+                return
+            }
+        case .rest:
+            guard survivalEnabled else {
+                releaseReservation(for: state)
+                state.navigationProgress = AgentNavigationProgress()
+                return
+            }
+            releaseReservation(for: state)
+            purpose = .homeRest
             targetPosition = state.homePosition
             targetResource = nil
             goalMode = .exact
@@ -1323,6 +1594,108 @@ public struct AgentSimulationSession {
             && (state.currentGoal.kind == .deliverResources
                 || state.resourceInventory.totalCount >= configuration.deliveryQuota
                 || state.resourceInventory.isFull)
+    }
+
+    private func shouldSatisfyHunger(
+        _ state: AgentSessionAgentState,
+        projectedToNextTick: Bool = false
+    ) -> Bool {
+        guard survivalEnabled else { return false }
+        let added = projectedToNextTick ? configuration.survivalConfiguration.hungerPerTick : 0
+        let hunger = min(1, max(0, state.needs.hunger + added))
+        if state.currentGoal.kind == .satisfyHunger {
+            return hunger > configuration.survivalConfiguration.hungerRecoveryThreshold
+        }
+        return hunger >= configuration.survivalConfiguration.hungryThreshold
+    }
+
+    private func shouldRest(
+        _ state: AgentSessionAgentState,
+        projectedToNextTick: Bool = false
+    ) -> Bool {
+        guard survivalEnabled else { return false }
+        let added = projectedToNextTick ? configuration.survivalConfiguration.fatiguePerTick : 0
+        let fatigue = min(1, max(0, state.needs.fatigue + added))
+        if state.currentGoal.kind == .rest {
+            return fatigue > configuration.survivalConfiguration.fatigueRecoveryThreshold
+        }
+        return fatigue >= configuration.survivalConfiguration.fatigueThreshold
+    }
+
+    private func applySurvivalTick(
+        to state: inout AgentSessionAgentState,
+        tick survivalTick: Int
+    ) -> AgentMemoryEntry? {
+        let survival = configuration.survivalConfiguration
+        state.needs.hunger = min(1, max(0, state.needs.hunger + survival.hungerPerTick))
+        state.needs.fatigue = min(1, max(0, state.needs.fatigue + survival.fatiguePerTick))
+        state.needs.curiosity = min(1, max(0, state.needs.curiosity))
+        state.needs.safety = min(1, max(0, state.needs.safety))
+        state.health = min(100, max(0, state.health))
+        state.state = "idle"
+        var progress = state.survivalProgress ?? AgentSurvivalProgress()
+        var memory: AgentMemoryEntry?
+        if state.needs.hunger >= survival.criticalHungerThreshold {
+            progress.consecutiveCriticalHungerTicks = min(
+                survival.starvationGraceTicks + 1,
+                progress.consecutiveCriticalHungerTicks + 1
+            )
+            if progress.consecutiveCriticalHungerTicks > survival.starvationGraceTicks,
+               state.health > 0 {
+                let damage = min(state.health, survival.starvationDamagePerTick)
+                state.health -= damage
+                progress.starvationDamageTaken = min(
+                    100,
+                    progress.starvationDamageTaken + damage
+                )
+                memory = AgentMemoryEntry(
+                    tick: survivalTick,
+                    type: "starvation_damage",
+                    summary: "\(state.id) took \(damage) starvation damage",
+                    importance: 0.70
+                )
+                progress.lastMemoryType = .starvationDamage
+            }
+        } else {
+            progress.consecutiveCriticalHungerTicks = 0
+        }
+        progress.status = state.needs.hunger >= survival.criticalHungerThreshold
+            ? .starving
+            : state.needs.hunger >= survival.hungryThreshold
+                ? .hungry
+                : state.needs.fatigue >= survival.fatigueThreshold
+                    ? .exhausted
+                    : .stable
+        state.survivalProgress = progress
+        return memory
+    }
+
+    private func updateSurvivalProgress(
+        for state: inout AgentSessionAgentState,
+        action: AgentAction
+    ) {
+        guard var progress = state.survivalProgress else { return }
+        let survival = configuration.survivalConfiguration
+        if action.name == "rest", state.position == state.homePosition {
+            progress.restTicks = min(
+                AgentSurvivalProgress.maximumEventCount,
+                progress.restTicks + 1
+            )
+            progress.status = state.needs.fatigue <= survival.fatigueRecoveryThreshold
+                ? .stable
+                : .recovering
+        } else if state.currentGoal.kind == .rest {
+            progress.status = .exhausted
+        } else if state.needs.hunger >= survival.criticalHungerThreshold {
+            progress.status = .starving
+        } else if state.currentGoal.kind == .satisfyHunger {
+            progress.status = .hungry
+        } else if state.needs.fatigue >= survival.fatigueThreshold {
+            progress.status = .exhausted
+        } else {
+            progress.status = .stable
+        }
+        state.survivalProgress = progress
     }
 
     private func positionKey(_ position: AgentPosition) -> String {

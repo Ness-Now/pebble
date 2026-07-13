@@ -57,11 +57,13 @@ public struct AgentSnapshot: Encodable, Equatable {
     public let navigationProgress: AgentNavigationProgress
     public let resourceReservation: AgentResourceReservation?
     public let lastDeliveryOutcome: AgentDeliveryOutcome?
+    public let survivalProgress: AgentSurvivalProgress?
 
     init(
         state: AgentSessionAgentState,
         recentMemoryLimit: Int,
-        resourceReservation: AgentResourceReservation?
+        resourceReservation: AgentResourceReservation?,
+        survivalEnabled: Bool = false
     ) {
         id = state.id
         self.state = state.state
@@ -106,6 +108,7 @@ public struct AgentSnapshot: Encodable, Equatable {
         navigationProgress = state.navigationProgress
         self.resourceReservation = resourceReservation
         lastDeliveryOutcome = state.lastDeliveryOutcome
+        survivalProgress = survivalEnabled ? state.survivalProgress : nil
     }
 
     public static func == (lhs: AgentSnapshot, rhs: AgentSnapshot) -> Bool {
@@ -150,6 +153,7 @@ public struct AgentSnapshot: Encodable, Equatable {
             && lhs.navigationProgress == rhs.navigationProgress
             && lhs.resourceReservation == rhs.resourceReservation
             && lhs.lastDeliveryOutcome == rhs.lastDeliveryOutcome
+            && lhs.survivalProgress == rhs.survivalProgress
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -166,6 +170,7 @@ public struct AgentSnapshot: Encodable, Equatable {
         case lastResourceObservations, activeResourceTarget, resourceInventory, lastInteractionOutcome
         case navigationProgress, resourceReservation
         case lastDeliveryOutcome
+        case survivalProgress
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -230,6 +235,7 @@ public struct AgentSnapshot: Encodable, Equatable {
         }
         try container.encodeIfPresent(resourceReservation, forKey: .resourceReservation)
         try container.encodeIfPresent(lastDeliveryOutcome, forKey: .lastDeliveryOutcome)
+        try container.encodeIfPresent(survivalProgress, forKey: .survivalProgress)
     }
 }
 
@@ -243,6 +249,8 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
     public let deliveryQuota: Int
     public let campStock: AgentCampStock
     public let conservation: AgentResourceConservationSnapshot
+    public let survivalEnabled: Bool
+    public let survivalConfiguration: AgentSurvivalConfiguration
 
     init(
         seed: UInt32,
@@ -252,7 +260,9 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
         economyEnabled: Bool,
         deliveryQuota: Int,
         campStock: AgentCampStock,
-        conservation: AgentResourceConservationSnapshot
+        conservation: AgentResourceConservationSnapshot,
+        survivalEnabled: Bool = false,
+        survivalConfiguration: AgentSurvivalConfiguration = .live
     ) {
         self.seed = seed
         self.tick = tick
@@ -263,11 +273,14 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
         self.deliveryQuota = deliveryQuota
         self.campStock = campStock
         self.conservation = conservation
+        self.survivalEnabled = survivalEnabled
+        self.survivalConfiguration = survivalConfiguration
     }
 
     private enum CodingKeys: String, CodingKey {
         case seed, tick, agentCount, agents, resourceReservations
         case economyEnabled, deliveryQuota, campStock, conservation
+        case survivalEnabled, survivalConfiguration
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -284,6 +297,13 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
             try container.encode(deliveryQuota, forKey: .deliveryQuota)
             try container.encode(campStock, forKey: .campStock)
             try container.encode(conservation, forKey: .conservation)
+        }
+        if survivalEnabled || conservation.consumedTotal > 0 {
+            try container.encode(survivalEnabled, forKey: .survivalEnabled)
+            try container.encode(survivalConfiguration, forKey: .survivalConfiguration)
+            if !economyEnabled && campStock.isEmpty && conservation.harvestedTotal == 0 {
+                try container.encode(conservation, forKey: .conservation)
+            }
         }
     }
 }

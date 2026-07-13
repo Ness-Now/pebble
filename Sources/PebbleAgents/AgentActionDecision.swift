@@ -16,6 +16,7 @@ public enum AgentGoalKind: String, Codable, Equatable {
     case seekSafety
     case collectResource
     case deliverResources
+    case satisfyHunger
     case explore
     case observeOtherAgent
 }
@@ -75,6 +76,8 @@ public struct AgentActionDecisionInput {
     public let activeResourceTarget: AgentResourceTarget?
     public let navigationProgress: AgentNavigationProgress
     public let resourceReservation: AgentResourceReservation?
+    public let survivalEnabled: Bool
+    public let hasFoodRaw: Bool
 
     public init(
         agentId: String,
@@ -85,7 +88,9 @@ public struct AgentActionDecisionInput {
         resourceObservations: [AgentResourceObservation] = [],
         activeResourceTarget: AgentResourceTarget? = nil,
         navigationProgress: AgentNavigationProgress = AgentNavigationProgress(),
-        resourceReservation: AgentResourceReservation? = nil
+        resourceReservation: AgentResourceReservation? = nil,
+        survivalEnabled: Bool = false,
+        hasFoodRaw: Bool = false
     ) {
         self.agentId = agentId
         self.tick = tick
@@ -96,6 +101,8 @@ public struct AgentActionDecisionInput {
         self.activeResourceTarget = activeResourceTarget
         self.navigationProgress = navigationProgress
         self.resourceReservation = resourceReservation
+        self.survivalEnabled = survivalEnabled
+        self.hasFoodRaw = hasFoodRaw
     }
 }
 
@@ -122,106 +129,41 @@ public enum AgentActionDecider {
                 tick: input.tick
             )
         case .rest:
+            if input.survivalEnabled, input.position != input.homePosition {
+                return returnHomeAction(input, goalName: "rest")
+            }
             return AgentAction(name: "rest", reason: "goal rest", tick: input.tick)
         case .collectResource:
-            let observations = (try? AgentResourcePerception.normalize(
-                observerPosition: input.position,
-                observations: input.resourceObservations,
-                maximumDistance: AgentResourcePerception.maximumDistance
-            )) ?? []
-            let target = input.activeResourceTarget ?? observations.first.map {
-                AgentResourceTarget(
-                    resource: $0.resource,
-                    target: $0.target,
-                    source: $0.source,
-                    distanceManhattan: $0.distanceManhattan,
-                    selectedAtTick: input.tick,
-                    lastSeenAtTick: input.tick
-                )
-            }
-            guard let target else {
+            return resourceAction(input, goalName: "collectResource")
+        case .satisfyHunger:
+            if input.hasFoodRaw {
                 return AgentAction(
-                    name: "wait",
-                    reason: "goal collectResource: resource unavailable",
-                    tick: input.tick
-                )
-            }
-            if target.distanceManhattan > 1 {
-                if input.navigationProgress.lastFailure == .reservationConflict
-                    || input.navigationProgress.lastFailure == .reservationLost {
-                    return AgentAction(
-                        name: "wait",
-                        reason: "goal collectResource: reservation unavailable",
-                        tick: input.tick,
-                        target: target.target,
-                        resource: target.resource
-                    )
-                }
-                if input.resourceReservation?.agentId == input.agentId,
-                   input.resourceReservation?.target == target.target,
-                   let next = input.navigationProgress.nextStep {
-                    let dx = next.x - input.position.x
-                    let dy = next.y - input.position.y
-                    let dz = next.z - input.position.z
-                    if abs(dx) + abs(dz) == 1, (-1...1).contains(dy) {
-                        return AgentAction(
-                            name: "approach_resource",
-                            reason: "goal collectResource: follow bounded route",
-                            tick: input.tick,
-                            dx: dx,
-                            dy: dy,
-                            dz: dz,
-                            target: target.target,
-                            resource: target.resource
-                        )
-                    }
-                }
-                return AgentAction(
-                    name: "approach_resource",
-                    reason: "goal collectResource: distant target selected",
+                    name: "consume_food",
+                    reason: "goal satisfyHunger: foodRaw carried",
                     tick: input.tick,
-                    target: target.target,
-                    resource: target.resource
+                    resource: .foodRaw
                 )
             }
-            return AgentAction(
-                name: "harvest_block",
-                reason: "goal collectResource: adjacent sandbox resource",
+            let foodObservations = input.resourceObservations.filter { $0.resource == .foodRaw }
+            let foodTarget = input.activeResourceTarget?.resource == .foodRaw
+                ? input.activeResourceTarget
+                : nil
+            let foodInput = AgentActionDecisionInput(
+                agentId: input.agentId,
                 tick: input.tick,
-                target: target.target,
-                resource: target.resource
+                goalKind: input.goalKind,
+                position: input.position,
+                homePosition: input.homePosition,
+                resourceObservations: foodObservations,
+                activeResourceTarget: foodTarget,
+                navigationProgress: input.navigationProgress,
+                resourceReservation: input.resourceReservation,
+                survivalEnabled: true,
+                hasFoodRaw: false
             )
+            return resourceAction(foodInput, goalName: "satisfyHunger")
         case .deliverResources:
-            if input.position == input.homePosition {
-                return AgentAction(
-                    name: "deliver_resource",
-                    reason: "goal deliverResources: at home",
-                    tick: input.tick,
-                    target: input.homePosition
-                )
-            }
-            if let next = input.navigationProgress.nextStep {
-                let dx = next.x - input.position.x
-                let dy = next.y - input.position.y
-                let dz = next.z - input.position.z
-                if abs(dx) + abs(dz) == 1, (-1...1).contains(dy) {
-                    return AgentAction(
-                        name: "return_home",
-                        reason: "goal deliverResources: follow bounded route",
-                        tick: input.tick,
-                        dx: dx,
-                        dy: dy,
-                        dz: dz,
-                        target: input.homePosition
-                    )
-                }
-            }
-            return AgentAction(
-                name: "return_home",
-                reason: "goal deliverResources: awaiting bounded route",
-                tick: input.tick,
-                target: input.homePosition
-            )
+            return returnHomeAction(input, goalName: "deliverResources")
         case .observeOtherAgent:
             return AgentAction(
                 name: "observe_area",
@@ -241,6 +183,118 @@ public enum AgentActionDecider {
         case .idle:
             return AgentAction(name: "wait", reason: "goal idle", tick: input.tick)
         }
+    }
+
+    private static func resourceAction(
+        _ input: AgentActionDecisionInput,
+        goalName: String
+    ) -> AgentAction {
+            let observations = (try? AgentResourcePerception.normalize(
+                observerPosition: input.position,
+                observations: input.resourceObservations,
+                maximumDistance: AgentResourcePerception.maximumDistance
+            )) ?? []
+            let target = input.activeResourceTarget ?? observations.first.map {
+                AgentResourceTarget(
+                    resource: $0.resource,
+                    target: $0.target,
+                    source: $0.source,
+                    distanceManhattan: $0.distanceManhattan,
+                    selectedAtTick: input.tick,
+                    lastSeenAtTick: input.tick
+                )
+            }
+            guard let target else {
+                return AgentAction(
+                    name: "wait",
+                    reason: "goal \(goalName): resource unavailable",
+                    tick: input.tick
+                )
+            }
+            if target.distanceManhattan > 1 {
+                if input.navigationProgress.lastFailure == .reservationConflict
+                    || input.navigationProgress.lastFailure == .reservationLost {
+                    return AgentAction(
+                        name: "wait",
+                        reason: "goal \(goalName): reservation unavailable",
+                        tick: input.tick,
+                        target: target.target,
+                        resource: target.resource
+                    )
+                }
+                if input.resourceReservation?.agentId == input.agentId,
+                   input.resourceReservation?.target == target.target,
+                   let next = input.navigationProgress.nextStep {
+                    let dx = next.x - input.position.x
+                    let dy = next.y - input.position.y
+                    let dz = next.z - input.position.z
+                    if abs(dx) + abs(dz) == 1, (-1...1).contains(dy) {
+                        return AgentAction(
+                            name: "approach_resource",
+                            reason: "goal \(goalName): follow bounded route",
+                            tick: input.tick,
+                            dx: dx,
+                            dy: dy,
+                            dz: dz,
+                            target: target.target,
+                            resource: target.resource
+                        )
+                    }
+                }
+                return AgentAction(
+                    name: "approach_resource",
+                    reason: "goal \(goalName): distant target selected",
+                    tick: input.tick,
+                    target: target.target,
+                    resource: target.resource
+                )
+            }
+            return AgentAction(
+                name: "harvest_block",
+                reason: "goal \(goalName): adjacent sandbox resource",
+                tick: input.tick,
+                target: target.target,
+                resource: target.resource
+            )
+    }
+
+    private static func returnHomeAction(
+        _ input: AgentActionDecisionInput,
+        goalName: String
+    ) -> AgentAction {
+            if input.position == input.homePosition {
+                if goalName == "rest" {
+                    return AgentAction(name: "rest", reason: "goal rest at home", tick: input.tick)
+                }
+                return AgentAction(
+                    name: "deliver_resource",
+                    reason: "goal \(goalName): at home",
+                    tick: input.tick,
+                    target: input.homePosition
+                )
+            }
+            if let next = input.navigationProgress.nextStep {
+                let dx = next.x - input.position.x
+                let dy = next.y - input.position.y
+                let dz = next.z - input.position.z
+                if abs(dx) + abs(dz) == 1, (-1...1).contains(dy) {
+                    return AgentAction(
+                        name: "return_home",
+                        reason: "goal \(goalName): follow bounded route",
+                        tick: input.tick,
+                        dx: dx,
+                        dy: dy,
+                        dz: dz,
+                        target: input.homePosition
+                    )
+                }
+            }
+            return AgentAction(
+                name: "return_home",
+                reason: "goal \(goalName): awaiting bounded route",
+                tick: input.tick,
+                target: input.homePosition
+            )
     }
 
     private static func movementStepTowardHome(

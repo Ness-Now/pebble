@@ -33,7 +33,23 @@ public enum AgentCognitiveTransitions {
 
     public static func selectGoal(_ input: AgentGoalSelectionInput) -> AgentGoalChange? {
         let nextGoal: AgentGoal
-        if input.health <= 25 {
+        let hungerCommitted = input.survivalEnabled
+            && input.currentGoalKind == .satisfyHunger
+            && input.needs.hunger > input.hungerRecoveryThreshold
+        let restCommitted = input.survivalEnabled
+            && input.currentGoalKind == .rest
+            && input.needs.fatigue > input.fatigueRecoveryThreshold
+        if input.survivalEnabled
+            && (input.needs.hunger >= input.criticalHungerThreshold || hungerCommitted) {
+            nextGoal = AgentGoal(
+                kind: .satisfyHunger,
+                reason: input.needs.hunger >= input.criticalHungerThreshold
+                    ? "critical hunger requires food"
+                    : "hunger recovery committed",
+                startedAtTick: input.tick,
+                urgency: 110
+            )
+        } else if input.health <= 25 {
             nextGoal = AgentGoal(
                 kind: .seekSafety,
                 reason: "health <= 25",
@@ -54,6 +70,21 @@ public enum AgentCognitiveTransitions {
                 startedAtTick: input.tick,
                 urgency: 90
             )
+        } else if input.survivalEnabled && input.needs.hunger >= input.hungryThreshold {
+            nextGoal = AgentGoal(
+                kind: .satisfyHunger,
+                reason: "hunger threshold reached",
+                startedAtTick: input.tick,
+                urgency: 82
+            )
+        } else if input.survivalEnabled
+                    && (input.needs.fatigue >= input.fatigueThreshold || restCommitted) {
+            nextGoal = AgentGoal(
+                kind: .rest,
+                reason: restCommitted ? "fatigue recovery committed" : "fatigue threshold reached",
+                startedAtTick: input.tick,
+                urgency: 81
+            )
         } else if input.shouldDeliverResources {
             nextGoal = AgentGoal(
                 kind: .deliverResources,
@@ -68,7 +99,7 @@ public enum AgentCognitiveTransitions {
                 startedAtTick: input.tick,
                 urgency: 75
             )
-        } else if input.needs.fatigue >= 0.02 {
+        } else if !input.survivalEnabled && input.needs.fatigue >= 0.02 {
             nextGoal = AgentGoal(
                 kind: .rest,
                 reason: "fatigue >= 0.02",
@@ -129,10 +160,15 @@ public enum AgentCognitiveTransitions {
 
         switch input.action.name {
         case "rest":
-            needs.fatigue = max(0, needs.fatigue - 0.02)
+            let recovery = input.survivalEnabled
+                ? (input.distanceFromHome == 0 ? input.restRecoveryPerTick : 0)
+                : 0.02
+            needs.fatigue = max(0, needs.fatigue - recovery)
             fear = max(0, fear - 1)
             state = "resting"
-            effect = "fatigue -0.02, fear -1"
+            effect = input.survivalEnabled
+                ? "fatigue -\(recovery), fear -1"
+                : "fatigue -0.02, fear -1"
         case "observe_area":
             needs.curiosity = min(1, needs.curiosity + 0.01)
             state = "observing"
@@ -149,6 +185,9 @@ public enum AgentCognitiveTransitions {
         case "deliver_resource":
             state = "delivering"
             effect = "awaiting delivery transaction"
+        case "consume_food":
+            state = "consuming"
+            effect = "awaiting consumption transaction"
         case "move_abstract":
             if input.goalKind == .seekSafety {
                 fear = max(0, fear - 1)

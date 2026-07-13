@@ -140,6 +140,12 @@ public struct AgentGoalSelectionInput {
     public let hasCommittedResourceTask: Bool
     public let shouldDeliverResources: Bool
     public let currentGoalKind: AgentGoalKind
+    public let survivalEnabled: Bool
+    public let hungryThreshold: Double
+    public let criticalHungerThreshold: Double
+    public let hungerRecoveryThreshold: Double
+    public let fatigueThreshold: Double
+    public let fatigueRecoveryThreshold: Double
 
     public init(
         tick: Int,
@@ -151,7 +157,13 @@ public struct AgentGoalSelectionInput {
         hasInventoryCapacity: Bool = false,
         hasCommittedResourceTask: Bool = false,
         shouldDeliverResources: Bool = false,
-        currentGoalKind: AgentGoalKind
+        currentGoalKind: AgentGoalKind,
+        survivalEnabled: Bool = false,
+        hungryThreshold: Double = AgentSurvivalConfiguration.live.hungryThreshold,
+        criticalHungerThreshold: Double = AgentSurvivalConfiguration.live.criticalHungerThreshold,
+        hungerRecoveryThreshold: Double = AgentSurvivalConfiguration.live.hungerRecoveryThreshold,
+        fatigueThreshold: Double = AgentSurvivalConfiguration.live.fatigueThreshold,
+        fatigueRecoveryThreshold: Double = AgentSurvivalConfiguration.live.fatigueRecoveryThreshold
     ) {
         self.tick = tick
         self.health = health
@@ -163,6 +175,12 @@ public struct AgentGoalSelectionInput {
         self.hasCommittedResourceTask = hasCommittedResourceTask
         self.shouldDeliverResources = shouldDeliverResources
         self.currentGoalKind = currentGoalKind
+        self.survivalEnabled = survivalEnabled
+        self.hungryThreshold = hungryThreshold
+        self.criticalHungerThreshold = criticalHungerThreshold
+        self.hungerRecoveryThreshold = hungerRecoveryThreshold
+        self.fatigueThreshold = fatigueThreshold
+        self.fatigueRecoveryThreshold = fatigueRecoveryThreshold
     }
 }
 
@@ -174,6 +192,8 @@ public struct AgentActionEffectInput {
     public let fear: Int
     public let state: String
     public let tick: Int
+    public let survivalEnabled: Bool
+    public let restRecoveryPerTick: Double
 
     public init(
         action: AgentAction,
@@ -182,7 +202,9 @@ public struct AgentActionEffectInput {
         needs: AgentNeeds,
         fear: Int,
         state: String,
-        tick: Int
+        tick: Int,
+        survivalEnabled: Bool = false,
+        restRecoveryPerTick: Double = AgentSurvivalConfiguration.live.restRecoveryPerTick
     ) {
         self.action = action
         self.goalKind = goalKind
@@ -191,6 +213,8 @@ public struct AgentActionEffectInput {
         self.fear = fear
         self.state = state
         self.tick = tick
+        self.survivalEnabled = survivalEnabled
+        self.restRecoveryPerTick = restRecoveryPerTick
     }
 }
 

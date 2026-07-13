@@ -148,30 +148,37 @@ public struct AgentResourceConservationSnapshot: Encodable, Equatable {
     public let harvested: [AgentResourceAmount]
     public let carried: [AgentResourceAmount]
     public let campStock: [AgentResourceAmount]
+    public let consumed: [AgentResourceAmount]
     public let harvestedTotal: Int
     public let carriedTotal: Int
     public let campStockTotal: Int
+    public let consumedTotal: Int
     public let balanced: Bool
 
     public init(
         harvested: [AgentResourceAmount],
         carried: [AgentResourceAmount],
-        campStock: [AgentResourceAmount]
+        campStock: [AgentResourceAmount],
+        consumed: [AgentResourceAmount] = []
     ) {
         let normalizedHarvested = AgentResourceAmounts.normalize(harvested)
         let normalizedCarried = AgentResourceAmounts.normalize(carried)
         let normalizedCampStock = AgentResourceAmounts.normalize(campStock)
+        let normalizedConsumed = AgentResourceAmounts.normalize(consumed)
         self.harvested = normalizedHarvested
         self.carried = normalizedCarried
         self.campStock = normalizedCampStock
+        self.consumed = normalizedConsumed
         harvestedTotal = normalizedHarvested.reduce(0) { $0 + $1.quantity }
         carriedTotal = normalizedCarried.reduce(0) { $0 + $1.quantity }
         campStockTotal = normalizedCampStock.reduce(0) { $0 + $1.quantity }
+        consumedTotal = normalizedConsumed.reduce(0) { $0 + $1.quantity }
         balanced = AgentResourceKind.allCases.allSatisfy { resource in
             let produced = normalizedHarvested.first { $0.resource == resource }?.quantity ?? 0
             let carried = normalizedCarried.first { $0.resource == resource }?.quantity ?? 0
             let stocked = normalizedCampStock.first { $0.resource == resource }?.quantity ?? 0
-            return produced == carried + stocked
+            let consumed = normalizedConsumed.first { $0.resource == resource }?.quantity ?? 0
+            return produced == carried + stocked + consumed
         }
     }
 }

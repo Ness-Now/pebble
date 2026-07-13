@@ -293,6 +293,7 @@ public enum AgentNavigationStatus: String, Codable, Equatable {
 public enum AgentNavigationPurpose: String, Codable, Equatable {
     case resource
     case homeDelivery
+    case homeRest
 }
 
 public struct AgentNavigationRoute: Codable, Equatable {

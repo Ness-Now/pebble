@@ -5945,6 +5945,611 @@ do {
         let text = String(data: economySnapshotEncodingA, encoding: .utf8) ?? ""
         return text.contains("campStock") && text.contains("conservation") && text.contains("deliveryQuota")
     }())
+
+    // -----------------------------------------------------------------------
+    section("PebbleAgents autonomous survival sandbox J")
+
+    let survivalConfiguration = try! AgentSurvivalConfiguration(
+        hungerPerTick: 0.20,
+        fatiguePerTick: 0.20,
+        hungryThreshold: 0.40,
+        criticalHungerThreshold: 0.60,
+        hungerRecoveryThreshold: 0.20,
+        fatigueThreshold: 0.60,
+        fatigueRecoveryThreshold: 0.20,
+        foodNutrition: 0.75,
+        restRecoveryPerTick: 0.60,
+        starvationGraceTicks: 2,
+        starvationDamagePerTick: 10
+    )
+    check("J survival configuration valid",
+          survivalConfiguration.hungryThreshold == 0.40
+            && survivalConfiguration.criticalHungerThreshold == 0.60
+            && survivalConfiguration.starvationGraceTicks == 2)
+    check("J incoherent hunger thresholds rejected", {
+        do {
+            _ = try AgentSurvivalConfiguration(
+                hungerPerTick: 0.1, fatiguePerTick: 0.1,
+                hungryThreshold: 0.7, criticalHungerThreshold: 0.6,
+                hungerRecoveryThreshold: 0.2,
+                fatigueThreshold: 0.7, fatigueRecoveryThreshold: 0.2,
+                foodNutrition: 0.5, restRecoveryPerTick: 0.5,
+                starvationGraceTicks: 2, starvationDamagePerTick: 10
+            )
+            return false
+        } catch AgentSurvivalConfigurationError.invalidThresholds { return true }
+        catch { return false }
+    }())
+    check("J incoherent fatigue thresholds rejected", {
+        do {
+            _ = try AgentSurvivalConfiguration(
+                hungerPerTick: 0.1, fatiguePerTick: 0.1,
+                hungryThreshold: 0.4, criticalHungerThreshold: 0.8,
+                hungerRecoveryThreshold: 0.2,
+                fatigueThreshold: 0.3, fatigueRecoveryThreshold: 0.4,
+                foodNutrition: 0.5, restRecoveryPerTick: 0.5,
+                starvationGraceTicks: 2, starvationDamagePerTick: 10
+            )
+            return false
+        } catch AgentSurvivalConfigurationError.invalidThresholds { return true }
+        catch { return false }
+    }())
+    check("J out of range need rate rejected", {
+        do {
+            _ = try AgentSurvivalConfiguration(
+                hungerPerTick: 1.1, fatiguePerTick: 0.1,
+                hungryThreshold: 0.4, criticalHungerThreshold: 0.8,
+                hungerRecoveryThreshold: 0.2,
+                fatigueThreshold: 0.7, fatigueRecoveryThreshold: 0.2,
+                foodNutrition: 0.5, restRecoveryPerTick: 0.5,
+                starvationGraceTicks: 2, starvationDamagePerTick: 10
+            )
+            return false
+        } catch AgentSurvivalConfigurationError.invalidRate { return true }
+        catch { return false }
+    }())
+    let survivalEncodingA = try! economyEncoder.encode(survivalConfiguration)
+    let survivalEncodingB = try! economyEncoder.encode(survivalConfiguration)
+    check("J survival configuration deterministic encoding", survivalEncodingA == survivalEncodingB)
+
+    func survivalAgentState(
+        id: String = "agent_survival",
+        position: AgentPosition = AgentPosition(x: 0, y: 64, z: 0),
+        home: AgentPosition = AgentPosition(x: 0, y: 64, z: 0),
+        hunger: Double = 0,
+        fatigue: Double = 0,
+        health: Int = 100,
+        inventory: AgentResourceInventory = AgentResourceInventory(),
+        goal: AgentGoalKind = .idle
+    ) -> AgentSessionAgentState {
+        AgentSessionAgentState(
+            id: id,
+            state: "idle",
+            position: position,
+            needs: AgentNeeds(hunger: hunger, fatigue: fatigue, curiosity: 0, safety: 1),
+            health: health,
+            fear: 0,
+            homePosition: home,
+            nearbyAgents: [],
+            currentGoal: AgentGoal(kind: goal, reason: "survival fixture", startedAtTick: 0, urgency: 0),
+            lastAction: nil,
+            lastActionEffect: nil,
+            memory: [],
+            tickCreated: 0,
+            ticksAlive: 0,
+            observationCount: 0,
+            nearbyObservationCount: 0,
+            goalSelectionCount: 0,
+            goalChangeCount: 0,
+            actionCount: 0,
+            actionEffectCount: 0,
+            movementCount: 0,
+            totalManhattanDistanceMoved: 0,
+            returnHomeMoveCount: 0,
+            totalDistanceReducedTowardHome: 0,
+            resourceInventory: inventory
+        )
+    }
+
+    func survivalSession(
+        states: [AgentSessionAgentState],
+        economy: Bool = false,
+        configuration: AgentSurvivalConfiguration = survivalConfiguration
+    ) -> AgentSimulationSession {
+        var session = try! AgentSimulationSession(
+            configuration: try! AgentSessionConfiguration(
+                seed: 404,
+                resourceObservationRadius: 8,
+                recentMemorySnapshotLimit: 128,
+                memoryPolicy: .bounded(maxEntries: 256),
+                deliveryQuota: 2,
+                survivalConfiguration: configuration
+            ),
+            agents: states
+        )
+        if economy { session.setEconomyEnabled(true) }
+        return session
+    }
+
+    var survivalDefault = survivalSession(states: [survivalAgentState()])
+    check("J survival disabled by default", !survivalDefault.survivalEnabled
+          && !survivalDefault.snapshot().survivalEnabled
+          && survivalDefault.snapshot().agents[0].survivalProgress == nil)
+    let legacyBefore = survivalDefault.snapshot()
+    _ = try! survivalDefault.advanceTick()
+    let legacyAfter = survivalDefault.snapshot()
+    check("J survival off preserves legacy hunger tick", legacyAfter.agents[0].needs.hunger == 0.01)
+    check("J survival off preserves legacy fatigue tick", legacyAfter.agents[0].needs.fatigue == 0.005)
+    check("J survival off preserves legacy state shape",
+          legacyBefore.agents[0].survivalProgress == nil && legacyAfter.agents[0].survivalProgress == nil)
+    let legacySnapshotText = String(
+        data: try! economyEncoder.encode(legacyAfter),
+        encoding: .utf8
+    ) ?? ""
+    check("J historical snapshot omits survival fields",
+          !legacySnapshotText.contains("survivalEnabled")
+            && !legacySnapshotText.contains("survivalProgress")
+            && !legacySnapshotText.contains("survivalConfiguration"))
+
+    var boundedNeeds = survivalSession(states: [survivalAgentState(
+        hunger: 0.95, fatigue: 0.95, health: 120
+    )])
+    boundedNeeds.setSurvivalEnabled(true)
+    _ = try! boundedNeeds.advanceTick()
+    check("J survival clamps hunger and fatigue",
+          boundedNeeds.snapshot().agents[0].needs.hunger == 1
+            && boundedNeeds.snapshot().agents[0].needs.fatigue == 1)
+    check("J survival clamps health", boundedNeeds.snapshot().agents[0].health == 100)
+    check("J enabling survival creates neutral progress",
+          boundedNeeds.snapshot().agents[0].survivalProgress != nil)
+
+    func survivalGoalInput(
+        hunger: Double,
+        fatigue: Double = 0,
+        health: Int = 100,
+        fear: Int = 0,
+        safety: Double = 1,
+        current: AgentGoalKind = .idle,
+        deliver: Bool = false
+    ) -> AgentGoalSelectionInput {
+        AgentGoalSelectionInput(
+            tick: 10,
+            health: health,
+            fear: fear,
+            needs: AgentNeeds(hunger: hunger, fatigue: fatigue, curiosity: 0, safety: safety),
+            hasNearbyAgents: false,
+            shouldDeliverResources: deliver,
+            currentGoalKind: current,
+            survivalEnabled: true,
+            hungryThreshold: survivalConfiguration.hungryThreshold,
+            criticalHungerThreshold: survivalConfiguration.criticalHungerThreshold,
+            hungerRecoveryThreshold: survivalConfiguration.hungerRecoveryThreshold,
+            fatigueThreshold: survivalConfiguration.fatigueThreshold,
+            fatigueRecoveryThreshold: survivalConfiguration.fatigueRecoveryThreshold
+        )
+    }
+    check("J critical hunger outranks low health",
+          AgentCognitiveTransitions.selectGoal(survivalGoalInput(
+            hunger: 0.8, health: 10
+          ))?.to == .satisfyHunger)
+    check("J immediate safety outranks normal hunger",
+          AgentCognitiveTransitions.selectGoal(survivalGoalInput(
+            hunger: 0.5, safety: 0.2
+          ))?.to == .seekSafety)
+    check("J immediate fear outranks normal hunger",
+          AgentCognitiveTransitions.selectGoal(survivalGoalInput(
+            hunger: 0.5, fear: 80
+          ))?.to == .seekSafety)
+    check("J normal hunger outranks economy delivery",
+          AgentCognitiveTransitions.selectGoal(survivalGoalInput(
+            hunger: 0.5, deliver: true
+          ))?.to == .satisfyHunger)
+    check("J hunger interrupts committed delivery",
+          AgentCognitiveTransitions.selectGoal(survivalGoalInput(
+            hunger: 0.5, current: .deliverResources, deliver: true
+          ))?.to == .satisfyHunger)
+    check("J hunger hysteresis holds above recovery",
+          AgentCognitiveTransitions.selectGoal(survivalGoalInput(
+            hunger: 0.3, current: .satisfyHunger
+          )) == nil)
+    check("J hunger hysteresis releases at recovery",
+          AgentCognitiveTransitions.selectGoal(survivalGoalInput(
+            hunger: 0.2, current: .satisfyHunger
+          ))?.to == .idle)
+    check("J fatigue threshold selects rest",
+          AgentCognitiveTransitions.selectGoal(survivalGoalInput(
+            hunger: 0, fatigue: 0.7
+          ))?.to == .rest)
+    check("J rest hysteresis holds above recovery",
+          AgentCognitiveTransitions.selectGoal(survivalGoalInput(
+            hunger: 0, fatigue: 0.3, current: .rest
+          )) == nil)
+    check("J rest hysteresis releases at recovery",
+          AgentCognitiveTransitions.selectGoal(survivalGoalInput(
+            hunger: 0, fatigue: 0.2, current: .rest
+          ))?.to == .idle)
+
+    let foodTarget = AgentPosition(x: 2, y: 64, z: 0)
+    let woodTarget = AgentPosition(x: 0, y: 64, z: 2)
+    func observedResource(
+        _ resource: AgentResourceKind,
+        target: AgentPosition,
+        observer: AgentPosition = AgentPosition(x: 0, y: 64, z: 0)
+    ) -> AgentResourceObservation {
+        AgentResourceObservation(
+            resource: resource,
+            target: target,
+            direction: AgentResourcePerception.direction(
+                observerPosition: observer,
+                target: target
+            )!,
+            distanceManhattan: abs(target.x - observer.x) + abs(target.z - observer.z),
+            quantityAvailable: 1,
+            source: .sandboxFixture
+        )
+    }
+    var foodSelection = survivalSession(states: [survivalAgentState(hunger: 0.3)])
+    foodSelection.setSurvivalEnabled(true)
+    let foodSelectionTick = try! foodSelection.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: "agent_survival",
+        resourceObservations: [
+            observedResource(.wood, target: woodTarget),
+            observedResource(.foodRaw, target: foodTarget),
+        ],
+        navigationObservation: AgentNavigationObservation(
+            worldTick: 1,
+            origin: AgentPosition(x: 0, y: 64, z: 0),
+            target: foodTarget,
+            radius: 8,
+            cells: flatCells()
+        )
+    )])
+    check("J hungry agent targets foodRaw exclusively",
+          foodSelection.snapshot().agents[0].activeResourceTarget?.resource == .foodRaw)
+    check("J hungry agent ignores wood and stone",
+          foodSelection.snapshot().agents[0].activeResourceTarget?.target == foodTarget)
+    check("J food target uses existing reservation",
+          foodSelection.snapshot().agents[0].resourceReservation?.resource == .foodRaw)
+    check("J food target uses existing bounded navigation",
+          foodSelection.snapshot().agents[0].navigationProgress.route?.purpose == .resource)
+    check("J food target emits approach_resource",
+          foodSelectionTick.agents[0].action.name == "approach_resource")
+    var noFood = survivalSession(states: [survivalAgentState(hunger: 0.3)])
+    noFood.setSurvivalEnabled(true)
+    let noFoodTick = try! noFood.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: "agent_survival",
+        resourceObservations: [observedResource(.wood, target: woodTarget)]
+    )])
+    check("J missing food has explicit wait action",
+          noFoodTick.agents[0].action.name == "wait"
+            && noFoodTick.agents[0].action.reason.contains("resource unavailable"))
+    check("J missing food creates no non-food target", noFood.snapshot().agents[0].activeResourceTarget == nil)
+
+    func harvestForSurvival(
+        _ resource: AgentResourceKind,
+        target: AgentPosition,
+        id: String,
+        agentId: String = "agent_survival",
+        session: inout AgentSimulationSession
+    ) {
+        try! session.applyInteractionOutcome(AgentInteractionOutcome(
+            interactionId: id,
+            agentId: agentId,
+            tick: session.tick,
+            target: target,
+            resource: resource,
+            status: .succeeded,
+            inventoryDelta: AgentInventoryDelta(resource: resource, quantity: 1),
+            reason: "survival fixture harvested"
+        ))
+    }
+    var consumption = survivalSession(states: [survivalAgentState(hunger: 0.7)])
+    harvestForSurvival(.foodRaw, target: AgentPosition(x: 1, y: 64, z: 0), id: "j-food", session: &consumption)
+    harvestForSurvival(.wood, target: AgentPosition(x: 0, y: 64, z: 1), id: "j-wood", session: &consumption)
+    consumption.setSurvivalEnabled(true)
+    let consumptionTick = try! consumption.advanceTick()
+    check("J carried food emits consume_food", consumptionTick.agents[0].action.name == "consume_food")
+    let beforeConsumption = consumption.snapshot().agents[0]
+    let consumptionIntent = AgentConsumptionIntent(
+        consumptionId: "j-consumption-1",
+        agentId: "agent_survival",
+        tick: consumption.tick
+    )
+    let consumptionOutcome = try! consumption.consumeFood(consumptionIntent)
+    let afterConsumption = consumption.snapshot().agents[0]
+    check("J consumption succeeds atomically", consumptionOutcome.status == .succeeded)
+    check("J consumption removes exactly one foodRaw",
+          beforeConsumption.resourceInventory.count(of: .foodRaw) == 1
+            && afterConsumption.resourceInventory.count(of: .foodRaw) == 0)
+    check("J consumption preserves other resources",
+          beforeConsumption.resourceInventory.count(of: .wood) == 1
+            && afterConsumption.resourceInventory.count(of: .wood) == 1)
+    check("J consumption reduces hunger exactly",
+          abs(consumptionOutcome.hungerBefore - 0.9) < 1e-12
+            && abs(consumptionOutcome.hungerAfter - 0.15) < 1e-12
+            && abs(afterConsumption.needs.hunger - 0.15) < 1e-12)
+    check("J consumption increments consumed total",
+          consumption.snapshot().conservation.consumedTotal == 1
+            && consumption.snapshot().conservation.consumed.first?.resource == .foodRaw)
+    check("J consumption writes one success memory",
+          afterConsumption.recentMemory.filter { $0.type == "food_consumed" }.count == 1)
+    check("J consumption outcome exposed",
+          afterConsumption.survivalProgress?.lastConsumptionOutcome == consumptionOutcome)
+    check("J consumption counter exact", afterConsumption.survivalProgress?.foodConsumedCount == 1)
+    check("J consumption resets critical hunger counter",
+          afterConsumption.survivalProgress?.consecutiveCriticalHungerTicks == 0)
+    check("J conservation includes consumed resource",
+          consumption.snapshot().conservation.harvestedTotal == 2
+            && consumption.snapshot().conservation.carriedTotal == 1
+            && consumption.snapshot().conservation.consumedTotal == 1
+            && consumption.snapshot().conservation.balanced)
+    let afterFirstConsumption = consumption.snapshot()
+    check("J consumption ID deduplicated", {
+        do {
+            _ = try consumption.consumeFood(consumptionIntent)
+            return false
+        } catch AgentSessionError.duplicateConsumption { return true }
+        catch { return false }
+    }())
+    check("J duplicate consumption is atomic", consumption.snapshot() == afterFirstConsumption)
+    let postConsumptionDelivery = try! consumption.deliverResources(AgentDeliveryIntent(
+        deliveryId: "j-post-consumption-delivery",
+        agentId: "agent_survival",
+        tick: consumption.tick,
+        position: AgentPosition(x: 0, y: 64, z: 0)
+    ))
+    check("J delivery remains atomic after consumption",
+          postConsumptionDelivery.status == .succeeded
+            && postConsumptionDelivery.transferred == [AgentResourceAmount(resource: .wood, quantity: 1)])
+    check("J conservation exact after consumption and delivery",
+          consumption.snapshot().conservation.harvestedTotal == 2
+            && consumption.snapshot().conservation.carriedTotal == 0
+            && consumption.snapshot().conservation.campStockTotal == 1
+            && consumption.snapshot().conservation.consumedTotal == 1
+            && consumption.snapshot().conservation.balanced)
+    check("J invalid consumption resource rejected", {
+        do {
+            try consumption.prevalidateConsumption(AgentConsumptionIntent(
+                consumptionId: "j-consume-wood",
+                agentId: "agent_survival",
+                tick: consumption.tick,
+                resource: .wood
+            ))
+            return false
+        } catch AgentSessionError.invalidConsumptionResource { return true }
+        catch { return false }
+    }())
+
+    var invalidConsumption = survivalSession(states: [survivalAgentState(hunger: 0.5)])
+    harvestForSurvival(.foodRaw, target: AgentPosition(x: 1, y: 64, z: 0), id: "j-invalid-food", session: &invalidConsumption)
+    invalidConsumption.setSurvivalEnabled(true)
+    let invalidConsumptionBefore = invalidConsumption.snapshot()
+    check("J invalid consumption outcome rejected", {
+        do {
+            try invalidConsumption.applyConsumptionOutcome(AgentConsumptionOutcome(
+                consumptionId: "j-invalid-outcome",
+                agentId: "agent_survival",
+                tick: invalidConsumption.tick,
+                resource: .foodRaw,
+                quantity: 1,
+                status: .succeeded,
+                hungerBefore: 0.5,
+                hungerAfter: 0.4,
+                reason: "invalid nutrition delta"
+            ))
+            return false
+        } catch AgentSessionError.invalidConsumptionOutcome { return true }
+        catch { return false }
+    }())
+    check("J invalid consumption outcome has no mutation",
+          invalidConsumption.snapshot() == invalidConsumptionBefore)
+
+    var emptyConsumption = survivalSession(states: [survivalAgentState(hunger: 0.5)])
+    emptyConsumption.setSurvivalEnabled(true)
+    let emptyBefore = emptyConsumption.snapshot().agents[0]
+    let emptyOutcome = try! emptyConsumption.consumeFood(AgentConsumptionIntent(
+        consumptionId: "j-empty-consumption",
+        agentId: "agent_survival",
+        tick: emptyConsumption.tick
+    ))
+    let emptyAfter = emptyConsumption.snapshot().agents[0]
+    check("J empty consumption is explicitly blocked", emptyOutcome.status == .foodUnavailable)
+    check("J empty consumption preserves inventory and hunger",
+          emptyAfter.resourceInventory == emptyBefore.resourceInventory
+            && emptyAfter.needs == emptyBefore.needs)
+    check("J empty consumption writes no success memory",
+          emptyAfter.recentMemory.allSatisfy { $0.type != "food_consumed" })
+    check("J empty consumption writes blocked memory",
+          emptyAfter.recentMemory.last?.type == "consumption_blocked")
+    check("J empty consumption preserves conservation",
+          emptyConsumption.snapshot().conservation.consumedTotal == 0
+            && emptyConsumption.snapshot().conservation.balanced)
+
+    var starvation = survivalSession(states: [survivalAgentState(hunger: 0.55)])
+    starvation.setSurvivalEnabled(true)
+    _ = try! starvation.advanceTick()
+    check("J starvation grace tick one has no damage",
+          starvation.snapshot().agents[0].health == 100
+            && starvation.snapshot().agents[0].survivalProgress?.consecutiveCriticalHungerTicks == 1)
+    _ = try! starvation.advanceTick()
+    check("J starvation grace tick two has no damage",
+          starvation.snapshot().agents[0].health == 100
+            && starvation.snapshot().agents[0].survivalProgress?.consecutiveCriticalHungerTicks == 2)
+    _ = try! starvation.advanceTick()
+    check("J starvation first damage occurs after grace",
+          starvation.snapshot().agents[0].health == 90
+            && starvation.snapshot().agents[0].survivalProgress?.starvationDamageTaken == 10)
+    check("J starvation writes memory only on real damage",
+          starvation.snapshot().agents[0].recentMemory.filter { $0.type == "starvation_damage" }.count == 1)
+    for _ in 0..<12 { _ = try! starvation.advanceTick() }
+    check("J starvation health is bounded at zero", starvation.snapshot().agents[0].health == 0)
+    check("J starvation damage total is bounded", starvation.snapshot().agents[0].survivalProgress?.starvationDamageTaken == 100)
+    check("J starvation invents no resources",
+          starvation.snapshot().conservation.harvestedTotal == 0
+            && starvation.snapshot().conservation.carriedTotal == 0
+            && starvation.snapshot().conservation.consumedTotal == 0)
+    var starvationOff = survivalSession(states: [survivalAgentState(hunger: 1, health: 100)])
+    for _ in 0..<5 { _ = try! starvationOff.advanceTick() }
+    check("J survival off prevents starvation damage", starvationOff.snapshot().agents[0].health == 100)
+    check("J survival off writes no starvation memory",
+          starvationOff.snapshot().agents[0].recentMemory.allSatisfy { $0.type != "starvation_damage" })
+
+    let restHome = AgentPosition(x: 0, y: 64, z: 0)
+    let restAway = AgentPosition(x: 2, y: 64, z: 0)
+    let restConfiguration = try! AgentSurvivalConfiguration(
+        hungerPerTick: 0.01,
+        fatiguePerTick: 0.20,
+        hungryThreshold: 0.80,
+        criticalHungerThreshold: 0.90,
+        hungerRecoveryThreshold: 0.10,
+        fatigueThreshold: 0.60,
+        fatigueRecoveryThreshold: 0.20,
+        foodNutrition: 0.75,
+        restRecoveryPerTick: 0.60,
+        starvationGraceTicks: 2,
+        starvationDamagePerTick: 10
+    )
+    var restSession = survivalSession(states: [survivalAgentState(
+        position: restAway,
+        home: restHome,
+        fatigue: 0.55
+    )], configuration: restConfiguration)
+    let rejectedAwayRest = AgentCognitiveTransitions.applyActionEffect(AgentActionEffectInput(
+        action: AgentAction(name: "rest", reason: "injected away-home rest", tick: 1),
+        goalKind: .rest,
+        distanceFromHome: 2,
+        needs: AgentNeeds(hunger: 0.1, fatigue: 0.8, curiosity: 0.2, safety: 1),
+        fear: 0,
+        state: "idle",
+        tick: 1,
+        survivalEnabled: true,
+        restRecoveryPerTick: restConfiguration.restRecoveryPerTick
+    ))
+    check("J survival rest away from home has zero recovery",
+          rejectedAwayRest.needs.fatigue == 0.8)
+    restSession.setSurvivalEnabled(true)
+    func restPerception(_ position: AgentPosition, worldTick: Int, blocked: AgentCardinalDirection? = nil) -> AgentPerceptionInput {
+        AgentPerceptionInput(
+            agentId: "agent_survival",
+            worldObservation: worldObservation(position, worldTick: worldTick, blockedDirection: blocked),
+            navigationObservation: AgentNavigationObservation(
+                worldTick: worldTick,
+                origin: position,
+                target: restHome,
+                radius: 8,
+                cells: flatCells()
+            )
+        )
+    }
+    let restTick1 = try! restSession.advanceTick(perceptions: [restPerception(restAway, worldTick: 201)])
+    check("J fatigue threshold engages rest goal", restSession.snapshot().agents[0].currentGoal.kind == .rest)
+    check("J rest away from home uses homeRest route",
+          restSession.snapshot().agents[0].navigationProgress.route?.purpose == .homeRest)
+    check("J rest away from home emits return_home", restTick1.agents[0].action.name == "return_home")
+    let restMove1 = AgentMovementCoordinator.resolve(snapshot: restSession.snapshot())
+    try! restSession.applyMovementOutcomes(restMove1)
+    check("J rest route advances one step only",
+          restSession.snapshot().agents[0].position == AgentPosition(x: 1, y: 64, z: 0)
+            && restSession.snapshot().agents[0].navigationProgress.routeIndex == 1)
+    let restBeforeBlocked = restSession.snapshot().agents[0]
+    _ = try! restSession.advanceTick(perceptions: [restPerception(
+        restBeforeBlocked.position, worldTick: 202, blocked: .west
+    )])
+    let restBlockedOutcomes = AgentMovementCoordinator.resolve(snapshot: restSession.snapshot())
+    try! restSession.applyMovementOutcomes(restBlockedOutcomes)
+    check("J blocked rest movement does not progress",
+          restSession.snapshot().agents[0].position == restBeforeBlocked.position
+            && restSession.snapshot().agents[0].navigationProgress.routeIndex == restBeforeBlocked.navigationProgress.routeIndex)
+    _ = try! restSession.advanceTick(perceptions: [restPerception(
+        restSession.snapshot().agents[0].position, worldTick: 203
+    )])
+    check("J blocked rest route replans bounded",
+          restSession.snapshot().agents[0].navigationProgress.replanCount == 1)
+    let restMove2 = AgentMovementCoordinator.resolve(snapshot: restSession.snapshot())
+    try! restSession.applyMovementOutcomes(restMove2)
+    check("J rest route arrives exactly at home",
+          restSession.snapshot().agents[0].position == restHome
+            && restSession.snapshot().agents[0].navigationProgress.status == .arrived)
+    let beforeRestFatigue = restSession.snapshot().agents[0].needs.fatigue
+    let atHomeRestTick = try! restSession.advanceTick(perceptions: [restPerception(restHome, worldTick: 204)])
+    check("J rest action occurs only at home", atHomeRestTick.agents[0].action.name == "rest")
+    check("J rest recovery exact",
+          restSession.snapshot().agents[0].needs.fatigue
+            == max(0, min(1, beforeRestFatigue + restConfiguration.fatiguePerTick)
+                - restConfiguration.restRecoveryPerTick))
+    check("J rest progress increments", restSession.snapshot().agents[0].survivalProgress?.restTicks == 1)
+    var exitedRest = false
+    for worldTick in 205...208 {
+        _ = try! restSession.advanceTick(perceptions: [restPerception(restHome, worldTick: worldTick)])
+        if restSession.snapshot().agents[0].currentGoal.kind != .rest { exitedRest = true; break }
+    }
+    check("J rest exits at recovery threshold", exitedRest)
+    check("J rest does not oscillate immediately",
+          restSession.snapshot().agents[0].needs.fatigue <= restConfiguration.fatigueRecoveryThreshold)
+
+    var resumeEconomy = survivalSession(states: [survivalAgentState(hunger: 0.5)], economy: true)
+    harvestForSurvival(.foodRaw, target: AgentPosition(x: 1, y: 64, z: 0), id: "j-resume-food", session: &resumeEconomy)
+    resumeEconomy.setSurvivalEnabled(true)
+    _ = try! resumeEconomy.advanceTick()
+    _ = try! resumeEconomy.consumeFood(AgentConsumptionIntent(
+        consumptionId: "j-resume-consume",
+        agentId: "agent_survival",
+        tick: resumeEconomy.tick
+    ))
+    let resumedEconomyTick = try! resumeEconomy.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: "agent_survival",
+        resourceObservations: [observedResource(.wood, target: woodTarget)]
+    )])
+    check("J economy resumes after hunger recovery",
+          resumedEconomyTick.agents[0].snapshot.currentGoal.kind == .collectResource)
+    check("J H2 action semantics remain unchanged",
+          AgentActionDecider.decide(AgentActionDecisionInput(
+            agentId: "agent_h2",
+            tick: 1,
+            goalKind: .collectResource,
+            position: AgentPosition(x: 0, y: 64, z: 0),
+            homePosition: AgentPosition(x: 0, y: 64, z: 0),
+            resourceObservations: [resource(AgentPosition(x: 0, y: 64, z: 0))]
+          )).name == "approach_resource")
+
+    var twoAgentConservation = survivalSession(states: [
+        survivalAgentState(id: "agent_a"),
+        survivalAgentState(id: "agent_b", position: AgentPosition(x: 0, y: 64, z: 1), home: AgentPosition(x: 0, y: 64, z: 1)),
+    ])
+    harvestForSurvival(.foodRaw, target: AgentPosition(x: 1, y: 64, z: 0), id: "j-two-food", agentId: "agent_a", session: &twoAgentConservation)
+    harvestForSurvival(.wood, target: AgentPosition(x: 1, y: 64, z: 1), id: "j-two-wood", agentId: "agent_b", session: &twoAgentConservation)
+    twoAgentConservation.setSurvivalEnabled(true)
+    let twoAgentOutcome = try! twoAgentConservation.consumeFood(AgentConsumptionIntent(
+        consumptionId: "j-two-consume",
+        agentId: "agent_a",
+        tick: twoAgentConservation.tick
+    ))
+    check("J multi-agent consumption succeeds", twoAgentOutcome.status == .succeeded)
+    check("J conservation exact globally for multiple agents",
+          twoAgentConservation.snapshot().conservation.harvestedTotal == 2
+            && twoAgentConservation.snapshot().conservation.carriedTotal == 1
+            && twoAgentConservation.snapshot().conservation.consumedTotal == 1
+            && twoAgentConservation.snapshot().conservation.balanced)
+    check("J conservation exact per foodRaw",
+          twoAgentConservation.snapshot().conservation.harvested.first { $0.resource == .foodRaw }?.quantity == 1
+            && twoAgentConservation.snapshot().conservation.consumed.first { $0.resource == .foodRaw }?.quantity == 1)
+    check("J only foodRaw can be consumed",
+          twoAgentConservation.snapshot().conservation.consumed.allSatisfy { $0.resource == .foodRaw })
+    let survivalSnapshotEncodingA = try! economyEncoder.encode(twoAgentConservation.snapshot())
+    let survivalSnapshotEncodingB = try! economyEncoder.encode(twoAgentConservation.snapshot())
+    check("J survival snapshot deterministic encoding", survivalSnapshotEncodingA == survivalSnapshotEncodingB)
+    let survivalSnapshotText = String(data: survivalSnapshotEncodingA, encoding: .utf8) ?? ""
+    check("J survival snapshot exposes consumed conservation",
+          survivalSnapshotText.contains("consumedTotal")
+            && survivalSnapshotText.contains("survivalProgress")
+            && survivalSnapshotText.contains("lastConsumptionOutcome"))
+    twoAgentConservation.setSurvivalEnabled(false)
+    check("J disabling survival clears survival engagements",
+          !twoAgentConservation.snapshot().survivalEnabled
+            && twoAgentConservation.snapshot().agents.allSatisfy { $0.survivalProgress == nil })
+    check("J disabling survival preserves inventory and consumed totals",
+          twoAgentConservation.snapshot().agents.first { $0.id == "agent_b" }?.resourceInventory.count(of: .wood) == 1
+            && twoAgentConservation.snapshot().conservation.consumedTotal == 1)
 }
 
 print("\n\(passed) passed, \(failed) failed")
