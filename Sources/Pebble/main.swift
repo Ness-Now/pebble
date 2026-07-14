@@ -499,6 +499,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
                 }
                 game.createWorld(name: requestedName ?? "WGTest-\(seedText)", seedText: seedText,
                                  mode: GameMode.survival, difficulty: 2)
+                if let requestedName {
+                    // A named PebbleLab disposable world is a reproducibility fixture, not a normal save.
+                    let world = game.world
+                    world.randomTickSpeed = 0
+                    world.gameRules["doMobSpawning"] = 0
+                    world.gameRules["doDaylightCycle"] = 0
+                    world.gameRules["doWeatherCycle"] = 0
+                    world.dayTime = 1000
+                    world.raining = false
+                    world.thundering = false
+                    world.weatherTimer = 12000
+                    print("[lab-live] disposable-world name=\(requestedName) seed=\(world.seed) worldTick=\(world.time) dayTime=\(world.dayTime) weather=clear randomTickSpeed=\(world.randomTickSpeed) mobSpawning=\(Int(world.gameRules["doMobSpawning"] ?? -1))")
+                }
             } else if let rec = game.listWorlds().sorted(by: { $0.lastPlayed > $1.lastPlayed }).first {
                 game.loadWorld(rec.id)
             } else {

@@ -91,7 +91,8 @@ extension PebbleAgentController {
             try createProbes(in: world)
             if followTargetId() == nil { followMode = .off }
             let verb = resetSpeed ? "start" : "reset"
-            trace("\(verb) seed=\(seed) agents=3 tick=0 hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off")")
+            let weather = world.raining ? (world.thundering ? "thunder" : "rain") : "clear"
+            trace("\(verb) seed=\(seed) agents=3 tick=0 hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") worldTick=\(world.time) dayTime=\(world.dayTime) weather=\(weather) randomTickSpeed=\(world.randomTickSpeed) mobSpawning=\(Int(world.gameRules["doMobSpawning"] ?? -1))")
             return success(resetSpeed ? "PebbleAgents started: 3 agents at 4 Hz." : "PebbleAgents reset to tick 0.")
         } catch {
             lastError = String(describing: error)

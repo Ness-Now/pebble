@@ -153,6 +153,7 @@ print_plan() {
     printf '  PEBBLE_AUTOLOAD=1\n'
     printf '  PEBBLE_NEWWORLD=%s\n' "$WORLD_SEED"
     printf '  PEBBLE_NEWWORLD_NAME=%s\n' "$WORLD_NAME"
+    printf '  disposable world dynamics: random ticks, mob spawning, daylight, and weather disabled\n'
     printf '  PEBBLELAB_APP_AGENTS=1\n'
     printf '  PEBBLELAB_APP_AGENTS_MOVE=1\n'
     printf '  PEBBLELAB_APP_PROBES=1\n'
@@ -226,6 +227,9 @@ SESSION_HOME="$SESSION_ROOT/home"
 CAPTURE_DIR="$SESSION_ROOT/captures"
 CAPTURE_PATH="$CAPTURE_DIR/$CAPTURE_NAME"
 TRACE_PATH="$SESSION_ROOT/pebble-live.log"
+[ ! -e "$SESSION_HOME" ] || fail "fresh isolated home already exists: $SESSION_HOME"
+DB_PATH="$SESSION_HOME/Library/Application Support/Pebble/pebble.db"
+[ ! -e "$DB_PATH" ] || fail "fresh disposable database already exists: $DB_PATH"
 /bin/mkdir -p "$SESSION_HOME" "$CAPTURE_DIR"
 if [ "$MODE" = "build" ]; then
     CAPTURE_BEFORE_PATH="$CAPTURE_DIR/fixed-shelter-before.png"
@@ -237,6 +241,10 @@ fi
 
 print_plan "$SESSION_ROOT" "$CAPTURE_PATH" "$TRACE_PATH"
 printf '\nLaunching Pebble now. Personal Pebble data is hidden by CFFIXED_USER_HOME.\n\n'
+
+if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
+    fail "a Pebble process is already running; refusing an ambiguous live baseline"
+fi
 
 cd "$ROOT_DIR"
 CFFIXED_USER_HOME="$SESSION_HOME" \
@@ -256,6 +264,22 @@ PEBBLELAB_APP_AGENTS_BUILD="$BUILD_GATE" \
 PEBBLE_CMD="$LAB_COMMANDS" \
 PEBBLE_SHOT="$SHOT_SPEC" \
 swift run -c release Pebble 2>&1 | /usr/bin/tee "$TRACE_PATH"
+
+if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
+    fail "Pebble process remained after the isolated live run"
+fi
+[ -f "$DB_PATH" ] || fail "disposable database was not created: $DB_PATH"
+world_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT count(*), json_extract(json, '$.seed'), json_extract(json, '$.name'), json_extract(json, '$.dims.\"0\".dayTime'), json_extract(json, '$.dims.\"0\".raining'), json_extract(json, '$.dims.\"0\".thundering'), json_extract(json, '$.gameRules.doMobSpawning'), json_extract(json, '$.gameRules.doDaylightCycle'), json_extract(json, '$.gameRules.doWeatherCycle') FROM worlds;")
+expected_world_facts="1|$WORLD_SEED|$WORLD_NAME|1000|0|0|0|0|0"
+[ "$world_facts" = "$expected_world_facts" ] \
+    || fail "unexpected disposable world facts: $world_facts"
+if [ "$MODE" = "build" ]; then
+    spawn_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.spawnX'), json_extract(json, '$.spawnY'), json_extract(json, '$.spawnZ') FROM worlds;")
+    [ "$spawn_facts" = "8|75|-112" ] || fail "unexpected seed-46 spawn: $spawn_facts"
+fi
+
+require_trace "disposable-world name=$WORLD_NAME seed=$WORLD_SEED worldTick=0 dayTime=1000 weather=clear randomTickSpeed=0 mobSpawning=0" 'deterministic disposable world initialization'
+require_trace "start seed=$WORLD_SEED agents=3 tick=0 hz=4 movement=on worldTick=[0-9]+ dayTime=1000 weather=clear randomTickSpeed=0 mobSpawning=0" 'deterministic agent session initial conditions'
 
 [ -s "$CAPTURE_PATH" ] || fail "capture was not written: $CAPTURE_PATH"
 if [ "$MODE" = "build" ]; then
