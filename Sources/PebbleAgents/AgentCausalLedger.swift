@@ -1,4 +1,4 @@
-public enum AgentCausalLedgerPolicy: Equatable, Sendable {
+public enum AgentCausalLedgerPolicy: Codable, Equatable, Sendable {
     case disabled
     case bounded(maxEvents: Int)
 }
@@ -388,6 +388,17 @@ struct AgentCausalLedger {
             throw AgentCausalLedgerError.invalidBound(maxEvents)
         }
         self.policy = policy
+    }
+
+    init(restoring state: AgentCausalLedgerDurableState) throws {
+        if case let .bounded(maxEvents) = state.policy, maxEvents <= 0 {
+            throw AgentCausalLedgerError.invalidBound(maxEvents)
+        }
+        policy = state.policy
+        events = state.events
+        latestSequence = state.latestSequence
+        droppedEventCount = state.droppedEventCount
+        rollingDigest = state.rollingDigest
     }
 
     func prevalidateAppend(count: Int) throws {

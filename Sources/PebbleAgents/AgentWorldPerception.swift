@@ -163,7 +163,7 @@ public struct AgentWorldObservation: Codable, Equatable {
     }
 }
 
-public struct AgentWorldPerceptionEffect: Encodable, Equatable {
+public struct AgentWorldPerceptionEffect: Codable, Equatable {
     public let safetyBefore: Double
     public let safetyAfter: Double
     public let curiosityBefore: Double

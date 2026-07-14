@@ -4,7 +4,7 @@ public enum AgentMovementStatus: String, Codable, Equatable {
     case blocked
 }
 
-public struct AgentMovementOutcome: Encodable, Equatable {
+public struct AgentMovementOutcome: Codable, Equatable {
     public let agentId: String
     public let tick: Int
     public let status: AgentMovementStatus

@@ -297,7 +297,7 @@ public enum AgentResourceTargeting {
     }
 }
 
-public struct AgentResourceInventory: Encodable, Equatable {
+public struct AgentResourceInventory: Codable, Equatable {
     public let capacity: Int
     public private(set) var sandboxResourceCount: Int
     public private(set) var foodRawCount: Int
@@ -393,6 +393,15 @@ public struct AgentResourceInventory: Encodable, Equatable {
         if woodCount != 0 { try container.encode(woodCount, forKey: .woodCount) }
         if stoneCount != 0 { try container.encode(stoneCount, forKey: .stoneCount) }
     }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        capacity = try container.decode(Int.self, forKey: .capacity)
+        sandboxResourceCount = try container.decode(Int.self, forKey: .sandboxResourceCount)
+        foodRawCount = try container.decodeIfPresent(Int.self, forKey: .foodRawCount) ?? 0
+        woodCount = try container.decodeIfPresent(Int.self, forKey: .woodCount) ?? 0
+        stoneCount = try container.decodeIfPresent(Int.self, forKey: .stoneCount) ?? 0
+    }
 }
 
 public struct AgentInteractionIntent: Equatable {
@@ -432,7 +441,7 @@ public enum AgentInteractionStatus: String, Codable, Equatable {
     case inventoryFull
 }
 
-public struct AgentInventoryDelta: Encodable, Equatable {
+public struct AgentInventoryDelta: Codable, Equatable {
     public let resource: AgentResourceKind
     public let quantity: Int
 
@@ -442,7 +451,7 @@ public struct AgentInventoryDelta: Encodable, Equatable {
     }
 }
 
-public struct AgentInteractionOutcome: Encodable, Equatable {
+public struct AgentInteractionOutcome: Codable, Equatable {
     public let interactionId: String
     public let agentId: String
     public let tick: Int

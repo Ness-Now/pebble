@@ -3,7 +3,7 @@ public struct AgentSimulationSession {
     public static let maximumConstructionEventCount = 64
     public static let maximumFailedNaturalResourceTargetsPerAgent = 16
     public let configuration: AgentSessionConfiguration
-    public private(set) var clock: AgentSimulationClock
+    public internal(set) var clock: AgentSimulationClock
     public var simulationID: AgentSimulationID { clock.simulationID }
     public var simulationInstant: AgentSimulationInstant { clock.instant }
     public var tick: Int { clock.tick.rawValue }
@@ -12,12 +12,12 @@ public struct AgentSimulationSession {
     var creditedResourceKeys: Set<String>
     var reservationsByTarget: [String: AgentResourceReservation]
     var failedNaturalResourceTargetKeysByAgentId: [String: [String]]
-    public private(set) var economyEnabled: Bool
-    public private(set) var naturalResourcesEnabled: Bool
+    public internal(set) var economyEnabled: Bool
+    public internal(set) var naturalResourcesEnabled: Bool
     public internal(set) var campStock: AgentCampStock
     var harvestedResourceTotals: AgentCampStock
     var processedDeliveryIds: Set<String>
-    public private(set) var survivalEnabled: Bool
+    public internal(set) var survivalEnabled: Bool
     var consumedResourceTotals: AgentCampStock
     var processedConsumptionIds: Set<String>
     public internal(set) var buildAutoEnabled: Bool

@@ -5,7 +5,7 @@ public enum AgentFeedbackLoopConfigurationError: Error, Equatable {
     case invalidMaxExploreDistanceFromHome(Int)
 }
 
-public struct AgentFeedbackLoopConfiguration: Equatable {
+public struct AgentFeedbackLoopConfiguration: Codable, Equatable {
     public let maxRetrievedRecords: Int
     public let maxMemoryAgeTicks: Int
     public let duplicateWindowTicks: Int
@@ -38,7 +38,7 @@ public struct AgentFeedbackLoopConfiguration: Equatable {
     public static let live = try! AgentFeedbackLoopConfiguration()
 }
 
-public struct AgentRetrievedMemory: Encodable, Equatable {
+public struct AgentRetrievedMemory: Codable, Equatable {
     public let tick: Int
     public let type: String
     public let summary: String
@@ -69,7 +69,7 @@ public enum AgentDecisionFactorKind: String, Codable, Equatable {
     case explorationBoundary
 }
 
-public struct AgentDecisionFactor: Encodable, Equatable {
+public struct AgentDecisionFactor: Codable, Equatable {
     public let kind: AgentDecisionFactorKind
     public let weight: Int
     public let summary: String
@@ -83,7 +83,7 @@ public struct AgentDecisionFactor: Encodable, Equatable {
     }
 }
 
-public struct AgentFeedbackDecisionTrace: Encodable, Equatable {
+public struct AgentFeedbackDecisionTrace: Codable, Equatable {
     public let tick: Int
     public let baseAction: AgentAction
     public let finalAction: AgentAction

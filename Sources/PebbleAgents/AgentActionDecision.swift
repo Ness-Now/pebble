@@ -40,7 +40,7 @@ public struct AgentGoal: Codable, Equatable {
     }
 }
 
-public struct AgentAction: Encodable {
+public struct AgentAction: Codable {
     public let name: String
     public let reason: String
     public let tick: Int

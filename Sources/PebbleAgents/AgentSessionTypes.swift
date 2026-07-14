@@ -1,4 +1,4 @@
-public enum AgentMemoryPolicy: Equatable {
+public enum AgentMemoryPolicy: Codable, Equatable {
     case legacyUnbounded
     case bounded(maxEntries: Int)
 }
@@ -73,7 +73,7 @@ public enum AgentSessionError: Error, Equatable {
     case cooperation(AgentCooperationError)
 }
 
-public struct AgentSessionConfiguration {
+public struct AgentSessionConfiguration: Codable {
     public let seed: UInt32
     public let nearbyRadius: Int
     public let resourceObservationRadius: Int
@@ -152,7 +152,7 @@ public struct AgentSessionConfiguration {
     }
 }
 
-public struct AgentSessionAgentState {
+public struct AgentSessionAgentState: Codable {
     public internal(set) var agentID: AgentID
     public var id: String { agentID.rawValue }
     public internal(set) var state: String
@@ -347,7 +347,7 @@ public struct AgentSessionAgentState {
     }
 }
 
-public struct AgentPerceptionInput {
+public struct AgentPerceptionInput: Codable {
     public let agentId: String
     public let observationCountIncrement: Int
     public let externalMemoryEntries: [AgentMemoryEntry]
@@ -375,7 +375,7 @@ public struct AgentPerceptionInput {
     }
 }
 
-public struct AgentExternalUpdate {
+public struct AgentExternalUpdate: Codable {
     public let agentId: String
     public let position: AgentPosition?
     public let memoryEntries: [AgentMemoryEntry]

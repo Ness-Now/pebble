@@ -17,7 +17,7 @@ public enum AgentResourceAmounts {
     }
 }
 
-public struct AgentCampStock: Encodable, Equatable {
+public struct AgentCampStock: Codable, Equatable {
     public let capacity: Int
     public private(set) var sandboxResourceCount: Int
     public private(set) var foodRawCount: Int
@@ -152,7 +152,7 @@ public enum AgentDeliveryStatus: String, Codable, Equatable {
     case campStockFull
 }
 
-public struct AgentDeliveryOutcome: Encodable, Equatable {
+public struct AgentDeliveryOutcome: Codable, Equatable {
     public let deliveryId: String
     public let agentId: String
     public let tick: Int

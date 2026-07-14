@@ -1,4 +1,4 @@
-public struct AgentNeeds: Encodable {
+public struct AgentNeeds: Codable {
     public var hunger: Double
     public var fatigue: Double
     public var curiosity: Double
@@ -50,7 +50,7 @@ public struct AgentGoalChange {
     }
 }
 
-public struct AgentActionEffect: Encodable {
+public struct AgentActionEffect: Codable {
     public let action: String
     public let effect: String
     public let tick: Int
@@ -105,7 +105,7 @@ public struct AgentActionEffect: Encodable {
     }
 }
 
-public struct AgentMemoryEntry: Encodable {
+public struct AgentMemoryEntry: Codable {
     public let tick: Int
     public let type: String
     public let summary: String
