@@ -19,8 +19,10 @@ Le point de départ est le HEAD post-K :
   acquis dans leurs contrats actuels ;
 - information sociale causale et confiance dirigée acquises dans leur verticale
   bornée ;
-- communication physique, coopération, tâches partagées, persistance complète
-  des agents, replay complet, grande population et cycle de vie non acquis.
+- sons locaux, gestes de pointage et perception physique imparfaite acquis dans
+  une verticale bornée ; langage libre, forwarding, coopération, tâches
+  partagées, persistance complète des agents, replay complet, grande population
+  et cycle de vie non acquis.
 
 Ce stade ne doit pas être décrit comme une civilisation déjà implémentée.
 
@@ -63,8 +65,10 @@ validé localement : les fondations d’identité stable, d’horloge simulée e
 causalité déterministe sont acquises sans ouvrir la persistance ni la
 communication. `CIV-03` est terminé et validé localement : l’information
 sociale causale et la confiance dirigée sont acquises, sans forwarding,
-coopération ni persistance. Après revue, la prochaine étape canonique est
-`CIV-04 — Local Physical Channel: Sounds, Gestures and Imperfect Perception`.
+coopération ni persistance. `CIV-04` est terminé et validé localement : sons,
+gestes et perception imparfaite sont acquis dans un canal local borné, sans
+langage libre, forwarding ni coopération. Après revue, la prochaine étape
+canonique est `CIV-05 — Shared Tasks and Cooperation V1`.
 
 ## Grands programmes ultérieurs
 
