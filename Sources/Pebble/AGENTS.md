@@ -7,3 +7,7 @@
 - Verify rollback after every failed transaction and cleanup after stop, reset, World replacement, dimension/lifecycle transition, and termination.
 - Proxies and probes are unregistered, non-persistent, excluded from saves, and removed through the normal World lifecycle APIs.
 - Keep cognitive logic out of renderers. Rendering may visualize snapshots but must never select goals, actions, targets, routes, or memories.
+- Reuse existing Pebble systems before introducing a parallel physical implementation.
+- Never turn World access into an omniscient shortcut for an agent or group.
+- When their verticals open, communication, books, objects, goods, markets, and construction require a material manifestation in the World or an explicitly owned physical adapter.
+- Do not add a World mutation outside an explicitly authorized boundary.

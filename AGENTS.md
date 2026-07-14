@@ -2,7 +2,14 @@
 
 ## Objective and architecture
 
-PebbleLab Society V1 builds a deterministic, observable society simulation while preserving the original Pebble game.
+PebbleLab builds a deterministic, observable civilization simulation while preserving the original Pebble game. Society V1 is the first observable social milestone; Medieval Civilization V1 is the long-term product objective.
+
+The canonical direction is defined by:
+
+- [`PEBBLE_CIVILIZATION_VISION.md`](docs/pebblelab/PEBBLE_CIVILIZATION_VISION.md);
+- [`PEBBLE_CIVILIZATION_ROADMAP.md`](docs/pebblelab/PEBBLE_CIVILIZATION_ROADMAP.md);
+- [`DOCUMENTATION_INDEX.md`](docs/pebblelab/DOCUMENTATION_INDEX.md);
+- [`DEVELOPMENT_WORKFLOW.md`](docs/pebblelab/DEVELOPMENT_WORKFLOW.md).
 
 The package has five targets:
 
@@ -26,7 +33,13 @@ Read this file first, then the nearest target-local `AGENTS.md` for every file i
 ## Runtime safeguards
 
 - Preserve PebbleCore determinism and registration order for blocks, items, entities, and biomes.
-- Gates for laboratory behavior remain disabled by default and require explicit opt-in.
+- Simulate causes instead of imposing social outcomes; never provide magical global information or collective omniscience.
+- Keep material conservation and causal transitions explicit and verifiable.
+- Keep genetics, development, knowledge, skill, culture, profession, and social status conceptually separate.
+- Reuse existing Pebble engine systems before creating a parallel implementation.
+- A future LLM remains an optional provider; it never owns transactions, cognitive state, or the World.
+- Every new live collection must be bounded or have an explicit storage and persistence policy.
+- Gates for laboratory or experimental behavior remain disabled by default and require explicit opt-in.
 - World mutations must be bounded, prevalidated, transactional, and owned by one adapter. Publish shared state only after the World mutation is verified.
 - Every failed or lifecycle-ending World mutation must run a verified rollback. A rollback that cannot be verified is a hard failure, never a warning.
 - Never set or use `PEBBLE_REGOLD`, regenerate goldens, or change a golden to make a test pass.

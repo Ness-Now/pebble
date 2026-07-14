@@ -1,5 +1,17 @@
 # PebbleLab development workflow
 
+## Canonical direction
+
+Read the current [`Pebble Civilization vision`](PEBBLE_CIVILIZATION_VISION.md),
+[`prospective roadmap`](PEBBLE_CIVILIZATION_ROADMAP.md), and
+[`documentation index`](DOCUMENTATION_INDEX.md) before defining a mission.
+`PebbleLab Society V1` is the intermediate social milestone;
+`Medieval Civilization V1` is the long-term product destination.
+
+New missions use the `CIV-XX` convention. A mission must not produce only
+documentary ceremony unless that work directly reduces a real delivery or
+architecture risk, as `CIV-00` does by removing conflicting project direction.
+
 ## Read and scope
 
 Read the repository `AGENTS.md` first, then every `AGENTS.md` from the repository root down to each file being changed. The target-local file narrows responsibility; it does not override root safety rules.

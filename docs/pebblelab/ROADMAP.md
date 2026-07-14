@@ -1,5 +1,11 @@
 # PebbleLab Roadmap
 
+> **Historique, non prospectif.** Ce fichier est conservé comme preuve et
+> journal technique détaillé des anciennes phases. Il ne constitue plus la
+> roadmap prospective du projet et ses anciennes recommandations de « next
+> step » restent attachées à leur contexte historique. La roadmap actuelle est
+> [`PEBBLE_CIVILIZATION_ROADMAP.md`](PEBBLE_CIVILIZATION_ROADMAP.md).
+
 ## Phase 3.1 - Nearby Agents Social Perception V0
 
 Status: done and validated.
