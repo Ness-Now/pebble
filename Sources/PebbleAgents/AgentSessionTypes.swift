@@ -14,6 +14,7 @@ public enum AgentSessionError: Error, Equatable {
     case invalidDeliveryQuota(Int)
     case invalidCampStockCapacity(Int)
     case invalidInitialTick(Int)
+    case simulationTickOverflow
     case duplicateAgentId(String)
     case duplicatePerceptionInput(String)
     case unknownAgentId(String)
@@ -140,7 +141,8 @@ public struct AgentSessionConfiguration {
 }
 
 public struct AgentSessionAgentState {
-    public internal(set) var id: String
+    public internal(set) var agentID: AgentID
+    public var id: String { agentID.rawValue }
     public internal(set) var state: String
     public internal(set) var position: AgentPosition
     public internal(set) var needs: AgentNeeds
@@ -221,7 +223,10 @@ public struct AgentSessionAgentState {
         lastDeliveryOutcome: AgentDeliveryOutcome? = nil,
         survivalProgress: AgentSurvivalProgress? = nil
     ) {
-        self.id = id
+        guard let agentID = AgentID(rawValue: id) else {
+            preconditionFailure("invalid AgentID: \(id)")
+        }
+        self.agentID = agentID
         self.state = state
         self.position = position
         self.needs = needs
@@ -260,6 +265,73 @@ public struct AgentSessionAgentState {
         self.navigationProgress = navigationProgress
         self.lastDeliveryOutcome = lastDeliveryOutcome
         self.survivalProgress = survivalProgress
+    }
+
+    public init(
+        agentID: AgentID,
+        state: String,
+        position: AgentPosition,
+        needs: AgentNeeds,
+        health: Int,
+        fear: Int,
+        homePosition: AgentPosition,
+        nearbyAgents: [AgentNearbyObservation],
+        currentGoal: AgentGoal,
+        lastAction: AgentAction?,
+        lastActionEffect: AgentActionEffect?,
+        memory: [AgentMemoryEntry],
+        tickCreated: Int,
+        ticksAlive: Int,
+        observationCount: Int,
+        nearbyObservationCount: Int,
+        goalSelectionCount: Int,
+        goalChangeCount: Int,
+        actionCount: Int,
+        actionEffectCount: Int,
+        movementCount: Int,
+        totalManhattanDistanceMoved: Int,
+        returnHomeMoveCount: Int,
+        totalDistanceReducedTowardHome: Int,
+        lastWorldObservation: AgentWorldObservation? = nil,
+        lastWorldPerceptionEffect: AgentWorldPerceptionEffect? = nil,
+        lastMovementOutcome: AgentMovementOutcome? = nil,
+        lastFeedbackDecisionTrace: AgentFeedbackDecisionTrace? = nil,
+        feedbackMemoryWriteCount: Int = 0,
+        feedbackMemoryDeduplicatedCount: Int = 0,
+        memoryRetrievalCount: Int = 0,
+        memoryInfluencedDecisionCount: Int = 0,
+        lastResourceObservations: [AgentResourceObservation] = [],
+        activeResourceTarget: AgentResourceTarget? = nil,
+        resourceInventory: AgentResourceInventory = AgentResourceInventory(),
+        lastInteractionOutcome: AgentInteractionOutcome? = nil,
+        navigationProgress: AgentNavigationProgress = AgentNavigationProgress(),
+        lastDeliveryOutcome: AgentDeliveryOutcome? = nil,
+        survivalProgress: AgentSurvivalProgress? = nil
+    ) {
+        self.init(
+            id: agentID.rawValue, state: state, position: position, needs: needs,
+            health: health, fear: fear, homePosition: homePosition, nearbyAgents: nearbyAgents,
+            currentGoal: currentGoal, lastAction: lastAction, lastActionEffect: lastActionEffect,
+            memory: memory, tickCreated: tickCreated, ticksAlive: ticksAlive,
+            observationCount: observationCount, nearbyObservationCount: nearbyObservationCount,
+            goalSelectionCount: goalSelectionCount, goalChangeCount: goalChangeCount,
+            actionCount: actionCount, actionEffectCount: actionEffectCount,
+            movementCount: movementCount, totalManhattanDistanceMoved: totalManhattanDistanceMoved,
+            returnHomeMoveCount: returnHomeMoveCount,
+            totalDistanceReducedTowardHome: totalDistanceReducedTowardHome,
+            lastWorldObservation: lastWorldObservation,
+            lastWorldPerceptionEffect: lastWorldPerceptionEffect,
+            lastMovementOutcome: lastMovementOutcome,
+            lastFeedbackDecisionTrace: lastFeedbackDecisionTrace,
+            feedbackMemoryWriteCount: feedbackMemoryWriteCount,
+            feedbackMemoryDeduplicatedCount: feedbackMemoryDeduplicatedCount,
+            memoryRetrievalCount: memoryRetrievalCount,
+            memoryInfluencedDecisionCount: memoryInfluencedDecisionCount,
+            lastResourceObservations: lastResourceObservations,
+            activeResourceTarget: activeResourceTarget, resourceInventory: resourceInventory,
+            lastInteractionOutcome: lastInteractionOutcome, navigationProgress: navigationProgress,
+            lastDeliveryOutcome: lastDeliveryOutcome, survivalProgress: survivalProgress
+        )
     }
 }
 

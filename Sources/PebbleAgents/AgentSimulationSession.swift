@@ -3,8 +3,11 @@ public struct AgentSimulationSession {
     public static let maximumConstructionEventCount = 64
     public static let maximumFailedNaturalResourceTargetsPerAgent = 16
     public let configuration: AgentSessionConfiguration
-    public private(set) var tick: Int
-    var statesById: [String: AgentSessionAgentState]
+    public private(set) var clock: AgentSimulationClock
+    public var simulationID: AgentSimulationID { clock.simulationID }
+    public var simulationInstant: AgentSimulationInstant { clock.instant }
+    public var tick: Int { clock.tick.rawValue }
+    var statesById: AgentStateStore
     var processedInteractionIds: Set<String>
     var creditedResourceKeys: Set<String>
     var reservationsByTarget: [String: AgentResourceReservation]
@@ -23,16 +26,23 @@ public struct AgentSimulationSession {
     var processedConstructionPlacementIds: Set<String>
     var processedConstructionFailureIds: Set<String>
     var lastConstructionPlacementTick: Int?
+    var causalLedger: AgentCausalLedger
+    var lastPerceptionEventByAgentID: [AgentID: AgentCausalEventID]
+    var lastDecisionEventByAgentID: [AgentID: AgentCausalEventID]
+    var lastOutcomeEventByAgentID: [AgentID: AgentCausalEventID]
+    var lastConstructionEventID: AgentCausalEventID?
 
     public init(
         configuration: AgentSessionConfiguration,
         agents: [AgentSessionAgentState],
-        initialTick: Int = 0
+        initialTick: Int = 0,
+        simulationID: AgentSimulationID? = nil,
+        causalLedgerPolicy: AgentCausalLedgerPolicy = .disabled
     ) throws {
         guard initialTick >= 0 else {
             throw AgentSessionError.invalidInitialTick(initialTick)
         }
-        var states: [String: AgentSessionAgentState] = [:]
+        var states = AgentStateStore()
         for var agent in agents {
             guard states[agent.id] == nil else {
                 throw AgentSessionError.duplicateAgentId(agent.id)
@@ -41,7 +51,10 @@ public struct AgentSimulationSession {
             states[agent.id] = agent
         }
         self.configuration = configuration
-        tick = initialTick
+        clock = AgentSimulationClock(
+            simulationID: simulationID ?? .legacy(seed: configuration.seed),
+            initialTick: AgentSimulationTick(rawValue: initialTick)!
+        )
         statesById = states
         processedInteractionIds = []
         creditedResourceKeys = []
@@ -61,6 +74,28 @@ public struct AgentSimulationSession {
         processedConstructionPlacementIds = []
         processedConstructionFailureIds = []
         lastConstructionPlacementTick = nil
+        causalLedger = try AgentCausalLedger(policy: causalLedgerPolicy)
+        lastPerceptionEventByAgentID = [:]
+        lastDecisionEventByAgentID = [:]
+        lastOutcomeEventByAgentID = [:]
+        lastConstructionEventID = nil
+        try recordCausalEvent(
+            kind: .sessionLifecycle,
+            origin: .lifecycle,
+            payload: .lifecycle(status: "created", agentCount: states.count),
+            summary: "session created agents=\(states.count)"
+        )
+    }
+
+    public func causalLedgerSnapshot(tail limit: Int? = nil) -> AgentCausalLedgerSnapshot {
+        causalLedger.snapshot(instant: simulationInstant, tail: limit)
+    }
+
+    public func identitySnapshot() -> AgentSimulationIdentitySnapshot {
+        AgentSimulationIdentitySnapshot(
+            simulationID: simulationID,
+            agentIDs: statesById.values.map(\.agentID)
+        )
     }
 
     public func snapshot() -> AgentSessionSnapshot {
@@ -92,14 +127,23 @@ public struct AgentSimulationSession {
     }
 
     public func state(for agentId: String) throws -> AgentSessionAgentState {
-        guard let state = statesById[agentId] else {
+        guard let agentID = AgentID(rawValue: agentId) else {
             throw AgentSessionError.unknownAgentId(agentId)
+        }
+        return try state(for: agentID)
+    }
+
+    public func state(for agentID: AgentID) throws -> AgentSessionAgentState {
+        guard let state = statesById[agentID.rawValue] else {
+            throw AgentSessionError.unknownAgentId(agentID.rawValue)
         }
         return state
     }
 
     public mutating func setEconomyEnabled(_ enabled: Bool) {
+        let changed = economyEnabled != enabled
         economyEnabled = enabled
+        defer { if changed { recordFeatureToggle(name: "economy", enabled: enabled) } }
         guard !enabled else { return }
         reservationsByTarget.removeAll()
         for id in sortedIds {
@@ -119,7 +163,9 @@ public struct AgentSimulationSession {
     }
 
     public mutating func setNaturalResourcesEnabled(_ enabled: Bool) {
+        let changed = naturalResourcesEnabled != enabled
         naturalResourcesEnabled = enabled
+        defer { if changed { recordFeatureToggle(name: "naturalResources", enabled: enabled) } }
         guard !enabled else { return }
         failedNaturalResourceTargetKeysByAgentId.removeAll()
         reservationsByTarget = reservationsByTarget.filter { $0.value.source != .naturalWorld }
@@ -135,7 +181,9 @@ public struct AgentSimulationSession {
     }
 
     public mutating func setSurvivalEnabled(_ enabled: Bool) {
+        let changed = survivalEnabled != enabled
         survivalEnabled = enabled
+        defer { if changed { recordFeatureToggle(name: "survival", enabled: enabled) } }
         for id in sortedIds {
             guard var state = statesById[id] else { continue }
             if enabled {
@@ -168,6 +216,7 @@ public struct AgentSimulationSession {
     public mutating func advanceTick(
         perceptions: [AgentPerceptionInput] = []
     ) throws -> AgentSessionTickResult {
+        try prevalidateCausalAppend(count: sortedIds.count * 3 + 1)
         var perceptionsById: [String: AgentPerceptionInput] = [:]
         var resourceObservationsById: [String: [AgentResourceObservation]] = [:]
         for perception in perceptions {
@@ -198,7 +247,8 @@ public struct AgentSimulationSession {
             perceptionsById[perception.agentId] = perception
         }
 
-        let nextTick = tick + 1
+        let nextSimulationTick = try clock.nextTick()
+        let nextTick = nextSimulationTick.rawValue
         let ids = sortedIds
         refreshConstructionProjectStatus()
         reservationsByTarget = reservationsByTarget.filter { !$0.value.isExpired(at: nextTick) }
@@ -459,7 +509,62 @@ public struct AgentSimulationSession {
             ))
         }
 
-        tick = nextTick
+        clock.advance(to: nextSimulationTick)
+        for result in results {
+            let agentID = AgentID(rawValue: result.agentId)!
+            let perceptionEvent = try recordCausalEvent(
+                kind: .perception,
+                origin: .externalObservation,
+                actorID: agentID,
+                subjectID: agentID,
+                payload: .perception(
+                    worldObserved: result.worldPerceptionEffect != nil,
+                    resourceObservationCount: result.snapshot.lastResourceObservations.count,
+                    memoriesAdded: result.memoriesAdded.count
+                ),
+                summary: "perception accepted actor=\(result.agentId) resources=\(result.snapshot.lastResourceObservations.count)"
+            )
+            if let eventID = perceptionEvent?.eventID {
+                lastPerceptionEventByAgentID[agentID] = eventID
+            }
+            var actionCause = perceptionEvent?.eventID
+            if let goalChange = result.goalChange {
+                let goalEvent = try recordCausalEvent(
+                    kind: .goalTransition,
+                    origin: .cognitiveTransition,
+                    actorID: agentID,
+                    causes: perceptionEvent.map { [$0.eventID] } ?? [],
+                    payload: .cognitive(
+                        goal: goalChange.to.rawValue,
+                        action: "none",
+                        goalChanged: true
+                    ),
+                    summary: "goal actor=\(result.agentId) \(goalChange.from.rawValue)>\(goalChange.to.rawValue)"
+                )
+                actionCause = goalEvent?.eventID
+            }
+            let decisionEvent = try recordCausalEvent(
+                kind: .actionSelected,
+                origin: .cognitiveTransition,
+                actorID: agentID,
+                causes: actionCause.map { [$0] } ?? [],
+                payload: .cognitive(
+                    goal: result.snapshot.currentGoal.kind.rawValue,
+                    action: result.action.name,
+                    goalChanged: result.goalChange != nil
+                ),
+                summary: "action actor=\(result.agentId) goal=\(result.snapshot.currentGoal.kind.rawValue) action=\(result.action.name)"
+            )
+            if let eventID = decisionEvent?.eventID {
+                lastDecisionEventByAgentID[agentID] = eventID
+            }
+        }
+        try recordCausalEvent(
+            kind: .tickCompleted,
+            origin: .cognitiveTransition,
+            payload: .lifecycle(status: "tickCompleted", agentCount: results.count),
+            summary: "tick \(tick) completed agents=\(results.count)"
+        )
         return AgentSessionTickResult(tick: tick, agents: results)
     }
 

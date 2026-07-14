@@ -19,9 +19,11 @@ extension AgentSimulationSession {
     }
 
     public mutating func setBuildAutoEnabled(_ enabled: Bool) throws {
+        let changed = buildAutoEnabled != enabled
         if enabled, constructionProject == nil {
             throw AgentSessionError.constructionProjectMissing
         }
+        defer { if changed { recordFeatureToggle(name: "construction", enabled: enabled) } }
         if enabled, var project = constructionProject {
             project.resumeAfterRecoverableFailure()
             constructionProject = project
@@ -99,6 +101,7 @@ extension AgentSimulationSession {
         builderAgentId: String,
         fundingTick: Int
     ) throws -> AgentConstructionProject {
+        try prevalidateCausalAppend(count: 1)
         guard buildAutoEnabled else { throw AgentSessionError.constructionDisabled }
         guard fundingTick == tick else {
             throw AgentSessionError.constructionFundingTickMismatch(fundingId)
@@ -145,6 +148,13 @@ extension AgentSimulationSession {
         ), to: &builder.memory)
         statesById[builderAgentId] = builder
         processedConstructionFundingIds.insert(fundingId)
+        recordAcceptedOperation(
+            kind: .constructionFunding,
+            agentId: builderAgentId,
+            operationId: fundingId,
+            status: "funded",
+            detail: project.projectId
+        )
         return project
     }
 
@@ -237,6 +247,7 @@ extension AgentSimulationSession {
     mutating func applyPlacementOutcomeInPlace(
         _ outcome: AgentPlacementOutcome
     ) throws {
+        try prevalidateCausalAppend(count: 1)
         guard outcome.tick == tick else {
             throw AgentSessionError.constructionPlacementTickMismatch(outcome.placementId)
         }
@@ -275,6 +286,13 @@ extension AgentSimulationSession {
         guard conservationSnapshot().balanced else {
             throw AgentSessionError.invalidConstructionPlacement(outcome.placementId)
         }
+        recordAcceptedOperation(
+            kind: .constructionPlacement,
+            agentId: outcome.builderAgentId,
+            operationId: outcome.placementId,
+            status: outcome.status.rawValue,
+            detail: "\(outcome.projectId):cell=\(outcome.cellIndex)"
+        )
     }
 
     public mutating func completeConstructionProject(
@@ -293,6 +311,7 @@ extension AgentSimulationSession {
         projectId: String,
         completionTick: Int
     ) throws {
+        try prevalidateCausalAppend(count: 1)
         guard completionTick == tick,
               var project = constructionProject,
               project.projectId == projectId,
@@ -318,6 +337,13 @@ extension AgentSimulationSession {
         guard conservationSnapshot().balanced else {
             throw AgentSessionError.constructionCompletionInvalid(projectId)
         }
+        recordAcceptedOperation(
+            kind: .constructionCompletion,
+            agentId: project.builderAgentId,
+            operationId: "\(projectId):completion:\(completionTick)",
+            status: "completed",
+            detail: projectId
+        )
     }
 
     public func prevalidateConstructionClear(projectId: String) throws {
@@ -339,6 +365,7 @@ extension AgentSimulationSession {
     }
 
     mutating func clearConstructionProjectInPlace(projectId: String) throws {
+        try prevalidateCausalAppend(count: 1)
         try prevalidateConstructionClear(projectId: projectId)
         guard let project = constructionProject,
               var builder = statesById[project.builderAgentId] else {
@@ -374,6 +401,13 @@ extension AgentSimulationSession {
         guard conservationSnapshot().balanced else {
             throw AgentSessionError.constructionClearInvalid(projectId)
         }
+        recordAcceptedOperation(
+            kind: .constructionClear,
+            agentId: project.builderAgentId,
+            operationId: "\(projectId):clear:\(tick)",
+            status: "cleared",
+            detail: projectId
+        )
     }
 
     mutating func refreshConstructionProjectStatus() {

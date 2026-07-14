@@ -62,6 +62,7 @@ extension AgentSimulationSession {
     mutating func applyConsumptionOutcomeInPlace(
         _ outcome: AgentConsumptionOutcome
     ) throws {
+        try prevalidateCausalAppend(count: 1)
         guard var state = statesById[outcome.agentId],
               var progress = state.survivalProgress else {
             throw AgentSessionError.unknownAgentId(outcome.agentId)
@@ -138,6 +139,13 @@ extension AgentSimulationSession {
         guard conservationSnapshot().balanced else {
             throw AgentSessionError.invalidConsumptionOutcome(outcome.consumptionId)
         }
+        recordAcceptedOperation(
+            kind: .consumption,
+            agentId: outcome.agentId,
+            operationId: outcome.consumptionId,
+            status: outcome.status.rawValue,
+            detail: outcome.reason
+        )
     }
 
     func shouldSatisfyHunger(

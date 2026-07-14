@@ -64,6 +64,7 @@ extension AgentSimulationSession {
     }
 
     mutating func applyDeliveryOutcomeInPlace(_ outcome: AgentDeliveryOutcome) throws {
+        try prevalidateCausalAppend(count: 1)
         guard var state = statesById[outcome.agentId] else {
             throw AgentSessionError.unknownAgentId(outcome.agentId)
         }
@@ -119,6 +120,13 @@ extension AgentSimulationSession {
         state.lastDeliveryOutcome = outcome
         statesById[outcome.agentId] = state
         processedDeliveryIds.insert(outcome.deliveryId)
+        recordAcceptedOperation(
+            kind: .delivery,
+            agentId: outcome.agentId,
+            operationId: outcome.deliveryId,
+            status: outcome.status.rawValue,
+            detail: outcome.reason
+        )
     }
 
     public func prevalidateInteraction(_ intent: AgentInteractionIntent) throws {
@@ -159,6 +167,7 @@ extension AgentSimulationSession {
     }
 
     public mutating func applyInteractionOutcome(_ outcome: AgentInteractionOutcome) throws {
+        try prevalidateCausalAppend(count: 1)
         guard var state = statesById[outcome.agentId] else {
             throw AgentSessionError.unknownAgentId(outcome.agentId)
         }
@@ -247,6 +256,13 @@ extension AgentSimulationSession {
         state.lastInteractionOutcome = outcome
         statesById[outcome.agentId] = state
         processedInteractionIds.insert(outcome.interactionId)
+        recordAcceptedOperation(
+            kind: .interaction,
+            agentId: outcome.agentId,
+            operationId: outcome.interactionId,
+            status: outcome.status.rawValue,
+            detail: outcome.reason
+        )
     }
 
     func shouldDeliverResources(_ state: AgentSessionAgentState) -> Bool {

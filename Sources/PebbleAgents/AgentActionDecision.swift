@@ -1,4 +1,4 @@
-public struct AgentPosition: Codable, Equatable, Hashable {
+public struct AgentPosition: Codable, Equatable, Hashable, Sendable {
     public let x: Int
     public let y: Int
     public let z: Int

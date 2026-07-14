@@ -23,6 +23,7 @@ extension AgentSimulationSession {
     }
 
     public mutating func applyMovementOutcomes(_ outcomes: [AgentMovementOutcome]) throws {
+        try prevalidateCausalAppend(count: outcomes.count)
         let ids = sortedIds
         guard outcomes.count == ids.count else {
             throw AgentSessionError.movementOutcomeCountMismatch(expected: ids.count, actual: outcomes.count)
@@ -185,6 +186,24 @@ extension AgentSimulationSession {
             updated[id] = state
         }
         statesById = updated
+        for outcome in outcomes.sorted(by: { $0.agentId < $1.agentId }) {
+            let agentID = AgentID(rawValue: outcome.agentId)!
+            let event = try recordCausalEvent(
+                kind: .movement,
+                origin: .worldOutcome,
+                actorID: agentID,
+                causes: lastDecisionEventByAgentID[agentID].map { [$0] } ?? [],
+                payload: .movement(
+                    status: outcome.status.rawValue,
+                    from: outcome.fromPosition,
+                    to: outcome.toPosition
+                ),
+                summary: "movement \(outcome.status.rawValue) actor=\(outcome.agentId)"
+            )
+            if let eventID = event?.eventID {
+                lastOutcomeEventByAgentID[agentID] = eventID
+            }
+        }
     }
 
     mutating func reconcileReservations(at reservationTick: Int) {
