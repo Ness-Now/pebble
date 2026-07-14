@@ -20,9 +20,10 @@ Le point de départ est le HEAD post-K :
 - information sociale causale et confiance dirigée acquises dans leur verticale
   bornée ;
 - sons locaux, gestes de pointage et perception physique imparfaite acquis dans
-  une verticale bornée ; langage libre, forwarding, coopération, tâches
-  partagées, persistance complète des agents, replay complet, grande population
-  et cycle de vie non acquis.
+  une verticale bornée ; tâches partagées et coopération matérielle bornée
+  acquises pour la construction d'un abri ; langage libre, forwarding,
+  professions, économie du travail, persistance complète des agents, replay
+  complet, grande population et cycle de vie non acquis.
 
 Ce stade ne doit pas être décrit comme une civilisation déjà implémentée.
 
@@ -67,8 +68,12 @@ communication. `CIV-03` est terminé et validé localement : l’information
 sociale causale et la confiance dirigée sont acquises, sans forwarding,
 coopération ni persistance. `CIV-04` est terminé et validé localement : sons,
 gestes et perception imparfaite sont acquis dans un canal local borné, sans
-langage libre, forwarding ni coopération. Après revue, la prochaine étape
-canonique est `CIV-05 — Shared Tasks and Cooperation V1`.
+langage libre ni forwarding. `CIV-05` est terminé et validé localement : une
+tâche de livraison de matériaux peut être offerte, acceptée et accomplie par
+un helper distinct du builder, avec contribution matérielle conservée et
+fiabilité dirigée, sans profession, économie du travail ni persistance. Après
+revue, la prochaine étape canonique est
+`CIV-06 — Persistent Agent State, Checkpoints and Causal Replay V1`.
 
 ## Grands programmes ultérieurs
 

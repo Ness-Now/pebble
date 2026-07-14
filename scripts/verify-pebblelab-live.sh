@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build|--social|--physical]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build|--social|--physical|--cooperation]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -34,6 +34,7 @@ Options:
   --build    Run fixed shelter acquisition, construction, interruption, rest, and clear.
   --social   Run directed grounded information, read-only verification, and trust.
   --physical Run local sound, pointing gesture, imperfect perception, and existing trust.
+  --cooperation Run shared construction-material task, delivery, and shelter completion.
   --help     Show this help and exit.
 EOF
 }
@@ -58,6 +59,15 @@ reject_trace() {
     fi
 }
 
+require_trace_count() {
+    pattern=$1
+    expected=$2
+    description=$3
+    actual=$(/usr/bin/grep -Ec "$pattern" "$TRACE_PATH" || true)
+    [ "$actual" -eq "$expected" ] \
+        || fail "live trace count $actual != $expected: $description"
+}
+
 DRY_RUN=0
 MODE_OPTIONS=0
 for option in "$@"; do
@@ -70,6 +80,7 @@ for option in "$@"; do
         --build) MODE="build"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --social) MODE="social"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --physical) MODE="physical"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --cooperation) MODE="cooperation"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --help|-h) usage; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$option" >&2; usage >&2; exit 2 ;;
     esac
@@ -81,7 +92,32 @@ NATURAL_GATE=0
 BUILD_GATE=0
 SOCIAL_GATE=0
 PHYSICAL_GATE=0
-if [ "$MODE" = "physical" ]; then
+COOPERATION_GATE=0
+if [ "$MODE" = "cooperation" ]; then
+    WORLD_SEED="46"
+    NATURAL_GATE=1
+    BUILD_GATE=1
+    SOCIAL_GATE=1
+    PHYSICAL_GATE=1
+    COOPERATION_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-Cooperation-46"
+    CAPTURE_NAME="cooperation-complete.png"
+    BUILD_ANCHOR_X=${PEBBLELAB_BUILD_ANCHOR_X:-14}
+    BUILD_ANCHOR_Z=${PEBBLELAB_BUILD_ANCHOR_Z:--21}
+    BUILD_ANCHOR_Y=${PEBBLELAB_BUILD_ANCHOR_Y:-66}
+    BUILD_PLAYER_Y=$((BUILD_ANCHOR_Y + 3))
+    LAB_COMMANDS="/tp $BUILD_ANCHOR_X $BUILD_ANCHOR_Y $BUILD_ANCHOR_Z|/lab start;/tp $BUILD_ANCHOR_X $BUILD_PLAYER_Y $BUILD_ANCHOR_Z;/lab pause;/lab movement off;/lab focus agent_2;/lab follow agent_2;/lab natural on;/lab build setup;/lab economy auto on;/lab build auto on;/lab social on;/lab physical on;/lab cooperation on;/lab overlay compact;/lab movement on;/lab build status|"
+    COOPERATION_STEPS=${PEBBLELAB_COOPERATION_STEPS:-180}
+    cooperation_step=0
+    while [ "$cooperation_step" -lt "$COOPERATION_STEPS" ]; do
+        LAB_COMMANDS="$LAB_COMMANDS;/lab step"
+        if [ "$cooperation_step" -eq 5 ]; then
+            LAB_COMMANDS="$LAB_COMMANDS|"
+        fi
+        cooperation_step=$((cooperation_step + 1))
+    done
+    LAB_COMMANDS="$LAB_COMMANDS;/lab cooperation status;/lab build status;/lab economy status;/lab natural status;/lab physical status;/lab social status;/lab causality status;/lab causality tail 20;/lab status|/lab movement off;/lab cooperation off;/lab physical off;/lab social off;/lab build clear;/lab build status;/lab cooperation status;/lab follow off"
+elif [ "$MODE" = "physical" ]; then
     WORLD_SEED="46"
     SOCIAL_GATE=1
     PHYSICAL_GATE=1
@@ -184,6 +220,11 @@ print_plan() {
         printf 'Captures: %s\n' "$capture_dir/physical-before.png"
         printf '          %s\n' "$capture_dir/physical-during.png"
         printf '          %s\n' "$capture_path"
+    elif [ "$MODE" = "cooperation" ]; then
+        capture_dir=$(dirname "$capture_path")
+        printf 'Captures: %s\n' "$capture_dir/cooperation-before.png"
+        printf '          %s\n' "$capture_dir/cooperation-offer.png"
+        printf '          %s\n' "$capture_path"
     else
         printf 'Capture: %s\n' "$capture_path"
     fi
@@ -206,12 +247,16 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_BUILD=%s\n' "$BUILD_GATE"
     printf '  PEBBLELAB_APP_AGENTS_SOCIAL=%s\n' "$SOCIAL_GATE"
     printf '  PEBBLELAB_APP_AGENTS_PHYSICAL=%s\n' "$PHYSICAL_GATE"
+    printf '  PEBBLELAB_APP_AGENTS_COOPERATION=%s\n' "$COOPERATION_GATE"
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
     if [ "$MODE" = "build" ]; then
         printf '  PEBBLE_SHOT=-|%s/fixed-shelter-before.png|%s/fixed-shelter-partial.png|%s|-\n' \
             "$(dirname "$capture_path")" "$(dirname "$capture_path")" "$capture_path"
     elif [ "$MODE" = "physical" ]; then
         printf '  PEBBLE_SHOT=%s/physical-before.png|%s/physical-during.png|%s\n' \
+            "$(dirname "$capture_path")" "$(dirname "$capture_path")" "$capture_path"
+    elif [ "$MODE" = "cooperation" ]; then
+        printf '  PEBBLE_SHOT=%s/cooperation-before.png|%s/cooperation-offer.png|%s\n' \
             "$(dirname "$capture_path")" "$(dirname "$capture_path")" "$capture_path"
     else
         printf '  PEBBLE_SHOT=%s@240\n' "$capture_path"
@@ -223,7 +268,10 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "physical" ]; then
+    if [ "$MODE" = "cooperation" ]; then
+        printf '  2. Confirm agent_2 physically offers a three-stone task only to agent_1.\n'
+        printf '  3. Confirm helper stone delivery, builder wood delivery, funding, 9/9 construction, and exact conservation.\n'
+    elif [ "$MODE" = "physical" ]; then
         printf '  2. Confirm agent_1 emits one positional attention sound and one bounded pointing gesture.\n'
         printf '  3. Confirm exact recipient perception, ambiguous bystander impression, read-only verification, and trust 0->10.\n'
     elif [ "$MODE" = "social" ]; then
@@ -290,6 +338,10 @@ elif [ "$MODE" = "physical" ]; then
     CAPTURE_BEFORE_PATH="$CAPTURE_DIR/physical-before.png"
     CAPTURE_DURING_PATH="$CAPTURE_DIR/physical-during.png"
     SHOT_SPEC="$CAPTURE_BEFORE_PATH|$CAPTURE_DURING_PATH|$CAPTURE_PATH"
+elif [ "$MODE" = "cooperation" ]; then
+    CAPTURE_BEFORE_PATH="$CAPTURE_DIR/cooperation-before.png"
+    CAPTURE_DURING_PATH="$CAPTURE_DIR/cooperation-offer.png"
+    SHOT_SPEC="$CAPTURE_BEFORE_PATH|$CAPTURE_DURING_PATH|$CAPTURE_PATH"
 else
     SHOT_SPEC="$CAPTURE_PATH@240"
 fi
@@ -318,6 +370,7 @@ PEBBLELAB_APP_AGENTS_NATURAL="$NATURAL_GATE" \
 PEBBLELAB_APP_AGENTS_BUILD="$BUILD_GATE" \
 PEBBLELAB_APP_AGENTS_SOCIAL="$SOCIAL_GATE" \
 PEBBLELAB_APP_AGENTS_PHYSICAL="$PHYSICAL_GATE" \
+PEBBLELAB_APP_AGENTS_COOPERATION="$COOPERATION_GATE" \
 PEBBLE_CMD="$LAB_COMMANDS" \
 PEBBLE_SHOT="$SHOT_SPEC" \
 swift run -c release Pebble 2>&1 | /usr/bin/tee "$TRACE_PATH"
@@ -330,7 +383,7 @@ world_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT count(*), json_extract(json, '
 expected_world_facts="1|$WORLD_SEED|$WORLD_NAME|1000|0|0|0|0|0"
 [ "$world_facts" = "$expected_world_facts" ] \
     || fail "unexpected disposable world facts: $world_facts"
-if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ]; then
+if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ] || [ "$MODE" = "cooperation" ]; then
     spawn_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.spawnX'), json_extract(json, '$.spawnY'), json_extract(json, '$.spawnZ') FROM worlds;")
     [ "$spawn_facts" = "8|75|-112" ] || fail "unexpected seed-46 spawn: $spawn_facts"
 fi
@@ -339,7 +392,28 @@ require_trace "disposable-world name=$WORLD_NAME seed=$WORLD_SEED worldTick=0 da
 require_trace "start seed=$WORLD_SEED agents=3 tick=0 hz=4 movement=on worldTick=[0-9]+ dayTime=1000 weather=clear randomTickSpeed=0 mobSpawning=0" 'deterministic agent session initial conditions'
 
 [ -s "$CAPTURE_PATH" ] || fail "capture was not written: $CAPTURE_PATH"
-if [ "$MODE" = "physical" ]; then
+if [ "$MODE" = "cooperation" ]; then
+    [ -s "$CAPTURE_BEFORE_PATH" ] || fail "before capture was not written: $CAPTURE_BEFORE_PATH"
+    [ -s "$CAPTURE_DURING_PATH" ] || fail "offer capture was not written: $CAPTURE_DURING_PATH"
+    require_trace 'cooperation=on tick=0 mutation=none' 'cooperation was explicitly enabled after its dependencies'
+    require_trace 'cooperation task tick=[1-9][0-9]* id=task-.* issuer=agent_2 helper=agent_1 resource=stone requested=3 .*status=(signaled|offered)' 'builder created one bounded three-stone offer for the helper'
+    reject_trace 'cooperation task .* helper=agent_0' 'urgent third agent assigned a task'
+    require_trace 'physical perception tick=[1-9][0-9]* signal=signal-.* observer=agent_1 intended=1 .*outcome=exact' 'intended helper perceived the physical offer exactly'
+    require_trace 'cooperation task tick=[1-9][0-9]* .*status=(accepted|active)' 'helper voluntarily accepted and started the task'
+    require_trace_count 'cooperation harvest tick=[1-9][0-9]* operation=g2-natural:agent_1:.* actor=agent_1 .* resource=stone status=succeeded' 3 'helper harvested exactly three real stone blocks'
+    require_trace 'cooperation delivery tick=[1-9][0-9]* operation=economy-delivery:agent_1:.* actor=agent_1 transferred=stone:(1|2|3) status=succeeded' 'helper transferred real stone through the existing delivery transaction'
+    require_trace 'cooperation task tick=[1-9][0-9]* .*resource=stone requested=3 contributed=3 status=completed' 'helper delivery completed the material task'
+    require_trace 'cooperation reliability tick=[1-9][0-9]* issuer=agent_2 helper=agent_1 score=10 completed=1 failed=0 outcome=completed' 'successful task updated directed cooperation reliability'
+    require_trace_count 'cooperation harvest tick=[1-9][0-9]* operation=g2-natural:agent_2:.* actor=agent_2 .* resource=wood status=succeeded' 6 'builder harvested exactly six real wood blocks'
+    require_trace 'cooperation funding tick=[1-9][0-9]* operation=construction-funding:agent_2:.* event=.*event-[0-9]{20} actor=agent_2 .*status=funded' 'builder funding event is inspectable'
+    require_trace_count 'cooperation placement tick=[1-9][0-9]* operation=construction-placement:agent_2:.* actor=agent_2 cell=[0-8] ' 9 'builder produced exactly nine ordered placement events'
+    require_trace 'action=fund_construction .*buildStatus=funded .*conservation=9:0\+0\+0\+9\+0:exact' 'shared real stock funded the existing project atomically'
+    require_trace 'build gate=enabled auto=on .*status=completed .*placedMaterials=wood:6,stone:3 placed=9/9 .*home=23,66,-24 .*conservation=9:0\+0\+0\+0\+9:exact' 'existing builder authority completed all nine cells'
+    require_trace 'cooperation status gate=enabled enabled=yes .*issuer=agent_2 helper=agent_1 resource=stone requested=3 contributed=3 status=completed .*reliability=10 .*completed=1 .*contributedStone=3 .*digest=[0-9a-f]{16}' 'bounded final cooperation status'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 .*naturalHarvests=9 naturalRollbacks=0 .*constructionRestored=1 .*causalDropped=0' 'cooperation proof cleaned the disposable run without runtime errors'
+    require_trace 'cooperation summary enabled=0 tasks=1 .*completed=1 .*relations=1 .*digest=[0-9a-f]{16}' 'cooperation history survives explicit off and cleanup'
+    printf '\nPASS: shared-task cooperation and material construction live evidence verified.\n'
+elif [ "$MODE" = "physical" ]; then
     [ -s "$CAPTURE_BEFORE_PATH" ] || fail "before capture was not written: $CAPTURE_BEFORE_PATH"
     [ -s "$CAPTURE_DURING_PATH" ] || fail "during capture was not written: $CAPTURE_DURING_PATH"
     require_trace 'physical=on tick=0 mutation=none' 'physical mode was explicitly enabled without mutation'

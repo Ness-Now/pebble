@@ -71,6 +71,7 @@ final class PebbleAgentController {
     var buildFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_BUILD"] == "1" }
     var socialFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_SOCIAL"] == "1" }
     var physicalFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_PHYSICAL"] == "1" }
+    var cooperationFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_COOPERATION"] == "1" }
     var physicalAudioAvailable: () -> Bool = { false }
     var traceEvery: Int {
         guard let raw = environment["PEBBLELAB_APP_AGENTS_TRACE_EVERY"],

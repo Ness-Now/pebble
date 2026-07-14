@@ -35,9 +35,13 @@ extension PebbleAgentController {
                         maximumDistance: session.configuration.resourceObservationRadius
                     )
                 }
+                let cooperationActors = Set(session.cooperationSnapshot().tasks
+                    .filter { $0.status == .accepted || $0.status == .active }
+                    .flatMap { [$0.issuerID.rawValue, $0.helperID.rawValue] })
                 if preCognitive.naturalResourcesEnabled,
                    economyAutoEnabled,
-                   agent.id == focusedAgentId {
+                   (agent.id == focusedAgentId
+                    || (session.cooperationEnabled && cooperationActors.contains(agent.id))) {
                     let occupied = preCognitive.agents
                         .filter { $0.id != agent.id }
                         .map(\.position)
@@ -50,7 +54,10 @@ extension PebbleAgentController {
                         world: world,
                         agent: agent,
                         occupiedAgentPositions: occupied,
-                        playerPosition: playerPosition
+                        playerPosition: playerPosition,
+                        priorityTarget: session.cooperationEnabled
+                            ? agent.activeResourceTarget?.target
+                            : nil
                     )
                     naturalResourceExecutor.recordScan(naturalScan)
                     combinedResourceObservations += naturalScan.observations
@@ -227,13 +234,16 @@ extension PebbleAgentController {
             let interactionActions = result.agents
                 .filter { $0.action.name == "harvest_block" }
                 .sorted { $0.agentId < $1.agentId }
-            if let interaction = interactionActions.first {
+            let interactionsToApply = session.cooperationEnabled
+                ? interactionActions
+                : Array(interactionActions.prefix(1))
+            for interaction in interactionsToApply {
                 guard autoInteractionEnabled || economyAutoEnabled
                         || (session.survivalEnabled && interactionFeatureEnabled) else {
                     throw ControllerError.interactionBoundary("harvest action without automatic interaction")
                 }
                 lastInteractionAttempted = true
-                _ = try performHarvestTransaction(
+                let outcome = try performHarvestTransaction(
                     world: world,
                     player: player,
                     actorId: interaction.agentId,
@@ -241,13 +251,19 @@ extension PebbleAgentController {
                     interactionPrefix: "g2",
                     session: &session
                 )
+                if session.cooperationEnabled {
+                    trace("cooperation harvest tick=\(session.tick) operation=\(outcome.interactionId) actor=\(outcome.agentId) target=\(positionText(outcome.target)) resource=\(outcome.resource.rawValue) status=\(outcome.status.rawValue)")
+                }
                 lastInteractionSucceeded = true
                 lastAutoInteractionReason = "automatic harvest succeeded"
             }
             let deliveryActions = result.agents
                 .filter { $0.action.name == "deliver_resource" }
                 .sorted { $0.agentId < $1.agentId }
-            if let delivery = deliveryActions.first {
+            let deliveriesToApply = session.cooperationEnabled
+                ? deliveryActions
+                : Array(deliveryActions.prefix(1))
+            for delivery in deliveriesToApply {
                 guard economyAutoEnabled else {
                     throw ControllerError.interactionBoundary("delivery action without automatic economy")
                 }
@@ -261,6 +277,12 @@ extension PebbleAgentController {
                 ))
                 lastDeliverySucceeded = outcome.status == .succeeded
                 lastEconomyReason = outcome.reason
+                if session.cooperationEnabled {
+                    let transferred = outcome.transferred.map {
+                        "\($0.resource.rawValue):\($0.quantity)"
+                    }.joined(separator: ",")
+                    trace("cooperation delivery tick=\(session.tick) operation=\(deliveryId) actor=\(delivery.agentId) transferred=\(transferred) status=\(outcome.status.rawValue)")
+                }
             }
             let fundingActions = result.agents
                 .filter { $0.action.name == "fund_construction" }
@@ -277,6 +299,12 @@ extension PebbleAgentController {
                     fundingTick: session.tick
                 )
                 lastConstructionReason = "funded \(funded.projectId)"
+                if session.cooperationEnabled,
+                   let event = session.causalLedgerSnapshot().events.last(where: {
+                       $0.kind == .constructionFunding
+                   }) {
+                    trace("cooperation funding tick=\(session.tick) operation=construction-funding:\(funding.agentId):\(session.tick) event=\(event.eventID.rawValue) actor=\(funding.agentId) project=\(funded.projectId) status=\(funded.status.rawValue)")
+                }
             }
             let placementActions = result.agents
                 .filter { $0.action.name == "place_block" }
@@ -421,7 +449,16 @@ extension PebbleAgentController {
                 }
                 session = candidate
                 lastConstructionReason = "placed cell \(cell.index) \(cell.resource.rawValue)"
+                if session.cooperationEnabled {
+                    let ledger = session.causalLedgerSnapshot().events
+                    let placementEvent = ledger.last { $0.kind == .constructionPlacement }
+                    let completionEvent = ledger.last { $0.kind == .constructionCompletion }
+                    trace("cooperation placement tick=\(session.tick) operation=\(intent.placementId) event=\(placementEvent?.eventID.rawValue ?? "none") actor=\(placement.agentId) cell=\(cell.index) resource=\(cell.resource.rawValue) completionEvent=\(completionEvent?.eventID.rawValue ?? "none")")
+                }
             }
+            let cooperationTravelAgentIDs = Set(session.cooperationSnapshot().tasks
+                .filter { $0.status == .accepted || $0.status == .active }
+                .map { $0.helperID.rawValue })
             if movementEnabled {
                 let outcomes = AgentMovementCoordinator.resolve(snapshot: session.snapshot())
                 try session.applyMovementOutcomes(outcomes)
@@ -430,17 +467,26 @@ extension PebbleAgentController {
                     outcomes: outcomes,
                     probesByAgentId: probesByAgentId,
                     postApplyValidation: {
-                        try validatePostTick(snapshot: finalSnapshot, result: result)
+                        try validatePostTick(
+                            snapshot: finalSnapshot,
+                            result: result,
+                            cooperationTravelAgentIDs: cooperationTravelAgentIDs
+                        )
                     }
                 )
                 lastMovementOutcomes = outcomes
             } else {
                 lastMovementOutcomes = []
-                try validatePostTick(snapshot: session.snapshot(), result: result)
+                try validatePostTick(
+                    snapshot: session.snapshot(),
+                    result: result,
+                    cooperationTravelAgentIDs: cooperationTravelAgentIDs
+                )
             }
             let finalSnapshot = session.snapshot()
             self.session = session
             tracePhysicalState(at: session.tick)
+            traceCooperationState(at: session.tick)
             lastTickResult = result
             for agent in finalSnapshot.agents { observedGoalKinds.insert(agent.currentGoal.kind.rawValue) }
             for agent in finalSnapshot.agents {
@@ -547,7 +593,11 @@ extension PebbleAgentController {
         }
     }
 
-    func validatePostTick(snapshot: AgentSessionSnapshot, result: AgentSessionTickResult) throws {
+    func validatePostTick(
+        snapshot: AgentSessionSnapshot,
+        result: AgentSessionTickResult,
+        cooperationTravelAgentIDs: Set<String> = []
+    ) throws {
         var positions = Set<String>()
         for agent in snapshot.agents {
             guard agent.lastWorldObservation != nil,
@@ -572,10 +622,12 @@ extension PebbleAgentController {
                     throw ControllerError.feedbackBoundary(agent.id)
                 }
             }
-            let movementBoundary = snapshot.buildAutoEnabled
+            let usesConstructionMaterialRange = (snapshot.buildAutoEnabled
                     && snapshot.constructionProject?.builderAgentId == agent.id
                     && (snapshot.constructionProject?.status == .planned
-                        || snapshot.constructionProject?.status == .acquiringMaterials)
+                        || snapshot.constructionProject?.status == .acquiringMaterials))
+                || cooperationTravelAgentIDs.contains(agent.id)
+            let movementBoundary = usesConstructionMaterialRange
                 ? AgentConstructionMaterialSurvey.maximumDistanceFromHome
                 : AgentNavigationObservation.maximumRadius
             if movementEnabled, agent.distanceFromHome > movementBoundary {

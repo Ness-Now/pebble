@@ -106,9 +106,10 @@ extension PebbleAgentController {
         let recipientPosition = socialFeatureEnabled
             ? AgentPosition(x: anchor.x + 8, y: anchor.y, z: anchor.z - 3)
             : AgentPosition(x: anchor.x + 2, y: anchor.y, z: anchor.z)
+        let helperFatigue = cooperationFeatureEnabled ? 0 : 0.03
         let specifications: [(String, AgentPosition, Int, Double, Double)] = [
             ("agent_0", AgentPosition(x: anchor.x + 6, y: anchor.y, z: anchor.z - 3), 80, 0, 0.2),
-            ("agent_1", AgentPosition(x: anchor.x + 7, y: anchor.y, z: anchor.z - 3), 10, 0.03, 0.2),
+            ("agent_1", AgentPosition(x: anchor.x + 7, y: anchor.y, z: anchor.z - 3), 10, helperFatigue, 0.2),
             ("agent_2", recipientPosition, 10, 0, 0.9),
         ]
         return specifications.map { id, position, fear, fatigue, curiosity in
@@ -181,6 +182,7 @@ extension PebbleAgentController {
         let causalSummary = session?.causalLedgerSnapshot().summary
         let socialSummary = session?.socialSummary()
         let physicalSummary = session?.physicalChannelSummary()
+        let cooperationSummary = session?.cooperationSummary()
         let followStatus = followMode.statusText
         let wasDemo = demoActive
         let cleanupWorld = activeWorld ?? fallbackWorld
@@ -216,6 +218,9 @@ extension PebbleAgentController {
             }
             if let physicalSummary, physicalSummary.physicalCausalEventCount > 0 {
                 trace("physical summary enabled=\(physicalSummary.enabled ? 1 : 0) signals=\(physicalSummary.retainedSignalCount) pending=\(physicalSummary.pendingSignalCount) exact=\(physicalSummary.exactCount) ambiguous=\(physicalSummary.ambiguousCount) missed=\(physicalSummary.missedCount) inconclusive=\(physicalSummary.inconclusiveCount) decoded=\(physicalSummary.decodedMessageCount) expired=\(physicalSummary.expiredCount) events=\(physicalSummary.physicalCausalEventCount) digest=\(physicalSummary.digest)")
+            }
+            if let cooperationSummary, cooperationSummary.cooperationCausalEventCount > 0 {
+                trace("cooperation summary enabled=\(cooperationSummary.enabled ? 1 : 0) tasks=\(cooperationSummary.taskCount) offered=\(cooperationSummary.offeredCount) accepted=\(cooperationSummary.acceptedCount) active=\(cooperationSummary.activeCount) completed=\(cooperationSummary.completedCount) declined=\(cooperationSummary.declinedCount) expired=\(cooperationSummary.expiredCount) cancelled=\(cooperationSummary.cancelledCount) failed=\(cooperationSummary.failedCount) relations=\(cooperationSummary.relationCount) events=\(cooperationSummary.cooperationCausalEventCount) digest=\(cooperationSummary.digest)")
             }
         }
         interactionExecutor.clearBoundaryAudit()

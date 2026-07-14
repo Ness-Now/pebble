@@ -6,7 +6,7 @@ La maquette V0 rend trois agents PebbleLab observables dans l’application Pebb
 
 ## Prérequis et lancement
 
-Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social` et `--physical` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03 et canal physique CIV-04. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
+Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical` et `--cooperation` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04 et tâche partagée CIV-05. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
 
 Depuis la racine du dépôt :
 
@@ -54,6 +54,7 @@ Commandes de démonstration :
 /lab natural <on|off|status|scan>
 /lab social <on|off|status|clear>
 /lab physical <on|off|status|clear>
+/lab cooperation <on|off|status|clear>
 /lab status
 /lab focus <agentId|next>        /lab next
 /lab follow <agentId|focus|next|off>
@@ -72,6 +73,25 @@ Pebble réutilise le moteur audio existant pour demander une note courte à la p
 
 La preuve produit `physical-before.png`, `physical-during.png` et `physical-after.png`. La capture centrale doit montrer le fil orange, absent des deux autres. La trace doit montrer `requested=1` pour l’audio, une perception exacte de `agent_2`, une perception ambiguë du bystander `agent_0`, le message et la belief CIV-03, la vérification read-only puis le trust `0→10`. Les cas son seul, geste seul, ambigu, missed, inconclusive et expiration sont couverts sans mutation World par le scénario headless et `pebsmoke`.
 
+## CIV-05 — Tâche partagée et coopération matérielle
+
+Le mode `scripts/verify-pebblelab-live.sh --cooperation` démarre dans un monde
+jetable neuf avec la seed `46` et les gates sociale, physique, ressources
+naturelles, construction et coopération explicitement actives. La gate
+`PEBBLELAB_APP_AGENTS_COOPERATION=1` reste désactivée par défaut. La preuve
+attend une offre physique exacte, son acceptation volontaire par un helper
+distinct du builder, trois récoltes de pierre et une livraison du helper, puis
+les six récoltes de bois, le financement et les neuf placements du builder.
+Elle vérifie enfin la construction complète, le nouveau home, la conservation
+de neuf matériaux, l'absence d'erreur runtime et le cleanup vérifié.
+
+Les captures `cooperation-before.png`, `cooperation-offer.png` et
+`cooperation-complete.png` documentent les trois états observables, sans
+assertion automatique sur les pixels. La trace et les événements causaux font
+autorité pour l'acceptation, les contributions et les transitions matérielles.
+Chaque exécution doit employer un monde jetable neuf et conserver son dossier
+temporaire pour inspection ; aucun monde personnel ne doit être utilisé.
+
 ## Arrêt propre et inspection
 
 Utiliser `/lab demo stop`, `/lab stop` ou `/lab clear`. Les probes transitoires sont retirées, le follow est désactivé et un résumé de session est écrit lorsque les traces sont actives. `/lab status` confirme ensuite que la session est inactive. Les probes ont `shouldSaveToChunk == false` et `persistent == false` ; aucun agent n’est restauré lors d’un lancement ultérieur.
@@ -85,7 +105,8 @@ Utiliser `/lab demo stop`, `/lab stop` ou `/lab clear`. Les probes transitoires 
 - aucune destination partagée et aucun dangerous drop exécuté ;
 - navigation de ressource bornée au rayon 8, route cardinale et un pas au plus par tick ;
 - hors gate naturelle explicite, seule la fixture transactionnelle peut être mutée puis restaurée ; la construction reste interdite ;
-- aucune langue libre, retransmission ou coopération entre agents ;
+- aucune langue libre ni retransmission ; la coopération est limitée à la
+  tâche de livraison matérielle CIV-05 explicitement gated ;
 - aucune persistance agent ;
 - aucun contrôleur autonome du joueur.
 

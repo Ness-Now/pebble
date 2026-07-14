@@ -17,6 +17,7 @@ struct PebbleAgentDebugState {
         causalSummary: AgentCausalLedgerSummary,
         socialSnapshot: AgentSocialSnapshot,
         physicalSnapshot: AgentPhysicalChannelSnapshot,
+        cooperationSnapshot: AgentCooperationSnapshot,
         mode: PebbleAgentOverlayMode,
         paused: Bool,
         cognitiveHz: Int,
@@ -56,6 +57,10 @@ struct PebbleAgentDebugState {
         let socialLines = Self.socialLines(snapshot: socialSnapshot, focusedAgentId: agent.id)
         let physicalLines = Self.physicalLines(
             snapshot: physicalSnapshot,
+            focusedAgentId: agent.id
+        )
+        let cooperationLines = Self.cooperationLines(
+            snapshot: cooperationSnapshot,
             focusedAgentId: agent.id
         )
         if mode == .compact {
@@ -123,7 +128,7 @@ struct PebbleAgentDebugState {
                 "outcome: \(interactionOutcome?.status.rawValue ?? "none") delta \(interactionOutcome?.inventoryDelta.quantity ?? 0) memory \(interactionMemory)",
                 "rollback: \(interaction.rollbackCount) \(Self.short(interaction.lastRollback, limit: 30))",
                 "errors: \(runtimeErrorCount)  catchup dropped: \(droppedCatchUpSteps)",
-            ] + socialLines + physicalLines
+            ] + socialLines + physicalLines + cooperationLines
             return
         }
 
@@ -250,6 +255,7 @@ struct PebbleAgentDebugState {
         ]
         lines += socialLines
         lines += physicalLines
+        lines += cooperationLines
         lines.append("ticks: \(agent.ticksAlive) goals: \(agent.goalChangeCount) actions/effects: \(agent.actionCount)/\(agent.actionEffectCount)")
         focusedAgentLines = lines
     }
@@ -338,6 +344,41 @@ struct PebbleAgentDebugState {
             "channel=\(perception?.outcome.rawValue ?? "none")",
             "sound=\(perception?.soundClarity ?? 0) gesture=\(perception?.gestureClarity ?? 0)",
             "gesturePose=\(pose ? "on" : "off")",
+        ]
+    }
+
+    private static func cooperationLines(
+        snapshot: AgentCooperationSnapshot,
+        focusedAgentId: String
+    ) -> [String] {
+        guard snapshot.enabled else { return [] }
+        let task = snapshot.tasks.filter {
+            $0.issuerID.rawValue == focusedAgentId || $0.helperID.rawValue == focusedAgentId
+        }.last
+        let role: String
+        if task?.issuerID.rawValue == focusedAgentId {
+            role = "issuer"
+        } else if task?.helperID.rawValue == focusedAgentId {
+            role = "helper"
+        } else {
+            role = "none"
+        }
+        let partner = task.map {
+            $0.issuerID.rawValue == focusedAgentId
+                ? $0.helperID.rawValue
+                : $0.issuerID.rawValue
+        } ?? "none"
+        let reliability = task.flatMap { selected in
+            snapshot.relations.first {
+                $0.issuerID == selected.issuerID && $0.helperID == selected.helperID
+            }?.reliabilityScore
+        } ?? 0
+        return [
+            "cooperation=on",
+            "task=\(task?.taskID.rawValue ?? "none") role=\(role)",
+            "taskStatus=\(task?.status.rawValue ?? "none")",
+            "taskResource=\(task.map { "\($0.resource.rawValue) \($0.contributedQuantity)/\($0.requestedQuantity)" } ?? "none")",
+            "partner=\(partner) reliability=\(reliability)",
         ]
     }
 

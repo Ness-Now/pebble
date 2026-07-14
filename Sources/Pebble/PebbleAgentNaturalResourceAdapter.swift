@@ -57,7 +57,8 @@ struct PebbleAgentNaturalResourceAdapter {
         world: World,
         agent: AgentSnapshot,
         occupiedAgentPositions: [AgentPosition],
-        playerPosition: AgentPosition
+        playerPosition: AgentPosition,
+        priorityTarget: AgentPosition? = nil
     ) throws -> AgentNaturalResourceScanResult {
         let positions = AgentNaturalResourceScanner.positions(
             around: agent.position,
@@ -106,8 +107,16 @@ struct PebbleAgentNaturalResourceAdapter {
 
         var boundedMapped: [(index: Int, resource: AgentResourceKind, position: AgentPosition)] = []
         let perResourceLimit = max(1, Self.configuration.maximumCandidates / 2)
+        if let priorityTarget,
+           let priority = mapped.first(where: { $0.position == priorityTarget }) {
+            boundedMapped.append(priority)
+        }
         for resource in [AgentResourceKind.wood, .stone] {
-            boundedMapped += mapped.filter { $0.resource == resource }.prefix(perResourceLimit)
+            let selectedIndices = Set(boundedMapped.map(\.index))
+            let selectedForResource = boundedMapped.filter { $0.resource == resource }.count
+            boundedMapped += mapped.filter {
+                $0.resource == resource && !selectedIndices.contains($0.index)
+            }.prefix(max(0, perResourceLimit - selectedForResource))
         }
         if boundedMapped.count < Self.configuration.maximumCandidates {
             let selectedIndices = Set(boundedMapped.map(\.index))

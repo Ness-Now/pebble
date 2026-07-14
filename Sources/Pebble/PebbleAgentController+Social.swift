@@ -80,6 +80,15 @@ extension PebbleAgentController {
             occupiedAgentPositions: occupied,
             playerPosition: playerPosition
         )
+        if session?.cooperationEnabled == true,
+           snapshot.constructionProject?.builderAgentId == agent.id {
+            return Array(scan.observations.sorted {
+                let lhsOrder = $0.resource == .stone ? 0 : 1
+                let rhsOrder = $1.resource == .stone ? 0 : 1
+                if lhsOrder != rhsOrder { return lhsOrder < rhsOrder }
+                return AgentResourcePerception.sortsBefore($0, $1)
+            }.prefix(AgentResourcePerception.maximumObservationCount))
+        }
         return Array(scan.observations.prefix(1))
     }
 
