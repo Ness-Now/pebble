@@ -13,6 +13,9 @@ if options.scenario == "social_information_trust_smoke" {
 if options.scenario == "physical_channel_smoke" {
     runPhysicalChannelSmoke(options)
 }
+if options.scenario == "shared_tasks_cooperation_smoke" {
+    runSharedTasksCooperationSmoke(options)
+}
 
 let isMultiAgentMovementFixtureScenario = options.scenario
     == "multi_agent_movement_fixture_smoke"
