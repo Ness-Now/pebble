@@ -74,6 +74,20 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case physicalSignalDecoded
     case physicalSignalExpired
     case physicalStateCleared
+    case sharedTaskCreated
+    case sharedTaskSignaled
+    case sharedTaskOffered
+    case sharedTaskAccepted
+    case sharedTaskDeclined
+    case sharedTaskStarted
+    case sharedTaskProgress
+    case sharedTaskCompleted
+    case sharedTaskExpired
+    case sharedTaskCancelled
+    case sharedTaskFailed
+    case sharedTaskSuperseded
+    case cooperationReliabilityChanged
+    case cooperationStateCleared
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -85,6 +99,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case lifecycle
     case socialTransition
     case physicalTransition
+    case cooperationTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -131,6 +146,25 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         outcome: String
     )
     case physicalClear(signals: Int, perceptions: Int, presentations: Int)
+    case cooperationTask(
+        taskID: String,
+        projectID: String,
+        issuerID: String,
+        helperID: String,
+        resource: AgentResourceKind,
+        requested: Int,
+        contributed: Int,
+        status: String,
+        reason: String
+    )
+    case cooperationReliability(
+        relationID: String,
+        taskID: String,
+        before: Int,
+        delta: Int,
+        after: Int
+    )
+    case cooperationClear(tasks: Int, offers: Int, relations: Int)
 
     var canonicalText: String {
         switch self {
@@ -171,6 +205,15 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
             return "physicalPerception|\(signalID)|\(observerID)|\(intended ? 1 : 0)|\(soundClarity)|\(gestureClarity)|\(occlusions)|\(lineOfSight ? 1 : 0)|\(outcome)"
         case let .physicalClear(signals, perceptions, presentations):
             return "physicalClear|\(signals)|\(perceptions)|\(presentations)"
+        case let .cooperationTask(
+            taskID, projectID, issuerID, helperID, resource,
+            requested, contributed, status, reason
+        ):
+            return "cooperationTask|\(taskID)|\(projectID)|\(issuerID)|\(helperID)|\(resource.rawValue)|\(requested)|\(contributed)|\(status)|\(reason)"
+        case let .cooperationReliability(relationID, taskID, before, delta, after):
+            return "cooperationReliability|\(relationID)|\(taskID)|\(before)|\(delta)|\(after)"
+        case let .cooperationClear(tasks, offers, relations):
+            return "cooperationClear|\(tasks)|\(offers)|\(relations)"
         }
     }
 }
@@ -254,7 +297,21 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.physicalSignalPerceived, .physicalPerception),
              (.physicalSignalDecoded, .physicalPerception),
              (.physicalSignalExpired, .physicalSignal),
-             (.physicalStateCleared, .physicalClear):
+             (.physicalStateCleared, .physicalClear),
+             (.sharedTaskCreated, .cooperationTask),
+             (.sharedTaskSignaled, .cooperationTask),
+             (.sharedTaskOffered, .cooperationTask),
+             (.sharedTaskAccepted, .cooperationTask),
+             (.sharedTaskDeclined, .cooperationTask),
+             (.sharedTaskStarted, .cooperationTask),
+             (.sharedTaskProgress, .cooperationTask),
+             (.sharedTaskCompleted, .cooperationTask),
+             (.sharedTaskExpired, .cooperationTask),
+             (.sharedTaskCancelled, .cooperationTask),
+             (.sharedTaskFailed, .cooperationTask),
+             (.sharedTaskSuperseded, .cooperationTask),
+             (.cooperationReliabilityChanged, .cooperationReliability),
+             (.cooperationStateCleared, .cooperationClear):
             matches = true
         default:
             matches = false

@@ -44,6 +44,12 @@ public struct AgentSimulationSession {
     var physicalPerceptions: [AgentPhysicalPerception]
     var physicalPresentationRequests: [AgentPhysicalPresentationRequest]
     var physicalEvictionCounts: AgentPhysicalEvictionCounts
+    public internal(set) var cooperationEnabled: Bool
+    var sharedTasks: [AgentSharedTask]
+    var sharedTaskOffers: [AgentSharedTaskOffer]
+    var cooperationRelations: [AgentCooperationRelation]
+    var cooperationEvictionCounts: AgentCooperationEvictionCounts
+    var lastCooperationOfferTickByIssuerID: [String: Int]
 
     public init(
         configuration: AgentSessionConfiguration,
@@ -105,6 +111,12 @@ public struct AgentSimulationSession {
         physicalPerceptions = []
         physicalPresentationRequests = []
         physicalEvictionCounts = AgentPhysicalEvictionCounts()
+        cooperationEnabled = false
+        sharedTasks = []
+        sharedTaskOffers = []
+        cooperationRelations = []
+        cooperationEvictionCounts = AgentCooperationEvictionCounts()
+        lastCooperationOfferTickByIssuerID = [:]
         try recordCausalEvent(
             kind: .sessionLifecycle,
             origin: .lifecycle,
@@ -325,7 +337,8 @@ public struct AgentSimulationSession {
                     observations: selectableObservations,
                     inventory: state.resourceInventory,
                     tick: nextTick,
-                    eligibleResources: constructionEligibleResources(for: state)
+                    eligibleResources: cooperationEligibleResources(for: state)
+                        ?? constructionEligibleResources(for: state)
                 )
             }
             if let previousTarget,
@@ -341,11 +354,20 @@ public struct AgentSimulationSession {
         let peers = ids.compactMap { id in
             statesById[id].map { AgentPeerSnapshot(id: id, position: $0.position) }
         }
-        let socialPlan = prepareSocialTick(at: nextTick)
+        var socialPlan = prepareSocialTick(at: nextTick)
+        let cooperationPlan = prepareCooperationTick(at: nextTick)
+        let terminalCooperationHelperIDs = prepareAgentsForTerminalCooperationTransitions(
+            cooperationPlan,
+            at: nextTick
+        )
+        if let proposal = cooperationPlan.proposal {
+            socialPlan.shareIntentsByAgentId[proposal.task.issuerID.rawValue] = proposal.shareIntent
+        }
         var results: [AgentSessionAgentTickResult] = []
 
         for id in ids {
             guard var state = statesById[id] else { continue }
+            let cooperationTransitionPending = terminalCooperationHelperIDs.contains(id)
             let perception = perceptionsById[id]
             var memoriesAdded = perception?.externalMemoryEntries ?? []
 
@@ -416,21 +438,31 @@ public struct AgentSimulationSession {
                 fear: state.fear,
                 needs: state.needs,
                 hasNearbyAgents: !state.nearbyAgents.isEmpty,
-                hasCollectibleAdjacentResource: state.activeResourceTarget != nil,
+                hasCollectibleAdjacentResource: state.activeResourceTarget != nil
+                    && cooperationPlan.proposal?.task.issuerID.rawValue != id,
                 hasInventoryCapacity: state.activeResourceTarget.map {
                     state.resourceInventory.canAdd($0.resource)
-                } ?? (constructionEligibleResources(for: state)?.contains(where: {
+                } ?? ((cooperationEligibleResources(for: state)
+                    ?? constructionEligibleResources(for: state))?.contains(where: {
                     state.resourceInventory.canAdd($0)
                 }) == true),
-                hasCommittedResourceTask: ((state.currentGoal.kind == .collectResource
+                hasCommittedResourceTask: (((state.currentGoal.kind == .collectResource
                     || state.currentGoal.kind == .satisfyHunger)
                     && reservation(for: state)?.agentId == id)
-                    || constructionEligibleResources(for: state)?.isEmpty == false,
+                    || constructionEligibleResources(for: state)?.isEmpty == false)
+                    && cooperationPlan.proposal?.task.issuerID.rawValue != id,
                 shouldDeliverResources: shouldDeliverResources(state),
                 shouldBuildShelter: shouldBuildShelter(state),
-                hasConstructionTask: hasActiveConstructionTask(state),
+                hasConstructionTask: hasActiveConstructionTask(state)
+                    || (hasActiveCooperationTask(state) && !cooperationTransitionPending),
                 canShareInformation: socialPlan.shareIntentsByAgentId[id] != nil,
                 canVerifySocialInformation: socialPlan.verificationBeliefsByAgentId[id] != nil,
+                hasActiveCooperationTask: hasActiveCooperationTask(state)
+                    && !cooperationTransitionPending,
+                shouldConsiderCooperationOffer: shouldConsiderCooperationOffer(state)
+                    && !cooperationTransitionPending,
+                canAcceptCooperationOffer: canAcceptCooperationOffer(state)
+                    && !cooperationTransitionPending,
                 currentGoalKind: state.currentGoal.kind,
                 survivalEnabled: survivalEnabled,
                 hungryThreshold: configuration.survivalConfiguration.hungryThreshold,
@@ -478,7 +510,9 @@ public struct AgentSimulationSession {
                 socialVerificationResource: socialVerificationRequest(
                     candidate: socialPlan.verificationBeliefsByAgentId[id],
                     for: id
-                )?.resource
+                )?.resource,
+                canAcceptSharedTask: canAcceptCooperationOffer(state)
+                    && !cooperationTransitionPending
             ))
             let retrievedMemories = AgentFeedbackLoop.retrieveMovementMemories(
                 memory: state.memory,
@@ -622,6 +656,7 @@ public struct AgentSimulationSession {
                 lastDecisionEventByAgentID[agentID] = eventID
             }
         }
+        try applyCooperationTickPlan(cooperationPlan, results: results)
         try applyPhysicalObservations(physicalObservations)
         try applySocialTickPlan(socialPlan, results: results)
         try recordCausalEvent(

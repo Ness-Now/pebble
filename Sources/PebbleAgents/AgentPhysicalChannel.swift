@@ -150,6 +150,7 @@ public struct AgentPhysicalSignal: Codable, Equatable {
     public let expiresAtTick: Int
     public let emittedEventID: AgentCausalEventID
     public let modalities: [AgentPhysicalSignalModality]
+    public let cooperationOffer: AgentCooperationOfferEnvelope?
     public internal(set) var status: AgentPhysicalSignalStatus
 }
 

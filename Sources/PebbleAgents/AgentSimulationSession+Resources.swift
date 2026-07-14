@@ -64,7 +64,7 @@ extension AgentSimulationSession {
     }
 
     mutating func applyDeliveryOutcomeInPlace(_ outcome: AgentDeliveryOutcome) throws {
-        try prevalidateCausalAppend(count: 1)
+        try prevalidateCausalAppend(count: cooperationEnabled ? 4 : 1)
         guard var state = statesById[outcome.agentId] else {
             throw AgentSessionError.unknownAgentId(outcome.agentId)
         }
@@ -120,13 +120,19 @@ extension AgentSimulationSession {
         state.lastDeliveryOutcome = outcome
         statesById[outcome.agentId] = state
         processedDeliveryIds.insert(outcome.deliveryId)
-        recordAcceptedOperation(
+        let deliveryEventID = recordAcceptedOperation(
             kind: .delivery,
             agentId: outcome.agentId,
             operationId: outcome.deliveryId,
             status: outcome.status.rawValue,
             detail: outcome.reason
         )
+        if let deliveryEventID {
+            try applyCooperationDeliveryProgress(
+                outcome: outcome,
+                deliveryEventID: deliveryEventID
+            )
+        }
     }
 
     public func prevalidateInteraction(_ intent: AgentInteractionIntent) throws {
@@ -267,6 +273,7 @@ extension AgentSimulationSession {
 
     func shouldDeliverResources(_ state: AgentSessionAgentState) -> Bool {
         guard economyEnabled, !state.resourceInventory.isEmpty else { return false }
+        if cooperationDeliveryIsCommitted(state) { return true }
         if state.currentGoal.kind == .deliverResources
             || state.resourceInventory.totalCount >= configuration.deliveryQuota
             || state.resourceInventory.isFull {

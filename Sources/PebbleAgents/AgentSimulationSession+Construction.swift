@@ -64,7 +64,8 @@ extension AgentSimulationSession {
         atTick surveyTick: Int
     ) -> AgentPosition? {
         guard let state = statesById[agentId],
-              let eligible = constructionEligibleResources(for: state),
+              let eligible = cooperationEligibleResources(for: state)
+                ?? constructionEligibleResources(for: state),
               !eligible.isEmpty else { return nil }
         let failedKeys = Set(failedNaturalResourceTargetKeysByAgentId[agentId] ?? [])
         let hasSelectableResource = observations.contains {
@@ -153,7 +154,8 @@ extension AgentSimulationSession {
             agentId: builderAgentId,
             operationId: fundingId,
             status: "funded",
-            detail: project.projectId
+            detail: project.projectId,
+            extraCauses: completedCooperationCauses(for: project.projectId)
         )
         return project
     }
@@ -431,10 +433,7 @@ extension AgentSimulationSession {
               project.status == .planned
                 || project.status == .acquiringMaterials
                 || project.status == .readyToFund else { return nil }
-        let missing = project.missingMaterials(
-            campStock: campStock,
-            builderInventory: state.resourceInventory
-        )
+        let missing = uncommittedConstructionDemand()?.missing ?? []
         guard let maximumDeficit = missing.map(\.quantity).max() else { return [] }
         return missing.filter { $0.quantity == maximumDeficit }.map(\.resource)
     }

@@ -23,6 +23,10 @@ extension AgentSimulationSession {
         }
         guard socialEnabled != enabled else { return }
         let physicalWasEnabled = physicalEnabled
+        if !enabled, cooperationEnabled {
+            try disableCooperationState(reason: "social channel disabled")
+            recordFeatureToggle(name: "cooperation", enabled: false)
+        }
         socialEnabled = enabled
         if !enabled {
             disablePhysicalChannelState()

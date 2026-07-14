@@ -7,6 +7,10 @@ extension AgentSimulationSession {
             throw AgentSessionError.physical(.socialRequired)
         }
         guard physicalEnabled != enabled else { return }
+        if !enabled, cooperationEnabled {
+            try disableCooperationState(reason: "physical channel disabled")
+            recordFeatureToggle(name: "cooperation", enabled: false)
+        }
         physicalEnabled = enabled
         if !enabled { disablePhysicalChannelState() }
         recordFeatureToggle(name: "physical", enabled: enabled)
@@ -135,6 +139,24 @@ extension AgentSimulationSession {
             "\(simulationID.rawValue)|\(tick)|\(intent.senderID.rawValue)|\(intent.recipientID.rawValue)|\(intent.factID.rawValue)"
         ))!
         guard !physicalSignals.contains(where: { $0.signalID == signalID }) else { return }
+        let task = cooperationEnabled ? sharedTasks.first {
+            $0.status == .draft
+                && $0.issuerID == intent.senderID
+                && $0.helperID == intent.recipientID
+                && $0.sourceFactID == intent.factID
+        } : nil
+        let cooperationOffer = task.map {
+            AgentCooperationOfferEnvelope(
+                taskID: $0.taskID,
+                signalID: signalID,
+                issuerID: $0.issuerID,
+                intendedHelperID: $0.helperID,
+                projectID: $0.projectID,
+                resource: $0.resource,
+                quantity: $0.requestedQuantity,
+                sourceFactID: $0.sourceFactID
+            )
+        }
         let causes = [
             fact.directObservationEventID,
             lastDecisionEventByAgentID[intent.senderID],
@@ -170,6 +192,7 @@ extension AgentSimulationSession {
             expiresAtTick: expiry,
             emittedEventID: event.eventID,
             modalities: [.attentionSound, .pointingGesture],
+            cooperationOffer: cooperationOffer,
             status: .pending
         ))
         physicalPresentationRequests.append(AgentPhysicalPresentationRequest(
@@ -182,6 +205,12 @@ extension AgentSimulationSession {
             presentedAtTick: nil
         ))
         lastSocialShareTickByAgentId[intent.senderID.rawValue] = tick
+        if let cooperationOffer {
+            try markSharedTaskSignaled(
+                envelope: cooperationOffer,
+                emittedEventID: event.eventID
+            )
+        }
         enforcePhysicalBounds()
     }
 
@@ -274,6 +303,12 @@ extension AgentSimulationSession {
                 decodedEventID = decoded.eventID
                 guard try deliverSocialMessage(intent, physicalCause: decoded.eventID) else {
                     throw AgentSessionError.physical(.invalidObservation(key))
+                }
+                if let offer = signal.cooperationOffer {
+                    try markSharedTaskOffered(
+                        envelope: offer,
+                        perceptionEventID: decoded.eventID
+                    )
                 }
                 physicalSignals[signalIndex].status = .decoded
             } else if intended && outcome == .ambiguous {

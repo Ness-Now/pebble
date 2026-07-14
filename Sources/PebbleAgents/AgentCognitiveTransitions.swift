@@ -99,6 +99,13 @@ public enum AgentCognitiveTransitions {
                 startedAtTick: input.tick,
                 urgency: 80
             )
+        } else if input.hasActiveCooperationTask {
+            nextGoal = AgentGoal(
+                kind: .fulfillSharedTask,
+                reason: "accepted shared material task active",
+                startedAtTick: input.tick,
+                urgency: 78
+            )
         } else if input.hasCommittedResourceTask && input.hasInventoryCapacity {
             nextGoal = AgentGoal(
                 kind: .collectResource,
@@ -122,6 +129,15 @@ public enum AgentCognitiveTransitions {
                 reason: "adjacent sandbox resource available",
                 startedAtTick: input.tick,
                 urgency: 65
+            )
+        } else if input.shouldConsiderCooperationOffer {
+            nextGoal = AgentGoal(
+                kind: .considerSharedTask,
+                reason: input.canAcceptCooperationOffer
+                    ? "exact physical task offer available"
+                    : "exact physical task offer requires refusal",
+                startedAtTick: input.tick,
+                urgency: 60
             )
         } else if input.canVerifySocialInformation {
             nextGoal = AgentGoal(
@@ -215,6 +231,9 @@ public enum AgentCognitiveTransitions {
         case "verify_information":
             state = "verifying"
             effect = "awaiting read-only World verification"
+        case "accept_task", "decline_task":
+            state = "cooperating"
+            effect = "awaiting bounded shared task transition"
         case "return_home":
             state = "planning"
             effect = "awaiting bounded navigation home"

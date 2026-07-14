@@ -36,15 +36,17 @@ extension AgentSimulationSession {
         )
     }
 
+    @discardableResult
     mutating func recordAcceptedOperation(
         kind: AgentCausalEventKind,
         agentId: String,
         operationId: String,
         status: String,
         detail: String,
-        origin: AgentCausalOrigin = .worldOutcome
-    ) {
-        guard let agentID = AgentID(rawValue: agentId) else { return }
+        origin: AgentCausalOrigin = .worldOutcome,
+        extraCauses: [AgentCausalEventID] = []
+    ) -> AgentCausalEventID? {
+        guard let agentID = AgentID(rawValue: agentId) else { return nil }
         let cause: AgentCausalEventID?
         switch kind {
         case .constructionPlacement, .constructionCompletion, .constructionClear:
@@ -56,20 +58,22 @@ extension AgentSimulationSession {
         default:
             cause = lastDecisionEventByAgentID[agentID]
         }
+        let causes = Array(Set(extraCauses + (cause.map { [$0] } ?? []))).sorted()
         let event = try! recordCausalEvent(
             kind: kind,
             origin: origin,
             actorID: agentID,
             operationID: AgentOperationID(rawValue: operationId),
-            causes: cause.map { [$0] } ?? [],
+            causes: Array(causes.prefix(AgentCausalEvent.maximumCauseCount)),
             payload: .operation(status: String(status.prefix(64)), detail: String(detail.prefix(160))),
             summary: "\(kind.rawValue) \(status) actor=\(agentId)"
         )
-        guard let eventID = event?.eventID else { return }
+        guard let eventID = event?.eventID else { return nil }
         lastOutcomeEventByAgentID[agentID] = eventID
         if kind == .constructionFunding || kind == .constructionPlacement
             || kind == .constructionCompletion || kind == .constructionClear {
             lastConstructionEventID = eventID
         }
+        return eventID
     }
 }

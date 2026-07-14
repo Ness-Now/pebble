@@ -263,9 +263,10 @@ extension AgentSimulationSession {
         let targetResource: AgentResourceKind?
         let goalMode: AgentNavigationGoalMode
         switch state.currentGoal.kind {
-        case .collectResource, .satisfyHunger:
+        case .collectResource, .satisfyHunger, .fulfillSharedTask:
             if state.activeResourceTarget == nil,
-               state.currentGoal.kind == .collectResource,
+               state.currentGoal.kind == .collectResource
+                    || state.currentGoal.kind == .fulfillSharedTask,
                let observation,
                let survey = constructionMaterialSurveyTarget(
                    for: state.id,

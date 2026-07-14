@@ -20,6 +20,8 @@ public enum AgentGoalKind: String, Codable, Equatable {
     case buildShelter
     case shareInformation
     case verifySocialInformation
+    case considerSharedTask
+    case fulfillSharedTask
     case explore
     case observeOtherAgent
 }
@@ -84,6 +86,7 @@ public struct AgentActionDecisionInput {
     public let constructionProject: AgentConstructionProject?
     public let socialVerificationTarget: AgentPosition?
     public let socialVerificationResource: AgentResourceKind?
+    public let canAcceptSharedTask: Bool
 
     public init(
         agentId: String,
@@ -99,7 +102,8 @@ public struct AgentActionDecisionInput {
         hasFoodRaw: Bool = false,
         constructionProject: AgentConstructionProject? = nil,
         socialVerificationTarget: AgentPosition? = nil,
-        socialVerificationResource: AgentResourceKind? = nil
+        socialVerificationResource: AgentResourceKind? = nil,
+        canAcceptSharedTask: Bool = false
     ) {
         self.agentId = agentId
         self.tick = tick
@@ -115,6 +119,7 @@ public struct AgentActionDecisionInput {
         self.constructionProject = constructionProject
         self.socialVerificationTarget = socialVerificationTarget
         self.socialVerificationResource = socialVerificationResource
+        self.canAcceptSharedTask = canAcceptSharedTask
     }
 }
 
@@ -226,6 +231,16 @@ public enum AgentActionDecider {
                 target: target,
                 resource: input.socialVerificationResource
             )
+        case .considerSharedTask:
+            return AgentAction(
+                name: input.canAcceptSharedTask ? "accept_task" : "decline_task",
+                reason: input.canAcceptSharedTask
+                    ? "goal considerSharedTask: voluntary bounded acceptance"
+                    : "goal considerSharedTask: acceptance conditions not met",
+                tick: input.tick
+            )
+        case .fulfillSharedTask:
+            return resourceAction(input, goalName: "fulfillSharedTask")
         case .observeOtherAgent:
             return AgentAction(
                 name: "observe_area",
