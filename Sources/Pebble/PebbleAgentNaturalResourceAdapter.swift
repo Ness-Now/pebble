@@ -150,6 +150,30 @@ struct PebbleAgentNaturalResourceAdapter {
         )
     }
 
+    func observeSocialVerification(
+        world: World,
+        request: AgentSocialVerificationRequest
+    ) -> AgentSocialVerificationObservation {
+        let position = request.position
+        guard world.isChunkReady(position.x >> 4, position.z >> 4) else {
+            return AgentSocialVerificationObservation(
+                beliefID: request.beliefID,
+                verifierID: request.verifierID,
+                position: position,
+                chunkReady: false
+            )
+        }
+        let fingerprint = world.getBlock(position.x, position.y, position.z)
+        return AgentSocialVerificationObservation(
+            beliefID: request.beliefID,
+            verifierID: request.verifierID,
+            position: position,
+            chunkReady: true,
+            observedBlockFingerprint: fingerprint,
+            observedResource: PebbleAgentNaturalResourceMapping.resource(for: fingerprint)
+        )
+    }
+
     private func manhattan(_ lhs: AgentPosition, _ rhs: AgentPosition) -> Int {
         abs(lhs.x - rhs.x) + abs(lhs.y - rhs.y) + abs(lhs.z - rhs.z)
     }

@@ -103,10 +103,13 @@ extension PebbleAgentController {
     }
 
     func initialAgentStates(anchor: AgentPosition) -> [AgentSessionAgentState] {
+        let recipientPosition = socialFeatureEnabled
+            ? AgentPosition(x: anchor.x + 8, y: anchor.y, z: anchor.z - 3)
+            : AgentPosition(x: anchor.x + 2, y: anchor.y, z: anchor.z)
         let specifications: [(String, AgentPosition, Int, Double, Double)] = [
             ("agent_0", AgentPosition(x: anchor.x + 6, y: anchor.y, z: anchor.z - 3), 80, 0, 0.2),
             ("agent_1", AgentPosition(x: anchor.x + 7, y: anchor.y, z: anchor.z - 3), 10, 0.03, 0.2),
-            ("agent_2", AgentPosition(x: anchor.x + 2, y: anchor.y, z: anchor.z), 10, 0, 0.9),
+            ("agent_2", recipientPosition, 10, 0, 0.9),
         ]
         return specifications.map { id, position, fear, fatigue, curiosity in
             AgentSessionAgentState(
@@ -176,6 +179,7 @@ extension PebbleAgentController {
     func stop(reason: String, fallbackWorld: World? = nil) -> Int {
         let snapshot = session?.snapshot()
         let causalSummary = session?.causalLedgerSnapshot().summary
+        let socialSummary = session?.socialSummary()
         let followStatus = followMode.statusText
         let wasDemo = demoActive
         let cleanupWorld = activeWorld ?? fallbackWorld
@@ -206,6 +210,9 @@ extension PebbleAgentController {
             let dedup = snapshot.agents.reduce(0) { $0 + $1.feedbackMemoryDeduplicatedCount }
             let natural = naturalResourceExecutor.state
             trace("summary reason=\(reason.replacingOccurrences(of: " ", with: "_")) seed=\(seed) ticks=\(successfulCognitiveTicks) hz=\(cognitiveHz) agents=\(snapshot.agentCount) movementCount=\(movementCount) blocked=\(blockedMovementOutcomeCount) memoryMax=\(maxObservedMemoryCount) retrieved=\(retrieved) influenced=\(influenced) dedup=\(dedup) maxDistanceHome=\(maxObservedDistanceFromHome) runtimeErrors=\(runtimeErrorCount) catchupDropped=\(droppedCatchUpSteps) probesRemoved=\(removed) follow=\(followStatus) demo=\(wasDemo ? 1 : 0) interactionRestored=\(interactionRestored ? 1 : 0) interactionTarget=\(interactionBeforeCleanup.target.map(positionText) ?? "none") natural=\(snapshot.naturalResourcesEnabled ? 1 : 0) naturalHarvests=\(natural.harvestCount) naturalRollbacks=\(natural.rollbackCount) naturalRestoredAfterSuccess=0 buildProject=\(snapshot.constructionProject?.projectId ?? "none") buildPlaced=\(snapshot.constructionProject?.placedCellIndices.count ?? 0) buildRestored=\(constructionAfterCleanup.cleanupRestoredBlockCount) buildRollback=\(constructionAfterCleanup.rollbackCount) constructionRestored=1 conservation=\(snapshot.conservation.harvestedTotal):\(snapshot.conservation.carriedTotal)+\(snapshot.conservation.campStockTotal)+\(snapshot.conservation.consumedTotal)+\(snapshot.conservation.constructionEscrowTotal)+\(snapshot.conservation.constructedTotal):\(snapshot.conservation.balanced ? "exact" : "diverged") causalSim=\(causalSummary?.simulationID.rawValue ?? "none") causalTick=\(causalSummary?.currentTick.rawValue ?? 0) causalSequence=\(causalSummary?.latestSequence ?? 0) causalEvents=\(causalSummary?.retainedEventCount ?? 0) causalDropped=\(causalSummary?.droppedEventCount ?? 0) corridorObserved=\(interactionAfterCleanup.corridorObservedBlockCount) corridorChangedCleanup=\(interactionAfterCleanup.corridorChangedAfterCleanup) cleanupRestoredBlocks=\(interactionAfterCleanup.cleanupRestoredBlockCount)")
+            if let socialSummary, socialSummary.socialCausalEventCount > 0 {
+                trace("social summary enabled=\(socialSummary.enabled ? 1 : 0) messages=\(socialSummary.retainedMessageCount) unverified=\(socialSummary.unverifiedBeliefCount) confirmed=\(socialSummary.confirmedBeliefCount) contradicted=\(socialSummary.contradictedBeliefCount) expired=\(socialSummary.expiredBeliefCount) trustEdges=\(socialSummary.trustEdgeCount) events=\(socialSummary.socialCausalEventCount) digest=\(socialSummary.digest)")
+            }
         }
         interactionExecutor.clearBoundaryAudit()
         naturalResourceExecutor.resetDiagnostics()

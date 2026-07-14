@@ -14,6 +14,12 @@ extension PebbleAgentController {
             let preCognitive = session.snapshot()
             let perceptions = try preCognitive.agents.map { agent in
                 var combinedResourceObservations: [AgentResourceObservation] = []
+                let socialObservations = try socialResourceObservations(
+                    world: world,
+                    agent: agent,
+                    snapshot: preCognitive,
+                    player: player
+                )
                 if autoInteractionEnabled || economyAutoEnabled
                     || (preCognitive.survivalEnabled && interactionFeatureEnabled) {
                     guard let anchor else { throw ControllerError.missingSession }
@@ -126,9 +132,30 @@ extension PebbleAgentController {
                     navigationTarget = preparedNavigationObservation?.target
                     navigationGoalMode = .exact
                 } else {
-                    navigationTarget = agent.activeResourceTarget?.target
-                        ?? resourceObservations.first?.target
-                    navigationGoalMode = .cardinalAdjacent
+                    let socialRequest = session.socialEnabled
+                        ? session.pendingSocialVerificationRequest(for: agent.id)
+                        : nil
+                    if agent.activeResourceTarget == nil,
+                       resourceObservations.isEmpty,
+                       let socialRequest {
+                        preparedNavigationObservation = socialNavigationObservation(
+                            world: world,
+                            agent: agent,
+                            request: socialRequest,
+                            occupiedAgentPositions: preCognitive.agents
+                                .filter { $0.id != agent.id }
+                                .map(\.position)
+                        )
+                        navigationTarget = preparedNavigationObservation?.target
+                            ?? socialRequest.position
+                        navigationGoalMode = navigationTarget == socialRequest.position
+                            ? .cardinalAdjacent
+                            : .exact
+                    } else {
+                        navigationTarget = agent.activeResourceTarget?.target
+                            ?? resourceObservations.first?.target
+                        navigationGoalMode = .cardinalAdjacent
+                    }
                 }
                 if movementEnabled, let target = navigationTarget {
                     navigationObservation = preparedNavigationObservation
@@ -148,10 +175,34 @@ extension PebbleAgentController {
                     agentId: agent.id,
                     worldObservation: try worldSensor.observe(world: world, agent: agent),
                     resourceObservations: resourceObservations,
+                    socialResourceObservations: socialObservations,
                     navigationObservation: navigationObservation
                 )
             }
             let result = try session.advanceTick(perceptions: perceptions)
+            let verificationActions = result.agents
+                .filter { $0.action.name == "verify_information" }
+                .sorted { $0.agentId < $1.agentId }
+            for verification in verificationActions {
+                guard let request = session.socialVerificationRequest(for: verification.agentId),
+                      request.position == verification.action.target else {
+                    throw ControllerError.socialBoundary(
+                        "verification action outside active social request"
+                    )
+                }
+                let observation = naturalResourceAdapter.observeSocialVerification(
+                    world: world,
+                    request: request
+                )
+                let outcome = try session.applySocialVerification(observation)
+                let fingerprintAfter = observation.chunkReady
+                    ? world.getBlock(request.position.x, request.position.y, request.position.z)
+                    : nil
+                let belief = session.socialSnapshot().beliefs.first {
+                    $0.beliefID == request.beliefID
+                }
+                trace("social verification tick=\(session.tick) verifier=\(request.verifierID.rawValue) sender=\(request.senderID.rawValue) belief=\(request.beliefID.rawValue) position=\(positionText(request.position)) expected=\(request.expectedBlockFingerprint) observed=\(observation.observedBlockFingerprint.map(String.init) ?? "none") after=\(fingerprintAfter.map(String.init) ?? "none") resourceUnchanged=\(fingerprintAfter == observation.observedBlockFingerprint ? 1 : 0) chunkReady=\(observation.chunkReady ? 1 : 0) result=\(outcome.rawValue) event=\(belief?.verificationEventID?.rawValue ?? "none") mutation=none")
+            }
             let consumptionActions = result.agents
                 .filter { $0.action.name == "consume_food" }
                 .sorted { $0.agentId < $1.agentId }
@@ -462,6 +513,7 @@ extension PebbleAgentController {
                 important: decision?.actionChanged == true || lastInteractionAttempted
                     || placementActions.first != nil || fundingActions.first != nil
             )
+            traceSocialState(snapshot: finalSnapshot)
             return true
         } catch {
             if autoInteractionEnabled {

@@ -15,6 +15,7 @@ struct PebbleAgentDebugState {
     init(
         snapshot: AgentSessionSnapshot,
         causalSummary: AgentCausalLedgerSummary,
+        socialSnapshot: AgentSocialSnapshot,
         mode: PebbleAgentOverlayMode,
         paused: Bool,
         cognitiveHz: Int,
@@ -51,6 +52,7 @@ struct PebbleAgentDebugState {
         let currentFeedback = agent.lastFeedbackDecisionTrace.flatMap {
             $0.memoryRecordsUsed.isEmpty ? nil : $0
         } ?? lastInfluencedDecisionTrace
+        let socialLines = Self.socialLines(snapshot: socialSnapshot, focusedAgentId: agent.id)
         if mode == .compact {
             let decisionAgent = lastInfluencedDecisionAgentId.flatMap { id in
                 snapshot.agents.first { $0.id == id }
@@ -116,7 +118,7 @@ struct PebbleAgentDebugState {
                 "outcome: \(interactionOutcome?.status.rawValue ?? "none") delta \(interactionOutcome?.inventoryDelta.quantity ?? 0) memory \(interactionMemory)",
                 "rollback: \(interaction.rollbackCount) \(Self.short(interaction.lastRollback, limit: 30))",
                 "errors: \(runtimeErrorCount)  catchup dropped: \(droppedCatchUpSteps)",
-            ]
+            ] + socialLines
             return
         }
 
@@ -241,6 +243,7 @@ struct PebbleAgentDebugState {
             "interaction delta/memory: \(agent.lastInteractionOutcome?.inventoryDelta.quantity ?? 0) / \(agent.recentMemory.last?.type ?? "none")",
             "interaction rollback: \(interaction.rollbackCount) \(Self.short(interaction.lastRollback, limit: 28))",
         ]
+        lines += socialLines
         lines.append("ticks: \(agent.ticksAlive) goals: \(agent.goalChangeCount) actions/effects: \(agent.actionCount)/\(agent.actionEffectCount)")
         focusedAgentLines = lines
     }
@@ -253,6 +256,53 @@ struct PebbleAgentDebugState {
             ("safety", 1 - needs.safety),
         ]
         return values.max { $0.1 < $1.1 }?.0 ?? "none"
+    }
+
+    private static func socialLines(
+        snapshot: AgentSocialSnapshot,
+        focusedAgentId: String
+    ) -> [String] {
+        guard snapshot.enabled else { return [] }
+        let beliefs = snapshot.beliefs.filter { $0.ownerID.rawValue == focusedAgentId }
+        let pending = beliefs.filter { $0.status == .unverified }.count
+        let confirmed = beliefs.filter { $0.status == .confirmed }.count
+        let contradicted = beliefs.filter { $0.status == .contradicted }.count
+        let verification = snapshot.activeVerifications.first {
+            $0.verifierID.rawValue == focusedAgentId
+        }
+        let trust = snapshot.trustRelations.filter {
+            $0.sourceID.rawValue == focusedAgentId
+        }.map {
+            "\($0.targetID.rawValue):\($0.score)"
+        }.joined(separator: ",")
+        let message = snapshot.messages.filter {
+            $0.senderID.rawValue == focusedAgentId || $0.recipientID.rawValue == focusedAgentId
+        }.max {
+            if $0.sentAtTick != $1.sentAtTick { return $0.sentAtTick < $1.sentAtTick }
+            return $0.messageID < $1.messageID
+        }
+        let fact = snapshot.facts.filter {
+            $0.observerID.rawValue == focusedAgentId
+        }.max {
+            if $0.observedAtTick != $1.observedAtTick {
+                return $0.observedAtTick < $1.observedAtTick
+            }
+            return $0.factID < $1.factID
+        }
+        let belief = beliefs.max {
+            if $0.receivedAtTick != $1.receivedAtTick {
+                return $0.receivedAtTick < $1.receivedAtTick
+            }
+            return $0.beliefID < $1.beliefID
+        }
+        return [
+            "social=on beliefs=\(pending)/\(confirmed)/\(contradicted)",
+            "verify=\(verification.map { position($0.position) } ?? "none") trust=\(trust.isEmpty ? "none" : trust)",
+            "lastMessage=\(message?.messageID.rawValue ?? "none")",
+            "social fact=\(fact.map { "\($0.resource.rawValue)@\(position($0.position)) by \($0.observerID.rawValue)" } ?? "none")",
+            "social belief=\(belief.map { "\($0.status.rawValue) from \($0.senderID.rawValue): \(short($0.reason, limit: 22))" } ?? "none")",
+            "social cause=\(belief?.verificationEventID?.rawValue ?? fact?.directObservationEventID.rawValue ?? "none")",
+        ]
     }
 
     private static func goalLines(_ goals: [String]) -> [String] {

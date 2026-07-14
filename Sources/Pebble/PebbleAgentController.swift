@@ -68,6 +68,7 @@ final class PebbleAgentController {
     var interactionFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_INTERACT"] == "1" }
     var naturalFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_NATURAL"] == "1" }
     var buildFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_BUILD"] == "1" }
+    var socialFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_SOCIAL"] == "1" }
     var traceEvery: Int {
         guard let raw = environment["PEBBLELAB_APP_AGENTS_TRACE_EVERY"],
               let value = Int(raw), (1...1000).contains(value) else { return 1 }
@@ -129,5 +130,6 @@ final class PebbleAgentController {
         case feedbackBoundary(String)
         case interactionBoundary(String)
         case constructionBoundary(String)
+        case socialBoundary(String)
     }
 }

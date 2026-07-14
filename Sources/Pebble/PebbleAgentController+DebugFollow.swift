@@ -15,6 +15,7 @@ extension PebbleAgentController {
         return PebbleAgentDebugState(
             snapshot: session.snapshot(),
             causalSummary: session.causalLedgerSnapshot().summary,
+            socialSnapshot: session.socialSnapshot(),
             mode: mode,
             paused: isPaused,
             cognitiveHz: cognitiveHz,

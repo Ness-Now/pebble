@@ -17,9 +17,10 @@ Le point de départ est le HEAD post-K :
   récolte naturelle transactionnelle, inventaire, livraison, stock, faim,
   consommation, famine, fatigue, repos, financement, escrow et nouveau home
   acquis dans leurs contrats actuels ;
-- communication sociale non acquise ;
-- confiance, coopération, tâches partagées, persistance complète des agents,
-  replay complet, grande population et cycle de vie non acquis.
+- information sociale causale et confiance dirigée acquises dans leur verticale
+  bornée ;
+- communication physique, coopération, tâches partagées, persistance complète
+  des agents, replay complet, grande population et cycle de vie non acquis.
 
 Ce stade ne doit pas être décrit comme une civilisation déjà implémentée.
 
@@ -60,8 +61,10 @@ intégrés, reproductibles et observables, pas d’étiquettes scénarisées.
 modularisé sans changement de comportement. `CIV-02` est également terminé et
 validé localement : les fondations d’identité stable, d’horloge simulée et de
 causalité déterministe sont acquises sans ouvrir la persistance ni la
-communication. La prochaine mission est `CIV-03`, première verticale sociale
-sur ces fondations.
+communication. `CIV-03` est terminé et validé localement : l’information
+sociale causale et la confiance dirigée sont acquises, sans forwarding,
+coopération ni persistance. Après revue, la prochaine étape canonique est
+`CIV-04 — Local Physical Channel: Sounds, Gestures and Imperfect Perception`.
 
 ## Grands programmes ultérieurs
 

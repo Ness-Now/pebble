@@ -343,6 +343,14 @@ func runPebbleAgentsSocialSmoke() {
     check("received belief cannot be forwarded", forwardingRejected)
     check("forwarding refusal creates no causal success", confirmation.causalLedgerSnapshot().summary.latestSequence == sequenceBeforeForwarding)
 
+    var lifecycle = confirmation
+    try! lifecycle.setSocialEnabled(false)
+    check("social off retains bounded facts beliefs and directed trust", !lifecycle.socialEnabled && !lifecycle.socialSnapshot().facts.isEmpty && !lifecycle.socialSnapshot().beliefs.isEmpty && !lifecycle.trustSnapshot().relations.isEmpty)
+    let sequenceBeforeClear = lifecycle.causalLedgerSnapshot().summary.latestSequence
+    try! lifecycle.clearSocialState()
+    check("social clear works while disabled and resets only social state", lifecycle.socialSnapshot().facts.isEmpty && lifecycle.socialSnapshot().messages.isEmpty && lifecycle.socialSnapshot().beliefs.isEmpty && lifecycle.trustSnapshot().relations.isEmpty && lifecycle.snapshot().conservation == confirmation.snapshot().conservation)
+    check("social clear appends one explicit causal lifecycle event", lifecycle.causalLedgerSnapshot().summary.latestSequence == sequenceBeforeClear + 1 && lifecycle.causalLedgerSnapshot().events.last?.kind == .socialStateCleared)
+
     var urgent = socialSmokeSession(
         id: "social-urgent",
         configuration: try! AgentSocialConfiguration(

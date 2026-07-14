@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build|--social]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -32,6 +32,7 @@ Options:
   --h2       Run the preserved H2 navigate-to-harvest proof.
   --natural  Run natural wood/stone harvest and delivery with no fixtures.
   --build    Run fixed shelter acquisition, construction, interruption, rest, and clear.
+  --social   Run directed grounded information, read-only verification, and trust.
   --help     Show this help and exit.
 EOF
 }
@@ -48,6 +49,14 @@ require_trace() {
         || fail "live trace missing: $description"
 }
 
+reject_trace() {
+    pattern=$1
+    description=$2
+    if /usr/bin/grep -Eq "$pattern" "$TRACE_PATH"; then
+        fail "live trace unexpectedly contains: $description"
+    fi
+}
+
 DRY_RUN=0
 MODE_OPTIONS=0
 for option in "$@"; do
@@ -58,6 +67,7 @@ for option in "$@"; do
         --h2) MODE="h2"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --natural) MODE="natural"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --build) MODE="build"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --social) MODE="social"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --help|-h) usage; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$option" >&2; usage >&2; exit 2 ;;
     esac
@@ -67,7 +77,18 @@ done
 
 NATURAL_GATE=0
 BUILD_GATE=0
-if [ "$MODE" = "build" ]; then
+SOCIAL_GATE=0
+if [ "$MODE" = "social" ]; then
+    WORLD_SEED="46"
+    SOCIAL_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-Social-46"
+    CAPTURE_NAME="social-information-trust.png"
+    SOCIAL_ANCHOR_X=${PEBBLELAB_SOCIAL_ANCHOR_X:-14}
+    SOCIAL_ANCHOR_Y=${PEBBLELAB_SOCIAL_ANCHOR_Y:-68}
+    SOCIAL_ANCHOR_Z=${PEBBLELAB_SOCIAL_ANCHOR_Z:--18}
+    SOCIAL_PLAYER_Y=$((SOCIAL_ANCHOR_Y + 3))
+    LAB_COMMANDS="/tp $SOCIAL_ANCHOR_X $SOCIAL_ANCHOR_Y $SOCIAL_ANCHOR_Z;/lab start;/tp $SOCIAL_ANCHOR_X $SOCIAL_PLAYER_Y $SOCIAL_ANCHOR_Z;/lab pause;/lab movement off;/lab focus agent_1;/lab survival on;/lab social on;/lab overlay compact;/lab step;/lab step;/lab social status;/lab movement on;/lab step;/lab step;/lab step;/lab step;/lab social status;/lab causality status;/lab causality tail 20;/lab status;/lab movement off;/lab social off;/lab social status"
+elif [ "$MODE" = "build" ]; then
     WORLD_SEED=${PEBBLELAB_BUILD_SEED:-46}
     NATURAL_GATE=1
     BUILD_GATE=1
@@ -164,6 +185,7 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_INTERACT=1\n'
     printf '  PEBBLELAB_APP_AGENTS_NATURAL=%s\n' "$NATURAL_GATE"
     printf '  PEBBLELAB_APP_AGENTS_BUILD=%s\n' "$BUILD_GATE"
+    printf '  PEBBLELAB_APP_AGENTS_SOCIAL=%s\n' "$SOCIAL_GATE"
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
     if [ "$MODE" = "build" ]; then
         printf '  PEBBLE_SHOT=-|%s/fixed-shelter-before.png|%s/fixed-shelter-partial.png|%s|-\n' \
@@ -178,7 +200,10 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "build" ]; then
+    if [ "$MODE" = "social" ]; then
+        printf '  2. Confirm one direct natural fact from agent_1 and one directed delivery to agent_2.\n'
+        printf '  3. Confirm bounded approach, read-only fingerprint match, trust 0->10, and no material delta.\n'
+    elif [ "$MODE" = "build" ]; then
         printf '  2. Confirm read-only site selection, natural acquisition of 6 wood and 3 stone, and atomic funding.\n'
         printf '  3. Confirm exact work routes, one placement per tick, 9/9 completion, shelter home/rest, and conservation.\n'
     elif [ "$MODE" = "natural" ]; then
@@ -261,6 +286,7 @@ PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
 PEBBLELAB_APP_AGENTS_INTERACT=1 \
 PEBBLELAB_APP_AGENTS_NATURAL="$NATURAL_GATE" \
 PEBBLELAB_APP_AGENTS_BUILD="$BUILD_GATE" \
+PEBBLELAB_APP_AGENTS_SOCIAL="$SOCIAL_GATE" \
 PEBBLE_CMD="$LAB_COMMANDS" \
 PEBBLE_SHOT="$SHOT_SPEC" \
 swift run -c release Pebble 2>&1 | /usr/bin/tee "$TRACE_PATH"
@@ -273,7 +299,7 @@ world_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT count(*), json_extract(json, '
 expected_world_facts="1|$WORLD_SEED|$WORLD_NAME|1000|0|0|0|0|0"
 [ "$world_facts" = "$expected_world_facts" ] \
     || fail "unexpected disposable world facts: $world_facts"
-if [ "$MODE" = "build" ]; then
+if [ "$MODE" = "build" ] || [ "$MODE" = "social" ]; then
     spawn_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.spawnX'), json_extract(json, '$.spawnY'), json_extract(json, '$.spawnZ') FROM worlds;")
     [ "$spawn_facts" = "8|75|-112" ] || fail "unexpected seed-46 spawn: $spawn_facts"
 fi
@@ -282,7 +308,18 @@ require_trace "disposable-world name=$WORLD_NAME seed=$WORLD_SEED worldTick=0 da
 require_trace "start seed=$WORLD_SEED agents=3 tick=0 hz=4 movement=on worldTick=[0-9]+ dayTime=1000 weather=clear randomTickSpeed=0 mobSpawning=0" 'deterministic agent session initial conditions'
 
 [ -s "$CAPTURE_PATH" ] || fail "capture was not written: $CAPTURE_PATH"
-if [ "$MODE" = "build" ]; then
+if [ "$MODE" = "social" ]; then
+    require_trace 'social=on tick=0 mutation=none' 'social mode was explicitly enabled without mutation'
+    require_trace 'social tick=1 .*fact=.*observer=agent_1 .*resource=(wood|stone) .*fingerprint=[0-9]+ .*messages=none .*trust=none' 'direct natural fact grounded for agent_1'
+    require_trace 'social tick=2 .*messages=message-.*sender=agent_1 recipient=agent_2 .*belief=belief-.*owner=agent_2 status=unverified .*trust=none' 'single directed message and unverified belief'
+    reject_trace 'sender=agent_1 recipient=agent_0' 'directed message to excluded urgent agent_0'
+    require_trace 'social tick=[3-9] .*active=agent_2@.*navigation=socialVerification:active' 'recipient follows bounded social verification route'
+    require_trace 'social verification tick=[3-9] verifier=agent_2 sender=agent_1 .*expected=1520 observed=1520 after=1520 resourceUnchanged=1 .*result=confirmed .*mutation=none' 'read-only World verification confirms the grounded fact without mutation'
+    require_trace 'social tick=[3-9] .*belief=.*owner=agent_2 status=confirmed .*trust=agent_2→agent_1=10@.* active=none .*inventories=agent_0:0,agent_1:0,agent_2:0 stock=0 construction=none conservation=exact' 'directed trust updates while every material state remains unchanged'
+    require_trace 'social status gate=enabled enabled=yes messages=1 unverified=0 confirmed=1 contradicted=0 expired=0 .*active=none trustEdges=1 trust=agent_2→agent_1=10 .*events=[1-9][0-9]* .*digest=[0-9a-f]{16}' 'bounded final social status'
+    require_trace 'summary .*movementCount=[1-9][0-9]* .*runtimeErrors=0 .*probesRemoved=3 .*naturalHarvests=0 .*buildProject=none .*conservation=0:0\+0\+0\+0\+0:exact .*causalDropped=0' 'social proof preserves material state and cleans up'
+    printf '\nPASS: grounded social information and directed trust live evidence verified.\n'
+elif [ "$MODE" = "build" ]; then
     [ -s "$CAPTURE_BEFORE_PATH" ] || fail "before capture was not written: $CAPTURE_BEFORE_PATH"
     [ -s "$CAPTURE_PARTIAL_PATH" ] || fail "partial capture was not written: $CAPTURE_PARTIAL_PATH"
     require_trace 'build setup project=fixedLeanToV1:agent_2:0:.* candidates=.* worldMutations=0' 'read-only fixed shelter site selection'

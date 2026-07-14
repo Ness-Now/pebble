@@ -48,7 +48,6 @@ extension AgentSimulationSession {
     }
 
     public mutating func clearSocialState() throws {
-        guard socialEnabled else { throw AgentSessionError.social(.socialDisabled) }
         try prevalidateCausalAppend(count: 1)
         let counts = (
             facts: socialFacts.count,
