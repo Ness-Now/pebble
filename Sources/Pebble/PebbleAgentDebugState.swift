@@ -14,6 +14,7 @@ struct PebbleAgentDebugState {
 
     init(
         snapshot: AgentSessionSnapshot,
+        causalSummary: AgentCausalLedgerSummary,
         mode: PebbleAgentOverlayMode,
         paused: Bool,
         cognitiveHz: Int,
@@ -26,6 +27,7 @@ struct PebbleAgentDebugState {
         lastInfluencedDecisionAgentId: String?,
         runtimeErrorCount: Int,
         droppedCatchUpSteps: Int,
+        worldTick: Int?,
         lastError: String?,
         interaction: PebbleAgentInteractionState,
         economyFixtures: PebbleAgentEconomyFixtureState,
@@ -56,6 +58,8 @@ struct PebbleAgentDebugState {
             globalLines = [
                 "PEBBLE AGENTS - 3D LIVE PROTOTYPE",
                 "status: \(status)  demo: \(demoActive ? "on" : "off")  tick: \(snapshot.tick)",
+                "sim=\(causalSummary.simulationID.rawValue) tick=\(causalSummary.currentTick.rawValue) seq=\(causalSummary.latestSequence) events=\(causalSummary.retainedEventCount) dropped=\(causalSummary.droppedEventCount)",
+                "worldTick: \(worldTick.map(String.init) ?? "none")",
                 "clock: \(cognitiveHz) Hz  paused: \(paused ? "yes" : "no")",
                 "movement: \(movementEnabled ? "on" : "off")  follow: \(followMode.statusText)",
                 "agents: \(snapshot.agentCount) focus: \(agent.id) goals: \(Self.short(observedGoalKinds.joined(separator: ","), limit: 22))",
@@ -122,6 +126,8 @@ struct PebbleAgentDebugState {
             movementEnabled ? "movement: enabled / safe cardinal steps" : "movement: disabled / intent only",
             "status: \(status)",
             "seed: \(snapshot.seed)  tick: \(snapshot.tick)  cognitive: \(cognitiveHz) Hz",
+            "sim=\(causalSummary.simulationID.rawValue) tick=\(causalSummary.currentTick.rawValue) seq=\(causalSummary.latestSequence) events=\(causalSummary.retainedEventCount) dropped=\(causalSummary.droppedEventCount)",
+            "worldTick: \(worldTick.map(String.init) ?? "none")",
             "agents: \(snapshot.agentCount)  focus: \(agent.id)",
         ] + Self.goalLines(observedGoalKinds)
             + ["errors: \(runtimeErrorCount)  catchup dropped: \(droppedCatchUpSteps)"]

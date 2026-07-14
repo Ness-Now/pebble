@@ -14,6 +14,7 @@ extension PebbleAgentController {
         let focusedInfluenced = focusedAgentId.flatMap { lastInfluencedTracesByAgentId[$0] }
         return PebbleAgentDebugState(
             snapshot: session.snapshot(),
+            causalSummary: session.causalLedgerSnapshot().summary,
             mode: mode,
             paused: isPaused,
             cognitiveHz: cognitiveHz,
@@ -26,6 +27,7 @@ extension PebbleAgentController {
             lastInfluencedDecisionAgentId: focusedInfluenced == nil ? latestInfluenced?.key : focusedAgentId,
             runtimeErrorCount: runtimeErrorCount,
             droppedCatchUpSteps: droppedCatchUpSteps,
+            worldTick: lastWorldTick,
             lastError: lastError,
             interaction: interactionExecutor.state(
                 gateEnabled: interactionFeatureEnabled,

@@ -8,7 +8,7 @@ extension PebbleAgentController {
         switch command {
         case "help":
             guard arguments.count == 1 else { return failure("Usage: /lab help") }
-            return success("/lab lifecycle: start stop clear | time control: pause resume step speed <1|2|4|8> reset | inspection: status focus <agentId|next> next follow <agentId|focus|next|off> overlay <off|compact|full> | movement: movement <on|off> | interaction: interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off> | economy: economy <setup|auto on|auto off|status|clear> | survival: survival <on|off|status> | natural: natural <on|off|status|scan> | build: build <setup|auto on|auto off|status|clear> | demo: demo [start|stop|status]")
+            return success("/lab lifecycle: start stop clear | time control: pause resume step speed <1|2|4|8> reset | inspection: status focus <agentId|next> next follow <agentId|focus|next|off> overlay <off|compact|full> causality <status|tail <1...20>> | movement: movement <on|off> | interaction: interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off> | economy: economy <setup|auto on|auto off|status|clear> | survival: survival <on|off|status> | natural: natural <on|off|status|scan> | build: build <setup|auto on|auto off|status|clear> | demo: demo [start|stop|status]")
         case "demo":
             return handleDemo(Array(arguments.dropFirst()), world: world, player: player)
         case "start":
@@ -84,6 +84,8 @@ extension PebbleAgentController {
             return handleNatural(Array(arguments.dropFirst()), world: world, player: player)
         case "build":
             return handleBuild(Array(arguments.dropFirst()), world: world, player: player)
+        case "causality":
+            return handleCausality(Array(arguments.dropFirst()))
         case "status":
             guard arguments.count == 1 else { return failure("Usage: /lab status") }
             guard let session else {

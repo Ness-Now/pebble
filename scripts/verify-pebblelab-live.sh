@@ -102,7 +102,7 @@ if [ "$MODE" = "build" ]; then
         LAB_COMMANDS="$LAB_COMMANDS;/lab step"
         build_step=$((build_step + 1))
     done
-    LAB_COMMANDS="$LAB_COMMANDS;/lab survival status;/lab build status;/lab economy status;/lab natural status;/lab overlay compact|/lab survival off;/lab movement off;/lab build clear;/lab build status;/lab economy status;/lab natural status;/lab status"
+    LAB_COMMANDS="$LAB_COMMANDS;/lab survival status;/lab build status;/lab economy status;/lab natural status;/lab causality status;/lab causality tail 20;/lab overlay compact|/lab survival off;/lab movement off;/lab build clear;/lab build status;/lab economy status;/lab natural status;/lab status;/lab causality status;/lab causality tail 20"
 elif [ "$MODE" = "natural" ]; then
     WORLD_SEED="46"
     NATURAL_GATE=1
@@ -273,12 +273,15 @@ if [ "$MODE" = "build" ]; then
     require_trace 'build auto=on tick=116 mutation=none' 'construction resumed without replanning the project'
     require_trace 'action=place_block .*buildPlaced=4 buildNext=4 .*buildLast=3:wood@' 'resume continues at exact cell index three'
     require_trace 'build gate=enabled auto=on .*status=completed .*placedMaterials=wood:6,stone:3 placed=9/9 nextCell=9 .*home=23,66,-24 rest=23,66,-24 .*conservation=9:0\+0\+0\+0\+9:exact' 'completed shelter, new home, and extended conservation'
+    require_trace 'causality status PebbleAgents causality simulationId=live-46-20-66--24 simulationTick=[0-9]+ nextSequence=[0-9]+ retainedEventCount=[1-9][0-9]* firstRetainedSequence=1 lastSequence=[0-9]+ droppedEventCount=0 digest=[0-9a-f]{16}' 'stable live simulation identity and bounded causal status'
+    require_trace 'causality tail limit=20 returned=20' 'bounded causal tail inspection'
+    require_trace 'causality eventId=live-46-20-66--24/event-[0-9]{20} tick=[0-9]+ kind=constructionClear' 'material causal clear visible in bounded live tail'
     require_trace 'survival=on tick=146 reason=command' 'survival explicitly enabled only after construction'
     require_trace 'goals=.*agent_2:rest.*navigationPurpose=homeRest' 'survival rest routes to the shelter home'
     require_trace 'tick=149 .*action=rest .*survival=on .*fatigue=0\.00 .*home=23,66,-24' 'rest completes in the shelter'
     require_trace 'build clear project=fixedLeanToV1:agent_2:0:22,66,-25 restored=9 conservation=exact' 'transactional clear restored nine cells'
     require_trace 'build gate=enabled auto=off project=none .*stock=wood:6,stone:3 .*conservation=9:0\+9\+0\+0\+0:exact' 'clear refunded materials and removed project'
-    require_trace 'summary .*runtimeErrors=0 .*naturalHarvests=9 naturalRollbacks=0 naturalRestoredAfterSuccess=0 buildProject=none buildPlaced=0 buildRestored=9 buildRollback=0 constructionRestored=1 conservation=9:0\+9\+0\+0\+0:exact' 'verified clear, lifecycle, and natural destruction boundary'
+    require_trace 'summary .*runtimeErrors=0 .*naturalHarvests=9 naturalRollbacks=0 naturalRestoredAfterSuccess=0 buildProject=none buildPlaced=0 buildRestored=9 buildRollback=0 constructionRestored=1 conservation=9:0\+9\+0\+0\+0:exact causalSim=live-46-20-66--24 causalTick=[0-9]+ causalSequence=[0-9]+ causalEvents=[0-9]+ causalDropped=0' 'verified clear, lifecycle, natural destruction boundary, and causal summary'
     printf '\nPASS: fixed shelter live trace and capture evidence verified.\n'
 elif [ "$MODE" = "natural" ]; then
     require_trace 'natural=on tick=0 mutation=none' 'natural mode was explicitly enabled without mutation'

@@ -1,8 +1,12 @@
 import Foundation
+import PebbleAgents
 import PebbleCore
 
 let options = parseArguments(CommandLine.arguments)
 validateScenario(options.scenario)
+if options.scenario == "causal_ledger_smoke" {
+    runCausalLedgerSmoke(options)
+}
 
 let isMultiAgentMovementFixtureScenario = options.scenario
     == "multi_agent_movement_fixture_smoke"
