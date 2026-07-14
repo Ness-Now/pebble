@@ -1,3 +1,4 @@
+import Foundation
 import PebbleAgents
 
 func runPebbleAgentsCausalitySmoke() {
@@ -10,6 +11,24 @@ func runPebbleAgentsCausalitySmoke() {
     check("typed simulation identity preserves canonical string", simulationID.rawValue == "smoke-seed-42")
     check("typed operation identity preserves canonical string", operationID.rawValue == "agent_0:interaction:1:0,64,0")
     check("typed agent identity rejects whitespace", AgentID(rawValue: "agent 0") == nil)
+    check("typed agent identity rejects empty values", AgentID(rawValue: "") == nil)
+    check("typed agent identity rejects overlong values", AgentID(rawValue: String(repeating: "a", count: 65)) == nil)
+    check("typed agent identity rejects non-ASCII values", AgentID(rawValue: "agent_é") == nil)
+    check(
+        "typed agent identity comparison is lexical",
+        [AgentID(rawValue: "agent_10")!, AgentID(rawValue: "agent_2")!].sorted().map(\.rawValue)
+            == ["agent_10", "agent_2"]
+    )
+    let identityEncoder = JSONEncoder()
+    let identityDecoder = JSONDecoder()
+    check(
+        "typed identities preserve Codable round trips",
+        (try? identityDecoder.decode(AgentID.self, from: identityEncoder.encode(agentID))) == agentID
+            && (try? identityDecoder.decode(AgentSimulationID.self, from: identityEncoder.encode(simulationID))) == simulationID
+            && (try? identityDecoder.decode(AgentOperationID.self, from: identityEncoder.encode(operationID))) == operationID
+    )
+    check("typed simulation identity rejects invalid values", AgentSimulationID(rawValue: "bad simulation") == nil)
+    check("typed operation identity rejects empty values", AgentOperationID(rawValue: "") == nil)
 
     let configuration = try! AgentSessionConfiguration(
         seed: 42,
@@ -47,7 +66,40 @@ func runPebbleAgentsCausalitySmoke() {
         simulationID: simulationID,
         causalLedgerPolicy: .bounded(maxEvents: 32)
     )
+    check("legacy string agent accessor derives from typed identity", state.id == agentID.rawValue)
     check("session exposes explicit simulation identity", session.simulationID == simulationID)
+    check("simulation clock exposes the validated initial tick", session.tick == 0 && session.clock.tick.rawValue == 0)
+    check(
+        "legacy simulation identity fallback is seed stable",
+        AgentSimulationID.legacy(seed: 42) == AgentSimulationID.legacy(seed: 42)
+            && AgentSimulationID.legacy(seed: 42) != AgentSimulationID.legacy(seed: 43)
+    )
+    var duplicateAgentRejected = false
+    do {
+        _ = try AgentSimulationSession(configuration: configuration, agents: [state, state])
+    } catch AgentSessionError.duplicateAgentId("agent_0") {
+        duplicateAgentRejected = true
+    } catch {}
+    check("duplicate typed agent identity is rejected", duplicateAgentRejected)
+
+    let secondState = AgentSessionAgentState(
+        agentID: try! AgentID(validating: "agent_1"), state: "idle",
+        position: AgentPosition(x: 1, y: 64, z: 0), needs: state.needs,
+        health: 100, fear: 0, homePosition: AgentPosition(x: 1, y: 64, z: 0),
+        nearbyAgents: [], currentGoal: state.currentGoal, lastAction: nil,
+        lastActionEffect: nil, memory: [], tickCreated: 0, ticksAlive: 0,
+        observationCount: 0, nearbyObservationCount: 0, goalSelectionCount: 0,
+        goalChangeCount: 0, actionCount: 0, actionEffectCount: 0,
+        movementCount: 0, totalManhattanDistanceMoved: 0,
+        returnHomeMoveCount: 0, totalDistanceReducedTowardHome: 0
+    )
+    let orderedIdentity = try! AgentSimulationSession(
+        configuration: configuration, agents: [state, secondState]
+    ).identitySnapshot()
+    let reversedIdentity = try! AgentSimulationSession(
+        configuration: configuration, agents: [secondState, state]
+    ).identitySnapshot()
+    check("typed session identity is input-order independent", orderedIdentity == reversedIdentity)
     _ = try! session.advanceTick()
     check("simulation clock advances exactly once per accepted tick", session.tick == 1)
     var ledger = session.causalLedgerSnapshot()
@@ -96,6 +148,9 @@ func runPebbleAgentsCausalitySmoke() {
     var futureRejected = false
     var duplicateCauseRejected = false
     var crossSimulationRejected = false
+    var causeLimitRejected = false
+    var causeOrderRejected = false
+    var payloadMismatchRejected = false
     do { try AgentCausalEvent.validate(causes: [eventTwo], for: eventTwo) }
     catch AgentCausalLedgerError.nonPriorCause { futureRejected = true }
     catch {}
@@ -105,9 +160,44 @@ func runPebbleAgentsCausalitySmoke() {
     do { try AgentCausalEvent.validate(causes: [foreignOne], for: eventTwo) }
     catch AgentCausalLedgerError.crossSimulationCause { crossSimulationRejected = true }
     catch {}
+    let eventTen = AgentCausalEventID(
+        simulationID: simulationID,
+        sequence: AgentCausalSequence(rawValue: 10)!
+    )
+    let nineCauses = (1...9).map {
+        AgentCausalEventID(simulationID: simulationID, sequence: AgentCausalSequence(rawValue: UInt64($0))!)
+    }
+    do { try AgentCausalEvent.validate(causes: nineCauses, for: eventTen) }
+    catch AgentCausalLedgerError.tooManyCauses(9) { causeLimitRejected = true }
+    catch {}
+    do { try AgentCausalEvent.validate(causes: [eventTwo, causeOne], for: eventTen) }
+    catch AgentCausalLedgerError.nonPriorCause { causeOrderRejected = true }
+    catch {}
+    do {
+        try AgentCausalEvent.validate(
+            payload: .feature(name: "movement", enabled: true),
+            for: .movement
+        )
+    } catch AgentCausalLedgerError.payloadMismatch(.movement) {
+        payloadMismatchRejected = true
+    } catch {}
     check("future causal reference rejected", futureRejected)
     check("duplicate causal reference rejected", duplicateCauseRejected)
     check("cross-simulation causal reference rejected", crossSimulationRejected)
+    check("causal reference count is explicitly bounded", causeLimitRejected)
+    check("causal references require canonical order", causeOrderRejected)
+    check("causal event kind rejects mismatched payload", payloadMismatchRejected)
+    check(
+        "causal event kind accepts its typed payload",
+        (try? AgentCausalEvent.validate(
+            payload: .movement(
+                status: "moved",
+                from: AgentPosition(x: 0, y: 64, z: 0),
+                to: AgentPosition(x: 1, y: 64, z: 0)
+            ),
+            for: .movement
+        )) != nil
+    )
 
     var bounded = try! AgentSimulationSession(
         configuration: configuration,
@@ -124,6 +214,16 @@ func runPebbleAgentsCausalitySmoke() {
             && boundedLedger.summary.retainedEventCount == 3
             && boundedLedger.summary.droppedEventCount == 4
             && boundedLedger.summary.firstRetainedEventID?.sequence.rawValue == 5
+    )
+    let encodedLedger = try! JSONEncoder().encode(ledger)
+    check(
+        "causal ledger snapshot preserves Codable round trip",
+        try! JSONDecoder().decode(AgentCausalLedgerSnapshot.self, from: encodedLedger) == ledger
+    )
+    check(
+        "causal ledger sequences are contiguous and event IDs unique",
+        ledger.events.map(\.sequence.rawValue) == Array(1...ledger.summary.latestSequence)
+            && Set(ledger.events.map(\.eventID)).count == ledger.events.count
     )
 
     var invalidTick = session

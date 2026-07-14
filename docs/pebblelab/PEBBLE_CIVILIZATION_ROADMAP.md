@@ -57,11 +57,11 @@ intégrés, reproductibles et observables, pas d’étiquettes scénarisées.
 4. `CIV-03 — Social Information and Directed Trust V1`
 
 `CIV-01` est terminé et validé localement : le runtime existant a été
-modularisé sans changement de comportement. La prochaine mission est `CIV-02`.
-`CIV-02` stabilise l’identité, le temps simulé et la causalité. Ensemble, ils
-préparent les domaines sociaux, la persistance, les générations et la
-population sans encore ajouter de civilisation artificielle. `CIV-03` ouvre la
-première verticale sociale sur ces fondations.
+modularisé sans changement de comportement. `CIV-02` est également terminé et
+validé localement : les fondations d’identité stable, d’horloge simulée et de
+causalité déterministe sont acquises sans ouvrir la persistance ni la
+communication. La prochaine mission est `CIV-03`, première verticale sociale
+sur ces fondations.
 
 ## Grands programmes ultérieurs
 

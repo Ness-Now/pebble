@@ -6,6 +6,7 @@ public enum AgentCausalLedgerPolicy: Equatable, Sendable {
 public enum AgentCausalLedgerError: Error, Equatable {
     case invalidBound(Int)
     case sequenceOverflow
+    case payloadMismatch(AgentCausalEventKind)
     case tooManyCauses(Int)
     case duplicateCause(AgentCausalEventID)
     case crossSimulationCause(AgentCausalEventID)
@@ -128,6 +129,7 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
         payload: AgentCausalPayload,
         summary: String
     ) throws {
+        try Self.validate(payload: payload, for: kind)
         try Self.validate(causes: causes, for: id)
         schemaVersion = 1
         eventID = id
@@ -150,6 +152,26 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
                 + causes.map(\.rawValue).joined(separator: ",")
                 + "|\(payload.canonicalText)|\(self.summary)"
         )
+    }
+
+    public static func validate(
+        payload: AgentCausalPayload,
+        for kind: AgentCausalEventKind
+    ) throws {
+        let matches: Bool
+        switch (kind, payload) {
+        case (.sessionLifecycle, .lifecycle), (.tickCompleted, .lifecycle),
+             (.featureToggle, .feature), (.perception, .perception),
+             (.goalTransition, .cognitive), (.actionSelected, .cognitive),
+             (.movement, .movement), (.interaction, .operation),
+             (.delivery, .operation), (.consumption, .operation),
+             (.constructionFunding, .operation), (.constructionPlacement, .operation),
+             (.constructionCompletion, .operation), (.constructionClear, .operation):
+            matches = true
+        default:
+            matches = false
+        }
+        guard matches else { throw AgentCausalLedgerError.payloadMismatch(kind) }
     }
 
     public static func validate(
