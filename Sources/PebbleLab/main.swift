@@ -7,6 +7,9 @@ validateScenario(options.scenario)
 if options.scenario == "causal_ledger_smoke" {
     runCausalLedgerSmoke(options)
 }
+if options.scenario == "social_information_trust_smoke" {
+    runSocialInformationTrustSmoke(options)
+}
 
 let isMultiAgentMovementFixtureScenario = options.scenario
     == "multi_agent_movement_fixture_smoke"
