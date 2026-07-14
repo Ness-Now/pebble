@@ -56,7 +56,8 @@ intégrés, reproductibles et observables, pas d’étiquettes scénarisées.
 3. `CIV-02 — Stable Identity, Simulation Clock and Causal Ledger`
 4. `CIV-03 — Social Information and Directed Trust V1`
 
-`CIV-01` modularise le runtime existant sans changer son comportement.
+`CIV-01` est terminé et validé localement : le runtime existant a été
+modularisé sans changement de comportement. La prochaine mission est `CIV-02`.
 `CIV-02` stabilise l’identité, le temps simulé et la causalité. Ensemble, ils
 préparent les domaines sociaux, la persistance, les générations et la
 population sans encore ajouter de civilisation artificielle. `CIV-03` ouvre la
