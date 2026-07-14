@@ -6,7 +6,7 @@ La maquette V0 rend trois agents PebbleLab observables dans l’application Pebb
 
 ## Prérequis et lancement
 
-Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2` et `--natural` conservent respectivement les preuves Phase I, H2 et la récolte naturelle J→K. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
+Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social` et `--physical` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03 et canal physique CIV-04. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
 
 Depuis la racine du dépôt :
 
@@ -52,6 +52,8 @@ Commandes de démonstration :
 /lab economy <setup|auto on|auto off|status|clear>
 /lab survival <on|off|status>
 /lab natural <on|off|status|scan>
+/lab social <on|off|status|clear>
+/lab physical <on|off|status|clear>
 /lab status
 /lab focus <agentId|next>        /lab next
 /lab follow <agentId|focus|next|off>
@@ -61,6 +63,14 @@ Commandes de démonstration :
 `/lab overlay on` reste un alias de `compact`. L’overlay compact est destiné aux démonstrations ; `full` expose le diagnostic détaillé. Sans commande explicite, F3 sélectionne le mode full et la variable d’environnement sélectionne compact.
 
 `follow focus` suit dynamiquement l’agent focalisé ; un identifiant suit une cible fixe. Le follow ne déplace jamais le joueur : il oriente seulement sa vue. Le joueur reste libre de se déplacer.
+
+## CIV-04 — Canal physique local
+
+Le mode `scripts/verify-pebblelab-live.sh --physical` utilise un monde jetable neuf, la seed `46`, trois agents et les gates sociale et physique explicitement actives. La gate `PEBBLELAB_APP_AGENTS_PHYSICAL=1` reste désactivée par défaut et exige la gate sociale. Quand elle est active, une transmission CIV-03 devient un appel sonore local et un pointage vers le fait : la session ne crée le message et la belief qu’après une observation exacte de ces deux modalités au tick suivant. `/lab physical off` annule les signaux pending et arrête les présentations sans effacer les preuves sociales ; `/lab physical clear` efface uniquement l’état borné du canal, jamais le ledger causal ni le World.
+
+Pebble réutilise le moteur audio existant pour demander une note courte à la position de l’émetteur. Le renderer affiche, pendant trois ticks au plus, un fil orange attaché au haut du proxy et orienté vers la position pointée. Ce fil de debug reste lisible devant le terrain afin que la capture automatisée démontre la pose ; il ne décide ni de la perception, ni du destinataire. L’adapter read-only calcule séparément distance, occlusion, chunks prêts et ligne de vue. Le succès matériel du son et le rendu n’alimentent jamais la cognition.
+
+La preuve produit `physical-before.png`, `physical-during.png` et `physical-after.png`. La capture centrale doit montrer le fil orange, absent des deux autres. La trace doit montrer `requested=1` pour l’audio, une perception exacte de `agent_2`, une perception ambiguë du bystander `agent_0`, le message et la belief CIV-03, la vérification read-only puis le trust `0→10`. Les cas son seul, geste seul, ambigu, missed, inconclusive et expiration sont couverts sans mutation World par le scénario headless et `pebsmoke`.
 
 ## Arrêt propre et inspection
 
@@ -75,7 +85,7 @@ Utiliser `/lab demo stop`, `/lab stop` ou `/lab clear`. Les probes transitoires 
 - aucune destination partagée et aucun dangerous drop exécuté ;
 - navigation de ressource bornée au rayon 8, route cardinale et un pas au plus par tick ;
 - hors gate naturelle explicite, seule la fixture transactionnelle peut être mutée puis restaurée ; la construction reste interdite ;
-- aucune société ou communication entre agents ;
+- aucune langue libre, retransmission ou coopération entre agents ;
 - aucune persistance agent ;
 - aucun contrôleur autonome du joueur.
 

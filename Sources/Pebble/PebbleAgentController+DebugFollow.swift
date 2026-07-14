@@ -16,6 +16,7 @@ extension PebbleAgentController {
             snapshot: session.snapshot(),
             causalSummary: session.causalLedgerSnapshot().summary,
             socialSnapshot: session.socialSnapshot(),
+            physicalSnapshot: session.physicalChannelSnapshot(),
             mode: mode,
             paused: isPaused,
             cognitiveHz: cognitiveHz,

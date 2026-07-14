@@ -12,6 +12,11 @@ extension PebbleAgentController {
         lastConsumptionSucceeded = false
         do {
             let preCognitive = session.snapshot()
+            let physicalInputs = physicalObservations(
+                world: world,
+                snapshot: preCognitive,
+                session: session
+            )
             let perceptions = try preCognitive.agents.map { agent in
                 var combinedResourceObservations: [AgentResourceObservation] = []
                 let socialObservations = try socialResourceObservations(
@@ -179,7 +184,11 @@ extension PebbleAgentController {
                     navigationObservation: navigationObservation
                 )
             }
-            let result = try session.advanceTick(perceptions: perceptions)
+            let result = try session.advanceTick(
+                perceptions: perceptions,
+                physicalObservations: physicalInputs
+            )
+            presentPhysicalSignals(world: world, session: &session)
             let verificationActions = result.agents
                 .filter { $0.action.name == "verify_information" }
                 .sorted { $0.agentId < $1.agentId }
@@ -431,6 +440,7 @@ extension PebbleAgentController {
             }
             let finalSnapshot = session.snapshot()
             self.session = session
+            tracePhysicalState(at: session.tick)
             lastTickResult = result
             for agent in finalSnapshot.agents { observedGoalKinds.insert(agent.currentGoal.kind.rawValue) }
             for agent in finalSnapshot.agents {

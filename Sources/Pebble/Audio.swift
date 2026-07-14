@@ -80,6 +80,7 @@ final class AudioEngineM {
     private var musicPlayingUntil = 0.0
     private var discUntil = 0.0
     private var inited = false
+    var isAvailable: Bool { inited && engine.isRunning }
 
     func initEngine() {
         if inited { return }

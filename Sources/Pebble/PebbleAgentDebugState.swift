@@ -16,6 +16,7 @@ struct PebbleAgentDebugState {
         snapshot: AgentSessionSnapshot,
         causalSummary: AgentCausalLedgerSummary,
         socialSnapshot: AgentSocialSnapshot,
+        physicalSnapshot: AgentPhysicalChannelSnapshot,
         mode: PebbleAgentOverlayMode,
         paused: Bool,
         cognitiveHz: Int,
@@ -53,6 +54,10 @@ struct PebbleAgentDebugState {
             $0.memoryRecordsUsed.isEmpty ? nil : $0
         } ?? lastInfluencedDecisionTrace
         let socialLines = Self.socialLines(snapshot: socialSnapshot, focusedAgentId: agent.id)
+        let physicalLines = Self.physicalLines(
+            snapshot: physicalSnapshot,
+            focusedAgentId: agent.id
+        )
         if mode == .compact {
             let decisionAgent = lastInfluencedDecisionAgentId.flatMap { id in
                 snapshot.agents.first { $0.id == id }
@@ -118,7 +123,7 @@ struct PebbleAgentDebugState {
                 "outcome: \(interactionOutcome?.status.rawValue ?? "none") delta \(interactionOutcome?.inventoryDelta.quantity ?? 0) memory \(interactionMemory)",
                 "rollback: \(interaction.rollbackCount) \(Self.short(interaction.lastRollback, limit: 30))",
                 "errors: \(runtimeErrorCount)  catchup dropped: \(droppedCatchUpSteps)",
-            ] + socialLines
+            ] + socialLines + physicalLines
             return
         }
 
@@ -244,6 +249,7 @@ struct PebbleAgentDebugState {
             "interaction rollback: \(interaction.rollbackCount) \(Self.short(interaction.lastRollback, limit: 28))",
         ]
         lines += socialLines
+        lines += physicalLines
         lines.append("ticks: \(agent.ticksAlive) goals: \(agent.goalChangeCount) actions/effects: \(agent.actionCount)/\(agent.actionEffectCount)")
         focusedAgentLines = lines
     }
@@ -302,6 +308,36 @@ struct PebbleAgentDebugState {
             "social fact=\(fact.map { "\($0.resource.rawValue)@\(position($0.position)) by \($0.observerID.rawValue)" } ?? "none")",
             "social belief=\(belief.map { "\($0.status.rawValue) from \($0.senderID.rawValue): \(short($0.reason, limit: 22))" } ?? "none")",
             "social cause=\(belief?.verificationEventID?.rawValue ?? fact?.directObservationEventID.rawValue ?? "none")",
+        ]
+    }
+
+    private static func physicalLines(
+        snapshot: AgentPhysicalChannelSnapshot,
+        focusedAgentId: String
+    ) -> [String] {
+        guard snapshot.enabled else { return [] }
+        let signal = snapshot.signals.filter {
+            $0.senderID.rawValue == focusedAgentId
+                || $0.intendedRecipientID.rawValue == focusedAgentId
+        }.last
+        let perception = signal.flatMap { selected in
+            snapshot.perceptions.filter {
+                $0.signalID == selected.signalID
+                    && ($0.observerID.rawValue == focusedAgentId || $0.isIntendedRecipient)
+            }.last
+        }
+        let pose = signal.map { selected in
+            snapshot.presentations.contains {
+                $0.signalID == selected.signalID && $0.presentedAtTick != nil
+                    && snapshot.tick <= $0.expiresAtTick
+            }
+        } ?? false
+        return [
+            "physical=on",
+            "signal=\(signal?.signalID.rawValue ?? "none")",
+            "channel=\(perception?.outcome.rawValue ?? "none")",
+            "sound=\(perception?.soundClarity ?? 0) gesture=\(perception?.gestureClarity ?? 0)",
+            "gesturePose=\(pose ? "on" : "off")",
         ]
     }
 

@@ -39,6 +39,7 @@ final class PebbleAgentController {
     let navigationAdapter = PebbleAgentNavigationAdapter()
     let naturalResourceAdapter = PebbleAgentNaturalResourceAdapter()
     let constructionSiteAdapter = PebbleAgentConstructionSiteAdapter()
+    let physicalSignalAdapter = PebbleAgentPhysicalSignalAdapter()
     let movementExecutor = PebbleAgentMovementExecutor()
     let cameraFollow = PebbleAgentCameraFollow()
     var interactionExecutor = PebbleAgentInteractionExecutor()
@@ -69,6 +70,8 @@ final class PebbleAgentController {
     var naturalFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_NATURAL"] == "1" }
     var buildFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_BUILD"] == "1" }
     var socialFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_SOCIAL"] == "1" }
+    var physicalFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_PHYSICAL"] == "1" }
+    var physicalAudioAvailable: () -> Bool = { false }
     var traceEvery: Int {
         guard let raw = environment["PEBBLELAB_APP_AGENTS_TRACE_EVERY"],
               let value = Int(raw), (1...1000).contains(value) else { return 1 }

@@ -6,6 +6,7 @@ import AppKit
 import Metal
 import MetalKit
 import simd
+import PebbleAgents
 import PebbleCore
 
 struct SectionKey: Hashable {
@@ -264,6 +265,7 @@ final class WorldRenderer {
     let particles: ParticleSystemM
     private let pebbleLabDebugEntitiesEnabled =
         ProcessInfo.processInfo.environment["PEBBLELAB_DEBUG_ENTITIES"] == "1"
+    var pebbleAgentPhysicalGestures: [PebbleAgentPhysicalGestureMarker] = []
 
     // item sprite atlas (dropped items / thrown projectiles)
     var spriteTex: MTLTexture!
@@ -1052,6 +1054,11 @@ final class WorldRenderer {
                 partial: partial
             )
         }
+        drawPebbleAgentPhysicalGestures(
+            enc,
+            viewProj: viewProj,
+            camPos: camPos
+        )
         drawSprites(enc, game: game, viewProj: viewProj, camPos: camPos, cam: cam,
                     dayLight: sky.dayLight, fog: (fogColor, fogStart, fogEnd), partial: partial)
         drawCubes(enc, game: game, viewProj: viewProj, camPos: camPos, uni: &uni, partial: partial)
@@ -1348,6 +1355,41 @@ final class WorldRenderer {
         )
     }
 
+    private func drawPebbleAgentPhysicalGestures(
+        _ enc: MTLRenderCommandEncoder,
+        viewProj: simd_float4x4,
+        camPos: SIMD3<Double>
+    ) {
+        var boxes: [(Double, Double, Double, Double, Double, Double)] = []
+        for marker in pebbleAgentPhysicalGestures {
+            let sx = Double(marker.sourcePosition.x) + 0.5
+            let sy = Double(marker.sourcePosition.y) + 1.35
+            let sz = Double(marker.sourcePosition.z) + 0.5
+            let tx = Double(marker.pointedPosition.x) + 0.5
+            let ty = Double(marker.pointedPosition.y) + 0.5
+            let tz = Double(marker.pointedPosition.z) + 0.5
+            for step in 0...8 {
+                let t = Double(step) / 8
+                let x = sx + (tx - sx) * t - camPos.x
+                let y = sy + (ty - sy) * t - camPos.y
+                let z = sz + (tz - sz) * t - camPos.z
+                let radius = step == 0 ? 0.12 : 0.055
+                boxes.append((
+                    x - radius, y - radius, z - radius,
+                    x + radius, y + radius, z + radius
+                ))
+            }
+        }
+        drawBoxOutline(
+            enc,
+            viewProj,
+            boxes,
+            asLines: false,
+            color: SIMD4<Float>(1, 0.62, 0.08, 0.95),
+            depthTest: false
+        )
+    }
+
     // ---- item / projectile billboards ------------------------------------------
     private func spriteSlot(_ stack: ItemStack) -> Int {
         let key = "\(stack.id)|\(stack.data.potion ?? "")"
@@ -1618,7 +1660,7 @@ final class WorldRenderer {
     /// wireframe boxes (12 edges) or a single straight segment (asLines)
     func drawBoxOutline(_ enc: MTLRenderCommandEncoder, _ viewProj: simd_float4x4,
                         _ boxes: [(Double, Double, Double, Double, Double, Double)],
-                        asLines: Bool, color: SIMD4<Float>) {
+                        asLines: Bool, color: SIMD4<Float>, depthTest: Bool = true) {
         var verts: [Float] = []
         for (x0, y0, z0, x1, y1, z1) in boxes {
             if asLines {
@@ -1636,7 +1678,7 @@ final class WorldRenderer {
         guard !verts.isEmpty else { return }
         var u = LineUniforms(viewProj: viewProj, color: color)
         enc.setRenderPipelineState(linePipeline)
-        enc.setDepthStencilState(depthRead)
+        enc.setDepthStencilState(depthTest ? depthRead : depthNone)
         verts.withUnsafeBytes { raw in
             enc.setVertexBytes(raw.baseAddress!, length: raw.count, index: 0)
         }

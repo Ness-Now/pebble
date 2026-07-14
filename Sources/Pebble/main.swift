@@ -464,6 +464,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         }
 
         audio.initEngine()
+        agentController.physicalAudioAvailable = { [weak audio] in
+            audio?.isAvailable ?? false
+        }
         audio.applyVolumes(game.settings.volumes)
         audio.onSubtitle = { [weak self] text in
             guard let self, self.game.settings.subtitles else { return }
@@ -695,6 +698,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         if game.hasWorld() {
             let partial = game.frame(dtMs: dt)
             agentController.update(world: game.world, player: game.player)
+            renderer.pebbleAgentPhysicalGestures = agentController.physicalGestureMarkers()
             bot?.tick()
             booth?.tickBooth()
             renderer.particles.tick(game.world)
@@ -702,6 +706,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
             enc = renderer.render(cmd: cmd, rpd: rpd, game: game, cam: cam, partial: partial, timeSec: timeSec)
         } else {
             agentController.update(world: nil, player: nil)
+            renderer.pebbleAgentPhysicalGestures = []
             enc = renderer.renderTitle(cmd: cmd, rpd: rpd)
         }
 
