@@ -1,4 +1,4 @@
-public enum AgentResourceKind: String, Codable, Equatable, CaseIterable {
+public enum AgentResourceKind: String, Codable, Equatable, CaseIterable, Sendable {
     case sandboxResource
     case foodRaw
     case wood
@@ -16,7 +16,7 @@ public enum AgentResourceKind: String, Codable, Equatable, CaseIterable {
     }
 }
 
-public enum AgentResourceObservationSource: String, Codable, Equatable, CaseIterable {
+public enum AgentResourceObservationSource: String, Codable, Equatable, CaseIterable, Sendable {
     case sandboxFixture
     case naturalWorld
 

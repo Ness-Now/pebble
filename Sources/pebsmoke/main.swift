@@ -2101,6 +2101,7 @@ runPebbleAgentsMovementSmoke()
 runPebbleAgentsResourceSmoke()
 runPebbleAgentsVerticalSmoke()
 runPebbleAgentsCausalitySmoke()
+runPebbleAgentsSocialSmoke()
 
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)

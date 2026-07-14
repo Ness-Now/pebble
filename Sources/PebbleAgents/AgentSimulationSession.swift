@@ -31,6 +31,14 @@ public struct AgentSimulationSession {
     var lastDecisionEventByAgentID: [AgentID: AgentCausalEventID]
     var lastOutcomeEventByAgentID: [AgentID: AgentCausalEventID]
     var lastConstructionEventID: AgentCausalEventID?
+    public internal(set) var socialEnabled: Bool
+    var socialFacts: [AgentSocialFact]
+    var socialMessages: [AgentSocialMessage]
+    var socialBeliefs: [AgentSocialBelief]
+    var socialTrustRelations: [AgentTrustRelation]
+    var activeSocialVerificationByAgentId: [String: AgentSocialBeliefID]
+    var lastSocialShareTickByAgentId: [String: Int]
+    var socialEvictionCounts: AgentSocialEvictionCounts
 
     public init(
         configuration: AgentSessionConfiguration,
@@ -79,6 +87,14 @@ public struct AgentSimulationSession {
         lastDecisionEventByAgentID = [:]
         lastOutcomeEventByAgentID = [:]
         lastConstructionEventID = nil
+        socialEnabled = false
+        socialFacts = []
+        socialMessages = []
+        socialBeliefs = []
+        socialTrustRelations = []
+        activeSocialVerificationByAgentId = [:]
+        lastSocialShareTickByAgentId = [:]
+        socialEvictionCounts = AgentSocialEvictionCounts()
         try recordCausalEvent(
             kind: .sessionLifecycle,
             origin: .lifecycle,
@@ -216,9 +232,10 @@ public struct AgentSimulationSession {
     public mutating func advanceTick(
         perceptions: [AgentPerceptionInput] = []
     ) throws -> AgentSessionTickResult {
-        try prevalidateCausalAppend(count: sortedIds.count * 3 + 1)
+        try prevalidateCausalAppend(count: sortedIds.count * (socialEnabled ? 20 : 3) + 1)
         var perceptionsById: [String: AgentPerceptionInput] = [:]
         var resourceObservationsById: [String: [AgentResourceObservation]] = [:]
+        var socialResourceObservationsById: [String: [AgentResourceObservation]] = [:]
         for perception in perceptions {
             guard statesById[perception.agentId] != nil else {
                 throw AgentSessionError.unknownAgentId(perception.agentId)
@@ -236,6 +253,13 @@ public struct AgentSimulationSession {
                     observations: perception.resourceObservations,
                     maximumDistance: configuration.resourceObservationRadius
                 )
+                if socialEnabled {
+                    socialResourceObservationsById[perception.agentId] = try AgentResourcePerception.normalize(
+                        observerPosition: position,
+                        observations: perception.socialResourceObservations,
+                        maximumDistance: configuration.resourceObservationRadius
+                    )
+                }
             }
             if let navigation = perception.navigationObservation {
                 guard navigation.origin == statesById[perception.agentId]?.position,
@@ -304,6 +328,7 @@ public struct AgentSimulationSession {
         let peers = ids.compactMap { id in
             statesById[id].map { AgentPeerSnapshot(id: id, position: $0.position) }
         }
+        let socialPlan = prepareSocialTick(at: nextTick)
         var results: [AgentSessionAgentTickResult] = []
 
         for id in ids {
@@ -391,6 +416,8 @@ public struct AgentSimulationSession {
                 shouldDeliverResources: shouldDeliverResources(state),
                 shouldBuildShelter: shouldBuildShelter(state),
                 hasConstructionTask: hasActiveConstructionTask(state),
+                canShareInformation: socialPlan.shareIntentsByAgentId[id] != nil,
+                canVerifySocialInformation: socialPlan.verificationBeliefsByAgentId[id] != nil,
                 currentGoalKind: state.currentGoal.kind,
                 survivalEnabled: survivalEnabled,
                 hungryThreshold: configuration.survivalConfiguration.hungryThreshold,
@@ -403,6 +430,12 @@ public struct AgentSimulationSession {
                 state.currentGoal = goalChange.goal
                 state.goalChangeCount += 1
             }
+
+            activateSocialVerification(
+                agentId: id,
+                candidate: socialPlan.verificationBeliefsByAgentId[id],
+                selectedGoal: state.currentGoal.kind
+            )
 
             updateNavigation(
                 state: &state,
@@ -424,7 +457,15 @@ public struct AgentSimulationSession {
                 hasFoodRaw: state.resourceInventory.count(of: .foodRaw) > 0,
                 constructionProject: constructionProject?.builderAgentId == id
                     ? constructionProject
-                    : nil
+                    : nil,
+                socialVerificationTarget: socialVerificationRequest(
+                    candidate: socialPlan.verificationBeliefsByAgentId[id],
+                    for: id
+                )?.position,
+                socialVerificationResource: socialVerificationRequest(
+                    candidate: socialPlan.verificationBeliefsByAgentId[id],
+                    for: id
+                )?.resource
             ))
             let retrievedMemories = AgentFeedbackLoop.retrieveMovementMemories(
                 memory: state.memory,
@@ -519,13 +560,22 @@ public struct AgentSimulationSession {
                 subjectID: agentID,
                 payload: .perception(
                     worldObserved: result.worldPerceptionEffect != nil,
-                    resourceObservationCount: result.snapshot.lastResourceObservations.count,
+                    resourceObservationCount: result.snapshot.lastResourceObservations.count
+                        + (socialResourceObservationsById[result.agentId]?.count ?? 0),
                     memoriesAdded: result.memoriesAdded.count
                 ),
-                summary: "perception accepted actor=\(result.agentId) resources=\(result.snapshot.lastResourceObservations.count)"
+                summary: "perception accepted actor=\(result.agentId) resources=\(result.snapshot.lastResourceObservations.count + (socialResourceObservationsById[result.agentId]?.count ?? 0))"
             )
             if let eventID = perceptionEvent?.eventID {
                 lastPerceptionEventByAgentID[agentID] = eventID
+                try recordGroundedSocialFacts(
+                    observerID: agentID,
+                    observations: (result.snapshot.lastResourceObservations
+                        + (socialResourceObservationsById[result.agentId] ?? []))
+                        .sorted(by: AgentResourcePerception.sortsBefore),
+                    perceptionEventID: eventID,
+                    at: tick
+                )
             }
             var actionCause = perceptionEvent?.eventID
             if let goalChange = result.goalChange {
@@ -559,6 +609,7 @@ public struct AgentSimulationSession {
                 lastDecisionEventByAgentID[agentID] = eventID
             }
         }
+        try applySocialTickPlan(socialPlan, results: results)
         try recordCausalEvent(
             kind: .tickCompleted,
             origin: .cognitiveTransition,

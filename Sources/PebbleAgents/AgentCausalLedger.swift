@@ -62,6 +62,13 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case constructionPlacement
     case constructionCompletion
     case constructionClear
+    case resourceFactGrounded
+    case socialMessageSent
+    case socialMessageReceived
+    case socialBeliefChanged
+    case socialVerification
+    case trustChanged
+    case socialStateCleared
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -71,6 +78,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case worldOutcome
     case controllerCommand
     case lifecycle
+    case socialTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -80,6 +88,23 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
     case cognitive(goal: String, action: String, goalChanged: Bool)
     case movement(status: String, from: AgentPosition, to: AgentPosition)
     case operation(status: String, detail: String)
+    case resourceFact(
+        factID: String,
+        observerID: String,
+        resource: AgentResourceKind,
+        position: AgentPosition,
+        fingerprint: Int
+    )
+    case socialMessage(messageID: String, factID: String, status: String)
+    case socialBelief(beliefID: String, messageID: String, status: String, reason: String)
+    case socialVerification(
+        beliefID: String,
+        expectedFingerprint: Int,
+        observedFingerprint: Int?,
+        result: String
+    )
+    case trust(relationID: String, before: Int, delta: Int, after: Int)
+    case socialClear(facts: Int, messages: Int, beliefs: Int, trustRelations: Int)
 
     var canonicalText: String {
         switch self {
@@ -95,6 +120,20 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
             return "movement|\(status)|\(from.x),\(from.y),\(from.z)|\(to.x),\(to.y),\(to.z)"
         case let .operation(status, detail):
             return "operation|\(status)|\(detail)"
+        case let .resourceFact(factID, observerID, resource, position, fingerprint):
+            return "resourceFact|\(factID)|\(observerID)|\(resource.rawValue)|\(position.x),\(position.y),\(position.z)|\(fingerprint)"
+        case let .socialMessage(messageID, factID, status):
+            return "socialMessage|\(messageID)|\(factID)|\(status)"
+        case let .socialBelief(beliefID, messageID, status, reason):
+            return "socialBelief|\(beliefID)|\(messageID)|\(status)|\(reason)"
+        case let .socialVerification(
+            beliefID, expectedFingerprint, observedFingerprint, result
+        ):
+            return "socialVerification|\(beliefID)|\(expectedFingerprint)|\(observedFingerprint.map(String.init) ?? "none")|\(result)"
+        case let .trust(relationID, before, delta, after):
+            return "trust|\(relationID)|\(before)|\(delta)|\(after)"
+        case let .socialClear(facts, messages, beliefs, trustRelations):
+            return "socialClear|\(facts)|\(messages)|\(beliefs)|\(trustRelations)"
         }
     }
 }
@@ -166,7 +205,14 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.movement, .movement), (.interaction, .operation),
              (.delivery, .operation), (.consumption, .operation),
              (.constructionFunding, .operation), (.constructionPlacement, .operation),
-             (.constructionCompletion, .operation), (.constructionClear, .operation):
+             (.constructionCompletion, .operation), (.constructionClear, .operation),
+             (.resourceFactGrounded, .resourceFact),
+             (.socialMessageSent, .socialMessage),
+             (.socialMessageReceived, .socialMessage),
+             (.socialBeliefChanged, .socialBelief),
+             (.socialVerification, .socialVerification),
+             (.trustChanged, .trust),
+             (.socialStateCleared, .socialClear):
             matches = true
         default:
             matches = false
@@ -232,6 +278,11 @@ struct AgentCausalLedger {
     private(set) var latestSequence: UInt64 = 0
     private(set) var droppedEventCount: UInt64 = 0
     private(set) var rollingDigest = AgentCausalEvent.digest("")
+
+    var isEnabled: Bool {
+        if case .bounded = policy { return true }
+        return false
+    }
 
     init(policy: AgentCausalLedgerPolicy) throws {
         if case let .bounded(maxEvents) = policy, maxEvents <= 0 {

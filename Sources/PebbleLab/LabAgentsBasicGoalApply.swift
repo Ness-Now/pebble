@@ -753,6 +753,10 @@ private func agentsBasicGoalApplyUrgency(for goal: LabGoalKind) -> Int {
         return 60
     case .observeOtherAgent:
         return 50
+    case .shareInformation:
+        return 55
+    case .verifySocialInformation:
+        return 58
     case .rest:
         return 70
     case .collectResource:

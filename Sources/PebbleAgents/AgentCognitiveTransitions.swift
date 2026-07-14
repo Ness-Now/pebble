@@ -123,6 +123,20 @@ public enum AgentCognitiveTransitions {
                 startedAtTick: input.tick,
                 urgency: 65
             )
+        } else if input.canVerifySocialInformation {
+            nextGoal = AgentGoal(
+                kind: .verifySocialInformation,
+                reason: "unverified grounded social belief available",
+                startedAtTick: input.tick,
+                urgency: 58
+            )
+        } else if input.canShareInformation {
+            nextGoal = AgentGoal(
+                kind: .shareInformation,
+                reason: "direct grounded fact has eligible recipient",
+                startedAtTick: input.tick,
+                urgency: 55
+            )
         } else if input.needs.curiosity >= 0.8 {
             nextGoal = AgentGoal(
                 kind: .explore,
@@ -192,6 +206,15 @@ public enum AgentCognitiveTransitions {
         case "approach_construction":
             state = "planning"
             effect = "awaiting bounded construction navigation"
+        case "share_information":
+            state = "communicating"
+            effect = "awaiting directed social delivery"
+        case "approach_information":
+            state = "planning"
+            effect = "awaiting bounded social verification navigation"
+        case "verify_information":
+            state = "verifying"
+            effect = "awaiting read-only World verification"
         case "return_home":
             state = "planning"
             effect = "awaiting bounded navigation home"

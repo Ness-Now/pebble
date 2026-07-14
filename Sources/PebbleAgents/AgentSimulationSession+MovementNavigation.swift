@@ -71,7 +71,8 @@ extension AgentSimulationSession {
                       action.name == "move_abstract"
                         || action.name == "approach_resource"
                         || action.name == "return_home"
-                        || action.name == "approach_construction",
+                        || action.name == "approach_construction"
+                        || action.name == "approach_information",
                       outcome.requestedDX == (action.dx ?? 0),
                       outcome.requestedDY == (action.dy ?? 0),
                       outcome.requestedDZ == (action.dz ?? 0),
@@ -129,7 +130,8 @@ extension AgentSimulationSession {
                 }
                 if state.lastAction?.name == "approach_resource"
                     || state.lastAction?.name == "return_home"
-                    || state.lastAction?.name == "approach_construction" {
+                    || state.lastAction?.name == "approach_construction"
+                    || state.lastAction?.name == "approach_information" {
                     guard let route = state.navigationProgress.route,
                           state.navigationProgress.status == .active,
                           state.navigationProgress.nextStep == outcome.toPosition else {
@@ -155,7 +157,8 @@ extension AgentSimulationSession {
             case .blocked:
                 if state.lastAction?.name == "approach_resource"
                     || state.lastAction?.name == "return_home"
-                    || state.lastAction?.name == "approach_construction" {
+                    || state.lastAction?.name == "approach_construction"
+                    || state.lastAction?.name == "approach_information" {
                     state.navigationProgress = AgentNavigationProgress(
                         status: state.navigationProgress.status,
                         route: state.navigationProgress.route,
@@ -438,6 +441,37 @@ extension AgentSimulationSession {
                 )
                 return
             }
+        case .verifySocialInformation:
+            guard socialEnabled,
+                  let request = socialVerificationRequest(for: state.id) else {
+                releaseReservation(for: state)
+                state.navigationProgress = AgentNavigationProgress(
+                    lastInvalidation: .targetMissing
+                )
+                return
+            }
+            releaseReservation(for: state)
+            purpose = .socialVerification
+            targetPosition = boundedSocialTarget(
+                state: state,
+                destination: request.position,
+                observation: observation
+            )
+            targetResource = request.resource
+            goalMode = targetPosition == request.position ? .cardinalAdjacent : .exact
+            if manhattanDistance(state.position, request.position) <= 1 {
+                state.navigationProgress = AgentNavigationProgress(
+                    status: .arrived,
+                    route: state.navigationProgress.route,
+                    routeIndex: state.navigationProgress.route.map {
+                        max(0, $0.positions.count - 1)
+                    } ?? 0,
+                    replanCount: state.navigationProgress.replanCount,
+                    lastPlanTick: state.navigationProgress.lastPlanTick,
+                    lastInvalidation: state.navigationProgress.lastInvalidation
+                )
+                return
+            }
         default:
             releaseReservation(for: state)
             if state.navigationProgress.route != nil {
@@ -599,6 +633,35 @@ extension AgentSimulationSession {
             current: state.position,
             destination: state.homePosition
         ) ? target : state.homePosition
+    }
+
+    func boundedSocialTarget(
+        state: AgentSessionAgentState,
+        destination: AgentPosition,
+        observation: AgentNavigationObservation?
+    ) -> AgentPosition {
+        if state.navigationProgress.status == .active,
+           let route = state.navigationProgress.route,
+           route.purpose == .socialVerification,
+           observation?.target == route.target {
+            return route.target
+        }
+        guard AgentBoundedTravel.requiresWaypoint(
+            from: state.position,
+            to: destination
+        ), let target = observation?.target else {
+            return destination
+        }
+        let desired = AgentBoundedTravel.desiredWaypoint(
+            from: state.position,
+            toward: destination
+        )
+        return AgentBoundedTravel.permitsNormalizedWaypoint(
+            target,
+            desiredWaypoint: desired,
+            current: state.position,
+            destination: destination
+        ) ? target : destination
     }
 
     func reservation(for state: AgentSessionAgentState) -> AgentResourceReservation? {

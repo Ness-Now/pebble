@@ -68,6 +68,7 @@ public enum AgentSessionError: Error, Equatable {
     case constructionCompletionInvalid(String)
     case constructionClearInvalid(String)
     case constructionEventLimitReached
+    case social(AgentSocialError)
 }
 
 public struct AgentSessionConfiguration {
@@ -83,6 +84,7 @@ public struct AgentSessionConfiguration {
     public let deliveryQuota: Int
     public let campStockCapacity: Int
     public let survivalConfiguration: AgentSurvivalConfiguration
+    public let socialConfiguration: AgentSocialConfiguration
 
     public init(
         seed: UInt32,
@@ -96,7 +98,8 @@ public struct AgentSessionConfiguration {
         reservationLifetimeTicks: Int = 4,
         deliveryQuota: Int = 2,
         campStockCapacity: Int = 64,
-        survivalConfiguration: AgentSurvivalConfiguration = .live
+        survivalConfiguration: AgentSurvivalConfiguration = .live,
+        socialConfiguration: AgentSocialConfiguration = .live
     ) throws {
         guard nearbyRadius >= 0 else {
             throw AgentSessionError.invalidNearbyRadius(nearbyRadius)
@@ -137,6 +140,7 @@ public struct AgentSessionConfiguration {
         self.deliveryQuota = deliveryQuota
         self.campStockCapacity = campStockCapacity
         self.survivalConfiguration = survivalConfiguration
+        self.socialConfiguration = socialConfiguration
     }
 }
 
@@ -341,6 +345,7 @@ public struct AgentPerceptionInput {
     public let externalMemoryEntries: [AgentMemoryEntry]
     public let worldObservation: AgentWorldObservation?
     public let resourceObservations: [AgentResourceObservation]
+    public let socialResourceObservations: [AgentResourceObservation]
     public let navigationObservation: AgentNavigationObservation?
 
     public init(
@@ -349,6 +354,7 @@ public struct AgentPerceptionInput {
         externalMemoryEntries: [AgentMemoryEntry] = [],
         worldObservation: AgentWorldObservation? = nil,
         resourceObservations: [AgentResourceObservation] = [],
+        socialResourceObservations: [AgentResourceObservation] = [],
         navigationObservation: AgentNavigationObservation? = nil
     ) {
         self.agentId = agentId
@@ -356,6 +362,7 @@ public struct AgentPerceptionInput {
         self.externalMemoryEntries = externalMemoryEntries
         self.worldObservation = worldObservation
         self.resourceObservations = resourceObservations
+        self.socialResourceObservations = socialResourceObservations
         self.navigationObservation = navigationObservation
     }
 }

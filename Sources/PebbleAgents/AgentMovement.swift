@@ -97,7 +97,8 @@ public enum AgentMovementCoordinator {
               action.name == "move_abstract"
                 || action.name == "approach_resource"
                 || action.name == "return_home"
-                || action.name == "approach_construction" else {
+                || action.name == "approach_construction"
+                || action.name == "approach_information" else {
             return stationary(
                 agent: agent,
                 tick: tick,

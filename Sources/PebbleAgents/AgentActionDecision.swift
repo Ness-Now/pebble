@@ -18,6 +18,8 @@ public enum AgentGoalKind: String, Codable, Equatable {
     case deliverResources
     case satisfyHunger
     case buildShelter
+    case shareInformation
+    case verifySocialInformation
     case explore
     case observeOtherAgent
 }
@@ -80,6 +82,8 @@ public struct AgentActionDecisionInput {
     public let survivalEnabled: Bool
     public let hasFoodRaw: Bool
     public let constructionProject: AgentConstructionProject?
+    public let socialVerificationTarget: AgentPosition?
+    public let socialVerificationResource: AgentResourceKind?
 
     public init(
         agentId: String,
@@ -93,7 +97,9 @@ public struct AgentActionDecisionInput {
         resourceReservation: AgentResourceReservation? = nil,
         survivalEnabled: Bool = false,
         hasFoodRaw: Bool = false,
-        constructionProject: AgentConstructionProject? = nil
+        constructionProject: AgentConstructionProject? = nil,
+        socialVerificationTarget: AgentPosition? = nil,
+        socialVerificationResource: AgentResourceKind? = nil
     ) {
         self.agentId = agentId
         self.tick = tick
@@ -107,6 +113,8 @@ public struct AgentActionDecisionInput {
         self.survivalEnabled = survivalEnabled
         self.hasFoodRaw = hasFoodRaw
         self.constructionProject = constructionProject
+        self.socialVerificationTarget = socialVerificationTarget
+        self.socialVerificationResource = socialVerificationResource
     }
 }
 
@@ -170,6 +178,54 @@ public enum AgentActionDecider {
             return returnHomeAction(input, goalName: "deliverResources")
         case .buildShelter:
             return constructionAction(input)
+        case .shareInformation:
+            return AgentAction(
+                name: "share_information",
+                reason: "goal shareInformation: directed grounded fact",
+                tick: input.tick
+            )
+        case .verifySocialInformation:
+            guard let target = input.socialVerificationTarget else {
+                return AgentAction(
+                    name: "wait",
+                    reason: "goal verifySocialInformation: belief unavailable",
+                    tick: input.tick
+                )
+            }
+            if abs(target.x - input.position.x) + abs(target.y - input.position.y)
+                + abs(target.z - input.position.z) <= 1 {
+                return AgentAction(
+                    name: "verify_information",
+                    reason: "goal verifySocialInformation: read exact World cell",
+                    tick: input.tick,
+                    target: target,
+                    resource: input.socialVerificationResource
+                )
+            }
+            if let next = input.navigationProgress.nextStep {
+                let dx = next.x - input.position.x
+                let dy = next.y - input.position.y
+                let dz = next.z - input.position.z
+                if abs(dx) + abs(dz) == 1, (-1...1).contains(dy) {
+                    return AgentAction(
+                        name: "approach_information",
+                        reason: "goal verifySocialInformation: follow bounded social route",
+                        tick: input.tick,
+                        dx: dx,
+                        dy: dy,
+                        dz: dz,
+                        target: target,
+                        resource: input.socialVerificationResource
+                    )
+                }
+            }
+            return AgentAction(
+                name: "approach_information",
+                reason: "goal verifySocialInformation: awaiting bounded social route",
+                tick: input.tick,
+                target: target,
+                resource: input.socialVerificationResource
+            )
         case .observeOtherAgent:
             return AgentAction(
                 name: "observe_area",
