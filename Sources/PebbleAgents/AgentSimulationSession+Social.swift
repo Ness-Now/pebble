@@ -22,8 +22,10 @@ extension AgentSimulationSession {
             throw AgentSessionError.social(.causalLedgerRequired)
         }
         guard socialEnabled != enabled else { return }
+        let physicalWasEnabled = physicalEnabled
         socialEnabled = enabled
         if !enabled {
+            disablePhysicalChannelState()
             activeSocialVerificationByAgentId.removeAll()
             for id in sortedIds {
                 guard var state = statesById[id] else { continue }
@@ -43,6 +45,9 @@ extension AgentSimulationSession {
                 }
                 statesById[id] = state
             }
+        }
+        if physicalWasEnabled && !enabled {
+            recordFeatureToggle(name: "physical", enabled: false)
         }
         recordFeatureToggle(name: "social", enabled: enabled)
     }
@@ -319,6 +324,11 @@ extension AgentSimulationSession {
                                 && $0.status == .unverified
                           }),
                           let recipientID = AgentID(rawValue: recipientId) else { return nil }
+                    guard !hasPendingPhysicalSignal(
+                        senderID: fact.observerID,
+                        recipientID: recipientID,
+                        factID: fact.factID
+                    ) else { return nil }
                     return (recipientID, distance)
                 }.sorted {
                     if $0.1 != $1.1 { return $0.1 < $1.1 }
@@ -443,7 +453,11 @@ extension AgentSimulationSession {
         for senderId in plan.shareIntentsByAgentId.keys.sorted() {
             guard let intent = plan.shareIntentsByAgentId[senderId],
                   resultByID[senderId]?.action.name == "share_information" else { continue }
-            try deliverSocialMessage(intent)
+            if physicalEnabled {
+                try emitPhysicalSignal(intent)
+            } else {
+                _ = try deliverSocialMessage(intent)
+            }
         }
     }
 
@@ -526,7 +540,7 @@ extension AgentSimulationSession {
         return result
     }
 
-    private mutating func deliverSocialMessage(_ intent: AgentSocialShareIntent) throws {
+    func canDeliverSocialMessage(_ intent: AgentSocialShareIntent) -> Bool {
         guard let fact = socialFacts.first(where: { $0.factID == intent.factID }),
               fact.observerID == intent.senderID,
               !fact.isExpired(at: tick),
@@ -544,17 +558,30 @@ extension AgentSimulationSession {
                   $0.senderID == intent.senderID && $0.recipientID == intent.recipientID
                     && $0.fact.factID == intent.factID
                     && $0.fact.directObservationEventID == fact.directObservationEventID
-              }) else { return }
+              }) else { return false }
+        return true
+    }
+
+    @discardableResult
+    mutating func deliverSocialMessage(
+        _ intent: AgentSocialShareIntent,
+        physicalCause: AgentCausalEventID? = nil
+    ) throws -> Bool {
+        guard canDeliverSocialMessage(intent),
+              let fact = socialFacts.first(where: { $0.factID == intent.factID }) else {
+            return false
+        }
         let messageID = AgentSocialMessageID(rawValue: "message-" + AgentSocialDigest.make(
             "\(intent.senderID.rawValue)|\(intent.recipientID.rawValue)|\(fact.factID.rawValue)|\(tick)"
         ))!
         let beliefID = AgentSocialBeliefID(rawValue: "belief-" + AgentSocialDigest.make(
             "\(intent.recipientID.rawValue)|\(messageID.rawValue)"
         ))!
-        let sendCauses = [
+        let directCauses = [
             fact.directObservationEventID,
             lastDecisionEventByAgentID[intent.senderID],
         ].compactMap { $0 }
+        let sendCauses = physicalCause.map { [$0] } ?? directCauses
         let sent = try requiredSocialEvent(
             kind: .socialMessageSent,
             actorID: intent.senderID,
@@ -626,6 +653,7 @@ extension AgentSimulationSession {
         lastSocialShareTickByAgentId[intent.senderID.rawValue] = tick
         enforceMessageBound()
         enforceBeliefBound(for: intent.recipientID)
+        return true
     }
 
     private mutating func applyTrustChange(
@@ -699,7 +727,7 @@ extension AgentSimulationSession {
         return event
     }
 
-    private func isSociallyUrgent(_ state: AgentSessionAgentState) -> Bool {
+    func isSociallyUrgent(_ state: AgentSessionAgentState) -> Bool {
         if state.health <= 25 || state.fear >= 70 || state.needs.safety < 0.5 { return true }
         if survivalEnabled {
             if state.needs.hunger >= configuration.survivalConfiguration.hungryThreshold
@@ -710,7 +738,7 @@ extension AgentSimulationSession {
         return false
     }
 
-    private func hasMaterialTransaction(_ state: AgentSessionAgentState) -> Bool {
+    func hasMaterialTransaction(_ state: AgentSessionAgentState) -> Bool {
         switch state.currentGoal.kind {
         case .satisfyHunger, .seekSafety, .rest, .deliverResources, .buildShelter:
             return true

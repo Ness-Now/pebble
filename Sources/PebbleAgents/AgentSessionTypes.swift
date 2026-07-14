@@ -69,6 +69,7 @@ public enum AgentSessionError: Error, Equatable {
     case constructionClearInvalid(String)
     case constructionEventLimitReached
     case social(AgentSocialError)
+    case physical(AgentPhysicalChannelError)
 }
 
 public struct AgentSessionConfiguration {
@@ -85,6 +86,7 @@ public struct AgentSessionConfiguration {
     public let campStockCapacity: Int
     public let survivalConfiguration: AgentSurvivalConfiguration
     public let socialConfiguration: AgentSocialConfiguration
+    public let physicalChannelConfiguration: AgentPhysicalChannelConfiguration
 
     public init(
         seed: UInt32,
@@ -99,7 +101,8 @@ public struct AgentSessionConfiguration {
         deliveryQuota: Int = 2,
         campStockCapacity: Int = 64,
         survivalConfiguration: AgentSurvivalConfiguration = .live,
-        socialConfiguration: AgentSocialConfiguration = .live
+        socialConfiguration: AgentSocialConfiguration = .live,
+        physicalChannelConfiguration: AgentPhysicalChannelConfiguration = .live
     ) throws {
         guard nearbyRadius >= 0 else {
             throw AgentSessionError.invalidNearbyRadius(nearbyRadius)
@@ -141,6 +144,7 @@ public struct AgentSessionConfiguration {
         self.campStockCapacity = campStockCapacity
         self.survivalConfiguration = survivalConfiguration
         self.socialConfiguration = socialConfiguration
+        self.physicalChannelConfiguration = physicalChannelConfiguration
     }
 }
 

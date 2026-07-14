@@ -39,6 +39,11 @@ public struct AgentSimulationSession {
     var activeSocialVerificationByAgentId: [String: AgentSocialBeliefID]
     var lastSocialShareTickByAgentId: [String: Int]
     var socialEvictionCounts: AgentSocialEvictionCounts
+    public internal(set) var physicalEnabled: Bool
+    var physicalSignals: [AgentPhysicalSignal]
+    var physicalPerceptions: [AgentPhysicalPerception]
+    var physicalPresentationRequests: [AgentPhysicalPresentationRequest]
+    var physicalEvictionCounts: AgentPhysicalEvictionCounts
 
     public init(
         configuration: AgentSessionConfiguration,
@@ -95,6 +100,11 @@ public struct AgentSimulationSession {
         activeSocialVerificationByAgentId = [:]
         lastSocialShareTickByAgentId = [:]
         socialEvictionCounts = AgentSocialEvictionCounts()
+        physicalEnabled = false
+        physicalSignals = []
+        physicalPerceptions = []
+        physicalPresentationRequests = []
+        physicalEvictionCounts = AgentPhysicalEvictionCounts()
         try recordCausalEvent(
             kind: .sessionLifecycle,
             origin: .lifecycle,
@@ -230,9 +240,12 @@ public struct AgentSimulationSession {
     }
 
     public mutating func advanceTick(
-        perceptions: [AgentPerceptionInput] = []
+        perceptions: [AgentPerceptionInput] = [],
+        physicalObservations: [AgentPhysicalSignalObservation] = []
     ) throws -> AgentSessionTickResult {
-        try prevalidateCausalAppend(count: sortedIds.count * (socialEnabled ? 20 : 3) + 1)
+        try prevalidateCausalAppend(
+            count: sortedIds.count * (physicalEnabled ? 30 : (socialEnabled ? 20 : 3)) + 1
+        )
         var perceptionsById: [String: AgentPerceptionInput] = [:]
         var resourceObservationsById: [String: [AgentResourceObservation]] = [:]
         var socialResourceObservationsById: [String: [AgentResourceObservation]] = [:]
@@ -609,6 +622,7 @@ public struct AgentSimulationSession {
                 lastDecisionEventByAgentID[agentID] = eventID
             }
         }
+        try applyPhysicalObservations(physicalObservations)
         try applySocialTickPlan(socialPlan, results: results)
         try recordCausalEvent(
             kind: .tickCompleted,

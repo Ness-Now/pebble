@@ -69,6 +69,11 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case socialVerification
     case trustChanged
     case socialStateCleared
+    case physicalSignalEmitted
+    case physicalSignalPerceived
+    case physicalSignalDecoded
+    case physicalSignalExpired
+    case physicalStateCleared
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -79,6 +84,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case controllerCommand
     case lifecycle
     case socialTransition
+    case physicalTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -105,6 +111,26 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
     )
     case trust(relationID: String, before: Int, delta: Int, after: Int)
     case socialClear(facts: Int, messages: Int, beliefs: Int, trustRelations: Int)
+    case physicalSignal(
+        signalID: String,
+        senderID: String,
+        recipientID: String,
+        factID: String,
+        source: AgentPosition,
+        pointed: AgentPosition,
+        modalities: String
+    )
+    case physicalPerception(
+        signalID: String,
+        observerID: String,
+        intended: Bool,
+        soundClarity: Int,
+        gestureClarity: Int,
+        occlusions: Int,
+        lineOfSight: Bool,
+        outcome: String
+    )
+    case physicalClear(signals: Int, perceptions: Int, presentations: Int)
 
     var canonicalText: String {
         switch self {
@@ -134,6 +160,17 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
             return "trust|\(relationID)|\(before)|\(delta)|\(after)"
         case let .socialClear(facts, messages, beliefs, trustRelations):
             return "socialClear|\(facts)|\(messages)|\(beliefs)|\(trustRelations)"
+        case let .physicalSignal(
+            signalID, senderID, recipientID, factID, source, pointed, modalities
+        ):
+            return "physicalSignal|\(signalID)|\(senderID)|\(recipientID)|\(factID)|\(source.x),\(source.y),\(source.z)|\(pointed.x),\(pointed.y),\(pointed.z)|\(modalities)"
+        case let .physicalPerception(
+            signalID, observerID, intended, soundClarity, gestureClarity,
+            occlusions, lineOfSight, outcome
+        ):
+            return "physicalPerception|\(signalID)|\(observerID)|\(intended ? 1 : 0)|\(soundClarity)|\(gestureClarity)|\(occlusions)|\(lineOfSight ? 1 : 0)|\(outcome)"
+        case let .physicalClear(signals, perceptions, presentations):
+            return "physicalClear|\(signals)|\(perceptions)|\(presentations)"
         }
     }
 }
@@ -212,7 +249,12 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.socialBeliefChanged, .socialBelief),
              (.socialVerification, .socialVerification),
              (.trustChanged, .trust),
-             (.socialStateCleared, .socialClear):
+             (.socialStateCleared, .socialClear),
+             (.physicalSignalEmitted, .physicalSignal),
+             (.physicalSignalPerceived, .physicalPerception),
+             (.physicalSignalDecoded, .physicalPerception),
+             (.physicalSignalExpired, .physicalSignal),
+             (.physicalStateCleared, .physicalClear):
             matches = true
         default:
             matches = false

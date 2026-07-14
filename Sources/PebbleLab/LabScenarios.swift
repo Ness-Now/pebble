@@ -33,6 +33,7 @@ let supportedScenarios = ["empty", "chunk_smoke", "agent_smoke", "agents_basic",
 func validateScenario(_ scenario: String) {
     guard scenario == "causal_ledger_smoke"
         || scenario == "social_information_trust_smoke"
+        || scenario == "physical_channel_smoke"
         || supportedScenarios.contains(scenario) else {
         fail("unsupported scenario: \(scenario). Currently supported: \(supportedScenarios.joined(separator: ", "))")
     }

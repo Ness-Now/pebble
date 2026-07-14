@@ -10,6 +10,9 @@ if options.scenario == "causal_ledger_smoke" {
 if options.scenario == "social_information_trust_smoke" {
     runSocialInformationTrustSmoke(options)
 }
+if options.scenario == "physical_channel_smoke" {
+    runPhysicalChannelSmoke(options)
+}
 
 let isMultiAgentMovementFixtureScenario = options.scenario
     == "multi_agent_movement_fixture_smoke"
