@@ -71,9 +71,13 @@ gestes et perception imparfaite sont acquis dans un canal local borné, sans
 langage libre ni forwarding. `CIV-05` est terminé et validé localement : une
 tâche de livraison de matériaux peut être offerte, acceptée et accomplie par
 un helper distinct du builder, avec contribution matérielle conservée et
-fiabilité dirigée, sans profession, économie du travail ni persistance. Après
-revue, la prochaine étape canonique est
-`CIV-06 — Persistent Agent State, Checkpoints and Causal Replay V1`.
+fiabilité dirigée, sans profession ni économie du travail. `CIV-06` est
+terminé et validé localement : les checkpoints agents versionnés et bornés,
+le chargement restart-safe et le replay causal pur du kernel sont acquis sous
+gate explicite. Cette verticale n'est ni un snapshot complet du World, ni un
+autosave, ni un framework général de migration de schéma. Après revue, la
+prochaine étape canonique est
+`CIV-07 — Population Registry and Bounded Migration V1`.
 
 ## Grands programmes ultérieurs
 

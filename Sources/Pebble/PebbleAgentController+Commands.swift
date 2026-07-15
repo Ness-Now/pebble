@@ -8,7 +8,7 @@ extension PebbleAgentController {
         switch command {
         case "help":
             guard arguments.count == 1 else { return failure("Usage: /lab help") }
-            return success("/lab lifecycle: start stop clear | time control: pause resume step speed <1|2|4|8> reset | inspection: status focus <agentId|next> next follow <agentId|focus|next|off> overlay <off|compact|full> causality <status|tail <1...20>> | movement: movement <on|off> | interaction: interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off> | economy: economy <setup|auto on|auto off|status|clear> | survival: survival <on|off|status> | natural: natural <on|off|status|scan> | build: build <setup|auto on|auto off|status|clear> | social: social <on|off|status|clear> | physical: physical <on|off|status|clear> | cooperation: cooperation <on|off|status|clear> | demo: demo [start|stop|status]")
+            return success("/lab lifecycle: start stop clear | time control: pause resume step speed <1|2|4|8> reset | inspection: status focus <agentId|next> next follow <agentId|focus|next|off> overlay <off|compact|full> causality <status|tail <1...20>> | persistence: checkpoint <status|list|save|load|delete> replay <status|start|stop|verify> | movement: movement <on|off> | interaction: interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off> | economy: economy <setup|auto on|auto off|status|clear> | survival: survival <on|off|status> | natural: natural <on|off|status|scan> | build: build <setup|auto on|auto off|status|clear> | social: social <on|off|status|clear> | physical: physical <on|off|status|clear> | cooperation: cooperation <on|off|status|clear> | demo: demo [start|stop|status]")
         case "demo":
             return handleDemo(Array(arguments.dropFirst()), world: world, player: player)
         case "start":
@@ -86,6 +86,10 @@ extension PebbleAgentController {
             return handleBuild(Array(arguments.dropFirst()), world: world, player: player)
         case "causality":
             return handleCausality(Array(arguments.dropFirst()))
+        case "checkpoint":
+            return handleCheckpoint(Array(arguments.dropFirst()), world: world)
+        case "replay":
+            return handleReplay(Array(arguments.dropFirst()))
         case "social":
             return handleSocial(Array(arguments.dropFirst()))
         case "physical":

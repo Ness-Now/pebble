@@ -58,6 +58,11 @@ final class PebbleAgentController {
     var lastSurvivalReason = "none"
     var lastNaturalReason = "none"
     var lastConstructionReason = "none"
+    var persistenceWorldID: String?
+    var persistenceDimension = 0
+    var replayRecorder: AgentReplayRecorder?
+    var replayBaseCheckpointName: AgentCheckpointName?
+    var isAdvancingSession = false
 
     let environment = ProcessInfo.processInfo.environment
     var featureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS"] == "1" }
@@ -72,6 +77,9 @@ final class PebbleAgentController {
     var socialFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_SOCIAL"] == "1" }
     var physicalFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_PHYSICAL"] == "1" }
     var cooperationFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_COOPERATION"] == "1" }
+    var persistenceFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_PERSISTENCE"] == "1"
+    }
     var physicalAudioAvailable: () -> Bool = { false }
     var traceEvery: Int {
         guard let raw = environment["PEBBLELAB_APP_AGENTS_TRACE_EVERY"],
@@ -79,7 +87,9 @@ final class PebbleAgentController {
         return value
     }
 
-    func update(world: World?, player: Player?) {
+    func update(world: World?, player: Player?, worldID: String? = nil, dimension: Int = 0) {
+        persistenceWorldID = worldID
+        persistenceDimension = dimension
         guard let world else {
             if session != nil { stop(reason: "world unavailable") }
             return

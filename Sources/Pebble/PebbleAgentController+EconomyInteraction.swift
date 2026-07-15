@@ -51,7 +51,15 @@ extension PebbleAgentController {
                 return failure(usage)
             }
             if arguments[1].lowercased() == "off" {
-                session.setEconomyEnabled(false)
+                do {
+                    if try applyCommandMutationIfRecording(
+                        .setEconomyEnabled(false), session: &session
+                    ) == nil {
+                        session.setEconomyEnabled(false)
+                    }
+                } catch {
+                    return failure("Economy recording failed: \(error)")
+                }
                 self.session = session
                 economyAutoEnabled = false
                 lastEconomyReason = "disabled by command"
@@ -76,7 +84,15 @@ extension PebbleAgentController {
             guard let actorId else {
                 return failure("Economy auto requires natural mode with a focused actor or three fixtures focused on their actor.")
             }
-            session.setEconomyEnabled(true)
+            do {
+                if try applyCommandMutationIfRecording(
+                    .setEconomyEnabled(true), session: &session
+                ) == nil {
+                    session.setEconomyEnabled(true)
+                }
+            } catch {
+                return failure("Economy recording failed: \(error)")
+            }
             self.session = session
             economyAutoEnabled = true
             autoInteractionEnabled = false
@@ -90,7 +106,15 @@ extension PebbleAgentController {
             guard interactionExecutor.cleanup(world: world) else {
                 return failure("Economy cleanup failed; fixture ledger retained.")
             }
-            session.setEconomyEnabled(false)
+            do {
+                if try applyCommandMutationIfRecording(
+                    .setEconomyEnabled(false), session: &session
+                ) == nil {
+                    session.setEconomyEnabled(false)
+                }
+            } catch {
+                return failure("Economy recording failed: \(error)")
+            }
             self.session = session
             economyAutoEnabled = false
             lastEconomyReason = "fixtures cleared"
@@ -289,15 +313,18 @@ extension PebbleAgentController {
                 trace("interaction setup mode=\(mode) distance=\(distance) actor=\(actorId) target=\(positionText(target)) block=\(PebbleAgentInteractionExecutor.resourceBlockName) corridorObserved=\(boundary.corridorObservedBlockCount) corridorChanged=\(boundary.corridorChangedAfterSetup) fixtureSetupMutations=\(boundary.setupMutatedBlockCount)")
                 return success("Interaction sandbox \(mode) distance \(distance) ready for \(actorId) at \(positionText(target)); block=\(PebbleAgentInteractionExecutor.resourceBlockName).")
             }
+            var recorder = replayRecorder
             let outcome = try performHarvestTransaction(
                 world: world,
                 player: player,
                 actorId: actorId,
                 expectedAction: nil,
                 interactionPrefix: "g1",
-                session: &session
+                session: &session,
+                recorder: &recorder
             )
             self.session = session
+            replayRecorder = recorder
             let after = session.snapshot().agents.first { $0.id == actorId }!
             trace("interaction harvest actor=\(actorId) target=\(positionText(outcome.target)) inventory=\(after.resourceInventory.totalCount)/\(after.resourceInventory.capacity) memory=resource_harvested outcome=succeeded")
             return success("\(actorId) harvested sandboxResource; inventory \(after.resourceInventory.totalCount)/\(after.resourceInventory.capacity).")
@@ -316,7 +343,11 @@ extension PebbleAgentController {
                 reason: "inventory capacity reached"
             )
             do {
-                try session.applyInteractionOutcome(outcome)
+                if try applyCommandMutationIfRecording(
+                    .interactionOutcome(outcome), session: &session
+                ) == nil {
+                    try session.applyInteractionOutcome(outcome)
+                }
                 self.session = session
             } catch {
                 return failure("Inventory full; failed to record outcome: \(error)")
@@ -334,7 +365,8 @@ extension PebbleAgentController {
         actorId: String,
         expectedAction: AgentAction?,
         interactionPrefix: String,
-        session: inout AgentSimulationSession
+        session: inout AgentSimulationSession,
+        recorder: inout AgentReplayRecorder?
     ) throws -> AgentInteractionOutcome {
         guard let actor = session.snapshot().agents.first(where: { $0.id == actorId }) else {
             throw ControllerError.interactionBoundary("missing interaction actor")
@@ -350,7 +382,8 @@ extension PebbleAgentController {
                 actor: actor,
                 identity: naturalTarget.identity,
                 interactionPrefix: interactionPrefix,
-                session: &session
+                session: &session,
+                recorder: &recorder
             )
         }
         let availableFixtures = interactionExecutor.economyState().fixtures.filter {
@@ -395,6 +428,8 @@ extension PebbleAgentController {
             inventoryDelta: AgentInventoryDelta(resource: resource, quantity: 1),
             reason: "sandbox resource harvested"
         )
+        var recordedCandidate = session
+        var candidateRecorder = recorder
         try interactionExecutor.harvest(
             world: world,
             actor: actor,
@@ -405,13 +440,24 @@ extension PebbleAgentController {
             expectedResource: resource,
             prevalidate: { try session.prevalidateInteraction(intent) },
             applyAndVerify: {
-                try session.applyInteractionOutcome(outcome)
+                let published: AgentSimulationSession
+                if candidateRecorder != nil {
+                    _ = try applyRecordedOperationIfActive(
+                        .interactionOutcome(outcome),
+                        session: &recordedCandidate,
+                        recorder: &candidateRecorder
+                    )
+                    published = recordedCandidate
+                } else {
+                    try session.applyInteractionOutcome(outcome)
+                    published = session
+                }
                 if environment["PEBBLELAB_APP_AGENTS_INTERACT_FAIL_AFTER_WORLD"] == "1" {
                     throw ControllerError.interactionBoundary("injected post-World failure")
                 }
-                let after = session.snapshot().agents.first { $0.id == actorId }!
+                let after = published.snapshot().agents.first { $0.id == actorId }!
                 let expectedMemoryCount: Int
-                switch session.configuration.memoryPolicy {
+                switch published.configuration.memoryPolicy {
                 case .legacyUnbounded:
                     expectedMemoryCount = before.memoryCount + 1
                 case let .bounded(maxEntries):
@@ -426,6 +472,10 @@ extension PebbleAgentController {
                 }
             }
         )
+        if candidateRecorder != nil {
+            session = recordedCandidate
+            recorder = candidateRecorder
+        }
         return outcome
     }
 
@@ -435,7 +485,8 @@ extension PebbleAgentController {
         actor: AgentSnapshot,
         identity: AgentResourceIdentity,
         interactionPrefix: String,
-        session: inout AgentSimulationSession
+        session: inout AgentSimulationSession,
+        recorder: inout AgentReplayRecorder?
     ) throws -> AgentInteractionOutcome {
         let fingerprint = identity.expectedBlockFingerprint ?? -1
         let interactionId = "\(interactionPrefix)-natural:\(actor.id):\(session.tick):\(positionText(identity.position)):\(fingerprint)"
@@ -471,6 +522,7 @@ extension PebbleAgentController {
         let interactionGate = interactionFeatureEnabled
         let injectFailure = environment["PEBBLELAB_APP_AGENTS_NATURAL_FAIL_AFTER_WORLD"] == "1"
         let memoryPolicy = session.configuration.memoryPolicy
+        var candidateRecorder = recorder
         try naturalResourceExecutor.harvest(
             world: world,
             actor: actor,
@@ -484,7 +536,13 @@ extension PebbleAgentController {
             },
             publishAndVerify: {
                 var candidate = session
-                try candidate.applyInteractionOutcome(outcome)
+                if try applyRecordedOperationIfActive(
+                    .interactionOutcome(outcome),
+                    session: &candidate,
+                    recorder: &candidateRecorder
+                ) == nil {
+                    try candidate.applyInteractionOutcome(outcome)
+                }
                 if injectFailure {
                     throw ControllerError.interactionBoundary("injected natural publication failure")
                 }
@@ -508,6 +566,7 @@ extension PebbleAgentController {
                 session = candidate
             }
         )
+        recorder = candidateRecorder
         trace("natural harvest actor=\(actor.id) target=\(positionText(identity.position)) resource=\(identity.resource.rawValue) source=naturalWorld fingerprint=\(fingerprint) blockAfter=\(world.getBlock(identity.position.x, identity.position.y, identity.position.z)) cleanupRestore=0 inventoryCredit=1 memory=resource_harvested")
         return outcome
     }

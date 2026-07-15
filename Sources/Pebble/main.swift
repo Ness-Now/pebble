@@ -394,6 +394,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         return Array(value.components(separatedBy: "|").dropFirst())
     }()
     private var pendingCmdDelay = 0
+    // Persistence proof hook: run command batches at explicit World ticks so a
+    // restart and its uninterrupted control cannot inherit renderer-frame timing.
+    // The normal PEBBLE_CMD frame delay remains unchanged when this is absent.
+    private var pendingCmdWorldTick: Int? = {
+        guard ProcessInfo.processInfo.environment["PEBBLELAB_APP_AGENTS_PERSISTENCE"] == "1",
+              let value = ProcessInfo.processInfo.environment["PEBBLE_CMD_WORLD_TICK"] else {
+            return nil
+        }
+        return Int(value)
+    }()
     // test hook: PEBBLE_SHOT="/tmp/x.png@300" captures after all command batches.
     // A `|`-separated list captures immediately after matching PEBBLE_CMD batches;
     // use `-` to skip a batch. This remains a launch-only reproducibility hook.
@@ -517,6 +527,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
                 }
             } else if let rec = game.listWorlds().sorted(by: { $0.lastPlayed > $1.lastPlayed }).first {
                 game.loadWorld(rec.id)
+                if ProcessInfo.processInfo.environment["PEBBLELAB_APP_AGENTS_PERSISTENCE"] == "1",
+                   rec.name.hasPrefix("PebbleLab-Disposable-") {
+                    // The disposable-world creation hook disables random ticks;
+                    // preserve that environment across the real process restart.
+                    game.world.randomTickSpeed = 0
+                }
             } else {
                 game.createWorld(name: "New World", seedText: "", mode: GameMode.survival, difficulty: 2)
             }
@@ -656,8 +672,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         renderer.flushAtlasUploads(cmd)         // staged slice blits, GPU-ordered
 
         if let cmds = pendingCmds, game.hasWorld(), let p = game.player {
-            pendingCmdDelay += 1
-            if pendingCmdDelay > 240 {
+            let commandBatchReady: Bool
+            if let targetTick = pendingCmdWorldTick {
+                precondition(
+                    game.world.time <= targetTick,
+                    "PEBBLE_CMD_WORLD_TICK missed: world=\(game.world.time) target=\(targetTick)"
+                )
+                commandBatchReady = game.world.time == targetTick
+            } else {
+                pendingCmdDelay += 1
+                commandBatchReady = pendingCmdDelay > 240
+            }
+            if commandBatchReady {
+                if let targetTick = pendingCmdWorldTick {
+                    print("[lab-live] command-batch worldTick=\(game.world.time) target=\(targetTick)")
+                }
                 if p.dead { game.respawnPlayer() }
                 for c in cmds.components(separatedBy: ";") where !c.isEmpty {
                     runCommand(game, c.trimmingCharacters(in: .whitespaces))
@@ -674,6 +703,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
                 } else {
                     pendingCmds = pendingCmdBatches.removeFirst()
                     pendingCmdDelay = 0
+                    if pendingCmdWorldTick != nil {
+                        pendingCmdWorldTick = game.world.time + 1
+                    }
                 }
             }
         }
@@ -696,8 +728,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
 
         let enc: MTLRenderCommandEncoder
         if game.hasWorld() {
-            let partial = game.frame(dtMs: dt)
-            agentController.update(world: game.world, player: game.player)
+            // Cap only the explicit persistence-proof scheduler below one
+            // simulation step so its requested World tick cannot be skipped.
+            // Once its final batch has run, freeze World age until the scripted
+            // shutdown so the saved continuation boundary is byte-reproducible.
+            let frameDelta: Double
+            if pendingCmdWorldTick == nil {
+                frameDelta = dt
+            } else if pendingCmds == nil {
+                frameDelta = 0
+            } else {
+                frameDelta = min(dt, 10)
+            }
+            let partial = game.frame(dtMs: frameDelta)
+            agentController.update(
+                world: game.world,
+                player: game.player,
+                worldID: game.worldRec?.id,
+                dimension: game.dim.rawValue
+            )
             renderer.pebbleAgentPhysicalGestures = agentController.physicalGestureMarkers()
             bot?.tick()
             booth?.tickBooth()

@@ -62,7 +62,12 @@ extension PebbleAgentController {
                 return failure("PebbleAgents movement disabled. Set PEBBLELAB_APP_AGENTS_MOVE=1 before launch.")
             }
             do {
-                try session.setBuildAutoEnabled(enabled)
+                if try applyCommandMutationIfRecording(
+                    .setBuildAutoEnabled(enabled),
+                    session: &session
+                ) == nil {
+                    try session.setBuildAutoEnabled(enabled)
+                }
                 self.session = session
                 lastConstructionReason = enabled ? "enabled by command" : "suspended by command"
                 trace("build auto=\(enabled ? "on" : "off") tick=\(session.tick) mutation=none")
@@ -84,6 +89,7 @@ extension PebbleAgentController {
                 return failure("No construction project to clear.")
             }
             var candidate = session
+            var candidateRecorder = replayRecorder
             let injectClearFailure = environment[
                 "PEBBLELAB_APP_AGENTS_BUILD_FAIL_CLEAR_AFTER_WORLD"
             ] == "1"
@@ -95,7 +101,13 @@ extension PebbleAgentController {
                         try session.prevalidateConstructionClear(projectId: project.projectId)
                     },
                     publishAndVerify: {
-                        try candidate.clearConstructionProject(projectId: project.projectId)
+                        if try applyRecordedOperationIfActive(
+                            .clearConstructionProject(projectID: project.projectId),
+                            session: &candidate,
+                            recorder: &candidateRecorder
+                        ) == nil {
+                            try candidate.clearConstructionProject(projectId: project.projectId)
+                        }
                         if injectClearFailure {
                             throw ControllerError.constructionBoundary(
                                 "injected construction clear publication failure"
@@ -110,6 +122,7 @@ extension PebbleAgentController {
                     }
                 )
                 session = candidate
+                replayRecorder = candidateRecorder
                 self.session = session
                 lastConstructionReason = "cleared and restored"
                 let restored = constructionExecutor.state.cleanupRestoredBlockCount
@@ -155,10 +168,18 @@ extension PebbleAgentController {
                 diagnostics: &siteDiagnostics
             )
             var candidate = session
-            try candidate.createConstructionProject(selection.project)
+            var candidateRecorder = replayRecorder
+            if try applyRecordedOperationIfActive(
+                .createConstructionProject(selection.project),
+                session: &candidate,
+                recorder: &candidateRecorder
+            ) == nil {
+                try candidate.createConstructionProject(selection.project)
+            }
             var executorCandidate = constructionExecutor
             try executorCandidate.begin(project: selection.project)
             session = candidate
+            replayRecorder = candidateRecorder
             constructionExecutor = executorCandidate
             self.session = session
             lastConstructionSiteDiagnostics = selection.diagnostics

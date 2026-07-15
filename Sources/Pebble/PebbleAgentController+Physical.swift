@@ -15,12 +15,20 @@ extension PebbleAgentController {
                         "PebbleAgents physical channel disabled. Set PEBBLELAB_APP_AGENTS_PHYSICAL=1 before launch."
                     )
                 }
-                try session.setPhysicalEnabled(true)
+                if try applyCommandMutationIfRecording(
+                    .setPhysicalEnabled(true), session: &session
+                ) == nil {
+                    try session.setPhysicalEnabled(true)
+                }
                 self.session = session
                 trace("physical=on tick=\(session.tick) mutation=none")
                 return success("PebbleAgents physical channel on; World and material state unchanged.")
             case "off":
-                try session.setPhysicalEnabled(false)
+                if try applyCommandMutationIfRecording(
+                    .setPhysicalEnabled(false), session: &session
+                ) == nil {
+                    try session.setPhysicalEnabled(false)
+                }
                 self.session = session
                 trace("physical=off tick=\(session.tick) mutation=none retained=1")
                 return success("PebbleAgents physical channel off; retained evidence preserved.")
@@ -30,7 +38,11 @@ extension PebbleAgentController {
                         "PebbleAgents physical channel disabled. Set PEBBLELAB_APP_AGENTS_PHYSICAL=1 before launch."
                     )
                 }
-                try session.clearPhysicalState()
+                if try applyCommandMutationIfRecording(
+                    .clearPhysicalState, session: &session
+                ) == nil {
+                    try session.clearPhysicalState()
+                }
                 self.session = session
                 trace("physical clear tick=\(session.tick) mutation=none")
                 return success("PebbleAgents physical state cleared; World and social state preserved.")
@@ -73,8 +85,22 @@ extension PebbleAgentController {
         )
     }
 
-    func presentPhysicalSignals(world: World, session: inout AgentSimulationSession) {
-        for request in session.claimPhysicalPresentationRequests() {
+    func presentPhysicalSignals(
+        world: World,
+        session: inout AgentSimulationSession,
+        recorder: inout AgentReplayRecorder?
+    ) throws {
+        let requests: [AgentPhysicalPresentationRequest]
+        if let result = try applyRecordedOperationIfActive(
+            .claimPhysicalPresentationRequests,
+            session: &session,
+            recorder: &recorder
+        ) {
+            requests = result.claimedPhysicalPresentations
+        } else {
+            requests = session.claimPhysicalPresentationRequests()
+        }
+        for request in requests {
             world.hooks.playSound(
                 "note.flute.12",
                 Double(request.sourcePosition.x) + 0.5,

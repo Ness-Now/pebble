@@ -86,6 +86,8 @@ extension PebbleAgentController {
             lastNaturalReason = "none"
             lastConstructionReason = "none"
             lastConstructionSiteDiagnostics = PebbleAgentConstructionSiteDiagnostics()
+            replayRecorder = nil
+            replayBaseCheckpointName = nil
             observedGoalKinds = [AgentGoalKind.idle.rawValue]
             resetRunCounters()
             try createProbes(in: world)
@@ -255,6 +257,8 @@ extension PebbleAgentController {
         lastNaturalReason = "none"
         lastConstructionReason = "none"
         lastConstructionSiteDiagnostics = PebbleAgentConstructionSiteDiagnostics()
+        replayRecorder = nil
+        replayBaseCheckpointName = nil
         lastError = nil
         trace("stop probesRemoved=\(removed) reason=\(reason)")
         return removed

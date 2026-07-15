@@ -130,17 +130,23 @@ public struct AgentReplayApplicationResult {
     public let tick: Int
     public let causalSequence: UInt64
     public let causalDigest: String
+    public let tickResult: AgentSessionTickResult?
+    public let socialVerificationResult: AgentSocialVerificationResult?
     public let claimedPhysicalPresentations: [AgentPhysicalPresentationRequest]
 
     init(
         tick: Int,
         causalSequence: UInt64,
         causalDigest: String,
+        tickResult: AgentSessionTickResult? = nil,
+        socialVerificationResult: AgentSocialVerificationResult? = nil,
         claimedPhysicalPresentations: [AgentPhysicalPresentationRequest] = []
     ) {
         self.tick = tick
         self.causalSequence = causalSequence
         self.causalDigest = causalDigest
+        self.tickResult = tickResult
+        self.socialVerificationResult = socialVerificationResult
         self.claimedPhysicalPresentations = claimedPhysicalPresentations
     }
 }
@@ -616,9 +622,11 @@ extension AgentSimulationSession {
     ) throws -> AgentReplayApplicationResult {
         var candidate = self
         var claimed: [AgentPhysicalPresentationRequest] = []
+        var tickResult: AgentSessionTickResult?
+        var socialVerificationResult: AgentSocialVerificationResult?
         switch operation {
         case let .advanceTick(perceptions, physicalObservations):
-            _ = try candidate.advanceTick(
+            tickResult = try candidate.advanceTick(
                 perceptions: perceptions,
                 physicalObservations: physicalObservations
             )
@@ -669,7 +677,7 @@ extension AgentSimulationSession {
         case let .clearConstructionProject(projectID):
             try candidate.clearConstructionProject(projectId: projectID)
         case let .applySocialVerification(observation):
-            _ = try candidate.applySocialVerification(observation)
+            socialVerificationResult = try candidate.applySocialVerification(observation)
         case .clearSocialState:
             try candidate.clearSocialState()
         case .claimPhysicalPresentationRequests:
@@ -685,6 +693,8 @@ extension AgentSimulationSession {
             tick: tick,
             causalSequence: causal.latestSequence,
             causalDigest: causal.digest,
+            tickResult: tickResult,
+            socialVerificationResult: socialVerificationResult,
             claimedPhysicalPresentations: claimed
         )
     }

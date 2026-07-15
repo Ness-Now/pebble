@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build|--social|--physical|--cooperation]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build|--social|--physical|--cooperation|--persistence]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -35,6 +35,7 @@ Options:
   --social   Run directed grounded information, read-only verification, and trust.
   --physical Run local sound, pointing gesture, imperfect perception, and existing trust.
   --cooperation Run shared construction-material task, delivery, and shelter completion.
+  --persistence Run checkpoint, real process restart, causal replay, and uninterrupted control.
   --help     Show this help and exit.
 EOF
 }
@@ -81,6 +82,7 @@ for option in "$@"; do
         --social) MODE="social"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --physical) MODE="physical"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --cooperation) MODE="cooperation"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --persistence) MODE="persistence"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --help|-h) usage; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$option" >&2; usage >&2; exit 2 ;;
     esac
@@ -93,7 +95,52 @@ BUILD_GATE=0
 SOCIAL_GATE=0
 PHYSICAL_GATE=0
 COOPERATION_GATE=0
-if [ "$MODE" = "cooperation" ]; then
+PERSISTENCE_GATE=0
+if [ "$MODE" = "persistence" ]; then
+    WORLD_SEED="46"
+    NATURAL_GATE=1
+    BUILD_GATE=1
+    SOCIAL_GATE=1
+    PHYSICAL_GATE=1
+    COOPERATION_GATE=1
+    PERSISTENCE_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-Persistence-46"
+    CAPTURE_NAME="persistence-proof.txt"
+    BUILD_ANCHOR_X=${PEBBLELAB_BUILD_ANCHOR_X:-14}
+    BUILD_ANCHOR_Z=${PEBBLELAB_BUILD_ANCHOR_Z:--21}
+    BUILD_ANCHOR_Y=${PEBBLELAB_BUILD_ANCHOR_Y:-66}
+    BUILD_PLAYER_Y=$((BUILD_ANCHOR_Y + 3))
+    PERSISTENCE_WORLD_READY="/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp $BUILD_ANCHOR_X $BUILD_ANCHOR_Y $BUILD_ANCHOR_Z"
+    PERSISTENCE_PHASE1_COMMANDS="$PERSISTENCE_WORLD_READY|/lab start;/tp $BUILD_ANCHOR_X $BUILD_PLAYER_Y $BUILD_ANCHOR_Z;/lab pause;/lab movement off;/lab focus agent_2;/lab follow agent_2;/lab natural on;/lab build setup;/lab economy auto on;/lab build auto on;/lab social on;/lab physical on;/lab cooperation on;/lab movement on"
+    persistence_step=0
+    while [ "$persistence_step" -lt 4 ]; do
+        PERSISTENCE_PHASE1_COMMANDS="$PERSISTENCE_PHASE1_COMMANDS;/lab step"
+        persistence_step=$((persistence_step + 1))
+    done
+    PERSISTENCE_PHASE1_COMMANDS="$PERSISTENCE_PHASE1_COMMANDS;/lab economy auto off;/lab step;/lab cooperation status;/lab checkpoint status;/lab checkpoint save accepted-task;/lab replay start accepted-task;/lab replay status;/lab checkpoint status"
+    PERSISTENCE_PHASE2_COMMANDS="$PERSISTENCE_WORLD_READY|/lab start;/tp $BUILD_ANCHOR_X $BUILD_PLAYER_Y $BUILD_ANCHOR_Z;/lab checkpoint load accepted-task;/lab replay start accepted-task;/lab step;/lab economy auto on"
+    PERSISTENCE_STEPS=${PEBBLELAB_PERSISTENCE_STEPS:-180}
+    persistence_step=0
+    while [ "$persistence_step" -lt "$PERSISTENCE_STEPS" ]; do
+        PERSISTENCE_PHASE2_COMMANDS="$PERSISTENCE_PHASE2_COMMANDS;/lab step"
+        persistence_step=$((persistence_step + 1))
+    done
+    PERSISTENCE_PHASE2_COMMANDS="$PERSISTENCE_PHASE2_COMMANDS;/lab cooperation status;/lab build status;/lab checkpoint save post-material;/lab checkpoint status;/lab replay stop live-continuation;/lab replay verify accepted-task live-continuation;/lab causality status;/lab status|/lab movement off;/lab cooperation off;/lab physical off;/lab social off;/lab build clear;/lab build status;/lab follow off"
+    PERSISTENCE_CONTROL_COMMANDS="$PERSISTENCE_WORLD_READY|/lab start;/tp $BUILD_ANCHOR_X $BUILD_PLAYER_Y $BUILD_ANCHOR_Z;/lab pause;/lab movement off;/lab focus agent_2;/lab follow agent_2;/lab natural on;/lab build setup;/lab economy auto on;/lab build auto on;/lab social on;/lab physical on;/lab cooperation on;/lab movement on"
+    persistence_step=0
+    while [ "$persistence_step" -lt 4 ]; do
+        PERSISTENCE_CONTROL_COMMANDS="$PERSISTENCE_CONTROL_COMMANDS;/lab step"
+        persistence_step=$((persistence_step + 1))
+    done
+    PERSISTENCE_CONTROL_COMMANDS="$PERSISTENCE_CONTROL_COMMANDS;/lab economy auto off;/lab step;/lab step;/lab economy auto on"
+    persistence_step=0
+    while [ "$persistence_step" -lt "$PERSISTENCE_STEPS" ]; do
+        PERSISTENCE_CONTROL_COMMANDS="$PERSISTENCE_CONTROL_COMMANDS;/lab step"
+        persistence_step=$((persistence_step + 1))
+    done
+    PERSISTENCE_CONTROL_COMMANDS="$PERSISTENCE_CONTROL_COMMANDS;/lab cooperation status;/lab build status;/lab checkpoint status;/lab causality status;/lab status|/lab movement off;/lab cooperation off;/lab physical off;/lab social off;/lab build clear;/lab build status;/lab follow off"
+    LAB_COMMANDS="$PERSISTENCE_PHASE1_COMMANDS"
+elif [ "$MODE" = "cooperation" ]; then
     WORLD_SEED="46"
     NATURAL_GATE=1
     BUILD_GATE=1
@@ -248,6 +295,7 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_SOCIAL=%s\n' "$SOCIAL_GATE"
     printf '  PEBBLELAB_APP_AGENTS_PHYSICAL=%s\n' "$PHYSICAL_GATE"
     printf '  PEBBLELAB_APP_AGENTS_COOPERATION=%s\n' "$COOPERATION_GATE"
+    printf '  PEBBLELAB_APP_AGENTS_PERSISTENCE=%s\n' "$PERSISTENCE_GATE"
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
     if [ "$MODE" = "build" ]; then
         printf '  PEBBLE_SHOT=-|%s/fixed-shelter-before.png|%s/fixed-shelter-partial.png|%s|-\n' \
@@ -268,7 +316,11 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "cooperation" ]; then
+    if [ "$MODE" = "persistence" ]; then
+        printf '  2. Confirm accepted-task is restartSafe with zero harvests, placements, inventory, and stock.\n'
+        printf '  3. Confirm a second process restores the exact tick, simulation, digest, task, and three probes.\n'
+        printf '  4. Confirm replay matches live final state and the uninterrupted control digest.\n'
+    elif [ "$MODE" = "cooperation" ]; then
         printf '  2. Confirm agent_2 physically offers a three-stone task only to agent_1.\n'
         printf '  3. Confirm helper stone delivery, builder wood delivery, funding, 9/9 construction, and exact conservation.\n'
     elif [ "$MODE" = "physical" ]; then
@@ -293,7 +345,9 @@ print_plan() {
         printf '  2. Confirm hunger growth, satisfyHunger, food-only targeting, three route steps, harvest, and consume_food.\n'
         printf '  3. Confirm consumed=1 conservation, fatigue-driven homeRest, rest recovery, normal goal resumption, and zero corridor changes.\n'
     fi
-    printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
+    if [ "$MODE" != "persistence" ]; then
+        printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
+    fi
     printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
 }
 
@@ -353,6 +407,159 @@ if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
     fail "a Pebble process is already running; refusing an ambiguous live baseline"
 fi
 
+if [ "$MODE" = "persistence" ]; then
+    cd "$ROOT_DIR"
+    swift build -c release --product Pebble
+    PEBBLE_BINARY="$ROOT_DIR/.build/release/Pebble"
+    [ -x "$PEBBLE_BINARY" ] || fail "Release Pebble binary missing: $PEBBLE_BINARY"
+
+    PHASE1_TRACE="$SESSION_ROOT/persistence-phase1.log"
+    PHASE2_TRACE="$SESSION_ROOT/persistence-phase2.log"
+    CONTROL_HOME="$SESSION_ROOT/control-home"
+    CONTROL_TRACE="$SESSION_ROOT/persistence-control.log"
+    [ ! -e "$CONTROL_HOME" ] || fail "fresh control home already exists: $CONTROL_HOME"
+
+    run_persistence_app() {
+        run_home=$1
+        run_trace=$2
+        run_commands=$3
+        create_world=$4
+        command_world_tick=$5
+        if [ "$create_world" -eq 1 ]; then
+            CFFIXED_USER_HOME="$run_home" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLE_NEWWORLD="$WORLD_SEED" \
+            PEBBLE_NEWWORLD_NAME="$WORLD_NAME" \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_NATURAL=1 \
+            PEBBLELAB_APP_AGENTS_BUILD=1 \
+            PEBBLELAB_APP_AGENTS_SOCIAL=1 \
+            PEBBLELAB_APP_AGENTS_PHYSICAL=1 \
+            PEBBLELAB_APP_AGENTS_COOPERATION=1 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT='-|-|-' \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        else
+            CFFIXED_USER_HOME="$run_home" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_NATURAL=1 \
+            PEBBLELAB_APP_AGENTS_BUILD=1 \
+            PEBBLELAB_APP_AGENTS_SOCIAL=1 \
+            PEBBLELAB_APP_AGENTS_PHYSICAL=1 \
+            PEBBLELAB_APP_AGENTS_COOPERATION=1 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT='-|-|-' \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        fi
+        if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
+            fail "Pebble process remained after persistence phase: $run_trace"
+        fi
+    }
+
+    printf '\nPersistence phase 1: accepted task and restart-safe checkpoint.\n'
+    run_persistence_app "$SESSION_HOME" "$PHASE1_TRACE" "$PERSISTENCE_PHASE1_COMMANDS" 1 100
+    TRACE_PATH="$PHASE1_TRACE"
+    require_trace 'cooperation task tick=5 .*status=(accepted|active)' 'accepted task before checkpoint'
+    reject_trace 'natural harvest actor=' 'World harvest before restart-safe checkpoint'
+    reject_trace 'cooperation placement tick=' 'World placement before restart-safe checkpoint'
+    require_trace 'checkpoint saved name=accepted-task .*tick=5 .*restartSafe=1 .*mutation=none' 'restart-safe checkpoint at accepted task boundary'
+    require_trace 'checkpoint status gate=enabled ready=1 restartSafe=1 .*tick=5 .*recording=active' 'stable checkpoint boundary and active recorder'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 .*naturalHarvests=0 .*buildPlaced=0 .*constructionRestored=1' 'clean first-process shutdown'
+
+    PERSISTENCE_ROOT="$SESSION_HOME/Library/Application Support/Pebble/PebbleLabAgents"
+    ACCEPTED_MANIFEST=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f -path '*/checkpoints/accepted-task/manifest.json' -print -quit)
+    [ -n "$ACCEPTED_MANIFEST" ] || fail "accepted-task manifest missing under managed root"
+    /usr/bin/grep -q '"restartSafe":true' "$ACCEPTED_MANIFEST" \
+        || fail "accepted-task manifest is not restart-safe"
+    /usr/bin/grep -q '"focusedAgentID":"agent_2"' "$ACCEPTED_MANIFEST" \
+        || fail "accepted-task manifest did not retain the decision-relevant live focus"
+    PHASE1_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=accepted-task .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE1_TRACE" | /usr/bin/tail -1)
+    PHASE1_SIM=$(/usr/bin/sed -n 's/.*checkpoint saved name=accepted-task .* simulation=\([^ ]*\) digest=.*/\1/p' "$PHASE1_TRACE" | /usr/bin/tail -1)
+    [ -n "$PHASE1_DIGEST" ] && [ -n "$PHASE1_SIM" ] || fail "phase-1 identity extraction failed"
+
+    CONTROL_DB="$CONTROL_HOME/Library/Application Support/Pebble/pebble.db"
+    /bin/mkdir -p "$(dirname "$CONTROL_DB")"
+    [ ! -e "$CONTROL_DB" ] || fail "fresh control database already exists: $CONTROL_DB"
+    /usr/bin/sqlite3 "$DB_PATH" ".backup '$CONTROL_DB'"
+    [ -s "$CONTROL_DB" ] || fail "post-phase-1 control database snapshot failed"
+    persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
+    case "$persisted_world_tick" in
+        ''|*[!0-9]*) fail "invalid persisted World tick after phase 1: $persisted_world_tick" ;;
+    esac
+    continuation_command_tick=$((persisted_world_tick + 100))
+
+    printf '\nPersistence phase 2: real process restart, load, continuation, and replay.\n'
+    run_persistence_app "$SESSION_HOME" "$PHASE2_TRACE" "$PERSISTENCE_PHASE2_COMMANDS" 0 "$continuation_command_tick"
+    TRACE_PATH="$PHASE2_TRACE"
+    require_trace "checkpoint loaded name=accepted-task .*tick=5 simulation=$PHASE1_SIM digest=$PHASE1_DIGEST .*restartSafe=1 probes=3 paused=1 focus=agent_2 lifecycleEvent=none worldMutation=none" 'exact checkpoint restore in second process'
+    require_trace 'replay recording started base=accepted-task .*tick=5 .*records=0' 'replay recording resumed from restored base'
+    require_trace_count 'cooperation harvest tick=[1-9][0-9]* operation=g2-natural:agent_1:.* actor=agent_1 .* resource=stone status=succeeded' 3 'three helper stone harvests after restart'
+    require_trace_count 'cooperation harvest tick=[1-9][0-9]* operation=g2-natural:agent_2:.* actor=agent_2 .* resource=wood status=succeeded' 6 'six builder wood harvests after restart'
+    require_trace 'cooperation task tick=[1-9][0-9]* .*contributed=3 status=completed' 'shared task completion after restart'
+    require_trace 'cooperation reliability tick=[1-9][0-9]* .*score=10 completed=1 failed=0 outcome=completed' 'reliability update after restart'
+    require_trace_count 'cooperation placement tick=[1-9][0-9]* .*cell=[0-8] ' 9 'nine ordered placements after restart'
+    require_trace 'build gate=enabled auto=on .*status=completed .*placed=9/9 .*conservation=9:0\+0\+0\+0\+9:exact' 'completed material continuation after restart'
+    require_trace 'checkpoint saved name=post-material .*restartSafe=0 ' 'unsafe post-mutation checkpoint labelled explicitly'
+    require_trace 'replay recording stopped name=live-continuation .*replayable=1' 'bounded replay journal persisted'
+    require_trace 'replay verified checkpoint=accepted-task journal=live-continuation .*liveMutation=none worldMutation=none' 'pure replay verified without live publication'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 .*naturalHarvests=9 .*constructionRestored=1' 'second-process cleanup'
+
+    POST_MANIFEST=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f -path '*/checkpoints/post-material/manifest.json' -print -quit)
+    [ -n "$POST_MANIFEST" ] || fail "post-material manifest missing under managed root"
+    /usr/bin/grep -q '"restartSafe":false' "$POST_MANIFEST" \
+        || fail "post-material checkpoint was incorrectly marked restart-safe"
+    LIVE_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=post-material .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
+    REPLAY_DIGEST=$(/usr/bin/sed -n 's/.*replay verified checkpoint=accepted-task journal=live-continuation .* digest=\([0-9a-f]*\) causalSequence=.*/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
+    [ -n "$LIVE_DIGEST" ] && [ "$LIVE_DIGEST" = "$REPLAY_DIGEST" ] \
+        || fail "live/replay final digest mismatch: live=$LIVE_DIGEST replay=$REPLAY_DIGEST"
+
+    printf '\nPersistence uninterrupted control.\n'
+    run_persistence_app "$CONTROL_HOME" "$CONTROL_TRACE" "$PERSISTENCE_CONTROL_COMMANDS" 0 "$continuation_command_tick"
+    TRACE_PATH="$CONTROL_TRACE"
+    require_trace 'checkpoint status gate=enabled ready=1 restartSafe=0 .*recording=inactive' 'uninterrupted final durable state'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 .*naturalHarvests=9 .*constructionRestored=1' 'uninterrupted cleanup'
+    CONTROL_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint status gate=enabled .* digest=\([0-9a-f]*\) causalSequence=.*/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    [ -n "$CONTROL_DIGEST" ] && [ "$CONTROL_DIGEST" = "$LIVE_DIGEST" ] \
+        || fail "restart/uninterrupted digest mismatch: restart=$LIVE_DIGEST control=$CONTROL_DIGEST"
+
+    /usr/bin/grep -E '^\[lab-live\] tick=([6-9]|[1-9][0-9]+) ' "$PHASE2_TRACE" > "$SESSION_ROOT/restart-decisions.normalized"
+    /usr/bin/grep -E '^\[lab-live\] tick=([6-9]|[1-9][0-9]+) ' "$CONTROL_TRACE" > "$SESSION_ROOT/control-decisions.normalized"
+    /usr/bin/cmp "$SESSION_ROOT/restart-decisions.normalized" "$SESSION_ROOT/control-decisions.normalized" \
+        || fail "restart and uninterrupted decision traces differ"
+
+    if /usr/bin/pgrep -x Pebble >/dev/null 2>&1 \
+        || /usr/bin/pgrep -x swift-run >/dev/null 2>&1 \
+        || /usr/bin/pgrep -x pebsmoke >/dev/null 2>&1; then
+        fail "residual PebbleLab process after persistence proof"
+    fi
+    printf '\nPASS: restart-safe checkpoint, real process restart, pure causal replay, unsafe checkpoint labelling, and uninterrupted equivalence verified.\n'
+    printf 'Phase 1 trace: %s\n' "$PHASE1_TRACE"
+    printf 'Phase 2 trace: %s\n' "$PHASE2_TRACE"
+    printf 'Control trace: %s\n' "$CONTROL_TRACE"
+    printf 'Final durable digest: %s\n' "$LIVE_DIGEST"
+    printf 'Retained isolated session: %s\n' "$SESSION_ROOT"
+    exit 0
+fi
+
 cd "$ROOT_DIR"
 CFFIXED_USER_HOME="$SESSION_HOME" \
 PEBBLE_AUTOLOAD=1 \
@@ -371,6 +578,7 @@ PEBBLELAB_APP_AGENTS_BUILD="$BUILD_GATE" \
 PEBBLELAB_APP_AGENTS_SOCIAL="$SOCIAL_GATE" \
 PEBBLELAB_APP_AGENTS_PHYSICAL="$PHYSICAL_GATE" \
 PEBBLELAB_APP_AGENTS_COOPERATION="$COOPERATION_GATE" \
+PEBBLELAB_APP_AGENTS_PERSISTENCE="$PERSISTENCE_GATE" \
 PEBBLE_CMD="$LAB_COMMANDS" \
 PEBBLE_SHOT="$SHOT_SPEC" \
 swift run -c release Pebble 2>&1 | /usr/bin/tee "$TRACE_PATH"

@@ -101,7 +101,7 @@ public struct AgentNaturalResourceScanSample: Codable, Equatable {
     }
 }
 
-public struct AgentNaturalResourceScanDiagnostics: Codable, Equatable {
+public struct AgentNaturalResourceScanDiagnostics: Codable, Equatable, Sendable {
     public let positionsConsidered: Int
     public let positionsRead: Int
     public let approachBlockReads: Int

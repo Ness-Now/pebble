@@ -5,6 +5,9 @@ import PebbleCore
 extension PebbleAgentController {
     func advanceOneTick(world: World, player: Player) -> Bool {
         guard activeWorld === world, var session else { return false }
+        var recorder = replayRecorder
+        isAdvancingSession = true
+        defer { isAdvancingSession = false }
         lastInteractionAttempted = false
         lastInteractionSucceeded = false
         lastInteractionBlocked = false
@@ -191,11 +194,30 @@ extension PebbleAgentController {
                     navigationObservation: navigationObservation
                 )
             }
-            let result = try session.advanceTick(
-                perceptions: perceptions,
-                physicalObservations: physicalInputs
+            let result: AgentSessionTickResult
+            if let recorded = try applyRecordedOperationIfActive(
+                .advanceTick(
+                    perceptions: perceptions,
+                    physicalObservations: physicalInputs
+                ),
+                session: &session,
+                recorder: &recorder
+            ) {
+                guard let tickResult = recorded.tickResult else {
+                    throw ControllerError.feedbackBoundary("recorded tick result missing")
+                }
+                result = tickResult
+            } else {
+                result = try session.advanceTick(
+                    perceptions: perceptions,
+                    physicalObservations: physicalInputs
+                )
+            }
+            try presentPhysicalSignals(
+                world: world,
+                session: &session,
+                recorder: &recorder
             )
-            presentPhysicalSignals(world: world, session: &session)
             let verificationActions = result.agents
                 .filter { $0.action.name == "verify_information" }
                 .sorted { $0.agentId < $1.agentId }
@@ -210,7 +232,21 @@ extension PebbleAgentController {
                     world: world,
                     request: request
                 )
-                let outcome = try session.applySocialVerification(observation)
+                let outcome: AgentSocialVerificationResult
+                if let recorded = try applyRecordedOperationIfActive(
+                    .applySocialVerification(observation),
+                    session: &session,
+                    recorder: &recorder
+                ) {
+                    guard let verification = recorded.socialVerificationResult else {
+                        throw ControllerError.socialBoundary(
+                            "recorded social verification result missing"
+                        )
+                    }
+                    outcome = verification
+                } else {
+                    outcome = try session.applySocialVerification(observation)
+                }
                 let fingerprintAfter = observation.chunkReady
                     ? world.getBlock(request.position.x, request.position.y, request.position.z)
                     : nil
@@ -223,11 +259,23 @@ extension PebbleAgentController {
                 .filter { $0.action.name == "consume_food" }
                 .sorted { $0.agentId < $1.agentId }
             for consumption in consumptionActions {
-                let outcome = try session.consumeFood(AgentConsumptionIntent(
+                let intent = AgentConsumptionIntent(
                     consumptionId: "survival-consumption:\(consumption.agentId):\(session.tick)",
                     agentId: consumption.agentId,
                     tick: session.tick
-                ))
+                )
+                let outcome: AgentConsumptionOutcome
+                if recorder != nil {
+                    var outcomeCandidate = session
+                    outcome = try outcomeCandidate.consumeFood(intent)
+                    _ = try applyRecordedOperationIfActive(
+                        .consumptionOutcome(outcome),
+                        session: &session,
+                        recorder: &recorder
+                    )
+                } else {
+                    outcome = try session.consumeFood(intent)
+                }
                 lastConsumptionSucceeded = outcome.status == .succeeded
                 lastSurvivalReason = outcome.reason
             }
@@ -249,7 +297,8 @@ extension PebbleAgentController {
                     actorId: interaction.agentId,
                     expectedAction: interaction.action,
                     interactionPrefix: "g2",
-                    session: &session
+                    session: &session,
+                    recorder: &recorder
                 )
                 if session.cooperationEnabled {
                     trace("cooperation harvest tick=\(session.tick) operation=\(outcome.interactionId) actor=\(outcome.agentId) target=\(positionText(outcome.target)) resource=\(outcome.resource.rawValue) status=\(outcome.status.rawValue)")
@@ -269,12 +318,24 @@ extension PebbleAgentController {
                 }
                 let actor = session.snapshot().agents.first { $0.id == delivery.agentId }!
                 let deliveryId = "economy-delivery:\(delivery.agentId):\(session.tick)"
-                let outcome = try session.deliverResources(AgentDeliveryIntent(
+                let intent = AgentDeliveryIntent(
                     deliveryId: deliveryId,
                     agentId: delivery.agentId,
                     tick: session.tick,
                     position: actor.position
-                ))
+                )
+                let outcome: AgentDeliveryOutcome
+                if recorder != nil {
+                    var outcomeCandidate = session
+                    outcome = try outcomeCandidate.deliverResources(intent)
+                    _ = try applyRecordedOperationIfActive(
+                        .deliveryOutcome(outcome),
+                        session: &session,
+                        recorder: &recorder
+                    )
+                } else {
+                    outcome = try session.deliverResources(intent)
+                }
                 lastDeliverySucceeded = outcome.status == .succeeded
                 lastEconomyReason = outcome.reason
                 if session.cooperationEnabled {
@@ -293,11 +354,30 @@ extension PebbleAgentController {
                         "funding action without enabled construction gate and auto mode"
                     )
                 }
-                let funded = try session.fundConstructionProject(
-                    fundingId: "construction-funding:\(funding.agentId):\(session.tick)",
-                    builderAgentId: funding.agentId,
-                    fundingTick: session.tick
-                )
+                let fundingID = "construction-funding:\(funding.agentId):\(session.tick)"
+                let funded: AgentConstructionProject
+                if try applyRecordedOperationIfActive(
+                    .fundConstructionProject(
+                        fundingID: fundingID,
+                        builderAgentID: funding.agentId,
+                        tick: session.tick
+                    ),
+                    session: &session,
+                    recorder: &recorder
+                ) != nil {
+                    guard let project = session.constructionProject else {
+                        throw ControllerError.constructionBoundary(
+                            "recorded funding project missing"
+                        )
+                    }
+                    funded = project
+                } else {
+                    funded = try session.fundConstructionProject(
+                        fundingId: fundingID,
+                        builderAgentId: funding.agentId,
+                        fundingTick: session.tick
+                    )
+                }
                 lastConstructionReason = "funded \(funded.projectId)"
                 if session.cooperationEnabled,
                    let event = session.causalLedgerSnapshot().events.last(where: {
@@ -347,6 +427,7 @@ extension PebbleAgentController {
                     reason: "ordered fixed blueprint cell placed"
                 )
                 var candidate = session
+                var candidateRecorder = recorder
                 let occupied = session.snapshot().agents
                     .filter { $0.id != placement.agentId }
                     .map(\.position)
@@ -373,7 +454,13 @@ extension PebbleAgentController {
                         try session.prevalidatePlacement(intent)
                     },
                     publishAndVerify: { finalCell in
-                        try candidate.applyPlacementOutcome(outcome)
+                        if try applyRecordedOperationIfActive(
+                            .applyPlacementOutcome(outcome),
+                            session: &candidate,
+                            recorder: &candidateRecorder
+                        ) == nil {
+                            try candidate.applyPlacementOutcome(outcome)
+                        }
                         if injectPublicationFailure {
                             throw ControllerError.constructionBoundary(
                                 "injected construction publication failure"
@@ -423,10 +510,19 @@ extension PebbleAgentController {
                                     "completed shelter entrance or rest cell is not safely routable"
                                 )
                             }
-                            try candidate.completeConstructionProject(
-                                projectId: pending.projectId,
-                                completionTick: candidate.tick
-                            )
+                            if try applyRecordedOperationIfActive(
+                                .completeConstructionProject(
+                                    projectID: pending.projectId,
+                                    tick: candidate.tick
+                                ),
+                                session: &candidate,
+                                recorder: &candidateRecorder
+                            ) == nil {
+                                try candidate.completeConstructionProject(
+                                    projectId: pending.projectId,
+                                    completionTick: candidate.tick
+                                )
+                            }
                         }
                         guard candidate.conservationSnapshot().balanced,
                               candidate.constructionProject?.placedCellIndices.contains(cell.index) == true else {
@@ -438,16 +534,30 @@ extension PebbleAgentController {
                     )
                 } catch {
                     let failure = constructionFailure(for: error)
-                    try? session.recordConstructionFailure(
-                        failureId: "construction-failure:\(intent.placementId)",
-                        projectId: project.projectId,
-                        builderAgentId: project.builderAgentId,
-                        failure: failure,
-                        reason: String(describing: error)
-                    )
+                    let failureID = "construction-failure:\(intent.placementId)"
+                    if (try? applyRecordedOperationIfActive(
+                        .recordConstructionFailure(
+                            failureID: failureID,
+                            projectID: project.projectId,
+                            builderAgentID: project.builderAgentId,
+                            failure: failure,
+                            reason: String(describing: error)
+                        ),
+                        session: &session,
+                        recorder: &recorder
+                    )) == nil {
+                        try? session.recordConstructionFailure(
+                            failureId: failureID,
+                            projectId: project.projectId,
+                            builderAgentId: project.builderAgentId,
+                            failure: failure,
+                            reason: String(describing: error)
+                        )
+                    }
                     throw error
                 }
                 session = candidate
+                recorder = candidateRecorder
                 lastConstructionReason = "placed cell \(cell.index) \(cell.resource.rawValue)"
                 if session.cooperationEnabled {
                     let ledger = session.causalLedgerSnapshot().events
@@ -461,7 +571,13 @@ extension PebbleAgentController {
                 .map { $0.helperID.rawValue })
             if movementEnabled {
                 let outcomes = AgentMovementCoordinator.resolve(snapshot: session.snapshot())
-                try session.applyMovementOutcomes(outcomes)
+                if try applyRecordedOperationIfActive(
+                    .movementOutcomes(outcomes),
+                    session: &session,
+                    recorder: &recorder
+                ) == nil {
+                    try session.applyMovementOutcomes(outcomes)
+                }
                 let finalSnapshot = session.snapshot()
                 try movementExecutor.apply(
                     outcomes: outcomes,
@@ -485,6 +601,7 @@ extension PebbleAgentController {
             }
             let finalSnapshot = session.snapshot()
             self.session = session
+            replayRecorder = recorder
             tracePhysicalState(at: session.tick)
             traceCooperationState(at: session.tick)
             lastTickResult = result
@@ -572,6 +689,10 @@ extension PebbleAgentController {
             traceSocialState(snapshot: finalSnapshot)
             return true
         } catch {
+            if recorder != nil {
+                recorder?.markNonReplayable("tick failed: \(error)")
+                replayRecorder = recorder
+            }
             if autoInteractionEnabled {
                 autoInteractionEnabled = false
                 lastInteractionBlocked = true

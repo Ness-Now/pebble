@@ -127,6 +127,10 @@ struct PebbleAgentNaturalResourceExecutor {
         state = PebbleAgentNaturalResourceState()
     }
 
+    mutating func restoreScanDiagnostics(_ diagnostics: AgentNaturalResourceScanDiagnostics?) {
+        state.lastScan = diagnostics ?? AgentNaturalResourceScanDiagnostics()
+    }
+
     private mutating func rollback(
         world: World,
         identity: AgentResourceIdentity,

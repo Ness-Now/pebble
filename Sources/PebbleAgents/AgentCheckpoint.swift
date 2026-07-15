@@ -348,19 +348,25 @@ public struct AgentCheckpointLiveOrchestration: Codable, Equatable, Sendable {
     public let movementEnabled: Bool
     public let autoInteractionEnabled: Bool
     public let economyAutoEnabled: Bool
+    public let focusedAgentID: String?
+    public let naturalResourceScanDiagnostics: AgentNaturalResourceScanDiagnostics?
 
     public init(
         cognitiveHz: Int,
         wasPaused: Bool,
         movementEnabled: Bool,
         autoInteractionEnabled: Bool,
-        economyAutoEnabled: Bool
+        economyAutoEnabled: Bool,
+        focusedAgentID: String? = nil,
+        naturalResourceScanDiagnostics: AgentNaturalResourceScanDiagnostics? = nil
     ) {
         self.cognitiveHz = cognitiveHz
         self.wasPaused = wasPaused
         self.movementEnabled = movementEnabled
         self.autoInteractionEnabled = autoInteractionEnabled
         self.economyAutoEnabled = economyAutoEnabled
+        self.focusedAgentID = focusedAgentID
+        self.naturalResourceScanDiagnostics = naturalResourceScanDiagnostics
     }
 }
 

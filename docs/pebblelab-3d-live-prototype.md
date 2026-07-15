@@ -6,7 +6,7 @@ La maquette V0 rend trois agents PebbleLab observables dans l’application Pebb
 
 ## Prérequis et lancement
 
-Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical` et `--cooperation` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04 et tâche partagée CIV-05. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
+Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation` et `--persistence` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05 et restart/replay CIV-06. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
 
 Depuis la racine du dépôt :
 
@@ -55,6 +55,8 @@ Commandes de démonstration :
 /lab social <on|off|status|clear>
 /lab physical <on|off|status|clear>
 /lab cooperation <on|off|status|clear>
+/lab checkpoint <status|list|save|load|delete>
+/lab replay <status|start|stop|verify>
 /lab status
 /lab focus <agentId|next>        /lab next
 /lab follow <agentId|focus|next|off>
@@ -92,6 +94,24 @@ autorité pour l'acceptation, les contributions et les transitions matérielles.
 Chaque exécution doit employer un monde jetable neuf et conserver son dossier
 temporaire pour inspection ; aucun monde personnel ne doit être utilisé.
 
+## CIV-06 — Checkpoint restart-safe et replay causal
+
+Le mode `scripts/verify-pebblelab-live.sh --persistence` active explicitement
+`PEBBLELAB_APP_AGENTS_PERSISTENCE=1` dans un home jetable. Il sauvegarde un
+checkpoint versionné à une frontière stable avant toute mutation World
+réussie, termine le premier processus, recharge le même monde dans un second
+processus, restaure la session et ses trois probes, puis poursuit la chaîne
+matérielle CIV-05. Un contrôle ininterrompu doit produire les mêmes décisions
+et le même digest durable. Le journal typé est rejoué par le kernel pur, sans
+World ni nouvelle publication physique.
+
+Les sidecars bornés vivent sous `Application Support/Pebble/PebbleLabAgents`
+avec binding strict au monde, à la dimension, à la seed, à l'anchor et aux
+cellules pertinentes. Les checkpoints pris après une récolte ou un placement
+réussi sont explicitement marqués non restart-safe et leur chargement live est
+refusé. CIV-06 n'ajoute ni snapshot complet du World, ni autosave, ni migration
+générale de schéma ; la gate reste désactivée par défaut.
+
 ## Arrêt propre et inspection
 
 Utiliser `/lab demo stop`, `/lab stop` ou `/lab clear`. Les probes transitoires sont retirées, le follow est désactivé et un résumé de session est écrit lorsque les traces sont actives. `/lab status` confirme ensuite que la session est inactive. Les probes ont `shouldSaveToChunk == false` et `persistent == false` ; aucun agent n’est restauré lors d’un lancement ultérieur.
@@ -107,10 +127,12 @@ Utiliser `/lab demo stop`, `/lab stop` ou `/lab clear`. Les probes transitoires 
 - hors gate naturelle explicite, seule la fixture transactionnelle peut être mutée puis restaurée ; la construction reste interdite ;
 - aucune langue libre ni retransmission ; la coopération est limitée à la
   tâche de livraison matérielle CIV-05 explicitement gated ;
-- aucune persistance agent ;
+- aucune persistance active par défaut ; la persistence CIV-06 reste bornée,
+  explicitement gated et limitée aux frontières restart-safe documentées ;
 - aucun contrôleur autonome du joueur.
 
-Les comportements cognitifs supplémentaires, la planification longue, les interactions terrain et la persistance sont explicitement reportés après la Phase F.
+Les comportements cognitifs supplémentaires, la planification longue, le
+replay complet du World et l'autosave restent hors de cette verticale.
 
 ## Transactional interaction G1
 

@@ -19,14 +19,30 @@ extension PebbleAgentController {
             guard naturalFeatureEnabled else {
                 return failure("Natural resources disabled. Set PEBBLELAB_APP_AGENTS_NATURAL=1 before launch.")
             }
-            session.setNaturalResourcesEnabled(true)
+            do {
+                if try applyCommandMutationIfRecording(
+                    .setNaturalResourcesEnabled(true), session: &session
+                ) == nil {
+                    session.setNaturalResourcesEnabled(true)
+                }
+            } catch {
+                return failure("Natural resource recording failed: \(error)")
+            }
             self.session = session
             lastNaturalReason = "enabled by command"
             trace("natural=on tick=\(session.tick) mutation=none")
             return success("PebbleAgents natural resources on; movement, economy, and survival unchanged.")
         }
         if subcommand == "off" {
-            session.setNaturalResourcesEnabled(false)
+            do {
+                if try applyCommandMutationIfRecording(
+                    .setNaturalResourcesEnabled(false), session: &session
+                ) == nil {
+                    session.setNaturalResourcesEnabled(false)
+                }
+            } catch {
+                return failure("Natural resource recording failed: \(error)")
+            }
             self.session = session
             lastNaturalReason = "disabled by command"
             trace("natural=off tick=\(session.tick) mutation=none")
@@ -80,7 +96,15 @@ extension PebbleAgentController {
         }
         if subcommand == "on" || subcommand == "off" {
             let enabled = subcommand == "on"
-            session.setSurvivalEnabled(enabled)
+            do {
+                if try applyCommandMutationIfRecording(
+                    .setSurvivalEnabled(enabled), session: &session
+                ) == nil {
+                    session.setSurvivalEnabled(enabled)
+                }
+            } catch {
+                return failure("Survival recording failed: \(error)")
+            }
             self.session = session
             lastSurvivalReason = enabled ? "enabled by command" : "disabled by command"
             trace("survival=\(enabled ? "on" : "off") tick=\(session.tick) reason=command")

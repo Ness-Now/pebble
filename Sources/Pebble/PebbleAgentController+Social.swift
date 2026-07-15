@@ -16,14 +16,22 @@ extension PebbleAgentController {
                         "PebbleAgents social disabled. Set PEBBLELAB_APP_AGENTS_SOCIAL=1 before launch."
                     )
                 }
-                try session.setSocialEnabled(true)
+                if try applyCommandMutationIfRecording(
+                    .setSocialEnabled(true), session: &session
+                ) == nil {
+                    try session.setSocialEnabled(true)
+                }
                 self.session = session
                 trace("social=on tick=\(session.tick) mutation=none")
                 return success(
                     "PebbleAgents social on; interaction, economy, natural harvest, and construction unchanged."
                 )
             case "off":
-                try session.setSocialEnabled(false)
+                if try applyCommandMutationIfRecording(
+                    .setSocialEnabled(false), session: &session
+                ) == nil {
+                    try session.setSocialEnabled(false)
+                }
                 self.session = session
                 trace("social=off tick=\(session.tick) mutation=none retained=1")
                 return success(
@@ -35,7 +43,11 @@ extension PebbleAgentController {
                         "PebbleAgents social disabled. Set PEBBLELAB_APP_AGENTS_SOCIAL=1 before launch."
                     )
                 }
-                try session.clearSocialState()
+                if try applyCommandMutationIfRecording(
+                    .clearSocialState, session: &session
+                ) == nil {
+                    try session.clearSocialState()
+                }
                 self.session = session
                 trace("social clear tick=\(session.tick) mutation=none")
                 return success(

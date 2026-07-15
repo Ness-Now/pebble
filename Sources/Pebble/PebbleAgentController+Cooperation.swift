@@ -23,14 +23,22 @@ extension PebbleAgentController {
                 guard session.constructionProject != nil else {
                     return failure("PebbleAgents cooperation requires an active construction project.")
                 }
-                try session.setCooperationEnabled(true)
+                if try applyCommandMutationIfRecording(
+                    .setCooperationEnabled(true), session: &session
+                ) == nil {
+                    try session.setCooperationEnabled(true)
+                }
                 self.session = session
                 trace("cooperation=on tick=\(session.tick) mutation=none")
                 return success(
                     "PebbleAgents cooperation on; economy, natural resources, construction, movement, and survival unchanged."
                 )
             case "off":
-                try session.setCooperationEnabled(false)
+                if try applyCommandMutationIfRecording(
+                    .setCooperationEnabled(false), session: &session
+                ) == nil {
+                    try session.setCooperationEnabled(false)
+                }
                 self.session = session
                 trace("cooperation=off tick=\(session.tick) mutation=none retained=1")
                 return success(
@@ -42,7 +50,11 @@ extension PebbleAgentController {
                         "PebbleAgents cooperation disabled. Set PEBBLELAB_APP_AGENTS_COOPERATION=1 before launch."
                     )
                 }
-                try session.clearCooperationState()
+                if try applyCommandMutationIfRecording(
+                    .clearCooperationState, session: &session
+                ) == nil {
+                    try session.clearCooperationState()
+                }
                 self.session = session
                 trace("cooperation clear tick=\(session.tick) mutation=none")
                 return success(
