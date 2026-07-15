@@ -51,6 +51,52 @@ private func persistenceSmokeSession(_ id: String = "persistence-contracts") -> 
     )
 }
 
+private func persistenceReplayJournal(
+    name: String,
+    checkpoint: AgentSessionCheckpoint,
+    records: [AgentReplayRecord],
+    replayable: Bool = true,
+    dropped: Int = 0
+) -> AgentReplayJournal {
+    let bytes = try! AgentReplayCodec.encodeRecords(records)
+    return AgentReplayJournal(
+        manifest: AgentReplayJournalManifest(
+            name: AgentCheckpointName(rawValue: name)!,
+            baseCheckpointID: checkpoint.checkpointID,
+            baseCheckpointDigest: checkpoint.semanticDigest,
+            simulationID: checkpoint.simulationID,
+            initialTick: checkpoint.tick.rawValue,
+            recordCount: records.count,
+            droppedRecordCount: dropped,
+            replayable: replayable,
+            nonReplayableReason: replayable ? nil : "test refusal",
+            operationsStorageDigest: AgentCheckpointDigest.sha256(bytes),
+            operationsByteLength: bytes.count
+        ),
+        records: records
+    )
+}
+
+private func persistenceReplayRecord(
+    from record: AgentReplayRecord,
+    simulationID: AgentSimulationID? = nil,
+    sequence: UInt64? = nil,
+    preDigest: AgentCheckpointDigest? = nil,
+    postDigest: AgentCheckpointDigest? = nil
+) -> AgentReplayRecord {
+    AgentReplayRecord(
+        simulationID: simulationID ?? record.simulationID,
+        recordSequence: AgentReplayRecordSequence(rawValue: sequence ?? record.recordSequence.rawValue)!,
+        operation: record.operation,
+        expectedTickBefore: record.expectedTickBefore,
+        preStateSemanticDigest: preDigest ?? record.preStateSemanticDigest,
+        postStateSemanticDigest: postDigest ?? record.postStateSemanticDigest,
+        causalSequenceBefore: record.causalSequenceBefore,
+        causalSequenceAfter: record.causalSequenceAfter,
+        causalDigestAfter: record.causalDigestAfter
+    )
+}
+
 func runPebbleAgentsPersistenceReplaySmoke() {
     section("PebbleAgents persistence and replay")
 
@@ -129,4 +175,125 @@ func runPebbleAgentsPersistenceReplaySmoke() {
         )]
     )
     check("World binding digest deterministic", binding.compatibilityDigest == bindingAgain.compatibilityDigest)
+
+    var replayDirect = persistenceSmokeSession("persistence-replay")
+    let replayBase = try! replayDirect.makeCheckpoint()
+    var recorder = try! AgentReplayRecorder(checkpoint: replayBase, session: replayDirect)
+    _ = try! recorder.apply(.setEconomyEnabled(true), to: &replayDirect)
+    _ = try! recorder.apply(
+        .advanceTick(perceptions: [], physicalObservations: []),
+        to: &replayDirect
+    )
+    _ = try! recorder.apply(.externalUpdate(AgentExternalUpdate(
+        agentId: "agent_0",
+        memoryEntries: [AgentMemoryEntry(
+            tick: replayDirect.tick,
+            type: "replay_fixture",
+            summary: "typed external update",
+            importance: 0.4
+        )]
+    )), to: &replayDirect)
+    _ = try! recorder.apply(.setSurvivalEnabled(true), to: &replayDirect)
+    let journal = try! recorder.journal(named: AgentCheckpointName(rawValue: "continuation")!)
+    check("replay records every accepted mutation", journal.records.count == 4)
+    check("replay records contiguous sequence", journal.records.map(\.recordSequence.rawValue) == [1, 2, 3, 4])
+    check("replay records typed operation kinds", journal.records.map(\.operationKind) == [
+        .economyFeature, .advanceTick, .externalUpdate, .survivalFeature,
+    ])
+    check("replay manifest has no dropped records", journal.manifest.droppedRecordCount == 0)
+    check("replay manifest is replayable", journal.manifest.replayable)
+    let journalBytesA = try! AgentReplayCodec.encodeRecords(journal.records)
+    let journalBytesB = try! AgentReplayCodec.encodeRecords(journal.records)
+    check("replay NDJSON bytes deterministic", journalBytesA == journalBytesB)
+    let decodedRecords = try! AgentReplayCodec.decodeRecords(journalBytesA)
+    check("replay NDJSON round-trip count", decodedRecords.count == journal.records.count)
+
+    let replayed = try! AgentSessionReplayer.replay(checkpoint: replayBase, journal: journal)
+    check("replay verifies exact continuation", replayed.report.verified)
+    check("replay applies all records", replayed.report.recordsApplied == journal.records.count)
+    check("replay final digest exact", replayed.report.finalSemanticDigest == (try! replayDirect.durableStateDigest()))
+    check("replay final durable bytes exact", try! replayed.session.durableStateBytes() == replayDirect.durableStateBytes())
+    check("replay final causal sequence exact", replayed.report.finalCausalSequence == replayDirect.causalLedgerSnapshot().summary.latestSequence)
+    check("replay final causal digest exact", replayed.report.finalCausalDigest == replayDirect.causalLedgerSnapshot().summary.digest)
+
+    var refusedSession = try! AgentSimulationSession.restoring(replayBase)
+    var refusedRecorder = try! AgentReplayRecorder(checkpoint: replayBase, session: refusedSession)
+    let refusedBefore = try! refusedSession.durableStateDigest()
+    let invalidDelivery = AgentDeliveryOutcome(
+        deliveryId: "invalid-delivery",
+        agentId: "missing-agent",
+        tick: refusedSession.tick,
+        status: .blocked,
+        transferred: [],
+        reason: "negative test"
+    )
+    let refused = (try? refusedRecorder.apply(
+        .deliveryOutcome(invalidDelivery),
+        to: &refusedSession
+    )) == nil
+    check("replay refused mutation produces no record", refused && refusedRecorder.records.isEmpty)
+    check("replay refused mutation preserves state", try! refusedSession.durableStateDigest() == refusedBefore)
+
+    let zeroDigest = AgentCheckpointDigest(rawValue: String(repeating: "0", count: 64))!
+    let badPostRecord = persistenceReplayRecord(from: journal.records[0], postDigest: zeroDigest)
+    let badPost = try! AgentSessionReplayer.replay(
+        checkpoint: replayBase,
+        journal: persistenceReplayJournal(
+            name: "bad-post",
+            checkpoint: replayBase,
+            records: [badPostRecord]
+        )
+    )
+    check("replay reports post-digest divergence", !badPost.report.verified && badPost.report.divergence?.recordSequence == 1)
+    check("replay reports first divergent operation", badPost.report.divergence?.operationKind == .economyFeature)
+
+    let badPreRecord = persistenceReplayRecord(from: journal.records[0], preDigest: zeroDigest)
+    let badPre = try! AgentSessionReplayer.replay(
+        checkpoint: replayBase,
+        journal: persistenceReplayJournal(
+            name: "bad-pre",
+            checkpoint: replayBase,
+            records: [badPreRecord]
+        )
+    )
+    check("replay reports pre-digest divergence", !badPre.report.verified && badPre.report.recordsApplied == 0)
+
+    let gapRecord = persistenceReplayRecord(from: journal.records[0], sequence: 2)
+    let gap = try! AgentSessionReplayer.replay(
+        checkpoint: replayBase,
+        journal: persistenceReplayJournal(
+            name: "record-gap",
+            checkpoint: replayBase,
+            records: [gapRecord]
+        )
+    )
+    check("replay rejects record sequence gap", !gap.report.verified && gap.report.divergence?.recordSequence == 2)
+
+    let otherSimulation = try! AgentSimulationID(validating: "wrong-simulation")
+    let crossSimulationRecord = persistenceReplayRecord(
+        from: journal.records[0],
+        simulationID: otherSimulation
+    )
+    let crossSimulation = try! AgentSessionReplayer.replay(
+        checkpoint: replayBase,
+        journal: persistenceReplayJournal(
+            name: "cross-simulation",
+            checkpoint: replayBase,
+            records: [crossSimulationRecord]
+        )
+    )
+    check("replay rejects cross-simulation record", !crossSimulation.report.verified)
+    check("replay rejects truncated NDJSON", (try? AgentReplayCodec.decodeRecords(Data(journalBytesA.dropLast()))) == nil)
+
+    let nonReplayable = persistenceReplayJournal(
+        name: "not-replayable",
+        checkpoint: replayBase,
+        records: [],
+        replayable: false,
+        dropped: 1
+    )
+    check("replay rejects dropped-record journal", (try? AgentSessionReplayer.replay(
+        checkpoint: replayBase,
+        journal: nonReplayable
+    )) == nil)
 }

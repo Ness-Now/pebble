@@ -16,6 +16,9 @@ if options.scenario == "physical_channel_smoke" {
 if options.scenario == "shared_tasks_cooperation_smoke" {
     runSharedTasksCooperationSmoke(options)
 }
+if options.scenario == "persistent_checkpoint_replay_smoke" {
+    runPersistentCheckpointReplaySmoke(options)
+}
 
 let isMultiAgentMovementFixtureScenario = options.scenario
     == "multi_agent_movement_fixture_smoke"
