@@ -101,11 +101,12 @@ extension PebbleAgentController {
         guard let session else { return failure("No active PebbleAgents session.") }
         let interval = session.settlementMetricsSummary().macroIntervalTicks
             ?? AgentSettlementMetricsConfiguration.live.macroIntervalTicks
-        return success(
+        let message =
             "scale microAgents=\(session.snapshot().agentCount) microTicks=every_tick "
                 + "macroSettlement=every_\(interval)_ticks "
                 + "coarseAgentExecution=off offScreenAgents=0"
-        )
+        trace(message)
+        return success(message)
     }
 
     func traceSettlementMetricsState(at tick: Int) {
@@ -135,6 +136,33 @@ extension PebbleAgentController {
             "\($0.agentID.rawValue):\($0.tier.rawValue):\($0.reason)"
         }.joined(separator: ",")
         trace("settlement classifications tick=\(tick) \(classifications)")
+        func distribution(
+            _ name: String,
+            _ value: AgentMetricFixedPointDistribution
+        ) -> String {
+            "\(name)=\(value.minimum.rawValue),\(value.maximum.rawValue),"
+                + "\(value.sum.rawValue),\(value.mean.rawValue)"
+        }
+        trace(
+            "settlement welfare tick=\(tick) "
+                + "\(distribution("hunger", frame.welfare.hunger)) "
+                + "\(distribution("fatigue", frame.welfare.fatigue)) "
+                + "\(distribution("curiosity", frame.welfare.curiosity)) "
+                + "\(distribution("safety", frame.welfare.safety)) "
+                + "health=\(frame.welfare.minimumHealth),\(frame.welfare.meanHealth) "
+                + "fearMax=\(frame.welfare.maximumFear) "
+                + "hungry=\(frame.welfare.hungryCount) "
+                + "criticalHunger=\(frame.welfare.criticalHungerCount) "
+                + "fatigued=\(frame.welfare.fatiguedCount) "
+                + "atHome=\(frame.spatial.agentsAtHome) "
+                + "away=\(frame.spatial.agentsAwayFromHome) "
+                + "homeDistance=\(frame.spatial.totalDistanceFromHome),"
+                + "\(frame.spatial.maximumDistanceFromHome) "
+                + "anchorDistance=\(frame.spatial.totalDistanceFromAnchor),"
+                + "\(frame.spatial.maximumDistanceFromAnchor) "
+                + "occupied=\(frame.spatial.distinctOccupiedPositions) "
+                + "conservation=\(frame.material.conservationBalanced ? "exact" : "divergent")"
+        )
     }
 
     private func settlementMetricsStatus(
@@ -144,7 +172,7 @@ extension PebbleAgentController {
         let coverage = summary.causalCoverageComplete.map {
             $0 ? "complete" : "incomplete"
         } ?? "none"
-        return success(
+        let message =
             "settlement gate=enabled enabled=\(summary.enabled ? 1 : 0) "
                 + "settlement=\(summary.settlementID?.rawValue ?? "none") "
                 + "microTick=\(summary.microTick) "
@@ -163,6 +191,7 @@ extension PebbleAgentController {
                 + "socialDelta=\(summary.socialActivityDelta) "
                 + "cooperationDelta=\(summary.cooperationActivityDelta) "
                 + "coverage=\(coverage) digest=\(summary.digest)"
-        )
+        trace(message)
+        return success(message)
     }
 }

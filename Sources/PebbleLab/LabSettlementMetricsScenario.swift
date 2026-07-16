@@ -26,6 +26,7 @@ private struct SettlementScenarioSummary: Encodable, Equatable {
     let pulseTicks: [Int]
     let frameIDs: [String]
     let conditions: [String]
+    let conditionProofs: [SettlementConditionProof]
     let population: Int
     let residents: Int
     let arrivalTick: Int
@@ -39,6 +40,22 @@ private struct SettlementScenarioSummary: Encodable, Equatable {
     let populationDigest: String
     let durableDigest: String
     let causalDigest: String
+}
+
+private struct SettlementConditionProof: Encodable, Equatable {
+    let condition: String
+    let reason: String
+    let frameID: String
+    let digest: String
+    let causalCoverageComplete: Bool
+    let urgent: Int
+    let migrating: Int
+    let admissionDelta: Int
+    let arrivalDelta: Int
+    let movementDelta: Int
+    let materialActivityDelta: Int
+    let conservationBalanced: Bool
+    let classifications: [String]
 }
 
 private struct SettlementBehaviorABReport: Codable, Equatable {
@@ -78,14 +95,19 @@ private let metricsRoute = (20...27).reversed().map {
     AgentPosition(x: $0, y: 64, z: 0)
 }
 
-private func metricsAgent(_ id: String, x: Int) -> AgentSessionAgentState {
+private func metricsAgent(
+    _ id: String,
+    x: Int,
+    health: Int = 100,
+    curiosity: Double = 0.2
+) -> AgentSessionAgentState {
     let position = AgentPosition(x: x, y: 64, z: 0)
     return AgentSessionAgentState(
         id: id,
         state: "idle",
         position: position,
-        needs: AgentNeeds(hunger: 0, fatigue: 0, curiosity: 0.2, safety: 1),
-        health: 100,
+        needs: AgentNeeds(hunger: 0, fatigue: 0, curiosity: curiosity, safety: 1),
+        health: health,
         fear: 0,
         homePosition: position,
         nearbyAgents: [],
@@ -111,7 +133,10 @@ private func metricsAgent(_ id: String, x: Int) -> AgentSessionAgentState {
 private func metricsSession(
     seed: UInt32,
     id: String,
-    metricsEnabled: Bool
+    metricsEnabled: Bool,
+    ledgerEvents: Int = 8192,
+    firstAgentHealth: Int = 100,
+    firstAgentCuriosity: Double = 0.2
 ) -> AgentSimulationSession {
     let survival = try! AgentSurvivalConfiguration(
         hungerPerTick: 0.001,
@@ -137,12 +162,17 @@ private func metricsSession(
     var session = try! AgentSimulationSession(
         configuration: configuration,
         agents: [
-            metricsAgent("agent_0", x: -30),
+            metricsAgent(
+                "agent_0",
+                x: -30,
+                health: firstAgentHealth,
+                curiosity: firstAgentCuriosity
+            ),
             metricsAgent("agent_1", x: -15),
             metricsAgent("agent_2", x: 0),
         ],
         simulationID: try! AgentSimulationID(validating: id),
-        causalLedgerPolicy: .bounded(maxEvents: 8192)
+        causalLedgerPolicy: .bounded(maxEvents: ledgerEvents)
     )
     session.setSurvivalEnabled(true)
     try! session.initializePopulationRegistry(
@@ -233,6 +263,44 @@ private func metricsPerception(
     )
 }
 
+private func metricsResidentPerception(
+    agentId: String,
+    position: AgentPosition,
+    worldTick: Int
+) -> AgentPerceptionInput {
+    let neighbors = AgentCardinalDirection.allCases.map { direction in
+        let target = AgentPosition(
+            x: position.x + direction.dx,
+            y: position.y,
+            z: position.z + direction.dz
+        )
+        return AgentWorldNeighborObservation(
+            direction: direction,
+            column: metricsColumn(target),
+            stepDelta: 0,
+            traversable: true,
+            dangerousDrop: false
+        )
+    }
+    return AgentPerceptionInput(
+        agentId: agentId,
+        worldObservation: try! AgentWorldObservation(
+            worldTick: worldTick,
+            position: position,
+            center: metricsColumn(position),
+            neighbors: neighbors,
+            biomeId: 1,
+            biomeName: "plains",
+            combinedLight: 15,
+            skyLight: 15,
+            blockLight: 0,
+            dayTime: 1000,
+            raining: false,
+            thundering: false
+        )
+    )
+}
+
 @discardableResult
 private func metricsStep(
     session: inout AgentSimulationSession,
@@ -291,6 +359,28 @@ private func metricsBehaviorDigest(_ session: AgentSimulationSession) -> String 
             + "\(conservation.harvestedTotal)|\(conservation.carriedTotal)|"
             + "\(conservation.campStockTotal)|\(conservation.consumedTotal)|"
             + "\(conservation.constructionEscrowTotal)|\(conservation.constructedTotal)"
+    )
+}
+
+private func metricsConditionProof(
+    _ frame: AgentSettlementMetricFrame
+) -> SettlementConditionProof {
+    SettlementConditionProof(
+        condition: frame.condition.rawValue,
+        reason: frame.reasonCode,
+        frameID: frame.frameID.rawValue,
+        digest: frame.digest,
+        causalCoverageComplete: frame.causalCoverageComplete,
+        urgent: frame.activity.urgentCount,
+        migrating: frame.activity.migratingCount,
+        admissionDelta: frame.population.admissionDelta,
+        arrivalDelta: frame.population.arrivalDelta,
+        movementDelta: frame.throughput.movementDelta,
+        materialActivityDelta: frame.throughput.materialActivityDelta,
+        conservationBalanced: frame.material.conservationBalanced,
+        classifications: frame.activity.classifications.map {
+            "\($0.agentID.rawValue):\($0.tier.rawValue):\($0.reason)"
+        }
     )
 }
 
@@ -432,6 +522,56 @@ func runSettlementMetricsMultiscaleSmoke(_ options: Options) -> Never {
     let v2BytesA = try! AgentCheckpointCodec.encode(v2Checkpoint)
     let v2BytesB = try! AgentCheckpointCodec.encode(try! v2.makeCheckpoint())
 
+    var active = metricsSession(
+        seed: options.seed,
+        id: "settlement-active-\(options.seed)",
+        metricsEnabled: true,
+        firstAgentCuriosity: 0.8
+    )
+    for _ in 0..<4 {
+        let agent = active.snapshot().agents.first { $0.id == "agent_0" }!
+        _ = try! active.advanceTick(perceptions: [
+            metricsResidentPerception(
+                agentId: agent.id,
+                position: agent.position,
+                worldTick: active.tick + 1
+            ),
+        ])
+        try! active.applyMovementOutcomes(
+            AgentMovementCoordinator.resolve(snapshot: active.snapshot())
+        )
+    }
+    let activeFrame = active.settlementMetricsSnapshot().frames[0]
+
+    var strained = metricsSession(
+        seed: options.seed,
+        id: "settlement-strained-\(options.seed)",
+        metricsEnabled: true,
+        firstAgentHealth: 25
+    )
+    for _ in 0..<4 {
+        _ = try! metricsStep(session: &strained, recorder: &noRecorder)
+    }
+    let strainedFrame = strained.settlementMetricsSnapshot().frames[0]
+
+    var incomplete = metricsSession(
+        seed: options.seed,
+        id: "settlement-incomplete-\(options.seed)",
+        metricsEnabled: true,
+        ledgerEvents: 10
+    )
+    for _ in 0..<4 {
+        _ = try! metricsStep(session: &incomplete, recorder: &noRecorder)
+    }
+    let incompleteFrame = incomplete.settlementMetricsSnapshot().frames[0]
+    let conditionProofs = [
+        metricsConditionProof(incompleteFrame),
+        metricsConditionProof(strainedFrame),
+        metricsConditionProof(frames[0]),
+        metricsConditionProof(activeFrame),
+        metricsConditionProof(frames[2]),
+    ]
+
     var checks: [SettlementScenarioCheck] = []
     func add(_ name: String, _ passed: Bool, _ detail: String = "") {
         checks.append(SettlementScenarioCheck(name: name, passed: passed, detail: detail))
@@ -466,6 +606,25 @@ func runSettlementMetricsMultiscaleSmoke(_ options: Options) -> Never {
     add("frame_three_stable", frames[2].condition == .stable
         && frames[2].activity.stableCount == 4
         && frames[2].throughput.movementDelta == 0)
+    add("active_condition", activeFrame.condition == .active
+        && activeFrame.reasonCode == "accepted_window_activity")
+    add("active_movement_delta", activeFrame.throughput.movementDelta > 0)
+    add("active_no_urgency", activeFrame.activity.urgentCount == 0)
+    add("active_no_population_transition", activeFrame.activity.migratingCount == 0
+        && activeFrame.population.admissionDelta == 0
+        && activeFrame.population.arrivalDelta == 0
+        && activeFrame.populationEventDelta == 0)
+    add("active_conservation_exact", activeFrame.material.conservationBalanced
+        && activeFrame.throughput.materialActivityDelta == 0)
+    add("strained_condition", strainedFrame.condition == .strained
+        && strainedFrame.reasonCode == "urgent_agents"
+        && strainedFrame.activity.urgentCount == 1)
+    add("incomplete_condition", incompleteFrame.condition == .incomplete
+        && incompleteFrame.reasonCode == "causal_window_incomplete"
+        && !incompleteFrame.causalCoverageComplete)
+    add("condition_coverage_all_five",
+        Set(conditionProofs.map(\.condition))
+            == Set(AgentSettlementCondition.allCases.map(\.rawValue)))
     add("causal_coverage", frames.allSatisfy(\.causalCoverageComplete))
     add("no_feedback", behaviorReport.equal && behaviorReport.agentSnapshotsEqual)
     add("world_material_unchanged", direct.conservationSnapshot().harvestedTotal == 0
@@ -505,6 +664,7 @@ func runSettlementMetricsMultiscaleSmoke(_ options: Options) -> Never {
         pulseTicks: frames.map(\.toTickInclusive),
         frameIDs: frames.map(\.frameID.rawValue),
         conditions: frames.map(\.condition.rawValue),
+        conditionProofs: conditionProofs,
         population: population.members.count,
         residents: population.members.filter {
             $0.status == .founderResident || $0.status == .resident

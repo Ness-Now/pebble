@@ -7,14 +7,19 @@ private let settlementRoute = (20...27).reversed().map {
     AgentPosition(x: $0, y: 64, z: 0)
 }
 
-private func settlementAgent(_ id: String, x: Int) -> AgentSessionAgentState {
+private func settlementAgent(
+    _ id: String,
+    x: Int,
+    health: Int = 100,
+    curiosity: Double = 0.2
+) -> AgentSessionAgentState {
     let position = AgentPosition(x: x, y: 64, z: 0)
     return AgentSessionAgentState(
         id: id,
         state: "idle",
         position: position,
-        needs: AgentNeeds(hunger: 0, fatigue: 0, curiosity: 0.2, safety: 1),
-        health: 100,
+        needs: AgentNeeds(hunger: 0, fatigue: 0, curiosity: curiosity, safety: 1),
+        health: health,
         fear: 0,
         homePosition: position,
         nearbyAgents: [],
@@ -39,7 +44,9 @@ private func settlementAgent(_ id: String, x: Int) -> AgentSessionAgentState {
 
 private func settlementSession(
     id: String,
-    ledgerEvents: Int = 8192
+    ledgerEvents: Int = 8192,
+    firstAgentHealth: Int = 100,
+    firstAgentCuriosity: Double = 0.2
 ) -> AgentSimulationSession {
     let survival = try! AgentSurvivalConfiguration(
         hungerPerTick: 0.001,
@@ -65,7 +72,12 @@ private func settlementSession(
     var session = try! AgentSimulationSession(
         configuration: configuration,
         agents: [
-            settlementAgent("agent_0", x: -30),
+            settlementAgent(
+                "agent_0",
+                x: -30,
+                health: firstAgentHealth,
+                curiosity: firstAgentCuriosity
+            ),
             settlementAgent("agent_1", x: -15),
             settlementAgent("agent_2", x: 0),
         ],
@@ -154,6 +166,44 @@ private func settlementPerception(
             cells: settlementRoute.map {
                 AgentNavigationCell(position: $0, status: .traversable)
             }
+        )
+    )
+}
+
+private func settlementResidentPerception(
+    agentId: String,
+    position: AgentPosition,
+    worldTick: Int
+) -> AgentPerceptionInput {
+    let neighbors = AgentCardinalDirection.allCases.map { direction in
+        let target = AgentPosition(
+            x: position.x + direction.dx,
+            y: position.y,
+            z: position.z + direction.dz
+        )
+        return AgentWorldNeighborObservation(
+            direction: direction,
+            column: settlementColumn(target),
+            stepDelta: 0,
+            traversable: true,
+            dangerousDrop: false
+        )
+    }
+    return AgentPerceptionInput(
+        agentId: agentId,
+        worldObservation: try! AgentWorldObservation(
+            worldTick: worldTick,
+            position: position,
+            center: settlementColumn(position),
+            neighbors: neighbors,
+            biomeId: 1,
+            biomeName: "plains",
+            combinedLight: 15,
+            skyLight: 15,
+            blockLight: 0,
+            dayTime: 1000,
+            raining: false,
+            thundering: false
         )
     )
 }
@@ -383,6 +433,63 @@ func runPebbleAgentsSettlementMetricsSmoke() {
         $0.material.conservationBalanced
     })
 
+    var active = settlementSession(
+        id: "settlement-active",
+        firstAgentCuriosity: 0.8
+    )
+    try! active.setSettlementMetricsEnabled(true)
+    for _ in 0..<4 {
+        let agent = active.snapshot().agents.first { $0.id == "agent_0" }!
+        _ = try! active.advanceTick(perceptions: [
+            settlementResidentPerception(
+                agentId: agent.id,
+                position: agent.position,
+                worldTick: active.tick + 1
+            ),
+        ])
+        try! active.applyMovementOutcomes(
+            AgentMovementCoordinator.resolve(snapshot: active.snapshot())
+        )
+    }
+    let activeFrame = active.settlementMetricsSnapshot().frames[0]
+    check(
+        "settlement active condition",
+        activeFrame.condition == .active
+            && activeFrame.reasonCode == "accepted_window_activity",
+        "condition=\(activeFrame.condition.rawValue) reason=\(activeFrame.reasonCode)"
+    )
+    check("settlement active movement delta", activeFrame.throughput.movementDelta > 0)
+    check("settlement active no urgency", activeFrame.activity.urgentCount == 0)
+    check("settlement active no population transition",
+          activeFrame.activity.migratingCount == 0
+            && activeFrame.population.admissionDelta == 0
+            && activeFrame.population.arrivalDelta == 0
+            && activeFrame.populationEventDelta == 0)
+    check("settlement active conservation exact",
+          activeFrame.material.conservationBalanced
+            && activeFrame.throughput.materialActivityDelta == 0)
+
+    var strained = settlementSession(
+        id: "settlement-strained",
+        firstAgentHealth: 25
+    )
+    try! strained.setSettlementMetricsEnabled(true)
+    for _ in 0..<4 {
+        _ = try! advanceSettlementTick(&strained, recorder: &noRecorder)
+    }
+    let strainedFrame = strained.settlementMetricsSnapshot().frames[0]
+    check(
+        "settlement strained condition",
+        strainedFrame.condition == .strained
+            && strainedFrame.reasonCode == "urgent_agents",
+        "condition=\(strainedFrame.condition.rawValue) reason=\(strainedFrame.reasonCode)"
+    )
+    check("settlement strained true classifier",
+          strainedFrame.activity.urgentCount == 1
+            && strainedFrame.activity.classifications.first?.tier == .microUrgent
+            && strainedFrame.activity.classifications.first?.reason == "safety"
+            && strainedFrame.welfare.minimumHealth == 25)
+
     let journal = try! recorder!.journal(
         named: AgentCheckpointName(rawValue: "settlement-continuation")!
     )
@@ -508,4 +615,10 @@ func runPebbleAgentsSettlementMetricsSmoke() {
     check("settlement events excluded from activity", incompleteFrame.social.eventDelta == 0
         && incompleteFrame.physical.eventDelta == 0
         && incompleteFrame.cooperation.eventDelta == 0)
+    let observedConditions = Set(
+        [frame1.condition, frames[1].condition, frames[2].condition,
+         activeFrame.condition, strainedFrame.condition, incompleteFrame.condition]
+    )
+    check("settlement classifier covers five fixture conditions",
+          observedConditions == Set(AgentSettlementCondition.allCases))
 }

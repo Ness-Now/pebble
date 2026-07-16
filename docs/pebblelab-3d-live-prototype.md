@@ -8,10 +8,13 @@ admettre un quatrième agent migrant dans un registre local borné à huit
 membres. Elle expose leur cognition partagée, leur perception locale, leurs
 déplacements cardinaux sûrs et l’influence de leur mémoire de mouvement. La
 verticale population ne modifie aucun bloc du terrain.
+Sous une gate multi-scale supplémentaire, `settlement-main` publie aussi un
+frame administratif borné tous les quatre ticks. Cette vue collective ne
+ralentit, ne remplace et ne pilote aucun tick agent.
 
 ## Prérequis et lancement
 
-Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence` et `--population` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06 et migration physique CIV-07. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
+Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population` et `--multiscale` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07 et métriques settlement CIV-08. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
 
 Depuis la racine du dépôt :
 
@@ -62,6 +65,8 @@ Commandes de démonstration :
 /lab cooperation <on|off|status|clear>
 /lab population <on|off|status|clear>
 /lab migration <admit|status>
+/lab settlement <on|off|status|clear>
+/lab scale status
 /lab checkpoint <status|list|save|load|delete>
 /lab replay <status|start|stop|verify>
 /lab status
@@ -138,6 +143,42 @@ gate reste désactivée par défaut et la population active est limitée à huit
 membres ; aucune naissance, mort, reproduction, famille, émigration,
 population hors écran ou mutation World n'est ouverte.
 
+## CIV-08 — Métriques settlement et vue multi-scale bornée
+
+Le mode `scripts/verify-pebblelab-live.sh --multiscale` active explicitement
+`PEBBLELAB_APP_AGENTS_MULTISCALE=1`, ainsi que population et persistence, dans
+un monde jetable seed `46`. `/lab settlement on` construit une baseline au tick
+courant ; le runtime publie ensuite un frame administratif de
+`settlement-main` aux ticks `4`, `8` et `12`. `/lab scale status` rappelle que
+les agents restent exécutés à chaque tick, que la coarse execution est
+désactivée et qu'aucun agent n'est hors écran.
+
+La preuve sauvegarde `settlement-frame-1` en checkpoint v3 au tick 4, termine
+réellement le processus, restaure quatre agents, quatre probes, la route du
+migrant, le frame 1 et l'horloge macro, puis poursuit jusqu'au troisième pulse.
+Un contrôle ininterrompu produit les mêmes frames, digests et décisions. Un
+contrôle avec les métriques désactivées produit une trace micro byte-identical,
+ce qui prouve l'absence de rétroaction cognitive ou matérielle.
+
+Les fixtures headless contrôlées font passer le vrai classificateur par les
+cinq conditions : `incomplete`, `strained`, `transitioning`, `active` et
+`stable`. La preuve `active` repose sur un mouvement de résident réellement
+accepté dans une fenêtre complète, sans urgence, migration, transition de
+population ni activité matérielle. Le monde live conserve au contraire les
+besoins et goals historiques des fondateurs ; ses frames aux ticks `4`, `8` et
+`12` restent donc honnêtement `strained` lorsque `seekSafety` ou `rest` sont
+engagés. Le script l'affirme explicitement. Cette vérité administrative
+n'altère ni migration, ni population, ni conservation, et ne doit pas être
+masquée en requalifiant les états micro ou en exigeant du live une séquence
+artificielle des cinq conditions.
+
+CIV-08 est terminé et validé localement. Il ne constitue pas une optimisation
+de grande population : l'historique est borné à seize frames, la population
+reste limitée à huit agents actifs et chaque agent conserve sa cognition
+complète. Le checkpoint/replay v3 n'ouvre ni autosave général, ni snapshot du
+World, ni framework général de migration. La prochaine étape canonique est
+`CIV-09 — Local Ecology and Subsistence Pressure V1`.
+
 ## Arrêt propre et inspection
 
 Utiliser `/lab demo stop`, `/lab stop` ou `/lab clear`. Les probes transitoires sont retirées, le follow est désactivé et un résumé de session est écrit lorsque les traces sont actives. `/lab status` confirme ensuite que la session est inactive. Les probes ont `shouldSaveToChunk == false` et `persistent == false` ; aucun agent n’est restauré lors d’un lancement ultérieur.
@@ -159,6 +200,8 @@ Utiliser `/lab demo stop`, `/lab stop` ou `/lab clear`. Les probes transitoires 
   explicitement gated et limitée aux frontières restart-safe documentées ;
 - aucun agent dynamique hors admission migratoire CIV-07, aucune suppression
   d'agent et aucune simulation hors écran ;
+- aucun tick agent sauté, aucune coarse execution et aucun agrégat macro
+  utilisé comme entrée cognitive ; la gate CIV-08 est désactivée par défaut ;
 - aucun contrôleur autonome du joueur.
 
 Les comportements cognitifs supplémentaires, la planification longue, le

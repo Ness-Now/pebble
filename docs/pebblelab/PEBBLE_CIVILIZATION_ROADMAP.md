@@ -24,7 +24,12 @@ Le point de départ est le HEAD post-K :
   acquises pour la construction d'un abri ;
 - registre local de population borné, admission physique d'un migrant,
   identité dynamique monotone, checkpoint/replay population v2 et reprise
-  mid-route acquis sous gate explicite, avec un maximum de huit agents actifs.
+  mid-route acquis sous gate explicite, avec un maximum de huit agents actifs ;
+- métriques collectives bornées de `settlement-main`, pulse macro déterministe
+  tous les quatre ticks, classifications administratives, historique borné et
+  checkpoint/replay v3 acquis sous gate explicite. Tous les agents continuent
+  à recevoir leur tick micro complet : aucune coarse execution et aucun agent
+  hors écran ne sont introduits.
 
 Le langage libre, le forwarding, les professions, l'économie du travail, la
 persistance complète des agents, le replay complet du World, la grande
@@ -87,8 +92,15 @@ peuvent initialiser `settlement-main`, un migrant `agent_3` peut être admis
 depuis `outside-north`, marcher physiquement jusqu'au point d'accueil et
 devenir résident après un restart mid-route. La population reste bornée à huit
 membres, sans naissance, mort, reproduction, famille, émigration ou simulation
-hors écran. La prochaine étape canonique est
-`CIV-08 — Settlement Metrics and Bounded Multi-Scale Simulation V1`.
+hors écran. `CIV-08` est terminé et validé localement : le settlement possède
+désormais une vue macro administrative à cadence bornée, persistée et
+rejouable, sans rétroaction sur les décisions, les mouvements ou les
+transactions micro. Les fixtures headless contrôlées couvrent les cinq
+conditions du vrai classificateur (`incomplete`, `strained`, `transitioning`,
+`active`, `stable`) ; la preuve live historique reste correctement `strained`
+aux trois pulses parce que les urgences micro réelles sont prioritaires. La
+prochaine étape canonique est
+`CIV-09 — Local Ecology and Subsistence Pressure V1`.
 
 ## Grands programmes ultérieurs
 

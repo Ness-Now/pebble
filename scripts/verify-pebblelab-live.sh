@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build|--social|--physical|--cooperation|--persistence|--population]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build|--social|--physical|--cooperation|--persistence|--population|--multiscale]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -37,6 +37,7 @@ Options:
   --cooperation Run shared construction-material task, delivery, and shelter completion.
   --persistence Run checkpoint, real process restart, causal replay, and uninterrupted control.
   --population Run bounded migrant admission, mid-route restart, arrival, and uninterrupted control.
+  --multiscale Run bounded settlement pulses, v3 restart, uninterrupted, and metrics-off controls.
   --help     Show this help and exit.
 EOF
 }
@@ -85,6 +86,7 @@ for option in "$@"; do
         --cooperation) MODE="cooperation"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --persistence) MODE="persistence"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --population) MODE="population"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --multiscale) MODE="multiscale"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --help|-h) usage; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$option" >&2; usage >&2; exit 2 ;;
     esac
@@ -99,7 +101,28 @@ PHYSICAL_GATE=0
 COOPERATION_GATE=0
 PERSISTENCE_GATE=0
 POPULATION_GATE=0
-if [ "$MODE" = "population" ]; then
+MULTISCALE_GATE=0
+if [ "$MODE" = "multiscale" ]; then
+    WORLD_SEED="46"
+    PERSISTENCE_GATE=1
+    POPULATION_GATE=1
+    MULTISCALE_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-Multiscale-46"
+    CAPTURE_NAME="settlement-multiscale-proof.txt"
+    POPULATION_ANCHOR_X=${PEBBLELAB_POPULATION_ANCHOR_X:-14}
+    POPULATION_ANCHOR_Z=${PEBBLELAB_POPULATION_ANCHOR_Z:--18}
+    POPULATION_ANCHOR_Y=${PEBBLELAB_POPULATION_ANCHOR_Y:-68}
+    POPULATION_PLAYER_Y=$((POPULATION_ANCHOR_Y + 3))
+    POPULATION_WORLD_READY="/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp $POPULATION_ANCHOR_X $POPULATION_ANCHOR_Y $POPULATION_ANCHOR_Z"
+    MULTISCALE_PHASE1_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab pause;/lab movement on;/lab population on;/lab settlement on;/lab settlement status;/lab scale status;/lab migration admit;/lab focus agent_3;/lab follow agent_3"
+    multiscale_step=0
+    while [ "$multiscale_step" -lt 4 ]; do
+        MULTISCALE_PHASE1_COMMANDS="$MULTISCALE_PHASE1_COMMANDS;/lab step"
+        multiscale_step=$((multiscale_step + 1))
+    done
+    MULTISCALE_PHASE1_COMMANDS="$MULTISCALE_PHASE1_COMMANDS;/lab migration status;/lab settlement status;/lab checkpoint save settlement-frame-1;/lab checkpoint status;/lab causality status;/lab status"
+    LAB_COMMANDS="$MULTISCALE_PHASE1_COMMANDS"
+elif [ "$MODE" = "population" ]; then
     WORLD_SEED="46"
     PERSISTENCE_GATE=1
     POPULATION_GATE=1
@@ -313,6 +336,7 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_COOPERATION=%s\n' "$COOPERATION_GATE"
     printf '  PEBBLELAB_APP_AGENTS_PERSISTENCE=%s\n' "$PERSISTENCE_GATE"
     printf '  PEBBLELAB_APP_AGENTS_POPULATION=%s\n' "$POPULATION_GATE"
+    printf '  PEBBLELAB_APP_AGENTS_MULTISCALE=%s\n' "$MULTISCALE_GATE"
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
     if [ "$MODE" = "build" ]; then
         printf '  PEBBLE_SHOT=-|%s/fixed-shelter-before.png|%s/fixed-shelter-partial.png|%s|-\n' \
@@ -333,7 +357,11 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "population" ]; then
+    if [ "$MODE" = "multiscale" ]; then
+        printf '  2. Confirm four micro ticks, one macro pulse, four agents, and no coarse execution.\n'
+        printf '  3. Confirm a v3 restart-safe checkpoint restores frame 1 and its pulse clock exactly.\n'
+        printf '  4. Confirm restart, uninterrupted, and metrics-off controls preserve all micro decisions.\n'
+    elif [ "$MODE" = "population" ]; then
         printf '  2. Confirm three historical founders, deterministic agent_3 admission, and exactly four probes.\n'
         printf '  3. Confirm a v2 restart-safe checkpoint after exactly two successful migrant movements.\n'
         printf '  4. Confirm restart and uninterrupted control reach the same resident state and causal digest.\n'
@@ -366,7 +394,8 @@ print_plan() {
         printf '  2. Confirm hunger growth, satisfyHunger, food-only targeting, three route steps, harvest, and consume_food.\n'
         printf '  3. Confirm consumed=1 conservation, fatigue-driven homeRest, rest recovery, normal goal resumption, and zero corridor changes.\n'
     fi
-    if [ "$MODE" != "persistence" ] && [ "$MODE" != "population" ]; then
+    if [ "$MODE" != "persistence" ] && [ "$MODE" != "population" ] \
+        && [ "$MODE" != "multiscale" ]; then
         printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
     fi
     printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
@@ -426,6 +455,280 @@ printf '\nLaunching Pebble now. Personal Pebble data is hidden by CFFIXED_USER_H
 
 if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
     fail "a Pebble process is already running; refusing an ambiguous live baseline"
+fi
+
+if [ "$MODE" = "multiscale" ]; then
+    cd "$ROOT_DIR"
+    swift build -c release --product Pebble
+    PEBBLE_BINARY="$ROOT_DIR/.build/release/Pebble"
+    [ -x "$PEBBLE_BINARY" ] || fail "Release Pebble binary missing: $PEBBLE_BINARY"
+
+    PHASE1_TRACE="$SESSION_ROOT/multiscale-phase1.log"
+    PHASE2_TRACE="$SESSION_ROOT/multiscale-phase2.log"
+    CONTROL_HOME="$SESSION_ROOT/control-home"
+    CONTROL_TRACE="$SESSION_ROOT/multiscale-control.log"
+    METRICS_OFF_HOME="$SESSION_ROOT/metrics-off-home"
+    METRICS_OFF_TRACE="$SESSION_ROOT/multiscale-metrics-off.log"
+    [ ! -e "$CONTROL_HOME" ] || fail "fresh multiscale control home already exists: $CONTROL_HOME"
+    [ ! -e "$METRICS_OFF_HOME" ] \
+        || fail "fresh metrics-off control home already exists: $METRICS_OFF_HOME"
+
+    run_multiscale_app() {
+        run_home=$1
+        run_trace=$2
+        run_commands=$3
+        create_world=$4
+        command_world_tick=$5
+        metrics_gate=$6
+        if [ "$create_world" -eq 1 ]; then
+            CFFIXED_USER_HOME="$run_home" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLE_NEWWORLD="$WORLD_SEED" \
+            PEBBLE_NEWWORLD_NAME="$WORLD_NAME" \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_NATURAL=0 \
+            PEBBLELAB_APP_AGENTS_BUILD=0 \
+            PEBBLELAB_APP_AGENTS_SOCIAL=0 \
+            PEBBLELAB_APP_AGENTS_PHYSICAL=0 \
+            PEBBLELAB_APP_AGENTS_COOPERATION=0 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_APP_AGENTS_POPULATION=1 \
+            PEBBLELAB_APP_AGENTS_MULTISCALE="$metrics_gate" \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT='-|-|-|-' \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        else
+            CFFIXED_USER_HOME="$run_home" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_NATURAL=0 \
+            PEBBLELAB_APP_AGENTS_BUILD=0 \
+            PEBBLELAB_APP_AGENTS_SOCIAL=0 \
+            PEBBLELAB_APP_AGENTS_PHYSICAL=0 \
+            PEBBLELAB_APP_AGENTS_COOPERATION=0 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_APP_AGENTS_POPULATION=1 \
+            PEBBLELAB_APP_AGENTS_MULTISCALE="$metrics_gate" \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT='-|-|-|-' \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        fi
+        if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
+            fail "Pebble process remained after multiscale phase: $run_trace"
+        fi
+    }
+
+    printf '\nMultiscale phase 1: four micro ticks, first macro frame, and v3 checkpoint.\n'
+    run_multiscale_app \
+        "$SESSION_HOME" "$PHASE1_TRACE" "$MULTISCALE_PHASE1_COMMANDS" 1 100 1
+    TRACE_PATH="$PHASE1_TRACE"
+    require_trace 'start seed=46 agents=3 tick=0 ' 'historical three-agent bootstrap'
+    require_trace 'population initialized settlement=settlement-main capacity=8 founders=3 members=3 nextOrdinal=3 ' 'three founder population registry'
+    require_trace 'settlement metrics initialized tick=0 settlement=settlement-main macroSequence=0 nextPulse=4 mutation=none' 'settlement baseline at tick zero'
+    require_trace 'scale microAgents=3 microTicks=every_tick macroSettlement=every_4_ticks coarseAgentExecution=off offScreenAgents=0' 'honest two-scale status before admission'
+    require_trace 'migration admitted id=migration-00000003 migrant=agent_3 .*routeLength=8 ' 'deterministic migrant admission'
+    require_trace 'settlement frame tick=4 id=settlement-main/frame-00000001-t4 sequence=1 window=0..4 .*coverage=complete condition=strained reason=urgent_agents population=4/8 residents=3 migrants=1 urgent=2 .*movementDelta=4 .*materialDelta=0 socialDelta=0 physicalDelta=0 cooperationDelta=0 ' 'first complete strained four-tick macro frame'
+    require_trace 'settlement classifications tick=4 agent_0:microUrgent:safety,agent_1:microEngaged:micro_commitment,agent_2:microUrgent:safety,agent_3:microMigrating:migration' 'real founder urgency and migrant classification without feedback'
+    require_trace 'settlement welfare tick=4 ' 'fixed-point welfare and spatial frame details'
+    require_trace 'checkpoint saved name=settlement-frame-1 .*tick=4 .*restartSafe=1 ' 'restart-safe v3 checkpoint after frame one'
+    require_trace 'summary .*agents=4 .*runtimeErrors=0 .*probesRemoved=4 .*naturalHarvests=0 .*buildProject=none .*conservation=0:0\+0\+0\+0\+0:exact .*causalDropped=0' 'clean four-probe phase-one cleanup'
+
+    MULTISCALE_ROOT="$SESSION_HOME/Library/Application Support/Pebble/PebbleLabAgents"
+    FRAME1_MANIFEST=$(/usr/bin/find "$MULTISCALE_ROOT" -type f -path '*/checkpoints/settlement-frame-1/manifest.json' -print -quit)
+    FRAME1_SESSION=$(/usr/bin/find "$MULTISCALE_ROOT" -type f -path '*/checkpoints/settlement-frame-1/session.json' -print -quit)
+    [ -n "$FRAME1_MANIFEST" ] && [ -n "$FRAME1_SESSION" ] \
+        || fail "settlement v3 checkpoint bundle missing"
+    /usr/bin/grep -q '"schemaVersion":3' "$FRAME1_MANIFEST" \
+        || fail "settlement checkpoint manifest is not schema v3"
+    /usr/bin/grep -q '"schemaVersion":3' "$FRAME1_SESSION" \
+        || fail "settlement checkpoint session is not schema v3"
+    /usr/bin/grep -q '"restartSafe":true' "$FRAME1_MANIFEST" \
+        || fail "settlement frame-one checkpoint is not restart-safe"
+    /usr/bin/grep -q '"macroSequence":1' "$FRAME1_SESSION" \
+        || fail "settlement frame-one checkpoint did not retain macro sequence one"
+    /usr/bin/grep -q '"lastPulseTick":4' "$FRAME1_SESSION" \
+        || fail "settlement frame-one checkpoint did not retain last pulse four"
+    /usr/bin/grep -q '"nextPulseTick":8' "$FRAME1_SESSION" \
+        || fail "settlement frame-one checkpoint did not retain next pulse eight"
+
+    PHASE1_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=settlement-frame-1 .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE1_TRACE" | /usr/bin/tail -1)
+    PHASE1_SIM=$(/usr/bin/sed -n 's/.*checkpoint saved name=settlement-frame-1 .* simulation=\([^ ]*\) digest=.*/\1/p' "$PHASE1_TRACE" | /usr/bin/tail -1)
+    [ -n "$PHASE1_DIGEST" ] && [ -n "$PHASE1_SIM" ] \
+        || fail "multiscale phase-one identity extraction failed"
+
+    CONTROL_DB="$CONTROL_HOME/Library/Application Support/Pebble/pebble.db"
+    METRICS_OFF_DB="$METRICS_OFF_HOME/Library/Application Support/Pebble/pebble.db"
+    /bin/mkdir -p "$(dirname "$CONTROL_DB")" "$(dirname "$METRICS_OFF_DB")"
+    [ ! -e "$CONTROL_DB" ] || fail "fresh multiscale control database already exists"
+    [ ! -e "$METRICS_OFF_DB" ] || fail "fresh metrics-off database already exists"
+    /usr/bin/sqlite3 "$DB_PATH" ".backup '$CONTROL_DB'"
+    /usr/bin/sqlite3 "$DB_PATH" ".backup '$METRICS_OFF_DB'"
+    [ -s "$CONTROL_DB" ] && [ -s "$METRICS_OFF_DB" ] \
+        || fail "multiscale control database snapshots failed"
+    persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
+    case "$persisted_world_tick" in
+        ''|*[!0-9]*) fail "invalid persisted World tick after multiscale phase 1: $persisted_world_tick" ;;
+    esac
+    continuation_command_tick=$((persisted_world_tick + 100))
+
+    MULTISCALE_PHASE2_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab checkpoint load settlement-frame-1;/lab movement on;/lab migration status;/lab settlement status;/lab scale status"
+    multiscale_step=0
+    while [ "$multiscale_step" -lt 4 ]; do
+        MULTISCALE_PHASE2_COMMANDS="$MULTISCALE_PHASE2_COMMANDS;/lab step"
+        multiscale_step=$((multiscale_step + 1))
+    done
+    MULTISCALE_PHASE2_COMMANDS="$MULTISCALE_PHASE2_COMMANDS;/lab settlement status;/lab movement off"
+    multiscale_step=0
+    while [ "$multiscale_step" -lt 4 ]; do
+        MULTISCALE_PHASE2_COMMANDS="$MULTISCALE_PHASE2_COMMANDS;/lab step"
+        multiscale_step=$((multiscale_step + 1))
+    done
+    MULTISCALE_PHASE2_COMMANDS="$MULTISCALE_PHASE2_COMMANDS;/lab migration status;/lab population status;/lab settlement status;/lab scale status;/lab checkpoint save settlement-final;/lab checkpoint status;/lab causality status;/lab status"
+
+    MULTISCALE_CONTROL_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab pause;/lab movement on;/lab population on;/lab settlement on;/lab migration admit;/lab focus agent_3;/lab follow agent_3"
+    multiscale_step=0
+    while [ "$multiscale_step" -lt 8 ]; do
+        MULTISCALE_CONTROL_COMMANDS="$MULTISCALE_CONTROL_COMMANDS;/lab step"
+        multiscale_step=$((multiscale_step + 1))
+    done
+    MULTISCALE_CONTROL_COMMANDS="$MULTISCALE_CONTROL_COMMANDS;/lab movement off"
+    multiscale_step=0
+    while [ "$multiscale_step" -lt 4 ]; do
+        MULTISCALE_CONTROL_COMMANDS="$MULTISCALE_CONTROL_COMMANDS;/lab step"
+        multiscale_step=$((multiscale_step + 1))
+    done
+    MULTISCALE_CONTROL_COMMANDS="$MULTISCALE_CONTROL_COMMANDS;/lab migration status;/lab population status;/lab settlement status;/lab scale status;/lab checkpoint save settlement-final-control;/lab checkpoint status;/lab causality status;/lab status"
+
+    METRICS_OFF_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab pause;/lab movement on;/lab population on;/lab migration admit;/lab focus agent_3;/lab follow agent_3"
+    multiscale_step=0
+    while [ "$multiscale_step" -lt 8 ]; do
+        METRICS_OFF_COMMANDS="$METRICS_OFF_COMMANDS;/lab step"
+        multiscale_step=$((multiscale_step + 1))
+    done
+    METRICS_OFF_COMMANDS="$METRICS_OFF_COMMANDS;/lab movement off"
+    multiscale_step=0
+    while [ "$multiscale_step" -lt 4 ]; do
+        METRICS_OFF_COMMANDS="$METRICS_OFF_COMMANDS;/lab step"
+        multiscale_step=$((multiscale_step + 1))
+    done
+    METRICS_OFF_COMMANDS="$METRICS_OFF_COMMANDS;/lab migration status;/lab population status;/lab checkpoint save settlement-metrics-off;/lab checkpoint status;/lab causality status;/lab status"
+
+    printf '\nMultiscale phase 2: real process restart and pulses two and three.\n'
+    run_multiscale_app \
+        "$SESSION_HOME" "$PHASE2_TRACE" "$MULTISCALE_PHASE2_COMMANDS" \
+        0 "$continuation_command_tick" 1
+    TRACE_PATH="$PHASE2_TRACE"
+    require_trace "checkpoint loaded name=settlement-frame-1 .*tick=4 simulation=$PHASE1_SIM digest=$PHASE1_DIGEST .*restartSafe=1 probes=4 paused=1 focus=agent_3 lifecycleEvent=none worldMutation=none" 'exact four-agent v3 restore'
+    require_trace 'settlement gate=enabled enabled=1 settlement=settlement-main microTick=4 macroInterval=4 macroSequence=1 lastPulse=4 nextPulse=8 frames=1 evicted=0 ' 'restored macro clock and frame history'
+    require_trace 'settlement frame tick=8 id=settlement-main/frame-00000002-t8 sequence=2 window=4..8 .*coverage=complete condition=strained reason=urgent_agents population=4/8 residents=4 migrants=0 urgent=3 .*movementDelta=3 .*populationDelta=2 ' 'strained arrival window macro frame'
+    require_trace 'settlement classifications tick=8 agent_0:microUrgent:rest,agent_1:microEngaged:micro_commitment,agent_2:microUrgent:safety,agent_3:microUrgent:rest' 'rest and safety urgency remains visible after arrival'
+    require_trace 'settlement frame tick=12 id=settlement-main/frame-00000003-t12 sequence=3 window=8..12 .*coverage=complete condition=strained reason=urgent_agents population=4/8 residents=4 migrants=0 urgent=3 .*movementDelta=0 .*materialDelta=0 socialDelta=0 physicalDelta=0 cooperationDelta=0 populationDelta=0 ' 'strained quiet third macro frame'
+    require_trace 'settlement classifications tick=12 agent_0:microUrgent:rest,agent_1:microEngaged:micro_commitment,agent_2:microUrgent:safety,agent_3:microUrgent:rest' 'historical urgency remains visible in the quiet frame'
+    require_trace 'migration id=migration-00000003 migrant=agent_3 .*routeCursor=7 status=arrived ' 'migrant arrived after restart'
+    require_trace 'settlement gate=enabled enabled=1 settlement=settlement-main microTick=12 macroInterval=4 macroSequence=3 lastPulse=12 nextPulse=16 frames=3 evicted=0 ' 'final retained three-frame state'
+    require_trace 'scale microAgents=4 microTicks=every_tick macroSettlement=every_4_ticks coarseAgentExecution=off offScreenAgents=0' 'no coarse or off-screen execution'
+    require_trace 'checkpoint saved name=settlement-final .*tick=12 .*restartSafe=1 ' 'restart-safe final v3 checkpoint'
+    require_trace 'summary .*agents=4 .*runtimeErrors=0 .*probesRemoved=4 .*naturalHarvests=0 .*buildProject=none .*conservation=0:0\+0\+0\+0\+0:exact .*causalDropped=0' 'clean restarted multiscale cleanup'
+
+    LIVE_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=settlement-final .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
+    LIVE_SETTLEMENT_DIGEST=$(/usr/bin/sed -n 's/.*settlement gate=enabled .* digest=\([0-9a-f]*\)$/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
+    LIVE_POPULATION_DIGEST=$(/usr/bin/sed -n 's/.*population gate=enabled .* digest=\([0-9a-f]*\)$/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
+    LIVE_CAUSAL_DIGEST=$(/usr/bin/sed -n 's/.*causality status .* digest=\([0-9a-f]*\)$/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
+    [ -n "$LIVE_DIGEST" ] && [ -n "$LIVE_SETTLEMENT_DIGEST" ] \
+        && [ -n "$LIVE_POPULATION_DIGEST" ] && [ -n "$LIVE_CAUSAL_DIGEST" ] \
+        || fail "multiscale final digest extraction failed"
+
+    printf '\nMultiscale uninterrupted control.\n'
+    run_multiscale_app \
+        "$CONTROL_HOME" "$CONTROL_TRACE" "$MULTISCALE_CONTROL_COMMANDS" \
+        0 "$continuation_command_tick" 1
+    TRACE_PATH="$CONTROL_TRACE"
+    require_trace 'settlement frame tick=4 id=settlement-main/frame-00000001-t4 sequence=1 .*condition=strained reason=urgent_agents ' 'uninterrupted strained frame one'
+    require_trace 'settlement frame tick=8 id=settlement-main/frame-00000002-t8 sequence=2 .*condition=strained reason=urgent_agents ' 'uninterrupted strained frame two'
+    require_trace 'settlement frame tick=12 id=settlement-main/frame-00000003-t12 sequence=3 .*condition=strained reason=urgent_agents ' 'uninterrupted strained frame three'
+    require_trace 'summary .*agents=4 .*runtimeErrors=0 .*probesRemoved=4 .*conservation=0:0\+0\+0\+0\+0:exact .*causalDropped=0' 'clean uninterrupted multiscale cleanup'
+
+    CONTROL_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=settlement-final-control .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    CONTROL_SETTLEMENT_DIGEST=$(/usr/bin/sed -n 's/.*settlement gate=enabled .* digest=\([0-9a-f]*\)$/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    CONTROL_POPULATION_DIGEST=$(/usr/bin/sed -n 's/.*population gate=enabled .* digest=\([0-9a-f]*\)$/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    CONTROL_CAUSAL_DIGEST=$(/usr/bin/sed -n 's/.*causality status .* digest=\([0-9a-f]*\)$/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    [ "$CONTROL_DIGEST" = "$LIVE_DIGEST" ] \
+        || fail "multiscale restart/uninterrupted durable digest mismatch"
+    [ "$CONTROL_SETTLEMENT_DIGEST" = "$LIVE_SETTLEMENT_DIGEST" ] \
+        || fail "multiscale restart/uninterrupted settlement digest mismatch"
+    [ "$CONTROL_POPULATION_DIGEST" = "$LIVE_POPULATION_DIGEST" ] \
+        || fail "multiscale restart/uninterrupted population digest mismatch"
+    [ "$CONTROL_CAUSAL_DIGEST" = "$LIVE_CAUSAL_DIGEST" ] \
+        || fail "multiscale restart/uninterrupted causal digest mismatch"
+
+    /usr/bin/grep -E '^\[lab-live\] tick=([5-9]|1[0-2]) ' "$PHASE2_TRACE" \
+        > "$SESSION_ROOT/restart-micro.normalized"
+    /usr/bin/grep -E '^\[lab-live\] tick=([5-9]|1[0-2]) ' "$CONTROL_TRACE" \
+        > "$SESSION_ROOT/control-micro.normalized"
+    /usr/bin/cmp "$SESSION_ROOT/restart-micro.normalized" "$SESSION_ROOT/control-micro.normalized" \
+        || fail "multiscale restart and uninterrupted micro traces differ"
+    {
+        /usr/bin/grep -E '^\[lab-live\] settlement (frame|classifications|welfare) tick=4 ' "$PHASE1_TRACE"
+        /usr/bin/grep -E '^\[lab-live\] settlement (frame|classifications|welfare) tick=(8|12) ' "$PHASE2_TRACE"
+    } > "$SESSION_ROOT/restart-macro.normalized"
+    /usr/bin/grep -E '^\[lab-live\] settlement (frame|classifications|welfare) tick=(4|8|12) ' "$CONTROL_TRACE" \
+        > "$SESSION_ROOT/control-macro.normalized"
+    /usr/bin/cmp "$SESSION_ROOT/restart-macro.normalized" "$SESSION_ROOT/control-macro.normalized" \
+        || fail "multiscale restart and uninterrupted macro traces differ"
+
+    printf '\nMultiscale metrics-off behavioral control.\n'
+    run_multiscale_app \
+        "$METRICS_OFF_HOME" "$METRICS_OFF_TRACE" "$METRICS_OFF_COMMANDS" \
+        0 "$continuation_command_tick" 0
+    TRACE_PATH="$METRICS_OFF_TRACE"
+    reject_trace 'settlement metrics initialized|settlement frame tick=|settlement classifications tick=' 'settlement metrics while the gate is off'
+    require_trace 'migration id=migration-00000003 migrant=agent_3 .*routeCursor=7 status=arrived ' 'metrics-off migrant arrival'
+    require_trace 'checkpoint saved name=settlement-metrics-off .*tick=12 .*restartSafe=1 ' 'metrics-off v2 checkpoint'
+    require_trace 'summary .*agents=4 .*runtimeErrors=0 .*probesRemoved=4 .*conservation=0:0\+0\+0\+0\+0:exact .*causalDropped=0' 'clean metrics-off control cleanup'
+    METRICS_OFF_MANIFEST=$(/usr/bin/find "$METRICS_OFF_HOME/Library/Application Support/Pebble/PebbleLabAgents" -type f -path '*/checkpoints/settlement-metrics-off/manifest.json' -print -quit)
+    [ -n "$METRICS_OFF_MANIFEST" ] || fail "metrics-off checkpoint manifest missing"
+    /usr/bin/grep -q '"schemaVersion":2' "$METRICS_OFF_MANIFEST" \
+        || fail "metrics-off population checkpoint is not unchanged schema v2"
+
+    /usr/bin/grep -E '^\[lab-live\] tick=([1-9]|1[0-2]) ' "$CONTROL_TRACE" \
+        > "$SESSION_ROOT/metrics-on-micro.normalized"
+    /usr/bin/grep -E '^\[lab-live\] tick=([1-9]|1[0-2]) ' "$METRICS_OFF_TRACE" \
+        > "$SESSION_ROOT/metrics-off-micro.normalized"
+    /usr/bin/cmp "$SESSION_ROOT/metrics-on-micro.normalized" "$SESSION_ROOT/metrics-off-micro.normalized" \
+        || fail "settlement metrics changed a micro decision or material outcome"
+
+    if /usr/bin/pgrep -x Pebble >/dev/null 2>&1 \
+        || /usr/bin/pgrep -x swift-run >/dev/null 2>&1 \
+        || /usr/bin/pgrep -x pebsmoke >/dev/null 2>&1; then
+        fail "residual PebbleLab process after multiscale proof"
+    fi
+    printf '\nPASS: bounded settlement pulses, v3 restart, uninterrupted equivalence, and metrics-off cognitive neutrality verified.\n'
+    printf 'Phase 1 trace: %s\n' "$PHASE1_TRACE"
+    printf 'Phase 2 trace: %s\n' "$PHASE2_TRACE"
+    printf 'Control trace: %s\n' "$CONTROL_TRACE"
+    printf 'Metrics-off trace: %s\n' "$METRICS_OFF_TRACE"
+    printf 'Final durable digest: %s\n' "$LIVE_DIGEST"
+    printf 'Settlement digest: %s\n' "$LIVE_SETTLEMENT_DIGEST"
+    printf 'Population digest: %s\n' "$LIVE_POPULATION_DIGEST"
+    printf 'Causal digest: %s\n' "$LIVE_CAUSAL_DIGEST"
+    printf 'Retained isolated session: %s\n' "$SESSION_ROOT"
+    exit 0
 fi
 
 if [ "$MODE" = "population" ]; then
@@ -792,6 +1095,7 @@ PEBBLELAB_APP_AGENTS_PHYSICAL="$PHYSICAL_GATE" \
 PEBBLELAB_APP_AGENTS_COOPERATION="$COOPERATION_GATE" \
 PEBBLELAB_APP_AGENTS_PERSISTENCE="$PERSISTENCE_GATE" \
 PEBBLELAB_APP_AGENTS_POPULATION="$POPULATION_GATE" \
+PEBBLELAB_APP_AGENTS_MULTISCALE="$MULTISCALE_GATE" \
 PEBBLE_CMD="$LAB_COMMANDS" \
 PEBBLE_SHOT="$SHOT_SPEC" \
 swift run -c release Pebble 2>&1 | /usr/bin/tee "$TRACE_PATH"
