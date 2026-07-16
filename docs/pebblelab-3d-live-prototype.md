@@ -2,11 +2,16 @@
 
 ## Statut
 
-La maquette V0 rend trois agents PebbleLab observables dans l’application Pebble. Elle expose leur cognition partagée, leur perception locale, leurs déplacements cardinaux sûrs et l’influence de leur mémoire de mouvement. Le terrain et les sauvegardes restent inchangés.
+La maquette rend par défaut les trois agents historiques PebbleLab observables
+dans l’application Pebble. Sous gate population explicite, elle peut aussi
+admettre un quatrième agent migrant dans un registre local borné à huit
+membres. Elle expose leur cognition partagée, leur perception locale, leurs
+déplacements cardinaux sûrs et l’influence de leur mémoire de mouvement. La
+verticale population ne modifie aucun bloc du terrain.
 
 ## Prérequis et lancement
 
-Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation` et `--persistence` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05 et restart/replay CIV-06. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
+Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence` et `--population` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06 et migration physique CIV-07. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
 
 Depuis la racine du dépôt :
 
@@ -55,6 +60,8 @@ Commandes de démonstration :
 /lab social <on|off|status|clear>
 /lab physical <on|off|status|clear>
 /lab cooperation <on|off|status|clear>
+/lab population <on|off|status|clear>
+/lab migration <admit|status>
 /lab checkpoint <status|list|save|load|delete>
 /lab replay <status|start|stop|verify>
 /lab status
@@ -112,16 +119,37 @@ réussi sont explicitement marqués non restart-safe et leur chargement live est
 refusé. CIV-06 n'ajoute ni snapshot complet du World, ni autosave, ni migration
 générale de schéma ; la gate reste désactivée par défaut.
 
+## CIV-07 — Registre de population et migration locale bornée
+
+Le mode `scripts/verify-pebblelab-live.sh --population` active explicitement
+`PEBBLELAB_APP_AGENTS_POPULATION=1` et la persistence CIV-06 dans un monde
+jetable seed `46`. `/lab population on` enregistre `agent_0`, `agent_1` et
+`agent_2` comme fondateurs de `settlement-main` sans modifier leur cognition,
+leur position ou leur home. `/lab migration admit` utilise un adapter World
+read-only pour sélectionner une entrée, une réception et une route sûres,
+puis admet atomiquement `agent_3` et son quatrième probe.
+
+La preuve exécute exactement deux mouvements physiques, sauvegarde un
+checkpoint population v2 restart-safe, termine le processus, restaure quatre
+agents et quatre probes, puis poursuit la même route jusqu'à l'arrivée au tick
+7. Un contrôle ininterrompu doit produire les mêmes mouvements, digests
+durable, population et causal. Le cleanup retire exactement quatre probes. La
+gate reste désactivée par défaut et la population active est limitée à huit
+membres ; aucune naissance, mort, reproduction, famille, émigration,
+population hors écran ou mutation World n'est ouverte.
+
 ## Arrêt propre et inspection
 
 Utiliser `/lab demo stop`, `/lab stop` ou `/lab clear`. Les probes transitoires sont retirées, le follow est désactivé et un résumé de session est écrit lorsque les traces sont actives. `/lab status` confirme ensuite que la session est inactive. Les probes ont `shouldSaveToChunk == false` et `persistent == false` ; aucun agent n’est restauré lors d’un lancement ultérieur.
 
 ## Garde-fous et limitations V0
 
-- exactement trois agents ;
+- exactement trois agents lorsque la gate population est désactivée ; au plus
+  huit membres actifs sous la gate CIV-07 ;
 - mouvement cardinal single-step ;
 - perception World en rayon 1 ;
-- mémoire bornée et distance au home toujours inférieure ou égale à 8 ;
+- mémoire bornée ; la navigation historique reste dans son rayon contractuel
+  et une migration CIV-07 est limitée à une distance locale de 24 ;
 - aucune destination partagée et aucun dangerous drop exécuté ;
 - navigation de ressource bornée au rayon 8, route cardinale et un pas au plus par tick ;
 - hors gate naturelle explicite, seule la fixture transactionnelle peut être mutée puis restaurée ; la construction reste interdite ;
@@ -129,6 +157,8 @@ Utiliser `/lab demo stop`, `/lab stop` ou `/lab clear`. Les probes transitoires 
   tâche de livraison matérielle CIV-05 explicitement gated ;
 - aucune persistance active par défaut ; la persistence CIV-06 reste bornée,
   explicitement gated et limitée aux frontières restart-safe documentées ;
+- aucun agent dynamique hors admission migratoire CIV-07, aucune suppression
+  d'agent et aucune simulation hors écran ;
 - aucun contrôleur autonome du joueur.
 
 Les comportements cognitifs supplémentaires, la planification longue, le

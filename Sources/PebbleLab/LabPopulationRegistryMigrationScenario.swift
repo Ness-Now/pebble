@@ -7,7 +7,7 @@ private struct PopulationScenarioCheck: Codable, Equatable {
     let detail: String
 }
 
-private struct PopulationScenarioInvariantReport: Codable, Equatable {
+private struct PopulationScenarioInvariantReport: Encodable, Equatable {
     let schemaVersion = 2
     let scenario: String
     let seed: UInt32
@@ -15,7 +15,7 @@ private struct PopulationScenarioInvariantReport: Codable, Equatable {
     let checks: [PopulationScenarioCheck]
 }
 
-private struct PopulationScenarioSummary: Codable, Equatable {
+private struct PopulationScenarioSummary: Encodable, Equatable {
     let schemaVersion = 2
     let scenario: String
     let seed: UInt32

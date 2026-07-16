@@ -21,9 +21,15 @@ Le point de départ est le HEAD post-K :
   bornée ;
 - sons locaux, gestes de pointage et perception physique imparfaite acquis dans
   une verticale bornée ; tâches partagées et coopération matérielle bornée
-  acquises pour la construction d'un abri ; langage libre, forwarding,
-  professions, économie du travail, persistance complète des agents, replay
-  complet, grande population et cycle de vie non acquis.
+  acquises pour la construction d'un abri ;
+- registre local de population borné, admission physique d'un migrant,
+  identité dynamique monotone, checkpoint/replay population v2 et reprise
+  mid-route acquis sous gate explicite, avec un maximum de huit agents actifs.
+
+Le langage libre, le forwarding, les professions, l'économie du travail, la
+persistance complète des agents, le replay complet du World, la grande
+population, les naissances, les morts, la reproduction, les familles,
+l'émigration et le cycle de vie ne sont pas acquis.
 
 Ce stade ne doit pas être décrit comme une civilisation déjà implémentée.
 
@@ -75,9 +81,14 @@ fiabilité dirigée, sans profession ni économie du travail. `CIV-06` est
 terminé et validé localement : les checkpoints agents versionnés et bornés,
 le chargement restart-safe et le replay causal pur du kernel sont acquis sous
 gate explicite. Cette verticale n'est ni un snapshot complet du World, ni un
-autosave, ni un framework général de migration de schéma. Après revue, la
-prochaine étape canonique est
-`CIV-07 — Population Registry and Bounded Migration V1`.
+autosave, ni un framework général de migration de schéma. `CIV-07` est
+également terminé et validé localement : les trois fondateurs historiques
+peuvent initialiser `settlement-main`, un migrant `agent_3` peut être admis
+depuis `outside-north`, marcher physiquement jusqu'au point d'accueil et
+devenir résident après un restart mid-route. La population reste bornée à huit
+membres, sans naissance, mort, reproduction, famille, émigration ou simulation
+hors écran. La prochaine étape canonique est
+`CIV-08 — Settlement Metrics and Bounded Multi-Scale Simulation V1`.
 
 ## Grands programmes ultérieurs
 
