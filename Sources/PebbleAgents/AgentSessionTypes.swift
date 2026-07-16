@@ -72,6 +72,7 @@ public enum AgentSessionError: Error, Equatable {
     case physical(AgentPhysicalChannelError)
     case cooperation(AgentCooperationError)
     case population(AgentPopulationError)
+    case settlementMetrics(AgentSettlementMetricsError)
 }
 
 public struct AgentSessionConfiguration: Codable {

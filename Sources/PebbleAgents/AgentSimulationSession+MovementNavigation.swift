@@ -26,7 +26,10 @@ extension AgentSimulationSession {
         let populationArrivalEventCapacity = populationRegistry?.migrations.contains {
             $0.status == .admitted || $0.status == .inTransit
         } == true ? 2 : 0
-        try prevalidateCausalAppend(count: outcomes.count + populationArrivalEventCapacity)
+        let settlementPulseCapacity = settlementMetricsState?.nextPulseTick == tick ? 1 : 0
+        try prevalidateCausalAppend(
+            count: outcomes.count + populationArrivalEventCapacity + settlementPulseCapacity
+        )
         let ids = sortedIds
         guard outcomes.count == ids.count else {
             throw AgentSessionError.movementOutcomeCountMismatch(expected: ids.count, actual: outcomes.count)
@@ -214,6 +217,7 @@ extension AgentSimulationSession {
             }
         }
         try updatePopulationAfterMovementEvents()
+        _ = try applySettlementMetricsPulseIfDue()
     }
 
     mutating func reconcileReservations(at reservationTick: Int) {

@@ -3,9 +3,11 @@ import Foundation
 public enum AgentReplaySchema {
     public static let currentVersion = 1
     public static let populationVersion = 2
+    public static let settlementMetricsVersion = 3
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
+            || version == settlementMetricsVersion
     }
 }
 
@@ -51,6 +53,9 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case populationRegistryInitialization
     case migrationAdmission
     case populationClear
+    case settlementMetricsFeature
+    case settlementMetricsClear
+    case settlementPulseBoundary
 }
 
 public enum AgentReplayOperation: Codable {
@@ -103,6 +108,9 @@ public enum AgentReplayOperation: Codable {
         observation: AgentMigrationWorldObservation
     )
     case clearPopulationDiagnostics
+    case setSettlementMetricsEnabled(Bool, configuration: AgentSettlementMetricsConfiguration)
+    case clearSettlementMetrics
+    case settlementPulseBoundary
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -134,6 +142,9 @@ public enum AgentReplayOperation: Codable {
         case .initializePopulationRegistry: return .populationRegistryInitialization
         case .admitMigration: return .migrationAdmission
         case .clearPopulationDiagnostics: return .populationClear
+        case .setSettlementMetricsEnabled: return .settlementMetricsFeature
+        case .clearSettlementMetrics: return .settlementMetricsClear
+        case .settlementPulseBoundary: return .settlementPulseBoundary
         }
     }
 
@@ -385,7 +396,7 @@ public struct AgentReplayRecorder {
     public let baseCheckpointDigest: AgentCheckpointDigest
     public let simulationID: AgentSimulationID
     public let initialTick: Int
-    public let schemaVersion: Int
+    public private(set) var schemaVersion: Int
     public private(set) var records: [AgentReplayRecord]
     public private(set) var droppedRecordCount: Int
     public private(set) var nonReplayableReason: String?
@@ -422,6 +433,16 @@ public struct AgentReplayRecorder {
         }
         guard records.count < AgentCheckpointLimits.maximumReplayRecords else {
             throw AgentReplayError.capacityReached(records.count)
+        }
+        if case let .setSettlementMetricsEnabled(enabled, _) = operation,
+           enabled,
+           schemaVersion != AgentReplaySchema.settlementMetricsVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "settlement metrics activation must be the first v3 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.settlementMetricsVersion
         }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
@@ -594,11 +615,14 @@ public enum AgentSessionReplayer {
         guard AgentReplaySchema.supports(manifest.schemaVersion) else {
             throw AgentReplayError.unsupportedSchema(manifest.schemaVersion)
         }
+        let compatibleSchema = manifest.schemaVersion == checkpoint.schemaVersion
+            || (manifest.schemaVersion == AgentReplaySchema.settlementMetricsVersion
+                && checkpoint.schemaVersion == AgentCheckpointSchema.populationVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
               manifest.initialTick == checkpoint.tick.rawValue,
-              manifest.schemaVersion == checkpoint.schemaVersion else {
+              compatibleSchema else {
             throw AgentReplayError.baseCheckpointMismatch
         }
         guard manifest.replayable, manifest.droppedRecordCount == 0,
@@ -746,6 +770,12 @@ extension AgentSimulationSession {
             _ = try candidate.admitMigration(intent: intent, observation: observation)
         case .clearPopulationDiagnostics:
             try candidate.clearPopulationDiagnostics()
+        case let .setSettlementMetricsEnabled(enabled, configuration):
+            try candidate.setSettlementMetricsEnabled(enabled, configuration: configuration)
+        case .clearSettlementMetrics:
+            try candidate.clearSettlementMetrics()
+        case .settlementPulseBoundary:
+            _ = try candidate.applySettlementMetricsPulseIfDue()
         }
         self = candidate
         let causal = causalLedgerSnapshot().summary

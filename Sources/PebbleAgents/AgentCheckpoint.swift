@@ -4,9 +4,11 @@ import Foundation
 public enum AgentCheckpointSchema {
     public static let currentVersion = 1
     public static let populationVersion = 2
+    public static let settlementMetricsVersion = 3
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
+            || version == settlementMetricsVersion
     }
 }
 
@@ -182,11 +184,16 @@ public struct AgentSessionDurableState: Codable {
     public let cooperationEvictionCounts: AgentCooperationEvictionCounts
     public let lastCooperationOfferTicks: [AgentCheckpointStringIntEntry]
     public let populationRegistry: AgentPopulationRegistry?
+    public let settlementMetricsState: AgentSettlementMetricsState?
 
     init(session: AgentSimulationSession) {
-        schemaVersion = session.populationRegistry == nil
-            ? AgentCheckpointSchema.currentVersion
-            : AgentCheckpointSchema.populationVersion
+        if session.settlementMetricsState != nil {
+            schemaVersion = AgentCheckpointSchema.settlementMetricsVersion
+        } else if session.populationRegistry != nil {
+            schemaVersion = AgentCheckpointSchema.populationVersion
+        } else {
+            schemaVersion = AgentCheckpointSchema.currentVersion
+        }
         configuration = session.configuration
         clock = session.clock
         agents = session.statesById.values.sorted { $0.agentID < $1.agentID }
@@ -261,6 +268,7 @@ public struct AgentSessionDurableState: Codable {
             }
         }
         populationRegistry = session.populationRegistry
+        settlementMetricsState = session.settlementMetricsState
     }
 }
 
@@ -673,6 +681,10 @@ extension AgentSimulationSession {
             state.lastCooperationOfferTicks.map { ($0.key, $0.value) }
         )
         populationRegistry = state.populationRegistry
+        settlementMetricsState = state.settlementMetricsState
+        if let settlementMetricsState {
+            try validateSettlementMetricsState(settlementMetricsState)
+        }
         guard conservationSnapshot().balanced else { throw AgentCheckpointError.invalidConservation }
     }
 
@@ -681,9 +693,12 @@ extension AgentSimulationSession {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard (state.schemaVersion == AgentCheckpointSchema.currentVersion
-                && state.populationRegistry == nil)
+                && state.populationRegistry == nil && state.settlementMetricsState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.populationVersion
-                    && state.populationRegistry != nil) else {
+                    && state.populationRegistry != nil && state.settlementMetricsState == nil)
+                || (state.schemaVersion == AgentCheckpointSchema.settlementMetricsVersion
+                    && state.populationRegistry != nil
+                    && state.settlementMetricsState != nil) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.clock.tick.rawValue >= 0,
@@ -835,6 +850,40 @@ extension AgentSimulationSession {
                 agents: state.agents,
                 clock: state.clock
             )
+        }
+        if let metrics = state.settlementMetricsState {
+            guard metrics.settlementID == state.populationRegistry?.settlement.settlementID,
+                  metrics.configuration.maximumAgentClassifications
+                    >= (state.populationRegistry?.configuration.maximumActivePopulation ?? Int.max),
+                  metrics.lastPulseTick >= 0,
+                  metrics.lastPulseTick <= state.clock.tick.rawValue,
+                  metrics.nextPulseTick
+                    == metrics.lastPulseTick + metrics.configuration.macroIntervalTicks,
+                  metrics.nextPulseTick > state.clock.tick.rawValue,
+                  metrics.baseline.tick == metrics.lastPulseTick,
+                  metrics.baseline.causalSequence <= state.causalLedger.latestSequence,
+                  metrics.frames.count <= metrics.configuration.maximumMetricFrames,
+                  metrics.evictionCounts.frames >= 0,
+                  metrics.initializedEventID.simulationID == state.clock.simulationID,
+                  metrics.lastSettlementEventID.simulationID == state.clock.simulationID,
+                  metrics.initializedEventID.sequence <= metrics.lastSettlementEventID.sequence,
+                  metrics.lastSettlementEventID.sequence.rawValue
+                    <= state.causalLedger.latestSequence else {
+                throw AgentCheckpointError.invalidBound("settlement metrics")
+            }
+            do {
+                _ = try AgentSettlementMetricsConfiguration(
+                    macroIntervalTicks: metrics.configuration.macroIntervalTicks,
+                    maximumMetricFrames: metrics.configuration.maximumMetricFrames,
+                    maximumAgentClassifications:
+                        metrics.configuration.maximumAgentClassifications,
+                    maximumCausalEventsPerWindow:
+                        metrics.configuration.maximumCausalEventsPerWindow,
+                    fixedPointScale: metrics.configuration.fixedPointScale
+                )
+            } catch {
+                throw AgentCheckpointError.invalidConfiguration
+            }
         }
         for relation in state.socialTrustRelations {
             guard agentIDs.contains(relation.sourceID), agentIDs.contains(relation.targetID),

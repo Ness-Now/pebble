@@ -98,6 +98,10 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case migrationCancelled
     case migrationFailed
     case populationStateCleared
+    case settlementMetricsInitialized
+    case settlementMacroPulse
+    case settlementMetricsCleared
+    case settlementMetricsDisabled
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -111,6 +115,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case physicalTransition
     case cooperationTransition
     case populationTransition
+    case settlementTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -196,6 +201,25 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         reason: String?,
         routeLength: Int
     )
+    case settlementMetrics(
+        frameID: String?,
+        settlementID: String,
+        macroSequence: UInt64,
+        fromTickExclusive: Int,
+        toTickInclusive: Int,
+        condition: String,
+        population: Int,
+        urgent: Int,
+        migrating: Int,
+        engaged: Int,
+        stable: Int,
+        movementDelta: Int,
+        materialActivityDelta: Int,
+        socialActivityDelta: Int,
+        cooperationActivityDelta: Int,
+        coverageComplete: Bool,
+        status: String
+    )
 
     var canonicalText: String {
         switch self {
@@ -254,6 +278,17 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
             status, reason, routeLength
         ):
             return "migration|\(migrationID)|\(migrantID)|\(origin)|\(destination)|\(entry.x),\(entry.y),\(entry.z)|\(reception.x),\(reception.y),\(reception.z)|\(status)|\(reason ?? "none")|\(routeLength)"
+        case let .settlementMetrics(
+            frameID, settlementID, macroSequence, fromTickExclusive, toTickInclusive,
+            condition, population, urgent, migrating, engaged, stable, movementDelta,
+            materialActivityDelta, socialActivityDelta, cooperationActivityDelta,
+            coverageComplete, status
+        ):
+            return "settlementMetrics|\(frameID ?? "none")|\(settlementID)|\(macroSequence)|"
+                + "\(fromTickExclusive)|\(toTickInclusive)|\(condition)|\(population)|"
+                + "\(urgent)|\(migrating)|\(engaged)|\(stable)|\(movementDelta)|"
+                + "\(materialActivityDelta)|\(socialActivityDelta)|"
+                + "\(cooperationActivityDelta)|\(coverageComplete ? 1 : 0)|\(status)"
         }
     }
 }
@@ -361,7 +396,11 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.migrationArrived, .migration),
              (.migrationRejected, .migration),
              (.migrationCancelled, .migration),
-             (.migrationFailed, .migration):
+             (.migrationFailed, .migration),
+             (.settlementMetricsInitialized, .settlementMetrics),
+             (.settlementMacroPulse, .settlementMetrics),
+             (.settlementMetricsCleared, .settlementMetrics),
+             (.settlementMetricsDisabled, .settlementMetrics):
             matches = true
         default:
             matches = false

@@ -2106,6 +2106,7 @@ runPebbleAgentsPhysicalChannelSmoke()
 runPebbleAgentsCooperationSmoke()
 runPebbleAgentsPersistenceReplaySmoke()
 runPebbleAgentsPopulationMigrationSmoke()
+runPebbleAgentsSettlementMetricsSmoke()
 
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)
