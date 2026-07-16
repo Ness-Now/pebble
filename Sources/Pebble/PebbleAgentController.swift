@@ -40,6 +40,7 @@ final class PebbleAgentController {
     let naturalResourceAdapter = PebbleAgentNaturalResourceAdapter()
     let constructionSiteAdapter = PebbleAgentConstructionSiteAdapter()
     let physicalSignalAdapter = PebbleAgentPhysicalSignalAdapter()
+    let migrationAdmissionAdapter = PebbleAgentMigrationAdmissionAdapter()
     let movementExecutor = PebbleAgentMovementExecutor()
     let cameraFollow = PebbleAgentCameraFollow()
     var interactionExecutor = PebbleAgentInteractionExecutor()
@@ -79,6 +80,9 @@ final class PebbleAgentController {
     var cooperationFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_COOPERATION"] == "1" }
     var persistenceFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_PERSISTENCE"] == "1"
+    }
+    var populationFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_POPULATION"] == "1"
     }
     var physicalAudioAvailable: () -> Bool = { false }
     var traceEvery: Int {
@@ -145,5 +149,6 @@ final class PebbleAgentController {
         case interactionBoundary(String)
         case constructionBoundary(String)
         case socialBoundary(String)
+        case populationBoundary(String)
     }
 }

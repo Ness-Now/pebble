@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build|--social|--physical|--cooperation|--persistence]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build|--social|--physical|--cooperation|--persistence|--population]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -36,6 +36,7 @@ Options:
   --physical Run local sound, pointing gesture, imperfect perception, and existing trust.
   --cooperation Run shared construction-material task, delivery, and shelter completion.
   --persistence Run checkpoint, real process restart, causal replay, and uninterrupted control.
+  --population Run bounded migrant admission, mid-route restart, arrival, and uninterrupted control.
   --help     Show this help and exit.
 EOF
 }
@@ -83,6 +84,7 @@ for option in "$@"; do
         --physical) MODE="physical"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --cooperation) MODE="cooperation"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --persistence) MODE="persistence"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --population) MODE="population"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --help|-h) usage; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$option" >&2; usage >&2; exit 2 ;;
     esac
@@ -96,7 +98,21 @@ SOCIAL_GATE=0
 PHYSICAL_GATE=0
 COOPERATION_GATE=0
 PERSISTENCE_GATE=0
-if [ "$MODE" = "persistence" ]; then
+POPULATION_GATE=0
+if [ "$MODE" = "population" ]; then
+    WORLD_SEED="46"
+    PERSISTENCE_GATE=1
+    POPULATION_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-Population-46"
+    CAPTURE_NAME="population-proof.txt"
+    POPULATION_ANCHOR_X=${PEBBLELAB_POPULATION_ANCHOR_X:-14}
+    POPULATION_ANCHOR_Z=${PEBBLELAB_POPULATION_ANCHOR_Z:--18}
+    POPULATION_ANCHOR_Y=${PEBBLELAB_POPULATION_ANCHOR_Y:-68}
+    POPULATION_PLAYER_Y=$((POPULATION_ANCHOR_Y + 3))
+    POPULATION_WORLD_READY="/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp $POPULATION_ANCHOR_X $POPULATION_ANCHOR_Y $POPULATION_ANCHOR_Z"
+    POPULATION_PHASE1_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab pause;/lab movement on;/lab population on;/lab population status;/lab migration admit;/lab focus agent_3;/lab follow agent_3;/lab migration status;/lab step;/lab step;/lab migration status;/lab checkpoint save migration-mid-route;/lab checkpoint status;/lab causality status;/lab status"
+    LAB_COMMANDS="$POPULATION_PHASE1_COMMANDS"
+elif [ "$MODE" = "persistence" ]; then
     WORLD_SEED="46"
     NATURAL_GATE=1
     BUILD_GATE=1
@@ -296,6 +312,7 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_PHYSICAL=%s\n' "$PHYSICAL_GATE"
     printf '  PEBBLELAB_APP_AGENTS_COOPERATION=%s\n' "$COOPERATION_GATE"
     printf '  PEBBLELAB_APP_AGENTS_PERSISTENCE=%s\n' "$PERSISTENCE_GATE"
+    printf '  PEBBLELAB_APP_AGENTS_POPULATION=%s\n' "$POPULATION_GATE"
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
     if [ "$MODE" = "build" ]; then
         printf '  PEBBLE_SHOT=-|%s/fixed-shelter-before.png|%s/fixed-shelter-partial.png|%s|-\n' \
@@ -316,7 +333,11 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "persistence" ]; then
+    if [ "$MODE" = "population" ]; then
+        printf '  2. Confirm three historical founders, deterministic agent_3 admission, and exactly four probes.\n'
+        printf '  3. Confirm a v2 restart-safe checkpoint after exactly two successful migrant movements.\n'
+        printf '  4. Confirm restart and uninterrupted control reach the same resident state and causal digest.\n'
+    elif [ "$MODE" = "persistence" ]; then
         printf '  2. Confirm accepted-task is restartSafe with zero harvests, placements, inventory, and stock.\n'
         printf '  3. Confirm a second process restores the exact tick, simulation, digest, task, and three probes.\n'
         printf '  4. Confirm replay matches live final state and the uninterrupted control digest.\n'
@@ -345,7 +366,7 @@ print_plan() {
         printf '  2. Confirm hunger growth, satisfyHunger, food-only targeting, three route steps, harvest, and consume_food.\n'
         printf '  3. Confirm consumed=1 conservation, fatigue-driven homeRest, rest recovery, normal goal resumption, and zero corridor changes.\n'
     fi
-    if [ "$MODE" != "persistence" ]; then
+    if [ "$MODE" != "persistence" ] && [ "$MODE" != "population" ]; then
         printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
     fi
     printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
@@ -405,6 +426,197 @@ printf '\nLaunching Pebble now. Personal Pebble data is hidden by CFFIXED_USER_H
 
 if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
     fail "a Pebble process is already running; refusing an ambiguous live baseline"
+fi
+
+if [ "$MODE" = "population" ]; then
+    cd "$ROOT_DIR"
+    swift build -c release --product Pebble
+    PEBBLE_BINARY="$ROOT_DIR/.build/release/Pebble"
+    [ -x "$PEBBLE_BINARY" ] || fail "Release Pebble binary missing: $PEBBLE_BINARY"
+
+    PHASE1_TRACE="$SESSION_ROOT/population-phase1.log"
+    PHASE2_TRACE="$SESSION_ROOT/population-phase2.log"
+    CONTROL_HOME="$SESSION_ROOT/control-home"
+    CONTROL_TRACE="$SESSION_ROOT/population-control.log"
+    [ ! -e "$CONTROL_HOME" ] || fail "fresh population control home already exists: $CONTROL_HOME"
+
+    run_population_app() {
+        run_home=$1
+        run_trace=$2
+        run_commands=$3
+        create_world=$4
+        command_world_tick=$5
+        if [ "$create_world" -eq 1 ]; then
+            CFFIXED_USER_HOME="$run_home" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLE_NEWWORLD="$WORLD_SEED" \
+            PEBBLE_NEWWORLD_NAME="$WORLD_NAME" \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_NATURAL=0 \
+            PEBBLELAB_APP_AGENTS_BUILD=0 \
+            PEBBLELAB_APP_AGENTS_SOCIAL=0 \
+            PEBBLELAB_APP_AGENTS_PHYSICAL=0 \
+            PEBBLELAB_APP_AGENTS_COOPERATION=0 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_APP_AGENTS_POPULATION=1 \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT='-|-|-' \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        else
+            CFFIXED_USER_HOME="$run_home" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_NATURAL=0 \
+            PEBBLELAB_APP_AGENTS_BUILD=0 \
+            PEBBLELAB_APP_AGENTS_SOCIAL=0 \
+            PEBBLELAB_APP_AGENTS_PHYSICAL=0 \
+            PEBBLELAB_APP_AGENTS_COOPERATION=0 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_APP_AGENTS_POPULATION=1 \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT='-|-|-' \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        fi
+        if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
+            fail "Pebble process remained after population phase: $run_trace"
+        fi
+    }
+
+    printf '\nPopulation phase 1: deterministic admission and restart-safe mid-route checkpoint.\n'
+    run_population_app "$SESSION_HOME" "$PHASE1_TRACE" "$POPULATION_PHASE1_COMMANDS" 1 100
+    TRACE_PATH="$PHASE1_TRACE"
+    require_trace 'start seed=46 agents=3 tick=0 ' 'historical three-agent bootstrap'
+    require_trace 'population initialized settlement=settlement-main capacity=8 founders=3 members=3 nextOrdinal=3 ' 'three founder population registry'
+    require_trace 'migration admitted id=migration-00000003 migrant=agent_3 origin=outside-north destination=settlement-main .*routeLength=[5-9][0-9]*|migration admitted id=migration-00000003 migrant=agent_3 origin=outside-north destination=settlement-main .*routeLength=[5-9]' 'bounded deterministic migrant admission'
+    require_trace 'migration id=migration-00000003 migrant=agent_3 origin=outside-north destination=settlement-main .*routeCursor=2 status=inTransit ' 'two successful migrant movements before checkpoint'
+    require_trace 'checkpoint saved name=migration-mid-route .*tick=2 .*restartSafe=1 ' 'restart-safe mid-route checkpoint'
+    require_trace 'summary .*agents=4 .*runtimeErrors=0 .*probesRemoved=4 .*naturalHarvests=0 .*buildProject=none .*conservation=0:0\+0\+0\+0\+0:exact .*causalDropped=0' 'clean four-probe phase-one cleanup'
+
+    POPULATION_ROOT="$SESSION_HOME/Library/Application Support/Pebble/PebbleLabAgents"
+    MID_MANIFEST=$(/usr/bin/find "$POPULATION_ROOT" -type f -path '*/checkpoints/migration-mid-route/manifest.json' -print -quit)
+    MID_SESSION=$(/usr/bin/find "$POPULATION_ROOT" -type f -path '*/checkpoints/migration-mid-route/session.json' -print -quit)
+    [ -n "$MID_MANIFEST" ] && [ -n "$MID_SESSION" ] \
+        || fail "population v2 checkpoint bundle missing"
+    /usr/bin/grep -q '"schemaVersion":2' "$MID_MANIFEST" \
+        || fail "population checkpoint manifest is not schema v2"
+    /usr/bin/grep -q '"schemaVersion":2' "$MID_SESSION" \
+        || fail "population checkpoint session is not schema v2"
+    /usr/bin/grep -q '"restartSafe":true' "$MID_MANIFEST" \
+        || fail "population mid-route checkpoint is not restart-safe"
+
+    PHASE1_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=migration-mid-route .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE1_TRACE" | /usr/bin/tail -1)
+    PHASE1_SIM=$(/usr/bin/sed -n 's/.*checkpoint saved name=migration-mid-route .* simulation=\([^ ]*\) digest=.*/\1/p' "$PHASE1_TRACE" | /usr/bin/tail -1)
+    ROUTE_LENGTH=$(/usr/bin/sed -n 's/.*migration id=migration-00000003 .* routeLength=\([0-9]*\) routeCursor=2 status=inTransit.*/\1/p' "$PHASE1_TRACE" | /usr/bin/tail -1)
+    [ -n "$PHASE1_DIGEST" ] && [ -n "$PHASE1_SIM" ] && [ -n "$ROUTE_LENGTH" ] \
+        || fail "population phase-one identity or route extraction failed"
+    case "$ROUTE_LENGTH" in
+        ''|*[!0-9]*) fail "invalid migration route length: $ROUTE_LENGTH" ;;
+    esac
+    remaining_steps=$((ROUTE_LENGTH - 3))
+    total_steps=$((ROUTE_LENGTH - 1))
+    [ "$remaining_steps" -ge 1 ] \
+        || fail "migration route did not remain active after two movements: length=$ROUTE_LENGTH"
+
+    CONTROL_DB="$CONTROL_HOME/Library/Application Support/Pebble/pebble.db"
+    /bin/mkdir -p "$(dirname "$CONTROL_DB")"
+    [ ! -e "$CONTROL_DB" ] || fail "fresh population control database already exists: $CONTROL_DB"
+    /usr/bin/sqlite3 "$DB_PATH" ".backup '$CONTROL_DB'"
+    [ -s "$CONTROL_DB" ] || fail "population control database snapshot failed"
+    persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
+    case "$persisted_world_tick" in
+        ''|*[!0-9]*) fail "invalid persisted World tick after population phase 1: $persisted_world_tick" ;;
+    esac
+    continuation_command_tick=$((persisted_world_tick + 100))
+
+    POPULATION_PHASE2_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab checkpoint load migration-mid-route;/lab migration status"
+    population_step=0
+    while [ "$population_step" -lt "$remaining_steps" ]; do
+        POPULATION_PHASE2_COMMANDS="$POPULATION_PHASE2_COMMANDS;/lab step"
+        population_step=$((population_step + 1))
+    done
+    POPULATION_PHASE2_COMMANDS="$POPULATION_PHASE2_COMMANDS;/lab migration status;/lab population status;/lab checkpoint save migration-arrived;/lab checkpoint status;/lab causality status;/lab status"
+
+    POPULATION_CONTROL_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab pause;/lab movement on;/lab population on;/lab migration admit;/lab focus agent_3;/lab follow agent_3"
+    population_step=0
+    while [ "$population_step" -lt "$total_steps" ]; do
+        POPULATION_CONTROL_COMMANDS="$POPULATION_CONTROL_COMMANDS;/lab step"
+        population_step=$((population_step + 1))
+    done
+    POPULATION_CONTROL_COMMANDS="$POPULATION_CONTROL_COMMANDS;/lab migration status;/lab population status;/lab checkpoint save migration-arrived-control;/lab checkpoint status;/lab causality status;/lab status"
+
+    printf '\nPopulation phase 2: real process restart and physical arrival.\n'
+    run_population_app "$SESSION_HOME" "$PHASE2_TRACE" "$POPULATION_PHASE2_COMMANDS" 0 "$continuation_command_tick"
+    TRACE_PATH="$PHASE2_TRACE"
+    require_trace "checkpoint loaded name=migration-mid-route .*tick=2 simulation=$PHASE1_SIM digest=$PHASE1_DIGEST .*restartSafe=1 probes=4 paused=1 focus=agent_3 lifecycleEvent=none worldMutation=none" 'exact four-agent checkpoint restore'
+    require_trace 'migration id=migration-00000003 migrant=agent_3 origin=outside-north destination=settlement-main .*status=arrived ' 'migrant arrived after restart'
+    require_trace 'population gate=enabled enabled=1 settlement=settlement-main capacity=8 members=4 founders=3 residents=4 migrating=0 nextOrdinal=4 activeMigration=0 latestMigrant=agent_3 latestMigrationStatus=arrived ' 'final four-resident registry'
+    require_trace 'checkpoint saved name=migration-arrived .*restartSafe=1 ' 'restart-safe final population checkpoint'
+    require_trace 'summary .*agents=4 .*runtimeErrors=0 .*probesRemoved=4 .*naturalHarvests=0 .*buildProject=none .*conservation=0:0\+0\+0\+0\+0:exact .*causalDropped=0' 'clean restarted population cleanup'
+    require_trace 'population summary enabled=1 settlement=settlement-main members=4/8 founders=3 residents=4 migrating=0 active=0 arrived=1 rejected=0 failed=0 nextOrdinal=4 ' 'retained population evidence after cleanup'
+
+    LIVE_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=migration-arrived .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
+    LIVE_POPULATION_DIGEST=$(/usr/bin/sed -n 's/.*population gate=enabled .* digest=\([0-9a-f]*\)$/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
+    LIVE_CAUSAL_SEQUENCE=$(/usr/bin/sed -n 's/.*causality status .* nextSequence=\([0-9]*\) retainedEventCount=.*/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
+    LIVE_CAUSAL_DIGEST=$(/usr/bin/sed -n 's/.*causality status .* digest=\([0-9a-f]*\)$/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
+    [ -n "$LIVE_DIGEST" ] && [ -n "$LIVE_POPULATION_DIGEST" ] \
+        && [ -n "$LIVE_CAUSAL_SEQUENCE" ] && [ -n "$LIVE_CAUSAL_DIGEST" ] \
+        || fail "population final digest extraction failed"
+
+    printf '\nPopulation uninterrupted control.\n'
+    run_population_app "$CONTROL_HOME" "$CONTROL_TRACE" "$POPULATION_CONTROL_COMMANDS" 0 "$continuation_command_tick"
+    TRACE_PATH="$CONTROL_TRACE"
+    require_trace 'migration id=migration-00000003 migrant=agent_3 origin=outside-north destination=settlement-main .*status=arrived ' 'uninterrupted migrant arrival'
+    require_trace 'population gate=enabled enabled=1 settlement=settlement-main capacity=8 members=4 founders=3 residents=4 migrating=0 nextOrdinal=4 activeMigration=0 latestMigrant=agent_3 latestMigrationStatus=arrived ' 'uninterrupted four-resident registry'
+    require_trace 'summary .*agents=4 .*runtimeErrors=0 .*probesRemoved=4 .*naturalHarvests=0 .*buildProject=none .*conservation=0:0\+0\+0\+0\+0:exact .*causalDropped=0' 'clean uninterrupted population cleanup'
+
+    CONTROL_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=migration-arrived-control .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    CONTROL_POPULATION_DIGEST=$(/usr/bin/sed -n 's/.*population gate=enabled .* digest=\([0-9a-f]*\)$/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    CONTROL_CAUSAL_SEQUENCE=$(/usr/bin/sed -n 's/.*causality status .* nextSequence=\([0-9]*\) retainedEventCount=.*/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    CONTROL_CAUSAL_DIGEST=$(/usr/bin/sed -n 's/.*causality status .* digest=\([0-9a-f]*\)$/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    [ "$CONTROL_DIGEST" = "$LIVE_DIGEST" ] \
+        || fail "population restart/uninterrupted durable digest mismatch: restart=$LIVE_DIGEST control=$CONTROL_DIGEST"
+    [ "$CONTROL_POPULATION_DIGEST" = "$LIVE_POPULATION_DIGEST" ] \
+        || fail "population restart/uninterrupted registry digest mismatch"
+    [ "$CONTROL_CAUSAL_SEQUENCE" = "$LIVE_CAUSAL_SEQUENCE" ] \
+        || fail "population restart/uninterrupted causal sequence mismatch"
+    [ "$CONTROL_CAUSAL_DIGEST" = "$LIVE_CAUSAL_DIGEST" ] \
+        || fail "population restart/uninterrupted causal digest mismatch"
+
+    /usr/bin/grep -E '^\[lab-live\] (tick=([3-9]|[1-9][0-9]+) |population tick=([3-9]|[1-9][0-9]+) )' "$PHASE2_TRACE" > "$SESSION_ROOT/restart-population.normalized"
+    /usr/bin/grep -E '^\[lab-live\] (tick=([3-9]|[1-9][0-9]+) |population tick=([3-9]|[1-9][0-9]+) )' "$CONTROL_TRACE" > "$SESSION_ROOT/control-population.normalized"
+    /usr/bin/cmp "$SESSION_ROOT/restart-population.normalized" "$SESSION_ROOT/control-population.normalized" \
+        || fail "population restart and uninterrupted decision traces differ"
+
+    if /usr/bin/pgrep -x Pebble >/dev/null 2>&1 \
+        || /usr/bin/pgrep -x swift-run >/dev/null 2>&1 \
+        || /usr/bin/pgrep -x pebsmoke >/dev/null 2>&1; then
+        fail "residual PebbleLab process after population proof"
+    fi
+    printf '\nPASS: bounded population admission, v2 mid-route restart, physical arrival, and uninterrupted equivalence verified.\n'
+    printf 'Phase 1 trace: %s\n' "$PHASE1_TRACE"
+    printf 'Phase 2 trace: %s\n' "$PHASE2_TRACE"
+    printf 'Control trace: %s\n' "$CONTROL_TRACE"
+    printf 'Final durable digest: %s\n' "$LIVE_DIGEST"
+    printf 'Population digest: %s\n' "$LIVE_POPULATION_DIGEST"
+    printf 'Causal digest: %s\n' "$LIVE_CAUSAL_DIGEST"
+    printf 'Retained isolated session: %s\n' "$SESSION_ROOT"
+    exit 0
 fi
 
 if [ "$MODE" = "persistence" ]; then
@@ -579,6 +791,7 @@ PEBBLELAB_APP_AGENTS_SOCIAL="$SOCIAL_GATE" \
 PEBBLELAB_APP_AGENTS_PHYSICAL="$PHYSICAL_GATE" \
 PEBBLELAB_APP_AGENTS_COOPERATION="$COOPERATION_GATE" \
 PEBBLELAB_APP_AGENTS_PERSISTENCE="$PERSISTENCE_GATE" \
+PEBBLELAB_APP_AGENTS_POPULATION="$POPULATION_GATE" \
 PEBBLE_CMD="$LAB_COMMANDS" \
 PEBBLE_SHOT="$SHOT_SPEC" \
 swift run -c release Pebble 2>&1 | /usr/bin/tee "$TRACE_PATH"

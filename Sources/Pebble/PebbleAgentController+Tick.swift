@@ -74,7 +74,11 @@ extension PebbleAgentController {
                 var preparedNavigationObservation: AgentNavigationObservation?
                 var navigationTarget: AgentPosition?
                 let navigationGoalMode: AgentNavigationGoalMode
-                if agent.currentGoal.kind == .buildShelter,
+                if agent.currentGoal.kind == .migrateToSettlement,
+                   let routeTarget = agent.navigationProgress.route?.target {
+                    navigationTarget = routeTarget
+                    navigationGoalMode = .exact
+                } else if agent.currentGoal.kind == .buildShelter,
                    let project = preCognitive.constructionProject,
                    project.builderAgentId == agent.id,
                    project.status == .funded || project.status == .building,
@@ -604,6 +608,7 @@ extension PebbleAgentController {
             replayRecorder = recorder
             tracePhysicalState(at: session.tick)
             traceCooperationState(at: session.tick)
+            tracePopulationState(at: session.tick)
             lastTickResult = result
             for agent in finalSnapshot.agents { observedGoalKinds.insert(agent.currentGoal.kind.rawValue) }
             for agent in finalSnapshot.agents {
@@ -748,9 +753,14 @@ extension PebbleAgentController {
                     && (snapshot.constructionProject?.status == .planned
                         || snapshot.constructionProject?.status == .acquiringMaterials))
                 || cooperationTravelAgentIDs.contains(agent.id)
-            let movementBoundary = usesConstructionMaterialRange
-                ? AgentConstructionMaterialSurvey.maximumDistanceFromHome
-                : AgentNavigationObservation.maximumRadius
+            let movementBoundary: Int
+            if agent.currentGoal.kind == .migrateToSettlement {
+                movementBoundary = AgentPopulationConfiguration.live.maximumMigrationDistance
+            } else if usesConstructionMaterialRange {
+                movementBoundary = AgentConstructionMaterialSurvey.maximumDistanceFromHome
+            } else {
+                movementBoundary = AgentNavigationObservation.maximumRadius
+            }
             if movementEnabled, agent.distanceFromHome > movementBoundary {
                 throw ControllerError.feedbackBoundary(agent.id)
             }

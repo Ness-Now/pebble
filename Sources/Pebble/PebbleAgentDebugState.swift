@@ -18,6 +18,7 @@ struct PebbleAgentDebugState {
         socialSnapshot: AgentSocialSnapshot,
         physicalSnapshot: AgentPhysicalChannelSnapshot,
         cooperationSnapshot: AgentCooperationSnapshot,
+        populationSnapshot: AgentPopulationSnapshot,
         mode: PebbleAgentOverlayMode,
         paused: Bool,
         cognitiveHz: Int,
@@ -61,6 +62,10 @@ struct PebbleAgentDebugState {
         )
         let cooperationLines = Self.cooperationLines(
             snapshot: cooperationSnapshot,
+            focusedAgentId: agent.id
+        )
+        let populationLines = Self.populationLines(
+            snapshot: populationSnapshot,
             focusedAgentId: agent.id
         )
         if mode == .compact {
@@ -128,7 +133,7 @@ struct PebbleAgentDebugState {
                 "outcome: \(interactionOutcome?.status.rawValue ?? "none") delta \(interactionOutcome?.inventoryDelta.quantity ?? 0) memory \(interactionMemory)",
                 "rollback: \(interaction.rollbackCount) \(Self.short(interaction.lastRollback, limit: 30))",
                 "errors: \(runtimeErrorCount)  catchup dropped: \(droppedCatchUpSteps)",
-            ] + socialLines + physicalLines + cooperationLines
+            ] + socialLines + physicalLines + cooperationLines + populationLines
             return
         }
 
@@ -256,6 +261,7 @@ struct PebbleAgentDebugState {
         lines += socialLines
         lines += physicalLines
         lines += cooperationLines
+        lines += populationLines
         lines.append("ticks: \(agent.ticksAlive) goals: \(agent.goalChangeCount) actions/effects: \(agent.actionCount)/\(agent.actionEffectCount)")
         focusedAgentLines = lines
     }
@@ -379,6 +385,29 @@ struct PebbleAgentDebugState {
             "taskStatus=\(task?.status.rawValue ?? "none")",
             "taskResource=\(task.map { "\($0.resource.rawValue) \($0.contributedQuantity)/\($0.requestedQuantity)" } ?? "none")",
             "partner=\(partner) reliability=\(reliability)",
+        ]
+    }
+
+    private static func populationLines(
+        snapshot: AgentPopulationSnapshot,
+        focusedAgentId: String
+    ) -> [String] {
+        guard snapshot.enabled,
+              let member = snapshot.members.first(where: {
+                  $0.agentID.rawValue == focusedAgentId
+              }) else {
+            return []
+        }
+        let migration = member.migrationID.flatMap { migrationID in
+            snapshot.migrations.first { $0.migrationID == migrationID }
+        }
+        let capacity = snapshot.settlement?.capacity ?? 0
+        let progress = migration.map {
+            "\($0.routeCursor)/\(max(0, $0.route.count - 1))"
+        } ?? "none"
+        return [
+            "population=on settlement=\(member.settlementID.rawValue) population=\(snapshot.members.count)/\(capacity)",
+            "memberStatus=\(member.status.rawValue) migration=\(migration?.migrationID.rawValue ?? "none") migrationProgress=\(progress)",
         ]
     }
 

@@ -147,26 +147,43 @@ extension PebbleAgentController {
     func createProbes(in world: World) throws {
         guard let session else { throw ControllerError.missingSession }
         for agent in session.snapshot().agents {
-            let probe = LabCoreAgentEntity(
-                world: world,
-                labAgentId: agent.id,
-                physicalId: "pebble_app_agent_\(agent.id)"
-            )
-            guard !probe.shouldSaveToChunk, !probe.persistent else {
-                throw ControllerError.persistableProbe(agent.id)
-            }
-            probe.setPos(Double(agent.position.x) + 0.5, Double(agent.position.y), Double(agent.position.z) + 0.5)
-            probe.prevX = probe.x
-            probe.prevY = probe.y
-            probe.prevZ = probe.z
-            world.addEntity(probe)
-            probesByAgentId[agent.id] = probe
+            probesByAgentId[agent.id] = try createProbe(for: agent, in: world)
         }
         let ids = world.entities.compactMap { $0 as? LabCoreAgentEntity }.map(\.labAgentId).sorted()
         let expected = session.snapshot().agents.map(\.id).sorted()
-        guard ids == expected, probesByAgentId.count == 3 else {
+        guard ids == expected, probesByAgentId.count == expected.count else {
             throw ControllerError.invalidProbeSet(ids)
         }
+    }
+
+    func createProbe(
+        for agent: AgentSnapshot,
+        in world: World
+    ) throws -> LabCoreAgentEntity {
+        guard probesByAgentId[agent.id] == nil,
+              !world.entities.contains(where: {
+                  ($0 as? LabCoreAgentEntity)?.labAgentId == agent.id
+              }) else {
+            throw ControllerError.invalidProbeSet(probesByAgentId.keys.sorted())
+        }
+        let probe = LabCoreAgentEntity(
+            world: world,
+            labAgentId: agent.id,
+            physicalId: "pebble_app_agent_\(agent.id)"
+        )
+        guard !probe.shouldSaveToChunk, !probe.persistent else {
+            throw ControllerError.persistableProbe(agent.id)
+        }
+        probe.setPos(
+            Double(agent.position.x) + 0.5,
+            Double(agent.position.y),
+            Double(agent.position.z) + 0.5
+        )
+        probe.prevX = probe.x
+        probe.prevY = probe.y
+        probe.prevZ = probe.z
+        world.addEntity(probe)
+        return probe
     }
 
     func resetRunCounters() {
@@ -185,6 +202,7 @@ extension PebbleAgentController {
         let socialSummary = session?.socialSummary()
         let physicalSummary = session?.physicalChannelSummary()
         let cooperationSummary = session?.cooperationSummary()
+        let populationSummary = session?.populationSummary()
         let followStatus = followMode.statusText
         let wasDemo = demoActive
         let cleanupWorld = activeWorld ?? fallbackWorld
@@ -223,6 +241,9 @@ extension PebbleAgentController {
             }
             if let cooperationSummary, cooperationSummary.cooperationCausalEventCount > 0 {
                 trace("cooperation summary enabled=\(cooperationSummary.enabled ? 1 : 0) tasks=\(cooperationSummary.taskCount) offered=\(cooperationSummary.offeredCount) accepted=\(cooperationSummary.acceptedCount) active=\(cooperationSummary.activeCount) completed=\(cooperationSummary.completedCount) declined=\(cooperationSummary.declinedCount) expired=\(cooperationSummary.expiredCount) cancelled=\(cooperationSummary.cancelledCount) failed=\(cooperationSummary.failedCount) relations=\(cooperationSummary.relationCount) events=\(cooperationSummary.cooperationCausalEventCount) digest=\(cooperationSummary.digest)")
+            }
+            if let populationSummary, populationSummary.populationCausalEventCount > 0 {
+                trace("population summary enabled=\(populationSummary.enabled ? 1 : 0) settlement=\(populationSummary.settlementID?.rawValue ?? "none") members=\(populationSummary.memberCount)/\(populationSummary.capacity) founders=\(populationSummary.founderCount) residents=\(populationSummary.residentCount) migrating=\(populationSummary.migratingCount) active=\(populationSummary.activeMigrationCount) arrived=\(populationSummary.arrivedMigrationCount) rejected=\(populationSummary.rejectedMigrationCount) failed=\(populationSummary.failedMigrationCount) nextOrdinal=\(populationSummary.nextPopulationOrdinal ?? -1) events=\(populationSummary.populationCausalEventCount) digest=\(populationSummary.digest)")
             }
         }
         interactionExecutor.clearBoundaryAudit()

@@ -228,7 +228,7 @@ struct PebbleAgentPersistenceStore {
         let sessionURL = root.appendingPathComponent("session.json")
         let manifestBytes = try readRegularFile(manifestURL, limit: 1_048_576, fileManager: fileManager)
         let manifest = try AgentCheckpointCodec.decode(AgentCheckpointManifest.self, from: manifestBytes)
-        guard manifest.schemaVersion == AgentCheckpointSchema.currentVersion,
+        guard AgentCheckpointSchema.supports(manifest.schemaVersion),
               manifest.name == name,
               manifest.byteLength <= AgentCheckpointLimits.maximumCheckpointBytes else {
             throw PebbleAgentPersistenceStoreError.invalidBundle("checkpoint manifest")
@@ -263,7 +263,7 @@ struct PebbleAgentPersistenceStore {
             fileManager: fileManager
         )
         let manifest = try AgentCheckpointCodec.decode(AgentReplayJournalManifest.self, from: manifestBytes)
-        guard manifest.schemaVersion == AgentReplaySchema.currentVersion,
+        guard AgentReplaySchema.supports(manifest.schemaVersion),
               manifest.name == name,
               manifest.recordCount <= AgentCheckpointLimits.maximumReplayRecords,
               manifest.operationsByteLength <= AgentCheckpointLimits.maximumReplayBytes else {

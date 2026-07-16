@@ -369,6 +369,19 @@ extension PebbleAgentController {
             positions.insert(project.restPosition)
             for cell in project.blueprint.cells { positions.insert(project.worldPosition(for: cell)) }
         }
+        if let population = state.populationRegistry {
+            positions.insert(population.settlement.anchor)
+            positions.insert(population.settlement.receptionPosition)
+            for member in population.members {
+                positions.insert(member.receptionPosition)
+                if let entry = member.entryPosition { positions.insert(entry) }
+            }
+            for migration in population.migrations {
+                positions.insert(migration.entryPosition)
+                positions.insert(migration.receptionPosition)
+                positions.formUnion(migration.route)
+            }
+        }
         guard positions.count <= AgentCheckpointLimits.maximumBoundWorldCells else {
             throw AgentCheckpointError.invalidBound("World binding cells")
         }
