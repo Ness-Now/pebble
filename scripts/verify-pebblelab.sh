@@ -25,9 +25,11 @@ TMP_ROOT=$(mktemp -d "$TMP_BASE/PebbleLab-verify.XXXXXX")
 AGENTS_OUT_A="$TMP_ROOT/agents-basic-a"
 AGENTS_OUT_B="$TMP_ROOT/agents-basic-b"
 REGRESSION_OUT="$TMP_ROOT/regression-smoke"
+SETTLEMENT_OUT_A="$TMP_ROOT/settlement-metrics-a"
+SETTLEMENT_OUT_B="$TMP_ROOT/settlement-metrics-b"
 
 STEP=0
-TOTAL_STEPS=11
+TOTAL_STEPS=14
 
 run_step() {
     STEP=$((STEP + 1))
@@ -77,6 +79,38 @@ verify_regression_outputs() {
     expect_json_value "$report" summary.checksFailed 0
 }
 
+verify_settlement_metrics_outputs() {
+    out=$1
+    for file in \
+        settlement_metrics_state.json \
+        settlement_metric_frames.json \
+        settlement_agent_classifications.json \
+        settlement_macro_causal_chain.json \
+        settlement_behavior_ab.json \
+        settlement_metrics_summary.json \
+        settlement_metrics_digest.json \
+        settlement_metrics_invariant_report.json \
+        settlement_checkpoint_v3/manifest.json \
+        settlement_checkpoint_v3/session.json \
+        settlement_replay_v3/manifest.json \
+        settlement_replay_v3/operations.ndjson
+    do
+        [ -s "$out/$file" ] || fail "settlement metrics did not produce $out/$file"
+    done
+    expect_json_value "$out/settlement_metrics_summary.json" schemaVersion 3
+    expect_json_value "$out/settlement_metrics_summary.json" scenario \
+        settlement_metrics_multiscale_smoke
+    expect_json_value "$out/settlement_metrics_summary.json" seed 46
+    expect_json_value "$out/settlement_metrics_summary.json" macroInterval 4
+    expect_json_value "$out/settlement_metrics_summary.json" macroSequence 3
+    expect_json_value "$out/settlement_metrics_summary.json" population 4
+    expect_json_value "$out/settlement_metrics_summary.json" residents 4
+    expect_json_value "$out/settlement_metrics_summary.json" checkpointSchema 3
+    expect_json_value "$out/settlement_metrics_summary.json" replaySchema 3
+    expect_json_value "$out/settlement_behavior_ab.json" equal true
+    expect_json_value "$out/settlement_metrics_invariant_report.json" success true
+}
+
 verify_no_tracked_run_outputs() {
     tracked=$(
         git ls-files | /usr/bin/awk '
@@ -118,6 +152,17 @@ run_step "agents_basic deterministic replay comparison" \
 run_step "Canonical regression_smoke business checks" \
     swift run -c release PebbleLab -- --scenario regression_smoke --seed 42 --out "$REGRESSION_OUT"
 verify_regression_outputs
+
+run_step "settlement metrics deterministic run A" \
+    swift run -c release PebbleLab -- --scenario settlement_metrics_multiscale_smoke \
+        --seed 46 --ticks 12 --out "$SETTLEMENT_OUT_A"
+run_step "settlement metrics deterministic run B" \
+    swift run -c release PebbleLab -- --scenario settlement_metrics_multiscale_smoke \
+        --seed 46 --ticks 12 --out "$SETTLEMENT_OUT_B"
+run_step "settlement metrics canonical outputs and replay comparison" \
+    verify_settlement_metrics_outputs "$SETTLEMENT_OUT_A"
+verify_settlement_metrics_outputs "$SETTLEMENT_OUT_B"
+/usr/bin/diff -r "$SETTLEMENT_OUT_A" "$SETTLEMENT_OUT_B"
 
 run_step "Repository hygiene" git diff --check
 verify_no_tracked_run_outputs

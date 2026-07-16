@@ -22,6 +22,9 @@ if options.scenario == "persistent_checkpoint_replay_smoke" {
 if options.scenario == "population_registry_migration_smoke" {
     runPopulationRegistryMigrationSmoke(options)
 }
+if options.scenario == "settlement_metrics_multiscale_smoke" {
+    runSettlementMetricsMultiscaleSmoke(options)
+}
 
 let isMultiAgentMovementFixtureScenario = options.scenario
     == "multi_agent_movement_fixture_smoke"

@@ -416,6 +416,11 @@ extension PebbleAgentController {
             store: store
         )
         let candidate = try AgentSimulationSession.restoring(stored.checkpoint)
+        if candidate.settlementMetricsEnabled && !multiscaleFeatureEnabled {
+            return failure(
+                "Checkpoint load refused: settlement metrics gate is disabled."
+            )
+        }
         let candidateDigest = try candidate.durableStateDigest()
         guard candidateDigest == stored.manifest.semanticDigest else {
             throw AgentCheckpointError.semanticDigestMismatch

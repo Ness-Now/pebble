@@ -84,6 +84,9 @@ final class PebbleAgentController {
     var populationFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_POPULATION"] == "1"
     }
+    var multiscaleFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_MULTISCALE"] == "1"
+    }
     var physicalAudioAvailable: () -> Bool = { false }
     var traceEvery: Int {
         guard let raw = environment["PEBBLELAB_APP_AGENTS_TRACE_EVERY"],
@@ -150,5 +153,6 @@ final class PebbleAgentController {
         case constructionBoundary(String)
         case socialBoundary(String)
         case populationBoundary(String)
+        case settlementMetricsBoundary(String)
     }
 }

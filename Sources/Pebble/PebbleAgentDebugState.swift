@@ -19,6 +19,7 @@ struct PebbleAgentDebugState {
         physicalSnapshot: AgentPhysicalChannelSnapshot,
         cooperationSnapshot: AgentCooperationSnapshot,
         populationSnapshot: AgentPopulationSnapshot,
+        settlementMetricsSnapshot: AgentSettlementMetricsSnapshot,
         mode: PebbleAgentOverlayMode,
         paused: Bool,
         cognitiveHz: Int,
@@ -68,6 +69,7 @@ struct PebbleAgentDebugState {
             snapshot: populationSnapshot,
             focusedAgentId: agent.id
         )
+        let settlementLines = Self.settlementLines(snapshot: settlementMetricsSnapshot)
         if mode == .compact {
             let decisionAgent = lastInfluencedDecisionAgentId.flatMap { id in
                 snapshot.agents.first { $0.id == id }
@@ -134,6 +136,7 @@ struct PebbleAgentDebugState {
                 "rollback: \(interaction.rollbackCount) \(Self.short(interaction.lastRollback, limit: 30))",
                 "errors: \(runtimeErrorCount)  catchup dropped: \(droppedCatchUpSteps)",
             ] + socialLines + physicalLines + cooperationLines + populationLines
+                + settlementLines
             return
         }
 
@@ -262,6 +265,7 @@ struct PebbleAgentDebugState {
         lines += physicalLines
         lines += cooperationLines
         lines += populationLines
+        lines += settlementLines
         lines.append("ticks: \(agent.ticksAlive) goals: \(agent.goalChangeCount) actions/effects: \(agent.actionCount)/\(agent.actionEffectCount)")
         focusedAgentLines = lines
     }
@@ -408,6 +412,18 @@ struct PebbleAgentDebugState {
         return [
             "population=on settlement=\(member.settlementID.rawValue) population=\(snapshot.members.count)/\(capacity)",
             "memberStatus=\(member.status.rawValue) migration=\(migration?.migrationID.rawValue ?? "none") migrationProgress=\(progress)",
+        ]
+    }
+
+    private static func settlementLines(
+        snapshot: AgentSettlementMetricsSnapshot
+    ) -> [String] {
+        guard snapshot.enabled, let frame = snapshot.frames.last else { return [] }
+        return [
+            "settlement=\(frame.settlementID.rawValue) macro=\(frame.macroSequence.rawValue) window=\(frame.fromTickExclusive)..\(frame.toTickInclusive)",
+            "condition=\(frame.condition.rawValue) population=\(frame.population.members)/\(frame.population.capacity)",
+            "urgent=\(frame.activity.urgentCount) migrating=\(frame.activity.migratingCount) engaged=\(frame.activity.engagedCount) stable=\(frame.activity.stableCount)",
+            "movementDelta=\(frame.throughput.movementDelta) nextPulse=\(snapshot.nextPulseTick ?? -1)",
         ]
     }
 

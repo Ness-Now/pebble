@@ -19,6 +19,7 @@ extension PebbleAgentController {
             physicalSnapshot: session.physicalChannelSnapshot(),
             cooperationSnapshot: session.cooperationSnapshot(),
             populationSnapshot: session.populationSnapshot(),
+            settlementMetricsSnapshot: session.settlementMetricsSnapshot(),
             mode: mode,
             paused: isPaused,
             cognitiveHz: cognitiveHz,

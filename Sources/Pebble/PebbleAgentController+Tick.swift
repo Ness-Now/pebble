@@ -597,6 +597,16 @@ extension PebbleAgentController {
                 lastMovementOutcomes = outcomes
             } else {
                 lastMovementOutcomes = []
+                if session.settlementMetricsEnabled,
+                   session.settlementMetricsSummary().nextPulseTick == session.tick {
+                    if try applyRecordedOperationIfActive(
+                        .settlementPulseBoundary,
+                        session: &session,
+                        recorder: &recorder
+                    ) == nil {
+                        _ = try session.applySettlementMetricsPulseIfDue()
+                    }
+                }
                 try validatePostTick(
                     snapshot: session.snapshot(),
                     result: result,
@@ -609,6 +619,7 @@ extension PebbleAgentController {
             tracePhysicalState(at: session.tick)
             traceCooperationState(at: session.tick)
             tracePopulationState(at: session.tick)
+            traceSettlementMetricsState(at: session.tick)
             lastTickResult = result
             for agent in finalSnapshot.agents { observedGoalKinds.insert(agent.currentGoal.kind.rawValue) }
             for agent in finalSnapshot.agents {

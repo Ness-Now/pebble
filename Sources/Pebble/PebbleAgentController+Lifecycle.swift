@@ -203,6 +203,7 @@ extension PebbleAgentController {
         let physicalSummary = session?.physicalChannelSummary()
         let cooperationSummary = session?.cooperationSummary()
         let populationSummary = session?.populationSummary()
+        let settlementSummary = session?.settlementMetricsSummary()
         let followStatus = followMode.statusText
         let wasDemo = demoActive
         let cleanupWorld = activeWorld ?? fallbackWorld
@@ -244,6 +245,28 @@ extension PebbleAgentController {
             }
             if let populationSummary, populationSummary.populationCausalEventCount > 0 {
                 trace("population summary enabled=\(populationSummary.enabled ? 1 : 0) settlement=\(populationSummary.settlementID?.rawValue ?? "none") members=\(populationSummary.memberCount)/\(populationSummary.capacity) founders=\(populationSummary.founderCount) residents=\(populationSummary.residentCount) migrating=\(populationSummary.migratingCount) active=\(populationSummary.activeMigrationCount) arrived=\(populationSummary.arrivedMigrationCount) rejected=\(populationSummary.rejectedMigrationCount) failed=\(populationSummary.failedMigrationCount) nextOrdinal=\(populationSummary.nextPopulationOrdinal ?? -1) events=\(populationSummary.populationCausalEventCount) digest=\(populationSummary.digest)")
+            }
+            if let settlementSummary, settlementSummary.enabled {
+                trace(
+                    "settlement summary enabled=1 settlement=\(settlementSummary.settlementID?.rawValue ?? "none") "
+                        + "microTick=\(settlementSummary.microTick) "
+                        + "macroInterval=\(settlementSummary.macroIntervalTicks ?? 0) "
+                        + "macroSequence=\(settlementSummary.macroSequence) "
+                        + "lastPulse=\(settlementSummary.lastPulseTick ?? -1) "
+                        + "nextPulse=\(settlementSummary.nextPulseTick ?? -1) "
+                        + "frames=\(settlementSummary.retainedFrameCount) "
+                        + "evicted=\(settlementSummary.evictedFrameCount) "
+                        + "condition=\(settlementSummary.condition?.rawValue ?? "none") "
+                        + "population=\(settlementSummary.population)/\(settlementSummary.capacity) "
+                        + "urgent=\(settlementSummary.urgent) migrating=\(settlementSummary.migrating) "
+                        + "engaged=\(settlementSummary.engaged) stable=\(settlementSummary.stable) "
+                        + "movementDelta=\(settlementSummary.movementDelta) "
+                        + "materialDelta=\(settlementSummary.materialActivityDelta) "
+                        + "socialDelta=\(settlementSummary.socialActivityDelta) "
+                        + "cooperationDelta=\(settlementSummary.cooperationActivityDelta) "
+                        + "coverage=\(settlementSummary.causalCoverageComplete == true ? "complete" : "incomplete") "
+                        + "digest=\(settlementSummary.digest)"
+                )
             }
         }
         interactionExecutor.clearBoundaryAudit()
