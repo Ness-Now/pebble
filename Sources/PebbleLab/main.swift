@@ -19,6 +19,9 @@ if options.scenario == "shared_tasks_cooperation_smoke" {
 if options.scenario == "persistent_checkpoint_replay_smoke" {
     runPersistentCheckpointReplaySmoke(options)
 }
+if options.scenario == "population_registry_migration_smoke" {
+    runPopulationRegistryMigrationSmoke(options)
+}
 
 let isMultiAgentMovementFixtureScenario = options.scenario
     == "multi_agent_movement_fixture_smoke"

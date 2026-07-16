@@ -789,6 +789,8 @@ private func agentsBasicCognitiveLoopUrgency(for goal: LabGoalKind) -> Int {
         return 60
     case .fulfillSharedTask:
         return 78
+    case .migrateToSettlement:
+        return 79
     case .rest:
         return 70
     case .collectResource:

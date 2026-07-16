@@ -190,7 +190,8 @@ extension AgentSimulationSession {
 
     public func pendingSocialVerificationRequest(for agentId: String) -> AgentSocialVerificationRequest? {
         if let active = socialVerificationRequest(for: agentId) { return active }
-        guard socialEnabled, let state = statesById[agentId] else { return nil }
+        guard socialEnabled, !isMigratingAgent(agentId),
+              let state = statesById[agentId] else { return nil }
         let belief = socialBeliefs.filter {
             $0.ownerID.rawValue == agentId && $0.status == .unverified
                 && tick + 1 <= $0.expiresAtTick
@@ -260,7 +261,7 @@ extension AgentSimulationSession {
         }
 
         var verification: [String: AgentSocialBeliefID] = [:]
-        for id in sortedIds {
+        for id in sortedIds where !isMigratingAgent(id) {
             if let active = activeSocialVerificationByAgentId[id],
                socialBeliefs.first(where: { $0.beliefID == active })?.status == .unverified {
                 verification[id] = active
@@ -292,7 +293,7 @@ extension AgentSimulationSession {
         }
 
         var shares: [String: AgentSocialShareIntent] = [:]
-        for senderId in sortedIds {
+        for senderId in sortedIds where !isMigratingAgent(senderId) {
             guard let sender = statesById[senderId],
                   lastSocialShareTickByAgentId[senderId].map({
                       socialTick - $0 >= configuration.socialConfiguration.shareCooldownTicks
@@ -306,6 +307,7 @@ extension AgentSimulationSession {
             for fact in facts {
                 let recipients = sortedIds.compactMap { recipientId -> (AgentID, Int)? in
                     guard recipientId != senderId,
+                          !isMigratingAgent(recipientId),
                           let recipient = statesById[recipientId],
                           !isSociallyUrgent(recipient),
                           !hasMaterialTransaction(recipient),
@@ -360,7 +362,8 @@ extension AgentSimulationSession {
         candidate: AgentSocialBeliefID?,
         selectedGoal: AgentGoalKind
     ) {
-        guard socialEnabled, selectedGoal == .verifySocialInformation, let candidate else { return }
+        guard socialEnabled, !isMigratingAgent(agentId),
+              selectedGoal == .verifySocialInformation, let candidate else { return }
         activeSocialVerificationByAgentId[agentId] = candidate
     }
 
@@ -389,7 +392,7 @@ extension AgentSimulationSession {
         perceptionEventID: AgentCausalEventID,
         at factTick: Int
     ) throws {
-        guard socialEnabled else { return }
+        guard socialEnabled, !isMigratingAgent(observerID.rawValue) else { return }
         for observation in observations.sorted(by: AgentResourcePerception.sortsBefore) {
             guard observation.source == .naturalWorld,
                   observation.resource == .wood || observation.resource == .stone,
@@ -546,6 +549,8 @@ extension AgentSimulationSession {
 
     func canDeliverSocialMessage(_ intent: AgentSocialShareIntent) -> Bool {
         guard let fact = socialFacts.first(where: { $0.factID == intent.factID }),
+              !isMigratingAgent(intent.senderID.rawValue),
+              !isMigratingAgent(intent.recipientID.rawValue),
               fact.observerID == intent.senderID,
               !fact.isExpired(at: tick),
               let sender = statesById[intent.senderID.rawValue],
@@ -744,7 +749,8 @@ extension AgentSimulationSession {
 
     func hasMaterialTransaction(_ state: AgentSessionAgentState) -> Bool {
         switch state.currentGoal.kind {
-        case .satisfyHunger, .seekSafety, .rest, .deliverResources, .buildShelter:
+        case .satisfyHunger, .seekSafety, .rest, .deliverResources, .buildShelter,
+             .migrateToSettlement:
             return true
         case .collectResource:
             return reservation(for: state)?.agentId == state.id

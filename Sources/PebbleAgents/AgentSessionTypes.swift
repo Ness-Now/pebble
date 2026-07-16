@@ -71,6 +71,7 @@ public enum AgentSessionError: Error, Equatable {
     case social(AgentSocialError)
     case physical(AgentPhysicalChannelError)
     case cooperation(AgentCooperationError)
+    case population(AgentPopulationError)
 }
 
 public struct AgentSessionConfiguration: Codable {

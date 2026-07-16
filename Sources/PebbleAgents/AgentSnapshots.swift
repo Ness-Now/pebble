@@ -254,6 +254,7 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
     public let survivalConfiguration: AgentSurvivalConfiguration
     public let buildAutoEnabled: Bool
     public let constructionProject: AgentConstructionProject?
+    public let population: AgentPopulationSnapshot?
 
     init(
         seed: UInt32,
@@ -268,7 +269,8 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
         survivalEnabled: Bool = false,
         survivalConfiguration: AgentSurvivalConfiguration = .live,
         buildAutoEnabled: Bool = false,
-        constructionProject: AgentConstructionProject? = nil
+        constructionProject: AgentConstructionProject? = nil,
+        population: AgentPopulationSnapshot? = nil
     ) {
         self.seed = seed
         self.tick = tick
@@ -284,6 +286,7 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
         self.survivalConfiguration = survivalConfiguration
         self.buildAutoEnabled = buildAutoEnabled
         self.constructionProject = constructionProject
+        self.population = population
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -291,6 +294,7 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
         case economyEnabled, naturalResourcesEnabled, deliveryQuota, campStock, conservation
         case survivalEnabled, survivalConfiguration
         case buildAutoEnabled, constructionProject
+        case population
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -327,6 +331,7 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
                 try container.encode(conservation, forKey: .conservation)
             }
         }
+        try container.encodeIfPresent(population, forKey: .population)
     }
 }
 

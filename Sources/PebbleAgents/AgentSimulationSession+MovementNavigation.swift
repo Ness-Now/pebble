@@ -23,7 +23,10 @@ extension AgentSimulationSession {
     }
 
     public mutating func applyMovementOutcomes(_ outcomes: [AgentMovementOutcome]) throws {
-        try prevalidateCausalAppend(count: outcomes.count)
+        let populationArrivalEventCapacity = populationRegistry?.migrations.contains {
+            $0.status == .admitted || $0.status == .inTransit
+        } == true ? 2 : 0
+        try prevalidateCausalAppend(count: outcomes.count + populationArrivalEventCapacity)
         let ids = sortedIds
         guard outcomes.count == ids.count else {
             throw AgentSessionError.movementOutcomeCountMismatch(expected: ids.count, actual: outcomes.count)
@@ -72,7 +75,8 @@ extension AgentSimulationSession {
                         || action.name == "approach_resource"
                         || action.name == "return_home"
                         || action.name == "approach_construction"
-                        || action.name == "approach_information",
+                        || action.name == "approach_information"
+                        || action.name == "approach_settlement",
                       outcome.requestedDX == (action.dx ?? 0),
                       outcome.requestedDY == (action.dy ?? 0),
                       outcome.requestedDZ == (action.dz ?? 0),
@@ -131,7 +135,8 @@ extension AgentSimulationSession {
                 if state.lastAction?.name == "approach_resource"
                     || state.lastAction?.name == "return_home"
                     || state.lastAction?.name == "approach_construction"
-                    || state.lastAction?.name == "approach_information" {
+                    || state.lastAction?.name == "approach_information"
+                    || state.lastAction?.name == "approach_settlement" {
                     guard let route = state.navigationProgress.route,
                           state.navigationProgress.status == .active,
                           state.navigationProgress.nextStep == outcome.toPosition else {
@@ -158,7 +163,8 @@ extension AgentSimulationSession {
                 if state.lastAction?.name == "approach_resource"
                     || state.lastAction?.name == "return_home"
                     || state.lastAction?.name == "approach_construction"
-                    || state.lastAction?.name == "approach_information" {
+                    || state.lastAction?.name == "approach_information"
+                    || state.lastAction?.name == "approach_settlement" {
                     state.navigationProgress = AgentNavigationProgress(
                         status: state.navigationProgress.status,
                         route: state.navigationProgress.route,
@@ -207,6 +213,7 @@ extension AgentSimulationSession {
                 lastOutcomeEventByAgentID[agentID] = eventID
             }
         }
+        try updatePopulationAfterMovementEvents()
     }
 
     mutating func reconcileReservations(at reservationTick: Int) {
@@ -263,6 +270,34 @@ extension AgentSimulationSession {
         let targetResource: AgentResourceKind?
         let goalMode: AgentNavigationGoalMode
         switch state.currentGoal.kind {
+        case .migrateToSettlement:
+            guard let migration = migrationRecord(for: state.id) else {
+                state.navigationProgress = AgentNavigationProgress(
+                    status: .failed,
+                    lastInvalidation: .targetMissing,
+                    lastFailure: .targetMissing
+                )
+                return
+            }
+            releaseReservation(for: state)
+            purpose = .migrationArrival
+            targetPosition = migration.receptionPosition
+            targetResource = nil
+            goalMode = .exact
+            if state.position == migration.receptionPosition {
+                state.navigationProgress = AgentNavigationProgress(
+                    status: .arrived,
+                    route: state.navigationProgress.route,
+                    routeIndex: state.navigationProgress.route.map {
+                        max(0, $0.positions.count - 1)
+                    } ?? 0,
+                    replanCount: state.navigationProgress.replanCount,
+                    consecutiveBlockedMoves: 0,
+                    lastPlanTick: state.navigationProgress.lastPlanTick,
+                    lastInvalidation: state.navigationProgress.lastInvalidation
+                )
+                return
+            }
         case .collectResource, .satisfyHunger, .fulfillSharedTask:
             if state.activeResourceTarget == nil,
                state.currentGoal.kind == .collectResource

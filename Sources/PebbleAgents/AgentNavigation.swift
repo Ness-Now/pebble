@@ -342,6 +342,7 @@ public enum AgentNavigationPurpose: String, Codable, Equatable {
     case homeRest
     case constructionWork
     case socialVerification
+    case migrationArrival
 }
 
 public struct AgentNavigationRoute: Codable, Equatable {

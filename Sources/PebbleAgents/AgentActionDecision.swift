@@ -14,6 +14,7 @@ public enum AgentGoalKind: String, Codable, Equatable {
     case idle
     case rest
     case seekSafety
+    case migrateToSettlement
     case collectResource
     case deliverResources
     case satisfyHunger
@@ -150,6 +151,37 @@ public enum AgentActionDecider {
                 return returnHomeAction(input, goalName: "rest")
             }
             return AgentAction(name: "rest", reason: "goal rest", tick: input.tick)
+        case .migrateToSettlement:
+            if input.position == input.homePosition {
+                return AgentAction(
+                    name: "wait",
+                    reason: "goal migrateToSettlement: reception reached",
+                    tick: input.tick,
+                    target: input.homePosition
+                )
+            }
+            if let next = input.navigationProgress.nextStep {
+                let dx = next.x - input.position.x
+                let dy = next.y - input.position.y
+                let dz = next.z - input.position.z
+                if abs(dx) + abs(dz) == 1, (-1...1).contains(dy) {
+                    return AgentAction(
+                        name: "approach_settlement",
+                        reason: "goal migrateToSettlement: follow admitted route",
+                        tick: input.tick,
+                        dx: dx,
+                        dy: dy,
+                        dz: dz,
+                        target: input.homePosition
+                    )
+                }
+            }
+            return AgentAction(
+                name: "approach_settlement",
+                reason: "goal migrateToSettlement: awaiting bounded route",
+                tick: input.tick,
+                target: input.homePosition
+            )
         case .collectResource:
             return resourceAction(input, goalName: "collectResource")
         case .satisfyHunger:

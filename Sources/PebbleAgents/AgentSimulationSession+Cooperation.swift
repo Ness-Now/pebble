@@ -144,23 +144,26 @@ extension AgentSimulationSession {
     }
 
     func cooperationEligibleResources(for state: AgentSessionAgentState) -> [AgentResourceKind]? {
-        guard cooperationEnabled, let task = activeSharedTask(for: state.id) else { return nil }
+        guard cooperationEnabled, !isMigratingAgent(state.id),
+              let task = activeSharedTask(for: state.id) else { return nil }
         return task.remainingQuantity > 0 ? [task.resource] : []
     }
 
     func hasActiveCooperationTask(_ state: AgentSessionAgentState) -> Bool {
-        activeSharedTask(for: state.id) != nil
+        !isMigratingAgent(state.id) && activeSharedTask(for: state.id) != nil
     }
 
     func shouldConsiderCooperationOffer(_ state: AgentSessionAgentState) -> Bool {
-        guard cooperationEnabled, let task = pendingSharedTaskOffer(for: state.id) else {
+        guard cooperationEnabled, !isMigratingAgent(state.id),
+              let task = pendingSharedTaskOffer(for: state.id) else {
             return false
         }
         return tick + 1 <= task.offerExpiresAtTick && !isSociallyUrgent(state)
     }
 
     func canAcceptCooperationOffer(_ state: AgentSessionAgentState) -> Bool {
-        guard let task = pendingSharedTaskOffer(for: state.id),
+        guard !isMigratingAgent(state.id),
+              let task = pendingSharedTaskOffer(for: state.id),
               tick + 1 <= task.offerExpiresAtTick,
               !isSociallyUrgent(state),
               activeSharedTask(for: state.id) == nil,
@@ -218,6 +221,7 @@ extension AgentSimulationSession {
 
         guard transitions.isEmpty,
               let project = constructionProject,
+              !isMigratingAgent(project.builderAgentId),
               project.status == .planned || project.status == .acquiringMaterials
                 || project.status == .readyToFund,
               !sharedTasks.contains(where: {
@@ -259,6 +263,7 @@ extension AgentSimulationSession {
 
         let helpers = sortedIds.compactMap { helperId -> (AgentID, Int, Int, Int)? in
             guard helperId != project.builderAgentId,
+                  !isMigratingAgent(helperId),
                   let helperID = AgentID(rawValue: helperId),
                   let helper = statesById[helperId],
                   !isSociallyUrgent(helper),

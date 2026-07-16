@@ -85,6 +85,13 @@ public enum AgentCognitiveTransitions {
                 startedAtTick: input.tick,
                 urgency: 81
             )
+        } else if input.isMigrating {
+            nextGoal = AgentGoal(
+                kind: .migrateToSettlement,
+                reason: "admitted migrant must reach settlement reception",
+                startedAtTick: input.tick,
+                urgency: 79
+            )
         } else if input.shouldBuildShelter {
             nextGoal = AgentGoal(
                 kind: .buildShelter,
@@ -228,6 +235,9 @@ public enum AgentCognitiveTransitions {
         case "approach_information":
             state = "planning"
             effect = "awaiting bounded social verification navigation"
+        case "approach_settlement":
+            state = "migrating"
+            effect = "awaiting bounded settlement migration"
         case "verify_information":
             state = "verifying"
             effect = "awaiting read-only World verification"

@@ -98,7 +98,8 @@ public enum AgentMovementCoordinator {
                 || action.name == "approach_resource"
                 || action.name == "return_home"
                 || action.name == "approach_construction"
-                || action.name == "approach_information" else {
+                || action.name == "approach_information"
+                || action.name == "approach_settlement" else {
             return stationary(
                 agent: agent,
                 tick: tick,
@@ -114,7 +115,8 @@ public enum AgentMovementCoordinator {
         let dy = action.dy ?? 0
         let dz = action.dz ?? 0
         if action.name == "approach_resource" || action.name == "return_home"
-            || action.name == "approach_construction" || action.name == "approach_information",
+            || action.name == "approach_construction" || action.name == "approach_information"
+            || action.name == "approach_settlement",
            action.dx == nil || action.dz == nil
                 || !(action.dy == nil || (-1...1).contains(dy))
                 || abs(dx) + abs(dz) != 1 {
@@ -130,6 +132,7 @@ public enum AgentMovementCoordinator {
         }
         let validVerticalIntent = action.name == "approach_resource" || action.name == "return_home"
             || action.name == "approach_construction" || action.name == "approach_information"
+            || action.name == "approach_settlement"
             ? (-1...1).contains(dy)
             : (action.dy == nil || action.dy == 0)
         guard validVerticalIntent, abs(dx) + abs(dz) == 1 else {
@@ -160,7 +163,8 @@ public enum AgentMovementCoordinator {
 
         let step = neighbor.stepDelta!
         if action.name == "approach_resource" || action.name == "return_home"
-            || action.name == "approach_construction" || action.name == "approach_information",
+            || action.name == "approach_construction" || action.name == "approach_information"
+            || action.name == "approach_settlement",
            step != dy {
             return stationary(agent: agent, tick: tick, status: .blocked, action: action, direction: direction, reason: "route step height changed", worldTick: observation.worldTick)
         }

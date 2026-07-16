@@ -50,6 +50,7 @@ public struct AgentSimulationSession {
     var cooperationRelations: [AgentCooperationRelation]
     var cooperationEvictionCounts: AgentCooperationEvictionCounts
     var lastCooperationOfferTickByIssuerID: [String: Int]
+    public internal(set) var populationRegistry: AgentPopulationRegistry?
 
     public init(
         configuration: AgentSessionConfiguration,
@@ -117,6 +118,7 @@ public struct AgentSimulationSession {
         cooperationRelations = []
         cooperationEvictionCounts = AgentCooperationEvictionCounts()
         lastCooperationOfferTickByIssuerID = [:]
+        populationRegistry = nil
         try recordCausalEvent(
             kind: .sessionLifecycle,
             origin: .lifecycle,
@@ -160,7 +162,8 @@ public struct AgentSimulationSession {
             survivalEnabled: survivalEnabled,
             survivalConfiguration: configuration.survivalConfiguration,
             buildAutoEnabled: buildAutoEnabled,
-            constructionProject: constructionProject
+            constructionProject: constructionProject,
+            population: populationRegistry == nil ? nil : populationSnapshot()
         )
     }
 
@@ -298,6 +301,7 @@ public struct AgentSimulationSession {
 
         let nextSimulationTick = try clock.nextTick()
         let nextTick = nextSimulationTick.rawValue
+        try expireActiveMigrationIfNeeded(at: nextTick)
         let ids = sortedIds
         refreshConstructionProjectStatus()
         reservationsByTarget = reservationsByTarget.filter { !$0.value.isExpired(at: nextTick) }
@@ -305,7 +309,9 @@ public struct AgentSimulationSession {
             guard var state = statesById[id] else { continue }
             let previousTarget = state.activeResourceTarget
             state.lastResourceObservations = resourceObservationsById[id] ?? []
-            if shouldSatisfyHunger(state, projectedToNextTick: true) {
+            if isMigratingAgent(id) {
+                state.activeResourceTarget = nil
+            } else if shouldSatisfyHunger(state, projectedToNextTick: true) {
                 let foodObservations = state.lastResourceObservations.filter {
                     $0.resource == .foodRaw
                 }
@@ -463,6 +469,7 @@ public struct AgentSimulationSession {
                     && !cooperationTransitionPending,
                 canAcceptCooperationOffer: canAcceptCooperationOffer(state)
                     && !cooperationTransitionPending,
+                isMigrating: isMigratingAgent(id),
                 currentGoalKind: state.currentGoal.kind,
                 survivalEnabled: survivalEnabled,
                 hungryThreshold: configuration.survivalConfiguration.hungryThreshold,
@@ -615,14 +622,16 @@ public struct AgentSimulationSession {
             )
             if let eventID = perceptionEvent?.eventID {
                 lastPerceptionEventByAgentID[agentID] = eventID
-                try recordGroundedSocialFacts(
-                    observerID: agentID,
-                    observations: (result.snapshot.lastResourceObservations
-                        + (socialResourceObservationsById[result.agentId] ?? []))
-                        .sorted(by: AgentResourcePerception.sortsBefore),
-                    perceptionEventID: eventID,
-                    at: tick
-                )
+                if !isMigratingAgent(result.agentId) {
+                    try recordGroundedSocialFacts(
+                        observerID: agentID,
+                        observations: (result.snapshot.lastResourceObservations
+                            + (socialResourceObservationsById[result.agentId] ?? []))
+                            .sorted(by: AgentResourcePerception.sortsBefore),
+                        perceptionEventID: eventID,
+                        at: tick
+                    )
+                }
             }
             var actionCause = perceptionEvent?.eventID
             if let goalChange = result.goalChange {

@@ -2,6 +2,11 @@ import Foundation
 
 public enum AgentReplaySchema {
     public static let currentVersion = 1
+    public static let populationVersion = 2
+
+    public static func supports(_ version: Int) -> Bool {
+        version == currentVersion || version == populationVersion
+    }
 }
 
 public struct AgentReplayRecordSequence: RawRepresentable, Codable, Hashable, Comparable, Sendable {
@@ -42,6 +47,10 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case physicalPresentationClaim
     case physicalClear
     case cooperationClear
+    case populationFeature
+    case populationRegistryInitialization
+    case migrationAdmission
+    case populationClear
 }
 
 public enum AgentReplayOperation: Codable {
@@ -78,6 +87,22 @@ public enum AgentReplayOperation: Codable {
     case claimPhysicalPresentationRequests
     case clearPhysicalState
     case clearCooperationState
+    case setPopulationEnabled(
+        Bool,
+        settlementAnchor: AgentPosition?,
+        receptionPosition: AgentPosition?,
+        configuration: AgentPopulationConfiguration
+    )
+    case initializePopulationRegistry(
+        settlementAnchor: AgentPosition,
+        receptionPosition: AgentPosition,
+        configuration: AgentPopulationConfiguration
+    )
+    case admitMigration(
+        intent: AgentMigrationAdmissionIntent,
+        observation: AgentMigrationWorldObservation
+    )
+    case clearPopulationDiagnostics
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -105,6 +130,10 @@ public enum AgentReplayOperation: Codable {
         case .claimPhysicalPresentationRequests: return .physicalPresentationClaim
         case .clearPhysicalState: return .physicalClear
         case .clearCooperationState: return .cooperationClear
+        case .setPopulationEnabled: return .populationFeature
+        case .initializePopulationRegistry: return .populationRegistryInitialization
+        case .admitMigration: return .migrationAdmission
+        case .clearPopulationDiagnostics: return .populationClear
         }
     }
 
@@ -166,6 +195,7 @@ public struct AgentReplayRecord: Codable {
     public let operationID: AgentOperationID?
 
     public init(
+        schemaVersion: Int = AgentReplaySchema.currentVersion,
         simulationID: AgentSimulationID,
         recordSequence: AgentReplayRecordSequence,
         operation: AgentReplayOperation,
@@ -176,7 +206,7 @@ public struct AgentReplayRecord: Codable {
         causalSequenceAfter: UInt64,
         causalDigestAfter: String
     ) {
-        schemaVersion = AgentReplaySchema.currentVersion
+        self.schemaVersion = schemaVersion
         self.simulationID = simulationID
         self.recordSequence = recordSequence
         operationKind = operation.kind
@@ -206,6 +236,7 @@ public struct AgentReplayJournalManifest: Codable, Equatable, Sendable {
     public let operationsByteLength: Int
 
     public init(
+        schemaVersion: Int = AgentReplaySchema.currentVersion,
         name: AgentCheckpointName,
         baseCheckpointID: AgentCheckpointID,
         baseCheckpointDigest: AgentCheckpointDigest,
@@ -218,7 +249,7 @@ public struct AgentReplayJournalManifest: Codable, Equatable, Sendable {
         operationsStorageDigest: AgentCheckpointDigest,
         operationsByteLength: Int
     ) {
-        schemaVersion = AgentReplaySchema.currentVersion
+        self.schemaVersion = schemaVersion
         self.name = name
         self.baseCheckpointID = baseCheckpointID
         self.baseCheckpointDigest = baseCheckpointDigest
@@ -293,6 +324,7 @@ public struct AgentReplayReport: Codable, Equatable, Sendable {
     public let divergence: AgentReplayDivergence?
 
     init(
+        schemaVersion: Int = AgentReplaySchema.currentVersion,
         verified: Bool,
         baseCheckpointID: AgentCheckpointID,
         simulationID: AgentSimulationID,
@@ -303,7 +335,7 @@ public struct AgentReplayReport: Codable, Equatable, Sendable {
         finalCausalDigest: String,
         divergence: AgentReplayDivergence?
     ) {
-        schemaVersion = AgentReplaySchema.currentVersion
+        self.schemaVersion = schemaVersion
         self.verified = verified
         self.baseCheckpointID = baseCheckpointID
         self.simulationID = simulationID
@@ -353,6 +385,7 @@ public struct AgentReplayRecorder {
     public let baseCheckpointDigest: AgentCheckpointDigest
     public let simulationID: AgentSimulationID
     public let initialTick: Int
+    public let schemaVersion: Int
     public private(set) var records: [AgentReplayRecord]
     public private(set) var droppedRecordCount: Int
     public private(set) var nonReplayableReason: String?
@@ -373,6 +406,7 @@ public struct AgentReplayRecorder {
         baseCheckpointDigest = checkpoint.semanticDigest
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
+        schemaVersion = checkpoint.schemaVersion
         records = []
         droppedRecordCount = 0
         nonReplayableReason = nil
@@ -398,6 +432,7 @@ public struct AgentReplayRecorder {
         let postDigest = try candidate.durableStateDigest()
         let causalAfter = candidate.causalLedgerSnapshot().summary
         let record = AgentReplayRecord(
+            schemaVersion: schemaVersion,
             simulationID: simulationID,
             recordSequence: AgentReplayRecordSequence(rawValue: UInt64(records.count + 1))!,
             operation: operation,
@@ -424,6 +459,7 @@ public struct AgentReplayRecorder {
     public func journal(named name: AgentCheckpointName) throws -> AgentReplayJournal {
         let bytes = try AgentReplayCodec.encodeRecords(records)
         let manifest = AgentReplayJournalManifest(
+            schemaVersion: schemaVersion,
             name: name,
             baseCheckpointID: baseCheckpointID,
             baseCheckpointDigest: baseCheckpointDigest,
@@ -484,7 +520,7 @@ public enum AgentSessionReplayer {
             let expectedRecordSequence = UInt64(index + 1)
             let actualDigest = try candidate.durableStateDigest()
             let causalBefore = candidate.causalLedgerSnapshot().summary
-            if record.schemaVersion != AgentReplaySchema.currentVersion
+            if record.schemaVersion != journal.manifest.schemaVersion
                 || record.recordSequence.rawValue != expectedRecordSequence
                 || record.operationKind != record.operation.kind
                 || record.operationID != record.operation.operationID
@@ -535,6 +571,7 @@ public enum AgentSessionReplayer {
         let causal = candidate.causalLedgerSnapshot().summary
         return AgentReplayResult(
             report: AgentReplayReport(
+                schemaVersion: journal.manifest.schemaVersion,
                 verified: true,
                 baseCheckpointID: checkpoint.checkpointID,
                 simulationID: candidate.simulationID,
@@ -554,13 +591,14 @@ public enum AgentSessionReplayer {
         journal: AgentReplayJournal
     ) throws {
         let manifest = journal.manifest
-        guard manifest.schemaVersion == AgentReplaySchema.currentVersion else {
+        guard AgentReplaySchema.supports(manifest.schemaVersion) else {
             throw AgentReplayError.unsupportedSchema(manifest.schemaVersion)
         }
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
-              manifest.initialTick == checkpoint.tick.rawValue else {
+              manifest.initialTick == checkpoint.tick.rawValue,
+              manifest.schemaVersion == checkpoint.schemaVersion else {
             throw AgentReplayError.baseCheckpointMismatch
         }
         guard manifest.replayable, manifest.droppedRecordCount == 0,
@@ -600,6 +638,7 @@ public enum AgentSessionReplayer {
         )
         return AgentReplayResult(
             report: AgentReplayReport(
+                schemaVersion: record.schemaVersion,
                 verified: false,
                 baseCheckpointID: checkpoint.checkpointID,
                 simulationID: candidate.simulationID,
@@ -686,6 +725,27 @@ extension AgentSimulationSession {
             try candidate.clearPhysicalState()
         case .clearCooperationState:
             try candidate.clearCooperationState()
+        case let .setPopulationEnabled(
+            enabled, settlementAnchor, receptionPosition, configuration
+        ):
+            try candidate.setPopulationEnabled(
+                enabled,
+                settlementAnchor: settlementAnchor,
+                receptionPosition: receptionPosition,
+                configuration: configuration
+            )
+        case let .initializePopulationRegistry(
+            settlementAnchor, receptionPosition, configuration
+        ):
+            try candidate.initializePopulationRegistry(
+                settlementAnchor: settlementAnchor,
+                receptionPosition: receptionPosition,
+                configuration: configuration
+            )
+        case let .admitMigration(intent, observation):
+            _ = try candidate.admitMigration(intent: intent, observation: observation)
+        case .clearPopulationDiagnostics:
+            try candidate.clearPopulationDiagnostics()
         }
         self = candidate
         let causal = causalLedgerSnapshot().summary

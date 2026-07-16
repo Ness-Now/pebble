@@ -427,7 +427,7 @@ extension AgentSimulationSession {
     func constructionEligibleResources(
         for state: AgentSessionAgentState
     ) -> [AgentResourceKind]? {
-        guard buildAutoEnabled,
+        guard buildAutoEnabled, !isMigratingAgent(state.id),
               let project = constructionProject,
               project.builderAgentId == state.id,
               project.status == .planned
@@ -439,7 +439,7 @@ extension AgentSimulationSession {
     }
 
     func isFundedConstructionBuilder(_ state: AgentSessionAgentState) -> Bool {
-        guard buildAutoEnabled,
+        guard buildAutoEnabled, !isMigratingAgent(state.id),
               let project = constructionProject,
               project.builderAgentId == state.id else { return false }
         return project.status == .funded
@@ -449,7 +449,7 @@ extension AgentSimulationSession {
     }
 
     func hasActiveConstructionTask(_ state: AgentSessionAgentState) -> Bool {
-        guard buildAutoEnabled,
+        guard buildAutoEnabled, !isMigratingAgent(state.id),
               let project = constructionProject,
               project.builderAgentId == state.id else { return false }
         return project.status != .completed

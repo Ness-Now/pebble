@@ -3,6 +3,11 @@ import Foundation
 
 public enum AgentCheckpointSchema {
     public static let currentVersion = 1
+    public static let populationVersion = 2
+
+    public static func supports(_ version: Int) -> Bool {
+        version == currentVersion || version == populationVersion
+    }
 }
 
 public enum AgentCheckpointLimits {
@@ -176,9 +181,12 @@ public struct AgentSessionDurableState: Codable {
     public let cooperationRelations: [AgentCooperationRelation]
     public let cooperationEvictionCounts: AgentCooperationEvictionCounts
     public let lastCooperationOfferTicks: [AgentCheckpointStringIntEntry]
+    public let populationRegistry: AgentPopulationRegistry?
 
     init(session: AgentSimulationSession) {
-        schemaVersion = AgentCheckpointSchema.currentVersion
+        schemaVersion = session.populationRegistry == nil
+            ? AgentCheckpointSchema.currentVersion
+            : AgentCheckpointSchema.populationVersion
         configuration = session.configuration
         clock = session.clock
         agents = session.statesById.values.sorted { $0.agentID < $1.agentID }
@@ -252,6 +260,7 @@ public struct AgentSessionDurableState: Codable {
                 AgentCheckpointStringIntEntry(key: id, value: $0)
             }
         }
+        populationRegistry = session.populationRegistry
     }
 }
 
@@ -273,7 +282,7 @@ public struct AgentSessionCheckpoint: Codable {
         guard let checkpointID = AgentCheckpointID(rawValue: idText) else {
             throw AgentCheckpointError.invalidCheckpointID(idText)
         }
-        schemaVersion = AgentCheckpointSchema.currentVersion
+        schemaVersion = durableState.schemaVersion
         self.checkpointID = checkpointID
         simulationID = durableState.clock.simulationID
         tick = durableState.clock.tick
@@ -392,7 +401,7 @@ public struct AgentCheckpointManifest: Codable, Equatable, Sendable {
         worldBinding: AgentCheckpointWorldBinding,
         orchestration: AgentCheckpointLiveOrchestration
     ) {
-        schemaVersion = AgentCheckpointSchema.currentVersion
+        schemaVersion = checkpoint.schemaVersion
         self.name = name
         checkpointID = checkpoint.checkpointID
         semanticDigest = checkpoint.semanticDigest
@@ -561,8 +570,8 @@ extension AgentSimulationSession {
     public static func validate(
         _ checkpoint: AgentSessionCheckpoint
     ) throws -> AgentCheckpointValidationReport {
-        guard checkpoint.schemaVersion == AgentCheckpointSchema.currentVersion,
-              checkpoint.durableState.schemaVersion == AgentCheckpointSchema.currentVersion else {
+        guard AgentCheckpointSchema.supports(checkpoint.schemaVersion),
+              checkpoint.durableState.schemaVersion == checkpoint.schemaVersion else {
             throw AgentCheckpointError.unsupportedSchema(checkpoint.schemaVersion)
         }
         guard checkpoint.simulationID == checkpoint.durableState.clock.simulationID,
@@ -663,11 +672,18 @@ extension AgentSimulationSession {
         lastCooperationOfferTickByIssuerID = Dictionary(uniqueKeysWithValues:
             state.lastCooperationOfferTicks.map { ($0.key, $0.value) }
         )
+        populationRegistry = state.populationRegistry
         guard conservationSnapshot().balanced else { throw AgentCheckpointError.invalidConservation }
     }
 
     static func validateDurableState(_ state: AgentSessionDurableState) throws {
-        guard state.schemaVersion == AgentCheckpointSchema.currentVersion else {
+        guard AgentCheckpointSchema.supports(state.schemaVersion) else {
+            throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
+        }
+        guard (state.schemaVersion == AgentCheckpointSchema.currentVersion
+                && state.populationRegistry == nil)
+                || (state.schemaVersion == AgentCheckpointSchema.populationVersion
+                    && state.populationRegistry != nil) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.clock.tick.rawValue >= 0,
@@ -812,6 +828,13 @@ extension AgentSimulationSession {
                   (0...task.requestedQuantity).contains(task.contributedQuantity) else {
                 throw AgentCheckpointError.invalidReference(task.taskID.rawValue)
             }
+        }
+        if let populationRegistry = state.populationRegistry {
+            try validatePopulationRegistry(
+                populationRegistry,
+                agents: state.agents,
+                clock: state.clock
+            )
         }
         for relation in state.socialTrustRelations {
             guard agentIDs.contains(relation.sourceID), agentIDs.contains(relation.targetID),

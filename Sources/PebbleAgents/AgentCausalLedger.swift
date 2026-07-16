@@ -88,6 +88,16 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case sharedTaskSuperseded
     case cooperationReliabilityChanged
     case cooperationStateCleared
+    case populationRegistryInitialized
+    case populationMemberRegistered
+    case migrationProposed
+    case migrationAdmitted
+    case migrationStarted
+    case migrationArrived
+    case migrationRejected
+    case migrationCancelled
+    case migrationFailed
+    case populationStateCleared
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -100,6 +110,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case socialTransition
     case physicalTransition
     case cooperationTransition
+    case populationTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -165,6 +176,26 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         after: Int
     )
     case cooperationClear(tasks: Int, offers: Int, relations: Int)
+    case population(
+        settlementID: String,
+        memberID: String?,
+        ordinal: Int?,
+        founder: Bool?,
+        status: String,
+        populationBefore: Int,
+        populationAfter: Int
+    )
+    case migration(
+        migrationID: String,
+        migrantID: String,
+        origin: String,
+        destination: String,
+        entry: AgentPosition,
+        reception: AgentPosition,
+        status: String,
+        reason: String?,
+        routeLength: Int
+    )
 
     var canonicalText: String {
         switch self {
@@ -214,6 +245,15 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
             return "cooperationReliability|\(relationID)|\(taskID)|\(before)|\(delta)|\(after)"
         case let .cooperationClear(tasks, offers, relations):
             return "cooperationClear|\(tasks)|\(offers)|\(relations)"
+        case let .population(
+            settlementID, memberID, ordinal, founder, status, populationBefore, populationAfter
+        ):
+            return "population|\(settlementID)|\(memberID ?? "none")|\(ordinal.map(String.init) ?? "none")|\(founder.map { $0 ? "1" : "0" } ?? "none")|\(status)|\(populationBefore)|\(populationAfter)"
+        case let .migration(
+            migrationID, migrantID, origin, destination, entry, reception,
+            status, reason, routeLength
+        ):
+            return "migration|\(migrationID)|\(migrantID)|\(origin)|\(destination)|\(entry.x),\(entry.y),\(entry.z)|\(reception.x),\(reception.y),\(reception.z)|\(status)|\(reason ?? "none")|\(routeLength)"
         }
     }
 }
@@ -311,7 +351,17 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.sharedTaskFailed, .cooperationTask),
              (.sharedTaskSuperseded, .cooperationTask),
              (.cooperationReliabilityChanged, .cooperationReliability),
-             (.cooperationStateCleared, .cooperationClear):
+             (.cooperationStateCleared, .cooperationClear),
+             (.populationRegistryInitialized, .population),
+             (.populationMemberRegistered, .population),
+             (.populationStateCleared, .population),
+             (.migrationProposed, .migration),
+             (.migrationAdmitted, .migration),
+             (.migrationStarted, .migration),
+             (.migrationArrived, .migration),
+             (.migrationRejected, .migration),
+             (.migrationCancelled, .migration),
+             (.migrationFailed, .migration):
             matches = true
         default:
             matches = false
