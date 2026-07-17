@@ -105,7 +105,7 @@ public struct AgentActionEffect: Codable {
     }
 }
 
-public struct AgentMemoryEntry: Codable {
+public struct AgentMemoryEntry: Codable, Equatable, Sendable {
     public let tick: Int
     public let type: String
     public let summary: String

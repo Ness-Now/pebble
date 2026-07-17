@@ -10,7 +10,7 @@ public struct AgentPosition: Codable, Equatable, Hashable, Sendable {
     }
 }
 
-public enum AgentGoalKind: String, Codable, Equatable {
+public enum AgentGoalKind: String, Codable, Equatable, Sendable {
     case idle
     case rest
     case seekSafety
@@ -41,7 +41,7 @@ public struct AgentGoal: Codable, Equatable {
     }
 }
 
-public struct AgentAction: Codable {
+public struct AgentAction: Codable, Equatable, Sendable {
     public let name: String
     public let reason: String
     public let tick: Int

@@ -110,6 +110,13 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case ecologyPatchInvalidated
     case subsistencePressureChanged
     case localEcologyStateCleared
+    case mortalityInitialized
+    case lethalHealthDepletion
+    case agentDeathFinalized
+    case populationMemberExited
+    case mortalityResourcesRetired
+    case mortalityCommitmentsResolved
+    case mortalityStateCleared
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -125,6 +132,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case populationTransition
     case settlementTransition
     case ecologyTransition
+    case mortalityTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -265,6 +273,39 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         starvationDamage: Int
     )
     case ecologyClear(forageHistory: Int, pressureFrames: Int)
+    case mortalityDeath(
+        deathID: String,
+        agentID: String,
+        cause: String,
+        tick: Int,
+        healthBefore: Int,
+        healthAfter: Int,
+        hunger: Double,
+        populationBefore: Int,
+        populationAfter: Int,
+        membershipStatus: String,
+        position: AgentPosition,
+        carriedQuantity: Int,
+        cancelledCommitments: Int,
+        reason: String
+    )
+    case mortalityResources(
+        deathID: String,
+        amounts: [AgentResourceAmount],
+        terminalBefore: Int,
+        terminalAfter: Int,
+        conservationExact: Bool
+    )
+    case mortalityCommitments(
+        deathID: String,
+        reservations: Int,
+        socialVerifications: Int,
+        signals: Int,
+        tasksAndOffers: Int,
+        constructionBlocked: Bool,
+        reason: String
+    )
+    case mortalityClear(exitFrames: Int)
 
     var canonicalText: String {
         switch self {
@@ -357,6 +398,32 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
                 + "\(regenerated)|\(consumed)|\(starvationDamage)"
         case let .ecologyClear(forageHistory, pressureFrames):
             return "ecologyClear|\(forageHistory)|\(pressureFrames)"
+        case let .mortalityDeath(
+            deathID, agentID, cause, tick, healthBefore, healthAfter, hunger,
+            populationBefore, populationAfter, membershipStatus, position,
+            carriedQuantity, cancelledCommitments, reason
+        ):
+            return "mortalityDeath|\(deathID)|\(agentID)|\(cause)|\(tick)|"
+                + "\(healthBefore)|\(healthAfter)|\(hunger)|\(populationBefore)|"
+                + "\(populationAfter)|\(membershipStatus)|\(position.x),\(position.y),\(position.z)|"
+                + "\(carriedQuantity)|\(cancelledCommitments)|\(reason)"
+        case let .mortalityResources(
+            deathID, amounts, terminalBefore, terminalAfter, conservationExact
+        ):
+            let resources = AgentResourceAmounts.normalize(amounts).map {
+                "\($0.resource.rawValue):\($0.quantity)"
+            }.joined(separator: ",")
+            return "mortalityResources|\(deathID)|\(resources)|\(terminalBefore)|"
+                + "\(terminalAfter)|\(conservationExact ? 1 : 0)"
+        case let .mortalityCommitments(
+            deathID, reservations, socialVerifications, signals, tasksAndOffers,
+            constructionBlocked, reason
+        ):
+            return "mortalityCommitments|\(deathID)|\(reservations)|"
+                + "\(socialVerifications)|\(signals)|\(tasksAndOffers)|"
+                + "\(constructionBlocked ? 1 : 0)|\(reason)"
+        case let .mortalityClear(exitFrames):
+            return "mortalityClear|\(exitFrames)"
         }
     }
 }
@@ -476,7 +543,14 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.ecologyPatchInvalidated, .ecologyPatch),
              (.ecologyForageResolved, .ecologyForage),
              (.subsistencePressureChanged, .subsistencePressure),
-             (.localEcologyStateCleared, .ecologyClear):
+             (.localEcologyStateCleared, .ecologyClear),
+             (.mortalityInitialized, .mortalityDeath),
+             (.lethalHealthDepletion, .mortalityDeath),
+             (.agentDeathFinalized, .mortalityDeath),
+             (.populationMemberExited, .mortalityDeath),
+             (.mortalityResourcesRetired, .mortalityResources),
+             (.mortalityCommitmentsResolved, .mortalityCommitments),
+             (.mortalityStateCleared, .mortalityClear):
             matches = true
         default:
             matches = false

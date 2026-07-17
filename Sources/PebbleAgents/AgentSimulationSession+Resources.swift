@@ -14,7 +14,8 @@ extension AgentSimulationSession {
             campStock: campStock.amounts,
             consumed: consumedResourceTotals.amounts,
             constructionEscrow: constructionProject?.materialEscrow.amounts ?? [],
-            constructed: constructionProject?.placedMaterialTotals.amounts ?? []
+            constructed: constructionProject?.placedMaterialTotals.amounts ?? [],
+            unrecoveredAtDeath: mortalityState?.unrecoveredAtDeath.amounts ?? []
         )
     }
 

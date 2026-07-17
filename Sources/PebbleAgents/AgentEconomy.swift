@@ -1,4 +1,4 @@
-public struct AgentResourceAmount: Codable, Equatable {
+public struct AgentResourceAmount: Codable, Equatable, Sendable {
     public let resource: AgentResourceKind
     public let quantity: Int
 
@@ -184,12 +184,14 @@ public struct AgentResourceConservationSnapshot: Encodable, Equatable {
     public let consumed: [AgentResourceAmount]
     public let constructionEscrow: [AgentResourceAmount]
     public let constructed: [AgentResourceAmount]
+    public let unrecoveredAtDeath: [AgentResourceAmount]
     public let harvestedTotal: Int
     public let carriedTotal: Int
     public let campStockTotal: Int
     public let consumedTotal: Int
     public let constructionEscrowTotal: Int
     public let constructedTotal: Int
+    public let unrecoveredAtDeathTotal: Int
     public let balanced: Bool
 
     public init(
@@ -198,7 +200,8 @@ public struct AgentResourceConservationSnapshot: Encodable, Equatable {
         campStock: [AgentResourceAmount],
         consumed: [AgentResourceAmount] = [],
         constructionEscrow: [AgentResourceAmount] = [],
-        constructed: [AgentResourceAmount] = []
+        constructed: [AgentResourceAmount] = [],
+        unrecoveredAtDeath: [AgentResourceAmount] = []
     ) {
         let normalizedHarvested = AgentResourceAmounts.normalize(harvested)
         let normalizedCarried = AgentResourceAmounts.normalize(carried)
@@ -206,18 +209,21 @@ public struct AgentResourceConservationSnapshot: Encodable, Equatable {
         let normalizedConsumed = AgentResourceAmounts.normalize(consumed)
         let normalizedEscrow = AgentResourceAmounts.normalize(constructionEscrow)
         let normalizedConstructed = AgentResourceAmounts.normalize(constructed)
+        let normalizedUnrecovered = AgentResourceAmounts.normalize(unrecoveredAtDeath)
         self.harvested = normalizedHarvested
         self.carried = normalizedCarried
         self.campStock = normalizedCampStock
         self.consumed = normalizedConsumed
         self.constructionEscrow = normalizedEscrow
         self.constructed = normalizedConstructed
+        self.unrecoveredAtDeath = normalizedUnrecovered
         harvestedTotal = normalizedHarvested.reduce(0) { $0 + $1.quantity }
         carriedTotal = normalizedCarried.reduce(0) { $0 + $1.quantity }
         campStockTotal = normalizedCampStock.reduce(0) { $0 + $1.quantity }
         consumedTotal = normalizedConsumed.reduce(0) { $0 + $1.quantity }
         constructionEscrowTotal = normalizedEscrow.reduce(0) { $0 + $1.quantity }
         constructedTotal = normalizedConstructed.reduce(0) { $0 + $1.quantity }
+        unrecoveredAtDeathTotal = normalizedUnrecovered.reduce(0) { $0 + $1.quantity }
         balanced = AgentResourceKind.allCases.allSatisfy { resource in
             let produced = normalizedHarvested.first { $0.resource == resource }?.quantity ?? 0
             let carried = normalizedCarried.first { $0.resource == resource }?.quantity ?? 0
@@ -225,14 +231,16 @@ public struct AgentResourceConservationSnapshot: Encodable, Equatable {
             let consumed = normalizedConsumed.first { $0.resource == resource }?.quantity ?? 0
             let escrow = normalizedEscrow.first { $0.resource == resource }?.quantity ?? 0
             let built = normalizedConstructed.first { $0.resource == resource }?.quantity ?? 0
-            return produced == carried + stocked + consumed + escrow + built
+            let unrecovered = normalizedUnrecovered.first { $0.resource == resource }?.quantity ?? 0
+            return produced == carried + stocked + consumed + escrow + built + unrecovered
         }
     }
 
     private enum CodingKeys: String, CodingKey {
         case harvested, carried, campStock, consumed, constructionEscrow, constructed
         case harvestedTotal, carriedTotal, campStockTotal, consumedTotal
-        case constructionEscrowTotal, constructedTotal, balanced
+        case constructionEscrowTotal, constructedTotal, unrecoveredAtDeathTotal, balanced
+        case unrecoveredAtDeath
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -250,6 +258,10 @@ public struct AgentResourceConservationSnapshot: Encodable, Equatable {
             try container.encode(constructed, forKey: .constructed)
             try container.encode(constructionEscrowTotal, forKey: .constructionEscrowTotal)
             try container.encode(constructedTotal, forKey: .constructedTotal)
+        }
+        if unrecoveredAtDeathTotal > 0 {
+            try container.encode(unrecoveredAtDeath, forKey: .unrecoveredAtDeath)
+            try container.encode(unrecoveredAtDeathTotal, forKey: .unrecoveredAtDeathTotal)
         }
         try container.encode(balanced, forKey: .balanced)
     }
