@@ -42,6 +42,7 @@ final class PebbleAgentController {
     let physicalSignalAdapter = PebbleAgentPhysicalSignalAdapter()
     let migrationAdmissionAdapter = PebbleAgentMigrationAdmissionAdapter()
     let localEcologyAdapter = PebbleAgentLocalEcologyAdapter()
+    let birthSiteAdapter = PebbleAgentBirthSiteAdapter()
     let movementExecutor = PebbleAgentMovementExecutor()
     let cameraFollow = PebbleAgentCameraFollow()
     var interactionExecutor = PebbleAgentInteractionExecutor()
@@ -96,6 +97,9 @@ final class PebbleAgentController {
     }
     var mortalityFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_MORTALITY"] == "1"
+    }
+    var lifecycleFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_LIFECYCLE"] == "1"
     }
     var physicalAudioAvailable: () -> Bool = { false }
     var traceEvery: Int {
@@ -166,5 +170,6 @@ final class PebbleAgentController {
         case settlementMetricsBoundary(String)
         case ecologyBoundary(String)
         case mortalityBoundary(String)
+        case lifecycleBoundary(String)
     }
 }

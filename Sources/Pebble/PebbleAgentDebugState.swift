@@ -22,6 +22,7 @@ struct PebbleAgentDebugState {
         settlementMetricsSnapshot: AgentSettlementMetricsSnapshot,
         localEcologySnapshot: AgentLocalEcologySnapshot,
         mortalitySnapshot: AgentMortalitySnapshot,
+        lifecycleSnapshot: AgentLifecycleSnapshot,
         mode: PebbleAgentOverlayMode,
         paused: Bool,
         cognitiveHz: Int,
@@ -49,9 +50,14 @@ struct PebbleAgentDebugState {
         let focus = snapshot.agents.first { $0.id == focusedAgentId } ?? snapshot.agents.first
         let status = paused ? "paused" : "running"
         let mortalityLines = Self.mortalityLines(snapshot: mortalitySnapshot)
+        let lifecycleLines = Self.lifecycleLines(
+            snapshot: lifecycleSnapshot,
+            simulationTick: snapshot.tick
+        )
         statusSummary = "status=\(status) tick=\(snapshot.tick) hz=\(cognitiveHz) agents=\(snapshot.agentCount)"
         guard let agent = focus else {
-            globalLines = ["PEBBLE AGENTS - 3D LIVE PROTOTYPE"] + mortalityLines
+            globalLines = ["PEBBLE AGENTS - 3D LIVE PROTOTYPE"]
+                + mortalityLines + lifecycleLines
             focusedAgentLines = ["No focused agent"]
             return
         }
@@ -140,7 +146,7 @@ struct PebbleAgentDebugState {
                 "rollback: \(interaction.rollbackCount) \(Self.short(interaction.lastRollback, limit: 30))",
                 "errors: \(runtimeErrorCount)  catchup dropped: \(droppedCatchUpSteps)",
             ] + socialLines + physicalLines + cooperationLines + populationLines
-                + settlementLines + ecologyLines + mortalityLines
+                + settlementLines + ecologyLines + mortalityLines + lifecycleLines
             return
         }
 
@@ -153,7 +159,7 @@ struct PebbleAgentDebugState {
             "sim=\(causalSummary.simulationID.rawValue) tick=\(causalSummary.currentTick.rawValue) seq=\(causalSummary.latestSequence) events=\(causalSummary.retainedEventCount) dropped=\(causalSummary.droppedEventCount)",
             "worldTick: \(worldTick.map(String.init) ?? "none")",
             "agents: \(snapshot.agentCount)  focus: \(agent.id)",
-        ] + Self.goalLines(observedGoalKinds)
+        ] + Self.goalLines(observedGoalKinds) + lifecycleLines
             + ["errors: \(runtimeErrorCount)  catchup dropped: \(droppedCatchUpSteps)"]
             + (lastError.map { ["last error: \(Self.short($0))"] } ?? [])
 
@@ -463,6 +469,23 @@ struct PebbleAgentDebugState {
         return [
             "mortality=on deaths=\(snapshot.totalDeathCount) retained=\(snapshot.records.count) terminal=\(snapshot.unrecoveredAtDeath.reduce(0) { $0 + $1.quantity })",
             "lastDeath=\(latest?.agentID.rawValue ?? "none") tick=\(latest?.deathTick ?? -1) exits=\(snapshot.exitFrames.count)",
+        ]
+    }
+
+    private static func lifecycleLines(
+        snapshot: AgentLifecycleSnapshot,
+        simulationTick: Int
+    ) -> [String] {
+        guard snapshot.enabled else { return [] }
+        let ages = snapshot.members.map {
+            "\($0.agentID.rawValue):\((try? $0.age(at: simulationTick)) ?? -1)"
+        }.joined(separator: ",")
+        let stages = Dictionary(grouping: snapshot.members, by: \.currentStage)
+        let plan = snapshot.plans.last { $0.status == .planned }
+        return [
+            "lifecycle=on ages=\(ages)",
+            "stages=m\(stages[.mature]?.count ?? 0)/j\(stages[.juvenile]?.count ?? 0)/n\(stages[.newborn]?.count ?? 0)",
+            "plan=\(plan?.planID.rawValue ?? "none") births=\(snapshot.totalBirthCount)",
         ]
     }
 

@@ -722,6 +722,12 @@ extension PebbleAgentController {
                 let ecology = session.localEcologySummary()
                 trace("ecology pulse tick=\(session.tick) patches=\(ecology.patchCount) yield=\(ecology.currentYield)/\(ecology.capacity) regenerated=\(ecology.regenerated) harvested=\(ecology.harvested) pressure=\(ecology.pressure?.rawValue ?? "none") hungry=\(ecology.hungry) critical=\(ecology.critical) starvationDamage=\(ecology.starvationDamage) reads=\(validation.diagnostics.worldReads) conservation=\(ecology.conservationBalanced ? "exact" : "diverged") mutation=none")
             }
+            try resolvePendingBirthIfDue(
+                world: world,
+                player: player,
+                session: &session,
+                recorder: &recorder
+            )
             let finalSnapshot = session.snapshot()
             self.session = session
             replayRecorder = recorder
@@ -729,6 +735,7 @@ extension PebbleAgentController {
             traceCooperationState(at: session.tick)
             tracePopulationState(at: session.tick)
             traceSettlementMetricsState(at: session.tick)
+            traceLifecycleState(at: session.tick)
             lastTickResult = result
             for agent in finalSnapshot.agents { observedGoalKinds.insert(agent.currentGoal.kind.rawValue) }
             for agent in finalSnapshot.agents {

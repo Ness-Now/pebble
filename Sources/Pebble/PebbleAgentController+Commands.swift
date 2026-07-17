@@ -8,7 +8,7 @@ extension PebbleAgentController {
         switch command {
         case "help":
             guard arguments.count == 1 else { return failure("Usage: /lab help") }
-            return success("/lab lifecycle: start stop clear | time control: pause resume step speed <1|2|4|8> reset | inspection: status focus <agentId|next> next follow <agentId|focus|next|off> overlay <off|compact|full> causality <status|tail <1...20>> scale status | persistence: checkpoint <status|list|save|load|delete> replay <status|start|stop|verify> | movement: movement <on|off> | interaction: interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off> | economy: economy <setup|auto on|auto off|status|clear> | survival: survival <on|off|status> | natural: natural <on|off|status|scan> | ecology: ecology <on|off|status|scan|clear> forage status | mortality: mortality <on|off|status|clear> exits status | build: build <setup|auto on|auto off|status|clear> | social: social <on|off|status|clear> | physical: physical <on|off|status|clear> | cooperation: cooperation <on|off|status|clear> | population: population <on|off|status|clear> migration <admit|status> | settlement: settlement <on|off|status|clear> | demo: demo [start|stop|status]")
+            return success("/lab session: start stop clear | lifecycle <on|status|clear> reproduction <on|off|status> births status | time control: pause resume step speed <1|2|4|8> reset | inspection: status focus <agentId|next> next follow <agentId|focus|next|off> overlay <off|compact|full> causality <status|tail <1...20>> scale status | persistence: checkpoint <status|list|save|load|delete> replay <status|start|stop|verify> | movement: movement <on|off> | interaction: interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off> | economy: economy <setup|auto on|auto off|status|clear> | survival: survival <on|off|status> | natural: natural <on|off|status|scan> | ecology: ecology <on|off|status|scan|clear> forage status | mortality: mortality <on|off|status|clear> exits status | build: build <setup|auto on|auto off|status|clear> | social: social <on|off|status|clear> | physical: physical <on|off|status|clear> | cooperation: cooperation <on|off|status|clear> | population: population <on|off|status|clear> migration <admit|status> | settlement: settlement <on|off|status|clear> | demo: demo [start|stop|status]")
         case "demo":
             return handleDemo(Array(arguments.dropFirst()), world: world, player: player)
         case "start":
@@ -90,6 +90,12 @@ extension PebbleAgentController {
             return handleMortality(Array(arguments.dropFirst()))
         case "exits":
             return handlePopulationExits(Array(arguments.dropFirst()))
+        case "lifecycle":
+            return handleLifecycleAge(Array(arguments.dropFirst()))
+        case "reproduction":
+            return handleReproduction(Array(arguments.dropFirst()))
+        case "births":
+            return handleBirths(Array(arguments.dropFirst()))
         case "build":
             return handleBuild(Array(arguments.dropFirst()), world: world, player: player)
         case "causality":
@@ -136,7 +142,8 @@ extension PebbleAgentController {
             let settlementStatus = session.settlementMetricsEnabled ? " settlement=on" : ""
             let ecologyStatus = session.localEcologyEnabled ? " ecology=on" : ""
             let mortalityStatus = session.mortalityEnabled ? " mortality=on" : ""
-            let message = "PebbleAgents \(isPaused ? "paused" : "running") tick=\(snapshot.tick) hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") autoInteraction=\(autoInteractionEnabled ? "on" : "off") economy=\(snapshot.economyEnabled ? "on" : "off") survival=\(snapshot.survivalEnabled ? "on" : "off") natural=\(snapshot.naturalResourcesEnabled ? "on" : "off") build=\(snapshot.buildAutoEnabled ? "on" : "off")\(socialStatus)\(physicalStatus)\(cooperationStatus)\(populationStatus)\(settlementStatus)\(ecologyStatus)\(mortalityStatus) probes=\(probesByAgentId.count) focus=\(focusedAgentId ?? "none") follow=\(followMode.statusText) overlay=\(overlay) demo=\(demoActive ? "on" : "off") catchupDropped=\(droppedCatchUpSteps) \(positions)"
+            let lifecycleStatus = session.lifecycleEnabled ? " lifecycle=on" : ""
+            let message = "PebbleAgents \(isPaused ? "paused" : "running") tick=\(snapshot.tick) hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") autoInteraction=\(autoInteractionEnabled ? "on" : "off") economy=\(snapshot.economyEnabled ? "on" : "off") survival=\(snapshot.survivalEnabled ? "on" : "off") natural=\(snapshot.naturalResourcesEnabled ? "on" : "off") build=\(snapshot.buildAutoEnabled ? "on" : "off")\(socialStatus)\(physicalStatus)\(cooperationStatus)\(populationStatus)\(settlementStatus)\(ecologyStatus)\(mortalityStatus)\(lifecycleStatus) probes=\(probesByAgentId.count) focus=\(focusedAgentId ?? "none") follow=\(followMode.statusText) overlay=\(overlay) demo=\(demoActive ? "on" : "off") catchupDropped=\(droppedCatchUpSteps) \(positions)"
             trace("status \(message)")
             return success(message)
         case "focus":
