@@ -27,9 +27,11 @@ AGENTS_OUT_B="$TMP_ROOT/agents-basic-b"
 REGRESSION_OUT="$TMP_ROOT/regression-smoke"
 SETTLEMENT_OUT_A="$TMP_ROOT/settlement-metrics-a"
 SETTLEMENT_OUT_B="$TMP_ROOT/settlement-metrics-b"
+ECOLOGY_OUT_A="$TMP_ROOT/local-ecology-a"
+ECOLOGY_OUT_B="$TMP_ROOT/local-ecology-b"
 
 STEP=0
-TOTAL_STEPS=14
+TOTAL_STEPS=17
 
 run_step() {
     STEP=$((STEP + 1))
@@ -111,6 +113,38 @@ verify_settlement_metrics_outputs() {
     expect_json_value "$out/settlement_metrics_invariant_report.json" success true
 }
 
+verify_local_ecology_outputs() {
+    out=$1
+    for file in \
+        local_ecology_patches.json \
+        local_ecology_observations.json \
+        forage_outcomes.json \
+        ecology_conservation.json \
+        subsistence_pressure_frames.json \
+        ecology_causal_chain.json \
+        ecology_summary.json \
+        ecology_digest.json \
+        ecology_invariant_report.json \
+        ecology_checkpoint_v4/manifest.json \
+        ecology_checkpoint_v4/session.json \
+        ecology_replay_v4/manifest.json \
+        ecology_replay_v4/operations.ndjson
+    do
+        [ -s "$out/$file" ] || fail "local ecology did not produce $out/$file"
+    done
+    expect_json_value "$out/ecology_summary.json" schemaVersion 4
+    expect_json_value "$out/ecology_summary.json" scenario local_ecology_subsistence_smoke
+    expect_json_value "$out/ecology_summary.json" seed 46
+    expect_json_value "$out/ecology_summary.json" population 4
+    expect_json_value "$out/ecology_summary.json" residents 4
+    expect_json_value "$out/ecology_summary.json" checkpointSchema 4
+    expect_json_value "$out/ecology_summary.json" replaySchema 4
+    expect_json_value "$out/ecology_summary.json" ecologyBalanced true
+    expect_json_value "$out/ecology_summary.json" materialBalanced true
+    expect_json_value "$out/ecology_summary.json" worldMutationCount 0
+    expect_json_value "$out/ecology_invariant_report.json" success true
+}
+
 verify_no_tracked_run_outputs() {
     tracked=$(
         git ls-files | /usr/bin/awk '
@@ -163,6 +197,17 @@ run_step "settlement metrics canonical outputs and replay comparison" \
     verify_settlement_metrics_outputs "$SETTLEMENT_OUT_A"
 verify_settlement_metrics_outputs "$SETTLEMENT_OUT_B"
 /usr/bin/diff -r "$SETTLEMENT_OUT_A" "$SETTLEMENT_OUT_B"
+
+run_step "local ecology deterministic run A" \
+    swift run -c release PebbleLab -- --scenario local_ecology_subsistence_smoke \
+        --seed 46 --ticks 14 --out "$ECOLOGY_OUT_A"
+run_step "local ecology deterministic run B" \
+    swift run -c release PebbleLab -- --scenario local_ecology_subsistence_smoke \
+        --seed 46 --ticks 14 --out "$ECOLOGY_OUT_B"
+run_step "local ecology canonical outputs and replay comparison" \
+    verify_local_ecology_outputs "$ECOLOGY_OUT_A"
+verify_local_ecology_outputs "$ECOLOGY_OUT_B"
+/usr/bin/diff -r "$ECOLOGY_OUT_A" "$ECOLOGY_OUT_B"
 
 run_step "Repository hygiene" git diff --check
 verify_no_tracked_run_outputs

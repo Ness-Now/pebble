@@ -281,7 +281,10 @@ extension AgentSimulationSession {
             let inventoryBefore = agent.resourceInventory.count(of: .foodRaw)
             let status: AgentForageStatus
             let reason: String
-            if patch.status == .invalidated || validation?.isUsable != true
+            if agent.health <= 0 {
+                status = .blocked
+                reason = "agent health does not permit forage"
+            } else if patch.status == .invalidated || validation?.isUsable != true
                 || validation?.habitatFingerprint != patch.habitatFingerprint {
                 status = .habitatInvalid
                 reason = "habitat validation failed"

@@ -25,6 +25,9 @@ if options.scenario == "population_registry_migration_smoke" {
 if options.scenario == "settlement_metrics_multiscale_smoke" {
     runSettlementMetricsMultiscaleSmoke(options)
 }
+if options.scenario == "local_ecology_subsistence_smoke" {
+    runLocalEcologySubsistenceSmoke(options)
+}
 
 let isMultiAgentMovementFixtureScenario = options.scenario
     == "multi_agent_movement_fixture_smoke"

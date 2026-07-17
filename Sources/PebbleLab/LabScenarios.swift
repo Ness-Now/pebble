@@ -38,6 +38,7 @@ func validateScenario(_ scenario: String) {
         || scenario == "persistent_checkpoint_replay_smoke"
         || scenario == "population_registry_migration_smoke"
         || scenario == "settlement_metrics_multiscale_smoke"
+        || scenario == "local_ecology_subsistence_smoke"
         || supportedScenarios.contains(scenario) else {
         fail("unsupported scenario: \(scenario). Currently supported: \(supportedScenarios.joined(separator: ", "))")
     }
