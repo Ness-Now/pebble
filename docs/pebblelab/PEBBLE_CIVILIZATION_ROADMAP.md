@@ -29,7 +29,11 @@ Le point de départ est le HEAD post-K :
   tous les quatre ticks, classifications administratives, historique borné et
   checkpoint/replay v3 acquis sous gate explicite. Tous les agents continuent
   à recevoir leur tick micro complet : aucune coarse execution et aucun agent
-  hors écran ne sont introduits.
+  hors écran ne sont introduits ;
+- écologie alimentaire locale bornée acquise sous gate explicite : deux patches
+  sauvages adossés à des habitats World réels, rendement limité, épuisement,
+  régénération déterministe, cueillette transactionnelle, conservation double,
+  pression de subsistance administrative et checkpoint/replay v4.
 
 Le langage libre, le forwarding, les professions, l'économie du travail, la
 persistance complète des agents, le replay complet du World, la grande
@@ -99,8 +103,14 @@ transactions micro. Les fixtures headless contrôlées couvrent les cinq
 conditions du vrai classificateur (`incomplete`, `strained`, `transitioning`,
 `active`, `stable`) ; la preuve live historique reste correctement `strained`
 aux trois pulses parce que les urgences micro réelles sont prioritaires. La
+verticale `CIV-09` est terminée et validée localement : quatre résidents
+exploitent des patches alimentaires locaux bornés détectés en lecture seule
+dans le World, avec compétition déterministe, rendement limité, épuisement,
+régénération, consommation et pression collective sans rétroaction cognitive.
+Le checkpoint/replay v4 conserve exactement patches, horloges et bilans. Cette
+V1 n'introduit ni agriculture, saisons, animaux, eau, ni mort effective. La
 prochaine étape canonique est
-`CIV-09 — Local Ecology and Subsistence Pressure V1`.
+`CIV-10 — Mortality and Bounded Population Exit V1`.
 
 ## Grands programmes ultérieurs
 

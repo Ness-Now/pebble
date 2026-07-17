@@ -20,6 +20,7 @@ extension PebbleAgentController {
             cooperationSnapshot: session.cooperationSnapshot(),
             populationSnapshot: session.populationSnapshot(),
             settlementMetricsSnapshot: session.settlementMetricsSnapshot(),
+            localEcologySnapshot: session.localEcologySnapshot(),
             mode: mode,
             paused: isPaused,
             cognitiveHz: cognitiveHz,

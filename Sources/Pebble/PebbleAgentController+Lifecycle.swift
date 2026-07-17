@@ -85,6 +85,9 @@ extension PebbleAgentController {
             lastSurvivalReason = "none"
             lastNaturalReason = "none"
             lastConstructionReason = "none"
+            lastEcologyReason = "none"
+            lastForageOutcome = nil
+            lastEcologyScanDiagnostics = PebbleAgentLocalEcologyScanDiagnostics()
             lastConstructionSiteDiagnostics = PebbleAgentConstructionSiteDiagnostics()
             replayRecorder = nil
             replayBaseCheckpointName = nil
@@ -300,6 +303,9 @@ extension PebbleAgentController {
         lastSurvivalReason = "none"
         lastNaturalReason = "none"
         lastConstructionReason = "none"
+        lastEcologyReason = "none"
+        lastForageOutcome = nil
+        lastEcologyScanDiagnostics = PebbleAgentLocalEcologyScanDiagnostics()
         lastConstructionSiteDiagnostics = PebbleAgentConstructionSiteDiagnostics()
         replayRecorder = nil
         replayBaseCheckpointName = nil

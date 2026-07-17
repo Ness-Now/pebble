@@ -11,10 +11,13 @@ verticale population ne modifie aucun bloc du terrain.
 Sous une gate multi-scale supplémentaire, `settlement-main` publie aussi un
 frame administratif borné tous les quatre ticks. Cette vue collective ne
 ralentit, ne remplace et ne pilote aucun tick agent.
+Sous la gate ecology, des habitats réels lus dans le World portent aussi un
+rendement alimentaire local borné. La cueillette ne casse aucun bloc et la
+pression de subsistance reste un diagnostic collectif sans rétroaction.
 
 ## Prérequis et lancement
 
-Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population` et `--multiscale` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07 et métriques settlement CIV-08. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
+Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population`, `--multiscale` et `--ecology` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07, métriques settlement CIV-08 et écologie alimentaire CIV-09. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
 
 Depuis la racine du dépôt :
 
@@ -60,6 +63,8 @@ Commandes de démonstration :
 /lab economy <setup|auto on|auto off|status|clear>
 /lab survival <on|off|status>
 /lab natural <on|off|status|scan>
+/lab ecology <on|off|status|scan|clear>
+/lab forage status
 /lab social <on|off|status|clear>
 /lab physical <on|off|status|clear>
 /lab cooperation <on|off|status|clear>
@@ -176,8 +181,39 @@ CIV-08 est terminé et validé localement. Il ne constitue pas une optimisation
 de grande population : l'historique est borné à seize frames, la population
 reste limitée à huit agents actifs et chaque agent conserve sa cognition
 complète. Le checkpoint/replay v3 n'ouvre ni autosave général, ni snapshot du
-World, ni framework général de migration. La prochaine étape canonique est
-`CIV-09 — Local Ecology and Subsistence Pressure V1`.
+World, ni framework général de migration.
+
+## CIV-09 — Écologie locale et pression de subsistance
+
+Le mode `scripts/verify-pebblelab-live.sh --ecology` active explicitement
+`PEBBLELAB_APP_AGENTS_ECOLOGY=1` avec population, settlement metrics,
+persistence, survie et économie dans un monde jetable seed `46`. Après
+l'arrivée physique d'`agent_3`, `/lab ecology on` inspecte en lecture seule un
+maximum de seize candidats et enregistre deux patches locaux adossés à de vrais
+blocs habitat. Chaque patch possède une unité de rendement initial, un ID
+stable, une capacité et une horloge de régénération ; le rayon perceptif agent
+reste limité à huit blocs.
+
+La cueillette produit `forage_food`, suit la navigation bornée existante et
+résout les concurrents par patch, `AgentID`, puis operation ID. Un succès retire
+exactement une unité de rendement et ajoute un `foodRaw` réellement porté,
+ensuite consommé par le chemin de survie historique. La fin de tick valide les
+habitats, régénère dans l'ordre lexical au seul rythme de l'horloge simulée et
+publie la pression administrative `abundant`, `adequate`, `scarce`, `critical`
+ou `recovering`. Cette pression n'est jamais une entrée de cognition.
+
+La preuve sauvegarde `ecology-shortage` au tick 21 avec quatre résidents, un
+patch épuisé, un rendement disponible inférieur aux trois résidents affamés et
+une pression `scarce`, puis restaure le même World, les quatre
+probes, les yields, les besoins, les horloges et le ledger depuis un checkpoint
+v4. La continuation et le contrôle ininterrompu convergent sur les mêmes
+traces, digests, régénérations, gagnants, consommations et dégâts de famine,
+avec conservation écologique et matérielle exactes et aucune mutation World.
+
+CIV-09 est terminé et validé localement. Cette V1 n'est pas une botanique
+réaliste et n'ouvre ni agriculture, saisons, animaux, chasse, pêche, eau,
+cuisson, pourrissement ou mort effective. La prochaine étape canonique est
+`CIV-10 — Mortality and Bounded Population Exit V1`.
 
 ## Arrêt propre et inspection
 
@@ -202,6 +238,8 @@ Utiliser `/lab demo stop`, `/lab stop` ou `/lab clear`. Les probes transitoires 
   d'agent et aucune simulation hors écran ;
 - aucun tick agent sauté, aucune coarse execution et aucun agrégat macro
   utilisé comme entrée cognitive ; la gate CIV-08 est désactivée par défaut ;
+- aucun patch alimentaire global : CIV-09 reste local, borné, en lecture World
+  seule et désactivé par défaut ; aucune agriculture, saison ou faune ;
 - aucun contrôleur autonome du joueur.
 
 Les comportements cognitifs supplémentaires, la planification longue, le

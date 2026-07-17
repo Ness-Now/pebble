@@ -382,6 +382,12 @@ extension PebbleAgentController {
                 positions.formUnion(migration.route)
             }
         }
+        if let ecology = state.localEcologyState {
+            for patch in ecology.patches {
+                positions.insert(patch.habitatPosition)
+                positions.insert(patch.foragePosition)
+            }
+        }
         guard positions.count <= AgentCheckpointLimits.maximumBoundWorldCells else {
             throw AgentCheckpointError.invalidBound("World binding cells")
         }
@@ -421,6 +427,9 @@ extension PebbleAgentController {
                 "Checkpoint load refused: settlement metrics gate is disabled."
             )
         }
+        if candidate.localEcologyEnabled && !ecologyFeatureEnabled {
+            return failure("Checkpoint load refused: local ecology gate is disabled.")
+        }
         let candidateDigest = try candidate.durableStateDigest()
         guard candidateDigest == stored.manifest.semanticDigest else {
             throw AgentCheckpointError.semanticDigestMismatch
@@ -429,6 +438,9 @@ extension PebbleAgentController {
         let oldConstructionExecutor = constructionExecutor
         let oldInteractionExecutor = interactionExecutor
         let oldNaturalResourceExecutor = naturalResourceExecutor
+        let oldEcologyScanDiagnostics = lastEcologyScanDiagnostics
+        let oldForageOutcome = lastForageOutcome
+        let oldEcologyReason = lastEcologyReason
         let oldOrchestration = (
             cognitiveHz, isPaused, movementEnabled, autoInteractionEnabled, economyAutoEnabled,
             seed, anchor, focusedAgentId, followMode
@@ -443,6 +455,12 @@ extension PebbleAgentController {
             naturalResourceExecutor.restoreScanDiagnostics(
                 stored.manifest.orchestration.naturalResourceScanDiagnostics
             )
+            lastEcologyScanDiagnostics = PebbleAgentLocalEcologyScanDiagnostics(
+                lastWorldTick: world.time,
+                lastReason: "restored_checkpoint_requires_fresh_read_only_validation"
+            )
+            lastForageOutcome = candidate.localEcologySnapshot().forageHistory.last
+            lastEcologyReason = "restored from checkpoint"
             if let project = candidate.constructionProject {
                 try constructionExecutor.begin(project: project)
             }
@@ -473,6 +491,9 @@ extension PebbleAgentController {
             constructionExecutor = oldConstructionExecutor
             interactionExecutor = oldInteractionExecutor
             naturalResourceExecutor = oldNaturalResourceExecutor
+            lastEcologyScanDiagnostics = oldEcologyScanDiagnostics
+            lastForageOutcome = oldForageOutcome
+            lastEcologyReason = oldEcologyReason
             cognitiveHz = oldOrchestration.0
             isPaused = oldOrchestration.1
             movementEnabled = oldOrchestration.2

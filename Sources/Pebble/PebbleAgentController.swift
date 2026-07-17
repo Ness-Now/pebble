@@ -41,6 +41,7 @@ final class PebbleAgentController {
     let constructionSiteAdapter = PebbleAgentConstructionSiteAdapter()
     let physicalSignalAdapter = PebbleAgentPhysicalSignalAdapter()
     let migrationAdmissionAdapter = PebbleAgentMigrationAdmissionAdapter()
+    let localEcologyAdapter = PebbleAgentLocalEcologyAdapter()
     let movementExecutor = PebbleAgentMovementExecutor()
     let cameraFollow = PebbleAgentCameraFollow()
     var interactionExecutor = PebbleAgentInteractionExecutor()
@@ -59,6 +60,9 @@ final class PebbleAgentController {
     var lastSurvivalReason = "none"
     var lastNaturalReason = "none"
     var lastConstructionReason = "none"
+    var lastEcologyScanDiagnostics = PebbleAgentLocalEcologyScanDiagnostics()
+    var lastEcologyReason = "none"
+    var lastForageOutcome: AgentForageOutcome?
     var persistenceWorldID: String?
     var persistenceDimension = 0
     var replayRecorder: AgentReplayRecorder?
@@ -86,6 +90,9 @@ final class PebbleAgentController {
     }
     var multiscaleFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_MULTISCALE"] == "1"
+    }
+    var ecologyFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_ECOLOGY"] == "1"
     }
     var physicalAudioAvailable: () -> Bool = { false }
     var traceEvery: Int {
@@ -154,5 +161,6 @@ final class PebbleAgentController {
         case socialBoundary(String)
         case populationBoundary(String)
         case settlementMetricsBoundary(String)
+        case ecologyBoundary(String)
     }
 }

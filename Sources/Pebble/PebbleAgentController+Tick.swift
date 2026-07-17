@@ -15,6 +15,19 @@ extension PebbleAgentController {
         lastConsumptionSucceeded = false
         do {
             let preCognitive = session.snapshot()
+            let ecologyValidations: [AgentEcologyHabitatObservation]
+            if session.localEcologyEnabled,
+               let settlement = session.populationSnapshot().settlement {
+                let validation = localEcologyAdapter.validate(
+                    world: world,
+                    settlement: settlement,
+                    patches: session.localEcologySnapshot().patches
+                )
+                ecologyValidations = validation.observations
+                lastEcologyScanDiagnostics = validation.diagnostics
+            } else {
+                ecologyValidations = []
+            }
             let physicalInputs = physicalObservations(
                 world: world,
                 snapshot: preCognitive,
@@ -64,6 +77,12 @@ extension PebbleAgentController {
                     )
                     naturalResourceExecutor.recordScan(naturalScan)
                     combinedResourceObservations += naturalScan.observations
+                }
+                if session.localEcologyEnabled, let agentID = AgentID(rawValue: agent.id) {
+                    combinedResourceObservations += try session.localEcologyResourceObservations(
+                        for: agentID,
+                        habitatValidations: ecologyValidations
+                    )
                 }
                 var seenResourcePositions = Set<AgentPosition>()
                 let resourceObservations = Array(combinedResourceObservations
@@ -282,6 +301,62 @@ extension PebbleAgentController {
                 }
                 lastConsumptionSucceeded = outcome.status == .succeeded
                 lastSurvivalReason = outcome.reason
+            }
+            let forageActions = result.agents
+                .filter { $0.action.name == "forage_food" }
+                .sorted { $0.agentId < $1.agentId }
+            if !forageActions.isEmpty {
+                guard session.localEcologyEnabled else {
+                    throw ControllerError.ecologyBoundary("forage action while ecology disabled")
+                }
+                let snapshot = session.snapshot()
+                let intents = try forageActions.map { action -> AgentForageIntent in
+                    guard let actor = snapshot.agents.first(where: { $0.id == action.agentId }),
+                          let target = actor.activeResourceTarget,
+                          target.source == .localEcology,
+                          let patchID = target.ecologyPatchID,
+                          let fingerprint = target.expectedBlockFingerprint,
+                          let observedAt = target.observationTick,
+                          action.action.target == target.target else {
+                        throw ControllerError.ecologyBoundary("forage action target mismatch")
+                    }
+                    return AgentForageIntent(
+                        forageID: "ecology-forage:\(action.agentId):\(session.tick):\(patchID.rawValue)",
+                        patchID: patchID,
+                        agentID: AgentID(rawValue: action.agentId)!,
+                        tick: session.tick,
+                        target: target.target,
+                        observedAtTick: observedAt,
+                        expectedHabitatFingerprint: fingerprint
+                    )
+                }
+                let outcomes: [AgentForageOutcome]
+                if recorder != nil {
+                    _ = try applyRecordedOperationIfActive(
+                        .applyForageOutcomes(
+                            intents: intents,
+                            habitatValidations: ecologyValidations
+                        ),
+                        session: &session,
+                        recorder: &recorder
+                    )
+                    let ids = Set(intents.map(\.forageID))
+                    outcomes = session.localEcologySnapshot().forageHistory.filter {
+                        ids.contains($0.forageID)
+                    }
+                } else {
+                    outcomes = try session.applyForageIntents(
+                        intents,
+                        habitatValidations: ecologyValidations
+                    )
+                }
+                lastForageOutcome = outcomes.last
+                lastInteractionAttempted = true
+                lastInteractionSucceeded = outcomes.contains { $0.status == .succeeded }
+                lastInteractionBlocked = outcomes.contains { $0.status != .succeeded }
+                for outcome in outcomes {
+                    trace("ecology forage tick=\(session.tick) operation=\(outcome.forageID) patch=\(outcome.patchID.rawValue) actor=\(outcome.agentID.rawValue) status=\(outcome.status.rawValue) yield=\(outcome.yieldBefore)->\(outcome.yieldAfter) inventory=\(outcome.inventoryBefore)->\(outcome.inventoryAfter) mutation=none")
+                }
             }
             let interactionActions = result.agents
                 .filter { $0.action.name == "harvest_block" }
@@ -612,6 +687,26 @@ extension PebbleAgentController {
                     result: result,
                     cooperationTravelAgentIDs: cooperationTravelAgentIDs
                 )
+            }
+            if session.localEcologyEnabled,
+               let settlement = session.populationSnapshot().settlement {
+                let validation = localEcologyAdapter.validate(
+                    world: world,
+                    settlement: settlement,
+                    patches: session.localEcologySnapshot().patches
+                )
+                lastEcologyScanDiagnostics = validation.diagnostics
+                if try applyRecordedOperationIfActive(
+                    .applyHabitatValidation(validation.observations),
+                    session: &session,
+                    recorder: &recorder
+                ) == nil {
+                    _ = try session.applyLocalEcologyEndOfTick(
+                        habitatValidations: validation.observations
+                    )
+                }
+                let ecology = session.localEcologySummary()
+                trace("ecology pulse tick=\(session.tick) patches=\(ecology.patchCount) yield=\(ecology.currentYield)/\(ecology.capacity) regenerated=\(ecology.regenerated) harvested=\(ecology.harvested) pressure=\(ecology.pressure?.rawValue ?? "none") hungry=\(ecology.hungry) critical=\(ecology.critical) starvationDamage=\(ecology.starvationDamage) reads=\(validation.diagnostics.worldReads) conservation=\(ecology.conservationBalanced ? "exact" : "diverged") mutation=none")
             }
             let finalSnapshot = session.snapshot()
             self.session = session

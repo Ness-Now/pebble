@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build|--social|--physical|--cooperation|--persistence|--population|--multiscale]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build|--social|--physical|--cooperation|--persistence|--population|--multiscale|--ecology]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -38,6 +38,7 @@ Options:
   --persistence Run checkpoint, real process restart, causal replay, and uninterrupted control.
   --population Run bounded migrant admission, mid-route restart, arrival, and uninterrupted control.
   --multiscale Run bounded settlement pulses, v3 restart, uninterrupted, and metrics-off controls.
+  --ecology Run local forage scarcity, v4 restart, regeneration, and uninterrupted control.
   --help     Show this help and exit.
 EOF
 }
@@ -87,6 +88,7 @@ for option in "$@"; do
         --persistence) MODE="persistence"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --population) MODE="population"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --multiscale) MODE="multiscale"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --ecology) MODE="ecology"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --help|-h) usage; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$option" >&2; usage >&2; exit 2 ;;
     esac
@@ -102,7 +104,41 @@ COOPERATION_GATE=0
 PERSISTENCE_GATE=0
 POPULATION_GATE=0
 MULTISCALE_GATE=0
-if [ "$MODE" = "multiscale" ]; then
+ECOLOGY_GATE=0
+if [ "$MODE" = "ecology" ]; then
+    WORLD_SEED="46"
+    PERSISTENCE_GATE=1
+    POPULATION_GATE=1
+    MULTISCALE_GATE=1
+    ECOLOGY_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-Ecology-46"
+    CAPTURE_NAME="local-ecology-proof.txt"
+    POPULATION_ANCHOR_X=${PEBBLELAB_ECOLOGY_ANCHOR_X:-14}
+    POPULATION_ANCHOR_Z=${PEBBLELAB_ECOLOGY_ANCHOR_Z:--21}
+    POPULATION_ANCHOR_Y=${PEBBLELAB_ECOLOGY_ANCHOR_Y:-66}
+    POPULATION_PLAYER_Y=$((POPULATION_ANCHOR_Y + 3))
+    POPULATION_WORLD_READY="/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp $POPULATION_ANCHOR_X $POPULATION_ANCHOR_Y $POPULATION_ANCHOR_Z"
+    ECOLOGY_PHASE1_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab pause;/lab movement on;/lab population on;/lab settlement on;/lab migration admit;/lab focus agent_3;/lab follow agent_3"
+    ecology_step=0
+    while [ "$ecology_step" -lt 7 ]; do
+        ECOLOGY_PHASE1_COMMANDS="$ECOLOGY_PHASE1_COMMANDS;/lab step"
+        ecology_step=$((ecology_step + 1))
+    done
+    ECOLOGY_PHASE1_COMMANDS="$ECOLOGY_PHASE1_COMMANDS;/lab migration status;/lab population status;/lab ecology on;/lab survival on;/lab focus agent_0;/lab ecology scan;/lab ecology status"
+    ecology_step=0
+    while [ "$ecology_step" -lt 7 ]; do
+        ECOLOGY_PHASE1_COMMANDS="$ECOLOGY_PHASE1_COMMANDS;/lab step"
+        ecology_step=$((ecology_step + 1))
+    done
+    ECOLOGY_PHASE1_COMMANDS="$ECOLOGY_PHASE1_COMMANDS;/lab economy auto on"
+    ecology_step=0
+    while [ "$ecology_step" -lt 7 ]; do
+        ECOLOGY_PHASE1_COMMANDS="$ECOLOGY_PHASE1_COMMANDS;/lab step"
+        ecology_step=$((ecology_step + 1))
+    done
+    ECOLOGY_PHASE1_COMMANDS="$ECOLOGY_PHASE1_COMMANDS;/lab ecology status;/lab forage status;/lab survival status;/lab checkpoint save ecology-shortage;/lab checkpoint status;/lab causality status;/lab status"
+    LAB_COMMANDS="$ECOLOGY_PHASE1_COMMANDS"
+elif [ "$MODE" = "multiscale" ]; then
     WORLD_SEED="46"
     PERSISTENCE_GATE=1
     POPULATION_GATE=1
@@ -337,6 +373,7 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_PERSISTENCE=%s\n' "$PERSISTENCE_GATE"
     printf '  PEBBLELAB_APP_AGENTS_POPULATION=%s\n' "$POPULATION_GATE"
     printf '  PEBBLELAB_APP_AGENTS_MULTISCALE=%s\n' "$MULTISCALE_GATE"
+    printf '  PEBBLELAB_APP_AGENTS_ECOLOGY=%s\n' "$ECOLOGY_GATE"
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
     if [ "$MODE" = "build" ]; then
         printf '  PEBBLE_SHOT=-|%s/fixed-shelter-before.png|%s/fixed-shelter-partial.png|%s|-\n' \
@@ -357,7 +394,11 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "multiscale" ]; then
+    if [ "$MODE" = "ecology" ]; then
+        printf '  2. Confirm four residents, two read-only habitat patches, and bounded local perception.\n'
+        printf '  3. Confirm transactional forage, scarcity, starvation damage, deterministic regeneration, and recovery.\n'
+        printf '  4. Confirm v4 restart and uninterrupted control preserve patches, pressure, material, and causal digests.\n'
+    elif [ "$MODE" = "multiscale" ]; then
         printf '  2. Confirm four micro ticks, one macro pulse, four agents, and no coarse execution.\n'
         printf '  3. Confirm a v3 restart-safe checkpoint restores frame 1 and its pulse clock exactly.\n'
         printf '  4. Confirm restart, uninterrupted, and metrics-off controls preserve all micro decisions.\n'
@@ -395,7 +436,7 @@ print_plan() {
         printf '  3. Confirm consumed=1 conservation, fatigue-driven homeRest, rest recovery, normal goal resumption, and zero corridor changes.\n'
     fi
     if [ "$MODE" != "persistence" ] && [ "$MODE" != "population" ] \
-        && [ "$MODE" != "multiscale" ]; then
+        && [ "$MODE" != "multiscale" ] && [ "$MODE" != "ecology" ]; then
         printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
     fi
     printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
@@ -455,6 +496,232 @@ printf '\nLaunching Pebble now. Personal Pebble data is hidden by CFFIXED_USER_H
 
 if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
     fail "a Pebble process is already running; refusing an ambiguous live baseline"
+fi
+
+if [ "$MODE" = "ecology" ]; then
+    cd "$ROOT_DIR"
+    swift build -c release --product Pebble
+    PEBBLE_BINARY="$ROOT_DIR/.build/release/Pebble"
+    [ -x "$PEBBLE_BINARY" ] || fail "Release Pebble binary missing: $PEBBLE_BINARY"
+
+    PHASE1_TRACE="$SESSION_ROOT/ecology-phase1.log"
+    PHASE2_TRACE="$SESSION_ROOT/ecology-phase2.log"
+    CONTROL_HOME="$SESSION_ROOT/control-home"
+    CONTROL_TRACE="$SESSION_ROOT/ecology-control.log"
+    [ ! -e "$CONTROL_HOME" ] || fail "fresh ecology control home already exists: $CONTROL_HOME"
+
+    run_ecology_app() {
+        run_home=$1
+        run_trace=$2
+        run_commands=$3
+        create_world=$4
+        command_world_tick=$5
+        if [ "$create_world" -eq 1 ]; then
+            CFFIXED_USER_HOME="$run_home" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLE_NEWWORLD="$WORLD_SEED" \
+            PEBBLE_NEWWORLD_NAME="$WORLD_NAME" \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_NATURAL=0 \
+            PEBBLELAB_APP_AGENTS_BUILD=0 \
+            PEBBLELAB_APP_AGENTS_SOCIAL=0 \
+            PEBBLELAB_APP_AGENTS_PHYSICAL=0 \
+            PEBBLELAB_APP_AGENTS_COOPERATION=0 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_APP_AGENTS_POPULATION=1 \
+            PEBBLELAB_APP_AGENTS_MULTISCALE=1 \
+            PEBBLELAB_APP_AGENTS_ECOLOGY=1 \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT='-|-|-|-' \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        else
+            CFFIXED_USER_HOME="$run_home" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_NATURAL=0 \
+            PEBBLELAB_APP_AGENTS_BUILD=0 \
+            PEBBLELAB_APP_AGENTS_SOCIAL=0 \
+            PEBBLELAB_APP_AGENTS_PHYSICAL=0 \
+            PEBBLELAB_APP_AGENTS_COOPERATION=0 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_APP_AGENTS_POPULATION=1 \
+            PEBBLELAB_APP_AGENTS_MULTISCALE=1 \
+            PEBBLELAB_APP_AGENTS_ECOLOGY=1 \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT='-|-|-|-' \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        fi
+        if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
+            fail "Pebble process remained after ecology phase: $run_trace"
+        fi
+    }
+
+    printf '\nEcology phase 1: four residents, bounded forage, shortage, and v4 checkpoint.\n'
+    run_ecology_app "$SESSION_HOME" "$PHASE1_TRACE" "$ECOLOGY_PHASE1_COMMANDS" 1 100
+    TRACE_PATH="$PHASE1_TRACE"
+    require_trace 'start seed=46 agents=3 tick=0 ' 'historical three-agent bootstrap'
+    require_trace 'migration id=migration-00000003 migrant=agent_3 .*routeCursor=[1-9][0-9]* status=arrived ' 'physical migrant arrival before ecology activation'
+    require_trace 'population gate=enabled enabled=1 settlement=settlement-main capacity=8 members=4 founders=3 residents=4 migrating=0 ' 'four-resident ecology population'
+    require_trace 'ecology=on tick=7 patches=2 reads=[1-9][0-9]* mutation=none' 'read-only local ecology initialization'
+    require_trace_count '^\[lab-live\] ecology patch id=patch-[0-9a-f]+ habitat=.* forage=.* fingerprint=[1-9][0-9]* distance=[1-9][0-9]* yield=1/1 status=available mutation=none$' 2 'two real bounded habitat patches'
+    require_trace 'tick=15 .*economy=on natural=off .*survival=on ' 'canonical economy and survival gates with natural wood/stone disabled'
+    require_trace 'ecology forage tick=.* status=succeeded yield=1->0 inventory=0->1 mutation=none' 'transactional forage success'
+    forage_success_count=$(/usr/bin/grep -Ec '^\[lab-live\] ecology forage tick=.* status=succeeded ' "$PHASE1_TRACE" || true)
+    [ "$forage_success_count" -ge 2 ] || fail "live ecology produced fewer than two successful forages"
+    require_trace 'tick=14 .*action=approach_resource focusMove=moved:.*navigationPurpose=resource navigation=active ' 'bounded authoritative approach to local forage'
+    require_trace 'ecology pulse tick=21 patches=2 yield=1/2 regenerated=1 harvested=2 pressure=scarce hungry=3 critical=0 starvationDamage=0 .*conservation=exact mutation=none' 'real local shortage with yield below hungry residents'
+    require_trace 'ecology gate=enabled active=yes settlement=settlement-main patches=2 available=1 depleted=1 invalidated=0 yield=1/2 regenerated=1 harvested=2 .*pressure=scarce hungry=3 .*ecologyConservation=2\+1:1\+2:exact resourceConservation=2:1\+0\+1\+0\+0:exact .*reason=initialized_from_read-only_World_scan' 'checkpoint shortage status and double conservation'
+    require_trace 'checkpoint saved name=ecology-shortage .*tick=21 .*restartSafe=1 ' 'restart-safe shortage checkpoint'
+    require_trace 'summary .*agents=4 .*runtimeErrors=0 .*probesRemoved=4 .*naturalHarvests=0 .*buildProject=none .*causalDropped=0' 'clean four-probe shortage cleanup'
+    reject_trace 'ecology.*mutation=(block|world)|runtime error|health=0' 'World mutation, runtime error, or zero health during shortage'
+
+    ECOLOGY_ROOT="$SESSION_HOME/Library/Application Support/Pebble/PebbleLabAgents"
+    SHORTAGE_MANIFEST=$(/usr/bin/find "$ECOLOGY_ROOT" -type f -path '*/checkpoints/ecology-shortage/manifest.json' -print -quit)
+    SHORTAGE_SESSION=$(/usr/bin/find "$ECOLOGY_ROOT" -type f -path '*/checkpoints/ecology-shortage/session.json' -print -quit)
+    [ -n "$SHORTAGE_MANIFEST" ] && [ -n "$SHORTAGE_SESSION" ] \
+        || fail "ecology v4 checkpoint bundle missing"
+    /usr/bin/grep -q '"schemaVersion":4' "$SHORTAGE_MANIFEST" \
+        || fail "ecology checkpoint manifest is not schema v4"
+    /usr/bin/grep -q '"schemaVersion":4' "$SHORTAGE_SESSION" \
+        || fail "ecology checkpoint session is not schema v4"
+    /usr/bin/grep -q '"restartSafe":true' "$SHORTAGE_MANIFEST" \
+        || fail "ecology shortage checkpoint is not restart-safe"
+    /usr/bin/grep -q '"localEcologyState"' "$SHORTAGE_SESSION" \
+        || fail "ecology state missing from schema v4 checkpoint"
+    if /usr/bin/grep -q '"health":0' "$SHORTAGE_SESSION"; then
+        fail "zero-health agent in ecology shortage checkpoint"
+    fi
+
+    PHASE1_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=ecology-shortage .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE1_TRACE" | /usr/bin/tail -1)
+    PHASE1_SIM=$(/usr/bin/sed -n 's/.*checkpoint saved name=ecology-shortage .* simulation=\([^ ]*\) digest=.*/\1/p' "$PHASE1_TRACE" | /usr/bin/tail -1)
+    [ -n "$PHASE1_DIGEST" ] && [ -n "$PHASE1_SIM" ] \
+        || fail "ecology phase-one identity extraction failed"
+
+    CONTROL_DB="$CONTROL_HOME/Library/Application Support/Pebble/pebble.db"
+    /bin/mkdir -p "$(dirname "$CONTROL_DB")"
+    [ ! -e "$CONTROL_DB" ] || fail "fresh ecology control database already exists"
+    /usr/bin/sqlite3 "$DB_PATH" ".backup '$CONTROL_DB'"
+    [ -s "$CONTROL_DB" ] || fail "ecology control database snapshot failed"
+    persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
+    case "$persisted_world_tick" in
+        ''|*[!0-9]*) fail "invalid persisted World tick after ecology phase 1: $persisted_world_tick" ;;
+    esac
+    continuation_command_tick=$((persisted_world_tick + 100))
+
+    ECOLOGY_PHASE2_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab checkpoint load ecology-shortage;/lab ecology status;/lab population status;/lab movement on"
+    ecology_step=0
+    while [ "$ecology_step" -lt 11 ]; do
+        ECOLOGY_PHASE2_COMMANDS="$ECOLOGY_PHASE2_COMMANDS;/lab step"
+        ecology_step=$((ecology_step + 1))
+    done
+    ECOLOGY_PHASE2_COMMANDS="$ECOLOGY_PHASE2_COMMANDS;/lab ecology status;/lab forage status;/lab survival status;/lab population status;/lab settlement status;/lab checkpoint save ecology-final;/lab checkpoint status;/lab causality status;/lab status"
+
+    ECOLOGY_CONTROL_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab pause;/lab movement on;/lab population on;/lab settlement on;/lab migration admit;/lab focus agent_3;/lab follow agent_3"
+    ecology_step=0
+    while [ "$ecology_step" -lt 7 ]; do
+        ECOLOGY_CONTROL_COMMANDS="$ECOLOGY_CONTROL_COMMANDS;/lab step"
+        ecology_step=$((ecology_step + 1))
+    done
+    ECOLOGY_CONTROL_COMMANDS="$ECOLOGY_CONTROL_COMMANDS;/lab ecology on;/lab survival on;/lab focus agent_0;/lab ecology scan"
+    ecology_step=0
+    while [ "$ecology_step" -lt 7 ]; do
+        ECOLOGY_CONTROL_COMMANDS="$ECOLOGY_CONTROL_COMMANDS;/lab step"
+        ecology_step=$((ecology_step + 1))
+    done
+    ECOLOGY_CONTROL_COMMANDS="$ECOLOGY_CONTROL_COMMANDS;/lab economy auto on"
+    ecology_step=0
+    while [ "$ecology_step" -lt 18 ]; do
+        ECOLOGY_CONTROL_COMMANDS="$ECOLOGY_CONTROL_COMMANDS;/lab step"
+        ecology_step=$((ecology_step + 1))
+    done
+    ECOLOGY_CONTROL_COMMANDS="$ECOLOGY_CONTROL_COMMANDS;/lab ecology status;/lab forage status;/lab survival status;/lab population status;/lab settlement status;/lab checkpoint save ecology-final-control;/lab checkpoint status;/lab causality status;/lab status"
+
+    printf '\nEcology phase 2: exact v4 restart, regeneration, forage, consumption, and pressure recovery.\n'
+    run_ecology_app "$SESSION_HOME" "$PHASE2_TRACE" "$ECOLOGY_PHASE2_COMMANDS" 0 "$continuation_command_tick"
+    TRACE_PATH="$PHASE2_TRACE"
+    require_trace "checkpoint loaded name=ecology-shortage .*tick=21 simulation=$PHASE1_SIM digest=$PHASE1_DIGEST .*restartSafe=1 probes=4 paused=1 focus=agent_0 lifecycleEvent=none worldMutation=none" 'exact four-agent v4 restore'
+    require_trace 'ecology pulse tick=.*regenerated=[1-9][0-9]* .*pressure=recovering .*conservation=exact mutation=none' 'deterministic regeneration and recovering pressure'
+    require_trace 'ecology forage tick=.*status=succeeded yield=1->0 inventory=0->1 mutation=none' 'post-restart forage success'
+    require_trace 'ecology pulse tick=.*critical=[1-9][0-9]* starvationDamage=[1-9][0-9]* .*conservation=exact mutation=none' 'real critical hunger and starvation damage'
+    require_trace 'ecology gate=enabled active=yes settlement=settlement-main patches=2 .*invalidated=0 .*regenerated=[1-9][0-9]* harvested=[3-9][0-9]* .*ecologyConservation=.*:exact resourceConservation=.*:exact .*reads=[1-9][0-9]*/256 ' 'final unchanged habitats and exact ecology/material conservation'
+    require_trace 'checkpoint saved name=ecology-final .*tick=32 .*restartSafe=1 ' 'restart-safe final v4 checkpoint before zero health'
+    require_trace 'summary .*agents=4 .*runtimeErrors=0 .*probesRemoved=4 .*naturalHarvests=0 .*buildProject=none .*causalDropped=0' 'clean restarted ecology cleanup'
+    reject_trace 'ecology.*mutation=(block|world)|runtime error|health=0' 'World mutation, runtime error, or zero health after restart'
+
+    LIVE_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=ecology-final .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
+    LIVE_ECOLOGY_DIGEST=$(/usr/bin/sed -n 's/.*ecology gate=enabled .* digest=\([0-9a-f]*\) ecologyConservation=.*/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
+    LIVE_SETTLEMENT_DIGEST=$(/usr/bin/sed -n 's/.*settlement gate=enabled .* digest=\([0-9a-f]*\)$/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
+    LIVE_POPULATION_DIGEST=$(/usr/bin/sed -n 's/.*population gate=enabled .* digest=\([0-9a-f]*\)$/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
+    LIVE_CAUSAL_DIGEST=$(/usr/bin/sed -n 's/.*causality status .* digest=\([0-9a-f]*\)$/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
+    [ -n "$LIVE_DIGEST" ] && [ -n "$LIVE_ECOLOGY_DIGEST" ] \
+        && [ -n "$LIVE_SETTLEMENT_DIGEST" ] && [ -n "$LIVE_POPULATION_DIGEST" ] \
+        && [ -n "$LIVE_CAUSAL_DIGEST" ] || fail "ecology final digest extraction failed"
+
+    printf '\nEcology uninterrupted control.\n'
+    run_ecology_app "$CONTROL_HOME" "$CONTROL_TRACE" "$ECOLOGY_CONTROL_COMMANDS" 0 "$continuation_command_tick"
+    TRACE_PATH="$CONTROL_TRACE"
+    require_trace 'ecology pulse tick=.*critical=[1-9][0-9]* starvationDamage=[1-9][0-9]* .*conservation=exact mutation=none' 'uninterrupted critical hunger and starvation damage'
+    require_trace 'ecology pulse tick=.*regenerated=[1-9][0-9]* .*pressure=recovering .*conservation=exact mutation=none' 'uninterrupted regeneration and recovery'
+    require_trace 'checkpoint saved name=ecology-final-control .*tick=32 .*restartSafe=1 ' 'uninterrupted final v4 checkpoint before zero health'
+    require_trace 'summary .*agents=4 .*runtimeErrors=0 .*probesRemoved=4 .*naturalHarvests=0 .*buildProject=none .*causalDropped=0' 'clean uninterrupted ecology cleanup'
+    reject_trace 'ecology.*mutation=(block|world)|runtime error|health=0' 'World mutation, runtime error, or zero health in uninterrupted control'
+
+    CONTROL_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=ecology-final-control .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    CONTROL_ECOLOGY_DIGEST=$(/usr/bin/sed -n 's/.*ecology gate=enabled .* digest=\([0-9a-f]*\) ecologyConservation=.*/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    CONTROL_SETTLEMENT_DIGEST=$(/usr/bin/sed -n 's/.*settlement gate=enabled .* digest=\([0-9a-f]*\)$/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    CONTROL_POPULATION_DIGEST=$(/usr/bin/sed -n 's/.*population gate=enabled .* digest=\([0-9a-f]*\)$/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    CONTROL_CAUSAL_DIGEST=$(/usr/bin/sed -n 's/.*causality status .* digest=\([0-9a-f]*\)$/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    [ "$CONTROL_DIGEST" = "$LIVE_DIGEST" ] || fail "ecology restart/uninterrupted durable digest mismatch"
+    [ "$CONTROL_ECOLOGY_DIGEST" = "$LIVE_ECOLOGY_DIGEST" ] || fail "ecology restart/uninterrupted ecology digest mismatch"
+    [ "$CONTROL_SETTLEMENT_DIGEST" = "$LIVE_SETTLEMENT_DIGEST" ] || fail "ecology restart/uninterrupted settlement digest mismatch"
+    [ "$CONTROL_POPULATION_DIGEST" = "$LIVE_POPULATION_DIGEST" ] || fail "ecology restart/uninterrupted population digest mismatch"
+    [ "$CONTROL_CAUSAL_DIGEST" = "$LIVE_CAUSAL_DIGEST" ] || fail "ecology restart/uninterrupted causal digest mismatch"
+
+    /usr/bin/grep -E '^\[lab-live\] (tick=(2[2-9]|3[0-2]) |ecology (pulse|forage) tick=(2[2-9]|3[0-2]) )' "$PHASE2_TRACE" \
+        > "$SESSION_ROOT/restart-ecology.normalized"
+    /usr/bin/grep -E '^\[lab-live\] (tick=(2[2-9]|3[0-2]) |ecology (pulse|forage) tick=(2[2-9]|3[0-2]) )' "$CONTROL_TRACE" \
+        > "$SESSION_ROOT/control-ecology.normalized"
+    /usr/bin/cmp "$SESSION_ROOT/restart-ecology.normalized" "$SESSION_ROOT/control-ecology.normalized" \
+        || fail "ecology restart and uninterrupted decision/material traces differ"
+
+    FINAL_MANIFEST=$(/usr/bin/find "$ECOLOGY_ROOT" -type f -path '*/checkpoints/ecology-final/manifest.json' -print -quit)
+    FINAL_SESSION=$(/usr/bin/find "$ECOLOGY_ROOT" -type f -path '*/checkpoints/ecology-final/session.json' -print -quit)
+    [ -n "$FINAL_MANIFEST" ] && [ -n "$FINAL_SESSION" ] || fail "final ecology checkpoint bundle missing"
+    /usr/bin/grep -q '"schemaVersion":4' "$FINAL_MANIFEST" || fail "final ecology manifest is not schema v4"
+    if /usr/bin/grep -q '"health":0' "$FINAL_SESSION"; then fail "zero-health agent in final ecology checkpoint"; fi
+
+    if /usr/bin/pgrep -x Pebble >/dev/null 2>&1 \
+        || /usr/bin/pgrep -x swift-run >/dev/null 2>&1 \
+        || /usr/bin/pgrep -x pebsmoke >/dev/null 2>&1; then
+        fail "residual PebbleLab process after ecology proof"
+    fi
+    printf '\nPASS: local read-only ecology, scarcity, v4 restart, regeneration, recovery, and uninterrupted equivalence verified.\n'
+    printf 'Phase 1 trace: %s\n' "$PHASE1_TRACE"
+    printf 'Phase 2 trace: %s\n' "$PHASE2_TRACE"
+    printf 'Control trace: %s\n' "$CONTROL_TRACE"
+    printf 'Final durable digest: %s\n' "$LIVE_DIGEST"
+    printf 'Ecology digest: %s\n' "$LIVE_ECOLOGY_DIGEST"
+    printf 'Settlement digest: %s\n' "$LIVE_SETTLEMENT_DIGEST"
+    printf 'Population digest: %s\n' "$LIVE_POPULATION_DIGEST"
+    printf 'Causal digest: %s\n' "$LIVE_CAUSAL_DIGEST"
+    printf 'Retained isolated session: %s\n' "$SESSION_ROOT"
+    exit 0
 fi
 
 if [ "$MODE" = "multiscale" ]; then

@@ -20,6 +20,7 @@ struct PebbleAgentDebugState {
         cooperationSnapshot: AgentCooperationSnapshot,
         populationSnapshot: AgentPopulationSnapshot,
         settlementMetricsSnapshot: AgentSettlementMetricsSnapshot,
+        localEcologySnapshot: AgentLocalEcologySnapshot,
         mode: PebbleAgentOverlayMode,
         paused: Bool,
         cognitiveHz: Int,
@@ -70,6 +71,7 @@ struct PebbleAgentDebugState {
             focusedAgentId: agent.id
         )
         let settlementLines = Self.settlementLines(snapshot: settlementMetricsSnapshot)
+        let ecologyLines = Self.ecologyLines(snapshot: localEcologySnapshot, focus: agent)
         if mode == .compact {
             let decisionAgent = lastInfluencedDecisionAgentId.flatMap { id in
                 snapshot.agents.first { $0.id == id }
@@ -136,7 +138,7 @@ struct PebbleAgentDebugState {
                 "rollback: \(interaction.rollbackCount) \(Self.short(interaction.lastRollback, limit: 30))",
                 "errors: \(runtimeErrorCount)  catchup dropped: \(droppedCatchUpSteps)",
             ] + socialLines + physicalLines + cooperationLines + populationLines
-                + settlementLines
+                + settlementLines + ecologyLines
             return
         }
 
@@ -266,8 +268,33 @@ struct PebbleAgentDebugState {
         lines += cooperationLines
         lines += populationLines
         lines += settlementLines
+        lines += ecologyLines
         lines.append("ticks: \(agent.ticksAlive) goals: \(agent.goalChangeCount) actions/effects: \(agent.actionCount)/\(agent.actionEffectCount)")
         focusedAgentLines = lines
+    }
+
+    private static func ecologyLines(
+        snapshot: AgentLocalEcologySnapshot,
+        focus: AgentSnapshot
+    ) -> [String] {
+        guard snapshot.enabled, let configuration = snapshot.configuration else { return [] }
+        let available = snapshot.patches.filter { $0.status == .available }
+            .reduce(0) { $0 + $1.currentYield }
+        let capacity = snapshot.patches.reduce(0) { $0 + $1.capacity }
+        let pressure = snapshot.pressureFrames.last
+        let target = focus.activeResourceTarget?.ecologyPatchID?.rawValue ?? "none"
+        let regen = snapshot.patches.filter { $0.regenerating }.map {
+            max(
+                0,
+                configuration.regenerationIntervalTicks
+                    - ((pressure?.tick ?? 0) - $0.lastRegenerationTick)
+            )
+        }.min()
+        return [
+            "ecology=on patches=\(snapshot.patches.count)/\(configuration.maximumPatches) yield=\(available)/\(capacity)",
+            "pressure=\(pressure?.level.rawValue ?? "none") hungry=\(pressure?.input.hungry ?? 0) critical=\(pressure?.input.critical ?? 0)",
+            "forage=\(target) regen=\(regen.map(String.init) ?? "none") ecologyConservation=\(snapshot.conservation.balanced ? "exact" : "diverged")",
+        ]
     }
 
     private static func dominantNeed(_ needs: AgentNeedsSnapshot) -> String {

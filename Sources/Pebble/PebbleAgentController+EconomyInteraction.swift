@@ -71,7 +71,9 @@ extension PebbleAgentController {
             }
             let fixtures = interactionExecutor.economyState().fixtures
             let actorId: String?
-            if session.naturalResourcesEnabled {
+            if session.localEcologyEnabled {
+                actorId = focusedAgentId
+            } else if session.naturalResourcesEnabled {
                 actorId = focusedAgentId
             } else if fixtures.count == PebbleAgentInteractionExecutor.maximumFixtureCount,
                       fixtures.contains(where: { !$0.harvested }),
