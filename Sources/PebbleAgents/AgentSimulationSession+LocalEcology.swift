@@ -683,7 +683,7 @@ extension AgentSimulationSession {
     func totalStarvationDamage() -> Int {
         statesById.values.reduce(0) { partial, state in
             partial + (state.survivalProgress?.starvationDamageTaken ?? 0)
-        }
+        } + (mortalityState?.terminalStarvationDamageTotal ?? 0)
     }
 }
 

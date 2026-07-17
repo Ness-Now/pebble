@@ -29,9 +29,11 @@ SETTLEMENT_OUT_A="$TMP_ROOT/settlement-metrics-a"
 SETTLEMENT_OUT_B="$TMP_ROOT/settlement-metrics-b"
 ECOLOGY_OUT_A="$TMP_ROOT/local-ecology-a"
 ECOLOGY_OUT_B="$TMP_ROOT/local-ecology-b"
+MORTALITY_OUT_A="$TMP_ROOT/mortality-a"
+MORTALITY_OUT_B="$TMP_ROOT/mortality-b"
 
 STEP=0
-TOTAL_STEPS=17
+TOTAL_STEPS=20
 
 run_step() {
     STEP=$((STEP + 1))
@@ -145,6 +147,40 @@ verify_local_ecology_outputs() {
     expect_json_value "$out/ecology_invariant_report.json" success true
 }
 
+verify_mortality_outputs() {
+    out=$1
+    for file in \
+        mortality_records.json \
+        population_exit_frames.json \
+        mortality_cleanup.json \
+        mortality_resource_conservation.json \
+        mortality_causal_chain.json \
+        mortality_summary.json \
+        mortality_digest.json \
+        mortality_invariant_report.json \
+        mortality_checkpoint_v5/manifest.json \
+        mortality_checkpoint_v5/session.json \
+        mortality_replay_v5/manifest.json \
+        mortality_replay_v5/operations.ndjson
+    do
+        [ -s "$out/$file" ] || fail "mortality did not produce $out/$file"
+    done
+    expect_json_value "$out/mortality_summary.json" schemaVersion 5
+    expect_json_value "$out/mortality_summary.json" scenario mortality_population_exit_smoke
+    expect_json_value "$out/mortality_summary.json" seed 46
+    expect_json_value "$out/mortality_summary.json" deadAgentID agent_3
+    expect_json_value "$out/mortality_summary.json" deathTick 27
+    expect_json_value "$out/mortality_summary.json" populationBefore 4
+    expect_json_value "$out/mortality_summary.json" populationAfter 3
+    expect_json_value "$out/mortality_summary.json" replacementAgentID agent_4
+    expect_json_value "$out/mortality_summary.json" nextPopulationOrdinal 5
+    expect_json_value "$out/mortality_summary.json" checkpointSchema 5
+    expect_json_value "$out/mortality_summary.json" replaySchema 5
+    expect_json_value "$out/mortality_summary.json" unrecoveredAtDeath 2
+    expect_json_value "$out/mortality_summary.json" worldMutationCount 0
+    expect_json_value "$out/mortality_invariant_report.json" success true
+}
+
 verify_no_tracked_run_outputs() {
     tracked=$(
         git ls-files | /usr/bin/awk '
@@ -208,6 +244,17 @@ run_step "local ecology canonical outputs and replay comparison" \
     verify_local_ecology_outputs "$ECOLOGY_OUT_A"
 verify_local_ecology_outputs "$ECOLOGY_OUT_B"
 /usr/bin/diff -r "$ECOLOGY_OUT_A" "$ECOLOGY_OUT_B"
+
+run_step "mortality deterministic run A" \
+    swift run -c release PebbleLab -- --scenario mortality_population_exit_smoke \
+        --seed 46 --ticks 27 --out "$MORTALITY_OUT_A"
+run_step "mortality deterministic run B" \
+    swift run -c release PebbleLab -- --scenario mortality_population_exit_smoke \
+        --seed 46 --ticks 27 --out "$MORTALITY_OUT_B"
+run_step "mortality canonical outputs and replay comparison" \
+    verify_mortality_outputs "$MORTALITY_OUT_A"
+verify_mortality_outputs "$MORTALITY_OUT_B"
+/usr/bin/diff -r "$MORTALITY_OUT_A" "$MORTALITY_OUT_B"
 
 run_step "Repository hygiene" git diff --check
 verify_no_tracked_run_outputs

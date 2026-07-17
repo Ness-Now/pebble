@@ -106,9 +106,16 @@ public struct AgentMetricFixedPointDistribution: Codable, Equatable, Sendable {
     public let mean: AgentMetricFixedPoint
 
     public init(values: [AgentMetricFixedPoint]) throws {
-        guard let minimum = values.min(), let maximum = values.max(), !values.isEmpty else {
-            throw AgentSettlementMetricsError.invalidFrame("empty fixed-point distribution")
+        guard !values.isEmpty else {
+            count = 0
+            minimum = AgentMetricFixedPoint(rawValue: 0)
+            maximum = AgentMetricFixedPoint(rawValue: 0)
+            sum = AgentMetricFixedPoint(rawValue: 0)
+            mean = AgentMetricFixedPoint(rawValue: 0)
+            return
         }
+        let minimum = values.min()!
+        let maximum = values.max()!
         var total: Int64 = 0
         for value in values {
             let (next, overflow) = total.addingReportingOverflow(value.rawValue)
@@ -213,6 +220,7 @@ public struct AgentSettlementMetricBaseline: Codable, Equatable, Sendable {
     public let harvestedUnits: Int
     public let consumedUnits: Int
     public let settledMaterialUnits: Int
+    public let mortalityDeathCount: Int?
 
     public init(
         tick: Int,
@@ -221,7 +229,8 @@ public struct AgentSettlementMetricBaseline: Codable, Equatable, Sendable {
         distanceMoved: Int,
         harvestedUnits: Int,
         consumedUnits: Int,
-        settledMaterialUnits: Int
+        settledMaterialUnits: Int,
+        mortalityDeathCount: Int? = nil
     ) {
         self.tick = tick
         self.causalSequence = causalSequence
@@ -230,6 +239,7 @@ public struct AgentSettlementMetricBaseline: Codable, Equatable, Sendable {
         self.harvestedUnits = harvestedUnits
         self.consumedUnits = consumedUnits
         self.settledMaterialUnits = settledMaterialUnits
+        self.mortalityDeathCount = mortalityDeathCount
     }
 }
 
@@ -282,6 +292,35 @@ public struct AgentSettlementMaterialMetrics: Codable, Equatable {
     public let constructionEscrow: [AgentResourceAmount]
     public let constructed: [AgentResourceAmount]
     public let conservationBalanced: Bool
+    public let unrecoveredAtDeath: [AgentResourceAmount]?
+
+    public init(
+        campStock: [AgentResourceAmount],
+        carried: [AgentResourceAmount],
+        harvested: [AgentResourceAmount],
+        consumed: [AgentResourceAmount],
+        constructionEscrow: [AgentResourceAmount],
+        constructed: [AgentResourceAmount],
+        conservationBalanced: Bool,
+        unrecoveredAtDeath: [AgentResourceAmount]? = nil
+    ) {
+        self.campStock = campStock
+        self.carried = carried
+        self.harvested = harvested
+        self.consumed = consumed
+        self.constructionEscrow = constructionEscrow
+        self.constructed = constructed
+        self.conservationBalanced = conservationBalanced
+        self.unrecoveredAtDeath = unrecoveredAtDeath
+    }
+}
+
+public struct AgentSettlementMortalityMetrics: Codable, Equatable, Sendable {
+    public let deathDelta: Int
+    public let exitDelta: Int
+    public let retainedDeathCount: Int
+    public let totalDeathCount: Int
+    public let terminalResourceQuantity: Int
 }
 
 public struct AgentSettlementThroughputMetrics: Codable, Equatable, Sendable {
@@ -344,6 +383,7 @@ public struct AgentSettlementMetricFrame: Codable, Equatable {
     public let physical: AgentSettlementPhysicalMetrics
     public let cooperation: AgentSettlementCooperationMetrics
     public let populationEventDelta: Int
+    public let mortality: AgentSettlementMortalityMetrics?
     public let condition: AgentSettlementCondition
     public let reasonCode: String
     public let digest: String
@@ -367,6 +407,7 @@ public struct AgentSettlementMetricFrame: Codable, Equatable {
         physical: AgentSettlementPhysicalMetrics,
         cooperation: AgentSettlementCooperationMetrics,
         populationEventDelta: Int,
+        mortality: AgentSettlementMortalityMetrics? = nil,
         condition: AgentSettlementCondition,
         reasonCode: String
     ) {
@@ -388,6 +429,7 @@ public struct AgentSettlementMetricFrame: Codable, Equatable {
         self.physical = physical
         self.cooperation = cooperation
         self.populationEventDelta = populationEventDelta
+        self.mortality = mortality
         self.condition = condition
         self.reasonCode = String(reasonCode.prefix(64))
         digest = AgentSettlementMetricsDigest.make(
@@ -404,6 +446,9 @@ public struct AgentSettlementMetricFrame: Codable, Equatable {
                 + "\(throughput.materialActivityDelta)|\(social.eventDelta)|"
                 + "\(physical.eventDelta)|\(cooperation.eventDelta)|"
                 + "\(populationEventDelta)|\(condition.rawValue)|\(self.reasonCode)"
+                + (mortality.map {
+                    "|mortality:\($0.deathDelta):\($0.exitDelta):\($0.retainedDeathCount):\($0.totalDeathCount):\($0.terminalResourceQuantity)"
+                } ?? "")
         )
     }
 }

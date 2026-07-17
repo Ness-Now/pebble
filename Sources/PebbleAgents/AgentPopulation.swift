@@ -88,6 +88,7 @@ public enum AgentMigrationFailure: String, Codable, CaseIterable, Error, Sendabl
     case memberMissing
     case settlementMissing
     case routeIrrecoverable
+    case memberDied
 }
 
 public enum AgentPopulationError: Error, Equatable, CustomStringConvertible {

@@ -171,7 +171,8 @@ public struct AgentSimulationSession {
             constructionProject: constructionProject,
             population: populationRegistry == nil ? nil : populationSnapshot(),
             settlementMetrics: settlementMetricsState == nil ? nil : settlementMetricsSnapshot(),
-            localEcology: localEcologyState == nil ? nil : localEcologySnapshot()
+            localEcology: localEcologyState == nil ? nil : localEcologySnapshot(),
+            mortality: mortalityState == nil ? nil : mortalitySnapshot()
         )
     }
 
@@ -230,6 +231,7 @@ public struct AgentSimulationSession {
     }
 
     public mutating func setSurvivalEnabled(_ enabled: Bool) {
+        guard enabled || mortalityState == nil else { return }
         let changed = survivalEnabled != enabled
         survivalEnabled = enabled
         defer { if changed { recordFeatureToggle(name: "survival", enabled: enabled) } }
@@ -268,6 +270,7 @@ public struct AgentSimulationSession {
     ) throws -> AgentSessionTickResult {
         try prevalidateCausalAppend(
             count: sortedIds.count * (physicalEnabled ? 30 : (socialEnabled ? 20 : 3)) + 1
+                + (mortalityState?.configuration.maximumDeathsPerTick ?? 0) * 7
         )
         var perceptionsById: [String: AgentPerceptionInput] = [:]
         var resourceObservationsById: [String: [AgentResourceObservation]] = [:]
@@ -309,6 +312,16 @@ public struct AgentSimulationSession {
 
         let nextSimulationTick = try clock.nextTick()
         let nextTick = nextSimulationTick.rawValue
+        let mortalityWasEnabled = mortalityState != nil
+        var mortalitySurvivalMemories: [String: AgentMemoryEntry] = [:]
+        if mortalityWasEnabled {
+            var candidate = self
+            candidate.clock.advance(to: nextSimulationTick)
+            mortalitySurvivalMemories = try candidate.applyMortalitySurvivalBoundary(
+                at: nextTick
+            )
+            self = candidate
+        }
         try expireActiveMigrationIfNeeded(at: nextTick)
         let ids = sortedIds
         refreshConstructionProjectStatus()
@@ -386,7 +399,9 @@ public struct AgentSimulationSession {
             var memoriesAdded = perception?.externalMemoryEntries ?? []
 
             let survivalMemory: AgentMemoryEntry?
-            if survivalEnabled {
+            if mortalityWasEnabled {
+                survivalMemory = mortalitySurvivalMemories[id]
+            } else if survivalEnabled {
                 survivalMemory = applySurvivalTick(to: &state, tick: nextTick)
             } else {
                 let hungerBeforeConstructionTick = state.needs.hunger
@@ -403,11 +418,11 @@ public struct AgentSimulationSession {
                 state.state = tickTransition.state
                 survivalMemory = nil
             }
-            state.ticksAlive += 1
+            if !mortalityWasEnabled { state.ticksAlive += 1 }
 
             appendMemories(memoriesAdded, to: &state.memory)
             if let survivalMemory {
-                appendMemory(survivalMemory, to: &state.memory)
+                if !mortalityWasEnabled { appendMemory(survivalMemory, to: &state.memory) }
                 memoriesAdded.append(survivalMemory)
             }
             var worldPerceptionEffect: AgentWorldPerceptionEffect?
@@ -612,7 +627,7 @@ public struct AgentSimulationSession {
             ))
         }
 
-        clock.advance(to: nextSimulationTick)
+        if !mortalityWasEnabled { clock.advance(to: nextSimulationTick) }
         for result in results {
             let agentID = AgentID(rawValue: result.agentId)!
             let perceptionEvent = try recordCausalEvent(
@@ -674,7 +689,10 @@ public struct AgentSimulationSession {
             }
         }
         try applyCooperationTickPlan(cooperationPlan, results: results)
-        try applyPhysicalObservations(physicalObservations)
+        let activePhysicalObservations = mortalityWasEnabled
+            ? physicalObservations.filter { statesById[$0.observerID.rawValue] != nil }
+            : physicalObservations
+        try applyPhysicalObservations(activePhysicalObservations)
         try applySocialTickPlan(socialPlan, results: results)
         try recordCausalEvent(
             kind: .tickCompleted,

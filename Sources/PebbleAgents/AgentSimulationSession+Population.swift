@@ -263,6 +263,7 @@ extension AgentSimulationSession {
             $0.origin == intent.origin
                 && $0.destinationSettlementID == intent.destinationSettlementID
                 && $0.entryPosition == observation.entryPosition
+                && !$0.status.isTerminal
         }) else {
             throw AgentSessionError.population(.admission(.duplicateAdmission))
         }
@@ -646,7 +647,8 @@ extension AgentSimulationSession {
     static func validatePopulationRegistry(
         _ registry: AgentPopulationRegistry,
         agents: [AgentSessionAgentState],
-        clock: AgentSimulationClock
+        clock: AgentSimulationClock,
+        departedAgentIDs: Set<AgentID> = []
     ) throws {
         let agentIDs = Set(agents.map(\.agentID))
         guard registry.configuration.maximumActivePopulation >= 3,
@@ -684,7 +686,10 @@ extension AgentSimulationSession {
             }
         }
         for migration in registry.migrations {
-            guard agentIDs.contains(migration.migrantID),
+            let referencesActive = agentIDs.contains(migration.migrantID)
+            let referencesDeparted = departedAgentIDs.contains(migration.migrantID)
+                && migration.status.isTerminal
+            guard (referencesActive || referencesDeparted),
                   migration.route.count >= 2,
                   migration.route.count - 1 <= registry.configuration.maximumRouteLength,
                   migration.route.first == migration.entryPosition,
@@ -759,7 +764,7 @@ extension AgentCausalEventKind {
         case .populationRegistryInitialized, .populationMemberRegistered,
              .migrationProposed, .migrationAdmitted, .migrationStarted,
              .migrationArrived, .migrationRejected, .migrationCancelled,
-             .migrationFailed, .populationStateCleared:
+             .migrationFailed, .populationMemberExited, .populationStateCleared:
             return true
         default:
             return false

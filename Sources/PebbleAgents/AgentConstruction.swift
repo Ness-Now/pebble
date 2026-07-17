@@ -245,6 +245,7 @@ public enum AgentConstructionFailure: String, Codable, Equatable {
     case publicationFailed
     case rollbackFailed
     case clearFailed
+    case builderDied
 }
 
 public enum AgentPlacementStatus: String, Codable, Equatable {

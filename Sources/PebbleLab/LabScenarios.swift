@@ -39,6 +39,7 @@ func validateScenario(_ scenario: String) {
         || scenario == "population_registry_migration_smoke"
         || scenario == "settlement_metrics_multiscale_smoke"
         || scenario == "local_ecology_subsistence_smoke"
+        || scenario == "mortality_population_exit_smoke"
         || supportedScenarios.contains(scenario) else {
         fail("unsupported scenario: \(scenario). Currently supported: \(supportedScenarios.joined(separator: ", "))")
     }

@@ -6,10 +6,12 @@ public enum AgentCheckpointSchema {
     public static let populationVersion = 2
     public static let settlementMetricsVersion = 3
     public static let localEcologyVersion = 4
+    public static let mortalityVersion = 5
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
             || version == settlementMetricsVersion || version == localEcologyVersion
+            || version == mortalityVersion
     }
 }
 
@@ -187,9 +189,12 @@ public struct AgentSessionDurableState: Codable {
     public let populationRegistry: AgentPopulationRegistry?
     public let settlementMetricsState: AgentSettlementMetricsState?
     public let localEcologyState: AgentLocalEcologyState?
+    public let mortalityState: AgentMortalityState?
 
     init(session: AgentSimulationSession) {
-        if session.localEcologyState != nil {
+        if session.mortalityState != nil {
+            schemaVersion = AgentCheckpointSchema.mortalityVersion
+        } else if session.localEcologyState != nil {
             schemaVersion = AgentCheckpointSchema.localEcologyVersion
         } else if session.settlementMetricsState != nil {
             schemaVersion = AgentCheckpointSchema.settlementMetricsVersion
@@ -274,6 +279,7 @@ public struct AgentSessionDurableState: Codable {
         populationRegistry = session.populationRegistry
         settlementMetricsState = session.settlementMetricsState
         localEcologyState = session.localEcologyState
+        mortalityState = session.mortalityState
     }
 }
 
@@ -692,6 +698,7 @@ extension AgentSimulationSession {
         populationRegistry = state.populationRegistry
         settlementMetricsState = state.settlementMetricsState
         localEcologyState = state.localEcologyState
+        mortalityState = state.mortalityState
         if let settlementMetricsState {
             try validateSettlementMetricsState(settlementMetricsState)
         }
@@ -706,16 +713,23 @@ extension AgentSimulationSession {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard (state.schemaVersion == AgentCheckpointSchema.currentVersion
-                && state.populationRegistry == nil && state.settlementMetricsState == nil)
+                && state.populationRegistry == nil && state.settlementMetricsState == nil
+                && state.mortalityState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.populationVersion
-                    && state.populationRegistry != nil && state.settlementMetricsState == nil)
+                    && state.populationRegistry != nil && state.settlementMetricsState == nil
+                    && state.mortalityState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.settlementMetricsVersion
                     && state.populationRegistry != nil
                     && state.settlementMetricsState != nil
-                    && state.localEcologyState == nil)
+                    && state.localEcologyState == nil
+                    && state.mortalityState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.localEcologyVersion
                     && state.populationRegistry != nil
-                    && state.localEcologyState != nil) else {
+                    && state.localEcologyState != nil
+                    && state.mortalityState == nil)
+                || (state.schemaVersion == AgentCheckpointSchema.mortalityVersion
+                    && state.populationRegistry != nil
+                    && state.mortalityState != nil) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.clock.tick.rawValue >= 0,
@@ -743,7 +757,11 @@ extension AgentSimulationSession {
         } catch {
             throw AgentCheckpointError.invalidConfiguration
         }
-        guard !state.agents.isEmpty else { throw AgentCheckpointError.invalidAgent("empty") }
+        guard !state.agents.isEmpty
+                || (state.schemaVersion == AgentCheckpointSchema.mortalityVersion
+                    && (state.mortalityState?.totalDeathCount ?? 0) > 0) else {
+            throw AgentCheckpointError.invalidAgent("empty")
+        }
         var agentIDs = Set<AgentID>()
         for agent in state.agents {
             guard AgentID(rawValue: agent.id) != nil, agentIDs.insert(agent.agentID).inserted else {
@@ -763,6 +781,9 @@ extension AgentSimulationSession {
                   agent.needs.hunger.isFinite, agent.needs.fatigue.isFinite,
                   agent.needs.curiosity.isFinite, agent.needs.safety.isFinite,
                   validInventory(agent.resourceInventory) else {
+                throw AgentCheckpointError.invalidAgent(agent.id)
+            }
+            if state.mortalityState != nil, agent.health <= 0 {
                 throw AgentCheckpointError.invalidAgent(agent.id)
             }
             if case let .bounded(maxEntries) = state.configuration.memoryPolicy,
@@ -826,22 +847,37 @@ extension AgentSimulationSession {
                 throw AgentCheckpointError.invalidReference(entry.agentID)
             }
         }
+        let historicalPopulationIDs = Set((0..<(state.populationRegistry?
+            .nextPopulationOrdinal.rawValue ?? 0)).compactMap {
+                AgentID(rawValue: "agent_\($0)")
+            })
+        let retainedDepartedIDs = Set(state.mortalityState?.records.map(\.agentID) ?? [])
+        let departedIDs = Set((state.populationRegistry?.migrations ?? []).compactMap { migration in
+            migration.failure == .memberDied ? migration.migrantID : nil
+        }).union(retainedDepartedIDs).union(historicalPopulationIDs.subtracting(agentIDs))
+        let knownPopulationIDs = agentIDs.union(departedIDs).union(historicalPopulationIDs)
         if let project = state.constructionProject,
            !agentIDs.contains(AgentID(rawValue: project.builderAgentId) ?? AgentID(rawValue: "invalid")!) {
-            throw AgentCheckpointError.invalidReference(project.builderAgentId)
+            guard project.status == .blocked, project.lastFailure == .builderDied,
+                  departedIDs.contains(AgentID(rawValue: project.builderAgentId)
+                    ?? AgentID(rawValue: "invalid")!) else {
+                throw AgentCheckpointError.invalidReference(project.builderAgentId)
+            }
         }
         try validateCausalState(state.causalLedger, simulationID: state.clock.simulationID, tick: state.clock.tick)
-        let constructionPointers = state.lastConstructionEventID.map {
-            [AgentCheckpointCausalPointer(agentID: state.agents[0].agentID, eventID: $0)]
-        } ?? []
         let pointers = state.lastPerceptionEvents + state.lastDecisionEvents
-            + state.lastOutcomeEvents + constructionPointers
+            + state.lastOutcomeEvents
         for pointer in pointers {
             guard agentIDs.contains(pointer.agentID),
                   pointer.eventID.simulationID == state.clock.simulationID,
                   pointer.eventID.sequence.rawValue <= state.causalLedger.latestSequence else {
                 throw AgentCheckpointError.invalidCausalState
             }
+        }
+        if let constructionEventID = state.lastConstructionEventID,
+           constructionEventID.simulationID != state.clock.simulationID
+            || constructionEventID.sequence.rawValue > state.causalLedger.latestSequence {
+            throw AgentCheckpointError.invalidCausalState
         }
         guard state.socialEvictionCounts.facts >= 0,
               state.socialEvictionCounts.messages >= 0,
@@ -856,8 +892,11 @@ extension AgentSimulationSession {
             throw AgentCheckpointError.invalidBound("eviction counts")
         }
         for task in state.sharedTasks {
-            guard agentIDs.contains(task.issuerID), agentIDs.contains(task.helperID),
-                  task.requestedQuantity > 0,
+            let participantsActive = agentIDs.contains(task.issuerID)
+                && agentIDs.contains(task.helperID)
+            let participantDied = task.status.isTerminal && task.reason == "participantDied"
+                && (departedIDs.contains(task.issuerID) || departedIDs.contains(task.helperID))
+            guard (participantsActive || participantDied), task.requestedQuantity > 0,
                   (0...task.requestedQuantity).contains(task.contributedQuantity) else {
                 throw AgentCheckpointError.invalidReference(task.taskID.rawValue)
             }
@@ -866,7 +905,8 @@ extension AgentSimulationSession {
             try validatePopulationRegistry(
                 populationRegistry,
                 agents: state.agents,
-                clock: state.clock
+                clock: state.clock,
+                departedAgentIDs: departedIDs
             )
         }
         if let metrics = state.settlementMetricsState {
@@ -960,15 +1000,74 @@ extension AgentSimulationSession {
                 throw AgentCheckpointError.invalidBound("local ecology")
             }
         }
+        if let mortality = state.mortalityState {
+            do {
+                _ = try AgentMortalityConfiguration(
+                    maximumDeathsPerTick: mortality.configuration.maximumDeathsPerTick,
+                    maximumRetainedDeathRecords:
+                        mortality.configuration.maximumRetainedDeathRecords,
+                    maximumFinalMemoryEntries:
+                        mortality.configuration.maximumFinalMemoryEntries,
+                    maximumCancelledCommitmentIDsPerDeath:
+                        mortality.configuration.maximumCancelledCommitmentIDsPerDeath,
+                    maximumExitFrames: mortality.configuration.maximumExitFrames
+                )
+            } catch {
+                throw AgentCheckpointError.invalidConfiguration
+            }
+            let recordIDs = mortality.records.map(\.deathID)
+            let recordAgents = mortality.records.map(\.agentID)
+            let processed = mortality.processedDeathIDs
+            guard mortality.records.count
+                    <= mortality.configuration.maximumRetainedDeathRecords,
+                  mortality.exitFrames.count <= mortality.configuration.maximumExitFrames,
+                  mortality.totalDeathCount >= mortality.records.count,
+                  mortality.totalDeathCount
+                    == mortality.records.count + mortality.evictionCounts.deathRecords,
+                  recordIDs.count == Set(recordIDs).count,
+                  recordAgents.count == Set(recordAgents).count,
+                  processed.count == Set(processed).count,
+                  Set(recordIDs).isSubset(of: Set(processed)),
+                  recordAgents.allSatisfy({ !agentIDs.contains($0) }),
+                  mortality.records == mortality.records.sorted(by: {
+                      if $0.deathTick != $1.deathTick { return $0.deathTick < $1.deathTick }
+                      if $0.agentID != $1.agentID { return $0.agentID < $1.agentID }
+                      return $0.deathID < $1.deathID
+                  }),
+                  mortality.records.allSatisfy({ record in
+                      record.cause == .starvation && record.finalHealth == 0
+                          && record.healthBeforeLethalDamage > 0
+                          && record.deathTick <= state.clock.tick.rawValue
+                          && record.finalMemory.count
+                            <= mortality.configuration.maximumFinalMemoryEntries
+                          && record.cancelledCommitmentIDs.count
+                            <= mortality.configuration.maximumCancelledCommitmentIDsPerDeath
+                          && record.deathEventID.simulationID == state.clock.simulationID
+                          && record.populationExitEventID.simulationID == state.clock.simulationID
+                  }),
+                  mortality.evictionCounts.deathRecords >= 0,
+                  mortality.evictionCounts.exitFrames >= 0,
+                  mortality.unrecoveredAtDeath.capacity == 4096,
+                  mortality.terminalStarvationDamageTotal >= 0,
+                  !mortality.rollingDigest.isEmpty,
+                  mortality.initializedEventID.simulationID == state.clock.simulationID,
+                  mortality.lastMortalityEventID.simulationID == state.clock.simulationID,
+                  mortality.lastMortalityEventID.sequence.rawValue
+                    <= state.causalLedger.latestSequence else {
+                throw AgentCheckpointError.invalidBound("mortality")
+            }
+        }
         for relation in state.socialTrustRelations {
-            guard agentIDs.contains(relation.sourceID), agentIDs.contains(relation.targetID),
+            guard knownPopulationIDs.contains(relation.sourceID),
+                  knownPopulationIDs.contains(relation.targetID),
                   relation.score >= state.configuration.socialConfiguration.minimumTrust,
                   relation.score <= state.configuration.socialConfiguration.maximumTrust else {
                 throw AgentCheckpointError.invalidReference(relation.relationID.rawValue)
             }
         }
         for relation in state.cooperationRelations {
-            guard agentIDs.contains(relation.issuerID), agentIDs.contains(relation.helperID),
+            guard knownPopulationIDs.contains(relation.issuerID),
+                  knownPopulationIDs.contains(relation.helperID),
                   relation.reliabilityScore >= state.configuration.cooperationConfiguration.minimumReliability,
                   relation.reliabilityScore <= state.configuration.cooperationConfiguration.maximumReliability else {
                 throw AgentCheckpointError.invalidReference(relation.relationID.rawValue)

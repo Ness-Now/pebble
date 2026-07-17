@@ -323,7 +323,8 @@ extension AgentSimulationSession {
                 values: try agents.map { try AgentMetricFixedPoint(value: $0.needs.safety, scale: scale) }
             ),
             minimumHealth: agents.map(\.health).min() ?? 0,
-            meanHealth: agents.reduce(0) { $0 + $1.health } / agents.count,
+            meanHealth: agents.isEmpty ? 0
+                : agents.reduce(0) { $0 + $1.health } / agents.count,
             maximumFear: agents.map(\.fear).max() ?? 0,
             hungryCount: agents.filter {
                 $0.needs.hunger >= configuration.survivalConfiguration.hungryThreshold
@@ -355,6 +356,17 @@ extension AgentSimulationSession {
         let populationEventDelta = countedEvents.filter { $0.kind.isPopulation }.count
         let admissionDelta = countedEvents.filter { $0.kind == .migrationAdmitted }.count
         let arrivalDelta = countedEvents.filter { $0.kind == .migrationArrived }.count
+        let deathDelta = countedEvents.filter { $0.kind == .agentDeathFinalized }.count
+        let exitDelta = countedEvents.filter { $0.kind == .populationMemberExited }.count
+        let mortalityMetrics = mortalityState.map { mortality in
+            AgentSettlementMortalityMetrics(
+                deathDelta: deathDelta,
+                exitDelta: exitDelta,
+                retainedDeathCount: mortality.records.count,
+                totalDeathCount: mortality.totalDeathCount,
+                terminalResourceQuantity: mortality.unrecoveredAtDeath.totalCount
+            )
+        }
         let throughput = AgentSettlementThroughputMetrics(
             movementDelta: max(0, movementTotal - state.baseline.movementCount),
             distanceDelta: max(0, distanceTotal - state.baseline.distanceMoved),
@@ -415,7 +427,8 @@ extension AgentSimulationSession {
         } else if urgent > 0 || !conservation.balanced {
             condition = .strained
             reason = urgent > 0 ? "urgent_agents" : "conservation_divergence"
-        } else if activeMigrationCount > 0 || admissionDelta > 0 || arrivalDelta > 0 {
+        } else if activeMigrationCount > 0 || admissionDelta > 0 || arrivalDelta > 0
+            || deathDelta > 0 || exitDelta > 0 {
             condition = .transitioning
             reason = activeMigrationCount > 0 ? "migration_active" : "population_changed"
         } else if throughput.movementDelta > 0 || throughput.materialActivityDelta > 0
@@ -475,13 +488,16 @@ extension AgentSimulationSession {
                 consumed: conservation.consumed,
                 constructionEscrow: conservation.constructionEscrow,
                 constructed: conservation.constructed,
-                conservationBalanced: conservation.balanced
+                conservationBalanced: conservation.balanced,
+                unrecoveredAtDeath: mortalityState == nil
+                    ? nil : conservation.unrecoveredAtDeath
             ),
             throughput: throughput,
             social: socialMetrics,
             physical: physicalMetrics,
             cooperation: cooperationMetrics,
             populationEventDelta: populationEventDelta,
+            mortality: mortalityMetrics,
             condition: condition,
             reasonCode: reason
         )
@@ -569,7 +585,8 @@ extension AgentSimulationSession {
             harvestedUnits: conservation.harvestedTotal,
             consumedUnits: conservation.consumedTotal,
             settledMaterialUnits: conservation.campStockTotal
-                + conservation.constructionEscrowTotal + conservation.constructedTotal
+                + conservation.constructionEscrowTotal + conservation.constructedTotal,
+            mortalityDeathCount: mortalityState?.totalDeathCount
         )
     }
 
@@ -596,7 +613,7 @@ extension AgentSimulationSession {
               frame.activity.urgentCount + frame.activity.migratingCount
                 + frame.activity.engagedCount + frame.activity.stableCount
                 == frame.population.members,
-              frame.population.members > 0,
+              frame.population.members >= 0,
               frame.population.residents + frame.population.migrants
                 == frame.population.members,
               frame.reasonCode.count <= 64 else {
