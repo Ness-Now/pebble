@@ -31,6 +31,9 @@ if options.scenario == "local_ecology_subsistence_smoke" {
 if options.scenario == "mortality_population_exit_smoke" {
     runMortalityPopulationExitSmoke(options)
 }
+if options.scenario == "age_maturity_reproduction_smoke" {
+    runAgeMaturityReproductionSmoke(options)
+}
 
 let isMultiAgentMovementFixtureScenario = options.scenario
     == "multi_agent_movement_fixture_smoke"

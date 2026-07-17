@@ -258,6 +258,7 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
     public let settlementMetrics: AgentSettlementMetricsSnapshot?
     public let localEcology: AgentLocalEcologySnapshot?
     public let mortality: AgentMortalitySnapshot?
+    public let lifecycle: AgentLifecycleSnapshot?
 
     init(
         seed: UInt32,
@@ -276,7 +277,8 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
         population: AgentPopulationSnapshot? = nil,
         settlementMetrics: AgentSettlementMetricsSnapshot? = nil,
         localEcology: AgentLocalEcologySnapshot? = nil,
-        mortality: AgentMortalitySnapshot? = nil
+        mortality: AgentMortalitySnapshot? = nil,
+        lifecycle: AgentLifecycleSnapshot? = nil
     ) {
         self.seed = seed
         self.tick = tick
@@ -296,6 +298,7 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
         self.settlementMetrics = settlementMetrics
         self.localEcology = localEcology
         self.mortality = mortality
+        self.lifecycle = lifecycle
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -303,7 +306,7 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
         case economyEnabled, naturalResourcesEnabled, deliveryQuota, campStock, conservation
         case survivalEnabled, survivalConfiguration
         case buildAutoEnabled, constructionProject
-        case population, settlementMetrics, localEcology, mortality
+        case population, settlementMetrics, localEcology, mortality, lifecycle
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -344,6 +347,7 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
         try container.encodeIfPresent(settlementMetrics, forKey: .settlementMetrics)
         try container.encodeIfPresent(localEcology, forKey: .localEcology)
         try container.encodeIfPresent(mortality, forKey: .mortality)
+        try container.encodeIfPresent(lifecycle, forKey: .lifecycle)
     }
 }
 

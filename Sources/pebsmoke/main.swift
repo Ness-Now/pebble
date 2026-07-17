@@ -2109,6 +2109,7 @@ runPebbleAgentsPopulationMigrationSmoke()
 runPebbleAgentsSettlementMetricsSmoke()
 runPebbleAgentsLocalEcologySmoke()
 runPebbleAgentsMortalityPopulationExitSmoke()
+runPebbleAgentsAgeMaturityReproductionSmoke()
 
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)

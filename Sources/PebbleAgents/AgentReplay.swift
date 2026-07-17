@@ -6,11 +6,12 @@ public enum AgentReplaySchema {
     public static let settlementMetricsVersion = 3
     public static let localEcologyVersion = 4
     public static let mortalityVersion = 5
+    public static let lifecycleVersion = 6
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
             || version == settlementMetricsVersion || version == localEcologyVersion
-            || version == mortalityVersion
+            || version == mortalityVersion || version == lifecycleVersion
     }
 }
 
@@ -66,6 +67,10 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case ecologyClear
     case mortalityFeature
     case mortalityClear
+    case lifecycleFeature
+    case reproductionFeature
+    case birthSiteObservation
+    case lifecycleClear
 }
 
 public enum AgentReplayOperation: Codable {
@@ -134,6 +139,10 @@ public enum AgentReplayOperation: Codable {
     case clearEcologyDiagnostics
     case setMortalityEnabled(Bool, configuration: AgentMortalityConfiguration)
     case clearMortalityDiagnostics
+    case setLifecycleEnabled(Bool, configuration: AgentLifecycleConfiguration)
+    case setReproductionEnabled(Bool)
+    case applyBirthSiteObservation(AgentBirthSiteObservation)
+    case clearLifecycleDiagnostics
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -175,6 +184,10 @@ public enum AgentReplayOperation: Codable {
         case .clearEcologyDiagnostics: return .ecologyClear
         case .setMortalityEnabled: return .mortalityFeature
         case .clearMortalityDiagnostics: return .mortalityClear
+        case .setLifecycleEnabled: return .lifecycleFeature
+        case .setReproductionEnabled: return .reproductionFeature
+        case .applyBirthSiteObservation: return .birthSiteObservation
+        case .clearLifecycleDiagnostics: return .lifecycleClear
         }
     }
 
@@ -190,6 +203,8 @@ public enum AgentReplayOperation: Codable {
         case let .completeConstructionProject(projectID, tick): raw = "\(projectID):completion:\(tick)"
         case let .clearConstructionProject(projectID): raw = "\(projectID):clear"
         case let .applySocialVerification(observation): raw = "social-verification:\(observation.beliefID.rawValue)"
+        case let .applyBirthSiteObservation(observation):
+            raw = "birth-site:\(observation.planID.rawValue):\(observation.observedTick)"
         default: raw = nil
         }
         return raw.flatMap(AgentOperationID.init(rawValue:))
@@ -493,6 +508,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.mortalityVersion
         }
+        if case let .setLifecycleEnabled(enabled, _) = operation,
+           enabled,
+           schemaVersion != AgentReplaySchema.lifecycleVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "lifecycle activation must be the first v6 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.lifecycleVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -674,6 +699,8 @@ public enum AgentSessionReplayer {
                 && (checkpoint.schemaVersion == AgentCheckpointSchema.populationVersion
                     || checkpoint.schemaVersion == AgentCheckpointSchema.settlementMetricsVersion
                     || checkpoint.schemaVersion == AgentCheckpointSchema.localEcologyVersion))
+            || (manifest.schemaVersion == AgentReplaySchema.lifecycleVersion
+                && checkpoint.schemaVersion <= AgentCheckpointSchema.mortalityVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -852,6 +879,14 @@ extension AgentSimulationSession {
             try candidate.setMortalityEnabled(enabled, configuration: configuration)
         case .clearMortalityDiagnostics:
             try candidate.clearMortalityDiagnostics()
+        case let .setLifecycleEnabled(enabled, configuration):
+            try candidate.setLifecycleEnabled(enabled, configuration: configuration)
+        case let .setReproductionEnabled(enabled):
+            try candidate.setReproductionEnabled(enabled)
+        case let .applyBirthSiteObservation(observation):
+            _ = try candidate.applyBirthSiteObservation(observation)
+        case .clearLifecycleDiagnostics:
+            try candidate.clearLifecycleDiagnostics()
         }
         self = candidate
         let causal = causalLedgerSnapshot().summary

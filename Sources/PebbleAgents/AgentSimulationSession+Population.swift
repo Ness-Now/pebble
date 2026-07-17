@@ -245,6 +245,11 @@ extension AgentSimulationSession {
             intent: intent,
             observation: observation
         )
+        if let member = candidate.populationRegistry?.members.first(where: {
+            $0.agentID == migration.migrantID
+        }) {
+            try candidate.registerImportedLifecycleMemberIfNeeded(member)
+        }
         self = candidate
         return migration
     }
@@ -765,6 +770,8 @@ extension AgentCausalEventKind {
              .migrationProposed, .migrationAdmitted, .migrationStarted,
              .migrationArrived, .migrationRejected, .migrationCancelled,
              .migrationFailed, .populationMemberExited, .populationStateCleared:
+            return true
+        case .populationMemberBorn:
             return true
         default:
             return false

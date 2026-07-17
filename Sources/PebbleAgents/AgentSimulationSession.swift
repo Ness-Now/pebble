@@ -54,6 +54,7 @@ public struct AgentSimulationSession {
     public internal(set) var settlementMetricsState: AgentSettlementMetricsState?
     public internal(set) var localEcologyState: AgentLocalEcologyState?
     public internal(set) var mortalityState: AgentMortalityState?
+    public internal(set) var lifecycleState: AgentLifecycleState?
 
     public init(
         configuration: AgentSessionConfiguration,
@@ -125,6 +126,7 @@ public struct AgentSimulationSession {
         settlementMetricsState = nil
         localEcologyState = nil
         mortalityState = nil
+        lifecycleState = nil
         try recordCausalEvent(
             kind: .sessionLifecycle,
             origin: .lifecycle,
@@ -172,7 +174,8 @@ public struct AgentSimulationSession {
             population: populationRegistry == nil ? nil : populationSnapshot(),
             settlementMetrics: settlementMetricsState == nil ? nil : settlementMetricsSnapshot(),
             localEcology: localEcologyState == nil ? nil : localEcologySnapshot(),
-            mortality: mortalityState == nil ? nil : mortalitySnapshot()
+            mortality: mortalityState == nil ? nil : mortalitySnapshot(),
+            lifecycle: lifecycleState == nil ? nil : lifecycleSnapshot()
         )
     }
 
@@ -322,6 +325,7 @@ public struct AgentSimulationSession {
             )
             self = candidate
         }
+        try applyLifecycleStageBoundary(at: nextTick)
         try expireActiveMigrationIfNeeded(at: nextTick)
         let ids = sortedIds
         refreshConstructionProjectStatus()
@@ -694,6 +698,8 @@ public struct AgentSimulationSession {
             : physicalObservations
         try applyPhysicalObservations(activePhysicalObservations)
         try applySocialTickPlan(socialPlan, results: results)
+        try evaluateReproductionPlanIfDue(at: tick)
+        try appendLifecycleFrame(at: tick)
         try recordCausalEvent(
             kind: .tickCompleted,
             origin: .cognitiveTransition,

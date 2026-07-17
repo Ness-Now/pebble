@@ -358,6 +358,7 @@ extension AgentSimulationSession {
         let arrivalDelta = countedEvents.filter { $0.kind == .migrationArrived }.count
         let deathDelta = countedEvents.filter { $0.kind == .agentDeathFinalized }.count
         let exitDelta = countedEvents.filter { $0.kind == .populationMemberExited }.count
+        let birthDelta = countedEvents.filter { $0.kind == .populationMemberBorn }.count
         let mortalityMetrics = mortalityState.map { mortality in
             AgentSettlementMortalityMetrics(
                 deathDelta: deathDelta,
@@ -428,9 +429,10 @@ extension AgentSimulationSession {
             condition = .strained
             reason = urgent > 0 ? "urgent_agents" : "conservation_divergence"
         } else if activeMigrationCount > 0 || admissionDelta > 0 || arrivalDelta > 0
-            || deathDelta > 0 || exitDelta > 0 {
+            || deathDelta > 0 || exitDelta > 0 || birthDelta > 0 {
             condition = .transitioning
-            reason = activeMigrationCount > 0 ? "migration_active" : "population_changed"
+            reason = activeMigrationCount > 0 ? "migration_active"
+                : (birthDelta > 0 ? "local_birth" : "population_changed")
         } else if throughput.movementDelta > 0 || throughput.materialActivityDelta > 0
             || socialMetrics.eventDelta > 0 || physicalMetrics.eventDelta > 0
             || cooperationMetrics.eventDelta > 0 || populationEventDelta > 0 {

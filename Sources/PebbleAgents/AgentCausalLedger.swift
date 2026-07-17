@@ -117,6 +117,18 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case mortalityResourcesRetired
     case mortalityCommitmentsResolved
     case mortalityStateCleared
+    case lifecycleInitialized
+    case lifecycleMemberRegistered
+    case lifeStageChanged
+    case reproductionEnabled
+    case reproductionDisabled
+    case reproductionPlanCreated
+    case reproductionPlanCancelled
+    case birthSiteValidated
+    case populationMemberBorn
+    case birthFinalized
+    case lifecycleMemberExited
+    case lifecycleStateCleared
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -133,6 +145,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case settlementTransition
     case ecologyTransition
     case mortalityTransition
+    case lifecycleTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -306,6 +319,32 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         reason: String
     )
     case mortalityClear(exitFrames: Int)
+    case lifecycleMember(
+        memberID: String?,
+        ordinal: Int?,
+        origin: String?,
+        stage: String?,
+        age: Int?,
+        status: String
+    )
+    case reproductionPlan(
+        planID: String?,
+        progenitorIDs: [String],
+        createdTick: Int?,
+        dueTick: Int?,
+        status: String,
+        reason: String?
+    )
+    case birth(
+        birthID: String,
+        planID: String,
+        newbornID: String,
+        ordinal: Int,
+        progenitorIDs: [String],
+        position: AgentPosition,
+        fingerprint: Int,
+        status: String
+    )
 
     var canonicalText: String {
         switch self {
@@ -424,6 +463,22 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
                 + "\(constructionBlocked ? 1 : 0)|\(reason)"
         case let .mortalityClear(exitFrames):
             return "mortalityClear|\(exitFrames)"
+        case let .lifecycleMember(memberID, ordinal, origin, stage, age, status):
+            return "lifecycleMember|\(memberID ?? "none")|\(ordinal.map(String.init) ?? "none")|"
+                + "\(origin ?? "none")|\(stage ?? "none")|\(age.map(String.init) ?? "none")|\(status)"
+        case let .reproductionPlan(
+            planID, progenitorIDs, createdTick, dueTick, status, reason
+        ):
+            return "reproductionPlan|\(planID ?? "none")|\(progenitorIDs.joined(separator: ","))|"
+                + "\(createdTick.map(String.init) ?? "none")|\(dueTick.map(String.init) ?? "none")|"
+                + "\(status)|\(reason ?? "none")"
+        case let .birth(
+            birthID, planID, newbornID, ordinal, progenitorIDs, position,
+            fingerprint, status
+        ):
+            return "birth|\(birthID)|\(planID)|\(newbornID)|\(ordinal)|"
+                + "\(progenitorIDs.joined(separator: ","))|\(position.x),\(position.y),\(position.z)|"
+                + "\(fingerprint)|\(status)"
         }
     }
 }
@@ -550,7 +605,19 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.populationMemberExited, .mortalityDeath),
              (.mortalityResourcesRetired, .mortalityResources),
              (.mortalityCommitmentsResolved, .mortalityCommitments),
-             (.mortalityStateCleared, .mortalityClear):
+             (.mortalityStateCleared, .mortalityClear),
+             (.lifecycleInitialized, .lifecycleMember),
+             (.lifecycleMemberRegistered, .lifecycleMember),
+             (.lifeStageChanged, .lifecycleMember),
+             (.lifecycleMemberExited, .lifecycleMember),
+             (.lifecycleStateCleared, .lifecycleMember),
+             (.reproductionEnabled, .reproductionPlan),
+             (.reproductionDisabled, .reproductionPlan),
+             (.reproductionPlanCreated, .reproductionPlan),
+             (.reproductionPlanCancelled, .reproductionPlan),
+             (.birthSiteValidated, .birth),
+             (.populationMemberBorn, .birth),
+             (.birthFinalized, .birth):
             matches = true
         default:
             matches = false

@@ -239,7 +239,7 @@ extension AgentSimulationSession {
         guard var mortality = mortalityState, var registry = populationRegistry else {
             throw AgentSessionError.mortality(.disabled)
         }
-        try prevalidateCausalAppend(count: lethal.count * 7)
+        try prevalidateCausalAppend(count: lethal.count * (lifecycleState == nil ? 7 : 9))
         let preDeathIDs = Set(statesById.values.map(\.agentID))
         guard lethal.map(\.agentID) == lethal.map(\.agentID).sorted(),
               Set(lethal.map(\.agentID)).count == lethal.count else {
@@ -442,6 +442,11 @@ extension AgentSimulationSession {
             // Capture the terminal activity boundary after lethal survival and
             // before the authoritative active-state removal below.
             let terminalActivity = AgentTerminalActivitySnapshot(state: state)
+            try applyLifecycleDeath(
+                agentID: item.agentID,
+                causeEventID: lethalEvent.eventID,
+                at: mortalityTick
+            )
             registry.members.remove(at: memberIndex)
             registry.settlement.residentIDs.removeAll { $0 == item.agentID }
             registry.settlement.inTransitIDs.removeAll { $0 == item.agentID }

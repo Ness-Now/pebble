@@ -75,6 +75,7 @@ public enum AgentSessionError: Error, Equatable {
     case settlementMetrics(AgentSettlementMetricsError)
     case localEcology(AgentLocalEcologyError)
     case mortality(AgentMortalityError)
+    case lifecycle(AgentLifecycleError)
 }
 
 public struct AgentSessionConfiguration: Codable {

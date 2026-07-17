@@ -7,11 +7,12 @@ public enum AgentCheckpointSchema {
     public static let settlementMetricsVersion = 3
     public static let localEcologyVersion = 4
     public static let mortalityVersion = 5
+    public static let lifecycleVersion = 6
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
             || version == settlementMetricsVersion || version == localEcologyVersion
-            || version == mortalityVersion
+            || version == mortalityVersion || version == lifecycleVersion
     }
 }
 
@@ -190,9 +191,12 @@ public struct AgentSessionDurableState: Codable {
     public let settlementMetricsState: AgentSettlementMetricsState?
     public let localEcologyState: AgentLocalEcologyState?
     public let mortalityState: AgentMortalityState?
+    public let lifecycleState: AgentLifecycleState?
 
     init(session: AgentSimulationSession) {
-        if session.mortalityState != nil {
+        if session.lifecycleState != nil {
+            schemaVersion = AgentCheckpointSchema.lifecycleVersion
+        } else if session.mortalityState != nil {
             schemaVersion = AgentCheckpointSchema.mortalityVersion
         } else if session.localEcologyState != nil {
             schemaVersion = AgentCheckpointSchema.localEcologyVersion
@@ -280,6 +284,7 @@ public struct AgentSessionDurableState: Codable {
         settlementMetricsState = session.settlementMetricsState
         localEcologyState = session.localEcologyState
         mortalityState = session.mortalityState
+        lifecycleState = session.lifecycleState
     }
 }
 
@@ -699,6 +704,7 @@ extension AgentSimulationSession {
         settlementMetricsState = state.settlementMetricsState
         localEcologyState = state.localEcologyState
         mortalityState = state.mortalityState
+        lifecycleState = state.lifecycleState
         if let settlementMetricsState {
             try validateSettlementMetricsState(settlementMetricsState)
         }
@@ -714,22 +720,26 @@ extension AgentSimulationSession {
         }
         guard (state.schemaVersion == AgentCheckpointSchema.currentVersion
                 && state.populationRegistry == nil && state.settlementMetricsState == nil
-                && state.mortalityState == nil)
+                && state.mortalityState == nil && state.lifecycleState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.populationVersion
                     && state.populationRegistry != nil && state.settlementMetricsState == nil
-                    && state.mortalityState == nil)
+                    && state.mortalityState == nil && state.lifecycleState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.settlementMetricsVersion
                     && state.populationRegistry != nil
                     && state.settlementMetricsState != nil
                     && state.localEcologyState == nil
-                    && state.mortalityState == nil)
+                    && state.mortalityState == nil && state.lifecycleState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.localEcologyVersion
                     && state.populationRegistry != nil
                     && state.localEcologyState != nil
-                    && state.mortalityState == nil)
+                    && state.mortalityState == nil && state.lifecycleState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.mortalityVersion
                     && state.populationRegistry != nil
-                    && state.mortalityState != nil) else {
+                    && state.mortalityState != nil
+                    && state.lifecycleState == nil)
+                || (state.schemaVersion == AgentCheckpointSchema.lifecycleVersion
+                    && state.populationRegistry != nil
+                    && state.lifecycleState != nil) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.clock.tick.rawValue >= 0,
@@ -758,7 +768,8 @@ extension AgentSimulationSession {
             throw AgentCheckpointError.invalidConfiguration
         }
         guard !state.agents.isEmpty
-                || (state.schemaVersion == AgentCheckpointSchema.mortalityVersion
+                || ((state.schemaVersion == AgentCheckpointSchema.mortalityVersion
+                        || state.schemaVersion == AgentCheckpointSchema.lifecycleVersion)
                     && (state.mortalityState?.totalDeathCount ?? 0) > 0) else {
             throw AgentCheckpointError.invalidAgent("empty")
         }
@@ -1134,6 +1145,15 @@ extension AgentSimulationSession {
                     throw AgentCheckpointError.invalidBound("mortality causal chain")
                 }
             }
+        }
+        if let lifecycle = state.lifecycleState, let population = state.populationRegistry {
+            try validateLifecycleState(
+                lifecycle,
+                population: population,
+                agents: state.agents,
+                clock: state.clock,
+                causalLatestSequence: state.causalLedger.latestSequence
+            )
         }
         for relation in state.socialTrustRelations {
             guard knownPopulationIDs.contains(relation.sourceID),
