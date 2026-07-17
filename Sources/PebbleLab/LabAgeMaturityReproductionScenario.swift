@@ -278,22 +278,60 @@ func runAgeMaturityReproductionSmoke(_ options: Options) -> Never {
     add("world mutation zero", true)
 
     let postBirthCheckpoint = try! direct.makeCheckpoint()
+    var preTransitionDirect = direct
+    lifecycleScenarioAdvance(&preTransitionDirect, to: birthTick + 1)
+    let preTransitionCheckpoint = try! preTransitionDirect.makeCheckpoint()
+    var preTransitionRestored = try! AgentSimulationSession.restoring(preTransitionCheckpoint)
+    _ = try! preTransitionDirect.advanceTick()
+    _ = try! preTransitionRestored.advanceTick()
+    let directRestartEvent = preTransitionDirect.causalLedgerSnapshot().events.last {
+        $0.kind == .lifeStageChanged && $0.subjectID?.rawValue == "agent_4"
+    }!
+    let restoredRestartEvent = preTransitionRestored.causalLedgerSnapshot().events.last {
+        $0.kind == .lifeStageChanged && $0.subjectID?.rawValue == "agent_4"
+    }!
+    add("pre-transition restart tick exact", preTransitionCheckpoint.tick.rawValue == 5
+        && preTransitionDirect.tick == 6 && preTransitionRestored.tick == 6)
+    add("pre-transition restart causal event exact", directRestartEvent.simulationTick.rawValue == 6
+        && directRestartEvent.eventID == restoredRestartEvent.eventID)
+    add("pre-transition restart bytes exact", try! preTransitionDirect.durableStateBytes()
+        == preTransitionRestored.durableStateBytes())
     lifecycleScenarioAdvance(
         &direct,
         to: birthTick + AgentLifecycleConfiguration.live.newbornDurationTicks
     )
+    let juvenileMember = direct.lifecycleSnapshot().members.first {
+        $0.agentID.rawValue == "agent_4"
+    }!
+    let juvenileEvent = direct.causalLedgerSnapshot().events.last {
+        $0.kind == .lifeStageChanged && $0.subjectID?.rawValue == "agent_4"
+    }!
     add("juvenile at exact age", direct.lifecycleSnapshot().members.first {
         $0.agentID.rawValue == "agent_4"
     }?.currentStage == .juvenile
         && (try! direct.demographicAge(for: AgentID(rawValue: "agent_4")!)) == 2)
+    add("juvenile event tick exact", juvenileMember.lastStageTransitionTick == 6
+        && juvenileEvent.simulationTick.rawValue == 6
+        && juvenileEvent.instant.tick.rawValue == 6)
     lifecycleScenarioAdvance(
         &direct,
         to: birthTick + AgentLifecycleConfiguration.live.maturityAgeTicks
     )
+    let matureMember = direct.lifecycleSnapshot().members.first {
+        $0.agentID.rawValue == "agent_4"
+    }!
+    let directStageEvents = direct.causalLedgerSnapshot().events.filter {
+        $0.kind == .lifeStageChanged && $0.subjectID?.rawValue == "agent_4"
+    }
     add("mature at exact age", direct.lifecycleSnapshot().members.first {
         $0.agentID.rawValue == "agent_4"
     }?.currentStage == .mature
         && (try! direct.demographicAge(for: AgentID(rawValue: "agent_4")!)) == 8)
+    add("mature event tick exact", matureMember.lastStageTransitionTick == 12
+        && directStageEvents.map { $0.simulationTick.rawValue } == [6, 12]
+        && directStageEvents.map { $0.instant.tick.rawValue } == [6, 12])
+    add("stage events emitted once", directStageEvents.count == 2
+        && Set(directStageEvents.map(\.eventID)).count == 2)
     add("cooldown prevents second birth", direct.lifecycleSummary().totalBirthCount == 1)
 
     var replayDirect = lifecycleScenarioBase(seed: options.seed)
@@ -314,6 +352,11 @@ func runAgeMaturityReproductionSmoke(_ options: Options) -> Never {
         worldFingerprint: observation.worldFingerprint
     )
     _ = try! recorder.apply(.applyBirthSiteObservation(replayObservation), to: &replayDirect)
+    for _ in 0..<AgentLifecycleConfiguration.live.maturityAgeTicks {
+        _ = try! recorder.apply(
+            .advanceTick(perceptions: [], physicalObservations: []), to: &replayDirect
+        )
+    }
     let journal = try! recorder.journal(
         named: AgentCheckpointName(rawValue: "lifecycle-reproduction")!
     )
@@ -322,6 +365,16 @@ func runAgeMaturityReproductionSmoke(_ options: Options) -> Never {
     add("replay verified", replayed.report.verified)
     add("replay bytes exact", try! replayDirect.durableStateBytes()
         == replayed.session.durableStateBytes())
+    let replayStageEvents = replayed.session.causalLedgerSnapshot().events.filter {
+        $0.kind == .lifeStageChanged && $0.subjectID?.rawValue == "agent_4"
+    }
+    add("replay stage ticks exact", replayStageEvents.map {
+        $0.simulationTick.rawValue
+    } == [6, 12] && replayStageEvents == directStageEvents)
+    add("replay lifecycle digest exact", replayed.session.lifecycleSummary().digest
+        == direct.lifecycleSummary().digest)
+    add("replay final direct bytes exact", try! replayed.session.durableStateBytes()
+        == direct.durableStateBytes())
     add("v4 base unchanged", v4Checkpoint.schemaVersion == 4
         && !String(data: try! AgentCheckpointCodec.encode(v4Checkpoint.durableState), encoding: .utf8)!
             .contains("lifecycleState"))

@@ -31,9 +31,11 @@ ECOLOGY_OUT_A="$TMP_ROOT/local-ecology-a"
 ECOLOGY_OUT_B="$TMP_ROOT/local-ecology-b"
 MORTALITY_OUT_A="$TMP_ROOT/mortality-a"
 MORTALITY_OUT_B="$TMP_ROOT/mortality-b"
+LIFECYCLE_OUT_A="$TMP_ROOT/lifecycle-a"
+LIFECYCLE_OUT_B="$TMP_ROOT/lifecycle-b"
 
 STEP=0
-TOTAL_STEPS=20
+TOTAL_STEPS=23
 
 run_step() {
     STEP=$((STEP + 1))
@@ -182,6 +184,37 @@ verify_mortality_outputs() {
     expect_json_value "$out/mortality_invariant_report.json" success true
 }
 
+verify_lifecycle_outputs() {
+    out=$1
+    for file in \
+        lifecycle_members.json \
+        life_stage_transitions.json \
+        reproduction_plans.json \
+        birth_records.json \
+        lineage_index.json \
+        birth_site_observations.json \
+        lifecycle_causal_chain.json \
+        lifecycle_checkpoint_v6/manifest.json \
+        lifecycle_checkpoint_v6/session.json \
+        lifecycle_replay_v6/manifest.json \
+        lifecycle_replay_v6/operations.ndjson \
+        lifecycle_summary.json \
+        lifecycle_digest.json \
+        lifecycle_invariant_report.json
+    do
+        [ -s "$out/$file" ] || fail "lifecycle did not produce $out/$file"
+    done
+    expect_json_value "$out/lifecycle_invariant_report.json" schemaVersion 6
+    expect_json_value "$out/lifecycle_invariant_report.json" scenario \
+        age_maturity_reproduction_smoke
+    expect_json_value "$out/lifecycle_invariant_report.json" seed 46
+    expect_json_value "$out/lifecycle_invariant_report.json" success true
+    expect_json_value "$out/lifecycle_summary.json" totalBirthCount 1
+    expect_json_value "$out/lifecycle_summary.json" matureCount 5
+    expect_json_value "$out/lifecycle_checkpoint_v6/session.json" schemaVersion 6
+    expect_json_value "$out/lifecycle_replay_v6/manifest.json" schemaVersion 6
+}
+
 verify_no_tracked_run_outputs() {
     tracked=$(
         git ls-files | /usr/bin/awk '
@@ -256,6 +289,17 @@ run_step "mortality canonical outputs and replay comparison" \
     verify_mortality_outputs "$MORTALITY_OUT_A"
 verify_mortality_outputs "$MORTALITY_OUT_B"
 /usr/bin/diff -r "$MORTALITY_OUT_A" "$MORTALITY_OUT_B"
+
+run_step "lifecycle deterministic run A" \
+    swift run -c release PebbleLab -- --scenario age_maturity_reproduction_smoke \
+        --seed 46 --ticks 12 --out "$LIFECYCLE_OUT_A"
+run_step "lifecycle deterministic run B" \
+    swift run -c release PebbleLab -- --scenario age_maturity_reproduction_smoke \
+        --seed 46 --ticks 12 --out "$LIFECYCLE_OUT_B"
+run_step "lifecycle canonical outputs and replay comparison" \
+    verify_lifecycle_outputs "$LIFECYCLE_OUT_A"
+verify_lifecycle_outputs "$LIFECYCLE_OUT_B"
+/usr/bin/diff -r "$LIFECYCLE_OUT_A" "$LIFECYCLE_OUT_B"
 
 run_step "Repository hygiene" git diff --check
 verify_no_tracked_run_outputs

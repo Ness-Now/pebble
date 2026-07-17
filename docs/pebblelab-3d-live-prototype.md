@@ -17,10 +17,13 @@ pression de subsistance reste un diagnostic collectif sans rétroaction.
 Sous la gate mortality, la famine peut finaliser une sortie de population
 bornée sans cadavre ni mutation du World ; seuls les agents actifs conservent
 un probe.
+Sous la gate lifecycle, un âge démographique déterministe et trois stages
+bornés permettent une naissance locale sur un site World validé en lecture
+seule, sans grossesse, famille, génétique ni mutation du World.
 
 ## Prérequis et lancement
 
-Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population`, `--multiscale`, `--ecology` et `--mortality` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07, métriques settlement CIV-08, écologie alimentaire CIV-09 et sortie de population CIV-10. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
+Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population`, `--multiscale`, `--ecology`, `--mortality` et `--reproduction` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07, métriques settlement CIV-08, écologie alimentaire CIV-09, sortie de population CIV-10 et âge/maturité/reproduction bornée CIV-11. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
 
 Depuis la racine du dépôt :
 
@@ -70,6 +73,9 @@ Commandes de démonstration :
 /lab forage status
 /lab mortality <on|off|status|clear>
 /lab exits status
+/lab lifecycle <on|status|clear>
+/lab reproduction <on|off|status>
+/lab births status
 /lab social <on|off|status|clear>
 /lab physical <on|off|status|clear>
 /lab cooperation <on|off|status|clear>
@@ -263,6 +269,39 @@ funérailles, héritage, résurrection, naissance, reproduction ou famille. La
 prochaine étape canonique est
 `CIV-11 — Age, Maturity and Bounded Reproduction V1`.
 
+## CIV-11 — Âge, maturité et reproduction locale bornée
+
+Le mode `scripts/verify-pebblelab-live.sh --reproduction` active explicitement
+`PEBBLELAB_APP_AGENTS_LIFECYCLE=1` avec population, persistence, settlement
+metrics, écologie et survie dans un monde jetable seed `46`. La gate reste
+désactivée par défaut. `/lab lifecycle on` enregistre les quatre résidents
+actifs avec un âge démographique mature dérivé de l'horloge simulée, distinct
+de `ticksAlive`; `/lab reproduction on` autorise ensuite au plus un plan
+reproductif actif et `/lab births status` expose l'historique borné.
+
+Après l'arrivée physique d'`agent_3`, la preuve initialise l'écologie en lecture
+seule. Le pulse du tick `8` établit une pression `abundant`; l'évaluation
+déterministe du tick `10` sélectionne `agent_0` et `agent_1` comme deux
+progéniteurs historiques et sauvegarde un checkpoint v6 mid-plan. Après
+restart, l'adapter inspecte un maximum borné de sites autour de la réception,
+ne mute aucun bloc et valide la position `(18,67,-23)`. Au tick `12`, la
+transaction crée `birth-00000001` et `agent_4`, fait passer population et probes
+de quatre à cinq, avance `nextPopulationOrdinal` à cinq et laisse le newborn à
+âge zéro, inventaire vide et zéro perception, action ou mouvement sur son tick
+de naissance.
+
+Un second checkpoint/restart v6 restaure exactement les cinq agents et
+l'historique causal. `agent_4` devient `juvenile` au tick `14`, puis `mature` au
+tick `20`. La continuation avec deux restarts et le contrôle ininterrompu
+produisent les mêmes traces normalisées, octets durables et digests lifecycle,
+population, ecology, settlement et causal. Le contexte alimentaire conditionne
+la naissance mais ne crée, ne détruit et ne consomme aucun `foodRaw`.
+
+CIV-11 est terminé et validé localement. Les deux progéniteurs ne constituent
+ni couple, ni foyer, ni famille et aucune règle de sexe, grossesse, soin
+parental, génétique ou héritage n'est ouverte. La prochaine étape canonique est
+`CIV-12 — Kinship, Households and Dependent Care V1`.
+
 ## Arrêt propre et inspection
 
 Utiliser `/lab demo stop`, `/lab stop` ou `/lab clear`. Les probes transitoires sont retirées, le follow est désactivé et un résumé de session est écrit lorsque les traces sont actives. `/lab status` confirme ensuite que la session est inactive. Les probes ont `shouldSaveToChunk == false` et `persistent == false` ; aucun agent n’est restauré lors d’un lancement ultérieur.
@@ -282,16 +321,17 @@ Utiliser `/lab demo stop`, `/lab stop` ou `/lab clear`. Les probes transitoires 
   tâche de livraison matérielle CIV-05 explicitement gated ;
 - aucune persistance active par défaut ; la persistence CIV-06 reste bornée,
   explicitement gated et limitée aux frontières restart-safe documentées ;
-- aucun agent dynamique hors admission migratoire CIV-07 ; la seule suppression
-  active est la mort par famine explicitement gated de CIV-10, sans simulation
-  hors écran ;
+- aucun agent dynamique hors admission migratoire CIV-07 ou naissance locale
+  explicitement gated de CIV-11 ; la seule suppression active est la mort par
+  famine explicitement gated de CIV-10, sans simulation hors écran ;
 - aucun tick agent sauté, aucune coarse execution et aucun agrégat macro
   utilisé comme entrée cognitive ; la gate CIV-08 est désactivée par défaut ;
 - aucun patch alimentaire global : CIV-09 reste local, borné, en lecture World
   seule et désactivé par défaut ; aucune agriculture, saison ou faune ;
 - aucune entité de cadavre : CIV-10 conserve des records et ressources
-  terminales bornés, sans mutation World, vieillissement, maladie, reproduction
-  ou héritage ;
+  terminales bornés, sans mutation World, vieillissement ou maladie ;
+- CIV-11 conserve uniquement âge, stages et filiation historique bornée :
+  aucun sexe, grossesse, couple, foyer, soin parental, génétique ou héritage ;
 - aucun contrôleur autonome du joueur.
 
 Les comportements cognitifs supplémentaires, la planification longue, le

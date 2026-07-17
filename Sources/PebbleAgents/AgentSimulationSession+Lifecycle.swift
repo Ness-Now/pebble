@@ -278,6 +278,13 @@ extension AgentSimulationSession {
 
     mutating func applyLifecycleStageBoundary(at lifecycleTick: Int) throws {
         guard var lifecycle = lifecycleState else { return }
+        guard let transitionTick = AgentSimulationTick(rawValue: lifecycleTick) else {
+            throw AgentSessionError.lifecycle(.invalidConfiguration("stage transition tick"))
+        }
+        let transitionInstant = AgentSimulationInstant(
+            simulationID: simulationID,
+            tick: transitionTick
+        )
         let transitions = try lifecycle.members.indices.compactMap { index -> (Int, AgentLifeStage, Int)? in
             guard statesById[lifecycle.members[index].agentID.rawValue] != nil else { return nil }
             let age = try lifecycle.members[index].age(at: lifecycleTick)
@@ -300,7 +307,8 @@ extension AgentSimulationSession {
                     age: age,
                     status: "stageChanged"
                 ),
-                summary: "life stage changed id=\(member.agentID.rawValue) \(member.currentStage.rawValue)>\(stage.rawValue) age=\(age)"
+                summary: "life stage changed id=\(member.agentID.rawValue) \(member.currentStage.rawValue)>\(stage.rawValue) age=\(age)",
+                instant: transitionInstant
             )
             lifecycle.members[index].currentStage = stage
             lifecycle.members[index].lastStageTransitionTick = lifecycleTick
@@ -399,8 +407,10 @@ extension AgentSimulationSession {
                 $0 + $1.resourceInventory.count(of: .foodRaw)
             } + campStock.count(of: .foodRaw)
         guard observation.observedTick == tick, tick >= plan.dueTick,
-              observation.settlementID == plan.settlementID,
-              observation.candidateIndex >= 0,
+              observation.settlementID == plan.settlementID else {
+            throw AgentSessionError.lifecycle(.staleObservation(observation.planID.rawValue))
+        }
+        guard observation.candidateIndex >= 0,
               observation.candidateIndex < lifecycle.configuration.maximumBirthSiteCandidates,
               (1...lifecycle.configuration.maximumBirthSiteCandidates)
                 .contains(observation.candidatesConsidered),
@@ -436,33 +446,12 @@ extension AgentSimulationSession {
             lifecycleState = lifecycle
             return nil
         }
-        let criticalHunger = configuration.survivalConfiguration.criticalHungerThreshold
-        let parentsEligible = plan.progenitorIDs.count == 2
-            && plan.progenitorIDs == plan.progenitorIDs.sorted()
-            && Set(plan.progenitorIDs).count == 2
-            && plan.progenitorIDs.allSatisfy { id in
-                guard registry.settlement.residentIDs.contains(id),
-                      let state = statesById[id.rawValue], state.health > 0,
-                      state.needs.hunger < criticalHunger,
-                      let member = lifecycle.members.first(where: { $0.agentID == id }),
-                      member.currentStage == .mature,
-                      member.completedBirthCount
-                        < lifecycle.configuration.maximumParentBirthCount else { return false }
-                return member.lastCompletedBirthTick.map {
-                    tick - $0 >= lifecycle.configuration.reproductionCooldownTicks
-                } ?? true
-            }
-        guard parentsEligible,
-              let firstParent = lifecycle.members.first(where: {
-                  $0.agentID == plan.progenitorIDs[0]
-              }),
-              let secondParent = lifecycle.members.first(where: {
-                  $0.agentID == plan.progenitorIDs[1]
-              }),
-              areUnrelated(firstParent, secondParent) else {
+        if let parentFailure = reproductionPlanParentFailureReason(
+            plan: plan, lifecycle: lifecycle, registry: registry
+        ) {
             try cancelReproductionPlan(
                 &lifecycle, index: planIndex, plan: plan,
-                reason: .parentIneligible, status: .cancelled
+                reason: parentFailure, status: .cancelled
             )
             lifecycleState = lifecycle
             return nil
@@ -472,16 +461,10 @@ extension AgentSimulationSession {
               accessibleFood > 0 else {
             try cancelReproductionPlan(
                 &lifecycle, index: planIndex, plan: plan,
-                reason: .subsistenceUnavailable, status: .cancelled
+                reason: .subsistenceInsufficient, status: .cancelled
             )
             lifecycleState = lifecycle
             return nil
-        }
-        guard plan.progenitorIDs.count == 2,
-              plan.progenitorIDs == plan.progenitorIDs.sorted(),
-              Set(plan.progenitorIDs).count == 2,
-              parentsEligible else {
-            throw AgentSessionError.lifecycle(.invalidPlan(plan.planID.rawValue))
         }
         let ordinal = registry.nextPopulationOrdinal
         guard ordinal.rawValue < Int.max,
@@ -883,6 +866,45 @@ extension AgentSimulationSession {
         return Set(lhs.progenitorIDs).isDisjoint(with: Set(rhs.progenitorIDs))
     }
 
+    private func reproductionPlanParentFailureReason(
+        plan: AgentReproductionPlan,
+        lifecycle: AgentLifecycleState,
+        registry: AgentPopulationRegistry
+    ) -> AgentReproductionPlanReason? {
+        guard plan.progenitorIDs.count == 2,
+              plan.progenitorIDs == plan.progenitorIDs.sorted(),
+              Set(plan.progenitorIDs).count == 2 else { return .kinshipInvalid }
+        let recordedDeaths = Set(mortalityState?.records.map(\.agentID) ?? [])
+        var parents: [AgentLifecycleMember] = []
+        let criticalHunger = configuration.survivalConfiguration.criticalHungerThreshold
+        for id in plan.progenitorIDs {
+            if recordedDeaths.contains(id) || statesById[id.rawValue]?.health == 0 {
+                return .parentDied
+            }
+            guard let populationMember = registry.members.first(where: { $0.agentID == id }),
+                  let member = lifecycle.members.first(where: { $0.agentID == id }),
+                  let state = statesById[id.rawValue] else { return .parentUnavailable }
+            if populationMember.status == .migrating
+                || registry.settlement.inTransitIDs.contains(id) {
+                return .parentMigrating
+            }
+            guard registry.settlement.residentIDs.contains(id) else {
+                return .parentUnavailable
+            }
+            guard member.currentStage == .mature else { return .parentImmature }
+            guard state.needs.hunger < criticalHunger else {
+                return .subsistenceInsufficient
+            }
+            guard member.completedBirthCount
+                    < lifecycle.configuration.maximumParentBirthCount,
+                  member.lastCompletedBirthTick.map({
+                      tick - $0 >= lifecycle.configuration.reproductionCooldownTicks
+                  }) ?? true else { return .parentIneligible }
+            parents.append(member)
+        }
+        return areUnrelated(parents[0], parents[1]) ? nil : .kinshipInvalid
+    }
+
     private func reproductionEligibility(
         lifecycle: AgentLifecycleState,
         registry: AgentPopulationRegistry,
@@ -1024,9 +1046,11 @@ extension AgentSimulationSession {
         subjectID: AgentID? = nil,
         causes: [AgentCausalEventID] = [],
         payload: AgentCausalPayload,
-        summary: String
+        summary: String,
+        instant: AgentSimulationInstant? = nil
     ) throws -> AgentCausalEvent {
-        guard let event = try recordCausalEvent(
+        guard let event = try causalLedger.append(
+            instant: instant ?? simulationInstant,
             kind: kind,
             origin: .lifecycleTransition,
             actorID: actorID,

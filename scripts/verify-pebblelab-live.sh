@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build|--social|--physical|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build|--social|--physical|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -40,6 +40,7 @@ Options:
   --multiscale Run bounded settlement pulses, v3 restart, uninterrupted, and metrics-off controls.
   --ecology Run local forage scarcity, v4 restart, regeneration, and uninterrupted control.
   --mortality Run starvation mortality, v5 pre/post restart, probe exit, and replacement migration.
+  --reproduction Run deterministic age, bounded local birth, v6 pre/post restart, and maturity.
   --help     Show this help and exit.
 EOF
 }
@@ -91,6 +92,7 @@ for option in "$@"; do
         --multiscale) MODE="multiscale"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --ecology) MODE="ecology"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --mortality) MODE="mortality"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --reproduction) MODE="reproduction"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --help|-h) usage; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$option" >&2; usage >&2; exit 2 ;;
     esac
@@ -108,7 +110,31 @@ POPULATION_GATE=0
 MULTISCALE_GATE=0
 ECOLOGY_GATE=0
 MORTALITY_GATE=0
-if [ "$MODE" = "mortality" ]; then
+LIFECYCLE_GATE=0
+if [ "$MODE" = "reproduction" ]; then
+    WORLD_SEED="46"
+    PERSISTENCE_GATE=1
+    POPULATION_GATE=1
+    MULTISCALE_GATE=1
+    ECOLOGY_GATE=1
+    LIFECYCLE_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-Reproduction-46"
+    CAPTURE_NAME="age-maturity-reproduction-proof.txt"
+    POPULATION_ANCHOR_X=${PEBBLELAB_ECOLOGY_ANCHOR_X:-14}
+    POPULATION_ANCHOR_Z=${PEBBLELAB_ECOLOGY_ANCHOR_Z:--21}
+    POPULATION_ANCHOR_Y=${PEBBLELAB_ECOLOGY_ANCHOR_Y:-66}
+    POPULATION_PLAYER_Y=$((POPULATION_ANCHOR_Y + 3))
+    POPULATION_WORLD_READY="/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp $POPULATION_ANCHOR_X $POPULATION_ANCHOR_Y $POPULATION_ANCHOR_Z"
+    REPRODUCTION_BOOTSTRAP_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab pause;/lab movement on;/lab population on;/lab settlement on;/lab migration admit;/lab focus agent_3;/lab follow agent_3"
+    reproduction_step=0
+    while [ "$reproduction_step" -lt 7 ]; do
+        REPRODUCTION_BOOTSTRAP_COMMANDS="$REPRODUCTION_BOOTSTRAP_COMMANDS;/lab step"
+        reproduction_step=$((reproduction_step + 1))
+    done
+    REPRODUCTION_BOOTSTRAP_COMMANDS="$REPRODUCTION_BOOTSTRAP_COMMANDS;/lab migration status;/lab population status;/lab ecology on;/lab ecology scan;/lab survival on;/lab lifecycle on;/lab reproduction on"
+    REPRODUCTION_PHASE1_COMMANDS="$REPRODUCTION_BOOTSTRAP_COMMANDS;/lab step;/lab step;/lab step;/lab lifecycle status;/lab reproduction status;/lab births status;/lab checkpoint save reproduction-midplan;/lab checkpoint status;/lab causality status;/lab status"
+    LAB_COMMANDS="$REPRODUCTION_PHASE1_COMMANDS"
+elif [ "$MODE" = "mortality" ]; then
     WORLD_SEED="46"
     PERSISTENCE_GATE=1
     POPULATION_GATE=1
@@ -412,6 +438,7 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_MULTISCALE=%s\n' "$MULTISCALE_GATE"
     printf '  PEBBLELAB_APP_AGENTS_ECOLOGY=%s\n' "$ECOLOGY_GATE"
     printf '  PEBBLELAB_APP_AGENTS_MORTALITY=%s\n' "$MORTALITY_GATE"
+    printf '  PEBBLELAB_APP_AGENTS_LIFECYCLE=%s\n' "$LIFECYCLE_GATE"
     printf '  PEBBLELAB_DISPOSABLE_WORLD_PROOF=1\n'
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
     if [ "$MODE" = "build" ]; then
@@ -433,7 +460,11 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "mortality" ]; then
+    if [ "$MODE" = "reproduction" ]; then
+        printf '  2. Confirm four mature residents, one deterministic plan, and a restart-safe v6 mid-plan checkpoint.\n'
+        printf '  3. Confirm one read-only birth site, agent_4, five probes, and a restart-safe post-birth checkpoint.\n'
+        printf '  4. Confirm exact newborn, juvenile, and mature thresholds plus uninterrupted equivalence.\n'
+    elif [ "$MODE" = "mortality" ]; then
         printf '  2. Confirm four residents and exactly one naturally lethal starvation transition.\n'
         printf '  3. Confirm v5 pre/post-death restart, exact probe exit, focus reconciliation, and no terminal action.\n'
         printf '  4. Confirm agent_4 physically replaces the exited member and matches uninterrupted control.\n'
@@ -480,7 +511,7 @@ print_plan() {
     fi
     if [ "$MODE" != "persistence" ] && [ "$MODE" != "population" ] \
         && [ "$MODE" != "multiscale" ] && [ "$MODE" != "ecology" ] \
-        && [ "$MODE" != "mortality" ]; then
+        && [ "$MODE" != "mortality" ] && [ "$MODE" != "reproduction" ]; then
         printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
     fi
     printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
@@ -540,6 +571,291 @@ printf '\nLaunching Pebble now. Personal Pebble data is hidden by CFFIXED_USER_H
 
 if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
     fail "a Pebble process is already running; refusing an ambiguous live baseline"
+fi
+
+if [ "$MODE" = "reproduction" ]; then
+    cd "$ROOT_DIR"
+    swift build -c release --product Pebble
+    PEBBLE_BINARY="$ROOT_DIR/.build/release/Pebble"
+    [ -x "$PEBBLE_BINARY" ] || fail "Release Pebble binary missing: $PEBBLE_BINARY"
+
+    PHASE1_TRACE="$SESSION_ROOT/reproduction-phase1.log"
+    PHASE2_TRACE="$SESSION_ROOT/reproduction-phase2.log"
+    PHASE3_TRACE="$SESSION_ROOT/reproduction-phase3.log"
+    CONTROL_HOME="$SESSION_ROOT/control-home"
+    CONTROL_TRACE="$SESSION_ROOT/reproduction-control.log"
+    [ ! -e "$CONTROL_HOME" ] || fail "fresh reproduction control home already exists: $CONTROL_HOME"
+
+    run_reproduction_app() {
+        run_home=$1
+        run_trace=$2
+        run_commands=$3
+        create_world=$4
+        command_world_tick=$5
+        if [ "$create_world" -eq 1 ]; then
+            CFFIXED_USER_HOME="$run_home" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLE_NEWWORLD="$WORLD_SEED" \
+            PEBBLE_NEWWORLD_NAME="$WORLD_NAME" \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_NATURAL=0 \
+            PEBBLELAB_APP_AGENTS_BUILD=0 \
+            PEBBLELAB_APP_AGENTS_SOCIAL=0 \
+            PEBBLELAB_APP_AGENTS_PHYSICAL=0 \
+            PEBBLELAB_APP_AGENTS_COOPERATION=0 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_APP_AGENTS_POPULATION=1 \
+            PEBBLELAB_APP_AGENTS_MULTISCALE=1 \
+            PEBBLELAB_APP_AGENTS_ECOLOGY=1 \
+            PEBBLELAB_APP_AGENTS_MORTALITY=0 \
+            PEBBLELAB_APP_AGENTS_LIFECYCLE=1 \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT='-|-|-|-|-' \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        else
+            CFFIXED_USER_HOME="$run_home" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_NATURAL=0 \
+            PEBBLELAB_APP_AGENTS_BUILD=0 \
+            PEBBLELAB_APP_AGENTS_SOCIAL=0 \
+            PEBBLELAB_APP_AGENTS_PHYSICAL=0 \
+            PEBBLELAB_APP_AGENTS_COOPERATION=0 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_APP_AGENTS_POPULATION=1 \
+            PEBBLELAB_APP_AGENTS_MULTISCALE=1 \
+            PEBBLELAB_APP_AGENTS_ECOLOGY=1 \
+            PEBBLELAB_APP_AGENTS_MORTALITY=0 \
+            PEBBLELAB_APP_AGENTS_LIFECYCLE=1 \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT='-|-|-|-|-' \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        fi
+        if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
+            fail "Pebble process remained after reproduction phase: $run_trace"
+        fi
+    }
+
+    printf '\nReproduction phase 1: four mature residents and mid-plan v6 checkpoint.\n'
+    run_reproduction_app "$SESSION_HOME" "$PHASE1_TRACE" "$REPRODUCTION_PHASE1_COMMANDS" 1 100
+    TRACE_PATH="$PHASE1_TRACE"
+    require_trace 'start seed=46 agents=3 tick=0 ' 'historical three-agent bootstrap'
+    require_trace '^\[pebblelab-proof\] disposable-world gate=armed$' 'explicit disposable-world proof gate'
+    require_trace 'migration id=migration-00000003 migrant=agent_3 .*status=arrived ' 'physical agent_3 arrival before lifecycle activation'
+    require_trace 'population gate=enabled enabled=1 settlement=settlement-main capacity=8 members=4 founders=3 residents=4 migrating=0 nextOrdinal=4 ' 'four resident population'
+    require_trace 'lifecycle tick=7 enabled=1 reproduction=0 newborn=0 juvenile=0 mature=4 plans=0 .*ages=agent_0:8/mature,agent_1:8/mature,agent_2:8/mature,agent_3:8/mature nextOrdinal=4 probes=agent_0,agent_1,agent_2,agent_3 ' 'four bootstrap mature lifecycle members'
+    require_trace 'lifecycle tick=10 enabled=1 reproduction=1 newborn=0 juvenile=0 mature=4 plans=1 plan=reproduction-plan-00000010-agent_0-agent_1 due=12 births=0 ' 'deterministic pending plan'
+    require_trace 'reproduction tick=10 enabled=1 eligible=.* pairs=.* plan=reproduction-plan-00000010-agent_0-agent_1 parents=agent_0,agent_1 created=10 due=12 population=4/8 pressure=(abundant|adequate) food=[1-9][0-9]* lastCancellation=none ' 'true reproductive eligibility status'
+    require_trace 'checkpoint saved name=reproduction-midplan .*tick=10 .*restartSafe=1 ' 'restart-safe mid-plan checkpoint'
+    require_trace 'summary .*agents=4 .*runtimeErrors=0 .*probesRemoved=4 ' 'clean mid-plan four-probe cleanup'
+    reject_trace 'birth finalized|runtime error|worldMutation=(block|world)' 'premature birth, runtime error, or World mutation'
+
+    REPRODUCTION_ROOT="$SESSION_HOME/Library/Application Support/Pebble/PebbleLabAgents"
+    MID_MANIFEST=$(/usr/bin/find "$REPRODUCTION_ROOT" -type f -path '*/checkpoints/reproduction-midplan/manifest.json' -print -quit)
+    MID_SESSION=$(/usr/bin/find "$REPRODUCTION_ROOT" -type f -path '*/checkpoints/reproduction-midplan/session.json' -print -quit)
+    [ -n "$MID_MANIFEST" ] && [ -n "$MID_SESSION" ] || fail "mid-plan v6 bundle missing"
+    /usr/bin/grep -q '"schemaVersion":6' "$MID_MANIFEST" || fail "mid-plan manifest is not v6"
+    /usr/bin/grep -q '"schemaVersion":6' "$MID_SESSION" || fail "mid-plan session is not v6"
+    /usr/bin/grep -q '"restartSafe":true' "$MID_MANIFEST" || fail "mid-plan checkpoint is not restart-safe"
+    [ "$(/usr/bin/plutil -extract durableState.lifecycleState.totalBirthCount raw -o - "$MID_SESSION")" = "0" ] \
+        || fail "mid-plan checkpoint already contains a birth"
+    [ "$(/usr/bin/plutil -extract durableState.lifecycleState.plans.0.status raw -o - "$MID_SESSION")" = "planned" ] \
+        && [ "$(/usr/bin/plutil -extract durableState.lifecycleState.plans.0.dueTick raw -o - "$MID_SESSION")" = "12" ] \
+        || fail "mid-plan pending plan is not exact"
+    [ "$(/usr/bin/plutil -extract durableState.populationRegistry.nextPopulationOrdinal raw -o - "$MID_SESSION")" = "4" ] \
+        || fail "mid-plan ordinal is not four"
+    [ "$(/usr/bin/plutil -extract durableState.lifecycleState.members.3.agentID raw -o - "$MID_SESSION")" = "agent_3" ] \
+        && [ "$(/usr/bin/plutil -extract durableState.lifecycleState.members.3.origin raw -o - "$MID_SESSION")" = "importedMigrant" ] \
+        || fail "activation did not preserve the arrived migrant's demographic origin"
+
+    MID_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=reproduction-midplan .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE1_TRACE" | /usr/bin/tail -1)
+    MID_SIM=$(/usr/bin/sed -n 's/.*checkpoint saved name=reproduction-midplan .* simulation=\([^ ]*\) digest=.*/\1/p' "$PHASE1_TRACE" | /usr/bin/tail -1)
+    [ -n "$MID_DIGEST" ] && [ -n "$MID_SIM" ] || fail "mid-plan identity extraction failed"
+
+    CONTROL_DB="$CONTROL_HOME/Library/Application Support/Pebble/pebble.db"
+    /bin/mkdir -p "$(dirname "$CONTROL_DB")"
+    [ ! -e "$CONTROL_DB" ] || fail "fresh reproduction control database already exists"
+    /usr/bin/sqlite3 "$DB_PATH" ".backup '$CONTROL_DB'"
+    [ -s "$CONTROL_DB" ] || fail "reproduction control database snapshot failed"
+    persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
+    case "$persisted_world_tick" in
+        ''|*[!0-9]*) fail "invalid persisted World tick after reproduction phase 1: $persisted_world_tick" ;;
+    esac
+    continuation_command_tick=$((persisted_world_tick + 100))
+
+    REPRODUCTION_PHASE2_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab checkpoint load reproduction-midplan;/lab lifecycle status;/lab reproduction status;/lab step;/lab step;/lab births status;/lab lifecycle status;/lab population status;/lab ecology status;/lab settlement status;/lab checkpoint save reproduction-postbirth;/lab checkpoint status;/lab causality status;/lab status"
+    printf '\nReproduction phase 2: exact mid-plan restore and local birth.\n'
+    run_reproduction_app "$SESSION_HOME" "$PHASE2_TRACE" "$REPRODUCTION_PHASE2_COMMANDS" 0 "$continuation_command_tick"
+    TRACE_PATH="$PHASE2_TRACE"
+    require_trace "checkpoint loaded name=reproduction-midplan .*tick=10 simulation=$MID_SIM digest=$MID_DIGEST .*restartSafe=1 probes=4 paused=1" 'exact mid-plan restore with four probes'
+    require_trace_count '^\[lab-live\] birth site tick=12 plan=reproduction-plan-00000010-agent_0-agent_1 position=.* candidate=[0-9]+ valid=1 validCandidates=[1-9][0-9]* reads=[1-9][0-9]* fingerprint=[0-9-]+ mutation=none$' 1 'one real read-only birth site'
+    require_trace_count '^\[lab-live\] birth finalized tick=12 birth=birth-00000001 plan=reproduction-plan-00000010-agent_0-agent_1 newborn=agent_4 ordinal=4 parents=agent_0,agent_1 position=.* stage=newborn age=0 population=5 nextOrdinal=5 probes=agent_0,agent_1,agent_2,agent_3,agent_4 worldMutation=none$' 1 'one exact local birth'
+    require_trace_count '^\[lab-live\] birth finalized ' 1 'exactly one finalized birth in the restarted phase'
+    require_trace 'lifecycle tick=12 enabled=1 reproduction=1 newborn=1 juvenile=0 mature=4 plans=0 plan=none due=-1 births=1 newbornID=agent_4 ages=.*agent_4:0/newborn nextOrdinal=5 probes=agent_0,agent_1,agent_2,agent_3,agent_4 ' 'birth-tick lifecycle state'
+    require_trace 'checkpoint saved name=reproduction-postbirth .*tick=12 .*restartSafe=1 ' 'restart-safe post-birth checkpoint'
+    require_trace 'summary .*agents=5 .*runtimeErrors=0 .*probesRemoved=5 ' 'clean post-birth five-probe cleanup'
+    reject_trace 'runtime error|worldMutation=(block|world)' 'runtime error or World mutation'
+
+    POST_MANIFEST=$(/usr/bin/find "$REPRODUCTION_ROOT" -type f -path '*/checkpoints/reproduction-postbirth/manifest.json' -print -quit)
+    POST_SESSION=$(/usr/bin/find "$REPRODUCTION_ROOT" -type f -path '*/checkpoints/reproduction-postbirth/session.json' -print -quit)
+    [ -n "$POST_MANIFEST" ] && [ -n "$POST_SESSION" ] || fail "post-birth v6 bundle missing"
+    /usr/bin/grep -q '"schemaVersion":6' "$POST_SESSION" || fail "post-birth session is not v6"
+    [ "$(/usr/bin/plutil -extract durableState.lifecycleState.totalBirthCount raw -o - "$POST_SESSION")" = "1" ] \
+        && [ "$(/usr/bin/plutil -extract durableState.populationRegistry.nextPopulationOrdinal raw -o - "$POST_SESSION")" = "5" ] \
+        || fail "post-birth totals or ordinal are not exact"
+    [ "$(/usr/bin/plutil -extract durableState.agents.4.agentID raw -o - "$POST_SESSION")" = "agent_4" ] \
+        && [ "$(/usr/bin/plutil -extract durableState.agents.4.ticksAlive raw -o - "$POST_SESSION")" = "0" ] \
+        && [ "$(/usr/bin/plutil -extract durableState.agents.4.observationCount raw -o - "$POST_SESSION")" = "0" ] \
+        && [ "$(/usr/bin/plutil -extract durableState.agents.4.actionCount raw -o - "$POST_SESSION")" = "0" ] \
+        && [ "$(/usr/bin/plutil -extract durableState.agents.4.movementCount raw -o - "$POST_SESSION")" = "0" ] \
+        || fail "newborn acted or aged on the birth tick"
+    [ "$(/usr/bin/plutil -extract durableState.agents.4.resourceInventory.totalCount raw -o - "$POST_SESSION" 2>/dev/null || printf 0)" = "0" ] \
+        || fail "newborn inventory is not empty"
+    site_sequence=$(/usr/bin/plutil -extract durableState.lifecycleState.births.0.siteValidatedEventID.sequence raw -o - "$POST_SESSION")
+    born_sequence=$(/usr/bin/plutil -extract durableState.lifecycleState.births.0.populationBornEventID.sequence raw -o - "$POST_SESSION")
+    finalized_sequence=$(/usr/bin/plutil -extract durableState.lifecycleState.births.0.finalizedEventID.sequence raw -o - "$POST_SESSION")
+    [ "$born_sequence" -eq $((site_sequence + 1)) ] \
+        && [ "$finalized_sequence" -eq $((born_sequence + 1)) ] \
+        || fail "birth causal sequence is not exact"
+    POST_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=reproduction-postbirth .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
+    [ -n "$POST_DIGEST" ] || fail "post-birth digest extraction failed"
+
+    persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
+    case "$persisted_world_tick" in
+        ''|*[!0-9]*) fail "invalid persisted World tick after reproduction phase 2: $persisted_world_tick" ;;
+    esac
+    continuation_command_tick=$((persisted_world_tick + 100))
+    REPRODUCTION_PHASE3_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab checkpoint load reproduction-postbirth"
+    reproduction_step=0
+    while [ "$reproduction_step" -lt 8 ]; do
+        REPRODUCTION_PHASE3_COMMANDS="$REPRODUCTION_PHASE3_COMMANDS;/lab step"
+        reproduction_step=$((reproduction_step + 1))
+    done
+    REPRODUCTION_PHASE3_COMMANDS="$REPRODUCTION_PHASE3_COMMANDS;/lab lifecycle status;/lab reproduction status;/lab births status;/lab population status;/lab ecology status;/lab settlement status;/lab checkpoint save reproduction-final;/lab checkpoint status;/lab causality status;/lab status"
+
+    REPRODUCTION_CONTROL_COMMANDS="$REPRODUCTION_BOOTSTRAP_COMMANDS"
+    reproduction_step=0
+    while [ "$reproduction_step" -lt 13 ]; do
+        REPRODUCTION_CONTROL_COMMANDS="$REPRODUCTION_CONTROL_COMMANDS;/lab step"
+        reproduction_step=$((reproduction_step + 1))
+    done
+    REPRODUCTION_CONTROL_COMMANDS="$REPRODUCTION_CONTROL_COMMANDS;/lab lifecycle status;/lab reproduction status;/lab births status;/lab population status;/lab ecology status;/lab settlement status;/lab checkpoint save reproduction-final-control;/lab checkpoint status;/lab causality status;/lab status"
+
+    printf '\nReproduction phase 3: post-birth restore through exact maturity.\n'
+    run_reproduction_app "$SESSION_HOME" "$PHASE3_TRACE" "$REPRODUCTION_PHASE3_COMMANDS" 0 "$continuation_command_tick"
+    TRACE_PATH="$PHASE3_TRACE"
+    require_trace "checkpoint loaded name=reproduction-postbirth .*tick=12 simulation=$MID_SIM digest=$POST_DIGEST .*restartSafe=1 probes=5 paused=1" 'exact post-birth restore with five probes'
+    require_trace 'lifecycle tick=14 enabled=1 reproduction=1 newborn=0 juvenile=1 mature=4 .*births=1 newbornID=agent_4 ages=.*agent_4:2/juvenile ' 'exact juvenile threshold'
+    require_trace 'lifecycle tick=20 enabled=1 reproduction=1 newborn=0 juvenile=0 mature=5 plans=0 plan=none due=-1 births=1 newbornID=agent_4 ages=.*agent_4:8/mature nextOrdinal=5 probes=agent_0,agent_1,agent_2,agent_3,agent_4 ' 'exact mature threshold'
+    require_trace 'checkpoint saved name=reproduction-final .*tick=20 .*restartSafe=1 ' 'final v6 checkpoint'
+    require_trace 'summary .*agents=5 .*runtimeErrors=0 .*probesRemoved=5 ' 'clean final five-probe cleanup'
+    reject_trace 'birth finalized|runtime error|worldMutation=(block|world)' 'duplicate birth, runtime error, or World mutation after restore'
+
+    printf '\nReproduction uninterrupted control.\n'
+    run_reproduction_app "$CONTROL_HOME" "$CONTROL_TRACE" "$REPRODUCTION_CONTROL_COMMANDS" 0 "$continuation_command_tick"
+    TRACE_PATH="$CONTROL_TRACE"
+    require_trace_count '^\[lab-live\] birth finalized tick=12 birth=birth-00000001 plan=reproduction-plan-00000010-agent_0-agent_1 newborn=agent_4 ordinal=4 parents=agent_0,agent_1 position=.* stage=newborn age=0 population=5 nextOrdinal=5 probes=agent_0,agent_1,agent_2,agent_3,agent_4 worldMutation=none$' 1 'one uninterrupted local birth'
+    require_trace_count '^\[lab-live\] birth finalized ' 1 'exactly one finalized birth without restart'
+    require_trace 'lifecycle tick=20 enabled=1 reproduction=1 newborn=0 juvenile=0 mature=5 plans=0 .*births=1 newbornID=agent_4 ages=.*agent_4:8/mature ' 'uninterrupted exact maturity'
+    require_trace 'summary .*agents=5 .*runtimeErrors=0 .*probesRemoved=5 ' 'clean uninterrupted cleanup'
+    reject_trace 'runtime error|worldMutation=(block|world)' 'uninterrupted runtime error or World mutation'
+
+    LIVE_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=reproduction-final .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE3_TRACE" | /usr/bin/tail -1)
+    CONTROL_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=reproduction-final-control .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    LIVE_LIFECYCLE_DIGEST=$(/usr/bin/sed -n 's/.*lifecycle tick=20 .* digest=\([0-9a-f]*\)$/\1/p' "$PHASE3_TRACE" | /usr/bin/tail -1)
+    CONTROL_LIFECYCLE_DIGEST=$(/usr/bin/sed -n 's/.*lifecycle tick=20 .* digest=\([0-9a-f]*\)$/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    LIVE_POPULATION_DIGEST=$(/usr/bin/sed -n 's/.*population gate=enabled .* digest=\([0-9a-f]*\)$/\1/p' "$PHASE3_TRACE" | /usr/bin/tail -1)
+    CONTROL_POPULATION_DIGEST=$(/usr/bin/sed -n 's/.*population gate=enabled .* digest=\([0-9a-f]*\)$/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    LIVE_ECOLOGY_DIGEST=$(/usr/bin/sed -n 's/.*ecology gate=enabled .* digest=\([0-9a-f]*\) ecologyConservation=.*/\1/p' "$PHASE3_TRACE" | /usr/bin/tail -1)
+    CONTROL_ECOLOGY_DIGEST=$(/usr/bin/sed -n 's/.*ecology gate=enabled .* digest=\([0-9a-f]*\) ecologyConservation=.*/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    LIVE_SETTLEMENT_DIGEST=$(/usr/bin/sed -n 's/.*settlement gate=enabled .* digest=\([0-9a-f]*\)$/\1/p' "$PHASE3_TRACE" | /usr/bin/tail -1)
+    CONTROL_SETTLEMENT_DIGEST=$(/usr/bin/sed -n 's/.*settlement gate=enabled .* digest=\([0-9a-f]*\)$/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    LIVE_CAUSAL_DIGEST=$(/usr/bin/sed -n 's/.*causality status .* digest=\([0-9a-f]*\)$/\1/p' "$PHASE3_TRACE" | /usr/bin/tail -1)
+    CONTROL_CAUSAL_DIGEST=$(/usr/bin/sed -n 's/.*causality status .* digest=\([0-9a-f]*\)$/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    [ -n "$LIVE_DIGEST" ] && [ "$LIVE_DIGEST" = "$CONTROL_DIGEST" ] \
+        || fail "reproduction restart/uninterrupted durable digest mismatch"
+    [ "$LIVE_LIFECYCLE_DIGEST" = "$CONTROL_LIFECYCLE_DIGEST" ] \
+        || fail "reproduction restart/uninterrupted lifecycle digest mismatch"
+    [ "$LIVE_POPULATION_DIGEST" = "$CONTROL_POPULATION_DIGEST" ] \
+        || fail "reproduction restart/uninterrupted population digest mismatch"
+    [ "$LIVE_ECOLOGY_DIGEST" = "$CONTROL_ECOLOGY_DIGEST" ] \
+        || fail "reproduction restart/uninterrupted ecology digest mismatch"
+    [ "$LIVE_SETTLEMENT_DIGEST" = "$CONTROL_SETTLEMENT_DIGEST" ] \
+        || fail "reproduction restart/uninterrupted settlement digest mismatch"
+    [ "$LIVE_CAUSAL_DIGEST" = "$CONTROL_CAUSAL_DIGEST" ] \
+        || fail "reproduction restart/uninterrupted causal digest mismatch"
+
+    /bin/cat "$PHASE2_TRACE" "$PHASE3_TRACE" \
+        | /usr/bin/grep -E '^\[lab-live\] (tick=(11|1[2-9]|20) |lifecycle tick=(11|1[2-9]|20) |birth (site|finalized) tick=12 )' \
+        > "$SESSION_ROOT/restart-reproduction.normalized"
+    /usr/bin/grep -E '^\[lab-live\] (tick=(11|1[2-9]|20) |lifecycle tick=(11|1[2-9]|20) |birth (site|finalized) tick=12 )' "$CONTROL_TRACE" \
+        > "$SESSION_ROOT/control-reproduction.normalized"
+    /usr/bin/cmp "$SESSION_ROOT/restart-reproduction.normalized" "$SESSION_ROOT/control-reproduction.normalized" \
+        || fail "reproduction restart and uninterrupted traces differ"
+
+    FINAL_SESSION=$(/usr/bin/find "$REPRODUCTION_ROOT" -type f -path '*/checkpoints/reproduction-final/session.json' -print -quit)
+    [ -n "$FINAL_SESSION" ] || fail "final reproduction checkpoint missing"
+    [ "$(/usr/bin/plutil -extract durableState.lifecycleState.totalBirthCount raw -o - "$FINAL_SESSION")" = "1" ] \
+        && [ "$(/usr/bin/plutil -extract durableState.lifecycleState.members.4.currentStage raw -o - "$FINAL_SESSION")" = "mature" ] \
+        && [ "$(/usr/bin/plutil -extract durableState.populationRegistry.nextPopulationOrdinal raw -o - "$FINAL_SESSION")" = "5" ] \
+        || fail "final birth, maturity, or ordinal changed"
+    stage_event_count=$(/usr/bin/plutil -extract durableState.causalLedger.events json -o - "$FINAL_SESSION" \
+        | /usr/bin/grep -o '"kind":"lifeStageChanged"' | /usr/bin/wc -l | /usr/bin/tr -d ' ')
+    [ "$stage_event_count" = "2" ] || fail "expected exactly two lifecycle stage events, got $stage_event_count"
+    mature_stage_sequence=$(/usr/bin/plutil -extract \
+        durableState.lifecycleState.members.4.lastLifecycleEventID.sequence raw -o - "$FINAL_SESSION")
+    mature_stage_index=$((mature_stage_sequence - 1))
+    [ "$(/usr/bin/plutil -extract \
+        "durableState.causalLedger.events.$mature_stage_index.kind" raw -o - "$FINAL_SESSION")" \
+        = "lifeStageChanged" ] || fail "expected terminal lifecycle event to be mature stage change"
+    juvenile_stage_sequence=$(/usr/bin/plutil -extract \
+        "durableState.causalLedger.events.$mature_stage_index.causes.0.sequence" raw -o - "$FINAL_SESSION")
+    juvenile_stage_index=$((juvenile_stage_sequence - 1))
+    [ "$(/usr/bin/plutil -extract \
+        "durableState.causalLedger.events.$juvenile_stage_index.kind" raw -o - "$FINAL_SESSION")" \
+        = "lifeStageChanged" ] || fail "expected mature stage cause to be juvenile stage change"
+    stage_event_ticks=$(printf '%s\n%s' \
+        "$(/usr/bin/plutil -extract \
+            "durableState.causalLedger.events.$juvenile_stage_index.instant.tick" raw -o - "$FINAL_SESSION")" \
+        "$(/usr/bin/plutil -extract \
+            "durableState.causalLedger.events.$mature_stage_index.instant.tick" raw -o - "$FINAL_SESSION")")
+    expected_stage_event_ticks=$(printf '14\n20')
+    [ "$stage_event_ticks" = "$expected_stage_event_ticks" ] \
+        || fail "expected lifecycle stage causal ticks 14 and 20, got: $stage_event_ticks"
+    if /usr/bin/pgrep -f '[/]PebbleLab-live\.' >/dev/null 2>&1; then
+        fail "residual PebbleLab process after reproduction proof"
+    fi
+    printf '\nPASS: deterministic lifecycle age, one bounded local birth, v6 pre/post restart, exact maturity, and uninterrupted equivalence verified.\n'
+    printf 'Phase 1 trace: %s\n' "$PHASE1_TRACE"
+    printf 'Phase 2 trace: %s\n' "$PHASE2_TRACE"
+    printf 'Phase 3 trace: %s\n' "$PHASE3_TRACE"
+    printf 'Control trace: %s\n' "$CONTROL_TRACE"
+    printf 'Final durable digest: %s\n' "$LIVE_DIGEST"
+    printf 'Lifecycle digest: %s\n' "$LIVE_LIFECYCLE_DIGEST"
+    printf 'Population digest: %s\n' "$LIVE_POPULATION_DIGEST"
+    printf 'Ecology digest: %s\n' "$LIVE_ECOLOGY_DIGEST"
+    printf 'Settlement digest: %s\n' "$LIVE_SETTLEMENT_DIGEST"
+    printf 'Causal digest: %s\n' "$LIVE_CAUSAL_DIGEST"
+    printf 'Retained isolated session: %s\n' "$SESSION_ROOT"
+    exit 0
 fi
 
 if [ "$MODE" = "mortality" ]; then

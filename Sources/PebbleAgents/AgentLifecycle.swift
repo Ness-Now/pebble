@@ -52,12 +52,17 @@ public enum AgentReproductionPlanStatus: String, Codable, CaseIterable, Sendable
 public enum AgentReproductionPlanReason: String, Codable, CaseIterable, Sendable {
     case completed
     case reproductionDisabled
+    case parentUnavailable
     case parentDied
+    case parentMigrating
+    case parentImmature
+    case kinshipInvalid
     case parentIneligible
     case populationFull
-    case subsistenceUnavailable
+    case subsistenceInsufficient
     case birthSiteUnavailable
     case invalidObservation
+    case staleObservation
 }
 
 public enum AgentLifecycleError: Error, Equatable, CustomStringConvertible {
@@ -72,6 +77,7 @@ public enum AgentLifecycleError: Error, Equatable, CustomStringConvertible {
     case invalidMember(String)
     case invalidPlan(String)
     case invalidObservation(String)
+    case staleObservation(String)
     case populationFull
     case ordinalOverflow
     case ageOverflow(String)
@@ -89,6 +95,7 @@ public enum AgentLifecycleError: Error, Equatable, CustomStringConvertible {
         case let .invalidMember(id): return "invalid lifecycle member \(id)"
         case let .invalidPlan(id): return "invalid reproduction plan \(id)"
         case let .invalidObservation(id): return "invalid birth site observation \(id)"
+        case let .staleObservation(id): return "stale birth site observation \(id)"
         case .populationFull: return "population capacity reached"
         case .ordinalOverflow: return "population ordinal overflow"
         case let .ageOverflow(id): return "demographic age overflow for \(id)"

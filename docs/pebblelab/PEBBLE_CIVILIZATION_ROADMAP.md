@@ -37,12 +37,16 @@ Le point de départ est le HEAD post-K :
 - mortalité par famine bornée acquise sous gate explicite : transition
   terminale atomique, death records durables, ressources terminales
   comptabilisées, sortie de population et retrait du probe, puis remplacement
-  physique par un nouvel AgentID monotone avec checkpoint/replay v5.
+  physique par un nouvel AgentID monotone avec checkpoint/replay v5 ;
+- âge démographique déterministe distinct de `ticksAlive`, stages
+  `newborn`/`juvenile`/`mature` et reproduction locale bornée acquis sous gate
+  explicite : deux progéniteurs historiques, site World validé en lecture
+  seule, AgentID monotone et checkpoint/replay v6.
 
 Le langage libre, le forwarding, les professions, l'économie du travail, la
 persistance complète des agents, le replay complet du World, la grande
-population, les naissances, le vieillissement, les maladies, la reproduction,
-les familles, l'émigration et le cycle de vie complet ne sont pas acquis.
+population, le vieillissement physique, les maladies, les familles,
+l'émigration et le cycle de vie complet ne sont pas acquis.
 
 Ce stade ne doit pas être décrit comme une civilisation déjà implémentée.
 
@@ -123,8 +127,16 @@ Le record terminal v5 fige les compteurs cognitifs et matériels, et la preuve
 contractuelle couvre l'ordre causal létal exact ainsi que le nettoyage des
 références actives de chaque verticale sans supprimer leurs historiques.
 Cette V1 ne crée aucun cadavre et n'ouvre ni vieillissement, maladie,
-reproduction, famille ou héritage. La prochaine étape canonique est
-`CIV-11 — Age, Maturity and Bounded Reproduction V1`.
+reproduction, famille ou héritage. `CIV-11` est terminé et validé localement :
+le lifecycle dérive un âge démographique de l'horloge simulée, conserve
+`ticksAlive`, classe les membres en `newborn`, `juvenile` et `mature`, puis
+peut produire une naissance locale atomique dans la limite de population. La
+preuve sélectionne deux progéniteurs historiques sans créer couple ni foyer,
+valide un site World en lecture seule, crée `agent_4` avec un ordinal monotone
+et restaure exactement le plan, la naissance et la maturation via le schéma
+checkpoint/replay v6. Cette V1 n'introduit aucun sexe, grossesse, famille,
+génétique ou héritage. La prochaine étape canonique est
+`CIV-12 — Kinship, Households and Dependent Care V1`.
 
 ## Grands programmes ultérieurs
 

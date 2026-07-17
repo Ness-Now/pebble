@@ -144,6 +144,14 @@ func runPebbleAgentsAgeMaturityReproductionSmoke() {
             AgentLifecycleConfiguration.self, from: bytes
         )) == configuration
     }())
+    let requiredPlanReasons = Set([
+        "parentUnavailable", "parentDied", "parentMigrating", "parentImmature",
+        "kinshipInvalid", "populationFull", "subsistenceInsufficient",
+        "birthSiteUnavailable", "reproductionDisabled", "staleObservation",
+    ])
+    check("reproduction typed cancellation reasons complete", Set(
+        AgentReproductionPlanReason.allCases.map(\.rawValue)
+    ).isSuperset(of: requiredPlanReasons))
 
     var disabled = lifecycleSmokeBase("sim-lifecycle-disabled")
     let disabledBefore = try! disabled.durableStateBytes()
@@ -268,23 +276,106 @@ func runPebbleAgentsAgeMaturityReproductionSmoke() {
     check("lifecycle v6 post-birth no duplicate birth", birthRestored.lifecycleSummary().totalBirthCount == 1
         && birthRestored.populationSummary().nextPopulationOrdinal == 4)
 
+    var restartDirect = session
+    _ = try! restartDirect.advanceTick()
+    let preJuvenileTick = restartDirect.tick
+    let preJuvenileCheckpoint = try! restartDirect.makeCheckpoint()
+    var restartRestored = try! AgentSimulationSession.restoring(preJuvenileCheckpoint)
+    _ = try! restartDirect.advanceTick()
+    _ = try! restartRestored.advanceTick()
+    let restartDirectMember = restartDirect.lifecycleSnapshot().members.first {
+        $0.agentID.rawValue == "agent_3"
+    }!
+    let restartRestoredMember = restartRestored.lifecycleSnapshot().members.first {
+        $0.agentID.rawValue == "agent_3"
+    }!
+    let restartDirectEvent = restartDirect.causalLedgerSnapshot().events.last {
+        $0.kind == .lifeStageChanged && $0.subjectID?.rawValue == "agent_3"
+    }!
+    let restartRestoredEvent = restartRestored.causalLedgerSnapshot().events.last {
+        $0.kind == .lifeStageChanged && $0.subjectID?.rawValue == "agent_3"
+    }!
+    check("lifecycle restart pre-transition tick exact", preJuvenileTick == 5
+        && restartDirect.tick == 6 && restartRestored.tick == 6)
+    check("lifecycle restart stage event tick exact", restartDirectMember.currentStage == .juvenile
+        && restartDirectMember.lastStageTransitionTick == 6
+        && restartDirectEvent.simulationTick.rawValue == 6
+        && restartDirectEvent.instant.tick.rawValue == 6)
+    check("lifecycle restart event sequence exact", restartDirectEvent.eventID
+        == restartRestoredEvent.eventID && restartDirectMember == restartRestoredMember)
+    check("lifecycle restart continuation bytes exact", try! restartDirect.durableStateBytes()
+        == restartRestored.durableStateBytes())
+
     _ = try! session.advanceTick()
     let afterFirstCognition = session.snapshot().agents.first { $0.id == "agent_3" }!
     check("newborn first cognition is next tick", afterFirstCognition.ticksAlive == 1
         && afterFirstCognition.goalSelectionCount == 1
         && afterFirstCognition.actionCount == 1)
     lifecycleAdvance(&session, to: 6)
-    check("newborn transitions to juvenile at age two", session.lifecycleSnapshot().members
-        .first { $0.agentID.rawValue == "agent_3" }?.currentStage == .juvenile
+    let juvenileMember = session.lifecycleSnapshot().members.first {
+        $0.agentID.rawValue == "agent_3"
+    }!
+    let juvenileEvents = session.causalLedgerSnapshot().events.filter {
+        $0.kind == .lifeStageChanged && $0.subjectID?.rawValue == "agent_3"
+    }
+    check("newborn transitions to juvenile at age two", juvenileMember.currentStage == .juvenile
         && (try! session.demographicAge(for: AgentID(rawValue: "agent_3")!)) == 2)
+    check("lifecycle juvenile event tick exact", juvenileMember.lastStageTransitionTick == 6
+        && juvenileEvents.count == 1
+        && juvenileEvents[0].simulationTick.rawValue == 6
+        && juvenileEvents[0].instant.tick.rawValue == 6)
     lifecycleAdvance(&session, to: 12)
-    check("juvenile transitions to mature at age eight", session.lifecycleSnapshot().members
-        .first { $0.agentID.rawValue == "agent_3" }?.currentStage == .mature
+    let matureMember = session.lifecycleSnapshot().members.first {
+        $0.agentID.rawValue == "agent_3"
+    }!
+    let stageEvents = session.causalLedgerSnapshot().events.filter {
+        $0.kind == .lifeStageChanged && $0.subjectID?.rawValue == "agent_3"
+    }
+    check("juvenile transitions to mature at age eight", matureMember.currentStage == .mature
         && (try! session.demographicAge(for: AgentID(rawValue: "agent_3")!)) == 8)
+    check("lifecycle mature event tick exact", matureMember.lastStageTransitionTick == 12
+        && stageEvents.count == 2
+        && stageEvents[1].simulationTick.rawValue == 12
+        && stageEvents[1].instant.tick.rawValue == 12)
+    check("lifecycle stage event matches transition tick", stageEvents.map {
+        $0.simulationTick.rawValue
+    } == [6, 12] && matureMember.lastStageTransitionTick == stageEvents.last?.simulationTick.rawValue)
+    check("lifecycle stage causal tick exact without mortality", stageEvents.map {
+        $0.instant.tick.rawValue
+    } == [6, 12])
+    check("lifecycle stage event emitted once", stageEvents.count == 2
+        && Set(stageEvents.map(\.eventID)).count == 2)
     check("ticksAlive remains separate from demographic age", try! session.state(for: "agent_3").ticksAlive == 8
         && (try! session.demographicAge(for: AgentID(rawValue: "agent_0")!)) == 20)
     check("reproduction cooldown prevents immediate second birth", session.lifecycleSummary().totalBirthCount == 1
         && session.lifecycleSummary().activePlanCount == 0)
+
+    var mortalityClock = lifecycleSmokeBase("sim-lifecycle-stage-mortality-on")
+    try! mortalityClock.setLifecycleEnabled(true)
+    try! mortalityClock.setReproductionEnabled(true)
+    mortalityClock.setSurvivalEnabled(true)
+    try! mortalityClock.setMortalityEnabled(true)
+    lifecycleAdvance(&mortalityClock, to: 4)
+    _ = lifecycleResolveBirth(
+        &mortalityClock, position: AgentPosition(x: 0, y: 64, z: 4)
+    )
+    let mortalityBirthTick = mortalityClock.tick
+    _ = try! mortalityClock.advanceTick()
+    let mortalityIntermediateTick = mortalityClock.tick
+    _ = try! mortalityClock.advanceTick()
+    let mortalityJuvenile = mortalityClock.lifecycleSnapshot().members.first {
+        $0.agentID.rawValue == "agent_3"
+    }!
+    let mortalityJuvenileEvent = mortalityClock.causalLedgerSnapshot().events.last {
+        $0.kind == .lifeStageChanged && $0.subjectID?.rawValue == "agent_3"
+    }!
+    check("lifecycle mortality clock advances once", mortalityBirthTick == 4
+        && mortalityIntermediateTick == 5 && mortalityClock.tick == 6)
+    check("lifecycle stage causal tick exact with mortality", mortalityJuvenile.currentStage == .juvenile
+        && mortalityJuvenile.lastStageTransitionTick == 6
+        && mortalityJuvenileEvent.simulationTick.rawValue == 6
+        && mortalityJuvenileEvent.instant.tick.rawValue == 6
+        && mortalityClock.mortalitySummary().totalDeathCount == 0)
 
     var adequate = lifecycleSmokeBase(
         "sim-lifecycle-adequate",
@@ -352,6 +443,25 @@ func runPebbleAgentsAgeMaturityReproductionSmoke() {
     check("reproduction invalid observation atomic bytes", atomicBefore
         == (try! atomic.durableStateBytes()))
 
+    let stalePlan = atomic.pendingBirthSitePlan()!
+    let staleBefore = try! atomic.durableStateBytes()
+    let staleRejected: Bool
+    do {
+        _ = try atomic.applyBirthSiteObservation(AgentBirthSiteObservation(
+            planID: stalePlan.planID,
+            observedTick: atomic.tick - 1,
+            position: AgentPosition(x: 0, y: 64, z: 4),
+            candidateIndex: 0,
+            worldFingerprint: 1
+        ))
+        staleRejected = false
+    } catch AgentSessionError.lifecycle(.staleObservation(stalePlan.planID.rawValue)) {
+        staleRejected = true
+    } catch { staleRejected = false }
+    check("reproduction stale observation rejected atomically", staleRejected
+        && staleBefore == (try! atomic.durableStateBytes())
+        && atomic.populationSummary().nextPopulationOrdinal == 3)
+
     var imported = lifecycleSmokeBase("sim-lifecycle-imported")
     try! imported.setLifecycleEnabled(true)
     _ = try! imported.admitMigration(
@@ -414,6 +524,54 @@ func runPebbleAgentsAgeMaturityReproductionSmoke() {
     check("reproduction parent death consumes no ordinal", parentDeath.populationSummary()
         .nextPopulationOrdinal == 3)
 
+    let newbornLethalSurvival = try! AgentSurvivalConfiguration(
+        hungerPerTick: 1,
+        fatiguePerTick: liveSurvival.fatiguePerTick,
+        hungryThreshold: liveSurvival.hungryThreshold,
+        criticalHungerThreshold: liveSurvival.criticalHungerThreshold,
+        hungerRecoveryThreshold: liveSurvival.hungerRecoveryThreshold,
+        fatigueThreshold: liveSurvival.fatigueThreshold,
+        fatigueRecoveryThreshold: liveSurvival.fatigueRecoveryThreshold,
+        foodNutrition: liveSurvival.foodNutrition,
+        restRecoveryPerTick: liveSurvival.restRecoveryPerTick,
+        starvationGraceTicks: 0,
+        starvationDamagePerTick: 100
+    )
+    var newbornDeath = lifecycleSmokeBase(
+        "sim-lifecycle-newborn-death",
+        survivalConfiguration: newbornLethalSurvival
+    )
+    try! newbornDeath.setLifecycleEnabled(true)
+    try! newbornDeath.setReproductionEnabled(true)
+    lifecycleAdvance(&newbornDeath, to: 4)
+    let newbornDeathBirth = lifecycleResolveBirth(
+        &newbornDeath, position: AgentPosition(x: 0, y: 64, z: 4)
+    )
+    let newbornMember = newbornDeath.lifecycleSnapshot().members.first {
+        $0.agentID == newbornDeathBirth.newbornID
+    }!
+    newbornDeath.setSurvivalEnabled(true)
+    try! newbornDeath.setMortalityEnabled(true)
+    _ = try! newbornDeath.advanceTick()
+    check("lifecycle newborn death uses true mortality transition",
+          newbornMember.currentStage == .newborn
+            && (try! newbornMember.age(at: newbornDeathBirth.birthTick)) == 0
+            && newbornDeath.mortalitySnapshot().records.contains {
+                $0.agentID == newbornDeathBirth.newbornID
+            }
+            && !newbornDeath.snapshot().agents.contains {
+                $0.id == newbornDeathBirth.newbornID.rawValue
+            })
+    check("lifecycle newborn death preserves birth history",
+          newbornDeath.lifecycleSnapshot().births.contains {
+              $0.birthID == newbornDeathBirth.birthID
+                && $0.newbornID == newbornDeathBirth.newbornID
+                && $0.progenitorIDs == newbornDeathBirth.progenitorIDs
+          }
+            && !newbornDeath.lifecycleSnapshot().members.contains {
+                $0.agentID == newbornDeathBirth.newbornID
+            })
+
     var lineage = lifecycleSmokeBase("sim-lifecycle-lineage")
     try! lineage.setLifecycleEnabled(true)
     try! lineage.setReproductionEnabled(true)
@@ -463,6 +621,11 @@ func runPebbleAgentsAgeMaturityReproductionSmoke() {
         candidateIndex: 0,
         worldFingerprint: 9_001
     )), to: &replayBase)
+    for _ in 0..<AgentLifecycleConfiguration.live.maturityAgeTicks {
+        _ = try! recorder.apply(
+            .advanceTick(perceptions: [], physicalObservations: []), to: &replayBase
+        )
+    }
     let journal = try! recorder.journal(
         named: AgentCheckpointName(rawValue: "lifecycle-reproduction")!
     )
@@ -477,4 +640,15 @@ func runPebbleAgentsAgeMaturityReproductionSmoke() {
         == "agent_3")
     check("lifecycle replay causal digest exact", replayBase.causalLedgerSnapshot().summary.digest
         == replayed.session.causalLedgerSnapshot().summary.digest)
+    let replayDirectStageEvents = replayBase.causalLedgerSnapshot().events.filter {
+        $0.kind == .lifeStageChanged && $0.subjectID?.rawValue == "agent_3"
+    }
+    let replayedStageEvents = replayed.session.causalLedgerSnapshot().events.filter {
+        $0.kind == .lifeStageChanged && $0.subjectID?.rawValue == "agent_3"
+    }
+    check("lifecycle replay stage ticks exact", replayDirectStageEvents.map {
+        $0.simulationTick.rawValue
+    } == [6, 12] && replayedStageEvents == replayDirectStageEvents)
+    check("lifecycle replay digest exact", replayBase.lifecycleSummary().digest
+        == replayed.session.lifecycleSummary().digest)
 }
