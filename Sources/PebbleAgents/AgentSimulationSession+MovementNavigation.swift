@@ -228,7 +228,8 @@ extension AgentSimulationSession {
                 target: target.target,
                 resource: target.resource,
                 source: target.source,
-                expectedBlockFingerprint: target.expectedBlockFingerprint
+                expectedBlockFingerprint: target.expectedBlockFingerprint,
+                ecologyPatchID: target.ecologyPatchID
             ), default: []]
                 .append(id)
         }
@@ -246,6 +247,7 @@ extension AgentSimulationSession {
                 resource: target.resource,
                 source: target.source,
                 expectedBlockFingerprint: target.expectedBlockFingerprint,
+                ecologyPatchID: target.ecologyPatchID,
                 acquiredAtTick: prior?.agentId == owner ? prior!.acquiredAtTick : reservationTick,
                 expiresAtTick: reservationTick + configuration.reservationLifetimeTicks
             )
@@ -710,7 +712,8 @@ extension AgentSimulationSession {
             target: target.target,
             resource: target.resource,
             source: target.source,
-            expectedBlockFingerprint: target.expectedBlockFingerprint
+            expectedBlockFingerprint: target.expectedBlockFingerprint,
+            ecologyPatchID: target.ecologyPatchID
         )]
             .flatMap { $0.agentId == state.id ? $0 : nil }
     }
@@ -721,7 +724,8 @@ extension AgentSimulationSession {
             target: target.target,
             resource: target.resource,
             source: target.source,
-            expectedBlockFingerprint: target.expectedBlockFingerprint
+            expectedBlockFingerprint: target.expectedBlockFingerprint,
+            ecologyPatchID: target.ecologyPatchID
         )
         if reservationsByTarget[key]?.agentId == state.id {
             reservationsByTarget.removeValue(forKey: key)
@@ -747,13 +751,15 @@ extension AgentSimulationSession {
         target: AgentPosition,
         resource: AgentResourceKind,
         source: AgentResourceObservationSource = .sandboxFixture,
-        expectedBlockFingerprint: Int? = nil
+        expectedBlockFingerprint: Int? = nil,
+        ecologyPatchID: AgentEcologyPatchID? = nil
     ) -> String {
         AgentResourceIdentity(
             source: source,
             position: target,
             resource: resource,
-            expectedBlockFingerprint: expectedBlockFingerprint
+            expectedBlockFingerprint: expectedBlockFingerprint,
+            ecologyPatchID: ecologyPatchID
         ).stableKey
     }
 
@@ -765,13 +771,15 @@ extension AgentSimulationSession {
             target: lhs.target,
             resource: lhs.resource,
             source: lhs.source,
-            expectedBlockFingerprint: lhs.expectedBlockFingerprint
+            expectedBlockFingerprint: lhs.expectedBlockFingerprint,
+            ecologyPatchID: lhs.ecologyPatchID
         )
         let rhsKey = reservationKey(
             target: rhs.target,
             resource: rhs.resource,
             source: rhs.source,
-            expectedBlockFingerprint: rhs.expectedBlockFingerprint
+            expectedBlockFingerprint: rhs.expectedBlockFingerprint,
+            ecologyPatchID: rhs.ecologyPatchID
         )
         if lhsKey != rhsKey { return lhsKey < rhsKey }
         return lhs.agentId < rhs.agentId

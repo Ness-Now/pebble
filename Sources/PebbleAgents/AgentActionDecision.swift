@@ -417,7 +417,10 @@ public enum AgentActionDecider {
                     source: $0.source,
                     distanceManhattan: $0.distanceManhattan,
                     selectedAtTick: input.tick,
-                    lastSeenAtTick: input.tick
+                    lastSeenAtTick: input.tick,
+                    expectedBlockFingerprint: $0.expectedBlockFingerprint,
+                    ecologyPatchID: $0.ecologyPatchID,
+                    observationTick: $0.observationTick
                 )
             }
             guard let target else {
@@ -466,8 +469,10 @@ public enum AgentActionDecider {
                 )
             }
             return AgentAction(
-                name: "harvest_block",
-                reason: "goal \(goalName): adjacent sandbox resource",
+                name: target.source == .localEcology ? "forage_food" : "harvest_block",
+                reason: target.source == .localEcology
+                    ? "goal \(goalName): adjacent local ecology patch"
+                    : "goal \(goalName): adjacent sandbox resource",
                 tick: input.tick,
                 target: target.target,
                 resource: target.resource

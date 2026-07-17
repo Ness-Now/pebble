@@ -102,6 +102,14 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case settlementMacroPulse
     case settlementMetricsCleared
     case settlementMetricsDisabled
+    case localEcologyInitialized
+    case ecologyPatchRegistered
+    case ecologyPatchRegenerated
+    case ecologyForageResolved
+    case ecologyPatchDepleted
+    case ecologyPatchInvalidated
+    case subsistencePressureChanged
+    case localEcologyStateCleared
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -116,6 +124,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case cooperationTransition
     case populationTransition
     case settlementTransition
+    case ecologyTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -220,6 +229,42 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         coverageComplete: Bool,
         status: String
     )
+    case ecologyPatch(
+        patchID: String?,
+        settlementID: String,
+        position: AgentPosition?,
+        fingerprint: Int?,
+        yieldBefore: Int,
+        yieldDelta: Int,
+        yieldAfter: Int,
+        capacity: Int,
+        status: String,
+        reason: String
+    )
+    case ecologyForage(
+        forageID: String,
+        patchID: String,
+        agentID: String,
+        status: String,
+        yieldBefore: Int,
+        yieldAfter: Int,
+        inventoryBefore: Int,
+        inventoryAfter: Int
+    )
+    case subsistencePressure(
+        previous: String?,
+        current: String,
+        population: Int,
+        hungry: Int,
+        critical: Int,
+        available: Int,
+        carried: Int,
+        stocked: Int,
+        regenerated: Int,
+        consumed: Int,
+        starvationDamage: Int
+    )
+    case ecologyClear(forageHistory: Int, pressureFrames: Int)
 
     var canonicalText: String {
         switch self {
@@ -289,6 +334,29 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
                 + "\(urgent)|\(migrating)|\(engaged)|\(stable)|\(movementDelta)|"
                 + "\(materialActivityDelta)|\(socialActivityDelta)|"
                 + "\(cooperationActivityDelta)|\(coverageComplete ? 1 : 0)|\(status)"
+        case let .ecologyPatch(
+            patchID, settlementID, position, fingerprint, yieldBefore, yieldDelta,
+            yieldAfter, capacity, status, reason
+        ):
+            let point = position.map { "\($0.x),\($0.y),\($0.z)" } ?? "none"
+            return "ecologyPatch|\(patchID ?? "none")|\(settlementID)|\(point)|"
+                + "\(fingerprint.map(String.init) ?? "none")|\(yieldBefore)|\(yieldDelta)|"
+                + "\(yieldAfter)|\(capacity)|\(status)|\(reason)"
+        case let .ecologyForage(
+            forageID, patchID, agentID, status, yieldBefore, yieldAfter,
+            inventoryBefore, inventoryAfter
+        ):
+            return "ecologyForage|\(forageID)|\(patchID)|\(agentID)|\(status)|"
+                + "\(yieldBefore)|\(yieldAfter)|\(inventoryBefore)|\(inventoryAfter)"
+        case let .subsistencePressure(
+            previous, current, population, hungry, critical, available, carried,
+            stocked, regenerated, consumed, starvationDamage
+        ):
+            return "subsistencePressure|\(previous ?? "none")|\(current)|\(population)|"
+                + "\(hungry)|\(critical)|\(available)|\(carried)|\(stocked)|"
+                + "\(regenerated)|\(consumed)|\(starvationDamage)"
+        case let .ecologyClear(forageHistory, pressureFrames):
+            return "ecologyClear|\(forageHistory)|\(pressureFrames)"
         }
     }
 }
@@ -400,7 +468,15 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.settlementMetricsInitialized, .settlementMetrics),
              (.settlementMacroPulse, .settlementMetrics),
              (.settlementMetricsCleared, .settlementMetrics),
-             (.settlementMetricsDisabled, .settlementMetrics):
+             (.settlementMetricsDisabled, .settlementMetrics),
+             (.localEcologyInitialized, .ecologyPatch),
+             (.ecologyPatchRegistered, .ecologyPatch),
+             (.ecologyPatchRegenerated, .ecologyPatch),
+             (.ecologyPatchDepleted, .ecologyPatch),
+             (.ecologyPatchInvalidated, .ecologyPatch),
+             (.ecologyForageResolved, .ecologyForage),
+             (.subsistencePressureChanged, .subsistencePressure),
+             (.localEcologyStateCleared, .ecologyClear):
             matches = true
         default:
             matches = false

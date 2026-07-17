@@ -417,6 +417,7 @@ public struct AgentResourceReservation: Codable, Equatable {
     public let resource: AgentResourceKind
     public let source: AgentResourceObservationSource
     public let expectedBlockFingerprint: Int?
+    public let ecologyPatchID: AgentEcologyPatchID?
     public let acquiredAtTick: Int
     public let expiresAtTick: Int
 
@@ -426,6 +427,7 @@ public struct AgentResourceReservation: Codable, Equatable {
         resource: AgentResourceKind,
         source: AgentResourceObservationSource = .sandboxFixture,
         expectedBlockFingerprint: Int? = nil,
+        ecologyPatchID: AgentEcologyPatchID? = nil,
         acquiredAtTick: Int,
         expiresAtTick: Int
     ) {
@@ -434,6 +436,7 @@ public struct AgentResourceReservation: Codable, Equatable {
         self.resource = resource
         self.source = source
         self.expectedBlockFingerprint = expectedBlockFingerprint
+        self.ecologyPatchID = ecologyPatchID
         self.acquiredAtTick = acquiredAtTick
         self.expiresAtTick = expiresAtTick
     }

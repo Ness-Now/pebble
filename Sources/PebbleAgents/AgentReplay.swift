@@ -4,10 +4,11 @@ public enum AgentReplaySchema {
     public static let currentVersion = 1
     public static let populationVersion = 2
     public static let settlementMetricsVersion = 3
+    public static let localEcologyVersion = 4
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
-            || version == settlementMetricsVersion
+            || version == settlementMetricsVersion || version == localEcologyVersion
     }
 }
 
@@ -56,6 +57,11 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case settlementMetricsFeature
     case settlementMetricsClear
     case settlementPulseBoundary
+    case localEcologyFeature
+    case localEcologyInitialization
+    case ecologyHabitatValidation
+    case ecologyForageOutcomes
+    case ecologyClear
 }
 
 public enum AgentReplayOperation: Codable {
@@ -111,6 +117,17 @@ public enum AgentReplayOperation: Codable {
     case setSettlementMetricsEnabled(Bool, configuration: AgentSettlementMetricsConfiguration)
     case clearSettlementMetrics
     case settlementPulseBoundary
+    case setLocalEcologyEnabled(Bool)
+    case initializeLocalEcology(
+        observations: [AgentEcologyHabitatObservation],
+        configuration: AgentLocalEcologyConfiguration
+    )
+    case applyHabitatValidation([AgentEcologyHabitatObservation])
+    case applyForageOutcomes(
+        intents: [AgentForageIntent],
+        habitatValidations: [AgentEcologyHabitatObservation]
+    )
+    case clearEcologyDiagnostics
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -145,6 +162,11 @@ public enum AgentReplayOperation: Codable {
         case .setSettlementMetricsEnabled: return .settlementMetricsFeature
         case .clearSettlementMetrics: return .settlementMetricsClear
         case .settlementPulseBoundary: return .settlementPulseBoundary
+        case .setLocalEcologyEnabled: return .localEcologyFeature
+        case .initializeLocalEcology: return .localEcologyInitialization
+        case .applyHabitatValidation: return .ecologyHabitatValidation
+        case .applyForageOutcomes: return .ecologyForageOutcomes
+        case .clearEcologyDiagnostics: return .ecologyClear
         }
     }
 
@@ -444,6 +466,15 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.settlementMetricsVersion
         }
+        if case .initializeLocalEcology = operation,
+           schemaVersion != AgentReplaySchema.localEcologyVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "local ecology initialization must be the first v4 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.localEcologyVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -618,6 +649,9 @@ public enum AgentSessionReplayer {
         let compatibleSchema = manifest.schemaVersion == checkpoint.schemaVersion
             || (manifest.schemaVersion == AgentReplaySchema.settlementMetricsVersion
                 && checkpoint.schemaVersion == AgentCheckpointSchema.populationVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.localEcologyVersion
+                && (checkpoint.schemaVersion == AgentCheckpointSchema.populationVersion
+                    || checkpoint.schemaVersion == AgentCheckpointSchema.settlementMetricsVersion))
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -776,6 +810,22 @@ extension AgentSimulationSession {
             try candidate.clearSettlementMetrics()
         case .settlementPulseBoundary:
             _ = try candidate.applySettlementMetricsPulseIfDue()
+        case let .setLocalEcologyEnabled(enabled):
+            try candidate.setLocalEcologyEnabled(enabled)
+        case let .initializeLocalEcology(observations, configuration):
+            try candidate.initializeLocalEcology(
+                observations: observations,
+                configuration: configuration
+            )
+        case let .applyHabitatValidation(observations):
+            _ = try candidate.applyLocalEcologyEndOfTick(habitatValidations: observations)
+        case let .applyForageOutcomes(intents, habitatValidations):
+            _ = try candidate.applyForageIntents(
+                intents,
+                habitatValidations: habitatValidations
+            )
+        case .clearEcologyDiagnostics:
+            try candidate.clearLocalEcologyDiagnostics()
         }
         self = candidate
         let causal = causalLedgerSnapshot().summary

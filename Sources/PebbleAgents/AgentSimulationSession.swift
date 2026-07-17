@@ -52,6 +52,7 @@ public struct AgentSimulationSession {
     var lastCooperationOfferTickByIssuerID: [String: Int]
     public internal(set) var populationRegistry: AgentPopulationRegistry?
     public internal(set) var settlementMetricsState: AgentSettlementMetricsState?
+    public internal(set) var localEcologyState: AgentLocalEcologyState?
 
     public init(
         configuration: AgentSessionConfiguration,
@@ -121,6 +122,7 @@ public struct AgentSimulationSession {
         lastCooperationOfferTickByIssuerID = [:]
         populationRegistry = nil
         settlementMetricsState = nil
+        localEcologyState = nil
         try recordCausalEvent(
             kind: .sessionLifecycle,
             origin: .lifecycle,
@@ -166,7 +168,8 @@ public struct AgentSimulationSession {
             buildAutoEnabled: buildAutoEnabled,
             constructionProject: constructionProject,
             population: populationRegistry == nil ? nil : populationSnapshot(),
-            settlementMetrics: settlementMetricsState == nil ? nil : settlementMetricsSnapshot()
+            settlementMetrics: settlementMetricsState == nil ? nil : settlementMetricsSnapshot(),
+            localEcology: localEcologyState == nil ? nil : localEcologySnapshot()
         )
     }
 

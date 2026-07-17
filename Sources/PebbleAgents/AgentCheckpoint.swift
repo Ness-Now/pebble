@@ -5,10 +5,11 @@ public enum AgentCheckpointSchema {
     public static let currentVersion = 1
     public static let populationVersion = 2
     public static let settlementMetricsVersion = 3
+    public static let localEcologyVersion = 4
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
-            || version == settlementMetricsVersion
+            || version == settlementMetricsVersion || version == localEcologyVersion
     }
 }
 
@@ -185,9 +186,12 @@ public struct AgentSessionDurableState: Codable {
     public let lastCooperationOfferTicks: [AgentCheckpointStringIntEntry]
     public let populationRegistry: AgentPopulationRegistry?
     public let settlementMetricsState: AgentSettlementMetricsState?
+    public let localEcologyState: AgentLocalEcologyState?
 
     init(session: AgentSimulationSession) {
-        if session.settlementMetricsState != nil {
+        if session.localEcologyState != nil {
+            schemaVersion = AgentCheckpointSchema.localEcologyVersion
+        } else if session.settlementMetricsState != nil {
             schemaVersion = AgentCheckpointSchema.settlementMetricsVersion
         } else if session.populationRegistry != nil {
             schemaVersion = AgentCheckpointSchema.populationVersion
@@ -269,6 +273,7 @@ public struct AgentSessionDurableState: Codable {
         }
         populationRegistry = session.populationRegistry
         settlementMetricsState = session.settlementMetricsState
+        localEcologyState = session.localEcologyState
     }
 }
 
@@ -538,6 +543,9 @@ extension AgentSimulationSession {
         var reasons: [String] = []
         let conservation = conservationSnapshot().balanced
         if !conservation { reasons.append("material conservation is not exact") }
+        if localEcologyState != nil, !ecologyConservationSnapshot().balanced {
+            reasons.append("ecology conservation is not exact")
+        }
         if pendingOperationCount != 0 { reasons.append("pending operations: \(pendingOperationCount)") }
         let ledger = causalLedgerSnapshot().summary
         if ledger.currentTick.rawValue != tick { reasons.append("causal clock differs from session clock") }
@@ -624,7 +632,8 @@ extension AgentSimulationSession {
                 source: $0.source,
                 position: $0.target,
                 resource: $0.resource,
-                expectedBlockFingerprint: $0.expectedBlockFingerprint
+                expectedBlockFingerprint: $0.expectedBlockFingerprint,
+                ecologyPatchID: $0.ecologyPatchID
             ).stableKey, $0)
         })
         failedNaturalResourceTargetKeysByAgentId = Dictionary(uniqueKeysWithValues:
@@ -682,10 +691,14 @@ extension AgentSimulationSession {
         )
         populationRegistry = state.populationRegistry
         settlementMetricsState = state.settlementMetricsState
+        localEcologyState = state.localEcologyState
         if let settlementMetricsState {
             try validateSettlementMetricsState(settlementMetricsState)
         }
-        guard conservationSnapshot().balanced else { throw AgentCheckpointError.invalidConservation }
+        guard conservationSnapshot().balanced,
+              localEcologyState == nil || ecologyConservationSnapshot().balanced else {
+            throw AgentCheckpointError.invalidConservation
+        }
     }
 
     static func validateDurableState(_ state: AgentSessionDurableState) throws {
@@ -698,7 +711,11 @@ extension AgentSimulationSession {
                     && state.populationRegistry != nil && state.settlementMetricsState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.settlementMetricsVersion
                     && state.populationRegistry != nil
-                    && state.settlementMetricsState != nil) else {
+                    && state.settlementMetricsState != nil
+                    && state.localEcologyState == nil)
+                || (state.schemaVersion == AgentCheckpointSchema.localEcologyVersion
+                    && state.populationRegistry != nil
+                    && state.localEcologyState != nil) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.clock.tick.rawValue >= 0,
@@ -781,7 +798,8 @@ extension AgentSimulationSession {
                 source: $0.source,
                 position: $0.target,
                 resource: $0.resource,
-                expectedBlockFingerprint: $0.expectedBlockFingerprint
+                expectedBlockFingerprint: $0.expectedBlockFingerprint,
+                ecologyPatchID: $0.ecologyPatchID
             ).stableKey
         }
         guard reservationKeys.count == Set(reservationKeys).count,
@@ -883,6 +901,63 @@ extension AgentSimulationSession {
                 )
             } catch {
                 throw AgentCheckpointError.invalidConfiguration
+            }
+        }
+        if let ecology = state.localEcologyState {
+            do {
+                _ = try AgentLocalEcologyConfiguration(
+                    maximumPatches: ecology.configuration.maximumPatches,
+                    maximumHabitatCandidates: ecology.configuration.maximumHabitatCandidates,
+                    observationRadius: ecology.configuration.observationRadius,
+                    patchCapacity: ecology.configuration.patchCapacity,
+                    initialYield: ecology.configuration.initialYield,
+                    regenerationIntervalTicks: ecology.configuration.regenerationIntervalTicks,
+                    regenerationQuantity: ecology.configuration.regenerationQuantity,
+                    maximumForageIntentsPerTick: ecology.configuration.maximumForageIntentsPerTick,
+                    maximumForageHistory: ecology.configuration.maximumForageHistory,
+                    maximumPressureFrames: ecology.configuration.maximumPressureFrames,
+                    maximumHabitatReadsPerScan: ecology.configuration.maximumHabitatReadsPerScan
+                )
+            } catch {
+                throw AgentCheckpointError.invalidConfiguration
+            }
+            let patchIDs = ecology.patches.map(\.patchID)
+            let forageIDs = ecology.processedForageIDs
+            let initial = ecology.patches.reduce(0) { $0 + $1.initialYield }
+            let regenerated = ecology.patches.reduce(0) { $0 + $1.regeneratedTotal }
+            let current = ecology.patches.reduce(0) { $0 + $1.currentYield }
+            let harvested = ecology.patches.reduce(0) { $0 + $1.harvestedTotal }
+            guard ecology.settlementID == state.populationRegistry?.settlement.settlementID,
+                  !ecology.patches.isEmpty,
+                  ecology.patches.count <= ecology.configuration.maximumPatches,
+                  patchIDs == patchIDs.sorted(),
+                  patchIDs.count == Set(patchIDs).count,
+                  forageIDs.count == Set(forageIDs).count,
+                  forageIDs.count <= ecology.configuration.maximumForageHistory,
+                  ecology.forageHistory.count <= ecology.configuration.maximumForageHistory,
+                  ecology.pressureFrames.count <= ecology.configuration.maximumPressureFrames,
+                  ecology.pressureFrames.map(\.sequence)
+                    == ecology.pressureFrames.map(\.sequence).sorted(),
+                  ecology.pressureSequence >= (ecology.pressureFrames.last?.sequence ?? 0),
+                  ecology.evictionCounts.forageHistory >= 0,
+                  ecology.evictionCounts.pressureFrames >= 0,
+                  ecology.initializedEventID.simulationID == state.clock.simulationID,
+                  ecology.lastEcologyEventID.simulationID == state.clock.simulationID,
+                  ecology.lastEcologyEventID.sequence.rawValue <= state.causalLedger.latestSequence,
+                  ecology.patches.allSatisfy({ patch in
+                      patch.settlementID == ecology.settlementID
+                          && (0...patch.capacity).contains(patch.currentYield)
+                          && patch.capacity == ecology.configuration.patchCapacity
+                          && patch.initialYield == ecology.configuration.initialYield
+                          && patch.regeneratedTotal >= 0 && patch.harvestedTotal >= 0
+                          && patch.registeredTick >= 0 && patch.registeredTick <= state.clock.tick.rawValue
+                          && patch.lastRegenerationTick >= patch.registeredTick
+                          && patch.lastRegenerationTick <= state.clock.tick.rawValue
+                          && patch.registrationEventID.simulationID == state.clock.simulationID
+                          && patch.lastEcologyEventID.simulationID == state.clock.simulationID
+                  }),
+                  initial + regenerated == current + harvested else {
+                throw AgentCheckpointError.invalidBound("local ecology")
             }
         }
         for relation in state.socialTrustRelations {

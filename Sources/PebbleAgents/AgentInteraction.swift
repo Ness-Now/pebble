@@ -19,11 +19,13 @@ public enum AgentResourceKind: String, Codable, Equatable, CaseIterable, Sendabl
 public enum AgentResourceObservationSource: String, Codable, Equatable, CaseIterable, Sendable {
     case sandboxFixture
     case naturalWorld
+    case localEcology
 
     fileprivate var selectionPriority: Int {
         switch self {
         case .sandboxFixture: return 0
         case .naturalWorld: return 1
+        case .localEcology: return 2
         }
     }
 }
@@ -33,22 +35,26 @@ public struct AgentResourceIdentity: Codable, Equatable, Hashable {
     public let position: AgentPosition
     public let resource: AgentResourceKind
     public let expectedBlockFingerprint: Int?
+    public let ecologyPatchID: AgentEcologyPatchID?
 
     public init(
         source: AgentResourceObservationSource,
         position: AgentPosition,
         resource: AgentResourceKind,
-        expectedBlockFingerprint: Int? = nil
+        expectedBlockFingerprint: Int? = nil,
+        ecologyPatchID: AgentEcologyPatchID? = nil
     ) {
         self.source = source
         self.position = position
         self.resource = resource
         self.expectedBlockFingerprint = expectedBlockFingerprint
+        self.ecologyPatchID = ecologyPatchID
     }
 
     public var stableKey: String {
         let fingerprint = expectedBlockFingerprint.map(String.init) ?? "fixture"
-        return "\(source.rawValue):\(resource.rawValue):\(position.x),\(position.y),\(position.z):\(fingerprint)"
+        let historical = "\(source.rawValue):\(resource.rawValue):\(position.x),\(position.y),\(position.z):\(fingerprint)"
+        return ecologyPatchID.map { "\(historical):\($0.rawValue)" } ?? historical
     }
 }
 
@@ -60,13 +66,16 @@ public struct AgentResourceObservation: Codable, Equatable {
     public let quantityAvailable: Int
     public let source: AgentResourceObservationSource
     public let expectedBlockFingerprint: Int?
+    public let ecologyPatchID: AgentEcologyPatchID?
+    public let observationTick: Int?
 
     public var identity: AgentResourceIdentity {
         AgentResourceIdentity(
             source: source,
             position: target,
             resource: resource,
-            expectedBlockFingerprint: expectedBlockFingerprint
+            expectedBlockFingerprint: expectedBlockFingerprint,
+            ecologyPatchID: ecologyPatchID
         )
     }
 
@@ -77,7 +86,9 @@ public struct AgentResourceObservation: Codable, Equatable {
         distanceManhattan: Int = 1,
         quantityAvailable: Int,
         source: AgentResourceObservationSource,
-        expectedBlockFingerprint: Int? = nil
+        expectedBlockFingerprint: Int? = nil,
+        ecologyPatchID: AgentEcologyPatchID? = nil,
+        observationTick: Int? = nil
     ) {
         self.resource = resource
         self.target = target
@@ -86,6 +97,8 @@ public struct AgentResourceObservation: Codable, Equatable {
         self.quantityAvailable = quantityAvailable
         self.source = source
         self.expectedBlockFingerprint = expectedBlockFingerprint
+        self.ecologyPatchID = ecologyPatchID
+        self.observationTick = observationTick
     }
 }
 
@@ -101,6 +114,7 @@ public enum AgentResourceObservationError: Error, Equatable {
     case duplicateTarget(AgentPosition)
     case missingNaturalFingerprint(AgentPosition)
     case unexpectedFixtureFingerprint(AgentPosition)
+    case invalidEcologyObservation(AgentPosition)
 }
 
 public enum AgentResourcePerception {
@@ -145,13 +159,24 @@ public enum AgentResourcePerception {
             }
             switch observation.source {
             case .sandboxFixture:
-                guard observation.expectedBlockFingerprint == nil else {
+                guard observation.expectedBlockFingerprint == nil,
+                      observation.ecologyPatchID == nil,
+                      observation.observationTick == nil else {
                     throw AgentResourceObservationError.unexpectedFixtureFingerprint(observation.target)
                 }
             case .naturalWorld:
                 guard observation.expectedBlockFingerprint != nil,
+                      observation.ecologyPatchID == nil,
+                      observation.observationTick == nil,
                       observation.resource == .wood || observation.resource == .stone else {
                     throw AgentResourceObservationError.missingNaturalFingerprint(observation.target)
+                }
+            case .localEcology:
+                guard observation.expectedBlockFingerprint != nil,
+                      observation.ecologyPatchID != nil,
+                      observation.observationTick != nil,
+                      observation.resource == .foodRaw else {
+                    throw AgentResourceObservationError.invalidEcologyObservation(observation.target)
                 }
             }
             let key = positionKey(observation.target)
@@ -183,7 +208,11 @@ public enum AgentResourcePerception {
         if lhs.target.z != rhs.target.z { return lhs.target.z < rhs.target.z }
         let lhsFingerprint = lhs.expectedBlockFingerprint ?? -1
         let rhsFingerprint = rhs.expectedBlockFingerprint ?? -1
-        return lhsFingerprint < rhsFingerprint
+        if lhsFingerprint != rhsFingerprint { return lhsFingerprint < rhsFingerprint }
+        let lhsPatch = lhs.ecologyPatchID?.rawValue ?? ""
+        let rhsPatch = rhs.ecologyPatchID?.rawValue ?? ""
+        if lhsPatch != rhsPatch { return lhsPatch < rhsPatch }
+        return (lhs.observationTick ?? -1) < (rhs.observationTick ?? -1)
     }
 
     public static func direction(
@@ -216,13 +245,16 @@ public struct AgentResourceTarget: Codable, Equatable {
     public let selectedAtTick: Int
     public let lastSeenAtTick: Int
     public let expectedBlockFingerprint: Int?
+    public let ecologyPatchID: AgentEcologyPatchID?
+    public let observationTick: Int?
 
     public var identity: AgentResourceIdentity {
         AgentResourceIdentity(
             source: source,
             position: target,
             resource: resource,
-            expectedBlockFingerprint: expectedBlockFingerprint
+            expectedBlockFingerprint: expectedBlockFingerprint,
+            ecologyPatchID: ecologyPatchID
         )
     }
 
@@ -233,7 +265,9 @@ public struct AgentResourceTarget: Codable, Equatable {
         distanceManhattan: Int,
         selectedAtTick: Int,
         lastSeenAtTick: Int,
-        expectedBlockFingerprint: Int? = nil
+        expectedBlockFingerprint: Int? = nil,
+        ecologyPatchID: AgentEcologyPatchID? = nil,
+        observationTick: Int? = nil
     ) {
         self.resource = resource
         self.target = target
@@ -242,6 +276,8 @@ public struct AgentResourceTarget: Codable, Equatable {
         self.selectedAtTick = selectedAtTick
         self.lastSeenAtTick = lastSeenAtTick
         self.expectedBlockFingerprint = expectedBlockFingerprint
+        self.ecologyPatchID = ecologyPatchID
+        self.observationTick = observationTick
     }
 }
 
@@ -262,6 +298,7 @@ public enum AgentResourceTargeting {
                    && $0.resource == current.resource
                    && $0.source == current.source
                    && $0.expectedBlockFingerprint == current.expectedBlockFingerprint
+                   && $0.ecologyPatchID == current.ecologyPatchID
            }) {
             return AgentResourceTarget(
                 resource: retained.resource,
@@ -270,7 +307,9 @@ public enum AgentResourceTargeting {
                 distanceManhattan: retained.distanceManhattan,
                 selectedAtTick: current.selectedAtTick,
                 lastSeenAtTick: tick,
-                expectedBlockFingerprint: retained.expectedBlockFingerprint
+                expectedBlockFingerprint: retained.expectedBlockFingerprint,
+                ecologyPatchID: retained.ecologyPatchID,
+                observationTick: retained.observationTick
             )
         }
         let eligibleObservations = observations.filter {
@@ -292,7 +331,9 @@ public enum AgentResourceTargeting {
             distanceManhattan: selected.distanceManhattan,
             selectedAtTick: tick,
             lastSeenAtTick: tick,
-            expectedBlockFingerprint: selected.expectedBlockFingerprint
+            expectedBlockFingerprint: selected.expectedBlockFingerprint,
+            ecologyPatchID: selected.ecologyPatchID,
+            observationTick: selected.observationTick
         )
     }
 }

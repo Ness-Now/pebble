@@ -169,6 +169,8 @@ extension AgentSimulationSession {
                   reservation(for: state)?.agentId == intent.agentId else {
                 throw AgentSessionError.invalidNaturalResourceIdentity(intent.interactionId)
             }
+        case .localEcology:
+            throw AgentSessionError.invalidNaturalResourceIdentity(intent.interactionId)
         }
     }
 
@@ -198,6 +200,8 @@ extension AgentSimulationSession {
                       outcome.resource == .wood || outcome.resource == .stone else {
                     throw AgentSessionError.invalidInteractionOutcome(outcome.interactionId)
                 }
+            case .localEcology:
+                throw AgentSessionError.invalidInteractionOutcome(outcome.interactionId)
             }
             let creditKey = reservationKey(
                 target: outcome.target,
