@@ -207,6 +207,7 @@ extension PebbleAgentController {
         let cooperationSummary = session?.cooperationSummary()
         let populationSummary = session?.populationSummary()
         let settlementSummary = session?.settlementMetricsSummary()
+        let mortalitySummary = session?.mortalitySummary()
         let followStatus = followMode.statusText
         let wasDemo = demoActive
         let cleanupWorld = activeWorld ?? fallbackWorld
@@ -269,6 +270,20 @@ extension PebbleAgentController {
                         + "cooperationDelta=\(settlementSummary.cooperationActivityDelta) "
                         + "coverage=\(settlementSummary.causalCoverageComplete == true ? "complete" : "incomplete") "
                         + "digest=\(settlementSummary.digest)"
+                )
+            }
+            if let mortalitySummary, mortalitySummary.enabled {
+                trace(
+                    "mortality summary enabled=1 active=\(mortalitySummary.activeAgentCount) "
+                        + "deaths=\(mortalitySummary.totalDeathCount) "
+                        + "retained=\(mortalitySummary.retainedDeathCount) "
+                        + "evicted=\(mortalitySummary.evictedDeathCount) "
+                        + "latest=\(mortalitySummary.latestDeathID?.rawValue ?? "none") "
+                        + "victim=\(mortalitySummary.latestAgentID?.rawValue ?? "none") "
+                        + "deathTick=\(mortalitySummary.latestDeathTick ?? -1) "
+                        + "terminal=\(mortalitySummary.unrecoveredTotal) "
+                        + "events=\(mortalitySummary.mortalityEventCount) "
+                        + "digest=\(mortalitySummary.digest)"
                 )
             }
         }

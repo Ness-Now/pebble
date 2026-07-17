@@ -14,10 +14,13 @@ ralentit, ne remplace et ne pilote aucun tick agent.
 Sous la gate ecology, des habitats réels lus dans le World portent aussi un
 rendement alimentaire local borné. La cueillette ne casse aucun bloc et la
 pression de subsistance reste un diagnostic collectif sans rétroaction.
+Sous la gate mortality, la famine peut finaliser une sortie de population
+bornée sans cadavre ni mutation du World ; seuls les agents actifs conservent
+un probe.
 
 ## Prérequis et lancement
 
-Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population`, `--multiscale` et `--ecology` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07, métriques settlement CIV-08 et écologie alimentaire CIV-09. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
+Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population`, `--multiscale`, `--ecology` et `--mortality` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07, métriques settlement CIV-08, écologie alimentaire CIV-09 et sortie de population CIV-10. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
 
 Depuis la racine du dépôt :
 
@@ -65,6 +68,8 @@ Commandes de démonstration :
 /lab natural <on|off|status|scan>
 /lab ecology <on|off|status|scan|clear>
 /lab forage status
+/lab mortality <on|off|status|clear>
+/lab exits status
 /lab social <on|off|status|clear>
 /lab physical <on|off|status|clear>
 /lab cooperation <on|off|status|clear>
@@ -212,8 +217,51 @@ avec conservation écologique et matérielle exactes et aucune mutation World.
 
 CIV-09 est terminé et validé localement. Cette V1 n'est pas une botanique
 réaliste et n'ouvre ni agriculture, saisons, animaux, chasse, pêche, eau,
-cuisson, pourrissement ou mort effective. La prochaine étape canonique est
-`CIV-10 — Mortality and Bounded Population Exit V1`.
+cuisson ou pourrissement.
+
+## CIV-10 — Mortalité et sortie de population bornée
+
+Le mode `scripts/verify-pebblelab-live.sh --mortality` active explicitement
+`PEBBLELAB_APP_AGENTS_MORTALITY=1` avec survie, population, persistence,
+settlement metrics et écologie dans un monde jetable seed `46`. La gate reste
+désactivée par défaut et exige une population active cohérente. `/lab mortality
+status` expose les death records et le compte de ressources terminales bornés ;
+`/lab exits status` expose les transitions de population correspondantes.
+
+La preuve forme quatre résidents, sauvegarde au tick 26 un checkpoint v5 où
+`agent_2` possède exactement 10 points de santé, puis redémarre et exécute un
+seul tick létal. Au tick 27, la famine produit exactement une mort, aucune
+cognition ni action terminale, une population `4 → 3`, le retrait vérifié du
+probe et un checkpoint post-mortem sans résurrection. Un troisième processus
+réadmet physiquement `agent_4`, qui atteint la réception au tick 34 ; la
+population et les probes reviennent à quatre tandis que l'ordinal monotone
+passe à cinq. La continuation restart et le contrôle ininterrompu ont des
+traces, octets et digests identiques.
+
+Le contrat causal conserve l'ordre `starvation_damage →
+lethalHealthDepletion → mortalityResourcesRetired →
+mortalityCommitmentsResolved → populationMemberExited →
+agentDeathFinalized`. Le dernier événement confirme que toutes les
+sous-transitions de la mort ont été validées et appliquées. Le death record v5
+porte en outre un snapshot terminal borné des compteurs d'activité : au tick
+létal, les compteurs cognitifs et matériels restent figés tandis que
+`ticksAlive` avance exactement une fois. Les fixtures headless traversent la
+vraie frontière de mort avec des références actives dans les domaines
+ressources, social, physique, coopération, construction et écologie, puis
+vérifient leur nettoyage sans effacer les historiques.
+
+Le harnais jetable fournit simultanément `PEBBLE_CMD` et
+`PEBBLELAB_DISPOSABLE_WORLD_PROOF=1`. Cette seconde gate est indispensable
+pour empêcher l'ouverture automatique de la pause lors d'une perte de focus
+du processus de preuve ; `PEBBLE_CMD` seul conserve le comportement normal de
+pause du jeu.
+
+CIV-10 est terminé et validé localement. Les ressources portées par un mort
+restent comptabilisées dans `unrecoveredAtDeath` ; aucun cadavre ni objet n'est
+créé dans le World. Cette V1 n'ouvre ni vieillissement, maladie, combat,
+funérailles, héritage, résurrection, naissance, reproduction ou famille. La
+prochaine étape canonique est
+`CIV-11 — Age, Maturity and Bounded Reproduction V1`.
 
 ## Arrêt propre et inspection
 
@@ -234,12 +282,16 @@ Utiliser `/lab demo stop`, `/lab stop` ou `/lab clear`. Les probes transitoires 
   tâche de livraison matérielle CIV-05 explicitement gated ;
 - aucune persistance active par défaut ; la persistence CIV-06 reste bornée,
   explicitement gated et limitée aux frontières restart-safe documentées ;
-- aucun agent dynamique hors admission migratoire CIV-07, aucune suppression
-  d'agent et aucune simulation hors écran ;
+- aucun agent dynamique hors admission migratoire CIV-07 ; la seule suppression
+  active est la mort par famine explicitement gated de CIV-10, sans simulation
+  hors écran ;
 - aucun tick agent sauté, aucune coarse execution et aucun agrégat macro
   utilisé comme entrée cognitive ; la gate CIV-08 est désactivée par défaut ;
 - aucun patch alimentaire global : CIV-09 reste local, borné, en lecture World
   seule et désactivé par défaut ; aucune agriculture, saison ou faune ;
+- aucune entité de cadavre : CIV-10 conserve des records et ressources
+  terminales bornés, sans mutation World, vieillissement, maladie, reproduction
+  ou héritage ;
 - aucun contrôleur autonome du joueur.
 
 Les comportements cognitifs supplémentaires, la planification longue, le

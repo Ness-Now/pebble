@@ -103,7 +103,7 @@ public enum AgentSurvivalMemoryType: String, Codable, Equatable {
     case starvationDamage = "starvation_damage"
 }
 
-public enum AgentConsumptionStatus: String, Codable, Equatable {
+public enum AgentConsumptionStatus: String, Codable, Equatable, Sendable {
     case succeeded
     case blocked
     case foodUnavailable

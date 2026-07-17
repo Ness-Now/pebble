@@ -236,6 +236,20 @@ extension PebbleAgentController {
                     physicalObservations: physicalInputs
                 )
             }
+            if session.mortalityEnabled {
+                self.session = session
+                replayRecorder = recorder
+                do {
+                    try reconcileMortalityProbes(
+                        previous: preCognitive,
+                        current: session,
+                        world: world
+                    )
+                } catch {
+                    isPaused = true
+                    throw error
+                }
+            }
             try presentPhysicalSignals(
                 world: world,
                 session: &session,
@@ -834,7 +848,7 @@ extension PebbleAgentController {
         for agent in snapshot.agents {
             guard agent.lastWorldObservation != nil,
                   agent.lastWorldPerceptionEffect != nil,
-                  agent.observationCount >= result.tick,
+                  agent.observationCount >= agent.ticksAlive,
                   positions.insert(positionText(agent.position)).inserted,
                   let probe = probesByAgentId[agent.id],
                   probe.labAgentId == agent.id,

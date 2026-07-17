@@ -430,6 +430,9 @@ extension PebbleAgentController {
         if candidate.localEcologyEnabled && !ecologyFeatureEnabled {
             return failure("Checkpoint load refused: local ecology gate is disabled.")
         }
+        if candidate.mortalityEnabled && !mortalityFeatureEnabled {
+            return failure("Checkpoint load refused: mortality gate is disabled.")
+        }
         let candidateDigest = try candidate.durableStateDigest()
         guard candidateDigest == stored.manifest.semanticDigest else {
             throw AgentCheckpointError.semanticDigestMismatch

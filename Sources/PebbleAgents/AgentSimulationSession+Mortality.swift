@@ -245,6 +245,34 @@ extension AgentSimulationSession {
               Set(lethal.map(\.agentID)).count == lethal.count else {
             throw AgentSessionError.mortality(.invalidState("lethal order"))
         }
+        var prevalidatedDeathIDs: [AgentID: AgentDeathID] = [:]
+        var terminalPreview = mortality.unrecoveredAtDeath
+        for (offset, item) in lethal.enumerated() {
+            guard let state = statesById[item.agentID.rawValue], state.health == 0,
+                  item.healthBefore > 0,
+                  state.needs.hunger >= configuration.survivalConfiguration.criticalHungerThreshold,
+                  registry.members.contains(where: { $0.agentID == item.agentID }) else {
+                throw AgentSessionError.mortality(.invalidLethalTransition(item.agentID.rawValue))
+            }
+            let ordinal = mortality.totalDeathCount + offset + 1
+            let digest = AgentMortalityDigest.make(
+                "\(simulationID.rawValue)|\(item.agentID.rawValue)|\(mortalityTick)|"
+                    + "\(AgentMortalityCause.starvation.rawValue)|\(ordinal)"
+            )
+            let deathID = AgentDeathID(
+                rawValue: "death-\(item.agentID.rawValue)-t\(mortalityTick)-\(digest)"
+            )!
+            guard !mortality.processedDeathIDs.contains(deathID),
+                  !mortality.records.contains(where: { $0.agentID == item.agentID }),
+                  prevalidatedDeathIDs[item.agentID] == nil else {
+                throw AgentSessionError.mortality(.duplicateDeath(deathID.rawValue))
+            }
+            guard state.resourceInventory.isEmpty
+                    || terminalPreview.add(state.resourceInventory.amounts) else {
+                throw AgentSessionError.mortality(.terminalResourceOverflow)
+            }
+            prevalidatedDeathIDs[item.agentID] = deathID
+        }
         for item in lethal {
             guard let state = statesById[item.agentID.rawValue], state.health == 0,
                   item.healthBefore > 0,
@@ -255,14 +283,7 @@ extension AgentSimulationSession {
                 throw AgentSessionError.mortality(.invalidLethalTransition(item.agentID.rawValue))
             }
             let member = registry.members[memberIndex]
-            let ordinal = mortality.totalDeathCount + 1
-            let digest = AgentMortalityDigest.make(
-                "\(simulationID.rawValue)|\(item.agentID.rawValue)|\(mortalityTick)|"
-                    + "\(AgentMortalityCause.starvation.rawValue)|\(ordinal)"
-            )
-            let deathID = AgentDeathID(
-                rawValue: "death-\(item.agentID.rawValue)-t\(mortalityTick)-\(digest)"
-            )!
+            let deathID = prevalidatedDeathIDs[item.agentID]!
             guard !mortality.processedDeathIDs.contains(deathID),
                   !mortality.records.contains(where: { $0.agentID == item.agentID }) else {
                 throw AgentSessionError.mortality(.duplicateDeath(deathID.rawValue))
@@ -418,6 +439,9 @@ extension AgentSimulationSession {
                 registry.migrations[migrationIndex].failure = .memberDied
             }
 
+            // Capture the terminal activity boundary after lethal survival and
+            // before the authoritative active-state removal below.
+            let terminalActivity = AgentTerminalActivitySnapshot(state: state)
             registry.members.remove(at: memberIndex)
             registry.settlement.residentIDs.removeAll { $0 == item.agentID }
             registry.settlement.inTransitIDs.removeAll { $0 == item.agentID }
@@ -481,7 +505,8 @@ extension AgentSimulationSession {
                 "\(item.agentID.rawValue)|\(mortalityTick)|\(state.position.x),\(state.position.y),\(state.position.z)|"
                     + "\(state.health)|\(state.needs.hunger)|\(state.needs.fatigue)|\(state.fear)|"
                     + "\(state.ticksAlive)|\(state.currentGoal.kind.rawValue)|"
-                    + "\(state.lastAction?.name ?? "none")|\(carried.map { "\($0.resource.rawValue):\($0.quantity)" }.joined(separator: ","))"
+                    + "\(state.lastAction?.name ?? "none")|\(carried.map { "\($0.resource.rawValue):\($0.quantity)" }.joined(separator: ","))|"
+                    + terminalActivity.canonicalText
             )
             let memoryLimit = mortality.configuration.maximumFinalMemoryEntries
             let finalMemory = memoryLimit == 0 ? [] : Array(state.memory.suffix(memoryLimit))
@@ -506,6 +531,7 @@ extension AgentSimulationSession {
                 ticksAlive: state.ticksAlive,
                 lastGoal: state.currentGoal.kind,
                 lastAction: state.lastAction,
+                terminalActivity: terminalActivity,
                 carriedInventory: carried,
                 finalMemory: finalMemory,
                 finalStateDigest: finalDigest,
@@ -551,9 +577,40 @@ extension AgentSimulationSession {
                 mortality.evictionCounts.exitFrames += removed
             }
         }
+        let deadIDs = Set(lethal.map(\.agentID))
+        let deadRawIDs = Set(deadIDs.map(\.rawValue))
         let remaining = Set(statesById.values.map(\.agentID))
+        let activePhysicalReference = physicalSignals.contains {
+            $0.status == .pending
+                && (deadIDs.contains($0.senderID) || deadIDs.contains($0.intendedRecipientID))
+        } || physicalPresentationRequests.contains {
+            $0.presentedAtTick == nil && deadIDs.contains($0.senderID)
+        }
+        let activeCooperationReference = sharedTasks.contains {
+            !$0.status.isTerminal
+                && (deadIDs.contains($0.issuerID) || deadIDs.contains($0.helperID))
+        } || sharedTaskOffers.contains {
+            deadIDs.contains($0.issuerID) || deadIDs.contains($0.helperID)
+        }
+        let invalidDeadBuilder = constructionProject.map { project in
+            guard deadRawIDs.contains(project.builderAgentId) else { return false }
+            return project.status != .blocked || project.lastFailure != .builderDied
+        } ?? false
         guard remaining == preDeathIDs.subtracting(lethal.map(\.agentID)),
               Set(registry.members.map(\.agentID)) == remaining,
+              registry.settlement.residentIDs.allSatisfy({ !deadIDs.contains($0) }),
+              registry.settlement.inTransitIDs.allSatisfy({ !deadIDs.contains($0) }),
+              reservationsByTarget.values.allSatisfy({ !deadRawIDs.contains($0.agentId) }),
+              failedNaturalResourceTargetKeysByAgentId.keys.allSatisfy({ !deadRawIDs.contains($0) }),
+              activeSocialVerificationByAgentId.keys.allSatisfy({ !deadRawIDs.contains($0) }),
+              lastSocialShareTickByAgentId.keys.allSatisfy({ !deadRawIDs.contains($0) }),
+              lastCooperationOfferTickByIssuerID.keys.allSatisfy({ !deadRawIDs.contains($0) }),
+              lastPerceptionEventByAgentID.keys.allSatisfy({ !deadIDs.contains($0) }),
+              lastDecisionEventByAgentID.keys.allSatisfy({ !deadIDs.contains($0) }),
+              lastOutcomeEventByAgentID.keys.allSatisfy({ !deadIDs.contains($0) }),
+              !activePhysicalReference,
+              !activeCooperationReference,
+              !invalidDeadBuilder,
               conservationSnapshotWith(mortality: mortality).balanced else {
             throw AgentSessionError.mortality(.invalidState("post-transition invariants"))
         }

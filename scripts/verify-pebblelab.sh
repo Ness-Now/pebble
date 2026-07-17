@@ -153,6 +153,7 @@ verify_mortality_outputs() {
         mortality_records.json \
         population_exit_frames.json \
         mortality_cleanup.json \
+        mortality_terminal_activity.json \
         mortality_resource_conservation.json \
         mortality_causal_chain.json \
         mortality_summary.json \

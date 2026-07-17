@@ -146,7 +146,7 @@ public struct AgentDeliveryIntent: Equatable {
     }
 }
 
-public enum AgentDeliveryStatus: String, Codable, Equatable {
+public enum AgentDeliveryStatus: String, Codable, Equatable, Sendable {
     case succeeded
     case blocked
     case campStockFull

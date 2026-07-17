@@ -33,12 +33,16 @@ Le point de départ est le HEAD post-K :
 - écologie alimentaire locale bornée acquise sous gate explicite : deux patches
   sauvages adossés à des habitats World réels, rendement limité, épuisement,
   régénération déterministe, cueillette transactionnelle, conservation double,
-  pression de subsistance administrative et checkpoint/replay v4.
+  pression de subsistance administrative et checkpoint/replay v4 ;
+- mortalité par famine bornée acquise sous gate explicite : transition
+  terminale atomique, death records durables, ressources terminales
+  comptabilisées, sortie de population et retrait du probe, puis remplacement
+  physique par un nouvel AgentID monotone avec checkpoint/replay v5.
 
 Le langage libre, le forwarding, les professions, l'économie du travail, la
 persistance complète des agents, le replay complet du World, la grande
-population, les naissances, les morts, la reproduction, les familles,
-l'émigration et le cycle de vie ne sont pas acquis.
+population, les naissances, le vieillissement, les maladies, la reproduction,
+les familles, l'émigration et le cycle de vie complet ne sont pas acquis.
 
 Ce stade ne doit pas être décrit comme une civilisation déjà implémentée.
 
@@ -108,9 +112,19 @@ exploitent des patches alimentaires locaux bornés détectés en lecture seule
 dans le World, avec compétition déterministe, rendement limité, épuisement,
 régénération, consommation et pression collective sans rétroaction cognitive.
 Le checkpoint/replay v4 conserve exactement patches, horloges et bilans. Cette
-V1 n'introduit ni agriculture, saisons, animaux, eau, ni mort effective. La
-prochaine étape canonique est
-`CIV-10 — Mortality and Bounded Population Exit V1`.
+V1 n'introduit ni agriculture, saisons, animaux ni eau. La verticale `CIV-10`
+est terminée et validée localement : la famine peut maintenant finaliser une
+mort à une frontière de tick déterministe, retirer atomiquement le résident de
+la population active et conserver son death record ainsi que ses ressources
+dans un compte terminal borné. Le probe correspondant est retiré, puis la
+capacité libérée permet l'admission physique d'`agent_4` sans réutiliser aucun
+identifiant. Le checkpoint/replay v5 couvre les reprises pré- et post-mortem.
+Le record terminal v5 fige les compteurs cognitifs et matériels, et la preuve
+contractuelle couvre l'ordre causal létal exact ainsi que le nettoyage des
+références actives de chaque verticale sans supprimer leurs historiques.
+Cette V1 ne crée aucun cadavre et n'ouvre ni vieillissement, maladie,
+reproduction, famille ou héritage. La prochaine étape canonique est
+`CIV-11 — Age, Maturity and Bounded Reproduction V1`.
 
 ## Grands programmes ultérieurs
 

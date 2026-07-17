@@ -67,6 +67,126 @@ private func mortalitySession(_ simulation: String) -> AgentSimulationSession {
     return session
 }
 
+private let mortalityProofSurvival = try! AgentSurvivalConfiguration(
+    hungerPerTick: 0.05,
+    fatiguePerTick: 0.06,
+    hungryThreshold: 0.40,
+    criticalHungerThreshold: 0.80,
+    hungerRecoveryThreshold: 0.15,
+    fatigueThreshold: 0.65,
+    fatigueRecoveryThreshold: 0.20,
+    foodNutrition: 1.0,
+    restRecoveryPerTick: 1.0,
+    starvationGraceTicks: 2,
+    starvationDamagePerTick: 100
+)
+
+private func mortalityPreparedSession(
+    _ simulation: String,
+    navigationMaxReplans: Int = 3
+) -> AgentSimulationSession {
+    let configuration = try! AgentSessionConfiguration(
+        seed: 46,
+        nearbyRadius: 12,
+        resourceObservationRadius: 8,
+        recentMemorySnapshotLimit: 8,
+        memoryPolicy: .bounded(maxEntries: 128),
+        navigationMaxReplans: navigationMaxReplans,
+        navigationReplanCooldownTicks: 1,
+        survivalConfiguration: mortalityProofSurvival,
+        socialConfiguration: try! AgentSocialConfiguration(shareCooldownTicks: 1)
+    )
+    var session = try! AgentSimulationSession(
+        configuration: configuration,
+        agents: [
+            mortalityAgent("agent_0", health: 100, lethalNextTick: true),
+            mortalityAgent("agent_1"),
+            mortalityAgent("agent_2"),
+        ],
+        simulationID: try! AgentSimulationID(validating: simulation),
+        causalLedgerPolicy: .bounded(maxEvents: 8192)
+    )
+    try! session.initializePopulationRegistry(
+        settlementAnchor: AgentPosition(x: 0, y: 64, z: 0),
+        receptionPosition: AgentPosition(x: 0, y: 64, z: 0)
+    )
+    return session
+}
+
+@discardableResult
+private func mortalityKillPrepared(_ session: inout AgentSimulationSession) -> AgentMortalityRecord {
+    session.setSurvivalEnabled(true)
+    try! session.setMortalityEnabled(true)
+    _ = try! session.advanceTick()
+    return session.mortalitySnapshot().records.last!
+}
+
+private func mortalityResourceObservation(
+    resource: AgentResourceKind,
+    target: AgentPosition,
+    direction: AgentCardinalDirection,
+    fingerprint: Int
+) -> AgentResourceObservation {
+    AgentResourceObservation(
+        resource: resource,
+        target: target,
+        direction: direction,
+        distanceManhattan: abs(target.x) + abs(target.z),
+        quantityAvailable: 1,
+        source: .naturalWorld,
+        expectedBlockFingerprint: fingerprint
+    )
+}
+
+private func mortalityNavigation(
+    tick: Int,
+    target: AgentPosition
+) -> AgentNavigationObservation {
+    let cells: [AgentNavigationCell]
+    if target.x != 0 {
+        cells = (0...target.x).map {
+            AgentNavigationCell(position: AgentPosition(x: $0, y: 64, z: 0), status: .traversable)
+        }
+    } else {
+        cells = (0...target.z).map {
+            AgentNavigationCell(position: AgentPosition(x: 0, y: 64, z: $0), status: .traversable)
+        }
+    }
+    return AgentNavigationObservation(
+        worldTick: tick,
+        origin: AgentPosition(x: 0, y: 64, z: 0),
+        target: target,
+        radius: 8,
+        cells: cells
+    )
+}
+
+private func mortalityConstructionProject(_ id: String) -> AgentConstructionProject {
+    try! AgentConstructionProject(
+        projectId: id,
+        builderAgentId: "agent_0",
+        origin: AgentPosition(x: 4, y: 64, z: 4),
+        createdAtTick: 0,
+        previousHomePosition: AgentPosition(x: 0, y: 64, z: 0),
+        originalFingerprints: AgentBlueprint.fixedLeanToV1.cells.map {
+            AgentConstructionCellFingerprint(cellIndex: $0.index, originalFingerprint: 0)
+        }
+    )
+}
+
+private func mortalityEcologyHabitat(tick: Int = 0) -> AgentEcologyHabitatObservation {
+    AgentEcologyHabitatObservation(
+        worldTick: tick,
+        candidateIndex: 0,
+        habitatPosition: AgentPosition(x: 3, y: 63, z: 0),
+        foragePosition: AgentPosition(x: 3, y: 64, z: 0),
+        habitatFingerprint: 528,
+        distanceFromSettlement: 3,
+        directionIndex: 0,
+        worldReadCount: 4
+    )
+}
+
 func runPebbleAgentsMortalityPopulationExitSmoke() {
     section("pebble agents mortality and population exit")
 
@@ -176,9 +296,24 @@ func runPebbleAgentsMortalityPopulationExitSmoke() {
         == (try! invalidSession.durableStateBytes()))
 
     var session = mortalitySession("sim-mortality-lethal")
+    let preLethalState = try! session.state(for: "agent_0")
     let result = try! session.advanceTick()
     let mortality = session.mortalitySnapshot()
     let record = mortality.records.first
+    let lethalEvents = session.causalLedgerSnapshot().events.filter {
+        $0.actorID?.rawValue == "agent_0" && [
+            AgentCausalEventKind.lethalHealthDepletion.rawValue,
+            AgentCausalEventKind.mortalityResourcesRetired.rawValue,
+            AgentCausalEventKind.mortalityCommitmentsResolved.rawValue,
+            AgentCausalEventKind.populationMemberExited.rawValue,
+            AgentCausalEventKind.agentDeathFinalized.rawValue,
+        ].contains($0.kind.rawValue)
+    }
+    let lethalEvent = lethalEvents.first { $0.kind == .lethalHealthDepletion }
+    let resourcesEvent = lethalEvents.first { $0.kind == .mortalityResourcesRetired }
+    let commitmentsEvent = lethalEvents.first { $0.kind == .mortalityCommitmentsResolved }
+    let exitEvent = lethalEvents.first { $0.kind == .populationMemberExited }
+    let finalizedEvent = lethalEvents.first { $0.kind == .agentDeathFinalized }
     check("mortality lethal health reaches zero", record?.healthBeforeLethalDamage == 10
         && record?.finalHealth == 0)
     check("mortality starvation cause", record?.cause == .starvation)
@@ -195,6 +330,82 @@ func runPebbleAgentsMortalityPopulationExitSmoke() {
         == ["agent_1", "agent_2"])
     check("mortality death record has lethal memory", record?.finalMemory.last?.type
         == "starvation_damage")
+    check("mortality lethal causal order exact", record?.finalMemory.last?.tick == 1
+        && record?.finalMemory.last?.type == "starvation_damage"
+        && lethalEvents.map(\.kind.rawValue) == [
+            AgentCausalEventKind.lethalHealthDepletion.rawValue,
+            AgentCausalEventKind.mortalityResourcesRetired.rawValue,
+            AgentCausalEventKind.mortalityCommitmentsResolved.rawValue,
+            AgentCausalEventKind.populationMemberExited.rawValue,
+            AgentCausalEventKind.agentDeathFinalized.rawValue,
+        ]
+        && resourcesEvent?.causes == [lethalEvent!.eventID]
+        && commitmentsEvent?.causes == [lethalEvent!.eventID]
+        && exitEvent?.causes == [
+            lethalEvent!.eventID,
+            resourcesEvent!.eventID,
+            commitmentsEvent!.eventID,
+        ].sorted()
+        && finalizedEvent?.causes == [exitEvent!.eventID])
+    check("mortality finalized event is terminal", finalizedEvent?.eventID == record?.deathEventID
+        && lethalEvents.last?.kind == .agentDeathFinalized)
+    let forbiddenCognition = Set([
+        AgentCausalEventKind.perception.rawValue,
+        AgentCausalEventKind.goalTransition.rawValue,
+        AgentCausalEventKind.actionSelected.rawValue,
+        AgentCausalEventKind.resourceFactGrounded.rawValue,
+        AgentCausalEventKind.socialMessageSent.rawValue,
+        AgentCausalEventKind.physicalSignalEmitted.rawValue,
+        AgentCausalEventKind.sharedTaskAccepted.rawValue,
+        AgentCausalEventKind.sharedTaskProgress.rawValue,
+    ])
+    let forbiddenMaterial = Set([
+        AgentCausalEventKind.movement.rawValue,
+        AgentCausalEventKind.interaction.rawValue,
+        AgentCausalEventKind.delivery.rawValue,
+        AgentCausalEventKind.consumption.rawValue,
+        AgentCausalEventKind.constructionPlacement.rawValue,
+        AgentCausalEventKind.ecologyForageResolved.rawValue,
+    ])
+    let postLethalEvents = session.causalLedgerSnapshot().events.filter {
+        $0.sequence > lethalEvent!.sequence
+            && ($0.actorID?.rawValue == "agent_0" || $0.subjectID?.rawValue == "agent_0")
+    }
+    check("mortality no post lethal cognition", !postLethalEvents.contains {
+        forbiddenCognition.contains($0.kind.rawValue)
+    })
+    check("mortality no post lethal material action", !postLethalEvents.contains {
+        forbiddenMaterial.contains($0.kind.rawValue)
+    })
+    let terminalActivity = record!.terminalActivity
+    check("mortality terminal observation count frozen", terminalActivity.observationCount
+        == preLethalState.observationCount
+        && terminalActivity.nearbyObservationCount == preLethalState.nearbyObservationCount)
+    check("mortality terminal goal counters frozen", terminalActivity.goalSelectionCount
+        == preLethalState.goalSelectionCount
+        && terminalActivity.goalChangeCount == preLethalState.goalChangeCount)
+    check("mortality terminal action counters frozen", terminalActivity.actionCount
+        == preLethalState.actionCount
+        && terminalActivity.actionEffectCount == preLethalState.actionEffectCount)
+    check("mortality terminal movement counters frozen", terminalActivity.movementCount
+        == preLethalState.movementCount
+        && terminalActivity.totalManhattanDistanceMoved
+            == preLethalState.totalManhattanDistanceMoved
+        && terminalActivity.returnHomeMoveCount == preLethalState.returnHomeMoveCount)
+    check("mortality terminal consumption count frozen", terminalActivity.foodConsumedCount
+        == (preLethalState.survivalProgress?.foodConsumedCount ?? 0))
+    check("mortality terminal ticks alive advances once", terminalActivity.ticksAlive
+        == preLethalState.ticksAlive + 1)
+    check("mortality terminal last activity exact", terminalActivity.lastGoal
+        == preLethalState.currentGoal.kind
+        && terminalActivity.lastAction == preLethalState.lastAction
+        && terminalActivity.lastActionEffect == preLethalState.lastActionEffect
+        && terminalActivity.lastMovementOutcomeStatus == preLethalState.lastMovementOutcome?.status
+        && terminalActivity.lastInteractionOutcomeStatus
+            == preLethalState.lastInteractionOutcome?.status
+        && terminalActivity.lastDeliveryOutcomeStatus == preLethalState.lastDeliveryOutcome?.status
+        && terminalActivity.lastConsumptionOutcomeStatus
+            == preLethalState.survivalProgress?.lastConsumptionOutcome?.status)
     check("mortality empty inventory remains conserved", session.conservationSnapshot().balanced
         && mortality.unrecoveredAtDeath.isEmpty)
     check("mortality active IDs equal population members", session.expectedActiveAgentIDs()
@@ -279,6 +490,277 @@ func runPebbleAgentsMortalityPopulationExitSmoke() {
         && resources.conservationSnapshot().carriedTotal == 0
         && resources.conservationSnapshot().unrecoveredAtDeathTotal == 2)
 
+    var resourceCleanup = mortalityPreparedSession(
+        "sim-mortality-resource-cleanup",
+        navigationMaxReplans: 0
+    )
+    resourceCleanup.setEconomyEnabled(true)
+    resourceCleanup.setNaturalResourcesEnabled(true)
+    let firstResourceTarget = AgentPosition(x: 3, y: 64, z: 0)
+    let secondResourceTarget = AgentPosition(x: 0, y: 64, z: 4)
+    let cleanupObservations = [
+        mortalityResourceObservation(
+            resource: .wood,
+            target: firstResourceTarget,
+            direction: .east,
+            fingerprint: 701
+        ),
+        mortalityResourceObservation(
+            resource: .stone,
+            target: secondResourceTarget,
+            direction: .south,
+            fingerprint: 702
+        ),
+    ]
+    _ = try! resourceCleanup.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: "agent_0",
+        resourceObservations: cleanupObservations,
+        navigationObservation: mortalityNavigation(tick: 1, target: firstResourceTarget)
+    )])
+    try! resourceCleanup.applyMovementOutcomes(
+        AgentMovementCoordinator.resolve(snapshot: resourceCleanup.snapshot())
+    )
+    _ = try! resourceCleanup.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: "agent_0",
+        resourceObservations: cleanupObservations,
+        navigationObservation: mortalityNavigation(tick: 2, target: firstResourceTarget)
+    )])
+    _ = try! resourceCleanup.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: "agent_0",
+        resourceObservations: cleanupObservations,
+        navigationObservation: mortalityNavigation(tick: 3, target: secondResourceTarget)
+    )])
+    let resourceCleanupBefore = resourceCleanup.durableState()
+    let resourceAgentBefore = try! resourceCleanup.state(for: "agent_0")
+    let resourceHistoryBefore = resourceCleanup.causalLedgerSnapshot().events
+    let resourceCleanupRecord = mortalityKillPrepared(&resourceCleanup)
+    let resourceCleanupAfter = resourceCleanup.durableState()
+    check("mortality resource fixture has active reservation target navigation", resourceAgentBefore
+        .activeResourceTarget?.target == secondResourceTarget
+        && resourceAgentBefore.navigationProgress.status == .active
+        && resourceCleanupBefore.reservations.contains { $0.agentId == "agent_0" })
+    check("mortality resource fixture has failed target diagnostic", resourceCleanupBefore
+        .failedNaturalResourceTargets.contains {
+            $0.agentID == "agent_0" && !$0.targetKeys.isEmpty
+        })
+    check("mortality resource active state removed", resourceCleanupAfter.reservations
+        .allSatisfy { $0.agentId != "agent_0" }
+        && !resourceCleanupAfter.failedNaturalResourceTargets.contains { $0.agentID == "agent_0" }
+        && !resourceCleanup.expectedActiveAgentIDs().map(\.rawValue).contains("agent_0"))
+    check("mortality resource material history preserved", Array(resourceCleanup
+        .causalLedgerSnapshot().events.prefix(resourceHistoryBefore.count)) == resourceHistoryBefore
+        && resourceCleanupRecord.cleanupCounts.reservations == 1)
+    check("mortality survivor causal pointers preserved", resourceCleanupBefore
+        .lastPerceptionEvents.filter { $0.agentID.rawValue != "agent_0" }.allSatisfy { pointer in
+            resourceCleanupAfter.lastPerceptionEvents.contains { $0.agentID == pointer.agentID }
+        }
+        && resourceCleanupBefore.lastDecisionEvents
+            .filter { $0.agentID.rawValue != "agent_0" }.allSatisfy { pointer in
+                resourceCleanupAfter.lastDecisionEvents.contains { $0.agentID == pointer.agentID }
+            }
+        && resourceCleanupBefore.lastOutcomeEvents
+            .filter { $0.agentID.rawValue != "agent_0" }.allSatisfy { pointer in
+                resourceCleanupAfter.lastOutcomeEvents.contains { $0.agentID == pointer.agentID }
+            })
+
+    var socialCleanup = mortalityPreparedSession("sim-mortality-social-cleanup")
+    try! socialCleanup.setSocialEnabled(true)
+    _ = try! socialCleanup.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: "agent_1",
+        socialResourceObservations: [AgentResourceObservation(
+            resource: .wood,
+            target: AgentPosition(x: 0, y: 64, z: 1),
+            direction: .west,
+            distanceManhattan: 2,
+            quantityAvailable: 1,
+            source: .naturalWorld,
+            expectedBlockFingerprint: 801
+        )]
+    )])
+    for _ in 0..<4 where socialCleanup.socialSnapshot().messages.isEmpty {
+        _ = try! socialCleanup.advanceTick()
+    }
+    if socialCleanup.socialVerificationRequest(for: "agent_0") == nil {
+        _ = try! socialCleanup.advanceTick()
+    }
+    let socialCleanupBefore = socialCleanup.durableState()
+    let socialHistoryBefore = socialCleanup.socialSnapshot()
+    let socialTrustBefore = socialCleanup.trustSnapshot()
+    let socialCleanupRecord = mortalityKillPrepared(&socialCleanup)
+    let socialCleanupAfter = socialCleanup.durableState()
+    check("mortality social fixture has active verification", socialCleanupBefore
+        .activeSocialVerifications.contains(where: { $0.agentID == "agent_0" }))
+    check("mortality social verification removed", !socialCleanupAfter
+        .activeSocialVerifications.contains(where: { $0.agentID == "agent_0" })
+        && socialCleanupRecord.cleanupCounts.socialVerifications == 1)
+    check("mortality social history preserved", socialCleanup.socialSnapshot().facts
+        == socialHistoryBefore.facts
+        && socialCleanup.socialSnapshot().messages == socialHistoryBefore.messages
+        && socialCleanup.socialSnapshot().beliefs == socialHistoryBefore.beliefs
+        && socialCleanup.trustSnapshot() == socialTrustBefore)
+
+    var physicalCleanup = mortalityPreparedSession("sim-mortality-physical-cleanup")
+    try! physicalCleanup.setSocialEnabled(true)
+    try! physicalCleanup.setPhysicalEnabled(true)
+    _ = try! physicalCleanup.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: "agent_0",
+        socialResourceObservations: [mortalityResourceObservation(
+            resource: .wood,
+            target: AgentPosition(x: 3, y: 64, z: 0),
+            direction: .east,
+            fingerprint: 901
+        )]
+    )])
+    _ = try! physicalCleanup.advanceTick()
+    let physicalCleanupBefore = physicalCleanup.durableState()
+    let physicalHistoryBefore = physicalCleanup.physicalChannelSnapshot().perceptions
+    let physicalSignal = physicalCleanup.physicalChannelSnapshot().signals.last!
+    let physicalCleanupRecord = mortalityKillPrepared(&physicalCleanup)
+    let physicalCleanupAfter = physicalCleanup.durableState()
+    check("mortality physical fixture has pending signal presentation", physicalSignal.senderID
+        .rawValue == "agent_0" && physicalSignal.status == .pending
+        && physicalCleanupBefore.physicalPresentationRequests.contains {
+            $0.senderID.rawValue == "agent_0" && $0.presentedAtTick == nil
+        })
+    check("mortality physical pending state resolved", physicalCleanup.physicalChannelSnapshot()
+        .signals.contains { $0.signalID == physicalSignal.signalID && $0.status == .cancelled }
+        && !physicalCleanupAfter.physicalPresentationRequests.contains {
+            $0.senderID.rawValue == "agent_0" && $0.presentedAtTick == nil
+        }
+        && physicalCleanupRecord.cleanupCounts.physicalSignals == 1
+        && physicalCleanupRecord.cleanupCounts.physicalPresentations == 1)
+    check("mortality physical cooldown removed", physicalCleanupBefore.lastSocialShareTicks
+        .contains { $0.key == "agent_0" }
+        && !physicalCleanupAfter.lastSocialShareTicks.contains { $0.key == "agent_0" })
+    check("mortality physical perceptions preserved", physicalCleanup.physicalChannelSnapshot()
+        .perceptions == physicalHistoryBefore)
+
+    var cooperationCleanup = mortalityPreparedSession("sim-mortality-cooperation-cleanup")
+    try! cooperationCleanup.setSocialEnabled(true)
+    try! cooperationCleanup.setPhysicalEnabled(true)
+    try! cooperationCleanup.createConstructionProject(mortalityConstructionProject(
+        "mortality-cleanup-project"
+    ))
+    try! cooperationCleanup.setCooperationEnabled(true)
+    _ = try! cooperationCleanup.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: "agent_0",
+        socialResourceObservations: [mortalityResourceObservation(
+            resource: .stone,
+            target: AgentPosition(x: 3, y: 64, z: 0),
+            direction: .east,
+            fingerprint: 1_001
+        )]
+    )])
+    _ = try! cooperationCleanup.advanceTick()
+    let cooperationSignal = cooperationCleanup.physicalChannelSnapshot().signals.last!
+    _ = try! cooperationCleanup.advanceTick(physicalObservations: [
+        AgentPhysicalSignalObservation(
+            signalID: cooperationSignal.signalID,
+            observerID: AgentID(rawValue: "agent_1")!,
+            distanceManhattan: 1,
+            soundClarity: 95,
+            gestureClarity: 95,
+            opaqueOcclusionCount: 0,
+            lineOfSight: true,
+            chunksReady: true,
+            observedAtTick: cooperationCleanup.tick + 1
+        ),
+    ])
+    let cooperationBefore = cooperationCleanup.cooperationSnapshot()
+    let constructionBefore = cooperationCleanup.snapshot().constructionProject!
+    let cooperationCleanupRecord = mortalityKillPrepared(&cooperationCleanup)
+    let cooperationAfter = cooperationCleanup.cooperationSnapshot()
+    let constructionAfter = cooperationCleanup.snapshot().constructionProject!
+    check("mortality cooperation fixture has active task offer", cooperationBefore.tasks
+        .contains { !$0.status.isTerminal && $0.issuerID.rawValue == "agent_0" }
+        && cooperationBefore.offers.contains { $0.issuerID.rawValue == "agent_0" })
+    check("mortality cooperation task cancelled participant died", cooperationAfter.tasks
+        .contains { $0.status == .cancelled && $0.reason == "participantDied" }
+        && cooperationAfter.offers.isEmpty
+        && cooperationCleanupRecord.cleanupCounts.cooperationTasks == 1
+        && cooperationCleanupRecord.cleanupCounts.cooperationOffers == 1)
+    check("mortality cooperation reliability history preserved", cooperationAfter.relations
+        == cooperationBefore.relations)
+    check("mortality construction builder death blocks project", constructionAfter.status
+        == .blocked && constructionAfter.lastFailure == .builderDied
+        && constructionAfter.materialEscrow == constructionBefore.materialEscrow
+        && constructionAfter.placedCellIndices == constructionBefore.placedCellIndices
+        && cooperationCleanupRecord.cleanupCounts.constructionProjects == 1)
+
+    var ecologyCleanup = mortalityPreparedSession("sim-mortality-ecology-cleanup")
+    let ecologyHabitat = mortalityEcologyHabitat()
+    try! ecologyCleanup.initializeLocalEcology(observations: [ecologyHabitat])
+    let ecologyObservations = try! ecologyCleanup.localEcologyResourceObservations(
+        for: AgentID(rawValue: "agent_0")!,
+        habitatValidations: [ecologyHabitat]
+    )
+    _ = try! ecologyCleanup.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: "agent_0",
+        resourceObservations: ecologyObservations,
+        navigationObservation: mortalityNavigation(
+            tick: 1,
+            target: ecologyHabitat.foragePosition
+        )
+    )])
+    let ecologyPatch = ecologyCleanup.localEcologySnapshot().patches.first!
+    let blockedForage = try! ecologyCleanup.applyForageIntents([
+        AgentForageIntent(
+            forageID: "mortality-ecology-not-adjacent",
+            patchID: ecologyPatch.patchID,
+            agentID: AgentID(rawValue: "agent_0")!,
+            tick: ecologyCleanup.tick,
+            target: ecologyPatch.foragePosition,
+            observedAtTick: ecologyCleanup.tick,
+            expectedHabitatFingerprint: ecologyPatch.habitatFingerprint
+        ),
+    ], habitatValidations: [mortalityEcologyHabitat(tick: ecologyCleanup.tick)])
+    let ecologyCleanupBefore = ecologyCleanup.durableState()
+    let ecologyStateBefore = ecologyCleanup.localEcologySnapshot()
+    _ = mortalityKillPrepared(&ecologyCleanup)
+    let pressureAfterDeath = try! ecologyCleanup.applyLocalEcologyEndOfTick(
+        habitatValidations: [mortalityEcologyHabitat(tick: ecologyCleanup.tick)]
+    )
+    let ecologyCleanupAfter = ecologyCleanup.durableState()
+    let ecologyStateAfter = ecologyCleanup.localEcologySnapshot()
+    check("mortality ecology fixture has active target reservation", ecologyCleanupBefore.agents
+        .first { $0.id == "agent_0" }?.activeResourceTarget?.source == .localEcology
+        && ecologyCleanupBefore.reservations.contains {
+            $0.agentId == "agent_0" && $0.ecologyPatchID == ecologyPatch.patchID
+        })
+    check("mortality ecology fixture has real forage history", blockedForage.first?.status
+        == .notAdjacent && ecologyCleanupBefore.localEcologyState?.processedForageIDs
+        == ["mortality-ecology-not-adjacent"])
+    check("mortality ecology active state removed", !ecologyCleanupAfter.reservations
+        .contains { $0.agentId == "agent_0" }
+        && !ecologyCleanupAfter.agents.contains { $0.id == "agent_0" })
+    check("mortality ecology history and patch preserved", ecologyStateAfter.patches
+        == ecologyStateBefore.patches
+        && ecologyStateAfter.forageHistory == ecologyStateBefore.forageHistory
+        && ecologyCleanupAfter.localEcologyState?.processedForageIDs
+            == ecologyCleanupBefore.localEcologyState?.processedForageIDs)
+    check("mortality ecology pressure uses survivors", pressureAfterDeath?.input.population == 2
+        && ecologyCleanup.ecologyConservationSnapshot().balanced
+        && ecologyCleanup.conservationSnapshot().balanced)
+
+    let cleanupDurableStates = [
+        resourceCleanup.durableState(),
+        socialCleanup.durableState(),
+        physicalCleanup.durableState(),
+        cooperationCleanup.durableState(),
+        ecologyCleanup.durableState(),
+    ]
+    check("mortality causal pointers remove dead keys", cleanupDurableStates.allSatisfy { state in
+        !state.lastPerceptionEvents.contains { $0.agentID.rawValue == "agent_0" }
+            && !state.lastDecisionEvents.contains { $0.agentID.rawValue == "agent_0" }
+            && !state.lastOutcomeEvents.contains { $0.agentID.rawValue == "agent_0" }
+    })
+    check("mortality population cleanup exact across fixtures", cleanupDurableStates.allSatisfy {
+        $0.populationRegistry?.members.map(\.agentID.rawValue) == ["agent_1", "agent_2"]
+            && $0.populationRegistry?.settlement.residentIDs.map(\.rawValue)
+                == ["agent_1", "agent_2"]
+            && $0.populationRegistry?.nextPopulationOrdinal.rawValue == 3
+    })
+
     func simultaneous(
         _ reversed: Bool,
         mortalityConfiguration: AgentMortalityConfiguration = .live
@@ -318,6 +800,59 @@ func runPebbleAgentsMortalityPopulationExitSmoke() {
         && simultaneousA.populationSummary().memberCount == 0)
     let emptyTick = try! simultaneousA.advanceTick()
     check("mortality zero active tick safe", emptyTick.tick == 2 && emptyTick.agents.isEmpty)
+
+    func capacityInvalidBatch(_ reversed: Bool) -> (
+        rejected: Bool,
+        before: Data,
+        after: Data,
+        session: AgentSimulationSession
+    ) {
+        let config = try! AgentSessionConfiguration(
+            seed: 46,
+            memoryPolicy: .bounded(maxEntries: 64)
+        )
+        var agents = [
+            mortalityAgent("agent_0", health: 10, lethalNextTick: true),
+            mortalityAgent("agent_1", health: 10, lethalNextTick: true),
+            mortalityAgent("agent_2"),
+        ]
+        if reversed { agents.reverse() }
+        var value = try! AgentSimulationSession(
+            configuration: config,
+            agents: agents,
+            simulationID: try! AgentSimulationID(validating: "sim-mortality-invalid-batch"),
+            causalLedgerPolicy: .bounded(maxEvents: 4096)
+        )
+        value.setSurvivalEnabled(true)
+        try! value.initializePopulationRegistry(
+            settlementAnchor: AgentPosition(x: 0, y: 64, z: 0),
+            receptionPosition: AgentPosition(x: 0, y: 64, z: 0)
+        )
+        try! value.setMortalityEnabled(true, configuration: try! AgentMortalityConfiguration(
+            maximumDeathsPerTick: 1
+        ))
+        let before = try! value.durableStateBytes()
+        let rejected: Bool
+        do {
+            _ = try value.advanceTick()
+            rejected = false
+        } catch AgentSessionError.mortality(.deathsPerTickExceeded(2)) {
+            rejected = true
+        } catch {
+            rejected = false
+        }
+        return (rejected, before, try! value.durableStateBytes(), value)
+    }
+    let invalidBatch = capacityInvalidBatch(false)
+    let reversedInvalidBatch = capacityInvalidBatch(true)
+    check("mortality batch late member invalid rollback", invalidBatch.rejected
+        && invalidBatch.session.mortalitySnapshot().records.isEmpty
+        && invalidBatch.session.populationSummary().memberCount == 3)
+    check("mortality batch rollback durable bytes exact", invalidBatch.before
+        == invalidBatch.after)
+    check("mortality batch rollback input order neutral", reversedInvalidBatch.rejected
+        && reversedInvalidBatch.before == invalidBatch.before
+        && reversedInvalidBatch.after == invalidBatch.after)
 
     let boundedMortality = try! AgentMortalityConfiguration(
         maximumRetainedDeathRecords: 1,
@@ -442,4 +977,6 @@ func runPebbleAgentsMortalityPopulationExitSmoke() {
     check("mortality replacement ordinal monotone", migration.populationSummary()
         .nextPopulationOrdinal == 5 && !migration.expectedActiveAgentIDs().map(\.rawValue)
         .contains("agent_3"))
+    check("mortality population migration history preserved", migration.migrationSnapshot()
+        .migrations.first == failedMigration)
 }

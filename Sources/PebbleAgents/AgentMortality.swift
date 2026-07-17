@@ -133,6 +133,80 @@ public struct AgentMortalityCleanupCounts: Codable, Equatable, Sendable {
     }
 }
 
+public struct AgentTerminalActivitySnapshot: Codable, Equatable, Sendable {
+    public let observationCount: Int
+    public let nearbyObservationCount: Int
+    public let goalSelectionCount: Int
+    public let goalChangeCount: Int
+    public let actionCount: Int
+    public let actionEffectCount: Int
+    public let movementCount: Int
+    public let totalManhattanDistanceMoved: Int
+    public let returnHomeMoveCount: Int
+    public let foodConsumedCount: Int
+    public let ticksAlive: Int
+    public let lastGoal: AgentGoalKind
+    public let lastAction: AgentAction?
+    public let lastActionEffect: AgentActionEffect?
+    public let lastMovementOutcomeStatus: AgentMovementStatus?
+    public let lastInteractionOutcomeStatus: AgentInteractionStatus?
+    public let lastDeliveryOutcomeStatus: AgentDeliveryStatus?
+    public let lastConsumptionOutcomeStatus: AgentConsumptionStatus?
+
+    init(state: AgentSessionAgentState) {
+        observationCount = state.observationCount
+        nearbyObservationCount = state.nearbyObservationCount
+        goalSelectionCount = state.goalSelectionCount
+        goalChangeCount = state.goalChangeCount
+        actionCount = state.actionCount
+        actionEffectCount = state.actionEffectCount
+        movementCount = state.movementCount
+        totalManhattanDistanceMoved = state.totalManhattanDistanceMoved
+        returnHomeMoveCount = state.returnHomeMoveCount
+        foodConsumedCount = state.survivalProgress?.foodConsumedCount ?? 0
+        ticksAlive = state.ticksAlive
+        lastGoal = state.currentGoal.kind
+        lastAction = state.lastAction
+        lastActionEffect = state.lastActionEffect
+        lastMovementOutcomeStatus = state.lastMovementOutcome?.status
+        lastInteractionOutcomeStatus = state.lastInteractionOutcome?.status
+        lastDeliveryOutcomeStatus = state.lastDeliveryOutcome?.status
+        lastConsumptionOutcomeStatus = state.survivalProgress?.lastConsumptionOutcome?.status
+    }
+
+    var canonicalText: String {
+        let actionText = lastAction.map { action in
+            let dx = action.dx.map(String.init) ?? "nil"
+            let dy = action.dy.map(String.init) ?? "nil"
+            let dz = action.dz.map(String.init) ?? "nil"
+            return "\(action.name):\(action.tick):\(dx):\(dy):\(dz)"
+        } ?? "nil"
+        let effectText = lastActionEffect.map { effect in
+            "\(effect.action):\(effect.effect):\(effect.tick)"
+        } ?? "nil"
+        return [
+            String(observationCount),
+            String(nearbyObservationCount),
+            String(goalSelectionCount),
+            String(goalChangeCount),
+            String(actionCount),
+            String(actionEffectCount),
+            String(movementCount),
+            String(totalManhattanDistanceMoved),
+            String(returnHomeMoveCount),
+            String(foodConsumedCount),
+            String(ticksAlive),
+            lastGoal.rawValue,
+            actionText,
+            effectText,
+            lastMovementOutcomeStatus?.rawValue ?? "nil",
+            lastInteractionOutcomeStatus?.rawValue ?? "nil",
+            lastDeliveryOutcomeStatus?.rawValue ?? "nil",
+            lastConsumptionOutcomeStatus?.rawValue ?? "nil",
+        ].joined(separator: ",")
+    }
+}
+
 public struct AgentMortalityRecord: Codable, Equatable, Sendable {
     public let deathID: AgentDeathID
     public let agentID: AgentID
@@ -154,6 +228,7 @@ public struct AgentMortalityRecord: Codable, Equatable, Sendable {
     public let ticksAlive: Int
     public let lastGoal: AgentGoalKind
     public let lastAction: AgentAction?
+    public let terminalActivity: AgentTerminalActivitySnapshot
     public let carriedInventory: [AgentResourceAmount]
     public let finalMemory: [AgentMemoryEntry]
     public let finalStateDigest: String

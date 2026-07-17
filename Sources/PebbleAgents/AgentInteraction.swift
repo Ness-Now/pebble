@@ -476,7 +476,7 @@ public struct AgentInteractionIntent: Equatable {
     }
 }
 
-public enum AgentInteractionStatus: String, Codable, Equatable {
+public enum AgentInteractionStatus: String, Codable, Equatable, Sendable {
     case succeeded
     case blocked
     case inventoryFull

@@ -94,6 +94,9 @@ final class PebbleAgentController {
     var ecologyFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_ECOLOGY"] == "1"
     }
+    var mortalityFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_MORTALITY"] == "1"
+    }
     var physicalAudioAvailable: () -> Bool = { false }
     var traceEvery: Int {
         guard let raw = environment["PEBBLELAB_APP_AGENTS_TRACE_EVERY"],
@@ -162,5 +165,6 @@ final class PebbleAgentController {
         case populationBoundary(String)
         case settlementMetricsBoundary(String)
         case ecologyBoundary(String)
+        case mortalityBoundary(String)
     }
 }

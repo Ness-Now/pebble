@@ -330,6 +330,42 @@ func runMortalityPopulationExitSmoke(_ options: Options) -> Never {
     let record = mortality.records.last!
     let exitFrame = mortality.exitFrames.last!
     let causal = direct.causalLedgerSnapshot()
+    let eventByID: (AgentCausalEventID) -> AgentCausalEvent? = { eventID in
+        causal.events.first { $0.eventID == eventID }
+    }
+    let lethalEvent = eventByID(record.lethalDamageEventID)
+    let resourcesEvent = eventByID(record.resourcesRetiredEventID)
+    let commitmentsEvent = eventByID(record.commitmentsResolvedEventID)
+    let populationExitEvent = eventByID(record.populationExitEventID)
+    let finalizedEvent = eventByID(record.deathEventID)
+    let lethalChain = [
+        lethalEvent,
+        resourcesEvent,
+        commitmentsEvent,
+        populationExitEvent,
+        finalizedEvent,
+    ].compactMap { $0 }
+    let forbiddenPostLethalKinds: Set<String> = [
+        AgentCausalEventKind.perception.rawValue,
+        AgentCausalEventKind.goalTransition.rawValue,
+        AgentCausalEventKind.actionSelected.rawValue,
+        AgentCausalEventKind.movement.rawValue,
+        AgentCausalEventKind.interaction.rawValue,
+        AgentCausalEventKind.delivery.rawValue,
+        AgentCausalEventKind.consumption.rawValue,
+        AgentCausalEventKind.resourceFactGrounded.rawValue,
+        AgentCausalEventKind.socialMessageSent.rawValue,
+        AgentCausalEventKind.physicalSignalEmitted.rawValue,
+        AgentCausalEventKind.sharedTaskAccepted.rawValue,
+        AgentCausalEventKind.sharedTaskProgress.rawValue,
+        AgentCausalEventKind.constructionPlacement.rawValue,
+        AgentCausalEventKind.ecologyForageResolved.rawValue,
+    ]
+    let postLethalAgentEvents = causal.events.filter {
+        $0.sequence > record.lethalDamageEventID.sequence
+            && ($0.actorID == record.agentID || $0.subjectID == record.agentID)
+            && forbiddenPostLethalKinds.contains($0.kind.rawValue)
+    }
     let mortalityEvents = causal.events.filter { event in
         switch event.kind {
         case .mortalityInitialized, .lethalHealthDepletion, .agentDeathFinalized,
@@ -352,9 +388,60 @@ func runMortalityPopulationExitSmoke(_ options: Options) -> Never {
     add("real_starvation_cause", record.cause == .starvation
         && record.healthBeforeLethalDamage == 10 && record.finalHealth == 0)
     add("terminal_tick_exact", record.deathTick == 27 && exitFrame.tick == 27)
+    add("mortality_lethal_causal_order_exact", record.finalMemory.last?.tick == 27
+        && record.finalMemory.last?.type == "starvation_damage"
+        && lethalChain.map(\.kind) == [
+            .lethalHealthDepletion,
+            .mortalityResourcesRetired,
+            .mortalityCommitmentsResolved,
+            .populationMemberExited,
+            .agentDeathFinalized,
+        ]
+        && resourcesEvent?.causes == [record.lethalDamageEventID]
+        && commitmentsEvent?.causes == [record.lethalDamageEventID]
+        && populationExitEvent?.causes == [
+            record.lethalDamageEventID,
+            record.resourcesRetiredEventID,
+            record.commitmentsResolvedEventID,
+        ].sorted()
+        && finalizedEvent?.causes == [record.populationExitEventID])
+    add("mortality_finalized_event_is_terminal", finalizedEvent?.kind == .agentDeathFinalized
+        && lethalChain.last?.eventID == record.deathEventID)
     add("no_terminal_cognition", lethalApplication.tickResult?.agents.contains {
         $0.agentId == "agent_3"
     } == false)
+    add("mortality_no_post_lethal_cognition_or_material", postLethalAgentEvents.isEmpty)
+    add("terminal_observation_counts_frozen", record.terminalActivity.observationCount
+        == preDeathAgent.observationCount
+        && record.terminalActivity.nearbyObservationCount
+            == preDeathAgent.nearbyObservationCount)
+    add("terminal_goal_counts_frozen", record.terminalActivity.goalSelectionCount
+        == preDeathAgent.goalSelectionCount
+        && record.terminalActivity.goalChangeCount == preDeathAgent.goalChangeCount)
+    add("terminal_action_counts_frozen", record.terminalActivity.actionCount
+        == preDeathAgent.actionCount
+        && record.terminalActivity.actionEffectCount == preDeathAgent.actionEffectCount)
+    add("terminal_movement_counts_frozen", record.terminalActivity.movementCount
+        == preDeathAgent.movementCount
+        && record.terminalActivity.totalManhattanDistanceMoved
+            == preDeathAgent.totalManhattanDistanceMoved
+        && record.terminalActivity.returnHomeMoveCount == preDeathAgent.returnHomeMoveCount)
+    add("terminal_consumption_count_frozen", record.terminalActivity.foodConsumedCount
+        == (preDeathAgent.survivalProgress?.foodConsumedCount ?? 0))
+    add("terminal_ticks_alive_advances_once", record.terminalActivity.ticksAlive
+        == preDeathAgent.ticksAlive + 1)
+    add("terminal_last_activity_exact", record.terminalActivity.lastGoal
+        == preDeathAgent.currentGoal.kind
+        && record.terminalActivity.lastAction == preDeathAgent.lastAction
+        && record.terminalActivity.lastActionEffect == preDeathAgent.lastActionEffect
+        && record.terminalActivity.lastMovementOutcomeStatus
+            == preDeathAgent.lastMovementOutcome?.status
+        && record.terminalActivity.lastInteractionOutcomeStatus
+            == preDeathAgent.lastInteractionOutcome?.status
+        && record.terminalActivity.lastDeliveryOutcomeStatus
+            == preDeathAgent.lastDeliveryOutcome?.status
+        && record.terminalActivity.lastConsumptionOutcomeStatus
+            == preDeathAgent.survivalProgress?.lastConsumptionOutcome?.status)
     add("population_four_to_three", exitFrame.populationBefore == 4
         && exitFrame.populationAfter == 3)
     add("active_state_removed", !postDeathRestored.expectedActiveAgentIDs()
@@ -432,6 +519,10 @@ func runMortalityPopulationExitSmoke(_ options: Options) -> Never {
     try! mortalityWrite(
         mortality.records.map { $0.cleanupCounts },
         to: root.appendingPathComponent("mortality_cleanup.json")
+    )
+    try! mortalityWrite(
+        mortality.records.map { $0.terminalActivity },
+        to: root.appendingPathComponent("mortality_terminal_activity.json")
     )
     try! mortalityWrite(
         conservation,

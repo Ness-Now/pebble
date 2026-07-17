@@ -7,6 +7,26 @@ import ImageIO
 import MetalKit
 import PebbleCore
 
+func suppressAutomaticPauseForDisposableWorldProof(
+    environment: [String: String] = ProcessInfo.processInfo.environment
+) -> Bool {
+    environment["PEBBLE_CMD"] != nil
+        && environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1"
+}
+
+func disposableWorldProofPauseContractIsValid() -> Bool {
+    !suppressAutomaticPauseForDisposableWorldProof(environment: [:])
+        && !suppressAutomaticPauseForDisposableWorldProof(environment: ["PEBBLE_CMD": "/lab"])
+        && !suppressAutomaticPauseForDisposableWorldProof(environment: [
+            "PEBBLE_CMD": "/lab",
+            "PEBBLELAB_DISPOSABLE_WORLD_PROOF": "0",
+        ])
+        && suppressAutomaticPauseForDisposableWorldProof(environment: [
+            "PEBBLE_CMD": "/lab",
+            "PEBBLELAB_DISPOSABLE_WORLD_PROOF": "1",
+        ])
+}
+
 // ---------------------------------------------------------------------------
 // NSEvent keyCode (kVK_*) → internal key-code strings (GameCore keybinds)
 // ---------------------------------------------------------------------------
@@ -426,6 +446,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         gAppDelegate = self
+        precondition(disposableWorldProofPauseContractIsValid())
+        if suppressAutomaticPauseForDisposableWorldProof() {
+            print("[pebblelab-proof] disposable-world gate=armed")
+        }
         let t0 = CFAbsoluteTimeGetCurrent()
         game = GameCore()
         game.host = host
@@ -597,6 +621,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     func applicationDidResignActive(_ notification: Notification) {
         game?.clearInput()
         gameView?.releaseMouse()
+        // Explicit disposable-world proofs must reach their requested World tick
+        // when the harness, rather than Pebble, owns focus. PEBBLE_CMD alone
+        // remains an ordinary command-injection hook and still auto-pauses.
+        guard !suppressAutomaticPauseForDisposableWorldProof() else { return }
         if let game, let ui, game.hasWorld(), !ui.hasScreen() {
             ui.open(PauseScreen(), game)
         }

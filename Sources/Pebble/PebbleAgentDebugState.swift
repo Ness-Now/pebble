@@ -21,6 +21,7 @@ struct PebbleAgentDebugState {
         populationSnapshot: AgentPopulationSnapshot,
         settlementMetricsSnapshot: AgentSettlementMetricsSnapshot,
         localEcologySnapshot: AgentLocalEcologySnapshot,
+        mortalitySnapshot: AgentMortalitySnapshot,
         mode: PebbleAgentOverlayMode,
         paused: Bool,
         cognitiveHz: Int,
@@ -47,9 +48,10 @@ struct PebbleAgentDebugState {
     ) {
         let focus = snapshot.agents.first { $0.id == focusedAgentId } ?? snapshot.agents.first
         let status = paused ? "paused" : "running"
+        let mortalityLines = Self.mortalityLines(snapshot: mortalitySnapshot)
         statusSummary = "status=\(status) tick=\(snapshot.tick) hz=\(cognitiveHz) agents=\(snapshot.agentCount)"
         guard let agent = focus else {
-            globalLines = ["PEBBLE AGENTS - 3D LIVE PROTOTYPE"]
+            globalLines = ["PEBBLE AGENTS - 3D LIVE PROTOTYPE"] + mortalityLines
             focusedAgentLines = ["No focused agent"]
             return
         }
@@ -138,7 +140,7 @@ struct PebbleAgentDebugState {
                 "rollback: \(interaction.rollbackCount) \(Self.short(interaction.lastRollback, limit: 30))",
                 "errors: \(runtimeErrorCount)  catchup dropped: \(droppedCatchUpSteps)",
             ] + socialLines + physicalLines + cooperationLines + populationLines
-                + settlementLines + ecologyLines
+                + settlementLines + ecologyLines + mortalityLines
             return
         }
 
@@ -269,6 +271,7 @@ struct PebbleAgentDebugState {
         lines += populationLines
         lines += settlementLines
         lines += ecologyLines
+        lines += mortalityLines
         lines.append("ticks: \(agent.ticksAlive) goals: \(agent.goalChangeCount) actions/effects: \(agent.actionCount)/\(agent.actionEffectCount)")
         focusedAgentLines = lines
     }
@@ -451,6 +454,15 @@ struct PebbleAgentDebugState {
             "condition=\(frame.condition.rawValue) population=\(frame.population.members)/\(frame.population.capacity)",
             "urgent=\(frame.activity.urgentCount) migrating=\(frame.activity.migratingCount) engaged=\(frame.activity.engagedCount) stable=\(frame.activity.stableCount)",
             "movementDelta=\(frame.throughput.movementDelta) nextPulse=\(snapshot.nextPulseTick ?? -1)",
+        ]
+    }
+
+    private static func mortalityLines(snapshot: AgentMortalitySnapshot) -> [String] {
+        guard snapshot.enabled else { return [] }
+        let latest = snapshot.records.last
+        return [
+            "mortality=on deaths=\(snapshot.totalDeathCount) retained=\(snapshot.records.count) terminal=\(snapshot.unrecoveredAtDeath.reduce(0) { $0 + $1.quantity })",
+            "lastDeath=\(latest?.agentID.rawValue ?? "none") tick=\(latest?.deathTick ?? -1) exits=\(snapshot.exitFrames.count)",
         ]
     }
 

@@ -50,7 +50,7 @@ public struct AgentGoalChange {
     }
 }
 
-public struct AgentActionEffect: Codable {
+public struct AgentActionEffect: Codable, Equatable, Sendable {
     public let action: String
     public let effect: String
     public let tick: Int

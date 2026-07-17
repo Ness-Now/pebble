@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build|--social|--physical|--cooperation|--persistence|--population|--multiscale|--ecology]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build|--social|--physical|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -39,6 +39,7 @@ Options:
   --population Run bounded migrant admission, mid-route restart, arrival, and uninterrupted control.
   --multiscale Run bounded settlement pulses, v3 restart, uninterrupted, and metrics-off controls.
   --ecology Run local forage scarcity, v4 restart, regeneration, and uninterrupted control.
+  --mortality Run starvation mortality, v5 pre/post restart, probe exit, and replacement migration.
   --help     Show this help and exit.
 EOF
 }
@@ -89,6 +90,7 @@ for option in "$@"; do
         --population) MODE="population"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --multiscale) MODE="multiscale"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --ecology) MODE="ecology"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --mortality) MODE="mortality"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --help|-h) usage; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$option" >&2; usage >&2; exit 2 ;;
     esac
@@ -105,7 +107,42 @@ PERSISTENCE_GATE=0
 POPULATION_GATE=0
 MULTISCALE_GATE=0
 ECOLOGY_GATE=0
-if [ "$MODE" = "ecology" ]; then
+MORTALITY_GATE=0
+if [ "$MODE" = "mortality" ]; then
+    WORLD_SEED="46"
+    PERSISTENCE_GATE=1
+    POPULATION_GATE=1
+    MULTISCALE_GATE=1
+    ECOLOGY_GATE=1
+    MORTALITY_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-Mortality-46"
+    CAPTURE_NAME="mortality-population-exit-proof.txt"
+    POPULATION_ANCHOR_X=${PEBBLELAB_ECOLOGY_ANCHOR_X:-14}
+    POPULATION_ANCHOR_Z=${PEBBLELAB_ECOLOGY_ANCHOR_Z:--21}
+    POPULATION_ANCHOR_Y=${PEBBLELAB_ECOLOGY_ANCHOR_Y:-66}
+    POPULATION_PLAYER_Y=$((POPULATION_ANCHOR_Y + 3))
+    POPULATION_WORLD_READY="/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp $POPULATION_ANCHOR_X $POPULATION_ANCHOR_Y $POPULATION_ANCHOR_Z"
+    MORTALITY_BOOTSTRAP_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab pause;/lab movement on;/lab population on;/lab settlement on;/lab survival on;/lab mortality on;/lab focus agent_0"
+    mortality_step=0
+    while [ "$mortality_step" -lt 10 ]; do
+        MORTALITY_BOOTSTRAP_COMMANDS="$MORTALITY_BOOTSTRAP_COMMANDS;/lab step"
+        mortality_step=$((mortality_step + 1))
+    done
+    MORTALITY_BOOTSTRAP_COMMANDS="$MORTALITY_BOOTSTRAP_COMMANDS;/lab migration admit;/lab focus agent_3;/lab follow agent_3"
+    mortality_step=0
+    while [ "$mortality_step" -lt 5 ]; do
+        MORTALITY_BOOTSTRAP_COMMANDS="$MORTALITY_BOOTSTRAP_COMMANDS;/lab step"
+        mortality_step=$((mortality_step + 1))
+    done
+    MORTALITY_BOOTSTRAP_COMMANDS="$MORTALITY_BOOTSTRAP_COMMANDS;/lab migration status;/lab population status;/lab ecology on;/lab ecology scan;/lab economy auto on"
+    mortality_step=0
+    while [ "$mortality_step" -lt 11 ]; do
+        MORTALITY_BOOTSTRAP_COMMANDS="$MORTALITY_BOOTSTRAP_COMMANDS;/lab step"
+        mortality_step=$((mortality_step + 1))
+    done
+    MORTALITY_PHASE1_COMMANDS="$MORTALITY_BOOTSTRAP_COMMANDS;/lab focus agent_2;/lab follow agent_2;/lab ecology status;/lab survival status;/lab mortality status;/lab exits status;/lab checkpoint save mortality-preexit;/lab checkpoint status;/lab causality status;/lab status"
+    LAB_COMMANDS="$MORTALITY_PHASE1_COMMANDS"
+elif [ "$MODE" = "ecology" ]; then
     WORLD_SEED="46"
     PERSISTENCE_GATE=1
     POPULATION_GATE=1
@@ -374,6 +411,8 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_POPULATION=%s\n' "$POPULATION_GATE"
     printf '  PEBBLELAB_APP_AGENTS_MULTISCALE=%s\n' "$MULTISCALE_GATE"
     printf '  PEBBLELAB_APP_AGENTS_ECOLOGY=%s\n' "$ECOLOGY_GATE"
+    printf '  PEBBLELAB_APP_AGENTS_MORTALITY=%s\n' "$MORTALITY_GATE"
+    printf '  PEBBLELAB_DISPOSABLE_WORLD_PROOF=1\n'
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
     if [ "$MODE" = "build" ]; then
         printf '  PEBBLE_SHOT=-|%s/fixed-shelter-before.png|%s/fixed-shelter-partial.png|%s|-\n' \
@@ -394,7 +433,11 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "ecology" ]; then
+    if [ "$MODE" = "mortality" ]; then
+        printf '  2. Confirm four residents and exactly one naturally lethal starvation transition.\n'
+        printf '  3. Confirm v5 pre/post-death restart, exact probe exit, focus reconciliation, and no terminal action.\n'
+        printf '  4. Confirm agent_4 physically replaces the exited member and matches uninterrupted control.\n'
+    elif [ "$MODE" = "ecology" ]; then
         printf '  2. Confirm four residents, two read-only habitat patches, and bounded local perception.\n'
         printf '  3. Confirm transactional forage, scarcity, starvation damage, deterministic regeneration, and recovery.\n'
         printf '  4. Confirm v4 restart and uninterrupted control preserve patches, pressure, material, and causal digests.\n'
@@ -436,7 +479,8 @@ print_plan() {
         printf '  3. Confirm consumed=1 conservation, fatigue-driven homeRest, rest recovery, normal goal resumption, and zero corridor changes.\n'
     fi
     if [ "$MODE" != "persistence" ] && [ "$MODE" != "population" ] \
-        && [ "$MODE" != "multiscale" ] && [ "$MODE" != "ecology" ]; then
+        && [ "$MODE" != "multiscale" ] && [ "$MODE" != "ecology" ] \
+        && [ "$MODE" != "mortality" ]; then
         printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
     fi
     printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
@@ -498,6 +542,368 @@ if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
     fail "a Pebble process is already running; refusing an ambiguous live baseline"
 fi
 
+if [ "$MODE" = "mortality" ]; then
+    cd "$ROOT_DIR"
+    swift build -c release --product Pebble
+    PEBBLE_BINARY="$ROOT_DIR/.build/release/Pebble"
+    [ -x "$PEBBLE_BINARY" ] || fail "Release Pebble binary missing: $PEBBLE_BINARY"
+
+    PHASE1_TRACE="$SESSION_ROOT/mortality-phase1.log"
+    PHASE2_TRACE="$SESSION_ROOT/mortality-phase2.log"
+    PHASE3_TRACE="$SESSION_ROOT/mortality-phase3.log"
+    CONTROL_HOME="$SESSION_ROOT/control-home"
+    CONTROL_TRACE="$SESSION_ROOT/mortality-control.log"
+    [ ! -e "$CONTROL_HOME" ] || fail "fresh mortality control home already exists: $CONTROL_HOME"
+
+    run_mortality_app() {
+        run_home=$1
+        run_trace=$2
+        run_commands=$3
+        create_world=$4
+        command_world_tick=$5
+        if [ "$create_world" -eq 1 ]; then
+            CFFIXED_USER_HOME="$run_home" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLE_NEWWORLD="$WORLD_SEED" \
+            PEBBLE_NEWWORLD_NAME="$WORLD_NAME" \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_NATURAL=0 \
+            PEBBLELAB_APP_AGENTS_BUILD=0 \
+            PEBBLELAB_APP_AGENTS_SOCIAL=0 \
+            PEBBLELAB_APP_AGENTS_PHYSICAL=0 \
+            PEBBLELAB_APP_AGENTS_COOPERATION=0 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_APP_AGENTS_POPULATION=1 \
+            PEBBLELAB_APP_AGENTS_MULTISCALE=1 \
+            PEBBLELAB_APP_AGENTS_ECOLOGY=1 \
+            PEBBLELAB_APP_AGENTS_MORTALITY=1 \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT='-|-|-|-|-' \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        else
+            CFFIXED_USER_HOME="$run_home" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_NATURAL=0 \
+            PEBBLELAB_APP_AGENTS_BUILD=0 \
+            PEBBLELAB_APP_AGENTS_SOCIAL=0 \
+            PEBBLELAB_APP_AGENTS_PHYSICAL=0 \
+            PEBBLELAB_APP_AGENTS_COOPERATION=0 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_APP_AGENTS_POPULATION=1 \
+            PEBBLELAB_APP_AGENTS_MULTISCALE=1 \
+            PEBBLELAB_APP_AGENTS_ECOLOGY=1 \
+            PEBBLELAB_APP_AGENTS_MORTALITY=1 \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT='-|-|-|-|-' \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        fi
+        if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
+            fail "Pebble process remained after mortality phase: $run_trace"
+        fi
+    }
+
+    printf '\nMortality phase 1: four residents and restart-safe pre-lethal v5 checkpoint.\n'
+    run_mortality_app "$SESSION_HOME" "$PHASE1_TRACE" "$MORTALITY_PHASE1_COMMANDS" 1 100
+    TRACE_PATH="$PHASE1_TRACE"
+    require_trace 'start seed=46 agents=3 tick=0 ' 'historical three-agent bootstrap'
+    require_trace '^\[pebblelab-proof\] disposable-world gate=armed$' 'explicit disposable-world focus policy'
+    require_trace 'mortality enabled tick=0 active=3 deaths=0 terminal=0 mutation=none' 'mortality enabled without direct death'
+    require_trace 'migration id=migration-00000003 migrant=agent_3 .*status=arrived ' 'physical agent_3 arrival'
+    require_trace 'population gate=enabled enabled=1 settlement=settlement-main capacity=8 members=4 founders=3 residents=4 migrating=0 nextOrdinal=4 ' 'four active residents before mortality'
+    require_trace 'mortality gate=enabled active=yes agents=4 deaths=0 retained=0 evicted=0 latest=none victim=none tick=-1 terminal=0 members=4 nextOrdinal=4 probes=4 ' 'pre-lethal mortality state'
+    require_trace 'checkpoint saved name=mortality-preexit .*tick=26 .*restartSafe=1 ' 'restart-safe pre-lethal checkpoint'
+    require_trace 'summary .*agents=4 .*runtimeErrors=0 .*probesRemoved=4 ' 'clean pre-lethal four-probe cleanup'
+    reject_trace 'mortality exit|agent death finalized|runtime error|health=0' 'premature death or runtime error'
+
+    MORTALITY_ROOT="$SESSION_HOME/Library/Application Support/Pebble/PebbleLabAgents"
+    PRE_MANIFEST=$(/usr/bin/find "$MORTALITY_ROOT" -type f -path '*/checkpoints/mortality-preexit/manifest.json' -print -quit)
+    PRE_SESSION=$(/usr/bin/find "$MORTALITY_ROOT" -type f -path '*/checkpoints/mortality-preexit/session.json' -print -quit)
+    [ -n "$PRE_MANIFEST" ] && [ -n "$PRE_SESSION" ] || fail "mortality pre-exit bundle missing"
+    /usr/bin/grep -q '"schemaVersion":5' "$PRE_MANIFEST" || fail "pre-exit manifest is not schema v5"
+    /usr/bin/grep -q '"schemaVersion":5' "$PRE_SESSION" || fail "pre-exit session is not schema v5"
+    /usr/bin/grep -q '"restartSafe":true' "$PRE_MANIFEST" || fail "pre-exit checkpoint is not restart-safe"
+    [ "$(/usr/bin/plutil -extract durableState.agents.2.agentID raw -o - "$PRE_SESSION")" = "agent_2" ] \
+        || fail "agent_2 is not the canonical mortality victim"
+    [ "$(/usr/bin/plutil -extract durableState.agents.2.health raw -o - "$PRE_SESSION")" = "10" ] \
+        || fail "agent_2 pre-lethal health is not 10"
+    [ "$(/usr/bin/plutil -extract durableState.agents.2.needs.hunger raw -o - "$PRE_SESSION")" = "1" ] \
+        || fail "agent_2 pre-lethal hunger is not critical"
+    [ "$(/usr/bin/plutil -extract durableState.mortalityState.totalDeathCount raw -o - "$PRE_SESSION")" = "0" ] \
+        || fail "pre-lethal checkpoint already contains a death"
+    [ "$(/usr/bin/plutil -extract durableState.populationRegistry.nextPopulationOrdinal raw -o - "$PRE_SESSION")" = "4" ] \
+        || fail "pre-lethal next population ordinal is not four"
+
+    PRE_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=mortality-preexit .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE1_TRACE" | /usr/bin/tail -1)
+    PRE_SIM=$(/usr/bin/sed -n 's/.*checkpoint saved name=mortality-preexit .* simulation=\([^ ]*\) digest=.*/\1/p' "$PHASE1_TRACE" | /usr/bin/tail -1)
+    [ -n "$PRE_DIGEST" ] && [ -n "$PRE_SIM" ] || fail "mortality pre-exit identity extraction failed"
+
+    CONTROL_DB="$CONTROL_HOME/Library/Application Support/Pebble/pebble.db"
+    /bin/mkdir -p "$(dirname "$CONTROL_DB")"
+    [ ! -e "$CONTROL_DB" ] || fail "fresh mortality control database already exists"
+    /usr/bin/sqlite3 "$DB_PATH" ".backup '$CONTROL_DB'"
+    [ -s "$CONTROL_DB" ] || fail "mortality control database snapshot failed"
+    persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
+    case "$persisted_world_tick" in
+        ''|*[!0-9]*) fail "invalid persisted World tick after mortality phase 1: $persisted_world_tick" ;;
+    esac
+    continuation_command_tick=$((persisted_world_tick + 100))
+    control_command_tick=$continuation_command_tick
+
+    MORTALITY_PHASE2_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab checkpoint load mortality-preexit;/lab mortality status;/lab survival status;/lab step;/lab mortality status;/lab exits status;/lab population status;/lab settlement status;/lab ecology status;/lab checkpoint save mortality-postexit;/lab checkpoint status;/lab causality status;/lab status"
+    printf '\nMortality phase 2: exact pre-lethal restore and one terminal tick.\n'
+    run_mortality_app "$SESSION_HOME" "$PHASE2_TRACE" "$MORTALITY_PHASE2_COMMANDS" 0 "$continuation_command_tick"
+    TRACE_PATH="$PHASE2_TRACE"
+    require_trace "checkpoint loaded name=mortality-preexit .*tick=26 simulation=$PRE_SIM digest=$PRE_DIGEST .*restartSafe=1 probes=4 paused=1 focus=agent_2 lifecycleEvent=none worldMutation=none" 'exact pre-lethal v5 restore'
+    require_trace_count '^\[lab-live\] mortality exit tick=27 death=death-agent_2-t27-[0-9a-f]{16} agent=agent_2 cause=starvation health=10>0 population=4>3 terminal=0 probes=4>3 focus=agent_0 corpse=none worldMutation=none$' 1 'one exact terminal transition and probe removal'
+    require_trace 'mortality gate=enabled active=yes agents=3 deaths=1 retained=1 evicted=0 latest=death-agent_2-t27-.* victim=agent_2 tick=27 terminal=0 members=3 nextOrdinal=4 probes=3 ' 'post-death mortality state'
+    require_trace 'population exits count=1 latestDeath=death-agent_2-t27-.* agent=agent_2 tick=27 population=4>3' 'typed population exit frame'
+    require_trace 'checkpoint saved name=mortality-postexit .*tick=27 .*restartSafe=1 ' 'restart-safe post-death checkpoint'
+    require_trace 'summary .*agents=3 .*runtimeErrors=0 .*probesRemoved=3 ' 'clean post-death three-probe cleanup'
+    reject_trace 'tick=27 .*agent_2:|runtime error|corpse=[^n]' 'terminal cognition, runtime error, or corpse'
+
+    POST_MANIFEST=$(/usr/bin/find "$MORTALITY_ROOT" -type f -path '*/checkpoints/mortality-postexit/manifest.json' -print -quit)
+    POST_SESSION=$(/usr/bin/find "$MORTALITY_ROOT" -type f -path '*/checkpoints/mortality-postexit/session.json' -print -quit)
+    [ -n "$POST_MANIFEST" ] && [ -n "$POST_SESSION" ] || fail "mortality post-exit bundle missing"
+    /usr/bin/grep -q '"schemaVersion":5' "$POST_SESSION" || fail "post-exit session is not schema v5"
+    [ "$(/usr/bin/plutil -extract durableState.agents raw -o - "$POST_SESSION" | /usr/bin/grep -c 'agent_2' || true)" = "0" ] \
+        || fail "dead agent_2 remains active after checkpoint"
+    [ "$(/usr/bin/plutil -extract durableState.mortalityState.totalDeathCount raw -o - "$POST_SESSION")" = "1" ] \
+        || fail "post-exit death count is not one"
+    [ "$(/usr/bin/plutil -extract durableState.populationRegistry.nextPopulationOrdinal raw -o - "$POST_SESSION")" = "4" ] \
+        || fail "death changed the next population ordinal"
+
+    for counter in \
+        observationCount \
+        nearbyObservationCount \
+        goalSelectionCount \
+        goalChangeCount \
+        actionCount \
+        actionEffectCount \
+        movementCount \
+        totalManhattanDistanceMoved \
+        returnHomeMoveCount
+    do
+        pre_value=$(/usr/bin/plutil -extract "durableState.agents.2.$counter" raw -o - "$PRE_SESSION")
+        terminal_value=$(/usr/bin/plutil -extract \
+            "durableState.mortalityState.records.0.terminalActivity.$counter" \
+            raw -o - "$POST_SESSION")
+        [ "$terminal_value" = "$pre_value" ] \
+            || fail "terminal $counter changed across lethal survival boundary: $pre_value>$terminal_value"
+    done
+    pre_food=$(/usr/bin/plutil -extract \
+        durableState.agents.2.survivalProgress.foodConsumedCount raw -o - "$PRE_SESSION")
+    terminal_food=$(/usr/bin/plutil -extract \
+        durableState.mortalityState.records.0.terminalActivity.foodConsumedCount \
+        raw -o - "$POST_SESSION")
+    [ "$terminal_food" = "$pre_food" ] \
+        || fail "terminal foodConsumedCount changed across lethal survival boundary"
+    pre_ticks_alive=$(/usr/bin/plutil -extract durableState.agents.2.ticksAlive raw -o - "$PRE_SESSION")
+    terminal_ticks_alive=$(/usr/bin/plutil -extract \
+        durableState.mortalityState.records.0.terminalActivity.ticksAlive \
+        raw -o - "$POST_SESSION")
+    [ "$terminal_ticks_alive" -eq $((pre_ticks_alive + 1)) ] \
+        || fail "terminal ticksAlive did not advance exactly once"
+
+    lethal_sequence=$(/usr/bin/plutil -extract \
+        durableState.mortalityState.records.0.lethalDamageEventID.sequence raw -o - "$POST_SESSION")
+    resources_sequence=$(/usr/bin/plutil -extract \
+        durableState.mortalityState.records.0.resourcesRetiredEventID.sequence raw -o - "$POST_SESSION")
+    commitments_sequence=$(/usr/bin/plutil -extract \
+        durableState.mortalityState.records.0.commitmentsResolvedEventID.sequence raw -o - "$POST_SESSION")
+    exit_sequence=$(/usr/bin/plutil -extract \
+        durableState.mortalityState.records.0.populationExitEventID.sequence raw -o - "$POST_SESSION")
+    finalized_sequence=$(/usr/bin/plutil -extract \
+        durableState.mortalityState.records.0.deathEventID.sequence raw -o - "$POST_SESSION")
+    [ "$resources_sequence" -eq $((lethal_sequence + 1)) ] \
+        && [ "$commitments_sequence" -eq $((resources_sequence + 1)) ] \
+        && [ "$exit_sequence" -eq $((commitments_sequence + 1)) ] \
+        && [ "$finalized_sequence" -eq $((exit_sequence + 1)) ] \
+        || fail "mortality causal sequence is not exact"
+    [ "$(/usr/bin/plutil -extract durableState.causalLedger.droppedEventCount raw -o - "$POST_SESSION")" = "0" ] \
+        || fail "mortality live ledger dropped events required by proof"
+
+    lethal_index=$((lethal_sequence - 1))
+    resources_index=$((resources_sequence - 1))
+    commitments_index=$((commitments_sequence - 1))
+    exit_index=$((exit_sequence - 1))
+    finalized_index=$((finalized_sequence - 1))
+    [ "$(/usr/bin/plutil -extract "durableState.causalLedger.events.$lethal_index.kind" raw -o - "$POST_SESSION")" = "lethalHealthDepletion" ] \
+        && [ "$(/usr/bin/plutil -extract "durableState.causalLedger.events.$resources_index.kind" raw -o - "$POST_SESSION")" = "mortalityResourcesRetired" ] \
+        && [ "$(/usr/bin/plutil -extract "durableState.causalLedger.events.$commitments_index.kind" raw -o - "$POST_SESSION")" = "mortalityCommitmentsResolved" ] \
+        && [ "$(/usr/bin/plutil -extract "durableState.causalLedger.events.$exit_index.kind" raw -o - "$POST_SESSION")" = "populationMemberExited" ] \
+        && [ "$(/usr/bin/plutil -extract "durableState.causalLedger.events.$finalized_index.kind" raw -o - "$POST_SESSION")" = "agentDeathFinalized" ] \
+        || fail "mortality causal kinds are not in canonical order"
+    [ "$(/usr/bin/plutil -extract "durableState.causalLedger.events.$resources_index.causes.0.sequence" raw -o - "$POST_SESSION")" = "$lethal_sequence" ] \
+        && [ "$(/usr/bin/plutil -extract "durableState.causalLedger.events.$commitments_index.causes.0.sequence" raw -o - "$POST_SESSION")" = "$lethal_sequence" ] \
+        && [ "$(/usr/bin/plutil -extract "durableState.causalLedger.events.$exit_index.causes.0.sequence" raw -o - "$POST_SESSION")" = "$lethal_sequence" ] \
+        && [ "$(/usr/bin/plutil -extract "durableState.causalLedger.events.$exit_index.causes.1.sequence" raw -o - "$POST_SESSION")" = "$resources_sequence" ] \
+        && [ "$(/usr/bin/plutil -extract "durableState.causalLedger.events.$exit_index.causes.2.sequence" raw -o - "$POST_SESSION")" = "$commitments_sequence" ] \
+        && [ "$(/usr/bin/plutil -extract "durableState.causalLedger.events.$finalized_index.causes.0.sequence" raw -o - "$POST_SESSION")" = "$exit_sequence" ] \
+        || fail "mortality causal links are not exact"
+
+    latest_sequence=$(/usr/bin/plutil -extract durableState.causalLedger.latestSequence raw -o - "$POST_SESSION")
+    event_index=$lethal_index
+    while [ "$event_index" -lt "$latest_sequence" ]; do
+        event_kind=$(/usr/bin/plutil -extract \
+            "durableState.causalLedger.events.$event_index.kind" raw -o - "$POST_SESSION")
+        event_actor=$(/usr/bin/plutil -extract \
+            "durableState.causalLedger.events.$event_index.actorID" raw -o - "$POST_SESSION" 2>/dev/null || true)
+        event_subject=$(/usr/bin/plutil -extract \
+            "durableState.causalLedger.events.$event_index.subjectID" raw -o - "$POST_SESSION" 2>/dev/null || true)
+        if [ "$event_actor" = "agent_2" ] || [ "$event_subject" = "agent_2" ]; then
+            case "$event_kind" in
+                perception|goalTransition|actionSelected|movement|interaction|delivery|consumption|resourceFactGrounded|socialMessageSent|physicalSignalEmitted|sharedTaskAccepted|sharedTaskProgress|constructionPlacement|ecologyForageResolved)
+                    fail "post-lethal cognitive or material event for agent_2: $event_kind" ;;
+            esac
+            if [ "$event_index" -gt "$finalized_index" ]; then
+                case "$event_kind" in
+                    lethalHealthDepletion|mortalityResourcesRetired|mortalityCommitmentsResolved|populationMemberExited|agentDeathFinalized)
+                        fail "agentDeathFinalized is not the terminal mortality event" ;;
+                esac
+            fi
+        fi
+        event_index=$((event_index + 1))
+    done
+
+    for active_path in \
+        durableState.agents \
+        durableState.reservations \
+        durableState.failedNaturalResourceTargets \
+        durableState.activeSocialVerifications \
+        durableState.lastSocialShareTicks \
+        durableState.lastCooperationOfferTicks \
+        durableState.lastPerceptionEvents \
+        durableState.lastDecisionEvents \
+        durableState.lastOutcomeEvents \
+        durableState.populationRegistry.members \
+        durableState.populationRegistry.settlement.residentIDs \
+        durableState.populationRegistry.settlement.inTransitIDs
+    do
+        if /usr/bin/plutil -extract "$active_path" json -o - "$POST_SESSION" \
+            | /usr/bin/grep -q 'agent_2'; then
+            fail "dead agent_2 remains in active reference path $active_path"
+        fi
+    done
+    POST_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=mortality-postexit .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
+    POST_DEATH_ID=$(/usr/bin/sed -n 's/.*mortality exit tick=27 death=\([^ ]*\) agent=.*/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
+    [ -n "$POST_DIGEST" ] && [ -n "$POST_DEATH_ID" ] || fail "post-exit identity extraction failed"
+    persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
+    case "$persisted_world_tick" in
+        ''|*[!0-9]*) fail "invalid persisted World tick after mortality phase 2: $persisted_world_tick" ;;
+    esac
+    continuation_command_tick=$((persisted_world_tick + 100))
+    control_command_tick=$continuation_command_tick
+
+    MORTALITY_PHASE3_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab checkpoint load mortality-postexit;/lab mortality status;/lab population status;/lab step;/lab migration admit;/lab focus agent_4;/lab follow agent_4;/lab movement on"
+    mortality_step=0
+    while [ "$mortality_step" -lt 8 ]; do
+        MORTALITY_PHASE3_COMMANDS="$MORTALITY_PHASE3_COMMANDS;/lab step"
+        mortality_step=$((mortality_step + 1))
+    done
+    MORTALITY_PHASE3_COMMANDS="$MORTALITY_PHASE3_COMMANDS;/lab migration status;/lab population status;/lab mortality status;/lab exits status;/lab ecology status;/lab settlement status;/lab checkpoint save mortality-final;/lab checkpoint status;/lab causality status;/lab status"
+    printf '\nMortality phase 3: post-death restore and physical agent_4 replacement.\n'
+    run_mortality_app "$SESSION_HOME" "$PHASE3_TRACE" "$MORTALITY_PHASE3_COMMANDS" 0 "$continuation_command_tick"
+    TRACE_PATH="$PHASE3_TRACE"
+    require_trace "checkpoint loaded name=mortality-postexit .*tick=27 simulation=$PRE_SIM digest=$POST_DIGEST .*restartSafe=1 probes=3 paused=1 focus=agent_0 lifecycleEvent=none worldMutation=none" 'exact post-death v5 restore without resurrection'
+    require_trace 'migration admitted id=migration-00000004 migrant=agent_4 .*probes=agent_0,agent_1,agent_3,agent_4 members=4 nextOrdinal=5' 'monotone agent_4 admission and atomic fourth probe'
+    require_trace 'migration id=migration-00000004 migrant=agent_4 .*status=arrived ' 'physical replacement arrival'
+    require_trace 'population gate=enabled enabled=1 settlement=settlement-main capacity=8 members=4 founders=2 residents=4 migrating=0 nextOrdinal=5 activeMigration=0 latestMigrant=agent_4 latestMigrationStatus=arrived ' 'four-resident replacement registry'
+    require_trace "mortality gate=enabled active=yes agents=4 deaths=1 retained=1 evicted=0 latest=$POST_DEATH_ID victim=agent_2 tick=27 terminal=0 members=4 nextOrdinal=5 probes=4" 'one durable death after replacement'
+    require_trace 'checkpoint saved name=mortality-final .*restartSafe=1 ' 'restart-safe final mortality checkpoint'
+    require_trace 'summary .*agents=4 .*runtimeErrors=0 .*probesRemoved=4 ' 'clean final four-probe cleanup'
+    reject_trace 'mortality exit tick=(2[8-9]|3[0-9])|runtime error|agent_2=.*\/m' 'second death, runtime error, or resurrection'
+
+    MORTALITY_CONTROL_COMMANDS="$MORTALITY_BOOTSTRAP_COMMANDS;/lab focus agent_2;/lab follow agent_2;/lab step;/lab step;/lab migration admit;/lab focus agent_4;/lab follow agent_4"
+    mortality_step=0
+    while [ "$mortality_step" -lt 8 ]; do
+        MORTALITY_CONTROL_COMMANDS="$MORTALITY_CONTROL_COMMANDS;/lab step"
+        mortality_step=$((mortality_step + 1))
+    done
+    MORTALITY_CONTROL_COMMANDS="$MORTALITY_CONTROL_COMMANDS;/lab migration status;/lab population status;/lab mortality status;/lab exits status;/lab ecology status;/lab settlement status;/lab checkpoint save mortality-final-control;/lab checkpoint status;/lab causality status;/lab status"
+    printf '\nMortality uninterrupted control.\n'
+    run_mortality_app "$CONTROL_HOME" "$CONTROL_TRACE" "$MORTALITY_CONTROL_COMMANDS" 0 "$control_command_tick"
+    TRACE_PATH="$CONTROL_TRACE"
+    require_trace_count '^\[lab-live\] mortality exit tick=27 death=death-agent_2-t27-[0-9a-f]{16} agent=agent_2 cause=starvation health=10>0 population=4>3 terminal=0 probes=4>3 focus=agent_0 corpse=none worldMutation=none$' 1 'one uninterrupted terminal transition'
+    require_trace 'migration id=migration-00000004 migrant=agent_4 .*status=arrived ' 'uninterrupted agent_4 arrival'
+    require_trace 'summary .*agents=4 .*runtimeErrors=0 .*probesRemoved=4 ' 'clean uninterrupted cleanup'
+    reject_trace 'mortality exit tick=(2[8-9]|3[0-9])|runtime error' 'uninterrupted second death or runtime error'
+
+    LIVE_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=mortality-final .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE3_TRACE" | /usr/bin/tail -1)
+    CONTROL_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=mortality-final-control .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    LIVE_MORTALITY_DIGEST=$(/usr/bin/sed -n 's/.*mortality gate=enabled .* digest=\([0-9a-f]*\)$/\1/p' "$PHASE3_TRACE" | /usr/bin/tail -1)
+    CONTROL_MORTALITY_DIGEST=$(/usr/bin/sed -n 's/.*mortality gate=enabled .* digest=\([0-9a-f]*\)$/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    LIVE_ECOLOGY_DIGEST=$(/usr/bin/sed -n 's/.*ecology gate=enabled .* digest=\([0-9a-f]*\) ecologyConservation=.*/\1/p' "$PHASE3_TRACE" | /usr/bin/tail -1)
+    CONTROL_ECOLOGY_DIGEST=$(/usr/bin/sed -n 's/.*ecology gate=enabled .* digest=\([0-9a-f]*\) ecologyConservation=.*/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    LIVE_SETTLEMENT_DIGEST=$(/usr/bin/sed -n 's/.*settlement gate=enabled .* digest=\([0-9a-f]*\)$/\1/p' "$PHASE3_TRACE" | /usr/bin/tail -1)
+    CONTROL_SETTLEMENT_DIGEST=$(/usr/bin/sed -n 's/.*settlement gate=enabled .* digest=\([0-9a-f]*\)$/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    LIVE_POPULATION_DIGEST=$(/usr/bin/sed -n 's/.*population gate=enabled .* digest=\([0-9a-f]*\)$/\1/p' "$PHASE3_TRACE" | /usr/bin/tail -1)
+    CONTROL_POPULATION_DIGEST=$(/usr/bin/sed -n 's/.*population gate=enabled .* digest=\([0-9a-f]*\)$/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    LIVE_CAUSAL_DIGEST=$(/usr/bin/sed -n 's/.*causality status .* digest=\([0-9a-f]*\)$/\1/p' "$PHASE3_TRACE" | /usr/bin/tail -1)
+    CONTROL_CAUSAL_DIGEST=$(/usr/bin/sed -n 's/.*causality status .* digest=\([0-9a-f]*\)$/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    [ -n "$LIVE_DIGEST" ] && [ "$LIVE_DIGEST" = "$CONTROL_DIGEST" ] \
+        || fail "mortality restart/uninterrupted durable digest mismatch"
+    [ "$LIVE_MORTALITY_DIGEST" = "$CONTROL_MORTALITY_DIGEST" ] \
+        || fail "mortality restart/uninterrupted mortality digest mismatch"
+    [ "$LIVE_ECOLOGY_DIGEST" = "$CONTROL_ECOLOGY_DIGEST" ] \
+        || fail "mortality restart/uninterrupted ecology digest mismatch"
+    [ "$LIVE_SETTLEMENT_DIGEST" = "$CONTROL_SETTLEMENT_DIGEST" ] \
+        || fail "mortality restart/uninterrupted settlement digest mismatch"
+    [ "$LIVE_POPULATION_DIGEST" = "$CONTROL_POPULATION_DIGEST" ] \
+        || fail "mortality restart/uninterrupted population digest mismatch"
+    [ "$LIVE_CAUSAL_DIGEST" = "$CONTROL_CAUSAL_DIGEST" ] \
+        || fail "mortality restart/uninterrupted causal digest mismatch"
+
+    /bin/cat "$PHASE2_TRACE" "$PHASE3_TRACE" | /usr/bin/grep -E '^\[lab-live\] (tick=(2[7-9]|3[0-6]) |ecology (pulse|forage) tick=(2[7-9]|3[0-6]) |population tick=(2[7-9]|3[0-6]) |settlement (frame|classifications|welfare) tick=(2[7-9]|3[0-6]) |mortality exit tick=27 )' \
+        > "$SESSION_ROOT/restart-mortality.normalized"
+    /usr/bin/grep -E '^\[lab-live\] (tick=(2[7-9]|3[0-6]) |ecology (pulse|forage) tick=(2[7-9]|3[0-6]) |population tick=(2[7-9]|3[0-6]) |settlement (frame|classifications|welfare) tick=(2[7-9]|3[0-6]) |mortality exit tick=27 )' "$CONTROL_TRACE" \
+        > "$SESSION_ROOT/control-mortality.normalized"
+    /usr/bin/cmp "$SESSION_ROOT/restart-mortality.normalized" "$SESSION_ROOT/control-mortality.normalized" \
+        || fail "mortality restart and uninterrupted decision/material traces differ"
+
+    FINAL_SESSION=$(/usr/bin/find "$MORTALITY_ROOT" -type f -path '*/checkpoints/mortality-final/session.json' -print -quit)
+    [ -n "$FINAL_SESSION" ] || fail "final mortality checkpoint missing"
+    [ "$(/usr/bin/plutil -extract durableState.mortalityState.totalDeathCount raw -o - "$FINAL_SESSION")" = "1" ] \
+        || fail "final mortality checkpoint death count changed"
+    [ "$(/usr/bin/plutil -extract durableState.populationRegistry.nextPopulationOrdinal raw -o - "$FINAL_SESSION")" = "5" ] \
+        || fail "final replacement ordinal is not five"
+    if /usr/bin/pgrep -f '[/]PebbleLab-live\.' >/dev/null 2>&1; then
+        fail "residual PebbleLab process after mortality proof"
+    fi
+    printf '\nPASS: bounded starvation mortality, v5 pre/post restart, probe exit, agent_4 replacement, and uninterrupted equivalence verified.\n'
+    printf 'Phase 1 trace: %s\n' "$PHASE1_TRACE"
+    printf 'Phase 2 trace: %s\n' "$PHASE2_TRACE"
+    printf 'Phase 3 trace: %s\n' "$PHASE3_TRACE"
+    printf 'Control trace: %s\n' "$CONTROL_TRACE"
+    printf 'Death ID: %s\n' "$POST_DEATH_ID"
+    printf 'Final durable digest: %s\n' "$LIVE_DIGEST"
+    printf 'Mortality digest: %s\n' "$LIVE_MORTALITY_DIGEST"
+    printf 'Ecology digest: %s\n' "$LIVE_ECOLOGY_DIGEST"
+    printf 'Settlement digest: %s\n' "$LIVE_SETTLEMENT_DIGEST"
+    printf 'Population digest: %s\n' "$LIVE_POPULATION_DIGEST"
+    printf 'Causal digest: %s\n' "$LIVE_CAUSAL_DIGEST"
+    printf 'Retained isolated session: %s\n' "$SESSION_ROOT"
+    exit 0
+fi
+
 if [ "$MODE" = "ecology" ]; then
     cd "$ROOT_DIR"
     swift build -c release --product Pebble
@@ -538,6 +944,7 @@ if [ "$MODE" = "ecology" ]; then
             PEBBLELAB_APP_AGENTS_POPULATION=1 \
             PEBBLELAB_APP_AGENTS_MULTISCALE=1 \
             PEBBLELAB_APP_AGENTS_ECOLOGY=1 \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
             PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
             PEBBLE_CMD="$run_commands" \
             PEBBLE_SHOT='-|-|-|-' \
@@ -562,6 +969,7 @@ if [ "$MODE" = "ecology" ]; then
             PEBBLELAB_APP_AGENTS_POPULATION=1 \
             PEBBLELAB_APP_AGENTS_MULTISCALE=1 \
             PEBBLELAB_APP_AGENTS_ECOLOGY=1 \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
             PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
             PEBBLE_CMD="$run_commands" \
             PEBBLE_SHOT='-|-|-|-' \
@@ -768,6 +1176,7 @@ if [ "$MODE" = "multiscale" ]; then
             PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
             PEBBLELAB_APP_AGENTS_POPULATION=1 \
             PEBBLELAB_APP_AGENTS_MULTISCALE="$metrics_gate" \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
             PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
             PEBBLE_CMD="$run_commands" \
             PEBBLE_SHOT='-|-|-|-' \
@@ -791,6 +1200,7 @@ if [ "$MODE" = "multiscale" ]; then
             PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
             PEBBLELAB_APP_AGENTS_POPULATION=1 \
             PEBBLELAB_APP_AGENTS_MULTISCALE="$metrics_gate" \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
             PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
             PEBBLE_CMD="$run_commands" \
             PEBBLE_SHOT='-|-|-|-' \
@@ -1036,6 +1446,7 @@ if [ "$MODE" = "population" ]; then
             PEBBLELAB_APP_AGENTS_COOPERATION=0 \
             PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
             PEBBLELAB_APP_AGENTS_POPULATION=1 \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
             PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
             PEBBLE_CMD="$run_commands" \
             PEBBLE_SHOT='-|-|-' \
@@ -1058,6 +1469,7 @@ if [ "$MODE" = "population" ]; then
             PEBBLELAB_APP_AGENTS_COOPERATION=0 \
             PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
             PEBBLELAB_APP_AGENTS_POPULATION=1 \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
             PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
             PEBBLE_CMD="$run_commands" \
             PEBBLE_SHOT='-|-|-' \
@@ -1226,6 +1638,7 @@ if [ "$MODE" = "persistence" ]; then
             PEBBLELAB_APP_AGENTS_PHYSICAL=1 \
             PEBBLELAB_APP_AGENTS_COOPERATION=1 \
             PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
             PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
             PEBBLE_CMD="$run_commands" \
             PEBBLE_SHOT='-|-|-' \
@@ -1247,6 +1660,7 @@ if [ "$MODE" = "persistence" ]; then
             PEBBLELAB_APP_AGENTS_PHYSICAL=1 \
             PEBBLELAB_APP_AGENTS_COOPERATION=1 \
             PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
             PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
             PEBBLE_CMD="$run_commands" \
             PEBBLE_SHOT='-|-|-' \
@@ -1363,6 +1777,7 @@ PEBBLELAB_APP_AGENTS_COOPERATION="$COOPERATION_GATE" \
 PEBBLELAB_APP_AGENTS_PERSISTENCE="$PERSISTENCE_GATE" \
 PEBBLELAB_APP_AGENTS_POPULATION="$POPULATION_GATE" \
 PEBBLELAB_APP_AGENTS_MULTISCALE="$MULTISCALE_GATE" \
+PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
 PEBBLE_CMD="$LAB_COMMANDS" \
 PEBBLE_SHOT="$SHOT_SPEC" \
 swift run -c release Pebble 2>&1 | /usr/bin/tee "$TRACE_PATH"

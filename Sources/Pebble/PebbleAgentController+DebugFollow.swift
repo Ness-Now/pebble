@@ -21,6 +21,7 @@ extension PebbleAgentController {
             populationSnapshot: session.populationSnapshot(),
             settlementMetricsSnapshot: session.settlementMetricsSnapshot(),
             localEcologySnapshot: session.localEcologySnapshot(),
+            mortalitySnapshot: session.mortalitySnapshot(),
             mode: mode,
             paused: isPaused,
             cognitiveHz: cognitiveHz,

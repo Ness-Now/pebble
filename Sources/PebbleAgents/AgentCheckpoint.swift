@@ -1038,6 +1038,22 @@ extension AgentSimulationSession {
                       record.cause == .starvation && record.finalHealth == 0
                           && record.healthBeforeLethalDamage > 0
                           && record.deathTick <= state.clock.tick.rawValue
+                          && record.terminalActivity.ticksAlive == record.ticksAlive
+                          && record.terminalActivity.lastGoal == record.lastGoal
+                          && record.terminalActivity.lastAction == record.lastAction
+                          && [
+                              record.terminalActivity.observationCount,
+                              record.terminalActivity.nearbyObservationCount,
+                              record.terminalActivity.goalSelectionCount,
+                              record.terminalActivity.goalChangeCount,
+                              record.terminalActivity.actionCount,
+                              record.terminalActivity.actionEffectCount,
+                              record.terminalActivity.movementCount,
+                              record.terminalActivity.totalManhattanDistanceMoved,
+                              record.terminalActivity.returnHomeMoveCount,
+                              record.terminalActivity.foodConsumedCount,
+                              record.terminalActivity.ticksAlive,
+                          ].allSatisfy({ $0 >= 0 })
                           && record.finalMemory.count
                             <= mortality.configuration.maximumFinalMemoryEntries
                           && record.cancelledCommitmentIDs.count
@@ -1055,6 +1071,68 @@ extension AgentSimulationSession {
                   mortality.lastMortalityEventID.sequence.rawValue
                     <= state.causalLedger.latestSequence else {
                 throw AgentCheckpointError.invalidBound("mortality")
+            }
+            for record in mortality.records {
+                let event: (AgentCausalEventID) -> AgentCausalEvent? = { eventID in
+                    state.causalLedger.events.first { $0.eventID == eventID }
+                }
+                let mortalityEventIDs = [
+                    record.lethalDamageEventID,
+                    record.resourcesRetiredEventID,
+                    record.commitmentsResolvedEventID,
+                    record.populationExitEventID,
+                    record.deathEventID,
+                ]
+                let retained = mortalityEventIDs.compactMap(event)
+                if retained.count != mortalityEventIDs.count {
+                    guard state.causalLedger.droppedEventCount > 0,
+                          let firstRetained = state.causalLedger.events.first?.sequence,
+                          zip(mortalityEventIDs, mortalityEventIDs.map(event)).allSatisfy({
+                              $0.1 != nil || $0.0.sequence < firstRetained
+                          }) else {
+                        throw AgentCheckpointError.invalidBound("mortality causal chain")
+                    }
+                    continue
+                }
+                let lethal = retained[0]
+                let resources = retained[1]
+                let commitments = retained[2]
+                let exit = retained[3]
+                let finalized = retained[4]
+                let migrationFailure = state.causalLedger.events.first {
+                    $0.kind == .migrationFailed && $0.actorID == record.agentID
+                        && $0.sequence > commitments.sequence && $0.sequence < exit.sequence
+                }
+                guard
+                      [lethal.kind, resources.kind, commitments.kind, exit.kind, finalized.kind]
+                        == [
+                            .lethalHealthDepletion,
+                            .mortalityResourcesRetired,
+                            .mortalityCommitmentsResolved,
+                            .populationMemberExited,
+                            .agentDeathFinalized,
+                        ],
+                      lethal.actorID == record.agentID,
+                      lethal.subjectID == record.agentID,
+                      resources.causes == [lethal.eventID],
+                      commitments.causes == [lethal.eventID],
+                      exit.causes == [
+                          lethal.eventID,
+                          resources.eventID,
+                          commitments.eventID,
+                          migrationFailure?.eventID,
+                      ].compactMap({ $0 }).sorted(),
+                      finalized.causes == [exit.eventID],
+                      lethal.sequence < resources.sequence,
+                      resources.sequence < commitments.sequence,
+                      commitments.sequence < exit.sequence,
+                      exit.sequence < finalized.sequence,
+                      !state.causalLedger.events.contains(where: {
+                          $0.sequence > finalized.sequence && $0.kind.isMortality
+                              && ($0.actorID == record.agentID || $0.subjectID == record.agentID)
+                      }) else {
+                    throw AgentCheckpointError.invalidBound("mortality causal chain")
+                }
             }
         }
         for relation in state.socialTrustRelations {

@@ -1,4 +1,4 @@
-public enum AgentMovementStatus: String, Codable, Equatable {
+public enum AgentMovementStatus: String, Codable, Equatable, Sendable {
     case notRequested
     case moved
     case blocked
