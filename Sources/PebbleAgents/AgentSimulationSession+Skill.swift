@@ -190,7 +190,8 @@ extension AgentSimulationSession {
             cumulativePracticeUnits: cumulativeUnits, tick: tick,
             sourceSuccessEventID: sourceSuccessEventID,
             skillPracticeEventID: practiceEvent.eventID,
-            sourceKind: source.kind, sourceStatus: skillSourceStatus(source)
+            sourceKind: source.kind, sourceStatus: skillSourceStatus(source),
+            digest: nextDigest
         ))
         evictPracticeRecordsIfNeeded(&state)
         state.totalPracticeCreditCount += 1
@@ -269,6 +270,291 @@ extension AgentSimulationSession {
               state.lastCreditedSourceEventID?.simulationID == simulationID
                 || state.lastCreditedSourceEventID == nil else {
             throw AgentSkillError.invalidState("causal identity")
+        }
+    }
+
+    static func validateSkillState(
+        _ state: AgentSkillState,
+        population: AgentPopulationRegistry,
+        lifecycle: AgentLifecycleState,
+        historicalAgentIDs: Set<AgentID>,
+        clock: AgentSimulationClock,
+        causalLatestSequence: UInt64,
+        causalDroppedEventCount: UInt64,
+        causalEvents: [AgentCausalEvent]
+    ) throws {
+        _ = population
+        _ = lifecycle
+        _ = try AgentSkillConfiguration(
+            maximumProfiles: state.configuration.maximumProfiles,
+            maximumRetainedPracticeRecords:
+                state.configuration.maximumRetainedPracticeRecords,
+            maximumPracticeRecordsPerAgent:
+                state.configuration.maximumPracticeRecordsPerAgent,
+            maximumPracticeCreditsPerTick:
+                state.configuration.maximumPracticeCreditsPerTick,
+            maximumPracticeUnitsPerCredit:
+                state.configuration.maximumPracticeUnitsPerCredit
+        )
+        guard state.profiles.count <= state.configuration.maximumProfiles,
+              state.retainedPracticeRecords.count
+                <= state.configuration.maximumRetainedPracticeRecords,
+              state.evictionCounts.practiceRecords >= 0,
+              state.totalPracticeCreditCount
+                == state.retainedPracticeRecords.count
+                    + state.evictionCounts.practiceRecords,
+              state.totalPracticeUnits == state.profiles.reduce(0, {
+                  $0 + $1.domainPractices.reduce(0) { $0 + $1.practiceUnits }
+              }),
+              state.transitionTick >= 0,
+              state.transitionTick <= clock.tick.rawValue,
+              (0...state.configuration.maximumPracticeCreditsPerTick)
+                .contains(state.creditsAtTick),
+              validSkillDigest(state.evictedPracticeDigest),
+              validSkillDigest(state.rollingDigest) else {
+            throw AgentSkillError.invalidState("bounds, totals, or digests")
+        }
+        let sortedProfiles = state.profiles.sorted { $0.agentID < $1.agentID }
+        guard state.profiles == sortedProfiles,
+              Set(sortedProfiles.map(\.agentID)).count == sortedProfiles.count else {
+            throw AgentSkillError.invalidState("duplicate or noncanonical profiles")
+        }
+        for profile in sortedProfiles {
+            guard historicalAgentIDs.contains(profile.agentID),
+                  !profile.domainPractices.isEmpty,
+                  profile.domainPractices == profile.domainPractices.sorted(by: {
+                      $0.domain < $1.domain
+                  }),
+                  Set(profile.domainPractices.map(\.domain)).count
+                    == profile.domainPractices.count else {
+                throw AgentSkillError.invalidState("profile identity or domains")
+            }
+            for practice in profile.domainPractices {
+                guard practice.practiceUnits > 0,
+                      practice.lastPracticeTick >= 0,
+                      practice.lastPracticeTick <= clock.tick.rawValue,
+                      practice.lastSourceSuccessEventID.simulationID == clock.simulationID,
+                      practice.lastSkillPracticeEventID.simulationID == clock.simulationID,
+                      practice.lastSourceSuccessEventID.sequence
+                        < practice.lastSkillPracticeEventID.sequence else {
+                    throw AgentSkillError.invalidState("profile practice")
+                }
+            }
+        }
+        let records = state.retainedPracticeRecords.sorted(by: staticSkillRecordSort)
+        guard records == state.retainedPracticeRecords,
+              Set(records.map(\.sourceSuccessEventID)).count == records.count,
+              Set(records.map(\.skillPracticeEventID)).count == records.count else {
+            throw AgentSkillError.invalidState("duplicate or noncanonical records")
+        }
+        let recordsByAgent = Dictionary(grouping: records, by: \.agentID)
+        guard recordsByAgent.values.allSatisfy({
+            $0.count <= state.configuration.maximumPracticeRecordsPerAgent
+        }) else {
+            throw AgentSkillError.invalidState("records per agent")
+        }
+        let profilesByID = Dictionary(uniqueKeysWithValues: sortedProfiles.map {
+            ($0.agentID, $0)
+        })
+        for record in records {
+            guard historicalAgentIDs.contains(record.agentID),
+                  record.practiceUnits > 0,
+                  record.practiceUnits
+                    <= state.configuration.maximumPracticeUnitsPerCredit,
+                  record.cumulativePracticeUnits >= record.practiceUnits,
+                  record.tick >= 0, record.tick <= clock.tick.rawValue,
+                  record.sourceSuccessEventID.simulationID == clock.simulationID,
+                  record.skillPracticeEventID.simulationID == clock.simulationID,
+                  record.sourceSuccessEventID.sequence
+                    < record.skillPracticeEventID.sequence,
+                  validSkillDigest(record.digest),
+                  profilesByID[record.agentID]?.practiceUnits(in: record.domain)
+                    ?? 0 >= record.cumulativePracticeUnits else {
+                throw AgentSkillError.invalidState("practice record")
+            }
+        }
+        for profile in sortedProfiles {
+            for practice in profile.domainPractices {
+                if let latest = records.filter({
+                    $0.agentID == profile.agentID && $0.domain == practice.domain
+                }).last {
+                    guard latest.cumulativePracticeUnits == practice.practiceUnits,
+                          latest.sourceSuccessEventID
+                            == practice.lastSourceSuccessEventID,
+                          latest.skillPracticeEventID
+                            == practice.lastSkillPracticeEventID else {
+                        throw AgentSkillError.invalidState("profile/record projection")
+                    }
+                }
+            }
+        }
+        let latestSource = sortedProfiles.flatMap(\.domainPractices)
+            .map(\.lastSourceSuccessEventID).max()
+        guard latestSource == state.lastCreditedSourceEventID,
+              state.initializedEventID.simulationID == clock.simulationID,
+              state.lastSkillEventID.simulationID == clock.simulationID,
+              state.initializedEventID.sequence <= state.lastSkillEventID.sequence,
+              causalDroppedEventCount <= causalLatestSequence,
+              UInt64(causalEvents.count)
+                == causalLatestSequence - causalDroppedEventCount,
+              causalEvents.enumerated().allSatisfy({ index, event in
+                  event.sequence.rawValue
+                    == causalDroppedEventCount + UInt64(index) + 1
+              }) else {
+            throw AgentSkillError.invalidState("causal pointers or retained window")
+        }
+        let eventsByID = Dictionary(uniqueKeysWithValues: causalEvents.map {
+            ($0.eventID, $0)
+        })
+        func validateReference(
+            _ eventID: AgentCausalEventID,
+            matches: (AgentCausalEvent) -> Bool
+        ) throws {
+            guard eventID.simulationID == clock.simulationID,
+                  eventID.sequence.rawValue <= causalLatestSequence else {
+                throw AgentSkillError.invalidCausalReference(eventID)
+            }
+            if let event = eventsByID[eventID] {
+                guard matches(event) else {
+                    throw AgentSkillError.invalidCausalReference(eventID)
+                }
+            } else if eventID.sequence.rawValue > causalDroppedEventCount {
+                throw AgentSkillError.invalidCausalReference(eventID)
+            }
+        }
+        try validateReference(state.initializedEventID) { event in
+            guard event.kind == .skillsInitialized,
+                  event.origin == .skillTransition,
+                  event.actorID == nil, event.subjectID == nil,
+                  event.causes.isEmpty,
+                  case let .skill(
+                      agentID, domain, units, cumulative, sourceID,
+                      recordCount, status, digest
+                  ) = event.payload else { return false }
+            return agentID == nil && domain == nil && units == 0 && cumulative == 0
+                && sourceID == nil && recordCount == 0 && status == "initialized"
+                && digest == AgentSkillDigest.make(
+                    "skills|\(clock.simulationID.rawValue)|"
+                        + "\(event.simulationTick.rawValue)|empty"
+                )
+        }
+        func matchesSkillEvent(
+            _ event: AgentCausalEvent,
+            record: AgentSkillPracticeRecord
+        ) -> Bool {
+            guard event.kind == .skillPracticeCredited,
+                  event.origin == .skillTransition,
+                  event.simulationTick.rawValue == record.tick,
+                  event.actorID == record.agentID,
+                  event.subjectID == record.agentID,
+                  event.causes == [record.sourceSuccessEventID],
+                  case let .skill(
+                      agentID, domain, units, cumulative, sourceID,
+                      recordCount, status, digest
+                  ) = event.payload else { return false }
+            return agentID == record.agentID.rawValue
+                && domain == record.domain.rawValue
+                && units == record.practiceUnits
+                && cumulative == record.cumulativePracticeUnits
+                && sourceID == record.sourceSuccessEventID.rawValue
+                && recordCount > 0
+                && recordCount <= state.configuration.maximumRetainedPracticeRecords + 1
+                && status == "credited" && digest == record.digest
+        }
+        func sourceMatches(
+            _ event: AgentCausalEvent,
+            record: AgentSkillPracticeRecord
+        ) -> Bool {
+            guard event.kind == record.sourceKind,
+                  event.simulationTick.rawValue == record.tick,
+                  event.actorID == record.agentID else { return false }
+            switch (record.domain, event.kind, event.payload) {
+            case let (.foraging, .ecologyForageResolved, .ecologyForage(
+                _, _, agentID, status, yieldBefore, yieldAfter,
+                inventoryBefore, inventoryAfter
+            )):
+                return agentID == record.agentID.rawValue
+                    && status == record.sourceStatus && status == "succeeded"
+                    && yieldAfter == yieldBefore - 1
+                    && inventoryAfter == inventoryBefore + 1
+            case let (.materialHandling, .delivery, .operation(status, _)):
+                return status == record.sourceStatus && status == "succeeded"
+            case let (.construction, .constructionPlacement, .operation(status, _)):
+                return status == record.sourceStatus && status == "succeeded"
+            case let (.caregiving, .careProvided, .dependentCare(
+                _, caregiverID, _, _, needKind, _, _, status, _, quantity, _
+            )):
+                return caregiverID == record.agentID.rawValue
+                    && needKind == "nourishment" && status == record.sourceStatus
+                    && status == "provided" && quantity == 1
+            default:
+                return false
+            }
+        }
+        for record in records {
+            try validateReference(record.sourceSuccessEventID) {
+                sourceMatches($0, record: record)
+            }
+            try validateReference(record.skillPracticeEventID) {
+                matchesSkillEvent($0, record: record)
+            }
+        }
+        for profile in sortedProfiles {
+            for practice in profile.domainPractices {
+                try validateReference(practice.lastSourceSuccessEventID) { event in
+                    event.actorID == profile.agentID
+                        && event.simulationTick.rawValue == practice.lastPracticeTick
+                }
+                try validateReference(practice.lastSkillPracticeEventID) { event in
+                    guard event.kind == .skillPracticeCredited,
+                          event.origin == .skillTransition,
+                          event.actorID == profile.agentID,
+                          event.subjectID == profile.agentID,
+                          event.simulationTick.rawValue == practice.lastPracticeTick,
+                          event.causes == [practice.lastSourceSuccessEventID],
+                          case let .skill(
+                              agentID, domain, units, cumulative, sourceID,
+                              _, status, _
+                          ) = event.payload else { return false }
+                    return agentID == profile.agentID.rawValue
+                        && domain == practice.domain.rawValue && units > 0
+                        && cumulative == practice.practiceUnits
+                        && sourceID == practice.lastSourceSuccessEventID.rawValue
+                        && status == "credited"
+                }
+            }
+        }
+        let retainedSkillEvents = causalEvents.filter {
+            $0.origin == .skillTransition
+                && ($0.kind == .skillsInitialized || $0.kind == .skillPracticeCredited)
+        }
+        if let latest = retainedSkillEvents.last {
+            guard latest.eventID == state.lastSkillEventID else {
+                throw AgentSkillError.invalidCausalReference(state.lastSkillEventID)
+            }
+        } else if state.lastSkillEventID.sequence.rawValue > causalDroppedEventCount {
+            throw AgentSkillError.invalidCausalReference(state.lastSkillEventID)
+        }
+        try validateReference(state.lastSkillEventID) { event in
+            event.origin == .skillTransition
+                && (event.kind == .skillsInitialized || event.kind == .skillPracticeCredited)
+        }
+    }
+
+    private static func staticSkillRecordSort(
+        _ lhs: AgentSkillPracticeRecord,
+        _ rhs: AgentSkillPracticeRecord
+    ) -> Bool {
+        if lhs.skillPracticeEventID != rhs.skillPracticeEventID {
+            return lhs.skillPracticeEventID < rhs.skillPracticeEventID
+        }
+        if lhs.agentID != rhs.agentID { return lhs.agentID < rhs.agentID }
+        return lhs.domain < rhs.domain
+    }
+
+    private static func validSkillDigest(_ value: String) -> Bool {
+        value.count == 16 && value.allSatisfy {
+            $0.isNumber || ("a"..."f").contains(String($0))
         }
     }
 

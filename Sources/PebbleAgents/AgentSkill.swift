@@ -139,6 +139,7 @@ public struct AgentSkillPracticeRecord: Codable, Equatable, Sendable {
     public let skillPracticeEventID: AgentCausalEventID
     public let sourceKind: AgentCausalEventKind
     public let sourceStatus: String
+    public let digest: String
 }
 
 public struct AgentSkillEvictionCounts: Codable, Equatable, Sendable {

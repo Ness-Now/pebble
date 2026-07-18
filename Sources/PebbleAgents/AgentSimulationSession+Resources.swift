@@ -68,7 +68,9 @@ extension AgentSimulationSession {
     }
 
     mutating func applyDeliveryOutcomeInPlace(_ outcome: AgentDeliveryOutcome) throws {
-        try prevalidateCausalAppend(count: cooperationEnabled ? 4 : 1)
+        try prevalidateCausalAppend(
+            count: (cooperationEnabled ? 4 : 1) + (skillsEnabled ? 1 : 0)
+        )
         guard var state = statesById[outcome.agentId] else {
             throw AgentSessionError.unknownAgentId(outcome.agentId)
         }
@@ -132,9 +134,15 @@ extension AgentSimulationSession {
             detail: outcome.reason
         )
         if let deliveryEventID {
+            let skillEventID = outcome.status == .succeeded
+                ? try creditPracticeAfterMaterialSuccess(
+                    agentID: state.agentID,
+                    domain: .materialHandling,
+                    sourceSuccessEventID: deliveryEventID
+                ) : nil
             try applyCooperationDeliveryProgress(
                 outcome: outcome,
-                deliveryEventID: deliveryEventID
+                deliveryEventID: skillEventID ?? deliveryEventID
             )
         }
     }

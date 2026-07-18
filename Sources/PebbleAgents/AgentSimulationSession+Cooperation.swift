@@ -266,13 +266,15 @@ extension AgentSimulationSession {
             )
         }
 
-        let helpers = sortedIds.compactMap { helperId -> (AgentID, Int, Int, Int)? in
+        let helpers = sortedIds.compactMap {
+            helperId -> (AgentID, Int, Int, Int, Int)? in
             guard helperId != project.builderAgentId,
                   !isMigratingAgent(helperId),
                   let helperID = AgentID(rawValue: helperId),
                   permitsStageCapability(.cooperateAsWorker, for: helperID),
                   let helper = statesById[helperId],
                   !isSociallyUrgent(helper),
+                  (skillState == nil || activeCareEngagement(for: helperID) == nil),
                   !hasMaterialTransaction(helper),
                   activeSharedTask(for: helperId) == nil,
                   pendingSharedTaskOffer(for: helperId) == nil else { return nil }
@@ -283,6 +285,7 @@ extension AgentSimulationSession {
             ) else { return nil }
             return (
                 helperID,
+                practiceUnits(agentID: helperID, domain: .materialHandling),
                 cooperationReliability(issuerID: builderID, helperID: helperID),
                 trustScore(sourceAgentId: helperId, targetAgentId: project.builderAgentId),
                 distance
@@ -290,7 +293,8 @@ extension AgentSimulationSession {
         }.sorted {
             if $0.1 != $1.1 { return $0.1 > $1.1 }
             if $0.2 != $1.2 { return $0.2 > $1.2 }
-            if $0.3 != $1.3 { return $0.3 < $1.3 }
+            if $0.3 != $1.3 { return $0.3 > $1.3 }
+            if $0.4 != $1.4 { return $0.4 < $1.4 }
             return $0.0 < $1.0
         }
         guard let helperID = helpers.first?.0 else {
@@ -334,7 +338,11 @@ extension AgentSimulationSession {
             acceptanceEventID: nil,
             latestProgressEventID: nil,
             terminalEventID: nil,
-            reason: "direct builder demand and resource fact"
+            reason: skillState == nil
+                ? "direct builder demand and resource fact"
+                : "direct builder demand and resource fact; skill=materialHandling:"
+                    + "\(practiceUnits(agentID: helperID, domain: .materialHandling))/"
+                    + skillLevel(agentID: helperID, domain: .materialHandling).rawValue
         )
         return AgentCooperationTickPlan(
             proposal: AgentCooperationTaskProposal(

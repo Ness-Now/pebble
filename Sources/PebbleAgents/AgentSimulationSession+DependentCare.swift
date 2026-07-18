@@ -359,7 +359,7 @@ extension AgentSimulationSession {
                 <= care.configuration.careInteractionDistance else {
             throw AgentSessionError.dependentCare(.interactionTooFar)
         }
-        try prevalidateCausalAppend(count: 3)
+        try prevalidateCausalAppend(count: skillsEnabled ? 4 : 3)
         let inventoryFoodBefore = caregiver.resourceInventory.count(of: .foodRaw)
         let campFoodBefore = campStock.count(of: .foodRaw)
         let source: AgentCareFoodSource
@@ -454,9 +454,14 @@ extension AgentSimulationSession {
             ),
             summary: "care provided need=\(intent.needID.rawValue) quantity=1"
         )
+        let skillEventID = try creditPracticeAfterMaterialSuccess(
+            agentID: intent.caregiverID,
+            domain: .caregiving,
+            sourceSuccessEventID: provided.eventID
+        )
         let resolved = try requiredDependentCareEvent(
             kind: .careNeedResolved, actorID: intent.caregiverID,
-            subjectID: intent.dependentID, causes: [provided.eventID],
+            subjectID: intent.dependentID, causes: [skillEventID ?? provided.eventID],
             payload: carePayload(
                 dependentID: intent.dependentID, caregiverID: intent.caregiverID,
                 householdID: assignment.householdID,
@@ -1525,7 +1530,23 @@ extension AgentSimulationSession {
             }
             guard outcome.status == .resolved,
                   let terminalEvent = eventsByID[outcome.terminalEventID],
-                  let providedEventID = terminalEvent.causes.first else { continue }
+                  let terminalCauseID = terminalEvent.causes.first else { continue }
+            let providedEventID: AgentCausalEventID
+            if let intermediary = eventsByID[terminalCauseID],
+               intermediary.kind == .skillPracticeCredited,
+               intermediary.origin == .skillTransition,
+               intermediary.actorID == outcome.caregiverID,
+               intermediary.subjectID == outcome.caregiverID,
+               intermediary.causes.count == 1,
+               case let .skill(_, domain, units, _, sourceID, _, status, _)
+                    = intermediary.payload,
+               domain == AgentSkillDomain.caregiving.rawValue,
+               units == 1, status == "credited",
+               sourceID == intermediary.causes[0].rawValue {
+                providedEventID = intermediary.causes[0]
+            } else {
+                providedEventID = terminalCauseID
+            }
             try validateReference(providedEventID) { event in
                 guard event.kind == .careProvided,
                       event.origin == .dependentCareTransition,

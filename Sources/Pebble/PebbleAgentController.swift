@@ -126,6 +126,9 @@ final class PebbleAgentController {
     var dependentCareFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_CARE"] == "1"
     }
+    var skillFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_SKILLS"] == "1"
+    }
     var kinshipLateFailureProofEnabled: Bool {
         let lineageProof = environment["PEBBLELAB_DISPOSABLE_KINSHIP_LATE_FAILURE_PROOF"] == "1"
         let careProof = environment["PEBBLELAB_DISPOSABLE_CARE_LATE_FAILURE_PROOF"] == "1"

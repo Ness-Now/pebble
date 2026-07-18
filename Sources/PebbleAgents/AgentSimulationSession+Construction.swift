@@ -105,7 +105,7 @@ extension AgentSimulationSession {
         if let id = AgentID(rawValue: builderAgentId) {
             try requireStageCapability(.build, for: id)
         }
-        try prevalidateCausalAppend(count: 1)
+        try prevalidateCausalAppend(count: skillsEnabled ? 2 : 1)
         guard buildAutoEnabled else { throw AgentSessionError.constructionDisabled }
         guard fundingTick == tick else {
             throw AgentSessionError.constructionFundingTickMismatch(fundingId)
@@ -294,13 +294,20 @@ extension AgentSimulationSession {
         guard conservationSnapshot().balanced else {
             throw AgentSessionError.invalidConstructionPlacement(outcome.placementId)
         }
-        recordAcceptedOperation(
+        let placementEventID = recordAcceptedOperation(
             kind: .constructionPlacement,
             agentId: outcome.builderAgentId,
             operationId: outcome.placementId,
             status: outcome.status.rawValue,
             detail: "\(outcome.projectId):cell=\(outcome.cellIndex)"
         )
+        if let placementEventID {
+            _ = try creditPracticeAfterMaterialSuccess(
+                agentID: builder.agentID,
+                domain: .construction,
+                sourceSuccessEventID: placementEventID
+            )
+        }
     }
 
     public mutating func completeConstructionProject(

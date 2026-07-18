@@ -11,13 +11,14 @@ public enum AgentCheckpointSchema {
     public static let kinshipVersion = 7
     public static let householdVersion = 8
     public static let dependentCareVersion = 9
+    public static let skillVersion = 10
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
             || version == settlementMetricsVersion || version == localEcologyVersion
             || version == mortalityVersion || version == lifecycleVersion
             || version == kinshipVersion || version == householdVersion
-            || version == dependentCareVersion
+            || version == dependentCareVersion || version == skillVersion
     }
 }
 
@@ -200,9 +201,12 @@ public struct AgentSessionDurableState: Codable {
     public let kinshipState: AgentKinshipState?
     public let householdState: AgentHouseholdState?
     public let dependentCareState: AgentDependentCareState?
+    public let skillState: AgentSkillState?
 
     init(session: AgentSimulationSession) {
-        if session.dependentCareState != nil {
+        if session.skillState != nil {
+            schemaVersion = AgentCheckpointSchema.skillVersion
+        } else if session.dependentCareState != nil {
             schemaVersion = AgentCheckpointSchema.dependentCareVersion
         } else if session.householdState != nil {
             schemaVersion = AgentCheckpointSchema.householdVersion
@@ -302,6 +306,7 @@ public struct AgentSessionDurableState: Codable {
         kinshipState = session.kinshipState
         householdState = session.householdState
         dependentCareState = session.dependentCareState
+        skillState = session.skillState
     }
 }
 
@@ -725,6 +730,7 @@ extension AgentSimulationSession {
         kinshipState = state.kinshipState
         householdState = state.householdState
         dependentCareState = state.dependentCareState
+        skillState = state.skillState
         if let settlementMetricsState {
             try validateSettlementMetricsState(settlementMetricsState)
         }
@@ -742,46 +748,54 @@ extension AgentSimulationSession {
                 && state.populationRegistry == nil && state.settlementMetricsState == nil
                 && state.mortalityState == nil && state.lifecycleState == nil
                 && state.kinshipState == nil && state.householdState == nil
-                && state.dependentCareState == nil)
+                && state.dependentCareState == nil && state.skillState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.populationVersion
                     && state.populationRegistry != nil && state.settlementMetricsState == nil
                     && state.mortalityState == nil && state.lifecycleState == nil
                     && state.kinshipState == nil && state.householdState == nil
-                    && state.dependentCareState == nil)
+                    && state.dependentCareState == nil && state.skillState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.settlementMetricsVersion
                     && state.populationRegistry != nil
                     && state.settlementMetricsState != nil
                     && state.localEcologyState == nil
                     && state.mortalityState == nil && state.lifecycleState == nil
                     && state.kinshipState == nil && state.householdState == nil
-                    && state.dependentCareState == nil)
+                    && state.dependentCareState == nil && state.skillState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.localEcologyVersion
                     && state.populationRegistry != nil
                     && state.localEcologyState != nil
                     && state.mortalityState == nil && state.lifecycleState == nil
                     && state.kinshipState == nil && state.householdState == nil
-                    && state.dependentCareState == nil)
+                    && state.dependentCareState == nil && state.skillState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.mortalityVersion
                     && state.populationRegistry != nil
                     && state.mortalityState != nil
                     && state.lifecycleState == nil && state.kinshipState == nil
-                    && state.householdState == nil && state.dependentCareState == nil)
+                    && state.householdState == nil && state.dependentCareState == nil
+                    && state.skillState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.lifecycleVersion
                     && state.populationRegistry != nil
                     && state.lifecycleState != nil && state.kinshipState == nil
-                    && state.householdState == nil && state.dependentCareState == nil)
+                    && state.householdState == nil && state.dependentCareState == nil
+                    && state.skillState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.kinshipVersion
                     && state.populationRegistry != nil
                     && state.lifecycleState != nil && state.kinshipState != nil
-                    && state.householdState == nil && state.dependentCareState == nil)
+                    && state.householdState == nil && state.dependentCareState == nil
+                    && state.skillState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.householdVersion
                     && state.populationRegistry != nil
                     && state.lifecycleState != nil && state.kinshipState != nil
-                    && state.householdState != nil && state.dependentCareState == nil)
+                    && state.householdState != nil && state.dependentCareState == nil
+                    && state.skillState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.dependentCareVersion
                     && state.populationRegistry != nil
                     && state.lifecycleState != nil && state.kinshipState != nil
-                    && state.householdState != nil && state.dependentCareState != nil) else {
+                    && state.householdState != nil && state.dependentCareState != nil
+                    && state.skillState == nil)
+                || (state.schemaVersion == AgentCheckpointSchema.skillVersion
+                    && state.populationRegistry != nil
+                    && state.lifecycleState != nil && state.skillState != nil) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.clock.tick.rawValue >= 0,
@@ -814,7 +828,8 @@ extension AgentSimulationSession {
                         || state.schemaVersion == AgentCheckpointSchema.lifecycleVersion
                         || state.schemaVersion == AgentCheckpointSchema.kinshipVersion
                         || state.schemaVersion == AgentCheckpointSchema.householdVersion
-                        || state.schemaVersion == AgentCheckpointSchema.dependentCareVersion)
+                        || state.schemaVersion == AgentCheckpointSchema.dependentCareVersion
+                        || state.schemaVersion == AgentCheckpointSchema.skillVersion)
                     && (state.mortalityState?.totalDeathCount ?? 0) > 0) else {
             throw AgentCheckpointError.invalidAgent("empty")
         }
@@ -1264,6 +1279,29 @@ extension AgentSimulationSession {
                 )
             } catch {
                 throw AgentCheckpointError.invalidBound("dependent care")
+            }
+        }
+        if let skills = state.skillState,
+           let population = state.populationRegistry,
+           let lifecycle = state.lifecycleState {
+            do {
+                var historicalIDs = Set(state.agents.map(\.agentID))
+                historicalIDs.formUnion(lifecycle.members.map(\.agentID))
+                historicalIDs.formUnion(
+                    state.kinshipState?.historicalPersons.map(\.agentID) ?? []
+                )
+                historicalIDs.formUnion(
+                    state.mortalityState?.records.map(\.agentID) ?? []
+                )
+                try validateSkillState(
+                    skills, population: population, lifecycle: lifecycle,
+                    historicalAgentIDs: historicalIDs, clock: state.clock,
+                    causalLatestSequence: state.causalLedger.latestSequence,
+                    causalDroppedEventCount: state.causalLedger.droppedEventCount,
+                    causalEvents: state.causalLedger.events
+                )
+            } catch {
+                throw AgentCheckpointError.invalidBound("skills")
             }
         }
         for relation in state.socialTrustRelations {

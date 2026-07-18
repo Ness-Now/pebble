@@ -10,13 +10,14 @@ public enum AgentReplaySchema {
     public static let kinshipVersion = 7
     public static let householdVersion = 8
     public static let dependentCareVersion = 9
+    public static let skillVersion = 10
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
             || version == settlementMetricsVersion || version == localEcologyVersion
             || version == mortalityVersion || version == lifecycleVersion
             || version == kinshipVersion || version == householdVersion
-            || version == dependentCareVersion
+            || version == dependentCareVersion || version == skillVersion
     }
 }
 
@@ -83,6 +84,7 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case dependentCareFeature
     case dependentCareProvision
     case dependentCareInteraction
+    case skillFeature
 }
 
 public enum AgentReplayOperation: Codable {
@@ -162,6 +164,7 @@ public enum AgentReplayOperation: Codable {
     case setDependentCareEnabled(Bool, configuration: AgentDependentCareConfiguration)
     case provideDependentNourishment(AgentCareProvisionIntent)
     case completeDependentCareInteraction(caregiverID: AgentID, dependentID: AgentID)
+    case setSkillsEnabled(Bool, configuration: AgentSkillConfiguration)
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -214,6 +217,7 @@ public enum AgentReplayOperation: Codable {
         case .setDependentCareEnabled: return .dependentCareFeature
         case .provideDependentNourishment: return .dependentCareProvision
         case .completeDependentCareInteraction: return .dependentCareInteraction
+        case .setSkillsEnabled: return .skillFeature
         }
     }
 
@@ -575,6 +579,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.dependentCareVersion
         }
+        if case let .setSkillsEnabled(enabled, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.skillVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "skill activation must be the first v10 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.skillVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -764,6 +778,8 @@ public enum AgentSessionReplayer {
                 && checkpoint.schemaVersion == AgentCheckpointSchema.kinshipVersion)
             || (manifest.schemaVersion == AgentReplaySchema.dependentCareVersion
                 && checkpoint.schemaVersion == AgentCheckpointSchema.householdVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.skillVersion
+                && checkpoint.schemaVersion <= AgentCheckpointSchema.dependentCareVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -969,6 +985,8 @@ extension AgentSimulationSession {
             _ = try candidate.completeDependentCareInteraction(
                 caregiverID: caregiverID, dependentID: dependentID
             )
+        case let .setSkillsEnabled(enabled, configuration):
+            try candidate.setSkillsEnabled(enabled, configuration: configuration)
         }
         self = candidate
         let causal = causalLedgerSnapshot().summary

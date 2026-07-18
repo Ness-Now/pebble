@@ -102,6 +102,8 @@ extension PebbleAgentController {
             return handleHousehold(Array(arguments.dropFirst()))
         case "care":
             return handleDependentCare(Array(arguments.dropFirst()))
+        case "skills":
+            return handleSkills(Array(arguments.dropFirst()))
         case "build":
             return handleBuild(Array(arguments.dropFirst()), world: world, player: player)
         case "causality":
@@ -152,7 +154,8 @@ extension PebbleAgentController {
             let kinshipStatus = session.kinshipEnabled ? " kinship=on" : ""
             let householdStatus = session.householdsEnabled ? " households=on" : ""
             let careStatus = session.dependentCareEnabled ? " care=on" : ""
-            let message = "PebbleAgents \(isPaused ? "paused" : "running") tick=\(snapshot.tick) hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") autoInteraction=\(autoInteractionEnabled ? "on" : "off") economy=\(snapshot.economyEnabled ? "on" : "off") survival=\(snapshot.survivalEnabled ? "on" : "off") natural=\(snapshot.naturalResourcesEnabled ? "on" : "off") build=\(snapshot.buildAutoEnabled ? "on" : "off")\(socialStatus)\(physicalStatus)\(cooperationStatus)\(populationStatus)\(settlementStatus)\(ecologyStatus)\(mortalityStatus)\(lifecycleStatus)\(kinshipStatus)\(householdStatus)\(careStatus) probes=\(probesByAgentId.count) focus=\(focusedAgentId ?? "none") follow=\(followMode.statusText) overlay=\(overlay) demo=\(demoActive ? "on" : "off") catchupDropped=\(droppedCatchUpSteps) \(positions)"
+            let skillStatus = session.skillsEnabled ? " skills=on" : ""
+            let message = "PebbleAgents \(isPaused ? "paused" : "running") tick=\(snapshot.tick) hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") autoInteraction=\(autoInteractionEnabled ? "on" : "off") economy=\(snapshot.economyEnabled ? "on" : "off") survival=\(snapshot.survivalEnabled ? "on" : "off") natural=\(snapshot.naturalResourcesEnabled ? "on" : "off") build=\(snapshot.buildAutoEnabled ? "on" : "off")\(socialStatus)\(physicalStatus)\(cooperationStatus)\(populationStatus)\(settlementStatus)\(ecologyStatus)\(mortalityStatus)\(lifecycleStatus)\(kinshipStatus)\(householdStatus)\(careStatus)\(skillStatus) probes=\(probesByAgentId.count) focus=\(focusedAgentId ?? "none") follow=\(followMode.statusText) overlay=\(overlay) demo=\(demoActive ? "on" : "off") catchupDropped=\(droppedCatchUpSteps) \(positions)"
             trace("status \(message)")
             return success(message)
         case "focus":

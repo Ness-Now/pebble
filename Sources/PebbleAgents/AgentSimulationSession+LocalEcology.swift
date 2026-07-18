@@ -261,7 +261,9 @@ extension AgentSimulationSession {
                 throw AgentSessionError.localEcology(.invalidForage(intent.forageID))
             }
         }
-        try prevalidateCausalAppend(count: intents.count * 2)
+        try prevalidateCausalAppend(
+            count: intents.count * 2 + (skillsEnabled ? intents.count : 0)
+        )
         let validationByPatch = Dictionary(
             habitatValidations.map { ($0.patchID, $0) },
             uniquingKeysWith: { lhs, _ in lhs }
@@ -361,6 +363,13 @@ extension AgentSimulationSession {
                 throw AgentSessionError.localEcology(.causalLedgerRequired)
             }
             patch.lastEcologyEventID = event.eventID
+            if status == .succeeded {
+                _ = try creditPracticeAfterMaterialSuccess(
+                    agentID: intent.agentID,
+                    domain: .foraging,
+                    sourceSuccessEventID: event.eventID
+                )
+            }
             if status == .succeeded, patch.status == .depleted,
                let depleted = try recordCausalEvent(
                 kind: .ecologyPatchDepleted,
