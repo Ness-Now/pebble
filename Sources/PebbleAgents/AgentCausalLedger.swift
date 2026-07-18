@@ -129,6 +129,9 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case birthFinalized
     case lifecycleMemberExited
     case lifecycleStateCleared
+    case kinshipInitialized
+    case kinshipPersonRegistered
+    case kinshipParentageRecorded
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -146,6 +149,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case ecologyTransition
     case mortalityTransition
     case lifecycleTransition
+    case kinshipTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -345,6 +349,15 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         fingerprint: Int,
         status: String
     )
+    case kinship(
+        childID: String?,
+        birthID: String?,
+        parentIDs: [String],
+        personCount: Int,
+        parentageCount: Int,
+        digest: String,
+        status: String
+    )
 
     var canonicalText: String {
         switch self {
@@ -479,6 +492,12 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
             return "birth|\(birthID)|\(planID)|\(newbornID)|\(ordinal)|"
                 + "\(progenitorIDs.joined(separator: ","))|\(position.x),\(position.y),\(position.z)|"
                 + "\(fingerprint)|\(status)"
+        case let .kinship(
+            childID, birthID, parentIDs, personCount, parentageCount, digest, status
+        ):
+            return "kinship|\(childID ?? "none")|\(birthID ?? "none")|"
+                + "\(parentIDs.joined(separator: ","))|\(personCount)|\(parentageCount)|"
+                + "\(digest)|\(status)"
         }
     }
 }
@@ -617,7 +636,10 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.reproductionPlanCancelled, .reproductionPlan),
              (.birthSiteValidated, .birth),
              (.populationMemberBorn, .birth),
-             (.birthFinalized, .birth):
+             (.birthFinalized, .birth),
+             (.kinshipInitialized, .kinship),
+             (.kinshipPersonRegistered, .kinship),
+             (.kinshipParentageRecorded, .kinship):
             matches = true
         default:
             matches = false
