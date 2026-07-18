@@ -145,6 +145,8 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case careProvided
     case careNeedResolved
     case careNeedUnmet
+    case skillsInitialized
+    case skillPracticeCredited
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -165,6 +167,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case kinshipTransition
     case householdTransition
     case dependentCareTransition
+    case skillTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -398,6 +401,16 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         materialQuantity: Int,
         digest: String
     )
+    case skill(
+        agentID: String?,
+        domain: String?,
+        practiceUnits: Int,
+        cumulativePracticeUnits: Int,
+        sourceSuccessEventID: String?,
+        practiceRecordCount: Int,
+        status: String,
+        digest: String
+    )
 
     var canonicalText: String {
         switch self {
@@ -555,6 +568,14 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
                 + "\(householdID ?? "none")|\(needID ?? "none")|\(needKind ?? "none")|"
                 + "\(assignmentCount)|\(needCount)|\(status)|\(reason ?? "none")|"
                 + "\(materialQuantity)|\(digest)"
+        case let .skill(
+            agentID, domain, practiceUnits, cumulativePracticeUnits,
+            sourceSuccessEventID, practiceRecordCount, status, digest
+        ):
+            return "skill|\(agentID ?? "none")|\(domain ?? "none")|"
+                + "\(practiceUnits)|\(cumulativePracticeUnits)|"
+                + "\(sourceSuccessEventID ?? "none")|\(practiceRecordCount)|"
+                + "\(status)|\(digest)"
         }
     }
 }
@@ -709,7 +730,9 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.careEngagementStarted, .dependentCare),
              (.careProvided, .dependentCare),
              (.careNeedResolved, .dependentCare),
-             (.careNeedUnmet, .dependentCare):
+             (.careNeedUnmet, .dependentCare),
+             (.skillsInitialized, .skill),
+             (.skillPracticeCredited, .skill):
             matches = true
         default:
             matches = false

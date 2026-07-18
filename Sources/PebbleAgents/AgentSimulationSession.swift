@@ -58,6 +58,7 @@ public struct AgentSimulationSession {
     public internal(set) var kinshipState: AgentKinshipState?
     public internal(set) var householdState: AgentHouseholdState?
     public internal(set) var dependentCareState: AgentDependentCareState?
+    public internal(set) var skillState: AgentSkillState?
 
     public init(
         configuration: AgentSessionConfiguration,
@@ -133,6 +134,7 @@ public struct AgentSimulationSession {
         kinshipState = nil
         householdState = nil
         dependentCareState = nil
+        skillState = nil
         try recordCausalEvent(
             kind: .sessionLifecycle,
             origin: .lifecycle,
