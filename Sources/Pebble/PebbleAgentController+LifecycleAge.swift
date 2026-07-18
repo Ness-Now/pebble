@@ -60,6 +60,31 @@ extension PebbleAgentController {
         }
         let probe = try createProbe(for: newborn, in: world)
         do {
+            if kinshipLateFailureProofEnabled, !kinshipLateFailureProofInjected {
+                _ = try candidate.durableStateBytes()
+                let candidateRecorderBytes = try candidateRecorder.map {
+                    try AgentReplayCodec.encodeRecords($0.records)
+                }
+                guard world.entities.contains(where: {
+                    ($0 as? LabCoreAgentEntity)?.labAgentId == newborn.id
+                }) else {
+                    throw ControllerError.lifecycleBoundary("newborn proof probe missing")
+                }
+                kinshipLateFailureProofInjected = true
+                trace(
+                    "kinship late-failure candidate valid=1 tick=\(candidate.tick) "
+                        + "newborn=\(newborn.id) nextOrdinal=\(candidate.populationSummary().nextPopulationOrdinal ?? -1) "
+                        + "populationMembers=\(candidate.populationSnapshot().members.count) "
+                        + "lifecycleMembers=\(candidate.lifecycleSnapshot().members.count) "
+                        + "kinshipPeople=\(candidate.kinshipSnapshot().historicalPersons.count) "
+                        + "parentages=\(candidate.kinshipSnapshot().parentageRecords.count) "
+                        + "causalSequence=\(candidate.causalLedgerSnapshot().summary.latestSequence) "
+                        + "causalEvents=\(candidate.causalLedgerSnapshot().events.count) "
+                        + "recorderRecords=\(candidateRecorder?.records.count ?? 0) "
+                        + "recorderBytes=\(candidateRecorderBytes?.count ?? 0) probeCreated=1"
+                )
+                throw ControllerError.kinshipLateFailureProof
+            }
             let expected = candidate.expectedActiveAgentIDs().map(\.rawValue).sorted()
             let worldIDs = world.entities.compactMap {
                 ($0 as? LabCoreAgentEntity)?.labAgentId
@@ -83,19 +108,87 @@ extension PebbleAgentController {
         let parentage = candidate.kinshipSnapshot().parentageRecords.first {
             $0.childID == record.newbornID
         }
+        let kinshipTrace = candidate.kinshipEnabled
+            ? "kinship=1 "
+                + "kinshipParents=\(parentage?.canonicalParentIDs.map(\.rawValue).joined(separator: ",") ?? "none") "
+                + "kinshipDigest=\(candidate.kinshipSnapshot().digest) "
+            : ""
         trace(
             "birth finalized tick=\(record.birthTick) birth=\(record.birthID.rawValue) "
                 + "plan=\(record.planID.rawValue) newborn=\(record.newbornID.rawValue) "
                 + "ordinal=\(record.ordinal.rawValue) parents=\(record.progenitorIDs.map(\.rawValue).joined(separator: ",")) "
                 + "position=\(positionText(record.position)) stage=\(member?.currentStage.rawValue ?? "none") "
                 + "age=\(member.flatMap { try? $0.age(at: candidate.tick) } ?? -1) "
-                + "kinship=\(candidate.kinshipEnabled ? 1 : 0) "
-                + "kinshipParents=\(parentage?.canonicalParentIDs.map(\.rawValue).joined(separator: ",") ?? "none") "
-                + "kinshipDigest=\(candidate.kinshipSnapshot().digest) "
+                + kinshipTrace
                 + "population=\(candidate.populationSummary().memberCount) "
                 + "nextOrdinal=\(candidate.populationSummary().nextPopulationOrdinal ?? -1) "
                 + "probes=\(probesByAgentId.keys.sorted().joined(separator: ",")) "
                 + "worldMutation=none"
+        )
+    }
+
+    func kinshipLateFailureBoundarySnapshot(
+        session: AgentSimulationSession,
+        recorder: AgentReplayRecorder?,
+        world: World
+    ) throws -> PebbleKinshipLateFailureBoundarySnapshot {
+        PebbleKinshipLateFailureBoundarySnapshot(
+            durableSessionBytes: try session.durableStateBytes(),
+            tick: session.tick,
+            population: session.populationSnapshot(),
+            lifecycle: session.lifecycleSnapshot(),
+            kinship: session.kinshipSnapshot(),
+            causal: session.causalLedgerSnapshot(),
+            recorderBytes: try recorder.map { try AgentReplayCodec.encodeRecords($0.records) },
+            recorderRecordCount: recorder?.records.count ?? 0,
+            probeIDs: probesByAgentId.keys.sorted(),
+            worldEntityIDs: world.entities.compactMap {
+                ($0 as? LabCoreAgentEntity)?.labAgentId
+            }.sorted()
+        )
+    }
+
+    func verifyKinshipLateFailureRollback(
+        _ before: PebbleKinshipLateFailureBoundarySnapshot,
+        world: World
+    ) throws {
+        guard let session else {
+            throw ControllerError.kinshipBoundary("late-failure rollback lost session")
+        }
+        let after = try kinshipLateFailureBoundarySnapshot(
+            session: session,
+            recorder: replayRecorder,
+            world: world
+        )
+        let newbornAbsent = !after.population.members.contains { $0.agentID.rawValue == "agent_4" }
+            && !after.lifecycle.members.contains { $0.agentID.rawValue == "agent_4" }
+            && !after.kinship.historicalPersons.contains { $0.agentID.rawValue == "agent_4" }
+            && !after.probeIDs.contains("agent_4")
+            && !after.worldEntityIDs.contains("agent_4")
+        guard after.durableSessionBytes == before.durableSessionBytes,
+              after.tick == before.tick,
+              after.population == before.population,
+              after.lifecycle == before.lifecycle,
+              after.kinship == before.kinship,
+              after.causal == before.causal,
+              after.recorderBytes == before.recorderBytes,
+              after.recorderRecordCount == before.recorderRecordCount,
+              after.probeIDs == before.probeIDs,
+              after.worldEntityIDs == before.worldEntityIDs,
+              newbornAbsent else {
+            throw ControllerError.kinshipBoundary("late-failure rollback diverged")
+        }
+        trace(
+            "kinship late-failure rollback sessionBytes=exact tick=\(after.tick) "
+                + "nextOrdinal=\(after.population.nextPopulationOrdinal ?? -1) "
+                + "populationMembers=\(after.population.members.count) "
+                + "lifecycleMembers=\(after.lifecycle.members.count) "
+                + "kinshipPeople=\(after.kinship.historicalPersons.count) "
+                + "parentages=\(after.kinship.parentageRecords.count) "
+                + "causalSequence=\(after.causal.summary.latestSequence) "
+                + "causalEvents=\(after.causal.events.count) recorderBytes=exact "
+                + "recorderRecords=\(after.recorderRecordCount) probeMap=exact "
+                + "worldEntityIndexes=exact newbornAbsent=1"
         )
     }
 

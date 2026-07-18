@@ -41,7 +41,12 @@ Le point de départ est le HEAD post-K :
 - âge démographique déterministe distinct de `ticksAlive`, stages
   `newborn`/`juvenile`/`mature` et reproduction locale bornée acquis sous gate
   explicite : deux progéniteurs historiques, site World validé en lecture
-  seule, AgentID monotone et checkpoint/replay v6.
+  seule, AgentID monotone et checkpoint/replay v6 ;
+- parenté historique durable acquise sous gate explicite : personnes
+  historiques sans statut vivant/résident dupliqué, parentages canoniques
+  immuables, index enfant/parents/enfants/fratries dérivés et
+  checkpoint/replay v7 ; le kernel pur `PebbleAgents` n'accède pas au World et
+  la preuve live n'observe aucun appel ou événement de mutation de bloc/World.
 
 Le langage libre, le forwarding, les professions, l'économie du travail, la
 persistance complète des agents, le replay complet du World, la grande
@@ -135,8 +140,21 @@ preuve sélectionne deux progéniteurs historiques sans créer couple ni foyer,
 valide un site World en lecture seule, crée `agent_4` avec un ordinal monotone
 et restaure exactement le plan, la naissance et la maturation via le schéma
 checkpoint/replay v6. Cette V1 n'introduit aucun sexe, grossesse, famille,
-génétique ou héritage. La prochaine étape canonique est
-`CIV-12 — Kinship, Households and Dependent Care V1`.
+génétique ou héritage. `CIV-12A — Durable Kinship Graph V1` est terminé et
+validé localement : l'archive kinship devient l'autorité historique unique,
+les champs `progenitorIDs` lifecycle/birth restent des projections contrôlées,
+les fondateurs et migrants sont des racines à parentage inconnu, et mort,
+migration, checkpoint, restart et replay ne suppriment aucun lien. L'archive
+bornée est fail-closed et le schéma v7 n'encode aucun index inverse. Le restore
+v7 rapproche intégralement les événements causaux encore retenus avec chaque
+parentage et n'accepte une référence absente que si sa séquence est prouvée
+antérieure à la fenêtre retenue. La preuve de hardening conserve les traces et
+octets v1-v6 gate-off, force après validation du candidat une défaillance
+physique newborn réservée au harnais jetable, puis vérifie l'absence de toute
+publication session, recorder, ordinal, événement ou probe. Cette verticale
+n'introduit ni foyer, care, propriété, héritage, génétique ou cognition newborn
+supplémentaire. La prochaine étape canonique est `CIV-12B — Households and
+Membership V1`.
 
 ## Grands programmes ultérieurs
 

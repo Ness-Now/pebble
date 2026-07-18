@@ -33,9 +33,11 @@ MORTALITY_OUT_A="$TMP_ROOT/mortality-a"
 MORTALITY_OUT_B="$TMP_ROOT/mortality-b"
 LIFECYCLE_OUT_A="$TMP_ROOT/lifecycle-a"
 LIFECYCLE_OUT_B="$TMP_ROOT/lifecycle-b"
+KINSHIP_OUT_A="$TMP_ROOT/kinship-a"
+KINSHIP_OUT_B="$TMP_ROOT/kinship-b"
 
 STEP=0
-TOTAL_STEPS=23
+TOTAL_STEPS=26
 
 run_step() {
     STEP=$((STEP + 1))
@@ -215,6 +217,37 @@ verify_lifecycle_outputs() {
     expect_json_value "$out/lifecycle_replay_v6/manifest.json" schemaVersion 6
 }
 
+verify_kinship_outputs() {
+    out=$1
+    for file in \
+        kinship_people.json \
+        parentage_records.json \
+        children_by_parent.json \
+        sibling_relations.json \
+        kinship_external_status.json \
+        kinship_causal_chain.json \
+        kinship_digest.json \
+        kinship_invariant_report.json \
+        kinship_checkpoint_v7/manifest.json \
+        kinship_checkpoint_v7/session.json \
+        kinship_replay_v7/manifest.json \
+        kinship_replay_v7/operations.ndjson
+    do
+        [ -s "$out/$file" ] || fail "kinship did not produce $out/$file"
+    done
+    expect_json_value "$out/kinship_invariant_report.json" schemaVersion 7
+    expect_json_value "$out/kinship_invariant_report.json" scenario \
+        durable_kinship_graph_smoke
+    expect_json_value "$out/kinship_invariant_report.json" seed 47
+    expect_json_value "$out/kinship_invariant_report.json" success true
+    expect_json_value "$out/kinship_digest.json" schemaVersion 7
+    expect_json_value "$out/kinship_digest.json" seed 47
+    expect_json_value "$out/kinship_digest.json" worldBoundaryEvidence \
+        "pure PebbleAgents APIs; no World access or mutation event"
+    expect_json_value "$out/kinship_checkpoint_v7/session.json" schemaVersion 7
+    expect_json_value "$out/kinship_replay_v7/manifest.json" schemaVersion 7
+}
+
 verify_no_tracked_run_outputs() {
     tracked=$(
         git ls-files | /usr/bin/awk '
@@ -300,6 +333,17 @@ run_step "lifecycle canonical outputs and replay comparison" \
     verify_lifecycle_outputs "$LIFECYCLE_OUT_A"
 verify_lifecycle_outputs "$LIFECYCLE_OUT_B"
 /usr/bin/diff -r "$LIFECYCLE_OUT_A" "$LIFECYCLE_OUT_B"
+
+run_step "kinship deterministic run A" \
+    swift run -c release PebbleLab -- --scenario durable_kinship_graph_smoke \
+        --seed 47 --out "$KINSHIP_OUT_A"
+run_step "kinship deterministic run B" \
+    swift run -c release PebbleLab -- --scenario durable_kinship_graph_smoke \
+        --seed 47 --out "$KINSHIP_OUT_B"
+run_step "kinship canonical outputs and replay comparison" \
+    verify_kinship_outputs "$KINSHIP_OUT_A"
+verify_kinship_outputs "$KINSHIP_OUT_B"
+/usr/bin/diff -r "$KINSHIP_OUT_A" "$KINSHIP_OUT_B"
 
 run_step "Repository hygiene" git diff --check
 verify_no_tracked_run_outputs

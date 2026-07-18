@@ -59,6 +59,7 @@ extension AgentSimulationSession {
     ) -> AgentSiblingRelation {
         guard let kinship = kinshipState else { return .unknownPerson(lhs) }
         let known = Set(kinship.historicalPersons.map(\.agentID))
+        // Identity is meaningful only inside the historical archive: equal unknown IDs stay unknown.
         guard known.contains(lhs) else { return .unknownPerson(lhs) }
         guard known.contains(rhs) else { return .unknownPerson(rhs) }
         guard lhs != rhs else { return .samePerson }
@@ -202,11 +203,41 @@ extension AgentSimulationSession {
         }) else {
             throw AgentSessionError.kinship(.incompleteBirthHistory)
         }
-        try prevalidateCausalAppend(count: 1)
+        try prevalidateCausalAppend(count: lifecycle.births.count + 1)
         let digest = AgentKinshipDigest.make(
             "initialize|\(persons.map { "\($0.agentID.rawValue):\($0.ordinal.rawValue)" }.joined(separator: ","))|"
                 + lifecycle.births.map(\.birthID.rawValue).sorted().joined(separator: ",")
         )
+        var parentages: [AgentParentageRecord] = []
+        for (index, birth) in lifecycle.births.sorted(by: { $0.newbornID < $1.newbornID }).enumerated() {
+            let recorded = try requiredKinshipEvent(
+                kind: .kinshipParentageRecorded,
+                subjectID: birth.newbornID,
+                causes: [birth.populationBornEventID],
+                payload: .kinship(
+                    childID: birth.newbornID.rawValue,
+                    birthID: birth.birthID.rawValue,
+                    parentIDs: birth.progenitorIDs.map(\.rawValue),
+                    personCount: persons.count,
+                    parentageCount: index + 1,
+                    digest: digest,
+                    status: "parentageRecorded"
+                ),
+                summary: "kinship parentage reconstructed child=\(birth.newbornID.rawValue) parents=\(birth.progenitorIDs.map(\.rawValue).joined(separator: ","))",
+                instant: AgentSimulationInstant(
+                    simulationID: clock.simulationID,
+                    tick: AgentSimulationTick(rawValue: birth.birthTick)!
+                )
+            )
+            parentages.append(AgentParentageRecord(
+                childID: birth.newbornID,
+                parentIDs: birth.progenitorIDs,
+                birthID: birth.birthID,
+                birthTick: birth.birthTick,
+                sourcePopulationBornEventID: birth.populationBornEventID,
+                recordedEventID: recorded.eventID
+            ))
+        }
         let initialized = try requiredKinshipEvent(
             kind: .kinshipInitialized,
             payload: .kinship(
@@ -216,16 +247,6 @@ extension AgentSimulationSession {
             ),
             summary: "kinship initialized persons=\(persons.count) parentages=\(lifecycle.births.count)"
         )
-        let parentages = lifecycle.births.sorted { $0.newbornID < $1.newbornID }.map {
-            AgentParentageRecord(
-                childID: $0.newbornID,
-                parentIDs: $0.progenitorIDs,
-                birthID: $0.birthID,
-                birthTick: $0.birthTick,
-                sourcePopulationBornEventID: $0.populationBornEventID,
-                recordedEventID: initialized.eventID
-            )
-        }
         var state = AgentKinshipState(
             configuration: configuration,
             historicalPersons: persons,
@@ -243,6 +264,7 @@ extension AgentSimulationSession {
                 lifecycle: lifecycle,
                 clock: clock,
                 causalLatestSequence: causalLedger.latestSequence,
+                causalDroppedEventCount: causalLedger.droppedEventCount,
                 causalEvents: causalLedger.events
             )
         } catch let error as AgentKinshipError {
@@ -362,6 +384,7 @@ extension AgentSimulationSession {
         lifecycle: AgentLifecycleState,
         clock: AgentSimulationClock,
         causalLatestSequence: UInt64,
+        causalDroppedEventCount: UInt64,
         causalEvents: [AgentCausalEvent]
     ) throws {
         _ = try AgentKinshipConfiguration(
@@ -385,6 +408,43 @@ extension AgentSimulationSession {
               kinship.lastKinshipEventID.sequence.rawValue <= causalLatestSequence,
               !kinship.rollingDigest.isEmpty else {
             throw AgentKinshipError.invalidConfiguration("state bounds or ordering")
+        }
+        guard causalDroppedEventCount <= causalLatestSequence,
+              UInt64(causalEvents.count) == causalLatestSequence - causalDroppedEventCount,
+              causalEvents.enumerated().allSatisfy({ index, event in
+                  event.sequence.rawValue == causalDroppedEventCount + UInt64(index) + 1
+              }) else {
+            throw AgentKinshipError.invalidCausalReference(kinship.lastKinshipEventID)
+        }
+        let retainedEvent: (AgentCausalEventID) throws -> AgentCausalEvent? = { eventID in
+            guard eventID.simulationID == clock.simulationID,
+                  eventID.sequence.rawValue <= causalLatestSequence else {
+                throw AgentKinshipError.invalidCausalReference(eventID)
+            }
+            if let event = causalEvents.first(where: { $0.eventID == eventID }) {
+                return event
+            }
+            guard causalDroppedEventCount > 0,
+                  eventID.sequence.rawValue <= causalDroppedEventCount else {
+                throw AgentKinshipError.invalidCausalReference(eventID)
+            }
+            return nil
+        }
+        if let initialized = try retainedEvent(kinship.initializedEventID) {
+            guard initialized.kind == .kinshipInitialized,
+                  initialized.origin == .kinshipTransition,
+                  initialized.actorID == nil,
+                  initialized.subjectID == nil,
+                  initialized.operationID == nil,
+                  initialized.causes.isEmpty,
+                  case let .kinship(childID, birthID, parentIDs, personCount,
+                                    parentageCount, digest, status) = initialized.payload,
+                  childID == nil, birthID == nil, parentIDs.isEmpty,
+                  personCount > 0, personCount <= kinship.historicalPersons.count,
+                  parentageCount >= 0, parentageCount <= kinship.parentageRecords.count,
+                  !digest.isEmpty, status == "initialized" else {
+                throw AgentKinshipError.invalidCausalReference(kinship.initializedEventID)
+            }
         }
         for person in kinship.historicalPersons {
             guard person.agentID.rawValue == "agent_\(person.ordinal.rawValue)" else {
@@ -410,16 +470,76 @@ extension AgentSimulationSession {
                   record.recordedEventID.sequence.rawValue <= causalLatestSequence else {
                 throw AgentKinshipError.invalidParentage(record.childID)
             }
-            if let source = causalEvents.first(where: {
-                $0.eventID == record.sourcePopulationBornEventID
-            }), source.kind != .populationMemberBorn || source.subjectID != record.childID {
-                throw AgentKinshipError.invalidCausalReference(record.sourcePopulationBornEventID)
+            let ordinal = kinship.historicalPersons.first(where: {
+                $0.agentID == record.childID
+            })!.ordinal
+            if let source = try retainedEvent(record.sourcePopulationBornEventID) {
+                guard source.kind == .populationMemberBorn,
+                      source.origin == .lifecycleTransition,
+                      source.simulationTick.rawValue == record.birthTick,
+                      source.actorID == record.canonicalParentIDs.first,
+                      source.subjectID == record.childID,
+                      source.operationID == nil,
+                      source.causes.count == 1,
+                      case let .birth(birthID, planID, newbornID, payloadOrdinal,
+                                      progenitorIDs, position, fingerprint, status) = source.payload,
+                      birthID == record.birthID.rawValue,
+                      newbornID == record.childID.rawValue,
+                      payloadOrdinal == ordinal.rawValue,
+                      progenitorIDs == record.canonicalParentIDs.map(\.rawValue),
+                      status == "born" else {
+                    throw AgentKinshipError.invalidCausalReference(record.sourcePopulationBornEventID)
+                }
+                let siteEventID = source.causes[0]
+                if let birth = lifecycle.births.first(where: { $0.newbornID == record.childID }),
+                   birth.siteValidatedEventID != siteEventID {
+                    throw AgentKinshipError.invalidCausalReference(siteEventID)
+                }
+                if let site = try retainedEvent(siteEventID) {
+                    guard site.kind == .birthSiteValidated,
+                          site.origin == .lifecycleTransition,
+                          site.simulationTick.rawValue == record.birthTick,
+                          site.actorID == record.canonicalParentIDs.first,
+                          site.subjectID == record.childID,
+                          site.operationID == nil,
+                          case let .birth(siteBirthID, sitePlanID, siteNewbornID,
+                                          siteOrdinal, siteParents, sitePosition,
+                                          siteFingerprint, siteStatus) = site.payload,
+                          siteBirthID == birthID,
+                          sitePlanID == planID,
+                          siteNewbornID == newbornID,
+                          siteOrdinal == payloadOrdinal,
+                          siteParents == progenitorIDs,
+                          sitePosition == position,
+                          siteFingerprint == fingerprint,
+                          siteStatus == "siteValidated" else {
+                        throw AgentKinshipError.invalidCausalReference(siteEventID)
+                    }
+                }
             }
-            if let recorded = causalEvents.first(where: { $0.eventID == record.recordedEventID }),
-               ![AgentCausalEventKind.kinshipInitialized, .kinshipParentageRecorded]
-                .contains(recorded.kind) || recorded.kind == .kinshipParentageRecorded
-                    && recorded.subjectID != record.childID {
-                throw AgentKinshipError.invalidCausalReference(record.recordedEventID)
+            if let recorded = try retainedEvent(record.recordedEventID) {
+                let expectedParentageCount = kinship.parentageRecords.filter {
+                    $0.recordedEventID.sequence <= recorded.sequence
+                }.count
+                guard recorded.kind == .kinshipParentageRecorded,
+                      recorded.origin == .kinshipTransition,
+                      recorded.simulationTick.rawValue == record.birthTick,
+                      recorded.actorID == nil,
+                      recorded.subjectID == record.childID,
+                      recorded.operationID == nil,
+                      recorded.causes == [record.sourcePopulationBornEventID],
+                      case let .kinship(childID, birthID, parentIDs, personCount,
+                                        parentageCount, digest, status) = recorded.payload,
+                      childID == record.childID.rawValue,
+                      birthID == record.birthID.rawValue,
+                      parentIDs == record.canonicalParentIDs.map(\.rawValue),
+                      personCount >= ordinal.rawValue + 1,
+                      personCount <= kinship.historicalPersons.count,
+                      parentageCount == expectedParentageCount,
+                      !digest.isEmpty,
+                      status == "parentageRecorded" else {
+                    throw AgentKinshipError.invalidCausalReference(record.recordedEventID)
+                }
             }
             for parentID in record.canonicalParentIDs {
                 childrenCounts[parentID, default: 0] += 1
@@ -428,6 +548,49 @@ extension AgentSimulationSession {
                     throw AgentKinshipError.childrenPerParentCapacityReached(parentID)
                 }
             }
+        }
+        if let last = try retainedEvent(kinship.lastKinshipEventID) {
+            let isRecordedParentage = kinship.parentageRecords.contains {
+                $0.recordedEventID == last.eventID
+            }
+            let validLastEvent: Bool
+            switch last.kind {
+            case .kinshipInitialized:
+                validLastEvent = last.eventID == kinship.initializedEventID
+            case .kinshipParentageRecorded:
+                validLastEvent = isRecordedParentage
+            case .kinshipPersonRegistered:
+                if case let .kinship(childID, birthID, parentIDs, personCount,
+                                     parentageCount, digest, status) = last.payload {
+                    validLastEvent = last.origin == .kinshipTransition
+                        && last.actorID == nil
+                        && last.subjectID?.rawValue == childID
+                        && last.operationID == nil
+                        && last.causes.count == 1
+                        && birthID == nil
+                        && parentIDs.isEmpty
+                        && personCount > 0
+                        && personCount <= kinship.historicalPersons.count
+                        && parentageCount >= 0
+                        && parentageCount <= kinship.parentageRecords.count
+                        && !digest.isEmpty
+                        && status == "rootRegistered"
+                        && last.subjectID.map(known.contains) == true
+                } else {
+                    validLastEvent = false
+                }
+            default:
+                validLastEvent = false
+            }
+            guard validLastEvent else {
+                throw AgentKinshipError.invalidCausalReference(kinship.lastKinshipEventID)
+            }
+        }
+        guard !causalEvents.contains(where: {
+            [.kinshipInitialized, .kinshipPersonRegistered, .kinshipParentageRecorded]
+                .contains($0.kind) && $0.sequence > kinship.lastKinshipEventID.sequence
+        }) else {
+            throw AgentKinshipError.invalidCausalReference(kinship.lastKinshipEventID)
         }
         let parentsByChild = Dictionary(uniqueKeysWithValues: kinship.parentageRecords.map {
             ($0.childID, $0.canonicalParentIDs)
@@ -489,6 +652,7 @@ extension AgentSimulationSession {
                 lifecycle: lifecycle,
                 clock: clock,
                 causalLatestSequence: causalLedger.latestSequence,
+                causalDroppedEventCount: causalLedger.droppedEventCount,
                 causalEvents: causalLedger.events
             )
         } catch let error as AgentKinshipError {
@@ -519,9 +683,11 @@ extension AgentSimulationSession {
         subjectID: AgentID? = nil,
         causes: [AgentCausalEventID] = [],
         payload: AgentCausalPayload,
-        summary: String
+        summary: String,
+        instant: AgentSimulationInstant? = nil
     ) throws -> AgentCausalEvent {
-        guard let event = try recordCausalEvent(
+        guard let event = try causalLedger.append(
+            instant: instant ?? simulationInstant,
             kind: kind,
             origin: .kinshipTransition,
             actorID: actorID,

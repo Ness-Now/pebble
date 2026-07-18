@@ -7,6 +7,19 @@ struct PebbleAgentCommandResult {
     let message: String
 }
 
+struct PebbleKinshipLateFailureBoundarySnapshot {
+    let durableSessionBytes: Data
+    let tick: Int
+    let population: AgentPopulationSnapshot
+    let lifecycle: AgentLifecycleSnapshot
+    let kinship: AgentKinshipSnapshot
+    let causal: AgentCausalLedgerSnapshot
+    let recorderBytes: Data?
+    let recorderRecordCount: Int
+    let probeIDs: [String]
+    let worldEntityIDs: [String]
+}
+
 final class PebbleAgentController {
     private static let maxCognitiveStepsPerUpdate = 8
     var session: AgentSimulationSession?
@@ -69,6 +82,7 @@ final class PebbleAgentController {
     var replayRecorder: AgentReplayRecorder?
     var replayBaseCheckpointName: AgentCheckpointName?
     var isAdvancingSession = false
+    var kinshipLateFailureProofInjected = false
 
     let environment = ProcessInfo.processInfo.environment
     var featureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS"] == "1" }
@@ -103,6 +117,13 @@ final class PebbleAgentController {
     }
     var kinshipFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_KINSHIP"] == "1"
+    }
+    var kinshipLateFailureProofEnabled: Bool {
+        environment["PEBBLELAB_DISPOSABLE_KINSHIP_LATE_FAILURE_PROOF"] == "1"
+            && environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1"
+            && featureEnabled && persistenceFeatureEnabled && populationFeatureEnabled
+            && lifecycleFeatureEnabled && kinshipFeatureEnabled
+            && probesFeatureEnabled && debugEntitiesEnabled && traceEnabled
     }
     var physicalAudioAvailable: () -> Bool = { false }
     var traceEvery: Int {
@@ -175,5 +196,6 @@ final class PebbleAgentController {
         case mortalityBoundary(String)
         case lifecycleBoundary(String)
         case kinshipBoundary(String)
+        case kinshipLateFailureProof
     }
 }

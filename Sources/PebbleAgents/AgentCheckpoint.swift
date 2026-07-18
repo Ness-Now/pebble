@@ -1179,6 +1179,7 @@ extension AgentSimulationSession {
                     lifecycle: lifecycle,
                     clock: state.clock,
                     causalLatestSequence: state.causalLedger.latestSequence,
+                    causalDroppedEventCount: state.causalLedger.droppedEventCount,
                     causalEvents: state.causalLedger.events
                 )
             } catch {

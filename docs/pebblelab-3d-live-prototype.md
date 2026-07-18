@@ -23,7 +23,7 @@ seule, sans grossesse, famille, génétique ni mutation du World.
 
 ## Prérequis et lancement
 
-Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population`, `--multiscale`, `--ecology`, `--mortality` et `--reproduction` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07, métriques settlement CIV-08, écologie alimentaire CIV-09, sortie de population CIV-10 et âge/maturité/reproduction bornée CIV-11. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
+Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population`, `--multiscale`, `--ecology`, `--mortality`, `--reproduction` et `--kinship` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07, métriques settlement CIV-08, écologie alimentaire CIV-09, sortie de population CIV-10, âge/maturité/reproduction bornée CIV-11 et parenté durable CIV-12A. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
 
 Depuis la racine du dépôt :
 
@@ -76,6 +76,7 @@ Commandes de démonstration :
 /lab lifecycle <on|status|clear>
 /lab reproduction <on|off|status>
 /lab births status
+/lab kinship <on|status>
 /lab social <on|off|status|clear>
 /lab physical <on|off|status|clear>
 /lab cooperation <on|off|status|clear>
@@ -302,6 +303,45 @@ ni couple, ni foyer, ni famille et aucune règle de sexe, grossesse, soin
 parental, génétique ou héritage n'est ouverte. La prochaine étape canonique est
 `CIV-12 — Kinship, Households and Dependent Care V1`.
 
+## CIV-12A — Graphe de parenté durable V1
+
+Le mode `scripts/verify-pebblelab-live.sh --kinship` réutilise la naissance
+réelle CIV-11 avec la gate supplémentaire
+`PEBBLELAB_APP_AGENTS_KINSHIP=1`. Après `/lab lifecycle on`, la commande
+explicite `/lab kinship on` migre exactement les allocations v6 prouvables en
+personnes historiques racines, sans inventer de parents. La gate reste
+désactivée par défaut et exige agents, persistence, population et lifecycle.
+
+La naissance d'`agent_4` ajoute dans la même transaction candidate un record
+immuable `agent_4 <- agent_0,agent_1`. Le nouvel événement
+`kinshipParentageRecorded` est causé par `populationMemberBorn`, puis cause
+`birthFinalized`. Le checkpoint v7 encode personnes et parentages dans un ordre
+canonique ; les enfants par parent, fratries et ancêtres restent des index
+dérivés non encodés. Un second processus restaure exactement les cinq personnes,
+le parentage et les digests. Le restore rapproche les événements causaux encore
+retenus avec leurs records complets ; une référence absente n'est recevable que
+si sa séquence est prouvée antérieure à la fenêtre retenue. Les traces exigent
+zéro erreur runtime pour les runs positifs et un cleanup complet des probes. La
+preuve World reste exacte sans compteur d'attribution inventé : `PebbleAgents`
+n'accède pas au World et aucun appel ou événement de mutation de bloc/World
+n'est observé ; le kinship ne crée aucune ressource ni représentation graphique.
+
+Le workflow couvre aussi une défaillance tardive réservée au harnais jetable.
+Après validation complète de la naissance et du parentage dans le candidat, la
+création/réconciliation physique du probe newborn échoue de manière contrôlée.
+Les octets durables, le tick, l'ordinal, les membres population/lifecycle, les
+personnes et parentages kinship, le ledger causal, le recorder, la carte des
+probes et les index d'entités World sont alors identiques à l'état antérieur ;
+le newborn est absent et le cleanup retire les quatre probes existants. Un run
+positif indépendant exécuté ensuite restaure v7, publie la naissance et retire
+ses cinq probes. En gate-off, la trace de naissance CIV-11 et le checkpoint v6
+restent byte-identiques au baseline antérieur à CIV-12A.
+
+CIV-12A est terminé et validé localement. Il n'introduit ni foyer, care,
+cohabitation, mariage, adoption, génétique, héritage, propriété, maison
+politique ou changement cognitif des newborns. La prochaine étape canonique
+est `CIV-12B — Households and Membership V1`.
+
 ## Arrêt propre et inspection
 
 Utiliser `/lab demo stop`, `/lab stop` ou `/lab clear`. Les probes transitoires sont retirées, le follow est désactivé et un résumé de session est écrit lorsque les traces sont actives. `/lab status` confirme ensuite que la session est inactive. Les probes ont `shouldSaveToChunk == false` et `persistent == false` ; aucun agent n’est restauré lors d’un lancement ultérieur.
@@ -332,6 +372,8 @@ Utiliser `/lab demo stop`, `/lab stop` ou `/lab clear`. Les probes transitoires 
   terminales bornés, sans mutation World, vieillissement ou maladie ;
 - CIV-11 conserve uniquement âge, stages et filiation historique bornée :
   aucun sexe, grossesse, couple, foyer, soin parental, génétique ou héritage ;
+- CIV-12A conserve uniquement personnes historiques et parentages canoniques :
+  aucun foyer, care, propriété, héritage, dynastie ou représentation World ;
 - aucun contrôleur autonome du joueur.
 
 Les comportements cognitifs supplémentaires, la planification longue, le

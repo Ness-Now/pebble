@@ -5,6 +5,20 @@ import PebbleCore
 extension PebbleAgentController {
     func advanceOneTick(world: World, player: Player) -> Bool {
         guard activeWorld === world, var session else { return false }
+        let publishedRecorder = replayRecorder
+        let kinshipLateFailureBoundary: PebbleKinshipLateFailureBoundarySnapshot?
+        do {
+            kinshipLateFailureBoundary = kinshipLateFailureProofEnabled
+                ? try kinshipLateFailureBoundarySnapshot(
+                    session: session, recorder: replayRecorder, world: world
+                )
+                : nil
+        } catch {
+            lastError = "kinship late-failure boundary capture failed: \(error)"
+            runtimeErrorCount += 1
+            trace("error \(lastError!)")
+            return false
+        }
         var recorder = replayRecorder
         isAdvancingSession = true
         defer { isAdvancingSession = false }
@@ -821,7 +835,30 @@ extension PebbleAgentController {
             traceSocialState(snapshot: finalSnapshot)
             return true
         } catch {
-            if recorder != nil {
+            let isKinshipLateFailure: Bool
+            if case ControllerError.kinshipLateFailureProof = error {
+                isKinshipLateFailure = true
+            } else {
+                isKinshipLateFailure = false
+            }
+            if isKinshipLateFailure {
+                replayRecorder = publishedRecorder
+                do {
+                    guard let kinshipLateFailureBoundary else {
+                        throw ControllerError.kinshipBoundary(
+                            "late-failure proof boundary was not captured"
+                        )
+                    }
+                    try verifyKinshipLateFailureRollback(
+                        kinshipLateFailureBoundary, world: world
+                    )
+                } catch {
+                    lastError = String(describing: error)
+                    runtimeErrorCount += 1
+                    trace("error \(error)")
+                    return false
+                }
+            } else if recorder != nil {
                 recorder?.markNonReplayable("tick failed: \(error)")
                 replayRecorder = recorder
             }
@@ -841,7 +878,11 @@ extension PebbleAgentController {
             }
             lastError = String(describing: error)
             runtimeErrorCount += 1
-            trace("error \(error)")
+            if isKinshipLateFailure {
+                trace("kinship late-failure controlledError=\(error)")
+            } else {
+                trace("error \(error)")
+            }
             return false
         }
     }

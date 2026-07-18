@@ -15,6 +15,7 @@ extension PebbleAgentController {
         ]
         let missing = dependencies.filter { !$0.1 }.map(\.0)
         guard missing.isEmpty else {
+            trace("kinship gates refused missing=\(missing.joined(separator: ","))")
             return failure("PebbleAgents kinship refused; missing gates: \(missing.joined(separator: ", "))")
         }
         guard var candidate = session else { return failure("No active PebbleAgents session.") }

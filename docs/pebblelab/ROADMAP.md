@@ -4678,3 +4678,47 @@ Next recommended step: Phase 5.15C - agents_basic Cognitive Loop Fixture
 Hardening. It should harden the new cognitive-loop fixture boundaries without
 turning on live memory writes, live movement, World mutation, terrain mutation,
 communication, mood, relationships, LLM, Python, embeddings, or RL.
+
+## CIV-12A - Durable Kinship Graph V1
+
+Status: implemented and validated locally.
+
+Goal: preserve canonical historical parentage across death, migration,
+checkpoint, restart, and replay without beginning households or dependent
+care.
+
+Implemented evidence:
+
+- `AgentKinshipState` is the sole historical authority and remains owned by
+  `AgentSimulationSession`;
+- historical persons contain only `AgentID` and monotone population ordinal;
+- immutable local-birth records contain exactly two canonically sorted
+  parents, birth identity/tick, and causal references;
+- child-to-parent, parent-to-children, full/half sibling, and bounded ancestry
+  queries rebuild their projections from canonical records;
+- schema v7 persists canonical records but no inverse index;
+- explicit v6 activation refuses incomplete birth/allocation history;
+- v7 restore validates every retained kinship causal reference against its
+  complete expected event and accepts a missing reference only when its
+  sequence is provably older than the retained ledger window;
+- CIV-11 birth and migrant admission register kinship in the existing
+  candidate-copy transactions, fail closed at capacity, and consume no World
+  resource or block;
+- mortality removes no historical person or parentage;
+- `durable_kinship_graph_smoke` and the `--kinship` disposable-world workflow
+  prove deterministic v7 checkpoint/restart/replay behavior;
+- the historical gate-off CIV-11 birth trace and v6 checkpoint remain
+  byte-identical to the pre-CIV-12A baseline;
+- a disposable-harness-only late physical newborn failure proves exact rollback
+  of session, recorder, ordinal, causal events, probes, and World entity indexes,
+  followed by a successful positive run;
+- the World boundary proof is structural and trace-based: `PebbleAgents` has no
+  World access and the live traces contain no block/World mutation call or
+  event; no synthetic kinship attribution counter is claimed.
+
+Out of scope: households, `HouseholdID`, cohabitation, care, skills, marriage,
+adoption, genetics, inheritance, property, dynasty, culture, and any newborn
+cognition change.
+
+Next canonical step: CIV-12B - Households and Membership V1. Household
+membership must not make a household an economic or material owner.

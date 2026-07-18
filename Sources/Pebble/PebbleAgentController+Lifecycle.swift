@@ -196,6 +196,7 @@ extension PebbleAgentController {
         droppedCatchUpSteps = 0
         maxObservedMemoryCount = 0
         maxObservedDistanceFromHome = 0
+        kinshipLateFailureProofInjected = false
     }
 
     @discardableResult
