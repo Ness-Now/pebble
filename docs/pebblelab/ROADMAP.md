@@ -4722,3 +4722,37 @@ cognition change.
 
 Next canonical step: CIV-12B - Households and Membership V1. Household
 membership must not make a household an economic or material owner.
+
+## CIV-12B - Households and Membership V1
+
+Status: implemented and validated locally.
+
+Goal: represent bounded social cohabitation, one current membership per active
+resident, and a shared operational home without introducing family authority,
+care, property, or household-owned material.
+
+Implemented evidence:
+
+- `AgentHouseholdState`, owned only by `AgentSimulationSession`, retains
+  monotone household records and canonical historical membership periods;
+- current membership and members-by-household are derived projections, not a
+  second persisted authority;
+- explicit v7 activation groups active residents by identical `homePosition`;
+- formation and movement atomically close/open periods, update operational
+  homes, and dissolve empty source households without reusing IDs;
+- true birth, migrant admission, and CIV-10 death transactions integrate the
+  household transition before their terminal event;
+- schema v8 persists only canonical records and validates population,
+  lifecycle, kinship, home, and retained/evicted causal references on restore;
+- restart and replay are byte-identical in the headless proof;
+- the disposable `--households` workflow proves a real birth, v8 restart,
+  exact digests, gate dependencies, five-probe cleanup, and a kinship-active
+  late physical rollback that also compares the complete household snapshot;
+- the World boundary is structural and trace-based: `PebbleAgents` has no World
+  access and no block/World mutation call or event is observed.
+
+Out of scope: dependent care, feeding, education, marriage, adoption,
+inheritance, property, household stock, owned terrain/buildings, politics, and
+newborn cognition changes.
+
+Next canonical step: CIV-12C - Dependent Care and Lifecycle Integration V1.

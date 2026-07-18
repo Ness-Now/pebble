@@ -604,10 +604,12 @@ extension AgentSimulationSession {
 
     private func prevalidateHouseholdTransitionCount(
         _ count: Int,
+        at transitionTick: Int? = nil,
         state: inout AgentHouseholdState
     ) throws {
-        if state.transitionTick != tick {
-            state.transitionTick = tick
+        let effectiveTick = transitionTick ?? tick
+        if state.transitionTick != effectiveTick {
+            state.transitionTick = effectiveTick
             state.transitionsAtTick = 0
         }
         guard count >= 0, state.transitionsAtTick + count
@@ -619,6 +621,7 @@ extension AgentSimulationSession {
     private mutating func dissolveHouseholdInPlace(
         _ householdID: AgentHouseholdID,
         causeEventIDs: [AgentCausalEventID],
+        at transitionTick: Int? = nil,
         state: inout AgentHouseholdState
     ) throws {
         guard let index = state.households.firstIndex(where: {
@@ -630,6 +633,7 @@ extension AgentSimulationSession {
             throw AgentSessionError.household(.invalidState("dissolve non-empty household"))
         }
         let record = state.households[index]
+        let effectiveTick = transitionTick ?? tick
         let event = try requiredHouseholdEvent(
             kind: .householdDissolved,
             causes: causeEventIDs.sorted(),
@@ -642,10 +646,14 @@ extension AgentSimulationSession {
                 reason: .householdDissolution, status: "dissolved",
                 digest: state.rollingDigest
             ),
-            summary: "household dissolved id=\(householdID.rawValue)"
+            summary: "household dissolved id=\(householdID.rawValue)",
+            instant: AgentSimulationInstant(
+                simulationID: simulationID,
+                tick: AgentSimulationTick(rawValue: effectiveTick)!
+            )
         )
         state.households[index].status = .dissolved
-        state.households[index].dissolvedTick = tick
+        state.households[index].dissolvedTick = effectiveTick
         state.households[index].lastHouseholdEventID = event.eventID
         state.lastHouseholdEventID = event.eventID
     }
@@ -771,14 +779,17 @@ extension AgentSimulationSession {
         )
     }
 
-    func householdDeathEventCount(agentIDs: [AgentID]) throws -> Int {
+    func householdDeathEventCount(
+        agentIDs: [AgentID],
+        at deathTick: Int
+    ) throws -> Int {
         guard let state = householdState else { return 0 }
         let ids = agentIDs.sorted()
         for agentID in ids where currentHouseholdID(for: agentID, in: state) == nil {
             throw AgentSessionError.household(.invalidMembership(agentID))
         }
         var preview = state
-        try prevalidateHouseholdTransitionCount(ids.count, state: &preview)
+        try prevalidateHouseholdTransitionCount(ids.count, at: deathTick, state: &preview)
         let dying = Set(ids)
         let sourceIDs = Set(ids.compactMap { currentHouseholdID(for: $0, in: state) })
         let dissolved = sourceIDs.filter { householdID in
@@ -789,11 +800,12 @@ extension AgentSimulationSession {
 
     mutating func closeHouseholdMembershipForDeath(
         agentID: AgentID,
-        causeEventID: AgentCausalEventID
+        causeEventID: AgentCausalEventID,
+        at deathTick: Int
     ) throws -> AgentCausalEventID? {
         guard var state = householdState else { return nil }
         var preview = state
-        try prevalidateHouseholdTransitionCount(1, state: &preview)
+        try prevalidateHouseholdTransitionCount(1, at: deathTick, state: &preview)
         guard let periodIndex = state.membershipPeriods.firstIndex(where: {
             $0.agentID == agentID && $0.leftTick == nil
         }) else { throw AgentSessionError.household(.invalidMembership(agentID)) }
@@ -814,9 +826,13 @@ extension AgentSimulationSession {
                 membershipCount: state.membershipPeriods.count,
                 reason: .death, status: "membershipEnded", digest: state.rollingDigest
             ),
-            summary: "household membership ended death agent=\(agentID.rawValue) household=\(household.householdID.rawValue)"
+            summary: "household membership ended death agent=\(agentID.rawValue) household=\(household.householdID.rawValue)",
+            instant: AgentSimulationInstant(
+                simulationID: simulationID,
+                tick: AgentSimulationTick(rawValue: deathTick)!
+            )
         )
-        state.membershipPeriods[periodIndex].leftTick = tick
+        state.membershipPeriods[periodIndex].leftTick = deathTick
         state.membershipPeriods[periodIndex].leftEventID = ended.eventID
         state.membershipPeriods[periodIndex].leftReason = .death
         state.households[householdIndex].lastHouseholdEventID = ended.eventID
@@ -824,17 +840,18 @@ extension AgentSimulationSession {
         var lastEventID = ended.eventID
         if currentMemberIDs(of: household.householdID, in: state).isEmpty {
             try dissolveHouseholdInPlace(
-                household.householdID, causeEventIDs: [ended.eventID], state: &state
+                household.householdID, causeEventIDs: [ended.eventID],
+                at: deathTick, state: &state
             )
             lastEventID = state.lastHouseholdEventID
         }
-        if state.transitionTick != tick {
-            state.transitionTick = tick
+        if state.transitionTick != deathTick {
+            state.transitionTick = deathTick
             state.transitionsAtTick = 0
         }
         state.transitionsAtTick += 1
         state.rollingDigest = AgentHouseholdDigest.make(
-            "\(state.rollingDigest)|death|\(agentID.rawValue)|\(household.householdID.rawValue)|\(tick)"
+            "\(state.rollingDigest)|death|\(agentID.rawValue)|\(household.householdID.rawValue)|\(deathTick)"
         )
         state.households.sort(by: householdRecordSort)
         state.membershipPeriods.sort(by: householdPeriodSort)
@@ -1185,7 +1202,10 @@ extension AgentSimulationSession {
             periodsByAgent[period.agentID, default: []].append(period)
         }
         for (agentID, periods) in periodsByAgent {
-            let ordered = periods.sorted(by: householdPeriodSort)
+            let ordered = periods.sorted {
+                if $0.joinedTick != $1.joinedTick { return $0.joinedTick < $1.joinedTick }
+                return $0.joinedEventID < $1.joinedEventID
+            }
             guard ordered.filter({ $0.leftTick == nil }).count <= 1 else {
                 throw AgentHouseholdError.overlappingMembership(agentID)
             }
@@ -1346,10 +1366,11 @@ extension AgentSimulationSession {
         subjectID: AgentID? = nil,
         causes: [AgentCausalEventID] = [],
         payload: AgentCausalPayload,
-        summary: String
+        summary: String,
+        instant: AgentSimulationInstant? = nil
     ) throws -> AgentCausalEvent {
         guard let event = try causalLedger.append(
-            instant: simulationInstant,
+            instant: instant ?? simulationInstant,
             kind: kind,
             origin: .householdTransition,
             actorID: actorID,

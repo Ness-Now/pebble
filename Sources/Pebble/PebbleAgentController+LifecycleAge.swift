@@ -78,6 +78,8 @@ extension PebbleAgentController {
                         + "lifecycleMembers=\(candidate.lifecycleSnapshot().members.count) "
                         + "kinshipPeople=\(candidate.kinshipSnapshot().historicalPersons.count) "
                         + "parentages=\(candidate.kinshipSnapshot().parentageRecords.count) "
+                        + "households=\(candidate.householdSnapshot().households.count) "
+                        + "memberships=\(candidate.householdSnapshot().currentMemberships.count) "
                         + "causalSequence=\(candidate.causalLedgerSnapshot().summary.latestSequence) "
                         + "causalEvents=\(candidate.causalLedgerSnapshot().events.count) "
                         + "recorderRecords=\(candidateRecorder?.records.count ?? 0) "
@@ -145,6 +147,7 @@ extension PebbleAgentController {
             population: session.populationSnapshot(),
             lifecycle: session.lifecycleSnapshot(),
             kinship: session.kinshipSnapshot(),
+            household: session.householdSnapshot(),
             causal: session.causalLedgerSnapshot(),
             recorderBytes: try recorder.map { try AgentReplayCodec.encodeRecords($0.records) },
             recorderRecordCount: recorder?.records.count ?? 0,
@@ -170,6 +173,7 @@ extension PebbleAgentController {
         let newbornAbsent = !after.population.members.contains { $0.agentID.rawValue == "agent_4" }
             && !after.lifecycle.members.contains { $0.agentID.rawValue == "agent_4" }
             && !after.kinship.historicalPersons.contains { $0.agentID.rawValue == "agent_4" }
+            && !after.household.membershipPeriods.contains { $0.agentID.rawValue == "agent_4" }
             && !after.probeIDs.contains("agent_4")
             && !after.worldEntityIDs.contains("agent_4")
         guard after.durableSessionBytes == before.durableSessionBytes,
@@ -177,6 +181,7 @@ extension PebbleAgentController {
               after.population == before.population,
               after.lifecycle == before.lifecycle,
               after.kinship == before.kinship,
+              after.household == before.household,
               after.causal == before.causal,
               after.recorderBytes == before.recorderBytes,
               after.recorderRecordCount == before.recorderRecordCount,
@@ -192,6 +197,8 @@ extension PebbleAgentController {
                 + "lifecycleMembers=\(after.lifecycle.members.count) "
                 + "kinshipPeople=\(after.kinship.historicalPersons.count) "
                 + "parentages=\(after.kinship.parentageRecords.count) "
+                + "households=\(after.household.households.count) "
+                + "memberships=\(after.household.currentMemberships.count) "
                 + "causalSequence=\(after.causal.summary.latestSequence) "
                 + "causalEvents=\(after.causal.events.count) recorderBytes=exact "
                 + "recorderRecords=\(after.recorderRecordCount) probeMap=exact "

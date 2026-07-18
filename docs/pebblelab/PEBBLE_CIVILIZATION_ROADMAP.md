@@ -153,8 +153,17 @@ octets v1-v6 gate-off, force après validation du candidat une défaillance
 physique newborn réservée au harnais jetable, puis vérifie l'absence de toute
 publication session, recorder, ordinal, événement ou probe. Cette verticale
 n'introduit ni foyer, care, propriété, héritage, génétique ou cognition newborn
-supplémentaire. La prochaine étape canonique est `CIV-12B — Households and
-Membership V1`.
+supplémentaire. `CIV-12B — Households and Membership V1` est terminé et validé
+localement : `AgentSimulationSession` possède l'unique archive household, les
+foyers monotones conservent une ancre de résidence sans posséder le terrain ni
+les ressources, et les périodes historiques déterminent l'unique appartenance
+courante. L'activation explicite v7→v8 groupe les résidents par `homePosition` ;
+formation, déplacement, naissance, admission migratoire et mortalité publient
+leurs changements de membership, home et causalité dans une même candidate.
+Les foyers vides sont dissous sans réutilisation d'ID, tandis que kinship reste
+indépendant. Checkpoint, restart et replay v8 restaurent exactement les foyers,
+les périodes et les homes, sans mutation World. La prochaine étape canonique
+est `CIV-12C — Dependent Care and Lifecycle Integration V1`.
 
 ## Grands programmes ultérieurs
 

@@ -13,6 +13,7 @@ struct PebbleKinshipLateFailureBoundarySnapshot {
     let population: AgentPopulationSnapshot
     let lifecycle: AgentLifecycleSnapshot
     let kinship: AgentKinshipSnapshot
+    let household: AgentHouseholdSnapshot
     let causal: AgentCausalLedgerSnapshot
     let recorderBytes: Data?
     let recorderRecordCount: Int

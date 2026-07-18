@@ -240,7 +240,7 @@ extension AgentSimulationSession {
             throw AgentSessionError.mortality(.disabled)
         }
         let householdEventCount = try householdDeathEventCount(
-            agentIDs: lethal.map(\.agentID)
+            agentIDs: lethal.map(\.agentID), at: mortalityTick
         )
         try prevalidateCausalAppend(
             count: lethal.count * (lifecycleState == nil ? 7 : 9)
@@ -455,7 +455,8 @@ extension AgentSimulationSession {
             )
             let householdEventID = try closeHouseholdMembershipForDeath(
                 agentID: item.agentID,
-                causeEventID: commitmentsEvent.eventID
+                causeEventID: commitmentsEvent.eventID,
+                at: mortalityTick
             )
             registry.members.remove(at: memberIndex)
             registry.settlement.residentIDs.removeAll { $0 == item.agentID }

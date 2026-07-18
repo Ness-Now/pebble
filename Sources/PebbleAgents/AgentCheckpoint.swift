@@ -1143,6 +1143,21 @@ extension AgentSimulationSession {
                     $0.kind == .migrationFailed && $0.actorID == record.agentID
                         && $0.sequence > commitments.sequence && $0.sequence < exit.sequence
                 }
+                let householdPeriod = state.householdState?.membershipPeriods.first {
+                    $0.agentID == record.agentID
+                        && $0.leftTick == record.deathTick
+                        && $0.leftReason == .death
+                }
+                let householdRecord = householdPeriod.flatMap { period in
+                    state.householdState?.households.first {
+                        $0.householdID == period.householdID
+                    }
+                }
+                let householdExit = householdRecord.flatMap { household in
+                    household.dissolvedTick == record.deathTick
+                        && household.lastHouseholdEventID.sequence < exit.sequence
+                        ? household.lastHouseholdEventID : householdPeriod?.leftEventID
+                } ?? householdPeriod?.leftEventID
                 guard
                       [lethal.kind, resources.kind, commitments.kind, exit.kind, finalized.kind]
                         == [
@@ -1161,6 +1176,7 @@ extension AgentSimulationSession {
                           resources.eventID,
                           commitments.eventID,
                           migrationFailure?.eventID,
+                          householdExit,
                       ].compactMap({ $0 }).sorted(),
                       finalized.causes == [exit.eventID],
                       lethal.sequence < resources.sequence,

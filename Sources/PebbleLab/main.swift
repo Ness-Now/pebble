@@ -37,6 +37,9 @@ if options.scenario == "age_maturity_reproduction_smoke" {
 if options.scenario == "durable_kinship_graph_smoke" {
     runDurableKinshipGraphSmoke(options)
 }
+if options.scenario == "households_and_membership_smoke" {
+    runHouseholdsAndMembershipSmoke(options)
+}
 
 let isMultiAgentMovementFixtureScenario = options.scenario
     == "multi_agent_movement_fixture_smoke"

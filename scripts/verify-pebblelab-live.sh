@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build|--social|--physical|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build|--social|--physical|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -42,6 +42,7 @@ Options:
   --mortality Run starvation mortality, v5 pre/post restart, probe exit, and replacement migration.
   --reproduction Run deterministic age, bounded local birth, v6 pre/post restart, and maturity.
   --kinship Run the reproduction workflow with explicit kinship activation and v7 restart.
+  --households Run the kinship workflow with explicit household activation and v8 restart.
   --help     Show this help and exit.
 EOF
 }
@@ -95,6 +96,7 @@ for option in "$@"; do
         --mortality) MODE="mortality"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --reproduction) MODE="reproduction"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --kinship) MODE="kinship"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --households) MODE="households"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --help|-h) usage; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$option" >&2; usage >&2; exit 2 ;;
     esac
@@ -114,18 +116,26 @@ ECOLOGY_GATE=0
 MORTALITY_GATE=0
 LIFECYCLE_GATE=0
 KINSHIP_GATE=0
-if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ]; then
+HOUSEHOLD_GATE=0
+if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ] || [ "$MODE" = "households" ]; then
     WORLD_SEED="46"
     PERSISTENCE_GATE=1
     POPULATION_GATE=1
     MULTISCALE_GATE=1
     ECOLOGY_GATE=1
     LIFECYCLE_GATE=1
-    if [ "$MODE" = "kinship" ]; then
+    if [ "$MODE" = "kinship" ] || [ "$MODE" = "households" ]; then
         KINSHIP_GATE=1
-        WORLD_NAME="PebbleLab-Disposable-Kinship-46"
-        CAPTURE_NAME="durable-kinship-proof.txt"
-        EXPECTED_REPRODUCTION_SCHEMA=7
+        if [ "$MODE" = "households" ]; then
+            HOUSEHOLD_GATE=1
+            WORLD_NAME="PebbleLab-Disposable-Households-46"
+            CAPTURE_NAME="household-membership-proof.txt"
+            EXPECTED_REPRODUCTION_SCHEMA=8
+        else
+            WORLD_NAME="PebbleLab-Disposable-Kinship-46"
+            CAPTURE_NAME="durable-kinship-proof.txt"
+            EXPECTED_REPRODUCTION_SCHEMA=7
+        fi
     else
         WORLD_NAME="PebbleLab-Disposable-Reproduction-46"
         CAPTURE_NAME="age-maturity-reproduction-proof.txt"
@@ -143,8 +153,11 @@ if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ]; then
         reproduction_step=$((reproduction_step + 1))
     done
     REPRODUCTION_BOOTSTRAP_COMMANDS="$REPRODUCTION_BOOTSTRAP_COMMANDS;/lab migration status;/lab population status;/lab ecology on;/lab ecology scan;/lab survival on;/lab lifecycle on"
-    if [ "$MODE" = "kinship" ]; then
+    if [ "$MODE" = "kinship" ] || [ "$MODE" = "households" ]; then
         REPRODUCTION_BOOTSTRAP_COMMANDS="$REPRODUCTION_BOOTSTRAP_COMMANDS;/lab checkpoint save kinship-preactivation-v6;/lab kinship on;/lab kinship status"
+    fi
+    if [ "$MODE" = "households" ]; then
+        REPRODUCTION_BOOTSTRAP_COMMANDS="$REPRODUCTION_BOOTSTRAP_COMMANDS;/lab checkpoint save households-preactivation-v7;/lab household on;/lab household status"
     fi
     REPRODUCTION_BOOTSTRAP_COMMANDS="$REPRODUCTION_BOOTSTRAP_COMMANDS;/lab reproduction on"
     REPRODUCTION_PHASE1_COMMANDS="$REPRODUCTION_BOOTSTRAP_COMMANDS;/lab step;/lab step;/lab step;/lab lifecycle status;/lab reproduction status;/lab births status;/lab checkpoint save reproduction-midplan;/lab checkpoint status;/lab causality status;/lab status"
@@ -455,6 +468,7 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_MORTALITY=%s\n' "$MORTALITY_GATE"
     printf '  PEBBLELAB_APP_AGENTS_LIFECYCLE=%s\n' "$LIFECYCLE_GATE"
     printf '  PEBBLELAB_APP_AGENTS_KINSHIP=%s\n' "$KINSHIP_GATE"
+    printf '  PEBBLELAB_APP_AGENTS_HOUSEHOLDS=%s\n' "$HOUSEHOLD_GATE"
     printf '  PEBBLELAB_DISPOSABLE_WORLD_PROOF=1\n'
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
     if [ "$MODE" = "build" ]; then
@@ -476,7 +490,11 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "kinship" ]; then
+    if [ "$MODE" = "households" ]; then
+        printf '  2. Confirm explicit v7 to v8 activation groups the four residents by home position.\n'
+        printf '  3. Confirm the true birth gives agent_4 one household membership without World mutation.\n'
+        printf '  4. Confirm process restart preserves households, memberships, homes, and digests exactly.\n'
+    elif [ "$MODE" = "kinship" ]; then
         printf '  2. Confirm explicit kinship activation archives the four historical roots in schema v7.\n'
         printf '  3. Confirm the true CIV-11 birth records agent_4 -> agent_0,agent_1 without World mutation.\n'
         printf '  4. Confirm process restart preserves people, parentage, durable digest, and kinship digest exactly.\n'
@@ -532,7 +550,7 @@ print_plan() {
     if [ "$MODE" != "persistence" ] && [ "$MODE" != "population" ] \
         && [ "$MODE" != "multiscale" ] && [ "$MODE" != "ecology" ] \
         && [ "$MODE" != "mortality" ] && [ "$MODE" != "reproduction" ] \
-        && [ "$MODE" != "kinship" ]; then
+        && [ "$MODE" != "kinship" ] && [ "$MODE" != "households" ]; then
         printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
     fi
     printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
@@ -594,7 +612,7 @@ if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
     fail "a Pebble process is already running; refusing an ambiguous live baseline"
 fi
 
-if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ]; then
+if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ] || [ "$MODE" = "households" ]; then
     cd "$ROOT_DIR"
     swift build -c release --product Pebble
     PEBBLE_BINARY="$ROOT_DIR/.build/release/Pebble"
@@ -639,6 +657,7 @@ if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ]; then
             PEBBLELAB_APP_AGENTS_MORTALITY=0 \
             PEBBLELAB_APP_AGENTS_LIFECYCLE=1 \
             PEBBLELAB_APP_AGENTS_KINSHIP="$KINSHIP_GATE" \
+            PEBBLELAB_APP_AGENTS_HOUSEHOLDS="$HOUSEHOLD_GATE" \
             PEBBLELAB_DISPOSABLE_KINSHIP_LATE_FAILURE_PROOF="$kinship_late_failure_proof" \
             PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
             PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
@@ -668,6 +687,7 @@ if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ]; then
             PEBBLELAB_APP_AGENTS_MORTALITY=0 \
             PEBBLELAB_APP_AGENTS_LIFECYCLE=1 \
             PEBBLELAB_APP_AGENTS_KINSHIP="$KINSHIP_GATE" \
+            PEBBLELAB_APP_AGENTS_HOUSEHOLDS="$HOUSEHOLD_GATE" \
             PEBBLELAB_DISPOSABLE_KINSHIP_LATE_FAILURE_PROOF="$kinship_late_failure_proof" \
             PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
             PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
@@ -693,8 +713,11 @@ if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ]; then
     require_trace 'checkpoint saved name=reproduction-midplan .*tick=10 .*restartSafe=1 ' 'restart-safe mid-plan checkpoint'
     require_trace 'summary .*agents=4 .*runtimeErrors=0 .*probesRemoved=4 ' 'clean mid-plan four-probe cleanup'
     reject_trace 'birth finalized|runtime error|worldMutation=(block|world)' 'premature birth, runtime error, or World mutation'
-    if [ "$MODE" = "kinship" ]; then
+    if [ "$MODE" = "kinship" ] || [ "$MODE" = "households" ]; then
         require_trace 'kinship tick=7 enabled=1 people=4 parentages=0 child=none parents=none digest=[0-9a-f]+ worldMutation=none' 'explicit four-root kinship initialization'
+    fi
+    if [ "$MODE" = "households" ]; then
+        require_trace 'household tick=7 enabled=1 households=[1-9][0-9]* active=[1-9][0-9]* memberships=4 nextOrdinal=[1-9][0-9]* digest=[0-9a-f]+ worldMutation=none' 'explicit four-resident household initialization'
     fi
 
     REPRODUCTION_ROOT="$SESSION_HOME/Library/Application Support/Pebble/PebbleLabAgents"
@@ -716,7 +739,7 @@ if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ]; then
     [ "$(/usr/bin/plutil -extract durableState.lifecycleState.members.3.agentID raw -o - "$MID_SESSION")" = "agent_3" ] \
         && [ "$(/usr/bin/plutil -extract durableState.lifecycleState.members.3.origin raw -o - "$MID_SESSION")" = "importedMigrant" ] \
         || fail "activation did not preserve the arrived migrant's demographic origin"
-    if [ "$MODE" = "kinship" ]; then
+    if [ "$MODE" = "kinship" ] || [ "$MODE" = "households" ]; then
         [ "$(/usr/bin/plutil -extract durableState.kinshipState.totalHistoricalPersonCount raw -o - "$MID_SESSION")" = "4" ] \
             && [ "$(/usr/bin/plutil -extract durableState.kinshipState.totalParentageRecordCount raw -o - "$MID_SESSION")" = "0" ] \
             || fail "kinship activation did not archive exactly four roots"
@@ -725,6 +748,17 @@ if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ]; then
             && /usr/bin/grep -q '"schemaVersion":6' "$PREACTIVATION_V6" \
             && ! /usr/bin/grep -q '"kinshipState"' "$PREACTIVATION_V6" \
             || fail "kinship preactivation v6 checkpoint is not exact"
+    fi
+    if [ "$MODE" = "households" ]; then
+        PREACTIVATION_V7=$(/usr/bin/find "$REPRODUCTION_ROOT" -type f -path '*/checkpoints/households-preactivation-v7/session.json' -print -quit)
+        [ -n "$PREACTIVATION_V7" ] \
+            && /usr/bin/grep -q '"schemaVersion":7' "$PREACTIVATION_V7" \
+            && /usr/bin/grep -q '"kinshipState"' "$PREACTIVATION_V7" \
+            && ! /usr/bin/grep -q '"householdState"' "$PREACTIVATION_V7" \
+            || fail "household preactivation v7 checkpoint is not exact"
+        [ "$(/usr/bin/plutil -extract durableState.householdState.membershipPeriods json -o - "$MID_SESSION" \
+            | /usr/bin/grep -o '"agentID"' | /usr/bin/wc -l | /usr/bin/tr -d ' ')" = "4" ] \
+            || fail "household activation did not assign exactly four residents"
     fi
 
     MID_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=reproduction-midplan .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE1_TRACE" | /usr/bin/tail -1)
@@ -742,18 +776,19 @@ if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ]; then
     esac
     continuation_command_tick=$((persisted_world_tick + 100))
 
-    if [ "$MODE" = "kinship" ]; then
-        run_kinship_gate_case() {
+    if [ "$MODE" = "kinship" ] || [ "$MODE" = "households" ]; then
+        run_lineage_gate_case() {
             gate_name=$1
             agents_gate=$2
             persistence_gate=$3
             population_gate=$4
             lifecycle_gate=$5
             kinship_gate=$6
-            gate_commands=$7
+            household_gate=$7
+            gate_commands=$8
             gate_home="$SESSION_ROOT/gate-$gate_name-home"
             gate_trace="$SESSION_ROOT/gate-$gate_name.log"
-            [ ! -e "$gate_home" ] || fail "fresh kinship gate home already exists: $gate_name"
+            [ ! -e "$gate_home" ] || fail "fresh lineage gate home already exists: $gate_name"
             /usr/bin/ditto "$SESSION_HOME" "$gate_home"
             CFFIXED_USER_HOME="$gate_home" \
             PEBBLE_AUTOLOAD=1 \
@@ -777,54 +812,93 @@ if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ]; then
             PEBBLELAB_APP_AGENTS_MORTALITY=0 \
             PEBBLELAB_APP_AGENTS_LIFECYCLE="$lifecycle_gate" \
             PEBBLELAB_APP_AGENTS_KINSHIP="$kinship_gate" \
+            PEBBLELAB_APP_AGENTS_HOUSEHOLDS="$household_gate" \
             PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
             PEBBLE_CMD_WORLD_TICK="$continuation_command_tick" \
             PEBBLE_CMD="$gate_commands" \
             PEBBLE_SHOT='-|-|-|-|-' \
             "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$gate_trace"
             if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
-                fail "Pebble process remained after kinship gate case: $gate_name"
+                fail "Pebble process remained after lineage gate case: $gate_name"
             fi
             TRACE_PATH="$gate_trace"
         }
 
-        printf '\nKinship gate matrix: exact dependency and restore refusals.\n'
-        run_kinship_gate_case only 0 0 0 0 1 \
-            "$POPULATION_WORLD_READY|/lab kinship on"
-        require_trace 'kinship gates refused missing=PEBBLELAB_APP_AGENTS=1,PEBBLELAB_APP_AGENTS_PERSISTENCE=1,PEBBLELAB_APP_AGENTS_POPULATION=1,PEBBLELAB_APP_AGENTS_LIFECYCLE=1' 'kinship-only refusal'
-        run_kinship_gate_case agents-no-persistence 1 0 0 0 1 \
-            "$POPULATION_WORLD_READY|/lab kinship on"
-        require_trace 'kinship gates refused missing=PEBBLELAB_APP_AGENTS_PERSISTENCE=1,PEBBLELAB_APP_AGENTS_POPULATION=1,PEBBLELAB_APP_AGENTS_LIFECYCLE=1' 'agents without persistence refusal'
-        run_kinship_gate_case population-no-lifecycle 1 1 1 0 1 \
-            "$POPULATION_WORLD_READY|/lab kinship on"
-        require_trace 'kinship gates refused missing=PEBBLELAB_APP_AGENTS_LIFECYCLE=1' 'population without lifecycle refusal'
-        run_kinship_gate_case lifecycle-no-persistence 1 0 1 1 1 \
-            "$POPULATION_WORLD_READY|/lab kinship on"
-        require_trace 'kinship gates refused missing=PEBBLELAB_APP_AGENTS_PERSISTENCE=1' 'lifecycle without persistence refusal'
-        run_kinship_gate_case v7-no-kinship 1 1 1 1 0 \
-            "$POPULATION_WORLD_READY|/lab start;/lab checkpoint load reproduction-midplan"
-        require_trace 'checkpoint load refused name=reproduction-midplan reason=kinshipGate' 'v7 without kinship gate refusal'
-        run_kinship_gate_case v7-no-lifecycle 1 1 1 0 1 \
-            "$POPULATION_WORLD_READY|/lab start;/lab checkpoint load reproduction-midplan"
-        require_trace 'checkpoint load refused name=reproduction-midplan reason=lifecycleGate' 'v7 without lifecycle gate refusal'
-        run_kinship_gate_case v6-all 1 1 1 1 1 \
-            "$POPULATION_WORLD_READY|/lab start;/lab checkpoint load kinship-preactivation-v6;/lab kinship status"
-        require_trace 'checkpoint loaded name=kinship-preactivation-v6 .*tick=7 .*restartSafe=1 probes=4 paused=1' 'v6 restore with all gates'
-        require_trace 'kinship tick=7 enabled=0 people=0 parentages=0 child=none parents=none digest=[0-9a-f]+ worldMutation=none' 'v6 restore does not activate kinship silently'
+        if [ "$MODE" = "kinship" ]; then
+            printf '\nKinship gate matrix: exact dependency and restore refusals.\n'
+            run_lineage_gate_case only 0 0 0 0 1 0 \
+                "$POPULATION_WORLD_READY|/lab kinship on"
+            require_trace 'kinship gates refused missing=PEBBLELAB_APP_AGENTS=1,PEBBLELAB_APP_AGENTS_PERSISTENCE=1,PEBBLELAB_APP_AGENTS_POPULATION=1,PEBBLELAB_APP_AGENTS_LIFECYCLE=1' 'kinship-only refusal'
+            run_lineage_gate_case agents-no-persistence 1 0 0 0 1 0 \
+                "$POPULATION_WORLD_READY|/lab kinship on"
+            require_trace 'kinship gates refused missing=PEBBLELAB_APP_AGENTS_PERSISTENCE=1,PEBBLELAB_APP_AGENTS_POPULATION=1,PEBBLELAB_APP_AGENTS_LIFECYCLE=1' 'agents without persistence refusal'
+            run_lineage_gate_case population-no-lifecycle 1 1 1 0 1 0 \
+                "$POPULATION_WORLD_READY|/lab kinship on"
+            require_trace 'kinship gates refused missing=PEBBLELAB_APP_AGENTS_LIFECYCLE=1' 'population without lifecycle refusal'
+            run_lineage_gate_case lifecycle-no-persistence 1 0 1 1 1 0 \
+                "$POPULATION_WORLD_READY|/lab kinship on"
+            require_trace 'kinship gates refused missing=PEBBLELAB_APP_AGENTS_PERSISTENCE=1' 'lifecycle without persistence refusal'
+            run_lineage_gate_case v7-no-kinship 1 1 1 1 0 0 \
+                "$POPULATION_WORLD_READY|/lab start;/lab checkpoint load reproduction-midplan"
+            require_trace 'checkpoint load refused name=reproduction-midplan reason=kinshipGate' 'v7 without kinship gate refusal'
+            run_lineage_gate_case v7-no-lifecycle 1 1 1 0 1 0 \
+                "$POPULATION_WORLD_READY|/lab start;/lab checkpoint load reproduction-midplan"
+            require_trace 'checkpoint load refused name=reproduction-midplan reason=lifecycleGate' 'v7 without lifecycle gate refusal'
+            run_lineage_gate_case v6-all 1 1 1 1 1 0 \
+                "$POPULATION_WORLD_READY|/lab start;/lab checkpoint load kinship-preactivation-v6;/lab kinship status"
+            require_trace 'checkpoint loaded name=kinship-preactivation-v6 .*tick=7 .*restartSafe=1 probes=4 paused=1' 'v6 restore with all gates'
+            require_trace 'kinship tick=7 enabled=0 people=0 parentages=0 child=none parents=none digest=[0-9a-f]+ worldMutation=none' 'v6 restore does not activate kinship silently'
+        else
+            printf '\nHousehold gate matrix: exact dependencies, activation, and restore refusals.\n'
+            run_lineage_gate_case household-only 0 0 0 0 0 1 \
+                "$POPULATION_WORLD_READY|/lab household on"
+            require_trace 'household gates refused missing=PEBBLELAB_APP_AGENTS=1,PEBBLELAB_APP_AGENTS_PERSISTENCE=1,PEBBLELAB_APP_AGENTS_POPULATION=1,PEBBLELAB_APP_AGENTS_LIFECYCLE=1,PEBBLELAB_APP_AGENTS_KINSHIP=1' 'household-only refusal'
+            run_lineage_gate_case household-agents-no-persistence 1 0 0 0 0 1 \
+                "$POPULATION_WORLD_READY|/lab household on"
+            require_trace 'household gates refused missing=PEBBLELAB_APP_AGENTS_PERSISTENCE=1,PEBBLELAB_APP_AGENTS_POPULATION=1,PEBBLELAB_APP_AGENTS_LIFECYCLE=1,PEBBLELAB_APP_AGENTS_KINSHIP=1' 'household plus agents without persistence refusal'
+            run_lineage_gate_case household-population-no-lifecycle 1 1 1 0 1 1 \
+                "$POPULATION_WORLD_READY|/lab household on"
+            require_trace 'household gates refused missing=PEBBLELAB_APP_AGENTS_LIFECYCLE=1' 'household population without lifecycle refusal'
+            run_lineage_gate_case household-lifecycle-no-persistence 1 0 1 1 1 1 \
+                "$POPULATION_WORLD_READY|/lab household on"
+            require_trace 'household gates refused missing=PEBBLELAB_APP_AGENTS_PERSISTENCE=1' 'household lifecycle without persistence refusal'
+            run_lineage_gate_case household-all 1 1 1 1 1 1 \
+                "$POPULATION_WORLD_READY|/lab start;/lab checkpoint load households-preactivation-v7;/lab household on;/lab household status"
+            require_trace 'household tick=7 enabled=1 households=[1-9][0-9]* active=[1-9][0-9]* memberships=4 nextOrdinal=[1-9][0-9]* digest=[0-9a-f]+ worldMutation=none' 'all household dependencies succeed'
+            run_lineage_gate_case v8-no-household 1 1 1 1 1 0 \
+                "$POPULATION_WORLD_READY|/lab start;/lab checkpoint load reproduction-midplan"
+            require_trace 'checkpoint load refused name=reproduction-midplan reason=householdGate' 'v8 without household gate refusal'
+            run_lineage_gate_case v8-no-lifecycle 1 1 1 0 1 1 \
+                "$POPULATION_WORLD_READY|/lab start;/lab checkpoint load reproduction-midplan"
+            require_trace 'checkpoint load refused name=reproduction-midplan reason=lifecycleGate' 'v8 without lifecycle gate refusal'
+            run_lineage_gate_case v7-all 1 1 1 1 1 1 \
+                "$POPULATION_WORLD_READY|/lab start;/lab checkpoint load households-preactivation-v7;/lab household status"
+            require_trace 'checkpoint loaded name=households-preactivation-v7 .*tick=7 .*restartSafe=1 probes=4 paused=1' 'v7 restore with all household gates'
+            require_trace 'household tick=7 enabled=0 households=0 active=0 memberships=0 nextOrdinal=-1 digest=[0-9a-f]+ worldMutation=none' 'v7 restore does not activate households silently'
+        fi
 
         FAILURE_HOME="$SESSION_ROOT/late-failure-home"
         FAILURE_TRACE="$SESSION_ROOT/kinship-late-failure.log"
         [ ! -e "$FAILURE_HOME" ] || fail "fresh kinship late-failure home already exists"
         /usr/bin/ditto "$SESSION_HOME" "$FAILURE_HOME"
-        KINSHIP_FAILURE_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab checkpoint load reproduction-midplan;/lab movement off;/lab replay start reproduction-midplan;/lab step;/lab step;/lab births status;/lab replay status;/lab kinship status;/lab status"
-        printf '\nKinship late failure: valid birth candidate, newborn probe rollback, no publication.\n'
+        KINSHIP_FAILURE_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab checkpoint load reproduction-midplan;/lab movement off;/lab replay start reproduction-midplan;/lab step;/lab step;/lab births status;/lab replay status;/lab kinship status"
+        if [ "$MODE" = "households" ]; then
+            KINSHIP_FAILURE_COMMANDS="$KINSHIP_FAILURE_COMMANDS;/lab household status"
+        fi
+        KINSHIP_FAILURE_COMMANDS="$KINSHIP_FAILURE_COMMANDS;/lab status"
+        printf '\nLineage late failure: valid birth candidate, newborn probe rollback, no publication.\n'
         run_reproduction_app \
             "$FAILURE_HOME" "$FAILURE_TRACE" "$KINSHIP_FAILURE_COMMANDS" \
             0 "$continuation_command_tick" 1
         TRACE_PATH="$FAILURE_TRACE"
         require_trace "checkpoint loaded name=reproduction-midplan .*tick=10 simulation=$MID_SIM digest=$MID_DIGEST .*restartSafe=1 probes=4 paused=1" 'late-failure checkpoint restore'
-        require_trace 'kinship late-failure candidate valid=1 tick=12 newborn=agent_4 nextOrdinal=5 populationMembers=5 lifecycleMembers=5 kinshipPeople=5 parentages=1 causalSequence=[0-9]+ causalEvents=[0-9]+ recorderRecords=[1-9][0-9]* recorderBytes=[1-9][0-9]* probeCreated=1' 'fully valid unpublished kinship birth candidate'
-        require_trace 'kinship late-failure rollback sessionBytes=exact tick=11 nextOrdinal=4 populationMembers=4 lifecycleMembers=4 kinshipPeople=4 parentages=0 causalSequence=[0-9]+ causalEvents=[0-9]+ recorderBytes=exact recorderRecords=[1-9][0-9]* probeMap=exact worldEntityIndexes=exact newbornAbsent=1' 'exact session recorder and probe rollback'
+        if [ "$MODE" = "households" ]; then
+            require_trace 'kinship late-failure candidate valid=1 tick=12 newborn=agent_4 nextOrdinal=5 populationMembers=5 lifecycleMembers=5 kinshipPeople=5 parentages=1 households=[1-9][0-9]* memberships=5 causalSequence=[0-9]+ causalEvents=[0-9]+ recorderRecords=[1-9][0-9]* recorderBytes=[1-9][0-9]* probeCreated=1' 'fully valid unpublished household birth candidate'
+            require_trace 'kinship late-failure rollback sessionBytes=exact tick=11 nextOrdinal=4 populationMembers=4 lifecycleMembers=4 kinshipPeople=4 parentages=0 households=[1-9][0-9]* memberships=4 causalSequence=[0-9]+ causalEvents=[0-9]+ recorderBytes=exact recorderRecords=[1-9][0-9]* probeMap=exact worldEntityIndexes=exact newbornAbsent=1' 'exact household session recorder and probe rollback'
+        else
+            require_trace 'kinship late-failure candidate valid=1 tick=12 newborn=agent_4 nextOrdinal=5 populationMembers=5 lifecycleMembers=5 kinshipPeople=5 parentages=1 households=0 memberships=0 causalSequence=[0-9]+ causalEvents=[0-9]+ recorderRecords=[1-9][0-9]* recorderBytes=[1-9][0-9]* probeCreated=1' 'fully valid unpublished kinship birth candidate'
+            require_trace 'kinship late-failure rollback sessionBytes=exact tick=11 nextOrdinal=4 populationMembers=4 lifecycleMembers=4 kinshipPeople=4 parentages=0 households=0 memberships=0 causalSequence=[0-9]+ causalEvents=[0-9]+ recorderBytes=exact recorderRecords=[1-9][0-9]* probeMap=exact worldEntityIndexes=exact newbornAbsent=1' 'exact session recorder and probe rollback'
+        fi
         require_trace_count '^\[lab-live\] kinship late-failure controlledError=kinshipLateFailureProof$' 1 'one controlled late-failure marker'
         require_trace_count '^\[lab-live\] error kinshipLateFailureProof$' 1 'one controlled expected late publication error'
         require_trace 'summary .*agents=4 .*runtimeErrors=1 .*probesRemoved=4 ' 'controlled error and clean four-probe shutdown'
@@ -832,7 +906,10 @@ if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ]; then
     fi
 
     REPRODUCTION_PHASE2_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab checkpoint load reproduction-midplan;/lab lifecycle status;/lab reproduction status;/lab step;/lab step;/lab births status;/lab lifecycle status;/lab population status;/lab ecology status;/lab settlement status;/lab checkpoint save reproduction-postbirth;/lab checkpoint status;/lab causality status;/lab status"
-    if [ "$MODE" = "kinship" ]; then
+    if [ "$MODE" = "households" ]; then
+        REPRODUCTION_PHASE2_COMMANDS="$REPRODUCTION_PHASE2_COMMANDS;/lab kinship status;/lab household status"
+        BIRTH_FINALIZED_PATTERN='^\[lab-live\] birth finalized tick=12 birth=birth-00000001 plan=reproduction-plan-00000010-agent_0-agent_1 newborn=agent_4 ordinal=4 parents=agent_0,agent_1 position=.* stage=newborn age=0 kinship=1 kinshipParents=agent_0,agent_1 kinshipDigest=[0-9a-f]+ household=1 householdID=household_[0-9]+ householdDigest=[0-9a-f]+ population=5 nextOrdinal=5 probes=agent_0,agent_1,agent_2,agent_3,agent_4 worldMutation=none$'
+    elif [ "$MODE" = "kinship" ]; then
         REPRODUCTION_PHASE2_COMMANDS="$REPRODUCTION_PHASE2_COMMANDS;/lab kinship status"
         BIRTH_FINALIZED_PATTERN='^\[lab-live\] birth finalized tick=12 birth=birth-00000001 plan=reproduction-plan-00000010-agent_0-agent_1 newborn=agent_4 ordinal=4 parents=agent_0,agent_1 position=.* stage=newborn age=0 kinship=1 kinshipParents=agent_0,agent_1 kinshipDigest=[0-9a-f]+ population=5 nextOrdinal=5 probes=agent_0,agent_1,agent_2,agent_3,agent_4 worldMutation=none$'
     else
@@ -870,7 +947,23 @@ if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ]; then
     site_sequence=$(/usr/bin/plutil -extract durableState.lifecycleState.births.0.siteValidatedEventID.sequence raw -o - "$POST_SESSION")
     born_sequence=$(/usr/bin/plutil -extract durableState.lifecycleState.births.0.populationBornEventID.sequence raw -o - "$POST_SESSION")
     finalized_sequence=$(/usr/bin/plutil -extract durableState.lifecycleState.births.0.finalizedEventID.sequence raw -o - "$POST_SESSION")
-    if [ "$MODE" = "kinship" ]; then
+    if [ "$MODE" = "households" ]; then
+        recorded_sequence=$(/usr/bin/plutil -extract durableState.kinshipState.parentageRecords.0.recordedEventID.sequence raw -o - "$POST_SESSION")
+        household_created_sequence=$(/usr/bin/plutil -extract durableState.householdState.households.4.createdEventID.sequence raw -o - "$POST_SESSION")
+        membership_sequence=$(/usr/bin/plutil -extract durableState.householdState.membershipPeriods.4.joinedEventID.sequence raw -o - "$POST_SESSION")
+        [ "$born_sequence" -eq $((site_sequence + 1)) ] \
+            && [ "$recorded_sequence" -eq $((born_sequence + 1)) ] \
+            && [ "$household_created_sequence" -eq $((recorded_sequence + 1)) ] \
+            && [ "$membership_sequence" -eq $((household_created_sequence + 1)) ] \
+            && [ "$finalized_sequence" -eq $((membership_sequence + 1)) ] \
+            || fail "household birth causal sequence is not exact"
+        [ "$(/usr/bin/plutil -extract durableState.kinshipState.totalHistoricalPersonCount raw -o - "$POST_SESSION")" = "5" ] \
+            && [ "$(/usr/bin/plutil -extract durableState.kinshipState.totalParentageRecordCount raw -o - "$POST_SESSION")" = "1" ] \
+            && [ "$(/usr/bin/plutil -extract durableState.householdState.membershipPeriods.4.agentID raw -o - "$POST_SESSION")" = "agent_4" ] \
+            && [ "$(/usr/bin/plutil -extract durableState.householdState.membershipPeriods.4.joinedReason raw -o - "$POST_SESSION")" = "birth" ] \
+            && [ "$(/usr/bin/plutil -extract durableState.householdState.membershipPeriods.4.leftTick raw -o - "$POST_SESSION" 2>/dev/null || printf absent)" = "absent" ] \
+            || fail "post-birth household membership is not exact"
+    elif [ "$MODE" = "kinship" ]; then
         recorded_sequence=$(/usr/bin/plutil -extract durableState.kinshipState.parentageRecords.0.recordedEventID.sequence raw -o - "$POST_SESSION")
         [ "$born_sequence" -eq $((site_sequence + 1)) ] \
             && [ "$recorded_sequence" -eq $((born_sequence + 1)) ] \
@@ -902,7 +995,9 @@ if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ]; then
         reproduction_step=$((reproduction_step + 1))
     done
     REPRODUCTION_PHASE3_COMMANDS="$REPRODUCTION_PHASE3_COMMANDS;/lab lifecycle status;/lab reproduction status;/lab births status;/lab population status;/lab ecology status;/lab settlement status;/lab checkpoint save reproduction-final;/lab checkpoint status;/lab causality status;/lab status"
-    if [ "$MODE" = "kinship" ]; then
+    if [ "$MODE" = "households" ]; then
+        REPRODUCTION_PHASE3_COMMANDS="$REPRODUCTION_PHASE3_COMMANDS;/lab kinship status;/lab household status"
+    elif [ "$MODE" = "kinship" ]; then
         REPRODUCTION_PHASE3_COMMANDS="$REPRODUCTION_PHASE3_COMMANDS;/lab kinship status"
     fi
 
@@ -913,7 +1008,9 @@ if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ]; then
         reproduction_step=$((reproduction_step + 1))
     done
     REPRODUCTION_CONTROL_COMMANDS="$REPRODUCTION_CONTROL_COMMANDS;/lab lifecycle status;/lab reproduction status;/lab births status;/lab population status;/lab ecology status;/lab settlement status;/lab checkpoint save reproduction-final-control;/lab checkpoint status;/lab causality status;/lab status"
-    if [ "$MODE" = "kinship" ]; then
+    if [ "$MODE" = "households" ]; then
+        REPRODUCTION_CONTROL_COMMANDS="$REPRODUCTION_CONTROL_COMMANDS;/lab kinship status;/lab household status"
+    elif [ "$MODE" = "kinship" ]; then
         REPRODUCTION_CONTROL_COMMANDS="$REPRODUCTION_CONTROL_COMMANDS;/lab kinship status"
     fi
 
@@ -948,9 +1045,13 @@ if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ]; then
     CONTROL_SETTLEMENT_DIGEST=$(/usr/bin/sed -n 's/.*settlement gate=enabled .* digest=\([0-9a-f]*\)$/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
     LIVE_CAUSAL_DIGEST=$(/usr/bin/sed -n 's/.*causality status .* digest=\([0-9a-f]*\)$/\1/p' "$PHASE3_TRACE" | /usr/bin/tail -1)
     CONTROL_CAUSAL_DIGEST=$(/usr/bin/sed -n 's/.*causality status .* digest=\([0-9a-f]*\)$/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
-    if [ "$MODE" = "kinship" ]; then
+    if [ "$MODE" = "kinship" ] || [ "$MODE" = "households" ]; then
         LIVE_KINSHIP_DIGEST=$(/usr/bin/sed -n 's/.*kinship tick=20 .* digest=\([0-9a-f]*\) worldMutation=none$/\1/p' "$PHASE3_TRACE" | /usr/bin/tail -1)
         CONTROL_KINSHIP_DIGEST=$(/usr/bin/sed -n 's/.*kinship tick=20 .* digest=\([0-9a-f]*\) worldMutation=none$/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    fi
+    if [ "$MODE" = "households" ]; then
+        LIVE_HOUSEHOLD_DIGEST=$(/usr/bin/sed -n 's/.*household tick=20 .* digest=\([0-9a-f]*\) worldMutation=none$/\1/p' "$PHASE3_TRACE" | /usr/bin/tail -1)
+        CONTROL_HOUSEHOLD_DIGEST=$(/usr/bin/sed -n 's/.*household tick=20 .* digest=\([0-9a-f]*\) worldMutation=none$/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
     fi
     [ -n "$LIVE_DIGEST" ] && [ "$LIVE_DIGEST" = "$CONTROL_DIGEST" ] \
         || fail "reproduction restart/uninterrupted durable digest mismatch"
@@ -964,10 +1065,15 @@ if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ]; then
         || fail "reproduction restart/uninterrupted settlement digest mismatch"
     [ "$LIVE_CAUSAL_DIGEST" = "$CONTROL_CAUSAL_DIGEST" ] \
         || fail "reproduction restart/uninterrupted causal digest mismatch"
-    if [ "$MODE" = "kinship" ]; then
+    if [ "$MODE" = "kinship" ] || [ "$MODE" = "households" ]; then
         [ -n "$LIVE_KINSHIP_DIGEST" ] \
             && [ "$LIVE_KINSHIP_DIGEST" = "$CONTROL_KINSHIP_DIGEST" ] \
             || fail "kinship restart/uninterrupted digest mismatch"
+    fi
+    if [ "$MODE" = "households" ]; then
+        [ -n "$LIVE_HOUSEHOLD_DIGEST" ] \
+            && [ "$LIVE_HOUSEHOLD_DIGEST" = "$CONTROL_HOUSEHOLD_DIGEST" ] \
+            || fail "household restart/uninterrupted digest mismatch"
     fi
 
     /bin/cat "$PHASE2_TRACE" "$PHASE3_TRACE" \
@@ -984,10 +1090,16 @@ if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ]; then
         && [ "$(/usr/bin/plutil -extract durableState.lifecycleState.members.4.currentStage raw -o - "$FINAL_SESSION")" = "mature" ] \
         && [ "$(/usr/bin/plutil -extract durableState.populationRegistry.nextPopulationOrdinal raw -o - "$FINAL_SESSION")" = "5" ] \
         || fail "final birth, maturity, or ordinal changed"
-    if [ "$MODE" = "kinship" ]; then
+    if [ "$MODE" = "kinship" ] || [ "$MODE" = "households" ]; then
         [ "$(/usr/bin/plutil -extract durableState.kinshipState.totalHistoricalPersonCount raw -o - "$FINAL_SESSION")" = "5" ] \
             && [ "$(/usr/bin/plutil -extract durableState.kinshipState.totalParentageRecordCount raw -o - "$FINAL_SESSION")" = "1" ] \
             || fail "final kinship graph changed after restart"
+    fi
+    if [ "$MODE" = "households" ]; then
+        [ "$(/usr/bin/plutil -extract durableState.householdState.membershipPeriods.4.agentID raw -o - "$FINAL_SESSION")" = "agent_4" ] \
+            && [ "$(/usr/bin/plutil -extract durableState.householdState.membershipPeriods.4.joinedReason raw -o - "$FINAL_SESSION")" = "birth" ] \
+            && [ "$(/usr/bin/plutil -extract durableState.householdState.totalMembershipPeriodCount raw -o - "$FINAL_SESSION")" = "5" ] \
+            || fail "final household membership changed after restart"
     fi
     stage_event_count=$(/usr/bin/plutil -extract durableState.causalLedger.events json -o - "$FINAL_SESSION" \
         | /usr/bin/grep -o '"kind":"lifeStageChanged"' | /usr/bin/wc -l | /usr/bin/tr -d ' ')
@@ -1026,10 +1138,14 @@ if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ]; then
     printf 'Ecology digest: %s\n' "$LIVE_ECOLOGY_DIGEST"
     printf 'Settlement digest: %s\n' "$LIVE_SETTLEMENT_DIGEST"
     printf 'Causal digest: %s\n' "$LIVE_CAUSAL_DIGEST"
-    if [ "$MODE" = "kinship" ]; then
+    if [ "$MODE" = "kinship" ] || [ "$MODE" = "households" ]; then
         printf 'Kinship digest: %s\n' "$LIVE_KINSHIP_DIGEST"
         printf 'Kinship World boundary: PebbleAgents has no World access; no block/world mutation trace observed.\n'
         printf 'Kinship late-failure trace: %s\n' "$FAILURE_TRACE"
+    fi
+    if [ "$MODE" = "households" ]; then
+        printf 'Household digest: %s\n' "$LIVE_HOUSEHOLD_DIGEST"
+        printf 'Household World boundary: PebbleAgents has no World access; no block/world mutation trace observed.\n'
     fi
     printf 'Retained isolated session: %s\n' "$SESSION_ROOT"
     exit 0

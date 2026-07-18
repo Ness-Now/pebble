@@ -35,9 +35,11 @@ LIFECYCLE_OUT_A="$TMP_ROOT/lifecycle-a"
 LIFECYCLE_OUT_B="$TMP_ROOT/lifecycle-b"
 KINSHIP_OUT_A="$TMP_ROOT/kinship-a"
 KINSHIP_OUT_B="$TMP_ROOT/kinship-b"
+HOUSEHOLD_OUT_A="$TMP_ROOT/household-a"
+HOUSEHOLD_OUT_B="$TMP_ROOT/household-b"
 
 STEP=0
-TOTAL_STEPS=26
+TOTAL_STEPS=29
 
 run_step() {
     STEP=$((STEP + 1))
@@ -248,6 +250,37 @@ verify_kinship_outputs() {
     expect_json_value "$out/kinship_replay_v7/manifest.json" schemaVersion 7
 }
 
+verify_household_outputs() {
+    out=$1
+    for file in \
+        households.json \
+        membership_periods.json \
+        current_memberships.json \
+        household_external_projections.json \
+        household_transitions.json \
+        household_causal_chain.json \
+        household_digest.json \
+        household_invariant_report.json \
+        household_checkpoint_v8/manifest.json \
+        household_checkpoint_v8/session.json \
+        household_replay_v8/manifest.json \
+        household_replay_v8/operations.ndjson
+    do
+        [ -s "$out/$file" ] || fail "household did not produce $out/$file"
+    done
+    expect_json_value "$out/household_invariant_report.json" schemaVersion 8
+    expect_json_value "$out/household_invariant_report.json" scenario \
+        households_and_membership_smoke
+    expect_json_value "$out/household_invariant_report.json" seed 59
+    expect_json_value "$out/household_invariant_report.json" success true
+    expect_json_value "$out/household_digest.json" schemaVersion 8
+    expect_json_value "$out/household_digest.json" seed 59
+    expect_json_value "$out/household_digest.json" worldBoundaryEvidence \
+        "pure PebbleAgents APIs; no World access or mutation event"
+    expect_json_value "$out/household_checkpoint_v8/session.json" schemaVersion 8
+    expect_json_value "$out/household_replay_v8/manifest.json" schemaVersion 8
+}
+
 verify_no_tracked_run_outputs() {
     tracked=$(
         git ls-files | /usr/bin/awk '
@@ -344,6 +377,17 @@ run_step "kinship canonical outputs and replay comparison" \
     verify_kinship_outputs "$KINSHIP_OUT_A"
 verify_kinship_outputs "$KINSHIP_OUT_B"
 /usr/bin/diff -r "$KINSHIP_OUT_A" "$KINSHIP_OUT_B"
+
+run_step "household deterministic run A" \
+    swift run -c release PebbleLab -- --scenario households_and_membership_smoke \
+        --seed 59 --out "$HOUSEHOLD_OUT_A"
+run_step "household deterministic run B" \
+    swift run -c release PebbleLab -- --scenario households_and_membership_smoke \
+        --seed 59 --out "$HOUSEHOLD_OUT_B"
+run_step "household canonical outputs and replay comparison" \
+    verify_household_outputs "$HOUSEHOLD_OUT_A"
+verify_household_outputs "$HOUSEHOLD_OUT_B"
+/usr/bin/diff -r "$HOUSEHOLD_OUT_A" "$HOUSEHOLD_OUT_B"
 
 run_step "Repository hygiene" git diff --check
 verify_no_tracked_run_outputs
