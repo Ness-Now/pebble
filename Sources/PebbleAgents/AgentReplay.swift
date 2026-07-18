@@ -7,11 +7,13 @@ public enum AgentReplaySchema {
     public static let localEcologyVersion = 4
     public static let mortalityVersion = 5
     public static let lifecycleVersion = 6
+    public static let kinshipVersion = 7
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
             || version == settlementMetricsVersion || version == localEcologyVersion
             || version == mortalityVersion || version == lifecycleVersion
+            || version == kinshipVersion
     }
 }
 
@@ -71,6 +73,7 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case reproductionFeature
     case birthSiteObservation
     case lifecycleClear
+    case kinshipFeature
 }
 
 public enum AgentReplayOperation: Codable {
@@ -143,6 +146,7 @@ public enum AgentReplayOperation: Codable {
     case setReproductionEnabled(Bool)
     case applyBirthSiteObservation(AgentBirthSiteObservation)
     case clearLifecycleDiagnostics
+    case setKinshipEnabled(Bool, configuration: AgentKinshipConfiguration)
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -188,6 +192,7 @@ public enum AgentReplayOperation: Codable {
         case .setReproductionEnabled: return .reproductionFeature
         case .applyBirthSiteObservation: return .birthSiteObservation
         case .clearLifecycleDiagnostics: return .lifecycleClear
+        case .setKinshipEnabled: return .kinshipFeature
         }
     }
 
@@ -481,7 +486,7 @@ public struct AgentReplayRecorder {
         }
         if case let .setSettlementMetricsEnabled(enabled, _) = operation,
            enabled,
-           schemaVersion != AgentReplaySchema.settlementMetricsVersion {
+           schemaVersion < AgentReplaySchema.settlementMetricsVersion {
             guard records.isEmpty else {
                 throw AgentReplayError.invalidJournal(
                     "settlement metrics activation must be the first v3 replay operation"
@@ -490,7 +495,7 @@ public struct AgentReplayRecorder {
             schemaVersion = AgentReplaySchema.settlementMetricsVersion
         }
         if case .initializeLocalEcology = operation,
-           schemaVersion != AgentReplaySchema.localEcologyVersion {
+           schemaVersion < AgentReplaySchema.localEcologyVersion {
             guard records.isEmpty else {
                 throw AgentReplayError.invalidJournal(
                     "local ecology initialization must be the first v4 replay operation"
@@ -500,7 +505,7 @@ public struct AgentReplayRecorder {
         }
         if case let .setMortalityEnabled(enabled, _) = operation,
            enabled,
-           schemaVersion != AgentReplaySchema.mortalityVersion {
+           schemaVersion < AgentReplaySchema.mortalityVersion {
             guard records.isEmpty else {
                 throw AgentReplayError.invalidJournal(
                     "mortality activation must be the first v5 replay operation"
@@ -510,13 +515,23 @@ public struct AgentReplayRecorder {
         }
         if case let .setLifecycleEnabled(enabled, _) = operation,
            enabled,
-           schemaVersion != AgentReplaySchema.lifecycleVersion {
+           schemaVersion < AgentReplaySchema.lifecycleVersion {
             guard records.isEmpty else {
                 throw AgentReplayError.invalidJournal(
                     "lifecycle activation must be the first v6 replay operation"
                 )
             }
             schemaVersion = AgentReplaySchema.lifecycleVersion
+        }
+        if case let .setKinshipEnabled(enabled, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.kinshipVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "kinship activation must be the first v7 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.kinshipVersion
         }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
@@ -701,6 +716,8 @@ public enum AgentSessionReplayer {
                     || checkpoint.schemaVersion == AgentCheckpointSchema.localEcologyVersion))
             || (manifest.schemaVersion == AgentReplaySchema.lifecycleVersion
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.mortalityVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.kinshipVersion
+                && checkpoint.schemaVersion == AgentCheckpointSchema.lifecycleVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -887,6 +904,8 @@ extension AgentSimulationSession {
             _ = try candidate.applyBirthSiteObservation(observation)
         case .clearLifecycleDiagnostics:
             try candidate.clearLifecycleDiagnostics()
+        case let .setKinshipEnabled(enabled, configuration):
+            try candidate.setKinshipEnabled(enabled, configuration: configuration)
         }
         self = candidate
         let causal = causalLedgerSnapshot().summary

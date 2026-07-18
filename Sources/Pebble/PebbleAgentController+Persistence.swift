@@ -433,6 +433,14 @@ extension PebbleAgentController {
         if candidate.mortalityEnabled && !mortalityFeatureEnabled {
             return failure("Checkpoint load refused: mortality gate is disabled.")
         }
+        if candidate.lifecycleEnabled && !lifecycleFeatureEnabled {
+            return failure("Checkpoint load refused: lifecycle gate is disabled.")
+        }
+        if candidate.kinshipEnabled && (!kinshipFeatureEnabled || !featureEnabled
+            || !persistenceFeatureEnabled || !populationFeatureEnabled
+            || !lifecycleFeatureEnabled) {
+            return failure("Checkpoint load refused: kinship gate or dependency is disabled.")
+        }
         let candidateDigest = try candidate.durableStateDigest()
         guard candidateDigest == stored.manifest.semanticDigest else {
             throw AgentCheckpointError.semanticDigestMismatch

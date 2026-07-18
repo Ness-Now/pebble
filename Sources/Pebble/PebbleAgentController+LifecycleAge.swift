@@ -80,12 +80,18 @@ extension PebbleAgentController {
         let member = candidate.lifecycleSnapshot().members.first {
             $0.agentID == record.newbornID
         }
+        let parentage = candidate.kinshipSnapshot().parentageRecords.first {
+            $0.childID == record.newbornID
+        }
         trace(
             "birth finalized tick=\(record.birthTick) birth=\(record.birthID.rawValue) "
                 + "plan=\(record.planID.rawValue) newborn=\(record.newbornID.rawValue) "
                 + "ordinal=\(record.ordinal.rawValue) parents=\(record.progenitorIDs.map(\.rawValue).joined(separator: ",")) "
                 + "position=\(positionText(record.position)) stage=\(member?.currentStage.rawValue ?? "none") "
                 + "age=\(member.flatMap { try? $0.age(at: candidate.tick) } ?? -1) "
+                + "kinship=\(candidate.kinshipEnabled ? 1 : 0) "
+                + "kinshipParents=\(parentage?.canonicalParentIDs.map(\.rawValue).joined(separator: ",") ?? "none") "
+                + "kinshipDigest=\(candidate.kinshipSnapshot().digest) "
                 + "population=\(candidate.populationSummary().memberCount) "
                 + "nextOrdinal=\(candidate.populationSummary().nextPopulationOrdinal ?? -1) "
                 + "probes=\(probesByAgentId.keys.sorted().joined(separator: ",")) "

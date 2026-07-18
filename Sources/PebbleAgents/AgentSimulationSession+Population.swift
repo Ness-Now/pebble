@@ -241,6 +241,7 @@ extension AgentSimulationSession {
         observation: AgentMigrationWorldObservation
     ) throws -> AgentMigrationRecord {
         var candidate = self
+        try candidate.prevalidateKinshipAdmission(parentIDs: nil)
         let migration = try candidate.admitMigrationInPlace(
             intent: intent,
             observation: observation
@@ -249,7 +250,13 @@ extension AgentSimulationSession {
             $0.agentID == migration.migrantID
         }) {
             try candidate.registerImportedLifecycleMemberIfNeeded(member)
+            try candidate.registerKinshipRoot(
+                agentID: member.agentID,
+                ordinal: member.ordinal,
+                causeEventID: member.registrationEventID
+            )
         }
+        try candidate.validateKinshipCrossDomainIfEnabled()
         self = candidate
         return migration
     }

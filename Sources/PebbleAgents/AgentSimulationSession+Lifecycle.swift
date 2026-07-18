@@ -466,6 +466,7 @@ extension AgentSimulationSession {
             lifecycleState = lifecycle
             return nil
         }
+        try prevalidateKinshipAdmission(parentIDs: plan.progenitorIDs)
         let ordinal = registry.nextPopulationOrdinal
         guard ordinal.rawValue < Int.max,
               let nextOrdinal = AgentPopulationOrdinal(rawValue: ordinal.rawValue + 1),
@@ -477,7 +478,7 @@ extension AgentSimulationSession {
         let birthID = AgentBirthID(
             rawValue: "birth-\(String(format: "%08d", lifecycle.totalBirthCount + 1))"
         )!
-        try prevalidateCausalAppend(count: 3)
+        try prevalidateCausalAppend(count: kinshipEnabled ? 4 : 3)
         let site = try requiredLifecycleEvent(
             kind: .birthSiteValidated,
             actorID: plan.progenitorIDs[0],
@@ -500,11 +501,19 @@ extension AgentSimulationSession {
             ),
             summary: "population member born id=\(newbornID.rawValue) birth=\(birthID.rawValue)"
         )
+        let kinshipEventID = try registerKinshipBirth(
+            childID: newbornID,
+            ordinal: ordinal,
+            parentIDs: plan.progenitorIDs,
+            birthID: birthID,
+            birthTick: tick,
+            sourcePopulationBornEventID: born.eventID
+        )
         let finalized = try requiredLifecycleEvent(
             kind: .birthFinalized,
             actorID: plan.progenitorIDs[0],
             subjectID: newbornID,
-            causes: [born.eventID],
+            causes: [kinshipEventID ?? born.eventID],
             payload: birthPayload(
                 birthID: birthID, plan: plan, newbornID: newbornID,
                 ordinal: ordinal, observation: observation, status: "finalized"
@@ -628,6 +637,7 @@ extension AgentSimulationSession {
         trimLifecycleHistories(&lifecycle)
         populationRegistry = registry
         lifecycleState = lifecycle
+        try validateKinshipCrossDomainIfEnabled()
         return record
     }
 

@@ -101,6 +101,9 @@ final class PebbleAgentController {
     var lifecycleFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_LIFECYCLE"] == "1"
     }
+    var kinshipFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_KINSHIP"] == "1"
+    }
     var physicalAudioAvailable: () -> Bool = { false }
     var traceEvery: Int {
         guard let raw = environment["PEBBLELAB_APP_AGENTS_TRACE_EVERY"],
@@ -171,5 +174,6 @@ final class PebbleAgentController {
         case ecologyBoundary(String)
         case mortalityBoundary(String)
         case lifecycleBoundary(String)
+        case kinshipBoundary(String)
     }
 }
