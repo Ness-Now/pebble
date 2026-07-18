@@ -313,6 +313,11 @@ extension AgentSimulationSession {
         projectId: String,
         completionTick: Int
     ) throws {
+        guard householdState == nil else {
+            throw AgentSessionError.household(
+                .invalidState("construction cannot rewrite household-authoritative home")
+            )
+        }
         try prevalidateCausalAppend(count: 1)
         guard completionTick == tick,
               var project = constructionProject,
@@ -367,6 +372,11 @@ extension AgentSimulationSession {
     }
 
     mutating func clearConstructionProjectInPlace(projectId: String) throws {
+        guard householdState == nil else {
+            throw AgentSessionError.household(
+                .invalidState("construction cannot rewrite household-authoritative home")
+            )
+        }
         try prevalidateCausalAppend(count: 1)
         try prevalidateConstructionClear(projectId: projectId)
         guard let project = constructionProject,

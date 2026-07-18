@@ -239,7 +239,13 @@ extension AgentSimulationSession {
         guard var mortality = mortalityState, var registry = populationRegistry else {
             throw AgentSessionError.mortality(.disabled)
         }
-        try prevalidateCausalAppend(count: lethal.count * (lifecycleState == nil ? 7 : 9))
+        let householdEventCount = try householdDeathEventCount(
+            agentIDs: lethal.map(\.agentID)
+        )
+        try prevalidateCausalAppend(
+            count: lethal.count * (lifecycleState == nil ? 7 : 9)
+                + householdEventCount
+        )
         let preDeathIDs = Set(statesById.values.map(\.agentID))
         guard lethal.map(\.agentID) == lethal.map(\.agentID).sorted(),
               Set(lethal.map(\.agentID)).count == lethal.count else {
@@ -447,6 +453,10 @@ extension AgentSimulationSession {
                 causeEventID: lethalEvent.eventID,
                 at: mortalityTick
             )
+            let householdEventID = try closeHouseholdMembershipForDeath(
+                agentID: item.agentID,
+                causeEventID: commitmentsEvent.eventID
+            )
             registry.members.remove(at: memberIndex)
             registry.settlement.residentIDs.removeAll { $0 == item.agentID }
             registry.settlement.inTransitIDs.removeAll { $0 == item.agentID }
@@ -462,6 +472,7 @@ extension AgentSimulationSession {
                     resourcesEvent.eventID,
                     commitmentsEvent.eventID,
                     migrationFailureEvent?.eventID,
+                    householdEventID,
                 ].compactMap { $0 }.sorted(),
                 payload: mortalityDeathPayload(
                     deathID: deathID,
@@ -621,6 +632,7 @@ extension AgentSimulationSession {
         }
         populationRegistry = registry
         mortalityState = mortality
+        try validateHouseholdCrossDomainIfEnabled()
     }
 
     private func conservationSnapshotWith(

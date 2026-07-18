@@ -242,6 +242,12 @@ extension AgentSimulationSession {
     ) throws -> AgentMigrationRecord {
         var candidate = self
         try candidate.prevalidateKinshipAdmission(parentIDs: nil)
+        try candidate.prevalidateHouseholdMigrationAdmission()
+        try candidate.prevalidateCausalAppend(
+            count: 4 + (candidate.lifecycleState == nil ? 0 : 1)
+                + (candidate.kinshipState == nil ? 0 : 1)
+                + (candidate.householdState == nil ? 0 : 2)
+        )
         let migration = try candidate.admitMigrationInPlace(
             intent: intent,
             observation: observation
@@ -255,8 +261,15 @@ extension AgentSimulationSession {
                 ordinal: member.ordinal,
                 causeEventID: member.registrationEventID
             )
+            try candidate.registerHouseholdMigrationAdmission(
+                agentID: member.agentID,
+                residenceAnchor: member.receptionPosition,
+                causeEventID: candidate.kinshipState?.lastKinshipEventID
+                    ?? member.registrationEventID
+            )
         }
         try candidate.validateKinshipCrossDomainIfEnabled()
+        try candidate.validateHouseholdCrossDomainIfEnabled()
         self = candidate
         return migration
     }
@@ -652,8 +665,15 @@ extension AgentSimulationSession {
             )
             state.navigationProgress = AgentNavigationProgress()
             statesById[migrantID.rawValue] = state
+            populationRegistry = registry
+            try registerHouseholdArrivalIfNeeded(
+                agentID: migrantID,
+                residenceAnchor: migration.receptionPosition,
+                causeEventID: resident.eventID
+            )
         }
         populationRegistry = registry
+        try validateHouseholdCrossDomainIfEnabled()
     }
 
     static func validatePopulationRegistry(

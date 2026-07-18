@@ -467,6 +467,9 @@ extension AgentSimulationSession {
             return nil
         }
         try prevalidateKinshipAdmission(parentIDs: plan.progenitorIDs)
+        let householdEventCount = try householdBirthEventCount(
+            parentIDs: plan.progenitorIDs
+        )
         let ordinal = registry.nextPopulationOrdinal
         guard ordinal.rawValue < Int.max,
               let nextOrdinal = AgentPopulationOrdinal(rawValue: ordinal.rawValue + 1),
@@ -478,7 +481,9 @@ extension AgentSimulationSession {
         let birthID = AgentBirthID(
             rawValue: "birth-\(String(format: "%08d", lifecycle.totalBirthCount + 1))"
         )!
-        try prevalidateCausalAppend(count: kinshipEnabled ? 4 : 3)
+        try prevalidateCausalAppend(
+            count: (kinshipEnabled ? 4 : 3) + householdEventCount
+        )
         let site = try requiredLifecycleEvent(
             kind: .birthSiteValidated,
             actorID: plan.progenitorIDs[0],
@@ -509,17 +514,25 @@ extension AgentSimulationSession {
             birthTick: tick,
             sourcePopulationBornEventID: born.eventID
         )
+        let householdEventID = try registerHouseholdBirth(
+            childID: newbornID,
+            parentIDs: plan.progenitorIDs,
+            residenceAnchor: observation.position,
+            causeEventID: kinshipEventID ?? born.eventID
+        )
         let finalized = try requiredLifecycleEvent(
             kind: .birthFinalized,
             actorID: plan.progenitorIDs[0],
             subjectID: newbornID,
-            causes: [kinshipEventID ?? born.eventID],
+            causes: [householdEventID ?? kinshipEventID ?? born.eventID],
             payload: birthPayload(
                 birthID: birthID, plan: plan, newbornID: newbornID,
                 ordinal: ordinal, observation: observation, status: "finalized"
             ),
             summary: "birth finalized id=\(birthID.rawValue) newborn=\(newbornID.rawValue)"
         )
+        let newbornHome = try currentMembership(of: newbornID)?.residenceAnchor
+            ?? observation.position
         statesById[newbornID.rawValue] = AgentSessionAgentState(
             agentID: newbornID,
             state: "idle",
@@ -527,7 +540,7 @@ extension AgentSimulationSession {
             needs: AgentNeeds(hunger: 0, fatigue: 0, curiosity: 0.2, safety: 1),
             health: 100,
             fear: 0,
-            homePosition: observation.position,
+            homePosition: newbornHome,
             nearbyAgents: [],
             currentGoal: AgentGoal(
                 kind: .idle, reason: "local birth awaiting next cognitive tick",
@@ -638,6 +651,7 @@ extension AgentSimulationSession {
         populationRegistry = registry
         lifecycleState = lifecycle
         try validateKinshipCrossDomainIfEnabled()
+        try validateHouseholdCrossDomainIfEnabled()
         return record
     }
 

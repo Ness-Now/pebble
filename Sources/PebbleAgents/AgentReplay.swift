@@ -8,12 +8,13 @@ public enum AgentReplaySchema {
     public static let mortalityVersion = 5
     public static let lifecycleVersion = 6
     public static let kinshipVersion = 7
+    public static let householdVersion = 8
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
             || version == settlementMetricsVersion || version == localEcologyVersion
             || version == mortalityVersion || version == lifecycleVersion
-            || version == kinshipVersion
+            || version == kinshipVersion || version == householdVersion
     }
 }
 
@@ -74,6 +75,9 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case birthSiteObservation
     case lifecycleClear
     case kinshipFeature
+    case householdFeature
+    case householdFormation
+    case householdMove
 }
 
 public enum AgentReplayOperation: Codable {
@@ -147,6 +151,9 @@ public enum AgentReplayOperation: Codable {
     case applyBirthSiteObservation(AgentBirthSiteObservation)
     case clearLifecycleDiagnostics
     case setKinshipEnabled(Bool, configuration: AgentKinshipConfiguration)
+    case setHouseholdsEnabled(Bool, configuration: AgentHouseholdConfiguration)
+    case formHousehold(memberIDs: [AgentID], residenceAnchor: AgentPosition)
+    case moveHouseholdMembers(memberIDs: [AgentID], householdID: AgentHouseholdID)
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -193,6 +200,9 @@ public enum AgentReplayOperation: Codable {
         case .applyBirthSiteObservation: return .birthSiteObservation
         case .clearLifecycleDiagnostics: return .lifecycleClear
         case .setKinshipEnabled: return .kinshipFeature
+        case .setHouseholdsEnabled: return .householdFeature
+        case .formHousehold: return .householdFormation
+        case .moveHouseholdMembers: return .householdMove
         }
     }
 
@@ -533,6 +543,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.kinshipVersion
         }
+        if case let .setHouseholdsEnabled(enabled, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.householdVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "household activation must be the first v8 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.householdVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -718,6 +738,8 @@ public enum AgentSessionReplayer {
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.mortalityVersion)
             || (manifest.schemaVersion == AgentReplaySchema.kinshipVersion
                 && checkpoint.schemaVersion == AgentCheckpointSchema.lifecycleVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.householdVersion
+                && checkpoint.schemaVersion == AgentCheckpointSchema.kinshipVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -906,6 +928,15 @@ extension AgentSimulationSession {
             try candidate.clearLifecycleDiagnostics()
         case let .setKinshipEnabled(enabled, configuration):
             try candidate.setKinshipEnabled(enabled, configuration: configuration)
+        case let .setHouseholdsEnabled(enabled, configuration):
+            try candidate.setHouseholdsEnabled(enabled, configuration: configuration)
+        case let .formHousehold(memberIDs, residenceAnchor):
+            _ = try candidate.formHousehold(
+                memberIDs: memberIDs,
+                residenceAnchor: residenceAnchor
+            )
+        case let .moveHouseholdMembers(memberIDs, householdID):
+            try candidate.moveMembers(memberIDs: memberIDs, to: householdID)
         }
         self = candidate
         let causal = causalLedgerSnapshot().summary

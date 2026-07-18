@@ -113,6 +113,12 @@ extension PebbleAgentController {
                 + "kinshipParents=\(parentage?.canonicalParentIDs.map(\.rawValue).joined(separator: ",") ?? "none") "
                 + "kinshipDigest=\(candidate.kinshipSnapshot().digest) "
             : ""
+        let currentHousehold = (try? candidate.currentMembership(of: record.newbornID)) ?? nil
+        let householdTrace = candidate.householdsEnabled
+            ? "household=1 "
+                + "householdID=\(currentHousehold?.householdID.rawValue ?? "none") "
+                + "householdDigest=\(candidate.householdSnapshot().digest) "
+            : ""
         trace(
             "birth finalized tick=\(record.birthTick) birth=\(record.birthID.rawValue) "
                 + "plan=\(record.planID.rawValue) newborn=\(record.newbornID.rawValue) "
@@ -120,6 +126,7 @@ extension PebbleAgentController {
                 + "position=\(positionText(record.position)) stage=\(member?.currentStage.rawValue ?? "none") "
                 + "age=\(member.flatMap { try? $0.age(at: candidate.tick) } ?? -1) "
                 + kinshipTrace
+                + householdTrace
                 + "population=\(candidate.populationSummary().memberCount) "
                 + "nextOrdinal=\(candidate.populationSummary().nextPopulationOrdinal ?? -1) "
                 + "probes=\(probesByAgentId.keys.sorted().joined(separator: ",")) "

@@ -118,6 +118,9 @@ final class PebbleAgentController {
     var kinshipFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_KINSHIP"] == "1"
     }
+    var householdFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_HOUSEHOLDS"] == "1"
+    }
     var kinshipLateFailureProofEnabled: Bool {
         environment["PEBBLELAB_DISPOSABLE_KINSHIP_LATE_FAILURE_PROOF"] == "1"
             && environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1"
@@ -197,5 +200,6 @@ final class PebbleAgentController {
         case lifecycleBoundary(String)
         case kinshipBoundary(String)
         case kinshipLateFailureProof
+        case householdBoundary(String)
     }
 }

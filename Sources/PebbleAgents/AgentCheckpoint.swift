@@ -9,12 +9,13 @@ public enum AgentCheckpointSchema {
     public static let mortalityVersion = 5
     public static let lifecycleVersion = 6
     public static let kinshipVersion = 7
+    public static let householdVersion = 8
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
             || version == settlementMetricsVersion || version == localEcologyVersion
             || version == mortalityVersion || version == lifecycleVersion
-            || version == kinshipVersion
+            || version == kinshipVersion || version == householdVersion
     }
 }
 
@@ -195,9 +196,12 @@ public struct AgentSessionDurableState: Codable {
     public let mortalityState: AgentMortalityState?
     public let lifecycleState: AgentLifecycleState?
     public let kinshipState: AgentKinshipState?
+    public let householdState: AgentHouseholdState?
 
     init(session: AgentSimulationSession) {
-        if session.kinshipState != nil {
+        if session.householdState != nil {
+            schemaVersion = AgentCheckpointSchema.householdVersion
+        } else if session.kinshipState != nil {
             schemaVersion = AgentCheckpointSchema.kinshipVersion
         } else if session.lifecycleState != nil {
             schemaVersion = AgentCheckpointSchema.lifecycleVersion
@@ -291,6 +295,7 @@ public struct AgentSessionDurableState: Codable {
         mortalityState = session.mortalityState
         lifecycleState = session.lifecycleState
         kinshipState = session.kinshipState
+        householdState = session.householdState
     }
 }
 
@@ -712,6 +717,7 @@ extension AgentSimulationSession {
         mortalityState = state.mortalityState
         lifecycleState = state.lifecycleState
         kinshipState = state.kinshipState
+        householdState = state.householdState
         if let settlementMetricsState {
             try validateSettlementMetricsState(settlementMetricsState)
         }
@@ -728,32 +734,39 @@ extension AgentSimulationSession {
         guard (state.schemaVersion == AgentCheckpointSchema.currentVersion
                 && state.populationRegistry == nil && state.settlementMetricsState == nil
                 && state.mortalityState == nil && state.lifecycleState == nil
-                && state.kinshipState == nil)
+                && state.kinshipState == nil && state.householdState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.populationVersion
                     && state.populationRegistry != nil && state.settlementMetricsState == nil
                     && state.mortalityState == nil && state.lifecycleState == nil
-                    && state.kinshipState == nil)
+                    && state.kinshipState == nil && state.householdState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.settlementMetricsVersion
                     && state.populationRegistry != nil
                     && state.settlementMetricsState != nil
                     && state.localEcologyState == nil
                     && state.mortalityState == nil && state.lifecycleState == nil
-                    && state.kinshipState == nil)
+                    && state.kinshipState == nil && state.householdState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.localEcologyVersion
                     && state.populationRegistry != nil
                     && state.localEcologyState != nil
                     && state.mortalityState == nil && state.lifecycleState == nil
-                    && state.kinshipState == nil)
+                    && state.kinshipState == nil && state.householdState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.mortalityVersion
                     && state.populationRegistry != nil
                     && state.mortalityState != nil
-                    && state.lifecycleState == nil && state.kinshipState == nil)
+                    && state.lifecycleState == nil && state.kinshipState == nil
+                    && state.householdState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.lifecycleVersion
                     && state.populationRegistry != nil
-                    && state.lifecycleState != nil && state.kinshipState == nil)
+                    && state.lifecycleState != nil && state.kinshipState == nil
+                    && state.householdState == nil)
                 || (state.schemaVersion == AgentCheckpointSchema.kinshipVersion
                     && state.populationRegistry != nil
-                    && state.lifecycleState != nil && state.kinshipState != nil) else {
+                    && state.lifecycleState != nil && state.kinshipState != nil
+                    && state.householdState == nil)
+                || (state.schemaVersion == AgentCheckpointSchema.householdVersion
+                    && state.populationRegistry != nil
+                    && state.lifecycleState != nil && state.kinshipState != nil
+                    && state.householdState != nil) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.clock.tick.rawValue >= 0,
@@ -784,7 +797,8 @@ extension AgentSimulationSession {
         guard !state.agents.isEmpty
                 || ((state.schemaVersion == AgentCheckpointSchema.mortalityVersion
                         || state.schemaVersion == AgentCheckpointSchema.lifecycleVersion
-                        || state.schemaVersion == AgentCheckpointSchema.kinshipVersion)
+                        || state.schemaVersion == AgentCheckpointSchema.kinshipVersion
+                        || state.schemaVersion == AgentCheckpointSchema.householdVersion)
                     && (state.mortalityState?.totalDeathCount ?? 0) > 0) else {
             throw AgentCheckpointError.invalidAgent("empty")
         }
@@ -1184,6 +1198,23 @@ extension AgentSimulationSession {
                 )
             } catch {
                 throw AgentCheckpointError.invalidBound("kinship")
+            }
+        }
+        if let household = state.householdState, let population = state.populationRegistry,
+           let kinship = state.kinshipState {
+            do {
+                try validateHouseholdState(
+                    household,
+                    population: population,
+                    agents: state.agents,
+                    kinship: kinship,
+                    clock: state.clock,
+                    causalLatestSequence: state.causalLedger.latestSequence,
+                    causalDroppedEventCount: state.causalLedger.droppedEventCount,
+                    causalEvents: state.causalLedger.events
+                )
+            } catch {
+                throw AgentCheckpointError.invalidBound("household")
             }
         }
         for relation in state.socialTrustRelations {

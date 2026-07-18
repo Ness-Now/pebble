@@ -23,12 +23,29 @@ extension AgentSimulationSession {
     }
 
     public mutating func applyMovementOutcomes(_ outcomes: [AgentMovementOutcome]) throws {
+        var candidate = self
+        try candidate.applyMovementOutcomesInPlace(outcomes)
+        self = candidate
+    }
+
+    private mutating func applyMovementOutcomesInPlace(
+        _ outcomes: [AgentMovementOutcome]
+    ) throws {
         let populationArrivalEventCapacity = populationRegistry?.migrations.contains {
             $0.status == .admitted || $0.status == .inTransit
         } == true ? 2 : 0
+        let currentHouseholdIDs = Set(
+            householdSnapshot().currentMemberships.map(\.agentID)
+        )
+        let householdArrivalEventCapacity = householdState == nil ? 0
+            : (populationRegistry?.migrations.contains {
+                ($0.status == .admitted || $0.status == .inTransit)
+                    && !currentHouseholdIDs.contains($0.migrantID)
+            } == true ? 2 : 0)
         let settlementPulseCapacity = settlementMetricsState?.nextPulseTick == tick ? 1 : 0
         try prevalidateCausalAppend(
-            count: outcomes.count + populationArrivalEventCapacity + settlementPulseCapacity
+            count: outcomes.count + populationArrivalEventCapacity
+                + householdArrivalEventCapacity + settlementPulseCapacity
         )
         let ids = sortedIds
         guard outcomes.count == ids.count else {
