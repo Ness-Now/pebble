@@ -137,6 +137,14 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case householdMembershipStarted
     case householdMembershipEnded
     case householdDissolved
+    case dependentCareInitialized
+    case careAssignmentStarted
+    case careAssignmentEnded
+    case careNeedRaised
+    case careEngagementStarted
+    case careProvided
+    case careNeedResolved
+    case careNeedUnmet
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -156,6 +164,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case lifecycleTransition
     case kinshipTransition
     case householdTransition
+    case dependentCareTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -376,6 +385,19 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         status: String,
         digest: String
     )
+    case dependentCare(
+        dependentID: String?,
+        caregiverID: String?,
+        householdID: String?,
+        needID: String?,
+        needKind: String?,
+        assignmentCount: Int,
+        needCount: Int,
+        status: String,
+        reason: String?,
+        materialQuantity: Int,
+        digest: String
+    )
 
     var canonicalText: String {
         switch self {
@@ -525,6 +547,14 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
                 + "\(ordinal.map(String.init) ?? "none")|\(settlementID ?? "none")|"
                 + "\(agentID ?? "none")|\(anchor)|\(householdCount)|"
                 + "\(membershipCount)|\(reason ?? "none")|\(status)|\(digest)"
+        case let .dependentCare(
+            dependentID, caregiverID, householdID, needID, needKind,
+            assignmentCount, needCount, status, reason, materialQuantity, digest
+        ):
+            return "dependentCare|\(dependentID ?? "none")|\(caregiverID ?? "none")|"
+                + "\(householdID ?? "none")|\(needID ?? "none")|\(needKind ?? "none")|"
+                + "\(assignmentCount)|\(needCount)|\(status)|\(reason ?? "none")|"
+                + "\(materialQuantity)|\(digest)"
         }
     }
 }
