@@ -40,6 +40,9 @@ if options.scenario == "durable_kinship_graph_smoke" {
 if options.scenario == "households_and_membership_smoke" {
     runHouseholdsAndMembershipSmoke(options)
 }
+if options.scenario == "dependent_care_lifecycle_smoke" {
+    runDependentCareLifecycleSmoke(options)
+}
 
 let isMultiAgentMovementFixtureScenario = options.scenario
     == "multi_agent_movement_fixture_smoke"

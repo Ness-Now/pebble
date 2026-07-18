@@ -83,7 +83,7 @@ public struct AgentDependentCareConfiguration: Codable, Equatable, Sendable {
         maximumRetainedOutcomes: Int = 512,
         maximumDependentsPerCaregiver: Int = 4,
         maximumCareTransitionsPerTick: Int = 32,
-        nourishmentHungerThreshold: Double = 0.40,
+        nourishmentHungerThreshold: Double = 0.20,
         careInteractionDistance: Int = 1,
         supervisionIntervalTicks: Int = 4
     ) throws {

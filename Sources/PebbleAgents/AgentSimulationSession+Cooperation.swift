@@ -162,7 +162,12 @@ extension AgentSimulationSession {
     }
 
     func canAcceptCooperationOffer(_ state: AgentSessionAgentState) -> Bool {
+        let stageEligible = dependentCareState == nil || {
+            guard let agentID = AgentID(rawValue: state.id) else { return false }
+            return permitsStageCapability(.cooperateAsWorker, for: agentID)
+        }()
         guard !isMigratingAgent(state.id),
+              stageEligible,
               let task = pendingSharedTaskOffer(for: state.id),
               tick + 1 <= task.offerExpiresAtTick,
               !isSociallyUrgent(state),
@@ -265,6 +270,7 @@ extension AgentSimulationSession {
             guard helperId != project.builderAgentId,
                   !isMigratingAgent(helperId),
                   let helperID = AgentID(rawValue: helperId),
+                  permitsStageCapability(.cooperateAsWorker, for: helperID),
                   let helper = statesById[helperId],
                   !isSociallyUrgent(helper),
                   !hasMaterialTransaction(helper),
@@ -599,6 +605,7 @@ extension AgentSimulationSession {
     }
 
     private mutating func createSharedTask(_ task: AgentSharedTask) throws {
+        try requireStageCapability(.cooperateAsWorker, for: task.helperID)
         guard cooperationEnabled,
               !sharedTasks.contains(where: { $0.taskID == task.taskID }),
               task.issuerID.rawValue == constructionProject?.builderAgentId,

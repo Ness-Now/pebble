@@ -37,9 +37,11 @@ KINSHIP_OUT_A="$TMP_ROOT/kinship-a"
 KINSHIP_OUT_B="$TMP_ROOT/kinship-b"
 HOUSEHOLD_OUT_A="$TMP_ROOT/household-a"
 HOUSEHOLD_OUT_B="$TMP_ROOT/household-b"
+CARE_OUT_A="$TMP_ROOT/care-a"
+CARE_OUT_B="$TMP_ROOT/care-b"
 
 STEP=0
-TOTAL_STEPS=29
+TOTAL_STEPS=32
 
 run_step() {
     STEP=$((STEP + 1))
@@ -281,6 +283,40 @@ verify_household_outputs() {
     expect_json_value "$out/household_replay_v8/manifest.json" schemaVersion 8
 }
 
+verify_care_outputs() {
+    out=$1
+    for file in \
+        care_assignments.json \
+        care_needs.json \
+        care_engagements.json \
+        care_outcomes.json \
+        capability_matrix.json \
+        care_resource_conservation.json \
+        care_causal_chain.json \
+        care_digest.json \
+        care_invariant_report.json \
+        checkpoint_v9/manifest.json \
+        checkpoint_v9/session.json \
+        replay_v9/manifest.json \
+        replay_v9/operations.ndjson
+    do
+        [ -s "$out/$file" ] || fail "dependent care did not produce $out/$file"
+    done
+    expect_json_value "$out/care_invariant_report.json" schemaVersion 9
+    expect_json_value "$out/care_invariant_report.json" scenario \
+        dependent_care_lifecycle_smoke
+    expect_json_value "$out/care_invariant_report.json" seed 73
+    expect_json_value "$out/care_invariant_report.json" success true
+    expect_json_value "$out/care_digest.json" schemaVersion 9
+    expect_json_value "$out/care_digest.json" seed 73
+    expect_json_value "$out/care_digest.json" worldBoundaryEvidence \
+        "PebbleAgents has no World import; no block or World mutation event is emitted"
+    expect_json_value "$out/care_resource_conservation.json" equationBalanced true
+    expect_json_value "$out/care_resource_conservation.json" materialLedgerBalanced true
+    expect_json_value "$out/checkpoint_v9/session.json" schemaVersion 9
+    expect_json_value "$out/replay_v9/manifest.json" schemaVersion 9
+}
+
 verify_no_tracked_run_outputs() {
     tracked=$(
         git ls-files | /usr/bin/awk '
@@ -388,6 +424,17 @@ run_step "household canonical outputs and replay comparison" \
     verify_household_outputs "$HOUSEHOLD_OUT_A"
 verify_household_outputs "$HOUSEHOLD_OUT_B"
 /usr/bin/diff -r "$HOUSEHOLD_OUT_A" "$HOUSEHOLD_OUT_B"
+
+run_step "dependent care deterministic run A" \
+    swift run -c release PebbleLab -- --scenario dependent_care_lifecycle_smoke \
+        --seed 73 --out "$CARE_OUT_A"
+run_step "dependent care deterministic run B" \
+    swift run -c release PebbleLab -- --scenario dependent_care_lifecycle_smoke \
+        --seed 73 --out "$CARE_OUT_B"
+run_step "dependent care canonical outputs and replay comparison" \
+    verify_care_outputs "$CARE_OUT_A"
+verify_care_outputs "$CARE_OUT_B"
+/usr/bin/diff -r "$CARE_OUT_A" "$CARE_OUT_B"
 
 run_step "Repository hygiene" git diff --check
 verify_no_tracked_run_outputs

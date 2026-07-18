@@ -72,14 +72,16 @@ extension AgentSimulationSession {
         }
     }
 
+    func permitsStageCapability(
+        _ capability: AgentStageCapability,
+        for agentID: AgentID
+    ) -> Bool {
+        guard dependentCareState != nil else { return true }
+        return (try? stageCapabilityPolicy(for: agentID).permits(capability)) == true
+    }
+
     public func careTarget(for caregiverID: AgentID) -> AgentID? {
-        guard let state = dependentCareState else { return nil }
-        let needsByID = Dictionary(uniqueKeysWithValues: state.activeNeeds.map {
-            ($0.needID, $0)
-        })
-        return state.activeEngagements.filter {
-            $0.caregiverID == caregiverID && needsByID[$0.needID]?.status == .active
-        }.sorted(by: careEngagementSort).first?.dependentID
+        activeCareEngagement(for: caregiverID)?.dependentID
     }
 
     public func careEngagement(for caregiverID: AgentID) -> AgentCareEngagement? {
@@ -101,9 +103,19 @@ extension AgentSimulationSession {
     }
 
     func activeCareEngagement(for caregiverID: AgentID) -> AgentCareEngagement? {
-        dependentCareState?.activeEngagements.filter {
-            $0.caregiverID == caregiverID
-        }.sorted(by: careEngagementSort).first
+        guard let state = dependentCareState else { return nil }
+        let needsByID = Dictionary(uniqueKeysWithValues: state.activeNeeds.map {
+            ($0.needID, $0)
+        })
+        return state.activeEngagements.filter {
+            $0.caregiverID == caregiverID && needsByID[$0.needID]?.status == .active
+        }.sorted { lhs, rhs in
+            let lhsPriority = careExecutionPriority(lhs.kind)
+            let rhsPriority = careExecutionPriority(rhs.kind)
+            if lhsPriority != rhsPriority { return lhsPriority < rhsPriority }
+            if lhs.dependentID != rhs.dependentID { return lhs.dependentID < rhs.dependentID }
+            return lhs.engagementID < rhs.engagementID
+        }.first
     }
 
     func dependentCareForcedGoal(
@@ -1106,16 +1118,14 @@ extension AgentSimulationSession {
                 causeEventID: causeEventID, tick: deathTick, state: &care
             )
         }
-        if !deadAsDependent.isEmpty {
-            let needIDs = care.activeNeeds.compactMap {
-                $0.dependentID == agentID ? $0.needID : nil
-            }.sorted()
-            for needID in needIDs {
-                try closeCareNeed(
-                    needID: needID, reason: .dependentDied,
-                    caregiverID: nil, tick: deathTick, state: &care
-                )
-            }
+        let deadDependentNeedIDs = care.activeNeeds.compactMap {
+            $0.dependentID == agentID ? $0.needID : nil
+        }.sorted()
+        for needID in deadDependentNeedIDs {
+            try closeCareNeed(
+                needID: needID, reason: .dependentDied,
+                caregiverID: nil, tick: deathTick, state: &care
+            )
         }
 
         let affectedDependents = care.assignments.compactMap { assignment in
@@ -1252,9 +1262,16 @@ extension AgentSimulationSession {
             ($0.householdID, $0.status)
         })
         let openAssignments = state.assignments.filter { $0.status == .active }
+        let activeNeedKeys = state.activeNeeds.map {
+            "\($0.dependentID.rawValue)|\($0.kind.rawValue)"
+        }
         guard state.assignments == state.assignments.sorted(by: careAssignmentSort),
               state.activeNeeds == state.activeNeeds.sorted(by: careNeedSort),
               state.activeEngagements == state.activeEngagements.sorted(by: careEngagementSort),
+              state.terminalOutcomes == state.terminalOutcomes.sorted(by: {
+                  if $0.tick != $1.tick { return $0.tick < $1.tick }
+                  return $0.terminalEventID < $1.terminalEventID
+              }),
               state.assignments.count <= state.configuration.maximumAssignments,
               state.activeNeeds.count <= state.configuration.maximumActiveNeeds,
               state.activeEngagements.count <= state.configuration.maximumActiveEngagements,
@@ -1262,8 +1279,11 @@ extension AgentSimulationSession {
               openAssignments.count <= state.configuration.maximumDependents,
               openAssignments.map(\.dependentID).count == Set(openAssignments.map(\.dependentID)).count,
               state.activeNeeds.map(\.needID).count == Set(state.activeNeeds.map(\.needID)).count,
+              activeNeedKeys.count == Set(activeNeedKeys).count,
               state.activeEngagements.map(\.engagementID).count
                 == Set(state.activeEngagements.map(\.engagementID)).count,
+              state.activeEngagements.map(\.needID).count
+                == Set(state.activeEngagements.map(\.needID)).count,
               state.totalAssignmentCount == state.assignments.count,
               state.totalNeedCount >= state.activeNeeds.count,
               state.totalEngagementCount >= state.activeEngagements.count,
@@ -1403,6 +1423,18 @@ extension AgentSimulationSession {
             default:
                 return false
             }
+        }
+        let retainedCareEvents = causalEvents.filter {
+            $0.origin == .dependentCareTransition && isCareKind($0.kind)
+        }
+        if let latestRetainedCareEvent = retainedCareEvents.max(by: {
+            $0.sequence < $1.sequence
+        }) {
+            guard latestRetainedCareEvent.eventID == state.lastCareEventID else {
+                throw AgentDependentCareError.invalidCausalReference(state.lastCareEventID)
+            }
+        } else if state.lastCareEventID.sequence.rawValue > causalDroppedEventCount {
+            throw AgentDependentCareError.invalidCausalReference(state.lastCareEventID)
         }
         try validateReference(state.initializedEventID) { event in
             matchesCareEnvelope(
@@ -1604,4 +1636,12 @@ private func careEngagementSort(
     if lhs.caregiverID != rhs.caregiverID { return lhs.caregiverID < rhs.caregiverID }
     if lhs.dependentID != rhs.dependentID { return lhs.dependentID < rhs.dependentID }
     return lhs.engagementID < rhs.engagementID
+}
+
+private func careExecutionPriority(_ kind: AgentCareEngagementKind) -> Int {
+    switch kind {
+    case .provideFood: return 0
+    case .assistReturnHome: return 1
+    case .supervise, .approachDependent: return 2
+    }
 }

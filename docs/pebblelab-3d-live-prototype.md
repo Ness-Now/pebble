@@ -23,7 +23,7 @@ seule, sans grossesse, famille, génétique ni mutation du World.
 
 ## Prérequis et lancement
 
-Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population`, `--multiscale`, `--ecology`, `--mortality`, `--reproduction`, `--kinship` et `--households` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07, métriques settlement CIV-08, écologie alimentaire CIV-09, sortie de population CIV-10, âge/maturité/reproduction bornée CIV-11, parenté durable CIV-12A et appartenance household CIV-12B. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
+Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population`, `--multiscale`, `--ecology`, `--mortality`, `--reproduction`, `--kinship`, `--households` et `--care` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07, métriques settlement CIV-08, écologie alimentaire CIV-09, sortie de population CIV-10, âge/maturité/reproduction bornée CIV-11, parenté durable CIV-12A, appartenance household CIV-12B et dependent care final de CIV-12. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
 
 Depuis la racine du dépôt :
 
@@ -370,8 +370,45 @@ n'est revendiqué.
 
 CIV-12B est terminé et validé localement. Le household ne possède ni ressource,
 stock, bloc, terrain ou bâtiment et ne signifie ni famille biologique, mariage,
-care ou héritage. La prochaine étape canonique est
-`CIV-12C — Dependent Care and Lifecycle Integration V1`.
+care ou héritage. La tranche suivante termine le contrat global CIV-12 sans
+créer un nouveau jalon top-level.
+
+## CIV-12 — Dependent care et intégration lifecycle V1
+
+Le mode `scripts/verify-pebblelab-live.sh --care` ajoute la gate exacte
+`PEBBLELAB_APP_AGENTS_CARE=1` aux gates agents, persistence, population,
+lifecycle, kinship, households, survival et consommation déjà existantes. La
+commande explicite `/lab care on` transforme une session v8 en v9 ; `/lab care
+status` ne fait qu'observer assignments, besoins, engagements, dependents
+at-risk et digest. Un v9 est refusé si care ou l'une de ses dépendances manque,
+et un v8 ne s'active jamais implicitement au restore.
+
+Dans le monde jetable seed `46`, la vraie naissance d'`agent_4` crée son
+assignment vers `agent_0` dans la transaction population/lifecycle/kinship/
+household/care. Le newborn conserve `observationCount=0`, `actionCount=0` et
+`movementCount=0` au tick de naissance, puis le caregiver interrompt son
+activité, l'approche par le mouvement existant et fournit une unité réelle de
+`foodRaw`. Le débit provient d'abord de son inventaire puis du `campStock`, et
+la trace compare `foodBefore = foodAfter + consumedByDependent`; aucun besoin
+n'est résolu lorsque le débit échoue. Le juvenile ne conserve que les capacités
+perception, idle, retour au home, approche du caregiver et consommation de
+nourriture déjà portée.
+
+Un second processus recharge le v9 post-naissance et produit les mêmes octets,
+digests, assignments, ressources et événements que le contrôle ininterrompu.
+La preuve tardive réservée au harnais laisse d'abord réussir le candidat kernel
+complet, force ensuite l'échec physique du probe newborn, puis compare session,
+recorder, ordinals, ledger, probes et index d'entités avant/après. Les runs
+positifs finissent avec `runtimeErrors=0` et cinq probes retirés ; le run
+d'échec contient exactement l'erreur contrôlée attendue et retire quatre probes.
+`PebbleAgents` n'accède pas au World et aucune trace d'appel ou d'événement de
+mutation de bloc/World n'est observée ; aucun compteur artificiel d'attribution
+care n'est revendiqué.
+
+`CIV-12 — Kinship, Households and Dependent Care V1` est terminé localement.
+Cette V1 n'introduit ni adoption, mariage, propriété, héritage, stock household,
+enseignement, compétence ou institution de care. Prochaine étape : recalage
+obligatoire de la roadmap depuis l'état réel avant toute nouvelle verticale.
 
 ## Arrêt propre et inspection
 

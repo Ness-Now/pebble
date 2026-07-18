@@ -46,7 +46,12 @@ Le point de départ est le HEAD post-K :
   historiques sans statut vivant/résident dupliqué, parentages canoniques
   immuables, index enfant/parents/enfants/fratries dérivés et
   checkpoint/replay v7 ; le kernel pur `PebbleAgents` n'accède pas au World et
-  la preuve live n'observe aucun appel ou événement de mutation de bloc/World.
+  la preuve live n'observe aucun appel ou événement de mutation de bloc/World ;
+- foyers résidentiels bornés, périodes d'appartenance historiques et home
+  partagé acquis sous gate explicite avec checkpoint/replay v8 ; dependent care
+  matériel et comportemental acquis sous gate explicite avec checkpoint/replay
+  v9, politique de capacités par stage et alimentation conservée depuis
+  l'inventaire du caregiver ou le camp stock existant.
 
 Le langage libre, le forwarding, les professions, l'économie du travail, la
 persistance complète des agents, le replay complet du World, la grande
@@ -162,8 +167,21 @@ formation, déplacement, naissance, admission migratoire et mortalité publient
 leurs changements de membership, home et causalité dans une même candidate.
 Les foyers vides sont dissous sans réutilisation d'ID, tandis que kinship reste
 indépendant. Checkpoint, restart et replay v8 restaurent exactement les foyers,
-les périodes et les homes, sans mutation World. La prochaine étape canonique
-est `CIV-12C — Dependent Care and Lifecycle Integration V1`.
+les périodes et les homes, sans mutation World. La dernière tranche interne de
+`CIV-12` ajoute maintenant le dependent care : newborns sans cognition, action
+ou mouvement autonomes, juveniles limités, assignments déterministes vers un
+caregiver mature, besoins explicites et engagements prioritaires. La nourriture
+fournie est débitée exactement une fois de l'inventaire réel du caregiver puis,
+à défaut, du `campStock`; un manque reste `unmet`. Les changements de household,
+la naissance et la mortalité revalident ou ferment les assignments dans leur
+transaction candidate, sans modifier kinship. Le schéma v9, le restart et le
+replay conservent exactement care, lifecycle et households ; les versions v1 à
+v8 restent inchangées lorsque la gate care est désactivée.
+
+`CIV-12 — Kinship, Households and Dependent Care V1` est terminé localement.
+Il n'introduit ni adoption, mariage, propriété, stock household, enseignement,
+compétences ou héritage. Prochaine étape : recalage obligatoire de la roadmap
+depuis l'état réel avant toute nouvelle verticale.
 
 ## Grands programmes ultérieurs
 

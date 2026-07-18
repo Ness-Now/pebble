@@ -14,6 +14,7 @@ struct PebbleKinshipLateFailureBoundarySnapshot {
     let lifecycle: AgentLifecycleSnapshot
     let kinship: AgentKinshipSnapshot
     let household: AgentHouseholdSnapshot
+    let care: AgentDependentCareSnapshot
     let causal: AgentCausalLedgerSnapshot
     let recorderBytes: Data?
     let recorderRecordCount: Int
@@ -126,7 +127,10 @@ final class PebbleAgentController {
         environment["PEBBLELAB_APP_AGENTS_CARE"] == "1"
     }
     var kinshipLateFailureProofEnabled: Bool {
-        environment["PEBBLELAB_DISPOSABLE_KINSHIP_LATE_FAILURE_PROOF"] == "1"
+        let lineageProof = environment["PEBBLELAB_DISPOSABLE_KINSHIP_LATE_FAILURE_PROOF"] == "1"
+        let careProof = environment["PEBBLELAB_DISPOSABLE_CARE_LATE_FAILURE_PROOF"] == "1"
+            && householdFeatureEnabled && dependentCareFeatureEnabled
+        return (lineageProof || careProof)
             && environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1"
             && featureEnabled && persistenceFeatureEnabled && populationFeatureEnabled
             && lifecycleFeatureEnabled && kinshipFeatureEnabled

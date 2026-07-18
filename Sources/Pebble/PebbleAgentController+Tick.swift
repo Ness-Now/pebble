@@ -716,6 +716,7 @@ extension PebbleAgentController {
                         try validatePostTick(
                             snapshot: finalSnapshot,
                             result: result,
+                            dependentCareEnabled: session.dependentCareEnabled,
                             cooperationTravelAgentIDs: cooperationTravelAgentIDs
                         )
                     }
@@ -736,6 +737,7 @@ extension PebbleAgentController {
                 try validatePostTick(
                     snapshot: session.snapshot(),
                     result: result,
+                    dependentCareEnabled: session.dependentCareEnabled,
                     cooperationTravelAgentIDs: cooperationTravelAgentIDs
                 )
             }
@@ -973,6 +975,7 @@ extension PebbleAgentController {
     func validatePostTick(
         snapshot: AgentSessionSnapshot,
         result: AgentSessionTickResult,
+        dependentCareEnabled: Bool = false,
         cooperationTravelAgentIDs: Set<String> = []
     ) throws {
         var positions = Set<String>()
@@ -989,14 +992,26 @@ extension PebbleAgentController {
                 throw ControllerError.movementBoundary(agent.id)
             }
             guard agent.memoryCount <= 128,
-                  agent.memoryRetrievalCount >= agent.memoryInfluencedDecisionCount,
-                  let decision = agent.lastFeedbackDecisionTrace else {
+                  agent.memoryRetrievalCount >= agent.memoryInfluencedDecisionCount else {
                 throw ControllerError.feedbackBoundary(agent.id)
             }
-            if !decision.memoryRecordsUsed.isEmpty {
-                guard decision.actionChanged,
-                      decision.dominantFactor.kind == .movementFeedback else {
+            let isPassiveNewborn = dependentCareEnabled
+                && snapshot.lifecycle?.members.first(where: {
+                    $0.agentID.rawValue == agent.id
+                })?.currentStage == .newborn
+            if isPassiveNewborn {
+                guard agent.lastFeedbackDecisionTrace == nil else {
                     throw ControllerError.feedbackBoundary(agent.id)
+                }
+            } else {
+                guard let decision = agent.lastFeedbackDecisionTrace else {
+                    throw ControllerError.feedbackBoundary(agent.id)
+                }
+                if !decision.memoryRecordsUsed.isEmpty {
+                    guard decision.actionChanged,
+                          decision.dominantFactor.kind == .movementFeedback else {
+                        throw ControllerError.feedbackBoundary(agent.id)
+                    }
                 }
             }
             let usesConstructionMaterialRange = (snapshot.buildAutoEnabled

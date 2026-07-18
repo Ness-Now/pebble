@@ -4755,4 +4755,46 @@ Out of scope: dependent care, feeding, education, marriage, adoption,
 inheritance, property, household stock, owned terrain/buildings, politics, and
 newborn cognition changes.
 
-Next canonical step: CIV-12C - Dependent Care and Lifecycle Integration V1.
+The next internal implementation slice completed the global CIV-12 contract;
+it is recorded below without creating a new top-level CIV-12C milestone.
+
+## CIV-12 - Dependent Care And Lifecycle Integration V1
+
+Status: implemented and validated locally as the final internal CIV-12 slice.
+
+Goal: make newborn and juvenile dependency materially and behaviorally real
+without creating a second cognition loop, resource store, family authority, or
+World adapter.
+
+Implemented evidence:
+
+- `AgentDependentCareState`, owned only by `AgentSimulationSession`, retains
+  bounded historical assignments, active needs/engagements, terminal outcomes,
+  counters, digest, and causal references;
+- mature caregivers are selected deterministically by biological-parent and
+  household preference, active load, then `AgentID`; absence remains explicit
+  as at-risk rather than inventing a caregiver;
+- newborns cannot select normal goals, act, move, consume, work, migrate, or
+  reproduce autonomously; juveniles retain only perception, idle, return-home,
+  caregiver approach, and carried-food consumption;
+- urgent care overrides mature activity, uses existing bounded movement, and
+  requires physical interaction distance;
+- nourishment debits one real `foodRaw`, first from caregiver inventory and
+  then from existing camp stock, before reducing the dependent's hunger;
+- birth, household transitions, caregiver/dependent mortality, restart, and
+  replay preserve or deterministically replace assignments atomically;
+- schema v9 persists canonical care state and validates retained or provably
+  evicted causal references; v1-v8 remain unchanged with care disabled;
+- `dependent_care_lifecycle_smoke` and the disposable `--care` workflow prove
+  v9 restart/replay, material conservation, no newborn autonomy, late physical
+  rollback, zero positive-run runtime errors, and complete probe cleanup;
+- `PebbleAgents` does not access the World and no block/World mutation call or
+  event is observed; no synthetic mutation counter is claimed.
+
+Out of scope: marriage, adoption, romance, genetics, pregnancy, inheritance,
+property, household stock, education, skills, profession, culture, religion,
+medicine, institutional childcare, and LLM behavior.
+
+`CIV-12 — Kinship, Households and Dependent Care V1` is complete locally.
+Next step: mandatory roadmap recalibration from the actual implemented state
+before any new vertical.
