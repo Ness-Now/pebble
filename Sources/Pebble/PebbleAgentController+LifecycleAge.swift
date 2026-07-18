@@ -121,6 +121,12 @@ extension PebbleAgentController {
                 + "householdID=\(currentHousehold?.householdID.rawValue ?? "none") "
                 + "householdDigest=\(candidate.householdSnapshot().digest) "
             : ""
+        let careAssignment = (try? candidate.currentCareAssignment(for: record.newbornID)) ?? nil
+        let careTrace = candidate.dependentCareEnabled
+            ? "care=1 "
+                + "caregiver=\(careAssignment?.caregiverID.rawValue ?? "none") "
+                + "careDigest=\(candidate.dependentCareSnapshot().digest) "
+            : ""
         trace(
             "birth finalized tick=\(record.birthTick) birth=\(record.birthID.rawValue) "
                 + "plan=\(record.planID.rawValue) newborn=\(record.newbornID.rawValue) "
@@ -129,6 +135,7 @@ extension PebbleAgentController {
                 + "age=\(member.flatMap { try? $0.age(at: candidate.tick) } ?? -1) "
                 + kinshipTrace
                 + householdTrace
+                + careTrace
                 + "population=\(candidate.populationSummary().memberCount) "
                 + "nextOrdinal=\(candidate.populationSummary().nextPopulationOrdinal ?? -1) "
                 + "probes=\(probesByAgentId.keys.sorted().joined(separator: ",")) "

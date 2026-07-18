@@ -1,5 +1,8 @@
 extension AgentSimulationSession {
     public func prevalidateConsumption(_ intent: AgentConsumptionIntent) throws {
+        if let id = AgentID(rawValue: intent.agentId) {
+            try requireStageCapability(.selfConsumeCarriedFood, for: id)
+        }
         guard let state = statesById[intent.agentId] else {
             throw AgentSessionError.unknownAgentId(intent.agentId)
         }

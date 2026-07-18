@@ -102,6 +102,9 @@ extension AgentSimulationSession {
         builderAgentId: String,
         fundingTick: Int
     ) throws -> AgentConstructionProject {
+        if let id = AgentID(rawValue: builderAgentId) {
+            try requireStageCapability(.build, for: id)
+        }
         try prevalidateCausalAppend(count: 1)
         guard buildAutoEnabled else { throw AgentSessionError.constructionDisabled }
         guard fundingTick == tick else {
@@ -161,6 +164,9 @@ extension AgentSimulationSession {
     }
 
     public func prevalidatePlacement(_ intent: AgentPlacementIntent) throws {
+        if let id = AgentID(rawValue: intent.builderAgentId) {
+            try requireStageCapability(.build, for: id)
+        }
         guard buildAutoEnabled else { throw AgentSessionError.constructionDisabled }
         guard intent.tick == tick else {
             throw AgentSessionError.constructionPlacementTickMismatch(intent.placementId)

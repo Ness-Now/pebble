@@ -270,6 +270,7 @@ extension AgentSimulationSession {
         }
         try candidate.validateKinshipCrossDomainIfEnabled()
         try candidate.validateHouseholdCrossDomainIfEnabled()
+        try candidate.validateDependentCareCrossDomainIfEnabled()
         self = candidate
         return migration
     }
@@ -674,6 +675,7 @@ extension AgentSimulationSession {
         }
         populationRegistry = registry
         try validateHouseholdCrossDomainIfEnabled()
+        try validateDependentCareCrossDomainIfEnabled()
     }
 
     static func validatePopulationRegistry(

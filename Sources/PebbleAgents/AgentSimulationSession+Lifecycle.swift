@@ -467,8 +467,10 @@ extension AgentSimulationSession {
             return nil
         }
         try prevalidateKinshipAdmission(parentIDs: plan.progenitorIDs)
+        let careBirth = try prevalidateDependentCareBirth(parentIDs: plan.progenitorIDs)
         let householdEventCount = try householdBirthEventCount(
-            parentIDs: plan.progenitorIDs
+            parentIDs: plan.progenitorIDs,
+            preferredHouseholdID: careBirth?.householdID
         )
         let ordinal = registry.nextPopulationOrdinal
         guard ordinal.rawValue < Int.max,
@@ -483,6 +485,7 @@ extension AgentSimulationSession {
         )!
         try prevalidateCausalAppend(
             count: (kinshipEnabled ? 4 : 3) + householdEventCount
+                + (careBirth == nil ? 0 : 2)
         )
         let site = try requiredLifecycleEvent(
             kind: .birthSiteValidated,
@@ -518,13 +521,21 @@ extension AgentSimulationSession {
             childID: newbornID,
             parentIDs: plan.progenitorIDs,
             residenceAnchor: observation.position,
-            causeEventID: kinshipEventID ?? born.eventID
+            causeEventID: kinshipEventID ?? born.eventID,
+            preferredHouseholdID: careBirth?.householdID
         )
+        let careEventID = try careBirth.flatMap { careBirth in
+            try registerDependentCareBirth(
+                childID: newbornID, caregiverID: careBirth.caregiverID,
+                householdID: careBirth.householdID,
+                causeEventID: householdEventID ?? kinshipEventID ?? born.eventID
+            )
+        }
         let finalized = try requiredLifecycleEvent(
             kind: .birthFinalized,
             actorID: plan.progenitorIDs[0],
             subjectID: newbornID,
-            causes: [householdEventID ?? kinshipEventID ?? born.eventID],
+            causes: [careEventID ?? householdEventID ?? kinshipEventID ?? born.eventID],
             payload: birthPayload(
                 birthID: birthID, plan: plan, newbornID: newbornID,
                 ordinal: ordinal, observation: observation, status: "finalized"
@@ -652,6 +663,7 @@ extension AgentSimulationSession {
         lifecycleState = lifecycle
         try validateKinshipCrossDomainIfEnabled()
         try validateHouseholdCrossDomainIfEnabled()
+        try validateDependentCareCrossDomainIfEnabled()
         return record
     }
 

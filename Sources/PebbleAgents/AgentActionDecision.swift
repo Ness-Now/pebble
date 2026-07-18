@@ -23,6 +23,8 @@ public enum AgentGoalKind: String, Codable, Equatable, Sendable {
     case verifySocialInformation
     case considerSharedTask
     case fulfillSharedTask
+    case provideDependentCare
+    case dependentReturnHome
     case explore
     case observeOtherAgent
 }
@@ -88,6 +90,9 @@ public struct AgentActionDecisionInput {
     public let socialVerificationTarget: AgentPosition?
     public let socialVerificationResource: AgentResourceKind?
     public let canAcceptSharedTask: Bool
+    public let careTarget: AgentPosition?
+    public let careActionName: String?
+    public let careInteractionDistance: Int
 
     public init(
         agentId: String,
@@ -104,7 +109,10 @@ public struct AgentActionDecisionInput {
         constructionProject: AgentConstructionProject? = nil,
         socialVerificationTarget: AgentPosition? = nil,
         socialVerificationResource: AgentResourceKind? = nil,
-        canAcceptSharedTask: Bool = false
+        canAcceptSharedTask: Bool = false,
+        careTarget: AgentPosition? = nil,
+        careActionName: String? = nil,
+        careInteractionDistance: Int = 1
     ) {
         self.agentId = agentId
         self.tick = tick
@@ -121,6 +129,9 @@ public struct AgentActionDecisionInput {
         self.socialVerificationTarget = socialVerificationTarget
         self.socialVerificationResource = socialVerificationResource
         self.canAcceptSharedTask = canAcceptSharedTask
+        self.careTarget = careTarget
+        self.careActionName = careActionName
+        self.careInteractionDistance = careInteractionDistance
     }
 }
 
@@ -182,6 +193,36 @@ public enum AgentActionDecider {
                 tick: input.tick,
                 target: input.homePosition
             )
+        case .provideDependentCare:
+            guard let target = input.careTarget else {
+                return AgentAction(
+                    name: "wait", reason: "dependent care target unavailable", tick: input.tick
+                )
+            }
+            let distance = abs(input.position.x - target.x)
+                + abs(input.position.y - target.y) + abs(input.position.z - target.z)
+            if distance <= input.careInteractionDistance {
+                return AgentAction(
+                    name: input.careActionName ?? "supervise_dependent",
+                    reason: "dependent care interaction in range", tick: input.tick,
+                    target: target, resource: input.careActionName == "provide_food" ? .foodRaw : nil
+                )
+            }
+            if let next = input.navigationProgress.nextStep {
+                return AgentAction(
+                    name: "approach_dependent",
+                    reason: "dependent care follows bounded route", tick: input.tick,
+                    dx: next.x - input.position.x, dy: next.y - input.position.y,
+                    dz: next.z - input.position.z, target: target
+                )
+            }
+            return AgentAction(
+                name: "approach_dependent",
+                reason: "dependent care awaiting bounded route", tick: input.tick,
+                target: target
+            )
+        case .dependentReturnHome:
+            return returnHomeAction(input, goalName: "dependentReturnHome")
         case .collectResource:
             return resourceAction(input, goalName: "collectResource")
         case .satisfyHunger:

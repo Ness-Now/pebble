@@ -419,6 +419,7 @@ public struct AgentSessionAgentTickResult {
     public let memoriesAdded: [AgentMemoryEntry]
     public let worldPerceptionEffect: AgentWorldPerceptionEffect?
     public let snapshot: AgentSnapshot
+    public let cognitionPerformed: Bool
 
     init(
         agentId: String,
@@ -427,7 +428,8 @@ public struct AgentSessionAgentTickResult {
         actionEffect: AgentActionEffect,
         memoriesAdded: [AgentMemoryEntry],
         worldPerceptionEffect: AgentWorldPerceptionEffect?,
-        snapshot: AgentSnapshot
+        snapshot: AgentSnapshot,
+        cognitionPerformed: Bool = true
     ) {
         self.agentId = agentId
         self.goalChange = goalChange
@@ -436,6 +438,7 @@ public struct AgentSessionAgentTickResult {
         self.memoriesAdded = memoriesAdded
         self.worldPerceptionEffect = worldPerceptionEffect
         self.snapshot = snapshot
+        self.cognitionPerformed = cognitionPerformed
     }
 }
 

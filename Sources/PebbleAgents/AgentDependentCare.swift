@@ -24,6 +24,7 @@ public enum AgentDependentCareError: Error, Equatable, CustomStringConvertible {
     case transitionCapacityReached
     case interactionTooFar
     case materialDebitRequired
+    case capabilityDenied(AgentID, AgentStageCapability)
     case invalidCausalReference(AgentCausalEventID)
     case invalidState(String)
 
@@ -54,6 +55,8 @@ public enum AgentDependentCareError: Error, Equatable, CustomStringConvertible {
         case .transitionCapacityReached: return "care transition capacity reached"
         case .interactionTooFar: return "care interaction distance exceeded"
         case .materialDebitRequired: return "care nourishment requires one material food debit"
+        case let .capabilityDenied(id, capability):
+            return "\(capability.rawValue) is denied for \(id.rawValue) at the current life stage"
         case let .invalidCausalReference(id): return "invalid care causal reference \(id.rawValue)"
         case let .invalidState(reason): return "invalid dependent care state: \(reason)"
         }
@@ -243,6 +246,44 @@ public enum AgentCareFoodSource: String, Codable, CaseIterable, Sendable {
     case caregiverInventory
     case campStock
     case none
+}
+
+public struct AgentCareProvisionIntent: Codable, Equatable, Sendable {
+    public let provisionID: String
+    public let needID: AgentCareNeedID
+    public let caregiverID: AgentID
+    public let dependentID: AgentID
+    public let tick: Int
+
+    public init(
+        provisionID: String,
+        needID: AgentCareNeedID,
+        caregiverID: AgentID,
+        dependentID: AgentID,
+        tick: Int
+    ) {
+        self.provisionID = provisionID
+        self.needID = needID
+        self.caregiverID = caregiverID
+        self.dependentID = dependentID
+        self.tick = tick
+    }
+}
+
+public struct AgentCareProvisionResult: Codable, Equatable, Sendable {
+    public let provisionID: String
+    public let needID: AgentCareNeedID
+    public let caregiverID: AgentID
+    public let dependentID: AgentID
+    public let tick: Int
+    public let succeeded: Bool
+    public let foodSource: AgentCareFoodSource
+    public let foodBefore: Int
+    public let foodAfter: Int
+    public let consumedByDependent: Int
+    public let hungerBefore: Double
+    public let hungerAfter: Double
+    public let reason: String
 }
 
 public struct AgentCareOutcome: Codable, Equatable, Sendable {

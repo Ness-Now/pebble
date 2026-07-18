@@ -701,7 +701,15 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.householdCreated, .household),
              (.householdMembershipStarted, .household),
              (.householdMembershipEnded, .household),
-             (.householdDissolved, .household):
+             (.householdDissolved, .household),
+             (.dependentCareInitialized, .dependentCare),
+             (.careAssignmentStarted, .dependentCare),
+             (.careAssignmentEnded, .dependentCare),
+             (.careNeedRaised, .dependentCare),
+             (.careEngagementStarted, .dependentCare),
+             (.careProvided, .dependentCare),
+             (.careNeedResolved, .dependentCare),
+             (.careNeedUnmet, .dependentCare):
             matches = true
         default:
             matches = false

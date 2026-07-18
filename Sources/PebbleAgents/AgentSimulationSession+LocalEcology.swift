@@ -252,6 +252,7 @@ extension AgentSimulationSession {
         }
         var forageIDs = Set<String>()
         for intent in intents {
+            try requireStageCapability(.harvest, for: intent.agentID)
             guard intent.tick == tick,
                   AgentOperationID(rawValue: intent.forageID) != nil,
                   forageIDs.insert(intent.forageID).inserted,

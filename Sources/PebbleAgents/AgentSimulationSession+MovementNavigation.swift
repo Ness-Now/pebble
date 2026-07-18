@@ -81,6 +81,7 @@ extension AgentSimulationSession {
             let dz = outcome.toPosition.z - outcome.fromPosition.z
             switch outcome.status {
             case .moved:
+                try requireStageCapability(.autonomousMovement, for: state.agentID)
                 guard dx == outcome.appliedDX, dy == outcome.appliedDY, dz == outcome.appliedDZ else {
                     throw AgentSessionError.inconsistentMovementDelta(id)
                 }
@@ -96,7 +97,8 @@ extension AgentSimulationSession {
                         || action.name == "return_home"
                         || action.name == "approach_construction"
                         || action.name == "approach_information"
-                        || action.name == "approach_settlement",
+                        || action.name == "approach_settlement"
+                        || action.name == "approach_dependent",
                       outcome.requestedDX == (action.dx ?? 0),
                       outcome.requestedDY == (action.dy ?? 0),
                       outcome.requestedDZ == (action.dz ?? 0),
@@ -156,7 +158,8 @@ extension AgentSimulationSession {
                     || state.lastAction?.name == "return_home"
                     || state.lastAction?.name == "approach_construction"
                     || state.lastAction?.name == "approach_information"
-                    || state.lastAction?.name == "approach_settlement" {
+                    || state.lastAction?.name == "approach_settlement"
+                    || state.lastAction?.name == "approach_dependent" {
                     guard let route = state.navigationProgress.route,
                           state.navigationProgress.status == .active,
                           state.navigationProgress.nextStep == outcome.toPosition else {
@@ -184,7 +187,8 @@ extension AgentSimulationSession {
                     || state.lastAction?.name == "return_home"
                     || state.lastAction?.name == "approach_construction"
                     || state.lastAction?.name == "approach_information"
-                    || state.lastAction?.name == "approach_settlement" {
+                    || state.lastAction?.name == "approach_settlement"
+                    || state.lastAction?.name == "approach_dependent" {
                     state.navigationProgress = AgentNavigationProgress(
                         status: state.navigationProgress.status,
                         route: state.navigationProgress.route,
@@ -522,6 +526,54 @@ extension AgentSimulationSession {
                 state.navigationProgress = AgentNavigationProgress(
                     status: .arrived,
                     route: state.navigationProgress.route,
+                    routeIndex: state.navigationProgress.route.map {
+                        max(0, $0.positions.count - 1)
+                    } ?? 0,
+                    replanCount: state.navigationProgress.replanCount,
+                    lastPlanTick: state.navigationProgress.lastPlanTick,
+                    lastInvalidation: state.navigationProgress.lastInvalidation
+                )
+                return
+            }
+        case .provideDependentCare:
+            guard dependentCareState != nil,
+                  let dependentID = careTarget(for: state.agentID),
+                  let dependent = statesById[dependentID.rawValue] else {
+                releaseReservation(for: state)
+                state.navigationProgress = AgentNavigationProgress(
+                    lastInvalidation: .targetMissing
+                )
+                return
+            }
+            releaseReservation(for: state)
+            purpose = .dependentCare
+            targetPosition = boundedSocialTarget(
+                state: state, destination: dependent.position, observation: observation
+            )
+            targetResource = nil
+            goalMode = targetPosition == dependent.position ? .cardinalAdjacent : .exact
+            if manhattanDistance(state.position, dependent.position)
+                <= dependentCareState!.configuration.careInteractionDistance {
+                state.navigationProgress = AgentNavigationProgress(
+                    status: .arrived, route: state.navigationProgress.route,
+                    routeIndex: state.navigationProgress.route.map {
+                        max(0, $0.positions.count - 1)
+                    } ?? 0,
+                    replanCount: state.navigationProgress.replanCount,
+                    lastPlanTick: state.navigationProgress.lastPlanTick,
+                    lastInvalidation: state.navigationProgress.lastInvalidation
+                )
+                return
+            }
+        case .dependentReturnHome:
+            releaseReservation(for: state)
+            purpose = .dependentReturnHome
+            targetPosition = boundedHomeTarget(state: state, observation: observation)
+            targetResource = nil
+            goalMode = .exact
+            if state.position == state.homePosition {
+                state.navigationProgress = AgentNavigationProgress(
+                    status: .arrived, route: state.navigationProgress.route,
                     routeIndex: state.navigationProgress.route.map {
                         max(0, $0.positions.count - 1)
                     } ?? 0,

@@ -20,6 +20,9 @@ extension AgentSimulationSession {
     }
 
     public func prevalidateDelivery(_ intent: AgentDeliveryIntent) throws {
+        if let id = AgentID(rawValue: intent.agentId) {
+            try requireStageCapability(.deliver, for: id)
+        }
         guard let state = statesById[intent.agentId] else {
             throw AgentSessionError.unknownAgentId(intent.agentId)
         }
@@ -137,6 +140,9 @@ extension AgentSimulationSession {
     }
 
     public func prevalidateInteraction(_ intent: AgentInteractionIntent) throws {
+        if let id = AgentID(rawValue: intent.agentId) {
+            try requireStageCapability(.harvest, for: id)
+        }
         guard let state = statesById[intent.agentId] else {
             throw AgentSessionError.unknownAgentId(intent.agentId)
         }
@@ -176,6 +182,9 @@ extension AgentSimulationSession {
     }
 
     public mutating func applyInteractionOutcome(_ outcome: AgentInteractionOutcome) throws {
+        if let id = AgentID(rawValue: outcome.agentId) {
+            try requireStageCapability(.harvest, for: id)
+        }
         try prevalidateCausalAppend(count: 1)
         guard var state = statesById[outcome.agentId] else {
             throw AgentSessionError.unknownAgentId(outcome.agentId)

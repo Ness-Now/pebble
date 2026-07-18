@@ -449,6 +449,13 @@ extension PebbleAgentController {
             trace("checkpoint load refused name=\(name.rawValue) reason=householdGate")
             return failure("Checkpoint load refused: household gate or dependency is disabled.")
         }
+        if candidate.dependentCareEnabled && (!dependentCareFeatureEnabled
+            || !householdFeatureEnabled || !kinshipFeatureEnabled || !featureEnabled
+            || !persistenceFeatureEnabled || !populationFeatureEnabled
+            || !lifecycleFeatureEnabled || !candidate.survivalEnabled) {
+            trace("checkpoint load refused name=\(name.rawValue) reason=careGate")
+            return failure("Checkpoint load refused: care gate or dependency is disabled.")
+        }
         let candidateDigest = try candidate.durableStateDigest()
         guard candidateDigest == stored.manifest.semanticDigest else {
             throw AgentCheckpointError.semanticDigestMismatch

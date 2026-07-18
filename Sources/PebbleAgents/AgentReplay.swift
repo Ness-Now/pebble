@@ -9,12 +9,14 @@ public enum AgentReplaySchema {
     public static let lifecycleVersion = 6
     public static let kinshipVersion = 7
     public static let householdVersion = 8
+    public static let dependentCareVersion = 9
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
             || version == settlementMetricsVersion || version == localEcologyVersion
             || version == mortalityVersion || version == lifecycleVersion
             || version == kinshipVersion || version == householdVersion
+            || version == dependentCareVersion
     }
 }
 
@@ -78,6 +80,9 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case householdFeature
     case householdFormation
     case householdMove
+    case dependentCareFeature
+    case dependentCareProvision
+    case dependentCareInteraction
 }
 
 public enum AgentReplayOperation: Codable {
@@ -154,6 +159,9 @@ public enum AgentReplayOperation: Codable {
     case setHouseholdsEnabled(Bool, configuration: AgentHouseholdConfiguration)
     case formHousehold(memberIDs: [AgentID], residenceAnchor: AgentPosition)
     case moveHouseholdMembers(memberIDs: [AgentID], householdID: AgentHouseholdID)
+    case setDependentCareEnabled(Bool, configuration: AgentDependentCareConfiguration)
+    case provideDependentNourishment(AgentCareProvisionIntent)
+    case completeDependentCareInteraction(caregiverID: AgentID, dependentID: AgentID)
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -203,6 +211,9 @@ public enum AgentReplayOperation: Codable {
         case .setHouseholdsEnabled: return .householdFeature
         case .formHousehold: return .householdFormation
         case .moveHouseholdMembers: return .householdMove
+        case .setDependentCareEnabled: return .dependentCareFeature
+        case .provideDependentNourishment: return .dependentCareProvision
+        case .completeDependentCareInteraction: return .dependentCareInteraction
         }
     }
 
@@ -220,6 +231,7 @@ public enum AgentReplayOperation: Codable {
         case let .applySocialVerification(observation): raw = "social-verification:\(observation.beliefID.rawValue)"
         case let .applyBirthSiteObservation(observation):
             raw = "birth-site:\(observation.planID.rawValue):\(observation.observedTick)"
+        case let .provideDependentNourishment(intent): raw = intent.provisionID
         default: raw = nil
         }
         return raw.flatMap(AgentOperationID.init(rawValue:))
@@ -553,6 +565,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.householdVersion
         }
+        if case let .setDependentCareEnabled(enabled, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.dependentCareVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "dependent care activation must be the first v9 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.dependentCareVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -740,6 +762,8 @@ public enum AgentSessionReplayer {
                 && checkpoint.schemaVersion == AgentCheckpointSchema.lifecycleVersion)
             || (manifest.schemaVersion == AgentReplaySchema.householdVersion
                 && checkpoint.schemaVersion == AgentCheckpointSchema.kinshipVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.dependentCareVersion
+                && checkpoint.schemaVersion == AgentCheckpointSchema.householdVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -937,6 +961,14 @@ extension AgentSimulationSession {
             )
         case let .moveHouseholdMembers(memberIDs, householdID):
             try candidate.moveMembers(memberIDs: memberIDs, to: householdID)
+        case let .setDependentCareEnabled(enabled, configuration):
+            try candidate.setDependentCareEnabled(enabled, configuration: configuration)
+        case let .provideDependentNourishment(intent):
+            _ = try candidate.provideDependentNourishment(intent)
+        case let .completeDependentCareInteraction(caregiverID, dependentID):
+            _ = try candidate.completeDependentCareInteraction(
+                caregiverID: caregiverID, dependentID: dependentID
+            )
         }
         self = candidate
         let causal = causalLedgerSnapshot().summary

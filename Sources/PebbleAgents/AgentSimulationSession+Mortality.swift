@@ -245,6 +245,7 @@ extension AgentSimulationSession {
         try prevalidateCausalAppend(
             count: lethal.count * (lifecycleState == nil ? 7 : 9)
                 + householdEventCount
+                + (dependentCareState?.configuration.maximumCareTransitionsPerTick ?? 0)
         )
         let preDeathIDs = Set(statesById.values.map(\.agentID))
         guard lethal.map(\.agentID) == lethal.map(\.agentID).sorted(),
@@ -448,6 +449,12 @@ extension AgentSimulationSession {
             // Capture the terminal activity boundary after lethal survival and
             // before the authoritative active-state removal below.
             let terminalActivity = AgentTerminalActivitySnapshot(state: state)
+            let careEventID = try applyDependentCareDeath(
+                agentID: item.agentID,
+                lethalAgentIDs: Set(lethal.map(\.agentID)),
+                causeEventID: lethalEvent.eventID,
+                at: mortalityTick
+            )
             try applyLifecycleDeath(
                 agentID: item.agentID,
                 causeEventID: lethalEvent.eventID,
@@ -473,6 +480,7 @@ extension AgentSimulationSession {
                     resourcesEvent.eventID,
                     commitmentsEvent.eventID,
                     migrationFailureEvent?.eventID,
+                    careEventID,
                     householdEventID,
                 ].compactMap { $0 }.sorted(),
                 payload: mortalityDeathPayload(
@@ -634,6 +642,7 @@ extension AgentSimulationSession {
         populationRegistry = registry
         mortalityState = mortality
         try validateHouseholdCrossDomainIfEnabled()
+        try validateDependentCareCrossDomainIfEnabled()
     }
 
     private func conservationSnapshotWith(

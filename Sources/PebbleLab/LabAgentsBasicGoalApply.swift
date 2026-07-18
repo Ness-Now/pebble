@@ -761,6 +761,10 @@ private func agentsBasicGoalApplyUrgency(for goal: LabGoalKind) -> Int {
         return 60
     case .fulfillSharedTask:
         return 78
+    case .provideDependentCare:
+        return 100
+    case .dependentReturnHome:
+        return 20
     case .migrateToSettlement:
         return 79
     case .rest:

@@ -107,7 +107,30 @@ extension PebbleAgentController {
                 var preparedNavigationObservation: AgentNavigationObservation?
                 var navigationTarget: AgentPosition?
                 let navigationGoalMode: AgentNavigationGoalMode
-                if agent.currentGoal.kind == .migrateToSettlement,
+                if agent.currentGoal.kind == .provideDependentCare,
+                   let caregiverID = AgentID(rawValue: agent.id),
+                   let dependentID = session.careTarget(for: caregiverID),
+                   let dependent = preCognitive.agents.first(where: {
+                       $0.id == dependentID.rawValue
+                   }) {
+                    if AgentBoundedTravel.requiresWaypoint(
+                        from: agent.position, to: dependent.position
+                    ) {
+                        preparedNavigationObservation = navigationAdapter.observeBoundedTravel(
+                            world: world,
+                            agent: agent,
+                            destination: dependent.position,
+                            occupiedAgentPositions: preCognitive.agents
+                                .filter { $0.id != agent.id && $0.id != dependentID.rawValue }
+                                .map(\.position)
+                        )
+                    }
+                    navigationTarget = preparedNavigationObservation?.target ?? dependent.position
+                    navigationGoalMode = .cardinalAdjacent
+                } else if agent.currentGoal.kind == .dependentReturnHome {
+                    navigationTarget = agent.homePosition
+                    navigationGoalMode = .exact
+                } else if agent.currentGoal.kind == .migrateToSettlement,
                    let routeTarget = agent.navigationProgress.route?.target {
                     navigationTarget = routeTarget
                     navigationGoalMode = .exact
@@ -715,6 +738,66 @@ extension PebbleAgentController {
                     result: result,
                     cooperationTravelAgentIDs: cooperationTravelAgentIDs
                 )
+            }
+            if session.dependentCareEnabled {
+                let careActions = result.agents.filter {
+                    $0.action.name == "provide_food"
+                        || $0.action.name == "supervise_dependent"
+                        || $0.action.name == "assist_return_home"
+                }.sorted { $0.agentId < $1.agentId }
+                for action in careActions {
+                    guard let caregiverID = AgentID(rawValue: action.agentId),
+                          let engagement = session.careEngagement(for: caregiverID) else {
+                        throw ControllerError.lifecycleBoundary(
+                            "dependent care action without active engagement"
+                        )
+                    }
+                    if action.action.name == "provide_food" {
+                        let intent = AgentCareProvisionIntent(
+                            provisionID: "dependent-care:\(action.agentId):\(engagement.dependentID.rawValue):\(session.tick)",
+                            needID: engagement.needID,
+                            caregiverID: caregiverID,
+                            dependentID: engagement.dependentID,
+                            tick: session.tick
+                        )
+                        let provision: AgentCareProvisionResult
+                        if recorder != nil {
+                            var outcomeCandidate = session
+                            provision = try outcomeCandidate.provideDependentNourishment(intent)
+                            _ = try applyRecordedOperationIfActive(
+                                .provideDependentNourishment(intent),
+                                session: &session,
+                                recorder: &recorder
+                            )
+                        } else {
+                            provision = try session.provideDependentNourishment(intent)
+                        }
+                        trace(
+                            "care nourishment tick=\(session.tick) caregiver=\(caregiverID.rawValue) "
+                                + "dependent=\(engagement.dependentID.rawValue) source=\(provision.foodSource.rawValue) "
+                                + "food=\(provision.foodBefore)->\(provision.foodAfter) "
+                                + "consumed=\(provision.consumedByDependent) "
+                                + "hunger=\(String(format: "%.2f", provision.hungerBefore))->"
+                                + "\(String(format: "%.2f", provision.hungerAfter)) "
+                                + "succeeded=\(provision.succeeded ? 1 : 0) mutation=none"
+                        )
+                    } else {
+                        if try applyRecordedOperationIfActive(
+                            .completeDependentCareInteraction(
+                                caregiverID: caregiverID,
+                                dependentID: engagement.dependentID
+                            ),
+                            session: &session,
+                            recorder: &recorder
+                        ) == nil {
+                            _ = try session.completeDependentCareInteraction(
+                                caregiverID: caregiverID,
+                                dependentID: engagement.dependentID
+                            )
+                        }
+                    }
+                }
+                traceDependentCareState(session)
             }
             if session.localEcologyEnabled,
                let settlement = session.populationSnapshot().settlement {

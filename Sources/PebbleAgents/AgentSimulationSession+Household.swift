@@ -124,7 +124,9 @@ extension AgentSimulationSession {
             residenceAnchor: residenceAnchor,
             joinedReason: .formedHousehold
         )
+        try candidate.applyDependentCareTickBoundary(at: candidate.tick)
         try candidate.validateHouseholdCrossDomainIfEnabled()
+        try candidate.validateDependentCareCrossDomainIfEnabled()
         self = candidate
         return record
     }
@@ -143,7 +145,9 @@ extension AgentSimulationSession {
             residenceAnchor: residenceAnchor,
             joinedReason: reason
         )
+        try candidate.applyDependentCareTickBoundary(at: candidate.tick)
         try candidate.validateHouseholdCrossDomainIfEnabled()
+        try candidate.validateDependentCareCrossDomainIfEnabled()
         self = candidate
         return record
     }
@@ -154,7 +158,9 @@ extension AgentSimulationSession {
     ) throws {
         var candidate = self
         try candidate.moveMembersInPlace(memberIDs: memberIDs, to: householdID)
+        try candidate.applyDependentCareTickBoundary(at: candidate.tick)
         try candidate.validateHouseholdCrossDomainIfEnabled()
+        try candidate.validateDependentCareCrossDomainIfEnabled()
         self = candidate
     }
 
@@ -457,7 +463,7 @@ extension AgentSimulationSession {
         return newRecord
     }
 
-    private mutating func moveMembersInPlace(
+    mutating func moveMembersInPlace(
         memberIDs: [AgentID],
         to householdID: AgentHouseholdID
     ) throws {
@@ -658,7 +664,10 @@ extension AgentSimulationSession {
         state.lastHouseholdEventID = event.eventID
     }
 
-    func householdBirthEventCount(parentIDs: [AgentID]) throws -> Int {
+    func householdBirthEventCount(
+        parentIDs: [AgentID],
+        preferredHouseholdID: AgentHouseholdID? = nil
+    ) throws -> Int {
         guard let state = householdState else { return 0 }
         guard parentIDs.count == 2,
               let first = currentHouseholdID(for: parentIDs[0], in: state),
@@ -672,10 +681,16 @@ extension AgentSimulationSession {
         }
         var preview = state
         try prevalidateHouseholdTransitionCount(1, state: &preview)
-        if first == second {
-            guard currentMemberIDs(of: first, in: state).count
+        if first == second || preferredHouseholdID != nil {
+            let targetID = preferredHouseholdID ?? first
+            guard state.households.contains(where: {
+                $0.householdID == targetID && $0.status == .active
+            }) else {
+                throw AgentSessionError.household(.unknownHousehold(targetID))
+            }
+            guard currentMemberIDs(of: targetID, in: state).count
                     < state.configuration.maximumMembersPerHousehold else {
-                throw AgentSessionError.household(.memberCapacityReached(first))
+                throw AgentSessionError.household(.memberCapacityReached(targetID))
             }
             return 1
         }
@@ -687,14 +702,19 @@ extension AgentSimulationSession {
         childID: AgentID,
         parentIDs: [AgentID],
         residenceAnchor: AgentPosition,
-        causeEventID: AgentCausalEventID
+        causeEventID: AgentCausalEventID,
+        preferredHouseholdID: AgentHouseholdID? = nil
     ) throws -> AgentCausalEventID? {
         guard var state = householdState else { return nil }
-        _ = try householdBirthEventCount(parentIDs: parentIDs)
+        _ = try householdBirthEventCount(
+            parentIDs: parentIDs, preferredHouseholdID: preferredHouseholdID
+        )
         let first = currentHouseholdID(for: parentIDs[0], in: state)!
         let second = currentHouseholdID(for: parentIDs[1], in: state)!
         let target: AgentHouseholdRecord
-        if first == second {
+        if let preferredHouseholdID {
+            target = state.households.first { $0.householdID == preferredHouseholdID }!
+        } else if first == second {
             target = state.households.first { $0.householdID == first }!
         } else {
             target = try createRootHouseholdInPlace(

@@ -277,9 +277,23 @@ public struct AgentSimulationSession {
         perceptions: [AgentPerceptionInput] = [],
         physicalObservations: [AgentPhysicalSignalObservation] = []
     ) throws -> AgentSessionTickResult {
+        var candidate = self
+        let result = try candidate.advanceTickInPlace(
+            perceptions: perceptions,
+            physicalObservations: physicalObservations
+        )
+        self = candidate
+        return result
+    }
+
+    private mutating func advanceTickInPlace(
+        perceptions: [AgentPerceptionInput],
+        physicalObservations: [AgentPhysicalSignalObservation]
+    ) throws -> AgentSessionTickResult {
         try prevalidateCausalAppend(
             count: sortedIds.count * (physicalEnabled ? 30 : (socialEnabled ? 20 : 3)) + 1
                 + (mortalityState?.configuration.maximumDeathsPerTick ?? 0) * 7
+                + (dependentCareState?.configuration.maximumCareTransitionsPerTick ?? 0) * 3
         )
         var perceptionsById: [String: AgentPerceptionInput] = [:]
         var resourceObservationsById: [String: [AgentResourceObservation]] = [:]
@@ -332,6 +346,18 @@ public struct AgentSimulationSession {
             self = candidate
         }
         try applyLifecycleStageBoundary(at: nextTick)
+        if dependentCareState != nil, !mortalityWasEnabled, survivalEnabled {
+            for id in sortedIds {
+                guard var state = statesById[id] else { continue }
+                if let memory = applySurvivalTick(to: &state, tick: nextTick) {
+                    appendMemory(memory, to: &state.memory)
+                    mortalitySurvivalMemories[id] = memory
+                }
+                state.ticksAlive += 1
+                statesById[id] = state
+            }
+        }
+        try applyDependentCareTickBoundary(at: nextTick)
         try expireActiveMigrationIfNeeded(at: nextTick)
         let ids = sortedIds
         refreshConstructionProjectStatus()
@@ -409,7 +435,7 @@ public struct AgentSimulationSession {
             var memoriesAdded = perception?.externalMemoryEntries ?? []
 
             let survivalMemory: AgentMemoryEntry?
-            if mortalityWasEnabled {
+            if mortalityWasEnabled || dependentCareState != nil {
                 survivalMemory = mortalitySurvivalMemories[id]
             } else if survivalEnabled {
                 survivalMemory = applySurvivalTick(to: &state, tick: nextTick)
@@ -428,11 +454,13 @@ public struct AgentSimulationSession {
                 state.state = tickTransition.state
                 survivalMemory = nil
             }
-            if !mortalityWasEnabled { state.ticksAlive += 1 }
+            if !mortalityWasEnabled && dependentCareState == nil { state.ticksAlive += 1 }
 
             appendMemories(memoriesAdded, to: &state.memory)
             if let survivalMemory {
-                if !mortalityWasEnabled { appendMemory(survivalMemory, to: &state.memory) }
+                if !mortalityWasEnabled && dependentCareState == nil {
+                    appendMemory(survivalMemory, to: &state.memory)
+                }
                 memoriesAdded.append(survivalMemory)
             }
             var worldPerceptionEffect: AgentWorldPerceptionEffect?
@@ -470,47 +498,104 @@ public struct AgentSimulationSession {
             )
             state.nearbyObservationCount += state.nearbyAgents.count
 
+            let careStage = dependentCareState.flatMap { _ in
+                lifecycleState?.members.first { $0.agentID.rawValue == id }?.currentStage
+            }
+            if careStage == .newborn {
+                state.currentGoal = AgentGoal(
+                    kind: .idle, reason: "newborn dependent; autonomous cognition disabled",
+                    startedAtTick: state.currentGoal.startedAtTick, urgency: 0
+                )
+                state.lastAction = nil
+                let passiveAction = AgentAction(
+                    name: "dependent_wait", reason: "newborn dependent", tick: nextTick
+                )
+                let passiveEffect = AgentActionEffect(
+                    action: passiveAction.name, effect: "no autonomous action", tick: nextTick,
+                    hungerBefore: state.needs.hunger, hungerAfter: state.needs.hunger,
+                    fatigueBefore: state.needs.fatigue, fatigueAfter: state.needs.fatigue,
+                    curiosityBefore: state.needs.curiosity,
+                    curiosityAfter: state.needs.curiosity,
+                    safetyBefore: state.needs.safety, safetyAfter: state.needs.safety,
+                    fearBefore: state.fear, fearAfter: state.fear,
+                    stateBefore: state.state, stateAfter: state.state
+                )
+                statesById[id] = state
+                results.append(AgentSessionAgentTickResult(
+                    agentId: id, goalChange: nil, action: passiveAction,
+                    actionEffect: passiveEffect, memoriesAdded: memoriesAdded,
+                    worldPerceptionEffect: worldPerceptionEffect,
+                    snapshot: AgentSnapshot(
+                        state: state,
+                        recentMemoryLimit: configuration.recentMemorySnapshotLimit,
+                        resourceReservation: reservation(for: state),
+                        survivalEnabled: survivalEnabled
+                    ),
+                    cognitionPerformed: false
+                ))
+                continue
+            }
+
             state.goalSelectionCount += 1
-            let goalChange = AgentCognitiveTransitions.selectGoal(AgentGoalSelectionInput(
-                tick: nextTick,
-                health: state.health,
-                fear: state.fear,
-                needs: state.needs,
-                hasNearbyAgents: !state.nearbyAgents.isEmpty,
-                hasCollectibleAdjacentResource: state.activeResourceTarget != nil
-                    && cooperationPlan.proposal?.task.issuerID.rawValue != id,
-                hasInventoryCapacity: state.activeResourceTarget.map {
-                    state.resourceInventory.canAdd($0.resource)
-                } ?? ((cooperationEligibleResources(for: state)
-                    ?? constructionEligibleResources(for: state))?.contains(where: {
-                    state.resourceInventory.canAdd($0)
-                }) == true),
-                hasCommittedResourceTask: (((state.currentGoal.kind == .collectResource
-                    || state.currentGoal.kind == .satisfyHunger)
-                    && reservation(for: state)?.agentId == id)
-                    || constructionEligibleResources(for: state)?.isEmpty == false)
-                    && cooperationPlan.proposal?.task.issuerID.rawValue != id,
-                shouldDeliverResources: shouldDeliverResources(state),
-                shouldBuildShelter: shouldBuildShelter(state),
-                hasConstructionTask: hasActiveConstructionTask(state)
-                    || (hasActiveCooperationTask(state) && !cooperationTransitionPending),
-                canShareInformation: socialPlan.shareIntentsByAgentId[id] != nil,
-                canVerifySocialInformation: socialPlan.verificationBeliefsByAgentId[id] != nil,
-                hasActiveCooperationTask: hasActiveCooperationTask(state)
-                    && !cooperationTransitionPending,
-                shouldConsiderCooperationOffer: shouldConsiderCooperationOffer(state)
-                    && !cooperationTransitionPending,
-                canAcceptCooperationOffer: canAcceptCooperationOffer(state)
-                    && !cooperationTransitionPending,
-                isMigrating: isMigratingAgent(id),
-                currentGoalKind: state.currentGoal.kind,
-                survivalEnabled: survivalEnabled,
-                hungryThreshold: configuration.survivalConfiguration.hungryThreshold,
-                criticalHungerThreshold: configuration.survivalConfiguration.criticalHungerThreshold,
-                hungerRecoveryThreshold: configuration.survivalConfiguration.hungerRecoveryThreshold,
-                fatigueThreshold: configuration.survivalConfiguration.fatigueThreshold,
-                fatigueRecoveryThreshold: configuration.survivalConfiguration.fatigueRecoveryThreshold
-            ))
+            let goalChange: AgentGoalChange?
+            if let forcedKind = dependentCareForcedGoal(for: state.agentID, stage: careStage) {
+                if state.currentGoal.kind == forcedKind {
+                    goalChange = nil
+                } else {
+                    goalChange = AgentGoalChange(
+                        from: state.currentGoal.kind, to: forcedKind,
+                        goal: AgentGoal(
+                            kind: forcedKind,
+                            reason: forcedKind == .provideDependentCare
+                                ? "urgent dependent care engagement"
+                                : "juvenile capability policy",
+                            startedAtTick: nextTick,
+                            urgency: forcedKind == .provideDependentCare ? 100 : 20
+                        )
+                    )
+                }
+            } else {
+                goalChange = AgentCognitiveTransitions.selectGoal(AgentGoalSelectionInput(
+                    tick: nextTick,
+                    health: state.health,
+                    fear: state.fear,
+                    needs: state.needs,
+                    hasNearbyAgents: !state.nearbyAgents.isEmpty,
+                    hasCollectibleAdjacentResource: state.activeResourceTarget != nil
+                        && cooperationPlan.proposal?.task.issuerID.rawValue != id,
+                    hasInventoryCapacity: state.activeResourceTarget.map {
+                        state.resourceInventory.canAdd($0.resource)
+                    } ?? ((cooperationEligibleResources(for: state)
+                        ?? constructionEligibleResources(for: state))?.contains(where: {
+                        state.resourceInventory.canAdd($0)
+                    }) == true),
+                    hasCommittedResourceTask: (((state.currentGoal.kind == .collectResource
+                        || state.currentGoal.kind == .satisfyHunger)
+                        && reservation(for: state)?.agentId == id)
+                        || constructionEligibleResources(for: state)?.isEmpty == false)
+                        && cooperationPlan.proposal?.task.issuerID.rawValue != id,
+                    shouldDeliverResources: shouldDeliverResources(state),
+                    shouldBuildShelter: shouldBuildShelter(state),
+                    hasConstructionTask: hasActiveConstructionTask(state)
+                        || (hasActiveCooperationTask(state) && !cooperationTransitionPending),
+                    canShareInformation: socialPlan.shareIntentsByAgentId[id] != nil,
+                    canVerifySocialInformation: socialPlan.verificationBeliefsByAgentId[id] != nil,
+                    hasActiveCooperationTask: hasActiveCooperationTask(state)
+                        && !cooperationTransitionPending,
+                    shouldConsiderCooperationOffer: shouldConsiderCooperationOffer(state)
+                        && !cooperationTransitionPending,
+                    canAcceptCooperationOffer: canAcceptCooperationOffer(state)
+                        && !cooperationTransitionPending,
+                    isMigrating: isMigratingAgent(id),
+                    currentGoalKind: state.currentGoal.kind,
+                    survivalEnabled: survivalEnabled,
+                    hungryThreshold: configuration.survivalConfiguration.hungryThreshold,
+                    criticalHungerThreshold: configuration.survivalConfiguration.criticalHungerThreshold,
+                    hungerRecoveryThreshold: configuration.survivalConfiguration.hungerRecoveryThreshold,
+                    fatigueThreshold: configuration.survivalConfiguration.fatigueThreshold,
+                    fatigueRecoveryThreshold: configuration.survivalConfiguration.fatigueRecoveryThreshold
+                ))
+            }
             if let goalChange {
                 state.currentGoal = goalChange.goal
                 state.goalChangeCount += 1
@@ -528,6 +613,18 @@ public struct AgentSimulationSession {
                 tick: nextTick
             )
 
+            let careEngagement = activeCareEngagement(for: state.agentID)
+            let careTargetPosition = careEngagement.flatMap {
+                statesById[$0.dependentID.rawValue]?.position
+            }
+            let careActionName: String? = careEngagement.map {
+                switch $0.kind {
+                case .provideFood: return "provide_food"
+                case .supervise: return "supervise_dependent"
+                case .assistReturnHome: return "assist_return_home"
+                case .approachDependent: return "supervise_dependent"
+                }
+            }
             let baseAction = AgentActionDecider.decide(AgentActionDecisionInput(
                 agentId: id,
                 tick: nextTick,
@@ -552,7 +649,11 @@ public struct AgentSimulationSession {
                     for: id
                 )?.resource,
                 canAcceptSharedTask: canAcceptCooperationOffer(state)
-                    && !cooperationTransitionPending
+                    && !cooperationTransitionPending,
+                careTarget: careTargetPosition,
+                careActionName: careActionName,
+                careInteractionDistance: dependentCareState?.configuration
+                    .careInteractionDistance ?? 1
             ))
             let retrievedMemories = AgentFeedbackLoop.retrieveMovementMemories(
                 memory: state.memory,
@@ -666,6 +767,7 @@ public struct AgentSimulationSession {
                     )
                 }
             }
+            guard result.cognitionPerformed else { continue }
             var actionCause = perceptionEvent?.eventID
             if let goalChange = result.goalChange {
                 let goalEvent = try recordCausalEvent(
@@ -712,6 +814,8 @@ public struct AgentSimulationSession {
             payload: .lifecycle(status: "tickCompleted", agentCount: results.count),
             summary: "tick \(tick) completed agents=\(results.count)"
         )
+        try validateHouseholdCrossDomainIfEnabled()
+        try validateDependentCareCrossDomainIfEnabled()
         return AgentSessionTickResult(tick: tick, agents: results)
     }
 
