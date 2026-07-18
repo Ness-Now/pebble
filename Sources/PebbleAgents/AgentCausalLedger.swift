@@ -132,6 +132,11 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case kinshipInitialized
     case kinshipPersonRegistered
     case kinshipParentageRecorded
+    case householdsInitialized
+    case householdCreated
+    case householdMembershipStarted
+    case householdMembershipEnded
+    case householdDissolved
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -150,6 +155,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case mortalityTransition
     case lifecycleTransition
     case kinshipTransition
+    case householdTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -358,6 +364,18 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         digest: String,
         status: String
     )
+    case household(
+        householdID: String?,
+        ordinal: Int?,
+        settlementID: String?,
+        agentID: String?,
+        residenceAnchor: AgentPosition?,
+        householdCount: Int,
+        membershipCount: Int,
+        reason: String?,
+        status: String,
+        digest: String
+    )
 
     var canonicalText: String {
         switch self {
@@ -498,6 +516,15 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
             return "kinship|\(childID ?? "none")|\(birthID ?? "none")|"
                 + "\(parentIDs.joined(separator: ","))|\(personCount)|\(parentageCount)|"
                 + "\(digest)|\(status)"
+        case let .household(
+            householdID, ordinal, settlementID, agentID, residenceAnchor,
+            householdCount, membershipCount, reason, status, digest
+        ):
+            let anchor = residenceAnchor.map { "\($0.x),\($0.y),\($0.z)" } ?? "none"
+            return "household|\(householdID ?? "none")|"
+                + "\(ordinal.map(String.init) ?? "none")|\(settlementID ?? "none")|"
+                + "\(agentID ?? "none")|\(anchor)|\(householdCount)|"
+                + "\(membershipCount)|\(reason ?? "none")|\(status)|\(digest)"
         }
     }
 }
@@ -639,7 +666,12 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.birthFinalized, .birth),
              (.kinshipInitialized, .kinship),
              (.kinshipPersonRegistered, .kinship),
-             (.kinshipParentageRecorded, .kinship):
+             (.kinshipParentageRecorded, .kinship),
+             (.householdsInitialized, .household),
+             (.householdCreated, .household),
+             (.householdMembershipStarted, .household),
+             (.householdMembershipEnded, .household),
+             (.householdDissolved, .household):
             matches = true
         default:
             matches = false
