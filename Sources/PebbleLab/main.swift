@@ -43,6 +43,9 @@ if options.scenario == "households_and_membership_smoke" {
 if options.scenario == "dependent_care_lifecycle_smoke" {
     runDependentCareLifecycleSmoke(options)
 }
+if options.scenario == "practice_based_skills_task_matching_smoke" {
+    runPracticeBasedSkillsTaskMatchingSmoke(options)
+}
 
 let isMultiAgentMovementFixtureScenario = options.scenario
     == "multi_agent_movement_fixture_smoke"

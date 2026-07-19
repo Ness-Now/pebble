@@ -23,7 +23,7 @@ seule, sans grossesse, famille, génétique ni mutation du World.
 
 ## Prérequis et lancement
 
-Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population`, `--multiscale`, `--ecology`, `--mortality`, `--reproduction`, `--kinship`, `--households` et `--care` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07, métriques settlement CIV-08, écologie alimentaire CIV-09, sortie de population CIV-10, âge/maturité/reproduction bornée CIV-11, parenté durable CIV-12A, appartenance household CIV-12B et dependent care final de CIV-12. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
+Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population`, `--multiscale`, `--ecology`, `--mortality`, `--reproduction`, `--kinship`, `--households`, `--care` et `--skills` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07, métriques settlement CIV-08, écologie alimentaire CIV-09, sortie de population CIV-10, âge/maturité/reproduction bornée CIV-11, parenté durable CIV-12A, appartenance household CIV-12B, dependent care final de CIV-12 et compétences pratiques NEXT-1. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
 
 Depuis la racine du dépôt :
 
@@ -407,8 +407,32 @@ care n'est revendiqué.
 
 `CIV-12 — Kinship, Households and Dependent Care V1` est terminé localement.
 Cette V1 n'introduit ni adoption, mariage, propriété, héritage, stock household,
-enseignement, compétence ou institution de care. Prochaine étape : recalage
-obligatoire de la roadmap depuis l'état réel avant toute nouvelle verticale.
+enseignement, compétence ou institution de care. Le recalage post-CIV-12 a
+ensuite désigné NEXT-1 comme première verticale prospective.
+
+## NEXT-1 — Compétences pratiques et task matching V1
+
+Le mode `scripts/verify-pebblelab-live.sh --skills` active exactement
+`PEBBLELAB_APP_AGENTS_SKILLS=1` avec les gates matérielles nécessaires dans un
+monde jetable seed 46. `/lab skills on` crée explicitement le schéma v10 sans
+rétrocrédit ; `/lab skills status` expose profils, unités, niveaux dérivés et
+digest sans devenir une autorité.
+
+La preuve produit de vraies récoltes et livraisons, obtient des historiques
+individuels différents, puis fait sélectionner `agent_1` comme helper de la
+tâche de construction parce que son `materialHandling` est supérieur après les
+contraintes d'éligibilité. Le checkpoint v10 est chargé dans un nouveau
+processus et comparé byte à byte à un second run indépendant. Le harnais
+jetable force aussi, après pose World et crédit construction dans la candidate,
+une défaillance avant publication : bloc, session, ressources, preuves de
+pratique, ledger, recorder, probes et index World sont restaurés, puis le même
+run termine réellement la construction. Les runs positifs ont
+`runtimeErrors=0`; le run d'échec a l'unique erreur contrôlée attendue.
+
+`NEXT-1 — Practice-Based Skills and Task Matching V1` est terminé localement.
+Il n'ajoute ni enseignement, profession, aptitude innée, bonus de rendement,
+agriculture, propriété, connaissance ou culture. Prochaine verticale
+prospective : `NEXT-2 — Demonstration, Teaching and Apprenticeship V1`.
 
 ## Arrêt propre et inspection
 

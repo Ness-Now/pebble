@@ -31,6 +31,11 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "dependent-car
     print("\n\(passed) passed, \(failed) failed")
     exit(failed > 0 ? 1 : 0)
 }
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "skills" {
+    runPebbleAgentsSkillSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
 
 // ---------------------------------------------------------------------------
 section("random (vs goldens)")
@@ -2119,6 +2124,7 @@ runPebbleAgentsAgeMaturityReproductionSmoke()
 runPebbleAgentsDurableKinshipSmoke()
 runPebbleAgentsHouseholdMembershipSmoke()
 runPebbleAgentsDependentCareSmoke()
+runPebbleAgentsSkillSmoke()
 
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)

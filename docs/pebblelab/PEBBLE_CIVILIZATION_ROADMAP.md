@@ -51,9 +51,13 @@ Le point de départ est le HEAD post-K :
   partagé acquis sous gate explicite avec checkpoint/replay v8 ; dependent care
   matériel et comportemental acquis sous gate explicite avec checkpoint/replay
   v9, politique de capacités par stage et alimentation conservée depuis
-  l'inventaire du caregiver ou le camp stock existant.
+  l'inventaire du caregiver ou le camp stock existant ;
+- compétences pratiques individuelles acquises par succès matériels causaux
+  dans quatre domaines bornés (`foraging`, `materialHandling`, `construction`,
+  `caregiving`) et task matching coopératif réellement influencé par la maîtrise,
+  avec checkpoint/replay v10 sous gate explicite.
 
-Le langage libre, le forwarding, les professions, l'économie du travail, la
+Le langage libre, le forwarding, l'enseignement, les professions, l'économie du travail, la
 persistance complète des agents, le replay complet du World, la grande
 population, le vieillissement physique, les maladies, les familles,
 l'émigration et le cycle de vie complet ne sont pas acquis.
@@ -180,8 +184,19 @@ v8 restent inchangées lorsque la gate care est désactivée.
 
 `CIV-12 — Kinship, Households and Dependent Care V1` est terminé localement.
 Il n'introduit ni adoption, mariage, propriété, stock household, enseignement,
-compétences ou héritage. Prochaine étape : recalage obligatoire de la roadmap
-depuis l'état réel avant toute nouvelle verticale.
+compétences ou héritage.
+
+`NEXT-1 — Practice-Based Skills and Task Matching V1` est terminé et validé
+localement. Les niveaux sont dérivés de succès matériels réellement publiés,
+sans crédit rétroactif, XP temporel, talent inné, profession ni bonus de
+rendement. Les historiques divergents influencent une vraie sélection de helper
+après les contraintes d'éligibilité et de sécurité. Le schéma v10 persiste les
+totaux et preuves bornées ; restart et replay reproduisent les causes sans API
+publique d'ajout d'XP, tandis que les versions v1 à v9 restent inchangées avec
+la gate skills désactivée.
+
+Prochaine verticale prospective :
+`NEXT-2 — Demonstration, Teaching and Apprenticeship V1`.
 
 ## Grands programmes ultérieurs
 

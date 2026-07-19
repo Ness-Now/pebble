@@ -197,6 +197,7 @@ extension PebbleAgentController {
         maxObservedMemoryCount = 0
         maxObservedDistanceFromHome = 0
         kinshipLateFailureProofInjected = false
+        skillLateFailureProofInjected = false
     }
 
     @discardableResult

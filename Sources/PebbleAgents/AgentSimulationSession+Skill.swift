@@ -473,20 +473,68 @@ extension AgentSimulationSession {
                 _, _, agentID, status, yieldBefore, yieldAfter,
                 inventoryBefore, inventoryAfter
             )):
-                return agentID == record.agentID.rawValue
+                return event.origin == .ecologyTransition && event.subjectID == nil
+                    && event.operationID != nil
+                    && agentID == record.agentID.rawValue
                     && status == record.sourceStatus && status == "succeeded"
                     && yieldAfter == yieldBefore - 1
                     && inventoryAfter == inventoryBefore + 1
             case let (.materialHandling, .delivery, .operation(status, _)):
-                return status == record.sourceStatus && status == "succeeded"
+                return event.origin == .worldOutcome && event.subjectID == nil
+                    && event.operationID != nil
+                    && status == record.sourceStatus && status == "succeeded"
             case let (.construction, .constructionPlacement, .operation(status, _)):
-                return status == record.sourceStatus && status == "succeeded"
+                return event.origin == .worldOutcome && event.subjectID == nil
+                    && event.operationID != nil
+                    && status == record.sourceStatus && status == "succeeded"
             case let (.caregiving, .careProvided, .dependentCare(
-                _, caregiverID, _, _, needKind, _, _, status, _, quantity, _
+                dependentID, caregiverID, _, _, needKind, _, _, status, _, quantity, _
             )):
-                return caregiverID == record.agentID.rawValue
+                return event.origin == .dependentCareTransition
+                    && event.operationID == nil
+                    && event.subjectID?.rawValue == dependentID
+                    && caregiverID == record.agentID.rawValue
                     && needKind == "nourishment" && status == record.sourceStatus
                     && status == "provided" && quantity == 1
+                    && event.causes.count == 1
+            default:
+                return false
+            }
+        }
+        func sourceMatchesProfile(
+            _ event: AgentCausalEvent,
+            profile: AgentSkillProfile,
+            practice: AgentSkillDomainPractice
+        ) -> Bool {
+            guard event.simulationTick.rawValue == practice.lastPracticeTick,
+                  event.actorID == profile.agentID else { return false }
+            switch (practice.domain, event.kind, event.payload) {
+            case let (.foraging, .ecologyForageResolved, .ecologyForage(
+                _, _, agentID, status, yieldBefore, yieldAfter,
+                inventoryBefore, inventoryAfter
+            )):
+                return event.origin == .ecologyTransition && event.subjectID == nil
+                    && event.operationID != nil
+                    && agentID == profile.agentID.rawValue && status == "succeeded"
+                    && yieldAfter == yieldBefore - 1
+                    && inventoryAfter == inventoryBefore + 1
+            case let (.materialHandling, .delivery, .operation(status, _)):
+                return event.origin == .worldOutcome && event.subjectID == nil
+                    && event.operationID != nil
+                    && status == "succeeded"
+            case let (.construction, .constructionPlacement, .operation(status, _)):
+                return event.origin == .worldOutcome && event.subjectID == nil
+                    && event.operationID != nil
+                    && status == "succeeded"
+            case let (.caregiving, .careProvided, .dependentCare(
+                dependentID, caregiverID, _, _, needKind, _, _, status, _, quantity, _
+            )):
+                return event.origin == .dependentCareTransition
+                    && event.operationID == nil
+                    && event.subjectID?.rawValue == dependentID
+                    && caregiverID == profile.agentID.rawValue
+                    && needKind == "nourishment" && status == "provided"
+                    && quantity == 1 && event.causes.count == 1
             default:
                 return false
             }
@@ -502,8 +550,7 @@ extension AgentSimulationSession {
         for profile in sortedProfiles {
             for practice in profile.domainPractices {
                 try validateReference(practice.lastSourceSuccessEventID) { event in
-                    event.actorID == profile.agentID
-                        && event.simulationTick.rawValue == practice.lastPracticeTick
+                    sourceMatchesProfile(event, profile: profile, practice: practice)
                 }
                 try validateReference(practice.lastSkillPracticeEventID) { event in
                     guard event.kind == .skillPracticeCredited,

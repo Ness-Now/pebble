@@ -85,6 +85,7 @@ final class PebbleAgentController {
     var replayBaseCheckpointName: AgentCheckpointName?
     var isAdvancingSession = false
     var kinshipLateFailureProofInjected = false
+    var skillLateFailureProofInjected = false
 
     let environment = ProcessInfo.processInfo.environment
     var featureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS"] == "1" }

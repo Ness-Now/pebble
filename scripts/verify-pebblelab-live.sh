@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build|--social|--physical|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build|--social|--physical|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -44,6 +44,7 @@ Options:
   --kinship Run the reproduction workflow with explicit kinship activation and v7 restart.
   --households Run the kinship workflow with explicit household activation and v8 restart.
   --care Run the household workflow with dependent care, material nourishment, and v9 restart.
+  --skills Run causal material practice, skill-ranked task matching, v10 restart, and rollback.
   --help     Show this help and exit.
 EOF
 }
@@ -99,6 +100,7 @@ for option in "$@"; do
         --kinship) MODE="kinship"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --households) MODE="households"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --care) MODE="care"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --skills) MODE="skills"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --help|-h) usage; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$option" >&2; usage >&2; exit 2 ;;
     esac
@@ -120,7 +122,65 @@ LIFECYCLE_GATE=0
 KINSHIP_GATE=0
 HOUSEHOLD_GATE=0
 CARE_GATE=0
-if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ] \
+SKILL_GATE=0
+if [ "$MODE" = "skills" ]; then
+    WORLD_SEED="46"
+    NATURAL_GATE=1
+    BUILD_GATE=1
+    SOCIAL_GATE=1
+    PHYSICAL_GATE=1
+    COOPERATION_GATE=1
+    PERSISTENCE_GATE=1
+    POPULATION_GATE=1
+    MULTISCALE_GATE=1
+    ECOLOGY_GATE=1
+    LIFECYCLE_GATE=1
+    SKILL_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-Skills-46"
+    CAPTURE_NAME="practice-based-skills-proof.png"
+    BUILD_ANCHOR_X=${PEBBLELAB_BUILD_ANCHOR_X:-14}
+    BUILD_ANCHOR_Z=${PEBBLELAB_BUILD_ANCHOR_Z:--21}
+    BUILD_ANCHOR_Y=${PEBBLELAB_BUILD_ANCHOR_Y:-66}
+    BUILD_PLAYER_Y=$((BUILD_ANCHOR_Y + 3))
+    SKILLS_PRACTICE_TICK=62
+    SKILLS_TASK_TICK=64
+    SKILLS_FINAL_TICK=67
+    SKILLS_WORLD_READY="/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp $BUILD_ANCHOR_X $BUILD_ANCHOR_Y $BUILD_ANCHOR_Z"
+    SKILLS_PHASE1_COMMANDS="$SKILLS_WORLD_READY|/lab start;/tp $BUILD_ANCHOR_X $BUILD_PLAYER_Y $BUILD_ANCHOR_Z;/lab pause;/lab movement off;/lab population on;/lab settlement on;/lab lifecycle on;/lab skills on;/lab focus agent_2;/lab follow agent_2;/lab build setup;/lab migration admit;/lab focus agent_3;/lab follow agent_3;/lab movement on"
+    skills_step=0
+    while [ "$skills_step" -lt 7 ]; do
+        SKILLS_PHASE1_COMMANDS="$SKILLS_PHASE1_COMMANDS;/lab step"
+        skills_step=$((skills_step + 1))
+    done
+    SKILLS_PHASE1_COMMANDS="$SKILLS_PHASE1_COMMANDS;/lab ecology on;/lab survival on;/lab focus agent_0;/lab follow agent_0"
+    skills_step=0
+    while [ "$skills_step" -lt 7 ]; do
+        SKILLS_PHASE1_COMMANDS="$SKILLS_PHASE1_COMMANDS;/lab step"
+        skills_step=$((skills_step + 1))
+    done
+    SKILLS_PHASE1_COMMANDS="$SKILLS_PHASE1_COMMANDS;/lab survival off;/lab economy auto on"
+    skills_step=0
+    while [ "$skills_step" -lt 46 ]; do
+        SKILLS_PHASE1_COMMANDS="$SKILLS_PHASE1_COMMANDS;/lab step"
+        skills_step=$((skills_step + 1))
+    done
+    SKILLS_PHASE1_COMMANDS="$SKILLS_PHASE1_COMMANDS;/lab economy auto off;/lab ecology off;/lab step;/lab step;/lab skills status;/lab focus agent_2;/lab follow agent_2;/lab build auto on;/lab social on;/lab physical on;/lab cooperation on"
+    skills_step=0
+    while [ "$skills_step" -lt 5 ]; do
+        SKILLS_PHASE1_COMMANDS="$SKILLS_PHASE1_COMMANDS;/lab step"
+        skills_step=$((skills_step + 1))
+    done
+    SKILLS_PHASE1_COMMANDS="$SKILLS_PHASE1_COMMANDS;/lab movement off;/lab economy auto off;/lab skills status;/lab cooperation status;/lab checkpoint save skills-v10;/lab checkpoint status;/lab causality tail 20;/lab status"
+    SKILLS_RESTART_COMMANDS="$SKILLS_WORLD_READY|/lab start;/tp $BUILD_ANCHOR_X $BUILD_PLAYER_Y $BUILD_ANCHOR_Z;/lab checkpoint load skills-v10;/lab skills status;/lab cooperation status;/lab checkpoint status;/lab causality tail 20;/lab status"
+    SKILLS_FAILURE_COMMANDS="$SKILLS_WORLD_READY|/lab start;/tp $BUILD_ANCHOR_X $BUILD_PLAYER_Y $BUILD_ANCHOR_Z;/lab pause;/lab movement off;/lab population on;/lab lifecycle on;/lab skills on;/lab focus agent_2;/lab follow agent_2;/lab natural on;/lab build setup;/lab economy auto on;/lab build auto on;/lab social on;/lab physical on;/lab cooperation on;/lab movement on"
+    skills_step=0
+    while [ "$skills_step" -lt 180 ]; do
+        SKILLS_FAILURE_COMMANDS="$SKILLS_FAILURE_COMMANDS;/lab step"
+        skills_step=$((skills_step + 1))
+    done
+    SKILLS_FAILURE_COMMANDS="$SKILLS_FAILURE_COMMANDS;/lab skills status;/lab build status;/lab causality status;/lab status"
+    LAB_COMMANDS="$SKILLS_PHASE1_COMMANDS"
+elif [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ] \
     || [ "$MODE" = "households" ] || [ "$MODE" = "care" ]; then
     WORLD_SEED="46"
     PERSISTENCE_GATE=1
@@ -514,6 +574,7 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_KINSHIP=%s\n' "$KINSHIP_GATE"
     printf '  PEBBLELAB_APP_AGENTS_HOUSEHOLDS=%s\n' "$HOUSEHOLD_GATE"
     printf '  PEBBLELAB_APP_AGENTS_CARE=%s\n' "$CARE_GATE"
+    printf '  PEBBLELAB_APP_AGENTS_SKILLS=%s\n' "$SKILL_GATE"
     printf '  PEBBLELAB_DISPOSABLE_WORLD_PROOF=1\n'
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
     if [ "$MODE" = "build" ]; then
@@ -535,7 +596,11 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "care" ]; then
+    if [ "$MODE" = "skills" ]; then
+        printf '  2. Confirm explicit v9 to v10 activation grants no retroactive practice.\n'
+        printf '  3. Confirm real forage/delivery practice changes one cooperative helper selection.\n'
+        printf '  4. Confirm process restart, independent control, and late physical rollback are exact.\n'
+    elif [ "$MODE" = "care" ]; then
         printf '  2. Confirm explicit v8 to v9 activation and deterministic caregiver assignment.\n'
         printf '  3. Confirm agent_4 remains passive while its caregiver moves and debits real food.\n'
         printf '  4. Confirm process restart preserves care, households, resources, and digests exactly.\n'
@@ -600,7 +665,7 @@ print_plan() {
         && [ "$MODE" != "multiscale" ] && [ "$MODE" != "ecology" ] \
         && [ "$MODE" != "mortality" ] && [ "$MODE" != "reproduction" ] \
         && [ "$MODE" != "kinship" ] && [ "$MODE" != "households" ] \
-        && [ "$MODE" != "care" ]; then
+        && [ "$MODE" != "care" ] && [ "$MODE" != "skills" ]; then
         printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
     fi
     printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
@@ -2368,6 +2433,170 @@ if [ "$MODE" = "population" ]; then
     printf 'Final durable digest: %s\n' "$LIVE_DIGEST"
     printf 'Population digest: %s\n' "$LIVE_POPULATION_DIGEST"
     printf 'Causal digest: %s\n' "$LIVE_CAUSAL_DIGEST"
+    printf 'Retained isolated session: %s\n' "$SESSION_ROOT"
+    exit 0
+fi
+
+if [ "$MODE" = "skills" ]; then
+    cd "$ROOT_DIR"
+    swift build -c release --product Pebble
+    PEBBLE_BINARY="$ROOT_DIR/.build/release/Pebble"
+    [ -x "$PEBBLE_BINARY" ] || fail "Release Pebble binary missing: $PEBBLE_BINARY"
+
+    PHASE1_TRACE="$SESSION_ROOT/skills-phase1.log"
+    RESTART_TRACE="$SESSION_ROOT/skills-restart.log"
+    FAILURE_HOME="$SESSION_ROOT/skills-failure-home"
+    FAILURE_TRACE="$SESSION_ROOT/skills-late-failure.log"
+    CONTROL_HOME="$SESSION_ROOT/skills-control-home"
+    CONTROL_TRACE="$SESSION_ROOT/skills-control.log"
+
+    run_skills_app() {
+        run_home=$1
+        run_trace=$2
+        run_commands=$3
+        create_world=$4
+        command_world_tick=$5
+        late_failure=${6:-0}
+        if [ "$create_world" -eq 1 ]; then
+            CFFIXED_USER_HOME="$run_home" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLE_NEWWORLD="$WORLD_SEED" \
+            PEBBLE_NEWWORLD_NAME="$WORLD_NAME" \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_NATURAL=1 \
+            PEBBLELAB_APP_AGENTS_BUILD=1 \
+            PEBBLELAB_APP_AGENTS_SOCIAL=1 \
+            PEBBLELAB_APP_AGENTS_PHYSICAL=1 \
+            PEBBLELAB_APP_AGENTS_COOPERATION=1 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_APP_AGENTS_POPULATION=1 \
+            PEBBLELAB_APP_AGENTS_MULTISCALE=1 \
+            PEBBLELAB_APP_AGENTS_ECOLOGY=1 \
+            PEBBLELAB_APP_AGENTS_LIFECYCLE=1 \
+            PEBBLELAB_APP_AGENTS_SKILLS=1 \
+            PEBBLELAB_DISPOSABLE_SKILL_LATE_FAILURE_PROOF="$late_failure" \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT="${run_trace%.log}.png" \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        else
+            CFFIXED_USER_HOME="$run_home" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_NATURAL=1 \
+            PEBBLELAB_APP_AGENTS_BUILD=1 \
+            PEBBLELAB_APP_AGENTS_SOCIAL=1 \
+            PEBBLELAB_APP_AGENTS_PHYSICAL=1 \
+            PEBBLELAB_APP_AGENTS_COOPERATION=1 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_APP_AGENTS_POPULATION=1 \
+            PEBBLELAB_APP_AGENTS_MULTISCALE=1 \
+            PEBBLELAB_APP_AGENTS_ECOLOGY=1 \
+            PEBBLELAB_APP_AGENTS_LIFECYCLE=1 \
+            PEBBLELAB_APP_AGENTS_SKILLS=1 \
+            PEBBLELAB_DISPOSABLE_SKILL_LATE_FAILURE_PROOF="$late_failure" \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT="${run_trace%.log}.png" \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        fi
+        if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
+            fail "Pebble process remained after skills phase: $run_trace"
+        fi
+    }
+
+    printf '\nSkills phase 1: material practice, ranked matching, and v10 checkpoint.\n'
+    run_skills_app "$SESSION_HOME" "$PHASE1_TRACE" "$SKILLS_PHASE1_COMMANDS" 1 100 0
+    TRACE_PATH="$PHASE1_TRACE"
+    require_trace 'skills tick=0 profiles=0 credits=0 units=0 profilesState= digest=[0-9a-f]+' 'explicit zero-retroactive v10 activation'
+    require_trace "skills tick=$SKILLS_PRACTICE_TICK profiles=2 credits=10 units=10 profilesState=agent_0:foraging=3/practiced,materialHandling=1/novice,construction=0/untrained,caregiving=0/untrained;agent_1:foraging=4/practiced,materialHandling=2/novice,construction=0/untrained,caregiving=0/untrained digest=[0-9a-f]+" 'real unequal material practice before matching'
+    require_trace "cooperation task tick=$SKILLS_TASK_TICK id=task-.* issuer=agent_2 helper=agent_1 resource=stone requested=3 .*status=draft .*reason=direct_builder_demand_and_resource_fact;_skill=materialHandling:2/novice" 'real skill-ranked cooperative task'
+    require_trace "checkpoint saved name=skills-v10 .*tick=$SKILLS_FINAL_TICK .*restartSafe=1 " 'restart-safe v10 checkpoint'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=4 ' 'clean skills phase-one shutdown'
+    reject_trace 'skills late-failure|runtime error|worldMutation=(block|world)' 'unexpected failure or World mutation in safe phase'
+
+    SKILLS_ROOT="$SESSION_HOME/Library/Application Support/Pebble/PebbleLabAgents"
+    SKILLS_MANIFEST=$(/usr/bin/find "$SKILLS_ROOT" -type f -path '*/checkpoints/skills-v10/manifest.json' -print -quit)
+    SKILLS_SESSION=$(/usr/bin/find "$SKILLS_ROOT" -type f -path '*/checkpoints/skills-v10/session.json' -print -quit)
+    [ -n "$SKILLS_MANIFEST" ] && [ -n "$SKILLS_SESSION" ] \
+        || fail "skills v10 checkpoint bundle missing"
+    /usr/bin/grep -q '"schemaVersion":10' "$SKILLS_SESSION" \
+        || fail "skills checkpoint is not schema v10"
+    /usr/bin/grep -q '"restartSafe":true' "$SKILLS_MANIFEST" \
+        || fail "skills checkpoint is not restart-safe"
+    PHASE1_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=skills-v10 .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE1_TRACE" | /usr/bin/tail -1)
+    PHASE1_SKILL_DIGEST=$(/usr/bin/sed -n "s/.*skills tick=$SKILLS_FINAL_TICK .* digest=\\([0-9a-f]*\\)$/\\1/p" "$PHASE1_TRACE" | /usr/bin/tail -1)
+    PHASE1_SIM=$(/usr/bin/sed -n 's/.*checkpoint saved name=skills-v10 .* simulation=\([^ ]*\) digest=.*/\1/p' "$PHASE1_TRACE" | /usr/bin/tail -1)
+    [ -n "$PHASE1_DIGEST" ] && [ -n "$PHASE1_SKILL_DIGEST" ] \
+        && [ -n "$PHASE1_SIM" ] || fail "skills phase-one digest extraction failed"
+
+    persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
+    case "$persisted_world_tick" in
+        ''|*[!0-9]*) fail "invalid persisted skills World tick: $persisted_world_tick" ;;
+    esac
+    restart_command_tick=$((persisted_world_tick + 100))
+    printf '\nSkills phase 2: real process restart.\n'
+    run_skills_app "$SESSION_HOME" "$RESTART_TRACE" "$SKILLS_RESTART_COMMANDS" 0 "$restart_command_tick" 0
+    TRACE_PATH="$RESTART_TRACE"
+    require_trace "checkpoint loaded name=skills-v10 .*tick=$SKILLS_FINAL_TICK simulation=$PHASE1_SIM digest=$PHASE1_DIGEST .*restartSafe=1 probes=4 paused=1" 'exact v10 load in a new process'
+    require_trace "skills tick=$SKILLS_FINAL_TICK .*digest=$PHASE1_SKILL_DIGEST" 'skill profiles and digest survive restart'
+    require_trace 'cooperation status gate=enabled enabled=yes .*helper=agent_1 resource=stone requested=3 .*status=draft' 'same ranked task survives restart'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=4 ' 'clean skills restart shutdown'
+
+    printf '\nSkills late failure: valid construction candidate plus skill credit, physical rollback.\n'
+    run_skills_app "$FAILURE_HOME" "$FAILURE_TRACE" "$SKILLS_FAILURE_COMMANDS" 1 100 1
+    TRACE_PATH="$FAILURE_TRACE"
+    require_trace_count '^\[lab-live\] skills late-failure candidate valid=1 .*worldPlaced=1 published=0$' 1 'one fully credited unpublished construction candidate'
+    require_trace_count '^\[lab-live\] skills late-failure rollback sessionBytes=exact resources=exact practiceTotals=exact records=exact levels=exact causal=exact recorder=exact probes=exact worldIndexes=exact block=restored ghostCredit=0$' 1 'exact skill and physical rollback'
+    require_trace 'skills late-failure controlledError=injected_construction_publication_failure publishedSession=unchanged publishedRecorder=unchanged probes=unchanged worldIndexes=unchanged' 'one controlled late publication error at the unpublished boundary'
+    require_trace 'build gate=enabled auto=on .*status=completed .*placed=9/9 ' 'positive construction completed after the one-shot rollback'
+    require_trace 'summary .*runtimeErrors=1 .*probesRemoved=3 .*buildRollback=1 ' 'one controlled error and clean failure-run cleanup'
+
+    CONTROL_COMMANDS=${SKILLS_PHASE1_COMMANDS/skills-v10/skills-v10-control}
+    printf '\nSkills independent deterministic control.\n'
+    run_skills_app "$CONTROL_HOME" "$CONTROL_TRACE" "$CONTROL_COMMANDS" 1 100 0
+    TRACE_PATH="$CONTROL_TRACE"
+    require_trace "checkpoint saved name=skills-v10-control .*tick=$SKILLS_FINAL_TICK .*restartSafe=1 " 'independent v10 control checkpoint'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=4 ' 'clean independent control shutdown'
+    CONTROL_ROOT="$CONTROL_HOME/Library/Application Support/Pebble/PebbleLabAgents"
+    CONTROL_SESSION=$(/usr/bin/find "$CONTROL_ROOT" -type f -path '*/checkpoints/skills-v10-control/session.json' -print -quit)
+    [ -n "$CONTROL_SESSION" ] || fail "skills control checkpoint session missing"
+    /usr/bin/cmp "$SKILLS_SESSION" "$CONTROL_SESSION" \
+        || fail "independent skills sessions are not byte-identical"
+    CONTROL_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=skills-v10-control .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$CONTROL_TRACE" | /usr/bin/tail -1)
+    CONTROL_SKILL_DIGEST=$(/usr/bin/sed -n "s/.*skills tick=$SKILLS_FINAL_TICK .* digest=\\([0-9a-f]*\\)$/\\1/p" "$CONTROL_TRACE" | /usr/bin/tail -1)
+    [ "$CONTROL_DIGEST" = "$PHASE1_DIGEST" ] \
+        && [ "$CONTROL_SKILL_DIGEST" = "$PHASE1_SKILL_DIGEST" ] \
+        || fail "independent skills digests differ"
+
+    if /usr/bin/pgrep -x Pebble >/dev/null 2>&1 \
+        || /usr/bin/pgrep -x swift-run >/dev/null 2>&1; then
+        fail "residual Pebble process after skills proof"
+    fi
+    printf '\nPASS: practice-based skills, ranked task matching, v10 restart, independent determinism, and late rollback verified.\n'
+    printf 'Seed: %s\n' "$WORLD_SEED"
+    printf 'Phase 1 trace: %s\n' "$PHASE1_TRACE"
+    printf 'Restart trace: %s\n' "$RESTART_TRACE"
+    printf 'Failure trace: %s\n' "$FAILURE_TRACE"
+    printf 'Control trace: %s\n' "$CONTROL_TRACE"
+    printf 'Durable digest: %s\n' "$PHASE1_DIGEST"
+    printf 'Skill digest: %s\n' "$PHASE1_SKILL_DIGEST"
     printf 'Retained isolated session: %s\n' "$SESSION_ROOT"
     exit 0
 fi

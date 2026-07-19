@@ -4798,3 +4798,29 @@ medicine, institutional childcare, and LLM behavior.
 `CIV-12 — Kinship, Households and Dependent Care V1` is complete locally.
 Next step: mandatory roadmap recalibration from the actual implemented state
 before any new vertical.
+
+## NEXT-1 - Practice-Based Skills And Task Matching V1
+
+Status: implemented and validated locally after the post-CIV-12 roadmap
+recalibration.
+
+- `AgentSimulationSession` owns the only durable skill state;
+- real successful forage, material delivery, construction publication, and
+  dependent nourishment each credit one causal practice unit in their domain;
+- levels are derived (`untrained`, `novice`, `practiced`, `skilled`) and never
+  stored as a second authority;
+- activation v9 to v10 is explicit and grants no retroactive practice;
+- retained practice proofs are bounded while cumulative totals and evicted
+  history digests preserve mastery;
+- the cooperative construction helper matcher ranks relevant practice only
+  after lifecycle, availability, care, and material eligibility constraints;
+- checkpoint, restart, replay, independent runs, and the controlled late World
+  rollback are byte-exact, with no phantom practice credit;
+- skills-off behavior preserves schemas and historical task matching v1-v9.
+
+Out of scope: teaching, demonstration learning, apprenticeship, professions,
+aptitudes, genetics, productivity bonuses, agriculture, property, knowledge,
+language, and culture.
+
+Next prospective vertical: NEXT-2 - Demonstration, Teaching and
+Apprenticeship V1.

@@ -39,9 +39,11 @@ HOUSEHOLD_OUT_A="$TMP_ROOT/household-a"
 HOUSEHOLD_OUT_B="$TMP_ROOT/household-b"
 CARE_OUT_A="$TMP_ROOT/care-a"
 CARE_OUT_B="$TMP_ROOT/care-b"
+SKILLS_OUT_A="$TMP_ROOT/skills-a"
+SKILLS_OUT_B="$TMP_ROOT/skills-b"
 
 STEP=0
-TOTAL_STEPS=32
+TOTAL_STEPS=35
 
 run_step() {
     STEP=$((STEP + 1))
@@ -317,6 +319,37 @@ verify_care_outputs() {
     expect_json_value "$out/replay_v9/manifest.json" schemaVersion 9
 }
 
+verify_skill_outputs() {
+    out=$1
+    for file in \
+        skill_profiles.json \
+        practice_records.json \
+        skill_levels.json \
+        task_matching_decisions.json \
+        skill_causal_chain.json \
+        skill_digest.json \
+        skill_invariant_report.json \
+        checkpoint_v10/manifest.json \
+        checkpoint_v10/session.json \
+        replay_v10/manifest.json \
+        replay_v10/operations.ndjson
+    do
+        [ -s "$out/$file" ] || fail "practice skills did not produce $out/$file"
+    done
+    expect_json_value "$out/skill_invariant_report.json" schemaVersion 10
+    expect_json_value "$out/skill_invariant_report.json" scenario \
+        practice_based_skills_task_matching_smoke
+    expect_json_value "$out/skill_invariant_report.json" seed 79
+    expect_json_value "$out/skill_invariant_report.json" success true
+    expect_json_value "$out/skill_digest.json" schemaVersion 10
+    expect_json_value "$out/skill_digest.json" seed 79
+    expect_json_value "$out/task_matching_decisions.json" 0.selected agent_2
+    expect_json_value "$out/task_matching_decisions.json" 0.selectedUnits 3
+    expect_json_value "$out/task_matching_decisions.json" 0.noviceUnits 0
+    expect_json_value "$out/checkpoint_v10/session.json" schemaVersion 10
+    expect_json_value "$out/replay_v10/manifest.json" schemaVersion 10
+}
+
 verify_no_tracked_run_outputs() {
     tracked=$(
         git ls-files | /usr/bin/awk '
@@ -435,6 +468,19 @@ run_step "dependent care canonical outputs and replay comparison" \
     verify_care_outputs "$CARE_OUT_A"
 verify_care_outputs "$CARE_OUT_B"
 /usr/bin/diff -r "$CARE_OUT_A" "$CARE_OUT_B"
+
+run_step "practice skills deterministic run A" \
+    swift run -c release PebbleLab -- \
+        --scenario practice_based_skills_task_matching_smoke \
+        --seed 79 --out "$SKILLS_OUT_A"
+run_step "practice skills deterministic run B" \
+    swift run -c release PebbleLab -- \
+        --scenario practice_based_skills_task_matching_smoke \
+        --seed 79 --out "$SKILLS_OUT_B"
+run_step "practice skills canonical outputs and replay comparison" \
+    verify_skill_outputs "$SKILLS_OUT_A"
+verify_skill_outputs "$SKILLS_OUT_B"
+/usr/bin/diff -r "$SKILLS_OUT_A" "$SKILLS_OUT_B"
 
 run_step "Repository hygiene" git diff --check
 verify_no_tracked_run_outputs

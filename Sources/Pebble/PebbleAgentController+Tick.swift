@@ -6,6 +6,32 @@ extension PebbleAgentController {
     func advanceOneTick(world: World, player: Player) -> Bool {
         guard activeWorld === world, var session else { return false }
         let publishedRecorder = replayRecorder
+        let skillLateFailureRunEnabled = environment[
+            "PEBBLELAB_DISPOSABLE_SKILL_LATE_FAILURE_PROOF"
+        ] == "1" && session.skillsEnabled && !skillLateFailureProofInjected
+        let skillLateFailurePublishedBytes: Data?
+        let skillLateFailurePublishedRecorderBytes: Data?
+        do {
+            skillLateFailurePublishedBytes = skillLateFailureRunEnabled
+                ? try session.durableStateBytes() : nil
+            skillLateFailurePublishedRecorderBytes = skillLateFailureRunEnabled
+                ? try publishedRecorder.map { try AgentReplayCodec.encodeRecords($0.records) }
+                : nil
+        } catch {
+            lastError = "skills late-failure boundary capture failed: \(error)"
+            runtimeErrorCount += 1
+            trace("error \(lastError!)")
+            return false
+        }
+        let skillLateFailurePublishedProbeState = skillLateFailureRunEnabled
+            ? probesByAgentId.values.map {
+                "\($0.labAgentId):\($0.x):\($0.y):\($0.z)"
+            }.sorted()
+            : []
+        let skillLateFailurePublishedWorldAgentIDs = skillLateFailureRunEnabled
+            ? world.entities.compactMap { ($0 as? LabCoreAgentEntity)?.labAgentId }.sorted()
+            : []
+        let skillLateFailurePublishedWorldEntityCount = world.entities.count
         let kinshipLateFailureBoundary: PebbleKinshipLateFailureBoundarySnapshot?
         do {
             kinshipLateFailureBoundary = kinshipLateFailureProofEnabled
@@ -567,9 +593,29 @@ extension PebbleAgentController {
                     z: Int(player.z.rounded(.down))
                 )
                 let navigationAdapter = self.navigationAdapter
-                let injectPublicationFailure = environment[
+                let standardPublicationFailure = environment[
                     "PEBBLELAB_APP_AGENTS_BUILD_FAIL_AFTER_WORLD"
                 ] == "1"
+                let skillLateFailureProof = environment[
+                    "PEBBLELAB_DISPOSABLE_SKILL_LATE_FAILURE_PROOF"
+                ] == "1" && session.skillsEnabled && !skillLateFailureProofInjected
+                let injectPublicationFailure = standardPublicationFailure
+                    || skillLateFailureProof
+                let skillLateFailureBytes = skillLateFailureProof
+                    ? try session.durableStateBytes() : Data()
+                let skillLateFailureSnapshot = session.skillSnapshot()
+                let skillLateFailureCausal = session.causalLedgerSnapshot()
+                let skillLateFailureRecorderBytes = try recorder.map {
+                    try AgentReplayCodec.encodeRecords($0.records)
+                }
+                let skillLateFailureProbeIDs = probesByAgentId.keys.sorted()
+                let skillLateFailureWorldAgentIDs = world.entities.compactMap {
+                    ($0 as? LabCoreAgentEntity)?.labAgentId
+                }.sorted()
+                let skillLateFailureBlock = world.getBlock(
+                    target.x, target.y, target.z
+                )
+                var skillLateFailureCandidateValid = false
                 do {
                     try constructionExecutor.place(
                     world: world,
@@ -590,6 +636,34 @@ extension PebbleAgentController {
                             recorder: &candidateRecorder
                         ) == nil {
                             try candidate.applyPlacementOutcome(outcome)
+                        }
+                        if skillLateFailureProof {
+                            let candidateSkill = candidate.skillSnapshot()
+                            guard candidateSkill.totalPracticeCreditCount
+                                    == skillLateFailureSnapshot.totalPracticeCreditCount + 1,
+                                  candidateSkill.totalPracticeUnits
+                                    == skillLateFailureSnapshot.totalPracticeUnits + 1,
+                                  candidate.practiceUnits(
+                                    agentID: AgentID(rawValue: actor.id)!,
+                                    domain: .construction
+                                  ) == session.practiceUnits(
+                                    agentID: AgentID(rawValue: actor.id)!,
+                                    domain: .construction
+                                  ) + 1 else {
+                                throw ControllerError.constructionBoundary(
+                                    "skill late-failure candidate missing practice credit"
+                                )
+                            }
+                            skillLateFailureCandidateValid = true
+                            trace(
+                                "skills late-failure candidate valid=1 tick=\(candidate.tick) "
+                                    + "actor=\(actor.id) domain=construction "
+                                    + "credits=\(candidateSkill.totalPracticeCreditCount) "
+                                    + "units=\(candidateSkill.totalPracticeUnits) "
+                                    + "records=\(candidateSkill.retainedPracticeRecords.count) "
+                                    + "causalSequence=\(candidate.causalLedgerSnapshot().summary.latestSequence) "
+                                    + "worldPlaced=1 published=0"
+                            )
                         }
                         if injectPublicationFailure {
                             throw ControllerError.constructionBoundary(
@@ -663,6 +737,35 @@ extension PebbleAgentController {
                     }
                     )
                 } catch {
+                    if skillLateFailureProof {
+                        let afterRecorderBytes = try recorder.map {
+                            try AgentReplayCodec.encodeRecords($0.records)
+                        }
+                        let afterWorldAgentIDs = world.entities.compactMap {
+                            ($0 as? LabCoreAgentEntity)?.labAgentId
+                        }.sorted()
+                        guard skillLateFailureCandidateValid,
+                              try session.durableStateBytes() == skillLateFailureBytes,
+                              session.skillSnapshot() == skillLateFailureSnapshot,
+                              session.causalLedgerSnapshot() == skillLateFailureCausal,
+                              afterRecorderBytes == skillLateFailureRecorderBytes,
+                              probesByAgentId.keys.sorted() == skillLateFailureProbeIDs,
+                              afterWorldAgentIDs == skillLateFailureWorldAgentIDs,
+                              world.getBlock(target.x, target.y, target.z)
+                                == skillLateFailureBlock else {
+                            throw ControllerError.constructionBoundary(
+                                "skill late-failure rollback diverged"
+                            )
+                        }
+                        trace(
+                            "skills late-failure rollback sessionBytes=exact "
+                                + "resources=exact practiceTotals=exact records=exact "
+                                + "levels=exact causal=exact recorder=exact probes=exact "
+                                + "worldIndexes=exact block=restored ghostCredit=0"
+                        )
+                        skillLateFailureProofInjected = true
+                        throw error
+                    }
                     let failure = constructionFailure(for: error)
                     let failureID = "construction-failure:\(intent.placementId)"
                     if (try? applyRecordedOperationIfActive(
@@ -926,7 +1029,53 @@ extension PebbleAgentController {
             } else {
                 isKinshipLateFailure = false
             }
-            if isKinshipLateFailure {
+            let isSkillLateFailure: Bool
+            if case let ControllerError.constructionBoundary(reason) = error,
+               reason == "injected construction publication failure",
+               skillLateFailureRunEnabled,
+               skillLateFailureProofInjected {
+                isSkillLateFailure = true
+            } else {
+                isSkillLateFailure = false
+            }
+            if isSkillLateFailure {
+                replayRecorder = publishedRecorder
+                do {
+                    let afterRecorderBytes = try replayRecorder.map {
+                        try AgentReplayCodec.encodeRecords($0.records)
+                    }
+                    let afterProbeState = probesByAgentId.values.map {
+                        "\($0.labAgentId):\($0.x):\($0.y):\($0.z)"
+                    }.sorted()
+                    let afterWorldAgentIDs = world.entities.compactMap {
+                        ($0 as? LabCoreAgentEntity)?.labAgentId
+                    }.sorted()
+                    guard let publishedSession = self.session,
+                          try publishedSession.durableStateBytes()
+                            == skillLateFailurePublishedBytes,
+                          afterRecorderBytes == skillLateFailurePublishedRecorderBytes,
+                          afterProbeState == skillLateFailurePublishedProbeState,
+                          afterWorldAgentIDs == skillLateFailurePublishedWorldAgentIDs,
+                          world.entities.count == skillLateFailurePublishedWorldEntityCount else {
+                        throw ControllerError.constructionBoundary(
+                            "skill late-failure published boundary diverged"
+                        )
+                    }
+                } catch {
+                    lastError = String(describing: error)
+                    runtimeErrorCount += 1
+                    trace("error \(error)")
+                    return false
+                }
+                lastError = String(describing: error)
+                runtimeErrorCount += 1
+                trace(
+                    "skills late-failure controlledError=injected_construction_publication_failure "
+                        + "publishedSession=unchanged publishedRecorder=unchanged "
+                        + "probes=unchanged worldIndexes=unchanged"
+                )
+                return false
+            } else if isKinshipLateFailure {
                 replayRecorder = publishedRecorder
                 do {
                     guard let kinshipLateFailureBoundary else {
