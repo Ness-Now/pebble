@@ -34,13 +34,173 @@ public struct InteractCtx {
     }
 }
 
-private func dirFacingMeta(_ player: Player) -> Int {
+public struct PhysicalBlockPosition: Equatable, Hashable {
+    public let x: Int
+    public let y: Int
+    public let z: Int
+
+    public init(x: Int, y: Int, z: Int) {
+        self.x = x
+        self.y = y
+        self.z = z
+    }
+}
+
+public struct PhysicalBlockMutation: Equatable {
+    public let position: PhysicalBlockPosition
+    public let before: Int
+    public let after: Int
+
+    public init(position: PhysicalBlockPosition, before: Int, after: Int) {
+        self.position = position
+        self.before = before
+        self.after = after
+    }
+}
+
+public struct BlockPlacementOrientation: Equatable {
+    public let yaw: Double
+    public let pitch: Double
+
+    public init(yaw: Double, pitch: Double) {
+        self.yaw = yaw
+        self.pitch = pitch
+    }
+}
+
+public struct BlockPlacementRuleContext {
+    public let world: World
+    public let orientation: BlockPlacementOrientation
+    public let vibrationSource: EntityRef?
+    public let consumeHeld: (Int) -> Void
+    public let recordPlacement: () -> Void
+
+    public init(
+        world: World,
+        orientation: BlockPlacementOrientation,
+        vibrationSource: EntityRef? = nil,
+        consumeHeld: @escaping (Int) -> Void,
+        recordPlacement: @escaping () -> Void = {}
+    ) {
+        self.world = world
+        self.orientation = orientation
+        self.vibrationSource = vibrationSource
+        self.consumeHeld = consumeHeld
+        self.recordPlacement = recordPlacement
+    }
+}
+
+public struct BlockPlacementRuleResult: Equatable {
+    public let succeeded: Bool
+    public let target: PhysicalBlockPosition?
+    public let finalCell: Int?
+    public let mutations: [PhysicalBlockMutation]
+
+    public init(
+        succeeded: Bool,
+        target: PhysicalBlockPosition?,
+        finalCell: Int?,
+        mutations: [PhysicalBlockMutation]
+    ) {
+        self.succeeded = succeeded
+        self.target = target
+        self.finalCell = finalCell
+        self.mutations = mutations
+    }
+}
+
+public struct BlockBreakRuleContext {
+    public let world: World
+    public let heldItem: ItemStack?
+    public let isCreative: Bool
+    public let vibrationSource: EntityRef?
+    public let damageTool: (Int) -> Void
+    public let recordMinedBlock: () -> Void
+    public let addExhaustion: (Double) -> Void
+
+    public init(
+        world: World,
+        heldItem: ItemStack?,
+        isCreative: Bool,
+        vibrationSource: EntityRef? = nil,
+        damageTool: @escaping (Int) -> Void = { _ in },
+        recordMinedBlock: @escaping () -> Void = {},
+        addExhaustion: @escaping (Double) -> Void = { _ in }
+    ) {
+        self.world = world
+        self.heldItem = heldItem
+        self.isCreative = isCreative
+        self.vibrationSource = vibrationSource
+        self.damageTool = damageTool
+        self.recordMinedBlock = recordMinedBlock
+        self.addExhaustion = addExhaustion
+    }
+}
+
+public enum BlockBreakRuleStatus: String, Equatable {
+    case succeeded
+    case noTarget
+}
+
+public struct BlockBreakRuleResult: Equatable {
+    public let status: BlockBreakRuleStatus
+    public let target: PhysicalBlockPosition
+    public let originalCell: Int
+    public let finalCell: Int
+    public let mutations: [PhysicalBlockMutation]
+
+    public init(
+        status: BlockBreakRuleStatus,
+        target: PhysicalBlockPosition,
+        originalCell: Int,
+        finalCell: Int,
+        mutations: [PhysicalBlockMutation]
+    ) {
+        self.status = status
+        self.target = target
+        self.originalCell = originalCell
+        self.finalCell = finalCell
+        self.mutations = mutations
+    }
+}
+
+@discardableResult
+private func setBlockRecording(
+    _ world: World,
+    _ x: Int,
+    _ y: Int,
+    _ z: Int,
+    _ cellValue: Int,
+    _ mutations: inout [PhysicalBlockMutation],
+    flags: Int = SET_DEFAULT
+) -> Int {
+    let before = world.getBlock(x, y, z)
+    let returned = world.setBlock(x, y, z, cellValue, flags)
+    let after = world.getBlock(x, y, z)
+    if before != after {
+        mutations.append(PhysicalBlockMutation(
+            position: PhysicalBlockPosition(x: x, y: y, z: z),
+            before: before,
+            after: after
+        ))
+    }
+    return returned
+}
+
+private func dirFacingMeta(yaw: Double) -> Int {
     // horizontal facing meta (0=N 1=S 2=W 3=E) — direction the PLAYER faces
-    let d = yawToDir(player.yaw * 180 / .pi)
+    let d = yawToDir(yaw * 180 / .pi)
     return [0, 0, 0, 1, 2, 3][d]
+}
+private func dirFacingMeta(_ player: Player) -> Int { dirFacingMeta(yaw: player.yaw) }
+private func dirFacingMeta(_ orientation: BlockPlacementOrientation) -> Int {
+    dirFacingMeta(yaw: orientation.yaw)
 }
 private func dirFacingMetaOpp(_ player: Player) -> Int {
     [1, 0, 3, 2][dirFacingMeta(player)]
+}
+private func dirFacingMetaOpp(_ orientation: BlockPlacementOrientation) -> Int {
+    [1, 0, 3, 2][dirFacingMeta(orientation)]
 }
 
 private func shapeOf(_ id: Int) -> Shape {
@@ -1019,7 +1179,34 @@ private func waxedCopper(_ id: Int) -> Int {
 // PLACEMENT
 // =============================================================================
 public func placeBlock(_ ctx: InteractCtx, _ hit: RaycastHit, _ blockId: Int, _ held: ItemStack) -> Bool {
-    let world = ctx.world, player = ctx.player
+    executeBlockPlacement(
+        BlockPlacementRuleContext(
+            world: ctx.world,
+            orientation: BlockPlacementOrientation(
+                yaw: ctx.player.yaw,
+                pitch: ctx.player.pitch
+            ),
+            vibrationSource: ctx.player,
+            consumeHeld: { [player = ctx.player] count in player.consumeHeld(count) },
+            recordPlacement: { [player = ctx.player] in
+                player.stats["blocksPlaced"] = (player.stats["blocksPlaced"] ?? 0) + 1
+            }
+        ),
+        hit,
+        blockId,
+        held
+    ).succeeded
+}
+
+@discardableResult
+public func executeBlockPlacement(
+    _ ctx: BlockPlacementRuleContext,
+    _ hit: RaycastHit,
+    _ blockId: Int,
+    _ held: ItemStack
+) -> BlockPlacementRuleResult {
+    let world = ctx.world
+    var mutations: [PhysicalBlockMutation] = []
     let targetCell = world.getBlock(hit.x, hit.y, hit.z)
     var px = hit.x, py = hit.y, pz = hit.z
     if REPLACEABLE[targetCell >> 4] == 0 {
@@ -1027,73 +1214,109 @@ public func placeBlock(_ ctx: InteractCtx, _ hit: RaycastHit, _ blockId: Int, _ 
         py += DIR_Y[hit.face]
         pz += DIR_Z[hit.face]
     }
+    let target = PhysicalBlockPosition(x: px, y: py, z: pz)
+    func result(_ succeeded: Bool) -> BlockPlacementRuleResult {
+        BlockPlacementRuleResult(
+            succeeded: succeeded,
+            target: target,
+            finalCell: world.getBlock(px, py, pz),
+            mutations: mutations
+        )
+    }
     let cur = world.getBlock(px, py, pz)
     if cur != 0 && REPLACEABLE[cur >> 4] == 0 {
         // slab merging
         if shapeOf(blockId) == .slab && (cur >> 4) == blockId && (cur & 3) != 2 {
-            world.setBlock(px, py, pz, Int(cell(UInt16(blockId), 2)))
+            setBlockRecording(
+                world, px, py, pz, Int(cell(UInt16(blockId), 2)), &mutations
+            )
             placeEffects(world, blockId, px, py, pz)
-            player.consumeHeld(1)
-            return true
+            ctx.consumeHeld(1)
+            return result(true)
         }
-        return false
+        return result(false)
     }
     // entity collision check
     let def = blockDefs[blockId]
     if def.solid {
         let box = AABB(Double(px) + 0.05, Double(py) + 0.05, Double(pz) + 0.05, Double(px) + 0.95, Double(py) + 0.95, Double(pz) + 0.95)
         let blocked = world.getEntitiesInBox(box, except: nil, filter: { $0 is LivingEntity })
-        if !blocked.isEmpty { return false }
+        if !blocked.isEmpty { return result(false) }
     }
-    let meta = placementMeta(world, player, hit, blockId, px, py, pz)
-    if meta == -1 { return false }
+    let meta = placementMeta(world, ctx.orientation, hit, blockId, px, py, pz)
+    if meta == -1 { return result(false) }
     // snow layer stacking
     if blockId == Int(B.snow) && (cur >> 4) == Int(B.snow) {
         let layers = cur & 7
         if layers < 7 {
-            world.setBlock(px, py, pz, Int(cell(B.snow, layers + 1)))
+            setBlockRecording(world, px, py, pz, Int(cell(B.snow, layers + 1)), &mutations)
             placeEffects(world, blockId, px, py, pz)
-            player.consumeHeld(1)
-            return true
+            ctx.consumeHeld(1)
+            return result(true)
         }
-        return false
+        return result(false)
     }
     // candles & pickles & petals stack
     if (cur >> 4) == blockId && (shapeOf(blockId) == .candle || shapeOf(blockId) == .seaPickle || blockId == Int(bid("pink_petals")) || shapeOf(blockId) == .turtleEgg) {
         let count = cur & 3
         if count < 3 {
-            world.setBlock(px, py, pz, Int(cell(UInt16(blockId), (cur & 12) | (count + 1))))
+            setBlockRecording(
+                world,
+                px,
+                py,
+                pz,
+                Int(cell(UInt16(blockId), (cur & 12) | (count + 1))),
+                &mutations
+            )
             placeEffects(world, blockId, px, py, pz)
-            player.consumeHeld(1)
-            return true
+            ctx.consumeHeld(1)
+            return result(true)
         }
-        return false
+        return result(false)
     }
 
-    world.setBlock(px, py, pz, Int(cell(UInt16(blockId), meta)))
+    setBlockRecording(
+        world, px, py, pz, Int(cell(UInt16(blockId), meta)), &mutations
+    )
     // multi-block: doors & beds & tall plants
     let shape = shapeOf(blockId)
     if shape == .door {
         let above = world.getBlock(px, py + 1, pz)
         if above != 0 && REPLACEABLE[above >> 4] == 0 {
-            world.setBlock(px, py, pz, 0)
-            return false
+            setBlockRecording(world, px, py, pz, 0, &mutations)
+            return result(false)
         }
         // hinge: pick side with more support
         let hinge = interactRng.nextBoolean() ? 1 : 0
-        world.setBlock(px, py + 1, pz, Int(cell(UInt16(blockId), 8 | hinge)))
+        setBlockRecording(
+            world,
+            px,
+            py + 1,
+            pz,
+            Int(cell(UInt16(blockId), 8 | hinge)),
+            &mutations
+        )
     } else if shape == .bed {
         let f = meta & 3
         let hx = px + [0, 0, -1, 1][f], hz = pz + [-1, 1, 0, 0][f]
         let headCur = world.getBlock(hx, py, hz)
         if headCur != 0 && REPLACEABLE[headCur >> 4] == 0 {
-            world.setBlock(px, py, pz, 0)
-            return false
+            setBlockRecording(world, px, py, pz, 0, &mutations)
+            return result(false)
         }
-        world.setBlock(hx, py, hz, Int(cell(UInt16(blockId), f | 4)))
+        setBlockRecording(
+            world, hx, py, hz, Int(cell(UInt16(blockId), f | 4)), &mutations
+        )
     } else if shape == .tallCross || blockId == Int(B.pitcher_plant) {
         if world.getBlock(px, py + 1, pz) == 0 {
-            world.setBlock(px, py + 1, pz, Int(cell(UInt16(blockId), meta | 1)))
+            setBlockRecording(
+                world,
+                px,
+                py + 1,
+                pz,
+                Int(cell(UInt16(blockId), meta | 1)),
+                &mutations
+            )
         }
     }
     // block entities on placement
@@ -1102,10 +1325,10 @@ public func placeBlock(_ ctx: InteractCtx, _ hit: RaycastHit, _ blockId: Int, _ 
         handler(world, px, py, pz, Int(cell(UInt16(blockId), meta)))
     }
     placeEffects(world, blockId, px, py, pz)
-    player.consumeHeld(1)
-    player.stats["blocksPlaced"] = (player.stats["blocksPlaced"] ?? 0) + 1
-    world.emitVibration(Double(px), Double(py), Double(pz), 13, player)
-    return true
+    ctx.consumeHeld(1)
+    ctx.recordPlacement()
+    world.emitVibration(Double(px), Double(py), Double(pz), 13, ctx.vibrationSource)
+    return result(true)
 }
 
 private func placeEffects(_ world: World, _ blockId: Int, _ x: Int, _ y: Int, _ z: Int) {
@@ -1145,11 +1368,11 @@ private func attachPlacementBE(_ world: World, _ blockId: Int, _ x: Int, _ y: In
 }
 
 /// compute placement meta for orientation-aware shapes; -1 = can't place
-private func placementMeta(_ world: World, _ player: Player, _ hit: RaycastHit, _ blockId: Int, _ px: Int, _ py: Int, _ pz: Int) -> Int {
+private func placementMeta(_ world: World, _ orientation: BlockPlacementOrientation, _ hit: RaycastHit, _ blockId: Int, _ px: Int, _ py: Int, _ pz: Int) -> Int {
     let shape = shapeOf(blockId)
     let name = blockDefs[blockId].name
-    let facing = dirFacingMeta(player)       // direction player faces
-    let facingOpp = dirFacingMetaOpp(player) // toward player
+    let facing = dirFacingMeta(orientation)       // direction actor faces
+    let facingOpp = dirFacingMetaOpp(orientation) // toward actor
     let hitFY = hit.py - Double(hit.y)
 
     switch shape {
@@ -1180,7 +1403,7 @@ private func placementMeta(_ world: World, _ player: Player, _ hit: RaycastHit, 
         if hit.face < 2 { return -1 }
         return [0, 1, 2, 3][hit.face - 2]
     case .sign:
-        let deg = (player.yaw * 180 / .pi + 180).truncatingRemainder(dividingBy: 360)
+        let deg = (orientation.yaw * 180 / .pi + 180).truncatingRemainder(dividingBy: 360)
         return Int((deg / 22.5).rounded(.down)) & 15
     case .chest:
         return facingOpp
@@ -1241,8 +1464,8 @@ private func placementMeta(_ world: World, _ player: Player, _ hit: RaycastHit, 
         return (facing == 0 || facing == 1) ? 2 : 0
     case .piston:
         // facing away from player incl vertical
-        if player.pitch < -0.9 { return Dir.down }
-        if player.pitch > 0.9 { return Dir.up }
+        if orientation.pitch < -0.9 { return Dir.down }
+        if orientation.pitch > 0.9 { return Dir.up }
         return [Dir.north, Dir.south, Dir.west, Dir.east][facingOpp]
     case .vine:
         if hit.face < 2 { return -1 }
@@ -1266,18 +1489,18 @@ private func placementMeta(_ world: World, _ player: Player, _ hit: RaycastHit, 
             return hit.face < 2 ? 0 : (hit.face < 4 ? 2 : 1)
         }
         if blockId == Int(B.observer) {
-            if player.pitch < -0.9 { return Dir.up }
-            if player.pitch > 0.9 { return Dir.down }
+            if orientation.pitch < -0.9 { return Dir.up }
+            if orientation.pitch > 0.9 { return Dir.down }
             return [Dir.north, Dir.south, Dir.west, Dir.east][facing]
         }
         if blockId == Int(B.dispenser) || blockId == Int(B.dropper) {
-            if player.pitch < -0.9 { return Dir.down }
-            if player.pitch > 0.9 { return Dir.up }
+            if orientation.pitch < -0.9 { return Dir.down }
+            if orientation.pitch > 0.9 { return Dir.up }
             return [Dir.north, Dir.south, Dir.west, Dir.east][facingOpp]
         }
         if blockId == Int(B.barrel) {
-            if player.pitch < -0.9 { return Dir.up }
-            if player.pitch > 0.9 { return Dir.down }
+            if orientation.pitch < -0.9 { return Dir.up }
+            if orientation.pitch > 0.9 { return Dir.down }
             return [Dir.north, Dir.south, Dir.west, Dir.east][facingOpp]
         }
         if blockId == Int(B.furnace) || blockId == Int(B.blast_furnace) || blockId == Int(B.smoker) ||
@@ -1363,14 +1586,50 @@ public func releaseUsingItem(_ ctx: InteractCtx) {
 // BREAKING
 // =============================================================================
 public func finishBreaking(_ ctx: InteractCtx, _ x: Int, _ y: Int, _ z: Int) {
-    let world = ctx.world, player = ctx.player
+    _ = executeBlockBreak(
+        BlockBreakRuleContext(
+            world: ctx.world,
+            heldItem: ctx.player.mainHand,
+            isCreative: ctx.player.gameMode == GameMode.creative,
+            vibrationSource: ctx.player,
+            damageTool: { [player = ctx.player] amount in player.damageHeld(amount) },
+            recordMinedBlock: { [player = ctx.player] in
+                player.stats["blocksMined"] = (player.stats["blocksMined"] ?? 0) + 1
+            },
+            addExhaustion: { [player = ctx.player] amount in player.addExhaustion(amount) }
+        ),
+        x,
+        y,
+        z
+    )
+}
+
+@discardableResult
+public func executeBlockBreak(
+    _ ctx: BlockBreakRuleContext,
+    _ x: Int,
+    _ y: Int,
+    _ z: Int
+) -> BlockBreakRuleResult {
+    let world = ctx.world
+    let target = PhysicalBlockPosition(x: x, y: y, z: z)
+    var mutations: [PhysicalBlockMutation] = []
     let c = world.getBlock(x, y, z)
     let id = c >> 4
-    if id == 0 { return }
+    func result(_ status: BlockBreakRuleStatus) -> BlockBreakRuleResult {
+        BlockBreakRuleResult(
+            status: status,
+            target: target,
+            originalCell: c,
+            finalCell: world.getBlock(x, y, z),
+            mutations: mutations
+        )
+    }
+    if id == 0 { return result(.noTarget) }
     let def = blockDefs[id]
     world.hooks.playSound("block." + def.sound + ".break", Double(x) + 0.5, Double(y) + 0.5, Double(z) + 0.5, 1, 0.9)
     world.hooks.addParticles("block", Double(x) + 0.5, Double(y) + 0.5, Double(z) + 0.5, 18, 0.4, c)
-    world.emitVibration(Double(x), Double(y), Double(z), 12, player)
+    world.emitVibration(Double(x), Double(y), Double(z), 12, ctx.vibrationSource)
 
     // container contents spill
     if let be = world.getBlockEntity(x, y, z) {
@@ -1397,9 +1656,9 @@ public func finishBreaking(_ ctx: InteractCtx, _ x: Int, _ y: Int, _ z: Int) {
                 }
                 spawnItem(world, Double(x) + 0.5, Double(y) + 0.5, Double(z) + 0.5, stack)
             }
-            world.setBlock(x, y, z, 0)
-            player.stats["blocksMined"] = (player.stats["blocksMined"] ?? 0) + 1
-            return
+            setBlockRecording(world, x, y, z, 0, &mutations)
+            ctx.recordMinedBlock()
+            return result(.succeeded)
         }
     }
 
@@ -1407,43 +1666,54 @@ public func finishBreaking(_ ctx: InteractCtx, _ x: Int, _ y: Int, _ z: Int) {
     let shape = shapeOf(id)
     if shape == .door {
         let upper = (c & 8) != 0
-        world.setBlock(x, upper ? y - 1 : y + 1, z, 0)
+        setBlockRecording(world, x, upper ? y - 1 : y + 1, z, 0, &mutations)
     } else if shape == .bed {
         let f = c & 3
         let head = (c & 4) != 0
         let ox = x + (head ? -1 : 1) * [0, 0, -1, 1][f]
         let oz = z + (head ? -1 : 1) * [-1, 1, 0, 0][f]
-        if shapeOf(world.getBlock(ox, y, oz) >> 4) == .bed { world.setBlock(ox, y, oz, 0) }
+        if shapeOf(world.getBlock(ox, y, oz) >> 4) == .bed {
+            setBlockRecording(world, ox, y, oz, 0, &mutations)
+        }
     } else if shape == .tallCross {
         let upper = (c & 1) != 0
         let oy = upper ? y - 1 : y + 1
-        if (world.getBlock(x, oy, z) >> 4) == id { world.setBlock(x, oy, z, 0, 2 | 4) }
+        if (world.getBlock(x, oy, z) >> 4) == id {
+            setBlockRecording(world, x, oy, z, 0, &mutations, flags: 2 | 4)
+        }
     }
 
     // infested → spawn silverfish
     if def.name.hasPrefix("infested") {
-        world.setBlock(x, y, z, 0)
+        setBlockRecording(world, x, y, z, 0, &mutations)
         _ = spawnMob(world, "silverfish", Double(x) + 0.5, Double(y), Double(z) + 0.5, SpawnOpts())
-        return
+        return result(.succeeded)
     }
     // ice melts to water if supported
-    if id == Int(B.ice) && player.gameMode != GameMode.creative {
-        let held = player.mainHand
+    if id == Int(B.ice) && !ctx.isCreative {
+        let held = ctx.heldItem
         if held == nil || enchLevel(held!, "silk_touch") == 0 {
             let below = world.getBlock(x, y - 1, z) >> 4
-            world.setBlock(x, y, z, below != 0 && blockDefs[below].solid ? Int(cell(B.water, 0)) : 0)
-            return
+            setBlockRecording(
+                world,
+                x,
+                y,
+                z,
+                below != 0 && blockDefs[below].solid ? Int(cell(B.water, 0)) : 0,
+                &mutations
+            )
+            return result(.succeeded)
         }
     }
 
-    world.setBlock(x, y, z, 0)
-    player.stats["blocksMined"] = (player.stats["blocksMined"] ?? 0) + 1
+    setBlockRecording(world, x, y, z, 0, &mutations)
+    ctx.recordMinedBlock()
 
-    if player.gameMode == GameMode.creative { return }
-    if !world.rule("doTileDrops") { return }
-    if !canHarvest(player, c) { return }
+    if ctx.isCreative { return result(.succeeded) }
+    if !world.rule("doTileDrops") { return result(.succeeded) }
+    if !canHarvest(ctx.heldItem, c) { return result(.succeeded) }
 
-    let held = player.mainHand
+    let held = ctx.heldItem
     let fortune = held.map { enchLevel($0, "fortune") } ?? 0
     let silk = held.map { enchLevel($0, "silk_touch") > 0 } ?? false
     let toolDef = held.map { itemDef($0.id).tool } ?? nil
@@ -1453,8 +1723,8 @@ public func finishBreaking(_ ctx: InteractCtx, _ x: Int, _ y: Int, _ z: Int) {
         let itemId = blockToItem[id]
         if itemId >= 0 {
             spawnItem(world, Double(x) + 0.5, Double(y) + 0.3, Double(z) + 0.5, ItemStack(Int(itemId), 1))
-            damageToolForBreak(player, c)
-            return
+            damageToolForBreak(ctx, c)
+            return result(.succeeded)
         }
     }
     let ctx2 = DropCtx(fortune: fortune, silkTouch: silk,
@@ -1489,14 +1759,15 @@ public func finishBreaking(_ ctx: InteractCtx, _ x: Int, _ y: Int, _ z: Int) {
     if !silk, let (lo, hi) = xpMap[id] {
         spawnXP(world, Double(x) + 0.5, Double(y) + 0.5, Double(z) + 0.5, lo + gameRng.nextInt(hi - lo + 1))
     }
-    damageToolForBreak(player, c)
-    player.addExhaustion(0.005)
+    damageToolForBreak(ctx, c)
+    ctx.addExhaustion(0.005)
+    return result(.succeeded)
 }
-private func damageToolForBreak(_ player: Player, _ c: Int) {
-    guard let held = player.mainHand else { return }
+private func damageToolForBreak(_ ctx: BlockBreakRuleContext, _ c: Int) {
+    guard let held = ctx.heldItem else { return }
     let toolDef = itemDef(held.id).tool
     if toolDef != nil && blockDefs[c >> 4].hardness > 0 {
-        player.damageHeld(toolDef!.type == "sword" ? 2 : 1)
+        ctx.damageTool(toolDef!.type == "sword" ? 2 : 1)
     }
 }
 private func defaultDrop(_ id: Int) -> [Drop] {

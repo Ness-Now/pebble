@@ -226,13 +226,17 @@ public func breakSpeed(_ player: Player, _ cellVal: Int) -> Double {
     return speed / def.hardness / divisor
 }
 
-public func canHarvest(_ player: Player, _ cellVal: Int) -> Bool {
+public func canHarvest(_ heldItem: ItemStack?, _ cellVal: Int) -> Bool {
     let bid = cellVal >> 4
     let def = blockDefs[bid]
     if !def.requiresTool { return true }
-    guard let held = player.mainHand, let tool = itemDef(held.id).tool else { return false }
+    guard let held = heldItem, let tool = itemDef(held.id).tool else { return false }
     let matches = tool.type == def.tool.rawValue || (tool.type == "sword" && bid == Int(B.cobweb))
     return matches && tool.tier >= def.tier
+}
+
+public func canHarvest(_ player: Player, _ cellVal: Int) -> Bool {
+    canHarvest(player.mainHand, cellVal)
 }
 
 // ---------------------------------------------------------------------------
