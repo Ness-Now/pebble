@@ -37,6 +37,11 @@ Read this file first, then the nearest target-local `AGENTS.md` for every file i
 - Keep material conservation and causal transitions explicit and verifiable.
 - Keep genetics, development, knowledge, skill, culture, profession, and social status conceptually separate.
 - Reuse existing Pebble engine systems before creating a parallel implementation.
+- Audit the relevant PebbleCore surfaces before creating any physical mechanic.
+- Do not create parallel live farming, crafting, inventory, combat, animal, redstone, rail, World-persistence, or general physical-pathfinding engines.
+- Prefer a minimal actor-neutral PebbleCore primitive or a Pebble adapter over duplicating behavior that is currently Player-specific.
+- Live physical truth comes from PebbleCore. Coarse or dormant projections require explicit conservation, identity, obligation, and parity contracts.
+- Migrate abstract V1 systems incrementally after replacement proof; never delete them in a big-bang cleanup.
 - A future LLM remains an optional provider; it never owns transactions, cognitive state, or the World.
 - Every new live collection must be bounded or have an explicit storage and persistence policy.
 - Gates for laboratory or experimental behavior remain disabled by default and require explicit opt-in.

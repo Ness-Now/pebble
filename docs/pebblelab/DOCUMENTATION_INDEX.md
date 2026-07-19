@@ -4,11 +4,12 @@
 
 En cas de contradiction sur la direction future, appliquer cet ordre :
 
-1. documents canoniques actuels ;
-2. instructions `AGENTS.md` applicables au fichier concerné ;
-3. documents opérationnels et runbooks pour leur procédure ;
-4. références historiques pour expliquer une décision passée ;
-5. plans remplacés uniquement comme contexte historique.
+1. code et tests du HEAD validé pour l’état réellement implémenté ;
+2. vision canonique pour la cible produit et les invariants ;
+3. roadmap V3 Reuse-First pour l’ordre prospectif ;
+4. manifest pour sa projection machine-lisible ;
+5. instructions `AGENTS.md`, workflow et runbooks dans leur périmètre ;
+6. références historiques et plans remplacés comme contexte seulement.
 
 Un statut ou une « next step » dans un document historique ne remplace jamais
 la roadmap prospective actuelle.
@@ -18,7 +19,8 @@ la roadmap prospective actuelle.
 | Document | Rôle |
 | --- | --- |
 | [`PEBBLE_CIVILIZATION_VISION.md`](PEBBLE_CIVILIZATION_VISION.md) | Cible produit, doctrine et invariants de Medieval Civilization V1. |
-| [`PEBBLE_CIVILIZATION_ROADMAP.md`](PEBBLE_CIVILIZATION_ROADMAP.md) | État post-K, jalons, dépendances et ordre prospectif `CIV-XX`. |
+| [`PEBBLE_CIVILIZATION_ROADMAP.md`](PEBBLE_CIVILIZATION_ROADMAP.md) | Autorité prospective V3 Reuse-First, phases `CIV-00` à `CIV-67`, gates et frontières de convergence. |
+| [`ROADMAP_MANIFEST.json`](ROADMAP_MANIFEST.json) | Projection machine-lisible de la roadmap V3 ; elle doit rester synchronisée avec l’autorité humaine. |
 | [`DEVELOPMENT_WORKFLOW.md`](DEVELOPMENT_WORKFLOW.md) | Cycle de livraison, niveaux de risque et validations permanentes. |
 
 Les `AGENTS.md` racine et target-locaux sont des instructions permanentes, pas
@@ -55,6 +57,9 @@ obsolète comme recommandation prospective.
 
 Les séries suivantes ne pilotent plus le travail futur :
 
+- le plan directeur V2, ses anciens numéros prospectifs et les alias
+  `NEXT-1`/`NEXT-2`, conservés uniquement pour relire l’histoire antérieure à
+  la V3 Reuse-First ;
 - `PHASE_4_*.md` et `PHASE_5_*.md`, anciens plans de phases terminées ou
   dépassées ;
 - `NEXT_STEPS_FOR_PEBBLELAB.md` et `PEBBLELAB_NEXT.md`, anciennes listes de

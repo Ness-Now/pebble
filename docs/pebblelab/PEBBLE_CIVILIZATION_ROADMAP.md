@@ -1,262 +1,362 @@
-# Pebble Civilization — Roadmap prospective
+# Pebble Civilization — Roadmap V3 Reuse-First
 
-## Statut
+## Statut et autorité
 
-Cette roadmap est l’autorité prospective canonique. Elle définit un ordre de
-risque et de dépendance, sans figer prématurément les API des domaines futurs.
-L’ancienne [`ROADMAP.md`](ROADMAP.md) reste le journal historique détaillé des
-phases terminées.
+Cette roadmap est l’autorité prospective canonique `V3-Reuse-First`. Elle
+ordonne les risques et les dépendances sans annoncer comme acquise une capacité
+seulement planifiée. Le code et les tests du HEAD validé restent l’autorité sur
+l’état réellement implémenté ;
+[`PEBBLE_CIVILIZATION_VISION.md`](PEBBLE_CIVILIZATION_VISION.md) reste
+l’autorité sur la cible produit et ses invariants.
 
-## État actuel vérifié
+[`ROADMAP_MANIFEST.json`](ROADMAP_MANIFEST.json) est la projection
+machine-lisible de ce document. En cas d’écart, cette roadmap humaine contrôle
+la direction prospective et le manifest doit être resynchronisé.
+[`ROADMAP.md`](ROADMAP.md) conserve le journal historique détaillé sans définir
+la prochaine étape.
 
-Le point de départ est le HEAD post-K :
+Baseline de ce recalage :
+`b58f71b75110c2e65403cd073409a8559429ec77`.
 
-- construction individuelle autonome acquise dans la verticale bornée de
-  l’abri fixe ;
-- perception réelle, cognition, mémoire influente, target lock, navigation,
-  récolte naturelle transactionnelle, inventaire, livraison, stock, faim,
-  consommation, famine, fatigue, repos, financement, escrow et nouveau home
-  acquis dans leurs contrats actuels ;
-- information sociale causale et confiance dirigée acquises dans leur verticale
-  bornée ;
-- sons locaux, gestes de pointage et perception physique imparfaite acquis dans
-  une verticale bornée ; tâches partagées et coopération matérielle bornée
-  acquises pour la construction d'un abri ;
-- registre local de population borné, admission physique d'un migrant,
-  identité dynamique monotone, checkpoint/replay population v2 et reprise
-  mid-route acquis sous gate explicite, avec un maximum de huit agents actifs ;
-- métriques collectives bornées de `settlement-main`, pulse macro déterministe
-  tous les quatre ticks, classifications administratives, historique borné et
-  checkpoint/replay v3 acquis sous gate explicite. Tous les agents continuent
-  à recevoir leur tick micro complet : aucune coarse execution et aucun agent
-  hors écran ne sont introduits ;
-- écologie alimentaire locale bornée acquise sous gate explicite : deux patches
-  sauvages adossés à des habitats World réels, rendement limité, épuisement,
-  régénération déterministe, cueillette transactionnelle, conservation double,
-  pression de subsistance administrative et checkpoint/replay v4 ;
-- mortalité par famine bornée acquise sous gate explicite : transition
-  terminale atomique, death records durables, ressources terminales
-  comptabilisées, sortie de population et retrait du probe, puis remplacement
-  physique par un nouvel AgentID monotone avec checkpoint/replay v5 ;
-- âge démographique déterministe distinct de `ticksAlive`, stages
-  `newborn`/`juvenile`/`mature` et reproduction locale bornée acquis sous gate
-  explicite : deux progéniteurs historiques, site World validé en lecture
-  seule, AgentID monotone et checkpoint/replay v6 ;
-- parenté historique durable acquise sous gate explicite : personnes
-  historiques sans statut vivant/résident dupliqué, parentages canoniques
-  immuables, index enfant/parents/enfants/fratries dérivés et
-  checkpoint/replay v7 ; le kernel pur `PebbleAgents` n'accède pas au World et
-  la preuve live n'observe aucun appel ou événement de mutation de bloc/World ;
-- foyers résidentiels bornés, périodes d'appartenance historiques et home
-  partagé acquis sous gate explicite avec checkpoint/replay v8 ; dependent care
-  matériel et comportemental acquis sous gate explicite avec checkpoint/replay
-  v9, politique de capacités par stage et alimentation conservée depuis
-  l'inventaire du caregiver ou le camp stock existant ;
-- compétences pratiques individuelles acquises par succès matériels causaux
-  dans quatre domaines bornés (`foraging`, `materialHandling`, `construction`,
-  `caregiving`) et task matching coopératif réellement influencé par la maîtrise,
-  avec checkpoint/replay v10 sous gate explicite.
+## Position canonique actuelle
 
-Le langage libre, le forwarding, l'enseignement, les professions, l'économie du travail, la
-persistance complète des agents, le replay complet du World, la grande
-population, le vieillissement physique, les maladies, les familles,
-l'émigration et le cycle de vie complet ne sont pas acquis.
+`CIV-00` à `CIV-13` sont terminés et acquis dans leurs contrats bornés. La
+phase canonique actuelle est :
 
-Ce stade ne doit pas être décrit comme une civilisation déjà implémentée.
+`CIV-14 — Reuse & Convergence Baseline`.
 
-## Jalons produit
+Les noms `NEXT-1` et `NEXT-2` sont uniquement des alias historiques :
 
-### PebbleLab Society V1
+- `NEXT-1` désignait la verticale de compétences maintenant canonisée comme
+  `CIV-13` et terminée ;
+- `NEXT-2` désignait une proposition d’enseignement maintenant planifiée comme
+  `CIV-20`.
 
-Society V1 devient le premier jalon social observable et intermédiaire vers la
-cible principale. Il comprend notamment :
+Aucun identifiant `NEXT-*` n’est une phase canonique V3.
 
-- information sociale locale et causale ;
-- confiance dirigée ;
-- coopération ;
-- tâches et responsabilités partagées ;
-- persistance et checkpoints ;
-- replay causal ;
-- population et migration ;
-- métriques collectives.
+## État acquis, sans extrapolation
 
-Ce jalon valide des interactions sociales réelles. Il ne prétend pas encore
-livrer familles, culture cumulative, marchés, institutions ou histoire
-médiévale complète.
+Les preuves acquises couvrent notamment, dans leurs limites actuelles :
 
-### Medieval Civilization V1
+- le runtime partagé `PebbleAgents` et `AgentSimulationSession` comme source
+  unique des transitions cognitives et civilisationnelles ;
+- les identités stables, l’horloge simulée et le ledger causal ;
+- l’information sociale, la confiance dirigée, le canal physique local, les
+  tâches coopératives et leurs contributions matérielles ;
+- les checkpoints versionnés, restart et replay causal bornés ;
+- la population locale, la migration, les métriques settlement, l’écologie
+  locale abstraite, la mortalité par famine et le lifecycle borné ;
+- la parenté durable, les households, le dependent care et les compétences
+  issues de succès matériels réels ;
+- NaturalResource V1 et Construction V1 comme preuves transactionnelles avec
+  prévalidation, vérification, publication et rollback.
 
-`Medieval Civilization V1` est la cible produit principale à long terme. Son
-acceptation dépend de systèmes matériels, sociaux, générationnels et culturels
-intégrés, reproductibles et observables, pas d’étiquettes scénarisées.
+Ces preuves ne constituent pas encore une agriculture réelle, une économie
+d’items complète, une grande population, un cycle de vie complet, un système
+de connaissance, une culture, une institution ou une civilisation médiévale.
 
-## Prochain enchaînement obligatoire
+## Décision Reuse-First
 
-1. `CIV-00 — Documentation and AGENTS Rebaseline`
-2. `CIV-01 — Behavior-Preserving Runtime Modularization`
-3. `CIV-02 — Stable Identity, Simulation Clock and Causal Ledger`
-4. `CIV-03 — Social Information and Directed Trust V1`
+Tout nouveau besoin physique commence par un audit ciblé de PebbleCore :
 
-`CIV-01` est terminé et validé localement : le runtime existant a été
-modularisé sans changement de comportement. `CIV-02` est également terminé et
-validé localement : les fondations d’identité stable, d’horloge simulée et de
-causalité déterministe sont acquises sans ouvrir la persistance ni la
-communication. `CIV-03` est terminé et validé localement : l’information
-sociale causale et la confiance dirigée sont acquises, sans forwarding,
-coopération ni persistance. `CIV-04` est terminé et validé localement : sons,
-gestes et perception imparfaite sont acquis dans un canal local borné, sans
-langage libre ni forwarding. `CIV-05` est terminé et validé localement : une
-tâche de livraison de matériaux peut être offerte, acceptée et accomplie par
-un helper distinct du builder, avec contribution matérielle conservée et
-fiabilité dirigée, sans profession ni économie du travail. `CIV-06` est
-terminé et validé localement : les checkpoints agents versionnés et bornés,
-le chargement restart-safe et le replay causal pur du kernel sont acquis sous
-gate explicite. Cette verticale n'est ni un snapshot complet du World, ni un
-autosave, ni un framework général de migration de schéma. `CIV-07` est
-également terminé et validé localement : les trois fondateurs historiques
-peuvent initialiser `settlement-main`, un migrant `agent_3` peut être admis
-depuis `outside-north`, marcher physiquement jusqu'au point d'accueil et
-devenir résident après un restart mid-route. La population reste bornée à huit
-membres, sans naissance, mort, reproduction, famille, émigration ou simulation
-hors écran. `CIV-08` est terminé et validé localement : le settlement possède
-désormais une vue macro administrative à cadence bornée, persistée et
-rejouable, sans rétroaction sur les décisions, les mouvements ou les
-transactions micro. Les fixtures headless contrôlées couvrent les cinq
-conditions du vrai classificateur (`incomplete`, `strained`, `transitioning`,
-`active`, `stable`) ; la preuve live historique reste correctement `strained`
-aux trois pulses parce que les urgences micro réelles sont prioritaires. La
-verticale `CIV-09` est terminée et validée localement : quatre résidents
-exploitent des patches alimentaires locaux bornés détectés en lecture seule
-dans le World, avec compétition déterministe, rendement limité, épuisement,
-régénération, consommation et pression collective sans rétroaction cognitive.
-Le checkpoint/replay v4 conserve exactement patches, horloges et bilans. Cette
-V1 n'introduit ni agriculture, saisons, animaux ni eau. La verticale `CIV-10`
-est terminée et validée localement : la famine peut maintenant finaliser une
-mort à une frontière de tick déterministe, retirer atomiquement le résident de
-la population active et conserver son death record ainsi que ses ressources
-dans un compte terminal borné. Le probe correspondant est retiré, puis la
-capacité libérée permet l'admission physique d'`agent_4` sans réutiliser aucun
-identifiant. Le checkpoint/replay v5 couvre les reprises pré- et post-mortem.
-Le record terminal v5 fige les compteurs cognitifs et matériels, et la preuve
-contractuelle couvre l'ordre causal létal exact ainsi que le nettoyage des
-références actives de chaque verticale sans supprimer leurs historiques.
-Cette V1 ne crée aucun cadavre et n'ouvre ni vieillissement, maladie,
-reproduction, famille ou héritage. `CIV-11` est terminé et validé localement :
-le lifecycle dérive un âge démographique de l'horloge simulée, conserve
-`ticksAlive`, classe les membres en `newborn`, `juvenile` et `mature`, puis
-peut produire une naissance locale atomique dans la limite de population. La
-preuve sélectionne deux progéniteurs historiques sans créer couple ni foyer,
-valide un site World en lecture seule, crée `agent_4` avec un ordinal monotone
-et restaure exactement le plan, la naissance et la maturation via le schéma
-checkpoint/replay v6. Cette V1 n'introduit aucun sexe, grossesse, famille,
-génétique ou héritage. `CIV-12A — Durable Kinship Graph V1` est terminé et
-validé localement : l'archive kinship devient l'autorité historique unique,
-les champs `progenitorIDs` lifecycle/birth restent des projections contrôlées,
-les fondateurs et migrants sont des racines à parentage inconnu, et mort,
-migration, checkpoint, restart et replay ne suppriment aucun lien. L'archive
-bornée est fail-closed et le schéma v7 n'encode aucun index inverse. Le restore
-v7 rapproche intégralement les événements causaux encore retenus avec chaque
-parentage et n'accepte une référence absente que si sa séquence est prouvée
-antérieure à la fenêtre retenue. La preuve de hardening conserve les traces et
-octets v1-v6 gate-off, force après validation du candidat une défaillance
-physique newborn réservée au harnais jetable, puis vérifie l'absence de toute
-publication session, recorder, ordinal, événement ou probe. Cette verticale
-n'introduit ni foyer, care, propriété, héritage, génétique ou cognition newborn
-supplémentaire. `CIV-12B — Households and Membership V1` est terminé et validé
-localement : `AgentSimulationSession` possède l'unique archive household, les
-foyers monotones conservent une ancre de résidence sans posséder le terrain ni
-les ressources, et les périodes historiques déterminent l'unique appartenance
-courante. L'activation explicite v7→v8 groupe les résidents par `homePosition` ;
-formation, déplacement, naissance, admission migratoire et mortalité publient
-leurs changements de membership, home et causalité dans une même candidate.
-Les foyers vides sont dissous sans réutilisation d'ID, tandis que kinship reste
-indépendant. Checkpoint, restart et replay v8 restaurent exactement les foyers,
-les périodes et les homes, sans mutation World. La dernière tranche interne de
-`CIV-12` ajoute maintenant le dependent care : newborns sans cognition, action
-ou mouvement autonomes, juveniles limités, assignments déterministes vers un
-caregiver mature, besoins explicites et engagements prioritaires. La nourriture
-fournie est débitée exactement une fois de l'inventaire réel du caregiver puis,
-à défaut, du `campStock`; un manque reste `unmet`. Les changements de household,
-la naissance et la mortalité revalident ou ferment les assignments dans leur
-transaction candidate, sans modifier kinship. Le schéma v9, le restart et le
-replay conservent exactement care, lifecycle et households ; les versions v1 à
-v8 restent inchangées lorsque la gate care est désactivée.
+```text
+besoin physique
+-> audit PebbleCore
+-> mécanique existante ?
+   -> oui : réutiliser, adapter, ou extraire une primitive actor-neutral
+   -> non : ajouter le minimum générique dans le layer propriétaire
+```
 
-`CIV-12 — Kinship, Households and Dependent Care V1` est terminé localement.
-Il n'introduit ni adoption, mariage, propriété, stock household, enseignement,
-compétences ou héritage.
+Une partie des chemins actuels de use/break/place/craft est encore façonnée
+autour de `Player`. Cela justifie une extraction actor-neutral minimale ou un
+adapter dans `Pebble`, jamais une copie des règles dans `PebbleAgents`.
 
-`NEXT-1 — Practice-Based Skills and Task Matching V1` est terminé et validé
-localement. Les niveaux sont dérivés de succès matériels réellement publiés,
-sans crédit rétroactif, XP temporel, talent inné, profession ni bonus de
-rendement. Les historiques divergents influencent une vraie sélection de helper
-après les contraintes d'éligibilité et de sécurité. Le schéma v10 persiste les
-totaux et preuves bornées ; restart et replay reproduisent les causes sans API
-publique d'ajout d'XP, tandis que les versions v1 à v9 restent inchangées avec
-la gate skills désactivée.
+Sont interdits par défaut les seconds moteurs live de farming, crafting,
+inventory, combat, animaux, redstone, rails, persistence World et pathfinding
+physique général.
 
-Prochaine verticale prospective :
-`NEXT-2 — Demonstration, Teaching and Apprenticeship V1`.
+## Architecture propriétaire
 
-## Grands programmes ultérieurs
+| Layer | Autorité |
+| --- | --- |
+| `PebbleCore` | Vérité physique : `World`, chunks, blocs, items, entités, règles de gameplay, physique et persistence World. |
+| `Pebble` | Sensors, adapters et executors actor/World : observation bornée, prévalidation, mutation, vérification, outcome et rollback. |
+| `PebbleAgents` | Cognition et civilisation déterministes : identité, besoins, mémoire, décisions, causalité sociale, population, lifecycle, parenté, care, skills et futurs domaines sociaux. |
+| `AgentSimulationSession` | Aggregate root civilisationnel unique et propriétaire des transitions partagées ; aucun second kernel cognitif. |
+| `PebbleLab` | Runner headless, scénarios, long-runs, métriques, snapshots, benchmarks et évaluation. |
+| `pebsmoke` | Preuves, invariants, régressions et fault injection. |
+| UI / God / LLM | Présentation ou proposition structurée seulement ; aucune propriété du World, des transactions ou de la cognition. |
 
-L’ordre précis sera réévalué à chaque preuve, mais les programmes structurants
-sont :
+`PebbleAgents` reste pur et n’importe pas `PebbleCore`, AppKit, Metal, un
+réseau ou un provider LLM. Le live reçoit des observations et outcomes validés
+par `Pebble`.
 
-1. coopération, tâches et rôles ;
-2. persistance, checkpoints et replay ;
-3. population et simulation multi-échelle ;
-4. écologie et subsistance préindustrielle ;
-5. cycle de vie, reproduction et génétique ;
-6. foyers, familles, lignées et héritage ;
-7. compétences, apprentissage et professions ;
-8. propriété, production et conservation ;
-9. troc, dette, monnaie et marchés ;
-10. proto-langage et communication physique ;
-11. connaissances, livres, archives et bibliothèques ;
-12. cultures distribuées et mémoire collective ;
-13. guildes et institutions ;
-14. religions et systèmes de croyances ;
-15. territoires et structures politiques ;
-16. diplomatie, conflits et guerre ;
-17. technologies médiévales, rails et redstone ;
-18. training bridge et politiques apprises ;
-19. provider LLM local et interchangeable ;
-20. modes Dieu ;
-21. Genesis Run ;
-22. Medieval Civilization V1 acceptance.
+## Classification des abstractions existantes
 
-Ces noms définissent des problèmes produit et des dépendances. Ils n’annoncent
-ni API finale, ni modèle de données final, ni capacité déjà implémentée.
+Les classes suivantes sont normatives. Elles décrivent la trajectoire de
+migration, pas une suppression immédiate.
 
-## Dépendances incontournables
+| Classe | Systèmes | Décision |
+| --- | --- | --- |
+| `CANONICAL` | `AgentSimulationSession`, identités/clock, causal ledger, checkpoint/replay, social/trust, communication locale, cooperation/tasks, population, mortality/lifecycle, kinship, households, care, skills | Continuer dans `PebbleAgents` comme vérité civilisationnelle. |
+| `LIVE_BRIDGE` | contrôleur, sensors, adapters, coordination de mouvement et executors de `Pebble` | Conserver comme frontière actor/World ; ils n’acquièrent aucune cognition parallèle. |
+| `COARSE_DORMANT` | `AgentLocalEcologyState`, `AgentCampStock`, catégories `foodRaw`/`wood`/`stone`, `AgentBoundedRoutePlanner` | Conserver pour headless, coarse, dormant ou waypoints uniquement avec conservation et parité explicites. |
+| `TO_CONVERGE` | NaturalResource V1, Construction V1, projection inventory/stock live, frontière navigation physique live, frontière persistence World/civilisation | Migrer incrémentalement vers les mécaniques PebbleCore après preuve de remplacement et rollback. |
+| `LEGACY_FROZEN` | anciennes stacks et fixtures explicitement superseded par le runtime partagé | Garder pour compatibilité/régression ; ne plus leur ajouter de capacité produit et ne pas les supprimer en big-bang. |
 
-- Pas de grande population avant identité stable et spatialisation.
-- Pas de générations avant horloge, persistance et parenté versionnée.
-- Pas d’héritage avant propriété.
-- Pas de marché avant propriété et conservation.
-- Pas de culture cumulative avant transmission et persistance.
-- Pas de bibliothèque utile avant livres matériels et savoir structuré.
-- Pas de guerre crédible avant groupes, territoires et logistique.
-- Pas de LLM décisionnaire direct.
-- Pas de Genesis Run avant persistance, cycle de vie, apprentissage et
-  communication.
+Une abstraction peut fournir aujourd’hui une preuve de bridge tout en ayant
+`TO_CONVERGE` comme destination. La classification primaire ci-dessus indique
+où doit aller le produit.
 
-S’ajoutent les invariants permanents : aucun raccourci d’omniscience, aucune
-création gratuite de biens, aucune mutation World non autorisée, aucune seconde
-source de vérité cognitive et aucune feature expérimentale active par défaut.
+### Contrats de migration permanents
 
-## Règle de livraison
+- `AgentLocalEcologyState` peut devenir une projection coarse/dormant ; il ne
+  doit pas devenir un second moteur écologique live.
+- `AgentCampStock` et les catégories génériques restent des modèles de
+  compatibilité, conservation et agrégation pendant que le live converge vers
+  de vrais `ItemStack` et containers.
+- `AgentBoundedRoutePlanner` reste utile en headless, coarse et pour des
+  waypoints ; il ne devient pas un second pathfinder physique général.
+- NaturalResource V1 et Construction V1 conservent leurs preuves de
+  transaction, idempotence et rollback pendant leur convergence vers les
+  règles Pebble de break/drop et place.
+- checkpoint/replay, causal ledger, kinship, households, care, social/trust et
+  skills restent des systèmes Civilization canoniques.
+- Aucune abstraction V1 n’est retirée avant preuve de remplacement, parité des
+  outcomes et migration compatible.
 
-Chaque bloc futur doit produire au moins un des résultats suivants :
+## Matrice de réutilisation physique
 
-- un nouveau comportement observable ;
-- une réduction directe d’un risque bloquant ;
-- une fondation indispensable du bloc suivant ;
-- une amélioration importante du debug ou du replay.
+Pebble fournit déjà, ou fournit substantiellement, les autorités suivantes.
+Les phases futures les réutilisent ou les adaptent au lieu de les réimplémenter
+dans `PebbleAgents`.
 
-Une verticale livre ensemble son contrat, son implémentation, ses preuves
-focalisées, ses régressions et sa documentation. Une mission purement
-documentaire reste exceptionnelle et doit réduire un risque réel, comme
-`CIV-00` réduit l’ambiguïté stratégique et documentaire avant la prochaine
-mission technique.
+| Domaine physique | Autorité existante | Décision V3 |
+| --- | --- | --- |
+| worldgen, biomes, chunks | PebbleCore `Gen` et `World` | Réutiliser et observer par DTO bornés. |
+| farming, croissance, random ticks | PebbleCore `Farming` | Réutiliser ; aucun `FarmingEngine` agent. |
+| animaux, babies, breeding | PebbleCore entités/AI | Réutiliser ; Civilization ajoute décisions, tâches et valeur sociale. |
+| pêche et loot | PebbleCore fishing bobber/loot | Réutiliser les règles, équipements, délais et vrais drops. |
+| registries items/blocs | PebbleCore registries | Autorité des identités physiques ; ne pas recopier le catalogue dans un enum agent. |
+| inventories et containers | PebbleCore `ItemStack`, inventories et block entities | Autorité live ; snapshots civilisationnels uniquement lorsque nécessaires. |
+| recipes, crafting, smelting | PebbleCore recipes/crafting/furnaces | Réutiliser pour toute transformation matérielle. |
+| outils et durability | PebbleCore item/tool definitions et usure | Réutiliser ; aucun bonus de skill ne crée de matière. |
+| block breaking et drops | PebbleCore interaction/drop rules | Faire converger NaturalResource V1 vers ces primitives. |
+| block placement | PebbleCore placement, replaceability, orientation, collision et block entities | Faire converger Construction V1 vers ces primitives. |
+| physique et collision | PebbleCore entités/World | Autorité sur le déplacement incarné. |
+| pathfinding/navigation physique | PebbleCore A* et `Navigation` | Réutiliser pour le live ; garder le planner agent borné pour coarse/waypoints. |
+| combat | PebbleCore combat/damage/equipment | Réutiliser ; Civilization ajoute causes, morale, coordination et logistique. |
+| redstone | PebbleCore redstone | Réutiliser comme technologie matérielle réelle. |
+| rails et minecarts | PebbleCore rails, véhicules et rail physics | Réutiliser ; Civilization ajoute projets, droits, financement et maintenance. |
+| persistence World/SQLite | PebbleCore `SaveDB` et save queue | Réutiliser ; la persistence Civilization se réconcilie avec elle sans second World-save. |
+
+## Roadmap canonique CIV-00 à CIV-67
+
+Les statuts `planned` ci-dessous signifient explicitement « non acquis ». Les
+détails d’API restent à fixer par la mission qui ouvre chaque verticale.
+
+### Fondations acquises
+
+| Phase | Statut | Verticale |
+| --- | --- | --- |
+| `CIV-00` | completed | Documentation and Civilization Rebaseline |
+| `CIV-01` | completed | Behavior-Preserving Runtime Modularization |
+| `CIV-02` | completed | Stable Identity, Simulation Clock and Causal Ledger |
+| `CIV-03` | completed | Social Information and Directed Trust V1 |
+| `CIV-04` | completed | Physical Local Communication V1 |
+| `CIV-05` | completed | Cooperative Material Tasks V1 |
+| `CIV-06` | completed | Checkpoint, Restart and Replay V1 |
+| `CIV-07` | completed | Population and Local Migration V1 |
+| `CIV-08` | completed | Settlement Metrics V1 |
+| `CIV-09` | completed | Local Ecology V1 |
+| `CIV-10` | completed | Starvation Mortality V1 |
+| `CIV-11` | completed | Age, Stages, Reproduction and Birth V1 |
+| `CIV-12` | completed | Kinship, Households and Dependent Care V1 |
+| `CIV-13` | completed | Practice-Based Skills and Task Matching V1 |
+
+### Convergence Reuse-First
+
+| Phase | Statut | Verticale |
+| --- | --- | --- |
+| `CIV-14` | current | Reuse & Convergence Baseline |
+| `CIV-15` | planned | Actor-Neutral Physical Action Gateway V1 |
+| `CIV-16` | planned | Real Material Identity and Inventory Bridge V1 |
+| `CIV-17` | planned | Harvest and Resource Convergence V1 |
+| `CIV-18` | planned | Construction and Placement Convergence V1 |
+| `CIV-19` | planned | Navigation and Embodiment Boundary Consolidation V1 |
+
+`CIV-15` à `CIV-19` doivent fermer la frontière entre intention
+civilisationnelle et action physique réelle sans réécrire PebbleCore. Gate R
+est requise avant les nouvelles verticales physiques de subsistance.
+
+### Société locale autonome — Gate B
+
+| Phase | Statut | Verticale |
+| --- | --- | --- |
+| `CIV-20` | planned | Demonstration, Teaching and Apprenticeship V1 |
+| `CIV-21` | planned | Ecological Observation and Civil Calendar V1 |
+| `CIV-22` | planned | Agriculture and Managed Surplus V1 |
+| `CIV-23` | planned | Fishing, Hunting and Wild Subsistence V1 |
+| `CIV-24` | planned | Livestock and Animal Capital V1 |
+| `CIV-25` | planned | Durable Work Commitments and Emergent Professions V1 |
+
+Ces phases doivent produire plusieurs stratégies matérielles viables et une
+spécialisation dérivée de la pratique, de l’enseignement et des besoins, sans
+classe professionnelle imposée.
+
+### Économie matérielle locale — Gate C
+
+| Phase | Statut | Verticale |
+| --- | --- | --- |
+| `CIV-26` | planned | Possession, Custody, Claims and Use Rights V1 |
+| `CIV-27` | planned | Production, Tools and Workshops V1 |
+| `CIV-28` | planned | Barter and Local Exchange V1 |
+| `CIV-29` | planned | Debt, Promises and Durable Contracts V1 |
+| `CIV-30` | planned | Physical Markets and Local Price Discovery V1 |
+| `CIV-31` | planned | Currency, Units of Account and Accounting V1 |
+
+Les biens restent physiques, transportés et conservés. Les marchés, contrats
+et monnaies n’autorisent ni téléportation, ni double dépense, ni prix global
+omniscient.
+
+### Persistence et échelle — Gate D
+
+| Phase | Statut | Verticale |
+| --- | --- | --- |
+| `CIV-32` | planned | World/Civilization Persistence Convergence V1 |
+| `CIV-33` | planned | Multi-Settlement, Population Scaling and Fidelity Tiers V1 |
+| `CIV-34` | planned | Training and Evaluation Bridge V1 |
+
+Le training bridge reste optionnel et non bloquant. Les transitions
+live/near/dormant conservent identité, matière et obligations ; aucune policy
+externe ne devient autorité.
+
+### Continuité générationnelle — Gate E
+
+| Phase | Statut | Verticale |
+| --- | --- | --- |
+| `CIV-35` | planned | Homeostasis, Health, Aging and Mortality V2 |
+| `CIV-36` | planned | Genetics, Development and Phenotype V1 |
+| `CIV-37` | planned | Childhood Learning and Social Development V2 |
+| `CIV-38` | planned | Unions, Family Relations, Lineages and Houses V1 |
+| `CIV-39` | planned | Inheritance, Estates and Succession V1 |
+
+Génétique, développement, connaissance, compétence, culture, profession et
+statut restent distincts. Les skills ne sont jamais hérités et les estates
+référencent de vrais biens, claims et obligations.
+
+### Savoir et culture cumulative — Gate F
+
+| Phase | Statut | Verticale |
+| --- | --- | --- |
+| `CIV-40` | planned | Structured Knowledge Graph V1 |
+| `CIV-41` | planned | Oral Transmission and Distortion V1 |
+| `CIV-42` | planned | Learned Proto-Language V1 |
+| `CIV-43` | planned | Compositional and Long-Distance Communication V1 |
+| `CIV-44` | planned | Writing and Literacy V1 |
+| `CIV-45` | planned | Books, Manuscripts, Copying and Translation V1 |
+| `CIV-46` | planned | Archives, Libraries and Cumulative Knowledge V1 |
+| `CIV-47` | planned | Distributed Culture, Norms and Ritual Practices V1 |
+
+La vérité du World, une affirmation, la compréhension, la croyance, la
+tradition et l’énoncé restent séparés. Les messages longue distance et les
+livres ont un support physique ; le savoir peut se déformer ou disparaître.
+
+### Institutions médiévales — Gate G
+
+| Phase | Statut | Verticale |
+| --- | --- | --- |
+| `CIV-48` | planned | Generic Organization Kernel V1 |
+| `CIV-49` | planned | Guilds and Professional Institutions V1 |
+| `CIV-50` | planned | Heraldry and Visible Identity V1 |
+| `CIV-51` | planned | Settlements, Territory, Land and Obligations V1 |
+| `CIV-52` | planned | Governance, Charters, Law and Justice V1 |
+| `CIV-53` | planned | Beliefs, Myths and Emergent Religion V1 |
+| `CIV-54` | planned | Diplomacy, Treaties and Dynastic Alliances V1 |
+| `CIV-55` | planned | Conflict, Defense, Raids and War Logistics V1 |
+| `CIV-56` | planned | Emergent Polities and Alternative Feudalities V1 |
+
+Les labels politiques, religieux ou culturels restent descriptifs. Ils
+découlent de comportements, appartenances, ressources, croyances et histoires
+observables ; ils ne créent jamais directement leurs effets.
+
+### Technologie et Renaissance alternative — Gate H
+
+| Phase | Statut | Verticale |
+| --- | --- | --- |
+| `CIV-57` | planned | Technology, Crafting Knowledge and Innovation V1 |
+| `CIV-58` | planned | Redstone, Rails and Infrastructure V1 |
+
+L’innovation réutilise les recettes et mécaniques réelles. Redstone, rails et
+minecarts sont des technologies matérielles coûteuses, maintenues, transmissibles
+et perdables.
+
+### God mode, LLM optionnel et acceptation finale
+
+| Phase | Statut | Verticale |
+| --- | --- | --- |
+| `CIV-59` | planned | God Observer, Historiography and Time Control V1 |
+| `CIV-60` | planned | Divine Interventions, Revelations and Prophets V1 |
+| `CIV-61` | planned | LLM Provider Abstraction and Deterministic Mock V1 |
+| `CIV-62` | planned | Local LLM Prototype and Benchmark |
+| `CIV-63` | planned | Grounded Dialogue, Autobiography and Player Contact V1 |
+| `CIV-64` | planned | Dynamic Cognitive Budget and Large-Scale Inference V1 |
+| `CIV-65` | planned | Genesis Presets and Founder World |
+| `CIV-66` | planned | Long-Duration Medieval Civilization Acceptance |
+| `CIV-67` | planned | Incarnation and God World Final |
+
+Le monde doit fonctionner avec le provider LLM désactivé. Un LLM tardif peut
+verbaliser, résumer, reformuler ou proposer une structure validable ; il ne
+mutera jamais directement le World, l’inventaire, les transactions ou l’état
+cognitif. Le God mode observe d’abord ; toute intervention produit un événement
+physique ou informationnel audité, et l’incarnation réutilise les lois
+ordinaires du monde.
+
+## Gates V3
+
+| Gate | Après | Critère |
+| --- | --- | --- |
+| `R` — No Parallel Physical Engines | `CIV-19` | Actions actor-neutral/adapters, vrais items, break/drop, placement et navigation possèdent une frontière de réutilisation démontrée. |
+| `B` — Self-Sustaining Local Society | `CIV-25` | Teaching, subsistances plurielles, surplus, livestock et travail durable forment une société locale viable. |
+| `C` — Local Material Economy | `CIV-31` | Rights, production, échange, dette, marchés physiques et monnaie optionnelle conservent les biens réels. |
+| `D` — Durable Scaled Society | `CIV-34` | Persistence réconciliée, plusieurs settlements, fidelity tiers et évaluation optionnelle sont bornés et observables. |
+| `E` — Generational Continuity | `CIV-39` | Santé, développement, enfance, maisons et succession produisent une continuité multi-générationnelle. |
+| `F` — Cumulative Culture | `CIV-47` | Savoir, oralité, langage, écriture, livres, archives et cultures peuvent s’accumuler, diverger et disparaître. |
+| `G` — Medieval Institutions | `CIV-56` | Organisations, guildes, territoire, loi, religion, diplomatie, conflit et polities émergent de causes simulées. |
+| `H` — Alternative Renaissance | `CIV-58` | Innovation cumulative et infrastructures Pebble réelles sont socialement situées et matériellement maintenues. |
+
+Une gate n’est ouverte que par ses preuves ; sa présence dans la roadmap ne
+signifie pas qu’elle est déjà acquise.
+
+## Cible produit conservée
+
+La cible reste une civilisation médiévale alternative, préindustrielle,
+autonome, persistante et multi-générationnelle. Des individus limités doivent
+survivre, apprendre, transmettre, produire, échanger, former ou quitter des
+foyers et organisations, créer des cultures, institutions, religions et
+polities, innover, entrer en conflit ou négocier, vieillir et mourir sans forme
+sociale imposée.
+
+Le succès n’est ni une étiquette de « royaume », ni un récit plausible généré
+de l’extérieur. C’est une histoire rejouable dont les croyances, économies,
+alliances, héritages, guerres, technologies et effondrements se reconstruisent
+depuis des observations locales, des décisions, des transactions matérielles
+et une causalité persistante. Le joueur peut l’observer, l’accélérer,
+l’influencer comme un dieu puis s’y incarner, sans que son absence empêche le
+monde de vivre.
+
+## Invariants de livraison
+
+- Simuler les causes, jamais imposer le résultat social.
+- Aucune omniscience collective ni communication gratuite à distance.
+- Toute verticale matérielle étend une équation de conservation réconciliable.
+- Toute collection live est bornée ou possède une politique de persistence et
+  de compaction explicite.
+- Toute mutation World est prévalidée, bornée, transactionnelle, vérifiée et
+  rollbackée de façon vérifiable en cas d’échec.
+- Toute feature expérimentale reste désactivée par défaut.
+- Une verticale livre normalement contrat, implémentation, preuves focalisées,
+  une seule full gate finale justifiée et documentation en 1 à 3 commits
+  reviewables.
+- Aucune phase postérieure à `CIV-14` ne commence dans la mission de recalage
+  documentaire CIV-14.

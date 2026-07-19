@@ -4824,3 +4824,18 @@ language, and culture.
 
 Next prospective vertical: NEXT-2 - Demonstration, Teaching and
 Apprenticeship V1.
+
+## CIV-14 - V3 Reuse-First Prospective Rebaseline
+
+Status: prospective authority rebaselined after completion of CIV-13; this is
+an append-only documentation record, not a renumbering of historical events.
+
+The canonical prospective roadmap now treats `CIV-00` through `CIV-13` as
+completed, makes `CIV-14 — Reuse & Convergence Baseline` the current phase,
+adds the convergence chain through CIV-19, and renumbers the former prospective
+work through CIV-67. The former `NEXT-1` and `NEXT-2` names remain historical
+aliases only. `PEBBLE_CIVILIZATION_ROADMAP.md` is the V3 Reuse-First human
+authority and `ROADMAP_MANIFEST.json` is its machine-readable projection.
+
+This rebaseline changes no runtime, gameplay, registry, asset, save, golden, or
+test behavior and starts no CIV-15 implementation.

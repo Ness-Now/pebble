@@ -18,6 +18,10 @@ Read the repository `AGENTS.md` first, then every `AGENTS.md` from the repositor
 
 Work in one functional vertical at a time. State the allowed and forbidden surfaces before implementation, keep gates default-off, and stop if the requested Git path, branch, HEAD, or cleanliness invariant does not match.
 
+Every new physical vertical begins with a targeted audit of the relevant
+PebbleCore mechanics. Prefer reuse, a minimal actor-neutral extraction, or a
+Pebble adapter before proposing any new physical implementation.
+
 ## Delivery cycle
 
 1. ChatGPT defines the product vertical, boundaries, evidence, and Definition of Done.
@@ -28,15 +32,27 @@ Work in one functional vertical at a time. State the allowed and forbidden surfa
 
 A local result reported by Codex is evidence about one workspace and one command execution. GitHub proof is evidence attached to the user-pushed remote SHA. Neither should be presented as the other.
 
+The normal implementation sequence is preflight, targeted reuse audit,
+implementation, focused tests, then one justified full gate at the end. Avoid
+an audit of an audit, repeated full suites after micro-fixes, and live
+validation when no live boundary changed. One vertical normally produces one
+to three reviewable commits.
+
 ## Permanent validation
 
-Run the complete headless gate from the repository root:
+Run the complete headless gate once at the end of a runtime or tooling vertical
+from the repository root:
 
 ```bash
 scripts/verify-pebblelab.sh
 ```
 
 It refuses any defined `PEBBLE_REGOLD`, builds all relevant products, runs `pebsmoke`, runs `agents_basic` twice with seed 42 and compares its canonical sorted outputs, runs the existing `regression_smoke` business checks, performs repository hygiene checks, and writes evidence only to a temporary directory outside the repository.
+
+For a docs/contracts-only mission that touches no executable, configuration,
+runtime, test baseline, or generated artifact, use targeted Markdown/JSON and
+Git diff checks; do not run a Swift build merely because documentation changed
+unless the mission explicitly requires the full gate.
 
 There is no dedicated historical hash file for `agents_basic`. The retained mechanism deliberately uses the existing in-process `regression_smoke` report as the canonical business baseline and byte-compares deterministic `agents_basic` replays; it does not duplicate golden hashes.
 
@@ -51,7 +67,8 @@ The launcher isolates Pebble data, requires a `PebbleLab-*` disposable world wit
 
 ## Risk and commits
 
-- Risk A — docs, rules, and local validation tooling with no runtime behavior change: full headless gate; normally one commit.
+- Risk A — docs and rules with no executable or runtime behavior change:
+  targeted format, manifest, link, and diff checks; normally one commit.
 - Risk B — shared deterministic runtime or default-off app adapters: full gate plus focused scenario evidence and live dry-run when relevant; normally one or two commits.
 - Risk C — World mutation, lifecycle/persistence boundaries, rendering/assets, registries, packaging, or golden-sensitive behavior: explicit authorization, bounded transaction and verified rollback evidence, full gate, and honest manual live proof where automation ends; normally one to three commits.
 

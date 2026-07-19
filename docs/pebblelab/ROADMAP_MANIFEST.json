@@ -1,0 +1,384 @@
+{
+  "schemaVersion": 1,
+  "roadmapVersion": "V3-Reuse-First",
+  "baselineHead": "b58f71b75110c2e65403cd073409a8559429ec77",
+  "branch": "lab/pebblelab-v1",
+  "canonicalRoadmap": "docs/pebblelab/PEBBLE_CIVILIZATION_ROADMAP.md",
+  "current": "CIV-14",
+  "gates": {
+    "R": {
+      "title": "No Parallel Physical Engines",
+      "afterPhase": "CIV-19"
+    },
+    "B": {
+      "title": "Self-Sustaining Local Society",
+      "afterPhase": "CIV-25"
+    },
+    "C": {
+      "title": "Local Material Economy",
+      "afterPhase": "CIV-31"
+    },
+    "D": {
+      "title": "Durable Scaled Society",
+      "afterPhase": "CIV-34"
+    },
+    "E": {
+      "title": "Generational Continuity",
+      "afterPhase": "CIV-39"
+    },
+    "F": {
+      "title": "Cumulative Culture",
+      "afterPhase": "CIV-47"
+    },
+    "G": {
+      "title": "Medieval Institutions",
+      "afterPhase": "CIV-56"
+    },
+    "H": {
+      "title": "Alternative Renaissance",
+      "afterPhase": "CIV-58"
+    }
+  },
+  "phases": [
+    {
+      "id": "CIV-00",
+      "title": "Documentation and Civilization Rebaseline",
+      "status": "completed"
+    },
+    {
+      "id": "CIV-01",
+      "title": "Behavior-Preserving Runtime Modularization",
+      "status": "completed"
+    },
+    {
+      "id": "CIV-02",
+      "title": "Stable Identity, Simulation Clock and Causal Ledger",
+      "status": "completed"
+    },
+    {
+      "id": "CIV-03",
+      "title": "Social Information and Directed Trust V1",
+      "status": "completed"
+    },
+    {
+      "id": "CIV-04",
+      "title": "Physical Local Communication V1",
+      "status": "completed"
+    },
+    {
+      "id": "CIV-05",
+      "title": "Cooperative Material Tasks V1",
+      "status": "completed"
+    },
+    {
+      "id": "CIV-06",
+      "title": "Checkpoint, Restart and Replay V1",
+      "status": "completed"
+    },
+    {
+      "id": "CIV-07",
+      "title": "Population and Local Migration V1",
+      "status": "completed"
+    },
+    {
+      "id": "CIV-08",
+      "title": "Settlement Metrics V1",
+      "status": "completed"
+    },
+    {
+      "id": "CIV-09",
+      "title": "Local Ecology V1",
+      "status": "completed"
+    },
+    {
+      "id": "CIV-10",
+      "title": "Starvation Mortality V1",
+      "status": "completed"
+    },
+    {
+      "id": "CIV-11",
+      "title": "Age, Stages, Reproduction and Birth V1",
+      "status": "completed"
+    },
+    {
+      "id": "CIV-12",
+      "title": "Kinship, Households and Dependent Care V1",
+      "status": "completed"
+    },
+    {
+      "id": "CIV-13",
+      "title": "Practice-Based Skills and Task Matching V1",
+      "status": "completed"
+    },
+    {
+      "id": "CIV-14",
+      "title": "Reuse & Convergence Baseline",
+      "status": "current"
+    },
+    {
+      "id": "CIV-15",
+      "title": "Actor-Neutral Physical Action Gateway V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-16",
+      "title": "Real Material Identity and Inventory Bridge V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-17",
+      "title": "Harvest and Resource Convergence V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-18",
+      "title": "Construction and Placement Convergence V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-19",
+      "title": "Navigation and Embodiment Boundary Consolidation V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-20",
+      "title": "Demonstration, Teaching and Apprenticeship V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-21",
+      "title": "Ecological Observation and Civil Calendar V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-22",
+      "title": "Agriculture and Managed Surplus V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-23",
+      "title": "Fishing, Hunting and Wild Subsistence V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-24",
+      "title": "Livestock and Animal Capital V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-25",
+      "title": "Durable Work Commitments and Emergent Professions V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-26",
+      "title": "Possession, Custody, Claims and Use Rights V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-27",
+      "title": "Production, Tools and Workshops V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-28",
+      "title": "Barter and Local Exchange V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-29",
+      "title": "Debt, Promises and Durable Contracts V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-30",
+      "title": "Physical Markets and Local Price Discovery V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-31",
+      "title": "Currency, Units of Account and Accounting V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-32",
+      "title": "World/Civilization Persistence Convergence V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-33",
+      "title": "Multi-Settlement, Population Scaling and Fidelity Tiers V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-34",
+      "title": "Training and Evaluation Bridge V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-35",
+      "title": "Homeostasis, Health, Aging and Mortality V2",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-36",
+      "title": "Genetics, Development and Phenotype V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-37",
+      "title": "Childhood Learning and Social Development V2",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-38",
+      "title": "Unions, Family Relations, Lineages and Houses V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-39",
+      "title": "Inheritance, Estates and Succession V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-40",
+      "title": "Structured Knowledge Graph V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-41",
+      "title": "Oral Transmission and Distortion V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-42",
+      "title": "Learned Proto-Language V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-43",
+      "title": "Compositional and Long-Distance Communication V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-44",
+      "title": "Writing and Literacy V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-45",
+      "title": "Books, Manuscripts, Copying and Translation V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-46",
+      "title": "Archives, Libraries and Cumulative Knowledge V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-47",
+      "title": "Distributed Culture, Norms and Ritual Practices V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-48",
+      "title": "Generic Organization Kernel V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-49",
+      "title": "Guilds and Professional Institutions V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-50",
+      "title": "Heraldry and Visible Identity V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-51",
+      "title": "Settlements, Territory, Land and Obligations V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-52",
+      "title": "Governance, Charters, Law and Justice V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-53",
+      "title": "Beliefs, Myths and Emergent Religion V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-54",
+      "title": "Diplomacy, Treaties and Dynastic Alliances V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-55",
+      "title": "Conflict, Defense, Raids and War Logistics V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-56",
+      "title": "Emergent Polities and Alternative Feudalities V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-57",
+      "title": "Technology, Crafting Knowledge and Innovation V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-58",
+      "title": "Redstone, Rails and Infrastructure V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-59",
+      "title": "God Observer, Historiography and Time Control V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-60",
+      "title": "Divine Interventions, Revelations and Prophets V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-61",
+      "title": "LLM Provider Abstraction and Deterministic Mock V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-62",
+      "title": "Local LLM Prototype and Benchmark",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-63",
+      "title": "Grounded Dialogue, Autobiography and Player Contact V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-64",
+      "title": "Dynamic Cognitive Budget and Large-Scale Inference V1",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-65",
+      "title": "Genesis Presets and Founder World",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-66",
+      "title": "Long-Duration Medieval Civilization Acceptance",
+      "status": "planned"
+    },
+    {
+      "id": "CIV-67",
+      "title": "Incarnation and God World Final",
+      "status": "planned"
+    }
+  ]
+}
