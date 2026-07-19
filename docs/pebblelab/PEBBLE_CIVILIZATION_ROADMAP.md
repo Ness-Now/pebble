@@ -20,10 +20,10 @@ Baseline de ce recalage :
 
 ## Position canonique actuelle
 
-`CIV-00` à `CIV-13` sont terminés et acquis dans leurs contrats bornés. La
+`CIV-00` à `CIV-14` sont terminés et acquis dans leurs contrats bornés. La
 phase canonique actuelle est :
 
-`CIV-14 — Reuse & Convergence Baseline`.
+`CIV-15 — Actor-Neutral Physical Action Gateway V1`.
 
 Les noms `NEXT-1` et `NEXT-2` sont uniquement des alias historiques :
 
@@ -178,8 +178,8 @@ détails d’API restent à fixer par la mission qui ouvre chaque verticale.
 
 | Phase | Statut | Verticale |
 | --- | --- | --- |
-| `CIV-14` | current | Reuse & Convergence Baseline |
-| `CIV-15` | planned | Actor-Neutral Physical Action Gateway V1 |
+| `CIV-14` | completed | Reuse & Convergence Baseline |
+| `CIV-15` | current | Actor-Neutral Physical Action Gateway V1 |
 | `CIV-16` | planned | Real Material Identity and Inventory Bridge V1 |
 | `CIV-17` | planned | Harvest and Resource Convergence V1 |
 | `CIV-18` | planned | Construction and Placement Convergence V1 |
@@ -358,5 +358,5 @@ monde de vivre.
 - Une verticale livre normalement contrat, implémentation, preuves focalisées,
   une seule full gate finale justifiée et documentation en 1 à 3 commits
   reviewables.
-- Aucune phase postérieure à `CIV-14` ne commence dans la mission de recalage
-  documentaire CIV-14.
+- `CIV-15` ouvre uniquement les seams actor-neutral et la gateway bornée ; il
+  ne commence ni l’inventaire CIV-16, ni les convergences CIV-17/CIV-18.

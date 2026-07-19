@@ -136,6 +136,7 @@ extension PebbleAgentController {
             let invalidRefusalVerified = invalid.status == .refused
                 && invalid.failure == .invalidRequest
                 && invalid.mutations.isEmpty
+                && invalid.committedEffectCount == 0
                 && invalidCustodyCalls == 0
                 && currentGatewayCell(world, fixture.target) == 0
 
@@ -157,6 +158,7 @@ extension PebbleAgentController {
             )
             let lateRollbackVerified = late.status == .verificationFailure
                 && late.failure == .postMutationRejected
+                && late.committedEffectCount == 0
                 && currentGatewayCell(world, fixture.target) == 0
                 && lateCustodyCount == 1
                 && world.entities.map(\.id).sorted() == entityIDsBefore
@@ -212,12 +214,16 @@ extension PebbleAgentController {
                 && lateRollbackVerified
                 && placed.status == .succeeded
                 && placed.after == Int(cell(B.stone))
+                && placed.committedEffectCount == 2
                 && liveCustodyCount == 0
                 && stalePlacement.status == .staleTarget
+                && stalePlacement.committedEffectCount == 0
                 && staleCustodyCalls == 0
                 && broken.status == .succeeded
                 && broken.after == 0
+                && broken.committedEffectCount == 3
                 && repeatedBreak.status == .staleTarget
+                && repeatedBreak.committedEffectCount == 0
             let fixtureRestored = restoreGatewayProofFixture(fixture, world: world)
             let newEntities = world.entities.filter { !entityIDsBefore.contains($0.id) }
             for entity in newEntities {
@@ -240,7 +246,7 @@ extension PebbleAgentController {
                 sessionUnchanged ? "session-unchanged" : "session-changed",
             ].joined(separator: "|")
             let digest = String(hashString(digestInput), radix: 16)
-            trace("gateway proof actor=\(actorID) target=\(fixture.target.x),\(fixture.target.y),\(fixture.target.z) invalid=\(invalid.status.rawValue) late=\(late.status.rawValue) rollback=\(lateRollbackVerified ? "verified" : "failed") place=\(placed.status.rawValue) placeStale=\(stalePlacement.status.rawValue) break=\(broken.status.rawValue) breakRepeat=\(repeatedBreak.status.rawValue) session=\(sessionUnchanged ? "unchanged" : "changed") world=\(worldRestored ? "restored" : "dirty") entities=\(world.entities.map(\.id).sorted() == entityIDsBefore ? "unchanged" : "changed") digest=\(digest)")
+            trace("gateway proof actor=\(actorID) target=\(fixture.target.x),\(fixture.target.y),\(fixture.target.z) invalid=\(invalid.status.rawValue) late=\(late.status.rawValue) rollback=\(lateRollbackVerified ? "verified" : "failed") effects=\(invalid.committedEffectCount),\(late.committedEffectCount),\(placed.committedEffectCount),\(stalePlacement.committedEffectCount),\(broken.committedEffectCount),\(repeatedBreak.committedEffectCount) place=\(placed.status.rawValue) placeStale=\(stalePlacement.status.rawValue) break=\(broken.status.rawValue) breakRepeat=\(repeatedBreak.status.rawValue) session=\(sessionUnchanged ? "unchanged" : "changed") world=\(worldRestored ? "restored" : "dirty") entities=\(world.entities.map(\.id).sorted() == entityIDsBefore ? "unchanged" : "changed") digest=\(digest)")
             guard proofPassed else {
                 return failure("Physical action gateway proof failed; cleanup attempted and verified=\(worldRestored).")
             }

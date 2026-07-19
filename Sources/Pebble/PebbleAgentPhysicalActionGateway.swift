@@ -38,9 +38,16 @@ struct PebbleAgentPhysicalActionOutcome {
     let before: Int
     let after: Int
     let mutations: [PhysicalBlockMutation]
+    let committedEffectCount: Int
     let failure: PebbleAgentPhysicalActionFailure?
 
     var succeeded: Bool { status == .succeeded }
+}
+
+private enum PebbleAgentBufferedPhysicalEffect {
+    case sound(String, Double, Double, Double, Double, Double)
+    case particles(String, Double, Double, Double, Int, Double, Int)
+    case vibration(Double, Double, Double, Int, EntityRef?)
 }
 
 struct PebbleAgentBlockPlacementRequest {
@@ -205,17 +212,19 @@ struct PebbleAgentPhysicalActionGateway {
         }
 
         let entityIDsBefore = Set(world.entities.map(\.id))
-        let physical = executeBlockPlacement(
-            BlockPlacementRuleContext(
-                world: world,
-                orientation: request.orientation,
-                vibrationSource: actor,
-                consumeHeld: custody.consume
-            ),
-            request.hit,
-            request.blockID,
-            request.heldItem
-        )
+        let (physical, bufferedEffects) = bufferPhysicalEffects(world: world) {
+            executeBlockPlacement(
+                BlockPlacementRuleContext(
+                    world: world,
+                    orientation: request.orientation,
+                    vibrationSource: actor,
+                    consumeHeld: custody.consume
+                ),
+                request.hit,
+                request.blockID,
+                request.heldItem
+            )
+        }
         guard physical.succeeded else {
             if physical.mutations.isEmpty {
                 return outcome(
@@ -270,6 +279,7 @@ struct PebbleAgentPhysicalActionGateway {
                 failureAfterRollback: failure
             )
         }
+        commitPhysicalEffects(bufferedEffects, world: world)
         return outcome(
             family: family,
             request.actorID,
@@ -278,7 +288,8 @@ struct PebbleAgentPhysicalActionGateway {
             before,
             currentCell(world, request.target),
             physical.mutations,
-            nil
+            nil,
+            committedEffectCount: bufferedEffects.count
         )
     }
 
@@ -395,18 +406,20 @@ struct PebbleAgentPhysicalActionGateway {
         }
 
         let entityIDsBefore = Set(world.entities.map(\.id))
-        let physical = executeBlockBreak(
-            BlockBreakRuleContext(
-                world: world,
-                heldItem: request.heldItem,
-                isCreative: request.isCreative,
-                vibrationSource: actor,
-                damageTool: toolState.damage
-            ),
-            request.target.x,
-            request.target.y,
-            request.target.z
-        )
+        let (physical, bufferedEffects) = bufferPhysicalEffects(world: world) {
+            executeBlockBreak(
+                BlockBreakRuleContext(
+                    world: world,
+                    heldItem: request.heldItem,
+                    isCreative: request.isCreative,
+                    vibrationSource: actor,
+                    damageTool: toolState.damage
+                ),
+                request.target.x,
+                request.target.y,
+                request.target.z
+            )
+        }
         guard physical.status == .succeeded else {
             return outcome(
                 family: family,
@@ -443,6 +456,7 @@ struct PebbleAgentPhysicalActionGateway {
                 failureAfterRollback: failure
             )
         }
+        commitPhysicalEffects(bufferedEffects, world: world)
         return outcome(
             family: family,
             request.actorID,
@@ -451,7 +465,8 @@ struct PebbleAgentPhysicalActionGateway {
             before,
             currentCell(world, request.target),
             physical.mutations,
-            nil
+            nil,
+            committedEffectCount: bufferedEffects.count
         )
     }
 
@@ -512,6 +527,44 @@ struct PebbleAgentPhysicalActionGateway {
             }
         }
         return false
+    }
+
+    private func bufferPhysicalEffects<Result>(
+        world: World,
+        operation: () -> Result
+    ) -> (Result, [PebbleAgentBufferedPhysicalEffect]) {
+        let originalHooks = world.hooks
+        var buffered: [PebbleAgentBufferedPhysicalEffect] = []
+        var transactionalHooks = originalHooks
+        transactionalHooks.playSound = { name, x, y, z, volume, pitch in
+            buffered.append(.sound(name, x, y, z, volume, pitch))
+        }
+        transactionalHooks.addParticles = { name, x, y, z, count, spread, data in
+            buffered.append(.particles(name, x, y, z, count, spread, data))
+        }
+        transactionalHooks.onVibration = { x, y, z, radius, source in
+            buffered.append(.vibration(x, y, z, radius, source))
+        }
+        world.hooks = transactionalHooks
+        let result = operation()
+        world.hooks = originalHooks
+        return (result, buffered)
+    }
+
+    private func commitPhysicalEffects(
+        _ effects: [PebbleAgentBufferedPhysicalEffect],
+        world: World
+    ) {
+        for effect in effects {
+            switch effect {
+            case let .sound(name, x, y, z, volume, pitch):
+                world.hooks.playSound(name, x, y, z, volume, pitch)
+            case let .particles(name, x, y, z, count, spread, data):
+                world.hooks.addParticles(name, x, y, z, count, spread, data)
+            case let .vibration(x, y, z, radius, source):
+                world.hooks.onVibration?(x, y, z, radius, source)
+            }
+        }
     }
 
     private func rolledBackFailure(
@@ -580,7 +633,8 @@ struct PebbleAgentPhysicalActionGateway {
         _ before: Int,
         _ after: Int,
         _ mutations: [PhysicalBlockMutation],
-        _ failure: PebbleAgentPhysicalActionFailure?
+        _ failure: PebbleAgentPhysicalActionFailure?,
+        committedEffectCount: Int = 0
     ) -> PebbleAgentPhysicalActionOutcome {
         PebbleAgentPhysicalActionOutcome(
             family: family,
@@ -590,6 +644,7 @@ struct PebbleAgentPhysicalActionGateway {
             before: before,
             after: after,
             mutations: mutations,
+            committedEffectCount: committedEffectCount,
             failure: failure
         )
     }
