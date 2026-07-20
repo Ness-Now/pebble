@@ -221,6 +221,8 @@ func runPebbleCorePhysicalActionSmoke() {
     check("actor-neutral break succeeds without Player", broken.status == .succeeded && broken.finalCell == 0)
     check("break reports the direct mutation", broken.mutations == [PhysicalBlockMutation(position: PhysicalBlockPosition(x: 0, y: 64, z: 0), before: Int(cell(B.stone)), after: 0)])
     check("break reuses harvest and drop rules", breakDrops.count == 1 && breakDrops[0].stack.id == iid("cobblestone") && breakDrops[0].stack.count == 1)
+    check("break reports exact drop entity provenance",
+          broken.spawnedItemEntityIDs == breakDrops.map(\.id))
     check("break delegates tool, stat, and exhaustion effects", pickaxe.damage == 1 && minedRecords == 1 && exhaustion == 0.005)
     let dropCountBeforeRepeat = breakDrops.count
     let repeatedBreak = executeBlockBreak(
@@ -231,6 +233,8 @@ func runPebbleCorePhysicalActionSmoke() {
     )
     check("repeated break reports no target", repeatedBreak.status == .noTarget && repeatedBreak.mutations.isEmpty)
     check("repeated break creates no duplicate drop", breakWorld.entities.compactMap { $0 as? ItemEntity }.count == dropCountBeforeRepeat)
+    check("repeated break reports no drop provenance",
+          repeatedBreak.spawnedItemEntityIDs.isEmpty)
 
     let wrongToolWorld = physicalActionWorld()
     wrongToolWorld.setBlock(0, 64, 0, Int(cell(B.stone)), SET_SILENT)
@@ -242,6 +246,8 @@ func runPebbleCorePhysicalActionSmoke() {
     )
     check("wrong-tool break still mutates physical truth", wrongTool.status == .succeeded && wrongTool.finalCell == 0)
     check("wrong-tool break produces no conserved item", wrongToolWorld.entities.compactMap { $0 as? ItemEntity }.isEmpty)
+    check("wrong-tool break reports no drop provenance",
+          wrongTool.spawnedItemEntityIDs.isEmpty)
 
     resetGameRng(0xB15)
     let sharedBreakWorld = physicalActionWorld()

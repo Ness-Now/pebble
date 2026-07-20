@@ -148,19 +148,37 @@ public struct BlockBreakRuleResult: Equatable {
     public let originalCell: Int
     public let finalCell: Int
     public let mutations: [PhysicalBlockMutation]
+    /// Exact ItemEntity identities created by this break execution.
+    ///
+    /// This is provenance only: drop identity, quantity, harvest rules, and
+    /// spawning remain owned by the canonical Pebble breaking path.
+    public let spawnedItemEntityIDs: [Int]
 
     public init(
         status: BlockBreakRuleStatus,
         target: PhysicalBlockPosition,
         originalCell: Int,
         finalCell: Int,
-        mutations: [PhysicalBlockMutation]
+        mutations: [PhysicalBlockMutation],
+        spawnedItemEntityIDs: [Int] = []
     ) {
         self.status = status
         self.target = target
         self.originalCell = originalCell
         self.finalCell = finalCell
         self.mutations = mutations
+        self.spawnedItemEntityIDs = spawnedItemEntityIDs
+    }
+
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.status == rhs.status
+            && lhs.target == rhs.target
+            && lhs.originalCell == rhs.originalCell
+            && lhs.finalCell == rhs.finalCell
+            && lhs.mutations == rhs.mutations
+            // Entity IDs prove provenance within one World transaction but are
+            // intentionally not stable across independently created Worlds.
+            && lhs.spawnedItemEntityIDs.count == rhs.spawnedItemEntityIDs.count
     }
 }
 
@@ -1614,15 +1632,32 @@ public func executeBlockBreak(
     let world = ctx.world
     let target = PhysicalBlockPosition(x: x, y: y, z: z)
     var mutations: [PhysicalBlockMutation] = []
+    var spawnedItemEntityIDs: [Int] = []
     let c = world.getBlock(x, y, z)
     let id = c >> 4
+    @discardableResult
+    func spawnBreakItem(
+        _ stack: ItemStack,
+        yOffset: Double = 0.3
+    ) -> ItemEntity {
+        let item = spawnItem(
+            world,
+            Double(x) + 0.5,
+            Double(y) + yOffset,
+            Double(z) + 0.5,
+            stack
+        )
+        spawnedItemEntityIDs.append(item.id)
+        return item
+    }
     func result(_ status: BlockBreakRuleStatus) -> BlockBreakRuleResult {
         BlockBreakRuleResult(
             status: status,
             target: target,
             originalCell: c,
             finalCell: world.getBlock(x, y, z),
-            mutations: mutations
+            mutations: mutations,
+            spawnedItemEntityIDs: spawnedItemEntityIDs
         )
     }
     if id == 0 { return result(.noTarget) }
@@ -1636,7 +1671,7 @@ public func executeBlockBreak(
         let isShulker = def.name.hasSuffix("shulker_box") || id == Int(B.shulker_box)
         if !isShulker && (be.type == "container" || be.type == "hopper" || be.type == "furnace" || be.type == "brewing" || be.type == "shelf" || be.type == "campfire") {
             if let items = be.items {
-                for s in items { if let s { spawnItem(world, Double(x) + 0.5, Double(y) + 0.5, Double(z) + 0.5, s) } }
+                for s in items { if let s { spawnBreakItem(s, yOffset: 0.5) } }
             }
             if be.type == "furnace" {
                 let xp = Int((be.xpBank ?? 0).rounded(.down))
@@ -1644,7 +1679,7 @@ public func executeBlockBreak(
             }
         }
         if be.type == "jukebox", let disc = be.disc {
-            spawnItem(world, Double(x) + 0.5, Double(y) + 1, Double(z) + 0.5, disc)
+            spawnBreakItem(disc, yOffset: 1)
         }
         if isShulker && world.rule("doTileDrops") {
             // shulker keeps contents
@@ -1654,7 +1689,7 @@ public func executeBlockBreak(
                 if let items = be.items, items.contains(where: { $0 != nil }) {
                     stack.data.contents = items
                 }
-                spawnItem(world, Double(x) + 0.5, Double(y) + 0.5, Double(z) + 0.5, stack)
+                spawnBreakItem(stack, yOffset: 0.5)
             }
             setBlockRecording(world, x, y, z, 0, &mutations)
             ctx.recordMinedBlock()
@@ -1722,7 +1757,7 @@ public func executeBlockBreak(
     if silk {
         let itemId = blockToItem[id]
         if itemId >= 0 {
-            spawnItem(world, Double(x) + 0.5, Double(y) + 0.3, Double(z) + 0.5, ItemStack(Int(itemId), 1))
+            spawnBreakItem(ItemStack(Int(itemId), 1))
             damageToolForBreak(ctx, c)
             return result(.succeeded)
         }
@@ -1744,7 +1779,7 @@ public func executeBlockBreak(
         if d.countMin == d.countMax { count = d.countMin }
         else { count = d.countMin + gameRng.nextInt(max(0, d.countMax - d.countMin) + 1) }
         if d.chance != 1 && gameRng.nextFloat() > d.chance { continue }
-        if count > 0 { spawnItem(world, Double(x) + 0.5, Double(y) + 0.3, Double(z) + 0.5, ItemStack(itemId, count)) }
+        if count > 0 { spawnBreakItem(ItemStack(itemId, count)) }
     }
     // ore XP
     let xpMap: [Int: (Int, Int)] = [

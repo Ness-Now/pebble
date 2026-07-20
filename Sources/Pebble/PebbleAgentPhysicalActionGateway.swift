@@ -38,6 +38,7 @@ struct PebbleAgentPhysicalActionOutcome {
     let before: Int
     let after: Int
     let mutations: [PhysicalBlockMutation]
+    let spawnedItemEntityIDs: [Int]
     let committedEffectCount: Int
     let failure: PebbleAgentPhysicalActionFailure?
 
@@ -299,6 +300,7 @@ struct PebbleAgentPhysicalActionGateway {
         request: PebbleAgentBlockBreakRequest,
         toolState: PebbleAgentBlockBreakToolState = .none,
         occupiedPositions: [PhysicalBlockPosition],
+        acquireDrops: ([Int]) -> Bool = { _ in true },
         verifyAfterMutation: () -> Bool = { true }
     ) -> PebbleAgentPhysicalActionOutcome {
         let family = PebbleAgentPhysicalActionFamily.breakBlock
@@ -437,9 +439,19 @@ struct PebbleAgentPhysicalActionGateway {
             && physical.finalCell == currentCell(world, request.target)
             && !physical.mutations.isEmpty
             && mutationsConform(world: world, mutations: physical.mutations)
+            && physical.spawnedItemEntityIDs.count
+                == Set(physical.spawnedItemEntityIDs).count
+            && physical.spawnedItemEntityIDs.allSatisfy { id in
+                world.entities.contains { entity in
+                    entity.id == id && entity is ItemEntity
+                }
+            }
         let toolMatches = toolState.verify()
-        let acceptedAfterMutation = verifyAfterMutation()
-        guard physicalOutcomeMatches, toolMatches, acceptedAfterMutation else {
+        let dropsAcquired = physicalOutcomeMatches && toolMatches
+            ? acquireDrops(physical.spawnedItemEntityIDs)
+            : false
+        let acceptedAfterMutation = dropsAcquired && verifyAfterMutation()
+        guard physicalOutcomeMatches, toolMatches, dropsAcquired, acceptedAfterMutation else {
             let failure: PebbleAgentPhysicalActionFailure = !physicalOutcomeMatches
                 ? .outcomeMismatch
                 : !toolMatches ? .actorStateMismatch : .postMutationRejected
@@ -466,6 +478,7 @@ struct PebbleAgentPhysicalActionGateway {
             currentCell(world, request.target),
             physical.mutations,
             nil,
+            spawnedItemEntityIDs: physical.spawnedItemEntityIDs,
             committedEffectCount: bufferedEffects.count
         )
     }
@@ -634,6 +647,7 @@ struct PebbleAgentPhysicalActionGateway {
         _ after: Int,
         _ mutations: [PhysicalBlockMutation],
         _ failure: PebbleAgentPhysicalActionFailure?,
+        spawnedItemEntityIDs: [Int] = [],
         committedEffectCount: Int = 0
     ) -> PebbleAgentPhysicalActionOutcome {
         PebbleAgentPhysicalActionOutcome(
@@ -644,6 +658,7 @@ struct PebbleAgentPhysicalActionGateway {
             before: before,
             after: after,
             mutations: mutations,
+            spawnedItemEntityIDs: spawnedItemEntityIDs,
             committedEffectCount: committedEffectCount,
             failure: failure
         )
