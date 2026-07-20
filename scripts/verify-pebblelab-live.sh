@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--ecological-observation]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--ecological-observation|--agriculture]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -51,6 +51,7 @@ Options:
   --skills Run causal material practice, skill-ranked task matching, v10 restart, and rollback.
   --teaching Run real local demonstration, no-free-skill, guided practice, and distance refusal.
   --ecological-observation Run bounded real-World ecology, civil calendar, cache, and v12 proof.
+  --agriculture Run real wheat till/plant/grow/harvest/storage and v13 proof.
   --help     Show this help and exit.
 EOF
 }
@@ -113,6 +114,7 @@ for option in "$@"; do
         --skills) MODE="skills"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --teaching) MODE="teaching"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --ecological-observation) MODE="ecological-observation"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --agriculture) MODE="agriculture"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --help|-h) usage; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$option" >&2; usage >&2; exit 2 ;;
     esac
@@ -138,7 +140,20 @@ CARE_GATE=0
 SKILL_GATE=0
 TEACHING_GATE=0
 ECOLOGICAL_OBSERVATION_GATE=0
-if [ "$MODE" = "ecological-observation" ]; then
+AGRICULTURE_GATE=0
+if [ "$MODE" = "agriculture" ]; then
+    WORLD_SEED="46"
+    MATERIAL_GATE=1
+    PERSISTENCE_GATE=1
+    POPULATION_GATE=1
+    LIFECYCLE_GATE=1
+    SKILL_GATE=1
+    ECOLOGICAL_OBSERVATION_GATE=1
+    AGRICULTURE_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-Agriculture-46"
+    CAPTURE_NAME="agriculture-final.png"
+    LAB_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/tp 14 71 -18;/lab pause;/lab movement off;/lab population on;/lab lifecycle on;/lab skills on;/lab ecological-observation on;/lab agriculture on;/lab focus agent_0;/lab agriculture proof;/lab agriculture status;/lab checkpoint save agriculture-v13;/lab checkpoint status;/lab causality tail 20;/tp 22 73 -30 0 30;/lab overlay off;/lab status'
+elif [ "$MODE" = "ecological-observation" ]; then
     WORLD_SEED="46"
     PERSISTENCE_GATE=1
     POPULATION_GATE=1
@@ -655,6 +670,7 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_SKILLS=%s\n' "$SKILL_GATE"
     printf '  PEBBLELAB_APP_AGENTS_TEACHING=%s\n' "$TEACHING_GATE"
     printf '  PEBBLELAB_APP_AGENTS_ECOLOGICAL_OBSERVATION=%s\n' "$ECOLOGICAL_OBSERVATION_GATE"
+    printf '  PEBBLELAB_APP_AGENTS_AGRICULTURE=%s\n' "$AGRICULTURE_GATE"
     printf '  PEBBLELAB_DISPOSABLE_WORLD_PROOF=1\n'
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
     if [ "$MODE" = "build" ]; then
@@ -666,6 +682,8 @@ print_plan() {
     elif [ "$MODE" = "cooperation" ]; then
         printf '  PEBBLE_SHOT=%s/cooperation-before.png|%s/cooperation-offer.png|%s\n' \
             "$(dirname "$capture_path")" "$(dirname "$capture_path")" "$capture_path"
+    elif [ "$MODE" = "agriculture" ]; then
+        printf '  PEBBLE_SHOT=%s@1200\n' "$capture_path"
     else
         printf '  PEBBLE_SHOT=%s@240\n' "$capture_path"
     fi
@@ -676,7 +694,11 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "ecological-observation" ]; then
+    if [ "$MODE" = "agriculture" ]; then
+        printf '  2. Confirm the retained field shows hydrated farmland, water, two real wheat crops, and a chest.\n'
+        printf '  3. Confirm Core random growth, canonical drops, real custody, seed reserve, and live container surplus.\n'
+        printf '  4. Confirm stale/capacity/late failures roll back and live farm creates zero abstract stock credit.\n'
+    elif [ "$MODE" = "ecological-observation" ]; then
         printf '  2. Confirm agent_0 observes real local biome, water, soil, crop, plant, cow, and fishing affordance.\n'
         printf '  3. Confirm crop stage and rain change only after real World fixture changes; no scan mutates World or materials.\n'
         printf '  4. Confirm same-tick cache, unloaded chunk refusal, World replacement invalidation, and schema v12 checkpoint.\n'
@@ -769,13 +791,13 @@ print_plan() {
         && [ "$MODE" != "mortality" ] && [ "$MODE" != "reproduction" ] \
         && [ "$MODE" != "kinship" ] && [ "$MODE" != "households" ] \
         && [ "$MODE" != "care" ] && [ "$MODE" != "skills" ]; then
-        if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ]; then
+        if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ]; then
             printf '  5. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         else
             printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         fi
     fi
-    if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ]; then
+    if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ]; then
         printf '  6. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
     else
         printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
@@ -827,6 +849,8 @@ elif [ "$MODE" = "cooperation" ]; then
     CAPTURE_BEFORE_PATH="$CAPTURE_DIR/cooperation-before.png"
     CAPTURE_DURING_PATH="$CAPTURE_DIR/cooperation-offer.png"
     SHOT_SPEC="$CAPTURE_BEFORE_PATH|$CAPTURE_DURING_PATH|$CAPTURE_PATH"
+elif [ "$MODE" = "agriculture" ]; then
+    SHOT_SPEC="$CAPTURE_PATH@1200"
 else
     SHOT_SPEC="$CAPTURE_PATH@240"
 fi
@@ -2898,6 +2922,7 @@ PEBBLELAB_APP_AGENTS_CARE="$CARE_GATE" \
 PEBBLELAB_APP_AGENTS_SKILLS="$SKILL_GATE" \
 PEBBLELAB_APP_AGENTS_TEACHING="$TEACHING_GATE" \
 PEBBLELAB_APP_AGENTS_ECOLOGICAL_OBSERVATION="$ECOLOGICAL_OBSERVATION_GATE" \
+PEBBLELAB_APP_AGENTS_AGRICULTURE="$AGRICULTURE_GATE" \
 PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
 PEBBLE_CMD="$LAB_COMMANDS" \
 PEBBLE_SHOT="$SHOT_SPEC" \
@@ -2911,7 +2936,7 @@ world_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT count(*), json_extract(json, '
 expected_world_facts="1|$WORLD_SEED|$WORLD_NAME|1000|0|0|0|0|0"
 [ "$world_facts" = "$expected_world_facts" ] \
     || fail "unexpected disposable world facts: $world_facts"
-if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ] || [ "$MODE" = "material" ] || [ "$MODE" = "cooperation" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ]; then
+if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ] || [ "$MODE" = "material" ] || [ "$MODE" = "cooperation" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ]; then
     spawn_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.spawnX'), json_extract(json, '$.spawnY'), json_extract(json, '$.spawnZ') FROM worlds;")
     [ "$spawn_facts" = "8|75|-112" ] || fail "unexpected seed-46 spawn: $spawn_facts"
 fi
@@ -2920,7 +2945,15 @@ require_trace "disposable-world name=$WORLD_NAME seed=$WORLD_SEED worldTick=0 da
 require_trace "start seed=$WORLD_SEED agents=3 tick=0 hz=4 movement=on worldTick=[0-9]+ dayTime=1000 weather=clear randomTickSpeed=0 mobSpawning=0" 'deterministic agent session initial conditions'
 
 [ -s "$CAPTURE_PATH" ] || fail "capture was not written: $CAPTURE_PATH"
-if [ "$MODE" = "ecological-observation" ]; then
+if [ "$MODE" = "agriculture" ]; then
+    require_trace_count '^\[lab-live\] agriculture proof actor=agent_0 authority=PebbleCore crop=wheat observation=CIV21 site=real soil=real water=real plan=4cells navigation=findPath\+Entity.move reach=physical hoe=iron_hoe till=canonical plant=registry seedsConsumed=4 growth=randomTicks growthCalls=[1-9][0-9]* stage=0>7 hydration=water mature=CIV21 harvest=canonical drops=exact custody=real wheat=4 seedReserve=([4-9]|[1-9][0-9]+) container=real liveSeedsAfterReplant=[1-9][0-9]* liveWheat=4 surplus=physical historicalRecord=nonspendable externalRemoval=reflected multiAgentWinner=agent_0 duplicate=refused immature=wait staleTill=refused stalePlant=refused staleHarvest=refused lateTill=rollback latePlant=rollback lateHarvest=rollback fullCustody=rollback fullStorage=rollback tamper=reconciled practice=18 waitingPractice=0 observationPractice=0 campStockDelta=0 resourceInventoryDelta=0 civilSeasonGrowthEffect=0 displayCrops=2 fixture=retainedForCapture cleanup=deferred schema=13 cycle=complete digest=[0-9a-f]+$' 1 'complete CIV-22 agriculture proof'
+    require_trace 'agriculture autonomy observer=agent_0 observation=fresh soil=real water=real tool=real seeds=real storage=real plot=planned cells=4 next=till worldMutation=none materialMutation=none' 'normal agriculture decision seam'
+    require_trace 'agriculture state tick=0 reason=activated enabled=1 schema=13 plots=0 actions=0 cycles=0 reservations=0 surplusRecords=0 .*worldMutation=none materialMutation=none' 'zero-retroactive v13 activation'
+    require_trace 'checkpoint saved name=agriculture-v13 .*tick=0 .*restartSafe=0 ' 'honest live v13 checkpoint with app-owned fixture'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'agriculture cleanup and runtime health'
+    reject_trace 'Agriculture proof failed|agriculture proof failed|rollbackFailure|campStockDelta=[^0]|resourceInventoryDelta=[^0]|cleanup=failed' 'agriculture proof failure, ghost credit, or leaked state'
+    printf '\nPASS: real wheat cycle, Core growth, physical seed reserve/surplus, rollback, and exact cleanup verified.\n'
+elif [ "$MODE" = "ecological-observation" ]; then
     require_trace_count '^\[lab-live\] ecological observation proof observer=agent_0 authority=PebbleCore biome=real water=real soil=real crop=3>7 plant=real animal=cow fishing=candidate weather=clear>rain physicalTime=real civilDate=1-spring-1 clock=sessionTick independentWorldClock=1 biomePair=different waterContrast=present>absent soilContrast=tillable>invalid animalContrast=present>absent fishingContrast=candidate>absent perAgent=exact agent_1=none stableKeys=canonical noRuntimeIDs=1 chunkForce=none unavailable=unknown WorldReplacement=cacheMiss budgetExceeded=explicit missingEmbodiment=refused cache32=1miss\+31hits reads=[0-9]+ cellsMax=512 worldReadsMax=1024 entitiesMax=64 resultsMax=128 scanWorldMutation=none fixtureMutation=controlled materialMutation=none coarseEcologyMutation=none schema=12 restart=exact fixture=retainedForCapture cleanup=deferred digest=[0-9a-f]+$' 1 'complete CIV-21 ecological observation proof'
     require_trace 'ecological observation state tick=0 reason=activated enabled=1 schema=12 civil=1-spring-1 retained=0 total=0 fresh=0 stale=0 .*mutation=none' 'explicit zero-retroactive ecological observation activation'
     require_trace 'checkpoint saved name=ecological-v12 .*tick=0 .*restartSafe=1 .*mutation=none' 'live v12 ecological checkpoint save'

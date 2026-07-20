@@ -66,6 +66,16 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "ecological-ob
     print("\n\(passed) passed, \(failed) failed")
     exit(failed > 0 ? 1 : 0)
 }
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "agriculture" {
+    runPebbleAgentsAgricultureSmoke()
+    registerAllBlocks()
+    registerAllItems()
+    registerAllEntities()
+    registerAllSystems()
+    runPebbleCoreAgricultureSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "harvest" {
     registerAllBlocks()
     registerAllItems()
@@ -2187,8 +2197,10 @@ runPebbleAgentsDependentCareSmoke()
 runPebbleAgentsSkillSmoke()
 runPebbleAgentsTeachingSmoke()
 runPebbleAgentsEcologicalObservationSmoke()
+runPebbleAgentsAgricultureSmoke()
 runPebbleAgentsHarvestPublicationSmoke()
 runPebbleCorePhysicalActionSmoke()
+runPebbleCoreAgricultureSmoke()
 
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)

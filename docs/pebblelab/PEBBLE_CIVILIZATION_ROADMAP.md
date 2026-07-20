@@ -20,11 +20,11 @@ Baseline de ce recalage :
 
 ## Position canonique actuelle
 
-`CIV-00` à `CIV-20` sont terminés et acquis dans leurs contrats bornés. Gate R
+`CIV-00` à `CIV-21` sont terminés et acquis dans leurs contrats bornés. Gate R
 est acquise. La
 phase canonique actuelle est :
 
-`CIV-21 — Ecological Observation and Civil Calendar V1`.
+`CIV-22 — Agriculture and Managed Surplus V1`.
 
 Les noms `NEXT-1` et `NEXT-2` sont uniquement des alias historiques :
 
@@ -65,6 +65,8 @@ Les preuves acquises couvrent notamment, dans leurs limites actuelles :
 - la frontière navigation/embodiment CIV-19 : intentions et waypoints restent
   civilisationnels, tandis que pathfinding, collision, mouvement et position
   live vérifiée restent l'autorité de PebbleCore via les adapters de Pebble.
+- l'observation écologique CIV-21 reste locale, bornée et read-only ; son
+  calendrier civil n'altère ni croissance, ni météo, ni autre vérité physique.
 
 Ces preuves ne constituent pas encore une agriculture réelle, une économie
 d’items complète, une grande population, un cycle de vie complet, un système
@@ -233,8 +235,8 @@ exécute le mouvement physique. La validation senior du SHA publié
 | Phase | Statut | Verticale |
 | --- | --- | --- |
 | `CIV-20` | completed | Demonstration, Teaching and Apprenticeship V1 |
-| `CIV-21` | current | Ecological Observation and Civil Calendar V1 |
-| `CIV-22` | planned | Agriculture and Managed Surplus V1 |
+| `CIV-21` | completed | Ecological Observation and Civil Calendar V1 |
+| `CIV-22` | current | Agriculture and Managed Surplus V1 |
 | `CIV-23` | planned | Fishing, Hunting and Wild Subsistence V1 |
 | `CIV-24` | planned | Livestock and Animal Capital V1 |
 | `CIV-25` | planned | Durable Work Commitments and Emergent Professions V1 |
@@ -265,7 +267,7 @@ classe professionnelle imposée.
   chemin et n'exécute aucune action physique ; il observe et référence les
   actions Pebble déjà validées.
 
-#### Contrat courant CIV-21
+#### Contrat acquis CIV-21
 
 - La vérité écologique live reste dans le `World` PebbleCore. Un sensor Pebble
   local, borné et read-only normalise biome, eau, sols, crops/plantes,
@@ -286,6 +288,27 @@ classe professionnelle imposée.
 - Checkpoint/replay v12 conserve observations normalisées et calendrier. Les
   schémas v1-v11 restent compatibles avec CIV-21 désactivé et aucune
   observation rétroactive.
+
+#### Contrat courant CIV-22
+
+- L'intention, le plan borné, les réservations et l'historique agricole sont
+  civilisationnels ; farmland, crops, hydratation, lumière, random ticks,
+  croissance, drops, items, durabilité et containers restent l'autorité de
+  PebbleCore.
+- Le live utilise de vrais outils, planting items et positions physiques via
+  les gateways CIV-15/16/17/19. Il sélectionne un site depuis une observation
+  CIV-21 fraîche, puis revalide le World avant chaque action.
+- La croissance vient exclusivement des random ticks canoniques. Le calendrier
+  civil peut dater semis et récoltes mais ne change jamais la croissance.
+- La réserve de graines est une quantité d'items physiques réellement
+  présente. Le surplus est une vue read-only dérivée d'une custody/container
+  réelle ; son record historique n'est ni spendable, ni ownership.
+- `AgentLocalEcologyState`, `AgentCampStock` et les catégories génériques
+  restent coarse/headless/dormant : une ferme live ne leur crédite aucun yield
+  ou stock fantôme.
+- Le checkpoint v13, s'il est activé, conserve seulement intention, références
+  stables et histoire bornée ; le champ physique reste dans le save du World et
+  doit être réconcilié.
 
 ### Économie matérielle locale — Gate C
 
@@ -446,6 +469,6 @@ monde de vivre.
   reviewables.
 - `CIV-15` à `CIV-19` ont acquis les frontières actor-neutral, custody,
   harvest, construction, navigation et embodiment ; Gate R est acquise.
-  `CIV-20` est acquis. `CIV-21` est la verticale actuelle et observe les
-  autorités PebbleCore sans ajouter de moteur écologique, saisonnier,
-  météorologique, animal ou de pêche parallèle.
+  `CIV-20` et `CIV-21` sont acquis. `CIV-22` est la verticale actuelle : elle
+  orchestre les vraies règles Farming PebbleCore sans ajouter de moteur de
+  croissance, d'inventory, de drops, de pathfinding ou de saison parallèle.

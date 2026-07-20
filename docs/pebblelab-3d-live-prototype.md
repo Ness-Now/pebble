@@ -35,14 +35,17 @@ seulement la position physique vérifiée dans la session civilisationnelle.
 Sous la gate CIV-21, un sensor Pebble read-only observe l'écologie locale réelle
 du World, tandis qu'un calendrier civil séparé dérive uniquement du tick de
 session. Ce chemin ne mute ni World, ni matière, ni écologie coarse CIV-09.
+Sous la gate CIV-22, un plan agricole borné sélectionne un site observé, puis
+compose navigation, labourage, plantation, croissance Farming Core, récolte,
+custody et dépôt dans un vrai container sans créer de stock abstrait.
 
 ## Prérequis et lancement
 
 Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population`, `--multiscale`, `--ecology`, `--mortality`, `--reproduction`, `--kinship`, `--households`, `--care`, `--skills`, `--material`, `--harvest` et `--construction` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07, métriques settlement CIV-08, écologie alimentaire CIV-09, sortie de population CIV-10, âge/maturité/reproduction bornée CIV-11, parenté durable CIV-12A, appartenance household CIV-12B, dependent care final de CIV-12, compétences pratiques CIV-13, custody matérielle CIV-16, convergence harvest CIV-17 et convergence construction CIV-18. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
 
-Les options supplémentaires `--embodiment`, `--teaching` et
-`--ecological-observation` portent respectivement les preuves CIV-19, CIV-20 et
-CIV-21 décrites ci-dessous.
+Les options supplémentaires `--embodiment`, `--teaching`,
+`--ecological-observation` et `--agriculture` portent respectivement les
+preuves CIV-19, CIV-20, CIV-21 et CIV-22 décrites ci-dessous.
 
 Depuis la racine du dépôt :
 
@@ -252,6 +255,32 @@ chargement, cache invalidé sur un autre `World`, benchmark de 32 requêtes (`1
 miss + 31 hits`), checkpoint v12 byte-exact, capture rendue et cleanup. La
 commande `--dry-run` reste le préflight ; la preuve réelle et l'inspection
 manuelle du PNG sont obligatoires.
+
+## CIV-22 — Agriculture et surplus géré V1
+
+Le mode `scripts/verify-pebblelab-live.sh --agriculture` utilise
+`PebbleLab-Disposable-Agriculture-46` et active seulement les dépendances
+matérielles, persistence, population, lifecycle, skills, observation CIV-21 et
+la gate Agriculture default-off. `/lab agriculture on` active le schéma v13
+sans inventer plot, culture ou surplus ; `status` reste read-only et `proof`
+prépare seulement une fixture locale jetable.
+
+La preuve fait choisir à `agent_0` quatre cellules depuis de vraies observations
+de sol et d'eau, se déplacer par `findPath`/`Entity.move`, labourer avec une
+vraie hoe, consommer quatre vraies wheat seeds, puis progresser de stage 0 à 7
+uniquement par les random ticks canoniques de `Farming.swift`. La récolte passe
+par le break/drop Core, acquiert seulement les `ItemEntity` causaux et transfère
+les items par la custody CIV-16 vers un vrai container. La réserve de graines
+et le surplus courant sont relus physiquement ; leur historique v13 n'est ni
+spendable, ni ownership, ni profession.
+
+Le scénario vérifie aussi crop immature, targets stale, doublon, conflit de
+workers, container/custody pleins, échecs tardifs, retrait externe et
+réconciliation. Une saison civile ne change ni croissance ni rendement ; la
+ferme ne crédite ni `AgentCampStock`, ni ressource générique, ni
+`AgentLocalEcologyState`. La capture finale conserve deux crops, farmland, eau,
+container et probes pour inspection manuelle, puis la terminaison restaure la
+fixture et exige `runtimeErrors=0`.
 
 ## CIV-04 — Canal physique local
 
