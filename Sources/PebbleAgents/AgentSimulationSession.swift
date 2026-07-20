@@ -59,6 +59,7 @@ public struct AgentSimulationSession {
     public internal(set) var householdState: AgentHouseholdState?
     public internal(set) var dependentCareState: AgentDependentCareState?
     public internal(set) var skillState: AgentSkillState?
+    public internal(set) var teachingState: AgentTeachingState?
 
     public init(
         configuration: AgentSessionConfiguration,
@@ -135,6 +136,7 @@ public struct AgentSimulationSession {
         householdState = nil
         dependentCareState = nil
         skillState = nil
+        teachingState = nil
         try recordCausalEvent(
             kind: .sessionLifecycle,
             origin: .lifecycle,
@@ -741,6 +743,7 @@ public struct AgentSimulationSession {
         }
 
         if !mortalityWasEnabled { clock.advance(to: nextSimulationTick) }
+        try reconcileTeachingBoundary(at: nextTick)
         for result in results {
             let agentID = AgentID(rawValue: result.agentId)!
             let perceptionEvent = try recordCausalEvent(

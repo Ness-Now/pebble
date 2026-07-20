@@ -189,3 +189,56 @@ public enum AgentSkillDigest {
         return String(repeating: "0", count: max(0, 16 - digits.count)) + digits
     }
 }
+
+/// Shared verifier for the published material-success evidence accepted by
+/// Skills and Teaching. Keeping this actor/domain/status contract in one place
+/// prevents a demonstration from accepting weaker evidence than practice.
+enum AgentMaterialSuccessEvidence {
+    static func matches(
+        _ event: AgentCausalEvent,
+        agentID: AgentID,
+        domain: AgentSkillDomain
+    ) -> Bool {
+        guard event.actorID == agentID else { return false }
+        switch (domain, event.kind, event.payload) {
+        case let (.foraging, .ecologyForageResolved, .ecologyForage(
+            _, _, payloadAgentID, status, yieldBefore, yieldAfter,
+            inventoryBefore, inventoryAfter
+        )):
+            return event.origin == .ecologyTransition && event.subjectID == nil
+                && event.operationID != nil && payloadAgentID == agentID.rawValue
+                && status == "succeeded" && yieldAfter == yieldBefore - 1
+                && inventoryAfter == inventoryBefore + 1
+        case let (.foraging, .interaction, .operation(status, detail)):
+            return event.origin == .worldOutcome && event.subjectID == nil
+                && event.operationID != nil && status == "succeeded"
+                && detail.hasPrefix("pebble-harvest:")
+        case let (.materialHandling, .delivery, .operation(status, _)):
+            return event.origin == .worldOutcome && event.subjectID == nil
+                && event.operationID != nil && status == "succeeded"
+        case let (.construction, .constructionPlacement, .operation(status, _)):
+            return event.origin == .worldOutcome && event.subjectID == nil
+                && event.operationID != nil && status == "succeeded"
+        case let (.caregiving, .careProvided, .dependentCare(
+            dependentID, caregiverID, _, _, needKind, _, _, status, _, quantity, _
+        )):
+            return event.origin == .dependentCareTransition
+                && event.operationID == nil
+                && event.subjectID?.rawValue == dependentID
+                && caregiverID == agentID.rawValue
+                && needKind == "nourishment" && status == "provided"
+                && quantity == 1 && event.causes.count == 1
+        default:
+            return false
+        }
+    }
+
+    static func status(_ event: AgentCausalEvent) -> String {
+        switch event.payload {
+        case let .operation(status, _): return status
+        case let .ecologyForage(_, _, _, status, _, _, _, _): return status
+        case let .dependentCare(_, _, _, _, _, _, _, status, _, _, _): return status
+        default: return "unknown"
+        }
+    }
+}

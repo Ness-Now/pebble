@@ -190,7 +190,7 @@ extension AgentSimulationSession {
             cumulativePracticeUnits: cumulativeUnits, tick: tick,
             sourceSuccessEventID: sourceSuccessEventID,
             skillPracticeEventID: practiceEvent.eventID,
-            sourceKind: source.kind, sourceStatus: skillSourceStatus(source),
+            sourceKind: source.kind, sourceStatus: AgentMaterialSuccessEvidence.status(source),
             digest: nextDigest
         ))
         evictPracticeRecordsIfNeeded(&state)
@@ -465,79 +465,22 @@ extension AgentSimulationSession {
             _ event: AgentCausalEvent,
             record: AgentSkillPracticeRecord
         ) -> Bool {
-            guard event.kind == record.sourceKind,
-                  event.simulationTick.rawValue == record.tick,
-                  event.actorID == record.agentID else { return false }
-            switch (record.domain, event.kind, event.payload) {
-            case let (.foraging, .ecologyForageResolved, .ecologyForage(
-                _, _, agentID, status, yieldBefore, yieldAfter,
-                inventoryBefore, inventoryAfter
-            )):
-                return event.origin == .ecologyTransition && event.subjectID == nil
-                    && event.operationID != nil
-                    && agentID == record.agentID.rawValue
-                    && status == record.sourceStatus && status == "succeeded"
-                    && yieldAfter == yieldBefore - 1
-                    && inventoryAfter == inventoryBefore + 1
-            case let (.materialHandling, .delivery, .operation(status, _)):
-                return event.origin == .worldOutcome && event.subjectID == nil
-                    && event.operationID != nil
-                    && status == record.sourceStatus && status == "succeeded"
-            case let (.construction, .constructionPlacement, .operation(status, _)):
-                return event.origin == .worldOutcome && event.subjectID == nil
-                    && event.operationID != nil
-                    && status == record.sourceStatus && status == "succeeded"
-            case let (.caregiving, .careProvided, .dependentCare(
-                dependentID, caregiverID, _, _, needKind, _, _, status, _, quantity, _
-            )):
-                return event.origin == .dependentCareTransition
-                    && event.operationID == nil
-                    && event.subjectID?.rawValue == dependentID
-                    && caregiverID == record.agentID.rawValue
-                    && needKind == "nourishment" && status == record.sourceStatus
-                    && status == "provided" && quantity == 1
-                    && event.causes.count == 1
-            default:
-                return false
-            }
+            event.kind == record.sourceKind
+                && event.simulationTick.rawValue == record.tick
+                && AgentMaterialSuccessEvidence.matches(
+                    event, agentID: record.agentID, domain: record.domain
+                )
+                && AgentMaterialSuccessEvidence.status(event) == record.sourceStatus
         }
         func sourceMatchesProfile(
             _ event: AgentCausalEvent,
             profile: AgentSkillProfile,
             practice: AgentSkillDomainPractice
         ) -> Bool {
-            guard event.simulationTick.rawValue == practice.lastPracticeTick,
-                  event.actorID == profile.agentID else { return false }
-            switch (practice.domain, event.kind, event.payload) {
-            case let (.foraging, .ecologyForageResolved, .ecologyForage(
-                _, _, agentID, status, yieldBefore, yieldAfter,
-                inventoryBefore, inventoryAfter
-            )):
-                return event.origin == .ecologyTransition && event.subjectID == nil
-                    && event.operationID != nil
-                    && agentID == profile.agentID.rawValue && status == "succeeded"
-                    && yieldAfter == yieldBefore - 1
-                    && inventoryAfter == inventoryBefore + 1
-            case let (.materialHandling, .delivery, .operation(status, _)):
-                return event.origin == .worldOutcome && event.subjectID == nil
-                    && event.operationID != nil
-                    && status == "succeeded"
-            case let (.construction, .constructionPlacement, .operation(status, _)):
-                return event.origin == .worldOutcome && event.subjectID == nil
-                    && event.operationID != nil
-                    && status == "succeeded"
-            case let (.caregiving, .careProvided, .dependentCare(
-                dependentID, caregiverID, _, _, needKind, _, _, status, _, quantity, _
-            )):
-                return event.origin == .dependentCareTransition
-                    && event.operationID == nil
-                    && event.subjectID?.rawValue == dependentID
-                    && caregiverID == profile.agentID.rawValue
-                    && needKind == "nourishment" && status == "provided"
-                    && quantity == 1 && event.causes.count == 1
-            default:
-                return false
-            }
+            event.simulationTick.rawValue == practice.lastPracticeTick
+                && AgentMaterialSuccessEvidence.matches(
+                    event, agentID: profile.agentID, domain: practice.domain
+                )
         }
         for record in records {
             try validateReference(record.sourceSuccessEventID) {
@@ -610,40 +553,11 @@ extension AgentSimulationSession {
         agentID: AgentID,
         domain: AgentSkillDomain
     ) -> Bool {
-        guard event.simulationID == simulationID,
-              event.simulationTick.rawValue == tick,
-              event.actorID == agentID else { return false }
-        switch (domain, event.kind, event.payload) {
-        case let (.foraging, .ecologyForageResolved, .ecologyForage(
-            _, _, payloadAgentID, status, yieldBefore, yieldAfter,
-            inventoryBefore, inventoryAfter
-        )):
-            return payloadAgentID == agentID.rawValue && status == "succeeded"
-                && yieldAfter == yieldBefore - 1 && inventoryAfter == inventoryBefore + 1
-        case let (.foraging, .interaction, .operation(status, detail)):
-            return status == "succeeded"
-                && detail.hasPrefix("pebble-harvest:")
-        case let (.materialHandling, .delivery, .operation(status, _)):
-            return status == "succeeded"
-        case let (.construction, .constructionPlacement, .operation(status, _)):
-            return status == "succeeded"
-        case let (.caregiving, .careProvided, .dependentCare(
-            _, caregiverID, _, _, needKind, _, _, status, _, materialQuantity, _
-        )):
-            return caregiverID == agentID.rawValue && needKind == "nourishment"
-                && status == "provided" && materialQuantity == 1
-        default:
-            return false
-        }
-    }
-
-    private func skillSourceStatus(_ event: AgentCausalEvent) -> String {
-        switch event.payload {
-        case let .operation(status, _): return status
-        case let .ecologyForage(_, _, _, status, _, _, _, _): return status
-        case let .dependentCare(_, _, _, _, _, _, _, status, _, _, _): return status
-        default: return "unknown"
-        }
+        event.simulationID == simulationID
+            && event.simulationTick.rawValue == tick
+            && AgentMaterialSuccessEvidence.matches(
+                event, agentID: agentID, domain: domain
+            )
     }
 
     private mutating func requiredSkillEvent(

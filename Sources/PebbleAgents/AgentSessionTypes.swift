@@ -80,6 +80,7 @@ public enum AgentSessionError: Error, Equatable {
     case household(AgentHouseholdError)
     case dependentCare(AgentDependentCareError)
     case skill(AgentSkillError)
+    case teaching(AgentTeachingError)
 }
 
 public struct AgentSessionConfiguration: Codable {

@@ -147,6 +147,11 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case careNeedUnmet
     case skillsInitialized
     case skillPracticeCredited
+    case teachingInitialized
+    case apprenticeshipStarted
+    case demonstrationObserved
+    case apprenticeshipEnded
+    case guidedPracticeLinked
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -168,6 +173,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case householdTransition
     case dependentCareTransition
     case skillTransition
+    case teachingTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -411,6 +417,19 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         status: String,
         digest: String
     )
+    case teaching(
+        apprenticeshipID: String?,
+        demonstrationID: String?,
+        exposureID: String?,
+        teacherID: String?,
+        studentID: String?,
+        domain: String?,
+        sourceSuccessEventID: String?,
+        skillPracticeEventID: String?,
+        status: String,
+        reason: String?,
+        digest: String
+    )
 
     var canonicalText: String {
         switch self {
@@ -576,6 +595,16 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
                 + "\(practiceUnits)|\(cumulativePracticeUnits)|"
                 + "\(sourceSuccessEventID ?? "none")|\(practiceRecordCount)|"
                 + "\(status)|\(digest)"
+        case let .teaching(
+            apprenticeshipID, demonstrationID, exposureID, teacherID, studentID,
+            domain, sourceSuccessEventID, skillPracticeEventID, status, reason, digest
+        ):
+            return "teaching|\(apprenticeshipID ?? "none")|"
+                + "\(demonstrationID ?? "none")|\(exposureID ?? "none")|"
+                + "\(teacherID ?? "none")|\(studentID ?? "none")|"
+                + "\(domain ?? "none")|\(sourceSuccessEventID ?? "none")|"
+                + "\(skillPracticeEventID ?? "none")|\(status)|"
+                + "\(reason ?? "none")|\(digest)"
         }
     }
 }
@@ -732,7 +761,12 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.careNeedResolved, .dependentCare),
              (.careNeedUnmet, .dependentCare),
              (.skillsInitialized, .skill),
-             (.skillPracticeCredited, .skill):
+             (.skillPracticeCredited, .skill),
+             (.teachingInitialized, .teaching),
+             (.apprenticeshipStarted, .teaching),
+             (.demonstrationObserved, .teaching),
+             (.apprenticeshipEnded, .teaching),
+             (.guidedPracticeLinked, .teaching):
             matches = true
         default:
             matches = false

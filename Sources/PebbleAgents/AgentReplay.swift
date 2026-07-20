@@ -11,6 +11,7 @@ public enum AgentReplaySchema {
     public static let householdVersion = 8
     public static let dependentCareVersion = 9
     public static let skillVersion = 10
+    public static let teachingVersion = 11
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -18,6 +19,7 @@ public enum AgentReplaySchema {
             || version == mortalityVersion || version == lifecycleVersion
             || version == kinshipVersion || version == householdVersion
             || version == dependentCareVersion || version == skillVersion
+            || version == teachingVersion
     }
 }
 
@@ -86,6 +88,11 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case dependentCareProvision
     case dependentCareInteraction
     case skillFeature
+    case teachingFeature
+    case apprenticeshipStart
+    case teachingDemonstration
+    case apprenticeshipEnd
+    case guidedPractice
 }
 
 public enum AgentReplayOperation: Codable {
@@ -167,6 +174,19 @@ public enum AgentReplayOperation: Codable {
     case provideDependentNourishment(AgentCareProvisionIntent)
     case completeDependentCareInteraction(caregiverID: AgentID, dependentID: AgentID)
     case setSkillsEnabled(Bool, configuration: AgentSkillConfiguration)
+    case setTeachingEnabled(Bool, configuration: AgentTeachingConfiguration)
+    case startApprenticeship(AgentMentorSelectionRequest)
+    case recordTeachingDemonstration(AgentTeachingObservation)
+    case endApprenticeship(
+        apprenticeshipID: AgentApprenticeshipID,
+        participantID: AgentID,
+        reason: AgentApprenticeshipEndReason
+    )
+    case linkGuidedPractice(
+        exposureID: AgentLearningExposureID,
+        studentSourceSuccessEventID: AgentCausalEventID,
+        skillPracticeEventID: AgentCausalEventID
+    )
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -221,6 +241,11 @@ public enum AgentReplayOperation: Codable {
         case .provideDependentNourishment: return .dependentCareProvision
         case .completeDependentCareInteraction: return .dependentCareInteraction
         case .setSkillsEnabled: return .skillFeature
+        case .setTeachingEnabled: return .teachingFeature
+        case .startApprenticeship: return .apprenticeshipStart
+        case .recordTeachingDemonstration: return .teachingDemonstration
+        case .endApprenticeship: return .apprenticeshipEnd
+        case .linkGuidedPractice: return .guidedPractice
         }
     }
 
@@ -239,6 +264,16 @@ public enum AgentReplayOperation: Codable {
         case let .applyBirthSiteObservation(observation):
             raw = "birth-site:\(observation.planID.rawValue):\(observation.observedTick)"
         case let .provideDependentNourishment(intent): raw = intent.provisionID
+        case let .startApprenticeship(request):
+            raw = "teaching-start:\(request.requestID)"
+        case let .recordTeachingDemonstration(observation):
+            raw = "teaching-demo:\(observation.teacherID.rawValue):"
+                + "\(observation.studentID.rawValue):"
+                + "\(observation.sourceSuccessEventID.rawValue)"
+        case let .endApprenticeship(apprenticeshipID, _, _):
+            raw = "teaching-end:\(apprenticeshipID.rawValue)"
+        case let .linkGuidedPractice(_, _, skillPracticeEventID):
+            raw = "teaching-guided:\(skillPracticeEventID.rawValue)"
         default: raw = nil
         }
         return raw.flatMap(AgentOperationID.init(rawValue:))
@@ -592,6 +627,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.skillVersion
         }
+        if case let .setTeachingEnabled(enabled, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.teachingVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "teaching activation must be the first v11 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.teachingVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -783,6 +828,8 @@ public enum AgentSessionReplayer {
                 && checkpoint.schemaVersion == AgentCheckpointSchema.householdVersion)
             || (manifest.schemaVersion == AgentReplaySchema.skillVersion
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.dependentCareVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.teachingVersion
+                && checkpoint.schemaVersion <= AgentCheckpointSchema.skillVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -992,6 +1039,24 @@ extension AgentSimulationSession {
             )
         case let .setSkillsEnabled(enabled, configuration):
             try candidate.setSkillsEnabled(enabled, configuration: configuration)
+        case let .setTeachingEnabled(enabled, configuration):
+            try candidate.setTeachingEnabled(enabled, configuration: configuration)
+        case let .startApprenticeship(request):
+            _ = try candidate.selectMentorAndStartApprenticeship(request)
+        case let .recordTeachingDemonstration(observation):
+            _ = try candidate.recordTeachingDemonstration(observation)
+        case let .endApprenticeship(apprenticeshipID, participantID, reason):
+            try candidate.endApprenticeship(
+                apprenticeshipID, by: participantID, reason: reason
+            )
+        case let .linkGuidedPractice(
+            exposureID, studentSourceSuccessEventID, skillPracticeEventID
+        ):
+            _ = try candidate.linkGuidedPractice(
+                exposureID: exposureID,
+                studentSourceSuccessEventID: studentSourceSuccessEventID,
+                skillPracticeEventID: skillPracticeEventID
+            )
         }
         self = candidate
         let causal = causalLedgerSnapshot().summary
