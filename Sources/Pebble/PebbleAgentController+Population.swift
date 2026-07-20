@@ -176,7 +176,9 @@ extension PebbleAgentController {
                     session = candidate
                     replayRecorder = candidateRecorder
                 } catch {
-                    world.removeEntity(probe)
+                    guard removeLabCoreAgentProbe(probe, from: world) else {
+                        throw ControllerError.populationBoundary("migrant probe rollback failed")
+                    }
                     throw error
                 }
                 let summary = candidate.populationSummary()

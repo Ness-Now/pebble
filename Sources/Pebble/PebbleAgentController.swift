@@ -55,6 +55,7 @@ final class PebbleAgentController {
     let naturalResourceAdapter = PebbleAgentNaturalResourceAdapter()
     let constructionSiteAdapter = PebbleAgentConstructionSiteAdapter()
     let physicalSignalAdapter = PebbleAgentPhysicalSignalAdapter()
+    let materialCustodyGateway = PebbleAgentMaterialCustodyGateway()
     let migrationAdmissionAdapter = PebbleAgentMigrationAdmissionAdapter()
     let localEcologyAdapter = PebbleAgentLocalEcologyAdapter()
     let birthSiteAdapter = PebbleAgentBirthSiteAdapter()
@@ -99,6 +100,7 @@ final class PebbleAgentController {
     var buildFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_BUILD"] == "1" }
     var socialFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_SOCIAL"] == "1" }
     var physicalFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_PHYSICAL"] == "1" }
+    var materialFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_MATERIAL"] == "1" }
     var cooperationFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_COOPERATION"] == "1" }
     var persistenceFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_PERSISTENCE"] == "1"

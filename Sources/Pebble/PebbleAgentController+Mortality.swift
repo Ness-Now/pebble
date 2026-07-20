@@ -102,10 +102,13 @@ extension PebbleAgentController {
             throw ControllerError.mortalityBoundary("terminal probe missing before removal")
         }
         for id in removedIDs {
-            guard let probe = probesByAgentId.removeValue(forKey: id) else {
+            guard let probe = probesByAgentId[id] else {
                 throw ControllerError.mortalityBoundary("terminal probe missing for \(id)")
             }
-            world.removeEntity(probe)
+            guard removeLabCoreAgentProbe(probe, from: world) else {
+                throw ControllerError.mortalityBoundary("terminal probe removal failed for \(id)")
+            }
+            probesByAgentId.removeValue(forKey: id)
             lastInfluencedTracesByAgentId.removeValue(forKey: id)
         }
         let worldProbeIDs = world.entities.compactMap {

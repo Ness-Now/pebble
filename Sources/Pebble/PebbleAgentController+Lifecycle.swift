@@ -34,7 +34,11 @@ extension PebbleAgentController {
         }
         interactionExecutor.clearBoundaryAudit()
         naturalResourceExecutor.resetDiagnostics()
-        _ = clearLabCoreAgentProbes(in: world)
+        materialCustodyGateway.reset()
+        let probeCount = world.entities.compactMap { $0 as? LabCoreAgentEntity }.count
+        guard clearLabCoreAgentProbes(in: world) == probeCount else {
+            return failure("PebbleAgents rebuild refused: physical custody cleanup failed.")
+        }
         probesByAgentId.removeAll()
         do {
             let configuration = try AgentSessionConfiguration(
@@ -232,7 +236,16 @@ extension PebbleAgentController {
             runtimeErrorCount += 1
             trace("error interaction cleanup failed reason=\(reason.replacingOccurrences(of: " ", with: "_"))")
         }
+        let expectedProbeRemovals = cleanupWorld?.entities.compactMap {
+            $0 as? LabCoreAgentEntity
+        }.count ?? 0
         let removed = cleanupWorld.map { clearLabCoreAgentProbes(in: $0) } ?? 0
+        guard removed == expectedProbeRemovals else {
+            runtimeErrorCount += 1
+            lastError = "physical custody cleanup failed; session retained"
+            trace("error physical custody cleanup failed reason=\(reason.replacingOccurrences(of: " ", with: "_")) hardFailure=1")
+            return 0
+        }
         if let snapshot {
             let movementCount = snapshot.agents.reduce(0) { $0 + $1.movementCount }
             let retrieved = snapshot.agents.reduce(0) { $0 + $1.memoryRetrievalCount }
@@ -291,6 +304,7 @@ extension PebbleAgentController {
         }
         interactionExecutor.clearBoundaryAudit()
         naturalResourceExecutor.resetDiagnostics()
+        materialCustodyGateway.reset()
         session = nil
         activeWorld = nil
         probesByAgentId.removeAll()

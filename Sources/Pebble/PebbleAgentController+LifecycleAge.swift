@@ -102,7 +102,9 @@ extension PebbleAgentController {
             session = candidate
             recorder = candidateRecorder
         } catch {
-            world.removeEntity(probe)
+            guard removeLabCoreAgentProbe(probe, from: world) else {
+                throw ControllerError.lifecycleBoundary("newborn probe rollback failed")
+            }
             isPaused = true
             throw error
         }
