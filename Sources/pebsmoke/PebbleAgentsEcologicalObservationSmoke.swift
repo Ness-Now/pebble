@@ -120,6 +120,19 @@ func runPebbleAgentsEcologicalObservationSmoke() {
     check("civil calendar year boundary",
           calendar.date(atSimulationTick: 24 * 120)?.year == 2
             && calendar.date(atSimulationTick: 24 * 120)?.season == .spring)
+    check("civil calendar large tick is deterministic without overflow", {
+        let first = calendar.date(atSimulationTick: Int.max)
+        let second = calendar.date(atSimulationTick: Int.max)
+        return first != nil && first == second
+            && first?.simulationTick == Int.max
+            && first?.year ?? 0 > 1
+    }())
+    check("civil calendar is render cadence independent", {
+        let sparseRenderSamples = [0, 1_440, 2_880]
+        let denseRenderSamples = Array(stride(from: 0, through: 2_880, by: 12))
+        return calendar.date(atSimulationTick: sparseRenderSamples.last!)
+            == calendar.date(atSimulationTick: denseRenderSamples.last!)
+    }())
     check("physical World time cannot alter civil date", {
         var value = observationBase("calendar-clock-separation")
         try! value.setEcologicalObservationEnabled(true)

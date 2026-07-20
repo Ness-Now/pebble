@@ -4854,3 +4854,16 @@ never credits skill; only the student's own material success uses the CIV-13
 practice contract. The bridge introduces no Teaching-owned World, inventory,
 pathfinding, or physical-action mutation. CIV-20 remains `current` until remote
 publication and review; CIV-21 is not started.
+
+## CIV-21 - Ecological observation current after CIV-20
+
+Status: canonical prospective status synchronized after completion of CIV-20.
+
+`CIV-20 — Demonstration, Teaching and Apprenticeship V1` is completed and
+`CIV-21 — Ecological Observation and Civil Calendar V1` is current. CIV-21
+reads already-loaded PebbleCore World truth through a bounded Pebble sensor and
+stores only local normalized observations plus a deterministic civil date in
+`AgentSimulationSession`. It creates no resource credit, chunk load, physical
+season effect, weather prediction, animal simulation or fishing loot rule.
+`AgentLocalEcologyState` remains the coarse/headless compatibility model. Gate R
+remains acquired; CIV-21 stays `current` until remote publication and review.

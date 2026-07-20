@@ -194,6 +194,65 @@ extension PebbleAgentController {
                 )
             }
 
+            let dryOrigin = AgentPosition(
+                x: origin.x + 1, y: origin.y + 1, z: origin.z - 1
+            )
+            let contrastConfiguration = try AgentEcologicalObservationConfiguration(
+                radius: 1, verticalRadius: 0, maximumCellsPerScan: 1,
+                maximumChunksPerScan: 1, maximumWorldReadsPerScan: 8
+            )
+            ecologicalObservationSensor.invalidate(
+                world: world, origin: dryOrigin, radius: contrastConfiguration.radius
+            )
+            let dry = ecologicalObservationSensor.scan(
+                world: world, observerID: observerID, origin: dryOrigin,
+                worldContextKey: ecologicalObservationWorldContextKey(world),
+                dimensionKey: ecologicalObservationDimensionKey(world.dim),
+                simulationTick: candidate.tick, civilDate: civilDate,
+                configuration: contrastConfiguration
+            )
+            guard dry.water.isEmpty, dry.fishing.isEmpty, dry.soils.isEmpty else {
+                throw ControllerError.ecologicalObservationBoundary(
+                    "dry non-tillable contrast produced a false affordance"
+                )
+            }
+
+            world.removeEntity(fixture.cow)
+            ecologicalObservationSensor.invalidate(
+                world: world, origin: origin, radius: configuration.radius
+            )
+            let withoutFixtureCow = ecologicalObservationSensor.scan(
+                world: world, observerID: observerID, origin: origin,
+                worldContextKey: ecologicalObservationWorldContextKey(world),
+                dimensionKey: ecologicalObservationDimensionKey(world.dim),
+                simulationTick: candidate.tick, civilDate: civilDate,
+                configuration: configuration
+            )
+            world.addEntity(fixture.cow)
+            ecologicalObservationSensor.invalidate(
+                world: world, origin: origin, radius: configuration.radius
+            )
+            let fixtureCowPosition = AgentPosition(
+                x: Int(floor(fixture.cow.x)), y: Int(floor(fixture.cow.y)),
+                z: Int(floor(fixture.cow.z))
+            )
+            guard !withoutFixtureCow.animals.contains(where: {
+                $0.speciesKey == "cow" && $0.position == fixtureCowPosition
+            }) else {
+                throw ControllerError.ecologicalObservationBoundary(
+                    "removed fixture animal remained observable"
+                )
+            }
+
+            guard let biomePair = ecologicalBiomeNormalizationProof(
+                referenceWorld: world, observerID: observerID,
+                simulationTick: candidate.tick, civilDate: civilDate
+            ), biomePair.0 != biomePair.1 else {
+                throw ControllerError.ecologicalObservationBoundary(
+                    "distinct real biome identities were not normalized distinctly"
+                )
+            }
+
             let chunksBeforeFarScan = world.chunks.count
             let farOrigin = ecologicalUnloadedOrigin(world: world)
             let far = ecologicalObservationSensor.scan(
@@ -342,6 +401,9 @@ extension PebbleAgentController {
                     + "biome=real water=real soil=real crop=3>7 plant=real animal=cow "
                     + "fishing=candidate weather=clear>rain physicalTime=real "
                     + "civilDate=1-spring-1 clock=sessionTick independentWorldClock=1 "
+                    + "biomePair=different waterContrast=present>absent "
+                    + "soilContrast=tillable>invalid animalContrast=present>absent "
+                    + "fishingContrast=candidate>absent "
                     + "perAgent=exact agent_1=none stableKeys=canonical noRuntimeIDs=1 "
                     + "chunkForce=none unavailable=unknown WorldReplacement=cacheMiss "
                     + "budgetExceeded=explicit missingEmbodiment=refused "
@@ -485,6 +547,63 @@ extension PebbleAgentController {
             return AgentPosition(x: chunk * CHUNK_W, y: 64, z: chunk * CHUNK_W)
         }
         return AgentPosition(x: 320_000, y: 64, z: 320_000)
+    }
+
+    private func ecologicalBiomeNormalizationProof(
+        referenceWorld: World,
+        observerID: AgentID,
+        simulationTick: Int,
+        civilDate: AgentCivilDate
+    ) -> (String, String)? {
+        let definitions = BIOMES.enumerated().compactMap { index, definition in
+            definition.map { (index, $0.name) }
+        }
+        guard let first = definitions.first,
+              let second = definitions.first(where: { $0.1 != first.1 }) else {
+            return nil
+        }
+        let fixtureWorld = World(dim: referenceWorld.dim, seed: referenceWorld.seed)
+        fixtureWorld.time = referenceWorld.time
+        fixtureWorld.dayTime = referenceWorld.dayTime
+        let configuration = try! AgentEcologicalObservationConfiguration(
+            radius: 1, verticalRadius: 0, maximumCellsPerScan: 5,
+            maximumChunksPerScan: 1, maximumWorldReadsPerScan: 8
+        )
+        var keys: [String] = []
+        for (slot, definition) in [first, second].enumerated() {
+            let chunk = Chunk(
+                cx: slot, cz: 0, minY: fixtureWorld.info.minY,
+                height: fixtureWorld.info.height
+            )
+            for qy in 0..<((chunk.height + 3) / 4) {
+                for qz in 0..<4 {
+                    for qx in 0..<4 {
+                        chunk.setBiome(qx, qy, qz, definition.0)
+                    }
+                }
+            }
+            chunk.status = .generated
+            fixtureWorld.setChunk(chunk)
+            let sampleOrigin = AgentPosition(
+                x: slot * CHUNK_W + 8, y: fixtureWorld.info.minY + 8, z: 8
+            )
+            let observation = ecologicalObservationSensor.scan(
+                world: fixtureWorld, observerID: observerID, origin: sampleOrigin,
+                worldContextKey: "ecological-biome-fixture",
+                dimensionKey: ecologicalObservationDimensionKey(fixtureWorld.dim),
+                simulationTick: simulationTick, civilDate: civilDate,
+                configuration: configuration
+            )
+            guard let key = observation.biome?.biomeKey,
+                  key == definition.1 else {
+                ecologicalObservationSensor.invalidate(world: fixtureWorld)
+                return nil
+            }
+            keys.append(key)
+        }
+        ecologicalObservationSensor.invalidate(world: fixtureWorld)
+        guard keys.count == 2 else { return nil }
+        return (keys[0], keys[1])
     }
 
     private func positionEcologicalObservationProofCamera(

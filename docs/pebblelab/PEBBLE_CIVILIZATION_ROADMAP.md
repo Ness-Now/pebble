@@ -20,11 +20,11 @@ Baseline de ce recalage :
 
 ## Position canonique actuelle
 
-`CIV-00` à `CIV-19` sont terminés et acquis dans leurs contrats bornés. Gate R
+`CIV-00` à `CIV-20` sont terminés et acquis dans leurs contrats bornés. Gate R
 est acquise. La
 phase canonique actuelle est :
 
-`CIV-20 — Demonstration, Teaching and Apprenticeship V1`.
+`CIV-21 — Ecological Observation and Civil Calendar V1`.
 
 Les noms `NEXT-1` et `NEXT-2` sont uniquement des alias historiques :
 
@@ -49,6 +49,8 @@ Les preuves acquises couvrent notamment, dans leurs limites actuelles :
   locale abstraite, la mortalité par famine et le lifecycle borné ;
 - la parenté durable, les households, le dependent care et les compétences
   issues de succès matériels réels ;
+- l'enseignement CIV-20 borné, local et refusable, où seule la propre réussite
+  matérielle de l'élève crédite sa pratique ;
 - NaturalResource V1 converge en live vers le break/drop PebbleCore et la
   custody réelle ; son chemin abstrait subsiste seulement comme compatibilité
   coarse/headless.
@@ -230,8 +232,8 @@ exécute le mouvement physique. La validation senior du SHA publié
 
 | Phase | Statut | Verticale |
 | --- | --- | --- |
-| `CIV-20` | current | Demonstration, Teaching and Apprenticeship V1 |
-| `CIV-21` | planned | Ecological Observation and Civil Calendar V1 |
+| `CIV-20` | completed | Demonstration, Teaching and Apprenticeship V1 |
+| `CIV-21` | current | Ecological Observation and Civil Calendar V1 |
 | `CIV-22` | planned | Agriculture and Managed Surplus V1 |
 | `CIV-23` | planned | Fishing, Hunting and Wild Subsistence V1 |
 | `CIV-24` | planned | Livestock and Animal Capital V1 |
@@ -241,7 +243,7 @@ Ces phases doivent produire plusieurs stratégies matérielles viables et une
 spécialisation dérivée de la pratique, de l’enseignement et des besoins, sans
 classe professionnelle imposée.
 
-#### Contrat courant CIV-20
+#### Contrat acquis CIV-20
 
 - `AgentSimulationSession` possède un état Teaching séparé, borné,
   déterministe et default-off : apprentissages temporaires, démonstrations,
@@ -262,6 +264,28 @@ classe professionnelle imposée.
 - Le bridge live Teaching ne mute ni World ni inventory, ne planifie aucun
   chemin et n'exécute aucune action physique ; il observe et référence les
   actions Pebble déjà validées.
+
+#### Contrat courant CIV-21
+
+- La vérité écologique live reste dans le `World` PebbleCore. Un sensor Pebble
+  local, borné et read-only normalise biome, eau, sols, crops/plantes,
+  animaux, affordance de pêche, météo et temps physique sans charger de chunk.
+- Chaque observation appartient à un observer incarné et conserve uniquement
+  des noms canoniques de biome, bloc, fluide et espèce ; aucun identifiant de
+  registre ou d'entité runtime ne traverse vers `PebbleAgents`.
+- Le calendrier civil déterministe dérive exclusivement du tick de
+  `AgentSimulationSession` : 24 ticks par jour, 30 jours par saison, quatre
+  saisons par année et epoch année 1. Une saison civile n'applique aucun effet
+  physique, climatique ou agricole.
+- Fraîcheur, historiques, scans, résultats, lectures, entités et cache sont
+  bornés. Un chunk indisponible reste `unknown`, jamais une absence inventée ;
+  un changement pertinent invalide le cache avant une nouvelle décision.
+- Observer ne crédite ni ressource, ni inventory, ni `AgentCampStock`, et ne
+  mute ni les yields de `AgentLocalEcologyState` ni le World. Cette écologie V1
+  historique reste une projection coarse/headless/dormant de compatibilité.
+- Checkpoint/replay v12 conserve observations normalisées et calendrier. Les
+  schémas v1-v11 restent compatibles avec CIV-21 désactivé et aucune
+  observation rétroactive.
 
 ### Économie matérielle locale — Gate C
 
@@ -422,5 +446,6 @@ monde de vivre.
   reviewables.
 - `CIV-15` à `CIV-19` ont acquis les frontières actor-neutral, custody,
   harvest, construction, navigation et embodiment ; Gate R est acquise.
-  `CIV-20` est la verticale actuelle et ne peut ajouter aucun moteur physique
-  parallèle.
+  `CIV-20` est acquis. `CIV-21` est la verticale actuelle et observe les
+  autorités PebbleCore sans ajouter de moteur écologique, saisonnier,
+  météorologique, animal ou de pêche parallèle.

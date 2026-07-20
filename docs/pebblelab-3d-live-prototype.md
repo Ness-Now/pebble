@@ -32,13 +32,17 @@ vraies stones et six vrais oak logs en posant les neuf cellules ordonnées par
 Sous les gates de convergence CIV-19, la preuve embodiment fait choisir chaque
 pas live par PebbleCore `findPath`, l'exécute par `Entity.move`, puis publie
 seulement la position physique vérifiée dans la session civilisationnelle.
+Sous la gate CIV-21, un sensor Pebble read-only observe l'écologie locale réelle
+du World, tandis qu'un calendrier civil séparé dérive uniquement du tick de
+session. Ce chemin ne mute ni World, ni matière, ni écologie coarse CIV-09.
 
 ## Prérequis et lancement
 
 Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population`, `--multiscale`, `--ecology`, `--mortality`, `--reproduction`, `--kinship`, `--households`, `--care`, `--skills`, `--material`, `--harvest` et `--construction` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07, métriques settlement CIV-08, écologie alimentaire CIV-09, sortie de population CIV-10, âge/maturité/reproduction bornée CIV-11, parenté durable CIV-12A, appartenance household CIV-12B, dependent care final de CIV-12, compétences pratiques CIV-13, custody matérielle CIV-16, convergence harvest CIV-17 et convergence construction CIV-18. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
 
-L'option supplémentaire `--embodiment` porte la preuve de convergence
-navigation/embodiment CIV-19 décrite ci-dessous.
+Les options supplémentaires `--embodiment`, `--teaching` et
+`--ecological-observation` portent respectivement les preuves CIV-19, CIV-20 et
+CIV-21 décrites ci-dessous.
 
 Depuis la racine du dépôt :
 
@@ -88,6 +92,7 @@ Commandes de démonstration :
 /lab natural <on|off|status|scan>
 /lab ecology <on|off|status|scan|clear>
 /lab forage status
+/lab ecological-observation <on|status|scan|proof>
 /lab mortality <on|off|status|clear>
 /lab exits status
 /lab lifecycle <on|status|clear>
@@ -209,7 +214,44 @@ doit contenir `authority=PebbleCore`, `publication=verified`, quatre outcomes
 `probesRemoved=4`. La capture `navigation-embodiment-proof.png` reste une
 preuve visuelle manuelle ; la trace et les tests déterministes portent les
 assertions. `LabCoreAgentEntity` demeure un body expérimental non enregistré,
-non persistant et non universel. Gate R attend la revue senior/post-push.
+non persistant et non universel. Gate R reste acquise.
+
+## CIV-21 — Observation écologique et calendrier civil V1
+
+Le mode `scripts/verify-pebblelab-live.sh --ecological-observation` utilise
+`PebbleLab-Disposable-EcologicalObservation-46`, active uniquement agents,
+persistence, population, probes et la gate CIV-21, puis garde la session en
+pause. `/lab ecological-observation on` active explicitement le schéma v12 sans
+observation rétroactive ; `scan` observe l'agent focalisé et `proof` exécute la
+preuve jetable automatisée.
+
+Le sensor Pebble part de l'embodiment réel de chaque observer. Il visite au
+plus un rayon horizontal 4 et vertical 2, 512 cellules, quatre chunks déjà
+chargés, 1 024 lectures World, 64 entités et 128 résultats. Il normalise les
+noms canoniques de biome, bloc, fluide et espèce, sans persister les IDs de
+registre ou d'entité. Les chunks absents restent `chunkUnavailable` et ne sont
+jamais demandés. Le cache technique, limité à 64 entrées, inclut identité du
+World, contexte, dimension, origine et budgets ; il ne réutilise qu'un relevé
+du même tick physique et est invalidé à chaque tick cognitif, mutation de
+fixture, reload ou remplacement de World.
+
+La date civile utilise 24 ticks de session par jour, 30 jours par saison et
+quatre saisons par année depuis l'année 1. Le temps, l'heure et la météo du
+World restent des observations physiques séparées : `spring` ne modifie ni
+crop, ni température, ni météo. Les observations ont une TTL dynamique de
+quatre ticks, une rétention globale de 128 et de 16 par agent. Elles ne
+créditent ni inventory, ni `AgentCampStock`, ni ressource générique et ne
+touchent pas `AgentLocalEcologyState`, qui demeure coarse/headless/dormant.
+
+La preuve place puis restaure une petite fixture contrôlée avec dirt,
+farmland, wheat, eau, sapling et cow. Elle vérifie deux identités de biome
+PebbleCore distinctes, les contrastes eau/sol/animal/pêche présents puis
+absents, crop `3→7`, météo `clear→rain`, affordance de pêche sans prédire loot
+ou délai, séparation des observers, scan sans mutation, chunk absent sans
+chargement, cache invalidé sur un autre `World`, benchmark de 32 requêtes (`1
+miss + 31 hits`), checkpoint v12 byte-exact, capture rendue et cleanup. La
+commande `--dry-run` reste le préflight ; la preuve réelle et l'inspection
+manuelle du PNG sont obligatoires.
 
 ## CIV-04 — Canal physique local
 
