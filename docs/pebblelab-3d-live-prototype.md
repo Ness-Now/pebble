@@ -20,6 +20,9 @@ un probe.
 Sous la gate lifecycle, un âge démographique déterministe et trois stages
 bornés permettent une naissance locale sur un site World validé en lecture
 seule, sans grossesse, famille, génétique ni mutation du World.
+Sous la gate matérielle CIV-16, une preuve jetable relie aussi les probes à de
+vrais `ItemStack` et à un container Pebble réel sans publier de second stock
+civilisationnel.
 
 ## Prérequis et lancement
 
@@ -66,6 +69,7 @@ Commandes de démonstration :
 /lab speed <1|2|4|8>             /lab reset
 /lab movement <on|off>
 /lab interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off>
+/lab gateway proof              /lab material proof
 /lab economy <setup|auto on|auto off|status|clear>
 /lab survival <on|off|status>
 /lab natural <on|off|status|scan>
@@ -96,6 +100,21 @@ Commandes de démonstration :
 `/lab overlay on` reste un alias de `compact`. L’overlay compact est destiné aux démonstrations ; `full` expose le diagnostic détaillé. Sans commande explicite, F3 sélectionne le mode full et la variable d’environnement sélectionne compact.
 
 `follow focus` suit dynamiquement l’agent focalisé ; un identifiant suit une cible fixe. Le follow ne déplace jamais le joueur : il oriente seulement sa vue. Le joueur reste libre de se déplacer.
+
+## CIV-16 — Custody matérielle réelle V1
+
+Le mode `scripts/verify-pebblelab-live.sh --material` active explicitement
+`PEBBLELAB_APP_AGENTS_MATERIAL=1` dans un monde jetable seed `46`. Il exécute
+deux fois `/lab material proof` sur une session en pause : identité normalisée
+par nom d’item, transfert agent ↔ container réel, split/merge, consommation,
+replay idempotent, détection stale et rollback tardif. La même preuve connecte
+les callbacks place/tool de CIV-15 à la custody réelle, puis restaure le World,
+retire les drops de preuve et laisse session et `AgentCampStock` inchangés.
+
+La fixture crédite des piles uniquement dans la custody éphémère autorisée du
+test et les efface avant retour. Elle ne définit ni ownership, ni claim, ni
+checkpoint général de l’inventaire live ; ces frontières restent respectivement
+réservées à CIV-26 et à la convergence de persistence future.
 
 ## CIV-04 — Canal physique local
 

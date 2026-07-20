@@ -182,9 +182,7 @@ final class PebbleAgentMaterialCustodyGateway {
         }
         let capacity = itemInventoryInsertionCapacity(for: prototype, in: destinationBefore)
         guard capacity >= quantity else {
-            let status: PebbleAgentMaterialTransactionStatus = capacity == 0
-                ? .destinationFull : .incompatibleDestination
-            return outcome(request.transactionID, status, 0, sourceFingerprintBefore, destinationFingerprintBefore)
+            return outcome(request.transactionID, .destinationFull, 0, sourceFingerprintBefore, destinationFingerprintBefore)
         }
 
         var sourceAfter = copyItemInventory(sourceBefore)
@@ -196,6 +194,14 @@ final class PebbleAgentMaterialCustodyGateway {
         ), insertItemStack(extracted, quantity: quantity, into: &destinationAfter) == quantity,
               extracted.count == 0 else {
             return outcome(request.transactionID, .physicalExecutionFailure, 0, sourceFingerprintBefore, destinationFingerprintBefore)
+        }
+        guard (try? transferConservesIdentity(
+            sourceBefore: sourceBefore,
+            destinationBefore: destinationBefore,
+            sourceAfter: sourceAfter,
+            destinationAfter: destinationAfter
+        )) == true else {
+            return outcome(request.transactionID, .verificationFailure, 0, sourceFingerprintBefore, destinationFingerprintBefore)
         }
         guard source.write(sourceAfter), destination.write(destinationAfter) else {
             return rollback(
@@ -335,6 +341,23 @@ final class PebbleAgentMaterialCustodyGateway {
             default: return false
             }
         }
+    }
+
+    private func transferConservesIdentity(
+        sourceBefore: [ItemStack?],
+        destinationBefore: [ItemStack?],
+        sourceAfter: [ItemStack?],
+        destinationAfter: [ItemStack?]
+    ) throws -> Bool {
+        let before = try bridge.custodySnapshot(
+            locationID: "transaction-before",
+            slots: sourceBefore + destinationBefore
+        )
+        let after = try bridge.custodySnapshot(
+            locationID: "transaction-after",
+            slots: sourceAfter + destinationAfter
+        )
+        return bridge.normalizedTotals(in: before) == bridge.normalizedTotals(in: after)
     }
 
     private func retain(_ receipt: PebbleAgentMaterialTransactionOutcome) {

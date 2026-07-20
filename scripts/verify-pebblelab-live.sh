@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build|--social|--physical|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--build|--social|--physical|--material|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -34,6 +34,7 @@ Options:
   --build    Run fixed shelter acquisition, construction, interruption, rest, and clear.
   --social   Run directed grounded information, read-only verification, and trust.
   --physical Run local sound, pointing gesture, imperfect perception, and existing trust.
+  --material Run real agent/container custody, transactions, consumption, and CIV-15 seams.
   --cooperation Run shared construction-material task, delivery, and shelter completion.
   --persistence Run checkpoint, real process restart, causal replay, and uninterrupted control.
   --population Run bounded migrant admission, mid-route restart, arrival, and uninterrupted control.
@@ -90,6 +91,7 @@ for option in "$@"; do
         --build) MODE="build"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --social) MODE="social"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --physical) MODE="physical"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --material) MODE="material"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --cooperation) MODE="cooperation"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --persistence) MODE="persistence"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --population) MODE="population"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
@@ -112,6 +114,7 @@ NATURAL_GATE=0
 BUILD_GATE=0
 SOCIAL_GATE=0
 PHYSICAL_GATE=0
+MATERIAL_GATE=0
 COOPERATION_GATE=0
 PERSISTENCE_GATE=0
 POPULATION_GATE=0
@@ -434,6 +437,12 @@ elif [ "$MODE" = "cooperation" ]; then
         cooperation_step=$((cooperation_step + 1))
     done
     LAB_COMMANDS="$LAB_COMMANDS;/lab cooperation status;/lab build status;/lab economy status;/lab natural status;/lab physical status;/lab social status;/lab causality status;/lab causality tail 20;/lab status|/lab movement off;/lab cooperation off;/lab physical off;/lab social off;/lab build clear;/lab build status;/lab cooperation status;/lab follow off"
+elif [ "$MODE" = "material" ]; then
+    WORLD_SEED="46"
+    MATERIAL_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-Material-46"
+    CAPTURE_NAME="real-material-custody-proof.png"
+    LAB_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 71 -18;/lab pause;/lab movement off;/lab focus agent_2;/lab material proof;/lab material proof;/lab status'
 elif [ "$MODE" = "physical" ]; then
     WORLD_SEED="46"
     SOCIAL_GATE=1
@@ -564,6 +573,7 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_BUILD=%s\n' "$BUILD_GATE"
     printf '  PEBBLELAB_APP_AGENTS_SOCIAL=%s\n' "$SOCIAL_GATE"
     printf '  PEBBLELAB_APP_AGENTS_PHYSICAL=%s\n' "$PHYSICAL_GATE"
+    printf '  PEBBLELAB_APP_AGENTS_MATERIAL=%s\n' "$MATERIAL_GATE"
     printf '  PEBBLELAB_APP_AGENTS_COOPERATION=%s\n' "$COOPERATION_GATE"
     printf '  PEBBLELAB_APP_AGENTS_PERSISTENCE=%s\n' "$PERSISTENCE_GATE"
     printf '  PEBBLELAB_APP_AGENTS_POPULATION=%s\n' "$POPULATION_GATE"
@@ -639,6 +649,10 @@ print_plan() {
     elif [ "$MODE" = "cooperation" ]; then
         printf '  2. Confirm agent_2 physically offers a three-stone task only to agent_1.\n'
         printf '  3. Confirm helper stone delivery, builder wood delivery, funding, 9/9 construction, and exact conservation.\n'
+    elif [ "$MODE" = "material" ]; then
+        printf '  2. Confirm two identical stable-identity and real custody proof digests.\n'
+        printf '  3. Confirm real container transfer, consume, stale/idempotent refusal, and verified rollback.\n'
+        printf '  4. Confirm CIV-15 placement/tool state use real stacks and cleanup leaves no material fixture.\n'
     elif [ "$MODE" = "physical" ]; then
         printf '  2. Confirm agent_1 emits one positional attention sound and one bounded pointing gesture.\n'
         printf '  3. Confirm exact recipient perception, ambiguous bystander impression, read-only verification, and trust 0->10.\n'
@@ -666,9 +680,17 @@ print_plan() {
         && [ "$MODE" != "mortality" ] && [ "$MODE" != "reproduction" ] \
         && [ "$MODE" != "kinship" ] && [ "$MODE" != "households" ] \
         && [ "$MODE" != "care" ] && [ "$MODE" != "skills" ]; then
-        printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
+        if [ "$MODE" = "material" ]; then
+            printf '  5. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
+        else
+            printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
+        fi
     fi
-    printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
+    if [ "$MODE" = "material" ]; then
+        printf '  6. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
+    else
+        printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
+    fi
 }
 
 if [ "$DRY_RUN" -eq 1 ]; then
@@ -2773,6 +2795,7 @@ PEBBLELAB_APP_AGENTS_NATURAL="$NATURAL_GATE" \
 PEBBLELAB_APP_AGENTS_BUILD="$BUILD_GATE" \
 PEBBLELAB_APP_AGENTS_SOCIAL="$SOCIAL_GATE" \
 PEBBLELAB_APP_AGENTS_PHYSICAL="$PHYSICAL_GATE" \
+PEBBLELAB_APP_AGENTS_MATERIAL="$MATERIAL_GATE" \
 PEBBLELAB_APP_AGENTS_COOPERATION="$COOPERATION_GATE" \
 PEBBLELAB_APP_AGENTS_PERSISTENCE="$PERSISTENCE_GATE" \
 PEBBLELAB_APP_AGENTS_POPULATION="$POPULATION_GATE" \
@@ -2790,7 +2813,7 @@ world_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT count(*), json_extract(json, '
 expected_world_facts="1|$WORLD_SEED|$WORLD_NAME|1000|0|0|0|0|0"
 [ "$world_facts" = "$expected_world_facts" ] \
     || fail "unexpected disposable world facts: $world_facts"
-if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ] || [ "$MODE" = "cooperation" ]; then
+if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ] || [ "$MODE" = "material" ] || [ "$MODE" = "cooperation" ]; then
     spawn_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.spawnX'), json_extract(json, '$.spawnY'), json_extract(json, '$.spawnZ') FROM worlds;")
     [ "$spawn_facts" = "8|75|-112" ] || fail "unexpected seed-46 spawn: $spawn_facts"
 fi
@@ -2799,7 +2822,14 @@ require_trace "disposable-world name=$WORLD_NAME seed=$WORLD_SEED worldTick=0 da
 require_trace "start seed=$WORLD_SEED agents=3 tick=0 hz=4 movement=on worldTick=[0-9]+ dayTime=1000 weather=clear randomTickSpeed=0 mobSpawning=0" 'deterministic agent session initial conditions'
 
 [ -s "$CAPTURE_PATH" ] || fail "capture was not written: $CAPTURE_PATH"
-if [ "$MODE" = "cooperation" ]; then
+if [ "$MODE" = "material" ]; then
+    require_trace_count '^\[lab-live\] material proof actor=agent_2 identity=stable transfer=succeeded duplicate=duplicate stale=staleSource withdraw=succeeded lateTransfer=verificationFailure consume=succeeded lateConsume=verificationFailure place=succeeded break=succeeded lateBreak=verificationFailure session=unchanged campStock=unchanged cleanup=verified digest=[0-9a-f]+$' 2 'two complete real-material proofs'
+    material_digests=$(/usr/bin/sed -n 's/^\[lab-live\] material proof .* digest=\([0-9a-f]*\)$/\1/p' "$TRACE_PATH" | /usr/bin/sort -u | /usr/bin/wc -l | /usr/bin/tr -d ' ')
+    [ "$material_digests" -eq 1 ] || fail "material proof digests differ across replay"
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'material proof cleanup and runtime health'
+    reject_trace 'Material custody proof failed|rollbackFailure|session=changed|campStock=changed|cleanup=failed' 'material proof failure or leaked state'
+    printf '\nPASS: stable real-material custody, transactions, CIV-15 seams, and repeated deterministic cleanup verified.\n'
+elif [ "$MODE" = "cooperation" ]; then
     [ -s "$CAPTURE_BEFORE_PATH" ] || fail "before capture was not written: $CAPTURE_BEFORE_PATH"
     [ -s "$CAPTURE_DURING_PATH" ] || fail "offer capture was not written: $CAPTURE_DURING_PATH"
     require_trace 'cooperation=on tick=0 mutation=none' 'cooperation was explicitly enabled after its dependencies'

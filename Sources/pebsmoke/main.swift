@@ -36,6 +36,16 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "physical-acti
     exit(failed > 0 ? 1 : 0)
 }
 
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "materials" {
+    registerAllBlocks()
+    registerAllItems()
+    registerAllEntities()
+    registerAllSystems()
+    runPebbleCoreMaterialInventorySmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "dependent-care" {
     runPebbleAgentsDependentCareSmoke()
     print("\n\(passed) passed, \(failed) failed")

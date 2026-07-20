@@ -102,7 +102,7 @@ extension PebbleAgentController {
             )
             let richSnapshot = try bridge.snapshot(of: richPhysical)
             let richRoundTrip = try bridge.itemStack(from: richSnapshot)
-            var unknown = AgentMaterialStackSnapshot(
+            let unknown = AgentMaterialStackSnapshot(
                 identity: AgentMaterialIdentitySnapshot(
                     itemKey: "pebblelab:unknown",
                     damage: 0,
@@ -119,16 +119,28 @@ extension PebbleAgentController {
             } catch PebbleAgentMaterialBridgeError.unknownItemKey {
                 unknownRejected = true
             }
-            unknown = simpleA
+            let damagedTool = ItemStack(iid("iron_pickaxe"), 1, damage: 7)
+            let damagedToolSnapshot = try bridge.snapshot(of: damagedTool)
+            let damagedToolRoundTrip = try bridge.itemStack(from: damagedToolSnapshot)
+            var nestedData = StackData()
+            nestedData.contents = [ItemStack(iid("stone"), 1)]
+            let nestedRejected: Bool
+            do {
+                _ = try bridge.snapshot(of: ItemStack(iid("shulker_box"), 1, data: nestedData))
+                nestedRejected = false
+            } catch PebbleAgentMaterialBridgeError.unsupportedNestedInventory {
+                nestedRejected = true
+            }
             let simpleRoundTrip = try bridge.itemStack(from: simpleA)
             let richBytesA = try bridge.canonicalBytes(of: richSnapshot)
             let richBytesB = try bridge.canonicalBytes(of: richSnapshot)
             let identityProof = simpleA == simpleB
                 && simpleRoundTrip == ItemStack(iid("cobblestone"), 4)
                 && richRoundTrip == richPhysical
+                && damagedToolRoundTrip == damagedTool
                 && richBytesA == richBytesB
                 && unknownRejected
-                && unknown == simpleA
+                && nestedRejected
             try requireMaterialProof(identityProof, "stable identity round trip")
 
             let initialAgentSnapshot = try materialCustodyGateway.inspect(agentEndpoint)
@@ -512,8 +524,7 @@ extension PebbleAgentController {
             guard unique.allSatisfy({
                 world.isChunkReady($0.x >> 4, $0.z >> 4)
                     && world.getBlockEntity($0.x, $0.y, $0.z) == nil
-            }), world.getBlock(target.x, target.y, target.z) == 0,
-            !occupied.contains(target), !occupied.contains(container) else { continue }
+            }), !occupied.contains(target), !occupied.contains(container) else { continue }
             return PebbleAgentMaterialProofFixture(
                 target: target,
                 support: support,

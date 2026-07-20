@@ -60,9 +60,10 @@ public func removeLabCoreAgentProbe(
         spilled.append(item)
     }
     probe.carriedItems = Array(repeating: nil, count: LabCoreAgentEntity.carriedItemSlotCount)
-    let spillVerified = spilled.count == before.compactMap({ $0 }).count
-        && spilled.allSatisfy { item in
-            world.entities.contains(where: { $0 === item }) && item.stack.count > 0
+    let originalStacks = before.compactMap { $0 }
+    let spillVerified = spilled.count == originalStacks.count
+        && zip(spilled, originalStacks).allSatisfy { item, original in
+            world.entities.contains(where: { $0 === item }) && item.stack == original
         }
         && probe.carriedItems.allSatisfy { $0 == nil }
     guard spillVerified else {
