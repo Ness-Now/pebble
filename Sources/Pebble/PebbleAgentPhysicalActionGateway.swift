@@ -93,6 +93,9 @@ struct PebbleAgentBlockBreakToolState {
 /// action rules remain in PebbleCore; callers may publish Civilization state
 /// only after receiving a verified `.succeeded` outcome.
 struct PebbleAgentPhysicalActionGateway {
+    /// Compatibility entry point for existing bounded proof fixtures. It
+    /// immediately narrows the raw probe to the same embodiment boundary used
+    /// by live execution.
     func placeBlock(
         world: World,
         actor: LabCoreAgentEntity,
@@ -101,8 +104,26 @@ struct PebbleAgentPhysicalActionGateway {
         occupiedPositions: [PhysicalBlockPosition],
         verifyAfterMutation: () -> Bool = { true }
     ) -> PebbleAgentPhysicalActionOutcome {
+        placeBlock(
+            world: world,
+            actor: PebbleAgentEmbodiment(probe: actor),
+            request: request,
+            custody: custody,
+            occupiedPositions: occupiedPositions,
+            verifyAfterMutation: verifyAfterMutation
+        )
+    }
+
+    func placeBlock(
+        world: World,
+        actor: PebbleAgentEmbodiment,
+        request: PebbleAgentBlockPlacementRequest,
+        custody: PebbleAgentBlockPlacementCustody,
+        occupiedPositions: [PhysicalBlockPosition],
+        verifyAfterMutation: () -> Bool = { true }
+    ) -> PebbleAgentPhysicalActionOutcome {
         let family = PebbleAgentPhysicalActionFamily.placeBlock
-        guard actor.labAgentId == request.actorID, !actor.dead else {
+        guard actor.agentID == request.actorID, actor.isValid(in: world) else {
             return outcome(
                 family: family,
                 request.actorID,
@@ -218,7 +239,7 @@ struct PebbleAgentPhysicalActionGateway {
                 BlockPlacementRuleContext(
                     world: world,
                     orientation: request.orientation,
-                    vibrationSource: actor,
+                    vibrationSource: actor.entity,
                     consumeHeld: custody.consume
                 ),
                 request.hit,
@@ -303,8 +324,28 @@ struct PebbleAgentPhysicalActionGateway {
         acquireDrops: ([Int]) -> Bool = { _ in true },
         verifyAfterMutation: () -> Bool = { true }
     ) -> PebbleAgentPhysicalActionOutcome {
+        breakBlock(
+            world: world,
+            actor: PebbleAgentEmbodiment(probe: actor),
+            request: request,
+            toolState: toolState,
+            occupiedPositions: occupiedPositions,
+            acquireDrops: acquireDrops,
+            verifyAfterMutation: verifyAfterMutation
+        )
+    }
+
+    func breakBlock(
+        world: World,
+        actor: PebbleAgentEmbodiment,
+        request: PebbleAgentBlockBreakRequest,
+        toolState: PebbleAgentBlockBreakToolState = .none,
+        occupiedPositions: [PhysicalBlockPosition],
+        acquireDrops: ([Int]) -> Bool = { _ in true },
+        verifyAfterMutation: () -> Bool = { true }
+    ) -> PebbleAgentPhysicalActionOutcome {
         let family = PebbleAgentPhysicalActionFamily.breakBlock
-        guard actor.labAgentId == request.actorID, !actor.dead else {
+        guard actor.agentID == request.actorID, actor.isValid(in: world) else {
             return outcome(
                 family: family,
                 request.actorID,
@@ -414,7 +455,7 @@ struct PebbleAgentPhysicalActionGateway {
                     world: world,
                     heldItem: request.heldItem,
                     isCreative: request.isCreative,
-                    vibrationSource: actor,
+                    vibrationSource: actor.entity,
                     damageTool: toolState.damage
                 ),
                 request.target.x,
@@ -500,7 +541,7 @@ struct PebbleAgentPhysicalActionGateway {
     }
 
     private func isWithinBoundedReach(
-        actor: LabCoreAgentEntity,
+        actor: PebbleAgentEmbodiment,
         target: PhysicalBlockPosition
     ) -> Bool {
         let actorX = Int(actor.x.rounded(.down))

@@ -138,6 +138,38 @@ struct PebbleAgentConstructionExecutor {
         prevalidate: () throws -> Void,
         publishAndVerify: (_ finalCell: Bool, _ actualFingerprint: Int) throws -> Void
     ) throws {
+        try place(
+            world: world,
+            actor: actor,
+            physicalActor: PebbleAgentEmbodiment(probe: physicalActor),
+            project: project,
+            intent: intent,
+            occupiedAgentPositions: occupiedAgentPositions,
+            playerPosition: playerPosition,
+            buildGateEnabled: buildGateEnabled,
+            buildAutoEnabled: buildAutoEnabled,
+            materialGateway: materialGateway,
+            physicalGateway: physicalGateway,
+            prevalidate: prevalidate,
+            publishAndVerify: publishAndVerify
+        )
+    }
+
+    mutating func place(
+        world: World,
+        actor: AgentSnapshot,
+        physicalActor: PebbleAgentEmbodiment,
+        project: AgentConstructionProject,
+        intent: AgentPlacementIntent,
+        occupiedAgentPositions: [AgentPosition],
+        playerPosition: AgentPosition,
+        buildGateEnabled: Bool,
+        buildAutoEnabled: Bool,
+        materialGateway: PebbleAgentMaterialCustodyGateway,
+        physicalGateway: PebbleAgentPhysicalActionGateway,
+        prevalidate: () throws -> Void,
+        publishAndVerify: (_ finalCell: Bool, _ actualFingerprint: Int) throws -> Void
+    ) throws {
         guard buildGateEnabled else { throw ExecutionError.gateDisabled }
         guard buildAutoEnabled else { throw ExecutionError.autoDisabled }
         guard var ledger else { throw ExecutionError.projectMissing }
@@ -147,14 +179,9 @@ struct PebbleAgentConstructionExecutor {
               actor.id == intent.builderAgentId else {
             throw ExecutionError.projectMismatch
         }
-        guard physicalActor.labAgentId == actor.id,
-              !physicalActor.dead,
-              physicalActor.world === world,
-              AgentPosition(
-                x: Int(physicalActor.x.rounded(.down)),
-                y: Int(physicalActor.y.rounded(.down)),
-                z: Int(physicalActor.z.rounded(.down))
-              ) == actor.position else {
+        guard physicalActor.agentID == actor.id,
+              physicalActor.isValid(in: world),
+              physicalActor.position == actor.position else {
             throw ExecutionError.projectMismatch
         }
         guard ledger.cells.indices.contains(intent.cellIndex),
@@ -170,9 +197,10 @@ struct PebbleAgentConstructionExecutor {
             throw ExecutionError.invalidCell
         }
         let target = intent.target
-        let horizontalReach = abs(target.x - actor.position.x) + abs(target.z - actor.position.z)
-        let verticalReach = target.y - actor.position.y
-        guard actor.position == intent.workPosition,
+        let horizontalReach = abs(target.x - physicalActor.position.x)
+            + abs(target.z - physicalActor.position.z)
+        let verticalReach = target.y - physicalActor.position.y
+        guard physicalActor.position == intent.workPosition,
               horizontalReach == 1,
               (0...2).contains(verticalReach) else {
             throw ExecutionError.invalidReach

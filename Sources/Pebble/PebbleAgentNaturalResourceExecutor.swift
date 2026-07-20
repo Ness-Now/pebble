@@ -77,6 +77,38 @@ struct PebbleAgentNaturalResourceExecutor {
         prevalidate: () throws -> Void,
         publishAndVerify: (PebbleAgentItemEntityAcquisitionOutcome) throws -> Bool
     ) throws -> PebbleAgentNaturalHarvestResult {
+        try harvest(
+            world: world,
+            actor: actor,
+            physicalActor: PebbleAgentEmbodiment(probe: physicalActor),
+            identity: identity,
+            transactionID: transactionID,
+            occupiedAgentPositions: occupiedAgentPositions,
+            playerPosition: playerPosition,
+            naturalGateEnabled: naturalGateEnabled,
+            interactionGateEnabled: interactionGateEnabled,
+            physicalGateway: physicalGateway,
+            custodyGateway: custodyGateway,
+            prevalidate: prevalidate,
+            publishAndVerify: publishAndVerify
+        )
+    }
+
+    mutating func harvest(
+        world: World,
+        actor: AgentSnapshot,
+        physicalActor: PebbleAgentEmbodiment,
+        identity: AgentResourceIdentity,
+        transactionID: String,
+        occupiedAgentPositions: [AgentPosition],
+        playerPosition: AgentPosition,
+        naturalGateEnabled: Bool,
+        interactionGateEnabled: Bool,
+        physicalGateway: PebbleAgentPhysicalActionGateway,
+        custodyGateway: PebbleAgentMaterialCustodyGateway,
+        prevalidate: () throws -> Void,
+        publishAndVerify: (PebbleAgentItemEntityAcquisitionOutcome) throws -> Bool
+    ) throws -> PebbleAgentNaturalHarvestResult {
         guard naturalGateEnabled, interactionGateEnabled else {
             throw ExecutionError.gateDisabled
         }
@@ -95,7 +127,7 @@ struct PebbleAgentNaturalResourceExecutor {
         }
         guard AgentInteractionSandbox.isCardinalAdjacent(
             target: identity.position,
-            actor: actor.position
+            actor: physicalActor.position
         ) else {
             throw ExecutionError.nonAdjacentTarget
         }
@@ -113,9 +145,8 @@ struct PebbleAgentNaturalResourceExecutor {
         guard PebbleAgentNaturalResourceMapping.resource(for: fingerprint) == identity.resource else {
             throw ExecutionError.mappingMismatch
         }
-        guard physicalActor.world === world,
-              physicalActor.labAgentId == actor.id,
-              !physicalActor.dead else {
+        guard physicalActor.isValid(in: world),
+              physicalActor.agentID == actor.id else {
             throw ExecutionError.missingPhysicalActor
         }
         try prevalidate()

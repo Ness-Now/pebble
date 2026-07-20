@@ -112,21 +112,25 @@ struct PebbleAgentMaterialCustodyEndpoint {
         _ actor: LabCoreAgentEntity,
         in world: World
     ) -> PebbleAgentMaterialCustodyEndpoint {
+        liveAgent(PebbleAgentEmbodiment(probe: actor), in: world)
+    }
+
+    static func liveAgent(
+        _ actor: PebbleAgentEmbodiment,
+        in world: World
+    ) -> PebbleAgentMaterialCustodyEndpoint {
         PebbleAgentMaterialCustodyEndpoint(
-            locationID: "agent:\(actor.physicalId)",
+            locationID: "agent:\(actor.physicalID)",
             isValidImpl: {
-                actor.world === world && !actor.dead
-                    && world.entities.contains(where: { $0 === actor })
+                actor.isValid(in: world)
                     && actor.carriedItems.count == LabCoreAgentEntity.carriedItemSlotCount
             },
             readImpl: {
-                guard actor.world === world, !actor.dead,
-                      world.entities.contains(where: { $0 === actor }) else { return nil }
+                guard actor.isValid(in: world) else { return nil }
                 return copyItemInventory(actor.carriedItems)
             },
             writeImpl: { slots in
-                guard actor.world === world, !actor.dead,
-                      world.entities.contains(where: { $0 === actor }),
+                guard actor.isValid(in: world),
                       slots.count == LabCoreAgentEntity.carriedItemSlotCount else { return false }
                 actor.carriedItems = copyItemInventory(slots)
                 return true
@@ -663,6 +667,13 @@ extension PebbleAgentMaterialCustodyGateway {
         actor: LabCoreAgentEntity,
         slot: Int
     ) -> PebbleAgentMaterialPlacementBinding? {
+        placementBinding(actor: PebbleAgentEmbodiment(probe: actor), slot: slot)
+    }
+
+    func placementBinding(
+        actor: PebbleAgentEmbodiment,
+        slot: Int
+    ) -> PebbleAgentMaterialPlacementBinding? {
         guard actor.carriedItems.indices.contains(slot),
               let held = actor.carriedItems[slot], held.count > 0 else { return nil }
         let before = copyItemInventory(actor.carriedItems)
@@ -707,7 +718,7 @@ extension PebbleAgentMaterialCustodyGateway {
     /// Resolves the first real carried stack whose registry item places the
     /// exact required block. Slot order is the deterministic selection rule.
     func placementBinding(
-        actor: LabCoreAgentEntity,
+        actor: PebbleAgentEmbodiment,
         requiredBlockID: Int
     ) -> PebbleAgentMaterialPlacementBinding? {
         guard requiredBlockID > 0, requiredBlockID < blockDefs.count else { return nil }
@@ -724,7 +735,19 @@ extension PebbleAgentMaterialCustodyGateway {
         slot: Int,
         world: World
     ) -> PebbleAgentMaterialToolBinding? {
-        guard actor.world === world, actor.carriedItems.indices.contains(slot),
+        toolBinding(
+            actor: PebbleAgentEmbodiment(probe: actor),
+            slot: slot,
+            world: world
+        )
+    }
+
+    func toolBinding(
+        actor: PebbleAgentEmbodiment,
+        slot: Int,
+        world: World
+    ) -> PebbleAgentMaterialToolBinding? {
+        guard actor.isValid(in: world), actor.carriedItems.indices.contains(slot),
               let held = actor.carriedItems[slot] else { return nil }
         let before = copyItemInventory(actor.carriedItems)
         let heldCopy = held.copy()
@@ -770,7 +793,7 @@ extension PebbleAgentMaterialCustodyGateway {
     /// wins by slot order; otherwise the first real tool is exposed so
     /// PebbleCore can apply its normal wrong-tool/no-drop rule.
     func harvestToolBinding(
-        actor: LabCoreAgentEntity,
+        actor: PebbleAgentEmbodiment,
         targetCell: Int,
         world: World
     ) -> PebbleAgentMaterialToolBinding? {
@@ -786,6 +809,28 @@ extension PebbleAgentMaterialCustodyGateway {
         }
         guard let slot = matchingSlot ?? toolSlots.first else { return nil }
         return toolBinding(actor: actor, slot: slot, world: world)
+    }
+
+    func placementBinding(
+        actor: LabCoreAgentEntity,
+        requiredBlockID: Int
+    ) -> PebbleAgentMaterialPlacementBinding? {
+        placementBinding(
+            actor: PebbleAgentEmbodiment(probe: actor),
+            requiredBlockID: requiredBlockID
+        )
+    }
+
+    func harvestToolBinding(
+        actor: LabCoreAgentEntity,
+        targetCell: Int,
+        world: World
+    ) -> PebbleAgentMaterialToolBinding? {
+        harvestToolBinding(
+            actor: PebbleAgentEmbodiment(probe: actor),
+            targetCell: targetCell,
+            world: world
+        )
     }
 }
 

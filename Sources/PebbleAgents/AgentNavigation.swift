@@ -116,6 +116,9 @@ public struct AgentNavigationPlan: Codable, Equatable {
     }
 }
 
+/// Deterministic bounded planner for headless/coarse simulation and waypoint
+/// intent. Live physical path authority belongs to PebbleCore; this type must
+/// not be used as a second collision-aware physical pathfinder.
 public enum AgentBoundedRoutePlanner {
     public static let maximumVisitedNodes = 256
     public static let maximumRouteSteps = 16
@@ -283,9 +286,10 @@ public enum AgentBoundedRoutePlanner {
     }
 }
 
-/// Selects deterministic intermediate goals while every physical route remains
-/// within the shared planner's radius. This is waypoint selection, not a second
-/// pathfinder: each leg is still planned by `AgentBoundedRoutePlanner`.
+/// Selects deterministic intermediate goals for headless/coarse simulation and
+/// live waypoint intent. In live execution PebbleCore plans and moves every
+/// physical leg; `AgentBoundedRoutePlanner` remains a compatibility projection,
+/// not physical path authority.
 public enum AgentBoundedTravel {
     public static let stepDistance = 4
 
