@@ -154,6 +154,14 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case guidedPracticeLinked
     case ecologicalObservationInitialized
     case ecologicalObservationRecorded
+    case agricultureInitialized
+    case agriculturalPlotPlanned
+    case agriculturalCellPrepared
+    case agriculturalCropPlanted
+    case agriculturalCropMatured
+    case agriculturalCropHarvested
+    case agriculturalSurplusStored
+    case agriculturalCellReconciled
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -177,6 +185,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case skillTransition
     case teachingTransition
     case ecologicalObservationTransition
+    case agricultureTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -443,6 +452,16 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         status: String,
         digest: String
     )
+    case agriculture(
+        plotID: String?,
+        cellIndex: Int?,
+        actionID: String?,
+        status: String,
+        physicalFingerprint: Int,
+        itemKey: String?,
+        quantity: Int,
+        digest: String
+    )
 
     var canonicalText: String {
         switch self {
@@ -625,6 +644,13 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
             return "ecologicalObservation|\(observerID ?? "none")|"
                 + "\(worldContextKey ?? "none")|\(dimensionKey ?? "none")|"
                 + "\(resultCount)|\(worldReads)|\(truncated ? 1 : 0)|\(status)|\(digest)"
+        case let .agriculture(
+            plotID, cellIndex, actionID, status, physicalFingerprint,
+            itemKey, quantity, digest
+        ):
+            return "agriculture|\(plotID ?? "none")|\(cellIndex.map(String.init) ?? "none")|"
+                + "\(actionID ?? "none")|\(status)|\(physicalFingerprint)|"
+                + "\(itemKey ?? "none")|\(quantity)|\(digest)"
         }
     }
 }
@@ -788,7 +814,15 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.apprenticeshipEnded, .teaching),
              (.guidedPracticeLinked, .teaching),
              (.ecologicalObservationInitialized, .ecologicalObservation),
-             (.ecologicalObservationRecorded, .ecologicalObservation):
+             (.ecologicalObservationRecorded, .ecologicalObservation),
+             (.agricultureInitialized, .agriculture),
+             (.agriculturalPlotPlanned, .agriculture),
+             (.agriculturalCellPrepared, .agriculture),
+             (.agriculturalCropPlanted, .agriculture),
+             (.agriculturalCropMatured, .agriculture),
+             (.agriculturalCropHarvested, .agriculture),
+             (.agriculturalSurplusStored, .agriculture),
+             (.agriculturalCellReconciled, .agriculture):
             matches = true
         default:
             matches = false
