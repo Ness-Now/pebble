@@ -23,10 +23,13 @@ seule, sans grossesse, famille, génétique ni mutation du World.
 Sous la gate matérielle CIV-16, une preuve jetable relie aussi les probes à de
 vrais `ItemStack` et à un container Pebble réel sans publier de second stock
 civilisationnel.
+Sous les gates matérielle et naturelle, la preuve CIV-17 fait casser un vrai
+log et une vraie stone par les règles Pebble, acquiert uniquement leurs drops
+causaux dans la custody réelle et publie ensuite la causalité et la pratique.
 
 ## Prérequis et lancement
 
-Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population`, `--multiscale`, `--ecology`, `--mortality`, `--reproduction`, `--kinship`, `--households`, `--care` et `--skills` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07, métriques settlement CIV-08, écologie alimentaire CIV-09, sortie de population CIV-10, âge/maturité/reproduction bornée CIV-11, parenté durable CIV-12A, appartenance household CIV-12B, dependent care final de CIV-12 et compétences pratiques NEXT-1. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
+Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population`, `--multiscale`, `--ecology`, `--mortality`, `--reproduction`, `--kinship`, `--households`, `--care`, `--skills`, `--material` et `--harvest` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07, métriques settlement CIV-08, écologie alimentaire CIV-09, sortie de population CIV-10, âge/maturité/reproduction bornée CIV-11, parenté durable CIV-12A, appartenance household CIV-12B, dependent care final de CIV-12, compétences pratiques CIV-13, custody matérielle CIV-16 et convergence harvest CIV-17. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
 
 Depuis la racine du dépôt :
 
@@ -69,7 +72,7 @@ Commandes de démonstration :
 /lab speed <1|2|4|8>             /lab reset
 /lab movement <on|off>
 /lab interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off>
-/lab gateway proof              /lab material proof
+/lab gateway proof              /lab material proof    /lab harvest proof
 /lab economy <setup|auto on|auto off|status|clear>
 /lab survival <on|off|status>
 /lab natural <on|off|status|scan>
@@ -82,6 +85,7 @@ Commandes de démonstration :
 /lab births status
 /lab kinship <on|status>
 /lab household <on|status>
+/lab skills <on|status>
 /lab social <on|off|status|clear>
 /lab physical <on|off|status|clear>
 /lab cooperation <on|off|status|clear>
@@ -115,6 +119,35 @@ La fixture crédite des piles uniquement dans la custody éphémère autorisée 
 test et les efface avant retour. Elle ne définit ni ownership, ni claim, ni
 checkpoint général de l’inventaire live ; ces frontières restent respectivement
 réservées à CIV-26 et à la convergence de persistence future.
+
+## CIV-17 — Convergence harvest et ressources V1
+
+Le mode `scripts/verify-pebblelab-live.sh --harvest` active explicitement les
+gates naturelle, matérielle, persistence, population, lifecycle et skills dans
+`PebbleLab-Disposable-Harvest-46`. La commande de harnais `/lab harvest proof`
+reste réservée au monde jetable, à une session en pause et au mouvement coupé.
+Elle seed explicitement un axe et une pioche réels dans la custody du probe,
+puis rejoue deux fois le même scénario déterministe.
+
+NaturalResource conserve son observation bornée, son target lock, son
+fingerprint et son identité de transaction. Son exécution live passe désormais
+par la gateway CIV-15 : `executeBlockBreak` applique les règles Pebble de
+harvest et d'usure, rapporte les identifiants exacts des `ItemEntity` qu'il a
+créés, puis le bridge CIV-16 déplace ces stacks dans `carriedItems` avec les
+règles d'inventaire Core. La session civilisationnelle n'est publiée qu'après
+vérification de la mutation, des drops, de la custody et de l'outil. Cette
+publication ajoute un succès causal et une unité de pratique `foraging`, mais
+aucun `wood`/`stone` abstrait ni `AgentCampStock`.
+
+La preuve casse un `oak_log` en `oak_log x1`, puis une `stone` en
+`cobblestone x1`; chaque outil reçoit exactement un point de damage. Un
+`ItemEntity` de dirt préexistant et adjacent reste inchangé. Les présentations
+dupliquée et stale, la cible hors de portée, l'absence d'outil productif, la
+custody pleine et l'échec tardif d'acquisition produisent zéro succès causal et
+restaurent exactement bloc, drops, custody, outil et effets. Les deux commandes
+live publient le même digest, terminent avec `runtimeErrors=0` et retirent les
+trois probes. Le mapping de planification `wood`/`stone` reste une abstraction
+coarse compatible ; il ne calcule jamais les drops Pebble.
 
 ## CIV-04 — Canal physique local
 
@@ -534,15 +567,15 @@ Une faim engagée cible exclusivement les fixtures `foodRaw` et réutilise le ta
 
 Une fatigue engagée conserve le goal `rest` jusqu'au seuil de récupération. Loin du home, la purpose `homeRest` réutilise le planner exact et `return_home`, à un pas maximum par tick. Au home, l'action `rest` réduit la fatigue avant la reprise des activités normales. Le mode live par défaut utilise `PebbleLab-Disposable-J-12345`, conserve les trois blocs-fixtures comme seules mutations World, vérifie zéro modification de corridor et restaure les trois fixtures au cleanup. La preuve négative de famine sans nourriture est structurée dans `pebsmoke`, car elle ne nécessite aucune mutation World ni validation pixel.
 
-## J→K — Natural Wood and Stone Harvest V1
+## J→K — Natural targeting V1 (socle historique)
 
-Le mode naturel reste désactivé par défaut et exige `PEBBLELAB_APP_AGENTS_NATURAL=1`, puis `/lab natural on`. Il n'active ni le mouvement, ni l'économie, ni la survie. Le mapping Pebble est volontairement fermé aux fingerprints metadata `0` déjà enregistrés et générés : `oak_log#1520` et `birch_log#2032` donnent `wood`, `stone#48` donne `stone`. Aucun bloc ne donne `foodRaw`; la nourriture de survie reste une fixture.
+Le mode naturel reste désactivé par défaut et exige `PEBBLELAB_APP_AGENTS_NATURAL=1`, puis `/lab natural on`. Il n'active ni le mouvement, ni l'économie, ni la survie. Le mapping borné des fingerprints metadata `0` déjà enregistrés et générés (`oak_log#1520`, `birch_log#2032`, `stone#48`) ne sert plus qu'à la perception, au planning et à la compatibilité coarse ; il ne détermine aucun drop. Aucun bloc ne donne `foodRaw`; la nourriture de survie reste une fixture.
 
 Le scan read-only couvre un rayon horizontal maximal de 8 et la bande verticale `agentY-2...agentY+4`, au plus 1 008 positions cibles et 384 lectures d'approche, sans charger de chunk. Cette bande couvre les différences de niveau simples du movement stack et les troncs accessibles sans ouvrir un scan vertical général. Il émet au plus 32 candidats puis 8 observations dans un ordre stable. La session conserve la source `naturalWorld`, le fingerprint, le target lock et la réservation. Le planner H2 et le movement stack restent les seuls chemins de navigation.
 
-La récolte naturelle relit le fingerprint exact, prévalide la copie de session, remplace uniquement la cible par air, vérifie la mutation puis publie le crédit. Une publication refusée restaure immédiatement et vérifie le bloc exact; après succès, le bloc reste retiré et le cleanup ne le recrée pas. Les fixtures conservent leur ledger réversible séparé. L'invariant économique reste `harvested = carried + campStock + consumed`.
+Depuis CIV-17, la récolte live relit le fingerprint exact puis délègue la mutation, les drops et l'usure à `executeBlockBreak`; elle acquiert ensuite les `ItemEntity` causaux dans la custody réelle avant publication. Le chemin headless/coarse historique conserve son crédit abstrait dans sa boundary de compatibilité, mais une transaction live n'écrit jamais dans les deux modèles.
 
-La preuve permanente `scripts/verify-pebblelab-live.sh --natural` utilise le monde jetable `PebbleLab-Disposable-Natural-46`, la seed `46`, l'anchor joueur `(19,68,-21)`, zéro fixture et `agent_2` au home `(21,68,-21)`. Elle observe un `oak_log#1520` en `(24,68,-22)`, parcourt trois pas jusqu'à `(24,68,-21)`, récolte ensuite la pierre exposée adjacente `stone#48` en `(24,68,-20)`, revient au home en trois pas et livre `wood=1, stone=1`. La trace vérifie les deux blocs devenus air, `fixtures=0`, `naturalRestoredAfterSuccess=0`, la conservation `2=0+2+0`, zéro corridor modifié et zéro erreur runtime. La capture reste une preuve visuelle complémentaire; les fingerprints, la déduplication et le rollback injecté sont couverts par `pebsmoke`.
+L'ancien scénario `--natural` qui démontrait un crédit abstrait et une livraison `AgentCampStock` est superseded comme autorité live. L'option reste un alias de compatibilité vers la preuve `--harvest`; la section CIV-17 ci-dessus décrit le contrat physique actuel. Les tests headless conservent les anciennes transactions abstraites pour leur périmètre coarse explicite.
 
 ## K — Fixed Shelter Construction V1
 

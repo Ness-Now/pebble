@@ -278,6 +278,121 @@ private func skillTrainMaterialHandling(
     }
 }
 
+func runPebbleAgentsHarvestPublicationSmoke() {
+    section("pebble agents verified physical harvest publication")
+
+    var session = skillBase("skill-physical-harvest")
+    session.setEconomyEnabled(true)
+    session.setNaturalResourcesEnabled(true)
+    let actorID = AgentID(rawValue: "agent_2")!
+    let actorPosition = try! session.state(for: actorID.rawValue).position
+    let target = AgentPosition(
+        x: actorPosition.x + 1,
+        y: actorPosition.y,
+        z: actorPosition.z
+    )
+    let fingerprint = 95 << 4
+    _ = try! session.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: actorID.rawValue,
+        resourceObservations: [AgentResourceObservation(
+            resource: .wood,
+            target: target,
+            direction: .east,
+            distanceManhattan: 1,
+            quantityAvailable: 1,
+            source: .naturalWorld,
+            expectedBlockFingerprint: fingerprint
+        )]
+    )])
+    let intent = AgentInteractionIntent(
+        interactionId: "physical-harvest-agent_2",
+        agentId: actorID.rawValue,
+        tick: session.tick,
+        target: target,
+        resource: .wood,
+        source: .naturalWorld,
+        expectedBlockFingerprint: fingerprint
+    )
+    check("physical harvest intent keeps NaturalResource targeting", {
+        do { try session.prevalidateInteraction(intent); return true }
+        catch { return false }
+    }())
+    let outcome = AgentInteractionOutcome(
+        interactionId: intent.interactionId,
+        agentId: intent.agentId,
+        tick: intent.tick,
+        target: intent.target,
+        resource: intent.resource,
+        status: .succeeded,
+        inventoryDelta: AgentInventoryDelta(resource: .wood, quantity: 0),
+        reason: "pebble-harvest:oak_logx1",
+        source: .naturalWorld,
+        expectedBlockFingerprint: fingerprint
+    )
+    let before = session.snapshot()
+    let beforePractice = session.practiceUnits(agentID: actorID, domain: .foraging)
+    let beforeCausalCount = session.causalLedgerSnapshot().events.count
+    try! session.applyInteractionOutcome(outcome)
+    let after = session.snapshot()
+    check("physical harvest publishes zero abstract inventory credit",
+          after.agents.first { $0.id == actorID.rawValue }?.resourceInventory
+            == before.agents.first { $0.id == actorID.rawValue }?.resourceInventory)
+    check("physical harvest publishes zero AgentCampStock credit",
+          after.campStock == before.campStock)
+    check("physical harvest leaves coarse conservation unchanged",
+          after.conservation == before.conservation && after.conservation.balanced)
+    check("physical harvest publishes one causal success",
+          session.causalLedgerSnapshot().events.count == beforeCausalCount + 2
+            && session.causalLedgerSnapshot().events.filter {
+                $0.kind == .interaction
+                    && $0.operationID?.rawValue == intent.interactionId
+            }.count == 1)
+    check("physical harvest credits foraging exactly once",
+          session.practiceUnits(agentID: actorID, domain: .foraging)
+            == beforePractice + 1
+            && session.retainedPracticeHistory(agentID: actorID, domain: .foraging)
+                .last?.sourceKind == .interaction)
+    let committedBytes = try! session.durableStateBytes()
+    check("physical harvest duplicate is atomically refused", {
+        do { try session.applyInteractionOutcome(outcome); return false }
+        catch AgentSessionError.duplicateInteraction {
+            return (try! session.durableStateBytes()) == committedBytes
+        } catch { return false }
+    }())
+
+    var invalid = skillBase("skill-invalid-physical-harvest")
+    invalid.setEconomyEnabled(true)
+    invalid.setNaturalResourcesEnabled(true)
+    _ = try! invalid.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: actorID.rawValue,
+        resourceObservations: [AgentResourceObservation(
+            resource: .wood, target: target, direction: .east,
+            distanceManhattan: 1, quantityAvailable: 1,
+            source: .naturalWorld, expectedBlockFingerprint: fingerprint
+        )]
+    )])
+    let invalidBytes = try! invalid.durableStateBytes()
+    check("zero-delta harvest without physical provenance is refused", {
+        do {
+            try invalid.applyInteractionOutcome(AgentInteractionOutcome(
+                interactionId: "invalid-zero-delta",
+                agentId: actorID.rawValue,
+                tick: invalid.tick,
+                target: target,
+                resource: .wood,
+                status: .succeeded,
+                inventoryDelta: AgentInventoryDelta(resource: .wood, quantity: 0),
+                reason: "unverified harvest",
+                source: .naturalWorld,
+                expectedBlockFingerprint: fingerprint
+            ))
+            return false
+        } catch AgentSessionError.invalidInteractionOutcome {
+            return (try! invalid.durableStateBytes()) == invalidBytes
+        } catch { return false }
+    }())
+}
+
 func runPebbleAgentsSkillSmoke() {
     section("pebble agents practice-based skills and task matching")
 

@@ -20,10 +20,10 @@ Baseline de ce recalage :
 
 ## Position canonique actuelle
 
-`CIV-00` à `CIV-15` sont terminés et acquis dans leurs contrats bornés. La
+`CIV-00` à `CIV-16` sont terminés et acquis dans leurs contrats bornés. La
 phase canonique actuelle est :
 
-`CIV-16 — Real Material Identity and Inventory Bridge V1`.
+`CIV-17 — Harvest and Resource Convergence V1`.
 
 Les noms `NEXT-1` et `NEXT-2` sont uniquement des alias historiques :
 
@@ -52,6 +52,8 @@ Les preuves acquises couvrent notamment, dans leurs limites actuelles :
   prévalidation, vérification, publication et rollback.
 - la gateway actor-neutral CIV-15 pour break/place, avec refus stale,
   vérification de custody/tool state et rollback borné avant publication.
+- le bridge CIV-16 d’identité matérielle et de custody réelle, avec
+  `ItemStack`, containers, fingerprints, receipts et rollback vérifié.
 
 Ces preuves ne constituent pas encore une agriculture réelle, une économie
 d’items complète, une grande population, un cycle de vie complet, un système
@@ -182,8 +184,8 @@ détails d’API restent à fixer par la mission qui ouvre chaque verticale.
 | --- | --- | --- |
 | `CIV-14` | completed | Reuse & Convergence Baseline |
 | `CIV-15` | completed | Actor-Neutral Physical Action Gateway V1 |
-| `CIV-16` | current | Real Material Identity and Inventory Bridge V1 |
-| `CIV-17` | planned | Harvest and Resource Convergence V1 |
+| `CIV-16` | completed | Real Material Identity and Inventory Bridge V1 |
+| `CIV-17` | current | Harvest and Resource Convergence V1 |
 | `CIV-18` | planned | Construction and Placement Convergence V1 |
 | `CIV-19` | planned | Navigation and Embodiment Boundary Consolidation V1 |
 
@@ -360,5 +362,6 @@ monde de vivre.
 - Une verticale livre normalement contrat, implémentation, preuves focalisées,
   une seule full gate finale justifiée et documentation en 1 à 3 commits
   reviewables.
-- `CIV-15` a ouvert uniquement les seams actor-neutral et la gateway bornée ;
-  il n’a commencé ni l’inventaire CIV-16, ni les convergences CIV-17/CIV-18.
+- `CIV-15` et `CIV-16` ont acquis respectivement la gateway actor-neutral et
+  la custody matérielle réelle ; `CIV-17` est la convergence harvest actuelle,
+  sans anticiper Construction CIV-18.

@@ -282,6 +282,43 @@ func runPebbleCorePhysicalActionSmoke() {
     check("Player break wrapper uses identical block and drop authority", sharedBreak.status == .succeeded && sharedBreakWorld.getBlock(0, 64, 0) == playerBreakWorld.getBlock(0, 64, 0) && sharedDrop?.stack == playerDrop?.stack)
     check("Player break wrapper preserves durability, stats, and exhaustion", sharedPickaxe.damage == breakingPlayer.mainHand?.damage && breakingPlayer.stats["blocksMined"] == 1 && breakingPlayer.exhaustion == 0.005)
 
+    resetGameRng(0xC17)
+    let sharedLogWorld = physicalActionWorld()
+    sharedLogWorld.setBlock(0, 64, 0, Int(cell(B.oak_log)), SET_SILENT)
+    let sharedAxe = ItemStack(iid("iron_axe"))
+    let sharedLogBreak = executeBlockBreak(
+        BlockBreakRuleContext(
+            world: sharedLogWorld,
+            heldItem: sharedAxe,
+            isCreative: false,
+            damageTool: { sharedAxe.damage += $0 }
+        ),
+        0,
+        64,
+        0
+    )
+    let sharedLogDrop = sharedLogWorld.entities.compactMap { $0 as? ItemEntity }.first
+    resetGameRng(0xC17)
+    let playerLogWorld = physicalActionWorld()
+    playerLogWorld.setBlock(0, 64, 0, Int(cell(B.oak_log)), SET_SILENT)
+    let logPlayer = Player(world: playerLogWorld)
+    logPlayer.setPos(8.5, 64, 8.5)
+    logPlayer.inventory[logPlayer.selectedSlot] = ItemStack(iid("iron_axe"))
+    playerLogWorld.addEntity(logPlayer)
+    finishBreaking(
+        InteractCtx(world: playerLogWorld, player: logPlayer),
+        0,
+        64,
+        0
+    )
+    let playerLogDrop = playerLogWorld.entities.compactMap { $0 as? ItemEntity }.first
+    check("Player and actor-neutral log break share canonical drop authority",
+          sharedLogBreak.status == .succeeded
+            && sharedLogDrop?.stack == playerLogDrop?.stack
+            && sharedLogDrop?.stack.id == iid("oak_log"))
+    check("Player and actor-neutral log break share tool durability",
+          sharedAxe.damage == 1 && sharedAxe.damage == logPlayer.mainHand?.damage)
+
     let deterministicA = deterministicPhysicalBreak(seed: 0xC15)
     let deterministicB = deterministicPhysicalBreak(seed: 0xC15)
     check("actor-neutral break is deterministic for fixed state and RNG", deterministicA == deterministicB)

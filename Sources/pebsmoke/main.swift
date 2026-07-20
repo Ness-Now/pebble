@@ -56,6 +56,16 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "skills" {
     print("\n\(passed) passed, \(failed) failed")
     exit(failed > 0 ? 1 : 0)
 }
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "harvest" {
+    registerAllBlocks()
+    registerAllItems()
+    registerAllEntities()
+    registerAllSystems()
+    runPebbleCorePhysicalActionSmoke()
+    runPebbleAgentsHarvestPublicationSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
 
 // ---------------------------------------------------------------------------
 section("random (vs goldens)")
@@ -2145,6 +2155,7 @@ runPebbleAgentsDurableKinshipSmoke()
 runPebbleAgentsHouseholdMembershipSmoke()
 runPebbleAgentsDependentCareSmoke()
 runPebbleAgentsSkillSmoke()
+runPebbleAgentsHarvestPublicationSmoke()
 runPebbleCorePhysicalActionSmoke()
 
 print("\n\(passed) passed, \(failed) failed")

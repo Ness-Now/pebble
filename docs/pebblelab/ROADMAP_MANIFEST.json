@@ -4,7 +4,7 @@
   "baselineHead": "b58f71b75110c2e65403cd073409a8559429ec77",
   "branch": "lab/pebblelab-v1",
   "canonicalRoadmap": "docs/pebblelab/PEBBLE_CIVILIZATION_ROADMAP.md",
-  "current": "CIV-16",
+  "current": "CIV-17",
   "gates": {
     "R": {
       "title": "No Parallel Physical Engines",
@@ -123,12 +123,12 @@
     {
       "id": "CIV-16",
       "title": "Real Material Identity and Inventory Bridge V1",
-      "status": "current"
+      "status": "completed"
     },
     {
       "id": "CIV-17",
       "title": "Harvest and Resource Convergence V1",
-      "status": "planned"
+      "status": "current"
     },
     {
       "id": "CIV-18",
