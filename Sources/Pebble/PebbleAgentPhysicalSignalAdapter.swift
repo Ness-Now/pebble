@@ -8,6 +8,15 @@ struct PebbleAgentPhysicalGestureMarker {
     let expiresAtTick: Int
 }
 
+struct PebbleAgentPhysicalEvidence {
+    let distanceManhattan: Int
+    let soundClarity: Int
+    let gestureClarity: Int
+    let opaqueOcclusionCount: Int
+    let lineOfSight: Bool
+    let chunksReady: Bool
+}
+
 /// Read-only physical adapter. It samples a bounded set of loaded voxels and
 /// returns raw evidence; social meaning remains exclusively in PebbleAgents.
 struct PebbleAgentPhysicalSignalAdapter {
@@ -43,35 +52,54 @@ struct PebbleAgentPhysicalSignalAdapter {
         configuration: AgentPhysicalChannelConfiguration,
         tick: Int
     ) -> AgentPhysicalSignalObservation {
-        let distance = manhattan(signal.sourcePosition, observer.position)
-        let geometry = sampleGeometry(
+        let evidence = evidence(
             world: world,
             from: signal.sourcePosition,
             to: observer.position,
+            configuration: configuration
+        )
+        return AgentPhysicalSignalObservation(
+            signalID: signal.signalID,
+            observerID: AgentID(rawValue: observer.id)!,
+            distanceManhattan: evidence.distanceManhattan,
+            soundClarity: evidence.soundClarity,
+            gestureClarity: evidence.gestureClarity,
+            opaqueOcclusionCount: evidence.opaqueOcclusionCount,
+            lineOfSight: evidence.lineOfSight,
+            chunksReady: evidence.chunksReady,
+            observedAtTick: tick
+        )
+    }
+
+    /// Shared bounded geometry evidence used by physical communication and
+    /// live Teaching. No social or cognitive meaning is created here.
+    func evidence(
+        world: World,
+        from source: AgentPosition,
+        to observer: AgentPosition,
+        configuration: AgentPhysicalChannelConfiguration
+    ) -> PebbleAgentPhysicalEvidence {
+        let distance = manhattan(source, observer)
+        let geometry = sampleGeometry(
+            world: world, from: source, to: observer,
             maximumSamples: configuration.maximumOcclusionSamples
         )
         let sound = geometry.chunksReady
             ? configuration.soundClarity(
                 distanceManhattan: distance,
                 opaqueOcclusionCount: geometry.opaqueOcclusionCount
-            )
-            : 0
+            ) : 0
         let gesture = geometry.chunksReady
             ? configuration.gestureClarity(
                 distanceManhattan: distance,
                 lineOfSight: geometry.lineOfSight
-            )
-            : 0
-        return AgentPhysicalSignalObservation(
-            signalID: signal.signalID,
-            observerID: AgentID(rawValue: observer.id)!,
-            distanceManhattan: distance,
-            soundClarity: sound,
+            ) : 0
+        return PebbleAgentPhysicalEvidence(
+            distanceManhattan: distance, soundClarity: sound,
             gestureClarity: gesture,
             opaqueOcclusionCount: geometry.opaqueOcclusionCount,
             lineOfSight: geometry.lineOfSight,
-            chunksReady: geometry.chunksReady,
-            observedAtTick: tick
+            chunksReady: geometry.chunksReady
         )
     }
 

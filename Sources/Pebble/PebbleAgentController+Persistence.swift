@@ -462,6 +462,12 @@ extension PebbleAgentController {
             trace("checkpoint load refused name=\(name.rawValue) reason=skillGate")
             return failure("Checkpoint load refused: skills gate or dependency is disabled.")
         }
+        if candidate.teachingEnabled && (!teachingFeatureEnabled || !skillFeatureEnabled
+            || !featureEnabled || !persistenceFeatureEnabled
+            || !populationFeatureEnabled || !lifecycleFeatureEnabled) {
+            trace("checkpoint load refused name=\(name.rawValue) reason=teachingGate")
+            return failure("Checkpoint load refused: Teaching gate or dependency is disabled.")
+        }
         let candidateDigest = try candidate.durableStateDigest()
         guard candidateDigest == stored.manifest.semanticDigest else {
             throw AgentCheckpointError.semanticDigestMismatch

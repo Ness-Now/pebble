@@ -55,6 +55,7 @@ final class PebbleAgentController {
     let naturalResourceAdapter = PebbleAgentNaturalResourceAdapter()
     let constructionSiteAdapter = PebbleAgentConstructionSiteAdapter()
     let physicalSignalAdapter = PebbleAgentPhysicalSignalAdapter()
+    let teachingObservationAdapter = PebbleAgentTeachingObservationAdapter()
     let physicalActionGateway = PebbleAgentPhysicalActionGateway()
     let materialCustodyGateway = PebbleAgentMaterialCustodyGateway()
     let migrationAdmissionAdapter = PebbleAgentMigrationAdmissionAdapter()
@@ -132,6 +133,9 @@ final class PebbleAgentController {
     }
     var skillFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_SKILLS"] == "1"
+    }
+    var teachingFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_TEACHING"] == "1"
     }
     var kinshipLateFailureProofEnabled: Bool {
         let lineageProof = environment["PEBBLELAB_DISPOSABLE_KINSHIP_LATE_FAILURE_PROOF"] == "1"

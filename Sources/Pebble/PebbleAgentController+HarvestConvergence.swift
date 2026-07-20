@@ -2,7 +2,7 @@ import Foundation
 import PebbleAgents
 import PebbleCore
 
-private struct PebbleAgentHarvestProofFixture {
+struct PebbleAgentHarvestProofFixture {
     let target: PhysicalBlockPosition
     let originals: [(position: PhysicalBlockPosition, cell: Int)]
 }
@@ -589,7 +589,7 @@ extension PebbleAgentController {
         return locked
     }
 
-    private func harvestProofFixture(
+    func harvestProofFixture(
         world: World,
         actor: LabCoreAgentEntity,
         player: Player
@@ -638,7 +638,7 @@ extension PebbleAgentController {
         return nil
     }
 
-    private func prepareHarvestFixture(
+    func prepareHarvestFixture(
         _ fixture: PebbleAgentHarvestProofFixture,
         world: World,
         targetCell: Int
@@ -679,7 +679,7 @@ extension PebbleAgentController {
         }
     }
 
-    private func restoreHarvestProof(
+    func restoreHarvestProof(
         _ fixture: PebbleAgentHarvestProofFixture,
         world: World,
         actor: LabCoreAgentEntity,

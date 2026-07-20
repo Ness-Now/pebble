@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -49,6 +49,7 @@ Options:
   --households Run the kinship workflow with explicit household activation and v8 restart.
   --care Run the household workflow with dependent care, material nourishment, and v9 restart.
   --skills Run causal material practice, skill-ranked task matching, v10 restart, and rollback.
+  --teaching Run real local demonstration, no-free-skill, guided practice, and distance refusal.
   --help     Show this help and exit.
 EOF
 }
@@ -109,6 +110,7 @@ for option in "$@"; do
         --households) MODE="households"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --care) MODE="care"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --skills) MODE="skills"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --teaching) MODE="teaching"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --help|-h) usage; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$option" >&2; usage >&2; exit 2 ;;
     esac
@@ -132,7 +134,22 @@ KINSHIP_GATE=0
 HOUSEHOLD_GATE=0
 CARE_GATE=0
 SKILL_GATE=0
-if [ "$MODE" = "skills" ]; then
+TEACHING_GATE=0
+if [ "$MODE" = "teaching" ]; then
+    WORLD_SEED="46"
+    NATURAL_GATE=1
+    SOCIAL_GATE=1
+    PHYSICAL_GATE=1
+    MATERIAL_GATE=1
+    PERSISTENCE_GATE=1
+    POPULATION_GATE=1
+    LIFECYCLE_GATE=1
+    SKILL_GATE=1
+    TEACHING_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-Teaching-46"
+    CAPTURE_NAME="teaching-proof.png"
+    LAB_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/tp 14 71 -18;/lab pause;/lab movement off;/lab population on;/lab lifecycle on;/lab skills on;/lab teaching on;/lab focus agent_2;/lab teaching proof;/lab teaching status;/lab causality tail 20;/lab status'
+elif [ "$MODE" = "skills" ]; then
     WORLD_SEED="46"
     NATURAL_GATE=1
     BUILD_GATE=1
@@ -625,6 +642,7 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_HOUSEHOLDS=%s\n' "$HOUSEHOLD_GATE"
     printf '  PEBBLELAB_APP_AGENTS_CARE=%s\n' "$CARE_GATE"
     printf '  PEBBLELAB_APP_AGENTS_SKILLS=%s\n' "$SKILL_GATE"
+    printf '  PEBBLELAB_APP_AGENTS_TEACHING=%s\n' "$TEACHING_GATE"
     printf '  PEBBLELAB_DISPOSABLE_WORLD_PROOF=1\n'
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
     if [ "$MODE" = "build" ]; then
@@ -646,7 +664,11 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "skills" ]; then
+    if [ "$MODE" = "teaching" ]; then
+        printf '  2. Confirm teacher and student resolve to real Pebble embodiments in local CIV-04 range.\n'
+        printf '  3. Confirm observation grants zero skill and the student real harvest grants exactly one.\n'
+        printf '  4. Confirm out-of-range exposure is refused and both deterministic runs clean up exactly.\n'
+    elif [ "$MODE" = "skills" ]; then
         printf '  2. Confirm explicit v9 to v10 activation grants no retroactive practice.\n'
         printf '  3. Confirm real forage/delivery practice changes one cooperative helper selection.\n'
         printf '  4. Confirm process restart, independent control, and late physical rollback are exact.\n'
@@ -2858,6 +2880,7 @@ PEBBLELAB_APP_AGENTS_KINSHIP="$KINSHIP_GATE" \
 PEBBLELAB_APP_AGENTS_HOUSEHOLDS="$HOUSEHOLD_GATE" \
 PEBBLELAB_APP_AGENTS_CARE="$CARE_GATE" \
 PEBBLELAB_APP_AGENTS_SKILLS="$SKILL_GATE" \
+PEBBLELAB_APP_AGENTS_TEACHING="$TEACHING_GATE" \
 PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
 PEBBLE_CMD="$LAB_COMMANDS" \
 PEBBLE_SHOT="$SHOT_SPEC" \
@@ -2871,7 +2894,7 @@ world_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT count(*), json_extract(json, '
 expected_world_facts="1|$WORLD_SEED|$WORLD_NAME|1000|0|0|0|0|0"
 [ "$world_facts" = "$expected_world_facts" ] \
     || fail "unexpected disposable world facts: $world_facts"
-if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ] || [ "$MODE" = "material" ] || [ "$MODE" = "cooperation" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ]; then
+if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ] || [ "$MODE" = "material" ] || [ "$MODE" = "cooperation" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ]; then
     spawn_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.spawnX'), json_extract(json, '$.spawnY'), json_extract(json, '$.spawnZ') FROM worlds;")
     [ "$spawn_facts" = "8|75|-112" ] || fail "unexpected seed-46 spawn: $spawn_facts"
 fi
@@ -2880,7 +2903,13 @@ require_trace "disposable-world name=$WORLD_NAME seed=$WORLD_SEED worldTick=0 da
 require_trace "start seed=$WORLD_SEED agents=3 tick=0 hz=4 movement=on worldTick=[0-9]+ dayTime=1000 weather=clear randomTickSpeed=0 mobSpawning=0" 'deterministic agent session initial conditions'
 
 [ -s "$CAPTURE_PATH" ] || fail "capture was not written: $CAPTURE_PATH"
-if [ "$MODE" = "embodiment" ]; then
+if [ "$MODE" = "teaching" ]; then
+    require_trace_count '^\[lab-live\] teaching proof teacher=agent_2 student=agent_1 physical=embodiments locality=CIV04 exact=1 teacherAction=realHarvest exposure=1 skillObservation=0>0 studentAction=realHarvest skillPractice=1 guided=1 outOfRange=rejected worldMutation=harvestOnly teachingWorldMutation=none yieldBonus=0 session=unchanged custody=restored fixture=restored cleanup=exact runs=2 digest=[0-9a-f]+$' 1 'complete CIV-20 live Teaching proof'
+    require_trace 'teaching tick=0 enabled=1 active=0 demonstrations=0 exposures=0 guided=0 digest=[0-9a-f]+ worldMutation=none skillMutation=none' 'default-off then explicit zero-retroactive Teaching activation'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'Teaching proof cleanup and runtime health'
+    reject_trace 'Teaching proof failed|teaching proof failed|observation granted skill|double credited|cleanup=failed' 'Teaching proof failure or leaked state'
+    printf '\nPASS: real local demonstration, no-free-skill, guided practice, distance refusal, and exact cleanup verified.\n'
+elif [ "$MODE" = "embodiment" ]; then
     require_trace_count '^\[lab-live\] embodiment proof authority=PebbleCore/findPath\+Entity.move body=PebbleAgentEmbodiment oneToOne=exact simple=passed obstacle=passed dynamic=passed vertical=passed gap=refused multiAgent=refused waypoint=corePath coarsePlanner=preserved physicalTruth=wins orientation=physical noNormalSetPos=1 latePublicationRollback=exact harvestReach=physical constructionReach=physical missing=refused duplicate=refused staleWorld=refused custodyRemoval=spilled session=unchanged custody=unchanged cleanup=exact runs=2 digest=[0-9a-f]+$' 1 'complete CIV-19 navigation and embodiment convergence proof'
     require_trace_count '^\[lab-live\] harvest proof .*session=unchanged cleanup=exact runs=2 digest=[0-9a-f]+$' 1 'CIV-17 physical reach regression proof'
     require_trace_count '^\[lab-live\] construction proof .*session=unchanged cleanup=exact runs=2 digest=[0-9a-f]+$' 1 'CIV-18 work-position regression proof'
