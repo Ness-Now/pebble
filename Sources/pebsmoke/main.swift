@@ -2180,6 +2180,7 @@ runPebbleAgentsDurableKinshipSmoke()
 runPebbleAgentsHouseholdMembershipSmoke()
 runPebbleAgentsDependentCareSmoke()
 runPebbleAgentsSkillSmoke()
+runPebbleAgentsTeachingSmoke()
 runPebbleAgentsHarvestPublicationSmoke()
 runPebbleCorePhysicalActionSmoke()
 

@@ -29,6 +29,11 @@ through a Pebble embodiment adapter, then publish only verified physical
 outcomes to `AgentSimulationSession`. Never use ordinary `setPos` as movement
 or teleport fallback.
 
+Gate R est acquise depuis la validation senior de CIV-19. Toute verticale
+ultérieure, dont CIV-20 Teaching, doit préserver cette preuve : observer ou
+référencer les actions Pebble existantes, sans moteur parallèle de mutation
+World, inventory, navigation ou action physique.
+
 ## Delivery cycle
 
 1. ChatGPT defines the product vertical, boundaries, evidence, and Definition of Done.

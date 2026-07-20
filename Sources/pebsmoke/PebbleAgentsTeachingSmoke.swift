@@ -133,13 +133,49 @@ private func teachingRequest(
     studentID: AgentID,
     candidates: [AgentMentorCandidateConsent],
     requestID: String,
-    accepts: Bool = true
+    accepts: Bool = true,
+    domain: AgentSkillDomain = .materialHandling
 ) -> AgentMentorSelectionRequest {
     AgentMentorSelectionRequest(
-        requestID: requestID, studentID: studentID, domain: .materialHandling,
+        requestID: requestID, studentID: studentID, domain: domain,
         studentAccepts: accepts, candidates: candidates,
         requestedAtTick: session.tick
     )
+}
+
+@discardableResult
+private func teachingForageSuccess(
+    _ session: inout AgentSimulationSession,
+    agentID: AgentID,
+    index: Int
+) -> (source: AgentCausalEventID, skill: AgentCausalEventID) {
+    session.setEconomyEnabled(true)
+    session.setNaturalResourcesEnabled(true)
+    let actor = try! session.state(for: agentID)
+    let target = AgentPosition(
+        x: actor.position.x + 1, y: actor.position.y, z: actor.position.z
+    )
+    _ = try! session.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: agentID.rawValue,
+        resourceObservations: [AgentResourceObservation(
+            resource: .wood, target: target, direction: .east,
+            distanceManhattan: 1, quantityAvailable: 1,
+            source: .naturalWorld,
+            expectedBlockFingerprint: 9_000 + index
+        )]
+    )])
+    try! session.applyInteractionOutcome(AgentInteractionOutcome(
+        interactionId: "teaching-forage-\(agentID.rawValue)-\(index)",
+        agentId: agentID.rawValue, tick: session.tick, target: target,
+        resource: .wood, status: .succeeded,
+        inventoryDelta: AgentInventoryDelta(resource: .wood, quantity: 0),
+        reason: "pebble-harvest:oak_logx1", source: .naturalWorld,
+        expectedBlockFingerprint: 9_000 + index
+    ))
+    let practice = session.skillProfile(for: agentID)!.domainPractices.first {
+        $0.domain == .foraging
+    }!
+    return (practice.lastSourceSuccessEventID, practice.lastSkillPracticeEventID)
 }
 
 private func teachingObservation(
@@ -417,6 +453,43 @@ func runPebbleAgentsTeachingSmoke() {
             return (try! session.durableStateBytes()) == distantBytes
         } catch { return false }
     }())
+    let fakeSource = AgentCausalEventID(
+        simulationID: session.identitySnapshot().simulationID,
+        sequence: AgentCausalSequence(
+            rawValue: session.causalLedgerSnapshot().summary.latestSequence + 100
+        )!
+    )
+    let fakeSourceBytes = try! session.durableStateBytes()
+    check("nonexistent demonstration source is refused atomically", {
+        do {
+            _ = try session.recordTeachingDemonstration(teachingObservation(
+                session, engagement: engagement, source: fakeSource
+            ))
+            return false
+        } catch AgentSessionError.teaching(.invalidSourceEvent(_)) {
+            return (try! session.durableStateBytes()) == fakeSourceBytes
+        } catch { return false }
+    }())
+    try! session.applyInteractionOutcome(AgentInteractionOutcome(
+        interactionId: "teaching-failed-action",
+        agentId: teacher.rawValue, tick: session.tick,
+        target: AgentPosition(x: 90, y: 64, z: 90), resource: .wood,
+        status: .blocked,
+        inventoryDelta: AgentInventoryDelta(resource: .wood, quantity: 0),
+        reason: "verified rollback", source: .sandboxFixture
+    ))
+    let failedSource = session.causalLedgerSnapshot().events.last!.eventID
+    let failedSourceBytes = try! session.durableStateBytes()
+    check("failed or rolled-back teacher action creates no demonstration", {
+        do {
+            _ = try session.recordTeachingDemonstration(teachingObservation(
+                session, engagement: engagement, source: failedSource
+            ))
+            return false
+        } catch AgentSessionError.teaching(.invalidSourceEvent(_)) {
+            return (try! session.durableStateBytes()) == failedSourceBytes
+        } catch { return false }
+    }())
     check("teacher source cannot masquerade as student guided practice", {
         do {
             _ = try session.linkGuidedPractice(
@@ -428,12 +501,25 @@ func runPebbleAgentsTeachingSmoke() {
         } catch AgentSessionError.teaching(.invalidGuidedPractice) { return true }
         catch { return false }
     }())
+    let studentMaterialBefore = session.snapshot().conservation
     let studentSuccess = teachingMaterialSuccess(
         &session, agentID: student, index: 21, recorder: &noRecorder
     )
+    let studentMaterialAfter = session.snapshot().conservation
     check("student own material success credits exactly once",
           session.practiceUnits(agentID: student, domain: .materialHandling)
             == studentSkillBefore + 1)
+    let wrongActorBytes = try! session.durableStateBytes()
+    check("another actor's success cannot source teacher demonstration", {
+        do {
+            _ = try session.recordTeachingDemonstration(teachingObservation(
+                session, engagement: engagement, source: studentSuccess.source
+            ))
+            return false
+        } catch AgentSessionError.teaching(.invalidSourceEvent(_)) {
+            return (try! session.durableStateBytes()) == wrongActorBytes
+        } catch { return false }
+    }())
     let skillAfterOwnSuccess = session.practiceUnits(
         agentID: student, domain: .materialHandling
     )
@@ -453,6 +539,67 @@ func runPebbleAgentsTeachingSmoke() {
         return skill?.causes == [studentSuccess.source]
             && guided?.causes.contains(studentSuccess.skill) == true
             && guided?.causes.contains(exposure.demonstrationEventID) == true
+    }())
+
+    var solo = teachingBase("teaching-solo-parity", activateTeaching: false)
+    let soloBefore = solo.snapshot().conservation
+    let soloUnitsBefore = solo.practiceUnits(
+        agentID: student, domain: .materialHandling
+    )
+    _ = teachingMaterialSuccess(
+        &solo, agentID: student, index: 22, recorder: &noRecorder
+    )
+    let soloAfter = solo.snapshot().conservation
+    func materialTotal(_ amounts: [AgentResourceAmount]) -> Int {
+        amounts.reduce(0) { $0 + $1.quantity }
+    }
+    check("guided and solo practice preserve identical base accounting", {
+        let guidedHarvest = materialTotal(studentMaterialAfter.harvested)
+            - materialTotal(studentMaterialBefore.harvested)
+        let guidedCamp = materialTotal(studentMaterialAfter.campStock)
+            - materialTotal(studentMaterialBefore.campStock)
+        let soloHarvest = materialTotal(soloAfter.harvested)
+            - materialTotal(soloBefore.harvested)
+        let soloCamp = materialTotal(soloAfter.campStock)
+            - materialTotal(soloBefore.campStock)
+        return guidedHarvest == soloHarvest && guidedHarvest == 1
+            && guidedCamp == soloCamp && guidedCamp == 1
+            && solo.practiceUnits(
+                agentID: student, domain: .materialHandling
+            ) == soloUnitsBefore + 1
+            && session.practiceUnits(
+                agentID: student, domain: .materialHandling
+            ) == skillAfterOwnSuccess
+    }())
+
+    var wrongDomain = teachingBase("teaching-wrong-domain")
+    for index in 0..<3 {
+        _ = teachingForageSuccess(
+            &wrongDomain, agentID: teacher, index: 30 + index
+        )
+    }
+    let foragingEngagement = try! wrongDomain
+        .selectMentorAndStartApprenticeship(teachingRequest(
+            wrongDomain, studentID: student,
+            candidates: [AgentMentorCandidateConsent(
+                teacherID: teacher, accepts: true
+            )], requestID: "wrong-domain", domain: .foraging
+        ))!
+    _ = try! wrongDomain.advanceTick()
+    let materialHandlingSource = teachingMaterialSuccess(
+        &wrongDomain, agentID: teacher, index: 33, recorder: &noRecorder
+    )
+    let wrongDomainBytes = try! wrongDomain.durableStateBytes()
+    check("material-handling success cannot source foraging demonstration", {
+        do {
+            _ = try wrongDomain.recordTeachingDemonstration(teachingObservation(
+                wrongDomain, engagement: foragingEngagement,
+                source: materialHandlingSource.source
+            ))
+            return false
+        } catch AgentSessionError.teaching(.invalidSourceEvent(_)) {
+            return (try! wrongDomain.durableStateBytes()) == wrongDomainBytes
+        } catch { return false }
     }())
 
     let checkpoint = try! session.makeCheckpoint()
@@ -494,12 +641,36 @@ func runPebbleAgentsTeachingSmoke() {
     let selected = try! trustSession.selectMentorAndStartApprenticeship(teachingRequest(
         trustSession, studentID: student,
         candidates: [
+            AgentMentorCandidateConsent(teacherID: student, accepts: true),
             AgentMentorCandidateConsent(teacherID: teacher, accepts: true),
             AgentMentorCandidateConsent(teacherID: alternate, accepts: true),
         ], requestID: "trust-selects"
     ))!
-    check("trust breaks equal-skill equal-distance mentor tie",
-          selected.teacherID == alternate && selected.trustAtSelection > 0)
+    check("trust selects eligible mentor and excludes ineligible self",
+          selected.teacherID == alternate && selected.trustAtSelection > 0
+            && selected.teacherID != student)
+
+    var stableTie = teachingBase("teaching-stable-tie", activateTeaching: false)
+    teachingTrain(
+        &stableTie, agentID: teacher, count: 3, baseIndex: 120,
+        recorder: &noRecorder
+    )
+    teachingTrain(
+        &stableTie, agentID: alternate, count: 3, baseIndex: 130,
+        recorder: &noRecorder
+    )
+    try! stableTie.setTeachingEnabled(true)
+    let stableSelected = try! stableTie.selectMentorAndStartApprenticeship(
+        teachingRequest(
+            stableTie, studentID: student,
+            candidates: [
+                AgentMentorCandidateConsent(teacherID: alternate, accepts: true),
+                AgentMentorCandidateConsent(teacherID: teacher, accepts: true),
+            ], requestID: "stable-id-tie"
+        )
+    )!
+    check("equal mentor ranks use stable AgentID tie break",
+          stableSelected.teacherID == teacher)
 
     var replayed = teachingBase("teaching-replay", activateTeaching: false)
     teachingTrain(
@@ -621,6 +792,44 @@ func runPebbleAgentsTeachingSmoke() {
     }
     check("apprenticeship expires at bounded tick boundary",
           expired?.status == .expired && expired?.endReason == .expired)
+
+    let criticalSurvival = try! AgentSurvivalConfiguration(
+        hungerPerTick: 0.2, fatiguePerTick: 0.01,
+        hungryThreshold: 0.3, criticalHungerThreshold: 0.5,
+        hungerRecoveryThreshold: 0.1, fatigueThreshold: 0.65,
+        fatigueRecoveryThreshold: 0.2, foodNutrition: 1,
+        restRecoveryPerTick: 1, starvationGraceTicks: 100,
+        starvationDamagePerTick: 1
+    )
+    var critical = teachingBase(
+        "teaching-critical-need", activateTeaching: false,
+        survival: criticalSurvival
+    )
+    critical.setSurvivalEnabled(true)
+    teachingTrain(
+        &critical, agentID: teacher, count: 3, baseIndex: 550,
+        recorder: &noRecorder
+    )
+    try! critical.setTeachingEnabled(true)
+    let criticalEngagement = try! critical.selectMentorAndStartApprenticeship(
+        teachingRequest(
+            critical, studentID: student,
+            candidates: [AgentMentorCandidateConsent(
+                teacherID: teacher, accepts: true
+            )], requestID: "critical-interruption"
+        )
+    )!
+    for _ in 0..<4 where critical.activeApprenticeship(
+        studentID: student, domain: .materialHandling
+    ) != nil {
+        _ = try! critical.advanceTick()
+    }
+    let criticalEnded = critical.teachingSnapshot().apprenticeships.first {
+        $0.apprenticeshipID == criticalEngagement.apprenticeshipID
+    }
+    check("critical need interrupts apprenticeship deterministically",
+          criticalEnded?.status == .interrupted
+            && criticalEnded?.endReason == .criticalHunger)
 
     let juvenileFixture = teachingJuvenileSession()
     var juvenileSession = juvenileFixture.0

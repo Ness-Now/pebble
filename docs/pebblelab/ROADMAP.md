@@ -4839,3 +4839,18 @@ authority and `ROADMAP_MANIFEST.json` is its machine-readable projection.
 
 This rebaseline changes no runtime, gameplay, registry, asset, save, golden, or
 test behavior and starts no CIV-15 implementation.
+
+## CIV-20 - Teaching current after Gate R acquisition
+
+Status: canonical status synchronized after senior validation of the published
+CIV-19 SHA.
+
+CIV-19 is completed, Gate R is acquired, and
+`CIV-20 — Demonstration, Teaching and Apprenticeship V1` is the current
+prospective vertical. CIV-20 locally adds bounded, default-off Teaching state:
+real teacher-success provenance, physically local exposure, temporary and
+refusable apprenticeship, and descriptive guided-practice linkage. Observation
+never credits skill; only the student's own material success uses the CIV-13
+practice contract. The bridge introduces no Teaching-owned World, inventory,
+pathfinding, or physical-action mutation. CIV-20 remains `current` until remote
+publication and review; CIV-21 is not started.

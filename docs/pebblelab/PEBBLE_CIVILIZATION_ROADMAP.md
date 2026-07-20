@@ -20,16 +20,17 @@ Baseline de ce recalage :
 
 ## Position canonique actuelle
 
-`CIV-00` à `CIV-18` sont terminés et acquis dans leurs contrats bornés. La
+`CIV-00` à `CIV-19` sont terminés et acquis dans leurs contrats bornés. Gate R
+est acquise. La
 phase canonique actuelle est :
 
-`CIV-19 — Navigation and Embodiment Boundary Consolidation V1`.
+`CIV-20 — Demonstration, Teaching and Apprenticeship V1`.
 
 Les noms `NEXT-1` et `NEXT-2` sont uniquement des alias historiques :
 
 - `NEXT-1` désignait la verticale de compétences maintenant canonisée comme
   `CIV-13` et terminée ;
-- `NEXT-2` désignait une proposition d’enseignement maintenant planifiée comme
+- `NEXT-2` désignait la proposition d’enseignement maintenant canonisée comme
   `CIV-20`.
 
 Aucun identifiant `NEXT-*` n’est une phase canonique V3.
@@ -59,6 +60,9 @@ Les preuves acquises couvrent notamment, dans leurs limites actuelles :
   vérification de custody/tool state et rollback borné avant publication.
 - le bridge CIV-16 d’identité matérielle et de custody réelle, avec
   `ItemStack`, containers, fingerprints, receipts et rollback vérifié.
+- la frontière navigation/embodiment CIV-19 : intentions et waypoints restent
+  civilisationnels, tandis que pathfinding, collision, mouvement et position
+  live vérifiée restent l'autorité de PebbleCore via les adapters de Pebble.
 
 Ces preuves ne constituent pas encore une agriculture réelle, une économie
 d’items complète, une grande population, un cycle de vie complet, un système
@@ -192,15 +196,15 @@ détails d’API restent à fixer par la mission qui ouvre chaque verticale.
 | `CIV-16` | completed | Real Material Identity and Inventory Bridge V1 |
 | `CIV-17` | completed | Harvest and Resource Convergence V1 |
 | `CIV-18` | completed | Construction and Placement Convergence V1 |
-| `CIV-19` | current | Navigation and Embodiment Boundary Consolidation V1 |
+| `CIV-19` | completed | Navigation and Embodiment Boundary Consolidation V1 |
 
 `CIV-15` à `CIV-18` ont fermé les frontières action, custody, harvest et
-construction. `CIV-19` consolide maintenant la dernière frontière : la
+construction. `CIV-19` a consolidé la dernière frontière : la
 civilisation décide pourquoi et où aller, tandis que PebbleCore choisit et
-exécute le mouvement physique. Gate R reste soumise à revue senior/post-push et
-n'est pas déclarée acquise par ce statut `current`.
+exécute le mouvement physique. La validation senior du SHA publié
+`c2e78b9c325f3012f6ea6fa31a6afd8da5698a12` a acquis Gate R.
 
-#### Contrat courant CIV-19
+#### Contrat acquis CIV-19
 
 - `PebbleAgents` conserve intentions, destinations, waypoints, progression
   cognitive et projections coarse/headless ; il n'importe pas PebbleCore.
@@ -226,7 +230,7 @@ n'est pas déclarée acquise par ce statut `current`.
 
 | Phase | Statut | Verticale |
 | --- | --- | --- |
-| `CIV-20` | planned | Demonstration, Teaching and Apprenticeship V1 |
+| `CIV-20` | current | Demonstration, Teaching and Apprenticeship V1 |
 | `CIV-21` | planned | Ecological Observation and Civil Calendar V1 |
 | `CIV-22` | planned | Agriculture and Managed Surplus V1 |
 | `CIV-23` | planned | Fishing, Hunting and Wild Subsistence V1 |
@@ -236,6 +240,28 @@ n'est pas déclarée acquise par ce statut `current`.
 Ces phases doivent produire plusieurs stratégies matérielles viables et une
 spécialisation dérivée de la pratique, de l’enseignement et des besoins, sans
 classe professionnelle imposée.
+
+#### Contrat courant CIV-20
+
+- `AgentSimulationSession` possède un état Teaching séparé, borné,
+  déterministe et default-off : apprentissages temporaires, démonstrations,
+  expositions et liens de pratique guidée.
+- Une démonstration référence un succès matériel causal réel et frais du
+  teacher, avec teacher au moins `practiced`, student consentant et observation
+  locale exacte issue des embodiments live et de la géométrie CIV-04.
+- Regarder ne crédite jamais de compétence. Seul le succès matériel propre du
+  student passe par le crédit de pratique CIV-13 ; le lien guidé décrit cette
+  causalité sans XP, rendement ou matière supplémentaire.
+- La confiance départage des mentors autrement éligibles mais ne crée ni
+  capacité ni résultat. L'apprentissage reste refusable, interruptible,
+  expirant et réconcilié avec lifecycle, décès, migration, care et sécurité.
+- Les juveniles peuvent observer sans contourner leurs capacités matérielles ;
+  les newborns ne deviennent pas apprentis productifs.
+- Checkpoint/replay v11 conserve l'état Teaching et reste compatible avec les
+  schémas v1-v10, où Teaching demeure désactivé.
+- Le bridge live Teaching ne mute ni World ni inventory, ne planifie aucun
+  chemin et n'exécute aucune action physique ; il observe et référence les
+  actions Pebble déjà validées.
 
 ### Économie matérielle locale — Gate C
 
@@ -361,6 +387,9 @@ ordinaires du monde.
 Une gate n’est ouverte que par ses preuves ; sa présence dans la roadmap ne
 signifie pas qu’elle est déjà acquise.
 
+Gate R est acquise depuis la validation senior de `CIV-19`. Les gates B à H
+restent non acquises tant que leurs critères respectifs ne sont pas prouvés.
+
 ## Cible produit conservée
 
 La cible reste une civilisation médiévale alternative, préindustrielle,
@@ -391,7 +420,7 @@ monde de vivre.
 - Une verticale livre normalement contrat, implémentation, preuves focalisées,
   une seule full gate finale justifiée et documentation en 1 à 3 commits
   reviewables.
-- `CIV-15` à `CIV-18` ont acquis la gateway actor-neutral, la custody
-  matérielle réelle et les convergences harvest/construction ; `CIV-19` est la
-  consolidation navigation/embodiment actuelle. Gate R attend encore la revue
-  senior du SHA publié.
+- `CIV-15` à `CIV-19` ont acquis les frontières actor-neutral, custody,
+  harvest, construction, navigation et embodiment ; Gate R est acquise.
+  `CIV-20` est la verticale actuelle et ne peut ajouter aucun moteur physique
+  parallèle.
