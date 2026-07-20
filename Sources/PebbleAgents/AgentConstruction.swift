@@ -226,6 +226,17 @@ public enum AgentConstructionStatus: String, Codable, Equatable {
     case completed
 }
 
+/// Selects which material boundary makes a construction cell spendable.
+///
+/// The coarse mode preserves the historical headless escrow transaction. The
+/// physical mode is represented without a new persisted field: a project that
+/// starts funded with empty coarse material states can advance only after its
+/// live adapter verifies a real Pebble custody debit.
+public enum AgentConstructionMaterialAuthority: Equatable {
+    case coarseEscrow
+    case physicalCustody
+}
+
 public enum AgentConstructionFailure: String, Codable, Equatable {
     case noSafeBuildSite
     case gateDisabled
@@ -345,6 +356,24 @@ public struct AgentConstructionProject: Codable, Equatable {
     public private(set) var lastFailure: AgentConstructionFailure?
 
     public var isActive: Bool { status != .completed }
+    public var materialAuthority: AgentConstructionMaterialAuthority {
+        let physicallyActiveStatus = status == .funded || status == .building
+            || status == .blocked || status == .completed
+        return physicallyActiveStatus
+            && materialEscrow.total == 0
+            && placedMaterialTotals.total == 0
+            ? .physicalCustody
+            : .coarseEscrow
+    }
+    public var installedMaterialTotals: AgentConstructionMaterialState {
+        guard materialAuthority == .physicalCustody else { return placedMaterialTotals }
+        var totals = AgentConstructionMaterialState()
+        for index in placedCellIndices {
+            guard blueprint.cells.indices.contains(index) else { continue }
+            _ = totals.add(blueprint.cells[index].resource)
+        }
+        return totals
+    }
     public var nextCell: AgentBlueprintCell? {
         blueprint.cells.first { $0.index == nextCellIndex }
     }
@@ -359,7 +388,8 @@ public struct AgentConstructionProject: Codable, Equatable {
         createdAtTick: Int,
         previousHomePosition: AgentPosition,
         originalFingerprints: [AgentConstructionCellFingerprint],
-        workPositions: [AgentPosition]? = nil
+        workPositions: [AgentPosition]? = nil,
+        materialAuthority: AgentConstructionMaterialAuthority = .coarseEscrow
     ) throws {
         guard !projectId.isEmpty, !builderAgentId.isEmpty, createdAtTick >= 0 else {
             throw AgentConstructionError.invalidProject
@@ -391,7 +421,7 @@ public struct AgentConstructionProject: Codable, Equatable {
         self.blueprint = blueprint
         self.builderAgentId = builderAgentId
         self.origin = origin
-        status = .acquiringMaterials
+        status = materialAuthority == .physicalCustody ? .funded : .acquiringMaterials
         self.createdAtTick = createdAtTick
         completedAtTick = nil
         self.previousHomePosition = previousHomePosition
@@ -452,9 +482,23 @@ public struct AgentConstructionProject: Codable, Equatable {
         guard outcome.status == .succeeded,
               outcome.cellIndex == nextCellIndex,
               let cell = nextCell,
-              cell.resource == outcome.resource,
-              materialEscrow.remove(cell.resource),
-              placedMaterialTotals.add(cell.resource) else {
+              cell.resource == outcome.resource else {
+            lastFailure = outcome.status == .insufficientMaterial
+                ? .insufficientEscrow
+                : .invalidCell
+            return false
+        }
+        let materialAccepted: Bool
+        switch materialAuthority {
+        case .coarseEscrow:
+            materialAccepted = materialEscrow.remove(cell.resource)
+                && placedMaterialTotals.add(cell.resource)
+        case .physicalCustody:
+            // The live Pebble adapter owns and verifies the real ItemStack
+            // debit before it publishes this outcome. No coarse value moves.
+            materialAccepted = true
+        }
+        guard materialAccepted else {
             lastFailure = outcome.status == .insufficientMaterial
                 ? .insufficientEscrow
                 : .invalidCell
@@ -480,6 +524,7 @@ public struct AgentConstructionProject: Codable, Equatable {
               lastFailure == .occupied
                 || lastFailure == .chunkUnavailable
                 || lastFailure == .routeUnavailable
+                || lastFailure == .insufficientMaterials
                 || lastFailure == .publicationFailed else { return }
         status = placedCellIndices.isEmpty ? .funded : .building
         lastFailure = nil

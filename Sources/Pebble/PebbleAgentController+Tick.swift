@@ -556,7 +556,8 @@ extension PebbleAgentController {
                       placement.action.resource == cell.resource,
                       let actor = session.snapshot().agents.first(where: {
                           $0.id == placement.agentId
-                      }) else {
+                      }),
+                      let physicalActor = probesByAgentId[placement.agentId] else {
                     throw ControllerError.constructionBoundary(
                         "placement action outside active ordered project"
                     )
@@ -580,7 +581,7 @@ extension PebbleAgentController {
                     target: target,
                     resource: cell.resource,
                     status: .succeeded,
-                    reason: "ordered fixed blueprint cell placed"
+                    reason: "verified PebbleCore placement with real builder custody"
                 )
                 var candidate = session
                 var candidateRecorder = recorder
@@ -620,16 +621,26 @@ extension PebbleAgentController {
                     try constructionExecutor.place(
                     world: world,
                     actor: actor,
+                    physicalActor: physicalActor,
                     project: project,
                     intent: intent,
                     occupiedAgentPositions: occupied,
                     playerPosition: playerPosition,
                     buildGateEnabled: buildFeatureEnabled,
                     buildAutoEnabled: session.buildAutoEnabled,
+                    materialGateway: materialCustodyGateway,
+                    physicalGateway: physicalActionGateway,
                     prevalidate: {
                         try session.prevalidatePlacement(intent)
                     },
-                    publishAndVerify: { finalCell in
+                    publishAndVerify: { finalCell, actualFingerprint in
+                        guard let requiredFingerprint = PebbleAgentConstructionMapping.fingerprint(
+                            for: cell.resource
+                        ), actualFingerprint >> 4 == requiredFingerprint >> 4 else {
+                            throw ControllerError.constructionBoundary(
+                                "physical placement does not match blueprint material"
+                            )
+                        }
                         if try applyRecordedOperationIfActive(
                             .applyPlacementOutcome(outcome),
                             session: &candidate,
@@ -1220,6 +1231,7 @@ extension PebbleAgentController {
         case .projectMissing: return .projectMissing
         case .projectMismatch: return .invalidBuilder
         case .invalidCell, .invalidMaterial, .invalidReach: return .invalidCell
+        case .missingMaterial, .wrongMaterial: return .insufficientMaterials
         case .chunkUnavailable: return .chunkUnavailable
         case .occupied: return .occupied
         case .staleFingerprint: return .staleFingerprint

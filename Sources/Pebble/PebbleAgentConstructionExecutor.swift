@@ -6,6 +6,9 @@ struct PebbleAgentConstructionState {
     var origin: AgentPosition?
     var placedCount = 0
     var lastPlacement = "none"
+    var lastMaterial = "none"
+    var lastPhysicalStatus = "none"
+    var lastCommittedEffectCount = 0
     var lastFailure = "none"
     var rollbackCount = 0
     var cleanupRestoredBlockCount = 0
@@ -21,6 +24,8 @@ struct PebbleAgentConstructionExecutor {
         case projectMismatch
         case invalidCell
         case invalidMaterial
+        case missingMaterial
+        case wrongMaterial
         case invalidReach
         case chunkUnavailable
         case occupied
@@ -40,6 +45,8 @@ struct PebbleAgentConstructionExecutor {
             case .projectMismatch: return "construction project mismatch"
             case .invalidCell: return "construction cell is not the ordered next cell"
             case .invalidMaterial: return "construction material mapping invalid"
+            case .missingMaterial: return "construction builder has no required real material"
+            case .wrongMaterial: return "construction builder custody has only incompatible material"
             case .invalidReach: return "construction target outside bounded placement reach"
             case .chunkUnavailable: return "construction target chunk unavailable"
             case .occupied: return "construction target or work position occupied"
@@ -57,9 +64,10 @@ struct PebbleAgentConstructionExecutor {
         let index: Int
         let target: AgentPosition
         let originalFingerprint: Int
-        let constructionFingerprint: Int
+        let requiredBlockID: Int
         let resource: AgentResourceKind
         var placed: Bool
+        var placedFingerprint: Int?
     }
 
     private struct Ledger {
@@ -87,9 +95,10 @@ struct PebbleAgentConstructionExecutor {
                 index: cell.index,
                 target: project.worldPosition(for: cell),
                 originalFingerprint: original,
-                constructionFingerprint: construction,
+                requiredBlockID: construction >> 4,
                 resource: cell.resource,
-                placed: false
+                placed: false,
+                placedFingerprint: nil
             )
         }
         ledger = Ledger(
@@ -104,6 +113,9 @@ struct PebbleAgentConstructionExecutor {
             origin: project.origin,
             placedCount: 0,
             lastPlacement: "none",
+            lastMaterial: "none",
+            lastPhysicalStatus: "none",
+            lastCommittedEffectCount: 0,
             lastFailure: "none",
             rollbackCount: state.rollbackCount,
             cleanupRestoredBlockCount: 0,
@@ -114,14 +126,17 @@ struct PebbleAgentConstructionExecutor {
     mutating func place(
         world: World,
         actor: AgentSnapshot,
+        physicalActor: LabCoreAgentEntity,
         project: AgentConstructionProject,
         intent: AgentPlacementIntent,
         occupiedAgentPositions: [AgentPosition],
         playerPosition: AgentPosition,
         buildGateEnabled: Bool,
         buildAutoEnabled: Bool,
+        materialGateway: PebbleAgentMaterialCustodyGateway,
+        physicalGateway: PebbleAgentPhysicalActionGateway,
         prevalidate: () throws -> Void,
-        publishAndVerify: (_ finalCell: Bool) throws -> Void
+        publishAndVerify: (_ finalCell: Bool, _ actualFingerprint: Int) throws -> Void
     ) throws {
         guard buildGateEnabled else { throw ExecutionError.gateDisabled }
         guard buildAutoEnabled else { throw ExecutionError.autoDisabled }
@@ -130,6 +145,16 @@ struct PebbleAgentConstructionExecutor {
               project.projectId == intent.projectId,
               actor.id == project.builderAgentId,
               actor.id == intent.builderAgentId else {
+            throw ExecutionError.projectMismatch
+        }
+        guard physicalActor.labAgentId == actor.id,
+              !physicalActor.dead,
+              physicalActor.world === world,
+              AgentPosition(
+                x: Int(physicalActor.x.rounded(.down)),
+                y: Int(physicalActor.y.rounded(.down)),
+                z: Int(physicalActor.z.rounded(.down))
+              ) == actor.position else {
             throw ExecutionError.projectMismatch
         }
         guard ledger.cells.indices.contains(intent.cellIndex),
@@ -155,17 +180,13 @@ struct PebbleAgentConstructionExecutor {
         guard world.isChunkReady(target.x >> 4, target.z >> 4) else {
             throw ExecutionError.chunkUnavailable
         }
-        guard !occupiedAgentPositions.contains(target),
-              playerPosition != target,
-              !occupiedAgentPositions.contains(intent.workPosition),
+        guard !occupiedAgentPositions.contains(intent.workPosition),
               playerPosition != intent.workPosition else {
             throw ExecutionError.occupied
         }
         let cell = ledger.cells[intent.cellIndex]
         let currentFingerprint = world.getBlock(target.x, target.y, target.z)
-        guard currentFingerprint == cell.originalFingerprint,
-              blockDefs[currentFingerprint >> 4].replaceable,
-              PebbleAgentNaturalResourceMapping.resource(for: currentFingerprint) == nil else {
+        guard currentFingerprint == cell.originalFingerprint else {
             throw ExecutionError.staleFingerprint
         }
         guard priorCellsConform(world: world, ledger: ledger, before: intent.cellIndex) else {
@@ -173,36 +194,107 @@ struct PebbleAgentConstructionExecutor {
         }
         try prevalidate()
 
-        let returned = world.setBlock(
-            target.x,
-            target.y,
-            target.z,
-            cell.constructionFingerprint
+        guard let binding = materialGateway.placementBinding(
+            actor: physicalActor,
+            requiredBlockID: cell.requiredBlockID
+        ) else {
+            let hasAnyMaterial = physicalActor.carriedItems.contains {
+                guard let stack = $0 else { return false }
+                return stack.count > 0 && itemDef(stack.id).block != nil
+            }
+            throw hasAnyMaterial ? ExecutionError.wrongMaterial : ExecutionError.missingMaterial
+        }
+        let physicalTarget = PhysicalBlockPosition(x: target.x, y: target.y, z: target.z)
+        let hit = RaycastHit(
+            x: target.x,
+            y: target.y,
+            z: target.z,
+            face: placementFace(target: target, workPosition: intent.workPosition),
+            cell: currentFingerprint,
+            t: 0,
+            px: Double(target.x) + 0.5,
+            py: Double(target.y) + 0.5,
+            pz: Double(target.z) + 0.5
         )
-        guard returned == cell.originalFingerprint else {
-            try rollbackSingle(world: world, cell: cell, originalFingerprint: returned)
-            throw ExecutionError.staleFingerprint
-        }
-        guard world.getBlock(target.x, target.y, target.z) == cell.constructionFingerprint else {
-            try rollbackSingle(world: world, cell: cell, originalFingerprint: returned)
-            throw ExecutionError.mutationVerificationFailed
-        }
         let finalCell = intent.cellIndex == ledger.cells.count - 1
-        if finalCell, !completeStructureConforms(world: world, ledger: ledger, pending: cell) {
-            try rollbackSingle(world: world, cell: cell, originalFingerprint: returned)
-            throw ExecutionError.structureValidationFailed
-        }
-        do {
-            try publishAndVerify(finalCell)
-        } catch {
-            try rollbackSingle(world: world, cell: cell, originalFingerprint: returned)
-            state.lastFailure = "publicationFailed@\(positionText(target))"
-            throw error
+        var boundaryError: Error?
+        let physical = physicalGateway.placeBlock(
+            world: world,
+            actor: physicalActor,
+            request: PebbleAgentBlockPlacementRequest(
+                actorID: actor.id,
+                hit: hit,
+                target: physicalTarget,
+                expectedCell: cell.originalFingerprint,
+                blockID: cell.requiredBlockID,
+                heldItem: binding.heldItem,
+                orientation: BlockPlacementOrientation(
+                    yaw: physicalActor.yaw,
+                    pitch: physicalActor.pitch
+                )
+            ),
+            custody: binding.custody,
+            occupiedPositions: occupiedAgentPositions.map {
+                PhysicalBlockPosition(x: $0.x, y: $0.y, z: $0.z)
+            } + [PhysicalBlockPosition(
+                x: playerPosition.x,
+                y: playerPosition.y,
+                z: playerPosition.z
+            )],
+            verifyAfterMutation: {
+                let actual = world.getBlock(target.x, target.y, target.z)
+                guard actual >> 4 == cell.requiredBlockID,
+                      self.priorCellsConform(
+                        world: world,
+                        ledger: ledger,
+                        before: intent.cellIndex
+                      ) else {
+                    boundaryError = ExecutionError.mutationVerificationFailed
+                    return false
+                }
+                if finalCell, !self.completeStructureConforms(
+                    world: world,
+                    ledger: ledger,
+                    pending: cell,
+                    pendingFingerprint: actual
+                ) {
+                    boundaryError = ExecutionError.structureValidationFailed
+                    return false
+                }
+                do {
+                    try publishAndVerify(finalCell, actual)
+                    return true
+                } catch {
+                    boundaryError = error
+                    return false
+                }
+            }
+        )
+        state.lastPhysicalStatus = physical.status.rawValue
+        state.lastCommittedEffectCount = physical.committedEffectCount
+        guard physical.succeeded else {
+            if physical.status == .verificationFailure {
+                state.rollbackCount += 1
+                state.lastFailure = "rolledBack@\(positionText(target))"
+            } else if physical.status == .rollbackFailure {
+                state.lastFailure = "rollbackFailed@\(positionText(target))"
+                throw ExecutionError.rollbackVerificationFailed
+            }
+            if let boundaryError { throw boundaryError }
+            switch physical.failure {
+            case .targetChanged: throw ExecutionError.staleFingerprint
+            case .occupiedTarget: throw ExecutionError.occupied
+            case .chunkUnavailable: throw ExecutionError.chunkUnavailable
+            default: throw ExecutionError.mutationVerificationFailed
+            }
         }
         ledger.cells[intent.cellIndex].placed = true
+        ledger.cells[intent.cellIndex].placedFingerprint = physical.after
         self.ledger = ledger
         state.placedCount = ledger.cells.filter(\.placed).count
         state.lastPlacement = "\(intent.cellIndex):\(intent.resource.rawValue)@\(positionText(target))"
+        let afterCount = physicalActor.carriedItems[binding.slot]?.count ?? 0
+        state.lastMaterial = "slot=\(binding.slot):item=\(itemDef(binding.heldItem.id).name):before=\(binding.heldItem.count):after=\(afterCount)"
         state.lastFailure = "none"
     }
 
@@ -218,8 +310,9 @@ struct PebbleAgentConstructionExecutor {
         let placed = ledger.cells.filter(\.placed)
         guard placed.allSatisfy({ cell in
             world.isChunkReady(cell.target.x >> 4, cell.target.z >> 4)
-                && world.getBlock(cell.target.x, cell.target.y, cell.target.z)
-                    == cell.constructionFingerprint
+                && cell.placedFingerprint.map {
+                    world.getBlock(cell.target.x, cell.target.y, cell.target.z) == $0
+                } == true
         }) else {
             throw ExecutionError.clearVerificationFailed
         }
@@ -233,7 +326,7 @@ struct PebbleAgentConstructionExecutor {
                     cell.target.z,
                     cell.originalFingerprint
                 )
-                guard returned == cell.constructionFingerprint,
+                guard returned == cell.placedFingerprint,
                       world.getBlock(cell.target.x, cell.target.y, cell.target.z)
                         == cell.originalFingerprint else {
                     throw ExecutionError.clearVerificationFailed
@@ -265,8 +358,9 @@ struct PebbleAgentConstructionExecutor {
         let placed = ledger.cells.filter(\.placed)
         guard placed.allSatisfy({ cell in
             world.isChunkReady(cell.target.x >> 4, cell.target.z >> 4)
-                && world.getBlock(cell.target.x, cell.target.y, cell.target.z)
-                    == cell.constructionFingerprint
+                && cell.placedFingerprint.map {
+                    world.getBlock(cell.target.x, cell.target.y, cell.target.z) == $0
+                } == true
         }) else {
             state.lastFailure = "cleanupStructureChanged"
             return false
@@ -280,7 +374,7 @@ struct PebbleAgentConstructionExecutor {
                     cell.target.z,
                     cell.originalFingerprint
                 )
-                guard returned == cell.constructionFingerprint,
+                guard returned == cell.placedFingerprint,
                       world.getBlock(cell.target.x, cell.target.y, cell.target.z)
                         == cell.originalFingerprint else {
                     throw ExecutionError.clearVerificationFailed
@@ -302,24 +396,28 @@ struct PebbleAgentConstructionExecutor {
     }
 
     private func priorCellsConform(world: World, ledger: Ledger, before index: Int) -> Bool {
-        ledger.cells.prefix(index).allSatisfy {
-            $0.placed
-                && world.getBlock($0.target.x, $0.target.y, $0.target.z)
-                    == $0.constructionFingerprint
+        ledger.cells.prefix(index).allSatisfy { cell in
+            cell.placed
+                && cell.placedFingerprint.map { fingerprint in
+                    world.getBlock(cell.target.x, cell.target.y, cell.target.z) == fingerprint
+                } == true
         }
     }
 
     private func completeStructureConforms(
         world: World,
         ledger: Ledger,
-        pending: LedgerCell
+        pending: LedgerCell,
+        pendingFingerprint: Int
     ) -> Bool {
         let cellsConform = ledger.cells.allSatisfy { cell in
             let expected = cell.index == pending.index
-                ? pending.constructionFingerprint
-                : cell.constructionFingerprint
+                ? pendingFingerprint
+                : cell.placedFingerprint
             return (cell.index == pending.index || cell.placed)
-                && world.getBlock(cell.target.x, cell.target.y, cell.target.z) == expected
+                && expected.map {
+                    world.getBlock(cell.target.x, cell.target.y, cell.target.z) == $0
+                } == true
         }
         let entranceFeet = world.getBlock(ledger.entrance.x, ledger.entrance.y, ledger.entrance.z)
         let entranceHead = world.getBlock(ledger.entrance.x, ledger.entrance.y + 1, ledger.entrance.z)
@@ -333,43 +431,39 @@ struct PebbleAgentConstructionExecutor {
             && isAir(UInt16(truncatingIfNeeded: restFeet))
             && isAir(UInt16(truncatingIfNeeded: restHead))
             && blockDefs[restFloor >> 4].solid
-            && roof == PebbleAgentConstructionMapping.woodFingerprint
-    }
-
-    private mutating func rollbackSingle(
-        world: World,
-        cell: LedgerCell,
-        originalFingerprint: Int
-    ) throws {
-        _ = world.setBlock(
-            cell.target.x,
-            cell.target.y,
-            cell.target.z,
-            originalFingerprint
-        )
-        guard world.getBlock(cell.target.x, cell.target.y, cell.target.z)
-                == originalFingerprint else {
-            state.lastFailure = "rollbackFailed@\(positionText(cell.target))"
-            throw ExecutionError.rollbackVerificationFailed
-        }
-        state.rollbackCount += 1
-        state.lastFailure = "rolledBack@\(positionText(cell.target))"
+            && roof >> 4 == PebbleAgentConstructionMapping.woodFingerprint >> 4
     }
 
     private func reapplyConstruction<C: Collection>(world: World, cells: C) throws
     where C.Element == LedgerCell {
         for cell in cells {
+            guard let placedFingerprint = cell.placedFingerprint else {
+                throw ExecutionError.rollbackVerificationFailed
+            }
             _ = world.setBlock(
                 cell.target.x,
                 cell.target.y,
                 cell.target.z,
-                cell.constructionFingerprint
+                placedFingerprint
             )
             guard world.getBlock(cell.target.x, cell.target.y, cell.target.z)
-                    == cell.constructionFingerprint else {
+                    == placedFingerprint else {
                 throw ExecutionError.rollbackVerificationFailed
             }
         }
+    }
+
+    private func placementFace(
+        target: AgentPosition,
+        workPosition: AgentPosition
+    ) -> Int {
+        let dx = workPosition.x - target.x
+        let dz = workPosition.z - target.z
+        if dx < 0 { return Dir.west }
+        if dx > 0 { return Dir.east }
+        if dz < 0 { return Dir.north }
+        if dz > 0 { return Dir.south }
+        return workPosition.y < target.y ? Dir.down : Dir.up
     }
 
     private func offset(_ origin: AgentPosition, _ relative: AgentPosition) -> AgentPosition {

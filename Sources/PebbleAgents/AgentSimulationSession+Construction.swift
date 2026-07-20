@@ -6,9 +6,16 @@ extension AgentSimulationSession {
         guard let builder = statesById[project.builderAgentId] else {
             throw AgentSessionError.unknownAgentId(project.builderAgentId)
         }
+        let validInitialMaterialState = (
+            project.status == .acquiringMaterials
+                && project.materialAuthority == .coarseEscrow
+        ) || (
+            project.status == .funded
+                && project.materialAuthority == .physicalCustody
+        )
         guard project.blueprint == .fixedLeanToV1,
               project.previousHomePosition == builder.homePosition,
-              project.status == .acquiringMaterials,
+              validInitialMaterialState,
               project.placedCellIndices.isEmpty,
               project.materialEscrow.total == 0,
               project.placedMaterialTotals.total == 0 else {
@@ -191,7 +198,8 @@ extension AgentSimulationSession {
               cell.resource == intent.resource,
               project.nextTarget == intent.target,
               project.nextWorkPosition == intent.workPosition,
-              project.materialEscrow.canRemove(intent.resource),
+              (project.materialAuthority == .physicalCustody
+                || project.materialEscrow.canRemove(intent.resource)),
               statesById[intent.builderAgentId]?.position == intent.workPosition else {
             throw AgentSessionError.invalidConstructionPlacement(intent.placementId)
         }
@@ -339,7 +347,7 @@ extension AgentSimulationSession {
               project.nextCellIndex == project.blueprint.cells.count,
               project.placedCellIndices == project.blueprint.cells.map(\.index),
               project.materialEscrow.total == 0,
-              project.placedMaterialTotals.amounts == project.materialRequirements,
+              project.installedMaterialTotals.amounts == project.materialRequirements,
               var builder = statesById[project.builderAgentId] else {
             throw AgentSessionError.constructionCompletionInvalid(projectId)
         }

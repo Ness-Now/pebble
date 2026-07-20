@@ -647,6 +647,7 @@ final class PebbleAgentMaterialCustodyGateway {
 }
 
 struct PebbleAgentMaterialPlacementBinding {
+    let slot: Int
     let heldItem: ItemStack
     let custody: PebbleAgentBlockPlacementCustody
 }
@@ -669,6 +670,7 @@ extension PebbleAgentMaterialCustodyGateway {
         var expectedAfter: [ItemStack?]?
         var mutationValid = true
         return PebbleAgentMaterialPlacementBinding(
+            slot: slot,
             heldItem: heldCopy,
             custody: PebbleAgentBlockPlacementCustody(
                 consume: { quantity in
@@ -700,6 +702,21 @@ extension PebbleAgentMaterialCustodyGateway {
                 }
             )
         )
+    }
+
+    /// Resolves the first real carried stack whose registry item places the
+    /// exact required block. Slot order is the deterministic selection rule.
+    func placementBinding(
+        actor: LabCoreAgentEntity,
+        requiredBlockID: Int
+    ) -> PebbleAgentMaterialPlacementBinding? {
+        guard requiredBlockID > 0, requiredBlockID < blockDefs.count else { return nil }
+        let slot = actor.carriedItems.indices.first { index in
+            guard let stack = actor.carriedItems[index], stack.count > 0 else { return false }
+            return itemDef(stack.id).block.map(Int.init) == requiredBlockID
+        }
+        guard let slot else { return nil }
+        return placementBinding(actor: actor, slot: slot)
     }
 
     func toolBinding(

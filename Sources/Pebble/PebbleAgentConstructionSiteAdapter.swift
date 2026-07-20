@@ -134,7 +134,8 @@ struct PebbleAgentConstructionSiteAdapter {
             createdAtTick: tick,
             previousHomePosition: builder.homePosition,
             originalFingerprints: selected.originalFingerprints,
-            workPositions: selectedWorkPositions
+            workPositions: selectedWorkPositions,
+            materialAuthority: .physicalCustody
         )
         return PebbleAgentConstructionSiteSelection(
             project: project,
