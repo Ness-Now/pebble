@@ -393,6 +393,137 @@ func runPebbleAgentsHarvestPublicationSmoke() {
     }())
 }
 
+// Keep this large, assertion-heavy fixture out of the release optimizer. Swift 6.3.2
+// otherwise misdiagnoses a snapshot Optional borrow while compiling pebsmoke.
+@inline(never)
+@_optimize(none)
+func runPebbleAgentsConstructionPublicationSmoke() {
+    section("pebble agents verified physical construction publication")
+
+    var session = skillBase("skill-physical-construction")
+    let blueprint = AgentBlueprint.fixedLeanToV1
+    let project = try! AgentConstructionProject(
+        projectId: "physical-shelter",
+        builderAgentId: "agent_0",
+        origin: AgentPosition(x: 2, y: 64, z: -1),
+        createdAtTick: session.tick,
+        previousHomePosition: skillHome,
+        originalFingerprints: blueprint.cells.map {
+            AgentConstructionCellFingerprint(cellIndex: $0.index, originalFingerprint: 0)
+        },
+        materialAuthority: .physicalCustody
+    )
+    try! session.createConstructionProject(project)
+    try! session.setBuildAutoEnabled(true)
+    let initial = session.snapshot()
+    check("physical construction starts without coarse funding",
+          initial.constructionProject?.status == .funded
+            && initial.constructionProject?.materialAuthority == .physicalCustody
+            && initial.constructionProject?.materialEscrow.total == 0
+            && initial.campStock.isEmpty)
+
+    let first = initial.constructionProject!
+    try! session.applyExternalUpdate(AgentExternalUpdate(
+        agentId: first.builderAgentId,
+        position: first.nextWorkPosition!
+    ))
+    let wrongOrder = AgentPlacementIntent(
+        placementId: "physical-wrong-order",
+        projectId: first.projectId,
+        builderAgentId: first.builderAgentId,
+        tick: session.tick,
+        cellIndex: 1,
+        target: first.nextTarget!,
+        workPosition: first.nextWorkPosition!,
+        resource: first.nextCell!.resource
+    )
+    let wrongOrderBytes = try! session.durableStateBytes()
+    check("physical construction wrong order is atomic", {
+        do { try session.prevalidatePlacement(wrongOrder); return false }
+        catch AgentSessionError.invalidConstructionPlacement {
+            return (try! session.durableStateBytes()) == wrongOrderBytes
+        } catch { return false }
+    }())
+
+    let initialCamp = session.snapshot().campStock
+    let initialInventory = session.snapshot().agents[0].resourceInventory
+    let initialConservation = session.conservationSnapshot()
+    let actorID = AgentID(rawValue: first.builderAgentId)!
+    let initialPractice = session.practiceUnits(agentID: actorID, domain: .construction)
+    var successfulIDs: [String] = []
+    for index in blueprint.cells.indices {
+        let active = session.snapshot().constructionProject!
+        let cell = active.nextCell!
+        let intent = AgentPlacementIntent(
+            placementId: "physical-cell-\(index)",
+            projectId: active.projectId,
+            builderAgentId: active.builderAgentId,
+            tick: session.tick,
+            cellIndex: cell.index,
+            target: active.nextTarget!,
+            workPosition: active.nextWorkPosition!,
+            resource: cell.resource
+        )
+        try! session.applyExternalUpdate(AgentExternalUpdate(
+            agentId: active.builderAgentId,
+            position: intent.workPosition
+        ))
+        try! session.prevalidatePlacement(intent)
+        let outcome = AgentPlacementOutcome(
+            placementId: intent.placementId,
+            projectId: intent.projectId,
+            builderAgentId: intent.builderAgentId,
+            tick: intent.tick,
+            cellIndex: intent.cellIndex,
+            target: intent.target,
+            resource: intent.resource,
+            status: .succeeded,
+            reason: "verified PebbleCore placement with real builder custody"
+        )
+        try! session.applyPlacementOutcome(outcome)
+        successfulIDs.append(outcome.placementId)
+        if index == 0 {
+            let committed = try! session.durableStateBytes()
+            check("physical construction duplicate is exactly once", {
+                do { try session.applyPlacementOutcome(outcome); return false }
+                catch AgentSessionError.duplicateConstructionPlacement {
+                    return (try! session.durableStateBytes()) == committed
+                } catch { return false }
+            }())
+        }
+        if index < blueprint.cells.count - 1 { _ = try! session.advanceTick() }
+    }
+    let built = session.snapshot()
+    check("physical construction ordered multi-cell progression",
+          built.constructionProject?.placedCellIndices == blueprint.cells.map(\.index)
+            && built.constructionProject?.nextCellIndex == blueprint.cells.count)
+    check("physical construction derives exact installed mix",
+          built.constructionProject?.installedMaterialTotals.amounts
+            == blueprint.materialRequirements)
+    check("physical construction never debits coarse material",
+          built.campStock == initialCamp
+            && built.agents[0].resourceInventory == initialInventory
+            && session.conservationSnapshot() == initialConservation
+            && session.conservationSnapshot().balanced)
+    check("physical construction causal success exactly once per cell",
+          session.causalLedgerSnapshot().events.filter {
+              $0.kind == .constructionPlacement
+                && $0.operationID.map { successfulIDs.contains($0.rawValue) } == true
+          }.count == blueprint.cells.count)
+    check("physical construction practice exactly once per cell",
+          session.practiceUnits(agentID: actorID, domain: .construction)
+            == initialPractice + blueprint.cells.count)
+    try! session.completeConstructionProject(
+        projectId: project.projectId,
+        completionTick: session.tick
+    )
+    check("physical construction completes with no abstract escrow",
+          session.snapshot().constructionProject?.status == .completed
+            && session.snapshot().constructionProject?.materialAuthority == .physicalCustody
+            && session.snapshot().constructionProject?.materialEscrow.total == 0
+            && session.snapshot().constructionProject?.placedMaterialTotals.total == 0)
+}
+
 func runPebbleAgentsSkillSmoke() {
     section("pebble agents practice-based skills and task matching")
 

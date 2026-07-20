@@ -26,10 +26,13 @@ civilisationnel.
 Sous les gates matérielle et naturelle, la preuve CIV-17 fait casser un vrai
 log et une vraie stone par les règles Pebble, acquiert uniquement leurs drops
 causaux dans la custody réelle et publie ensuite la causalité et la pratique.
+Sous les gates matérielle et construction, la preuve CIV-18 consomme trois
+vraies stones et six vrais oak logs en posant les neuf cellules ordonnées par
+`executeBlockPlacement`, puis restaure sa fixture jetable.
 
 ## Prérequis et lancement
 
-Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population`, `--multiscale`, `--ecology`, `--mortality`, `--reproduction`, `--kinship`, `--households`, `--care`, `--skills`, `--material` et `--harvest` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07, métriques settlement CIV-08, écologie alimentaire CIV-09, sortie de population CIV-10, âge/maturité/reproduction bornée CIV-11, parenté durable CIV-12A, appartenance household CIV-12B, dependent care final de CIV-12, compétences pratiques CIV-13, custody matérielle CIV-16 et convergence harvest CIV-17. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
+Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population`, `--multiscale`, `--ecology`, `--mortality`, `--reproduction`, `--kinship`, `--households`, `--care`, `--skills`, `--material`, `--harvest` et `--construction` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07, métriques settlement CIV-08, écologie alimentaire CIV-09, sortie de population CIV-10, âge/maturité/reproduction bornée CIV-11, parenté durable CIV-12A, appartenance household CIV-12B, dependent care final de CIV-12, compétences pratiques CIV-13, custody matérielle CIV-16, convergence harvest CIV-17 et convergence construction CIV-18. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
 
 Depuis la racine du dépôt :
 
@@ -148,6 +151,32 @@ restaurent exactement bloc, drops, custody, outil et effets. Les deux commandes
 live publient le même digest, terminent avec `runtimeErrors=0` et retirent les
 trois probes. Le mapping de planification `wood`/`stone` reste une abstraction
 coarse compatible ; il ne calcule jamais les drops Pebble.
+
+## CIV-18 — Convergence construction et placement V1
+
+Le mode `scripts/verify-pebblelab-live.sh --construction` active les gates
+construction, matériau, persistence, population, lifecycle et skills dans
+`PebbleLab-Disposable-Construction-46`. `/lab construction proof` installe un
+projet et de vrais `ItemStack` uniquement dans une fixture bornée, rejoue deux
+fois le même scénario, puis restaure World, custody, position du probe et
+entités. L'option historique `--build` est un alias de cette preuve convergée.
+
+Le blueprint fixe conserve son ordre, ses targets, work positions,
+fingerprints originaux, ledger et validation finale. Chaque cellule résout le
+premier slot réel compatible dans un ordre stable, puis passe par la gateway
+CIV-15 et `executeBlockPlacement`. PebbleCore décide replaceability, collision,
+orientation, support, résultat physique et débit. Le ledger et la session ne
+sont publiés qu'après vérification ; chaque succès produit exactement un event
+`constructionPlacement` et une unité de pratique `construction`. Aucun
+`AgentCampStock`, inventaire abstrait ou escrow coarse ne bouge sur ce chemin.
+
+La preuve couvre matériau absent ou incompatible, mauvais ordre, cible stale,
+non-replaceable ou occupée, duplicate, cellule antérieure altérée, support
+final retiré et échec de publication sur la dernière cellule. Les failures
+tardives restaurent exactement bloc, custody et session sans effet ni skill
+fantôme. Le chemin headless conserve l'escrow abstrait historique ; `clear` et
+`cleanup` restent des restaurations lifecycle bornées, pas un gameplay de
+démolition.
 
 ## CIV-04 — Canal physique local
 
@@ -577,7 +606,11 @@ Depuis CIV-17, la récolte live relit le fingerprint exact puis délègue la mut
 
 L'ancien scénario `--natural` qui démontrait un crédit abstrait et une livraison `AgentCampStock` est superseded comme autorité live. L'option reste un alias de compatibilité vers la preuve `--harvest`; la section CIV-17 ci-dessus décrit le contrat physique actuel. Les tests headless conservent les anciennes transactions abstraites pour leur périmètre coarse explicite.
 
-## K — Fixed Shelter Construction V1
+## K — Fixed Shelter Construction V1 (historique)
+
+Le scénario ci-dessous décrit la preuve antérieure à CIV-18. Il est conservé
+comme historique ; `--build` redirige désormais vers `--construction`, qui est
+l'autorité live actuelle. Le chemin escrow reste couvert en headless/coarse.
 
 Le mode `scripts/verify-pebblelab-live.sh --build` utilise exclusivement le monde jetable `PebbleLab-Disposable-Build-46`, la seed `46` et l'anchor `(20,66,-24)`. Après activation explicite des gates naturelle et construction, il sélectionne en lecture seule le site d'origine `(22,66,-25)`, collecte six `wood` et trois `stone` naturels, les livre au stock existant puis finance atomiquement le blueprint fixe `fixedLeanToV1`. Le blueprint place, dans l'ordre, trois pierres de mur bas, trois troncs de mur haut et trois troncs de toit; l'entrée `(1,0,0)` et la cellule de repos `(1,0,1)` restent vides.
 

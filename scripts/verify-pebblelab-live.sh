@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--build|--social|--physical|--material|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--build|--social|--physical|--material|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -32,7 +32,8 @@ Options:
   --h2       Run the preserved H2 navigate-to-harvest proof.
   --natural  Historical alias for the converged CIV-17 harvest proof.
   --harvest  Run CIV-17 real break/drop/custody convergence and rollback proofs.
-  --build    Run fixed shelter acquisition, construction, interruption, rest, and clear.
+  --construction Run CIV-18 ordered real-custody placement and rollback proofs.
+  --build    Historical alias for the converged CIV-18 construction proof.
   --social   Run directed grounded information, read-only verification, and trust.
   --physical Run local sound, pointing gesture, imperfect perception, and existing trust.
   --material Run real agent/container custody, transactions, consumption, and CIV-15 seams.
@@ -90,7 +91,8 @@ for option in "$@"; do
         --h2) MODE="h2"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --natural) MODE="harvest"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --harvest) MODE="harvest"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
-        --build) MODE="build"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --construction) MODE="construction"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --build) MODE="construction"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --social) MODE="social"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --physical) MODE="physical"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --material) MODE="material"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
@@ -439,6 +441,17 @@ elif [ "$MODE" = "cooperation" ]; then
         cooperation_step=$((cooperation_step + 1))
     done
     LAB_COMMANDS="$LAB_COMMANDS;/lab cooperation status;/lab build status;/lab economy status;/lab natural status;/lab physical status;/lab social status;/lab causality status;/lab causality tail 20;/lab status|/lab movement off;/lab cooperation off;/lab physical off;/lab social off;/lab build clear;/lab build status;/lab cooperation status;/lab follow off"
+elif [ "$MODE" = "construction" ]; then
+    WORLD_SEED="46"
+    BUILD_GATE=1
+    MATERIAL_GATE=1
+    PERSISTENCE_GATE=1
+    POPULATION_GATE=1
+    LIFECYCLE_GATE=1
+    SKILL_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-Construction-46"
+    CAPTURE_NAME="construction-convergence-proof.png"
+    LAB_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/tp 14 71 -18;/lab pause;/lab movement off;/lab population on;/lab lifecycle on;/lab skills on;/lab focus agent_2;/lab construction proof;/lab status'
 elif [ "$MODE" = "harvest" ]; then
     WORLD_SEED="46"
     NATURAL_GATE=1
@@ -662,6 +675,9 @@ print_plan() {
     elif [ "$MODE" = "cooperation" ]; then
         printf '  2. Confirm agent_2 physically offers a three-stone task only to agent_1.\n'
         printf '  3. Confirm helper stone delivery, builder wood delivery, funding, 9/9 construction, and exact conservation.\n'
+    elif [ "$MODE" = "construction" ]; then
+        printf '  2. Confirm nine ordered cells use three real stone and six real oak-log items through PebbleCore.\n'
+        printf '  3. Confirm all refusal and late-failure probes preserve World, custody, project, causality, and skill.\n'
     elif [ "$MODE" = "harvest" ]; then
         printf '  2. Confirm two identical CIV-17 proof digests with canonical log and cobblestone drops.\n'
         printf '  3. Confirm exact unrelated-item, capacity, wrong-tool, stale, duplicate, and late rollback evidence.\n'
@@ -697,13 +713,13 @@ print_plan() {
         && [ "$MODE" != "mortality" ] && [ "$MODE" != "reproduction" ] \
         && [ "$MODE" != "kinship" ] && [ "$MODE" != "households" ] \
         && [ "$MODE" != "care" ] && [ "$MODE" != "skills" ]; then
-        if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ]; then
+        if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ]; then
             printf '  5. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         else
             printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         fi
     fi
-    if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ]; then
+    if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ]; then
         printf '  6. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
     else
         printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
@@ -2837,7 +2853,7 @@ world_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT count(*), json_extract(json, '
 expected_world_facts="1|$WORLD_SEED|$WORLD_NAME|1000|0|0|0|0|0"
 [ "$world_facts" = "$expected_world_facts" ] \
     || fail "unexpected disposable world facts: $world_facts"
-if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ] || [ "$MODE" = "material" ] || [ "$MODE" = "cooperation" ] || [ "$MODE" = "harvest" ]; then
+if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ] || [ "$MODE" = "material" ] || [ "$MODE" = "cooperation" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ]; then
     spawn_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.spawnX'), json_extract(json, '$.spawnY'), json_extract(json, '$.spawnZ') FROM worlds;")
     [ "$spawn_facts" = "8|75|-112" ] || fail "unexpected seed-46 spawn: $spawn_facts"
 fi
@@ -2846,7 +2862,12 @@ require_trace "disposable-world name=$WORLD_NAME seed=$WORLD_SEED worldTick=0 da
 require_trace "start seed=$WORLD_SEED agents=3 tick=0 hz=4 movement=on worldTick=[0-9]+ dayTime=1000 weather=clear randomTickSpeed=0 mobSpawning=0" 'deterministic agent session initial conditions'
 
 [ -s "$CAPTURE_PATH" ] || fail "capture was not written: $CAPTURE_PATH"
-if [ "$MODE" = "harvest" ]; then
+if [ "$MODE" = "construction" ]; then
+    require_trace_count '^\[lab-live\] construction proof actor=agent_2 blueprint=fixedLeanToV1 cells=9 materials=stone:3,oak_log:6 custody=real slotOrder=stable wrongMaterial=refused missingMaterial=refused stale=refused nonreplaceable=refused occupied=refused wrongOrder=refused priorTamper=refused duplicate=refused supportRollback=exact publicationRollback=exact finalCellRollback=exact installed=9 consumed=9 ghostStock=0 causal=9 practice=9 playerParity=executeBlockPlacement session=unchanged cleanup=exact runs=2 digest=[0-9a-f]+$' 1 'complete CIV-18 construction convergence proof'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'construction proof cleanup and runtime health'
+    reject_trace 'Construction convergence proof failed|rollbackFailure|session=changed|cleanup=failed' 'construction proof failure or leaked state'
+    printf '\nPASS: ordered real-custody construction, PebbleCore placement, rollback, and deterministic repeat verified.\n'
+elif [ "$MODE" = "harvest" ]; then
     require_trace_count '^\[lab-live\] harvest proof actor=agent_2 log=oak_logx1 stone=cobblestonex1 axeDamage=1 pickaxeDamage=1 custody=real unrelated=preserved capacityRollback=exact lateRollback=exact wrongToolRollback=exact stale=refused duplicate=refused abstractCredit=0 campStockCredit=0 causal=2 practiceDelta=2 session=unchanged cleanup=exact runs=2 digest=[0-9a-f]+$' 2 'two complete CIV-17 harvest convergence proofs'
     harvest_digests=$(/usr/bin/sed -n 's/^\[lab-live\] harvest proof .* digest=\([0-9a-f]*\)$/\1/p' "$TRACE_PATH" | /usr/bin/sort -u | /usr/bin/wc -l | /usr/bin/tr -d ' ')
     [ "$harvest_digests" -eq 1 ] || fail "harvest proof digests differ across replay"

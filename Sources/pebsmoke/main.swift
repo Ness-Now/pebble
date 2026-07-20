@@ -66,6 +66,16 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "harvest" {
     print("\n\(passed) passed, \(failed) failed")
     exit(failed > 0 ? 1 : 0)
 }
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "construction" {
+    registerAllBlocks()
+    registerAllItems()
+    registerAllEntities()
+    registerAllSystems()
+    runPebbleCorePhysicalActionSmoke()
+    runPebbleAgentsConstructionPublicationSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
 
 // ---------------------------------------------------------------------------
 section("random (vs goldens)")

@@ -20,10 +20,10 @@ Baseline de ce recalage :
 
 ## Position canonique actuelle
 
-`CIV-00` à `CIV-16` sont terminés et acquis dans leurs contrats bornés. La
+`CIV-00` à `CIV-17` sont terminés et acquis dans leurs contrats bornés. La
 phase canonique actuelle est :
 
-`CIV-17 — Harvest and Resource Convergence V1`.
+`CIV-18 — Construction and Placement Convergence V1`.
 
 Les noms `NEXT-1` et `NEXT-2` sont uniquement des alias historiques :
 
@@ -48,8 +48,13 @@ Les preuves acquises couvrent notamment, dans leurs limites actuelles :
   locale abstraite, la mortalité par famine et le lifecycle borné ;
 - la parenté durable, les households, le dependent care et les compétences
   issues de succès matériels réels ;
-- NaturalResource V1 et Construction V1 comme preuves transactionnelles avec
-  prévalidation, vérification, publication et rollback.
+- NaturalResource V1 converge en live vers le break/drop PebbleCore et la
+  custody réelle ; son chemin abstrait subsiste seulement comme compatibilité
+  coarse/headless.
+- Construction V1 conserve blueprint, ordre, ledger, causalité et skills, mais
+  ses cellules live utilisent désormais la custody réelle et
+  `executeBlockPlacement` ; son escrow abstrait subsiste seulement sur le
+  chemin coarse/headless.
 - la gateway actor-neutral CIV-15 pour break/place, avec refus stale,
   vérification de custody/tool state et rollback borné avant publication.
 - le bridge CIV-16 d’identité matérielle et de custody réelle, avec
@@ -105,7 +110,7 @@ migration, pas une suppression immédiate.
 | `CANONICAL` | `AgentSimulationSession`, identités/clock, causal ledger, checkpoint/replay, social/trust, communication locale, cooperation/tasks, population, mortality/lifecycle, kinship, households, care, skills | Continuer dans `PebbleAgents` comme vérité civilisationnelle. |
 | `LIVE_BRIDGE` | contrôleur, sensors, adapters, coordination de mouvement et executors de `Pebble` | Conserver comme frontière actor/World ; ils n’acquièrent aucune cognition parallèle. |
 | `COARSE_DORMANT` | `AgentLocalEcologyState`, `AgentCampStock`, catégories `foodRaw`/`wood`/`stone`, `AgentBoundedRoutePlanner` | Conserver pour headless, coarse, dormant ou waypoints uniquement avec conservation et parité explicites. |
-| `TO_CONVERGE` | NaturalResource V1, Construction V1, projection inventory/stock live, frontière navigation physique live, frontière persistence World/civilisation | Migrer incrémentalement vers les mécaniques PebbleCore après preuve de remplacement et rollback. |
+| `TO_CONVERGE` | projection inventory/stock live, frontière navigation physique live, frontière persistence World/civilisation | Migrer incrémentalement vers les mécaniques PebbleCore après preuve de remplacement et rollback. |
 | `LEGACY_FROZEN` | anciennes stacks et fixtures explicitement superseded par le runtime partagé | Garder pour compatibilité/régression ; ne plus leur ajouter de capacité produit et ne pas les supprimer en big-bang. |
 
 Une abstraction peut fournir aujourd’hui une preuve de bridge tout en ayant
@@ -185,8 +190,8 @@ détails d’API restent à fixer par la mission qui ouvre chaque verticale.
 | `CIV-14` | completed | Reuse & Convergence Baseline |
 | `CIV-15` | completed | Actor-Neutral Physical Action Gateway V1 |
 | `CIV-16` | completed | Real Material Identity and Inventory Bridge V1 |
-| `CIV-17` | current | Harvest and Resource Convergence V1 |
-| `CIV-18` | planned | Construction and Placement Convergence V1 |
+| `CIV-17` | completed | Harvest and Resource Convergence V1 |
+| `CIV-18` | current | Construction and Placement Convergence V1 |
 | `CIV-19` | planned | Navigation and Embodiment Boundary Consolidation V1 |
 
 `CIV-15` à `CIV-19` doivent fermer la frontière entre intention
@@ -362,6 +367,6 @@ monde de vivre.
 - Une verticale livre normalement contrat, implémentation, preuves focalisées,
   une seule full gate finale justifiée et documentation en 1 à 3 commits
   reviewables.
-- `CIV-15` et `CIV-16` ont acquis respectivement la gateway actor-neutral et
-  la custody matérielle réelle ; `CIV-17` est la convergence harvest actuelle,
-  sans anticiper Construction CIV-18.
+- `CIV-15` à `CIV-17` ont acquis la gateway actor-neutral, la custody
+  matérielle réelle et la convergence harvest ; `CIV-18` est la convergence
+  construction actuelle, sans anticiper la consolidation navigation CIV-19.
