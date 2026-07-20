@@ -13,6 +13,7 @@ public enum AgentCheckpointSchema {
     public static let dependentCareVersion = 9
     public static let skillVersion = 10
     public static let teachingVersion = 11
+    public static let ecologicalObservationVersion = 12
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -20,7 +21,7 @@ public enum AgentCheckpointSchema {
             || version == mortalityVersion || version == lifecycleVersion
             || version == kinshipVersion || version == householdVersion
             || version == dependentCareVersion || version == skillVersion
-            || version == teachingVersion
+            || version == teachingVersion || version == ecologicalObservationVersion
     }
 }
 
@@ -205,9 +206,12 @@ public struct AgentSessionDurableState: Codable {
     public let dependentCareState: AgentDependentCareState?
     public let skillState: AgentSkillState?
     public let teachingState: AgentTeachingState?
+    public let ecologicalObservationState: AgentEcologicalObservationState?
 
     init(session: AgentSimulationSession) {
-        if session.teachingState != nil {
+        if session.ecologicalObservationState != nil {
+            schemaVersion = AgentCheckpointSchema.ecologicalObservationVersion
+        } else if session.teachingState != nil {
             schemaVersion = AgentCheckpointSchema.teachingVersion
         } else if session.skillState != nil {
             schemaVersion = AgentCheckpointSchema.skillVersion
@@ -313,6 +317,7 @@ public struct AgentSessionDurableState: Codable {
         dependentCareState = session.dependentCareState
         skillState = session.skillState
         teachingState = session.teachingState
+        ecologicalObservationState = session.ecologicalObservationState
     }
 }
 
@@ -738,6 +743,8 @@ extension AgentSimulationSession {
         dependentCareState = state.dependentCareState
         skillState = state.skillState
         teachingState = state.teachingState
+        ecologicalObservationState = state.ecologicalObservationState
+        try validateEcologicalObservationStateIfEnabled()
         if let settlementMetricsState {
             try validateSettlementMetricsState(settlementMetricsState)
         }
@@ -749,6 +756,10 @@ extension AgentSimulationSession {
 
     static func validateDurableState(_ state: AgentSessionDurableState) throws {
         guard AgentCheckpointSchema.supports(state.schemaVersion) else {
+            throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
+        }
+        guard state.schemaVersion == AgentCheckpointSchema.ecologicalObservationVersion
+                || state.ecologicalObservationState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard (state.schemaVersion == AgentCheckpointSchema.currentVersion
@@ -811,7 +822,10 @@ extension AgentSimulationSession {
                 || (state.schemaVersion == AgentCheckpointSchema.teachingVersion
                     && state.populationRegistry != nil
                     && state.lifecycleState != nil && state.skillState != nil
-                    && state.teachingState != nil) else {
+                    && state.teachingState != nil)
+                || (state.schemaVersion == AgentCheckpointSchema.ecologicalObservationVersion
+                    && state.populationRegistry != nil
+                    && state.ecologicalObservationState != nil) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.clock.tick.rawValue >= 0,
@@ -1340,6 +1354,23 @@ extension AgentSimulationSession {
                 )
             } catch {
                 throw AgentCheckpointError.invalidBound("teaching")
+            }
+        }
+        if let observations = state.ecologicalObservationState {
+            do {
+                guard observations.observations.count
+                        <= observations.configuration.maximumRetainedObservations,
+                      observations.totalObservationCount
+                        >= UInt64(observations.observations.count),
+                      observations.observations.allSatisfy({
+                          $0.observation.observedAtSimulationTick <= state.clock.tick.rawValue
+                              && $0.observation.hasValidDigest()
+                              && state.agents.map(\.agentID).contains($0.observation.observerID)
+                      }) else {
+                    throw AgentEcologicalObservationError.invalidState("checkpoint bounds")
+                }
+            } catch {
+                throw AgentCheckpointError.invalidBound("ecological observation")
             }
         }
         for relation in state.socialTrustRelations {

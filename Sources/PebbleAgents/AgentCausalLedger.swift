@@ -152,6 +152,8 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case demonstrationObserved
     case apprenticeshipEnded
     case guidedPracticeLinked
+    case ecologicalObservationInitialized
+    case ecologicalObservationRecorded
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -174,6 +176,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case dependentCareTransition
     case skillTransition
     case teachingTransition
+    case ecologicalObservationTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -430,6 +433,16 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         reason: String?,
         digest: String
     )
+    case ecologicalObservation(
+        observerID: String?,
+        worldContextKey: String?,
+        dimensionKey: String?,
+        resultCount: Int,
+        worldReads: Int,
+        truncated: Bool,
+        status: String,
+        digest: String
+    )
 
     var canonicalText: String {
         switch self {
@@ -605,6 +618,13 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
                 + "\(domain ?? "none")|\(sourceSuccessEventID ?? "none")|"
                 + "\(skillPracticeEventID ?? "none")|\(status)|"
                 + "\(reason ?? "none")|\(digest)"
+        case let .ecologicalObservation(
+            observerID, worldContextKey, dimensionKey, resultCount, worldReads,
+            truncated, status, digest
+        ):
+            return "ecologicalObservation|\(observerID ?? "none")|"
+                + "\(worldContextKey ?? "none")|\(dimensionKey ?? "none")|"
+                + "\(resultCount)|\(worldReads)|\(truncated ? 1 : 0)|\(status)|\(digest)"
         }
     }
 }
@@ -766,7 +786,9 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.apprenticeshipStarted, .teaching),
              (.demonstrationObserved, .teaching),
              (.apprenticeshipEnded, .teaching),
-             (.guidedPracticeLinked, .teaching):
+             (.guidedPracticeLinked, .teaching),
+             (.ecologicalObservationInitialized, .ecologicalObservation),
+             (.ecologicalObservationRecorded, .ecologicalObservation):
             matches = true
         default:
             matches = false

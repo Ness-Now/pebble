@@ -12,6 +12,7 @@ public enum AgentReplaySchema {
     public static let dependentCareVersion = 9
     public static let skillVersion = 10
     public static let teachingVersion = 11
+    public static let ecologicalObservationVersion = 12
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -19,7 +20,7 @@ public enum AgentReplaySchema {
             || version == mortalityVersion || version == lifecycleVersion
             || version == kinshipVersion || version == householdVersion
             || version == dependentCareVersion || version == skillVersion
-            || version == teachingVersion
+            || version == teachingVersion || version == ecologicalObservationVersion
     }
 }
 
@@ -93,6 +94,8 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case teachingDemonstration
     case apprenticeshipEnd
     case guidedPractice
+    case ecologicalObservationFeature
+    case ecologicalObservationRecord
 }
 
 public enum AgentReplayOperation: Codable {
@@ -187,6 +190,11 @@ public enum AgentReplayOperation: Codable {
         studentSourceSuccessEventID: AgentCausalEventID,
         skillPracticeEventID: AgentCausalEventID
     )
+    case setEcologicalObservationEnabled(
+        Bool,
+        configuration: AgentEcologicalObservationConfiguration
+    )
+    case recordEcologicalObservation(AgentEcologicalObservation)
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -246,6 +254,8 @@ public enum AgentReplayOperation: Codable {
         case .recordTeachingDemonstration: return .teachingDemonstration
         case .endApprenticeship: return .apprenticeshipEnd
         case .linkGuidedPractice: return .guidedPractice
+        case .setEcologicalObservationEnabled: return .ecologicalObservationFeature
+        case .recordEcologicalObservation: return .ecologicalObservationRecord
         }
     }
 
@@ -274,6 +284,9 @@ public enum AgentReplayOperation: Codable {
             raw = "teaching-end:\(apprenticeshipID.rawValue)"
         case let .linkGuidedPractice(_, _, skillPracticeEventID):
             raw = "teaching-guided:\(skillPracticeEventID.rawValue)"
+        case let .recordEcologicalObservation(observation):
+            raw = "ecological-observation:\(observation.observerID.rawValue):"
+                + "\(observation.observedAtSimulationTick):\(observation.digest)"
         default: raw = nil
         }
         return raw.flatMap(AgentOperationID.init(rawValue:))
@@ -637,6 +650,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.teachingVersion
         }
+        if case let .setEcologicalObservationEnabled(enabled, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.ecologicalObservationVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "ecological observation activation must be the first v12 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.ecologicalObservationVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -830,6 +853,8 @@ public enum AgentSessionReplayer {
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.dependentCareVersion)
             || (manifest.schemaVersion == AgentReplaySchema.teachingVersion
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.skillVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.ecologicalObservationVersion
+                && checkpoint.schemaVersion <= AgentCheckpointSchema.teachingVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -1057,6 +1082,12 @@ extension AgentSimulationSession {
                 studentSourceSuccessEventID: studentSourceSuccessEventID,
                 skillPracticeEventID: skillPracticeEventID
             )
+        case let .setEcologicalObservationEnabled(enabled, configuration):
+            try candidate.setEcologicalObservationEnabled(
+                enabled, configuration: configuration
+            )
+        case let .recordEcologicalObservation(observation):
+            _ = try candidate.recordEcologicalObservation(observation)
         }
         self = candidate
         let causal = causalLedgerSnapshot().summary
