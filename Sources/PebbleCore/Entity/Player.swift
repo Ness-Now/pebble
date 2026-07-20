@@ -549,15 +549,7 @@ public final class Player: LivingEntity {
     }
     public func damageStack(_ s: ItemStack, _ amount: Int) {
         if gameMode == GameMode.creative { return }
-        let def = itemDef(s.id)
-        let maxD = def.tool?.durability ?? def.armor?.durability ?? 0
-        if maxD <= 0 { return }
-        let unb = enchLevel(s, "unbreaking")
-        for _ in 0..<amount {
-            if unb > 0 && gameRng.nextFloat() < Double(unb) / Double(unb + 1) { continue }
-            s.damage += 1
-        }
-        if s.damage >= maxD {
+        if damageItemStack(s, amount: amount, random: { gameRng.nextFloat() }) == .broken {
             // break
             if let idx = inventory.firstIndex(where: { $0 === s }) { inventory[idx] = nil }
             if let aIdx = armor.firstIndex(where: { $0 === s }) { armor[aIdx] = nil }
