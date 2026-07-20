@@ -29,10 +29,16 @@ causaux dans la custody réelle et publie ensuite la causalité et la pratique.
 Sous les gates matérielle et construction, la preuve CIV-18 consomme trois
 vraies stones et six vrais oak logs en posant les neuf cellules ordonnées par
 `executeBlockPlacement`, puis restaure sa fixture jetable.
+Sous les gates de convergence CIV-19, la preuve embodiment fait choisir chaque
+pas live par PebbleCore `findPath`, l'exécute par `Entity.move`, puis publie
+seulement la position physique vérifiée dans la session civilisationnelle.
 
 ## Prérequis et lancement
 
 Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population`, `--multiscale`, `--ecology`, `--mortality`, `--reproduction`, `--kinship`, `--households`, `--care`, `--skills`, `--material`, `--harvest` et `--construction` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07, métriques settlement CIV-08, écologie alimentaire CIV-09, sortie de population CIV-10, âge/maturité/reproduction bornée CIV-11, parenté durable CIV-12A, appartenance household CIV-12B, dependent care final de CIV-12, compétences pratiques CIV-13, custody matérielle CIV-16, convergence harvest CIV-17 et convergence construction CIV-18. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
+
+L'option supplémentaire `--embodiment` porte la preuve de convergence
+navigation/embodiment CIV-19 décrite ci-dessous.
 
 Depuis la racine du dépôt :
 
@@ -76,6 +82,7 @@ Commandes de démonstration :
 /lab movement <on|off>
 /lab interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off>
 /lab gateway proof              /lab material proof    /lab harvest proof
+/lab construction proof         /lab embodiment proof
 /lab economy <setup|auto on|auto off|status|clear>
 /lab survival <on|off|status>
 /lab natural <on|off|status|scan>
@@ -177,6 +184,32 @@ tardives restaurent exactement bloc, custody et session sans effet ni skill
 fantôme. Le chemin headless conserve l'escrow abstrait historique ; `clear` et
 `cleanup` restent des restaurations lifecycle bornées, pas un gameplay de
 démolition.
+
+## CIV-19 — Navigation et embodiment boundary V1
+
+Le mode `scripts/verify-pebblelab-live.sh --embodiment` active explicitement
+les gates nécessaires dans `PebbleLab-Disposable-Embodiment-46`. La commande
+`/lab embodiment proof` est limitée au monde jetable, à une session en pause
+et au mouvement coupé. Elle rejoue deux fois des fixtures bornées couvrant
+route simple, obstacle statique, changement dynamique, marche verticale,
+terrain non supporté, conflit multi-agent, publication tardive, identité et
+lifecycle. Elle réutilise aussi les preuves reach harvest et construction.
+
+La frontière live est stricte : `PebbleAgents` fournit raisons, destination et
+waypoints ; `Pebble` résout l'embodiment et orchestre la transaction ;
+PebbleCore `findPath`, `Entity.move`, collision et `World` choisissent et
+valident chaque pas. La position physique vérifiée gagne sur la projection de
+session. Une dérive bornée est publiée comme réconciliation explicite ; une
+dérive excessive, un body manquant/dupliqué, un ancien World, une destination
+bloquée ou un conflit sont refusés sans téléportation.
+
+Le scénario admet ensuite un migrant et exécute quatre ticks normaux. La trace
+doit contenir `authority=PebbleCore`, `publication=verified`, quatre outcomes
+`moved` du body, `noNormalSetPos=1`, `runtimeErrors=0` et
+`probesRemoved=4`. La capture `navigation-embodiment-proof.png` reste une
+preuve visuelle manuelle ; la trace et les tests déterministes portent les
+assertions. `LabCoreAgentEntity` demeure un body expérimental non enregistré,
+non persistant et non universel. Gate R attend la revue senior/post-push.
 
 ## CIV-04 — Canal physique local
 

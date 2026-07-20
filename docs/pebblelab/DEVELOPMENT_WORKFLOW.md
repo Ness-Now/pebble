@@ -22,6 +22,13 @@ Every new physical vertical begins with a targeted audit of the relevant
 PebbleCore mechanics. Prefer reuse, a minimal actor-neutral extraction, or a
 Pebble adapter before proposing any new physical implementation.
 
+For live navigation, Civilization owns intent, destination and coarse
+waypoints; PebbleCore pathfinding, collision and entity movement own the
+physical route and resulting position. Validate identity and World ownership
+through a Pebble embodiment adapter, then publish only verified physical
+outcomes to `AgentSimulationSession`. Never use ordinary `setPos` as movement
+or teleport fallback.
+
 ## Delivery cycle
 
 1. ChatGPT defines the product vertical, boundaries, evidence, and Definition of Done.

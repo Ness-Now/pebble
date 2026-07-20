@@ -433,6 +433,90 @@ do {
         do { try candidate.applyMovementOutcomes([occupiedInvalid]); return false } catch { return true }
     }())
 
+    section("CIV-19 verified physical movement publication")
+    let coreSelectedPosition = AgentPosition(x: 0, y: 64, z: 1)
+    let physicalOutcome = AgentMovementOutcome(
+        agentId: flat.agentId, tick: flat.tick, status: .moved,
+        fromPosition: flat.fromPosition, toPosition: coreSelectedPosition,
+        requestedDirection: flat.requestedDirection,
+        requestedDX: flat.requestedDX, requestedDY: flat.requestedDY,
+        requestedDZ: flat.requestedDZ,
+        appliedDX: 0, appliedDY: 0, appliedDZ: 1,
+        goalKind: flat.goalKind, actionReason: flat.actionReason,
+        resolutionReason: "PebbleCore path and Entity.move verified",
+        worldTickObserved: 8,
+        distanceFromHomeBefore: 0, distanceFromHomeAfter: 1,
+        distanceReducedTowardHome: 0
+    )
+    var physicalPublication = movementSession([movementState()])
+    try! physicalPublication.applyVerifiedPhysicalMovements([
+        AgentVerifiedPhysicalMovement(kind: .navigationStep, outcome: physicalOutcome)
+    ])
+    check("CIV-19 physical result may differ from coarse suggested cell",
+          physicalPublication.snapshot().agents[0].position == coreSelectedPosition)
+
+    let reconcileOutcome = AgentMovementOutcome(
+        agentId: flat.agentId, tick: flat.tick, status: .moved,
+        fromPosition: flat.fromPosition,
+        toPosition: AgentPosition(x: 1, y: 64, z: 0),
+        requestedDirection: nil, requestedDX: 0, requestedDY: 0, requestedDZ: 0,
+        appliedDX: 1, appliedDY: 0, appliedDZ: 0,
+        goalKind: flat.goalKind, actionReason: flat.actionReason,
+        resolutionReason: "verified physical truth reconciliation",
+        worldTickObserved: 8,
+        distanceFromHomeBefore: 0, distanceFromHomeAfter: 1,
+        distanceReducedTowardHome: 0
+    )
+    var reconciliation = movementSession([movementState()])
+    try! reconciliation.applyVerifiedPhysicalMovements([
+        AgentVerifiedPhysicalMovement(kind: .reconciliation, outcome: reconcileOutcome)
+    ])
+    check("CIV-19 physical truth reconciliation is explicit",
+          reconciliation.snapshot().agents[0].position == reconcileOutcome.toPosition)
+    check("CIV-19 reconciliation does not invent cognitive movement",
+          reconciliation.snapshot().agents[0].movementCount == 0)
+
+    var invalidPhysicalPublication = movementSession([movementState()])
+    let invalidPhysicalBefore = invalidPhysicalPublication.snapshot()
+    let invalidPhysical = AgentMovementOutcome(
+        agentId: flat.agentId, tick: flat.tick, status: .moved,
+        fromPosition: flat.fromPosition,
+        toPosition: AgentPosition(x: 3, y: 64, z: 0),
+        requestedDirection: flat.requestedDirection,
+        requestedDX: flat.requestedDX, requestedDY: flat.requestedDY,
+        requestedDZ: flat.requestedDZ,
+        appliedDX: 3, appliedDY: 0, appliedDZ: 0,
+        goalKind: flat.goalKind, actionReason: flat.actionReason,
+        resolutionReason: "invalid unbounded result", worldTickObserved: 8,
+        distanceFromHomeBefore: 0, distanceFromHomeAfter: 3,
+        distanceReducedTowardHome: 0
+    )
+    check("CIV-19 invalid physical publication is atomic", {
+        do {
+            try invalidPhysicalPublication.applyVerifiedPhysicalMovements([
+                AgentVerifiedPhysicalMovement(kind: .navigationStep, outcome: invalidPhysical)
+            ])
+            return false
+        } catch {
+            return invalidPhysicalPublication.snapshot() == invalidPhysicalBefore
+        }
+    }())
+
+    var replayPhysical = movementSession([movementState()])
+    let physicalCheckpoint = try! replayPhysical.makeCheckpoint()
+    var physicalRecorder = try! AgentReplayRecorder(
+        checkpoint: physicalCheckpoint, session: replayPhysical
+    )
+    _ = try! physicalRecorder.apply(
+        AgentReplayOperation.verifiedPhysicalMovements([
+            AgentVerifiedPhysicalMovement(kind: .navigationStep, outcome: physicalOutcome)
+        ]),
+        to: &replayPhysical
+    )
+    check("CIV-19 verified physical result is replayable",
+          replayPhysical.snapshot().agents[0].position == coreSelectedPosition
+              && physicalRecorder.records.last?.operationKind == .verifiedPhysicalMovements)
+
     let legacyMovementPath = movementSession([movementState()])
     let legacyMovementBefore = legacyMovementPath.snapshot()
     check("movement old path outcome nil", legacyMovementPath.snapshot().agents[0].lastMovementOutcome == nil)
@@ -1378,6 +1462,7 @@ do {
           invalidAfter.resourceInventory == invalidBefore.resourceInventory
               && invalidAfter.memoryCount == invalidBefore.memoryCount
               && invalidAfter.lastInteractionOutcome == nil)
+
 }
 
 }

@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--build|--social|--physical|--material|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -33,6 +33,7 @@ Options:
   --natural  Historical alias for the converged CIV-17 harvest proof.
   --harvest  Run CIV-17 real break/drop/custody convergence and rollback proofs.
   --construction Run CIV-18 ordered real-custody placement and rollback proofs.
+  --embodiment Run CIV-19 Core navigation, embodiment, reach, and rollback proofs.
   --build    Historical alias for the converged CIV-18 construction proof.
   --social   Run directed grounded information, read-only verification, and trust.
   --physical Run local sound, pointing gesture, imperfect perception, and existing trust.
@@ -92,6 +93,7 @@ for option in "$@"; do
         --natural) MODE="harvest"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --harvest) MODE="harvest"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --construction) MODE="construction"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --embodiment) MODE="embodiment"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --build) MODE="construction"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --social) MODE="social"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --physical) MODE="physical"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
@@ -441,6 +443,18 @@ elif [ "$MODE" = "cooperation" ]; then
         cooperation_step=$((cooperation_step + 1))
     done
     LAB_COMMANDS="$LAB_COMMANDS;/lab cooperation status;/lab build status;/lab economy status;/lab natural status;/lab physical status;/lab social status;/lab causality status;/lab causality tail 20;/lab status|/lab movement off;/lab cooperation off;/lab physical off;/lab social off;/lab build clear;/lab build status;/lab cooperation status;/lab follow off"
+elif [ "$MODE" = "embodiment" ]; then
+    WORLD_SEED="46"
+    NATURAL_GATE=1
+    BUILD_GATE=1
+    MATERIAL_GATE=1
+    PERSISTENCE_GATE=1
+    POPULATION_GATE=1
+    LIFECYCLE_GATE=1
+    SKILL_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-Embodiment-46"
+    CAPTURE_NAME="navigation-embodiment-proof.png"
+    LAB_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/tp 14 71 -18;/lab pause;/lab movement off;/lab population on;/lab lifecycle on;/lab skills on;/lab focus agent_2;/lab harvest proof;/lab construction proof;/lab embodiment proof;/lab migration admit;/lab focus agent_3;/lab movement on;/lab step;/lab step;/lab step;/lab step;/lab movement off;/lab status'
 elif [ "$MODE" = "construction" ]; then
     WORLD_SEED="46"
     BUILD_GATE=1
@@ -675,6 +689,10 @@ print_plan() {
     elif [ "$MODE" = "cooperation" ]; then
         printf '  2. Confirm agent_2 physically offers a three-stone task only to agent_1.\n'
         printf '  3. Confirm helper stone delivery, builder wood delivery, funding, 9/9 construction, and exact conservation.\n'
+    elif [ "$MODE" = "embodiment" ]; then
+        printf '  2. Confirm Core path selection and Entity.move own every tested physical step.\n'
+        printf '  3. Confirm missing, duplicate, stale-World, conflict, gap, and late publication are refused.\n'
+        printf '  4. Confirm CIV-17/18 reach proofs use the same embodiment and cleanup remains exact.\n'
     elif [ "$MODE" = "construction" ]; then
         printf '  2. Confirm nine ordered cells use three real stone and six real oak-log items through PebbleCore.\n'
         printf '  3. Confirm all refusal and late-failure probes preserve World, custody, project, causality, and skill.\n'
@@ -713,13 +731,13 @@ print_plan() {
         && [ "$MODE" != "mortality" ] && [ "$MODE" != "reproduction" ] \
         && [ "$MODE" != "kinship" ] && [ "$MODE" != "households" ] \
         && [ "$MODE" != "care" ] && [ "$MODE" != "skills" ]; then
-        if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ]; then
+        if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ]; then
             printf '  5. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         else
             printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         fi
     fi
-    if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ]; then
+    if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ]; then
         printf '  6. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
     else
         printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
@@ -2853,7 +2871,7 @@ world_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT count(*), json_extract(json, '
 expected_world_facts="1|$WORLD_SEED|$WORLD_NAME|1000|0|0|0|0|0"
 [ "$world_facts" = "$expected_world_facts" ] \
     || fail "unexpected disposable world facts: $world_facts"
-if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ] || [ "$MODE" = "material" ] || [ "$MODE" = "cooperation" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ]; then
+if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ] || [ "$MODE" = "material" ] || [ "$MODE" = "cooperation" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ]; then
     spawn_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.spawnX'), json_extract(json, '$.spawnY'), json_extract(json, '$.spawnZ') FROM worlds;")
     [ "$spawn_facts" = "8|75|-112" ] || fail "unexpected seed-46 spawn: $spawn_facts"
 fi
@@ -2862,7 +2880,15 @@ require_trace "disposable-world name=$WORLD_NAME seed=$WORLD_SEED worldTick=0 da
 require_trace "start seed=$WORLD_SEED agents=3 tick=0 hz=4 movement=on worldTick=[0-9]+ dayTime=1000 weather=clear randomTickSpeed=0 mobSpawning=0" 'deterministic agent session initial conditions'
 
 [ -s "$CAPTURE_PATH" ] || fail "capture was not written: $CAPTURE_PATH"
-if [ "$MODE" = "construction" ]; then
+if [ "$MODE" = "embodiment" ]; then
+    require_trace_count '^\[lab-live\] embodiment proof authority=PebbleCore/findPath\+Entity.move body=PebbleAgentEmbodiment oneToOne=exact simple=passed obstacle=passed dynamic=passed vertical=passed gap=refused multiAgent=refused waypoint=corePath coarsePlanner=preserved physicalTruth=wins orientation=physical noNormalSetPos=1 latePublicationRollback=exact harvestReach=physical constructionReach=physical missing=refused duplicate=refused staleWorld=refused custodyRemoval=spilled session=unchanged custody=unchanged cleanup=exact runs=2 digest=[0-9a-f]+$' 1 'complete CIV-19 navigation and embodiment convergence proof'
+    require_trace_count '^\[lab-live\] harvest proof .*session=unchanged cleanup=exact runs=2 digest=[0-9a-f]+$' 1 'CIV-17 physical reach regression proof'
+    require_trace_count '^\[lab-live\] construction proof .*session=unchanged cleanup=exact runs=2 digest=[0-9a-f]+$' 1 'CIV-18 work-position regression proof'
+    require_trace '^\[lab-live\] embodiment movement tick=[1-4] authority=PebbleCore publication=verified outcomes=.*:moved:.* noNormalSetPos=1$' 'normal live controller publishes a Core-verified physical movement'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=4 ' 'embodiment proof cleanup and runtime health'
+    reject_trace 'Embodiment convergence proof failed|embodiment proof failed|rollbackVerificationFailed|session=changed|cleanup=failed' 'embodiment proof failure or leaked state'
+    printf '\nPASS: Core navigation, physical movement, embodiment lifecycle, reach, and late rollback verified.\n'
+elif [ "$MODE" = "construction" ]; then
     require_trace_count '^\[lab-live\] construction proof actor=agent_2 blueprint=fixedLeanToV1 cells=9 materials=stone:3,oak_log:6 custody=real slotOrder=stable wrongMaterial=refused missingMaterial=refused stale=refused nonreplaceable=refused occupied=refused wrongOrder=refused priorTamper=refused duplicate=refused supportRollback=exact publicationRollback=exact finalCellRollback=exact installed=9 consumed=9 ghostStock=0 causal=9 practice=9 playerParity=executeBlockPlacement session=unchanged cleanup=exact runs=2 digest=[0-9a-f]+$' 1 'complete CIV-18 construction convergence proof'
     require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'construction proof cleanup and runtime health'
     reject_trace 'Construction convergence proof failed|rollbackFailure|session=changed|cleanup=failed' 'construction proof failure or leaked state'

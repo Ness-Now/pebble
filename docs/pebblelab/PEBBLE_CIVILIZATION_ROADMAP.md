@@ -20,10 +20,10 @@ Baseline de ce recalage :
 
 ## Position canonique actuelle
 
-`CIV-00` à `CIV-17` sont terminés et acquis dans leurs contrats bornés. La
+`CIV-00` à `CIV-18` sont terminés et acquis dans leurs contrats bornés. La
 phase canonique actuelle est :
 
-`CIV-18 — Construction and Placement Convergence V1`.
+`CIV-19 — Navigation and Embodiment Boundary Consolidation V1`.
 
 Les noms `NEXT-1` et `NEXT-2` sont uniquement des alias historiques :
 
@@ -108,9 +108,9 @@ migration, pas une suppression immédiate.
 | Classe | Systèmes | Décision |
 | --- | --- | --- |
 | `CANONICAL` | `AgentSimulationSession`, identités/clock, causal ledger, checkpoint/replay, social/trust, communication locale, cooperation/tasks, population, mortality/lifecycle, kinship, households, care, skills | Continuer dans `PebbleAgents` comme vérité civilisationnelle. |
-| `LIVE_BRIDGE` | contrôleur, sensors, adapters, coordination de mouvement et executors de `Pebble` | Conserver comme frontière actor/World ; ils n’acquièrent aucune cognition parallèle. |
+| `LIVE_BRIDGE` | contrôleur, sensors, `PebbleAgentEmbodiment`, adapters, coordination de mouvement et executors de `Pebble` | Conserver comme frontière actor/World ; ils n’acquièrent aucune cognition parallèle. |
 | `COARSE_DORMANT` | `AgentLocalEcologyState`, `AgentCampStock`, catégories `foodRaw`/`wood`/`stone`, `AgentBoundedRoutePlanner` | Conserver pour headless, coarse, dormant ou waypoints uniquement avec conservation et parité explicites. |
-| `TO_CONVERGE` | projection inventory/stock live, frontière navigation physique live, frontière persistence World/civilisation | Migrer incrémentalement vers les mécaniques PebbleCore après preuve de remplacement et rollback. |
+| `TO_CONVERGE` | projection inventory/stock live et frontière persistence World/civilisation | Migrer incrémentalement vers les mécaniques PebbleCore après preuve de remplacement et rollback. |
 | `LEGACY_FROZEN` | anciennes stacks et fixtures explicitement superseded par le runtime partagé | Garder pour compatibilité/régression ; ne plus leur ajouter de capacité produit et ne pas les supprimer en big-bang. |
 
 Une abstraction peut fournir aujourd’hui une preuve de bridge tout en ayant
@@ -191,12 +191,36 @@ détails d’API restent à fixer par la mission qui ouvre chaque verticale.
 | `CIV-15` | completed | Actor-Neutral Physical Action Gateway V1 |
 | `CIV-16` | completed | Real Material Identity and Inventory Bridge V1 |
 | `CIV-17` | completed | Harvest and Resource Convergence V1 |
-| `CIV-18` | current | Construction and Placement Convergence V1 |
-| `CIV-19` | planned | Navigation and Embodiment Boundary Consolidation V1 |
+| `CIV-18` | completed | Construction and Placement Convergence V1 |
+| `CIV-19` | current | Navigation and Embodiment Boundary Consolidation V1 |
 
-`CIV-15` à `CIV-19` doivent fermer la frontière entre intention
-civilisationnelle et action physique réelle sans réécrire PebbleCore. Gate R
-est requise avant les nouvelles verticales physiques de subsistance.
+`CIV-15` à `CIV-18` ont fermé les frontières action, custody, harvest et
+construction. `CIV-19` consolide maintenant la dernière frontière : la
+civilisation décide pourquoi et où aller, tandis que PebbleCore choisit et
+exécute le mouvement physique. Gate R reste soumise à revue senior/post-push et
+n'est pas déclarée acquise par ce statut `current`.
+
+#### Contrat courant CIV-19
+
+- `PebbleAgents` conserve intentions, destinations, waypoints, progression
+  cognitive et projections coarse/headless ; il n'importe pas PebbleCore.
+- `Pebble` résout un `PebbleAgentEmbodiment` un-à-un, valide identité, World,
+  lifecycle, position, orientation et custody, puis adapte l'intention.
+- PebbleCore `findPath`, `Entity.move`, collision et `World` sont l'autorité de
+  chaque pas live. Un changement dynamique invalide le pas et provoque un
+  calcul Core ultérieur ; il n'existe ni second A* ni fallback de téléportation.
+- La position physique vérifiée gagne. Une dérive bornée produit une
+  réconciliation explicite ; une dérive hors contrat, un embodiment manquant,
+  dupliqué ou rattaché à un ancien World est refusé.
+- `AgentBoundedRoutePlanner` et `AgentBoundedTravel` restent déterministes pour
+  headless/coarse et la sélection de waypoints. Ils ne décident plus du chemin
+  physique live détaillé.
+- Harvest, construction et les gateways d'action calculent le reach depuis
+  l'embodiment physique. Une publication civilisationnelle n'arrive qu'après
+  mouvement/mutation et vérification physiques ; un échec tardif déclenche le
+  rollback physique vérifié ou refuse la publication.
+- `LabCoreAgentEntity` reste un body expérimental, non enregistré, non
+  persistant et non présenté comme type fondamental universel.
 
 ### Société locale autonome — Gate B
 
@@ -367,6 +391,7 @@ monde de vivre.
 - Une verticale livre normalement contrat, implémentation, preuves focalisées,
   une seule full gate finale justifiée et documentation en 1 à 3 commits
   reviewables.
-- `CIV-15` à `CIV-17` ont acquis la gateway actor-neutral, la custody
-  matérielle réelle et la convergence harvest ; `CIV-18` est la convergence
-  construction actuelle, sans anticiper la consolidation navigation CIV-19.
+- `CIV-15` à `CIV-18` ont acquis la gateway actor-neutral, la custody
+  matérielle réelle et les convergences harvest/construction ; `CIV-19` est la
+  consolidation navigation/embodiment actuelle. Gate R attend encore la revue
+  senior du SHA publié.
