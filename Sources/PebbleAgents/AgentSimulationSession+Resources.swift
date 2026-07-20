@@ -163,12 +163,19 @@ extension AgentSimulationSession {
         guard !processedInteractionIds.contains(intent.interactionId) else {
             throw AgentSessionError.duplicateInteraction(intent.interactionId)
         }
-        guard state.resourceInventory.canAdd(intent.resource, quantity: intent.quantity) else {
-            throw AgentSessionError.inventoryFull(intent.agentId)
-        }
         switch intent.source {
         case .sandboxFixture:
-            guard intent.expectedBlockFingerprint == nil else {
+            guard intent.expectedBlockFingerprint == nil,
+                  state.resourceInventory.canAdd(
+                    intent.resource,
+                    quantity: intent.quantity
+                  ) else {
+                if !state.resourceInventory.canAdd(
+                    intent.resource,
+                    quantity: intent.quantity
+                ) {
+                    throw AgentSessionError.inventoryFull(intent.agentId)
+                }
                 throw AgentSessionError.invalidNaturalResourceIdentity(intent.interactionId)
             }
         case .naturalWorld:
@@ -190,10 +197,23 @@ extension AgentSimulationSession {
     }
 
     public mutating func applyInteractionOutcome(_ outcome: AgentInteractionOutcome) throws {
+        var candidate = self
+        try candidate.applyInteractionOutcomeInPlace(outcome)
+        self = candidate
+    }
+
+    private mutating func applyInteractionOutcomeInPlace(
+        _ outcome: AgentInteractionOutcome
+    ) throws {
         if let id = AgentID(rawValue: outcome.agentId) {
             try requireStageCapability(.harvest, for: id)
         }
-        try prevalidateCausalAppend(count: 1)
+        let creditsNaturalPractice = skillsEnabled
+            && outcome.status == .succeeded
+            && outcome.source == .naturalWorld
+            && outcome.inventoryDelta.quantity == 0
+            && outcome.reason.hasPrefix("pebble-harvest:")
+        try prevalidateCausalAppend(count: creditsNaturalPractice ? 2 : 1)
         guard var state = statesById[outcome.agentId] else {
             throw AgentSessionError.unknownAgentId(outcome.agentId)
         }
@@ -207,17 +227,28 @@ extension AgentSimulationSession {
         let memory: AgentMemoryEntry
         switch outcome.status {
         case .succeeded:
+            let publishesCoarseMaterial: Bool
             switch outcome.source {
             case .sandboxFixture:
-                guard outcome.expectedBlockFingerprint == nil else {
+                guard outcome.expectedBlockFingerprint == nil,
+                      outcome.inventoryDelta.resource == outcome.resource,
+                      outcome.inventoryDelta.quantity == 1 else {
                     throw AgentSessionError.invalidInteractionOutcome(outcome.interactionId)
                 }
+                publishesCoarseMaterial = true
             case .naturalWorld:
+                let isVerifiedLivePhysical = outcome.inventoryDelta.quantity == 0
+                    && outcome.reason.hasPrefix("pebble-harvest:")
+                let isHistoricalCoarse = outcome.inventoryDelta.quantity == 1
+                    && !outcome.reason.hasPrefix("pebble-harvest:")
                 guard naturalResourcesEnabled,
                       outcome.expectedBlockFingerprint != nil,
-                      outcome.resource == .wood || outcome.resource == .stone else {
+                      outcome.resource == .wood || outcome.resource == .stone,
+                      outcome.inventoryDelta.resource == outcome.resource,
+                      isVerifiedLivePhysical || isHistoricalCoarse else {
                     throw AgentSessionError.invalidInteractionOutcome(outcome.interactionId)
                 }
+                publishesCoarseMaterial = isHistoricalCoarse
             case .localEcology:
                 throw AgentSessionError.invalidInteractionOutcome(outcome.interactionId)
             }
@@ -230,20 +261,22 @@ extension AgentSimulationSession {
             guard !creditedResourceKeys.contains(creditKey) else {
                 throw AgentSessionError.duplicateResourceCredit(creditKey)
             }
-            var nextInventory = state.resourceInventory
-            var nextHarvestedTotals = harvestedResourceTotals
-            guard outcome.inventoryDelta.resource == outcome.resource,
-                  outcome.inventoryDelta.quantity == 1,
-                  nextInventory.add(outcome.resource, quantity: 1),
-                  nextHarvestedTotals.add(outcome.resource, quantity: 1) else {
-                throw AgentSessionError.invalidInteractionOutcome(outcome.interactionId)
+            if publishesCoarseMaterial {
+                var nextInventory = state.resourceInventory
+                var nextHarvestedTotals = harvestedResourceTotals
+                guard nextInventory.add(outcome.resource, quantity: 1),
+                      nextHarvestedTotals.add(outcome.resource, quantity: 1) else {
+                    throw AgentSessionError.invalidInteractionOutcome(outcome.interactionId)
+                }
+                state.resourceInventory = nextInventory
+                harvestedResourceTotals = nextHarvestedTotals
             }
-            state.resourceInventory = nextInventory
-            harvestedResourceTotals = nextHarvestedTotals
             memory = AgentMemoryEntry(
                 tick: tick,
                 type: "resource_harvested",
-                summary: "\(outcome.agentId) harvested 1 \(outcome.resource.rawValue)",
+                summary: publishesCoarseMaterial
+                    ? "\(outcome.agentId) harvested 1 \(outcome.resource.rawValue)"
+                    : "\(outcome.agentId) physically harvested \(outcome.resource.rawValue)",
                 importance: 0.40
             )
             reservationsByTarget.removeValue(forKey: reservationKey(
@@ -284,13 +317,21 @@ extension AgentSimulationSession {
         state.lastInteractionOutcome = outcome
         statesById[outcome.agentId] = state
         processedInteractionIds.insert(outcome.interactionId)
-        recordAcceptedOperation(
+        let interactionEventID = recordAcceptedOperation(
             kind: .interaction,
             agentId: outcome.agentId,
             operationId: outcome.interactionId,
             status: outcome.status.rawValue,
             detail: outcome.reason
         )
+        if creditsNaturalPractice, let interactionEventID,
+           let agentID = AgentID(rawValue: outcome.agentId) {
+            _ = try creditPracticeAfterMaterialSuccess(
+                agentID: agentID,
+                domain: .foraging,
+                sourceSuccessEventID: interactionEventID
+            )
+        }
     }
 
     func shouldDeliverResources(_ state: AgentSessionAgentState) -> Bool {

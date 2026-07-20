@@ -501,19 +501,10 @@ extension PebbleAgentController {
             source: .naturalWorld,
             expectedBlockFingerprint: identity.expectedBlockFingerprint
         )
-        let outcome = AgentInteractionOutcome(
-            interactionId: interactionId,
-            agentId: actor.id,
-            tick: session.tick,
-            target: identity.position,
-            resource: identity.resource,
-            status: .succeeded,
-            inventoryDelta: AgentInventoryDelta(resource: identity.resource, quantity: 1),
-            reason: "natural resource harvested",
-            source: .naturalWorld,
-            expectedBlockFingerprint: identity.expectedBlockFingerprint
-        )
         let snapshot = session.snapshot()
+        guard let physicalActor = probesByAgentId[actor.id] else {
+            throw ControllerError.interactionBoundary("missing physical harvest actor")
+        }
         let occupied = snapshot.agents.filter { $0.id != actor.id }.map(\.position)
         let playerPosition = AgentPosition(
             x: Int(player.x.rounded(.down)),
@@ -525,18 +516,48 @@ extension PebbleAgentController {
         let injectFailure = environment["PEBBLELAB_APP_AGENTS_NATURAL_FAIL_AFTER_WORLD"] == "1"
         let memoryPolicy = session.configuration.memoryPolicy
         var candidateRecorder = recorder
-        try naturalResourceExecutor.harvest(
+        var publishedCandidate: AgentSimulationSession?
+        var publishedOutcome: AgentInteractionOutcome?
+        let abstractInventoryBefore = actor.resourceInventory
+        let campStockBefore = session.snapshot().campStock
+        let harvestedBefore = session.conservationSnapshot().harvested
+        let practiceBefore = AgentID(rawValue: actor.id).map {
+            session.practiceUnits(agentID: $0, domain: .foraging)
+        } ?? 0
+        let result = try naturalResourceExecutor.harvest(
             world: world,
             actor: actor,
+            physicalActor: physicalActor,
             identity: identity,
+            transactionID: interactionId,
             occupiedAgentPositions: occupied,
             playerPosition: playerPosition,
             naturalGateEnabled: naturalGate,
             interactionGateEnabled: interactionGate,
+            physicalGateway: physicalActionGateway,
+            custodyGateway: materialCustodyGateway,
             prevalidate: {
                 try session.prevalidateInteraction(intent)
             },
-            publishAndVerify: {
+            publishAndVerify: { acquired in
+                let dropSummary = acquired.acquired.map {
+                    "\($0.material.identity.itemKey)x\($0.material.count)"
+                }.joined(separator: ",")
+                let outcome = AgentInteractionOutcome(
+                    interactionId: interactionId,
+                    agentId: actor.id,
+                    tick: session.tick,
+                    target: identity.position,
+                    resource: identity.resource,
+                    status: .succeeded,
+                    inventoryDelta: AgentInventoryDelta(
+                        resource: identity.resource,
+                        quantity: 0
+                    ),
+                    reason: "pebble-harvest:\(dropSummary)",
+                    source: .naturalWorld,
+                    expectedBlockFingerprint: identity.expectedBlockFingerprint
+                )
                 var candidate = session
                 if try applyRecordedOperationIfActive(
                     .interactionOutcome(outcome),
@@ -556,20 +577,37 @@ extension PebbleAgentController {
                 case let .bounded(maxEntries):
                     expectedMemoryCount = min(maxEntries, actor.memoryCount + 1)
                 }
-                guard after.resourceInventory.totalCount == actor.resourceInventory.totalCount + 1,
-                      after.resourceInventory.count(of: identity.resource)
-                        == actor.resourceInventory.count(of: identity.resource) + 1,
+                let practiceAfter = AgentID(rawValue: actor.id).map {
+                    candidate.practiceUnits(agentID: $0, domain: .foraging)
+                } ?? 0
+                let expectedPracticeAfter = candidate.skillsEnabled
+                    ? practiceBefore + 1 : practiceBefore
+                guard after.resourceInventory == abstractInventoryBefore,
+                      candidate.snapshot().campStock == campStockBefore,
+                      candidate.conservationSnapshot().harvested == harvestedBefore,
                       after.lastInteractionOutcome == outcome,
                       after.memoryCount == expectedMemoryCount,
                       after.recentMemory.last?.type == "resource_harvested",
-                      candidate.conservationSnapshot().balanced else {
+                      candidate.conservationSnapshot().balanced,
+                      practiceAfter == expectedPracticeAfter else {
                     throw ControllerError.interactionBoundary("natural publication verification failed")
                 }
-                session = candidate
+                publishedCandidate = candidate
+                publishedOutcome = outcome
+                return true
             }
         )
+        guard let publishedCandidate, let outcome = publishedOutcome,
+              result.physical.succeeded,
+              result.acquisition.succeeded else {
+            throw ControllerError.interactionBoundary("natural publication missing")
+        }
+        session = publishedCandidate
         recorder = candidateRecorder
-        trace("natural harvest actor=\(actor.id) target=\(positionText(identity.position)) resource=\(identity.resource.rawValue) source=naturalWorld fingerprint=\(fingerprint) blockAfter=\(world.getBlock(identity.position.x, identity.position.y, identity.position.z)) cleanupRestore=0 inventoryCredit=1 memory=resource_harvested")
+        let dropSummary = result.acquisition.acquired.map {
+            "\($0.material.identity.itemKey)x\($0.material.count)@\($0.entityID)"
+        }.joined(separator: ",")
+        trace("natural harvest actor=\(actor.id) transaction=\(interactionId) target=\(positionText(identity.position)) resource=\(identity.resource.rawValue) source=naturalWorld fingerprint=\(fingerprint) blockAfter=\(world.getBlock(identity.position.x, identity.position.y, identity.position.z)) drops=\(dropSummary) custody=real toolSlot=\(result.toolSlot.map(String.init) ?? "none") abstractCredit=0 campStockCredit=0 memory=resource_harvested")
         return outcome
     }
 

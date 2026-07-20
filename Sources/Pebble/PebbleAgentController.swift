@@ -55,6 +55,7 @@ final class PebbleAgentController {
     let naturalResourceAdapter = PebbleAgentNaturalResourceAdapter()
     let constructionSiteAdapter = PebbleAgentConstructionSiteAdapter()
     let physicalSignalAdapter = PebbleAgentPhysicalSignalAdapter()
+    let physicalActionGateway = PebbleAgentPhysicalActionGateway()
     let materialCustodyGateway = PebbleAgentMaterialCustodyGateway()
     let migrationAdmissionAdapter = PebbleAgentMigrationAdmissionAdapter()
     let localEcologyAdapter = PebbleAgentLocalEcologyAdapter()

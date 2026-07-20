@@ -620,6 +620,9 @@ extension AgentSimulationSession {
         )):
             return payloadAgentID == agentID.rawValue && status == "succeeded"
                 && yieldAfter == yieldBefore - 1 && inventoryAfter == inventoryBefore + 1
+        case let (.foraging, .interaction, .operation(status, detail)):
+            return status == "succeeded"
+                && detail.hasPrefix("pebble-harvest:")
         case let (.materialHandling, .delivery, .operation(status, _)):
             return status == "succeeded"
         case let (.construction, .constructionPlacement, .operation(status, _)):
