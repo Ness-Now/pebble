@@ -242,6 +242,9 @@ extension PebbleAgentController {
     }
 
     private func liveRestartSafety() -> (safe: Bool, reason: String) {
+        if agricultureProofFixture != nil {
+            return (false, "agriculture proof fixture is app-owned and pending cleanup")
+        }
         let interaction = interactionExecutor.economyState()
         if !interaction.fixtures.isEmpty {
             return (false, "interaction fixture receipts are app-only")
@@ -474,6 +477,16 @@ extension PebbleAgentController {
             trace("checkpoint load refused name=\(name.rawValue) reason=ecologicalObservationGate")
             return failure(
                 "Checkpoint load refused: ecological observation gate or dependency is disabled."
+            )
+        }
+        if candidate.agricultureEnabled
+            && (!agricultureFeatureEnabled || !featureEnabled || !persistenceFeatureEnabled
+                || !populationFeatureEnabled || !lifecycleFeatureEnabled
+                || !skillFeatureEnabled || !ecologicalObservationFeatureEnabled
+                || !materialFeatureEnabled || !interactionFeatureEnabled) {
+            trace("checkpoint load refused name=\(name.rawValue) reason=agricultureGate")
+            return failure(
+                "Checkpoint load refused: agriculture gate or dependency is disabled."
             )
         }
         let candidateDigest = try candidate.durableStateDigest()

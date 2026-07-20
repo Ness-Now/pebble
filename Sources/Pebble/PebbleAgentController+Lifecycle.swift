@@ -219,6 +219,13 @@ extension PebbleAgentController {
         let wasDemo = demoActive
         let cleanupWorld = activeWorld ?? fallbackWorld
         if let cleanupWorld,
+           !cleanupAgricultureProofFixture(world: cleanupWorld) {
+            runtimeErrorCount += 1
+            lastError = "agriculture fixture cleanup failed; session retained"
+            trace("error agriculture fixture cleanup failed hardFailure=1")
+            return 0
+        }
+        if let cleanupWorld,
            !cleanupEcologicalObservationProofFixture(world: cleanupWorld) {
             runtimeErrorCount += 1
             lastError = "ecological observation fixture cleanup failed; session retained"

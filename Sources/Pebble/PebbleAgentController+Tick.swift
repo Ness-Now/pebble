@@ -970,6 +970,11 @@ extension PebbleAgentController {
                     world: world, session: &session, recorder: &recorder
                 )
             }
+            if session.agricultureEnabled {
+                _ = try prepareLiveAgriculturalPlanIfEligible(
+                    world: world, session: &session, recorder: &recorder
+                )
+            }
             let finalSnapshot = session.snapshot()
             self.session = session
             replayRecorder = recorder

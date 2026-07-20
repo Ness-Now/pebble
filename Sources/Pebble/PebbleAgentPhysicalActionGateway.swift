@@ -3,6 +3,7 @@ import PebbleCore
 enum PebbleAgentPhysicalActionFamily: String {
     case breakBlock
     case placeBlock
+    case tillBlock
 }
 
 enum PebbleAgentPhysicalActionStatus: String {
@@ -69,6 +70,13 @@ struct PebbleAgentBlockBreakRequest {
     let isCreative: Bool
 }
 
+struct PebbleAgentBlockTillingRequest {
+    let actorID: String
+    let target: PhysicalBlockPosition
+    let expectedCell: Int
+    let heldItem: ItemStack
+}
+
 struct PebbleAgentBlockPlacementCustody {
     let consume: (Int) -> Void
     let verify: () -> Bool
@@ -93,6 +101,111 @@ struct PebbleAgentBlockBreakToolState {
 /// action rules remain in PebbleCore; callers may publish Civilization state
 /// only after receiving a verified `.succeeded` outcome.
 struct PebbleAgentPhysicalActionGateway {
+    func tillBlock(
+        world: World,
+        actor: PebbleAgentEmbodiment,
+        request: PebbleAgentBlockTillingRequest,
+        toolState: PebbleAgentBlockBreakToolState,
+        occupiedPositions: [PhysicalBlockPosition],
+        verifyAfterMutation: () -> Bool = { true }
+    ) -> PebbleAgentPhysicalActionOutcome {
+        let family = PebbleAgentPhysicalActionFamily.tillBlock
+        guard actor.agentID == request.actorID, actor.isValid(in: world) else {
+            return outcome(
+                family: family, request.actorID, .refused, request.target,
+                request.expectedCell, currentCell(world, request.target), [], .invalidActor
+            )
+        }
+        let expectedID = request.expectedCell >> 4
+        guard request.expectedCell != 0,
+              request.heldItem.id >= 0, request.heldItem.id < itemDefs.count,
+              request.heldItem.count > 0,
+              itemDef(request.heldItem.id).tool?.type == "hoe",
+              expectedID == Int(B.grass_block) || expectedID == Int(B.dirt)
+                || expectedID == Int(B.dirt_path) else {
+            return outcome(
+                family: family, request.actorID, .refused, request.target,
+                request.expectedCell, currentCell(world, request.target), [], .invalidRequest
+            )
+        }
+        guard isWithinBoundedReach(actor: actor, target: request.target) else {
+            return outcome(
+                family: family, request.actorID, .refused, request.target,
+                request.expectedCell, currentCell(world, request.target), [], .outOfReach
+            )
+        }
+        guard world.isChunkReady(request.target.x >> 4, request.target.z >> 4) else {
+            return outcome(
+                family: family, request.actorID, .refused, request.target,
+                request.expectedCell, currentCell(world, request.target), [], .chunkUnavailable
+            )
+        }
+        let before = currentCell(world, request.target)
+        guard before == request.expectedCell else {
+            return outcome(
+                family: family, request.actorID, .staleTarget, request.target,
+                request.expectedCell, before, [], .targetChanged
+            )
+        }
+        guard !occupiedPositions.contains(request.target) else {
+            return outcome(
+                family: family, request.actorID, .refused, request.target,
+                before, before, [], .occupiedTarget
+            )
+        }
+        guard world.getBlockEntity(request.target.x, request.target.y, request.target.z) == nil,
+              world.getBlock(request.target.x, request.target.y + 1, request.target.z) == 0 else {
+            return outcome(
+                family: family, request.actorID, .refused, request.target,
+                before, before, [], .blockEntityUnsupported
+            )
+        }
+        let entityIDsBefore = Set(world.entities.map(\.id))
+        let (physical, bufferedEffects) = bufferPhysicalEffects(world: world) {
+            executeBlockTilling(
+                BlockTillingRuleContext(
+                    world: world, heldItem: request.heldItem,
+                    vibrationSource: actor.entity, damageTool: toolState.damage
+                ),
+                request.target.x, request.target.y, request.target.z
+            )
+        }
+        guard physical.status == .succeeded else {
+            return outcome(
+                family: family, request.actorID, .physicalExecutionFailure,
+                request.target, before, currentCell(world, request.target),
+                physical.mutations, .coreRefused
+            )
+        }
+        let matches = physical.target == request.target
+            && physical.originalCell == before
+            && physical.finalCell == currentCell(world, request.target)
+            && physical.finalCell >> 4 == Int(B.farmland)
+            && physical.mutations.count == 1
+            && physical.spawnedItemEntityIDs.isEmpty
+            && mutationsConform(world: world, mutations: physical.mutations)
+        let toolMatches = toolState.verify()
+        let accepted = matches && toolMatches && verifyAfterMutation()
+        guard matches, toolMatches, accepted else {
+            let failure: PebbleAgentPhysicalActionFailure = !matches
+                ? .outcomeMismatch : !toolMatches ? .actorStateMismatch : .postMutationRejected
+            return rolledBackFailure(
+                family: family, actorID: request.actorID, target: request.target,
+                before: before, world: world, mutations: physical.mutations,
+                entityIDsBefore: entityIDsBefore,
+                rollbackActorState: toolState.rollback,
+                statusAfterRollback: .verificationFailure,
+                failureAfterRollback: failure
+            )
+        }
+        commitPhysicalEffects(bufferedEffects, world: world)
+        return outcome(
+            family: family, request.actorID, .succeeded, request.target,
+            before, currentCell(world, request.target), physical.mutations, nil,
+            committedEffectCount: bufferedEffects.count
+        )
+    }
+
     /// Compatibility entry point for existing bounded proof fixtures. It
     /// immediately narrows the raw probe to the same embodiment boundary used
     /// by live execution.
@@ -570,13 +683,17 @@ struct PebbleAgentPhysicalActionGateway {
         target: PhysicalBlockPosition
     ) -> Bool {
         for index in 0..<6 {
-            let neighbor = world.getBlock(
-                target.x + DIR_X[index],
-                target.y + DIR_Y[index],
-                target.z + DIR_Z[index]
-            )
+            let neighborX = target.x + DIR_X[index]
+            let neighborY = target.y + DIR_Y[index]
+            let neighborZ = target.z + DIR_Z[index]
+            let neighbor = world.getBlock(neighborX, neighborY, neighborZ)
             let neighborID = neighbor >> 4
-            if neighborHandlers[neighborID] != nil || HAS_GRAVITY[neighborID] == 1 {
+            // Core's crop support handler ignores side notifications. Keep
+            // support removal guarded while permitting adjacent plot cells.
+            let canonicalCropSideNotification = blockDefs[neighborID].shape == .crop
+                && target.y != neighborY - 1
+            if (neighborHandlers[neighborID] != nil && !canonicalCropSideNotification)
+                || HAS_GRAVITY[neighborID] == 1 {
                 return true
             }
         }

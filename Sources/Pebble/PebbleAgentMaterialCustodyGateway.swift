@@ -23,6 +23,13 @@ struct PebbleAgentMaterialTransactionRequest {
     let expectedDestinationFingerprint: String?
 }
 
+struct PebbleAgentMaterialBatchTransactionRequest {
+    let transactionID: String
+    let materials: [AgentMaterialStackSnapshot]
+    let expectedSourceFingerprint: String
+    let expectedDestinationFingerprint: String
+}
+
 struct PebbleAgentMaterialTransactionOutcome {
     let transactionID: String
     let status: PebbleAgentMaterialTransactionStatus
@@ -320,6 +327,124 @@ final class PebbleAgentMaterialCustodyGateway {
                 destination: destination,
                 sourceBefore: sourceBefore,
                 destinationBefore: destinationBefore,
+                failure: .verificationFailure
+            )
+        }
+    }
+
+    /// One all-or-nothing transfer for a bounded set of real item identities.
+    /// It uses the same Core split/merge/max-stack rules as the scalar path.
+    func transferBatch(
+        _ request: PebbleAgentMaterialBatchTransactionRequest,
+        from source: PebbleAgentMaterialCustodyEndpoint,
+        to destination: PebbleAgentMaterialCustodyEndpoint,
+        verifyAfterMutation: () -> Bool = { true }
+    ) -> PebbleAgentMaterialTransactionOutcome {
+        if let prior = receipts[request.transactionID] {
+            return outcome(
+                request.transactionID, .duplicate, 0,
+                prior.sourceFingerprint, prior.destinationFingerprint
+            )
+        }
+        guard !request.transactionID.isEmpty, request.transactionID.count <= 256,
+              !request.materials.isEmpty,
+              request.materials.count <= 16,
+              request.materials.allSatisfy({ $0.count > 0 }),
+              source.locationID != destination.locationID else {
+            return outcome(request.transactionID, .invalidRequest)
+        }
+        let prototypes: [(ItemStack, Int)]
+        do {
+            prototypes = try request.materials.map {
+                (try bridge.itemStack(from: $0), $0.count)
+            }
+        } catch PebbleAgentMaterialBridgeError.unknownItemKey {
+            return outcome(request.transactionID, .unknownMaterialIdentity)
+        } catch {
+            return outcome(request.transactionID, .invalidRequest)
+        }
+        guard source.isValid, destination.isValid,
+              let sourceBefore = source.read(),
+              let destinationBefore = destination.read() else {
+            return outcome(request.transactionID, .physicalExecutionFailure)
+        }
+        let sourceFingerprintBefore: String
+        let destinationFingerprintBefore: String
+        do {
+            sourceFingerprintBefore = try fingerprint(source)
+            destinationFingerprintBefore = try fingerprint(destination)
+        } catch {
+            return outcome(request.transactionID, .physicalExecutionFailure)
+        }
+        guard sourceFingerprintBefore == request.expectedSourceFingerprint else {
+            return outcome(
+                request.transactionID, .staleSource, 0,
+                sourceFingerprintBefore, destinationFingerprintBefore
+            )
+        }
+        guard destinationFingerprintBefore == request.expectedDestinationFingerprint else {
+            return outcome(
+                request.transactionID, .staleDestination, 0,
+                sourceFingerprintBefore, destinationFingerprintBefore
+            )
+        }
+        var sourceAfter = copyItemInventory(sourceBefore)
+        var destinationAfter = copyItemInventory(destinationBefore)
+        for (prototype, quantity) in prototypes {
+            guard itemInventoryQuantity(matching: prototype, in: sourceAfter) >= quantity else {
+                return outcome(
+                    request.transactionID, .insufficientQuantity, 0,
+                    sourceFingerprintBefore, destinationFingerprintBefore
+                )
+            }
+            guard itemInventoryInsertionCapacity(for: prototype, in: destinationAfter)
+                    >= quantity,
+                  let extracted = extractItemStack(
+                    matching: prototype, quantity: quantity, from: &sourceAfter
+                  ),
+                  insertItemStack(extracted, quantity: quantity, into: &destinationAfter)
+                    == quantity,
+                  extracted.count == 0 else {
+                return outcome(
+                    request.transactionID, .destinationFull, 0,
+                    sourceFingerprintBefore, destinationFingerprintBefore
+                )
+            }
+        }
+        guard (try? transferConservesIdentity(
+            sourceBefore: sourceBefore, destinationBefore: destinationBefore,
+            sourceAfter: sourceAfter, destinationAfter: destinationAfter
+        )) == true else {
+            return outcome(request.transactionID, .verificationFailure)
+        }
+        guard source.write(sourceAfter), destination.write(destinationAfter) else {
+            return rollback(
+                request.transactionID, source: source, destination: destination,
+                sourceBefore: sourceBefore, destinationBefore: destinationBefore,
+                failure: .physicalExecutionFailure
+            )
+        }
+        guard exactSlots(source.read(), sourceAfter),
+              exactSlots(destination.read(), destinationAfter),
+              verifyAfterMutation() else {
+            return rollback(
+                request.transactionID, source: source, destination: destination,
+                sourceBefore: sourceBefore, destinationBefore: destinationBefore,
+                failure: .verificationFailure
+            )
+        }
+        do {
+            let result = outcome(
+                request.transactionID, .succeeded,
+                prototypes.reduce(0) { $0 + $1.1 },
+                try fingerprint(source), try fingerprint(destination)
+            )
+            retain(result)
+            return result
+        } catch {
+            return rollback(
+                request.transactionID, source: source, destination: destination,
+                sourceBefore: sourceBefore, destinationBefore: destinationBefore,
                 failure: .verificationFailure
             )
         }

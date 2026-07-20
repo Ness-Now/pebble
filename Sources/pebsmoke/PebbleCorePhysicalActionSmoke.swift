@@ -190,6 +190,81 @@ func runPebbleCorePhysicalActionSmoke() {
     check("actor-neutral placement preserves LivingEntity collision", !collision.succeeded && collision.mutations.isEmpty)
     check("collision refusal consumes nothing", collisionConsumed == 0 && collisionWorld.getBlock(0, 64, 0) == 0)
 
+    let tillWorld = physicalActionWorld()
+    tillWorld.setBlock(0, 63, 0, Int(cell(B.dirt)), SET_SILENT)
+    let hoe = ItemStack(iid("iron_hoe"))
+    var tillDamage = 0
+    let tilled = executeBlockTilling(
+        BlockTillingRuleContext(
+            world: tillWorld, heldItem: hoe,
+            damageTool: { tillDamage += $0 }
+        ),
+        0, 63, 0
+    )
+    check("actor-neutral tilling succeeds without Player",
+          tilled.status == .succeeded
+            && tilled.finalCell == Int(cell(B.farmland, 0)))
+    check("tilling reports one exact direct mutation",
+          tilled.mutations == [PhysicalBlockMutation(
+            position: PhysicalBlockPosition(x: 0, y: 63, z: 0),
+            before: Int(cell(B.dirt)), after: Int(cell(B.farmland, 0))
+          )])
+    check("tilling delegates hoe durability exactly once", tillDamage == 1)
+    let repeatedTill = executeBlockTilling(
+        BlockTillingRuleContext(
+            world: tillWorld, heldItem: hoe,
+            damageTool: { tillDamage += $0 }
+        ),
+        0, 63, 0
+    )
+    check("repeated tilling is refused without durability",
+          repeatedTill.status == .refused && repeatedTill.mutations.isEmpty
+            && tillDamage == 1)
+
+    let invalidTillWorld = physicalActionWorld()
+    invalidTillWorld.setBlock(0, 63, 0, Int(cell(B.stone)), SET_SILENT)
+    let invalidTill = executeBlockTilling(
+        BlockTillingRuleContext(
+            world: invalidTillWorld, heldItem: hoe,
+            damageTool: { tillDamage += $0 }
+        ),
+        0, 63, 0
+    )
+    check("invalid soil tilling is an exact refusal",
+          invalidTill.status == .refused
+            && invalidTillWorld.getBlock(0, 63, 0) == Int(cell(B.stone))
+            && tillDamage == 1)
+
+    let playerTillWorld = physicalActionWorld()
+    playerTillWorld.setBlock(0, 63, 0, Int(cell(B.dirt)), SET_SILENT)
+    let tillPlayer = Player(world: playerTillWorld)
+    tillPlayer.inventory[tillPlayer.selectedSlot] = ItemStack(iid("iron_hoe"))
+    playerTillWorld.addEntity(tillPlayer)
+    let playerTilled = useItem(
+        InteractCtx(world: playerTillWorld, player: tillPlayer),
+        physicalActionHit(playerTillWorld, y: 63)
+    )
+    check("Player tilling compatibility wrapper still succeeds", playerTilled)
+    check("Player and actor-neutral tilling share Core authority",
+          playerTillWorld.getBlock(0, 63, 0) == tilled.finalCell
+            && tillPlayer.mainHand?.damage == 1)
+
+    let breakingHoeWorld = physicalActionWorld()
+    breakingHoeWorld.setBlock(0, 63, 0, Int(cell(B.dirt)), SET_SILENT)
+    let breakingHoePlayer = Player(world: breakingHoeWorld)
+    let breakingHoe = ItemStack(iid("iron_hoe"))
+    breakingHoe.damage = maxDamageOf(breakingHoe) - 1
+    breakingHoePlayer.inventory[breakingHoePlayer.selectedSlot] = breakingHoe
+    breakingHoeWorld.addEntity(breakingHoePlayer)
+    let tilledWithBreakingHoe = useItem(
+        InteractCtx(world: breakingHoeWorld, player: breakingHoePlayer),
+        physicalActionHit(breakingHoeWorld, y: 63)
+    )
+    check("Player tilling preserves canonical tool break semantics",
+          tilledWithBreakingHoe
+            && breakingHoeWorld.getBlock(0, 63, 0) == Int(cell(B.farmland, 0))
+            && breakingHoePlayer.mainHand == nil)
+
     resetGameRng(15)
     let breakWorld = physicalActionWorld()
     breakWorld.setBlock(0, 64, 0, Int(cell(B.stone)), SET_SILENT)

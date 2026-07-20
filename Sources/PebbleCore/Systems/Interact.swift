@@ -109,6 +109,55 @@ public struct BlockPlacementRuleResult: Equatable {
     }
 }
 
+public struct BlockTillingRuleContext {
+    public let world: World
+    public let heldItem: ItemStack
+    public let vibrationSource: EntityRef?
+    public let damageTool: (Int) -> Void
+
+    public init(
+        world: World,
+        heldItem: ItemStack,
+        vibrationSource: EntityRef? = nil,
+        damageTool: @escaping (Int) -> Void
+    ) {
+        self.world = world
+        self.heldItem = heldItem
+        self.vibrationSource = vibrationSource
+        self.damageTool = damageTool
+    }
+}
+
+public enum BlockTillingRuleStatus: String, Equatable {
+    case succeeded
+    case refused
+}
+
+public struct BlockTillingRuleResult: Equatable {
+    public let status: BlockTillingRuleStatus
+    public let target: PhysicalBlockPosition
+    public let originalCell: Int
+    public let finalCell: Int
+    public let mutations: [PhysicalBlockMutation]
+    public let spawnedItemEntityIDs: [Int]
+
+    public init(
+        status: BlockTillingRuleStatus,
+        target: PhysicalBlockPosition,
+        originalCell: Int,
+        finalCell: Int,
+        mutations: [PhysicalBlockMutation],
+        spawnedItemEntityIDs: [Int] = []
+    ) {
+        self.status = status
+        self.target = target
+        self.originalCell = originalCell
+        self.finalCell = finalCell
+        self.mutations = mutations
+        self.spawnedItemEntityIDs = spawnedItemEntityIDs
+    }
+}
+
 public struct BlockBreakRuleContext {
     public let world: World
     public let heldItem: ItemStack?
@@ -1052,19 +1101,13 @@ public func useItem(_ ctx: InteractCtx, _ hit: RaycastHit?) -> Bool {
         return false
     }
     if def.tool?.type == "hoe" {
-        if (targetId == Int(B.grass_block) || targetId == Int(B.dirt) || targetId == Int(B.dirt_path)) && world.getBlock(x, y + 1, z) == 0 {
-            world.setBlock(x, y, z, Int(cell(B.farmland, 0)))
-            world.hooks.playSound("item.hoe.till", Double(x) + 0.5, Double(y) + 1, Double(z) + 0.5, 1, 1)
-            player.damageHeld(1)
-            return true
-        }
-        if targetId == Int(B.rooted_dirt) {
-            world.setBlock(x, y, z, Int(cell(B.dirt)))
-            spawnItem(world, Double(x) + 0.5, Double(y) + 1, Double(z) + 0.5, ItemStack(iid("hanging_roots"), 1))
-            player.damageHeld(1)
-            return true
-        }
-        return false
+        return executeBlockTilling(
+            BlockTillingRuleContext(
+                world: world, heldItem: held, vibrationSource: player,
+                damageTool: { player.damageHeld($0) }
+            ),
+            x, y, z
+        ).status == .succeeded
     }
     if def.tool?.type == "shovel" {
         if targetId == Int(B.grass_block) && world.getBlock(x, y + 1, z) == 0 {
@@ -1157,6 +1200,69 @@ public func useItem(_ ctx: InteractCtx, _ hit: RaycastHit?) -> Bool {
         return placeBlock(ctx, hit, Int(block), held)
     }
     return false
+}
+
+/// Canonical actor-neutral hoe-on-block rule shared by Player and agents.
+/// Crop growth, farmland hydration, and planting remain separate Core rules.
+public func executeBlockTilling(
+    _ context: BlockTillingRuleContext,
+    _ x: Int,
+    _ y: Int,
+    _ z: Int
+) -> BlockTillingRuleResult {
+    let world = context.world
+    let target = PhysicalBlockPosition(x: x, y: y, z: z)
+    let original = world.getBlock(x, y, z)
+    let targetID = original >> 4
+    guard context.heldItem.id >= 0, context.heldItem.id < itemDefs.count,
+          context.heldItem.count > 0,
+          itemDef(context.heldItem.id).tool?.type == "hoe" else {
+        return BlockTillingRuleResult(
+            status: .refused, target: target, originalCell: original,
+            finalCell: original, mutations: []
+        )
+    }
+    var mutations: [PhysicalBlockMutation] = []
+    let entityIDsBefore = Set(world.entities.map(\.id))
+    if (targetID == Int(B.grass_block) || targetID == Int(B.dirt)
+        || targetID == Int(B.dirt_path)) && world.getBlock(x, y + 1, z) == 0 {
+        setBlockRecording(world, x, y, z, Int(cell(B.farmland, 0)), &mutations)
+        guard !mutations.isEmpty else {
+            return BlockTillingRuleResult(
+                status: .refused, target: target, originalCell: original,
+                finalCell: world.getBlock(x, y, z), mutations: []
+            )
+        }
+        world.hooks.playSound(
+            "item.hoe.till", Double(x) + 0.5, Double(y) + 1,
+            Double(z) + 0.5, 1, 1
+        )
+        context.damageTool(1)
+    } else if targetID == Int(B.rooted_dirt) {
+        setBlockRecording(world, x, y, z, Int(cell(B.dirt)), &mutations)
+        guard !mutations.isEmpty else {
+            return BlockTillingRuleResult(
+                status: .refused, target: target, originalCell: original,
+                finalCell: world.getBlock(x, y, z), mutations: []
+            )
+        }
+        spawnItem(
+            world, Double(x) + 0.5, Double(y) + 1, Double(z) + 0.5,
+            ItemStack(iid("hanging_roots"), 1)
+        )
+        context.damageTool(1)
+    } else {
+        return BlockTillingRuleResult(
+            status: .refused, target: target, originalCell: original,
+            finalCell: original, mutations: []
+        )
+    }
+    let spawned = world.entities.map(\.id).filter { !entityIDsBefore.contains($0) }
+    return BlockTillingRuleResult(
+        status: .succeeded, target: target, originalCell: original,
+        finalCell: world.getBlock(x, y, z), mutations: mutations,
+        spawnedItemEntityIDs: spawned
+    )
 }
 
 private func strippedVersion(_ id: Int) -> Int {
