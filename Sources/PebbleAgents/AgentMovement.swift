@@ -68,6 +68,29 @@ public struct AgentMovementOutcome: Codable, Equatable {
     }
 }
 
+/// Identifies the bounded Pebble adapter proof behind a live position update.
+///
+/// The DTO deliberately contains no World, Entity, path node, or collision
+/// type. PebbleAgents accepts only the verified result; Pebble remains the
+/// owner of physical navigation and embodiment validation.
+public enum AgentVerifiedPhysicalMovementKind: String, Codable, Equatable, Sendable {
+    case navigationStep
+    case reconciliation
+}
+
+public struct AgentVerifiedPhysicalMovement: Codable, Equatable {
+    public let kind: AgentVerifiedPhysicalMovementKind
+    public let outcome: AgentMovementOutcome
+
+    public init(
+        kind: AgentVerifiedPhysicalMovementKind,
+        outcome: AgentMovementOutcome
+    ) {
+        self.kind = kind
+        self.outcome = outcome
+    }
+}
+
 public enum AgentMovementCoordinator {
     public static func resolve(snapshot: AgentSessionSnapshot) -> [AgentMovementOutcome] {
         let agents = snapshot.agents.sorted { $0.id < $1.id }

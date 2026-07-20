@@ -24,12 +24,36 @@ extension AgentSimulationSession {
 
     public mutating func applyMovementOutcomes(_ outcomes: [AgentMovementOutcome]) throws {
         var candidate = self
-        try candidate.applyMovementOutcomesInPlace(outcomes)
+        try candidate.applyMovementOutcomesInPlace(outcomes, verifiedKinds: nil)
+        self = candidate
+    }
+
+    /// Publishes positions observed after Pebble-owned physical movement.
+    ///
+    /// Detailed path selection, collision, and embodiment validity are adapter
+    /// responsibilities. This method validates the pure result and deliberately
+    /// does not require it to equal a coarse planner's suggested next cell.
+    public mutating func applyVerifiedPhysicalMovements(
+        _ movements: [AgentVerifiedPhysicalMovement]
+    ) throws {
+        var kinds: [String: AgentVerifiedPhysicalMovementKind] = [:]
+        for movement in movements {
+            guard kinds[movement.outcome.agentId] == nil else {
+                throw AgentSessionError.duplicateMovementOutcome(movement.outcome.agentId)
+            }
+            kinds[movement.outcome.agentId] = movement.kind
+        }
+        var candidate = self
+        try candidate.applyMovementOutcomesInPlace(
+            movements.map(\.outcome),
+            verifiedKinds: kinds
+        )
         self = candidate
     }
 
     private mutating func applyMovementOutcomesInPlace(
-        _ outcomes: [AgentMovementOutcome]
+        _ outcomes: [AgentMovementOutcome],
+        verifiedKinds: [String: AgentVerifiedPhysicalMovementKind]?
     ) throws {
         let populationArrivalEventCapacity = populationRegistry?.migrations.contains {
             $0.status == .admitted || $0.status == .inTransit
@@ -69,6 +93,7 @@ extension AgentSimulationSession {
         var destinationKeys = [String]()
         for id in ids {
             guard let state = statesById[id], let outcome = byId[id] else { continue }
+            let verifiedKind = verifiedKinds?[id]
             guard outcome.tick == tick else { throw AgentSessionError.movementTickMismatch(id) }
             guard outcome.fromPosition == state.position else {
                 throw AgentSessionError.movementFromPositionMismatch(id)
@@ -85,31 +110,45 @@ extension AgentSimulationSession {
                 guard dx == outcome.appliedDX, dy == outcome.appliedDY, dz == outcome.appliedDZ else {
                     throw AgentSessionError.inconsistentMovementDelta(id)
                 }
-                guard abs(dx) + abs(dz) == 1 else {
+                let validHorizontalDelta = verifiedKind == nil
+                    ? abs(dx) + abs(dz) == 1
+                    : max(abs(dx), abs(dz)) == 1
+                guard validHorizontalDelta else {
                     throw AgentSessionError.invalidCardinalMovement(id)
                 }
                 guard (-1...1).contains(dy) else {
                     throw AgentSessionError.invalidVerticalMovement(id)
                 }
-                guard let action = state.lastAction,
-                      action.name == "move_abstract"
-                        || action.name == "approach_resource"
-                        || action.name == "return_home"
-                        || action.name == "approach_construction"
-                        || action.name == "approach_information"
-                        || action.name == "approach_settlement"
-                        || action.name == "approach_dependent",
-                      outcome.requestedDX == (action.dx ?? 0),
-                      outcome.requestedDY == (action.dy ?? 0),
-                      outcome.requestedDZ == (action.dz ?? 0),
-                      outcome.actionReason == action.reason,
-                      outcome.appliedDX == outcome.requestedDX,
-                      outcome.appliedDZ == outcome.requestedDZ else {
-                    throw AgentSessionError.movementActionMismatch(id)
-                }
-                guard outcome.requestedDirection?.dx == outcome.appliedDX,
-                      outcome.requestedDirection?.dz == outcome.appliedDZ else {
-                    throw AgentSessionError.movementDirectionMismatch(id)
+                if verifiedKind == .reconciliation {
+                    guard outcome.requestedDirection == nil,
+                          outcome.requestedDX == 0,
+                          outcome.requestedDY == 0,
+                          outcome.requestedDZ == 0 else {
+                        throw AgentSessionError.movementActionMismatch(id)
+                    }
+                } else {
+                    guard let action = state.lastAction,
+                          action.name == "move_abstract"
+                            || action.name == "approach_resource"
+                            || action.name == "return_home"
+                            || action.name == "approach_construction"
+                            || action.name == "approach_information"
+                            || action.name == "approach_settlement"
+                            || action.name == "approach_dependent",
+                          outcome.requestedDX == (action.dx ?? 0),
+                          outcome.requestedDY == (action.dy ?? 0),
+                          outcome.requestedDZ == (action.dz ?? 0),
+                          outcome.actionReason == action.reason else {
+                        throw AgentSessionError.movementActionMismatch(id)
+                    }
+                    if verifiedKind == nil {
+                        guard outcome.appliedDX == outcome.requestedDX,
+                              outcome.appliedDZ == outcome.requestedDZ,
+                              outcome.requestedDirection?.dx == outcome.appliedDX,
+                              outcome.requestedDirection?.dz == outcome.appliedDZ else {
+                            throw AgentSessionError.movementDirectionMismatch(id)
+                        }
+                    }
                 }
                 let destinationKey = positionKey(outcome.toPosition)
                 guard !destinationKeys.contains(destinationKey) else {
@@ -141,18 +180,22 @@ extension AgentSimulationSession {
         var updated = statesById
         for id in ids {
             guard var state = updated[id], let outcome = byId[id] else { continue }
+            let verifiedKind = verifiedKinds?[id]
             state.lastMovementOutcome = outcome
             switch outcome.status {
             case .moved:
                 state.position = outcome.toPosition
-                state.movementCount += 1
-                state.totalManhattanDistanceMoved += abs(outcome.appliedDX) + abs(outcome.appliedDZ)
-                if (state.currentGoal.kind == .seekSafety
-                        || state.currentGoal.kind == .deliverResources
-                        || (survivalEnabled && state.currentGoal.kind == .rest)),
-                   outcome.distanceReducedTowardHome > 0 {
-                    state.returnHomeMoveCount += 1
-                    state.totalDistanceReducedTowardHome += outcome.distanceReducedTowardHome
+                if verifiedKind != .reconciliation {
+                    state.movementCount += 1
+                    state.totalManhattanDistanceMoved += abs(outcome.appliedDX)
+                        + abs(outcome.appliedDZ)
+                    if (state.currentGoal.kind == .seekSafety
+                            || state.currentGoal.kind == .deliverResources
+                            || (survivalEnabled && state.currentGoal.kind == .rest)),
+                       outcome.distanceReducedTowardHome > 0 {
+                        state.returnHomeMoveCount += 1
+                        state.totalDistanceReducedTowardHome += outcome.distanceReducedTowardHome
+                    }
                 }
                 if state.lastAction?.name == "approach_resource"
                     || state.lastAction?.name == "return_home"
@@ -161,21 +204,66 @@ extension AgentSimulationSession {
                     || state.lastAction?.name == "approach_settlement"
                     || state.lastAction?.name == "approach_dependent" {
                     guard let route = state.navigationProgress.route,
-                          state.navigationProgress.status == .active,
-                          state.navigationProgress.nextStep == outcome.toPosition else {
+                          state.navigationProgress.status == .active else {
                         throw AgentSessionError.movementActionMismatch(id)
                     }
-                    let nextIndex = state.navigationProgress.routeIndex + 1
-                    let arrived = nextIndex == route.positions.count - 1
+                    if verifiedKind == .navigationStep {
+                        if outcome.toPosition == route.positions.last {
+                            state.navigationProgress = AgentNavigationProgress(
+                                status: .arrived,
+                                route: route,
+                                routeIndex: max(0, route.positions.count - 1),
+                                replanCount: state.navigationProgress.replanCount,
+                                consecutiveBlockedMoves: 0,
+                                lastPlanTick: state.navigationProgress.lastPlanTick,
+                                lastInvalidation: state.navigationProgress.lastInvalidation,
+                                lastFailure: nil
+                            )
+                        } else {
+                            // Preserve the coarse route as a waypoint/intent
+                            // artifact. Advance its cursor only when the Core
+                            // result happens to land on a later coarse node;
+                            // otherwise the next cognition tick may replan from
+                            // physical truth without stalling live movement.
+                            let matchedIndex = route.positions.firstIndex(
+                                of: outcome.toPosition
+                            )
+                            let routeIndex = matchedIndex.map {
+                                max(state.navigationProgress.routeIndex, $0)
+                            } ?? state.navigationProgress.routeIndex
+                            state.navigationProgress = AgentNavigationProgress(
+                                status: .active,
+                                route: route,
+                                routeIndex: routeIndex,
+                                replanCount: state.navigationProgress.replanCount,
+                                consecutiveBlockedMoves: 0,
+                                lastPlanTick: state.navigationProgress.lastPlanTick,
+                                lastInvalidation: state.navigationProgress.lastInvalidation,
+                                lastFailure: nil
+                            )
+                        }
+                    } else if verifiedKind == nil {
+                        guard state.navigationProgress.nextStep == outcome.toPosition else {
+                            throw AgentSessionError.movementActionMismatch(id)
+                        }
+                        let nextIndex = state.navigationProgress.routeIndex + 1
+                        let arrived = nextIndex == route.positions.count - 1
+                        state.navigationProgress = AgentNavigationProgress(
+                            status: arrived ? .arrived : .active,
+                            route: route,
+                            routeIndex: nextIndex,
+                            replanCount: state.navigationProgress.replanCount,
+                            consecutiveBlockedMoves: 0,
+                            lastPlanTick: state.navigationProgress.lastPlanTick,
+                            lastInvalidation: state.navigationProgress.lastInvalidation,
+                            lastFailure: nil
+                        )
+                    }
+                } else if verifiedKind == .reconciliation {
                     state.navigationProgress = AgentNavigationProgress(
-                        status: arrived ? .arrived : .active,
-                        route: route,
-                        routeIndex: nextIndex,
                         replanCount: state.navigationProgress.replanCount,
-                        consecutiveBlockedMoves: 0,
                         lastPlanTick: state.navigationProgress.lastPlanTick,
-                        lastInvalidation: state.navigationProgress.lastInvalidation,
-                        lastFailure: nil
+                        lastInvalidation: .targetChanged
                     )
                 }
                 if let entry = AgentFeedbackLoop.movementMemoryEntry(outcome: outcome) {

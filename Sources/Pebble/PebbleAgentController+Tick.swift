@@ -814,28 +814,51 @@ extension PebbleAgentController {
                 .filter { $0.status == .accepted || $0.status == .active }
                 .map { $0.helperID.rawValue })
             if movementEnabled {
-                let outcomes = AgentMovementCoordinator.resolve(snapshot: session.snapshot())
-                if try applyRecordedOperationIfActive(
-                    .movementOutcomes(outcomes),
-                    session: &session,
-                    recorder: &recorder
-                ) == nil {
-                    try session.applyMovementOutcomes(outcomes)
-                }
-                let finalSnapshot = session.snapshot()
-                try movementExecutor.apply(
-                    outcomes: outcomes,
+                let preMovementSnapshot = session.snapshot()
+                let intents = AgentMovementCoordinator.resolve(snapshot: preMovementSnapshot)
+                var movementCandidate = session
+                var movementRecorder = recorder
+                let verified = try movementExecutor.apply(
+                    intents: intents,
+                    snapshot: preMovementSnapshot,
+                    world: world,
                     probesByAgentId: probesByAgentId,
-                    postApplyValidation: {
+                    additionalOccupiedPositions: [AgentPosition(
+                        x: Int(player.x.rounded(.down)),
+                        y: Int(player.y.rounded(.down)),
+                        z: Int(player.z.rounded(.down))
+                    )],
+                    postApplyValidation: { verifiedMovements in
+                        if try applyRecordedOperationIfActive(
+                            .verifiedPhysicalMovements(verifiedMovements),
+                            session: &movementCandidate,
+                            recorder: &movementRecorder
+                        ) == nil {
+                            try movementCandidate.applyVerifiedPhysicalMovements(
+                                verifiedMovements
+                            )
+                        }
                         try validatePostTick(
-                            snapshot: finalSnapshot,
+                            snapshot: movementCandidate.snapshot(),
                             result: result,
-                            dependentCareEnabled: session.dependentCareEnabled,
+                            dependentCareEnabled: movementCandidate.dependentCareEnabled,
                             cooperationTravelAgentIDs: cooperationTravelAgentIDs
                         )
                     }
                 )
-                lastMovementOutcomes = outcomes
+                session = movementCandidate
+                recorder = movementRecorder
+                lastMovementOutcomes = verified.map(\.outcome)
+                let physicalMovementSummary = verified.map { movement in
+                    let outcome = movement.outcome
+                    return "\(outcome.agentId):\(outcome.status.rawValue):"
+                        + "\(outcome.fromPosition.x),\(outcome.fromPosition.y),\(outcome.fromPosition.z)>"
+                        + "\(outcome.toPosition.x),\(outcome.toPosition.y),\(outcome.toPosition.z)"
+                }.joined(separator: ";")
+                trace(
+                    "embodiment movement tick=\(session.tick) authority=PebbleCore "
+                        + "publication=verified outcomes=\(physicalMovementSummary) noNormalSetPos=1"
+                )
             } else {
                 lastMovementOutcomes = []
                 if session.settlementMetricsEnabled,

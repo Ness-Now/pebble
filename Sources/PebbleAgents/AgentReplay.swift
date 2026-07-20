@@ -38,6 +38,7 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case advanceTick
     case externalUpdate
     case movementOutcomes
+    case verifiedPhysicalMovements
     case interactionOutcome
     case deliveryOutcome
     case consumptionOutcome
@@ -94,6 +95,7 @@ public enum AgentReplayOperation: Codable {
     )
     case externalUpdate(AgentExternalUpdate)
     case movementOutcomes([AgentMovementOutcome])
+    case verifiedPhysicalMovements([AgentVerifiedPhysicalMovement])
     case interactionOutcome(AgentInteractionOutcome)
     case deliveryOutcome(AgentDeliveryOutcome)
     case consumptionOutcome(AgentConsumptionOutcome)
@@ -171,6 +173,7 @@ public enum AgentReplayOperation: Codable {
         case .advanceTick: return .advanceTick
         case .externalUpdate: return .externalUpdate
         case .movementOutcomes: return .movementOutcomes
+        case .verifiedPhysicalMovements: return .verifiedPhysicalMovements
         case .interactionOutcome: return .interactionOutcome
         case .deliveryOutcome: return .deliveryOutcome
         case .consumptionOutcome: return .consumptionOutcome
@@ -859,6 +862,8 @@ extension AgentSimulationSession {
             try candidate.applyExternalUpdate(update)
         case let .movementOutcomes(outcomes):
             try candidate.applyMovementOutcomes(outcomes)
+        case let .verifiedPhysicalMovements(movements):
+            try candidate.applyVerifiedPhysicalMovements(movements)
         case let .interactionOutcome(outcome):
             try candidate.applyInteractionOutcome(outcome)
         case let .deliveryOutcome(outcome):
