@@ -964,6 +964,12 @@ extension PebbleAgentController {
                 session: &session,
                 recorder: &recorder
             )
+            if session.ecologicalObservationEnabled {
+                ecologicalObservationSensor.invalidate(world: world)
+                try recordLiveEcologicalObservations(
+                    world: world, session: &session, recorder: &recorder
+                )
+            }
             let finalSnapshot = session.snapshot()
             self.session = session
             replayRecorder = recorder

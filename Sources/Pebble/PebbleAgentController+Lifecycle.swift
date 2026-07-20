@@ -35,6 +35,7 @@ extension PebbleAgentController {
         interactionExecutor.clearBoundaryAudit()
         naturalResourceExecutor.resetDiagnostics()
         materialCustodyGateway.reset()
+        ecologicalObservationSensor.invalidateAll()
         let probeCount = world.entities.compactMap { $0 as? LabCoreAgentEntity }.count
         guard clearLabCoreAgentProbes(in: world) == probeCount else {
             return failure("PebbleAgents rebuild refused: physical custody cleanup failed.")
@@ -217,6 +218,14 @@ extension PebbleAgentController {
         let followStatus = followMode.statusText
         let wasDemo = demoActive
         let cleanupWorld = activeWorld ?? fallbackWorld
+        if let cleanupWorld,
+           !cleanupEcologicalObservationProofFixture(world: cleanupWorld) {
+            runtimeErrorCount += 1
+            lastError = "ecological observation fixture cleanup failed; session retained"
+            trace("error ecological observation fixture cleanup failed hardFailure=1")
+            return 0
+        }
+        ecologicalObservationSensor.invalidateAll()
         let constructionBeforeCleanup = constructionExecutor.state
         let constructionRestored = cleanupWorld.map {
             constructionExecutor.cleanup(world: $0)

@@ -468,6 +468,14 @@ extension PebbleAgentController {
             trace("checkpoint load refused name=\(name.rawValue) reason=teachingGate")
             return failure("Checkpoint load refused: Teaching gate or dependency is disabled.")
         }
+        if candidate.ecologicalObservationEnabled
+            && (!ecologicalObservationFeatureEnabled || !featureEnabled
+                || !persistenceFeatureEnabled || !populationFeatureEnabled) {
+            trace("checkpoint load refused name=\(name.rawValue) reason=ecologicalObservationGate")
+            return failure(
+                "Checkpoint load refused: ecological observation gate or dependency is disabled."
+            )
+        }
         let candidateDigest = try candidate.durableStateDigest()
         guard candidateDigest == stored.manifest.semanticDigest else {
             throw AgentCheckpointError.semanticDigestMismatch
@@ -490,6 +498,7 @@ extension PebbleAgentController {
             constructionExecutor = PebbleAgentConstructionExecutor()
             interactionExecutor = PebbleAgentInteractionExecutor()
             naturalResourceExecutor = PebbleAgentNaturalResourceExecutor()
+            ecologicalObservationSensor.invalidateAll()
             naturalResourceExecutor.restoreScanDiagnostics(
                 stored.manifest.orchestration.naturalResourceScanDiagnostics
             )
