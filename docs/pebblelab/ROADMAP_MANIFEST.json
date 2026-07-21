@@ -4,7 +4,7 @@
   "baselineHead": "b58f71b75110c2e65403cd073409a8559429ec77",
   "branch": "lab/pebblelab-v1",
   "canonicalRoadmap": "docs/pebblelab/PEBBLE_CIVILIZATION_ROADMAP.md",
-  "current": "CIV-22",
+  "current": "CIV-23",
   "gates": {
     "R": {
       "title": "No Parallel Physical Engines",
@@ -153,12 +153,12 @@
     {
       "id": "CIV-22",
       "title": "Agriculture and Managed Surplus V1",
-      "status": "current"
+      "status": "completed"
     },
     {
       "id": "CIV-23",
       "title": "Fishing, Hunting and Wild Subsistence V1",
-      "status": "planned"
+      "status": "current"
     },
     {
       "id": "CIV-24",

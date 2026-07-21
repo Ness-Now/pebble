@@ -20,11 +20,11 @@ Baseline de ce recalage :
 
 ## Position canonique actuelle
 
-`CIV-00` à `CIV-21` sont terminés et acquis dans leurs contrats bornés. Gate R
+`CIV-00` à `CIV-22` sont terminés et acquis dans leurs contrats bornés. Gate R
 est acquise. La
 phase canonique actuelle est :
 
-`CIV-22 — Agriculture and Managed Surplus V1`.
+`CIV-23 — Fishing, Hunting and Wild Subsistence V1`.
 
 Les noms `NEXT-1` et `NEXT-2` sont uniquement des alias historiques :
 
@@ -67,10 +67,14 @@ Les preuves acquises couvrent notamment, dans leurs limites actuelles :
   live vérifiée restent l'autorité de PebbleCore via les adapters de Pebble.
 - l'observation écologique CIV-21 reste locale, bornée et read-only ; son
   calendrier civil n'altère ni croissance, ni météo, ni autre vérité physique.
+- l'agriculture CIV-22 orchestre labourage, plantation, croissance Farming,
+  récolte, custody, dépôt et surplus courant à partir des vrais outils, items,
+  blocs, random ticks et containers PebbleCore, sans rendement abstrait live.
 
-Ces preuves ne constituent pas encore une agriculture réelle, une économie
-d’items complète, une grande population, un cycle de vie complet, un système
-de connaissance, une culture, une institution ou une civilisation médiévale.
+Ces preuves ne constituent pas encore une société locale autosuffisante, une
+économie d’items complète, une grande population, un cycle de vie complet, un
+système de connaissance, une culture, une institution ou une civilisation
+médiévale.
 
 ## Décision Reuse-First
 
@@ -236,8 +240,8 @@ exécute le mouvement physique. La validation senior du SHA publié
 | --- | --- | --- |
 | `CIV-20` | completed | Demonstration, Teaching and Apprenticeship V1 |
 | `CIV-21` | completed | Ecological Observation and Civil Calendar V1 |
-| `CIV-22` | current | Agriculture and Managed Surplus V1 |
-| `CIV-23` | planned | Fishing, Hunting and Wild Subsistence V1 |
+| `CIV-22` | completed | Agriculture and Managed Surplus V1 |
+| `CIV-23` | current | Fishing, Hunting and Wild Subsistence V1 |
 | `CIV-24` | planned | Livestock and Animal Capital V1 |
 | `CIV-25` | planned | Durable Work Commitments and Emergent Professions V1 |
 
@@ -289,7 +293,7 @@ classe professionnelle imposée.
   schémas v1-v11 restent compatibles avec CIV-21 désactivé et aucune
   observation rétroactive.
 
-#### Contrat courant CIV-22
+#### Contrat acquis CIV-22
 
 - L'intention, le plan borné, les réservations et l'historique agricole sont
   civilisationnels ; farmland, crops, hydratation, lumière, random ticks,
@@ -309,6 +313,50 @@ classe professionnelle imposée.
 - Le checkpoint v13, s'il est activé, conserve seulement intention, références
   stables et histoire bornée ; le champ physique reste dans le save du World et
   doit être réconcilié.
+
+#### Contrat courant CIV-23
+
+- `AgentSimulationSession` possède un état WildSubsistence default-off,
+  déterministe et borné : opportunités locales, réservations one-shot,
+  tentatives, outcomes terminés et historiques non spendables. Il ne possède
+  ni population animale, ni stock de poisson, ni HP de proie, ni inventaire ou
+  moteur de régénération parallèle.
+- La pêche réutilise le vrai `FishingBobber`, son eau, son délai
+  nibble/bite, le RNG et les loot tables PebbleCore. Une primitive de cast
+  actor-neutral et le résultat du retrieve exposent les IDs exacts des
+  `ItemEntity`; l'adapter Pebble réutilise ensuite la custody CIV-16/17 et la
+  durabilité canonique de la rod, sans reroll silencieux.
+- La chasse résout une vraie Entity animale observée, approche via
+  `findPath`/`Entity.move`, puis applique une attaque melee Core minimale
+  actor-neutral. Santé, mort, attribution au dernier acteur dommageant,
+  durabilité et drops restent physiques ; une proie morte ou stale ne produit
+  aucun second décès ni loot.
+- La cueillette sauvage V1 choisit un `sweet_berry_bush` mature observé, puis
+  réutilise le break/drop canonique CIV-15/17 et la custody exacte. Sa
+  déplétion est un état du World et sa croissance éventuelle vient uniquement
+  des random ticks PebbleCore.
+- La sélection compare agriculture, pêche, chasse et cueillette à partir
+  d'observations CIV-21 fraîches, de l'équipement réellement disponible, de la
+  distance, du besoin existant, de l'histoire locale propre et de la pratique,
+  avec tie-break déterministe. Elle ne connaît ni futur loot, ni rendement
+  caché, ni meilleure stratégie globale.
+- Les domaines minimaux `fishing` et `hunting` complètent `foraging` pour la
+  cueillette. Seule une acquisition matérielle physique causalement validée
+  crédite exactement une pratique ; Teaching accepte ces domaines sans
+  conférer de skill par observation et aucun skill ne change RNG, damage,
+  drops ou croissance.
+- Cod, salmon, raw chicken et sweet berries restent classés par les métadonnées
+  food PebbleCore. La consommation agent de vrais `ItemStack` n'a pas encore
+  de primitive actor-neutral canonique ; CIV-23 ne crée donc aucun second
+  moteur de calories et ne prétend pas transformer la viande crue en repas.
+- Checkpoint/replay v14 conserve seulement l'état civilisationnel terminé et
+  reste compatible avec v1-v13, WildSubsistence désactivé et vide. Un cast ou
+  combat physique actif n'est pas restart-safe et doit être annulé ou
+  réconcilié depuis le World, jamais rejoué comme moteur Civilization.
+- Les trois chemins live produisent zéro crédit `AgentCampStock`, inventory
+  générique ou yield CIV-09. La disponibilité courante vient uniquement de la
+  custody ou d'un container physique ; Gate R reste acquise et Gate B reste
+  non acquise.
 
 ### Économie matérielle locale — Gate C
 
@@ -469,6 +517,7 @@ monde de vivre.
   reviewables.
 - `CIV-15` à `CIV-19` ont acquis les frontières actor-neutral, custody,
   harvest, construction, navigation et embodiment ; Gate R est acquise.
-  `CIV-20` et `CIV-21` sont acquis. `CIV-22` est la verticale actuelle : elle
-  orchestre les vraies règles Farming PebbleCore sans ajouter de moteur de
-  croissance, d'inventory, de drops, de pathfinding ou de saison parallèle.
+  `CIV-20` à `CIV-22` sont acquis. `CIV-23` est la verticale actuelle : elle
+  orchestre les vraies règles de pêche, combat, drops et ressources sauvages
+  PebbleCore sans ajouter de stock, RNG, damage, pathfinding ou régénération
+  parallèle.

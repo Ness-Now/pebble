@@ -38,14 +38,19 @@ session. Ce chemin ne mute ni World, ni matière, ni écologie coarse CIV-09.
 Sous la gate CIV-22, un plan agricole borné sélectionne un site observé, puis
 compose navigation, labourage, plantation, croissance Farming Core, récolte,
 custody et dépôt dans un vrai container sans créer de stock abstrait.
+Sous la gate CIV-23, trois intentions distinctes réutilisent respectivement le
+vrai `FishingBobber`, le combat/mort/drop Core et le break canonique d'une
+ressource sauvage ; tous les résultats passent par les IDs exacts des
+`ItemEntity` et la custody réelle, sans fish/meat/berry stock abstrait.
 
 ## Prérequis et lancement
 
 Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population`, `--multiscale`, `--ecology`, `--mortality`, `--reproduction`, `--kinship`, `--households`, `--care`, `--skills`, `--material`, `--harvest` et `--construction` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07, métriques settlement CIV-08, écologie alimentaire CIV-09, sortie de population CIV-10, âge/maturité/reproduction bornée CIV-11, parenté durable CIV-12A, appartenance household CIV-12B, dependent care final de CIV-12, compétences pratiques CIV-13, custody matérielle CIV-16, convergence harvest CIV-17 et convergence construction CIV-18. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
 
 Les options supplémentaires `--embodiment`, `--teaching`,
-`--ecological-observation` et `--agriculture` portent respectivement les
-preuves CIV-19, CIV-20, CIV-21 et CIV-22 décrites ci-dessous.
+`--ecological-observation`, `--agriculture` et `--wild-subsistence` portent
+respectivement les preuves CIV-19, CIV-20, CIV-21, CIV-22 et CIV-23 décrites
+ci-dessous.
 
 Depuis la racine du dépôt :
 
@@ -281,6 +286,53 @@ ferme ne crédite ni `AgentCampStock`, ni ressource générique, ni
 `AgentLocalEcologyState`. La capture finale conserve deux crops, farmland, eau,
 container et probes pour inspection manuelle, puis la terminaison restaure la
 fixture et exige `runtimeErrors=0`.
+
+## CIV-23 — Pêche, chasse et subsistance sauvage V1
+
+Le mode `scripts/verify-pebblelab-live.sh --wild-subsistence` utilise
+`PebbleLab-Disposable-WildSubsistence-46`, seed `46`, et active seulement les
+dépendances agents, mouvement, interaction, material, persistence, population,
+lifecycle, skills, observation CIV-21 et la gate WildSubsistence default-off.
+Le préflight obligatoire reste `--wild-subsistence --dry-run`. Les commandes
+opérationnelles sont `/lab wild-subsistence on|status` et
+`/lab wild-subsistence proof setup|fish|hunt|gather|final` ; `proof` est refusé
+hors monde explicitement jetable.
+
+La fixture bornée prépare une petite zone remeshée et intégralement réversible,
+une vraie rod, une vraie iron sword, de l'eau réelle, une `Chicken` Core et un
+`sweet_berry_bush` mature. Les actions productives ne seedent aucun résultat :
+`agent_0` approche par `findPath`/`Entity.move`, caste un vrai
+`FishingBobber`, attend le cycle nibble/bite piloté par le RNG Core, retrieve et
+acquiert uniquement les IDs exacts du catch ; `agent_1` résout à nouveau la
+proie mobile, approche, cause sa vraie mort melee et acquiert les vrais drops ;
+`agent_2` approche à reach canonique, casse le bush par CIV-15/17 et acquiert
+ses drops exacts. Le scénario vérifie rod durability, attribution au dernier
+acteur dommageant, déplétion World, une pratique par succès, zéro
+`AgentCampStock`/inventory générique/yield CIV-09 et trois outcomes v14
+non spendables.
+
+Une fault injection effectue aussi un second vrai catch avec la custody pleine.
+Le gateway refuse `destinationFull`, conserve exactement les `ItemEntity` Core
+dans le World, ne publie aucun succès ni pratique et trace explicitement la
+réconciliation `physicalTruthRetained`; la fixture les retire seulement lors
+de son cleanup final vérifié.
+
+Les captures `subsistence-fishing.png`, `subsistence-hunting.png`,
+`subsistence-gathering.png` et `subsistence-final.png` montrent l'eau, les
+embodiments, la proie ou son animation de mort immédiate, le bush avant puis
+après déplétion et la scène finale. Le retrieve canonique retire le bobber avant
+la capture ; son cast, ses 971 ticks seedés, sa bite, son loot et son cleanup
+sont donc prouvés par la trace structurée plutôt que par un bobber laissé
+artificiellement à l'écran. L'application tente l'activation foreground et les
+PNG exigent toujours une inspection manuelle.
+
+Le checkpoint/replay v14 couvre l'état civilisationnel terminé. La preuve live
+signale volontairement `restartSafe=0` : un cast actif, une poursuite ou un
+combat physique ne sont pas sérialisés par Civilization et doivent être
+annulés/réconciliés depuis le World au restart, jamais rejoués comme moteur
+parallèle. La terminaison retire les entités de fixture, restaure exactement les
+cellules, custody et probes, et exige `runtimeErrors=0`. Gate R reste acquise ;
+Gate B reste non acquise.
 
 ## CIV-04 — Canal physique local
 
