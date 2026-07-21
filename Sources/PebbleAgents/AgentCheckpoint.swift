@@ -15,6 +15,7 @@ public enum AgentCheckpointSchema {
     public static let teachingVersion = 11
     public static let ecologicalObservationVersion = 12
     public static let agricultureVersion = 13
+    public static let wildSubsistenceVersion = 14
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -23,7 +24,7 @@ public enum AgentCheckpointSchema {
             || version == kinshipVersion || version == householdVersion
             || version == dependentCareVersion || version == skillVersion
             || version == teachingVersion || version == ecologicalObservationVersion
-            || version == agricultureVersion
+            || version == agricultureVersion || version == wildSubsistenceVersion
     }
 }
 
@@ -210,9 +211,12 @@ public struct AgentSessionDurableState: Codable {
     public let teachingState: AgentTeachingState?
     public let ecologicalObservationState: AgentEcologicalObservationState?
     public let agricultureState: AgentAgricultureState?
+    public let wildSubsistenceState: AgentWildSubsistenceState?
 
     init(session: AgentSimulationSession) {
-        if session.agricultureState != nil {
+        if session.wildSubsistenceState != nil {
+            schemaVersion = AgentCheckpointSchema.wildSubsistenceVersion
+        } else if session.agricultureState != nil {
             schemaVersion = AgentCheckpointSchema.agricultureVersion
         } else if session.ecologicalObservationState != nil {
             schemaVersion = AgentCheckpointSchema.ecologicalObservationVersion
@@ -324,6 +328,7 @@ public struct AgentSessionDurableState: Codable {
         teachingState = session.teachingState
         ecologicalObservationState = session.ecologicalObservationState
         agricultureState = session.agricultureState
+        wildSubsistenceState = session.wildSubsistenceState
     }
 }
 
@@ -751,8 +756,10 @@ extension AgentSimulationSession {
         teachingState = state.teachingState
         ecologicalObservationState = state.ecologicalObservationState
         agricultureState = state.agricultureState
+        wildSubsistenceState = state.wildSubsistenceState
         try validateEcologicalObservationStateIfEnabled()
         try validateAgricultureStateIfEnabled()
+        try validateWildSubsistenceStateIfEnabled()
         if let settlementMetricsState {
             try validateSettlementMetricsState(settlementMetricsState)
         }
@@ -768,11 +775,17 @@ extension AgentSimulationSession {
         }
         guard state.schemaVersion == AgentCheckpointSchema.ecologicalObservationVersion
                 || state.schemaVersion == AgentCheckpointSchema.agricultureVersion
+                || state.schemaVersion == AgentCheckpointSchema.wildSubsistenceVersion
                 || state.ecologicalObservationState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.schemaVersion == AgentCheckpointSchema.agricultureVersion
+                || state.schemaVersion == AgentCheckpointSchema.wildSubsistenceVersion
                 || state.agricultureState == nil else {
+            throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
+        }
+        guard state.schemaVersion == AgentCheckpointSchema.wildSubsistenceVersion
+                || state.wildSubsistenceState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard (state.schemaVersion == AgentCheckpointSchema.currentVersion
@@ -844,7 +857,13 @@ extension AgentSimulationSession {
                     && state.populationRegistry != nil
                     && state.lifecycleState != nil && state.skillState != nil
                     && state.ecologicalObservationState != nil
-                    && state.agricultureState != nil) else {
+                    && state.agricultureState != nil
+                    && state.wildSubsistenceState == nil)
+                || (state.schemaVersion == AgentCheckpointSchema.wildSubsistenceVersion
+                    && state.populationRegistry != nil
+                    && state.lifecycleState != nil && state.skillState != nil
+                    && state.ecologicalObservationState != nil
+                    && state.wildSubsistenceState != nil) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.clock.tick.rawValue >= 0,
@@ -1404,6 +1423,20 @@ extension AgentSimulationSession {
                 )
             } catch {
                 throw AgentCheckpointError.invalidBound("agriculture")
+            }
+        }
+        if let wildSubsistence = state.wildSubsistenceState {
+            do {
+                try validateWildSubsistenceState(
+                    wildSubsistence,
+                    agents: Set(state.agents.map(\.agentID)),
+                    clock: state.clock,
+                    causalLatestSequence: state.causalLedger.latestSequence,
+                    causalDroppedEventCount: state.causalLedger.droppedEventCount,
+                    causalEvents: state.causalLedger.events
+                )
+            } catch {
+                throw AgentCheckpointError.invalidBound("wild subsistence")
             }
         }
         for relation in state.socialTrustRelations {

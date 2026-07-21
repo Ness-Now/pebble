@@ -162,6 +162,12 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case agriculturalCropHarvested
     case agriculturalSurplusStored
     case agriculturalCellReconciled
+    case wildSubsistenceInitialized
+    case subsistenceOpportunitySelected
+    case fishingCatchAcquired
+    case wildAnimalHunted
+    case wildResourceGathered
+    case wildSubsistenceAttemptFailed
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -186,6 +192,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case teachingTransition
     case ecologicalObservationTransition
     case agricultureTransition
+    case wildSubsistenceTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -462,6 +469,15 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         quantity: Int,
         digest: String
     )
+    case wildSubsistence(
+        opportunityID: String?,
+        attemptID: String?,
+        strategy: String?,
+        targetKey: String?,
+        status: String,
+        quantity: Int,
+        digest: String
+    )
 
     var canonicalText: String {
         switch self {
@@ -651,6 +667,11 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
             return "agriculture|\(plotID ?? "none")|\(cellIndex.map(String.init) ?? "none")|"
                 + "\(actionID ?? "none")|\(status)|\(physicalFingerprint)|"
                 + "\(itemKey ?? "none")|\(quantity)|\(digest)"
+        case let .wildSubsistence(
+            opportunityID, attemptID, strategy, targetKey, status, quantity, digest
+        ):
+            return "wildSubsistence|\(opportunityID ?? "none")|\(attemptID ?? "none")|"
+                + "\(strategy ?? "none")|\(targetKey ?? "none")|\(status)|\(quantity)|\(digest)"
         }
     }
 }
@@ -822,7 +843,13 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.agriculturalCropMatured, .agriculture),
              (.agriculturalCropHarvested, .agriculture),
              (.agriculturalSurplusStored, .agriculture),
-             (.agriculturalCellReconciled, .agriculture):
+             (.agriculturalCellReconciled, .agriculture),
+             (.wildSubsistenceInitialized, .wildSubsistence),
+             (.subsistenceOpportunitySelected, .wildSubsistence),
+             (.fishingCatchAcquired, .wildSubsistence),
+             (.wildAnimalHunted, .wildSubsistence),
+             (.wildResourceGathered, .wildSubsistence),
+             (.wildSubsistenceAttemptFailed, .wildSubsistence):
             matches = true
         default:
             matches = false

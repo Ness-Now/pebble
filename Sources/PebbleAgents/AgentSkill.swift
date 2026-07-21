@@ -42,6 +42,8 @@ public enum AgentSkillDomain: String, Codable, CaseIterable, Comparable, Sendabl
     case construction
     case caregiving
     case cultivation
+    case fishing
+    case hunting
 
     public static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
 }
@@ -235,6 +237,12 @@ enum AgentMaterialSuccessEvidence {
             return event.origin == .agricultureTransition && event.subjectID == nil
                 && event.operationID != nil && event.actorID == agentID
                 && AgentMaterialSuccessEvidence.status(event) == "succeeded"
+        case (.foraging, .wildResourceGathered, .wildSubsistence),
+             (.fishing, .fishingCatchAcquired, .wildSubsistence),
+             (.hunting, .wildAnimalHunted, .wildSubsistence):
+            return event.origin == .wildSubsistenceTransition
+                && event.subjectID == nil && event.operationID != nil
+                && AgentMaterialSuccessEvidence.status(event) == "succeeded"
         default:
             return false
         }
@@ -246,6 +254,7 @@ enum AgentMaterialSuccessEvidence {
         case let .ecologyForage(_, _, _, status, _, _, _, _): return status
         case let .dependentCare(_, _, _, _, _, _, _, status, _, _, _): return status
         case let .agriculture(_, _, _, status, _, _, _, _): return status
+        case let .wildSubsistence(_, _, _, _, status, _, _): return status
         default: return "unknown"
         }
     }

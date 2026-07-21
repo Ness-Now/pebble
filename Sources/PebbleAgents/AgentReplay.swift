@@ -14,6 +14,7 @@ public enum AgentReplaySchema {
     public static let teachingVersion = 11
     public static let ecologicalObservationVersion = 12
     public static let agricultureVersion = 13
+    public static let wildSubsistenceVersion = 14
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -22,7 +23,7 @@ public enum AgentReplaySchema {
             || version == kinshipVersion || version == householdVersion
             || version == dependentCareVersion || version == skillVersion
             || version == teachingVersion || version == ecologicalObservationVersion
-            || version == agricultureVersion
+            || version == agricultureVersion || version == wildSubsistenceVersion
     }
 }
 
@@ -102,6 +103,9 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case agriculturalPlotPlanning
     case agriculturalReservation
     case agriculturalAction
+    case wildSubsistenceFeature
+    case subsistenceOpportunitySelection
+    case wildSubsistenceOutcome
 }
 
 public enum AgentReplayOperation: Codable {
@@ -215,6 +219,9 @@ public enum AgentReplayOperation: Codable {
         contenders: [AgentID]
     )
     case recordAgriculturalAction(AgentAgriculturalActionOutcome)
+    case setWildSubsistenceEnabled(Bool, configuration: AgentWildSubsistenceConfiguration)
+    case selectWildSubsistenceOpportunity(AgentSubsistenceDecisionContext)
+    case recordWildSubsistenceOutcome(AgentSubsistenceOutcome)
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -280,6 +287,9 @@ public enum AgentReplayOperation: Codable {
         case .planAgriculturalPlot: return .agriculturalPlotPlanning
         case .reserveAgriculturalCell: return .agriculturalReservation
         case .recordAgriculturalAction: return .agriculturalAction
+        case .setWildSubsistenceEnabled: return .wildSubsistenceFeature
+        case .selectWildSubsistenceOpportunity: return .subsistenceOpportunitySelection
+        case .recordWildSubsistenceOutcome: return .wildSubsistenceOutcome
         }
     }
 
@@ -312,6 +322,9 @@ public enum AgentReplayOperation: Codable {
             raw = "ecological-observation:\(observation.observerID.rawValue):"
                 + "\(observation.observedAtSimulationTick):\(observation.digest)"
         case let .recordAgriculturalAction(outcome): raw = outcome.actionID.rawValue
+        case let .recordWildSubsistenceOutcome(outcome): raw = outcome.attemptID.rawValue
+        case let .selectWildSubsistenceOpportunity(context):
+            raw = "subsistence-select:\(context.actorID.rawValue)"
         case let .planAgriculturalPlot(
             plannerID, _, crop, sourceObservationEventID, _
         ):
@@ -700,6 +713,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.agricultureVersion
         }
+        if case let .setWildSubsistenceEnabled(enabled, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.wildSubsistenceVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "wild subsistence activation must be the first v14 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.wildSubsistenceVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -897,6 +920,8 @@ public enum AgentSessionReplayer {
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.teachingVersion)
             || (manifest.schemaVersion == AgentReplaySchema.agricultureVersion
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.ecologicalObservationVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.wildSubsistenceVersion
+                && checkpoint.schemaVersion <= AgentCheckpointSchema.agricultureVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -1147,6 +1172,12 @@ extension AgentSimulationSession {
             )
         case let .recordAgriculturalAction(outcome):
             _ = try candidate.recordAgriculturalActionSuccess(outcome)
+        case let .setWildSubsistenceEnabled(enabled, configuration):
+            try candidate.setWildSubsistenceEnabled(enabled, configuration: configuration)
+        case let .selectWildSubsistenceOpportunity(context):
+            _ = try candidate.selectWildSubsistenceOpportunity(context)
+        case let .recordWildSubsistenceOutcome(outcome):
+            _ = try candidate.recordWildSubsistenceOutcome(outcome)
         }
         self = candidate
         let causal = causalLedgerSnapshot().summary
