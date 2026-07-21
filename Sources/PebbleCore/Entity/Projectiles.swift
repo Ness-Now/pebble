@@ -525,9 +525,66 @@ public final class FireworkEntity: Entity {
     }
 }
 
+public enum FishingRetrievalKind: String, Equatable {
+    case missed
+    case hookedEntity
+    case caughtLoot
+}
+
+public struct FishingRetrievalResult: Equatable {
+    public let kind: FishingRetrievalKind
+    public let spawnedItemEntityIDs: [Int]
+    public let experienceAmount: Int
+
+    public init(
+        kind: FishingRetrievalKind,
+        spawnedItemEntityIDs: [Int] = [],
+        experienceAmount: Int = 0
+    ) {
+        self.kind = kind
+        self.spawnedItemEntityIDs = spawnedItemEntityIDs
+        self.experienceAmount = experienceAmount
+    }
+}
+
+/// Actor-neutral cast seam. PebbleCore retains trajectory, bobber ticking,
+/// bite timing, RNG, loot, and spawned ItemEntity authority.
+@discardableResult
+public func castFishingBobber(
+    world: World,
+    owner: Entity,
+    rod: ItemStack,
+    originX: Double,
+    originY: Double,
+    originZ: Double,
+    pitch: Double,
+    yaw: Double
+) -> FishingBobber {
+    let bobber = FishingBobber(world: world)
+    bobber.ownerActor = owner
+    bobber.fishingRod = rod
+    bobber.setPos(originX, originY, originZ)
+    let lookX = -detSin(yaw) * detCos(pitch)
+    let lookY = -detSin(pitch)
+    let lookZ = detCos(yaw) * detCos(pitch)
+    bobber.vx = lookX * 0.8
+    bobber.vy = lookY * 0.8 + 0.1
+    bobber.vz = lookZ * 0.8
+    world.addEntity(bobber)
+    world.hooks.playSound("entity.fishing_bobber.throw", owner.x, owner.y, owner.z, 0.5, 0.6)
+    return bobber
+}
+
 public final class FishingBobber: Entity {
     public override var type: String { "fishing_bobber" }
-    public var ownerPlayer: LivingEntity? = nil
+    public var ownerActor: Entity? = nil
+    public var ownerPlayer: LivingEntity? {
+        get { ownerActor as? LivingEntity }
+        set { ownerActor = newValue }
+    }
+    /// Exact real rod stack used by a non-Living actor. A Living owner keeps
+    /// the historical current-main-hand semantics for Player parity.
+    public var fishingRod: ItemStack? = nil
     public var biteTime = 0
     public var nibbling = 0
     public var hookedEntity: Entity? = nil
@@ -537,7 +594,7 @@ public final class FishingBobber: Entity {
     }
     public override func tick() {
         baseTick()
-        guard let op = ownerPlayer, !op.dead else { remove(); return }
+        guard let op = ownerActor, !op.dead else { remove(); return }
         let ddx = x - op.x, ddy = y - op.y, ddz = z - op.z
         let d = (ddx * ddx + ddy * ddy + ddz * ddz).squareRoot()
         if d > 32 { retrieve(); return }
@@ -566,7 +623,8 @@ public final class FishingBobber: Entity {
             } else if biteTime > 0 {
                 biteTime -= 1
             } else {
-                let lure = op.mainHand.map { enchLevel($0, "lure") } ?? 0
+                let held = ownerPlayer?.mainHand ?? fishingRod
+                let lure = held.map { enchLevel($0, "lure") } ?? 0
                 if gameRng.nextFloat() < 1 / Double(max(20, 400 - lure * 100)) {
                     nibbling = 20 + gameRng.nextInt(20)
                     world.hooks.playSound("entity.fishing_bobber.splash", x, y, z, 0.6, 1)
@@ -580,22 +638,28 @@ public final class FishingBobber: Entity {
         vx *= 0.92; vy *= 0.92; vz *= 0.92
         // hook entities
         for e in world.getEntitiesInBox(bb(), except: self, filter: { e2 in
-            e2 is LivingEntity && !(e2 === self.ownerPlayer)
+            e2 is LivingEntity && !(e2 === self.ownerActor)
         }) {
             hookedEntity = e as? Entity
             break
         }
     }
-    /// returns loot if a fish was caught
-    public func retrieve() {
-        if let e = hookedEntity, let op = ownerPlayer {
+    /// Returns the exact entities synchronously caused by this one retrieval.
+    @discardableResult
+    public func retrieve() -> FishingRetrievalResult {
+        var kind: FishingRetrievalKind = .missed
+        var spawnedItemEntityIDs: [Int] = []
+        var experienceAmount = 0
+        if let e = hookedEntity, let op = ownerActor {
             // yank entity toward player
             e.vx += (op.x - e.x) * 0.1
             e.vy += (op.y - e.y) * 0.1 + 0.3
             e.vz += (op.z - e.z) * 0.1
-        } else if biteTime > 0, let op = ownerPlayer {
+            kind = .hookedEntity
+        } else if biteTime > 0, let op = ownerActor {
             // catch!
-            let luck = op.mainHand.map { enchLevel($0, "luck_of_the_sea") } ?? 0
+            let held = ownerPlayer?.mainHand ?? fishingRod
+            let luck = held.map { enchLevel($0, "luck_of_the_sea") } ?? 0
             var rng = RandomX(UInt32(gameRng.nextInt(1000000000)))
             let roll = rng.nextFloat()
             let table = roll < 0.85 - Double(luck) * 0.02 ? "fishing_fish"
@@ -609,10 +673,18 @@ public final class FishingBobber: Entity {
                 item.vx = dx / dd * 0.35
                 item.vy = dy / dd * 0.35 + dd.squareRoot() * 0.04 + 0.15
                 item.vz = dz / dd * 0.35
+                spawnedItemEntityIDs.append(item.id)
             }
-            spawnXP(world, op.x, op.y, op.z, 1 + gameRng.nextInt(6))
+            experienceAmount = 1 + gameRng.nextInt(6)
+            spawnXP(world, op.x, op.y, op.z, experienceAmount)
+            kind = .caughtLoot
         }
         remove()
+        return FishingRetrievalResult(
+            kind: kind,
+            spawnedItemEntityIDs: spawnedItemEntityIDs,
+            experienceAmount: experienceAmount
+        )
     }
 }
 

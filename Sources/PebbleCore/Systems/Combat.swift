@@ -8,6 +8,119 @@ private func typeMatchesAny(_ type: String, _ words: [String]) -> Bool {
     words.contains { type.contains($0) }
 }
 
+private func canonicalMeleeDamage(
+    attacker: LivingEntity?,
+    held: ItemStack?,
+    target: Entity,
+    strength: Double
+) -> Double {
+    let tool = held.map { itemDef($0.id).tool } ?? nil
+    var damage = 1 + (tool?.attackDamage ?? 0)
+    if let held {
+        let sharpness = enchLevel(held, "sharpness")
+        damage += Double(sharpness) * 0.5 + (sharpness > 0 ? 0.5 : 0)
+        if typeMatchesAny(target.type, ["zombie", "skeleton", "wither", "phantom", "drowned", "husk", "stray", "zoglin"]) {
+            damage += Double(enchLevel(held, "smite")) * 2.5
+        }
+        if typeMatchesAny(target.type, ["spider", "silverfish", "endermite", "bee"]) {
+            damage += Double(enchLevel(held, "bane_of_arthropods")) * 2.5
+        }
+    }
+    damage += 3 * Double(attacker?.effectLevel("strength") ?? 0)
+    damage -= 4 * Double(attacker?.effectLevel("weakness") ?? 0)
+    return damage * (0.2 + strength * strength * 0.8)
+}
+
+public enum ActorMeleeAttackStatus: String, Equatable {
+    case succeeded
+    case invalidActorOrTarget
+    case outOfReach
+    case targetRejectedDamage
+}
+
+public struct ActorMeleeAttackResult: Equatable {
+    public let status: ActorMeleeAttackStatus
+    public let attemptedDamage: Double
+    public let healthBefore: Double?
+    public let healthAfter: Double?
+    public let killed: Bool
+    public let attributedToAttacker: Bool
+    public let spawnedItemEntityIDs: [Int]
+    public let durabilityResult: ItemStackDurabilityResult
+
+    public var succeeded: Bool { status == .succeeded }
+}
+
+/// Minimal actor-neutral melee seam used by non-Player physical adapters.
+/// It reuses the Player base damage formula, LivingEntity damage/death/drop
+/// rules, and ItemStack durability. Crits, sweeping, PvP, and ranged combat
+/// remain in the existing Player-specific path.
+@discardableResult
+public func executeActorMeleeAttack(
+    attacker: Entity,
+    heldItem: ItemStack?,
+    target: LivingEntity,
+    strength: Double = 1,
+    maximumReach: Double = 3,
+    random: () -> Double = { gameRng.nextFloat() }
+) -> ActorMeleeAttackResult {
+    guard attacker.world === target.world, attacker !== target,
+          !attacker.dead, !target.dead, target.deathTime == 0,
+          (0...1).contains(strength), maximumReach > 0 else {
+        return ActorMeleeAttackResult(
+            status: .invalidActorOrTarget, attemptedDamage: 0,
+            healthBefore: target.health, healthAfter: target.health,
+            killed: false, attributedToAttacker: false,
+            spawnedItemEntityIDs: [], durabilityResult: .unchanged
+        )
+    }
+    let dx = attacker.x - target.x
+    let dy = (attacker.y + attacker.height * 0.5) - (target.y + target.height * 0.5)
+    let dz = attacker.z - target.z
+    guard dx * dx + dy * dy + dz * dz <= maximumReach * maximumReach else {
+        return ActorMeleeAttackResult(
+            status: .outOfReach, attemptedDamage: 0,
+            healthBefore: target.health, healthAfter: target.health,
+            killed: false, attributedToAttacker: false,
+            spawnedItemEntityIDs: [], durabilityResult: .unchanged
+        )
+    }
+    let healthBefore = target.health
+    let damage = max(0, canonicalMeleeDamage(
+        attacker: attacker as? LivingEntity,
+        held: heldItem,
+        target: target,
+        strength: strength
+    ))
+    let hurt = target.hurt(damage, "mob", attacker)
+    guard hurt else {
+        return ActorMeleeAttackResult(
+            status: .targetRejectedDamage, attemptedDamage: damage,
+            healthBefore: healthBefore, healthAfter: target.health,
+            killed: false, attributedToAttacker: target.lastAttacker === attacker,
+            spawnedItemEntityIDs: [], durabilityResult: .unchanged
+        )
+    }
+    let durability: ItemStackDurabilityResult
+    if let heldItem, let tool = itemDef(heldItem.id).tool {
+        durability = damageItemStack(
+            heldItem,
+            amount: tool.type == "sword" || tool.type == "trident" ? 1 : 2,
+            random: random
+        )
+    } else {
+        durability = .unchanged
+    }
+    let killed = healthBefore > 0 && target.health <= 0 && target.deathTime > 0
+    return ActorMeleeAttackResult(
+        status: .succeeded, attemptedDamage: damage,
+        healthBefore: healthBefore, healthAfter: target.health,
+        killed: killed, attributedToAttacker: target.lastAttacker === attacker,
+        spawnedItemEntityIDs: killed ? target.lastDeathDropItemEntityIDs : [],
+        durabilityResult: durability
+    )
+}
+
 // ---------------------------------------------------------------------------
 // Player melee attack
 // ---------------------------------------------------------------------------
@@ -19,21 +132,9 @@ public func playerAttack(_ player: Player, _ target: Entity) {
 
     let held = player.mainHand
     let tool = held.map { itemDef($0.id).tool } ?? nil
-    var dmg = 1 + (tool?.attackDamage ?? 0)
-    // enchants
-    if let held {
-        dmg += Double(enchLevel(held, "sharpness")) * 0.5 + (enchLevel(held, "sharpness") > 0 ? 0.5 : 0)
-        if typeMatchesAny(target.type, ["zombie", "skeleton", "wither", "phantom", "drowned", "husk", "stray", "zoglin"]) {
-            dmg += Double(enchLevel(held, "smite")) * 2.5
-        }
-        if typeMatchesAny(target.type, ["spider", "silverfish", "endermite", "bee"]) {
-            dmg += Double(enchLevel(held, "bane_of_arthropods")) * 2.5
-        }
-    }
-    dmg += 3 * Double(player.effectLevel("strength"))
-    dmg -= 4 * Double(player.effectLevel("weakness"))
-    // cooldown scaling
-    dmg *= 0.2 + strength * strength * 0.8
+    var dmg = canonicalMeleeDamage(
+        attacker: player, held: held, target: target, strength: strength
+    )
 
     // crit: falling, not sprinting, full strength
     let crit = strength > 0.9 && player.fallDistance > 0 && !player.onGround && !player.inWater && !player.sprinting && !player.hasEffect("blindness")

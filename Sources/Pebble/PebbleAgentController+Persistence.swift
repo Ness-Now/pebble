@@ -242,6 +242,9 @@ extension PebbleAgentController {
     }
 
     private func liveRestartSafety() -> (safe: Bool, reason: String) {
+        if wildSubsistenceProofFixture != nil {
+            return (false, "wild subsistence proof has physical attempts that are not restart-safe")
+        }
         if agricultureProofFixture != nil {
             return (false, "agriculture proof fixture is app-owned and pending cleanup")
         }

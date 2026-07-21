@@ -957,18 +957,12 @@ public func useItem(_ ctx: InteractCtx, _ hit: RaycastHit?) -> Bool {
             }
             player.fishingBobberId = nil
         }
-        let bobber = FishingBobber(world: world)
-        bobber.ownerPlayer = player
-        bobber.setPos(player.x, player.eyeY() - 0.1, player.z)
-        let lookX = -detSin(player.yaw) * detCos(player.pitch)
-        let lookY = -detSin(player.pitch)
-        let lookZ = detCos(player.yaw) * detCos(player.pitch)
-        bobber.vx = lookX * 0.8
-        bobber.vy = lookY * 0.8 + 0.1
-        bobber.vz = lookZ * 0.8
-        world.addEntity(bobber)
+        let bobber = castFishingBobber(
+            world: world, owner: player, rod: held,
+            originX: player.x, originY: player.eyeY() - 0.1, originZ: player.z,
+            pitch: player.pitch, yaw: player.yaw
+        )
         player.fishingBobberId = bobber.id
-        world.hooks.playSound("entity.fishing_bobber.throw", player.x, player.y, player.z, 0.5, 0.6)
         return true
     }
     if name == "firework_rocket" {

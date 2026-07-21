@@ -409,7 +409,7 @@ public func spawnXP(_ world: World, _ x: Double, _ y: Double, _ z: Double, _ amo
 /// the original design binds the spawners at module init; Swift does it lazily via
 /// registerEntityHelpers() (called from registerAllEntities()).
 public func registerEntityHelpers() {
-    bindSpawners({ w, x, y, z, s, vx, vy, vz in _ = spawnItem(w, x, y, z, s, vx, vy, vz) }, spawnXP)
+    bindSpawners({ w, x, y, z, s, vx, vy, vz in spawnItem(w, x, y, z, s, vx, vy, vz) }, spawnXP)
 }
 
 public var explodeFn: ((World, Double, Double, Double, Double, Bool, Entity?) -> Void)?

@@ -55,6 +55,9 @@ open class LivingEntity: Entity {
     /// set by Player on outgoing attacks (wolf assist targeting reads it)
     public var lastHurtTarget: Entity?
     public var lastHurtByPlayerTime = 0
+    /// Exact ItemEntity identities synchronously emitted by the latest death.
+    /// This is transient physical provenance, not a durable entity identity.
+    public private(set) var lastDeathDropItemEntityIDs: [Int] = []
     public var rng = RandomX(0)   // seeded from gameRng in init (baseline field-init order)
     public var xpReward = 5
     /// water mobs (baseline dynamic props)
@@ -237,6 +240,7 @@ open class LivingEntity: Entity {
     open func die(_ source: String, _ attacker: Entity? = nil) {
         health = 0
         deathTime = 1
+        lastDeathDropItemEntityIDs = []
         world.hooks.playSound(deathSound(), x, y, z, 1, 1)
         if world.rule("doMobLoot") {
             let looting = (attacker as? LivingEntity)?.mainHand.map { enchLevel($0, "looting") } ?? 0
@@ -281,9 +285,13 @@ open class LivingEntity: Entity {
     }
     open func drops() -> [DropEntry] { [] }
 
-    public func dropStack(_ stack: ItemStack) {
-        spawnItemFn?(world, x, y + height / 2, z, stack,
-                     (rng.nextFloat() - 0.5) * 0.1, 0.2, (rng.nextFloat() - 0.5) * 0.1)
+    @discardableResult
+    public func dropStack(_ stack: ItemStack) -> ItemEntity? {
+        let item = spawnItemFn?(world, x, y + height / 2, z, stack,
+                                (rng.nextFloat() - 0.5) * 0.1, 0.2,
+                                (rng.nextFloat() - 0.5) * 0.1)
+        if let item, deathTime > 0 { lastDeathDropItemEntityIDs.append(item.id) }
+        return item
     }
 
     open func hurtSound() -> String { "entity.\(type).hurt" }
@@ -462,10 +470,10 @@ open class LivingEntity: Entity {
 }
 
 // late-bound spawners to avoid import cycles (set by Misc.swift registration)
-public var spawnItemFn: ((World, Double, Double, Double, ItemStack, Double, Double, Double) -> Void)?
+public var spawnItemFn: ((World, Double, Double, Double, ItemStack, Double, Double, Double) -> ItemEntity?)?
 public var spawnXPFn: ((World, Double, Double, Double, Int) -> Void)?
 public func bindSpawners(
-    _ item: ((World, Double, Double, Double, ItemStack, Double, Double, Double) -> Void)?,
+    _ item: ((World, Double, Double, Double, ItemStack, Double, Double, Double) -> ItemEntity?)?,
     _ xp: ((World, Double, Double, Double, Int) -> Void)?
 ) {
     spawnItemFn = item
