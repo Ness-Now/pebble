@@ -176,6 +176,18 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case animalProductAcquired
     case managedAnimalLost
     case livestockTaskCompleted
+    case workCommitmentsInitialized
+    case workDemandRefreshed
+    case workMatchingSelected
+    case workCommitmentStarted
+    case workCommitmentRenewed
+    case workCommitmentSuspended
+    case workCommitmentResumed
+    case workCommitmentFulfilled
+    case workCommitmentEnded
+    case workCommitmentReassigned
+    case workOutcomeValidated
+    case workReputationUpdated
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -202,6 +214,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case agricultureTransition
     case wildSubsistenceTransition
     case livestockTransition
+    case workCommitmentTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -496,6 +509,18 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         quantity: Int,
         digest: String
     )
+    case work(
+        demandID: String?,
+        commitmentID: String?,
+        workerID: String?,
+        observerID: String?,
+        domain: String?,
+        sourceEventID: String?,
+        status: String,
+        quantity: Int,
+        score: Int,
+        digest: String
+    )
 
     var canonicalText: String {
         switch self {
@@ -693,6 +718,13 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         case let .livestock(herdID, animalRecordID, taskID, actionID, status, quantity, digest):
             return "livestock|\(herdID ?? "none")|\(animalRecordID ?? "none")|"
                 + "\(taskID ?? "none")|\(actionID ?? "none")|\(status)|\(quantity)|\(digest)"
+        case let .work(
+            demandID, commitmentID, workerID, observerID, domain,
+            sourceEventID, status, quantity, score, digest
+        ):
+            return "work|\(demandID ?? "none")|\(commitmentID ?? "none")|"
+                + "\(workerID ?? "none")|\(observerID ?? "none")|\(domain ?? "none")|"
+                + "\(sourceEventID ?? "none")|\(status)|\(quantity)|\(score)|\(digest)"
         }
     }
 }
@@ -878,7 +910,19 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.animalBreedingObserved, .livestock),
              (.animalProductAcquired, .livestock),
              (.managedAnimalLost, .livestock),
-             (.livestockTaskCompleted, .livestock):
+             (.livestockTaskCompleted, .livestock),
+             (.workCommitmentsInitialized, .work),
+             (.workDemandRefreshed, .work),
+             (.workMatchingSelected, .work),
+             (.workCommitmentStarted, .work),
+             (.workCommitmentRenewed, .work),
+             (.workCommitmentSuspended, .work),
+             (.workCommitmentResumed, .work),
+             (.workCommitmentFulfilled, .work),
+             (.workCommitmentEnded, .work),
+             (.workCommitmentReassigned, .work),
+             (.workOutcomeValidated, .work),
+             (.workReputationUpdated, .work):
             matches = true
         default:
             matches = false

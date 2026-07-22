@@ -17,6 +17,7 @@ public enum AgentCheckpointSchema {
     public static let agricultureVersion = 13
     public static let wildSubsistenceVersion = 14
     public static let livestockVersion = 15
+    public static let workCommitmentVersion = 16
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -26,7 +27,7 @@ public enum AgentCheckpointSchema {
             || version == dependentCareVersion || version == skillVersion
             || version == teachingVersion || version == ecologicalObservationVersion
             || version == agricultureVersion || version == wildSubsistenceVersion
-            || version == livestockVersion
+            || version == livestockVersion || version == workCommitmentVersion
     }
 }
 
@@ -215,9 +216,12 @@ public struct AgentSessionDurableState: Codable {
     public let agricultureState: AgentAgricultureState?
     public let wildSubsistenceState: AgentWildSubsistenceState?
     public let livestockState: AgentLivestockState?
+    public let workCommitmentState: AgentWorkCommitmentState?
 
     init(session: AgentSimulationSession) {
-        if session.livestockState != nil {
+        if session.workCommitmentState != nil {
+            schemaVersion = AgentCheckpointSchema.workCommitmentVersion
+        } else if session.livestockState != nil {
             schemaVersion = AgentCheckpointSchema.livestockVersion
         } else if session.wildSubsistenceState != nil {
             schemaVersion = AgentCheckpointSchema.wildSubsistenceVersion
@@ -335,6 +339,7 @@ public struct AgentSessionDurableState: Codable {
         agricultureState = session.agricultureState
         wildSubsistenceState = session.wildSubsistenceState
         livestockState = session.livestockState
+        workCommitmentState = session.workCommitmentState
     }
 }
 
@@ -764,10 +769,12 @@ extension AgentSimulationSession {
         agricultureState = state.agricultureState
         wildSubsistenceState = state.wildSubsistenceState
         livestockState = state.livestockState
+        workCommitmentState = state.workCommitmentState
         try validateEcologicalObservationStateIfEnabled()
         try validateAgricultureStateIfEnabled()
         try validateWildSubsistenceStateIfEnabled()
         try validateLivestockStateIfEnabled()
+        try validateWorkCommitmentStateIfEnabled()
         if let settlementMetricsState {
             try validateSettlementMetricsState(settlementMetricsState)
         }
@@ -785,22 +792,30 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.agricultureVersion
                 || state.schemaVersion == AgentCheckpointSchema.wildSubsistenceVersion
                 || state.schemaVersion == AgentCheckpointSchema.livestockVersion
+                || state.schemaVersion == AgentCheckpointSchema.workCommitmentVersion
                 || state.ecologicalObservationState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.schemaVersion == AgentCheckpointSchema.agricultureVersion
                 || state.schemaVersion == AgentCheckpointSchema.wildSubsistenceVersion
                 || state.schemaVersion == AgentCheckpointSchema.livestockVersion
+                || state.schemaVersion == AgentCheckpointSchema.workCommitmentVersion
                 || state.agricultureState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.schemaVersion == AgentCheckpointSchema.wildSubsistenceVersion
                 || state.schemaVersion == AgentCheckpointSchema.livestockVersion
+                || state.schemaVersion == AgentCheckpointSchema.workCommitmentVersion
                 || state.wildSubsistenceState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.schemaVersion == AgentCheckpointSchema.livestockVersion
+                || state.schemaVersion == AgentCheckpointSchema.workCommitmentVersion
                 || state.livestockState == nil else {
+            throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
+        }
+        guard state.schemaVersion == AgentCheckpointSchema.workCommitmentVersion
+                || state.workCommitmentState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard (state.schemaVersion == AgentCheckpointSchema.currentVersion
@@ -884,7 +899,11 @@ extension AgentSimulationSession {
                     && state.populationRegistry != nil
                     && state.lifecycleState != nil && state.skillState != nil
                     && state.ecologicalObservationState != nil
-                    && state.livestockState != nil) else {
+                    && state.livestockState != nil)
+                || (state.schemaVersion == AgentCheckpointSchema.workCommitmentVersion
+                    && state.populationRegistry != nil
+                    && state.lifecycleState != nil && state.skillState != nil
+                    && state.workCommitmentState != nil) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.clock.tick.rawValue >= 0,
@@ -918,7 +937,8 @@ extension AgentSimulationSession {
                         || state.schemaVersion == AgentCheckpointSchema.kinshipVersion
                         || state.schemaVersion == AgentCheckpointSchema.householdVersion
                         || state.schemaVersion == AgentCheckpointSchema.dependentCareVersion
-                        || state.schemaVersion == AgentCheckpointSchema.skillVersion)
+                        || state.schemaVersion == AgentCheckpointSchema.skillVersion
+                        || state.schemaVersion == AgentCheckpointSchema.workCommitmentVersion)
                     && (state.mortalityState?.totalDeathCount ?? 0) > 0) else {
             throw AgentCheckpointError.invalidAgent("empty")
         }
@@ -1469,6 +1489,21 @@ extension AgentSimulationSession {
                   Set(livestock.activeTasks.map(\.taskID)).count == livestock.activeTasks.count,
                   Set(livestock.processedActionIDs).count == livestock.processedActionIDs.count else {
                 throw AgentCheckpointError.invalidBound("livestock")
+            }
+        }
+        if let work = state.workCommitmentState {
+            guard work.demands.filter(\.status.isActive).count
+                    <= work.configuration.maximumActiveDemands,
+                  work.commitments.count <= work.configuration.maximumRetainedCommitments,
+                  work.retainedEvidence.count <= work.configuration.maximumRetainedEvidence,
+                  work.localReputations.count <= work.configuration.maximumReputationEntries,
+                  Set(work.demands.map(\.demandID)).count == work.demands.count,
+                  Set(work.commitments.map(\.commitmentID)).count == work.commitments.count,
+                  Set(work.retainedEvidence.map(\.sourceEventID)).count
+                    == work.retainedEvidence.count,
+                  work.totalEvidenceCount
+                    == work.retainedEvidence.count + work.evictionCounts.evidence else {
+                throw AgentCheckpointError.invalidBound("work commitments")
             }
         }
         for relation in state.socialTrustRelations {

@@ -16,6 +16,7 @@ public enum AgentReplaySchema {
     public static let agricultureVersion = 13
     public static let wildSubsistenceVersion = 14
     public static let livestockVersion = 15
+    public static let workCommitmentVersion = 16
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -25,7 +26,7 @@ public enum AgentReplaySchema {
             || version == dependentCareVersion || version == skillVersion
             || version == teachingVersion || version == ecologicalObservationVersion
             || version == agricultureVersion || version == wildSubsistenceVersion
-            || version == livestockVersion
+            || version == livestockVersion || version == workCommitmentVersion
     }
 }
 
@@ -110,6 +111,8 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case wildSubsistenceOutcome
     case livestockFeature
     case livestockOperation
+    case workCommitmentFeature
+    case workCommitmentOperation
 }
 
 public enum AgentReplayOperation: Codable {
@@ -228,6 +231,10 @@ public enum AgentReplayOperation: Codable {
     case recordWildSubsistenceOutcome(AgentSubsistenceOutcome)
     case setLivestockEnabled(Bool, configuration: AgentLivestockConfiguration)
     case applyLivestockOperation(AgentLivestockOperation)
+    case setWorkCommitmentsEnabled(
+        Bool, configuration: AgentWorkCommitmentConfiguration
+    )
+    case applyWorkCommitmentOperation(AgentWorkCommitmentOperation)
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -298,6 +305,8 @@ public enum AgentReplayOperation: Codable {
         case .recordWildSubsistenceOutcome: return .wildSubsistenceOutcome
         case .setLivestockEnabled: return .livestockFeature
         case .applyLivestockOperation: return .livestockOperation
+        case .setWorkCommitmentsEnabled: return .workCommitmentFeature
+        case .applyWorkCommitmentOperation: return .workCommitmentOperation
         }
     }
 
@@ -332,6 +341,18 @@ public enum AgentReplayOperation: Codable {
         case let .recordAgriculturalAction(outcome): raw = outcome.actionID.rawValue
         case let .recordWildSubsistenceOutcome(outcome): raw = outcome.attemptID.rawValue
         case let .applyLivestockOperation(operation): raw = operation.operationIDText
+        case let .applyWorkCommitmentOperation(operation):
+            switch operation {
+            case .refreshDemands: raw = "work-refresh"
+            case let .start(demandID, _): raw = "work-start:\(demandID.rawValue)"
+            case let .renew(commitmentID): raw = "work-renew:\(commitmentID.rawValue)"
+            case let .suspend(commitmentID, _): raw = "work-suspend:\(commitmentID.rawValue)"
+            case let .resume(commitmentID): raw = "work-resume:\(commitmentID.rawValue)"
+            case let .end(commitmentID, _): raw = "work-end:\(commitmentID.rawValue)"
+            case let .replace(commitmentID, _): raw = "work-replace:\(commitmentID.rawValue)"
+            case let .recordOutcome(outcome): raw = "work-outcome:\(outcome.sourceSuccessEventID.rawValue)"
+            case .review: raw = "work-review"
+            }
         case let .selectWildSubsistenceOpportunity(context):
             raw = "subsistence-select:\(context.actorID.rawValue)"
         case let .planAgriculturalPlot(
@@ -742,6 +763,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.livestockVersion
         }
+        if case let .setWorkCommitmentsEnabled(enabled, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.workCommitmentVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "work commitment activation must be the first v16 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.workCommitmentVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -943,6 +974,8 @@ public enum AgentSessionReplayer {
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.agricultureVersion)
             || (manifest.schemaVersion == AgentReplaySchema.livestockVersion
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.wildSubsistenceVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.workCommitmentVersion
+                && checkpoint.schemaVersion <= AgentCheckpointSchema.livestockVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -1203,6 +1236,10 @@ extension AgentSimulationSession {
             try candidate.setLivestockEnabled(enabled, configuration: configuration)
         case let .applyLivestockOperation(operation):
             try candidate.applyLivestockOperation(operation)
+        case let .setWorkCommitmentsEnabled(enabled, configuration):
+            try candidate.setWorkCommitmentsEnabled(enabled, configuration: configuration)
+        case let .applyWorkCommitmentOperation(operation):
+            _ = try candidate.applyWorkCommitmentOperation(operation)
         }
         self = candidate
         let causal = causalLedgerSnapshot().summary

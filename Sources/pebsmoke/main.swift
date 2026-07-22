@@ -98,6 +98,11 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "livestock" {
     print("\n\(passed) passed, \(failed) failed")
     exit(failed > 0 ? 1 : 0)
 }
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "work-professions" {
+    runPebbleAgentsWorkProfessionSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "harvest" {
     registerAllBlocks()
     registerAllItems()
@@ -2227,6 +2232,7 @@ runPebbleCoreWildSubsistenceSmoke()
 runPebbleCoreLivestockSmoke()
 runPebbleAgentsLivestockSmoke()
 runPebbleAgentsWildSubsistenceSmoke()
+runPebbleAgentsWorkProfessionSmoke()
 
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)

@@ -242,10 +242,14 @@ extension AgentSimulationSession {
         let householdEventCount = try householdDeathEventCount(
             agentIDs: lethal.map(\.agentID), at: mortalityTick
         )
+        let terminalWorkEventCount = lethal.reduce(0) { count, candidate in
+            count + activeWorkCommitments(for: candidate.agentID).count
+        }
         try prevalidateCausalAppend(
             count: lethal.count * (lifecycleState == nil ? 7 : 9)
                 + householdEventCount
                 + (dependentCareState?.configuration.maximumCareTransitionsPerTick ?? 0)
+                + terminalWorkEventCount
         )
         let preDeathIDs = Set(statesById.values.map(\.agentID))
         guard lethal.map(\.agentID) == lethal.map(\.agentID).sorted(),
@@ -449,6 +453,7 @@ extension AgentSimulationSession {
             // Capture the terminal activity boundary after lethal survival and
             // before the authoritative active-state removal below.
             let terminalActivity = AgentTerminalActivitySnapshot(state: state)
+            try endWorkCommitmentsForTerminalAgent(item.agentID)
             let careEventID = try applyDependentCareDeath(
                 agentID: item.agentID,
                 lethalAgentIDs: Set(lethal.map(\.agentID)),
