@@ -24,7 +24,7 @@ Baseline de ce recalage :
 est acquise. La
 phase canonique actuelle est :
 
-`CIV-23 — Fishing, Hunting and Wild Subsistence V1`.
+`CIV-24 — Livestock and Animal Capital V1`.
 
 Les noms `NEXT-1` et `NEXT-2` sont uniquement des alias historiques :
 
@@ -241,8 +241,8 @@ exécute le mouvement physique. La validation senior du SHA publié
 | `CIV-20` | completed | Demonstration, Teaching and Apprenticeship V1 |
 | `CIV-21` | completed | Ecological Observation and Civil Calendar V1 |
 | `CIV-22` | completed | Agriculture and Managed Surplus V1 |
-| `CIV-23` | current | Fishing, Hunting and Wild Subsistence V1 |
-| `CIV-24` | planned | Livestock and Animal Capital V1 |
+| `CIV-23` | completed | Fishing, Hunting and Wild Subsistence V1 |
+| `CIV-24` | current | Livestock and Animal Capital V1 |
 | `CIV-25` | planned | Durable Work Commitments and Emergent Professions V1 |
 
 Ces phases doivent produire plusieurs stratégies matérielles viables et une
@@ -314,7 +314,7 @@ classe professionnelle imposée.
   stables et histoire bornée ; le champ physique reste dans le save du World et
   doit être réconcilié.
 
-#### Contrat courant CIV-23
+#### Contrat acquis CIV-23
 
 - `AgentSimulationSession` possède un état WildSubsistence default-off,
   déterministe et borné : opportunités locales, réservations one-shot,
@@ -357,6 +357,45 @@ classe professionnelle imposée.
   générique ou yield CIV-09. La disponibilité courante vient uniquement de la
   custody ou d'un container physique ; Gate R reste acquise et Gate B reste
   non acquise.
+
+#### Contrat courant CIV-24
+
+- Les animaux, leur santé, âge, déplacement, collision, reproduction, bébés,
+  mort et persistence physique restent exclusivement sous l’autorité de
+  PebbleCore. `PebbleAgents` n’introduit aucun `AnimalSimulation` parallèle.
+- `AgentLivestockState` conserve seulement groupes bornés, management areas,
+  responsabilités temporaires, tâches/réservations, décisions, outcomes et
+  histoire causale. Être managed n’est ni être tame, ni être possédé, ni
+  établir un claim ou une valeur monétaire.
+- Le mouton est l’espèce représentative V1. L’alimentation consomme un vrai
+  wheat item puis appelle la primitive Core actor-neutral ; `BreedGoal` et le
+  clock Core créent et font grandir le vrai offspring. Aucune naissance
+  abstraite ne peut valider la verticale.
+- La conduite réutilise la laisse, la navigation, les collisions et le
+  mouvement Core, sans second pathfinder ni téléportation. L’enclos est une
+  management area opérationnelle, pas une forcefield ou un droit foncier.
+- La tonte réutilise l’état `Sheep.sheared`, le RNG et de vrais `ItemEntity`
+  wool, ensuite transférés par la custody transactionnelle existante. Les
+  produits ne sont publiés qu’après acquisition et vérification physiques.
+- `AgentLivestockCapitalSnapshot` est une vue dérivée, bornée et non spendable
+  des animaux vivants résolus, jeunes/adultes, readiness, produits, naissances
+  et pertes. Le World gagne toujours ; missing, dead et ambiguous sont
+  réconciliés explicitement sans compensation ni nearest-match inventé.
+- La reproduction est différée quand le feed physique compatible, net de la
+  réserve de semis CIV-22, est insuffisant ou quand la capacité/care l’exige.
+  Le live ne crédite ni `AgentCampStock`, ni inventory générique, ni yield
+  CIV-09 et un animal managed est exclu de Hunting tant qu’il est résolu vivant.
+- Le domaine `husbandry` crédite exactement les succès physiques distincts de
+  feed, herd et product custody. Observation, attente, décision et birth
+  observation ne donnent aucun XP ; Teaching peut transporter la provenance,
+  jamais le résultat ou un bonus physique.
+- Checkpoint/replay v15 conserve les records civilisationnels, jamais les
+  animaux. Les runtime entity IDs restent transitoires ; après restart,
+  l'identité physique reste unresolved/ambiguous jusqu'à ré-observation et
+  réadmission explicites. Le bridge ne choisit jamais l'animal le plus proche
+  et ne déduit pas l'identité d'une simple correspondance espèce-position. Les
+  schémas v1-v14 gardent Livestock désactivé et vide.
+- Gate R reste acquise. Gate B reste non acquise jusqu’à CIV-25.
 
 ### Économie matérielle locale — Gate C
 
@@ -517,7 +556,7 @@ monde de vivre.
   reviewables.
 - `CIV-15` à `CIV-19` ont acquis les frontières actor-neutral, custody,
   harvest, construction, navigation et embodiment ; Gate R est acquise.
-  `CIV-20` à `CIV-22` sont acquis. `CIV-23` est la verticale actuelle : elle
-  orchestre les vraies règles de pêche, combat, drops et ressources sauvages
-  PebbleCore sans ajouter de stock, RNG, damage, pathfinding ou régénération
-  parallèle.
+  `CIV-20` à `CIV-23` sont acquis. `CIV-24` est la verticale actuelle : elle
+  orchestre les vrais animaux, feed, reproduction, offspring, leash et produits
+  PebbleCore, tout en ne conservant qu’un management et un capital dérivé
+  non spendable. Gate B reste non acquise jusqu’à CIV-25.

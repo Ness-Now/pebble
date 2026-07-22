@@ -4867,3 +4867,17 @@ stores only local normalized observations plus a deterministic civil date in
 season effect, weather prediction, animal simulation or fishing loot rule.
 `AgentLocalEcologyState` remains the coarse/headless compatibility model. Gate R
 remains acquired; CIV-21 stays `current` until remote publication and review.
+
+## CIV-24 - Livestock and Animal Capital V1 current after CIV-23
+
+Status: canonical prospective status synchronized after completion of CIV-23.
+
+`CIV-23 — Fishing, Hunting and Wild Subsistence V1` is completed and
+`CIV-24 — Livestock and Animal Capital V1` is current. The local vertical
+reuses real PebbleCore sheep, feeding, `BreedGoal`, offspring growth, leash
+physics and wool `ItemEntity` outputs. `AgentSimulationSession` stores only
+bounded management responsibility, causal work history and a non-spendable
+animal-capital view; management is not ownership. Runtime entity IDs are never
+durable and restart reconciliation remains explicitly resolved, missing or
+ambiguous. Gate R remains acquired and Gate B remains not acquired; CIV-25 is
+not started.

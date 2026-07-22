@@ -48,8 +48,8 @@ ressource sauvage ; tous les résultats passent par les IDs exacts des
 Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population`, `--multiscale`, `--ecology`, `--mortality`, `--reproduction`, `--kinship`, `--households`, `--care`, `--skills`, `--material`, `--harvest` et `--construction` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07, métriques settlement CIV-08, écologie alimentaire CIV-09, sortie de population CIV-10, âge/maturité/reproduction bornée CIV-11, parenté durable CIV-12A, appartenance household CIV-12B, dependent care final de CIV-12, compétences pratiques CIV-13, custody matérielle CIV-16, convergence harvest CIV-17 et convergence construction CIV-18. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
 
 Les options supplémentaires `--embodiment`, `--teaching`,
-`--ecological-observation`, `--agriculture` et `--wild-subsistence` portent
-respectivement les preuves CIV-19, CIV-20, CIV-21, CIV-22 et CIV-23 décrites
+`--ecological-observation`, `--agriculture`, `--wild-subsistence` et
+`--livestock` portent respectivement les preuves CIV-19 à CIV-24 décrites
 ci-dessous.
 
 Depuis la racine du dépôt :
@@ -333,6 +333,34 @@ annulés/réconciliés depuis le World au restart, jamais rejoués comme moteur
 parallèle. La terminaison retire les entités de fixture, restaure exactement les
 cellules, custody et probes, et exige `runtimeErrors=0`. Gate R reste acquise ;
 Gate B reste non acquise.
+
+## CIV-24 — Élevage et capital animal V1
+
+Le mode `scripts/verify-pebblelab-live.sh --livestock` utilise le monde isolé
+`PebbleLab-Disposable-Livestock-46` et requiert d’abord le dry-run homonyme. La
+commande `/lab livestock on` active explicitement l’état v15 default-off ;
+`/lab livestock proof` est refusé hors monde jetable.
+
+La fixture bornée construit un enclos réversible et utilise deux vrais moutons
+PebbleCore. Deux wheat items réels alimentent les parents par la primitive
+actor-neutral, le vrai `BreedGoal` crée un bébé, la physique de laisse déplace
+un animal sans téléportation, puis la tonte Core produit et transfère les IDs
+exacts de wool `ItemEntity`. La suppression physique d'un des deux adultes
+devient une perte visible lors de la réconciliation, tandis que l'autre adulte
+et le jeune restent dans l'enclos ; aucun stock, yield ou animal abstrait ne
+compense le World.
+
+La trace exige feed=2, birth=1, herding=1, product physique, loss=1,
+`husbandry=4`, zéro ghost stock et `Core_authority=1`. Les cinq captures
+`livestock-managed.png`, `livestock-feeding.png`, `livestock-offspring.png`,
+`livestock-product.png` et `livestock-final.png` complètent la preuve structurée
+mais doivent être inspectées manuellement pour l'enclos, les particules de
+feeding, le jeune réel, la production/conduite et le troupeau final cohérent.
+Checkpoint/replay v15 conserve seulement les records de management ; les
+animaux restent dans la persistence World et les runtime IDs ne sont jamais
+durables. Après restart, l'identité physique reste unresolved/ambiguous jusqu'à
+ré-observation explicite, sans nearest-match. Gate R reste acquise et Gate B
+reste non acquise jusqu’à CIV-25.
 
 ## CIV-04 — Canal physique local
 

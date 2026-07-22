@@ -87,6 +87,17 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "wild-subsiste
     print("\n\(passed) passed, \(failed) failed")
     exit(failed > 0 ? 1 : 0)
 }
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "livestock" {
+    registerAllBlocks()
+    registerAllItems()
+    registerAllLootTables()
+    registerAllEntities()
+    registerAllSystems()
+    runPebbleCoreLivestockSmoke()
+    runPebbleAgentsLivestockSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "harvest" {
     registerAllBlocks()
     registerAllItems()
@@ -2213,6 +2224,8 @@ runPebbleAgentsHarvestPublicationSmoke()
 runPebbleCorePhysicalActionSmoke()
 runPebbleCoreAgricultureSmoke()
 runPebbleCoreWildSubsistenceSmoke()
+runPebbleCoreLivestockSmoke()
+runPebbleAgentsLivestockSmoke()
 runPebbleAgentsWildSubsistenceSmoke()
 
 print("\n\(passed) passed, \(failed) failed")
