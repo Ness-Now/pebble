@@ -180,8 +180,8 @@ if [ "$MODE" = "gate-b-passive" ]; then
     AUTONOMOUS_CIVILIZATION_GATE=1
     PASSIVE_OBSERVER_INPUT_PROOF=1
     PASSIVE_OBSERVER_BATCH_FRAMES=3600
-    WORLD_NAME="PebbleLab-Disposable-GateB-Passive-46"
-    CAPTURE_NAME="gate-b-passive-later.png"
+    WORLD_NAME="PebbleLab-Disposable-GateB-Reevaluation-46"
+    CAPTURE_NAME="gate-b2-later.png"
     LAB_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/lab pause;/lab movement off;/lab population on;/lab lifecycle on;/lab skills on;/lab ecological-observation on;/lab survival on;/lab physical-food-survival on;/tp 24.5 68 -11.5 150 12;/lab focus agent_0;/lab follow off;/lab overlay off;/lab autonomous-civilization passive;/lab resume|/lab autonomous-civilization status;/lab focus agent_0|/lab autonomous-civilization status;/lab focus agent_0|/lab autonomous-civilization status;/lab focus agent_1|/lab autonomous-civilization status;/lab focus agent_0|/lab autonomous-civilization status;/lab causality status'
 elif [ "$MODE" = "physical-food-survival" ]; then
     WORLD_SEED="46"
@@ -722,11 +722,11 @@ print_plan() {
     printf 'Fixed seed: %s\n' "$WORLD_SEED"
     if [ "$MODE" = "gate-b-passive" ]; then
         capture_dir=$(dirname "$capture_path")
-        printf 'Captures: %s\n' "$capture_dir/gate-b-passive-start.png"
-        printf '          %s\n' "$capture_dir/gate-b-passive-multi-agent.png"
-        printf '          %s\n' "$capture_dir/gate-b-passive-agriculture.png"
-        printf '          %s\n' "$capture_dir/gate-b-passive-livestock.png"
-        printf '          %s\n' "$capture_dir/gate-b-passive-follow-agent.png"
+        printf 'Captures: %s\n' "$capture_dir/gate-b2-start.png"
+        printf '          %s\n' "$capture_dir/gate-b2-multi-agent.png"
+        printf '          %s\n' "$capture_dir/gate-b2-agriculture.png"
+        printf '          %s\n' "$capture_dir/gate-b2-livestock.png"
+        printf '          %s\n' "$capture_dir/gate-b2-follow-agent.png"
         printf '          %s\n' "$capture_path"
     elif [ "$MODE" = "work-professions" ]; then
         capture_dir=$(dirname "$capture_path")
@@ -801,7 +801,7 @@ print_plan() {
     printf '  PEBBLELAB_DISPOSABLE_WORLD_PROOF=1\n'
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
     if [ "$MODE" = "gate-b-passive" ]; then
-        printf '  PEBBLE_SHOT=-|%s/gate-b-passive-start.png|%s/gate-b-passive-multi-agent.png|%s/gate-b-passive-agriculture.png|%s/gate-b-passive-livestock.png|%s/gate-b-passive-follow-agent.png|%s\n' \
+        printf '  PEBBLE_SHOT=-|%s/gate-b2-start.png|%s/gate-b2-multi-agent.png|%s/gate-b2-agriculture.png|%s/gate-b2-livestock.png|%s/gate-b2-follow-agent.png|%s\n' \
             "$(dirname "$capture_path")" "$(dirname "$capture_path")" \
             "$(dirname "$capture_path")" "$(dirname "$capture_path")" \
             "$(dirname "$capture_path")" "$capture_path"
@@ -1006,11 +1006,11 @@ DB_PATH="$SESSION_HOME/Library/Application Support/Pebble/pebble.db"
 [ ! -e "$DB_PATH" ] || fail "fresh disposable database already exists: $DB_PATH"
 /bin/mkdir -p "$SESSION_HOME" "$CAPTURE_DIR"
 if [ "$MODE" = "gate-b-passive" ]; then
-    CAPTURE_START_PATH="$CAPTURE_DIR/gate-b-passive-start.png"
-    CAPTURE_MULTI_PATH="$CAPTURE_DIR/gate-b-passive-multi-agent.png"
-    CAPTURE_AGRICULTURE_PATH="$CAPTURE_DIR/gate-b-passive-agriculture.png"
-    CAPTURE_LIVESTOCK_PATH="$CAPTURE_DIR/gate-b-passive-livestock.png"
-    CAPTURE_FOLLOW_PATH="$CAPTURE_DIR/gate-b-passive-follow-agent.png"
+    CAPTURE_START_PATH="$CAPTURE_DIR/gate-b2-start.png"
+    CAPTURE_MULTI_PATH="$CAPTURE_DIR/gate-b2-multi-agent.png"
+    CAPTURE_AGRICULTURE_PATH="$CAPTURE_DIR/gate-b2-agriculture.png"
+    CAPTURE_LIVESTOCK_PATH="$CAPTURE_DIR/gate-b2-livestock.png"
+    CAPTURE_FOLLOW_PATH="$CAPTURE_DIR/gate-b2-follow-agent.png"
     SHOT_SPEC="-|$CAPTURE_START_PATH|$CAPTURE_MULTI_PATH|$CAPTURE_AGRICULTURE_PATH|$CAPTURE_LIVESTOCK_PATH|$CAPTURE_FOLLOW_PATH|$CAPTURE_PATH"
 elif [ "$MODE" = "physical-food-survival" ]; then
     CAPTURE_BEFORE_PATH="$CAPTURE_DIR/physical-food-before.png"
