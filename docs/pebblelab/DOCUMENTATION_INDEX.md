@@ -26,17 +26,20 @@ la roadmap prospective actuelle.
 Les `AGENTS.md` racine et target-locaux sont des instructions permanentes, pas
 des roadmaps. Ils restent obligatoires dans leur périmètre.
 
-État prospectif local préparé pour revue : `CIV-00` à `CIV-24` sont
-`completed`, Gate R reste acquise et `CIV-25` est `current`. Le baseline
-historique du recalage V3 reste inchangé ; `CIV-26` à `CIV-67` restent
-`planned`, et Gate B n'est pas acquise avant publication de CIV-25, revue
-senior et évaluation dédiée.
+État canonique après l'évaluation dédiée : `CIV-00` à `CIV-25` sont
+`completed` dans leurs contrats bornés et Gate R reste acquise. La candidate
+Gate B est `FAIL` et Gate B n'est pas acquise. Aucune phase n'est promue
+automatiquement pendant sa correction ; `CIV-26` à `CIV-67` restent `planned`.
 
 ## `operational-runbook`
 
 - [`../pebblelab-3d-live-prototype.md`](../pebblelab-3d-live-prototype.md) est le
   runbook live canonique. Il décrit les gates, commandes, preuves et limites des
   verticales 3D actuellement acquises.
+- [`GATE_B_CANDIDATE_EVALUATION.md`](GATE_B_CANDIDATE_EVALUATION.md) est le
+  record d'acceptance post-CIV-25 : verdict candidate `FAIL`, preuves réduites,
+  blockers et correctifs recommandés. Il ne marque pas Gate B acquise et ne
+  remplace pas la roadmap prospective.
 - Les fichiers racine `README.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md` et
   `SECURITY.md` restent les références opérationnelles du jeu Pebble et du
   dépôt général ; ils ne définissent pas la roadmap Civilization.

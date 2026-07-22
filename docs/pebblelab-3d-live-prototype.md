@@ -359,8 +359,8 @@ feeding, le jeune réel, la production/conduite et le troupeau final cohérent.
 Checkpoint/replay v15 conserve seulement les records de management ; les
 animaux restent dans la persistence World et les runtime IDs ne sont jamais
 durables. Après restart, l'identité physique reste unresolved/ambiguous jusqu'à
-ré-observation explicite, sans nearest-match. Gate R reste acquise et Gate B
-reste non acquise jusqu’à l’évaluation dédiée post-publication de CIV-25.
+ré-observation explicite, sans nearest-match. Gate R reste acquise ; cette
+verticale seule n'acquiert pas Gate B.
 
 ## CIV-25 — Responsabilités durables et professions émergentes V1
 
@@ -390,8 +390,37 @@ distincts, aucun doublon causal, `physicalMultiplier=0`,
 `resourceInventoryDelta=0`, `localEcologyDelta=0`, checkpoint v16,
 `runtimeErrors=0` et cleanup exact. Les tentatives physiques actives restent
 app-owned et ne sont donc pas déclarées restart-safe par Civilization.
-Gate R reste acquise ; Gate B reste non acquise jusqu’à publication, revue
-senior et évaluation dédiée.
+Gate R reste acquise ; l'évaluation candidate Gate B décrite ci-dessous a
+depuis conclu `FAIL`.
+
+## Gate B — Évaluation candidate post-CIV-25
+
+L'évaluation candidate est maintenant enregistrée dans
+[`docs/pebblelab/GATE_B_CANDIDATE_EVALUATION.md`](pebblelab/GATE_B_CANDIDATE_EVALUATION.md).
+Son résultat est `FAIL` et Gate B reste non acquise. `CIV-25` est terminé ;
+`CIV-26` reste planifié et n'est pas commencé.
+
+Depuis la racine, la commande dédiée est :
+
+```bash
+scripts/verify-pebblelab-gate-b.sh
+```
+
+Elle audite d'abord les deux frontières fail-fast, puis répète une matrice
+réduite de composants. Tant que les blockers sont présents, le mode normal
+imprime `GATE B CANDIDATE RESULT: FAIL` et sort avec le code `2` ;
+`--report-only` conserve ce verdict mais sort `0` pour diagnostic.
+
+Cette commande ne lance pas Pebble et ne prétend pas fournir une slice passive.
+Les modes live agriculture, wild subsistence, livestock, Teaching et
+work-professions ci-dessus restent des preuves de verticale séquencées par
+`/lab`. Les concaténer ne prouverait ni autonomie, ni coexistence dans une
+session, ni fermeture food-to-survival. Il n'existe donc pas encore de chemin
+de reproduction humain Gate B honnête. Après les convergences nourriture et
+orchestration, une future campagne devra définir explicitement
+`PLAYABLE_SLICE_BOOTSTRAP_COMPLETE`, conserver follow désactivé par défaut,
+mesurer zéro commande productive post-bootstrap et laisser les décisions
+s'enchaîner dans l'unique `AgentSimulationSession`.
 
 ## CIV-04 — Canal physique local
 

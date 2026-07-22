@@ -4894,3 +4894,17 @@ and read-only profession profiles derived from repeated real outcomes. It
 creates no profession permission, physical bonus, ownership, fixed class,
 scheduler or executor. Gate R remains acquired. Gate B remains not acquired
 pending CIV-25 publication, senior review and its dedicated evaluation.
+
+## Gate B - Dedicated candidate evaluation after CIV-25
+
+Status: candidate evaluated at published baseline
+`1191e70afe4757955ca48f992c8517df15455761`; result `FAIL`.
+
+`CIV-25 — Durable Work Commitments and Emergent Professions V1` is completed.
+The dedicated evaluation confirmed that physical foods are not yet connected
+to canonical agent survival and that normal agents do not autonomously choose
+and chain the acquired productive domains in a playable passive-observer
+session. It also recorded missing end-to-end livestock reserve and physical
+crisis/replacement orchestration. Gate R remains acquired; Gate B remains not
+acquired. Corrective convergence is required before a new candidate campaign.
+`CIV-26` remains planned and was not started.

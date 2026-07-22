@@ -1,42 +1,58 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "roadmapVersion": "V3-Reuse-First",
   "baselineHead": "b58f71b75110c2e65403cd073409a8559429ec77",
   "branch": "lab/pebblelab-v1",
   "canonicalRoadmap": "docs/pebblelab/PEBBLE_CIVILIZATION_ROADMAP.md",
-  "current": "CIV-25",
+  "evaluatedRuntimeHead": "1191e70afe4757955ca48f992c8517df15455761",
+  "current": null,
+  "currentGateEvaluation": {
+    "gate": "B",
+    "candidateResult": "failed",
+    "canonicalStatus": "notAcquired",
+    "evidence": "docs/pebblelab/GATE_B_CANDIDATE_EVALUATION.md",
+    "nextCanonicalPhasePromoted": false
+  },
   "gates": {
     "R": {
       "title": "No Parallel Physical Engines",
-      "afterPhase": "CIV-19"
+      "afterPhase": "CIV-19",
+      "status": "acquired"
     },
     "B": {
       "title": "Self-Sustaining Local Society",
-      "afterPhase": "CIV-25"
+      "afterPhase": "CIV-25",
+      "status": "evaluatedNotAcquired"
     },
     "C": {
       "title": "Local Material Economy",
-      "afterPhase": "CIV-31"
+      "afterPhase": "CIV-31",
+      "status": "notAcquired"
     },
     "D": {
       "title": "Durable Scaled Society",
-      "afterPhase": "CIV-34"
+      "afterPhase": "CIV-34",
+      "status": "notAcquired"
     },
     "E": {
       "title": "Generational Continuity",
-      "afterPhase": "CIV-39"
+      "afterPhase": "CIV-39",
+      "status": "notAcquired"
     },
     "F": {
       "title": "Cumulative Culture",
-      "afterPhase": "CIV-47"
+      "afterPhase": "CIV-47",
+      "status": "notAcquired"
     },
     "G": {
       "title": "Medieval Institutions",
-      "afterPhase": "CIV-56"
+      "afterPhase": "CIV-56",
+      "status": "notAcquired"
     },
     "H": {
       "title": "Alternative Renaissance",
-      "afterPhase": "CIV-58"
+      "afterPhase": "CIV-58",
+      "status": "notAcquired"
     }
   },
   "phases": [
@@ -168,7 +184,7 @@
     {
       "id": "CIV-25",
       "title": "Durable Work Commitments and Emergent Professions V1",
-      "status": "current"
+      "status": "completed"
     },
     {
       "id": "CIV-26",

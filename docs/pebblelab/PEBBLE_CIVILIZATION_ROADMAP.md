@@ -20,11 +20,11 @@ Baseline de ce recalage :
 
 ## Position canonique actuelle
 
-`CIV-00` à `CIV-24` sont terminés et acquis dans leurs contrats bornés. Gate R
-est acquise. La
-phase canonique actuelle est :
-
-`CIV-25 — Durable Work Commitments and Emergent Professions V1`.
+`CIV-00` à `CIV-25` sont terminés et acquis dans leurs contrats bornés. Gate R
+est acquise. La candidate Gate B a été évaluée sur le baseline
+`1191e70afe4757955ca48f992c8517df15455761` et a échoué ; Gate B n'est pas
+acquise. Aucune phase `CIV-*` n'est automatiquement promue pendant la
+correction de cette gate. `CIV-26` reste `planned` et n'est pas commencé.
 
 Les noms `NEXT-1` et `NEXT-2` sont uniquement des alias historiques :
 
@@ -243,7 +243,7 @@ exécute le mouvement physique. La validation senior du SHA publié
 | `CIV-22` | completed | Agriculture and Managed Surplus V1 |
 | `CIV-23` | completed | Fishing, Hunting and Wild Subsistence V1 |
 | `CIV-24` | completed | Livestock and Animal Capital V1 |
-| `CIV-25` | current | Durable Work Commitments and Emergent Professions V1 |
+| `CIV-25` | completed | Durable Work Commitments and Emergent Professions V1 |
 
 Ces phases doivent produire plusieurs stratégies matérielles viables et une
 spécialisation dérivée de la pratique, de l’enseignement et des besoins, sans
@@ -395,10 +395,10 @@ classe professionnelle imposée.
   réadmission explicites. Le bridge ne choisit jamais l'animal le plus proche
   et ne déduit pas l'identité d'une simple correspondance espèce-position. Les
   schémas v1-v14 gardent Livestock désactivé et vide.
-- Gate R reste acquise. Gate B reste non acquise jusqu’à l’évaluation dédiée
-  post-publication de CIV-25.
+- Gate R reste acquise. Cette verticale seule n'acquiert pas Gate B ;
+  l'évaluation dédiée post-CIV-25 a depuis confirmé les blockers ci-dessous.
 
-#### Contrat courant CIV-25
+#### Contrat acquis CIV-25
 
 - `AgentSimulationSession` possède l’unique état WorkCommitments default-off,
   déterministe et borné : demandes causales et fraîches, responsabilités
@@ -440,8 +440,29 @@ classe professionnelle imposée.
   cueillette puis leurs outcomes déjà vérifiés. Elle montre trois profils
   dérivés distincts, suspension/reprise de crise et zéro multiplicateur,
   crédit abstrait, delta `AgentCampStock`, inventory générique ou yield
-  `AgentLocalEcologyState`. Gate R reste acquise. Gate B reste non acquise
-  jusqu’à publication, revue senior et évaluation dédiée multi-seed.
+  `AgentLocalEcologyState`. Gate R reste acquise. Ces preuves sont des contrats
+  de composant ; elles ne prouvent pas à elles seules Gate B.
+
+#### Évaluation candidate Gate B — FAIL
+
+L'[évaluation dédiée](GATE_B_CANDIDATE_EVALUATION.md) a confirmé quatre
+blockers :
+
+- `B-BLOCKER-FOOD-CLOSURE` : les vrais aliments et la survie canonique agent
+  restent deux vérités séparées ;
+- `B-BLOCKER-AUTONOMOUS-PLAYABLE-SLICE` : les domaines productifs sont encore
+  séquencés par commandes/preuves et ne s'enchaînent pas dans le loop normal ;
+- `B-BLOCKER-LIVESTOCK-RESERVE-CLOSURE` : feed, réserve physique de semis et
+  décision de reproduction ne sont pas reliés de bout en bout en produit ;
+- `B-BLOCKER-CRISIS-REPLACEMENT-ORCHESTRATION` : une perte physique ne déclenche
+  pas encore la chaîne autonome revue, remplacement et action réelle.
+
+Les correctifs recommandés sont `Real Food Consumption and Survival
+Convergence`, puis `Autonomous Agent Activity Orchestration and Playable
+Observer Convergence`. Ils doivent réutiliser les autorités acquises, sans
+second moteur ni scheduler de démonstration. Leur ordonnancement canonique
+requiert une revue senior ; cette roadmap ne renumérote pas `CIV-26` et ne le
+passe pas `current`.
 
 ### Économie matérielle locale — Gate C
 
@@ -567,8 +588,10 @@ ordinaires du monde.
 Une gate n’est ouverte que par ses preuves ; sa présence dans la roadmap ne
 signifie pas qu’elle est déjà acquise.
 
-Gate R est acquise depuis la validation senior de `CIV-19`. Les gates B à H
-restent non acquises tant que leurs critères respectifs ne sont pas prouvés.
+Gate R est acquise depuis la validation senior de `CIV-19`. Gate B a été
+évaluée après `CIV-25` et reste non acquise avec un résultat candidate `FAIL`.
+Les gates C à H restent non acquises tant que leurs critères respectifs ne sont
+pas prouvés.
 
 ## Cible produit conservée
 
@@ -602,8 +625,8 @@ monde de vivre.
   reviewables.
 - `CIV-15` à `CIV-19` ont acquis les frontières actor-neutral, custody,
   harvest, construction, navigation et embodiment ; Gate R est acquise.
-  `CIV-20` à `CIV-24` sont acquis. `CIV-25` est la verticale actuelle : elle
-  ajoute responsabilités durables, matching explicable, réputation locale et
-  profils professionnels dérivés autour des domaines réels existants, sans
-  permission, bonus ou moteur physique parallèle. Gate B reste non acquise
-  jusqu’à publication de CIV-25, revue senior et évaluation dédiée.
+  `CIV-20` à `CIV-25` sont acquis dans leurs contrats bornés. L'évaluation
+  candidate Gate B est `FAIL` : nourriture physique/survie, orchestration
+  autonome, réserve livestock et remplacement de crise doivent converger
+  avant une nouvelle campagne. Gate B reste non acquise et `CIV-26` reste
+  planifié.
