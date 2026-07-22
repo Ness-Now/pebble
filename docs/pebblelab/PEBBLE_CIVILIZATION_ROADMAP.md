@@ -20,11 +20,11 @@ Baseline de ce recalage :
 
 ## Position canonique actuelle
 
-`CIV-00` à `CIV-22` sont terminés et acquis dans leurs contrats bornés. Gate R
+`CIV-00` à `CIV-24` sont terminés et acquis dans leurs contrats bornés. Gate R
 est acquise. La
 phase canonique actuelle est :
 
-`CIV-24 — Livestock and Animal Capital V1`.
+`CIV-25 — Durable Work Commitments and Emergent Professions V1`.
 
 Les noms `NEXT-1` et `NEXT-2` sont uniquement des alias historiques :
 
@@ -242,8 +242,8 @@ exécute le mouvement physique. La validation senior du SHA publié
 | `CIV-21` | completed | Ecological Observation and Civil Calendar V1 |
 | `CIV-22` | completed | Agriculture and Managed Surplus V1 |
 | `CIV-23` | completed | Fishing, Hunting and Wild Subsistence V1 |
-| `CIV-24` | current | Livestock and Animal Capital V1 |
-| `CIV-25` | planned | Durable Work Commitments and Emergent Professions V1 |
+| `CIV-24` | completed | Livestock and Animal Capital V1 |
+| `CIV-25` | current | Durable Work Commitments and Emergent Professions V1 |
 
 Ces phases doivent produire plusieurs stratégies matérielles viables et une
 spécialisation dérivée de la pratique, de l’enseignement et des besoins, sans
@@ -358,7 +358,7 @@ classe professionnelle imposée.
   custody ou d'un container physique ; Gate R reste acquise et Gate B reste
   non acquise.
 
-#### Contrat courant CIV-24
+#### Contrat acquis CIV-24
 
 - Les animaux, leur santé, âge, déplacement, collision, reproduction, bébés,
   mort et persistence physique restent exclusivement sous l’autorité de
@@ -395,7 +395,53 @@ classe professionnelle imposée.
   réadmission explicites. Le bridge ne choisit jamais l'animal le plus proche
   et ne déduit pas l'identité d'une simple correspondance espèce-position. Les
   schémas v1-v14 gardent Livestock désactivé et vide.
-- Gate R reste acquise. Gate B reste non acquise jusqu’à CIV-25.
+- Gate R reste acquise. Gate B reste non acquise jusqu’à l’évaluation dédiée
+  post-publication de CIV-25.
+
+#### Contrat courant CIV-25
+
+- `AgentSimulationSession` possède l’unique état WorkCommitments default-off,
+  déterministe et borné : demandes causales et fraîches, responsabilités
+  temporaires, cadence, revue, expiration, suspension, reprise, remplacement,
+  outcomes normalisés, histoire compacte et réputation de travail locale.
+- Agriculture, wild subsistence, livestock, construction, dependent care et
+  coopération restent les sources de besoins, tâches et résultats. CIV-25
+  organise leur continuité ; il ne crée ni moteur de demande omniscient, ni
+  second scheduler CIV-05, ni executor physique ou tâche fictive.
+- Le matching sépare éligibilité et rang décomposable : capacité, skill et
+  pratique, continuité, réputation locale connue, trust contextuel, distance
+  observée, disponibilité et charge, obligations/care, ainsi que vrais outils
+  et ressources. Le dernier tie-break est l’`AgentID` ; aucun profil n’accorde
+  permission ou exclusivité.
+- Chaque preuve de travail référence exactement un outcome causal existant.
+  Une source ne peut créditer qu’une fois l’histoire, le fulfillment et la
+  réputation ; succès, échec imputable, blocage externe et interruption
+  légitime restent distingués sans produire matière, skill ou résultat.
+- `AgentProfessionProfile` est une projection read-only recomputée à la
+  demande. Elle combine distributions récentes et lifetime, engagements
+  actifs/passés, continuité, skill/pratique, apprentissage et réputation ; elle
+  expose primary/secondary domains et une concentration integer/fixed-point,
+  sans setter, classe, statut, propriété, salaire, héritage ou bonus physique.
+- Multi-activité et reconversion restent possibles : l’histoire lifetime
+  persiste tandis que l’activité récente peut déplacer progressivement le
+  domaine dominant. Une crise, l’indisponibilité ou une obligation de care
+  suspend la responsabilité productive ; un remplaçant capable, même non
+  spécialiste, reste sélectionnable sans recevoir l’histoire de son
+  prédécesseur.
+- Les métriques descriptives exposent coverage par domaine, dépendance envers
+  un seul worker, depth de remplacement, concentration et coordination. Elles
+  ne créent ni droit CIV-26, ni workshop CIV-27, ni guilde CIV-49, ni booléen
+  runtime `GateBState`.
+- Checkpoint/replay v16 conserve l’état Work causal et borné. Les schémas
+  v1-v15 restent chargeables avec CIV-25 désactivé et vide ; aucun engagement,
+  profil ou réputation passé n’est inventé, et les profils se recomputent
+  byte-exact depuis leurs sources durables.
+- La preuve live réutilise de vraies actions Pebble de pêche, chasse et
+  cueillette puis leurs outcomes déjà vérifiés. Elle montre trois profils
+  dérivés distincts, suspension/reprise de crise et zéro multiplicateur,
+  crédit abstrait, delta `AgentCampStock`, inventory générique ou yield
+  `AgentLocalEcologyState`. Gate R reste acquise. Gate B reste non acquise
+  jusqu’à publication, revue senior et évaluation dédiée multi-seed.
 
 ### Économie matérielle locale — Gate C
 
@@ -556,7 +602,8 @@ monde de vivre.
   reviewables.
 - `CIV-15` à `CIV-19` ont acquis les frontières actor-neutral, custody,
   harvest, construction, navigation et embodiment ; Gate R est acquise.
-  `CIV-20` à `CIV-23` sont acquis. `CIV-24` est la verticale actuelle : elle
-  orchestre les vrais animaux, feed, reproduction, offspring, leash et produits
-  PebbleCore, tout en ne conservant qu’un management et un capital dérivé
-  non spendable. Gate B reste non acquise jusqu’à CIV-25.
+  `CIV-20` à `CIV-24` sont acquis. `CIV-25` est la verticale actuelle : elle
+  ajoute responsabilités durables, matching explicable, réputation locale et
+  profils professionnels dérivés autour des domaines réels existants, sans
+  permission, bonus ou moteur physique parallèle. Gate B reste non acquise
+  jusqu’à publication de CIV-25, revue senior et évaluation dédiée.

@@ -26,10 +26,11 @@ la roadmap prospective actuelle.
 Les `AGENTS.md` racine et target-locaux sont des instructions permanentes, pas
 des roadmaps. Ils restent obligatoires dans leur périmètre.
 
-État prospectif local préparé pour revue : `CIV-00` à `CIV-23` sont
-`completed`, Gate R reste acquise et `CIV-24` est `current`. Le baseline
-historique du recalage V3 reste inchangé ; `CIV-25` à `CIV-67` restent
-`planned`, et Gate B n'est pas acquise.
+État prospectif local préparé pour revue : `CIV-00` à `CIV-24` sont
+`completed`, Gate R reste acquise et `CIV-25` est `current`. Le baseline
+historique du recalage V3 reste inchangé ; `CIV-26` à `CIV-67` restent
+`planned`, et Gate B n'est pas acquise avant publication de CIV-25, revue
+senior et évaluation dédiée.
 
 ## `operational-runbook`
 

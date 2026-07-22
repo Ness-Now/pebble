@@ -67,13 +67,14 @@ private func socialSmokeSession(
 private func socialSmokeObservation(
     fingerprint: Int,
     targetX: Int = 2,
-    resource: AgentResourceKind = .wood
+    resource: AgentResourceKind = .wood,
+    observerX: Int = 0
 ) -> AgentResourceObservation {
     AgentResourceObservation(
         resource: resource,
         target: AgentPosition(x: targetX, y: 64, z: 0),
         direction: .east,
-        distanceManhattan: targetX,
+        distanceManhattan: abs(targetX - observerX),
         quantityAvailable: 1,
         source: .naturalWorld,
         expectedBlockFingerprint: fingerprint
@@ -83,30 +84,37 @@ private func socialSmokeObservation(
 private func socialSmokePerception(
     fingerprint: Int,
     targetX: Int = 2,
-    resource: AgentResourceKind = .wood
+    resource: AgentResourceKind = .wood,
+    observerX: Int = 0,
+    observerID: String = "agent_1"
 ) -> AgentPerceptionInput {
     AgentPerceptionInput(
-        agentId: "agent_1",
+        agentId: observerID,
         socialResourceObservations: [socialSmokeObservation(
             fingerprint: fingerprint,
             targetX: targetX,
-            resource: resource
+            resource: resource,
+            observerX: observerX
         )]
     )
 }
 
 @discardableResult
-private func socialSmokeDirectMessage(
+func socialSmokeDirectMessage(
     session: inout AgentSimulationSession,
     fingerprint: Int,
     targetX: Int = 2,
-    resource: AgentResourceKind = .wood
+    resource: AgentResourceKind = .wood,
+    observerX: Int = 0,
+    observerID: String = "agent_1"
 ) -> AgentSocialBelief {
     let messageCountBefore = session.socialSnapshot().messages.count
     _ = try! session.advanceTick(perceptions: [socialSmokePerception(
         fingerprint: fingerprint,
         targetX: targetX,
-        resource: resource
+        resource: resource,
+        observerX: observerX,
+        observerID: observerID
     )])
     for _ in 0..<4 {
         _ = try! session.advanceTick()
@@ -122,7 +130,7 @@ private func socialSmokeDirectMessage(
 }
 
 @discardableResult
-private func socialSmokeVerify(
+func socialSmokeVerify(
     session: inout AgentSimulationSession,
     belief: AgentSocialBelief,
     fingerprint: Int?,

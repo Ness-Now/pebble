@@ -23,6 +23,7 @@ struct PebbleAgentDebugState {
         localEcologySnapshot: AgentLocalEcologySnapshot,
         mortalitySnapshot: AgentMortalitySnapshot,
         lifecycleSnapshot: AgentLifecycleSnapshot,
+        workSnapshot: AgentWorkCommitmentSnapshot,
         mode: PebbleAgentOverlayMode,
         paused: Bool,
         cognitiveHz: Int,
@@ -53,6 +54,9 @@ struct PebbleAgentDebugState {
         let lifecycleLines = Self.lifecycleLines(
             snapshot: lifecycleSnapshot,
             simulationTick: snapshot.tick
+        )
+        let workLines = Self.workLines(
+            snapshot: workSnapshot, focusedAgentID: focusedAgentId
         )
         statusSummary = "status=\(status) tick=\(snapshot.tick) hz=\(cognitiveHz) agents=\(snapshot.agentCount)"
         guard let agent = focus else {
@@ -92,7 +96,7 @@ struct PebbleAgentDebugState {
                 "clock: \(cognitiveHz) Hz  paused: \(paused ? "yes" : "no")",
                 "movement: \(movementEnabled ? "on" : "off")  follow: \(followMode.statusText)",
                 "agents: \(snapshot.agentCount) focus: \(agent.id) goals: \(Self.short(observedGoalKinds.joined(separator: ","), limit: 22))",
-            ]
+            ] + workLines
             let base = currentFeedback?.baseDirection?.rawValue ?? currentFeedback?.baseAction.name ?? agent.lastAction?.name ?? "none"
             let final = currentFeedback?.finalDirection?.rawValue ?? currentFeedback?.finalAction.name ?? agent.lastAction?.name ?? "none"
             let movement = agent.lastMovementOutcome.map {
@@ -159,7 +163,7 @@ struct PebbleAgentDebugState {
             "sim=\(causalSummary.simulationID.rawValue) tick=\(causalSummary.currentTick.rawValue) seq=\(causalSummary.latestSequence) events=\(causalSummary.retainedEventCount) dropped=\(causalSummary.droppedEventCount)",
             "worldTick: \(worldTick.map(String.init) ?? "none")",
             "agents: \(snapshot.agentCount)  focus: \(agent.id)",
-        ] + Self.goalLines(observedGoalKinds) + lifecycleLines
+        ] + Self.goalLines(observedGoalKinds) + workLines + lifecycleLines
             + ["errors: \(runtimeErrorCount)  catchup dropped: \(droppedCatchUpSteps)"]
             + (lastError.map { ["last error: \(Self.short($0))"] } ?? [])
 
@@ -512,5 +516,37 @@ struct PebbleAgentDebugState {
 
     private static func position(_ position: AgentPosition) -> String {
         "\(position.x),\(position.y),\(position.z)"
+    }
+
+    private static func workLines(
+        snapshot: AgentWorkCommitmentSnapshot,
+        focusedAgentID: String?
+    ) -> [String] {
+        guard snapshot.enabled else { return [] }
+        let summaries = snapshot.professionProfiles.map { profile in
+            let ordinal = profile.agentID.rawValue.replacingOccurrences(of: "agent_", with: "")
+            let primary: String
+            switch profile.primaryWorkDomain {
+            case .fishing: primary = "fish"
+            case .hunting: primary = "hunt"
+            case .foraging: primary = "forage"
+            case .cultivation: primary = "cultivate"
+            case .husbandry: primary = "herd"
+            case .construction: primary = "build"
+            case .caregiving: primary = "care"
+            case .materialHandling: primary = "handle"
+            case nil: primary = "none"
+            }
+            return "\(ordinal):\(primary)@\(profile.specializationStrengthBasisPoints / 100)%"
+        }.joined(separator: " ")
+        let focus = focusedAgentID.flatMap { raw in
+            snapshot.professionProfiles.first { $0.agentID.rawValue == raw }
+        }
+        return [
+            "work d/c/e: \(snapshot.demands.filter(\.status.isActive).count)/\(snapshot.commitments.filter(\.status.isOpen).count)/\(snapshot.totalEvidenceCount)",
+            "work active/suspended/fulfilled: \(snapshot.commitments.filter { $0.status == .active }.count)/\(snapshot.commitments.filter { $0.status == .suspended }.count)/\(snapshot.commitments.filter { $0.status == .fulfilled }.count)",
+            "profiles: \(summaries.isEmpty ? "none" : summaries)",
+            "focus work: \(focus?.displayDescriptor ?? "none") secondary=\(focus?.secondaryDomains.map(\.rawValue).joined(separator: ",") ?? "none")",
+        ]
     }
 }

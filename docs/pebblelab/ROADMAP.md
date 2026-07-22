@@ -4881,3 +4881,16 @@ animal-capital view; management is not ownership. Runtime entity IDs are never
 durable and restart reconciliation remains explicitly resolved, missing or
 ambiguous. Gate R remains acquired and Gate B remains not acquired; CIV-25 is
 not started.
+
+## CIV-25 - Durable Work Commitments current after CIV-24
+
+Status: canonical prospective status synchronized after completion of CIV-24.
+
+`CIV-24 — Livestock and Animal Capital V1` is completed and
+`CIV-25 — Durable Work Commitments and Emergent Professions V1` is current.
+The local vertical adds bounded causal work demands, temporary durable
+responsibilities, deterministic matching, observer-local reliability evidence
+and read-only profession profiles derived from repeated real outcomes. It
+creates no profession permission, physical bonus, ownership, fixed class,
+scheduler or executor. Gate R remains acquired. Gate B remains not acquired
+pending CIV-25 publication, senior review and its dedicated evaluation.

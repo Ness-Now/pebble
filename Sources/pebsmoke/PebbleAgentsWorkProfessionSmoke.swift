@@ -40,11 +40,17 @@ private func workBase(_ id: String) -> AgentSimulationSession {
     return session
 }
 
-private func workProject(_ session: AgentSimulationSession, id: String) -> AgentConstructionProject {
+private func workProject(
+    _ session: AgentSimulationSession,
+    id: String,
+    builderAgentID: String = "agent_0"
+) -> AgentConstructionProject {
     try! AgentConstructionProject(
-        projectId: id, builderAgentId: "agent_0",
+        projectId: id, builderAgentId: builderAgentID,
         origin: AgentPosition(x: 2, y: 64, z: -1),
-        createdAtTick: session.tick, previousHomePosition: workHome,
+        createdAtTick: session.tick,
+        previousHomePosition: try! session.state(for: AgentID(rawValue: builderAgentID)!)
+            .homePosition,
         originalFingerprints: AgentBlueprint.fixedLeanToV1.cells.map {
             AgentConstructionCellFingerprint(cellIndex: $0.index, originalFingerprint: 0)
         },
@@ -355,6 +361,107 @@ func runPebbleAgentsWorkProfessionSmoke() {
     check("unprofiled capable replacement remains eligible",
           crisis.practiceUnits(agentID: replacement.workerID, domain: .construction) == 0
             && replacement.status == .active)
+
+    var expiration = preparedWorkSession("work-expiration")
+    let expiringDemand = expiration.activeWorkDemands().first!
+    let expiring = try! expiration.applyWorkCommitmentOperation(
+        .start(demandID: expiringDemand.demandID, candidates: workContexts())
+    )!
+    for _ in 0...expiration.workCommitmentSnapshot().configuration!.commitmentLifetimeTicks {
+        _ = try! expiration.advanceTick()
+    }
+    _ = try! expiration.applyWorkCommitmentOperation(.review)
+    check("unfulfilled durable responsibility expires after its bounded lifetime",
+          expiration.workCommitmentSnapshot().commitments.first {
+              $0.commitmentID == expiring.commitmentID
+          }?.status == .expired)
+
+    var contextualTrust = workBase("work-contextual-trust")
+    try! contextualTrust.setSocialEnabled(true)
+    let trustBelief = socialSmokeDirectMessage(
+        session: &contextualTrust, fingerprint: 25_001,
+        observerX: 0, observerID: "agent_0"
+    )
+    _ = socialSmokeVerify(
+        session: &contextualTrust, belief: trustBelief,
+        fingerprint: 25_001, resource: .wood
+    )
+    try! contextualTrust.createConstructionProject(workProject(
+        contextualTrust, id: "trust-shelter", builderAgentID: "agent_1"
+    ))
+    try! contextualTrust.setBuildAutoEnabled(true)
+    var trustPreparationRecorder: AgentReplayRecorder?
+    _ = workPlaceNext(
+        &contextualTrust, suffix: "trust-practice", recorder: &trustPreparationRecorder
+    )
+    _ = try! contextualTrust.advanceTick()
+    try! contextualTrust.setWorkCommitmentsEnabled(true)
+    _ = try! contextualTrust.applyWorkCommitmentOperation(.refreshDemands)
+    let trustDemand = contextualTrust.activeWorkDemands().first!
+    let trustedScore = contextualTrust.matchingScore(
+        for: trustDemand.demandID, candidate: workContexts()[0]
+    )!
+    let neutralScore = contextualTrust.matchingScore(
+        for: trustDemand.demandID, candidate: workContexts()[2]
+    )!
+    check("requester-local trust breaks an otherwise equal work match",
+          contextualTrust.trustScore(
+              sourceAgentId: trustDemand.observerID.rawValue,
+              targetAgentId: "agent_0"
+          ) > 0
+            && trustedScore.trust > neutralScore.trust
+            && trustedScore.total > neutralScore.total)
+
+    var carePreemption = careBase("work-care-preemption")
+    try! carePreemption.setSkillsEnabled(true)
+    try! carePreemption.createConstructionProject(
+        workProject(carePreemption, id: "care-preemption-shelter")
+    )
+    try! carePreemption.setBuildAutoEnabled(true)
+    var carePreparationRecorder: AgentReplayRecorder?
+    _ = workPlaceNext(
+        &carePreemption, suffix: "care-practice", recorder: &carePreparationRecorder
+    )
+    _ = try! carePreemption.advanceTick()
+    try! carePreemption.setWorkCommitmentsEnabled(true)
+    _ = try! carePreemption.applyWorkCommitmentOperation(.refreshDemands)
+    let productiveDemand = carePreemption.activeWorkDemands().first!
+    let productive = try! carePreemption.applyWorkCommitmentOperation(.start(
+        demandID: productiveDemand.demandID, candidates: workContexts()
+    ))!
+    try! carePreemption.setReproductionEnabled(true)
+    try! carePreemption.setDependentCareEnabled(
+        true,
+        configuration: try! AgentDependentCareConfiguration(
+            nourishmentHungerThreshold: 0.05
+        )
+    )
+    var careRecorder = try! AgentReplayRecorder(
+        checkpoint: try! carePreemption.makeCheckpoint(), session: carePreemption
+    )
+    let dependent = careBirth(
+        &careRecorder, &carePreemption,
+        position: AgentPosition(x: 0, y: 64, z: 2), candidateIndex: 0
+    )
+    for _ in 0..<8 where carePreemption.careTarget(for: productive.workerID) == nil {
+        _ = try! careRecorder.apply(
+            .advanceTick(perceptions: [], physicalObservations: []),
+            to: &carePreemption
+        )
+    }
+    let assignedCare = try! carePreemption.currentCareAssignment(for: dependent.newbornID)
+    _ = try! carePreemption.applyWorkCommitmentOperation(.review)
+    let careSuspended = carePreemption.workCommitmentSnapshot().commitments.first {
+        $0.commitmentID == productive.commitmentID
+    }
+    let careReplacement = try! carePreemption.applyWorkCommitmentOperation(.replace(
+        commitmentID: productive.commitmentID, candidates: workContexts()
+    ))!
+    check("critical dependent care suspends productive work and permits replacement",
+          assignedCare?.caregiverID == productive.workerID
+            && careSuspended?.status == .suspended
+            && careSuspended?.suspensionReason == .dependentCare
+            && careReplacement.workerID != productive.workerID)
 
     var replay = workBase("work-replay")
     try! replay.createConstructionProject(workProject(replay, id: "replay-shelter"))

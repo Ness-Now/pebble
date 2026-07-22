@@ -85,7 +85,7 @@ private func careMortalityBase(_ simulationID: String) -> AgentSimulationSession
     return session
 }
 
-private func careBase(
+func careBase(
     _ simulationID: String,
     lifecycle: Bool = true,
     kinship: Bool = true,
@@ -190,7 +190,7 @@ private func careMovementPerception(
     )
 }
 
-private func careBirth(
+func careBirth(
     _ recorder: inout AgentReplayRecorder,
     _ session: inout AgentSimulationSession,
     position: AgentPosition,

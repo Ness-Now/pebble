@@ -23,6 +23,7 @@ extension PebbleAgentController {
             localEcologySnapshot: session.localEcologySnapshot(),
             mortalitySnapshot: session.mortalitySnapshot(),
             lifecycleSnapshot: session.lifecycleSnapshot(),
+            workSnapshot: session.workCommitmentSnapshot(),
             mode: mode,
             paused: isPaused,
             cognitiveHz: cognitiveHz,

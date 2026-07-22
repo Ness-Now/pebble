@@ -197,8 +197,8 @@ public enum AgentSkillDigest {
 /// Shared verifier for the published material-success evidence accepted by
 /// Skills and Teaching. Keeping this actor/domain/status contract in one place
 /// prevents a demonstration from accepting weaker evidence than practice.
-enum AgentMaterialSuccessEvidence {
-    static func matches(
+public enum AgentMaterialSuccessEvidence {
+    public static func matches(
         _ event: AgentCausalEvent,
         agentID: AgentID,
         domain: AgentSkillDomain
@@ -255,7 +255,7 @@ enum AgentMaterialSuccessEvidence {
         }
     }
 
-    static func status(_ event: AgentCausalEvent) -> String {
+    public static func status(_ event: AgentCausalEvent) -> String {
         switch event.payload {
         case let .operation(status, _): return status
         case let .ecologyForage(_, _, _, status, _, _, _, _): return status

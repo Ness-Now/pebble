@@ -158,6 +158,9 @@ final class PebbleAgentController {
     var livestockFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_LIVESTOCK"] == "1"
     }
+    var workProfessionsFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_WORK_PROFESSIONS"] == "1"
+    }
     var kinshipLateFailureProofEnabled: Bool {
         let lineageProof = environment["PEBBLELAB_DISPOSABLE_KINSHIP_LATE_FAILURE_PROOF"] == "1"
         let careProof = environment["PEBBLELAB_DISPOSABLE_CARE_LATE_FAILURE_PROOF"] == "1"

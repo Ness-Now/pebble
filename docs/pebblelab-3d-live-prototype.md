@@ -49,8 +49,8 @@ Le cycle de développement et les validations permanentes sont décrits dans [`d
 
 Les options supplémentaires `--embodiment`, `--teaching`,
 `--ecological-observation`, `--agriculture`, `--wild-subsistence` et
-`--livestock` portent respectivement les preuves CIV-19 à CIV-24 décrites
-ci-dessous.
+`--livestock`, puis `--work-professions` portent respectivement les preuves
+CIV-19 à CIV-25 décrites ci-dessous.
 
 Depuis la racine du dépôt :
 
@@ -360,7 +360,38 @@ Checkpoint/replay v15 conserve seulement les records de management ; les
 animaux restent dans la persistence World et les runtime IDs ne sont jamais
 durables. Après restart, l'identité physique reste unresolved/ambiguous jusqu'à
 ré-observation explicite, sans nearest-match. Gate R reste acquise et Gate B
-reste non acquise jusqu’à CIV-25.
+reste non acquise jusqu’à l’évaluation dédiée post-publication de CIV-25.
+
+## CIV-25 — Responsabilités durables et professions émergentes V1
+
+Le mode `scripts/verify-pebblelab-live.sh --work-professions` utilise le monde
+isolé `PebbleLab-Disposable-WorkProfessions-46`, seed 46, après le dry-run
+homonyme. La gate unique `PEBBLELAB_APP_AGENTS_WORK_PROFESSIONS=1` reste
+default-off. Les commandes
+`/lab work-professions on|refresh|match|record|crisis|resume|status|final`
+préparent et observent la preuve ; elles ne posent aucune profession et
+n’exécutent aucune nouvelle physique.
+
+Trois demandes causales distinctes sont matchées vers trois agents depuis leurs
+embodiments, outils et opportunités live. Les executors déjà acquis produisent
+ensuite une vraie pêche via `FishingBobber`, une vraie chasse via
+combat/mort/drops Core et une vraie cueillette via le break canonique d’un
+`sweet_berry_bush`. CIV-25 ne fait que normaliser leurs outcomes causaux,
+fulfill les engagements correspondants et recomputer les profils descriptifs
+`fishing`, `hunting` et `foraging`. Une crise suspend puis permet la reprise
+d’une responsabilité sans verrou de profession.
+
+Les captures `work-professions-initial.png`,
+`work-professions-specialized.png`, `work-professions-crisis.png` et
+`work-professions-final.png` doivent rendre lisibles demandes, engagements,
+états et profils tout en montrant le vrai World. La trace exige trois outcomes
+distincts, aucun doublon causal, `physicalMultiplier=0`,
+`abstractMaterialCredit=0`, `campStockDelta=0`,
+`resourceInventoryDelta=0`, `localEcologyDelta=0`, checkpoint v16,
+`runtimeErrors=0` et cleanup exact. Les tentatives physiques actives restent
+app-owned et ne sont donc pas déclarées restart-safe par Civilization.
+Gate R reste acquise ; Gate B reste non acquise jusqu’à publication, revue
+senior et évaluation dédiée.
 
 ## CIV-04 — Canal physique local
 
