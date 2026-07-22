@@ -11,8 +11,25 @@
     "candidateResult": "failed",
     "canonicalStatus": "notAcquired",
     "evidence": "docs/pebblelab/GATE_B_CANDIDATE_EVALUATION.md",
-    "nextCanonicalPhasePromoted": false
+    "nextCanonicalPhasePromoted": false,
+    "locallyRemediatedBlockers": [
+      "B-BLOCKER-FOOD-CLOSURE"
+    ],
+    "openBlockers": [
+      "B-BLOCKER-AUTONOMOUS-PLAYABLE-SLICE",
+      "B-BLOCKER-LIVESTOCK-RESERVE-CLOSURE",
+      "B-BLOCKER-CRISIS-REPLACEMENT-ORCHESTRATION"
+    ]
   },
+  "correctiveMilestones": [
+    {
+      "id": "GATE-B-CORR-01",
+      "title": "Real Food Consumption and Survival Convergence",
+      "canonicalPhase": false,
+      "startingHead": "515ae22c871292a978bb76da3020d3959632b6ed",
+      "status": "locallyRemediatedPendingSeniorPublication"
+    }
+  ],
   "gates": {
     "R": {
       "title": "No Parallel Physical Engines",

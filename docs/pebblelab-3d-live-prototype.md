@@ -42,15 +42,20 @@ Sous la gate CIV-23, trois intentions distinctes réutilisent respectivement le
 vrai `FishingBobber`, le combat/mort/drop Core et le break canonique d'une
 ressource sauvage ; tous les résultats passent par les IDs exacts des
 `ItemEntity` et la custody réelle, sans fish/meat/berry stock abstrait.
+Sous le correctif non canonique `GATE-B-CORR-01`, un aliment V1 à débit simple
+déjà acquis en custody réelle peut être consommé exactement une fois et publier
+un outcome validé vers le même `AgentNeeds.hunger` que la starvation, sans
+crédit `.foodRaw`.
 
 ## Prérequis et lancement
 
 Le cycle de développement et les validations permanentes sont décrits dans [`docs/pebblelab/DEVELOPMENT_WORKFLOW.md`](pebblelab/DEVELOPMENT_WORKFLOW.md). Pour une session Phase J reproductible qui n'expose aucun monde personnel, commencer par `scripts/verify-pebblelab-live.sh --dry-run`, puis lancer explicitement `scripts/verify-pebblelab-live.sh`. Les options `--economy`, `--h2`, `--natural`, `--social`, `--physical`, `--cooperation`, `--persistence`, `--population`, `--multiscale`, `--ecology`, `--mortality`, `--reproduction`, `--kinship`, `--households`, `--care`, `--skills`, `--material`, `--harvest` et `--construction` conservent respectivement les preuves Phase I, H2, récolte naturelle J→K, information sociale CIV-03, canal physique CIV-04, tâche partagée CIV-05, restart/replay CIV-06, migration physique CIV-07, métriques settlement CIV-08, écologie alimentaire CIV-09, sortie de population CIV-10, âge/maturité/reproduction bornée CIV-11, parenté durable CIV-12A, appartenance household CIV-12B, dependent care final de CIV-12, compétences pratiques CIV-13, custody matérielle CIV-16, convergence harvest CIV-17 et convergence construction CIV-18. Ce lanceur réutilise les hooks existants d'autoload, de monde neuf, de commandes et de capture, impose un monde jetable préfixé `PebbleLab-Disposable-` avec seed fixe et conserve monde, traces et captures sous un home temporaire isolé. La vérification visuelle de la capture reste manuelle.
 
 Les options supplémentaires `--embodiment`, `--teaching`,
-`--ecological-observation`, `--agriculture`, `--wild-subsistence` et
+`--ecological-observation`, `--agriculture`, `--wild-subsistence`,
 `--livestock`, puis `--work-professions` portent respectivement les preuves
-CIV-19 à CIV-25 décrites ci-dessous.
+CIV-19 à CIV-25 décrites ci-dessous. `--physical-food-survival` porte la preuve
+corrective `GATE-B-CORR-01` sans créer une phase `CIV-*`.
 
 Depuis la racine du dépôt :
 
@@ -97,6 +102,7 @@ Commandes de démonstration :
 /lab construction proof         /lab embodiment proof
 /lab economy <setup|auto on|auto off|status|clear>
 /lab survival <on|off|status>
+/lab physical-food-survival <on|off|status|proof [shadow-setup|shadow|consume|final]>
 /lab natural <on|off|status|scan>
 /lab ecology <on|off|status|scan|clear>
 /lab forage status
@@ -333,6 +339,32 @@ annulés/réconciliés depuis le World au restart, jamais rejoués comme moteur
 parallèle. La terminaison retire les entités de fixture, restaure exactement les
 cellules, custody et probes, et exige `runtimeErrors=0`. Gate R reste acquise ;
 Gate B reste non acquise.
+
+## GATE-B-CORR-01 — Nourriture physique et survie
+
+Le mode `scripts/verify-pebblelab-live.sh --physical-food-survival` utilise
+`PebbleLab-Disposable-PhysicalFood-46`, seed `46`, après le dry-run homonyme.
+Il active explicitement l'autorité alimentaire physique default-off, fait
+progresser le même état de faim jusqu'à la zone critique malgré un solde
+`.foodRaw` coarse, puis réutilise la fixture CIV-23 pour casser un vrai bush
+mature et acquérir ses `sweet_berries` en custody exacte.
+
+Le narrow executor sélectionne un slot porté borné, relit le
+`FoodConsumptionDescriptor` PebbleCore et fait débiter exactement une berry par
+la gateway CIV-16 avant de publier le résultat validé vers
+`AgentNeeds.hunger`. Le scénario injecte une custody stale, un échec tardif
+avec rollback vérifié et un replay du même consumption ID ; chacun produit
+zéro débit et zéro delta de faim. La consommation réussie produit zéro delta
+`AgentCampStock`, resource inventory et écologie coarse, puis checkpoint/restore
+v17 conserve byte-exact l'état civilisationnel validé.
+
+Les captures `physical-food-before.png`, `physical-food-acquired.png`,
+`physical-food-consumed.png` et `physical-food-final.png` montrent le World
+rendu, les trois embodiments, le contexte berry réel puis sa disparition. La
+trace structurée reste l'autorité pour le débit 1→0 et la faim 0.85→0.75. La
+terminaison restaure la fixture et exige `runtimeErrors=0`. Cette preuve remédie
+localement `B-BLOCKER-FOOD-CLOSURE` ; Gate B reste `FAIL` tant que le blocker
+d'orchestration autonome est ouvert.
 
 ## CIV-24 — Élevage et capital animal V1
 

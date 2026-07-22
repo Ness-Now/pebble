@@ -26,6 +26,51 @@ func checkD(_ name: String, _ got: Double, _ want: Double, tol: Double = 1e-12) 
 
 func section(_ name: String) { print("\n— \(name)") }
 
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "survival-economy" {
+    registerAllBlocks()
+    registerAllItems()
+    registerAllBiomes()
+    registerAllRecipes()
+    registerAllLootTables()
+    registerAllEntities()
+    registerAllSystems()
+    runPebbleAgentsVerticalSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "physical-food-survival" {
+    registerAllBlocks()
+    registerAllItems()
+    registerAllBiomes()
+    registerAllRecipes()
+    registerAllLootTables()
+    registerAllEntities()
+    registerAllSystems()
+    runPebbleCorePhysicalFoodSurvivalSmoke()
+    runPebbleAgentsPhysicalFoodSurvivalSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "checkpoint-replay" {
+    runPebbleAgentsPersistenceReplaySmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "mortality" {
+    runPebbleAgentsMortalityPopulationExitSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "lifecycle" {
+    runPebbleAgentsAgeMaturityReproductionSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "physical-actions" {
     registerAllBlocks()
     registerAllItems()
@@ -2205,6 +2250,8 @@ do {
 }
 
 runPebbleAgentsRuntimeSmoke()
+runPebbleCorePhysicalFoodSurvivalSmoke()
+runPebbleAgentsPhysicalFoodSurvivalSmoke()
 runPebbleAgentsMovementSmoke()
 runPebbleAgentsResourceSmoke()
 runPebbleAgentsVerticalSmoke()

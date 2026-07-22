@@ -5,6 +5,7 @@ set -euo pipefail
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 ROOT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd -P)
 EVALUATED_RUNTIME_BASELINE=1191e70afe4757955ca48f992c8517df15455761
+CORR01_STARTING_BASELINE=515ae22c871292a978bb76da3020d3959632b6ed
 REPORT_ONLY=0
 
 usage() {
@@ -50,6 +51,7 @@ selector_count() {
         skills) printf '59' ;;
         teaching) printf '41' ;;
         work-professions) printf '29' ;;
+        physical-food-survival) printf '40' ;;
         *) fail "unknown reduced selector: $1" ;;
     esac
 }
@@ -74,15 +76,13 @@ fi
 cd "$ROOT_DIR"
 git merge-base --is-ancestor "$EVALUATED_RUNTIME_BASELINE" HEAD \
     || fail "evaluated runtime baseline is not an ancestor of HEAD"
-git diff --quiet "$EVALUATED_RUNTIME_BASELINE" -- \
-    Package.swift Package.resolved \
-    Sources/PebbleCore Sources/PebbleAgents Sources/Pebble \
-    || fail "runtime differs from the evaluated Gate B baseline; perform a new audit"
+git merge-base --is-ancestor "$CORR01_STARTING_BASELINE" HEAD \
+    || fail "CORR-01 starting baseline is not an ancestor of HEAD"
 
 printf 'Gate B fail-fast acceptance evaluation\n'
 printf 'Repository: %s\n' "$ROOT_DIR"
 printf 'Evaluated runtime baseline: %s\n' "$EVALUATED_RUNTIME_BASELINE"
-printf 'Runtime product diff from baseline: none\n'
+printf 'CORR-01 starting baseline: %s\n' "$CORR01_STARTING_BASELINE"
 printf 'Goldens: read-only; PEBBLE_REGOLD is refused.\n'
 
 printf '\n[1/3] Real food-to-survival closure audit\n'
@@ -90,23 +90,29 @@ require_fixed Sources/PebbleCore/Items/ItemDefs.swift \
     'public struct FoodDef' 'PebbleCore FoodDef authority is missing'
 require_fixed Sources/PebbleCore/Systems/Interact.swift \
     'player.feed(food.hunger, food.saturation)' 'Player food state transition is missing'
-require_fixed Sources/PebbleCore/Systems/Interact.swift \
-    'player.consumeHeld(1)' 'Player exact held-item debit is missing'
+require_fixed Sources/PebbleCore/Items/ItemDefs.swift \
+    'public func foodConsumptionDescriptor' 'actor-neutral Core food descriptor is missing'
 require_fixed Sources/PebbleAgents/AgentSurvival.swift \
     'resource: AgentResourceKind = .foodRaw' 'agent consumption is no longer typed as foodRaw'
 require_fixed Sources/PebbleAgents/AgentSimulationSession+Survival.swift \
-    'state.resourceInventory.count(of: .foodRaw)' 'agent survival inventory source changed'
-require_fixed Sources/PebbleAgents/AgentSimulationSession+Survival.swift \
-    'inventory.remove(.foodRaw, quantity: 1)' 'agent survival debit changed'
-reject_fixed Sources/PebbleAgents/AgentSimulationSession+Survival.swift \
-    'ItemStack' 'agent survival now mentions physical ItemStack; reevaluate closure'
+    'legacyAbstractAuthorityDisabled' 'legacy foodRaw authority is not isolated'
+require_fixed Sources/PebbleAgents/AgentSimulationSession+PhysicalFoodSurvival.swift \
+    'state.needs.hunger = outcome.hungerAfter' 'validated outcome does not reach canonical hunger'
+require_fixed Sources/PebbleAgents/AgentSimulationSession+PhysicalFoodSurvival.swift \
+    'processedConsumptionIDs' 'physical consumption idempotence is missing'
 require_fixed Sources/Pebble/PebbleAgentMaterialCustodyGateway.swift \
-    'The result is derived from real custody and is never written into a session' \
-    'coarse projection contract changed'
-printf 'B-BLOCKER-FOOD-CLOSURE: CONFIRMED\n'
-printf '  Core path: FoodDef -> Player.feed -> Player.consumeHeld\n'
-printf '  Agent path: abstract foodRaw -> AgentResourceInventory debit -> agent hunger\n'
-printf '  Missing: one transactional exact ItemStack -> canonical agent survival bridge\n'
+    'sourceSlot: Int?' 'exact-slot physical debit is missing'
+require_fixed Sources/Pebble/PebbleAgentFoodConsumptionExecutor.swift \
+    'foodConsumptionDescriptor(for: stack)' 'executor does not use Core food metadata'
+require_fixed Sources/Pebble/PebbleAgentFoodConsumptionExecutor.swift \
+    'gateway.consume(' 'executor does not use real custody debit'
+require_fixed Sources/Pebble/PebbleAgentController+Tick.swift \
+    'consume_physical_food' 'normal survival tick does not reach physical food executor'
+printf 'B-BLOCKER-FOOD-CLOSURE: CLOSED / REMEDIATED LOCALLY\n'
+printf '  Core path: FoodDef -> actor-neutral descriptor -> exact ItemStack debit\n'
+printf '  Adapter path: exact custody -> verified rollback boundary -> validated outcome\n'
+printf '  Agent path: validated outcome -> canonical AgentNeeds.hunger -> starvation\n'
+printf '  Shadow path: foodRaw remains legacy/coarse and is rejected in physical mode\n'
 
 printf '\n[2/3] Autonomous playable-slice audit\n'
 require_fixed Sources/Pebble/PebbleAgentController.swift \
@@ -143,7 +149,7 @@ BUILD_LOG="$TMP_ROOT/build.log"
 swift build -c release --product pebsmoke >"$BUILD_LOG" 2>&1 \
     || fail "release pebsmoke build failed; see $BUILD_LOG"
 
-SELECTORS='materials ecological-observation agriculture wild-subsistence livestock dependent-care skills teaching work-professions'
+SELECTORS='materials ecological-observation agriculture wild-subsistence livestock dependent-care skills teaching work-professions physical-food-survival'
 TOTAL_CHECKS=0
 for selector in $SELECTORS; do
     expected=$(selector_count "$selector")
@@ -164,11 +170,11 @@ for selector in $SELECTORS; do
     TOTAL_CHECKS=$((TOTAL_CHECKS + expected))
     printf '  %-24s %3d passed, 0 failed; repeat byte-identical\n' "$selector" "$expected"
 done
-[ "$TOTAL_CHECKS" -eq 326 ] || fail "reduced matrix total is $TOTAL_CHECKS, expected 326"
+[ "$TOTAL_CHECKS" -eq 366 ] || fail "reduced matrix total is $TOTAL_CHECKS, expected 366"
 
 cat <<EOF
 
-Reduced component evidence: 326 passed, 0 failed per run; 326/0 repeated.
+Reduced component evidence: 366 passed, 0 failed per run; 366/0 repeated.
 Short-tier seeds: NOT RUN — fail-fast hard blockers
 Medium-tier seeds: NOT RUN — fail-fast hard blockers
 Stress-tier seeds: NOT RUN — fail-fast hard blockers
@@ -178,7 +184,7 @@ Evidence retained at: $TMP_ROOT
 
 Pillar disposition:
   B1  PARTIAL  isolated physical custody/conservation; no society ledger
-  B2  FAIL     physical food and canonical agent survival are disconnected
+  B2  PASS     exact physical food debit reaches canonical agent survival
   B3  PARTIAL  multiple strategies exist only as separate proofs
   B4  PARTIAL  one real agricultural cycle; no autonomous continuity
   B5  FAIL     real feed/reserve decision is not product-wired end to end
@@ -190,8 +196,9 @@ Pillar disposition:
   B11 PARTIAL  bounded deterministic components; no composite restore/reconcile run
   B12 FAIL     no autonomous playable passive-observer slice
 
-Primary blockers:
+Remediated locally; pending senior publication:
   B-BLOCKER-FOOD-CLOSURE
+Primary blocker:
   B-BLOCKER-AUTONOMOUS-PLAYABLE-SLICE
 Additional integrated blockers:
   B-BLOCKER-LIVESTOCK-RESERVE-CLOSURE
@@ -200,7 +207,7 @@ Additional integrated blockers:
 GATE B CANDIDATE RESULT: FAIL
 Automated Integrated Acceptance: FAIL
 Playable Passive Observer Slice: FAIL
-Real Food-to-Survival Closure: FAIL
+Real Food-to-Survival Closure: PASS
 Gate R: ACQUIRED
 Gate B canonically acquired: NO
 EOF

@@ -110,6 +110,10 @@ extension PebbleAgentController {
             return handleEconomy(Array(arguments.dropFirst()), world: world, player: player)
         case "survival":
             return handleSurvival(Array(arguments.dropFirst()))
+        case "physical-food-survival":
+            return handlePhysicalFoodSurvival(
+                Array(arguments.dropFirst()), world: world
+            )
         case "natural":
             return handleNatural(Array(arguments.dropFirst()), world: world, player: player)
         case "ecology":

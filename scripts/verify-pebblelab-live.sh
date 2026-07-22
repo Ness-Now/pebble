@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--ecological-observation|--agriculture|--wild-subsistence|--livestock|--work-professions]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--ecological-observation|--agriculture|--wild-subsistence|--physical-food-survival|--livestock|--work-professions]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -53,6 +53,7 @@ Options:
   --ecological-observation Run bounded real-World ecology, civil calendar, cache, and v12 proof.
   --agriculture Run real wheat till/plant/grow/harvest/storage and v13 proof.
   --wild-subsistence Run real fishing, hunting, wild gathering, custody, and v14 proof.
+  --physical-food-survival Run real berry acquisition, exact eating, shadow rejection, and v17 proof.
   --livestock Run real sheep feeding, breeding, herding, wool, loss, and v15 proof.
   --work-professions Run real work commitments and derived multi-agent profiles with v16 proof.
   --help     Show this help and exit.
@@ -119,6 +120,7 @@ for option in "$@"; do
         --ecological-observation) MODE="ecological-observation"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --agriculture) MODE="agriculture"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --wild-subsistence) MODE="wild-subsistence"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --physical-food-survival) MODE="physical-food-survival"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --livestock) MODE="livestock"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --work-professions) MODE="work-professions"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --help|-h) usage; exit 0 ;;
@@ -150,7 +152,25 @@ AGRICULTURE_GATE=0
 WILD_SUBSISTENCE_GATE=0
 LIVESTOCK_GATE=0
 WORK_PROFESSIONS_GATE=0
-if [ "$MODE" = "work-professions" ]; then
+if [ "$MODE" = "physical-food-survival" ]; then
+    WORLD_SEED="46"
+    MATERIAL_GATE=1
+    PERSISTENCE_GATE=1
+    POPULATION_GATE=1
+    LIFECYCLE_GATE=1
+    SKILL_GATE=1
+    ECOLOGICAL_OBSERVATION_GATE=1
+    WILD_SUBSISTENCE_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-PhysicalFood-46"
+    CAPTURE_NAME="physical-food-final.png"
+    PHYSICAL_FOOD_BOOT='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/tp 14 71 -18;/lab pause;/lab population on;/lab lifecycle on;/lab skills on;/lab focus agent_2;/lab survival on;/lab physical-food-survival on;/lab physical-food-survival proof shadow-setup'
+    physical_food_step=0
+    while [ "$physical_food_step" -lt 17 ]; do
+        PHYSICAL_FOOD_BOOT="$PHYSICAL_FOOD_BOOT;/lab step"
+        physical_food_step=$((physical_food_step + 1))
+    done
+    LAB_COMMANDS="$PHYSICAL_FOOD_BOOT;/lab physical-food-survival proof shadow;/lab ecological-observation on;/lab wild-subsistence on;/lab wild-subsistence proof setup;/tp 14 70 -20 0 25;/lab overlay off|/lab wild-subsistence proof fish|/lab wild-subsistence proof hunt|/lab wild-subsistence proof gather|/lab physical-food-survival proof consume|/lab physical-food-survival proof final;/lab physical-food-survival status;/lab causality tail 20;/lab status"
+elif [ "$MODE" = "work-professions" ]; then
     WORLD_SEED="46"
     MATERIAL_GATE=1
     PERSISTENCE_GATE=1
@@ -671,6 +691,12 @@ print_plan() {
         printf '          %s\n' "$capture_dir/work-professions-specialized.png"
         printf '          %s\n' "$capture_dir/work-professions-crisis.png"
         printf '          %s\n' "$capture_path"
+    elif [ "$MODE" = "physical-food-survival" ]; then
+        capture_dir=$(dirname "$capture_path")
+        printf 'Captures: %s\n' "$capture_dir/physical-food-before.png"
+        printf '          %s\n' "$capture_dir/physical-food-acquired.png"
+        printf '          %s\n' "$capture_dir/physical-food-consumed.png"
+        printf '          %s\n' "$capture_path"
     elif [ "$MODE" = "build" ]; then
         capture_dir=$(dirname "$capture_path")
         printf 'Captures: %s\n' "$capture_dir/fixed-shelter-before.png"
@@ -728,7 +754,11 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_WORK_PROFESSIONS=%s\n' "$WORK_PROFESSIONS_GATE"
     printf '  PEBBLELAB_DISPOSABLE_WORLD_PROOF=1\n'
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
-    if [ "$MODE" = "build" ]; then
+    if [ "$MODE" = "physical-food-survival" ]; then
+        printf '  PEBBLE_SHOT=-|%s/physical-food-before.png|-|-|%s/physical-food-acquired.png|%s/physical-food-consumed.png|%s\n' \
+            "$(dirname "$capture_path")" "$(dirname "$capture_path")" \
+            "$(dirname "$capture_path")" "$capture_path"
+    elif [ "$MODE" = "build" ]; then
         printf '  PEBBLE_SHOT=-|%s/fixed-shelter-before.png|%s/fixed-shelter-partial.png|%s|-\n' \
             "$(dirname "$capture_path")" "$(dirname "$capture_path")" "$capture_path"
     elif [ "$MODE" = "physical" ]; then
@@ -761,7 +791,11 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "work-professions" ]; then
+    if [ "$MODE" = "physical-food-survival" ]; then
+        printf '  2. Inspect the hungry agent and mature berry context before acquisition.\n'
+        printf '  3. Confirm the gathered ItemStack appears in real custody, then decreases by exactly one.\n'
+        printf '  4. Confirm the trace proves shadow foodRaw rejection and the same canonical hunger changing.\n'
+    elif [ "$MODE" = "work-professions" ]; then
         printf '  2. Inspect initial, specialized, crisis, and final PNGs with the work/profile overlay.\n'
         printf '  3. Confirm fishing, hunting, and gathering remain real PebbleCore work with exact custody.\n'
         printf '  4. Confirm the crisis suspends/resumes responsibility and no profile grants output or permission.\n'
@@ -870,13 +904,13 @@ print_plan() {
         && [ "$MODE" != "mortality" ] && [ "$MODE" != "reproduction" ] \
         && [ "$MODE" != "kinship" ] && [ "$MODE" != "households" ] \
         && [ "$MODE" != "care" ] && [ "$MODE" != "skills" ]; then
-        if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ]; then
+        if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ]; then
             printf '  5. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         else
             printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         fi
     fi
-    if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ]; then
+    if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ]; then
         printf '  6. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
     else
         printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
@@ -916,7 +950,12 @@ TRACE_PATH="$SESSION_ROOT/pebble-live.log"
 DB_PATH="$SESSION_HOME/Library/Application Support/Pebble/pebble.db"
 [ ! -e "$DB_PATH" ] || fail "fresh disposable database already exists: $DB_PATH"
 /bin/mkdir -p "$SESSION_HOME" "$CAPTURE_DIR"
-if [ "$MODE" = "work-professions" ]; then
+if [ "$MODE" = "physical-food-survival" ]; then
+    CAPTURE_BEFORE_PATH="$CAPTURE_DIR/physical-food-before.png"
+    CAPTURE_ACQUIRED_PATH="$CAPTURE_DIR/physical-food-acquired.png"
+    CAPTURE_CONSUMED_PATH="$CAPTURE_DIR/physical-food-consumed.png"
+    SHOT_SPEC="-|$CAPTURE_BEFORE_PATH|-|-|$CAPTURE_ACQUIRED_PATH|$CAPTURE_CONSUMED_PATH|$CAPTURE_PATH"
+elif [ "$MODE" = "work-professions" ]; then
     CAPTURE_INITIAL_PATH="$CAPTURE_DIR/work-professions-initial.png"
     CAPTURE_SPECIALIZED_PATH="$CAPTURE_DIR/work-professions-specialized.png"
     CAPTURE_CRISIS_PATH="$CAPTURE_DIR/work-professions-crisis.png"
@@ -3034,7 +3073,7 @@ world_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT count(*), json_extract(json, '
 expected_world_facts="1|$WORLD_SEED|$WORLD_NAME|1000|0|0|0|0|0"
 [ "$world_facts" = "$expected_world_facts" ] \
     || fail "unexpected disposable world facts: $world_facts"
-if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ] || [ "$MODE" = "material" ] || [ "$MODE" = "cooperation" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ]; then
+if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ] || [ "$MODE" = "material" ] || [ "$MODE" = "cooperation" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ]; then
     spawn_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.spawnX'), json_extract(json, '$.spawnY'), json_extract(json, '$.spawnZ') FROM worlds;")
     [ "$spawn_facts" = "8|75|-112" ] || fail "unexpected seed-46 spawn: $spawn_facts"
 fi
@@ -3043,7 +3082,21 @@ require_trace "disposable-world name=$WORLD_NAME seed=$WORLD_SEED worldTick=0 da
 require_trace "start seed=$WORLD_SEED agents=3 tick=0 hz=4 movement=on worldTick=[0-9]+ dayTime=1000 weather=clear randomTickSpeed=0 mobSpawning=0" 'deterministic agent session initial conditions'
 
 [ -s "$CAPTURE_PATH" ] || fail "capture was not written: $CAPTURE_PATH"
-if [ "$MODE" = "work-professions" ]; then
+if [ "$MODE" = "physical-food-survival" ]; then
+    [ -s "$CAPTURE_BEFORE_PATH" ] || fail "before capture was not written: $CAPTURE_BEFORE_PATH"
+    [ -s "$CAPTURE_ACQUIRED_PATH" ] || fail "acquired capture was not written: $CAPTURE_ACQUIRED_PATH"
+    [ -s "$CAPTURE_CONSUMED_PATH" ] || fail "consumed capture was not written: $CAPTURE_CONSUMED_PATH"
+    require_trace 'physical food shadow actor=agent_2 foodRaw=[1-9][0-9]* physicalFood=none abstractSpend=rejected hunger=0\.[0-9]+ criticalTicks=[1-9][0-9]* health=[0-9]+ starvation=progressed mutation=none' 'abstract shadow authority rejection and starvation progression'
+    require_trace_count '^\[lab-live\] wild subsistence gathering actor=agent_2 resource=sweet_berry_bush observation=real approachSteps=[1-9][0-9]* interaction=canonicalBreak drops=exact loot=sweet_berries custody=real depleted=1 regrowth=CoreOnly practice=1 abstractCredit=0$' 1 'real berry acquisition through CIV-23'
+    require_trace 'physical food faults actor=agent_2 stale=refused staleDebit=0 staleHungerDelta=0 rollback=verified rollbackItem=restored rollbackSession=unchanged' 'stale refusal and verified rollback'
+    require_trace 'physical food live actor=agent_2 source=CIV23-wildGathering material=sweet_berries slot=[0-9]+ countBefore=[1-9][0-9]* consumed=1 countAfter=[0-9]+ remainder=none coreHunger=2 saturation=0\.4 hunger=0\.[0-9]+>0\.[0-9]+ criticalTicks=[1-9][0-9]*>0 foodRawDelta=0 campStockDelta=0 localEcologyDelta=0 resourceInventoryDelta=0 receipt=physical-food-live-[0-9]+ custody=real physicalConservation=exact' 'exact physical food debit and canonical hunger publication'
+    require_trace 'physical food duplicate actor=agent_2 consumptionID=physical-food-live-[0-9]+ secondDebit=0 secondHungerDelta=0 secondHistory=0' 'physical consumption idempotence'
+    require_trace 'physical food proof authority=physicalItems source=matureSweetBerryBush observation=real gathering=canonicalBreak itemEntity=real acquisition=exact custody=real consumption=exact survival=AgentNeeds.hunger hunger=0\.[0-9]+ health=[0-9]+ history=1 abstractCredit=0 schema=17 restart=validatedOutcomeOnly physicalInventoryOwner=PebbleCore GateR=acquired foodBlocker=remediated autonomyBlocker=open GateB=notAcquired runtimeErrors=0' 'complete GATE-B-CORR-01 live proof'
+    require_trace 'wild subsistence cleanup entities=exact cells=exact custody=exact probes=restored' 'exact physical food fixture cleanup'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'physical food runtime health'
+    reject_trace 'PhysicalFoodSurvival command failed|rollbackFailure|abstractCredit=[^0]|foodRawDelta=[^0]|campStockDelta=[^0]|resourceInventoryDelta=[^0]' 'physical food failure, rollback failure, or ghost abstract mutation'
+    printf '\nPASS: real berry acquisition, exact physical consumption, shadow rejection, v17 state, and Gate B food remediation verified.\n'
+elif [ "$MODE" = "work-professions" ]; then
     [ -s "$CAPTURE_INITIAL_PATH" ] || fail "initial capture was not written: $CAPTURE_INITIAL_PATH"
     [ -s "$CAPTURE_SPECIALIZED_PATH" ] || fail "specialized capture was not written: $CAPTURE_SPECIALIZED_PATH"
     [ -s "$CAPTURE_CRISIS_PATH" ] || fail "crisis capture was not written: $CAPTURE_CRISIS_PATH"

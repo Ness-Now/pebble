@@ -6,12 +6,27 @@ Evaluation baseline:
 `1191e70afe4757955ca48f992c8517df15455761`
 (`Prove specialization without fixed classes`).
 
+Evaluation #1 remains the historical acceptance record:
+
 ```text
 GATE B CANDIDATE RESULT: FAIL
 
 Automated Integrated Acceptance: FAIL
 Playable Passive Observer Slice: FAIL
 Real Food-to-Survival Closure: FAIL
+Gate R: ACQUIRED
+Gate B canonically acquired: NO
+```
+
+Local corrective status after `GATE-B-CORR-01`, based on starting HEAD
+`515ae22c871292a978bb76da3020d3959632b6ed` and pending senior publication:
+
+```text
+GATE B CANDIDATE RESULT: FAIL
+
+Automated Integrated Acceptance: FAIL
+Playable Passive Observer Slice: FAIL
+Real Food-to-Survival Closure: PASS
 Gate R: ACQUIRED
 Gate B canonically acquired: NO
 ```
@@ -42,7 +57,7 @@ Gate B does not require complete autarky, every tool replacement, workshops,
 markets, property law, currency, large settlements, a finished observer UI or
 the finished game.
 
-## Food-to-survival closure
+## Food-to-survival closure at evaluation #1
 
 ### Physical side
 
@@ -81,7 +96,7 @@ the finished game.
   `AgentCampStock` or generic inventory credit. That preserves Gate R but leaves
   the survival boundary open.
 
-The exact current graph is therefore:
+The graph observed by evaluation #1 was therefore:
 
 ```text
 real food ItemStack
@@ -103,8 +118,56 @@ real edible ItemStack
   -> starvation/survival
 ```
 
-Verdict: `B-BLOCKER-FOOD-CLOSURE` is confirmed. A chest containing berries or
-an agent carrying cod does not satisfy B2.
+Historical verdict: `B-BLOCKER-FOOD-CLOSURE` was confirmed by evaluation #1.
+
+## GATE-B-CORR-01 local remediation
+
+`GATE-B-CORR-01 — Real Food Consumption and Survival Convergence` is a
+non-canonical corrective milestone. It does not advance the current canonical
+phase and does not acquire Gate B.
+
+The local correction adds one default-off authority mode and one narrow
+adapter over existing owners:
+
+```text
+real edible ItemStack in exact actor custody
+  -> PebbleCore FoodDef / actor-neutral consumption descriptor
+  -> CIV-16 exact-slot debit, verification and verified rollback
+  -> validated physical consumption outcome
+  -> AgentSimulationSession AgentNeeds.hunger
+  -> existing starvation and survival progress
+```
+
+- PebbleCore remains the food-metadata and physical-item authority. Simple V1
+  agent consumption supports exact carried foods with positive nutrition,
+  ordinary one-item debit, no special effects and no remainder/teleport
+  behavior. Player retains the full existing food completion path.
+- `AgentSimulationSession` remains the only agent survival owner. The explicit
+  normalization bridge is `min(1, FoodDef.hunger / 20)` because Core uses a
+  20-point hunger scale while `AgentNeeds.hunger` is a normalized deficit.
+- The Pebble executor selects a deterministic bounded carried slot, checks the
+  Core descriptor, prevalidates the pure outcome, exact-debits real custody,
+  verifies the mutation and publishes only the validated outcome. Stale
+  custody, publication failure and verification failure leave both truths
+  unchanged; rollback must be verified.
+- Consumption IDs are unique and bounded; retained outcomes are bounded and
+  non-spendable. The abstract conservation ledger is not credited or debited.
+- In physical mode, legacy `.foodRaw` consumption is rejected even when a
+  large coarse balance exists. No physical item is converted to `.foodRaw`,
+  and disabling the mode performs no reverse conversion.
+- Checkpoint/replay schema v17 persists only the bounded Civilization state
+  and validated outcomes. Real inventory remains owned by PebbleCore and is
+  reconciled at the live boundary rather than serialized by PebbleAgents.
+
+The representative matrix proves sweet berries, cod, salmon and bread metadata
+plus differentiated nutrition; wheat is not directly edible. Raw chicken,
+stews/soups, milk buckets, chorus fruit, golden apples and any food with
+effects or non-simple completion semantics are deliberately outside the V1
+agent executor and remain Core/Player-only until a later audited extension.
+
+Local verdict: `B-BLOCKER-FOOD-CLOSURE` is `CLOSED / REMEDIATED LOCALLY`,
+pending senior publication. Dependent-care nourishment still uses its explicit
+coarse compatibility model and is not silently converted by this correction.
 
 ## Autonomous orchestration matrix
 
@@ -162,7 +225,8 @@ selectors twice. The repeated text output must be byte-identical.
 | `skills` | 59 | component pass |
 | `teaching` | 41 | component pass |
 | `work-professions` | 29 | component pass |
-| Total | 326 | 326 passed, 0 failed per run |
+| `physical-food-survival` | 40 | component pass |
+| Total | 366 | 366 passed, 0 failed per run |
 
 These checks retain strong evidence for real Core actions, conservation inside
 each transaction, causal Teaching, care, bounded histories, descriptive
@@ -183,7 +247,7 @@ campaign seed.
 | Pillar | Candidate status | Evidence boundary |
 | --- | --- | --- |
 | B1 Physical Material Truth | partial | Real custody and per-vertical zero-ghost checks exist; no society-scale conservation ledger or composite run exists. |
-| B2 Real Food-to-Survival Closure | fail | Physical food and canonical agent survival are separate truths. |
+| B2 Real Food-to-Survival Closure | pass locally, pending publication | Exact physical food debit reaches canonical agent hunger with shadow isolation, idempotence and rollback proof. |
 | B3 Multiple Viable Subsistence Strategies | partial | Real strategies exist in separate proofs; no autonomous integrated selection/adaptation. |
 | B4 Agriculture and Managed Surplus Continuity | partial | One real cycle and reserve are proved; no autonomous next cycle. |
 | B5 Livestock Resource-Bounded Continuity | fail | Core feeding/breeding is real, but a real agriculture reserve and Civilization breeding decision do not gate the live chain end to end. |
@@ -263,6 +327,34 @@ The app was intentionally not launched after the source audit proved that all
 available composite-looking live paths would be command-sequenced. Screenshots
 from such a run could not change the Gate B verdict.
 
+### CORR-01 corrective visual record
+
+The isolated corrective proof is not a passive Gate B slice. It was launched
+because CORR-01 changes a real physical boundary and therefore requires its own
+visual and trace evidence.
+
+```text
+Pebble process launched: YES
+real rendered World captured: YES
+foreground activation attempted: YES
+foreground client visibly observed when environment allowed: YES
+capture(s) inspected: YES
+real physical food acquisition represented: YES
+real food consumption context represented: YES
+exact physical debit trace-proven: YES (sweet_berries 1 -> 0)
+canonical hunger change trace-proven: YES (0.85 -> 0.75)
+abstract food shadow credit observed: NO
+final physical state coherent: YES
+visual anomaly found: NO
+capture paths: retained isolated physical-food-before/acquired/consumed/final PNGs
+```
+
+The four 3024×1898 frames show the real forest/water context, bounded fixture,
+three expected debug embodiments, visible berry acquisition context and its
+absence after consumption. No duplicate agent, duplicate item, ghost berry,
+teleport or contradictory final scene was observed. The structured trace also
+proves `runtimeErrors=0`, exact fixture/custody cleanup and three probes removed.
+
 ## Dedicated command
 
 ```bash
@@ -277,14 +369,14 @@ the hard FAIL and exits `2`. Diagnostic mode preserves the FAIL text but exits
 scripts/verify-pebblelab-gate-b.sh --report-only
 ```
 
-The evaluator refuses `PEBBLE_REGOLD`, verifies that product runtime surfaces
-still match the evaluated baseline, creates evidence only under a temporary
-directory, never launches a live command scheduler and never owns gameplay
-state. There is no runtime `GateBState`.
+The evaluator refuses `PEBBLE_REGOLD`, anchors evaluation #1 and the CORR-01
+starting baseline, audits the corrective source seams, creates evidence only
+under a temporary directory, never launches a live command scheduler and
+never owns gameplay state. There is no runtime `GateBState`.
 
 ## Corrective phases recommended
 
-### 1. Real Food Consumption and Survival Convergence
+### 1. Real Food Consumption and Survival Convergence — remediated locally
 
 Smallest causal scope:
 

@@ -25,6 +25,10 @@ est acquise. La candidate Gate B a été évaluée sur le baseline
 `1191e70afe4757955ca48f992c8517df15455761` et a échoué ; Gate B n'est pas
 acquise. Aucune phase `CIV-*` n'est automatiquement promue pendant la
 correction de cette gate. `CIV-26` reste `planned` et n'est pas commencé.
+Le jalon correctif non canonique `GATE-B-CORR-01` a localement remédié la
+fermeture nourriture physique → survie sur le baseline de départ
+`515ae22c871292a978bb76da3020d3959632b6ed`, sous réserve de revue senior et
+publication. Il ne change ni la numérotation, ni le statut de Gate B.
 
 Les noms `NEXT-1` et `NEXT-2` sont uniquement des alias historiques :
 
@@ -345,12 +349,14 @@ classe professionnelle imposée.
   crédite exactement une pratique ; Teaching accepte ces domaines sans
   conférer de skill par observation et aucun skill ne change RNG, damage,
   drops ou croissance.
-- Cod, salmon, raw chicken et sweet berries restent classés par les métadonnées
-  food PebbleCore. La consommation agent de vrais `ItemStack` n'a pas encore
-  de primitive actor-neutral canonique ; CIV-23 ne crée donc aucun second
-  moteur de calories et ne prétend pas transformer la viande crue en repas.
-- Checkpoint/replay v14 conserve seulement l'état civilisationnel terminé et
-  reste compatible avec v1-v13, WildSubsistence désactivé et vide. Un cast ou
+- Cod, salmon, chicken et sweet berries restent classés par les métadonnées
+  food PebbleCore. Le correctif non canonique `GATE-B-CORR-01` réutilise une
+  description Core actor-neutral pour les aliments V1 à débit simple, puis
+  publie un outcome validé vers le même `AgentNeeds.hunger` que la starvation.
+  Les effets, restes et téléportations restent hors scope et aucun second
+  moteur de calories n'est créé.
+- Checkpoint/replay v17 conserve seulement l'état civilisationnel terminé et
+  reste compatible avec v1-v16, les états postérieurs absents par défaut. Un cast ou
   combat physique actif n'est pas restart-safe et doit être annulé ou
   réconcilié depuis le World, jamais rejoué comme moteur Civilization.
 - Les trois chemins live produisent zéro crédit `AgentCampStock`, inventory
@@ -443,13 +449,16 @@ classe professionnelle imposée.
   `AgentLocalEcologyState`. Gate R reste acquise. Ces preuves sont des contrats
   de composant ; elles ne prouvent pas à elles seules Gate B.
 
-#### Évaluation candidate Gate B — FAIL
+#### Évaluation candidate Gate B — FAIL, correctif nourriture local
 
 L'[évaluation dédiée](GATE_B_CANDIDATE_EVALUATION.md) a confirmé quatre
-blockers :
+blockers. `GATE-B-CORR-01 — Real Food Consumption and Survival Convergence`,
+jalon correctif non canonique, a depuis remédié localement le premier sous
+réserve de revue senior et publication :
 
-- `B-BLOCKER-FOOD-CLOSURE` : les vrais aliments et la survie canonique agent
-  restent deux vérités séparées ;
+- `B-BLOCKER-FOOD-CLOSURE` : `CLOSED / REMEDIATED LOCALLY` ; un vrai aliment
+  Core en custody exacte peut désormais modifier la survie canonique sans
+  crédit `.foodRaw` ;
 - `B-BLOCKER-AUTONOMOUS-PLAYABLE-SLICE` : les domaines productifs sont encore
   séquencés par commandes/preuves et ne s'enchaînent pas dans le loop normal ;
 - `B-BLOCKER-LIVESTOCK-RESERVE-CLOSURE` : feed, réserve physique de semis et
@@ -457,12 +466,11 @@ blockers :
 - `B-BLOCKER-CRISIS-REPLACEMENT-ORCHESTRATION` : une perte physique ne déclenche
   pas encore la chaîne autonome revue, remplacement et action réelle.
 
-Les correctifs recommandés sont `Real Food Consumption and Survival
-Convergence`, puis `Autonomous Agent Activity Orchestration and Playable
-Observer Convergence`. Ils doivent réutiliser les autorités acquises, sans
-second moteur ni scheduler de démonstration. Leur ordonnancement canonique
-requiert une revue senior ; cette roadmap ne renumérote pas `CIV-26` et ne le
-passe pas `current`.
+Le correctif restant recommandé est `Autonomous Agent Activity Orchestration
+and Playable Observer Convergence`, avec réévaluation des seams réserve
+livestock et remplacement de crise. Il doit réutiliser les autorités acquises,
+sans second moteur ni scheduler de démonstration. Cette roadmap ne renumérote
+pas `CIV-26` et ne le passe pas `current`.
 
 ### Économie matérielle locale — Gate C
 
@@ -626,7 +634,7 @@ monde de vivre.
 - `CIV-15` à `CIV-19` ont acquis les frontières actor-neutral, custody,
   harvest, construction, navigation et embodiment ; Gate R est acquise.
   `CIV-20` à `CIV-25` sont acquis dans leurs contrats bornés. L'évaluation
-  candidate Gate B est `FAIL` : nourriture physique/survie, orchestration
-  autonome, réserve livestock et remplacement de crise doivent converger
-  avant une nouvelle campagne. Gate B reste non acquise et `CIV-26` reste
-  planifié.
+  candidate Gate B est `FAIL`. `GATE-B-CORR-01` a localement remédié la
+  nourriture physique/survie, sous réserve de publication ; orchestration
+  autonome, réserve livestock et remplacement de crise restent ouvertes avant
+  une nouvelle campagne. Gate B reste non acquise et `CIV-26` reste planifié.
