@@ -322,6 +322,192 @@ extension AgentSimulationSession {
         dependentCareState = care
     }
 
+    public func nextPhysicalDependentFoodIntent(
+        caregiverID: AgentID,
+        dependentID: AgentID
+    ) throws -> AgentPhysicalDependentFoodIntent {
+        guard physicalFoodSurvivalState != nil,
+              let care = dependentCareState,
+              let engagement = care.activeEngagements.first(where: {
+                  $0.caregiverID == caregiverID && $0.dependentID == dependentID
+                      && $0.kind == .provideFood
+              }), causalLedger.latestSequence < UInt64.max,
+              let sequence = AgentCausalSequence(rawValue: causalLedger.latestSequence + 1) else {
+            throw AgentSessionError.dependentCare(.invalidEngagement(dependentID.rawValue))
+        }
+        return AgentPhysicalDependentFoodIntent(
+            provisionID: "physical-care:\(simulationID.rawValue):\(caregiverID.rawValue):"
+                + "\(dependentID.rawValue):\(sequence.rawValue)",
+            provisionSequence: sequence, needID: engagement.needID,
+            caregiverID: caregiverID, dependentID: dependentID, tick: tick
+        )
+    }
+
+    public func prevalidatePhysicalDependentFood(
+        _ outcome: AgentValidatedPhysicalDependentFoodOutcome
+    ) throws {
+        let intent = outcome.intent
+        guard physicalFoodSurvivalState != nil,
+              let care = dependentCareState,
+              let need = care.activeNeeds.first(where: {
+                  $0.needID == intent.needID && $0.dependentID == intent.dependentID
+                      && $0.kind == .nourishment
+              }), need.status == .active,
+              care.activeEngagements.contains(where: {
+                  $0.needID == intent.needID && $0.caregiverID == intent.caregiverID
+                      && $0.dependentID == intent.dependentID && $0.kind == .provideFood
+              }),
+              care.assignments.contains(where: {
+                  $0.caregiverID == intent.caregiverID
+                      && $0.dependentID == intent.dependentID && $0.status == .active
+              }),
+              let caregiver = statesById[intent.caregiverID.rawValue],
+              let dependent = statesById[intent.dependentID.rawValue] else {
+            throw AgentSessionError.dependentCare(.invalidNeed(intent.needID.rawValue))
+        }
+        guard manhattanDistance(caregiver.position, dependent.position)
+                <= care.configuration.careInteractionDistance else {
+            throw AgentSessionError.dependentCare(.interactionTooFar)
+        }
+        let acceptedThrough = causalLedger.latestSequence
+        let canonicalID = "physical-care:\(simulationID.rawValue):\(intent.caregiverID.rawValue):"
+            + "\(intent.dependentID.rawValue):\(intent.provisionSequence.rawValue)"
+        let reduction = min(1, Double(outcome.coreHungerPoints) / 20)
+        guard intent.tick == tick, intent.provisionID == canonicalID,
+              intent.provisionSequence.rawValue == acceptedThrough + 1,
+              outcome.physicalReceiptID == intent.provisionID,
+              outcome.quantityConsumed == 1, (1...20).contains(outcome.coreHungerPoints),
+              outcome.coreSaturation.isFinite, (0...20).contains(outcome.coreSaturation),
+              (0..<64).contains(outcome.sourceSlot),
+              !outcome.canonicalMaterialName.isEmpty,
+              outcome.canonicalMaterialName.count <= 128,
+              outcome.hungerBefore == dependent.needs.hunger,
+              outcome.hungerAfter == max(0, dependent.needs.hunger - reduction) else {
+            throw AgentSessionError.dependentCare(.materialDebitRequired)
+        }
+        try prevalidateCausalAppend(count: skillsEnabled ? 4 : 3)
+    }
+
+    @discardableResult
+    public mutating func applyValidatedPhysicalDependentFood(
+        _ outcome: AgentValidatedPhysicalDependentFoodOutcome
+    ) throws -> AgentCareProvisionResult {
+        var candidate = self
+        let result = try candidate.applyValidatedPhysicalDependentFoodInPlace(outcome)
+        try candidate.validateDependentCareCrossDomainIfEnabled()
+        self = candidate
+        return result
+    }
+
+    private mutating func applyValidatedPhysicalDependentFoodInPlace(
+        _ outcome: AgentValidatedPhysicalDependentFoodOutcome
+    ) throws -> AgentCareProvisionResult {
+        try prevalidatePhysicalDependentFood(outcome)
+        let intent = outcome.intent
+        guard var care = dependentCareState,
+              let needIndex = care.activeNeeds.firstIndex(where: {
+                  $0.needID == intent.needID
+              }),
+              let engagement = care.activeEngagements.first(where: {
+                  $0.needID == intent.needID && $0.caregiverID == intent.caregiverID
+              }),
+              let assignment = care.assignments.first(where: {
+                  $0.dependentID == intent.dependentID
+                      && $0.caregiverID == intent.caregiverID && $0.status == .active
+              }), var dependent = statesById[intent.dependentID.rawValue] else {
+            throw AgentSessionError.dependentCare(.invalidNeed(intent.needID.rawValue))
+        }
+        dependent.needs.hunger = outcome.hungerAfter
+        if var progress = dependent.survivalProgress {
+            progress.consecutiveCriticalHungerTicks = 0
+            progress.foodConsumedCount = min(
+                AgentSurvivalProgress.maximumEventCount, progress.foodConsumedCount + 1
+            )
+            progress.status = outcome.hungerAfter
+                <= configuration.survivalConfiguration.hungerRecoveryThreshold ? .stable : .hungry
+            progress.lastMemoryType = .foodConsumed
+            dependent.survivalProgress = progress
+        }
+        appendMemory(AgentMemoryEntry(
+            tick: tick, type: "food_consumed",
+            summary: "\(intent.dependentID.rawValue) received 1 physical "
+                + "\(outcome.canonicalMaterialName) from \(intent.caregiverID.rawValue)",
+            importance: 0.50
+        ), to: &dependent.memory)
+        statesById[intent.dependentID.rawValue] = dependent
+        guard let material = try recordCausalEvent(
+            kind: .consumption, origin: .worldOutcome,
+            actorID: intent.caregiverID, subjectID: intent.dependentID,
+            operationID: AgentOperationID(rawValue: intent.provisionID),
+            causes: [engagement.startedEventID],
+            payload: .operation(
+                status: "succeeded",
+                detail: "provider=\(intent.caregiverID.rawValue) "
+                    + "consumer=\(intent.dependentID.rawValue) "
+                    + "source=physicalCaregiverInventory material="
+                    + "\(outcome.canonicalMaterialName) quantity=1 receipt="
+                    + "\(outcome.physicalReceiptID) historicalSlot="
+                    + "\(outcome.sourceSlot) sequence=\(intent.provisionSequence.rawValue)"
+            ),
+            summary: "physical care food consumed provider=\(intent.caregiverID.rawValue) "
+                + "consumer=\(intent.dependentID.rawValue)"
+        ), material.eventID.sequence == intent.provisionSequence else {
+            throw AgentSessionError.dependentCare(.invalidState("physical care sequence"))
+        }
+        let provided = try requiredDependentCareEvent(
+            kind: .careProvided, actorID: intent.caregiverID,
+            subjectID: intent.dependentID, causes: [material.eventID],
+            payload: carePayload(
+                dependentID: intent.dependentID, caregiverID: intent.caregiverID,
+                householdID: assignment.householdID, need: (intent.needID, .nourishment),
+                assignmentCount: care.assignments.count, needCount: care.activeNeeds.count,
+                status: "provided", reason: AgentCareFoodSource.physicalCaregiverInventory.rawValue,
+                materialQuantity: 1, digest: care.rollingDigest
+            ), summary: "physical care provided need=\(intent.needID.rawValue) quantity=1"
+        )
+        let skillEventID = try creditPracticeAfterMaterialSuccess(
+            agentID: intent.caregiverID, domain: .caregiving,
+            sourceSuccessEventID: provided.eventID
+        )
+        let resolved = try requiredDependentCareEvent(
+            kind: .careNeedResolved, actorID: intent.caregiverID,
+            subjectID: intent.dependentID, causes: [skillEventID ?? provided.eventID],
+            payload: carePayload(
+                dependentID: intent.dependentID, caregiverID: intent.caregiverID,
+                householdID: assignment.householdID, need: (intent.needID, .nourishment),
+                assignmentCount: care.assignments.count,
+                needCount: care.activeNeeds.count - 1, status: "resolved",
+                reason: "physicalProvided", materialQuantity: 1, digest: care.rollingDigest
+            ), summary: "physical care need resolved id=\(intent.needID.rawValue)"
+        )
+        care.activeNeeds.remove(at: needIndex)
+        care.activeEngagements.removeAll { $0.needID == intent.needID }
+        appendCareOutcome(AgentCareOutcome(
+            needID: intent.needID, dependentID: intent.dependentID,
+            caregiverID: intent.caregiverID, kind: .nourishment, status: .resolved,
+            terminalReason: .provided, tick: tick,
+            foodSource: .physicalCaregiverInventory, materialQuantity: 1,
+            hungerBefore: outcome.hungerBefore, hungerAfter: outcome.hungerAfter,
+            terminalEventID: resolved.eventID
+        ), state: &care)
+        care.lastCareEventID = resolved.eventID
+        try countCareTransition(&care, at: tick, count: 2)
+        care.rollingDigest = AgentDependentCareDigest.make(
+            "\(care.rollingDigest)|physicalFood|\(intent.dependentID.rawValue)|"
+                + "\(outcome.canonicalMaterialName)|1|\(outcome.hungerBefore)>"
+                + "\(outcome.hungerAfter)|\(tick)"
+        )
+        dependentCareState = care
+        return AgentCareProvisionResult(
+            provisionID: intent.provisionID, needID: intent.needID,
+            caregiverID: intent.caregiverID, dependentID: intent.dependentID,
+            tick: tick, succeeded: true, foodSource: .physicalCaregiverInventory,
+            foodBefore: 1, foodAfter: 0, consumedByDependent: 1,
+            hungerBefore: outcome.hungerBefore, hungerAfter: outcome.hungerAfter,
+            reason: "one canonical physical food item debited and consumed atomically"
+        )
+    }
+
     @discardableResult
     public mutating func provideDependentNourishment(
         _ intent: AgentCareProvisionIntent

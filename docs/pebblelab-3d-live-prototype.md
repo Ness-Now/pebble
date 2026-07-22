@@ -46,6 +46,10 @@ Sous le correctif non canonique `GATE-B-CORR-01`, un aliment V1 à débit simple
 déjà acquis en custody réelle peut être consommé exactement une fois et publier
 un outcome validé vers le même `AgentNeeds.hunger` que la starvation, sans
 crédit `.foodRaw`.
+Sous le correctif non canonique `GATE-B-CORR-02`, le même loop cognitif choisit
+et chaîne des activités typées, puis Pebble réutilise les exécuteurs physiques
+existants. Une slice passive default-off conserve le contrôle joueur et rend
+les agents avec des modèles villager existants, sans scheduler de démo.
 
 ## Prérequis et lancement
 
@@ -55,7 +59,8 @@ Les options supplémentaires `--embodiment`, `--teaching`,
 `--ecological-observation`, `--agriculture`, `--wild-subsistence`,
 `--livestock`, puis `--work-professions` portent respectivement les preuves
 CIV-19 à CIV-25 décrites ci-dessous. `--physical-food-survival` porte la preuve
-corrective `GATE-B-CORR-01` sans créer une phase `CIV-*`.
+corrective `GATE-B-CORR-01` sans créer une phase `CIV-*` ; `--gate-b-passive`
+porte la preuve corrective CORR-02, également non canonique.
 
 Depuis la racine du dépôt :
 
@@ -429,8 +434,10 @@ depuis conclu `FAIL`.
 
 L'évaluation candidate est maintenant enregistrée dans
 [`docs/pebblelab/GATE_B_CANDIDATE_EVALUATION.md`](pebblelab/GATE_B_CANDIDATE_EVALUATION.md).
-Son résultat est `FAIL` et Gate B reste non acquise. `CIV-25` est terminé ;
-`CIV-26` reste planifié et n'est pas commencé.
+Son résultat historique est `FAIL` et Gate B reste non acquise. CORR-01 et
+CORR-02 remédient localement les blockers enregistrés, mais la campagne 5/3/2,
+le restart composite, la revue humaine et la revue senior restent requises.
+`CIV-25` est terminé ; `CIV-26` reste planifié et n'est pas commencé.
 
 Depuis la racine, la commande dédiée est :
 
@@ -438,21 +445,33 @@ Depuis la racine, la commande dédiée est :
 scripts/verify-pebblelab-gate-b.sh
 ```
 
-Elle audite d'abord les deux frontières fail-fast, puis répète une matrice
-réduite de composants. Tant que les blockers sont présents, le mode normal
-imprime `GATE B CANDIDATE RESULT: FAIL` et sort avec le code `2` ;
-`--report-only` conserve ce verdict mais sort `0` pour diagnostic.
+Elle audite les frontières correctives, puis répète une matrice réduite de
+composants. Le mode normal conserve `GATE B CANDIDATE RESULT: FAIL` et sort
+avec le code `2` jusqu'à la réévaluation canonique ; `--report-only` conserve
+ce verdict mais sort `0` pour diagnostic.
 
-Cette commande ne lance pas Pebble et ne prétend pas fournir une slice passive.
-Les modes live agriculture, wild subsistence, livestock, Teaching et
-work-professions ci-dessus restent des preuves de verticale séquencées par
-`/lab`. Les concaténer ne prouverait ni autonomie, ni coexistence dans une
-session, ni fermeture food-to-survival. Il n'existe donc pas encore de chemin
-de reproduction humain Gate B honnête. Après les convergences nourriture et
-orchestration, une future campagne devra définir explicitement
-`PLAYABLE_SLICE_BOOTSTRAP_COMPLETE`, conserver follow désactivé par défaut,
-mesurer zéro commande productive post-bootstrap et laisser les décisions
-s'enchaîner dans l'unique `AgentSimulationSession`.
+Cette commande ne lance pas Pebble. La preuve corrective jouable se lance
+séparément :
+
+```bash
+scripts/verify-pebblelab-live.sh --gate-b-passive --dry-run
+scripts/verify-pebblelab-live.sh --gate-b-passive
+```
+
+Le dry-run décrit le monde jetable `PebbleLab-Disposable-GateB-Passive-46`, la
+seed 46, les gates, les commandes de bootstrap et la capture tardive. Après
+`PLAYABLE_SLICE_BOOTSTRAP_COMPLETE`, ne donner aucune commande productive :
+marcher et regarder normalement, ou utiliser focus/follow seulement comme
+observateur. Le follow est off initialement et aucune commande productive
+individuelle n'est injectée après le marqueur.
+
+Le run doit laisser trois agents choisir au minimum pêche, chasse et cueillette
+dans le même World, enchaîner plusieurs décisions, consommer ensuite une vraie
+berry via l'autorité alimentaire physique, produire `runtimeErrors=0`, nettoyer
+exactement la fixture et écrire `gate-b-passive-later.png`. La trace structurée
+reste l'autorité pour les compteurs, receipts, conservation et cleanup ; la PNG
+doit être inspectée manuellement. Cette slice passe localement CORR-02, mais ne
+remplace ni la campagne Gate B 5/3/2 ni la revue humaine/senior.
 
 ## CIV-04 — Canal physique local
 

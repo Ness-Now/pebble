@@ -19,6 +19,7 @@ public enum AgentCheckpointSchema {
     public static let livestockVersion = 15
     public static let workCommitmentVersion = 16
     public static let physicalFoodSurvivalVersion = 17
+    public static let autonomousActivityVersion = 18
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -29,7 +30,7 @@ public enum AgentCheckpointSchema {
             || version == teachingVersion || version == ecologicalObservationVersion
             || version == agricultureVersion || version == wildSubsistenceVersion
             || version == livestockVersion || version == workCommitmentVersion
-            || version == physicalFoodSurvivalVersion
+            || version == physicalFoodSurvivalVersion || version == autonomousActivityVersion
     }
 }
 
@@ -220,9 +221,12 @@ public struct AgentSessionDurableState: Codable {
     public let livestockState: AgentLivestockState?
     public let workCommitmentState: AgentWorkCommitmentState?
     public let physicalFoodSurvivalState: AgentPhysicalFoodSurvivalState?
+    public let autonomousActivityState: AgentAutonomousActivityState?
 
     init(session: AgentSimulationSession) {
-        if session.physicalFoodSurvivalState != nil {
+        if session.autonomousActivityState != nil {
+            schemaVersion = AgentCheckpointSchema.autonomousActivityVersion
+        } else if session.physicalFoodSurvivalState != nil {
             schemaVersion = AgentCheckpointSchema.physicalFoodSurvivalVersion
         } else if session.workCommitmentState != nil {
             schemaVersion = AgentCheckpointSchema.workCommitmentVersion
@@ -346,6 +350,7 @@ public struct AgentSessionDurableState: Codable {
         livestockState = session.livestockState
         workCommitmentState = session.workCommitmentState
         physicalFoodSurvivalState = session.physicalFoodSurvivalState
+        autonomousActivityState = session.autonomousActivityState
     }
 }
 
@@ -777,6 +782,7 @@ extension AgentSimulationSession {
         livestockState = state.livestockState
         workCommitmentState = state.workCommitmentState
         physicalFoodSurvivalState = state.physicalFoodSurvivalState
+        autonomousActivityState = state.autonomousActivityState
         try validateEcologicalObservationStateIfEnabled()
         try validateAgricultureStateIfEnabled()
         try validateWildSubsistenceStateIfEnabled()
@@ -802,6 +808,7 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.livestockVersion
                 || state.schemaVersion == AgentCheckpointSchema.workCommitmentVersion
                 || state.schemaVersion == AgentCheckpointSchema.physicalFoodSurvivalVersion
+                || state.schemaVersion == AgentCheckpointSchema.autonomousActivityVersion
                 || state.ecologicalObservationState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -810,6 +817,7 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.livestockVersion
                 || state.schemaVersion == AgentCheckpointSchema.workCommitmentVersion
                 || state.schemaVersion == AgentCheckpointSchema.physicalFoodSurvivalVersion
+                || state.schemaVersion == AgentCheckpointSchema.autonomousActivityVersion
                 || state.agricultureState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -817,22 +825,30 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.livestockVersion
                 || state.schemaVersion == AgentCheckpointSchema.workCommitmentVersion
                 || state.schemaVersion == AgentCheckpointSchema.physicalFoodSurvivalVersion
+                || state.schemaVersion == AgentCheckpointSchema.autonomousActivityVersion
                 || state.wildSubsistenceState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.schemaVersion == AgentCheckpointSchema.livestockVersion
                 || state.schemaVersion == AgentCheckpointSchema.workCommitmentVersion
                 || state.schemaVersion == AgentCheckpointSchema.physicalFoodSurvivalVersion
+                || state.schemaVersion == AgentCheckpointSchema.autonomousActivityVersion
                 || state.livestockState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.schemaVersion == AgentCheckpointSchema.workCommitmentVersion
                 || state.schemaVersion == AgentCheckpointSchema.physicalFoodSurvivalVersion
+                || state.schemaVersion == AgentCheckpointSchema.autonomousActivityVersion
                 || state.workCommitmentState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.schemaVersion == AgentCheckpointSchema.physicalFoodSurvivalVersion
+                || state.schemaVersion == AgentCheckpointSchema.autonomousActivityVersion
                 || state.physicalFoodSurvivalState == nil else {
+            throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
+        }
+        guard state.schemaVersion == AgentCheckpointSchema.autonomousActivityVersion
+                || state.autonomousActivityState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard (state.schemaVersion == AgentCheckpointSchema.currentVersion
@@ -923,7 +939,9 @@ extension AgentSimulationSession {
                     && state.workCommitmentState != nil)
                 || (state.schemaVersion == AgentCheckpointSchema.physicalFoodSurvivalVersion
                     && state.survivalEnabled
-                    && state.physicalFoodSurvivalState != nil) else {
+                    && state.physicalFoodSurvivalState != nil)
+                || (state.schemaVersion == AgentCheckpointSchema.autonomousActivityVersion
+                    && state.autonomousActivityState != nil) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.clock.tick.rawValue >= 0,
@@ -959,7 +977,8 @@ extension AgentSimulationSession {
                         || state.schemaVersion == AgentCheckpointSchema.dependentCareVersion
                         || state.schemaVersion == AgentCheckpointSchema.skillVersion
                         || state.schemaVersion == AgentCheckpointSchema.workCommitmentVersion
-                        || state.schemaVersion == AgentCheckpointSchema.physicalFoodSurvivalVersion)
+                        || state.schemaVersion == AgentCheckpointSchema.physicalFoodSurvivalVersion
+                        || state.schemaVersion == AgentCheckpointSchema.autonomousActivityVersion)
                     && (state.mortalityState?.totalDeathCount ?? 0) > 0) else {
             throw AgentCheckpointError.invalidAgent("empty")
         }
@@ -990,6 +1009,39 @@ extension AgentSimulationSession {
             if case let .bounded(maxEntries) = state.configuration.memoryPolicy,
                agent.memory.count > maxEntries {
                 throw AgentCheckpointError.invalidBound("memory for \(agent.id)")
+            }
+        }
+        if let autonomy = state.autonomousActivityState {
+            do {
+                _ = try AgentAutonomousActivityConfiguration(
+                    maximumCandidatesPerDecision:
+                        autonomy.configuration.maximumCandidatesPerDecision,
+                    maximumActiveActivities:
+                        autonomy.configuration.maximumActiveActivities,
+                    maximumRetainedRecords:
+                        autonomy.configuration.maximumRetainedRecords,
+                    maximumCooldowns: autonomy.configuration.maximumCooldowns,
+                    blockedCooldownTicks: autonomy.configuration.blockedCooldownTicks
+                )
+            } catch {
+                throw AgentCheckpointError.invalidConfiguration
+            }
+            let activeActors = autonomy.activeActivities.map { $0.candidate.actorID }
+            let counters = autonomy.counters
+            guard autonomy.activeActivities.count
+                    <= autonomy.configuration.maximumActiveActivities,
+                  autonomy.recentRecords.count
+                    <= autonomy.configuration.maximumRetainedRecords,
+                  autonomy.cooldowns.count <= autonomy.configuration.maximumCooldowns,
+                  Set(activeActors).count == activeActors.count,
+                  activeActors.allSatisfy(agentIDs.contains),
+                  autonomy.cooldowns.allSatisfy({ agentIDs.contains($0.actorID) }),
+                  counters.decisionCount >= 0, counters.candidateCount >= 0,
+                  counters.startCount >= 0, counters.completionCount >= 0,
+                  counters.blockCount >= 0, counters.switchCount >= 0,
+                  counters.currentIdleTicks >= 0, counters.longestIdleTicks >= 0,
+                  autonomy.evictionCount >= 0 else {
+                throw AgentCheckpointError.invalidBound("autonomous activity")
             }
         }
         func unique(_ values: [String], _ label: String) throws {

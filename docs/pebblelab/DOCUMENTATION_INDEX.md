@@ -31,8 +31,10 @@ des roadmaps. Ils restent obligatoires dans leur périmètre.
 Gate B est `FAIL` et Gate B n'est pas acquise. Aucune phase n'est promue
 automatiquement pendant sa correction ; `CIV-26` à `CIV-67` restent `planned`.
 Le jalon non canonique `GATE-B-CORR-01` remédie localement le blocker nourriture
-physique/survie, sous réserve de revue senior et publication ; le blocker
-d'orchestration autonome reste ouvert.
+physique/survie. `GATE-B-CORR-02` remédie localement l'orchestration autonome,
+la slice passive jouable, la réserve livestock, le remplacement de crise et la
+nourriture physique des dépendants. Tous deux restent des correctifs non
+canoniques soumis à revue/publication ; Gate B re-evaluation #2 reste requise.
 
 ## `operational-runbook`
 
@@ -41,7 +43,7 @@ d'orchestration autonome reste ouvert.
   verticales 3D actuellement acquises.
 - [`GATE_B_CANDIDATE_EVALUATION.md`](GATE_B_CANDIDATE_EVALUATION.md) est le
   record d'acceptance post-CIV-25 : verdict candidate `FAIL`, preuves réduites,
-  blockers et correctifs recommandés, puis le statut local de `GATE-B-CORR-01`.
+  blockers, puis les statuts locaux de `GATE-B-CORR-01` et `GATE-B-CORR-02`.
   Il ne marque pas Gate B acquise et ne remplace pas la roadmap prospective.
 - Les fichiers racine `README.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md` et
   `SECURITY.md` restent les références opérationnelles du jeu Pebble et du

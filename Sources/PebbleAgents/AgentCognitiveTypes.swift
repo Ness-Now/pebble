@@ -147,6 +147,8 @@ public struct AgentGoalSelectionInput {
     public let shouldConsiderCooperationOffer: Bool
     public let canAcceptCooperationOffer: Bool
     public let isMigrating: Bool
+    public let hasAutonomousActivity: Bool
+    public let autonomousActivityUrgency: Int
     public let currentGoalKind: AgentGoalKind
     public let survivalEnabled: Bool
     public let hungryThreshold: Double
@@ -173,6 +175,8 @@ public struct AgentGoalSelectionInput {
         shouldConsiderCooperationOffer: Bool = false,
         canAcceptCooperationOffer: Bool = false,
         isMigrating: Bool = false,
+        hasAutonomousActivity: Bool = false,
+        autonomousActivityUrgency: Int = 0,
         currentGoalKind: AgentGoalKind,
         survivalEnabled: Bool = false,
         hungryThreshold: Double = AgentSurvivalConfiguration.live.hungryThreshold,
@@ -198,6 +202,8 @@ public struct AgentGoalSelectionInput {
         self.shouldConsiderCooperationOffer = shouldConsiderCooperationOffer
         self.canAcceptCooperationOffer = canAcceptCooperationOffer
         self.isMigrating = isMigrating
+        self.hasAutonomousActivity = hasAutonomousActivity
+        self.autonomousActivityUrgency = max(0, min(100, autonomousActivityUrgency))
         self.currentGoalKind = currentGoalKind
         self.survivalEnabled = survivalEnabled
         self.hungryThreshold = hungryThreshold

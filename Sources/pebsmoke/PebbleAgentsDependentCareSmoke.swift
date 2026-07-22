@@ -1,5 +1,6 @@
 import Foundation
 import PebbleAgents
+import PebbleCore
 
 private let careHabitat = AgentEcologyHabitatObservation(
     worldTick: 0,
@@ -499,6 +500,69 @@ func runPebbleAgentsDependentCareSmoke() {
     check("care caregiver approached dependent through movement pipeline",
           session.snapshot().agents.first { $0.id == firstCaregiverID.rawValue }?
             .movementCount ?? 0 > 0)
+    var physicalCare = session
+    try! physicalCare.setPhysicalFoodSurvivalEnabled(true)
+    try! physicalCare.setAutonomousActivityEnabled(true)
+    let physicalEngagement = physicalCare.careEngagement(for: firstCaregiverID)!
+    let physicalIntent = try! physicalCare.nextPhysicalDependentFoodIntent(
+        caregiverID: firstCaregiverID,
+        dependentID: physicalEngagement.dependentID
+    )
+    let physicalDependentBefore = try! physicalCare.state(for: physicalEngagement.dependentID)
+    let physicalGhostBefore = try! physicalCare.state(for: firstCaregiverID)
+        .resourceInventory.count(of: .foodRaw)
+    let physicalOutcome = AgentValidatedPhysicalDependentFoodOutcome(
+        intent: physicalIntent, canonicalMaterialName: "sweet_berries",
+        quantityConsumed: 1, coreHungerPoints: 2, coreSaturation: 0.4,
+        sourceSlot: 0, physicalReceiptID: physicalIntent.provisionID,
+        hungerBefore: physicalDependentBefore.needs.hunger,
+        hungerAfter: max(0, physicalDependentBefore.needs.hunger - 0.1)
+    )
+    var physicalCustody: [ItemStack?] = [ItemStack(iid("sweet_berries"), 2)]
+    let physicalDebit = extractItemStack(
+        matching: ItemStack(iid("sweet_berries"), 1), quantity: 1,
+        from: &physicalCustody, slotFilter: { $0 == physicalOutcome.sourceSlot }
+    )
+    let physicalReplayBase = try! physicalCare.makeCheckpoint()
+    var physicalRecorder = try! AgentReplayRecorder(
+        checkpoint: physicalReplayBase, session: physicalCare
+    )
+    var physicalPreview = physicalCare
+    let physicalProvision = try! physicalPreview.applyValidatedPhysicalDependentFood(
+        physicalOutcome
+    )
+    _ = try! physicalRecorder.apply(
+        .validatedPhysicalDependentFood(physicalOutcome), to: &physicalCare
+    )
+    check("care physical publication resolves exact dependent",
+          physicalDebit?.count == 1 && physicalCustody[0]?.count == 1
+            && physicalProvision.succeeded
+            && physicalProvision.foodSource == .physicalCaregiverInventory
+            && physicalProvision.dependentID == physicalEngagement.dependentID)
+    check("care physical publication changes dependent hunger only",
+          (try! physicalCare.state(for: physicalEngagement.dependentID)).needs.hunger
+            == physicalOutcome.hungerAfter)
+    check("care physical publication creates no foodRaw ghost debit",
+          (try! physicalCare.state(for: firstCaregiverID))
+            .resourceInventory.count(of: .foodRaw) == physicalGhostBefore)
+    let physicalDuplicateBytes = try! physicalCare.durableStateBytes()
+    check("care physical sequence permanently rejects duplicate", {
+        do { _ = try physicalCare.applyValidatedPhysicalDependentFood(physicalOutcome); return false }
+        catch { return (try! physicalCare.durableStateBytes()) == physicalDuplicateBytes }
+    }())
+    let physicalCheckpoint = try! physicalCare.makeCheckpoint()
+    let physicalRestored = try! AgentSimulationSession.restoring(physicalCheckpoint)
+    let physicalJournal = try! physicalRecorder.journal(
+        named: AgentCheckpointName(rawValue: "care-physical-food")!
+    )
+    let physicalReplay = try! AgentSessionReplayer.replay(
+        checkpoint: physicalReplayBase, journal: physicalJournal
+    )
+    check("care physical outcome survives v18 checkpoint",
+          physicalCheckpoint.schemaVersion == AgentCheckpointSchema.autonomousActivityVersion
+            && (try! physicalRestored.durableStateBytes()) == physicalDuplicateBytes
+            && physicalReplay.report.verified
+            && (try! physicalReplay.session.durableStateBytes()) == physicalDuplicateBytes)
     check("care provision too far is refused atomically", {
         var attempted = session
         let caregiver = try! attempted.state(for: firstCaregiverID)

@@ -99,6 +99,8 @@ final class PebbleAgentController {
     var wildSubsistenceProofFixture: PebbleAgentWildSubsistenceProofFixture?
     var livestockProofFixture: PebbleAgentLivestockProofFixture?
     var livestockRuntimeEntityIDByRecord: [AgentManagedAnimalRecordID: Int] = [:]
+    var passiveObserverBootstrapComplete = false
+    var manualProductiveCommandsAfterBootstrap = 0
 
     let environment = ProcessInfo.processInfo.environment
     var featureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS"] == "1" }
@@ -161,6 +163,9 @@ final class PebbleAgentController {
     }
     var workProfessionsFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_WORK_PROFESSIONS"] == "1"
+    }
+    var autonomousCivilizationFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION"] == "1"
     }
     var kinshipLateFailureProofEnabled: Bool {
         let lineageProof = environment["PEBBLELAB_DISPOSABLE_KINSHIP_LATE_FAILURE_PROOF"] == "1"

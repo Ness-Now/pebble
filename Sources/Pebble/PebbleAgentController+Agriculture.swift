@@ -191,7 +191,7 @@ extension PebbleAgentController {
         ]
     }
 
-    private func nearestLiveAgricultureContainer(
+    func nearestLiveAgricultureContainer(
         world: World,
         origin: AgentPosition,
         radius: Int

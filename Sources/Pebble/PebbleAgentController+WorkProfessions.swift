@@ -119,7 +119,7 @@ extension PebbleAgentController {
         ]
     }
 
-    private func applyLiveWorkOperation(
+    func applyLiveWorkOperation(
         _ operation: AgentWorkCommitmentOperation,
         to candidate: inout AgentSimulationSession,
         recorder: inout AgentReplayRecorder?
@@ -130,7 +130,7 @@ extension PebbleAgentController {
         ) == nil { _ = try candidate.applyWorkCommitmentOperation(operation) }
     }
 
-    private func liveWorkCandidateContexts(
+    func liveWorkCandidateContexts(
         demand: AgentWorkDemandSignal,
         session: AgentSimulationSession,
         world: World
@@ -171,7 +171,7 @@ extension PebbleAgentController {
         }
     }
 
-    private func recordAvailableLiveWorkEvidence(
+    func recordAvailableLiveWorkEvidence(
         session candidate: inout AgentSimulationSession,
         recorder: inout AgentReplayRecorder?
     ) throws -> Int {

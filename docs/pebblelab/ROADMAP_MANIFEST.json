@@ -13,13 +13,13 @@
     "evidence": "docs/pebblelab/GATE_B_CANDIDATE_EVALUATION.md",
     "nextCanonicalPhasePromoted": false,
     "locallyRemediatedBlockers": [
-      "B-BLOCKER-FOOD-CLOSURE"
-    ],
-    "openBlockers": [
+      "B-BLOCKER-FOOD-CLOSURE",
       "B-BLOCKER-AUTONOMOUS-PLAYABLE-SLICE",
       "B-BLOCKER-LIVESTOCK-RESERVE-CLOSURE",
       "B-BLOCKER-CRISIS-REPLACEMENT-ORCHESTRATION"
-    ]
+    ],
+    "openBlockers": [],
+    "reevaluationRequired": true
   },
   "correctiveMilestones": [
     {
@@ -28,6 +28,13 @@
       "canonicalPhase": false,
       "startingHead": "515ae22c871292a978bb76da3020d3959632b6ed",
       "status": "locallyRemediatedPendingSeniorPublication"
+    },
+    {
+      "id": "GATE-B-CORR-02",
+      "title": "Autonomous Agent Activity Orchestration and Playable Observer Convergence",
+      "canonicalPhase": false,
+      "startingHead": "1b7c320ec897d5ea9944d3c12e6b7c460954ce23",
+      "status": "locallyRemediatedPendingSeniorReviewAndPublication"
     }
   ],
   "gates": {

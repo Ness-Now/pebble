@@ -18,6 +18,7 @@ public enum AgentReplaySchema {
     public static let livestockVersion = 15
     public static let workCommitmentVersion = 16
     public static let physicalFoodSurvivalVersion = 17
+    public static let autonomousActivityVersion = 18
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -28,7 +29,7 @@ public enum AgentReplaySchema {
             || version == teachingVersion || version == ecologicalObservationVersion
             || version == agricultureVersion || version == wildSubsistenceVersion
             || version == livestockVersion || version == workCommitmentVersion
-            || version == physicalFoodSurvivalVersion
+            || version == physicalFoodSurvivalVersion || version == autonomousActivityVersion
     }
 }
 
@@ -117,6 +118,10 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case workCommitmentOperation
     case physicalFoodSurvivalFeature
     case validatedPhysicalFoodConsumption
+    case autonomousActivityFeature
+    case autonomousActivitySelection
+    case autonomousActivityOutcome
+    case validatedPhysicalDependentFood
 }
 
 public enum AgentReplayOperation: Codable {
@@ -241,6 +246,12 @@ public enum AgentReplayOperation: Codable {
     case applyWorkCommitmentOperation(AgentWorkCommitmentOperation)
     case setPhysicalFoodSurvivalEnabled(Bool)
     case validatedPhysicalFoodConsumption(AgentValidatedPhysicalFoodConsumptionOutcome)
+    case setAutonomousActivityEnabled(
+        Bool, configuration: AgentAutonomousActivityConfiguration
+    )
+    case selectAutonomousActivities([AgentAutonomousActivityCandidate])
+    case autonomousActivityOutcome(AgentAutonomousActivityOutcome)
+    case validatedPhysicalDependentFood(AgentValidatedPhysicalDependentFoodOutcome)
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -315,6 +326,10 @@ public enum AgentReplayOperation: Codable {
         case .applyWorkCommitmentOperation: return .workCommitmentOperation
         case .setPhysicalFoodSurvivalEnabled: return .physicalFoodSurvivalFeature
         case .validatedPhysicalFoodConsumption: return .validatedPhysicalFoodConsumption
+        case .setAutonomousActivityEnabled: return .autonomousActivityFeature
+        case .selectAutonomousActivities: return .autonomousActivitySelection
+        case .autonomousActivityOutcome: return .autonomousActivityOutcome
+        case .validatedPhysicalDependentFood: return .validatedPhysicalDependentFood
         }
     }
 
@@ -363,6 +378,10 @@ public enum AgentReplayOperation: Codable {
             }
         case let .validatedPhysicalFoodConsumption(outcome):
             raw = outcome.consumptionID
+        case let .autonomousActivityOutcome(outcome):
+            raw = outcome.activityID
+        case let .validatedPhysicalDependentFood(outcome):
+            raw = outcome.intent.provisionID
         case let .selectWildSubsistenceOpportunity(context):
             raw = "subsistence-select:\(context.actorID.rawValue)"
         case let .planAgriculturalPlot(
@@ -793,6 +812,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.physicalFoodSurvivalVersion
         }
+        if case let .setAutonomousActivityEnabled(enabled, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.autonomousActivityVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "autonomous activity activation must be the first v18 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.autonomousActivityVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -998,6 +1027,8 @@ public enum AgentSessionReplayer {
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.livestockVersion)
             || (manifest.schemaVersion == AgentReplaySchema.physicalFoodSurvivalVersion
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.workCommitmentVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.autonomousActivityVersion
+                && checkpoint.schemaVersion <= AgentCheckpointSchema.physicalFoodSurvivalVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -1266,6 +1297,14 @@ extension AgentSimulationSession {
             try candidate.setPhysicalFoodSurvivalEnabled(enabled)
         case let .validatedPhysicalFoodConsumption(outcome):
             try candidate.applyValidatedPhysicalFoodConsumption(outcome)
+        case let .setAutonomousActivityEnabled(enabled, configuration):
+            try candidate.setAutonomousActivityEnabled(enabled, configuration: configuration)
+        case let .selectAutonomousActivities(candidates):
+            _ = try candidate.selectAutonomousActivities(candidates)
+        case let .autonomousActivityOutcome(outcome):
+            _ = try candidate.recordAutonomousActivityOutcome(outcome)
+        case let .validatedPhysicalDependentFood(outcome):
+            _ = try candidate.applyValidatedPhysicalDependentFood(outcome)
         }
         self = candidate
         let causal = causalLedgerSnapshot().summary

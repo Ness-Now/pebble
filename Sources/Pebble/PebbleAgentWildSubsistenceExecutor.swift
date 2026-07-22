@@ -66,7 +66,7 @@ struct PebbleAgentWildSubsistenceExecutor {
             let dy = Double(node.y) - actor.y
             let dz = Double(node.z) + 0.5 - actor.z
             guard max(abs(node.x - here.x), abs(node.z - here.z)) == 1,
-                  (-1...1).contains(node.y - here.y) else {
+                  (-3...1).contains(node.y - here.y) else {
                 throw ExecutionError.physicalFailure("Core path returned unsupported step")
             }
             actor.probe.yaw = detAtan2(-dx, dz)

@@ -5,12 +5,19 @@ import PebbleCore
 extension PebbleAgentController {
     func handleCommand(_ arguments: [String], world: World, player: Player) -> PebbleAgentCommandResult {
         let command = arguments.first?.lowercased() ?? "status"
+        if passiveObserverBootstrapComplete, isManualProductiveCommand(arguments) {
+            manualProductiveCommandsAfterBootstrap += 1
+        }
         switch command {
         case "help":
             guard arguments.count == 1 else { return failure("Usage: /lab help") }
             return success("/lab session: start stop clear | lifecycle <on|status|clear> reproduction <on|off|status> births status kinship <on|status> household <on|status> care <on|status> | time control: pause resume step speed <1|2|4|8> reset | inspection: status focus <agentId|next> next follow <agentId|focus|next|off> overlay <off|compact|full> causality <status|tail <1...20>> scale status | persistence: checkpoint <status|list|save|load|delete> replay <status|start|stop|verify> | movement: movement <on|off> embodiment proof | interaction: interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off> gateway proof material proof harvest proof construction proof | economy: economy <setup|auto on|auto off|status|clear> | survival: survival <on|off|status> | natural: natural <on|off|status|scan> | ecology: ecology <on|off|status|scan|clear> forage status | ecological-observation <on|status|scan|proof> agriculture <on|status|proof> wild-subsistence <on|status|proof [setup|fish|hunt|gather|final]> work-professions <on|refresh|match|record|crisis|resume|status|final> | mortality: mortality <on|off|status|clear> exits status | build: build <setup|auto on|auto off|status|clear> | social: social <on|off|status|clear> | physical: physical <on|off|status|clear> | cooperation: cooperation <on|off|status|clear> | population: population <on|off|status|clear> migration <admit|status> | settlement: settlement <on|off|status|clear> | demo: demo [start|stop|status]")
         case "demo":
             return handleDemo(Array(arguments.dropFirst()), world: world, player: player)
+        case "autonomous-civilization":
+            return handleAutonomousCivilization(
+                Array(arguments.dropFirst()), world: world, player: player
+            )
         case "start":
             guard arguments.count == 1 else { return failure("Usage: /lab start") }
             return start(world: world, player: player)
@@ -153,7 +160,7 @@ extension PebbleAgentController {
         case "household":
             return handleHousehold(Array(arguments.dropFirst()))
         case "care":
-            return handleDependentCare(Array(arguments.dropFirst()))
+            return handleDependentCare(Array(arguments.dropFirst()), world: world)
         case "skills":
             return handleSkills(Array(arguments.dropFirst()))
         case "teaching":
@@ -258,6 +265,20 @@ extension PebbleAgentController {
         default:
             return failure("Unknown /lab command. Use /lab help.")
         }
+    }
+
+    private func isManualProductiveCommand(_ arguments: [String]) -> Bool {
+        guard let command = arguments.first?.lowercased() else { return false }
+        let productiveDomains: Set<String> = [
+            "interaction", "gateway", "material", "harvest", "construction",
+            "economy", "natural", "ecology", "ecological-observation",
+            "agriculture", "wild-subsistence", "livestock", "work-professions",
+            "forage", "care", "teaching", "build",
+        ]
+        guard productiveDomains.contains(command) else { return false }
+        let inspectionOrGate = arguments.dropFirst().first?.lowercased()
+        return inspectionOrGate != "status" && inspectionOrGate != "on"
+            && inspectionOrGate != "off"
     }
 
     @discardableResult

@@ -92,6 +92,8 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "materials" {
 }
 
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "dependent-care" {
+    registerAllBlocks()
+    registerAllItems()
     runPebbleAgentsDependentCareSmoke()
     print("\n\(passed) passed, \(failed) failed")
     exit(failed > 0 ? 1 : 0)
@@ -145,6 +147,11 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "livestock" {
 }
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "work-professions" {
     runPebbleAgentsWorkProfessionSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "autonomous-civilization" {
+    runPebbleAgentsAutonomousCivilizationSmoke()
     print("\n\(passed) passed, \(failed) failed")
     exit(failed > 0 ? 1 : 0)
 }
@@ -2280,6 +2287,7 @@ runPebbleCoreLivestockSmoke()
 runPebbleAgentsLivestockSmoke()
 runPebbleAgentsWildSubsistenceSmoke()
 runPebbleAgentsWorkProfessionSmoke()
+runPebbleAgentsAutonomousCivilizationSmoke()
 
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)

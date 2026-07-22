@@ -134,7 +134,8 @@ extension AgentSimulationSession {
                             || action.name == "approach_construction"
                             || action.name == "approach_information"
                             || action.name == "approach_settlement"
-                            || action.name == "approach_dependent",
+                            || action.name == "approach_dependent"
+                            || action.name == "approach_activity",
                           outcome.requestedDX == (action.dx ?? 0),
                           outcome.requestedDY == (action.dy ?? 0),
                           outcome.requestedDZ == (action.dz ?? 0),
@@ -202,7 +203,8 @@ extension AgentSimulationSession {
                     || state.lastAction?.name == "approach_construction"
                     || state.lastAction?.name == "approach_information"
                     || state.lastAction?.name == "approach_settlement"
-                    || state.lastAction?.name == "approach_dependent" {
+                    || state.lastAction?.name == "approach_dependent"
+                    || state.lastAction?.name == "approach_activity" {
                     guard let route = state.navigationProgress.route,
                           state.navigationProgress.status == .active else {
                         throw AgentSessionError.movementActionMismatch(id)
@@ -276,7 +278,8 @@ extension AgentSimulationSession {
                     || state.lastAction?.name == "approach_construction"
                     || state.lastAction?.name == "approach_information"
                     || state.lastAction?.name == "approach_settlement"
-                    || state.lastAction?.name == "approach_dependent" {
+                    || state.lastAction?.name == "approach_dependent"
+                    || state.lastAction?.name == "approach_activity" {
                     state.navigationProgress = AgentNavigationProgress(
                         status: state.navigationProgress.status,
                         route: state.navigationProgress.route,
@@ -662,6 +665,34 @@ extension AgentSimulationSession {
             if state.position == state.homePosition {
                 state.navigationProgress = AgentNavigationProgress(
                     status: .arrived, route: state.navigationProgress.route,
+                    routeIndex: state.navigationProgress.route.map {
+                        max(0, $0.positions.count - 1)
+                    } ?? 0,
+                    replanCount: state.navigationProgress.replanCount,
+                    lastPlanTick: state.navigationProgress.lastPlanTick,
+                    lastInvalidation: state.navigationProgress.lastInvalidation
+                )
+                return
+            }
+        case .civilizationActivity:
+            guard let activity = activeAutonomousActivity(for: state.agentID),
+                  let target = activity.candidate.target else {
+                releaseReservation(for: state)
+                state.navigationProgress = AgentNavigationProgress(
+                    lastInvalidation: .targetMissing,
+                    lastFailure: .targetMissing
+                )
+                return
+            }
+            releaseReservation(for: state)
+            purpose = .civilizationActivity
+            targetPosition = target
+            targetResource = nil
+            goalMode = .cardinalAdjacent
+            if manhattanDistance(state.position, target) <= 1 {
+                state.navigationProgress = AgentNavigationProgress(
+                    status: .arrived,
+                    route: state.navigationProgress.route,
                     routeIndex: state.navigationProgress.route.map {
                         max(0, $0.positions.count - 1)
                     } ?? 0,

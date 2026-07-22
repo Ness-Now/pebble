@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--ecological-observation|--agriculture|--wild-subsistence|--physical-food-survival|--livestock|--work-professions]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--ecological-observation|--agriculture|--wild-subsistence|--physical-food-survival|--livestock|--work-professions|--gate-b-passive]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -56,6 +56,7 @@ Options:
   --physical-food-survival Run real berry acquisition, exact eating, shadow rejection, and v17 proof.
   --livestock Run real sheep feeding, breeding, herding, wool, loss, and v15 proof.
   --work-professions Run real work commitments and derived multi-agent profiles with v16 proof.
+  --gate-b-passive Run a five-minute rendered passive observer slice with no productive command after bootstrap.
   --help     Show this help and exit.
 EOF
 }
@@ -123,6 +124,7 @@ for option in "$@"; do
         --physical-food-survival) MODE="physical-food-survival"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --livestock) MODE="livestock"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --work-professions) MODE="work-professions"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --gate-b-passive) MODE="gate-b-passive"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --help|-h) usage; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$option" >&2; usage >&2; exit 2 ;;
     esac
@@ -152,7 +154,21 @@ AGRICULTURE_GATE=0
 WILD_SUBSISTENCE_GATE=0
 LIVESTOCK_GATE=0
 WORK_PROFESSIONS_GATE=0
-if [ "$MODE" = "physical-food-survival" ]; then
+AUTONOMOUS_CIVILIZATION_GATE=0
+if [ "$MODE" = "gate-b-passive" ]; then
+    WORLD_SEED="46"
+    MATERIAL_GATE=1
+    PERSISTENCE_GATE=1
+    POPULATION_GATE=1
+    LIFECYCLE_GATE=1
+    SKILL_GATE=1
+    ECOLOGICAL_OBSERVATION_GATE=1
+    WILD_SUBSISTENCE_GATE=1
+    AUTONOMOUS_CIVILIZATION_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-GateB-Passive-46"
+    CAPTURE_NAME="gate-b-passive-later.png"
+    LAB_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/tp 20 80 -8 180 35;/lab pause;/lab movement off;/lab population on;/lab lifecycle on;/lab skills on;/lab ecological-observation on;/lab wild-subsistence on;/lab survival on;/lab physical-food-survival on;/lab wild-subsistence proof setup;/lab focus agent_0;/lab follow off;/lab overlay compact;/lab autonomous-civilization passive;/lab resume'
+elif [ "$MODE" = "physical-food-survival" ]; then
     WORLD_SEED="46"
     MATERIAL_GATE=1
     PERSISTENCE_GATE=1
@@ -332,7 +348,11 @@ elif [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ] \
     fi
     POPULATION_ANCHOR_X=${PEBBLELAB_ECOLOGY_ANCHOR_X:-14}
     POPULATION_ANCHOR_Z=${PEBBLELAB_ECOLOGY_ANCHOR_Z:--21}
-    POPULATION_ANCHOR_Y=${PEBBLELAB_ECOLOGY_ANCHOR_Y:-66}
+    if [ "$MODE" = "care" ]; then
+        POPULATION_ANCHOR_Y=${PEBBLELAB_ECOLOGY_ANCHOR_Y:-68}
+    else
+        POPULATION_ANCHOR_Y=${PEBBLELAB_ECOLOGY_ANCHOR_Y:-66}
+    fi
     POPULATION_PLAYER_Y=$((POPULATION_ANCHOR_Y + 3))
     REPRO_INITIAL_TICK=7
     REPRO_PLAN_TICK=10
@@ -752,9 +772,12 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_WILD_SUBSISTENCE=%s\n' "$WILD_SUBSISTENCE_GATE"
     printf '  PEBBLELAB_APP_AGENTS_LIVESTOCK=%s\n' "$LIVESTOCK_GATE"
     printf '  PEBBLELAB_APP_AGENTS_WORK_PROFESSIONS=%s\n' "$WORK_PROFESSIONS_GATE"
+    printf '  PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION=%s\n' "$AUTONOMOUS_CIVILIZATION_GATE"
     printf '  PEBBLELAB_DISPOSABLE_WORLD_PROOF=1\n'
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
-    if [ "$MODE" = "physical-food-survival" ]; then
+    if [ "$MODE" = "gate-b-passive" ]; then
+        printf '  PEBBLE_SHOT=%s@18000\n' "$capture_path"
+    elif [ "$MODE" = "physical-food-survival" ]; then
         printf '  PEBBLE_SHOT=-|%s/physical-food-before.png|-|-|%s/physical-food-acquired.png|%s/physical-food-consumed.png|%s\n' \
             "$(dirname "$capture_path")" "$(dirname "$capture_path")" \
             "$(dirname "$capture_path")" "$capture_path"
@@ -791,7 +814,11 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "physical-food-survival" ]; then
+    if [ "$MODE" = "gate-b-passive" ]; then
+        printf '  2. After PLAYABLE_SLICE_BOOTSTRAP_COMPLETE, issue no productive command; normal walking and mouse look remain available.\n'
+        printf '  3. Observe at least three agents independently fish, hunt, gather, move, wait, eat, and replan.\n'
+        printf '  4. Optionally use focus/follow only as an observer; neither command directs an activity.\n'
+    elif [ "$MODE" = "physical-food-survival" ]; then
         printf '  2. Inspect the hungry agent and mature berry context before acquisition.\n'
         printf '  3. Confirm the gathered ItemStack appears in real custody, then decreases by exactly one.\n'
         printf '  4. Confirm the trace proves shadow foodRaw rejection and the same canonical hunger changing.\n'
@@ -904,13 +931,13 @@ print_plan() {
         && [ "$MODE" != "mortality" ] && [ "$MODE" != "reproduction" ] \
         && [ "$MODE" != "kinship" ] && [ "$MODE" != "households" ] \
         && [ "$MODE" != "care" ] && [ "$MODE" != "skills" ]; then
-        if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ]; then
+        if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "gate-b-passive" ]; then
             printf '  5. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         else
             printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         fi
     fi
-    if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ]; then
+    if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "gate-b-passive" ]; then
         printf '  6. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
     else
         printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
@@ -950,7 +977,9 @@ TRACE_PATH="$SESSION_ROOT/pebble-live.log"
 DB_PATH="$SESSION_HOME/Library/Application Support/Pebble/pebble.db"
 [ ! -e "$DB_PATH" ] || fail "fresh disposable database already exists: $DB_PATH"
 /bin/mkdir -p "$SESSION_HOME" "$CAPTURE_DIR"
-if [ "$MODE" = "physical-food-survival" ]; then
+if [ "$MODE" = "gate-b-passive" ]; then
+    SHOT_SPEC="$CAPTURE_PATH@18000"
+elif [ "$MODE" = "physical-food-survival" ]; then
     CAPTURE_BEFORE_PATH="$CAPTURE_DIR/physical-food-before.png"
     CAPTURE_ACQUIRED_PATH="$CAPTURE_DIR/physical-food-acquired.png"
     CAPTURE_CONSUMED_PATH="$CAPTURE_DIR/physical-food-consumed.png"
@@ -1452,6 +1481,14 @@ if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ] \
     continuation_command_tick=$((persisted_world_tick + 100))
     REPRODUCTION_PHASE3_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab checkpoint load reproduction-postbirth"
     reproduction_step=0
+    if [ "$MODE" = "care" ]; then
+        REPRODUCTION_PHASE3_COMMANDS="$REPRODUCTION_PHASE3_COMMANDS;/lab physical-food-survival on"
+        while [ "$reproduction_step" -lt 4 ]; do
+            REPRODUCTION_PHASE3_COMMANDS="$REPRODUCTION_PHASE3_COMMANDS;/lab step"
+            reproduction_step=$((reproduction_step + 1))
+        done
+        REPRODUCTION_PHASE3_COMMANDS="$REPRODUCTION_PHASE3_COMMANDS;/lab care proof physical-food-setup"
+    fi
     while [ "$reproduction_step" -lt 8 ]; do
         REPRODUCTION_PHASE3_COMMANDS="$REPRODUCTION_PHASE3_COMMANDS;/lab step"
         reproduction_step=$((reproduction_step + 1))
@@ -1468,7 +1505,19 @@ if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ] \
     REPRODUCTION_CONTROL_COMMANDS="$REPRODUCTION_BOOTSTRAP_COMMANDS"
     reproduction_step=0
     reproduction_control_steps=13
-    if [ "$MODE" = "care" ]; then reproduction_control_steps=11; fi
+    if [ "$MODE" = "care" ]; then
+        reproduction_control_steps=11
+        while [ "$reproduction_step" -lt 3 ]; do
+            REPRODUCTION_CONTROL_COMMANDS="$REPRODUCTION_CONTROL_COMMANDS;/lab step"
+            reproduction_step=$((reproduction_step + 1))
+        done
+        REPRODUCTION_CONTROL_COMMANDS="$REPRODUCTION_CONTROL_COMMANDS;/lab physical-food-survival on"
+        while [ "$reproduction_step" -lt 7 ]; do
+            REPRODUCTION_CONTROL_COMMANDS="$REPRODUCTION_CONTROL_COMMANDS;/lab step"
+            reproduction_step=$((reproduction_step + 1))
+        done
+        REPRODUCTION_CONTROL_COMMANDS="$REPRODUCTION_CONTROL_COMMANDS;/lab care proof physical-food-setup"
+    fi
     while [ "$reproduction_step" -lt "$reproduction_control_steps" ]; do
         REPRODUCTION_CONTROL_COMMANDS="$REPRODUCTION_CONTROL_COMMANDS;/lab step"
         reproduction_step=$((reproduction_step + 1))
@@ -1492,7 +1541,9 @@ if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ] \
     require_trace 'summary .*agents=5 .*runtimeErrors=0 .*probesRemoved=5 ' 'clean final five-probe cleanup'
     reject_trace 'birth finalized|runtime error|worldMutation=(block|world)' 'duplicate birth, runtime error, or World mutation after restore'
     if [ "$MODE" = "care" ]; then
-        require_trace 'care nourishment tick=2[0-5] caregiver=agent_0 dependent=agent_4 source=(caregiverInventory|campStock) food=[1-9][0-9]*->[0-9]+ consumed=1 hunger=0\.[0-9]+->0\.[0-9]+ succeeded=1 mutation=none' 'material dependent nourishment after real caregiver approach'
+        require_trace 'care physical shadow audit tick=22 caregiver=agent_0 dependent=agent_4 foodRawShadow=[1-9][0-9]* realFood=none physicalDebit=0 hungerRescue=0 historyDelta=0' 'abstract shadow food cannot nourish a live dependent in physical mode'
+        require_trace 'care physical food setup tick=22 caregiver=agent_0 dependent=agent_4 material=sweet_berries slot=[0-9]+ count=1 custody=real approachSteps=[1-9][0-9]* movement=CorePath\+Entity.move bootstrap=bounded' 'bounded real-food care fixture after real physical approach'
+        require_trace 'care physical nourishment tick=2[3-5] caregiver=agent_0 dependent=agent_4 material=sweet_berries slot=[0-9]+ physicalCount=1>0 physicalDebit=1 hunger=0\.[0-9]+>0\.[0-9]+ foodRawGhostDelta=0 receipt=physical-care:[A-Za-z0-9_.:-]+' 'exact physical dependent nourishment after real caregiver approach'
         require_trace "care tick=$REPRO_FINAL_TICK enabled=1 assignments=0 needs=0 engagements=0 atRisk= digest=[0-9a-f]+ worldMutation=none" 'care lifecycle closes cleanly at maturity'
     fi
 
@@ -1589,8 +1640,10 @@ if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ] \
     if [ "$MODE" = "care" ]; then
         [ "$(/usr/bin/plutil -extract durableState.dependentCareState.assignments.0.status raw -o - "$FINAL_SESSION")" = "ended" ] \
             && [ "$(/usr/bin/plutil -extract durableState.dependentCareState.activeNeeds json -o - "$FINAL_SESSION")" = "[]" ] \
-            && [ "$(/usr/bin/plutil -extract durableState.consumedResourceTotals.foodRawCount raw -o - "$FINAL_SESSION")" -ge 1 ] \
-            || fail "final care closure or material consumption is not exact"
+            && [ "$(/usr/bin/plutil -extract durableState.dependentCareState.terminalOutcomes.0.foodSource raw -o - "$FINAL_SESSION")" = "physicalCaregiverInventory" ] \
+            && [ "$(/usr/bin/plutil -extract durableState.dependentCareState.terminalOutcomes.0.materialQuantity raw -o - "$FINAL_SESSION")" = "1" ] \
+            && [ "$(/usr/bin/plutil -extract durableState.consumedResourceTotals.foodRawCount raw -o - "$FINAL_SESSION")" = "0" ] \
+            || fail "final physical care closure, provenance, or ghost material count is not exact"
     fi
     stage_event_count=$(/usr/bin/plutil -extract durableState.causalLedger.events json -o - "$FINAL_SESSION" \
         | /usr/bin/grep -o '"kind":"lifeStageChanged"' | /usr/bin/wc -l | /usr/bin/tr -d ' ')
@@ -3060,6 +3113,7 @@ PEBBLELAB_APP_AGENTS_AGRICULTURE="$AGRICULTURE_GATE" \
 PEBBLELAB_APP_AGENTS_WILD_SUBSISTENCE="$WILD_SUBSISTENCE_GATE" \
 PEBBLELAB_APP_AGENTS_LIVESTOCK="$LIVESTOCK_GATE" \
 PEBBLELAB_APP_AGENTS_WORK_PROFESSIONS="$WORK_PROFESSIONS_GATE" \
+PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION="$AUTONOMOUS_CIVILIZATION_GATE" \
 PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
 PEBBLE_CMD="$LAB_COMMANDS" \
 PEBBLE_SHOT="$SHOT_SPEC" \
@@ -3073,7 +3127,7 @@ world_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT count(*), json_extract(json, '
 expected_world_facts="1|$WORLD_SEED|$WORLD_NAME|1000|0|0|0|0|0"
 [ "$world_facts" = "$expected_world_facts" ] \
     || fail "unexpected disposable world facts: $world_facts"
-if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ] || [ "$MODE" = "material" ] || [ "$MODE" = "cooperation" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ]; then
+if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ] || [ "$MODE" = "material" ] || [ "$MODE" = "cooperation" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "gate-b-passive" ]; then
     spawn_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.spawnX'), json_extract(json, '$.spawnY'), json_extract(json, '$.spawnZ') FROM worlds;")
     [ "$spawn_facts" = "8|75|-112" ] || fail "unexpected seed-46 spawn: $spawn_facts"
 fi
@@ -3082,7 +3136,17 @@ require_trace "disposable-world name=$WORLD_NAME seed=$WORLD_SEED worldTick=0 da
 require_trace "start seed=$WORLD_SEED agents=3 tick=0 hz=4 movement=on worldTick=[0-9]+ dayTime=1000 weather=clear randomTickSpeed=0 mobSpawning=0" 'deterministic agent session initial conditions'
 
 [ -s "$CAPTURE_PATH" ] || fail "capture was not written: $CAPTURE_PATH"
-if [ "$MODE" = "physical-food-survival" ]; then
+if [ "$MODE" = "gate-b-passive" ]; then
+    require_trace 'PLAYABLE_SLICE_BOOTSTRAP_COMPLETE tick=0 agents=3 follow=off productiveCommandsAfter=0' 'bounded passive bootstrap marker'
+    require_trace '^\[lab-live\] autonomous activity completed actor=agent_0 domain=fishing .*manualTrigger=0$' 'agent_0 autonomous fishing completion'
+    require_trace '^\[lab-live\] autonomous activity completed actor=agent_1 domain=hunting .*manualTrigger=0$' 'agent_1 autonomous hunting completion'
+    require_trace '^\[lab-live\] autonomous activity completed actor=agent_2 domain=wildGathering .*manualTrigger=0$' 'agent_2 autonomous gathering completion'
+    require_trace 'physical food consumption actor=agent_2 material=sweet_berries .*physicalDebit=exact abstractDelta=0' 'autonomous real-food hunger closure'
+    require_trace 'autonomous summary bootstrap=1 manualProductive=0 decisions=[1-9][0-9]* candidates=[1-9][0-9]* starts=[3-9][0-9]* completed=[3-9][0-9]* blocked=[0-9]+ switches=[0-9]+ completedAgents=3 domains=fishing,hunting,wildGathering chainedAgents=agent_0 .*idleLongest=[0-9]+' 'five-minute passive autonomy counters'
+    require_trace 'summary .*ticks=(6[0-9][0-9]|[7-9][0-9][0-9]|1[0-2][0-9][0-9]) .*agents=3 .*runtimeErrors=0 .*probesRemoved=3 .*follow=off demo=0 ' 'five-minute normal lifecycle and exact cleanup'
+    reject_trace 'Autonomous Civilization command failed|rollbackFailure|manualProductive=[1-9]|runtimeErrors=[1-9]' 'manual productive action, rollback failure, or runtime error'
+    printf '\nPASS: five-minute rendered passive observer slice, three agents, three domains, chained decisions, real eating, and zero productive commands verified.\n'
+elif [ "$MODE" = "physical-food-survival" ]; then
     [ -s "$CAPTURE_BEFORE_PATH" ] || fail "before capture was not written: $CAPTURE_BEFORE_PATH"
     [ -s "$CAPTURE_ACQUIRED_PATH" ] || fail "acquired capture was not written: $CAPTURE_ACQUIRED_PATH"
     [ -s "$CAPTURE_CONSUMED_PATH" ] || fail "consumed capture was not written: $CAPTURE_CONSUMED_PATH"

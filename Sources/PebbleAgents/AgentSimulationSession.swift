@@ -66,6 +66,7 @@ public struct AgentSimulationSession {
     public internal(set) var livestockState: AgentLivestockState?
     public internal(set) var workCommitmentState: AgentWorkCommitmentState?
     public internal(set) var physicalFoodSurvivalState: AgentPhysicalFoodSurvivalState?
+    public internal(set) var autonomousActivityState: AgentAutonomousActivityState?
 
     public init(
         configuration: AgentSessionConfiguration,
@@ -149,6 +150,7 @@ public struct AgentSimulationSession {
         livestockState = nil
         workCommitmentState = nil
         physicalFoodSurvivalState = nil
+        autonomousActivityState = nil
         try recordCausalEvent(
             kind: .sessionLifecycle,
             origin: .lifecycle,
@@ -573,6 +575,7 @@ public struct AgentSimulationSession {
                     )
                 }
             } else {
+                let autonomousActivity = activeAutonomousActivity(for: state.agentID)
                 goalChange = AgentCognitiveTransitions.selectGoal(AgentGoalSelectionInput(
                     tick: nextTick,
                     health: state.health,
@@ -605,6 +608,8 @@ public struct AgentSimulationSession {
                     canAcceptCooperationOffer: canAcceptCooperationOffer(state)
                         && !cooperationTransitionPending,
                     isMigrating: isMigratingAgent(id),
+                    hasAutonomousActivity: autonomousActivity != nil,
+                    autonomousActivityUrgency: autonomousActivity?.candidate.urgency ?? 0,
                     currentGoalKind: state.currentGoal.kind,
                     survivalEnabled: survivalEnabled,
                     hungryThreshold: configuration.survivalConfiguration.hungryThreshold,
@@ -643,6 +648,7 @@ public struct AgentSimulationSession {
                 case .approachDependent: return "supervise_dependent"
                 }
             }
+            let autonomousActivity = activeAutonomousActivity(for: state.agentID)
             let baseAction = AgentActionDecider.decide(AgentActionDecisionInput(
                 agentId: id,
                 tick: nextTick,
@@ -673,7 +679,9 @@ public struct AgentSimulationSession {
                 careTarget: careTargetPosition,
                 careActionName: careActionName,
                 careInteractionDistance: dependentCareState?.configuration
-                    .careInteractionDistance ?? 1
+                    .careInteractionDistance ?? 1,
+                autonomousActivityTarget: autonomousActivity?.candidate.target,
+                autonomousActivityActionKey: autonomousActivity?.candidate.actionKey
             ))
             let retrievedMemories = AgentFeedbackLoop.retrieveMovementMemories(
                 memory: state.memory,

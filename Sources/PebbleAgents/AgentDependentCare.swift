@@ -244,8 +244,59 @@ public struct AgentCareEngagement: Codable, Equatable, Sendable {
 
 public enum AgentCareFoodSource: String, Codable, CaseIterable, Sendable {
     case caregiverInventory
+    case physicalCaregiverInventory
     case campStock
     case none
+}
+
+public struct AgentPhysicalDependentFoodIntent: Codable, Equatable, Sendable {
+    public let provisionID: String
+    public let provisionSequence: AgentCausalSequence
+    public let needID: AgentCareNeedID
+    public let caregiverID: AgentID
+    public let dependentID: AgentID
+    public let tick: Int
+
+    public init(
+        provisionID: String, provisionSequence: AgentCausalSequence,
+        needID: AgentCareNeedID, caregiverID: AgentID, dependentID: AgentID, tick: Int
+    ) {
+        self.provisionID = provisionID
+        self.provisionSequence = provisionSequence
+        self.needID = needID
+        self.caregiverID = caregiverID
+        self.dependentID = dependentID
+        self.tick = tick
+    }
+}
+
+public struct AgentValidatedPhysicalDependentFoodOutcome: Codable, Equatable, Sendable {
+    public let intent: AgentPhysicalDependentFoodIntent
+    public let canonicalMaterialName: String
+    public let quantityConsumed: Int
+    public let coreHungerPoints: Int
+    public let coreSaturation: Double
+    public let sourceSlot: Int
+    public let physicalReceiptID: String
+    public let hungerBefore: Double
+    public let hungerAfter: Double
+
+    public init(
+        intent: AgentPhysicalDependentFoodIntent, canonicalMaterialName: String,
+        quantityConsumed: Int, coreHungerPoints: Int, coreSaturation: Double,
+        sourceSlot: Int, physicalReceiptID: String,
+        hungerBefore: Double, hungerAfter: Double
+    ) {
+        self.intent = intent
+        self.canonicalMaterialName = canonicalMaterialName
+        self.quantityConsumed = quantityConsumed
+        self.coreHungerPoints = coreHungerPoints
+        self.coreSaturation = coreSaturation
+        self.sourceSlot = sourceSlot
+        self.physicalReceiptID = physicalReceiptID
+        self.hungerBefore = hungerBefore
+        self.hungerAfter = hungerAfter
+    }
 }
 
 public struct AgentCareProvisionIntent: Codable, Equatable, Sendable {

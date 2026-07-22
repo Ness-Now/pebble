@@ -9,6 +9,14 @@ struct PebbleAgentPreparedFoodConsumption {
     let validatedOutcome: AgentValidatedPhysicalFoodConsumptionOutcome
 }
 
+struct PebbleAgentPreparedDependentFoodConsumption {
+    let intent: AgentPhysicalDependentFoodIntent
+    let sourceSlot: Int
+    let expectedSourceFingerprint: String
+    let material: AgentMaterialStackSnapshot
+    let validatedOutcome: AgentValidatedPhysicalDependentFoodOutcome
+}
+
 enum PebbleAgentFoodConsumptionStatus: String {
     case succeeded
     case noEligibleFood
@@ -143,5 +151,74 @@ final class PebbleAgentFoodConsumptionExecutor {
             outcome: status == .succeeded ? plan.validatedOutcome : nil,
             physicalStatus: transaction.status
         )
+    }
+
+    func prepareDependent(
+        _ intent: AgentPhysicalDependentFoodIntent,
+        session: AgentSimulationSession,
+        source: PebbleAgentMaterialCustodyEndpoint,
+        gateway: PebbleAgentMaterialCustodyGateway
+    ) throws -> PebbleAgentPreparedDependentFoodConsumption? {
+        guard intent.tick == session.tick,
+              source.locationID == "agent:\(intent.caregiverID.rawValue)"
+                || source.locationID.hasSuffix("_\(intent.caregiverID.rawValue)") else {
+            throw AgentSessionError.dependentCare(.materialDebitRequired)
+        }
+        guard let slots = source.read() else { return nil }
+        let eligible = slots.indices.compactMap { slot -> (Int, ItemStack, FoodConsumptionDescriptor)? in
+            guard let stack = slots[slot],
+                  let descriptor = foodConsumptionDescriptor(for: stack),
+                  descriptor.food.hunger > 0, !descriptor.food.alwaysEat,
+                  descriptor.food.effects.isEmpty, descriptor.hasSimpleDebit else { return nil }
+            return (slot, stack, descriptor)
+        }
+        guard let (slot, stack, descriptor) = eligible.first else { return nil }
+        let dependent = try session.state(for: intent.dependentID)
+        let reduction = min(1, Double(descriptor.food.hunger) / 20)
+        let full = try bridge.snapshot(of: stack)
+        let outcome = AgentValidatedPhysicalDependentFoodOutcome(
+            intent: intent, canonicalMaterialName: descriptor.canonicalMaterialName,
+            quantityConsumed: 1, coreHungerPoints: descriptor.food.hunger,
+            coreSaturation: descriptor.food.saturation, sourceSlot: slot,
+            physicalReceiptID: intent.provisionID,
+            hungerBefore: dependent.needs.hunger,
+            hungerAfter: max(0, dependent.needs.hunger - reduction)
+        )
+        try session.prevalidatePhysicalDependentFood(outcome)
+        return PebbleAgentPreparedDependentFoodConsumption(
+            intent: intent, sourceSlot: slot,
+            expectedSourceFingerprint: try gateway.fingerprint(source),
+            material: AgentMaterialStackSnapshot(identity: full.identity, count: 1),
+            validatedOutcome: outcome
+        )
+    }
+
+    func executeDependent(
+        _ plan: PebbleAgentPreparedDependentFoodConsumption,
+        session: inout AgentSimulationSession,
+        source: PebbleAgentMaterialCustodyEndpoint,
+        gateway: PebbleAgentMaterialCustodyGateway,
+        publish: (
+            AgentValidatedPhysicalDependentFoodOutcome,
+            inout AgentSimulationSession
+        ) throws -> Void
+    ) -> PebbleAgentMaterialTransactionOutcome {
+        var candidate = session
+        do { try publish(plan.validatedOutcome, &candidate) }
+        catch {
+            return PebbleAgentMaterialTransactionOutcome(
+                transactionID: plan.intent.provisionID,
+                status: .verificationFailure, quantityMoved: 0,
+                sourceFingerprint: nil, destinationFingerprint: nil
+            )
+        }
+        return gateway.consume(PebbleAgentMaterialTransactionRequest(
+            transactionID: plan.intent.provisionID, material: plan.material,
+            expectedSourceFingerprint: plan.expectedSourceFingerprint,
+            expectedDestinationFingerprint: nil
+        ), from: source, sourceSlot: plan.sourceSlot) {
+            session = candidate
+            return true
+        }
     }
 }

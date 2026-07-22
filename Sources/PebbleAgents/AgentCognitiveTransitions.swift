@@ -92,6 +92,13 @@ public enum AgentCognitiveTransitions {
                 startedAtTick: input.tick,
                 urgency: 79
             )
+        } else if input.hasAutonomousActivity {
+            nextGoal = AgentGoal(
+                kind: .civilizationActivity,
+                reason: "deterministically selected civilization activity",
+                startedAtTick: input.tick,
+                urgency: input.autonomousActivityUrgency
+            )
         } else if input.shouldBuildShelter {
             nextGoal = AgentGoal(
                 kind: .buildShelter,
@@ -229,6 +236,12 @@ public enum AgentCognitiveTransitions {
         case "approach_construction":
             state = "planning"
             effect = "awaiting bounded construction navigation"
+        case "approach_activity":
+            state = "planning"
+            effect = "awaiting bounded autonomous activity navigation"
+        case "execute_autonomous_activity":
+            state = "working"
+            effect = "awaiting validated physical activity outcome"
         case "share_information":
             state = "communicating"
             effect = "awaiting directed social delivery"

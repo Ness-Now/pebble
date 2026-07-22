@@ -31,6 +31,22 @@ Gate R: ACQUIRED
 Gate B canonically acquired: NO
 ```
 
+Local corrective status after `GATE-B-CORR-02`, based on starting HEAD
+`1b7c320ec897d5ea9944d3c12e6b7c460954ce23` and pending senior review and
+publication:
+
+```text
+GATE B CANDIDATE RESULT: FAIL
+
+Automated Integrated Acceptance: NOT RERUN (5/3/2 pending)
+Playable Passive Observer Slice: PASS LOCALLY
+Real Food-to-Survival Closure: PASS
+Livestock Reserve Closure: PASS LOCALLY
+Crisis Replacement Orchestration: PASS LOCALLY
+Gate R: ACQUIRED
+Gate B canonically acquired: NO
+```
+
 This is a fail-fast acceptance result, not a new Civilization phase and not a
 product implementation. `CIV-00` through `CIV-25` remain completed in their
 bounded contracts. Gate B was evaluated and is not acquired. `CIV-26` remains
@@ -166,33 +182,83 @@ effects or non-simple completion semantics are deliberately outside the V1
 agent executor and remain Core/Player-only until a later audited extension.
 
 Local verdict: `B-BLOCKER-FOOD-CLOSURE` is `CLOSED / REMEDIATED LOCALLY`,
-pending senior publication. Dependent-care nourishment still uses its explicit
-coarse compatibility model and is not silently converted by this correction.
+pending senior publication. CORR-02 subsequently added a separate physical
+dependent-care path; the legacy coarse model remains compatible and isolated.
+
+## GATE-B-CORR-02 local remediation
+
+`GATE-B-CORR-02 — Autonomous Agent Activity Orchestration and Playable Observer
+Convergence` is a non-canonical corrective milestone. It does not advance the
+roadmap, acquire Gate B or start `CIV-26`.
+
+The correction extends the existing cognition loop instead of adding a demo
+scheduler. `AgentSimulationSession` deterministically selects at most one
+bounded activity per actor from local needs, responsibilities, commitments and
+opportunities. The normal cognitive tick still chooses the goal and action;
+Pebble translates only the selected typed intent to the already-existing
+agriculture, fishing, hunting, gathering and livestock executors. Verified
+outcomes return to the session and the next ordinary tick chooses again.
+
+The activity state has explicit selected/traveling/ready/completed/blocked/
+stale/interrupted lifecycle, bounded candidates, active intents, recent
+records and failure cooldowns. Arbitration is stable by priority band,
+urgency, continuity, distance, domain and identifier. Critical survival and
+dependent care preempt ordinary work. A blocked prerequisite records evidence
+and enters cooldown; idle remains valid. The existing bounded route planner
+and the Pebble `findPath` + `Entity.move` adapter remain the sole navigation
+path.
+
+The feature is default-off and checkpoint/replay v18 persists only stable
+Civilization identities, bounded orchestration state and verified outcomes.
+Schemas v1-v17 load with autonomy disabled and empty; no historical activity
+is invented. World, Entity, ItemStack, runtime entity IDs and executor objects
+are absent from the new durable state.
+
+Dependent care in physical-food mode now selects a supported real food from
+the caregiver's custody, uses the Core food descriptor, exact-debits the
+physical slot through the existing custody gateway, publishes a monotone
+causal outcome and changes only the dependent's canonical hunger. A coarse
+`foodRaw` balance cannot nourish a live dependent when real food is absent.
+Legacy abstract care remains available only under its explicit authority.
+
+Planting reserve is evaluated against real feed custody before an autonomous
+breeding activity is eligible; no feed can be promised twice. Work demands
+are refreshed and reviewed in the normal pre-tick bridge, crisis-suspended
+commitments admit a deterministic capable replacement, and only a later
+verified physical outcome fulfills work. Teaching evidence is derived from a
+real source success; observation alone grants no skill and the student's own
+later success remains the practice authority.
+
+The rendered passive slice maps stable AgentID hashes to existing villager
+models and animation profiles, suppresses cyan debug boxes under the gate,
+keeps follow off, and leaves ordinary player movement and mouse look active.
+No new asset, skin, registry or physical engine was added.
 
 ## Autonomous orchestration matrix
 
 | Domain | Autonomous in normal game | `/lab` required | Proof harness required | Chains next decision | Current trigger and disconnect |
 | --- | --- | --- | --- | --- | --- |
-| Agriculture | no; plan only | yes | yes | no | The normal tick can create a bounded plot and expose `nextAgriculturalIntent`, but the seam explicitly does not execute farming. `/lab agriculture proof` performs the cycle. |
-| Fishing | no | yes | yes | no | Proof setup selects the opportunity; `/lab ... proof fish` calls the real executor. |
-| Hunting | no | yes | yes | no | Proof setup selects the opportunity; `/lab ... proof hunt` calls the real executor. |
-| Wild gathering | no | yes | yes | no | Proof setup selects the opportunity; `/lab ... proof gather` calls the real executor. |
-| Livestock | no | yes | yes | no | Proof commands create the herd/task sequence and call feed, breed, shear, herd and loss transitions. |
-| Dependent care | partial after manual activation/bootstrap | yes | no per care action | within care only | Needs, assignment, care goal, bounded travel and interaction are tick-driven. Nourishment still uses abstract food and there is no cross-domain next choice. |
-| Teaching/apprenticeship | no | yes | yes | no | The proof manually chooses mentor, apprenticeship, demonstration and later student practice. |
-| Work commitments/profiles | no | yes | yes | no | `/lab refresh`, `match` and `record` drive the state; a commitment never becomes normal action input or invokes a domain executor. |
+| Agriculture | yes when autonomy and agriculture gates are enabled | activation/bootstrap only | focused proof remains | yes | Bounded plans become candidates; till, plant, harvest and storage reuse the existing executor and wait for real Core growth. |
+| Fishing | yes | activation/bootstrap only | focused proof remains | yes | Local selected opportunities become cognitive activities and reuse the real bobber/custody executor. |
+| Hunting | yes | activation/bootstrap only | focused proof remains | yes | Local prey evidence and real weapon custody gate the existing combat executor. |
+| Wild gathering | yes | activation/bootstrap only | focused proof remains | yes | Local renewable evidence reaches canonical break/drop/custody. |
+| Livestock | yes for eligible feed, product and herd tasks | activation/bootstrap only | focused proof remains | yes | Managed tasks become responsibilities; real feed reserve and existing executors remain authoritative. |
+| Dependent care | yes after explicit feature activation | activation/bootstrap only | focused proof remains | yes | Needs, assignment, preemption, bounded travel and interaction are tick-driven; physical mode exact-debits caregiver food. |
+| Teaching/apprenticeship | causal opportunity after real work | activation/bootstrap only | focused proof remains | yes | Demonstration evidence derives from real work; observation grants no skill and own practice remains required. |
+| Work commitments/profiles | yes as activity priority/evidence | activation/bootstrap only | focused proof remains | yes | Normal review and replacement feed candidate priority; commitments never mutate the World or lock a profession. |
 
-The first and next productive decisions are therefore chosen by proof commands
-or the live harness, except for care and agriculture's non-mutating plan. No
-normal `AgentSimulationSession` decision selects the next productive domain,
-and no WorkCommitment-to-executor bridge exists.
+Under the default-off autonomy gate, first and subsequent productive decisions
+are now selected by the normal `AgentSimulationSession` loop. `/lab` remains a
+feature/bootstrap and proof surface, not the per-agent productive authority.
 
 The current `/lab demo` is not a Gate B slice. It starts the base agents and
 movement but does not activate or orchestrate the acquired productive domains.
 Its default follow mode also reapplies player yaw/pitch; normal mouse look is
 available only after follow is turned off.
 
-Verdict: `B-BLOCKER-AUTONOMOUS-PLAYABLE-SLICE` is confirmed.
+Local corrective verdict: `B-BLOCKER-AUTONOMOUS-PLAYABLE-SLICE` is `CLOSED /
+REMEDIATED LOCALLY`; canonical Gate B acceptance still requires the dedicated
+5/3/2 campaign, composite restart, human passive review and senior review.
 
 ## Player control and visual identity
 
@@ -200,14 +266,12 @@ Pebble's ordinary player movement and mouse-look remain available while the
 agent controller updates the same World when follow mode is off. That is a
 useful coexistence boundary, but it is not proof of a living society.
 
-`LabCoreAgentEntity` is explicitly unregistered, non-persistent and not
-normally rendered. With the debug-entity gate, all agents are identical cyan
-boxes; the marker does not use AgentID, a name tag, a skin or a deterministic
-visual variant. The overlay can expose focus, current goal/action, commitment
-and profile, but current bodies are not distinguishable enough to follow one
-inhabitant naturally. Existing Player/villager models, skins and animation
-profiles are reuse candidates for a later corrective phase; none was connected
-by this evaluation.
+`LabCoreAgentEntity` remains unregistered and non-persistent. Under the
+CORR-02 gate, stable AgentID hashing selects existing farmer, fisherman,
+shepherd, toolsmith, mason or ordinary villager presentation, and the existing
+movement limb animation is reused. Cyan debug boxes are suppressed in that
+slice. The compact overlay exposes focus, goal/action, commitment and profile;
+no new model, texture, skin or animation asset was added.
 
 ## Reduced component evidence
 
@@ -221,12 +285,13 @@ selectors twice. The repeated text output must be byte-identical.
 | `agriculture` | 28 | component pass |
 | `wild-subsistence` | 44 | component pass |
 | `livestock` | 30 | component pass |
-| `dependent-care` | 48 | component pass |
+| `dependent-care` | 53 | component pass |
 | `skills` | 59 | component pass |
 | `teaching` | 41 | component pass |
 | `work-professions` | 29 | component pass |
 | `physical-food-survival` | 50 | component pass |
-| Total | 376 | 376 passed, 0 failed per run |
+| `autonomous-civilization` | 36 | component pass |
+| Total | 417 | 417 passed, 0 failed per run |
 
 These checks retain strong evidence for real Core actions, conservation inside
 each transaction, causal Teaching, care, bounded histories, descriptive
@@ -255,18 +320,19 @@ campaign seed.
 | --- | --- | --- |
 | B1 Physical Material Truth | partial | Real custody and per-vertical zero-ghost checks exist; no society-scale conservation ledger or composite run exists. |
 | B2 Real Food-to-Survival Closure | pass locally, pending publication | Exact physical food debit reaches canonical agent hunger with shadow isolation, idempotence and rollback proof. |
-| B3 Multiple Viable Subsistence Strategies | partial | Real strategies exist in separate proofs; no autonomous integrated selection/adaptation. |
-| B4 Agriculture and Managed Surplus Continuity | partial | One real cycle and reserve are proved; no autonomous next cycle. |
-| B5 Livestock Resource-Bounded Continuity | fail | Core feeding/breeding is real, but a real agriculture reserve and Civilization breeding decision do not gate the live chain end to end. |
-| B6 Care Continuity | partial | Care can preempt work and execute after activation; nourishment uses abstract food. |
-| B7 Teaching / Own-Practice Learning | partial | Causality is strong; the live chain is proof-command driven. |
-| B8 Durable Work Specialization | partial | Profiles are causal, derived and non-magical; the work history is manually sequenced in live proof. |
-| B9 Replacement / Crisis Resilience | fail | Direct APIs prove suspension/replacement, but no physical shock autonomously triggers review, selection and a real replacement action. |
+| B3 Multiple Viable Subsistence Strategies | partial | Local orchestration and a three-strategy passive slice pass; the canonical multi-seed adaptation campaign is pending. |
+| B4 Agriculture and Managed Surplus Continuity | partial | Autonomous executor chaining and the real cycle pass separately; multi-cycle campaign evidence is pending. |
+| B5 Livestock Resource-Bounded Continuity | partial | Real reserve-gated eligibility and executor linkage pass locally; campaign closure is pending. |
+| B6 Care Continuity | pass locally | Care preempts work and physical mode exact-debits caregiver food; canonical campaign evidence is pending. |
+| B7 Teaching / Own-Practice Learning | partial | Real work now creates causal teaching evidence; integrated campaign observation is pending. |
+| B8 Durable Work Specialization | partial | Commitments influence normal candidates and profiles remain causal/non-magical; campaign continuity is pending. |
+| B9 Replacement / Crisis Resilience | partial | Normal review and deterministic capable replacement are wired; a canonical live shock campaign is pending. |
 | B10 Local Information / No Ghost Stock | partial | Strong observer-local component contracts; no integrated campaign. |
 | B11 Determinism / Bounds / Persistence | partial | Per-vertical bounds and byte-exact replay exist; no composite World/session reconcile-and-continue run. |
-| B12 Playable Passive Observer Slice | fail | No normal autonomous cross-domain chaining and no adequate visible agent identity. |
+| B12 Playable Passive Observer Slice | partial | The seed-46 corrective slice passes locally with player control and reused villager identity; human review and canonical campaign remain pending. |
 
-Additional integrated blockers found after the two primary blockers:
+Additional integrated blockers found after the two primary blockers, now
+remediated locally by CORR-02:
 
 - `B-BLOCKER-LIVESTOCK-RESERVE-CLOSURE` — physical livestock feed and breeding
   are not causally gated by the real planting reserve and Civilization decision
@@ -275,28 +341,28 @@ Additional integrated blockers found after the two primary blockers:
   resource loss does not autonomously drive commitment review, replacement and
   an actual replacement action.
 
-The missing composite scenario and society-scale acceptance ledger are
-acceptance-infrastructure gaps. They must be built only after the product can
-actually close and orchestrate the chain; they are not evidence that the
-isolated contracts are false.
+The full composite persistence scenario and society-scale acceptance ledger
+remain acceptance-infrastructure gaps for Gate B re-evaluation #2. They do not
+reopen the local corrective seams or make Gate B acquired.
 
 ## Bootstrap, conservation and run metrics
 
-No `GATE_B_BOOTSTRAP_COMPLETE` or `PLAYABLE_SLICE_BOOTSTRAP_COMPLETE` marker was
-emitted because no credible composite candidate was launched. Consequently:
+The CORR-02 seed-46 live run emits
+`PLAYABLE_SLICE_BOOTSTRAP_COMPLETE tick=0 agents=3 follow=off
+productiveCommandsAfter=0`. The bounded bootstrap creates local proof
+opportunities and starter tools, then issues no per-agent productive command.
+Normal movement, camera and the ordinary cognitive clock remain live.
 
-- post-bootstrap productive injection was not performed;
-- manual/debug productive triggers after bootstrap are not applicable, rather
-  than falsely reported as zero;
-- autonomous decision/action/switch counters were not collected;
-- physical food produced/consumed/remaining and society-wide matter balances
-  were not fabricated from independent component runs;
-- no composite checkpoint, safe-boundary restore or reconciliation occurred;
-- no passive follow timeline exists.
+The run records decisions, candidates, starts, completions, blocks, switches,
+completed agents/domains, retained records, evictions and longest idle streak.
+Fishing, hunting and wild gathering all publish verified real outcomes in the
+same World. The berry path later exact-debits real food into canonical hunger
+with `foodRaw`, CampStock and coarse-ecology deltas all zero. The fixture owns
+bounded setup/cleanup only; physical actions are selected by cognition.
 
-The current command-driven live proofs do seed bounded physical fixtures and
-clean them up transactionally, but their manual sequencing disqualifies them
-from B12.
+This is local corrective evidence, not the missing canonical 5/3/2 campaign or
+composite persistence acceptance. Exact final counters and capture path belong
+to the retained live evidence and mission report.
 
 ## Visual evaluation record
 
@@ -362,6 +428,17 @@ absence after consumption. No duplicate agent, duplicate item, ghost berry,
 teleport or contradictory final scene was observed. The structured trace also
 proves `runtimeErrors=0`, exact fixture/custody cleanup and three probes removed.
 
+### CORR-02 corrective visual record
+
+The `--gate-b-passive` run launches a normal rendered disposable World with
+follow off and leaves player movement and mouse look available. After the
+bootstrap marker it performs no productive command. Three stable agent
+identities reuse villager models and existing limb animation; cyan debug boxes
+are absent under the gate. The later capture and structured trace are inspected
+for stacking, teleportation, land fishing, ghost items, duplicate animals,
+stale overlays and camera hijack. This local slice is corrective evidence only;
+it does not replace human review or the canonical Gate B campaign.
+
 ## Dedicated command
 
 ```bash
@@ -377,9 +454,9 @@ scripts/verify-pebblelab-gate-b.sh --report-only
 ```
 
 The evaluator refuses `PEBBLE_REGOLD`, anchors evaluation #1 and the CORR-01
-starting baseline, audits the corrective source seams, creates evidence only
-under a temporary directory, never launches a live command scheduler and
-never owns gameplay state. There is no runtime `GateBState`.
+starting baseline, audits both corrective source seams, creates headless
+evidence only under a temporary directory, never launches a live command
+scheduler and never owns gameplay state. There is no runtime `GateBState`.
 
 ## Corrective phases recommended
 
@@ -400,7 +477,7 @@ Smallest causal scope:
 Non-scope: a second calories engine, cooking/crafting replacement, a Player
 impersonation hack, economy, workshops or CIV-26.
 
-### 2. Autonomous Agent Activity Orchestration and Playable Observer Convergence
+### 2. Autonomous Agent Activity Orchestration and Playable Observer Convergence — remediated locally
 
 Smallest causal scope:
 
@@ -420,10 +497,9 @@ Smallest causal scope:
 Non-scope: a demo scheduler, second cognition kernel, new physical engines,
 God Observer, major UI, economy, new profession mechanics or CIV-26.
 
-Dependency order: food closure first, then autonomous orchestration and the
-real composite acceptance rerun. The livestock reserve and crisis replacement
-blockers belong inside the second causal convergence unless senior review
-splits them into smaller milestones.
+Dependency order was food closure first, then autonomous orchestration. Both
+corrective seams are now locally implemented; the next acceptance activity is
+Gate B re-evaluation #2, not `CIV-26`.
 
 ## Product question
 
@@ -432,5 +508,5 @@ splits them into smaller milestones.
 > small society begin to live, work, learn, care and adapt without me?
 
 ```text
-NO
+YES — locally under the default-off CORR-02 gate; canonical Gate B remains NOT ACQUIRED
 ```

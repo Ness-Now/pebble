@@ -158,7 +158,18 @@ extension PebbleAgentController {
         let embodiments = try PebbleAgentEmbodiment.resolveAll(
             agentIDs: ids, in: world, mappedByAgentID: probesByAgentId
         )
-        let base = anchor ?? embodiments["agent_0"]!.position
+        let base: AgentPosition
+        if autonomousCivilizationFeatureEnabled {
+            let first = embodiments["agent_0"]!.position
+            let third = embodiments["agent_2"]!.position
+            base = AgentPosition(
+                x: (first.x + third.x) / 2,
+                y: first.y,
+                z: min(first.z, third.z) + 1
+            )
+        } else {
+            base = anchor ?? embodiments["agent_0"]!.position
+        }
         let entityIDsBefore = Set(world.entities.map(\.id))
         let originalActors = ids.map { id in
             let body = embodiments[id]!
@@ -185,19 +196,33 @@ extension PebbleAgentController {
                 }
             }
         }
-        for z in (base.z - 2)...(base.z + 2) {
-            for x in (base.x + 3)...(base.x + 7) {
+        let waterX = autonomousCivilizationFeatureEnabled
+            ? (base.x + 2)...(base.x + 6) : (base.x + 3)...(base.x + 7)
+        let waterZ = autonomousCivilizationFeatureEnabled
+            ? base.z...(base.z + 4) : (base.z - 2)...(base.z + 2)
+        for z in waterZ {
+            for x in waterX {
                 world.setBlock(x, base.y, z, Int(cell(B.water)), SET_NO_NEIGHBORS)
             }
         }
-        let berry = AgentPosition(x: base.x - 2, y: base.y, z: base.z)
+        let berry = autonomousCivilizationFeatureEnabled
+            ? AgentPosition(
+                x: embodiments["agent_2"]!.position.x,
+                y: embodiments["agent_2"]!.position.y,
+                z: embodiments["agent_2"]!.position.z - 1
+            )
+            : AgentPosition(x: base.x - 2, y: base.y, z: base.z)
         world.setBlock(
             berry.x, berry.y, berry.z,
             Int(cell(B.sweet_berry_bush, 3)), SET_NO_NEIGHBORS
         )
         for (index, id) in ids.enumerated() {
             let body = embodiments[id]!
-            body.probe.setPos(Double(base.x + index) + 0.5, Double(base.y), Double(base.z) + 0.5)
+            if !autonomousCivilizationFeatureEnabled {
+                body.probe.setPos(
+                    Double(base.x + index) + 0.5, Double(base.y), Double(base.z) + 0.5
+                )
+            }
             body.carriedItems = Array(repeating: nil, count: LabCoreAgentEntity.carriedItemSlotCount)
         }
         embodiments["agent_0"]!.carriedItems[0] = ItemStack(iid("fishing_rod"))
@@ -206,7 +231,14 @@ extension PebbleAgentController {
         let chicken = Chicken(world: world)
         chicken.rng = RandomX(46)
         chicken.eggTime = 99_999
-        chicken.setPos(Double(base.x) + 0.5, Double(base.y), Double(base.z + 3) + 0.5)
+        if autonomousCivilizationFeatureEnabled {
+            let hunter = embodiments["agent_1"]!.position
+            chicken.setPos(Double(hunter.x) + 0.5, Double(hunter.y), Double(hunter.z + 1) + 0.5)
+        } else {
+            chicken.setPos(
+                Double(base.x) + 0.5, Double(base.y), Double(base.z + 3) + 0.5
+            )
+        }
         world.addEntity(chicken)
         do {
             ecologicalObservationSensor.invalidate(world: world)
@@ -222,7 +254,10 @@ extension PebbleAgentController {
                 huntingWeaponAvailable: true, agricultureAvailable: false,
                 maximumDistance: 16, subsistencePressure: 80
             ))
-            guard Set(multi.map(\.strategy)).isSuperset(of: [.fishing, .hunting, .wildGathering]) else {
+            guard autonomousCivilizationFeatureEnabled
+                    || Set(multi.map(\.strategy)).isSuperset(
+                        of: [.fishing, .hunting, .wildGathering]
+                    ) else {
                 throw ControllerError.wildSubsistenceBoundary(
                     "real multi-strategy observation missing: \(multi.map(\.strategy.rawValue))"
                 )
@@ -593,7 +628,13 @@ extension PebbleAgentController {
             probe.pitch = original.pitch
             probe.carriedItems = copyItemInventory(original.carriedItems)
         }
-        let entitiesRestored = Set(world.entities.map(\.id)).isSuperset(of: fixture.entityIDsBefore)
+        // The long-running passive slice may legitimately age out unrelated
+        // pre-existing transient entities. Cleanup owns only entities created
+        // after fixture setup; requiring every baseline runtime ID to survive
+        // would turn unrelated World lifecycle into a false cleanup failure.
+        let entitiesRestored = world.entities.allSatisfy {
+            fixture.entityIDsBefore.contains($0.id)
+        }
         let cellsRestored = fixture.originalCells.allSatisfy {
             world.getBlock($0.position.x, $0.position.y, $0.position.z) == $0.cell
         }

@@ -4908,3 +4908,22 @@ session. It also recorded missing end-to-end livestock reserve and physical
 crisis/replacement orchestration. Gate R remains acquired; Gate B remains not
 acquired. Corrective convergence is required before a new candidate campaign.
 `CIV-26` remains planned and was not started.
+
+## Gate B - CORR-02 local autonomous convergence after evaluation #1
+
+Status: non-canonical corrective milestone locally implemented from baseline
+`1b7c320ec897d5ea9944d3c12e6b7c460954ce23`; senior review and publication
+pending.
+
+`GATE-B-CORR-02 — Autonomous Agent Activity Orchestration and Playable Observer
+Convergence` extends the unique `AgentSimulationSession` cognition loop with
+bounded deterministic activities and connects typed intents to existing Pebble
+agriculture, wild-subsistence, livestock, dependent-care, Teaching and work
+boundaries. It adds physical dependent nourishment, local livestock reserve
+eligibility, normal crisis replacement review, checkpoint/replay v18 and a
+default-off rendered passive-observer proof using existing villager assets.
+No demo scheduler, new physical engine, property/economy system or CIV-26 work
+was introduced. The four recorded Gate B blockers are remediated locally, but
+Gate B remains not acquired pending re-evaluation #2, the 5/3/2 campaign,
+composite persistence, human passive review and senior review. `CIV-26` remains
+planned and was not started.

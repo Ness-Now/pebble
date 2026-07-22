@@ -54,6 +54,9 @@ extension PebbleAgentController {
         lastDeliverySucceeded = false
         lastConsumptionSucceeded = false
         do {
+            try prepareAutonomousCivilizationDecision(
+                world: world, session: &session, recorder: &recorder
+            )
             let preCognitive = session.snapshot()
             let ecologyValidations: [AgentEcologyHabitatObservation]
             if session.localEcologyEnabled,
@@ -133,7 +136,13 @@ extension PebbleAgentController {
                 var preparedNavigationObservation: AgentNavigationObservation?
                 var navigationTarget: AgentPosition?
                 let navigationGoalMode: AgentNavigationGoalMode
-                if agent.currentGoal.kind == .provideDependentCare,
+                if agent.currentGoal.kind == .civilizationActivity,
+                   let actorID = AgentID(rawValue: agent.id),
+                   let activity = session.activeAutonomousActivity(for: actorID),
+                   let target = activity.candidate.target {
+                    navigationTarget = target
+                    navigationGoalMode = .cardinalAdjacent
+                } else if agent.currentGoal.kind == .provideDependentCare,
                    let caregiverID = AgentID(rawValue: agent.id),
                    let dependentID = session.careTarget(for: caregiverID),
                    let dependent = preCognitive.agents.first(where: {
@@ -433,6 +442,17 @@ extension PebbleAgentController {
                             + "receipt=\(outcome.physicalReceiptID) physicalDebit=exact abstractDelta=0"
                     )
                 }
+            }
+            let autonomousActions = result.agents.filter {
+                $0.action.name == "execute_autonomous_activity"
+            }.sorted { $0.agentId < $1.agentId }
+            for action in autonomousActions {
+                try executeAutonomousCivilizationActivity(
+                    actorIDText: action.agentId,
+                    world: world,
+                    session: &session,
+                    recorder: &recorder
+                )
             }
             let forageActions = result.agents
                 .filter { $0.action.name == "forage_food" }
@@ -947,6 +967,72 @@ extension PebbleAgentController {
                         )
                     }
                     if action.action.name == "provide_food" {
+                        if session.physicalFoodSurvivalEnabled {
+                            guard let probe = probesByAgentId[action.agentId] else {
+                                throw ControllerError.physicalFoodBoundary(
+                                    "physical dependent care has no caregiver embodiment"
+                                )
+                            }
+                            let intent = try session.nextPhysicalDependentFoodIntent(
+                                caregiverID: caregiverID,
+                                dependentID: engagement.dependentID
+                            )
+                            let source = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+                                probe, in: world
+                            )
+                            guard let plan = try foodConsumptionExecutor.prepareDependent(
+                                intent, session: session, source: source,
+                                gateway: materialCustodyGateway
+                            ) else {
+                                trace(
+                                    "care physical nourishment unavailable tick=\(session.tick) caregiver="
+                                        + "\(caregiverID.rawValue) dependent="
+                                        + "\(engagement.dependentID.rawValue) "
+                                        + "foodRawShadow="
+                                        + "\((try session.state(for: caregiverID)).resourceInventory.count(of: .foodRaw)) "
+                                        + "physicalDebit=0 hungerDelta=0 historyDelta=0 "
+                                        + "foodRawGhostDelta=0"
+                                )
+                                continue
+                            }
+                            let physicalCountBefore = source.read()?[plan.sourceSlot]?.count ?? -1
+                            var recorderCandidate = recorder
+                            let transaction = foodConsumptionExecutor.executeDependent(
+                                plan, session: &session, source: source,
+                                gateway: materialCustodyGateway
+                            ) { outcome, candidate in
+                                if var activeRecorder = recorderCandidate {
+                                    _ = try activeRecorder.apply(
+                                        .validatedPhysicalDependentFood(outcome),
+                                        to: &candidate
+                                    )
+                                    recorderCandidate = activeRecorder
+                                } else {
+                                    _ = try candidate.applyValidatedPhysicalDependentFood(outcome)
+                                }
+                            }
+                            guard transaction.succeeded else {
+                                throw ControllerError.physicalFoodBoundary(
+                                    "physical dependent food transaction "
+                                        + transaction.status.rawValue
+                                )
+                            }
+                            recorder = recorderCandidate
+                            let physicalCountAfter = source.read()?[plan.sourceSlot]?.count ?? 0
+                            trace(
+                                "care physical nourishment tick=\(session.tick) caregiver="
+                                    + "\(caregiverID.rawValue) dependent="
+                                    + "\(engagement.dependentID.rawValue) material="
+                                    + "\(plan.validatedOutcome.canonicalMaterialName) "
+                                    + "slot=\(plan.sourceSlot) physicalCount="
+                                    + "\(physicalCountBefore)>\(physicalCountAfter) physicalDebit=1 "
+                                    + "hunger=\(plan.validatedOutcome.hungerBefore)>"
+                                    + "\(plan.validatedOutcome.hungerAfter) "
+                                    + "foodRawGhostDelta=0 receipt="
+                                    + plan.validatedOutcome.physicalReceiptID
+                            )
+                            continue
+                        }
                         let intent = AgentCareProvisionIntent(
                             provisionID: "dependent-care:\(action.agentId):\(engagement.dependentID.rawValue):\(session.tick)",
                             needID: engagement.needID,

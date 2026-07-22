@@ -765,6 +765,8 @@ private func agentsBasicGoalApplyUrgency(for goal: LabGoalKind) -> Int {
         return 100
     case .dependentReturnHome:
         return 20
+    case .civilizationActivity:
+        return 75
     case .migrateToSettlement:
         return 79
     case .rest:

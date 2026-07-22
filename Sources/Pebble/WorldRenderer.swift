@@ -1232,6 +1232,20 @@ final class WorldRenderer {
     // ---- entity drawing  -----------------------------------
     private func modelNameFor(_ ent: Entity) -> String? {
         let type = ent.type
+        if let agent = ent as? LabCoreAgentEntity,
+           ProcessInfo.processInfo.environment[
+               "PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION"
+           ] == "1" {
+            let variants = [
+                "villager_farmer", "villager_fisherman", "villager_shepherd",
+                "villager_toolsmith", "villager_mason", "villager",
+            ].filter(hasModel)
+            guard !variants.isEmpty else { return nil }
+            let stable = agent.labAgentId.utf8.reduce(UInt64(14_695_981_039_346_656_037)) {
+                ($0 ^ UInt64($1)) &* 1_099_511_628_211
+            }
+            return variants[Int(stable % UInt64(variants.count))]
+        }
         // data-driven skin variants (dyed sheep wool, villager professions)
         if type == "sheep", let c = ent.data.color, c > 0, !(ent.data.sheared ?? false),
            hasModel("sheep_\(c)") {
@@ -1275,6 +1289,11 @@ final class WorldRenderer {
             pose.pitch = ent.pitch
             pose.limbSwing = liv?.limbSwing ?? 0
             pose.limbAmp = liv?.limbAmp ?? 0
+            if ent is LabCoreAgentEntity {
+                let moved = abs(ent.x - ent.prevX) + abs(ent.z - ent.prevZ)
+                pose.limbSwing = Double(ent.age) * 0.65
+                pose.limbAmp = min(1, moved * 8)
+            }
             pose.attackSwing = liv?.attackAnim ?? 0
             pose.hurtFlash = (liv?.hurtTime ?? 0) > 0 ? Double(liv!.hurtTime) / 10 : deathFlip * 0.6
             pose.scale = 1
@@ -1323,6 +1342,9 @@ final class WorldRenderer {
         camPos: SIMD3<Double>,
         partial: Double
     ) {
+        if ProcessInfo.processInfo.environment[
+            "PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION"
+        ] == "1" { return }
         let maxD = game.settings.entityDistance * game.settings.entityDistance
         var boxes: [(Double, Double, Double, Double, Double, Double)] = []
 

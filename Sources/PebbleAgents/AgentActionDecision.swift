@@ -25,6 +25,7 @@ public enum AgentGoalKind: String, Codable, Equatable, Sendable {
     case fulfillSharedTask
     case provideDependentCare
     case dependentReturnHome
+    case civilizationActivity
     case explore
     case observeOtherAgent
 }
@@ -94,6 +95,8 @@ public struct AgentActionDecisionInput {
     public let careTarget: AgentPosition?
     public let careActionName: String?
     public let careInteractionDistance: Int
+    public let autonomousActivityTarget: AgentPosition?
+    public let autonomousActivityActionKey: String?
 
     public init(
         agentId: String,
@@ -114,7 +117,9 @@ public struct AgentActionDecisionInput {
         canAcceptSharedTask: Bool = false,
         careTarget: AgentPosition? = nil,
         careActionName: String? = nil,
-        careInteractionDistance: Int = 1
+        careInteractionDistance: Int = 1,
+        autonomousActivityTarget: AgentPosition? = nil,
+        autonomousActivityActionKey: String? = nil
     ) {
         self.agentId = agentId
         self.tick = tick
@@ -135,6 +140,8 @@ public struct AgentActionDecisionInput {
         self.careTarget = careTarget
         self.careActionName = careActionName
         self.careInteractionDistance = careInteractionDistance
+        self.autonomousActivityTarget = autonomousActivityTarget
+        self.autonomousActivityActionKey = autonomousActivityActionKey
     }
 }
 
@@ -226,6 +233,38 @@ public enum AgentActionDecider {
             )
         case .dependentReturnHome:
             return returnHomeAction(input, goalName: "dependentReturnHome")
+        case .civilizationActivity:
+            guard let target = input.autonomousActivityTarget,
+                  let actionKey = input.autonomousActivityActionKey else {
+                return AgentAction(
+                    name: "wait", reason: "autonomous activity unavailable", tick: input.tick
+                )
+            }
+            let distance = abs(input.position.x - target.x)
+                + abs(input.position.y - target.y) + abs(input.position.z - target.z)
+            if distance <= 1 {
+                return AgentAction(
+                    name: "execute_autonomous_activity",
+                    reason: "cognitive activity ready: \(actionKey)",
+                    tick: input.tick, target: target
+                )
+            }
+            if let next = input.navigationProgress.nextStep {
+                return AgentAction(
+                    name: "approach_activity",
+                    reason: "cognitive activity follows bounded route: \(actionKey)",
+                    tick: input.tick,
+                    dx: next.x - input.position.x,
+                    dy: next.y - input.position.y,
+                    dz: next.z - input.position.z,
+                    target: target
+                )
+            }
+            return AgentAction(
+                name: "approach_activity",
+                reason: "cognitive activity awaiting bounded route: \(actionKey)",
+                tick: input.tick, target: target
+            )
         case .collectResource:
             return resourceAction(input, goalName: "collectResource")
         case .satisfyHunger:

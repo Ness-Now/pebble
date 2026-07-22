@@ -29,6 +29,13 @@ Le jalon correctif non canonique `GATE-B-CORR-01` a localement remédié la
 fermeture nourriture physique → survie sur le baseline de départ
 `515ae22c871292a978bb76da3020d3959632b6ed`, sous réserve de revue senior et
 publication. Il ne change ni la numérotation, ni le statut de Gate B.
+Le jalon correctif non canonique `GATE-B-CORR-02` remédie maintenant localement
+l'orchestration autonome, la slice jouable passive, la réserve livestock, le
+remplacement de crise et la nourriture physique des dépendants sur le baseline
+de départ `1b7c320ec897d5ea9944d3c12e6b7c460954ce23`. Sa revue senior et sa
+publication restent en attente. La campagne Gate B 5/3/2, le restart composite
+et la revue humaine doivent encore être exécutés ; Gate B reste donc non
+acquise et `CIV-26` reste `planned`.
 
 Les noms `NEXT-1` et `NEXT-2` sont uniquement des alias historiques :
 
@@ -449,7 +456,7 @@ classe professionnelle imposée.
   `AgentLocalEcologyState`. Gate R reste acquise. Ces preuves sont des contrats
   de composant ; elles ne prouvent pas à elles seules Gate B.
 
-#### Évaluation candidate Gate B — FAIL, correctif nourriture local
+#### Évaluation candidate Gate B — FAIL, correctifs locaux CORR-01/CORR-02
 
 L'[évaluation dédiée](GATE_B_CANDIDATE_EVALUATION.md) a confirmé quatre
 blockers. `GATE-B-CORR-01 — Real Food Consumption and Survival Convergence`,
@@ -459,18 +466,22 @@ réserve de revue senior et publication :
 - `B-BLOCKER-FOOD-CLOSURE` : `CLOSED / REMEDIATED LOCALLY` ; un vrai aliment
   Core en custody exacte peut désormais modifier la survie canonique sans
   crédit `.foodRaw` ;
-- `B-BLOCKER-AUTONOMOUS-PLAYABLE-SLICE` : les domaines productifs sont encore
-  séquencés par commandes/preuves et ne s'enchaînent pas dans le loop normal ;
-- `B-BLOCKER-LIVESTOCK-RESERVE-CLOSURE` : feed, réserve physique de semis et
-  décision de reproduction ne sont pas reliés de bout en bout en produit ;
-- `B-BLOCKER-CRISIS-REPLACEMENT-ORCHESTRATION` : une perte physique ne déclenche
-  pas encore la chaîne autonome revue, remplacement et action réelle.
+- `B-BLOCKER-AUTONOMOUS-PLAYABLE-SLICE` : `CLOSED / REMEDIATED LOCALLY` par
+  sélection déterministe dans `AgentSimulationSession`, intents typés,
+  exécuteurs Pebble existants et slice passive default-off ;
+- `B-BLOCKER-LIVESTOCK-RESERVE-CLOSURE` : `CLOSED / REMEDIATED LOCALLY` ; la
+  réserve physique de plantation rend la reproduction inéligible avant tout
+  spend et les exécuteurs Core restent autoritaires ;
+- `B-BLOCKER-CRISIS-REPLACEMENT-ORCHESTRATION` : `CLOSED / REMEDIATED LOCALLY` ;
+  la revue normale suspend, choisit un remplaçant capable et attend son outcome
+  réel avant fulfillment.
 
-Le correctif restant recommandé est `Autonomous Agent Activity Orchestration
-and Playable Observer Convergence`, avec réévaluation des seams réserve
-livestock et remplacement de crise. Il doit réutiliser les autorités acquises,
-sans second moteur ni scheduler de démonstration. Cette roadmap ne renumérote
-pas `CIV-26` et ne le passe pas `current`.
+CORR-02 ajoute aussi un chemin de care physique : custody réelle du caregiver,
+FoodDef Core, débit exact puis hunger canonique du dependent, sans fallback
+`.foodRaw` en mode physique. Les correctifs ne constituent pas la campagne
+d'acceptance. La prochaine activité est `Gate B re-evaluation #2`, sans second
+moteur ni scheduler de démonstration. Cette roadmap ne renumérote pas `CIV-26`
+et ne le passe pas `current`.
 
 ### Économie matérielle locale — Gate C
 
@@ -634,7 +645,8 @@ monde de vivre.
 - `CIV-15` à `CIV-19` ont acquis les frontières actor-neutral, custody,
   harvest, construction, navigation et embodiment ; Gate R est acquise.
   `CIV-20` à `CIV-25` sont acquis dans leurs contrats bornés. L'évaluation
-  candidate Gate B est `FAIL`. `GATE-B-CORR-01` a localement remédié la
-  nourriture physique/survie, sous réserve de publication ; orchestration
-  autonome, réserve livestock et remplacement de crise restent ouvertes avant
-  une nouvelle campagne. Gate B reste non acquise et `CIV-26` reste planifié.
+  candidate Gate B est `FAIL`. `GATE-B-CORR-01` et `GATE-B-CORR-02` ont
+  localement remédié nourriture/survie, orchestration autonome, slice passive,
+  réserve livestock, remplacement de crise et care physique. Publication,
+  campagne 5/3/2, restart composite et revues restent nécessaires. Gate B
+  demeure non acquise et `CIV-26` reste planifié.

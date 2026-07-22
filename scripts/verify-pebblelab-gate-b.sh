@@ -47,11 +47,12 @@ selector_count() {
         agriculture) printf '28' ;;
         wild-subsistence) printf '44' ;;
         livestock) printf '30' ;;
-        dependent-care) printf '48' ;;
+        dependent-care) printf '53' ;;
         skills) printf '59' ;;
         teaching) printf '41' ;;
         work-professions) printf '29' ;;
         physical-food-survival) printf '50' ;;
+        autonomous-civilization) printf '36' ;;
         *) fail "unknown reduced selector: $1" ;;
     esac
 }
@@ -122,27 +123,29 @@ require_fixed Sources/Pebble/PebbleAgentController.swift \
     'guard session != nil else { return }' 'normal update/start boundary changed'
 require_fixed Sources/Pebble/PebbleAgentController+Agriculture.swift \
     'It does not execute farming or mutate the World.' 'agriculture plan-only seam changed'
-require_fixed Sources/Pebble/PebbleAgentController+WildSubsistence.swift \
-    'case "fish":' 'manual fishing proof phase changed'
-require_fixed Sources/Pebble/PebbleAgentController+Livestock.swift \
-    'case "feed": try runLivestockFeedProof' 'manual livestock proof phase changed'
-require_fixed Sources/Pebble/PebbleAgentController+WorkProfessions.swift \
-    'case "refresh":' 'manual work refresh path changed'
-require_fixed Sources/Pebble/PebbleAgentController+Teaching.swift \
-    'case "proof":' 'manual Teaching proof path changed'
-reject_fixed Sources/Pebble/PebbleAgentController+Tick.swift \
-    'wildSubsistenceExecutor' 'normal tick now reaches wild executor; reevaluate autonomy'
-reject_fixed Sources/Pebble/PebbleAgentController+Tick.swift \
-    'livestockExecutor' 'normal tick now reaches livestock executor; reevaluate autonomy'
-reject_fixed Sources/Pebble/PebbleAgentController+Tick.swift \
-    'workCommitment' 'normal tick now reaches work commitments; reevaluate autonomy'
-require_fixed Sources/PebbleCore/Entity/LabCoreAgentEntity.swift \
-    'not rendered' 'agent visual embodiment contract changed'
-printf 'B-BLOCKER-AUTONOMOUS-PLAYABLE-SLICE: CONFIRMED\n'
-printf '  Agriculture: automatic plan only; physical cycle remains proof-command driven\n'
-printf '  Wild/livestock/Teaching/work: proof command or harness selects each transition\n'
-printf '  WorkCommitment -> normal domain executor link: absent\n'
-printf '  Normal agent visual identity: absent; debug bodies are undifferentiated markers\n'
+require_fixed Sources/PebbleAgents/AgentSimulationSession+AutonomousActivity.swift \
+    'Selects at most one physical intent per actor' 'single cognitive activity authority missing'
+require_fixed Sources/Pebble/PebbleAgentController+AutonomousCivilization.swift \
+    'selectAutonomousActivities' 'normal controller does not request cognitive selection'
+require_fixed Sources/Pebble/PebbleAgentController+AutonomousExecution.swift \
+    'agricultureExecutor.till' 'normal autonomy does not reuse agriculture executor'
+require_fixed Sources/Pebble/PebbleAgentController+AutonomousExecution.swift \
+    'wildSubsistenceExecutor.gather' 'normal autonomy does not reuse wild executor'
+require_fixed Sources/Pebble/PebbleAgentController+AutonomousExecution.swift \
+    'livestockExecutor.feed' 'normal autonomy does not reuse livestock executor'
+require_fixed Sources/Pebble/PebbleAgentController+AutonomousExecution.swift \
+    'recordAutonomousTeachingEvidenceIfEligible' 'Teaching is not chained from real work'
+require_fixed Sources/Pebble/PebbleAgentController+Tick.swift \
+    'prepareDependent' 'dependent care does not use real physical food'
+require_fixed Sources/Pebble/WorldRenderer.swift \
+    'villager_farmer' 'stable reused villager presentation is absent'
+require_fixed Sources/Pebble/PebbleAgentController+AutonomousCivilization.swift \
+    'PLAYABLE_SLICE_BOOTSTRAP_COMPLETE' 'passive bootstrap boundary is absent'
+printf 'B-BLOCKER-AUTONOMOUS-PLAYABLE-SLICE: REMEDIATED LOCALLY / CAMPAIGN PENDING\n'
+printf '  Session: deterministic bounded cross-domain selection; one intent per actor\n'
+printf '  Pebble: existing agriculture/wild/livestock/care/Teaching/work boundaries reused\n'
+printf '  Player: follow remains off in passive mode; normal movement and mouse-look retained\n'
+printf '  Presentation: stable AgentID maps to existing villager variants; no new assets\n'
 
 printf '\n[3/3] Reduced component matrix (not integrated Gate B proof)\n'
 TMP_BASE=${TMPDIR:-/tmp}
@@ -152,7 +155,7 @@ BUILD_LOG="$TMP_ROOT/build.log"
 swift build -c release --product pebsmoke >"$BUILD_LOG" 2>&1 \
     || fail "release pebsmoke build failed; see $BUILD_LOG"
 
-SELECTORS='materials ecological-observation agriculture wild-subsistence livestock dependent-care skills teaching work-professions physical-food-survival'
+SELECTORS='materials ecological-observation agriculture wild-subsistence livestock dependent-care skills teaching work-professions physical-food-survival autonomous-civilization'
 TOTAL_CHECKS=0
 for selector in $SELECTORS; do
     expected=$(selector_count "$selector")
@@ -173,43 +176,42 @@ for selector in $SELECTORS; do
     TOTAL_CHECKS=$((TOTAL_CHECKS + expected))
     printf '  %-24s %3d passed, 0 failed; repeat byte-identical\n' "$selector" "$expected"
 done
-[ "$TOTAL_CHECKS" -eq 376 ] || fail "reduced matrix total is $TOTAL_CHECKS, expected 376"
+[ "$TOTAL_CHECKS" -eq 417 ] || fail "reduced matrix total is $TOTAL_CHECKS, expected 417"
 
 cat <<EOF
 
-Reduced component evidence: 376 passed, 0 failed per run; 376/0 repeated.
+Reduced component evidence: 417 passed, 0 failed per run; 417/0 repeated.
 Short-tier seeds: NOT RUN — fail-fast hard blockers
 Medium-tier seeds: NOT RUN — fail-fast hard blockers
 Stress-tier seeds: NOT RUN — fail-fast hard blockers
-Composite live World: NOT RUN — no autonomous composite candidate exists
-Playable passive observation: NOT RUN — launching scripted proof commands cannot prove autonomy
+Composite live World: CORR-02 seed-46 proof is external to this headless evaluator
+Playable passive observation: PASS LOCALLY — canonical 5/3/2 campaign has not been rerun
 Evidence retained at: $TMP_ROOT
 
 Pillar disposition:
   B1  PARTIAL  isolated physical custody/conservation; no society ledger
   B2  PASS     exact physical food debit reaches canonical agent survival
-  B3  PARTIAL  multiple strategies exist only as separate proofs
-  B4  PARTIAL  one real agricultural cycle; no autonomous continuity
-  B5  FAIL     real feed/reserve decision is not product-wired end to end
-  B6  PARTIAL  care is autonomous after setup but consumes abstract foodRaw
-  B7  PARTIAL  causal Teaching proof is command-driven
-  B8  PARTIAL  derived specialization is proven but not autonomously exercised
-  B9  FAIL     no physical shock -> autonomous review/replacement chain
+  B3  PARTIAL  local orchestration exists; multi-strategy campaign pending
+  B4  PARTIAL  autonomous executor link exists; multi-cycle campaign pending
+  B5  PARTIAL  reserve-gated feed link exists; campaign closure pending
+  B6  PASS     autonomous care exact-debits canonical physical food
+  B7  PARTIAL  causal Teaching is chained; campaign observation pending
+  B8  PARTIAL  commitments drive candidates; campaign continuity pending
+  B9  PARTIAL  review/replacement is wired; live shock campaign pending
   B10 PARTIAL  strong local-information components; no composite exercise
   B11 PARTIAL  bounded deterministic components; no composite restore/reconcile run
-  B12 FAIL     no autonomous playable passive-observer slice
+  B12 PARTIAL  local passive slice passes; human review and canonical campaign pending
 
 Remediated locally; pending senior publication:
   B-BLOCKER-FOOD-CLOSURE
-Primary blocker:
+Remediated locally; pending senior campaign re-evaluation:
   B-BLOCKER-AUTONOMOUS-PLAYABLE-SLICE
-Additional integrated blockers:
   B-BLOCKER-LIVESTOCK-RESERVE-CLOSURE
   B-BLOCKER-CRISIS-REPLACEMENT-ORCHESTRATION
 
 GATE B CANDIDATE RESULT: FAIL
 Automated Integrated Acceptance: FAIL
-Playable Passive Observer Slice: FAIL
+Playable Passive Observer Slice: PASS LOCALLY / RE-EVALUATION PENDING
 Real Food-to-Survival Closure: PASS
 long-running physical consumption exhaustion: NONE
 Gate R: ACQUIRED
