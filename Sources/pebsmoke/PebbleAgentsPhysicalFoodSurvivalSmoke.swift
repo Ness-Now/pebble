@@ -41,16 +41,20 @@ private func physicalFoodSession(
 
 private func physicalOutcome(
     _ session: AgentSimulationSession,
-    id: String,
     material: String,
     hungerPoints: Int,
     saturation: Double,
-    slot: Int = 0
+    slot: Int = 0,
+    intent: AgentPhysicalFoodConsumptionIntent? = nil
 ) -> AgentValidatedPhysicalFoodConsumptionOutcome {
     let actor = try! session.state(for: "agent_food")
+    let resolvedIntent = intent ?? (try! session.nextPhysicalFoodConsumptionIntent(
+        for: actor.agentID
+    ))
     let reduction = min(1, Double(hungerPoints) / 20)
     return AgentValidatedPhysicalFoodConsumptionOutcome(
-        consumptionID: id,
+        consumptionID: resolvedIntent.consumptionID,
+        consumptionSequence: resolvedIntent.consumptionSequence,
         agentID: actor.agentID,
         tick: session.tick,
         canonicalMaterialName: material,
@@ -59,8 +63,8 @@ private func physicalOutcome(
         coreSaturation: saturation,
         normalizedHungerReduction: reduction,
         status: .succeeded,
-        physicalReceiptID: id,
-        sourceLocationID: "agent:physical_food_probe",
+        physicalReceiptID: resolvedIntent.consumptionID,
+        sourceKind: .agentCarriedInventory,
         sourceSlot: slot,
         hungerBefore: actor.needs.hunger,
         hungerAfter: max(0, actor.needs.hunger - reduction)
@@ -201,7 +205,7 @@ func runPebbleAgentsPhysicalFoodSurvivalSmoke() {
         && (try! shadow.state(for: "agent_food")).resourceInventory.count(of: .foodRaw) == 100)
 
     let berry = physicalOutcome(
-        shadow, id: "physical-berry", material: "sweet_berries",
+        shadow, material: "sweet_berries",
         hungerPoints: 2, saturation: 0.4
     )
     try! shadow.applyValidatedPhysicalFoodConsumption(berry)
@@ -218,7 +222,7 @@ func runPebbleAgentsPhysicalFoodSurvivalSmoke() {
     let duplicateBytes = try! shadow.durableStateBytes()
     check("duplicate validated outcome refused", {
         do { try shadow.applyValidatedPhysicalFoodConsumption(berry); return false }
-        catch AgentSessionError.physicalFoodSurvival(.duplicateConsumption("physical-berry")) {
+        catch AgentSessionError.physicalFoodSurvival(.duplicateConsumption(berry.consumptionID)) {
             return true
         } catch { return false }
     }())
@@ -230,7 +234,7 @@ func runPebbleAgentsPhysicalFoodSurvivalSmoke() {
     breadSession.setSurvivalEnabled(true)
     try! breadSession.setPhysicalFoodSurvivalEnabled(true)
     try! breadSession.applyValidatedPhysicalFoodConsumption(physicalOutcome(
-        breadSession, id: "physical-bread", material: "bread",
+        breadSession, material: "bread",
         hungerPoints: 5, saturation: 6
     ))
     check("different FoodDef values produce different survival effects",
@@ -245,7 +249,7 @@ func runPebbleAgentsPhysicalFoodSurvivalSmoke() {
           full.survivalEnabled && full.physicalFoodSurvivalEnabled)
     check("full-hunger physical consumption refused", {
         let outcome = physicalOutcome(
-            full, id: "physical-full", material: "bread",
+            full, material: "bread",
             hungerPoints: 5, saturation: 6
         )
         do { try full.applyValidatedPhysicalFoodConsumption(outcome); return false }
@@ -279,7 +283,7 @@ func runPebbleAgentsPhysicalFoodSurvivalSmoke() {
     rescued.setSurvivalEnabled(true)
     try! rescued.setPhysicalFoodSurvivalEnabled(true)
     try! rescued.applyValidatedPhysicalFoodConsumption(physicalOutcome(
-        rescued, id: "physical-rescue", material: "sweet_berries",
+        rescued, material: "sweet_berries",
         hungerPoints: 2, saturation: 0.4
     ))
     _ = try! rescued.advanceTick()
@@ -303,7 +307,7 @@ func runPebbleAgentsPhysicalFoodSurvivalSmoke() {
     var recorder = try! AgentReplayRecorder(checkpoint: replayCheckpoint, session: replayed)
     try! recorder.apply(.setPhysicalFoodSurvivalEnabled(true), to: &replayed)
     let replayOutcome = physicalOutcome(
-        replayed, id: "physical-replay", material: "bread",
+        replayed, material: "bread",
         hungerPoints: 5, saturation: 6
     )
     try! recorder.apply(.validatedPhysicalFoodConsumption(replayOutcome), to: &replayed)
@@ -317,6 +321,156 @@ func runPebbleAgentsPhysicalFoodSurvivalSmoke() {
           (try! verification.session.durableStateBytes()) == (try! replayed.durableStateBytes())
             && verification.report.finalCausalDigest
                 == replayed.causalLedgerSnapshot().summary.digest)
+
+    let longRunConfig = try! AgentSurvivalConfiguration(
+        hungerPerTick: 0.1, fatiguePerTick: 0.01,
+        hungryThreshold: 0.4, criticalHungerThreshold: 0.8,
+        hungerRecoveryThreshold: 0.15, fatigueThreshold: 0.9,
+        fatigueRecoveryThreshold: 0.2, foodNutrition: 1,
+        restRecoveryPerTick: 1, starvationGraceTicks: 2,
+        starvationDamagePerTick: 10
+    )
+    var longRunning = physicalFoodSession(
+        "sim-food-long-running", hunger: 0.2, survival: longRunConfig
+    )
+    longRunning.setSurvivalEnabled(true)
+    try! longRunning.setPhysicalFoodSurvivalEnabled(true)
+    let longRunTarget = 5_001
+    var ancientOutcome: AgentValidatedPhysicalFoodConsumptionOutcome?
+    var boundaryTotals: [UInt64] = []
+    for operation in 1...longRunTarget {
+        let outcome = physicalOutcome(
+            longRunning, material: "sweet_berries", hungerPoints: 2, saturation: 0.4
+        )
+        if operation == 1 { ancientOutcome = outcome }
+        try! longRunning.applyValidatedPhysicalFoodConsumption(outcome)
+        if (4_095...4_097).contains(operation) || operation == longRunTarget {
+            boundaryTotals.append(
+                longRunning.physicalFoodSurvivalSnapshot()!.totalConsumedQuantity
+            )
+        }
+        if operation < longRunTarget { _ = try! longRunning.advanceTick() }
+    }
+    let longRunState = longRunning.physicalFoodSurvivalSnapshot()!
+    check("physical food accepts operations 4095, 4096, 4097, and 5001",
+          boundaryTotals == [4_095, 4_096, 4_097, 5_001])
+    check("physical food long-run retained state stays bounded",
+          longRunState.totalConsumedQuantity == 5_001
+            && longRunState.recentConsumptionIDs.count
+                == AgentPhysicalFoodSurvivalState.maximumRetainedConsumptionIDs
+            && longRunState.completedOutcomes.count
+                == AgentPhysicalFoodSurvivalState.maximumRetainedOutcomes
+            && longRunState.droppedConsumptionIDCount == 4_937
+            && longRunState.droppedOutcomeCount == 4_937)
+    check("physical food watermark is canonical causal identity",
+          longRunState.latestAcceptedConsumptionSequence
+            == longRunState.completedOutcomes.last?.consumptionSequence
+            && (longRunState.latestAcceptedConsumptionSequence?.rawValue ?? 0) <= longRunning
+                .causalLedgerSnapshot().summary.latestSequence)
+
+    let longRunCheckpoint = try! longRunning.makeCheckpoint()
+    var restartedLongRun = try! AgentSimulationSession.restoring(longRunCheckpoint)
+    let ancient = ancientOutcome!
+    let restartBeforeDuplicate = try! restartedLongRun.durableStateBytes()
+    let hungerBeforeDuplicate = try! restartedLongRun.state(for: "agent_food").needs.hunger
+    let historyBeforeDuplicate = restartedLongRun
+        .physicalFoodSurvivalSnapshot()!.completedOutcomes.count
+    check("ancient physical-food operation stays duplicate after ID eviction and restart", {
+        do {
+            try restartedLongRun.applyValidatedPhysicalFoodConsumption(ancient)
+            return false
+        } catch AgentSessionError.physicalFoodSurvival(
+            .duplicateConsumption(ancient.consumptionID)
+        ) {
+            return true
+        } catch { return false }
+    }())
+    check("ancient duplicate has zero debit, hunger, and history publication",
+          (try! restartedLongRun.durableStateBytes()) == restartBeforeDuplicate
+            && (try! restartedLongRun.state(for: "agent_food")).needs.hunger
+                == hungerBeforeDuplicate
+            && restartedLongRun.physicalFoodSurvivalSnapshot()!.completedOutcomes.count
+                == historyBeforeDuplicate)
+
+    let nextAfterRestart = physicalOutcome(
+        restartedLongRun, material: "sweet_berries", hungerPoints: 2, saturation: 0.4
+    )
+    try! restartedLongRun.applyValidatedPhysicalFoodConsumption(nextAfterRestart)
+    check("new physical-food operation succeeds after eviction and restart",
+          restartedLongRun.physicalFoodSurvivalSnapshot()!.totalConsumedQuantity == 5_002
+            && restartedLongRun.physicalFoodSurvivalSnapshot()!
+                .latestAcceptedConsumptionSequence == nextAfterRestart.consumptionSequence)
+    check("physical food v17 restart is deterministic beyond former limit",
+          longRunCheckpoint.schemaVersion == 17
+            && (try! AgentSimulationSession.restoring(longRunCheckpoint).durableStateBytes())
+                == (try! longRunning.durableStateBytes()))
+
+    var replayLongRun = try! AgentSimulationSession.restoring(longRunCheckpoint)
+    var longRunRecorder = try! AgentReplayRecorder(
+        checkpoint: longRunCheckpoint, session: replayLongRun
+    )
+    let replayBeforeDuplicate = try! replayLongRun.durableStateBytes()
+    let replayRejectedAncient: Bool
+    do {
+        _ = try longRunRecorder.apply(
+            .validatedPhysicalFoodConsumption(ancient), to: &replayLongRun
+        )
+        replayRejectedAncient = false
+    } catch AgentSessionError.physicalFoodSurvival(
+        .duplicateConsumption(ancient.consumptionID)
+    ) {
+        replayRejectedAncient = true
+    } catch {
+        replayRejectedAncient = false
+    }
+    check("replay recorder rejects ancient evicted duplicate without a record",
+          replayRejectedAncient && longRunRecorder.records.isEmpty
+            && (try! replayLongRun.durableStateBytes()) == replayBeforeDuplicate)
+    let replayNext = physicalOutcome(
+        replayLongRun, material: "sweet_berries", hungerPoints: 2, saturation: 0.4
+    )
+    _ = try! longRunRecorder.apply(
+        .validatedPhysicalFoodConsumption(replayNext), to: &replayLongRun
+    )
+    let longRunJournal = try! longRunRecorder.journal(
+        named: AgentCheckpointName(rawValue: "physical-food-long-run")!
+    )
+    let longRunReplay = try! AgentSessionReplayer.replay(
+        checkpoint: longRunCheckpoint, journal: longRunJournal
+    )
+    check("replay preserves bounded physical-food idempotence metadata",
+          longRunJournal.records.count == 1 && longRunReplay.report.verified
+            && (try! longRunReplay.session.durableStateBytes())
+                == (try! replayLongRun.durableStateBytes())
+            && longRunReplay.session.physicalFoodSurvivalSnapshot()!
+                .recentConsumptionIDs.count == 64)
+
+    let durablePhysicalData = try! AgentCheckpointCodec.encode(
+        replayLongRun.physicalFoodSurvivalSnapshot()!
+    )
+    let durablePhysicalJSON = try! JSONSerialization.jsonObject(
+        with: durablePhysicalData
+    ) as! [String: Any]
+    let persistedStateFields = Set(durablePhysicalJSON.keys)
+    let persistedOutcomeFields = Set(
+        ((durablePhysicalJSON["completedOutcomes"] as! [[String: Any]]).last!).keys
+    )
+    check("physical food durable provenance contains stable fields only",
+          persistedStateFields == Set([
+              "authorityMode", "recentConsumptionIDs", "completedOutcomes",
+              "latestAcceptedConsumptionSequence", "totalConsumedQuantity",
+              "droppedConsumptionIDCount", "droppedOutcomeCount",
+          ])
+            && persistedOutcomeFields == Set([
+                "consumptionID", "consumptionSequence", "agentID", "tick",
+                "canonicalMaterialName", "quantityConsumed", "coreHungerPoints",
+                "coreSaturation", "normalizedHungerReduction", "status",
+                "physicalReceiptID", "sourceKind", "sourceSlot", "hungerBefore",
+                "hungerAfter",
+            ])
+            && String(data: durablePhysicalData, encoding: .utf8)?.contains(
+                "sourceLocationID"
+            ) == false)
 
     try! replayed.setPhysicalFoodSurvivalEnabled(false)
     check("disabling physical authority restores legacy without conversion",

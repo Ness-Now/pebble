@@ -9,14 +9,36 @@ public enum AgentPhysicalFoodConsumptionStatus: String, Codable, Equatable, Send
 
 public struct AgentPhysicalFoodConsumptionIntent: Codable, Equatable, Sendable {
     public let consumptionID: String
+    public let consumptionSequence: AgentCausalSequence
     public let agentID: AgentID
     public let tick: Int
 
-    public init(consumptionID: String, agentID: AgentID, tick: Int) {
+    public init(
+        consumptionID: String,
+        consumptionSequence: AgentCausalSequence,
+        agentID: AgentID,
+        tick: Int
+    ) {
         self.consumptionID = consumptionID
+        self.consumptionSequence = consumptionSequence
         self.agentID = agentID
         self.tick = tick
     }
+
+    public static func canonicalConsumptionID(
+        simulationID: AgentSimulationID,
+        agentID: AgentID,
+        sequence: AgentCausalSequence
+    ) -> String {
+        "physical-food:\(simulationID.rawValue):\(agentID.rawValue):\(sequence.rawValue)"
+    }
+}
+
+/// Stable durable provenance for the kind of physical custody that Pebble
+/// validated. Runtime entity IDs and custody endpoint identities never cross
+/// this boundary.
+public enum AgentPhysicalFoodSourceKind: String, Codable, Equatable, Sendable {
+    case agentCarriedInventory
 }
 
 /// A pure Civilization DTO published only after Pebble has resolved Core food
@@ -25,6 +47,7 @@ public struct AgentPhysicalFoodConsumptionIntent: Codable, Equatable, Sendable {
 /// deficit, so `normalizedHungerReduction = min(1, coreHungerPoints / 20)`.
 public struct AgentValidatedPhysicalFoodConsumptionOutcome: Codable, Equatable, Sendable {
     public let consumptionID: String
+    public let consumptionSequence: AgentCausalSequence
     public let agentID: AgentID
     public let tick: Int
     public let canonicalMaterialName: String
@@ -34,13 +57,14 @@ public struct AgentValidatedPhysicalFoodConsumptionOutcome: Codable, Equatable, 
     public let normalizedHungerReduction: Double
     public let status: AgentPhysicalFoodConsumptionStatus
     public let physicalReceiptID: String
-    public let sourceLocationID: String
+    public let sourceKind: AgentPhysicalFoodSourceKind
     public let sourceSlot: Int
     public let hungerBefore: Double
     public let hungerAfter: Double
 
     public init(
         consumptionID: String,
+        consumptionSequence: AgentCausalSequence,
         agentID: AgentID,
         tick: Int,
         canonicalMaterialName: String,
@@ -50,12 +74,13 @@ public struct AgentValidatedPhysicalFoodConsumptionOutcome: Codable, Equatable, 
         normalizedHungerReduction: Double,
         status: AgentPhysicalFoodConsumptionStatus,
         physicalReceiptID: String,
-        sourceLocationID: String,
+        sourceKind: AgentPhysicalFoodSourceKind,
         sourceSlot: Int,
         hungerBefore: Double,
         hungerAfter: Double
     ) {
         self.consumptionID = consumptionID
+        self.consumptionSequence = consumptionSequence
         self.agentID = agentID
         self.tick = tick
         self.canonicalMaterialName = canonicalMaterialName
@@ -65,7 +90,7 @@ public struct AgentValidatedPhysicalFoodConsumptionOutcome: Codable, Equatable, 
         self.normalizedHungerReduction = normalizedHungerReduction
         self.status = status
         self.physicalReceiptID = physicalReceiptID
-        self.sourceLocationID = sourceLocationID
+        self.sourceKind = sourceKind
         self.sourceSlot = sourceSlot
         self.hungerBefore = hungerBefore
         self.hungerAfter = hungerAfter
@@ -73,26 +98,32 @@ public struct AgentValidatedPhysicalFoodConsumptionOutcome: Codable, Equatable, 
 }
 
 public struct AgentPhysicalFoodSurvivalState: Codable, Equatable, Sendable {
-    public static let maximumProcessedConsumptionIDs = 4096
+    public static let maximumRetainedConsumptionIDs = 64
     public static let maximumRetainedOutcomes = 64
 
     public internal(set) var authorityMode: AgentFoodAuthorityMode
-    public internal(set) var processedConsumptionIDs: [String]
+    public internal(set) var recentConsumptionIDs: [String]
     public internal(set) var completedOutcomes: [AgentValidatedPhysicalFoodConsumptionOutcome]
-    public internal(set) var totalConsumedQuantity: Int
-    public internal(set) var droppedOutcomeCount: Int
+    public internal(set) var latestAcceptedConsumptionSequence: AgentCausalSequence?
+    public internal(set) var totalConsumedQuantity: UInt64
+    public internal(set) var droppedConsumptionIDCount: UInt64
+    public internal(set) var droppedOutcomeCount: UInt64
 
     public init(
         authorityMode: AgentFoodAuthorityMode = .physicalItems,
-        processedConsumptionIDs: [String] = [],
+        recentConsumptionIDs: [String] = [],
         completedOutcomes: [AgentValidatedPhysicalFoodConsumptionOutcome] = [],
-        totalConsumedQuantity: Int = 0,
-        droppedOutcomeCount: Int = 0
+        latestAcceptedConsumptionSequence: AgentCausalSequence? = nil,
+        totalConsumedQuantity: UInt64 = 0,
+        droppedConsumptionIDCount: UInt64 = 0,
+        droppedOutcomeCount: UInt64 = 0
     ) {
         self.authorityMode = authorityMode
-        self.processedConsumptionIDs = processedConsumptionIDs
+        self.recentConsumptionIDs = recentConsumptionIDs
         self.completedOutcomes = completedOutcomes
+        self.latestAcceptedConsumptionSequence = latestAcceptedConsumptionSequence
         self.totalConsumedQuantity = totalConsumedQuantity
+        self.droppedConsumptionIDCount = droppedConsumptionIDCount
         self.droppedOutcomeCount = droppedOutcomeCount
     }
 }
@@ -100,10 +131,10 @@ public struct AgentPhysicalFoodSurvivalState: Codable, Equatable, Sendable {
 public enum AgentPhysicalFoodSurvivalError: Error, Equatable {
     case survivalRequired
     case disabled
+    case causalLedgerRequired
     case legacyAbstractAuthorityDisabled
     case invalidIntent(String)
     case duplicateConsumption(String)
-    case consumptionLimitReached
     case noHungerNeed(AgentID)
     case invalidOutcome(String)
     case invalidState(String)

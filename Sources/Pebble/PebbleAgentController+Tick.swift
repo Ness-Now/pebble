@@ -389,11 +389,7 @@ extension PebbleAgentController {
                         "physical food action has no exact embodiment"
                     )
                 }
-                let intent = AgentPhysicalFoodConsumptionIntent(
-                    consumptionID: "physical-food:\(consumption.agentId):\(session.tick)",
-                    agentID: actorID,
-                    tick: session.tick
-                )
+                let intent = try session.nextPhysicalFoodConsumptionIntent(for: actorID)
                 let source = PebbleAgentMaterialCustodyEndpoint.liveAgent(probe, in: world)
                 guard let plan = try foodConsumptionExecutor.prepare(
                     intent,

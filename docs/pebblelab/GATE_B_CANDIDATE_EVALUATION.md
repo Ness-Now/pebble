@@ -225,8 +225,8 @@ selectors twice. The repeated text output must be byte-identical.
 | `skills` | 59 | component pass |
 | `teaching` | 41 | component pass |
 | `work-professions` | 29 | component pass |
-| `physical-food-survival` | 40 | component pass |
-| Total | 366 | 366 passed, 0 failed per run |
+| `physical-food-survival` | 50 | component pass |
+| Total | 376 | 376 passed, 0 failed per run |
 
 These checks retain strong evidence for real Core actions, conservation inside
 each transaction, causal Teaching, care, bounded histories, descriptive
@@ -234,6 +234,13 @@ specialization, deterministic replay and fault handling. They are component
 proofs, not integrated Gate B acceptance. Agent-layer fixtures can present an
 already verified physical outcome directly, and current live launch modes run
 one scripted vertical at a time.
+
+The physical-food component additionally proves 5,001 accepted consumptions,
+64 retained recent IDs, 64 retained outcomes, rejection of an ancient
+post-eviction duplicate after v17 restore, acceptance of the next monotone
+operation, and byte-exact replay from that post-limit checkpoint. Its durable
+identity is the canonical causal sequence; there is no lifetime 4,096-meal
+ceiling.
 
 No short, medium or stress acceptance tier was run. No seed was rerolled. The
 required 5/3/2 campaign, same-World coexistence, composite persistence boundary

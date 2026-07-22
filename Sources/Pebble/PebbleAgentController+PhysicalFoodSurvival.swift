@@ -154,13 +154,9 @@ extension PebbleAgentController {
         let source = PebbleAgentMaterialCustodyEndpoint.liveAgent(probe, in: world)
         let faultBaseSlots = copyItemInventory(probe.carriedItems)
         let faultBaseSession = try session.durableStateBytes()
-        let staleIntent = AgentPhysicalFoodConsumptionIntent(
-            consumptionID: "physical-food-live-stale-\(session.tick)",
-            agentID: agentID,
-            tick: session.tick
-        )
+        let intent = try session.nextPhysicalFoodConsumptionIntent(for: agentID)
         guard let stalePlan = try foodConsumptionExecutor.prepare(
-            staleIntent, session: session, source: source,
+            intent, session: session, source: source,
             gateway: materialCustodyGateway
         ) else {
             throw ControllerError.physicalFoodBoundary("stale proof could not select real food")
@@ -176,13 +172,8 @@ extension PebbleAgentController {
             throw ControllerError.physicalFoodBoundary("stale custody was not atomic")
         }
 
-        let rollbackIntent = AgentPhysicalFoodConsumptionIntent(
-            consumptionID: "physical-food-live-rollback-\(session.tick)",
-            agentID: agentID,
-            tick: session.tick
-        )
         guard let rollbackPlan = try foodConsumptionExecutor.prepare(
-            rollbackIntent, session: session, source: source,
+            intent, session: session, source: source,
             gateway: materialCustodyGateway
         ) else {
             throw ControllerError.physicalFoodBoundary("rollback proof could not select real food")
@@ -204,11 +195,6 @@ extension PebbleAgentController {
                 + "rollback=verified rollbackItem=restored rollbackSession=unchanged"
         )
 
-        let intent = AgentPhysicalFoodConsumptionIntent(
-            consumptionID: "physical-food-live-\(session.tick)",
-            agentID: agentID,
-            tick: session.tick
-        )
         guard let plan = try foodConsumptionExecutor.prepare(
             intent, session: session, source: source, gateway: materialCustodyGateway
         ), plan.validatedOutcome.canonicalMaterialName == "sweet_berries" else {

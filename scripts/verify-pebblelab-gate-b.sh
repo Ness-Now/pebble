@@ -51,7 +51,7 @@ selector_count() {
         skills) printf '59' ;;
         teaching) printf '41' ;;
         work-professions) printf '29' ;;
-        physical-food-survival) printf '40' ;;
+        physical-food-survival) printf '50' ;;
         *) fail "unknown reduced selector: $1" ;;
     esac
 }
@@ -99,7 +99,10 @@ require_fixed Sources/PebbleAgents/AgentSimulationSession+Survival.swift \
 require_fixed Sources/PebbleAgents/AgentSimulationSession+PhysicalFoodSurvival.swift \
     'state.needs.hunger = outcome.hungerAfter' 'validated outcome does not reach canonical hunger'
 require_fixed Sources/PebbleAgents/AgentSimulationSession+PhysicalFoodSurvival.swift \
-    'processedConsumptionIDs' 'physical consumption idempotence is missing'
+    'outcome.consumptionSequence.rawValue == acceptedThrough + 1' \
+    'monotone physical consumption idempotence is missing'
+require_fixed Sources/PebbleAgents/AgentPhysicalFoodSurvival.swift \
+    'maximumRetainedConsumptionIDs = 64' 'physical consumption retention is not bounded'
 require_fixed Sources/Pebble/PebbleAgentMaterialCustodyGateway.swift \
     'sourceSlot: Int?' 'exact-slot physical debit is missing'
 require_fixed Sources/Pebble/PebbleAgentFoodConsumptionExecutor.swift \
@@ -170,11 +173,11 @@ for selector in $SELECTORS; do
     TOTAL_CHECKS=$((TOTAL_CHECKS + expected))
     printf '  %-24s %3d passed, 0 failed; repeat byte-identical\n' "$selector" "$expected"
 done
-[ "$TOTAL_CHECKS" -eq 366 ] || fail "reduced matrix total is $TOTAL_CHECKS, expected 366"
+[ "$TOTAL_CHECKS" -eq 376 ] || fail "reduced matrix total is $TOTAL_CHECKS, expected 376"
 
 cat <<EOF
 
-Reduced component evidence: 366 passed, 0 failed per run; 366/0 repeated.
+Reduced component evidence: 376 passed, 0 failed per run; 376/0 repeated.
 Short-tier seeds: NOT RUN — fail-fast hard blockers
 Medium-tier seeds: NOT RUN — fail-fast hard blockers
 Stress-tier seeds: NOT RUN — fail-fast hard blockers
@@ -208,6 +211,7 @@ GATE B CANDIDATE RESULT: FAIL
 Automated Integrated Acceptance: FAIL
 Playable Passive Observer Slice: FAIL
 Real Food-to-Survival Closure: PASS
+long-running physical consumption exhaustion: NONE
 Gate R: ACQUIRED
 Gate B canonically acquired: NO
 EOF

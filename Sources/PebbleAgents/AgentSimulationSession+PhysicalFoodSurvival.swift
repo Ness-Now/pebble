@@ -16,6 +16,9 @@ extension AgentSimulationSession {
             guard survivalEnabled else {
                 throw AgentSessionError.physicalFoodSurvival(.survivalRequired)
             }
+            guard causalLedger.isEnabled else {
+                throw AgentSessionError.physicalFoodSurvival(.causalLedgerRequired)
+            }
             guard physicalFoodSurvivalState == nil else { return }
             try prevalidateCausalAppend(count: 1)
             physicalFoodSurvivalState = AgentPhysicalFoodSurvivalState()
@@ -32,6 +35,31 @@ extension AgentSimulationSession {
         }
     }
 
+    /// Reserves no state. The returned identity is valid only while the causal
+    /// high-water mark remains unchanged; publication enforces exact adjacency.
+    public func nextPhysicalFoodConsumptionIntent(
+        for agentID: AgentID
+    ) throws -> AgentPhysicalFoodConsumptionIntent {
+        guard physicalFoodSurvivalState != nil else {
+            throw AgentSessionError.physicalFoodSurvival(.disabled)
+        }
+        guard causalLedger.isEnabled,
+              causalLedger.latestSequence < UInt64.max,
+              let sequence = AgentCausalSequence(rawValue: causalLedger.latestSequence + 1) else {
+            throw AgentSessionError.physicalFoodSurvival(.causalLedgerRequired)
+        }
+        return AgentPhysicalFoodConsumptionIntent(
+            consumptionID: AgentPhysicalFoodConsumptionIntent.canonicalConsumptionID(
+                simulationID: simulationID,
+                agentID: agentID,
+                sequence: sequence
+            ),
+            consumptionSequence: sequence,
+            agentID: agentID,
+            tick: tick
+        )
+    }
+
     public func prevalidatePhysicalFoodConsumption(
         _ outcome: AgentValidatedPhysicalFoodConsumptionOutcome
     ) throws {
@@ -44,26 +72,35 @@ extension AgentSimulationSession {
               state.survivalProgress != nil else {
             throw AgentSessionError.physicalFoodSurvival(.survivalRequired)
         }
-        guard outcome.tick == tick,
+        let acceptedThrough = causalLedger.latestSequence
+        guard outcome.consumptionSequence.rawValue > acceptedThrough else {
+            throw AgentSessionError.physicalFoodSurvival(
+                .duplicateConsumption(outcome.consumptionID)
+            )
+        }
+        guard acceptedThrough < UInt64.max,
+              outcome.consumptionSequence.rawValue == acceptedThrough + 1,
+              outcome.consumptionID == AgentPhysicalFoodConsumptionIntent.canonicalConsumptionID(
+                  simulationID: simulationID,
+                  agentID: outcome.agentID,
+                  sequence: outcome.consumptionSequence
+              ),
+              outcome.tick == tick,
               !outcome.consumptionID.isEmpty,
               outcome.consumptionID.count <= 256,
               outcome.physicalReceiptID == outcome.consumptionID,
-              !outcome.sourceLocationID.isEmpty,
-              outcome.sourceLocationID.count <= 256,
+              outcome.sourceKind == .agentCarriedInventory,
               (0..<64).contains(outcome.sourceSlot) else {
             throw AgentSessionError.physicalFoodSurvival(
                 .invalidIntent(outcome.consumptionID)
             )
         }
-        guard !physical.processedConsumptionIDs.contains(outcome.consumptionID) else {
+        guard !physical.recentConsumptionIDs.contains(outcome.consumptionID) else {
             throw AgentSessionError.physicalFoodSurvival(
                 .duplicateConsumption(outcome.consumptionID)
             )
         }
-        guard physical.processedConsumptionIDs.count
-                < AgentPhysicalFoodSurvivalState.maximumProcessedConsumptionIDs else {
-            throw AgentSessionError.physicalFoodSurvival(.consumptionLimitReached)
-        }
+        try prevalidateCausalAppend(count: 1)
         guard state.needs.hunger > 0 else {
             throw AgentSessionError.physicalFoodSurvival(.noHungerNeed(outcome.agentID))
         }
@@ -127,39 +164,63 @@ extension AgentSimulationSession {
         ), to: &state.memory)
         statesById[outcome.agentID.rawValue] = state
 
-        physical.processedConsumptionIDs.append(outcome.consumptionID)
+        physical.recentConsumptionIDs.append(outcome.consumptionID)
         physical.completedOutcomes.append(outcome)
-        physical.totalConsumedQuantity += outcome.quantityConsumed
+        physical.totalConsumedQuantity += UInt64(outcome.quantityConsumed)
+        if physical.recentConsumptionIDs.count
+            > AgentPhysicalFoodSurvivalState.maximumRetainedConsumptionIDs {
+            physical.recentConsumptionIDs.removeFirst()
+            physical.droppedConsumptionIDCount += 1
+        }
         if physical.completedOutcomes.count
             > AgentPhysicalFoodSurvivalState.maximumRetainedOutcomes {
             physical.completedOutcomes.removeFirst()
             physical.droppedOutcomeCount += 1
         }
-        physicalFoodSurvivalState = physical
-        recordAcceptedOperation(
+        guard let eventID = recordAcceptedOperation(
             kind: .physicalFoodConsumed,
             agentId: outcome.agentID.rawValue,
             operationId: outcome.consumptionID,
             status: outcome.status.rawValue,
-            detail: "material=\(outcome.canonicalMaterialName) quantity=1 coreHunger=\(outcome.coreHungerPoints) saturation=\(outcome.coreSaturation) hunger=\(outcome.hungerBefore)>\(outcome.hungerAfter) receipt=\(outcome.physicalReceiptID)"
-        )
+            detail: "sequence=\(outcome.consumptionSequence.rawValue) material=\(outcome.canonicalMaterialName) quantity=1 coreHunger=\(outcome.coreHungerPoints) saturation=\(outcome.coreSaturation) hunger=\(outcome.hungerBefore)>\(outcome.hungerAfter) receipt=\(outcome.physicalReceiptID)"
+        ), eventID.sequence == outcome.consumptionSequence else {
+            throw AgentSessionError.physicalFoodSurvival(.invalidState("causal sequence publication"))
+        }
+        physical.latestAcceptedConsumptionSequence = eventID.sequence
+        physicalFoodSurvivalState = physical
         try validatePhysicalFoodSurvivalStateIfEnabled()
     }
 
     func validatePhysicalFoodSurvivalStateIfEnabled() throws {
         guard let state = physicalFoodSurvivalState else { return }
         guard state.authorityMode == .physicalItems,
-              state.processedConsumptionIDs.count
-                <= AgentPhysicalFoodSurvivalState.maximumProcessedConsumptionIDs,
-              state.processedConsumptionIDs.count
-                == Set(state.processedConsumptionIDs).count,
+              state.recentConsumptionIDs.count
+                <= AgentPhysicalFoodSurvivalState.maximumRetainedConsumptionIDs,
+              state.recentConsumptionIDs.count
+                == Set(state.recentConsumptionIDs).count,
               state.completedOutcomes.count
                 <= AgentPhysicalFoodSurvivalState.maximumRetainedOutcomes,
-              state.completedOutcomes.allSatisfy({
-                  state.processedConsumptionIDs.contains($0.consumptionID)
+              state.completedOutcomes.map(\.consumptionID) == state.recentConsumptionIDs,
+              state.completedOutcomes.allSatisfy({ outcome in
+                  outcome.sourceKind == .agentCarriedInventory
+                      && outcome.physicalReceiptID == outcome.consumptionID
+                      && outcome.consumptionID
+                          == AgentPhysicalFoodConsumptionIntent.canonicalConsumptionID(
+                              simulationID: simulationID,
+                              agentID: outcome.agentID,
+                              sequence: outcome.consumptionSequence
+                          )
               }),
-              state.totalConsumedQuantity >= state.completedOutcomes.count,
-              state.droppedOutcomeCount >= 0 else {
+              state.totalConsumedQuantity
+                == state.droppedConsumptionIDCount + UInt64(state.recentConsumptionIDs.count),
+              state.totalConsumedQuantity
+                == state.droppedOutcomeCount + UInt64(state.completedOutcomes.count),
+              (state.totalConsumedQuantity == 0)
+                == (state.latestAcceptedConsumptionSequence == nil),
+              state.latestAcceptedConsumptionSequence?.rawValue
+                == state.completedOutcomes.last?.consumptionSequence.rawValue,
+              (state.latestAcceptedConsumptionSequence?.rawValue ?? 0)
+                <= causalLedger.latestSequence else {
             throw AgentSessionError.physicalFoodSurvival(.invalidState("bounds or identity"))
         }
     }

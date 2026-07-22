@@ -65,6 +65,7 @@ final class PebbleAgentFoodConsumptionExecutor {
         let reduction = min(1, Double(descriptor.food.hunger) / 20.0)
         let outcome = AgentValidatedPhysicalFoodConsumptionOutcome(
             consumptionID: intent.consumptionID,
+            consumptionSequence: intent.consumptionSequence,
             agentID: intent.agentID,
             tick: intent.tick,
             canonicalMaterialName: descriptor.canonicalMaterialName,
@@ -74,7 +75,7 @@ final class PebbleAgentFoodConsumptionExecutor {
             normalizedHungerReduction: reduction,
             status: .succeeded,
             physicalReceiptID: intent.consumptionID,
-            sourceLocationID: source.locationID,
+            sourceKind: .agentCarriedInventory,
             sourceSlot: slot,
             hungerBefore: actor.needs.hunger,
             hungerAfter: max(0, actor.needs.hunger - reduction)
