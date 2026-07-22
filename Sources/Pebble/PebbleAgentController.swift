@@ -59,6 +59,7 @@ final class PebbleAgentController {
     let ecologicalObservationSensor = PebbleAgentEcologicalObservationSensor()
     let physicalActionGateway = PebbleAgentPhysicalActionGateway()
     let materialCustodyGateway = PebbleAgentMaterialCustodyGateway()
+    let foodConsumptionExecutor = PebbleAgentFoodConsumptionExecutor()
     let agricultureExecutor = PebbleAgentAgricultureExecutor()
     let wildSubsistenceExecutor = PebbleAgentWildSubsistenceExecutor()
     let livestockExecutor = PebbleAgentLivestockExecutor()
@@ -248,5 +249,6 @@ final class PebbleAgentController {
         case agricultureBoundary(String)
         case wildSubsistenceBoundary(String)
         case livestockBoundary(String)
+        case physicalFoodBoundary(String)
     }
 }

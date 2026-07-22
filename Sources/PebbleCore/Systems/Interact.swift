@@ -1643,17 +1643,18 @@ public func finishUsingItem(_ ctx: InteractCtx) {
     let world = ctx.world, player = ctx.player
     guard let held = player.mainHand else { return }
     let def = itemDef(held.id)
-    if let food = def.food {
+    if let descriptor = foodConsumptionDescriptor(for: held) {
+        let food = descriptor.food
         player.feed(food.hunger, food.saturation)
         for e in food.effects {
             if e.chance == 0 || gameRng.nextFloat() < e.chance {
                 player.addEffect(e.effect, e.duration, e.amplifier)
             }
         }
-        if def.name == "milk_bucket" {
+        if descriptor.disposition == .replaceWithBucketAndClearEffects {
             player.clearEffects()
             player.replaceHeld(ItemStack(iid("bucket"), 1))
-        } else if def.name == "chorus_fruit" {
+        } else if descriptor.disposition == .teleportThenConsume {
             // random teleport
             for _ in 0..<16 {
                 let tx = player.x + (gameRng.nextFloat() - 0.5) * 16
@@ -1666,7 +1667,7 @@ public func finishUsingItem(_ ctx: InteractCtx) {
                 }
             }
             player.consumeHeld(1)
-        } else if def.name.contains("stew") || def.name.contains("soup") {
+        } else if descriptor.disposition == .replaceWithBowl {
             player.replaceHeld(ItemStack(iid("bowl"), 1))
         } else {
             player.consumeHeld(1)

@@ -17,6 +17,7 @@ public enum AgentReplaySchema {
     public static let wildSubsistenceVersion = 14
     public static let livestockVersion = 15
     public static let workCommitmentVersion = 16
+    public static let physicalFoodSurvivalVersion = 17
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -27,6 +28,7 @@ public enum AgentReplaySchema {
             || version == teachingVersion || version == ecologicalObservationVersion
             || version == agricultureVersion || version == wildSubsistenceVersion
             || version == livestockVersion || version == workCommitmentVersion
+            || version == physicalFoodSurvivalVersion
     }
 }
 
@@ -113,6 +115,8 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case livestockOperation
     case workCommitmentFeature
     case workCommitmentOperation
+    case physicalFoodSurvivalFeature
+    case validatedPhysicalFoodConsumption
 }
 
 public enum AgentReplayOperation: Codable {
@@ -235,6 +239,8 @@ public enum AgentReplayOperation: Codable {
         Bool, configuration: AgentWorkCommitmentConfiguration
     )
     case applyWorkCommitmentOperation(AgentWorkCommitmentOperation)
+    case setPhysicalFoodSurvivalEnabled(Bool)
+    case validatedPhysicalFoodConsumption(AgentValidatedPhysicalFoodConsumptionOutcome)
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -307,6 +313,8 @@ public enum AgentReplayOperation: Codable {
         case .applyLivestockOperation: return .livestockOperation
         case .setWorkCommitmentsEnabled: return .workCommitmentFeature
         case .applyWorkCommitmentOperation: return .workCommitmentOperation
+        case .setPhysicalFoodSurvivalEnabled: return .physicalFoodSurvivalFeature
+        case .validatedPhysicalFoodConsumption: return .validatedPhysicalFoodConsumption
         }
     }
 
@@ -353,6 +361,8 @@ public enum AgentReplayOperation: Codable {
             case let .recordOutcome(outcome): raw = "work-outcome:\(outcome.sourceSuccessEventID.rawValue)"
             case .review: raw = "work-review"
             }
+        case let .validatedPhysicalFoodConsumption(outcome):
+            raw = outcome.consumptionID
         case let .selectWildSubsistenceOpportunity(context):
             raw = "subsistence-select:\(context.actorID.rawValue)"
         case let .planAgriculturalPlot(
@@ -773,6 +783,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.workCommitmentVersion
         }
+        if case let .setPhysicalFoodSurvivalEnabled(enabled) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.physicalFoodSurvivalVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "physical food survival activation must be the first v17 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.physicalFoodSurvivalVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -976,6 +996,8 @@ public enum AgentSessionReplayer {
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.wildSubsistenceVersion)
             || (manifest.schemaVersion == AgentReplaySchema.workCommitmentVersion
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.livestockVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.physicalFoodSurvivalVersion
+                && checkpoint.schemaVersion <= AgentCheckpointSchema.workCommitmentVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -1240,6 +1262,10 @@ extension AgentSimulationSession {
             try candidate.setWorkCommitmentsEnabled(enabled, configuration: configuration)
         case let .applyWorkCommitmentOperation(operation):
             _ = try candidate.applyWorkCommitmentOperation(operation)
+        case let .setPhysicalFoodSurvivalEnabled(enabled):
+            try candidate.setPhysicalFoodSurvivalEnabled(enabled)
+        case let .validatedPhysicalFoodConsumption(outcome):
+            try candidate.applyValidatedPhysicalFoodConsumption(outcome)
         }
         self = candidate
         let causal = causalLedgerSnapshot().summary

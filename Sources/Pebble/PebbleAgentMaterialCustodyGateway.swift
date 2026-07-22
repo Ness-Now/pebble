@@ -575,6 +575,7 @@ final class PebbleAgentMaterialCustodyGateway {
     func consume(
         _ request: PebbleAgentMaterialTransactionRequest,
         from source: PebbleAgentMaterialCustodyEndpoint,
+        sourceSlot: Int? = nil,
         verifyAfterMutation: () -> Bool = { true }
     ) -> PebbleAgentMaterialTransactionOutcome {
         if let prior = receipts[request.transactionID] {
@@ -591,7 +592,8 @@ final class PebbleAgentMaterialCustodyGateway {
         } catch {
             return outcome(request.transactionID, .invalidRequest)
         }
-        guard source.isValid, let sourceBefore = source.read() else {
+        guard source.isValid, let sourceBefore = source.read(),
+              sourceSlot.map(sourceBefore.indices.contains) ?? true else {
             return outcome(request.transactionID, .physicalExecutionFailure)
         }
         let sourceFingerprintBefore: String
@@ -602,21 +604,31 @@ final class PebbleAgentMaterialCustodyGateway {
             return outcome(request.transactionID, .staleSource, 0, sourceFingerprintBefore, nil)
         }
         let quantity = request.material.count
-        guard itemInventoryQuantity(matching: prototype, in: sourceBefore) >= quantity else {
-            return outcome(request.transactionID, .insufficientQuantity, 0, sourceFingerprintBefore, nil)
-        }
         var sourceAfter = copyItemInventory(sourceBefore)
-        guard extractItemStack(matching: prototype, quantity: quantity, from: &sourceAfter) != nil else {
-            return outcome(request.transactionID, .physicalExecutionFailure, 0, sourceFingerprintBefore, nil)
+        guard extractItemStack(
+            matching: prototype,
+            quantity: quantity,
+            from: &sourceAfter,
+            slotFilter: { sourceSlot == nil || $0 == sourceSlot }
+        ) != nil else {
+            return outcome(request.transactionID, .insufficientQuantity, 0, sourceFingerprintBefore, nil)
         }
         guard source.write(sourceAfter) else {
             return rollbackConsume(request.transactionID, source: source, sourceBefore: sourceBefore, failure: .physicalExecutionFailure)
         }
-        guard source.isValid, exactSlots(source.read(), sourceAfter), verifyAfterMutation() else {
+        guard source.isValid, exactSlots(source.read(), sourceAfter) else {
             return rollbackConsume(request.transactionID, source: source, sourceBefore: sourceBefore, failure: .verificationFailure)
         }
         do {
             let result = outcome(request.transactionID, .succeeded, quantity, try fingerprint(source), nil)
+            guard verifyAfterMutation() else {
+                return rollbackConsume(
+                    request.transactionID,
+                    source: source,
+                    sourceBefore: sourceBefore,
+                    failure: .verificationFailure
+                )
+            }
             retain(result)
             return result
         } catch {

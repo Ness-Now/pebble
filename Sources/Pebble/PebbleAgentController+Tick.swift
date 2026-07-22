@@ -379,6 +379,65 @@ extension PebbleAgentController {
                 lastConsumptionSucceeded = outcome.status == .succeeded
                 lastSurvivalReason = outcome.reason
             }
+            let physicalFoodActions = result.agents
+                .filter { $0.action.name == "consume_physical_food" }
+                .sorted { $0.agentId < $1.agentId }
+            for consumption in physicalFoodActions {
+                guard let actorID = AgentID(rawValue: consumption.agentId),
+                      let probe = probesByAgentId[consumption.agentId] else {
+                    throw ControllerError.physicalFoodBoundary(
+                        "physical food action has no exact embodiment"
+                    )
+                }
+                let intent = AgentPhysicalFoodConsumptionIntent(
+                    consumptionID: "physical-food:\(consumption.agentId):\(session.tick)",
+                    agentID: actorID,
+                    tick: session.tick
+                )
+                let source = PebbleAgentMaterialCustodyEndpoint.liveAgent(probe, in: world)
+                guard let plan = try foodConsumptionExecutor.prepare(
+                    intent,
+                    session: session,
+                    source: source,
+                    gateway: materialCustodyGateway
+                ) else {
+                    lastConsumptionSucceeded = false
+                    lastSurvivalReason = "no eligible carried physical food"
+                    continue
+                }
+                var recorderCandidate = recorder
+                let physicalResult = foodConsumptionExecutor.execute(
+                    plan,
+                    session: &session,
+                    source: source,
+                    gateway: materialCustodyGateway,
+                    publish: { outcome, candidate in
+                        if var activeRecorder = recorderCandidate {
+                            _ = try activeRecorder.apply(
+                                .validatedPhysicalFoodConsumption(outcome),
+                                to: &candidate
+                            )
+                            recorderCandidate = activeRecorder
+                        } else {
+                            try candidate.applyValidatedPhysicalFoodConsumption(outcome)
+                        }
+                    }
+                )
+                if physicalResult.succeeded { recorder = recorderCandidate }
+                lastConsumptionSucceeded = physicalResult.succeeded
+                lastSurvivalReason = physicalResult.succeeded
+                    ? "validated physical \(plan.validatedOutcome.canonicalMaterialName) consumed"
+                    : "physical food \(physicalResult.status.rawValue)"
+                if let outcome = physicalResult.outcome {
+                    trace(
+                        "physical food consumption actor=\(outcome.agentID.rawValue) "
+                            + "material=\(outcome.canonicalMaterialName) slot=\(outcome.sourceSlot) "
+                            + "quantity=\(outcome.quantityConsumed) coreHunger=\(outcome.coreHungerPoints) "
+                            + "saturation=\(outcome.coreSaturation) hunger=\(outcome.hungerBefore)>\(outcome.hungerAfter) "
+                            + "receipt=\(outcome.physicalReceiptID) physicalDebit=exact abstractDelta=0"
+                    )
+                }
+            }
             let forageActions = result.agents
                 .filter { $0.action.name == "forage_food" }
                 .sorted { $0.agentId < $1.agentId }

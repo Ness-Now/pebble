@@ -86,6 +86,7 @@ public struct AgentActionDecisionInput {
     public let resourceReservation: AgentResourceReservation?
     public let survivalEnabled: Bool
     public let hasFoodRaw: Bool
+    public let physicalFoodAuthorityEnabled: Bool
     public let constructionProject: AgentConstructionProject?
     public let socialVerificationTarget: AgentPosition?
     public let socialVerificationResource: AgentResourceKind?
@@ -106,6 +107,7 @@ public struct AgentActionDecisionInput {
         resourceReservation: AgentResourceReservation? = nil,
         survivalEnabled: Bool = false,
         hasFoodRaw: Bool = false,
+        physicalFoodAuthorityEnabled: Bool = false,
         constructionProject: AgentConstructionProject? = nil,
         socialVerificationTarget: AgentPosition? = nil,
         socialVerificationResource: AgentResourceKind? = nil,
@@ -125,6 +127,7 @@ public struct AgentActionDecisionInput {
         self.resourceReservation = resourceReservation
         self.survivalEnabled = survivalEnabled
         self.hasFoodRaw = hasFoodRaw
+        self.physicalFoodAuthorityEnabled = physicalFoodAuthorityEnabled
         self.constructionProject = constructionProject
         self.socialVerificationTarget = socialVerificationTarget
         self.socialVerificationResource = socialVerificationResource
@@ -226,6 +229,13 @@ public enum AgentActionDecider {
         case .collectResource:
             return resourceAction(input, goalName: "collectResource")
         case .satisfyHunger:
+            if input.physicalFoodAuthorityEnabled {
+                return AgentAction(
+                    name: "consume_physical_food",
+                    reason: "goal satisfyHunger: request carried physical food",
+                    tick: input.tick
+                )
+            }
             if input.hasFoodRaw {
                 return AgentAction(
                     name: "consume_food",

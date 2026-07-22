@@ -22,6 +22,48 @@ public struct FoodDef {
     }
 }
 
+/// Actor-neutral completion semantics for a real Core food stack. This is a
+/// read-only description: the caller still owns exact custody mutation.
+public enum FoodConsumptionDisposition: String, Equatable, Sendable {
+    case consumeStack
+    case replaceWithBowl
+    case replaceWithBucketAndClearEffects
+    case teleportThenConsume
+}
+
+public struct FoodConsumptionDescriptor {
+    public let canonicalMaterialName: String
+    public let food: FoodDef
+    public let disposition: FoodConsumptionDisposition
+
+    public var hasEffects: Bool { !food.effects.isEmpty }
+    public var hasSimpleDebit: Bool { disposition == .consumeStack }
+}
+
+public func foodConsumptionDescriptor(
+    for stack: ItemStack
+) -> FoodConsumptionDescriptor? {
+    guard stack.id >= 0, stack.id < itemDefs.count,
+          stack.count > 0 else { return nil }
+    let definition = itemDef(stack.id)
+    guard let food = definition.food else { return nil }
+    let disposition: FoodConsumptionDisposition
+    if definition.name == "milk_bucket" {
+        disposition = .replaceWithBucketAndClearEffects
+    } else if definition.name == "chorus_fruit" {
+        disposition = .teleportThenConsume
+    } else if definition.name.contains("stew") || definition.name.contains("soup") {
+        disposition = .replaceWithBowl
+    } else {
+        disposition = .consumeStack
+    }
+    return FoodConsumptionDescriptor(
+        canonicalMaterialName: definition.name,
+        food: food,
+        disposition: disposition
+    )
+}
+
 public struct ToolDef {
     public let type: String   // pickaxe/axe/shovel/hoe/sword/shears/flint_and_steel/fishing_rod/bow/crossbow/trident/brush
     public let tier: Int

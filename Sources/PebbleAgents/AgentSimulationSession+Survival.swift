@@ -1,5 +1,8 @@
 extension AgentSimulationSession {
     public func prevalidateConsumption(_ intent: AgentConsumptionIntent) throws {
+        guard physicalFoodSurvivalState == nil else {
+            throw AgentSessionError.physicalFoodSurvival(.legacyAbstractAuthorityDisabled)
+        }
         if let id = AgentID(rawValue: intent.agentId) {
             try requireStageCapability(.selfConsumeCarriedFood, for: id)
         }
@@ -65,6 +68,9 @@ extension AgentSimulationSession {
     mutating func applyConsumptionOutcomeInPlace(
         _ outcome: AgentConsumptionOutcome
     ) throws {
+        guard physicalFoodSurvivalState == nil else {
+            throw AgentSessionError.physicalFoodSurvival(.legacyAbstractAuthorityDisabled)
+        }
         try prevalidateCausalAppend(count: 1)
         guard var state = statesById[outcome.agentId],
               var progress = state.survivalProgress else {

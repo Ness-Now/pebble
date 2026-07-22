@@ -53,7 +53,7 @@ extension AgentSimulationSession {
             cause = lastConstructionEventID
         case .constructionFunding:
             cause = lastOutcomeEventByAgentID[agentID] ?? lastDecisionEventByAgentID[agentID]
-        case .interaction, .delivery, .consumption:
+        case .interaction, .delivery, .consumption, .physicalFoodConsumed:
             cause = lastOutcomeEventByAgentID[agentID] ?? lastDecisionEventByAgentID[agentID]
         default:
             cause = lastDecisionEventByAgentID[agentID]

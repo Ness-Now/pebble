@@ -58,6 +58,8 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case interaction
     case delivery
     case consumption
+    case physicalFoodSurvivalInitialized
+    case physicalFoodConsumed
     case constructionFunding
     case constructionPlacement
     case constructionCompletion
@@ -795,6 +797,8 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.goalTransition, .cognitive), (.actionSelected, .cognitive),
              (.movement, .movement), (.interaction, .operation),
              (.delivery, .operation), (.consumption, .operation),
+             (.physicalFoodSurvivalInitialized, .feature),
+             (.physicalFoodConsumed, .operation),
              (.constructionFunding, .operation), (.constructionPlacement, .operation),
              (.constructionCompletion, .operation), (.constructionClear, .operation),
              (.resourceFactGrounded, .resourceFact),

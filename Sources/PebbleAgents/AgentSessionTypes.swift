@@ -86,6 +86,7 @@ public enum AgentSessionError: Error, Equatable {
     case wildSubsistence(AgentWildSubsistenceError)
     case livestock(AgentLivestockError)
     case workCommitment(AgentWorkCommitmentError)
+    case physicalFoodSurvival(AgentPhysicalFoodSurvivalError)
 }
 
 public struct AgentSessionConfiguration: Codable {

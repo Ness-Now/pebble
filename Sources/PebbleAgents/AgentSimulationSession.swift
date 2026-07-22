@@ -65,6 +65,7 @@ public struct AgentSimulationSession {
     public internal(set) var wildSubsistenceState: AgentWildSubsistenceState?
     public internal(set) var livestockState: AgentLivestockState?
     public internal(set) var workCommitmentState: AgentWorkCommitmentState?
+    public internal(set) var physicalFoodSurvivalState: AgentPhysicalFoodSurvivalState?
 
     public init(
         configuration: AgentSessionConfiguration,
@@ -147,6 +148,7 @@ public struct AgentSimulationSession {
         wildSubsistenceState = nil
         livestockState = nil
         workCommitmentState = nil
+        physicalFoodSurvivalState = nil
         try recordCausalEvent(
             kind: .sessionLifecycle,
             origin: .lifecycle,
@@ -254,7 +256,9 @@ public struct AgentSimulationSession {
     }
 
     public mutating func setSurvivalEnabled(_ enabled: Bool) {
-        guard enabled || mortalityState == nil else { return }
+        guard enabled || (mortalityState == nil && physicalFoodSurvivalState == nil) else {
+            return
+        }
         let changed = survivalEnabled != enabled
         survivalEnabled = enabled
         defer { if changed { recordFeatureToggle(name: "survival", enabled: enabled) } }
@@ -650,7 +654,9 @@ public struct AgentSimulationSession {
                 navigationProgress: state.navigationProgress,
                 resourceReservation: reservation(for: state),
                 survivalEnabled: survivalEnabled,
-                hasFoodRaw: state.resourceInventory.count(of: .foodRaw) > 0,
+                hasFoodRaw: physicalFoodSurvivalState == nil
+                    && state.resourceInventory.count(of: .foodRaw) > 0,
+                physicalFoodAuthorityEnabled: physicalFoodSurvivalState != nil,
                 constructionProject: constructionProject?.builderAgentId == id
                     ? constructionProject
                     : nil,
