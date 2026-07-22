@@ -459,19 +459,25 @@ scripts/verify-pebblelab-live.sh --gate-b-passive
 ```
 
 Le dry-run décrit le monde jetable `PebbleLab-Disposable-GateB-Passive-46`, la
-seed 46, les gates, les commandes de bootstrap et la capture tardive. Après
+seed 46, les gates, les commandes de bootstrap et les six captures bornées. Après
 `PLAYABLE_SLICE_BOOTSTRAP_COMPLETE`, ne donner aucune commande productive :
 marcher et regarder normalement, ou utiliser focus/follow seulement comme
 observateur. Le follow est off initialement et aucune commande productive
 individuelle n'est injectée après le marqueur.
 
-Le run doit laisser trois agents choisir au minimum pêche, chasse et cueillette
-dans le même World, enchaîner plusieurs décisions, consommer ensuite une vraie
-berry via l'autorité alimentaire physique, produire `runtimeErrors=0`, nettoyer
-exactement la fixture et écrire `gate-b-passive-later.png`. La trace structurée
-reste l'autorité pour les compteurs, receipts, conservation et cleanup ; la PNG
-doit être inspectée manuellement. Cette slice passe localement CORR-02, mais ne
-remplace ni la campagne Gate B 5/3/2 ni la revue humaine/senior.
+Le run doit laisser au moins trois agents choisir et compléter naturellement
+des activités d'agriculture, de livestock et de subsistance sauvage dans le
+même World et la même session, puis observer au moins une transition autonome
+entre familles. Si la faim survient, une vraie nourriture doit être débitée via
+l'autorité physique. Le probe de coexistence passe par les mêmes API
+`GameCore.keyDown`/`keyUp`/`mouseDelta` que l'entrée AppKit, sans `setPos`, et
+doit faire progresser simultanément déplacement Player, cognition et actions
+physiques. Les compteurs exigent zéro commande productive post-bootstrap, zéro
+idle-while-eligible, `runtimeErrors=0`, absence de crédit fantôme et cleanup
+exact. Les six PNG `gate-b-passive-start`, `multi-agent`, `agriculture`,
+`livestock`, `follow-agent` et `later` doivent être inspectées manuellement.
+Cette slice passe localement CORR-02, mais ne remplace ni la campagne Gate B
+5/3/2 ni la revue humaine/senior.
 
 ## CIV-04 — Canal physique local
 

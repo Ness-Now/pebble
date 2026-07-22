@@ -165,3 +165,71 @@ final class PhysicsBot {
         fflush(stdout)
     }
 }
+
+/// Disposable product-proof input probe. It uses the same GameCore input API
+/// as AppKit keyboard and mouse events and never writes Player position.
+final class PlayableObserverInputProof {
+    private let game: GameCore
+    private let controller: PebbleAgentController
+    private var started = false
+    private var completed = false
+    private var startWorldTick = 0
+    private var beforePosition = (x: 0.0, y: 0.0, z: 0.0)
+    private var beforeCamera = (yaw: 0.0, pitch: 0.0)
+    private var beforeMetrics: PebblePassiveProductProofSnapshot?
+
+    init(game: GameCore, controller: PebbleAgentController) {
+        self.game = game
+        self.controller = controller
+    }
+
+    func beforeFrame() {
+        guard !started, !completed, game.hasWorld(), let player = game.player,
+              let metrics = controller.passiveProductProofSnapshot(),
+              metrics.bootstrapComplete else { return }
+        started = true
+        startWorldTick = game.world.time
+        beforePosition = (player.x, player.y, player.z)
+        beforeCamera = (player.yaw, player.pitch)
+        beforeMetrics = metrics
+        game.mouseDelta(80, -24)
+        game.keyDown("KeyW", now: Double(startWorldTick) * 50)
+        print(
+            String(
+                format: "[lab-live] player coexistence start inputPath=GameCore.keyDown+mouseDelta worldTick=%d simulationTick=%d position=%.3f,%.3f,%.3f camera=%.3f,%.3f decisions=%d completed=%d directSetPos=0",
+                startWorldTick, metrics.simulationTick,
+                beforePosition.x, beforePosition.y, beforePosition.z,
+                beforeCamera.yaw, beforeCamera.pitch,
+                metrics.decisions, metrics.completions
+            )
+        )
+    }
+
+    func afterFrame() {
+        guard started, !completed, game.hasWorld(), let player = game.player,
+              game.world.time - startWorldTick >= 20 else { return }
+        game.keyUp("KeyW")
+        game.mouseDelta(-20, 12)
+        completed = true
+        let after = controller.passiveProductProofSnapshot()
+        let horizontal = hypot(player.x - beforePosition.x, player.z - beforePosition.z)
+        let cameraDelta = abs(player.yaw - beforeCamera.yaw)
+            + abs(player.pitch - beforeCamera.pitch)
+        let decisionDelta = (after?.decisions ?? 0) - (beforeMetrics?.decisions ?? 0)
+        let completionDelta = (after?.completions ?? 0) - (beforeMetrics?.completions ?? 0)
+        let passed = horizontal > 0.25 && cameraDelta > 0.01
+            && decisionDelta > 0 && completionDelta > 0
+        print(
+            String(
+                format: "[lab-live] player coexistence result inputPath=GameCore.keyDown/keyUp+mouseDelta worldTicks=%d simulationTicks=%d>%d position=%.3f,%.3f,%.3f>%.3f,%.3f,%.3f camera=%.3f,%.3f>%.3f,%.3f distance=%.3f decisionsDelta=%d completedDelta=%d directSetPos=0 passed=%d",
+                game.world.time - startWorldTick,
+                beforeMetrics?.simulationTick ?? 0, after?.simulationTick ?? 0,
+                beforePosition.x, beforePosition.y, beforePosition.z,
+                player.x, player.y, player.z,
+                beforeCamera.yaw, beforeCamera.pitch, player.yaw, player.pitch,
+                horizontal, decisionDelta, completionDelta, passed ? 1 : 0
+            )
+        )
+        fflush(stdout)
+    }
+}

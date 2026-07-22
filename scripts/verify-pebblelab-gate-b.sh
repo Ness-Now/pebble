@@ -137,7 +137,7 @@ require_fixed Sources/Pebble/PebbleAgentController+AutonomousExecution.swift \
     'recordAutonomousTeachingEvidenceIfEligible' 'Teaching is not chained from real work'
 require_fixed Sources/Pebble/PebbleAgentController+Tick.swift \
     'prepareDependent' 'dependent care does not use real physical food'
-require_fixed Sources/Pebble/WorldRenderer.swift \
+require_fixed Sources/Pebble/PebbleAgentVisualIdentity.swift \
     'villager_farmer' 'stable reused villager presentation is absent'
 require_fixed Sources/Pebble/PebbleAgentController+AutonomousCivilization.swift \
     'PLAYABLE_SLICE_BOOTSTRAP_COMPLETE' 'passive bootstrap boundary is absent'

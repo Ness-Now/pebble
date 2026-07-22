@@ -90,6 +90,7 @@ extension PebbleAgentController {
             demoActive = resetSpeed ? false : preservedDemoActive
             passiveObserverBootstrapComplete = false
             manualProductiveCommandsAfterBootstrap = 0
+            passiveSocietyAudit = PebbleAgentPassiveSocietyAudit()
             lastTickResult = nil
             lastError = nil
             autoInteractionEnabled = false
@@ -235,6 +236,13 @@ extension PebbleAgentController {
         let wasDemo = demoActive
         let cleanupWorld = activeWorld ?? fallbackWorld
         if let cleanupWorld,
+           !cleanupPassiveSocietyFixture(world: cleanupWorld) {
+            runtimeErrorCount += 1
+            lastError = "passive society fixture cleanup failed; session retained"
+            trace("error passive society fixture cleanup failed hardFailure=1")
+            return 0
+        }
+        if let cleanupWorld,
            !cleanupLivestockProofFixture(world: cleanupWorld) {
             runtimeErrorCount += 1
             lastError = "livestock fixture cleanup failed; session retained"
@@ -323,7 +331,8 @@ extension PebbleAgentController {
                         + "chainedAgents=\(chained.isEmpty ? "none" : chained) "
                         + "active=\(autonomy.activeActivities.count) "
                         + "retained=\(autonomy.recentRecords.count) evicted=\(autonomy.evictionCount) "
-                        + "idleLongest=\(counters.longestIdleTicks)"
+                        + "idleLongest=\(counters.longestIdleTicks) "
+                        + passiveSocietyAuditSummary()
                 )
             }
             if let socialSummary, socialSummary.socialCausalEventCount > 0 {
@@ -397,6 +406,8 @@ extension PebbleAgentController {
         demoActive = false
         passiveObserverBootstrapComplete = false
         manualProductiveCommandsAfterBootstrap = 0
+        passiveSocietyFixture = nil
+        passiveSocietyAudit = PebbleAgentPassiveSocietyAudit()
         autoInteractionEnabled = false
         lastAutoInteractionReason = "none"
         lastInteractionAttempted = false

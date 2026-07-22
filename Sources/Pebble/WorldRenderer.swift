@@ -1236,15 +1236,10 @@ final class WorldRenderer {
            ProcessInfo.processInfo.environment[
                "PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION"
            ] == "1" {
-            let variants = [
-                "villager_farmer", "villager_fisherman", "villager_shepherd",
-                "villager_toolsmith", "villager_mason", "villager",
-            ].filter(hasModel)
-            guard !variants.isEmpty else { return nil }
-            let stable = agent.labAgentId.utf8.reduce(UInt64(14_695_981_039_346_656_037)) {
-                ($0 ^ UInt64($1)) &* 1_099_511_628_211
-            }
-            return variants[Int(stable % UInt64(variants.count))]
+            return PebbleAgentVisualIdentity.variant(
+                for: agent.labAgentId,
+                availableVariants: PebbleAgentVisualIdentity.variants.filter(hasModel)
+            )
         }
         // data-driven skin variants (dyed sheep wool, villager professions)
         if type == "sheep", let c = ent.data.color, c > 0, !(ent.data.sheared ?? false),

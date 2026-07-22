@@ -81,6 +81,13 @@ extension PebbleAgentController {
             if session.workCommitmentsEnabled {
                 _ = try recordAvailableLiveWorkEvidence(session: &session, recorder: &recorder)
             }
+            recordPassiveSocietyCompletion(
+                actorID: actorID,
+                family: passiveActivityFamily(activity.candidate.domain),
+                action: activity.candidate.actionKey,
+                receipt: receipt,
+                session: session
+            )
             trace(
                 "autonomous activity completed actor=\(actorIDText) "
                     + "domain=\(activity.candidate.domain.rawValue) "

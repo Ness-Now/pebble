@@ -24,6 +24,11 @@ extension PebbleAgentController {
             var recorder = replayRecorder
             switch command {
             case "on", "passive":
+                if command == "passive" {
+                    try preparePassiveSocietySlice(
+                        world: world, session: &candidate, recorder: &recorder
+                    )
+                }
                 if !candidate.autonomousActivityEnabled {
                     if try applyRecordedOperationIfActive(
                         .setAutonomousActivityEnabled(true, configuration: .live),
@@ -153,7 +158,10 @@ extension PebbleAgentController {
                     actorID: actorID,
                     fishingRodAvailable: itemNames.contains("fishing_rod"),
                     huntingWeaponAvailable: itemNames.contains { $0.hasSuffix("_sword") },
-                    agricultureAvailable: false, maximumDistance: 16,
+                    // Agriculture is exposed below from its canonical plot intent.
+                    // Wild Subsistence must not create a second agricultural receipt path.
+                    agricultureAvailable: false,
+                    maximumDistance: 16,
                     subsistencePressure: max(0, min(100, Int(agent.needs.hunger * 100)))
                 )
                 guard let eligible = try? session.eligibleSubsistenceStrategies(context),
@@ -183,12 +191,19 @@ extension PebbleAgentController {
         }
         for agent in snapshot.agents.sorted(by: { $0.id < $1.id }) {
             guard let actorID = AgentID(rawValue: agent.id) else { continue }
-            if let intent = session.nextAgriculturalIntent(for: actorID) {
-                let id = "agriculture:\(intent.plotID.rawValue):\(intent.cellIndex ?? -1):\(intent.kind.rawValue)"
+            if let intent = session.nextAgriculturalIntent(for: actorID),
+               session.agricultureSnapshot().plots.first(where: {
+                   $0.plotID == intent.plotID
+               })?.plannerID == actorID {
+                let id = "agriculture:\(actorID.rawValue):\(intent.plotID.rawValue):"
+                    + "\(intent.cellIndex ?? -1):\(intent.kind.rawValue)"
                 let work = commitment(actorID, domains: [.cultivation])
                 let target = intent.kind == .store
                     ? agricultureStoragePosition(for: intent.plotID, session: session) ?? intent.position
-                    : intent.position
+                    : AgentPosition(
+                        x: intent.position.x, y: intent.position.y + 1,
+                        z: intent.position.z
+                    )
                 candidates.append(AgentAutonomousActivityCandidate(
                     candidateID: id, actorID: actorID, domain: .agriculture,
                     actionKey: intent.kind.rawValue, stableReference: intent.plotID.rawValue,
@@ -215,16 +230,23 @@ extension PebbleAgentController {
             }
             let work = commitment(opportunity.actorID, domains: workDomains)
             let id = "subsistence:\(opportunity.opportunityID.rawValue)"
+            let navigationTarget = AgentPosition(
+                x: opportunity.lastObservedPosition.x,
+                y: opportunity.lastObservedPosition.y < agent.position.y
+                    ? opportunity.lastObservedPosition.y + 1
+                    : opportunity.lastObservedPosition.y,
+                z: opportunity.lastObservedPosition.z
+            )
             candidates.append(AgentAutonomousActivityCandidate(
                 candidateID: id, actorID: opportunity.actorID, domain: domain,
                 actionKey: opportunity.strategy.rawValue,
                 stableReference: opportunity.opportunityID.rawValue,
-                target: opportunity.lastObservedPosition,
+                target: navigationTarget,
                 source: work == nil ? .opportunity : .commitment,
                 priorityBand: work == nil ? 35 : 20,
                 urgency: max(50, min(90, opportunity.score)),
                 continuity: currentByActor[opportunity.actorID] == id,
-                distance: distance(agent.position, opportunity.lastObservedPosition),
+                distance: distance(agent.position, navigationTarget),
                 commitmentID: work?.commitmentID, observedAtTick: session.tick
             ))
         }
@@ -252,6 +274,7 @@ extension PebbleAgentController {
         ) == nil {
             _ = try session.selectAutonomousActivities(candidates)
         }
+        recordPassiveSocietyDecisionAudit(candidates: candidates, session: session)
     }
 
     private func agricultureStoragePosition(

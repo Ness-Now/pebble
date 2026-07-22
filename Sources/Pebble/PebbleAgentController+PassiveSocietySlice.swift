@@ -1,0 +1,542 @@
+import PebbleAgents
+import PebbleCore
+
+struct PebbleAgentPassiveSocietyFixture {
+    struct OriginalCell {
+        let position: PhysicalBlockPosition
+        let cell: Int
+    }
+
+    struct OriginalActor {
+        let agentID: String
+        let carriedItems: [ItemStack?]
+    }
+
+    let originalCells: [OriginalCell]
+    let originalActors: [OriginalActor]
+    let entityIDsBefore: Set<Int>
+    let container: BlockEntityData
+    let fieldPositions: [AgentPosition]
+    let penCenter: AgentPosition
+    let wildPosition: AgentPosition
+    let plannerID: AgentID
+    let livestockAgentIDs: [AgentID]
+    let wildAgentID: AgentID
+}
+
+struct PebbleAgentPassiveSocietyAudit {
+    var currentIdleByAgent: [String: Int] = [:]
+    var longestIdleByAgent: [String: Int] = [:]
+    var idleReasonsByAgent: [String: [String: Int]] = [:]
+    var idleWhileEligibleViolations = 0
+    var lastCompletedFamilyByAgent: [String: String] = [:]
+    var sameFamilyContinuations = 0
+    var crossFamilySwitches = 0
+    var completionsByAgent: [String: Int] = [:]
+    var completionsByFamily: [String: Int] = [:]
+    var lastDecisionCandidateByAgent: [String: String] = [:]
+
+    mutating func reset(agentIDs: [String]) {
+        self = PebbleAgentPassiveSocietyAudit()
+        for id in agentIDs.sorted() {
+            currentIdleByAgent[id] = 0
+            longestIdleByAgent[id] = 0
+            idleReasonsByAgent[id] = [:]
+            completionsByAgent[id] = 0
+        }
+    }
+}
+
+struct PebblePassiveProductProofSnapshot {
+    let bootstrapComplete: Bool
+    let simulationTick: Int
+    let decisions: Int
+    let completions: Int
+}
+
+extension PebbleAgentController {
+    func preparePassiveSocietySlice(
+        world: World,
+        session published: inout AgentSimulationSession,
+        recorder publishedRecorder: inout AgentReplayRecorder?
+    ) throws {
+        guard environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
+              agricultureFeatureEnabled, wildSubsistenceFeatureEnabled,
+              livestockFeatureEnabled, materialFeatureEnabled,
+              ecologicalObservationFeatureEnabled, isPaused, !movementEnabled else {
+            throw ControllerError.feedbackBoundary(
+                "passive society requires disposable World, composite gates, pause, and movement off"
+            )
+        }
+        guard published.populationEnabled, published.lifecycleEnabled,
+              published.skillsEnabled, published.ecologicalObservationEnabled,
+              cleanupPassiveSocietyFixture(world: world), let anchor else {
+            throw ControllerError.feedbackBoundary(
+                "passive society requires population, lifecycle, skills, observation, and clean fixture"
+            )
+        }
+
+        let snapshots = published.snapshot().agents.sorted { $0.id < $1.id }
+        guard snapshots.count >= 3 else {
+            throw ControllerError.feedbackBoundary("passive society requires at least three agents")
+        }
+        let fieldCenter = AgentPosition(
+            x: anchor.x + 4, y: anchor.y, z: anchor.z - 5
+        )
+        let penCenter = AgentPosition(x: anchor.x + 7, y: anchor.y, z: anchor.z + 1)
+        let wildPosition = AgentPosition(x: anchor.x + 1, y: anchor.y, z: anchor.z)
+        let secondWildPosition = AgentPosition(
+            x: anchor.x + 1, y: anchor.y, z: anchor.z - 3
+        )
+        func distance(_ position: AgentPosition, _ target: AgentPosition) -> Int {
+            abs(position.x - target.x) + abs(position.y - target.y) + abs(position.z - target.z)
+        }
+        let plannerSnapshot = snapshots.sorted {
+            let lhs = distance($0.position, fieldCenter)
+            let rhs = distance($1.position, fieldCenter)
+            return lhs == rhs ? $0.id < $1.id : lhs < rhs
+        }.first!
+        // The three-cell plot surrounds whichever inhabitant is naturally
+        // closest to the prospective field. Each real soil cell is therefore
+        // reachable from the shared standing cell without manufacturing a
+        // per-agent command or a second navigation policy.
+        let fieldPositions = [
+            AgentPosition(
+                x: plannerSnapshot.position.x - 1, y: anchor.y - 1,
+                z: plannerSnapshot.position.z
+            ),
+            AgentPosition(
+                x: plannerSnapshot.position.x, y: anchor.y - 1,
+                z: plannerSnapshot.position.z - 1
+            ),
+            AgentPosition(
+                x: plannerSnapshot.position.x, y: anchor.y - 1,
+                z: plannerSnapshot.position.z + 1
+            ),
+        ]
+        let livestockSnapshots = snapshots.filter { $0.id != plannerSnapshot.id }.sorted {
+            let lhs = distance($0.position, penCenter)
+            let rhs = distance($1.position, penCenter)
+            return lhs == rhs ? $0.id < $1.id : lhs < rhs
+        }
+        guard livestockSnapshots.count >= 2,
+              let plannerID = AgentID(rawValue: plannerSnapshot.id),
+              let primaryLivestockID = AgentID(rawValue: livestockSnapshots[0].id),
+              let secondaryLivestockID = AgentID(rawValue: livestockSnapshots[1].id) else {
+            throw ControllerError.feedbackBoundary("passive society stable actor selection failed")
+        }
+        let wildAgentID = secondaryLivestockID
+        let actorIDs = snapshots.map(\.id)
+        let embodiments = try PebbleAgentEmbodiment.resolveAll(
+            agentIDs: actorIDs, in: world, mappedByAgentID: probesByAgentId
+        )
+
+        let minimumX = anchor.x - 4
+        let maximumX = anchor.x + 13
+        let minimumZ = anchor.z - 10
+        let maximumZ = anchor.z + 7
+        var originalCells: [PebbleAgentPassiveSocietyFixture.OriginalCell] = []
+        for x in minimumX...maximumX {
+            for z in minimumZ...maximumZ {
+                guard world.isChunkReady(x >> 4, z >> 4) else {
+                    throw ControllerError.feedbackBoundary("passive society fixture chunk unavailable")
+                }
+                for y in (anchor.y - 2)...(anchor.y + 4) {
+                    guard world.getBlockEntity(x, y, z) == nil else {
+                        throw ControllerError.feedbackBoundary("passive society fixture overlaps block entity")
+                    }
+                    originalCells.append(.init(
+                        position: PhysicalBlockPosition(x: x, y: y, z: z),
+                        cell: world.getBlock(x, y, z)
+                    ))
+                }
+            }
+        }
+        let originalActors = actorIDs.map { id in
+            PebbleAgentPassiveSocietyFixture.OriginalActor(
+                agentID: id,
+                carriedItems: copyItemInventory(embodiments[id]!.carriedItems)
+            )
+        }
+        let entityIDsBefore = Set(world.entities.map(\.id))
+
+        for original in originalCells {
+            let position = original.position
+            let replacement = position.y <= anchor.y - 1 ? Int(cell(B.stone)) : 0
+            world.setBlock(
+                position.x, position.y, position.z, replacement, SET_NO_NEIGHBORS
+            )
+        }
+        for position in fieldPositions {
+            world.setBlock(
+                position.x, position.y, position.z, Int(cell(B.dirt)), SET_NO_NEIGHBORS
+            )
+        }
+        let fieldWater = PhysicalBlockPosition(
+            x: anchor.x + 3, y: anchor.y - 1, z: anchor.z - 3
+        )
+        world.setBlock(
+            fieldWater.x, fieldWater.y, fieldWater.z, Int(cell(B.water)), SET_NO_NEIGHBORS
+        )
+        let containerPosition = PhysicalBlockPosition(
+            x: anchor.x + 6, y: anchor.y, z: anchor.z - 5
+        )
+        world.setBlock(
+            containerPosition.x, containerPosition.y, containerPosition.z,
+            Int(cell(B.chest)), SET_NO_NEIGHBORS
+        )
+        let container = makeContainerBE(
+            containerPosition.x, containerPosition.y, containerPosition.z, 27
+        )
+        world.setBlockEntity(container)
+
+        let fenceID = UInt16(bid("oak_fence"))
+        for x in (penCenter.x - 3)...(penCenter.x + 3) {
+            for z in (penCenter.z - 3)...(penCenter.z + 3)
+                where x == penCenter.x - 3 || x == penCenter.x + 3
+                    || z == penCenter.z - 3 || z == penCenter.z + 3 {
+                world.setBlock(x, penCenter.y, z, Int(cell(fenceID)), SET_NO_NEIGHBORS)
+            }
+        }
+        world.setBlock(
+            penCenter.x - 3, penCenter.y, penCenter.z, 0, SET_NO_NEIGHBORS
+        )
+        world.setBlock(
+            penCenter.x - 1, penCenter.y, penCenter.z - 3, 0, SET_NO_NEIGHBORS
+        )
+        world.setBlock(
+            penCenter.x, penCenter.y, penCenter.z - 3, 0, SET_NO_NEIGHBORS
+        )
+        world.setBlock(
+            penCenter.x - 3, penCenter.y, penCenter.z - 2, 0, SET_NO_NEIGHBORS
+        )
+        for z in (anchor.z - 3)...(anchor.z - 2) {
+            world.setBlock(
+                anchor.x + 4, anchor.y - 1, z,
+                Int(cell(B.water)), SET_NO_NEIGHBORS
+            )
+        }
+        world.setBlock(
+            wildPosition.x, wildPosition.y, wildPosition.z,
+            Int(cell(B.sweet_berry_bush, 3)), SET_NO_NEIGHBORS
+        )
+        world.setBlock(
+            secondWildPosition.x, secondWildPosition.y, secondWildPosition.z,
+            Int(cell(B.sweet_berry_bush, 3)), SET_NO_NEIGHBORS
+        )
+
+        let firstSheep = spawnMob(
+            world, "sheep", Double(penCenter.x) + 0.5, Double(penCenter.y),
+            Double(penCenter.z - 3) + 0.5, SpawnOpts()
+        ) as! Sheep
+        let secondSheep = spawnMob(
+            world, "sheep", Double(penCenter.x - 2) + 0.5, Double(penCenter.y),
+            Double(penCenter.z - 2) + 0.5, SpawnOpts()
+        ) as! Sheep
+        firstSheep.persistent = true
+        secondSheep.persistent = true
+
+        passiveSocietyFixture = PebbleAgentPassiveSocietyFixture(
+            originalCells: originalCells, originalActors: originalActors,
+            entityIDsBefore: entityIDsBefore, container: container,
+            fieldPositions: fieldPositions, penCenter: penCenter,
+            wildPosition: wildPosition, plannerID: plannerID,
+            livestockAgentIDs: [primaryLivestockID, secondaryLivestockID],
+            wildAgentID: wildAgentID
+        )
+
+        do {
+            var candidate = published
+            var recorder = publishedRecorder
+            if !candidate.agricultureEnabled {
+                if try applyRecordedOperationIfActive(
+                    .setAgricultureEnabled(true, configuration: .live),
+                    session: &candidate, recorder: &recorder
+                ) == nil { try candidate.setAgricultureEnabled(true) }
+            }
+            if !candidate.wildSubsistenceEnabled {
+                if try applyRecordedOperationIfActive(
+                    .setWildSubsistenceEnabled(true, configuration: .live),
+                    session: &candidate, recorder: &recorder
+                ) == nil { try candidate.setWildSubsistenceEnabled(true) }
+            }
+            if !candidate.livestockEnabled {
+                if try applyRecordedOperationIfActive(
+                    .setLivestockEnabled(true, configuration: .live),
+                    session: &candidate, recorder: &recorder
+                ) == nil { try candidate.setLivestockEnabled(true) }
+            }
+
+            for id in actorIDs {
+                embodiments[id]!.carriedItems = Array(
+                    repeating: nil, count: LabCoreAgentEntity.carriedItemSlotCount
+                )
+            }
+            embodiments[plannerID.rawValue]!.carriedItems[0] = ItemStack(iid("iron_hoe"), 1)
+            embodiments[plannerID.rawValue]!.carriedItems[1] = ItemStack(iid("wheat_seeds"), 4)
+            for id in [primaryLivestockID, secondaryLivestockID] {
+                embodiments[id.rawValue]!.carriedItems[0] = ItemStack(iid("wheat"), 3)
+            }
+            embodiments[primaryLivestockID.rawValue]!.carriedItems[1]
+                = ItemStack(iid("fishing_rod"), 1, damage: 63)
+
+            ecologicalObservationSensor.invalidateAll()
+            for id in actorIDs.sorted() {
+                _ = try recordLiveEcologicalObservation(
+                    world: world, observerID: AgentID(rawValue: id)!,
+                    session: &candidate, recorder: &recorder
+                )
+            }
+            guard try prepareLiveAgriculturalPlanIfEligible(
+                world: world, session: &candidate, recorder: &recorder
+            ), candidate.agricultureSnapshot().plots.first?.plannerID == plannerID else {
+                throw ControllerError.feedbackBoundary("passive agriculture opportunity not selected")
+            }
+
+            let sheepPositions = [firstSheep, secondSheep].map {
+                AgentPosition(
+                    x: Int($0.x.rounded(.down)), y: Int($0.y.rounded(.down)),
+                    z: Int($0.z.rounded(.down))
+                )
+            }
+            let livestockObservations = candidate.ecologicalObservations(
+                for: primaryLivestockID
+            )
+            trace(
+                "passive livestock observation actor=\(primaryLivestockID.rawValue) animals="
+                    + (livestockObservations.first?.observation.animals.map {
+                        "\($0.speciesKey)@\(positionText($0.position))"
+                    }.joined(separator: ",") ?? "none")
+            )
+            guard let source = livestockObservations.first(where: { record in
+                record.observation.animals.filter { $0.speciesKey == "sheep" }.count >= 2
+            })?.causalEventID else {
+                throw ControllerError.feedbackBoundary("passive livestock observation missing")
+            }
+            let herdID = AgentLivestockHerdID(rawValue: "passive-society-sheep")!
+            let recordIDs = [
+                AgentManagedAnimalRecordID(rawValue: "passive-sheep-1")!,
+                AgentManagedAnimalRecordID(rawValue: "passive-sheep-2")!,
+            ]
+            let area = AgentLivestockManagementArea(
+                minimum: AgentPosition(
+                    x: penCenter.x - 2, y: penCenter.y - 1, z: penCenter.z - 2
+                ),
+                maximum: AgentPosition(
+                    x: penCenter.x + 2, y: penCenter.y + 2, z: penCenter.z + 2
+                )
+            )
+            func applyLivestock(_ operation: AgentLivestockOperation) throws {
+                if try applyRecordedOperationIfActive(
+                    .applyLivestockOperation(operation),
+                    session: &candidate, recorder: &recorder
+                ) == nil { try candidate.applyLivestockOperation(operation) }
+            }
+            try applyLivestock(.establishHerd(
+                herdID: herdID, speciesKey: "sheep", managementArea: area,
+                responsibleAgentIDs: [primaryLivestockID, secondaryLivestockID]
+            ))
+            for index in 0..<2 {
+                try applyLivestock(.admitObservedAnimal(
+                    recordID: recordIDs[index], herdID: herdID,
+                    actorID: primaryLivestockID, speciesKey: "sheep",
+                    position: sheepPositions[index], lifeStage: .adult,
+                    sourceObservationEventID: source, compatibleFeedAvailable: true
+                ))
+                livestockRuntimeEntityIDByRecord[recordIDs[index]] = [firstSheep, secondSheep][index].id
+                try applyLivestock(.queueTask(AgentLivestockTaskRequest(
+                    taskID: AgentLivestockTaskID(rawValue: "passive-feed-\(index + 1)")!,
+                    herdID: herdID, kind: .feed,
+                    primaryAnimalRecordID: recordIDs[index],
+                    responsibleAgentID: [primaryLivestockID, secondaryLivestockID][index],
+                    targetPosition: sheepPositions[index]
+                )))
+            }
+
+            published = candidate
+            publishedRecorder = recorder
+            passiveSocietyAudit.reset(agentIDs: actorIDs)
+            for snapshot in snapshots {
+                trace(
+                    "passive visual identity actor=\(snapshot.id) variant="
+                        + "\(PebbleAgentVisualIdentity.variant(for: snapshot.id) ?? "none") "
+                        + "marker=stableAgentID position=\(positionText(snapshot.position))"
+                )
+            }
+            trace(
+                "passive composite bootstrap world=one session=one settlement=one "
+                    + "agents=\(actorIDs.count) planner=\(plannerID.rawValue) "
+                    + "livestock=\(primaryLivestockID.rawValue),\(secondaryLivestockID.rawValue) "
+                    + "wild=\(wildAgentID.rawValue) field=real storage=real water=real "
+                    + "livestockPhysical=2 food=real commandsProductive=0"
+            )
+        } catch {
+            _ = cleanupPassiveSocietyFixture(world: world)
+            throw error
+        }
+    }
+
+    func recordPassiveSocietyDecisionAudit(
+        candidates: [AgentAutonomousActivityCandidate],
+        session: AgentSimulationSession
+    ) {
+        guard passiveObserverBootstrapComplete else { return }
+        let autonomy = session.autonomousActivitySnapshot()
+        let activeByAgent = Dictionary(uniqueKeysWithValues: autonomy.activeActivities.map {
+            ($0.candidate.actorID.rawValue, $0)
+        })
+        let cooldowns = autonomy.cooldowns
+        for agent in session.snapshot().agents.sorted(by: { $0.id < $1.id }) {
+            if let active = activeByAgent[agent.id] {
+                passiveSocietyAudit.currentIdleByAgent[agent.id] = 0
+                if focusedAgentId == agent.id,
+                   passiveSocietyAudit.lastDecisionCandidateByAgent[agent.id]
+                    != active.candidate.candidateID {
+                    passiveSocietyAudit.lastDecisionCandidateByAgent[agent.id]
+                        = active.candidate.candidateID
+                    trace(
+                        "passive focus decision tick=\(session.tick) actor=\(agent.id) "
+                            + "variant=\(PebbleAgentVisualIdentity.variant(for: agent.id) ?? "none") "
+                            + "position=\(positionText(agent.position)) goal=\(agent.currentGoal.kind.rawValue) "
+                            + "activity=\(passiveActivityFamily(active.candidate.domain))/\(active.candidate.actionKey) "
+                            + "movement=\(active.lifecycle.rawValue) next=physical_executor"
+                    )
+                }
+                continue
+            }
+            let observed = candidates.filter { $0.actorID.rawValue == agent.id }
+            let eligible = observed.filter { candidate in
+                !cooldowns.contains {
+                    $0.actorID == candidate.actorID && $0.candidateID == candidate.candidateID
+                        && $0.untilTick >= session.tick
+                }
+            }
+            let reason: String
+            if !eligible.isEmpty {
+                reason = "eligible_candidate_unselected"
+                passiveSocietyAudit.idleWhileEligibleViolations += 1
+            } else if !observed.isEmpty {
+                reason = "cooldown"
+            } else if agent.currentGoal.kind == .satisfyHunger {
+                reason = "survival_transition"
+            } else {
+                reason = "no_observed_opportunity"
+            }
+            let current = passiveSocietyAudit.currentIdleByAgent[agent.id, default: 0] + 1
+            passiveSocietyAudit.currentIdleByAgent[agent.id] = current
+            passiveSocietyAudit.longestIdleByAgent[agent.id] = max(
+                passiveSocietyAudit.longestIdleByAgent[agent.id, default: 0], current
+            )
+            passiveSocietyAudit.idleReasonsByAgent[agent.id, default: [:]][reason, default: 0] += 1
+        }
+    }
+
+    func recordPassiveSocietyCompletion(
+        actorID: AgentID,
+        family: String,
+        action: String,
+        receipt: String,
+        session: AgentSimulationSession
+    ) {
+        guard passiveObserverBootstrapComplete else { return }
+        let id = actorID.rawValue
+        if let previous = passiveSocietyAudit.lastCompletedFamilyByAgent[id] {
+            if previous == family {
+                passiveSocietyAudit.sameFamilyContinuations += 1
+            } else {
+                passiveSocietyAudit.crossFamilySwitches += 1
+                trace(
+                    "passive cross-family switch actor=\(id) from=\(previous) to=\(family) "
+                        + "tick=\(session.tick) cause=autonomous_completed_then_new_eligible_activity"
+                )
+            }
+        }
+        passiveSocietyAudit.lastCompletedFamilyByAgent[id] = family
+        passiveSocietyAudit.completionsByAgent[id, default: 0] += 1
+        passiveSocietyAudit.completionsByFamily[family, default: 0] += 1
+        if focusedAgentId == id, let agent = session.snapshot().agents.first(where: { $0.id == id }) {
+            trace(
+                "passive focus outcome tick=\(session.tick) actor=\(id) "
+                    + "variant=\(PebbleAgentVisualIdentity.variant(for: id) ?? "none") "
+                    + "position=\(positionText(agent.position)) activity=\(family)/\(action) "
+                    + "physicalOutcome=completed receipt=\(receipt) nextDecision=pending"
+            )
+        }
+    }
+
+    func passiveSocietyAuditSummary() -> String {
+        let idle = passiveSocietyAudit.longestIdleByAgent.keys.sorted().map {
+            "\($0):\(passiveSocietyAudit.longestIdleByAgent[$0, default: 0])"
+        }.joined(separator: ",")
+        let reasons = passiveSocietyAudit.idleReasonsByAgent.keys.sorted().flatMap { id in
+            passiveSocietyAudit.idleReasonsByAgent[id, default: [:]].keys.sorted().map {
+                "\(id).\($0):\(passiveSocietyAudit.idleReasonsByAgent[id]![$0]!)"
+            }
+        }.joined(separator: ",")
+        let families = passiveSocietyAudit.completionsByFamily.keys.sorted().map {
+            "\($0):\(passiveSocietyAudit.completionsByFamily[$0, default: 0])"
+        }.joined(separator: ",")
+        return "sameFamilyContinuations=\(passiveSocietyAudit.sameFamilyContinuations) "
+            + "crossFamilySwitches=\(passiveSocietyAudit.crossFamilySwitches) "
+            + "families=\(families.isEmpty ? "none" : families) "
+            + "idleByAgent=\(idle.isEmpty ? "none" : idle) "
+            + "idleReasons=\(reasons.isEmpty ? "none" : reasons) "
+            + "idleEligibleViolations=\(passiveSocietyAudit.idleWhileEligibleViolations)"
+    }
+
+    func passiveProductProofSnapshot() -> PebblePassiveProductProofSnapshot? {
+        guard passiveObserverBootstrapComplete, let session else { return nil }
+        let counters = session.autonomousActivitySnapshot().counters
+        return PebblePassiveProductProofSnapshot(
+            bootstrapComplete: true, simulationTick: session.tick,
+            decisions: counters.decisionCount, completions: counters.completionCount
+        )
+    }
+
+    func cleanupPassiveSocietyFixture(world: World) -> Bool {
+        guard let fixture = passiveSocietyFixture else { return true }
+        fixture.container.items = Array(repeating: nil, count: 27)
+        for entity in world.entities where !fixture.entityIDsBefore.contains(entity.id) {
+            world.removeEntity(entity)
+        }
+        for original in fixture.originalCells.reversed() {
+            world.setBlock(
+                original.position.x, original.position.y, original.position.z,
+                original.cell, SET_NO_NEIGHBORS
+            )
+        }
+        for original in fixture.originalActors {
+            guard let probe = probesByAgentId[original.agentID], probe.world === world else {
+                return false
+            }
+            probe.carriedItems = copyItemInventory(original.carriedItems)
+        }
+        let cellsRestored = fixture.originalCells.allSatisfy {
+            world.getBlock($0.position.x, $0.position.y, $0.position.z) == $0.cell
+                && world.getBlockEntity($0.position.x, $0.position.y, $0.position.z) == nil
+        }
+        let actorsRestored = fixture.originalActors.allSatisfy {
+            probesByAgentId[$0.agentID]?.carriedItems == $0.carriedItems
+        }
+        let entitiesRestored = world.entities.allSatisfy {
+            fixture.entityIDsBefore.contains($0.id)
+        }
+        guard cellsRestored, actorsRestored, entitiesRestored else { return false }
+        passiveSocietyFixture = nil
+        livestockRuntimeEntityIDByRecord.removeAll()
+        ecologicalObservationSensor.invalidateAll()
+        trace("passive society cleanup cells=exact entities=exact custody=exact")
+        return true
+    }
+
+    func passiveActivityFamily(_ domain: AgentAutonomousActivityDomain) -> String {
+        switch domain {
+        case .agriculture: return "agriculture"
+        case .fishing, .hunting, .wildGathering: return "wildSubsistence"
+        case .livestock: return "livestock"
+        case .dependentCare: return "care"
+        case .teaching: return "teaching"
+        case .construction, .materialHandling: return "materialWork"
+        }
+    }
+}

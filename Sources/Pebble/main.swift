@@ -402,6 +402,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     private var uncappedMode = false
     private var uncapTimer: Timer?
     var bot: PhysicsBot?
+    var passiveObserverInputProof: PlayableObserverInputProof?
     var booth: PhotoBooth?
     // test hook: PEBBLE_CMD="/tp 0 120 0;/time set 1000" runs once the world is up.
     // A vertical bar starts a second batch after another bounded world-ready delay.
@@ -414,6 +415,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         return Array(value.components(separatedBy: "|").dropFirst())
     }()
     private var pendingCmdDelay = 0
+    private let passiveObserverBatchFrames: Int? = {
+        guard ProcessInfo.processInfo.environment[
+            "PEBBLELAB_PASSIVE_OBSERVER_INPUT_PROOF"
+        ] == "1", let raw = ProcessInfo.processInfo.environment[
+            "PEBBLELAB_PASSIVE_OBSERVER_BATCH_FRAMES"
+        ], let value = Int(raw), (240...7200).contains(value) else { return nil }
+        return value
+    }()
     // Persistence proof hook: run command batches at explicit World ticks so a
     // restart and its uninterrupted control cannot inherit renderer-frame timing.
     // The normal PEBBLE_CMD frame delay remains unchanged when this is absent.
@@ -565,6 +574,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
             if ProcessInfo.processInfo.environment["PEBBLE_BOT"] != nil {
                 bot = PhysicsBot(game: game)
             }
+            if ProcessInfo.processInfo.environment[
+                "PEBBLELAB_PASSIVE_OBSERVER_INPUT_PROOF"
+            ] == "1" {
+                passiveObserverInputProof = PlayableObserverInputProof(
+                    game: game, controller: agentController
+                )
+            }
             if ProcessInfo.processInfo.environment["PEBBLE_PHOTOBOOTH"] != nil {
                 booth = PhotoBooth(game: game, renderer: renderer)
             }
@@ -709,7 +725,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
                 commandBatchReady = game.world.time == targetTick
             } else {
                 pendingCmdDelay += 1
-                commandBatchReady = pendingCmdDelay > 240
+                let requiredFrames = agentController.passiveProductProofSnapshot() != nil
+                    ? (passiveObserverBatchFrames ?? 240) : 240
+                commandBatchReady = pendingCmdDelay > requiredFrames
             }
             if commandBatchReady {
                 if let targetTick = pendingCmdWorldTick {
@@ -768,6 +786,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
             } else {
                 frameDelta = min(dt, 10)
             }
+            passiveObserverInputProof?.beforeFrame()
             let partial = game.frame(dtMs: frameDelta)
             agentController.update(
                 world: game.world,
@@ -775,6 +794,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
                 worldID: game.worldRec?.id,
                 dimension: game.dim.rawValue
             )
+            passiveObserverInputProof?.afterFrame()
             renderer.pebbleAgentPhysicalGestures = agentController.physicalGestureMarkers()
             bot?.tick()
             booth?.tickBooth()

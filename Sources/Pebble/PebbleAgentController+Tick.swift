@@ -434,6 +434,13 @@ extension PebbleAgentController {
                     ? "validated physical \(plan.validatedOutcome.canonicalMaterialName) consumed"
                     : "physical food \(physicalResult.status.rawValue)"
                 if let outcome = physicalResult.outcome {
+                    recordPassiveSocietyCompletion(
+                        actorID: outcome.agentID,
+                        family: "physicalSurvival",
+                        action: "eat:\(outcome.canonicalMaterialName)",
+                        receipt: outcome.physicalReceiptID,
+                        session: session
+                    )
                     trace(
                         "physical food consumption actor=\(outcome.agentID.rawValue) "
                             + "material=\(outcome.canonicalMaterialName) slot=\(outcome.sourceSlot) "
@@ -1315,15 +1322,29 @@ extension PebbleAgentController {
     ) throws {
         var positions = Set<String>()
         for agent in snapshot.agents {
+            let uniquePosition = positions.insert(positionText(agent.position)).inserted
+            let probe = probesByAgentId[agent.id]
+            let probePosition = probe.map {
+                AgentPosition(
+                    x: Int($0.x.rounded(.down)), y: Int($0.y.rounded(.down)),
+                    z: Int($0.z.rounded(.down))
+                )
+            }
+            let probeMatches = probe?.labAgentId == agent.id
+                && probePosition == agent.position
             guard agent.lastWorldObservation != nil,
                   agent.lastWorldPerceptionEffect != nil,
                   agent.observationCount >= agent.ticksAlive,
-                  positions.insert(positionText(agent.position)).inserted,
-                  let probe = probesByAgentId[agent.id],
-                  probe.labAgentId == agent.id,
-                  probe.x == Double(agent.position.x) + 0.5,
-                  probe.y == Double(agent.position.y),
-                  probe.z == Double(agent.position.z) + 0.5 else {
+                  uniquePosition, probeMatches else {
+                trace(
+                    "movement boundary detail actor=\(agent.id) "
+                        + "observation=\(agent.lastWorldObservation == nil ? 0 : 1) "
+                        + "perception=\(agent.lastWorldPerceptionEffect == nil ? 0 : 1) "
+                        + "counts=\(agent.observationCount)/\(agent.ticksAlive) "
+                        + "unique=\(uniquePosition ? 1 : 0) session=\(positionText(agent.position)) "
+                        + "probe=\(probePosition.map(positionText) ?? "none") "
+                        + "probeMatches=\(probeMatches ? 1 : 0)"
+                )
                 throw ControllerError.movementBoundary(agent.id)
             }
             guard agent.memoryCount <= 128,

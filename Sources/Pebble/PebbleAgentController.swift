@@ -99,6 +99,8 @@ final class PebbleAgentController {
     var wildSubsistenceProofFixture: PebbleAgentWildSubsistenceProofFixture?
     var livestockProofFixture: PebbleAgentLivestockProofFixture?
     var livestockRuntimeEntityIDByRecord: [AgentManagedAnimalRecordID: Int] = [:]
+    var passiveSocietyFixture: PebbleAgentPassiveSocietyFixture?
+    var passiveSocietyAudit = PebbleAgentPassiveSocietyAudit()
     var passiveObserverBootstrapComplete = false
     var manualProductiveCommandsAfterBootstrap = 0
 

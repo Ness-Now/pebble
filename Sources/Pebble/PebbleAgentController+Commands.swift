@@ -5,8 +5,14 @@ import PebbleCore
 extension PebbleAgentController {
     func handleCommand(_ arguments: [String], world: World, player: Player) -> PebbleAgentCommandResult {
         let command = arguments.first?.lowercased() ?? "status"
-        if passiveObserverBootstrapComplete, isManualProductiveCommand(arguments) {
-            manualProductiveCommandsAfterBootstrap += 1
+        if passiveObserverBootstrapComplete {
+            let productive = isManualProductiveCommand(arguments)
+            if productive { manualProductiveCommandsAfterBootstrap += 1 }
+            trace(
+                "passive command command=/lab_\(arguments.joined(separator: "_")) "
+                    + "class=\(productive ? "productive" : "observer_debug") "
+                    + "productiveCount=\(manualProductiveCommandsAfterBootstrap)"
+            )
         }
         switch command {
         case "help":

@@ -308,21 +308,19 @@ identity is the canonical causal sequence; there is no lifetime 4,096-meal
 ceiling.
 
 No short, medium or stress acceptance tier was run. No seed was rerolled. The
-required 5/3/2 campaign, same-World coexistence, composite persistence boundary
-and multi-strategy adaptation remain not run because the two primary hard
-blockers make a genuine campaign impossible. Historical seed 46 remains
-covered by existing component proofs but was not represented as a Gate B
-campaign seed.
+corrective seed-46 slice now proves same-World cross-family coexistence, but it
+is not a Gate B campaign seed. The required 5/3/2 campaign, composite
+persistence boundary and multi-seed adaptation therefore remain not run.
 
 ## Pillar disposition
 
 | Pillar | Candidate status | Evidence boundary |
 | --- | --- | --- |
-| B1 Physical Material Truth | partial | Real custody and per-vertical zero-ghost checks exist; no society-scale conservation ledger or composite run exists. |
+| B1 Physical Material Truth | partial | Real custody, same-World corrective actions and zero-ghost checks exist; no society-scale conservation ledger or canonical campaign exists. |
 | B2 Real Food-to-Survival Closure | pass locally, pending publication | Exact physical food debit reaches canonical agent hunger with shadow isolation, idempotence and rollback proof. |
-| B3 Multiple Viable Subsistence Strategies | partial | Local orchestration and a three-strategy passive slice pass; the canonical multi-seed adaptation campaign is pending. |
-| B4 Agriculture and Managed Surplus Continuity | partial | Autonomous executor chaining and the real cycle pass separately; multi-cycle campaign evidence is pending. |
-| B5 Livestock Resource-Bounded Continuity | partial | Real reserve-gated eligibility and executor linkage pass locally; campaign closure is pending. |
+| B3 Multiple Viable Subsistence Strategies | partial | Local orchestration and a cross-family passive slice pass; the canonical multi-seed adaptation campaign is pending. |
+| B4 Agriculture and Managed Surplus Continuity | partial | Autonomous real till/plant chaining passes in the corrective composite; multi-cycle campaign evidence is pending. |
+| B5 Livestock Resource-Bounded Continuity | partial | Real reserve-gated eligibility and two physical feed completions pass in the corrective composite; campaign closure is pending. |
 | B6 Care Continuity | pass locally | Care preempts work and physical mode exact-debits caregiver food; canonical campaign evidence is pending. |
 | B7 Teaching / Own-Practice Learning | partial | Real work now creates causal teaching evidence; integrated campaign observation is pending. |
 | B8 Durable Work Specialization | partial | Commitments influence normal candidates and profiles remain causal/non-magical; campaign continuity is pending. |
@@ -353,12 +351,22 @@ productiveCommandsAfter=0`. The bounded bootstrap creates local proof
 opportunities and starter tools, then issues no per-agent productive command.
 Normal movement, camera and the ordinary cognitive clock remain live.
 
-The run records decisions, candidates, starts, completions, blocks, switches,
-completed agents/domains, retained records, evictions and longest idle streak.
-Fishing, hunting and wild gathering all publish verified real outcomes in the
-same World. The berry path later exact-debits real food into canonical hunger
-with `foodRaw`, CampStock and coarse-ecology deltas all zero. The fixture owns
-bounded setup/cleanup only; physical actions are selected by cognition.
+The hardened product-proof run records decisions, candidates, starts,
+completions, blocks, same-family continuations, cross-family switches,
+completed agents/families, retained records, evictions and per-agent idle
+reasons. Its single seed-46 timeline completed agriculture, livestock, Wild
+Subsistence and physical survival across all three agents. Agriculture produced
+three real till/plant pairs, both livestock actors fed real sheep, Wild
+Subsistence acquired physical food, and the survival path exact-debited that
+food into canonical hunger with `foodRaw`, CampStock and coarse-ecology deltas
+all zero. Four cross-family transitions were observed. No tick was idle while
+an eligible higher-than-idle candidate existed.
+
+The Player input probe used `GameCore.keyDown`/`keyUp` and `mouseDelta`, the
+same world-mode API reached by AppKit, and never wrote Player position. During
+20 World ticks it changed horizontal position and yaw/pitch while four new
+autonomous decisions and five completions occurred. The fixture owns bounded
+setup/cleanup only; physical actions remain selected by cognition.
 
 This is local corrective evidence, not the missing canonical 5/3/2 campaign or
 composite persistence acceptance. Exact final counters and capture path belong
@@ -434,10 +442,39 @@ The `--gate-b-passive` run launches a normal rendered disposable World with
 follow off and leaves player movement and mouse look available. After the
 bootstrap marker it performs no productive command. Three stable agent
 identities reuse villager models and existing limb animation; cyan debug boxes
-are absent under the gate. The later capture and structured trace are inspected
-for stacking, teleportation, land fishing, ghost items, duplicate animals,
-stale overlays and camera hijack. This local slice is corrective evidence only;
-it does not replace human review or the canonical Gate B campaign.
+are absent under the gate.
+
+```text
+Pebble process launched: YES
+real rendered World captured: YES
+capture(s) inspected: YES (six)
+multi-agent life visibly represented: YES
+agriculture visibly represented: YES
+livestock visibly represented: YES
+multiple domain contexts visibly represented: YES
+one stable individual traceable across decisions/captures: YES
+real Player movement/camera coexistence trace-proven: YES
+manual productive commands after bootstrap: 0
+autonomous completed activities: 11
+completed agents: 3
+completed families: 4
+cross-family switches: 4
+idle while eligible violations: 0
+runtime errors: 0
+ghost productive credits: 0
+cleanup: exact
+visual anomaly: one transient malformed first frame; five later frames coherent
+captures: gate-b-passive-start/multi-agent/agriculture/livestock/follow-agent/later.png
+```
+
+The multi-agent frame shows distinguishable inhabitants with the physical pen,
+sheep, field and storage. Subsequent frames show the agricultural and livestock
+contexts and changed inhabitant/World state. The first post-bootstrap frame had
+a transient inverted/incomplete terrain render; it is retained and reported,
+not treated as product evidence. The other five frames rendered normally and
+showed no stacking, teleportation, ghost item, duplicate animal, stale overlay
+or camera hijack. This local slice is corrective evidence only; it does not
+replace human review or the canonical Gate B campaign.
 
 ## Dedicated command
 
@@ -508,5 +545,7 @@ Gate B re-evaluation #2, not `CIV-26`.
 > small society begin to live, work, learn, care and adapt without me?
 
 ```text
-YES — locally under the default-off CORR-02 gate; canonical Gate B remains NOT ACQUIRED
+YES — for normal controls, zero productive commands and observable cross-family
+work in the local default-off CORR-02 slice. Care and Teaching remain separate
+autonomous proofs; canonical Gate B remains NOT ACQUIRED.
 ```

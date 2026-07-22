@@ -90,6 +90,15 @@ require_trace_count() {
         || fail "live trace count $actual != $expected: $description"
 }
 
+require_trace_at_least() {
+    pattern=$1
+    minimum=$2
+    description=$3
+    actual=$(/usr/bin/grep -Ec "$pattern" "$TRACE_PATH" || true)
+    [ "$actual" -ge "$minimum" ] \
+        || fail "live trace count $actual < $minimum: $description"
+}
+
 DRY_RUN=0
 MODE_OPTIONS=0
 for option in "$@"; do
@@ -155,6 +164,8 @@ WILD_SUBSISTENCE_GATE=0
 LIVESTOCK_GATE=0
 WORK_PROFESSIONS_GATE=0
 AUTONOMOUS_CIVILIZATION_GATE=0
+PASSIVE_OBSERVER_INPUT_PROOF=0
+PASSIVE_OBSERVER_BATCH_FRAMES=240
 if [ "$MODE" = "gate-b-passive" ]; then
     WORLD_SEED="46"
     MATERIAL_GATE=1
@@ -163,11 +174,15 @@ if [ "$MODE" = "gate-b-passive" ]; then
     LIFECYCLE_GATE=1
     SKILL_GATE=1
     ECOLOGICAL_OBSERVATION_GATE=1
+    AGRICULTURE_GATE=1
     WILD_SUBSISTENCE_GATE=1
+    LIVESTOCK_GATE=1
     AUTONOMOUS_CIVILIZATION_GATE=1
+    PASSIVE_OBSERVER_INPUT_PROOF=1
+    PASSIVE_OBSERVER_BATCH_FRAMES=3600
     WORLD_NAME="PebbleLab-Disposable-GateB-Passive-46"
     CAPTURE_NAME="gate-b-passive-later.png"
-    LAB_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/tp 20 80 -8 180 35;/lab pause;/lab movement off;/lab population on;/lab lifecycle on;/lab skills on;/lab ecological-observation on;/lab wild-subsistence on;/lab survival on;/lab physical-food-survival on;/lab wild-subsistence proof setup;/lab focus agent_0;/lab follow off;/lab overlay compact;/lab autonomous-civilization passive;/lab resume'
+    LAB_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/lab pause;/lab movement off;/lab population on;/lab lifecycle on;/lab skills on;/lab ecological-observation on;/lab survival on;/lab physical-food-survival on;/tp 24.5 68 -11.5 150 12;/lab focus agent_0;/lab follow off;/lab overlay off;/lab autonomous-civilization passive;/lab resume|/lab autonomous-civilization status;/lab focus agent_0|/lab autonomous-civilization status;/lab focus agent_0|/lab autonomous-civilization status;/lab focus agent_1|/lab autonomous-civilization status;/lab focus agent_0|/lab autonomous-civilization status;/lab causality status'
 elif [ "$MODE" = "physical-food-survival" ]; then
     WORLD_SEED="46"
     MATERIAL_GATE=1
@@ -705,7 +720,15 @@ print_plan() {
     printf 'Isolated session root: %s\n' "$session_root"
     printf 'Disposable world name: %s\n' "$WORLD_NAME"
     printf 'Fixed seed: %s\n' "$WORLD_SEED"
-    if [ "$MODE" = "work-professions" ]; then
+    if [ "$MODE" = "gate-b-passive" ]; then
+        capture_dir=$(dirname "$capture_path")
+        printf 'Captures: %s\n' "$capture_dir/gate-b-passive-start.png"
+        printf '          %s\n' "$capture_dir/gate-b-passive-multi-agent.png"
+        printf '          %s\n' "$capture_dir/gate-b-passive-agriculture.png"
+        printf '          %s\n' "$capture_dir/gate-b-passive-livestock.png"
+        printf '          %s\n' "$capture_dir/gate-b-passive-follow-agent.png"
+        printf '          %s\n' "$capture_path"
+    elif [ "$MODE" = "work-professions" ]; then
         capture_dir=$(dirname "$capture_path")
         printf 'Captures: %s\n' "$capture_dir/work-professions-initial.png"
         printf '          %s\n' "$capture_dir/work-professions-specialized.png"
@@ -773,10 +796,15 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_LIVESTOCK=%s\n' "$LIVESTOCK_GATE"
     printf '  PEBBLELAB_APP_AGENTS_WORK_PROFESSIONS=%s\n' "$WORK_PROFESSIONS_GATE"
     printf '  PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION=%s\n' "$AUTONOMOUS_CIVILIZATION_GATE"
+    printf '  PEBBLELAB_PASSIVE_OBSERVER_INPUT_PROOF=%s\n' "$PASSIVE_OBSERVER_INPUT_PROOF"
+    printf '  PEBBLELAB_PASSIVE_OBSERVER_BATCH_FRAMES=%s\n' "$PASSIVE_OBSERVER_BATCH_FRAMES"
     printf '  PEBBLELAB_DISPOSABLE_WORLD_PROOF=1\n'
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
     if [ "$MODE" = "gate-b-passive" ]; then
-        printf '  PEBBLE_SHOT=%s@18000\n' "$capture_path"
+        printf '  PEBBLE_SHOT=-|%s/gate-b-passive-start.png|%s/gate-b-passive-multi-agent.png|%s/gate-b-passive-agriculture.png|%s/gate-b-passive-livestock.png|%s/gate-b-passive-follow-agent.png|%s\n' \
+            "$(dirname "$capture_path")" "$(dirname "$capture_path")" \
+            "$(dirname "$capture_path")" "$(dirname "$capture_path")" \
+            "$(dirname "$capture_path")" "$capture_path"
     elif [ "$MODE" = "physical-food-survival" ]; then
         printf '  PEBBLE_SHOT=-|%s/physical-food-before.png|-|-|%s/physical-food-acquired.png|%s/physical-food-consumed.png|%s\n' \
             "$(dirname "$capture_path")" "$(dirname "$capture_path")" \
@@ -816,8 +844,8 @@ print_plan() {
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
     if [ "$MODE" = "gate-b-passive" ]; then
         printf '  2. After PLAYABLE_SLICE_BOOTSTRAP_COMPLETE, issue no productive command; normal walking and mouse look remain available.\n'
-        printf '  3. Observe at least three agents independently fish, hunt, gather, move, wait, eat, and replan.\n'
-        printf '  4. Optionally use focus/follow only as an observer; neither command directs an activity.\n'
+        printf '  3. Observe agriculture, livestock, wild subsistence, physical eating, and a cross-family switch in one World.\n'
+        printf '  4. Confirm real GameCore key/mouse input moves the Player while cognition and physical actions continue.\n'
     elif [ "$MODE" = "physical-food-survival" ]; then
         printf '  2. Inspect the hungry agent and mature berry context before acquisition.\n'
         printf '  3. Confirm the gathered ItemStack appears in real custody, then decreases by exactly one.\n'
@@ -978,7 +1006,12 @@ DB_PATH="$SESSION_HOME/Library/Application Support/Pebble/pebble.db"
 [ ! -e "$DB_PATH" ] || fail "fresh disposable database already exists: $DB_PATH"
 /bin/mkdir -p "$SESSION_HOME" "$CAPTURE_DIR"
 if [ "$MODE" = "gate-b-passive" ]; then
-    SHOT_SPEC="$CAPTURE_PATH@18000"
+    CAPTURE_START_PATH="$CAPTURE_DIR/gate-b-passive-start.png"
+    CAPTURE_MULTI_PATH="$CAPTURE_DIR/gate-b-passive-multi-agent.png"
+    CAPTURE_AGRICULTURE_PATH="$CAPTURE_DIR/gate-b-passive-agriculture.png"
+    CAPTURE_LIVESTOCK_PATH="$CAPTURE_DIR/gate-b-passive-livestock.png"
+    CAPTURE_FOLLOW_PATH="$CAPTURE_DIR/gate-b-passive-follow-agent.png"
+    SHOT_SPEC="-|$CAPTURE_START_PATH|$CAPTURE_MULTI_PATH|$CAPTURE_AGRICULTURE_PATH|$CAPTURE_LIVESTOCK_PATH|$CAPTURE_FOLLOW_PATH|$CAPTURE_PATH"
 elif [ "$MODE" = "physical-food-survival" ]; then
     CAPTURE_BEFORE_PATH="$CAPTURE_DIR/physical-food-before.png"
     CAPTURE_ACQUIRED_PATH="$CAPTURE_DIR/physical-food-acquired.png"
@@ -3114,6 +3147,8 @@ PEBBLELAB_APP_AGENTS_WILD_SUBSISTENCE="$WILD_SUBSISTENCE_GATE" \
 PEBBLELAB_APP_AGENTS_LIVESTOCK="$LIVESTOCK_GATE" \
 PEBBLELAB_APP_AGENTS_WORK_PROFESSIONS="$WORK_PROFESSIONS_GATE" \
 PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION="$AUTONOMOUS_CIVILIZATION_GATE" \
+PEBBLELAB_PASSIVE_OBSERVER_INPUT_PROOF="$PASSIVE_OBSERVER_INPUT_PROOF" \
+PEBBLELAB_PASSIVE_OBSERVER_BATCH_FRAMES="$PASSIVE_OBSERVER_BATCH_FRAMES" \
 PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
 PEBBLE_CMD="$LAB_COMMANDS" \
 PEBBLE_SHOT="$SHOT_SPEC" \
@@ -3137,15 +3172,30 @@ require_trace "start seed=$WORLD_SEED agents=3 tick=0 hz=4 movement=on worldTick
 
 [ -s "$CAPTURE_PATH" ] || fail "capture was not written: $CAPTURE_PATH"
 if [ "$MODE" = "gate-b-passive" ]; then
+    [ -s "$CAPTURE_START_PATH" ] || fail "passive start capture was not written: $CAPTURE_START_PATH"
+    [ -s "$CAPTURE_MULTI_PATH" ] || fail "passive multi-agent capture was not written: $CAPTURE_MULTI_PATH"
+    [ -s "$CAPTURE_AGRICULTURE_PATH" ] || fail "passive agriculture capture was not written: $CAPTURE_AGRICULTURE_PATH"
+    [ -s "$CAPTURE_LIVESTOCK_PATH" ] || fail "passive livestock capture was not written: $CAPTURE_LIVESTOCK_PATH"
+    [ -s "$CAPTURE_FOLLOW_PATH" ] || fail "passive focus capture was not written: $CAPTURE_FOLLOW_PATH"
     require_trace 'PLAYABLE_SLICE_BOOTSTRAP_COMPLETE tick=0 agents=3 follow=off productiveCommandsAfter=0' 'bounded passive bootstrap marker'
-    require_trace '^\[lab-live\] autonomous activity completed actor=agent_0 domain=fishing .*manualTrigger=0$' 'agent_0 autonomous fishing completion'
-    require_trace '^\[lab-live\] autonomous activity completed actor=agent_1 domain=hunting .*manualTrigger=0$' 'agent_1 autonomous hunting completion'
-    require_trace '^\[lab-live\] autonomous activity completed actor=agent_2 domain=wildGathering .*manualTrigger=0$' 'agent_2 autonomous gathering completion'
+    require_trace '^\[lab-live\] passive composite bootstrap world=one session=one settlement=one agents=3 .*field=real storage=real water=real livestockPhysical=2 food=real commandsProductive=0$' 'single composite physical World and session'
+    require_trace '^\[lab-live\] passive visual identity actor=agent_0 variant=villager_fisherman marker=stableAgentID ' 'stable agent_0 visual identity'
+    require_trace '^\[lab-live\] passive visual identity actor=agent_1 variant=villager_farmer marker=stableAgentID ' 'stable agent_1 visual identity'
+    require_trace '^\[lab-live\] passive visual identity actor=agent_2 variant=villager marker=stableAgentID ' 'stable agent_2 visual identity'
+    require_trace '^\[lab-live\] autonomous activity completed actor=agent_[0-2] domain=agriculture action=(till|plant|harvest) .*manualTrigger=0$' 'naturally selected real agriculture completion'
+    require_trace '^\[lab-live\] autonomous activity completed actor=agent_1 domain=livestock action=feed .*manualTrigger=0$' 'agent_1 real livestock completion'
+    require_trace '^\[lab-live\] autonomous activity completed actor=agent_2 domain=livestock action=feed .*manualTrigger=0$' 'agent_2 real livestock completion'
+    require_trace '^\[lab-live\] autonomous activity completed actor=agent_[0-2] domain=(fishing|hunting|wildGathering) .*manualTrigger=0$' 'real Wild Subsistence completion'
     require_trace 'physical food consumption actor=agent_2 material=sweet_berries .*physicalDebit=exact abstractDelta=0' 'autonomous real-food hunger closure'
-    require_trace 'autonomous summary bootstrap=1 manualProductive=0 decisions=[1-9][0-9]* candidates=[1-9][0-9]* starts=[3-9][0-9]* completed=[3-9][0-9]* blocked=[0-9]+ switches=[0-9]+ completedAgents=3 domains=fishing,hunting,wildGathering chainedAgents=agent_0 .*idleLongest=[0-9]+' 'five-minute passive autonomy counters'
+    require_trace '^\[lab-live\] passive cross-family switch actor=agent_[0-2] from=(agriculture|livestock|wildSubsistence|physicalSurvival) to=(agriculture|livestock|wildSubsistence|physicalSurvival) ' 'causal cross-family autonomous switch'
+    require_trace_at_least '^\[lab-live\] passive focus decision .* actor=agent_0 ' 3 'three meaningful decisions for the unchanged observer focus'
+    require_trace_at_least '^\[lab-live\] passive focus outcome .* actor=agent_0 ' 2 'two completed real actions for the unchanged observer focus'
+    require_trace '^\[lab-live\] player coexistence result inputPath=GameCore\.keyDown/keyUp\+mouseDelta worldTicks=[2-9][0-9]* simulationTicks=[0-9]+>[1-9][0-9]* position=[^ ]+>[^ ]+ camera=[^ ]+>[^ ]+ distance=([1-9][0-9]*|[1-9][0-9]*\.[0-9]+|0\.[3-9][0-9]*) decisionsDelta=[1-9][0-9]* completedDelta=[1-9][0-9]* directSetPos=0 passed=1$' 'real key/mouse Player control coexisting with autonomous progress'
+    require_trace 'autonomous summary bootstrap=1 manualProductive=0 decisions=[1-9][0-9]* candidates=[1-9][0-9]* starts=[1-9][0-9]* completed=[1-9][0-9]* blocked=[0-9]+ switches=[0-9]+ completedAgents=3 domains=.*agriculture.*livestock.*wildGathering.* chainedAgents=.* active=[0-9]+ retained=[0-9]+ evicted=[0-9]+ idleLongest=[0-9]+ sameFamilyContinuations=[1-9][0-9]* crossFamilySwitches=[1-9][0-9]* families=.*agriculture:[1-9].*livestock:[1-9].*physicalSurvival:[1-9].*wildSubsistence:[1-9].* idleByAgent=.* idleReasons=.* idleEligibleViolations=0' 'continuous passive autonomy and bounded product-audit counters'
     require_trace 'summary .*ticks=(6[0-9][0-9]|[7-9][0-9][0-9]|1[0-2][0-9][0-9]) .*agents=3 .*runtimeErrors=0 .*probesRemoved=3 .*follow=off demo=0 ' 'five-minute normal lifecycle and exact cleanup'
-    reject_trace 'Autonomous Civilization command failed|rollbackFailure|manualProductive=[1-9]|runtimeErrors=[1-9]' 'manual productive action, rollback failure, or runtime error'
-    printf '\nPASS: five-minute rendered passive observer slice, three agents, three domains, chained decisions, real eating, and zero productive commands verified.\n'
+    require_trace '^\[lab-live\] passive society cleanup cells=exact entities=exact custody=exact$' 'exact composite fixture cleanup'
+    reject_trace 'passive command .*class=productive|productiveCount=[1-9]|Autonomous Civilization command failed|rollbackFailure|runtimeErrors=[1-9]|abstractCredit=[^0]|campStockDelta=[^0]|resourceInventoryDelta=[^0]' 'productive command, runtime failure, or ghost productive credit'
+    printf '\nPASS: continuous playable passive society slice, three cross-family domains, real Player input, stable visual identities, exact cleanup, and zero productive commands verified.\n'
 elif [ "$MODE" = "physical-food-survival" ]; then
     [ -s "$CAPTURE_BEFORE_PATH" ] || fail "before capture was not written: $CAPTURE_BEFORE_PATH"
     [ -s "$CAPTURE_ACQUIRED_PATH" ] || fail "acquired capture was not written: $CAPTURE_ACQUIRED_PATH"
