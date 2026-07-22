@@ -6,7 +6,9 @@ extension AgentSimulationSession {
     public func workCommitmentSnapshot() -> AgentWorkCommitmentSnapshot {
         guard let state = workCommitmentState else {
             return AgentWorkCommitmentSnapshot(
-                enabled: false, demands: [], commitments: [], evidence: [],
+                enabled: false, configuration: nil, demands: [], commitments: [], evidence: [],
+                professionProfiles: [], specializationMetrics: [], dependencyMetrics: [],
+                coordinationMetrics: workCoordinationMetrics(),
                 localReputations: [], matchingAttempts: [], totalDemandCount: 0,
                 totalCommitmentCount: 0, totalEvidenceCount: 0,
                 totalReassignmentCount: 0, evictionCounts: AgentWorkEvictionCounts(),
@@ -14,10 +16,14 @@ extension AgentSimulationSession {
             )
         }
         return AgentWorkCommitmentSnapshot(
-            enabled: true,
+            enabled: true, configuration: state.configuration,
             demands: state.demands.sorted(by: workDemandSort),
             commitments: state.commitments.sorted(by: workCommitmentSort),
             evidence: state.retainedEvidence.sorted(by: workEvidenceSort),
+            professionProfiles: professionProfiles(),
+            specializationMetrics: specializationMetrics(),
+            dependencyMetrics: workDependencyMetrics(),
+            coordinationMetrics: workCoordinationMetrics(),
             localReputations: state.localReputations.sorted(by: workReputationSort),
             matchingAttempts: state.matchingAttempts.sorted(by: workMatchingAttemptSort),
             totalDemandCount: state.totalDemandCount,
@@ -330,7 +336,13 @@ extension AgentSimulationSession {
             let demand = constructionDemand()
             let acquiring = demand?.isSatisfied == false
             values.append(make(
-                source: .construction, key: project.projectId, eventID: eventID,
+                source: .construction,
+                key: project.projectId + "-" + (acquiring
+                    ? "materials-" + (demand?.missing.map {
+                        "\($0.resource.rawValue):\($0.quantity)"
+                    }.joined(separator: ",") ?? "none")
+                    : "cell-\(project.nextCell?.index ?? -1)"),
+                eventID: eventID,
                 observerID: builder, suggested: builder,
                 domain: acquiring ? .materialHandling : .construction,
                 position: acquiring ? project.origin : project.nextWorkPosition,
@@ -757,10 +769,22 @@ extension AgentSimulationSession {
         guard let state = workCommitmentState else {
             throw AgentSessionError.workCommitment(.disabled)
         }
-        let expired = state.commitments.filter {
+        workCommitmentState = state
+        let carePreempted = state.commitments.filter {
+            $0.status == .active && $0.domain != .caregiving
+                && careTarget(for: $0.workerID) != nil
+        }.map(\.commitmentID).sorted()
+        for id in carePreempted {
+            _ = try suspendWorkCommitmentInPlace(id, reason: .dependentCare)
+        }
+        let careReleased = (workCommitmentState?.commitments ?? []).filter {
+            $0.status == .suspended && $0.suspensionReason == .dependentCare
+                && careTarget(for: $0.workerID) == nil
+        }.map(\.commitmentID).sorted()
+        for id in careReleased { _ = try resumeWorkCommitmentInPlace(id) }
+        let expired = (workCommitmentState?.commitments ?? []).filter {
             $0.status.isOpen && $0.expiresAtTick < tick
         }.map(\.commitmentID).sorted()
-        workCommitmentState = state
         for id in expired { _ = try endWorkCommitmentInPlace(id, reason: .expired) }
         guard var final = workCommitmentState else { return }
         for index in final.commitments.indices where final.commitments[index].status.isOpen
@@ -791,6 +815,7 @@ extension AgentSimulationSession {
     ) -> Bool {
         guard context.capable, context.physicallyAvailable,
               context.toolsAvailable, context.resourcesAvailable,
+              (demand.domain == .caregiving || careTarget(for: context.agentID) == nil),
               statesById[context.agentID.rawValue]?.health ?? 0 > 0,
               populationRegistry?.members.first(where: {
                   $0.agentID == context.agentID
@@ -1011,8 +1036,11 @@ extension AgentSimulationSession {
         }.map {
             "\($0.workerID.rawValue):\($0.domain.rawValue):\($0.outcomeCount):\($0.successCount):\($0.completedCommitmentCount):\($0.lastWorkTick)"
         }.joined(separator: ";")
+        let profiles = professionProfiles().map {
+            "\($0.agentID.rawValue):\($0.digest)"
+        }.joined(separator: ";")
         return AgentWorkDigest.make(
-            "\(state.rollingDigest)|\(demands)|\(commitments)|\(evidence)|\(reputations)|\(histories)|\(state.totalDemandCount)|"
+            "\(state.rollingDigest)|\(demands)|\(commitments)|\(evidence)|\(reputations)|\(histories)|\(profiles)|\(state.totalDemandCount)|"
                 + "\(state.totalCommitmentCount)|\(state.totalEvidenceCount)|"
                 + "\(state.totalReassignmentCount)|\(state.evictionCounts.demands)|"
                 + "\(state.evictionCounts.commitments)|\(state.evictionCounts.evidence)|"

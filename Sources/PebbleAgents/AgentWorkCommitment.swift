@@ -434,9 +434,14 @@ public struct AgentWorkCommitmentState: Codable, Equatable, Sendable {
 
 public struct AgentWorkCommitmentSnapshot: Codable, Equatable, Sendable {
     public let enabled: Bool
+    public let configuration: AgentWorkCommitmentConfiguration?
     public let demands: [AgentWorkDemandSignal]
     public let commitments: [AgentWorkCommitment]
     public let evidence: [AgentWorkEvidence]
+    public let professionProfiles: [AgentProfessionProfile]
+    public let specializationMetrics: [AgentSpecializationMetric]
+    public let dependencyMetrics: [AgentWorkDependencyMetric]
+    public let coordinationMetrics: AgentWorkCoordinationMetrics
     public let localReputations: [AgentLocalWorkReputation]
     public let matchingAttempts: [AgentWorkMatchingAttempt]
     public let totalDemandCount: Int

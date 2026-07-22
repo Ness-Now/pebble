@@ -122,6 +122,127 @@ private func preparedWorkSession(_ id: String) -> AgentSimulationSession {
     return session
 }
 
+private func workWildObservation(
+    _ session: AgentSimulationSession,
+    actor: AgentID,
+    strategy: AgentSubsistenceStrategy
+) -> AgentEcologicalObservation {
+    let origin = AgentPosition(
+        x: Int(actor.rawValue.split(separator: "_").last!)!, y: 64, z: 0
+    )
+    let fishing = strategy == .fishing ? [AgentFishingAffordance(
+        position: AgentPosition(x: origin.x + 1, y: 63, z: 0),
+        waterKey: "water", candidate: true
+    )] : []
+    let animals = strategy == .hunting ? [AgentAnimalObservation(
+        speciesKey: "chicken", position: AgentPosition(x: origin.x + 1, y: 64, z: 0),
+        count: 1, lifeStage: .adult, breedableAffordanceObservable: false
+    )] : []
+    let plants = strategy == .wildGathering ? [AgentPlantObservation(
+        plantKey: "sweet_berry_bush",
+        position: AgentPosition(x: origin.x + 1, y: 64, z: 0),
+        renewability: .knownRenewable
+    )] : []
+    let configuration = session.ecologicalObservationSnapshot().configuration!
+    return AgentEcologicalObservation(
+        observerID: actor, origin: origin, worldContextKey: "world-seed-46",
+        dimensionKey: "overworld", observedAtSimulationTick: session.tick,
+        physicalWorldTick: session.tick + 120, civilDate: session.civilDate()!,
+        biome: AgentBiomeObservation(biomeKey: "plains", position: origin),
+        water: fishing.map {
+            AgentWaterAffordance(
+                fluidKey: "water", position: $0.position, sourceBlock: true
+            )
+        },
+        soils: [], crops: [], plants: plants, animals: animals, fishing: fishing,
+        weather: AgentWeatherObservation(kind: .clear, raining: false, thundering: false),
+        physicalTime: AgentPhysicalWorldTimeObservation(
+            worldTick: session.tick + 120, dayTime: 120, timeOfDay: .day,
+            daylightCycleEnabled: true
+        ),
+        diagnostics: AgentEcologicalScanDiagnostics(
+            radius: 4, cellsConsidered: 405, worldReads: 405, chunksTouched: 1,
+            chunksUnavailable: 0, entitiesConsidered: animals.count,
+            resultsEmitted: 3 + fishing.count * 2 + plants.count + animals.count,
+            cacheHits: 0, cacheMisses: 1, completion: .complete
+        ),
+        expiresAtSimulationTick: session.tick + configuration.dynamicFreshnessTicks
+    )
+}
+
+private func workWildSession(_ id: String) -> AgentSimulationSession {
+    var session = workBase(id)
+    try! session.setEcologicalObservationEnabled(true)
+    try! session.setWildSubsistenceEnabled(true)
+    try! session.setWorkCommitmentsEnabled(true)
+    return session
+}
+
+@discardableResult
+private func performCommittedWildWork(
+    _ session: inout AgentSimulationSession,
+    actor: AgentID,
+    strategy: AgentSubsistenceStrategy,
+    ordinal: Int
+) -> AgentWorkCommitment {
+    _ = try! session.recordEcologicalObservation(
+        workWildObservation(session, actor: actor, strategy: strategy)
+    )
+    let context = AgentSubsistenceDecisionContext(
+        actorID: actor,
+        fishingRodAvailable: strategy == .fishing,
+        huntingWeaponAvailable: strategy == .hunting,
+        agricultureAvailable: false, subsistencePressure: 80
+    )
+    let opportunity = try! session.selectWildSubsistenceOpportunity(context)
+    try! session.applyWorkCommitmentOperation(.refreshDemands)
+    let demand = session.activeWorkDemands().first {
+        $0.source == .wildSubsistence
+            && $0.sourceKey == opportunity.opportunityID.rawValue
+    }!
+    let commitment = try! session.applyWorkCommitmentOperation(.start(
+        demandID: demand.demandID,
+        candidates: [AgentWorkCandidateContext(
+            agentID: actor, toolsAvailable: true, resourcesAvailable: true, distance: 1
+        )]
+    ))!
+    let acquiredKey: String
+    switch strategy {
+    case .fishing: acquiredKey = "cod"
+    case .hunting: acquiredKey = "chicken"
+    case .wildGathering: acquiredKey = "sweet_berries"
+    case .agriculture: acquiredKey = "wheat"
+    }
+    let physicalStack = AgentMaterialStackSnapshot(
+        identity: AgentMaterialIdentitySnapshot(
+            itemKey: acquiredKey, damage: 0, enchantments: [], label: nil,
+            canonicalDataJSON: "{}"
+        ), count: 1
+    )
+    let outcome = AgentSubsistenceOutcome(
+        attemptID: AgentSubsistenceAttemptID(
+            rawValue: "wild-attempt-work-\(ordinal)-\(actor.rawValue)"
+        )!,
+        opportunityID: opportunity.opportunityID, actorID: actor,
+        strategy: strategy, targetKey: opportunity.targetKey,
+        targetPosition: opportunity.lastObservedPosition,
+        sourceObservationEventID: opportunity.sourceObservationEventID,
+        status: .succeeded, physicalCausalIDs: [10_000 + ordinal],
+        acquiredItems: [physicalStack], custodyFingerprint: "custody-work-\(ordinal)",
+        attribution: "core-physical-work-\(ordinal)", completedAtTick: session.tick
+    )
+    let record = try! session.recordWildSubsistenceOutcome(outcome)
+    _ = try! session.applyWorkCommitmentOperation(.recordOutcome(
+        AgentValidatedWorkOutcome(
+            commitmentID: commitment.commitmentID, workerID: actor,
+            domain: demand.domain, sourceSuccessEventID: record.subsistenceEventID,
+            status: .succeeded, observerIDs: [actor]
+        )
+    ))
+    _ = try! session.advanceTick()
+    return commitment
+}
+
 func runPebbleAgentsWorkProfessionSmoke() {
     section("pebble agents durable work commitments")
 
@@ -278,4 +399,126 @@ func runPebbleAgentsWorkProfessionSmoke() {
             && replayed.report.schemaVersion == 16
             && replayed.session.workCommitmentSnapshot() == replay.workCommitmentSnapshot()
             && (try! replayed.session.durableStateBytes()) == (try! replay.durableStateBytes()))
+
+    var specialization = workWildSession("work-specialization")
+    let agents = (0..<3).map { AgentID(rawValue: "agent_\($0)")! }
+    let domains: [AgentSubsistenceStrategy] = [.fishing, .hunting, .wildGathering]
+    var ordinal = 0
+    for (agent, strategy) in zip(agents, domains) {
+        for _ in 0..<2 {
+            _ = performCommittedWildWork(
+                &specialization, actor: agent, strategy: strategy, ordinal: ordinal
+            )
+            ordinal += 1
+        }
+    }
+    let profiles = specialization.professionProfiles()
+    check("three agents derive three different profiles without assignment",
+          profiles.count == 3
+            && profiles.map(\.primaryWorkDomain) == [.fishing, .hunting, .foraging]
+            && profiles.allSatisfy {
+                $0.specializationStrengthBasisPoints == 10_000
+                    && $0.commitmentContinuity == 2
+            })
+    check("snapshot exposes bounded profiles and specialization components",
+          specialization.workCommitmentSnapshot().professionProfiles == profiles
+            && specialization.workCommitmentSnapshot().specializationMetrics.count == 3
+            && specialization.workCommitmentSnapshot().configuration != nil)
+    check("derived profiles add no physical yield multiplier",
+          specialization.wildSubsistenceSnapshot().retainedOutcomes.allSatisfy {
+              $0.outcome.acquiredQuantity == 1
+          })
+    _ = try! specialization.recordEcologicalObservation(
+        workWildObservation(
+            specialization, actor: agents[0], strategy: .fishing
+        )
+    )
+    let permissionOpportunity = try! specialization.selectWildSubsistenceOpportunity(
+        AgentSubsistenceDecisionContext(
+            actorID: agents[0], fishingRodAvailable: true,
+            huntingWeaponAvailable: false, agricultureAvailable: false,
+            subsistencePressure: 90
+        )
+    )
+    _ = try! specialization.applyWorkCommitmentOperation(.refreshDemands)
+    let permissionDemand = specialization.activeWorkDemands().first {
+        $0.sourceKey == permissionOpportunity.opportunityID.rawValue
+    }!
+    check("a strong profile grants no physical tool permission",
+          specialization.matchingScore(
+            for: permissionDemand.demandID,
+            candidate: AgentWorkCandidateContext(
+                agentID: agents[0], toolsAvailable: false, distance: 1
+            )
+          ) == nil)
+    let crossDomainWorker = try! specialization.applyWorkCommitmentOperation(.start(
+        demandID: permissionDemand.demandID,
+        candidates: [AgentWorkCandidateContext(agentID: agents[1], distance: 1)]
+    ))!
+    check("a worker without the matching profile remains eligible",
+          profiles.first { $0.agentID == crossDomainWorker.workerID }?.primaryWorkDomain
+            == .hunting && crossDomainWorker.domain == .fishing)
+
+    var dependency = workWildSession("work-dependency")
+    let dependentActor = agents[0]
+    _ = try! dependency.recordEcologicalObservation(
+        workWildObservation(dependency, actor: dependentActor, strategy: .fishing)
+    )
+    let dependencyOpportunity = try! dependency.selectWildSubsistenceOpportunity(
+        AgentSubsistenceDecisionContext(
+            actorID: dependentActor, fishingRodAvailable: true,
+            huntingWeaponAvailable: false, agricultureAvailable: false,
+            subsistencePressure: 90
+        )
+    )
+    _ = try! dependency.applyWorkCommitmentOperation(.refreshDemands)
+    let dependencyDemand = dependency.activeWorkDemands().first {
+        $0.sourceKey == dependencyOpportunity.opportunityID.rawValue
+    }!
+    _ = try! dependency.applyWorkCommitmentOperation(.start(
+        demandID: dependencyDemand.demandID,
+        candidates: [AgentWorkCandidateContext(agentID: dependentActor, distance: 1)]
+    ))
+    let dependencyMetric = dependency.workDependencyMetrics().first!
+    check("dependency components expose single worker and replacement depth",
+          dependencyMetric.domain == .fishing
+            && dependencyMetric.committedWorkerIDs == [dependentActor]
+            && dependencyMetric.singleWorkerDependency
+            && dependencyMetric.knownCapableWorkerCount == 3
+            && dependencyMetric.replacementDepth == 2)
+    check("coordination metrics expose covered recurring demand",
+          dependency.workCoordinationMetrics().coveredDemandCount == 1
+            && dependency.workCoordinationMetrics().uncoveredDemandCount == 0)
+    var reconversion = workWildSession("work-reconversion")
+    for index in 0..<3 {
+        _ = performCommittedWildWork(
+            &reconversion, actor: agents[0], strategy: .fishing, ordinal: index
+        )
+    }
+    let fishingProfile = reconversion.professionProfile(for: agents[0])!
+    _ = performCommittedWildWork(
+        &reconversion, actor: agents[0], strategy: .wildGathering, ordinal: 20
+    )
+    let oneNewAction = reconversion.professionProfile(for: agents[0])!
+    for index in 21...23 {
+        _ = performCommittedWildWork(
+            &reconversion, actor: agents[0], strategy: .wildGathering, ordinal: index
+        )
+    }
+    let converted = reconversion.professionProfile(for: agents[0])!
+    check("one different action cannot instantly rewrite a work identity",
+          fishingProfile.primaryWorkDomain == .fishing
+            && oneNewAction.primaryWorkDomain == .fishing)
+    check("repeated changed demand produces reversible reconversion",
+          converted.primaryWorkDomain == .foraging
+            && converted.secondaryDomains.contains(.fishing)
+            && converted.domainActivity.first {
+                $0.domain == .fishing
+            }?.lifetimeWorkUnits ?? 0 > 0)
+    let profileCheckpoint = try! reconversion.makeCheckpoint()
+    let profileRestored = try! AgentSimulationSession.restoring(profileCheckpoint)
+    check("derived profiles reproduce exactly after v16 restore",
+          profileRestored.professionProfiles() == reconversion.professionProfiles()
+            && profileRestored.workCommitmentSnapshot().digest
+                == reconversion.workCommitmentSnapshot().digest)
 }
