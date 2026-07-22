@@ -125,7 +125,12 @@ extension AgentSimulationSession {
             for animal in observation.animals where animal.lifeStage == .adult {
                 let distance = subsistenceDistance(origin, animal.position)
                 let key = "animal:\(animal.speciesKey)@\(subsistencePoint(animal.position))"
-                guard distance <= context.maximumDistance, !reserved.contains(key) else { continue }
+                let currentlyManaged = livestockState?.managedAnimals.contains {
+                    $0.status.resolvedLiving && $0.speciesKey == animal.speciesKey
+                        && $0.lastKnownPosition == animal.position
+                } ?? false
+                guard distance <= context.maximumDistance, !reserved.contains(key),
+                      !currentlyManaged else { continue }
                 candidates.append(subsistenceCandidate(
                     strategy: .hunting, targetKey: key, position: animal.position,
                     sourceObservationEventID: record.causalEventID, distance: distance,

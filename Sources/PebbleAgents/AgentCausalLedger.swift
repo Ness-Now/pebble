@@ -168,6 +168,14 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case wildAnimalHunted
     case wildResourceGathered
     case wildSubsistenceAttemptFailed
+    case livestockInitialized
+    case livestockGroupEstablished
+    case managedAnimalAdded
+    case animalFed
+    case animalBreedingObserved
+    case animalProductAcquired
+    case managedAnimalLost
+    case livestockTaskCompleted
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -193,6 +201,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case ecologicalObservationTransition
     case agricultureTransition
     case wildSubsistenceTransition
+    case livestockTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -478,6 +487,15 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         quantity: Int,
         digest: String
     )
+    case livestock(
+        herdID: String?,
+        animalRecordID: String?,
+        taskID: String?,
+        actionID: String?,
+        status: String,
+        quantity: Int,
+        digest: String
+    )
 
     var canonicalText: String {
         switch self {
@@ -672,6 +690,9 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         ):
             return "wildSubsistence|\(opportunityID ?? "none")|\(attemptID ?? "none")|"
                 + "\(strategy ?? "none")|\(targetKey ?? "none")|\(status)|\(quantity)|\(digest)"
+        case let .livestock(herdID, animalRecordID, taskID, actionID, status, quantity, digest):
+            return "livestock|\(herdID ?? "none")|\(animalRecordID ?? "none")|"
+                + "\(taskID ?? "none")|\(actionID ?? "none")|\(status)|\(quantity)|\(digest)"
         }
     }
 }
@@ -849,7 +870,15 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.fishingCatchAcquired, .wildSubsistence),
              (.wildAnimalHunted, .wildSubsistence),
              (.wildResourceGathered, .wildSubsistence),
-             (.wildSubsistenceAttemptFailed, .wildSubsistence):
+             (.wildSubsistenceAttemptFailed, .wildSubsistence),
+             (.livestockInitialized, .livestock),
+             (.livestockGroupEstablished, .livestock),
+             (.managedAnimalAdded, .livestock),
+             (.animalFed, .livestock),
+             (.animalBreedingObserved, .livestock),
+             (.animalProductAcquired, .livestock),
+             (.managedAnimalLost, .livestock),
+             (.livestockTaskCompleted, .livestock):
             matches = true
         default:
             matches = false

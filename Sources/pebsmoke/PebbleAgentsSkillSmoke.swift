@@ -544,9 +544,9 @@ func runPebbleAgentsSkillSmoke() {
             maximumRetainedPracticeRecords: 2,
             maximumPracticeRecordsPerAgent: 3
         )) == nil)
-    check("skills domains include minimal CIV-22/23 extensions", AgentSkillDomain.allCases == [
+    check("skills domains include minimal CIV-22/24 extensions", AgentSkillDomain.allCases == [
         .foraging, .materialHandling, .construction, .caregiving, .cultivation,
-        .fishing, .hunting,
+        .fishing, .hunting, .husbandry,
     ])
     check("skills levels are derived", [0, 1, 2, 3, 5, 6].map {
         AgentSkillLevel(practiceUnits: $0)
