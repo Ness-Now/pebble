@@ -377,8 +377,9 @@ open class Mob: LivingEntity {
 
     open func isFood(_ stack: ItemStack?) -> Bool { false }
 
-    /// breeding interaction — returns true if consumed
-    public func tryFeed(_ player: Entity?, _ stack: ItemStack) -> Bool {
+    /// Actor-neutral feeding primitive. The caller remains responsible for
+    /// consuming exactly one real input item after this mutation succeeds.
+    public func tryFeed(_ stack: ItemStack, actorEntityID: Int?) -> Bool {
         if !isFood(stack) { return false }
         if baby {
             growUpAge = max(0, growUpAge - 1200)
@@ -386,10 +387,15 @@ open class Mob: LivingEntity {
         }
         if loveTicks <= 0 && breedCooldown <= 0 {
             loveTicks = 600
-            data.loveCause = player?.id
+            data.loveCause = actorEntityID
             return true
         }
         return false
+    }
+
+    /// Compatibility path retained for existing Player interactions.
+    public func tryFeed(_ player: Entity?, _ stack: ItemStack) -> Bool {
+        tryFeed(stack, actorEntityID: player?.id)
     }
 
     open override func save() -> [String: Any] {

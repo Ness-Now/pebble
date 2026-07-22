@@ -61,6 +61,7 @@ final class PebbleAgentController {
     let materialCustodyGateway = PebbleAgentMaterialCustodyGateway()
     let agricultureExecutor = PebbleAgentAgricultureExecutor()
     let wildSubsistenceExecutor = PebbleAgentWildSubsistenceExecutor()
+    let livestockExecutor = PebbleAgentLivestockExecutor()
     let migrationAdmissionAdapter = PebbleAgentMigrationAdmissionAdapter()
     let localEcologyAdapter = PebbleAgentLocalEcologyAdapter()
     let birthSiteAdapter = PebbleAgentBirthSiteAdapter()
@@ -95,6 +96,8 @@ final class PebbleAgentController {
     var ecologicalObservationProofFixture: PebbleAgentEcologicalObservationProofFixture?
     var agricultureProofFixture: PebbleAgentAgricultureProofFixture?
     var wildSubsistenceProofFixture: PebbleAgentWildSubsistenceProofFixture?
+    var livestockProofFixture: PebbleAgentLivestockProofFixture?
+    var livestockRuntimeEntityIDByRecord: [AgentManagedAnimalRecordID: Int] = [:]
 
     let environment = ProcessInfo.processInfo.environment
     var featureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS"] == "1" }
@@ -151,6 +154,9 @@ final class PebbleAgentController {
     }
     var wildSubsistenceFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_WILD_SUBSISTENCE"] == "1"
+    }
+    var livestockFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_LIVESTOCK"] == "1"
     }
     var kinshipLateFailureProofEnabled: Bool {
         let lineageProof = environment["PEBBLELAB_DISPOSABLE_KINSHIP_LATE_FAILURE_PROOF"] == "1"
@@ -238,5 +244,6 @@ final class PebbleAgentController {
         case ecologicalObservationBoundary(String)
         case agricultureBoundary(String)
         case wildSubsistenceBoundary(String)
+        case livestockBoundary(String)
     }
 }

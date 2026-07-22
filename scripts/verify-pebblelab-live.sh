@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--ecological-observation|--agriculture|--wild-subsistence]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--ecological-observation|--agriculture|--wild-subsistence|--livestock]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -53,6 +53,7 @@ Options:
   --ecological-observation Run bounded real-World ecology, civil calendar, cache, and v12 proof.
   --agriculture Run real wheat till/plant/grow/harvest/storage and v13 proof.
   --wild-subsistence Run real fishing, hunting, wild gathering, custody, and v14 proof.
+  --livestock Run real sheep feeding, breeding, herding, wool, loss, and v15 proof.
   --help     Show this help and exit.
 EOF
 }
@@ -117,6 +118,7 @@ for option in "$@"; do
         --ecological-observation) MODE="ecological-observation"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --agriculture) MODE="agriculture"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --wild-subsistence) MODE="wild-subsistence"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --livestock) MODE="livestock"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --help|-h) usage; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$option" >&2; usage >&2; exit 2 ;;
     esac
@@ -144,7 +146,20 @@ TEACHING_GATE=0
 ECOLOGICAL_OBSERVATION_GATE=0
 AGRICULTURE_GATE=0
 WILD_SUBSISTENCE_GATE=0
-if [ "$MODE" = "wild-subsistence" ]; then
+LIVESTOCK_GATE=0
+if [ "$MODE" = "livestock" ]; then
+    WORLD_SEED="46"
+    MATERIAL_GATE=1
+    PERSISTENCE_GATE=1
+    POPULATION_GATE=1
+    LIFECYCLE_GATE=1
+    SKILL_GATE=1
+    ECOLOGICAL_OBSERVATION_GATE=1
+    LIVESTOCK_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-Livestock-46"
+    CAPTURE_NAME="livestock-final.png"
+    LAB_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/lab pause;/lab movement off;/lab population on;/lab lifecycle on;/lab skills on;/lab ecological-observation on;/lab livestock on;/lab focus agent_0;/lab livestock proof setup;/tp 18 72 -17 -135 20;/lab overlay off|/lab livestock status|/lab livestock proof feed|/lab livestock proof breed|/lab livestock proof work|/lab livestock proof loss;/lab livestock status;/lab causality tail 20;/lab status'
+elif [ "$MODE" = "wild-subsistence" ]; then
     WORLD_SEED="46"
     MATERIAL_GATE=1
     PERSISTENCE_GATE=1
@@ -687,6 +702,7 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_ECOLOGICAL_OBSERVATION=%s\n' "$ECOLOGICAL_OBSERVATION_GATE"
     printf '  PEBBLELAB_APP_AGENTS_AGRICULTURE=%s\n' "$AGRICULTURE_GATE"
     printf '  PEBBLELAB_APP_AGENTS_WILD_SUBSISTENCE=%s\n' "$WILD_SUBSISTENCE_GATE"
+    printf '  PEBBLELAB_APP_AGENTS_LIVESTOCK=%s\n' "$LIVESTOCK_GATE"
     printf '  PEBBLELAB_DISPOSABLE_WORLD_PROOF=1\n'
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
     if [ "$MODE" = "build" ]; then
@@ -702,6 +718,10 @@ print_plan() {
         printf '  PEBBLE_SHOT=-|-|%s/subsistence-fishing.png|%s/subsistence-hunting.png|%s/subsistence-gathering.png|%s\n' \
             "$(dirname "$capture_path")" "$(dirname "$capture_path")" \
             "$(dirname "$capture_path")" "$capture_path"
+    elif [ "$MODE" = "livestock" ]; then
+        printf '  PEBBLE_SHOT=-|-|%s/livestock-managed.png|%s/livestock-feeding.png|%s/livestock-offspring.png|%s/livestock-product.png|%s\n' \
+            "$(dirname "$capture_path")" "$(dirname "$capture_path")" \
+            "$(dirname "$capture_path")" "$(dirname "$capture_path")" "$capture_path"
     elif [ "$MODE" = "agriculture" ]; then
         printf '  PEBBLE_SHOT=%s@1200\n' "$capture_path"
     else
@@ -714,7 +734,11 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "wild-subsistence" ]; then
+    if [ "$MODE" = "livestock" ]; then
+        printf '  2. Inspect managed, feeding, offspring, product/herding, and final PNGs; the final herd retains one adult and the real juvenile.\n'
+        printf '  3. Confirm the trace proves the removed adult as loss and zero CampStock, ResourceInventory, or LocalEcology credit.\n'
+        printf '  4. Confirm movement came from Core leash physics and wool entered real custody.\n'
+    elif [ "$MODE" = "wild-subsistence" ]; then
         printf '  2. Confirm the real water/agent fishing context; the trace proves the canonical bobber cycle and removal.\n'
         printf '  3. Confirm one real chicken is absent/dead after Core combat and no duplicate prey/drop exists.\n'
         printf '  4. Confirm the berry source is physically depleted and all acquired items remain in real custody.\n'
@@ -815,13 +839,13 @@ print_plan() {
         && [ "$MODE" != "mortality" ] && [ "$MODE" != "reproduction" ] \
         && [ "$MODE" != "kinship" ] && [ "$MODE" != "households" ] \
         && [ "$MODE" != "care" ] && [ "$MODE" != "skills" ]; then
-        if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ]; then
+        if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "livestock" ]; then
             printf '  5. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         else
             printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         fi
     fi
-    if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ]; then
+    if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "livestock" ]; then
         printf '  6. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
     else
         printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
@@ -866,6 +890,12 @@ if [ "$MODE" = "wild-subsistence" ]; then
     CAPTURE_HUNTING_PATH="$CAPTURE_DIR/subsistence-hunting.png"
     CAPTURE_GATHERING_PATH="$CAPTURE_DIR/subsistence-gathering.png"
     SHOT_SPEC="-|-|$CAPTURE_FISHING_PATH|$CAPTURE_HUNTING_PATH|$CAPTURE_GATHERING_PATH|$CAPTURE_PATH"
+elif [ "$MODE" = "livestock" ]; then
+    CAPTURE_MANAGED_PATH="$CAPTURE_DIR/livestock-managed.png"
+    CAPTURE_FEEDING_PATH="$CAPTURE_DIR/livestock-feeding.png"
+    CAPTURE_OFFSPRING_PATH="$CAPTURE_DIR/livestock-offspring.png"
+    CAPTURE_PRODUCT_PATH="$CAPTURE_DIR/livestock-product.png"
+    SHOT_SPEC="-|-|$CAPTURE_MANAGED_PATH|$CAPTURE_FEEDING_PATH|$CAPTURE_OFFSPRING_PATH|$CAPTURE_PRODUCT_PATH|$CAPTURE_PATH"
 elif [ "$MODE" = "build" ]; then
     CAPTURE_BEFORE_PATH="$CAPTURE_DIR/fixed-shelter-before.png"
     CAPTURE_PARTIAL_PATH="$CAPTURE_DIR/fixed-shelter-partial.png"
@@ -2953,6 +2983,7 @@ PEBBLELAB_APP_AGENTS_TEACHING="$TEACHING_GATE" \
 PEBBLELAB_APP_AGENTS_ECOLOGICAL_OBSERVATION="$ECOLOGICAL_OBSERVATION_GATE" \
 PEBBLELAB_APP_AGENTS_AGRICULTURE="$AGRICULTURE_GATE" \
 PEBBLELAB_APP_AGENTS_WILD_SUBSISTENCE="$WILD_SUBSISTENCE_GATE" \
+PEBBLELAB_APP_AGENTS_LIVESTOCK="$LIVESTOCK_GATE" \
 PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
 PEBBLE_CMD="$LAB_COMMANDS" \
 PEBBLE_SHOT="$SHOT_SPEC" \
@@ -2966,7 +2997,7 @@ world_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT count(*), json_extract(json, '
 expected_world_facts="1|$WORLD_SEED|$WORLD_NAME|1000|0|0|0|0|0"
 [ "$world_facts" = "$expected_world_facts" ] \
     || fail "unexpected disposable world facts: $world_facts"
-if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ] || [ "$MODE" = "material" ] || [ "$MODE" = "cooperation" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ]; then
+if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ] || [ "$MODE" = "material" ] || [ "$MODE" = "cooperation" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "livestock" ]; then
     spawn_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.spawnX'), json_extract(json, '$.spawnY'), json_extract(json, '$.spawnZ') FROM worlds;")
     [ "$spawn_facts" = "8|75|-112" ] || fail "unexpected seed-46 spawn: $spawn_facts"
 fi
@@ -2975,7 +3006,18 @@ require_trace "disposable-world name=$WORLD_NAME seed=$WORLD_SEED worldTick=0 da
 require_trace "start seed=$WORLD_SEED agents=3 tick=0 hz=4 movement=on worldTick=[0-9]+ dayTime=1000 weather=clear randomTickSpeed=0 mobSpawning=0" 'deterministic agent session initial conditions'
 
 [ -s "$CAPTURE_PATH" ] || fail "capture was not written: $CAPTURE_PATH"
-if [ "$MODE" = "wild-subsistence" ]; then
+if [ "$MODE" = "livestock" ]; then
+    [ -s "$CAPTURE_MANAGED_PATH" ] || fail "managed capture was not written: $CAPTURE_MANAGED_PATH"
+    [ -s "$CAPTURE_FEEDING_PATH" ] || fail "feeding capture was not written: $CAPTURE_FEEDING_PATH"
+    [ -s "$CAPTURE_OFFSPRING_PATH" ] || fail "offspring capture was not written: $CAPTURE_OFFSPRING_PATH"
+    [ -s "$CAPTURE_PRODUCT_PATH" ] || fail "product capture was not written: $CAPTURE_PRODUCT_PATH"
+    require_trace_count '^\[lab-live\] livestock proof physical feed=2 birth=1 herding=1 product=[1-9][0-9]* loss=1$' 1 'real Core livestock vertical'
+    require_trace_count '^\[lab-live\] livestock proof no_ghost_stock=1 campStockDelta=0 resourceInventoryDelta=0 localEcologyDelta=0 husbandry=4 Core_authority=1$' 1 'livestock conservation and practice'
+    require_trace 'livestock status enabled=1 herds=1 living=2 young=1 unresolved=0 missing=1 products=[1-9][0-9]* digest=[0-9a-f]+' 'final current animal capital'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'livestock cleanup and runtime health'
+    reject_trace 'Livestock command failed|livestock fixture cleanup failed|rollbackFailure|no_ghost_stock=0|Core_authority=0' 'livestock failure, rollback failure, or ghost credit'
+    printf '\nPASS: real sheep feed, Core birth, leash movement, wool custody, loss, and v15 state verified.\n'
+elif [ "$MODE" = "wild-subsistence" ]; then
     [ -s "$CAPTURE_FISHING_PATH" ] || fail "fishing capture was not written: $CAPTURE_FISHING_PATH"
     [ -s "$CAPTURE_HUNTING_PATH" ] || fail "hunting capture was not written: $CAPTURE_HUNTING_PATH"
     [ -s "$CAPTURE_GATHERING_PATH" ] || fail "gathering capture was not written: $CAPTURE_GATHERING_PATH"

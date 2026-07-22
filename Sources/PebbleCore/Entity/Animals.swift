@@ -28,7 +28,7 @@ open class Animal: Mob {
 
     open override func interact(_ player: Entity, _ stack: ItemStack?) -> Bool {
         if let stack, isFood(stack) {
-            if tryFeed(player, stack) {
+            if tryFeed(stack, actorEntityID: player.id) {
                 (player as? LivingEntity)?.consumeHeld(1)
                 world.hooks.playSound("entity.generic.eat", x, y, z, 1, 1)
                 return true
@@ -195,12 +195,8 @@ public final class Sheep: Animal {
     }
     public override func interact(_ player: Entity, _ stack: ItemStack?) -> Bool {
         let name = stack.map { itemDef($0.id).name }
-        if name == "shears" && !sheared && !baby {
-            sheared = true
-            let count = 1 + gameRng.nextInt(3)
-            for _ in 0..<count { spawnItem(world, x, y + 0.5, z, ItemStack(iid(COLORS[color] + "_wool"), 1)) }
+        if name == "shears", shearForLivestock() != nil {
             (player as? LivingEntity)?.damageHeld(1)
-            world.hooks.playSound("entity.sheep.shear", x, y, z, 1, 1)
             return true
         }
         if let name, name.hasSuffix("_dye") {
