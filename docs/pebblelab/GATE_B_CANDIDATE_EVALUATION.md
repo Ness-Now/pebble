@@ -1,5 +1,103 @@
 # Gate B — Self-Sustaining Local Society
 
+## Re-evaluation #2 — final candidate record
+
+Evaluation starting baseline:
+`fc618de61437c4acd63ec0ff41823e6d91b56d0a`
+(`Prove continuous playable autonomous society slice`). CORR-01 and CORR-02
+are published historical corrections at this baseline. This record evaluates
+their assembled result; it does not reopen either correction or start
+`CIV-26`.
+
+```text
+GATE B RE-EVALUATION #2
+CANDIDATE RESULT: FAIL
+
+Gate R: ACQUIRED
+Gate B canonically acquired: NO
+CIV-26 started: NO
+```
+
+The evaluator applied the hard-pillar policy before spending a long 5/3/2
+campaign. All six focused regression selectors passed: physical food survival
+50/0, autonomous civilization 36/0, livestock 30/0, work/professions 29/0,
+dependent care 53/0 and Teaching 41/0, for 239/0. The four published blockers
+therefore did not regress at their focused contracts.
+
+The integrated readiness audit then found a hard B7 architecture blocker. The
+normal Pebble product path has no caller of
+`selectMentorAndStartApprenticeship`. The only Pebble caller is
+`PebbleAgentController+TeachingProof.swift`. Autonomous physical execution can
+publish a demonstration and guided-practice evidence only after an active
+apprenticeship already exists; it cannot create the local Teaching opportunity
+that Gate B requires. Starting that apprenticeship from the acceptance harness
+would script the result and was refused.
+
+The ten seeds and their horizons were fixed before this audit. None was
+rerolled, hidden or credited:
+
+| Tier | Seed | Fixed horizon | Result |
+| --- | ---: | ---: | --- |
+| short | 46 | 800 ticks | NOT RUN — B7 hard fail before campaign |
+| short | 71 | 800 ticks | NOT RUN — B7 hard fail before campaign |
+| short | 113 | 800 ticks | NOT RUN — B7 hard fail before campaign |
+| short | 197 | 800 ticks | NOT RUN — B7 hard fail before campaign |
+| short | 337 | 800 ticks | NOT RUN — B7 hard fail before campaign |
+| medium | 509 | 4,800 ticks | NOT RUN — B7 hard fail before campaign |
+| medium | 887 | 4,800 ticks | NOT RUN — B7 hard fail before campaign |
+| medium | 1597 | 4,800 ticks | NOT RUN — B7 hard fail before campaign |
+| stress | 2593 | 6,400 ticks | NOT RUN — B7 hard fail before campaign |
+| stress | 4099 | 6,400 ticks | NOT RUN — B7 hard fail before campaign |
+
+Because all required seeds, the society-scale conservation ledger, seed-509
+repeat, seed-887 checkpoint/reconciliation and both shocks were not executed,
+their corresponding pillars cannot be credited. This is not an average or a
+claim that component proofs equal integrated acceptance.
+
+| Pillar | Re-evaluation #2 | Evidence |
+| --- | --- | --- |
+| B1 Physical Material Truth | FAIL | No society-scale integrated ledger campaign. |
+| B2 Real Food-to-Survival Closure | PASS | Published adult/dependent physical-food contracts passed focused regression; the passive World exact-debited real cod and berries with abstract delta zero. |
+| B3 Multiple Viable Subsistence Strategies | FAIL | Local passive evidence exists, but the fixed multi-seed campaign was not executed. |
+| B4 Agriculture and Managed Surplus Continuity | FAIL | Passive evidence reached till/plant only; random ticks were disabled, so growth, harvest, recovered seed and next cycle were not proved. |
+| B5 Livestock Resource-Bounded Continuity | FAIL | The focused reserve contract passed, but campaign continuity and later-surplus eligibility were not proved. |
+| B6 Care Continuity | FAIL | Care was not assembled into a medium and stress society run. |
+| B7 Teaching / Own-Practice Learning | FAIL | No normal autonomous/local apprenticeship initiation path exists. |
+| B8 Durable Work Specialization | FAIL | Work/profiles were not enabled in the passive World and no medium campaign ran. |
+| B9 Replacement / Crisis Resilience | FAIL | The designated stress shocks and real replacement outcomes were not run. |
+| B10 Local Information / No Omniscience / No Ghost Stock | FAIL | Strong component contracts remain, but no required composite campaign ledger exists. |
+| B11 Determinism / Bounds / Persistence Safety | FAIL | Seed 509 repeat and seed 887 reconcile were not run. |
+| B12 Playable Passive Observer Slice | FAIL | The live regression passed its narrower CORR-02 assertions, but not the final duration/tracking/integrated-society bar below. |
+
+### Passive-product re-evaluation
+
+The exact live World `PebbleLab-Disposable-GateB-Reevaluation-46` ran 648
+simulation ticks at 4 Hz. The interval from the first to last capture was 161
+seconds, below the five-minute target. It produced 648 decisions, 14 starts,
+11 completed domain activities, one blocked activity, four cross-family
+switches, three agents with completions, zero productive commands after
+bootstrap, zero eligible-idle violations and zero runtime errors. Completed
+families were agriculture 6, livestock 2, wild subsistence 3 and physical
+survival 6. Real Player input changed position by 1.736 blocks and changed
+yaw/pitch while four decisions and five completions occurred.
+
+This remains useful CORR-02 regression evidence, but is not final Gate B
+product evidence. Care, Teaching and work/professions were disabled. Core
+random ticks were disabled, so planted crops could not grow or be harvested.
+The continuous productive trace for `agent_0` covers till/plant decisions at
+ticks 0–12 rather than several minutes. The initial inverted/incomplete terrain
+frame recurred; it did not stop input or simulation and was resolved by the
+next scheduled capture 33 seconds later, but its exact shorter duration was not
+measured.
+
+The smallest corrective recommendation is
+`GATE-B-CORR-03 — Integrated Local Apprenticeship Initiation`: derive a bounded
+local mentor/student opportunity from real prior practice and local
+availability inside the unique `AgentSimulationSession`, without adding a
+scheduler or granting skill/profession/output. After that product correction,
+the complete unchanged 5/3/2 acceptance, determinism, checkpoint/reconcile and
+five-minute passive slice must run. CORR-03 is recommended, not started.
+
 ## Candidate evaluation record
 
 Evaluation baseline:
@@ -18,8 +116,8 @@ Gate R: ACQUIRED
 Gate B canonically acquired: NO
 ```
 
-Local corrective status after `GATE-B-CORR-01`, based on starting HEAD
-`515ae22c871292a978bb76da3020d3959632b6ed` and pending senior publication:
+Published corrective status after `GATE-B-CORR-01`, based on starting HEAD
+`515ae22c871292a978bb76da3020d3959632b6ed`:
 
 ```text
 GATE B CANDIDATE RESULT: FAIL
@@ -31,9 +129,8 @@ Gate R: ACQUIRED
 Gate B canonically acquired: NO
 ```
 
-Local corrective status after `GATE-B-CORR-02`, based on starting HEAD
-`1b7c320ec897d5ea9944d3c12e6b7c460954ce23` and pending senior review and
-publication:
+Published corrective status after `GATE-B-CORR-02`, based on starting HEAD
+`1b7c320ec897d5ea9944d3c12e6b7c460954ce23`:
 
 ```text
 GATE B CANDIDATE RESULT: FAIL
@@ -181,11 +278,11 @@ stews/soups, milk buckets, chorus fruit, golden apples and any food with
 effects or non-simple completion semantics are deliberately outside the V1
 agent executor and remain Core/Player-only until a later audited extension.
 
-Local verdict: `B-BLOCKER-FOOD-CLOSURE` is `CLOSED / REMEDIATED LOCALLY`,
-pending senior publication. CORR-02 subsequently added a separate physical
-dependent-care path; the legacy coarse model remains compatible and isolated.
+Published verdict: `B-BLOCKER-FOOD-CLOSURE` is `CLOSED`. CORR-02 subsequently
+added a separate physical dependent-care path; the legacy coarse model remains
+compatible and isolated.
 
-## GATE-B-CORR-02 local remediation
+## GATE-B-CORR-02 published remediation
 
 `GATE-B-CORR-02 — Autonomous Agent Activity Orchestration and Playable Observer
 Convergence` is a non-canonical corrective milestone. It does not advance the
@@ -244,7 +341,7 @@ No new asset, skin, registry or physical engine was added.
 | Wild gathering | yes | activation/bootstrap only | focused proof remains | yes | Local renewable evidence reaches canonical break/drop/custody. |
 | Livestock | yes for eligible feed, product and herd tasks | activation/bootstrap only | focused proof remains | yes | Managed tasks become responsibilities; real feed reserve and existing executors remain authoritative. |
 | Dependent care | yes after explicit feature activation | activation/bootstrap only | focused proof remains | yes | Needs, assignment, preemption, bounded travel and interaction are tick-driven; physical mode exact-debits caregiver food. |
-| Teaching/apprenticeship | causal opportunity after real work | activation/bootstrap only | focused proof remains | yes | Demonstration evidence derives from real work; observation grants no skill and own practice remains required. |
+| Teaching/apprenticeship | no autonomous initiation; evidence chaining only after a pre-existing apprenticeship | initiation exists only in focused proof | required | incomplete | Demonstration evidence derives from real work and observation grants no skill, but the normal product path never creates the apprenticeship. This is the B7 re-evaluation #2 blocker. |
 | Work commitments/profiles | yes as activity priority/evidence | activation/bootstrap only | focused proof remains | yes | Normal review and replacement feed candidate priority; commitments never mutate the World or lock a profession. |
 
 Under the default-off autonomy gate, first and subsequent productive decisions
@@ -520,8 +617,9 @@ Smallest causal scope:
 
 - connect existing needs, local opportunities and commitments to the unique
   `AgentSimulationSession` decision loop;
-- translate selected decisions into existing agriculture, wild, livestock,
-  care and Teaching executors;
+- translate selected decisions into existing agriculture, wild and livestock
+  executors while retaining the existing care path and post-apprenticeship
+  Teaching evidence path;
 - schedule the next decision after verified outcome, wait or causal blockage;
 - close physical seed-reserve/feed decisions and physical crisis/replacement;
 - define one bounded normal/quasi-normal bootstrap and an explicit end marker;
@@ -535,8 +633,9 @@ Non-scope: a demo scheduler, second cognition kernel, new physical engines,
 God Observer, major UI, economy, new profession mechanics or CIV-26.
 
 Dependency order was food closure first, then autonomous orchestration. Both
-corrective seams are now locally implemented; the next acceptance activity is
-Gate B re-evaluation #2, not `CIV-26`.
+corrective seams are published. Gate B re-evaluation #2 failed on integrated
+apprenticeship initiation; the smallest recommended next corrective activity
+is CORR-03, not `CIV-26`.
 
 ## Product question
 
@@ -545,7 +644,11 @@ Gate B re-evaluation #2, not `CIV-26`.
 > small society begin to live, work, learn, care and adapt without me?
 
 ```text
-YES — for normal controls, zero productive commands and observable cross-family
-work in the local default-off CORR-02 slice. Care and Teaching remain separate
-autonomous proofs; canonical Gate B remains NOT ACQUIRED.
+NO
+
+Normal controls, zero productive commands and cross-family physical work are
+real in the CORR-02 slice. The assembled product still does not autonomously
+initiate apprenticeship, and the final candidate did not prove integrated
+care, specialization, agriculture continuity, crisis recovery or the required
+multi-seed/persistence campaign. Gate B remains NOT ACQUIRED.
 ```

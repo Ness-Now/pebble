@@ -21,21 +21,18 @@ Baseline de ce recalage :
 ## Position canonique actuelle
 
 `CIV-00` à `CIV-25` sont terminés et acquis dans leurs contrats bornés. Gate R
-est acquise. La candidate Gate B a été évaluée sur le baseline
-`1191e70afe4757955ca48f992c8517df15455761` et a échoué ; Gate B n'est pas
-acquise. Aucune phase `CIV-*` n'est automatiquement promue pendant la
-correction de cette gate. `CIV-26` reste `planned` et n'est pas commencé.
-Le jalon correctif non canonique `GATE-B-CORR-01` a localement remédié la
-fermeture nourriture physique → survie sur le baseline de départ
-`515ae22c871292a978bb76da3020d3959632b6ed`, sous réserve de revue senior et
-publication. Il ne change ni la numérotation, ni le statut de Gate B.
-Le jalon correctif non canonique `GATE-B-CORR-02` remédie maintenant localement
-l'orchestration autonome, la slice jouable passive, la réserve livestock, le
-remplacement de crise et la nourriture physique des dépendants sur le baseline
-de départ `1b7c320ec897d5ea9944d3c12e6b7c460954ce23`. Sa revue senior et sa
-publication restent en attente. La campagne Gate B 5/3/2, le restart composite
-et la revue humaine doivent encore être exécutés ; Gate B reste donc non
-acquise et `CIV-26` reste `planned`.
+est acquise. Les correctifs non canoniques `GATE-B-CORR-01` et
+`GATE-B-CORR-02` sont publiés ; ils ont fermé les quatre blockers historiques
+de l'évaluation #1 sans promouvoir de phase `CIV-*`.
+
+Gate B re-evaluation #2, démarrée sur le baseline
+`fc618de61437c4acd63ec0ff41823e6d91b56d0a`, est `FAIL`. Le chemin autonome
+sait publier une démonstration issue d'un travail réel seulement lorsqu'un
+apprentissage est déjà actif, mais aucun chemin produit normal n'initie cet
+apprentissage. La campagne 5/3/2 a été arrêtée avant exécution conformément à
+la politique de hard fail. `GATE-B-CORR-03 — Integrated Local Apprenticeship
+Initiation` est recommandé mais non commencé. Gate B reste non acquise et
+`CIV-26` reste `planned`.
 
 Les noms `NEXT-1` et `NEXT-2` sont uniquement des alias historiques :
 
@@ -456,32 +453,40 @@ classe professionnelle imposée.
   `AgentLocalEcologyState`. Gate R reste acquise. Ces preuves sont des contrats
   de composant ; elles ne prouvent pas à elles seules Gate B.
 
-#### Évaluation candidate Gate B — FAIL, correctifs locaux CORR-01/CORR-02
+#### Évaluations candidates Gate B — FAIL, CORR-01/CORR-02 publiés
 
-L'[évaluation dédiée](GATE_B_CANDIDATE_EVALUATION.md) a confirmé quatre
-blockers. `GATE-B-CORR-01 — Real Food Consumption and Survival Convergence`,
-jalon correctif non canonique, a depuis remédié localement le premier sous
-réserve de revue senior et publication :
+L'[évaluation dédiée](GATE_B_CANDIDATE_EVALUATION.md) #1 a confirmé quatre
+blockers. Les jalons correctifs non canoniques publiés `GATE-B-CORR-01 — Real
+Food Consumption and Survival Convergence` et `GATE-B-CORR-02 — Autonomous
+Agent Activity Orchestration and Playable Observer Convergence` ont remédié ces
+quatre seams :
 
-- `B-BLOCKER-FOOD-CLOSURE` : `CLOSED / REMEDIATED LOCALLY` ; un vrai aliment
+- `B-BLOCKER-FOOD-CLOSURE` : `CLOSED / PUBLISHED` ; un vrai aliment
   Core en custody exacte peut désormais modifier la survie canonique sans
   crédit `.foodRaw` ;
-- `B-BLOCKER-AUTONOMOUS-PLAYABLE-SLICE` : `CLOSED / REMEDIATED LOCALLY` par
+- `B-BLOCKER-AUTONOMOUS-PLAYABLE-SLICE` : `CLOSED / PUBLISHED` par
   sélection déterministe dans `AgentSimulationSession`, intents typés,
   exécuteurs Pebble existants et slice passive default-off ;
-- `B-BLOCKER-LIVESTOCK-RESERVE-CLOSURE` : `CLOSED / REMEDIATED LOCALLY` ; la
+- `B-BLOCKER-LIVESTOCK-RESERVE-CLOSURE` : `CLOSED / PUBLISHED` ; la
   réserve physique de plantation rend la reproduction inéligible avant tout
   spend et les exécuteurs Core restent autoritaires ;
-- `B-BLOCKER-CRISIS-REPLACEMENT-ORCHESTRATION` : `CLOSED / REMEDIATED LOCALLY` ;
+- `B-BLOCKER-CRISIS-REPLACEMENT-ORCHESTRATION` : `CLOSED / PUBLISHED` ;
   la revue normale suspend, choisit un remplaçant capable et attend son outcome
   réel avant fulfillment.
 
 CORR-02 ajoute aussi un chemin de care physique : custody réelle du caregiver,
 FoodDef Core, débit exact puis hunger canonique du dependent, sans fallback
 `.foodRaw` en mode physique. Les correctifs ne constituent pas la campagne
-d'acceptance. La prochaine activité est `Gate B re-evaluation #2`, sans second
-moteur ni scheduler de démonstration. Cette roadmap ne renumérote pas `CIV-26`
-et ne le passe pas `current`.
+d'acceptance.
+
+Gate B re-evaluation #2 est `FAIL`. Son audit a montré que l'exécution autonome
+ne peut publier Teaching qu'après un apprentissage déjà actif, tandis que le
+seul appel Pebble qui initie cet apprentissage appartient au proof harness. La
+campagne 5/3/2 n'a pas été exécutée après ce hard blocker, et aucune preuve de
+composant n'a été comptée comme société intégrée. Le correctif non canonique
+minimal recommandé est `GATE-B-CORR-03 — Integrated Local Apprenticeship
+Initiation`; il n'est pas commencé. Gate B reste non acquise, cette roadmap ne
+renumérote pas `CIV-26` et ne le passe pas `current`.
 
 ### Économie matérielle locale — Gate C
 
@@ -645,8 +650,10 @@ monde de vivre.
 - `CIV-15` à `CIV-19` ont acquis les frontières actor-neutral, custody,
   harvest, construction, navigation et embodiment ; Gate R est acquise.
   `CIV-20` à `CIV-25` sont acquis dans leurs contrats bornés. L'évaluation
-  candidate Gate B est `FAIL`. `GATE-B-CORR-01` et `GATE-B-CORR-02` ont
-  localement remédié nourriture/survie, orchestration autonome, slice passive,
-  réserve livestock, remplacement de crise et care physique. Publication,
-  campagne 5/3/2, restart composite et revues restent nécessaires. Gate B
-  demeure non acquise et `CIV-26` reste planifié.
+  candidate Gate B est `FAIL`. `GATE-B-CORR-01` et `GATE-B-CORR-02` sont
+  publiés et ont remédié nourriture/survie, orchestration autonome, slice
+  passive, réserve livestock, remplacement de crise et care physique. La
+  re-evaluation #2 a échoué sur l'initiation Teaching intégrée avant campagne
+  5/3/2 ; restart composite et acceptances systémiques restent non prouvés.
+  Gate B demeure non acquise, CORR-03 est seulement recommandé et `CIV-26`
+  reste planifié.

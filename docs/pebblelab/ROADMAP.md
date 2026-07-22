@@ -4927,3 +4927,27 @@ was introduced. The four recorded Gate B blockers are remediated locally, but
 Gate B remains not acquired pending re-evaluation #2, the 5/3/2 campaign,
 composite persistence, human passive review and senior review. `CIV-26` remains
 planned and was not started.
+
+## Gate B - Re-evaluation #2 hard fail after published CORR-01/CORR-02
+
+Status: final local candidate evaluation started from published baseline
+`fc618de61437c4acd63ec0ff41823e6d91b56d0a`; result `FAIL`.
+
+CORR-01 and CORR-02 are published and their historical focused blockers did
+not regress (239 focused checks passed). The re-evaluation #2 readiness audit
+found that normal autonomous execution can publish Teaching evidence only for
+an already-active apprenticeship, while apprenticeship initiation exists only
+in the proof surface. The acceptance harness refused to manufacture that
+state. The fixed short seeds 46/71/113/197/337, medium seeds 509/887/1597 and
+stress seeds 2593/4099 were declared but not executed after this hard B7
+architecture blocker; no reroll or component-proof substitution occurred.
+
+The seed-46 passive regression still proved normal Player input, three
+inhabitants, agriculture/wild/livestock/physical-food activity, four
+cross-family switches, exact cleanup, zero ghost productive credit and zero
+productive commands after bootstrap. It covered 648 ticks at 4 Hz and 161
+seconds between first and last capture, with care, Teaching and work profiles
+disabled and random growth disabled, so it did not meet the final integrated
+Gate B product bar. Gate R remains acquired. Gate B remains not acquired.
+`GATE-B-CORR-03 — Integrated Local Apprenticeship Initiation` is recommended
+but not started, and `CIV-26` remains planned.

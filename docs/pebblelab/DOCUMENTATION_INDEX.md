@@ -30,11 +30,13 @@ des roadmaps. Ils restent obligatoires dans leur périmètre.
 `completed` dans leurs contrats bornés et Gate R reste acquise. La candidate
 Gate B est `FAIL` et Gate B n'est pas acquise. Aucune phase n'est promue
 automatiquement pendant sa correction ; `CIV-26` à `CIV-67` restent `planned`.
-Le jalon non canonique `GATE-B-CORR-01` remédie localement le blocker nourriture
-physique/survie. `GATE-B-CORR-02` remédie localement l'orchestration autonome,
-la slice passive jouable, la réserve livestock, le remplacement de crise et la
-nourriture physique des dépendants. Tous deux restent des correctifs non
-canoniques soumis à revue/publication ; Gate B re-evaluation #2 reste requise.
+Les jalons non canoniques publiés `GATE-B-CORR-01` et `GATE-B-CORR-02` ont
+remédié leurs quatre blockers historiques. Gate B re-evaluation #2 est
+désormais enregistrée `FAIL` : le chemin produit normal ne crée pas
+l'apprentissage local requis avant que l'exécution autonome puisse publier une
+démonstration. La campagne 5/3/2 a donc été arrêtée avant exécution plutôt que
+scriptée. `GATE-B-CORR-03 — Integrated Local Apprenticeship Initiation` est
+recommandé mais non commencé ; `CIV-26` reste planifié.
 
 ## `operational-runbook`
 
@@ -42,8 +44,9 @@ canoniques soumis à revue/publication ; Gate B re-evaluation #2 reste requise.
   runbook live canonique. Il décrit les gates, commandes, preuves et limites des
   verticales 3D actuellement acquises.
 - [`GATE_B_CANDIDATE_EVALUATION.md`](GATE_B_CANDIDATE_EVALUATION.md) est le
-  record d'acceptance post-CIV-25 : verdict candidate `FAIL`, preuves réduites,
-  blockers, puis les statuts locaux de `GATE-B-CORR-01` et `GATE-B-CORR-02`.
+  record d'acceptance post-CIV-25 : évaluations #1 et #2, verdict candidate
+  `FAIL`, blockers, preuves et statuts publiés de `GATE-B-CORR-01` et
+  `GATE-B-CORR-02`.
   Il ne marque pas Gate B acquise et ne remplace pas la roadmap prospective.
 - Les fichiers racine `README.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md` et
   `SECURITY.md` restent les références opérationnelles du jeu Pebble et du

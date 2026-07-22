@@ -4,21 +4,25 @@
   "baselineHead": "b58f71b75110c2e65403cd073409a8559429ec77",
   "branch": "lab/pebblelab-v1",
   "canonicalRoadmap": "docs/pebblelab/PEBBLE_CIVILIZATION_ROADMAP.md",
-  "evaluatedRuntimeHead": "1191e70afe4757955ca48f992c8517df15455761",
+  "evaluatedRuntimeHead": "fc618de61437c4acd63ec0ff41823e6d91b56d0a",
   "current": null,
   "currentGateEvaluation": {
     "gate": "B",
+    "evaluationNumber": 2,
     "candidateResult": "failed",
     "canonicalStatus": "notAcquired",
     "evidence": "docs/pebblelab/GATE_B_CANDIDATE_EVALUATION.md",
     "nextCanonicalPhasePromoted": false,
-    "locallyRemediatedBlockers": [
+    "publishedRemediatedBlockers": [
       "B-BLOCKER-FOOD-CLOSURE",
       "B-BLOCKER-AUTONOMOUS-PLAYABLE-SLICE",
       "B-BLOCKER-LIVESTOCK-RESERVE-CLOSURE",
       "B-BLOCKER-CRISIS-REPLACEMENT-ORCHESTRATION"
     ],
-    "openBlockers": [],
+    "openBlockers": [
+      "B-BLOCKER-INTEGRATED-TEACHING-INITIATION"
+    ],
+    "campaignStatus": "notRunAfterHardFail",
     "reevaluationRequired": true
   },
   "correctiveMilestones": [
@@ -27,14 +31,20 @@
       "title": "Real Food Consumption and Survival Convergence",
       "canonicalPhase": false,
       "startingHead": "515ae22c871292a978bb76da3020d3959632b6ed",
-      "status": "locallyRemediatedPendingSeniorPublication"
+      "status": "published"
     },
     {
       "id": "GATE-B-CORR-02",
       "title": "Autonomous Agent Activity Orchestration and Playable Observer Convergence",
       "canonicalPhase": false,
       "startingHead": "1b7c320ec897d5ea9944d3c12e6b7c460954ce23",
-      "status": "locallyRemediatedPendingSeniorReviewAndPublication"
+      "status": "published"
+    },
+    {
+      "id": "GATE-B-CORR-03",
+      "title": "Integrated Local Apprenticeship Initiation",
+      "canonicalPhase": false,
+      "status": "recommendedNotStarted"
     }
   ],
   "gates": {
