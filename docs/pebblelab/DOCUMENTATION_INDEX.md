@@ -35,8 +35,10 @@ remédié leurs quatre blockers historiques. Gate B re-evaluation #2 est
 désormais enregistrée `FAIL` : le chemin produit normal ne crée pas
 l'apprentissage local requis avant que l'exécution autonome puisse publier une
 démonstration. La campagne 5/3/2 a donc été arrêtée avant exécution plutôt que
-scriptée. `GATE-B-CORR-03 — Integrated Local Apprenticeship Initiation` est
-recommandé mais non commencé ; `CIV-26` reste planifié.
+scriptée. `GATE-B-CORR-03 — Integrated Local Apprenticeship Initiation` remédie
+maintenant ce blocker localement par la cognition normale et l'autorité
+Teaching CIV-20 existante. Cette correction n'est pas Gate B re-evaluation #3 :
+Gate B reste non acquise et `CIV-26` reste planifié.
 
 ## `operational-runbook`
 
@@ -46,7 +48,8 @@ recommandé mais non commencé ; `CIV-26` reste planifié.
 - [`GATE_B_CANDIDATE_EVALUATION.md`](GATE_B_CANDIDATE_EVALUATION.md) est le
   record d'acceptance post-CIV-25 : évaluations #1 et #2, verdict candidate
   `FAIL`, blockers, preuves et statuts publiés de `GATE-B-CORR-01` et
-  `GATE-B-CORR-02`.
+  `GATE-B-CORR-02`, puis remédiation locale CORR-03 en attente de
+  re-evaluation #3.
   Il ne marque pas Gate B acquise et ne remplace pas la roadmap prospective.
 - Les fichiers racine `README.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md` et
   `SECURITY.md` restent les références opérationnelles du jeu Pebble et du

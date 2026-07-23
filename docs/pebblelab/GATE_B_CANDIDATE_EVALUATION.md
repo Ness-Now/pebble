@@ -1,6 +1,43 @@
 # Gate B — Self-Sustaining Local Society
 
-## Re-evaluation #2 — final candidate record
+## Post-CORR-03 local remediation record
+
+Starting baseline:
+`768c8da5ccd325ecad06f9654e65b0a738864880`
+(`Record Gate B re-evaluation #2 evidence`).
+
+`GATE-B-CORR-03 — Integrated Local Apprenticeship Initiation` closes
+`B-BLOCKER-INTEGRATED-TEACHING-INITIATION` locally. The normal bounded
+autonomy review in the unique `AgentSimulationSession` now derives relevant
+skill domains from current local activity candidates, considers only retained
+nearby peers, obtains explicit deterministic student and teacher participation
+decisions, then delegates all eligibility and ranking to the existing CIV-20
+mentor-selection authority.
+
+The integrated disposable-World proof used no fake skill, practice history,
+profession, prestarted apprenticeship or manual initiation. Real foraging
+success made `agent_2` practiced; `agent_1` then autonomously entered a local
+foraging apprenticeship. A later real mentor success produced an observed
+demonstration with zero observation skill, and the student's later own real
+success produced normal practice before the existing guided-practice causal
+link. Initiation, observation and guided linking created no material or yield
+bonus.
+
+```text
+B-BLOCKER-INTEGRATED-TEACHING-INITIATION: REMEDIATED LOCALLY
+GATE B CANDIDATE RESULT: FAIL / RE-EVALUATION PENDING
+Gate R: ACQUIRED
+Gate B canonically acquired: NO
+Gate B re-evaluation #3 required: YES
+CIV-26 started: NO
+```
+
+This is a corrective product proof, not Gate B re-evaluation #3. The unchanged
+5/3/2 campaign, deterministic repeat, checkpoint/reconciliation campaign,
+shocks, composite persistence and final human/senior review were deliberately
+not run or credited here.
+
+## Re-evaluation #2 — historical final candidate record
 
 Evaluation starting baseline:
 `fc618de61437c4acd63ec0ff41823e6d91b56d0a`
@@ -90,13 +127,14 @@ frame recurred; it did not stop input or simulation and was resolved by the
 next scheduled capture 33 seconds later, but its exact shorter duration was not
 measured.
 
-The smallest corrective recommendation is
+The smallest corrective recommendation was
 `GATE-B-CORR-03 — Integrated Local Apprenticeship Initiation`: derive a bounded
 local mentor/student opportunity from real prior practice and local
 availability inside the unique `AgentSimulationSession`, without adding a
 scheduler or granting skill/profession/output. After that product correction,
 the complete unchanged 5/3/2 acceptance, determinism, checkpoint/reconcile and
-five-minute passive slice must run. CORR-03 is recommended, not started.
+five-minute passive slice must run. CORR-03 is now remediated locally by the
+record above, but is not a Gate B acquisition.
 
 ## Candidate evaluation record
 
@@ -647,8 +685,9 @@ is CORR-03, not `CIV-26`.
 NO
 
 Normal controls, zero productive commands and cross-family physical work are
-real in the CORR-02 slice. The assembled product still does not autonomously
-initiate apprenticeship, and the final candidate did not prove integrated
-care, specialization, agriculture continuity, crisis recovery or the required
-multi-seed/persistence campaign. Gate B remains NOT ACQUIRED.
+real in the CORR-02 slice. CORR-03 now proves autonomous local apprenticeship
+initiation and its full no-free-skill causal chain. The final candidate still
+did not prove integrated care, specialization, agriculture continuity, crisis
+recovery or the required multi-seed/persistence campaign. Gate B remains NOT
+ACQUIRED pending re-evaluation #3.
 ```

@@ -745,7 +745,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
                 }
                 if pendingCmdBatches.isEmpty {
                     pendingCmds = nil
-                    if usesBatchShots { shotQuitFrames = 120 }
+                    if usesBatchShots {
+                        shotQuitFrames = ProcessInfo.processInfo.environment[
+                            "PEBBLELAB_INTEGRATED_TEACHING_PROOF"
+                        ] == "1" ? 20 : 120
+                    }
                 } else {
                     pendingCmds = pendingCmdBatches.removeFirst()
                     pendingCmdDelay = 0

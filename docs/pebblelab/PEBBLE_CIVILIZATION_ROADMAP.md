@@ -27,12 +27,15 @@ de l'évaluation #1 sans promouvoir de phase `CIV-*`.
 
 Gate B re-evaluation #2, démarrée sur le baseline
 `fc618de61437c4acd63ec0ff41823e6d91b56d0a`, est `FAIL`. Le chemin autonome
-sait publier une démonstration issue d'un travail réel seulement lorsqu'un
-apprentissage est déjà actif, mais aucun chemin produit normal n'initie cet
-apprentissage. La campagne 5/3/2 a été arrêtée avant exécution conformément à
-la politique de hard fail. `GATE-B-CORR-03 — Integrated Local Apprenticeship
-Initiation` est recommandé mais non commencé. Gate B reste non acquise et
-`CIV-26` reste `planned`.
+a depuis identifié l'absence d'initiation Teaching intégrée. Le correctif local
+non canonique `GATE-B-CORR-03 — Integrated Local Apprenticeship Initiation`
+remédie maintenant ce blocker : la cognition normale dérive une opportunité
+locale contextuelle, les deux participants décident, puis l'autorité CIV-20
+existante sélectionne le mentor et crée l'apprentissage. La preuve intégrée
+conserve la causalité réussite réelle → démonstration sans skill gratuit →
+réussite propre de l'élève → pratique guidée. La campagne 5/3/2 n'a pas été
+relancée. Gate B reste non acquise, sa re-evaluation #3 est requise et `CIV-26`
+reste `planned`.
 
 Les noms `NEXT-1` et `NEXT-2` sont uniquement des alias historiques :
 
@@ -453,7 +456,7 @@ classe professionnelle imposée.
   `AgentLocalEcologyState`. Gate R reste acquise. Ces preuves sont des contrats
   de composant ; elles ne prouvent pas à elles seules Gate B.
 
-#### Évaluations candidates Gate B — FAIL, CORR-01/CORR-02 publiés
+#### Évaluations candidates Gate B — FAIL, CORR-01/CORR-02 publiés, CORR-03 local
 
 L'[évaluation dédiée](GATE_B_CANDIDATE_EVALUATION.md) #1 a confirmé quatre
 blockers. Les jalons correctifs non canoniques publiés `GATE-B-CORR-01 — Real
@@ -479,14 +482,14 @@ FoodDef Core, débit exact puis hunger canonique du dependent, sans fallback
 `.foodRaw` en mode physique. Les correctifs ne constituent pas la campagne
 d'acceptance.
 
-Gate B re-evaluation #2 est `FAIL`. Son audit a montré que l'exécution autonome
-ne peut publier Teaching qu'après un apprentissage déjà actif, tandis que le
-seul appel Pebble qui initie cet apprentissage appartient au proof harness. La
-campagne 5/3/2 n'a pas été exécutée après ce hard blocker, et aucune preuve de
-composant n'a été comptée comme société intégrée. Le correctif non canonique
-minimal recommandé est `GATE-B-CORR-03 — Integrated Local Apprenticeship
-Initiation`; il n'est pas commencé. Gate B reste non acquise, cette roadmap ne
-renumérote pas `CIV-26` et ne le passe pas `current`.
+Gate B re-evaluation #2 reste historiquement `FAIL`. Le correctif non canonique
+`GATE-B-CORR-03 — Integrated Local Apprenticeship Initiation` remédie localement
+son blocker B7 par un appel normal, contextuel, local et borné dans
+`AgentSimulationSession`. Il réutilise le selector/ranker CIV-20, les
+démonstrations et la pratique guidée existants ; il n'ajoute ni scheduler,
+oracle global, skill gratuit, profession ni matière. La campagne 5/3/2 et Gate
+B re-evaluation #3 n'ont pas été exécutées. Gate B reste non acquise, cette
+roadmap ne renumérote pas `CIV-26` et ne le passe pas `current`.
 
 ### Économie matérielle locale — Gate C
 
@@ -654,6 +657,6 @@ monde de vivre.
   publiés et ont remédié nourriture/survie, orchestration autonome, slice
   passive, réserve livestock, remplacement de crise et care physique. La
   re-evaluation #2 a échoué sur l'initiation Teaching intégrée avant campagne
-  5/3/2 ; restart composite et acceptances systémiques restent non prouvés.
-  Gate B demeure non acquise, CORR-03 est seulement recommandé et `CIV-26`
-  reste planifié.
+  5/3/2. CORR-03 remédie désormais ce blocker localement sans acquérir Gate B ;
+  restart composite, campagne systémique et re-evaluation #3 restent non
+  prouvés. Gate B demeure non acquise et `CIV-26` reste planifié.

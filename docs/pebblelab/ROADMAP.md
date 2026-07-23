@@ -4951,3 +4951,26 @@ disabled and random growth disabled, so it did not meet the final integrated
 Gate B product bar. Gate R remains acquired. Gate B remains not acquired.
 `GATE-B-CORR-03 — Integrated Local Apprenticeship Initiation` is recommended
 but not started, and `CIV-26` remains planned.
+
+## Gate B - CORR-03 local integrated apprenticeship initiation
+
+Status: locally complete from baseline
+`768c8da5ccd325ecad06f9654e65b0a738864880`; publication and Gate B
+re-evaluation #3 remain pending.
+
+The normal bounded `AgentSimulationSession` autonomy review now derives
+contextual learning opportunities from current local activity candidates and
+retained nearby peers. Explicit deterministic student and teacher
+participation decisions precede the existing CIV-20
+`selectMentorAndStartApprenticeship` authority; no global mentor oracle,
+Teaching scheduler, physical executor, profession assignment or free skill was
+added.
+
+The integrated disposable-World proof used no fake skill, preloaded practice
+or fixture-started apprenticeship. A mentor emerged through real material
+practice, apprenticeship began autonomously, a later real mentor success
+became a local demonstration with zero observation skill, and the student's
+own later success received normal practice before the guided-practice causal
+link. `B-BLOCKER-INTEGRATED-TEACHING-INITIATION` is therefore remediated
+locally. Gate B remains not acquired, the 5/3/2 campaign was not run, Gate R
+remains acquired and `CIV-26` remains planned.

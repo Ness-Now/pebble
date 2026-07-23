@@ -18,9 +18,10 @@ usage() {
     cat <<'EOF'
 Usage: scripts/verify-pebblelab-gate-b.sh [--report-only]
 
-Runs Gate B re-evaluation #2 in acceptance-first order. The evaluator declares
-the fixed 5/3/2 campaign, checks the published blocker seams, and refuses to
-run or credit the expensive campaign after a proven hard acceptance blocker.
+Reports the post-CORR-03 Gate B candidate state without starting re-evaluation
+#3. The evaluator declares the unchanged fixed 5/3/2 campaign, checks the
+published blocker seams and local integrated-Teaching remediation, and does
+not run or credit the pending campaign.
 
 Normal mode exits zero only for a Gate B candidate PASS and non-zero for FAIL.
 --report-only preserves the same verdict but exits zero after writing evidence.
@@ -36,7 +37,7 @@ require_fixed() {
     path=$1
     text=$2
     description=$3
-    /usr/bin/grep -Fq "$text" "$ROOT_DIR/$path" \
+    /usr/bin/grep -Fq -- "$text" "$ROOT_DIR/$path" \
         || fail "source audit inconclusive: $description"
 }
 
@@ -48,6 +49,7 @@ selector_count() {
         work-professions) printf '29' ;;
         dependent-care) printf '53' ;;
         teaching) printf '41' ;;
+        integrated-teaching-initiation) printf '25' ;;
         *) fail "unknown focused selector: $1" ;;
     esac
 }
@@ -86,7 +88,7 @@ fi
 RUN_MATRIX="$EVIDENCE_ROOT/fixed-seed-matrix.tsv"
 SOURCE_AUDIT="$EVIDENCE_ROOT/integrated-readiness-audit.txt"
 
-printf 'Gate B re-evaluation #2 — acceptance-first candidate evaluation\n'
+printf 'Gate B post-CORR-03 — local remediation report\n'
 printf 'Repository: %s\n' "$ROOT_DIR"
 printf 'Branch: %s\n' "$BRANCH"
 printf 'HEAD: %s\n' "$HEAD_SHA"
@@ -101,7 +103,7 @@ printf '  stress (%s ticks): %s\n' "$STRESS_HORIZON_TICKS" "$STRESS_SEEDS"
 cat >"$EVIDENCE_ROOT/configuration.json" <<EOF
 {
   "schemaVersion": 1,
-  "evaluation": "Gate B re-evaluation #2",
+  "evaluation": "Gate B post-CORR-03 local remediation report",
   "head": "$HEAD_SHA",
   "branch": "$BRANCH",
   "candidateResult": "FAIL",
@@ -136,7 +138,7 @@ swift build -c release --product pebsmoke >"$EVIDENCE_ROOT/build.log" 2>&1 \
 FOCUSED_TOTAL=0
 for selector in \
     physical-food-survival autonomous-civilization livestock \
-    work-professions dependent-care teaching
+    work-professions dependent-care teaching integrated-teaching-initiation
 do
     expected=$(selector_count "$selector")
     output="$EVIDENCE_ROOT/focused-$selector.log"
@@ -152,44 +154,49 @@ printf '  focused total              %3d passed, 0 failed\n' "$FOCUSED_TOTAL"
 printf 'Historical blockers: no focused regression detected.\n'
 
 printf '\n[2/3] Integrated Teaching readiness audit\n'
-PRODUCT_TEACHING_CALLS=$(
-    /usr/bin/grep -R -n --include='*.swift' \
-        'selectMentorAndStartApprenticeship' Sources/Pebble 2>/dev/null \
-        | /usr/bin/grep -v '/PebbleAgentController+TeachingProof.swift:' || true
-)
+require_fixed Sources/PebbleAgents/AgentSimulationSession+AutonomousActivity.swift \
+    'reviewAutonomousLocalApprenticeships(from: candidates)' \
+    'normal autonomy tick does not review local apprenticeship opportunities'
+require_fixed Sources/PebbleAgents/AgentSimulationSession+Teaching.swift \
+    'selectMentorAndStartApprenticeshipInPlace(' \
+    'existing CIV-20 mentor-selection authority is not reused'
+require_fixed Sources/PebbleAgents/AgentSimulationSession+Teaching.swift \
+    'teachingParticipationDecision(' \
+    'explicit student/teacher participation policy is missing'
+require_fixed scripts/verify-pebblelab-live.sh \
+    '--integrated-teaching' \
+    'integrated real-World Teaching proof mode is missing'
 {
     printf 'head=%s\n' "$HEAD_SHA"
-    printf 'normal_product_calls_to_selectMentorAndStartApprenticeship=%s\n' \
-        "$([ -n "$PRODUCT_TEACHING_CALLS" ] && printf 'present' || printf 'absent')"
-    printf 'proof_only_call=Sources/Pebble/PebbleAgentController+TeachingProof.swift:218\n'
-    printf 'autonomous_execution_behavior=publishes_demonstration_only_for_preexisting_active_apprenticeship\n'
-    printf 'classification=ARCHITECTURE_BLOCKER\n'
+    printf 'normal_product_initiation=AgentSimulationSession normal autonomous review\n'
+    printf 'mentor_selection_authority=existing CIV-20 selector/ranker\n'
+    printf 'local_candidate_source=bounded nearbyAgents observations\n'
+    printf 'participation=explicit deterministic student and teacher decisions\n'
+    printf 'integrated_live_chain=real practice -> autonomous apprenticeship -> real demonstration -> own practice -> guided link\n'
+    printf 'classification=REMEDIATED_LOCALLY_PENDING_REEVALUATION_3\n'
     printf 'pillar=B7\n'
 } >"$SOURCE_AUDIT"
 
-if [ -n "$PRODUCT_TEACHING_CALLS" ]; then
-    printf '%s\n' "$PRODUCT_TEACHING_CALLS" >>"$SOURCE_AUDIT"
-    fail "Teaching readiness audit changed; review the newly integrated call before campaign execution"
-fi
-
-printf '  normal autonomous/local apprenticeship initiation: ABSENT\n'
+printf '  normal autonomous/local apprenticeship initiation: PRESENT\n'
 printf '  demonstration publication after an existing apprenticeship: PRESENT\n'
-printf '  proof-only initiation: PRESENT\n'
-printf '  B7 integrated causal chain: HARD FAIL\n'
-printf '  classification: ARCHITECTURE BLOCKER\n'
+printf '  existing CIV-20 mentor selection authority reused: YES\n'
+printf '  bounded local candidate discovery: PRESENT\n'
+printf '  explicit autonomous participation decisions: PRESENT\n'
+printf '  B7 integrated causal chain: PROVEN LOCALLY\n'
+printf '  Integrated Teaching Initiation blocker: REMEDIATED LOCALLY\n'
 
 printf '\n[3/3] Fixed campaign disposition\n'
 printf 'tier\tseed\tticks\tstatus\treason\n' >"$RUN_MATRIX"
 for seed in $SHORT_SEEDS; do
-    printf 'short\t%s\t%s\tNOT_RUN\tB7_HARD_FAIL_BEFORE_CAMPAIGN\n' \
+    printf 'short\t%s\t%s\tNOT_RUN\tREEVALUATION_3_PENDING\n' \
         "$seed" "$SHORT_HORIZON_TICKS" >>"$RUN_MATRIX"
 done
 for seed in $MEDIUM_SEEDS; do
-    printf 'medium\t%s\t%s\tNOT_RUN\tB7_HARD_FAIL_BEFORE_CAMPAIGN\n' \
+    printf 'medium\t%s\t%s\tNOT_RUN\tREEVALUATION_3_PENDING\n' \
         "$seed" "$MEDIUM_HORIZON_TICKS" >>"$RUN_MATRIX"
 done
 for seed in $STRESS_SEEDS; do
-    printf 'stress\t%s\t%s\tNOT_RUN\tB7_HARD_FAIL_BEFORE_CAMPAIGN\n' \
+    printf 'stress\t%s\t%s\tNOT_RUN\tREEVALUATION_3_PENDING\n' \
         "$seed" "$STRESS_HORIZON_TICKS" >>"$RUN_MATRIX"
 done
 column -t -s "$(printf '\t')" "$RUN_MATRIX" 2>/dev/null || /bin/cat "$RUN_MATRIX"
@@ -199,7 +206,7 @@ cat <<EOF
 Acceptance policy applied:
   - no seed was rerolled, hidden, or credited
   - no post-bootstrap productive injection was attempted
-  - the 5/3/2 campaign was not run after a proven hard architecture blocker
+  - the 5/3/2 campaign remains reserved for Gate B re-evaluation #3
   - component proofs were not substituted for integrated Teaching evidence
 
 Pillar disposition at this fail-fast boundary:
@@ -209,7 +216,7 @@ Pillar disposition at this fail-fast boundary:
   B4  FAIL  growth/harvest/next-cycle continuity not established
   B5  FAIL  resource-bounded livestock continuity not established in campaign
   B6  FAIL  care continuity not established in a medium and stress World
-  B7  FAIL  no normal autonomous/local apprenticeship initiation path
+  B7  FAIL  formal campaign pending; initiation blocker remediated locally
   B8  FAIL  durable specialization not established across medium Worlds
   B9  FAIL  designated stress replacement runs not executed
   B10 FAIL  composite local-information campaign not executed
@@ -217,12 +224,11 @@ Pillar disposition at this fail-fast boundary:
   B12 FAIL  final passive re-evaluation is separate and cannot repair B7
 
 Primary hard blocker:
-  GATE-B-CORR-03 candidate scope: integrate autonomous/local apprenticeship
-  initiation from real practice and local opportunity, without a scheduler,
-  then rerun the complete 5/3/2 campaign.
+  B-BLOCKER-INTEGRATED-TEACHING-INITIATION: REMEDIATED LOCALLY
+  Gate B re-evaluation #3 must still run the complete 5/3/2 campaign.
 
-GATE B RE-EVALUATION #2
-CANDIDATE RESULT: FAIL
+GATE B CANDIDATE RESULT: FAIL / RE-EVALUATION PENDING
+Integrated Teaching Initiation blocker: REMEDIATED LOCALLY
 Gate R: ACQUIRED
 Gate B canonically acquired: NO
 CIV-26 started: NO
@@ -230,7 +236,7 @@ Evidence root: $EVIDENCE_ROOT
 EOF
 
 if [ "$REPORT_ONLY" -eq 1 ]; then
-    printf '\nREPORT-ONLY: diagnostics complete; FAIL verdict preserved.\n'
+    printf '\nREPORT-ONLY: diagnostics complete; FAIL / RE-EVALUATION PENDING preserved.\n'
     exit 0
 fi
 

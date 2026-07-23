@@ -479,6 +479,37 @@ exact. Les six PNG `gate-b-passive-start`, `multi-agent`, `agriculture`,
 Cette slice passe localement CORR-02, mais ne remplace ni la campagne Gate B
 5/3/2 ni la revue humaine/senior.
 
+### CORR-03 — initiation Teaching locale intégrée
+
+La preuve corrective se lance séparément, sans démarrer Gate B re-evaluation
+#3 :
+
+```bash
+scripts/verify-pebblelab-live.sh --integrated-teaching --dry-run
+scripts/verify-pebblelab-live.sh --integrated-teaching
+```
+
+Le mode crée un World jetable seed 46, une unique
+`AgentSimulationSession`, trois habitants et des opportunités matérielles
+réelles. Le bootstrap n'injecte ni skill, ni pratique, ni profession, ni
+apprentissage. Après le marqueur de bootstrap, seules des commandes
+observer/debug sont permises et le compteur productif doit rester à zéro.
+
+La trace doit montrer une pratique réelle rendant un mentor éligible, une
+initiation autonome locale avec décisions student/teacher, une réussite réelle
+ultérieure du mentor, une démonstration observée sans delta skill, puis une
+réussite propre réelle de l'élève et le lien de pratique guidée sans bonus
+matériel. Les captures `integrated-teaching-before.png`,
+`integrated-teaching-apprenticeship.png`,
+`integrated-teaching-demonstration-context.png` et
+`integrated-teaching-student-practice.png` prouvent uniquement le même World,
+la proximité et le contexte physique ; la trace causale reste l'autorité sur
+l'apprentissage.
+
+Ce correctif remédie localement
+`B-BLOCKER-INTEGRATED-TEACHING-INITIATION`. Gate B reste non acquise jusqu'à la
+campagne 5/3/2 et la re-evaluation #3 ; `CIV-26` reste planifié.
+
 ## CIV-04 — Canal physique local
 
 Le mode `scripts/verify-pebblelab-live.sh --physical` utilise un monde jetable neuf, la seed `46`, trois agents et les gates sociale et physique explicitement actives. La gate `PEBBLELAB_APP_AGENTS_PHYSICAL=1` reste désactivée par défaut et exige la gate sociale. Quand elle est active, une transmission CIV-03 devient un appel sonore local et un pointage vers le fait : la session ne crée le message et la belief qu’après une observation exacte de ces deux modalités au tick suivant. `/lab physical off` annule les signaux pending et arrête les présentations sans effacer les preuves sociales ; `/lab physical clear` efface uniquement l’état borné du canal, jamais le ledger causal ni le World.

@@ -19,10 +19,11 @@
       "B-BLOCKER-LIVESTOCK-RESERVE-CLOSURE",
       "B-BLOCKER-CRISIS-REPLACEMENT-ORCHESTRATION"
     ],
-    "openBlockers": [
+    "locallyRemediatedBlockersPendingReevaluation": [
       "B-BLOCKER-INTEGRATED-TEACHING-INITIATION"
     ],
-    "campaignStatus": "notRunAfterHardFail",
+    "openBlockers": [],
+    "campaignStatus": "reevaluation3NotRun",
     "reevaluationRequired": true
   },
   "correctiveMilestones": [
@@ -44,7 +45,8 @@
       "id": "GATE-B-CORR-03",
       "title": "Integrated Local Apprenticeship Initiation",
       "canonicalPhase": false,
-      "status": "recommendedNotStarted"
+      "startingHead": "768c8da5ccd325ecad06f9654e65b0a738864880",
+      "status": "locallyCompletePendingPublicationAndReevaluation"
     }
   ],
   "gates": {

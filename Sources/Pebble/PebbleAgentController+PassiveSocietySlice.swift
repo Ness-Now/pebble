@@ -88,6 +88,8 @@ extension PebbleAgentController {
         let secondWildPosition = AgentPosition(
             x: anchor.x + 1, y: anchor.y, z: anchor.z - 3
         )
+        let integratedTeachingProof =
+            environment["PEBBLELAB_INTEGRATED_TEACHING_PROOF"] == "1"
         func distance(_ position: AgentPosition, _ target: AgentPosition) -> Int {
             abs(position.x - target.x) + abs(position.y - target.y) + abs(position.z - target.z)
         }
@@ -216,14 +218,30 @@ extension PebbleAgentController {
                 Int(cell(B.water)), SET_NO_NEIGHBORS
             )
         }
-        world.setBlock(
-            wildPosition.x, wildPosition.y, wildPosition.z,
-            Int(cell(B.sweet_berry_bush, 3)), SET_NO_NEIGHBORS
-        )
-        world.setBlock(
-            secondWildPosition.x, secondWildPosition.y, secondWildPosition.z,
-            Int(cell(B.sweet_berry_bush, 3)), SET_NO_NEIGHBORS
-        )
+        var berryPositions = integratedTeachingProof
+            ? [] : [wildPosition, secondWildPosition]
+        if integratedTeachingProof {
+            // The disposable proof supplies repeated real opportunities, never
+            // skill, Teaching state, or a designated teacher/student. Existing
+            // agriculture, livestock, equipment, distance, and arbitration
+            // determine which inhabitant becomes practiced first.
+            for xOffset in [-1, 1, 3, 5] {
+                for zOffset in [-8, -6, -4, -2, 0] {
+                    if xOffset == 5 && zOffset >= -2 { continue }
+                    berryPositions.append(AgentPosition(
+                        x: anchor.x + xOffset,
+                        y: anchor.y,
+                        z: anchor.z + zOffset
+                    ))
+                }
+            }
+        }
+        for position in berryPositions {
+            world.setBlock(
+                position.x, position.y, position.z,
+                Int(cell(B.sweet_berry_bush, 3)), SET_NO_NEIGHBORS
+            )
+        }
 
         let firstSheep = spawnMob(
             world, "sheep", Double(penCenter.x) + 0.5, Double(penCenter.y),
@@ -370,6 +388,13 @@ extension PebbleAgentController {
                     + "wild=\(wildAgentID.rawValue) field=real storage=real water=real "
                     + "livestockPhysical=2 food=real commandsProductive=0"
             )
+            if integratedTeachingProof {
+                trace(
+                    "integrated teaching bootstrap resources=real_sweet_berry_bushes:"
+                        + "\(berryPositions.count) assignedRoles=0 fakeSkill=0 "
+                        + "fakePracticeHistory=0 activeApprenticeships=0"
+                )
+            }
         } catch {
             _ = cleanupPassiveSocietyFixture(world: world)
             throw error

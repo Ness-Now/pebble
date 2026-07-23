@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--ecological-observation|--agriculture|--wild-subsistence|--physical-food-survival|--livestock|--work-professions|--gate-b-passive]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--integrated-teaching|--ecological-observation|--agriculture|--wild-subsistence|--physical-food-survival|--livestock|--work-professions|--gate-b-passive]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -50,6 +50,7 @@ Options:
   --care Run the household workflow with dependent care, material nourishment, and v9 restart.
   --skills Run causal material practice, skill-ranked task matching, v10 restart, and rollback.
   --teaching Run real local demonstration, no-free-skill, guided practice, and distance refusal.
+  --integrated-teaching Run normal local apprenticeship initiation and the full real-action Teaching chain.
   --ecological-observation Run bounded real-World ecology, civil calendar, cache, and v12 proof.
   --agriculture Run real wheat till/plant/grow/harvest/storage and v13 proof.
   --wild-subsistence Run real fishing, hunting, wild gathering, custody, and v14 proof.
@@ -127,6 +128,7 @@ for option in "$@"; do
         --care) MODE="care"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --skills) MODE="skills"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --teaching) MODE="teaching"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --integrated-teaching) MODE="integrated-teaching"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --ecological-observation) MODE="ecological-observation"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --agriculture) MODE="agriculture"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --wild-subsistence) MODE="wild-subsistence"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
@@ -164,9 +166,28 @@ WILD_SUBSISTENCE_GATE=0
 LIVESTOCK_GATE=0
 WORK_PROFESSIONS_GATE=0
 AUTONOMOUS_CIVILIZATION_GATE=0
+INTEGRATED_TEACHING_PROOF=0
 PASSIVE_OBSERVER_INPUT_PROOF=0
 PASSIVE_OBSERVER_BATCH_FRAMES=240
-if [ "$MODE" = "gate-b-passive" ]; then
+if [ "$MODE" = "integrated-teaching" ]; then
+    WORLD_SEED="46"
+    MATERIAL_GATE=1
+    PERSISTENCE_GATE=1
+    POPULATION_GATE=1
+    LIFECYCLE_GATE=1
+    SKILL_GATE=1
+    TEACHING_GATE=1
+    ECOLOGICAL_OBSERVATION_GATE=1
+    AGRICULTURE_GATE=1
+    WILD_SUBSISTENCE_GATE=1
+    LIVESTOCK_GATE=1
+    AUTONOMOUS_CIVILIZATION_GATE=1
+    INTEGRATED_TEACHING_PROOF=1
+    PASSIVE_OBSERVER_BATCH_FRAMES=600
+    WORLD_NAME="PebbleLab-Disposable-IntegratedTeaching-46"
+    CAPTURE_NAME="integrated-teaching-student-practice.png"
+    LAB_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/lab pause;/lab movement off;/lab population on;/lab lifecycle on;/lab skills on;/lab teaching on;/lab ecological-observation on;/tp 24.5 68 -11.5 150 12;/lab focus agent_0;/lab follow off;/lab overlay off;/lab autonomous-civilization passive;/lab resume|/lab teaching status;/lab autonomous-civilization status;/lab focus agent_0|/lab teaching status;/lab autonomous-civilization status;/lab focus agent_1|/lab teaching status;/lab autonomous-civilization status;/lab causality status'
+elif [ "$MODE" = "gate-b-passive" ]; then
     WORLD_SEED="46"
     MATERIAL_GATE=1
     PERSISTENCE_GATE=1
@@ -720,7 +741,13 @@ print_plan() {
     printf 'Isolated session root: %s\n' "$session_root"
     printf 'Disposable world name: %s\n' "$WORLD_NAME"
     printf 'Fixed seed: %s\n' "$WORLD_SEED"
-    if [ "$MODE" = "gate-b-passive" ]; then
+    if [ "$MODE" = "integrated-teaching" ]; then
+        capture_dir=$(dirname "$capture_path")
+        printf 'Captures: %s\n' "$capture_dir/integrated-teaching-before.png"
+        printf '          %s\n' "$capture_dir/integrated-teaching-apprenticeship.png"
+        printf '          %s\n' "$capture_dir/integrated-teaching-demonstration-context.png"
+        printf '          %s\n' "$capture_path"
+    elif [ "$MODE" = "gate-b-passive" ]; then
         capture_dir=$(dirname "$capture_path")
         printf 'Captures: %s\n' "$capture_dir/gate-b2-start.png"
         printf '          %s\n' "$capture_dir/gate-b2-multi-agent.png"
@@ -796,11 +823,16 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_LIVESTOCK=%s\n' "$LIVESTOCK_GATE"
     printf '  PEBBLELAB_APP_AGENTS_WORK_PROFESSIONS=%s\n' "$WORK_PROFESSIONS_GATE"
     printf '  PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION=%s\n' "$AUTONOMOUS_CIVILIZATION_GATE"
+    printf '  PEBBLELAB_INTEGRATED_TEACHING_PROOF=%s\n' "$INTEGRATED_TEACHING_PROOF"
     printf '  PEBBLELAB_PASSIVE_OBSERVER_INPUT_PROOF=%s\n' "$PASSIVE_OBSERVER_INPUT_PROOF"
     printf '  PEBBLELAB_PASSIVE_OBSERVER_BATCH_FRAMES=%s\n' "$PASSIVE_OBSERVER_BATCH_FRAMES"
     printf '  PEBBLELAB_DISPOSABLE_WORLD_PROOF=1\n'
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
-    if [ "$MODE" = "gate-b-passive" ]; then
+    if [ "$MODE" = "integrated-teaching" ]; then
+        printf '  PEBBLE_SHOT=-|%s/integrated-teaching-before.png|%s/integrated-teaching-apprenticeship.png|%s/integrated-teaching-demonstration-context.png|%s\n' \
+            "$(dirname "$capture_path")" "$(dirname "$capture_path")" \
+            "$(dirname "$capture_path")" "$capture_path"
+    elif [ "$MODE" = "gate-b-passive" ]; then
         printf '  PEBBLE_SHOT=-|%s/gate-b2-start.png|%s/gate-b2-multi-agent.png|%s/gate-b2-agriculture.png|%s/gate-b2-livestock.png|%s/gate-b2-follow-agent.png|%s\n' \
             "$(dirname "$capture_path")" "$(dirname "$capture_path")" \
             "$(dirname "$capture_path")" "$(dirname "$capture_path")" \
@@ -842,7 +874,11 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "gate-b-passive" ]; then
+    if [ "$MODE" = "integrated-teaching" ]; then
+        printf '  2. After PLAYABLE_SLICE_BOOTSTRAP_COMPLETE, issue no productive command and observe the normal autonomous timeline.\n'
+        printf '  3. Confirm one inhabitant becomes practiced only through real work before a local apprenticeship starts.\n'
+        printf '  4. Confirm a later real mentor success is observed, then the student earns practice only from their own success.\n'
+    elif [ "$MODE" = "gate-b-passive" ]; then
         printf '  2. After PLAYABLE_SLICE_BOOTSTRAP_COMPLETE, issue no productive command; normal walking and mouse look remain available.\n'
         printf '  3. Observe agriculture, livestock, wild subsistence, physical eating, and a cross-family switch in one World.\n'
         printf '  4. Confirm real GameCore key/mouse input moves the Player while cognition and physical actions continue.\n'
@@ -959,13 +995,13 @@ print_plan() {
         && [ "$MODE" != "mortality" ] && [ "$MODE" != "reproduction" ] \
         && [ "$MODE" != "kinship" ] && [ "$MODE" != "households" ] \
         && [ "$MODE" != "care" ] && [ "$MODE" != "skills" ]; then
-        if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "gate-b-passive" ]; then
+        if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "gate-b-passive" ]; then
             printf '  5. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         else
             printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         fi
     fi
-    if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "gate-b-passive" ]; then
+    if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "gate-b-passive" ]; then
         printf '  6. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
     else
         printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
@@ -1005,7 +1041,12 @@ TRACE_PATH="$SESSION_ROOT/pebble-live.log"
 DB_PATH="$SESSION_HOME/Library/Application Support/Pebble/pebble.db"
 [ ! -e "$DB_PATH" ] || fail "fresh disposable database already exists: $DB_PATH"
 /bin/mkdir -p "$SESSION_HOME" "$CAPTURE_DIR"
-if [ "$MODE" = "gate-b-passive" ]; then
+if [ "$MODE" = "integrated-teaching" ]; then
+    CAPTURE_BEFORE_PATH="$CAPTURE_DIR/integrated-teaching-before.png"
+    CAPTURE_APPRENTICESHIP_PATH="$CAPTURE_DIR/integrated-teaching-apprenticeship.png"
+    CAPTURE_DEMONSTRATION_PATH="$CAPTURE_DIR/integrated-teaching-demonstration-context.png"
+    SHOT_SPEC="-|$CAPTURE_BEFORE_PATH|$CAPTURE_APPRENTICESHIP_PATH|$CAPTURE_DEMONSTRATION_PATH|$CAPTURE_PATH"
+elif [ "$MODE" = "gate-b-passive" ]; then
     CAPTURE_START_PATH="$CAPTURE_DIR/gate-b2-start.png"
     CAPTURE_MULTI_PATH="$CAPTURE_DIR/gate-b2-multi-agent.png"
     CAPTURE_AGRICULTURE_PATH="$CAPTURE_DIR/gate-b2-agriculture.png"
@@ -3147,6 +3188,7 @@ PEBBLELAB_APP_AGENTS_WILD_SUBSISTENCE="$WILD_SUBSISTENCE_GATE" \
 PEBBLELAB_APP_AGENTS_LIVESTOCK="$LIVESTOCK_GATE" \
 PEBBLELAB_APP_AGENTS_WORK_PROFESSIONS="$WORK_PROFESSIONS_GATE" \
 PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION="$AUTONOMOUS_CIVILIZATION_GATE" \
+PEBBLELAB_INTEGRATED_TEACHING_PROOF="$INTEGRATED_TEACHING_PROOF" \
 PEBBLELAB_PASSIVE_OBSERVER_INPUT_PROOF="$PASSIVE_OBSERVER_INPUT_PROOF" \
 PEBBLELAB_PASSIVE_OBSERVER_BATCH_FRAMES="$PASSIVE_OBSERVER_BATCH_FRAMES" \
 PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
@@ -3162,7 +3204,7 @@ world_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT count(*), json_extract(json, '
 expected_world_facts="1|$WORLD_SEED|$WORLD_NAME|1000|0|0|0|0|0"
 [ "$world_facts" = "$expected_world_facts" ] \
     || fail "unexpected disposable world facts: $world_facts"
-if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ] || [ "$MODE" = "material" ] || [ "$MODE" = "cooperation" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "gate-b-passive" ]; then
+if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ] || [ "$MODE" = "material" ] || [ "$MODE" = "cooperation" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "gate-b-passive" ]; then
     spawn_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.spawnX'), json_extract(json, '$.spawnY'), json_extract(json, '$.spawnZ') FROM worlds;")
     [ "$spawn_facts" = "8|75|-112" ] || fail "unexpected seed-46 spawn: $spawn_facts"
 fi
@@ -3171,7 +3213,24 @@ require_trace "disposable-world name=$WORLD_NAME seed=$WORLD_SEED worldTick=0 da
 require_trace "start seed=$WORLD_SEED agents=3 tick=0 hz=4 movement=on worldTick=[0-9]+ dayTime=1000 weather=clear randomTickSpeed=0 mobSpawning=0" 'deterministic agent session initial conditions'
 
 [ -s "$CAPTURE_PATH" ] || fail "capture was not written: $CAPTURE_PATH"
-if [ "$MODE" = "gate-b-passive" ]; then
+if [ "$MODE" = "integrated-teaching" ]; then
+    [ -s "$CAPTURE_BEFORE_PATH" ] || fail "integrated Teaching before capture was not written: $CAPTURE_BEFORE_PATH"
+    [ -s "$CAPTURE_APPRENTICESHIP_PATH" ] || fail "integrated Teaching apprenticeship capture was not written: $CAPTURE_APPRENTICESHIP_PATH"
+    [ -s "$CAPTURE_DEMONSTRATION_PATH" ] || fail "integrated Teaching demonstration capture was not written: $CAPTURE_DEMONSTRATION_PATH"
+    require_trace 'PLAYABLE_SLICE_BOOTSTRAP_COMPLETE tick=0 agents=3 follow=off productiveCommandsAfter=0' 'normal passive bootstrap marker'
+    require_trace '^\[lab-live\] integrated teaching bootstrap resources=real_sweet_berry_bushes:18 assignedRoles=0 fakeSkill=0 fakePracticeHistory=0 activeApprenticeships=0$' 'real opportunities with no designated social role or fake history'
+    require_trace '^\[lab-live\] autonomous material practice actor=agent_[0-2] domain=foraging source=.* skillEvent=.* practice=0>1 physicalReceipt=.* outputBonus=0 manualTrigger=0$' 'real material work begins mentor experience'
+    require_trace '^\[lab-live\] autonomous material practice actor=agent_[0-2] domain=foraging source=.* skillEvent=.* practice=2>3 physicalReceipt=.* outputBonus=0 manualTrigger=0$' 'one inhabitant becomes practiced through real work'
+    require_trace '^\[lab-live\] autonomous teaching review tick=[1-9][0-9]* opportunities=[1-9][0-9]* requests=[1-9][0-9]* accepted=[1-9][0-9]* .*started=[1-9][0-9]* .*manualSelectMentorCalls=0$' 'normal bounded review starts a local apprenticeship'
+    require_trace '^\[lab-live\] autonomous apprenticeship started id=.* teacher=agent_[0-2] student=agent_[0-2] domain=foraging teacherPractice=[3-9][0-9]* studentPractice=[0-2] distance=[0-8] studentDecision=accept teacherDecision=accept reason=.* manualInitiation=0$' 'existing selector starts a local consented foraging apprenticeship'
+    require_trace '^\[lab-live\] autonomous teaching demonstration apprenticeship=.* teacher=agent_[0-2] student=agent_[0-2] domain=foraging source=.* distance=[0-8] lineOfSight=1 studentPractice=[0-9]+>[0-9]+ observationSkillDelta=0$' 'later real mentor success is locally observed with zero free practice'
+    require_trace '^\[lab-live\] autonomous guided practice apprenticeship=.* student=agent_[0-2] domain=foraging source=.* skillEvent=.* practiceAfterOwnSuccess=[1-9][0-9]* practiceAfterLink=[1-9][0-9]* guidedPracticeSkillDelta=0 materialBonus=0$' 'student own physical success receives normal credit and a guided link'
+    require_trace 'autonomous summary bootstrap=1 manualProductive=0 .*completed=[1-9][0-9]* ' 'no productive manual command after bootstrap'
+    require_trace 'summary .*agents=3 .*runtimeErrors=0 .*probesRemoved=3 .*follow=off demo=0 ' 'normal client lifecycle and exact cleanup'
+    require_trace '^\[lab-live\] passive society cleanup cells=exact entities=exact custody=exact$' 'integrated fixture cleanup'
+    reject_trace 'passive command .*class=productive|productiveCount=[1-9]|/lab teaching proof|manualInitiation=[1-9]|manualSelectMentorCalls=[1-9]|outputBonus=[1-9]|materialBonus=[1-9]|runtimeErrors=[1-9]|rollbackFailure' 'manual Teaching action, productive command, bonus, or runtime failure'
+    printf '\nPASS: autonomous local apprenticeship, real mentor demonstration, zero-free-skill observation, student own practice, and guided link verified.\n'
+elif [ "$MODE" = "gate-b-passive" ]; then
     [ -s "$CAPTURE_START_PATH" ] || fail "passive start capture was not written: $CAPTURE_START_PATH"
     [ -s "$CAPTURE_MULTI_PATH" ] || fail "passive multi-agent capture was not written: $CAPTURE_MULTI_PATH"
     [ -s "$CAPTURE_AGRICULTURE_PATH" ] || fail "passive agriculture capture was not written: $CAPTURE_AGRICULTURE_PATH"
