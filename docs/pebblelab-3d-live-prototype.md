@@ -441,6 +441,16 @@ CORR-02 remédient localement les blockers enregistrés, mais la campagne 5/3/2,
 le restart composite, la revue humaine et la revue senior restent requises.
 `CIV-25` est terminé ; `CIV-26` reste planifié et n'est pas commencé.
 
+Gate B re-evaluation #4 a depuis retenté les dix seeds : tous ont échoué à
+tick 508 ou 509 sur `B-BLOCKER-MOVEMENT-HOME-BOUNDARY`. Le mouvement
+PebbleCore restait actif, sans bypass ; le pas portant l'agent de distance home
+8 à 9 a été refusé et rollback par la publication cognitive. Le verdict
+candidate reste `FAIL`. L'audit final relève aussi que le bootstrap sélectionne
+et préassigne un planner et des responsables livestock : cette attribution de
+rôles invalide tout crédit B1–B12, même si elle n'injecte aucun résultat après
+le marker. Voir
+[`GATE_B_REEVALUATION_4_SUMMARY.json`](pebblelab/GATE_B_REEVALUATION_4_SUMMARY.json).
+
 ### CORR-04 — refresh causal stable des demandes Work
 
 Le mode
@@ -464,7 +474,9 @@ corr04-later-active-society.png
 Le mode valide la continuité du vrai client et l'absence de storm runtime ; la
 sémantique transactionnelle, le checkpoint v18, le replay, les corruptions
 négatives et l'éviction causale restent prouvés par le selector headless
-`work-demand-refresh`. Cette preuve ne crédite pas Gate B re-evaluation #4.
+`work-demand-refresh`. Cette preuve n'a pas crédité Gate B re-evaluation #4 ;
+elle a seulement permis à la campagne de dépasser l'ancien défaut tick 4 avant
+de révéler le blocker déplacement/home à tick 508–509.
 
 Depuis la racine, la commande dédiée est :
 

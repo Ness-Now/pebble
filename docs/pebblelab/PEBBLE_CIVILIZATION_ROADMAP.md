@@ -32,15 +32,24 @@ publié. Gate B re-evaluation #3 a tenté la campagne 5/3/2 fixe et rencontré s
 les dix seeds le même refus Work transactionnel à tick 4. Son verdict
 historique reste `FAIL`.
 
-Le correctif local non canonique
+Le correctif non canonique publié
 `GATE-B-CORR-04 — Stable Work Demand Refresh and Transactional Continuity`
 sépare désormais l'identité logique stable
 `demandID/source/sourceKey/domain` de la provenance causale la plus récente.
 Un heartbeat identique ne crée pas de spam causal ; une provenance plus récente
 et valide actualise la même demande via `workDemandRefreshed`, sans nouveau
 count, engagement, outcome ou profil. Les corruptions d'identité et références
-invalides restent refusées transactionnellement. Ce correctif n'est pas Gate B
-re-evaluation #4 : Gate B reste non acquise et `CIV-26` reste `planned`.
+invalides restent refusées transactionnellement.
+
+Gate B re-evaluation #4 a ensuite tenté les dix seeds fixes sans reroll. Tous
+ont dépassé l'ancien défaut tick 4, puis échoué à tick 508 ou 509 : une approche
+d'activité physiquement exécutée par PebbleCore a porté un agent à distance 9
+de son home, au-delà de la frontière acceptée 8, et la transaction cognitive a
+rollback. La slice passive de cinq minutes reproduit ce blocker et ne montre
+pas une société qui continue. L'audit source final relève en plus que le
+bootstrap préassigne un planner et des responsables livestock ; il n'est donc
+pas role-neutral et ne peut créditer B1–B12. Le verdict candidate reste `FAIL`,
+Gate B reste non acquise et `CIV-26` reste `planned`.
 
 Les noms `NEXT-1` et `NEXT-2` sont uniquement des alias historiques :
 
@@ -461,7 +470,7 @@ classe professionnelle imposée.
   `AgentLocalEcologyState`. Gate R reste acquise. Ces preuves sont des contrats
   de composant ; elles ne prouvent pas à elles seules Gate B.
 
-#### Évaluations candidates Gate B — FAIL, CORR-01/CORR-02/CORR-03 publiés, CORR-04 local
+#### Évaluations candidates Gate B — FAIL, CORR-01 à CORR-04 publiés
 
 L'[évaluation dédiée](GATE_B_CANDIDATE_EVALUATION.md) #1 a confirmé quatre
 blockers. Les jalons correctifs non canoniques publiés `GATE-B-CORR-01 — Real
@@ -502,11 +511,18 @@ Work a refusé transactionnellement tick 4 avec
 n'a donc été crédité. Le verdict candidate est `FAIL`, Gate B reste non
 acquise, cette roadmap ne renumérote pas `CIV-26` et ne le passe pas `current`.
 
-CORR-04 remédie localement cette seam sans réécrire CIV-25 : `REFRESH != NEW
+CORR-04 remédie cette seam sans réécrire CIV-25 : `REFRESH != NEW
 DEMAND`, la provenance causale peut avancer pour une même identité logique, et
-les vrais mismatches restent fail-closed. La campagne Gate B re-evaluation #3
-reste historiquement `FAIL`; seule une future re-evaluation #4 inchangée peut
-créditer B1–B12.
+les vrais mismatches restent fail-closed.
+
+Gate B re-evaluation #4 a tenté la même matrice 5/3/2 complète. Les dix runs
+restent transactionnels, mouvement actif et sans bypass, mais rencontrent tous
+`B-BLOCKER-MOVEMENT-HOME-BOUNDARY` à tick 508 ou 509 avant leurs horizons. Le
+repeat 509 n'est pas byte/semantic-exact, le checkpoint 887 et les deux shocks
+ne sont pas atteints, et la slice passive ne maintient pas une société vivante.
+Le bootstrap doit aussi devenir role-neutral avant une nouvelle campagne. La
+candidate est `FAIL`; un éventuel `GATE-B-CORR-05` doit rester non canonique et
+minimal. Gate B n'est pas acquise et `CIV-26` reste `planned`.
 
 ### Économie matérielle locale — Gate C
 

@@ -26,7 +26,7 @@ la roadmap prospective actuelle.
 Les `AGENTS.md` racine et target-locaux sont des instructions permanentes, pas
 des roadmaps. Ils restent obligatoires dans leur périmètre.
 
-État canonique après Gate B re-evaluation #3 : `CIV-00` à `CIV-25` sont
+État canonique après Gate B re-evaluation #4 : `CIV-00` à `CIV-25` sont
 `completed` dans leurs contrats bornés et Gate R reste acquise. La candidate
 Gate B est `FAIL` et Gate B n'est pas acquise. Aucune phase n'est promue
 automatiquement pendant sa correction ; `CIV-26` à `CIV-67` restent `planned`.
@@ -39,9 +39,14 @@ scriptée. `GATE-B-CORR-03 — Integrated Local Apprenticeship Initiation` remé
 maintenant ce blocker localement par la cognition normale et l'autorité
 Teaching CIV-20 existante. Gate B re-evaluation #3 a ensuite tenté les dix
 seeds fixes sans reroll. Les dix sessions ont rencontré à tick 4 le même refus
-transactionnel de refresh Work (`demand identity changed`) ; aucun horizon,
-checkpoint, shock ou verdict par moyenne n'a été crédité. Gate B reste non
-acquise et `CIV-26` reste planifié.
+transactionnel de refresh Work (`demand identity changed`). CORR-04 a remédié
+ce blocker et est publié. Gate B re-evaluation #4 a retenté les dix seeds :
+tous atteignent 508 ou 509 ticks, puis un vrai pas PebbleCore porte l'agent
+hors de la frontière home acceptée et la transaction cognitive rollback. Aucun
+horizon, checkpoint ou shock n'est crédité. L'audit final classe aussi le
+bootstrap comme non conforme parce qu'il sélectionne et préassigne un planner
+et des responsables livestock ; ses résultats restent diagnostiques, sans
+crédit B1–B12. Gate B reste non acquise et `CIV-26` reste planifié.
 
 ## `operational-runbook`
 
@@ -49,12 +54,15 @@ acquise et `CIV-26` reste planifié.
   runbook live canonique. Il décrit les gates, commandes, preuves et limites des
   verticales 3D actuellement acquises.
 - [`GATE_B_CANDIDATE_EVALUATION.md`](GATE_B_CANDIDATE_EVALUATION.md) est le
-  record d'acceptance post-CIV-25 : évaluations #1, #2 et #3, leurs verdicts
+  record d'acceptance post-CIV-25 : évaluations #1 à #4, leurs verdicts
   candidate `FAIL`, blockers, corrections publiées et preuves intégrées.
   Il ne marque pas Gate B acquise et ne remplace pas la roadmap prospective.
+- [`GATE_B_REEVALUATION_4_SUMMARY.json`](GATE_B_REEVALUATION_4_SUMMARY.json)
+  est le résumé durable borné de la dernière matrice fixe, du blocker
+  déplacement/home, de la slice passive et de la disposition B1–B12.
 - [`GATE_B_REEVALUATION_3_SUMMARY.json`](GATE_B_REEVALUATION_3_SUMMARY.json)
-  est le résumé durable borné de la matrice fixe, du défaut systémique et de
-  la disposition B1–B12 ; les logs et captures HEAD-bound restent temporaires.
+  conserve le résumé historique de l'évaluation #3 ; les logs et captures
+  HEAD-bound restent temporaires.
 - Les fichiers racine `README.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md` et
   `SECURITY.md` restent les références opérationnelles du jeu Pebble et du
   dépôt général ; ils ne définissent pas la roadmap Civilization.

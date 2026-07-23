@@ -4,27 +4,30 @@
   "baselineHead": "b58f71b75110c2e65403cd073409a8559429ec77",
   "branch": "lab/pebblelab-v1",
   "canonicalRoadmap": "docs/pebblelab/PEBBLE_CIVILIZATION_ROADMAP.md",
-  "evaluatedRuntimeHead": "4d79aea21d77ddbfafd464695ed8a0517164b4ea",
+  "evaluatedRuntimeHead": "5a0abf17e3b977d96594d34d3eac626a2edb56c0",
   "current": null,
   "currentGateEvaluation": {
     "gate": "B",
-    "evaluationNumber": 3,
+    "evaluationNumber": 4,
     "candidateResult": "failed",
     "canonicalStatus": "notAcquired",
     "evidence": "docs/pebblelab/GATE_B_CANDIDATE_EVALUATION.md",
+    "summary": "docs/pebblelab/GATE_B_REEVALUATION_4_SUMMARY.json",
     "nextCanonicalPhasePromoted": false,
     "publishedRemediatedBlockers": [
       "B-BLOCKER-FOOD-CLOSURE",
       "B-BLOCKER-AUTONOMOUS-PLAYABLE-SLICE",
       "B-BLOCKER-LIVESTOCK-RESERVE-CLOSURE",
       "B-BLOCKER-CRISIS-REPLACEMENT-ORCHESTRATION",
-      "B-BLOCKER-INTEGRATED-TEACHING-INITIATION"
-    ],
-    "locallyRemediatedBlockersPendingReevaluation": [
+      "B-BLOCKER-INTEGRATED-TEACHING-INITIATION",
       "B-BLOCKER-STABLE-WORK-DEMAND-REFRESH"
     ],
-    "openBlockers": [],
-    "campaignStatus": "reevaluation3FailedReevaluation4Pending",
+    "locallyRemediatedBlockersPendingReevaluation": [],
+    "openBlockers": [
+      "B-BLOCKER-ACCEPTANCE-BOOTSTRAP-ROLE-ASSIGNMENT",
+      "B-BLOCKER-MOVEMENT-HOME-BOUNDARY"
+    ],
+    "campaignStatus": "reevaluation4FailedCorrection5Recommended",
     "reevaluationRequired": true
   },
   "correctiveMilestones": [
@@ -54,7 +57,7 @@
       "title": "Stable Work Demand Refresh and Transactional Continuity",
       "canonicalPhase": false,
       "startingHead": "4d79aea21d77ddbfafd464695ed8a0517164b4ea",
-      "status": "locallyCompletePendingPublicationAndReevaluation"
+      "status": "published"
     }
   ],
   "gates": {

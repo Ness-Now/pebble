@@ -1,0 +1,203 @@
+{
+  "schemaVersion": 4,
+  "evaluation": "Gate B Re-evaluation #4",
+  "startingHead": "ad9322761b2ffa16acad98ac6bafb18cf5317ad2",
+  "evaluatedHead": "5a0abf17e3b977d96594d34d3eac626a2edb56c0",
+  "configurationDigest": "c08e570dce1d7acdb62d49e83f39d9dbe1a1d3cf3dc27411de52d61c154f4e2d",
+  "bootstrapDigest": "600171e99eafb10ca449b046add3d3f9add77e9ea92808302505820aa6eb492c",
+  "candidateResult": "FAIL",
+  "hardBlockers": [
+    "B-BLOCKER-ACCEPTANCE-BOOTSTRAP-ROLE-ASSIGNMENT",
+    "B-BLOCKER-MOVEMENT-HOME-BOUNDARY"
+  ],
+  "fixedMatrix": {
+    "short": {"seeds": [46, 71, 113, 197, 337], "horizonTicks": 800},
+    "medium": {"seeds": [509, 887, 1597], "horizonTicks": 4800},
+    "stress": {"seeds": [2593, 4099], "horizonTicks": 6400},
+    "allFixedSeedsAttempted": true,
+    "allFixedHorizonsCompleted": false,
+    "rerolls": 0
+  },
+  "runs": [
+    {"tier": "short", "seed": 46, "horizonTicks": 800, "ticksReached": 509, "worldTickAtFailure": 272, "result": "FAIL"},
+    {"tier": "short", "seed": 71, "horizonTicks": 800, "ticksReached": 509, "worldTickAtFailure": 272, "result": "FAIL"},
+    {"tier": "short", "seed": 113, "horizonTicks": 800, "ticksReached": 509, "worldTickAtFailure": 262, "result": "FAIL"},
+    {"tier": "short", "seed": 197, "horizonTicks": 800, "ticksReached": 509, "worldTickAtFailure": 272, "result": "FAIL"},
+    {"tier": "short", "seed": 337, "horizonTicks": 800, "ticksReached": 509, "worldTickAtFailure": 276, "result": "FAIL"},
+    {"tier": "medium", "seed": 509, "horizonTicks": 4800, "ticksReached": 509, "worldTickAtFailure": 266, "result": "FAIL"},
+    {"tier": "medium", "seed": 887, "horizonTicks": 4800, "ticksReached": 508, "worldTickAtFailure": 262, "result": "FAIL"},
+    {"tier": "medium", "seed": 1597, "horizonTicks": 4800, "ticksReached": 508, "worldTickAtFailure": 267, "result": "FAIL"},
+    {"tier": "stress", "seed": 2593, "horizonTicks": 6400, "ticksReached": 508, "worldTickAtFailure": 267, "result": "FAIL"},
+    {"tier": "stress", "seed": 4099, "horizonTicks": 6400, "ticksReached": 509, "worldTickAtFailure": 273, "result": "FAIL"}
+  ],
+  "systemicFailure": {
+    "id": "B-BLOCKER-MOVEMENT-HOME-BOUNDARY",
+    "classification": "INTEGRATION BUG",
+    "criterion": "distance_from_home_feedback_boundary",
+    "affectedFixedSeeds": [46, 71, 113, 197, 337, 509, 887, 1597, 2593, 4099],
+    "firstFailureTicks": [508, 509],
+    "actor": "agent_0",
+    "acceptedBoundary": 8,
+    "failedDistance": 9,
+    "goal": "civilizationActivity",
+    "action": "approach_activity",
+    "physicalMovementAuthority": "PebbleCore path plus Entity.move",
+    "rollback": "verified",
+    "movementDisabledAfterBootstrap": false,
+    "distanceFromHomeBypassUsed": false,
+    "postBootstrapBehaviorAlteringAcceptanceWorkaroundUsed": false,
+    "effect": "The physical step leaves the accepted home boundary and the cognitive transaction rolls back, preventing every fixed horizon."
+  },
+  "acceptanceHarnessFailure": {
+    "id": "B-BLOCKER-ACCEPTANCE-BOOTSTRAP-ROLE-ASSIGNMENT",
+    "classification": "ACCEPTANCE HARNESS BUG",
+    "forbiddenBootstrapRoleAssignmentUsed": true,
+    "details": [
+      "The fixture selects a plannerID and two livestock responsible agent IDs.",
+      "The fixture distributes hoe, seeds, wheat and fishing rod according to those selected identities.",
+      "The fixture creates an agricultural plan, establishes a herd with responsible agents and queues feed tasks assigned to those agents."
+    ],
+    "notPresent": [
+      "preloaded profession profile",
+      "fake skill history",
+      "prestarted apprenticeship",
+      "fake trust",
+      "fake work reputation",
+      "fake commitment success",
+      "post-bootstrap productive command"
+    ],
+    "effect": "The campaign remains useful diagnostic evidence for the movement/home integration failure, but cannot receive B1-B12 acceptance credit."
+  },
+  "representativePreFailureEvidence": {
+    "decisions": {"minimum": 508, "maximum": 509},
+    "starts": {"minimum": 315, "maximum": 319},
+    "completions": {"minimum": 10, "maximum": 12},
+    "crossFamilySwitches": 7,
+    "activityFamilies": ["agriculture", "livestock", "physicalSurvival", "wildSubsistence"],
+    "realTill": 1,
+    "fullAgricultureCycles": 0,
+    "realLivestockFeeds": 2,
+    "livestockProducts": 0,
+    "livestockBreeding": 0,
+    "realFishing": 1,
+    "realWildGathering": {"minimum": 6, "maximum": 8},
+    "realPhysicalFoodConsumptions": 7,
+    "careOutcomes": 0,
+    "teachingApprenticeships": {"minimum": 2, "maximum": 4},
+    "teachingDemonstrations": {"minimum": 1, "maximum": 3},
+    "teachingGuidedPractice": 0,
+    "workRefreshAttempts": {"minimum": 127, "maximum": 128},
+    "workMeaningfulRefreshes": 2,
+    "workIdentityRejects": 0,
+    "workStaleRejects": 0,
+    "idleWhileEligibleViolations": 0,
+    "campStockUnits": 0,
+    "genericResourceUnits": 0
+  },
+  "seed509Repeat": {
+    "executed": true,
+    "failureTickA": 509,
+    "failureTickB": 509,
+    "failureCriterionEqual": true,
+    "semanticDigestA": "2a31be04a0218e98eb973fdafdbd148aaa33537d75fb63d61f4d2b464ca1a77a",
+    "semanticDigestB": "a77ea967018e3225ea6b051d9b19533fdca27df17e7e7cf71733cad1a69e90b5",
+    "semanticEquality": false,
+    "result": "FAIL"
+  },
+  "seed887CheckpointReconciliation": {
+    "checkpointBoundaryTicks": 2400,
+    "failureTick": 508,
+    "attempted": false,
+    "saved": false,
+    "loaded": false,
+    "result": "FAIL",
+    "evidenceState": "NOT_REACHED"
+  },
+  "stressShocks": {
+    "boundaryTicks": 3200,
+    "seed2593Reached": false,
+    "seed4099Reached": false,
+    "result": "FAIL",
+    "evidenceState": "NOT_REACHED"
+  },
+  "retentionBoundsBeforeFailure": {
+    "causalLedgerRetained": 8192,
+    "causalLedgerDropped": {"minimum": 132, "maximum": 167},
+    "autonomyRetained": 256,
+    "autonomyEvicted": {"minimum": 56, "maximum": 60},
+    "physicalFoodProcessedIDsRetained": 7,
+    "physicalFoodProcessedIDsDropped": 0
+  },
+  "passiveObserver": {
+    "seed": 46,
+    "targetWallSeconds": 300,
+    "measuredWallSeconds": 300.007,
+    "processElapsedSeconds": 305,
+    "worldTicks": 6054,
+    "reportedSimulationTick": 1012,
+    "lastSuccessfulCognitiveTick": 38,
+    "runtimeErrorsAtSnapshot": 32858,
+    "manualProductiveCommandsAfterBootstrap": 0,
+    "movementEnabled": true,
+    "distanceFromHomeFailureTick": 39,
+    "playerControlCoexistence": {
+      "result": "PASS",
+      "positionBefore": "24.500,68.000,-11.500",
+      "positionAfter": "23.925,68.000,-13.137",
+      "cameraBefore": "2.618,0.209",
+      "cameraAfter": "2.786,0.176",
+      "worldTicksDuringProbe": 20,
+      "simulationTicks": "0>4",
+      "decisionsDuringProbe": 4,
+      "completionsDuringProbe": 3,
+      "directSetPos": 0
+    },
+    "capturesProduced": 6,
+    "multiAgentVisibleAtStart": true,
+    "multiAgentVisibleInNamedLaterCapture": false,
+    "trackedInhabitantVisibleAcrossCaptures": false,
+    "multiDomainLifeVisibleAcrossCaptures": false,
+    "initialRenderAnomaly": {
+      "firstAnomalousFrame": 1,
+      "firstCoherentFrame": 17,
+      "durationFrames": 16,
+      "durationSeconds": 1.107
+    },
+    "result": "FAIL"
+  },
+  "pillarDisposition": {
+    "B1": {"result": "FAIL", "evidenceState": "PARTIAL_BEFORE_SYSTEMIC_FAILURE"},
+    "B2": {"result": "FAIL", "evidenceState": "ADULT_CLOSURE_ONLY_BEFORE_SYSTEMIC_FAILURE"},
+    "B3": {"result": "FAIL", "evidenceState": "FOUR_FAMILIES_PARTIAL_BEFORE_SYSTEMIC_FAILURE"},
+    "B4": {"result": "FAIL", "evidenceState": "TILL_ONLY_NO_FULL_CYCLE"},
+    "B5": {"result": "FAIL", "evidenceState": "FEED_ONLY_NO_CONTINUITY"},
+    "B6": {"result": "FAIL", "evidenceState": "NO_INTEGRATED_CARE_OUTCOME"},
+    "B7": {"result": "FAIL", "evidenceState": "NO_GUIDED_OWN_PRACTICE_CLOSURE"},
+    "B8": {"result": "FAIL", "evidenceState": "WORK_REFRESH_NON_REGRESSED_BUT_NO_HORIZON"},
+    "B9": {"result": "FAIL", "evidenceState": "STRESS_BOUNDARIES_NOT_REACHED"},
+    "B10": {"result": "FAIL", "evidenceState": "LOCAL_ZERO_GHOST_PARTIAL_BUT_NO_HORIZON"},
+    "B11": {"result": "FAIL", "evidenceState": "HORIZONS_REPEAT_AND_CHECKPOINT_FAILED"},
+    "B12": {"result": "FAIL", "evidenceState": "FIVE_MINUTE_CLIENT_WITH_NON_CONTINUING_SOCIETY"}
+  },
+  "focusedRegressions": {
+    "selectors": 13,
+    "passed": 1225,
+    "failed": 0,
+    "result": "PASS"
+  },
+  "canonicalGate": {
+    "stepsPassed": 35,
+    "stepsTotal": 35,
+    "pebsmokeBaseline": 3187,
+    "newChecks": 0,
+    "removedChecks": 0,
+    "pebsmokeActualPassed": 3187,
+    "pebsmokeFailed": 0,
+    "result": "PASS"
+  },
+  "gateR": "ACQUIRED",
+  "gateBCanonicallyAcquired": false,
+  "civ26Started": false,
+  "productQuestion": "NO",
+  "minimalCorrectionRecommendation": "First make the acceptance bootstrap role-neutral: compose only permitted physical opportunities and let product cognition create plans, responsibilities and tasks. Then GATE-B-CORR-05 should reconcile autonomous target and route selection with the existing distance-from-home feedback boundary, or causally replan/return home before crossing it, while preserving physical movement, rollback and local information. Rerun the fixed campaign only after both blockers are absent."
+}

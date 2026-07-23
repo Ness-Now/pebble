@@ -1,5 +1,115 @@
 # Gate B — Self-Sustaining Local Society
 
+## Re-evaluation #4 — final candidate result
+
+Acceptance baseline:
+`ad9322761b2ffa16acad98ac6bafb18cf5317ad2`
+(`Prove transactional work continuity past Gate B tick four`). The
+HEAD-bound acceptance harness was committed as
+`5a0abf17e3b977d96594d34d3eac626a2edb56c0`
+(`Execute Gate B re-evaluation four acceptance`).
+
+```text
+GATE B RE-EVALUATION #4
+CANDIDATE RESULT: FAIL
+
+Gate R: ACQUIRED
+Gate B canonically acquired: NO
+CIV-26 started: NO
+```
+
+All ten fixed seeds were attempted without reroll. Movement was enabled after
+bootstrap for every run; no distance-from-home bypass, post-bootstrap
+productive command, teleport, reset or system disable was used. The final
+source audit nevertheless found a separate hard acceptance-harness failure:
+the fixture selects a `plannerID` and two livestock responsible agent IDs,
+distributes tools/feed according to those identities, creates the agricultural
+plan, establishes a herd with those responsible agents and queues their feed
+tasks. Dynamic distance-based selection does not make this role-neutral.
+Although the fixture grants no profession, skill history, apprenticeship,
+trust, reputation or success, it violates the explicit “bootstrap must not
+assign society roles” contract:
+
+```text
+B-BLOCKER-ACCEPTANCE-BOOTSTRAP-ROLE-ASSIGNMENT
+classification: ACCEPTANCE HARNESS BUG
+```
+
+The campaign therefore provides diagnostic evidence but cannot receive
+B1–B12 acceptance credit. Independently, every seed encountered the same
+product integration failure after 507 or 508 successful cognitive ticks:
+
+```text
+B-BLOCKER-MOVEMENT-HOME-BOUNDARY
+classification: INTEGRATION BUG
+goal: civilizationActivity
+action: approach_activity
+accepted home boundary: 8
+failed physical distance: 9
+movement: PebbleCore path plus Entity.move
+publication: refused and rolled back
+```
+
+| Tier | Seed | Required ticks | Reached | Failure World tick | Result |
+| --- | ---: | ---: | ---: | ---: | --- |
+| short | 46 | 800 | 509 | 272 | FAIL |
+| short | 71 | 800 | 509 | 272 | FAIL |
+| short | 113 | 800 | 509 | 262 | FAIL |
+| short | 197 | 800 | 509 | 272 | FAIL |
+| short | 337 | 800 | 509 | 276 | FAIL |
+| medium | 509 | 4,800 | 509 | 266 | FAIL |
+| medium | 887 | 4,800 | 508 | 262 | FAIL |
+| medium | 1597 | 4,800 | 508 | 267 | FAIL |
+| stress | 2593 | 6,400 | 508 | 267 | FAIL |
+| stress | 4099 | 6,400 | 509 | 273 | FAIL |
+
+Before the failure, every run retained three living agents, zero eligible-idle
+violations and zero abstract camp-stock or generic-resource productive credit.
+The runs demonstrated one real till, two real livestock feeds, one fishing
+success, six to eight real gathers, seven real physical-food consumptions and
+seven cross-family switches. They did not establish a complete agriculture
+cycle, livestock product/breeding continuity, dependent-care outcome, guided
+own-practice Teaching closure, crisis response or any required horizon.
+
+The seed-509 repeat reproduced the same actor, transition, distance and
+cognitive failure tick, but its final semantic digest differed
+(`2a31be…` versus `a77ea9…`; World tick 266 versus 268). B11 therefore does
+not receive deterministic credit. Seed 887 failed at tick 508 before the
+2,400-tick checkpoint boundary. Both stress seeds failed before the
+3,200-tick subtractive shocks. Checkpoint and shock results are
+`NOT_REACHED`, not described as product successes or failures in isolation.
+
+The rendered seed-46 client ran for 300.007 seconds. Real Player input moved
+position and camera while four autonomous decisions and three completions
+occurred, with zero direct `setPos` and zero productive command after
+`PLAYABLE_SLICE_BOOTSTRAP_COMPLETE`. The society then crossed the same home
+boundary at cognitive tick 39. Only 38 cognitive ticks completed successfully;
+the final acceptance snapshot contained 32,858 runtime errors. Six captures
+were emitted, but visual inspection found only the initial anomalous frame
+showing multiple inhabitants; the later named multi-agent, agriculture,
+livestock, follow and final captures did not show continuing inhabitants or
+multi-domain life. B12 is `FAIL`.
+
+All 13 focused selectors passed (`1,225/0`). The canonical gate remained
+`35/35` and `3,187 passed, 0 failed`, so Gate R remains acquired and existing
+component contracts did not regress. Hard acceptance does not average these
+component successes over a systemic integrated failure: B1 through B12 all
+remain `FAIL`.
+
+The durable bounded record is
+[`GATE_B_REEVALUATION_4_SUMMARY.json`](GATE_B_REEVALUATION_4_SUMMARY.json).
+Raw logs, per-seed JSON and captures remain in the dedicated temporary evidence
+root printed by `scripts/verify-pebblelab-gate-b.sh`.
+
+Before another campaign, the acceptance fixture must become role-neutral:
+compose only the permitted physical opportunities and let product cognition
+create plans, responsibilities and tasks. The smallest product correction is a
+non-canonical `GATE-B-CORR-05`: reconcile autonomous target/route selection
+with the existing home-distance feedback boundary, or causally replan/return
+home before crossing it, without disabling movement, widening acceptance,
+teleporting or adding a second pathfinder. This evaluation implements neither
+correction, does not acquire Gate B and does not start `CIV-26`.
+
 ## Post-CORR-04 local remediation record
 
 Starting baseline:
