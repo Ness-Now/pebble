@@ -42,6 +42,7 @@ def run_result(args: argparse.Namespace) -> None:
     bootstrap_lines = [
         line for line in lines
         if "passive composite bootstrap" in line
+        or "GATE_B_BOOTSTRAP_COMPLETE" in line
         or "PLAYABLE_SLICE_BOOTSTRAP_COMPLETE" in line
         or "GATE_B3_RANDOM_TICKS" in line
     ]
@@ -51,7 +52,7 @@ def run_result(args: argparse.Namespace) -> None:
     ]
     unique_errors = list(dict.fromkeys(errors))
     exact = horizon.get("exact") == "1"
-    bootstrap = any("PLAYABLE_SLICE_BOOTSTRAP_COMPLETE" in line for line in lines)
+    bootstrap = any("GATE_B_BOOTSTRAP_COMPLETE" in line for line in lines)
     ticks = int(
         horizon.get("tick")
         or fatal.get("tick")

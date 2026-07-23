@@ -44,6 +44,12 @@ extension PebbleAgentController {
                 passiveObserverBootstrapComplete = command == "passive"
                 if passiveObserverBootstrapComplete {
                     manualProductiveCommandsAfterBootstrap = 0
+                    if environment["PEBBLELAB_GATE_B3_ACCEPTANCE"] == "1" {
+                        trace(
+                            "GATE_B_BOOTSTRAP_COMPLETE tick=\(candidate.tick) agents="
+                                + "\(candidate.snapshot().agentCount) productiveCommandsAfter=0"
+                        )
+                    }
                     trace(
                         "PLAYABLE_SLICE_BOOTSTRAP_COMPLETE tick=\(candidate.tick) agents="
                             + "\(candidate.snapshot().agentCount) follow=off productiveCommandsAfter=0"

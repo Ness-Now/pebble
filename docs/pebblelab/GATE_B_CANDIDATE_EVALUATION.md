@@ -54,8 +54,9 @@ CIV-26 started: NO
 
 The acceptance harness armed every required gate, used each World's safe
 natural spawn, enabled canonical Core random ticks, created one bounded
-three-agent physical opportunity field, and emitted
-`PLAYABLE_SLICE_BOOTSTRAP_COMPLETE` before any observation window. No
+three-agent physical opportunity field, and emitted the required
+`GATE_B_BOOTSTRAP_COMPLETE` / `PLAYABLE_SLICE_BOOTSTRAP_COMPLETE` end markers
+before the corresponding observation window. No
 post-bootstrap productive command, reroll, role assignment, material grant or
 Teaching seed was used.
 

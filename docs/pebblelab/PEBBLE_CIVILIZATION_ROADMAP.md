@@ -33,9 +33,10 @@ remédie maintenant ce blocker : la cognition normale dérive une opportunité
 locale contextuelle, les deux participants décident, puis l'autorité CIV-20
 existante sélectionne le mentor et crée l'apprentissage. La preuve intégrée
 conserve la causalité réussite réelle → démonstration sans skill gratuit →
-réussite propre de l'élève → pratique guidée. La campagne 5/3/2 n'a pas été
-relancée. Gate B reste non acquise, sa re-evaluation #3 est requise et `CIV-26`
-reste `planned`.
+réussite propre de l'élève → pratique guidée. Gate B re-evaluation #3 a depuis
+tenté la campagne 5/3/2 fixe et rencontré sur les dix seeds le même refus Work
+transactionnel à tick 4. Son verdict candidate est `FAIL` ; Gate B reste non
+acquise et `CIV-26` reste `planned`.
 
 Les noms `NEXT-1` et `NEXT-2` sont uniquement des alias historiques :
 

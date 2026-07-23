@@ -289,7 +289,7 @@ if [ "$MODE" = all ]; then
         output="$EVIDENCE_ROOT/focused/$selector.log"
         if PEBBLELAB_SMOKE_ONLY="$selector" \
             swift run -c release --skip-build pebsmoke >"$output" 2>&1; then
-            count=$(sed -n 's/^\\([0-9][0-9]*\\) passed, 0 failed$/\\1/p' "$output" | tail -n 1)
+            count=$(sed -n 's/^\([0-9][0-9]*\) passed, 0 failed$/\1/p' "$output" | tail -n 1)
             if [ -n "$count" ]; then
                 printf '%s\t%s\t0\t0\n' "$selector" "$count" >>"$EVIDENCE_ROOT/focused/results.tsv"
                 printf '  %-34s %s passed, 0 failed\n' "$selector" "$count"
