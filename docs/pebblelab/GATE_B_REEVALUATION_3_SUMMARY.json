@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 3,
+  "evaluation": "Gate B Re-evaluation #3",
+  "productBaselineHead": "a673b28b14e9d6c97c8d59cca0fbe47b097410a8",
+  "candidateResult": "FAIL",
+  "fixedMatrix": {
+    "short": {
+      "seeds": [46, 71, 113, 197, 337],
+      "horizonTicks": 800
+    },
+    "medium": {
+      "seeds": [509, 887, 1597],
+      "horizonTicks": 4800
+    },
+    "stress": {
+      "seeds": [2593, 4099],
+      "horizonTicks": 6400
+    },
+    "rerolls": 0
+  },
+  "runs": [
+    {"tier": "short", "seed": 46, "result": "FAIL", "ticksReached": 4, "horizonComplete": false},
+    {"tier": "short", "seed": 71, "result": "FAIL", "ticksReached": 4, "horizonComplete": false},
+    {"tier": "short", "seed": 113, "result": "FAIL", "ticksReached": 4, "horizonComplete": false},
+    {"tier": "short", "seed": 197, "result": "FAIL", "ticksReached": 4, "horizonComplete": false},
+    {"tier": "short", "seed": 337, "result": "FAIL", "ticksReached": 4, "horizonComplete": false},
+    {"tier": "medium", "seed": 509, "result": "FAIL", "ticksReached": 4, "horizonComplete": false},
+    {"tier": "medium", "seed": 887, "result": "FAIL", "ticksReached": 4, "horizonComplete": false},
+    {"tier": "medium", "seed": 1597, "result": "FAIL", "ticksReached": 4, "horizonComplete": false},
+    {"tier": "stress", "seed": 2593, "result": "FAIL", "ticksReached": 4, "horizonComplete": false},
+    {"tier": "stress", "seed": 4099, "result": "FAIL", "ticksReached": 4, "horizonComplete": false}
+  ],
+  "systemicFailure": {
+    "classification": "INTEGRATION BUG",
+    "message": "workCommitment(invalid work state: demand identity changed)",
+    "firstFailureTick": 4,
+    "affectedFixedSeeds": [46, 71, 113, 197, 337, 509, 887, 1597, 2593, 4099],
+    "effect": "The transactional cognitive tick is refused, so the integrated society cannot advance to any fixed horizon."
+  },
+  "seed509Repeat": {
+    "executed": true,
+    "result": "FAIL",
+    "reason": "Both attempts encounter the same tick-4 invariant before the fixed horizon; final-state determinism is not established."
+  },
+  "seed887CheckpointReconciliation": {
+    "result": "FAIL",
+    "checkpointBoundaryReached": false,
+    "reason": "The systemic tick-4 failure precedes the safe mid-run checkpoint boundary."
+  },
+  "stressShocks": {
+    "seed2593Reached": false,
+    "seed4099Reached": false,
+    "reason": "The systemic failure precedes both subtractive shock boundaries."
+  },
+  "pillarDisposition": {
+    "B1": {"result": "FAIL", "evidenceState": "NOT_EXERCISED_TO_HORIZON"},
+    "B2": {"result": "FAIL", "evidenceState": "NOT_EXERCISED_TO_HORIZON"},
+    "B3": {"result": "FAIL", "evidenceState": "PARTIAL_BEFORE_FATAL_TICK"},
+    "B4": {"result": "FAIL", "evidenceState": "NOT_EXERCISED_TO_FULL_CYCLE"},
+    "B5": {"result": "FAIL", "evidenceState": "PARTIAL_BEFORE_FATAL_TICK"},
+    "B6": {"result": "FAIL", "evidenceState": "NOT_EXERCISED"},
+    "B7": {"result": "FAIL", "evidenceState": "NOT_EXERCISED_IN_CAMPAIGN"},
+    "B8": {"result": "FAIL", "evidenceState": "FAILED_SYSTEMIC_WORK_TRANSITION"},
+    "B9": {"result": "FAIL", "evidenceState": "NOT_EXERCISED"},
+    "B10": {"result": "FAIL", "evidenceState": "NOT_EXERCISED_TO_HORIZON"},
+    "B11": {"result": "FAIL", "evidenceState": "FAILED_HORIZON_REPEAT_AND_CHECKPOINT"},
+    "B12": {"result": "FAIL", "evidenceState": "FIVE_MINUTE_CLIENT_CANNOT_SHOW_CONTINUING_SOCIETY"}
+  },
+  "materialBeforeFailure": {
+    "realActivityFamilies": ["agriculture", "livestock", "wildSubsistence"],
+    "typicalCompletedActions": {
+      "till": 1,
+      "feed": 2,
+      "wildGathering": 1
+    },
+    "agricultureCompletedCycles": 0,
+    "physicalFoodConsumptions": 0,
+    "careOutcomes": 0,
+    "teachingApprenticeships": 0,
+    "ghostProductiveDeltas": 0,
+    "manualProductiveCommands": 0
+  },
+  "gateR": "ACQUIRED",
+  "gateBCanonicallyAcquired": false,
+  "civ26Started": false,
+  "productQuestion": "NO",
+  "minimalCorrectionRecommendation": "Correct stable work-demand refresh identity so a changed source event for an existing logical demand is handled deterministically without freezing the transactional cognitive tick; then rerun this unchanged acceptance campaign."
+}

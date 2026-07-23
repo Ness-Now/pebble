@@ -456,7 +456,7 @@ classe professionnelle imposée.
   `AgentLocalEcologyState`. Gate R reste acquise. Ces preuves sont des contrats
   de composant ; elles ne prouvent pas à elles seules Gate B.
 
-#### Évaluations candidates Gate B — FAIL, CORR-01/CORR-02 publiés, CORR-03 local
+#### Évaluations candidates Gate B — FAIL, CORR-01/CORR-02/CORR-03 publiés
 
 L'[évaluation dédiée](GATE_B_CANDIDATE_EVALUATION.md) #1 a confirmé quatre
 blockers. Les jalons correctifs non canoniques publiés `GATE-B-CORR-01 — Real
@@ -487,9 +487,15 @@ Gate B re-evaluation #2 reste historiquement `FAIL`. Le correctif non canonique
 son blocker B7 par un appel normal, contextuel, local et borné dans
 `AgentSimulationSession`. Il réutilise le selector/ranker CIV-20, les
 démonstrations et la pratique guidée existants ; il n'ajoute ni scheduler,
-oracle global, skill gratuit, profession ni matière. La campagne 5/3/2 et Gate
-B re-evaluation #3 n'ont pas été exécutées. Gate B reste non acquise, cette
-roadmap ne renumérote pas `CIV-26` et ne le passe pas `current`.
+oracle global, skill gratuit, profession ni matière.
+
+Gate B re-evaluation #3 a tenté les dix seeds fixes depuis des spawns sûrs,
+sans reroll ni injection productive post-bootstrap. Chaque session a exécuté
+les premières actions physiques agriculture/livestock/Wild puis le refresh
+Work a refusé transactionnellement tick 4 avec
+`demand identity changed`. Aucun horizon fixe, cycle long, checkpoint ou shock
+n'a donc été crédité. Le verdict candidate est `FAIL`, Gate B reste non
+acquise, cette roadmap ne renumérote pas `CIV-26` et ne le passe pas `current`.
 
 ### Économie matérielle locale — Gate C
 
@@ -657,6 +663,7 @@ monde de vivre.
   publiés et ont remédié nourriture/survie, orchestration autonome, slice
   passive, réserve livestock, remplacement de crise et care physique. La
   re-evaluation #2 a échoué sur l'initiation Teaching intégrée avant campagne
-  5/3/2. CORR-03 remédie désormais ce blocker localement sans acquérir Gate B ;
-  restart composite, campagne systémique et re-evaluation #3 restent non
-  prouvés. Gate B demeure non acquise et `CIV-26` reste planifié.
+  5/3/2. CORR-03 remédie désormais ce blocker localement sans acquérir Gate B.
+  La re-evaluation #3 est `FAIL` : les dix seeds rencontrent le même refus
+  Work transactionnel à tick 4, avant horizons/checkpoint/shocks. Gate B
+  demeure non acquise et `CIV-26` reste planifié.

@@ -37,6 +37,63 @@ This is a corrective product proof, not Gate B re-evaluation #3. The unchanged
 shocks, composite persistence and final human/senior review were deliberately
 not run or credited here.
 
+## Re-evaluation #3 — final candidate result
+
+Product baseline:
+`a673b28b14e9d6c97c8d59cca0fbe47b097410a8`
+(`Prove integrated Teaching emergence`).
+
+```text
+GATE B RE-EVALUATION #3
+CANDIDATE RESULT: FAIL
+
+Gate R: ACQUIRED
+Gate B canonically acquired: NO
+CIV-26 started: NO
+```
+
+The acceptance harness armed every required gate, used each World's safe
+natural spawn, enabled canonical Core random ticks, created one bounded
+three-agent physical opportunity field, and emitted
+`PLAYABLE_SLICE_BOOTSTRAP_COMPLETE` before any observation window. No
+post-bootstrap productive command, reroll, role assignment, material grant or
+Teaching seed was used.
+
+All ten fixed seeds were attempted. Every run completed the same initial real
+actions — one till, two sheep feeds and one wild gather, with zero ghost
+productive delta — then failed at cognitive tick 4:
+
+```text
+workCommitment(invalid work state: demand identity changed)
+```
+
+The work-demand refresh is transactional, so the refused transition does not
+partially publish. It also means the session never advances past tick 4.
+Consequently none of the fixed 800/4800/6400 horizons completes; seed 509
+cannot establish final-state determinism, seed 887 cannot reach its safe
+checkpoint boundary, and neither subtractive stress shock is reached. These
+surfaces are recorded as `NOT_EXERCISED`, not falsely described as broken.
+B8 and B11 fail directly; every other mandatory hard pillar remains
+insufficient for candidate acceptance.
+
+The rendered seed-46 client remains operable for the five-minute wall-clock
+observation and accepts normal Player input, but the inhabitants cannot
+continue their society after tick 4. B12 therefore fails even though the
+client, camera, stable visual identities and zero-command bootstrap still
+exist.
+
+The durable bounded result is
+[`GATE_B_REEVALUATION_3_SUMMARY.json`](GATE_B_REEVALUATION_3_SUMMARY.json).
+Raw HEAD-bound logs, per-seed JSON, captures, focused results and full-gate
+output remain in the dedicated temporary evidence root printed by
+`scripts/verify-pebblelab-gate-b.sh`.
+
+The smallest recommended correction is limited to stable work-demand refresh
+identity: a refreshed logical demand must handle its newer causal source
+deterministically without freezing the entire cognitive tick. This evaluation
+does not implement that product fix, create CORR-04, acquire Gate B or start
+`CIV-26`.
+
 ## Re-evaluation #2 — historical final candidate record
 
 Evaluation starting baseline:

@@ -4974,3 +4974,21 @@ own later success received normal practice before the guided-practice causal
 link. `B-BLOCKER-INTEGRATED-TEACHING-INITIATION` is therefore remediated
 locally. Gate B remains not acquired, the 5/3/2 campaign was not run, Gate R
 remains acquired and `CIV-26` remains planned.
+
+## Gate B - Re-evaluation #3 systemic integrated-work failure
+
+Status: candidate `FAIL` from product baseline
+`a673b28b14e9d6c97c8d59cca0fbe47b097410a8`.
+
+The acceptance-only harness attempted all ten fixed seeds with canonical Core
+random ticks, full Gate B gates, no rerolls and zero productive command after
+the composite bootstrap. Every seed completed the same first physical
+agriculture, livestock and Wild actions, then the transactional Work refresh
+refused cognitive tick 4 with `demand identity changed`. No fixed horizon,
+seed-887 checkpoint boundary or designated stress boundary was reached or
+credited. The five-minute rendered seed-46 client remained controllable but
+could not show a continuing society after the freeze.
+
+No product repair, second authority, CORR-04 implementation or CIV-26 work was
+performed. Gate R remains acquired, Gate B remains not acquired and `CIV-26`
+remains planned.

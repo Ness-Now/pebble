@@ -26,7 +26,7 @@ la roadmap prospective actuelle.
 Les `AGENTS.md` racine et target-locaux sont des instructions permanentes, pas
 des roadmaps. Ils restent obligatoires dans leur périmètre.
 
-État canonique après l'évaluation dédiée : `CIV-00` à `CIV-25` sont
+État canonique après Gate B re-evaluation #3 : `CIV-00` à `CIV-25` sont
 `completed` dans leurs contrats bornés et Gate R reste acquise. La candidate
 Gate B est `FAIL` et Gate B n'est pas acquise. Aucune phase n'est promue
 automatiquement pendant sa correction ; `CIV-26` à `CIV-67` restent `planned`.
@@ -37,8 +37,11 @@ l'apprentissage local requis avant que l'exécution autonome puisse publier une
 démonstration. La campagne 5/3/2 a donc été arrêtée avant exécution plutôt que
 scriptée. `GATE-B-CORR-03 — Integrated Local Apprenticeship Initiation` remédie
 maintenant ce blocker localement par la cognition normale et l'autorité
-Teaching CIV-20 existante. Cette correction n'est pas Gate B re-evaluation #3 :
-Gate B reste non acquise et `CIV-26` reste planifié.
+Teaching CIV-20 existante. Gate B re-evaluation #3 a ensuite tenté les dix
+seeds fixes sans reroll. Les dix sessions ont rencontré à tick 4 le même refus
+transactionnel de refresh Work (`demand identity changed`) ; aucun horizon,
+checkpoint, shock ou verdict par moyenne n'a été crédité. Gate B reste non
+acquise et `CIV-26` reste planifié.
 
 ## `operational-runbook`
 
@@ -46,11 +49,12 @@ Gate B reste non acquise et `CIV-26` reste planifié.
   runbook live canonique. Il décrit les gates, commandes, preuves et limites des
   verticales 3D actuellement acquises.
 - [`GATE_B_CANDIDATE_EVALUATION.md`](GATE_B_CANDIDATE_EVALUATION.md) est le
-  record d'acceptance post-CIV-25 : évaluations #1 et #2, verdict candidate
-  `FAIL`, blockers, preuves et statuts publiés de `GATE-B-CORR-01` et
-  `GATE-B-CORR-02`, puis remédiation locale CORR-03 en attente de
-  re-evaluation #3.
+  record d'acceptance post-CIV-25 : évaluations #1, #2 et #3, leurs verdicts
+  candidate `FAIL`, blockers, corrections publiées et preuves intégrées.
   Il ne marque pas Gate B acquise et ne remplace pas la roadmap prospective.
+- [`GATE_B_REEVALUATION_3_SUMMARY.json`](GATE_B_REEVALUATION_3_SUMMARY.json)
+  est le résumé durable borné de la matrice fixe, du défaut systémique et de
+  la disposition B1–B12 ; les logs et captures HEAD-bound restent temporaires.
 - Les fichiers racine `README.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md` et
   `SECURITY.md` restent les références opérationnelles du jeu Pebble et du
   dépôt général ; ils ne définissent pas la roadmap Civilization.
