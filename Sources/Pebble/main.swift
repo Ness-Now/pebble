@@ -423,6 +423,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         ], let value = Int(raw), (240...7200).contains(value) else { return nil }
         return value
     }()
+    private let gateB3AcceptanceHorizon: Int? = {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["PEBBLELAB_GATE_B3_ACCEPTANCE"] == "1",
+              let raw = environment["PEBBLELAB_GATE_B3_HORIZON"],
+              let value = Int(raw), value > 0 else { return nil }
+        return value
+    }()
+    private let gateB3AcceptanceShock =
+        ProcessInfo.processInfo.environment["PEBBLELAB_GATE_B3_SHOCK"]
+    private let gateB3RandomTickSpeed: Int? = {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["PEBBLELAB_GATE_B3_ACCEPTANCE"] == "1",
+              let raw = environment["PEBBLELAB_GATE_B3_RANDOM_TICK_SPEED"],
+              let value = Int(raw), (1...100).contains(value) else { return nil }
+        return value
+    }()
+    private var gateB3RandomTickApplied = false
+    private var gateB3CheckpointAttempted = false
+    private var gateB3ShockApplied = false
+    private var gateB3Completed = false
+    private var gateB3CommandCompletionWorldTick: Int?
+    private let gateB3PassiveSeconds: Double? = {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["PEBBLELAB_GATE_B3_PASSIVE"] == "1",
+              let raw = environment["PEBBLELAB_GATE_B3_PASSIVE_SECONDS"],
+              let value = Double(raw), value >= 300 else { return nil }
+        return value
+    }()
+    private let gateB3PassiveCaptureDirectory =
+        ProcessInfo.processInfo.environment["PEBBLELAB_GATE_B3_PASSIVE_CAPTURE_DIR"]
+    private var gateB3PassiveStartedAt: CFTimeInterval?
+    private var gateB3PassiveCapturedMilestones = Set<Int>()
+    private var gateB3PassiveCompleted = false
+    private var gateB3RenderFrame = 0
+    private var gateB3FirstCoherentFrame: Int?
     // Persistence proof hook: run command batches at explicit World ticks so a
     // restart and its uninterrupted control cannot inherit renderer-frame timing.
     // The normal PEBBLE_CMD frame delay remains unchanged when this is absent.
@@ -677,6 +712,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
 
     func draw(in view: MTKView) {
         let now = CACurrentMediaTime()
+        if gateB3PassiveSeconds != nil {
+            gateB3RenderFrame += 1
+            if game?.hasWorld() == true, gateB3FirstCoherentFrame == nil,
+               renderer?.sections.isEmpty == false {
+                gateB3FirstCoherentFrame = gateB3RenderFrame
+                print(
+                    String(
+                        format: "[lab-live] GATE_B3_RENDER_COHERENCE "
+                            + "firstAnomalousFrame=1 firstCoherentFrame=%d "
+                            + "durationFrames=%d durationSeconds=%.3f "
+                            + "windowAlpha=%.2f sections=%d",
+                        gateB3RenderFrame, max(0, gateB3RenderFrame - 1),
+                        now - startTime, window?.alphaValue ?? 0,
+                        renderer?.sections.count ?? 0
+                    )
+                )
+            }
+        }
         let dt = (now - lastFrame) * 1000
         lastFrame = now
         let timeSec = (now - startTime).truncatingRemainder(dividingBy: 1800)
@@ -716,6 +769,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         renderer.flushAtlasUploads(cmd)         // staged slice blits, GPU-ordered
 
         if let cmds = pendingCmds, game.hasWorld(), let p = game.player {
+            if !gateB3RandomTickApplied, let speed = gateB3RandomTickSpeed {
+                gateB3RandomTickApplied = true
+                game.world.randomTickSpeed = speed
+                print(
+                    "[lab-live] GATE_B3_RANDOM_TICKS authority=PebbleCore "
+                        + "speed=\(speed) worldTick=\(game.world.time)"
+                )
+            }
             let commandBatchReady: Bool
             if let targetTick = pendingCmdWorldTick {
                 precondition(
@@ -745,6 +806,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
                 }
                 if pendingCmdBatches.isEmpty {
                     pendingCmds = nil
+                    if gateB3AcceptanceHorizon != nil {
+                        gateB3CommandCompletionWorldTick = game.world.time
+                    }
                     if usesBatchShots {
                         shotQuitFrames = ProcessInfo.processInfo.environment[
                             "PEBBLELAB_INTEGRATED_TEACHING_PROOF"
@@ -798,7 +862,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
                 worldID: game.worldRec?.id,
                 dimension: game.dim.rawValue
             )
+            driveGateB3Acceptance()
             passiveObserverInputProof?.afterFrame()
+            driveGateB3Passive(now: now)
             renderer.pebbleAgentPhysicalGestures = agentController.physicalGestureMarkers()
             bot?.tick()
             booth?.tickBooth()
@@ -832,6 +898,121 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         }
         cmd.present(drawable)
         cmd.commit()
+    }
+
+    private func driveGateB3Acceptance() {
+        guard !gateB3Completed, let horizon = gateB3AcceptanceHorizon else { return }
+        guard let proof = agentController.passiveProductProofSnapshot() else {
+            if let completedAt = gateB3CommandCompletionWorldTick,
+               game.world.time - completedAt >= 40 {
+                gateB3Completed = true
+                agentController.traceGateB3AcceptanceSnapshot(world: game.world)
+                print(
+                    "[lab-live] GATE_B3_FATAL_INVARIANT seed=\(game.world.seed) "
+                        + "tick=0 runtimeErrors=0 horizon=\(horizon) "
+                        + "reason=bootstrap_contract_failed"
+                )
+                fflush(stdout)
+                NSApp.terminate(nil)
+            }
+            return
+        }
+        if proof.runtimeErrors > 0 {
+            gateB3Completed = true
+            agentController.traceGateB3AcceptanceSnapshot(world: game.world)
+            print(
+                "[lab-live] GATE_B3_FATAL_INVARIANT seed=\(game.world.seed) "
+                    + "tick=\(proof.simulationTick) runtimeErrors=\(proof.runtimeErrors) "
+                    + "horizon=\(horizon) reason=cognitive_transition_failed"
+            )
+            fflush(stdout)
+            NSApp.terminate(nil)
+            return
+        }
+        let boundary = horizon / 2
+        if game.world.seed == 887, !gateB3CheckpointAttempted,
+           proof.simulationTick >= boundary {
+            gateB3CheckpointAttempted = true
+            print(
+                "[lab-live] GATE_B3_CHECKPOINT_BOUNDARY seed=887 "
+                    + "tick=\(proof.simulationTick) target=\(boundary)"
+            )
+            runCommand(game, "/lab pause")
+            runCommand(game, "/lab checkpoint save gate-b3-887-mid")
+            runCommand(game, "/lab checkpoint load gate-b3-887-mid")
+            runCommand(game, "/lab resume")
+        }
+        if let shock = gateB3AcceptanceShock, !gateB3ShockApplied,
+           proof.simulationTick >= boundary {
+            gateB3ShockApplied = true
+            agentController.applyGateB3AcceptanceShock(shock, world: game.world)
+        }
+        guard let updated = agentController.passiveProductProofSnapshot(),
+              updated.simulationTick >= horizon else { return }
+        gateB3Completed = true
+        agentController.traceGateB3AcceptanceSnapshot(world: game.world)
+        print(
+            "[lab-live] GATE_B3_HORIZON_COMPLETE seed=\(game.world.seed) "
+                + "tick=\(updated.simulationTick) target=\(horizon) "
+                + "exact=\(updated.simulationTick == horizon ? 1 : 0)"
+        )
+        fflush(stdout)
+        NSApp.terminate(nil)
+    }
+
+    private func driveGateB3Passive(now: CFTimeInterval) {
+        guard !gateB3PassiveCompleted, let duration = gateB3PassiveSeconds,
+              let captureDirectory = gateB3PassiveCaptureDirectory,
+              agentController.passiveProductProofSnapshot() != nil else { return }
+        if gateB3PassiveStartedAt == nil {
+            gateB3PassiveStartedAt = now
+            print(
+                "[lab-live] GATE_B3_PASSIVE_WALL_START "
+                    + "worldTick=\(game.world.time) simulationTick="
+                    + "\(agentController.passiveProductProofSnapshot()!.simulationTick) "
+                    + "durationTargetSeconds=\(Int(duration))"
+            )
+        }
+        guard let startedAt = gateB3PassiveStartedAt else { return }
+        let elapsed = now - startedAt
+        let milestones = [0, 60, 120, 180, 240, Int(duration)]
+        for milestone in milestones where elapsed >= Double(milestone)
+            && !gateB3PassiveCapturedMilestones.contains(milestone) {
+            gateB3PassiveCapturedMilestones.insert(milestone)
+            let name: String
+            switch milestone {
+            case 0: name = "gate-b3-start.png"
+            case 60: name = "gate-b3-multi-agent.png"
+            case 120: name = "gate-b3-agriculture.png"
+            case 180: name = "gate-b3-livestock.png"
+            case 240: name = "gate-b3-follow-agent-late.png"
+            default: name = "gate-b3-final.png"
+            }
+            pendingCompositedCapturePath = captureDirectory + "/" + name
+            print(
+                String(
+                    format: "[lab-live] GATE_B3_PASSIVE_CAPTURE "
+                        + "milestoneSeconds=%d elapsedSeconds=%.3f path=%@",
+                    milestone, elapsed, name
+                )
+            )
+            break
+        }
+        guard elapsed >= duration else { return }
+        gateB3PassiveCompleted = true
+        agentController.traceGateB3AcceptanceSnapshot(world: game.world)
+        print(
+            String(
+                format: "[lab-live] GATE_B3_PASSIVE_WALL_COMPLETE "
+                    + "elapsedSeconds=%.3f targetSeconds=%.0f "
+                    + "simulationTick=%d worldTick=%d productiveCommands=0",
+                elapsed, duration,
+                agentController.passiveProductProofSnapshot()!.simulationTick,
+                game.world.time
+            )
+        )
+        fflush(stdout)
+        shotQuitFrames = 120
     }
 
     private func encodeCompositedCapture(_ cmd: MTLCommandBuffer, from texture: MTLTexture, to path: String) {

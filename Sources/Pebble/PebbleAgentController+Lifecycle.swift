@@ -75,7 +75,13 @@ extension PebbleAgentController {
             activeWorld = world
             isPaused = false
             if resetSpeed {
-                cognitiveHz = 4
+                if environment["PEBBLELAB_GATE_B3_ACCEPTANCE"] == "1",
+                   let raw = environment["PEBBLELAB_GATE_B3_COGNITIVE_HZ"],
+                   let acceptanceHz = Int(raw), (1...160).contains(acceptanceHz) {
+                    cognitiveHz = acceptanceHz
+                } else {
+                    cognitiveHz = 4
+                }
                 movementEnabled = movementFeatureEnabled
             } else {
                 movementEnabled = preservedMovementEnabled

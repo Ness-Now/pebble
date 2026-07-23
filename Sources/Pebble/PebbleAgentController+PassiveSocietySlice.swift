@@ -52,6 +52,7 @@ struct PebblePassiveProductProofSnapshot {
     let simulationTick: Int
     let decisions: Int
     let completions: Int
+    let runtimeErrors: Int
 }
 
 extension PebbleAgentController {
@@ -514,7 +515,8 @@ extension PebbleAgentController {
         let counters = session.autonomousActivitySnapshot().counters
         return PebblePassiveProductProofSnapshot(
             bootstrapComplete: true, simulationTick: session.tick,
-            decisions: counters.decisionCount, completions: counters.completionCount
+            decisions: counters.decisionCount, completions: counters.completionCount,
+            runtimeErrors: runtimeErrorCount
         )
     }
 
