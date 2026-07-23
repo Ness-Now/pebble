@@ -156,6 +156,11 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "work-professi
     print("\n\(passed) passed, \(failed) failed")
     exit(failed > 0 ? 1 : 0)
 }
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "work-demand-refresh" {
+    runPebbleAgentsWorkDemandRefreshSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "autonomous-civilization" {
     runPebbleAgentsAutonomousCivilizationSmoke()
     print("\n\(passed) passed, \(failed) failed")
@@ -2294,6 +2299,7 @@ runPebbleCoreLivestockSmoke()
 runPebbleAgentsLivestockSmoke()
 runPebbleAgentsWildSubsistenceSmoke()
 runPebbleAgentsWorkProfessionSmoke()
+runPebbleAgentsWorkDemandRefreshSmoke()
 runPebbleAgentsAutonomousCivilizationSmoke()
 
 print("\n\(passed) passed, \(failed) failed")

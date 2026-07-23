@@ -12,18 +12,24 @@ STRESS_SEEDS='2593 4099'
 SHORT_HORIZON=800
 MEDIUM_HORIZON=4800
 STRESS_HORIZON=6400
+CORR04_SEEDS='46 71 113 197 337 509 887 1597 2593 4099'
+CORR04_HORIZON=32
+CORR04_LONG_HORIZON=800
 MODE=all
 REPORT_ONLY=0
 
 usage() {
     cat <<'EOF'
-Usage: scripts/verify-pebblelab-gate-b.sh [--short|--medium|--stress|--passive|--report-only]
+Usage: scripts/verify-pebblelab-gate-b.sh [--short|--medium|--stress|--passive|--work-demand-refresh|--report-only]
 
 Runs the fixed Gate B re-evaluation #3 acceptance campaign. Normal mode runs
 all ten fixed seeds, seed-509 repeat, seed-887 checkpoint attempt, the rendered
 five-minute passive slice, focused regressions, and the canonical full gate.
 The command exits zero only for a hard B1-B12 candidate PASS. --report-only
 prints the durable repository summary without executing or crediting new runs.
+--work-demand-refresh is the bounded CORR-04 escape probe only: the ten fixed
+seeds at 32 Civilization ticks plus seed 46 at 800 ticks. It is not Gate B
+Re-evaluation #4 and does not credit B1-B12.
 EOF
 }
 
@@ -42,6 +48,7 @@ if [ "$#" -eq 1 ]; then
         --medium) MODE=medium ;;
         --stress) MODE=stress ;;
         --passive) MODE=passive ;;
+        --work-demand-refresh) MODE=work-refresh ;;
         --report-only) MODE=report; REPORT_ONLY=1 ;;
         --help|-h) usage; exit 0 ;;
         *) usage >&2; exit 2 ;;
@@ -62,26 +69,35 @@ if [ "$REPORT_ONLY" -eq 1 ]; then
     SUMMARY="$ROOT_DIR/docs/pebblelab/GATE_B_REEVALUATION_3_SUMMARY.json"
     [ -f "$SUMMARY" ] || fail "durable Gate B re-evaluation #3 summary is missing"
     python3 -m json.tool "$SUMMARY"
-    printf '\nGate B canonically acquired: NO\nCIV-26 started: NO\n'
+    printf '\nGate B Re-evaluation #3: historical FAIL\n'
+    printf 'B-BLOCKER-STABLE-WORK-DEMAND-REFRESH: REMEDIATED LOCALLY\n'
+    printf 'Gate B candidate: FAIL / RE-EVALUATION #4 PENDING\n'
+    printf 'Gate B canonically acquired: NO\nCIV-26 started: NO\n'
     exit 0
 fi
 
 if [ -n "${PEBBLELAB_GATE_B_EVIDENCE_ROOT:-}" ]; then
     EVIDENCE_ROOT=${PEBBLELAB_GATE_B_EVIDENCE_ROOT%/}
+elif [ "$MODE" = work-refresh ]; then
+    EVIDENCE_ROOT=$(
+        mktemp -d "/tmp/PebbleLab-GateB-CORR04-${HEAD_SHA}.XXXXXX"
+    )
 else
     EVIDENCE_ROOT=$(
         mktemp -d "/tmp/PebbleLab-GateB-Reevaluation3-${HEAD_SHA}.XXXXXX"
     )
 fi
 case "$EVIDENCE_ROOT" in
-    /tmp/PebbleLab-GateB-Reevaluation3-*|/private/tmp/PebbleLab-GateB-Reevaluation3-*) ;;
+    /tmp/PebbleLab-GateB-Reevaluation3-*|/private/tmp/PebbleLab-GateB-Reevaluation3-*|\
+    /tmp/PebbleLab-GateB-CORR04-*|/private/tmp/PebbleLab-GateB-CORR04-*) ;;
     *) fail "evidence root must be a dedicated Gate B re-evaluation #3 temp path" ;;
 esac
 mkdir -p \
     "$EVIDENCE_ROOT/short" "$EVIDENCE_ROOT/medium" \
     "$EVIDENCE_ROOT/stress" "$EVIDENCE_ROOT/determinism" \
     "$EVIDENCE_ROOT/checkpoint" "$EVIDENCE_ROOT/passive" \
-    "$EVIDENCE_ROOT/focused" "$EVIDENCE_ROOT/summary"
+    "$EVIDENCE_ROOT/focused" "$EVIDENCE_ROOT/summary" \
+    "$EVIDENCE_ROOT/corr04" "$EVIDENCE_ROOT/corr04-long"
 
 CONFIG_DIGEST=$(
     printf '%s\n' \
@@ -96,7 +112,7 @@ CONFIG_DIGEST=$(
 cat >"$EVIDENCE_ROOT/configuration.json" <<EOF
 {
   "schemaVersion": 3,
-  "evaluation": "Gate B Re-evaluation #3",
+  "evaluation": "$([ "$MODE" = work-refresh ] && printf 'GATE-B-CORR-04 bounded escape probe' || printf 'Gate B Re-evaluation #3')",
   "head": "$HEAD_SHA",
   "branch": "$BRANCH",
   "configurationDigest": "$CONFIG_DIGEST",
@@ -110,13 +126,22 @@ cat >"$EVIDENCE_ROOT/configuration.json" <<EOF
 }
 EOF
 
-printf 'Gate B Re-evaluation #3 — Final Self-Sustaining Local Society Candidate Acceptance\n'
+if [ "$MODE" = work-refresh ]; then
+    printf 'GATE-B-CORR-04 — bounded Work-demand escape probe (no Gate B credit)\n'
+else
+    printf 'Gate B Re-evaluation #3 — Final Self-Sustaining Local Society Candidate Acceptance\n'
+fi
 printf 'Repository: %s\nBranch: %s\nHEAD: %s\n' "$ROOT_DIR" "$BRANCH" "$HEAD_SHA"
 printf 'Evidence root: %s\nConfiguration digest: %s\n' "$EVIDENCE_ROOT" "$CONFIG_DIGEST"
 printf 'Goldens: read-only; PEBBLE_REGOLD refused.\n'
-printf 'Fixed matrix: short=%s@%s medium=%s@%s stress=%s@%s rerolls=0\n' \
-    "$SHORT_SEEDS" "$SHORT_HORIZON" "$MEDIUM_SEEDS" "$MEDIUM_HORIZON" \
-    "$STRESS_SEEDS" "$STRESS_HORIZON"
+if [ "$MODE" = work-refresh ]; then
+    printf 'CORR-04 matrix: seeds=%s@%s; seed=46@%s; long movement scope boundary=480; Gate B pillars credited=0\n' \
+        "$CORR04_SEEDS" "$CORR04_HORIZON" "$CORR04_LONG_HORIZON"
+else
+    printf 'Fixed matrix: short=%s@%s medium=%s@%s stress=%s@%s rerolls=0\n' \
+        "$SHORT_SEEDS" "$SHORT_HORIZON" "$MEDIUM_SEEDS" "$MEDIUM_HORIZON" \
+        "$STRESS_SEEDS" "$STRESS_HORIZON"
+fi
 
 printf '\n[1/5] Building the existing Pebble client and pebsmoke\n'
 if ! swift build -c release --product Pebble >"$EVIDENCE_ROOT/build-pebble.log" 2>&1; then
@@ -135,16 +160,21 @@ run_seed() {
     seed=$2
     horizon=$3
     label=${4:-$seed}
+    cognitive_hz=${5:-80}
+    disable_movement_at=${6:-0}
     destination="$EVIDENCE_ROOT/$tier/$label"
     mkdir -p "$destination/home"
     trace="$destination/pebble-live.log"
     result="$destination/result.json"
     world_name="PebbleLab-Disposable-GateB3-${tier}-${label}"
     shock=
-    if [ "$seed" = "2593" ]; then shock=worker-care; fi
-    if [ "$seed" = "4099" ]; then shock=tool-feed; fi
+    if [ "$MODE" != work-refresh ]; then
+        if [ "$seed" = "2593" ]; then shock=worker-care; fi
+        if [ "$seed" = "4099" ]; then shock=tool-feed; fi
+    fi
     started=$(date +%s)
-    printf '  %-12s seed=%-4s horizon=%-4s ... ' "$tier" "$seed" "$horizon"
+    printf '  %-12s seed=%-4s horizon=%-4s hz=%-3s ... ' \
+        "$tier" "$seed" "$horizon" "$cognitive_hz"
     (
         CFFIXED_USER_HOME="$destination/home" \
         PEBBLE_AUTOLOAD=1 \
@@ -179,10 +209,13 @@ run_seed() {
         PEBBLELAB_INTEGRATED_TEACHING_PROOF=1 \
         PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
         PEBBLELAB_GATE_B3_ACCEPTANCE=1 \
-        PEBBLELAB_GATE_B3_COGNITIVE_HZ=80 \
+        PEBBLELAB_GATE_B3_COGNITIVE_HZ="$cognitive_hz" \
         PEBBLELAB_GATE_B3_HORIZON="$horizon" \
         PEBBLELAB_GATE_B3_RANDOM_TICK_SPEED=3 \
         PEBBLELAB_GATE_B3_SHOCK="$shock" \
+        PEBBLELAB_GATE_B3_SKIP_CHECKPOINT="$([ "$MODE" = work-refresh ] && printf 1 || printf 0)" \
+        PEBBLELAB_CORR04_DISABLE_MOVEMENT_AT="$disable_movement_at" \
+        PEBBLELAB_WORK_DEMAND_REFRESH_PROOF="$([ "$MODE" = work-refresh ] && printf 1 || printf 0)" \
         PEBBLE_CMD="$BASE_COMMANDS" \
         "$PEBBLE_BINARY"
     ) >"$trace" 2>&1
@@ -201,6 +234,101 @@ run_seed() {
 }
 
 printf '\n[2/5] Fixed integrated campaign (ordinary failures do not stop later seeds)\n'
+if [ "$MODE" = work-refresh ]; then
+    for seed in $CORR04_SEEDS; do
+        run_seed corr04 "$seed" "$CORR04_HORIZON"
+    done
+    # The long representative run stays coupled to physical World progress
+    # (one cognitive tick per World tick) instead of the campaign's accelerated
+    # short-probe rate.
+    run_seed corr04-long 46 "$CORR04_LONG_HORIZON" 46-long 20 480
+    printf '\nGATE-B-CORR-04 bounded escape results (not Gate B acceptance)\n'
+    python3 - "$EVIDENCE_ROOT" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+seeds = [46, 71, 113, 197, 337, 509, 887, 1597, 2593, 4099]
+failures = []
+print("seed ticks tick4 firstRefresh workErrors demands commitments decisionsAfter4 result")
+for seed in seeds:
+    result = json.loads((root / "corr04" / str(seed) / "result.json").read_text())
+    snapshot = result["snapshot"]
+    ticks = result["ticksReached"]
+    errors = result["runtimeErrors"]
+    refreshes = int(snapshot.get("workRefreshAttempts", 0))
+    identity = int(snapshot.get("workIdentityRejects", 0))
+    decisions = int(snapshot.get("decisions", 0))
+    passed = (
+        result["result"] == "PASS" and ticks == 32 and errors == 0
+        and refreshes >= 8 and identity == 0 and decisions > 4
+    )
+    if not passed:
+        failures.append(str(seed))
+    print(
+        seed, ticks, "YES" if ticks > 4 else "NO",
+        "RECONCILED" if refreshes >= 2 and identity == 0 else "FAILED",
+        errors,
+        snapshot.get("workDemands", 0),
+        snapshot.get("workCommitments", 0),
+        max(0, decisions - 4),
+        "PASS" if passed else "FAIL",
+    )
+long_run = json.loads(
+    (root / "corr04-long" / "46-long" / "result.json").read_text()
+)
+snapshot = long_run["snapshot"]
+long_pass = (
+    long_run["result"] == "PASS"
+    and long_run["ticksReached"] == 800
+    and long_run["runtimeErrors"] == 0
+    and int(snapshot.get("workRefreshAttempts", 0)) >= 200
+    and int(snapshot.get("workMeaningfulRefreshes", 0)) > 0
+    and int(snapshot.get("workIdentityRejects", 0)) == 0
+    and int(snapshot.get("workCommitments", 0)) > 0
+    and int(snapshot.get("workEvidence", 0)) > 0
+)
+if not long_pass:
+    failures.append("46-long")
+print(
+    "46-long",
+    long_run["ticksReached"],
+    "refreshAttempts=" + snapshot.get("workRefreshAttempts", "0"),
+    "heartbeats=" + snapshot.get("workHeartbeats", "0"),
+    "meaningful=" + snapshot.get("workMeaningfulRefreshes", "0"),
+    "new=" + snapshot.get("workNewDemands", "0"),
+    "withdrawn=" + snapshot.get("workWithdrawals", "0"),
+    "reactivated=" + snapshot.get("workReactivations", "0"),
+    "commitmentsPreserved=" + snapshot.get("workCommitmentsPreserved", "0"),
+    "evidence=" + snapshot.get("workEvidence", "0"),
+    "runtimeErrors=" + str(long_run["runtimeErrors"]),
+    "PASS" if long_pass else "FAIL",
+)
+summary = {
+    "schemaVersion": 1,
+    "mission": "GATE-B-CORR-04",
+    "head": long_run["head"],
+    "gateBAcceptanceCredited": False,
+    "shortHorizon": 32,
+    "longSeed": 46,
+    "longHorizon": 800,
+    "longMovementScopeBoundaryTick": 480,
+    "failedRuns": failures,
+    "result": "PASS" if not failures else "FAIL",
+}
+(root / "summary" / "corr04-work-demand-refresh.json").write_text(
+    json.dumps(summary, indent=2, sort_keys=True) + "\n"
+)
+raise SystemExit(0 if not failures else 2)
+PY
+    result=$?
+    printf 'Evidence root: %s\n' "$EVIDENCE_ROOT"
+    printf 'Gate B Re-evaluation #3: historical FAIL\n'
+    printf 'Gate B Re-evaluation #4 executed: NO\n'
+    printf 'Gate B canonically acquired: NO\nCIV-26 started: NO\n'
+    exit "$result"
+fi
 if [ "$MODE" = all ] || [ "$MODE" = short ]; then
     for seed in $SHORT_SEEDS; do run_seed short "$seed" "$SHORT_HORIZON"; done
 fi

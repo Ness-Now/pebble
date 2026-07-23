@@ -1,5 +1,70 @@
 # Gate B — Self-Sustaining Local Society
 
+## Post-CORR-04 local remediation record
+
+Starting baseline:
+`4d79aea21d77ddbfafd464695ed8a0517164b4ea`
+(`Finalize Gate B acceptance harness consistency`).
+
+`GATE-B-CORR-04 — Stable Work Demand Refresh and Transactional Continuity`
+remediates `B-BLOCKER-STABLE-WORK-DEMAND-REFRESH` locally. The contract is:
+
+```text
+WORK DEMAND LOGICAL IDENTITY != LATEST CAUSAL PROVENANCE
+REFRESH != NEW DEMAND
+```
+
+Logical identity is the canonical tuple `demandID`, `source`, `sourceKey` and
+`domain`. A mismatch in any tuple member remains a fail-closed corruption.
+`sourceEventID`, observer/suggested worker, target, tool/resource requirements,
+urgency, quantity and cadence are a refreshable projection of the canonical
+domain state. `createdAtTick` remains the historical origin; refresh and expiry
+ticks may advance.
+
+An unchanged-source heartbeat extends the projection without adding a causal
+event. A newer valid source from the same simulation and appropriate domain
+updates the same demand and appends the existing `workDemandRefreshed` event.
+Stale, future, cross-simulation and wrong-domain references are refused.
+Refresh does not increment `totalDemandCount`, replace an attached worker,
+create evidence, grant practice, alter profession history or execute physics.
+Phase changes whose `sourceKey` changes remain new logical demands.
+
+The published re-evaluation #3 failure was the agricultural plot projection:
+after the first real till, the two still-planned cells retained the same
+`source/sourceKey/domain/demandID` while the plot's latest valid causal event
+advanced. The former exact-`sourceEventID` guard therefore misclassified a
+legitimate refresh as identity corruption at tick 4.
+
+The dedicated deterministic selector covers the exact boundary, heartbeat,
+newer provenance, phase change, commitment continuity, real outcome/evidence,
+expiry/reactivation, v18 checkpoint/replay, input order, causal eviction and
+all identity/causal negatives. The bounded Gate-B3 escape probe runs only the
+ten historical seeds to 32 ticks plus seed 46 to 800; it is not the unchanged
+5/3/2 acceptance campaign and credits no B1–B12 result.
+
+Local evidence at the CORR-04 boundary is `10/10 PASS` at exactly 32 ticks:
+every seed crossed tick 4, made 32 autonomous decisions, completed eight Work
+reviews with two newer-provenance reconciliations, and reported zero runtime,
+identity or stale-provenance errors. Seven seeds retained 22 logical demands
+and 13 commitments; seeds 887, 1597 and 2593 retained 21 and 12 respectively.
+The targeted seed-46 continuation reached 800 ticks with 200 refresh attempts,
+594 heartbeat reconciliations, two meaningful refreshes, 483 new logical
+demands, 314 withdrawals, 1,737 commitment-preservation observations, 202
+commitments, four real Work evidence records, three profession profiles, 800
+decisions, 491 starts, ten completions, six cross-family switches and zero
+runtime/manual-productive errors. Its causal ledger remained bounded at 8,192
+retained events after 3,908 evictions. This targeted continuation explicitly
+does not credit Gate B.
+
+```text
+B-BLOCKER-STABLE-WORK-DEMAND-REFRESH: REMEDIATED LOCALLY
+GATE B RE-EVALUATION #3: HISTORICAL FAIL
+GATE B CANDIDATE RESULT: FAIL / RE-EVALUATION #4 PENDING
+Gate R: ACQUIRED
+Gate B canonically acquired: NO
+CIV-26 started: NO
+```
+
 ## Post-CORR-03 local remediation record
 
 Starting baseline:

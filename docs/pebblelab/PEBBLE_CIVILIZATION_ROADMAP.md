@@ -26,17 +26,21 @@ est acquise. Les correctifs non canoniques `GATE-B-CORR-01` et
 de l'évaluation #1 sans promouvoir de phase `CIV-*`.
 
 Gate B re-evaluation #2, démarrée sur le baseline
-`fc618de61437c4acd63ec0ff41823e6d91b56d0a`, est `FAIL`. Le chemin autonome
-a depuis identifié l'absence d'initiation Teaching intégrée. Le correctif local
-non canonique `GATE-B-CORR-03 — Integrated Local Apprenticeship Initiation`
-remédie maintenant ce blocker : la cognition normale dérive une opportunité
-locale contextuelle, les deux participants décident, puis l'autorité CIV-20
-existante sélectionne le mentor et crée l'apprentissage. La preuve intégrée
-conserve la causalité réussite réelle → démonstration sans skill gratuit →
-réussite propre de l'élève → pratique guidée. Gate B re-evaluation #3 a depuis
-tenté la campagne 5/3/2 fixe et rencontré sur les dix seeds le même refus Work
-transactionnel à tick 4. Son verdict candidate est `FAIL` ; Gate B reste non
-acquise et `CIV-26` reste `planned`.
+`fc618de61437c4acd63ec0ff41823e6d91b56d0a`, est `FAIL`.
+`GATE-B-CORR-03 — Integrated Local Apprenticeship Initiation` est depuis
+publié. Gate B re-evaluation #3 a tenté la campagne 5/3/2 fixe et rencontré sur
+les dix seeds le même refus Work transactionnel à tick 4. Son verdict
+historique reste `FAIL`.
+
+Le correctif local non canonique
+`GATE-B-CORR-04 — Stable Work Demand Refresh and Transactional Continuity`
+sépare désormais l'identité logique stable
+`demandID/source/sourceKey/domain` de la provenance causale la plus récente.
+Un heartbeat identique ne crée pas de spam causal ; une provenance plus récente
+et valide actualise la même demande via `workDemandRefreshed`, sans nouveau
+count, engagement, outcome ou profil. Les corruptions d'identité et références
+invalides restent refusées transactionnellement. Ce correctif n'est pas Gate B
+re-evaluation #4 : Gate B reste non acquise et `CIV-26` reste `planned`.
 
 Les noms `NEXT-1` et `NEXT-2` sont uniquement des alias historiques :
 
@@ -457,7 +461,7 @@ classe professionnelle imposée.
   `AgentLocalEcologyState`. Gate R reste acquise. Ces preuves sont des contrats
   de composant ; elles ne prouvent pas à elles seules Gate B.
 
-#### Évaluations candidates Gate B — FAIL, CORR-01/CORR-02/CORR-03 publiés
+#### Évaluations candidates Gate B — FAIL, CORR-01/CORR-02/CORR-03 publiés, CORR-04 local
 
 L'[évaluation dédiée](GATE_B_CANDIDATE_EVALUATION.md) #1 a confirmé quatre
 blockers. Les jalons correctifs non canoniques publiés `GATE-B-CORR-01 — Real
@@ -497,6 +501,12 @@ Work a refusé transactionnellement tick 4 avec
 `demand identity changed`. Aucun horizon fixe, cycle long, checkpoint ou shock
 n'a donc été crédité. Le verdict candidate est `FAIL`, Gate B reste non
 acquise, cette roadmap ne renumérote pas `CIV-26` et ne le passe pas `current`.
+
+CORR-04 remédie localement cette seam sans réécrire CIV-25 : `REFRESH != NEW
+DEMAND`, la provenance causale peut avancer pour une même identité logique, et
+les vrais mismatches restent fail-closed. La campagne Gate B re-evaluation #3
+reste historiquement `FAIL`; seule une future re-evaluation #4 inchangée peut
+créditer B1–B12.
 
 ### Économie matérielle locale — Gate C
 

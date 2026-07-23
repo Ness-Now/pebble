@@ -4,11 +4,11 @@
   "baselineHead": "b58f71b75110c2e65403cd073409a8559429ec77",
   "branch": "lab/pebblelab-v1",
   "canonicalRoadmap": "docs/pebblelab/PEBBLE_CIVILIZATION_ROADMAP.md",
-  "evaluatedRuntimeHead": "fc618de61437c4acd63ec0ff41823e6d91b56d0a",
+  "evaluatedRuntimeHead": "4d79aea21d77ddbfafd464695ed8a0517164b4ea",
   "current": null,
   "currentGateEvaluation": {
     "gate": "B",
-    "evaluationNumber": 2,
+    "evaluationNumber": 3,
     "candidateResult": "failed",
     "canonicalStatus": "notAcquired",
     "evidence": "docs/pebblelab/GATE_B_CANDIDATE_EVALUATION.md",
@@ -17,13 +17,14 @@
       "B-BLOCKER-FOOD-CLOSURE",
       "B-BLOCKER-AUTONOMOUS-PLAYABLE-SLICE",
       "B-BLOCKER-LIVESTOCK-RESERVE-CLOSURE",
-      "B-BLOCKER-CRISIS-REPLACEMENT-ORCHESTRATION"
-    ],
-    "locallyRemediatedBlockersPendingReevaluation": [
+      "B-BLOCKER-CRISIS-REPLACEMENT-ORCHESTRATION",
       "B-BLOCKER-INTEGRATED-TEACHING-INITIATION"
     ],
+    "locallyRemediatedBlockersPendingReevaluation": [
+      "B-BLOCKER-STABLE-WORK-DEMAND-REFRESH"
+    ],
     "openBlockers": [],
-    "campaignStatus": "reevaluation3NotRun",
+    "campaignStatus": "reevaluation3FailedReevaluation4Pending",
     "reevaluationRequired": true
   },
   "correctiveMilestones": [
@@ -46,6 +47,13 @@
       "title": "Integrated Local Apprenticeship Initiation",
       "canonicalPhase": false,
       "startingHead": "768c8da5ccd325ecad06f9654e65b0a738864880",
+      "status": "published"
+    },
+    {
+      "id": "GATE-B-CORR-04",
+      "title": "Stable Work Demand Refresh and Transactional Continuity",
+      "canonicalPhase": false,
+      "startingHead": "4d79aea21d77ddbfafd464695ed8a0517164b4ea",
       "status": "locallyCompletePendingPublicationAndReevaluation"
     }
   ],

@@ -101,6 +101,7 @@ final class PebbleAgentController {
     var livestockRuntimeEntityIDByRecord: [AgentManagedAnimalRecordID: Int] = [:]
     var passiveSocietyFixture: PebbleAgentPassiveSocietyFixture?
     var passiveSocietyAudit = PebbleAgentPassiveSocietyAudit()
+    var workDemandRefreshAudit = PebbleAgentWorkDemandRefreshAudit()
     var passiveObserverBootstrapComplete = false
     var manualProductiveCommandsAfterBootstrap = 0
 

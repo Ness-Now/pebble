@@ -430,8 +430,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
               let value = Int(raw), value > 0 else { return nil }
         return value
     }()
-    private let gateB3AcceptanceShock =
-        ProcessInfo.processInfo.environment["PEBBLELAB_GATE_B3_SHOCK"]
+    private let gateB3AcceptanceShock: String? = {
+        guard let value = ProcessInfo.processInfo.environment["PEBBLELAB_GATE_B3_SHOCK"],
+              !value.isEmpty else { return nil }
+        return value
+    }()
+    private let gateB3SkipCheckpoint =
+        ProcessInfo.processInfo.environment["PEBBLELAB_GATE_B3_SKIP_CHECKPOINT"] == "1"
     private let gateB3RandomTickSpeed: Int? = {
         let environment = ProcessInfo.processInfo.environment
         guard environment["PEBBLELAB_GATE_B3_ACCEPTANCE"] == "1",
@@ -442,8 +447,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     private var gateB3RandomTickApplied = false
     private var gateB3CheckpointAttempted = false
     private var gateB3ShockApplied = false
+    private let corr04MovementDisableTick: Int? = {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["PEBBLELAB_GATE_B3_ACCEPTANCE"] == "1",
+              let raw = environment["PEBBLELAB_CORR04_DISABLE_MOVEMENT_AT"],
+              let value = Int(raw), value > 4 else { return nil }
+        return value
+    }()
+    private var corr04MovementDisableApplied = false
     private var gateB3Completed = false
     private var gateB3CommandCompletionWorldTick: Int?
+    private let workDemandRefreshCaptureDirectory =
+        ProcessInfo.processInfo.environment["PEBBLELAB_WORK_DEMAND_REFRESH_CAPTURE_DIR"]
+    private var workDemandRefreshCapturedMilestones = Set<Int>()
     private let gateB3PassiveSeconds: Double? = {
         let environment = ProcessInfo.processInfo.environment
         guard environment["PEBBLELAB_GATE_B3_PASSIVE"] == "1",
@@ -917,6 +933,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
             }
             return
         }
+        captureWorkDemandRefreshMilestone(proof)
         if proof.runtimeErrors > 0 {
             gateB3Completed = true
             agentController.traceGateB3AcceptanceSnapshot(world: game.world)
@@ -929,8 +946,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
             NSApp.terminate(nil)
             return
         }
+        if let disableAt = corr04MovementDisableTick,
+           !corr04MovementDisableApplied, proof.simulationTick >= disableAt {
+            corr04MovementDisableApplied = true
+            runCommand(game, "/lab movement off")
+            print(
+                "[lab-live] CORR04_SCOPE_BOUNDARY tick=\(proof.simulationTick) "
+                    + "movement=off reason=exclude_unrelated_distance_boundary "
+                    + "productiveCommand=0"
+            )
+        }
         let boundary = horizon / 2
-        if game.world.seed == 887, !gateB3CheckpointAttempted,
+        if game.world.seed == 887, !gateB3SkipCheckpoint, !gateB3CheckpointAttempted,
            proof.simulationTick >= boundary {
             gateB3CheckpointAttempted = true
             print(
@@ -958,6 +985,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         )
         fflush(stdout)
         NSApp.terminate(nil)
+    }
+
+    private func captureWorkDemandRefreshMilestone(
+        _ proof: PebblePassiveProductProofSnapshot
+    ) {
+        guard let directory = workDemandRefreshCaptureDirectory else { return }
+        let milestones = [3, 8, 64]
+        guard let milestone = milestones.first(where: {
+            proof.simulationTick >= $0
+                && !workDemandRefreshCapturedMilestones.contains($0)
+        }) else { return }
+        workDemandRefreshCapturedMilestones.insert(milestone)
+        let name: String
+        switch milestone {
+        case 3: name = "corr04-before-first-refresh.png"
+        case 8: name = "corr04-after-first-refresh.png"
+        default: name = "corr04-later-active-society.png"
+        }
+        pendingCompositedCapturePath = directory + "/" + name
+        print(
+            "[lab-live] WORK_DEMAND_REFRESH_CAPTURE tick=\(proof.simulationTick) "
+                + "milestone=\(milestone) path=\(name)"
+        )
     }
 
     private func driveGateB3Passive(now: CFTimeInterval) {

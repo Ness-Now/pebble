@@ -97,6 +97,7 @@ extension PebbleAgentController {
             passiveObserverBootstrapComplete = false
             manualProductiveCommandsAfterBootstrap = 0
             passiveSocietyAudit = PebbleAgentPassiveSocietyAudit()
+            workDemandRefreshAudit = PebbleAgentWorkDemandRefreshAudit()
             lastTickResult = nil
             lastError = nil
             autoInteractionEnabled = false
@@ -414,6 +415,7 @@ extension PebbleAgentController {
         manualProductiveCommandsAfterBootstrap = 0
         passiveSocietyFixture = nil
         passiveSocietyAudit = PebbleAgentPassiveSocietyAudit()
+        workDemandRefreshAudit = PebbleAgentWorkDemandRefreshAudit()
         autoInteractionEnabled = false
         lastAutoInteractionReason = "none"
         lastInteractionAttempted = false

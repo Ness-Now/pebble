@@ -61,6 +61,8 @@ Les options supplémentaires `--embodiment`, `--teaching`,
 CIV-19 à CIV-25 décrites ci-dessous. `--physical-food-survival` porte la preuve
 corrective `GATE-B-CORR-01` sans créer une phase `CIV-*` ; `--gate-b-passive`
 porte la preuve corrective CORR-02, également non canonique.
+`--work-demand-refresh` porte la preuve intégrée CORR-04 jusqu'à 256 ticks,
+avec trois captures avant/après la première review puis dans la société active.
 
 Depuis la racine du dépôt :
 
@@ -438,6 +440,31 @@ Son résultat historique est `FAIL` et Gate B reste non acquise. CORR-01 et
 CORR-02 remédient localement les blockers enregistrés, mais la campagne 5/3/2,
 le restart composite, la revue humaine et la revue senior restent requises.
 `CIV-25` est terminé ; `CIV-26` reste planifié et n'est pas commencé.
+
+### CORR-04 — refresh causal stable des demandes Work
+
+Le mode
+`scripts/verify-pebblelab-live.sh --work-demand-refresh` réutilise le bootstrap
+intégré Gate-B3 dans un seul World et un seul `AgentSimulationSession`. Il
+conserve 4 Hz, le contrôle Player normal et zéro commande productive après
+`PLAYABLE_SLICE_BOOTSTRAP_COMPLETE`, puis s'arrête exactement à 256 ticks.
+
+Les traces `work demand reconciled` exposent le `demandID`, la source, la clé,
+le domaine et les anciennes/nouvelles séquences causales. Le résumé distingue
+attempts, heartbeats sans événement, refreshes significatifs, nouvelles
+identités, withdrawals, reactivations, engagements préservés et rejets. Les
+captures attendues sont :
+
+```text
+corr04-before-first-refresh.png
+corr04-after-first-refresh.png
+corr04-later-active-society.png
+```
+
+Le mode valide la continuité du vrai client et l'absence de storm runtime ; la
+sémantique transactionnelle, le checkpoint v18, le replay, les corruptions
+négatives et l'éviction causale restent prouvés par le selector headless
+`work-demand-refresh`. Cette preuve ne crédite pas Gate B re-evaluation #4.
 
 Depuis la racine, la commande dédiée est :
 

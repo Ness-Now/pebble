@@ -1,6 +1,21 @@
 import PebbleAgents
 import PebbleCore
 
+/// Read-only, process-local evidence for the work-demand reconciliation seam.
+/// These counters never participate in decisions, replay, or checkpoint state.
+struct PebbleAgentWorkDemandRefreshAudit {
+    var attempts = 0
+    var sameProvenanceHeartbeats = 0
+    var meaningfulRefreshes = 0
+    var newLogicalDemands = 0
+    var withdrawals = 0
+    var reactivations = 0
+    var commitmentsPreserved = 0
+    var workDemandRefreshedEvents = 0
+    var actualIdentityRejections = 0
+    var staleProvenanceRejections = 0
+}
+
 extension PebbleAgentController {
     func handleAutonomousCivilization(
         _ arguments: [String],
@@ -106,7 +121,29 @@ extension PebbleAgentController {
         if session.workCommitmentsEnabled,
            let configuration = session.workCommitmentSnapshot().configuration,
            session.tick % configuration.reviewIntervalTicks == 0 {
-            try applyLiveWorkOperation(.refreshDemands, to: &session, recorder: &recorder)
+            let before = session.workCommitmentSnapshot()
+            let causalSequenceBefore = session.causalLedgerSnapshot().summary.latestSequence
+            workDemandRefreshAudit.attempts += 1
+            do {
+                try applyLiveWorkOperation(.refreshDemands, to: &session, recorder: &recorder)
+            } catch {
+                let description = String(describing: error)
+                if description.contains("demand logical identity changed") {
+                    workDemandRefreshAudit.actualIdentityRejections += 1
+                }
+                if description.contains("stale demand causal provenance") {
+                    workDemandRefreshAudit.staleProvenanceRejections += 1
+                }
+                traceWorkDemandRefreshFailure(error: description, tick: session.tick)
+                throw error
+            }
+            recordWorkDemandRefresh(
+                before: before,
+                after: session.workCommitmentSnapshot(),
+                causalSequenceBefore: causalSequenceBefore,
+                causalSequenceAfter: session.causalLedgerSnapshot().summary.latestSequence,
+                tick: session.tick
+            )
             try applyLiveWorkOperation(.review, to: &session, recorder: &recorder)
             for suspended in session.activeWorkCommitments().filter({
                 $0.status == .suspended && $0.suspensionReason == .crisis
@@ -323,6 +360,122 @@ extension PebbleAgentController {
             }
         }
         recordPassiveSocietyDecisionAudit(candidates: candidates, session: session)
+    }
+
+    private func workDemandProjectionChanged(
+        _ previous: AgentWorkDemandSignal,
+        _ current: AgentWorkDemandSignal
+    ) -> Bool {
+        previous.observerID != current.observerID
+            || previous.suggestedWorkerID != current.suggestedWorkerID
+            || previous.targetPosition != current.targetPosition
+            || previous.requiredToolKeys != current.requiredToolKeys
+            || previous.requiredResourceKeys != current.requiredResourceKeys
+            || previous.urgency != current.urgency
+            || previous.quantity != current.quantity
+            || previous.cadenceTicks != current.cadenceTicks
+    }
+
+    private func recordWorkDemandRefresh(
+        before: AgentWorkCommitmentSnapshot,
+        after: AgentWorkCommitmentSnapshot,
+        causalSequenceBefore: UInt64,
+        causalSequenceAfter: UInt64,
+        tick: Int
+    ) {
+        let beforeByID = Dictionary(uniqueKeysWithValues: before.demands.map {
+            ($0.demandID, $0)
+        })
+        let afterByID = Dictionary(uniqueKeysWithValues: after.demands.map {
+            ($0.demandID, $0)
+        })
+        let created = after.demands.filter { beforeByID[$0.demandID] == nil }
+        let withdrawn = before.demands.filter { demand in
+            demand.status.isActive
+                && afterByID[demand.demandID]?.status == .withdrawn
+        }
+        var heartbeats = 0
+        var meaningful = 0
+        var reactivations = 0
+        for current in after.demands.sorted(by: { $0.demandID < $1.demandID }) {
+            guard let previous = beforeByID[current.demandID] else { continue }
+            let provenanceAdvanced =
+                current.sourceEventID.sequence > previous.sourceEventID.sequence
+            let reactivated = !previous.status.isActive && current.status.isActive
+            if provenanceAdvanced
+                || workDemandProjectionChanged(previous, current)
+                || reactivated {
+                meaningful += 1
+                if reactivated { reactivations += 1 }
+                traceWorkDemandRefreshDetail(
+                    previous: previous,
+                    current: current,
+                    reactivated: reactivated
+                )
+            } else if current.status.isActive {
+                heartbeats += 1
+            }
+        }
+        let preserved = before.commitments.filter { commitment in
+            commitment.status.isOpen
+                && after.commitments.contains {
+                    $0.commitmentID == commitment.commitmentID
+                        && $0.demandID == commitment.demandID
+                        && $0.workerID == commitment.workerID
+                        && $0.status == commitment.status
+                }
+        }.count
+        let causalDelta = Int(causalSequenceAfter - causalSequenceBefore)
+        workDemandRefreshAudit.sameProvenanceHeartbeats += heartbeats
+        workDemandRefreshAudit.meaningfulRefreshes += meaningful
+        workDemandRefreshAudit.newLogicalDemands += created.count
+        workDemandRefreshAudit.withdrawals += withdrawn.count
+        workDemandRefreshAudit.reactivations += reactivations
+        workDemandRefreshAudit.commitmentsPreserved += preserved
+        workDemandRefreshAudit.workDemandRefreshedEvents += causalDelta
+        guard workDemandRefreshProofEnabled else { return }
+        trace(
+            "work demand refresh tick=\(tick) "
+                + "attempt=\(workDemandRefreshAudit.attempts) "
+                + "heartbeat=\(heartbeats) meaningful=\(meaningful) "
+                + "new=\(created.count) withdrawn=\(withdrawn.count) "
+                + "reactivated=\(reactivations) commitmentsPreserved=\(preserved) "
+                + "events=\(causalDelta) totalDemands=\(before.totalDemandCount)"
+                + ">\(after.totalDemandCount) retained=\(after.demands.count) "
+                + "runtimeErrors=\(runtimeErrorCount)"
+        )
+    }
+
+    private var workDemandRefreshProofEnabled: Bool {
+        environment["PEBBLELAB_WORK_DEMAND_REFRESH_PROOF"] == "1"
+    }
+
+    private func traceWorkDemandRefreshDetail(
+        previous: AgentWorkDemandSignal,
+        current: AgentWorkDemandSignal,
+        reactivated: Bool
+    ) {
+        guard workDemandRefreshProofEnabled else { return }
+        trace(
+            "work demand reconciled demand=\(current.demandID.rawValue) "
+                + "source=\(current.source.rawValue) sourceKey=\(current.sourceKey) "
+                + "domain=\(current.domain.rawValue) "
+                + "oldSource=\(previous.sourceEventID.rawValue) "
+                + "newSource=\(current.sourceEventID.rawValue) "
+                + "createdAt=\(current.createdAtTick) "
+                + "refreshedAt=\(current.refreshedAtTick) "
+                + "reactivated=\(reactivated ? 1 : 0)"
+        )
+    }
+
+    private func traceWorkDemandRefreshFailure(error: String, tick: Int) {
+        guard workDemandRefreshProofEnabled else { return }
+        trace(
+            "work demand refresh rejected tick=\(tick) "
+                + "identityRejects=\(workDemandRefreshAudit.actualIdentityRejections) "
+                + "staleRejects=\(workDemandRefreshAudit.staleProvenanceRejections) "
+                + "error=\(error.replacingOccurrences(of: " ", with: "_"))"
+        )
     }
 
     private func agricultureStoragePosition(
