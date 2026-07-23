@@ -108,6 +108,12 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "teaching" {
     print("\n\(passed) passed, \(failed) failed")
     exit(failed > 0 ? 1 : 0)
 }
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
+    == "integrated-teaching-initiation" {
+    runPebbleAgentsIntegratedTeachingInitiationSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "ecological-observation" {
     runPebbleAgentsEcologicalObservationSmoke()
     print("\n\(passed) passed, \(failed) failed")
@@ -2277,6 +2283,7 @@ runPebbleAgentsHouseholdMembershipSmoke()
 runPebbleAgentsDependentCareSmoke()
 runPebbleAgentsSkillSmoke()
 runPebbleAgentsTeachingSmoke()
+runPebbleAgentsIntegratedTeachingInitiationSmoke()
 runPebbleAgentsEcologicalObservationSmoke()
 runPebbleAgentsAgricultureSmoke()
 runPebbleAgentsHarvestPublicationSmoke()

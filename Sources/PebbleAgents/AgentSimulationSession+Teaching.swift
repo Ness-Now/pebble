@@ -52,6 +52,287 @@ extension AgentSimulationSession {
         }.sorted(by: teachingExposureSort) ?? []
     }
 
+    public func autonomousTeachingReviewSnapshot() -> AgentAutonomousTeachingReviewSnapshot {
+        latestAutonomousTeachingReview ?? AgentAutonomousTeachingReviewSnapshot(
+            reviewedAtTick: tick,
+            cadenceDue: tick % AgentTeachingParticipationPolicy.reviewIntervalTicks == 0,
+            opportunitiesConsidered: 0, requestsAttempted: 0, accepted: 0,
+            refusedStudent: 0, refusedTeacher: 0, noMentor: 0, started: 0,
+            active: teachingState?.apprenticeships.filter {
+                $0.status == .active
+            }.count ?? 0,
+            ended: teachingState?.apprenticeships.filter {
+                $0.status.isTerminal
+            }.count ?? 0,
+            attempts: []
+        )
+    }
+
+    public func teachingParticipationDecision(
+        for participantID: AgentID,
+        role: AgentTeachingParticipationRole
+    ) -> AgentTeachingParticipationDecision {
+        AgentTeachingParticipationPolicy.decide(
+            teachingParticipationContext(for: participantID, role: role)
+        )
+    }
+
+    /// Reviews bounded, contextual opportunities at the normal deterministic
+    /// cadence. The existing CIV-20 selector remains the sole mentor-ranking
+    /// and apprenticeship-start authority.
+    @discardableResult
+    public mutating func reviewLocalApprenticeshipOpportunities(
+        _ opportunities: [AgentLocalApprenticeshipOpportunity]
+    ) throws -> AgentAutonomousTeachingReviewSnapshot {
+        var candidate = self
+        let review = try candidate.reviewLocalApprenticeshipOpportunitiesInPlace(
+            opportunities
+        )
+        self = candidate
+        return review
+    }
+
+    private mutating func reviewLocalApprenticeshipOpportunitiesInPlace(
+        _ opportunities: [AgentLocalApprenticeshipOpportunity]
+    ) throws -> AgentAutonomousTeachingReviewSnapshot {
+        guard let teaching = teachingState else {
+            throw AgentSessionError.teaching(.disabled)
+        }
+        let cadenceDue = tick % AgentTeachingParticipationPolicy.reviewIntervalTicks == 0
+        let activeCount = teaching.apprenticeships.filter { $0.status == .active }.count
+        let endedCount = teaching.apprenticeships.filter { $0.status.isTerminal }.count
+        guard cadenceDue else {
+            let review = AgentAutonomousTeachingReviewSnapshot(
+                reviewedAtTick: tick, cadenceDue: false,
+                opportunitiesConsidered: 0, requestsAttempted: 0, accepted: 0,
+                refusedStudent: 0, refusedTeacher: 0, noMentor: 0, started: 0,
+                active: activeCount, ended: endedCount, attempts: []
+            )
+            latestAutonomousTeachingReview = review
+            return review
+        }
+        guard opportunities.count <= AgentAutonomousActivityConfiguration.live
+                .maximumCandidatesPerDecision else {
+            throw AgentSessionError.teaching(.invalidRequest("local opportunity bound"))
+        }
+        let sorted = opportunities.sorted(by: localOpportunitySort)
+        guard Set(sorted.map {
+            "\($0.studentID.rawValue)|\($0.domain.rawValue)"
+        }).count == sorted.count else {
+            throw AgentSessionError.teaching(.invalidRequest("duplicate local opportunity"))
+        }
+
+        var attempts: [AgentLocalApprenticeshipAttempt] = []
+        var requestsAttempted = 0
+        var refusedStudent = 0
+        var refusedTeacher = 0
+        var noMentor = 0
+        var started = 0
+
+        for opportunity in sorted {
+            guard opportunity.observedAtTick == tick,
+                  !opportunity.contextReference.isEmpty,
+                  statesById[opportunity.studentID.rawValue] != nil,
+                  !opportunity.localMentorCandidateIDs.isEmpty,
+                  opportunity.localMentorCandidateIDs.count
+                    <= teaching.configuration.maximumMentorCandidates,
+                  Set(opportunity.localMentorCandidateIDs).count
+                    == opportunity.localMentorCandidateIDs.count else {
+                throw AgentSessionError.teaching(
+                    .invalidRequest(opportunity.contextReference)
+                )
+            }
+            let locallyObserved = Set(
+                statesById[opportunity.studentID.rawValue]!.nearbyAgents.compactMap {
+                    AgentID(rawValue: $0.id)
+                }
+            )
+            guard opportunity.localMentorCandidateIDs.allSatisfy({
+                $0 != opportunity.studentID && locallyObserved.contains($0)
+            }) else {
+                throw AgentSessionError.teaching(
+                    .invalidRequest("nonlocal mentor candidate")
+                )
+            }
+
+            let studentDecision = teachingParticipationDecision(
+                for: opportunity.studentID, role: .student
+            )
+            if activeApprenticeship(
+                studentID: opportunity.studentID, domain: opportunity.domain
+            ) != nil {
+                attempts.append(AgentLocalApprenticeshipAttempt(
+                    opportunity: opportunity, studentDecision: studentDecision,
+                    teacherDecisions: [],
+                    disposition: .activeApprenticeshipExists,
+                    apprenticeshipID: activeApprenticeship(
+                        studentID: opportunity.studentID, domain: opportunity.domain
+                    )?.apprenticeshipID
+                ))
+                continue
+            }
+            let recentTerminal = teachingState!.apprenticeships
+                .filter {
+                    $0.studentID == opportunity.studentID
+                        && $0.domain == opportunity.domain
+                        && $0.status.isTerminal
+                        && $0.endedAtTick != nil
+                }
+                .sorted(by: teachingApprenticeshipSort)
+                .last
+            if let endedAtTick = recentTerminal?.endedAtTick,
+               tick - endedAtTick
+                < AgentTeachingParticipationPolicy.reengagementCooldownTicks {
+                attempts.append(AgentLocalApprenticeshipAttempt(
+                    opportunity: opportunity, studentDecision: studentDecision,
+                    teacherDecisions: [],
+                    disposition: .reengagementCooldown,
+                    apprenticeshipID: recentTerminal?.apprenticeshipID
+                ))
+                continue
+            }
+            guard studentDecision.accepts else {
+                refusedStudent += 1
+                attempts.append(AgentLocalApprenticeshipAttempt(
+                    opportunity: opportunity, studentDecision: studentDecision,
+                    teacherDecisions: [], disposition: .studentRefused,
+                    apprenticeshipID: nil
+                ))
+                continue
+            }
+
+            let teacherDecisions = opportunity.localMentorCandidateIDs.sorted().map {
+                teachingParticipationDecision(for: $0, role: .teacher)
+            }
+            refusedTeacher += teacherDecisions.filter { !$0.accepts }.count
+            requestsAttempted += 1
+            let request = AgentMentorSelectionRequest(
+                requestID: autonomousTeachingRequestID(
+                    opportunity: opportunity, ordinal: attempts.count + 1
+                ),
+                studentID: opportunity.studentID,
+                domain: opportunity.domain,
+                studentAccepts: studentDecision.accepts,
+                candidates: teacherDecisions.map {
+                    AgentMentorCandidateConsent(
+                        teacherID: $0.participantID, accepts: $0.accepts
+                    )
+                },
+                requestedAtTick: tick
+            )
+            do {
+                if let engagement = try selectMentorAndStartApprenticeshipInPlace(request) {
+                    started += 1
+                    attempts.append(AgentLocalApprenticeshipAttempt(
+                        opportunity: opportunity, studentDecision: studentDecision,
+                        teacherDecisions: teacherDecisions, disposition: .started,
+                        apprenticeshipID: engagement.apprenticeshipID
+                    ))
+                }
+            } catch AgentSessionError.teaching(.noEligibleMentor) {
+                noMentor += 1
+                attempts.append(AgentLocalApprenticeshipAttempt(
+                    opportunity: opportunity, studentDecision: studentDecision,
+                    teacherDecisions: teacherDecisions, disposition: .noEligibleMentor,
+                    apprenticeshipID: nil
+                ))
+            }
+        }
+        let review = AgentAutonomousTeachingReviewSnapshot(
+            reviewedAtTick: tick, cadenceDue: true,
+            opportunitiesConsidered: sorted.count,
+            requestsAttempted: requestsAttempted, accepted: started,
+            refusedStudent: refusedStudent, refusedTeacher: refusedTeacher,
+            noMentor: noMentor, started: started,
+            active: teachingState!.apprenticeships.filter {
+                $0.status == .active
+            }.count,
+            ended: teachingState!.apprenticeships.filter {
+                $0.status.isTerminal
+            }.count,
+            attempts: attempts
+        )
+        latestAutonomousTeachingReview = review
+        return review
+    }
+
+    /// Called by the existing autonomous decision transition. Domain
+    /// relevance comes only from current bounded activity candidates and their
+    /// locally observed peers; no domain sweep or population oracle exists.
+    mutating func reviewAutonomousLocalApprenticeships(
+        from candidates: [AgentAutonomousActivityCandidate]
+    ) throws {
+        guard teachingState != nil else {
+            latestAutonomousTeachingReview = nil
+            return
+        }
+        struct RelevantContext {
+            let studentID: AgentID
+            let domain: AgentSkillDomain
+            let reason: AgentLocalApprenticeshipReason
+            let reference: String
+        }
+        var contexts: [RelevantContext] = []
+        for candidate in candidates.sorted(by: candidateSort) {
+            guard candidate.observedAtTick == tick,
+                  let domain = candidate.domain.skillDomain,
+                  let actorState = statesById[candidate.actorID.rawValue] else {
+                continue
+            }
+            contexts.append(RelevantContext(
+                studentID: candidate.actorID, domain: domain,
+                reason: .currentAutonomousActivity,
+                reference: candidate.candidateID
+            ))
+            for nearby in actorState.nearbyAgents.sorted(by: {
+                if $0.distanceManhattan != $1.distanceManhattan {
+                    return $0.distanceManhattan < $1.distanceManhattan
+                }
+                return $0.id < $1.id
+            }) {
+                guard let peerID = AgentID(rawValue: nearby.id),
+                      statesById[peerID.rawValue]?.nearbyAgents.contains(where: {
+                          $0.id == candidate.actorID.rawValue
+                      }) == true else { continue }
+                contexts.append(RelevantContext(
+                    studentID: peerID, domain: domain,
+                    reason: .nearbyLocalProductiveActivity,
+                    reference: candidate.candidateID
+                ))
+            }
+        }
+        var selectedByKey: [String: RelevantContext] = [:]
+        for context in contexts.sorted(by: {
+            if $0.studentID != $1.studentID { return $0.studentID < $1.studentID }
+            if $0.domain != $1.domain { return $0.domain < $1.domain }
+            if $0.reason != $1.reason { return $0.reason.rawValue < $1.reason.rawValue }
+            return $0.reference < $1.reference
+        }) {
+            let key = "\(context.studentID.rawValue)|\(context.domain.rawValue)"
+            if selectedByKey[key] == nil { selectedByKey[key] = context }
+        }
+        let maximumMentors = teachingState!.configuration.maximumMentorCandidates
+        let opportunities = selectedByKey.values.sorted {
+            if $0.studentID != $1.studentID { return $0.studentID < $1.studentID }
+            return $0.domain < $1.domain
+        }.compactMap { context -> AgentLocalApprenticeshipOpportunity? in
+            guard let student = statesById[context.studentID.rawValue] else { return nil }
+            let local = student.nearbyAgents.compactMap {
+                AgentID(rawValue: $0.id)
+            }.filter {
+                $0 != context.studentID && statesById[$0.rawValue] != nil
+            }.sorted()
+            let bounded = Array(local.prefix(maximumMentors))
+            guard !bounded.isEmpty else { return nil }
+            return AgentLocalApprenticeshipOpportunity(
+                studentID: context.studentID, domain: context.domain,
+                localMentorCandidateIDs: bounded, reason: context.reason,
+                contextReference: context.reference, observedAtTick: tick
+            )
+        }
+        _ = try reviewLocalApprenticeshipOpportunitiesInPlace(opportunities)
+    }
+
     public mutating func setTeachingEnabled(
         _ enabled: Bool,
         configuration teachingConfiguration: AgentTeachingConfiguration = .live
@@ -831,7 +1112,7 @@ extension AgentSimulationSession {
         _ teacherID: AgentID,
         domain: AgentSkillDomain
     ) -> Bool {
-        guard teachingParticipantIsAvailable(teacherID),
+        guard teachingParticipationDecision(for: teacherID, role: .teacher).accepts,
               lifecycleState?.members.first(where: {
                   $0.agentID == teacherID
               })?.currentStage == .mature else { return false }
@@ -839,7 +1120,7 @@ extension AgentSimulationSession {
     }
 
     private func teachingStudentIsEligible(_ studentID: AgentID) -> Bool {
-        guard teachingParticipantIsAvailable(studentID),
+        guard teachingParticipationDecision(for: studentID, role: .student).accepts,
               let stage = lifecycleState?.members.first(where: {
                   $0.agentID == studentID
               })?.currentStage else { return false }
@@ -847,14 +1128,34 @@ extension AgentSimulationSession {
             && AgentStageCapabilityPolicy.policy(for: stage).permits(.perceive)
     }
 
-    private func teachingParticipantIsAvailable(_ id: AgentID) -> Bool {
-        guard let state = statesById[id.rawValue], state.health > 0,
-              state.needs.hunger
-                < configuration.survivalConfiguration.criticalHungerThreshold,
-              state.needs.safety > 0,
-              activeCareEngagement(for: id) == nil,
-              !isMigratingAgent(id.rawValue) else { return false }
-        return true
+    private func teachingParticipationContext(
+        for id: AgentID,
+        role: AgentTeachingParticipationRole
+    ) -> AgentTeachingParticipationContext {
+        let state = statesById[id.rawValue]
+        let activeApprenticeships = teachingState?.apprenticeships.filter {
+            $0.status == .active && $0.teacherID == id
+        }.count ?? 0
+        return AgentTeachingParticipationContext(
+            participantID: id, role: role,
+            active: state.map { $0.health > 0 } ?? false,
+            lifecycleStage: lifecycleState?.members.first {
+                $0.agentID == id
+            }?.currentStage,
+            migrating: isMigratingAgent(id.rawValue),
+            criticalHunger: state.map {
+                $0.needs.hunger
+                    >= configuration.survivalConfiguration.criticalHungerThreshold
+            } ?? false,
+            urgentCarePriority: activeCareEngagement(for: id) != nil,
+            unsafe: state.map {
+                $0.needs.safety <= 0 || $0.currentGoal.kind == .seekSafety
+            } ?? true,
+            incompatibleUrgentResponsibility: activeAutonomousActivity(for: id)?
+                .candidate.domain == .dependentCare,
+            teacherCapacityAvailable: activeApprenticeships
+                < (teachingState?.configuration.maximumApprenticesPerTeacher ?? 0)
+        )
     }
 
     private func teachingHasCriticalHunger(_ id: AgentID) -> Bool {
@@ -869,6 +1170,26 @@ extension AgentSimulationSession {
 
     private func teachingDistance(_ lhs: AgentPosition, _ rhs: AgentPosition) -> Int {
         abs(lhs.x - rhs.x) + abs(lhs.y - rhs.y) + abs(lhs.z - rhs.z)
+    }
+
+    private func localOpportunitySort(
+        _ lhs: AgentLocalApprenticeshipOpportunity,
+        _ rhs: AgentLocalApprenticeshipOpportunity
+    ) -> Bool {
+        if lhs.studentID != rhs.studentID { return lhs.studentID < rhs.studentID }
+        if lhs.domain != rhs.domain { return lhs.domain < rhs.domain }
+        if lhs.reason != rhs.reason { return lhs.reason.rawValue < rhs.reason.rawValue }
+        return lhs.contextReference < rhs.contextReference
+    }
+
+    private func autonomousTeachingRequestID(
+        opportunity: AgentLocalApprenticeshipOpportunity,
+        ordinal: Int
+    ) -> String {
+        String(
+            "auto-apprenticeship-\(tick)-\(ordinal)-"
+                + "\(opportunity.studentID.rawValue)-\(opportunity.domain.rawValue)"
+        ).prefix(160).description
     }
 
     private mutating func requiredTeachingEvent(

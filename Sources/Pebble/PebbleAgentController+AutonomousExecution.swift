@@ -14,6 +14,10 @@ extension PebbleAgentController {
             throw ControllerError.feedbackBoundary("autonomous activity lost embodiment")
         }
         let embodiment = PebbleAgentEmbodiment(probe: probe)
+        let skillDomain = activity.candidate.domain.skillDomain
+        let practiceBefore = skillDomain.map {
+            session.practiceUnits(agentID: actorID, domain: $0)
+        }
         let occupied = session.snapshot().agents.filter { $0.id != actorIDText }.map {
             PhysicalBlockPosition(x: $0.position.x, y: $0.position.y, z: $0.position.z)
         }
@@ -64,6 +68,19 @@ extension PebbleAgentController {
                     activity: activity, sourceSuccessEventID: sourceEvent,
                     skillPracticeEventID: skillEvent?.eventID,
                     world: world, session: &session, recorder: &recorder
+                )
+            }
+            if let skillDomain, let practiceBefore {
+                let practiceAfter = session.practiceUnits(
+                    agentID: actorID, domain: skillDomain
+                )
+                trace(
+                    "autonomous material practice actor=\(actorID.rawValue) "
+                        + "domain=\(skillDomain.rawValue) "
+                        + "source=\(sourceEvent?.rawValue ?? "none") "
+                        + "skillEvent=\(skillEvent?.eventID.rawValue ?? "none") "
+                        + "practice=\(practiceBefore)>\(practiceAfter) "
+                        + "physicalReceipt=\(receipt) outputBonus=0 manualTrigger=0"
                 )
             }
             let outcome = AgentAutonomousActivityOutcome(
@@ -123,7 +140,7 @@ extension PebbleAgentController {
         recorder: inout AgentReplayRecorder?
     ) throws {
         guard session.teachingEnabled,
-              let domain = activitySkillDomain(activity.candidate.domain) else { return }
+              let domain = activity.candidate.domain.skillDomain else { return }
         let actorID = activity.candidate.actorID
         let teaching = session.teachingSnapshot()
         for engagement in teaching.apprenticeships where
@@ -136,52 +153,98 @@ extension PebbleAgentController {
                    agentID: engagement.studentID.rawValue,
                    in: world, mappedByAgentID: probesByAgentId
                ) {
-                let observation = try teachingObservationAdapter.observe(
-                    world: world, teacher: teacher, student: student,
-                    apprenticeshipID: engagement.apprenticeshipID,
-                    domain: domain, sourceSuccessEventID: sourceSuccessEventID,
-                    atTick: session.tick,
-                    configuration: session.configuration.physicalChannelConfiguration
-                )
-                if try applyRecordedOperationIfActive(
-                    .recordTeachingDemonstration(observation),
-                    session: &session, recorder: &recorder
-                ) == nil { _ = try session.recordTeachingDemonstration(observation) }
+                do {
+                    let practiceBefore = session.practiceUnits(
+                        agentID: engagement.studentID, domain: domain
+                    )
+                    let observation = try teachingObservationAdapter.observe(
+                        world: world, teacher: teacher, student: student,
+                        apprenticeshipID: engagement.apprenticeshipID,
+                        domain: domain, sourceSuccessEventID: sourceSuccessEventID,
+                        atTick: session.tick,
+                        configuration: session.configuration.physicalChannelConfiguration
+                    )
+                    if try applyRecordedOperationIfActive(
+                        .recordTeachingDemonstration(observation),
+                        session: &session, recorder: &recorder
+                    ) == nil { _ = try session.recordTeachingDemonstration(observation) }
+                    let practiceAfter = session.practiceUnits(
+                        agentID: engagement.studentID,
+                        domain: domain
+                    )
+                    trace(
+                        "autonomous teaching demonstration apprenticeship="
+                            + "\(engagement.apprenticeshipID.rawValue) "
+                            + "teacher=\(engagement.teacherID.rawValue) "
+                            + "student=\(engagement.studentID.rawValue) "
+                            + "domain=\(domain.rawValue) "
+                            + "source=\(sourceSuccessEventID.rawValue) "
+                            + "distance=\(observation.distanceManhattan) "
+                            + "lineOfSight=\(observation.lineOfSight ? 1 : 0) "
+                            + "studentPractice=\(practiceBefore)>"
+                            + "\(practiceAfter) observationSkillDelta="
+                            + "\(practiceAfter - practiceBefore)"
+                    )
+                } catch {
+                    let reason = String(describing: error)
+                        .replacingOccurrences(of: " ", with: "_")
+                    trace(
+                        "autonomous teaching demonstration deferred apprenticeship="
+                            + "\(engagement.apprenticeshipID.rawValue) "
+                            + "teacher=\(engagement.teacherID.rawValue) "
+                            + "student=\(engagement.studentID.rawValue) "
+                            + "domain=\(domain.rawValue) "
+                            + "reason=\(reason)"
+                    )
+                }
             }
             if engagement.studentID == actorID, let skillPracticeEventID,
                let exposure = session.freshLearningExposures(
                    studentID: actorID, domain: domain
                ).first {
-                if try applyRecordedOperationIfActive(
-                    .linkGuidedPractice(
-                        exposureID: exposure.exposureID,
-                        studentSourceSuccessEventID: sourceSuccessEventID,
-                        skillPracticeEventID: skillPracticeEventID
-                    ), session: &session, recorder: &recorder
-                ) == nil {
-                    _ = try session.linkGuidedPractice(
-                        exposureID: exposure.exposureID,
-                        studentSourceSuccessEventID: sourceSuccessEventID,
-                        skillPracticeEventID: skillPracticeEventID
+                do {
+                    let practiceBeforeLink = session.practiceUnits(
+                        agentID: actorID, domain: domain
+                    )
+                    if try applyRecordedOperationIfActive(
+                        .linkGuidedPractice(
+                            exposureID: exposure.exposureID,
+                            studentSourceSuccessEventID: sourceSuccessEventID,
+                            skillPracticeEventID: skillPracticeEventID
+                        ), session: &session, recorder: &recorder
+                    ) == nil {
+                        _ = try session.linkGuidedPractice(
+                            exposureID: exposure.exposureID,
+                            studentSourceSuccessEventID: sourceSuccessEventID,
+                            skillPracticeEventID: skillPracticeEventID
+                        )
+                    }
+                    let practiceAfterLink = session.practiceUnits(
+                        agentID: actorID,
+                        domain: domain
+                    )
+                    trace(
+                        "autonomous guided practice apprenticeship="
+                            + "\(engagement.apprenticeshipID.rawValue) "
+                            + "student=\(actorID.rawValue) domain=\(domain.rawValue) "
+                            + "source=\(sourceSuccessEventID.rawValue) "
+                            + "skillEvent=\(skillPracticeEventID.rawValue) "
+                            + "practiceAfterOwnSuccess=\(practiceBeforeLink) "
+                            + "practiceAfterLink=\(practiceAfterLink) "
+                            + "guidedPracticeSkillDelta="
+                            + "\(practiceAfterLink - practiceBeforeLink) materialBonus=0"
+                    )
+                } catch {
+                    let reason = String(describing: error)
+                        .replacingOccurrences(of: " ", with: "_")
+                    trace(
+                        "autonomous guided practice deferred apprenticeship="
+                            + "\(engagement.apprenticeshipID.rawValue) "
+                            + "student=\(actorID.rawValue) domain=\(domain.rawValue) "
+                            + "reason=\(reason)"
                     )
                 }
             }
-        }
-    }
-
-    private func activitySkillDomain(
-        _ domain: AgentAutonomousActivityDomain
-    ) -> AgentSkillDomain? {
-        switch domain {
-        case .agriculture: return .cultivation
-        case .fishing: return .fishing
-        case .hunting: return .hunting
-        case .wildGathering: return .foraging
-        case .livestock: return .husbandry
-        case .dependentCare: return .caregiving
-        case .construction: return .construction
-        case .materialHandling: return .materialHandling
-        case .teaching: return nil
         }
     }
 

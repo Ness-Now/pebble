@@ -274,6 +274,48 @@ extension PebbleAgentController {
         ) == nil {
             _ = try session.selectAutonomousActivities(candidates)
         }
+        if session.teachingEnabled {
+            let review = session.autonomousTeachingReviewSnapshot()
+            if review.cadenceDue {
+                trace(
+                    "autonomous teaching review tick=\(review.reviewedAtTick) "
+                        + "opportunities=\(review.opportunitiesConsidered) "
+                        + "requests=\(review.requestsAttempted) accepted=\(review.accepted) "
+                        + "refusedStudent=\(review.refusedStudent) "
+                        + "refusedTeacher=\(review.refusedTeacher) "
+                        + "noMentor=\(review.noMentor) started=\(review.started) "
+                        + "active=\(review.active) ended=\(review.ended) "
+                        + "manualSelectMentorCalls=0"
+                )
+                for attempt in review.attempts where attempt.disposition == .started {
+                    guard let apprenticeshipID = attempt.apprenticeshipID,
+                          let engagement = session.teachingSnapshot().apprenticeships.first(
+                            where: { $0.apprenticeshipID == apprenticeshipID }
+                          ) else { continue }
+                    let studentReason = attempt.studentDecision.refusalReason?.rawValue
+                        ?? "accept"
+                    let teacherReason = attempt.teacherDecisions.first(where: {
+                        $0.participantID == engagement.teacherID
+                    })?.refusalReason?.rawValue ?? "accept"
+                    let studentPractice = session.practiceUnits(
+                        agentID: engagement.studentID,
+                        domain: engagement.domain
+                    )
+                    trace(
+                        "autonomous apprenticeship started id=\(apprenticeshipID.rawValue) "
+                            + "teacher=\(engagement.teacherID.rawValue) "
+                            + "student=\(engagement.studentID.rawValue) "
+                            + "domain=\(engagement.domain.rawValue) "
+                            + "teacherPractice=\(engagement.teacherPracticeUnitsAtSelection) "
+                            + "studentPractice=\(studentPractice) "
+                            + "distance=\(engagement.distanceAtSelection) "
+                            + "studentDecision=\(studentReason) teacherDecision=\(teacherReason) "
+                            + "reason=\(attempt.opportunity.reason.rawValue) "
+                            + "manualInitiation=0"
+                    )
+                }
+            }
+        }
         recordPassiveSocietyDecisionAudit(candidates: candidates, session: session)
     }
 

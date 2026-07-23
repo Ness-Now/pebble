@@ -783,6 +783,7 @@ extension AgentSimulationSession {
         workCommitmentState = state.workCommitmentState
         physicalFoodSurvivalState = state.physicalFoodSurvivalState
         autonomousActivityState = state.autonomousActivityState
+        latestAutonomousTeachingReview = nil
         try validateEcologicalObservationStateIfEnabled()
         try validateAgricultureStateIfEnabled()
         try validateWildSubsistenceStateIfEnabled()

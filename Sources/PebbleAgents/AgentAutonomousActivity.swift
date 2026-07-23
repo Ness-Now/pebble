@@ -31,6 +31,20 @@ public enum AgentAutonomousActivityDomain: String, Codable, CaseIterable, Sendab
     case teaching
     case construction
     case materialHandling
+
+    public var skillDomain: AgentSkillDomain? {
+        switch self {
+        case .agriculture: return .cultivation
+        case .fishing: return .fishing
+        case .hunting: return .hunting
+        case .wildGathering: return .foraging
+        case .livestock: return .husbandry
+        case .dependentCare: return .caregiving
+        case .construction: return .construction
+        case .materialHandling: return .materialHandling
+        case .teaching: return nil
+        }
+    }
 }
 
 public enum AgentAutonomousActivitySource: String, Codable, CaseIterable, Sendable {

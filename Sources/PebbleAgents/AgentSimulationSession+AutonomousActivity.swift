@@ -77,6 +77,7 @@ extension AgentSimulationSession {
                 throw AgentSessionError.autonomousActivity(.invalidCandidate(candidate.candidateID))
             }
         }
+        try reviewAutonomousLocalApprenticeships(from: candidates)
         state.counters.decisionCount += 1
         state.counters.candidateCount += candidates.count
         state.cooldowns.removeAll { $0.untilTick < tick }

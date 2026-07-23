@@ -67,6 +67,7 @@ public struct AgentSimulationSession {
     public internal(set) var workCommitmentState: AgentWorkCommitmentState?
     public internal(set) var physicalFoodSurvivalState: AgentPhysicalFoodSurvivalState?
     public internal(set) var autonomousActivityState: AgentAutonomousActivityState?
+    var latestAutonomousTeachingReview: AgentAutonomousTeachingReviewSnapshot?
 
     public init(
         configuration: AgentSessionConfiguration,
@@ -151,6 +152,7 @@ public struct AgentSimulationSession {
         workCommitmentState = nil
         physicalFoodSurvivalState = nil
         autonomousActivityState = nil
+        latestAutonomousTeachingReview = nil
         try recordCausalEvent(
             kind: .sessionLifecycle,
             origin: .lifecycle,

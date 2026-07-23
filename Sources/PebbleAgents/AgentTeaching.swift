@@ -241,6 +241,217 @@ public struct AgentMentorSelectionRequest: Codable, Equatable, Sendable {
     }
 }
 
+public enum AgentTeachingParticipationRole: String, Codable, CaseIterable, Sendable {
+    case student
+    case teacher
+}
+
+public enum AgentTeachingParticipationRefusalReason:
+    String, Codable, CaseIterable, Sendable
+{
+    case inactive
+    case ineligibleLifecycleStage
+    case migrating
+    case criticalHunger
+    case carePriority
+    case unsafeContext
+    case incompatibleUrgentResponsibility
+    case teacherCapacityReached
+}
+
+/// Pure, testable input to the bounded V1 participation policy. The session
+/// derives it from canonical lifecycle, needs, care, migration, and Teaching
+/// state; no personality trait or permanent obedience flag is introduced.
+public struct AgentTeachingParticipationContext: Equatable, Sendable {
+    public let participantID: AgentID
+    public let role: AgentTeachingParticipationRole
+    public let active: Bool
+    public let lifecycleStage: AgentLifeStage?
+    public let migrating: Bool
+    public let criticalHunger: Bool
+    public let urgentCarePriority: Bool
+    public let unsafe: Bool
+    public let incompatibleUrgentResponsibility: Bool
+    public let teacherCapacityAvailable: Bool
+
+    public init(
+        participantID: AgentID,
+        role: AgentTeachingParticipationRole,
+        active: Bool,
+        lifecycleStage: AgentLifeStage?,
+        migrating: Bool,
+        criticalHunger: Bool,
+        urgentCarePriority: Bool,
+        unsafe: Bool,
+        incompatibleUrgentResponsibility: Bool,
+        teacherCapacityAvailable: Bool = true
+    ) {
+        self.participantID = participantID
+        self.role = role
+        self.active = active
+        self.lifecycleStage = lifecycleStage
+        self.migrating = migrating
+        self.criticalHunger = criticalHunger
+        self.urgentCarePriority = urgentCarePriority
+        self.unsafe = unsafe
+        self.incompatibleUrgentResponsibility = incompatibleUrgentResponsibility
+        self.teacherCapacityAvailable = teacherCapacityAvailable
+    }
+}
+
+public struct AgentTeachingParticipationDecision: Equatable, Sendable {
+    public let participantID: AgentID
+    public let role: AgentTeachingParticipationRole
+    public let accepts: Bool
+    public let refusalReason: AgentTeachingParticipationRefusalReason?
+
+    public init(
+        participantID: AgentID,
+        role: AgentTeachingParticipationRole,
+        accepts: Bool,
+        refusalReason: AgentTeachingParticipationRefusalReason?
+    ) {
+        self.participantID = participantID
+        self.role = role
+        self.accepts = accepts
+        self.refusalReason = refusalReason
+    }
+}
+
+public enum AgentTeachingParticipationPolicy {
+    /// The normal cognition boundary reviews contextual local opportunities,
+    /// never wall-clock time or a separate scheduler.
+    public static let reviewIntervalTicks = 4
+    public static let reengagementCooldownTicks = 16
+
+    public static func decide(
+        _ context: AgentTeachingParticipationContext
+    ) -> AgentTeachingParticipationDecision {
+        let refusal: AgentTeachingParticipationRefusalReason?
+        if !context.active {
+            refusal = .inactive
+        } else if context.lifecycleStage == nil
+                    || context.lifecycleStage == .newborn
+                    || (context.role == .teacher && context.lifecycleStage != .mature) {
+            refusal = .ineligibleLifecycleStage
+        } else if context.migrating {
+            refusal = .migrating
+        } else if context.criticalHunger {
+            refusal = .criticalHunger
+        } else if context.urgentCarePriority {
+            refusal = .carePriority
+        } else if context.unsafe {
+            refusal = .unsafeContext
+        } else if context.incompatibleUrgentResponsibility {
+            refusal = .incompatibleUrgentResponsibility
+        } else if context.role == .teacher && !context.teacherCapacityAvailable {
+            refusal = .teacherCapacityReached
+        } else {
+            refusal = nil
+        }
+        return AgentTeachingParticipationDecision(
+            participantID: context.participantID,
+            role: context.role,
+            accepts: refusal == nil,
+            refusalReason: refusal
+        )
+    }
+}
+
+public enum AgentLocalApprenticeshipReason: String, Codable, CaseIterable, Sendable {
+    case currentAutonomousActivity
+    case nearbyLocalProductiveActivity
+}
+
+/// Bounded pure cognition input. Candidate identities come only from the
+/// student's retained local peer observation, never a population-wide search.
+public struct AgentLocalApprenticeshipOpportunity: Equatable, Sendable {
+    public let studentID: AgentID
+    public let domain: AgentSkillDomain
+    public let localMentorCandidateIDs: [AgentID]
+    public let reason: AgentLocalApprenticeshipReason
+    public let contextReference: String
+    public let observedAtTick: Int
+
+    public init(
+        studentID: AgentID,
+        domain: AgentSkillDomain,
+        localMentorCandidateIDs: [AgentID],
+        reason: AgentLocalApprenticeshipReason,
+        contextReference: String,
+        observedAtTick: Int
+    ) {
+        self.studentID = studentID
+        self.domain = domain
+        self.localMentorCandidateIDs = localMentorCandidateIDs
+        self.reason = reason
+        self.contextReference = String(contextReference.prefix(160))
+        self.observedAtTick = observedAtTick
+    }
+}
+
+public enum AgentLocalApprenticeshipDisposition: String, Sendable {
+    case studentRefused
+    case noEligibleMentor
+    case activeApprenticeshipExists
+    case reengagementCooldown
+    case started
+}
+
+public struct AgentLocalApprenticeshipAttempt: Equatable, Sendable {
+    public let opportunity: AgentLocalApprenticeshipOpportunity
+    public let studentDecision: AgentTeachingParticipationDecision
+    public let teacherDecisions: [AgentTeachingParticipationDecision]
+    public let disposition: AgentLocalApprenticeshipDisposition
+    public let apprenticeshipID: AgentApprenticeshipID?
+}
+
+/// Latest-review diagnostics only. This snapshot is intentionally not part of
+/// checkpoint state; every durable result remains an existing apprenticeship
+/// and causal event.
+public struct AgentAutonomousTeachingReviewSnapshot: Equatable, Sendable {
+    public let reviewedAtTick: Int
+    public let cadenceDue: Bool
+    public let opportunitiesConsidered: Int
+    public let requestsAttempted: Int
+    public let accepted: Int
+    public let refusedStudent: Int
+    public let refusedTeacher: Int
+    public let noMentor: Int
+    public let started: Int
+    public let active: Int
+    public let ended: Int
+    public let attempts: [AgentLocalApprenticeshipAttempt]
+
+    public init(
+        reviewedAtTick: Int,
+        cadenceDue: Bool,
+        opportunitiesConsidered: Int,
+        requestsAttempted: Int,
+        accepted: Int,
+        refusedStudent: Int,
+        refusedTeacher: Int,
+        noMentor: Int,
+        started: Int,
+        active: Int,
+        ended: Int,
+        attempts: [AgentLocalApprenticeshipAttempt]
+    ) {
+        self.reviewedAtTick = reviewedAtTick
+        self.cadenceDue = cadenceDue
+        self.opportunitiesConsidered = opportunitiesConsidered
+        self.requestsAttempted = requestsAttempted
+        self.accepted = accepted
+        self.refusedStudent = refusedStudent
+        self.refusedTeacher = refusedTeacher
+        self.noMentor = noMentor
+        self.started = started
+        self.active = active
+        self.ended = ended
+        self.attempts = attempts
+    }
+}
+
 /// Pure evidence DTO. Pebble supplies it from live embodiments and World
 /// geometry; headless fixtures supply the same bounded physical contract.
 public struct AgentTeachingObservation: Codable, Equatable, Sendable {
