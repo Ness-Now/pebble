@@ -196,6 +196,15 @@ extension AgentSimulationSession {
         }
         try beginWorkTransition(&state)
         let fresh = derivedWorkDemandSignals(configuration: state.configuration)
+        guard Set(fresh.map(\.demandID)).count == fresh.count,
+              fresh.count <= state.configuration.maximumActiveDemands else {
+            throw AgentSessionError.workCommitment(
+                .invalidState("duplicate or excessive derived demand identity")
+            )
+        }
+        for signal in fresh {
+            try validateWorkDemandSourceReference(signal)
+        }
         let freshIDs = Set(fresh.map(\.demandID))
         for index in state.demands.indices where state.demands[index].status.isActive
             && !freshIDs.contains(state.demands[index].demandID) {
@@ -203,18 +212,80 @@ extension AgentSimulationSession {
         }
         for signal in fresh.sorted(by: workDemandSort) {
             if let index = state.demands.firstIndex(where: { $0.demandID == signal.demandID }) {
-                guard state.demands[index].sourceEventID == signal.sourceEventID,
-                      state.demands[index].domain == signal.domain else {
-                    throw AgentSessionError.workCommitment(.invalidState("demand identity changed"))
+                let previous = state.demands[index]
+                guard previous.source == signal.source,
+                      previous.sourceKey == signal.sourceKey,
+                      previous.domain == signal.domain,
+                      workDemandHasCanonicalLogicalIdentity(signal) else {
+                    throw AgentSessionError.workCommitment(
+                        .invalidState("demand logical identity changed")
+                    )
                 }
-                state.demands[index].refreshedAtTick = tick
-                state.demands[index].expiresAtTick = signal.expiresAtTick
-                if state.demands[index].status == .expired
-                    || state.demands[index].status == .withdrawn {
-                    state.demands[index].status = .active
-                    state.demands[index].terminalEventID = nil
+                guard signal.sourceEventID.simulationID == previous.sourceEventID.simulationID,
+                      signal.sourceEventID.sequence >= previous.sourceEventID.sequence else {
+                    throw AgentSessionError.workCommitment(
+                        .invalidState("stale demand causal provenance")
+                    )
                 }
+                let sourceAdvanced =
+                    signal.sourceEventID.sequence > previous.sourceEventID.sequence
+                let projectionChanged = workDemandProjectionChanged(
+                    previous, comparedWith: signal
+                )
+                let reactivates = previous.status == .expired
+                    || previous.status == .withdrawn
+                    || (previous.status == .fulfilled && sourceAdvanced)
+                var refreshed = previous
+                refreshed.sourceEventID = signal.sourceEventID
+                refreshed.observerID = signal.observerID
+                refreshed.suggestedWorkerID = signal.suggestedWorkerID
+                refreshed.targetPosition = signal.targetPosition
+                refreshed.requiredToolKeys = signal.requiredToolKeys
+                refreshed.requiredResourceKeys = signal.requiredResourceKeys
+                refreshed.urgency = signal.urgency
+                refreshed.quantity = signal.quantity
+                refreshed.cadenceTicks = signal.cadenceTicks
+                refreshed.refreshedAtTick = tick
+                refreshed.expiresAtTick = signal.expiresAtTick
+                if reactivates {
+                    refreshed.status = .active
+                    refreshed.terminalEventID = nil
+                }
+                let meaningfulRefresh = sourceAdvanced || projectionChanged || reactivates
+                if meaningfulRefresh {
+                    try prevalidateCausalAppend(count: 1)
+                    let digest = AgentWorkDigest.make(
+                        "\(state.rollingDigest)|demand-refresh|"
+                            + "\(signal.demandID.rawValue)|"
+                            + "\(previous.sourceEventID.rawValue)|"
+                            + "\(signal.sourceEventID.rawValue)|"
+                            + "\(workDemandProjectionDigest(refreshed))|\(tick)"
+                    )
+                    let event = try requiredWorkEvent(
+                        kind: .workDemandRefreshed,
+                        actorID: refreshed.observerID,
+                        causes: Array(Set([
+                            state.lastWorkEventID,
+                            refreshed.sourceEventID,
+                        ])).sorted(),
+                        payload: workPayload(
+                            demand: refreshed,
+                            status: reactivates ? "reactivated" : "refreshed",
+                            quantity: refreshed.quantity,
+                            digest: digest
+                        ),
+                        summary: "work demand refreshed source=\(refreshed.source.rawValue) domain=\(refreshed.domain.rawValue)"
+                    )
+                    state.lastWorkEventID = event.eventID
+                    state.rollingDigest = digest
+                }
+                state.demands[index] = refreshed
                 continue
+            }
+            guard workDemandHasCanonicalLogicalIdentity(signal) else {
+                throw AgentSessionError.workCommitment(
+                    .invalidState("noncanonical demand logical identity")
+                )
             }
             guard state.demands.filter(\.status.isActive).count
                     < state.configuration.maximumActiveDemands else {
@@ -242,6 +313,124 @@ extension AgentSimulationSession {
         state.demands.sort(by: workDemandSort)
         evictWorkStateIfNeeded(&state)
         workCommitmentState = state
+    }
+
+    private func workDemandHasCanonicalLogicalIdentity(
+        _ demand: AgentWorkDemandSignal
+    ) -> Bool {
+        let token = AgentWorkDigest.make(
+            "\(demand.source.rawValue)|\(demand.sourceKey)|\(demand.domain.rawValue)"
+        )
+        return demand.demandID.rawValue
+            == "work-demand-\(demand.source.rawValue)-\(token)"
+    }
+
+    private func workDemandProjectionChanged(
+        _ previous: AgentWorkDemandSignal,
+        comparedWith current: AgentWorkDemandSignal
+    ) -> Bool {
+        previous.observerID != current.observerID
+            || previous.suggestedWorkerID != current.suggestedWorkerID
+            || previous.targetPosition != current.targetPosition
+            || previous.requiredToolKeys != current.requiredToolKeys
+            || previous.requiredResourceKeys != current.requiredResourceKeys
+            || previous.urgency != current.urgency
+            || previous.quantity != current.quantity
+            || previous.cadenceTicks != current.cadenceTicks
+    }
+
+    private func workDemandProjectionDigest(
+        _ demand: AgentWorkDemandSignal
+    ) -> String {
+        AgentWorkDigest.make(
+            "\(demand.observerID.rawValue)|"
+                + "\(demand.suggestedWorkerID?.rawValue ?? "none")|"
+                + "\(demand.targetPosition.map { "\($0.x),\($0.y),\($0.z)" } ?? "none")|"
+                + "\(demand.requiredToolKeys.joined(separator: ","))|"
+                + "\(demand.requiredResourceKeys.joined(separator: ","))|"
+                + "\(demand.urgency)|\(demand.quantity)|\(demand.cadenceTicks)"
+        )
+    }
+
+    private func validateWorkDemandSourceReference(
+        _ demand: AgentWorkDemandSignal
+    ) throws {
+        guard workDemandHasCanonicalLogicalIdentity(demand),
+              demand.sourceEventID.simulationID == simulationID,
+              demand.sourceEventID.sequence.rawValue <= causalLedger.latestSequence else {
+            throw AgentSessionError.workCommitment(
+                .invalidCausalReference(demand.sourceEventID)
+            )
+        }
+        if let event = causalLedger.events.first(where: {
+            $0.eventID == demand.sourceEventID
+        }) {
+            guard event.simulationTick.rawValue <= tick,
+                  workDemandSourceEventMatches(event, demand: demand) else {
+                throw AgentSessionError.workCommitment(
+                    .invalidCausalReference(demand.sourceEventID)
+                )
+            }
+        } else {
+            guard demand.sourceEventID.sequence.rawValue <= causalLedger.droppedEventCount else {
+                throw AgentSessionError.workCommitment(
+                    .invalidCausalReference(demand.sourceEventID)
+                )
+            }
+        }
+    }
+
+    private func workDemandSourceEventMatches(
+        _ event: AgentCausalEvent,
+        demand: AgentWorkDemandSignal
+    ) -> Bool {
+        switch demand.source {
+        case .agriculture:
+            guard demand.domain == .cultivation,
+                  event.origin == .agricultureTransition,
+                  case let .agriculture(plotID, _, _, _, _, _, _, _) = event.payload,
+                  let plotID else { return false }
+            return demand.sourceKey.hasPrefix("\(plotID)-")
+        case .wildSubsistence:
+            guard [.cultivation, .fishing, .hunting, .foraging].contains(demand.domain),
+                  event.kind == .subsistenceOpportunitySelected,
+                  event.origin == .wildSubsistenceTransition,
+                  case let .wildSubsistence(opportunityID, _, _, _, _, _, _) = event.payload
+            else { return false }
+            return opportunityID == demand.sourceKey
+        case .livestock:
+            guard demand.domain == .husbandry,
+                  event.origin == .livestockTransition,
+                  case let .livestock(_, _, taskID, _, _, _, _) = event.payload
+            else { return false }
+            return taskID == demand.sourceKey
+        case .construction:
+            return [.construction, .materialHandling].contains(demand.domain)
+                && [
+                    AgentCausalEventKind.constructionFunding,
+                    .constructionPlacement,
+                    .constructionCompletion,
+                ].contains(event.kind)
+        case .dependentCare:
+            guard demand.domain == .caregiving,
+                  event.origin == .dependentCareTransition,
+                  event.kind == .careNeedRaised,
+                  case let .dependentCare(
+                      _, _, _, needID, _, _, _, _, _, _, _
+                  ) = event.payload else { return false }
+            return needID == demand.sourceKey
+        case .cooperation:
+            guard demand.domain == .materialHandling,
+                  event.origin == .cooperationTransition,
+                  case let .cooperationTask(
+                      taskID, _, _, _, _, _, _, _, _
+                  ) = event.payload else { return false }
+            return taskID == demand.sourceKey
+        case .material:
+            // Reserved for a future actor-neutral material need. No current
+            // producer may smuggle a generic World event into this identity.
+            return false
+        }
     }
 
     private func derivedWorkDemandSignals(
@@ -1020,7 +1209,10 @@ extension AgentSimulationSession {
 
     private func workCommitmentDigest(_ state: AgentWorkCommitmentState) -> String {
         let demands = state.demands.sorted(by: workDemandSort).map {
-            "\($0.demandID.rawValue):\($0.status.rawValue):\($0.refreshedAtTick):\($0.expiresAtTick)"
+            "\($0.demandID.rawValue):\($0.source.rawValue):\($0.sourceKey):"
+                + "\($0.domain.rawValue):\($0.sourceEventID.rawValue):"
+                + "\(workDemandProjectionDigest($0)):\($0.createdAtTick):"
+                + "\($0.refreshedAtTick):\($0.expiresAtTick):\($0.status.rawValue)"
         }.joined(separator: ";")
         let commitments = state.commitments.sorted(by: workCommitmentSort).map {
             "\($0.commitmentID.rawValue):\($0.workerID.rawValue):\($0.domain.rawValue):\($0.status.rawValue):\($0.outcomeCount):\($0.successfulOutcomeCount)"
@@ -1118,9 +1310,30 @@ extension AgentSimulationSession {
             reviewIntervalTicks: state.configuration.reviewIntervalTicks,
             recentHistoryWindowTicks: state.configuration.recentHistoryWindowTicks
         )
+        for demand in state.demands {
+            try validateWorkDemandSourceReference(demand)
+        }
         guard populationRegistry != nil, lifecycleState != nil, skillState != nil,
               state.demands == state.demands.sorted(by: workDemandSort),
               Set(state.demands.map(\.demandID)).count == state.demands.count,
+              state.demands.allSatisfy({
+                  workDemandHasCanonicalLogicalIdentity($0)
+                      && !$0.sourceKey.isEmpty && $0.sourceKey.count <= 160
+                      && $0.requiredToolKeys == Array(Set($0.requiredToolKeys)).sorted()
+                      && $0.requiredResourceKeys
+                          == Array(Set($0.requiredResourceKeys)).sorted()
+                      && $0.requiredToolKeys.allSatisfy({ $0.count <= 80 })
+                      && $0.requiredResourceKeys.allSatisfy({ $0.count <= 80 })
+                      && (0...100).contains($0.urgency)
+                      && $0.quantity > 0 && $0.cadenceTicks > 0
+                      && $0.createdAtTick <= $0.refreshedAtTick
+                      && $0.refreshedAtTick <= tick
+                      && $0.expiresAtTick >= $0.refreshedAtTick
+                      && ($0.terminalEventID.map({
+                          $0.simulationID == simulationID
+                              && $0.sequence.rawValue <= causalLedger.latestSequence
+                      }) ?? true)
+              }),
               state.demands.filter(\.status.isActive).count
                 <= state.configuration.maximumActiveDemands,
               state.commitments == state.commitments.sorted(by: workCommitmentSort),
@@ -1145,7 +1358,10 @@ extension AgentSimulationSession {
             throw AgentSessionError.workCommitment(.invalidState("bounds or canonical order"))
         }
         let knownAgents = Set(lifecycleState?.members.map(\.agentID) ?? [])
-        guard state.commitments.allSatisfy({
+        guard state.demands.allSatisfy({
+            knownAgents.contains($0.observerID)
+                && ($0.suggestedWorkerID.map(knownAgents.contains) ?? true)
+        }), state.commitments.allSatisfy({
             knownAgents.contains($0.workerID) && $0.startedAtTick <= tick
                 && $0.startedEventID.simulationID == simulationID
         }), state.retainedEvidence.allSatisfy({

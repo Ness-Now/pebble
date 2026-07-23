@@ -162,16 +162,16 @@ public struct AgentWorkDemandSignal: Codable, Equatable, Sendable {
     public let demandID: AgentWorkDemandID
     public let source: AgentWorkDemandSource
     public let sourceKey: String
-    public let sourceEventID: AgentCausalEventID
-    public let observerID: AgentID
-    public let suggestedWorkerID: AgentID?
+    public internal(set) var sourceEventID: AgentCausalEventID
+    public internal(set) var observerID: AgentID
+    public internal(set) var suggestedWorkerID: AgentID?
     public let domain: AgentSkillDomain
-    public let targetPosition: AgentPosition?
-    public let requiredToolKeys: [String]
-    public let requiredResourceKeys: [String]
-    public let urgency: Int
-    public let quantity: Int
-    public let cadenceTicks: Int
+    public internal(set) var targetPosition: AgentPosition?
+    public internal(set) var requiredToolKeys: [String]
+    public internal(set) var requiredResourceKeys: [String]
+    public internal(set) var urgency: Int
+    public internal(set) var quantity: Int
+    public internal(set) var cadenceTicks: Int
     public let createdAtTick: Int
     public internal(set) var refreshedAtTick: Int
     public internal(set) var expiresAtTick: Int
