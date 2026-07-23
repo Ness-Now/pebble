@@ -1384,6 +1384,20 @@ extension PebbleAgentController {
                 movementBoundary = AgentNavigationObservation.maximumRadius
             }
             if movementEnabled, agent.distanceFromHome > movementBoundary {
+                let movement = agent.lastMovementOutcome.map {
+                    "\($0.status.rawValue):from=\(positionText($0.fromPosition)):"
+                        + "to=\(positionText($0.toPosition)):"
+                        + "reason=\($0.resolutionReason.replacingOccurrences(of: " ", with: "_"))"
+                } ?? "none"
+                trace(
+                    "GATE_B4_DISTANCE_FROM_HOME_FAILURE actor=\(agent.id) "
+                        + "tick=\(result.tick) position=\(positionText(agent.position)) "
+                        + "home=\(positionText(agent.homePosition)) "
+                        + "distance=\(agent.distanceFromHome) boundary=\(movementBoundary) "
+                        + "goal=\(agent.currentGoal.kind.rawValue) "
+                        + "action=\(agent.lastAction?.name ?? "none") "
+                        + "movement=\(movement) bypass=0"
+                )
                 throw ControllerError.feedbackBoundary(agent.id)
             }
             if !movementWasEverEnabledSinceReset {

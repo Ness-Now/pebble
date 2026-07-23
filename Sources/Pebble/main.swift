@@ -447,14 +447,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     private var gateB3RandomTickApplied = false
     private var gateB3CheckpointAttempted = false
     private var gateB3ShockApplied = false
-    private let corr04MovementDisableTick: Int? = {
-        let environment = ProcessInfo.processInfo.environment
-        guard environment["PEBBLELAB_GATE_B3_ACCEPTANCE"] == "1",
-              let raw = environment["PEBBLELAB_CORR04_DISABLE_MOVEMENT_AT"],
-              let value = Int(raw), value > 4 else { return nil }
-        return value
-    }()
-    private var corr04MovementDisableApplied = false
     private var gateB3Completed = false
     private var gateB3CommandCompletionWorldTick: Int?
     private let workDemandRefreshCaptureDirectory =
@@ -940,21 +932,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
             print(
                 "[lab-live] GATE_B3_FATAL_INVARIANT seed=\(game.world.seed) "
                     + "tick=\(proof.simulationTick) runtimeErrors=\(proof.runtimeErrors) "
-                    + "horizon=\(horizon) reason=cognitive_transition_failed"
+                    + "worldTick=\(game.world.time) horizon=\(horizon) "
+                    + "reason=cognitive_transition_failed"
             )
             fflush(stdout)
             NSApp.terminate(nil)
             return
-        }
-        if let disableAt = corr04MovementDisableTick,
-           !corr04MovementDisableApplied, proof.simulationTick >= disableAt {
-            corr04MovementDisableApplied = true
-            runCommand(game, "/lab movement off")
-            print(
-                "[lab-live] CORR04_SCOPE_BOUNDARY tick=\(proof.simulationTick) "
-                    + "movement=off reason=exclude_unrelated_distance_boundary "
-                    + "productiveCommand=0"
-            )
         }
         let boundary = horizon / 2
         if game.world.seed == 887, !gateB3SkipCheckpoint, !gateB3CheckpointAttempted,
@@ -1031,12 +1014,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
             gateB3PassiveCapturedMilestones.insert(milestone)
             let name: String
             switch milestone {
-            case 0: name = "gate-b3-start.png"
-            case 60: name = "gate-b3-multi-agent.png"
-            case 120: name = "gate-b3-agriculture.png"
-            case 180: name = "gate-b3-livestock.png"
-            case 240: name = "gate-b3-follow-agent-late.png"
-            default: name = "gate-b3-final.png"
+            case 0: name = "gate-b4-start.png"
+            case 60: name = "gate-b4-multi-agent.png"
+            case 120: name = "gate-b4-agriculture.png"
+            case 180: name = "gate-b4-livestock.png"
+            case 240: name = "gate-b4-follow-agent-late.png"
+            default: name = "gate-b4-final.png"
             }
             pendingCompositedCapturePath = captureDirectory + "/" + name
             print(

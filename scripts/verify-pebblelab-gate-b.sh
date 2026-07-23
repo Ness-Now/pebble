@@ -5,7 +5,7 @@ set -o pipefail
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 ROOT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd -P)
-BASELINE=a673b28b14e9d6c97c8d59cca0fbe47b097410a8
+BASELINE=ad9322761b2ffa16acad98ac6bafb18cf5317ad2
 SHORT_SEEDS='46 71 113 197 337'
 MEDIUM_SEEDS='509 887 1597'
 STRESS_SEEDS='2593 4099'
@@ -22,7 +22,7 @@ usage() {
     cat <<'EOF'
 Usage: scripts/verify-pebblelab-gate-b.sh [--short|--medium|--stress|--passive|--work-demand-refresh|--report-only]
 
-Runs the fixed Gate B re-evaluation #3 acceptance campaign. Normal mode runs
+Runs the fixed Gate B re-evaluation #4 acceptance campaign. Normal mode runs
 all ten fixed seeds, seed-509 repeat, seed-887 checkpoint attempt, the rendered
 five-minute passive slice, focused regressions, and the canonical full gate.
 The command exits zero only for a hard B1-B12 candidate PASS. --report-only
@@ -66,12 +66,10 @@ git merge-base --is-ancestor "$BASELINE" HEAD \
 HEAD_SHA=$(git rev-parse HEAD)
 BRANCH=$(git branch --show-current)
 if [ "$REPORT_ONLY" -eq 1 ]; then
-    SUMMARY="$ROOT_DIR/docs/pebblelab/GATE_B_REEVALUATION_3_SUMMARY.json"
-    [ -f "$SUMMARY" ] || fail "durable Gate B re-evaluation #3 summary is missing"
+    SUMMARY="$ROOT_DIR/docs/pebblelab/GATE_B_REEVALUATION_4_SUMMARY.json"
+    [ -f "$SUMMARY" ] || fail "durable Gate B re-evaluation #4 summary is missing"
     python3 -m json.tool "$SUMMARY"
-    printf '\nGate B Re-evaluation #3: historical FAIL\n'
-    printf 'B-BLOCKER-STABLE-WORK-DEMAND-REFRESH: REMEDIATED LOCALLY\n'
-    printf 'Gate B candidate: FAIL / RE-EVALUATION #4 PENDING\n'
+    printf '\nGate B Re-evaluation #4: recorded candidate disposition\n'
     printf 'Gate B canonically acquired: NO\nCIV-26 started: NO\n'
     exit 0
 fi
@@ -84,13 +82,13 @@ elif [ "$MODE" = work-refresh ]; then
     )
 else
     EVIDENCE_ROOT=$(
-        mktemp -d "/tmp/PebbleLab-GateB-Reevaluation3-${HEAD_SHA}.XXXXXX"
+        mktemp -d "/tmp/PebbleLab-GateB-Reevaluation4-${HEAD_SHA}.XXXXXX"
     )
 fi
 case "$EVIDENCE_ROOT" in
-    /tmp/PebbleLab-GateB-Reevaluation3-*|/private/tmp/PebbleLab-GateB-Reevaluation3-*|\
+    /tmp/PebbleLab-GateB-Reevaluation4-*|/private/tmp/PebbleLab-GateB-Reevaluation4-*|\
     /tmp/PebbleLab-GateB-CORR04-*|/private/tmp/PebbleLab-GateB-CORR04-*) ;;
-    *) fail "evidence root must be a dedicated Gate B re-evaluation #3 temp path" ;;
+    *) fail "evidence root must be a dedicated Gate B re-evaluation #4 temp path" ;;
 esac
 mkdir -p \
     "$EVIDENCE_ROOT/short" "$EVIDENCE_ROOT/medium" \
@@ -111,8 +109,8 @@ CONFIG_DIGEST=$(
 
 cat >"$EVIDENCE_ROOT/configuration.json" <<EOF
 {
-  "schemaVersion": 3,
-  "evaluation": "$([ "$MODE" = work-refresh ] && printf 'GATE-B-CORR-04 bounded escape probe' || printf 'Gate B Re-evaluation #3')",
+  "schemaVersion": 4,
+  "evaluation": "$([ "$MODE" = work-refresh ] && printf 'GATE-B-CORR-04 bounded escape probe' || printf 'Gate B Re-evaluation #4')",
   "head": "$HEAD_SHA",
   "branch": "$BRANCH",
   "configurationDigest": "$CONFIG_DIGEST",
@@ -129,13 +127,13 @@ EOF
 if [ "$MODE" = work-refresh ]; then
     printf 'GATE-B-CORR-04 — bounded Work-demand escape probe (no Gate B credit)\n'
 else
-    printf 'Gate B Re-evaluation #3 — Final Self-Sustaining Local Society Candidate Acceptance\n'
+    printf 'Gate B Re-evaluation #4 — Full Self-Sustaining Local Society Acceptance\n'
 fi
 printf 'Repository: %s\nBranch: %s\nHEAD: %s\n' "$ROOT_DIR" "$BRANCH" "$HEAD_SHA"
 printf 'Evidence root: %s\nConfiguration digest: %s\n' "$EVIDENCE_ROOT" "$CONFIG_DIGEST"
 printf 'Goldens: read-only; PEBBLE_REGOLD refused.\n'
 if [ "$MODE" = work-refresh ]; then
-    printf 'CORR-04 matrix: seeds=%s@%s; seed=46@%s; long movement scope boundary=480; Gate B pillars credited=0\n' \
+    printf 'CORR-04 matrix: seeds=%s@%s; seed=46@%s; movement remains enabled; Gate B pillars credited=0\n' \
         "$CORR04_SEEDS" "$CORR04_HORIZON" "$CORR04_LONG_HORIZON"
 else
     printf 'Fixed matrix: short=%s@%s medium=%s@%s stress=%s@%s rerolls=0\n' \
@@ -161,12 +159,11 @@ run_seed() {
     horizon=$3
     label=${4:-$seed}
     cognitive_hz=${5:-80}
-    disable_movement_at=${6:-0}
     destination="$EVIDENCE_ROOT/$tier/$label"
     mkdir -p "$destination/home"
     trace="$destination/pebble-live.log"
     result="$destination/result.json"
-    world_name="PebbleLab-Disposable-GateB3-${tier}-${label}"
+    world_name="PebbleLab-Disposable-GateB4-${tier}-${label}"
     shock=
     if [ "$MODE" != work-refresh ]; then
         if [ "$seed" = "2593" ]; then shock=worker-care; fi
@@ -214,14 +211,13 @@ run_seed() {
         PEBBLELAB_GATE_B3_RANDOM_TICK_SPEED=3 \
         PEBBLELAB_GATE_B3_SHOCK="$shock" \
         PEBBLELAB_GATE_B3_SKIP_CHECKPOINT="$([ "$MODE" = work-refresh ] && printf 1 || printf 0)" \
-        PEBBLELAB_CORR04_DISABLE_MOVEMENT_AT="$disable_movement_at" \
         PEBBLELAB_WORK_DEMAND_REFRESH_PROOF="$([ "$MODE" = work-refresh ] && printf 1 || printf 0)" \
         PEBBLE_CMD="$BASE_COMMANDS" \
         "$PEBBLE_BINARY"
     ) >"$trace" 2>&1
     app_exit=$?
     elapsed=$(( $(date +%s) - started ))
-    python3 "$SCRIPT_DIR/gate_b3_evidence.py" run \
+    python3 "$SCRIPT_DIR/gate_b4_evidence.py" run \
         --head "$HEAD_SHA" --seed "$seed" --tier "$tier" \
         --horizon "$horizon" --label "$label" \
         --configuration-digest "$CONFIG_DIGEST" \
@@ -241,7 +237,7 @@ if [ "$MODE" = work-refresh ]; then
     # The long representative run stays coupled to physical World progress
     # (one cognitive tick per World tick) instead of the campaign's accelerated
     # short-probe rate.
-    run_seed corr04-long 46 "$CORR04_LONG_HORIZON" 46-long 20 480
+    run_seed corr04-long 46 "$CORR04_LONG_HORIZON" 46-long 20
     printf '\nGATE-B-CORR-04 bounded escape results (not Gate B acceptance)\n'
     python3 - "$EVIDENCE_ROOT" <<'PY'
 import json
@@ -313,7 +309,8 @@ summary = {
     "shortHorizon": 32,
     "longSeed": 46,
     "longHorizon": 800,
-    "longMovementScopeBoundaryTick": 480,
+    "movementEnabledForEntireRun": True,
+    "distanceFromHomeBypassUsed": False,
     "failedRuns": failures,
     "result": "PASS" if not failures else "FAIL",
 }
@@ -325,7 +322,7 @@ PY
     result=$?
     printf 'Evidence root: %s\n' "$EVIDENCE_ROOT"
     printf 'Gate B Re-evaluation #3: historical FAIL\n'
-    printf 'Gate B Re-evaluation #4 executed: NO\n'
+    printf 'Gate B Re-evaluation #4 executed: NO (CORR-04 probe only)\n'
     printf 'Gate B canonically acquired: NO\nCIV-26 started: NO\n'
     exit "$result"
 fi
@@ -351,7 +348,7 @@ run_passive() {
         CFFIXED_USER_HOME="$destination/home" \
         PEBBLE_AUTOLOAD=1 \
         PEBBLE_NEWWORLD=46 \
-        PEBBLE_NEWWORLD_NAME=PebbleLab-Disposable-GateB-Reevaluation3-46 \
+        PEBBLE_NEWWORLD_NAME=PebbleLab-Disposable-GateB-Reevaluation4-46 \
         PEBBLELAB_APP_AGENTS=1 \
         PEBBLELAB_APP_AGENTS_TRACE=1 \
         PEBBLELAB_APP_AGENTS_TRACE_EVERY=400 \
@@ -394,7 +391,7 @@ run_passive() {
     ) >"$trace" 2>&1
     app_exit=$?
     elapsed=$(( $(date +%s) - started ))
-    python3 "$SCRIPT_DIR/gate_b3_evidence.py" passive \
+    python3 "$SCRIPT_DIR/gate_b4_evidence.py" passive \
         --head "$HEAD_SHA" --elapsed-seconds "$elapsed" \
         --app-exit "$app_exit" --log "$trace" \
         --capture-directory "$destination/captures" \
@@ -411,7 +408,7 @@ fi
 
 if [ "$MODE" = all ]; then
     printf '\n[4/5] Focused and canonical regression evidence\n'
-    FOCUSED_SELECTORS='physical-food-survival autonomous-civilization integrated-teaching-initiation teaching agriculture wild-subsistence livestock dependent-care work-professions skills checkpoint-replay embodiment'
+    FOCUSED_SELECTORS='physical-food-survival autonomous-civilization integrated-teaching-initiation teaching work-demand-refresh work-professions agriculture wild-subsistence livestock dependent-care skills checkpoint-replay embodiment'
     : >"$EVIDENCE_ROOT/focused/results.tsv"
     for selector in $FOCUSED_SELECTORS; do
         output="$EVIDENCE_ROOT/focused/$selector.log"
@@ -441,14 +438,14 @@ if [ "$MODE" = all ]; then
 fi
 
 printf '\n[5/5] Hard aggregation (no averaging)\n'
-python3 "$SCRIPT_DIR/gate_b3_evidence.py" aggregate \
+python3 "$SCRIPT_DIR/gate_b4_evidence.py" aggregate \
     --head "$HEAD_SHA" --root "$EVIDENCE_ROOT" \
     --configuration-digest "$CONFIG_DIGEST" \
-    --output "$EVIDENCE_ROOT/summary/gate-b3-summary.json"
-python3 -m json.tool "$EVIDENCE_ROOT/summary/gate-b3-summary.json"
+    --output "$EVIDENCE_ROOT/summary/gate-b4-summary.json"
+python3 -m json.tool "$EVIDENCE_ROOT/summary/gate-b4-summary.json"
 
 CANDIDATE=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["candidateResult"])' \
-    "$EVIDENCE_ROOT/summary/gate-b3-summary.json")
+    "$EVIDENCE_ROOT/summary/gate-b4-summary.json")
 printf '\nGATE B CANDIDATE RESULT: %s\n' "$CANDIDATE"
 printf 'Gate R: ACQUIRED\nGate B canonically acquired: NO\nCIV-26 started: NO\n'
 printf 'Evidence root: %s\n' "$EVIDENCE_ROOT"

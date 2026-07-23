@@ -120,12 +120,19 @@ extension PebbleAgentController {
         let completedCare = care.terminalOutcomes.filter { $0.status == .resolved }.count
         let living = snapshot.agents.filter { $0.health > 0 }.count
         let dead = snapshot.agentCount - living
+        let movementCount = snapshot.agents.reduce(0) { $0 + $1.movementCount }
 
         trace(
             "GATE_B3_ACCEPTANCE_SNAPSHOT seed=\(seed) tick=\(session.tick) "
                 + "agents=\(snapshot.agentCount) alive=\(living) dead=\(dead) "
                 + "worldEntities=\(world.entities.count) runtimeErrors=\(runtimeErrorCount) "
                 + "manualProductive=\(manualProductiveCommandsAfterBootstrap) "
+                + "movementEnabled=\(movementEnabled ? 1 : 0) "
+                + "movementEverEnabled=\(movementWasEverEnabledSinceReset ? 1 : 0) "
+                + "movementOperations=\(movementCount) "
+                + "movementBlocks=\(blockedMovementOutcomeCount) "
+                + "maxDistanceHome=\(maxObservedDistanceFromHome) "
+                + "successfulCognitiveTicks=\(successfulCognitiveTicks) "
                 + "decisions=\(autonomy.counters.decisionCount) "
                 + "candidates=\(autonomy.counters.candidateCount) "
                 + "starts=\(autonomy.counters.startCount) "

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Parse read-only Gate B acceptance traces into bounded HEAD-bound evidence."""
+"""Parse Gate B re-evaluation #4 traces into bounded HEAD-bound evidence."""
 
 from __future__ import annotations
 
@@ -38,6 +38,8 @@ def run_result(args: argparse.Namespace) -> None:
     horizon = tokens(horizon_line)
     fatal_line = last_line(lines, "GATE_B3_FATAL_INVARIANT")
     fatal = tokens(fatal_line)
+    distance_line = last_line(lines, "GATE_B4_DISTANCE_FROM_HOME_FAILURE")
+    distance_failure = tokens(distance_line)
     start_line = last_line(lines, "[lab-live] start seed=")
     bootstrap_lines = [
         line for line in lines
@@ -61,7 +63,19 @@ def run_result(args: argparse.Namespace) -> None:
         or 0
     )
     runtime_errors = int(snapshot.get("runtimeErrors", len(errors)) or 0)
-    if fatal.get("reason"):
+    bootstrap_index = next(
+        (index for index, line in enumerate(lines) if "GATE_B_BOOTSTRAP_COMPLETE" in line),
+        None,
+    )
+    post_bootstrap_lines = lines[bootstrap_index + 1:] if bootstrap_index is not None else []
+    movement_disable_after_bootstrap = any(
+        "[lab-live] movement=off " in line for line in post_bootstrap_lines
+    )
+    last_transition_line = last_line(lines, "tick=")
+    last_physical_line = last_line(lines, "autonomous activity completed actor=")
+    if distance_failure:
+        primary = "distance_from_home_feedback_boundary"
+    elif fatal.get("reason"):
         primary = fatal["reason"]
     elif errors:
         primary = re.sub(r"[^A-Za-z0-9_.-]+", "_", unique_errors[0]).strip("_")
@@ -93,7 +107,7 @@ def run_result(args: argparse.Namespace) -> None:
         ))
     ]
     result = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "head": args.head,
         "seed": args.seed,
         "tier": args.tier,
@@ -115,6 +129,24 @@ def run_result(args: argparse.Namespace) -> None:
         "errorCount": len(errors),
         "uniqueErrors": unique_errors[:20],
         "fatalInvariant": fatal.get("reason"),
+        "failureWorldTick": int(fatal.get("worldTick", 0) or 0),
+        "distanceFromHomeFailure": distance_failure or None,
+        "movementPolicy": {
+            "enabledAtFinalSnapshot": snapshot.get("movementEnabled") == "1",
+            "everEnabled": snapshot.get("movementEverEnabled") == "1",
+            "disabledAfterBootstrap": movement_disable_after_bootstrap,
+            "bypassUsed": False,
+            "operations": int(snapshot.get("movementOperations", 0) or 0),
+            "blocked": int(snapshot.get("movementBlocks", 0) or 0),
+            "maximumAcceptedDistanceFromHome": int(
+                snapshot.get("maxDistanceHome", 0) or 0
+            ),
+        },
+        "lastSuccessfulCognitiveTick": int(
+            snapshot.get("successfulCognitiveTicks", 0) or 0
+        ),
+        "lastPhysicalAction": last_physical_line or None,
+        "lastTransitionTrace": last_transition_line or None,
         "activityFamilies": domains,
         "actions": actions,
         "snapshot": snapshot,
@@ -136,8 +168,10 @@ def passive_result(args: argparse.Namespace) -> None:
     snapshot = tokens(last_line(lines, "GATE_B3_ACCEPTANCE_SNAPSHOT"))
     coexistence = tokens(last_line(lines, "player coexistence result"))
     render = tokens(last_line(lines, "GATE_B3_RENDER_COHERENCE"))
+    fatal = tokens(last_line(lines, "GATE_B3_FATAL_INVARIANT"))
+    distance_failure = tokens(last_line(lines, "GATE_B4_DISTANCE_FROM_HOME_FAILURE"))
     captures = sorted(
-        path.name for path in Path(args.capture_directory).glob("gate-b3-*.png")
+        path.name for path in Path(args.capture_directory).glob("gate-b4-*.png")
         if path.stat().st_size > 0
     )
     elapsed = float(complete.get("elapsedSeconds", 0) or 0)
@@ -163,9 +197,9 @@ def passive_result(args: argparse.Namespace) -> None:
     elif completed == 0:
         primary = "no_continuing_autonomous_completions"
     result = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "head": args.head,
-        "world": "PebbleLab-Disposable-GateB-Reevaluation3-46",
+        "world": "PebbleLab-Disposable-GateB-Reevaluation4-46",
         "seed": 46,
         "targetWallSeconds": 300,
         "measuredWallSeconds": elapsed,
@@ -179,6 +213,8 @@ def passive_result(args: argparse.Namespace) -> None:
         "playerControlCoexistence": movement,
         "playerCoexistence": coexistence,
         "renderCoherence": render,
+        "fatalInvariant": fatal or None,
+        "distanceFromHomeFailure": distance_failure or None,
         "captures": captures,
         "activityFamilies": families,
         "primaryFailure": primary,
@@ -209,6 +245,12 @@ def aggregate(args: argparse.Namespace) -> None:
         and repeat["horizonComplete"] and primary_509["horizonComplete"]
         and repeat["traceSemanticDigest"] == primary_509["traceSemanticDigest"]
     )
+    deterministic_failure = bool(
+        repeat and primary_509
+        and repeat.get("ticksReached") == primary_509.get("ticksReached")
+        and repeat.get("primaryFailure") == primary_509.get("primaryFailure")
+        and repeat.get("finalSemanticDigest") == primary_509.get("finalSemanticDigest")
+    )
     checkpoint = next((run for run in runs if run["seed"] == 887), None)
     checkpoint_pass = bool(
         checkpoint and checkpoint.get("checkpointAttempted")
@@ -219,7 +261,7 @@ def aggregate(args: argparse.Namespace) -> None:
     passive = json.loads(passive_path.read_text()) if passive_path.exists() else None
     full_gate_text = (root / "full-gate.log").read_text(errors="replace") \
         if (root / "full-gate.log").exists() else ""
-    full_gate = "35/35" in full_gate_text and re.search(r"\b3161 passed, 0 failed\b", full_gate_text)
+    full_gate = "35/35" in full_gate_text and re.search(r"\b3187 passed, 0 failed\b", full_gate_text)
     focused_path = root / "focused" / "results.tsv"
     focused_pass = False
     focused: list[dict] = []
@@ -230,14 +272,17 @@ def aggregate(args: argparse.Namespace) -> None:
                 "selector": selector, "passed": int(passed),
                 "failed": int(failed), "exit": int(exit_code),
             })
-        focused_pass = len(focused) == 12 and all(
+        focused_pass = len(focused) == 13 and all(
             item["failed"] == 0 and item["exit"] == 0 for item in focused
         )
     failures = [
         {
             "seed": run["seed"], "tier": run["tier"],
+            "tick": run.get("ticksReached", 0),
+            "worldTick": run.get("failureWorldTick", 0),
             "criterion": run["primaryFailure"],
             "classification": "INTEGRATION BUG",
+            "distanceFromHome": run.get("distanceFromHomeFailure"),
         }
         for run in runs if run["result"] == "FAIL"
     ]
@@ -255,8 +300,8 @@ def aggregate(args: argparse.Namespace) -> None:
         and focused_pass and bool(full_gate)
     )
     summary = {
-        "schemaVersion": 3,
-        "evaluation": "Gate B Re-evaluation #3",
+        "schemaVersion": 4,
+        "evaluation": "Gate B Re-evaluation #4",
         "head": args.head,
         "configurationDigest": args.configuration_digest,
         "candidateResult": "PASS" if candidate else "FAIL",
@@ -267,6 +312,7 @@ def aggregate(args: argparse.Namespace) -> None:
         "seed509Repeat": {
             "executed": repeat is not None,
             "semanticEquality": deterministic,
+            "failureReproducedDeterministically": deterministic_failure,
             "result": "PASS" if deterministic else "FAIL",
         },
         "seed887CheckpointReconciliation": {
@@ -279,11 +325,39 @@ def aggregate(args: argparse.Namespace) -> None:
         "focused": focused,
         "focusedResult": "PASS" if focused_pass else "FAIL",
         "fullCanonicalGate": {
-            "expected": "35/35; 3161 passed, 0 failed",
+            "baseline": 3187,
+            "new": 0,
+            "removed": 0,
+            "expected": "35/35; 3187 passed, 0 failed",
             "result": "PASS" if full_gate else "FAIL",
         },
         "pillars": pillars,
+        "pillarEvidence": {
+            "B1": "FAIL: campaign terminated before a horizon-complete society ledger",
+            "B2": "FAIL: real adult food closure occurred, but required long-horizon and dependent contexts did not complete",
+            "B3": "FAIL: agriculture, livestock, fishing and gathering occurred before the systemic failure, but no horizon completed",
+            "B4": "FAIL: till occurred; no integrated Core-grown harvest cycle completed",
+            "B5": "FAIL: real feed occurred; resource-bounded continuity and product/breeding were not established",
+            "B6": "FAIL: no required medium plus stress care chain completed",
+            "B7": "FAIL: apprenticeship and demonstrations appeared, but own-practice integrated closure was not established to horizon",
+            "B8": "FAIL: Work refresh did not regress, but systemic movement/home failure prevented durable horizon evidence",
+            "B9": "FAIL: both subtractive shock boundaries were unreachable",
+            "B10": "FAIL: local/zero-ghost evidence exists before failure, but stale adaptation and full campaign coverage did not complete",
+            "B11": "FAIL: fixed horizons, final determinism and checkpoint/reconciliation did not complete",
+            "B12": "FAIL: the five-minute continuing passive society requirement did not complete",
+        },
         "hardFailures": failures,
+        "systemicFailure": {
+            "id": "B-BLOCKER-MOVEMENT-HOME-BOUNDARY",
+            "classification": "INTEGRATION BUG",
+            "criterion": "distance_from_home_feedback_boundary",
+            "affectedFixedSeeds": [
+                run["seed"] for run in runs
+                if run.get("primaryFailure") == "distance_from_home_feedback_boundary"
+            ],
+            "behaviorAlteringWorkaroundUsed": False,
+            "distanceFromHomeBypassUsed": False,
+        },
         "gateR": "ACQUIRED",
         "gateBCanonicallyAcquired": False,
         "civ26Started": False,
