@@ -16,12 +16,6 @@ struct PebbleAgentPassiveSocietyFixture {
     let originalActors: [OriginalActor]
     let entityIDsBefore: Set<Int>
     let container: BlockEntityData
-    let fieldPositions: [AgentPosition]
-    let penCenter: AgentPosition
-    let wildPosition: AgentPosition
-    let plannerID: AgentID
-    let livestockAgentIDs: [AgentID]
-    let wildAgentID: AgentID
 }
 
 struct PebbleAgentPassiveSocietyAudit {
@@ -91,44 +85,21 @@ extension PebbleAgentController {
         )
         let integratedTeachingProof =
             environment["PEBBLELAB_INTEGRATED_TEACHING_PROOF"] == "1"
-        func distance(_ position: AgentPosition, _ target: AgentPosition) -> Int {
-            abs(position.x - target.x) + abs(position.y - target.y) + abs(position.z - target.z)
-        }
-        let plannerSnapshot = snapshots.sorted {
-            let lhs = distance($0.position, fieldCenter)
-            let rhs = distance($1.position, fieldCenter)
-            return lhs == rhs ? $0.id < $1.id : lhs < rhs
-        }.first!
-        // The three-cell plot surrounds whichever inhabitant is naturally
-        // closest to the prospective field. Each real soil cell is therefore
-        // reachable from the shared standing cell without manufacturing a
-        // per-agent command or a second navigation policy.
+        // The plot belongs to the physical settlement layout, not to a chosen
+        // future farmer. Every inhabitant receives the same finite starter
+        // custody below; fresh local observation and product arbitration decide
+        // whether anyone plans or works this site after bootstrap.
         let fieldPositions = [
             AgentPosition(
-                x: plannerSnapshot.position.x - 1, y: anchor.y - 1,
-                z: plannerSnapshot.position.z
+                x: fieldCenter.x, y: anchor.y - 1, z: fieldCenter.z + 1
             ),
             AgentPosition(
-                x: plannerSnapshot.position.x, y: anchor.y - 1,
-                z: plannerSnapshot.position.z - 1
+                x: fieldCenter.x + 1, y: anchor.y - 1, z: fieldCenter.z + 1
             ),
             AgentPosition(
-                x: plannerSnapshot.position.x, y: anchor.y - 1,
-                z: plannerSnapshot.position.z + 1
+                x: fieldCenter.x, y: anchor.y - 1, z: fieldCenter.z
             ),
         ]
-        let livestockSnapshots = snapshots.filter { $0.id != plannerSnapshot.id }.sorted {
-            let lhs = distance($0.position, penCenter)
-            let rhs = distance($1.position, penCenter)
-            return lhs == rhs ? $0.id < $1.id : lhs < rhs
-        }
-        guard livestockSnapshots.count >= 2,
-              let plannerID = AgentID(rawValue: plannerSnapshot.id),
-              let primaryLivestockID = AgentID(rawValue: livestockSnapshots[0].id),
-              let secondaryLivestockID = AgentID(rawValue: livestockSnapshots[1].id) else {
-            throw ControllerError.feedbackBoundary("passive society stable actor selection failed")
-        }
-        let wildAgentID = secondaryLivestockID
         let actorIDs = snapshots.map(\.id)
         let embodiments = try PebbleAgentEmbodiment.resolveAll(
             agentIDs: actorIDs, in: world, mappedByAgentID: probesByAgentId
@@ -257,11 +228,7 @@ extension PebbleAgentController {
 
         passiveSocietyFixture = PebbleAgentPassiveSocietyFixture(
             originalCells: originalCells, originalActors: originalActors,
-            entityIDsBefore: entityIDsBefore, container: container,
-            fieldPositions: fieldPositions, penCenter: penCenter,
-            wildPosition: wildPosition, plannerID: plannerID,
-            livestockAgentIDs: [primaryLivestockID, secondaryLivestockID],
-            wildAgentID: wildAgentID
+            entityIDsBefore: entityIDsBefore, container: container
         )
 
         do {
@@ -290,86 +257,33 @@ extension PebbleAgentController {
                 embodiments[id]!.carriedItems = Array(
                     repeating: nil, count: LabCoreAgentEntity.carriedItemSlotCount
                 )
+                embodiments[id]!.carriedItems[0] = ItemStack(iid("iron_hoe"), 1)
+                embodiments[id]!.carriedItems[1] = ItemStack(iid("wheat_seeds"), 4)
+                embodiments[id]!.carriedItems[2] = ItemStack(iid("wheat"), 3)
+                embodiments[id]!.carriedItems[3] = ItemStack(
+                    iid("fishing_rod"), 1, damage: 63
+                )
+                embodiments[id]!.carriedItems[4] = ItemStack(iid("shears"), 1)
             }
-            embodiments[plannerID.rawValue]!.carriedItems[0] = ItemStack(iid("iron_hoe"), 1)
-            embodiments[plannerID.rawValue]!.carriedItems[1] = ItemStack(iid("wheat_seeds"), 4)
-            for id in [primaryLivestockID, secondaryLivestockID] {
-                embodiments[id.rawValue]!.carriedItems[0] = ItemStack(iid("wheat"), 3)
-            }
-            embodiments[primaryLivestockID.rawValue]!.carriedItems[1]
-                = ItemStack(iid("fishing_rod"), 1, damage: 63)
-
             ecologicalObservationSensor.invalidateAll()
-            for id in actorIDs.sorted() {
-                _ = try recordLiveEcologicalObservation(
-                    world: world, observerID: AgentID(rawValue: id)!,
-                    session: &candidate, recorder: &recorder
-                )
-            }
-            guard try prepareLiveAgriculturalPlanIfEligible(
-                world: world, session: &candidate, recorder: &recorder
-            ), candidate.agricultureSnapshot().plots.first?.plannerID == plannerID else {
-                throw ControllerError.feedbackBoundary("passive agriculture opportunity not selected")
-            }
-
-            let sheepPositions = [firstSheep, secondSheep].map {
-                AgentPosition(
-                    x: Int($0.x.rounded(.down)), y: Int($0.y.rounded(.down)),
-                    z: Int($0.z.rounded(.down))
-                )
-            }
-            let livestockObservations = candidate.ecologicalObservations(
-                for: primaryLivestockID
+            let roleNeutralAudit = AgentRoleNeutralBootstrapAudit(
+                assignedPlanner: 0,
+                assignedLivestockWorkers: 0,
+                assignedWildWorker: 0,
+                prequeuedProductiveTasks:
+                    candidate.livestockSnapshot().activeTasks.count,
+                prestartedAgriculturePlans:
+                    candidate.agricultureSnapshot().plots.count,
+                prestartedApprenticeships:
+                    candidate.teachingSnapshot().apprenticeships.count,
+                preloadedSkills: candidate.skillSnapshot().profiles.count,
+                preloadedProfessions:
+                    candidate.workCommitmentSnapshot().professionProfiles.count
             )
-            trace(
-                "passive livestock observation actor=\(primaryLivestockID.rawValue) animals="
-                    + (livestockObservations.first?.observation.animals.map {
-                        "\($0.speciesKey)@\(positionText($0.position))"
-                    }.joined(separator: ",") ?? "none")
-            )
-            guard let source = livestockObservations.first(where: { record in
-                record.observation.animals.filter { $0.speciesKey == "sheep" }.count >= 2
-            })?.causalEventID else {
-                throw ControllerError.feedbackBoundary("passive livestock observation missing")
-            }
-            let herdID = AgentLivestockHerdID(rawValue: "passive-society-sheep")!
-            let recordIDs = [
-                AgentManagedAnimalRecordID(rawValue: "passive-sheep-1")!,
-                AgentManagedAnimalRecordID(rawValue: "passive-sheep-2")!,
-            ]
-            let area = AgentLivestockManagementArea(
-                minimum: AgentPosition(
-                    x: penCenter.x - 2, y: penCenter.y - 1, z: penCenter.z - 2
-                ),
-                maximum: AgentPosition(
-                    x: penCenter.x + 2, y: penCenter.y + 2, z: penCenter.z + 2
+            guard roleNeutralAudit.isRoleNeutral else {
+                throw ControllerError.feedbackBoundary(
+                    "passive society bootstrap assigned cognitive work"
                 )
-            )
-            func applyLivestock(_ operation: AgentLivestockOperation) throws {
-                if try applyRecordedOperationIfActive(
-                    .applyLivestockOperation(operation),
-                    session: &candidate, recorder: &recorder
-                ) == nil { try candidate.applyLivestockOperation(operation) }
-            }
-            try applyLivestock(.establishHerd(
-                herdID: herdID, speciesKey: "sheep", managementArea: area,
-                responsibleAgentIDs: [primaryLivestockID, secondaryLivestockID]
-            ))
-            for index in 0..<2 {
-                try applyLivestock(.admitObservedAnimal(
-                    recordID: recordIDs[index], herdID: herdID,
-                    actorID: primaryLivestockID, speciesKey: "sheep",
-                    position: sheepPositions[index], lifeStage: .adult,
-                    sourceObservationEventID: source, compatibleFeedAvailable: true
-                ))
-                livestockRuntimeEntityIDByRecord[recordIDs[index]] = [firstSheep, secondSheep][index].id
-                try applyLivestock(.queueTask(AgentLivestockTaskRequest(
-                    taskID: AgentLivestockTaskID(rawValue: "passive-feed-\(index + 1)")!,
-                    herdID: herdID, kind: .feed,
-                    primaryAnimalRecordID: recordIDs[index],
-                    responsibleAgentID: [primaryLivestockID, secondaryLivestockID][index],
-                    targetPosition: sheepPositions[index]
-                )))
             }
 
             published = candidate
@@ -384,10 +298,18 @@ extension PebbleAgentController {
             }
             trace(
                 "passive composite bootstrap world=one session=one settlement=one "
-                    + "agents=\(actorIDs.count) planner=\(plannerID.rawValue) "
-                    + "livestock=\(primaryLivestockID.rawValue),\(secondaryLivestockID.rawValue) "
-                    + "wild=\(wildAgentID.rawValue) field=real storage=real water=real "
-                    + "livestockPhysical=2 food=real commandsProductive=0"
+                    + "agents=\(actorIDs.count) field=real storage=real water=real "
+                    + "livestockPhysical=2 food=real commandsProductive=0 "
+                    + "starterKits=\(actorIDs.count) kitHoe=1 kitSeeds=4 kitWheat=3 "
+                    + "kitFishingRod=1 kitShears=1 custody=physical_identical_bounded "
+                    + "assignedPlanner=\(roleNeutralAudit.assignedPlanner) "
+                    + "assignedLivestockWorkers=\(roleNeutralAudit.assignedLivestockWorkers) "
+                    + "assignedWildWorker=\(roleNeutralAudit.assignedWildWorker) "
+                    + "prequeuedProductiveTasks=\(roleNeutralAudit.prequeuedProductiveTasks) "
+                    + "prestartedAgriculturePlans=\(roleNeutralAudit.prestartedAgriculturePlans) "
+                    + "prestartedApprenticeships=\(roleNeutralAudit.prestartedApprenticeships) "
+                    + "preloadedSkills=\(roleNeutralAudit.preloadedSkills) "
+                    + "preloadedProfessions=\(roleNeutralAudit.preloadedProfessions)"
             )
             if integratedTeachingProof {
                 trace(
