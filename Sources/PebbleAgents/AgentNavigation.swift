@@ -21,6 +21,11 @@ public enum AgentNavigationGoalMode: String, Codable, Equatable {
 }
 
 public struct AgentNavigationObservation: Codable, Equatable {
+    /// Maximum radius of one locally observed/planned navigation segment.
+    ///
+    /// This is deliberately not a permanent distance-from-home limit. Domain
+    /// policies such as exploration, migration, and construction own their
+    /// separate settlement/home ranges.
     public static let maximumRadius = 8
     public static let maximumCellCount = 512
 
@@ -293,6 +298,13 @@ public enum AgentBoundedRoutePlanner {
 public enum AgentBoundedTravel {
     public static let stepDistance = 4
 
+    public static func isLocallyBoundedSegment(
+        from current: AgentPosition,
+        to target: AgentPosition
+    ) -> Bool {
+        horizontalDistance(current, target) <= AgentNavigationObservation.maximumRadius
+    }
+
     public static func desiredWaypoint(
         from current: AgentPosition,
         toward destination: AgentPosition
@@ -311,7 +323,7 @@ public enum AgentBoundedTravel {
         from current: AgentPosition,
         to destination: AgentPosition
     ) -> Bool {
-        horizontalDistance(current, destination) > AgentNavigationObservation.maximumRadius
+        !isLocallyBoundedSegment(from: current, to: destination)
     }
 
     public static func permitsNormalizedWaypoint(
@@ -350,6 +362,14 @@ public enum AgentNavigationPurpose: String, Codable, Equatable {
     case dependentCare
     case dependentReturnHome
     case civilizationActivity
+
+    /// Migration carries its own complete, cardinal, admission-validated route
+    /// (bounded by `maximumMigrationDistance`). Every other route is produced
+    /// from one local navigation observation and therefore has a locally
+    /// bounded target.
+    public var targetMustFitLocalObservationRadius: Bool {
+        self != .migrationArrival
+    }
 }
 
 public struct AgentNavigationRoute: Codable, Equatable {

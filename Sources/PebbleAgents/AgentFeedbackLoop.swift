@@ -134,6 +134,23 @@ public struct AgentFeedbackDecisionTrace: Codable, Equatable {
 }
 
 public enum AgentFeedbackLoop {
+    /// Validates one exploration movement against the exploration policy's
+    /// home range. An actor already at or beyond the boundary must make strict
+    /// progress home; a lateral step would otherwise permit an endless
+    /// out-of-range exploration loop.
+    public static func respectsExplorationHomeBoundary(
+        distanceBefore: Int,
+        distanceAfter: Int,
+        maximumDistance: Int
+    ) -> Bool {
+        guard distanceBefore >= 0, distanceAfter >= 0, maximumDistance > 0 else {
+            return false
+        }
+        return distanceBefore < maximumDistance
+            ? distanceAfter <= maximumDistance
+            : distanceAfter < distanceBefore
+    }
+
     public static func movementMemoryEntry(outcome: AgentMovementOutcome) -> AgentMemoryEntry? {
         switch outcome.status {
         case .notRequested:

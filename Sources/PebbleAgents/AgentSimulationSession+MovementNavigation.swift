@@ -509,9 +509,15 @@ extension AgentSimulationSession {
             }
             releaseReservation(for: state)
             purpose = .homeDelivery
+            resetCompletedBoundedWaypoint(
+                state: &state,
+                purpose: purpose,
+                destination: state.homePosition
+            )
             targetPosition = boundedHomeTarget(
                 state: state,
-                observation: observation
+                observation: observation,
+                purpose: purpose
             )
             targetResource = nil
             goalMode = .exact
@@ -536,9 +542,15 @@ extension AgentSimulationSession {
             }
             releaseReservation(for: state)
             purpose = .homeRest
+            resetCompletedBoundedWaypoint(
+                state: &state,
+                purpose: purpose,
+                destination: state.homePosition
+            )
             targetPosition = boundedHomeTarget(
                 state: state,
-                observation: observation
+                observation: observation,
+                purpose: purpose
             )
             targetResource = nil
             goalMode = .exact
@@ -566,9 +578,15 @@ extension AgentSimulationSession {
             releaseReservation(for: state)
             if project.status == .readyToFund {
                 purpose = .homeDelivery
+                resetCompletedBoundedWaypoint(
+                    state: &state,
+                    purpose: purpose,
+                    destination: state.homePosition
+                )
                 targetPosition = boundedHomeTarget(
                     state: state,
-                    observation: observation
+                    observation: observation,
+                    purpose: purpose
                 )
                 targetResource = nil
                 goalMode = .exact
@@ -606,10 +624,14 @@ extension AgentSimulationSession {
             }
             releaseReservation(for: state)
             purpose = .socialVerification
+            resetCompletedBoundedWaypoint(
+                state: &state,
+                purpose: purpose,
+                destination: request.position
+            )
             targetPosition = boundedSocialTarget(
-                state: state,
-                destination: request.position,
-                observation: observation
+                state: state, destination: request.position,
+                observation: observation, purpose: purpose
             )
             targetResource = request.resource
             goalMode = targetPosition == request.position ? .cardinalAdjacent : .exact
@@ -638,8 +660,14 @@ extension AgentSimulationSession {
             }
             releaseReservation(for: state)
             purpose = .dependentCare
+            resetCompletedBoundedWaypoint(
+                state: &state,
+                purpose: purpose,
+                destination: dependent.position
+            )
             targetPosition = boundedSocialTarget(
-                state: state, destination: dependent.position, observation: observation
+                state: state, destination: dependent.position,
+                observation: observation, purpose: purpose
             )
             targetResource = nil
             goalMode = targetPosition == dependent.position ? .cardinalAdjacent : .exact
@@ -659,7 +687,16 @@ extension AgentSimulationSession {
         case .dependentReturnHome:
             releaseReservation(for: state)
             purpose = .dependentReturnHome
-            targetPosition = boundedHomeTarget(state: state, observation: observation)
+            resetCompletedBoundedWaypoint(
+                state: &state,
+                purpose: purpose,
+                destination: state.homePosition
+            )
+            targetPosition = boundedHomeTarget(
+                state: state,
+                observation: observation,
+                purpose: purpose
+            )
             targetResource = nil
             goalMode = .exact
             if state.position == state.homePosition {
@@ -686,9 +723,19 @@ extension AgentSimulationSession {
             }
             releaseReservation(for: state)
             purpose = .civilizationActivity
-            targetPosition = target
+            resetCompletedBoundedWaypoint(
+                state: &state,
+                purpose: purpose,
+                destination: target
+            )
+            targetPosition = boundedSocialTarget(
+                state: state,
+                destination: target,
+                observation: observation,
+                purpose: purpose
+            )
             targetResource = nil
-            goalMode = .cardinalAdjacent
+            goalMode = targetPosition == target ? .cardinalAdjacent : .exact
             if manhattanDistance(state.position, target) <= 1 {
                 state.navigationProgress = AgentNavigationProgress(
                     status: .arrived,
@@ -839,40 +886,40 @@ extension AgentSimulationSession {
 
     func boundedHomeTarget(
         state: AgentSessionAgentState,
-        observation: AgentNavigationObservation?
+        observation: AgentNavigationObservation?,
+        purpose: AgentNavigationPurpose
     ) -> AgentPosition {
-        if state.navigationProgress.status == .active,
-           let route = state.navigationProgress.route,
-           route.purpose == .homeDelivery || route.purpose == .homeRest,
-           observation?.target == route.target {
-            return route.target
-        }
-        guard AgentBoundedTravel.requiresWaypoint(
-            from: state.position,
-            to: state.homePosition
-        ), let target = observation?.target else {
-            return state.homePosition
-        }
-        let desired = AgentBoundedTravel.desiredWaypoint(
-            from: state.position,
-            toward: state.homePosition
+        boundedTravelTarget(
+            state: state,
+            destination: state.homePosition,
+            observation: observation,
+            purpose: purpose
         )
-        return AgentBoundedTravel.permitsNormalizedWaypoint(
-            target,
-            desiredWaypoint: desired,
-            current: state.position,
-            destination: state.homePosition
-        ) ? target : state.homePosition
     }
 
     func boundedSocialTarget(
         state: AgentSessionAgentState,
         destination: AgentPosition,
-        observation: AgentNavigationObservation?
+        observation: AgentNavigationObservation?,
+        purpose: AgentNavigationPurpose
+    ) -> AgentPosition {
+        boundedTravelTarget(
+            state: state,
+            destination: destination,
+            observation: observation,
+            purpose: purpose
+        )
+    }
+
+    func boundedTravelTarget(
+        state: AgentSessionAgentState,
+        destination: AgentPosition,
+        observation: AgentNavigationObservation?,
+        purpose: AgentNavigationPurpose
     ) -> AgentPosition {
         if state.navigationProgress.status == .active,
            let route = state.navigationProgress.route,
-           route.purpose == .socialVerification,
+           route.purpose == purpose,
            observation?.target == route.target {
             return route.target
         }
@@ -892,6 +939,22 @@ extension AgentSimulationSession {
             current: state.position,
             destination: destination
         ) ? target : destination
+    }
+
+    func resetCompletedBoundedWaypoint(
+        state: inout AgentSessionAgentState,
+        purpose: AgentNavigationPurpose,
+        destination: AgentPosition
+    ) {
+        guard state.navigationProgress.status == .arrived,
+              let route = state.navigationProgress.route,
+              route.purpose == purpose,
+              route.target != destination,
+              state.position == route.target else { return }
+        // Reaching an intentional intermediate segment is progress, not a
+        // failed replan. Start the next local segment with a fresh retry
+        // budget while preserving the ultimate activity/home destination.
+        state.navigationProgress = AgentNavigationProgress()
     }
 
     func reservation(for state: AgentSessionAgentState) -> AgentResourceReservation? {

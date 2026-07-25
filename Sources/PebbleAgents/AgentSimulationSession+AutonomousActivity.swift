@@ -80,6 +80,35 @@ extension AgentSimulationSession {
         try reviewAutonomousLocalApprenticeships(from: candidates)
         state.counters.decisionCount += 1
         state.counters.candidateCount += candidates.count
+        let navigationBlocked = state.activeActivities
+            .filter { activity in
+                guard activity.candidate.target != nil,
+                      let agent = statesById[activity.candidate.actorID.rawValue] else {
+                    return false
+                }
+                return agent.currentGoal.kind == .civilizationActivity
+                    && agent.navigationProgress.lastFailure == .replanLimitReached
+            }
+            .sorted(by: activitySort)
+        for activity in navigationBlocked {
+            appendTerminalRecord(
+                activity,
+                lifecycle: .blocked,
+                reason: "bounded navigation replan limit reached",
+                state: &state
+            )
+            state.cooldowns.append(AgentAutonomousActivityCooldown(
+                actorID: activity.candidate.actorID,
+                candidateID: activity.candidate.candidateID,
+                untilTick: tick + state.configuration.blockedCooldownTicks
+            ))
+            state.counters.blockCount += 1
+            resetAutonomousNavigation(for: activity.candidate.actorID)
+        }
+        let navigationBlockedIDs = Set(navigationBlocked.map(\.activityID))
+        state.activeActivities.removeAll {
+            navigationBlockedIDs.contains($0.activityID)
+        }
         state.cooldowns.removeAll { $0.untilTick < tick }
         let available = candidates.filter { candidate in
             !state.cooldowns.contains {
@@ -99,6 +128,7 @@ extension AgentSimulationSession {
                         previous, lifecycle: .stale, reason: "candidate no longer observed",
                         state: &state
                     )
+                    resetAutonomousNavigation(for: actorID)
                 }
                 continue
             }
@@ -120,6 +150,7 @@ extension AgentSimulationSession {
                 )
                 state.counters.switchCount += 1
             }
+            resetAutonomousNavigation(for: actorID)
             let nextStart = state.counters.startCount + 1
             let activityID = String(
                 "activity:\(nextStart):\(actorID.rawValue):\(winner.candidateID)".prefix(160)
@@ -150,6 +181,26 @@ extension AgentSimulationSession {
         evictActivityState(&state)
         autonomousActivityState = state
         return state.activeActivities
+    }
+
+    private mutating func resetAutonomousNavigation(for actorID: AgentID) {
+        guard var agent = statesById[actorID.rawValue] else { return }
+        let navigation = agent.navigationProgress
+        // Activity arbitration owns only civilization-activity navigation.
+        // A concurrent population, care, resource, or home route must remain
+        // under its existing domain authority.
+        guard navigation.route?.purpose == .civilizationActivity
+                || (navigation.route == nil
+                    && agent.currentGoal.kind == .civilizationActivity) else {
+            return
+        }
+        guard navigation.status != .idle || navigation.route != nil
+                || navigation.lastPlanTick != nil || navigation.lastInvalidation != nil
+                || navigation.lastFailure != nil else { return }
+        agent.navigationProgress = AgentNavigationProgress(
+            lastInvalidation: .targetChanged
+        )
+        statesById[actorID.rawValue] = agent
     }
 
     @discardableResult

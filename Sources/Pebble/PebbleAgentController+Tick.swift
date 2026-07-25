@@ -140,15 +140,38 @@ extension PebbleAgentController {
                    let actorID = AgentID(rawValue: agent.id),
                    let activity = session.activeAutonomousActivity(for: actorID),
                    let target = activity.candidate.target {
-                    navigationTarget = target
-                    navigationGoalMode = .cardinalAdjacent
+                    if agent.navigationProgress.status == .active,
+                       agent.navigationProgress.route?.purpose == .civilizationActivity,
+                       let routeTarget = agent.navigationProgress.route?.target {
+                        navigationTarget = routeTarget
+                    } else if AgentBoundedTravel.requiresWaypoint(
+                        from: agent.position, to: target
+                    ) {
+                        preparedNavigationObservation = navigationAdapter.observeBoundedTravel(
+                            world: world,
+                            agent: agent,
+                            destination: target,
+                            occupiedAgentPositions: preCognitive.agents
+                                .filter { $0.id != agent.id }
+                                .map(\.position)
+                        )
+                    }
+                    if navigationTarget == nil {
+                        navigationTarget = preparedNavigationObservation?.target ?? target
+                    }
+                    navigationGoalMode = navigationTarget == target
+                        ? .cardinalAdjacent : .exact
                 } else if agent.currentGoal.kind == .provideDependentCare,
                    let caregiverID = AgentID(rawValue: agent.id),
                    let dependentID = session.careTarget(for: caregiverID),
                    let dependent = preCognitive.agents.first(where: {
                        $0.id == dependentID.rawValue
                    }) {
-                    if AgentBoundedTravel.requiresWaypoint(
+                    if agent.navigationProgress.status == .active,
+                       agent.navigationProgress.route?.purpose == .dependentCare,
+                       let routeTarget = agent.navigationProgress.route?.target {
+                        navigationTarget = routeTarget
+                    } else if AgentBoundedTravel.requiresWaypoint(
                         from: agent.position, to: dependent.position
                     ) {
                         preparedNavigationObservation = navigationAdapter.observeBoundedTravel(
@@ -160,10 +183,33 @@ extension PebbleAgentController {
                                 .map(\.position)
                         )
                     }
-                    navigationTarget = preparedNavigationObservation?.target ?? dependent.position
-                    navigationGoalMode = .cardinalAdjacent
+                    if navigationTarget == nil {
+                        navigationTarget = preparedNavigationObservation?.target
+                            ?? dependent.position
+                    }
+                    navigationGoalMode = navigationTarget == dependent.position
+                        ? .cardinalAdjacent : .exact
                 } else if agent.currentGoal.kind == .dependentReturnHome {
-                    navigationTarget = agent.homePosition
+                    if agent.navigationProgress.status == .active,
+                       agent.navigationProgress.route?.purpose == .dependentReturnHome,
+                       let routeTarget = agent.navigationProgress.route?.target {
+                        navigationTarget = routeTarget
+                    } else if AgentBoundedTravel.requiresWaypoint(
+                        from: agent.position, to: agent.homePosition
+                    ) {
+                        preparedNavigationObservation = navigationAdapter.observeBoundedTravel(
+                            world: world,
+                            agent: agent,
+                            destination: agent.homePosition,
+                            occupiedAgentPositions: preCognitive.agents
+                                .filter { $0.id != agent.id }
+                                .map(\.position)
+                        )
+                    }
+                    if navigationTarget == nil {
+                        navigationTarget = preparedNavigationObservation?.target
+                            ?? agent.homePosition
+                    }
                     navigationGoalMode = .exact
                 } else if agent.currentGoal.kind == .migrateToSettlement,
                    let routeTarget = agent.navigationProgress.route?.target {
@@ -924,7 +970,9 @@ extension PebbleAgentController {
                             snapshot: movementCandidate.snapshot(),
                             result: result,
                             dependentCareEnabled: movementCandidate.dependentCareEnabled,
-                            cooperationTravelAgentIDs: cooperationTravelAgentIDs
+                            cooperationTravelAgentIDs: cooperationTravelAgentIDs,
+                            explorationDistanceBoundary: movementCandidate.configuration
+                                .feedbackLoopConfiguration.maxExploreDistanceFromHome
                         )
                     }
                 )
@@ -957,7 +1005,9 @@ extension PebbleAgentController {
                     snapshot: session.snapshot(),
                     result: result,
                     dependentCareEnabled: session.dependentCareEnabled,
-                    cooperationTravelAgentIDs: cooperationTravelAgentIDs
+                    cooperationTravelAgentIDs: cooperationTravelAgentIDs,
+                    explorationDistanceBoundary: session.configuration
+                        .feedbackLoopConfiguration.maxExploreDistanceFromHome
                 )
             }
             if session.dependentCareEnabled {
@@ -1318,7 +1368,9 @@ extension PebbleAgentController {
         snapshot: AgentSessionSnapshot,
         result: AgentSessionTickResult,
         dependentCareEnabled: Bool = false,
-        cooperationTravelAgentIDs: Set<String> = []
+        cooperationTravelAgentIDs: Set<String> = [],
+        explorationDistanceBoundary: Int = AgentFeedbackLoopConfiguration.live
+            .maxExploreDistanceFromHome
     ) throws {
         var positions = Set<String>()
         for agent in snapshot.agents {
@@ -1375,15 +1427,17 @@ extension PebbleAgentController {
                     && (snapshot.constructionProject?.status == .planned
                         || snapshot.constructionProject?.status == .acquiringMaterials))
                 || cooperationTravelAgentIDs.contains(agent.id)
-            let movementBoundary: Int
+            let movementBoundary: Int?
             if agent.currentGoal.kind == .migrateToSettlement {
                 movementBoundary = AgentPopulationConfiguration.live.maximumMigrationDistance
             } else if usesConstructionMaterialRange {
                 movementBoundary = AgentConstructionMaterialSurvey.maximumDistanceFromHome
             } else {
-                movementBoundary = AgentNavigationObservation.maximumRadius
+                movementBoundary = nil
             }
-            if movementEnabled, agent.distanceFromHome > movementBoundary {
+            if movementEnabled,
+               let movementBoundary,
+               agent.distanceFromHome > movementBoundary {
                 let movement = agent.lastMovementOutcome.map {
                     "\($0.status.rawValue):from=\(positionText($0.fromPosition)):"
                         + "to=\(positionText($0.toPosition)):"
@@ -1400,6 +1454,30 @@ extension PebbleAgentController {
                 )
                 throw ControllerError.feedbackBoundary(agent.id)
             }
+            if movementEnabled,
+               agent.currentGoal.kind == .explore,
+               let outcome = agent.lastMovementOutcome,
+               outcome.tick == result.tick,
+               outcome.status == .moved {
+                let respectsExplorationRange =
+                    AgentFeedbackLoop.respectsExplorationHomeBoundary(
+                        distanceBefore: outcome.distanceFromHomeBefore,
+                        distanceAfter: outcome.distanceFromHomeAfter,
+                        maximumDistance: explorationDistanceBoundary
+                    )
+                guard respectsExplorationRange else {
+                    trace(
+                        "EXPLORATION_HOME_RANGE_FAILURE actor=\(agent.id) "
+                            + "tick=\(result.tick) distance="
+                            + "\(outcome.distanceFromHomeBefore)>"
+                            + "\(outcome.distanceFromHomeAfter) "
+                            + "boundary=\(explorationDistanceBoundary) "
+                            + "movement=\(positionText(outcome.fromPosition))>"
+                            + "\(positionText(outcome.toPosition)) bypass=0"
+                    )
+                    throw ControllerError.feedbackBoundary(agent.id)
+                }
+            }
             if !movementWasEverEnabledSinceReset {
                 guard agent.position == agent.homePosition,
                       agent.distanceFromHome == 0,
@@ -1410,6 +1488,23 @@ extension PebbleAgentController {
             if let outcome = agent.lastMovementOutcome,
                outcome.tick == result.tick,
                outcome.status == .moved {
+                if let route = agent.navigationProgress.route,
+                   route.purpose.targetMustFitLocalObservationRadius {
+                    guard AgentBoundedTravel.isLocallyBoundedSegment(
+                        from: outcome.fromPosition,
+                        to: route.target
+                    ) else {
+                        trace(
+                            "LOCAL_NAVIGATION_SEGMENT_FAILURE actor=\(agent.id) "
+                                + "tick=\(result.tick) origin="
+                                + "\(positionText(outcome.fromPosition)) target="
+                                + "\(positionText(route.target)) purpose="
+                                + "\(route.purpose.rawValue) radius="
+                                + "\(AgentNavigationObservation.maximumRadius) bypass=0"
+                        )
+                        throw ControllerError.movementBoundary(agent.id)
+                    }
+                }
                 guard agent.movementCount > 0,
                       let observation = agent.lastWorldObservation,
                       let direction = outcome.requestedDirection,
