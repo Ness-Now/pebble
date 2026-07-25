@@ -24,6 +24,7 @@ public enum AgentLivestockError: Error, Equatable, CustomStringConvertible {
     case duplicateAction(AgentLivestockActionID)
     case actionsPerTickReached
     case invalidOutcome(String)
+    case invalidInitiationContext(String)
     case invalidState(String)
 
     public var description: String {
@@ -51,6 +52,7 @@ public enum AgentLivestockError: Error, Equatable, CustomStringConvertible {
         case let .duplicateAction(id): return "duplicate livestock action \(id.rawValue)"
         case .actionsPerTickReached: return "livestock actions per tick reached"
         case let .invalidOutcome(value): return "invalid livestock outcome: \(value)"
+        case let .invalidInitiationContext(value): return "invalid livestock initiation context: \(value)"
         case let .invalidState(value): return "invalid livestock state: \(value)"
         }
     }
@@ -210,6 +212,15 @@ public enum AgentLivestockTaskKind: String, Codable, CaseIterable, Sendable {
     case collectProduct
     case recoverMissing
     case slaughter
+
+    public var followsManagedAnimalPosition: Bool {
+        switch self {
+        case .observe, .feed, .breed, .collectProduct, .slaughter:
+            return true
+        case .herdMove, .recoverMissing:
+            return false
+        }
+    }
 }
 
 public enum AgentLivestockTaskStatus: String, Codable, CaseIterable, Sendable {

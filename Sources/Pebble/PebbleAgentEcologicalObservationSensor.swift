@@ -32,9 +32,22 @@ final class PebbleAgentEcologicalObservationSensor {
         let key: CacheKey
         let physicalWorldTick: Int
         let observation: AgentEcologicalObservation
+        let animalEntityIDs: [Int]
+    }
+
+    /// Ephemeral, live-only bridge from one exact observation result index to
+    /// the PebbleCore entity that produced it. The binding is intentionally
+    /// absent from `AgentEcologicalObservation` and every durable checkpoint.
+    private struct AnimalBindingEntry {
+        let worldIdentity: ObjectIdentifier
+        let origin: AgentPosition
+        let radius: Int
+        let observation: AgentEcologicalObservation
+        let entityIDs: [Int]
     }
 
     private static let maximumCacheEntries = 64
+    private static let maximumAnimalBindingEntries = 128
     private static let cropStages: [String: Int] = [
         "wheat": 7, "carrots": 7, "potatoes": 7, "beetroots": 3,
         "torchflower_crop": 1, "pitcher_crop": 4,
@@ -59,6 +72,7 @@ final class PebbleAgentEcologicalObservationSensor {
     ])
 
     private var cache: [CacheEntry] = []
+    private var animalBindings: [AnimalBindingEntry] = []
     private(set) var scans = 0
     private(set) var cacheHits = 0
     private(set) var cacheMisses = 0
@@ -75,25 +89,38 @@ final class PebbleAgentEcologicalObservationSensor {
     }
 
     func invalidateAll() {
-        if !cache.isEmpty { invalidations += 1 }
+        if !cache.isEmpty || !animalBindings.isEmpty { invalidations += 1 }
         cache.removeAll(keepingCapacity: true)
+        animalBindings.removeAll(keepingCapacity: true)
     }
 
     func invalidate(world: World) {
         let identity = ObjectIdentifier(world)
-        let previous = cache.count
+        let previousCacheCount = cache.count
+        let previousBindingCount = animalBindings.count
         cache.removeAll { $0.key.worldIdentity == identity }
-        if cache.count != previous { invalidations += 1 }
+        animalBindings.removeAll { $0.worldIdentity == identity }
+        if cache.count != previousCacheCount
+            || animalBindings.count != previousBindingCount {
+            invalidations += 1
+        }
     }
 
     func invalidate(world: World, origin: AgentPosition, radius: Int) {
         let identity = ObjectIdentifier(world)
-        let previous = cache.count
+        let previousCacheCount = cache.count
+        let previousBindingCount = animalBindings.count
         cache.removeAll {
             $0.key.worldIdentity == identity && $0.key.origin == origin
                 && $0.key.radius == radius
         }
-        if cache.count != previous { invalidations += 1 }
+        animalBindings.removeAll {
+            $0.worldIdentity == identity && $0.origin == origin && $0.radius == radius
+        }
+        if cache.count != previousCacheCount
+            || animalBindings.count != previousBindingCount {
+            invalidations += 1
+        }
     }
 
     func scan(
@@ -122,28 +149,97 @@ final class PebbleAgentEcologicalObservationSensor {
             $0.key == key && $0.physicalWorldTick == world.time
         }) {
             cacheHits += 1
-            return rebound(
+            let observation = rebound(
                 cached.observation, observerID: observerID,
                 simulationTick: simulationTick, civilDate: civilDate,
                 configuration: configuration
             )
+            registerAnimalBindings(
+                world: world, observation: observation, radius: configuration.radius,
+                entityIDs: cached.animalEntityIDs
+            )
+            return observation
         }
         cacheMisses += 1
-        let observation = scanUncached(
+        let result = scanUncached(
             world: world, observerID: observerID, origin: origin,
             worldContextKey: worldContextKey, dimensionKey: dimensionKey,
             simulationTick: simulationTick, civilDate: civilDate,
             configuration: configuration
         )
         cache.append(CacheEntry(
-            key: key, physicalWorldTick: world.time, observation: observation
+            key: key, physicalWorldTick: world.time, observation: result.observation,
+            animalEntityIDs: result.animalEntityIDs
         ))
         if cache.count > Self.maximumCacheEntries {
             cache.removeFirst(cache.count - Self.maximumCacheEntries)
         }
-        worldReads += observation.diagnostics.worldReads
-        chunksUnavailable += observation.diagnostics.chunksUnavailable
-        return observation
+        registerAnimalBindings(
+            world: world, observation: result.observation, radius: configuration.radius,
+            entityIDs: result.animalEntityIDs
+        )
+        worldReads += result.observation.diagnostics.worldReads
+        chunksUnavailable += result.observation.diagnostics.chunksUnavailable
+        return result.observation
+    }
+
+    /// Resolves one exact live observation index without making Core identity
+    /// part of the durable cognitive observation. A stale World tick, removed
+    /// entity, changed species/position, or changed life stage invalidates the
+    /// lookup rather than falling back to an ambiguous proximity search.
+    func animalEntityID(
+        world: World,
+        observation: AgentEcologicalObservation,
+        animalIndex: Int
+    ) -> Int? {
+        guard world.time == observation.physicalWorldTick,
+              observation.animals.indices.contains(animalIndex),
+              let binding = animalBindings.last(where: {
+                  $0.worldIdentity == ObjectIdentifier(world)
+                      && $0.observation == observation
+              }),
+              binding.entityIDs.indices.contains(animalIndex) else {
+            return nil
+        }
+        let entityID = binding.entityIDs[animalIndex]
+        guard let animal = world.entityById[entityID] as? Animal,
+              animal.world === world, world.entityById[entityID] === animal,
+              !animal.dead, animal.deathTime <= 0 else {
+            return nil
+        }
+        let expected = observation.animals[animalIndex]
+        let position = AgentPosition(
+            x: Int(animal.x.rounded(.down)),
+            y: Int(animal.y.rounded(.down)),
+            z: Int(animal.z.rounded(.down))
+        )
+        let lifeStage: AgentAnimalLifeStage = animal.baby ? .juvenile : .adult
+        guard expected.count == 1, animal.type == expected.speciesKey,
+              position == expected.position, lifeStage == expected.lifeStage else {
+            return nil
+        }
+        return entityID
+    }
+
+    private func registerAnimalBindings(
+        world: World,
+        observation: AgentEcologicalObservation,
+        radius: Int,
+        entityIDs: [Int]
+    ) {
+        guard entityIDs.count == observation.animals.count else { return }
+        animalBindings.removeAll {
+            $0.worldIdentity == ObjectIdentifier(world) && $0.observation == observation
+        }
+        animalBindings.append(AnimalBindingEntry(
+            worldIdentity: ObjectIdentifier(world), origin: observation.origin,
+            radius: radius, observation: observation, entityIDs: entityIDs
+        ))
+        if animalBindings.count > Self.maximumAnimalBindingEntries {
+            animalBindings.removeFirst(
+                animalBindings.count - Self.maximumAnimalBindingEntries
+            )
+        }
     }
 
     private func rebound(
@@ -183,7 +279,7 @@ final class PebbleAgentEcologicalObservationSensor {
         simulationTick: Int,
         civilDate: AgentCivilDate,
         configuration: AgentEcologicalObservationConfiguration
-    ) -> AgentEcologicalObservation {
+    ) -> (observation: AgentEcologicalObservation, animalEntityIDs: [Int]) {
         var reads = 0
         var cells = 0
         var unavailable = 0
@@ -300,20 +396,44 @@ final class PebbleAgentEcologicalObservationSensor {
             if lhs.z != rhs.z { return lhs.z < rhs.z }
             return lhs.id < rhs.id
         }).prefix(configuration.maximumEntitiesPerScan)
-        var animals: [AgentAnimalObservation] = []
+        var animalPairs: [(observation: AgentAnimalObservation, entityID: Int)] = []
         for entity in entities where emitted < reserve {
             let animal = entity
-            animals.append(AgentAnimalObservation(
-                speciesKey: animal.type,
-                position: AgentPosition(
-                    x: Int(floor(animal.x)), y: Int(floor(animal.y)),
-                    z: Int(floor(animal.z))
+            animalPairs.append((
+                observation: AgentAnimalObservation(
+                    speciesKey: animal.type,
+                    position: AgentPosition(
+                        x: Int(floor(animal.x)), y: Int(floor(animal.y)),
+                        z: Int(floor(animal.z))
+                    ),
+                    count: 1, lifeStage: animal.baby ? .juvenile : .adult,
+                    breedableAffordanceObservable: false
                 ),
-                count: 1, lifeStage: animal.baby ? .juvenile : .adult,
-                breedableAffordanceObservable: false
+                entityID: animal.id
             ))
             emitted += 1
         }
+        // `AgentEcologicalObservation` canonicalizes animals by position before
+        // species. Keep the transient IDs in that exact order as well; sorting
+        // entities by their registry presentation order would silently break
+        // the index-to-Core-identity sidecar for mixed species.
+        animalPairs.sort { lhs, rhs in
+            if AgentEcologicalObservation.animalSort(
+                lhs.observation,
+                rhs.observation
+            ) {
+                return true
+            }
+            if AgentEcologicalObservation.animalSort(
+                rhs.observation,
+                lhs.observation
+            ) {
+                return false
+            }
+            return lhs.entityID < rhs.entityID
+        }
+        let animals = animalPairs.map(\.observation)
+        let animalEntityIDs = animalPairs.map(\.entityID)
 
         let weatherKind: AgentWeatherKind = world.thundering
             ? .thunder : (world.raining ? .rain : .clear)
@@ -327,7 +447,7 @@ final class PebbleAgentEcologicalObservationSensor {
             entitiesConsidered: entities.count, resultsEmitted: emitted,
             cacheHits: 0, cacheMisses: 1, completion: completion
         )
-        return AgentEcologicalObservation(
+        let observation = AgentEcologicalObservation(
             observerID: observerID, origin: origin,
             worldContextKey: worldContextKey, dimensionKey: dimensionKey,
             observedAtSimulationTick: simulationTick,
@@ -346,6 +466,7 @@ final class PebbleAgentEcologicalObservationSensor {
             diagnostics: diagnostics,
             expiresAtSimulationTick: simulationTick + configuration.dynamicFreshnessTicks
         )
+        return (observation, animalEntityIDs)
     }
 
     private func candidatePositions(

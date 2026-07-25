@@ -38,25 +38,33 @@ private func livestockBase(_ id: String) -> AgentSimulationSession {
     return session
 }
 
-private func livestockObservation(_ session: AgentSimulationSession) -> AgentEcologicalObservation {
+private func livestockObservation(
+    _ session: AgentSimulationSession,
+    observerIndex: Int = 0,
+    animals suppliedAnimals: [AgentAnimalObservation]? = nil
+) -> AgentEcologicalObservation {
     let config = session.ecologicalObservationSnapshot().configuration!
+    let observerID = AgentID(rawValue: "agent_\(observerIndex)")!
+    let origin = try! session.state(for: observerID).position
+    let animals = suppliedAnimals ?? [
+        AgentAnimalObservation(speciesKey: "sheep", position: AgentPosition(x: 2, y: 64, z: 0), count: 1, lifeStage: .adult, breedableAffordanceObservable: true),
+        AgentAnimalObservation(speciesKey: "sheep", position: AgentPosition(x: 3, y: 64, z: 0), count: 1, lifeStage: .adult, breedableAffordanceObservable: true),
+        AgentAnimalObservation(speciesKey: "chicken", position: AgentPosition(x: 4, y: 64, z: 0), count: 1, lifeStage: .adult, breedableAffordanceObservable: false)
+    ]
     return AgentEcologicalObservation(
-        observerID: AgentID(rawValue: "agent_0")!, origin: livestockOrigin,
+        observerID: observerID, origin: origin,
         worldContextKey: "world-seed-46", dimensionKey: "overworld",
         observedAtSimulationTick: session.tick, physicalWorldTick: 100,
         civilDate: session.civilDate()!,
-        biome: AgentBiomeObservation(biomeKey: "plains", position: livestockOrigin),
+        biome: AgentBiomeObservation(biomeKey: "plains", position: origin),
         water: [], soils: [], crops: [], plants: [],
-        animals: [
-            AgentAnimalObservation(speciesKey: "sheep", position: AgentPosition(x: 2, y: 64, z: 0), count: 1, lifeStage: .adult, breedableAffordanceObservable: true),
-            AgentAnimalObservation(speciesKey: "sheep", position: AgentPosition(x: 3, y: 64, z: 0), count: 1, lifeStage: .adult, breedableAffordanceObservable: true),
-            AgentAnimalObservation(speciesKey: "chicken", position: AgentPosition(x: 4, y: 64, z: 0), count: 1, lifeStage: .adult, breedableAffordanceObservable: false)
-        ],
+        animals: animals,
         fishing: [], weather: AgentWeatherObservation(kind: .clear, raining: false, thundering: false),
         physicalTime: AgentPhysicalWorldTimeObservation(worldTick: 100, dayTime: 100, timeOfDay: .day, daylightCycleEnabled: true),
         diagnostics: AgentEcologicalScanDiagnostics(
             radius: 4, cellsConsidered: 405, worldReads: 405, chunksTouched: 1,
-            chunksUnavailable: 0, entitiesConsidered: 3, resultsEmitted: 6,
+            chunksUnavailable: 0, entitiesConsidered: animals.count,
+            resultsEmitted: animals.count + 3,
             cacheHits: 0, cacheMisses: 1, completion: .complete
         ),
         expiresAtSimulationTick: session.tick + config.dynamicFreshnessTicks
@@ -91,10 +99,108 @@ func runPebbleAgentsLivestockSmoke() {
           !preEnable.enabled && session.livestockSnapshot().managedAnimals.isEmpty)
     _ = try! session.recordEcologicalObservation(livestockObservation(session))
     let observationEvent = session.ecologicalObservationSnapshot().observations.last!.causalEventID
+    let autonomousAnimals = [
+        AgentAutonomousLivestockAnimalContext(
+            candidateKey: "agent_0|\(observationEvent.rawValue)|sheep-2",
+            sourceObservationEventID: observationEvent,
+            speciesKey: "sheep", position: AgentPosition(x: 2, y: 64, z: 0),
+            lifeStage: .adult
+        ),
+        AgentAutonomousLivestockAnimalContext(
+            candidateKey: "agent_0|\(observationEvent.rawValue)|sheep-3",
+            sourceObservationEventID: observationEvent,
+            speciesKey: "sheep", position: AgentPosition(x: 3, y: 64, z: 0),
+            lifeStage: .adult
+        ),
+        AgentAutonomousLivestockAnimalContext(
+            candidateKey: "agent_0|\(observationEvent.rawValue)|chicken-4",
+            sourceObservationEventID: observationEvent,
+            speciesKey: "chicken", position: AgentPosition(x: 4, y: 64, z: 0),
+            lifeStage: .adult
+        )
+    ]
+    let autonomousFeeds = [
+        AgentAutonomousLivestockFeedContext(
+            speciesKey: "sheep", compatibleFeedQuantity: 3,
+            reservedPlantingQuantity: 1
+        ),
+        AgentAutonomousLivestockFeedContext(
+            speciesKey: "chicken", compatibleFeedQuantity: 1,
+            reservedPlantingQuantity: 0
+        )
+    ]
+    let activeAutonomousContext = AgentAutonomousLivestockActorContext(
+        actorID: actor, physicalPosition: livestockOrigin,
+        canPerformPhysicalLivestockWork: true,
+        compatibleFeeds: autonomousFeeds,
+        animals: autonomousAnimals
+    )
+    let inactiveAutonomousContext = AgentAutonomousLivestockActorContext(
+        actorID: AgentID(rawValue: "agent_1")!,
+        physicalPosition: AgentPosition(x: 1, y: 64, z: 0),
+        canPerformPhysicalLivestockWork: false,
+        compatibleFeeds: autonomousFeeds.reversed(),
+        animals: []
+    )
+    let initiationBytes = try! session.durableStateBytes()
+    let initiation = try! session.autonomousLivestockInitiationProposal(
+        contexts: [inactiveAutonomousContext, activeAutonomousContext]
+    )
+    let permutedInitiation = try! session.autonomousLivestockInitiationProposal(
+        contexts: [
+            AgentAutonomousLivestockActorContext(
+                actorID: actor, physicalPosition: livestockOrigin,
+                canPerformPhysicalLivestockWork: true,
+                compatibleFeeds: autonomousFeeds.reversed(),
+                animals: autonomousAnimals.reversed()
+            ),
+            inactiveAutonomousContext
+        ]
+    )
+    check("role-neutral livestock initiation is read-only and stable under input permutation",
+          initiation == permutedInitiation
+            && (try! session.durableStateBytes()) == initiationBytes)
+    check("fresh physical feed and observation produce bounded CIV-24 operations",
+          initiation?.responsibleAgentID == actor
+            && initiation?.speciesKey == "sheep"
+            && initiation?.admissions.count == 2
+            && initiation?.operations.count == 5
+            && Set(initiation?.admissions.map(\.recordID) ?? []).count == 2
+            && initiation?.admissions.allSatisfy {
+                $0.recordID.rawValue.utf8.count <= 160
+                    && $0.feedTaskID.rawValue.utf8.count <= 160
+                    && $0.sourceObservationEventID == observationEvent
+            } == true
+            && initiation.map {
+                $0.managementArea.maximum.x - $0.managementArea.minimum.x <= 128
+                    && $0.managementArea.maximum.y - $0.managementArea.minimum.y <= 32
+                    && $0.managementArea.maximum.z - $0.managementArea.minimum.z <= 128
+            } == true)
+    do {
+        _ = try session.autonomousLivestockInitiationProposal(contexts: [
+            AgentAutonomousLivestockActorContext(
+                actorID: actor, physicalPosition: livestockOrigin,
+                canPerformPhysicalLivestockWork: true,
+                compatibleFeeds: [autonomousFeeds[0], autonomousFeeds[0]],
+                animals: autonomousAnimals
+            )
+        ])
+        check("conflicting physical initiation evidence is rejected without mutation", false)
+    } catch AgentSessionError.livestock(.invalidInitiationContext) {
+        check("conflicting physical initiation evidence is rejected without mutation",
+              (try! session.durableStateBytes()) == initiationBytes)
+    } catch {
+        check("conflicting physical initiation evidence is rejected without mutation",
+              false, "\(error)")
+    }
     try! session.applyLivestockOperation(.establishHerd(
         herdID: herdID, speciesKey: "sheep", managementArea: area,
         responsibleAgentIDs: [actor]
     ))
+    check("existing durable herd suppresses autonomous bootstrap proposals",
+          try! session.autonomousLivestockInitiationProposal(
+              contexts: [activeAutonomousContext]
+          ) == nil)
     try! session.applyLivestockOperation(.admitObservedAnimal(
         recordID: firstID, herdID: herdID, actorID: actor, speciesKey: "sheep",
         position: AgentPosition(x: 2, y: 64, z: 0), lifeStage: .adult,
@@ -368,4 +474,169 @@ func runPebbleAgentsLivestockSmoke() {
     check("v15 replay reproduces livestock state and causal digest",
           replay.report.verified && replay.report.schemaVersion == 15
             && (try! replay.session.durableStateBytes()) == (try! replayBase.durableStateBytes()))
+
+    var movingTarget = livestockBase("livestock-moving-target")
+    try! movingTarget.setLivestockEnabled(true)
+    _ = try! movingTarget.recordEcologicalObservation(
+        livestockObservation(movingTarget)
+    )
+    let movingObservation = movingTarget.ecologicalObservationSnapshot()
+        .observations.last!.causalEventID
+    try! movingTarget.applyLivestockOperation(.establishHerd(
+        herdID: herdID, speciesKey: "sheep", managementArea: area,
+        responsibleAgentIDs: [actor]
+    ))
+    try! movingTarget.applyLivestockOperation(.admitObservedAnimal(
+        recordID: firstID, herdID: herdID, actorID: actor,
+        speciesKey: "sheep", position: AgentPosition(x: 2, y: 64, z: 0),
+        lifeStage: .adult, sourceObservationEventID: movingObservation,
+        compatibleFeedAvailable: true
+    ))
+    let movingTaskID = AgentLivestockTaskID(rawValue: "moving-feed-target")!
+    let originalFeedTarget = AgentPosition(x: 2, y: 64, z: 0)
+    try! movingTarget.applyLivestockOperation(.queueTask(
+        AgentLivestockTaskRequest(
+            taskID: movingTaskID, herdID: herdID, kind: .feed,
+            primaryAnimalRecordID: firstID, responsibleAgentID: actor,
+            targetPosition: originalFeedTarget
+        )
+    ))
+    let herdMoveTaskID = AgentLivestockTaskID(rawValue: "moving-herd-destination")!
+    let herdMoveDestination = AgentPosition(x: 7, y: 64, z: 7)
+    try! movingTarget.applyLivestockOperation(.queueTask(
+        AgentLivestockTaskRequest(
+            taskID: herdMoveTaskID, herdID: herdID, kind: .herdMove,
+            primaryAnimalRecordID: firstID, responsibleAgentID: actor,
+            targetPosition: herdMoveDestination
+        )
+    ))
+    let movedAnimalPosition = AgentPosition(x: 3, y: 64, z: 1)
+    try! movingTarget.applyLivestockOperation(.reconcile([
+        AgentManagedAnimalResolution(
+            recordID: firstID, kind: .resolvedLiving, speciesKey: "sheep",
+            position: movedAnimalPosition, lifeStage: .adult,
+            reason: "exact runtime binding moved",
+            observedAtTick: movingTarget.tick
+        )
+    ]))
+    let movingSnapshot = movingTarget.livestockSnapshot()
+    check("exact reconciliation updates the managed animal without rewriting task intent",
+          movingSnapshot.managedAnimals.first?.lastKnownPosition == movedAnimalPosition
+            && movingSnapshot.activeTasks.first(where: {
+                $0.taskID == movingTaskID
+            })?.targetPosition == originalFeedTarget)
+    check("herd destination survives reconciliation while interaction tasks follow animals",
+          movingSnapshot.activeTasks.first(where: {
+              $0.taskID == herdMoveTaskID
+          })?.targetPosition == herdMoveDestination
+            && AgentLivestockTaskKind.feed.followsManagedAnimalPosition
+            && AgentLivestockTaskKind.collectProduct.followsManagedAnimalPosition
+            && !AgentLivestockTaskKind.herdMove.followsManagedAnimalPosition
+            && !AgentLivestockTaskKind.recoverMissing.followsManagedAnimalPosition)
+
+    var staleInitiation = livestockBase("livestock-autonomous-stale")
+    try! staleInitiation.setLivestockEnabled(true)
+    _ = try! staleInitiation.recordEcologicalObservation(
+        livestockObservation(staleInitiation)
+    )
+    let staleEvent = staleInitiation.ecologicalObservationSnapshot()
+        .observations.last!.causalEventID
+    let staleContext = AgentAutonomousLivestockActorContext(
+        actorID: actor, physicalPosition: livestockOrigin,
+        canPerformPhysicalLivestockWork: true,
+        compatibleFeeds: [AgentAutonomousLivestockFeedContext(
+            speciesKey: "sheep", compatibleFeedQuantity: 2,
+            reservedPlantingQuantity: 0
+        )],
+        animals: [
+            AgentAutonomousLivestockAnimalContext(
+                candidateKey: "stale-sheep-2",
+                sourceObservationEventID: staleEvent, speciesKey: "sheep",
+                position: AgentPosition(x: 2, y: 64, z: 0),
+                lifeStage: .adult
+            )
+        ]
+    )
+    for _ in 0...AgentEcologicalObservationConfiguration.live.dynamicFreshnessTicks {
+        _ = try! staleInitiation.advanceTick()
+    }
+    check("stale observation and unavailable physical actor cannot assign livestock roles",
+          (try! staleInitiation.autonomousLivestockInitiationProposal(
+              contexts: [staleContext]
+          )) == nil
+            && (try! staleInitiation.autonomousLivestockInitiationProposal(
+                contexts: [AgentAutonomousLivestockActorContext(
+                    actorID: actor,
+                    physicalPosition: try! staleInitiation.state(for: actor).position,
+                    canPerformPhysicalLivestockWork: false,
+                    compatibleFeeds: staleContext.compatibleFeeds,
+                    animals: staleContext.animals
+                )]
+            )) == nil)
+
+    var autonomousReplay = livestockBase("livestock-autonomous-replay")
+    try! autonomousReplay.setLivestockEnabled(true)
+    _ = try! autonomousReplay.recordEcologicalObservation(
+        livestockObservation(autonomousReplay)
+    )
+    let autonomousReplayEvent = autonomousReplay.ecologicalObservationSnapshot()
+        .observations.last!.causalEventID
+    let autonomousReplayContext = AgentAutonomousLivestockActorContext(
+        actorID: actor, physicalPosition: livestockOrigin,
+        canPerformPhysicalLivestockWork: true,
+        compatibleFeeds: [AgentAutonomousLivestockFeedContext(
+            speciesKey: "sheep", compatibleFeedQuantity: 2,
+            reservedPlantingQuantity: 0
+        )],
+        animals: [
+            AgentAutonomousLivestockAnimalContext(
+                candidateKey: "replay-sheep-3",
+                sourceObservationEventID: autonomousReplayEvent,
+                speciesKey: "sheep",
+                position: AgentPosition(x: 3, y: 64, z: 0),
+                lifeStage: .adult
+            ),
+            AgentAutonomousLivestockAnimalContext(
+                candidateKey: "replay-sheep-2",
+                sourceObservationEventID: autonomousReplayEvent,
+                speciesKey: "sheep",
+                position: AgentPosition(x: 2, y: 64, z: 0),
+                lifeStage: .adult
+            )
+        ]
+    )
+    let autonomousProposal = try! autonomousReplay
+        .autonomousLivestockInitiationProposal(
+            contexts: [autonomousReplayContext]
+        )!
+    let autonomousCheckpoint = try! autonomousReplay.makeCheckpoint()
+    var autonomousRecorder = try! AgentReplayRecorder(
+        checkpoint: autonomousCheckpoint,
+        session: autonomousReplay
+    )
+    for operation in autonomousProposal.operations {
+        _ = try! autonomousRecorder.apply(
+            .applyLivestockOperation(operation),
+            to: &autonomousReplay
+        )
+    }
+    let autonomousRestored = try! AgentSimulationSession.restoring(
+        autonomousReplay.makeCheckpoint()
+    )
+    let autonomousJournal = try! autonomousRecorder.journal(
+        named: AgentCheckpointName(rawValue: "livestock-autonomous-replay")!
+    )
+    let autonomousReplayed = try! AgentSessionReplayer.replay(
+        checkpoint: autonomousCheckpoint,
+        journal: autonomousJournal
+    )
+    check("autonomous livestock proposal reuses checkpointable replayable CIV-24 operations",
+          autonomousReplay.livestockSnapshot().herds.count == 1
+            && autonomousReplay.livestockSnapshot().managedAnimals.count == 2
+            && autonomousReplay.livestockSnapshot().activeTasks.count == 2
+            && (try! autonomousRestored.durableStateBytes())
+                == (try! autonomousReplay.durableStateBytes())
+            && autonomousReplayed.report.verified
+            && (try! autonomousReplayed.session.durableStateBytes())
+                == (try! autonomousReplay.durableStateBytes()))
 }

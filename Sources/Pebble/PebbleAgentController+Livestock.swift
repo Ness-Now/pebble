@@ -273,6 +273,47 @@ extension PebbleAgentController {
         guard missingFeedRefused, first.loveTicks == loveBeforeNegatives else {
             throw ControllerError.livestockBoundary("missing-feed negative mutated physical truth")
         }
+        let firstPhysicalPosition = AgentPosition(
+            x: Int(first.x.rounded(.down)),
+            y: Int(first.y.rounded(.down)),
+            z: Int(first.z.rounded(.down))
+        )
+        let policyStateBefore = try candidate.durableStateBytes()
+        var remoteInteractionRefused = false
+        do {
+            try requireVerifiedAutonomousLivestockInteraction(
+                actorPosition: AgentPosition(
+                    x: firstPhysicalPosition.x + 2,
+                    y: firstPhysicalPosition.y,
+                    z: firstPhysicalPosition.z
+                ),
+                recordPosition: firstPhysicalPosition,
+                physicalAnimalPosition: firstPhysicalPosition
+            )
+        } catch ControllerError.feedbackBoundary(_) {
+            remoteInteractionRefused = true
+        }
+        var staleBindingRefused = false
+        do {
+            try requireVerifiedAutonomousLivestockInteraction(
+                actorPosition: firstPhysicalPosition,
+                recordPosition: AgentPosition(
+                    x: firstPhysicalPosition.x + 1,
+                    y: firstPhysicalPosition.y,
+                    z: firstPhysicalPosition.z
+                ),
+                physicalAnimalPosition: firstPhysicalPosition
+            )
+        } catch ControllerError.feedbackBoundary(_) {
+            staleBindingRefused = true
+        }
+        guard remoteInteractionRefused, staleBindingRefused,
+              try candidate.durableStateBytes() == policyStateBefore,
+              first.loveTicks == loveBeforeNegatives else {
+            throw ControllerError.livestockBoundary(
+                "remote or stale autonomous interaction was not refused cleanly"
+            )
+        }
         for (ordinal, pair) in [(1, (fixture.recordIDs[0], first)), (2, (fixture.recordIDs[1], second))] {
             let taskID = AgentLivestockTaskID(rawValue: "live-feed-task-\(ordinal)")!
             let actionID = AgentLivestockActionID(rawValue: "live-feed-action-\(ordinal)")!
@@ -297,7 +338,10 @@ extension PebbleAgentController {
         livestockProofFixture = fixture
         session = candidate
         replayRecorder = recorder
-        trace("livestock proof feed wrong=refused missing=refused accepted=2 consumed=2 Core_love=1")
+        trace(
+            "livestock proof feed wrong=refused missing=refused "
+                + "remote=refused staleBinding=refused accepted=2 consumed=2 Core_love=1"
+        )
     }
 
     private func runLivestockBreedProof(world: World) throws {
@@ -459,6 +503,132 @@ extension PebbleAgentController {
         trace("livestock proof no_ghost_stock=1 campStockDelta=0 resourceInventoryDelta=0 localEcologyDelta=0 husbandry=4 Core_authority=1")
     }
 
+    /// Normal product seam for role-neutral livestock emergence. Pebble exposes
+    /// only fresh, exactly rebound World observations and real carried feed;
+    /// PebbleAgents owns deterministic actor/species selection and the causal
+    /// operations. No animal runtime identity enters durable session state.
+    @discardableResult
+    func prepareLiveLivestockManagementIfEligible(
+        world: World,
+        session: inout AgentSimulationSession,
+        recorder: inout AgentReplayRecorder?
+    ) throws -> Bool {
+        guard livestockFeatureEnabled, session.livestockEnabled,
+              session.livestockSnapshot().herds.isEmpty else { return false }
+
+        var contexts: [AgentAutonomousLivestockActorContext] = []
+        var entityIDByCandidateKey: [String: Int] = [:]
+        let reservedPlantingQuantity = 2
+        for snapshot in session.snapshot().agents.sorted(by: { $0.id < $1.id }) {
+            guard let actorID = AgentID(rawValue: snapshot.id),
+                  let record = session.ecologicalObservations(for: actorID).first,
+                  record.observation.isFresh(atSimulationTick: session.tick),
+                  let probe = probesByAgentId[snapshot.id],
+                  probe.world === world, !probe.dead else {
+                continue
+            }
+            let embodiment = PebbleAgentEmbodiment(probe: probe)
+            var animals: [AgentAutonomousLivestockAnimalContext] = []
+            var physicalAnimalsBySpecies: [String: [Animal]] = [:]
+            for (index, observed) in record.observation.animals.enumerated() {
+                guard let entityID = ecologicalObservationSensor.animalEntityID(
+                    world: world, observation: record.observation, animalIndex: index
+                ), let animal = world.entityById[entityID] as? Animal else {
+                    continue
+                }
+                let candidateKey = [
+                    "live-livestock", actorID.rawValue,
+                    record.causalEventID.rawValue, String(index),
+                ].joined(separator: ":")
+                animals.append(AgentAutonomousLivestockAnimalContext(
+                    candidateKey: candidateKey,
+                    sourceObservationEventID: record.causalEventID,
+                    speciesKey: observed.speciesKey,
+                    position: observed.position,
+                    lifeStage: observed.lifeStage
+                ))
+                entityIDByCandidateKey[candidateKey] = entityID
+                physicalAnimalsBySpecies[observed.speciesKey, default: []].append(
+                    animal
+                )
+            }
+            let compatibleFeeds = physicalAnimalsBySpecies.keys.sorted().map { species in
+                let quantities = physicalAnimalsBySpecies[species]!.map { animal in
+                    embodiment.carriedItems.compactMap { $0 }.filter {
+                        $0.count > 0 && animal.isFood($0)
+                    }.reduce(0) { $0 + $1.count }
+                }
+                let quantity = quantities.min() ?? 0
+                return AgentAutonomousLivestockFeedContext(
+                    speciesKey: species,
+                    compatibleFeedQuantity: quantity,
+                    reservedPlantingQuantity: min(
+                        reservedPlantingQuantity,
+                        quantity
+                    )
+                )
+            }
+            contexts.append(AgentAutonomousLivestockActorContext(
+                actorID: actorID,
+                physicalPosition: embodiment.position,
+                canPerformPhysicalLivestockWork: embodiment.isValid(in: world),
+                compatibleFeeds: compatibleFeeds,
+                animals: animals
+            ))
+        }
+
+        guard let proposal = try session.autonomousLivestockInitiationProposal(
+            contexts: contexts
+        ) else { return false }
+        let pendingBindings = proposal.admissions.compactMap { admission
+            -> (AgentManagedAnimalRecordID, Int)? in
+            guard let entityID = entityIDByCandidateKey[admission.candidateKey] else {
+                return nil
+            }
+            return (admission.recordID, entityID)
+        }
+        guard pendingBindings.count == proposal.admissions.count else {
+            throw ControllerError.livestockBoundary(
+                "autonomous initiation lost exact observation bindings"
+            )
+        }
+
+        var candidate = session
+        var candidateRecorder = recorder
+        for operation in proposal.operations {
+            try applyLivestockRecorded(
+                operation, session: &candidate, recorder: &candidateRecorder
+            )
+        }
+        let result = candidate.livestockSnapshot()
+        guard result.herds.contains(where: { $0.herdID == proposal.herdID }),
+              proposal.admissions.allSatisfy({ admission in
+                  result.managedAnimals.contains { $0.recordID == admission.recordID }
+                      && result.activeTasks.contains {
+                          $0.taskID == admission.feedTaskID
+                              && $0.primaryAnimalRecordID == admission.recordID
+                      }
+              }) else {
+            throw ControllerError.livestockBoundary(
+                "autonomous initiation publication verification"
+            )
+        }
+
+        session = candidate
+        recorder = candidateRecorder
+        for (recordID, entityID) in pendingBindings {
+            livestockRuntimeEntityIDByRecord[recordID] = entityID
+        }
+        trace(
+            "livestock autonomy initiation actor=\(proposal.responsibleAgentID.rawValue) "
+                + "species=\(proposal.speciesKey) herd=\(proposal.herdID.rawValue) "
+                + "animals=\(proposal.admissions.count) feedTasks=\(proposal.admissions.count) "
+                + "observation=exact custody=physical roleAssignment=emergent "
+                + "worldMutation=none runtimeBindings=ephemeral"
+        )
+        return true
+    }
+
     private func applyLivestockRecorded(
         _ operation: AgentLivestockOperation,
         session: inout AgentSimulationSession,
@@ -469,7 +639,7 @@ extension PebbleAgentController {
         ) == nil { try session.applyLivestockOperation(operation) }
     }
 
-    private func reconcileLiveLivestock(
+    func reconcileLiveLivestock(
         world: World,
         session: inout AgentSimulationSession,
         recorder: inout AgentReplayRecorder?

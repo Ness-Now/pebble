@@ -293,21 +293,27 @@ extension PebbleAgentController {
                 commitmentID: work?.commitmentID, observedAtTick: session.tick
             ))
         }
-        for task in session.livestockSnapshot().activeTasks where
+        let livestock = session.livestockSnapshot()
+        for task in livestock.activeTasks where
             !task.status.terminal && task.expiresAtTick >= session.tick {
             guard let agent = snapshot.agents.first(where: {
                 $0.id == task.responsibleAgentID.rawValue
             }) else { continue }
             let work = commitment(task.responsibleAgentID, domains: [.husbandry])
             let id = "livestock:\(task.taskID.rawValue)"
+            let target = task.kind.followsManagedAnimalPosition
+                ? livestock.managedAnimals.first(where: {
+                    $0.recordID == task.primaryAnimalRecordID
+                })?.lastKnownPosition ?? task.targetPosition
+                : task.targetPosition
             candidates.append(AgentAutonomousActivityCandidate(
                 candidateID: id, actorID: task.responsibleAgentID, domain: .livestock,
                 actionKey: task.kind.rawValue, stableReference: task.taskID.rawValue,
-                target: task.targetPosition,
+                target: target,
                 source: work == nil ? .responsibility : .commitment,
                 priorityBand: work == nil ? 25 : 20, urgency: 72,
                 continuity: currentByActor[task.responsibleAgentID] == id,
-                distance: distance(agent.position, task.targetPosition),
+                distance: distance(agent.position, target),
                 commitmentID: work?.commitmentID, observedAtTick: session.tick
             ))
         }

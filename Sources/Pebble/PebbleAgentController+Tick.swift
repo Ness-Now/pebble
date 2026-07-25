@@ -54,6 +54,12 @@ extension PebbleAgentController {
         lastDeliverySucceeded = false
         lastConsumptionSucceeded = false
         do {
+            if session.livestockEnabled,
+               !session.livestockSnapshot().managedAnimals.isEmpty {
+                try reconcileLiveLivestock(
+                    world: world, session: &session, recorder: &recorder
+                )
+            }
             try prepareAutonomousCivilizationDecision(
                 world: world, session: &session, recorder: &recorder
             )
@@ -1170,6 +1176,11 @@ extension PebbleAgentController {
             }
             if session.agricultureEnabled {
                 _ = try prepareLiveAgriculturalPlanIfEligible(
+                    world: world, session: &session, recorder: &recorder
+                )
+            }
+            if session.livestockEnabled {
+                _ = try prepareLiveLivestockManagementIfEligible(
                     world: world, session: &session, recorder: &recorder
                 )
             }

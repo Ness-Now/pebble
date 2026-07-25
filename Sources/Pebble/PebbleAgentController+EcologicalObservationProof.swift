@@ -10,6 +10,7 @@ struct PebbleAgentEcologicalObservationProofFixture {
 
     let cells: [Cell]
     let cow: Cow
+    let sheep: Sheep
     let entityIDsBefore: [Int]
     let raining: Bool
     let thundering: Bool
@@ -138,6 +139,80 @@ extension PebbleAgentController {
                   cached.digest != first.digest else {
                 throw ControllerError.ecologicalObservationBoundary("cache proof mismatch")
             }
+            guard let firstCowIndex = first.animals.firstIndex(where: {
+                $0.speciesKey == "cow"
+            }), let firstSheepIndex = first.animals.firstIndex(where: {
+                $0.speciesKey == "sheep"
+            }), let cachedCowIndex = cached.animals.firstIndex(where: {
+                $0.speciesKey == "cow"
+            }), let cachedSheepIndex = cached.animals.firstIndex(where: {
+                $0.speciesKey == "sheep"
+            }), ecologicalObservationSensor.animalEntityID(
+                world: world, observation: first, animalIndex: firstCowIndex
+            ) == fixture.cow.id,
+                  ecologicalObservationSensor.animalEntityID(
+                      world: world, observation: first,
+                      animalIndex: firstSheepIndex
+                  ) == fixture.sheep.id,
+                  ecologicalObservationSensor.animalEntityID(
+                      world: world, observation: cached, animalIndex: cachedCowIndex
+                  ) == fixture.cow.id,
+                  ecologicalObservationSensor.animalEntityID(
+                      world: world, observation: cached,
+                      animalIndex: cachedSheepIndex
+                  ) == fixture.sheep.id,
+                  firstSheepIndex < firstCowIndex,
+                  cachedSheepIndex < cachedCowIndex else {
+                throw ControllerError.ecologicalObservationBoundary(
+                    "mixed-species animal sidecar order was not exact across cache hit"
+                )
+            }
+            let cowPositionBeforeBindingNegatives = (
+                fixture.cow.x, fixture.cow.y, fixture.cow.z
+            )
+            fixture.cow.setPos(
+                fixture.cow.x + 1, fixture.cow.y, fixture.cow.z
+            )
+            guard ecologicalObservationSensor.animalEntityID(
+                world: world, observation: cached, animalIndex: cachedCowIndex
+            ) == nil else {
+                throw ControllerError.ecologicalObservationBoundary(
+                    "animal sidecar accepted changed physical position"
+                )
+            }
+            fixture.cow.setPos(
+                cowPositionBeforeBindingNegatives.0,
+                cowPositionBeforeBindingNegatives.1,
+                cowPositionBeforeBindingNegatives.2
+            )
+            fixture.cow.baby = true
+            guard ecologicalObservationSensor.animalEntityID(
+                world: world, observation: cached, animalIndex: cachedCowIndex
+            ) == nil else {
+                throw ControllerError.ecologicalObservationBoundary(
+                    "animal sidecar accepted changed life stage"
+                )
+            }
+            fixture.cow.baby = false
+            fixture.cow.dead = true
+            guard ecologicalObservationSensor.animalEntityID(
+                world: world, observation: cached, animalIndex: cachedCowIndex
+            ) == nil else {
+                throw ControllerError.ecologicalObservationBoundary(
+                    "animal sidecar accepted dead physical identity"
+                )
+            }
+            fixture.cow.dead = false
+            let worldTickBeforeBindingNegative = world.time
+            world.time = world.time == Int.max ? world.time - 1 : world.time + 1
+            guard ecologicalObservationSensor.animalEntityID(
+                world: world, observation: cached, animalIndex: cachedCowIndex
+            ) == nil else {
+                throw ControllerError.ecologicalObservationBoundary(
+                    "animal sidecar accepted stale physical World tick"
+                )
+            }
+            world.time = worldTickBeforeBindingNegative
 
             let cropPosition = AgentPosition(x: origin.x + 2, y: origin.y, z: origin.z)
             world.setBlock(
@@ -151,6 +226,13 @@ extension PebbleAgentController {
             ecologicalObservationSensor.invalidate(
                 world: world, origin: origin, radius: configuration.radius
             )
+            guard ecologicalObservationSensor.animalEntityID(
+                world: world, observation: cached, animalIndex: cachedCowIndex
+            ) == nil else {
+                throw ControllerError.ecologicalObservationBoundary(
+                    "animal sidecar survived explicit invalidation"
+                )
+            }
             let beforeChanged = ecologicalWorldEvidence(world, fixture: fixture)
             let changed = ecologicalObservationSensor.scan(
                 world: world, observerID: observerID, origin: origin,
@@ -475,8 +557,16 @@ extension PebbleAgentController {
         cow.setPos(Double(origin.x) + 3.5, Double(origin.y), Double(origin.z) + 0.5)
         cow.persistent = false
         world.addEntity(cow)
+        let sheep = Sheep(world: world)
+        sheep.setPos(
+            Double(origin.x) + 1.5,
+            Double(origin.y),
+            Double(origin.z) + 0.5
+        )
+        sheep.persistent = false
+        world.addEntity(sheep)
         return PebbleAgentEcologicalObservationProofFixture(
-            cells: cells, cow: cow, entityIDsBefore: entityIDs,
+            cells: cells, cow: cow, sheep: sheep, entityIDsBefore: entityIDs,
             raining: world.raining, thundering: world.thundering,
             rainLevel: world.rainLevel, thunderLevel: world.thunderLevel,
             weatherTimer: world.weatherTimer
@@ -495,6 +585,9 @@ extension PebbleAgentController {
         if world.entities.contains(where: { $0 === fixture.cow }) {
             world.removeEntity(fixture.cow)
         }
+        if world.entities.contains(where: { $0 === fixture.sheep }) {
+            world.removeEntity(fixture.sheep)
+        }
         world.raining = fixture.raining
         world.thundering = fixture.thundering
         world.rainLevel = fixture.rainLevel
@@ -502,9 +595,11 @@ extension PebbleAgentController {
         world.weatherTimer = fixture.weatherTimer
         let cowAbsent = !world.entities.contains(where: { $0 === fixture.cow })
             && world.entityById[fixture.cow.id] == nil
+        let sheepAbsent = !world.entities.contains(where: { $0 === fixture.sheep })
+            && world.entityById[fixture.sheep.id] == nil
         let restored = fixture.cells.allSatisfy {
             world.getBlock($0.position.x, $0.position.y, $0.position.z) == $0.original
-        } && cowAbsent
+        } && cowAbsent && sheepAbsent
             && world.raining == fixture.raining
             && world.thundering == fixture.thundering
             && world.rainLevel == fixture.rainLevel
@@ -518,6 +613,7 @@ extension PebbleAgentController {
             trace(
                 "ecological observation cleanup mismatch cells=\(cells) "
                     + "cowAbsent=\(cowAbsent ? 1 : 0) "
+                    + "sheepAbsent=\(sheepAbsent ? 1 : 0) "
                     + "weather=\(world.raining ? 1 : 0):\(world.thundering ? 1 : 0):"
                     + "\(world.rainLevel):\(world.thunderLevel)"
             )

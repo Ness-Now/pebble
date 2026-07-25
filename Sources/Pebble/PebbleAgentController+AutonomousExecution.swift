@@ -516,8 +516,18 @@ extension PebbleAgentController {
         }), let runtimeID = livestockRuntimeEntityIDByRecord[record.recordID],
               let animal = world.entityById[runtimeID] as? Animal,
               let actionID = AgentLivestockActionID(
-                rawValue: "auto-livestock:\(session.tick):\(task.taskID.rawValue)"
+                  rawValue: "auto-livestock:\(session.tick):\(task.taskID.rawValue)"
               ) else { throw ControllerError.feedbackBoundary("livestock target unresolved") }
+        let physicalAnimalPosition = AgentPosition(
+            x: Int(animal.x.rounded(.down)),
+            y: Int(animal.y.rounded(.down)),
+            z: Int(animal.z.rounded(.down))
+        )
+        try requireVerifiedAutonomousLivestockInteraction(
+            actorPosition: actor.position,
+            recordPosition: record.lastKnownPosition,
+            physicalAnimalPosition: physicalAnimalPosition
+        )
         var candidate = session
         var candidateRecorder = recorder
         func publish(_ outcome: AgentLivestockValidatedOutcome) throws {
@@ -568,5 +578,20 @@ extension PebbleAgentController {
         session = candidate
         recorder = candidateRecorder
         return actionID.rawValue
+    }
+
+    func requireVerifiedAutonomousLivestockInteraction(
+        actorPosition: AgentPosition,
+        recordPosition: AgentPosition,
+        physicalAnimalPosition: AgentPosition
+    ) throws {
+        let physicalReach = abs(actorPosition.x - physicalAnimalPosition.x)
+            + abs(actorPosition.y - physicalAnimalPosition.y)
+            + abs(actorPosition.z - physicalAnimalPosition.z)
+        guard physicalReach <= 1, recordPosition == physicalAnimalPosition else {
+            throw ControllerError.feedbackBoundary(
+                "livestock target moved outside verified interaction reach"
+            )
+        }
     }
 }
