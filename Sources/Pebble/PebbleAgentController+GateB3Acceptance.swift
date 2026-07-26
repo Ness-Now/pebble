@@ -11,6 +11,12 @@ extension PebbleAgentController {
             trace("GATE_B3_SHOCK refused reason=acceptance_gate_or_session")
             return
         }
+        let autonomyBefore = session.autonomousActivitySnapshot().counters
+        let workBefore = session.workCommitmentSnapshot()
+        let careBefore = session.dependentCareSnapshot()
+        let baseline = "tick=\(session.tick) "
+            + "completionsBefore=\(autonomyBefore.completionCount) "
+            + "workEvidenceBefore=\(workBefore.totalEvidenceCount)"
         switch kind {
         case "worker-care":
             let active = session.activeWorkCommitments()
@@ -21,7 +27,13 @@ extension PebbleAgentController {
                     }
                     return $0.commitmentID < $1.commitmentID
                 }
-            let actorID = active.first?.workerID.rawValue
+            let activeCaregiverIDs = Set(careBefore.assignments.filter {
+                $0.status == .active
+            }.map(\.caregiverID))
+            let actorID = active.first(where: {
+                activeCaregiverIDs.contains($0.workerID)
+            })?.workerID.rawValue
+                ?? active.first?.workerID.rawValue
                 ?? passiveSocietyAudit.completionsByAgent.sorted {
                     if $0.value != $1.value { return $0.value > $1.value }
                     return $0.key < $1.key
@@ -29,8 +41,10 @@ extension PebbleAgentController {
             guard let actorID, let probe = probesByAgentId[actorID],
                   probe.world === world, !probe.dead else {
                 trace(
-                    "GATE_B3_SHOCK kind=worker-care applied=0 "
-                        + "reason=no_available_productive_worker carePressure=not_injected"
+                    "GATE_B3_SHOCK kind=worker-care applied=0 \(baseline) "
+                        + "reason=no_available_productive_worker "
+                        + "carePressureBefore=\(careBefore.activeNeeds.count) "
+                        + "replacementInjected=0 foodInjected=0"
                 )
                 return
             }
@@ -38,14 +52,16 @@ extension PebbleAgentController {
             // It does not suspend, replace, heal, or assign anybody.
             probe.dead = true
             trace(
-                "GATE_B3_SHOCK kind=worker-care applied=1 actor=\(actorID) "
+                "GATE_B3_SHOCK kind=worker-care applied=1 \(baseline) "
+                    + "actor=\(actorID) removedWorker=1 "
                     + "selection=oldest_active_commitment_or_observed_productivity "
                     + "physicalAvailable=0 replacementInjected=0 foodInjected=0 "
-                    + "carePressure=not_injected"
+                    + "carePressureBefore=\(careBefore.activeNeeds.count) "
+                    + "careAssignmentsBefore=\(activeCaregiverIDs.count)"
             )
         case "tool-feed":
             let removable = Set([
-                "iron_hoe", "wheat", "wheat_seeds", "fishing_rod",
+                "iron_hoe", "wheat", "wheat_seeds", "fishing_rod", "shears",
             ])
             var removed: [String: Int] = [:]
             for key in probesByAgentId.keys.sorted() {
@@ -58,12 +74,31 @@ extension PebbleAgentController {
                     probe.carriedItems[index] = nil
                 }
             }
+            if let fixture = passiveSocietyFixture,
+               var containerItems = fixture.container.items {
+                for index in containerItems.indices {
+                    guard let stack = containerItems[index] else { continue }
+                    let name = itemDef(stack.id).name
+                    guard removable.contains(name) else { continue }
+                    removed[name, default: 0] += stack.count
+                    containerItems[index] = nil
+                }
+                fixture.container.items = containerItems
+            }
             let summary = removed.keys.sorted().map {
                 "\($0):\(removed[$0]!)"
             }.joined(separator: ",")
+            let removedQuantity = removed.values.reduce(0, +)
+            let livestockDisruption =
+                (removed["wheat"] ?? 0) + (removed["shears"] ?? 0) > 0
+            let wildDisruption = (removed["fishing_rod"] ?? 0) > 0
             trace(
-                "GATE_B3_SHOCK kind=tool-feed applied=\(removed.isEmpty ? 0 : 1) "
+                "GATE_B3_SHOCK kind=tool-feed "
+                    + "applied=\(removedQuantity > 0 ? 1 : 0) \(baseline) "
                     + "removed=\(summary.isEmpty ? "none" : summary) "
+                    + "removedQuantity=\(removedQuantity) "
+                    + "livestockDisruption=\(livestockDisruption ? 1 : 0) "
+                    + "wildDisruption=\(wildDisruption ? 1 : 0) "
                     + "replacementToolInjected=0 replacementFeedInjected=0 "
                     + "successInjected=0"
             )

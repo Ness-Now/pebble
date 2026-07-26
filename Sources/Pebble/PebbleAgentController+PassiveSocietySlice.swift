@@ -47,6 +47,9 @@ struct PebblePassiveProductProofSnapshot {
     let decisions: Int
     let completions: Int
     let runtimeErrors: Int
+    let aliveAgents: Int
+    let movementEnabled: Bool
+    let movementEverEnabled: Bool
 }
 
 extension PebbleAgentController {
@@ -435,10 +438,14 @@ extension PebbleAgentController {
     func passiveProductProofSnapshot() -> PebblePassiveProductProofSnapshot? {
         guard passiveObserverBootstrapComplete, let session else { return nil }
         let counters = session.autonomousActivitySnapshot().counters
+        let snapshot = session.snapshot()
         return PebblePassiveProductProofSnapshot(
             bootstrapComplete: true, simulationTick: session.tick,
             decisions: counters.decisionCount, completions: counters.completionCount,
-            runtimeErrors: runtimeErrorCount
+            runtimeErrors: runtimeErrorCount,
+            aliveAgents: snapshot.agents.filter(\.isAlive).count,
+            movementEnabled: movementEnabled,
+            movementEverEnabled: movementWasEverEnabledSinceReset
         )
     }
 

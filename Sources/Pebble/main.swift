@@ -435,6 +435,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
               !value.isEmpty else { return nil }
         return value
     }()
+    private let gateBConvergence =
+        ProcessInfo.processInfo.environment["PEBBLELAB_GATE_B_CONVERGENCE"] == "1"
+    private let gateB3InterventionTick: Int? = {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["PEBBLELAB_GATE_B_CONVERGENCE"] == "1",
+              let raw = environment["PEBBLELAB_GATE_B3_INTERVENTION_TICK"],
+              let value = Int(raw), value > 0 else { return nil }
+        return value
+    }()
     private let gateB3SkipCheckpoint =
         ProcessInfo.processInfo.environment["PEBBLELAB_GATE_B3_SKIP_CHECKPOINT"] == "1"
     private let gateB3RandomTickSpeed: Int? = {
@@ -446,6 +455,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     }()
     private var gateB3RandomTickApplied = false
     private var gateB3CheckpointAttempted = false
+    private var gateB3CheckpointBeforeCustody:
+        PebbleGateBConvergenceCustodySnapshot?
+    private var gateB3CheckpointAfterCustody:
+        PebbleGateBConvergenceCustodySnapshot?
+    private var gateB3CheckpointContinuationTarget: Int?
+    private var gateB3CheckpointContinuationCaptured = false
     private var gateB3ShockApplied = false
     private var gateB3Completed = false
     private var gateB3CommandCompletionWorldTick: Int?
@@ -456,7 +471,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         let environment = ProcessInfo.processInfo.environment
         guard environment["PEBBLELAB_GATE_B3_PASSIVE"] == "1",
               let raw = environment["PEBBLELAB_GATE_B3_PASSIVE_SECONDS"],
-              let value = Double(raw), value >= 300 else { return nil }
+              let value = Double(raw),
+              value >= (environment["PEBBLELAB_GATE_B_CONVERGENCE"] == "1"
+                  ? 120 : 300) else { return nil }
         return value
     }()
     private let gateB3PassiveCaptureDirectory =
@@ -464,6 +481,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     private var gateB3PassiveStartedAt: CFTimeInterval?
     private var gateB3PassiveCapturedMilestones = Set<Int>()
     private var gateB3PassiveCompleted = false
+    private var gateB3PassiveMovementStayedEnabled = true
+    private var gateB3PassiveInitialCompletions: Int?
     private var gateB3RenderFrame = 0
     private var gateB3FirstCoherentFrame: Int?
     // Persistence proof hook: run command batches at explicit World ticks so a
@@ -926,6 +945,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
             return
         }
         captureWorkDemandRefreshMilestone(proof)
+        if gateBConvergence, !gateB3CheckpointContinuationCaptured,
+           let target = gateB3CheckpointContinuationTarget,
+           proof.simulationTick >= target {
+            gateB3CheckpointContinuationCaptured = true
+            let continued = agentController.traceGateBConvergenceCustody(
+                phase: "continued",
+                world: game.world
+            )
+            let before = gateB3CheckpointBeforeCustody
+            let after = gateB3CheckpointAfterCustody
+            print(
+                "[lab-live] GATE_B_CONVERGENCE_CHECKPOINT_CONTINUED "
+                    + "targetTick=\(target) actualTick=\(proof.simulationTick) "
+                    + "snapshotPresent=\(continued == nil ? 0 : 1) "
+                    + "stableCivilizationIDs="
+                    + "\((before?.civilizationAgentIDs == continued?.civilizationAgentIDs) ? 1 : 0) "
+                    + "postLoadCustodyDigest="
+                    + "\(after?.trackedCustodyDigest ?? "missing") "
+                    + "continuedCustodyDigest="
+                    + "\(continued?.trackedCustodyDigest ?? "missing") "
+                    + "postLoadMaterialTotals="
+                    + "\(after?.materialTotals ?? "missing") "
+                    + "continuedMaterialTotals="
+                    + "\(continued?.materialTotals ?? "missing")"
+            )
+        }
         if proof.runtimeErrors > 0 {
             gateB3Completed = true
             agentController.traceGateB3AcceptanceSnapshot(world: game.world)
@@ -943,17 +988,105 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         if game.world.seed == 887, !gateB3SkipCheckpoint, !gateB3CheckpointAttempted,
            proof.simulationTick >= boundary {
             gateB3CheckpointAttempted = true
+            let convergenceBefore = try? agentController
+                .gateBConvergenceSemanticSnapshot(world: game.world)
+            let custodyBefore = agentController.traceGateBConvergenceCustody(
+                phase: "before",
+                world: game.world
+            )
+            gateB3CheckpointBeforeCustody = custodyBefore
             print(
                 "[lab-live] GATE_B3_CHECKPOINT_BOUNDARY seed=887 "
                     + "tick=\(proof.simulationTick) target=\(boundary)"
             )
             runCommand(game, "/lab pause")
-            runCommand(game, "/lab checkpoint save gate-b3-887-mid")
-            runCommand(game, "/lab checkpoint load gate-b3-887-mid")
+            let saveResult = agentController.handleCheckpoint(
+                ["save", "gate-b3-887-mid"],
+                world: game.world
+            )
+            let loadResult: PebbleAgentCommandResult
+            if saveResult.succeeded {
+                loadResult = agentController.handleCheckpoint(
+                    ["load", "gate-b3-887-mid"],
+                    world: game.world
+                )
+            } else {
+                loadResult = PebbleAgentCommandResult(
+                    succeeded: false,
+                    message: "load not attempted because checkpoint save failed"
+                )
+            }
             runCommand(game, "/lab resume")
+            if gateBConvergence {
+                let convergenceAfter = try? agentController
+                    .gateBConvergenceSemanticSnapshot(world: game.world)
+                let custodyAfter = agentController.traceGateBConvergenceCustody(
+                    phase: "after",
+                    world: game.world
+                )
+                gateB3CheckpointAfterCustody = custodyAfter
+                if loadResult.succeeded {
+                    gateB3CheckpointContinuationTarget = proof.simulationTick + 4
+                }
+                let exact = convergenceBefore != nil
+                    && convergenceAfter != nil
+                    && convergenceBefore == convergenceAfter
+                let custodyExact = custodyBefore != nil
+                    && custodyAfter != nil
+                    && custodyBefore == custodyAfter
+                let configurationUnchanged = convergenceBefore != nil
+                    && convergenceAfter != nil
+                    && convergenceBefore?.durable == convergenceAfter?.durable
+                let reconciled = agentController.liveBindingsReconciled(
+                    world: game.world
+                )
+                print(
+                    "[lab-live] GATE_B_CONVERGENCE_CHECKPOINT "
+                        + "saveSucceeded=\(saveResult.succeeded ? 1 : 0) "
+                        + "loadSucceeded=\(loadResult.succeeded ? 1 : 0) "
+                        + "exact=\(exact ? 1 : 0) "
+                        + "custodyExact=\(custodyExact ? 1 : 0) "
+                        + "beforeTick=\(convergenceBefore?.tick ?? -1) "
+                        + "afterTick=\(convergenceAfter?.tick ?? -1) "
+                        + "beforeDurable=\(convergenceBefore?.durable ?? "missing") "
+                        + "afterDurable=\(convergenceAfter?.durable ?? "missing") "
+                        + "beforeSemantic="
+                        + "\(convergenceBefore?.semanticDigest ?? "missing") "
+                        + "afterSemantic="
+                        + "\(convergenceAfter?.semanticDigest ?? "missing") "
+                        + "configurationUnchanged="
+                        + "\(configurationUnchanged ? 1 : 0) "
+                        + "reconciled=\(reconciled ? 1 : 0) "
+                        + "beforeMaterialTotals="
+                        + "\(custodyBefore?.materialTotals ?? "missing") "
+                        + "afterMaterialTotals="
+                        + "\(custodyAfter?.materialTotals ?? "missing") "
+                        + "beforeAgentQuantity="
+                        + "\(custodyBefore?.agentMaterialQuantity ?? -1) "
+                        + "afterAgentQuantity="
+                        + "\(custodyAfter?.agentMaterialQuantity ?? -1) "
+                        + "beforeContainerQuantity="
+                        + "\(custodyBefore?.containerMaterialQuantity ?? -1) "
+                        + "afterContainerQuantity="
+                        + "\(custodyAfter?.containerMaterialQuantity ?? -1) "
+                        + "beforeLooseQuantity="
+                        + "\(custodyBefore?.looseMaterialQuantity ?? -1) "
+                        + "afterLooseQuantity="
+                        + "\(custodyAfter?.looseMaterialQuantity ?? -1) "
+                        + "beforeTotalQuantity="
+                        + "\(custodyBefore?.totalMaterialQuantity ?? -1) "
+                        + "afterTotalQuantity="
+                        + "\(custodyAfter?.totalMaterialQuantity ?? -1) "
+                        + "beforeCompletions="
+                        + "\(convergenceBefore?.completions ?? -1) "
+                        + "afterCompletions="
+                        + "\(convergenceAfter?.completions ?? -1)"
+                )
+            }
         }
+        let shockBoundary = gateB3InterventionTick ?? boundary
         if let shock = gateB3AcceptanceShock, !gateB3ShockApplied,
-           proof.simulationTick >= boundary {
+           proof.simulationTick >= shockBoundary {
             gateB3ShockApplied = true
             agentController.applyGateB3AcceptanceShock(shock, world: game.world)
         }
@@ -961,6 +1094,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
               updated.simulationTick >= horizon else { return }
         gateB3Completed = true
         agentController.traceGateB3AcceptanceSnapshot(world: game.world)
+        if gateBConvergence {
+            agentController.traceGateBConvergenceEvidence(world: game.world)
+        }
         print(
             "[lab-live] GATE_B3_HORIZON_COMPLETE seed=\(game.world.seed) "
                 + "tick=\(updated.simulationTick) target=\(horizon) "
@@ -996,30 +1132,49 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     private func driveGateB3Passive(now: CFTimeInterval) {
         guard !gateB3PassiveCompleted, let duration = gateB3PassiveSeconds,
               let captureDirectory = gateB3PassiveCaptureDirectory,
-              agentController.passiveProductProofSnapshot() != nil else { return }
+              let proof = agentController.passiveProductProofSnapshot() else { return }
+        gateB3PassiveMovementStayedEnabled =
+            gateB3PassiveMovementStayedEnabled && proof.movementEnabled
+                && proof.movementEverEnabled
         if gateB3PassiveStartedAt == nil {
             gateB3PassiveStartedAt = now
+            gateB3PassiveInitialCompletions = proof.completions
             print(
                 "[lab-live] GATE_B3_PASSIVE_WALL_START "
                     + "worldTick=\(game.world.time) simulationTick="
-                    + "\(agentController.passiveProductProofSnapshot()!.simulationTick) "
-                    + "durationTargetSeconds=\(Int(duration))"
+                    + "\(proof.simulationTick) "
+                    + "durationTargetSeconds=\(Int(duration)) "
+                    + "movementEnabled=\(proof.movementEnabled ? 1 : 0) "
+                    + "aliveAgents=\(proof.aliveAgents) "
+                    + "initialCompletions=\(proof.completions)"
             )
         }
         guard let startedAt = gateB3PassiveStartedAt else { return }
         let elapsed = now - startedAt
-        let milestones = [0, 60, 120, 180, 240, Int(duration)]
+        let milestones = gateBConvergence
+            ? [0, 30, 60, 90, Int(duration)]
+            : [0, 60, 120, 180, 240, Int(duration)]
         for milestone in milestones where elapsed >= Double(milestone)
             && !gateB3PassiveCapturedMilestones.contains(milestone) {
             gateB3PassiveCapturedMilestones.insert(milestone)
             let name: String
-            switch milestone {
-            case 0: name = "gate-b4-start.png"
-            case 60: name = "gate-b4-multi-agent.png"
-            case 120: name = "gate-b4-agriculture.png"
-            case 180: name = "gate-b4-livestock.png"
-            case 240: name = "gate-b4-follow-agent-late.png"
-            default: name = "gate-b4-final.png"
+            if gateBConvergence {
+                switch milestone {
+                case 0: name = "convergence-start.png"
+                case 30: name = "convergence-role-neutral-emergence.png"
+                case 60: name = "convergence-after-previous-home-boundary.png"
+                case 90: name = "convergence-multi-agent.png"
+                default: name = "convergence-late.png"
+                }
+            } else {
+                switch milestone {
+                case 0: name = "gate-b4-start.png"
+                case 60: name = "gate-b4-multi-agent.png"
+                case 120: name = "gate-b4-agriculture.png"
+                case 180: name = "gate-b4-livestock.png"
+                case 240: name = "gate-b4-follow-agent-late.png"
+                default: name = "gate-b4-final.png"
+                }
             }
             pendingCompositedCapturePath = captureDirectory + "/" + name
             print(
@@ -1034,14 +1189,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         guard elapsed >= duration else { return }
         gateB3PassiveCompleted = true
         agentController.traceGateB3AcceptanceSnapshot(world: game.world)
+        if gateBConvergence {
+            agentController.traceGateBConvergenceEvidence(world: game.world)
+        }
+        let initialCompletions = gateB3PassiveInitialCompletions ?? proof.completions
         print(
             String(
                 format: "[lab-live] GATE_B3_PASSIVE_WALL_COMPLETE "
                     + "elapsedSeconds=%.3f targetSeconds=%.0f "
-                    + "simulationTick=%d worldTick=%d productiveCommands=0",
+                    + "simulationTick=%d worldTick=%d productiveCommands=0 "
+                    + "movementStayedEnabled=%d initialCompletions=%d "
+                    + "finalCompletions=%d completionDelta=%d "
+                    + "aliveAgents=%d runtimeErrors=%d",
                 elapsed, duration,
-                agentController.passiveProductProofSnapshot()!.simulationTick,
-                game.world.time
+                proof.simulationTick, game.world.time,
+                gateB3PassiveMovementStayedEnabled ? 1 : 0,
+                initialCompletions, proof.completions,
+                proof.completions - initialCompletions,
+                proof.aliveAgents, proof.runtimeErrors
             )
         )
         fflush(stdout)

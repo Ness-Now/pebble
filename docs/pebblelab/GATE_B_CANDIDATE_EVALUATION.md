@@ -1,5 +1,39 @@
 # Gate B — Self-Sustaining Local Society
 
+## GATE-B-CONVERGENCE-01A — implementation foundation closure
+
+Gate B re-evaluation #4 reste le dernier résultat candidate : `FAIL`.
+Gate B n'est pas acquise et `CIV-26` n'est pas commencé.
+
+Cette récupération ferme plusieurs coutures d'intégration dans une phase
+bornée ; elle n'est ni Gate B re-evaluation #5, ni une campagne qui crédite
+B1–B12. Trois blockers produit sont utilisés sur un budget maximal de quatre :
+
+- mouvement autonome borné, cohérent avec la vraie frontière
+  exploration/home ;
+- initiation autonome role-neutral du bétail par la cognition normale.
+- conservation de la custody physique et des embodiments cohérents au
+  checkpoint.
+
+Un seul groupe harnais/instrumentation complète ces corrections : le bootstrap
+ne préassigne aucun planner, responsable livestock, plan ou tâche ; les preuves
+sémantiques et les futures vagues progressives restent HEAD-bound et sans
+reroll. La fondation est décrite par
+[`GATE_B_CONVERGENCE_01A_SUMMARY.md`](GATE_B_CONVERGENCE_01A_SUMMARY.md). La
+campagne `01B` complète s'exécutera avec :
+
+```sh
+scripts/verify-pebblelab-gate-b-convergence.sh --all
+```
+
+Le résumé de campagne devra conclure exclusivement
+`READY FOR GATE B RE-EVALUATION #5` ou
+`NOT READY FOR GATE B RE-EVALUATION #5`. Ce document ne présume pas ce résultat
+avant l'achèvement de toutes les vagues, qui ne sont pas exécutées en `01A`.
+Même le premier verdict autoriserait
+seulement une future réévaluation #5 distincte ; il n'acquerrait pas Gate B et
+ne commencerait pas `CIV-26`.
+
 ## Re-evaluation #4 — final candidate result
 
 Acceptance baseline:

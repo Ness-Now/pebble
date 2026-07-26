@@ -48,6 +48,20 @@ bootstrap comme non conforme parce qu'il sélectionne et préassigne un planner
 et des responsables livestock ; ses résultats restent diagnostiques, sans
 crédit B1–B12. Gate B reste non acquise et `CIV-26` reste planifié.
 
+`GATE-B-CONVERGENCE-01A` a récupéré la fondation d'implémentation de
+`GATE-B-CONVERGENCE-01` sans exécuter le soak. Elle regroupe trois corrections
+produit (mouvement autonome borné, initiation autonome role-neutral du bétail
+et custody physique au checkpoint) et un seul groupe
+harnais/instrumentation, incluant un bootstrap qui ne préassigne aucun rôle.
+Son record est
+[`GATE_B_CONVERGENCE_01A_SUMMARY.md`](GATE_B_CONVERGENCE_01A_SUMMARY.md).
+Le runner progressif destiné à la mission `01B` est
+`scripts/verify-pebblelab-gate-b-convergence.sh --all`. La campagne conclura
+uniquement `READY FOR GATE B RE-EVALUATION #5` ou
+`NOT READY FOR GATE B RE-EVALUATION #5`; aucun de ces verdicts n'est présumé
+avant l'exécution complète des vagues. Gate B re-evaluation #4 reste un `FAIL`
+historique, Gate B reste non acquise et `CIV-26` non commencé.
+
 ## `operational-runbook`
 
 - [`../pebblelab-3d-live-prototype.md`](../pebblelab-3d-live-prototype.md) est le
@@ -55,8 +69,9 @@ crédit B1–B12. Gate B reste non acquise et `CIV-26` reste planifié.
   verticales 3D actuellement acquises.
 - [`GATE_B_CANDIDATE_EVALUATION.md`](GATE_B_CANDIDATE_EVALUATION.md) est le
   record d'acceptance post-CIV-25 : évaluations #1 à #4, leurs verdicts
-  candidate `FAIL`, blockers, corrections publiées et preuves intégrées.
-  Il ne marque pas Gate B acquise et ne remplace pas la roadmap prospective.
+  candidate `FAIL`, blockers, corrections publiées, puis contrat borné de
+  convergence préalable à une éventuelle réévaluation #5. Il ne marque pas
+  Gate B acquise et ne remplace pas la roadmap prospective.
 - [`GATE_B_REEVALUATION_4_SUMMARY.json`](GATE_B_REEVALUATION_4_SUMMARY.json)
   est le résumé durable borné de la dernière matrice fixe, du blocker
   déplacement/home, de la slice passive et de la disposition B1–B12.
