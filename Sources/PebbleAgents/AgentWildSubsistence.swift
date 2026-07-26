@@ -284,7 +284,7 @@ public struct AgentWildSubsistenceEvictionCounts: Codable, Equatable, Sendable {
     }
 }
 
-public struct AgentWildSubsistenceState: Codable, Equatable, Sendable {
+public struct AgentWildSubsistenceState: Equatable, Sendable {
     public let configuration: AgentWildSubsistenceConfiguration
     public internal(set) var opportunities: [AgentSubsistenceOpportunity]
     public internal(set) var retainedOutcomes: [AgentSubsistenceOutcomeRecord]
@@ -298,6 +298,108 @@ public struct AgentWildSubsistenceState: Codable, Equatable, Sendable {
     public internal(set) var lastSubsistenceEventID: AgentCausalEventID
     public internal(set) var transitionTick: Int
     public internal(set) var attemptsAtTick: Int
+}
+
+extension AgentWildSubsistenceState: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case configuration
+        case opportunities
+        case retainedOutcomes
+        case processedAttemptIDs
+        case totalOpportunityCount
+        case totalAttemptCount
+        case successfulCounts
+        case evictionCounts
+        case rollingDigest
+        case initializedEventID
+        case lastSubsistenceEventID
+        case transitionTick
+        case attemptsAtTick
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        configuration = try values.decode(
+            AgentWildSubsistenceConfiguration.self,
+            forKey: .configuration
+        )
+        opportunities = try values.decode(
+            [AgentSubsistenceOpportunity].self,
+            forKey: .opportunities
+        )
+        retainedOutcomes = try values.decode(
+            [AgentSubsistenceOutcomeRecord].self,
+            forKey: .retainedOutcomes
+        )
+        processedAttemptIDs = try values.decode(
+            [AgentSubsistenceAttemptID].self,
+            forKey: .processedAttemptIDs
+        )
+        totalOpportunityCount = try values.decode(
+            Int.self,
+            forKey: .totalOpportunityCount
+        )
+        totalAttemptCount = try values.decode(
+            Int.self,
+            forKey: .totalAttemptCount
+        )
+        var successfulCountValues = try values.nestedUnkeyedContainer(
+            forKey: .successfulCounts
+        )
+        var decodedSuccessfulCounts: [AgentSubsistenceStrategy: Int] = [:]
+        while !successfulCountValues.isAtEnd {
+            let strategy = try successfulCountValues.decode(
+                AgentSubsistenceStrategy.self
+            )
+            let count = try successfulCountValues.decode(Int.self)
+            guard decodedSuccessfulCounts[strategy] == nil else {
+                throw DecodingError.dataCorruptedError(
+                    in: successfulCountValues,
+                    debugDescription: "duplicate wild subsistence success strategy"
+                )
+            }
+            decodedSuccessfulCounts[strategy] = count
+        }
+        successfulCounts = decodedSuccessfulCounts
+        evictionCounts = try values.decode(
+            AgentWildSubsistenceEvictionCounts.self,
+            forKey: .evictionCounts
+        )
+        rollingDigest = try values.decode(String.self, forKey: .rollingDigest)
+        initializedEventID = try values.decode(
+            AgentCausalEventID.self,
+            forKey: .initializedEventID
+        )
+        lastSubsistenceEventID = try values.decode(
+            AgentCausalEventID.self,
+            forKey: .lastSubsistenceEventID
+        )
+        transitionTick = try values.decode(Int.self, forKey: .transitionTick)
+        attemptsAtTick = try values.decode(Int.self, forKey: .attemptsAtTick)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(configuration, forKey: .configuration)
+        try values.encode(opportunities, forKey: .opportunities)
+        try values.encode(retainedOutcomes, forKey: .retainedOutcomes)
+        try values.encode(processedAttemptIDs, forKey: .processedAttemptIDs)
+        try values.encode(totalOpportunityCount, forKey: .totalOpportunityCount)
+        try values.encode(totalAttemptCount, forKey: .totalAttemptCount)
+        var successfulCountValues = values.nestedUnkeyedContainer(
+            forKey: .successfulCounts
+        )
+        for strategy in successfulCounts.keys.sorted() {
+            try successfulCountValues.encode(strategy)
+            try successfulCountValues.encode(successfulCounts[strategy]!)
+        }
+        try values.encode(evictionCounts, forKey: .evictionCounts)
+        try values.encode(rollingDigest, forKey: .rollingDigest)
+        try values.encode(initializedEventID, forKey: .initializedEventID)
+        try values.encode(lastSubsistenceEventID, forKey: .lastSubsistenceEventID)
+        try values.encode(transitionTick, forKey: .transitionTick)
+        try values.encode(attemptsAtTick, forKey: .attemptsAtTick)
+    }
 }
 
 public struct AgentWildSubsistenceSnapshot: Codable, Equatable, Sendable {

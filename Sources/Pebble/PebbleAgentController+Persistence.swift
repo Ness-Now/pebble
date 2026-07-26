@@ -2,6 +2,45 @@ import Foundation
 import PebbleAgents
 import PebbleCore
 
+private struct PebbleAgentCheckpointProbeState {
+    let agentID: String
+    let probe: LabCoreAgentEntity
+    let x: Double
+    let y: Double
+    let z: Double
+    let previousX: Double
+    let previousY: Double
+    let previousZ: Double
+    let carriedItems: [ItemStack?]
+
+    init(agentID: String, probe: LabCoreAgentEntity) {
+        self.agentID = agentID
+        self.probe = probe
+        x = probe.x
+        y = probe.y
+        z = probe.z
+        previousX = probe.prevX
+        previousY = probe.prevY
+        previousZ = probe.prevZ
+        carriedItems = copyItemInventory(probe.carriedItems)
+    }
+
+    func isUnchanged(
+        in world: World,
+        mappedByAgentID: [String: LabCoreAgentEntity]
+    ) -> Bool {
+        mappedByAgentID[agentID] === probe
+            && probe.world === world
+            && !probe.dead
+            && world.entities.filter { $0 === probe }.count == 1
+            && probe.x == x && probe.y == y && probe.z == z
+            && probe.prevX == previousX
+            && probe.prevY == previousY
+            && probe.prevZ == previousZ
+            && probe.carriedItems == carriedItems
+    }
+}
+
 extension PebbleAgentController {
     func handleCheckpoint(
         _ arguments: [String],
@@ -496,6 +535,73 @@ extension PebbleAgentController {
         guard candidateDigest == stored.manifest.semanticDigest else {
             throw AgentCheckpointError.semanticDigestMismatch
         }
+        let candidateAgents = candidate.snapshot().agents.sorted { $0.id < $1.id }
+        let candidateAgentIDs = candidateAgents.map(\.id)
+        let currentAgentIDs = oldSession.snapshot().agents.map(\.id).sorted()
+        let worldProbeIDs = world.entities.compactMap {
+            ($0 as? LabCoreAgentEntity)?.labAgentId
+        }.sorted()
+        let oldProbesByAgentID = probesByAgentId
+        let oldWorldEntities = world.entities
+        guard currentAgentIDs == candidateAgentIDs,
+              worldProbeIDs == currentAgentIDs else {
+            return failure(
+                "Checkpoint load refused: live Civilization identities do not match the checkpoint."
+            )
+        }
+        let currentEmbodiments: [String: PebbleAgentEmbodiment]
+        do {
+            currentEmbodiments = try PebbleAgentEmbodiment.resolveAll(
+                agentIDs: currentAgentIDs,
+                in: world,
+                mappedByAgentID: probesByAgentId
+            )
+        } catch {
+            return failure(
+                "Checkpoint load refused: live embodiments are not coherent (\(error))."
+            )
+        }
+        guard candidateAgents.allSatisfy({
+            currentEmbodiments[$0.id]?.position == $0.position
+        }) else {
+            return failure(
+                "Checkpoint load refused: checkpoint positions differ from live physical truth."
+            )
+        }
+        let reusableProbeStates = currentAgentIDs.compactMap { agentID in
+            currentEmbodiments[agentID].map {
+                PebbleAgentCheckpointProbeState(
+                    agentID: agentID,
+                    probe: $0.probe
+                )
+            }
+        }
+        guard reusableProbeStates.count == candidateAgentIDs.count else {
+            return failure(
+                "Checkpoint load refused: live embodiment capture is incomplete."
+            )
+        }
+
+        var candidateConstructionExecutor = PebbleAgentConstructionExecutor()
+        if let project = candidate.constructionProject {
+            try candidateConstructionExecutor.begin(project: project)
+        }
+        let candidateInteractionExecutor = PebbleAgentInteractionExecutor()
+        var candidateNaturalResourceExecutor = PebbleAgentNaturalResourceExecutor()
+        candidateNaturalResourceExecutor.restoreScanDiagnostics(
+            stored.manifest.orchestration.naturalResourceScanDiagnostics
+        )
+        let candidateEcologyScanDiagnostics = PebbleAgentLocalEcologyScanDiagnostics(
+            lastWorldTick: world.time,
+            lastReason: "restored_checkpoint_requires_fresh_read_only_validation"
+        )
+        let candidateForageOutcome = candidate.localEcologySnapshot().forageHistory.last
+        let restoredFocus = stored.manifest.orchestration.focusedAgentID
+        guard restoredFocus.map(candidateAgentIDs.contains) ?? true else {
+            throw PebbleAgentPersistenceStoreError.invalidBundle(
+                "orchestration focus does not belong to the checkpoint"
+            )
+        }
 
         let oldConstructionExecutor = constructionExecutor
         let oldInteractionExecutor = interactionExecutor
@@ -505,28 +611,17 @@ extension PebbleAgentController {
         let oldEcologyReason = lastEcologyReason
         let oldOrchestration = (
             cognitiveHz, isPaused, movementEnabled, autoInteractionEnabled, economyAutoEnabled,
-            seed, anchor, focusedAgentId, followMode
+            seed, anchor, focusedAgentId, followMode, credit, lastWorldTick, lastTickResult
         )
-        _ = clearLabCoreAgentProbes(in: world)
-        probesByAgentId.removeAll()
         do {
             session = candidate
-            constructionExecutor = PebbleAgentConstructionExecutor()
-            interactionExecutor = PebbleAgentInteractionExecutor()
-            naturalResourceExecutor = PebbleAgentNaturalResourceExecutor()
+            constructionExecutor = candidateConstructionExecutor
+            interactionExecutor = candidateInteractionExecutor
+            naturalResourceExecutor = candidateNaturalResourceExecutor
             ecologicalObservationSensor.invalidateAll()
-            naturalResourceExecutor.restoreScanDiagnostics(
-                stored.manifest.orchestration.naturalResourceScanDiagnostics
-            )
-            lastEcologyScanDiagnostics = PebbleAgentLocalEcologyScanDiagnostics(
-                lastWorldTick: world.time,
-                lastReason: "restored_checkpoint_requires_fresh_read_only_validation"
-            )
-            lastForageOutcome = candidate.localEcologySnapshot().forageHistory.last
+            lastEcologyScanDiagnostics = candidateEcologyScanDiagnostics
+            lastForageOutcome = candidateForageOutcome
             lastEcologyReason = "restored from checkpoint"
-            if let project = candidate.constructionProject {
-                try constructionExecutor.begin(project: project)
-            }
             cognitiveHz = stored.manifest.orchestration.cognitiveHz
             isPaused = true
             movementEnabled = stored.manifest.orchestration.movementEnabled
@@ -537,19 +632,26 @@ extension PebbleAgentController {
             credit = 0
             lastWorldTick = world.time
             lastTickResult = nil
-            let ids = candidate.snapshot().agents.map(\.id)
-            let restoredFocus = stored.manifest.orchestration.focusedAgentID
-            guard restoredFocus.map(ids.contains) ?? true else {
-                throw PebbleAgentPersistenceStoreError.invalidBundle(
-                    "orchestration focus does not belong to the checkpoint"
+            focusedAgentId = restoredFocus ?? candidateAgentIDs.first
+            if followTargetId() == nil { followMode = .off }
+            probesByAgentId = oldProbesByAgentID
+            let worldEntitiesUnchanged = world.entities.count
+                == oldWorldEntities.count
+                && zip(world.entities, oldWorldEntities).allSatisfy {
+                    $0.0 === $0.1
+                }
+            let probesUnchanged = reusableProbeStates.allSatisfy {
+                $0.isUnchanged(
+                    in: world,
+                    mappedByAgentID: probesByAgentId
                 )
             }
-            focusedAgentId = restoredFocus ?? ids.first
-            if followTargetId() == nil { followMode = .off }
-            try createProbes(in: world)
+            guard worldEntitiesUnchanged, probesUnchanged else {
+                throw PebbleAgentPersistenceStoreError.invalidBundle(
+                    "exact live probe reuse changed identity or physical custody"
+                )
+            }
         } catch {
-            _ = clearLabCoreAgentProbes(in: world)
-            probesByAgentId.removeAll()
             session = oldSession
             constructionExecutor = oldConstructionExecutor
             interactionExecutor = oldInteractionExecutor
@@ -566,15 +668,31 @@ extension PebbleAgentController {
             anchor = oldOrchestration.6
             focusedAgentId = oldOrchestration.7
             followMode = oldOrchestration.8
-            do {
-                try createProbes(in: world)
-            } catch {
-                lastError = "checkpoint restore rollback could not recreate prior probes: \(error)"
+            credit = oldOrchestration.9
+            lastWorldTick = oldOrchestration.10
+            lastTickResult = oldOrchestration.11
+            probesByAgentId = oldProbesByAgentID
+            let worldEntitiesUnchanged = world.entities.count
+                == oldWorldEntities.count
+                && zip(world.entities, oldWorldEntities).allSatisfy {
+                    $0.0 === $0.1
+                }
+            let probesUnchanged = reusableProbeStates.allSatisfy {
+                $0.isUnchanged(
+                    in: world,
+                    mappedByAgentID: probesByAgentId
+                )
+            }
+            guard worldEntitiesUnchanged, probesUnchanged else {
+                let rollbackFailure =
+                    "checkpoint restore rollback could not verify exact prior probes"
+                lastError = rollbackFailure
+                throw PebbleAgentPersistenceStoreError.invalidBundle(rollbackFailure)
             }
             throw error
         }
         let causal = candidate.causalLedgerSnapshot().summary
-        let message = "checkpoint loaded name=\(name.rawValue) id=\(stored.checkpoint.checkpointID.rawValue) tick=\(candidate.tick) simulation=\(candidate.simulationID.rawValue) digest=\(candidateDigest.rawValue) causalSequence=\(causal.latestSequence) causalDigest=\(causal.digest) restartSafe=1 probes=\(probesByAgentId.count) paused=1 focus=\(focusedAgentId ?? "none") lifecycleEvent=none worldMutation=none"
+        let message = "checkpoint loaded name=\(name.rawValue) id=\(stored.checkpoint.checkpointID.rawValue) tick=\(candidate.tick) simulation=\(candidate.simulationID.rawValue) digest=\(candidateDigest.rawValue) causalSequence=\(causal.latestSequence) causalDigest=\(causal.digest) restartSafe=1 probes=\(probesByAgentId.count) paused=1 focus=\(focusedAgentId ?? "none") lifecycleEvent=none probeReconciliation=reused_exact worldMutation=none"
         trace(message)
         return success(message)
     }

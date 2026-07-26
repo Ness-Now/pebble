@@ -414,6 +414,19 @@ func runPebbleAgentsWildSubsistenceSmoke() {
     check("v14 completed history checkpoint is byte exact",
           checkpoint.schemaVersion == 14
             && (try! restored.durableStateBytes()) == (try! session.durableStateBytes()))
+    let encodedCheckpoint = try! AgentCheckpointCodec.encode(checkpoint)
+    let decodedCheckpoint = try! AgentCheckpointCodec.decode(
+        AgentSessionCheckpoint.self,
+        from: encodedCheckpoint
+    )
+    let decodedReport = try! AgentSimulationSession.validate(decodedCheckpoint)
+    let decodedRestored = try! AgentSimulationSession.restoring(decodedCheckpoint)
+    check("multi-strategy wild success counts survive checkpoint codec byte exactly",
+          decodedReport.valid
+            && decodedRestored.wildSubsistenceSnapshot().successfulCounts
+                == session.wildSubsistenceSnapshot().successfulCounts
+            && (try! decodedRestored.durableStateBytes())
+                == (try! session.durableStateBytes()))
 
     var replayed = try! AgentSimulationSession.restoring(v13)
     var recorder = try! AgentReplayRecorder(checkpoint: v13, session: replayed)
