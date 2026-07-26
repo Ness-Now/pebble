@@ -254,6 +254,46 @@ extension PebbleAgentController {
         rememberAndSet(first.x, first.y + 1, first.z, 0)
 
         rememberAndSet(baseX + 1, baseY, baseZ, Int(cell(B.stone)))
+        let verticalBoundary = try movementExecutor.proveBoundedCoreStep(
+            world: world,
+            embodiment: embodiment,
+            destination: AgentPosition(x: baseX + 1, y: baseY + 1, z: baseZ),
+            explorationHomePosition: AgentPosition(
+                x: baseX - 7, y: baseY, z: baseZ
+            ),
+            explorationDistanceBoundary: 8
+        )
+        guard verticalBoundary.pathFound,
+              verticalBoundary.explorationBoundaryRefused,
+              !verticalBoundary.reachedCoreNode,
+              verticalBoundary.physicalMutationCount == 0,
+              verticalBoundary.node == AgentPosition(
+                  x: baseX + 1, y: baseY + 1, z: baseZ
+              ),
+              embodiment.position == AgentPosition(
+                  x: baseX, y: baseY, z: baseZ
+              ) else {
+            throw CIV19ProofError.assertion(
+                "vertical exploration boundary prevalidation"
+            )
+        }
+        let verticalWithinBoundary = try movementExecutor.proveBoundedCoreStep(
+            world: world,
+            embodiment: embodiment,
+            destination: AgentPosition(x: baseX + 1, y: baseY + 1, z: baseZ),
+            explorationHomePosition: AgentPosition(
+                x: baseX - 6, y: baseY, z: baseZ
+            ),
+            explorationDistanceBoundary: 8
+        )
+        guard verticalWithinBoundary.reachedCoreNode,
+              !verticalWithinBoundary.explorationBoundaryRefused,
+              verticalWithinBoundary.physicalMutationCount == 1,
+              verticalWithinBoundary.rollbackVerified else {
+            throw CIV19ProofError.assertion(
+                "vertical exploration step within boundary"
+            )
+        }
         let vertical = try movementExecutor.proveBoundedCoreStep(
             world: world,
             embodiment: embodiment,
@@ -301,7 +341,9 @@ extension PebbleAgentController {
             throw CIV19ProofError.assertion("late publication rollback")
         }
 
-        return "simple=1;obstacle=1;dynamic=1;vertical=1;gap=1;occupied=1;late=1;node="
+        return "simple=1;obstacle=1;dynamic=1;vertical=1;"
+            + "explorationBoundary=1;prevalidatedMutationCount=0;"
+            + "gap=1;occupied=1;late=1;node="
             + "\(simple.node!.x - baseX),\(simple.node!.y - baseY),\(simple.node!.z - baseZ)"
     }
 

@@ -255,21 +255,51 @@ public enum AgentFeedbackLoop {
             observation: worldObservation,
             occupiedPositions: occupiedPositions
         )
+        let explorationSafe = safe.filter {
+            respectsExplorationHomeBoundary(
+                distanceBefore: distanceHome,
+                distanceAfter: distance($0.position, homePosition),
+                maximumDistance: configuration.maxExploreDistanceFromHome
+            )
+        }
+        let baseExplorationCandidate = baseDirection.flatMap { direction in
+            safe.first { $0.direction == direction }
+        }
+        let baseExplorationStepExceedsBoundary =
+            baseExplorationCandidate != nil
+            && !explorationSafe.contains {
+                $0.direction == baseExplorationCandidate?.direction
+            }
 
         if goal.kind == .explore,
            baseAction.name == "move_abstract",
-           lastMovementOutcome != nil,
-           distanceHome >= configuration.maxExploreDistanceFromHome {
-            if let candidate = bestHomeCandidate(safe, position: position, home: homePosition) {
+           (
+               distanceHome >= configuration.maxExploreDistanceFromHome
+                   || baseExplorationStepExceedsBoundary
+           ) {
+            let candidate: Candidate?
+            if distanceHome >= configuration.maxExploreDistanceFromHome {
+                candidate = bestHomeCandidate(
+                    explorationSafe, position: position, home: homePosition
+                )
+            } else {
+                candidate = cyclicDirections(after: baseDirection).compactMap {
+                    direction in
+                    explorationSafe.first { $0.direction == direction }
+                }.first
+            }
+            if let candidate {
                 finalAction = movementAction(
                     tick: tick,
                     direction: candidate.direction,
-                    reason: "exploration boundary redirected toward home"
+                    reason: distanceHome >= configuration.maxExploreDistanceFromHome
+                        ? "exploration boundary redirected toward home"
+                        : "exploration step redirected within home boundary"
                 )
             } else {
                 finalAction = AgentAction(
                     name: "wait",
-                    reason: "exploration boundary found no safe home step",
+                    reason: "exploration boundary found no permitted step",
                     tick: tick
                 )
             }
@@ -286,7 +316,7 @@ public enum AgentFeedbackLoop {
             case (.blocked, .explore) where outcome.fromPosition == position:
                 let blockedDirection = outcome.requestedDirection
                 let alternative = cyclicDirections(after: blockedDirection).compactMap { direction in
-                    safe.first { $0.direction == direction }
+                    explorationSafe.first { $0.direction == direction }
                 }.first
                 let proposedAction: AgentAction
                 if let alternative {
@@ -327,8 +357,7 @@ public enum AgentFeedbackLoop {
                 }
             case (.moved, .explore) where outcome.toPosition == position:
                 if let direction = appliedDirection(outcome),
-                   let candidate = safe.first(where: { $0.direction == direction }),
-                   distance(candidate.position, homePosition) <= configuration.maxExploreDistanceFromHome {
+                   explorationSafe.contains(where: { $0.direction == direction }) {
                     let continuedAction = movementAction(
                         tick: tick,
                         direction: direction,

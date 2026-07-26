@@ -11,6 +11,8 @@ struct PebbleAgentMovementExecutor {
         let pathFound: Bool
         let reachedCoreNode: Bool
         let occupiedRefused: Bool
+        let explorationBoundaryRefused: Bool
+        let physicalMutationCount: Int
         let rollbackVerified: Bool
         let latePublicationRejected: Bool
         let orientationChanged: Bool
@@ -45,6 +47,7 @@ struct PebbleAgentMovementExecutor {
         snapshot: AgentSessionSnapshot,
         world: World,
         probesByAgentId: [String: LabCoreAgentEntity],
+        explorationDistanceBoundary: Int,
         additionalOccupiedPositions: Set<AgentPosition> = [],
         postApplyValidation: ([AgentVerifiedPhysicalMovement]) throws -> Void = { _ in }
     ) throws -> [AgentVerifiedPhysicalMovement] {
@@ -182,6 +185,22 @@ struct PebbleAgentMovementExecutor {
                     ))
                     continue
                 }
+                if agent.currentGoal.kind == .explore,
+                   !permitsExplorationCoreStep(
+                       from: embodiment.position,
+                       to: next,
+                       home: agent.homePosition,
+                       maximumDistance: explorationDistanceBoundary
+                   ) {
+                    verified.append(blocked(
+                        intent: intent,
+                        agent: agent,
+                        at: embodiment.position,
+                        reason: "Core step exceeds exploration home boundary",
+                        worldTick: world.time
+                    ))
+                    continue
+                }
                 guard !initiallyOccupied.subtracting([embodiment.position]).contains(next),
                       !claimed.contains(next) else {
                     verified.append(blocked(
@@ -269,6 +288,8 @@ struct PebbleAgentMovementExecutor {
         embodiment: PebbleAgentEmbodiment,
         destination: AgentPosition,
         occupied: Set<AgentPosition> = [],
+        explorationHomePosition: AgentPosition? = nil,
+        explorationDistanceBoundary: Int? = nil,
         rejectAfterPhysicalMove: Bool = false
     ) throws -> BoundedCoreStepProof {
         guard embodiment.isValid(in: world),
@@ -285,6 +306,8 @@ struct PebbleAgentMovementExecutor {
                 pathFound: false,
                 reachedCoreNode: false,
                 occupiedRefused: false,
+                explorationBoundaryRefused: false,
+                physicalMutationCount: 0,
                 rollbackVerified: true,
                 latePublicationRejected: rejectAfterPhysicalMove,
                 orientationChanged: false,
@@ -292,11 +315,32 @@ struct PebbleAgentMovementExecutor {
             )
         }
         let next = AgentPosition(x: node.x, y: node.y, z: node.z)
+        if let explorationHomePosition, let explorationDistanceBoundary,
+           !permitsExplorationCoreStep(
+               from: embodiment.position,
+               to: next,
+               home: explorationHomePosition,
+               maximumDistance: explorationDistanceBoundary
+           ) {
+            return BoundedCoreStepProof(
+                pathFound: true,
+                reachedCoreNode: false,
+                occupiedRefused: false,
+                explorationBoundaryRefused: true,
+                physicalMutationCount: 0,
+                rollbackVerified: true,
+                latePublicationRejected: false,
+                orientationChanged: false,
+                node: next
+            )
+        }
         guard !occupied.contains(next) else {
             return BoundedCoreStepProof(
                 pathFound: true,
                 reachedCoreNode: false,
                 occupiedRefused: true,
+                explorationBoundaryRefused: false,
+                physicalMutationCount: 0,
                 rollbackVerified: true,
                 latePublicationRejected: false,
                 orientationChanged: false,
@@ -327,6 +371,8 @@ struct PebbleAgentMovementExecutor {
             pathFound: true,
             reachedCoreNode: reached,
             occupiedRefused: false,
+            explorationBoundaryRefused: false,
+            physicalMutationCount: 1,
             rollbackVerified: embodiment.position == AgentPosition(
                 x: Int(original.x.rounded(.down)),
                 y: Int(original.y.rounded(.down)),
@@ -403,6 +449,19 @@ struct PebbleAgentMovementExecutor {
 
     private func distance(_ lhs: AgentPosition, _ rhs: AgentPosition) -> Int {
         abs(lhs.x - rhs.x) + abs(lhs.y - rhs.y) + abs(lhs.z - rhs.z)
+    }
+
+    private func permitsExplorationCoreStep(
+        from: AgentPosition,
+        to: AgentPosition,
+        home: AgentPosition,
+        maximumDistance: Int
+    ) -> Bool {
+        AgentFeedbackLoop.respectsExplorationHomeBoundary(
+            distanceBefore: distance(from, home),
+            distanceAfter: distance(to, home),
+            maximumDistance: maximumDistance
+        )
     }
 
     private func capture(_ probe: LabCoreAgentEntity) -> PhysicalState {

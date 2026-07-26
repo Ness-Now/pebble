@@ -54,12 +54,13 @@ private func boundedNavigationSession(
 private func boundedNavigationCandidate(
     id: String,
     target: AgentPosition,
-    tick: Int
+    tick: Int,
+    domain: AgentAutonomousActivityDomain = .wildGathering
 ) -> AgentAutonomousActivityCandidate {
     AgentAutonomousActivityCandidate(
         candidateID: id,
         actorID: AgentID(rawValue: "agent_0")!,
-        domain: .wildGathering,
+        domain: domain,
         actionKey: "gather",
         stableReference: "bounded-navigation:\(id)",
         target: target,
@@ -134,7 +135,8 @@ private func publishBoundedEastStep(
 }
 
 private func boundedExplorationObservation(
-    position: AgentPosition
+    position: AgentPosition,
+    eastStep: Int = 0
 ) -> AgentWorldObservation {
     func column(_ position: AgentPosition) -> AgentWorldColumnObservation {
         AgentWorldColumnObservation(
@@ -155,6 +157,7 @@ private func boundedExplorationObservation(
         position: position,
         center: column(position),
         neighbors: AgentCardinalDirection.allCases.map { direction in
+            let step = direction == .east ? eastStep : 0
             let neighbor = AgentPosition(
                 x: position.x + direction.dx,
                 y: position.y,
@@ -163,7 +166,7 @@ private func boundedExplorationObservation(
             return AgentWorldNeighborObservation(
                 direction: direction,
                 column: column(neighbor),
-                stepDelta: 0,
+                stepDelta: step,
                 traversable: true,
                 dangerousDrop: false
             )
@@ -385,6 +388,42 @@ func runPebbleAgentsBoundedAutonomousNavigationSmoke() {
         beyondHome.snapshot().agents[0].position == AgentPosition(x: 9, y: 64, z: 0)
             && beyondHome.snapshot().agents[0].distanceFromHome == 9
     )
+    for (domain, label) in [
+        (AgentAutonomousActivityDomain.construction, "construction"),
+        (AgentAutonomousActivityDomain.materialHandling, "cooperation-material"),
+    ] {
+        var activityTravel = boundedNavigationSession(
+            position: remoteOrigin,
+            home: origin
+        )
+        try! activityTravel.setAutonomousActivityEnabled(true)
+        _ = try! activityTravel.selectAutonomousActivities([
+            boundedNavigationCandidate(
+                id: "\(label)-beyond-home",
+                target: localActivity,
+                tick: activityTravel.tick,
+                domain: domain
+            )
+        ])
+        let activityTick = try! activityTravel.advanceTick(perceptions: [
+            AgentPerceptionInput(
+                agentId: "agent_0",
+                navigationObservation: boundedNavigationObservation(
+                    origin: remoteOrigin,
+                    target: localActivity,
+                    traversableX: 8...12,
+                    targetBlocked: true
+                )
+            )
+        ])
+        publishBoundedEastStep(result: activityTick, session: &activityTravel)
+        check(
+            "\(label) business travel retains local waypoint exception",
+            activityTravel.snapshot().agents[0].position
+                == AgentPosition(x: 9, y: 64, z: 0)
+                && activityTravel.snapshot().agents[0].distanceFromHome == 9
+        )
+    }
 
     let boundaryPosition = AgentPosition(x: 8, y: 64, z: 0)
     let boundaryOutcome = AgentMovementOutcome(
@@ -443,8 +482,71 @@ func runPebbleAgentsBoundedAutonomousNavigationSmoke() {
                 distanceBefore: 8, distanceAfter: 8, maximumDistance: 8
             )
             && !AgentFeedbackLoop.respectsExplorationHomeBoundary(
+                distanceBefore: 7, distanceAfter: 9, maximumDistance: 8
+            )
+            && !AgentFeedbackLoop.respectsExplorationHomeBoundary(
                 distanceBefore: 9, distanceAfter: 10, maximumDistance: 8
             )
+    )
+    check(
+        "horizontal exploration inward step remains permitted",
+        AgentFeedbackLoop.respectsExplorationHomeBoundary(
+            distanceBefore: 8,
+            distanceAfter: 7,
+            maximumDistance: 8
+        )
+    )
+    check(
+        "horizontal exploration outward crossing is refused",
+        !AgentFeedbackLoop.respectsExplorationHomeBoundary(
+            distanceBefore: 8,
+            distanceAfter: 9,
+            maximumDistance: 8
+        )
+    )
+    check(
+        "climb whose resulting home distance stays valid is permitted",
+        AgentFeedbackLoop.respectsExplorationHomeBoundary(
+            distanceBefore: 6,
+            distanceAfter: 8,
+            maximumDistance: 8
+        )
+    )
+    check(
+        "descent toward home remains permitted",
+        AgentFeedbackLoop.respectsExplorationHomeBoundary(
+            distanceBefore: 9,
+            distanceAfter: 7,
+            maximumDistance: 8
+        )
+    )
+    let risingBoundaryTrace = AgentFeedbackLoop.adjustAction(
+        agentId: "agent_0",
+        tick: 1,
+        position: AgentPosition(x: 7, y: 64, z: 0),
+        homePosition: origin,
+        goal: AgentGoal(
+            kind: .explore, reason: "bounded exploration", startedAtTick: 0, urgency: 1
+        ),
+        baseAction: AgentAction(
+            name: "move_abstract", reason: "explore east uphill", tick: 1,
+            dx: 1, dy: 0, dz: 0
+        ),
+        worldObservation: boundedExplorationObservation(
+            position: AgentPosition(x: 7, y: 64, z: 0),
+            eastStep: 1
+        ),
+        occupiedPositions: [],
+        lastMovementOutcome: nil,
+        retrievedMemories: [],
+        configuration: .live
+    )
+    check(
+        "observed uphill exploration step cannot overshoot true home boundary",
+        risingBoundaryTrace.finalDirection == .south
+            && risingBoundaryTrace.dominantFactor.kind == .explorationBoundary
+            && risingBoundaryTrace.reason
+                == "exploration step redirected within home boundary"
     )
 
     var terminal = boundedNavigationSession(maximumReplans: 0)

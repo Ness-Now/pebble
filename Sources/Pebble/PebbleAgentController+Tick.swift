@@ -957,6 +957,8 @@ extension PebbleAgentController {
                     snapshot: preMovementSnapshot,
                     world: world,
                     probesByAgentId: probesByAgentId,
+                    explorationDistanceBoundary: session.configuration
+                        .feedbackLoopConfiguration.maxExploreDistanceFromHome,
                     additionalOccupiedPositions: [AgentPosition(
                         x: Int(player.x.rounded(.down)),
                         y: Int(player.y.rounded(.down)),
