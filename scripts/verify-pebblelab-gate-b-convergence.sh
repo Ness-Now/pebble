@@ -28,6 +28,18 @@ fail() {
     exit 1
 }
 
+require_repository_root() {
+    local root=$1
+    local top_level
+
+    git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+        || fail "repository metadata not found at $root"
+    top_level=$(git -C "$root" rev-parse --show-toplevel 2>/dev/null) \
+        || fail "repository metadata not found at $root"
+    [ "$top_level" = "$root" ] \
+        || fail "unexpected repository root: $top_level"
+}
+
 assert_01b_lineage_and_scope() {
     git merge-base --is-ancestor "$PUBLISHED_FOUNDATION" "$HEAD_SHA" \
         || fail "published convergence foundation is not an ancestor"
@@ -85,7 +97,7 @@ fi
 if [ "${PEBBLE_REGOLD+x}" = x ]; then
     fail "PEBBLE_REGOLD must be absent (an empty value is also refused)."
 fi
-[ -d "$ROOT_DIR/.git" ] || fail "repository metadata not found at $ROOT_DIR"
+require_repository_root "$ROOT_DIR"
 cd "$ROOT_DIR"
 
 BRANCH=$(git branch --show-current)

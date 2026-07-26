@@ -68,6 +68,18 @@ fail() {
     exit 1
 }
 
+require_repository_root() {
+    local root=$1
+    local top_level
+
+    git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+        || fail "repository metadata not found at $root"
+    top_level=$(git -C "$root" rev-parse --show-toplevel 2>/dev/null) \
+        || fail "repository metadata not found at $root"
+    [ "$top_level" = "$root" ] \
+        || fail "unexpected repository root: $top_level"
+}
+
 require_trace() {
     pattern=$1
     description=$2
@@ -1067,7 +1079,7 @@ if [ "$DRY_RUN" -eq 1 ]; then
     exit 0
 fi
 
-[ -d "$ROOT_DIR/.git" ] || { printf 'Repository not found: %s\n' "$ROOT_DIR" >&2; exit 1; }
+require_repository_root "$ROOT_DIR"
 [ -f "$RUNBOOK" ] || { printf 'Runbook not found: %s\n' "$RUNBOOK" >&2; exit 1; }
 case "$WORLD_NAME" in
     PebbleLab-Disposable-*) ;;

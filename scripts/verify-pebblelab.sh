@@ -10,11 +10,23 @@ fail() {
     exit 1
 }
 
+require_repository_root() {
+    local root=$1
+    local top_level
+
+    git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+        || fail "repository metadata not found at $root"
+    top_level=$(git -C "$root" rev-parse --show-toplevel 2>/dev/null) \
+        || fail "repository metadata not found at $root"
+    [ "$top_level" = "$root" ] \
+        || fail "unexpected repository root: $top_level"
+}
+
 if [ "${PEBBLE_REGOLD+x}" = x ]; then
     fail "PEBBLE_REGOLD must be absent (an empty value is also refused)."
 fi
 
-[ -d "$ROOT_DIR/.git" ] || fail "repository metadata not found at $ROOT_DIR"
+require_repository_root "$ROOT_DIR"
 [ -f "$ROOT_DIR/Package.swift" ] || fail "Package.swift not found at $ROOT_DIR"
 
 cd "$ROOT_DIR"
