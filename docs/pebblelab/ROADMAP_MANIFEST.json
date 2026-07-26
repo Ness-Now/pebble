@@ -30,6 +30,37 @@
     "campaignStatus": "reevaluation4FailedCorrection5Recommended",
     "reevaluationRequired": true
   },
+  "gateBConvergenceReadiness": {
+    "mission": "GATE-B-CONVERGENCE-01B",
+    "status": "notReadyForReevaluation5",
+    "evaluatedHead": "3e6d29724ec55bc98ee4ada740b4867583da6289",
+    "summary": "docs/pebblelab/GATE_B_CONVERGENCE_01B_SUMMARY.json",
+    "completedWaves": [
+      "wave0",
+      "wave1"
+    ],
+    "firstFailingWave": "wave2",
+    "failingWaveAllFixedSeedsAttempted": true,
+    "laterWavesNotRun": [
+      "wave3",
+      "determinism",
+      "checkpoint",
+      "stress2593",
+      "stress4099",
+      "live"
+    ],
+    "productBlockers": [
+      "B-BLOCKER-AUTONOMOUS-ACTIVITY-OCCUPIED-DESTINATION-RETRY-STORM"
+    ],
+    "harnessInvalidities": [
+      "H-BLOCKER-WORK-DEMAND-RETAINED-CAP-MISMATCH",
+      "H-BLOCKER-FIXED-HORIZON-OVERSHOOT",
+      "H-BLOCKER-FAILED-WAVE-SUMMARY-AGGREGATION"
+    ],
+    "gateBReevaluation5Executed": false,
+    "gateBCanonicallyAcquired": false,
+    "civ26Started": false
+  },
   "correctiveMilestones": [
     {
       "id": "GATE-B-CORR-01",

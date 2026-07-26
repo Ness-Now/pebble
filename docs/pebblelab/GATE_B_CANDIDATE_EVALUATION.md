@@ -1,5 +1,45 @@
 # Gate B — Self-Sustaining Local Society
 
+## GATE-B-CONVERGENCE-01B — progressive soak readiness
+
+```text
+NOT READY FOR GATE B RE-EVALUATION #5
+```
+
+La campagne progressive est liée à
+`3e6d29724ec55bc98ee4ada740b4867583da6289`. Wave 0 passe ses 17 selectors
+(`1 310/0`) et Wave 1 passe les dix seeds fixes à 128 ticks. Wave 2 tente les
+dix seeds à l'horizon 800 sans reroll puis échoue ; conformément au protocole,
+Wave 3, déterminisme, checkpoint, stress et live restent `NOT_RUN`.
+
+Les dix seeds reproduisent
+`B-BLOCKER-AUTONOMOUS-ACTIVITY-OCCUPIED-DESTINATION-RETRY-STORM` : après les
+premiers résultats physiques, `agent_0` approche une opportunité
+`wildSubsistence/wildGathering` via une cellule physiquement occupée, épuise
+ses replans puis resélectionne la même cible. Chaque seed totalise 150 à 154
+refus `bounded_navigation_replan_limit_reached`, 164 à 168 redémarrages de
+même cible et zéro complétion physique après tick 600. La revue senior classe
+ce churn `BLOCKING`, même si le marker publié ne détecte pas le pattern.
+
+Trois invalidités du harnais empêchent indépendamment un crédit Wave 2 :
+la collection totale Work retenue est comparée au cap actif 64 au lieu de son
+cap produit 128 ; cinq horizons dépassent 800 jusqu'à 804 ; et `--summary`
+refuse d'agréger une campagne dont Wave 2 n'est pas PASS. Elles ne sont pas
+corrigées sur l'`EVALUATED_HEAD` gelé.
+
+Le correctif produit minimal recommandé doit faire viser aux interactions une
+position de travail adjacente et réellement atteignable, puis rendre
+l'activité stale après épuisement borné du replan jusqu'à observation locale
+fraîche ou cooldown. Il doit conserver PebbleCore comme unique pathfinder et
+autorité de mouvement, sans téléportation ni bypass home.
+
+Le record détaillé est
+[`GATE_B_CONVERGENCE_01B_SUMMARY.md`](GATE_B_CONVERGENCE_01B_SUMMARY.md) et sa
+projection machine-lisible est
+[`GATE_B_CONVERGENCE_01B_SUMMARY.json`](GATE_B_CONVERGENCE_01B_SUMMARY.json).
+Gate B re-evaluation #5 n'est pas exécutée, Gate B reste non acquise et
+`CIV-26` n'est pas commencé.
+
 ## GATE-B-CONVERGENCE-01A — implementation foundation closure
 
 Gate B re-evaluation #4 reste le dernier résultat candidate : `FAIL`.

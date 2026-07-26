@@ -51,17 +51,16 @@ bootstrap préassigne un planner et des responsables livestock ; il n'est donc
 pas role-neutral et ne peut créditer B1–B12. Le verdict candidate reste `FAIL`,
 Gate B reste non acquise et `CIV-26` reste `planned`.
 
-La phase bornée `GATE-B-CONVERGENCE-01A` récupère la fondation d'implémentation,
-pas Gate B re-evaluation #5. Son budget utilise trois blockers produit —
-mouvement autonome borné, initiation autonome role-neutral du bétail et custody
-physique au checkpoint — ainsi qu'un seul groupe harnais/instrumentation.
-`GATE-B-CONVERGENCE-01B` exécutera ensuite les vagues progressives avec
-`scripts/verify-pebblelab-gate-b-convergence.sh --all`. Son seul verdict final
-sera
-`READY FOR GATE B RE-EVALUATION #5` ou
-`NOT READY FOR GATE B RE-EVALUATION #5`; il n'est pas présumé et le soak n'est
-pas exécuté en `01A`. La mission n'acquiert pas Gate B et ne commence pas
-`CIV-26`.
+La phase bornée `GATE-B-CONVERGENCE-01A` a récupéré la fondation
+d'implémentation sans constituer Gate B re-evaluation #5. La mission
+`GATE-B-CONVERGENCE-01B` a ensuite exécuté Wave 0 (`1 310/0`), Wave 1
+(`10/10 × 128`) et tous les seeds de Wave 2. Wave 2 est la première vague en
+échec : les dix seeds reproduisent un retry storm d'activité autonome vers une
+destination physiquement occupée, et le harnais présente trois invalidités
+fail-closed. Wave 3, déterminisme, checkpoint, stress et live restent
+`NOT_RUN`. Le verdict est
+`NOT READY FOR GATE B RE-EVALUATION #5`. Gate B n'est pas acquise et
+`CIV-26` n'est pas commencé.
 
 Les noms `NEXT-1` et `NEXT-2` sont uniquement des alias historiques :
 
@@ -536,17 +535,17 @@ Le bootstrap doit aussi devenir role-neutral avant une nouvelle campagne. La
 candidate est `FAIL`; un éventuel `GATE-B-CORR-05` doit rester non canonique et
 minimal. Gate B n'est pas acquise et `CIV-26` reste `planned`.
 
-`GATE-B-CONVERGENCE-01A` ferme la fondation de ces coutures avant toute
-éventuelle re-evaluation #5. Cette phase bornée associe trois blockers produit
-(mouvement autonome borné ; initiation autonome role-neutral du bétail ;
-custody physique au checkpoint) à un seul groupe harnais/instrumentation
-(bootstrap role-neutral et observabilité sémantique). Elle ne crédite aucun
-critère Gate B par elle-même. Le runner de la future mission `01B`
-`scripts/verify-pebblelab-gate-b-convergence.sh --all` doit produire toutes les
-vagues, non exécutées en `01A`, avant qu'un verdict strictement
-`READY FOR GATE B RE-EVALUATION #5` ou
-`NOT READY FOR GATE B RE-EVALUATION #5` soit enregistré. Aucun résultat n'est
-présumé ici ; Gate B reste non acquise et `CIV-26` non commencé.
+`GATE-B-CONVERGENCE-01A` ferme la fondation de ces coutures sans créditer Gate
+B. `GATE-B-CONVERGENCE-01B` conclut
+`NOT READY FOR GATE B RE-EVALUATION #5` après Wave 2. Wave 0 et Wave 1 passent,
+mais les dix seeds Wave 2 répètent une approche `wildGathering` vers une
+cellule physiquement occupée : 150 à 154 épuisements de replan et aucune
+complétion physique après tick 600. Le correctif minimal futur doit sélectionner
+une position d'interaction adjacente atteignable et supprimer causalement la
+même cible après épuisement borné, sans second pathfinder ni bypass. Le
+harnais doit aussi corriger son cap Work retenu, son horizon exact et
+l'agrégation d'une campagne arrêtée sur échec. Gate B reste non acquise et
+`CIV-26` non commencé.
 
 ### Économie matérielle locale — Gate C
 
@@ -719,8 +718,8 @@ monde de vivre.
   Work transactionnel à tick 4, avant horizons/checkpoint/shocks. La
   re-evaluation #4 est aussi un `FAIL` historique : mouvement hors frontière
   home à tick 508/509 et bootstrap non role-neutral. La phase bornée
-  `GATE-B-CONVERGENCE-01A` stabilise leur fondation sans exécuter le soak, sans
-  constituer une réévaluation #5 et sans préjuger de son verdict
-  `READY FOR GATE B RE-EVALUATION #5` ou
+  `GATE-B-CONVERGENCE-01A` stabilise leur fondation sans constituer une
+  réévaluation #5. `GATE-B-CONVERGENCE-01B` passe Wave 0 et Wave 1, puis
+  s'arrête après l'échec systémique de Wave 2. Son verdict est
   `NOT READY FOR GATE B RE-EVALUATION #5`. Gate B demeure non acquise et
   `CIV-26` reste planifié.

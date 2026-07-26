@@ -55,12 +55,16 @@ et custody physique au checkpoint) et un seul groupe
 harnais/instrumentation, incluant un bootstrap qui ne préassigne aucun rôle.
 Son record est
 [`GATE_B_CONVERGENCE_01A_SUMMARY.md`](GATE_B_CONVERGENCE_01A_SUMMARY.md).
-Le runner progressif destiné à la mission `01B` est
-`scripts/verify-pebblelab-gate-b-convergence.sh --all`. La campagne conclura
-uniquement `READY FOR GATE B RE-EVALUATION #5` ou
-`NOT READY FOR GATE B RE-EVALUATION #5`; aucun de ces verdicts n'est présumé
-avant l'exécution complète des vagues. Gate B re-evaluation #4 reste un `FAIL`
-historique, Gate B reste non acquise et `CIV-26` non commencé.
+`GATE-B-CONVERGENCE-01B` passe Wave 0 et les dix seeds Wave 1, puis tente les
+dix seeds Wave 2 et conclut
+`NOT READY FOR GATE B RE-EVALUATION #5`. Un retry storm systémique vers une
+destination physiquement occupée et trois invalidités du harnais imposent
+l'arrêt ; les vagues ultérieures sont `NOT_RUN`. Son record humain est
+[`GATE_B_CONVERGENCE_01B_SUMMARY.md`](GATE_B_CONVERGENCE_01B_SUMMARY.md) et sa
+projection machine-lisible
+[`GATE_B_CONVERGENCE_01B_SUMMARY.json`](GATE_B_CONVERGENCE_01B_SUMMARY.json).
+Gate B re-evaluation #4 reste un `FAIL` historique, Gate B reste non acquise et
+`CIV-26` non commencé.
 
 ## `operational-runbook`
 
@@ -75,6 +79,10 @@ historique, Gate B reste non acquise et `CIV-26` non commencé.
 - [`GATE_B_REEVALUATION_4_SUMMARY.json`](GATE_B_REEVALUATION_4_SUMMARY.json)
   est le résumé durable borné de la dernière matrice fixe, du blocker
   déplacement/home, de la slice passive et de la disposition B1–B12.
+- [`GATE_B_CONVERGENCE_01B_SUMMARY.md`](GATE_B_CONVERGENCE_01B_SUMMARY.md) et
+  [`GATE_B_CONVERGENCE_01B_SUMMARY.json`](GATE_B_CONVERGENCE_01B_SUMMARY.json)
+  enregistrent le progressive soak arrêté après Wave 2 et le verdict
+  `NOT READY FOR GATE B RE-EVALUATION #5`.
 - [`GATE_B_REEVALUATION_3_SUMMARY.json`](GATE_B_REEVALUATION_3_SUMMARY.json)
   conserve le résumé historique de l'évaluation #3 ; les logs et captures
   HEAD-bound restent temporaires.
