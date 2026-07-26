@@ -5,7 +5,8 @@ set -o pipefail
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 ROOT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd -P)
-BASELINE=eaed4ce1d0a8c151316ddd84e8076813b3079c94
+REEVALUATION4_BASELINE=eaed4ce1d0a8c151316ddd84e8076813b3079c94
+PUBLISHED_FOUNDATION=e85377a05c5e0ffc6bfdcf95a581fef9c7e889c8
 FIXED_SEEDS='46 71 113 197 337 509 887 1597 2593 4099'
 MEDIUM_SEEDS='509 887 1597'
 STRESS_SEEDS='2593 4099'
@@ -27,6 +28,31 @@ fail() {
     exit 1
 }
 
+assert_01b_lineage_and_scope() {
+    git merge-base --is-ancestor "$PUBLISHED_FOUNDATION" "$HEAD_SHA" \
+        || fail "published convergence foundation is not an ancestor"
+    [ -z "$(git diff "$PUBLISHED_FOUNDATION".."$HEAD_SHA" --name-only -- \
+        Sources/PebbleCore Sources/Pebble Sources/PebbleAgents \
+        Sources/PebbleLab Sources/pebsmoke)" ] \
+        || fail "01B introduced a forbidden product or smoke-source change"
+    unexpected_paths=$(
+        git diff "$PUBLISHED_FOUNDATION".."$HEAD_SHA" --name-only |
+        awk '
+            $0 == "scripts/verify-pebblelab-gate-b-convergence.sh" { next }
+            $0 == "scripts/gate_b_convergence_evidence.py" { next }
+            $0 == "docs/pebblelab/GATE_B_CONVERGENCE_01B_SUMMARY.json" { next }
+            $0 == "docs/pebblelab/GATE_B_CONVERGENCE_01B_SUMMARY.md" { next }
+            $0 == "docs/pebblelab/GATE_B_CANDIDATE_EVALUATION.md" { next }
+            $0 == "docs/pebblelab/PEBBLE_CIVILIZATION_ROADMAP.md" { next }
+            $0 == "docs/pebblelab/ROADMAP_MANIFEST.json" { next }
+            $0 == "docs/pebblelab/DOCUMENTATION_INDEX.md" { next }
+            { print }
+        '
+    )
+    [ -z "$unexpected_paths" ] \
+        || fail "01B descendant contains unrelated paths: $unexpected_paths"
+}
+
 assert_final_state() {
     [ "$(git branch --show-current)" = "$BRANCH" ] \
         || fail "branch changed during convergence campaign"
@@ -34,8 +60,7 @@ assert_final_state() {
         || fail "HEAD changed during convergence campaign"
     [ -z "$(git status --short)" ] \
         || fail "working tree changed during convergence campaign"
-    [ -z "$(git diff "$BASELINE"..HEAD --name-only -- Sources/PebbleCore)" ] \
-        || fail "PebbleCore changed during convergence campaign"
+    assert_01b_lineage_and_scope
 }
 
 if [ "$#" -gt 1 ]; then usage >&2; exit 2; fi
@@ -67,10 +92,10 @@ BRANCH=$(git branch --show-current)
 HEAD_SHA=$(git rev-parse HEAD)
 REMOTE_SHA=$(git ls-remote origin refs/heads/lab/pebblelab-v1 | awk '{print $1}')
 [ "$BRANCH" = lab/pebblelab-v1 ] || fail "expected lab/pebblelab-v1, got $BRANCH"
-[ "$REMOTE_SHA" = "$BASELINE" ] \
-    || fail "canonical remote changed unexpectedly: $REMOTE_SHA"
-git merge-base --is-ancestor "$BASELINE" HEAD \
-    || fail "canonical Gate B re-evaluation #4 baseline is not an ancestor"
+[ "$REMOTE_SHA" = "$PUBLISHED_FOUNDATION" ] \
+    || fail "published convergence foundation remote changed: $REMOTE_SHA"
+git merge-base --is-ancestor "$REEVALUATION4_BASELINE" "$PUBLISHED_FOUNDATION" \
+    || fail "published foundation does not inherit re-evaluation #4"
 assert_final_state
 
 EVIDENCE_ROOT=${PEBBLELAB_GATE_B_CONVERGENCE_ROOT:-"/tmp/PebbleLab-GateB-Convergence01-${HEAD_SHA}"}
@@ -92,12 +117,15 @@ CONFIG_DIGEST=$(
         "determinism=509:1600x2" "checkpoint=887:1200>2400" \
         "stress=$STRESS_SEEDS:3200>3600" "live=120" \
         "randomTickSpeed=3" "cognitiveHz=80" \
+        "reevaluation4Baseline=$REEVALUATION4_BASELINE" \
+        "publishedFoundation=$PUBLISHED_FOUNDATION" \
         "roleNeutral=1" "productiveCommands=0" "rerolls=0" \
         | shasum -a 256 | awk '{print $1}'
 )
 
 python3 - "$EVIDENCE_ROOT/configuration.json" "$HEAD_SHA" "$BRANCH" \
-    "$REMOTE_SHA" "$CONFIG_DIGEST" <<'PY'
+    "$REMOTE_SHA" "$CONFIG_DIGEST" "$REEVALUATION4_BASELINE" \
+    "$PUBLISHED_FOUNDATION" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -110,6 +138,8 @@ value = {
     "branch": sys.argv[3],
     "remoteAtLaunch": sys.argv[4],
     "configurationDigest": sys.argv[5],
+    "reevaluation4Baseline": sys.argv[6],
+    "publishedFoundation": sys.argv[7],
     "fixedSeeds": [46, 71, 113, 197, 337, 509, 887, 1597, 2593, 4099],
     "waves": {
         "wave1": {"ticks": 128},
@@ -144,6 +174,8 @@ PY
 printf 'GATE-B-CONVERGENCE-01 — progressive integration stabilization\n'
 printf 'Repository: %s\nBranch: %s\nHEAD: %s\nRemote: %s\n' \
     "$ROOT_DIR" "$BRANCH" "$HEAD_SHA" "$REMOTE_SHA"
+printf 'Re-evaluation #4 baseline: %s\nPublished foundation: %s\n' \
+    "$REEVALUATION4_BASELINE" "$PUBLISHED_FOUNDATION"
 printf 'Evidence root: %s\nConfiguration digest: %s\n' \
     "$EVIDENCE_ROOT" "$CONFIG_DIGEST"
 printf 'Gate B credit: NONE; CIV-26: NOT STARTED; rerolls: 0\n'
@@ -477,7 +509,8 @@ PY
 }
 
 write_static_audits() {
-    python3 - "$ROOT_DIR" "$BASELINE" "$HEAD_SHA" "$EVIDENCE_ROOT" <<'PY'
+    python3 - "$ROOT_DIR" "$REEVALUATION4_BASELINE" "$HEAD_SHA" \
+        "$EVIDENCE_ROOT" <<'PY'
 from __future__ import annotations
 
 import json
@@ -487,11 +520,11 @@ import sys
 from pathlib import Path
 
 root = Path(sys.argv[1])
-baseline = sys.argv[2]
+reevaluation4_baseline = sys.argv[2]
 head = sys.argv[3]
 evidence_root = Path(sys.argv[4])
 summary_root = evidence_root / "summary"
-source_range = f"{baseline}..{head}"
+source_range = f"{reevaluation4_baseline}..{head}"
 
 
 def shell_join(values: list[str]) -> str:
@@ -550,7 +583,7 @@ authority_declaration = (
 )
 gate_r_commands = {
     "baselineInherited": [
-        f"git merge-base --is-ancestor {baseline} {head}",
+        f"git merge-base --is-ancestor {reevaluation4_baseline} {head}",
     ],
     "coreUnchanged": [
         f"git diff --quiet {source_range} -- Sources/PebbleCore",
@@ -898,7 +931,7 @@ def write_reproducible(path: Path, value: dict[str, object]) -> None:
 write_reproducible(summary_root / "gate-r.json", {
     "schemaVersion": 1,
     "head": head,
-    "baseline": baseline,
+    "reevaluation4Baseline": reevaluation4_baseline,
     "result": "PASS" if all(gate_r_checks.values()) else "FAIL",
     "checks": gate_r_checks,
     "commands": gate_r_command_results,
@@ -906,7 +939,7 @@ write_reproducible(summary_root / "gate-r.json", {
 write_reproducible(summary_root / "movement-audit.json", {
     "schemaVersion": 1,
     "head": head,
-    "baseline": baseline,
+    "reevaluation4Baseline": reevaluation4_baseline,
     "result": "PASS" if all(movement_checks.values()) else "FAIL",
     "checks": movement_checks,
     "commands": movement_command_results,
