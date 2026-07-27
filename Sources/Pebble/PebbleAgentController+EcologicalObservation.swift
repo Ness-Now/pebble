@@ -149,7 +149,9 @@ extension PebbleAgentController {
         }
         if session.productiveSourceLifecycleEnabled {
             let sourceObservations = productiveSourceObservations(
-                from: observation
+                from: observation,
+                world: world,
+                session: session
             )
             if !sourceObservations.isEmpty {
                 if try applyRecordedOperationIfActive(
@@ -167,7 +169,9 @@ extension PebbleAgentController {
     }
 
     func productiveSourceObservations(
-        from observation: AgentEcologicalObservation
+        from observation: AgentEcologicalObservation,
+        world: World,
+        session: AgentSimulationSession
     ) -> [AgentProductiveSourceObservation] {
         func positionKey(_ position: AgentPosition) -> String {
             "\(position.x),\(position.y),\(position.z)"
@@ -204,21 +208,47 @@ extension PebbleAgentController {
             )
         }
         sources += observation.fishing.map { fishing in
+            let hasPhysicalExecutor = session.snapshot().agents.contains { snapshot in
+                guard let actorID = AgentID(rawValue: snapshot.id),
+                      session.ecologicalObservations(for: actorID).first(where: {
+                          $0.observation.isFresh(atSimulationTick: session.tick)
+                              && $0.observation.fishing.contains {
+                                  $0.position == fishing.position && $0.candidate
+                              }
+                      }) != nil,
+                      let probe = probesByAgentId[snapshot.id],
+                      probe.world === world, !probe.dead else {
+                    return false
+                }
+                return probe.carriedItems.compactMap { $0 }.contains {
+                    $0.count > 0 && itemDef($0.id).name == "fishing_rod"
+                }
+            }
+            let viable = fishing.candidate && hasPhysicalExecutor
             return source(
                 key: "fishing:\(fishing.waterKey)@"
                     + positionKey(fishing.position),
                 domain: .fishing,
-                material: "\(fishing.waterKey)|candidate=\(fishing.candidate)",
+                material: "\(fishing.waterKey)|candidate=\(fishing.candidate)"
+                    + "|physicalExecutor=\(hasPhysicalExecutor)",
                 position: fishing.position,
-                disposition: fishing.candidate
-                    ? .viable : .temporarilyUnavailable,
-                unavailableReason: fishing.candidate
-                    ? nil : "fishing affordance unavailable"
+                disposition: viable ? .viable : .temporarilyUnavailable,
+                unavailableReason: viable ? nil
+                    : fishing.candidate
+                        ? "fishing rod unavailable"
+                        : "fishing affordance unavailable"
             )
         }
         sources += observation.soils.map { soil in
-            let viable = soil.supportsCrop
+            let compatible = soil.supportsCrop
                 && (soil.tillable || soil.alreadyFarmland)
+            let execution = liveAgriculturalSourceExecution(
+                world: world,
+                position: soil.position,
+                isCrop: false,
+                session: session
+            )
+            let viable = compatible && execution.executable
             return source(
                 key: "agriculture:soil:\(soil.blockKey)@"
                     + positionKey(soil.position),
@@ -226,26 +256,39 @@ extension PebbleAgentController {
                 material: "\(soil.blockKey)|tillable=\(soil.tillable)"
                     + "|farmland=\(soil.alreadyFarmland)"
                     + "|hydrated=\(soil.hydrated.map(String.init) ?? "unknown")"
-                    + "|supportsCrop=\(soil.supportsCrop)",
+                    + "|supportsCrop=\(soil.supportsCrop)"
+                    + "|\(execution.materialContract)",
                 position: soil.position,
                 disposition: viable ? .viable : .temporarilyUnavailable,
                 unavailableReason: viable
-                    ? nil : "soil cannot support a crop"
+                    ? nil
+                    : compatible
+                        ? execution.reason
+                        : "soil cannot support a crop"
             )
         }
         sources += observation.crops.map { crop in
-            source(
+            let execution = liveAgriculturalSourceExecution(
+                world: world,
+                position: crop.position,
+                isCrop: true,
+                session: session
+            )
+            let viable = crop.mature && execution.executable
+            return source(
                 key: "agriculture:crop:\(crop.cropKey)@"
                     + positionKey(crop.position),
                 domain: .agriculture,
                 material: "\(crop.cropKey)|stage=\(crop.growthStage)"
                     + "/\(crop.maximumGrowthStage)|mature=\(crop.mature)"
-                    + "|support=\(crop.supportBlockKey ?? "none")",
+                    + "|support=\(crop.supportBlockKey ?? "none")"
+                    + "|\(execution.materialContract)",
                 position: crop.position,
-                disposition: crop.mature
-                    ? .viable : .temporarilyUnavailable,
-                unavailableReason: crop.mature
-                    ? nil : "crop physically immature"
+                disposition: viable ? .viable : .temporarilyUnavailable,
+                unavailableReason: viable ? nil
+                    : crop.mature
+                        ? execution.reason
+                        : "crop physically immature"
             )
         }
         return sources.sorted {

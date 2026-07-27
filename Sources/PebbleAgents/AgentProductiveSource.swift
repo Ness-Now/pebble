@@ -61,6 +61,55 @@ public enum AgentProductiveSourceDisposition: String, Codable, CaseIterable, Sen
     case withdrawn
 }
 
+public enum AgentProductiveSourceExecutionBlocker: String, Equatable, Sendable {
+    case noPendingPhysicalAction
+    case toolUnavailable
+    case materialUnavailable
+    case physicalSupportUnavailable
+}
+
+/// Pure action-level precondition contract. Material compatibility alone does
+/// not make a productive source currently executable.
+public struct AgentProductiveSourceExecutionFacts: Equatable, Sendable {
+    public let hasPendingPhysicalAction: Bool
+    public let requiresTool: Bool
+    public let toolAvailable: Bool
+    public let requiresMaterial: Bool
+    public let materialAvailable: Bool
+    public let requiresPhysicalSupport: Bool
+    public let physicalSupportAvailable: Bool
+
+    public init(
+        hasPendingPhysicalAction: Bool,
+        requiresTool: Bool = false,
+        toolAvailable: Bool = true,
+        requiresMaterial: Bool = false,
+        materialAvailable: Bool = true,
+        requiresPhysicalSupport: Bool = false,
+        physicalSupportAvailable: Bool = true
+    ) {
+        self.hasPendingPhysicalAction = hasPendingPhysicalAction
+        self.requiresTool = requiresTool
+        self.toolAvailable = toolAvailable
+        self.requiresMaterial = requiresMaterial
+        self.materialAvailable = materialAvailable
+        self.requiresPhysicalSupport = requiresPhysicalSupport
+        self.physicalSupportAvailable = physicalSupportAvailable
+    }
+
+    public var blocker: AgentProductiveSourceExecutionBlocker? {
+        if !hasPendingPhysicalAction { return .noPendingPhysicalAction }
+        if requiresTool && !toolAvailable { return .toolUnavailable }
+        if requiresMaterial && !materialAvailable { return .materialUnavailable }
+        if requiresPhysicalSupport && !physicalSupportAvailable {
+            return .physicalSupportUnavailable
+        }
+        return nil
+    }
+
+    public var executable: Bool { blocker == nil }
+}
+
 public enum AgentProductiveSourceViability: String, Codable, CaseIterable, Sendable {
     case observed
     case viable

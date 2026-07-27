@@ -33,6 +33,28 @@ private enum PebbleAgentAgricultureProofError: Error {
     case failed(String)
 }
 
+struct PebbleLiveAgriculturalPlanEligibility {
+    let actorID: AgentID
+    let positions: [AgentPosition]
+    let hasHoe: Bool
+    let seedCount: Int
+    let storage: BlockEntityData?
+    let observedSoilCount: Int
+    let observedWaterCount: Int
+    let minimumCells: Int
+
+    var executable: Bool {
+        hasHoe && seedCount >= positions.count && storage != nil
+            && positions.count >= minimumCells
+    }
+}
+
+struct PebbleLiveProductiveSourceExecutionAssessment {
+    let executable: Bool
+    let reason: String
+    let materialContract: String
+}
+
 extension PebbleAgentController {
     func handleAgriculture(
         _ arguments: [String],
@@ -104,51 +126,29 @@ extension PebbleAgentController {
             guard let actorID = AgentID(rawValue: snapshot.id),
                   let observationRecord = session.ecologicalObservations(for: actorID).first,
                   observationRecord.observation.isFresh(atSimulationTick: session.tick),
-                  let probe = probesByAgentId[snapshot.id], probe.world === world, !probe.dead else {
+                  let eligibility = liveAgriculturalPlanEligibility(
+                      world: world,
+                      actorID: actorID,
+                      observation: observationRecord.observation,
+                      session: session
+                  ) else {
                 trace("agriculture autonomy candidate=\(snapshot.id) refused=observation_or_embodiment")
                 continue
             }
-            let embodiment = PebbleAgentEmbodiment(probe: probe)
-            let hasHoe = embodiment.carriedItems.compactMap { $0 }.contains {
-                $0.count > 0 && itemDef($0.id).tool?.type == "hoe"
-            }
-            let hasSeeds = materialCustodyGateway.placementBinding(
-                actor: embodiment, requiredBlockID: Int(B.wheat)
-            ) != nil
-            let storage = nearestLiveAgricultureContainer(
-                world: world, origin: embodiment.position, radius: 8
-            )
-            let observation = observationRecord.observation
-            let maximum = session.agricultureSnapshot().configuration?.maximumCellsPerPlot ?? 4
-            let minimum = session.agricultureSnapshot().configuration?.minimumCellsPerPlot ?? 2
-            let positions = observation.soils.filter { soil in
-                guard soil.tillable else { return false }
-                let physical = world.getBlock(
-                    soil.position.x, soil.position.y, soil.position.z
-                ) >> 4
-                guard physical == Int(B.dirt) || physical == Int(B.grass_block)
-                        || physical == Int(B.dirt_path) else { return false }
-                return observation.water.contains { water in
-                    abs(water.position.x - soil.position.x) <= 4
-                        && abs(water.position.z - soil.position.z) <= 4
-                        && (0...1).contains(water.position.y - soil.position.y)
-                }
-            }.map(\.position).sorted(by: agricultureLivePositionSort)
-            let bounded = Array(positions.prefix(maximum))
-            guard hasHoe, hasSeeds, let storage, bounded.count >= minimum else {
+            guard eligibility.executable, let storage = eligibility.storage else {
                 trace(
                     "agriculture autonomy candidate=\(actorID.rawValue) refused=materials_or_site "
-                        + "hoe=\(hasHoe ? 1 : 0) seeds=\(hasSeeds ? 1 : 0) "
-                        + "storage=\(storage == nil ? 0 : 1) observedSoils=\(observation.soils.count) "
-                        + "observedWater=\(observation.water.count) eligible=\(positions.count) "
-                        + "completion=\(observation.diagnostics.completion.rawValue) "
-                        + "cells=\(observation.diagnostics.cellsConsidered) "
-                        + "chunks=\(observation.diagnostics.chunksTouched)"
+                        + "hoe=\(eligibility.hasHoe ? 1 : 0) "
+                        + "seeds=\(eligibility.seedCount) required=\(eligibility.positions.count) "
+                        + "storage=\(eligibility.storage == nil ? 0 : 1) "
+                        + "observedSoils=\(eligibility.observedSoilCount) "
+                        + "observedWater=\(eligibility.observedWaterCount) "
+                        + "eligible=\(eligibility.positions.count)"
                 )
                 continue
             }
             let operation = AgentReplayOperation.planAgriculturalPlot(
-                plannerID: actorID, positions: bounded, crop: .wheat,
+                plannerID: actorID, positions: eligibility.positions, crop: .wheat,
                 sourceObservationEventID: observationRecord.causalEventID,
                 designatedStorageLocationID: "container:\(storage.x),\(storage.y),\(storage.z)"
             )
@@ -156,7 +156,7 @@ extension PebbleAgentController {
                 operation, session: &session, recorder: &recorder
             ) == nil {
                 _ = try session.planAgriculturalPlot(
-                    plannerID: actorID, positions: bounded, crop: .wheat,
+                    plannerID: actorID, positions: eligibility.positions, crop: .wheat,
                     sourceObservationEventID: observationRecord.causalEventID,
                     designatedStorageLocationID: "container:\(storage.x),\(storage.y),\(storage.z)"
                 )
@@ -165,12 +165,202 @@ extension PebbleAgentController {
             trace(
                 "agriculture autonomy observer=\(actorID.rawValue) observation=fresh "
                     + "soil=real water=real tool=real seeds=real storage=real "
-                    + "plot=planned cells=\(bounded.count) next=\(intent?.kind.rawValue ?? "none") "
+                    + "plot=planned cells=\(eligibility.positions.count) "
+                    + "next=\(intent?.kind.rawValue ?? "none") "
                     + "worldMutation=none materialMutation=none"
             )
             return true
         }
         return false
+    }
+
+    func liveAgriculturalPlanEligibility(
+        world: World,
+        actorID: AgentID,
+        observation: AgentEcologicalObservation,
+        session: AgentSimulationSession
+    ) -> PebbleLiveAgriculturalPlanEligibility? {
+        guard let probe = probesByAgentId[actorID.rawValue],
+              probe.world === world, !probe.dead else {
+            return nil
+        }
+        let embodiment = PebbleAgentEmbodiment(probe: probe)
+        let hasHoe = embodiment.carriedItems.compactMap { $0 }.contains {
+            $0.count > 0 && itemDef($0.id).tool?.type == "hoe"
+        }
+        let seedCount = embodiment.carriedItems.compactMap { $0 }.filter {
+            itemDef($0.id).name == AgentAgriculturalCrop.wheat.plantingItemKey
+        }.reduce(0) { $0 + $1.count }
+        let storage = nearestLiveAgricultureContainer(
+            world: world, origin: embodiment.position, radius: 8
+        )
+        let configuration = session.agricultureSnapshot().configuration
+        let maximum = configuration?.maximumCellsPerPlot ?? 4
+        let minimum = configuration?.minimumCellsPerPlot ?? 2
+        let positions = observation.soils.filter { soil in
+            guard soil.tillable else { return false }
+            let physical = world.getBlock(
+                soil.position.x, soil.position.y, soil.position.z
+            ) >> 4
+            guard physical == Int(B.dirt) || physical == Int(B.grass_block)
+                    || physical == Int(B.dirt_path) else { return false }
+            return observation.water.contains { water in
+                abs(water.position.x - soil.position.x) <= 4
+                    && abs(water.position.z - soil.position.z) <= 4
+                    && (0...1).contains(water.position.y - soil.position.y)
+            }
+        }.map(\.position).sorted(by: agricultureLivePositionSort)
+        return PebbleLiveAgriculturalPlanEligibility(
+            actorID: actorID,
+            positions: Array(positions.prefix(maximum)),
+            hasHoe: hasHoe,
+            seedCount: seedCount,
+            storage: storage,
+            observedSoilCount: observation.soils.count,
+            observedWaterCount: observation.water.count,
+            minimumCells: minimum
+        )
+    }
+
+    func liveAgriculturalSourceExecution(
+        world: World,
+        position: AgentPosition,
+        isCrop: Bool,
+        session: AgentSimulationSession
+    ) -> PebbleLiveProductiveSourceExecutionAssessment {
+        let plots = session.agricultureSnapshot().plots
+        for snapshot in session.snapshot().agents.sorted(by: { $0.id < $1.id }) {
+            guard let actorID = AgentID(rawValue: snapshot.id),
+                  let intent = session.nextAgriculturalIntent(for: actorID),
+                  plots.first(where: { $0.plotID == intent.plotID })?.plannerID
+                    == actorID else {
+                continue
+            }
+            let physicalPosition = intent.kind == .harvest
+                ? AgentPosition(
+                    x: intent.position.x,
+                    y: intent.position.y + 1,
+                    z: intent.position.z
+                )
+                : intent.position
+            guard physicalPosition == position,
+                  isCrop == (intent.kind == .harvest) else {
+                continue
+            }
+            guard let probe = probesByAgentId[actorID.rawValue],
+                  probe.world === world, !probe.dead else {
+                let facts = AgentProductiveSourceExecutionFacts(
+                    hasPendingPhysicalAction: true,
+                    requiresPhysicalSupport: true,
+                    physicalSupportAvailable: false
+                )
+                return PebbleLiveProductiveSourceExecutionAssessment(
+                    executable: facts.executable,
+                    reason: "agricultural planner embodiment unavailable",
+                    materialContract: "planner=\(actorID.rawValue)"
+                        + "|blocker=\(facts.blocker!.rawValue)"
+                )
+            }
+            let items = probe.carriedItems.compactMap { $0 }
+            let hasHoe = items.contains {
+                $0.count > 0 && itemDef($0.id).tool?.type == "hoe"
+            }
+            let hasSeeds = items.contains {
+                $0.count > 0
+                    && itemDef($0.id).name
+                        == AgentAgriculturalCrop.wheat.plantingItemKey
+            }
+            let facts: AgentProductiveSourceExecutionFacts
+            let reason: String
+            switch intent.kind {
+            case .till:
+                facts = AgentProductiveSourceExecutionFacts(
+                    hasPendingPhysicalAction: true,
+                    requiresTool: true,
+                    toolAvailable: hasHoe
+                )
+                reason = hasHoe ? "till action executable" : "hoe unavailable"
+            case .plant:
+                facts = AgentProductiveSourceExecutionFacts(
+                    hasPendingPhysicalAction: true,
+                    requiresMaterial: true,
+                    materialAvailable: hasSeeds
+                )
+                reason = hasSeeds ? "plant action executable" : "seed unavailable"
+            case .harvest:
+                facts = AgentProductiveSourceExecutionFacts(
+                    hasPendingPhysicalAction: true
+                )
+                reason = "harvest action executable"
+            case .store, .maturityObserved, .reconcile:
+                facts = AgentProductiveSourceExecutionFacts(
+                    hasPendingPhysicalAction: false
+                )
+                reason = "no source-bound agricultural action"
+            }
+            return PebbleLiveProductiveSourceExecutionAssessment(
+                executable: facts.executable,
+                reason: reason,
+                materialContract: "intent=\(intent.kind.rawValue)"
+                    + "|planner=\(actorID.rawValue)|hoe=\(hasHoe)"
+                    + "|seeds=\(hasSeeds)"
+                    + "|blocker=\(facts.blocker?.rawValue ?? "none")"
+            )
+        }
+
+        if plots.isEmpty, !isCrop {
+            for snapshot in session.snapshot().agents.sorted(by: { $0.id < $1.id }) {
+                guard let actorID = AgentID(rawValue: snapshot.id),
+                      let record = session.ecologicalObservations(for: actorID).first,
+                      record.observation.isFresh(atSimulationTick: session.tick),
+                      let eligibility = liveAgriculturalPlanEligibility(
+                          world: world,
+                          actorID: actorID,
+                          observation: record.observation,
+                          session: session
+                      ),
+                      eligibility.positions.contains(position) else {
+                    continue
+                }
+                let facts = AgentProductiveSourceExecutionFacts(
+                    hasPendingPhysicalAction: true,
+                    requiresTool: true,
+                    toolAvailable: eligibility.hasHoe,
+                    requiresMaterial: true,
+                    materialAvailable:
+                        eligibility.seedCount >= eligibility.positions.count,
+                    requiresPhysicalSupport: true,
+                    physicalSupportAvailable:
+                        eligibility.storage != nil
+                            && eligibility.positions.count
+                                >= eligibility.minimumCells
+                )
+                return PebbleLiveProductiveSourceExecutionAssessment(
+                    executable: facts.executable,
+                    reason: eligibility.executable
+                        ? "new bounded plot action executable"
+                        : "bounded plot material preconditions unavailable",
+                    materialContract: "newPlot=1|planner=\(actorID.rawValue)"
+                        + "|hoe=\(eligibility.hasHoe)"
+                        + "|seeds=\(eligibility.seedCount)"
+                        + "|required=\(eligibility.positions.count)"
+                        + "|storage=\(eligibility.storage != nil)"
+                        + "|blocker=\(facts.blocker?.rawValue ?? "none")"
+                )
+            }
+        }
+
+        let facts = AgentProductiveSourceExecutionFacts(
+            hasPendingPhysicalAction: false
+        )
+        return PebbleLiveProductiveSourceExecutionAssessment(
+            executable: facts.executable,
+            reason: isCrop
+                ? "crop outside current harvest action"
+                : "soil outside current executable agricultural action",
+            materialContract: "intent=none"
+                + "|blocker=\(facts.blocker!.rawValue)"
+        )
     }
 
     /// Connects fresh physical crop/soil observations back to the existing

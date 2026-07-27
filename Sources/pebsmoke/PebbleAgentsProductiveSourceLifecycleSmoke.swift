@@ -68,6 +68,43 @@ private func productiveObservation(
 func runPebbleAgentsProductiveSourceLifecycleSmoke() {
     section("PebbleAgents local productive source lifecycle")
 
+    let executableAgriculture = AgentProductiveSourceExecutionFacts(
+        hasPendingPhysicalAction: true,
+        requiresTool: true,
+        toolAvailable: true,
+        requiresMaterial: true,
+        materialAvailable: true,
+        requiresPhysicalSupport: true,
+        physicalSupportAvailable: true
+    )
+    check(
+        "material-compatible agriculture is executable only with a pending action and all physical preconditions",
+        executableAgriculture.executable
+            && executableAgriculture.blocker == nil
+    )
+    check(
+        "missing agricultural tool is an explicit execution blocker",
+        AgentProductiveSourceExecutionFacts(
+            hasPendingPhysicalAction: true,
+            requiresTool: true,
+            toolAvailable: false
+        ).blocker == .toolUnavailable
+    )
+    check(
+        "missing agricultural material is an explicit execution blocker",
+        AgentProductiveSourceExecutionFacts(
+            hasPendingPhysicalAction: true,
+            requiresMaterial: true,
+            materialAvailable: false
+        ).blocker == .materialUnavailable
+    )
+    check(
+        "an already completed action cannot leave a viable source",
+        AgentProductiveSourceExecutionFacts(
+            hasPendingPhysicalAction: false
+        ).blocker == .noPendingPhysicalAction
+    )
+
     var unchanged = productiveSourceSession("productive-source-unchanged")
     _ = try! unchanged.recordProductiveSourceObservations([
         productiveObservation()
