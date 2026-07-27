@@ -250,6 +250,99 @@ extension AgentSimulationSession {
         return nil
     }
 
+    /// Reopens a completed plot only from a fresh local observation proving
+    /// that every retained cell is still real, crop-supporting farmland.
+    /// Physical seed/tool custody remains a Pebble-side precondition.
+    @discardableResult
+    public mutating func renewAgriculturalPlot(
+        plotID: AgentAgriculturalPlotID,
+        plannerID: AgentID,
+        sourceObservationEventID: AgentCausalEventID
+    ) throws -> AgentAgriculturalPlot {
+        var candidate = self
+        let plot = try candidate.renewAgriculturalPlotInPlace(
+            plotID: plotID,
+            plannerID: plannerID,
+            sourceObservationEventID: sourceObservationEventID
+        )
+        try candidate.validateAgricultureStateIfEnabled()
+        self = candidate
+        return plot
+    }
+
+    private mutating func renewAgriculturalPlotInPlace(
+        plotID: AgentAgriculturalPlotID,
+        plannerID: AgentID,
+        sourceObservationEventID: AgentCausalEventID
+    ) throws -> AgentAgriculturalPlot {
+        guard var state = agricultureState else {
+            throw AgentSessionError.agriculture(.disabled)
+        }
+        guard let plotIndex = state.plots.firstIndex(where: {
+            $0.plotID == plotID
+        }), state.plots[plotIndex].plannerID == plannerID,
+              state.plots[plotIndex].phase == .cycleCompleted,
+              state.plots[plotIndex].cells.allSatisfy({
+                  $0.phase == .harvested
+              }),
+              let observationRecord = ecologicalObservations(
+                  for: plannerID
+              ).first(where: {
+                  $0.causalEventID == sourceObservationEventID
+                      && $0.observation.isFresh(atSimulationTick: tick)
+              }) else {
+            throw AgentSessionError.agriculture(
+                .invalidAction("completed plot or fresh renewal observation")
+            )
+        }
+        let soils = observationRecord.observation.soils
+        guard state.plots[plotIndex].cells.allSatisfy({ cell in
+            soils.contains {
+                $0.position == cell.position
+                    && $0.alreadyFarmland && $0.supportsCrop
+            }
+        }) else {
+            throw AgentSessionError.agriculture(
+                .invalidAction("renewal requires observed physical farmland")
+            )
+        }
+        try prevalidateCausalAppend(count: 1)
+        let digest = AgentAgricultureDigest.make(
+            "\(state.rollingDigest)|renew|\(plotID.rawValue)|"
+                + sourceObservationEventID.rawValue
+        )
+        let event = try requiredAgricultureEvent(
+            kind: .agriculturalPlotPlanned,
+            actorID: plannerID,
+            causes: [
+                state.plots[plotIndex].lastAgricultureEventID,
+                sourceObservationEventID,
+            ],
+            payload: agriculturePayload(
+                plotID: plotID,
+                status: "renewed",
+                physicalFingerprint: 0,
+                quantity: state.plots[plotIndex].cells.count,
+                digest: digest
+            ),
+            summary: "agricultural plot renewed from observed farmland id="
+                + plotID.rawValue
+        )
+        for index in state.plots[plotIndex].cells.indices {
+            state.plots[plotIndex].cells[index].phase = .prepared
+            state.plots[plotIndex].cells[index].lastWorkEventID = event.eventID
+        }
+        state.plots[plotIndex].phase = .planting
+        state.plots[plotIndex].plantedCivilDate = nil
+        state.plots[plotIndex].harvestedCivilDate = nil
+        state.plots[plotIndex].lastAgricultureEventID = event.eventID
+        state.reservations.removeAll { $0.plotID == plotID }
+        state.lastAgricultureEventID = event.eventID
+        state.rollingDigest = digest
+        agricultureState = state
+        return state.plots[plotIndex]
+    }
+
     @discardableResult
     public mutating func recordAgriculturalActionSuccess(
         _ outcome: AgentAgriculturalActionOutcome

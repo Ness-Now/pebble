@@ -1177,6 +1177,11 @@ extension PebbleAgentController {
                 )
             }
             if session.agricultureEnabled {
+                try reconcileLiveAgriculturalLifecycle(
+                    world: world,
+                    session: &session,
+                    recorder: &recorder
+                )
                 _ = try prepareLiveAgriculturalPlanIfEligible(
                     world: world, session: &session, recorder: &recorder
                 )

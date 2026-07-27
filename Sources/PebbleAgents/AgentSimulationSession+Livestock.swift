@@ -367,6 +367,12 @@ extension AgentSimulationSession {
         guard var state = livestockState else { throw AgentSessionError.livestock(.disabled) }
         guard resolutions.count == state.managedAnimals.filter({ $0.status != .released }).count,
               Set(resolutions.map(\.recordID)).count == resolutions.count else { throw AgentSessionError.livestock(.invalidOutcome("complete unique reconciliation")) }
+        for index in state.activeTasks.indices where
+            !state.activeTasks[index].status.terminal
+                && state.activeTasks[index].expiresAtTick < tick {
+            state.activeTasks[index].status = .expired
+        }
+        state.reservations.removeAll { $0.expiresAtTick < tick }
         let lossCount = resolutions.filter { [.missing, .dead].contains($0.kind) }.filter { resolution in
             !state.lossRecords.contains(where: { $0.recordID == resolution.recordID })
         }.count

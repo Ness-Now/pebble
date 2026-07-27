@@ -239,6 +239,11 @@ public enum AgentReplayOperation: Codable {
         contenders: [AgentID]
     )
     case recordAgriculturalAction(AgentAgriculturalActionOutcome)
+    case renewAgriculturalPlot(
+        plotID: AgentAgriculturalPlotID,
+        plannerID: AgentID,
+        sourceObservationEventID: AgentCausalEventID
+    )
     case setWildSubsistenceEnabled(Bool, configuration: AgentWildSubsistenceConfiguration)
     case selectWildSubsistenceOpportunity(AgentSubsistenceDecisionContext)
     case recordWildSubsistenceOutcome(AgentSubsistenceOutcome)
@@ -333,6 +338,7 @@ public enum AgentReplayOperation: Codable {
         case .planAgriculturalPlot: return .agriculturalPlotPlanning
         case .reserveAgriculturalCell: return .agriculturalReservation
         case .recordAgriculturalAction: return .agriculturalAction
+        case .renewAgriculturalPlot: return .agriculturalAction
         case .setWildSubsistenceEnabled: return .wildSubsistenceFeature
         case .selectWildSubsistenceOpportunity: return .subsistenceOpportunitySelection
         case .recordWildSubsistenceOutcome: return .wildSubsistenceOutcome
@@ -386,6 +392,11 @@ public enum AgentReplayOperation: Codable {
             raw = "ecological-observation:\(observation.observerID.rawValue):"
                 + "\(observation.observedAtSimulationTick):\(observation.digest)"
         case let .recordAgriculturalAction(outcome): raw = outcome.actionID.rawValue
+        case let .renewAgriculturalPlot(
+            plotID, plannerID, sourceObservationEventID
+        ):
+            raw = "agriculture-renew:\(plotID.rawValue):"
+                + "\(plannerID.rawValue):\(sourceObservationEventID.rawValue)"
         case let .recordWildSubsistenceOutcome(outcome): raw = outcome.attemptID.rawValue
         case let .applyLivestockOperation(operation): raw = operation.operationIDText
         case let .applyWorkCommitmentOperation(operation):
@@ -1303,6 +1314,14 @@ extension AgentSimulationSession {
             )
         case let .recordAgriculturalAction(outcome):
             _ = try candidate.recordAgriculturalActionSuccess(outcome)
+        case let .renewAgriculturalPlot(
+            plotID, plannerID, sourceObservationEventID
+        ):
+            _ = try candidate.renewAgriculturalPlot(
+                plotID: plotID,
+                plannerID: plannerID,
+                sourceObservationEventID: sourceObservationEventID
+            )
         case let .setWildSubsistenceEnabled(enabled, configuration):
             try candidate.setWildSubsistenceEnabled(enabled, configuration: configuration)
         case let .selectWildSubsistenceOpportunity(context):

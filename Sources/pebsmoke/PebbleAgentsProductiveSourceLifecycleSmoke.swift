@@ -47,7 +47,8 @@ private func productiveObservation(
     observationReference: String = "event-1",
     unavailableReason: String? = nil,
     withdrawalReason: String? = nil,
-    renewalReason: String? = nil
+    renewalReason: String? = nil,
+    position: AgentPosition = AgentPosition(x: 2, y: 64, z: 0)
 ) -> AgentProductiveSourceObservation {
     AgentProductiveSourceObservation(
         sourceKey: key,
@@ -55,7 +56,7 @@ private func productiveObservation(
         materialFingerprint: material,
         observedAtTick: tick,
         observerID: AgentID(rawValue: "agent_0")!,
-        physicalPosition: AgentPosition(x: 2, y: 64, z: 0),
+        physicalPosition: position,
         disposition: disposition,
         observationReference: observationReference,
         temporarilyUnavailableReason: unavailableReason,
@@ -110,6 +111,13 @@ func runPebbleAgentsProductiveSourceLifecycleSmoke() {
         "materially changed local source becomes renewed",
         unchanged.productiveSourceSnapshot().sources[0].viability == .renewed
             && unchanged.productiveSourceSnapshot().sources[0].renewalCount == 1
+    )
+    check(
+        "logical source generation ignores event IDs but advances on material renewal",
+        first.sources[0].logicalGenerationKey
+            == second.sources[0].logicalGenerationKey
+            && unchanged.productiveSourceSnapshot().sources[0]
+                .logicalGenerationKey != second.sources[0].logicalGenerationKey
     )
 
     var unavailable = productiveSourceSession("productive-source-unavailable")
@@ -169,7 +177,8 @@ func runPebbleAgentsProductiveSourceLifecycleSmoke() {
         productiveObservation(
             key: "wild:sweet_berry_bush@5,64,0",
             material: "sweet_berry_bush:young",
-            observationReference: "event-other"
+            observationReference: "event-other",
+            position: AgentPosition(x: 5, y: 64, z: 0)
         ),
     ])
     check(
@@ -179,6 +188,13 @@ func runPebbleAgentsProductiveSourceLifecycleSmoke() {
                 "wild:sweet_berry_bush@2,64,0",
                 "wild:sweet_berry_bush@5,64,0",
             ]
+    )
+    check(
+        "domain-position lookup selects the exact eligible local source",
+        multiple.productiveSource(
+            domain: .wildGathering,
+            at: AgentPosition(x: 5, y: 64, z: 0)
+        )?.sourceKey == "wild:sweet_berry_bush@5,64,0"
     )
 
     let boundedConfiguration = try! AgentProductiveSourceConfiguration(

@@ -315,6 +315,30 @@ func runPebbleAgentsAgricultureSmoke() {
           session.practiceUnits(
             agentID: AgentID(rawValue: "agent_0")!, domain: .cultivation
           ) == 6)
+    let renewalObservation = try! session.recordEcologicalObservation(
+        agricultureObservation(session, mature: true)
+    )
+    let renewalPractice = session.practiceUnits(
+        agentID: AgentID(rawValue: "agent_0")!, domain: .cultivation
+    )
+    _ = try! session.renewAgriculturalPlot(
+        plotID: plotID,
+        plannerID: AgentID(rawValue: "agent_0")!,
+        sourceObservationEventID: renewalObservation.causalEventID
+    )
+    check("fresh observed farmland reopens the same bounded plot",
+          session.agricultureSnapshot().plots[0].phase == .planting
+            && session.agricultureSnapshot().plots[0].cells.allSatisfy {
+                $0.phase == .prepared
+            }
+            && session.nextAgriculturalIntent(
+                for: AgentID(rawValue: "agent_0")!
+            )?.kind == .plant)
+    check("plot renewal creates no practice or material success",
+          session.practiceUnits(
+              agentID: AgentID(rawValue: "agent_0")!, domain: .cultivation
+          ) == renewalPractice
+            && session.agricultureSnapshot().completedCycleCount == 1)
 
     try! session.setTeachingEnabled(true)
     let teacherID = AgentID(rawValue: "agent_0")!
@@ -460,6 +484,17 @@ func runPebbleAgentsAgricultureSmoke() {
         replayed, plotID: replayPlotID, cellIndex: nil, kind: .store,
         suffix: "store"
     )), to: &replayed)
+    _ = try! recorder.apply(.recordEcologicalObservation(
+        agricultureObservation(replayed, mature: true)
+    ), to: &replayed)
+    let replayRenewalEvent = replayed.ecologicalObservations(
+        for: AgentID(rawValue: "agent_0")!
+    ).first!.causalEventID
+    _ = try! recorder.apply(.renewAgriculturalPlot(
+        plotID: replayPlotID,
+        plannerID: AgentID(rawValue: "agent_0")!,
+        sourceObservationEventID: replayRenewalEvent
+    ), to: &replayed)
     let journal = try! recorder.journal(
         named: AgentCheckpointName(rawValue: "agriculture-replay")!
     )

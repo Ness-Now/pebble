@@ -173,6 +173,164 @@ extension PebbleAgentController {
         return false
     }
 
+    /// Connects fresh physical crop/soil observations back to the existing
+    /// CIV-22 lifecycle. Observation publication is non-mutating; maturity and
+    /// cycle renewal are durable only after exact World verification.
+    func reconcileLiveAgriculturalLifecycle(
+        world: World,
+        session: inout AgentSimulationSession,
+        recorder: inout AgentReplayRecorder?
+    ) throws {
+        guard agricultureFeatureEnabled, session.agricultureEnabled else {
+            return
+        }
+        let actors = session.snapshot().agents.compactMap {
+            AgentID(rawValue: $0.id)
+        }.sorted()
+        let currentTick = session.tick
+        var plots = session.agricultureSnapshot().plots
+        for plot in plots where plot.phase != .cycleCompleted {
+            for cell in plot.cells where cell.phase == .planted {
+                let cropPosition = AgentPosition(
+                    x: cell.position.x,
+                    y: cell.position.y + 1,
+                    z: cell.position.z
+                )
+                let evidence = actors.compactMap { actorID in
+                    session.ecologicalObservations(for: actorID).first(where: {
+                        $0.observation.isFresh(atSimulationTick: currentTick)
+                            && $0.observation.crops.contains {
+                                $0.position == cropPosition
+                                    && $0.cropKey == plot.crop.rawValue
+                                    && $0.mature
+                            }
+                    }).flatMap { record in
+                        record.observation.crops.first {
+                            $0.position == cropPosition
+                                && $0.cropKey == plot.crop.rawValue
+                                && $0.mature
+                        }.map { (record, $0) }
+                    }
+                }.first
+                guard let (record, crop) = evidence,
+                      let date = session.civilDate(),
+                      let actionID = AgentAgriculturalActionID(
+                          rawValue: "auto-maturity:\(session.tick):"
+                              + "\(plot.plotID.rawValue):\(cell.index)"
+                      ) else {
+                    continue
+                }
+                let intent = AgentAgriculturalIntent(
+                    plotID: plot.plotID,
+                    cellIndex: cell.index,
+                    actorID: plot.plannerID,
+                    kind: .maturityObserved,
+                    position: cell.position
+                )
+                var candidate = session
+                var candidateRecorder = recorder
+                _ = try agricultureExecutor.observeMaturity(
+                    world: world,
+                    intent: intent,
+                    observationEventID: record.causalEventID,
+                    observedCrop: crop,
+                    civilDate: date,
+                    actionID: actionID,
+                    publish: { outcome in
+                        if try self.applyRecordedOperationIfActive(
+                            .recordAgriculturalAction(outcome),
+                            session: &candidate,
+                            recorder: &candidateRecorder
+                        ) != nil {
+                            guard let result = candidate.agricultureSnapshot()
+                                .retainedActions.last(where: {
+                                    $0.outcome.actionID == outcome.actionID
+                                }) else {
+                                throw ControllerError.agricultureBoundary(
+                                    "maturity replay publication missing"
+                                )
+                            }
+                            return result
+                        }
+                        return try candidate.recordAgriculturalActionSuccess(
+                            outcome
+                        )
+                    }
+                )
+                session = candidate
+                recorder = candidateRecorder
+                trace(
+                    "agriculture lifecycle maturity plot="
+                        + "\(plot.plotID.rawValue) cell=\(cell.index) "
+                        + "observation=\(record.causalEventID.rawValue) "
+                        + "world=verified mutation=none"
+                )
+            }
+        }
+
+        plots = session.agricultureSnapshot().plots
+        for plot in plots where plot.phase == .cycleCompleted {
+            guard let probe = probesByAgentId[plot.plannerID.rawValue],
+                  probe.world === world, !probe.dead else {
+                continue
+            }
+            let embodiment = PebbleAgentEmbodiment(probe: probe)
+            let hasHoe = embodiment.carriedItems.compactMap { $0 }.contains {
+                $0.count > 0 && itemDef($0.id).tool?.type == "hoe"
+            }
+            let seedCount = embodiment.carriedItems.compactMap { $0 }.filter {
+                itemDef($0.id).name == plot.crop.plantingItemKey
+            }.reduce(0) { $0 + $1.count }
+            guard hasHoe, seedCount >= plot.cells.count,
+                  plot.cells.allSatisfy({
+                      world.getBlock(
+                          $0.position.x, $0.position.y, $0.position.z
+                      ) >> 4 == Int(B.farmland)
+                          && world.getBlock(
+                              $0.position.x,
+                              $0.position.y + 1,
+                              $0.position.z
+                          ) == 0
+                  }),
+                  let observation = session.ecologicalObservations(
+                      for: plot.plannerID
+                  ).first(where: { record in
+                      record.observation.isFresh(
+                          atSimulationTick: session.tick
+                      ) && plot.cells.allSatisfy { cell in
+                          record.observation.soils.contains {
+                              $0.position == cell.position
+                                  && $0.alreadyFarmland
+                                  && $0.supportsCrop
+                          }
+                      }
+                  }) else {
+                continue
+            }
+            let operation = AgentReplayOperation.renewAgriculturalPlot(
+                plotID: plot.plotID,
+                plannerID: plot.plannerID,
+                sourceObservationEventID: observation.causalEventID
+            )
+            if try applyRecordedOperationIfActive(
+                operation,
+                session: &session,
+                recorder: &recorder
+            ) == nil {
+                _ = try session.renewAgriculturalPlot(
+                    plotID: plot.plotID,
+                    plannerID: plot.plannerID,
+                    sourceObservationEventID: observation.causalEventID
+                )
+            }
+            trace(
+                "agriculture lifecycle renewed plot=\(plot.plotID.rawValue) "
+                    + "observer=\(plot.plannerID.rawValue) "
+                    + "farmland=verified seeds=\(seedCount) tool=verified"
+            )
+        }
+    }
+
     private func agricultureGateDependencies() -> [(String, Bool)] {
         [
             ("PEBBLELAB_APP_AGENTS=1", featureEnabled),

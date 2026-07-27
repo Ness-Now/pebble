@@ -300,6 +300,7 @@ struct PebbleAgentAgricultureExecutor {
         container: BlockEntityData,
         civilDate: AgentCivilDate,
         seedReserveTarget: Int,
+        retainedSeedQuantity: Int = 0,
         materialGateway: PebbleAgentMaterialCustodyGateway,
         actionID: AgentAgriculturalActionID,
         publishAndVerify: (AgentAgriculturalActionOutcome) throws -> AgentAgriculturalActionRecord
@@ -327,10 +328,16 @@ struct PebbleAgentAgricultureExecutor {
             return stack
         }
         let materials = Dictionary(grouping: agriculturalStacks, by: \.identity)
-            .map { identity, stacks in
-                AgentMaterialStackSnapshot(
+            .compactMap { identity, stacks -> AgentMaterialStackSnapshot? in
+                var count = stacks.reduce(0) { $0 + $1.count }
+                if identity.itemKey
+                    == AgentAgriculturalCrop.wheat.plantingItemKey {
+                    count = max(0, count - max(0, retainedSeedQuantity))
+                }
+                guard count > 0 else { return nil }
+                return AgentMaterialStackSnapshot(
                     identity: identity,
-                    count: stacks.reduce(0) { $0 + $1.count }
+                    count: count
                 )
             }
             .sorted { $0.identity.itemKey < $1.identity.itemKey }

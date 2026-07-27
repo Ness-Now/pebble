@@ -654,6 +654,123 @@ extension PebbleAgentController {
                 )
             }
         try applyLivestockRecorded(.reconcile(resolutions), session: &session, recorder: &recorder)
+        try publishRenewableLivestockSourcesAndTasks(
+            world: world,
+            session: &session,
+            recorder: &recorder
+        )
+    }
+
+    private func publishRenewableLivestockSourcesAndTasks(
+        world: World,
+        session: inout AgentSimulationSession,
+        recorder: inout AgentReplayRecorder?
+    ) throws {
+        guard session.productiveSourceLifecycleEnabled else { return }
+        let snapshot = session.livestockSnapshot()
+        var observations: [AgentProductiveSourceObservation] = []
+        var contexts: [AgentRenewableLivestockTaskContext] = []
+        for record in snapshot.managedAnimals.sorted(by: {
+            $0.recordID < $1.recordID
+        }) {
+            guard let herd = snapshot.herds.first(where: {
+                $0.herdID == record.herdID
+            }), let actorID = herd.responsibleAgentIDs.sorted().first,
+                  let probe = probesByAgentId[actorID.rawValue],
+                  probe.world === world, !probe.dead,
+                  let runtimeID = livestockRuntimeEntityIDByRecord[
+                      record.recordID
+                  ], let animal = world.entityById[runtimeID] as? Animal,
+                  !animal.dead else {
+                continue
+            }
+            let embodiment = PebbleAgentEmbodiment(probe: probe)
+            let feedAvailable = embodiment.carriedItems.compactMap { $0 }
+                .contains { $0.count > 0 && animal.isFood($0) }
+            let productToolAvailable = embodiment.carriedItems.compactMap { $0 }
+                .contains {
+                    $0.count == 1 && itemDef($0.id).name == "shears"
+                }
+            let actionableProduct = record.productReady
+                && productToolAvailable
+            let actionableFeed = !record.breedingReady && feedAvailable
+            let living = record.status.resolvedLiving
+            let disposition: AgentProductiveSourceDisposition
+            let unavailableReason: String?
+            let withdrawalReason: String?
+            if !living {
+                disposition = .withdrawn
+                unavailableReason = nil
+                withdrawalReason = "managed animal is not physically resolved"
+            } else if actionableProduct || actionableFeed {
+                disposition = .viable
+                unavailableReason = nil
+                withdrawalReason = nil
+            } else {
+                disposition = .temporarilyUnavailable
+                unavailableReason = record.productReady
+                    ? "physical shears unavailable"
+                    : (record.breedingReady
+                        ? "animal physical state has no renewed task"
+                        : "compatible physical feed unavailable")
+                withdrawalReason = nil
+            }
+            let material = AgentAutonomousActivityDigest.make([
+                record.speciesKey,
+                record.status.rawValue,
+                record.lastObservedLifeStage.rawValue,
+                record.breedingReady ? "breeding-ready" : "feed-ready",
+                record.productReady ? "product-ready" : "no-product",
+                feedAvailable ? "feed-present" : "feed-absent",
+                productToolAvailable ? "tool-present" : "tool-absent",
+            ].joined(separator: "|"))
+            observations.append(AgentProductiveSourceObservation(
+                sourceKey: "livestock:animal:\(record.recordID.rawValue)",
+                domain: .livestock,
+                materialFingerprint: material,
+                observedAtTick: session.tick,
+                observerID: actorID,
+                physicalPosition: record.lastKnownPosition,
+                disposition: disposition,
+                observationReference:
+                    "livestock-reconcile:\(session.tick):"
+                        + record.recordID.rawValue,
+                temporarilyUnavailableReason: unavailableReason,
+                withdrawalReason: withdrawalReason,
+                renewalReason: disposition == .viable
+                    ? "exact physical animal or custody state changed" : nil
+            ))
+            contexts.append(AgentRenewableLivestockTaskContext(
+                actorID: actorID,
+                recordID: record.recordID,
+                compatibleFeedAvailable: feedAvailable,
+                productToolAvailable: productToolAvailable
+            ))
+        }
+        if !observations.isEmpty {
+            if try applyRecordedOperationIfActive(
+                .recordProductiveSourceObservations(observations),
+                session: &session,
+                recorder: &recorder
+            ) == nil {
+                _ = try session.recordProductiveSourceObservations(observations)
+            }
+        }
+        for context in contexts {
+            guard let request = session.renewableLivestockTaskRequest(context)
+            else { continue }
+            try applyLivestockRecorded(
+                .queueTask(request),
+                session: &session,
+                recorder: &recorder
+            )
+            trace(
+                "livestock lifecycle renewed actor=\(context.actorID.rawValue) "
+                    + "record=\(context.recordID.rawValue) "
+                    + "task=\(request.kind.rawValue) "
+                    + "source=local_physical materialMutation=none"
+            )
+        }
     }
 
     private func livestockStatus(_ session: AgentSimulationSession) -> PebbleAgentCommandResult {

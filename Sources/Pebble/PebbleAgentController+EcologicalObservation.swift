@@ -204,7 +204,7 @@ extension PebbleAgentController {
             )
         }
         sources += observation.fishing.map { fishing in
-            source(
+            return source(
                 key: "fishing:\(fishing.waterKey)@"
                     + positionKey(fishing.position),
                 domain: .fishing,

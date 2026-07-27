@@ -475,6 +475,71 @@ func runPebbleAgentsLivestockSmoke() {
           replay.report.verified && replay.report.schemaVersion == 15
             && (try! replay.session.durableStateBytes()) == (try! replayBase.durableStateBytes()))
 
+    var renewable = livestockBase("livestock-renewable-source")
+    try! renewable.setLivestockEnabled(true)
+    try! renewable.setAutonomousActivityEnabled(true)
+    try! renewable.setProductiveSourceLifecycleEnabled(true)
+    _ = try! renewable.recordEcologicalObservation(
+        livestockObservation(renewable)
+    )
+    let renewableObservation = renewable.ecologicalObservationSnapshot()
+        .observations.last!.causalEventID
+    try! renewable.applyLivestockOperation(.establishHerd(
+        herdID: herdID, speciesKey: "sheep", managementArea: area,
+        responsibleAgentIDs: [actor]
+    ))
+    try! renewable.applyLivestockOperation(.admitObservedAnimal(
+        recordID: firstID, herdID: herdID, actorID: actor,
+        speciesKey: "sheep", position: AgentPosition(x: 2, y: 64, z: 0),
+        lifeStage: .adult,
+        sourceObservationEventID: renewableObservation,
+        compatibleFeedAvailable: true
+    ))
+    try! renewable.applyLivestockOperation(.reconcile([
+        AgentManagedAnimalResolution(
+            recordID: firstID, kind: .resolvedLiving,
+            speciesKey: "sheep",
+            position: AgentPosition(x: 2, y: 64, z: 0),
+            lifeStage: .adult, productReady: true,
+            reason: "exact physical product state",
+            observedAtTick: renewable.tick
+        )
+    ]))
+    let renewableSource = AgentProductiveSourceObservation(
+        sourceKey: "livestock:animal:\(firstID.rawValue)",
+        domain: .livestock,
+        materialFingerprint: "sheep-product-ready",
+        observedAtTick: renewable.tick,
+        observerID: actor,
+        physicalPosition: AgentPosition(x: 2, y: 64, z: 0),
+        disposition: .viable,
+        observationReference: "exact-sheep-state",
+        renewalReason: "physical product became available"
+    )
+    _ = try! renewable.recordProductiveSourceObservations([
+        renewableSource
+    ])
+    let renewableBytes = try! renewable.durableStateBytes()
+    let productProposal = renewable.renewableLivestockTaskRequest(
+        AgentRenewableLivestockTaskContext(
+            actorID: actor, recordID: firstID,
+            compatibleFeedAvailable: true,
+            productToolAvailable: true
+        )
+    )
+    check("renewed physical animal state proposes one bounded product task",
+          productProposal?.kind == .collectProduct
+            && productProposal?.primaryAnimalRecordID == firstID
+            && (try! renewable.durableStateBytes()) == renewableBytes)
+    check("missing physical tool suppresses the product task",
+          renewable.renewableLivestockTaskRequest(
+              AgentRenewableLivestockTaskContext(
+                  actorID: actor, recordID: firstID,
+                  compatibleFeedAvailable: true,
+                  productToolAvailable: false
+              )
+          ) == nil)
+
     var movingTarget = livestockBase("livestock-moving-target")
     try! movingTarget.setLivestockEnabled(true)
     _ = try! movingTarget.recordEcologicalObservation(

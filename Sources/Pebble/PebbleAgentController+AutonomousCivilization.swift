@@ -256,9 +256,25 @@ extension PebbleAgentController {
                session.agricultureSnapshot().plots.first(where: {
                    $0.plotID == intent.plotID
                })?.plannerID == actorID {
+                let sourcePosition = intent.kind == .harvest
+                    ? AgentPosition(
+                        x: intent.position.x,
+                        y: intent.position.y + 1,
+                        z: intent.position.z
+                    )
+                    : intent.position
+                let productiveSource = session.productiveSource(
+                    domain: .agriculture,
+                    at: sourcePosition
+                )
+                if session.productiveSourceLifecycleEnabled,
+                   intent.kind != .store, productiveSource == nil {
+                    continue
+                }
                 let id = "agriculture:\(actorID.rawValue):\(intent.plotID.rawValue):"
                     + "\(intent.cellIndex ?? -1):\(intent.kind.rawValue)"
-                let work = commitment(actorID, domains: [.cultivation])
+                let work = productiveSource == nil && intent.kind != .store
+                    ? nil : commitment(actorID, domains: [.cultivation])
                 let target = intent.kind == .store
                     ? agricultureStoragePosition(for: intent.plotID, session: session) ?? intent.position
                     : AgentPosition(
@@ -272,13 +288,19 @@ extension PebbleAgentController {
                         stableReference: intent.plotID.rawValue,
                         target: target,
                         logicalTargetKey: "plot:\(intent.plotID.rawValue):"
-                            + "\(intent.cellIndex ?? -1)",
-                        physicalTarget: intent.position,
+                            + "\(intent.cellIndex ?? -1):"
+                            + (productiveSource?.logicalGenerationKey
+                                ?? "verified-storage"),
+                        physicalTarget: sourcePosition,
                         approachPosition: target,
-                        materialFingerprint: AgentAutonomousActivityDigest.make(
-                            "\(intent.kind.rawValue)|\(intent.position.x),"
-                                + "\(intent.position.y),\(intent.position.z)"
-                        ),
+                        materialFingerprint:
+                            productiveSource?.materialFingerprint
+                                ?? AgentAutonomousActivityDigest.make(
+                                    "\(intent.kind.rawValue)|"
+                                        + "\(intent.position.x),"
+                                        + "\(intent.position.y),"
+                                        + "\(intent.position.z)"
+                                ),
                         source: work == nil ? .opportunity : .commitment,
                         priorityBand: work == nil ? 30 : 20,
                         urgency: work == nil ? 62 : 76,
@@ -302,7 +324,23 @@ extension PebbleAgentController {
             case .wildGathering: domain = .wildGathering; workDomains = [.foraging]
             case .agriculture: domain = .agriculture; workDomains = [.cultivation]
             }
-            let work = commitment(opportunity.actorID, domains: workDomains)
+            let productiveSource = session.productiveSource(
+                domain: domain,
+                at: opportunity.lastObservedPosition
+            )
+            if session.productiveSourceLifecycleEnabled,
+               productiveSource == nil {
+                continue
+            }
+            if domain == .fishing,
+               probesByAgentId[opportunity.actorID.rawValue]?
+                .carriedItems.compactMap({ $0 }).contains(where: {
+                    itemDef($0.id).name == "fishing_rod"
+                }) != true {
+                continue
+            }
+            let work = productiveSource == nil
+                ? nil : commitment(opportunity.actorID, domains: workDomains)
             let id = "subsistence:\(opportunity.opportunityID.rawValue)"
             let navigationTarget = AgentPosition(
                 x: opportunity.lastObservedPosition.x,
@@ -318,16 +356,20 @@ extension PebbleAgentController {
                     actionKey: opportunity.strategy.rawValue,
                     stableReference: opportunity.opportunityID.rawValue,
                     target: navigationTarget,
-                    logicalTargetKey: opportunity.targetKey,
+                    logicalTargetKey:
+                        productiveSource?.logicalGenerationKey
+                            ?? opportunity.targetKey,
                     physicalTarget: opportunity.lastObservedPosition,
                     approachPosition: navigationTarget,
-                    materialFingerprint: AgentAutonomousActivityDigest.make(
-                        "\(opportunity.strategy.rawValue)|"
-                            + "\(opportunity.targetKey)|"
-                            + "\(opportunity.lastObservedPosition.x),"
-                            + "\(opportunity.lastObservedPosition.y),"
-                            + "\(opportunity.lastObservedPosition.z)"
-                    ),
+                    materialFingerprint:
+                        productiveSource?.materialFingerprint
+                            ?? AgentAutonomousActivityDigest.make(
+                                "\(opportunity.strategy.rawValue)|"
+                                    + "\(opportunity.targetKey)|"
+                                    + "\(opportunity.lastObservedPosition.x),"
+                                    + "\(opportunity.lastObservedPosition.y),"
+                                    + "\(opportunity.lastObservedPosition.z)"
+                            ),
                     source: work == nil ? .opportunity : .commitment,
                     priorityBand: work == nil ? 35 : 20,
                     urgency: max(50, min(90, opportunity.score)),
@@ -353,6 +395,14 @@ extension PebbleAgentController {
             let managedAnimal = livestock.managedAnimals.first {
                 $0.recordID == task.primaryAnimalRecordID
             }
+            let productiveSource = session.productiveSource(
+                for: "livestock:animal:"
+                    + task.primaryAnimalRecordID.rawValue
+            )
+            if session.productiveSourceLifecycleEnabled,
+               productiveSource?.viability.eligible != true {
+                continue
+            }
             candidates.append(markingLogicalContinuity(
                 AgentAutonomousActivityCandidate(
                     candidateID: id, actorID: task.responsibleAgentID,
@@ -361,18 +411,22 @@ extension PebbleAgentController {
                     stableReference: task.taskID.rawValue,
                     target: target,
                     logicalTargetKey:
-                        "animal:\(task.primaryAnimalRecordID.rawValue)",
+                        productiveSource?.logicalGenerationKey
+                            ?? "animal:\(task.primaryAnimalRecordID.rawValue)",
                     physicalTarget: target,
                     approachPosition: target,
-                    materialFingerprint: AgentAutonomousActivityDigest.make([
-                        managedAnimal?.recordID.rawValue ?? "missing",
-                        managedAnimal?.status.rawValue ?? "missing",
-                        managedAnimal?.lastObservedLifeStage.rawValue ?? "missing",
-                        managedAnimal?.breedingReady == true
-                            ? "breeding" : "not-breeding",
-                        managedAnimal?.productReady == true
-                            ? "product" : "no-product",
-                    ].joined(separator: "|")),
+                    materialFingerprint:
+                        productiveSource?.materialFingerprint
+                            ?? AgentAutonomousActivityDigest.make([
+                                managedAnimal?.recordID.rawValue ?? "missing",
+                                managedAnimal?.status.rawValue ?? "missing",
+                                managedAnimal?.lastObservedLifeStage.rawValue
+                                    ?? "missing",
+                                managedAnimal?.breedingReady == true
+                                    ? "breeding" : "not-breeding",
+                                managedAnimal?.productReady == true
+                                    ? "product" : "no-product",
+                            ].joined(separator: "|")),
                     source: work == nil ? .responsibility : .commitment,
                     priorityBand: work == nil ? 25 : 20, urgency: 72,
                     distance: distance(agent.position, target),

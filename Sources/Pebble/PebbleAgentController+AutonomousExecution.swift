@@ -306,7 +306,11 @@ extension PebbleAgentController {
             ) else { throw ControllerError.feedbackBoundary("agriculture storage unavailable") }
             _ = try agricultureExecutor.storeHarvest(
                 world: world, actor: actor, intent: intent, container: container,
-                civilDate: date, seedReserveTarget: 2,
+                civilDate: date, seedReserveTarget: 0,
+                retainedSeedQuantity:
+                    session.agricultureSnapshot().plots.first(where: {
+                        $0.plotID == intent.plotID
+                    })?.cells.count ?? 0,
                 materialGateway: materialCustodyGateway, actionID: actionID,
                 publishAndVerify: publish
             )
@@ -315,6 +319,13 @@ extension PebbleAgentController {
         }
         session = candidate
         recorder = candidateRecorder
+        try recordProductiveSourceSuccessIfPresent(
+            domain: .agriculture,
+            position: activity.candidate.physicalTarget ?? intent.position,
+            receiptID: actionID.rawValue,
+            session: &session,
+            recorder: &recorder
+        )
         return actionID.rawValue
     }
 
@@ -365,6 +376,13 @@ extension PebbleAgentController {
         }
         session = candidate
         recorder = candidateRecorder
+        try recordProductiveSourceSuccessIfPresent(
+            domain: .wildGathering,
+            position: opportunity.lastObservedPosition,
+            receiptID: attemptID.rawValue,
+            session: &session,
+            recorder: &recorder
+        )
         return attemptID.rawValue
     }
 
@@ -415,6 +433,13 @@ extension PebbleAgentController {
         }
         session = candidate
         recorder = candidateRecorder
+        try recordProductiveSourceSuccessIfPresent(
+            domain: .fishing,
+            position: opportunity.lastObservedPosition,
+            receiptID: attemptID.rawValue,
+            session: &session,
+            recorder: &recorder
+        )
         return attemptID.rawValue
     }
 
@@ -541,8 +566,11 @@ extension PebbleAgentController {
             let feedCount = actor.carriedItems.compactMap { $0 }.filter {
                 animal.isFood($0)
             }.reduce(0) { $0 + $1.count }
+            let reservedPlantingQuantity = task.taskID.rawValue
+                .hasPrefix("renewable-feed-") ? 0 : 2
             let pressure = session.livestockFeedPressure(
-                compatibleFeedQuantity: feedCount, reservedPlantingQuantity: 2
+                compatibleFeedQuantity: feedCount,
+                reservedPlantingQuantity: reservedPlantingQuantity
             )
             guard pressure.eligibleFeedQuantity > 0 else {
                 throw ControllerError.feedbackBoundary("planting reserve protects livestock feed")
@@ -577,7 +605,46 @@ extension PebbleAgentController {
         }
         session = candidate
         recorder = candidateRecorder
+        try recordProductiveSourceSuccessIfPresent(
+            domain: .livestock,
+            position: record.lastKnownPosition,
+            receiptID: actionID.rawValue,
+            session: &session,
+            recorder: &recorder
+        )
         return actionID.rawValue
+    }
+
+    private func recordProductiveSourceSuccessIfPresent(
+        domain: AgentAutonomousActivityDomain,
+        position: AgentPosition,
+        receiptID: String,
+        session: inout AgentSimulationSession,
+        recorder: inout AgentReplayRecorder?
+    ) throws {
+        guard session.productiveSourceLifecycleEnabled,
+              let source = session.productiveSource(
+                  domain: domain,
+                  at: position
+              ) else {
+            return
+        }
+        let operation = AgentReplayOperation.recordProductiveSourceSuccess(
+            sourceKey: source.sourceKey,
+            expectedMaterialFingerprint: source.materialFingerprint,
+            physicalReceiptID: receiptID
+        )
+        if try applyRecordedOperationIfActive(
+            operation,
+            session: &session,
+            recorder: &recorder
+        ) == nil {
+            _ = try session.recordProductiveSourceSuccess(
+                sourceKey: source.sourceKey,
+                expectedMaterialFingerprint: source.materialFingerprint,
+                physicalReceiptID: receiptID
+            )
+        }
     }
 
     func requireVerifiedAutonomousLivestockInteraction(
