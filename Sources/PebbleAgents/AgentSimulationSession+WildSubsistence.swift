@@ -139,9 +139,10 @@ extension AgentSimulationSession {
                 ))
             }
         }
-        let gatherable = Set(["sweet_berry_bush", "cave_vines", "cave_vines_plant",
-                              "red_mushroom", "brown_mushroom", "melon", "pumpkin"])
-        for plant in observation.plants where gatherable.contains(plant.plantKey) {
+        for plant in observation.plants
+            where AgentWildSubsistenceMaterialPolicy.isGatherablePlant(
+                plant.plantKey
+            ) {
             let distance = subsistenceDistance(origin, plant.position)
             let key = "plant:\(plant.plantKey)@\(subsistencePoint(plant.position))"
             guard distance <= context.maximumDistance, !reserved.contains(key) else { continue }

@@ -46,6 +46,22 @@ public enum AgentWildSubsistenceError: Error, Equatable, CustomStringConvertible
     }
 }
 
+public enum AgentWildSubsistenceMaterialPolicy {
+    public static let gatherablePlantKeys: Set<String> = [
+        "sweet_berry_bush",
+        "cave_vines",
+        "cave_vines_plant",
+        "red_mushroom",
+        "brown_mushroom",
+        "melon",
+        "pumpkin",
+    ]
+
+    public static func isGatherablePlant(_ plantKey: String) -> Bool {
+        gatherablePlantKeys.contains(plantKey)
+    }
+}
+
 public struct AgentWildSubsistenceConfiguration: Codable, Equatable, Sendable {
     public let maximumActiveOpportunities: Int
     public let opportunityLifetimeTicks: Int

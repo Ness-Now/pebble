@@ -199,12 +199,19 @@ extension PebbleAgentController {
             )
         }
         var sources = observation.plants.map { plant in
-            source(
+            let executable =
+                AgentWildSubsistenceMaterialPolicy.isGatherablePlant(
+                    plant.plantKey
+                )
+            return source(
                 key: "wild:\(plant.plantKey)@\(positionKey(plant.position))",
                 domain: .wildGathering,
-                material: "\(plant.plantKey)|\(plant.renewability.rawValue)",
+                material: "\(plant.plantKey)|\(plant.renewability.rawValue)"
+                    + "|gatherable=\(executable)",
                 position: plant.position,
-                disposition: .viable
+                disposition: executable ? .viable : .temporarilyUnavailable,
+                unavailableReason: executable
+                    ? nil : "plant has no canonical gathering action"
             )
         }
         sources += observation.fishing.map { fishing in

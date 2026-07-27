@@ -116,6 +116,17 @@ private func wildOutcome(
 func runPebbleAgentsWildSubsistenceSmoke() {
     section("PebbleAgents bounded wild subsistence")
 
+    check(
+        "wild source viability shares the canonical gatherable plant policy",
+        AgentWildSubsistenceMaterialPolicy.isGatherablePlant(
+            "sweet_berry_bush"
+        ) && AgentWildSubsistenceMaterialPolicy.isGatherablePlant("pumpkin")
+    )
+    check(
+        "locally observed non-gatherable flora is not an executable source",
+        !AgentWildSubsistenceMaterialPolicy.isGatherablePlant("dandelion")
+            && !AgentWildSubsistenceMaterialPolicy.isGatherablePlant("oak_sapling")
+    )
     check("WildSubsistence gate is default off", !wildBase("wild-off").wildSubsistenceEnabled)
     check("activation dependencies are atomic", {
         var noObservation = try! AgentSimulationSession(
