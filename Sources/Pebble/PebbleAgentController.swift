@@ -187,7 +187,13 @@ final class PebbleAgentController {
         return value
     }
 
-    func update(world: World?, player: Player?, worldID: String? = nil, dimension: Int = 0) {
+    func update(
+        world: World?,
+        player: Player?,
+        worldID: String? = nil,
+        dimension: Int = 0,
+        maximumSimulationTick: Int? = nil
+    ) {
         persistenceWorldID = worldID
         persistenceDimension = dimension
         guard let world else {
@@ -222,7 +228,14 @@ final class PebbleAgentController {
         let elapsedWorldTicks = worldTick - previousTick
         credit += elapsedWorldTicks * cognitiveHz
         let availableSteps = credit / 20
-        let executedSteps = min(availableSteps, Self.maxCognitiveStepsPerUpdate)
+        let horizonRemaining = maximumSimulationTick.map {
+            max(0, $0 - (session?.tick ?? $0))
+        } ?? Self.maxCognitiveStepsPerUpdate
+        let executedSteps = min(
+            availableSteps,
+            Self.maxCognitiveStepsPerUpdate,
+            horizonRemaining
+        )
         for _ in 0..<executedSteps {
             guard advanceOneTick(world: world, player: player) else { return }
             credit -= 20

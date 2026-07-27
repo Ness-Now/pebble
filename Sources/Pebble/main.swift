@@ -887,7 +887,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
                 world: game.world,
                 player: game.player,
                 worldID: game.worldRec?.id,
-                dimension: game.dim.rawValue
+                dimension: game.dim.rawValue,
+                maximumSimulationTick: gateB3AcceptanceHorizon
             )
             driveGateB3Acceptance()
             passiveObserverInputProof?.afterFrame()
@@ -1088,6 +1089,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         if let shock = gateB3AcceptanceShock, !gateB3ShockApplied,
            proof.simulationTick >= shockBoundary {
             gateB3ShockApplied = true
+            if shock == "material-reactivation-berry" {
+                agentController.traceGateB3AcceptanceSnapshot(world: game.world)
+            }
             agentController.applyGateB3AcceptanceShock(shock, world: game.world)
         }
         guard let updated = agentController.passiveProductProofSnapshot(),

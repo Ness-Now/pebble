@@ -18,6 +18,67 @@ extension PebbleAgentController {
             + "completionsBefore=\(autonomyBefore.completionCount) "
             + "workEvidenceBefore=\(workBefore.totalEvidenceCount)"
         switch kind {
+        case "material-reactivation-berry":
+            let actors = session.snapshot().agents.filter { $0.health > 0 }
+                .sorted { $0.id < $1.id }
+            guard let actor = actors.first else {
+                trace(
+                    "GATE_B_MATERIAL_REACTIVATION tick=\(session.tick) "
+                        + "applied=0 reason=no_living_observer"
+                )
+                return
+            }
+            let offsets = [
+                (1, 0), (0, 1), (-1, 0), (0, -1),
+                (1, 1), (-1, 1), (-1, -1), (1, -1),
+            ]
+            let target = offsets.lazy.compactMap { dx, dz -> PhysicalBlockPosition? in
+                let value = PhysicalBlockPosition(
+                    x: actor.position.x + dx,
+                    y: actor.position.y,
+                    z: actor.position.z + dz
+                )
+                guard world.getBlock(value.x, value.y, value.z) == 0 else {
+                    return nil
+                }
+                return value
+            }.first
+            guard let target else {
+                trace(
+                    "GATE_B_MATERIAL_REACTIVATION tick=\(session.tick) "
+                        + "applied=0 reason=no_local_physical_site actor=\(actor.id)"
+                )
+                return
+            }
+            let before = world.getBlock(target.x, target.y, target.z)
+            world.setBlock(
+                target.x, target.y, target.z,
+                Int(cell(B.sweet_berry_bush, 3)), SET_NO_NEIGHBORS
+            )
+            let expected = Int(cell(B.sweet_berry_bush, 3))
+            guard world.getBlock(target.x, target.y, target.z) == expected else {
+                world.setBlock(
+                    target.x, target.y, target.z, before, SET_NO_NEIGHBORS
+                )
+                precondition(
+                    world.getBlock(target.x, target.y, target.z) == before,
+                    "Gate B material reactivation rollback failed"
+                )
+                trace(
+                    "GATE_B_MATERIAL_REACTIVATION tick=\(session.tick) "
+                        + "applied=0 reason=physical_verification_failed "
+                        + "rollback=verified"
+                )
+                return
+            }
+            trace(
+                "GATE_B_MATERIAL_REACTIVATION tick=\(session.tick) "
+                    + "applied=1 actor=\(actor.id) source=sweet_berry_bush "
+                    + "position=\(target.x),\(target.y),\(target.z) "
+                    + "candidateInjected=0 opportunityInjected=0 "
+                    + "activityInjected=0 successInjected=0 "
+                    + "observation=normal_local_sensor"
+            )
         case "worker-care":
             let active = session.activeWorkCommitments()
                 .filter { $0.status == .active }
@@ -123,6 +184,7 @@ extension PebbleAgentController {
         let work = session.workCommitmentSnapshot()
         let causal = session.causalLedgerSnapshot().summary
         let physicalFood = session.physicalFoodSurvivalSnapshot()
+        let productiveSources = session.productiveSourceSnapshot()
         let durableDigest = (try? session.durableStateDigest().rawValue) ?? "unavailable"
 
         var physicalItems: [String: Int] = [:]
@@ -215,6 +277,74 @@ extension PebbleAgentController {
                 + "causalDropped=\(causal.droppedEventCount) "
                 + "digest=\(durableDigest) "
                 + passiveSocietyAuditSummary()
+        )
+        traceGateBFiniteWorldSnapshot(
+            session: session,
+            autonomy: autonomy,
+            sources: productiveSources,
+            activeWorkCommitments: activeCommitments
+        )
+    }
+
+    private func traceGateBFiniteWorldSnapshot(
+        session: AgentSimulationSession,
+        autonomy: AgentAutonomousActivitySnapshot,
+        sources: AgentProductiveSourceSnapshot,
+        activeWorkCommitments: Int
+    ) {
+        let viable = sources.sources.filter(\.viability.eligible)
+        let temporary = sources.sources.filter {
+            $0.viability == .temporarilyUnavailable
+        }
+        let depleted = sources.sources.filter { $0.viability == .depleted }
+        let withdrawn = sources.sources.filter { $0.viability == .withdrawn }
+        let activeCooldowns = autonomy.cooldowns.filter {
+            $0.untilTick >= session.tick
+        }.count
+        let expiredCooldowns = autonomy.cooldowns.count - activeCooldowns
+        let generated = (session.tick - passiveSocietyAudit.lastDecisionTick) <= 1
+            ? passiveSocietyAudit.lastGeneratedCandidateCount : -1
+        let state: String
+        let contradiction: String
+        if generated > 0 || !autonomy.activeActivities.isEmpty {
+            state = "PRODUCTIVE"
+            contradiction = "none"
+        } else if !viable.isEmpty {
+            state = "FALSE_QUIESCENCE"
+            contradiction = "viable_source_without_candidate"
+        } else if activeWorkCommitments > 0 {
+            state = "FALSE_QUIESCENCE"
+            contradiction = "active_work_without_candidate"
+        } else {
+            state = "QUIESCENT_NO_EXECUTABLE_SOURCE"
+            contradiction = "none"
+        }
+        let domains = AgentAutonomousActivityDomain.allCases.map { domain in
+            let values = sources.sources.filter { $0.domain == domain }
+            let candidateCount = passiveSocietyAudit
+                .lastGeneratedCandidatesByDomain[domain.rawValue, default: 0]
+            return "\(domain.rawValue):"
+                + "o\(values.count)"
+                + "v\(values.filter { $0.viability.eligible }.count)"
+                + "t\(values.filter { $0.viability == .temporarilyUnavailable }.count)"
+                + "d\(values.filter { $0.viability == .depleted }.count)"
+                + "w\(values.filter { $0.viability == .withdrawn }.count)"
+                + "c\(candidateCount)"
+        }.joined(separator: ",")
+        trace(
+            "GATE_B_FINITE_WORLD tick=\(session.tick) state=\(state) "
+                + "contradiction=\(contradiction) "
+                + "sourcesObserved=\(sources.sources.count) "
+                + "sourcesViable=\(viable.count) "
+                + "sourcesTemporary=\(temporary.count) "
+                + "sourcesDepleted=\(depleted.count) "
+                + "sourcesWithdrawn=\(withdrawn.count) "
+                + "candidatesGenerated=\(generated) "
+                + "activitiesActive=\(autonomy.activeActivities.count) "
+                + "workExecutable=\(activeWorkCommitments) "
+                + "cooldownsActive=\(activeCooldowns) "
+                + "cooldownsExpired=\(expiredCooldowns) "
+                + "domains=\(domains)"
         )
     }
 }

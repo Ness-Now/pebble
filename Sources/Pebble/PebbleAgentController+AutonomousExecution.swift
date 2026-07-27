@@ -106,7 +106,8 @@ extension PebbleAgentController {
                 session: session
             )
             trace(
-                "autonomous activity completed actor=\(actorIDText) "
+                "autonomous activity completed tick=\(session.tick) "
+                    + "actor=\(actorIDText) "
                     + "domain=\(activity.candidate.domain.rawValue) "
                     + "action=\(activity.candidate.actionKey) receipt=\(receipt) "
                     + "manualTrigger=0"

@@ -29,6 +29,9 @@ struct PebbleAgentPassiveSocietyAudit {
     var completionsByAgent: [String: Int] = [:]
     var completionsByFamily: [String: Int] = [:]
     var lastDecisionCandidateByAgent: [String: String] = [:]
+    var lastDecisionTick = -1
+    var lastGeneratedCandidateCount = 0
+    var lastGeneratedCandidatesByDomain: [String: Int] = [:]
 
     mutating func reset(agentIDs: [String]) {
         self = PebbleAgentPassiveSocietyAudit()
@@ -332,6 +335,11 @@ extension PebbleAgentController {
         session: AgentSimulationSession
     ) {
         guard passiveObserverBootstrapComplete else { return }
+        passiveSocietyAudit.lastDecisionTick = session.tick
+        passiveSocietyAudit.lastGeneratedCandidateCount = candidates.count
+        passiveSocietyAudit.lastGeneratedCandidatesByDomain = Dictionary(
+            grouping: candidates, by: { $0.domain.rawValue }
+        ).mapValues(\.count)
         let autonomy = session.autonomousActivitySnapshot()
         let activeByAgent = Dictionary(uniqueKeysWithValues: autonomy.activeActivities.map {
             ($0.candidate.actorID.rawValue, $0)
