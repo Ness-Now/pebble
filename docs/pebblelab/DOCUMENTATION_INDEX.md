@@ -66,6 +66,16 @@ projection machine-lisible
 Gate B re-evaluation #4 reste un `FAIL` historique, Gate B reste non acquise et
 `CIV-26` non commencé.
 
+`GATE-B-CLOSURE-01` résout localement la contradiction entre sources
+physiquement présentes et actions réellement exécutables, puis valide une
+sémantique de monde fini sur trois seeds exactes et une réactivation
+matérielle externe. Son verdict maximal est `GATE B CLOSURE CANDIDATE`,
+`VALIDATED FOR REVIEW AND MANUAL PUBLICATION`; il ne marque ni publication ni
+acquisition canonique de Gate B. Le record humain est
+[`GATE_B_CLOSURE_01_SUMMARY.md`](GATE_B_CLOSURE_01_SUMMARY.md) et sa projection
+machine-lisible
+[`GATE_B_CLOSURE_01_SUMMARY.json`](GATE_B_CLOSURE_01_SUMMARY.json).
+
 ## `operational-runbook`
 
 - [`../pebblelab-3d-live-prototype.md`](../pebblelab-3d-live-prototype.md) est le
@@ -83,6 +93,10 @@ Gate B re-evaluation #4 reste un `FAIL` historique, Gate B reste non acquise et
   [`GATE_B_CONVERGENCE_01B_SUMMARY.json`](GATE_B_CONVERGENCE_01B_SUMMARY.json)
   enregistrent le progressive soak arrêté après Wave 2 et le verdict
   `NOT READY FOR GATE B RE-EVALUATION #5`.
+- [`GATE_B_CLOSURE_01_SUMMARY.md`](GATE_B_CLOSURE_01_SUMMARY.md) et
+  [`GATE_B_CLOSURE_01_SUMMARY.json`](GATE_B_CLOSURE_01_SUMMARY.json)
+  enregistrent la candidature locale de clôture fondée sur l'exécutabilité
+  physique, l'épuisement borné et la réactivation matérielle.
 - [`GATE_B_REEVALUATION_3_SUMMARY.json`](GATE_B_REEVALUATION_3_SUMMARY.json)
   conserve le résumé historique de l'évaluation #3 ; les logs et captures
   HEAD-bound restent temporaires.

@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "mission": "GATE-B-CLOSURE-01",
+  "date": "2026-07-27",
+  "verdict": "GATE B CLOSURE CANDIDATE",
+  "publicationStatus": "VALIDATED FOR REVIEW AND MANUAL PUBLICATION",
+  "remoteFoundation": "780d59d04b0e2b943cde2a9a4b39c9f93496ebe5",
+  "initialLocalHead": "a2efdeb756c589507cbbd09ab81c7475467d7294",
+  "evaluatedHead": "a4ed5832db9f4f57e4592be4ba7c26788fc7dd64",
+  "evidenceRoot": "/tmp/PebbleLab-GateB-Closure01-a4ed5832db9f4f57e4592be4ba7c26788fc7dd64",
+  "agricultureContradiction": {
+    "observedCompatibleSoils": 8,
+    "interpretation": "physical crop-compatible surfaces, not pending executable agricultural actions",
+    "rootCause": "source viability omitted bounded plot action and physical tool, material, storage, water, site, and phase prerequisites",
+    "resolution": "agriculture planning and productive-source projection share exact execution facts and explicit blockers"
+  },
+  "crossDomainAudit": {
+    "wildRootCause": "all observed flora were treated as viable although candidate generation supports only canonical gatherables",
+    "resolution": "candidate generation and source projection share one canonical gatherable-plant policy"
+  },
+  "commits": [
+    {
+      "sha": "6f407f60a39f3e76fb64f5b13e8f883bc457c106",
+      "classification": "PRODUCT",
+      "message": "Align productive source viability with executable actions"
+    },
+    {
+      "sha": "76fc37773bbd039cbdc3996a6eaec9efc7aaf7cc",
+      "classification": "HARNESS_EVIDENCE",
+      "message": "Validate finite-world quiescence and material reactivation"
+    },
+    {
+      "sha": "a4ed5832db9f4f57e4592be4ba7c26788fc7dd64",
+      "classification": "PRODUCT",
+      "message": "Align wild source viability with gatherable flora"
+    }
+  ],
+  "canonicalValidation": {
+    "baseline": 3264,
+    "newChecks": 6,
+    "removedOrReplaced": 0,
+    "expected": 3270,
+    "passed": 3270,
+    "failed": 0,
+    "stepsPassed": 35,
+    "stepsTotal": 35
+  },
+  "preSoak": [
+    {
+      "seed": 46,
+      "ticksReached": 800,
+      "snapshotTick": 800,
+      "markerTick": 800,
+      "classification": "PASS_FINITE_WORLD_EXHAUSTED",
+      "physicalCompletions": 26,
+      "sourcesObserved": 128,
+      "sourcesViable": 0,
+      "sourcesTemporary": 19,
+      "sourcesWithdrawn": 109,
+      "exercisedDomains": {
+        "agriculture": 6,
+        "livestock": 2,
+        "physicalSurvival": 9,
+        "wildSubsistence": 18
+      }
+    },
+    {
+      "seed": 71,
+      "ticksReached": 800,
+      "snapshotTick": 800,
+      "markerTick": 800,
+      "classification": "PASS_FINITE_WORLD_EXHAUSTED",
+      "physicalCompletions": 25,
+      "sourcesObserved": 128,
+      "sourcesViable": 0,
+      "sourcesTemporary": 75,
+      "sourcesWithdrawn": 53,
+      "exercisedDomains": {
+        "agriculture": 6,
+        "livestock": 2,
+        "physicalSurvival": 9,
+        "wildSubsistence": 17
+      }
+    },
+    {
+      "seed": 887,
+      "ticksReached": 800,
+      "snapshotTick": 800,
+      "markerTick": 800,
+      "classification": "PASS_FINITE_WORLD_EXHAUSTED",
+      "physicalCompletions": 28,
+      "sourcesObserved": 128,
+      "sourcesViable": 0,
+      "sourcesTemporary": 76,
+      "sourcesWithdrawn": 52,
+      "exercisedDomains": {
+        "agriculture": 6,
+        "livestock": 2,
+        "physicalSurvival": 9,
+        "wildSubsistence": 20
+      }
+    }
+  ],
+  "materialReactivation": {
+    "seed": 46,
+    "ticksReached": 600,
+    "snapshotTick": 600,
+    "markerTick": 600,
+    "preState": "QUIESCENT_NO_EXECUTABLE_SOURCE",
+    "injectionTick": 404,
+    "externalPhysicalFact": "one real mature berry bush in a verified adjacent World cell",
+    "cognitionInjected": false,
+    "postPhysicalSuccesses": 1,
+    "lastSuccessTick": 408,
+    "physicalCompletions": 27,
+    "result": "PASS"
+  },
+  "invariants": {
+    "gateR": "ACQUIRED",
+    "pebbleCoreModified": false,
+    "checkpointSchema": 18,
+    "runtimeErrors": 0,
+    "manualProductiveCommands": 0,
+    "secondPathfinder": false,
+    "secondScheduler": false,
+    "teleport": false,
+    "forcedSuccess": false,
+    "globalOracle": false
+  },
+  "claims": {
+    "provesFiniteWorldExhaustion": true,
+    "provesMaterialReactivation": true,
+    "provesInfiniteRenewal": false,
+    "provesCompleteEconomy": false,
+    "gateBCanonicallyAcquired": false,
+    "civ26Started": false,
+    "pushAttempted": false
+  }
+}
