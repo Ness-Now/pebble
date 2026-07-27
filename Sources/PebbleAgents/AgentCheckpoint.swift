@@ -1044,6 +1044,49 @@ extension AgentSimulationSession {
                   autonomy.evictionCount >= 0 else {
                 throw AgentCheckpointError.invalidBound("autonomous activity")
             }
+            if let sources = autonomy.productiveSourceState {
+                do {
+                    _ = try AgentProductiveSourceConfiguration(
+                        maximumSources: sources.configuration.maximumSources,
+                        maximumTransitions:
+                            sources.configuration.maximumTransitions,
+                        maximumObservationAgeTicks:
+                            sources.configuration.maximumObservationAgeTicks
+                    )
+                } catch {
+                    throw AgentCheckpointError.invalidConfiguration
+                }
+                let sourceKeys = sources.sources.map(\.sourceKey)
+                guard sources.sources.count
+                        <= sources.configuration.maximumSources,
+                      sources.transitions.count
+                        <= sources.configuration.maximumTransitions,
+                      sourceKeys.count == Set(sourceKeys).count,
+                      sources.sources.allSatisfy({
+                          !$0.sourceKey.isEmpty
+                              && !$0.materialFingerprint.isEmpty
+                              && agentIDs.contains($0.observerID)
+                              && $0.firstObservedTick >= 0
+                              && $0.firstObservedTick <= $0.lastObservedTick
+                              && $0.lastObservedTick <= state.clock.tick.rawValue + 1
+                              && $0.observationCount > 0
+                              && $0.renewalCount >= 0
+                      }),
+                      sources.transitions.allSatisfy({
+                          !$0.sourceKey.isEmpty
+                              && !$0.materialFingerprint.isEmpty
+                              && $0.tick >= 0
+                              && $0.tick <= state.clock.tick.rawValue + 1
+                      }),
+                      sources.counters.observationCount >= 0,
+                      sources.counters.renewedCount >= 0,
+                      sources.counters.physicalSuccessCount >= 0,
+                      sources.evictionCount >= 0 else {
+                    throw AgentCheckpointError.invalidBound(
+                        "productive sources"
+                    )
+                }
+            }
         }
         func unique(_ values: [String], _ label: String) throws {
             guard values.count == Set(values).count,

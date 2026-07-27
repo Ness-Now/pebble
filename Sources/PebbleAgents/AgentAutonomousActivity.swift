@@ -460,6 +460,7 @@ public struct AgentAutonomousActivityState: Codable, Equatable, Sendable {
     public internal(set) var cooldowns: [AgentAutonomousActivityCooldown]
     public internal(set) var counters: AgentAutonomousActivityCounters
     public internal(set) var evictionCount: Int
+    public internal(set) var productiveSourceState: AgentProductiveSourceState?
 
     public init(configuration: AgentAutonomousActivityConfiguration) {
         self.configuration = configuration
@@ -468,6 +469,54 @@ public struct AgentAutonomousActivityState: Codable, Equatable, Sendable {
         cooldowns = []
         counters = AgentAutonomousActivityCounters()
         evictionCount = 0
+        productiveSourceState = nil
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case configuration
+        case activeActivities
+        case recentRecords
+        case cooldowns
+        case counters
+        case evictionCount
+        case productiveSourceState
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        configuration = try values.decode(
+            AgentAutonomousActivityConfiguration.self,
+            forKey: .configuration
+        )
+        activeActivities = try values.decode(
+            [AgentAutonomousActivity].self, forKey: .activeActivities
+        )
+        recentRecords = try values.decode(
+            [AgentAutonomousActivityRecord].self, forKey: .recentRecords
+        )
+        cooldowns = try values.decode(
+            [AgentAutonomousActivityCooldown].self, forKey: .cooldowns
+        )
+        counters = try values.decode(
+            AgentAutonomousActivityCounters.self, forKey: .counters
+        )
+        evictionCount = try values.decode(Int.self, forKey: .evictionCount)
+        productiveSourceState = try values.decodeIfPresent(
+            AgentProductiveSourceState.self, forKey: .productiveSourceState
+        )
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(configuration, forKey: .configuration)
+        try values.encode(activeActivities, forKey: .activeActivities)
+        try values.encode(recentRecords, forKey: .recentRecords)
+        try values.encode(cooldowns, forKey: .cooldowns)
+        try values.encode(counters, forKey: .counters)
+        try values.encode(evictionCount, forKey: .evictionCount)
+        try values.encodeIfPresent(
+            productiveSourceState, forKey: .productiveSourceState
+        )
     }
 }
 

@@ -121,6 +121,10 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case autonomousActivityFeature
     case autonomousActivitySelection
     case autonomousActivityOutcome
+    case productiveSourceFeature
+    case productiveSourceObservations
+    case productiveSourceSuccess
+    case productiveSourceReview
     case validatedPhysicalDependentFood
 }
 
@@ -251,6 +255,18 @@ public enum AgentReplayOperation: Codable {
     )
     case selectAutonomousActivities([AgentAutonomousActivityCandidate])
     case autonomousActivityOutcome(AgentAutonomousActivityOutcome)
+    case setProductiveSourceLifecycleEnabled(
+        Bool, configuration: AgentProductiveSourceConfiguration
+    )
+    case recordProductiveSourceObservations(
+        [AgentProductiveSourceObservation]
+    )
+    case recordProductiveSourceSuccess(
+        sourceKey: String,
+        expectedMaterialFingerprint: String,
+        physicalReceiptID: String
+    )
+    case reviewProductiveSources
     case validatedPhysicalDependentFood(AgentValidatedPhysicalDependentFoodOutcome)
 
     public var kind: AgentReplayOperationKind {
@@ -329,6 +345,14 @@ public enum AgentReplayOperation: Codable {
         case .setAutonomousActivityEnabled: return .autonomousActivityFeature
         case .selectAutonomousActivities: return .autonomousActivitySelection
         case .autonomousActivityOutcome: return .autonomousActivityOutcome
+        case .setProductiveSourceLifecycleEnabled:
+            return .productiveSourceFeature
+        case .recordProductiveSourceObservations:
+            return .productiveSourceObservations
+        case .recordProductiveSourceSuccess:
+            return .productiveSourceSuccess
+        case .reviewProductiveSources:
+            return .productiveSourceReview
         case .validatedPhysicalDependentFood: return .validatedPhysicalDependentFood
         }
     }
@@ -1303,6 +1327,22 @@ extension AgentSimulationSession {
             _ = try candidate.selectAutonomousActivities(candidates)
         case let .autonomousActivityOutcome(outcome):
             _ = try candidate.recordAutonomousActivityOutcome(outcome)
+        case let .setProductiveSourceLifecycleEnabled(enabled, configuration):
+            try candidate.setProductiveSourceLifecycleEnabled(
+                enabled, configuration: configuration
+            )
+        case let .recordProductiveSourceObservations(observations):
+            _ = try candidate.recordProductiveSourceObservations(observations)
+        case let .recordProductiveSourceSuccess(
+            sourceKey, expectedMaterialFingerprint, physicalReceiptID
+        ):
+            _ = try candidate.recordProductiveSourceSuccess(
+                sourceKey: sourceKey,
+                expectedMaterialFingerprint: expectedMaterialFingerprint,
+                physicalReceiptID: physicalReceiptID
+            )
+        case .reviewProductiveSources:
+            _ = try candidate.reviewProductiveSources()
         case let .validatedPhysicalDependentFood(outcome):
             _ = try candidate.applyValidatedPhysicalDependentFood(outcome)
         }

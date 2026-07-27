@@ -52,6 +52,16 @@ extension PebbleAgentController {
                         try candidate.setAutonomousActivityEnabled(true)
                     }
                 }
+                if !candidate.productiveSourceLifecycleEnabled {
+                    if try applyRecordedOperationIfActive(
+                        .setProductiveSourceLifecycleEnabled(
+                            true, configuration: .live
+                        ),
+                        session: &candidate, recorder: &recorder
+                    ) == nil {
+                        try candidate.setProductiveSourceLifecycleEnabled(true)
+                    }
+                }
                 movementEnabled = true
                 movementWasEverEnabledSinceReset = true
                 followMode = .off

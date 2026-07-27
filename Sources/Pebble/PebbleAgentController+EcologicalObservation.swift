@@ -100,6 +100,15 @@ extension PebbleAgentController {
             )
             traceEcologicalObservation(observation, reason: "cognitive-tick")
         }
+        if session.productiveSourceLifecycleEnabled {
+            if try applyRecordedOperationIfActive(
+                .reviewProductiveSources,
+                session: &session,
+                recorder: &recorder
+            ) == nil {
+                _ = try session.reviewProductiveSources()
+            }
+        }
     }
 
     @discardableResult
@@ -138,7 +147,113 @@ extension PebbleAgentController {
         ) == nil {
             try session.recordEcologicalObservation(observation)
         }
+        if session.productiveSourceLifecycleEnabled {
+            let sourceObservations = productiveSourceObservations(
+                from: observation
+            )
+            if !sourceObservations.isEmpty {
+                if try applyRecordedOperationIfActive(
+                    .recordProductiveSourceObservations(sourceObservations),
+                    session: &session,
+                    recorder: &recorder
+                ) == nil {
+                    _ = try session.recordProductiveSourceObservations(
+                        sourceObservations
+                    )
+                }
+            }
+        }
         return observation
+    }
+
+    func productiveSourceObservations(
+        from observation: AgentEcologicalObservation
+    ) -> [AgentProductiveSourceObservation] {
+        func positionKey(_ position: AgentPosition) -> String {
+            "\(position.x),\(position.y),\(position.z)"
+        }
+        func source(
+            key: String,
+            domain: AgentAutonomousActivityDomain,
+            material: String,
+            position: AgentPosition,
+            disposition: AgentProductiveSourceDisposition,
+            unavailableReason: String? = nil
+        ) -> AgentProductiveSourceObservation {
+            AgentProductiveSourceObservation(
+                sourceKey: key,
+                domain: domain,
+                materialFingerprint: AgentAutonomousActivityDigest.make(material),
+                observedAtTick: observation.observedAtSimulationTick,
+                observerID: observation.observerID,
+                physicalPosition: position,
+                disposition: disposition,
+                observationReference: "ecology:\(observation.digest)",
+                temporarilyUnavailableReason: unavailableReason,
+                renewalReason: disposition == .viable
+                    ? "fresh local material observation" : nil
+            )
+        }
+        var sources = observation.plants.map { plant in
+            source(
+                key: "wild:\(plant.plantKey)@\(positionKey(plant.position))",
+                domain: .wildGathering,
+                material: "\(plant.plantKey)|\(plant.renewability.rawValue)",
+                position: plant.position,
+                disposition: .viable
+            )
+        }
+        sources += observation.fishing.map { fishing in
+            source(
+                key: "fishing:\(fishing.waterKey)@"
+                    + positionKey(fishing.position),
+                domain: .fishing,
+                material: "\(fishing.waterKey)|candidate=\(fishing.candidate)",
+                position: fishing.position,
+                disposition: fishing.candidate
+                    ? .viable : .temporarilyUnavailable,
+                unavailableReason: fishing.candidate
+                    ? nil : "fishing affordance unavailable"
+            )
+        }
+        sources += observation.soils.map { soil in
+            let viable = soil.supportsCrop
+                && (soil.tillable || soil.alreadyFarmland)
+            return source(
+                key: "agriculture:soil:\(soil.blockKey)@"
+                    + positionKey(soil.position),
+                domain: .agriculture,
+                material: "\(soil.blockKey)|tillable=\(soil.tillable)"
+                    + "|farmland=\(soil.alreadyFarmland)"
+                    + "|hydrated=\(soil.hydrated.map(String.init) ?? "unknown")"
+                    + "|supportsCrop=\(soil.supportsCrop)",
+                position: soil.position,
+                disposition: viable ? .viable : .temporarilyUnavailable,
+                unavailableReason: viable
+                    ? nil : "soil cannot support a crop"
+            )
+        }
+        sources += observation.crops.map { crop in
+            source(
+                key: "agriculture:crop:\(crop.cropKey)@"
+                    + positionKey(crop.position),
+                domain: .agriculture,
+                material: "\(crop.cropKey)|stage=\(crop.growthStage)"
+                    + "/\(crop.maximumGrowthStage)|mature=\(crop.mature)"
+                    + "|support=\(crop.supportBlockKey ?? "none")",
+                position: crop.position,
+                disposition: crop.mature
+                    ? .viable : .temporarilyUnavailable,
+                unavailableReason: crop.mature
+                    ? nil : "crop physically immature"
+            )
+        }
+        return sources.sorted {
+            if $0.domain != $1.domain {
+                return $0.domain.rawValue < $1.domain.rawValue
+            }
+            return $0.sourceKey < $1.sourceKey
+        }
     }
 
     func ecologicalObservationWorldContextKey(_ world: World) -> String {
