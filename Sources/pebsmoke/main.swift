@@ -203,6 +203,12 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
     exit(failed > 0 ? 1 : 0)
 }
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
+    == "autonomous-interaction-retry-liveness" {
+    runPebbleAgentsAutonomousActivityLifecycleSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
     == "role-neutral-society-bootstrap" {
     runPebbleAgentsRoleNeutralBootstrapSmoke()
     print("\n\(passed) passed, \(failed) failed")
@@ -2314,6 +2320,7 @@ runPebbleAgentsWorkProfessionSmoke()
 runPebbleAgentsWorkDemandRefreshSmoke()
 runPebbleAgentsAutonomousCivilizationSmoke()
 runPebbleAgentsBoundedAutonomousNavigationSmoke()
+runPebbleAgentsAutonomousActivityLifecycleSmoke()
 runPebbleAgentsRoleNeutralBootstrapSmoke()
 
 print("\n\(passed) passed, \(failed) failed")

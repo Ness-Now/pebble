@@ -219,9 +219,17 @@ extension PebbleAgentController {
         var candidates: [AgentAutonomousActivityCandidate] = []
         let currentByActor = Dictionary(uniqueKeysWithValues:
             session.autonomousActivitySnapshot().activeActivities.map {
-                ($0.candidate.actorID, $0.candidate.candidateID)
+                ($0.candidate.actorID, $0.candidate)
             }
         )
+        func markingLogicalContinuity(
+            _ candidate: AgentAutonomousActivityCandidate
+        ) -> AgentAutonomousActivityCandidate {
+            candidate.withContinuity(
+                currentByActor[candidate.actorID]?
+                    .representsSameLogicalActivity(as: candidate) == true
+            )
+        }
         func distance(_ a: AgentPosition, _ b: AgentPosition) -> Int {
             abs(a.x - b.x) + abs(a.y - b.y) + abs(a.z - b.z)
         }
@@ -247,14 +255,27 @@ extension PebbleAgentController {
                         x: intent.position.x, y: intent.position.y + 1,
                         z: intent.position.z
                     )
-                candidates.append(AgentAutonomousActivityCandidate(
-                    candidateID: id, actorID: actorID, domain: .agriculture,
-                    actionKey: intent.kind.rawValue, stableReference: intent.plotID.rawValue,
-                    target: target, source: work == nil ? .opportunity : .commitment,
-                    priorityBand: work == nil ? 30 : 20, urgency: work == nil ? 62 : 76,
-                    continuity: currentByActor[actorID] == id,
-                    distance: distance(agent.position, target),
-                    commitmentID: work?.commitmentID, observedAtTick: session.tick
+                candidates.append(markingLogicalContinuity(
+                    AgentAutonomousActivityCandidate(
+                        candidateID: id, actorID: actorID, domain: .agriculture,
+                        actionKey: intent.kind.rawValue,
+                        stableReference: intent.plotID.rawValue,
+                        target: target,
+                        logicalTargetKey: "plot:\(intent.plotID.rawValue):"
+                            + "\(intent.cellIndex ?? -1)",
+                        physicalTarget: intent.position,
+                        approachPosition: target,
+                        materialFingerprint: AgentAutonomousActivityDigest.make(
+                            "\(intent.kind.rawValue)|\(intent.position.x),"
+                                + "\(intent.position.y),\(intent.position.z)"
+                        ),
+                        source: work == nil ? .opportunity : .commitment,
+                        priorityBand: work == nil ? 30 : 20,
+                        urgency: work == nil ? 62 : 76,
+                        distance: distance(agent.position, target),
+                        commitmentID: work?.commitmentID,
+                        observedAtTick: session.tick
+                    )
                 ))
             }
         }
@@ -280,17 +301,30 @@ extension PebbleAgentController {
                     : opportunity.lastObservedPosition.y,
                 z: opportunity.lastObservedPosition.z
             )
-            candidates.append(AgentAutonomousActivityCandidate(
-                candidateID: id, actorID: opportunity.actorID, domain: domain,
-                actionKey: opportunity.strategy.rawValue,
-                stableReference: opportunity.opportunityID.rawValue,
-                target: navigationTarget,
-                source: work == nil ? .opportunity : .commitment,
-                priorityBand: work == nil ? 35 : 20,
-                urgency: max(50, min(90, opportunity.score)),
-                continuity: currentByActor[opportunity.actorID] == id,
-                distance: distance(agent.position, navigationTarget),
-                commitmentID: work?.commitmentID, observedAtTick: session.tick
+            candidates.append(markingLogicalContinuity(
+                AgentAutonomousActivityCandidate(
+                    candidateID: id, actorID: opportunity.actorID,
+                    domain: domain,
+                    actionKey: opportunity.strategy.rawValue,
+                    stableReference: opportunity.opportunityID.rawValue,
+                    target: navigationTarget,
+                    logicalTargetKey: opportunity.targetKey,
+                    physicalTarget: opportunity.lastObservedPosition,
+                    approachPosition: navigationTarget,
+                    materialFingerprint: AgentAutonomousActivityDigest.make(
+                        "\(opportunity.strategy.rawValue)|"
+                            + "\(opportunity.targetKey)|"
+                            + "\(opportunity.lastObservedPosition.x),"
+                            + "\(opportunity.lastObservedPosition.y),"
+                            + "\(opportunity.lastObservedPosition.z)"
+                    ),
+                    source: work == nil ? .opportunity : .commitment,
+                    priorityBand: work == nil ? 35 : 20,
+                    urgency: max(50, min(90, opportunity.score)),
+                    distance: distance(agent.position, navigationTarget),
+                    commitmentID: work?.commitmentID,
+                    observedAtTick: session.tick
+                )
             ))
         }
         let livestock = session.livestockSnapshot()
@@ -306,15 +340,35 @@ extension PebbleAgentController {
                     $0.recordID == task.primaryAnimalRecordID
                 })?.lastKnownPosition ?? task.targetPosition
                 : task.targetPosition
-            candidates.append(AgentAutonomousActivityCandidate(
-                candidateID: id, actorID: task.responsibleAgentID, domain: .livestock,
-                actionKey: task.kind.rawValue, stableReference: task.taskID.rawValue,
-                target: target,
-                source: work == nil ? .responsibility : .commitment,
-                priorityBand: work == nil ? 25 : 20, urgency: 72,
-                continuity: currentByActor[task.responsibleAgentID] == id,
-                distance: distance(agent.position, target),
-                commitmentID: work?.commitmentID, observedAtTick: session.tick
+            let managedAnimal = livestock.managedAnimals.first {
+                $0.recordID == task.primaryAnimalRecordID
+            }
+            candidates.append(markingLogicalContinuity(
+                AgentAutonomousActivityCandidate(
+                    candidateID: id, actorID: task.responsibleAgentID,
+                    domain: .livestock,
+                    actionKey: task.kind.rawValue,
+                    stableReference: task.taskID.rawValue,
+                    target: target,
+                    logicalTargetKey:
+                        "animal:\(task.primaryAnimalRecordID.rawValue)",
+                    physicalTarget: target,
+                    approachPosition: target,
+                    materialFingerprint: AgentAutonomousActivityDigest.make([
+                        managedAnimal?.recordID.rawValue ?? "missing",
+                        managedAnimal?.status.rawValue ?? "missing",
+                        managedAnimal?.lastObservedLifeStage.rawValue ?? "missing",
+                        managedAnimal?.breedingReady == true
+                            ? "breeding" : "not-breeding",
+                        managedAnimal?.productReady == true
+                            ? "product" : "no-product",
+                    ].joined(separator: "|")),
+                    source: work == nil ? .responsibility : .commitment,
+                    priorityBand: work == nil ? 25 : 20, urgency: 72,
+                    distance: distance(agent.position, target),
+                    commitmentID: work?.commitmentID,
+                    observedAtTick: session.tick
+                )
             ))
         }
         if try applyRecordedOperationIfActive(

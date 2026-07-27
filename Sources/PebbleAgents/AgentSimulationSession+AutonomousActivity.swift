@@ -73,6 +73,10 @@ extension AgentSimulationSession {
             }
             guard !candidate.candidateID.isEmpty, !candidate.actionKey.isEmpty,
                   !candidate.stableReference.isEmpty,
+                  !candidate.logicalTargetKey.isEmpty,
+                  !candidate.materialFingerprint.isEmpty,
+                  candidate.logicalTargetKey.count <= 160,
+                  candidate.materialFingerprint.count <= 80,
                   candidate.observedAtTick <= tick + 1 else {
                 throw AgentSessionError.autonomousActivity(.invalidCandidate(candidate.candidateID))
             }
@@ -97,11 +101,12 @@ extension AgentSimulationSession {
                 reason: "bounded navigation replan limit reached",
                 state: &state
             )
-            state.cooldowns.append(AgentAutonomousActivityCooldown(
-                actorID: activity.candidate.actorID,
-                candidateID: activity.candidate.candidateID,
-                untilTick: tick + state.configuration.blockedCooldownTicks
-            ))
+            appendAutonomousCooldown(
+                for: activity.candidate,
+                failureCategory: "navigationReplanLimit",
+                completedAtTick: tick,
+                state: &state
+            )
             state.counters.blockCount += 1
             resetAutonomousNavigation(for: activity.candidate.actorID)
         }
@@ -109,12 +114,34 @@ extension AgentSimulationSession {
         state.activeActivities.removeAll {
             navigationBlockedIDs.contains($0.activityID)
         }
-        state.cooldowns.removeAll { $0.untilTick < tick }
+        // Causal cooldowns remain as bounded logical failure history after
+        // expiry. Legacy v18 records have no physical fingerprint and can be
+        // discarded once they no longer suppress their candidate instance.
+        state.cooldowns.removeAll {
+            $0.physicalAttemptFingerprint.isEmpty && $0.untilTick < tick
+        }
         let available = candidates.filter { candidate in
-            !state.cooldowns.contains {
-                $0.actorID == candidate.actorID && $0.candidateID == candidate.candidateID
+            let exactAttemptBlocked = state.cooldowns.contains {
+                guard $0.actorID == candidate.actorID else { return false }
+                if !$0.physicalAttemptFingerprint.isEmpty {
+                    return $0.physicalAttemptFingerprint
+                        == candidate.physicalAttemptFingerprint
+                        && $0.untilTick >= tick
+                }
+                return $0.candidateID == candidate.candidateID
                     && $0.untilTick >= tick
             }
+            let logicalFailureCount = state.cooldowns.filter {
+                !$0.logicalActivityKey.isEmpty
+                    && $0.actorID == candidate.actorID
+                    && $0.logicalActivityKey == candidate.logicalActivityKey
+            }.count
+            let logicalFailureLimit = min(
+                state.configuration.maximumCooldowns,
+                configuration.navigationMaxReplans + 1
+            )
+            return !exactAttemptBlocked
+                && logicalFailureCount < logicalFailureLimit
         }
         let grouped = Dictionary(grouping: available, by: \.actorID)
         let actorIDs = Set(grouped.keys).union(state.activeActivities.map { $0.candidate.actorID })
@@ -134,7 +161,11 @@ extension AgentSimulationSession {
             }
             let lifecycle: AgentAutonomousActivityLifecycle = winner.distance <= 1
                 ? .ready : .traveling
-            if var previous, previous.candidate.candidateID == winner.candidateID {
+            if var previous,
+               previous.candidate.representsSameLogicalActivity(as: winner) {
+                if !previous.candidate.representsSamePhysicalAttempt(as: winner) {
+                    invalidateAutonomousPhysicalAttemptNavigation(for: actorID)
+                }
                 previous = AgentAutonomousActivity(
                     activityID: previous.activityID, candidate: winner,
                     selectedAtTick: previous.selectedAtTick, updatedAtTick: tick,
@@ -203,6 +234,25 @@ extension AgentSimulationSession {
         statesById[actorID.rawValue] = agent
     }
 
+    private mutating func invalidateAutonomousPhysicalAttemptNavigation(
+        for actorID: AgentID
+    ) {
+        guard var agent = statesById[actorID.rawValue] else { return }
+        let navigation = agent.navigationProgress
+        guard navigation.route?.purpose == .civilizationActivity
+                || (navigation.route == nil
+                    && agent.currentGoal.kind == .civilizationActivity) else {
+            return
+        }
+        agent.navigationProgress = AgentNavigationProgress(
+            replanCount: navigation.replanCount,
+            consecutiveBlockedMoves: navigation.consecutiveBlockedMoves,
+            lastPlanTick: navigation.lastPlanTick,
+            lastInvalidation: .targetChanged
+        )
+        statesById[actorID.rawValue] = agent
+    }
+
     @discardableResult
     public mutating func recordAutonomousActivityOutcome(
         _ outcome: AgentAutonomousActivityOutcome
@@ -239,13 +289,19 @@ extension AgentSimulationSession {
         switch outcome.lifecycle {
         case .completed:
             state.counters.completionCount += 1
+            state.cooldowns.removeAll {
+                $0.actorID == activity.candidate.actorID
+                    && $0.logicalActivityKey
+                        == activity.candidate.logicalActivityKey
+            }
         case .blocked:
             state.counters.blockCount += 1
-            state.cooldowns.append(AgentAutonomousActivityCooldown(
-                actorID: outcome.actorID,
-                candidateID: activity.candidate.candidateID,
-                untilTick: outcome.completedAtTick + state.configuration.blockedCooldownTicks
-            ))
+            appendAutonomousCooldown(
+                for: activity.candidate,
+                failureCategory: outcome.reason,
+                completedAtTick: outcome.completedAtTick,
+                state: &state
+            )
         default: break
         }
         evictActivityState(&state)
@@ -268,6 +324,26 @@ extension AgentSimulationSession {
                 activityID: terminal.activityID, actorID: terminal.candidate.actorID,
                 lifecycle: lifecycle, completedAtTick: tick, reason: reason
             )
+        ))
+    }
+
+    private func appendAutonomousCooldown(
+        for candidate: AgentAutonomousActivityCandidate,
+        failureCategory: String,
+        completedAtTick: Int,
+        state: inout AgentAutonomousActivityState
+    ) {
+        state.cooldowns.append(AgentAutonomousActivityCooldown(
+            actorID: candidate.actorID,
+            candidateID: candidate.candidateID,
+            logicalActivityKey: candidate.logicalActivityKey,
+            physicalAttemptFingerprint: candidate.physicalAttemptFingerprint,
+            failureFingerprint: candidate.cooldownFailureFingerprint(
+                failureCategory: failureCategory
+            ),
+            failureCategory: failureCategory,
+            untilTick: completedAtTick
+                + state.configuration.blockedCooldownTicks
         ))
     }
 
@@ -310,6 +386,9 @@ extension AgentSimulationSession {
     ) -> Bool {
         if lhs.untilTick != rhs.untilTick { return lhs.untilTick < rhs.untilTick }
         if lhs.actorID != rhs.actorID { return lhs.actorID < rhs.actorID }
+        if lhs.failureFingerprint != rhs.failureFingerprint {
+            return lhs.failureFingerprint < rhs.failureFingerprint
+        }
         return lhs.candidateID < rhs.candidateID
     }
 }

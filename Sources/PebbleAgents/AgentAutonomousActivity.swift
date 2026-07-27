@@ -105,6 +105,18 @@ public struct AgentAutonomousActivityConfiguration: Codable, Equatable, Sendable
     public static let live = try! AgentAutonomousActivityConfiguration()
 }
 
+public enum AgentAutonomousActivityDigest {
+    public static func make(_ text: String) -> String {
+        var value: UInt64 = 14_695_981_039_346_656_037
+        for byte in text.utf8 {
+            value ^= UInt64(byte)
+            value &*= 1_099_511_628_211
+        }
+        let digits = String(value, radix: 16, uppercase: false)
+        return String(repeating: "0", count: max(0, 16 - digits.count)) + digits
+    }
+}
+
 /// A pure cognition input. It may contain stable registry names and positions,
 /// but never a World, Entity, ItemStack, registry number, pointer, or closure.
 public struct AgentAutonomousActivityCandidate: Codable, Equatable, Sendable {
@@ -114,6 +126,10 @@ public struct AgentAutonomousActivityCandidate: Codable, Equatable, Sendable {
     public let actionKey: String
     public let stableReference: String
     public let target: AgentPosition?
+    public let logicalTargetKey: String
+    public let physicalTarget: AgentPosition?
+    public let approachPosition: AgentPosition?
+    public let materialFingerprint: String
     public let source: AgentAutonomousActivitySource
     public let priorityBand: Int
     public let urgency: Int
@@ -129,6 +145,10 @@ public struct AgentAutonomousActivityCandidate: Codable, Equatable, Sendable {
         actionKey: String,
         stableReference: String,
         target: AgentPosition? = nil,
+        logicalTargetKey: String? = nil,
+        physicalTarget: AgentPosition? = nil,
+        approachPosition: AgentPosition? = nil,
+        materialFingerprint: String = "legacy",
         source: AgentAutonomousActivitySource,
         priorityBand: Int,
         urgency: Int,
@@ -143,6 +163,12 @@ public struct AgentAutonomousActivityCandidate: Codable, Equatable, Sendable {
         self.actionKey = String(actionKey.prefix(80))
         self.stableReference = String(stableReference.prefix(160))
         self.target = target
+        self.logicalTargetKey = String(
+            (logicalTargetKey ?? stableReference).prefix(160)
+        )
+        self.physicalTarget = physicalTarget ?? target
+        self.approachPosition = approachPosition
+        self.materialFingerprint = String(materialFingerprint.prefix(80))
         self.source = source
         self.priorityBand = max(0, min(100, priorityBand))
         self.urgency = max(0, min(100, urgency))
@@ -150,6 +176,160 @@ public struct AgentAutonomousActivityCandidate: Codable, Equatable, Sendable {
         self.distance = max(0, distance)
         self.commitmentID = commitmentID
         self.observedAtTick = observedAtTick
+    }
+
+    public var logicalActivityKey: String {
+        AgentAutonomousActivityDigest.make([
+            actorID.rawValue,
+            domain.rawValue,
+            actionKey,
+            logicalTargetKey,
+        ].joined(separator: "|"))
+    }
+
+    public var physicalAttemptFingerprint: String {
+        func position(_ value: AgentPosition?) -> String {
+            value.map { "\($0.x),\($0.y),\($0.z)" } ?? "none"
+        }
+        return AgentAutonomousActivityDigest.make([
+            logicalActivityKey,
+            position(physicalTarget),
+            position(approachPosition),
+            materialFingerprint,
+        ].joined(separator: "|"))
+    }
+
+    public func cooldownFailureFingerprint(
+        failureCategory: String
+    ) -> String {
+        AgentAutonomousActivityDigest.make(
+            "\(physicalAttemptFingerprint)|\(failureCategory)"
+        )
+    }
+
+    public func representsSameLogicalActivity(
+        as other: AgentAutonomousActivityCandidate
+    ) -> Bool {
+        logicalActivityKey == other.logicalActivityKey
+            && actorID == other.actorID
+            && domain == other.domain
+            && actionKey == other.actionKey
+            && logicalTargetKey == other.logicalTargetKey
+    }
+
+    public func representsSamePhysicalAttempt(
+        as other: AgentAutonomousActivityCandidate
+    ) -> Bool {
+        physicalAttemptFingerprint == other.physicalAttemptFingerprint
+            && physicalTarget == other.physicalTarget
+            && approachPosition == other.approachPosition
+            && materialFingerprint == other.materialFingerprint
+    }
+
+    public func withContinuity(_ continuity: Bool) -> Self {
+        Self(
+            candidateID: candidateID,
+            actorID: actorID,
+            domain: domain,
+            actionKey: actionKey,
+            stableReference: stableReference,
+            target: target,
+            logicalTargetKey: logicalTargetKey,
+            physicalTarget: physicalTarget,
+            approachPosition: approachPosition,
+            materialFingerprint: materialFingerprint,
+            source: source,
+            priorityBand: priorityBand,
+            urgency: urgency,
+            continuity: continuity,
+            distance: distance,
+            commitmentID: commitmentID,
+            observedAtTick: observedAtTick
+        )
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case candidateID
+        case actorID
+        case domain
+        case actionKey
+        case stableReference
+        case target
+        case logicalTargetKey
+        case physicalTarget
+        case approachPosition
+        case materialFingerprint
+        case source
+        case priorityBand
+        case urgency
+        case continuity
+        case distance
+        case commitmentID
+        case observedAtTick
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        let stableReference = try values.decode(
+            String.self, forKey: .stableReference
+        )
+        let target = try values.decodeIfPresent(
+            AgentPosition.self, forKey: .target
+        )
+        self.init(
+            candidateID: try values.decode(String.self, forKey: .candidateID),
+            actorID: try values.decode(AgentID.self, forKey: .actorID),
+            domain: try values.decode(
+                AgentAutonomousActivityDomain.self, forKey: .domain
+            ),
+            actionKey: try values.decode(String.self, forKey: .actionKey),
+            stableReference: stableReference,
+            target: target,
+            logicalTargetKey: try values.decodeIfPresent(
+                String.self, forKey: .logicalTargetKey
+            ) ?? stableReference,
+            physicalTarget: try values.decodeIfPresent(
+                AgentPosition.self, forKey: .physicalTarget
+            ) ?? target,
+            approachPosition: try values.decodeIfPresent(
+                AgentPosition.self, forKey: .approachPosition
+            ),
+            materialFingerprint: try values.decodeIfPresent(
+                String.self, forKey: .materialFingerprint
+            ) ?? "legacy",
+            source: try values.decode(
+                AgentAutonomousActivitySource.self, forKey: .source
+            ),
+            priorityBand: try values.decode(Int.self, forKey: .priorityBand),
+            urgency: try values.decode(Int.self, forKey: .urgency),
+            continuity: try values.decode(Bool.self, forKey: .continuity),
+            distance: try values.decode(Int.self, forKey: .distance),
+            commitmentID: try values.decodeIfPresent(
+                AgentWorkCommitmentID.self, forKey: .commitmentID
+            ),
+            observedAtTick: try values.decode(Int.self, forKey: .observedAtTick)
+        )
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(candidateID, forKey: .candidateID)
+        try values.encode(actorID, forKey: .actorID)
+        try values.encode(domain, forKey: .domain)
+        try values.encode(actionKey, forKey: .actionKey)
+        try values.encode(stableReference, forKey: .stableReference)
+        try values.encodeIfPresent(target, forKey: .target)
+        try values.encode(logicalTargetKey, forKey: .logicalTargetKey)
+        try values.encodeIfPresent(physicalTarget, forKey: .physicalTarget)
+        try values.encodeIfPresent(approachPosition, forKey: .approachPosition)
+        try values.encode(materialFingerprint, forKey: .materialFingerprint)
+        try values.encode(source, forKey: .source)
+        try values.encode(priorityBand, forKey: .priorityBand)
+        try values.encode(urgency, forKey: .urgency)
+        try values.encode(continuity, forKey: .continuity)
+        try values.encode(distance, forKey: .distance)
+        try values.encodeIfPresent(commitmentID, forKey: .commitmentID)
+        try values.encode(observedAtTick, forKey: .observedAtTick)
     }
 }
 
@@ -197,7 +377,62 @@ public struct AgentAutonomousActivityRecord: Codable, Equatable, Sendable {
 public struct AgentAutonomousActivityCooldown: Codable, Equatable, Sendable {
     public let actorID: AgentID
     public let candidateID: String
+    public let logicalActivityKey: String
+    public let physicalAttemptFingerprint: String
+    public let failureFingerprint: String
+    public let failureCategory: String
     public let untilTick: Int
+
+    public init(
+        actorID: AgentID,
+        candidateID: String,
+        logicalActivityKey: String = "",
+        physicalAttemptFingerprint: String = "",
+        failureFingerprint: String = "",
+        failureCategory: String = "legacy",
+        untilTick: Int
+    ) {
+        self.actorID = actorID
+        self.candidateID = String(candidateID.prefix(160))
+        self.logicalActivityKey = String(logicalActivityKey.prefix(80))
+        self.physicalAttemptFingerprint = String(
+            physicalAttemptFingerprint.prefix(80)
+        )
+        self.failureFingerprint = String(failureFingerprint.prefix(80))
+        self.failureCategory = String(failureCategory.prefix(120))
+        self.untilTick = untilTick
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case actorID
+        case candidateID
+        case logicalActivityKey
+        case physicalAttemptFingerprint
+        case failureFingerprint
+        case failureCategory
+        case untilTick
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            actorID: try values.decode(AgentID.self, forKey: .actorID),
+            candidateID: try values.decode(String.self, forKey: .candidateID),
+            logicalActivityKey: try values.decodeIfPresent(
+                String.self, forKey: .logicalActivityKey
+            ) ?? "",
+            physicalAttemptFingerprint: try values.decodeIfPresent(
+                String.self, forKey: .physicalAttemptFingerprint
+            ) ?? "",
+            failureFingerprint: try values.decodeIfPresent(
+                String.self, forKey: .failureFingerprint
+            ) ?? "",
+            failureCategory: try values.decodeIfPresent(
+                String.self, forKey: .failureCategory
+            ) ?? "legacy",
+            untilTick: try values.decode(Int.self, forKey: .untilTick)
+        )
+    }
 }
 
 public struct AgentAutonomousActivityCounters: Codable, Equatable, Sendable {
