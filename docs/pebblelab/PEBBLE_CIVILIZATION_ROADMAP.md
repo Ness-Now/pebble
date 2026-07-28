@@ -12,10 +12,10 @@ defined by [`PEBBLE_CIVILIZATION_VISION.md`](PEBBLE_CIVILIZATION_VISION.md).
 [`ROADMAP_MANIFEST.json`](ROADMAP_MANIFEST.json) is the machine-readable
 projection of this document and must agree with it exactly.
 
-Product implementation baseline reconciled by the `CIV-27` closure:
+Product implementation baseline reconciled by the `CIV-28` closure:
 
 ```text
-eb63a62a6d5e6851bd11b98926591db3be608f5d
+57d7a57dec3956ba3d4bd30a837fa9417a29efb6
 ```
 
 This is the product commit preceding the closure documentation, not the
@@ -24,14 +24,15 @@ self-referential SHA of this roadmap.
 ## Canonical position
 
 ```text
-CIV-00 through CIV-27: COMPLETE
+CIV-00 through CIV-28: COMPLETE
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: none
-next eligible phase: CIV-28
-CIV-27: COMPLETE
-CIV-28: NOT STARTED
+next authorized action: V4-GATE-C-v1 independent evaluation
+CIV-28: COMPLETE
+V4-GATE-C-v1: READY FOR EVALUATION, NOT ACQUIRED
+CIV-29: PLANNED, NOT ELIGIBLE
 ```
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
@@ -145,7 +146,7 @@ cross-store atomic save or arbitrary migration.
 
 ### `CIV-28` — Observer and Chronicle V1
 
-Status: **planned, not started, next eligible, required**.
+Status: **completed, required**.
 
 Result: a read-only inspector exposes individuals, needs, activity, custody,
 households, relations, claims, causal timeline and explicit wait/failure
@@ -159,13 +160,26 @@ Observable slices:
 - after `CIV-28`: follow the cause of a current action or refusal in the
   rendered World.
 
+Bounded proof:
+[`CIV_28_PHASE_SUMMARY.md`](CIV_28_PHASE_SUMMARY.md). It covers one coherent
+versioned snapshot, structured reasons, a ledger-backed Chronicle, explicit
+bounds and truncation, read-only UI navigation, rights/custody divergence,
+schema-20 restart continuity and a real two-process rendered-World campaign.
+It does not claim an omniscient observer, unbounded history, an editing
+surface or Gate C acquisition.
+
 ### `V4-GATE-C-v1` — Durable Observable Local World
 
 Required phases: `CIV-26`, `CIV-27`, `CIV-28`.
 
+Status: **ready for independent evaluation, not acquired**.
+
 The gate proves coherent rights/custody, real restart and reconciliation,
 material non-duplication, inspectable causal history and a local scenario that
 can be understood before and after restart.
+
+`CIV-29` remains ineligible until this gate is independently evaluated,
+acquired, manually published and remotely verified.
 
 ## Wave 2 — Generational continuity
 

@@ -46,9 +46,10 @@ Canonical status at the product baseline reconciled by this documentation:
 ```text
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED under V4-GATE-B-v1
-CIV-00 through CIV-27: COMPLETE
+CIV-00 through CIV-28: COMPLETE
 post-Gate-B safe-bootstrap hardening: PUBLISHED
-CIV-28: NOT STARTED; next eligible phase
+V4-GATE-C-v1: READY FOR INDEPENDENT EVALUATION; NOT ACQUIRED
+CIV-29: PLANNED; NOT ELIGIBLE
 ```
 
 ## Operational
@@ -108,6 +109,10 @@ explicit limits of `CIV-26`.
 [`CIV_27_PHASE_SUMMARY.md`](CIV_27_PHASE_SUMMARY.md) records the bounded
 World/civilization save, restart and reconciliation protocol, deterministic
 and two-process live evidence, exact cleanup and explicit V1 limits.
+
+[`CIV_28_PHASE_SUMMARY.md`](CIV_28_PHASE_SUMMARY.md) records the bounded
+read-only Observer projection, structured reasons, ledger-backed Chronicle,
+rendered two-process restart evidence, exact cleanup and explicit V1 limits.
 
 The `PHASE_4_*.md`, `PHASE_5_*.md` and
 `PHASE_A0_SHARED_AGENT_RUNTIME_AUDIT.md` documents record completed audits,

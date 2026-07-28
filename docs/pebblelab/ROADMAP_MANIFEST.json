@@ -4,8 +4,8 @@
   "repository": "Ness-Now/pebble",
   "canonicalBranch": "lab/pebblelab-v1",
   "productBaseline": {
-    "reconciledHead": "eb63a62a6d5e6851bd11b98926591db3be608f5d",
-    "meaning": "CIV-27 product implementation commit preceding its closure documentation; not the self-referential HEAD of this manifest.",
+    "reconciledHead": "57d7a57dec3956ba3d4bd30a837fa9417a29efb6",
+    "meaning": "CIV-28 product implementation commit preceding its closure documentation; not the self-referential HEAD of this manifest.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -29,16 +29,19 @@
   },
   "currentState": {
     "activePhase": null,
-    "completedThrough": "CIV-27",
-    "nextEligiblePhase": "CIV-28",
+    "completedThrough": "CIV-28",
+    "nextEligiblePhase": null,
+    "nextAuthorizedAction": "V4-GATE-C-v1",
     "civ27Status": "completed",
-    "civ28Status": "notStarted",
+    "civ28Status": "completed",
+    "gateCStatus": "readyForEvaluation",
+    "civ29Status": "plannedNotEligible",
     "gateRAcquired": true,
     "gateBAcquired": true,
     "v4CanonicalDocumentSet": true
   },
   "validationBaseline": {
-    "productHead": "eb63a62a6d5e6851bd11b98926591db3be608f5d",
+    "productHead": "57d7a57dec3956ba3d4bd30a837fa9417a29efb6",
     "focusedSafePlacementPassed": 14,
     "focusedSafePlacementFailed": 0,
     "focusedMaterialRightsPassed": 21,
@@ -47,13 +50,16 @@
     "focusedPersistenceReconciliationFailed": 0,
     "focusedCheckpointReplayPassed": 49,
     "focusedCheckpointReplayFailed": 0,
-    "repositoryChecksPassed": 3323,
+    "focusedObserverChroniclePassed": 17,
+    "focusedObserverChronicleFailed": 0,
+    "repositoryChecksPassed": 3340,
     "repositoryChecksFailed": 0,
     "repositoryStepsPassed": 35,
     "repositoryStepsTotal": 35,
     "safeBootstrapNormalWorldCampaign": "passed",
     "materialRightsTargetedLiveCampaign": "passed",
     "durableWorldRestartLiveCampaign": "passed",
+    "observerChronicleRenderedRestartCampaign": "passed",
     "representativeBeforeAfterRenderedWorldCapturesInspected": true
   },
   "publishedPostGateHardening": [
@@ -103,7 +109,7 @@
     "C": {
       "contractId": "V4-GATE-C-v1",
       "title": "Durable Observable Local World",
-      "status": "planned",
+      "status": "readyForEvaluation",
       "requiredPhases": [
         "CIV-26",
         "CIV-27",
@@ -433,11 +439,14 @@
     {
       "id": "CIV-28",
       "title": "Observer and Chronicle V1",
-      "status": "notStarted",
+      "status": "completed",
       "wave": "wave-1-durable-local-world",
       "requiredForCanonicalProgression": true,
       "dependsOn": [
         "CIV-27"
+      ],
+      "evidence": [
+        "docs/pebblelab/CIV_28_PHASE_SUMMARY.md"
       ]
     },
     {

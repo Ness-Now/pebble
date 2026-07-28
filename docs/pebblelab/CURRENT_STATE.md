@@ -8,20 +8,21 @@ SHA of the documentation commit that contains it.
 - Gate R — No Parallel Physical Engines: **ACQUIRED AND PUBLISHED**.
 - Gate B — Bounded Embodied Local Autonomy:
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-B-v1`.
-- `CIV-00` through `CIV-27`: **COMPLETE** in their bounded contracts.
+- `CIV-00` through `CIV-28`: **COMPLETE** in their bounded contracts.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
-Product implementation baseline reconciled by the `CIV-27` closure:
+Product implementation baseline reconciled by the `CIV-28` closure:
 
 ```text
-eb63a62a6d5e6851bd11b98926591db3be608f5d
+57d7a57dec3956ba3d4bd30a837fa9417a29efb6
 ```
 
 This baseline contains:
 
 - the previously published safe-bootstrap hardening;
-- `eb63a62` — bounded World/civilization persistence and reconciliation,
-  checkpoint/replay schema 20, and a real two-process rendered-World restart
+- `fc09d67` — the versioned, bounded and read-only Observer projection,
+  structured reasons and ledger-backed Chronicle;
+- `57d7a57` — the rendered Observer UI and a real two-process restart
   campaign.
 
 The SHA above identifies the product commit preceding this status update. It
@@ -32,25 +33,25 @@ file. Always fetch Git to determine the published HEAD.
 
 ```text
 active CIV phase: none
-next eligible phase: CIV-28 — Observer and Chronicle V1
-CIV-27 status: COMPLETE
-CIV-28 status: NOT STARTED
+next authorized action: V4-GATE-C-v1 — independent gate evaluation
+CIV-28 status: COMPLETE
+V4-GATE-C-v1 status: READY FOR EVALUATION, NOT ACQUIRED
+CIV-29 status: PLANNED, NOT ELIGIBLE
 roadmap generation: V4
 ```
 
-Preparing or publishing this documentation does not start `CIV-28`.
+Closing `CIV-28` does not evaluate or acquire `V4-GATE-C-v1` and does not
+start `CIV-29`.
 
 ## Last validation baseline
 
-At the reconciled `CIV-27` product baseline:
+At the reconciled `CIV-28` product baseline:
 
 ```text
-focused persistence reconciliation: 18 passed, 0 failed
-focused material rights regression: 21 passed, 0 failed
-focused checkpoint/replay regression: 49 passed, 0 failed
-repository gate: 3323 passed, 0 failed
+focused Observer and Chronicle: 17 passed, 0 failed
+repository gate: 3340 passed, 0 failed
 repository verification steps: 35/35
-CIV-27 real two-process restart campaign: PASS
+CIV-28 rendered two-process Observer campaign: PASS
 representative before/after rendered-world captures: inspected
 ```
 
@@ -71,13 +72,16 @@ representative before/after rendered-world captures: inspected
   transaction. Schema 20 binds the expected World, causal boundary and
   physical references, then fails closed or records reconciliation outcomes
   after the real World loads.
+- Observer V1 is a bounded local-session projection. It does not provide
+  omniscient multi-settlement inspection, unbounded history, full-text search
+  or simulation editing.
 - Gate `V4-GATE-D-v1` requires proof of at least one genuinely renewable
   physical subsistence loop; Gate B did not claim this.
 
 ## Next authorized action
 
 After senior review, manual publication and remote verification of this phase,
-a new mission may open `CIV-28` from the then-current canonical HEAD.
-`CIV-28` may expose read-only authoritative projections and causal history; it
-must not compute business truth in the UI, reopen Gate C, or begin markets,
-currency, inheritance, land law or tribunals.
+the next mission may independently evaluate `V4-GATE-C-v1` from the
+then-current canonical HEAD. That mission must review the combined bounded
+contracts of `CIV-26` through `CIV-28`; this closure does not pre-acquire the
+gate. `CIV-29` remains ineligible until Gate C is acquired and published.
