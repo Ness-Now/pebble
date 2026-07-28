@@ -8,21 +8,21 @@ SHA of the documentation commit that contains it.
 - Gate R — No Parallel Physical Engines: **ACQUIRED AND PUBLISHED**.
 - Gate B — Bounded Embodied Local Autonomy:
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-B-v1`.
-- `CIV-00` through `CIV-26`: **COMPLETE** in their bounded contracts.
+- `CIV-00` through `CIV-27`: **COMPLETE** in their bounded contracts.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
-Product implementation baseline reconciled by the `CIV-26` closure:
+Product implementation baseline reconciled by the `CIV-27` closure:
 
 ```text
-b410b47040deaa8d7b949c8c58023dadf9349f03
+eb63a62a6d5e6851bd11b98926591db3be608f5d
 ```
 
 This baseline contains:
 
 - the previously published safe-bootstrap hardening;
-- `b410b47` — bounded possession, custody, claims and use rights over real
-  Pebble material custody, with checkpoint/replay schema 19 and a targeted
-  rendered-World campaign.
+- `eb63a62` — bounded World/civilization persistence and reconciliation,
+  checkpoint/replay schema 20, and a real two-process rendered-World restart
+  campaign.
 
 The SHA above identifies the product commit preceding this status update. It
 does not claim to be the SHA of the documentation commit that contains this
@@ -32,24 +32,26 @@ file. Always fetch Git to determine the published HEAD.
 
 ```text
 active CIV phase: none
-next eligible phase: CIV-27 — Durable World/Civilization Persistence and Reconciliation V1
-CIV-26 status: COMPLETE
-CIV-27 status: NOT STARTED
+next eligible phase: CIV-28 — Observer and Chronicle V1
+CIV-27 status: COMPLETE
+CIV-28 status: NOT STARTED
 roadmap generation: V4
 ```
 
-Preparing or publishing this documentation does not start `CIV-27`.
+Preparing or publishing this documentation does not start `CIV-28`.
 
 ## Last validation baseline
 
-At the reconciled `CIV-26` product baseline:
+At the reconciled `CIV-27` product baseline:
 
 ```text
-focused material rights: 21 passed, 0 failed
-repository gate: 3305 passed, 0 failed
+focused persistence reconciliation: 18 passed, 0 failed
+focused material rights regression: 21 passed, 0 failed
+focused checkpoint/replay regression: 49 passed, 0 failed
+repository gate: 3323 passed, 0 failed
 repository verification steps: 35/35
-CIV-26 targeted live campaign: PASS
-representative rendered-world capture: inspected
+CIV-27 real two-process restart campaign: PASS
+representative before/after rendered-world captures: inspected
 ```
 
 ## Known important debt
@@ -59,19 +61,23 @@ representative rendered-world capture: inspected
 - Historical Gate B closure tooling and raw temporary artifacts are tied to
   their historical evaluation context; the reports remain evidence, not a
   current all-purpose gate runner.
-- Productive-source retention, checkpoint/replay budgets and aggregate-root
-  growth must be reviewed before persistence and multi-settlement scale.
 - `CIV-26` binds a bounded social asset reference to verified Pebble stack
   identity and quantity. It does not claim a universal per-unit item UUID.
-- Restart-safe reconciliation between a restored World and material-rights
-  state is intentionally deferred to `CIV-27`.
+- `CIV-27` reconciles only bounded candidate holders known at save time:
+  civilization agents and known material-rights holders. It does not scan the
+  World globally or discover an item moved into an otherwise unknown
+  container; that case remains explicitly unresolved instead of guessed.
+- The World and civilization saves do not claim a cross-store atomic
+  transaction. Schema 20 binds the expected World, causal boundary and
+  physical references, then fails closed or records reconciliation outcomes
+  after the real World loads.
 - Gate `V4-GATE-D-v1` requires proof of at least one genuinely renewable
   physical subsistence loop; Gate B did not claim this.
 
 ## Next authorized action
 
 After senior review, manual publication and remote verification of this phase,
-a new mission may open `CIV-27` from the then-current canonical HEAD.
-`CIV-27` must reconcile restored physical World truth with civilization state;
-it must not turn `CIV-26` observations into a second inventory or begin the
-general markets, currency, inheritance, land-law or tribunal phases.
+a new mission may open `CIV-28` from the then-current canonical HEAD.
+`CIV-28` may expose read-only authoritative projections and causal history; it
+must not compute business truth in the UI, reopen Gate C, or begin markets,
+currency, inheritance, land law or tribunals.

@@ -12,10 +12,10 @@ defined by [`PEBBLE_CIVILIZATION_VISION.md`](PEBBLE_CIVILIZATION_VISION.md).
 [`ROADMAP_MANIFEST.json`](ROADMAP_MANIFEST.json) is the machine-readable
 projection of this document and must agree with it exactly.
 
-Product implementation baseline reconciled by the `CIV-26` closure:
+Product implementation baseline reconciled by the `CIV-27` closure:
 
 ```text
-b410b47040deaa8d7b949c8c58023dadf9349f03
+eb63a62a6d5e6851bd11b98926591db3be608f5d
 ```
 
 This is the product commit preceding the closure documentation, not the
@@ -24,14 +24,14 @@ self-referential SHA of this roadmap.
 ## Canonical position
 
 ```text
-CIV-00 through CIV-26: COMPLETE
+CIV-00 through CIV-27: COMPLETE
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: none
-next eligible phase: CIV-27
-CIV-26: COMPLETE
-CIV-27: NOT STARTED
+next eligible phase: CIV-28
+CIV-27: COMPLETE
+CIV-28: NOT STARTED
 ```
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
@@ -129,16 +129,23 @@ universal per-unit physical item UUID.
 
 ### `CIV-27` — Durable World/Civilization Persistence and Reconciliation V1
 
-Status: **planned, not started, next eligible, required**.
+Status: **completed, required**.
 
 Result: save, stop, restore, reconcile and continue a World and its
 civilization without duplicating people, goods, claims, obligations, causal
 history or activity state. PebbleCore World persistence remains authoritative;
 the civilization adds no second World save.
 
+Bounded proof:
+[`CIV_27_PHASE_SUMMARY.md`](CIV_27_PHASE_SUMMARY.md). It covers schema 20,
+explicit World binding, bounded post-load physical reconciliation, interrupted
+activity policy, idempotence, corruption refusal, exact replay and a real
+two-process rendered-World restart. It does not claim a global item registry,
+cross-store atomic save or arbitrary migration.
+
 ### `CIV-28` — Observer and Chronicle V1
 
-Status: **planned, required**.
+Status: **planned, not started, next eligible, required**.
 
 Result: a read-only inspector exposes individuals, needs, activity, custody,
 households, relations, claims, causal timeline and explicit wait/failure

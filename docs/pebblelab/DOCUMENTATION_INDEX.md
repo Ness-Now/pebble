@@ -46,9 +46,9 @@ Canonical status at the product baseline reconciled by this documentation:
 ```text
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED under V4-GATE-B-v1
-CIV-00 through CIV-26: COMPLETE
+CIV-00 through CIV-27: COMPLETE
 post-Gate-B safe-bootstrap hardening: PUBLISHED
-CIV-27: NOT STARTED; next eligible phase
+CIV-28: NOT STARTED; next eligible phase
 ```
 
 ## Operational
@@ -104,6 +104,10 @@ to make it say something it did not claim at execution time.
 [`CIV_26_PHASE_SUMMARY.md`](CIV_26_PHASE_SUMMARY.md) records the bounded
 material-rights contract, deterministic and live validation, exact cleanup and
 explicit limits of `CIV-26`.
+
+[`CIV_27_PHASE_SUMMARY.md`](CIV_27_PHASE_SUMMARY.md) records the bounded
+World/civilization save, restart and reconciliation protocol, deterministic
+and two-process live evidence, exact cleanup and explicit V1 limits.
 
 The `PHASE_4_*.md`, `PHASE_5_*.md` and
 `PHASE_A0_SHARED_AGENT_RUNTIME_AUDIT.md` documents record completed audits,

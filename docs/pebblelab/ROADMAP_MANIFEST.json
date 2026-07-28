@@ -4,8 +4,8 @@
   "repository": "Ness-Now/pebble",
   "canonicalBranch": "lab/pebblelab-v1",
   "productBaseline": {
-    "reconciledHead": "b410b47040deaa8d7b949c8c58023dadf9349f03",
-    "meaning": "CIV-26 product implementation commit preceding its closure documentation; not the self-referential HEAD of this manifest.",
+    "reconciledHead": "eb63a62a6d5e6851bd11b98926591db3be608f5d",
+    "meaning": "CIV-27 product implementation commit preceding its closure documentation; not the self-referential HEAD of this manifest.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -29,27 +29,32 @@
   },
   "currentState": {
     "activePhase": null,
-    "completedThrough": "CIV-26",
-    "nextEligiblePhase": "CIV-27",
-    "civ26Status": "completed",
-    "civ27Status": "notStarted",
+    "completedThrough": "CIV-27",
+    "nextEligiblePhase": "CIV-28",
+    "civ27Status": "completed",
+    "civ28Status": "notStarted",
     "gateRAcquired": true,
     "gateBAcquired": true,
     "v4CanonicalDocumentSet": true
   },
   "validationBaseline": {
-    "productHead": "b410b47040deaa8d7b949c8c58023dadf9349f03",
+    "productHead": "eb63a62a6d5e6851bd11b98926591db3be608f5d",
     "focusedSafePlacementPassed": 14,
     "focusedSafePlacementFailed": 0,
     "focusedMaterialRightsPassed": 21,
     "focusedMaterialRightsFailed": 0,
-    "repositoryChecksPassed": 3305,
+    "focusedPersistenceReconciliationPassed": 18,
+    "focusedPersistenceReconciliationFailed": 0,
+    "focusedCheckpointReplayPassed": 49,
+    "focusedCheckpointReplayFailed": 0,
+    "repositoryChecksPassed": 3323,
     "repositoryChecksFailed": 0,
     "repositoryStepsPassed": 35,
     "repositoryStepsTotal": 35,
     "safeBootstrapNormalWorldCampaign": "passed",
     "materialRightsTargetedLiveCampaign": "passed",
-    "representativeRenderedWorldCaptureInspected": true
+    "durableWorldRestartLiveCampaign": "passed",
+    "representativeBeforeAfterRenderedWorldCapturesInspected": true
   },
   "publishedPostGateHardening": [
     {
@@ -415,17 +420,20 @@
     {
       "id": "CIV-27",
       "title": "Durable World/Civilization Persistence and Reconciliation V1",
-      "status": "notStarted",
+      "status": "completed",
       "wave": "wave-1-durable-local-world",
       "requiredForCanonicalProgression": true,
       "dependsOn": [
         "CIV-26"
+      ],
+      "evidence": [
+        "docs/pebblelab/CIV_27_PHASE_SUMMARY.md"
       ]
     },
     {
       "id": "CIV-28",
       "title": "Observer and Chronicle V1",
-      "status": "planned",
+      "status": "notStarted",
       "wave": "wave-1-durable-local-world",
       "requiredForCanonicalProgression": true,
       "dependsOn": [
