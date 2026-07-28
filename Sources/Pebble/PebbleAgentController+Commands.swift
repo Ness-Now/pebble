@@ -69,7 +69,13 @@ extension PebbleAgentController {
             guard session != nil, activeWorld === world, let anchor else {
                 return failure("No active PebbleAgents session.")
             }
-            return rebuild(world: world, anchor: anchor, seed: seed, resetSpeed: false)
+            return rebuild(
+                world: world,
+                player: player,
+                anchor: anchor,
+                seed: seed,
+                resetSpeed: false
+            )
         case "movement":
             guard session != nil else { return failure("No active PebbleAgents session.") }
             guard arguments.count == 2, arguments[1] == "on" || arguments[1] == "off" else {

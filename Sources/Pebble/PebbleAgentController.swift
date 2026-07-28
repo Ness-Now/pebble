@@ -66,6 +66,7 @@ final class PebbleAgentController {
     let migrationAdmissionAdapter = PebbleAgentMigrationAdmissionAdapter()
     let localEcologyAdapter = PebbleAgentLocalEcologyAdapter()
     let birthSiteAdapter = PebbleAgentBirthSiteAdapter()
+    let bootstrapPlacementResolver = PebbleAgentBootstrapPlacementResolver()
     let movementExecutor = PebbleAgentMovementExecutor()
     let cameraFollow = PebbleAgentCameraFollow()
     var interactionExecutor = PebbleAgentInteractionExecutor()
@@ -170,6 +171,10 @@ final class PebbleAgentController {
     var autonomousCivilizationFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION"] == "1"
     }
+    var safeBootstrapLateFailureProofEnabled: Bool {
+        environment["PEBBLELAB_DISPOSABLE_SAFE_BOOTSTRAP_LATE_FAILURE_PROOF"] == "1"
+            && environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1"
+    }
     var kinshipLateFailureProofEnabled: Bool {
         let lineageProof = environment["PEBBLELAB_DISPOSABLE_KINSHIP_LATE_FAILURE_PROOF"] == "1"
         let careProof = environment["PEBBLELAB_DISPOSABLE_CARE_LATE_FAILURE_PROOF"] == "1"
@@ -271,5 +276,7 @@ final class PebbleAgentController {
         case wildSubsistenceBoundary(String)
         case livestockBoundary(String)
         case physicalFoodBoundary(String)
+        case bootstrapPlacementBoundary(String)
+        case bootstrapRollbackBoundary(String)
     }
 }

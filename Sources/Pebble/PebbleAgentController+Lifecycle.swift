@@ -12,20 +12,43 @@ extension PebbleAgentController {
             trace("error disabled; set PEBBLELAB_APP_AGENTS=1")
             return failure("PebbleAgents disabled. Set PEBBLELAB_APP_AGENTS=1 before launch.")
         }
-        if session != nil || activeWorld != nil { _ = stop(reason: "restart") }
         let anchor = AgentPosition(
             x: Int(player.x.rounded(.down)),
             y: Int(player.y.rounded(.down)),
             z: Int(player.z.rounded(.down))
         )
-        return rebuild(world: world, anchor: anchor, seed: world.seed, resetSpeed: true)
+        return rebuild(
+            world: world,
+            player: player,
+            anchor: anchor,
+            seed: world.seed,
+            resetSpeed: true
+        )
     }
 
-    func rebuild(world: World, anchor: AgentPosition, seed: UInt32, resetSpeed: Bool) -> PebbleAgentCommandResult {
+    func rebuild(
+        world: World,
+        player: Player,
+        anchor: AgentPosition,
+        seed: UInt32,
+        resetSpeed: Bool
+    ) -> PebbleAgentCommandResult {
         let preservedMovementEnabled = movementEnabled
         let preservedFocus = focusedAgentId
         let preservedFollowMode = followMode
         let preservedDemoActive = demoActive
+        if session != nil || activeWorld != nil {
+            _ = stop(
+                reason: resetSpeed ? "restart" : "reset",
+                fallbackWorld: world
+            )
+            guard session == nil, activeWorld == nil else {
+                return failure(
+                    "PebbleAgents \(resetSpeed ? "restart" : "reset") refused: "
+                        + "verified cleanup failed."
+                )
+            }
+        }
         guard constructionExecutor.cleanup(world: world) else {
             return failure("PebbleAgents rebuild refused: construction cleanup failed.")
         }
@@ -43,6 +66,16 @@ extension PebbleAgentController {
         }
         probesByAgentId.removeAll()
         do {
+            let placement = try bootstrapPlacementResolver.resolve(
+                world: world,
+                anchor: anchor,
+                player: player,
+                socialEnabled: socialFeatureEnabled
+            )
+            trace(
+                "bootstrap placement status=accepted anchor=\(positionText(anchor)) "
+                    + placement.traceSummary
+            )
             let survivalConfiguration = autonomousCivilizationFeatureEnabled
                 ? try AgentSurvivalConfiguration(
                     hungerPerTick: 0.0008, fatiguePerTick: 0.0006,
@@ -61,15 +94,41 @@ extension PebbleAgentController {
                 memoryPolicy: .bounded(maxEntries: 128),
                 survivalConfiguration: survivalConfiguration
             )
-            session = try AgentSimulationSession(
+            let candidateSession = try AgentSimulationSession(
                 configuration: configuration,
-                agents: initialAgentStates(anchor: anchor),
+                agents: try initialAgentStates(
+                    positionsByAgentID: placement.positionsByAgentID
+                ),
                 initialTick: 0,
                 simulationID: try AgentSimulationID(
                     validating: "live-\(seed)-\(anchor.x)-\(anchor.y)-\(anchor.z)"
                 ),
                 causalLedgerPolicy: .bounded(maxEvents: 8192)
             )
+            let stagedProbes = try stageInitialProbes(
+                for: candidateSession.snapshot(),
+                in: world
+            )
+            do {
+                try verifyInitialBootstrap(
+                    session: candidateSession,
+                    probes: stagedProbes,
+                    world: world,
+                    player: player
+                )
+            } catch {
+                try rollbackInitialProbes(
+                    stagedProbes.values.sorted { $0.labAgentId > $1.labAgentId },
+                    in: world,
+                    cause: error
+                )
+                throw error
+            }
+
+            // This is the publication boundary: both sides have already been
+            // constructed and verified, and no throwing work remains.
+            session = candidateSession
+            probesByAgentId = stagedProbes
             self.seed = seed
             self.anchor = anchor
             activeWorld = world
@@ -120,33 +179,58 @@ extension PebbleAgentController {
             replayBaseCheckpointName = nil
             observedGoalKinds = [AgentGoalKind.idle.rawValue]
             resetRunCounters()
-            try createProbes(in: world)
             if followTargetId() == nil { followMode = .off }
             let verb = resetSpeed ? "start" : "reset"
             let weather = world.raining ? (world.thundering ? "thunder" : "rain") : "clear"
+            trace(
+                "bootstrap publication status=verified cognitionPhysical=exact "
+                    + "sessionAgents=\(candidateSession.snapshot().agentCount) "
+                    + "worldProbes=\(stagedProbes.count) rollbackRequired=0"
+            )
             trace("\(verb) seed=\(seed) agents=3 tick=0 hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") worldTick=\(world.time) dayTime=\(world.dayTime) weather=\(weather) randomTickSpeed=\(world.randomTickSpeed) mobSpawning=\(Int(world.gameRules["doMobSpawning"] ?? -1))")
             return success(resetSpeed ? "PebbleAgents started: 3 agents at 4 Hz." : "PebbleAgents reset to tick 0.")
+        } catch let error as PebbleAgentBootstrapPlacementResolver.ResolutionError {
+            let reason: String
+            switch error {
+            case let .insufficientSafePositions(
+                found, required, candidates, maximumCandidates, rejections
+            ):
+                reason = "insufficient_safe_positions found=\(found) required=\(required) "
+                    + "candidates=\(candidates)/\(maximumCandidates) "
+                    + "rejections=\(rejections)"
+            }
+            trace(
+                "bootstrap placement status=refused anchor=\(positionText(anchor)) "
+                    + "reason=\(reason) session=none probes=0"
+            )
+            lastError = reason
+            _ = stop(reason: "start refusal", fallbackWorld: world)
+            return failure("PebbleAgents start refused: \(reason)")
         } catch {
             lastError = String(describing: error)
-            _ = stop(reason: "start failure")
+            _ = stop(reason: "start failure", fallbackWorld: world)
             trace("error \(error)")
             return failure("PebbleAgents start failed: \(error)")
         }
     }
 
-    func initialAgentStates(anchor: AgentPosition) -> [AgentSessionAgentState] {
-        let recipientPosition = socialFeatureEnabled
-            ? AgentPosition(x: anchor.x + 8, y: anchor.y, z: anchor.z - 3)
-            : AgentPosition(x: anchor.x + 2, y: anchor.y, z: anchor.z)
+    func initialAgentStates(
+        positionsByAgentID: [String: AgentPosition]
+    ) throws -> [AgentSessionAgentState] {
         let helperFatigue = cooperationFeatureEnabled ? 0 : 0.03
         let primaryFear = autonomousCivilizationFeatureEnabled ? 10 : 80
-        let specifications: [(String, AgentPosition, Int, Double, Double)] = [
-            ("agent_0", AgentPosition(x: anchor.x + 6, y: anchor.y, z: anchor.z - 3), primaryFear, 0, 0.2),
-            ("agent_1", AgentPosition(x: anchor.x + 7, y: anchor.y, z: anchor.z - 3), 10, helperFatigue, 0.2),
-            ("agent_2", recipientPosition, 10, 0, 0.9),
+        let specifications: [(String, Int, Double, Double)] = [
+            ("agent_0", primaryFear, 0, 0.2),
+            ("agent_1", 10, helperFatigue, 0.2),
+            ("agent_2", 10, 0, 0.9),
         ]
-        return specifications.map { id, position, fear, fatigue, curiosity in
-            AgentSessionAgentState(
+        return try specifications.map { id, fear, fatigue, curiosity in
+            guard let position = positionsByAgentID[id] else {
+                throw ControllerError.bootstrapPlacementBoundary(
+                    "missing placement for \(id)"
+                )
+            }
+            return AgentSessionAgentState(
                 id: id,
                 state: "idle",
                 position: position,
@@ -175,6 +259,121 @@ extension PebbleAgentController {
         }
     }
 
+    func stageInitialProbes(
+        for snapshot: AgentSessionSnapshot,
+        in world: World
+    ) throws -> [String: LabCoreAgentEntity] {
+        var staged: [String: LabCoreAgentEntity] = [:]
+        do {
+            for agent in snapshot.agents.sorted(by: { $0.id < $1.id }) {
+                let probe = try createProbe(for: agent, in: world)
+                staged[agent.id] = probe
+                if safeBootstrapLateFailureProofEnabled, staged.count == 2 {
+                    throw ControllerError.bootstrapPlacementBoundary(
+                        "injected late bootstrap failure"
+                    )
+                }
+            }
+            return staged
+        } catch {
+            try rollbackInitialProbes(
+                staged.values.sorted { $0.labAgentId > $1.labAgentId },
+                in: world,
+                cause: error
+            )
+            throw error
+        }
+    }
+
+    func verifyInitialBootstrap(
+        session: AgentSimulationSession,
+        probes: [String: LabCoreAgentEntity],
+        world: World,
+        player: Player
+    ) throws {
+        let snapshot = session.snapshot()
+        let expectedIDs = snapshot.agents.map(\.id).sorted()
+        let worldProbes = world.entities.compactMap { $0 as? LabCoreAgentEntity }
+        let worldIDs = worldProbes.map(\.labAgentId).sorted()
+        guard probes.keys.sorted() == expectedIDs, worldIDs == expectedIDs else {
+            throw ControllerError.bootstrapPlacementBoundary(
+                "probe identity mismatch expected=\(expectedIDs) actual=\(worldIDs)"
+            )
+        }
+        for agent in snapshot.agents {
+            guard let probe = probes[agent.id],
+                  world.entityById[probe.id] === probe else {
+                throw ControllerError.bootstrapPlacementBoundary(
+                    "missing World indexes for \(agent.id)"
+                )
+            }
+            let physicalPosition = AgentPosition(
+                x: Int(probe.x.rounded(.down)),
+                y: Int(probe.y.rounded(.down)),
+                z: Int(probe.z.rounded(.down))
+            )
+            guard physicalPosition == agent.position,
+                  agent.homePosition == agent.position else {
+                throw ControllerError.bootstrapPlacementBoundary(
+                    "cognition/physical mismatch for \(agent.id)"
+                )
+            }
+            let assessment = assessEntityPlacement(
+                in: world,
+                at: EntityPlacementPosition(
+                    x: physicalPosition.x,
+                    y: physicalPosition.y,
+                    z: physicalPosition.z
+                ),
+                bodyWidth: probe.width,
+                bodyHeight: probe.height,
+                ignoringEntityIDs: [probe.id]
+            )
+            guard assessment.isValid else {
+                throw ControllerError.bootstrapPlacementBoundary(
+                    "post-placement invalid \(agent.id):"
+                        + assessment.rejections.map(\.rawValue).joined(separator: ",")
+                )
+            }
+            guard hypot(probe.x - player.x, probe.z - player.z) >= 1.5 else {
+                throw ControllerError.bootstrapPlacementBoundary(
+                    "player separation invalid for \(agent.id)"
+                )
+            }
+        }
+    }
+
+    func rollbackInitialProbes(
+        _ probes: [LabCoreAgentEntity],
+        in world: World,
+        cause: Error
+    ) throws {
+        var removedIDs: [String] = []
+        for probe in probes {
+            guard removeLabCoreAgentProbe(probe, from: world) else {
+                throw ControllerError.bootstrapRollbackBoundary(
+                    "failed to remove \(probe.labAgentId) after \(cause)"
+                )
+            }
+            removedIDs.append(probe.labAgentId)
+        }
+        let residual = world.entities.compactMap { entity -> String? in
+            guard let probe = entity as? LabCoreAgentEntity,
+                  removedIDs.contains(probe.labAgentId) else { return nil }
+            return probe.labAgentId
+        }.sorted()
+        guard residual.isEmpty else {
+            throw ControllerError.bootstrapRollbackBoundary(
+                "residual probes after rollback: \(residual)"
+            )
+        }
+        trace(
+            "bootstrap rollback status=verified cause="
+                + "\(String(describing: cause).replacingOccurrences(of: " ", with: "_")) "
+                + "probesRemoved=\(removedIDs.count) session=none residual=0"
+        )
+    }
+
     func createProbes(in world: World) throws {
         guard let session else { throw ControllerError.missingSession }
         for agent in session.snapshot().agents {
@@ -197,6 +396,23 @@ extension PebbleAgentController {
               }) else {
             throw ControllerError.invalidProbeSet(probesByAgentId.keys.sorted())
         }
+        let placement = EntityPlacementPosition(
+            x: agent.position.x,
+            y: agent.position.y,
+            z: agent.position.z
+        )
+        let assessment = assessEntityPlacement(
+            in: world,
+            at: placement,
+            bodyWidth: 0.6,
+            bodyHeight: 1.8
+        )
+        guard assessment.isValid else {
+            throw ControllerError.bootstrapPlacementBoundary(
+                "invalid physical creation position for \(agent.id):"
+                    + assessment.rejections.map(\.rawValue).joined(separator: ",")
+            )
+        }
         let probe = LabCoreAgentEntity(
             world: world,
             labAgentId: agent.id,
@@ -214,6 +430,23 @@ extension PebbleAgentController {
         probe.prevY = probe.y
         probe.prevZ = probe.z
         world.addEntity(probe)
+        let publishedPosition = AgentPosition(
+            x: Int(probe.x.rounded(.down)),
+            y: Int(probe.y.rounded(.down)),
+            z: Int(probe.z.rounded(.down))
+        )
+        guard world.entityById[probe.id] === probe,
+              world.entities.filter({ $0 === probe }).count == 1,
+              publishedPosition == agent.position else {
+            guard removeLabCoreAgentProbe(probe, from: world) else {
+                throw ControllerError.bootstrapRollbackBoundary(
+                    "probe publication rollback failed for \(agent.id)"
+                )
+            }
+            throw ControllerError.bootstrapPlacementBoundary(
+                "probe publication verification failed for \(agent.id)"
+            )
+        }
         return probe
     }
 
