@@ -1,260 +1,255 @@
-# Pebble Civilization — Vision
+# Pebble Civilization — Vision V4
 
-## Statut et trajectoire
+## Role
 
-Ce document est la vision produit canonique de PebbleLab. Il décrit une cible à
-long terme, pas l’état déjà implémenté.
+This is the durable product vision for Pebble Civilization. It defines the
+destination and permanent invariants. It does not define the current Git HEAD,
+phase status or next task; those belong to `CURRENT_STATE.md`, the roadmap and
+the manifest.
 
-`PebbleLab Society V1` est le premier jalon social observable. Il doit établir
-les fondations d’une société simulée — information sociale, confiance,
-coopération, tâches, persistance et population — sans être confondu avec la
-cible produit complète.
+## Product purpose
 
-`Medieval Civilization V1` est la cible produit principale à long terme : un
-monde médiéval alternatif et préindustriel, approximativement inspiré des
-contraintes sociales, matérielles et technologiques de la période 1200–1550,
-mais laissant émerger des sociétés différentes.
+Pebble Civilization aims to create a small autonomous world of alternative
+medieval civilization inside Pebble: a world that can live for generations,
+produce unplanned but causally explainable histories, and remain meaningful
+whether the player watches, intervenes or leaves.
 
-Le stade post-K actuellement acquis reste volontairement plus étroit. Un agent
-visible peut percevoir le World réel, arbitrer ses besoins à l’aide d’une
-cognition et d’une mémoire influentes, verrouiller une cible, naviguer dans des
-bounds, récolter transactionnellement des ressources naturelles, les porter,
-les livrer au camp, consommer de la nourriture, subir la famine, se reposer,
-financer un projet, placer en escrow ses matériaux et construire
-transactionnellement un abri fixe qui devient son nouveau home. Ce résultat ne
-constitue encore ni communication sociale, ni coopération, ni civilisation.
+The target experience is not merely intelligent NPCs, an automated village or
+LLM-generated dialogue. The player should be able to return after decades or
+centuries of simulated time and discover descendants, migrations, debts,
+customs, lost techniques, institutions, conflicts and stories that follow from
+events which actually occurred.
 
-## Cible de simulation
+The final success criterion is:
 
-La simulation ne code pas une féodalité obligatoire. Elle code les conditions
-matérielles, informationnelles, écologiques et sociales qui peuvent produire,
-selon l’histoire vécue :
+> An inhabitant can tell a credible story because the people, material events,
+> transmission and consequences behind that story are reconstructible from
+> the world’s durable history.
 
-- des seigneuries ;
-- des clans ;
-- des communes ;
-- des guildes ;
-- des républiques marchandes ;
-- des monarchies ;
-- des confédérations ;
-- des théocraties ;
-- des communautés plus égalitaires.
+## Simulate causes, not outcomes
 
-Aucune forme n’est une fin prédéterminée. Une société doit pouvoir se maintenir,
-se transformer, se fragmenter ou disparaître à cause de décisions et de
-contraintes observables.
+The simulation provides constraints, capabilities and consequences. It does
+not directly create a kingdom, guild, religion, war or culture because a
+threshold was reached.
 
-## Doctrine de simulation
+Different material and social histories may produce:
 
-Les futures verticales respectent les principes suivants :
+- clans, communes, guild cities, merchant republics or seigniories;
+- settled agriculture, fishing communities, pastoralism, trade or migration;
+- cooperation, inequality, schism, collapse or extinction.
 
-- simuler les causes plutôt que les résultats ;
-- information locale, limitée et faillible ;
-- aucune omniscience collective ;
-- conservation matérielle stricte ;
-- conséquences réelles des décisions ;
-- plusieurs stratégies viables ;
-- émergence encadrée par des règles sûres.
+No social form is mandatory. Multiple strategies must remain viable, and
+failure is an honest possible result.
 
-Le kernel déterministe décide ce qui est possible et valide chaque transition.
-Les adapters observent et mutent le World à travers des boundaries explicites,
-bornées, vérifiables et transactionnelles. Les rapports doivent permettre de
-relier un résultat à ses observations, décisions, transactions et effets.
+## Permanent simulation principles
 
-## Séparations conceptuelles
+- Information is local, incomplete, delayed, fallible and provenance-bearing.
+- There is no collective omniscience or free long-distance communication.
+- Material transitions conserve real things.
+- Decisions have physical, social and historical consequences.
+- Agents may wait, fail, misunderstand, forget, disagree and act
+  sub-optimally.
+- Deterministic inputs produce deterministic authoritative transitions.
+- State and searches are bounded, or have explicit persistence and compaction
+  policies.
+- Experimental behavior remains gated and default-off until acquired.
+- A proof must never inject the outcome it claims to demonstrate.
 
-Les domaines suivants restent distincts, même lorsqu’ils interagissent :
+## Authority boundaries
 
 ```text
-génétique
-≠ développement
-≠ éducation
-≠ connaissance
-≠ compétence
-≠ culture
-≠ profession
-≠ statut social
+PebbleCore
+= World, blocks, items, entities, physical rules and World persistence
+
+Pebble
+= live sensors, adapters, executors, verification and rollback
+
+PebbleAgents
+= deterministic cognition, society and civilization
+
+AgentSimulationSession
+= sole civilization aggregate root and transition owner
+
+PebbleLab
+= deterministic scenarios, reports, long-runs and evaluation
+
+pebsmoke
+= invariants, regressions and fault injection
 ```
 
-Un trait hérité ne vaut pas savoir. Une éducation ne garantit pas la maîtrise.
-Une profession ne résume pas un individu. Une appartenance culturelle ou un
-statut ne détermine pas mécaniquement une croyance, une aptitude ou une loyauté.
+`PebbleAgents` never mutates or reads a live `World` directly. Physical
+observations and outcomes cross explicit Pebble boundaries. Physical truth
+wins over projections. New physical needs reuse Pebble first, then use the
+smallest actor-neutral primitive or adapter that preserves ownership.
 
-## Individus et cycle de vie
+No second farming, crafting, inventory, combat, animal, redstone, rail,
+World-persistence or general physical-pathfinding engine belongs in the
+civilization layer.
 
-À long terme, les individus combinent :
+## Individuals and generations
 
-- des besoins concurrents ;
-- des aptitudes différentes ;
-- des personnalités imparfaites ;
-- des erreurs et des informations incomplètes ;
-- un apprentissage issu de la pratique et de la transmission ;
-- des expériences individuelles qui influencent leurs décisions ;
-- le vieillissement, la mort et des descendants.
+Inhabitants are limited individuals with needs, aptitudes, development,
+relationships, responsibilities, memories and imperfect knowledge. Across a
+life they may depend on caregivers, learn, practice, specialize, change roles,
+form or leave households, reproduce, age, die and transmit material and
+informational legacies.
 
-Le cycle de vie doit produire des contraintes réelles de temps, de dépendance,
-de soin et de succession. Il ne doit pas réduire les agents à des profils
-optimaux ni transformer les descendants en copies de leurs parents.
-
-## Compétences et professions
-
-L’efficacité effective suit le modèle cible :
+These concepts remain distinct:
 
 ```text
-théorie
-+ maîtrise pratique
-+ expérience réelle
-= efficacité effective
+genotype
+!= development
+!= phenotype
+!= education
+!= knowledge
+!= practical skill
+!= culture
+!= profession
+!= social status
 ```
 
-Une profession n’est jamais une classe définitive. La spécialisation émerge du
-temps limité, de l’apprentissage, des outils disponibles, des ateliers, de la
-réputation, des obligations et de la transmission familiale. Une personne peut
-changer de rôle, cumuler des activités, perdre une maîtrise faute de pratique
-ou savoir expliquer une théorie sans savoir l’exécuter correctement.
+No inherited profession, belief, loyalty or skill may be disguised as biology.
+Practice, tools, time, teaching and outcomes create mastery. Childhood, care
+and environment influence an adult without predetermining one.
 
-## Savoir, croyance et transmission
+## Subsistence and material economy
 
-La transmission future peut passer par :
+Survival emerges from competing needs and obligations rather than one global
+utility score. Communities may combine gathering, fishing, hunting,
+agriculture, livestock, trade, migration, tribute or theft.
 
-- l’observation ;
-- l’imitation ;
-- l’enseignement parental ;
-- l’apprentissage auprès d’un maître ;
-- le bouche-à-oreille ;
-- la pratique ;
-- les livres ;
-- les écoles ;
-- les guildes ;
-- les bibliothèques.
-
-Chaque passage peut perdre, altérer ou enrichir l’information. Le modèle doit
-distinguer :
+Every material domain must reconcile an equation equivalent to:
 
 ```text
-vérité du monde
-≠ affirmation transmise
-≠ compréhension de l’agent
-≠ croyance de l’agent
-≠ nouvelle transmission
+produced or extracted
+= carried
++ contained
++ deposited
++ in transit
++ escrowed
++ built or installed
++ consumed
++ decayed or destroyed
++ explicitly accounted loss
 ```
 
-La provenance devient décisionnellement pertinente dès qu’une affirmation peut
-influencer une action. Les livres sont des objets matériels, copiés, transportés,
-stockés, endommagés ou perdus ; les institutions du savoir ne sont utiles que
-si des personnes peuvent comprendre et transmettre leur contenu.
+Possession, physical custody, recognized ownership, claims and rights of use
+are separate. A stolen object still exists. Markets do not create goods.
+Buildings require materials. Livestock and books can be physically lost.
 
-## Société et appartenances
+Economic development may pass through barter, obligations, contracts,
+physical markets and local price memory. Currency is optional: a society may
+never adopt it, may use a commodity or may build a local unit of account.
+There is no globally omniscient price.
 
-La simulation prévoit séparément :
+## Knowledge, language and culture
 
-- les foyers ;
-- les familles ;
-- les lignées ;
-- les maisons et dynasties ;
-- les guildes ;
-- les religions ;
-- les villages ;
-- les cités ;
-- les royaumes ;
-- les nations ;
-- d’autres organisations émergentes.
-
-Ces ensembles peuvent se recouvrir sans partager le même propriétaire, la
-même durée de vie ou les mêmes règles d’admission. Une appartenance officielle
-n’équivaut jamais automatiquement à une loyauté réelle. Confiance, dette,
-parenté, foi, intérêt, contrainte, réputation et expérience peuvent tirer un
-individu dans des directions opposées.
-
-## Économie et conservation
-
-Tout futur domaine économique doit pouvoir rendre compte de l’invariant :
+World truth is not the same as what an agent believes or transmits:
 
 ```text
-ressources produites ou extraites
-=
-inventaires
-+ stocks
-+ entrepôts
-+ marchandises en vente
-+ matériaux construits
-+ ressources consommées
-+ pertes ou destructions
+WorldTruth
+!= SourceClaim
+!= AgentUnderstanding
+!= AgentBelief
+!= SharedTradition
+!= Narrative
+!= Utterance
 ```
 
-Les catégories et unités précises pourront évoluer, mais aucune opération ne
-doit faire apparaître gratuitement une ressource. La trajectoire économique
-visée est progressive :
+Knowledge can be observed, taught, practiced, distorted, forgotten, hidden,
+stolen, written or rediscovered. Theory never grants practical mastery.
+
+Communication grows from physical signals, gestures and learned local
+associations toward proto-language, composition, messengers, writing and
+books. Meaning is learned and may diverge into dialects. Long-distance
+information requires a physical or social carrier.
+
+Books and archives are material objects with authorship, script, copies,
+errors, location and custody. Their loss can destroy knowledge. Culture is a
+distributed pattern across individuals, not an enum or global bonus; it can
+diverge, mix, disappear and re-emerge.
+
+## Families, organizations and institutions
+
+Biological kinship, affection, union, household, lineage and house are
+different relations. Belonging does not imply loyalty.
+
+Organizations use general mechanisms for membership, roles, assets,
+obligations, exit, exclusion, split, merge and dissolution. Guilds, councils,
+cults, armies and polities arise from histories and needs rather than separate
+magic constructors.
+
+Territory, control, ownership, use rights and claims may overlap. Governance,
+law, religion, diplomacy and conflict must operate through imperfect
+information, material power, obligations and enforceable actions. Political or
+religious labels remain descriptive outputs, never causes by themselves.
+
+War is possible but costly in people, food, tools, production, knowledge and
+trust. Peace can create real value through safety, trade, learning and shared
+infrastructure.
+
+## Technology
+
+Technology is situated knowledge plus material capability. Techniques may be
+discovered, practiced, copied, guarded, lost and rediscovered. Production
+always uses real Pebble recipes, tools and machines.
+
+Rails, minecarts and redstone are physical properties of this world. Their
+infrastructure costs material, expertise and maintenance; it can fail and
+disappear. There is no global technology tree that unlocks automatically.
+
+## Player and observation
+
+The player should be able to inspect individuals, relationships, claims,
+households, organizations and causal timelines without the UI becoming a
+second authority.
+
+As an observer, the player may pause and accelerate time. As an interventionist
+god, the player may cause real physical or informational events whose meaning
+inhabitants interpret for themselves. As an incarnated actor, the player
+obeys ordinary physical constraints and can be injured or die. Omnipotence and
+incarnation are separate modes.
+
+## Optional and subordinate LLM
+
+The civilization must remain viable with LLM support disabled.
+
+An optional provider may verbalize, summarize, negotiate or propose structured
+content:
 
 ```text
-troc
-→ dette
-→ marché local
-→ monnaie
-→ halle ou entrepôt de marché
-→ commerce régional
+authoritative structured state
+-> bounded context
+-> optional provider
+-> structured proposal
+-> deterministic validation
 ```
 
-La propriété, la possession, la garde, la dette et le droit d’usage doivent
-être distingués avant d’introduire des marchés crédibles. Prix, pénuries,
-spécialisation et routes commerciales doivent découler des biens matériels,
-des coûts, des risques, de l’information locale et de la logistique.
+An LLM never owns perception, transactions, cognitive state, material truth or
+the World. Providers are replaceable, gated and non-authoritative. Natural
+language is a window onto a coherent history, not a substitute for one.
 
-## Communication physique
+## Non-goals
 
-Le proto-langage est une chaîne causale :
+Pebble Civilization must not become:
 
-```text
-intention
-→ signal physique
-→ perception
-→ interprétation
-→ vérification
-```
+- a scripted village or predetermined feudal progression;
+- an LLM facade over a shallow world;
+- a second implementation of Minecraft inside `PebbleAgents`;
+- an invisible spreadsheet that contradicts the detailed World;
+- an omniscient society;
+- a world guaranteed to prosper;
+- an infinitely detailed simulation everywhere;
+- a proof harness that creates the success it measures.
 
-La communication dépend de la proximité, de la portée, du bruit, de la mémoire
-et des capacités de l’émetteur comme du récepteur. Elle peut utiliser gestes,
-sons, sifflets, cloches, feux, messagers, marques, écriture et livres. Il
-n’existe aucune communication longue distance gratuite : l’information doit
-voyager par un support et peut arriver tard, déformée ou jamais.
+Coarse fidelity, derived projections, fixtures and simplified V1 verticals are
+valid when they preserve identity, causality, conservation and reconciliation.
 
-## Technologies du monde
+## Final destination
 
-Les rails et la redstone sont des technologies internes à ce monde, pas des
-exceptions extérieures à sa cohérence.
-
-- Les rails apparaissent d’abord dans les usages miniers et logistiques.
-- La redstone est un phénomène naturel découvert progressivement.
-- Leur extraction et leur usage ont des coûts matériels.
-- Leur conception exige un savoir spécialisé.
-- Les installations demandent maintenance et pièces.
-- Elles connaissent des pannes et des accidents.
-- Leur diffusion est lente et socialement située.
-- Le savoir nécessaire peut être perdu.
-
-Le progrès n’est ni uniforme ni irréversible. Une invention utile ne devient
-pas automatiquement disponible à toute la population.
-
-## Place du LLM
-
-Le LLM n’est pas le moteur permanent de la simulation. Le kernel déterministe
-reste responsable des actions, des transactions, de la causalité et des
-mutations du World.
-
-Un futur LLM peut verbaliser, négocier, raconter, interpréter ou proposer. Toute
-sortie est une proposition structurée validée par le moteur avant de produire
-un effet. Le provider est interchangeable : aucun fournisseur, protocole réseau
-ou modèle spécifique ne contamine les domaines de simulation.
-
-La simulation doit fonctionner sans LLM. Cette capacité arrive tard, reste
-optionnelle, explicitement gated et ne devient jamais propriétaire de l’état,
-des transactions ou du World.
-
-## Critère de réussite
-
-`Medieval Civilization V1` ne sera pas accepté parce que des agents portent une
-étiquette de métier, de royaume ou de religion. Il devra produire des histoires
-rejouables et causalement explicables dans lesquelles des individus limités
-apprennent, transmettent, coopèrent, échangent, fondent ou quittent des groupes,
-construisent des institutions et affrontent les conséquences matérielles de
-leurs décisions, sans résultat social imposé à l’avance.
+The target is a persistent, multi-generational medieval world in which people
+survive, learn, work, exchange, form families and organizations, inherit,
+write, believe, negotiate, fight, innovate and die without a prescribed social
+outcome. The player can understand why events happened, intervene, leave, and
+return generations later to consequences still present in people, objects,
+institutions and memories.

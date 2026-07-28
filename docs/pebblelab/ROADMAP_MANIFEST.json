@@ -1,478 +1,828 @@
 {
-  "schemaVersion": 2,
-  "roadmapVersion": "V3-Reuse-First",
-  "baselineHead": "b58f71b75110c2e65403cd073409a8559429ec77",
-  "branch": "lab/pebblelab-v1",
-  "canonicalRoadmap": "docs/pebblelab/PEBBLE_CIVILIZATION_ROADMAP.md",
-  "evaluatedRuntimeHead": "5a0abf17e3b977d96594d34d3eac626a2edb56c0",
-  "current": null,
-  "currentGateEvaluation": {
-    "gate": "B",
-    "evaluationNumber": 4,
-    "candidateResult": "failed",
-    "canonicalStatus": "notAcquired",
-    "evidence": "docs/pebblelab/GATE_B_CANDIDATE_EVALUATION.md",
-    "summary": "docs/pebblelab/GATE_B_REEVALUATION_4_SUMMARY.json",
-    "nextCanonicalPhasePromoted": false,
-    "publishedRemediatedBlockers": [
-      "B-BLOCKER-FOOD-CLOSURE",
-      "B-BLOCKER-AUTONOMOUS-PLAYABLE-SLICE",
-      "B-BLOCKER-LIVESTOCK-RESERVE-CLOSURE",
-      "B-BLOCKER-CRISIS-REPLACEMENT-ORCHESTRATION",
-      "B-BLOCKER-INTEGRATED-TEACHING-INITIATION",
-      "B-BLOCKER-STABLE-WORK-DEMAND-REFRESH"
-    ],
-    "locallyRemediatedBlockersPendingReevaluation": [],
-    "openBlockers": [
-      "B-BLOCKER-ACCEPTANCE-BOOTSTRAP-ROLE-ASSIGNMENT",
-      "B-BLOCKER-MOVEMENT-HOME-BOUNDARY"
-    ],
-    "campaignStatus": "reevaluation4FailedCorrection5Recommended",
-    "reevaluationRequired": true
+  "schemaVersion": 3,
+  "roadmapVersion": "V4-Emergence-First-Durable-World",
+  "repository": "Ness-Now/pebble",
+  "canonicalBranch": "lab/pebblelab-v1",
+  "productBaseline": {
+    "reconciledHead": "ef4ef405fe8b5e6c92bbaee2e75fae64c736c583",
+    "meaning": "Published product baseline reconciled by the V4 documentation mission; not the self-referential HEAD of this manifest.",
+    "safeBootstrapHardeningPublished": true
   },
-  "gateBConvergenceReadiness": {
-    "mission": "GATE-B-CONVERGENCE-01B",
-    "status": "notReadyForReevaluation5",
-    "evaluatedHead": "3e6d29724ec55bc98ee4ada740b4867583da6289",
-    "summary": "docs/pebblelab/GATE_B_CONVERGENCE_01B_SUMMARY.json",
-    "completedWaves": [
-      "wave0",
-      "wave1"
-    ],
-    "firstFailingWave": "wave2",
-    "failingWaveAllFixedSeedsAttempted": true,
-    "laterWavesNotRun": [
-      "wave3",
-      "determinism",
-      "checkpoint",
-      "stress2593",
-      "stress4099",
-      "live"
-    ],
-    "productBlockers": [
-      "B-BLOCKER-AUTONOMOUS-ACTIVITY-OCCUPIED-DESTINATION-RETRY-STORM"
-    ],
-    "harnessInvalidities": [
-      "H-BLOCKER-WORK-DEMAND-RETAINED-CAP-MISMATCH",
-      "H-BLOCKER-FIXED-HORIZON-OVERSHOOT",
-      "H-BLOCKER-FAILED-WAVE-SUMMARY-AGGREGATION"
-    ],
-    "gateBReevaluation5Executed": false,
-    "gateBCanonicallyAcquired": false,
-    "civ26Started": false
+  "documents": {
+    "startHere": "CODEX_START_HERE.md",
+    "currentState": "docs/pebblelab/CURRENT_STATE.md",
+    "vision": "docs/pebblelab/PEBBLE_CIVILIZATION_VISION.md",
+    "roadmap": "docs/pebblelab/PEBBLE_CIVILIZATION_ROADMAP.md",
+    "manifest": "docs/pebblelab/ROADMAP_MANIFEST.json",
+    "workflow": "docs/pebblelab/DEVELOPMENT_WORKFLOW.md",
+    "codexMethod": "docs/pebblelab/METHOD_CODEX_AUTONOMIE_GUIDEE.md",
+    "visualValidationPolicy": "docs/pebblelab/VISUAL_GAME_SMOKE_POLICY.md",
+    "documentationIndex": "docs/pebblelab/DOCUMENTATION_INDEX.md"
   },
-  "correctiveMilestones": [
+  "authority": {
+    "implementedState": "publishedCodeTestsAndGitHead",
+    "mandatoryWorkRules": "agentsAndApplicableWorkflows",
+    "productTarget": "vision",
+    "canonicalProgramAndStatus": "roadmapAndManifest",
+    "historicalFacts": "versionedEvidenceAndGateReports",
+    "historicalPlans": "nonDirective"
+  },
+  "currentState": {
+    "activePhase": null,
+    "completedThrough": "CIV-25",
+    "nextEligiblePhase": "CIV-26",
+    "civ26Started": false,
+    "gateRAcquired": true,
+    "gateBAcquired": true,
+    "v4CanonicalDocumentSet": true
+  },
+  "validationBaseline": {
+    "productHead": "ef4ef405fe8b5e6c92bbaee2e75fae64c736c583",
+    "focusedSafePlacementPassed": 14,
+    "focusedSafePlacementFailed": 0,
+    "repositoryChecksPassed": 3284,
+    "repositoryChecksFailed": 0,
+    "repositoryStepsPassed": 35,
+    "repositoryStepsTotal": 35,
+    "safeBootstrapNormalWorldCampaign": "passed",
+    "representativeRenderedWorldCaptureInspected": true
+  },
+  "publishedPostGateHardening": [
     {
-      "id": "GATE-B-CORR-01",
-      "title": "Real Food Consumption and Survival Convergence",
-      "canonicalPhase": false,
-      "startingHead": "515ae22c871292a978bb76da3020d3959632b6ed",
-      "status": "published"
-    },
+      "id": "POST-GATE-B-SAFE-BOOTSTRAP",
+      "status": "published",
+      "productCommit": "b6a65029cdb31b09cdceb78091ff1c1754e51766",
+      "evidenceCommit": "ef4ef405fe8b5e6c92bbaee2e75fae64c736c583",
+      "gateBReevaluation": false
+    }
+  ],
+  "milestones": [
     {
-      "id": "GATE-B-CORR-02",
-      "title": "Autonomous Agent Activity Orchestration and Playable Observer Convergence",
-      "canonicalPhase": false,
-      "startingHead": "1b7c320ec897d5ea9944d3c12e6b7c460954ce23",
-      "status": "published"
-    },
-    {
-      "id": "GATE-B-CORR-03",
-      "title": "Integrated Local Apprenticeship Initiation",
-      "canonicalPhase": false,
-      "startingHead": "768c8da5ccd325ecad06f9654e65b0a738864880",
-      "status": "published"
-    },
-    {
-      "id": "GATE-B-CORR-04",
-      "title": "Stable Work Demand Refresh and Transactional Continuity",
-      "canonicalPhase": false,
-      "startingHead": "4d79aea21d77ddbfafd464695ed8a0517164b4ea",
-      "status": "published"
+      "id": "V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1",
+      "title": "Renewable Physical Subsistence Loop",
+      "status": "planned",
+      "requiredByGate": "V4-GATE-D-v1",
+      "contract": "At least one physical subsistence loop renews and completes a new productive cycle through normal Pebble mechanics across the relevant lifecycle and restart boundary."
     }
   ],
   "gates": {
     "R": {
+      "contractId": "V3-GATE-R-v1",
       "title": "No Parallel Physical Engines",
-      "afterPhase": "CIV-19",
-      "status": "acquired"
+      "status": "acquired",
+      "requiredPhases": [
+        "CIV-19"
+      ],
+      "optionalPhases": []
     },
     "B": {
-      "title": "Self-Sustaining Local Society",
-      "afterPhase": "CIV-25",
-      "status": "evaluatedNotAcquired"
+      "contractId": "V4-GATE-B-v1",
+      "title": "Bounded Embodied Local Autonomy",
+      "status": "acquired",
+      "requiredPhases": [
+        "CIV-25"
+      ],
+      "optionalPhases": [],
+      "evidence": [
+        "docs/pebblelab/GATE_B_CLOSURE_01_SUMMARY.md",
+        "docs/pebblelab/GATE_B_CLOSURE_01_SUMMARY.json"
+      ],
+      "historicalFailReportsPreserved": true,
+      "claimsRenewableEconomy": false,
+      "reevaluationRequired": false
     },
     "C": {
-      "title": "Local Material Economy",
-      "afterPhase": "CIV-31",
-      "status": "notAcquired"
+      "contractId": "V4-GATE-C-v1",
+      "title": "Durable Observable Local World",
+      "status": "planned",
+      "requiredPhases": [
+        "CIV-26",
+        "CIV-27",
+        "CIV-28"
+      ],
+      "optionalPhases": []
     },
     "D": {
-      "title": "Durable Scaled Society",
-      "afterPhase": "CIV-34",
-      "status": "notAcquired"
+      "contractId": "V4-GATE-D-v1",
+      "title": "Generational Continuity",
+      "status": "planned",
+      "requiredPhases": [
+        "CIV-29",
+        "CIV-30",
+        "CIV-31",
+        "CIV-32",
+        "CIV-33"
+      ],
+      "requiredMilestones": [
+        "V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1"
+      ],
+      "optionalPhases": []
     },
     "E": {
-      "title": "Generational Continuity",
-      "afterPhase": "CIV-39",
-      "status": "notAcquired"
+      "contractId": "V4-GATE-E-v1",
+      "title": "Local Material Economy",
+      "status": "planned",
+      "requiredPhases": [
+        "CIV-34",
+        "CIV-35",
+        "CIV-36",
+        "CIV-37"
+      ],
+      "optionalPhases": [
+        "CIV-38"
+      ],
+      "currencyRequired": false
     },
     "F": {
-      "title": "Cumulative Culture",
-      "afterPhase": "CIV-47",
-      "status": "notAcquired"
+      "contractId": "V4-GATE-F-v1",
+      "title": "Durable Scaled World",
+      "status": "planned",
+      "requiredPhases": [
+        "CIV-39"
+      ],
+      "optionalPhases": [
+        "CIV-40"
+      ],
+      "trainingBridgeRequired": false
     },
     "G": {
-      "title": "Medieval Institutions",
-      "afterPhase": "CIV-56",
-      "status": "notAcquired"
+      "contractId": "V4-GATE-G-v1",
+      "title": "Cumulative Culture",
+      "status": "planned",
+      "requiredPhases": [
+        "CIV-41",
+        "CIV-42",
+        "CIV-43",
+        "CIV-44",
+        "CIV-45",
+        "CIV-46",
+        "CIV-47"
+      ],
+      "optionalPhases": []
     },
     "H": {
+      "contractId": "V4-GATE-H-v1",
+      "title": "Local Medieval Institutions",
+      "status": "planned",
+      "requiredPhases": [
+        "CIV-48",
+        "CIV-49",
+        "CIV-50",
+        "CIV-51",
+        "CIV-52"
+      ],
+      "optionalPhases": []
+    },
+    "I": {
+      "contractId": "V4-GATE-I-v1",
+      "title": "Medieval World",
+      "status": "planned",
+      "requiredPhases": [
+        "CIV-53",
+        "CIV-54",
+        "CIV-55",
+        "CIV-56"
+      ],
+      "optionalPhases": []
+    },
+    "J": {
+      "contractId": "V4-GATE-J-v1",
       "title": "Alternative Renaissance",
-      "afterPhase": "CIV-58",
-      "status": "notAcquired"
+      "status": "planned",
+      "requiredPhases": [
+        "CIV-57",
+        "CIV-58"
+      ],
+      "optionalPhases": []
+    },
+    "K": {
+      "contractId": "V4-GATE-K-v1",
+      "title": "God World",
+      "status": "planned",
+      "requiredPhases": [
+        "CIV-59",
+        "CIV-60",
+        "CIV-63",
+        "CIV-65",
+        "CIV-66",
+        "CIV-67"
+      ],
+      "optionalPhases": [
+        "CIV-61",
+        "CIV-62",
+        "CIV-64"
+      ],
+      "llmRequired": false
     }
   },
   "phases": [
     {
       "id": "CIV-00",
       "title": "Documentation and Civilization Rebaseline",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-01",
       "title": "Behavior-Preserving Runtime Modularization",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-02",
       "title": "Stable Identity, Simulation Clock and Causal Ledger",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-03",
       "title": "Social Information and Directed Trust V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-04",
       "title": "Physical Local Communication V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-05",
       "title": "Cooperative Material Tasks V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-06",
       "title": "Checkpoint, Restart and Replay V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-07",
       "title": "Population and Local Migration V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-08",
       "title": "Settlement Metrics V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-09",
       "title": "Local Ecology V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-10",
       "title": "Starvation Mortality V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-11",
       "title": "Age, Stages, Reproduction and Birth V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-12",
       "title": "Kinship, Households and Dependent Care V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-13",
       "title": "Practice-Based Skills and Task Matching V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-14",
-      "title": "Reuse & Convergence Baseline",
-      "status": "completed"
+      "title": "Reuse and Convergence Baseline",
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-15",
       "title": "Actor-Neutral Physical Action Gateway V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-16",
       "title": "Real Material Identity and Inventory Bridge V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-17",
       "title": "Harvest and Resource Convergence V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-18",
       "title": "Construction and Placement Convergence V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-19",
       "title": "Navigation and Embodiment Boundary Consolidation V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-20",
       "title": "Demonstration, Teaching and Apprenticeship V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-21",
       "title": "Ecological Observation and Civil Calendar V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-22",
       "title": "Agriculture and Managed Surplus V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-23",
       "title": "Fishing, Hunting and Wild Subsistence V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-24",
       "title": "Livestock and Animal Capital V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-25",
       "title": "Durable Work Commitments and Emergent Professions V1",
-      "status": "completed"
+      "status": "completed",
+      "wave": "completed-foundation",
+      "requiredForCanonicalProgression": true
     },
     {
       "id": "CIV-26",
       "title": "Possession, Custody, Claims and Use Rights V1",
-      "status": "planned"
+      "status": "notStarted",
+      "wave": "wave-1-durable-local-world",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-25"
+      ]
     },
     {
       "id": "CIV-27",
-      "title": "Production, Tools and Workshops V1",
-      "status": "planned"
+      "title": "Durable World/Civilization Persistence and Reconciliation V1",
+      "status": "planned",
+      "wave": "wave-1-durable-local-world",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-26"
+      ]
     },
     {
       "id": "CIV-28",
-      "title": "Barter and Local Exchange V1",
-      "status": "planned"
+      "title": "Observer and Chronicle V1",
+      "status": "planned",
+      "wave": "wave-1-durable-local-world",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-27"
+      ]
     },
     {
       "id": "CIV-29",
-      "title": "Debt, Promises and Durable Contracts V1",
-      "status": "planned"
+      "title": "Homeostasis, Health, Aging and Mortality V2",
+      "status": "planned",
+      "wave": "wave-2-generational-continuity",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "V4-GATE-C-v1"
+      ]
     },
     {
       "id": "CIV-30",
-      "title": "Physical Markets and Local Price Discovery V1",
-      "status": "planned"
+      "title": "Genetics, Development and Phenotype V1",
+      "status": "planned",
+      "wave": "wave-2-generational-continuity",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-29"
+      ]
     },
     {
       "id": "CIV-31",
-      "title": "Currency, Units of Account and Accounting V1",
-      "status": "planned"
+      "title": "Childhood, Guardianship and Social Development V2",
+      "status": "planned",
+      "wave": "wave-2-generational-continuity",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-30"
+      ]
     },
     {
       "id": "CIV-32",
-      "title": "World/Civilization Persistence Convergence V1",
-      "status": "planned"
+      "title": "Unions, Family Relations, Lineages and Houses V1",
+      "status": "planned",
+      "wave": "wave-2-generational-continuity",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-31"
+      ]
     },
     {
       "id": "CIV-33",
-      "title": "Multi-Settlement, Population Scaling and Fidelity Tiers V1",
-      "status": "planned"
+      "title": "Estates, Inheritance and Succession V1",
+      "status": "planned",
+      "wave": "wave-2-generational-continuity",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-32"
+      ]
     },
     {
       "id": "CIV-34",
-      "title": "Training and Evaluation Bridge V1",
-      "status": "planned"
+      "title": "Production, Tools and Workshops V1",
+      "status": "planned",
+      "wave": "wave-3-local-material-economy",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "V4-GATE-D-v1"
+      ]
     },
     {
       "id": "CIV-35",
-      "title": "Homeostasis, Health, Aging and Mortality V2",
-      "status": "planned"
+      "title": "Barter and Local Exchange V1",
+      "status": "planned",
+      "wave": "wave-3-local-material-economy",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-34"
+      ]
     },
     {
       "id": "CIV-36",
-      "title": "Genetics, Development and Phenotype V1",
-      "status": "planned"
+      "title": "Debt, Promises and Durable Contracts V1",
+      "status": "planned",
+      "wave": "wave-3-local-material-economy",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-35"
+      ]
     },
     {
       "id": "CIV-37",
-      "title": "Childhood Learning and Social Development V2",
-      "status": "planned"
+      "title": "Physical Markets and Local Price Discovery V1",
+      "status": "planned",
+      "wave": "wave-3-local-material-economy",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-36"
+      ]
     },
     {
       "id": "CIV-38",
-      "title": "Unions, Family Relations, Lineages and Houses V1",
-      "status": "planned"
+      "title": "Currency, Units of Account and Accounting V1",
+      "status": "planned",
+      "wave": "wave-3-local-material-economy",
+      "requiredForCanonicalProgression": false,
+      "optionalCapability": true,
+      "dependsOn": [
+        "CIV-37"
+      ]
     },
     {
       "id": "CIV-39",
-      "title": "Inheritance, Estates and Succession V1",
-      "status": "planned"
+      "title": "Multi-Settlement, Population Scaling and Fidelity Tiers V1",
+      "status": "planned",
+      "wave": "wave-4-scale-settlements",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "V4-GATE-E-v1"
+      ]
     },
     {
       "id": "CIV-40",
-      "title": "Structured Knowledge Graph V1",
-      "status": "planned"
+      "title": "Training and Evaluation Bridge V1",
+      "status": "planned",
+      "wave": "wave-4-scale-settlements",
+      "requiredForCanonicalProgression": false,
+      "optionalCapability": true,
+      "dependsOn": [
+        "CIV-39"
+      ]
     },
     {
       "id": "CIV-41",
-      "title": "Oral Transmission and Distortion V1",
-      "status": "planned"
+      "title": "Structured Knowledge and Belief Graph V1",
+      "status": "planned",
+      "wave": "wave-5-knowledge-language-culture",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "V4-GATE-F-v1"
+      ]
     },
     {
       "id": "CIV-42",
       "title": "Learned Proto-Language V1",
-      "status": "planned"
+      "status": "planned",
+      "wave": "wave-5-knowledge-language-culture",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-41"
+      ]
     },
     {
       "id": "CIV-43",
-      "title": "Compositional and Long-Distance Communication V1",
-      "status": "planned"
+      "title": "Oral Transmission and Distortion V1",
+      "status": "planned",
+      "wave": "wave-5-knowledge-language-culture",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-42"
+      ]
     },
     {
       "id": "CIV-44",
-      "title": "Writing and Literacy V1",
-      "status": "planned"
+      "title": "Compositional and Long-Distance Communication V1",
+      "status": "planned",
+      "wave": "wave-5-knowledge-language-culture",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-43"
+      ]
     },
     {
       "id": "CIV-45",
-      "title": "Books, Manuscripts, Copying and Translation V1",
-      "status": "planned"
+      "title": "Writing and Literacy V1",
+      "status": "planned",
+      "wave": "wave-5-knowledge-language-culture",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-44"
+      ]
     },
     {
       "id": "CIV-46",
-      "title": "Archives, Libraries and Cumulative Knowledge V1",
-      "status": "planned"
+      "title": "Books, Manuscripts, Archives and Libraries V1",
+      "status": "planned",
+      "wave": "wave-5-knowledge-language-culture",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-45"
+      ]
     },
     {
       "id": "CIV-47",
       "title": "Distributed Culture, Norms and Ritual Practices V1",
-      "status": "planned"
+      "status": "planned",
+      "wave": "wave-5-knowledge-language-culture",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-46"
+      ]
     },
     {
       "id": "CIV-48",
       "title": "Generic Organization Kernel V1",
-      "status": "planned"
+      "status": "planned",
+      "wave": "wave-6-organizations-land-law",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "V4-GATE-G-v1"
+      ]
     },
     {
       "id": "CIV-49",
       "title": "Guilds and Professional Institutions V1",
-      "status": "planned"
+      "status": "planned",
+      "wave": "wave-6-organizations-land-law",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-48"
+      ]
     },
     {
       "id": "CIV-50",
       "title": "Heraldry and Visible Identity V1",
-      "status": "planned"
+      "status": "planned",
+      "wave": "wave-6-organizations-land-law",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-49"
+      ]
     },
     {
       "id": "CIV-51",
       "title": "Settlements, Territory, Land and Obligations V1",
-      "status": "planned"
+      "status": "planned",
+      "wave": "wave-6-organizations-land-law",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-50"
+      ]
     },
     {
       "id": "CIV-52",
       "title": "Governance, Charters, Law and Justice V1",
-      "status": "planned"
+      "status": "planned",
+      "wave": "wave-6-organizations-land-law",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-51"
+      ]
     },
     {
       "id": "CIV-53",
       "title": "Beliefs, Myths and Emergent Religion V1",
-      "status": "planned"
+      "status": "planned",
+      "wave": "wave-7-beliefs-diplomacy-conflict-polities",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "V4-GATE-H-v1"
+      ]
     },
     {
       "id": "CIV-54",
       "title": "Diplomacy, Treaties and Dynastic Alliances V1",
-      "status": "planned"
+      "status": "planned",
+      "wave": "wave-7-beliefs-diplomacy-conflict-polities",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-53"
+      ]
     },
     {
       "id": "CIV-55",
       "title": "Conflict, Defense, Raids and War Logistics V1",
-      "status": "planned"
+      "status": "planned",
+      "wave": "wave-7-beliefs-diplomacy-conflict-polities",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-54"
+      ]
     },
     {
       "id": "CIV-56",
       "title": "Emergent Polities and Alternative Feudalities V1",
-      "status": "planned"
+      "status": "planned",
+      "wave": "wave-7-beliefs-diplomacy-conflict-polities",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-55"
+      ]
     },
     {
       "id": "CIV-57",
       "title": "Technology, Crafting Knowledge and Innovation V1",
-      "status": "planned"
+      "status": "planned",
+      "wave": "wave-8-innovation-infrastructure",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "V4-GATE-I-v1"
+      ]
     },
     {
       "id": "CIV-58",
       "title": "Redstone, Rails and Infrastructure V1",
-      "status": "planned"
+      "status": "planned",
+      "wave": "wave-8-innovation-infrastructure",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-57"
+      ]
     },
     {
       "id": "CIV-59",
-      "title": "God Observer, Historiography and Time Control V1",
-      "status": "planned"
+      "title": "God Observer, Historiography and Time Control V2",
+      "status": "planned",
+      "wave": "wave-9-god-world",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "V4-GATE-J-v1"
+      ]
     },
     {
       "id": "CIV-60",
       "title": "Divine Interventions, Revelations and Prophets V1",
-      "status": "planned"
+      "status": "planned",
+      "wave": "wave-9-god-world",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-59"
+      ]
     },
     {
       "id": "CIV-61",
       "title": "LLM Provider Abstraction and Deterministic Mock V1",
-      "status": "planned"
+      "status": "planned",
+      "wave": "wave-9-god-world",
+      "requiredForCanonicalProgression": false,
+      "optionalCapability": true,
+      "dependsOn": [
+        "CIV-60"
+      ]
     },
     {
       "id": "CIV-62",
       "title": "Local LLM Prototype and Benchmark",
-      "status": "planned"
+      "status": "planned",
+      "wave": "wave-9-god-world",
+      "requiredForCanonicalProgression": false,
+      "optionalCapability": true,
+      "dependsOn": [
+        "CIV-61"
+      ]
     },
     {
       "id": "CIV-63",
       "title": "Grounded Dialogue, Autobiography and Player Contact V1",
-      "status": "planned"
+      "status": "planned",
+      "wave": "wave-9-god-world",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-60"
+      ],
+      "providerOffPathRequired": true
     },
     {
       "id": "CIV-64",
       "title": "Dynamic Cognitive Budget and Large-Scale Inference V1",
-      "status": "planned"
+      "status": "planned",
+      "wave": "wave-9-god-world",
+      "requiredForCanonicalProgression": false,
+      "optionalCapability": true,
+      "dependsOn": [
+        "CIV-61"
+      ]
     },
     {
       "id": "CIV-65",
-      "title": "Genesis Presets and Founder World",
-      "status": "planned"
+      "title": "Genesis Presets and Canonical Founder World",
+      "status": "planned",
+      "wave": "wave-9-god-world",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-63"
+      ]
     },
     {
       "id": "CIV-66",
-      "title": "Long-Duration Medieval Civilization Acceptance",
-      "status": "planned"
+      "title": "Long-Duration Civilization Acceptance",
+      "status": "planned",
+      "wave": "wave-9-god-world",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-65"
+      ]
     },
     {
       "id": "CIV-67",
       "title": "Incarnation and God World Final",
-      "status": "planned"
+      "status": "planned",
+      "wave": "wave-9-god-world",
+      "requiredForCanonicalProgression": true,
+      "dependsOn": [
+        "CIV-66"
+      ]
     }
   ]
 }
