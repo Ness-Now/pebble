@@ -1,57 +1,73 @@
 # PebbleLab — Codex instructions
 
-## Objective and architecture
+## Start and scope
 
-PebbleLab builds a deterministic, observable civilization simulation while preserving the original Pebble game. Society V1 is the first observable social milestone; Medieval Civilization V1 is the long-term product objective.
+Read [`CODEX_START_HERE.md`](CODEX_START_HERE.md), then
+[`CURRENT_STATE.md`](docs/pebblelab/CURRENT_STATE.md), before defining work.
+Read this file and every nearer `AGENTS.md` for each touched path. Local rules
+narrow responsibility; they do not override root safety rules.
 
-The canonical direction is defined by:
+Pebble Civilization extends Pebble into a deterministic, observable
+civilization simulation. The canonical branch is `lab/pebblelab-v1`, but every
+mission must verify the requested remote and exact starting HEAD rather than
+trust documentation.
 
-- [`PEBBLE_CIVILIZATION_VISION.md`](docs/pebblelab/PEBBLE_CIVILIZATION_VISION.md);
-- [`PEBBLE_CIVILIZATION_ROADMAP.md`](docs/pebblelab/PEBBLE_CIVILIZATION_ROADMAP.md);
-- [`DOCUMENTATION_INDEX.md`](docs/pebblelab/DOCUMENTATION_INDEX.md);
-- [`DEVELOPMENT_WORKFLOW.md`](docs/pebblelab/DEVELOPMENT_WORKFLOW.md).
+## Permanent ownership
 
-The package has five targets:
+- `PebbleCore`: physical truth — World, chunks, blocks, items, entities,
+  physics, gameplay rules and World persistence.
+- `Pebble`: live sensors, adapters and physical executors; it prevalidates,
+  mutates, verifies and rolls back World operations.
+- `PebbleAgents`: pure deterministic cognition and civilization. It never
+  reads or mutates a live World directly.
+- `AgentSimulationSession`: sole civilization aggregate root and shared
+  transition owner. Never create a second agent kernel or cognitive owner.
+- `PebbleLab`: deterministic headless scenarios, reports and evaluation.
+- `pebsmoke`: invariants, regressions and fault injection.
 
-- `PebbleCore`: deterministic game engine and `World` implementation.
-- `PebbleAgents`: pure shared agent runtime; `AgentSimulationSession` is the cognitive state and transition source of truth.
-- `Pebble`: macOS/Metal game plus live adapters and physical executors.
-- `PebbleLab`: deterministic headless runner, reports, and fixtures.
-- `pebsmoke`: frozen-baseline and shared-runtime regression harness.
+## Engineering invariants
 
-Read this file first, then the nearest target-local `AGENTS.md` for every file in scope. Never create a second agent kernel or a second owner of cognitive state.
+- Reuse Pebble systems first. Audit the owning PebbleCore surface before
+  creating any physical mechanic; prefer an existing mechanic, a Pebble
+  adapter or the smallest actor-neutral Core primitive.
+- Never create parallel live farming, crafting, inventory, combat, animal,
+  redstone, rail, World-persistence or general physical-pathfinding engines.
+- Preserve deterministic ordering and registration order. Seed randomness,
+  bound searches and collections, and define persistence/compaction where
+  bounds are inappropriate.
+- Simulate causes rather than imposing social outcomes. Information is local;
+  matter, identity, obligations and provenance remain reconcilable.
+- World mutations are bounded, prevalidated, transactional and owned by one
+  adapter. Publish civilization state only after physical verification.
+  Failed or lifecycle-ending mutations require verified rollback; unverifiable
+  rollback is a hard failure.
+- A future LLM remains optional, replaceable and subordinate. It never owns
+  transactions, cognition or the World.
+- Never use `PEBBLE_REGOLD`, regenerate a golden, or weaken an existing proof
+  to make a change pass.
 
-## Git and change discipline
+## Git and delivery
 
-- Laboratory work uses branch `lab/pebblelab-v1`.
-- Before editing, run `pwd`, `git branch --show-current`, `git rev-parse HEAD`, and `git status --short`; honor any task-specific path, HEAD, and cleanliness requirements.
-- Codex must never push. The user owns pushes and remote publication.
-- Do not autonomously run `git rebase`, `git reset --hard`, or `git clean -fd`.
-- Keep one functional vertical per change: contract, implementation, focused evidence, regression evidence, and documentation belong together. Do not mix unrelated refactors.
-- Prefer small additions over rewrites. The normal range is 1–3 reviewable commits unless the task sets a stricter limit.
+- Before editing, verify `pwd`, branch, HEAD, relevant remote ref and
+  `git status --short`.
+- Codex never pushes. The user owns publication.
+- Do not autonomously rebase, hard reset, destructively clean or overwrite
+  unrelated user changes.
+- Keep commits coherent and reviewable. Choose their number from the work;
+  there is no rigid maximum.
+- Do not mix a product phase, an unrelated correction and roadmap
+  canonization in one change.
 
-## Runtime safeguards
+## Validation
 
-- Preserve PebbleCore determinism and registration order for blocks, items, entities, and biomes.
-- Simulate causes instead of imposing social outcomes; never provide magical global information or collective omniscience.
-- Keep material conservation and causal transitions explicit and verifiable.
-- Keep genetics, development, knowledge, skill, culture, profession, and social status conceptually separate.
-- Reuse existing Pebble engine systems before creating a parallel implementation.
-- Audit the relevant PebbleCore surfaces before creating any physical mechanic.
-- Do not create parallel live farming, crafting, inventory, combat, animal, redstone, rail, World-persistence, or general physical-pathfinding engines.
-- Prefer a minimal actor-neutral PebbleCore primitive or a Pebble adapter over duplicating behavior that is currently Player-specific.
-- Live physical truth comes from PebbleCore. Coarse or dormant projections require explicit conservation, identity, obligation, and parity contracts.
-- Migrate abstract V1 systems incrementally after replacement proof; never delete them in a big-bang cleanup.
-- A future LLM remains an optional provider; it never owns transactions, cognitive state, or the World.
-- Every new live collection must be bounded or have an explicit storage and persistence policy.
-- Gates for laboratory or experimental behavior remain disabled by default and require explicit opt-in.
-- World mutations must be bounded, prevalidated, transactional, and owned by one adapter. Publish shared state only after the World mutation is verified.
-- Every failed or lifecycle-ending World mutation must run a verified rollback. A rollback that cannot be verified is a hard failure, never a warning.
-- Never set or use `PEBBLE_REGOLD`, regenerate goldens, or change a golden to make a test pass.
-- Do not change rendering, audio, resource packs, registries, save/load, or packaging unless the task explicitly authorizes that surface.
+Apply validation proportionally to actual risk:
 
-## Permanent validation and reporting
+- docs/contracts: parse, link, consistency and diff checks;
+- deterministic runtime: focused tests and the canonical repository gate;
+- live/physical/visible work: applicable live proof plus the canonical
+  [`Visual Game Smoke Policy V5`](docs/pebblelab/VISUAL_GAME_SMOKE_POLICY.md).
 
-- Run `scripts/verify-pebblelab.sh` for the full local headless gate.
-- Use `scripts/verify-pebblelab-live.sh --dry-run` before any explicit live validation, then follow `docs/pebblelab-3d-live-prototype.md`.
-- Report at minimum: initial/final Git state, commits and changed files, behavior and boundary confirmation, every validation command with exact result/exit status, final diff, and whether a push was attempted.
+The canonical headless gate is `scripts/verify-pebblelab.sh`. The live launcher
+is `scripts/verify-pebblelab-live.sh`; use its dry-run before an explicit live
+campaign and follow the live runbook. Report exact commands, results, changed
+files, commits, final Git state and `Push attempted: NO`.

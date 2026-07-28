@@ -1,87 +1,168 @@
 # PebbleLab development workflow
 
-## Canonical direction
+## Canonical inputs
 
-Read the current [`Pebble Civilization vision`](PEBBLE_CIVILIZATION_VISION.md),
-[`prospective roadmap`](PEBBLE_CIVILIZATION_ROADMAP.md), and
-[`documentation index`](DOCUMENTATION_INDEX.md) before defining a mission.
-`PebbleLab Society V1` is the intermediate social milestone;
-`Medieval Civilization V1` is the long-term product destination.
+Begin at [`CODEX_START_HERE.md`](../../CODEX_START_HERE.md). Verify Git, then
+read `CURRENT_STATE.md`, the root and applicable local `AGENTS.md`, and only the
+canonical or operational documents relevant to the mission.
 
-New missions use the `CIV-XX` convention. A mission must not produce only
-documentary ceremony unless that work directly reduces a real delivery or
-architecture risk, as `CIV-00` does by removing conflicting project direction.
+Authority is scoped:
 
-## Read and scope
+```text
+published code, tests and Git HEAD
+= implemented reality
 
-Read the repository `AGENTS.md` first, then every `AGENTS.md` from the repository root down to each file being changed. The target-local file narrows responsibility; it does not override root safety rules.
+AGENTS.md and applicable workflows
+= mandatory working rules
 
-Work in one functional vertical at a time. State the allowed and forbidden surfaces before implementation, keep gates default-off, and stop if the requested Git path, branch, HEAD, or cleanliness invariant does not match.
+vision
+= durable product target
 
-Every new physical vertical begins with a targeted audit of the relevant
-PebbleCore mechanics. Prefer reuse, a minimal actor-neutral extraction, or a
-Pebble adapter before proposing any new physical implementation.
+roadmap and manifest
+= canonical program and status
 
-For live navigation, Civilization owns intent, destination and coarse
-waypoints; PebbleCore pathfinding, collision and entity movement own the
-physical route and resulting position. Validate identity and World ownership
-through a Pebble embodiment adapter, then publish only verified physical
-outcomes to `AgentSimulationSession`. Never use ordinary `setPos` as movement
-or teleport fallback.
+gate reports and evidence
+= verifiable history
 
-Gate R est acquise depuis la validation senior de CIV-19. Toute verticale
-ultérieure, dont CIV-20 Teaching, doit préserver cette preuve : observer ou
-référencer les actions Pebble existantes, sans moteur parallèle de mutation
-World, inventory, navigation ou action physique.
+old plans and handoffs
+= non-directive historical context
+```
+
+## Mission contract
+
+A mission defines:
+
+- exact Git baseline and cleanliness requirements;
+- product or documentation outcome;
+- why the outcome belongs now;
+- non-negotiable invariants;
+- explicit non-goals;
+- evidence proportional to risk;
+- local Git and reporting expectations.
+
+The mission should not prescribe structures, files or commit count without a
+concrete reason. Codex audits the repository and chooses the smallest coherent
+implementation. Use
+[`METHOD_CODEX_AUTONOMIE_GUIDEE.md`](METHOD_CODEX_AUTONOMIE_GUIDEE.md) when
+designing or reviewing a mission.
+
+Not every change is a `CIV-XX` phase. Corrections, gate evidence, tooling and
+documentation canonization use descriptive non-CIV identifiers and must not
+silently start a product phase.
+
+## Preflight
+
+Before any edit:
+
+1. verify repository path;
+2. fetch the relevant remote refs;
+3. compare the requested remote branch to the exact expected SHA;
+4. verify current branch, HEAD and `git status --short`;
+5. create or switch to a dedicated clean local branch when requested;
+6. read all applicable instructions.
+
+Stop without editing if a task requires an exact remote baseline and the remote
+has moved.
+
+## Reuse-First audit
+
+Every physical vertical begins by locating the existing owner:
+
+```text
+physical need
+-> inspect PebbleCore and Pebble
+-> reuse existing behavior
+-> otherwise adapt or extract the smallest actor-neutral primitive
+```
+
+Civilization owns intent, identity, reasons, social state and coarse
+waypoints. Pebble/PebbleCore own live World observation, detailed pathfinding,
+collision, movement, items, entities and physical outcomes. Publish to
+`AgentSimulationSession` only after verification.
 
 ## Delivery cycle
 
-1. ChatGPT defines the product vertical, boundaries, evidence, and Definition of Done.
-2. Codex verifies Git state, reads the applicable rules, implements a small patch, and validates it locally.
-3. Codex reports exact local commands, exit statuses, diff, commits, and remaining manual evidence. Codex never pushes.
-4. The user reviews and pushes the local commits.
-5. A GitHub audit checks the pushed SHA, remote diff, checks, and review evidence.
+1. Audit the real call path and current tests.
+2. Define the behavioral contract and ownership boundary.
+3. Implement one coherent vertical or documentation outcome.
+4. Run focused positive, negative and failure-path evidence.
+5. Run broader validation once when justified by risk.
+6. Inspect the diff for unrelated or generated changes.
+7. Create coherent local commits.
+8. Report facts, limitations and final Git state.
+9. User reviews and pushes manually.
+10. Published SHA is verified remotely before phase or gate status advances.
 
-A local result reported by Codex is evidence about one workspace and one command execution. GitHub proof is evidence attached to the user-pushed remote SHA. Neither should be presented as the other.
+Local evidence is not remote publication. A local green result never acquires a
+gate by itself.
 
-The normal implementation sequence is preflight, targeted reuse audit,
-implementation, focused tests, then one justified full gate at the end. Avoid
-an audit of an audit, repeated full suites after micro-fixes, and live
-validation when no live boundary changed. One vertical normally produces one
-to three reviewable commits.
+## Proportional validation
 
-## Permanent validation
+### Risk A — documentation and contracts
 
-Run the complete headless gate once at the end of a runtime or tooling vertical
-from the repository root:
+When no executable, configuration, generated baseline or runtime behavior
+changes:
+
+- parse JSON and other structured files;
+- check local Markdown links and named paths;
+- search canonical documents for status contradictions;
+- run existing documentation validators if present;
+- run `git diff --check`.
+
+Do not run Swift builds, live campaigns or the full product gate merely as
+ceremony.
+
+### Risk B — deterministic runtime or default-off adapters
+
+Run focused tests for the changed contract and
+`scripts/verify-pebblelab.sh` at the end. Add live dry-run or live proof only
+when a live boundary is affected.
+
+### Risk C — World mutation, persistence, physical systems or scale
+
+Require bounded prevalidation, mutation, verification, publication and
+verified rollback. Run focused fault injection, the repository gate, applicable
+live proof, and the risk-selected parts of the canonical Visual Game Smoke
+Policy.
+
+### Risk D — normal player/World integration
+
+Use controlled proof, adversarial normal-world variation, temporal observation
+and representative rendered-world inspection. Never present a prepared fixture
+as proof of arbitrary-world robustness.
+
+Apply the canonical Visual Game Smoke Policy proportionally to the risks of
+this mission.
+
+## Canonical commands
+
+Headless repository gate:
 
 ```bash
 scripts/verify-pebblelab.sh
 ```
 
-It refuses any defined `PEBBLE_REGOLD`, builds all relevant products, runs `pebsmoke`, runs `agents_basic` twice with seed 42 and compares its canonical sorted outputs, runs the existing `regression_smoke` business checks, performs repository hygiene checks, and writes evidence only to a temporary directory outside the repository.
-
-For a docs/contracts-only mission that touches no executable, configuration,
-runtime, test baseline, or generated artifact, use targeted Markdown/JSON and
-Git diff checks; do not run a Swift build merely because documentation changed
-unless the mission explicitly requires the full gate.
-
-There is no dedicated historical hash file for `agents_basic`. The retained mechanism deliberately uses the existing in-process `regression_smoke` report as the canonical business baseline and byte-compares deterministic `agents_basic` replays; it does not duplicate golden hashes.
-
-For live work, inspect the plan before launching:
+Live planning and launcher:
 
 ```bash
 scripts/verify-pebblelab-live.sh --dry-run
-scripts/verify-pebblelab-live.sh
+scripts/verify-pebblelab-live.sh <applicable-mode>
 ```
 
-The launcher isolates Pebble data, requires a `PebbleLab-*` disposable world with a fixed seed, reuses only existing command/capture hooks, and leaves visual and trace interpretation to the operator. It never opens or deletes a personal world. Follow the canonical [live runbook](../pebblelab-3d-live-prototype.md).
+Follow [`../pebblelab-3d-live-prototype.md`](../pebblelab-3d-live-prototype.md)
+for disposable-world rules and evidence handling.
 
-## Risk and commits
+## Reporting
 
-- Risk A — docs and rules with no executable or runtime behavior change:
-  targeted format, manifest, link, and diff checks; normally one commit.
-- Risk B — shared deterministic runtime or default-off app adapters: full gate plus focused scenario evidence and live dry-run when relevant; normally one or two commits.
-- Risk C — World mutation, lifecycle/persistence boundaries, rendering/assets, registries, packaging, or golden-sensitive behavior: explicit authorization, bounded transaction and verified rollback evidence, full gate, and honest manual live proof where automation ends; normally one to three commits.
+Every final report includes:
 
-Never push from Codex. Never use autonomous rebase, destructive Git cleanup, or golden regeneration as a shortcut.
+- initial and final branch/HEAD/status;
+- changed documents or code surfaces and why;
+- commits created;
+- every validation command with exit status and exact result;
+- remaining limits or debt;
+- whether any live or visual claim was actually inspected;
+- `Push attempted: NO`.
+
+Codex never pushes, never regolds and never converts a local candidate into a
+published phase or acquired gate.
