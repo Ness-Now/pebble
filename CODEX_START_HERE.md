@@ -40,9 +40,9 @@ Read [`CURRENT_STATE.md`](docs/pebblelab/CURRENT_STATE.md), not old gate reports
 for the compact status. In particular:
 
 - Gate R and Gate B are acquired and published.
-- `CIV-00` through `CIV-25` are complete in their bounded contracts.
+- `CIV-00` through `CIV-26` are complete in their bounded contracts.
 - post-Gate-B safe-bootstrap hardening is published.
-- `CIV-26` is the next eligible product phase and is not started.
+- `CIV-27` is the next eligible product phase and is not started.
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved
 as evidence of their own evaluations. They do not reopen Gate B.

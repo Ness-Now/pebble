@@ -4,8 +4,8 @@
   "repository": "Ness-Now/pebble",
   "canonicalBranch": "lab/pebblelab-v1",
   "productBaseline": {
-    "reconciledHead": "ef4ef405fe8b5e6c92bbaee2e75fae64c736c583",
-    "meaning": "Published product baseline reconciled by the V4 documentation mission; not the self-referential HEAD of this manifest.",
+    "reconciledHead": "b410b47040deaa8d7b949c8c58023dadf9349f03",
+    "meaning": "CIV-26 product implementation commit preceding its closure documentation; not the self-referential HEAD of this manifest.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -29,22 +29,26 @@
   },
   "currentState": {
     "activePhase": null,
-    "completedThrough": "CIV-25",
-    "nextEligiblePhase": "CIV-26",
-    "civ26Started": false,
+    "completedThrough": "CIV-26",
+    "nextEligiblePhase": "CIV-27",
+    "civ26Status": "completed",
+    "civ27Status": "notStarted",
     "gateRAcquired": true,
     "gateBAcquired": true,
     "v4CanonicalDocumentSet": true
   },
   "validationBaseline": {
-    "productHead": "ef4ef405fe8b5e6c92bbaee2e75fae64c736c583",
+    "productHead": "b410b47040deaa8d7b949c8c58023dadf9349f03",
     "focusedSafePlacementPassed": 14,
     "focusedSafePlacementFailed": 0,
-    "repositoryChecksPassed": 3284,
+    "focusedMaterialRightsPassed": 21,
+    "focusedMaterialRightsFailed": 0,
+    "repositoryChecksPassed": 3305,
     "repositoryChecksFailed": 0,
     "repositoryStepsPassed": 35,
     "repositoryStepsTotal": 35,
     "safeBootstrapNormalWorldCampaign": "passed",
+    "materialRightsTargetedLiveCampaign": "passed",
     "representativeRenderedWorldCaptureInspected": true
   },
   "publishedPostGateHardening": [
@@ -401,7 +405,7 @@
     {
       "id": "CIV-26",
       "title": "Possession, Custody, Claims and Use Rights V1",
-      "status": "notStarted",
+      "status": "completed",
       "wave": "wave-1-durable-local-world",
       "requiredForCanonicalProgression": true,
       "dependsOn": [
@@ -411,7 +415,7 @@
     {
       "id": "CIV-27",
       "title": "Durable World/Civilization Persistence and Reconciliation V1",
-      "status": "planned",
+      "status": "notStarted",
       "wave": "wave-1-durable-local-world",
       "requiredForCanonicalProgression": true,
       "dependsOn": [

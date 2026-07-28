@@ -8,42 +8,48 @@ SHA of the documentation commit that contains it.
 - Gate R — No Parallel Physical Engines: **ACQUIRED AND PUBLISHED**.
 - Gate B — Bounded Embodied Local Autonomy:
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-B-v1`.
-- `CIV-00` through `CIV-25`: **COMPLETE** in their bounded contracts.
+- `CIV-00` through `CIV-26`: **COMPLETE** in their bounded contracts.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
-Product baseline reconciled by this documentation mission:
+Product implementation baseline reconciled by the `CIV-26` closure:
 
 ```text
-ef4ef405fe8b5e6c92bbaee2e75fae64c736c583
+b410b47040deaa8d7b949c8c58023dadf9349f03
 ```
 
 This baseline contains:
 
-- `b6a6502` — safe, bounded and deterministic live civilization bootstrap
-  placement with atomic refusal and rollback;
-- `ef4ef40` — the normal-world safe-bootstrap live campaign.
+- the previously published safe-bootstrap hardening;
+- `b410b47` — bounded possession, custody, claims and use rights over real
+  Pebble material custody, with checkpoint/replay schema 19 and a targeted
+  rendered-World campaign.
+
+The SHA above identifies the product commit preceding this status update. It
+does not claim to be the SHA of the documentation commit that contains this
+file. Always fetch Git to determine the published HEAD.
 
 ## Current program position
 
 ```text
 active CIV phase: none
-next eligible phase: CIV-26 — Possession, Custody, Claims and Use Rights V1
-CIV-26 status: NOT STARTED
+next eligible phase: CIV-27 — Durable World/Civilization Persistence and Reconciliation V1
+CIV-26 status: COMPLETE
+CIV-27 status: NOT STARTED
 roadmap generation: V4
 ```
 
-Preparing or publishing this documentation does not start `CIV-26`.
+Preparing or publishing this documentation does not start `CIV-27`.
 
 ## Last validation baseline
 
-At the reconciled product baseline:
+At the reconciled `CIV-26` product baseline:
 
 ```text
-focused safe placement: 14 passed, 0 failed
-repository gate: 3284 passed, 0 failed
+focused material rights: 21 passed, 0 failed
+repository gate: 3305 passed, 0 failed
 repository verification steps: 35/35
-safe-bootstrap normal-world campaign: PASS
-representative rendered-world captures: inspected
+CIV-26 targeted live campaign: PASS
+representative rendered-world capture: inspected
 ```
 
 ## Known important debt
@@ -55,13 +61,17 @@ representative rendered-world captures: inspected
   current all-purpose gate runner.
 - Productive-source retention, checkpoint/replay budgets and aggregate-root
   growth must be reviewed before persistence and multi-settlement scale.
+- `CIV-26` binds a bounded social asset reference to verified Pebble stack
+  identity and quantity. It does not claim a universal per-unit item UUID.
+- Restart-safe reconciliation between a restored World and material-rights
+  state is intentionally deferred to `CIV-27`.
 - Gate `V4-GATE-D-v1` requires proof of at least one genuinely renewable
   physical subsistence loop; Gate B did not claim this.
 
 ## Next authorized action
 
-After senior review, manual publication and remote verification of this
-documentation set, a new mission may open `CIV-26` from the then-current
-canonical HEAD. That mission must audit the real custody/material-identity
-surfaces and must not silently open markets, currency, inheritance, land law or
-tribunals.
+After senior review, manual publication and remote verification of this phase,
+a new mission may open `CIV-27` from the then-current canonical HEAD.
+`CIV-27` must reconcile restored physical World truth with civilization state;
+it must not turn `CIV-26` observations into a second inventory or begin the
+general markets, currency, inheritance, land-law or tribunal phases.

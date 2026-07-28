@@ -12,25 +12,26 @@ defined by [`PEBBLE_CIVILIZATION_VISION.md`](PEBBLE_CIVILIZATION_VISION.md).
 [`ROADMAP_MANIFEST.json`](ROADMAP_MANIFEST.json) is the machine-readable
 projection of this document and must agree with it exactly.
 
-Product baseline reconciled by this documentation mission:
+Product implementation baseline reconciled by the `CIV-26` closure:
 
 ```text
-ef4ef405fe8b5e6c92bbaee2e75fae64c736c583
+b410b47040deaa8d7b949c8c58023dadf9349f03
 ```
 
-This is a product baseline, not the self-referential SHA of this documentation
-file.
+This is the product commit preceding the closure documentation, not the
+self-referential SHA of this roadmap.
 
 ## Canonical position
 
 ```text
-CIV-00 through CIV-25: COMPLETE
+CIV-00 through CIV-26: COMPLETE
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: none
-next eligible phase: CIV-26
-CIV-26: NOT STARTED
+next eligible phase: CIV-27
+CIV-26: COMPLETE
+CIV-27: NOT STARTED
 ```
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
@@ -104,13 +105,13 @@ demonstrated boundary between civilization intent and Pebble physical truth.
 
 ## Wave 1 — Durable local world
 
-This is the next wave. Only its outcomes and boundaries are canonical here;
+This is the current wave. Only its outcomes and boundaries are canonical here;
 each phase receives its own mission design after auditing the then-current
 code.
 
 ### `CIV-26` — Possession, Custody, Claims and Use Rights V1
 
-Status: **planned, not started, required**.
+Status: **completed, required**.
 
 Result: distinguish physical holder, custodian, recognized owner, claimant and
 authorized user while real Pebble items and containers remain authoritative.
@@ -120,9 +121,15 @@ may diverge.
 Not opened by this phase: markets, currency, complete inheritance, land law,
 tribunals or taxation.
 
+Bounded proof:
+[`CIV_26_PHASE_SUMMARY.md`](CIV_26_PHASE_SUMMARY.md). It covers local social
+recognition, permissions, verified transfers, transgression, conflict,
+rollback and checkpoint/replay. It does not claim restart reconciliation or a
+universal per-unit physical item UUID.
+
 ### `CIV-27` — Durable World/Civilization Persistence and Reconciliation V1
 
-Status: **planned, required**.
+Status: **planned, not started, next eligible, required**.
 
 Result: save, stop, restore, reconcile and continue a World and its
 civilization without duplicating people, goods, claims, obligations, causal
