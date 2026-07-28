@@ -20,6 +20,7 @@ public enum AgentReplaySchema {
     public static let physicalFoodSurvivalVersion = 17
     public static let autonomousActivityVersion = 18
     public static let materialRightsVersion = 19
+    public static let persistenceReconciliationVersion = 20
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -31,7 +32,7 @@ public enum AgentReplaySchema {
             || version == agricultureVersion || version == wildSubsistenceVersion
             || version == livestockVersion || version == workCommitmentVersion
             || version == physicalFoodSurvivalVersion || version == autonomousActivityVersion
-            || version == materialRightsVersion
+            || version == materialRightsVersion || version == persistenceReconciliationVersion
     }
 }
 

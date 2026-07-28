@@ -262,6 +262,7 @@ public enum AgentMaterialUseReason: String, Codable, Sendable {
     case explicitPermission
     case unknownAsset
     case stalePhysicalObservation
+    case physicalAssetUnresolved
     case requesterNotPhysicalHolder
     case noUseRight
 }

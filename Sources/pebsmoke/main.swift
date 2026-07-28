@@ -70,6 +70,13 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "checkpoint-re
     exit(failed > 0 ? 1 : 0)
 }
 
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
+    == "persistence-reconciliation" {
+    runPebbleAgentsPersistenceReconciliationSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "mortality" {
     runPebbleAgentsMortalityPopulationExitSmoke()
     print("\n\(passed) passed, \(failed) failed")
@@ -2348,6 +2355,7 @@ runPebbleAgentsAutonomousActivityLifecycleSmoke()
 runPebbleAgentsProductiveSourceLifecycleSmoke()
 runPebbleAgentsRoleNeutralBootstrapSmoke()
 runPebbleAgentsMaterialRightsSmoke()
+runPebbleAgentsPersistenceReconciliationSmoke()
 
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)

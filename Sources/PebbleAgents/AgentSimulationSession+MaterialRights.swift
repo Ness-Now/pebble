@@ -43,6 +43,16 @@ extension AgentSimulationSession {
                 conflictObserved: false
             )
         }
+        if let reconciliation = persistenceReconciliationState?.latestResults
+            .first(where: { $0.assetID == request.assetID }),
+           !reconciliation.outcome.hasVerifiedPhysicalAsset {
+            return AgentMaterialUseDecision(
+                request: request,
+                verdict: .denied,
+                reason: .physicalAssetUnresolved,
+                conflictObserved: record.hasConflict
+            )
+        }
         guard record.lastVerifiedHolder == request.verifiedHolder else {
             return AgentMaterialUseDecision(
                 request: request,

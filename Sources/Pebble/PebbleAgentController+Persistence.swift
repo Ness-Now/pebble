@@ -102,6 +102,12 @@ extension PebbleAgentController {
                     world: world,
                     store: store
                 )
+                let reconciliation = try reconciliationBinding(
+                    checkpoint: checkpoint,
+                    session: session,
+                    world: world,
+                    store: store
+                )
                 let safety = liveRestartSafety()
                 let manifest = AgentCheckpointManifest(
                     name: name,
@@ -119,7 +125,8 @@ extension PebbleAgentController {
                         economyAutoEnabled: economyAutoEnabled,
                         focusedAgentID: focusedAgentId,
                         naturalResourceScanDiagnostics: naturalResourceExecutor.state.lastScan
-                    )
+                    ),
+                    reconciliationBinding: reconciliation
                 )
                 try store.saveCheckpoint(name: name, checkpoint: checkpoint, manifest: manifest)
                 let causalAfter = session.causalLedgerSnapshot().summary
@@ -130,7 +137,7 @@ extension PebbleAgentController {
                     )
                 }
                 self.session = session
-                let message = "checkpoint saved name=\(name.rawValue) id=\(checkpoint.checkpointID.rawValue) tick=\(checkpoint.tick.rawValue) simulation=\(checkpoint.simulationID.rawValue) digest=\(checkpoint.semanticDigest.rawValue) storageDigest=\(manifest.storageDigest.rawValue) bytes=\(bytes.count) causalSequence=\(causalAfter.latestSequence) restartSafe=\(safety.safe ? 1 : 0) boundCells=\(binding.cells.count) world=\(binding.worldID) mutation=none"
+                let message = "checkpoint saved name=\(name.rawValue) id=\(checkpoint.checkpointID.rawValue) tick=\(checkpoint.tick.rawValue) simulation=\(checkpoint.simulationID.rawValue) digest=\(checkpoint.semanticDigest.rawValue) storageDigest=\(manifest.storageDigest.rawValue) bytes=\(bytes.count) causalSequence=\(causalAfter.latestSequence) restartSafe=\(safety.safe ? 1 : 0) boundCells=\(binding.cells.count) physicalReferences=\(reconciliation?.assets.count ?? 0) world=\(binding.worldID) mutation=none"
                 trace(message)
                 return success(message)
             case "load":
@@ -466,7 +473,13 @@ extension PebbleAgentController {
             world: world,
             store: store
         )
-        let candidate = try AgentSimulationSession.restoring(stored.checkpoint)
+        var candidate = try AgentSimulationSession.restoring(stored.checkpoint)
+        if candidate.persistenceReconciliationEnabled
+            && !persistenceReconciliationFeatureEnabled {
+            return failure(
+                "Checkpoint load refused: persistence reconciliation gate is disabled."
+            )
+        }
         if candidate.settlementMetricsEnabled && !multiscaleFeatureEnabled {
             return failure(
                 "Checkpoint load refused: settlement metrics gate is disabled."
@@ -531,8 +544,8 @@ extension PebbleAgentController {
                 "Checkpoint load refused: agriculture gate or dependency is disabled."
             )
         }
-        let candidateDigest = try candidate.durableStateDigest()
-        guard candidateDigest == stored.manifest.semanticDigest else {
+        let checkpointDigest = try candidate.durableStateDigest()
+        guard checkpointDigest == stored.manifest.semanticDigest else {
             throw AgentCheckpointError.semanticDigestMismatch
         }
         let candidateAgents = candidate.snapshot().agents.sorted { $0.id < $1.id }
@@ -579,6 +592,45 @@ extension PebbleAgentController {
         guard reusableProbeStates.count == candidateAgentIDs.count else {
             return failure(
                 "Checkpoint load refused: live embodiment capture is incomplete."
+            )
+        }
+
+        var reconciliationSummary = "legacy_exact"
+        if candidate.persistenceReconciliationEnabled {
+            guard let binding = stored.manifest.reconciliationBinding else {
+                throw PebbleAgentPersistenceStoreError.invalidBundle(
+                    "schema v20 checkpoint has no reconciliation binding"
+                )
+            }
+            let request = try reconciliationRequest(
+                binding: binding,
+                candidate: candidate,
+                world: world,
+                store: store
+            )
+            let report = try candidate.applyPersistenceReconciliation(request)
+            guard report.publishable, report.run.duplicationCount == 0 else {
+                throw PebbleAgentPersistenceStoreError.invalidBundle(
+                    "reconciliation did not produce a publishable session"
+                )
+            }
+            let outcomes = report.run.assetResults.map(\.outcome.rawValue)
+                .joined(separator: ",")
+            reconciliationSummary = "applied:\(outcomes.isEmpty ? "none" : outcomes)"
+            trace(
+                "persistence reconciliation run=\(report.run.runID) "
+                    + "checkpoint=\(report.run.checkpointID.rawValue) "
+                    + "world=\(report.run.world.worldID) "
+                    + "assets=\(report.run.assetResults.count) "
+                    + "activities=\(report.run.activityResults.count) "
+                    + "outcomes=\(outcomes.isEmpty ? "none" : outcomes) "
+                    + "duplicates=\(report.run.duplicationCount) "
+                    + "causal=\(report.run.causalSequenceBefore)"
+                    + ">\(report.run.causalSequenceAfter)"
+            )
+        } else if stored.manifest.reconciliationBinding != nil {
+            throw PebbleAgentPersistenceStoreError.invalidBundle(
+                "legacy checkpoint has unexpected reconciliation binding"
             )
         }
 
@@ -692,7 +744,8 @@ extension PebbleAgentController {
             throw error
         }
         let causal = candidate.causalLedgerSnapshot().summary
-        let message = "checkpoint loaded name=\(name.rawValue) id=\(stored.checkpoint.checkpointID.rawValue) tick=\(candidate.tick) simulation=\(candidate.simulationID.rawValue) digest=\(candidateDigest.rawValue) causalSequence=\(causal.latestSequence) causalDigest=\(causal.digest) restartSafe=1 probes=\(probesByAgentId.count) paused=1 focus=\(focusedAgentId ?? "none") lifecycleEvent=none probeReconciliation=reused_exact worldMutation=none"
+        let reconciledDigest = try candidate.durableStateDigest()
+        let message = "checkpoint loaded name=\(name.rawValue) id=\(stored.checkpoint.checkpointID.rawValue) tick=\(candidate.tick) simulation=\(candidate.simulationID.rawValue) digest=\(checkpointDigest.rawValue) reconciledDigest=\(reconciledDigest.rawValue) causalSequence=\(causal.latestSequence) causalDigest=\(causal.digest) restartSafe=1 probes=\(probesByAgentId.count) paused=1 focus=\(focusedAgentId ?? "none") lifecycleEvent=none probeReconciliation=reused_exact physicalReconciliation=\(reconciliationSummary) worldMutation=none"
         trace(message)
         return success(message)
     }

@@ -124,6 +124,9 @@ final class PebbleAgentController {
     var persistenceFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_PERSISTENCE"] == "1"
     }
+    var persistenceReconciliationFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_RECONCILIATION"] == "1"
+    }
     var populationFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_POPULATION"] == "1"
     }
