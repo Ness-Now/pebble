@@ -42,6 +42,7 @@ final class PebbleAgentController {
     var movementWasEverEnabledSinceReset = false
     var activeWorld: World?
     var overlayModeByCommand: PebbleAgentOverlayMode?
+    var observerUIState = PebbleObserverUIState()
     var followMode: PebbleAgentFollowMode = .off
     var demoActive = false
     var successfulCognitiveTicks = 0
@@ -111,6 +112,9 @@ final class PebbleAgentController {
     var featureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS"] == "1" }
     var traceEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_TRACE"] == "1" }
     var overlayEnabledByEnvironment: Bool { environment["PEBBLELAB_APP_AGENTS_OVERLAY"] == "1" }
+    var observerFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_OBSERVER"] == "1"
+    }
     var movementFeatureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS_MOVE"] == "1" }
     var probesFeatureEnabled: Bool { environment["PEBBLELAB_APP_PROBES"] == "1" }
     var debugEntitiesEnabled: Bool { environment["PEBBLELAB_DEBUG_ENTITIES"] == "1" }

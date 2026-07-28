@@ -910,10 +910,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         let screen = ui.current()
         if game.hasWorld() && (screen == nil || screen!.showHUD || !screen!.pausesGame) {
             hud.draw(ui, game, 0)
-            if !hud.hideGui, let state = agentController.debugState(f3Visible: hud.debugVisible) {
+            if !(screen is ChatScreen) { drawChatOverlay(ui) }
+            if !hud.hideGui,
+               let observer = agentController.observerPresentation(world: game.world) {
+                hud.drawPebbleObserver(ui, observer)
+            } else if !hud.hideGui,
+                      let state = agentController.debugState(f3Visible: hud.debugVisible) {
                 hud.drawPebbleAgentOverlay(ui, state)
             }
-            if !(screen is ChatScreen) { drawChatOverlay(ui) }
         }
         screen?.draw(ui, game, 0)
         ui.endFrame()

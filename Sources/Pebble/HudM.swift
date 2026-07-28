@@ -408,6 +408,80 @@ final class HUD {
             cv.drawText(line, x + 5, y + 4 + Double(index) * lineHeight, textScale, color, shadow: false)
         }
     }
+
+    func drawPebbleObserver(
+        _ ui: UIManager,
+        _ presentation: PebbleObserverPresentation
+    ) {
+        let cv = ui.cv
+        let panelWidth = min(max(400.0, ui.width * 0.68), ui.width - 8)
+        let textScale = 0.72
+        let lineHeight = 7.4
+        let approximateColumns = max(48, Int((panelWidth - 14) / (6 * textScale)))
+        let body = presentation.lines.flatMap {
+            wrapObserverLine($0, columns: approximateColumns)
+        }
+        let maximumBodyLines = max(10, Int((ui.height - 58) / lineHeight))
+        var lines = Array(body.prefix(maximumBodyLines))
+        if body.count > lines.count {
+            lines.append("[TRUNCATED BY VIEWPORT] use Observer navigation for more")
+        }
+        let panelHeight = min(
+            ui.height - 32,
+            25 + Double(lines.count) * lineHeight + 8
+        )
+        let x = 4.0
+        let y = 27.0
+        cv.setFill("rgba(7,12,18,0.94)")
+        cv.fillRect(x, y, panelWidth, panelHeight)
+        cv.setStroke("rgba(87,210,224,0.95)")
+        cv.strokeRect(x, y, panelWidth, panelHeight)
+        cv.drawText(
+            presentation.title, x + 6, y + 5, 0.78, "#8cecf1", shadow: false
+        )
+        cv.drawText(
+            presentation.subtitle, x + 6, y + 14, 0.68, "#9fb5c3", shadow: false
+        )
+        for (index, line) in lines.enumerated() where !line.isEmpty {
+            let color: String
+            if line.hasPrefix("[PHYSICAL") {
+                color = "#82c7ff"
+            } else if line.hasPrefix("[SOCIAL") || line.hasPrefix("[CIVILIZATION") {
+                color = "#b5e78a"
+            } else if line.hasPrefix("[AUTHORITATIVE")
+                        || line.hasPrefix("[CAUSAL") {
+                color = "#ffd17c"
+            } else if line.hasPrefix("[TRUNCATED")
+                        || line.hasPrefix("[UNKNOWN") {
+                color = "#ff9d8f"
+            } else {
+                color = "#eef4f7"
+            }
+            cv.drawText(
+                line, x + 6, y + 25 + Double(index) * lineHeight,
+                textScale, color, shadow: false
+            )
+        }
+    }
+
+    private func wrapObserverLine(_ line: String, columns: Int) -> [String] {
+        guard line.count > columns else { return [line] }
+        var remaining = line
+        var result: [String] = []
+        while remaining.count > columns {
+            let boundary = remaining.index(
+                remaining.startIndex, offsetBy: columns
+            )
+            let prefix = remaining[..<boundary]
+            let split = prefix.lastIndex(of: " ") ?? boundary
+            result.append(String(remaining[..<split]))
+            remaining = String(remaining[split...]).trimmingCharacters(
+                in: .whitespaces
+            )
+        }
+        if !remaining.isEmpty { result.append(remaining) }
+        return result
+    }
 }
 
 private func facingName(_ yaw: Double) -> String {

@@ -649,6 +649,7 @@ extension PebbleAgentController {
         lastInfluencedTracesByAgentId.removeAll()
         observedGoalKinds.removeAll()
         overlayModeByCommand = nil
+        observerUIState = PebbleObserverUIState()
         followMode = .off
         demoActive = false
         passiveObserverBootstrapComplete = false
