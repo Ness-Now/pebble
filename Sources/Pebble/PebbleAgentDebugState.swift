@@ -24,6 +24,7 @@ struct PebbleAgentDebugState {
         mortalitySnapshot: AgentMortalitySnapshot,
         lifecycleSnapshot: AgentLifecycleSnapshot,
         workSnapshot: AgentWorkCommitmentSnapshot,
+        materialRightsSnapshot: AgentMaterialRightsSnapshot,
         mode: PebbleAgentOverlayMode,
         paused: Bool,
         cognitiveHz: Int,
@@ -58,6 +59,7 @@ struct PebbleAgentDebugState {
         let workLines = Self.workLines(
             snapshot: workSnapshot, focusedAgentID: focusedAgentId
         )
+        let rightsLines = Self.materialRightsLines(snapshot: materialRightsSnapshot)
         statusSummary = "status=\(status) tick=\(snapshot.tick) hz=\(cognitiveHz) agents=\(snapshot.agentCount)"
         guard let agent = focus else {
             globalLines = ["PEBBLE AGENTS - 3D LIVE PROTOTYPE"]
@@ -96,7 +98,7 @@ struct PebbleAgentDebugState {
                 "clock: \(cognitiveHz) Hz  paused: \(paused ? "yes" : "no")",
                 "movement: \(movementEnabled ? "on" : "off")  follow: \(followMode.statusText)",
                 "agents: \(snapshot.agentCount) focus: \(agent.id) goals: \(Self.short(observedGoalKinds.joined(separator: ","), limit: 22))",
-            ] + workLines
+            ] + rightsLines + workLines
             let base = currentFeedback?.baseDirection?.rawValue ?? currentFeedback?.baseAction.name ?? agent.lastAction?.name ?? "none"
             let final = currentFeedback?.finalDirection?.rawValue ?? currentFeedback?.finalAction.name ?? agent.lastAction?.name ?? "none"
             let movement = agent.lastMovementOutcome.map {
@@ -163,7 +165,7 @@ struct PebbleAgentDebugState {
             "sim=\(causalSummary.simulationID.rawValue) tick=\(causalSummary.currentTick.rawValue) seq=\(causalSummary.latestSequence) events=\(causalSummary.retainedEventCount) dropped=\(causalSummary.droppedEventCount)",
             "worldTick: \(worldTick.map(String.init) ?? "none")",
             "agents: \(snapshot.agentCount)  focus: \(agent.id)",
-        ] + Self.goalLines(observedGoalKinds) + workLines + lifecycleLines
+        ] + rightsLines + Self.goalLines(observedGoalKinds) + workLines + lifecycleLines
             + ["errors: \(runtimeErrorCount)  catchup dropped: \(droppedCatchUpSteps)"]
             + (lastError.map { ["last error: \(Self.short($0))"] } ?? [])
 
@@ -307,6 +309,21 @@ struct PebbleAgentDebugState {
             "ecology=on patches=\(snapshot.patches.count)/\(configuration.maximumPatches) yield=\(available)/\(capacity)",
             "pressure=\(pressure?.level.rawValue ?? "none") hungry=\(pressure?.input.hungry ?? 0) critical=\(pressure?.input.critical ?? 0)",
             "forage=\(target) regen=\(regen.map(String.init) ?? "none") ecologyConservation=\(snapshot.conservation.balanced ? "exact" : "diverged")",
+        ]
+    }
+
+    private static func materialRightsLines(
+        snapshot: AgentMaterialRightsSnapshot
+    ) -> [String] {
+        guard snapshot.enabled, let record = snapshot.records.first else { return [] }
+        return [
+            "RIGHTS \(record.asset.materialIdentity.itemKey) "
+                + "holder=\(record.lastVerifiedHolder.holder.stableText)",
+            "custodian=\(record.custodianID?.rawValue ?? "none") "
+                + "owner=\(record.recognizedOwnership?.ownerID.rawValue ?? "none")",
+            "claims=\(record.claims.map(\.claimantID.rawValue).joined(separator: "+")) "
+                + "users=\(record.permissions.map(\.userID.rawValue).joined(separator: "+")) "
+                + "conflict=\(record.hasConflict ? "yes" : "no")",
         ]
     }
 

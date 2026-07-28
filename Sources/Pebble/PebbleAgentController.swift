@@ -103,6 +103,7 @@ final class PebbleAgentController {
     var passiveSocietyFixture: PebbleAgentPassiveSocietyFixture?
     var passiveSocietyAudit = PebbleAgentPassiveSocietyAudit()
     var workDemandRefreshAudit = PebbleAgentWorkDemandRefreshAudit()
+    var rightsProofFixture: PebbleAgentMaterialRightsProofFixture?
     var passiveObserverBootstrapComplete = false
     var manualProductiveCommandsAfterBootstrap = 0
 

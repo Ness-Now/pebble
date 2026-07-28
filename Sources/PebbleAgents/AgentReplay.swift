@@ -19,6 +19,7 @@ public enum AgentReplaySchema {
     public static let workCommitmentVersion = 16
     public static let physicalFoodSurvivalVersion = 17
     public static let autonomousActivityVersion = 18
+    public static let materialRightsVersion = 19
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -30,6 +31,7 @@ public enum AgentReplaySchema {
             || version == agricultureVersion || version == wildSubsistenceVersion
             || version == livestockVersion || version == workCommitmentVersion
             || version == physicalFoodSurvivalVersion || version == autonomousActivityVersion
+            || version == materialRightsVersion
     }
 }
 
@@ -126,6 +128,8 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case productiveSourceSuccess
     case productiveSourceReview
     case validatedPhysicalDependentFood
+    case materialRightsFeature
+    case materialRightsOperation
 }
 
 public enum AgentReplayOperation: Codable {
@@ -273,6 +277,8 @@ public enum AgentReplayOperation: Codable {
     )
     case reviewProductiveSources
     case validatedPhysicalDependentFood(AgentValidatedPhysicalDependentFoodOutcome)
+    case setMaterialRightsEnabled(Bool, configuration: AgentMaterialRightsConfiguration)
+    case applyMaterialRightsOperation(AgentMaterialRightsOperation)
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -360,6 +366,8 @@ public enum AgentReplayOperation: Codable {
         case .reviewProductiveSources:
             return .productiveSourceReview
         case .validatedPhysicalDependentFood: return .validatedPhysicalDependentFood
+        case .setMaterialRightsEnabled: return .materialRightsFeature
+        case .applyMaterialRightsOperation: return .materialRightsOperation
         }
     }
 
@@ -417,6 +425,8 @@ public enum AgentReplayOperation: Codable {
             raw = outcome.activityID
         case let .validatedPhysicalDependentFood(outcome):
             raw = outcome.intent.provisionID
+        case let .applyMaterialRightsOperation(operation):
+            raw = operation.operationID
         case let .selectWildSubsistenceOpportunity(context):
             raw = "subsistence-select:\(context.actorID.rawValue)"
         case let .planAgriculturalPlot(
@@ -857,6 +867,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.autonomousActivityVersion
         }
+        if case let .setMaterialRightsEnabled(enabled, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.materialRightsVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "material rights activation must be the first v19 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.materialRightsVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -1064,6 +1084,8 @@ public enum AgentSessionReplayer {
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.workCommitmentVersion)
             || (manifest.schemaVersion == AgentReplaySchema.autonomousActivityVersion
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.physicalFoodSurvivalVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.materialRightsVersion
+                && checkpoint.schemaVersion <= AgentCheckpointSchema.autonomousActivityVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -1364,6 +1386,10 @@ extension AgentSimulationSession {
             _ = try candidate.reviewProductiveSources()
         case let .validatedPhysicalDependentFood(outcome):
             _ = try candidate.applyValidatedPhysicalDependentFood(outcome)
+        case let .setMaterialRightsEnabled(enabled, configuration):
+            try candidate.setMaterialRightsEnabled(enabled, configuration: configuration)
+        case let .applyMaterialRightsOperation(operation):
+            _ = try candidate.applyMaterialRightsOperation(operation)
         }
         self = candidate
         let causal = causalLedgerSnapshot().summary

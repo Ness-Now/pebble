@@ -102,6 +102,12 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "materials" {
     exit(failed > 0 ? 1 : 0)
 }
 
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "material-rights" {
+    runPebbleAgentsMaterialRightsSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "dependent-care" {
     registerAllBlocks()
     registerAllItems()
@@ -2341,6 +2347,7 @@ runPebbleAgentsBoundedAutonomousNavigationSmoke()
 runPebbleAgentsAutonomousActivityLifecycleSmoke()
 runPebbleAgentsProductiveSourceLifecycleSmoke()
 runPebbleAgentsRoleNeutralBootstrapSmoke()
+runPebbleAgentsMaterialRightsSmoke()
 
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)

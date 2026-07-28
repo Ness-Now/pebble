@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--integrated-teaching|--ecological-observation|--agriculture|--wild-subsistence|--physical-food-survival|--livestock|--work-professions|--work-demand-refresh|--gate-b-passive]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--rights|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--integrated-teaching|--ecological-observation|--agriculture|--wild-subsistence|--physical-food-survival|--livestock|--work-professions|--work-demand-refresh|--gate-b-passive]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -38,6 +38,7 @@ Options:
   --social   Run directed grounded information, read-only verification, and trust.
   --physical Run local sound, pointing gesture, imperfect perception, and existing trust.
   --material Run real agent/container custody, transactions, consumption, and CIV-15 seams.
+  --rights Run CIV-26 real custody, claims, permissions, transgression, and rollback.
   --cooperation Run shared construction-material task, delivery, and shelter completion.
   --persistence Run checkpoint, real process restart, causal replay, and uninterrupted control.
   --population Run bounded migrant admission, mid-route restart, arrival, and uninterrupted control.
@@ -129,6 +130,7 @@ for option in "$@"; do
         --social) MODE="social"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --physical) MODE="physical"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --material) MODE="material"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --rights) MODE="rights"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --cooperation) MODE="cooperation"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --persistence) MODE="persistence"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --population) MODE="population"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
@@ -694,6 +696,12 @@ elif [ "$MODE" = "material" ]; then
     WORLD_NAME="PebbleLab-Disposable-Material-46"
     CAPTURE_NAME="real-material-custody-proof.png"
     LAB_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 71 -18;/lab pause;/lab movement off;/lab focus agent_2;/lab material proof;/lab material proof;/lab status'
+elif [ "$MODE" = "rights" ]; then
+    WORLD_SEED="46"
+    MATERIAL_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-Rights-46"
+    CAPTURE_NAME="civ26-rights-divergence.png"
+    LAB_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/tp 14 71 -18;/lab pause;/lab movement off;/lab rights proof;/lab rights status;/lab overlay compact|/lab rights clear;/lab rights status;/lab follow off'
 elif [ "$MODE" = "physical" ]; then
     WORLD_SEED="46"
     SOCIAL_GATE=1
@@ -904,6 +912,8 @@ print_plan() {
     elif [ "$MODE" = "physical" ]; then
         printf '  PEBBLE_SHOT=%s/physical-before.png|%s/physical-during.png|%s\n' \
             "$(dirname "$capture_path")" "$(dirname "$capture_path")" "$capture_path"
+    elif [ "$MODE" = "rights" ]; then
+        printf '  PEBBLE_SHOT=-|%s|-\n' "$capture_path"
     elif [ "$MODE" = "cooperation" ]; then
         printf '  PEBBLE_SHOT=%s/cooperation-before.png|%s/cooperation-offer.png|%s\n' \
             "$(dirname "$capture_path")" "$(dirname "$capture_path")" "$capture_path"
@@ -1029,6 +1039,10 @@ print_plan() {
         printf '  2. Confirm two identical stable-identity and real custody proof digests.\n'
         printf '  3. Confirm real container transfer, consume, stale/idempotent refusal, and verified rollback.\n'
         printf '  4. Confirm CIV-15 placement/tool state use real stacks and cleanup leaves no material fixture.\n'
+    elif [ "$MODE" = "rights" ]; then
+        printf '  2. Confirm the rendered overlay shows holder agent_2, custodian agent_1, and owner agent_0.\n'
+        printf '  3. Confirm the real transfer path records permission, transgression, conflict, and rollback.\n'
+        printf '  4. Confirm post-capture cleanup removes proof custody and leaves no residual entity.\n'
     elif [ "$MODE" = "physical" ]; then
         printf '  2. Confirm agent_1 emits one positional attention sound and one bounded pointing gesture.\n'
         printf '  3. Confirm exact recipient perception, ambiguous bystander impression, read-only verification, and trust 0->10.\n'
@@ -1056,13 +1070,13 @@ print_plan() {
         && [ "$MODE" != "mortality" ] && [ "$MODE" != "reproduction" ] \
         && [ "$MODE" != "kinship" ] && [ "$MODE" != "households" ] \
         && [ "$MODE" != "care" ] && [ "$MODE" != "skills" ]; then
-        if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
+        if [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
             printf '  5. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         else
             printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         fi
     fi
-    if [ "$MODE" = "material" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
+    if [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
         printf '  6. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
     else
         printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
@@ -1147,6 +1161,8 @@ elif [ "$MODE" = "physical" ]; then
     CAPTURE_BEFORE_PATH="$CAPTURE_DIR/physical-before.png"
     CAPTURE_DURING_PATH="$CAPTURE_DIR/physical-during.png"
     SHOT_SPEC="$CAPTURE_BEFORE_PATH|$CAPTURE_DURING_PATH|$CAPTURE_PATH"
+elif [ "$MODE" = "rights" ]; then
+    SHOT_SPEC="-|$CAPTURE_PATH|-"
 elif [ "$MODE" = "cooperation" ]; then
     CAPTURE_BEFORE_PATH="$CAPTURE_DIR/cooperation-before.png"
     CAPTURE_DURING_PATH="$CAPTURE_DIR/cooperation-offer.png"
@@ -3275,7 +3291,7 @@ world_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT count(*), json_extract(json, '
 expected_world_facts="1|$WORLD_SEED|$WORLD_NAME|1000|0|0|0|0|0"
 [ "$world_facts" = "$expected_world_facts" ] \
     || fail "unexpected disposable world facts: $world_facts"
-if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ] || [ "$MODE" = "material" ] || [ "$MODE" = "cooperation" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
+if [ "$MODE" = "build" ] || [ "$MODE" = "social" ] || [ "$MODE" = "physical" ] || [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "cooperation" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
     spawn_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.spawnX'), json_extract(json, '$.spawnY'), json_extract(json, '$.spawnZ') FROM worlds;")
     [ "$spawn_facts" = "8|75|-112" ] || fail "unexpected seed-46 spawn: $spawn_facts"
 fi
@@ -3441,6 +3457,13 @@ elif [ "$MODE" = "material" ]; then
     require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'material proof cleanup and runtime health'
     reject_trace 'Material custody proof failed|rollbackFailure|session=changed|campStock=changed|cleanup=failed' 'material proof failure or leaked state'
     printf '\nPASS: stable real-material custody, transactions, CIV-15 seams, and repeated deterministic cleanup verified.\n'
+elif [ "$MODE" = "rights" ]; then
+    require_trace_count '^\[lab-live\] rights proof asset=asset:iron_pickaxe:live physicalHolder=agent_2 custodian=agent_1 recognizedOwner=agent_0 claims=agent_0,agent_2 authorizedUser=agent_1 aligned=allowed loan=verified borrowerDenied=noUseRight authorizedReturn=verified unauthorizedTake=transgression conflict=active rollback=verified rolesAfterRollback=unchanged authority=PebbleCore transfer=PebbleGateway state=AgentSimulationSession fixture=retainedForCapture digest=[0-9a-f]+$' 1 'complete CIV-26 physical and social divergence'
+    require_trace '^\[lab-live\] rights status enabled=1 assets=1 conflicts=1 records=asset:iron_pickaxe:live:holder=agent:agent_2,custodian=agent_1,owner=agent_0,claims=agent_0\+agent_2,users=agent_1,conflict=yes$' 'inspectable final rights matrix'
+    require_trace '^\[lab-live\] rights cleanup custody=exact entities=exact state=cleared$' 'exact post-capture cleanup'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'rights runtime health and probe cleanup'
+    reject_trace 'Material-rights proof failed|material-rights fixture cleanup failed|rollbackFailure|cleanup=failed|runtimeErrors=[1-9]' 'CIV-26 failure, rollback failure, or cleanup leak'
+    printf '\nPASS: CIV-26 real custody, local ownership recognition, permissions, transgression, conflict, rollback, and cleanup verified.\n'
 elif [ "$MODE" = "cooperation" ]; then
     [ -s "$CAPTURE_BEFORE_PATH" ] || fail "before capture was not written: $CAPTURE_BEFORE_PATH"
     [ -s "$CAPTURE_DURING_PATH" ] || fail "offer capture was not written: $CAPTURE_DURING_PATH"

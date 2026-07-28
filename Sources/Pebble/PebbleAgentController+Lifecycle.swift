@@ -483,6 +483,13 @@ extension PebbleAgentController {
             return 0
         }
         if let cleanupWorld,
+           !cleanupMaterialRightsProofFixture(world: cleanupWorld) {
+            runtimeErrorCount += 1
+            lastError = "material-rights fixture cleanup failed; session retained"
+            trace("error material-rights fixture cleanup failed hardFailure=1")
+            return 0
+        }
+        if let cleanupWorld,
            !cleanupLivestockProofFixture(world: cleanupWorld) {
             runtimeErrorCount += 1
             lastError = "livestock fixture cleanup failed; session retained"
@@ -649,6 +656,7 @@ extension PebbleAgentController {
         passiveSocietyFixture = nil
         passiveSocietyAudit = PebbleAgentPassiveSocietyAudit()
         workDemandRefreshAudit = PebbleAgentWorkDemandRefreshAudit()
+        rightsProofFixture = nil
         autoInteractionEnabled = false
         lastAutoInteractionReason = "none"
         lastInteractionAttempted = false

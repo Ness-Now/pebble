@@ -20,6 +20,7 @@ public enum AgentCheckpointSchema {
     public static let workCommitmentVersion = 16
     public static let physicalFoodSurvivalVersion = 17
     public static let autonomousActivityVersion = 18
+    public static let materialRightsVersion = 19
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -31,6 +32,7 @@ public enum AgentCheckpointSchema {
             || version == agricultureVersion || version == wildSubsistenceVersion
             || version == livestockVersion || version == workCommitmentVersion
             || version == physicalFoodSurvivalVersion || version == autonomousActivityVersion
+            || version == materialRightsVersion
     }
 }
 
@@ -222,9 +224,12 @@ public struct AgentSessionDurableState: Codable {
     public let workCommitmentState: AgentWorkCommitmentState?
     public let physicalFoodSurvivalState: AgentPhysicalFoodSurvivalState?
     public let autonomousActivityState: AgentAutonomousActivityState?
+    public let materialRightsState: AgentMaterialRightsState?
 
     init(session: AgentSimulationSession) {
-        if session.autonomousActivityState != nil {
+        if session.materialRightsState != nil {
+            schemaVersion = AgentCheckpointSchema.materialRightsVersion
+        } else if session.autonomousActivityState != nil {
             schemaVersion = AgentCheckpointSchema.autonomousActivityVersion
         } else if session.physicalFoodSurvivalState != nil {
             schemaVersion = AgentCheckpointSchema.physicalFoodSurvivalVersion
@@ -351,6 +356,7 @@ public struct AgentSessionDurableState: Codable {
         workCommitmentState = session.workCommitmentState
         physicalFoodSurvivalState = session.physicalFoodSurvivalState
         autonomousActivityState = session.autonomousActivityState
+        materialRightsState = session.materialRightsState
     }
 }
 
@@ -783,6 +789,7 @@ extension AgentSimulationSession {
         workCommitmentState = state.workCommitmentState
         physicalFoodSurvivalState = state.physicalFoodSurvivalState
         autonomousActivityState = state.autonomousActivityState
+        materialRightsState = state.materialRightsState
         latestAutonomousTeachingReview = nil
         try validateEcologicalObservationStateIfEnabled()
         try validateAgricultureStateIfEnabled()
@@ -790,6 +797,7 @@ extension AgentSimulationSession {
         try validateLivestockStateIfEnabled()
         try validateWorkCommitmentStateIfEnabled()
         try validatePhysicalFoodSurvivalStateIfEnabled()
+        try validateMaterialRightsStateIfEnabled()
         if let settlementMetricsState {
             try validateSettlementMetricsState(settlementMetricsState)
         }
@@ -810,6 +818,7 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.workCommitmentVersion
                 || state.schemaVersion == AgentCheckpointSchema.physicalFoodSurvivalVersion
                 || state.schemaVersion == AgentCheckpointSchema.autonomousActivityVersion
+                || state.schemaVersion == AgentCheckpointSchema.materialRightsVersion
                 || state.ecologicalObservationState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -819,6 +828,7 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.workCommitmentVersion
                 || state.schemaVersion == AgentCheckpointSchema.physicalFoodSurvivalVersion
                 || state.schemaVersion == AgentCheckpointSchema.autonomousActivityVersion
+                || state.schemaVersion == AgentCheckpointSchema.materialRightsVersion
                 || state.agricultureState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -827,6 +837,7 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.workCommitmentVersion
                 || state.schemaVersion == AgentCheckpointSchema.physicalFoodSurvivalVersion
                 || state.schemaVersion == AgentCheckpointSchema.autonomousActivityVersion
+                || state.schemaVersion == AgentCheckpointSchema.materialRightsVersion
                 || state.wildSubsistenceState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -834,22 +845,30 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.workCommitmentVersion
                 || state.schemaVersion == AgentCheckpointSchema.physicalFoodSurvivalVersion
                 || state.schemaVersion == AgentCheckpointSchema.autonomousActivityVersion
+                || state.schemaVersion == AgentCheckpointSchema.materialRightsVersion
                 || state.livestockState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.schemaVersion == AgentCheckpointSchema.workCommitmentVersion
                 || state.schemaVersion == AgentCheckpointSchema.physicalFoodSurvivalVersion
                 || state.schemaVersion == AgentCheckpointSchema.autonomousActivityVersion
+                || state.schemaVersion == AgentCheckpointSchema.materialRightsVersion
                 || state.workCommitmentState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.schemaVersion == AgentCheckpointSchema.physicalFoodSurvivalVersion
                 || state.schemaVersion == AgentCheckpointSchema.autonomousActivityVersion
+                || state.schemaVersion == AgentCheckpointSchema.materialRightsVersion
                 || state.physicalFoodSurvivalState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.schemaVersion == AgentCheckpointSchema.autonomousActivityVersion
+                || state.schemaVersion == AgentCheckpointSchema.materialRightsVersion
                 || state.autonomousActivityState == nil else {
+            throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
+        }
+        guard state.schemaVersion == AgentCheckpointSchema.materialRightsVersion
+                || state.materialRightsState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard (state.schemaVersion == AgentCheckpointSchema.currentVersion
@@ -942,7 +961,9 @@ extension AgentSimulationSession {
                     && state.survivalEnabled
                     && state.physicalFoodSurvivalState != nil)
                 || (state.schemaVersion == AgentCheckpointSchema.autonomousActivityVersion
-                    && state.autonomousActivityState != nil) else {
+                    && state.autonomousActivityState != nil)
+                || (state.schemaVersion == AgentCheckpointSchema.materialRightsVersion
+                    && state.materialRightsState != nil) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.clock.tick.rawValue >= 0,
@@ -979,7 +1000,8 @@ extension AgentSimulationSession {
                         || state.schemaVersion == AgentCheckpointSchema.skillVersion
                         || state.schemaVersion == AgentCheckpointSchema.workCommitmentVersion
                         || state.schemaVersion == AgentCheckpointSchema.physicalFoodSurvivalVersion
-                        || state.schemaVersion == AgentCheckpointSchema.autonomousActivityVersion)
+                        || state.schemaVersion == AgentCheckpointSchema.autonomousActivityVersion
+                        || state.schemaVersion == AgentCheckpointSchema.materialRightsVersion)
                     && (state.mortalityState?.totalDeathCount ?? 0) > 0) else {
             throw AgentCheckpointError.invalidAgent("empty")
         }

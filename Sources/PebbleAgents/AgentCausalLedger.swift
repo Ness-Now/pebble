@@ -190,6 +190,14 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case workCommitmentReassigned
     case workOutcomeValidated
     case workReputationUpdated
+    case materialRightsInitialized
+    case materialAssetRegistered
+    case materialPhysicalCustodyObserved
+    case materialClaimChanged
+    case materialOwnershipRecognized
+    case materialCustodyChanged
+    case materialUsePermissionChanged
+    case materialUseDecided
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -217,6 +225,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case wildSubsistenceTransition
     case livestockTransition
     case workCommitmentTransition
+    case materialRightsTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -926,7 +935,15 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.workCommitmentEnded, .work),
              (.workCommitmentReassigned, .work),
              (.workOutcomeValidated, .work),
-             (.workReputationUpdated, .work):
+             (.workReputationUpdated, .work),
+             (.materialRightsInitialized, .feature),
+             (.materialAssetRegistered, .operation),
+             (.materialPhysicalCustodyObserved, .operation),
+             (.materialClaimChanged, .operation),
+             (.materialOwnershipRecognized, .operation),
+             (.materialCustodyChanged, .operation),
+             (.materialUsePermissionChanged, .operation),
+             (.materialUseDecided, .operation):
             matches = true
         default:
             matches = false
