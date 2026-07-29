@@ -7,7 +7,7 @@ extension PebbleAgentController {
         world: World,
         player: Player
     ) -> PebbleAgentCommandResult {
-        let usage = "Usage: /lab homeostasis <on|status|proof <setup|advance 1...32|cleanup>>"
+        let usage = "Usage: /lab homeostasis <on|status|proof <setup|rollback|advance 1...32|cleanup>>"
         guard homeostasisFeatureEnabled else {
             return failure(
                 "Homeostasis disabled. Set PEBBLELAB_APP_AGENTS_HOMEOSTASIS=1 before launch."
@@ -58,6 +58,12 @@ extension PebbleAgentController {
                     return try advanceHomeostasisProof(
                         count: count, world: world, player: player
                     )
+                case "rollback":
+                    guard arguments.count == 2 else { return failure(usage) }
+                    return try verifyHomeostasisMortalityExitRollback(
+                        published: candidate,
+                        world: world
+                    )
                 case "cleanup":
                     guard arguments.count == 2 else { return failure(usage) }
                     return try cleanupHomeostasisProof(
@@ -101,7 +107,22 @@ extension PebbleAgentController {
                 "real persisted rights asset unavailable"
             )
         }
-        if !record.claims.contains(where: { $0.claimID == claimID }) {
+        try takeHomeostasisProofAsset(
+            record: record,
+            terminalAgentID: AgentID(rawValue: "agent_2")!,
+            container: container,
+            session: &candidate,
+            world: world
+        )
+        guard let heldRecord = candidate.materialRightsSnapshot().records
+            .first(where: { $0.asset.assetID == assetID }),
+              heldRecord.lastVerifiedHolder.holder
+                == .agent(AgentID(rawValue: "agent_2")!) else {
+            throw ControllerError.homeostasisBoundary(
+                "terminal actor did not receive the real proof asset"
+            )
+        }
+        if !heldRecord.claims.contains(where: { $0.claimID == claimID }) {
             _ = try candidate.applyMaterialRightsOperation(.assertClaim(
                 operationID: "civ29-live-terminal-claim",
                 assetID: assetID,
@@ -132,6 +153,122 @@ extension PebbleAgentController {
         ].joined(separator: " ")
         trace(message)
         return success(message)
+    }
+
+    private func takeHomeostasisProofAsset(
+        record: AgentMaterialRightsRecord,
+        terminalAgentID: AgentID,
+        container: BlockEntityData,
+        session candidate: inout AgentSimulationSession,
+        world: World
+    ) throws {
+        guard let probe = probesByAgentId[terminalAgentID.rawValue],
+              probe.carriedItems.allSatisfy({ $0 == nil }) else {
+            throw ControllerError.homeostasisBoundary(
+                "terminal proof custody is not empty"
+            )
+        }
+        let source = PebbleAgentMaterialCustodyEndpoint.container(
+            container, in: world
+        )
+        let destination = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            probe, in: world
+        )
+        let operationID = "civ29-terminal-agent-take"
+        let decision = candidate.evaluateMaterialUse(AgentMaterialUseRequest(
+            requestID: operationID + ":decision",
+            assetID: record.asset.assetID,
+            actorID: terminalAgentID,
+            use: .transferCustody,
+            verifiedHolder: record.lastVerifiedHolder
+        ))
+        guard decision.verdict == .denied,
+              decision.reason == .requesterNotPhysicalHolder else {
+            throw ControllerError.homeostasisBoundary(
+                "terminal proof take was not an explicit transgression"
+            )
+        }
+        var staged: AgentSimulationSession?
+        var publicationError: Error?
+        let physical = materialCustodyGateway.transfer(
+            PebbleAgentMaterialTransactionRequest(
+                transactionID: operationID,
+                material: AgentMaterialStackSnapshot(
+                    identity: record.lastVerifiedHolder.materialIdentity,
+                    count: record.lastVerifiedHolder.quantity
+                ),
+                expectedSourceFingerprint:
+                    try materialCustodyGateway.fingerprint(source),
+                expectedDestinationFingerprint:
+                    try materialCustodyGateway.fingerprint(destination)
+            ),
+            from: source,
+            to: destination,
+            verifyAfterMutation: {
+                do {
+                    let observation = try self.homeostasisAgentObservation(
+                        agentID: terminalAgentID,
+                        receiptID: operationID,
+                        world: world,
+                        tick: candidate.tick
+                    )
+                    var sessionCandidate = candidate
+                    _ = try sessionCandidate.applyMaterialRightsOperation(
+                        .physicalTransfer(AgentMaterialPhysicalTransferOutcome(
+                            operationID: operationID,
+                            decision: decision,
+                            disposition: .observedTransgression,
+                            status: .succeeded,
+                            destinationObservation: observation,
+                            physicalReceiptID: operationID
+                        ))
+                    )
+                    staged = sessionCandidate
+                    return true
+                } catch {
+                    publicationError = error
+                    return false
+                }
+            }
+        )
+        guard physical.succeeded, let staged else {
+            throw publicationError
+                ?? ControllerError.homeostasisBoundary(
+                    "terminal proof take \(physical.status.rawValue)"
+                )
+        }
+        candidate = staged
+    }
+
+    private func homeostasisAgentObservation(
+        agentID: AgentID,
+        receiptID: String,
+        world: World,
+        tick: Int
+    ) throws -> AgentMaterialHolderObservation {
+        guard let probe = probesByAgentId[agentID.rawValue] else {
+            throw ControllerError.homeostasisBoundary(
+                "terminal proof actor missing"
+            )
+        }
+        let endpoint = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            probe, in: world
+        )
+        let custody = try materialCustodyGateway.inspect(endpoint)
+        let stacks = custody.slots.compactMap { $0 }
+        guard stacks.count == 1, stacks[0].count == 1 else {
+            throw ControllerError.homeostasisBoundary(
+                "terminal proof actor does not hold one exact item"
+            )
+        }
+        return AgentMaterialHolderObservation(
+            holder: .agent(agentID),
+            materialIdentity: stacks[0].identity,
+            quantity: stacks[0].count,
+            custodyFingerprint: try materialCustodyGateway.fingerprint(endpoint),
+            physicalReceiptID: receiptID,
+            observedAtTick: tick
+        )
     }
 
     private func advanceHomeostasisProof(
@@ -203,10 +340,77 @@ extension PebbleAgentController {
             "stage=\(terminalProfile?.lifeStage.rawValue ?? death?.lifeStage?.rawValue ?? "missing")",
             "deaths=\(deathsBefore)>\(final.mortalitySnapshot().totalDeathCount)",
             "claimPreserved=\(claimPreserved ? 1 : 0)",
+            "holder=\(rights?.lastVerifiedHolder.holder.stableText ?? "missing")",
+            "custodian=\(rights?.custodianID?.rawValue ?? "none")",
+            "owner=\(rights?.recognizedOwnership?.ownerID.rawValue ?? "none")",
+            "claims=\(rights?.claims.map(\.claimantID.rawValue).joined(separator: ",") ?? "none")",
+            "permissions=\(rights?.permissions.map(\.userID.rawValue).joined(separator: ",") ?? "none")",
             "activeAgents=\(final.expectedActiveAgentIDs().count)",
             "probes=\(probesByAgentId.count)",
             "runtimeErrors=\(runtimeErrorCount)",
         ].joined(separator: " ")
+        trace(message)
+        return success(message)
+    }
+
+    private func verifyHomeostasisMortalityExitRollback(
+        published: AgentSimulationSession,
+        world: World
+    ) throws -> PebbleAgentCommandResult {
+        let terminalID = AgentID(rawValue: "agent_2")!
+        guard published.tick == 22,
+              published.mortalitySnapshot().totalDeathCount == 0,
+              let probe = probesByAgentId[terminalID.rawValue],
+              let container = mortalityMaterialExitContainers(
+                  around: probe, world: world
+              ).first else {
+            throw ControllerError.homeostasisBoundary(
+                "terminal rollback proof requires tick 22 and a real container"
+            )
+        }
+        let sessionBefore = try published.durableStateBytes()
+        let probeBefore = copyItemInventory(probe.carriedItems)
+        let containerBefore = copyItemInventory(container.items ?? [])
+        var staged = published
+        _ = try staged.advanceTick()
+        guard let pending = staged.pendingMortalityTransitions().first,
+              pending.agentID == terminalID,
+              pending.detectedAtTick == 23,
+              staged.mortalitySnapshot().totalDeathCount == 0 else {
+            throw ControllerError.homeostasisBoundary(
+                "terminal rollback proof did not stage material exit"
+            )
+        }
+        var recorder: AgentReplayRecorder?
+        var rejected = false
+        do {
+            _ = try resolvePendingMortalityMaterialExits(
+                session: &staged,
+                recorder: &recorder,
+                world: world,
+                rejectAfterMutation: true
+            )
+        } catch {
+            rejected = true
+        }
+        guard rejected,
+              try published.durableStateBytes() == sessionBefore,
+              session?.mortalitySnapshot().totalDeathCount == 0,
+              session?.tick == 22,
+              probe.carriedItems == probeBefore,
+              container.items == containerBefore,
+              probesByAgentId[terminalID.rawValue] === probe else {
+            throw ControllerError.homeostasisBoundary(
+                "terminal material rollback was not exact"
+            )
+        }
+        let message = "homeostasis mortality-exit rollback "
+            + "terminalEvent=\(pending.terminalPhysiologyEventID?.rawValue ?? "none") "
+            + "pendingEvent=\(pending.pendingEventID.rawValue) "
+            + "asset=\(pending.requiredMaterialAssetIDs.map(\.rawValue).joined(separator: ",")) "
+            + "holder=agent:agent_2 quantity=\(probeBefore.compactMap { $0 }.reduce(0) { $0 + $1.count }) "
+            + "physicalRollback=verified session=unchanged deathFinalized=0 "
+            + "retryable=1 runtimeErrors=\(runtimeErrorCount)"
         trace(message)
         return success(message)
     }
@@ -307,6 +511,9 @@ extension PebbleAgentController {
             .flatMap(\.claims).contains {
                 $0.claimID.rawValue == "claim:civ29:agent_2"
             }
+        let asset = session.materialRightsSnapshot().records.first {
+            $0.asset.assetID.rawValue == "asset:civ27:live-pickaxe"
+        }
         let causal = session.causalLedgerSnapshot().summary
         let message = [
             "homeostasis status",
@@ -319,6 +526,13 @@ extension PebbleAgentController {
             "latestDeath=\(death?.agentID.rawValue ?? "none")",
             "deathCause=\(death?.cause.rawValue ?? "none")",
             "terminalClaim=\(terminalClaim ? 1 : 0)",
+            "asset=\(asset?.asset.assetID.rawValue ?? "none")",
+            "holder=\(asset?.lastVerifiedHolder.holder.stableText ?? "none")",
+            "quantity=\(asset?.lastVerifiedHolder.quantity ?? 0)",
+            "custodian=\(asset?.custodianID?.rawValue ?? "none")",
+            "owner=\(asset?.recognizedOwnership?.ownerID.rawValue ?? "none")",
+            "claims=\(asset?.claims.map(\.claimantID.rawValue).joined(separator: ",") ?? "none")",
+            "permissions=\(asset?.permissions.map(\.userID.rawValue).joined(separator: ",") ?? "none")",
             "probes=\(probesByAgentId.count)",
             "world=\(persistenceWorldID ?? "none")",
             "runtimeErrors=\(runtimeErrorCount)",

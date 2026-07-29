@@ -559,8 +559,24 @@ extension PebbleAgentController {
         }.sorted()
         let oldProbesByAgentID = probesByAgentId
         let oldWorldEntities = world.entities
-        guard currentAgentIDs == candidateAgentIDs,
-              worldProbeIDs == currentAgentIDs else {
+        let candidateAgentIDSet = Set(candidateAgentIDs)
+        let retiredBootstrapAgentIDs = currentAgentIDs.filter {
+            !candidateAgentIDSet.contains($0)
+        }
+        let retainedDeathAgentIDs = Set(
+            candidate.mortalitySnapshot().records.map(\.agentID.rawValue)
+        )
+        guard candidateAgentIDSet.isSubset(of: Set(currentAgentIDs)),
+              worldProbeIDs == currentAgentIDs,
+              Set(retiredBootstrapAgentIDs).isSubset(
+                  of: retainedDeathAgentIDs
+              ),
+              candidate.materialRightsSnapshot().records.allSatisfy({ record in
+                  !retiredBootstrapAgentIDs.contains {
+                      record.lastVerifiedHolder.holder
+                          == .agent(AgentID(rawValue: $0)!)
+                  }
+              }) else {
             return failure(
                 "Checkpoint load refused: live Civilization identities do not match the checkpoint."
             )
@@ -584,7 +600,7 @@ extension PebbleAgentController {
                 "Checkpoint load refused: checkpoint positions differ from live physical truth."
             )
         }
-        let reusableProbeStates = currentAgentIDs.compactMap { agentID in
+        let reusableProbeStates = candidateAgentIDs.compactMap { agentID in
             currentEmbodiments[agentID].map {
                 PebbleAgentCheckpointProbeState(
                     agentID: agentID,
@@ -595,6 +611,22 @@ extension PebbleAgentController {
         guard reusableProbeStates.count == candidateAgentIDs.count else {
             return failure(
                 "Checkpoint load refused: live embodiment capture is incomplete."
+            )
+        }
+        let retiredProbeStates = retiredBootstrapAgentIDs.compactMap { agentID in
+            currentEmbodiments[agentID].map {
+                PebbleAgentCheckpointProbeState(
+                    agentID: agentID,
+                    probe: $0.probe
+                )
+            }
+        }
+        guard retiredProbeStates.count == retiredBootstrapAgentIDs.count,
+              retiredProbeStates.allSatisfy({
+                  $0.carriedItems.allSatisfy { $0 == nil }
+              }) else {
+            return failure(
+                "Checkpoint load refused: retired bootstrap custody is not empty."
             )
         }
 
@@ -668,7 +700,19 @@ extension PebbleAgentController {
             cognitiveHz, isPaused, movementEnabled, autoInteractionEnabled, economyAutoEnabled,
             seed, anchor, focusedAgentId, followMode, credit, lastWorldTick, lastTickResult
         )
+        var retiredProbesRemoved: [PebbleAgentCheckpointProbeState] = []
         do {
+            for retired in retiredProbeStates.sorted(by: {
+                $0.agentID < $1.agentID
+            }) {
+                guard removeLabCoreAgentProbe(retired.probe, from: world) else {
+                    throw PebbleAgentPersistenceStoreError.invalidBundle(
+                        "retired bootstrap probe removal failed"
+                    )
+                }
+                probesByAgentId.removeValue(forKey: retired.agentID)
+                retiredProbesRemoved.append(retired)
+            }
             session = candidate
             constructionExecutor = candidateConstructionExecutor
             interactionExecutor = candidateInteractionExecutor
@@ -689,21 +733,29 @@ extension PebbleAgentController {
             lastTickResult = nil
             focusedAgentId = restoredFocus ?? candidateAgentIDs.first
             if followTargetId() == nil { followMode = .off }
-            probesByAgentId = oldProbesByAgentID
-            let worldEntitiesUnchanged = world.entities.count
-                == oldWorldEntities.count
-                && zip(world.entities, oldWorldEntities).allSatisfy {
-                    $0.0 === $0.1
-                }
+            let oldNonProbeEntities = Set(oldWorldEntities.compactMap {
+                entity -> ObjectIdentifier? in
+                entity is LabCoreAgentEntity ? nil : ObjectIdentifier(entity)
+            })
+            let currentNonProbeEntities = Set(world.entities.compactMap {
+                entity -> ObjectIdentifier? in
+                entity is LabCoreAgentEntity ? nil : ObjectIdentifier(entity)
+            })
+            let worldEntitiesExact = oldNonProbeEntities
+                    == currentNonProbeEntities
+                && world.entities.compactMap {
+                    ($0 as? LabCoreAgentEntity)?.labAgentId
+                }.sorted() == candidateAgentIDs
             let probesUnchanged = reusableProbeStates.allSatisfy {
                 $0.isUnchanged(
                     in: world,
                     mappedByAgentID: probesByAgentId
                 )
             }
-            guard worldEntitiesUnchanged, probesUnchanged else {
+            guard worldEntitiesExact, probesUnchanged,
+                  probesByAgentId.keys.sorted() == candidateAgentIDs else {
                 throw PebbleAgentPersistenceStoreError.invalidBundle(
-                    "exact live probe reuse changed identity or physical custody"
+                    "verified live probe reconciliation changed physical custody"
                 )
             }
         } catch {
@@ -726,19 +778,21 @@ extension PebbleAgentController {
             credit = oldOrchestration.9
             lastWorldTick = oldOrchestration.10
             lastTickResult = oldOrchestration.11
+            for retired in retiredProbesRemoved where !world.entities.contains(
+                where: { $0 === retired.probe }
+            ) {
+                world.addEntity(retired.probe)
+            }
             probesByAgentId = oldProbesByAgentID
-            let worldEntitiesUnchanged = world.entities.count
-                == oldWorldEntities.count
-                && zip(world.entities, oldWorldEntities).allSatisfy {
-                    $0.0 === $0.1
-                }
-            let probesUnchanged = reusableProbeStates.allSatisfy {
+            let worldEntityIDs = Set(world.entities.map(ObjectIdentifier.init))
+            let oldWorldEntityIDs = Set(oldWorldEntities.map(ObjectIdentifier.init))
+            let probesUnchanged = (reusableProbeStates + retiredProbeStates).allSatisfy {
                 $0.isUnchanged(
                     in: world,
                     mappedByAgentID: probesByAgentId
                 )
             }
-            guard worldEntitiesUnchanged, probesUnchanged else {
+            guard worldEntityIDs == oldWorldEntityIDs, probesUnchanged else {
                 let rollbackFailure =
                     "checkpoint restore rollback could not verify exact prior probes"
                 lastError = rollbackFailure
@@ -748,7 +802,10 @@ extension PebbleAgentController {
         }
         let causal = candidate.causalLedgerSnapshot().summary
         let reconciledDigest = try candidate.durableStateDigest()
-        let message = "checkpoint loaded name=\(name.rawValue) id=\(stored.checkpoint.checkpointID.rawValue) tick=\(candidate.tick) simulation=\(candidate.simulationID.rawValue) digest=\(checkpointDigest.rawValue) reconciledDigest=\(reconciledDigest.rawValue) causalSequence=\(causal.latestSequence) causalDigest=\(causal.digest) restartSafe=1 probes=\(probesByAgentId.count) paused=1 focus=\(focusedAgentId ?? "none") lifecycleEvent=none probeReconciliation=reused_exact physicalReconciliation=\(reconciliationSummary) worldMutation=none"
+        let probeReconciliation = retiredBootstrapAgentIDs.isEmpty
+            ? "reused_exact"
+            : "retired_verified:\(retiredBootstrapAgentIDs.joined(separator: ","))"
+        let message = "checkpoint loaded name=\(name.rawValue) id=\(stored.checkpoint.checkpointID.rawValue) tick=\(candidate.tick) simulation=\(candidate.simulationID.rawValue) digest=\(checkpointDigest.rawValue) reconciledDigest=\(reconciledDigest.rawValue) causalSequence=\(causal.latestSequence) causalDigest=\(causal.digest) restartSafe=1 probes=\(probesByAgentId.count) paused=1 focus=\(focusedAgentId ?? "none") lifecycleEvent=none probeReconciliation=\(probeReconciliation) physicalReconciliation=\(reconciliationSummary) worldMutation=none"
         trace(message)
         return success(message)
     }

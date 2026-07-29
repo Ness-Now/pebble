@@ -54,6 +54,19 @@ extension PebbleAgentController {
         lastDeliverySucceeded = false
         lastConsumptionSucceeded = false
         do {
+            if session.mortalityEnabled,
+               !session.pendingMortalityTransitions().isEmpty {
+                let before = session.snapshot()
+                try reconcileMortalityProbes(
+                    previous: before,
+                    current: &session,
+                    recorder: &recorder,
+                    world: world
+                )
+                self.session = session
+                replayRecorder = recorder
+                return true
+            }
             if session.livestockEnabled,
                !session.livestockSnapshot().managedAnimals.isEmpty {
                 try reconcileLiveLivestock(
@@ -361,12 +374,11 @@ extension PebbleAgentController {
                 )
             }
             if session.mortalityEnabled {
-                self.session = session
-                replayRecorder = recorder
                 do {
                     try reconcileMortalityProbes(
                         previous: preCognitive,
-                        current: session,
+                        current: &session,
+                        recorder: &recorder,
                         world: world
                     )
                 } catch {
@@ -1298,6 +1310,24 @@ extension PebbleAgentController {
                 isSkillLateFailure = true
             } else {
                 isSkillLateFailure = false
+            }
+            let isMortalityBoundary: Bool
+            if case ControllerError.mortalityBoundary = error {
+                isMortalityBoundary = true
+            } else {
+                isMortalityBoundary = false
+            }
+            if isMortalityBoundary {
+                replayRecorder = publishedRecorder
+                isPaused = true
+                lastError = String(describing: error)
+                runtimeErrorCount += 1
+                trace(
+                    "mortality boundary rollback publishedSession=unchanged "
+                        + "publishedRecorder=unchanged physicalCustody=verified "
+                        + "error=\(error)"
+                )
+                return false
             }
             if isSkillLateFailure {
                 replayRecorder = publishedRecorder

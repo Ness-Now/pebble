@@ -34,7 +34,15 @@ reevaluated. `CIV-30` is not started.
   knowledge or status.
 - Mortality preserves household/kinship history and passive material claims,
   ownership, permissions and obligations. A deceased claimant cannot initiate
-  a new operation. No item is deleted, transferred or inherited by this phase.
+  a new operation. Before finalization, each verified agent-held asset is
+  transferred through Pebble's existing atomic custody gateway to a real,
+  verified container. Only the physical holder changes: no item is deleted,
+  duplicated or inherited and no social role is transferred.
+- A Homeostasis V2 death is staged until required material exits succeed.
+  `lethalHealthDepletion` directly cites the same-agent, same-tick terminal
+  homeostasis event; the causal path remains navigable through resource and
+  commitment retirement, population exit and final death. A refused physical
+  exit rolls back exactly and leaves mortality unpublished and retryable.
 - Profiles, factors, episodes and retained transitions have explicit bounds.
   Evictions are counted. Checkpoint/replay schema 21 preserves the exact
   trajectory and rejects invalid bounds before session publication.
@@ -52,19 +60,22 @@ PebbleAgents owns deterministic physiology and causal decisions.
 
 ```text
 PEBBLELAB_SMOKE_ONLY=homeostasis-health swift run pebsmoke
-19 passed, 0 failed
+25 passed, 0 failed
 
 scripts/verify-pebblelab.sh
-3362 passed, 0 failed
+3369 passed, 0 failed
 35/35 verification steps
 ```
 
-The prior repository baseline was 3343 checks. `CIV-29` adds 19 checks and
-removes none. Focused coverage includes stable physiology, natural age
+The prior repository baseline was 3343 checks. `CIV-29` now adds 26 checks and
+removes none; this corrective change adds 7 checks to the initial phase
+candidate. Focused coverage includes stable physiology, natural age
 progression, bounded later-life vulnerability, progressive deprivation,
 recovery from verified food and rest, incapacity, single death, no post-death
-agency, preserved claims, history eviction, schema-21 checkpoint/replay,
-Observer read-only behavior and corrupt-state refusal.
+agency, exact terminal-physiology causality, verified material exit and
+rollback, preserved social roles, legacy-starvation compatibility, history
+eviction, schema-21 checkpoint/replay, Observer read-only behavior and
+corrupt-state refusal.
 
 Related published suites for mortality, lifecycle, physical food,
 material rights, persistence/reconciliation and Observer also pass inside the
@@ -87,17 +98,22 @@ separate Pebble processes:
 ```text
 process 1: bootstrap three real probes in a rendered World
            → register one real iron pickaxe and divergent social claims
+           → physically transfer the pickaxe into agent_2 custody
            → supply and consume real bread for agent_0 and agent_1
            → leave agent_2 without food
            → progress normally to incapacity at tick 22
-           → save schema-21 checkpoint and capture Observer
-           → terminate process and verify three probes removed
-process 2: load the same SaveDB World and checkpoint
-           → reconcile the physical asset as matched
-           → capture restored degradation at tick 22
-           → advance normally to one causal death at tick 23
-           → capture mortality Chronicle
-           → continue through tick 25 with no resurrection
+           → capture holder and social roles in Observer
+           → inject one verified physical rollback
+           → advance to terminal physiology at tick 23
+           → transfer the held pickaxe to a verified real container
+           → finalize one causally linked death and capture Chronicle
+           → save a post-death schema-21 checkpoint
+           → terminate process and verify two remaining probes removed
+process 2: load the same SaveDB World and post-death checkpoint
+           → retire only the verified empty bootstrap probe for agent_2
+           → reconcile the same physical asset as matched
+           → capture the restored Observer and Chronicle
+           → continue through tick 25 with no duplication or resurrection
            → remove proof-only food/claim/checkpoint/container state
            → terminate and verify two remaining probes removed
 ```
@@ -105,24 +121,36 @@ process 2: load the same SaveDB World and checkpoint
 Compact observed facts:
 
 ```text
-World binding: wms63ymk34eeb
+World binding: wms69943oletf
 simulation: live-46-14-68--18
-agents before restart: agent_0, agent_1, agent_2
+agents before death: agent_0, agent_1, agent_2
 real food consumed before restart: 42 bread
-deprived person at checkpoint: agent_2
-checkpoint state: tick 22, age 30, health 4, incapacitated
-causal sequence: 256 before restart, 258 after reconciliation
+deprived person: agent_2
+pre-death state: tick 22, age 30, health 4, incapacitated
 physical asset: asset:civ27:live-pickaxe / iron_pickaxe x1
-holder: container:9,69,-18
+holder before death: agent:agent_2
+terminal homeostasis event: event-00000000000000000262
+pending material exit event: event-00000000000000000263
+verified material event: event-00000000000000000272
+lethalHealthDepletion event: event-00000000000000000273
+agentDeathFinalized event: event-00000000000000000278
+physical receipt: mortality-exit:agent_2:t23:a2:9,69,-18
+holder after death: container:9,69,-18
+quantity: 1→1
 custodian: agent_1
 recognized owner: agent_0
 claimants: agent_0, agent_2
 authorized user: agent_1
+social roles after death: unchanged
+automatic inheritance: none
 death: agent_2 at tick 23, compoundedHomeostaticFailure
-post-death causal sequence: 276
+post-death checkpoint: tick 23, causal sequence 278
+post-restart reconciliation: matched, causal sequence 280
+continued simulation: tick 25, causal sequence 296
 active agents/probes: 3→2
 death count: 1
 resurrection or duplicate death count: 0
+asset duplication count: 0
 Observer mutation count: 0
 runtime errors: 0
 cleanup: exact
@@ -132,14 +160,14 @@ All three 3024×1898 captures were inspected. They show a real rendered World
 behind legible Observer panels:
 
 ```text
-pre-restart incapacity SHA-256:
-bcbbf7570a32c8557a3373d01274518462fc73614a845ea6c97cb294aeb83ebd
+agent-held asset before death SHA-256:
+554e870e63ba647e58c3e5a34ac135bef5b3c0c0defae254f5bcad5a99f5bd11
 
-post-restart restored progression SHA-256:
-ecb8d26c0a6000eeadbcf693d026c3027c01d631f04a5ace9249ffcad5178701
+verified material exit and mortality Chronicle SHA-256:
+a1231fb82ece2246d1dde918dd862a00f84c3f9169e8078a126df934d1026dbd
 
-final mortality Chronicle SHA-256:
-e76157e18b8e4070e61d0e02c04b7758df193b2ca74944c486d3e9ca1de7774e
+post-death restart Observer and Chronicle SHA-256:
+7985e462273cf9bbf8a2ef32162b2dfcbfa910cc8c9614ec8c8df9788b8edc61
 ```
 
 ## Honest V2 limits
@@ -154,6 +182,11 @@ e76157e18b8e4070e61d0e02c04b7758df193b2ca74944c486d3e9ca1de7774e
 - Pebble provides no corpse primitive required by this phase, so no corpse
   system was invented. The transient agent probe is removed through the
   existing physical boundary.
+- V1 mortality material exit requires a bounded, existing and safe real
+  container near the dying probe. If none can accept every verified held
+  stack, the physical mutation is rolled back, death is not finalized and the
+  explicit pending transition remains retryable. No terrain, corpse container
+  or fictitious endpoint is created.
 - Claims and ownership survive death, but inheritance, estates and automatic
   transfer are deliberately absent until `CIV-33`.
 - Schema 21 preserves the civilization trajectory and binds it to the existing

@@ -107,6 +107,7 @@ final class PebbleAgentController {
     var rightsProofFixture: PebbleAgentMaterialRightsProofFixture?
     var passiveObserverBootstrapComplete = false
     var manualProductiveCommandsAfterBootstrap = 0
+    var mortalityMaterialExitAttempt = 0
 
     let environment = ProcessInfo.processInfo.environment
     var featureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS"] == "1" }

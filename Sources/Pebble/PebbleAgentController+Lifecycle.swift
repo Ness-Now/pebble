@@ -155,6 +155,7 @@ extension PebbleAgentController {
             demoActive = resetSpeed ? false : preservedDemoActive
             passiveObserverBootstrapComplete = false
             manualProductiveCommandsAfterBootstrap = 0
+            mortalityMaterialExitAttempt = 0
             passiveSocietyAudit = PebbleAgentPassiveSocietyAudit()
             workDemandRefreshAudit = PebbleAgentWorkDemandRefreshAudit()
             lastTickResult = nil
@@ -654,6 +655,7 @@ extension PebbleAgentController {
         demoActive = false
         passiveObserverBootstrapComplete = false
         manualProductiveCommandsAfterBootstrap = 0
+        mortalityMaterialExitAttempt = 0
         passiveSocietyFixture = nil
         passiveSocietyAudit = PebbleAgentPassiveSocietyAudit()
         workDemandRefreshAudit = PebbleAgentWorkDemandRefreshAudit()
