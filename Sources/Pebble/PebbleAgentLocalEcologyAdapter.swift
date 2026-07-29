@@ -4,6 +4,7 @@ import PebbleCore
 struct PebbleAgentLocalEcologyScanDiagnostics: Codable, Equatable {
     var candidatesInspected = 0
     var habitatsValid = 0
+    var duplicateHabitatsDiscarded = 0
     var worldReads = 0
     var chunksUnavailable = 0
     var lastWorldTick = 0
@@ -85,8 +86,17 @@ struct PebbleAgentLocalEcologyAdapter {
                 worldReadCount: sample.reads
             ))
         }
-        let selected = Array(observations.sorted(by: AgentEcologyHabitatObservation.sortsBefore)
-            .prefix(min(Self.maximumInitialPatches, configuration.maximumPatches)))
+        let limit = min(Self.maximumInitialPatches, configuration.maximumPatches)
+        var selected: [AgentEcologyHabitatObservation] = []
+        var selectedPatchIDs = Set<AgentEcologyPatchID>()
+        for observation in observations.sorted(by: AgentEcologyHabitatObservation.sortsBefore) {
+            guard selectedPatchIDs.insert(observation.patchID).inserted else {
+                diagnostics.duplicateHabitatsDiscarded += 1
+                continue
+            }
+            selected.append(observation)
+            if selected.count == limit { break }
+        }
         return PebbleAgentLocalEcologyScanResult(observations: selected, diagnostics: diagnostics)
     }
 

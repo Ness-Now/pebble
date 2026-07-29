@@ -56,7 +56,7 @@ extension PebbleAgentController {
                 }
                 self.session = session
                 lastEcologyReason = "initialized from read-only World scan"
-                trace("ecology=on tick=\(session.tick) patches=\(scan.observations.count) reads=\(scan.diagnostics.worldReads) mutation=none")
+                trace("ecology=on tick=\(session.tick) patches=\(scan.observations.count) reads=\(scan.diagnostics.worldReads) duplicateHabitatsDiscarded=\(scan.diagnostics.duplicateHabitatsDiscarded) mutation=none")
                 for patch in session.localEcologySnapshot().patches {
                     let distance = abs(patch.foragePosition.x - settlement.anchor.x)
                         + abs(patch.foragePosition.y - settlement.anchor.y)
@@ -104,7 +104,7 @@ extension PebbleAgentController {
                 }
                 lastEcologyScanDiagnostics = scan.diagnostics
                 let ids = scan.observations.map { $0.patchID.rawValue }.joined(separator: ",")
-                let message = "ecology scan candidates=\(scan.diagnostics.candidatesInspected) valid=\(scan.diagnostics.habitatsValid) reads=\(scan.diagnostics.worldReads)/256 chunksUnavailable=\(scan.diagnostics.chunksUnavailable) patches=\(ids.isEmpty ? "none" : ids) mutation=none"
+                let message = "ecology scan candidates=\(scan.diagnostics.candidatesInspected) valid=\(scan.diagnostics.habitatsValid) duplicatesDiscarded=\(scan.diagnostics.duplicateHabitatsDiscarded) reads=\(scan.diagnostics.worldReads)/256 chunksUnavailable=\(scan.diagnostics.chunksUnavailable) patches=\(ids.isEmpty ? "none" : ids) mutation=none"
                 trace(message)
                 return success(message)
             } catch { return failure("Local ecology scan failed: \(error)") }

@@ -480,7 +480,7 @@ extension AgentSimulationSession {
                       source.actorID == record.canonicalParentIDs.first,
                       source.subjectID == record.childID,
                       source.operationID == nil,
-                      source.causes.count == 1,
+                      (1...2).contains(source.causes.count),
                       case let .birth(birthID, planID, newbornID, payloadOrdinal,
                                       progenitorIDs, position, fingerprint, status) = source.payload,
                       birthID == record.birthID.rawValue,
@@ -490,10 +490,31 @@ extension AgentSimulationSession {
                       status == "born" else {
                     throw AgentKinshipError.invalidCausalReference(record.sourcePopulationBornEventID)
                 }
-                let siteEventID = source.causes[0]
-                if let birth = lifecycle.births.first(where: { $0.newbornID == record.childID }),
-                   birth.siteValidatedEventID != siteEventID {
+                guard let birth = lifecycle.births.first(where: {
+                    $0.newbornID == record.childID
+                }), source.causes.contains(birth.siteValidatedEventID) else {
+                    throw AgentKinshipError.invalidCausalReference(
+                        record.sourcePopulationBornEventID
+                    )
+                }
+                let siteEventID = birth.siteValidatedEventID
+                let geneticsCauseIDs = source.causes.filter { $0 != siteEventID }
+                guard geneticsCauseIDs.count <= 1 else {
                     throw AgentKinshipError.invalidCausalReference(siteEventID)
+                }
+                if let geneticsEventID = geneticsCauseIDs.first,
+                   let geneticsEvent = try retainedEvent(geneticsEventID) {
+                    guard geneticsEvent.kind == .genotypeInherited,
+                          geneticsEvent.origin == .geneticsTransition,
+                          geneticsEvent.simulationTick.rawValue == record.birthTick,
+                          geneticsEvent.actorID == record.canonicalParentIDs.first,
+                          geneticsEvent.subjectID == record.childID,
+                          geneticsEvent.operationID == nil,
+                          geneticsEvent.causes.contains(siteEventID) else {
+                        throw AgentKinshipError.invalidCausalReference(
+                            geneticsEventID
+                        )
+                    }
                 }
                 if let site = try retainedEvent(siteEventID) {
                     guard site.kind == .birthSiteValidated,

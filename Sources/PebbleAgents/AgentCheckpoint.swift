@@ -471,6 +471,7 @@ public struct AgentCheckpointLiveOrchestration: Codable, Equatable, Sendable {
     public let economyAutoEnabled: Bool
     public let focusedAgentID: String?
     public let naturalResourceScanDiagnostics: AgentNaturalResourceScanDiagnostics?
+    public let verifiedEmptyProbeAgentIDsAtSave: [String]?
 
     public init(
         cognitiveHz: Int,
@@ -479,7 +480,8 @@ public struct AgentCheckpointLiveOrchestration: Codable, Equatable, Sendable {
         autoInteractionEnabled: Bool,
         economyAutoEnabled: Bool,
         focusedAgentID: String? = nil,
-        naturalResourceScanDiagnostics: AgentNaturalResourceScanDiagnostics? = nil
+        naturalResourceScanDiagnostics: AgentNaturalResourceScanDiagnostics? = nil,
+        verifiedEmptyProbeAgentIDsAtSave: [String]? = nil
     ) {
         self.cognitiveHz = cognitiveHz
         self.wasPaused = wasPaused
@@ -488,6 +490,8 @@ public struct AgentCheckpointLiveOrchestration: Codable, Equatable, Sendable {
         self.economyAutoEnabled = economyAutoEnabled
         self.focusedAgentID = focusedAgentID
         self.naturalResourceScanDiagnostics = naturalResourceScanDiagnostics
+        self.verifiedEmptyProbeAgentIDsAtSave =
+            verifiedEmptyProbeAgentIDsAtSave
     }
 }
 

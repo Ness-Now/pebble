@@ -109,6 +109,18 @@ extension PebbleAgentController {
                     store: store
                 )
                 let safety = liveRestartSafety()
+                let checkpointAgentIDs = session.snapshot().agents
+                    .map(\.id).sorted()
+                let checkpointEmbodiments = try PebbleAgentEmbodiment.resolveAll(
+                    agentIDs: checkpointAgentIDs,
+                    in: world,
+                    mappedByAgentID: probesByAgentId
+                )
+                let verifiedEmptyProbeAgentIDs = checkpointAgentIDs.filter {
+                    checkpointEmbodiments[$0]?.carriedItems.allSatisfy {
+                        $0 == nil
+                    } == true
+                }
                 let manifest = AgentCheckpointManifest(
                     name: name,
                     checkpoint: checkpoint,
@@ -124,7 +136,9 @@ extension PebbleAgentController {
                         autoInteractionEnabled: autoInteractionEnabled,
                         economyAutoEnabled: economyAutoEnabled,
                         focusedAgentID: focusedAgentId,
-                        naturalResourceScanDiagnostics: naturalResourceExecutor.state.lastScan
+                        naturalResourceScanDiagnostics: naturalResourceExecutor.state.lastScan,
+                        verifiedEmptyProbeAgentIDsAtSave:
+                            verifiedEmptyProbeAgentIDs
                     ),
                     reconciliationBinding: reconciliation
                 )
@@ -563,22 +577,48 @@ extension PebbleAgentController {
         let oldProbesByAgentID = probesByAgentId
         let oldWorldEntities = world.entities
         let candidateAgentIDSet = Set(candidateAgentIDs)
+        let currentAgentIDSet = Set(currentAgentIDs)
         let retiredBootstrapAgentIDs = currentAgentIDs.filter {
             !candidateAgentIDSet.contains($0)
+        }
+        let restoredCheckpointAgentIDs = candidateAgentIDs.filter {
+            !currentAgentIDSet.contains($0)
         }
         let retainedDeathAgentIDs = Set(
             candidate.mortalitySnapshot().records.map(\.agentID.rawValue)
         )
-        guard candidateAgentIDSet.isSubset(of: Set(currentAgentIDs)),
-              worldProbeIDs == currentAgentIDs,
+        let candidatePopulationIDs = Set(
+            candidate.populationSnapshot().members.map(\.agentID.rawValue)
+        )
+        let candidateLifecycleIDs = Set(
+            candidate.lifecycleSnapshot().members.map(\.agentID.rawValue)
+        )
+        let verifiedEmptyProbeAgentIDs = stored.manifest.orchestration
+            .verifiedEmptyProbeAgentIDsAtSave ?? []
+        guard worldProbeIDs == currentAgentIDs,
+              verifiedEmptyProbeAgentIDs
+                == Array(Set(verifiedEmptyProbeAgentIDs)).sorted(),
               Set(retiredBootstrapAgentIDs).isSubset(
                   of: retainedDeathAgentIDs
+              ),
+              Set(restoredCheckpointAgentIDs).isSubset(
+                  of: candidatePopulationIDs
+              ),
+              Set(restoredCheckpointAgentIDs).isSubset(
+                  of: candidateLifecycleIDs
+              ),
+              Set(restoredCheckpointAgentIDs).isSubset(
+                  of: Set(verifiedEmptyProbeAgentIDs)
               ),
               candidate.materialRightsSnapshot().records.allSatisfy({ record in
                   !retiredBootstrapAgentIDs.contains {
                       record.lastVerifiedHolder.holder
                           == .agent(AgentID(rawValue: $0)!)
                   }
+                    && !restoredCheckpointAgentIDs.contains {
+                        record.lastVerifiedHolder.holder
+                            == .agent(AgentID(rawValue: $0)!)
+                    }
               }) else {
             return failure(
                 "Checkpoint load refused: live Civilization identities do not match the checkpoint."
@@ -596,7 +636,9 @@ extension PebbleAgentController {
                 "Checkpoint load refused: live embodiments are not coherent (\(error))."
             )
         }
-        guard candidateAgents.allSatisfy({
+        guard candidateAgents.filter({
+            currentAgentIDSet.contains($0.id)
+        }).allSatisfy({
             currentEmbodiments[$0.id]?.position == $0.position
         }) else {
             return failure(
@@ -611,7 +653,9 @@ extension PebbleAgentController {
                 )
             }
         }
-        guard reusableProbeStates.count == candidateAgentIDs.count else {
+        guard reusableProbeStates.count
+                == candidateAgentIDs.count - restoredCheckpointAgentIDs.count
+        else {
             return failure(
                 "Checkpoint load refused: live embodiment capture is incomplete."
             )
@@ -704,6 +748,7 @@ extension PebbleAgentController {
             seed, anchor, focusedAgentId, followMode, credit, lastWorldTick, lastTickResult
         )
         var retiredProbesRemoved: [PebbleAgentCheckpointProbeState] = []
+        var restoredProbesCreated: [PebbleAgentCheckpointProbeState] = []
         do {
             for retired in retiredProbeStates.sorted(by: {
                 $0.agentID < $1.agentID
@@ -715,6 +760,17 @@ extension PebbleAgentController {
                 }
                 probesByAgentId.removeValue(forKey: retired.agentID)
                 retiredProbesRemoved.append(retired)
+            }
+            for agent in candidateAgents where
+                restoredCheckpointAgentIDs.contains(agent.id) {
+                let probe = try createProbe(for: agent, in: world)
+                probesByAgentId[agent.id] = probe
+                restoredProbesCreated.append(
+                    PebbleAgentCheckpointProbeState(
+                        agentID: agent.id,
+                        probe: probe
+                    )
+                )
             }
             session = candidate
             constructionExecutor = candidateConstructionExecutor
@@ -749,7 +805,9 @@ extension PebbleAgentController {
                 && world.entities.compactMap {
                     ($0 as? LabCoreAgentEntity)?.labAgentId
                 }.sorted() == candidateAgentIDs
-            let probesUnchanged = reusableProbeStates.allSatisfy {
+            let probesUnchanged = (
+                reusableProbeStates + restoredProbesCreated
+            ).allSatisfy {
                 $0.isUnchanged(
                     in: world,
                     mappedByAgentID: probesByAgentId
@@ -781,6 +839,19 @@ extension PebbleAgentController {
             credit = oldOrchestration.9
             lastWorldTick = oldOrchestration.10
             lastTickResult = oldOrchestration.11
+            for restored in restoredProbesCreated.reversed() where
+                world.entities.contains(where: { $0 === restored.probe }) {
+                guard removeLabCoreAgentProbe(restored.probe, from: world) else {
+                    let rollbackFailure =
+                        "checkpoint restore rollback could not remove restored probe "
+                            + restored.agentID
+                    lastError = rollbackFailure
+                    throw PebbleAgentPersistenceStoreError.invalidBundle(
+                        rollbackFailure
+                    )
+                }
+                probesByAgentId.removeValue(forKey: restored.agentID)
+            }
             for retired in retiredProbesRemoved where !world.entities.contains(
                 where: { $0 === retired.probe }
             ) {
@@ -806,7 +877,9 @@ extension PebbleAgentController {
         let causal = candidate.causalLedgerSnapshot().summary
         let reconciledDigest = try candidate.durableStateDigest()
         let probeReconciliation = retiredBootstrapAgentIDs.isEmpty
-            ? "reused_exact"
+            ? (restoredCheckpointAgentIDs.isEmpty
+                ? "reused_exact"
+                : "restored_verified:\(restoredCheckpointAgentIDs.joined(separator: ","))")
             : "retired_verified:\(retiredBootstrapAgentIDs.joined(separator: ","))"
         let message = "checkpoint loaded name=\(name.rawValue) id=\(stored.checkpoint.checkpointID.rawValue) tick=\(candidate.tick) simulation=\(candidate.simulationID.rawValue) digest=\(checkpointDigest.rawValue) reconciledDigest=\(reconciledDigest.rawValue) causalSequence=\(causal.latestSequence) causalDigest=\(causal.digest) restartSafe=1 probes=\(probesByAgentId.count) paused=1 focus=\(focusedAgentId ?? "none") lifecycleEvent=none probeReconciliation=\(probeReconciliation) physicalReconciliation=\(reconciliationSummary) worldMutation=none"
         trace(message)

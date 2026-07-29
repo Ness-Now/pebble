@@ -344,6 +344,24 @@ func runPebbleAgentsGeneticsDevelopmentSmoke() {
                 to: childGenotype.creationEventID
             ))
 
+    var socialBirth = geneticsSession(
+        "civ30-inheritance-social-boundaries",
+        enableGenetics: false
+    )
+    try! socialBirth.setKinshipEnabled(true)
+    try! socialBirth.setHouseholdsEnabled(true)
+    try! socialBirth.setGeneticsEnabled(true)
+    let socialBirthRecord = geneticsBirth(&socialBirth)
+    let socialChild = socialBirthRecord.newbornID
+    check("genetic birth remains atomic with kinship and households",
+          socialBirth.genotype(for: socialChild)?.origin == .inherited
+            && (try! socialBirth.parents(of: socialChild))
+                == socialBirthRecord.progenitorIDs
+            && (try! socialBirth.currentMembership(of: socialChild)) != nil
+            && (try? AgentSimulationSession.restoring(
+                try! socialBirth.makeCheckpoint()
+            ).durableStateBytes()) == (try? socialBirth.durableStateBytes()))
+
     var permutedBirth = geneticsSession(
         "civ30-inheritance",
         order: ["agent_2", "agent_1", "agent_0"]
