@@ -25,19 +25,23 @@ roadmap.
 ## Canonical position
 
 ```text
-CIV-00 through CIV-29: COMPLETE
+CIV-00 through CIV-30: COMPLETE
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: none
-next authorized action: CIV-30
-CIV-29: COMPLETE
-V4-GATE-C-v1: ACQUIRED
-CIV-30: NOT STARTED — NEXT ELIGIBLE PHASE
+next authorized action: CIV-31
+CIV-30: COMPLETE
+V4-GATE-C-v1: ACQUIRED AND PUBLISHED
+CIV-31: NOT STARTED — NEXT ELIGIBLE PHASE
+V4-GATE-D-v1: PLANNED
+V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: PLANNED
 ```
 
-The `CIV-29` completion in this local tree is a publication candidate until
-senior review, manual push and remote verification complete.
+The `CIV-29` completion is published on the canonical branch at
+`c1eda66dfacdd16911207b6fc8fd58df8581b99f`. The `CIV-30` completion in this
+local tree remains a review candidate until senior review, manual push and
+remote verification complete.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:
@@ -110,9 +114,9 @@ demonstrated boundary between civilization intent and Pebble physical truth.
 
 ## Wave 1 — Durable local world
 
-This is the current wave. Only its outcomes and boundaries are canonical here;
-each phase receives its own mission design after auditing the then-current
-code.
+This completed wave retains only its outcomes and boundaries as canonical;
+each later phase receives its own mission design after auditing the
+then-current code.
 
 ### `CIV-26` — Possession, Custody, Claims and Use Rights V1
 
@@ -189,11 +193,12 @@ The evaluated product baseline passed 108 focused adversarial checks, the
 3343-check repository gate and a rendered two-process restart with real
 missing-asset reconciliation, zero duplication and read-only observation.
 
-Gate C remains acquired and published. `CIV-29` does not reevaluate it.
+Gate C remains acquired and published. `CIV-29` and `CIV-30` do not reevaluate
+it.
 
 ## Wave 2 — Generational continuity
 
-Current entry status: `CIV-29` is **complete** and `CIV-30` is
+Current entry status: `CIV-30` is **complete** and `CIV-31` is
 **not started — next eligible phase**.
 
 | Phase | Requirement | Outcome |
@@ -225,7 +230,36 @@ resurrection and exact cleanup. It does not claim disease catalogs, medicine,
 complex injury, long-term impairment mechanics, genetics, corpses,
 inheritance or renewable subsistence.
 
-`CIV-30` is the next eligible phase but remains not started.
+### `CIV-30` — Genetics, Development and Phenotype V1
+
+Status: **completed, required**.
+
+Result: every active person receives one immutable genotype in a closed,
+four-locus diploid model. Founders are initialized explicitly and
+deterministically; normal births inherit one recorded contribution per locus
+from each canonical progenitor with no general mutation. Development is a
+bounded life-course projection of lifecycle age/stage and accumulated
+physiological exposure. Phenotype is derived authoritatively from genotype and
+development, and can modify only the existing CIV-29 physiology within
+explicit bounds.
+
+Bounded proof:
+[`CIV_30_PHASE_SUMMARY.md`](CIV_30_PHASE_SUMMARY.md). It covers deterministic
+founder and sibling variation, parent-order neutrality, mutation-free
+inheritance with per-locus provenance, atomic child/parentage/household/genotype
+publication, migration, post-mortem development stop, schema-22
+checkpoint/replay, read-only Observer schema 3, bounded ecological
+deduplication and fail-closed restoration of a persistent child probe only
+when carried custody was attested empty. A real rendered two-process campaign
+proves normal birth, the same child and genotype after restart, continued
+newborn-to-juvenile development, zero duplication and exact cleanup.
+
+This phase does not claim general mutation, genetic disease, sex or gender,
+detailed appearance, genetically assigned intelligence or personality,
+guardianship, unions, lineages, houses, inheritance, renewable subsistence or
+Gate D.
+
+`CIV-31` is the next eligible phase but remains not started.
 
 This wave must preserve the distinction between genotype, development,
 education, knowledge, skill and status. Care consumes real time and resources.
@@ -246,6 +280,8 @@ implementation belongs to a future mission, not this roadmap.
 Observable slices:
 
 - after `CIV-29`: visible health, aging and causal mortality;
+- after `CIV-30`: inspect founder variation, inherited per-locus provenance
+  and bounded phenotype across a real restart;
 - after `CIV-31`: dependent childhood, care and guardianship over time;
 - after `CIV-33`: a death, durable estate and succession across restart.
 

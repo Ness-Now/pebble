@@ -2,16 +2,19 @@
 
 ## Verdict and baseline
 
-`CIV-29` is complete in its bounded contract as a local publication
-candidate. It was implemented from published baseline:
+`CIV-29` is complete in its bounded contract and is published on the canonical
+branch at `c1eda66dfacdd16911207b6fc8fd58df8581b99f`. It was implemented from
+published baseline:
 
 ```text
 3452bf92a0f324a2fb9bd9824fc729ec3b4b860c
 ```
 
-This report intentionally does not self-reference the commit containing the
-phase. Gate R, Gate B and `V4-GATE-C-v1` remain acquired; Gate C is not
-reevaluated. `CIV-30` is not started.
+This report originally documented the local review candidate and intentionally
+does not self-reference its containing commit. Gate R, Gate B and
+`V4-GATE-C-v1` remain acquired; Gate C is not reevaluated. At this report's
+evidence boundary, `CIV-30` had not started; its later completion is documented
+separately.
 
 ## Contract proved
 
