@@ -81,6 +81,20 @@ struct PebbleAgentPersistenceStore {
               manifest.semanticDigest == checkpoint.semanticDigest else {
             throw PebbleAgentPersistenceStoreError.invalidBundle("checkpoint manifest identity")
         }
+        do {
+            try manifest.validateIntegrityDigest()
+        } catch {
+            throw PebbleAgentPersistenceStoreError.storageDigestMismatch
+        }
+        do {
+            _ = try manifest.protectedVerifiedEmptyProbeAgentIDs(
+                for: checkpoint
+            )
+        } catch {
+            throw PebbleAgentPersistenceStoreError.invalidBundle(
+                "checkpoint physical attestation"
+            )
+        }
         let sessionBytes = try AgentCheckpointCodec.encode(checkpoint)
         guard sessionBytes.count <= AgentCheckpointLimits.maximumCheckpointBytes else {
             throw PebbleAgentPersistenceStoreError.sizeLimit(sessionBytes.count)
@@ -228,6 +242,11 @@ struct PebbleAgentPersistenceStore {
         let sessionURL = root.appendingPathComponent("session.json")
         let manifestBytes = try readRegularFile(manifestURL, limit: 1_048_576, fileManager: fileManager)
         let manifest = try AgentCheckpointCodec.decode(AgentCheckpointManifest.self, from: manifestBytes)
+        do {
+            try manifest.validateIntegrityDigest()
+        } catch {
+            throw PebbleAgentPersistenceStoreError.storageDigestMismatch
+        }
         guard AgentCheckpointSchema.supports(manifest.schemaVersion),
               manifest.name == name,
               manifest.byteLength <= AgentCheckpointLimits.maximumCheckpointBytes else {
@@ -244,9 +263,19 @@ struct PebbleAgentPersistenceStore {
         }
         let checkpoint = try AgentCheckpointCodec.decode(AgentSessionCheckpoint.self, from: sessionBytes)
         _ = try AgentSimulationSession.validate(checkpoint)
-        guard checkpoint.checkpointID == manifest.checkpointID,
+        guard checkpoint.schemaVersion == manifest.schemaVersion,
+              checkpoint.checkpointID == manifest.checkpointID,
               checkpoint.semanticDigest == manifest.semanticDigest else {
             throw PebbleAgentPersistenceStoreError.storageDigestMismatch
+        }
+        do {
+            _ = try manifest.protectedVerifiedEmptyProbeAgentIDs(
+                for: checkpoint
+            )
+        } catch {
+            throw PebbleAgentPersistenceStoreError.invalidBundle(
+                "checkpoint physical attestation"
+            )
         }
         return PebbleAgentStoredCheckpoint(manifest: manifest, checkpoint: checkpoint)
     }

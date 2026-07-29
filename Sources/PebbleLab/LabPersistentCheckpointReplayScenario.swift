@@ -326,7 +326,7 @@ private func persistenceManifest(
     checkpoint: AgentSessionCheckpoint,
     bytes: Data
 ) -> AgentCheckpointManifest {
-    AgentCheckpointManifest(
+    try! AgentCheckpointManifest(
         name: AgentCheckpointName(rawValue: name)!,
         checkpoint: checkpoint,
         storageDigest: AgentCheckpointDigest.sha256(bytes),

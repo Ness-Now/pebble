@@ -424,6 +424,7 @@ extension AgentSimulationSession {
             )
         }
         trimGeneticsTransitions()
+        try validateGeneticsCrossDomainIfEnabled()
     }
 
     mutating func assignFounderGenotype(
@@ -853,13 +854,31 @@ extension AgentSimulationSession {
         trimGeneticsTransitions()
     }
 
+    func validateGeneticsCrossDomainIfEnabled() throws {
+        guard let genetics = geneticsState else { return }
+        try Self.validateGeneticsState(
+            genetics,
+            agents: statesById.values.sorted {
+                $0.agentID < $1.agentID
+            },
+            lifecycle: lifecycleState,
+            mortality: mortalityState,
+            clock: clock,
+            causalLatestSequence: causalLedger.latestSequence,
+            causalDroppedEventCount: causalLedger.droppedEventCount,
+            causalEvents: causalLedger.events
+        )
+    }
+
     static func validateGeneticsState(
         _ genetics: AgentGeneticsState,
         agents: [AgentSessionAgentState],
         lifecycle: AgentLifecycleState?,
         mortality: AgentMortalityState?,
         clock: AgentSimulationClock,
-        causalLatestSequence: UInt64
+        causalLatestSequence: UInt64,
+        causalDroppedEventCount: UInt64,
+        causalEvents: [AgentCausalEvent]
     ) throws {
         _ = try AgentGeneticsConfiguration(
             modelVersion: genetics.configuration.modelVersion,
@@ -893,6 +912,35 @@ extension AgentSimulationSession {
         else {
             throw AgentCheckpointError.invalidBound("genetics")
         }
+        guard let lifecycle else {
+            throw AgentCheckpointError.invalidReference("genetics lifecycle")
+        }
+        guard causalDroppedEventCount <= causalLatestSequence,
+              UInt64(causalEvents.count)
+                == causalLatestSequence - causalDroppedEventCount,
+              causalEvents.enumerated().allSatisfy({ index, event in
+                  event.sequence.rawValue
+                    == causalDroppedEventCount + UInt64(index) + 1
+              }) else {
+            throw AgentCheckpointError.invalidCausalState
+        }
+        let retainedEvent: (AgentCausalEventID) throws -> AgentCausalEvent? = {
+            eventID in
+            guard eventID.simulationID == clock.simulationID,
+                  eventID.sequence.rawValue <= causalLatestSequence else {
+                throw AgentCheckpointError.invalidCausalState
+            }
+            if let event = causalEvents.first(where: {
+                $0.eventID == eventID
+            }) {
+                return event
+            }
+            guard causalDroppedEventCount > 0,
+                  eventID.sequence.rawValue <= causalDroppedEventCount else {
+                throw AgentCheckpointError.invalidCausalState
+            }
+            return nil
+        }
         for genotype in genetics.genotypes {
             guard genotype.schemaVersion == genetics.configuration.modelVersion,
                   genotype.loci.map(\.locus)
@@ -920,6 +968,119 @@ extension AgentSimulationSession {
                 throw AgentCheckpointError.invalidReference(
                     genotype.agentID.rawValue
                 )
+            }
+            let matchingBirths = lifecycle.births.filter {
+                $0.newbornID == genotype.agentID
+            }
+            switch genotype.origin {
+            case .founder:
+                guard matchingBirths.isEmpty,
+                      lifecycle.members.first(where: {
+                          $0.agentID == genotype.agentID
+                      })?.origin != .localBirth else {
+                    throw AgentCheckpointError.invalidReference(
+                        genotype.agentID.rawValue
+                    )
+                }
+            case .inherited:
+                guard matchingBirths.count == 1,
+                      let birth = matchingBirths.first,
+                      genotype.birthID == birth.birthID,
+                      genotype.contributorIDs == birth.progenitorIDs,
+                      genotype.createdAtTick == birth.birthTick,
+                      birth.siteValidatedEventID.sequence
+                        < genotype.creationEventID.sequence,
+                      genotype.creationEventID.sequence
+                        < birth.populationBornEventID.sequence,
+                      lifecycle.members.first(where: {
+                          $0.agentID == genotype.agentID
+                      }).map({
+                          $0.origin == .localBirth
+                              && $0.birthID == birth.birthID
+                              && $0.progenitorIDs == birth.progenitorIDs
+                      }) ?? true else {
+                    throw AgentCheckpointError.invalidReference(
+                        genotype.agentID.rawValue
+                    )
+                }
+                if let event = try retainedEvent(
+                    genotype.creationEventID
+                ) {
+                    let expectedDetail =
+                        "genotype=\(genotype.genotypeID.rawValue) contributors="
+                            + genotype.contributorIDs.map(\.rawValue)
+                                .joined(separator: ",")
+                    guard event.kind == .genotypeInherited,
+                          event.origin == .geneticsTransition,
+                          event.simulationTick.rawValue == birth.birthTick,
+                          event.actorID == birth.progenitorIDs.first,
+                          event.subjectID == birth.newbornID,
+                          event.operationID == nil,
+                          event.causes.contains(
+                              birth.siteValidatedEventID
+                          ),
+                          case let .operation(status, detail) = event.payload,
+                          status == "inherited",
+                          detail == expectedDetail else {
+                        throw AgentCheckpointError.invalidCausalState
+                    }
+                }
+                if let site = try retainedEvent(
+                    birth.siteValidatedEventID
+                ) {
+                    guard site.kind == .birthSiteValidated,
+                          site.origin == .lifecycleTransition,
+                          site.simulationTick.rawValue == birth.birthTick,
+                          site.actorID == birth.progenitorIDs.first,
+                          site.subjectID == birth.newbornID,
+                          site.operationID == nil,
+                          case let .birth(
+                              birthID, planID, newbornID, ordinal,
+                              progenitorIDs, position, fingerprint, status
+                          ) = site.payload,
+                          birthID == birth.birthID.rawValue,
+                          planID == birth.planID.rawValue,
+                          newbornID == birth.newbornID.rawValue,
+                          ordinal == birth.ordinal.rawValue,
+                          progenitorIDs
+                            == birth.progenitorIDs.map(\.rawValue),
+                          position == birth.position,
+                          fingerprint == birth.worldFingerprint,
+                          status == "siteValidated" else {
+                        throw AgentCheckpointError.invalidCausalState
+                    }
+                }
+                if let born = try retainedEvent(
+                    birth.populationBornEventID
+                ) {
+                    guard born.kind == .populationMemberBorn,
+                          born.origin == .lifecycleTransition,
+                          born.simulationTick.rawValue == birth.birthTick,
+                          born.actorID == birth.progenitorIDs.first,
+                          born.subjectID == birth.newbornID,
+                          born.operationID == nil,
+                          born.causes.contains(
+                              birth.siteValidatedEventID
+                          ),
+                          born.causes.contains(
+                              genotype.creationEventID
+                          ),
+                          case let .birth(
+                              birthID, planID, newbornID, ordinal,
+                              progenitorIDs, position, fingerprint, status
+                          ) = born.payload,
+                          birthID == birth.birthID.rawValue,
+                          planID == birth.planID.rawValue,
+                          newbornID == birth.newbornID.rawValue,
+                          ordinal == birth.ordinal.rawValue,
+                          progenitorIDs
+                            == birth.progenitorIDs.map(\.rawValue),
+                          position == birth.position,
+                          fingerprint == birth.worldFingerprint,
+                          status == "born" else {
+                        throw AgentCheckpointError.invalidCausalState
+                    }
+                }
             }
             for locus in genotype.loci {
                 guard locus.contributions.count == 2,
@@ -959,6 +1120,50 @@ extension AgentSimulationSession {
                 }
             }
         }
+        for member in lifecycle.members {
+            guard let genotype = genetics.genotypes.first(where: {
+                $0.agentID == member.agentID
+            }) else {
+                throw AgentCheckpointError.invalidReference(
+                    member.agentID.rawValue
+                )
+            }
+            switch member.origin {
+            case .localBirth:
+                guard genotype.origin == .inherited,
+                      let birthID = member.birthID,
+                      genotype.birthID == birthID,
+                      genotype.contributorIDs == member.progenitorIDs,
+                      lifecycle.births.filter({
+                          $0.newbornID == member.agentID
+                              && $0.birthID == birthID
+                      }).count == 1 else {
+                    throw AgentCheckpointError.invalidReference(
+                        member.agentID.rawValue
+                    )
+                }
+            case .bootstrapResident, .importedMigrant:
+                guard genotype.origin == .founder,
+                      genotype.birthID == nil else {
+                    throw AgentCheckpointError.invalidReference(
+                        member.agentID.rawValue
+                    )
+                }
+            }
+        }
+        for birth in lifecycle.births {
+            guard genetics.genotypes.filter({
+                $0.agentID == birth.newbornID
+                    && $0.origin == .inherited
+                    && $0.birthID == birth.birthID
+                    && $0.contributorIDs == birth.progenitorIDs
+                    && $0.createdAtTick == birth.birthTick
+            }).count == 1 else {
+                throw AgentCheckpointError.invalidReference(
+                    birth.newbornID.rawValue
+                )
+            }
+        }
         for development in genetics.development {
             guard (0...10_000).contains(
                     development.expressionMaturityBasisPoints
@@ -980,7 +1185,7 @@ extension AgentSimulationSession {
                 )
             }
             if development.active,
-               let member = lifecycle?.members.first(where: {
+               let member = lifecycle.members.first(where: {
                    $0.agentID == development.agentID
                }) {
                 guard development.ageTicks == (try member.age(at: clock.tick.rawValue)),

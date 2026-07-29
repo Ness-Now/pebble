@@ -92,6 +92,7 @@ private func geneticsSession(
     mortality: AgentMortalityConfiguration = .live,
     genetics: AgentGeneticsConfiguration = .live,
     lifecycle: AgentLifecycleConfiguration = .live,
+    causalMaximumEvents: Int = 16_384,
     enableGenetics: Bool = true
 ) -> AgentSimulationSession {
     var session = try! AgentSimulationSession(
@@ -108,7 +109,7 @@ private func geneticsSession(
             )
         },
         simulationID: try! AgentSimulationID(validating: simulationID),
-        causalLedgerPolicy: .bounded(maxEvents: 16_384)
+        causalLedgerPolicy: .bounded(maxEvents: causalMaximumEvents)
     )
     session.setSurvivalEnabled(true)
     try! session.initializePopulationRegistry(
@@ -175,6 +176,236 @@ private func geneticsCausalPathExists(
         frontier.append(contentsOf: event.causes.map { ($0, depth + 1) })
     }
     return false
+}
+
+private func geneticsManifest(
+    checkpoint: AgentSessionCheckpoint,
+    verifiedEmptyProbeAgentIDs: [String]
+) -> AgentCheckpointManifest {
+    let bytes = try! AgentCheckpointCodec.encode(checkpoint)
+    return try! AgentCheckpointManifest(
+        name: AgentCheckpointName(rawValue: "civ30-integrity")!,
+        checkpoint: checkpoint,
+        storageDigest: AgentCheckpointDigest.sha256(bytes),
+        byteLength: bytes.count,
+        restartSafe: true,
+        restartSafetyReason: "CIV-30 manifest integrity smoke",
+        worldBinding: try! AgentCheckpointWorldBinding(
+            worldID: "world-civ30-integrity",
+            storageIdentity: "sqlite-world:world-civ30-integrity",
+            seed: 30,
+            dimension: 0,
+            anchor: AgentPosition(x: 0, y: 64, z: 0),
+            simulationID: checkpoint.simulationID,
+            checkpointTick: checkpoint.tick,
+            cells: []
+        ),
+        orchestration: AgentCheckpointLiveOrchestration(
+            cognitiveHz: 4,
+            wasPaused: true,
+            movementEnabled: false,
+            autoInteractionEnabled: false,
+            economyAutoEnabled: false,
+            focusedAgentID: "agent_0",
+            verifiedEmptyProbeAgentIDsAtSave: verifiedEmptyProbeAgentIDs
+        )
+    )
+}
+
+private func geneticsManifestWithTamperedEmptyProbeID(
+    _ manifest: AgentCheckpointManifest,
+    replacement: String
+) -> AgentCheckpointManifest {
+    var root = try! JSONSerialization.jsonObject(
+        with: AgentCheckpointCodec.encode(manifest)
+    ) as! [String: Any]
+    var orchestration = root["orchestration"] as! [String: Any]
+    var values = orchestration[
+        "verifiedEmptyProbeAgentIDsAtSave"
+    ] as! [String]
+    values[values.count - 1] = replacement
+    orchestration["verifiedEmptyProbeAgentIDsAtSave"] = values
+    root["orchestration"] = orchestration
+    let bytes = try! JSONSerialization.data(
+        withJSONObject: root,
+        options: [.sortedKeys, .withoutEscapingSlashes]
+    )
+    return try! AgentCheckpointCodec.decode(
+        AgentCheckpointManifest.self,
+        from: bytes
+    )
+}
+
+private func geneticsManifestPhysicalAttestationRefused(
+    _ manifest: AgentCheckpointManifest,
+    checkpoint: AgentSessionCheckpoint
+) -> Bool {
+    do {
+        _ = try manifest.protectedVerifiedEmptyProbeAgentIDs(
+            for: checkpoint
+        )
+        return false
+    } catch AgentCheckpointError.invalidPhysicalAttestation {
+        return true
+    } catch {
+        return false
+    }
+}
+
+private func geneticsProbeRestorationRefused(
+    _ manifest: AgentCheckpointManifest,
+    checkpoint: AgentSessionCheckpoint,
+    restoredAgentIDs: [String]
+) -> Bool {
+    do {
+        _ = try manifest.validateProbeRestoration(
+            restoredAgentIDs: restoredAgentIDs,
+            for: checkpoint
+        )
+        return false
+    } catch AgentCheckpointError.invalidPhysicalAttestation {
+        return true
+    } catch {
+        return false
+    }
+}
+
+private func geneticsMutatedCheckpoint(
+    _ checkpoint: AgentSessionCheckpoint,
+    mutate: (inout [String: Any]) -> Void
+) -> AgentSessionCheckpoint {
+    var root = try! JSONSerialization.jsonObject(
+        with: AgentCheckpointCodec.encode(checkpoint)
+    ) as! [String: Any]
+    var durable = root["durableState"] as! [String: Any]
+    mutate(&durable)
+    let mutatedJSON = try! JSONSerialization.data(
+        withJSONObject: durable,
+        options: [.sortedKeys, .withoutEscapingSlashes]
+    )
+    let mutatedState = try! AgentCheckpointCodec.decode(
+        AgentSessionDurableState.self,
+        from: mutatedJSON
+    )
+    let durableBytes = try! AgentCheckpointCodec.encode(mutatedState)
+    let digest = AgentCheckpointDigest.sha256(durableBytes)
+    let canonicalDurable = try! JSONSerialization.jsonObject(
+        with: durableBytes
+    ) as! [String: Any]
+    let clock = canonicalDurable["clock"] as! [String: Any]
+    let simulationID = clock["simulationID"] as! String
+    let tick = clock["tick"] as! Int
+    let simulationDigest = AgentCheckpointDigest.sha256(
+        Data(simulationID.utf8)
+    )
+    root["durableState"] = canonicalDurable
+    root["semanticDigest"] = digest.rawValue
+    root["checkpointID"] =
+        "checkpoint-\(simulationDigest.rawValue.prefix(12))-t\(tick)-"
+            + "\(digest.rawValue.prefix(16))"
+    let bytes = try! JSONSerialization.data(
+        withJSONObject: root,
+        options: [.sortedKeys, .withoutEscapingSlashes]
+    )
+    return try! AgentCheckpointCodec.decode(
+        AgentSessionCheckpoint.self,
+        from: bytes
+    )
+}
+
+private func geneticsRestoreRefused(
+    _ checkpoint: AgentSessionCheckpoint,
+    mutate: (inout [String: Any]) -> Void
+) -> Bool {
+    do {
+        _ = try AgentSimulationSession.restoring(
+            geneticsMutatedCheckpoint(checkpoint, mutate: mutate)
+        )
+        return false
+    } catch {
+        return true
+    }
+}
+
+private func geneticsTestDigest(_ text: String) -> String {
+    var value: UInt64 = 14_695_981_039_346_656_037
+    for byte in text.utf8 {
+        value ^= UInt64(byte)
+        value &*= 1_099_511_628_211
+    }
+    let digits = String(value, radix: 16, uppercase: false)
+    return String(repeating: "0", count: max(0, 16 - digits.count))
+        + digits
+}
+
+private func geneticsRepairImmutableDigest(
+    _ genotype: inout [String: Any]
+) {
+    let loci = genotype["loci"] as! [[String: Any]]
+    let locusText = loci.map { locus in
+        let contributions = locus["contributions"] as! [[String: Any]]
+        return "\(locus["locus"] as! String)=" + contributions.map {
+            "\($0["contributorID"] as! String):"
+                + "\($0["allele"] as! String):"
+                + "\($0["sourceGenotypeID"] as? String ?? "founder"):"
+                + "\($0["sourceAlleleIndex"] as! Int)"
+        }.joined(separator: ",")
+    }.joined(separator: ";")
+    let canonical = [
+        genotype["genotypeID"] as! String,
+        genotype["agentID"] as! String,
+        genotype["origin"] as! String,
+        (genotype["contributorIDs"] as! [String]).joined(separator: ","),
+        genotype["birthID"] as? String ?? "none",
+        locusText,
+    ].joined(separator: "|")
+    genotype["immutableDigest"] = geneticsTestDigest(canonical)
+}
+
+private func geneticsEventIDText(_ value: [String: Any]) -> String {
+    let simulationID = value["simulationID"] as! String
+    let sequence = value["sequence"] as! UInt64
+    let digits = String(sequence)
+    return "\(simulationID)/event-"
+        + String(repeating: "0", count: max(0, 20 - digits.count))
+        + digits
+}
+
+private func geneticsRepairOperationEventDigest(
+    _ event: inout [String: Any]
+) {
+    let eventID = geneticsEventIDText(
+        event["eventID"] as! [String: Any]
+    )
+    let instant = event["instant"] as! [String: Any]
+    let causes = (event["causes"] as! [[String: Any]])
+        .map(geneticsEventIDText).joined(separator: ",")
+    let payload = event["payload"] as! [String: Any]
+    let operation = payload["operation"] as! [String: Any]
+    let payloadText = "operation|\(operation["status"] as! String)|"
+        + "\(operation["detail"] as! String)"
+    let text = "\(eventID)|\(instant["tick"] as! Int)|"
+        + "\(event["kind"] as! String)|\(event["origin"] as! String)|"
+        + "\(event["actorID"] as? String ?? "-")|"
+        + "\(event["subjectID"] as? String ?? "-")|"
+        + "\(event["operationID"] as? String ?? "-")|"
+        + "\(causes)|\(payloadText)|\(event["summary"] as! String)"
+    event["digest"] = geneticsTestDigest(text)
+}
+
+private func geneticsRecomputeCausalRollingDigest(
+    _ durable: inout [String: Any]
+) {
+    var ledger = durable["causalLedger"] as! [String: Any]
+    let events = ledger["events"] as! [[String: Any]]
+    var rolling = geneticsTestDigest("")
+    for event in events {
+        rolling = geneticsTestDigest(
+            "\(rolling)|\(event["digest"] as! String)"
+        )
+    }
+    ledger["rollingDigest"] = rolling
+    durable["causalLedger"] = ledger
 }
 
 func runPebbleAgentsGeneticsDevelopmentSmoke() {
@@ -344,6 +575,102 @@ func runPebbleAgentsGeneticsDevelopmentSmoke() {
                 to: childGenotype.creationEventID
             ))
 
+    let birthCheckpoint = try! birthSession.makeCheckpoint()
+    let activeBirthAgentIDs = birthCheckpoint.durableState.agents
+        .map(\.agentID.rawValue).sorted()
+    let intactManifest = geneticsManifest(
+        checkpoint: birthCheckpoint,
+        verifiedEmptyProbeAgentIDs: activeBirthAgentIDs
+    )
+    let repeatedIntactManifest = geneticsManifest(
+        checkpoint: birthCheckpoint,
+        verifiedEmptyProbeAgentIDs: activeBirthAgentIDs
+    )
+    check("schema 22 manifest integrity is canonical and authorizes the verified empty child",
+          intactManifest.manifestIntegrityVersion
+                == AgentCheckpointManifest.currentIntegrityVersion
+            && intactManifest.manifestIntegrityDigest != nil
+            && intactManifest.manifestIntegrityDigest
+                == repeatedIntactManifest.manifestIntegrityDigest
+            && (try? intactManifest.validateProbeRestoration(
+                restoredAgentIDs: [child.rawValue],
+                for: birthCheckpoint
+            )) == activeBirthAgentIDs)
+    let tamperedManifest = geneticsManifestWithTamperedEmptyProbeID(
+        intactManifest,
+        replacement: "agent_9"
+    )
+    check("schema 22 rejects a tampered empty-probe ID without a new digest", {
+        do {
+            try tamperedManifest.validateIntegrityDigest()
+            return false
+        } catch AgentCheckpointError.manifestIntegrityMismatch {
+            return true
+        } catch {
+            return false
+        }
+    }())
+    check("schema 22 rejects duplicate protected probe attestations",
+          geneticsManifestPhysicalAttestationRefused(
+              geneticsManifest(
+                  checkpoint: birthCheckpoint,
+                  verifiedEmptyProbeAgentIDs: [
+                      "agent_0", "agent_1", "agent_2", "agent_2",
+                  ]
+              ),
+              checkpoint: birthCheckpoint
+          ))
+    check("schema 22 rejects noncanonical protected probe ordering",
+          geneticsManifestPhysicalAttestationRefused(
+              geneticsManifest(
+                  checkpoint: birthCheckpoint,
+                  verifiedEmptyProbeAgentIDs: [
+                      "agent_1", "agent_0", "agent_2", "agent_3",
+                  ]
+              ),
+              checkpoint: birthCheckpoint
+          ))
+    check("schema 22 rejects an unknown protected probe identity",
+          geneticsManifestPhysicalAttestationRefused(
+              geneticsManifest(
+                  checkpoint: birthCheckpoint,
+                  verifiedEmptyProbeAgentIDs: [
+                      "agent_0", "agent_1", "agent_2", "agent_9",
+                  ]
+              ),
+              checkpoint: birthCheckpoint
+          ))
+    let nonEmptyChildManifest = geneticsManifest(
+        checkpoint: birthCheckpoint,
+        verifiedEmptyProbeAgentIDs: ["agent_0", "agent_1", "agent_2"]
+    )
+    check("a non-empty child omitted from the protected attestation cannot be recreated",
+          geneticsProbeRestorationRefused(
+              nonEmptyChildManifest,
+              checkpoint: birthCheckpoint,
+              restoredAgentIDs: [child.rawValue]
+          ))
+    var legacyBirthSession = geneticsSession(
+        "civ30-legacy-unprotected-probe",
+        enableGenetics: false
+    )
+    let legacyBirth = geneticsBirth(&legacyBirthSession)
+    let legacyCheckpoint = try! legacyBirthSession.makeCheckpoint()
+    let legacyManifest = geneticsManifest(
+        checkpoint: legacyCheckpoint,
+        verifiedEmptyProbeAgentIDs: legacyCheckpoint.durableState.agents
+            .map(\.agentID.rawValue).sorted()
+    )
+    check("an old manifest without protected attestations cannot recreate a missing child",
+          legacyCheckpoint.schemaVersion
+                == AgentCheckpointSchema.homeostasisVersion
+            && legacyManifest.manifestIntegrityDigest == nil
+            && geneticsProbeRestorationRefused(
+                legacyManifest,
+                checkpoint: legacyCheckpoint,
+                restoredAgentIDs: [legacyBirth.newbornID.rawValue]
+            ))
+
     var socialBirth = geneticsSession(
         "civ30-inheritance-social-boundaries",
         enableGenetics: false
@@ -432,6 +759,168 @@ func runPebbleAgentsGeneticsDevelopmentSmoke() {
             + "parents2=\(siblingBirth.progenitorIDs) "
             + "first=\(firstSiblingGenotype.loci.map { $0.contributions.map { $0.allele.rawValue } }) "
             + "second=\(siblingGenotype.loci.map { $0.contributions.map { $0.allele.rawValue } })")
+
+    let siblingCheckpoint = try! siblingSession.makeCheckpoint()
+    check("an inherited genotype cannot claim another child's birth ID",
+          geneticsRestoreRefused(siblingCheckpoint) { durable in
+              var state = durable["geneticsState"] as! [String: Any]
+              var genotypes = state["genotypes"] as! [[String: Any]]
+              let index = genotypes.firstIndex {
+                  $0["agentID"] as? String
+                    == firstSiblingBirth.newbornID.rawValue
+              }!
+              genotypes[index]["birthID"] = siblingBirth.birthID.rawValue
+              geneticsRepairImmutableDigest(&genotypes[index])
+              state["genotypes"] = genotypes
+              durable["geneticsState"] = state
+          })
+    check("an inherited genotype cannot substitute existing non-progenitor parents",
+          geneticsRestoreRefused(birthCheckpoint) { durable in
+              var state = durable["geneticsState"] as! [String: Any]
+              var genotypes = state["genotypes"] as! [[String: Any]]
+              let childIndex = genotypes.firstIndex {
+                  $0["agentID"] as? String == child.rawValue
+              }!
+              let replacementParent = genotypes.first {
+                  $0["agentID"] as? String == "agent_2"
+              }!
+              let replacementLoci = replacementParent["loci"]
+                as! [[String: Any]]
+              var childRecord = genotypes[childIndex]
+              var childLoci = childRecord["loci"] as! [[String: Any]]
+              for locusIndex in childLoci.indices {
+                  var contributions = childLoci[locusIndex][
+                      "contributions"
+                  ] as! [[String: Any]]
+                  let replacementSource = (
+                      replacementLoci[locusIndex]["contributions"]
+                        as! [[String: Any]]
+                  )[0]
+                  var replacement = replacementSource
+                  replacement["contributorID"] = "agent_2"
+                  replacement["sourceGenotypeID"] =
+                      replacementParent["genotypeID"] as! String
+                  contributions.removeAll {
+                      $0["contributorID"] as? String == "agent_1"
+                  }
+                  contributions.append(replacement)
+                  contributions.sort {
+                      ($0["contributorID"] as! String)
+                        < ($1["contributorID"] as! String)
+                  }
+                  childLoci[locusIndex]["contributions"] = contributions
+              }
+              childRecord["contributorIDs"] = ["agent_0", "agent_2"]
+              childRecord["loci"] = childLoci
+              geneticsRepairImmutableDigest(&childRecord)
+              genotypes[childIndex] = childRecord
+              state["genotypes"] = genotypes
+              durable["geneticsState"] = state
+          })
+    check("an inherited genotype creation tick must equal its canonical birth tick",
+          geneticsRestoreRefused(birthCheckpoint) { durable in
+              var state = durable["geneticsState"] as! [String: Any]
+              var genotypes = state["genotypes"] as! [[String: Any]]
+              let index = genotypes.firstIndex {
+                  $0["agentID"] as? String == child.rawValue
+              }!
+              genotypes[index]["createdAtTick"] = birth.birthTick + 1
+              state["genotypes"] = genotypes
+              durable["geneticsState"] = state
+          })
+    check("a local-birth lifecycle member cannot carry a founder genotype",
+          geneticsRestoreRefused(birthCheckpoint) { durable in
+              var state = durable["geneticsState"] as! [String: Any]
+              var genotypes = state["genotypes"] as! [[String: Any]]
+              let index = genotypes.firstIndex {
+                  $0["agentID"] as? String == child.rawValue
+              }!
+              var record = genotypes[index]
+              record["origin"] = "founder"
+              record["contributorIDs"] = [child.rawValue]
+              record.removeValue(forKey: "birthID")
+              var loci = record["loci"] as! [[String: Any]]
+              for locusIndex in loci.indices {
+                  var contributions = loci[locusIndex][
+                      "contributions"
+                  ] as! [[String: Any]]
+                  for contributionIndex in contributions.indices {
+                      contributions[contributionIndex]["contributorID"] =
+                          child.rawValue
+                      contributions[contributionIndex].removeValue(
+                          forKey: "sourceGenotypeID"
+                      )
+                      contributions[contributionIndex][
+                          "sourceAlleleIndex"
+                      ] = contributionIndex
+                  }
+                  loci[locusIndex]["contributions"] = contributions
+              }
+              record["loci"] = loci
+              geneticsRepairImmutableDigest(&record)
+              genotypes[index] = record
+              state["genotypes"] = genotypes
+              durable["geneticsState"] = state
+          })
+    check("a bootstrap founder cannot claim an inherited child genotype",
+          geneticsRestoreRefused(birthCheckpoint) { durable in
+              var state = durable["geneticsState"] as! [String: Any]
+              var genotypes = state["genotypes"] as! [[String: Any]]
+              let founderIndex = genotypes.firstIndex {
+                  $0["agentID"] as? String == "agent_2"
+              }!
+              let childRecord = genotypes.first {
+                  $0["agentID"] as? String == child.rawValue
+              }!
+              var falseInherited = genotypes[founderIndex]
+              falseInherited["origin"] = "inherited"
+              falseInherited["contributorIDs"] =
+                  childRecord["contributorIDs"]
+              falseInherited["birthID"] = birth.birthID.rawValue
+              falseInherited["createdAtTick"] = birth.birthTick
+              falseInherited["loci"] = childRecord["loci"]
+              geneticsRepairImmutableDigest(&falseInherited)
+              genotypes[founderIndex] = falseInherited
+              state["genotypes"] = genotypes
+              durable["geneticsState"] = state
+          })
+    check("retained genotype causality rejects the wrong canonical parent actor",
+          geneticsRestoreRefused(birthCheckpoint) { durable in
+              var ledger = durable["causalLedger"] as! [String: Any]
+              var events = ledger["events"] as! [[String: Any]]
+              let index = events.firstIndex {
+                  let id = $0["eventID"] as! [String: Any]
+                  return id["simulationID"] as? String
+                        == childGenotype.creationEventID.simulationID.rawValue
+                      && id["sequence"] as? UInt64
+                        == childGenotype.creationEventID.sequence.rawValue
+              }!
+              events[index]["actorID"] = "agent_2"
+              geneticsRepairOperationEventDigest(&events[index])
+              ledger["events"] = events
+              durable["causalLedger"] = ledger
+              geneticsRecomputeCausalRollingDigest(&durable)
+          })
+    var evictedCausality = geneticsSession(
+        "civ30-evicted-genotype-causality",
+        causalMaximumEvents: 32
+    )
+    let evictedBirth = geneticsBirth(&evictedCausality)
+    let evictedCreationSequence = evictedCausality.genotype(
+        for: evictedBirth.newbornID
+    )!.creationEventID.sequence.rawValue
+    try! evictedCausality.setReproductionEnabled(false)
+    while evictedCausality.causalLedgerSnapshot().summary.droppedEventCount
+            < evictedCreationSequence {
+        _ = try! evictedCausality.advanceTick()
+    }
+    let evictedCheckpoint = try! evictedCausality.makeCheckpoint()
+    check("honestly evicted genotype events do not make restart impossible",
+          evictedCausality.causalLedgerSnapshot().summary.droppedEventCount
+                >= evictedCreationSequence
+            && (try? AgentSimulationSession.restoring(
+                evictedCheckpoint
+            ).durableStateBytes()) == (try? evictedCausality.durableStateBytes()))
 
     var rejectedBirth = geneticsSession("civ30-birth-atomicity")
     try! rejectedBirth.setReproductionEnabled(true)

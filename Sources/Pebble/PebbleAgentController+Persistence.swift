@@ -121,7 +121,7 @@ extension PebbleAgentController {
                         $0 == nil
                     } == true
                 }
-                let manifest = AgentCheckpointManifest(
+                let manifest = try AgentCheckpointManifest(
                     name: name,
                     checkpoint: checkpoint,
                     storageDigest: AgentCheckpointDigest.sha256(bytes),
@@ -151,7 +151,7 @@ extension PebbleAgentController {
                     )
                 }
                 self.session = session
-                let message = "checkpoint saved name=\(name.rawValue) id=\(checkpoint.checkpointID.rawValue) tick=\(checkpoint.tick.rawValue) simulation=\(checkpoint.simulationID.rawValue) digest=\(checkpoint.semanticDigest.rawValue) storageDigest=\(manifest.storageDigest.rawValue) bytes=\(bytes.count) causalSequence=\(causalAfter.latestSequence) restartSafe=\(safety.safe ? 1 : 0) boundCells=\(binding.cells.count) physicalReferences=\(reconciliation?.assets.count ?? 0) world=\(binding.worldID) mutation=none"
+                let message = "checkpoint saved name=\(name.rawValue) id=\(checkpoint.checkpointID.rawValue) tick=\(checkpoint.tick.rawValue) simulation=\(checkpoint.simulationID.rawValue) digest=\(checkpoint.semanticDigest.rawValue) storageDigest=\(manifest.storageDigest.rawValue) manifestIntegrity=v\(manifest.manifestIntegrityVersion ?? 0):\(manifest.manifestIntegrityDigest?.rawValue ?? "none") bytes=\(bytes.count) causalSequence=\(causalAfter.latestSequence) restartSafe=\(safety.safe ? 1 : 0) boundCells=\(binding.cells.count) physicalReferences=\(reconciliation?.assets.count ?? 0) world=\(binding.worldID) mutation=none"
                 trace(message)
                 return success(message)
             case "load":
@@ -593,8 +593,11 @@ extension PebbleAgentController {
         let candidateLifecycleIDs = Set(
             candidate.lifecycleSnapshot().members.map(\.agentID.rawValue)
         )
-        let verifiedEmptyProbeAgentIDs = stored.manifest.orchestration
-            .verifiedEmptyProbeAgentIDsAtSave ?? []
+        let verifiedEmptyProbeAgentIDs =
+            try stored.manifest.validateProbeRestoration(
+                restoredAgentIDs: restoredCheckpointAgentIDs,
+                for: stored.checkpoint
+            )
         guard worldProbeIDs == currentAgentIDs,
               verifiedEmptyProbeAgentIDs
                 == Array(Set(verifiedEmptyProbeAgentIDs)).sorted(),
@@ -881,7 +884,7 @@ extension PebbleAgentController {
                 ? "reused_exact"
                 : "restored_verified:\(restoredCheckpointAgentIDs.joined(separator: ","))")
             : "retired_verified:\(retiredBootstrapAgentIDs.joined(separator: ","))"
-        let message = "checkpoint loaded name=\(name.rawValue) id=\(stored.checkpoint.checkpointID.rawValue) tick=\(candidate.tick) simulation=\(candidate.simulationID.rawValue) digest=\(checkpointDigest.rawValue) reconciledDigest=\(reconciledDigest.rawValue) causalSequence=\(causal.latestSequence) causalDigest=\(causal.digest) restartSafe=1 probes=\(probesByAgentId.count) paused=1 focus=\(focusedAgentId ?? "none") lifecycleEvent=none probeReconciliation=\(probeReconciliation) physicalReconciliation=\(reconciliationSummary) worldMutation=none"
+        let message = "checkpoint loaded name=\(name.rawValue) id=\(stored.checkpoint.checkpointID.rawValue) tick=\(candidate.tick) simulation=\(candidate.simulationID.rawValue) digest=\(checkpointDigest.rawValue) reconciledDigest=\(reconciledDigest.rawValue) causalSequence=\(causal.latestSequence) causalDigest=\(causal.digest) restartSafe=1 manifestIntegrity=verified:v\(stored.manifest.manifestIntegrityVersion ?? 0) probes=\(probesByAgentId.count) paused=1 focus=\(focusedAgentId ?? "none") lifecycleEvent=none probeReconciliation=\(probeReconciliation) physicalReconciliation=\(reconciliationSummary) worldMutation=none"
         trace(message)
         return success(message)
     }

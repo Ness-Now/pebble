@@ -264,7 +264,7 @@ private func ecologyManifest(
             if $0.position.y != $1.position.y { return $0.position.y < $1.position.y }
             return $0.position.z < $1.position.z
         }
-    return AgentCheckpointManifest(
+    return try! AgentCheckpointManifest(
         name: AgentCheckpointName(rawValue: "ecology-shortage")!,
         checkpoint: checkpoint,
         storageDigest: AgentCheckpointDigest.sha256(bytes),

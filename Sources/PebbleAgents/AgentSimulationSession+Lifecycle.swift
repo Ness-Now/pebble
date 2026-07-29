@@ -680,6 +680,7 @@ extension AgentSimulationSession {
         try validateKinshipCrossDomainIfEnabled()
         try validateHouseholdCrossDomainIfEnabled()
         try validateDependentCareCrossDomainIfEnabled()
+        try validateGeneticsCrossDomainIfEnabled()
         return record
     }
 

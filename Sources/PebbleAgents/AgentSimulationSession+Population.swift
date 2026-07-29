@@ -247,6 +247,7 @@ extension AgentSimulationSession {
             count: 4 + (candidate.lifecycleState == nil ? 0 : 1)
                 + (candidate.kinshipState == nil ? 0 : 1)
                 + (candidate.householdState == nil ? 0 : 2)
+                + (candidate.geneticsState == nil ? 0 : 1)
         )
         let migration = try candidate.admitMigrationInPlace(
             intent: intent,
@@ -277,6 +278,7 @@ extension AgentSimulationSession {
         try candidate.validateKinshipCrossDomainIfEnabled()
         try candidate.validateHouseholdCrossDomainIfEnabled()
         try candidate.validateDependentCareCrossDomainIfEnabled()
+        try candidate.validateGeneticsCrossDomainIfEnabled()
         self = candidate
         return migration
     }

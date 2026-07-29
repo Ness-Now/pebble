@@ -34,6 +34,7 @@ if [ "${1:-}" = "--dry-run" ]; then
     printf '  World: %s seed=%s\n' "$WORLD_NAME" "$WORLD_SEED"
     printf '  Process 1: initialize founders, reproduce normally, render inherited child, save schema 22.\n'
     printf '  Process 2: restore the same World/checkpoint, continue development, render again, clean up.\n'
+    printf '  Process 3: reject a tampered protected probe attestation before World/session mutation.\n'
     printf '  No genotype or phenotype result is injected by the harness.\n'
     printf '  Product tests are not run by this script.\n'
     exit 0
@@ -58,11 +59,15 @@ SESSION_HOME="$EVIDENCE_ROOT/home"
 /bin/mkdir -p "$SESSION_HOME"
 PHASE1_TRACE="$EVIDENCE_ROOT/civ30-before-restart.log"
 PHASE2_TRACE="$EVIDENCE_ROOT/civ30-after-restart.log"
+TAMPER_TRACE="$EVIDENCE_ROOT/civ30-tampered-manifest.log"
 FOUNDER_CAPTURE="$EVIDENCE_ROOT/civ30-founders-before-birth.png"
 SECOND_FOUNDER_CAPTURE="$EVIDENCE_ROOT/civ30-second-founder-before-birth.png"
 CHILD_CAPTURE="$EVIDENCE_ROOT/civ30-child-inheritance.png"
 RESTART_CAPTURE="$EVIDENCE_ROOT/civ30-child-after-restart.png"
 MATRIX="$EVIDENCE_ROOT/matrix.tsv"
+INTACT_MANIFEST_COPY="$EVIDENCE_ROOT/civ30-manifest-intact.json"
+TAMPER_TARGET_INTACT_COPY="$EVIDENCE_ROOT/civ30-tamper-target-intact.json"
+TAMPERED_MANIFEST_COPY="$EVIDENCE_ROOT/civ30-manifest-tampered.json"
 
 cd "$ROOT_DIR"
 swift build -c release --product Pebble
@@ -136,7 +141,8 @@ run_app() {
 
 WORLD_READY='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 66 -21'
 PHASE1_COMMANDS="$WORLD_READY|/lab start;/tp 14 69 -21;/lab pause;/lab movement off;/lab follow off;/lab population on;/lab settlement on;/lab ecology on;/lab ecology scan;/lab survival on;/lab mortality on;/lab lifecycle on;/lab kinship on;/lab household on;/lab homeostasis on;/lab genetics on;/lab genetics status;/lab observer open;/lab observer select agent_0;/lab observer status;/tp 18 71 -14 135 24|/lab reproduction on;/lab step;/lab step;/lab lifecycle status;/lab reproduction status;/lab genetics status;/lab observer select agent_1;/lab observer status;/tp 18 71 -14 135 24|/lab step;/lab step;/lab births status;/lab genetics status;/lab observer select agent_3;/lab observer status;/lab checkpoint save civ30-child;/lab checkpoint status;/lab status;/tp 18 71 -14 135 24"
-PHASE2_COMMANDS='/tp 14 66 -21;/lab start;/lab pause;/lab movement off;/lab follow off;/lab overlay off;/lab checkpoint load civ30-child;/lab genetics status;/lab births status;/lab observer open;/lab observer select agent_3;/lab observer status;/tp 18 71 -14 135 24|/lab step;/lab step;/lab genetics status;/lab lifecycle status;/lab observer status;/lab checkpoint save civ30-continued;/lab checkpoint status;/lab status;/tp 18 71 -14 135 24|/lab observer close;/lab checkpoint delete civ30-child;/lab checkpoint delete civ30-continued;/lab status'
+PHASE2_COMMANDS='/tp 14 66 -21;/lab start;/lab pause;/lab movement off;/lab follow off;/lab overlay off;/lab checkpoint load civ30-child;/lab genetics status;/lab births status;/lab observer open;/lab observer select agent_3;/lab observer status;/tp 18 71 -14 135 24|/lab step;/lab step;/lab genetics status;/lab lifecycle status;/lab observer status;/lab checkpoint save civ30-continued;/lab checkpoint save civ30-tamper-target;/lab checkpoint status;/lab status;/tp 18 71 -14 135 24|/lab observer close;/lab checkpoint delete civ30-child;/lab checkpoint delete civ30-continued;/lab status'
+TAMPER_COMMANDS='/tp 14 66 -21;/lab start;/lab pause;/lab movement off;/lab follow off;/lab status;/lab checkpoint status;/lab genetics status;/lab checkpoint load civ30-tamper-target;/lab status;/lab checkpoint status;/lab genetics status;/lab checkpoint delete civ30-tamper-target;/lab status'
 
 printf '\nCIV-30 process 1: deterministic founders and normal inherited birth.\n'
 run_app "$PHASE1_TRACE" "$PHASE1_COMMANDS" \
@@ -170,8 +176,8 @@ require_trace "$PHASE1_TRACE" \
     'observer status open=1 view=individual selected=agent_3 schema=3 .*genotype=genotype-agent_3-v1-[0-9a-f]+ geneticOrigin=inherited geneticContributors=agent_0,agent_1 development=[0-9]+ trajectory=.* phenotype=.* mutation=none tickStable=1 causalStable=1 digestStable=1' \
     'rendered child inheritance and strictly read-only Observer'
 require_trace "$PHASE1_TRACE" \
-    'checkpoint saved name=civ30-child .*tick=4 .*restartSafe=1 .*mutation=none' \
-    'restart-safe schema 22 child checkpoint'
+    'checkpoint saved name=civ30-child .*tick=4 .*manifestIntegrity=v1:[0-9a-f]{64} .*restartSafe=1 .*mutation=none' \
+    'restart-safe schema 22 child checkpoint with manifest integrity'
 require_trace "$PHASE1_TRACE" \
     'summary .*agents=4 .*runtimeErrors=0 .*probesRemoved=4 ' \
     'first process terminated with every transient probe removed'
@@ -191,6 +197,17 @@ CHILD_MANIFEST=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f \
 [ -n "$CHILD_MANIFEST" ] || fail "schema 22 child manifest missing"
 /usr/bin/grep -q '"schemaVersion":22' "$CHILD_MANIFEST" \
     || fail "child checkpoint manifest is not schema 22"
+/usr/bin/grep -Eq '"manifestIntegrityVersion":1' "$CHILD_MANIFEST" \
+    || fail "child checkpoint manifest integrity version missing"
+/usr/bin/grep -Eq '"manifestIntegrityDigest":"[0-9a-f]{64}"' \
+    "$CHILD_MANIFEST" \
+    || fail "child checkpoint manifest integrity digest missing"
+/bin/cp "$CHILD_MANIFEST" "$INTACT_MANIFEST_COPY"
+MANIFEST_INTEGRITY_DIGEST=$(/usr/bin/sed -n \
+    's/.*"manifestIntegrityDigest":"\([0-9a-f]*\)".*/\1/p' \
+    "$CHILD_MANIFEST" | /usr/bin/tail -1)
+[ "${#MANIFEST_INTEGRITY_DIGEST}" -eq 64 ] \
+    || fail "manifest integrity digest extraction failed"
 
 PHASE1_SIM=$(/usr/bin/sed -n \
     's/.*checkpoint saved name=civ30-child .* simulation=\([^ ]*\) digest=.*/\1/p' \
@@ -217,7 +234,7 @@ run_app "$PHASE2_TRACE" "$PHASE2_COMMANDS" \
     "-|$RESTART_CAPTURE|-" 0
 
 require_trace "$PHASE2_TRACE" \
-    "checkpoint loaded name=civ30-child .*tick=4 simulation=$PHASE1_SIM digest=$PHASE1_DIGEST .*restartSafe=1 probes=4 paused=1 .*probeReconciliation=restored_verified:agent_3 .*worldMutation=none" \
+    "checkpoint loaded name=civ30-child .*tick=4 simulation=$PHASE1_SIM digest=$PHASE1_DIGEST .*restartSafe=1 manifestIntegrity=verified:v1 probes=4 paused=1 .*probeReconciliation=restored_verified:agent_3 .*worldMutation=none" \
     'same schema 22 child state and verified physical probe restored in a new process'
 require_trace "$PHASE2_TRACE" \
     "observer status open=1 view=individual selected=agent_3 schema=3 world=$PHASE1_WORLD .*simulation=$PHASE1_SIM tick=4 .*genotype=$CHILD_GENOTYPE geneticOrigin=inherited geneticContributors=agent_0,agent_1 .*mutation=none tickStable=1 causalStable=1 digestStable=1" \
@@ -231,6 +248,9 @@ require_trace "$PHASE2_TRACE" \
 require_trace "$PHASE2_TRACE" \
     'checkpoint saved name=civ30-continued .*tick=6 .*restartSafe=1 .*mutation=none' \
     'continued schema 22 checkpoint'
+require_trace "$PHASE2_TRACE" \
+    'checkpoint saved name=civ30-tamper-target .*tick=6 .*manifestIntegrity=v1:[0-9a-f]{64} .*restartSafe=1 .*mutation=none' \
+    'separate schema 22 checkpoint prepared for manifest corruption proof'
 require_trace "$PHASE2_TRACE" \
     'checkpoint deleted name=civ30-child' \
     'child checkpoint proof artifact cleanup'
@@ -260,6 +280,88 @@ CHILD_DEVELOPMENT_AFTER=$(/usr/bin/sed -n \
     && [ "$CHILD_DEVELOPMENT_AFTER" -ge "$CHILD_DEVELOPMENT_BEFORE" ] \
     || fail "child development regressed across restart"
 
+TAMPER_TARGET_MANIFEST=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f \
+    -path '*/checkpoints/civ30-tamper-target/manifest.json' -print -quit)
+[ -n "$TAMPER_TARGET_MANIFEST" ] \
+    || fail "tamper-target schema 22 manifest missing"
+/bin/cp "$TAMPER_TARGET_MANIFEST" "$TAMPER_TARGET_INTACT_COPY"
+TAMPER_DIGEST_BEFORE=$(/usr/bin/sed -n \
+    's/.*"manifestIntegrityDigest":"\([0-9a-f]*\)".*/\1/p' \
+    "$TAMPER_TARGET_MANIFEST" | /usr/bin/tail -1)
+[ "${#TAMPER_DIGEST_BEFORE}" -eq 64 ] \
+    || fail "intact tamper-target integrity digest extraction failed"
+TAMPER_MANIFEST="$TAMPER_TARGET_MANIFEST" /usr/bin/python3 - <<'PY'
+import json
+import os
+
+path = os.environ["TAMPER_MANIFEST"]
+with open(path, "rb") as handle:
+    manifest = json.load(handle)
+values = manifest["orchestration"]["verifiedEmptyProbeAgentIDsAtSave"]
+if values != sorted(set(values)) or "agent_3" not in values:
+    raise SystemExit("unexpected protected empty-probe attestation")
+values[values.index("agent_3")] = "agent_9"
+manifest["orchestration"]["verifiedEmptyProbeAgentIDsAtSave"] = values
+with open(path, "w", encoding="utf-8") as handle:
+    json.dump(manifest, handle, sort_keys=True, separators=(",", ":"))
+    handle.write("\n")
+PY
+/bin/cp "$TAMPER_TARGET_MANIFEST" "$TAMPERED_MANIFEST_COPY"
+/usr/bin/grep -q '"verifiedEmptyProbeAgentIDsAtSave":\["agent_0","agent_1","agent_2","agent_9"\]' \
+    "$TAMPER_TARGET_MANIFEST" \
+    || fail "tampered empty-probe identity was not written"
+TAMPER_DIGEST=$(/usr/bin/sed -n \
+    's/.*"manifestIntegrityDigest":"\([0-9a-f]*\)".*/\1/p' \
+    "$TAMPER_TARGET_MANIFEST" | /usr/bin/tail -1)
+[ "$TAMPER_DIGEST" = "$TAMPER_DIGEST_BEFORE" ] \
+    || fail "tampering unexpectedly changed the stored integrity digest"
+
+printf '\nCIV-30 process 3: tampered manifest must fail before World mutation.\n'
+run_app "$TAMPER_TRACE" "$TAMPER_COMMANDS" "" 0
+
+require_trace "$TAMPER_TRACE" \
+    '^\[lab-live\] error PebbleAgents checkpoint command failed: persistence storage digest mismatch$' \
+    'tampered physical attestation rejected by manifest integrity'
+require_trace "$TAMPER_TRACE" \
+    'checkpoint deleted name=civ30-tamper-target' \
+    'tampered checkpoint cleanup through the managed store'
+require_trace "$TAMPER_TRACE" \
+    'summary .*agents=3 .*runtimeErrors=0 .*probesRemoved=3 ' \
+    'tamper process terminated with unchanged bootstrap probes removed'
+reject_trace "$TAMPER_TRACE" \
+    'runtimeErrors=[1-9]|rollback failed|cleanup .*failed|manifestIntegrity=verified|probeReconciliation=restored' \
+    'tampered load mutation, rollback, runtime, or false integrity success'
+
+TAMPER_STATUS_BEFORE=$(/usr/bin/grep \
+    '^\[lab-live\] status PebbleAgents paused ' "$TAMPER_TRACE" \
+    | /usr/bin/sed -n '1p')
+TAMPER_STATUS_AFTER=$(/usr/bin/grep \
+    '^\[lab-live\] status PebbleAgents paused ' "$TAMPER_TRACE" \
+    | /usr/bin/sed -n '2p')
+TAMPER_GENETICS_BEFORE=$(/usr/bin/grep \
+    '^\[lab-live\] genetics status ' "$TAMPER_TRACE" \
+    | /usr/bin/sed -n '1p')
+TAMPER_GENETICS_AFTER=$(/usr/bin/grep \
+    '^\[lab-live\] genetics status ' "$TAMPER_TRACE" \
+    | /usr/bin/sed -n '2p')
+TAMPER_CHECKPOINT_BEFORE=$(/usr/bin/grep \
+    '^\[lab-live\] checkpoint status ' "$TAMPER_TRACE" \
+    | /usr/bin/sed -n '1p')
+TAMPER_CHECKPOINT_AFTER=$(/usr/bin/grep \
+    '^\[lab-live\] checkpoint status ' "$TAMPER_TRACE" \
+    | /usr/bin/sed -n '2p')
+[ -n "$TAMPER_STATUS_BEFORE" ] \
+    && [ "$TAMPER_STATUS_BEFORE" = "$TAMPER_STATUS_AFTER" ] \
+    || fail "World/probe/index state changed after refused manifest load"
+[ -n "$TAMPER_GENETICS_BEFORE" ] \
+    && [ "$TAMPER_GENETICS_BEFORE" = "$TAMPER_GENETICS_AFTER" ] \
+    || fail "genetics session changed after refused manifest load"
+[ -n "$TAMPER_CHECKPOINT_BEFORE" ] \
+    && [ "$TAMPER_CHECKPOINT_BEFORE" = "$TAMPER_CHECKPOINT_AFTER" ] \
+    || fail "durable session digest changed after refused manifest load"
+[ ! -e "$TAMPER_TARGET_MANIFEST" ] \
+    || fail "tampered checkpoint survived managed cleanup"
+
 if /usr/bin/pgrep -x Pebble >/dev/null 2>&1 \
     || /usr/bin/pgrep -x swift-run >/dev/null 2>&1 \
     || /usr/bin/pgrep -x pebsmoke >/dev/null 2>&1; then
@@ -277,11 +379,16 @@ fi
     printf 'development\t%s\t%s\tCONTINUED\n' \
         "$CHILD_DEVELOPMENT_BEFORE" "$CHILD_DEVELOPMENT_AFTER"
     printf 'checkpointSchema\t22\t22\tMATCH\n'
+    printf 'manifestIntegrity\t%s\tverified:v1\tMATCH\n' \
+        "$MANIFEST_INTEGRITY_DIGEST"
+    printf 'tamperedManifest\tprotected_agent_3>agent_9\tstorageDigestMismatch\tREFUSED_BEFORE_MUTATION\n'
+    printf 'refusedLoadWorldSessionProbes\tbaseline\tbaseline\tEXACT\n'
     printf 'attributionCount\t1\t1\tNO_DUPLICATION\n'
     printf 'observerMutationCount\t0\t0\tREAD_ONLY\n'
     printf 'duplicationCount\t0\t0\tZERO\n'
     printf 'runtimeErrors\t0\t0\tZERO\n'
     printf 'cleanup\tprobesRemoved=4\tprobesRemoved=4\tEXACT\n'
+    printf 'tamperCleanup\tprobesRemoved=3\tcheckpointDeleted\tEXACT\n'
 } > "$MATRIX"
 
 printf '\nCIV-30 two-process rendered campaign passed.\n'
@@ -290,6 +397,8 @@ printf 'World: %s seed=%s\n' "$WORLD_NAME" "$WORLD_SEED"
 printf 'Child: agent_3 genotype=%s development=%s>%s\n' \
     "$CHILD_GENOTYPE" "$CHILD_DEVELOPMENT_BEFORE" \
     "$CHILD_DEVELOPMENT_AFTER"
+printf 'Manifest integrity: %s verified; tamper rejected before mutation\n' \
+    "$MANIFEST_INTEGRITY_DIGEST"
 printf 'Observer mutation count: 0\n'
 printf 'Duplication count: 0\n'
 printf 'Runtime errors: 0\n'

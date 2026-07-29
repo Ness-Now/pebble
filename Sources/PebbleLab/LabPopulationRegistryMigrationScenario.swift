@@ -267,7 +267,7 @@ private func populationScenarioManifest(
     checkpoint: AgentSessionCheckpoint,
     bytes: Data
 ) -> AgentCheckpointManifest {
-    AgentCheckpointManifest(
+    try! AgentCheckpointManifest(
         name: AgentCheckpointName(rawValue: "migration-mid-route")!,
         checkpoint: checkpoint,
         storageDigest: AgentCheckpointDigest.sha256(bytes),

@@ -495,7 +495,24 @@ public struct AgentCheckpointLiveOrchestration: Codable, Equatable, Sendable {
     }
 }
 
+private struct AgentCheckpointManifestIntegrityPayload: Encodable {
+    let integrityVersion: Int
+    let schemaVersion: Int
+    let name: AgentCheckpointName
+    let checkpointID: AgentCheckpointID
+    let semanticDigest: AgentCheckpointDigest
+    let storageDigest: AgentCheckpointDigest
+    let byteLength: Int
+    let restartSafe: Bool
+    let restartSafetyReason: String
+    let worldBinding: AgentCheckpointWorldBinding
+    let orchestration: AgentCheckpointLiveOrchestration
+    let reconciliationBinding: AgentPersistenceReconciliationBinding?
+}
+
 public struct AgentCheckpointManifest: Codable, Equatable, Sendable {
+    public static let currentIntegrityVersion = 1
+
     public let schemaVersion: Int
     public let name: AgentCheckpointName
     public let checkpointID: AgentCheckpointID
@@ -507,6 +524,8 @@ public struct AgentCheckpointManifest: Codable, Equatable, Sendable {
     public let worldBinding: AgentCheckpointWorldBinding
     public let orchestration: AgentCheckpointLiveOrchestration
     public let reconciliationBinding: AgentPersistenceReconciliationBinding?
+    public let manifestIntegrityVersion: Int?
+    public let manifestIntegrityDigest: AgentCheckpointDigest?
 
     public init(
         name: AgentCheckpointName,
@@ -518,7 +537,7 @@ public struct AgentCheckpointManifest: Codable, Equatable, Sendable {
         worldBinding: AgentCheckpointWorldBinding,
         orchestration: AgentCheckpointLiveOrchestration,
         reconciliationBinding: AgentPersistenceReconciliationBinding? = nil
-    ) {
+    ) throws {
         schemaVersion = checkpoint.schemaVersion
         self.name = name
         checkpointID = checkpoint.checkpointID
@@ -530,6 +549,131 @@ public struct AgentCheckpointManifest: Codable, Equatable, Sendable {
         self.worldBinding = worldBinding
         self.orchestration = orchestration
         self.reconciliationBinding = reconciliationBinding
+        if checkpoint.schemaVersion == AgentCheckpointSchema.geneticsVersion {
+            manifestIntegrityVersion = Self.currentIntegrityVersion
+            manifestIntegrityDigest = try Self.integrityDigest(
+                integrityVersion: Self.currentIntegrityVersion,
+                schemaVersion: checkpoint.schemaVersion,
+                name: name,
+                checkpointID: checkpoint.checkpointID,
+                semanticDigest: checkpoint.semanticDigest,
+                storageDigest: storageDigest,
+                byteLength: byteLength,
+                restartSafe: restartSafe,
+                restartSafetyReason: restartSafetyReason,
+                worldBinding: worldBinding,
+                orchestration: orchestration,
+                reconciliationBinding: reconciliationBinding
+            )
+        } else {
+            manifestIntegrityVersion = nil
+            manifestIntegrityDigest = nil
+        }
+    }
+
+    public func validateIntegrityDigest() throws {
+        if schemaVersion == AgentCheckpointSchema.geneticsVersion {
+            guard manifestIntegrityVersion == Self.currentIntegrityVersion,
+                  let manifestIntegrityDigest else {
+                throw AgentCheckpointError.missingManifestIntegrity
+            }
+            guard try manifestIntegrityDigest == Self.integrityDigest(
+                integrityVersion: Self.currentIntegrityVersion,
+                schemaVersion: schemaVersion,
+                name: name,
+                checkpointID: checkpointID,
+                semanticDigest: semanticDigest,
+                storageDigest: storageDigest,
+                byteLength: byteLength,
+                restartSafe: restartSafe,
+                restartSafetyReason: restartSafetyReason,
+                worldBinding: worldBinding,
+                orchestration: orchestration,
+                reconciliationBinding: reconciliationBinding
+            ) else {
+                throw AgentCheckpointError.manifestIntegrityMismatch
+            }
+            return
+        }
+        guard manifestIntegrityVersion == nil,
+              manifestIntegrityDigest == nil else {
+            throw AgentCheckpointError.manifestIntegrityMismatch
+        }
+    }
+
+    public func protectedVerifiedEmptyProbeAgentIDs(
+        for checkpoint: AgentSessionCheckpoint
+    ) throws -> [String] {
+        try validateIntegrityDigest()
+        guard checkpoint.schemaVersion == schemaVersion else {
+            throw AgentCheckpointError.invalidPhysicalAttestation
+        }
+        guard schemaVersion == AgentCheckpointSchema.geneticsVersion else {
+            return []
+        }
+        guard let values = orchestration.verifiedEmptyProbeAgentIDsAtSave,
+              values == values.sorted(),
+              values.count == Set(values).count,
+              values.allSatisfy({ AgentID(rawValue: $0) != nil }),
+              let genetics = checkpoint.durableState.geneticsState,
+              values.count <= genetics.configuration.maximumProfiles,
+              values.count <= checkpoint.durableState.agents.count,
+              Set(values).isSubset(of: Set(
+                  checkpoint.durableState.agents.map(\.agentID.rawValue)
+              )) else {
+            throw AgentCheckpointError.invalidPhysicalAttestation
+        }
+        return values
+    }
+
+    public func validateProbeRestoration(
+        restoredAgentIDs: [String],
+        for checkpoint: AgentSessionCheckpoint
+    ) throws -> [String] {
+        let protectedAgentIDs = try protectedVerifiedEmptyProbeAgentIDs(
+            for: checkpoint
+        )
+        guard restoredAgentIDs == restoredAgentIDs.sorted(),
+              restoredAgentIDs.count == Set(restoredAgentIDs).count,
+              restoredAgentIDs.allSatisfy({
+                  AgentID(rawValue: $0) != nil
+              }),
+              Set(restoredAgentIDs).isSubset(of: Set(protectedAgentIDs)) else {
+            throw AgentCheckpointError.invalidPhysicalAttestation
+        }
+        return protectedAgentIDs
+    }
+
+    private static func integrityDigest(
+        integrityVersion: Int,
+        schemaVersion: Int,
+        name: AgentCheckpointName,
+        checkpointID: AgentCheckpointID,
+        semanticDigest: AgentCheckpointDigest,
+        storageDigest: AgentCheckpointDigest,
+        byteLength: Int,
+        restartSafe: Bool,
+        restartSafetyReason: String,
+        worldBinding: AgentCheckpointWorldBinding,
+        orchestration: AgentCheckpointLiveOrchestration,
+        reconciliationBinding: AgentPersistenceReconciliationBinding?
+    ) throws -> AgentCheckpointDigest {
+        AgentCheckpointDigest.sha256(try AgentCheckpointCodec.encode(
+            AgentCheckpointManifestIntegrityPayload(
+                integrityVersion: integrityVersion,
+                schemaVersion: schemaVersion,
+                name: name,
+                checkpointID: checkpointID,
+                semanticDigest: semanticDigest,
+                storageDigest: storageDigest,
+                byteLength: byteLength,
+                restartSafe: restartSafe,
+                restartSafetyReason: restartSafetyReason,
+                worldBinding: worldBinding,
+                orchestration: orchestration,
+                reconciliationBinding: reconciliationBinding
+            )
+        ))
     }
 }
 
@@ -597,6 +741,9 @@ public enum AgentCheckpointError: Error, Equatable, CustomStringConvertible {
     case invalidCausalState
     case invalidWorldBinding
     case worldBindingMismatch(String)
+    case missingManifestIntegrity
+    case manifestIntegrityMismatch
+    case invalidPhysicalAttestation
     case oversizedCheckpoint(Int)
 
     public var description: String {
@@ -614,6 +761,12 @@ public enum AgentCheckpointError: Error, Equatable, CustomStringConvertible {
         case .invalidCausalState: return "checkpoint causal state invalid"
         case .invalidWorldBinding: return "checkpoint World binding invalid"
         case let .worldBindingMismatch(reason): return "checkpoint World binding mismatch: \(reason)"
+        case .missingManifestIntegrity:
+            return "checkpoint manifest integrity proof missing"
+        case .manifestIntegrityMismatch:
+            return "checkpoint manifest integrity mismatch"
+        case .invalidPhysicalAttestation:
+            return "checkpoint physical attestation invalid"
         case let .oversizedCheckpoint(bytes): return "checkpoint size \(bytes) exceeds limit"
         }
     }
@@ -1218,7 +1371,10 @@ extension AgentSimulationSession {
                 lifecycle: state.lifecycleState,
                 mortality: state.mortalityState,
                 clock: state.clock,
-                causalLatestSequence: state.causalLedger.latestSequence
+                causalLatestSequence: state.causalLedger.latestSequence,
+                causalDroppedEventCount:
+                    state.causalLedger.droppedEventCount,
+                causalEvents: state.causalLedger.events
             )
         }
         func unique(_ values: [String], _ label: String) throws {
