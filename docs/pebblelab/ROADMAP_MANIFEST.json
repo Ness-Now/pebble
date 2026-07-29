@@ -18,6 +18,7 @@
     "codexMethod": "docs/pebblelab/METHOD_CODEX_AUTONOMIE_GUIDEE.md",
     "visualValidationPolicy": "docs/pebblelab/VISUAL_GAME_SMOKE_POLICY.md",
     "documentationIndex": "docs/pebblelab/DOCUMENTATION_INDEX.md",
+    "civ29PhaseEvidence": "docs/pebblelab/CIV_29_PHASE_SUMMARY.md",
     "gateCEvidenceMarkdown": "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.md",
     "gateCEvidenceJSON": "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.json"
   },
@@ -31,41 +32,35 @@
   },
   "currentState": {
     "activePhase": null,
-    "completedThrough": "CIV-28",
-    "nextEligiblePhase": "CIV-29",
-    "nextAuthorizedAction": "CIV-29",
+    "completedThrough": "CIV-29",
+    "nextEligiblePhase": "CIV-30",
+    "nextAuthorizedAction": "CIV-30",
     "civ27Status": "completed",
     "civ28Status": "completed",
     "gateCStatus": "acquired",
-    "civ29Status": "notStartedNextEligible",
+    "civ29Status": "completed",
+    "civ30Status": "notStartedNextEligible",
     "gateRAcquired": true,
     "gateBAcquired": true,
     "v4CanonicalDocumentSet": true
   },
   "validationBaseline": {
-    "scope": "Independent V4-GATE-C-v1 evaluation of the published product baseline; the containing evidence and status commit is intentionally not self-referenced.",
-    "evaluatedProductHead": "3d70c67b69824133eb318391f8e7c385f8cabce8",
-    "focusedMaterialRightsPassed": 21,
-    "focusedMaterialRightsFailed": 0,
-    "focusedPersistenceReconciliationPassed": 18,
-    "focusedPersistenceReconciliationFailed": 0,
-    "focusedCheckpointReplayPassed": 49,
-    "focusedCheckpointReplayFailed": 0,
-    "focusedObserverChroniclePassed": 20,
-    "focusedObserverChronicleFailed": 0,
-    "focusedGateCTotalPassed": 108,
-    "focusedGateCTotalFailed": 0,
-    "repositoryChecksPassed": 3343,
+    "scope": "CIV-29 local publication candidate implemented from the published product baseline; the containing phase commit is intentionally identified by Git rather than self-referenced.",
+    "productBaselineBeforePhase": "3452bf92a0f324a2fb9bd9824fc729ec3b4b860c",
+    "focusedHomeostasisHealthPassed": 19,
+    "focusedHomeostasisHealthFailed": 0,
+    "repositoryChecksPassed": 3362,
     "repositoryChecksFailed": 0,
     "repositoryStepsPassed": 35,
     "repositoryStepsTotal": 35,
-    "gateCRenderedTwoProcessCampaign": "passed",
-    "gateCReconciliationOutcome": "missing",
-    "gateCDuplicationCount": 0,
-    "gateCObserverMutationCount": 0,
-    "gateCRuntimeErrors": 0,
-    "gateCCleanup": "exact",
-    "representativeBeforeAfterRenderedWorldCapturesInspected": true
+    "civ29RenderedTwoProcessCampaign": "passed",
+    "civ29CheckpointSchema": 21,
+    "civ29DeathCount": 1,
+    "civ29ResurrectionCount": 0,
+    "civ29ObserverMutationCount": 0,
+    "civ29RuntimeErrors": 0,
+    "civ29Cleanup": "exact",
+    "representativePreRestartRestoredFinalCapturesInspected": true
   },
   "publishedPostGateHardening": [
     {
@@ -126,7 +121,7 @@
         "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.md",
         "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.json"
       ],
-      "publicationCandidateRequiresRemoteVerification": true
+      "publicationVerified": true
     },
     "D": {
       "contractId": "V4-GATE-D-v1",
@@ -463,17 +458,20 @@
     {
       "id": "CIV-29",
       "title": "Homeostasis, Health, Aging and Mortality V2",
-      "status": "notStartedNextEligible",
+      "status": "completed",
       "wave": "wave-2-generational-continuity",
       "requiredForCanonicalProgression": true,
       "dependsOn": [
         "V4-GATE-C-v1"
+      ],
+      "evidence": [
+        "docs/pebblelab/CIV_29_PHASE_SUMMARY.md"
       ]
     },
     {
       "id": "CIV-30",
       "title": "Genetics, Development and Phenotype V1",
-      "status": "planned",
+      "status": "notStartedNextEligible",
       "wave": "wave-2-generational-continuity",
       "requiredForCanonicalProgression": true,
       "dependsOn": [

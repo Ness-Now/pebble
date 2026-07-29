@@ -25,18 +25,18 @@ roadmap.
 ## Canonical position
 
 ```text
-CIV-00 through CIV-28: COMPLETE
+CIV-00 through CIV-29: COMPLETE
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: none
-next authorized action: CIV-29
-CIV-28: COMPLETE
+next authorized action: CIV-30
+CIV-29: COMPLETE
 V4-GATE-C-v1: ACQUIRED
-CIV-29: NOT STARTED — NEXT ELIGIBLE PHASE
+CIV-30: NOT STARTED — NEXT ELIGIBLE PHASE
 ```
 
-The Gate C acquisition in this local tree is a publication candidate until
+The `CIV-29` completion in this local tree is a publication candidate until
 senior review, manual push and remote verification complete.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
@@ -189,11 +189,12 @@ The evaluated product baseline passed 108 focused adversarial checks, the
 3343-check repository gate and a rendered two-process restart with real
 missing-asset reconciliation, zero duplication and read-only observation.
 
-`CIV-29` is the next eligible phase but remains not started.
+Gate C remains acquired and published. `CIV-29` does not reevaluate it.
 
 ## Wave 2 — Generational continuity
 
-Current entry status: `CIV-29` is **not started — next eligible phase**.
+Current entry status: `CIV-29` is **complete** and `CIV-30` is
+**not started — next eligible phase**.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -202,6 +203,27 @@ Current entry status: `CIV-29` is **not started — next eligible phase**.
 | `CIV-31` | required | Childhood, Guardianship and Social Development V2 |
 | `CIV-32` | required | Unions, Family Relations, Lineages and Houses V1 |
 | `CIV-33` | required | Estates, Inheritance and Succession V1 |
+
+### `CIV-29` — Homeostasis, Health, Aging and Mortality V2
+
+Status: **completed, required**.
+
+Result: existing needs, the canonical health reserve, lifecycle age and
+mortality V1 now drive one bounded physiological trajectory. Real food and
+normal rest can support gradual recovery; prolonged compounded deprivation can
+progress through strain, impairment, critical state and incapacity before one
+causally finalized death. Later life changes bounded vulnerability and
+recovery capacity without assigning a predetermined death tick.
+
+Bounded proof:
+[`CIV_29_PHASE_SUMMARY.md`](CIV_29_PHASE_SUMMARY.md). It covers schema 21,
+deterministic checkpoint/replay, read-only Observer physiology, preservation
+of material claims, a real two-process rendered restart during degradation,
+single causal mortality, no resurrection and exact cleanup. It does not claim
+disease catalogs, medicine, complex injury, long-term impairment mechanics,
+genetics, corpses, inheritance or renewable subsistence.
+
+`CIV-30` is the next eligible phase but remains not started.
 
 This wave must preserve the distinction between genotype, development,
 education, knowledge, skill and status. Care consumes real time and resources.

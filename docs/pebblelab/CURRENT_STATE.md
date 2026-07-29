@@ -9,53 +9,48 @@ SHA of the documentation commit that contains it.
 - Gate B — Bounded Embodied Local Autonomy:
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-B-v1`.
 - Gate C — Durable Observable Local World:
-  **ACQUIRED** under contract `V4-GATE-C-v1`.
-- `CIV-00` through `CIV-28`: **COMPLETE** in their bounded contracts.
+  **ACQUIRED AND PUBLISHED** under contract `V4-GATE-C-v1`.
+- `CIV-00` through `CIV-29`: **COMPLETE** in their bounded contracts.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
-Product baseline evaluated by the independent Gate C campaign:
+Published product baseline from which `CIV-29` was implemented:
 
 ```text
-3d70c67b69824133eb318391f8e7c385f8cabce8
+3452bf92a0f324a2fb9bd9824fc729ec3b4b860c
 ```
 
-This is the published product tree independently evaluated for the combined
-`CIV-26` through `CIV-28` contract. The Gate C evidence and this status update
-intentionally do not self-reference their containing commit. Always use Git to
-identify the exact reviewed or published HEAD.
+This document does not claim to record the SHA of the commit containing
+`CIV-29`. Use Git to identify the exact reviewed or published phase HEAD.
 
-The acquisition recorded here is a local publication candidate until senior
-review, manual push and remote verification complete.
+The `CIV-29` completion recorded here is a local publication candidate until
+senior review, manual push and remote verification complete.
 
 ## Current program position
 
 ```text
 active CIV phase: none
-next authorized action: CIV-29 — Homeostasis, Health, Aging and Mortality V2
-CIV-28 status: COMPLETE
+next authorized action: CIV-30 — Genetics, Development and Phenotype V1
+CIV-29 status: COMPLETE
 V4-GATE-C-v1 status: ACQUIRED
-CIV-29 status: NOT STARTED — NEXT ELIGIBLE PHASE
+CIV-30 status: NOT STARTED — NEXT ELIGIBLE PHASE
 roadmap generation: V4
 ```
 
-Acquiring Gate C makes `CIV-29` eligible; it does not start the phase.
+Completing `CIV-29` makes `CIV-30` eligible; it does not start the phase.
 
 ## Last validation baseline
 
-For the independent Gate C evaluation of the published product baseline:
+For the `CIV-29` local publication candidate:
 
 ```text
-focused material rights: 21 passed, 0 failed
-focused persistence/reconciliation: 18 passed, 0 failed
-focused Observer and Chronicle: 20 passed, 0 failed
-focused checkpoint/replay: 49 passed, 0 failed
-focused Gate C matrix: 108 passed, 0 failed
-repository gate: 3343 passed, 0 failed
+focused homeostasis/health/aging/mortality: 19 passed, 0 failed
+repository gate: 3362 passed, 0 failed
 repository verification steps: 35/35
-Gate C rendered two-process missing-asset reconciliation campaign: PASS
-representative before/after rendered-world captures: inspected
+rendered two-process CIV-29 restart campaign: PASS
+representative pre-restart/restored/final captures: inspected
 Observer mutation count: 0
-duplication count: 0
+death count: 1
+resurrection count: 0
 runtime errors: 0
 cleanup: exact
 ```
@@ -80,12 +75,17 @@ cleanup: exact
 - Observer V1 is a bounded local-session projection. It does not provide
   omniscient multi-settlement inspection, unbounded history, full-text search
   or simulation editing.
+- Homeostasis V2 is a bounded needs-driven physiological projection. It does
+  not add contagion, medicine, complex wounds, long-term impairment mechanics,
+  genetic predisposition, corpses or inheritance. Existing `AgentNeeds`,
+  lifecycle age, health reserve and mortality remain the underlying
+  authorities.
 - Gate `V4-GATE-D-v1` requires proof of at least one genuinely renewable
   physical subsistence loop; Gate B did not claim this.
 
 ## Next authorized action
 
-After senior review, manual publication and remote verification of this Gate C
-candidate, the next mission may start the bounded contract design and
-implementation of `CIV-29`. `CIV-29` remains **not started**; this gate
-evaluation implements no health, aging or mortality V2 behavior.
+After senior review, manual publication and remote verification of this
+`CIV-29` candidate, the next mission may start the bounded contract design and
+implementation of `CIV-30`. `CIV-30` remains **not started**; this phase
+implements no genotype, inheritable phenotype or genetic predisposition.

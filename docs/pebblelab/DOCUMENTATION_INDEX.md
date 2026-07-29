@@ -46,14 +46,14 @@ Canonical status at the product baseline reconciled by this documentation:
 ```text
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED under V4-GATE-B-v1
-CIV-00 through CIV-28: COMPLETE
+CIV-00 through CIV-29: COMPLETE
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 V4-GATE-C-v1: ACQUIRED
-CIV-29: NOT STARTED; NEXT ELIGIBLE PHASE
+CIV-30: NOT STARTED; NEXT ELIGIBLE PHASE
 ```
 
-The Gate C status in this local tree is a publication candidate until senior
-review, manual push and remote verification complete.
+The `CIV-29` completion in this local tree is a publication candidate until
+senior review, manual push and remote verification complete.
 
 ## Operational
 
@@ -116,6 +116,10 @@ and two-process live evidence, exact cleanup and explicit V1 limits.
 [`CIV_28_PHASE_SUMMARY.md`](CIV_28_PHASE_SUMMARY.md) records the bounded
 read-only Observer projection, structured reasons, ledger-backed Chronicle,
 rendered two-process restart evidence, exact cleanup and explicit V1 limits.
+
+[`CIV_29_PHASE_SUMMARY.md`](CIV_29_PHASE_SUMMARY.md) records the bounded
+homeostasis, health, aging and causal mortality V2 contract, schema-21
+checkpoint/replay, rendered two-process progression and exact cleanup.
 
 [`GATE_C_EVALUATION_01_SUMMARY.md`](GATE_C_EVALUATION_01_SUMMARY.md) and
 [`GATE_C_EVALUATION_01_SUMMARY.json`](GATE_C_EVALUATION_01_SUMMARY.json)
