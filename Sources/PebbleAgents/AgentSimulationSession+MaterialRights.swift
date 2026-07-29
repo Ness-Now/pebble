@@ -131,8 +131,13 @@ extension AgentSimulationSession {
             AgentCausalEventKind,
             AgentID?,
             String,
-            String
+            String,
+            [AgentCausalEventID]
         )
+        var mortalityResolution: (
+            pendingIndex: Int,
+            assetID: AgentMaterialAssetID
+        )?
         switch operation {
         case let .register(_, asset, observation):
             guard rights.records.count < rights.configuration.maximumAssets else {
@@ -151,7 +156,8 @@ extension AgentSimulationSession {
                 .assetRegistered, .materialAssetRegistered,
                 observation.holder.agentID,
                 "applied",
-                "verified physical asset registered"
+                "verified physical asset registered",
+                []
             )
 
         case let .assertClaim(_, id, claimID, claimantID, basis):
@@ -175,7 +181,8 @@ extension AgentSimulationSession {
             rights.records[index].claims.sort { $0.claimID < $1.claimID }
             transition = (
                 .claimAsserted, .materialClaimChanged, claimantID, "applied",
-                "claim asserted basis=\(basis.rawValue)"
+                "claim asserted basis=\(basis.rawValue)",
+                []
             )
 
         case let .withdrawClaim(_, id, claimID, actorID):
@@ -197,7 +204,8 @@ extension AgentSimulationSession {
             }
             transition = (
                 .claimWithdrawn, .materialClaimChanged, actorID, "applied",
-                "claim withdrawn"
+                "claim withdrawn",
+                []
             )
 
         case let .recognizeOwnership(_, id, claimID, recognizingAgentIDs):
@@ -223,7 +231,8 @@ extension AgentSimulationSession {
             transition = (
                 .ownershipRecognized, .materialOwnershipRecognized,
                 claim.claimantID, "applied",
-                "ownership recognized by \(witnesses.count) local witnesses"
+                "ownership recognized by \(witnesses.count) local witnesses",
+                []
             )
 
         case let .delegateCustody(_, id, custodianID, actorID):
@@ -237,7 +246,8 @@ extension AgentSimulationSession {
             rights.records[index].custodianID = custodianID
             transition = (
                 .custodyDelegated, .materialCustodyChanged, actorID, "applied",
-                "custody delegated to \(custodianID.rawValue)"
+                "custody delegated to \(custodianID.rawValue)",
+                []
             )
 
         case let .grantUse(
@@ -276,7 +286,8 @@ extension AgentSimulationSession {
             }
             transition = (
                 .useGranted, .materialUsePermissionChanged, grantorID, "applied",
-                "use granted to \(userID.rawValue)"
+                "use granted to \(userID.rawValue)",
+                []
             )
 
         case let .revokeUse(_, id, permissionID, actorID):
@@ -295,7 +306,8 @@ extension AgentSimulationSession {
             rights.records[index].permissions.remove(at: permissionIndex)
             transition = (
                 .useRevoked, .materialUsePermissionChanged, actorID, "applied",
-                "use permission revoked"
+                "use permission revoked",
+                []
             )
 
         case let .physicalTransfer(outcome):
@@ -350,7 +362,8 @@ extension AgentSimulationSession {
                 .physicalTransfer, .materialPhysicalCustodyObserved,
                 outcome.decision.request.actorID,
                 outcome.status.rawValue,
-                "\(outcome.disposition.rawValue):\(outcome.decision.reason.rawValue)"
+                "\(outcome.disposition.rawValue):\(outcome.decision.reason.rawValue)",
+                []
             )
 
         case let .useAttempt(outcome):
@@ -398,8 +411,59 @@ extension AgentSimulationSession {
                 .useAttempt, .materialUseDecided,
                 outcome.decision.request.actorID,
                 outcome.status.rawValue,
-                "\(outcome.decision.verdict.rawValue):\(outcome.decision.reason.rawValue)"
+                "\(outcome.decision.verdict.rawValue):\(outcome.decision.reason.rawValue)",
+                []
             )
+
+        case let .mortalityPhysicalExit(outcome):
+            let index = try materialRightsRecordIndex(outcome.assetID, in: rights)
+            guard let mortality = mortalityState,
+                  let pendingIndex = mortality.pendingTransitions.firstIndex(where: {
+                      $0.agentID == outcome.terminalAgentID
+                  }) else {
+                throw AgentSessionError.mortality(
+                    .pendingMaterialExit(outcome.terminalAgentID.rawValue)
+                )
+            }
+            let pending = mortality.pendingTransitions[pendingIndex]
+            let record = rights.records[index]
+            let destination = outcome.destinationObservation
+            guard pending.unresolvedMaterialAssetIDs.contains(outcome.assetID),
+                  record.lastVerifiedHolder == outcome.sourceObservation,
+                  outcome.sourceObservation.holder == .agent(outcome.terminalAgentID),
+                  case .container = destination.holder,
+                  destination.holder != outcome.sourceObservation.holder,
+                  destination.materialIdentity
+                    == outcome.sourceObservation.materialIdentity,
+                  destination.quantity == outcome.sourceObservation.quantity,
+                  destination.observedAtTick == tick,
+                  destination.physicalReceiptID == outcome.physicalReceiptID,
+                  validMaterialRightsText(outcome.physicalReceiptID, maximum: 256)
+            else {
+                throw AgentSessionError.materialRights(
+                    .invalidPhysicalOutcome(operationID)
+                )
+            }
+            try validateMaterialAsset(
+                record.asset,
+                observation: destination,
+                allowIdentityEvolution: true
+            )
+            rights.records[index].lastVerifiedHolder = destination
+            let causes = Array(Set(
+                [pending.pendingEventID] + pending.materialExitEventIDs.suffix(1)
+            )).sorted()
+            transition = (
+                .mortalityPhysicalExit,
+                .materialPhysicalCustodyObserved,
+                outcome.terminalAgentID,
+                "succeeded",
+                "verified terminal material exit",
+                causes
+            )
+            mortalityResolution = (pendingIndex, outcome.assetID)
+            // Keep the local copy alive until the causal event is appended.
+            mortalityState = mortality
         }
 
         let updatedRecord = rights.records.first { $0.asset.assetID == assetID }!
@@ -422,12 +486,32 @@ extension AgentSimulationSession {
             origin: .materialRightsTransition,
             actorID: transition.2,
             operationID: AgentOperationID(rawValue: operationID),
+            causes: transition.5,
             payload: .operation(
                 status: transition.3,
                 detail: String(eventDetail.prefix(160))
             ),
             summary: "material rights \(transition.0.rawValue) asset=\(assetID.rawValue)"
         )
+        if let mortalityResolution {
+            guard let event, var mortality = mortalityState,
+                  mortality.pendingTransitions.indices.contains(
+                      mortalityResolution.pendingIndex
+                  ),
+                  mortality.pendingTransitions[mortalityResolution.pendingIndex]
+                    .agentID == transition.2 else {
+                throw AgentSessionError.mortality(.invalidState(
+                    "material exit causal publication"
+                ))
+            }
+            mortality.pendingTransitions[mortalityResolution.pendingIndex]
+                .resolvedMaterialAssetIDs.append(mortalityResolution.assetID)
+            mortality.pendingTransitions[mortalityResolution.pendingIndex]
+                .resolvedMaterialAssetIDs.sort()
+            mortality.pendingTransitions[mortalityResolution.pendingIndex]
+                .materialExitEventIDs.append(event.eventID)
+            mortalityState = mortality
+        }
         retainMaterialRightsOperationID(operationID, in: &rights)
         retainMaterialRightsTransition(AgentMaterialRightsTransition(
             operationID: operationID,
@@ -536,6 +620,7 @@ extension AgentSimulationSession {
             return id
         case let .physicalTransfer(outcome): return outcome.decision.request.assetID
         case let .useAttempt(outcome): return outcome.decision.request.assetID
+        case let .mortalityPhysicalExit(outcome): return outcome.assetID
         }
     }
 

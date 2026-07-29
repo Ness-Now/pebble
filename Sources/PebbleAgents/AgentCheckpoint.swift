@@ -1079,7 +1079,11 @@ extension AgentSimulationSession {
                   validInventory(agent.resourceInventory) else {
                 throw AgentCheckpointError.invalidAgent(agent.id)
             }
-            if state.mortalityState != nil, agent.health <= 0 {
+            let pendingTerminalAgentIDs = Set(
+                state.mortalityState?.pendingTransitions.map(\.agentID) ?? []
+            )
+            if state.mortalityState != nil, agent.health <= 0,
+               !pendingTerminalAgentIDs.contains(agent.agentID) {
                 throw AgentCheckpointError.invalidAgent(agent.id)
             }
             if case let .bounded(maxEntries) = state.configuration.memoryPolicy,
@@ -1169,6 +1173,9 @@ extension AgentSimulationSession {
                 agents: state.agents,
                 lifecycle: state.lifecycleState,
                 autonomy: state.autonomousActivityState,
+                pendingMortalityAgentIDs: Set(
+                    state.mortalityState?.pendingTransitions.map(\.agentID) ?? []
+                ),
                 clock: state.clock,
                 causalLatestSequence: state.causalLedger.latestSequence
             )
@@ -1392,7 +1399,9 @@ extension AgentSimulationSession {
                         mortality.configuration.maximumFinalMemoryEntries,
                     maximumCancelledCommitmentIDsPerDeath:
                         mortality.configuration.maximumCancelledCommitmentIDsPerDeath,
-                    maximumExitFrames: mortality.configuration.maximumExitFrames
+                    maximumExitFrames: mortality.configuration.maximumExitFrames,
+                    maximumMaterialExitsPerDeath:
+                        mortality.configuration.maximumMaterialExitsPerDeath
                 )
             } catch {
                 throw AgentCheckpointError.invalidConfiguration
@@ -1400,8 +1409,13 @@ extension AgentSimulationSession {
             let recordIDs = mortality.records.map(\.deathID)
             let recordAgents = mortality.records.map(\.agentID)
             let processed = mortality.processedDeathIDs
+            let pendingAgents = mortality.pendingTransitions.map(\.agentID)
             guard mortality.records.count
                     <= mortality.configuration.maximumRetainedDeathRecords,
+                  mortality.pendingTransitions.count
+                    <= mortality.configuration.maximumDeathsPerTick,
+                  pendingAgents.count == Set(pendingAgents).count,
+                  Set(pendingAgents).isSubset(of: agentIDs),
                   mortality.exitFrames.count <= mortality.configuration.maximumExitFrames,
                   mortality.totalDeathCount >= mortality.records.count,
                   mortality.totalDeathCount
@@ -1417,16 +1431,19 @@ extension AgentSimulationSession {
                       return $0.deathID < $1.deathID
                   }),
                   mortality.records.allSatisfy({ record in
-                      let validCause: Bool
+                      var validCause: Bool
                       if record.cause == .starvation {
                           validCause = record.finalVitalStatus == nil
                               || record.finalVitalStatus == .dead
+                          validCause = validCause
+                              && record.terminalPhysiologyEventID == nil
                       } else {
                           validCause = state.schemaVersion
                                   >= AgentCheckpointSchema.homeostasisVersion
                               && record.finalVitalStatus == .dead
                               && record.finalHomeostasis?.vitalStatus == .dead
                               && record.finalHomeostasis?.condition == .dead
+                              && record.terminalPhysiologyEventID != nil
                               && (record.demographicAgeTicks ?? -1) >= 0
                               && record.lifeStage != nil
                       }
@@ -1455,6 +1472,12 @@ extension AgentSimulationSession {
                             <= mortality.configuration.maximumCancelledCommitmentIDsPerDeath
                           && record.deathEventID.simulationID == state.clock.simulationID
                           && record.populationExitEventID.simulationID == state.clock.simulationID
+                          && record.materialExitEventIDs.count
+                            <= mortality.configuration.maximumMaterialExitsPerDeath
+                          && record.materialExitEventIDs
+                            == record.materialExitEventIDs.sorted()
+                          && (record.pendingMaterialExitEventID == nil)
+                            == record.materialExitEventIDs.isEmpty
                   }),
                   mortality.evictionCounts.deathRecords >= 0,
                   mortality.evictionCounts.exitFrames >= 0,
@@ -1466,6 +1489,89 @@ extension AgentSimulationSession {
                   mortality.lastMortalityEventID.sequence.rawValue
                     <= state.causalLedger.latestSequence else {
                 throw AgentCheckpointError.invalidBound("mortality")
+            }
+            for pending in mortality.pendingTransitions {
+                let required = pending.requiredMaterialAssetIDs
+                let resolved = pending.resolvedMaterialAssetIDs
+                let unresolved = pending.unresolvedMaterialAssetIDs
+                let rights = state.materialRightsState?.records ?? []
+                let pendingEvent = state.causalLedger.events.first {
+                    $0.eventID == pending.pendingEventID
+                }
+                let terminalEvent = pending.terminalPhysiologyEventID.flatMap { id in
+                    state.causalLedger.events.first { $0.eventID == id }
+                }
+                guard pending.detectedAtTick == state.clock.tick.rawValue,
+                      pending.healthBeforeLethalDamage > 0,
+                      required.count > 0,
+                      required.count
+                        <= mortality.configuration.maximumMaterialExitsPerDeath,
+                      required == required.sorted(),
+                      required.count == Set(required).count,
+                      resolved == resolved.sorted(),
+                      resolved.count == Set(resolved).count,
+                      Set(resolved).isSubset(of: Set(required)),
+                      pending.materialExitEventIDs.count == resolved.count,
+                      pending.materialExitEventIDs
+                        == pending.materialExitEventIDs.sorted(),
+                      pending.materialExitEventIDs.enumerated().allSatisfy({
+                          index, eventID in
+                          guard let event = state.causalLedger.events.first(
+                              where: { $0.eventID == eventID }
+                          ) else { return false }
+                          let expected = Array(Set([
+                              pending.pendingEventID,
+                              index > 0
+                                ? pending.materialExitEventIDs[index - 1] : nil,
+                          ].compactMap { $0 })).sorted()
+                          return event.kind == .materialPhysicalCustodyObserved
+                              && event.actorID == pending.agentID
+                              && event.causes == expected
+                      }),
+                      pendingEvent?.kind == .mortalityMaterialExitPending,
+                      pendingEvent?.actorID == pending.agentID,
+                      pendingEvent?.subjectID == pending.agentID,
+                      pendingEvent?.simulationTick.rawValue == pending.detectedAtTick,
+                      state.agents.first(where: {
+                          $0.agentID == pending.agentID
+                      })?.health == 0,
+                      unresolved.allSatisfy({ assetID in
+                          rights.contains(where: {
+                              $0.asset.assetID == assetID
+                                  && $0.lastVerifiedHolder.holder
+                                      == .agent(pending.agentID)
+                          })
+                      }),
+                      resolved.allSatisfy({ assetID in
+                          rights.contains(where: {
+                              $0.asset.assetID == assetID
+                                  && $0.lastVerifiedHolder.holder
+                                      != .agent(pending.agentID)
+                          })
+                      }) else {
+                    throw AgentCheckpointError.invalidBound(
+                        "pending mortality material exit"
+                    )
+                }
+                if state.homeostasisState != nil {
+                    guard pending.cause != .starvation,
+                          terminalEvent?.kind == .homeostasisChanged,
+                          terminalEvent?.actorID == pending.agentID,
+                          terminalEvent?.subjectID == pending.agentID,
+                          terminalEvent?.simulationTick.rawValue
+                            == pending.detectedAtTick,
+                          pendingEvent?.causes.contains(
+                              pending.terminalPhysiologyEventID!
+                          ) == true else {
+                        throw AgentCheckpointError.invalidBound(
+                            "pending mortality physiology"
+                        )
+                    }
+                } else if pending.terminalPhysiologyEventID != nil {
+                    throw AgentCheckpointError.invalidBound(
+                        "legacy pending mortality physiology"
+                    )
+                }
             }
             for record in mortality.records {
                 let event: (AgentCausalEventID) -> AgentCausalEvent? = { eventID in
@@ -1494,6 +1600,9 @@ extension AgentSimulationSession {
                 let commitments = retained[2]
                 let exit = retained[3]
                 let finalized = retained[4]
+                let terminalPhysiology = record.terminalPhysiologyEventID.flatMap(event)
+                let pendingMaterialExit = record.pendingMaterialExitEventID.flatMap(event)
+                let materialExits = record.materialExitEventIDs.compactMap(event)
                 let migrationFailure = state.causalLedger.events.first {
                     $0.kind == .migrationFailed && $0.actorID == record.agentID
                         && $0.sequence > commitments.sequence && $0.sequence < exit.sequence
@@ -1513,6 +1622,56 @@ extension AgentSimulationSession {
                         && household.lastHouseholdEventID.sequence < exit.sequence
                         ? household.lastHouseholdEventID : householdPeriod?.leftEventID
                 } ?? householdPeriod?.leftEventID
+                if let terminalID = record.terminalPhysiologyEventID {
+                    guard lethal.causes.contains(terminalID),
+                          terminalPhysiology.map({
+                              $0.kind == .homeostasisChanged
+                                  && $0.actorID == record.agentID
+                                  && $0.subjectID == record.agentID
+                                  && $0.simulationTick.rawValue == record.deathTick
+                          }) ?? (state.causalLedger.droppedEventCount > 0) else {
+                        throw AgentCheckpointError.invalidBound(
+                            "mortality terminal physiology cause"
+                        )
+                    }
+                }
+                if let pendingID = record.pendingMaterialExitEventID {
+                    let expectedLethalCauses = Array(Set([
+                        record.terminalPhysiologyEventID,
+                        pendingID,
+                        record.materialExitEventIDs.last,
+                    ].compactMap { $0 })).sorted()
+                    guard pendingMaterialExit.map({ pendingEvent in
+                        pendingEvent.kind == .mortalityMaterialExitPending
+                            && pendingEvent.actorID == record.agentID
+                            && pendingEvent.subjectID == record.agentID
+                            && pendingEvent.simulationTick.rawValue == record.deathTick
+                            && (record.terminalPhysiologyEventID.map { terminalID in
+                                pendingEvent.causes.contains(terminalID)
+                            } ?? true)
+                    }) ?? (state.causalLedger.droppedEventCount > 0),
+                          lethal.causes == expectedLethalCauses,
+                          materialExits.count == record.materialExitEventIDs.count
+                              || state.causalLedger.droppedEventCount > 0 else {
+                        throw AgentCheckpointError.invalidBound(
+                            "mortality material exit chain"
+                        )
+                    }
+                    for (index, eventID) in record.materialExitEventIDs.enumerated() {
+                        guard let materialEvent = event(eventID) else { continue }
+                        let expectedCauses = Array(Set([
+                            pendingID,
+                            index > 0 ? record.materialExitEventIDs[index - 1] : nil,
+                        ].compactMap { $0 })).sorted()
+                        guard materialEvent.kind == .materialPhysicalCustodyObserved,
+                              materialEvent.actorID == record.agentID,
+                              materialEvent.causes == expectedCauses else {
+                            throw AgentCheckpointError.invalidBound(
+                                "mortality material exit event"
+                            )
+                        }
+                    }
+                }
                 guard
                       [lethal.kind, resources.kind, commitments.kind, exit.kind, finalized.kind]
                         == [

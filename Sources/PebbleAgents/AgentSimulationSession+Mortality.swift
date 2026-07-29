@@ -2,6 +2,9 @@ private struct AgentLethalMortalityCandidate {
     let agentID: AgentID
     let healthBefore: Int
     let cause: AgentMortalityCause
+    let terminalPhysiologyEventID: AgentCausalEventID?
+    let pendingMaterialExitEventID: AgentCausalEventID?
+    let materialExitEventIDs: [AgentCausalEventID]
 }
 
 extension AgentSimulationSession {
@@ -48,7 +51,9 @@ extension AgentSimulationSession {
                 maximumFinalMemoryEntries: configuration.maximumFinalMemoryEntries,
                 maximumCancelledCommitmentIDsPerDeath:
                     configuration.maximumCancelledCommitmentIDsPerDeath,
-                maximumExitFrames: configuration.maximumExitFrames
+                maximumExitFrames: configuration.maximumExitFrames,
+                maximumMaterialExitsPerDeath:
+                    configuration.maximumMaterialExitsPerDeath
             )
             try prevalidateCausalAppend(count: 1)
             guard let event = try recordCausalEvent(
@@ -82,6 +87,7 @@ extension AgentSimulationSession {
                 unrecoveredAtDeath: AgentCampStock(capacity: 4096),
                 terminalStarvationDamageTotal: 0,
                 exitFrames: [],
+                pendingTransitions: [],
                 evictionCounts: AgentMortalityEvictionCounts(),
                 rollingDigest: AgentMortalityDigest.make(""),
                 initializedEventID: event.eventID,
@@ -93,7 +99,8 @@ extension AgentSimulationSession {
         guard let state = mortalityState else {
             throw AgentSessionError.mortality(.disabled)
         }
-        guard state.totalDeathCount == 0, state.unrecoveredAtDeath.isEmpty else {
+        guard state.totalDeathCount == 0, state.unrecoveredAtDeath.isEmpty,
+              state.pendingTransitions.isEmpty else {
             throw AgentSessionError.mortality(.unsafeDisable)
         }
         mortalityState = nil
@@ -133,6 +140,7 @@ extension AgentSimulationSession {
                 unrecoveredAtDeath: [],
                 terminalStarvationDamageTotal: 0,
                 exitFrames: [],
+                pendingTransitions: [],
                 evictionCounts: AgentMortalityEvictionCounts(),
                 rollingDigest: AgentMortalityDigest.make(""),
                 lastMortalityEventID: nil,
@@ -146,13 +154,20 @@ extension AgentSimulationSession {
             return $0.deathID < $1.deathID
         }
         let canonical = [
-            "config=\(mortality.configuration.maximumDeathsPerTick),\(mortality.configuration.maximumRetainedDeathRecords),\(mortality.configuration.maximumFinalMemoryEntries),\(mortality.configuration.maximumCancelledCommitmentIDsPerDeath),\(mortality.configuration.maximumExitFrames)",
+            "config=\(mortality.configuration.maximumDeathsPerTick),\(mortality.configuration.maximumRetainedDeathRecords),\(mortality.configuration.maximumFinalMemoryEntries),\(mortality.configuration.maximumCancelledCommitmentIDsPerDeath),\(mortality.configuration.maximumExitFrames),\(mortality.configuration.maximumMaterialExitsPerDeath)",
             "total=\(mortality.totalDeathCount)",
             "processed=\(mortality.processedDeathIDs.sorted().map(\.rawValue).joined(separator: ","))",
             "terminal=\(mortality.unrecoveredAtDeath.amounts.map { "\($0.resource.rawValue):\($0.quantity)" }.joined(separator: ","))",
             "starvation=\(mortality.terminalStarvationDamageTotal)",
             records.map { "\($0.deathTick):\($0.agentID.rawValue):\($0.deathID.rawValue):\($0.finalStateDigest)" }.joined(separator: ";"),
             exits.map { "\($0.tick):\($0.agentID.rawValue):\($0.populationBefore)>\($0.populationAfter)" }.joined(separator: ";"),
+            mortality.pendingTransitions.sorted {
+                $0.agentID < $1.agentID
+            }.map {
+                "\($0.detectedAtTick):\($0.agentID.rawValue):"
+                    + "\($0.requiredMaterialAssetIDs.map(\.rawValue).joined(separator: ",")):"
+                    + "\($0.resolvedMaterialAssetIDs.map(\.rawValue).joined(separator: ","))"
+            }.joined(separator: ";"),
             "evicted=\(mortality.evictionCounts.deathRecords),\(mortality.evictionCounts.exitFrames)",
             "rolling=\(mortality.rollingDigest)",
             "last=\(mortality.lastMortalityEventID.rawValue)",
@@ -167,6 +182,9 @@ extension AgentSimulationSession {
             unrecoveredAtDeath: mortality.unrecoveredAtDeath.amounts,
             terminalStarvationDamageTotal: mortality.terminalStarvationDamageTotal,
             exitFrames: exits,
+            pendingTransitions: mortality.pendingTransitions.sorted {
+                $0.agentID < $1.agentID
+            },
             evictionCounts: mortality.evictionCounts,
             rollingDigest: mortality.rollingDigest,
             lastMortalityEventID: mortality.lastMortalityEventID,
@@ -183,6 +201,7 @@ extension AgentSimulationSession {
             totalDeathCount: snapshot.totalDeathCount,
             retainedDeathCount: snapshot.records.count,
             evictedDeathCount: snapshot.evictionCounts.deathRecords,
+            pendingDeathCount: snapshot.pendingTransitions.count,
             latestDeathID: latest?.deathID,
             latestAgentID: latest?.agentID,
             latestCause: latest?.cause,
@@ -195,6 +214,12 @@ extension AgentSimulationSession {
 
     public func populationExitSnapshot() -> [AgentPopulationExitFrame] {
         mortalitySnapshot().exitFrames
+    }
+
+    public func pendingMortalityTransitions() -> [AgentPendingMortalityTransition] {
+        mortalityState?.pendingTransitions.sorted {
+            $0.agentID < $1.agentID
+        } ?? []
     }
 
     mutating func applyMortalitySurvivalBoundary(
@@ -225,10 +250,15 @@ extension AgentSimulationSession {
             guard let healthBefore = healthBeforeByID[agentID],
                   let state = candidate.statesById[agentID.rawValue],
                   healthBefore > 0, state.health == 0 else { continue }
+            let terminalPhysiologyEventID = try candidate
+                .terminalHomeostasisEventID(for: agentID, at: mortalityTick)
             lethal.append(AgentLethalMortalityCandidate(
                 agentID: agentID,
                 healthBefore: healthBefore,
-                cause: candidate.homeostasisMortalityCause(for: agentID)
+                cause: candidate.homeostasisMortalityCause(for: agentID),
+                terminalPhysiologyEventID: terminalPhysiologyEventID,
+                pendingMaterialExitEventID: nil,
+                materialExitEventIDs: []
             ))
         }
         lethal.sort { $0.agentID < $1.agentID }
@@ -236,11 +266,132 @@ extension AgentSimulationSession {
             throw AgentSessionError.mortality(.deathsPerTickExceeded(lethal.count))
         }
         if !lethal.isEmpty {
-            try candidate.finalizeMortalityTransitions(lethal, at: mortalityTick)
-            for entry in lethal { survivalMemories.removeValue(forKey: entry.agentID.rawValue) }
+            let staged = try candidate.stageMaterialExitMortalityTransitions(
+                lethal, at: mortalityTick
+            )
+            let immediateIDs = Set(staged.map(\.agentID))
+            let immediate = lethal.filter { !immediateIDs.contains($0.agentID) }
+            if !immediate.isEmpty {
+                try candidate.finalizeMortalityTransitions(immediate, at: mortalityTick)
+            }
+            for entry in lethal {
+                survivalMemories.removeValue(forKey: entry.agentID.rawValue)
+            }
         }
         self = candidate
         return survivalMemories
+    }
+
+    private mutating func stageMaterialExitMortalityTransitions(
+        _ lethal: [AgentLethalMortalityCandidate],
+        at mortalityTick: Int
+    ) throws -> [AgentPendingMortalityTransition] {
+        guard var mortality = mortalityState else {
+            throw AgentSessionError.mortality(.disabled)
+        }
+        var pending: [AgentPendingMortalityTransition] = []
+        for item in lethal {
+            let assetIDs = materialRightsState?.records.compactMap { record in
+                record.lastVerifiedHolder.holder == .agent(item.agentID)
+                    ? record.asset.assetID : nil
+            }.sorted() ?? []
+            guard assetIDs.count <= mortality.configuration
+                .maximumMaterialExitsPerDeath else {
+                throw AgentSessionError.mortality(
+                    .materialExitLimitExceeded(assetIDs.count)
+                )
+            }
+            guard !assetIDs.isEmpty else { continue }
+            guard !mortality.pendingTransitions.contains(where: {
+                $0.agentID == item.agentID
+            }) else {
+                throw AgentSessionError.mortality(
+                    .pendingMaterialExit(item.agentID.rawValue)
+                )
+            }
+            try prevalidateCausalAppend(count: 1)
+            let causes = Array(Set([
+                item.terminalPhysiologyEventID,
+                mortality.lastMortalityEventID,
+            ].compactMap { $0 })).sorted()
+            let event = try requiredMortalityEvent(
+                kind: .mortalityMaterialExitPending,
+                actorID: item.agentID,
+                subjectID: item.agentID,
+                causes: causes,
+                payload: .operation(
+                    status: "pending",
+                    detail: "assets=\(assetIDs.map(\.rawValue).joined(separator: ","))"
+                ),
+                summary: "mortality material exit pending agent="
+                    + "\(item.agentID.rawValue) assets=\(assetIDs.count)"
+            )
+            let transition = AgentPendingMortalityTransition(
+                agentID: item.agentID,
+                healthBeforeLethalDamage: item.healthBefore,
+                cause: item.cause,
+                detectedAtTick: mortalityTick,
+                terminalPhysiologyEventID: item.terminalPhysiologyEventID,
+                pendingEventID: event.eventID,
+                requiredMaterialAssetIDs: assetIDs,
+                resolvedMaterialAssetIDs: [],
+                materialExitEventIDs: []
+            )
+            mortality.pendingTransitions.append(transition)
+            mortality.pendingTransitions.sort { $0.agentID < $1.agentID }
+            mortality.lastMortalityEventID = event.eventID
+            pending.append(transition)
+        }
+        mortalityState = mortality
+        return pending
+    }
+
+    @discardableResult
+    public mutating func finalizePendingMortality(
+        for agentID: AgentID
+    ) throws -> AgentMortalityRecord {
+        var candidate = self
+        let record = try candidate.finalizePendingMortalityInPlace(for: agentID)
+        self = candidate
+        return record
+    }
+
+    private mutating func finalizePendingMortalityInPlace(
+        for agentID: AgentID
+    ) throws -> AgentMortalityRecord {
+        guard var mortality = mortalityState,
+              let index = mortality.pendingTransitions.firstIndex(where: {
+                  $0.agentID == agentID
+              }) else {
+            throw AgentSessionError.mortality(.pendingMaterialExit(agentID.rawValue))
+        }
+        let pending = mortality.pendingTransitions[index]
+        guard pending.unresolvedMaterialAssetIDs.isEmpty,
+              pending.requiredMaterialAssetIDs
+                == pending.resolvedMaterialAssetIDs.sorted(),
+              !pending.materialExitEventIDs.isEmpty else {
+            throw AgentSessionError.mortality(.pendingMaterialExit(agentID.rawValue))
+        }
+        mortality.pendingTransitions.remove(at: index)
+        mortalityState = mortality
+        try finalizeMortalityTransitions([
+            AgentLethalMortalityCandidate(
+                agentID: pending.agentID,
+                healthBefore: pending.healthBeforeLethalDamage,
+                cause: pending.cause,
+                terminalPhysiologyEventID: pending.terminalPhysiologyEventID,
+                pendingMaterialExitEventID: pending.pendingEventID,
+                materialExitEventIDs: pending.materialExitEventIDs
+            ),
+        ], at: pending.detectedAtTick)
+        guard let record = mortalityState?.records.last(where: {
+            $0.agentID == agentID && $0.deathTick == pending.detectedAtTick
+        }) else {
+            throw AgentSessionError.mortality(.invalidState(
+                "pending death finalization missing record \(agentID.rawValue)"
+            ))
+        }
+        return record
     }
 
     private mutating func finalizeMortalityTransitions(
@@ -318,11 +469,27 @@ extension AgentSimulationSession {
                 throw AgentSessionError.mortality(.terminalResourceOverflow)
             }
 
+            let continuityEventID = item.pendingMaterialExitEventID
+                ?? mortality.lastMortalityEventID
+            let lethalCauses = Array(Set([
+                item.terminalPhysiologyEventID,
+                item.pendingMaterialExitEventID,
+                item.materialExitEventIDs.last,
+                continuityEventID,
+            ].compactMap { $0 })).sorted()
+            if homeostasisState != nil {
+                guard let terminal = item.terminalPhysiologyEventID,
+                      lethalCauses.contains(terminal) else {
+                    throw AgentSessionError.mortality(.invalidLethalTransition(
+                        item.agentID.rawValue
+                    ))
+                }
+            }
             let lethalEvent = try requiredMortalityEvent(
                 kind: .lethalHealthDepletion,
                 actorID: item.agentID,
                 subjectID: item.agentID,
-                causes: [mortality.lastMortalityEventID],
+                causes: lethalCauses,
                 payload: mortalityDeathPayload(
                     deathID: deathID,
                     state: state,
@@ -600,6 +767,9 @@ extension AgentSimulationSession {
                 finalStateDigest: finalDigest,
                 registrationEventID: member.registrationEventID,
                 arrivalEventID: member.arrivalEventID,
+                terminalPhysiologyEventID: item.terminalPhysiologyEventID,
+                pendingMaterialExitEventID: item.pendingMaterialExitEventID,
+                materialExitEventIDs: item.materialExitEventIDs,
                 lethalDamageEventID: lethalEvent.eventID,
                 deathEventID: deathEvent.eventID,
                 populationExitEventID: exitEvent.eventID,
@@ -749,10 +919,35 @@ extension AgentSimulationSession {
         if homeostasisState != nil {
             return homeostasisProfile(for: candidate.agentID)?.vitalStatus == .dead
                 && candidate.cause != .starvation
+                && candidate.terminalPhysiologyEventID != nil
         }
         return state.needs.hunger
             >= configuration.survivalConfiguration.criticalHungerThreshold
             && candidate.cause == .starvation
+    }
+
+    private func terminalHomeostasisEventID(
+        for agentID: AgentID,
+        at mortalityTick: Int
+    ) throws -> AgentCausalEventID? {
+        guard homeostasisState != nil else { return nil }
+        guard let profile = homeostasisProfile(for: agentID),
+              profile.vitalStatus == .dead,
+              profile.condition == .dead,
+              profile.lastUpdatedTick == mortalityTick,
+              let event = causalLedger.events.first(where: {
+                  $0.eventID == profile.lastEventID
+              }),
+              event.kind == .homeostasisChanged,
+              event.origin == .homeostasisTransition,
+              event.actorID == agentID,
+              event.subjectID == agentID,
+              event.simulationTick.rawValue == mortalityTick else {
+            throw AgentSessionError.mortality(.invalidLethalTransition(
+                agentID.rawValue
+            ))
+        }
+        return event.eventID
     }
 
     private func homeostasisMortalityCause(
@@ -803,7 +998,8 @@ extension AgentSimulationSession {
 extension AgentCausalEventKind {
     var isMortality: Bool {
         switch self {
-        case .mortalityInitialized, .lethalHealthDepletion, .agentDeathFinalized,
+        case .mortalityInitialized, .mortalityMaterialExitPending,
+             .lethalHealthDepletion, .agentDeathFinalized,
              .populationMemberExited, .mortalityResourcesRetired,
              .mortalityCommitmentsResolved, .mortalityStateCleared:
             return true

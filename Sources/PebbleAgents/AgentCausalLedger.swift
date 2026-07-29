@@ -113,6 +113,7 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case subsistencePressureChanged
     case localEcologyStateCleared
     case mortalityInitialized
+    case mortalityMaterialExitPending
     case lethalHealthDepletion
     case agentDeathFinalized
     case populationMemberExited
@@ -866,6 +867,7 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.subsistencePressureChanged, .subsistencePressure),
              (.localEcologyStateCleared, .ecologyClear),
              (.mortalityInitialized, .mortalityDeath),
+             (.mortalityMaterialExitPending, .operation),
              (.lethalHealthDepletion, .mortalityDeath),
              (.agentDeathFinalized, .mortalityDeath),
              (.populationMemberExited, .mortalityDeath),

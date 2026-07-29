@@ -325,6 +325,13 @@ func runPebbleAgentsMortalityPopulationExitSmoke() {
     check("mortality lethal health reaches zero", record?.healthBeforeLethalDamage == 10
         && record?.finalHealth == 0)
     check("mortality starvation cause", record?.cause == .starvation)
+    check("legacy starvation remains causal without invented physiology",
+          record?.terminalPhysiologyEventID == nil
+            && record?.pendingMaterialExitEventID == nil
+            && record?.materialExitEventIDs.isEmpty == true
+            && lethalEvent?.causes.allSatisfy {
+                $0.sequence < lethalEvent!.sequence
+            } == true)
     check("mortality death tick exact", record?.deathTick == 1)
     check("mortality removes active state", session.snapshot().agents.map(\.id)
         == ["agent_1", "agent_2"])

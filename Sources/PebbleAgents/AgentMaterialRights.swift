@@ -367,6 +367,34 @@ public struct AgentMaterialUseAttemptOutcome: Codable, Equatable, Sendable {
     }
 }
 
+/// A Pebble-verified physical exit for one rights-tracked asset held by an
+/// actor whose physiology is terminal. It changes only the observed physical
+/// holder; custody, ownership, claims, and permissions remain untouched.
+public struct AgentMaterialMortalityExitOutcome: Codable, Equatable, Sendable {
+    public let operationID: String
+    public let assetID: AgentMaterialAssetID
+    public let terminalAgentID: AgentID
+    public let sourceObservation: AgentMaterialHolderObservation
+    public let destinationObservation: AgentMaterialHolderObservation
+    public let physicalReceiptID: String
+
+    public init(
+        operationID: String,
+        assetID: AgentMaterialAssetID,
+        terminalAgentID: AgentID,
+        sourceObservation: AgentMaterialHolderObservation,
+        destinationObservation: AgentMaterialHolderObservation,
+        physicalReceiptID: String
+    ) {
+        self.operationID = operationID
+        self.assetID = assetID
+        self.terminalAgentID = terminalAgentID
+        self.sourceObservation = sourceObservation
+        self.destinationObservation = destinationObservation
+        self.physicalReceiptID = physicalReceiptID
+    }
+}
+
 public enum AgentMaterialRightsOperation: Codable, Equatable, Sendable {
     case register(
         operationID: String,
@@ -415,6 +443,7 @@ public enum AgentMaterialRightsOperation: Codable, Equatable, Sendable {
     )
     case physicalTransfer(AgentMaterialPhysicalTransferOutcome)
     case useAttempt(AgentMaterialUseAttemptOutcome)
+    case mortalityPhysicalExit(AgentMaterialMortalityExitOutcome)
 
     public var operationID: String {
         switch self {
@@ -428,6 +457,7 @@ public enum AgentMaterialRightsOperation: Codable, Equatable, Sendable {
             return id
         case let .physicalTransfer(outcome): return outcome.operationID
         case let .useAttempt(outcome): return outcome.operationID
+        case let .mortalityPhysicalExit(outcome): return outcome.operationID
         }
     }
 }
@@ -442,6 +472,7 @@ public enum AgentMaterialRightsTransitionKind: String, Codable, Sendable {
     case useRevoked
     case physicalTransfer
     case useAttempt
+    case mortalityPhysicalExit
 }
 
 public struct AgentMaterialRightsTransition: Codable, Equatable, Sendable {

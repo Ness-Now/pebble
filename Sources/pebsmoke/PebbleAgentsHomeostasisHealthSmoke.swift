@@ -139,6 +139,25 @@ private func consumePhysicalFood(
     try! session.applyValidatedPhysicalFoodConsumption(outcome)
 }
 
+private func homeostasisCausalPathExists(
+    events: [AgentCausalEvent],
+    from descendantID: AgentCausalEventID,
+    to ancestorID: AgentCausalEventID,
+    maximumDepth: Int = 16
+) -> Bool {
+    let byID = Dictionary(uniqueKeysWithValues: events.map { ($0.eventID, $0) })
+    var frontier: [(AgentCausalEventID, Int)] = [(descendantID, 0)]
+    var visited: Set<AgentCausalEventID> = []
+    while !frontier.isEmpty {
+        let (eventID, depth) = frontier.removeFirst()
+        if eventID == ancestorID { return true }
+        guard depth < maximumDepth, visited.insert(eventID).inserted,
+              let event = byID[eventID] else { continue }
+        frontier.append(contentsOf: event.causes.map { ($0, depth + 1) })
+    }
+    return false
+}
+
 func runPebbleAgentsHomeostasisHealthSmoke() {
     section("PebbleAgents homeostasis, health, aging, and mortality V2")
 
@@ -238,10 +257,10 @@ func runPebbleAgentsHomeostasisHealthSmoke() {
             quantity: 1
         ),
         observation: AgentMaterialHolderObservation(
-            holder: .container("civ29-test-container"),
+            holder: .agent(AgentID(rawValue: "agent_0")!),
             materialIdentity: terminalIdentity,
             quantity: 1,
-            custodyFingerprint: "civ29-container:iron_pickaxe:1",
+            custodyFingerprint: "civ29-agent_0:iron_pickaxe:1",
             physicalReceiptID: "civ29-terminal-asset-receipt",
             observedAtTick: declining.tick
         )
@@ -262,6 +281,23 @@ func runPebbleAgentsHomeostasisHealthSmoke() {
             AgentID(rawValue: "agent_1")!,
         ]
     ))
+    _ = try! declining.applyMaterialRightsOperation(.delegateCustody(
+        operationID: "civ29-terminal-custody",
+        assetID: terminalAssetID,
+        custodianID: AgentID(rawValue: "agent_1")!,
+        actorID: AgentID(rawValue: "agent_0")!
+    ))
+    _ = try! declining.applyMaterialRightsOperation(.grantUse(
+        operationID: "civ29-terminal-permission",
+        assetID: terminalAssetID,
+        permissionID: AgentMaterialPermissionID(
+            rawValue: "permission:civ29:agent_2"
+        )!,
+        grantorID: AgentID(rawValue: "agent_0")!,
+        userID: AgentID(rawValue: "agent_2")!,
+        allowedUses: [.toolUse],
+        expiresAtTick: nil
+    ))
     try! declining.setAutonomousActivityEnabled(true)
     _ = try! declining.selectAutonomousActivities([
         AgentAutonomousActivityCandidate(
@@ -279,10 +315,10 @@ func runPebbleAgentsHomeostasisHealthSmoke() {
     ])
     var sawImpairment = false
     var sawIncapacity = false
+    var preTerminalSession = declining
     for _ in 0..<12
-        where !declining.mortalitySnapshot().records.contains(where: {
-            $0.agentID.rawValue == "agent_0"
-        }) {
+        where declining.pendingMortalityTransitions().isEmpty {
+        preTerminalSession = declining
         _ = try! declining.advanceTick()
         if let profile = declining.homeostasisSnapshot().profiles.first {
             sawImpairment = sawImpairment
@@ -292,12 +328,110 @@ func runPebbleAgentsHomeostasisHealthSmoke() {
                 || profile.vitalStatus == .incapacitated
         }
     }
+    let pending = declining.pendingMortalityTransitions().first
+    let terminalEvent = pending?.terminalPhysiologyEventID.flatMap { eventID in
+        declining.causalLedgerSnapshot().events.first { $0.eventID == eventID }
+    }
+    check("terminal physiology stages death until material exit is verified",
+          pending?.agentID.rawValue == "agent_0"
+            && pending?.requiredMaterialAssetIDs == [terminalAssetID]
+            && pending?.unresolvedMaterialAssetIDs == [terminalAssetID]
+            && terminalEvent?.kind == .homeostasisChanged
+            && terminalEvent?.actorID?.rawValue == "agent_0"
+            && terminalEvent?.simulationTick.rawValue == declining.tick
+            && declining.mortalitySnapshot().totalDeathCount == 0
+            && declining.snapshot().agents.contains { $0.id == "agent_0" })
+
+    let rightsBeforeExit = declining.materialRightsSnapshot().records[0]
+    let stateBeforeRejectedExit = try! declining.durableStateBytes()
+    let rejectedDestination = AgentMaterialHolderObservation(
+        holder: .agent(AgentID(rawValue: "agent_1")!),
+        materialIdentity: terminalIdentity,
+        quantity: 1,
+        custodyFingerprint: "civ29-invalid-agent-destination",
+        physicalReceiptID: "civ29-invalid-exit-receipt",
+        observedAtTick: declining.tick
+    )
+    check("unverified mortality exit is rejected atomically and retryable", {
+        do {
+            _ = try declining.applyMaterialRightsOperation(.mortalityPhysicalExit(
+                AgentMaterialMortalityExitOutcome(
+                    operationID: "civ29-invalid-terminal-exit",
+                    assetID: terminalAssetID,
+                    terminalAgentID: AgentID(rawValue: "agent_0")!,
+                    sourceObservation: rightsBeforeExit.lastVerifiedHolder,
+                    destinationObservation: rejectedDestination,
+                    physicalReceiptID: rejectedDestination.physicalReceiptID
+                )
+            ))
+            return false
+        } catch AgentSessionError.materialRights(.invalidPhysicalOutcome(_)) {
+            return stateBeforeRejectedExit == (try! declining.durableStateBytes())
+                && declining.pendingMortalityTransitions().first?
+                    .unresolvedMaterialAssetIDs == [terminalAssetID]
+                && declining.mortalitySnapshot().totalDeathCount == 0
+        } catch {
+            return false
+        }
+    }())
+
+    let verifiedDestination = AgentMaterialHolderObservation(
+        holder: .container("civ29-test-container"),
+        materialIdentity: terminalIdentity,
+        quantity: 1,
+        custodyFingerprint: "civ29-test-container:iron_pickaxe:1",
+        physicalReceiptID: "civ29-verified-terminal-exit-receipt",
+        observedAtTick: declining.tick
+    )
+    let verifiedExitOperation = AgentMaterialRightsOperation.mortalityPhysicalExit(
+        AgentMaterialMortalityExitOutcome(
+            operationID: "civ29-verified-terminal-exit",
+            assetID: terminalAssetID,
+            terminalAgentID: AgentID(rawValue: "agent_0")!,
+            sourceObservation: rightsBeforeExit.lastVerifiedHolder,
+            destinationObservation: verifiedDestination,
+            physicalReceiptID: verifiedDestination.physicalReceiptID
+        )
+    )
+    _ = try! declining.applyMaterialRightsOperation(verifiedExitOperation)
+    let rightsAfterExit = declining.materialRightsSnapshot().records[0]
+    check("verified mortality exit changes only the physical holder",
+          rightsAfterExit.lastVerifiedHolder == verifiedDestination
+            && rightsAfterExit.custodianID == rightsBeforeExit.custodianID
+            && rightsAfterExit.recognizedOwnership
+                == rightsBeforeExit.recognizedOwnership
+            && rightsAfterExit.claims == rightsBeforeExit.claims
+            && rightsAfterExit.permissions == rightsBeforeExit.permissions)
+    _ = try! declining.finalizePendingMortality(
+        for: AgentID(rawValue: "agent_0")!
+    )
     let death = declining.mortalitySnapshot().records.last
     check("deprivation progresses through limitation before causal death",
           sawImpairment && sawIncapacity
             && death?.cause == .compoundedHomeostaticFailure
             && death?.finalVitalStatus == .dead
             && death?.finalHomeostasis?.condition == .dead)
+    let deathLedger = declining.causalLedgerSnapshot()
+    let lethalEvent = death.flatMap { record in
+        deathLedger.events.first { $0.eventID == record.lethalDamageEventID }
+    }
+    check("lethal depletion directly cites the same-tick terminal physiology",
+          terminalEvent.map {
+              death?.terminalPhysiologyEventID == $0.eventID
+                && lethalEvent?.causes.contains($0.eventID) == true
+                && lethalEvent?.actorID == $0.actorID
+                && lethalEvent?.simulationTick == $0.simulationTick
+          } ?? false)
+    check("death-finalized causal navigation reaches terminal physiology",
+          death.map {
+              homeostasisCausalPathExists(
+                  events: deathLedger.events,
+                  from: $0.deathEventID,
+                  to: $0.terminalPhysiologyEventID!
+              )
+          } ?? false)
+    let terminalDeathBytes = try! declining.durableStateBytes()
+    let terminalDeathDigest = try! declining.durableStateDigest()
     check("death is unique and removes all active physiology",
           declining.mortalitySnapshot().totalDeathCount == 1
             && declining.snapshot().agentCount == 2
@@ -327,9 +461,13 @@ func runPebbleAgentsHomeostasisHealthSmoke() {
         postDeathCheckpoint
     )
     check("death preserves historical claims without granting dead agency",
-          postDeathRights.claims.map(\.claimantID.rawValue) == ["agent_0"]
+          postDeathRights.lastVerifiedHolder
+                .holder == .container("civ29-test-container")
+            && postDeathRights.custodianID?.rawValue == "agent_1"
+            && postDeathRights.claims.map(\.claimantID.rawValue) == ["agent_0"]
             && postDeathRights.recognizedOwnership?.ownerID.rawValue
                 == "agent_0"
+            && postDeathRights.permissions.map(\.userID.rawValue) == ["agent_2"]
             && postDeathRestored.materialRightsSnapshot().records
                 == declining.materialRightsSnapshot().records
             && {
@@ -349,6 +487,44 @@ func runPebbleAgentsHomeostasisHealthSmoke() {
                     return false
                 }
             }())
+    var replaySession = preTerminalSession
+    let mortalityReplayCheckpoint = try! replaySession.makeCheckpoint()
+    var mortalityRecorder = try! AgentReplayRecorder(
+        checkpoint: mortalityReplayCheckpoint,
+        session: replaySession
+    )
+    _ = try! mortalityRecorder.apply(
+        .advanceTick(perceptions: [], physicalObservations: []),
+        to: &replaySession
+    )
+    _ = try! mortalityRecorder.apply(
+        .applyMaterialRightsOperation(verifiedExitOperation),
+        to: &replaySession
+    )
+    _ = try! mortalityRecorder.apply(
+        .finalizePendingMortality(AgentID(rawValue: "agent_0")!),
+        to: &replaySession
+    )
+    let mortalityJournal = try! mortalityRecorder.journal(
+        named: AgentCheckpointName(rawValue: "civ29-terminal-mortality")!
+    )
+    let mortalityReplay = try! AgentSessionReplayer.replay(
+        checkpoint: mortalityReplayCheckpoint,
+        journal: mortalityJournal
+    )
+    let mortalityReplayBytes = try! mortalityReplay.session.durableStateBytes()
+    let mortalityTargetBytes = terminalDeathBytes
+    check("checkpoint replay preserves the exact terminal causal chain",
+          mortalityReplay.report.verified
+            && mortalityReplayBytes == mortalityTargetBytes
+            && mortalityReplay.session.mortalitySnapshot().records.last?
+                .terminalPhysiologyEventID == death?.terminalPhysiologyEventID
+            && mortalityReplay.session.mortalitySnapshot().records.last?
+                .materialExitEventIDs == death?.materialExitEventIDs,
+          "verified=\(mortalityReplay.report.verified) "
+            + "replay=\(try! mortalityReplay.session.durableStateDigest()) "
+            + "target=\(terminalDeathDigest) "
+            + "operations=\(mortalityJournal.records.map(\.operationKind))")
     check("homeostasis transition history is bounded with explicit eviction",
           declining.homeostasisSnapshot().recentTransitions.count <= 2
             && declining.homeostasisSnapshot().transitionEvictionCount > 0

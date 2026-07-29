@@ -36,6 +36,8 @@ public enum AgentMortalityError: Error, Equatable, CustomStringConvertible {
     case invalidLethalTransition(String)
     case duplicateDeath(String)
     case deathsPerTickExceeded(Int)
+    case pendingMaterialExit(String)
+    case materialExitLimitExceeded(Int)
     case terminalResourceOverflow
     case invalidState(String)
 
@@ -55,6 +57,10 @@ public enum AgentMortalityError: Error, Equatable, CustomStringConvertible {
         case let .invalidLethalTransition(id): return "invalid lethal transition for \(id)"
         case let .duplicateDeath(id): return "duplicate mortality transition for \(id)"
         case let .deathsPerTickExceeded(count): return "mortality deaths per tick exceeded: \(count)"
+        case let .pendingMaterialExit(id):
+            return "mortality material exit pending for \(id)"
+        case let .materialExitLimitExceeded(count):
+            return "mortality material exit asset limit exceeded: \(count)"
         case .terminalResourceOverflow: return "mortality terminal resource capacity reached"
         case let .invalidState(reason): return "invalid mortality state: \(reason)"
         }
@@ -67,13 +73,15 @@ public struct AgentMortalityConfiguration: Codable, Equatable, Sendable {
     public let maximumFinalMemoryEntries: Int
     public let maximumCancelledCommitmentIDsPerDeath: Int
     public let maximumExitFrames: Int
+    public let maximumMaterialExitsPerDeath: Int
 
     public init(
         maximumDeathsPerTick: Int = 8,
         maximumRetainedDeathRecords: Int = 32,
         maximumFinalMemoryEntries: Int = 8,
         maximumCancelledCommitmentIDsPerDeath: Int = 32,
-        maximumExitFrames: Int = 32
+        maximumExitFrames: Int = 32,
+        maximumMaterialExitsPerDeath: Int = 16
     ) throws {
         guard (1...8).contains(maximumDeathsPerTick) else {
             throw AgentMortalityError.invalidConfiguration("deaths per tick")
@@ -90,11 +98,15 @@ public struct AgentMortalityConfiguration: Codable, Equatable, Sendable {
         guard (1...64).contains(maximumExitFrames) else {
             throw AgentMortalityError.invalidConfiguration("exit frames")
         }
+        guard (1...16).contains(maximumMaterialExitsPerDeath) else {
+            throw AgentMortalityError.invalidConfiguration("material exits per death")
+        }
         self.maximumDeathsPerTick = maximumDeathsPerTick
         self.maximumRetainedDeathRecords = maximumRetainedDeathRecords
         self.maximumFinalMemoryEntries = maximumFinalMemoryEntries
         self.maximumCancelledCommitmentIDsPerDeath = maximumCancelledCommitmentIDsPerDeath
         self.maximumExitFrames = maximumExitFrames
+        self.maximumMaterialExitsPerDeath = maximumMaterialExitsPerDeath
     }
 
     public static let live = try! AgentMortalityConfiguration()
@@ -237,6 +249,9 @@ public struct AgentMortalityRecord: Codable, Equatable, Sendable {
     public let finalStateDigest: String
     public let registrationEventID: AgentCausalEventID
     public let arrivalEventID: AgentCausalEventID?
+    public let terminalPhysiologyEventID: AgentCausalEventID?
+    public let pendingMaterialExitEventID: AgentCausalEventID?
+    public let materialExitEventIDs: [AgentCausalEventID]
     public let lethalDamageEventID: AgentCausalEventID
     public let deathEventID: AgentCausalEventID
     public let populationExitEventID: AgentCausalEventID
@@ -248,6 +263,26 @@ public struct AgentMortalityRecord: Codable, Equatable, Sendable {
     public let finalHomeostasis: AgentHomeostasisProfile?
     public let demographicAgeTicks: Int?
     public let lifeStage: AgentLifeStage?
+}
+
+/// A terminal civilization transition that cannot be published as a death
+/// until Pebble has moved every rights-tracked asset out of the live physical
+/// actor through a verified material boundary.
+public struct AgentPendingMortalityTransition: Codable, Equatable, Sendable {
+    public let agentID: AgentID
+    public let healthBeforeLethalDamage: Int
+    public let cause: AgentMortalityCause
+    public let detectedAtTick: Int
+    public let terminalPhysiologyEventID: AgentCausalEventID?
+    public let pendingEventID: AgentCausalEventID
+    public let requiredMaterialAssetIDs: [AgentMaterialAssetID]
+    public internal(set) var resolvedMaterialAssetIDs: [AgentMaterialAssetID]
+    public internal(set) var materialExitEventIDs: [AgentCausalEventID]
+
+    public var unresolvedMaterialAssetIDs: [AgentMaterialAssetID] {
+        let resolved = Set(resolvedMaterialAssetIDs)
+        return requiredMaterialAssetIDs.filter { !resolved.contains($0) }
+    }
 }
 
 public struct AgentPopulationExitFrame: Codable, Equatable, Sendable {
@@ -280,6 +315,7 @@ public struct AgentMortalityState: Codable, Equatable {
     public internal(set) var unrecoveredAtDeath: AgentCampStock
     public internal(set) var terminalStarvationDamageTotal: Int
     public internal(set) var exitFrames: [AgentPopulationExitFrame]
+    public internal(set) var pendingTransitions: [AgentPendingMortalityTransition]
     public internal(set) var evictionCounts: AgentMortalityEvictionCounts
     public internal(set) var rollingDigest: String
     public let initializedEventID: AgentCausalEventID
@@ -296,6 +332,7 @@ public struct AgentMortalitySnapshot: Codable, Equatable {
     public let unrecoveredAtDeath: [AgentResourceAmount]
     public let terminalStarvationDamageTotal: Int
     public let exitFrames: [AgentPopulationExitFrame]
+    public let pendingTransitions: [AgentPendingMortalityTransition]
     public let evictionCounts: AgentMortalityEvictionCounts
     public let rollingDigest: String
     public let lastMortalityEventID: AgentCausalEventID?
@@ -308,6 +345,7 @@ public struct AgentMortalitySummary: Codable, Equatable, Sendable {
     public let totalDeathCount: Int
     public let retainedDeathCount: Int
     public let evictedDeathCount: Int
+    public let pendingDeathCount: Int
     public let latestDeathID: AgentDeathID?
     public let latestAgentID: AgentID?
     public let latestCause: AgentMortalityCause?

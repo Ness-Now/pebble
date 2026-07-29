@@ -323,6 +323,11 @@ public struct AgentSimulationSession {
         perceptions: [AgentPerceptionInput],
         physicalObservations: [AgentPhysicalSignalObservation]
     ) throws -> AgentSessionTickResult {
+        if let pending = mortalityState?.pendingTransitions.first {
+            throw AgentSessionError.mortality(
+                .pendingMaterialExit(pending.agentID.rawValue)
+            )
+        }
         try prevalidateCausalAppend(
             count: sortedIds.count * (physicalEnabled ? 30 : (socialEnabled ? 20 : 3)) + 1
                 + (mortalityState?.configuration.maximumDeathsPerTick ?? 0) * 7

@@ -386,7 +386,10 @@ extension AgentSimulationSession {
     }
 
     func isPhysiologicallyIncapacitated(_ agentID: AgentID) -> Bool {
-        homeostasisProfile(for: agentID)?.vitalStatus == .incapacitated
+        guard let vital = homeostasisProfile(for: agentID)?.vitalStatus else {
+            return false
+        }
+        return vital == .incapacitated || vital == .dead
     }
 
     private func homeostasisProposal(
@@ -754,6 +757,7 @@ extension AgentSimulationSession {
         agents: [AgentSessionAgentState],
         lifecycle: AgentLifecycleState?,
         autonomy: AgentAutonomousActivityState?,
+        pendingMortalityAgentIDs: Set<AgentID>,
         clock: AgentSimulationClock,
         causalLatestSequence: UInt64
     ) throws {
@@ -815,9 +819,17 @@ extension AgentSimulationSession {
                 )
             }
             let age = try member.age(at: clock.tick.rawValue)
-            guard profile.vitalStatus != .dead,
-                  profile.condition != .dead,
-                  agent.health > 0,
+            let isPendingMortality = pendingMortalityAgentIDs.contains(
+                profile.agentID
+            )
+            guard (isPendingMortality
+                    ? (profile.vitalStatus == .dead
+                        && profile.condition == .dead
+                        && agent.health == 0
+                        && !activeActivities.contains(profile.agentID))
+                    : (profile.vitalStatus != .dead
+                        && profile.condition != .dead
+                        && agent.health > 0)),
                   profile.ageTicks == age,
                   profile.lifeStage == member.currentStage,
                   (0...10_000).contains(profile.energyReserveBasisPoints),
