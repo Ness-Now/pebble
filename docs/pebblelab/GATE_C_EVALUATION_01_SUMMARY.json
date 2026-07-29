@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "contract": "V4-GATE-C-v1",
+  "title": "Durable Observable Local World",
+  "date": "2026-07-29",
+  "evaluatedProductBaseline": "3d70c67b69824133eb318391f8e7c385f8cabce8",
+  "verdict": "PASS",
+  "publicationStatus": "READY_FOR_SENIOR_REVIEW_AND_MANUAL_PUBLICATION",
+  "canonicalAcquisitionRequiresPublicationAndRemoteVerification": true,
+  "requiredPhases": [
+    "CIV-26",
+    "CIV-27",
+    "CIV-28"
+  ],
+  "independence": {
+    "phaseReportsTreatedAsEvidence": true,
+    "publishedCodeAndTestsAudited": true,
+    "combinedContractEvaluated": true,
+    "productSourceChanges": false
+  },
+  "invariants": {
+    "realPhysicalRights": true,
+    "realRestart": true,
+    "realReconciliation": true,
+    "zeroDuplication": true,
+    "causalContinuity": true,
+    "understandableObserverBeforeRestart": true,
+    "understandableObserverAfterRestart": true,
+    "readOnlyObservation": true,
+    "deterministicBoundedEvidence": true,
+    "simulationContinuedAfterRestart": true
+  },
+  "authority": {
+    "physicalWorldAndPersistence": "PebbleCore",
+    "liveObservationTransferReconciliationAndUI": "Pebble",
+    "civilizationRightsCausalityAndProjection": "PebbleAgents",
+    "civilizationAggregateRoot": "AgentSimulationSession",
+    "observerCanMutate": false,
+    "parallelWorld": false,
+    "parallelInventory": false,
+    "parallelCausalLedger": false
+  },
+  "focusedValidation": {
+    "materialRights": {
+      "passed": 21,
+      "failed": 0
+    },
+    "persistenceReconciliation": {
+      "passed": 18,
+      "failed": 0
+    },
+    "observerChronicle": {
+      "passed": 20,
+      "failed": 0
+    },
+    "checkpointReplay": {
+      "passed": 49,
+      "failed": 0
+    },
+    "totalPassed": 108,
+    "totalFailed": 0
+  },
+  "integratedCampaign": {
+    "result": "PASS",
+    "world": "PebbleLab-Disposable-GateC-46",
+    "seed": 46,
+    "worldBinding": "wms5y5vwa840a",
+    "simulationID": "live-46-14-68--18",
+    "processCount": 2,
+    "firstProcessTerminatedBeforeSecond": true,
+    "agentIDs": [
+      "agent_0",
+      "agent_1",
+      "agent_2"
+    ],
+    "asset": "asset:civ27:live-pickaxe",
+    "physicalItem": "iron_pickaxe",
+    "savedHolder": "container:9,69,-18",
+    "restoredPhysicalOutcome": "missing",
+    "custodian": "agent_1",
+    "recognizedOwner": "agent_0",
+    "claimants": [
+      "agent_0"
+    ],
+    "authorizedUsers": [
+      "agent_1"
+    ],
+    "before": {
+      "tick": 0,
+      "causalSequence": 10,
+      "activity": "none",
+      "reason": "refused:useRefused",
+      "reasonEvent": 10
+    },
+    "reconciliation": {
+      "outcome": "missing",
+      "event": 11,
+      "tick": 0,
+      "causalSequence": 13,
+      "interruptedActivityPolicy": "replan",
+      "assetAdministrativelyRecreated": false
+    },
+    "afterContinuation": {
+      "tick": 8,
+      "causalSequence": 83,
+      "activity": "observe_area",
+      "reason": "acting:goalAction",
+      "reasonEvent": 79
+    },
+    "observerMutationCount": 0,
+    "duplicationCount": 0,
+    "runtimeErrors": 0
+  },
+  "visualEvidence": {
+    "inspectedAtNativeResolution": true,
+    "pixelWidth": 3024,
+    "pixelHeight": 1898,
+    "before": {
+      "file": "gate-c-observer-before-restart.png",
+      "sha256": "52a33d934a8bc370c5032b170a76dd0ea236c36c51e8dfa1e18838d02cba60e9"
+    },
+    "after": {
+      "file": "gate-c-observer-after-restart.png",
+      "sha256": "179acebae4ab8369001acb661263bdd84d8afafa57a0442c8060264a832a6e0e"
+    }
+  },
+  "repositoryValidation": {
+    "checksPassed": 3343,
+    "checksFailed": 0,
+    "stepsPassed": 35,
+    "stepsTotal": 35,
+    "diffCheck": "PASS"
+  },
+  "cleanup": {
+    "firstProcessTerminated": true,
+    "secondProcessTerminated": true,
+    "checkpointRemoved": true,
+    "probesRemoved": true,
+    "disposableSessionHomeRemoved": true,
+    "residualProcesses": 0,
+    "result": "exact"
+  },
+  "scope": {
+    "provesGenerationalContinuity": false,
+    "provesRenewableSubsistence": false,
+    "startsCIV29": false,
+    "changesGateR": false,
+    "changesGateB": false,
+    "pushAttempted": false
+  }
+}

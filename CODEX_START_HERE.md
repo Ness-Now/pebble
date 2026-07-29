@@ -42,12 +42,15 @@ for the compact status. In particular:
 - Gate R and Gate B are acquired and published.
 - `CIV-00` through `CIV-28` are complete in their bounded contracts.
 - post-Gate-B safe-bootstrap hardening is published.
-- `V4-GATE-C-v1` is ready for an independent gate evaluation but is not
-  acquired.
-- `CIV-29` is not yet eligible.
+- `V4-GATE-C-v1` is acquired by an independently evaluated publication
+  candidate.
+- `CIV-29` is not started and is the next eligible phase.
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved
 as evidence of their own evaluations. They do not reopen Gate B.
+
+Until the Gate C candidate is manually pushed and remotely verified, use Git
+to distinguish the local review tree from the currently published branch.
 
 ## Read by mission type
 

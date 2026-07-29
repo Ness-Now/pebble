@@ -48,9 +48,12 @@ Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED under V4-GATE-B-v1
 CIV-00 through CIV-28: COMPLETE
 post-Gate-B safe-bootstrap hardening: PUBLISHED
-V4-GATE-C-v1: READY FOR INDEPENDENT EVALUATION; NOT ACQUIRED
-CIV-29: PLANNED; NOT ELIGIBLE
+V4-GATE-C-v1: ACQUIRED
+CIV-29: NOT STARTED; NEXT ELIGIBLE PHASE
 ```
+
+The Gate C status in this local tree is a publication candidate until senior
+review, manual push and remote verification complete.
 
 ## Operational
 
@@ -113,6 +116,12 @@ and two-process live evidence, exact cleanup and explicit V1 limits.
 [`CIV_28_PHASE_SUMMARY.md`](CIV_28_PHASE_SUMMARY.md) records the bounded
 read-only Observer projection, structured reasons, ledger-backed Chronicle,
 rendered two-process restart evidence, exact cleanup and explicit V1 limits.
+
+[`GATE_C_EVALUATION_01_SUMMARY.md`](GATE_C_EVALUATION_01_SUMMARY.md) and
+[`GATE_C_EVALUATION_01_SUMMARY.json`](GATE_C_EVALUATION_01_SUMMARY.json)
+record the independent combined evaluation of real material rights, a
+two-process restart, nontrivial physical reconciliation, zero duplication,
+causal continuity and read-only rendered observation.
 
 The `PHASE_4_*.md`, `PHASE_5_*.md` and
 `PHASE_A0_SHARED_AGENT_RUNTIME_AUDIT.md` documents record completed audits,

@@ -12,15 +12,15 @@ defined by [`PEBBLE_CIVILIZATION_VISION.md`](PEBBLE_CIVILIZATION_VISION.md).
 [`ROADMAP_MANIFEST.json`](ROADMAP_MANIFEST.json) is the machine-readable
 projection of this document and must agree with it exactly.
 
-Initial `CIV-28` implementation baseline, before closure documentation and
-the targeted pre-publication Observer correction:
+Published product baseline evaluated by the independent Gate C campaign:
 
 ```text
-57d7a57dec3956ba3d4bd30a837fa9417a29efb6
+3d70c67b69824133eb318391f8e7c385f8cabce8
 ```
 
-This anchors the initial implementation vertical. The containing correction
-commit is identified by Git rather than self-referenced by this roadmap.
+This anchors the product behavior evaluated for Gate C. The containing
+evidence/status commit is identified by Git rather than self-referenced by this
+roadmap.
 
 ## Canonical position
 
@@ -30,11 +30,14 @@ Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: none
-next authorized action: V4-GATE-C-v1 independent evaluation
+next authorized action: CIV-29
 CIV-28: COMPLETE
-V4-GATE-C-v1: READY FOR EVALUATION, NOT ACQUIRED
-CIV-29: PLANNED, NOT ELIGIBLE
+V4-GATE-C-v1: ACQUIRED
+CIV-29: NOT STARTED — NEXT ELIGIBLE PHASE
 ```
+
+The Gate C acquisition in this local tree is a publication candidate until
+senior review, manual push and remote verification complete.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:
@@ -173,16 +176,24 @@ surface or Gate C acquisition.
 
 Required phases: `CIV-26`, `CIV-27`, `CIV-28`.
 
-Status: **ready for independent evaluation, not acquired**.
+Status: **acquired**.
 
 The gate proves coherent rights/custody, real restart and reconciliation,
 material non-duplication, inspectable causal history and a local scenario that
 can be understood before and after restart.
 
-`CIV-29` remains ineligible until this gate is independently evaluated,
-acquired, manually published and remotely verified.
+Independent proof:
+[`GATE_C_EVALUATION_01_SUMMARY.md`](GATE_C_EVALUATION_01_SUMMARY.md) and
+[`GATE_C_EVALUATION_01_SUMMARY.json`](GATE_C_EVALUATION_01_SUMMARY.json).
+The evaluated product baseline passed 108 focused adversarial checks, the
+3343-check repository gate and a rendered two-process restart with real
+missing-asset reconciliation, zero duplication and read-only observation.
+
+`CIV-29` is the next eligible phase but remains not started.
 
 ## Wave 2 — Generational continuity
+
+Current entry status: `CIV-29` is **not started — next eligible phase**.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -437,7 +448,7 @@ keeps incarnation physical and produces verifiable long-duration history.
 | --- | --- | --- |
 | `V3-GATE-R-v1` | acquired | `CIV-19` |
 | `V4-GATE-B-v1` | acquired | `CIV-25`; bounded embodied autonomy contract |
-| `V4-GATE-C-v1` | planned | `CIV-26`–`CIV-28` |
+| `V4-GATE-C-v1` | acquired | `CIV-26`–`CIV-28` |
 | `V4-GATE-D-v1` | planned | `CIV-29`–`CIV-33`; renewable subsistence milestone |
 | `V4-GATE-E-v1` | planned | `CIV-34`–`CIV-37`; `CIV-38` optional |
 | `V4-GATE-F-v1` | planned | `CIV-39`; `CIV-40` optional |

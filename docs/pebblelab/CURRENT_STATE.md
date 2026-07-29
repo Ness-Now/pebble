@@ -8,53 +8,56 @@ SHA of the documentation commit that contains it.
 - Gate R — No Parallel Physical Engines: **ACQUIRED AND PUBLISHED**.
 - Gate B — Bounded Embodied Local Autonomy:
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-B-v1`.
+- Gate C — Durable Observable Local World:
+  **ACQUIRED** under contract `V4-GATE-C-v1`.
 - `CIV-00` through `CIV-28`: **COMPLETE** in their bounded contracts.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
-Initial `CIV-28` implementation baseline, before its closure documentation and
-targeted pre-publication Observer correction:
+Product baseline evaluated by the independent Gate C campaign:
 
 ```text
-57d7a57dec3956ba3d4bd30a837fa9417a29efb6
+3d70c67b69824133eb318391f8e7c385f8cabce8
 ```
 
-This baseline contains:
+This is the published product tree independently evaluated for the combined
+`CIV-26` through `CIV-28` contract. The Gate C evidence and this status update
+intentionally do not self-reference their containing commit. Always use Git to
+identify the exact reviewed or published HEAD.
 
-- the previously published safe-bootstrap hardening;
-- `fc09d67` — the versioned, bounded and read-only Observer projection,
-  structured reasons and ledger-backed Chronicle;
-- `57d7a57` — the rendered Observer UI and a real two-process restart
-  campaign.
-
-The targeted correction and this status update intentionally do not
-self-reference their containing commit. Always use Git to identify the exact
-reviewed or published HEAD.
+The acquisition recorded here is a local publication candidate until senior
+review, manual push and remote verification complete.
 
 ## Current program position
 
 ```text
 active CIV phase: none
-next authorized action: V4-GATE-C-v1 — independent gate evaluation
+next authorized action: CIV-29 — Homeostasis, Health, Aging and Mortality V2
 CIV-28 status: COMPLETE
-V4-GATE-C-v1 status: READY FOR EVALUATION, NOT ACQUIRED
-CIV-29 status: PLANNED, NOT ELIGIBLE
+V4-GATE-C-v1 status: ACQUIRED
+CIV-29 status: NOT STARTED — NEXT ELIGIBLE PHASE
 roadmap generation: V4
 ```
 
-Closing `CIV-28` does not evaluate or acquire `V4-GATE-C-v1` and does not
-start `CIV-29`.
+Acquiring Gate C makes `CIV-29` eligible; it does not start the phase.
 
 ## Last validation baseline
 
-For the complete local `CIV-28` review tree, including the targeted
-pre-publication Observer correction:
+For the independent Gate C evaluation of the published product baseline:
 
 ```text
+focused material rights: 21 passed, 0 failed
+focused persistence/reconciliation: 18 passed, 0 failed
 focused Observer and Chronicle: 20 passed, 0 failed
+focused checkpoint/replay: 49 passed, 0 failed
+focused Gate C matrix: 108 passed, 0 failed
 repository gate: 3343 passed, 0 failed
 repository verification steps: 35/35
-CIV-28 rendered two-process Observer campaign: PASS
+Gate C rendered two-process missing-asset reconciliation campaign: PASS
 representative before/after rendered-world captures: inspected
+Observer mutation count: 0
+duplication count: 0
+runtime errors: 0
+cleanup: exact
 ```
 
 ## Known important debt
@@ -82,8 +85,7 @@ representative before/after rendered-world captures: inspected
 
 ## Next authorized action
 
-After senior review, manual publication and remote verification of this phase,
-the next mission may independently evaluate `V4-GATE-C-v1` from the
-then-current canonical HEAD. That mission must review the combined bounded
-contracts of `CIV-26` through `CIV-28`; this closure does not pre-acquire the
-gate. `CIV-29` remains ineligible until Gate C is acquired and published.
+After senior review, manual publication and remote verification of this Gate C
+candidate, the next mission may start the bounded contract design and
+implementation of `CIV-29`. `CIV-29` remains **not started**; this gate
+evaluation implements no health, aging or mortality V2 behavior.

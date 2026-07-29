@@ -4,8 +4,8 @@
   "repository": "Ness-Now/pebble",
   "canonicalBranch": "lab/pebblelab-v1",
   "productBaseline": {
-    "initialCiv28ImplementationHead": "57d7a57dec3956ba3d4bd30a837fa9417a29efb6",
-    "meaning": "Initial CIV-28 implementation commit before closure documentation and the targeted pre-publication Observer correction; the exact reviewed or published tree is identified by Git.",
+    "gateCEvaluatedProductHead": "3d70c67b69824133eb318391f8e7c385f8cabce8",
+    "meaning": "Published product behavior independently evaluated for V4-GATE-C-v1; the containing evidence and status commit is intentionally identified by Git rather than self-referenced here.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -17,7 +17,9 @@
     "workflow": "docs/pebblelab/DEVELOPMENT_WORKFLOW.md",
     "codexMethod": "docs/pebblelab/METHOD_CODEX_AUTONOMIE_GUIDEE.md",
     "visualValidationPolicy": "docs/pebblelab/VISUAL_GAME_SMOKE_POLICY.md",
-    "documentationIndex": "docs/pebblelab/DOCUMENTATION_INDEX.md"
+    "documentationIndex": "docs/pebblelab/DOCUMENTATION_INDEX.md",
+    "gateCEvidenceMarkdown": "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.md",
+    "gateCEvidenceJSON": "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.json"
   },
   "authority": {
     "implementedState": "publishedCodeTestsAndGitHead",
@@ -30,21 +32,19 @@
   "currentState": {
     "activePhase": null,
     "completedThrough": "CIV-28",
-    "nextEligiblePhase": null,
-    "nextAuthorizedAction": "V4-GATE-C-v1",
+    "nextEligiblePhase": "CIV-29",
+    "nextAuthorizedAction": "CIV-29",
     "civ27Status": "completed",
     "civ28Status": "completed",
-    "gateCStatus": "readyForEvaluation",
-    "civ29Status": "plannedNotEligible",
+    "gateCStatus": "acquired",
+    "civ29Status": "notStartedNextEligible",
     "gateRAcquired": true,
     "gateBAcquired": true,
     "v4CanonicalDocumentSet": true
   },
   "validationBaseline": {
-    "scope": "Complete local CIV-28 review tree including the targeted pre-publication Observer correction; the containing commit is intentionally not self-referenced.",
-    "precedingProductHead": "57d7a57dec3956ba3d4bd30a837fa9417a29efb6",
-    "focusedSafePlacementPassed": 14,
-    "focusedSafePlacementFailed": 0,
+    "scope": "Independent V4-GATE-C-v1 evaluation of the published product baseline; the containing evidence and status commit is intentionally not self-referenced.",
+    "evaluatedProductHead": "3d70c67b69824133eb318391f8e7c385f8cabce8",
     "focusedMaterialRightsPassed": 21,
     "focusedMaterialRightsFailed": 0,
     "focusedPersistenceReconciliationPassed": 18,
@@ -53,14 +53,18 @@
     "focusedCheckpointReplayFailed": 0,
     "focusedObserverChroniclePassed": 20,
     "focusedObserverChronicleFailed": 0,
+    "focusedGateCTotalPassed": 108,
+    "focusedGateCTotalFailed": 0,
     "repositoryChecksPassed": 3343,
     "repositoryChecksFailed": 0,
     "repositoryStepsPassed": 35,
     "repositoryStepsTotal": 35,
-    "safeBootstrapNormalWorldCampaign": "passed",
-    "materialRightsTargetedLiveCampaign": "passed",
-    "durableWorldRestartLiveCampaign": "passed",
-    "observerChronicleRenderedRestartCampaign": "passed",
+    "gateCRenderedTwoProcessCampaign": "passed",
+    "gateCReconciliationOutcome": "missing",
+    "gateCDuplicationCount": 0,
+    "gateCObserverMutationCount": 0,
+    "gateCRuntimeErrors": 0,
+    "gateCCleanup": "exact",
     "representativeBeforeAfterRenderedWorldCapturesInspected": true
   },
   "publishedPostGateHardening": [
@@ -110,13 +114,19 @@
     "C": {
       "contractId": "V4-GATE-C-v1",
       "title": "Durable Observable Local World",
-      "status": "readyForEvaluation",
+      "status": "acquired",
       "requiredPhases": [
         "CIV-26",
         "CIV-27",
         "CIV-28"
       ],
-      "optionalPhases": []
+      "optionalPhases": [],
+      "evaluatedProductBaseline": "3d70c67b69824133eb318391f8e7c385f8cabce8",
+      "evidence": [
+        "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.md",
+        "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.json"
+      ],
+      "publicationCandidateRequiresRemoteVerification": true
     },
     "D": {
       "contractId": "V4-GATE-D-v1",
@@ -453,7 +463,7 @@
     {
       "id": "CIV-29",
       "title": "Homeostasis, Health, Aging and Mortality V2",
-      "status": "planned",
+      "status": "notStartedNextEligible",
       "wave": "wave-2-generational-continuity",
       "requiredForCanonicalProgression": true,
       "dependsOn": [
