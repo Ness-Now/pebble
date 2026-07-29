@@ -22,7 +22,7 @@ public struct AgentObserverConfiguration: Codable, Equatable, Sendable {
     public let maximumAssetsPerAgent: Int
     public let maximumChronicleEvents: Int
     public let maximumEventsPerAgent: Int
-    public let maximumCausalDepth: Int
+    public let maximumDirectCausesPerEvent: Int
     public let maximumPresentationTextLength: Int
 
     public init(
@@ -31,7 +31,7 @@ public struct AgentObserverConfiguration: Codable, Equatable, Sendable {
         maximumAssetsPerAgent: Int = 16,
         maximumChronicleEvents: Int = 96,
         maximumEventsPerAgent: Int = 24,
-        maximumCausalDepth: Int = 8,
+        maximumDirectCausesPerEvent: Int = 8,
         maximumPresentationTextLength: Int = 160
     ) throws {
         guard (1...512).contains(maximumAgents) else {
@@ -49,8 +49,12 @@ public struct AgentObserverConfiguration: Codable, Equatable, Sendable {
         guard (1...256).contains(maximumEventsPerAgent) else {
             throw AgentObserverError.invalidConfiguration("events per agent")
         }
-        guard (1...AgentCausalEvent.maximumCauseCount).contains(maximumCausalDepth) else {
-            throw AgentObserverError.invalidConfiguration("causal depth")
+        guard (1...AgentCausalEvent.maximumCauseCount).contains(
+            maximumDirectCausesPerEvent
+        ) else {
+            throw AgentObserverError.invalidConfiguration(
+                "direct causes per event"
+            )
         }
         guard (32...512).contains(maximumPresentationTextLength) else {
             throw AgentObserverError.invalidConfiguration("presentation text")
@@ -60,7 +64,7 @@ public struct AgentObserverConfiguration: Codable, Equatable, Sendable {
         self.maximumAssetsPerAgent = maximumAssetsPerAgent
         self.maximumChronicleEvents = maximumChronicleEvents
         self.maximumEventsPerAgent = maximumEventsPerAgent
-        self.maximumCausalDepth = maximumCausalDepth
+        self.maximumDirectCausesPerEvent = maximumDirectCausesPerEvent
         self.maximumPresentationTextLength = maximumPresentationTextLength
     }
 
@@ -116,12 +120,13 @@ public struct AgentObserverTruncation: Codable, Equatable, Sendable {
     public let assetsOmitted: Int
     public let chronicleEventsOmitted: UInt64
     public let perAgentEventsOmitted: Int
+    public let directCausesOmitted: Int
     public let textWasTruncated: Bool
 
     public var isTruncated: Bool {
         agentsOmitted > 0 || relationsOmitted > 0 || assetsOmitted > 0
             || chronicleEventsOmitted > 0 || perAgentEventsOmitted > 0
-            || textWasTruncated
+            || directCausesOmitted > 0 || textWasTruncated
     }
 }
 
@@ -247,6 +252,7 @@ public struct AgentObserverChronicleEvent: Codable, Equatable, Sendable {
     public let operationID: String?
     public let assetIDs: [AgentMaterialAssetID]
     public let causes: [AgentCausalEventID]
+    public let directCausesOmitted: Int
     public let missingCauseCount: Int
     public let result: String
     public let detail: String
@@ -382,6 +388,7 @@ extension AgentSimulationSession {
                 event,
                 transition: materialTransitionByEventID[event.eventID],
                 retainedEventIDs: retainedEventIDs,
+                maximumDirectCauses: configuration.maximumDirectCausesPerEvent,
                 textLimit: textLimit
             )
         }
@@ -504,6 +511,9 @@ extension AgentSimulationSession {
             assetsOmitted: assetsOmitted,
             chronicleEventsOmitted: chronicleOmitted,
             perAgentEventsOmitted: perAgentEventsOmitted,
+            directCausesOmitted: chronicle.reduce(0) {
+                $0 + $1.directCausesOmitted
+            },
             textWasTruncated: textWasTruncated
         )
         return AgentObserverSnapshot(
@@ -522,11 +532,19 @@ extension AgentSimulationSession {
     }
 }
 
+private struct AgentObserverReasonCandidate {
+    let reason: AgentObserverStructuredReason
+    let tick: Int
+    let causalSequence: UInt64
+    let tieBreakPriority: Int
+}
+
 private extension AgentSimulationSession {
     func observerChronicleEvent(
         _ event: AgentCausalEvent,
         transition: AgentMaterialRightsTransition?,
         retainedEventIDs: Set<AgentCausalEventID>,
+        maximumDirectCauses: Int,
         textLimit: Int
     ) -> AgentObserverChronicleEvent {
         let assetIDs = transition.map { [$0.assetID] } ?? []
@@ -542,6 +560,7 @@ private extension AgentSimulationSession {
             result = "recorded"
             detail = event.payload.canonicalText
         }
+        let visibleCauses = Array(event.causes.prefix(maximumDirectCauses))
         return AgentObserverChronicleEvent(
             eventID: event.eventID,
             sequence: event.sequence.rawValue,
@@ -552,7 +571,10 @@ private extension AgentSimulationSession {
             subjectID: event.subjectID,
             operationID: event.operationID?.rawValue,
             assetIDs: assetIDs,
-            causes: Array(event.causes.prefix(AgentCausalEvent.maximumCauseCount)),
+            causes: visibleCauses,
+            directCausesOmitted: max(
+                0, event.causes.count - visibleCauses.count
+            ),
             missingCauseCount: event.causes.filter {
                 !retainedEventIDs.contains($0)
             }.count,
@@ -571,88 +593,153 @@ private extension AgentSimulationSession {
         ledgerEvents: [AgentCausalEvent],
         textLimit: Int
     ) -> AgentObserverStructuredReason {
-        let relevantTransitions = rights.recentTransitions.reversed().compactMap {
+        let activeActivity = activities.activeActivities.first(where: {
+            $0.candidate.actorID == agentID
+        })
+        var candidates: [AgentObserverReasonCandidate] = []
+
+        let latestUseAttempt = rights.recentTransitions.compactMap {
             transition -> (AgentMaterialRightsTransition, AgentCausalEvent)? in
-            guard let eventID = transition.eventID,
-                  let event = ledgerEvents.last(where: { $0.eventID == eventID }),
-                  event.actorID == agentID else { return nil }
+            guard transition.kind == .useAttempt,
+                  let eventID = transition.eventID,
+                  let event = ledgerEvents.last(where: {
+                      $0.eventID == eventID
+                  }),
+                  event.actorID == agentID else {
+                return nil
+            }
             return (transition, event)
+        }.max {
+            $0.1.sequence < $1.1.sequence
         }
-        if let (transition, event) = relevantTransitions.first,
-           transition.kind == .useAttempt,
+        if let (transition, event) = latestUseAttempt,
            transition.reason.hasPrefix("denied:") {
-            return observerStructuredReason(
-                code: .useRefused, category: .refused, subject: agentID,
-                target: transition.assetID.rawValue, event: event,
-                presentation: "Use refused: \(transition.reason.dropFirst(7))",
-                data: [
-                    ("asset", transition.assetID.rawValue),
-                    ("decision", transition.reason),
-                ], textLimit: textLimit
-            )
+            let isRelevantToCurrentActivity = activeActivity.map {
+                AgentMaterialAssetID(
+                    rawValue: $0.candidate.stableReference
+                ) == transition.assetID
+            } ?? true
+            if isRelevantToCurrentActivity {
+                candidates.append(AgentObserverReasonCandidate(
+                    reason: observerStructuredReason(
+                        code: .useRefused, category: .refused,
+                        subject: agentID, target: transition.assetID.rawValue,
+                        event: event,
+                        presentation: "Use refused: "
+                            + String(transition.reason.dropFirst(7)),
+                        data: [
+                            ("asset", transition.assetID.rawValue),
+                            ("decision", transition.reason),
+                        ],
+                        textLimit: textLimit
+                    ),
+                    tick: event.simulationTick.rawValue,
+                    causalSequence: event.sequence.rawValue,
+                    tieBreakPriority: 50
+                ))
+            }
         }
-        if let resolution = reconciliation.recentRuns.last?.activityResults.last(where: {
-            resolution in
-            resolution.actorID == agentID
-                && activities.activeActivities.contains {
-                    $0.activityID == resolution.activityID
-                }
-        }) {
+
+        if let activity = activeActivity,
+           let resolution = reconciliation.recentRuns.last?.activityResults.last(
+               where: {
+                   $0.actorID == agentID
+                       && $0.activityID == activity.activityID
+               }
+           ) {
             let event = resolution.eventID.flatMap { id in
                 ledgerEvents.last { $0.eventID == id }
             }
             let keepsActive = resolution.policy.keepsActivityActive
-            return observerStructuredReason(
-                code: keepsActive ? .persistenceReconciled : .interruptedAfterRestart,
-                category: keepsActive ? .interruptedReconciled : .replanning,
-                subject: agentID, target: resolution.activityID, event: event,
-                presentation: resolution.reason,
-                data: [
-                    ("policy", resolution.policy.rawValue),
-                    ("activity", resolution.activityID),
-                ], textLimit: textLimit
-            )
+            candidates.append(AgentObserverReasonCandidate(
+                reason: observerStructuredReason(
+                    code: keepsActive
+                        ? .persistenceReconciled : .interruptedAfterRestart,
+                    category: keepsActive
+                        ? .interruptedReconciled : .replanning,
+                    subject: agentID, target: resolution.activityID,
+                    event: event, presentation: resolution.reason,
+                    data: [
+                        ("policy", resolution.policy.rawValue),
+                        ("activity", resolution.activityID),
+                    ],
+                    textLimit: textLimit
+                ),
+                tick: event?.simulationTick.rawValue ?? activity.updatedAtTick,
+                causalSequence: event?.sequence.rawValue ?? 0,
+                tieBreakPriority: 60
+            ))
         }
-        if let activity = activities.activeActivities.first(where: {
-            $0.candidate.actorID == agentID
-        }) {
-            let permittedAsset = rights.records.first { record in
-                record.recognizedOwnership?.ownerID == agentID
-                    || record.permissions.contains {
-                        $0.userID == agentID
-                            && $0.allowedUses.map(\.rawValue)
-                                .contains(activity.candidate.actionKey)
+
+        if let activity = activeActivity {
+            let materialUse = AgentMaterialUseKind(
+                rawValue: activity.candidate.actionKey
+            )
+            let referencedAssetID = AgentMaterialAssetID(
+                rawValue: activity.candidate.stableReference
+            )
+            let referencedRecord = referencedAssetID.flatMap { assetID in
+                rights.records.first { $0.asset.assetID == assetID }
+            }
+            let ownerAuthorizes = materialUse != nil
+                && referencedRecord?.recognizedOwnership?.ownerID == agentID
+            let permissionAuthorizes = materialUse.map { use in
+                referencedRecord?.permissions.contains {
+                    $0.userID == agentID && $0.permits(use, at: tick)
+                } == true
+            } ?? false
+            let authorizationIsExact = ownerAuthorizes || permissionAuthorizes
+            let authorizationKinds: Set<AgentMaterialRightsTransitionKind> =
+                Set(
+                    (ownerAuthorizes ? [.ownershipRecognized] : [])
+                        + (permissionAuthorizes ? [.useGranted] : [])
+                )
+            let authorizationEvent = referencedAssetID.flatMap { assetID in
+                rights.recentTransitions.compactMap {
+                    transition -> AgentCausalEvent? in
+                    guard transition.assetID == assetID,
+                          authorizationKinds.contains(transition.kind),
+                          let eventID = transition.eventID else {
+                        return nil
                     }
-                    || record.permissions.contains { $0.userID == agentID }
+                    return ledgerEvents.last { $0.eventID == eventID }
+                }.max { $0.sequence < $1.sequence }
             }
-            let permissionEvent = permittedAsset.flatMap { asset in
-                rights.recentTransitions.reversed().first {
-                    $0.assetID == asset.asset.assetID
-                        && ($0.kind == .useGranted
-                            || $0.kind == .ownershipRecognized)
-                }?.eventID
-            }.flatMap { id in
-                ledgerEvents.last { $0.eventID == id }
-            }
-            return observerStructuredReason(
-                code: permissionEvent == nil ? .activeActivity : .authorizedActivity,
-                category: .acting, subject: agentID,
-                target: permittedAsset?.asset.assetID.rawValue
-                    ?? activity.candidate.stableReference,
-                event: permissionEvent,
-                presentation: "Executing \(activity.candidate.actionKey) for "
-                    + "\(activity.candidate.source.rawValue)",
-                data: [
-                    ("activity", activity.activityID),
-                    ("lifecycle", activity.lifecycle.rawValue),
-                    ("source", activity.candidate.source.rawValue),
-                ], textLimit: textLimit
-            )
+            candidates.append(AgentObserverReasonCandidate(
+                reason: observerStructuredReason(
+                    code: authorizationIsExact
+                        ? .authorizedActivity : .activeActivity,
+                    category: .acting, subject: agentID,
+                    target: authorizationIsExact
+                        ? referencedAssetID?.rawValue
+                        : activity.candidate.stableReference,
+                    event: authorizationEvent,
+                    presentation: "Executing "
+                        + "\(activity.candidate.actionKey) for "
+                        + "\(activity.candidate.source.rawValue)",
+                    data: [
+                        ("activity", activity.activityID),
+                        ("lifecycle", activity.lifecycle.rawValue),
+                        ("source", activity.candidate.source.rawValue),
+                    ],
+                    textLimit: textLimit
+                ),
+                tick: activity.updatedAtTick,
+                causalSequence: 0,
+                tieBreakPriority: 40
+            ))
         }
-        if let record = activities.recentRecords.reversed().first(where: {
-            $0.activity.candidate.actorID == agentID
-                && $0.outcome.completedAtTick >= (agent.lastAction?.tick ?? 0)
-        }) {
+
+        if activeActivity == nil,
+           let record = activities.recentRecords.filter({
+               $0.activity.candidate.actorID == agentID
+           }).max(by: {
+               if $0.outcome.completedAtTick != $1.outcome.completedAtTick {
+                   return $0.outcome.completedAtTick
+                       < $1.outcome.completedAtTick
+               }
+               return $0.activity.activityID < $1.activity.activityID
+           }) {
             let category: AgentObserverReasonCategory
             let code: AgentObserverReasonCode
             switch record.outcome.lifecycle {
@@ -675,39 +762,79 @@ private extension AgentSimulationSession {
             let event = record.outcome.sourceEventID.flatMap { id in
                 ledgerEvents.last { $0.eventID == id }
             }
-            return observerStructuredReason(
-                code: code, category: category, subject: agentID,
-                target: record.activity.candidate.stableReference, event: event,
-                presentation: record.outcome.reason,
-                data: [
-                    ("activity", record.activity.activityID),
-                    ("lifecycle", record.outcome.lifecycle.rawValue),
-                ], textLimit: textLimit
-            )
+            candidates.append(AgentObserverReasonCandidate(
+                reason: observerStructuredReason(
+                    code: code, category: category, subject: agentID,
+                    target: record.activity.candidate.stableReference,
+                    event: event, presentation: record.outcome.reason,
+                    data: [
+                        ("activity", record.activity.activityID),
+                        ("lifecycle", record.outcome.lifecycle.rawValue),
+                    ],
+                    textLimit: textLimit
+                ),
+                tick: record.outcome.completedAtTick,
+                causalSequence: event?.sequence.rawValue ?? 0,
+                tieBreakPriority: 30
+            ))
         }
-        if let action = agent.lastAction {
+
+        if activeActivity == nil, let action = agent.lastAction {
             let event = ledgerEvents.reversed().first {
-                $0.actorID == agentID && $0.kind == .actionSelected
+                guard $0.actorID == agentID,
+                      $0.kind == .actionSelected,
+                      $0.simulationTick.rawValue == action.tick,
+                      case let .cognitive(_, recordedAction, _) = $0.payload
+                else {
+                    return false
+                }
+                return recordedAction == action.name
             }
             let waiting = action.name == "wait" || action.name == "rest"
-            return observerStructuredReason(
-                code: waiting ? .waitingForCondition : .goalAction,
-                category: waiting ? .waiting : .acting, subject: agentID,
-                target: action.target.map {
-                    "\($0.x),\($0.y),\($0.z)"
-                }, event: event, presentation: action.reason,
-                data: [
-                    ("action", action.name),
-                    ("goal", agent.currentGoal.kind.rawValue),
-                ], textLimit: textLimit
-            )
+            candidates.append(AgentObserverReasonCandidate(
+                reason: observerStructuredReason(
+                    code: waiting ? .waitingForCondition : .goalAction,
+                    category: waiting ? .waiting : .acting,
+                    subject: agentID,
+                    target: action.target.map {
+                        "\($0.x),\($0.y),\($0.z)"
+                    },
+                    event: event, presentation: action.reason,
+                    data: [
+                        ("action", action.name),
+                        ("goal", agent.currentGoal.kind.rawValue),
+                    ],
+                    textLimit: textLimit
+                ),
+                tick: action.tick,
+                causalSequence: event?.sequence.rawValue ?? 0,
+                tieBreakPriority: 20
+            ))
+        }
+
+        if let current = candidates.max(by: observerReasonCandidateLessThan) {
+            return current.reason
         }
         return observerStructuredReason(
-            code: .noCurrentAction, category: .waiting, subject: agentID,
-            target: nil, event: nil, presentation: agent.currentGoal.reason,
+            code: .noCurrentAction, category: .waiting,
+            subject: agentID, target: nil, event: nil,
+            presentation: agent.currentGoal.reason,
             data: [("goal", agent.currentGoal.kind.rawValue)],
             textLimit: textLimit
         )
+    }
+
+    func observerReasonCandidateLessThan(
+        _ lhs: AgentObserverReasonCandidate,
+        _ rhs: AgentObserverReasonCandidate
+    ) -> Bool {
+        if lhs.tick != rhs.tick {
+            return lhs.tick < rhs.tick
+        }
+        if lhs.causalSequence != rhs.causalSequence {
+            return lhs.causalSequence < rhs.causalSequence
+        }
+        return lhs.tieBreakPriority < rhs.tieBreakPriority
     }
 
     func observerActivity(

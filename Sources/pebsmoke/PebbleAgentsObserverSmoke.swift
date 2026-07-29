@@ -13,6 +13,14 @@ private let observerAssetID = AgentMaterialAssetID(
     rawValue: "asset:civ28:shared-pickaxe"
 )!
 
+private let observerOtherAssetID = AgentMaterialAssetID(
+    rawValue: "asset:civ28:unrelated-tool"
+)!
+
+private let observerPermissionID = AgentMaterialPermissionID(
+    rawValue: "permission:civ28:borrower"
+)!
+
 private func observerAgent(_ ordinal: Int) -> AgentSessionAgentState {
     let position = AgentPosition(x: ordinal, y: 64, z: 0)
     let nearby = (0..<3).filter { $0 != ordinal }.map {
@@ -123,9 +131,7 @@ private func observerSession() -> AgentSimulationSession {
     _ = try! session.applyMaterialRightsOperation(.grantUse(
         operationID: "civ28-permission",
         assetID: observerAssetID,
-        permissionID: AgentMaterialPermissionID(
-            rawValue: "permission:civ28:borrower"
-        )!,
+        permissionID: observerPermissionID,
         grantorID: AgentID(rawValue: "agent_0")!,
         userID: AgentID(rawValue: "agent_1")!,
         allowedUses: [.toolUse],
@@ -211,11 +217,69 @@ func runPebbleAgentsObserverSmoke() {
             && (try! session.durableStateDigest()) == digestBefore)
 
     let acting = first.individual(AgentID(rawValue: "agent_1")!)!
-    check("authorized action exposes activity and structured causal reason",
+    check("exact permission on asset B authorizes activity on asset B",
           acting.activity.action == "toolUse"
             && acting.activity.reason.category == .acting
             && acting.activity.reason.code == .authorizedActivity
+            && acting.activity.reason.targetOrDependency
+                == observerAssetID.rawValue
             && acting.activity.reason.causalEventID != nil)
+
+    var mismatchedPermission = observerSession()
+    _ = try! mismatchedPermission.applyMaterialRightsOperation(.revokeUse(
+        operationID: "civ28-revoke-exact-permission",
+        assetID: observerAssetID,
+        permissionID: observerPermissionID,
+        actorID: AgentID(rawValue: "agent_0")!
+    ))
+    let unrelatedObservation = observerHolder(
+        receipt: "civ28-unrelated-register"
+    )
+    _ = try! mismatchedPermission.applyMaterialRightsOperation(.register(
+        operationID: "civ28-register-unrelated",
+        asset: AgentMaterialAssetReference(
+            assetID: observerOtherAssetID,
+            materialIdentity: unrelatedObservation.materialIdentity,
+            quantity: 1
+        ),
+        observation: unrelatedObservation
+    ))
+    let unrelatedClaimID = AgentMaterialClaimID(
+        rawValue: "claim:civ28:unrelated"
+    )!
+    _ = try! mismatchedPermission.applyMaterialRightsOperation(.assertClaim(
+        operationID: "civ28-claim-unrelated",
+        assetID: observerOtherAssetID,
+        claimID: unrelatedClaimID,
+        claimantID: AgentID(rawValue: "agent_1")!,
+        basis: .found
+    ))
+    _ = try! mismatchedPermission.applyMaterialRightsOperation(
+        .recognizeOwnership(
+            operationID: "civ28-recognize-unrelated",
+            assetID: observerOtherAssetID,
+            claimID: unrelatedClaimID,
+            recognizingAgentIDs: [AgentID(rawValue: "agent_1")!]
+        )
+    )
+    _ = try! mismatchedPermission.applyMaterialRightsOperation(.grantUse(
+        operationID: "civ28-permission-unrelated",
+        assetID: observerOtherAssetID,
+        permissionID: AgentMaterialPermissionID(
+            rawValue: "permission:civ28:unrelated"
+        )!,
+        grantorID: AgentID(rawValue: "agent_1")!,
+        userID: AgentID(rawValue: "agent_1")!,
+        allowedUses: [.toolUse],
+        expiresAtTick: nil
+    ))
+    let mismatchedReason = mismatchedPermission.observerSnapshot(
+        worldBinding: observerWorld
+    ).individual(AgentID(rawValue: "agent_1")!)!.activity.reason
+    check("permission on asset A cannot authorize activity on asset B",
+          mismatchedReason.code == .activeActivity
+            && mismatchedReason.targetOrDependency == observerAssetID.rawValue)
+
     let alignedAsset = acting.materialAssets.first!
     check("physical holder, social custody, owner, claim, and permission stay distinct",
           alignedAsset.physicalHolder == "agent:agent_1"
@@ -242,6 +306,27 @@ func runPebbleAgentsObserverSmoke() {
             && refusalEvent?.assetIDs == [observerAssetID]
             && refusalEvent?.result == "notAttempted"
             && refusalEvent?.detail == "denied:requesterNotPhysicalHolder")
+
+    var actedAfterRefusal = observerSession()
+    let oldRefusalEventID = actedAfterRefusal.observerSnapshot(
+        worldBinding: observerWorld
+    ).individual(AgentID(rawValue: "agent_2")!)!.activity.reason.causalEventID
+    _ = try! actedAfterRefusal.advanceTick()
+    let actedAgent = actedAfterRefusal.snapshot().agents.first {
+        $0.id == "agent_2"
+    }!
+    let currentAfterRefusal = actedAfterRefusal.observerSnapshot(
+        worldBinding: observerWorld
+    ).individual(AgentID(rawValue: "agent_2")!)!
+    check("a newer action replaces an older refused-use reason",
+          currentAfterRefusal.activity.action == actedAgent.lastAction?.name
+            && currentAfterRefusal.activity.reason.presentation
+                == actedAgent.lastAction?.reason
+            && currentAfterRefusal.activity.reason.code != .useRefused
+            && (currentAfterRefusal.activity.reason.causalEventID?.sequence
+                .rawValue ?? 0)
+                > (oldRefusalEventID?.sequence.rawValue ?? 0))
+
     check("Chronicle order is stable and strictly newest-first",
           zip(first.globalChronicle, first.globalChronicle.dropFirst())
             .allSatisfy { $0.sequence > $1.sequence })
@@ -266,7 +351,7 @@ func runPebbleAgentsObserverSmoke() {
         maximumAssetsPerAgent: 1,
         maximumChronicleEvents: 3,
         maximumEventsPerAgent: 1,
-        maximumCausalDepth: 1,
+        maximumDirectCausesPerEvent: 1,
         maximumPresentationTextLength: 48
     )
     let bounded = session.observerSnapshot(
@@ -283,12 +368,55 @@ func runPebbleAgentsObserverSmoke() {
                     && $0.materialAssets.count <= 1
                     && $0.recentEventIDs.count <= 1
             })
+
+    var causalFixture = observerSession()
+    _ = try! causalFixture.formHousehold(
+        memberIDs: [
+            AgentID(rawValue: "agent_1")!,
+            AgentID(rawValue: "agent_2")!,
+        ],
+        residenceAnchor: AgentPosition(x: 2, y: 64, z: 0)
+    )
+    let multiParentSource = causalFixture.causalLedgerSnapshot().events.first {
+        $0.causes.count > 1
+    }
+    let causalBound = try! AgentObserverConfiguration(
+        maximumChronicleEvents: 1024,
+        maximumDirectCausesPerEvent: 1
+    )
+    let causallyBounded = causalFixture.observerSnapshot(
+        worldBinding: observerWorld, configuration: causalBound
+    )
+    let boundedMultiParent = multiParentSource.flatMap { source in
+        causallyBounded.globalChronicle.first {
+            $0.eventID == source.eventID
+        }
+    }
+    check("direct causal references obey their bound with explicit truncation",
+          multiParentSource != nil
+            && boundedMultiParent?.causes.count == 1
+            && boundedMultiParent?.directCausesOmitted
+                == (multiParentSource?.causes.count ?? 1) - 1
+            && causallyBounded.truncation.directCausesOmitted > 0
+            && causallyBounded.truncation.isTruncated)
+
     check("invalid Observer bounds are rejected", {
         do {
             _ = try AgentObserverConfiguration(maximumChronicleEvents: 0)
             return false
         } catch AgentObserverError.invalidConfiguration("chronicle events") {
-            return true
+            do {
+                _ = try AgentObserverConfiguration(
+                    maximumDirectCausesPerEvent: 0
+                )
+                return false
+            } catch AgentObserverError.invalidConfiguration(
+                "direct causes per event"
+            ) {
+                return true
+            } catch {
+                return false
+            }
         } catch {
             return false
         }

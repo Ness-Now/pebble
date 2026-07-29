@@ -221,6 +221,12 @@ extension PebbleAgentController {
                 "[TRUNCATED] \(event.missingCauseCount) causal parent(s) unavailable"
             )
         }
+        if event.directCausesOmitted > 0 {
+            lines.append(
+                "[TRUNCATED] \(event.directCausesOmitted)"
+                    + " direct causal parent reference(s) omitted by Observer bound"
+            )
+        }
         lines += [
             "",
             "/lab observer individual — return to selected individual",

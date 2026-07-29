@@ -277,7 +277,7 @@ extension PebbleAgentController {
                 maximumAssetsPerAgent: 1,
                 maximumChronicleEvents: 1,
                 maximumEventsPerAgent: 1,
-                maximumCausalDepth: 1,
+                maximumDirectCausesPerEvent: 1,
                 maximumPresentationTextLength: 64
             )
             let digestBefore = try? current.durableStateDigest()

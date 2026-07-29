@@ -11,7 +11,8 @@ SHA of the documentation commit that contains it.
 - `CIV-00` through `CIV-28`: **COMPLETE** in their bounded contracts.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
-Product implementation baseline reconciled by the `CIV-28` closure:
+Initial `CIV-28` implementation baseline, before its closure documentation and
+targeted pre-publication Observer correction:
 
 ```text
 57d7a57dec3956ba3d4bd30a837fa9417a29efb6
@@ -25,9 +26,9 @@ This baseline contains:
 - `57d7a57` — the rendered Observer UI and a real two-process restart
   campaign.
 
-The SHA above identifies the product commit preceding this status update. It
-does not claim to be the SHA of the documentation commit that contains this
-file. Always fetch Git to determine the published HEAD.
+The targeted correction and this status update intentionally do not
+self-reference their containing commit. Always use Git to identify the exact
+reviewed or published HEAD.
 
 ## Current program position
 
@@ -45,11 +46,12 @@ start `CIV-29`.
 
 ## Last validation baseline
 
-At the reconciled `CIV-28` product baseline:
+For the complete local `CIV-28` review tree, including the targeted
+pre-publication Observer correction:
 
 ```text
-focused Observer and Chronicle: 17 passed, 0 failed
-repository gate: 3340 passed, 0 failed
+focused Observer and Chronicle: 20 passed, 0 failed
+repository gate: 3343 passed, 0 failed
 repository verification steps: 35/35
 CIV-28 rendered two-process Observer campaign: PASS
 representative before/after rendered-world captures: inspected

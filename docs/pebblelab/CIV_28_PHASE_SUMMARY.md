@@ -2,8 +2,10 @@
 
 ## Verdict and baseline
 
-`CIV-28` is complete in its bounded contract at product commit
-`57d7a57dec3956ba3d4bd30a837fa9417a29efb6`.
+`CIV-28` is complete in its bounded contract. The initial product vertical
+ended at `57d7a57dec3956ba3d4bd30a837fa9417a29efb6`; this report also covers
+the targeted pre-publication Observer correction in the commit containing the
+report, without trying to self-reference that commit's SHA.
 
 Gate R and Gate B remain acquired. `V4-GATE-C-v1` is ready for a separate
 independent evaluation but is not acquired. `CIV-29` is not eligible.
@@ -43,14 +45,14 @@ swift build -c debug --product pebsmoke
 PASS
 
 PEBBLELAB_SMOKE_ONLY=observer .build/debug/pebsmoke
-17 passed, 0 failed
+20 passed, 0 failed
 
 scripts/verify-pebblelab.sh
-3340 passed, 0 failed
+3343 passed, 0 failed
 35/35 verification steps
 ```
 
-The prior repository baseline was 3323 checks. `CIV-28` adds 17 checks and
+The prior repository baseline was 3323 checks. `CIV-28` adds 20 checks and
 removes none.
 
 ## Rendered restart and visual evidence
@@ -58,7 +60,7 @@ removes none.
 Command:
 
 ```text
-PEBBLELAB_CIV28_EVIDENCE_DIR=/tmp/PebbleLab-CIV28-final6 \
+PEBBLELAB_CIV28_EVIDENCE_DIR=<fresh-temporary-evidence-directory> \
   scripts/verify-pebblelab-civ28.sh
 ```
 
@@ -83,7 +85,7 @@ process 2: load the same SaveDB World and checkpoint
 Compact observed trace:
 
 ```text
-World ID: wms59k423dvfm
+World ID: wms5ou5v42il7
 simulation ID: live-46-14-68--18
 agents: agent_0, agent_1, agent_2 before and after
 asset: asset:civ27:live-pickaxe
@@ -110,18 +112,19 @@ reconciliation reason/event are visible.
 
 ```text
 before PNG SHA-256:
-bcc33c5a6dfc9355b97aef579d096c0734b38d03973fbb39ebf9e7fd2f112820
+f0a4ea78fe9ba09f38f2ac4654367577bdc4f10e2ab18eec15c323eb702f9d0a
 
 after PNG SHA-256:
-e99eb35d416c6cca9e934a1b40db4f1ce05eccb847900c14330049b37d7ef4b3
+17beb1fba3a379c3e9bdbb9ff0b07796f387b37c94c65fcd9db768b59de4cc84
 ```
 
 ## Honest V1 limits
 
 - Observer V1 is local to one active civilization session and its explicit
   World binding. It is not an omniscient multi-settlement observer.
-- Collections, text and causal depth are bounded. Truncation is explicit; V1
-  provides neither unlimited graph traversal nor full-text search/export.
+- Collections, text and direct causal references per event are bounded.
+  Truncation is explicit; V1 provides neither unlimited graph traversal nor
+  full-text search/export.
 - Physical position is a verified session projection supplied through Pebble,
   not a direct World read from PebbleAgents.
 - Chronicle exposes retained ledger history. Events already evicted under the

@@ -12,14 +12,15 @@ defined by [`PEBBLE_CIVILIZATION_VISION.md`](PEBBLE_CIVILIZATION_VISION.md).
 [`ROADMAP_MANIFEST.json`](ROADMAP_MANIFEST.json) is the machine-readable
 projection of this document and must agree with it exactly.
 
-Product implementation baseline reconciled by the `CIV-28` closure:
+Initial `CIV-28` implementation baseline, before closure documentation and
+the targeted pre-publication Observer correction:
 
 ```text
 57d7a57dec3956ba3d4bd30a837fa9417a29efb6
 ```
 
-This is the product commit preceding the closure documentation, not the
-self-referential SHA of this roadmap.
+This anchors the initial implementation vertical. The containing correction
+commit is identified by Git rather than self-referenced by this roadmap.
 
 ## Canonical position
 

@@ -4,8 +4,8 @@
   "repository": "Ness-Now/pebble",
   "canonicalBranch": "lab/pebblelab-v1",
   "productBaseline": {
-    "reconciledHead": "57d7a57dec3956ba3d4bd30a837fa9417a29efb6",
-    "meaning": "CIV-28 product implementation commit preceding its closure documentation; not the self-referential HEAD of this manifest.",
+    "initialCiv28ImplementationHead": "57d7a57dec3956ba3d4bd30a837fa9417a29efb6",
+    "meaning": "Initial CIV-28 implementation commit before closure documentation and the targeted pre-publication Observer correction; the exact reviewed or published tree is identified by Git.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -41,7 +41,8 @@
     "v4CanonicalDocumentSet": true
   },
   "validationBaseline": {
-    "productHead": "57d7a57dec3956ba3d4bd30a837fa9417a29efb6",
+    "scope": "Complete local CIV-28 review tree including the targeted pre-publication Observer correction; the containing commit is intentionally not self-referenced.",
+    "precedingProductHead": "57d7a57dec3956ba3d4bd30a837fa9417a29efb6",
     "focusedSafePlacementPassed": 14,
     "focusedSafePlacementFailed": 0,
     "focusedMaterialRightsPassed": 21,
@@ -50,9 +51,9 @@
     "focusedPersistenceReconciliationFailed": 0,
     "focusedCheckpointReplayPassed": 49,
     "focusedCheckpointReplayFailed": 0,
-    "focusedObserverChroniclePassed": 17,
+    "focusedObserverChroniclePassed": 20,
     "focusedObserverChronicleFailed": 0,
-    "repositoryChecksPassed": 3340,
+    "repositoryChecksPassed": 3343,
     "repositoryChecksFailed": 0,
     "repositoryStepsPassed": 35,
     "repositoryStepsTotal": 35,
