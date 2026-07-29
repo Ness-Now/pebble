@@ -147,6 +147,9 @@ final class PebbleAgentController {
     var homeostasisFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_HOMEOSTASIS"] == "1"
     }
+    var geneticsFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_GENETICS"] == "1"
+    }
     var lifecycleFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_LIFECYCLE"] == "1"
     }

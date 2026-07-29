@@ -131,6 +131,12 @@ extension PebbleAgentController {
                 + "caregiver=\(careAssignment?.caregiverID.rawValue ?? "none") "
                 + "careDigest=\(candidate.dependentCareSnapshot().digest) "
             : ""
+        let geneticsTrace = candidate.geneticsEnabled
+            ? "genetics=1 genotype="
+                + "\(candidate.genotype(for: record.newbornID)?.genotypeID.rawValue ?? "none") "
+                + "geneticParents="
+                + "\(candidate.genotype(for: record.newbornID)?.contributorIDs.map(\.rawValue).joined(separator: ",") ?? "none") "
+            : ""
         trace(
             "birth finalized tick=\(record.birthTick) birth=\(record.birthID.rawValue) "
                 + "plan=\(record.planID.rawValue) newborn=\(record.newbornID.rawValue) "
@@ -140,6 +146,7 @@ extension PebbleAgentController {
                 + kinshipTrace
                 + householdTrace
                 + careTrace
+                + geneticsTrace
                 + "population=\(candidate.populationSummary().memberCount) "
                 + "nextOrdinal=\(candidate.populationSummary().nextPopulationOrdinal ?? -1) "
                 + "probes=\(probesByAgentId.keys.sorted().joined(separator: ",")) "

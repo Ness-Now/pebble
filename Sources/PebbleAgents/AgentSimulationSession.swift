@@ -71,6 +71,7 @@ public struct AgentSimulationSession {
     public internal(set) var persistenceReconciliationState:
         AgentPersistenceReconciliationState?
     public internal(set) var homeostasisState: AgentHomeostasisState?
+    public internal(set) var geneticsState: AgentGeneticsState?
     var latestAutonomousTeachingReview: AgentAutonomousTeachingReviewSnapshot?
 
     public init(
@@ -159,6 +160,7 @@ public struct AgentSimulationSession {
         materialRightsState = nil
         persistenceReconciliationState = nil
         homeostasisState = nil
+        geneticsState = nil
         latestAutonomousTeachingReview = nil
         try recordCausalEvent(
             kind: .sessionLifecycle,
@@ -845,6 +847,7 @@ public struct AgentSimulationSession {
         }
 
         if !mortalityWasEnabled { clock.advance(to: nextSimulationTick) }
+        try applyGeneticsDevelopmentBoundary(at: nextTick)
         try reconcileTeachingBoundary(at: nextTick)
         for result in results {
             let agentID = AgentID(rawValue: result.agentId)!

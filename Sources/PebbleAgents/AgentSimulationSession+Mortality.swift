@@ -764,6 +764,11 @@ extension AgentSimulationSession {
             let terminalStage = lifecycleState?.members.first {
                 $0.agentID == item.agentID
             }?.currentStage
+            try stopGeneticDevelopmentAfterDeath(
+                item.agentID,
+                at: mortalityTick,
+                causeEventID: lethalEvent.eventID
+            )
             try endWorkCommitmentsForTerminalAgent(item.agentID)
             let careEventID = try applyDependentCareDeath(
                 agentID: item.agentID,

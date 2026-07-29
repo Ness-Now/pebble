@@ -23,6 +23,7 @@ public enum AgentCheckpointSchema {
     public static let materialRightsVersion = 19
     public static let persistenceReconciliationVersion = 20
     public static let homeostasisVersion = 21
+    public static let geneticsVersion = 22
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -35,7 +36,7 @@ public enum AgentCheckpointSchema {
             || version == livestockVersion || version == workCommitmentVersion
             || version == physicalFoodSurvivalVersion || version == autonomousActivityVersion
             || version == materialRightsVersion || version == persistenceReconciliationVersion
-            || version == homeostasisVersion
+            || version == homeostasisVersion || version == geneticsVersion
     }
 }
 
@@ -230,9 +231,12 @@ public struct AgentSessionDurableState: Codable {
     public let materialRightsState: AgentMaterialRightsState?
     public let persistenceReconciliationState: AgentPersistenceReconciliationState?
     public let homeostasisState: AgentHomeostasisState?
+    public let geneticsState: AgentGeneticsState?
 
     init(session: AgentSimulationSession) {
-        if session.homeostasisState != nil {
+        if session.geneticsState != nil {
+            schemaVersion = AgentCheckpointSchema.geneticsVersion
+        } else if session.homeostasisState != nil {
             schemaVersion = AgentCheckpointSchema.homeostasisVersion
         } else if session.persistenceReconciliationState != nil {
             schemaVersion = AgentCheckpointSchema.persistenceReconciliationVersion
@@ -368,6 +372,7 @@ public struct AgentSessionDurableState: Codable {
         materialRightsState = session.materialRightsState
         persistenceReconciliationState = session.persistenceReconciliationState
         homeostasisState = session.homeostasisState
+        geneticsState = session.geneticsState
     }
 }
 
@@ -806,6 +811,7 @@ extension AgentSimulationSession {
         materialRightsState = state.materialRightsState
         persistenceReconciliationState = state.persistenceReconciliationState
         homeostasisState = state.homeostasisState
+        geneticsState = state.geneticsState
         latestAutonomousTeachingReview = nil
         try validateEcologicalObservationStateIfEnabled()
         try validateAgricultureStateIfEnabled()
@@ -838,6 +844,7 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.materialRightsVersion
                 || state.schemaVersion == AgentCheckpointSchema.persistenceReconciliationVersion
                 || state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
+                || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                 || state.ecologicalObservationState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -850,6 +857,7 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.materialRightsVersion
                 || state.schemaVersion == AgentCheckpointSchema.persistenceReconciliationVersion
                 || state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
+                || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                 || state.agricultureState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -861,6 +869,7 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.materialRightsVersion
                 || state.schemaVersion == AgentCheckpointSchema.persistenceReconciliationVersion
                 || state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
+                || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                 || state.wildSubsistenceState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -871,6 +880,7 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.materialRightsVersion
                 || state.schemaVersion == AgentCheckpointSchema.persistenceReconciliationVersion
                 || state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
+                || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                 || state.livestockState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -880,6 +890,7 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.materialRightsVersion
                 || state.schemaVersion == AgentCheckpointSchema.persistenceReconciliationVersion
                 || state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
+                || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                 || state.workCommitmentState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -888,6 +899,7 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.materialRightsVersion
                 || state.schemaVersion == AgentCheckpointSchema.persistenceReconciliationVersion
                 || state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
+                || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                 || state.physicalFoodSurvivalState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -895,22 +907,30 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.materialRightsVersion
                 || state.schemaVersion == AgentCheckpointSchema.persistenceReconciliationVersion
                 || state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
+                || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                 || state.autonomousActivityState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.schemaVersion == AgentCheckpointSchema.materialRightsVersion
                 || state.schemaVersion == AgentCheckpointSchema.persistenceReconciliationVersion
                 || state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
+                || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                 || state.materialRightsState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.schemaVersion == AgentCheckpointSchema.persistenceReconciliationVersion
                 || state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
+                || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                 || state.persistenceReconciliationState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
+                || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                 || state.homeostasisState == nil else {
+            throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
+        }
+        guard state.schemaVersion == AgentCheckpointSchema.geneticsVersion
+                || state.geneticsState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard (state.schemaVersion == AgentCheckpointSchema.currentVersion
@@ -1013,6 +1033,12 @@ extension AgentSimulationSession {
                     && state.homeostasisState != nil
                     && state.populationRegistry != nil
                     && state.mortalityState != nil
+                    && state.lifecycleState != nil)
+                || (state.schemaVersion == AgentCheckpointSchema.geneticsVersion
+                    && state.geneticsState != nil
+                    && state.homeostasisState != nil
+                    && state.populationRegistry != nil
+                    && state.mortalityState != nil
                     && state.lifecycleState != nil) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -1054,7 +1080,8 @@ extension AgentSimulationSession {
                         || state.schemaVersion == AgentCheckpointSchema.materialRightsVersion
                         || state.schemaVersion
                             == AgentCheckpointSchema.persistenceReconciliationVersion
-                        || state.schemaVersion == AgentCheckpointSchema.homeostasisVersion)
+                        || state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
+                        || state.schemaVersion == AgentCheckpointSchema.geneticsVersion)
                     && (state.mortalityState?.totalDeathCount ?? 0) > 0) else {
             throw AgentCheckpointError.invalidAgent("empty")
         }
@@ -1176,6 +1203,16 @@ extension AgentSimulationSession {
                 pendingMortalityAgentIDs: Set(
                     state.mortalityState?.pendingTransitions.map(\.agentID) ?? []
                 ),
+                clock: state.clock,
+                causalLatestSequence: state.causalLedger.latestSequence
+            )
+        }
+        if let genetics = state.geneticsState {
+            try validateGeneticsState(
+                genetics,
+                agents: state.agents,
+                lifecycle: state.lifecycleState,
+                mortality: state.mortalityState,
                 clock: state.clock,
                 causalLatestSequence: state.causalLedger.latestSequence
             )

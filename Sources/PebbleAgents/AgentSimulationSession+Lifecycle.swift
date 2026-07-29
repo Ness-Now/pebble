@@ -486,6 +486,7 @@ extension AgentSimulationSession {
         try prevalidateCausalAppend(
             count: (kinshipEnabled ? 4 : 3) + householdEventCount
                 + (careBirth == nil ? 0 : 2)
+                + (geneticsEnabled ? 1 : 0)
         )
         let site = try requiredLifecycleEvent(
             kind: .birthSiteValidated,
@@ -498,11 +499,22 @@ extension AgentSimulationSession {
             ),
             summary: "birth site validated plan=\(plan.planID.rawValue) position=\(positionText(observation.position))"
         )
+        let geneticsPreview = try inheritedGenotypePreview(
+            childID: newbornID,
+            birthID: birthID,
+            contributorIDs: plan.progenitorIDs
+        )
+        let genotypeEventID = try geneticsPreview.map {
+            try publishInheritedGenotype(
+                preview: $0,
+                causeEventIDs: [site.eventID]
+            )
+        }
         let born = try requiredLifecycleEvent(
             kind: .populationMemberBorn,
             actorID: plan.progenitorIDs[0],
             subjectID: newbornID,
-            causes: [site.eventID],
+            causes: [site.eventID, genotypeEventID].compactMap { $0 }.sorted(),
             payload: birthPayload(
                 birthID: birthID, plan: plan, newbornID: newbornID,
                 ordinal: ordinal, observation: observation, status: "born"

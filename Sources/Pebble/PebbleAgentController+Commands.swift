@@ -169,6 +169,8 @@ extension PebbleAgentController {
             return handleHomeostasis(
                 Array(arguments.dropFirst()), world: world, player: player
             )
+        case "genetics":
+            return handleGenetics(Array(arguments.dropFirst()))
         case "exits":
             return handlePopulationExits(Array(arguments.dropFirst()))
         case "lifecycle":

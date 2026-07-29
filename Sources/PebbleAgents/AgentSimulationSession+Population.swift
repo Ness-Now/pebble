@@ -267,6 +267,12 @@ extension AgentSimulationSession {
                 causeEventID: candidate.kinshipState?.lastKinshipEventID
                     ?? member.registrationEventID
             )
+            try candidate.registerImportedGenotypeIfEnabled(
+                for: member.agentID,
+                causeEventID: candidate.lifecycleState?.members.first {
+                    $0.agentID == member.agentID
+                }?.lastLifecycleEventID ?? member.registrationEventID
+            )
         }
         try candidate.validateKinshipCrossDomainIfEnabled()
         try candidate.validateHouseholdCrossDomainIfEnabled()

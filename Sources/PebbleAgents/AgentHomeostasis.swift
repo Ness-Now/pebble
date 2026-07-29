@@ -26,6 +26,7 @@ public enum AgentPhysiologicalFactorCode: String, Codable, CaseIterable, Sendabl
     case ageVulnerability
     case nourishment
     case rest
+    case phenotypeExpression
 }
 
 public enum AgentPhysiologicalAgeBand: String, Codable, CaseIterable, Sendable {

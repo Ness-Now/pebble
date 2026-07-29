@@ -102,6 +102,46 @@ extension PebbleAgentController {
             "profession=\(individual.profession.primaryDomain ?? individual.profession.status)"
                 + " commitments=\(individual.profession.activeCommitmentCount)",
         ]
+        if let genetics = individual.genetics {
+            lines += [
+                "[GENOTYPE — IMMUTABLE INHERITED POTENTIAL]",
+                "id=\(genetics.genotypeID.rawValue)"
+                    + " origin=\(genetics.origin.rawValue)"
+                    + " model=v\(genetics.modelVersion)",
+                "contributors="
+                    + genetics.contributorIDs.map(\.rawValue)
+                        .joined(separator: ",")
+                    + " causal=\(genetics.creationEventID.rawValue)",
+            ]
+            lines += genetics.loci.map { locus in
+                let alleles = locus.contributions.map {
+                    "\($0.contributorID.rawValue):\($0.allele.rawValue)"
+                }.joined(separator: "+")
+                return "  \(locus.locus.rawValue)=\(alleles)"
+                    + " potential=\(locus.potentialBasisPoints)"
+            }
+            lines += [
+                "[DEVELOPMENT — LIFE-COURSE EXPRESSION]",
+                "age=\(genetics.development.ageTicks)"
+                    + " stage=\(genetics.development.lifeStage.rawValue)"
+                    + " active=\(genetics.development.active ? "yes" : "no")",
+                "maturity=\(genetics.development.expressionMaturityBasisPoints)"
+                    + " exposure=\(genetics.development.physiologicalExposureBasisPoints)"
+                    + " reserve=\(genetics.development.developmentalReserveBasisPoints)"
+                    + " trajectory=\(genetics.development.trajectory.rawValue)",
+                "[PHENOTYPE — CURRENT EXPRESSED PHYSIOLOGY]",
+            ]
+            lines += genetics.phenotype.map {
+                "  \($0.traitID.rawValue)"
+                    + " potential=\($0.geneticPotentialBasisPoints)"
+                    + " development=\($0.developmentalFactorBasisPoints)"
+                    + " expressed=\($0.expressedModifierBasisPoints)"
+                    + " bounds=\($0.lowerBoundBasisPoints)...\($0.upperBoundBasisPoints)"
+            }
+            lines.append(
+                "[SEPARATE SYSTEMS] health below; skill/status remain social"
+            )
+        }
         if let physiology = individual.physiology {
             let factorText = physiology.activeFactors.map {
                 "\($0.code.rawValue):\($0.severityBasisPoints)"

@@ -22,6 +22,7 @@ public enum AgentReplaySchema {
     public static let materialRightsVersion = 19
     public static let persistenceReconciliationVersion = 20
     public static let homeostasisVersion = 21
+    public static let geneticsVersion = 22
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -34,7 +35,7 @@ public enum AgentReplaySchema {
             || version == livestockVersion || version == workCommitmentVersion
             || version == physicalFoodSurvivalVersion || version == autonomousActivityVersion
             || version == materialRightsVersion || version == persistenceReconciliationVersion
-            || version == homeostasisVersion
+            || version == homeostasisVersion || version == geneticsVersion
     }
 }
 
@@ -136,6 +137,7 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case materialRightsFeature
     case materialRightsOperation
     case homeostasisFeature
+    case geneticsFeature
 }
 
 public enum AgentReplayOperation: Codable {
@@ -292,6 +294,9 @@ public enum AgentReplayOperation: Codable {
     case setHomeostasisEnabled(
         Bool, configuration: AgentHomeostasisConfiguration
     )
+    case setGeneticsEnabled(
+        Bool, configuration: AgentGeneticsConfiguration
+    )
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -385,6 +390,7 @@ public enum AgentReplayOperation: Codable {
         case .setMaterialRightsEnabled: return .materialRightsFeature
         case .applyMaterialRightsOperation: return .materialRightsOperation
         case .setHomeostasisEnabled: return .homeostasisFeature
+        case .setGeneticsEnabled: return .geneticsFeature
         }
     }
 
@@ -908,6 +914,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.homeostasisVersion
         }
+        if case let .setGeneticsEnabled(enabled, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.geneticsVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "genetics activation must be the first v22 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.geneticsVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -1120,6 +1136,9 @@ public enum AgentSessionReplayer {
             || (manifest.schemaVersion == AgentReplaySchema.homeostasisVersion
                 && checkpoint.schemaVersion
                     <= AgentCheckpointSchema.persistenceReconciliationVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.geneticsVersion
+                && checkpoint.schemaVersion
+                    <= AgentCheckpointSchema.homeostasisVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -1430,6 +1449,10 @@ extension AgentSimulationSession {
             _ = try candidate.applyMaterialRightsOperation(operation)
         case let .setHomeostasisEnabled(enabled, configuration):
             try candidate.setHomeostasisEnabled(
+                enabled, configuration: configuration
+            )
+        case let .setGeneticsEnabled(enabled, configuration):
+            try candidate.setGeneticsEnabled(
                 enabled, configuration: configuration
             )
         }

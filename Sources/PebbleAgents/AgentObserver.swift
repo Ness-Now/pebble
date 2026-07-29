@@ -270,6 +270,56 @@ public struct AgentObserverPhysiology: Codable, Equatable, Sendable {
     public let lastCausalEventID: AgentCausalEventID
 }
 
+public struct AgentObserverGeneticContribution: Codable, Equatable, Sendable {
+    public let allele: AgentGeneticAllele
+    public let contributorID: AgentID
+    public let sourceGenotypeID: AgentGenotypeID?
+    public let sourceAlleleIndex: Int
+}
+
+public struct AgentObserverGeneticLocus: Codable, Equatable, Sendable {
+    public let locus: AgentGeneticLocus
+    public let contributions: [AgentObserverGeneticContribution]
+    public let potentialBasisPoints: Int
+}
+
+public struct AgentObserverDevelopment: Codable, Equatable, Sendable {
+    public let active: Bool
+    public let ageTicks: Int
+    public let lifeStage: AgentLifeStage
+    public let expressionMaturityBasisPoints: Int
+    public let physiologicalExposureBasisPoints: Int
+    public let developmentalReserveBasisPoints: Int
+    public let trajectory: AgentDevelopmentTrajectory
+    public let lastSignificantChangeTick: Int
+    public let stoppedAtTick: Int?
+    public let lastEventID: AgentCausalEventID
+}
+
+public struct AgentObserverPhenotypeTrait: Codable, Equatable, Sendable {
+    public let traitID: AgentPhenotypeTraitID
+    public let geneticPotentialBasisPoints: Int
+    public let developmentalFactorBasisPoints: Int
+    public let physiologicalExpressionFactorBasisPoints: Int
+    public let expressedModifierBasisPoints: Int
+    public let lowerBoundBasisPoints: Int
+    public let upperBoundBasisPoints: Int
+    public let provenance: String
+    public let lastSignificantChangeTick: Int
+    public let lastEventID: AgentCausalEventID
+}
+
+public struct AgentObserverGenetics: Codable, Equatable, Sendable {
+    public let modelVersion: Int
+    public let genotypeID: AgentGenotypeID
+    public let origin: AgentGenotypeOrigin
+    public let contributorIDs: [AgentID]
+    public let loci: [AgentObserverGeneticLocus]
+    public let creationEventID: AgentCausalEventID
+    public let development: AgentObserverDevelopment
+    public let phenotype: [AgentObserverPhenotypeTrait]
+}
+
 public struct AgentObserverDeath: Codable, Equatable, Sendable {
     public let agentID: AgentID
     public let deathID: AgentDeathID
@@ -281,6 +331,7 @@ public struct AgentObserverDeath: Codable, Equatable, Sendable {
     public let finalHealth: Int
     public let deathEventID: AgentCausalEventID
     public let preservedMaterialClaims: [AgentMaterialAssetID]
+    public let genetics: AgentObserverGenetics?
 }
 
 public struct AgentObserverChronicleEvent: Codable, Equatable, Sendable {
@@ -318,6 +369,7 @@ public struct AgentObserverIndividual: Codable, Equatable, Sendable {
     public let recentEventIDs: [AgentCausalEventID]
     public let recentEventsTruncated: Bool
     public let physiology: AgentObserverPhysiology?
+    public let genetics: AgentObserverGenetics?
 }
 
 public struct AgentObserverSnapshot: Codable, Equatable, Sendable {
@@ -420,6 +472,7 @@ extension AgentSimulationSession {
         let reconciliation = persistenceReconciliationSnapshot()
         let homeostasis = homeostasisSnapshot()
         let mortality = mortalitySnapshot()
+        let genetics = geneticsSnapshot()
         let textLimit = configuration.maximumPresentationTextLength
 
         let materialTransitionByEventID = Dictionary(
@@ -546,7 +599,8 @@ extension AgentSimulationSession {
                     $0.agentID == agentID
                 }.map {
                     observerPhysiology($0, healthReserve: agent.health)
-                }
+                },
+                genetics: observerGenetics(agentID, snapshot: genetics)
             )
         }
         let retainedDeaths = Array(
@@ -570,7 +624,8 @@ extension AgentSimulationSession {
                             $0.claimantID == record.agentID
                         })
                         ? $0.asset.assetID : nil
-                }.sorted()
+                }.sorted(),
+                genetics: observerGenetics(record.agentID, snapshot: genetics)
             )
         }
         let generationSource = [
@@ -581,6 +636,7 @@ extension AgentSimulationSession {
             reconciliation.recentRuns.last?.runID ?? "none",
             homeostasis.digest,
             mortality.digest,
+            genetics.digest,
         ].joined(separator: "|")
         let truncation = AgentObserverTruncation(
             agentsOmitted: max(0, sortedAgents.count - visibleAgents.count),
@@ -596,7 +652,7 @@ extension AgentSimulationSession {
         )
         return AgentObserverSnapshot(
             header: AgentObserverSnapshotHeader(
-                schemaVersion: homeostasis.enabled ? 2 : 1,
+                schemaVersion: genetics.enabled ? 3 : (homeostasis.enabled ? 2 : 1),
                 sessionIdentity: simulationID,
                 worldBinding: worldBinding,
                 asOfTick: tick,
@@ -619,6 +675,77 @@ private struct AgentObserverReasonCandidate {
 }
 
 private extension AgentSimulationSession {
+    func observerGenetics(
+        _ agentID: AgentID,
+        snapshot: AgentGeneticsSnapshot
+    ) -> AgentObserverGenetics? {
+        guard let genotype = snapshot.genotypes.first(where: {
+            $0.agentID == agentID
+        }),
+        let development = snapshot.development.first(where: {
+            $0.agentID == agentID
+        }),
+        let phenotype = snapshot.phenotypes.first(where: {
+            $0.agentID == agentID
+        }) else { return nil }
+        return AgentObserverGenetics(
+            modelVersion: genotype.schemaVersion,
+            genotypeID: genotype.genotypeID,
+            origin: genotype.origin,
+            contributorIDs: genotype.contributorIDs,
+            loci: genotype.loci.map { locus in
+                AgentObserverGeneticLocus(
+                    locus: locus.locus,
+                    contributions: locus.contributions.map {
+                        AgentObserverGeneticContribution(
+                            allele: $0.allele,
+                            contributorID: $0.contributorID,
+                            sourceGenotypeID: $0.sourceGenotypeID,
+                            sourceAlleleIndex: $0.sourceAlleleIndex
+                        )
+                    },
+                    potentialBasisPoints: locus.potentialBasisPoints
+                )
+            },
+            creationEventID: genotype.creationEventID,
+            development: AgentObserverDevelopment(
+                active: development.active,
+                ageTicks: development.ageTicks,
+                lifeStage: development.lifeStage,
+                expressionMaturityBasisPoints:
+                    development.expressionMaturityBasisPoints,
+                physiologicalExposureBasisPoints:
+                    development.physiologicalExposureBasisPoints,
+                developmentalReserveBasisPoints:
+                    development.developmentalReserveBasisPoints,
+                trajectory: development.trajectory,
+                lastSignificantChangeTick:
+                    development.lastSignificantChangeTick,
+                stoppedAtTick: development.stoppedAtTick,
+                lastEventID: development.lastEventID
+            ),
+            phenotype: phenotype.traits.map {
+                AgentObserverPhenotypeTrait(
+                    traitID: $0.traitID,
+                    geneticPotentialBasisPoints:
+                        $0.geneticPotentialBasisPoints,
+                    developmentalFactorBasisPoints:
+                        $0.developmentalFactorBasisPoints,
+                    physiologicalExpressionFactorBasisPoints:
+                        $0.physiologicalExpressionFactorBasisPoints,
+                    expressedModifierBasisPoints:
+                        $0.expressedModifierBasisPoints,
+                    lowerBoundBasisPoints: $0.lowerBoundBasisPoints,
+                    upperBoundBasisPoints: $0.upperBoundBasisPoints,
+                    provenance: $0.provenance,
+                    lastSignificantChangeTick:
+                        $0.lastSignificantChangeTick,
+                    lastEventID: $0.lastEventID
+                )
+            }
+        )
+    }
+
     func observerPhysiology(
         _ profile: AgentHomeostasisProfile,
         healthReserve: Int

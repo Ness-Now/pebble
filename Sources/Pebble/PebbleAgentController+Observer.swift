@@ -167,12 +167,21 @@ extension PebbleAgentController {
         }
         let asset = selected.materialAssets.first
         let physiology = selected.physiology
+        let genetics = selected.genetics
         let view: String
         switch observerUIState.view {
         case .individual: view = "individual"
         case .globalChronicle: view = "global"
         case let .causalEvent(id): view = "event:\(id.sequence.rawValue)"
         }
+        let reasonEventText = selected.activity.reason.causalSequence
+            .map(String.init) ?? "none"
+        let contributorText = genetics?.contributorIDs.map(\.rawValue)
+            .joined(separator: ",") ?? "unavailable"
+        let phenotypeText = genetics?.phenotype.map { trait in
+            trait.traitID.rawValue + ":"
+                + String(trait.expressedModifierBasisPoints)
+        }.joined(separator: ",") ?? "unavailable"
         let message = [
             "observer status",
             "open=\(observerUIState.isOpen ? 1 : 0)",
@@ -188,7 +197,7 @@ extension PebbleAgentController {
             "activity=\(selected.activity.action)",
             "reason=\(selected.activity.reason.category.rawValue)"
                 + ":\(selected.activity.reason.code.rawValue)",
-            "reasonEvent=\(selected.activity.reason.causalSequence.map(String.init) ?? "none")",
+            "reasonEvent=\(reasonEventText)",
             "holder=\(asset?.physicalHolder ?? "none")",
             "custodian=\(asset?.custodianID?.rawValue ?? "none")",
             "owner=\(asset?.recognizedOwnerID?.rawValue ?? "none")",
@@ -202,6 +211,12 @@ extension PebbleAgentController {
             "healthTrend=\(physiology?.trend.rawValue ?? "unavailable")",
             "energy=\(physiology?.energyReserveBasisPoints ?? -1)",
             "stress=\(physiology?.stressBasisPoints ?? -1)",
+            "genotype=\(genetics?.genotypeID.rawValue ?? "unavailable")",
+            "geneticOrigin=\(genetics?.origin.rawValue ?? "unavailable")",
+            "geneticContributors=" + contributorText,
+            "development=\(genetics?.development.expressionMaturityBasisPoints ?? -1)",
+            "trajectory=\(genetics?.development.trajectory.rawValue ?? "unavailable")",
+            "phenotype=" + phenotypeText,
             "deaths=\(snapshot.recentDeaths.count)",
             "truncated=\(snapshot.truncation.isTruncated ? 1 : 0)",
             "mutation=none",

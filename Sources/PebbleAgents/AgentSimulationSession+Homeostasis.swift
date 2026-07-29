@@ -471,6 +471,28 @@ extension AgentSimulationSession {
                 source: "monotone lifecycle age"
             ))
         }
+        let resilienceModifier = phenotypeModifier(
+            .homeostaticResilience, for: profile.agentID
+        )
+        let recoveryModifier = phenotypeModifier(
+            .recoveryEfficiency, for: profile.agentID
+        )
+        let toleranceModifier = phenotypeModifier(
+            .deprivationTolerance, for: profile.agentID
+        )
+        let phenotypeMagnitude = [
+            resilienceModifier, recoveryModifier, toleranceModifier,
+        ].map(abs).max() ?? 0
+        if geneticsEnabled, phenotypeMagnitude > 0 {
+            factors.append(AgentPhysiologicalFactor(
+                code: .phenotypeExpression,
+                severityBasisPoints: phenotypeMagnitude,
+                harmful: false,
+                source: "bounded CIV-30 modifiers resilience="
+                    + "\(resilienceModifier) recovery=\(recoveryModifier) "
+                    + "tolerance=\(toleranceModifier)"
+            ))
+        }
         factors.sort {
             if $0.harmful != $1.harmful { return $0.harmful && !$1.harmful }
             if $0.severityBasisPoints != $1.severityBasisPoints {
@@ -484,17 +506,28 @@ extension AgentSimulationSession {
         if hungry { drain += criticalHunger ? 1_200 : 400 }
         if exhausted { drain += 700 }
         if criticalHunger && exhausted { drain += 400 }
+        drain = max(0, drain * (10_000 - toleranceModifier) / 10_000)
         let recovering = recoveredHunger && recoveredFatigue
         let energyBefore = profile.energyReserveBasisPoints
         let stressBefore = profile.stressBasisPoints
         if recovering {
             profile.energyReserveBasisPoints = min(
                 10_000,
-                profile.energyReserveBasisPoints + configuration.recoveryPerTick
+                profile.energyReserveBasisPoints
+                    + max(
+                        1,
+                        configuration.recoveryPerTick
+                            * (10_000 + recoveryModifier) / 10_000
+                    )
             )
             profile.stressBasisPoints = max(
                 0,
-                profile.stressBasisPoints - configuration.stressRecoveryPerTick
+                profile.stressBasisPoints
+                    - max(
+                        1,
+                        configuration.stressRecoveryPerTick
+                            * (10_000 + recoveryModifier) / 10_000
+                    )
             )
         } else {
             profile.energyReserveBasisPoints = max(
@@ -502,13 +535,22 @@ extension AgentSimulationSession {
             )
             profile.stressBasisPoints = min(
                 10_000,
-                profile.stressBasisPoints + drain + ageVulnerability / 10
+                profile.stressBasisPoints
+                    + max(
+                        0,
+                        drain * (10_000 - resilienceModifier) / 10_000
+                    )
+                    + ageVulnerability / 10
             )
         }
         profile.recoveryCapacityBasisPoints = max(
             0,
-            10_000 - ageVulnerability
-                - profile.stressBasisPoints / 2
+            min(
+                10_000,
+                10_000 - ageVulnerability
+                    - profile.stressBasisPoints / 2
+                    + recoveryModifier
+            )
         )
 
         if profile.stressBasisPoints >= 6_000,
@@ -530,7 +572,12 @@ extension AgentSimulationSession {
         } else if recovering, state.health < 100,
                   profile.recoveryCapacityBasisPoints > 0 {
             state.health = min(
-                100, state.health + configuration.healthRecoveryPerTick
+                100,
+                state.health + max(
+                    1,
+                    configuration.healthRecoveryPerTick
+                        * (10_000 + recoveryModifier) / 10_000
+                )
             )
         }
 
@@ -589,6 +636,7 @@ extension AgentSimulationSession {
             "health=\(healthBefore)>\(state.health)",
             "age=\(age)",
             "factor=\(dominant?.rawValue ?? "none")",
+            "phenotype=\(resilienceModifier),\(recoveryModifier),\(toleranceModifier)",
         ].joined(separator: " ")
         return AgentHomeostasisProposal(
             agentID: profile.agentID, profile: profile, state: state,
