@@ -166,6 +166,7 @@ extension PebbleAgentController {
             return failure("Observer could not produce its authoritative projection.")
         }
         let asset = selected.materialAssets.first
+        let physiology = selected.physiology
         let view: String
         switch observerUIState.view {
         case .individual: view = "individual"
@@ -194,6 +195,14 @@ extension PebbleAgentController {
             "claims=\(asset?.claimantIDs.map(\.rawValue).joined(separator: ",") ?? "none")",
             "users=\(asset?.authorizedUserIDs.map(\.rawValue).joined(separator: ",") ?? "none")",
             "events=\(selected.recentEventIDs.count)",
+            "vital=\(physiology?.vitalStatus.rawValue ?? "unavailable")",
+            "age=\(physiology?.ageTicks ?? -1)",
+            "stage=\(physiology?.lifeStage.rawValue ?? "unavailable")",
+            "healthCondition=\(physiology?.condition.rawValue ?? "unavailable")",
+            "healthTrend=\(physiology?.trend.rawValue ?? "unavailable")",
+            "energy=\(physiology?.energyReserveBasisPoints ?? -1)",
+            "stress=\(physiology?.stressBasisPoints ?? -1)",
+            "deaths=\(snapshot.recentDeaths.count)",
             "truncated=\(snapshot.truncation.isTruncated ? 1 : 0)",
             "mutation=none",
             "tickStable=1",

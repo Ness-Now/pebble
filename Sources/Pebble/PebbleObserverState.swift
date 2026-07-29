@@ -102,6 +102,28 @@ extension PebbleAgentController {
             "profession=\(individual.profession.primaryDomain ?? individual.profession.status)"
                 + " commitments=\(individual.profession.activeCommitmentCount)",
         ]
+        if let physiology = individual.physiology {
+            let factorText = physiology.activeFactors.map {
+                "\($0.code.rawValue):\($0.severityBasisPoints)"
+            }.joined(separator: ",")
+            lines += [
+                "[HOMEOSTASIS / HEALTH]",
+                "vital=\(physiology.vitalStatus.rawValue)"
+                    + " condition=\(physiology.condition.rawValue)"
+                    + " trend=\(physiology.trend.rawValue)",
+                "age=\(physiology.ageTicks)"
+                    + " stage=\(physiology.lifeStage.rawValue)"
+                    + " band=\(physiology.ageBand.rawValue)"
+                    + " vulnerability=\(physiology.ageVulnerabilityBasisPoints)",
+                "health=\(physiology.healthReserve)"
+                    + " energy=\(physiology.energyReserveBasisPoints)"
+                    + " stress=\(physiology.stressBasisPoints)"
+                    + " recovery=\(physiology.recoveryCapacityBasisPoints)",
+                "factors=\(factorText.isEmpty ? "none" : factorText)",
+                "limitation=\(physiology.limitation ?? "none")"
+                    + " causal=\(physiology.lastCausalEventID.rawValue)",
+            ]
+        }
         if individual.relations.isEmpty {
             lines.append("[SOCIAL] relations=unknown-or-none")
         } else {
@@ -167,6 +189,14 @@ extension PebbleAgentController {
                 + " more=\(page.hasMore ? "yes" : "no")",
             "selection: /lab observer select <agent> | /lab observer reason",
         ]
+        if let death = snapshot.recentDeaths.first {
+            lines.append(
+                "[MORTALITY] latest=\(death.agentID.rawValue)"
+                    + " cause=\(death.cause.rawValue)"
+                    + " tick=\(death.deathTick)"
+                    + " claimsPreserved=\(death.preservedMaterialClaims.count)"
+            )
+        }
         lines += page.values.map {
             "#\($0.sequence) t\($0.tick) \($0.kind.rawValue) [\($0.result)] "
                 + "\($0.summary)"

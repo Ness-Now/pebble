@@ -491,6 +491,9 @@ extension PebbleAgentController {
         if candidate.mortalityEnabled && !mortalityFeatureEnabled {
             return failure("Checkpoint load refused: mortality gate is disabled.")
         }
+        if candidate.homeostasisEnabled && !homeostasisFeatureEnabled {
+            return failure("Checkpoint load refused: homeostasis gate is disabled.")
+        }
         if candidate.lifecycleEnabled && !lifecycleFeatureEnabled {
             trace("checkpoint load refused name=\(name.rawValue) reason=lifecycleGate")
             return failure("Checkpoint load refused: lifecycle gate is disabled.")

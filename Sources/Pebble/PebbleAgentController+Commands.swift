@@ -17,7 +17,7 @@ extension PebbleAgentController {
         switch command {
         case "help":
             guard arguments.count == 1 else { return failure("Usage: /lab help") }
-            return success("/lab session: start stop clear | lifecycle <on|status|clear> reproduction <on|off|status> births status kinship <on|status> household <on|status> care <on|status> | time control: pause resume step speed <1|2|4|8> reset | inspection: status focus <agentId|next> next follow <agentId|focus|next|off> overlay <off|compact|full> observer <open|close|status|next|previous|select|individual|global|reason|event> causality <status|tail <1...20>> scale status | persistence: checkpoint <status|list|save|load|delete> replay <status|start|stop|verify> persistence-reconciliation <setup|status|cleanup> | movement: movement <on|off> embodiment proof | interaction: interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off> gateway proof material proof rights <proof|status|clear> harvest proof construction proof | economy: economy <setup|auto on|auto off|status|clear> | survival: survival <on|off|status> | natural: natural <on|off|status|scan> | ecology: ecology <on|off|status|scan|clear> forage status | ecological-observation <on|status|scan|proof> agriculture <on|status|proof> wild-subsistence <on|status|proof [setup|fish|hunt|gather|final]> work-professions <on|refresh|match|record|crisis|resume|status|final> | mortality: mortality <on|off|status|clear> exits status | build: build <setup|auto on|auto off|status|clear> | social: social <on|off|status|clear> | physical: physical <on|off|status|clear> | cooperation: cooperation <on|off|status|clear> | population: population <on|off|status|clear> migration <admit|status> | settlement: settlement <on|off|status|clear> | demo: demo [start|stop|status]")
+            return success("/lab session: start stop clear | lifecycle <on|status|clear> reproduction <on|off|status> births status kinship <on|status> household <on|status> care <on|status> | time control: pause resume step speed <1|2|4|8> reset | inspection: status focus <agentId|next> next follow <agentId|focus|next|off> overlay <off|compact|full> observer <open|close|status|next|previous|select|individual|global|reason|event> causality <status|tail <1...20>> scale status | persistence: checkpoint <status|list|save|load|delete> replay <status|start|stop|verify> persistence-reconciliation <setup|status|cleanup> | movement: movement <on|off> embodiment proof | interaction: interaction <setup|setup distant <2...8>|harvest|status|auto on|auto off> gateway proof material proof rights <proof|status|clear> harvest proof construction proof | economy: economy <setup|auto on|auto off|status|clear> | survival: survival <on|off|status> | natural: natural <on|off|status|scan> | ecology: ecology <on|off|status|scan|clear> forage status | ecological-observation <on|status|scan|proof> agriculture <on|status|proof> wild-subsistence <on|status|proof [setup|fish|hunt|gather|final]> work-professions <on|refresh|match|record|crisis|resume|status|final> | mortality: mortality <on|off|status|clear> homeostasis <on|status|proof> exits status | build: build <setup|auto on|auto off|status|clear> | social: social <on|off|status|clear> | physical: physical <on|off|status|clear> | cooperation: cooperation <on|off|status|clear> | population: population <on|off|status|clear> migration <admit|status> | settlement: settlement <on|off|status|clear> | demo: demo [start|stop|status]")
         case "demo":
             return handleDemo(Array(arguments.dropFirst()), world: world, player: player)
         case "autonomous-civilization":
@@ -165,6 +165,10 @@ extension PebbleAgentController {
             return handleForage(Array(arguments.dropFirst()))
         case "mortality":
             return handleMortality(Array(arguments.dropFirst()))
+        case "homeostasis":
+            return handleHomeostasis(
+                Array(arguments.dropFirst()), world: world, player: player
+            )
         case "exits":
             return handlePopulationExits(Array(arguments.dropFirst()))
         case "lifecycle":
@@ -235,13 +239,15 @@ extension PebbleAgentController {
             let settlementStatus = session.settlementMetricsEnabled ? " settlement=on" : ""
             let ecologyStatus = session.localEcologyEnabled ? " ecology=on" : ""
             let mortalityStatus = session.mortalityEnabled ? " mortality=on" : ""
+            let homeostasisStatus = session.homeostasisEnabled
+                ? " homeostasis=on" : ""
             let lifecycleStatus = session.lifecycleEnabled ? " lifecycle=on" : ""
             let kinshipStatus = session.kinshipEnabled ? " kinship=on" : ""
             let householdStatus = session.householdsEnabled ? " households=on" : ""
             let careStatus = session.dependentCareEnabled ? " care=on" : ""
             let skillStatus = session.skillsEnabled ? " skills=on" : ""
             let teachingStatus = session.teachingEnabled ? " teaching=on" : ""
-            let message = "PebbleAgents \(isPaused ? "paused" : "running") tick=\(snapshot.tick) hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") autoInteraction=\(autoInteractionEnabled ? "on" : "off") economy=\(snapshot.economyEnabled ? "on" : "off") survival=\(snapshot.survivalEnabled ? "on" : "off") natural=\(snapshot.naturalResourcesEnabled ? "on" : "off") build=\(snapshot.buildAutoEnabled ? "on" : "off")\(socialStatus)\(physicalStatus)\(cooperationStatus)\(populationStatus)\(settlementStatus)\(ecologyStatus)\(mortalityStatus)\(lifecycleStatus)\(kinshipStatus)\(householdStatus)\(careStatus)\(skillStatus)\(teachingStatus) probes=\(probesByAgentId.count) focus=\(focusedAgentId ?? "none") follow=\(followMode.statusText) overlay=\(overlay) demo=\(demoActive ? "on" : "off") catchupDropped=\(droppedCatchUpSteps) \(positions)"
+            let message = "PebbleAgents \(isPaused ? "paused" : "running") tick=\(snapshot.tick) hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") autoInteraction=\(autoInteractionEnabled ? "on" : "off") economy=\(snapshot.economyEnabled ? "on" : "off") survival=\(snapshot.survivalEnabled ? "on" : "off") natural=\(snapshot.naturalResourcesEnabled ? "on" : "off") build=\(snapshot.buildAutoEnabled ? "on" : "off")\(socialStatus)\(physicalStatus)\(cooperationStatus)\(populationStatus)\(settlementStatus)\(ecologyStatus)\(mortalityStatus)\(homeostasisStatus)\(lifecycleStatus)\(kinshipStatus)\(householdStatus)\(careStatus)\(skillStatus)\(teachingStatus) probes=\(probesByAgentId.count) focus=\(focusedAgentId ?? "none") follow=\(followMode.statusText) overlay=\(overlay) demo=\(demoActive ? "on" : "off") catchupDropped=\(droppedCatchUpSteps) \(positions)"
             trace("status \(message)")
             return success(message)
         case "focus":

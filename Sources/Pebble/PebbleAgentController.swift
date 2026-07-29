@@ -143,6 +143,9 @@ final class PebbleAgentController {
     var mortalityFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_MORTALITY"] == "1"
     }
+    var homeostasisFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_HOMEOSTASIS"] == "1"
+    }
     var lifecycleFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_LIFECYCLE"] == "1"
     }
@@ -275,6 +278,7 @@ final class PebbleAgentController {
         case settlementMetricsBoundary(String)
         case ecologyBoundary(String)
         case mortalityBoundary(String)
+        case homeostasisBoundary(String)
         case lifecycleBoundary(String)
         case kinshipBoundary(String)
         case kinshipLateFailureProof

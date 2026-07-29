@@ -299,7 +299,7 @@ extension PebbleAgentController {
             return failure(lastError!)
         }
         let message = "persistence reconciliation cleanup world=exact assetRemoved=1 "
-            + "state=cleared probes=3 duplicates=0"
+            + "state=cleared probes=\(probesByAgentId.count) duplicates=0"
         trace(message)
         return success(message)
     }
