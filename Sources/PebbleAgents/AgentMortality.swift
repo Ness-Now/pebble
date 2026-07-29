@@ -74,6 +74,9 @@ public struct AgentMortalityConfiguration: Codable, Equatable, Sendable {
     public let maximumCancelledCommitmentIDsPerDeath: Int
     public let maximumExitFrames: Int
     public let maximumMaterialExitsPerDeath: Int
+    /// Requires every terminal actor to wait for an explicit Pebble-owned
+    /// carried-inventory verification, even when no CIV-26 asset refers to it.
+    public let requiresTerminalPhysicalCustodyVerification: Bool
 
     public init(
         maximumDeathsPerTick: Int = 8,
@@ -81,7 +84,8 @@ public struct AgentMortalityConfiguration: Codable, Equatable, Sendable {
         maximumFinalMemoryEntries: Int = 8,
         maximumCancelledCommitmentIDsPerDeath: Int = 32,
         maximumExitFrames: Int = 32,
-        maximumMaterialExitsPerDeath: Int = 16
+        maximumMaterialExitsPerDeath: Int = 16,
+        requiresTerminalPhysicalCustodyVerification: Bool = false
     ) throws {
         guard (1...8).contains(maximumDeathsPerTick) else {
             throw AgentMortalityError.invalidConfiguration("deaths per tick")
@@ -107,9 +111,53 @@ public struct AgentMortalityConfiguration: Codable, Equatable, Sendable {
         self.maximumCancelledCommitmentIDsPerDeath = maximumCancelledCommitmentIDsPerDeath
         self.maximumExitFrames = maximumExitFrames
         self.maximumMaterialExitsPerDeath = maximumMaterialExitsPerDeath
+        self.requiresTerminalPhysicalCustodyVerification =
+            requiresTerminalPhysicalCustodyVerification
     }
 
     public static let live = try! AgentMortalityConfiguration()
+    public static let embodiedLive = try! AgentMortalityConfiguration(
+        requiresTerminalPhysicalCustodyVerification: true
+    )
+
+    private enum CodingKeys: String, CodingKey {
+        case maximumDeathsPerTick
+        case maximumRetainedDeathRecords
+        case maximumFinalMemoryEntries
+        case maximumCancelledCommitmentIDsPerDeath
+        case maximumExitFrames
+        case maximumMaterialExitsPerDeath
+        case requiresTerminalPhysicalCustodyVerification
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(
+            maximumDeathsPerTick: values.decode(
+                Int.self, forKey: .maximumDeathsPerTick
+            ),
+            maximumRetainedDeathRecords: values.decode(
+                Int.self, forKey: .maximumRetainedDeathRecords
+            ),
+            maximumFinalMemoryEntries: values.decode(
+                Int.self, forKey: .maximumFinalMemoryEntries
+            ),
+            maximumCancelledCommitmentIDsPerDeath: values.decode(
+                Int.self, forKey: .maximumCancelledCommitmentIDsPerDeath
+            ),
+            maximumExitFrames: values.decode(
+                Int.self, forKey: .maximumExitFrames
+            ),
+            maximumMaterialExitsPerDeath: values.decode(
+                Int.self, forKey: .maximumMaterialExitsPerDeath
+            ),
+            requiresTerminalPhysicalCustodyVerification:
+                try values.decodeIfPresent(
+                    Bool.self,
+                    forKey: .requiresTerminalPhysicalCustodyVerification
+                ) ?? false
+        )
+    }
 }
 
 public struct AgentMortalityCleanupCounts: Codable, Equatable, Sendable {
@@ -252,6 +300,7 @@ public struct AgentMortalityRecord: Codable, Equatable, Sendable {
     public let terminalPhysiologyEventID: AgentCausalEventID?
     public let pendingMaterialExitEventID: AgentCausalEventID?
     public let materialExitEventIDs: [AgentCausalEventID]
+    public let physicalCustodyResolution: AgentMortalityPhysicalCustodyResolution?
     public let lethalDamageEventID: AgentCausalEventID
     public let deathEventID: AgentCausalEventID
     public let populationExitEventID: AgentCausalEventID
@@ -265,9 +314,58 @@ public struct AgentMortalityRecord: Codable, Equatable, Sendable {
     public let lifeStage: AgentLifeStage?
 }
 
+public enum AgentMortalityPhysicalCustodyResolutionKind: String, Codable, Sendable {
+    case verifiedEmpty
+    case transferred
+}
+
+/// Pebble-owned evidence that the terminal actor's complete real carried
+/// inventory was either empty or moved to one verified physical endpoint.
+/// It conveys no ownership, claim, permission, or inheritance.
+public struct AgentMortalityPhysicalCustodyResolution: Codable, Equatable, Sendable {
+    public let kind: AgentMortalityPhysicalCustodyResolutionKind
+    public let physicalReceiptID: String
+    public let destinationHolderID: String?
+    public let stackCount: Int
+    public let itemCount: Int
+    public let verifiedAtTick: Int
+    public let eventID: AgentCausalEventID
+}
+
+public struct AgentMortalityPhysicalCustodyOutcome: Codable, Equatable, Sendable {
+    public let operationID: String
+    public let terminalAgentID: AgentID
+    public let kind: AgentMortalityPhysicalCustodyResolutionKind
+    public let physicalReceiptID: String
+    public let destinationHolderID: String?
+    public let stackCount: Int
+    public let itemCount: Int
+    public let verifiedAtTick: Int
+
+    public init(
+        operationID: String,
+        terminalAgentID: AgentID,
+        kind: AgentMortalityPhysicalCustodyResolutionKind,
+        physicalReceiptID: String,
+        destinationHolderID: String?,
+        stackCount: Int,
+        itemCount: Int,
+        verifiedAtTick: Int
+    ) {
+        self.operationID = operationID
+        self.terminalAgentID = terminalAgentID
+        self.kind = kind
+        self.physicalReceiptID = physicalReceiptID
+        self.destinationHolderID = destinationHolderID
+        self.stackCount = stackCount
+        self.itemCount = itemCount
+        self.verifiedAtTick = verifiedAtTick
+    }
+}
+
 /// A terminal civilization transition that cannot be published as a death
-/// until Pebble has moved every rights-tracked asset out of the live physical
-/// actor through a verified material boundary.
+/// until Pebble has verified the entire physical carried inventory. CIV-26
+/// asset IDs are only the social records that also require holder updates.
 public struct AgentPendingMortalityTransition: Codable, Equatable, Sendable {
     public let agentID: AgentID
     public let healthBeforeLethalDamage: Int
@@ -278,6 +376,8 @@ public struct AgentPendingMortalityTransition: Codable, Equatable, Sendable {
     public let requiredMaterialAssetIDs: [AgentMaterialAssetID]
     public internal(set) var resolvedMaterialAssetIDs: [AgentMaterialAssetID]
     public internal(set) var materialExitEventIDs: [AgentCausalEventID]
+    public internal(set) var physicalCustodyResolution:
+        AgentMortalityPhysicalCustodyResolution?
 
     public var unresolvedMaterialAssetIDs: [AgentMaterialAssetID] {
         let resolved = Set(resolvedMaterialAssetIDs)

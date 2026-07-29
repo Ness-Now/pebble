@@ -184,12 +184,36 @@ struct PebbleAgentMaterialCustodyEndpoint {
 /// PebbleCore. It owns only preconditions, exact verification, rollback, and a
 /// bounded local replay receipt set; it is not an inventory or economic ledger.
 final class PebbleAgentMaterialCustodyGateway {
+    struct BoundarySnapshot {
+        fileprivate let receiptOrder: [String]
+        fileprivate let receipts: [String: PebbleAgentMaterialTransactionOutcome]
+        fileprivate let acquisitionReceiptOrder: [String]
+        fileprivate let acquisitionReceipts:
+            [String: PebbleAgentItemEntityAcquisitionOutcome]
+    }
+
     private static let maximumReceipts = 256
     private let bridge = PebbleAgentMaterialSnapshotBridge()
     private var receiptOrder: [String] = []
     private var receipts: [String: PebbleAgentMaterialTransactionOutcome] = [:]
     private var acquisitionReceiptOrder: [String] = []
     private var acquisitionReceipts: [String: PebbleAgentItemEntityAcquisitionOutcome] = [:]
+
+    func boundarySnapshot() -> BoundarySnapshot {
+        BoundarySnapshot(
+            receiptOrder: receiptOrder,
+            receipts: receipts,
+            acquisitionReceiptOrder: acquisitionReceiptOrder,
+            acquisitionReceipts: acquisitionReceipts
+        )
+    }
+
+    func restoreBoundarySnapshot(_ snapshot: BoundarySnapshot) {
+        receiptOrder = snapshot.receiptOrder
+        receipts = snapshot.receipts
+        acquisitionReceiptOrder = snapshot.acquisitionReceiptOrder
+        acquisitionReceipts = snapshot.acquisitionReceipts
+    }
 
     func reset() {
         receiptOrder.removeAll(keepingCapacity: true)

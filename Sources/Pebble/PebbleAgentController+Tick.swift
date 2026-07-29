@@ -373,19 +373,6 @@ extension PebbleAgentController {
                     physicalObservations: physicalInputs
                 )
             }
-            if session.mortalityEnabled {
-                do {
-                    try reconcileMortalityProbes(
-                        previous: preCognitive,
-                        current: &session,
-                        recorder: &recorder,
-                        world: world
-                    )
-                } catch {
-                    isPaused = true
-                    throw error
-                }
-            }
             try presentPhysicalSignals(
                 world: world,
                 session: &session,
@@ -1203,6 +1190,19 @@ extension PebbleAgentController {
                     world: world, session: &session, recorder: &recorder
                 )
             }
+            if session.mortalityEnabled {
+                do {
+                    try reconcileMortalityProbes(
+                        previous: preCognitive,
+                        current: &session,
+                        recorder: &recorder,
+                        world: world
+                    )
+                } catch {
+                    isPaused = true
+                    throw error
+                }
+            }
             let finalSnapshot = session.snapshot()
             self.session = session
             replayRecorder = recorder
@@ -1316,6 +1316,24 @@ extension PebbleAgentController {
                 isMortalityBoundary = true
             } else {
                 isMortalityBoundary = false
+            }
+            let isMortalityRollbackBoundary: Bool
+            if case ControllerError.mortalityRollbackBoundary = error {
+                isMortalityRollbackBoundary = true
+            } else {
+                isMortalityRollbackBoundary = false
+            }
+            if isMortalityRollbackBoundary {
+                replayRecorder = publishedRecorder
+                isPaused = true
+                lastError = String(describing: error)
+                runtimeErrorCount += 1
+                trace(
+                    "mortality boundary rollback publishedSession=unchanged "
+                        + "publishedRecorder=unchanged physicalCustody=FAILED "
+                        + "error=\(error)"
+                )
+                return false
             }
             if isMortalityBoundary {
                 replayRecorder = publishedRecorder

@@ -11,6 +11,63 @@ struct PebbleMortalityMaterialExitRollback {
     let containerInventoryBefore: [ItemStack?]
 }
 
+enum PebbleMortalityBoundaryFailurePoint: Equatable {
+    case none
+    case beforePhysicalResolution(Int)
+    case afterPhysicalTransfers
+    case afterProbeRemoval
+    case beforePublication
+}
+
+struct PebbleMortalityPhysicalExitCompletion {
+    let agentID: AgentID
+    let kind: AgentMortalityPhysicalCustodyResolutionKind
+    let physicalReceiptID: String
+    let destinationHolderID: String?
+    let materials: [AgentMaterialStackSnapshot]
+    let trackedAssetIDs: [AgentMaterialAssetID]
+    let rollback: PebbleMortalityMaterialExitRollback?
+}
+
+private struct PebbleMortalityProbeBoundaryState {
+    let agentID: String
+    let probe: LabCoreAgentEntity
+    let x: Double
+    let y: Double
+    let z: Double
+    let previousX: Double
+    let previousY: Double
+    let previousZ: Double
+    let inventory: [ItemStack?]
+
+    init(agentID: String, probe: LabCoreAgentEntity) {
+        self.agentID = agentID
+        self.probe = probe
+        x = probe.x
+        y = probe.y
+        z = probe.z
+        previousX = probe.prevX
+        previousY = probe.prevY
+        previousZ = probe.prevZ
+        inventory = copyItemInventory(probe.carriedItems)
+    }
+
+    func matches(
+        world: World,
+        probesByAgentID: [String: LabCoreAgentEntity]
+    ) -> Bool {
+        probesByAgentID[agentID] === probe
+            && probe.world === world
+            && !probe.dead
+            && world.entities.filter { $0 === probe }.count == 1
+            && probe.x == x && probe.y == y && probe.z == z
+            && probe.prevX == previousX
+            && probe.prevY == previousY
+            && probe.prevZ == previousZ
+            && probe.carriedItems == inventory
+    }
+}
+
 extension PebbleAgentController {
     func handleMortality(_ arguments: [String]) -> PebbleAgentCommandResult {
         let usage = "Usage: /lab mortality <on|off|status|clear>"
@@ -29,10 +86,12 @@ extension PebbleAgentController {
                     return failure("Mortality is already enabled.")
                 }
                 if try applyCommandMutationIfRecording(
-                    .setMortalityEnabled(true, configuration: .live),
+                    .setMortalityEnabled(true, configuration: .embodiedLive),
                     session: &candidate
                 ) == nil {
-                    try candidate.setMortalityEnabled(true)
+                    try candidate.setMortalityEnabled(
+                        true, configuration: .embodiedLive
+                    )
                 }
                 session = candidate
                 let summary = candidate.mortalitySummary()
@@ -42,8 +101,9 @@ extension PebbleAgentController {
                 )
                 return success(
                     "Mortality enabled: active=\(summary.activeAgentCount) "
-                        + "maximumDeathsPerTick=\(AgentMortalityConfiguration.live.maximumDeathsPerTick) "
-                        + "records=\(AgentMortalityConfiguration.live.maximumRetainedDeathRecords)."
+                        + "maximumDeathsPerTick=\(AgentMortalityConfiguration.embodiedLive.maximumDeathsPerTick) "
+                        + "records=\(AgentMortalityConfiguration.embodiedLive.maximumRetainedDeathRecords) "
+                        + "physicalCustodyVerification=required."
                 )
             case "off":
                 guard candidate.mortalityEnabled else {
@@ -101,24 +161,49 @@ extension PebbleAgentController {
         previous: AgentSessionSnapshot,
         current: inout AgentSimulationSession,
         recorder: inout AgentReplayRecorder?,
-        world: World
+        world: World,
+        failurePoint: PebbleMortalityBoundaryFailurePoint = .none
     ) throws {
-        let materialRollbacks = try resolvePendingMortalityMaterialExits(
-            session: &current,
-            recorder: &recorder,
-            world: world
-        )
-        let expected = current.expectedActiveAgentIDs().map(\.rawValue).sorted()
-        let previousIDs = previous.agents.map(\.id).sorted()
-        let removedIDs = previousIDs.filter { !expected.contains($0) }
-        guard removedIDs.allSatisfy({ id in
-            guard let probe = probesByAgentId[id] else { return false }
-            return world.entities.contains { entity in entity === probe }
-        }) else {
-            throw ControllerError.mortalityBoundary("terminal probe missing before removal")
+        let sessionBefore = current
+        let recorderBefore = recorder
+        let probesBefore = probesByAgentId
+        let probeStatesBefore = probesBefore.keys.sorted().compactMap { id in
+            probesBefore[id].map {
+                PebbleMortalityProbeBoundaryState(agentID: id, probe: $0)
+            }
         }
+        let worldEntitiesBefore = world.entities
+        let influencedBefore = lastInfluencedTracesByAgentId
+        let focusBefore = focusedAgentId
+        let followBefore = followMode
+        let materialGatewayBefore = materialCustodyGateway.boundarySnapshot()
+        let materialAttemptBefore = mortalityMaterialExitAttempt
+        var completions: [PebbleMortalityPhysicalExitCompletion] = []
         var removedProbes: [LabCoreAgentEntity] = []
         do {
+            completions = try resolvePendingMortalityMaterialExits(
+                session: &current,
+                recorder: &recorder,
+                world: world,
+                failurePoint: failurePoint
+            )
+            if failurePoint == .afterPhysicalTransfers {
+                throw ControllerError.mortalityBoundary(
+                    "injected after physical transfers"
+                )
+            }
+            let expected = current.expectedActiveAgentIDs().map(\.rawValue).sorted()
+            let previousIDs = previous.agents.map(\.id).sorted()
+            let removedIDs = previousIDs.filter { !expected.contains($0) }
+            guard removedIDs.allSatisfy({ id in
+                guard let probe = probesByAgentId[id] else { return false }
+                return world.entities.contains { entity in entity === probe }
+                    && probe.carriedItems.allSatisfy { $0 == nil }
+            }) else {
+                throw ControllerError.mortalityBoundary(
+                    "terminal probe missing or nonempty before removal"
+                )
+            }
             for id in removedIDs {
                 guard let probe = probesByAgentId[id] else {
                     throw ControllerError.mortalityBoundary(
@@ -134,53 +219,145 @@ extension PebbleAgentController {
                 probesByAgentId.removeValue(forKey: id)
                 lastInfluencedTracesByAgentId.removeValue(forKey: id)
             }
+            if failurePoint == .afterProbeRemoval {
+                throw ControllerError.mortalityBoundary(
+                    "injected after probe removal"
+                )
+            }
+            let worldProbeIDs = world.entities.compactMap {
+                ($0 as? LabCoreAgentEntity)?.labAgentId
+            }.sorted()
+            guard probesByAgentId.keys.sorted() == expected,
+                  worldProbeIDs == expected else {
+                throw ControllerError.mortalityBoundary(
+                    "active probes do not match active agents "
+                        + "expected=\(expected) actual=\(worldProbeIDs)"
+                )
+            }
+            if let focusedAgentId, !expected.contains(focusedAgentId) {
+                self.focusedAgentId = expected.first
+            }
+            if expected.isEmpty {
+                focusedAgentId = nil
+                followMode = .off
+            } else if let target = followTargetId(), !expected.contains(target) {
+                followMode = .off
+            }
+            let recordsByAgent = Dictionary(uniqueKeysWithValues:
+                current.mortalitySnapshot().records.map {
+                    ($0.agentID.rawValue, $0)
+                }
+            )
+            guard removedIDs.allSatisfy({ recordsByAgent[$0] != nil }) else {
+                throw ControllerError.mortalityBoundary(
+                    "terminal record missing after probe removal"
+                )
+            }
+            if failurePoint == .beforePublication {
+                throw ControllerError.mortalityBoundary(
+                    "injected before mortality publication"
+                )
+            }
+            for completion in completions.sorted(by: {
+                $0.agentID < $1.agentID
+            }) {
+                guard let death = recordsByAgent[
+                    completion.agentID.rawValue
+                ], let physical = death.physicalCustodyResolution else {
+                    throw ControllerError.mortalityBoundary(
+                        "terminal physical resolution missing"
+                    )
+                }
+                let physicalStacks = completion.materials.map {
+                    "\($0.identity.itemKey):\($0.count)"
+                }.joined(separator: ",")
+                trace(
+                    "mortality physical custody tick=\(death.deathTick) "
+                        + "agent=\(completion.agentID.rawValue) "
+                        + "kind=\(physical.kind.rawValue) "
+                        + "trackedAssets=\(completion.trackedAssetIDs.map(\.rawValue).joined(separator: ",")) "
+                        + "physicalStacks=\(physicalStacks) "
+                        + "receipt=\(physical.physicalReceiptID) "
+                        + "destination=\(physical.destinationHolderID ?? "none") "
+                        + "probeEmpty=1 socialRecordsInvented=0"
+                )
+                trace(
+                    "mortality material exit tick=\(death.deathTick) "
+                        + "agent=\(completion.agentID.rawValue) "
+                        + "terminalHomeostasis="
+                        + "\(death.terminalPhysiologyEventID?.rawValue ?? "none") "
+                        + "pending=\(death.pendingMaterialExitEventID?.rawValue ?? "none") "
+                        + "physicalEvent=\(physical.eventID.rawValue) "
+                        + "materialEvent=\(death.materialExitEventIDs.last?.rawValue ?? "none") "
+                        + "lethal=\(death.lethalDamageEventID.rawValue) "
+                        + "resources=\(death.resourcesRetiredEventID.rawValue) "
+                        + "commitments=\(death.commitmentsResolvedEventID.rawValue) "
+                        + "exit=\(death.populationExitEventID.rawValue) "
+                        + "death=\(death.deathEventID.rawValue) "
+                        + "assets=\(completion.trackedAssetIDs.map(\.rawValue).joined(separator: ",")) "
+                        + "holderBefore=agent:\(completion.agentID.rawValue) "
+                        + "holderAfter=\(physical.destinationHolderID ?? "none") "
+                        + "quantity=\(physical.itemCount)>\(physical.itemCount) "
+                        + "receipt=\(physical.physicalReceiptID) "
+                        + "socialRoles=unchanged inheritance=none"
+                )
+            }
+            for id in removedIDs {
+                let record = recordsByAgent[id]!
+                trace(
+                    "mortality exit tick=\(record.deathTick) "
+                        + "death=\(record.deathID.rawValue) agent=\(id) "
+                        + "cause=\(record.cause.rawValue) "
+                        + "health=\(record.healthBeforeLethalDamage)>\(record.finalHealth) "
+                        + "population=\(previous.agentCount)>\(expected.count) "
+                        + "terminal=\(record.carriedInventory.reduce(0) { $0 + $1.quantity }) "
+                        + "probes=\(previousIDs.count)>\(expected.count) "
+                        + "focus=\(focusedAgentId ?? "none") "
+                        + "corpse=none worldMutation=none"
+                )
+            }
         } catch {
             for probe in removedProbes where !world.entities.contains(where: {
                 $0 === probe
             }) {
                 world.addEntity(probe)
-                probesByAgentId[probe.labAgentId] = probe
             }
-            guard rollbackMortalityMaterialExits(
-                materialRollbacks, world: world
-            ) else {
-                throw ControllerError.mortalityBoundary(
-                    "terminal probe rollback failed after \(error)"
+            probesByAgentId = probesBefore
+            lastInfluencedTracesByAgentId = influencedBefore
+            focusedAgentId = focusBefore
+            followMode = followBefore
+            let physicalRollback = rollbackMortalityMaterialExits(
+                completions.compactMap(\.rollback), world: world
+            )
+            materialCustodyGateway.restoreBoundarySnapshot(
+                materialGatewayBefore
+            )
+            mortalityMaterialExitAttempt = materialAttemptBefore
+            current = sessionBefore
+            recorder = recorderBefore
+            let sameWorldEntities = worldEntitiesBefore.count
+                    == world.entities.count
+                && worldEntitiesBefore.allSatisfy { before in
+                    world.entities.contains { $0 === before }
+                }
+            let exact = physicalRollback && sameWorldEntities
+                && probeStatesBefore.allSatisfy {
+                    $0.matches(
+                        world: world,
+                        probesByAgentID: probesByAgentId
+                    )
+                }
+                && probesByAgentId.keys.sorted()
+                    == probesBefore.keys.sorted()
+                && focusedAgentId == focusBefore
+                && followMode == followBefore
+            guard exact else {
+                throw ControllerError.mortalityRollbackBoundary(
+                    "full mortality boundary rollback failed after \(error)"
                 )
             }
-            throw error
-        }
-        let worldProbeIDs = world.entities.compactMap {
-            ($0 as? LabCoreAgentEntity)?.labAgentId
-        }.sorted()
-        guard probesByAgentId.keys.sorted() == expected, worldProbeIDs == expected else {
             throw ControllerError.mortalityBoundary(
-                "active probes do not match active agents expected=\(expected) actual=\(worldProbeIDs)"
-            )
-        }
-        if let focusedAgentId, !expected.contains(focusedAgentId) {
-            self.focusedAgentId = expected.first
-        }
-        if expected.isEmpty {
-            focusedAgentId = nil
-            followMode = .off
-        } else if let target = followTargetId(), !expected.contains(target) {
-            followMode = .off
-        }
-        for id in removedIDs {
-            guard let record = current.mortalitySnapshot().records.last(where: {
-                $0.agentID.rawValue == id
-            }) else {
-                throw ControllerError.mortalityBoundary("terminal record missing for \(id)")
-            }
-            trace(
-                "mortality exit tick=\(record.deathTick) death=\(record.deathID.rawValue) "
-                    + "agent=\(id) cause=\(record.cause.rawValue) "
-                    + "health=\(record.healthBeforeLethalDamage)>\(record.finalHealth) "
-                    + "population=\(previous.agentCount)>\(expected.count) "
-                    + "terminal=\(record.carriedInventory.reduce(0) { $0 + $1.quantity }) "
-                    + "probes=\(previousIDs.count)>\(expected.count) focus=\(focusedAgentId ?? "none") "
-                    + "corpse=none worldMutation=none"
+                "full mortality boundary rollback verified after \(error)"
             )
         }
     }
@@ -190,13 +367,22 @@ extension PebbleAgentController {
         session: inout AgentSimulationSession,
         recorder: inout AgentReplayRecorder?,
         world: World,
-        rejectAfterMutation: Bool = false
-    ) throws -> [PebbleMortalityMaterialExitRollback] {
+        failurePoint: PebbleMortalityBoundaryFailurePoint = .none
+    ) throws -> [PebbleMortalityPhysicalExitCompletion] {
         let pending = session.pendingMortalityTransitions()
         guard !pending.isEmpty else { return [] }
-        var completed: [PebbleMortalityMaterialExitRollback] = []
+        let sessionBefore = session
+        let recorderBefore = recorder
+        let gatewayBefore = materialCustodyGateway.boundarySnapshot()
+        let attemptBefore = mortalityMaterialExitAttempt
+        var completed: [PebbleMortalityPhysicalExitCompletion] = []
         do {
-            for transition in pending {
+            for (offset, transition) in pending.enumerated() {
+                if failurePoint == .beforePhysicalResolution(offset + 1) {
+                    throw ControllerError.mortalityBoundary(
+                        "injected before physical resolution \(offset + 1)"
+                    )
+                }
                 guard let probe = probesByAgentId[
                     transition.agentID.rawValue
                 ], probe.world === world,
@@ -228,8 +414,8 @@ extension PebbleAgentController {
                 let sourceCustody = try materialCustodyGateway.inspect(source)
                 let allCarried = sourceCustody.slots.compactMap { $0 }
                 let probeInventoryBefore = copyItemInventory(probe.carriedItems)
-                guard !allCarried.isEmpty,
-                      allCarried.count <= AgentMortalityConfiguration.live
+                guard allCarried.count <= AgentMortalityConfiguration
+                        .embodiedLive
                         .maximumMaterialExitsPerDeath else {
                     throw ControllerError.mortalityBoundary(
                         "terminal carried material bound"
@@ -251,6 +437,60 @@ extension PebbleAgentController {
                         "terminal material source stale"
                     )
                 }
+                mortalityMaterialExitAttempt += 1
+                if allCarried.isEmpty {
+                    guard rightsBefore.isEmpty else {
+                        throw ControllerError.mortalityBoundary(
+                            "terminal rights asset missing from physical custody"
+                        )
+                    }
+                    let receipt = "mortality-custody:"
+                        + "\(transition.agentID.rawValue):t\(session.tick):"
+                        + "empty:a\(mortalityMaterialExitAttempt)"
+                    let outcome = AgentMortalityPhysicalCustodyOutcome(
+                        operationID: receipt,
+                        terminalAgentID: transition.agentID,
+                        kind: .verifiedEmpty,
+                        physicalReceiptID: receipt,
+                        destinationHolderID: nil,
+                        stackCount: 0,
+                        itemCount: 0,
+                        verifiedAtTick: session.tick
+                    )
+                    var staged = session
+                    var stagedReplay = recorder
+                    if try applyRecordedOperationIfActive(
+                        .applyMortalityPhysicalCustodyOutcome(outcome),
+                        session: &staged,
+                        recorder: &stagedReplay
+                    ) == nil {
+                        _ = try staged.applyMortalityPhysicalCustodyOutcome(
+                            outcome
+                        )
+                    }
+                    if try applyRecordedOperationIfActive(
+                        .finalizePendingMortality(transition.agentID),
+                        session: &staged,
+                        recorder: &stagedReplay
+                    ) == nil {
+                        _ = try staged.finalizePendingMortality(
+                            for: transition.agentID
+                        )
+                    }
+                    session = staged
+                    recorder = stagedReplay
+                    completed.append(PebbleMortalityPhysicalExitCompletion(
+                        agentID: transition.agentID,
+                        kind: .verifiedEmpty,
+                        physicalReceiptID: receipt,
+                        destinationHolderID: nil,
+                        materials: [],
+                        trackedAssetIDs:
+                            transition.requiredMaterialAssetIDs,
+                        rollback: nil
+                    ))
+                    continue
+                }
                 let candidates = mortalityMaterialExitContainers(
                     around: probe, world: world
                 )
@@ -260,7 +500,6 @@ extension PebbleAgentController {
                     )
                 }
 
-                mortalityMaterialExitAttempt += 1
                 var selectedRollback: PebbleMortalityMaterialExitRollback?
                 var stagedSession: AgentSimulationSession?
                 var stagedRecorder: AgentReplayRecorder?
@@ -292,7 +531,6 @@ extension PebbleAgentController {
                         from: source,
                         to: destination,
                         verifyAfterMutation: {
-                            guard !rejectAfterMutation else { return false }
                             do {
                                 let fingerprint = try self.materialCustodyGateway
                                     .fingerprint(destination)
@@ -337,6 +575,34 @@ extension PebbleAgentController {
                                             .mortalityPhysicalExit(outcome)
                                         )
                                     }
+                                }
+                                let physicalOutcome =
+                                    AgentMortalityPhysicalCustodyOutcome(
+                                        operationID: transactionID
+                                            + ":physical-custody",
+                                        terminalAgentID: transition.agentID,
+                                        kind: .transferred,
+                                        physicalReceiptID: transactionID,
+                                        destinationHolderID:
+                                            "container:\(container.x),"
+                                                + "\(container.y),\(container.z)",
+                                        stackCount: allCarried.count,
+                                        itemCount: allCarried.reduce(0) {
+                                            $0 + $1.count
+                                        },
+                                        verifiedAtTick: staged.tick
+                                    )
+                                if try self.applyRecordedOperationIfActive(
+                                    .applyMortalityPhysicalCustodyOutcome(
+                                        physicalOutcome
+                                    ),
+                                    session: &staged,
+                                    recorder: &stagedReplay
+                                ) == nil {
+                                    _ = try staged
+                                        .applyMortalityPhysicalCustodyOutcome(
+                                            physicalOutcome
+                                        )
                                 }
                                 if try self.applyRecordedOperationIfActive(
                                     .finalizePendingMortality(
@@ -383,7 +649,19 @@ extension PebbleAgentController {
                             "terminal material exit \(lastStatus.rawValue)"
                         )
                 }
-                completed.append(selectedRollback)
+                let completion = PebbleMortalityPhysicalExitCompletion(
+                    agentID: transition.agentID,
+                    kind: .transferred,
+                    physicalReceiptID: selectedRollback.transactionID,
+                    destinationHolderID:
+                        "container:\(selectedRollback.container.x),"
+                            + "\(selectedRollback.container.y),"
+                            + "\(selectedRollback.container.z)",
+                    materials: allCarried,
+                    trackedAssetIDs: transition.requiredMaterialAssetIDs,
+                    rollback: selectedRollback
+                )
+                completed.append(completion)
                 let rightsAfter = stagedSession.materialRightsSnapshot().records
                     .filter {
                         transition.requiredMaterialAssetIDs.contains(
@@ -424,38 +702,30 @@ extension PebbleAgentController {
                         "terminal death was not finalized"
                     )
                 }
-                let materialEvent = death.materialExitEventIDs.last?.rawValue
-                    ?? "none"
-                trace(
-                    "mortality material exit tick=\(death.deathTick) "
-                        + "agent=\(transition.agentID.rawValue) "
-                        + "terminalHomeostasis="
-                        + "\(death.terminalPhysiologyEventID?.rawValue ?? "none") "
-                        + "pending=\(death.pendingMaterialExitEventID?.rawValue ?? "none") "
-                        + "materialEvent=\(materialEvent) "
-                        + "lethal=\(death.lethalDamageEventID.rawValue) "
-                        + "resources=\(death.resourcesRetiredEventID.rawValue) "
-                        + "commitments=\(death.commitmentsResolvedEventID.rawValue) "
-                        + "exit=\(death.populationExitEventID.rawValue) "
-                        + "death=\(death.deathEventID.rawValue) "
-                        + "assets=\(transition.requiredMaterialAssetIDs.map(\.rawValue).joined(separator: ",")) "
-                        + "holderBefore=agent:\(transition.agentID.rawValue) "
-                        + "holderAfter=container:\(selectedRollback.container.x),"
-                        + "\(selectedRollback.container.y),\(selectedRollback.container.z) "
-                        + "quantity=\(allCarried.reduce(0) { $0 + $1.count })>"
-                        + "\(allCarried.reduce(0) { $0 + $1.count }) "
-                        + "receipt=\(selectedRollback.transactionID) "
-                        + "socialRoles=unchanged inheritance=none"
-                )
+                guard death.physicalCustodyResolution?.physicalReceiptID
+                        == selectedRollback.transactionID else {
+                    throw ControllerError.mortalityBoundary(
+                        "terminal physical receipt was not retained"
+                    )
+                }
             }
             return completed
         } catch {
-            guard rollbackMortalityMaterialExits(completed, world: world) else {
-                throw ControllerError.mortalityBoundary(
+            let rolledBack = rollbackMortalityMaterialExits(
+                completed.compactMap(\.rollback), world: world
+            )
+            session = sessionBefore
+            recorder = recorderBefore
+            materialCustodyGateway.restoreBoundarySnapshot(gatewayBefore)
+            mortalityMaterialExitAttempt = attemptBefore
+            guard rolledBack else {
+                throw ControllerError.mortalityRollbackBoundary(
                     "terminal material rollback failed after \(error)"
                 )
             }
-            throw error
+            throw ControllerError.mortalityBoundary(
+                "terminal material rollback verified after \(error)"
+            )
         }
     }
 

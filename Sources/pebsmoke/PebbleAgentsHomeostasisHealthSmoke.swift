@@ -80,7 +80,8 @@ private func homeostasisSession(
     _ simulationID: String,
     agents: [AgentSessionAgentState],
     survival: AgentSurvivalConfiguration,
-    homeostasis: AgentHomeostasisConfiguration
+    homeostasis: AgentHomeostasisConfiguration,
+    mortality: AgentMortalityConfiguration = .live
 ) -> AgentSimulationSession {
     var completeAgents = agents
     let existing = Set(completeAgents.map(\.id))
@@ -103,7 +104,7 @@ private func homeostasisSession(
         settlementAnchor: AgentPosition(x: 0, y: 64, z: 0),
         receptionPosition: AgentPosition(x: 0, y: 64, z: 3)
     )
-    try! session.setMortalityEnabled(true)
+    try! session.setMortalityEnabled(true, configuration: mortality)
     try! session.setLifecycleEnabled(true)
     try! session.setHomeostasisEnabled(true, configuration: homeostasis)
     return session
@@ -394,9 +395,24 @@ func runPebbleAgentsHomeostasisHealthSmoke() {
         )
     )
     _ = try! declining.applyMaterialRightsOperation(verifiedExitOperation)
+    let verifiedPhysicalCustody = AgentMortalityPhysicalCustodyOutcome(
+        operationID: "civ29-verified-terminal-physical-custody",
+        terminalAgentID: AgentID(rawValue: "agent_0")!,
+        kind: .transferred,
+        physicalReceiptID: verifiedDestination.physicalReceiptID,
+        destinationHolderID: "container:civ29-test-container",
+        stackCount: 1,
+        itemCount: 1,
+        verifiedAtTick: declining.tick
+    )
+    let physicalResolution = try! declining
+        .applyMortalityPhysicalCustodyOutcome(verifiedPhysicalCustody)
     let rightsAfterExit = declining.materialRightsSnapshot().records[0]
     check("verified mortality exit changes only the physical holder",
-          rightsAfterExit.lastVerifiedHolder == verifiedDestination
+          physicalResolution.kind == .transferred
+            && physicalResolution.physicalReceiptID
+                == verifiedDestination.physicalReceiptID
+            && rightsAfterExit.lastVerifiedHolder == verifiedDestination
             && rightsAfterExit.custodianID == rightsBeforeExit.custodianID
             && rightsAfterExit.recognizedOwnership
                 == rightsBeforeExit.recognizedOwnership
@@ -502,6 +518,10 @@ func runPebbleAgentsHomeostasisHealthSmoke() {
         to: &replaySession
     )
     _ = try! mortalityRecorder.apply(
+        .applyMortalityPhysicalCustodyOutcome(verifiedPhysicalCustody),
+        to: &replaySession
+    )
+    _ = try! mortalityRecorder.apply(
         .finalizePendingMortality(AgentID(rawValue: "agent_0")!),
         to: &replaySession
     )
@@ -525,6 +545,124 @@ func runPebbleAgentsHomeostasisHealthSmoke() {
             + "replay=\(try! mortalityReplay.session.durableStateDigest()) "
             + "target=\(terminalDeathDigest) "
             + "operations=\(mortalityJournal.records.map(\.operationKind))")
+
+    var physicalOnly = homeostasisSession(
+        "civ29-physical-only-pending",
+        agents: [
+            homeostasisAgent("agent_0", hunger: 0.9, fatigue: 0.9),
+        ],
+        survival: homeostasisFastSurvival,
+        homeostasis: boundedConfig,
+        mortality: .embodiedLive
+    )
+    for _ in 0..<12
+        where physicalOnly.pendingMortalityTransitions().isEmpty {
+        _ = try! physicalOnly.advanceTick()
+    }
+    let physicalOnlyPending = physicalOnly.pendingMortalityTransitions().first
+    let physicalOnlyPendingBytes = try! physicalOnly.durableStateBytes()
+    let physicalOnlyCheckpoint = try! physicalOnly.makeCheckpoint()
+    let physicalOnlyRestored = try! AgentSimulationSession.restoring(
+        physicalOnlyCheckpoint
+    )
+    check("embodied death waits for physical custody without Material Rights",
+          !physicalOnly.materialRightsEnabled
+            && physicalOnlyPending?.agentID.rawValue == "agent_0"
+            && physicalOnlyPending?.requiredMaterialAssetIDs.isEmpty == true
+            && physicalOnlyPending?.physicalCustodyResolution == nil
+            && physicalOnly.mortalitySnapshot().totalDeathCount == 0)
+    check("pending physical exit without social assets survives checkpoint exactly",
+          physicalOnlyCheckpoint.schemaVersion
+                == AgentCheckpointSchema.homeostasisVersion
+            && (try! physicalOnlyRestored.durableStateBytes())
+                == physicalOnlyPendingBytes
+            && physicalOnlyRestored.pendingMortalityTransitions().first?
+                .requiredMaterialAssetIDs.isEmpty == true)
+    check("death cannot finalize before terminal inventory verification", {
+        do {
+            _ = try physicalOnly.finalizePendingMortality(
+                for: AgentID(rawValue: "agent_0")!
+            )
+            return false
+        } catch AgentSessionError.mortality(
+            .pendingMaterialExit("agent_0")
+        ) {
+            return (try! physicalOnly.durableStateBytes())
+                == physicalOnlyPendingBytes
+                && physicalOnly.mortalitySnapshot().totalDeathCount == 0
+        } catch {
+            return false
+        }
+    }())
+    let physicalOnlyOutcome = AgentMortalityPhysicalCustodyOutcome(
+        operationID: "civ29-physical-only-transfer",
+        terminalAgentID: AgentID(rawValue: "agent_0")!,
+        kind: .transferred,
+        physicalReceiptID: "civ29-physical-only-receipt",
+        destinationHolderID: "container:civ29-physical-only",
+        stackCount: 1,
+        itemCount: 3,
+        verifiedAtTick: physicalOnly.tick
+    )
+    _ = try! physicalOnly.applyMortalityPhysicalCustodyOutcome(
+        physicalOnlyOutcome
+    )
+    _ = try! physicalOnly.finalizePendingMortality(
+        for: AgentID(rawValue: "agent_0")!
+    )
+    check("physical-only transfer finalizes once without inventing social state",
+          physicalOnly.mortalitySnapshot().totalDeathCount == 1
+            && physicalOnly.materialRightsSnapshot().records.isEmpty
+            && physicalOnly.mortalitySnapshot().records.last?
+                .physicalCustodyResolution?.itemCount == 3)
+
+    var verifiedEmpty = homeostasisSession(
+        "civ29-verified-empty",
+        agents: [
+            homeostasisAgent("agent_0", hunger: 0.9, fatigue: 0.9),
+        ],
+        survival: homeostasisFastSurvival,
+        homeostasis: boundedConfig,
+        mortality: .embodiedLive
+    )
+    try! verifiedEmpty.setMaterialRightsEnabled(true)
+    for _ in 0..<12
+        where verifiedEmpty.pendingMortalityTransitions().isEmpty {
+        _ = try! verifiedEmpty.advanceTick()
+    }
+    let emptyPending = verifiedEmpty.pendingMortalityTransitions().first
+    _ = try! verifiedEmpty.applyMortalityPhysicalCustodyOutcome(
+        AgentMortalityPhysicalCustodyOutcome(
+            operationID: "civ29-empty-custody",
+            terminalAgentID: AgentID(rawValue: "agent_0")!,
+            kind: .verifiedEmpty,
+            physicalReceiptID: "civ29-empty-custody-receipt",
+            destinationHolderID: nil,
+            stackCount: 0,
+            itemCount: 0,
+            verifiedAtTick: verifiedEmpty.tick
+        )
+    )
+    _ = try! verifiedEmpty.finalizePendingMortality(
+        for: AgentID(rawValue: "agent_0")!
+    )
+    check("verified-empty custody permits exactly one death with no fake asset",
+          emptyPending?.requiredMaterialAssetIDs.isEmpty == true
+            && verifiedEmpty.materialRightsSnapshot().records.isEmpty
+            && verifiedEmpty.mortalitySnapshot().totalDeathCount == 1
+            && verifiedEmpty.mortalitySnapshot().records.last?
+                .physicalCustodyResolution?.kind == .verifiedEmpty
+            && {
+                do {
+                    _ = try verifiedEmpty.finalizePendingMortality(
+                        for: AgentID(rawValue: "agent_0")!
+                    )
+                    return false
+                } catch {
+                    return verifiedEmpty.mortalitySnapshot().totalDeathCount == 1
+                }
+            }())
+
     check("homeostasis transition history is bounded with explicit eviction",
           declining.homeostasisSnapshot().recentTransitions.count <= 2
             && declining.homeostasisSnapshot().transitionEvictionCount > 0

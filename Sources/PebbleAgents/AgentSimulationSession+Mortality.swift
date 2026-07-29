@@ -5,6 +5,7 @@ private struct AgentLethalMortalityCandidate {
     let terminalPhysiologyEventID: AgentCausalEventID?
     let pendingMaterialExitEventID: AgentCausalEventID?
     let materialExitEventIDs: [AgentCausalEventID]
+    let physicalCustodyResolution: AgentMortalityPhysicalCustodyResolution?
 }
 
 extension AgentSimulationSession {
@@ -53,7 +54,9 @@ extension AgentSimulationSession {
                     configuration.maximumCancelledCommitmentIDsPerDeath,
                 maximumExitFrames: configuration.maximumExitFrames,
                 maximumMaterialExitsPerDeath:
-                    configuration.maximumMaterialExitsPerDeath
+                    configuration.maximumMaterialExitsPerDeath,
+                requiresTerminalPhysicalCustodyVerification:
+                    configuration.requiresTerminalPhysicalCustodyVerification
             )
             try prevalidateCausalAppend(count: 1)
             guard let event = try recordCausalEvent(
@@ -154,7 +157,7 @@ extension AgentSimulationSession {
             return $0.deathID < $1.deathID
         }
         let canonical = [
-            "config=\(mortality.configuration.maximumDeathsPerTick),\(mortality.configuration.maximumRetainedDeathRecords),\(mortality.configuration.maximumFinalMemoryEntries),\(mortality.configuration.maximumCancelledCommitmentIDsPerDeath),\(mortality.configuration.maximumExitFrames),\(mortality.configuration.maximumMaterialExitsPerDeath)",
+            "config=\(mortality.configuration.maximumDeathsPerTick),\(mortality.configuration.maximumRetainedDeathRecords),\(mortality.configuration.maximumFinalMemoryEntries),\(mortality.configuration.maximumCancelledCommitmentIDsPerDeath),\(mortality.configuration.maximumExitFrames),\(mortality.configuration.maximumMaterialExitsPerDeath),\(mortality.configuration.requiresTerminalPhysicalCustodyVerification ? 1 : 0)",
             "total=\(mortality.totalDeathCount)",
             "processed=\(mortality.processedDeathIDs.sorted().map(\.rawValue).joined(separator: ","))",
             "terminal=\(mortality.unrecoveredAtDeath.amounts.map { "\($0.resource.rawValue):\($0.quantity)" }.joined(separator: ","))",
@@ -164,9 +167,19 @@ extension AgentSimulationSession {
             mortality.pendingTransitions.sorted {
                 $0.agentID < $1.agentID
             }.map {
-                "\($0.detectedAtTick):\($0.agentID.rawValue):"
+                let physical = $0.physicalCustodyResolution.map {
+                    [
+                        $0.kind.rawValue,
+                        String($0.stackCount),
+                        String($0.itemCount),
+                        $0.physicalReceiptID,
+                        $0.eventID.rawValue,
+                    ].joined(separator: ",")
+                } ?? "unverified"
+                return "\($0.detectedAtTick):\($0.agentID.rawValue):"
                     + "\($0.requiredMaterialAssetIDs.map(\.rawValue).joined(separator: ",")):"
-                    + "\($0.resolvedMaterialAssetIDs.map(\.rawValue).joined(separator: ","))"
+                    + "\($0.resolvedMaterialAssetIDs.map(\.rawValue).joined(separator: ",")):"
+                    + physical
             }.joined(separator: ";"),
             "evicted=\(mortality.evictionCounts.deathRecords),\(mortality.evictionCounts.exitFrames)",
             "rolling=\(mortality.rollingDigest)",
@@ -258,7 +271,8 @@ extension AgentSimulationSession {
                 cause: candidate.homeostasisMortalityCause(for: agentID),
                 terminalPhysiologyEventID: terminalPhysiologyEventID,
                 pendingMaterialExitEventID: nil,
-                materialExitEventIDs: []
+                materialExitEventIDs: [],
+                physicalCustodyResolution: nil
             ))
         }
         lethal.sort { $0.agentID < $1.agentID }
@@ -301,7 +315,11 @@ extension AgentSimulationSession {
                     .materialExitLimitExceeded(assetIDs.count)
                 )
             }
-            guard !assetIDs.isEmpty else { continue }
+            guard !assetIDs.isEmpty
+                    || mortality.configuration
+                        .requiresTerminalPhysicalCustodyVerification else {
+                continue
+            }
             guard !mortality.pendingTransitions.contains(where: {
                 $0.agentID == item.agentID
             }) else {
@@ -321,9 +339,10 @@ extension AgentSimulationSession {
                 causes: causes,
                 payload: .operation(
                     status: "pending",
-                    detail: "assets=\(assetIDs.map(\.rawValue).joined(separator: ","))"
+                    detail: "physicalCustody=required assets="
+                        + assetIDs.map(\.rawValue).joined(separator: ",")
                 ),
-                summary: "mortality material exit pending agent="
+                summary: "mortality physical custody pending agent="
                     + "\(item.agentID.rawValue) assets=\(assetIDs.count)"
             )
             let transition = AgentPendingMortalityTransition(
@@ -335,7 +354,8 @@ extension AgentSimulationSession {
                 pendingEventID: event.eventID,
                 requiredMaterialAssetIDs: assetIDs,
                 resolvedMaterialAssetIDs: [],
-                materialExitEventIDs: []
+                materialExitEventIDs: [],
+                physicalCustodyResolution: nil
             )
             mortality.pendingTransitions.append(transition)
             mortality.pendingTransitions.sort { $0.agentID < $1.agentID }
@@ -344,6 +364,97 @@ extension AgentSimulationSession {
         }
         mortalityState = mortality
         return pending
+    }
+
+    @discardableResult
+    public mutating func applyMortalityPhysicalCustodyOutcome(
+        _ outcome: AgentMortalityPhysicalCustodyOutcome
+    ) throws -> AgentMortalityPhysicalCustodyResolution {
+        var candidate = self
+        let resolution = try candidate
+            .applyMortalityPhysicalCustodyOutcomeInPlace(outcome)
+        self = candidate
+        return resolution
+    }
+
+    private mutating func applyMortalityPhysicalCustodyOutcomeInPlace(
+        _ outcome: AgentMortalityPhysicalCustodyOutcome
+    ) throws -> AgentMortalityPhysicalCustodyResolution {
+        guard var mortality = mortalityState,
+              let index = mortality.pendingTransitions.firstIndex(where: {
+                  $0.agentID == outcome.terminalAgentID
+              }) else {
+            throw AgentSessionError.mortality(
+                .pendingMaterialExit(outcome.terminalAgentID.rawValue)
+            )
+        }
+        let pending = mortality.pendingTransitions[index]
+        guard pending.physicalCustodyResolution == nil,
+              pending.unresolvedMaterialAssetIDs.isEmpty,
+              pending.requiredMaterialAssetIDs
+                == pending.resolvedMaterialAssetIDs.sorted(),
+              outcome.verifiedAtTick == tick,
+              pending.detectedAtTick == tick,
+              (1...256).contains(outcome.operationID.utf8.count),
+              (1...256).contains(outcome.physicalReceiptID.utf8.count),
+              (0...mortality.configuration.maximumMaterialExitsPerDeath)
+                .contains(outcome.stackCount),
+              outcome.itemCount >= outcome.stackCount,
+              outcome.itemCount <= Int.max / 2 else {
+            throw AgentSessionError.mortality(.invalidState(
+                "terminal physical custody outcome"
+            ))
+        }
+        switch outcome.kind {
+        case .verifiedEmpty:
+            guard outcome.stackCount == 0, outcome.itemCount == 0,
+                  outcome.destinationHolderID == nil else {
+                throw AgentSessionError.mortality(.invalidState(
+                    "terminal empty custody outcome"
+                ))
+            }
+        case .transferred:
+            guard outcome.stackCount > 0, outcome.itemCount > 0,
+                  let destination = outcome.destinationHolderID,
+                  destination.hasPrefix("container:"),
+                  (11...256).contains(destination.utf8.count) else {
+                throw AgentSessionError.mortality(.invalidState(
+                    "terminal transferred custody outcome"
+                ))
+            }
+        }
+        let causes = Array(Set(
+            [pending.pendingEventID] + pending.materialExitEventIDs.suffix(1)
+        )).sorted()
+        let detail = "receipt=\(outcome.physicalReceiptID) stacks="
+            + "\(outcome.stackCount) items=\(outcome.itemCount) "
+            + "destination=\(outcome.destinationHolderID ?? "none")"
+        let event = try requiredMortalityEvent(
+            kind: .mortalityPhysicalCustodyResolved,
+            actorID: pending.agentID,
+            subjectID: pending.agentID,
+            operationID: AgentOperationID(rawValue: outcome.operationID),
+            causes: causes,
+            payload: .operation(
+                status: outcome.kind.rawValue,
+                detail: String(detail.prefix(160))
+            ),
+            summary: "mortality physical custody \(outcome.kind.rawValue) "
+                + "agent=\(pending.agentID.rawValue)"
+        )
+        let resolution = AgentMortalityPhysicalCustodyResolution(
+            kind: outcome.kind,
+            physicalReceiptID: outcome.physicalReceiptID,
+            destinationHolderID: outcome.destinationHolderID,
+            stackCount: outcome.stackCount,
+            itemCount: outcome.itemCount,
+            verifiedAtTick: outcome.verifiedAtTick,
+            eventID: event.eventID
+        )
+        mortality.pendingTransitions[index].physicalCustodyResolution = resolution
+        mortality.lastMortalityEventID = event.eventID
+        mortalityState = mortality
+        return resolution
     }
 
     @discardableResult
@@ -369,7 +480,7 @@ extension AgentSimulationSession {
         guard pending.unresolvedMaterialAssetIDs.isEmpty,
               pending.requiredMaterialAssetIDs
                 == pending.resolvedMaterialAssetIDs.sorted(),
-              !pending.materialExitEventIDs.isEmpty else {
+              pending.physicalCustodyResolution != nil else {
             throw AgentSessionError.mortality(.pendingMaterialExit(agentID.rawValue))
         }
         mortality.pendingTransitions.remove(at: index)
@@ -381,7 +492,8 @@ extension AgentSimulationSession {
                 cause: pending.cause,
                 terminalPhysiologyEventID: pending.terminalPhysiologyEventID,
                 pendingMaterialExitEventID: pending.pendingEventID,
-                materialExitEventIDs: pending.materialExitEventIDs
+                materialExitEventIDs: pending.materialExitEventIDs,
+                physicalCustodyResolution: pending.physicalCustodyResolution
             ),
         ], at: pending.detectedAtTick)
         guard let record = mortalityState?.records.last(where: {
@@ -475,6 +587,7 @@ extension AgentSimulationSession {
                 item.terminalPhysiologyEventID,
                 item.pendingMaterialExitEventID,
                 item.materialExitEventIDs.last,
+                item.physicalCustodyResolution?.eventID,
                 continuityEventID,
             ].compactMap { $0 })).sorted()
             if homeostasisState != nil {
@@ -770,6 +883,7 @@ extension AgentSimulationSession {
                 terminalPhysiologyEventID: item.terminalPhysiologyEventID,
                 pendingMaterialExitEventID: item.pendingMaterialExitEventID,
                 materialExitEventIDs: item.materialExitEventIDs,
+                physicalCustodyResolution: item.physicalCustodyResolution,
                 lethalDamageEventID: lethalEvent.eventID,
                 deathEventID: deathEvent.eventID,
                 populationExitEventID: exitEvent.eventID,
@@ -969,6 +1083,7 @@ extension AgentSimulationSession {
         kind: AgentCausalEventKind,
         actorID: AgentID? = nil,
         subjectID: AgentID? = nil,
+        operationID: AgentOperationID? = nil,
         causes: [AgentCausalEventID] = [],
         payload: AgentCausalPayload,
         summary: String
@@ -978,6 +1093,7 @@ extension AgentSimulationSession {
             origin: .mortalityTransition,
             actorID: actorID,
             subjectID: subjectID,
+            operationID: operationID,
             causes: causes,
             payload: payload,
             summary: summary
@@ -999,6 +1115,7 @@ extension AgentCausalEventKind {
     var isMortality: Bool {
         switch self {
         case .mortalityInitialized, .mortalityMaterialExitPending,
+             .mortalityPhysicalCustodyResolved,
              .lethalHealthDepletion, .agentDeathFinalized,
              .populationMemberExited, .mortalityResourcesRetired,
              .mortalityCommitmentsResolved, .mortalityStateCleared:

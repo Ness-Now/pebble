@@ -91,6 +91,7 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case ecologyClear
     case mortalityFeature
     case mortalityClear
+    case mortalityPhysicalCustodyResolution
     case mortalityFinalization
     case lifecycleFeature
     case reproductionFeature
@@ -204,6 +205,9 @@ public enum AgentReplayOperation: Codable {
     case clearEcologyDiagnostics
     case setMortalityEnabled(Bool, configuration: AgentMortalityConfiguration)
     case clearMortalityDiagnostics
+    case applyMortalityPhysicalCustodyOutcome(
+        AgentMortalityPhysicalCustodyOutcome
+    )
     case finalizePendingMortality(AgentID)
     case setLifecycleEnabled(Bool, configuration: AgentLifecycleConfiguration)
     case setReproductionEnabled(Bool)
@@ -330,6 +334,8 @@ public enum AgentReplayOperation: Codable {
         case .clearEcologyDiagnostics: return .ecologyClear
         case .setMortalityEnabled: return .mortalityFeature
         case .clearMortalityDiagnostics: return .mortalityClear
+        case .applyMortalityPhysicalCustodyOutcome:
+            return .mortalityPhysicalCustodyResolution
         case .finalizePendingMortality: return .mortalityFinalization
         case .setLifecycleEnabled: return .lifecycleFeature
         case .setReproductionEnabled: return .reproductionFeature
@@ -438,6 +444,8 @@ public enum AgentReplayOperation: Codable {
             raw = outcome.intent.provisionID
         case let .applyMaterialRightsOperation(operation):
             raw = operation.operationID
+        case let .applyMortalityPhysicalCustodyOutcome(outcome):
+            raw = outcome.operationID
         case let .finalizePendingMortality(agentID):
             raw = "mortality-finalize:\(agentID.rawValue)"
         case let .selectWildSubsistenceOpportunity(context):
@@ -1292,6 +1300,8 @@ extension AgentSimulationSession {
             try candidate.setMortalityEnabled(enabled, configuration: configuration)
         case .clearMortalityDiagnostics:
             try candidate.clearMortalityDiagnostics()
+        case let .applyMortalityPhysicalCustodyOutcome(outcome):
+            _ = try candidate.applyMortalityPhysicalCustodyOutcome(outcome)
         case let .finalizePendingMortality(agentID):
             _ = try candidate.finalizePendingMortality(for: agentID)
         case let .setLifecycleEnabled(enabled, configuration):

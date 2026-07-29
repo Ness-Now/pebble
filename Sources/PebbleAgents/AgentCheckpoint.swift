@@ -1401,7 +1401,10 @@ extension AgentSimulationSession {
                         mortality.configuration.maximumCancelledCommitmentIDsPerDeath,
                     maximumExitFrames: mortality.configuration.maximumExitFrames,
                     maximumMaterialExitsPerDeath:
-                        mortality.configuration.maximumMaterialExitsPerDeath
+                        mortality.configuration.maximumMaterialExitsPerDeath,
+                    requiresTerminalPhysicalCustodyVerification:
+                        mortality.configuration
+                            .requiresTerminalPhysicalCustodyVerification
                 )
             } catch {
                 throw AgentCheckpointError.invalidConfiguration
@@ -1476,8 +1479,32 @@ extension AgentSimulationSession {
                             <= mortality.configuration.maximumMaterialExitsPerDeath
                           && record.materialExitEventIDs
                             == record.materialExitEventIDs.sorted()
-                          && (record.pendingMaterialExitEventID == nil)
-                            == record.materialExitEventIDs.isEmpty
+                          && (record.pendingMaterialExitEventID != nil
+                            || (record.materialExitEventIDs.isEmpty
+                                && record.physicalCustodyResolution == nil))
+                          && (record.physicalCustodyResolution == nil
+                            || record.pendingMaterialExitEventID != nil)
+                          && (!mortality.configuration
+                                .requiresTerminalPhysicalCustodyVerification
+                            || record.physicalCustodyResolution != nil)
+                          && record.physicalCustodyResolution.map {
+                              $0.verifiedAtTick == record.deathTick
+                                  && (0...mortality.configuration
+                                    .maximumMaterialExitsPerDeath)
+                                    .contains($0.stackCount)
+                                  && $0.itemCount >= $0.stackCount
+                                  && $0.eventID.simulationID
+                                    == state.clock.simulationID
+                                  && (($0.kind == .verifiedEmpty
+                                        && $0.stackCount == 0
+                                        && $0.itemCount == 0
+                                        && $0.destinationHolderID == nil)
+                                    || ($0.kind == .transferred
+                                        && $0.stackCount > 0
+                                        && $0.itemCount > 0
+                                        && ($0.destinationHolderID?
+                                            .hasPrefix("container:") == true)))
+                          } ?? true
                   }),
                   mortality.evictionCounts.deathRecords >= 0,
                   mortality.evictionCounts.exitFrames >= 0,
@@ -1501,9 +1528,17 @@ extension AgentSimulationSession {
                 let terminalEvent = pending.terminalPhysiologyEventID.flatMap { id in
                     state.causalLedger.events.first { $0.eventID == id }
                 }
+                let physicalEvent = pending.physicalCustodyResolution.flatMap {
+                    resolution in
+                    state.causalLedger.events.first {
+                        $0.eventID == resolution.eventID
+                    }
+                }
                 guard pending.detectedAtTick == state.clock.tick.rawValue,
                       pending.healthBeforeLethalDamage > 0,
-                      required.count > 0,
+                      (required.count > 0
+                        || mortality.configuration
+                            .requiresTerminalPhysicalCustodyVerification),
                       required.count
                         <= mortality.configuration.maximumMaterialExitsPerDeath,
                       required == required.sorted(),
@@ -1532,6 +1567,38 @@ extension AgentSimulationSession {
                       pendingEvent?.actorID == pending.agentID,
                       pendingEvent?.subjectID == pending.agentID,
                       pendingEvent?.simulationTick.rawValue == pending.detectedAtTick,
+                      (pending.physicalCustodyResolution.map { resolution in
+                          let expectedCauses = Array(Set(
+                              [pending.pendingEventID]
+                                + pending.materialExitEventIDs.suffix(1)
+                          )).sorted()
+                          return unresolved.isEmpty
+                              && required == resolved
+                              && resolution.verifiedAtTick
+                                  == pending.detectedAtTick
+                              && (0...mortality.configuration
+                                .maximumMaterialExitsPerDeath)
+                                .contains(resolution.stackCount)
+                              && resolution.itemCount >= resolution.stackCount
+                              && resolution.eventID.simulationID
+                                == state.clock.simulationID
+                              && physicalEvent?.kind
+                                == .mortalityPhysicalCustodyResolved
+                              && physicalEvent?.actorID == pending.agentID
+                              && physicalEvent?.subjectID == pending.agentID
+                              && physicalEvent?.simulationTick.rawValue
+                                == pending.detectedAtTick
+                              && physicalEvent?.causes == expectedCauses
+                              && ((resolution.kind == .verifiedEmpty
+                                    && resolution.stackCount == 0
+                                    && resolution.itemCount == 0
+                                    && resolution.destinationHolderID == nil)
+                                || (resolution.kind == .transferred
+                                    && resolution.stackCount > 0
+                                    && resolution.itemCount > 0
+                                    && (resolution.destinationHolderID?
+                                        .hasPrefix("container:") == true)))
+                      } ?? true),
                       state.agents.first(where: {
                           $0.agentID == pending.agentID
                       })?.health == 0,
@@ -1603,6 +1670,8 @@ extension AgentSimulationSession {
                 let terminalPhysiology = record.terminalPhysiologyEventID.flatMap(event)
                 let pendingMaterialExit = record.pendingMaterialExitEventID.flatMap(event)
                 let materialExits = record.materialExitEventIDs.compactMap(event)
+                let physicalResolution = record.physicalCustodyResolution
+                    .flatMap { event($0.eventID) }
                 let migrationFailure = state.causalLedger.events.first {
                     $0.kind == .migrationFailed && $0.actorID == record.agentID
                         && $0.sequence > commitments.sequence && $0.sequence < exit.sequence
@@ -1640,6 +1709,7 @@ extension AgentSimulationSession {
                         record.terminalPhysiologyEventID,
                         pendingID,
                         record.materialExitEventIDs.last,
+                        record.physicalCustodyResolution?.eventID,
                     ].compactMap { $0 })).sorted()
                     guard pendingMaterialExit.map({ pendingEvent in
                         pendingEvent.kind == .mortalityMaterialExitPending
@@ -1670,6 +1740,28 @@ extension AgentSimulationSession {
                                 "mortality material exit event"
                             )
                         }
+                    }
+                    if let resolution = record.physicalCustodyResolution {
+                        let expectedCauses = Array(Set(
+                            [pendingID] + record.materialExitEventIDs.suffix(1)
+                        )).sorted()
+                        guard physicalResolution.map({
+                            $0.kind == .mortalityPhysicalCustodyResolved
+                                && $0.actorID == record.agentID
+                                && $0.subjectID == record.agentID
+                                && $0.simulationTick.rawValue == record.deathTick
+                                && $0.causes == expectedCauses
+                        }) ?? (state.causalLedger.droppedEventCount > 0),
+                              lethal.causes.contains(resolution.eventID) else {
+                            throw AgentCheckpointError.invalidBound(
+                                "mortality physical custody resolution"
+                            )
+                        }
+                    } else if mortality.configuration
+                        .requiresTerminalPhysicalCustodyVerification {
+                        throw AgentCheckpointError.invalidBound(
+                            "mortality physical custody missing"
+                        )
                     }
                 }
                 guard

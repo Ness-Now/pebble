@@ -279,6 +279,7 @@ final class PebbleAgentController {
         case settlementMetricsBoundary(String)
         case ecologyBoundary(String)
         case mortalityBoundary(String)
+        case mortalityRollbackBoundary(String)
         case homeostasisBoundary(String)
         case lifecycleBoundary(String)
         case kinshipBoundary(String)
