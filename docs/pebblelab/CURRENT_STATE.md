@@ -46,18 +46,22 @@ Completing `CIV-30` makes `CIV-31` eligible; it does not start the phase.
 For the `CIV-30` local review candidate:
 
 ```text
-focused genetics/development/phenotype: 31 passed, 0 failed
+focused genetics/development/phenotype: 45 passed, 0 failed
 focused lifecycle: 80 passed, 0 failed
 focused homeostasis/health: 30 passed, 0 failed
 focused checkpoint/replay: 49 passed, 0 failed
 focused Observer: 20 passed, 0 failed
-repository gate: 3405 passed, 0 failed
+repository gate: 3419 passed, 0 failed
 repository verification steps: 35/35
-rendered two-process CIV-30 birth/restart/development campaign: PASS
+rendered two-process CIV-30 birth/restart/development campaign
+plus isolated tamper process: PASS
 founder/second-founder/child/post-restart captures: inspected
 normal inherited birth: YES
 parental locus provenance: YES
+inherited genotype bound to canonical birth, progenitors and birth tick: YES
 schema-22 checkpoint/replay: byte exact
+schema-22 manifest integrity digest: verified
+tampered physical attestation refused before World/session/probe mutation: YES
 Observer schema 3: read-only
 persistent child probe restored from empty-custody attestation: YES
 child genotype changed across restart: NO
@@ -103,11 +107,13 @@ cleanup: exact
   it does not encode sex, gender, detailed appearance, intelligence,
   personality, genetic disease or automatic social outcomes.
 - A checkpoint may recreate a persistent active probe absent from the fresh
-  bootstrap only when the schema-22 live manifest attests empty carried
-  custody, the identity remains present in population and lifecycle, and no
-  Material Rights record resolves to that agent as physical holder. Non-empty
-  custody remains fail-closed and depends on the existing CIV-27
-  reconciliation path.
+  bootstrap only when the schema-22 live manifest carries a valid canonical
+  integrity digest protecting its sorted, unique empty-custody attestation,
+  the identity remains present in population and lifecycle, and no Material
+  Rights record resolves to that agent as physical holder. The manifest is
+  verified before any World mutation; older unprotected manifests and
+  non-empty custody cannot authorize empty-probe recreation and remain
+  fail-closed on the existing CIV-27 reconciliation path.
 - Gate `V4-GATE-D-v1` requires proof of at least one genuinely renewable
   physical subsistence loop; Gate B did not claim this.
 

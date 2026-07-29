@@ -250,9 +250,13 @@ inheritance with per-locus provenance, atomic child/parentage/household/genotype
 publication, migration, post-mortem development stop, schema-22
 checkpoint/replay, read-only Observer schema 3, bounded ecological
 deduplication and fail-closed restoration of a persistent child probe only
-when carried custody was attested empty. A real rendered two-process campaign
-proves normal birth, the same child and genotype after restart, continued
-newborn-to-juvenile development, zero duplication and exact cleanup.
+when carried custody was attested empty by a sorted, bounded attestation
+protected by the schema-22 manifest integrity digest. Inherited genotypes are
+also validated against exactly one canonical birth, its ordered progenitors,
+birth tick and retained causal chain. A real rendered two-process campaign,
+plus an isolated corrupt-manifest refusal process, proves normal birth, the
+same child and genotype after restart, continued newborn-to-juvenile
+development, pre-mutation rejection, zero duplication and exact cleanup.
 
 This phase does not claim general mutation, genetic disease, sex or gender,
 detailed appearance, genetically assigned intelligence or personality,

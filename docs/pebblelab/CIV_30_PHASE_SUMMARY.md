@@ -9,11 +9,12 @@ was implemented from the published canonical baseline:
 c1eda66dfacdd16911207b6fc8fd58df8581b99f
 ```
 
-The product work is separated into two commits:
+The product work is separated into three commits:
 
 ```text
 be157f1  Implement bounded deterministic genetics V1
 994c3ce  Integrate rendered genetics birth and restart
+453ff02  Harden CIV-30 checkpoint and inherited genetics integrity
 ```
 
 This report intentionally does not self-reference its containing documentation
@@ -41,6 +42,14 @@ started and is the next eligible phase.
   index and causal creation event. Parent input order is canonicalized;
   distinct birth and child identities provide deterministic sibling
   variation. V1 performs no general mutation.
+- Validation binds every inherited genotype to exactly one canonical birth
+  record: child ID, birth ID, ordered progenitors and creation tick must match.
+  Every active `localBirth` lifecycle member has exactly one such inherited
+  genotype; bootstrap and imported roots follow the existing founder policy.
+  Retained causal evidence must be the same-child, same-tick
+  `genotypeInherited` event by the first canonical progenitor and must cite the
+  corresponding `birthSiteValidated` event. Honest causal-ledger eviction
+  remains accepted under the existing bounded historical-reference policy.
 - Birth publication is one candidate transaction. Child cognitive state,
   population member, lifecycle record, parentage, household membership,
   inherited genotype, development, phenotype and causal provenance either
@@ -115,6 +124,12 @@ resolved probes had exactly empty carried inventories at save time. On load, a
 checkpoint identity absent from the fresh bootstrap may receive a new
 transient probe only when all of the following hold:
 
+- the manifest has a versioned canonical SHA-256 integrity digest covering
+  its schema, checkpoint identity and storage digest, World binding, restart
+  safety, reconciliation binding and complete live orchestration, including
+  the empty-probe attestation;
+- that digest is verified before any manifest field can authorize World
+  mutation and is rechecked while validating the temporary save bundle;
 - the identity is a validated active checkpoint agent;
 - it is present in both population and lifecycle;
 - no probe for it exists in the bootstrap World or controller index;
@@ -130,14 +145,18 @@ restores the prior session and controller fields, and verifies exact prior
 World entity identities and probe state before returning the original error.
 An agent carrying any item is not recreated empty. Holder reconciliation
 continues to use CIV-27; this is not a second World save or persistence engine.
+For schema 22 the attestation is mandatory, sorted, unique, bounded, composed
+only of valid checkpoint agent IDs and protected by the digest. Older
+unprotected manifests remain historically loadable where otherwise valid, but
+cannot authorize recreation of an agent absent from bootstrap.
 
 ## Deterministic evidence
 
-Commands rerun after product commit `994c3ce`:
+Commands rerun after product commit `453ff02`:
 
 ```text
 PEBBLELAB_SMOKE_ONLY=genetics-development swift run pebsmoke
-31 passed, 0 failed
+45 passed, 0 failed
 
 PEBBLELAB_SMOKE_ONLY=lifecycle swift run pebsmoke
 80 passed, 0 failed
@@ -152,20 +171,21 @@ PEBBLELAB_SMOKE_ONLY=observer swift run pebsmoke
 20 passed, 0 failed
 
 scripts/verify-pebblelab.sh
-3405 passed, 0 failed
+3419 passed, 0 failed
 35/35 verification steps
 exit status 0
 ```
 
 The repository gate log was produced after the last product-file change and
-therefore corresponds byte-for-byte to `994c3ce`; committing changed no
-product content. Focused coverage includes bounds, founder uniqueness, input
-order neutrality, migration, normal inheritance, per-locus provenance,
+therefore corresponds to `453ff02`. Focused coverage includes bounds, founder
+uniqueness, input-order neutrality, migration, normal inheritance, per-locus
+provenance, canonical birth/progenitor/tick binding, retained causal binding,
+honest event eviction, local-birth and founder-origin corruption refusal,
 kinship/household atomicity, sibling variation, rejected-birth rollback,
 physiological exposure, immutable genotype, bounded CIV-29 effects, monotone
-development, transition eviction, Observer immutability, schema-22
-checkpoint/replay, schema-21 explicit upgrade, corruption refusal and
-post-mortem development stop.
+development, transition eviction, Observer immutability, schema-22 manifest
+integrity and structural attestation checks, legacy fail-closed probe
+restoration, checkpoint/replay and post-mortem development stop.
 
 ## Rendered two-process restart evidence
 
@@ -177,8 +197,9 @@ scripts/verify-pebblelab-civ30.sh
 
 Result: **PASS**, exit status 0.
 
-The harness used World `PebbleLab-Disposable-CIV30-46`, seed 46, and two
-separate Pebble processes:
+The harness used World `PebbleLab-Disposable-CIV30-46`, seed 46, two separate
+Pebble processes for the rendered restart, and a third isolated process for
+the corrupt-manifest refusal:
 
 ```text
 process 1: bootstrap three real probes in a rendered World
@@ -190,6 +211,7 @@ process 1: bootstrap three real probes in a rendered World
            → publish parentage, household membership, inherited genotype and
              per-locus parental provenance in the same candidate transaction
            → save a schema-22 checkpoint with empty child custody attested
+             inside a valid manifest integrity digest
            → terminate and remove all four transient probes
 process 2: load the same SaveDB World and schema-22 checkpoint
            → recreate only missing agent_3 through the verified-empty rule
@@ -198,12 +220,19 @@ process 2: load the same SaveDB World and schema-22 checkpoint
            → save a continued schema-22 checkpoint
            → close Observer and delete both proof checkpoints
            → terminate and remove all four transient probes
+process 3: start a fresh three-probe bootstrap session
+           → alter agent_3 to agent_9 in a copied protected attestation without
+             updating the stored manifest digest
+           → refuse load with storageDigestMismatch before World/session/index
+             mutation
+           → prove identical status, checkpoint digest and genetics state
+           → delete the tampered managed checkpoint and remove all three probes
 ```
 
 Compact observed facts:
 
 ```text
-World identity: wms6huocrfja7
+World identity: wms6lyssg6j3q
 session identity: live-46-14-66--21
 parents: agent_0, agent_1
 child: agent_3
@@ -224,7 +253,11 @@ phenotype deprivationTolerance: 0 → -200
 other expressed phenotype modifiers: 0 → 0
 restart: complete process 1 termination → new process 2
 probe reconciliation: restored_verified:agent_3
-manifest empty-custody evidence: required by successful restored_verified load
+manifest integrity digest: e61e8b451e2250770672004f8149f7d88549275ed103699b7948b0add011be00
+manifest empty-custody evidence: protected and required by restored_verified
+tampered attestation: agent_3 → agent_9 without digest update
+tampered load result: storageDigestMismatch before mutation
+refused-load World/session/probe/index equality: exact
 genotype after restart: exact match
 assignment count: 1
 duplication count: 0
@@ -238,16 +271,16 @@ World behind legible read-only Observer panels:
 
 ```text
 founder agent_0 SHA-256:
-50e2fa10c4bb939048363345fc8c6f348176f166115f5e84c8634c1ec1152018
+886b0ea2baa2c15f00616da9cce00af4e543dd876bf5cc09d711b4483aa47c81
 
 founder agent_1 SHA-256:
-e6957c15b0d40a4e02534c437e455fc394e7cc3a943bfb00bfe77c99272c47cb
+ecf3474c9408812b9f86194a6694f8ac19a95375cc2a417fdc34d608298b2ad2
 
 child inheritance SHA-256:
-3b68ff9de85bfcd96ae73eaf218a05d34c6be600fe3a5f6ded4d65f29e5f04ab
+a17895483ffcec952a774feb105dea7e07074402ea9785be0f4da34b743c6a3a
 
 child after restart SHA-256:
-61e06fc2e5c89b79b1c73872768e59f42310c0471e18b8b37b636abea9e2519d
+bb28256cfb2c55a9982ed3c66d1ba502ed167de4a4c572f1e01f0fc2131c7543
 ```
 
 No visual anomaly, runtime error, residual process, residual checkpoint,
@@ -265,8 +298,9 @@ duplicate identity, duplicate assignment or Observer mutation was found.
 - This phase does not implement guardianship, unions, lineages, houses,
   estates, inheritance or succession.
 - A persistent missing probe can be recreated only from explicit
-  verified-empty custody evidence. Non-empty or unresolved physical custody
-  remains fail-closed and is not guessed.
+  verified-empty custody evidence protected by the schema-22 manifest
+  integrity digest. Older unprotected manifests, non-empty custody and
+  unresolved physical custody remain fail-closed and are not guessed.
 - Schema 22 binds civilization state to the existing CIV-27 World protocol;
   it does not claim a globally atomic World/civilization save.
 - Renewable subsistence was not implemented or evaluated. Gate D remains
