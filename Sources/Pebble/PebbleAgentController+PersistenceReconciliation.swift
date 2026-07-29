@@ -264,8 +264,12 @@ extension PebbleAgentController {
                   position.x, position.y, position.z
               ),
               container.type == "container",
-              container.items?.compactMap({ $0 }).count == 1,
-              container.items?.compactMap({ $0 }).first?.id == iid("iron_pickaxe") else {
+              let physical = container.items?.compactMap({ $0 }),
+              physical.filter({ $0.id == iid("iron_pickaxe") })
+                .reduce(0, { $0 + $1.count }) == 1,
+              physical.filter({ $0.id == iid("cobblestone") })
+                .reduce(0, { $0 + $1.count }) == 3,
+              physical.reduce(0, { $0 + $1.count }) == 4 else {
             return failure("Persistence cleanup refused: physical proof asset is not exact.")
         }
         container.items = Array(repeating: nil, count: container.items?.count ?? 27)
@@ -298,7 +302,8 @@ extension PebbleAgentController {
             lastError = "persistence cleanup probe verification failed"
             return failure(lastError!)
         }
-        let message = "persistence reconciliation cleanup world=exact assetRemoved=1 "
+        let message = "persistence reconciliation cleanup world=exact "
+            + "trackedAssetRemoved=1 untrackedItemsRemoved=3 "
             + "state=cleared probes=\(probesByAgentId.count) duplicates=0"
         trace(message)
         return success(message)

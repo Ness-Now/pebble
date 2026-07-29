@@ -43,15 +43,19 @@ Completing `CIV-29` makes `CIV-30` eligible; it does not start the phase.
 For the `CIV-29` local publication candidate:
 
 ```text
-focused homeostasis/health/aging/mortality: 25 passed, 0 failed
-repository gate: 3369 passed, 0 failed
+focused homeostasis/health/aging/mortality: 30 passed, 0 failed
+repository gate: 3374 passed, 0 failed
 repository verification steps: 35/35
-rendered two-process CIV-29 agent-held-asset/restart campaign: PASS
+rendered two-process CIV-29 mixed-inventory/restart campaign: PASS
 representative pre-death/material-exit/post-restart captures: inspected
 terminal physiology linked directly to lethal depletion: YES
-agent-held asset conserved through verified physical exit: 1→1
+tracked agent-held asset conserved through verified physical exit: 1→1
+unregistered agent-held item conserved through verified physical exit: 3→3
+whole-boundary late-failure rollback equality: verified
+invented social record count: 0
 social custody/ownership/claims/permissions changed by death: NO
 asset duplication count: 0
+physical loss count: 0
 Observer mutation count: 0
 death count: 1
 resurrection count: 0
@@ -83,9 +87,11 @@ cleanup: exact
   not add contagion, medicine, complex wounds, long-term impairment mechanics,
   genetic predisposition, corpses or inheritance. Existing `AgentNeeds`,
   lifecycle age, health reserve and mortality remain the underlying
-  authorities. Finalization waits for bounded verified physical exit of any
-  agent-held rights asset into an existing safe real container; failure rolls
-  back and remains retryable rather than inventing a holder or losing matter.
+  authorities. Every embodied finalization waits for bounded verification that
+  the probe is empty or for verified physical exit of every carried stack into
+  an existing safe real container, independently of Material Rights. Failure
+  rolls the complete mortality boundary back and remains retryable rather than
+  inventing a holder, social record or losing matter.
 - Gate `V4-GATE-D-v1` requires proof of at least one genuinely renewable
   physical subsistence loop; Gate B did not claim this.
 

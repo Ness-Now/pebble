@@ -218,10 +218,12 @@ recovery capacity without assigning a predetermined death tick.
 Bounded proof:
 [`CIV_29_PHASE_SUMMARY.md`](CIV_29_PHASE_SUMMARY.md). It covers schema 21,
 deterministic checkpoint/replay, read-only Observer physiology, preservation
-of material claims, a real two-process rendered restart during degradation,
-single causal mortality, no resurrection and exact cleanup. It does not claim
-disease catalogs, medicine, complex injury, long-term impairment mechanics,
-genetics, corpses, inheritance or renewable subsistence.
+of material claims, verified exit of all physically carried inventory
+independently of social registration, whole-boundary rollback, a real
+two-process rendered restart during degradation, single causal mortality, no
+resurrection and exact cleanup. It does not claim disease catalogs, medicine,
+complex injury, long-term impairment mechanics, genetics, corpses,
+inheritance or renewable subsistence.
 
 `CIV-30` is the next eligible phase but remains not started.
 

@@ -107,6 +107,10 @@ extension PebbleAgentController {
                 "real persisted rights asset unavailable"
             )
         }
+        try seedHomeostasisUntrackedInventory(
+            terminalAgentID: AgentID(rawValue: "agent_2")!,
+            world: world
+        )
         try takeHomeostasisProofAsset(
             record: record,
             terminalAgentID: AgentID(rawValue: "agent_2")!,
@@ -142,6 +146,7 @@ extension PebbleAgentController {
             "homeostasis proof setup",
             "asset=\(assetID.rawValue)",
             "physicalItem=iron_pickaxe:1",
+            "untrackedItem=cobblestone:3",
             "holder=\(updated.lastVerifiedHolder.holder.stableText)",
             "owner=\(updated.recognizedOwnership?.ownerID.rawValue ?? "none")",
             "terminalClaim=agent_2",
@@ -163,9 +168,12 @@ extension PebbleAgentController {
         world: World
     ) throws {
         guard let probe = probesByAgentId[terminalAgentID.rawValue],
-              probe.carriedItems.allSatisfy({ $0 == nil }) else {
+              probe.carriedItems.compactMap({ $0 }).count == 1,
+              probe.carriedItems.compactMap({ $0 }).first?.id
+                == iid("cobblestone"),
+              probe.carriedItems.compactMap({ $0 }).first?.count == 3 else {
             throw ControllerError.homeostasisBoundary(
-                "terminal proof custody is not empty"
+                "terminal proof untracked custody is not exact"
             )
         }
         let source = PebbleAgentMaterialCustodyEndpoint.container(
@@ -208,6 +216,9 @@ extension PebbleAgentController {
                 do {
                     let observation = try self.homeostasisAgentObservation(
                         agentID: terminalAgentID,
+                        materialIdentity:
+                            record.lastVerifiedHolder.materialIdentity,
+                        quantity: record.lastVerifiedHolder.quantity,
                         receiptID: operationID,
                         world: world,
                         tick: candidate.tick
@@ -242,6 +253,8 @@ extension PebbleAgentController {
 
     private func homeostasisAgentObservation(
         agentID: AgentID,
+        materialIdentity: AgentMaterialIdentitySnapshot,
+        quantity: Int,
         receiptID: String,
         world: World,
         tick: Int
@@ -256,19 +269,70 @@ extension PebbleAgentController {
         )
         let custody = try materialCustodyGateway.inspect(endpoint)
         let stacks = custody.slots.compactMap { $0 }
-        guard stacks.count == 1, stacks[0].count == 1 else {
+        guard stacks.count == 2,
+              stacks.filter({ $0.identity == materialIdentity })
+                .reduce(0, { $0 + $1.count }) == quantity else {
             throw ControllerError.homeostasisBoundary(
-                "terminal proof actor does not hold one exact item"
+                "terminal proof actor does not hold the exact tracked item"
             )
         }
         return AgentMaterialHolderObservation(
             holder: .agent(agentID),
-            materialIdentity: stacks[0].identity,
-            quantity: stacks[0].count,
+            materialIdentity: materialIdentity,
+            quantity: quantity,
             custodyFingerprint: try materialCustodyGateway.fingerprint(endpoint),
             physicalReceiptID: receiptID,
             observedAtTick: tick
         )
+    }
+
+    private func seedHomeostasisUntrackedInventory(
+        terminalAgentID: AgentID,
+        world: World
+    ) throws {
+        guard let probe = probesByAgentId[terminalAgentID.rawValue],
+              probe.world === world,
+              probe.carriedItems.allSatisfy({ $0 == nil }) else {
+            throw ControllerError.homeostasisBoundary(
+                "terminal proof probe is not empty before untracked acquisition"
+            )
+        }
+        let item = spawnItem(
+            world, probe.x, probe.y + 0.25, probe.z,
+            ItemStack(iid("cobblestone"), 3)
+        )
+        guard let source = PebbleAgentItemEntityCustodyEndpoint(
+            spawnedItemEntityIDs: [item.id],
+            world: world
+        ) else {
+            world.removeEntity(item)
+            throw ControllerError.homeostasisBoundary(
+                "untracked physical item source unavailable"
+            )
+        }
+        let destination = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            probe, in: world
+        )
+        let outcome = materialCustodyGateway.acquireItemEntities(
+            PebbleAgentItemEntityAcquisitionRequest(
+                transactionID: "civ29-terminal-untracked-acquisition",
+                spawnedItemEntityIDs: [item.id],
+                expectedDestinationFingerprint:
+                    try materialCustodyGateway.fingerprint(destination)
+            ),
+            from: source,
+            to: destination
+        )
+        guard outcome.succeeded,
+              probe.carriedItems.compactMap({ $0 }).count == 1,
+              probe.carriedItems.compactMap({ $0 }).first?.id
+                == iid("cobblestone"),
+              probe.carriedItems.compactMap({ $0 }).first?.count == 3,
+              !world.entities.contains(where: { $0 === item }) else {
+            throw ControllerError.homeostasisBoundary(
+                "untracked physical item acquisition \(outcome.status.rawValue)"
+            )
+        }
     }
 
     private func advanceHomeostasisProof(
@@ -325,6 +389,12 @@ extension PebbleAgentController {
         let claimPreserved = rights?.claims.contains {
             $0.claimantID == terminalID
         } == true
+        let physicalSlots = rights.flatMap {
+            homeostasisPhysicalCustodySlots(for: $0, world: world)
+        }
+        let untrackedQuantity = physicalSlots?.compactMap { $0 }
+            .filter { $0.id == iid("cobblestone") }
+            .reduce(0) { $0 + $1.count } ?? 0
         let message = [
             "homeostasis proof advance",
             "ticks=\(count)",
@@ -345,6 +415,7 @@ extension PebbleAgentController {
             "owner=\(rights?.recognizedOwnership?.ownerID.rawValue ?? "none")",
             "claims=\(rights?.claims.map(\.claimantID.rawValue).joined(separator: ",") ?? "none")",
             "permissions=\(rights?.permissions.map(\.userID.rawValue).joined(separator: ",") ?? "none")",
+            "untrackedItem=cobblestone:\(untrackedQuantity)",
             "activeAgents=\(final.expectedActiveAgentIDs().count)",
             "probes=\(probesByAgentId.count)",
             "runtimeErrors=\(runtimeErrorCount)",
@@ -368,49 +439,123 @@ extension PebbleAgentController {
                 "terminal rollback proof requires tick 22 and a real container"
             )
         }
-        let sessionBefore = try published.durableStateBytes()
+        let publishedBytes = try published.durableStateBytes()
         let probeBefore = copyItemInventory(probe.carriedItems)
         let containerBefore = copyItemInventory(container.items ?? [])
-        var staged = published
-        _ = try staged.advanceTick()
-        guard let pending = staged.pendingMortalityTransitions().first,
+        var pendingCandidate = published
+        _ = try pendingCandidate.advanceTick()
+        guard let pending = pendingCandidate.pendingMortalityTransitions().first,
               pending.agentID == terminalID,
               pending.detectedAtTick == 23,
-              staged.mortalitySnapshot().totalDeathCount == 0 else {
+              pendingCandidate.mortalitySnapshot().totalDeathCount == 0 else {
             throw ControllerError.homeostasisBoundary(
                 "terminal rollback proof did not stage material exit"
             )
         }
-        var recorder: AgentReplayRecorder?
-        var rejected = false
+        let pendingBytes = try pendingCandidate.durableStateBytes()
+        let replayBefore = try replayRecorder.map {
+            try AgentReplayCodec.encodeRecords($0.records)
+        }
+        let probesBefore = probesByAgentId
+        let worldEntityIDsBefore = Set(world.entities.map(ObjectIdentifier.init))
+        let failures: [PebbleMortalityBoundaryFailurePoint] = [
+            .afterPhysicalTransfers,
+            .afterProbeRemoval,
+            .beforePublication,
+        ]
+        for failure in failures {
+            var staged = pendingCandidate
+            var recorder = replayRecorder
+            var rejected = false
+            do {
+                try reconcileMortalityProbes(
+                    previous: published.snapshot(),
+                    current: &staged,
+                    recorder: &recorder,
+                    world: world,
+                    failurePoint: failure
+                )
+            } catch {
+                rejected = true
+            }
+            let replayAfter = try recorder.map {
+                try AgentReplayCodec.encodeRecords($0.records)
+            }
+            guard rejected,
+                  try staged.durableStateBytes() == pendingBytes,
+                  replayAfter == replayBefore,
+                  try published.durableStateBytes() == publishedBytes,
+                  session?.mortalitySnapshot().totalDeathCount == 0,
+                  session?.tick == 22,
+                  probe.carriedItems == probeBefore,
+                  container.items == containerBefore,
+                  Set(world.entities.map(ObjectIdentifier.init))
+                    == worldEntityIDsBefore,
+                  probesByAgentId.keys.sorted()
+                    == probesBefore.keys.sorted(),
+                  probesByAgentId.allSatisfy({
+                      probesBefore[$0.key] === $0.value
+                  }) else {
+                throw ControllerError.homeostasisBoundary(
+                    "terminal boundary rollback was not exact for \(failure)"
+                )
+            }
+        }
+        let containerStates = mortalityMaterialExitContainers(
+            around: probe, world: world
+        ).map { ($0, copyItemInventory($0.items ?? [])) }
+        guard !containerStates.isEmpty else {
+            throw ControllerError.homeostasisBoundary(
+                "terminal no-container proof has no candidate container"
+            )
+        }
+        for (candidateContainer, before) in containerStates {
+            candidateContainer.items = Array(
+                repeating: ItemStack(iid("cobblestone"), 64),
+                count: before.count
+            )
+        }
+        var noContainerCandidate = pendingCandidate
+        var noContainerRecorder = replayRecorder
+        var noContainerRejected = false
         do {
-            _ = try resolvePendingMortalityMaterialExits(
-                session: &staged,
-                recorder: &recorder,
-                world: world,
-                rejectAfterMutation: true
+            try reconcileMortalityProbes(
+                previous: published.snapshot(),
+                current: &noContainerCandidate,
+                recorder: &noContainerRecorder,
+                world: world
             )
         } catch {
-            rejected = true
+            noContainerRejected = true
         }
-        guard rejected,
-              try published.durableStateBytes() == sessionBefore,
-              session?.mortalitySnapshot().totalDeathCount == 0,
-              session?.tick == 22,
+        for (candidateContainer, before) in containerStates {
+            candidateContainer.items = copyItemInventory(before)
+        }
+        guard noContainerRejected,
+              try noContainerCandidate.durableStateBytes() == pendingBytes,
               probe.carriedItems == probeBefore,
               container.items == containerBefore,
               probesByAgentId[terminalID.rawValue] === probe else {
             throw ControllerError.homeostasisBoundary(
-                "terminal material rollback was not exact"
+                "terminal no-container refusal was not retryable"
             )
         }
-        let message = "homeostasis mortality-exit rollback "
+        guard probesByAgentId[terminalID.rawValue] === probe else {
+            throw ControllerError.homeostasisBoundary(
+                "terminal material rollback changed the terminal probe"
+            )
+        }
+        let message = "homeostasis mortality-boundary rollback "
             + "terminalEvent=\(pending.terminalPhysiologyEventID?.rawValue ?? "none") "
             + "pendingEvent=\(pending.pendingEventID.rawValue) "
             + "asset=\(pending.requiredMaterialAssetIDs.map(\.rawValue).joined(separator: ",")) "
             + "holder=agent:agent_2 quantity=\(probeBefore.compactMap { $0 }.reduce(0) { $0 + $1.count }) "
-            + "physicalRollback=verified session=unchanged deathFinalized=0 "
-            + "retryable=1 runtimeErrors=\(runtimeErrorCount)"
+            + "afterTransfer=verified afterProbeRemoval=verified "
+            + "beforePublication=verified session=unchanged replay=unchanged "
+            + "probes=unchanged inventories=unchanged deathFinalized=0 "
+            + "noContainer=verified retryable=1 "
+            + "runtimeErrors=\(runtimeErrorCount) "
+            + (try verifyMortalityPhysicalCustodyFixtures())
         trace(message)
         return success(message)
     }
@@ -469,8 +614,14 @@ extension PebbleAgentController {
         }), record.claims.contains(where: { $0.claimID == claimID }),
               case let .container(location) = record.lastVerifiedHolder.holder,
               let position = homeostasisContainerPosition(location),
-              world.getBlockEntity(position.x, position.y, position.z)?
-                .items?.compactMap({ $0 }).first?.id == iid("iron_pickaxe") else {
+              let physical = world.getBlockEntity(
+                  position.x, position.y, position.z
+              )?.items?.compactMap({ $0 }),
+              physical.filter({ $0.id == iid("iron_pickaxe") })
+                .reduce(0, { $0 + $1.count }) == 1,
+              physical.filter({ $0.id == iid("cobblestone") })
+                .reduce(0, { $0 + $1.count }) == 3,
+              physical.reduce(0, { $0 + $1.count }) == 4 else {
             throw ControllerError.homeostasisBoundary(
                 "terminal claim or real physical asset missing during cleanup"
             )
@@ -490,7 +641,8 @@ extension PebbleAgentController {
         }
         session = candidate
         let message = "homeostasis proof cleanup claimRemoved=1 foodCustody=empty "
-            + "physicalAsset=preserved worldMutation=none"
+            + "trackedAsset=preserved untrackedInventory=cobblestone:3 "
+            + "worldMutation=none"
         trace(message)
         return success(message)
     }
@@ -514,6 +666,14 @@ extension PebbleAgentController {
         let asset = session.materialRightsSnapshot().records.first {
             $0.asset.assetID.rawValue == "asset:civ27:live-pickaxe"
         }
+        let physicalSlots = asset.flatMap {
+            homeostasisPhysicalCustodySlots(for: $0, world: world)
+        }
+        let untrackedQuantity = physicalSlots?.compactMap { $0 }
+            .filter { $0.id == iid("cobblestone") }
+            .reduce(0) { $0 + $1.count } ?? 0
+        let physicalTotal = physicalSlots?.compactMap { $0 }
+            .reduce(0) { $0 + $1.count } ?? 0
         let causal = session.causalLedgerSnapshot().summary
         let message = [
             "homeostasis status",
@@ -533,6 +693,8 @@ extension PebbleAgentController {
             "owner=\(asset?.recognizedOwnership?.ownerID.rawValue ?? "none")",
             "claims=\(asset?.claims.map(\.claimantID.rawValue).joined(separator: ",") ?? "none")",
             "permissions=\(asset?.permissions.map(\.userID.rawValue).joined(separator: ",") ?? "none")",
+            "untrackedItem=cobblestone:\(untrackedQuantity)",
+            "physicalItemTotal=\(physicalTotal)",
             "probes=\(probesByAgentId.count)",
             "world=\(persistenceWorldID ?? "none")",
             "runtimeErrors=\(runtimeErrorCount)",
@@ -550,5 +712,24 @@ extension PebbleAgentController {
         }
         guard values.count == 3 else { return nil }
         return PhysicalBlockPosition(x: values[0], y: values[1], z: values[2])
+    }
+
+    private func homeostasisPhysicalCustodySlots(
+        for record: AgentMaterialRightsRecord,
+        world: World
+    ) -> [ItemStack?]? {
+        switch record.lastVerifiedHolder.holder {
+        case let .agent(agentID):
+            return probesByAgentId[agentID.rawValue].map {
+                copyItemInventory($0.carriedItems)
+            }
+        case let .container(location):
+            guard let position = homeostasisContainerPosition(location) else {
+                return nil
+            }
+            return world.getBlockEntity(
+                position.x, position.y, position.z
+            )?.items.map(copyItemInventory)
+        }
     }
 }
