@@ -21,6 +21,7 @@ public enum AgentReplaySchema {
     public static let autonomousActivityVersion = 18
     public static let materialRightsVersion = 19
     public static let persistenceReconciliationVersion = 20
+    public static let homeostasisVersion = 21
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -33,6 +34,7 @@ public enum AgentReplaySchema {
             || version == livestockVersion || version == workCommitmentVersion
             || version == physicalFoodSurvivalVersion || version == autonomousActivityVersion
             || version == materialRightsVersion || version == persistenceReconciliationVersion
+            || version == homeostasisVersion
     }
 }
 
@@ -131,6 +133,7 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case validatedPhysicalDependentFood
     case materialRightsFeature
     case materialRightsOperation
+    case homeostasisFeature
 }
 
 public enum AgentReplayOperation: Codable {
@@ -280,6 +283,9 @@ public enum AgentReplayOperation: Codable {
     case validatedPhysicalDependentFood(AgentValidatedPhysicalDependentFoodOutcome)
     case setMaterialRightsEnabled(Bool, configuration: AgentMaterialRightsConfiguration)
     case applyMaterialRightsOperation(AgentMaterialRightsOperation)
+    case setHomeostasisEnabled(
+        Bool, configuration: AgentHomeostasisConfiguration
+    )
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -369,6 +375,7 @@ public enum AgentReplayOperation: Codable {
         case .validatedPhysicalDependentFood: return .validatedPhysicalDependentFood
         case .setMaterialRightsEnabled: return .materialRightsFeature
         case .applyMaterialRightsOperation: return .materialRightsOperation
+        case .setHomeostasisEnabled: return .homeostasisFeature
         }
     }
 
@@ -878,6 +885,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.materialRightsVersion
         }
+        if case let .setHomeostasisEnabled(enabled, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.homeostasisVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "homeostasis activation must be the first v21 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.homeostasisVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -1087,6 +1104,9 @@ public enum AgentSessionReplayer {
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.physicalFoodSurvivalVersion)
             || (manifest.schemaVersion == AgentReplaySchema.materialRightsVersion
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.autonomousActivityVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.homeostasisVersion
+                && checkpoint.schemaVersion
+                    <= AgentCheckpointSchema.persistenceReconciliationVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -1391,6 +1411,10 @@ extension AgentSimulationSession {
             try candidate.setMaterialRightsEnabled(enabled, configuration: configuration)
         case let .applyMaterialRightsOperation(operation):
             _ = try candidate.applyMaterialRightsOperation(operation)
+        case let .setHomeostasisEnabled(enabled, configuration):
+            try candidate.setHomeostasisEnabled(
+                enabled, configuration: configuration
+            )
         }
         self = candidate
         let causal = causalLedgerSnapshot().summary

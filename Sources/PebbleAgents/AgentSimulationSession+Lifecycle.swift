@@ -661,6 +661,10 @@ extension AgentSimulationSession {
         trimLifecycleHistories(&lifecycle)
         populationRegistry = registry
         lifecycleState = lifecycle
+        try registerHomeostasisProfileIfEnabled(
+            for: newbornID,
+            causeEventID: finalized.eventID
+        )
         try validateKinshipCrossDomainIfEnabled()
         try validateHouseholdCrossDomainIfEnabled()
         try validateDependentCareCrossDomainIfEnabled()
@@ -704,6 +708,10 @@ extension AgentSimulationSession {
         lifecycle.members.sort { $0.agentID < $1.agentID }
         lifecycle.lastLifecycleEventID = event.eventID
         lifecycleState = lifecycle
+        try registerHomeostasisProfileIfEnabled(
+            for: member.agentID,
+            causeEventID: event.eventID
+        )
     }
 
     mutating func applyLifecycleDeath(

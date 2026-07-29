@@ -199,6 +199,10 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case materialUsePermissionChanged
     case materialUseDecided
     case persistenceReconciliation
+    case homeostasisInitialized
+    case homeostasisProfileRegistered
+    case homeostasisChanged
+    case homeostasisIncapacityChanged
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -228,6 +232,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case workCommitmentTransition
     case materialRightsTransition
     case persistenceReconciliation
+    case homeostasisTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -946,7 +951,11 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.materialCustodyChanged, .operation),
              (.materialUsePermissionChanged, .operation),
              (.materialUseDecided, .operation),
-             (.persistenceReconciliation, .operation):
+             (.persistenceReconciliation, .operation),
+             (.homeostasisInitialized, .operation),
+             (.homeostasisProfileRegistered, .operation),
+             (.homeostasisChanged, .operation),
+             (.homeostasisIncapacityChanged, .operation):
             matches = true
         default:
             matches = false

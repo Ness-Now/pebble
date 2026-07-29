@@ -234,7 +234,15 @@ func runPebbleAgentsMortalityPopulationExitSmoke() {
               ) else { return false }
         return decoded == live
     }())
-    check("mortality cause V1 is starvation only", AgentMortalityCause.allCases == [.starvation])
+    check(
+        "mortality cause V2 preserves legacy starvation and bounded physiology causes",
+        AgentMortalityCause.allCases == [
+            .starvation,
+            .deprivation,
+            .exhaustion,
+            .compoundedHomeostaticFailure,
+        ]
+    )
     check("death ID validates canonical form", AgentDeathID(
         rawValue: "death-agent_3-t33-0123456789abcdef"
     ) != nil)

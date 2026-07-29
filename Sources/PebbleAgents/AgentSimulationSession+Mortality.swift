@@ -1,6 +1,7 @@
 private struct AgentLethalMortalityCandidate {
     let agentID: AgentID
     let healthBefore: Int
+    let cause: AgentMortalityCause
 }
 
 extension AgentSimulationSession {
@@ -202,23 +203,33 @@ extension AgentSimulationSession {
         guard let mortality = mortalityState else { return [:] }
         var candidate = self
         var survivalMemories: [String: AgentMemoryEntry] = [:]
-        var lethal: [AgentLethalMortalityCandidate] = []
+        var healthBeforeByID: [AgentID: Int] = [:]
         for id in candidate.sortedIds {
             guard var state = candidate.statesById[id] else { continue }
-            let healthBefore = state.health
-            let memory = candidate.applySurvivalTick(to: &state, tick: mortalityTick)
+            healthBeforeByID[state.agentID] = state.health
+            let memory = candidate.applySurvivalTick(
+                to: &state,
+                tick: mortalityTick,
+                appliesLegacyStarvationDamage: candidate.homeostasisState == nil
+            )
             state.ticksAlive += 1
             if let memory {
                 candidate.appendMemory(memory, to: &state.memory)
                 survivalMemories[id] = memory
             }
             candidate.statesById[id] = state
-            if healthBefore > 0, state.health == 0 {
-                lethal.append(AgentLethalMortalityCandidate(
-                    agentID: state.agentID,
-                    healthBefore: healthBefore
-                ))
-            }
+        }
+        try candidate.applyHomeostasisBoundary(at: mortalityTick)
+        var lethal: [AgentLethalMortalityCandidate] = []
+        for agentID in healthBeforeByID.keys.sorted() {
+            guard let healthBefore = healthBeforeByID[agentID],
+                  let state = candidate.statesById[agentID.rawValue],
+                  healthBefore > 0, state.health == 0 else { continue }
+            lethal.append(AgentLethalMortalityCandidate(
+                agentID: agentID,
+                healthBefore: healthBefore,
+                cause: candidate.homeostasisMortalityCause(for: agentID)
+            ))
         }
         lethal.sort { $0.agentID < $1.agentID }
         guard lethal.count <= mortality.configuration.maximumDeathsPerTick else {
@@ -261,14 +272,14 @@ extension AgentSimulationSession {
         for (offset, item) in lethal.enumerated() {
             guard let state = statesById[item.agentID.rawValue], state.health == 0,
                   item.healthBefore > 0,
-                  state.needs.hunger >= configuration.survivalConfiguration.criticalHungerThreshold,
+                  validLethalPhysiology(state: state, candidate: item),
                   registry.members.contains(where: { $0.agentID == item.agentID }) else {
                 throw AgentSessionError.mortality(.invalidLethalTransition(item.agentID.rawValue))
             }
             let ordinal = mortality.totalDeathCount + offset + 1
             let digest = AgentMortalityDigest.make(
                 "\(simulationID.rawValue)|\(item.agentID.rawValue)|\(mortalityTick)|"
-                    + "\(AgentMortalityCause.starvation.rawValue)|\(ordinal)"
+                    + "\(item.cause.rawValue)|\(ordinal)"
             )
             let deathID = AgentDeathID(
                 rawValue: "death-\(item.agentID.rawValue)-t\(mortalityTick)-\(digest)"
@@ -287,7 +298,7 @@ extension AgentSimulationSession {
         for item in lethal {
             guard let state = statesById[item.agentID.rawValue], state.health == 0,
                   item.healthBefore > 0,
-                  state.needs.hunger >= configuration.survivalConfiguration.criticalHungerThreshold,
+                  validLethalPhysiology(state: state, candidate: item),
                   let memberIndex = registry.members.firstIndex(where: {
                       $0.agentID == item.agentID
                   }) else {
@@ -316,14 +327,15 @@ extension AgentSimulationSession {
                     deathID: deathID,
                     state: state,
                     member: member,
+                    cause: item.cause,
                     healthBefore: item.healthBefore,
                     populationBefore: populationBefore,
                     populationAfter: populationBefore,
                     carriedQuantity: carriedTotal,
                     cancelledCommitments: 0,
-                    reason: "starvation depleted health"
+                    reason: "\(item.cause.rawValue) depleted health"
                 ),
-                summary: "lethal starvation agent=\(item.agentID.rawValue) death=\(deathID.rawValue)"
+                summary: "lethal \(item.cause.rawValue) agent=\(item.agentID.rawValue) death=\(deathID.rawValue)"
             )
 
             let reservationCount = reservationsByTarget.values.filter {
@@ -453,6 +465,25 @@ extension AgentSimulationSession {
             // Capture the terminal activity boundary after lethal survival and
             // before the authoritative active-state removal below.
             let terminalActivity = AgentTerminalActivitySnapshot(state: state)
+            if let activity = activeAutonomousActivity(for: item.agentID) {
+                _ = try recordAutonomousActivityOutcome(
+                    AgentAutonomousActivityOutcome(
+                        activityID: activity.activityID,
+                        actorID: item.agentID,
+                        lifecycle: .interrupted,
+                        completedAtTick: mortalityTick,
+                        sourceEventID: lethalEvent.eventID,
+                        reason: "participant died"
+                    )
+                )
+            }
+            let terminalHomeostasis = homeostasisProfile(for: item.agentID)
+            let terminalAge = try? lifecycleState?.members.first {
+                $0.agentID == item.agentID
+            }?.age(at: mortalityTick)
+            let terminalStage = lifecycleState?.members.first {
+                $0.agentID == item.agentID
+            }?.currentStage
             try endWorkCommitmentsForTerminalAgent(item.agentID)
             let careEventID = try applyDependentCareDeath(
                 agentID: item.agentID,
@@ -492,6 +523,7 @@ extension AgentSimulationSession {
                     deathID: deathID,
                     state: state,
                     member: member,
+                    cause: item.cause,
                     healthBefore: item.healthBefore,
                     populationBefore: populationBefore,
                     populationAfter: populationAfter,
@@ -511,6 +543,7 @@ extension AgentSimulationSession {
                     deathID: deathID,
                     state: state,
                     member: member,
+                    cause: item.cause,
                     healthBefore: item.healthBefore,
                     populationBefore: populationBefore,
                     populationAfter: populationAfter,
@@ -548,7 +581,7 @@ extension AgentSimulationSession {
                 settlementID: member.settlementID,
                 membershipStatus: member.status,
                 migrationID: member.migrationID,
-                cause: .starvation,
+                cause: item.cause,
                 deathTick: mortalityTick,
                 finalPosition: state.position,
                 finalHome: state.homePosition,
@@ -573,7 +606,11 @@ extension AgentSimulationSession {
                 resourcesRetiredEventID: resourcesEvent.eventID,
                 commitmentsResolvedEventID: commitmentsEvent.eventID,
                 cancelledCommitmentIDs: cancelledIDs,
-                cleanupCounts: cleanup
+                cleanupCounts: cleanup,
+                finalVitalStatus: .dead,
+                finalHomeostasis: terminalHomeostasis,
+                demographicAgeTicks: terminalAge ?? nil,
+                lifeStage: terminalStage
             )
             mortality.records.append(record)
             mortality.records.sort(by: mortalityRecordSort)
@@ -594,6 +631,7 @@ extension AgentSimulationSession {
                 populationExitEventID: exitEvent.eventID
             ))
             mortality.lastMortalityEventID = deathEvent.eventID
+            try removeHomeostasisProfileAfterDeath(item.agentID)
             if mortality.records.count > mortality.configuration.maximumRetainedDeathRecords {
                 let removed = mortality.records.count
                     - mortality.configuration.maximumRetainedDeathRecords
@@ -641,6 +679,8 @@ extension AgentSimulationSession {
               !activePhysicalReference,
               !activeCooperationReference,
               !invalidDeadBuilder,
+              homeostasisState == nil
+                || Set(homeostasisState?.profiles.map(\.agentID) ?? []) == remaining,
               conservationSnapshotWith(mortality: mortality).balanced else {
             throw AgentSessionError.mortality(.invalidState("post-transition invariants"))
         }
@@ -676,6 +716,7 @@ extension AgentSimulationSession {
         deathID: AgentDeathID,
         state: AgentSessionAgentState,
         member: AgentPopulationMemberRecord,
+        cause: AgentMortalityCause,
         healthBefore: Int,
         populationBefore: Int,
         populationAfter: Int,
@@ -686,7 +727,7 @@ extension AgentSimulationSession {
         .mortalityDeath(
             deathID: deathID.rawValue,
             agentID: state.id,
-            cause: AgentMortalityCause.starvation.rawValue,
+            cause: cause.rawValue,
             tick: tick,
             healthBefore: healthBefore,
             healthAfter: state.health,
@@ -699,6 +740,34 @@ extension AgentSimulationSession {
             cancelledCommitments: cancelledCommitments,
             reason: reason
         )
+    }
+
+    private func validLethalPhysiology(
+        state: AgentSessionAgentState,
+        candidate: AgentLethalMortalityCandidate
+    ) -> Bool {
+        if homeostasisState != nil {
+            return homeostasisProfile(for: candidate.agentID)?.vitalStatus == .dead
+                && candidate.cause != .starvation
+        }
+        return state.needs.hunger
+            >= configuration.survivalConfiguration.criticalHungerThreshold
+            && candidate.cause == .starvation
+    }
+
+    private func homeostasisMortalityCause(
+        for agentID: AgentID
+    ) -> AgentMortalityCause {
+        guard let profile = homeostasisProfile(for: agentID) else {
+            return .starvation
+        }
+        let factors = Set(profile.activeFactors.filter(\.harmful).map(\.code))
+        if factors.contains(.compoundedDeprivation)
+            || (factors.contains(.hunger) && factors.contains(.fatigue)) {
+            return .compoundedHomeostaticFailure
+        }
+        if factors.contains(.fatigue) { return .exhaustion }
+        return .deprivation
     }
 
     private mutating func requiredMortalityEvent(

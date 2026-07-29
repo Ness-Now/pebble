@@ -122,11 +122,13 @@ public struct AgentObserverTruncation: Codable, Equatable, Sendable {
     public let perAgentEventsOmitted: Int
     public let directCausesOmitted: Int
     public let textWasTruncated: Bool
+    public let deathsOmitted: Int
 
     public var isTruncated: Bool {
         agentsOmitted > 0 || relationsOmitted > 0 || assetsOmitted > 0
             || chronicleEventsOmitted > 0 || perAgentEventsOmitted > 0
             || directCausesOmitted > 0 || textWasTruncated
+            || deathsOmitted > 0
     }
 }
 
@@ -160,6 +162,7 @@ public enum AgentObserverReasonCode: String, Codable, CaseIterable, Sendable {
     case interruptedAfterRestart
     case noCurrentAction
     case unavailable
+    case physiologicalIncapacity
 }
 
 public struct AgentObserverPresentationDatum: Codable, Equatable, Sendable {
@@ -241,6 +244,45 @@ public struct AgentObserverMaterialAsset: Codable, Equatable, Sendable {
     public let reconciliationEventID: AgentCausalEventID?
 }
 
+public struct AgentObserverHealthFactor: Codable, Equatable, Sendable {
+    public let code: AgentPhysiologicalFactorCode
+    public let severityBasisPoints: Int
+    public let harmful: Bool
+    public let source: String
+}
+
+public struct AgentObserverPhysiology: Codable, Equatable, Sendable {
+    public let vitalStatus: AgentVitalStatus
+    public let ageTicks: Int
+    public let lifeStage: AgentLifeStage
+    public let ageBand: AgentPhysiologicalAgeBand
+    public let condition: AgentHealthCondition
+    public let trend: AgentHealthTrend
+    public let healthReserve: Int
+    public let energyReserveBasisPoints: Int
+    public let stressBasisPoints: Int
+    public let recoveryCapacityBasisPoints: Int
+    public let ageVulnerabilityBasisPoints: Int
+    public let activeFactors: [AgentObserverHealthFactor]
+    public let limitation: String?
+    public let recentEpisodeCount: Int
+    public let episodesTruncated: Bool
+    public let lastCausalEventID: AgentCausalEventID
+}
+
+public struct AgentObserverDeath: Codable, Equatable, Sendable {
+    public let agentID: AgentID
+    public let deathID: AgentDeathID
+    public let deathTick: Int
+    public let cause: AgentMortalityCause
+    public let ageTicks: Int?
+    public let lifeStage: AgentLifeStage?
+    public let finalPosition: AgentPosition
+    public let finalHealth: Int
+    public let deathEventID: AgentCausalEventID
+    public let preservedMaterialClaims: [AgentMaterialAssetID]
+}
+
 public struct AgentObserverChronicleEvent: Codable, Equatable, Sendable {
     public let eventID: AgentCausalEventID
     public let sequence: UInt64
@@ -275,6 +317,7 @@ public struct AgentObserverIndividual: Codable, Equatable, Sendable {
     public let materialAssetsTruncated: Bool
     public let recentEventIDs: [AgentCausalEventID]
     public let recentEventsTruncated: Bool
+    public let physiology: AgentObserverPhysiology?
 }
 
 public struct AgentObserverSnapshot: Codable, Equatable, Sendable {
@@ -282,6 +325,7 @@ public struct AgentObserverSnapshot: Codable, Equatable, Sendable {
     public let individuals: [AgentObserverIndividual]
     /// Newest event first. Sequence remains the stable total order.
     public let globalChronicle: [AgentObserverChronicleEvent]
+    public let recentDeaths: [AgentObserverDeath]
     public let truncation: AgentObserverTruncation
 }
 
@@ -374,6 +418,8 @@ extension AgentSimulationSession {
         let kinship = kinshipSnapshot()
         let social = socialSnapshot()
         let reconciliation = persistenceReconciliationSnapshot()
+        let homeostasis = homeostasisSnapshot()
+        let mortality = mortalitySnapshot()
         let textLimit = configuration.maximumPresentationTextLength
 
         let materialTransitionByEventID = Dictionary(
@@ -495,7 +541,36 @@ extension AgentSimulationSession {
                 materialAssets: visibleAssets,
                 materialAssetsTruncated: assetRows.count > visibleAssets.count,
                 recentEventIDs: visibleEventIDs,
-                recentEventsTruncated: omittedEvents > 0
+                recentEventsTruncated: omittedEvents > 0,
+                physiology: homeostasis.profiles.first {
+                    $0.agentID == agentID
+                }.map {
+                    observerPhysiology($0, healthReserve: agent.health)
+                }
+            )
+        }
+        let retainedDeaths = Array(
+            mortality.records.suffix(configuration.maximumAgents)
+        )
+        let recentDeaths = retainedDeaths.reversed().map { record in
+            AgentObserverDeath(
+                agentID: record.agentID,
+                deathID: record.deathID,
+                deathTick: record.deathTick,
+                cause: record.cause,
+                ageTicks: record.demographicAgeTicks,
+                lifeStage: record.lifeStage,
+                finalPosition: record.finalPosition,
+                finalHealth: record.finalHealth,
+                deathEventID: record.deathEventID,
+                preservedMaterialClaims: rights.records.compactMap {
+                    $0.custodianID == record.agentID
+                        || $0.recognizedOwnership?.ownerID == record.agentID
+                        || $0.claims.contains(where: {
+                            $0.claimantID == record.agentID
+                        })
+                        ? $0.asset.assetID : nil
+                }.sorted()
             )
         }
         let generationSource = [
@@ -504,6 +579,8 @@ extension AgentSimulationSession {
             String(ledger.summary.latestSequence), ledger.summary.digest,
             rights.records.map(\.asset.assetID.rawValue).joined(separator: ","),
             reconciliation.recentRuns.last?.runID ?? "none",
+            homeostasis.digest,
+            mortality.digest,
         ].joined(separator: "|")
         let truncation = AgentObserverTruncation(
             agentsOmitted: max(0, sortedAgents.count - visibleAgents.count),
@@ -514,11 +591,12 @@ extension AgentSimulationSession {
             directCausesOmitted: chronicle.reduce(0) {
                 $0 + $1.directCausesOmitted
             },
-            textWasTruncated: textWasTruncated
+            textWasTruncated: textWasTruncated,
+            deathsOmitted: max(0, mortality.records.count - retainedDeaths.count)
         )
         return AgentObserverSnapshot(
             header: AgentObserverSnapshotHeader(
-                schemaVersion: 1,
+                schemaVersion: homeostasis.enabled ? 2 : 1,
                 sessionIdentity: simulationID,
                 worldBinding: worldBinding,
                 asOfTick: tick,
@@ -527,6 +605,7 @@ extension AgentSimulationSession {
             ),
             individuals: individuals,
             globalChronicle: chronicle,
+            recentDeaths: recentDeaths,
             truncation: truncation
         )
     }
@@ -540,6 +619,41 @@ private struct AgentObserverReasonCandidate {
 }
 
 private extension AgentSimulationSession {
+    func observerPhysiology(
+        _ profile: AgentHomeostasisProfile,
+        healthReserve: Int
+    ) -> AgentObserverPhysiology {
+        AgentObserverPhysiology(
+            vitalStatus: profile.vitalStatus,
+            ageTicks: profile.ageTicks,
+            lifeStage: profile.lifeStage,
+            ageBand: profile.ageBand,
+            condition: profile.condition,
+            trend: profile.trend,
+            healthReserve: healthReserve,
+            energyReserveBasisPoints: profile.energyReserveBasisPoints,
+            stressBasisPoints: profile.stressBasisPoints,
+            recoveryCapacityBasisPoints:
+                profile.recoveryCapacityBasisPoints,
+            ageVulnerabilityBasisPoints:
+                profile.ageVulnerabilityBasisPoints,
+            activeFactors: profile.activeFactors.map {
+                AgentObserverHealthFactor(
+                    code: $0.code,
+                    severityBasisPoints: $0.severityBasisPoints,
+                    harmful: $0.harmful,
+                    source: $0.source
+                )
+            },
+            limitation: profile.vitalStatus == .incapacitated
+                ? "incapacitated: autonomous actions are suspended"
+                : nil,
+            recentEpisodeCount: profile.recentEpisodes.count,
+            episodesTruncated: profile.episodeEvictionCount > 0,
+            lastCausalEventID: profile.lastEventID
+        )
+    }
+
     func observerChronicleEvent(
         _ event: AgentCausalEvent,
         transition: AgentMaterialRightsTransition?,
@@ -597,6 +711,34 @@ private extension AgentSimulationSession {
             $0.candidate.actorID == agentID
         })
         var candidates: [AgentObserverReasonCandidate] = []
+        if let profile = homeostasisProfile(for: agentID),
+           profile.vitalStatus == .incapacitated {
+            let event = ledgerEvents.last {
+                $0.eventID == profile.lastEventID
+            }
+            candidates.append(AgentObserverReasonCandidate(
+                reason: observerStructuredReason(
+                    code: .physiologicalIncapacity,
+                    category: .blocked,
+                    subject: agentID,
+                    target: profile.activeFactors.first(where: \.harmful)?
+                        .code.rawValue,
+                    event: event,
+                    presentation:
+                        "Physiological incapacity prevents autonomous action",
+                    data: [
+                        ("condition", profile.condition.rawValue),
+                        ("trend", profile.trend.rawValue),
+                        ("energy", String(profile.energyReserveBasisPoints)),
+                        ("stress", String(profile.stressBasisPoints)),
+                    ],
+                    textLimit: textLimit
+                ),
+                tick: profile.lastUpdatedTick,
+                causalSequence: event?.sequence.rawValue ?? 0,
+                tieBreakPriority: 100
+            ))
+        }
 
         let latestUseAttempt = rights.recentTransitions.compactMap {
             transition -> (AgentMaterialRightsTransition, AgentCausalEvent)? in

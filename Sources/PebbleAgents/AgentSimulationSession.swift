@@ -70,6 +70,7 @@ public struct AgentSimulationSession {
     public internal(set) var materialRightsState: AgentMaterialRightsState?
     public internal(set) var persistenceReconciliationState:
         AgentPersistenceReconciliationState?
+    public internal(set) var homeostasisState: AgentHomeostasisState?
     var latestAutonomousTeachingReview: AgentAutonomousTeachingReviewSnapshot?
 
     public init(
@@ -157,6 +158,7 @@ public struct AgentSimulationSession {
         autonomousActivityState = nil
         materialRightsState = nil
         persistenceReconciliationState = nil
+        homeostasisState = nil
         latestAutonomousTeachingReview = nil
         try recordCausalEvent(
             kind: .sessionLifecycle,
@@ -184,7 +186,10 @@ public struct AgentSimulationSession {
                     state: $0,
                     recentMemoryLimit: configuration.recentMemorySnapshotLimit,
                     resourceReservation: reservation(for: $0),
-                    survivalEnabled: survivalEnabled
+                    survivalEnabled: survivalEnabled,
+                    homeostasisProfile: AgentID(rawValue: id).flatMap {
+                        homeostasisProfile(for: $0)
+                    }
                 )
             }
         }
@@ -206,7 +211,8 @@ public struct AgentSimulationSession {
             settlementMetrics: settlementMetricsState == nil ? nil : settlementMetricsSnapshot(),
             localEcology: localEcologyState == nil ? nil : localEcologySnapshot(),
             mortality: mortalityState == nil ? nil : mortalitySnapshot(),
-            lifecycle: lifecycleState == nil ? nil : lifecycleSnapshot()
+            lifecycle: lifecycleState == nil ? nil : lifecycleSnapshot(),
+            homeostasis: homeostasisState == nil ? nil : homeostasisSnapshot()
         )
     }
 
@@ -525,6 +531,60 @@ public struct AgentSimulationSession {
             )
             state.nearbyObservationCount += state.nearbyAgents.count
 
+            if isPhysiologicallyIncapacitated(state.agentID) {
+                state.currentGoal = AgentGoal(
+                    kind: .idle,
+                    reason: "physiological incapacity prevents autonomous action",
+                    startedAtTick: state.currentGoal.startedAtTick,
+                    urgency: 100
+                )
+                state.lastAction = nil
+                state.state = "incapacitated"
+                let passiveAction = AgentAction(
+                    name: "incapacitated_wait",
+                    reason: "authoritative homeostasis limitation",
+                    tick: nextTick
+                )
+                let passiveEffect = AgentActionEffect(
+                    action: passiveAction.name,
+                    effect: "no autonomous action while incapacitated",
+                    tick: nextTick,
+                    hungerBefore: state.needs.hunger,
+                    hungerAfter: state.needs.hunger,
+                    fatigueBefore: state.needs.fatigue,
+                    fatigueAfter: state.needs.fatigue,
+                    curiosityBefore: state.needs.curiosity,
+                    curiosityAfter: state.needs.curiosity,
+                    safetyBefore: state.needs.safety,
+                    safetyAfter: state.needs.safety,
+                    fearBefore: state.fear,
+                    fearAfter: state.fear,
+                    stateBefore: state.state,
+                    stateAfter: state.state
+                )
+                statesById[id] = state
+                results.append(AgentSessionAgentTickResult(
+                    agentId: id,
+                    goalChange: nil,
+                    action: passiveAction,
+                    actionEffect: passiveEffect,
+                    memoriesAdded: memoriesAdded,
+                    worldPerceptionEffect: worldPerceptionEffect,
+                    snapshot: AgentSnapshot(
+                        state: state,
+                        recentMemoryLimit:
+                            configuration.recentMemorySnapshotLimit,
+                        resourceReservation: reservation(for: state),
+                        survivalEnabled: survivalEnabled,
+                        homeostasisProfile: homeostasisProfile(
+                            for: state.agentID
+                        )
+                    ),
+                    cognitionPerformed: false
+                ))
+                continue
+            }
+
             let careStage = dependentCareState.flatMap { _ in
                 lifecycleState?.members.first { $0.agentID.rawValue == id }?.currentStage
             }
@@ -556,7 +616,10 @@ public struct AgentSimulationSession {
                         state: state,
                         recentMemoryLimit: configuration.recentMemorySnapshotLimit,
                         resourceReservation: reservation(for: state),
-                        survivalEnabled: survivalEnabled
+                        survivalEnabled: survivalEnabled,
+                        homeostasisProfile: homeostasisProfile(
+                            for: state.agentID
+                        )
                     ),
                     cognitionPerformed: false
                 ))
@@ -768,7 +831,10 @@ public struct AgentSimulationSession {
                     state: state,
                     recentMemoryLimit: configuration.recentMemorySnapshotLimit,
                     resourceReservation: reservation(for: state),
-                    survivalEnabled: survivalEnabled
+                    survivalEnabled: survivalEnabled,
+                    homeostasisProfile: homeostasisProfile(
+                        for: state.agentID
+                    )
                 )
             ))
         }

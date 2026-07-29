@@ -1,5 +1,8 @@
 public enum AgentMortalityCause: String, Codable, CaseIterable, Sendable {
     case starvation
+    case deprivation
+    case exhaustion
+    case compoundedHomeostaticFailure
 }
 
 public struct AgentDeathID: RawRepresentable, Codable, Hashable, Comparable, Sendable {
@@ -241,6 +244,10 @@ public struct AgentMortalityRecord: Codable, Equatable, Sendable {
     public let commitmentsResolvedEventID: AgentCausalEventID
     public let cancelledCommitmentIDs: [String]
     public let cleanupCounts: AgentMortalityCleanupCounts
+    public let finalVitalStatus: AgentVitalStatus?
+    public let finalHomeostasis: AgentHomeostasisProfile?
+    public let demographicAgeTicks: Int?
+    public let lifeStage: AgentLifeStage?
 }
 
 public struct AgentPopulationExitFrame: Codable, Equatable, Sendable {

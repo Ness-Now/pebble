@@ -469,7 +469,7 @@ extension AgentSimulationSession {
                 try requireMaterialRightsAgent(holder)
             }
             if let custodian = record.custodianID {
-                try requireMaterialRightsAgent(custodian)
+                try validateHistoricalMaterialRightsSubject(custodian)
             }
             guard record.claims.count <= rights.configuration.maximumClaimsPerAsset,
                   record.claims.map(\.claimID) == record.claims.map(\.claimID).sorted(),
@@ -482,10 +482,12 @@ extension AgentSimulationSession {
                     == record.permissions.count else {
                 throw AgentSessionError.materialRights(.invalidState("record bounds"))
             }
-            for claim in record.claims { try requireMaterialRightsAgent(claim.claimantID) }
+            for claim in record.claims {
+                try validateHistoricalMaterialRightsSubject(claim.claimantID)
+            }
             for permission in record.permissions {
-                try requireMaterialRightsAgent(permission.grantorID)
-                try requireMaterialRightsAgent(permission.userID)
+                try validateHistoricalMaterialRightsSubject(permission.grantorID)
+                try validateHistoricalMaterialRightsSubject(permission.userID)
                 guard !permission.allowedUses.isEmpty,
                       permission.allowedUses == permission.allowedUses.sorted(),
                       Set(permission.allowedUses).count == permission.allowedUses.count else {
@@ -493,7 +495,7 @@ extension AgentSimulationSession {
                 }
             }
             if let ownership = record.recognizedOwnership {
-                try requireMaterialRightsAgent(ownership.ownerID)
+                try validateHistoricalMaterialRightsSubject(ownership.ownerID)
                 guard let claim = record.claims.first(where: {
                     $0.claimID == ownership.claimID
                 }), claim.claimantID == ownership.ownerID,
@@ -507,7 +509,7 @@ extension AgentSimulationSession {
                     throw AgentSessionError.materialRights(.invalidState("recognition"))
                 }
                 for witness in ownership.recognizingAgentIDs {
-                    try requireMaterialRightsAgent(witness)
+                    try validateHistoricalMaterialRightsSubject(witness)
                 }
             }
         }
@@ -551,6 +553,21 @@ extension AgentSimulationSession {
 
     private func requireMaterialRightsAgent(_ agentID: AgentID) throws {
         guard statesById[agentID.rawValue] != nil else {
+            throw AgentSessionError.materialRights(.unknownAgent(agentID))
+        }
+    }
+
+    /// Social references are durable historical assertions, not capabilities.
+    /// Their subjects may be deceased; only a new operation still requires an
+    /// active agent through `requireMaterialRightsAgent`.
+    private func validateHistoricalMaterialRightsSubject(
+        _ agentID: AgentID
+    ) throws {
+        let active = statesById[agentID.rawValue] != nil
+        let deceased = mortalityState?.records.contains {
+            $0.agentID == agentID
+        } == true
+        guard active || deceased else {
             throw AgentSessionError.materialRights(.unknownAgent(agentID))
         }
     }

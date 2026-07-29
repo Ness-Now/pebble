@@ -185,7 +185,8 @@ extension AgentSimulationSession {
 
     func applySurvivalTick(
         to state: inout AgentSessionAgentState,
-        tick survivalTick: Int
+        tick survivalTick: Int,
+        appliesLegacyStarvationDamage: Bool = true
     ) -> AgentMemoryEntry? {
         let survival = configuration.survivalConfiguration
         state.needs.hunger = min(1, max(0, state.needs.hunger + survival.hungerPerTick))
@@ -201,7 +202,8 @@ extension AgentSimulationSession {
                 survival.starvationGraceTicks + 1,
                 progress.consecutiveCriticalHungerTicks + 1
             )
-            if progress.consecutiveCriticalHungerTicks > survival.starvationGraceTicks,
+            if appliesLegacyStarvationDamage,
+               progress.consecutiveCriticalHungerTicks > survival.starvationGraceTicks,
                state.health > 0 {
                 let damage = min(state.health, survival.starvationDamagePerTick)
                 state.health -= damage

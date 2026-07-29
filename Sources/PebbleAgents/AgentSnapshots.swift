@@ -58,12 +58,14 @@ public struct AgentSnapshot: Encodable, Equatable {
     public let resourceReservation: AgentResourceReservation?
     public let lastDeliveryOutcome: AgentDeliveryOutcome?
     public let survivalProgress: AgentSurvivalProgress?
+    public let homeostasisProfile: AgentHomeostasisProfile?
 
     init(
         state: AgentSessionAgentState,
         recentMemoryLimit: Int,
         resourceReservation: AgentResourceReservation?,
-        survivalEnabled: Bool = false
+        survivalEnabled: Bool = false,
+        homeostasisProfile: AgentHomeostasisProfile? = nil
     ) {
         id = state.id
         self.state = state.state
@@ -109,6 +111,7 @@ public struct AgentSnapshot: Encodable, Equatable {
         self.resourceReservation = resourceReservation
         lastDeliveryOutcome = state.lastDeliveryOutcome
         survivalProgress = survivalEnabled ? state.survivalProgress : nil
+        self.homeostasisProfile = homeostasisProfile
     }
 
     public static func == (lhs: AgentSnapshot, rhs: AgentSnapshot) -> Bool {
@@ -154,6 +157,7 @@ public struct AgentSnapshot: Encodable, Equatable {
             && lhs.resourceReservation == rhs.resourceReservation
             && lhs.lastDeliveryOutcome == rhs.lastDeliveryOutcome
             && lhs.survivalProgress == rhs.survivalProgress
+            && lhs.homeostasisProfile == rhs.homeostasisProfile
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -171,6 +175,7 @@ public struct AgentSnapshot: Encodable, Equatable {
         case navigationProgress, resourceReservation
         case lastDeliveryOutcome
         case survivalProgress
+        case homeostasisProfile
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -236,6 +241,7 @@ public struct AgentSnapshot: Encodable, Equatable {
         try container.encodeIfPresent(resourceReservation, forKey: .resourceReservation)
         try container.encodeIfPresent(lastDeliveryOutcome, forKey: .lastDeliveryOutcome)
         try container.encodeIfPresent(survivalProgress, forKey: .survivalProgress)
+        try container.encodeIfPresent(homeostasisProfile, forKey: .homeostasisProfile)
     }
 }
 
@@ -259,6 +265,7 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
     public let localEcology: AgentLocalEcologySnapshot?
     public let mortality: AgentMortalitySnapshot?
     public let lifecycle: AgentLifecycleSnapshot?
+    public let homeostasis: AgentHomeostasisSnapshot?
 
     init(
         seed: UInt32,
@@ -278,7 +285,8 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
         settlementMetrics: AgentSettlementMetricsSnapshot? = nil,
         localEcology: AgentLocalEcologySnapshot? = nil,
         mortality: AgentMortalitySnapshot? = nil,
-        lifecycle: AgentLifecycleSnapshot? = nil
+        lifecycle: AgentLifecycleSnapshot? = nil,
+        homeostasis: AgentHomeostasisSnapshot? = nil
     ) {
         self.seed = seed
         self.tick = tick
@@ -299,6 +307,7 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
         self.localEcology = localEcology
         self.mortality = mortality
         self.lifecycle = lifecycle
+        self.homeostasis = homeostasis
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -306,7 +315,7 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
         case economyEnabled, naturalResourcesEnabled, deliveryQuota, campStock, conservation
         case survivalEnabled, survivalConfiguration
         case buildAutoEnabled, constructionProject
-        case population, settlementMetrics, localEcology, mortality, lifecycle
+        case population, settlementMetrics, localEcology, mortality, lifecycle, homeostasis
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -348,6 +357,7 @@ public struct AgentSessionSnapshot: Encodable, Equatable {
         try container.encodeIfPresent(localEcology, forKey: .localEcology)
         try container.encodeIfPresent(mortality, forKey: .mortality)
         try container.encodeIfPresent(lifecycle, forKey: .lifecycle)
+        try container.encodeIfPresent(homeostasis, forKey: .homeostasis)
     }
 }
 

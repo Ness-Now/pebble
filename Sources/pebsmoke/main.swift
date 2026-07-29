@@ -83,6 +83,12 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "observer" {
     exit(failed > 0 ? 1 : 0)
 }
 
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "homeostasis-health" {
+    runPebbleAgentsHomeostasisHealthSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "mortality" {
     runPebbleAgentsMortalityPopulationExitSmoke()
     print("\n\(passed) passed, \(failed) failed")
@@ -2363,6 +2369,7 @@ runPebbleAgentsRoleNeutralBootstrapSmoke()
 runPebbleAgentsMaterialRightsSmoke()
 runPebbleAgentsPersistenceReconciliationSmoke()
 runPebbleAgentsObserverSmoke()
+runPebbleAgentsHomeostasisHealthSmoke()
 
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)
