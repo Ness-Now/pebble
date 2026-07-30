@@ -46,16 +46,16 @@ Canonical status at the product baseline reconciled by this documentation:
 ```text
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED under V4-GATE-B-v1
-CIV-00 through CIV-31: COMPLETE
+CIV-00 through CIV-32: COMPLETE
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
-CIV-32: NOT STARTED; NEXT ELIGIBLE PHASE
+CIV-33: NOT STARTED; NEXT ELIGIBLE PHASE
 V4-GATE-D-v1: PLANNED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: PLANNED
 ```
 
-The `CIV-30` completion is published on the canonical branch at
-`2cdf5d9c89e9e54e79dd6e9bf627a5cee2303851`. The `CIV-31` completion in this
+The `CIV-31` completion is published on the canonical branch at
+`a5f06290e9596756e5690fd284f59aaa457d10d3`. The `CIV-32` completion in this
 local tree is a review candidate until senior review, manual push and remote
 verification complete.
 
@@ -135,6 +135,12 @@ guardianship, shared physiological availability, candidate-state care
 selection, verified multi-tick supervision and physical nourishment, causal
 social development, schema-24 checkpoint/replay, Observer schema 4, and the
 rendered two-process child/guardian restart proof.
+
+[`CIV_32_PHASE_SUMMARY.md`](CIV_32_PHASE_SUMMARY.md) records physically
+grounded proposal and acceptance, bounded unions, derived family and lineage
+projections, social houses independent from households and property, atomic
+birth/death integration, schema-25 checkpoint/replay, Observer schema 5, and
+the rendered two-process family restart proof.
 
 [`GATE_C_EVALUATION_01_SUMMARY.md`](GATE_C_EVALUATION_01_SUMMARY.md) and
 [`GATE_C_EVALUATION_01_SUMMARY.json`](GATE_C_EVALUATION_01_SUMMARY.json)

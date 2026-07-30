@@ -25,21 +25,21 @@ roadmap.
 ## Canonical position
 
 ```text
-CIV-00 through CIV-31: COMPLETE
+CIV-00 through CIV-32: COMPLETE
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: none
-next authorized action: CIV-32
-CIV-31: COMPLETE
+next authorized action: CIV-33
+CIV-32: COMPLETE
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
-CIV-32: NOT STARTED — NEXT ELIGIBLE PHASE
+CIV-33: NOT STARTED — NEXT ELIGIBLE PHASE
 V4-GATE-D-v1: PLANNED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: PLANNED
 ```
 
-The `CIV-30` completion is published on the canonical branch at
-`2cdf5d9c89e9e54e79dd6e9bf627a5cee2303851`. The `CIV-31` completion in this
+The `CIV-31` completion is published on the canonical branch at
+`a5f06290e9596756e5690fd284f59aaa457d10d3`. The `CIV-32` completion in this
 local tree remains a review candidate until senior review, manual push and
 remote verification complete.
 
@@ -193,12 +193,12 @@ The evaluated product baseline passed 108 focused adversarial checks, the
 3343-check repository gate and a rendered two-process restart with real
 missing-asset reconciliation, zero duplication and read-only observation.
 
-Gate C remains acquired and published. `CIV-29` through `CIV-31` do not
+Gate C remains acquired and published. `CIV-29` through `CIV-32` do not
 reevaluate it.
 
 ## Wave 2 — Generational continuity
 
-Current entry status: `CIV-31` is **complete** and `CIV-32` is
+Current entry status: `CIV-32` is **complete** and `CIV-33` is
 **not started — next eligible phase**.
 
 | Phase | Requirement | Outcome |
@@ -317,7 +317,48 @@ This phase does not claim legal adoption or guardianship, general education,
 personality or intelligence, unions, family relations V1, lineages, houses,
 estates, inheritance, succession, Gate D or renewable subsistence.
 
-`CIV-32` is the next eligible phase but remains not started.
+### `CIV-32` — Unions, Family Relations, Lineages and Houses V1
+
+Status: **completed, required**.
+
+Result: two eligible mature residents can create one bounded active union only
+through a physically verified proposal followed by the counterparty's
+separately verified acceptance. Proposal, acceptance and activation retain
+their causal chain. Either partner may end the union explicitly, and partner
+death closes it once without changing canonical parentage, household, care,
+property or prior family history.
+
+Family relations are read-only deterministic projections over canonical
+kinship and union records. They distinguish parents, children, full and half
+siblings, grandparents, grandchildren, bounded ancestors and descendants,
+active and former partners, and co-parents. Lineages persist only explicit
+roots; membership is derived from full canonical ancestry under explicit
+depth and row bounds with visible truncation. A social house persists its one
+or two founders and bounded membership history, but is independent from
+households, custody, care, Material Rights, estate, office and leadership.
+Adults join and leave explicitly. A birth adds the child to a house only when
+both canonical progenitors share exactly one active house, and does so in the
+same candidate birth transaction as the child, genotype, parentage,
+household, care and guardianship.
+
+Bounded proof:
+[`CIV_32_PHASE_SUMMARY.md`](CIV_32_PHASE_SUMMARY.md). It covers physical
+proposal/acceptance, one-active-union enforcement, prohibited close-kin
+unions, derived full/half sibling and ancestry projections, explicit lineage
+roots, co-founded and single-founder houses, adult membership, atomic birth
+and death integration, deterministic corruption refusal, schema-25
+checkpoint/replay and read-only Observer schema 5. A rendered two-process
+campaign proves the same World, session, union, child, genotype, parentage,
+lineages, house and membership after restart, then one unilateral separation
+with family and separate authorities preserved, zero duplication and exact
+cleanup.
+
+This phase does not claim marriage law, sex or gender roles, sexuality,
+fertility policy, adoption, surnames, clans, dynasties, household merger,
+property, estate, inheritance, succession, house leadership, Gate D or
+renewable subsistence.
+
+`CIV-33` is the next eligible phase but remains not started.
 
 This wave must preserve the distinction between genotype, development,
 education, knowledge, skill and status. Care consumes real time and resources.
@@ -341,6 +382,8 @@ Observable slices:
 - after `CIV-30`: inspect founder variation, inherited per-locus provenance
   and bounded phenotype across a real restart;
 - after `CIV-31`: dependent childhood, care and guardianship over time;
+- after `CIV-32`: mutually accepted unions, derived family and lineage
+  continuity, and social houses across a real restart;
 - after `CIV-33`: a death, durable estate and succession across restart.
 
 ### `V4-GATE-D-v1` — Generational Continuity

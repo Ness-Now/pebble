@@ -10,19 +10,19 @@ SHA of the documentation commit that contains it.
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-B-v1`.
 - Gate C — Durable Observable Local World:
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-C-v1`.
-- `CIV-00` through `CIV-31`: **COMPLETE** in their bounded contracts.
+- `CIV-00` through `CIV-32`: **COMPLETE** in their bounded contracts.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
-Published product baseline from which `CIV-31` was implemented:
+Published product baseline from which `CIV-32` was implemented:
 
 ```text
-2cdf5d9c89e9e54e79dd6e9bf627a5cee2303851
+a5f06290e9596756e5690fd284f59aaa457d10d3
 ```
 
 This document does not claim to record the SHA of the commit containing
-`CIV-31`. Use Git to identify the exact reviewed or published phase HEAD.
+`CIV-32`. Use Git to identify the exact reviewed or published phase HEAD.
 
-The `CIV-30` completion is published on the canonical branch. The `CIV-31`
+The `CIV-31` completion is published on the canonical branch. The `CIV-32`
 completion recorded here is a local review candidate until senior review,
 manual push and remote verification complete.
 
@@ -30,54 +30,54 @@ manual push and remote verification complete.
 
 ```text
 active CIV phase: none
-next authorized action: CIV-32 — Unions, Family Relations, Lineages and Houses V1
-CIV-31 status: COMPLETE
+next authorized action: CIV-33 — Estates, Inheritance and Succession V1
+CIV-32 status: COMPLETE
 V4-GATE-C-v1 status: ACQUIRED
-CIV-32 status: NOT STARTED — NEXT ELIGIBLE PHASE
+CIV-33 status: NOT STARTED — NEXT ELIGIBLE PHASE
 V4-GATE-D-v1 status: PLANNED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: PLANNED
 roadmap generation: V4
 ```
 
-Completing `CIV-31` makes `CIV-32` eligible; it does not start the phase.
+Completing `CIV-32` makes `CIV-33` eligible; it does not start the phase.
 
 ## Last validation baseline
 
-For the `CIV-31` local review candidate:
+For the `CIV-32` local review candidate:
 
 ```text
+focused unions/family/lineages/houses: 60 passed, 0 failed
+focused lifecycle: 80 passed, 0 failed
 focused childhood/guardianship/social development: 62 passed, 0 failed
 focused dependent care: 55 passed, 0 failed
-focused lifecycle: 80 passed, 0 failed
-focused teaching: 41 passed, 0 failed
-focused skills: 59 passed, 0 failed
 focused homeostasis/health: 30 passed, 0 failed
 focused genetics/development/phenotype: 45 passed, 0 failed
 focused checkpoint/replay: 49 passed, 0 failed
 focused Observer: 20 passed, 0 failed
-repository gate: 3483 passed, 0 failed
+focused mortality: 93 passed, 0 failed
+focused material rights: 21 passed, 0 failed
+repository gate: 3543 passed, 0 failed
 repository verification steps: 35/35
-rendered two-process CIV-31 birth/care/restart/separation campaign: PASS
-parental-guardian/care/restart/verified-supervision captures: inspected
-normal child, parentage and inherited genotype preserved: YES
-parental guardian assignment: agent_0/canonicalParent
-guardian and current caregiver represented separately: YES
-physiologically incapacitated birth parent excluded: YES
-candidate guardian/caregiver replacement coherence: YES
-verified supervision: 1 tick at restart, 2 ticks at completion
-elapsed/interrupted supervision at completion: 5/4 ticks
-physical nourishment: bread 1 -> 0
-physical care receipt count: 1
-social-development state exact at restart: YES
-schema-24 checkpoint/replay: byte exact
-schema-23 supervision compatibility: zero elapsed-time credit
-schema-24 manifest integrity digest: verified
+rendered two-process CIV-32 union/birth/restart/separation campaign: PASS
+physical proposal and independent acceptance: YES
+one canonical active union activation: YES
+two explicit lineage roots: YES
+one co-founded social house: YES
+normal child, parentage, inherited genotype and guardian preserved: YES
+child shared-parent-house membership count: 1
+family relations and lineage memberships: deterministically derived
+households remain separate after union and house foundation: YES
+material rights unchanged: YES
+schema-25 checkpoint/replay: byte exact
+schema-25 manifest integrity digest: verified
 Observer schema 3: read-only
 Observer schema 4: read-only childhood projection
+Observer schema 5: read-only family projection
 persistent child probe restored from protected empty-custody attestation: YES
-care outcome count: 3
-physical consumption count: 1
-asset duplication count: 0
+union activation count: 1
+house foundation count: 1
+child house membership count: 1
+duplication count: 0
 Observer mutation count: 0
 runtime errors: 0
 cleanup: exact
@@ -138,12 +138,25 @@ cleanup: exact
   kinship parent, household owner, teacher, material custodian or legal actor.
   Social development grants no trust, knowledge, skill, profession,
   ownership, reproductive capability or status by itself.
+- Family V1 adds bounded durable union proposals and records, explicit lineage
+  roots, social houses and house-membership periods to the existing
+  `AgentSimulationSession`. A union requires two separately verified physical
+  acts, permits at most one active union per person and can end unilaterally or
+  by death. Parent, child, sibling, ancestor, descendant, partner, former
+  partner and co-parent relations are deterministic projections of canonical
+  kinship and union records, not a second stored kinship graph. Lineage
+  membership is similarly derived from canonical ancestry with visible depth
+  and row truncation. A house is neither a household nor a property, care,
+  custody, leadership or inheritance authority. Birth may add one
+  shared-parent-house membership only when both canonical progenitors share
+  exactly one active house; otherwise it adds none. Schema 25 persists the
+  bounded social records while Observer schema 5 remains read-only.
 - Gate `V4-GATE-D-v1` requires proof of at least one genuinely renewable
   physical subsistence loop; Gate B did not claim this.
 
 ## Next authorized action
 
 After senior review, manual publication and remote verification of this
-`CIV-31` candidate, the next mission may start the bounded contract design and
-implementation of `CIV-32`. `CIV-32` remains **not started**. Gate D and the
+`CIV-32` candidate, the next mission may start the bounded contract design and
+implementation of `CIV-33`. `CIV-33` remains **not started**. Gate D and the
 renewable-subsistence milestone remain planned and unevaluated.
