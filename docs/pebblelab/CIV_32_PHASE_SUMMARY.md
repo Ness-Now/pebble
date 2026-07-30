@@ -14,6 +14,7 @@ The product and rendered proof are separated into these reviewable commits:
 ```text
 5b7cc5b  Implement bounded unions family lineages and houses
 25dadfd  Add rendered CIV-32 restart campaign
+72a0e1d  Validate durable house policy and consent
 ```
 
 This report intentionally does not self-reference its containing documentation
@@ -135,8 +136,15 @@ root and derived descendants without inventing succession.
   same-household residents may remain in different houses.
 - A child joins automatically only when its two canonical progenitors share
   exactly one active house. The basis is
-  `sharedParentHouseAtBirth`. Different parental houses, no common house or an
-  ambiguous common set produces no invented membership.
+  `sharedParentHouseAtBirth`. Zero or multiple active common houses produce no
+  membership or join event and do not abort an otherwise valid birth.
+- An explicit adult join durably binds one request by the entrant and one
+  acceptance by a distinct active member. Their event IDs and operation IDs
+  are distinct, their roles are reciprocal, the entrant is mature, and a
+  canonical family relation or active union grounds the join at that tick.
+- A two-founder house requires an active union between those founders at the
+  foundation tick and two distinct reciprocal co-foundation acts. A later
+  separation does not erase the valid house.
 - Union separation preserves house membership. Member death ends only that
   membership; the house remains without leader selection, succession or asset
   transfer.
@@ -171,22 +179,27 @@ matter.
 
 ## Persistence, replay and observation
 
-Checkpoint/replay schema 25 persists the bounded family configuration,
+Checkpoint/replay schema 26 persists the bounded family configuration,
 proposal and union history, lineage roots, houses, membership periods, exact
-identity counters and typed family operations. Restore validates identities,
+identity counters, typed family operations and durable reciprocal proof for
+explicit adult joins and two-founder houses. Restore validates identities,
 canonical ordering, one-active-union limits, participant eligibility where
 active, proposal/union correspondence, house foundations and memberships,
-birth-derived child membership, death reasons and retained causal payloads
-before publication.
+the exact-one parental-house rule, birth-derived child membership, join
+maturity and family grounding, co-founders' active union at foundation, death
+reasons and retained causal payloads before publication.
 
 Schema 24 remains readable with Family V1 disabled and empty; it cannot invent
-new family state. Schema 25 round-trip and replay restore the same bytes and
+new family state. Schema 25 remains readable only when retained request,
+acceptance, join and co-foundation events allow the complete durable proof to
+be reconstructed. An honestly evicted but incomplete legacy proof is refused
+rather than trusted. Schema 26 round-trip and replay restore the same bytes and
 digest without reactivating a union, refounding a house or duplicating a
 membership.
 
 The versioned manifest-integrity and protected empty-custody rule remains in
 force. The rendered restart recreates the persistent child probe only because
-the intact schema-25 manifest attests its empty carried inventory. Manifest,
+the intact schema-26 manifest attests its empty carried inventory. Manifest,
 World binding, session candidate and probe indexes validate before
 publication.
 
@@ -201,22 +214,13 @@ Commands executed after the final product change:
 
 ```text
 PEBBLELAB_SMOKE_ONLY=unions-family-lineages-houses swift run pebsmoke
-60 passed, 0 failed
+83 passed, 0 failed
 
 PEBBLELAB_SMOKE_ONLY=lifecycle swift run pebsmoke
 80 passed, 0 failed
 
 PEBBLELAB_SMOKE_ONLY=childhood-guardianship swift run pebsmoke
 62 passed, 0 failed
-
-PEBBLELAB_SMOKE_ONLY=dependent-care swift run pebsmoke
-55 passed, 0 failed
-
-PEBBLELAB_SMOKE_ONLY=homeostasis-health swift run pebsmoke
-30 passed, 0 failed
-
-PEBBLELAB_SMOKE_ONLY=genetics-development swift run pebsmoke
-45 passed, 0 failed
 
 PEBBLELAB_SMOKE_ONLY=checkpoint-replay swift run pebsmoke
 49 passed, 0 failed
@@ -231,7 +235,7 @@ PEBBLELAB_SMOKE_ONLY=material-rights swift run pebsmoke
 21 passed, 0 failed
 
 scripts/verify-pebblelab.sh
-3543 passed, 0 failed
+3566 passed, 0 failed
 35/35 verification steps
 exit status 0
 ```
@@ -240,13 +244,17 @@ Focused coverage includes input-order neutrality, eligibility and close-kin
 refusal, two-act physical consent, one-active-union enforcement, relation
 truncation, full/half sibling derivation, lineage ancestry, house/household
 independence, normal birth with and without a shared parental house,
+birth with multiple common parental houses and no affiliation, duplicate
+birth-house membership refusal, explicit join consent roles and grounding,
+two-founder active-union-at-foundation proof, valid post-separation restore,
 unilateral separation, partner/root death, exact causal actors and payloads,
-counter corruption, schema-25 restore/replay and Observer immutability.
+counter corruption, schema-26 restore/replay, restrictive schema-25
+compatibility and Observer immutability.
 
 ## Rendered two-process campaign
 
 The final native rendered campaign used disposable World
-`PebbleLab-Disposable-CIV32-46`, World identity `wms7kt7xac2v1`, seed 46 and
+`PebbleLab-Disposable-CIV32-46`, World identity `wms7xzl9x1zqi`, seed 46 and
 session `live-46-14-66--21`.
 
 Process 1 verified:
@@ -263,8 +271,8 @@ canonical progenitors agent_0 + agent_1
 genotype genotype-agent_3-v1-7eb9e1b0ffbd955e
 guardian agent_0 / canonicalParent
 one house membership / sharedParentHouseAtBirth
-schema-25 save
-manifest integrity v1 / cdce3ce62ab8ebf79131cdb1c88bab4cd7cca5bff66093858aeefd59a43c9ce4
+schema-26 save
+manifest integrity v1 / 92104d49030838d9a2a0c56add56314228747eb4ba2cfa32fde0ecc39400ba2c
 complete process termination
 ```
 

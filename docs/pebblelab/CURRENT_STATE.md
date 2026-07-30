@@ -46,17 +46,14 @@ Completing `CIV-32` makes `CIV-33` eligible; it does not start the phase.
 For the `CIV-32` local review candidate:
 
 ```text
-focused unions/family/lineages/houses: 60 passed, 0 failed
+focused unions/family/lineages/houses: 83 passed, 0 failed
 focused lifecycle: 80 passed, 0 failed
 focused childhood/guardianship/social development: 62 passed, 0 failed
-focused dependent care: 55 passed, 0 failed
-focused homeostasis/health: 30 passed, 0 failed
-focused genetics/development/phenotype: 45 passed, 0 failed
 focused checkpoint/replay: 49 passed, 0 failed
 focused Observer: 20 passed, 0 failed
 focused mortality: 93 passed, 0 failed
 focused material rights: 21 passed, 0 failed
-repository gate: 3543 passed, 0 failed
+repository gate: 3566 passed, 0 failed
 repository verification steps: 35/35
 rendered two-process CIV-32 union/birth/restart/separation campaign: PASS
 physical proposal and independent acceptance: YES
@@ -68,8 +65,8 @@ child shared-parent-house membership count: 1
 family relations and lineage memberships: deterministically derived
 households remain separate after union and house foundation: YES
 material rights unchanged: YES
-schema-25 checkpoint/replay: byte exact
-schema-25 manifest integrity digest: verified
+schema-26 checkpoint/replay: byte exact
+schema-26 manifest integrity digest: verified
 Observer schema 3: read-only
 Observer schema 4: read-only childhood projection
 Observer schema 5: read-only family projection
@@ -149,8 +146,15 @@ cleanup: exact
   and row truncation. A house is neither a household nor a property, care,
   custody, leadership or inheritance authority. Birth may add one
   shared-parent-house membership only when both canonical progenitors share
-  exactly one active house; otherwise it adds none. Schema 25 persists the
-  bounded social records while Observer schema 5 remains read-only.
+  exactly one active house; zero or multiple common houses add none and do not
+  abort an otherwise valid birth. Explicit adult join persists distinct,
+  reciprocal request and acceptance proofs, exact roles, operation IDs,
+  maturity and family grounding. Two-founder houses require a matching union
+  active at the foundation tick and two reciprocal co-foundation acts.
+  Schema 26 persists those durable consent proofs while Observer schema 5
+  remains read-only. Schema 25 is readable only when its retained causal
+  events can reconstruct the complete proof; an honestly evicted but
+  incomplete legacy proof fails closed.
 - Gate `V4-GATE-D-v1` requires proof of at least one genuinely renewable
   physical subsistence loop; Gate B did not claim this.
 

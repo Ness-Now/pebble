@@ -339,14 +339,17 @@ households, custody, care, Material Rights, estate, office and leadership.
 Adults join and leave explicitly. A birth adds the child to a house only when
 both canonical progenitors share exactly one active house, and does so in the
 same candidate birth transaction as the child, genotype, parentage,
-household, care and guardianship.
+household, care and guardianship. Zero or multiple active common houses add no
+automatic membership and do not invalidate the birth. Adult join consent
+retains distinct reciprocal request and acceptance proofs. A two-founder
+house is valid only when its founders' union was active at foundation time.
 
 Bounded proof:
 [`CIV_32_PHASE_SUMMARY.md`](CIV_32_PHASE_SUMMARY.md). It covers physical
 proposal/acceptance, one-active-union enforcement, prohibited close-kin
 unions, derived full/half sibling and ancestry projections, explicit lineage
 roots, co-founded and single-founder houses, adult membership, atomic birth
-and death integration, deterministic corruption refusal, schema-25
+and death integration, deterministic corruption refusal, schema-26
 checkpoint/replay and read-only Observer schema 5. A rendered two-process
 campaign proves the same World, session, union, child, genotype, parentage,
 lineages, house and membership after restart, then one unilateral separation

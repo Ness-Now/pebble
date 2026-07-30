@@ -139,7 +139,8 @@ rendered two-process child/guardian restart proof.
 [`CIV_32_PHASE_SUMMARY.md`](CIV_32_PHASE_SUMMARY.md) records physically
 grounded proposal and acceptance, bounded unions, derived family and lineage
 projections, social houses independent from households and property, atomic
-birth/death integration, schema-25 checkpoint/replay, Observer schema 5, and
+birth/death integration, exact-one parental-house affiliation, durable
+two-act house consent, schema-26 checkpoint/replay, Observer schema 5, and
 the rendered two-process family restart proof.
 
 [`GATE_C_EVALUATION_01_SUMMARY.md`](GATE_C_EVALUATION_01_SUMMARY.md) and
