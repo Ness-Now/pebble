@@ -279,9 +279,14 @@ explicitly at risk with visible unmet needs and no invented guardian or
 caregiver.
 
 Care still uses the existing need, assignment, engagement and outcome engine.
-Supervision occupies the caregiver for a minimum real duration and requires
-physical proximity. Nourishment consumes exactly one verified physical food
-item through Pebble before its physiological and social outcome can publish.
+Birth and later selection share one physiological-availability predicate.
+Guardian and caregiver replacement read the same candidate care authority,
+not the previously published state. Supervision occupies the caregiver and
+counts only unique ticks with an active matching need and assignment,
+compatible care activity, physiological availability and verified physical
+proximity; elapsed and interrupted ticks grant no progress. Nourishment
+consumes exactly one verified physical food item through Pebble before its
+physiological and social outcome can publish.
 Delegation changes only the current care executor; guardian reassignment
 changes neither parentage nor household and never teleports the child.
 Newborn and juvenile stage gateways prevent adult work, agriculture,
@@ -300,11 +305,13 @@ Bounded proof:
 guardian selection and reassignment, guardian/caregiver separation, timed
 supervision, one verified physical nourishment debit, at-risk behavior,
 mortality and maturity, adult-capability denial, corruption refusal,
-schema-23 checkpoint/replay and read-only Observer schema 4. A rendered
-two-process campaign proves normal birth, parental guardianship, real
-supervision and nourishment, exact child/guardian/social restoration,
-protected empty-probe recreation, causal household separation without
-teleportation, explicit at-risk state, zero duplication and exact cleanup.
+schema-24 checkpoint/replay, fail-closed schema-23 supervision compatibility
+and read-only Observer schema 4. A rendered two-process campaign proves normal
+birth, parental guardianship, verified supervision with an interruption,
+exact progress restoration, real nourishment, exact child/guardian/social
+restoration, protected empty-probe recreation, causal household separation
+without teleportation, explicit at-risk state, zero duplication and exact
+cleanup.
 
 This phase does not claim legal adoption or guardianship, general education,
 personality or intelligence, unions, family relations V1, lineages, houses,

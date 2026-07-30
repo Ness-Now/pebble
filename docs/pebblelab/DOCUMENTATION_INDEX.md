@@ -131,9 +131,10 @@ bounded development and phenotype, schema-22 checkpoint/replay, Observer
 schema 3, rendered normal birth and safe persistent-child restart.
 
 [`CIV_31_PHASE_SUMMARY.md`](CIV_31_PHASE_SUMMARY.md) records durable bounded
-guardianship, reuse of Dependent Care, timed supervision and physical
-nourishment, causal social development, schema-23 checkpoint/replay, Observer
-schema 4, and the rendered two-process child/guardian restart proof.
+guardianship, shared physiological availability, candidate-state care
+selection, verified multi-tick supervision and physical nourishment, causal
+social development, schema-24 checkpoint/replay, Observer schema 4, and the
+rendered two-process child/guardian restart proof.
 
 [`GATE_C_EVALUATION_01_SUMMARY.md`](GATE_C_EVALUATION_01_SUMMARY.md) and
 [`GATE_C_EVALUATION_01_SUMMARY.json`](GATE_C_EVALUATION_01_SUMMARY.json)

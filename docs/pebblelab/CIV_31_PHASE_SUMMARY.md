@@ -9,12 +9,15 @@ was implemented from the published canonical baseline:
 2cdf5d9c89e9e54e79dd6e9bf627a5cee2303851
 ```
 
-The product work is separated into three commits:
+The phase history and final validation correction are separated into these
+reviewable commits:
 
 ```text
 abe1d72  Implement durable childhood guardianship V2
 49e05e9  Add rendered CIV-31 restart campaign
 cb3f8f3  Bind guardianship to physiological availability
+82f3e66  Close CIV-31 documentation
+203922d  Enforce available caregivers and verified supervision
 ```
 
 This report intentionally does not self-reference its containing documentation
@@ -66,10 +69,20 @@ Teaching and Skills remain the only learning and practice authorities.
   kin, then other household adults; equal candidates use current bounded
   guardian load and stable `AgentID` order. Genotype, phenotype, wealth,
   profession, skill and display names are not inputs.
+- Birth applies that same physiological-availability predicate before any
+  child authority publishes. A parent with positive health but CIV-29
+  `incapacitated` or `dead` status is ineligible; the other canonical parent
+  may be selected normally. If both parents are unavailable, the bounded
+  birth contract refuses atomically rather than inventing a caregiver.
 - Delegation changes the active care executor without rewriting guardian,
   parentage or household. Explicit guardian reassignment ends the previous
   responsibility and starts a causal same-household responsibility; it does
   not teleport the child.
+- Tick-boundary, incapacity and death replacement receive the candidate care
+  and childhood authorities plus projected loads explicitly. Once a
+  replacement guardian exists in that candidate state, caregiver selection
+  sees and prefers that exact guardian; it never falls back to the stale
+  published `dependentCareState`.
 - Guardian death, durable incapacity, household separation, explicit
   reassignment, child death and maturity end the active responsibility. A
   deterministic replacement is sought. If none exists, the child is
@@ -82,9 +95,19 @@ profile and causal provenance either publish together or do not publish.
 
 ## Care, time and material truth
 
-- Supervision reuses the existing care engagement. It requires bounded
-  physical proximity and at least two engaged ticks. An instantaneous attempt
-  is refused without resolving the need or advancing social development.
+- Supervision reuses the existing care engagement. Its durable bounded
+  progress records verified engaged ticks, the last evaluated and verified
+  ticks, verified caregiver/dependent positions, interrupted ticks and the
+  last interruption. One tick counts only when the matching need and
+  assignment remain active, the caregiver remains physiologically available,
+  caregiver and child are in bounded range, and the caregiver's current
+  activity is `supervise_dependent`. A tick is evaluated at most once.
+- The interruption policy is deterministic pause: distance, incompatible
+  activity or unavailable care records an interrupted tick without increasing
+  verified progress. Returning to valid supervision resumes from the
+  persisted count. Completion requires the configured two verified ticks;
+  elapsed wall or simulation time alone cannot resolve the need or advance
+  social development.
 - An active care engagement wins the existing urgent activity band and
   occupies the caregiver rather than running as a free parallel effect.
   Critical physiology can still interrupt it through existing availability
@@ -159,6 +182,11 @@ Validation refuses, before publication:
 - an unknown social profile, duplicate dimension, out-of-range value,
   incoherent counter or exposure without its matching causal source;
 - care engagements without the existing need and caregiver authority;
+- supervision progress that is negative, unbounded, future-dated,
+  double-counted or inconsistent with its verified/interrupted positions and
+  ticks;
+- an active engagement whose assignment ended or whose caregiver is no longer
+  physiologically available;
 - reused physical-care receipts;
 - adult actions by a newborn or juvenile;
 - social change after the child's causal death boundary.
@@ -170,14 +198,21 @@ remains owned by CIV-29; `CIV-31` creates no estate or inheritance.
 
 ## Persistence and observation
 
-Checkpoint/replay schema 23 persists the complete childhood state and the
-typed enable, delegation and guardian-reassignment operations. Round-trip and
-replay restore byte-identical guardian basis, care state, social dimensions,
-causal sequence and digest. No care outcome, food consumption, exposure or
-assignment is duplicated.
+Checkpoint/replay schema 24 persists the complete childhood state, bounded
+verified-supervision progress, and the typed enable, delegation,
+guardian-reassignment and supervision-tick operations. Round-trip and replay
+restore byte-identical guardian basis, care state, progress, social
+dimensions, causal sequence and digest. No care outcome, food consumption,
+exposure, assignment or supervision tick is duplicated.
+
+Schema 23 remains readable. Because it did not carry protected verified
+supervision progress, a legacy active supervision engagement decodes with
+zero verified and interrupted ticks and receives no elapsed-time credit. It
+must earn schema-24 progress through real post-load activity before
+completion.
 
 The schema-22 manifest-integrity and protected empty-probe rule remains in
-force for schema 23. A persistent child absent from the three-founder
+force for schema 24. A persistent child absent from the three-founder
 bootstrap can be recreated only from an intact, versioned manifest attesting
 empty carried custody. The World, session and controller indexes validate
 before publication.
@@ -193,7 +228,7 @@ Commands executed after the final product change:
 
 ```text
 PEBBLELAB_SMOKE_ONLY=childhood-guardianship swift run pebsmoke
-51 passed, 0 failed
+62 passed, 0 failed
 
 PEBBLELAB_SMOKE_ONLY=dependent-care swift run pebsmoke
 55 passed, 0 failed
@@ -201,35 +236,29 @@ PEBBLELAB_SMOKE_ONLY=dependent-care swift run pebsmoke
 PEBBLELAB_SMOKE_ONLY=lifecycle swift run pebsmoke
 80 passed, 0 failed
 
-PEBBLELAB_SMOKE_ONLY=teaching swift run pebsmoke
-41 passed, 0 failed
-
-PEBBLELAB_SMOKE_ONLY=skills swift run pebsmoke
-59 passed, 0 failed
-
-PEBBLELAB_SMOKE_ONLY=observer swift run pebsmoke
-20 passed, 0 failed
-
 PEBBLELAB_SMOKE_ONLY=checkpoint-replay swift run pebsmoke
 49 passed, 0 failed
 
 PEBBLELAB_SMOKE_ONLY=homeostasis-health swift run pebsmoke
 30 passed, 0 failed
 
-PEBBLELAB_SMOKE_ONLY=genetics-development swift run pebsmoke
-45 passed, 0 failed
+PEBBLELAB_SMOKE_ONLY=observer swift run pebsmoke
+20 passed, 0 failed
 
 scripts/verify-pebblelab.sh
-3472 passed, 0 failed
+3483 passed, 0 failed
 35/35 verification steps
 exit status 0
 ```
 
 Focused coverage includes normal and non-parent guardian selection,
-delegation, reassignment, at-risk behavior, timed supervision, exact physical
-food publication, load and activity bounds, adult-gateway refusal, maturity,
-mortality, teaching/skill non-duplication, Observer immutability, schema-23
-restore/replay and adversarial corruption.
+birth-time physiological exclusion and recovery, candidate-state
+guardian/caregiver equality after incapacity and death, delegation,
+reassignment, at-risk behavior, verified supervision, interruption and
+duplicate-tick refusal, orphan-engagement rejection, exact physical food
+publication, load and activity bounds, adult-gateway refusal, maturity,
+mortality, Observer immutability, schema-24 restore/replay, fail-closed
+schema-23 compatibility and adversarial corruption.
 
 ## Rendered two-process restart evidence
 
@@ -241,7 +270,7 @@ scripts/verify-pebblelab-civ31.sh
 
 Result: **PASS**, exit status 0.
 
-The campaign used World `PebbleLab-Disposable-CIV31-46`, seed 46 and two
+The campaign used a disposable World, seed 46 and two
 separate Pebble processes:
 
 ```text
@@ -249,19 +278,24 @@ process 1:
   normal reproduction and birth of agent_3
   → canonical parents agent_0 and agent_1 remain unchanged
   → agent_0 becomes guardian by canonicalParent basis
-  → timed supervision remains active across several ticks
-  → one real sweet_berries item is debited 1 → 0
-  → one physical care receipt resolves nourishment
-  → stable-care and supervision exposures publish causally
-  → schema-23 checkpoint with protected empty-child attestation
+  → supervision earns exactly one verified tick at tick 5
+  → physical separation at tick 6 records one interruption and no progress
+  → no supervision exposure publishes before the verified minimum
+  → schema-24 checkpoint persists verified=1 and interrupted=1
+  → protected empty-child attestation is integrity-bound
   → process terminates and removes four transient probes
 
 process 2:
-  same SaveDB World and schema-23 checkpoint load
+  same SaveDB World and schema-24 checkpoint load
   → manifest integrity v1 verifies
   → missing agent_3 probe is restored only from protected empty custody
-  → same session, child, guardian, household, genotype and childhood digest
-  → no outcome, consumption or exposure is duplicated
+  → same session, child, guardian, household, genotype, childhood digest
+    and verified/interrupted progress
+  → return-home and nourishment activities add interrupted ticks, not
+    supervision progress
+  → one real bread item is debited 1 → 0
+  → supervision resumes at tick 10 and reaches verified=2 exactly
+  → the engagement resolves once and one supervision exposure publishes
   → normal household separation ends the guardian and caregiver
   → no eligible replacement leaves agent_3 explicitly at risk
   → parentage, genotype and child position remain unchanged
@@ -272,7 +306,7 @@ process 2:
 Compact facts:
 
 ```text
-World identity: wms75hfxy7odo
+World identity: wms7c0ey53nzo
 session identity: live-46-14-66--21
 parents: agent_0, agent_1
 child: agent_3
@@ -280,19 +314,23 @@ guardian before separation: agent_0 / canonicalParent / household_0
 current caregiver before separation: agent_0
 child genotype: genotype-agent_3-v1-7eb9e1b0ffbd955e
 child stage: newborn → juvenile → mature
-supervision engagement: tick 5 through tick 12
-physical food: sweet_berries 1 → 0
-physical receipt: physical-care:live-46-14-66--21:agent_0:agent_3:159
-social before restart: guardian 100, supervision 140, stable care 160
-childhood digest at restart: 56afa6fc8a780dea, exact
-manifest integrity: v1 / 903a6f267e9b0b898afc8c2d2daa6b6164bbdcb0013aa4e72d8804c3f903d415 / verified
+supervision at save: elapsed 1 / verified 1 / interrupted 1
+supervision at completion: elapsed 5 / verified 2 / interrupted 4
+supervision completion count: 1
+supervised-interaction exposure count: 1
+physical food: bread 1 → 0
+physical receipt: physical-care:live-46-14-66--21:agent_0:agent_3:160
+social at restart: guardian 100, supervision 0, stable care 0
+social after verified completion: supervision 140
+childhood digest at restart: f98aa76af32c0584, exact
+manifest integrity: v1 / 85dabc4d7a11088e2d57d04cbd0d17f5a19385b54797a50210df01c3ae7690cf / verified
 restored child probe: restored_verified:agent_3
 separation: householdSeparated → no replacement → atRisk
 unmet-care exposure after separation: 150
 trust edges: 0 → 0
 teaching exposures: 0 → 0
 caregiving skill: one unit from the real care action only
-care outcome count: 2 → 2
+care outcome count: 3 → 3
 physical consumption count: 1 → 1
 duplication count: 0
 Observer mutation count: 0
@@ -306,13 +344,13 @@ The four native-resolution captures were individually inspected:
 civ31-parental-guardian-active-need.png
 civ31-real-care-social-development.png
 civ31-same-child-after-restart.png
-civ31-guardian-unavailable-at-risk.png
+civ31-verified-supervision-complete.png
 ```
 
 They show a coherent rendered World and readable Observer schema-4 state for
-the active parental guardian, real care exposure, exact restarted child and
-explicit at-risk result. No visual corruption or contradictory authority was
-found.
+the active parental guardian, interrupted care, the exact restarted child and
+the single verified-supervision completion. No visual corruption or
+contradictory authority was found.
 
 ## Limits
 

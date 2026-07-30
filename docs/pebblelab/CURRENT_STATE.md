@@ -46,7 +46,7 @@ Completing `CIV-31` makes `CIV-32` eligible; it does not start the phase.
 For the `CIV-31` local review candidate:
 
 ```text
-focused childhood/guardianship/social development: 51 passed, 0 failed
+focused childhood/guardianship/social development: 62 passed, 0 failed
 focused dependent care: 55 passed, 0 failed
 focused lifecycle: 80 passed, 0 failed
 focused teaching: 41 passed, 0 failed
@@ -55,23 +55,27 @@ focused homeostasis/health: 30 passed, 0 failed
 focused genetics/development/phenotype: 45 passed, 0 failed
 focused checkpoint/replay: 49 passed, 0 failed
 focused Observer: 20 passed, 0 failed
-repository gate: 3472 passed, 0 failed
+repository gate: 3483 passed, 0 failed
 repository verification steps: 35/35
 rendered two-process CIV-31 birth/care/restart/separation campaign: PASS
-parental-guardian/care/restart/at-risk captures: inspected
+parental-guardian/care/restart/verified-supervision captures: inspected
 normal child, parentage and inherited genotype preserved: YES
 parental guardian assignment: agent_0/canonicalParent
 guardian and current caregiver represented separately: YES
-timed supervision outcome: causal
-physical nourishment: sweet_berries 1 -> 0
+physiologically incapacitated birth parent excluded: YES
+candidate guardian/caregiver replacement coherence: YES
+verified supervision: 1 tick at restart, 2 ticks at completion
+elapsed/interrupted supervision at completion: 5/4 ticks
+physical nourishment: bread 1 -> 0
 physical care receipt count: 1
 social-development state exact at restart: YES
-schema-23 checkpoint/replay: byte exact
-schema-23 manifest integrity digest: verified
+schema-24 checkpoint/replay: byte exact
+schema-23 supervision compatibility: zero elapsed-time credit
+schema-24 manifest integrity digest: verified
 Observer schema 3: read-only
 Observer schema 4: read-only childhood projection
 persistent child probe restored from protected empty-custody attestation: YES
-care outcome count: 2
+care outcome count: 3
 physical consumption count: 1
 asset duplication count: 0
 Observer mutation count: 0
@@ -122,11 +126,18 @@ cleanup: exact
   non-empty custody cannot authorize empty-probe recreation and remain
   fail-closed on the existing CIV-27 reconciliation path.
 - Childhood V2 extends the existing Dependent Care authority with one bounded,
-  durable active guardian, explicit reassignment or at-risk state, timed
-  supervision and causal social-development exposure. It does not make a
-  guardian a genetic or kinship parent, household owner, teacher, material
-  custodian or legal actor. Social development grants no trust, knowledge,
-  skill, profession, ownership, reproductive capability or status by itself.
+  durable active guardian, explicit reassignment or at-risk state, and causal
+  social-development exposure. Birth, replacement and active engagement share
+  one physiological-availability predicate. Candidate guardian and caregiver
+  selection reads the same transactional care authority. Supervision advances
+  only on unique ticks with an active matching assignment and need, an
+  available caregiver, compatible care activity and verified proximity;
+  elapsed or interrupted time grants no credit. Schema 24 persists that
+  bounded progress, while schema 23 decodes it with zero historical
+  elapsed-time credit. Childhood V2 does not make a guardian a genetic or
+  kinship parent, household owner, teacher, material custodian or legal actor.
+  Social development grants no trust, knowledge, skill, profession,
+  ownership, reproductive capability or status by itself.
 - Gate `V4-GATE-D-v1` requires proof of at least one genuinely renewable
   physical subsistence loop; Gate B did not claim this.
 
