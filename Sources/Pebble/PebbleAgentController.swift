@@ -162,6 +162,9 @@ final class PebbleAgentController {
     var dependentCareFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_CARE"] == "1"
     }
+    var childhoodFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_CHILDHOOD"] == "1"
+    }
     var skillFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_SKILLS"] == "1"
     }

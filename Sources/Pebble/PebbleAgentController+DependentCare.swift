@@ -6,7 +6,8 @@ extension PebbleAgentController {
         _ arguments: [String],
         world: World
     ) -> PebbleAgentCommandResult {
-        let usage = "Usage: /lab care <on|status|proof physical-food-setup>"
+        let usage = "Usage: /lab care <on|status|proof "
+            + "<proximity-setup|physical-food-setup>>"
         guard let command = arguments.first?.lowercased(),
               arguments.count == 1
                 || (arguments.count == 2 && command == "proof") else {
@@ -52,6 +53,41 @@ extension PebbleAgentController {
             case "status":
                 traceDependentCareState(candidate)
                 return dependentCareStatus(candidate)
+            case "proof" where arguments[1].lowercased() == "proximity-setup":
+                guard environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
+                      activeWorld === world,
+                      let configuration = candidate.dependentCareSnapshot()
+                        .configuration,
+                      let assignment = candidate.dependentCareSnapshot()
+                        .assignments.filter({ $0.status == .active })
+                        .sorted(by: {
+                            if $0.dependentID != $1.dependentID {
+                                return $0.dependentID < $1.dependentID
+                            }
+                            return $0.caregiverID < $1.caregiverID
+                        }).first else {
+                    return failure("Physical care proximity setup refused.")
+                }
+                var recorder = replayRecorder
+                let approachSteps = try approachDependentForCare(
+                    assignment: assignment,
+                    maximumDistance: configuration.careInteractionDistance,
+                    candidate: &candidate,
+                    recorder: &recorder,
+                    world: world
+                )
+                session = candidate
+                replayRecorder = recorder
+                trace(
+                    "care proximity setup tick=\(candidate.tick) caregiver="
+                        + "\(assignment.caregiverID.rawValue) dependent="
+                        + "\(assignment.dependentID.rawValue) approachSteps="
+                        + "\(approachSteps) distance="
+                        + "\(configuration.careInteractionDistance) "
+                        + "moved=dependent movement=CorePath+Entity.move outcome=none "
+                        + "socialDelta=0 worldMutation=bounded"
+                )
+                return success("Physical dependent-care proximity prepared.")
             case "proof" where arguments[1].lowercased() == "physical-food-setup":
                 guard environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
                       activeWorld === world,
@@ -66,7 +102,6 @@ extension PebbleAgentController {
                             return $0.caregiverID < $1.caregiverID
                         }).first,
                       let probe = probesByAgentId[assignment.caregiverID.rawValue],
-                      let dependentProbe = probesByAgentId[assignment.dependentID.rawValue],
                       probe.carriedItems.allSatisfy({ stack in
                           guard let stack else { return true }
                           return foodConsumptionDescriptor(for: stack) == nil
@@ -75,7 +110,6 @@ extension PebbleAgentController {
                     return failure("Physical care proof setup refused.")
                 }
                 let caregiver = PebbleAgentEmbodiment(probe: probe)
-                let dependent = PebbleAgentEmbodiment(probe: dependentProbe)
                 var recorder = replayRecorder
                 var shadowFood = try candidate.state(for: assignment.caregiverID)
                     .resourceInventory.count(of: .foodRaw)
@@ -114,88 +148,13 @@ extension PebbleAgentController {
                         + "\(assignment.dependentID.rawValue) foodRawShadow=\(shadowFood) "
                         + "realFood=none physicalDebit=0 hungerRescue=0 historyDelta=0"
                 )
-                let occupied = Set<AgentPosition>(probesByAgentId.values.compactMap { other in
-                    guard other !== caregiver.probe, !other.dead, other.world === world else {
-                        return nil
-                    }
-                    return AgentPosition(
-                        x: Int(other.x.rounded(.down)),
-                        y: Int(other.y.rounded(.down)),
-                        z: Int(other.z.rounded(.down))
-                    )
-                })
-                let adjacentCandidates = [
-                    AgentPosition(
-                        x: dependent.position.x + 1,
-                        y: dependent.position.y,
-                        z: dependent.position.z
-                    ),
-                    AgentPosition(
-                        x: dependent.position.x - 1,
-                        y: dependent.position.y,
-                        z: dependent.position.z
-                    ),
-                    AgentPosition(
-                        x: dependent.position.x,
-                        y: dependent.position.y,
-                        z: dependent.position.z + 1
-                    ),
-                    AgentPosition(
-                        x: dependent.position.x,
-                        y: dependent.position.y,
-                        z: dependent.position.z - 1
-                    ),
-                    AgentPosition(
-                        x: dependent.position.x,
-                        y: dependent.position.y + 1,
-                        z: dependent.position.z
-                    ),
-                    AgentPosition(
-                        x: dependent.position.x,
-                        y: dependent.position.y - 1,
-                        z: dependent.position.z
-                    ),
-                ]
-                let approachTarget = adjacentCandidates.first { target in
-                    guard !occupied.contains(target), let path = findPath(
-                        world, caregiver.x, caregiver.y, caregiver.z,
-                        Double(target.x) + 0.5, Double(target.y), Double(target.z) + 0.5,
-                        600, true
-                    ), !path.isEmpty else { return false }
-                    var previous = caregiver.position
-                    for node in path {
-                        let next = AgentPosition(x: node.x, y: node.y, z: node.z)
-                        guard !occupied.contains(next),
-                              max(abs(next.x - previous.x), abs(next.z - previous.z)) == 1,
-                              (-3...1).contains(next.y - previous.y) else { return false }
-                        previous = next
-                    }
-                    return previous == target
-                }
-                guard let approachTarget else {
-                    return failure("Physical care has no collision-safe Core approach.")
-                }
-                let approachSteps = try wildSubsistenceExecutor.approach(
-                    world: world,
-                    actor: caregiver,
-                    target: approachTarget,
-                    reach: 0
+                let approachSteps = try approachDependentForCare(
+                    assignment: assignment,
+                    maximumDistance: configuration.careInteractionDistance,
+                    candidate: &candidate,
+                    recorder: &recorder,
+                    world: world
                 )
-                guard abs(caregiver.position.x - dependent.position.x)
-                        + abs(caregiver.position.y - dependent.position.y)
-                        + abs(caregiver.position.z - dependent.position.z)
-                        <= configuration.careInteractionDistance else {
-                    return failure("Physical care approach remained out of range.")
-                }
-                let update = AgentExternalUpdate(
-                    agentId: assignment.caregiverID.rawValue,
-                    position: caregiver.position
-                )
-                if try applyRecordedOperationIfActive(
-                    .externalUpdate(update), session: &candidate, recorder: &recorder
-                ) == nil {
-                    try candidate.applyExternalUpdate(update)
-                }
                 probe.carriedItems[slot] = ItemStack(iid("sweet_berries"), 1)
                 guard probe.carriedItems[slot]?.count == 1,
                       probe.carriedItems[slot].flatMap(foodConsumptionDescriptor)?
@@ -219,6 +178,149 @@ extension PebbleAgentController {
         } catch {
             return failure("PebbleAgents care command failed: \(error)")
         }
+    }
+
+    private func approachDependentForCare(
+        assignment: AgentCareAssignment,
+        maximumDistance: Int,
+        candidate: inout AgentSimulationSession,
+        recorder: inout AgentReplayRecorder?,
+        world: World
+    ) throws -> Int {
+        guard let caregiverProbe = probesByAgentId[
+                assignment.caregiverID.rawValue
+              ],
+              let probe = probesByAgentId[
+                assignment.dependentID.rawValue
+              ] else {
+            throw ControllerError.lifecycleBoundary(
+                "physical care embodiment missing"
+            )
+        }
+        let caregiver = PebbleAgentEmbodiment(probe: caregiverProbe)
+        let dependent = PebbleAgentEmbodiment(probe: probe)
+        let distance = max(
+            abs(caregiver.position.x - dependent.position.x),
+            abs(caregiver.position.y - dependent.position.y),
+            abs(caregiver.position.z - dependent.position.z)
+        )
+        if distance <= maximumDistance { return 0 }
+        let occupied = Set<AgentPosition>(
+            probesByAgentId.values.compactMap { other in
+                guard other !== dependent.probe, !other.dead,
+                      other.world === world else { return nil }
+                return AgentPosition(
+                    x: Int(other.x.rounded(.down)),
+                    y: Int(other.y.rounded(.down)),
+                    z: Int(other.z.rounded(.down))
+                )
+            }
+        )
+        let adjacentCandidates = [
+            AgentPosition(
+                x: caregiver.position.x + 1,
+                y: caregiver.position.y,
+                z: caregiver.position.z
+            ),
+            AgentPosition(
+                x: caregiver.position.x - 1,
+                y: caregiver.position.y,
+                z: caregiver.position.z
+            ),
+            AgentPosition(
+                x: caregiver.position.x,
+                y: caregiver.position.y,
+                z: caregiver.position.z + 1
+            ),
+            AgentPosition(
+                x: caregiver.position.x,
+                y: caregiver.position.y,
+                z: caregiver.position.z - 1
+            ),
+            AgentPosition(
+                x: caregiver.position.x,
+                y: caregiver.position.y + 1,
+                z: caregiver.position.z
+            ),
+            AgentPosition(
+                x: caregiver.position.x,
+                y: caregiver.position.y - 1,
+                z: caregiver.position.z
+            ),
+        ]
+        let approachNode = adjacentCandidates.compactMap {
+            target -> AgentPosition? in
+            guard !occupied.contains(target), let path = findPath(
+                world, dependent.x, dependent.y, dependent.z,
+                Double(target.x) + 0.5, Double(target.y),
+                Double(target.z) + 0.5, 600, true
+            ), let node = path.first else { return nil }
+            let next = AgentPosition(x: node.x, y: node.y, z: node.z)
+            guard !occupied.contains(next),
+                  max(
+                    abs(next.x - dependent.position.x),
+                    abs(next.z - dependent.position.z)
+                  ) == 1,
+                  (-3...1).contains(next.y - dependent.position.y),
+                  max(
+                    abs(next.x - caregiver.position.x),
+                    abs(next.y - caregiver.position.y),
+                    abs(next.z - caregiver.position.z)
+                  ) <= maximumDistance else {
+                return nil
+            }
+            return next
+        }.first
+        guard let approachNode else {
+            throw ControllerError.lifecycleBoundary(
+                "physical care has no collision-safe Core approach"
+            )
+        }
+        let original = (probe.x, probe.y, probe.z)
+        do {
+            let dx = Double(approachNode.x) + 0.5 - dependent.x
+            let dy = Double(approachNode.y) - dependent.y
+            let dz = Double(approachNode.z) + 0.5 - dependent.z
+            dependent.probe.yaw = detAtan2(-dx, dz)
+            dependent.probe.move(dx, dy, dz)
+            guard dependent.position == approachNode else {
+                throw ControllerError.lifecycleBoundary(
+                    "physical care Core approach step was refused"
+                )
+            }
+            let actualDistance = max(
+                abs(caregiver.position.x - dependent.position.x),
+                abs(caregiver.position.y - dependent.position.y),
+                abs(caregiver.position.z - dependent.position.z)
+            )
+            guard actualDistance <= maximumDistance else {
+                throw ControllerError.lifecycleBoundary(
+                    "physical care approach remained out of range"
+                )
+            }
+            let update = AgentExternalUpdate(
+                agentId: assignment.dependentID.rawValue,
+                position: dependent.position
+            )
+            if try applyRecordedOperationIfActive(
+                .externalUpdate(update),
+                session: &candidate,
+                recorder: &recorder
+            ) == nil {
+                try candidate.applyExternalUpdate(update)
+            }
+        } catch {
+            probe.move(original.0 - probe.x, 0, original.2 - probe.z)
+            probe.move(0, original.1 - probe.y, 0)
+            guard probe.x == original.0, probe.y == original.1,
+                  probe.z == original.2 else {
+                throw ControllerError.lifecycleBoundary(
+                    "physical care approach rollback failed"
+                )
+            }
+            throw error
+        }
+        return 1
     }
 
     func traceDependentCareState(_ session: AgentSimulationSession) {

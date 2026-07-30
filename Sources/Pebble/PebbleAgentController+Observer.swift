@@ -168,6 +168,7 @@ extension PebbleAgentController {
         let asset = selected.materialAssets.first
         let physiology = selected.physiology
         let genetics = selected.genetics
+        let childhood = selected.childhood
         let view: String
         switch observerUIState.view {
         case .individual: view = "individual"
@@ -217,6 +218,14 @@ extension PebbleAgentController {
             "development=\(genetics?.development.expressionMaturityBasisPoints ?? -1)",
             "trajectory=\(genetics?.development.trajectory.rawValue ?? "unavailable")",
             "phenotype=" + phenotypeText,
+            "dependency=\(childhood?.dependencyStatus ?? "unavailable")",
+            "guardian=\(childhood?.guardianID?.rawValue ?? "unavailable")",
+            "guardianshipBasis=\(childhood?.guardianshipBasis?.rawValue ?? "unavailable")",
+            "caregiver=\(childhood?.currentCaregiverID?.rawValue ?? "unavailable")",
+            "careEngagedTicks=\(childhood?.currentCareEngagedTicks ?? -1)",
+            "autonomyReadiness=\(childhood?.autonomyReadinessBasisPoints ?? -1)",
+            "socialDimensions=\(childhood?.socialDevelopment.count ?? 0)",
+            "childhoodAtRisk=\(childhood?.atRisk == true ? 1 : 0)",
             "deaths=\(snapshot.recentDeaths.count)",
             "truncated=\(snapshot.truncation.isTruncated ? 1 : 0)",
             "mutation=none",

@@ -534,6 +534,10 @@ extension PebbleAgentController {
             trace("checkpoint load refused name=\(name.rawValue) reason=careGate")
             return failure("Checkpoint load refused: care gate or dependency is disabled.")
         }
+        if candidate.childhoodV2Enabled && !childhoodFeatureEnabled {
+            trace("checkpoint load refused name=\(name.rawValue) reason=childhoodGate")
+            return failure("Checkpoint load refused: childhood V2 gate is disabled.")
+        }
         if candidate.skillsEnabled && (!skillFeatureEnabled || !featureEnabled
             || !persistenceFeatureEnabled || !populationFeatureEnabled
             || !lifecycleFeatureEnabled) {

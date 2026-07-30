@@ -47,7 +47,8 @@ extension PebbleAgentController {
             lines = observerCausalLines(eventID, snapshot: snapshot)
         }
         return PebbleObserverPresentation(
-            title: "PEBBLE CIVILIZATION — OBSERVER V1 [READ ONLY]",
+            title: "PEBBLE CIVILIZATION — OBSERVER V"
+                + "\(snapshot.header.schemaVersion) [READ ONLY]",
             subtitle: subtitle,
             lines: lines,
             selectedAgentID: selected?.agentID,
@@ -102,6 +103,53 @@ extension PebbleAgentController {
             "profession=\(individual.profession.primaryDomain ?? individual.profession.status)"
                 + " commitments=\(individual.profession.activeCommitmentCount)",
         ]
+        if let childhood = individual.childhood {
+            lines += [
+                "[CHILDHOOD / GUARDIANSHIP — READ ONLY]",
+                "age=\(childhood.ageTicks)"
+                    + " stage=\(childhood.lifeStage.rawValue)"
+                    + " dependency=\(childhood.dependencyStatus)"
+                    + " readiness=\(childhood.autonomyReadinessBasisPoints)",
+                "position=\(observerPosition(childhood.currentPhysicalLocation))"
+                    + " home=\(observerPosition(childhood.homePosition))",
+                "guardian=\(childhood.guardianID?.rawValue ?? "none")"
+                    + " basis=\(childhood.guardianshipBasis?.rawValue ?? "none")"
+                    + " status=\(childhood.guardianshipStatus?.rawValue ?? "none")"
+                    + " atRisk=\(childhood.atRisk ? "YES" : "no")",
+                "caregiver=\(childhood.currentCaregiverID?.rawValue ?? "none")"
+                    + " engagement=\(childhood.currentCareEngagement?.rawValue ?? "none")"
+                    + " elapsed=\(childhood.currentCareEngagedTicks.map(String.init) ?? "none")",
+                "needs="
+                    + (childhood.activeNeeds.isEmpty
+                        ? "none"
+                        : childhood.activeNeeds.map {
+                            "\($0.kind.rawValue):\($0.severity):"
+                                + "\($0.status.rawValue)"
+                        }
+                            .joined(separator: ","))
+                    + " outcome=\(childhood.latestCareOutcome?.rawValue ?? "none")",
+                "allowed="
+                    + childhood.allowedCapabilities.map(\.rawValue)
+                        .joined(separator: ","),
+                "refused="
+                    + childhood.refusedCapabilities.map(\.rawValue)
+                        .joined(separator: ","),
+                "[SOCIAL DEVELOPMENT — CAUSAL EXPOSURE]"
+                    + " trajectory=\(childhood.socialTrajectory)",
+            ]
+            lines += childhood.socialDevelopment.map {
+                "  \($0.dimension.rawValue)=\($0.basisPoints)"
+                    + " changed@\(String($0.lastChangedTick))"
+                    + " causal=\($0.lastEventID.rawValue)"
+            }
+            if !childhood.recentExposureEventIDs.isEmpty {
+                lines.append(
+                    "sources="
+                        + childhood.recentExposureEventIDs.map(\.rawValue)
+                            .joined(separator: ",")
+                )
+            }
+        }
         if let genetics = individual.genetics {
             lines += [
                 "[GENOTYPE — IMMUTABLE INHERITED POTENTIAL]",
