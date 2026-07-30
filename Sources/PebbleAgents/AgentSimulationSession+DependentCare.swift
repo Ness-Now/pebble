@@ -173,8 +173,16 @@ extension AgentSimulationSession {
             }
             if let index = activeIndex,
                !careAssignmentRemainsEligible(care.assignments[index]) {
+                let caregiverID = care.assignments[index].caregiverID
+                let reason: AgentCareAssignmentEndReason
+                if isPhysiologicallyIncapacitated(caregiverID),
+                   statesById[caregiverID.rawValue] != nil {
+                    reason = .caregiverIncapacitated
+                } else {
+                    reason = .householdSeparated
+                }
                 try endCareAssignment(
-                    at: index, reason: .householdSeparated,
+                    at: index, reason: reason,
                     causeEventID: care.lastCareEventID, tick: careTick, state: &care
                 )
                 activeIndex = nil
@@ -820,6 +828,7 @@ extension AgentSimulationSession {
         guard assignment.status == .active,
               let caregiver = statesById[assignment.caregiverID.rawValue],
               caregiver.health > 0,
+              !isPhysiologicallyIncapacitated(assignment.caregiverID),
               statesById[assignment.dependentID.rawValue] != nil,
               lifecycleState?.members.first(where: {
                   $0.agentID == assignment.caregiverID
@@ -1487,7 +1496,7 @@ extension AgentSimulationSession {
             try Self.validateDependentCareState(
                 state, population: population, lifecycle: lifecycle,
                 kinship: kinshipState!, households: households,
-                mortality: mortalityState,
+                mortality: mortalityState, homeostasis: homeostasisState,
                 agents: statesById.values.sorted { $0.agentID < $1.agentID },
                 clock: clock, causalLatestSequence: causalLedger.latestSequence,
                 causalDroppedEventCount: causalLedger.droppedEventCount,
@@ -1507,6 +1516,7 @@ extension AgentSimulationSession {
         kinship: AgentKinshipState,
         households: AgentHouseholdState,
         mortality: AgentMortalityState?,
+        homeostasis: AgentHomeostasisState?,
         agents: [AgentSessionAgentState],
         clock: AgentSimulationClock,
         causalLatestSequence: UInt64,
@@ -1526,6 +1536,10 @@ extension AgentSimulationSession {
             supervisionIntervalTicks: state.configuration.supervisionIntervalTicks
         )
         let activeIDs = Set(agents.map(\.agentID))
+        let incapacitatedIDs = Set(homeostasis?.profiles.compactMap {
+            $0.vitalStatus == .incapacitated || $0.vitalStatus == .dead
+                ? $0.agentID : nil
+        } ?? [])
         let residents = Set(population.members.compactMap {
             $0.status == .founderResident || $0.status == .resident ? $0.agentID : nil
         })
@@ -1588,6 +1602,7 @@ extension AgentSimulationSession {
                       assignment.endedReason == nil,
                       activeIDs.contains(assignment.dependentID),
                       activeIDs.contains(assignment.caregiverID),
+                      !incapacitatedIDs.contains(assignment.caregiverID),
                       residents.contains(assignment.dependentID),
                       residents.contains(assignment.caregiverID),
                       (stageByID[assignment.dependentID] == .newborn
@@ -1628,6 +1643,7 @@ extension AgentSimulationSession {
                   need.dependentID == engagement.dependentID,
                   need.assignedCaregiverID == engagement.caregiverID,
                   activeIDs.contains(engagement.caregiverID),
+                  !incapacitatedIDs.contains(engagement.caregiverID),
                   stageByID[engagement.caregiverID] == .mature else {
                 throw AgentDependentCareError.invalidEngagement(engagement.engagementID.rawValue)
             }
@@ -1858,6 +1874,7 @@ extension AgentSimulationSession {
                 childhood, care: state, population: population,
                 lifecycle: lifecycle, kinship: kinship,
                 households: households, mortality: mortality,
+                homeostasis: homeostasis,
                 agents: agents, clock: clock,
                 causalLatestSequence: causalLatestSequence,
                 causalDroppedEventCount: causalDroppedEventCount,

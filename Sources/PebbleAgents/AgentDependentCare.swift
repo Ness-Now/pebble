@@ -140,6 +140,7 @@ public enum AgentCareAssignmentStatus: String, Codable, CaseIterable, Sendable {
 
 public enum AgentCareAssignmentEndReason: String, Codable, CaseIterable, Sendable {
     case caregiverDied
+    case caregiverIncapacitated
     case dependentDied
     case householdSeparated
     case dependentMatured

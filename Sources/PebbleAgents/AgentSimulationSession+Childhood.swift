@@ -616,6 +616,7 @@ extension AgentSimulationSession {
     ) -> Bool {
         guard guardianID != dependentID, !excluding.contains(guardianID),
               let agent = statesById[guardianID.rawValue], agent.health > 0,
+              !isPhysiologicallyIncapacitated(guardianID),
               lifecycleState?.members.first(where: {
                   $0.agentID == guardianID
               })?.currentStage == .mature,
@@ -1026,6 +1027,7 @@ extension AgentSimulationSession {
         kinship: AgentKinshipState,
         households: AgentHouseholdState,
         mortality: AgentMortalityState?,
+        homeostasis: AgentHomeostasisState?,
         agents: [AgentSessionAgentState],
         clock: AgentSimulationClock,
         causalLatestSequence: UInt64,
@@ -1051,6 +1053,10 @@ extension AgentSimulationSession {
                 childhood.configuration.maximumDimensionBasisPoints
         )
         let activeAgentIDs = Set(agents.map(\.agentID))
+        let incapacitatedIDs = Set(homeostasis?.profiles.compactMap {
+            $0.vitalStatus == .incapacitated || $0.vitalStatus == .dead
+                ? $0.agentID : nil
+        } ?? [])
         let activeResidentIDs = Set(population.members.compactMap {
             $0.status == .founderResident || $0.status == .resident
                 ? $0.agentID : nil
@@ -1154,6 +1160,7 @@ extension AgentSimulationSession {
                       activeDependents.contains(assignment.dependentID),
                       activeAgentIDs.contains(assignment.dependentID),
                       activeAgentIDs.contains(assignment.guardianID),
+                      !incapacitatedIDs.contains(assignment.guardianID),
                       activeResidentIDs.contains(assignment.guardianID),
                       stageByID[assignment.guardianID] == .mature,
                       membershipByID[assignment.dependentID]

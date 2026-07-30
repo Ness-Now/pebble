@@ -76,11 +76,15 @@ private func childhoodAdvance(
 
 private func childhoodMortalityAgent(
     _ ordinal: Int,
-    home: AgentPosition
+    home: AgentPosition,
+    hunger: Double = 0,
+    fatigue: Double = 0
 ) -> AgentSessionAgentState {
     AgentSessionAgentState(
         id: "agent_\(ordinal)", state: "idle", position: home,
-        needs: AgentNeeds(hunger: 0, fatigue: 0, curiosity: 0.1, safety: 1),
+        needs: AgentNeeds(
+            hunger: hunger, fatigue: fatigue, curiosity: 0.1, safety: 1
+        ),
         health: 100, fear: 0, homePosition: home, nearbyAgents: [],
         currentGoal: AgentGoal(
             kind: .idle, reason: "childhood mortality fixture",
@@ -95,7 +99,11 @@ private func childhoodMortalityAgent(
     )
 }
 
-private func childhoodMortalityBase() -> AgentSimulationSession {
+private func childhoodMortalityBase(
+    simulationID: String = "sim-childhood-guardian-death",
+    guardianHunger: Double = 0,
+    guardianFatigue: Double = 0
+) -> AgentSimulationSession {
     let home = AgentPosition(x: 0, y: 64, z: 0)
     let habitat = AgentEcologyHabitatObservation(
         worldTick: 0, candidateIndex: 0,
@@ -119,13 +127,14 @@ private func childhoodMortalityBase() -> AgentSimulationSession {
             )
         ),
         agents: [
-            childhoodMortalityAgent(0, home: home),
+            childhoodMortalityAgent(
+                0, home: home, hunger: guardianHunger,
+                fatigue: guardianFatigue
+            ),
             childhoodMortalityAgent(1, home: home),
             childhoodMortalityAgent(2, home: home),
         ],
-        simulationID: try! AgentSimulationID(
-            validating: "sim-childhood-guardian-death"
-        ),
+        simulationID: try! AgentSimulationID(validating: simulationID),
         causalLedgerPolicy: .bounded(maxEvents: 16_384)
     )
     session.setSurvivalEnabled(true)
@@ -631,6 +640,120 @@ func runPebbleAgentsChildhoodGuardianshipSmoke() {
           v9Checkpoint.schemaVersion == AgentCheckpointSchema.dependentCareVersion
             && !((try! AgentSimulationSession.restoring(v9Checkpoint))
                 .childhoodV2Enabled))
+
+    var incapacity = childhoodMortalityBase(
+        simulationID: "sim-childhood-guardian-incapacity",
+        guardianHunger: 0.90, guardianFatigue: 0.90
+    )
+    let incapacityBase = try! incapacity.makeCheckpoint()
+    var incapacityRecorder = try! AgentReplayRecorder(
+        checkpoint: incapacityBase, session: incapacity
+    )
+    let incapacityBirth = careBirth(
+        &incapacityRecorder, &incapacity,
+        position: AgentPosition(x: 0, y: 64, z: 0),
+        candidateIndex: 0
+    )
+    let incapacityChildID = incapacityBirth.newbornID
+    let incapacityChildPosition = try! incapacity.state(
+        for: incapacityChildID
+    ).position
+    let incapacityParents = incapacity.kinshipSnapshot().parentageRecords.first {
+        $0.childID == incapacityChildID
+    }!.canonicalParentIDs
+    let incapacitatedGuardianID = AgentID(rawValue: "agent_0")!
+    _ = try! incapacityRecorder.apply(
+        .reassignGuardian(
+            dependentID: incapacityChildID,
+            guardianID: incapacitatedGuardianID
+        ),
+        to: &incapacity
+    )
+    _ = try! incapacityRecorder.apply(
+        .delegateDependentCare(
+            dependentID: incapacityChildID,
+            caregiverID: incapacitatedGuardianID
+        ),
+        to: &incapacity
+    )
+    _ = try! incapacityRecorder.apply(
+        .setMortalityEnabled(true, configuration: .live),
+        to: &incapacity
+    )
+    _ = try! incapacityRecorder.apply(
+        .setHomeostasisEnabled(
+            true,
+            configuration: try! AgentHomeostasisConfiguration(
+                ageVulnerabilityStartTicks: 1_000,
+                baseHealthDamagePerTick: 25,
+                incapacityHealthThreshold: 20
+            )
+        ),
+        to: &incapacity
+    )
+    var reachedIncapacity = false
+    for _ in 0..<8 {
+        _ = childhoodAdvance(&incapacityRecorder, &incapacity)
+        if incapacity.vitalStatus(for: incapacitatedGuardianID)
+            == .incapacitated {
+            reachedIncapacity = true
+            break
+        }
+    }
+    let replacementGuardian = try! incapacity.currentGuardian(
+        for: incapacityChildID
+    )
+    let replacementCaregiver = try! incapacity.currentCareAssignment(
+        for: incapacityChildID
+    )
+    let incapacityChildhood = incapacity.childhoodSnapshot()
+    let incapacityCare = incapacity.dependentCareSnapshot()
+    let incapacityGuardiansDiagnostic = incapacityChildhood.guardianships.map {
+        "\($0.guardianID.rawValue):\($0.status.rawValue):"
+            + "\($0.endedReason?.rawValue ?? "none")"
+    }
+    let incapacityCareDiagnostic = incapacityCare.assignments.map {
+        "\($0.caregiverID.rawValue):\($0.status.rawValue):"
+            + "\($0.endedReason?.rawValue ?? "none")"
+    }
+    check("physiological incapacity ends guardian and caregiver responsibility",
+          reachedIncapacity
+            && incapacity.snapshot().agents.contains {
+                $0.id == incapacitatedGuardianID.rawValue
+            }
+            && incapacityChildhood.guardianships.contains {
+                $0.dependentID == incapacityChildID
+                    && $0.guardianID == incapacitatedGuardianID
+                    && $0.endedReason == .guardianIncapacitated
+            }
+            && incapacityCare.assignments.contains {
+                $0.dependentID == incapacityChildID
+                    && $0.caregiverID == incapacitatedGuardianID
+                    && $0.endedReason == .caregiverIncapacitated
+            },
+          "vital=\(String(describing: incapacity.vitalStatus(for: incapacitatedGuardianID))) "
+            + "guardian=\(String(describing: replacementGuardian?.guardianID)) "
+            + "caregiver=\(String(describing: replacementCaregiver?.caregiverID)) "
+            + "guardians=\(incapacityGuardiansDiagnostic) "
+            + "care=\(incapacityCareDiagnostic)")
+    check("incapacity selects the other canonical parent without teleport",
+          replacementGuardian?.guardianID
+                == incapacityParents.first {
+                    $0 != incapacitatedGuardianID
+                }
+            && replacementGuardian?.basis == .canonicalParent
+            && replacementCaregiver?.caregiverID
+                == replacementGuardian?.guardianID
+            && (try! incapacity.state(for: incapacityChildID)).position
+                == incapacityChildPosition
+            && incapacity.kinshipSnapshot().parentageRecords.first {
+                $0.childID == incapacityChildID
+            }?.canonicalParentIDs == incapacityParents,
+          "parents=\(incapacityParents.map(\.rawValue)) "
+            + "guardian=\(String(describing: replacementGuardian?.guardianID)) "
+            + "basis=\(String(describing: replacementGuardian?.basis)) "
+            + "caregiver=\(String(describing: replacementCaregiver?.caregiverID)) "
+            + "position=\((try! incapacity.state(for: incapacityChildID)).position)")
 
     var mortality = childhoodMortalityBase()
     let mortalityBase = try! mortality.makeCheckpoint()

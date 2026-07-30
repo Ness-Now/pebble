@@ -2070,6 +2070,7 @@ extension AgentSimulationSession {
                     care, population: population, lifecycle: lifecycle,
                     kinship: kinship, households: households,
                     mortality: state.mortalityState,
+                    homeostasis: state.homeostasisState,
                     agents: state.agents,
                     clock: state.clock,
                     causalLatestSequence: state.causalLedger.latestSequence,
