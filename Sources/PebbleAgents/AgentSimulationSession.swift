@@ -73,6 +73,10 @@ public struct AgentSimulationSession {
     public internal(set) var homeostasisState: AgentHomeostasisState?
     public internal(set) var geneticsState: AgentGeneticsState?
     var latestAutonomousTeachingReview: AgentAutonomousTeachingReviewSnapshot?
+    // Runtime-only compatibility marker. A schema 23 childhood checkpoint
+    // remains byte-identical until the first schema 24 supervision-progress
+    // mutation; it is never a second durable authority.
+    var durableSchemaVersionOverride: Int?
 
     public init(
         configuration: AgentSessionConfiguration,
@@ -162,6 +166,7 @@ public struct AgentSimulationSession {
         homeostasisState = nil
         geneticsState = nil
         latestAutonomousTeachingReview = nil
+        durableSchemaVersionOverride = nil
         try recordCausalEvent(
             kind: .sessionLifecycle,
             origin: .lifecycle,

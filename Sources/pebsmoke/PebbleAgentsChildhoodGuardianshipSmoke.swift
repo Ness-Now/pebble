@@ -64,28 +64,59 @@ private func mutateChildhood(
     durable["dependentCareState"] = care
 }
 
+private func mutateCare(
+    _ durable: inout [String: Any],
+    _ mutation: (inout [String: Any]) -> Void
+) {
+    var care = durable["dependentCareState"] as! [String: Any]
+    mutation(&care)
+    durable["dependentCareState"] = care
+}
+
 private func childhoodAdvance(
     _ recorder: inout AgentReplayRecorder,
-    _ session: inout AgentSimulationSession
+    _ session: inout AgentSimulationSession,
+    verifySupervision: Bool = true
 ) -> AgentSessionTickResult {
-    try! recorder.apply(
+    let result = try! recorder.apply(
         .advanceTick(perceptions: [], physicalObservations: []),
         to: &session
     ).tickResult!
+    if verifySupervision {
+        let engagements = session.dependentCareSnapshot().activeEngagements
+            .filter { $0.kind == .supervise }
+            .sorted {
+                if $0.dependentID != $1.dependentID {
+                    return $0.dependentID < $1.dependentID
+                }
+                return $0.caregiverID < $1.caregiverID
+            }
+        for engagement in engagements {
+            _ = try! recorder.apply(
+                .verifyDependentCareSupervisionTick(
+                    caregiverID: engagement.caregiverID,
+                    dependentID: engagement.dependentID
+                ),
+                to: &session
+            )
+        }
+    }
+    return result
 }
 
 private func childhoodMortalityAgent(
     _ ordinal: Int,
     home: AgentPosition,
     hunger: Double = 0,
-    fatigue: Double = 0
+    fatigue: Double = 0,
+    health: Int = 100
 ) -> AgentSessionAgentState {
     AgentSessionAgentState(
         id: "agent_\(ordinal)", state: "idle", position: home,
         needs: AgentNeeds(
             hunger: hunger, fatigue: fatigue, curiosity: 0.1, safety: 1
         ),
-        health: 100, fear: 0, homePosition: home, nearbyAgents: [],
+        health: health, fear: 0, homePosition: home, nearbyAgents: [],
         currentGoal: AgentGoal(
             kind: .idle, reason: "childhood mortality fixture",
             startedAtTick: 0, urgency: 0
@@ -102,7 +133,11 @@ private func childhoodMortalityAgent(
 private func childhoodMortalityBase(
     simulationID: String = "sim-childhood-guardian-death",
     guardianHunger: Double = 0,
-    guardianFatigue: Double = 0
+    guardianFatigue: Double = 0,
+    guardianHealth: Int = 100,
+    secondParentHealth: Int = 100,
+    hungerPerTick: Double = 0.30,
+    starvationDamagePerTick: Int = 100
 ) -> AgentSimulationSession {
     let home = AgentPosition(x: 0, y: 64, z: 0)
     let habitat = AgentEcologyHabitatObservation(
@@ -118,20 +153,22 @@ private func childhoodMortalityBase(
             recentMemorySnapshotLimit: 8,
             memoryPolicy: .bounded(maxEntries: 64),
             survivalConfiguration: try! AgentSurvivalConfiguration(
-                hungerPerTick: 0.30, fatiguePerTick: 0.005,
+                hungerPerTick: hungerPerTick, fatiguePerTick: 0.005,
                 hungryThreshold: 0.4, criticalHungerThreshold: 0.95,
                 hungerRecoveryThreshold: 0.15, fatigueThreshold: 0.65,
                 fatigueRecoveryThreshold: 0.2, foodNutrition: 0.6,
                 restRecoveryPerTick: 1, starvationGraceTicks: 3,
-                starvationDamagePerTick: 100
+                starvationDamagePerTick: starvationDamagePerTick
             )
         ),
         agents: [
             childhoodMortalityAgent(
                 0, home: home, hunger: guardianHunger,
-                fatigue: guardianFatigue
+                fatigue: guardianFatigue, health: guardianHealth
             ),
-            childhoodMortalityAgent(1, home: home),
+            childhoodMortalityAgent(
+                1, home: home, health: secondParentHealth
+            ),
             childhoodMortalityAgent(2, home: home),
         ],
         simulationID: try! AgentSimulationID(validating: simulationID),
@@ -165,6 +202,56 @@ private func childhoodMortalityBase(
     try! session.setChildhoodV2Enabled(true)
     try! session.setReproductionEnabled(true)
     return session
+}
+
+private func childhoodAvailabilityFixture(
+    simulationID: String,
+    firstParentHealth: Int,
+    secondParentHealth: Int
+) -> (
+    session: AgentSimulationSession,
+    recorder: AgentReplayRecorder,
+    plan: AgentReproductionPlan
+) {
+    var session = childhoodMortalityBase(
+        simulationID: simulationID,
+        guardianHealth: firstParentHealth,
+        secondParentHealth: secondParentHealth,
+        hungerPerTick: 0.001
+    )
+    let base = try! session.makeCheckpoint()
+    var recorder = try! AgentReplayRecorder(
+        checkpoint: base, session: session
+    )
+    while session.pendingBirthSitePlan() == nil {
+        _ = childhoodAdvance(&recorder, &session)
+    }
+    let plan = session.pendingBirthSitePlan()!
+    while session.tick < plan.dueTick {
+        _ = childhoodAdvance(&recorder, &session)
+    }
+    _ = try! recorder.apply(
+        .setMortalityEnabled(true, configuration: .live),
+        to: &session
+    )
+    _ = try! recorder.apply(
+        .setHomeostasisEnabled(
+            true,
+            configuration: try! AgentHomeostasisConfiguration(
+                ageVulnerabilityStartTicks: 1_000,
+                baseHealthDamagePerTick: 1,
+                healthRecoveryPerTick: 10,
+                incapacityHealthThreshold: 20
+            )
+        ),
+        to: &session
+    )
+    _ = try! recorder.apply(
+        .setGeneticsEnabled(true, configuration: .live),
+        to: &session
+    )
+    _ = childhoodAdvance(&recorder, &session)
+    return (session, recorder, plan)
 }
 
 func runPebbleAgentsChildhoodGuardianshipSmoke() {
@@ -210,11 +297,12 @@ func runPebbleAgentsChildhoodGuardianshipSmoke() {
     _ = try! recorder.apply(
         .setChildhoodV2Enabled(true, configuration: live), to: &session
     )
-    check("childhood activation promotes checkpoint schema 23",
+    check("childhood activation promotes checkpoint schema 24",
           session.childhoodV2Enabled
             && (try! session.makeCheckpoint()).schemaVersion
-                == AgentCheckpointSchema.childhoodVersion
-            && recorder.schemaVersion == AgentReplaySchema.childhoodVersion)
+                == AgentCheckpointSchema.verifiedSupervisionVersion
+            && recorder.schemaVersion
+                == AgentReplaySchema.verifiedSupervisionVersion)
     check("childhood activation does not invent trust or skill",
           session.socialSnapshot() == socialBefore
             && session.skillSnapshot() == skillsBefore)
@@ -331,6 +419,9 @@ func runPebbleAgentsChildhoodGuardianshipSmoke() {
     check("eligible non-parent household adult can become guardian",
           try! session.currentGuardian(for: childID)?.guardianID
             == AgentID(rawValue: "agent_2")!
+            && (try! session.currentCareAssignment(
+                for: childID
+            ))?.caregiverID == AgentID(rawValue: "agent_2")!
             && session.kinshipSnapshot().parentageRecords.first {
                 $0.childID == childID
             }?.canonicalParentIDs == birth.progenitorIDs)
@@ -338,6 +429,12 @@ func runPebbleAgentsChildhoodGuardianshipSmoke() {
           try! session.state(for: childID).position
             == childPositionBeforeFallback)
 
+    _ = try! recorder.apply(
+        .externalUpdate(AgentExternalUpdate(
+            agentId: "agent_2", position: childPositionBeforeFallback
+        )),
+        to: &session
+    )
     _ = childhoodAdvance(&recorder, &session)
     let engagement = session.dependentCareSnapshot().activeEngagements.first {
         $0.dependentID == childID && $0.kind == .supervise
@@ -345,39 +442,123 @@ func runPebbleAgentsChildhoodGuardianshipSmoke() {
     let exposureBeforeEarlyCompletion = session.childhoodSnapshot()
         .totalExposureCount
     check("supervision starts a timed real engagement", engagement != nil
-        && engagement!.startedTick <= session.tick)
+        && engagement!.startedTick <= session.tick
+        && engagement!.verifiedEngagedTicks == 1)
+    let duplicateProgress = try! session.verifyDependentCareSupervisionTick(
+        caregiverID: AgentID(rawValue: "agent_2")!,
+        dependentID: childID
+    )
+    check("the same supervision tick cannot be counted twice",
+          duplicateProgress.duplicateEvaluation
+            && duplicateProgress.verifiedEngagedTicks == 1
+            && duplicateProgress.countedThisTick == false)
     let early = try! session.completeDependentCareInteraction(
-        caregiverID: AgentID(rawValue: "agent_1")!,
+        caregiverID: AgentID(rawValue: "agent_2")!,
         dependentID: childID
     )
     check("instantaneous supervision is refused without social growth",
           !early
             && session.childhoodSnapshot().totalExposureCount
                 == exposureBeforeEarlyCompletion)
+    let supervisionCheckpoint = try! session.makeCheckpoint()
+    let supervisionRestored = try! AgentSimulationSession.restoring(
+        supervisionCheckpoint
+    )
+    check("mid-supervision restart preserves verified progress exactly",
+          supervisionCheckpoint.schemaVersion
+                == AgentCheckpointSchema.verifiedSupervisionVersion
+            && supervisionRestored.dependentCareSnapshot()
+                .activeEngagements.first {
+                    $0.engagementID == engagement?.engagementID
+                }?.verifiedEngagedTicks == 1)
+    let incompatibleCheckpoint = childhoodMutatedCheckpoint(
+        supervisionCheckpoint
+    ) { durable in
+        mutateCare(&durable) { care in
+            var engagements = care["activeEngagements"] as! [[String: Any]]
+            let index = engagements.firstIndex {
+                ($0["engagementID"] as? String)
+                    == engagement?.engagementID.rawValue
+            }!
+            engagements[index]["verifiedEngagedTicks"] = 0
+            engagements[index]["lastVerifiedTick"] = nil
+            engagements[index]["lastEvaluatedTick"] = nil
+            engagements[index]["lastVerifiedCaregiverPosition"] = nil
+            engagements[index]["lastVerifiedDependentPosition"] = nil
+            engagements[index]["interruptedTicks"] = 0
+            engagements[index]["lastInterruptedTick"] = nil
+            care["activeEngagements"] = engagements
+        }
+        var agents = durable["agents"] as! [[String: Any]]
+        let index = agents.firstIndex {
+            ($0["agentID"] as? String) == "agent_2"
+        }!
+        var action = agents[index]["lastAction"] as! [String: Any]
+        action["name"] = "wait"
+        agents[index]["lastAction"] = action
+        durable["agents"] = agents
+    }
+    var incompatible = try! AgentSimulationSession.restoring(
+        incompatibleCheckpoint
+    )
+    let incompatibleProgress = try! incompatible
+        .verifyDependentCareSupervisionTick(
+            caregiverID: AgentID(rawValue: "agent_2")!,
+            dependentID: childID
+        )
+    check("an incompatible simultaneous activity cannot advance supervision",
+          incompatibleProgress.verifiedEngagedTicks == 0
+            && incompatibleProgress.interruptedTicks == 1
+            && incompatibleProgress.interruptedThisTick)
+    let inRangePosition = try! session.state(for: childID).position
+    _ = try! recorder.apply(
+        .externalUpdate(AgentExternalUpdate(
+            agentId: childID.rawValue,
+            position: AgentPosition(x: 8, y: 64, z: 0)
+        )),
+        to: &session
+    )
     _ = childhoodAdvance(&recorder, &session)
+    let interrupted = session.dependentCareSnapshot().activeEngagements.first {
+        $0.engagementID == engagement?.engagementID
+    }
+    check("out-of-range elapsed time does not advance supervision",
+          interrupted?.verifiedEngagedTicks == 1
+            && interrupted?.interruptedTicks == 1
+            && interrupted?.lastInterruptedTick == session.tick)
+    _ = try! recorder.apply(
+        .externalUpdate(AgentExternalUpdate(
+            agentId: childID.rawValue, position: inRangePosition
+        )),
+        to: &session
+    )
     _ = childhoodAdvance(&recorder, &session)
     _ = try! recorder.apply(
         .completeDependentCareInteraction(
-            caregiverID: AgentID(rawValue: "agent_1")!,
+            caregiverID: AgentID(rawValue: "agent_2")!,
             dependentID: childID
         ),
         to: &session
     )
-    check("elapsed supervision produces bounded causal social exposure",
+    check("verified supervision produces one bounded causal social exposure",
           session.socialDevelopmentProfile(for: childID)?.values.first {
               $0.dimension == .supervisedInteraction
           }?.basisPoints == 140
             && session.childhoodSnapshot().exposures.last?
                 .dimension == .supervisedInteraction
             && session.childhoodSnapshot().exposures.last?
-                .participantID == AgentID(rawValue: "agent_1")!)
+                .participantID == AgentID(rawValue: "agent_2")!
+            && session.dependentCareSnapshot().terminalOutcomes.filter {
+                $0.dependentID == childID && $0.kind == .supervision
+                    && $0.status == .resolved
+            }.count == 1)
     check("social development did not mutate trust",
           session.socialSnapshot().trustRelations
             == socialBefore.trustRelations)
     _ = try! recorder.apply(
         .setPhysicalFoodSurvivalEnabled(true), to: &session
     )
-    let physicalCaregiverID = AgentID(rawValue: "agent_1")!
+    let physicalCaregiverID = AgentID(rawValue: "agent_2")!
     for _ in 0..<16 where session.careEngagement(
         for: physicalCaregiverID
     )?.kind != .provideFood {
@@ -476,7 +657,7 @@ func runPebbleAgentsChildhoodGuardianshipSmoke() {
           observer.header.schemaVersion == 4
             && observedChild?.guardianID == AgentID(rawValue: "agent_2")!
             && observedChild?.currentCaregiverID
-                == AgentID(rawValue: "agent_1")!
+                == AgentID(rawValue: "agent_2")!
             && observedChild?.atRisk == false
             && observedChild?.socialDevelopment.count
                 == AgentSocialDevelopmentDimension.allCases.count)
@@ -496,11 +677,14 @@ func runPebbleAgentsChildhoodGuardianshipSmoke() {
             }?.currentStage == .newborn
             && (try! session.currentGuardian(for: secondChildID)) != nil)
 
+    let orphanEngagementDependentID = session.dependentCareSnapshot()
+        .activeEngagements.first!.dependentID
     let checkpoint = try! session.makeCheckpoint()
     let checkpointBytes = try! session.durableStateBytes()
     let restored = try! AgentSimulationSession.restoring(checkpoint)
-    check("schema 23 checkpoint restores guardianship and social state exactly",
-          checkpoint.schemaVersion == AgentCheckpointSchema.childhoodVersion
+    check("schema 24 checkpoint restores guardianship and social state exactly",
+          checkpoint.schemaVersion
+                == AgentCheckpointSchema.verifiedSupervisionVersion
             && (try! restored.durableStateBytes()) == checkpointBytes
             && restored.childhoodSnapshot() == session.childhoodSnapshot())
     let journal = try! recorder.journal(
@@ -509,8 +693,9 @@ func runPebbleAgentsChildhoodGuardianshipSmoke() {
     let replayed = try! AgentSessionReplayer.replay(
         checkpoint: v9Checkpoint, journal: journal
     )
-    check("schema 23 replay is byte exact",
-          journal.manifest.schemaVersion == AgentReplaySchema.childhoodVersion
+    check("schema 24 replay is byte exact",
+          journal.manifest.schemaVersion
+                == AgentReplaySchema.verifiedSupervisionVersion
             && replayed.report.verified
             && (try! replayed.session.durableStateBytes())
                 == (try! session.durableStateBytes()))
@@ -636,10 +821,180 @@ func runPebbleAgentsChildhoodGuardianshipSmoke() {
                   childhood["guardianships"] = guardians
               }
           })
+    check("an active engagement without its active assignment is refused",
+          childhoodRestoreRefused(checkpoint) { durable in
+              mutateCare(&durable) { care in
+                  var assignments = care["assignments"] as! [[String: Any]]
+                  let active = assignments.firstIndex {
+                      ($0["status"] as? String) == "active"
+                          && ($0["dependentID"] as? String)
+                            == orphanEngagementDependentID.rawValue
+                  }!
+                  assignments.remove(at: active)
+                  care["assignments"] = assignments
+                  care["totalAssignmentCount"] =
+                      (care["totalAssignmentCount"] as! Int) - 1
+              }
+          })
+    check("future or unbounded supervision progress is refused",
+          childhoodRestoreRefused(supervisionCheckpoint) { durable in
+              let futureTick =
+                  ((durable["clock"] as! [String: Any])["tick"] as! Int) + 1
+              mutateCare(&durable) { care in
+                  var engagements = care["activeEngagements"]
+                      as! [[String: Any]]
+                  let index = engagements.firstIndex {
+                      ($0["engagementID"] as? String)
+                        == engagement?.engagementID.rawValue
+                  }!
+                  engagements[index]["lastEvaluatedTick"] = futureTick
+                  engagements[index]["interruptedTicks"] =
+                      AgentCareEngagement.maximumInterruptedTicks + 1
+                  care["activeEngagements"] = engagements
+              }
+          })
+    let legacySupervisionCheckpoint = childhoodMutatedCheckpoint(
+        supervisionCheckpoint
+    ) { durable in
+        durable["schemaVersion"] = AgentCheckpointSchema.childhoodVersion
+        mutateCare(&durable) { care in
+            var engagements = care["activeEngagements"] as! [[String: Any]]
+            for index in engagements.indices {
+                engagements[index]["verifiedEngagedTicks"] = nil
+                engagements[index]["lastVerifiedTick"] = nil
+                engagements[index]["lastEvaluatedTick"] = nil
+                engagements[index]["lastVerifiedCaregiverPosition"] = nil
+                engagements[index]["lastVerifiedDependentPosition"] = nil
+                engagements[index]["interruptedTicks"] = nil
+                engagements[index]["lastInterruptedTick"] = nil
+            }
+            care["activeEngagements"] = engagements
+        }
+    }
+    let legacySupervision = try! AgentSimulationSession.restoring(
+        legacySupervisionCheckpoint
+    )
+    check("schema 23 supervision decodes safely without elapsed-time credit",
+          legacySupervision.dependentCareSnapshot().activeEngagements
+            .allSatisfy {
+                $0.verifiedEngagedTicks == 0
+                    && $0.lastEvaluatedTick == nil
+                    && $0.interruptedTicks == 0
+            })
     check("legacy care checkpoint remains readable with childhood absent",
           v9Checkpoint.schemaVersion == AgentCheckpointSchema.dependentCareVersion
             && !((try! AgentSimulationSession.restoring(v9Checkpoint))
                 .childhoodV2Enabled))
+
+    var oneUnavailable = childhoodAvailabilityFixture(
+        simulationID: "sim-childhood-birth-one-unavailable",
+        firstParentHealth: 1,
+        secondParentHealth: 100
+    )
+    let unavailableParentID = oneUnavailable.plan.progenitorIDs[0]
+    let availableParentID = oneUnavailable.plan.progenitorIDs[1]
+    let oneUnavailableBirthCount = oneUnavailable.session.lifecycleSnapshot()
+        .births.count
+    _ = try! oneUnavailable.recorder.apply(
+        .applyBirthSiteObservation(AgentBirthSiteObservation(
+            planID: oneUnavailable.plan.planID,
+            observedTick: oneUnavailable.session.tick,
+            position: AgentPosition(x: 0, y: 64, z: 0),
+            candidateIndex: 0,
+            worldFingerprint: 31_100
+        )),
+        to: &oneUnavailable.session
+    )
+    let availableBirth = oneUnavailable.session.lifecycleSnapshot().births.last!
+    check("birth excludes the first deterministic physiologically incapacitated parent",
+          oneUnavailable.session.vitalStatus(for: unavailableParentID)
+                == .incapacitated
+            && (try! oneUnavailable.session.state(
+                for: unavailableParentID
+            )).health > 0
+            && oneUnavailable.session.lifecycleSnapshot().births.count
+                == oneUnavailableBirthCount + 1
+            && (try! oneUnavailable.session.currentGuardian(
+                for: availableBirth.newbornID
+            ))?.guardianID == availableParentID
+            && (try! oneUnavailable.session.currentCareAssignment(
+                for: availableBirth.newbornID
+            ))?.caregiverID == availableParentID
+            && oneUnavailable.session.genotype(
+                for: availableBirth.newbornID
+            )?.origin == .inherited)
+
+    var noneAvailable = childhoodAvailabilityFixture(
+        simulationID: "sim-childhood-birth-none-available",
+        firstParentHealth: 1,
+        secondParentHealth: 1
+    )
+    let noneAvailableBytes = try! noneAvailable.session.durableStateBytes()
+    let noneAvailableLifecycle = noneAvailable.session.lifecycleSnapshot()
+    let noneAvailableKinship = noneAvailable.session.kinshipSnapshot()
+    let noneAvailableHousehold = noneAvailable.session.householdSnapshot()
+    let noneAvailableCare = noneAvailable.session.dependentCareSnapshot()
+    let noneAvailableChildhood = noneAvailable.session.childhoodSnapshot()
+    let noneAvailableGenetics = noneAvailable.session.geneticsSnapshot()
+    check("birth with two physiologically unavailable parents is atomically refused", {
+        do {
+            _ = try noneAvailable.recorder.apply(
+                .applyBirthSiteObservation(AgentBirthSiteObservation(
+                    planID: noneAvailable.plan.planID,
+                    observedTick: noneAvailable.session.tick,
+                    position: AgentPosition(x: 0, y: 64, z: 0),
+                    candidateIndex: 0,
+                    worldFingerprint: 31_101
+                )),
+                to: &noneAvailable.session
+            )
+            return false
+        } catch AgentSessionError.dependentCare {
+            return (try! noneAvailable.session.durableStateBytes())
+                    == noneAvailableBytes
+                && noneAvailable.session.lifecycleSnapshot()
+                    == noneAvailableLifecycle
+                && noneAvailable.session.kinshipSnapshot()
+                    == noneAvailableKinship
+                && noneAvailable.session.householdSnapshot()
+                    == noneAvailableHousehold
+                && noneAvailable.session.dependentCareSnapshot()
+                    == noneAvailableCare
+                && noneAvailable.session.childhoodSnapshot()
+                    == noneAvailableChildhood
+                && noneAvailable.session.geneticsSnapshot()
+                    == noneAvailableGenetics
+        } catch {
+            return false
+        }
+    }())
+    while noneAvailable.plan.progenitorIDs.contains(where: {
+        noneAvailable.session.vitalStatus(for: $0) == .incapacitated
+    }) {
+        _ = childhoodAdvance(
+            &noneAvailable.recorder, &noneAvailable.session
+        )
+    }
+    _ = try! noneAvailable.recorder.apply(
+        .applyBirthSiteObservation(AgentBirthSiteObservation(
+            planID: noneAvailable.plan.planID,
+            observedTick: noneAvailable.session.tick,
+            position: AgentPosition(x: 0, y: 64, z: 0),
+            candidateIndex: 1,
+            worldFingerprint: 31_102
+        )),
+        to: &noneAvailable.session
+    )
+    check("physiological recovery restores normal caregiver eligibility",
+          noneAvailable.session.lifecycleSnapshot().births.count
+                == noneAvailableLifecycle.births.count + 1
+            && noneAvailable.session.vitalStatus(
+                for: noneAvailable.plan.progenitorIDs[0]
+            ) == .alive
+            && (try! noneAvailable.session.currentCareAssignment(
+                for: noneAvailable.session.lifecycleSnapshot().births.last!
+                    .newbornID
+            ))?.caregiverID == noneAvailable.plan.progenitorIDs[0])
 
     var incapacity = childhoodMortalityBase(
         simulationID: "sim-childhood-guardian-incapacity",
@@ -754,6 +1109,82 @@ func runPebbleAgentsChildhoodGuardianshipSmoke() {
             + "basis=\(String(describing: replacementGuardian?.basis)) "
             + "caregiver=\(String(describing: replacementCaregiver?.caregiverID)) "
             + "position=\((try! incapacity.state(for: incapacityChildID)).position)")
+
+    var deathReplacement = childhoodMortalityBase(
+        simulationID: "sim-childhood-guardian-death-replacement",
+        guardianHealth: 1,
+        starvationDamagePerTick: 10
+    )
+    let deathReplacementBase = try! deathReplacement.makeCheckpoint()
+    var deathReplacementRecorder = try! AgentReplayRecorder(
+        checkpoint: deathReplacementBase, session: deathReplacement
+    )
+    let deathReplacementTarget = careBirth(
+        &deathReplacementRecorder, &deathReplacement,
+        position: AgentPosition(x: 0, y: 64, z: 0),
+        candidateIndex: 0
+    ).newbornID
+    let deathReplacementLoad = careBirth(
+        &deathReplacementRecorder, &deathReplacement,
+        position: AgentPosition(x: 0, y: 64, z: 0),
+        candidateIndex: 1
+    ).newbornID
+    let survivingParentID = AgentID(rawValue: "agent_1")!
+    let lowerLoadAdultID = AgentID(rawValue: "agent_2")!
+    let deathReplacementPosition = try! deathReplacement.state(
+        for: deathReplacementTarget
+    ).position
+    _ = try! deathReplacementRecorder.apply(
+        .setMortalityEnabled(true, configuration: .live),
+        to: &deathReplacement
+    )
+    for _ in 0..<16 where deathReplacement.snapshot().agents.contains(where: {
+        $0.id == incapacitatedGuardianID.rawValue
+    }) {
+        _ = childhoodAdvance(
+            &deathReplacementRecorder, &deathReplacement
+        )
+    }
+    let deathGuardian = try! deathReplacement.currentGuardian(
+        for: deathReplacementTarget
+    )
+    let deathCaregiver = try! deathReplacement.currentCareAssignment(
+        for: deathReplacementTarget
+    )
+    let survivingParentLoad = deathReplacement.dependentCareSnapshot()
+        .assignments.filter {
+            $0.caregiverID == survivingParentID
+                && $0.dependentID == deathReplacementLoad
+                && $0.status == .active
+        }.count
+    let lowerAdultLoad = deathReplacement.dependentCareSnapshot()
+        .assignments.filter {
+            $0.caregiverID == lowerLoadAdultID
+                && $0.status == .active
+        }.count
+    check("guardian death candidate state keeps replacement guardian and caregiver coherent",
+          !deathReplacement.snapshot().agents.contains {
+              $0.id == incapacitatedGuardianID.rawValue
+          }
+            && deathReplacement.snapshot().agents.contains {
+                $0.id == survivingParentID.rawValue
+            }
+            && deathGuardian?.guardianID == survivingParentID
+            && deathGuardian?.basis == .emergencyHouseholdFallback
+            && deathCaregiver?.caregiverID == deathGuardian?.guardianID
+            && survivingParentLoad == 1
+            && lowerAdultLoad == 0
+            && (try! deathReplacement.state(
+                for: deathReplacementTarget
+            )).position == deathReplacementPosition,
+          "guardian=\(String(describing: deathGuardian?.guardianID)) "
+            + "caregiver=\(String(describing: deathCaregiver?.caregiverID)) "
+            + "parentLoad=\(survivingParentLoad) "
+            + "lowerAdultLoad=\(lowerAdultLoad) "
+            + "formerAlive=\(deathReplacement.snapshot().agents.contains { $0.id == incapacitatedGuardianID.rawValue }) "
+            + "survivorAlive=\(deathReplacement.snapshot().agents.contains { $0.id == survivingParentID.rawValue }) "
+            + "basis=\(String(describing: deathGuardian?.basis)) "
+            + "positionStable=\((try! deathReplacement.state(for: deathReplacementTarget)).position == deathReplacementPosition)")
 
     var mortality = childhoodMortalityBase()
     let mortalityBase = try! mortality.makeCheckpoint()

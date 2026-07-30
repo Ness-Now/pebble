@@ -25,6 +25,7 @@ public enum AgentCheckpointSchema {
     public static let homeostasisVersion = 21
     public static let geneticsVersion = 22
     public static let childhoodVersion = 23
+    public static let verifiedSupervisionVersion = 24
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -38,7 +39,7 @@ public enum AgentCheckpointSchema {
             || version == physicalFoodSurvivalVersion || version == autonomousActivityVersion
             || version == materialRightsVersion || version == persistenceReconciliationVersion
             || version == homeostasisVersion || version == geneticsVersion
-            || version == childhoodVersion
+            || version == childhoodVersion || version == verifiedSupervisionVersion
     }
 }
 
@@ -236,8 +237,11 @@ public struct AgentSessionDurableState: Codable {
     public let geneticsState: AgentGeneticsState?
 
     init(session: AgentSimulationSession) {
-        if session.dependentCareState?.childhoodV2 != nil {
-            schemaVersion = AgentCheckpointSchema.childhoodVersion
+        if let override = session.durableSchemaVersionOverride,
+           session.dependentCareState?.childhoodV2 != nil {
+            schemaVersion = override
+        } else if session.dependentCareState?.childhoodV2 != nil {
+            schemaVersion = AgentCheckpointSchema.verifiedSupervisionVersion
         } else if session.geneticsState != nil {
             schemaVersion = AgentCheckpointSchema.geneticsVersion
         } else if session.homeostasisState != nil {
@@ -976,6 +980,9 @@ extension AgentSimulationSession {
         homeostasisState = state.homeostasisState
         geneticsState = state.geneticsState
         latestAutonomousTeachingReview = nil
+        durableSchemaVersionOverride =
+            state.schemaVersion == AgentCheckpointSchema.childhoodVersion
+                ? state.schemaVersion : nil
         try validateEcologicalObservationStateIfEnabled()
         try validateAgricultureStateIfEnabled()
         try validateWildSubsistenceStateIfEnabled()
@@ -997,7 +1004,16 @@ extension AgentSimulationSession {
         guard AgentCheckpointSchema.supports(state.schemaVersion) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
-        guard state.schemaVersion == AgentCheckpointSchema.ecologicalObservationVersion
+        if state.schemaVersion == AgentCheckpointSchema.verifiedSupervisionVersion {
+            guard state.populationRegistry != nil,
+                  state.lifecycleState != nil,
+                  state.kinshipState != nil,
+                  state.householdState != nil,
+                  state.dependentCareState?.childhoodV2 != nil else {
+                throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
+            }
+        } else {
+            guard state.schemaVersion == AgentCheckpointSchema.ecologicalObservationVersion
                 || state.schemaVersion == AgentCheckpointSchema.agricultureVersion
                 || state.schemaVersion == AgentCheckpointSchema.wildSubsistenceVersion
                 || state.schemaVersion == AgentCheckpointSchema.livestockVersion
@@ -1220,7 +1236,8 @@ extension AgentSimulationSession {
                     && state.kinshipState != nil
                     && state.householdState != nil
                     && state.dependentCareState?.childhoodV2 != nil) else {
-            throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
+                throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
+            }
         }
         guard state.clock.tick.rawValue >= 0,
               AgentSimulationID(rawValue: state.clock.simulationID.rawValue) != nil else {
@@ -1262,7 +1279,9 @@ extension AgentSimulationSession {
                             == AgentCheckpointSchema.persistenceReconciliationVersion
                         || state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
                         || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
-                        || state.schemaVersion == AgentCheckpointSchema.childhoodVersion)
+                        || state.schemaVersion == AgentCheckpointSchema.childhoodVersion
+                        || state.schemaVersion
+                            == AgentCheckpointSchema.verifiedSupervisionVersion)
                     && (state.mortalityState?.totalDeathCount ?? 0) > 0) else {
             throw AgentCheckpointError.invalidAgent("empty")
         }
@@ -2066,6 +2085,22 @@ extension AgentSimulationSession {
            let kinship = state.kinshipState,
            let households = state.householdState {
             do {
+                if state.schemaVersion
+                    == AgentCheckpointSchema.childhoodVersion {
+                    guard care.activeEngagements.allSatisfy({
+                        $0.verifiedEngagedTicks == 0
+                            && $0.lastVerifiedTick == nil
+                            && $0.lastEvaluatedTick == nil
+                            && $0.lastVerifiedCaregiverPosition == nil
+                            && $0.lastVerifiedDependentPosition == nil
+                            && $0.interruptedTicks == 0
+                            && $0.lastInterruptedTick == nil
+                    }) else {
+                        throw AgentDependentCareError.invalidState(
+                            "schema 23 supervision progress"
+                        )
+                    }
+                }
                 try validateDependentCareState(
                     care, population: population, lifecycle: lifecycle,
                     kinship: kinship, households: households,

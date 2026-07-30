@@ -228,7 +228,7 @@ extension PebbleAgentController {
         }.joined(separator: ",")
         trace(
             "childhood status enabled=\(childhood.enabled ? 1 : 0) "
-                + "schema=\(childhood.enabled ? 23 : 22) tick=\(candidate.tick) "
+                + "schema=\(childhood.enabled ? 24 : 22) tick=\(candidate.tick) "
                 + "guardians=\(guardians.isEmpty ? "none" : guardians) "
                 + "caregivers=\(caregivers.isEmpty ? "none" : caregivers) "
                 + "atRisk=\(childhood.atRiskDependentIDs.map(\.rawValue).joined(separator: ",")) "
@@ -244,7 +244,7 @@ extension PebbleAgentController {
         let childhood = candidate.childhoodSnapshot()
         return success(
             "Childhood gate=enabled active=\(childhood.enabled ? 1 : 0) "
-                + "schema=\(childhood.enabled ? 23 : 22) "
+                + "schema=\(childhood.enabled ? 24 : 22) "
                 + "guardians=\(childhood.guardianships.filter { $0.status == .active }.count) "
                 + "atRisk=\(childhood.atRiskDependentIDs.map(\.rawValue).joined(separator: ",")) "
                 + "profiles=\(childhood.socialProfiles.count) "

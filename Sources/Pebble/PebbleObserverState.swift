@@ -118,7 +118,7 @@ extension PebbleAgentController {
                     + " atRisk=\(childhood.atRisk ? "YES" : "no")",
                 "caregiver=\(childhood.currentCaregiverID?.rawValue ?? "none")"
                     + " engagement=\(childhood.currentCareEngagement?.rawValue ?? "none")"
-                    + " elapsed=\(childhood.currentCareEngagedTicks.map(String.init) ?? "none")",
+                    + " verified=\(childhood.currentCareEngagedTicks.map(String.init) ?? "none")",
                 "needs="
                     + (childhood.activeNeeds.isEmpty
                         ? "none"

@@ -1018,6 +1018,50 @@ extension PebbleAgentController {
                 )
             }
             if session.dependentCareEnabled {
+                let supervisionEngagements = session.dependentCareSnapshot()
+                    .activeEngagements.filter {
+                        $0.kind == .supervise
+                    }.sorted {
+                        if $0.dependentID != $1.dependentID {
+                            return $0.dependentID < $1.dependentID
+                        }
+                        return $0.caregiverID < $1.caregiverID
+                    }
+                for engagement in supervisionEngagements {
+                    let progress: AgentCareSupervisionProgress
+                    if recorder != nil {
+                        var progressCandidate = session
+                        progress = try progressCandidate
+                            .verifyDependentCareSupervisionTick(
+                                caregiverID: engagement.caregiverID,
+                                dependentID: engagement.dependentID
+                            )
+                        _ = try applyRecordedOperationIfActive(
+                            .verifyDependentCareSupervisionTick(
+                                caregiverID: engagement.caregiverID,
+                                dependentID: engagement.dependentID
+                            ),
+                            session: &session,
+                            recorder: &recorder
+                        )
+                    } else {
+                        progress = try session.verifyDependentCareSupervisionTick(
+                            caregiverID: engagement.caregiverID,
+                            dependentID: engagement.dependentID
+                        )
+                    }
+                    trace(
+                        "care supervision tick=\(session.tick) caregiver="
+                            + "\(progress.caregiverID.rawValue) dependent="
+                            + "\(progress.dependentID.rawValue) elapsedTicks="
+                            + "\(progress.elapsedTicks) verifiedSupervisionTicks="
+                            + "\(progress.verifiedEngagedTicks) interruptedTicks="
+                            + "\(progress.interruptedTicks) counted="
+                            + "\(progress.countedThisTick ? 1 : 0) interrupted="
+                            + "\(progress.interruptedThisTick ? 1 : 0) duplicate="
+                            + "\(progress.duplicateEvaluation ? 1 : 0)"
+                    )
+                }
                 let careActions = result.agents.filter {
                     $0.action.name == "provide_food"
                         || $0.action.name == "supervise_dependent"

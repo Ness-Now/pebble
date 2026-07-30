@@ -816,7 +816,7 @@ private extension AgentSimulationSession {
             currentCaregiverID: assignment?.caregiverID,
             currentCareEngagement: engagement?.kind,
             currentCareEngagedTicks: engagement.map {
-                max(0, tick - $0.startedTick)
+                $0.verifiedEngagedTicks
             },
             activeNeeds: activeNeeds.map {
                 AgentObserverChildCareNeed(

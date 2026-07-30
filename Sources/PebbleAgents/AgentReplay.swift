@@ -24,6 +24,7 @@ public enum AgentReplaySchema {
     public static let homeostasisVersion = 21
     public static let geneticsVersion = 22
     public static let childhoodVersion = 23
+    public static let verifiedSupervisionVersion = 24
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -37,7 +38,7 @@ public enum AgentReplaySchema {
             || version == physicalFoodSurvivalVersion || version == autonomousActivityVersion
             || version == materialRightsVersion || version == persistenceReconciliationVersion
             || version == homeostasisVersion || version == geneticsVersion
-            || version == childhoodVersion
+            || version == childhoodVersion || version == verifiedSupervisionVersion
     }
 }
 
@@ -107,6 +108,7 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case dependentCareFeature
     case dependentCareProvision
     case dependentCareInteraction
+    case dependentCareSupervisionProgress
     case skillFeature
     case teachingFeature
     case apprenticeshipStart
@@ -227,6 +229,9 @@ public enum AgentReplayOperation: Codable {
     case setDependentCareEnabled(Bool, configuration: AgentDependentCareConfiguration)
     case provideDependentNourishment(AgentCareProvisionIntent)
     case completeDependentCareInteraction(caregiverID: AgentID, dependentID: AgentID)
+    case verifyDependentCareSupervisionTick(
+        caregiverID: AgentID, dependentID: AgentID
+    )
     case setSkillsEnabled(Bool, configuration: AgentSkillConfiguration)
     case setTeachingEnabled(Bool, configuration: AgentTeachingConfiguration)
     case startApprenticeship(AgentMentorSelectionRequest)
@@ -363,6 +368,8 @@ public enum AgentReplayOperation: Codable {
         case .setDependentCareEnabled: return .dependentCareFeature
         case .provideDependentNourishment: return .dependentCareProvision
         case .completeDependentCareInteraction: return .dependentCareInteraction
+        case .verifyDependentCareSupervisionTick:
+            return .dependentCareSupervisionProgress
         case .setSkillsEnabled: return .skillFeature
         case .setTeachingEnabled: return .teachingFeature
         case .startApprenticeship: return .apprenticeshipStart
@@ -731,7 +738,9 @@ public struct AgentReplayRecorder {
         baseCheckpointDigest = checkpoint.semanticDigest
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
-        schemaVersion = checkpoint.schemaVersion
+        schemaVersion = session.childhoodV2Enabled
+            ? AgentReplaySchema.verifiedSupervisionVersion
+            : checkpoint.schemaVersion
         records = []
         droppedRecordCount = 0
         nonReplayableReason = nil
@@ -939,13 +948,13 @@ public struct AgentReplayRecorder {
         }
         if case let .setChildhoodV2Enabled(enabled, _) = operation,
            enabled,
-           schemaVersion < AgentReplaySchema.childhoodVersion {
+           schemaVersion < AgentReplaySchema.verifiedSupervisionVersion {
             guard records.isEmpty else {
                 throw AgentReplayError.invalidJournal(
-                    "childhood V2 activation must be the first v23 replay operation"
+                    "childhood V2 activation must be the first v24 replay operation"
                 )
             }
-            schemaVersion = AgentReplaySchema.childhoodVersion
+            schemaVersion = AgentReplaySchema.verifiedSupervisionVersion
         }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
@@ -1165,6 +1174,10 @@ public enum AgentSessionReplayer {
             || (manifest.schemaVersion == AgentReplaySchema.childhoodVersion
                 && checkpoint.schemaVersion
                     <= AgentCheckpointSchema.geneticsVersion)
+            || (manifest.schemaVersion
+                    == AgentReplaySchema.verifiedSupervisionVersion
+                && checkpoint.schemaVersion
+                    <= AgentCheckpointSchema.childhoodVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -1374,6 +1387,12 @@ extension AgentSimulationSession {
             _ = try candidate.provideDependentNourishment(intent)
         case let .completeDependentCareInteraction(caregiverID, dependentID):
             _ = try candidate.completeDependentCareInteraction(
+                caregiverID: caregiverID, dependentID: dependentID
+            )
+        case let .verifyDependentCareSupervisionTick(
+            caregiverID, dependentID
+        ):
+            _ = try candidate.verifyDependentCareSupervisionTick(
                 caregiverID: caregiverID, dependentID: dependentID
             )
         case let .setSkillsEnabled(enabled, configuration):

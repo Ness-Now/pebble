@@ -278,21 +278,39 @@ extension AgentSimulationSession {
             causeEventID: childhood.lastEventID, at: tick,
             care: &care, childhood: &childhood
         )
+        if let careIndex = care.assignments.firstIndex(where: {
+            $0.dependentID == dependentID && $0.status == .active
+        }), care.assignments[careIndex].caregiverID != guardianID {
+            try endCareAssignment(
+                at: careIndex, reason: .reassigned,
+                causeEventID: childhood.lastEventID, tick: tick, state: &care
+            )
+        }
+        if !care.assignments.contains(where: {
+            $0.dependentID == dependentID && $0.status == .active
+        }) {
+            try startCareAssignment(
+                dependentID: dependentID, caregiverID: guardianID,
+                householdID: householdID,
+                causeEventID: childhood.lastEventID, tick: tick, state: &care
+            )
+        }
         care.childhoodV2 = childhood
         dependentCareState = care
     }
 
     func deterministicV2Caregiver(
         for dependentID: AgentID,
+        care: AgentDependentCareState?,
+        childhood: AgentChildhoodState,
         projectedLoads: [AgentID: Int],
         configuration: AgentDependentCareConfiguration,
         excluding: Set<AgentID>
     ) -> AgentID? {
-        guard let childhood = dependentCareState?.childhoodV2,
-              let householdID = (try? currentMembership(of: dependentID))??.householdID
+        guard let householdID = (try? currentMembership(of: dependentID))??.householdID
         else { return nil }
         let activeLoads = Dictionary(grouping:
-            dependentCareState?.assignments.filter {
+            care?.assignments.filter {
                 $0.status == .active && $0.dependentID != dependentID
             } ?? [], by: \.caregiverID
         ).mapValues(\.count)
@@ -408,6 +426,19 @@ extension AgentSimulationSession {
                     causeEventID: childhood.lastEventID, at: boundaryTick,
                     care: &care, childhood: &childhood
                 )
+                if let careIndex = care.assignments.firstIndex(where: {
+                    $0.dependentID == dependentID && $0.status == .active
+                }), care.assignments[careIndex].caregiverID
+                    != selection.guardianID {
+                    let oldCaregiverID = care.assignments[careIndex].caregiverID
+                    try endCareAssignment(
+                        at: careIndex,
+                        reason: isPhysiologicallyIncapacitated(oldCaregiverID)
+                            ? .caregiverIncapacitated : .reassigned,
+                        causeEventID: childhood.lastEventID,
+                        tick: boundaryTick, state: &care
+                    )
+                }
                 if !care.assignments.contains(where: {
                     $0.dependentID == dependentID && $0.status == .active
                 }) {
@@ -614,18 +645,9 @@ extension AgentSimulationSession {
         excluding: Set<AgentID>,
         enforceGuardianCapacity: Bool
     ) -> Bool {
-        guard guardianID != dependentID, !excluding.contains(guardianID),
-              let agent = statesById[guardianID.rawValue], agent.health > 0,
-              !isPhysiologicallyIncapacitated(guardianID),
-              lifecycleState?.members.first(where: {
-                  $0.agentID == guardianID
-              })?.currentStage == .mature,
-              populationRegistry?.members.contains(where: {
-                  $0.agentID == guardianID
-                      && ($0.status == .founderResident || $0.status == .resident)
-              }) == true,
-              !isMigratingAgent(guardianID.rawValue),
-              (try? currentMembership(of: guardianID)) != nil else { return false }
+        guard fundamentalCaregiverHousehold(
+            guardianID, for: dependentID, excluding: excluding
+        ) != nil else { return false }
         guard enforceGuardianCapacity else { return true }
         return childhood.guardianships.filter {
             $0.status == .active && $0.guardianID == guardianID

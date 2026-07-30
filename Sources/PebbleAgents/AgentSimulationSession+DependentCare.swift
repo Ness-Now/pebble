@@ -189,7 +189,9 @@ extension AgentSimulationSession {
             }
             if activeIndex == nil,
                let caregiverID = deterministicCaregiver(
-                   for: dependentID, configuration: care.configuration, excluding: []
+                   for: dependentID, care: care, childhood: care.childhoodV2,
+                   projectedLoads: [:], configuration: care.configuration,
+                   excluding: []
                ) {
                 guard let caregiverMembership = try currentMembership(of: caregiverID),
                       let dependentMembership = try currentMembership(of: dependentID) else {
@@ -743,14 +745,131 @@ extension AgentSimulationSession {
         return completed
     }
 
+    @discardableResult
+    public mutating func verifyDependentCareSupervisionTick(
+        caregiverID: AgentID,
+        dependentID: AgentID
+    ) throws -> AgentCareSupervisionProgress {
+        var candidate = self
+        let result = try candidate.verifyDependentCareSupervisionTickInPlace(
+            caregiverID: caregiverID, dependentID: dependentID
+        )
+        try candidate.validateDependentCareCrossDomainIfEnabled()
+        self = candidate
+        return result
+    }
+
+    private mutating func verifyDependentCareSupervisionTickInPlace(
+        caregiverID: AgentID,
+        dependentID: AgentID
+    ) throws -> AgentCareSupervisionProgress {
+        guard var care = dependentCareState,
+              let engagementIndex = care.activeEngagements.firstIndex(where: {
+                  $0.caregiverID == caregiverID
+                      && $0.dependentID == dependentID
+                      && $0.kind == .supervise
+              }) else {
+            throw AgentSessionError.dependentCare(
+                .invalidEngagement(dependentID.rawValue)
+            )
+        }
+        let engagement = care.activeEngagements[engagementIndex]
+        durableSchemaVersionOverride = nil
+        guard let need = care.activeNeeds.first(where: {
+            $0.needID == engagement.needID && $0.status == .active
+                && $0.kind == .supervision
+                && $0.dependentID == dependentID
+                && $0.assignedCaregiverID == caregiverID
+        }), care.assignments.contains(where: {
+            $0.status == .active && $0.dependentID == dependentID
+                && $0.caregiverID == caregiverID
+        }) else {
+            throw AgentSessionError.dependentCare(
+                .invalidEngagement(engagement.engagementID.rawValue)
+            )
+        }
+        _ = need
+        if engagement.lastEvaluatedTick == tick {
+            return AgentCareSupervisionProgress(
+                engagementID: engagement.engagementID,
+                caregiverID: caregiverID, dependentID: dependentID,
+                tick: tick, elapsedTicks: max(0, tick - engagement.startedTick),
+                verifiedEngagedTicks: engagement.verifiedEngagedTicks,
+                interruptedTicks: engagement.interruptedTicks,
+                countedThisTick: false, interruptedThisTick: false,
+                duplicateEvaluation: true
+            )
+        }
+        guard engagement.lastEvaluatedTick.map({ $0 < tick }) ?? true,
+              let caregiver = statesById[caregiverID.rawValue],
+              let dependent = statesById[dependentID.rawValue] else {
+            throw AgentSessionError.dependentCare(
+                .invalidEngagement(engagement.engagementID.rawValue)
+            )
+        }
+        let available = fundamentalCaregiverHousehold(
+            caregiverID, for: dependentID, excluding: []
+        ) != nil
+        let inRange = dependentCareInteractionDistance(
+            caregiver.position, dependent.position
+        ) <= care.configuration.careInteractionDistance
+        let compatibleAction = caregiver.lastAction?.tick == tick
+            && caregiver.lastAction?.name == "supervise_dependent"
+        let counted = available && inRange && compatibleAction
+
+        care.activeEngagements[engagementIndex].lastEvaluatedTick = tick
+        if counted {
+            let maximumVerified = care.childhoodV2?
+                .configuration.minimumSupervisionTicks ?? 1
+            care.activeEngagements[engagementIndex].verifiedEngagedTicks = min(
+                maximumVerified,
+                engagement.verifiedEngagedTicks + 1
+            )
+            care.activeEngagements[engagementIndex].lastVerifiedTick = tick
+            care.activeEngagements[engagementIndex]
+                .lastVerifiedCaregiverPosition = caregiver.position
+            care.activeEngagements[engagementIndex]
+                .lastVerifiedDependentPosition = dependent.position
+        } else {
+            care.activeEngagements[engagementIndex].interruptedTicks = min(
+                AgentCareEngagement.maximumInterruptedTicks,
+                engagement.interruptedTicks + 1
+            )
+            care.activeEngagements[engagementIndex].lastInterruptedTick = tick
+        }
+        let updated = care.activeEngagements[engagementIndex]
+        care.rollingDigest = AgentDependentCareDigest.make(
+            "\(care.rollingDigest)|supervision|\(updated.engagementID.rawValue)"
+                + "|\(tick)|\(updated.verifiedEngagedTicks)"
+                + "|\(updated.interruptedTicks)"
+        )
+        dependentCareState = care
+        return AgentCareSupervisionProgress(
+            engagementID: updated.engagementID,
+            caregiverID: caregiverID, dependentID: dependentID,
+            tick: tick, elapsedTicks: max(0, tick - updated.startedTick),
+            verifiedEngagedTicks: updated.verifiedEngagedTicks,
+            interruptedTicks: updated.interruptedTicks,
+            countedThisTick: counted, interruptedThisTick: !counted,
+            duplicateEvaluation: false
+        )
+    }
+
     private mutating func completeDependentCareInteractionInPlace(
         caregiverID: AgentID,
         dependentID: AgentID
     ) throws -> Bool {
+        let compatibleKind: AgentCareEngagementKind?
+        switch statesById[caregiverID.rawValue]?.lastAction?.name {
+        case "supervise_dependent": compatibleKind = .supervise
+        case "assist_return_home": compatibleKind = .assistReturnHome
+        default: compatibleKind = nil
+        }
         guard var care = dependentCareState,
+              let compatibleKind,
               let engagement = care.activeEngagements.first(where: {
                   $0.caregiverID == caregiverID && $0.dependentID == dependentID
-                      && $0.kind != .provideFood
+                      && $0.kind == compatibleKind
               }),
               let need = care.activeNeeds.first(where: { $0.needID == engagement.needID }),
               let caregiver = statesById[caregiverID.rawValue],
@@ -762,8 +881,8 @@ extension AgentSimulationSession {
         }
         if need.kind == .returnHome, dependent.position != dependent.homePosition { return false }
         if need.kind == .supervision, let childhood = care.childhoodV2 {
-            let elapsed = tick - engagement.startedTick
-            guard elapsed >= childhood.configuration.minimumSupervisionTicks else {
+            guard engagement.verifiedEngagedTicks
+                    >= childhood.configuration.minimumSupervisionTicks else {
                 return false
             }
         }
@@ -826,22 +945,14 @@ extension AgentSimulationSession {
         _ assignment: AgentCareAssignment
     ) -> Bool {
         guard assignment.status == .active,
-              let caregiver = statesById[assignment.caregiverID.rawValue],
-              caregiver.health > 0,
-              !isPhysiologicallyIncapacitated(assignment.caregiverID),
               statesById[assignment.dependentID.rawValue] != nil,
-              lifecycleState?.members.first(where: {
-                  $0.agentID == assignment.caregiverID
-              })?.currentStage == .mature,
-              populationRegistry?.members.contains(where: {
-                  $0.agentID == assignment.caregiverID
-                      && ($0.status == .founderResident || $0.status == .resident)
-              }) == true,
-              !isMigratingAgent(assignment.caregiverID.rawValue),
               let dependentMembership = try? currentMembership(of: assignment.dependentID),
-              let caregiverMembership = try? currentMembership(of: assignment.caregiverID),
+              let caregiverHousehold = fundamentalCaregiverHousehold(
+                  assignment.caregiverID, for: assignment.dependentID,
+                  excluding: []
+              ),
               dependentMembership.householdID == assignment.householdID,
-              caregiverMembership.householdID == assignment.householdID else { return false }
+              caregiverHousehold == assignment.householdID else { return false }
         return householdState?.households.contains {
             $0.householdID == assignment.householdID && $0.status == .active
         } == true
@@ -869,9 +980,9 @@ extension AgentSimulationSession {
         guard load < state.configuration.maximumDependentsPerCaregiver else {
             throw AgentSessionError.dependentCare(.caregiverCapacityReached(caregiverID))
         }
-        guard lifecycleState?.members.first(where: {
-            $0.agentID == caregiverID
-        })?.currentStage == .mature else {
+        guard fundamentalCaregiverHousehold(
+            caregiverID, for: dependentID, excluding: []
+        ) == householdID else {
             throw AgentSessionError.dependentCare(.ineligibleCaregiver(caregiverID))
         }
         let started = try requiredDependentCareEvent(
@@ -1115,6 +1226,8 @@ extension AgentSimulationSession {
             }
             let caregiver = deterministicCaregiver(
                 for: dependentID,
+                care: nil,
+                childhood: nil,
                 projectedLoads: projectedLoads,
                 configuration: configuration,
                 excluding: []
@@ -1220,24 +1333,24 @@ extension AgentSimulationSession {
 
     func deterministicCaregiver(
         for dependentID: AgentID,
-        projectedLoads: [AgentID: Int] = [:],
-        configuration: AgentDependentCareConfiguration? = nil,
+        care: AgentDependentCareState?,
+        childhood: AgentChildhoodState?,
+        projectedLoads: [AgentID: Int],
+        configuration: AgentDependentCareConfiguration,
         excluding: Set<AgentID>
     ) -> AgentID? {
-        if dependentCareState?.childhoodV2 != nil {
+        if let childhood {
             return deterministicV2Caregiver(
-                for: dependentID, projectedLoads: projectedLoads,
-                configuration: configuration
-                    ?? dependentCareState?.configuration ?? .live,
+                for: dependentID, care: care, childhood: childhood,
+                projectedLoads: projectedLoads, configuration: configuration,
                 excluding: excluding
             )
         }
         guard let household = try? currentMembership(of: dependentID),
               let kinship = kinshipState, let lifecycle = lifecycleState,
-              let population = populationRegistry else { return nil }
-        let limit = configuration?.maximumDependentsPerCaregiver
-            ?? dependentCareState?.configuration.maximumDependentsPerCaregiver ?? 4
-        let activeLoads = Dictionary(grouping: dependentCareState?.assignments.filter {
+              populationRegistry != nil else { return nil }
+        let limit = configuration.maximumDependentsPerCaregiver
+        let activeLoads = Dictionary(grouping: care?.assignments.filter {
             $0.status == .active && $0.dependentID != dependentID
         } ?? [], by: \.caregiverID).mapValues(\.count)
         let parents = Set(kinship.parentageRecords.first {
@@ -1247,14 +1360,10 @@ extension AgentSimulationSession {
             guard member.currentStage == .mature,
                   member.agentID != dependentID,
                   !excluding.contains(member.agentID),
-                  let agent = statesById[member.agentID.rawValue], agent.health > 0,
-                  population.members.contains(where: {
-                      $0.agentID == member.agentID
-                          && ($0.status == .founderResident || $0.status == .resident)
-                  }),
-                  !isMigratingAgent(member.agentID.rawValue),
                   (activeLoads[member.agentID] ?? 0) + (projectedLoads[member.agentID] ?? 0) < limit,
-                  (try? currentMembership(of: member.agentID)) != nil else { return nil }
+                  fundamentalCaregiverHousehold(
+                      member.agentID, for: dependentID, excluding: excluding
+                  ) != nil else { return nil }
             return member.agentID
         }
         return eligible.sorted { lhs, rhs in
@@ -1280,6 +1389,32 @@ extension AgentSimulationSession {
                 : (membership?.householdID == household.householdID ? 1 : 3)
             return tier < 3 ? id : nil
         }
+    }
+
+    func fundamentalCaregiverHousehold(
+        _ caregiverID: AgentID,
+        for dependentID: AgentID?,
+        excluding: Set<AgentID>
+    ) -> AgentHouseholdID? {
+        guard caregiverID != dependentID,
+              !excluding.contains(caregiverID),
+              let caregiver = statesById[caregiverID.rawValue],
+              caregiver.health > 0,
+              !isPhysiologicallyIncapacitated(caregiverID),
+              lifecycleState?.members.first(where: {
+                  $0.agentID == caregiverID
+              })?.currentStage == .mature,
+              populationRegistry?.members.contains(where: {
+                  $0.agentID == caregiverID
+                      && ($0.status == .founderResident || $0.status == .resident)
+              }) == true,
+              !isMigratingAgent(caregiverID.rawValue),
+              let membership = try? currentMembership(of: caregiverID),
+              householdState?.households.contains(where: {
+                  $0.householdID == membership.householdID
+                      && $0.status == .active
+              }) == true else { return nil }
+        return membership.householdID
     }
 
     func prevalidateDependentCareBirth(
@@ -1324,15 +1459,9 @@ extension AgentSimulationSession {
             $0.status == .active
         }, by: \.caregiverID).mapValues(\.count)
         let candidates = parentIDs.sorted().filter { parentID in
-            lifecycleState?.members.first(where: {
-                $0.agentID == parentID
-            })?.currentStage == .mature
-                && statesById[parentID.rawValue].map { $0.health > 0 } == true
-                && populationRegistry?.members.contains(where: {
-                    $0.agentID == parentID
-                        && ($0.status == .founderResident || $0.status == .resident)
-                }) == true
-                && !isMigratingAgent(parentID.rawValue)
+            fundamentalCaregiverHousehold(
+                parentID, for: nil, excluding: []
+            ) != nil
                 && (loads[parentID] ?? 0)
                     < care.configuration.maximumDependentsPerCaregiver
         }.sorted {
@@ -1422,8 +1551,8 @@ extension AgentSimulationSession {
                 causeEventID: causeEventID, tick: deathTick, state: &care
             )
             if let replacement = deterministicCaregiver(
-                for: dependentID,
-                configuration: care.configuration,
+                for: dependentID, care: care, childhood: care.childhoodV2,
+                projectedLoads: [:], configuration: care.configuration,
                 excluding: lethalAgentIDs
             ), let replacementMembership = try currentMembership(of: replacement),
                let dependentMembership = try currentMembership(of: dependentID) {
@@ -1536,6 +1665,9 @@ extension AgentSimulationSession {
             supervisionIntervalTicks: state.configuration.supervisionIntervalTicks
         )
         let activeIDs = Set(agents.map(\.agentID))
+        let healthByID = Dictionary(uniqueKeysWithValues: agents.map {
+            ($0.agentID, $0.health)
+        })
         let incapacitatedIDs = Set(homeostasis?.profiles.compactMap {
             $0.vitalStatus == .incapacitated || $0.vitalStatus == .dead
                 ? $0.agentID : nil
@@ -1642,10 +1774,62 @@ extension AgentSimulationSession {
             guard let need = needsByID[engagement.needID],
                   need.dependentID == engagement.dependentID,
                   need.assignedCaregiverID == engagement.caregiverID,
+                  need.status == .active,
+                  openAssignments.contains(where: {
+                      $0.dependentID == engagement.dependentID
+                          && $0.caregiverID == engagement.caregiverID
+                  }),
                   activeIDs.contains(engagement.caregiverID),
+                  (healthByID[engagement.caregiverID] ?? 0) > 0,
                   !incapacitatedIDs.contains(engagement.caregiverID),
-                  stageByID[engagement.caregiverID] == .mature else {
+                  stageByID[engagement.caregiverID] == .mature,
+                  engagement.startedTick >= 0,
+                  engagement.startedTick <= clock.tick.rawValue,
+                  engagement.verifiedEngagedTicks >= 0,
+                  engagement.interruptedTicks >= 0,
+                  engagement.interruptedTicks
+                    <= AgentCareEngagement.maximumInterruptedTicks,
+                  (engagement.lastEvaluatedTick.map {
+                      $0 >= engagement.startedTick && $0 <= clock.tick.rawValue
+                  } ?? true),
+                  (engagement.lastVerifiedTick.map {
+                      $0 >= engagement.startedTick
+                          && $0 <= (engagement.lastEvaluatedTick ?? -1)
+                  } ?? true),
+                  (engagement.lastInterruptedTick.map {
+                      $0 >= engagement.startedTick
+                          && $0 <= (engagement.lastEvaluatedTick ?? -1)
+                  } ?? true) else {
                 throw AgentDependentCareError.invalidEngagement(engagement.engagementID.rawValue)
+            }
+            if engagement.kind == .supervise {
+                let maximumVerified = state.childhoodV2?
+                    .configuration.minimumSupervisionTicks ?? 1
+                guard engagement.verifiedEngagedTicks <= maximumVerified,
+                      (engagement.verifiedEngagedTicks == 0)
+                        == (engagement.lastVerifiedTick == nil),
+                      (engagement.lastVerifiedTick == nil)
+                        == (engagement.lastVerifiedCaregiverPosition == nil),
+                      (engagement.lastVerifiedTick == nil)
+                        == (engagement.lastVerifiedDependentPosition == nil),
+                      (engagement.interruptedTicks == 0)
+                        == (engagement.lastInterruptedTick == nil) else {
+                    throw AgentDependentCareError.invalidEngagement(
+                        engagement.engagementID.rawValue
+                    )
+                }
+            } else {
+                guard engagement.verifiedEngagedTicks == 0,
+                      engagement.lastVerifiedTick == nil,
+                      engagement.lastEvaluatedTick == nil,
+                      engagement.lastVerifiedCaregiverPosition == nil,
+                      engagement.lastVerifiedDependentPosition == nil,
+                      engagement.interruptedTicks == 0,
+                      engagement.lastInterruptedTick == nil else {
+                    throw AgentDependentCareError.invalidEngagement(
+                        engagement.engagementID.rawValue
+                    )
+                }
             }
         }
         guard causalDroppedEventCount <= causalLatestSequence,
@@ -1923,17 +2107,45 @@ extension AgentSimulationSession {
     }
 
     private func dependentCareDigest(_ state: AgentDependentCareState) -> String {
-        AgentDependentCareDigest.make([
+        let assignmentDigest = state.assignments.sorted(
+            by: careAssignmentSort
+        ).map { assignment in
+            let ended = assignment.endedTick.map(String.init) ?? "open"
+            return "a|\(assignment.dependentID.rawValue)"
+                + "|\(assignment.caregiverID.rawValue)"
+                + "|\(assignment.householdID.rawValue)"
+                + "|\(assignment.startedTick)|\(ended)"
+        }.joined(separator: ";")
+        let needDigest = state.activeNeeds.sorted(by: careNeedSort).map { need in
+            "n|\(need.needID.rawValue)|\(need.dependentID.rawValue)"
+                + "|\(need.kind.rawValue)|\(need.status.rawValue)"
+        }.joined(separator: ";")
+        let engagementDigest = state.activeEngagements.sorted(
+            by: careEngagementSort
+        ).map { engagement in
+            let verifiedTick = engagement.lastVerifiedTick.map(String.init)
+                ?? "none"
+            let evaluatedTick = engagement.lastEvaluatedTick.map(String.init)
+                ?? "none"
+            let caregiverPosition = engagement.lastVerifiedCaregiverPosition
+                .map { String(describing: $0) } ?? "none"
+            let dependentPosition = engagement.lastVerifiedDependentPosition
+                .map { String(describing: $0) } ?? "none"
+            let interruptedTick = engagement.lastInterruptedTick.map(String.init)
+                ?? "none"
+            return "e|\(engagement.engagementID.rawValue)"
+                + "|\(engagement.needID.rawValue)"
+                + "|\(engagement.caregiverID.rawValue)"
+                + "|\(engagement.verifiedEngagedTicks)|\(verifiedTick)"
+                + "|\(evaluatedTick)|\(caregiverPosition)"
+                + "|\(dependentPosition)|\(engagement.interruptedTicks)"
+                + "|\(interruptedTick)"
+        }.joined(separator: ";")
+        return AgentDependentCareDigest.make([
             state.rollingDigest,
-            state.assignments.sorted(by: careAssignmentSort).map {
-                "a|\($0.dependentID.rawValue)|\($0.caregiverID.rawValue)|\($0.householdID.rawValue)|\($0.startedTick)|\($0.endedTick.map(String.init) ?? "open")"
-            }.joined(separator: ";"),
-            state.activeNeeds.sorted(by: careNeedSort).map {
-                "n|\($0.needID.rawValue)|\($0.dependentID.rawValue)|\($0.kind.rawValue)|\($0.status.rawValue)"
-            }.joined(separator: ";"),
-            state.activeEngagements.sorted(by: careEngagementSort).map {
-                "e|\($0.engagementID.rawValue)|\($0.needID.rawValue)|\($0.caregiverID.rawValue)"
-            }.joined(separator: ";"),
+            assignmentDigest,
+            needDigest,
+            engagementDigest,
             state.childhoodV2.map {
                 "childhood|\(childhoodDigest($0))"
             } ?? "childhood|disabled",

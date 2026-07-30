@@ -234,6 +234,8 @@ public enum AgentCareEngagementKind: String, Codable, CaseIterable, Sendable {
 }
 
 public struct AgentCareEngagement: Codable, Equatable, Sendable {
+    public static let maximumInterruptedTicks = 4_096
+
     public let engagementID: AgentCareEngagementID
     public let needID: AgentCareNeedID
     public let dependentID: AgentID
@@ -241,6 +243,114 @@ public struct AgentCareEngagement: Codable, Equatable, Sendable {
     public let kind: AgentCareEngagementKind
     public let startedTick: Int
     public let startedEventID: AgentCausalEventID
+    public internal(set) var verifiedEngagedTicks: Int
+    public internal(set) var lastVerifiedTick: Int?
+    public internal(set) var lastEvaluatedTick: Int?
+    public internal(set) var lastVerifiedCaregiverPosition: AgentPosition?
+    public internal(set) var lastVerifiedDependentPosition: AgentPosition?
+    public internal(set) var interruptedTicks: Int
+    public internal(set) var lastInterruptedTick: Int?
+
+    init(
+        engagementID: AgentCareEngagementID,
+        needID: AgentCareNeedID,
+        dependentID: AgentID,
+        caregiverID: AgentID,
+        kind: AgentCareEngagementKind,
+        startedTick: Int,
+        startedEventID: AgentCausalEventID,
+        verifiedEngagedTicks: Int = 0,
+        lastVerifiedTick: Int? = nil,
+        lastEvaluatedTick: Int? = nil,
+        lastVerifiedCaregiverPosition: AgentPosition? = nil,
+        lastVerifiedDependentPosition: AgentPosition? = nil,
+        interruptedTicks: Int = 0,
+        lastInterruptedTick: Int? = nil
+    ) {
+        self.engagementID = engagementID
+        self.needID = needID
+        self.dependentID = dependentID
+        self.caregiverID = caregiverID
+        self.kind = kind
+        self.startedTick = startedTick
+        self.startedEventID = startedEventID
+        self.verifiedEngagedTicks = verifiedEngagedTicks
+        self.lastVerifiedTick = lastVerifiedTick
+        self.lastEvaluatedTick = lastEvaluatedTick
+        self.lastVerifiedCaregiverPosition = lastVerifiedCaregiverPosition
+        self.lastVerifiedDependentPosition = lastVerifiedDependentPosition
+        self.interruptedTicks = interruptedTicks
+        self.lastInterruptedTick = lastInterruptedTick
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case engagementID
+        case needID
+        case dependentID
+        case caregiverID
+        case kind
+        case startedTick
+        case startedEventID
+        case verifiedEngagedTicks
+        case lastVerifiedTick
+        case lastEvaluatedTick
+        case lastVerifiedCaregiverPosition
+        case lastVerifiedDependentPosition
+        case interruptedTicks
+        case lastInterruptedTick
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        engagementID = try values.decode(
+            AgentCareEngagementID.self, forKey: .engagementID
+        )
+        needID = try values.decode(AgentCareNeedID.self, forKey: .needID)
+        dependentID = try values.decode(AgentID.self, forKey: .dependentID)
+        caregiverID = try values.decode(AgentID.self, forKey: .caregiverID)
+        kind = try values.decode(AgentCareEngagementKind.self, forKey: .kind)
+        startedTick = try values.decode(Int.self, forKey: .startedTick)
+        startedEventID = try values.decode(
+            AgentCausalEventID.self, forKey: .startedEventID
+        )
+        // Schema 23 engagements had no verified progress. They remain
+        // readable, but elapsed wall/simulation time is never promoted into
+        // supervision credit during compatibility decoding.
+        verifiedEngagedTicks = try values.decodeIfPresent(
+            Int.self, forKey: .verifiedEngagedTicks
+        ) ?? 0
+        lastVerifiedTick = try values.decodeIfPresent(
+            Int.self, forKey: .lastVerifiedTick
+        )
+        lastEvaluatedTick = try values.decodeIfPresent(
+            Int.self, forKey: .lastEvaluatedTick
+        )
+        lastVerifiedCaregiverPosition = try values.decodeIfPresent(
+            AgentPosition.self, forKey: .lastVerifiedCaregiverPosition
+        )
+        lastVerifiedDependentPosition = try values.decodeIfPresent(
+            AgentPosition.self, forKey: .lastVerifiedDependentPosition
+        )
+        interruptedTicks = try values.decodeIfPresent(
+            Int.self, forKey: .interruptedTicks
+        ) ?? 0
+        lastInterruptedTick = try values.decodeIfPresent(
+            Int.self, forKey: .lastInterruptedTick
+        )
+    }
+}
+
+public struct AgentCareSupervisionProgress: Codable, Equatable, Sendable {
+    public let engagementID: AgentCareEngagementID
+    public let caregiverID: AgentID
+    public let dependentID: AgentID
+    public let tick: Int
+    public let elapsedTicks: Int
+    public let verifiedEngagedTicks: Int
+    public let interruptedTicks: Int
+    public let countedThisTick: Bool
+    public let interruptedThisTick: Bool
+    public let duplicateEvaluation: Bool
 }
 
 public enum AgentCareFoodSource: String, Codable, CaseIterable, Sendable {
