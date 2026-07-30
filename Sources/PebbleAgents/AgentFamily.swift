@@ -192,6 +192,22 @@ public struct AgentFamilyInteractionReceipt: Codable, Equatable, Sendable {
     }
 }
 
+public struct AgentFamilyInteractionProof: Codable, Equatable, Sendable {
+    public let eventID: AgentCausalEventID
+    public let operationID: String
+    public let kind: AgentFamilyInteractionKind
+    public let actorID: AgentID
+    public let counterpartyID: AgentID
+    public let tick: Int
+}
+
+public struct AgentHouseJoinConsent: Codable, Equatable, Sendable {
+    public let acceptedByID: AgentID
+    public let joiningMatureSinceTick: Int
+    public let request: AgentFamilyInteractionProof
+    public let acceptance: AgentFamilyInteractionProof
+}
+
 public struct AgentFamilyConfiguration: Codable, Equatable, Sendable {
     public let maximumPendingProposals: Int
     public let maximumUnionHistory: Int
@@ -360,6 +376,7 @@ public struct AgentHouseRecord: Codable, Equatable, Sendable {
     public let foundationTick: Int
     public let foundationPosition: AgentPosition
     public let foundationEventID: AgentCausalEventID
+    public let cofoundingInteractionProofs: [AgentFamilyInteractionProof]?
     public internal(set) var status: AgentHouseStatus
     public internal(set) var lastEventID: AgentCausalEventID
     public let version: Int
@@ -371,6 +388,7 @@ public struct AgentHouseMembershipPeriod: Codable, Equatable, Sendable {
     public let basis: AgentHouseMembershipBasis
     public let joinedTick: Int
     public let joinedEventID: AgentCausalEventID
+    public let explicitJoinConsent: AgentHouseJoinConsent?
     public internal(set) var leftTick: Int?
     public internal(set) var leftEventID: AgentCausalEventID?
     public internal(set) var endReason: AgentHouseMembershipEndReason?

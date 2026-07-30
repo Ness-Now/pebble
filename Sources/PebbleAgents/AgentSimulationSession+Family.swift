@@ -631,6 +631,7 @@ extension AgentSimulationSession {
         }
         for founder in founders { try validateAvailableMaturePerson(founder) }
         var causeIDs: [AgentCausalEventID] = []
+        var cofoundingInteractionProofs: [AgentFamilyInteractionProof]?
         var foundationPosition = statesById[founders[0].rawValue]!.position
         if founders.count == 2 {
             guard family.unions.contains(where: {
@@ -644,11 +645,20 @@ extension AgentSimulationSession {
                 throw AgentSessionError.family(.invalidHouseFoundation)
             }
             try prevalidateCausalAppend(count: 5)
+            var proofs: [AgentFamilyInteractionProof] = []
             for receipt in receipts.sorted(by: { $0.actorID < $1.actorID }) {
-                causeIDs.append(try consumeFamilyInteraction(
+                let eventID = try consumeFamilyInteraction(
                     receipt, expected: .houseCoFoundation, family: &family
+                )
+                causeIDs.append(eventID)
+                proofs.append(AgentFamilyInteractionProof(
+                    eventID: eventID, operationID: receipt.receiptID,
+                    kind: receipt.kind, actorID: receipt.actorID,
+                    counterpartyID: receipt.counterpartyID,
+                    tick: receipt.observedTick
                 ))
             }
+            cofoundingInteractionProofs = proofs
             foundationPosition = receipts.sorted { $0.actorID < $1.actorID }[0].actorPosition
         } else {
             guard let operationID, AgentOperationID(rawValue: operationID) != nil,
@@ -674,7 +684,9 @@ extension AgentSimulationSession {
         let house = AgentHouseRecord(
             houseID: houseID, founderIDs: founders, foundationTick: tick,
             foundationPosition: foundationPosition,
-            foundationEventID: founded.eventID, status: .active,
+            foundationEventID: founded.eventID,
+            cofoundingInteractionProofs: cofoundingInteractionProofs,
+            status: .active,
             lastEventID: founded.eventID, version: 1
         )
         family.houses.append(house)
@@ -688,6 +700,7 @@ extension AgentSimulationSession {
             family.houseMembershipPeriods.append(AgentHouseMembershipPeriod(
                 houseID: houseID, agentID: founder, basis: .founder,
                 joinedTick: tick, joinedEventID: joined.eventID,
+                explicitJoinConsent: nil,
                 leftTick: nil, leftEventID: nil, endReason: nil
             ))
             family.houses[family.houses.count - 1].lastEventID = joined.eventID
@@ -725,6 +738,7 @@ extension AgentSimulationSession {
         let acceptingID = acceptance.actorID
         try candidate.validateAvailableMaturePerson(joiningID)
         try candidate.validateAvailableMaturePerson(acceptingID)
+        let joiningMatureSinceTick = try candidate.familyMatureSinceTick(joiningID)
         guard family.houseMembershipPeriods.contains(where: {
             $0.houseID == houseID && $0.agentID == acceptingID && $0.leftTick == nil
         }), !family.houseMembershipPeriods.contains(where: {
@@ -734,8 +748,11 @@ extension AgentSimulationSession {
         }).count < family.configuration.maximumMembersPerHouse,
         family.houseMembershipPeriods.count
             < family.configuration.maximumHouseMembershipHistory,
-        candidate.hasInspectableFamilyGrounding(
-            joiningID, memberID: acceptingID, family: family
+        Self.familyGroundingExists(
+            joiningID, acceptingID, at: candidate.tick,
+            beforeEventID: nil, family: family,
+            parentageRecords: candidate.kinshipState?.parentageRecords ?? [],
+            maximumDepth: family.configuration.maximumProjectedAncestryDepth
         ) else {
             throw AgentSessionError.family(.invalidHouseMembershipBasis)
         }
@@ -745,6 +762,22 @@ extension AgentSimulationSession {
         )
         let accepted = try candidate.consumeFamilyInteraction(
             acceptance, expected: .houseJoinAcceptance, family: &family
+        )
+        let consent = AgentHouseJoinConsent(
+            acceptedByID: acceptingID,
+            joiningMatureSinceTick: joiningMatureSinceTick,
+            request: AgentFamilyInteractionProof(
+                eventID: requested, operationID: request.receiptID,
+                kind: request.kind, actorID: request.actorID,
+                counterpartyID: request.counterpartyID,
+                tick: request.observedTick
+            ),
+            acceptance: AgentFamilyInteractionProof(
+                eventID: accepted, operationID: acceptance.receiptID,
+                kind: acceptance.kind, actorID: acceptance.actorID,
+                counterpartyID: acceptance.counterpartyID,
+                tick: acceptance.observedTick
+            )
         )
         try candidate.countFamilyTransitions(&family, count: 1)
         let joined = try candidate.requiredFamilyEvent(
@@ -756,6 +789,7 @@ extension AgentSimulationSession {
         family.houseMembershipPeriods.append(AgentHouseMembershipPeriod(
             houseID: houseID, agentID: joiningID, basis: .explicitAdultJoin,
             joinedTick: candidate.tick, joinedEventID: joined.eventID,
+            explicitJoinConsent: consent,
             leftTick: nil, leftEventID: nil, endReason: nil
         ))
         family.houseMembershipPeriods.sort(by: candidate.familyHouseMembershipSort)
@@ -816,24 +850,17 @@ extension AgentSimulationSession {
     ) throws -> AgentCausalEventID? {
         guard var family = familyState else { return nil }
         let parents = parentIDs.sorted()
-        guard parents.count == 2 else {
+        guard parents.count == 2, Set(parents).count == 2 else {
             throw AgentSessionError.family(.invalidState("birth parents"))
         }
-        let common = Set(family.houseMembershipPeriods.compactMap {
-            $0.agentID == parents[0] && $0.leftTick == nil ? $0.houseID : nil
-        }).intersection(family.houseMembershipPeriods.compactMap {
-            $0.agentID == parents[1] && $0.leftTick == nil ? $0.houseID : nil
-        }).filter { houseID in
-            family.houses.contains {
-                $0.houseID == houseID && $0.status == .active
-            }
-        }.sorted()
-        guard let houseID = common.first else { return nil }
-        guard common.count == 1,
-              family.houseMembershipPeriods.count
+        guard let houseID = Self.sharedParentalHouseAtBirth(
+            parentIDs: parents, tick: tick, family: family
+        ) else { return nil }
+        guard family.houseMembershipPeriods.count
                 < family.configuration.maximumHouseMembershipHistory,
               family.houseMembershipPeriods.filter({
-                  $0.houseID == houseID && $0.leftTick == nil
+                  $0.houseID == houseID
+                      && Self.familyMembership($0, isActiveAt: tick)
               }).count < family.configuration.maximumMembersPerHouse else {
             throw AgentSessionError.family(.membershipCapacityReached)
         }
@@ -847,8 +874,8 @@ extension AgentSimulationSession {
         family.houseMembershipPeriods.append(AgentHouseMembershipPeriod(
             houseID: houseID, agentID: childID,
             basis: .sharedParentHouseAtBirth, joinedTick: tick,
-            joinedEventID: event.eventID, leftTick: nil,
-            leftEventID: nil, endReason: nil
+            joinedEventID: event.eventID, explicitJoinConsent: nil,
+            leftTick: nil, leftEventID: nil, endReason: nil
         ))
         family.houseMembershipPeriods.sort(by: familyHouseMembershipSort)
         if let index = family.houses.firstIndex(where: { $0.houseID == houseID }) {
@@ -860,20 +887,11 @@ extension AgentSimulationSession {
         return event.eventID
     }
 
-    func familyBirthEventCount(parentIDs: [AgentID]) -> Int {
-        guard let family = familyState, parentIDs.count == 2 else { return 0 }
-        let parents = parentIDs.sorted()
-        let left = Set(family.houseMembershipPeriods.compactMap {
-            $0.agentID == parents[0] && $0.leftTick == nil ? $0.houseID : nil
-        })
-        let right = Set(family.houseMembershipPeriods.compactMap {
-            $0.agentID == parents[1] && $0.leftTick == nil ? $0.houseID : nil
-        })
-        return left.intersection(right).contains(where: { houseID in
-            family.houses.contains {
-                $0.houseID == houseID && $0.status == .active
-            }
-        }) ? 1 : 0
+    public func familyBirthEventCount(parentIDs: [AgentID]) -> Int {
+        guard let family = familyState else { return 0 }
+        return Self.sharedParentalHouseAtBirth(
+            parentIDs: parentIDs, tick: tick, family: family
+        ) == nil ? 0 : 1
     }
 
     func familyDeathEventCount(agentIDs: [AgentID]) -> Int {
@@ -948,6 +966,10 @@ extension AgentSimulationSession {
                 family, population: population, lifecycle: lifecycle,
                 kinship: kinship, households: households,
                 agents: Array(statesById.values), mortality: mortalityState,
+                schemaVersion: durableSchemaVersionOverride
+                    == AgentCheckpointSchema.familyVersion
+                    ? AgentCheckpointSchema.familyVersion
+                    : AgentCheckpointSchema.durableHouseConsentVersion,
                 clock: clock, causalLatestSequence: causalLedger.latestSequence,
                 causalDroppedEventCount: causalLedger.droppedEventCount,
                 causalEvents: causalLedger.events
@@ -965,6 +987,7 @@ extension AgentSimulationSession {
         households: AgentHouseholdState,
         agents: [AgentSessionAgentState],
         mortality: AgentMortalityState?,
+        schemaVersion: Int,
         clock: AgentSimulationClock,
         causalLatestSequence: UInt64,
         causalDroppedEventCount: UInt64,
@@ -1034,7 +1057,10 @@ extension AgentSimulationSession {
         family.initializedEventID.simulationID == clock.simulationID,
         family.lastFamilyEventID.simulationID == clock.simulationID,
         family.initializedEventID.sequence <= family.lastFamilyEventID.sequence,
-        family.lastFamilyEventID.sequence.rawValue <= causalLatestSequence else {
+        family.lastFamilyEventID.sequence.rawValue <= causalLatestSequence,
+        schemaVersion == AgentCheckpointSchema.familyVersion
+            || schemaVersion
+                == AgentCheckpointSchema.durableHouseConsentVersion else {
             throw AgentFamilyError.invalidState("bounds, ordering or counters")
         }
         let proposalIDs = family.proposals.map(\.proposalID)
@@ -1082,21 +1108,42 @@ extension AgentSimulationSession {
             Int
         ) throws -> Bool = { eventID, kind, actorID, subjectID, operationID, tick in
             guard let event = try retainedEvent(eventID) else { return true }
+            guard case let .operation(status, detail) = event.payload else {
+                return false
+            }
             return event.kind == .familyInteractionVerified
                 && event.origin == .familyTransition
                 && event.actorID == actorID
                 && event.subjectID == subjectID
                 && event.operationID?.rawValue == operationID
                 && event.simulationTick.rawValue == tick
-                && event.payload == .operation(
-                    status: kind.rawValue,
-                    detail: {
-                        if case let .operation(_, detail) = event.payload {
-                            return detail
-                        }
-                        return ""
-                    }()
-                )
+                && status == kind.rawValue
+                && familyInteractionPositionIsValid(detail)
+        }
+        let interactionProofMatches: (
+            AgentFamilyInteractionProof,
+            AgentFamilyInteractionKind,
+            AgentID,
+            AgentID,
+            Int,
+            AgentCausalEventID
+        ) throws -> Bool = {
+            proof, kind, actorID, counterpartyID, tick, terminalEventID in
+            guard proof.kind == kind,
+                  proof.actorID == actorID,
+                  proof.counterpartyID == counterpartyID,
+                  proof.tick == tick,
+                  proof.eventID.sequence < terminalEventID.sequence,
+                  AgentOperationID(rawValue: proof.operationID) != nil,
+                  family.processedInteractionReceiptIDs.contains(
+                      proof.operationID
+                  ) else {
+                return false
+            }
+            return try interactionMatches(
+                proof.eventID, kind, actorID, counterpartyID,
+                proof.operationID, tick
+            )
         }
         if let event = try retainedEvent(family.initializedEventID) {
             let initializedPersonCount: Int?
@@ -1381,52 +1428,116 @@ extension AgentSimulationSession {
                   house.version == 1 else {
                 throw AgentFamilyError.invalidState("house")
             }
-            if let event = try retainedEvent(house.foundationEventID) {
-                guard event.kind == .houseFounded,
-                      event.origin == .familyTransition,
-                      event.simulationTick.rawValue == house.foundationTick,
-                      event.actorID == house.founderIDs[0],
-                      event.subjectID == house.founderIDs.last,
-                      event.payload == .operation(
-                          status: "active",
-                          detail: "\(house.houseID.rawValue)|"
-                              + house.founderIDs.map(\.rawValue)
-                                .joined(separator: ",")
-                      ),
-                      (house.founderIDs.count == 1
-                          ? event.causes.isEmpty
-                              && event.operationID.map({
-                                  family.processedInteractionReceiptIDs.contains(
-                                      $0.rawValue
-                                  )
-                              }) == true
-                          : event.causes.count == 2
-                              && event.operationID == nil) else {
-                    throw AgentFamilyError.invalidCausalReference(event.eventID)
+            let foundationEvent = try retainedEvent(house.foundationEventID)
+            if house.founderIDs.count == 1 {
+                guard house.cofoundingInteractionProofs == nil else {
+                    throw AgentFamilyError.invalidState(
+                        "single-founder house consent"
+                    )
                 }
-                if house.founderIDs.count == 2 {
-                    for founderID in house.founderIDs {
-                        guard let interactionID = event.causes.first(where: {
-                            causeID in
-                            causalEvents.first {
-                                $0.eventID == causeID
-                            }?.actorID == founderID
-                                || causeID.sequence.rawValue
-                                    <= causalDroppedEventCount
-                        }), let counterpartyID = house.founderIDs.first(where: {
-                            $0 != founderID
-                        }), try interactionMatches(
-                            interactionID, .houseCoFoundation,
-                            founderID, counterpartyID,
-                            causalEvents.first {
-                                $0.eventID == interactionID
-                            }?.operationID?.rawValue ?? "historically-dropped",
-                            house.foundationTick
-                        ) else {
+                if let event = foundationEvent {
+                    guard event.kind == .houseFounded,
+                          event.origin == .familyTransition,
+                          event.simulationTick.rawValue == house.foundationTick,
+                          event.actorID == house.founderIDs[0],
+                          event.subjectID == house.founderIDs[0],
+                          event.causes.isEmpty,
+                          event.operationID.map({
+                              family.processedInteractionReceiptIDs.contains(
+                                  $0.rawValue
+                              )
+                          }) == true,
+                          event.payload == .operation(
+                              status: "active",
+                              detail: "\(house.houseID.rawValue)|"
+                                  + house.founderIDs.map(\.rawValue)
+                                    .joined(separator: ",")
+                          ) else {
+                        throw AgentFamilyError.invalidCausalReference(event.eventID)
+                    }
+                }
+            } else {
+                guard family.unions.contains(where: {
+                    $0.partnerIDs == house.founderIDs
+                        && familyUnion(
+                            $0, isActiveAt: house.foundationTick,
+                            beforeEventID: house.foundationEventID
+                        )
+                }) else {
+                    throw AgentFamilyError.invalidState(
+                        "co-founded house without active union"
+                    )
+                }
+                var proofs = house.cofoundingInteractionProofs
+                if proofs == nil,
+                   schemaVersion == AgentCheckpointSchema.familyVersion,
+                   let event = foundationEvent, event.causes.count == 2 {
+                    var legacyProofs: [AgentFamilyInteractionProof] = []
+                    for causeID in event.causes {
+                        guard let interaction = try retainedEvent(causeID),
+                              interaction.kind == .familyInteractionVerified,
+                              let actorID = interaction.actorID,
+                              let counterpartyID = interaction.subjectID,
+                              let operationID = interaction.operationID?.rawValue
+                        else {
                             throw AgentFamilyError.invalidCausalReference(
-                                event.eventID
+                                causeID
                             )
                         }
+                        legacyProofs.append(AgentFamilyInteractionProof(
+                            eventID: causeID, operationID: operationID,
+                            kind: .houseCoFoundation, actorID: actorID,
+                            counterpartyID: counterpartyID,
+                            tick: interaction.simulationTick.rawValue
+                        ))
+                    }
+                    proofs = legacyProofs.sorted { $0.actorID < $1.actorID }
+                }
+                guard let proofs,
+                      proofs == proofs.sorted(by: { $0.actorID < $1.actorID }),
+                      proofs.count == 2,
+                      Set(proofs.map(\.eventID)).count == 2,
+                      Set(proofs.map(\.operationID)).count == 2,
+                      Set(proofs.map(\.actorID)) == Set(house.founderIDs),
+                      proofs.allSatisfy({ proof in
+                          proof.counterpartyID
+                              == house.founderIDs.first {
+                                  $0 != proof.actorID
+                              }
+                      }) else {
+                    throw AgentFamilyError.invalidState(
+                        "co-founding consent proof"
+                    )
+                }
+                for proof in proofs {
+                    let counterpartyID = house.founderIDs.first {
+                        $0 != proof.actorID
+                    }!
+                    guard try interactionProofMatches(
+                        proof, .houseCoFoundation, proof.actorID,
+                        counterpartyID, house.foundationTick,
+                        house.foundationEventID
+                    ) else {
+                        throw AgentFamilyError.invalidCausalReference(
+                            proof.eventID
+                        )
+                    }
+                }
+                if let event = foundationEvent {
+                    guard event.kind == .houseFounded,
+                          event.origin == .familyTransition,
+                          event.simulationTick.rawValue == house.foundationTick,
+                          event.actorID == house.founderIDs[0],
+                          event.subjectID == house.founderIDs[1],
+                          event.operationID == nil,
+                          event.causes == proofs.map(\.eventID).sorted(),
+                          event.payload == .operation(
+                              status: "active",
+                              detail: "\(house.houseID.rawValue)|"
+                                  + house.founderIDs.map(\.rawValue)
+                                    .joined(separator: ",")
+                          ) else {
+                        throw AgentFamilyError.invalidCausalReference(event.eventID)
                     }
                 }
             }
@@ -1450,8 +1561,10 @@ extension AgentSimulationSession {
             let activeMemberships = family.houseMembershipPeriods.filter {
                 $0.houseID == house.houseID && $0.leftTick == nil
             }
-            guard activeMemberships.count <= family.configuration.maximumMembersPerHouse,
-                  Set(activeMemberships.map(\.agentID)).count == activeMemberships.count,
+            guard activeMemberships.count
+                    <= family.configuration.maximumMembersPerHouse,
+                  Set(activeMemberships.map(\.agentID)).count
+                    == activeMemberships.count,
                   (house.status == .active) == activeMemberships.contains(where: {
                       active.contains($0.agentID)
                   }) else {
@@ -1465,29 +1578,7 @@ extension AgentSimulationSession {
                   membership.joinedTick <= clock.tick.rawValue else {
                 throw AgentFamilyError.invalidState("house membership")
             }
-            if membership.basis == .founder {
-                guard family.houses.first(where: {
-                    $0.houseID == membership.houseID
-                })?.founderIDs.contains(membership.agentID) == true else {
-                    throw AgentFamilyError.invalidState("founder membership")
-                }
-            }
-            if membership.basis == .sharedParentHouseAtBirth {
-                guard let parentage = kinship.parentageRecords.first(where: {
-                    $0.childID == membership.agentID
-                }), parentage.canonicalParentIDs.count == 2,
-                parentage.canonicalParentIDs.allSatisfy({ parentID in
-                    family.houseMembershipPeriods.contains {
-                        $0.houseID == membership.houseID
-                            && $0.agentID == parentID
-                            && $0.joinedTick <= membership.joinedTick
-                            && ($0.leftTick == nil
-                                || $0.leftTick! > membership.joinedTick)
-                    }
-                }) else {
-                    throw AgentFamilyError.invalidState("child house membership")
-                }
-            }
+            let joinedEvent = try retainedEvent(membership.joinedEventID)
             if let leftTick = membership.leftTick {
                 guard let leftEventID = membership.leftEventID,
                       let endReason = membership.endReason,
@@ -1557,58 +1648,189 @@ extension AgentSimulationSession {
                     throw AgentFamilyError.invalidState("active house membership")
                 }
             }
-            if let event = try retainedEvent(membership.joinedEventID) {
-                guard event.kind == .houseMemberJoined,
-                      event.origin == .familyTransition,
-                      event.subjectID == membership.agentID,
-                      event.simulationTick.rawValue == membership.joinedTick,
-                      event.payload == .operation(
-                          status: membership.basis.rawValue,
-                          detail: {
-                              if case let .operation(_, detail) = event.payload {
-                                  return detail
-                              }
-                              return ""
-                          }()
-                      ) else {
-                    throw AgentFamilyError.invalidCausalReference(event.eventID)
+            switch membership.basis {
+            case .founder:
+                guard membership.explicitJoinConsent == nil,
+                      let house = family.houses.first(where: {
+                          $0.houseID == membership.houseID
+                      }),
+                      house.founderIDs.contains(membership.agentID),
+                      membership.joinedTick == house.foundationTick else {
+                    throw AgentFamilyError.invalidState("founder membership")
                 }
-                switch membership.basis {
-                case .founder:
-                    guard let house = family.houses.first(where: {
-                        $0.houseID == membership.houseID
-                    }), membership.joinedTick == house.foundationTick,
-                    event.actorID == membership.agentID,
-                    event.causes == [house.foundationEventID],
-                    event.payload == .operation(
-                        status: membership.basis.rawValue,
-                        detail: membership.houseID.rawValue
-                    ) else {
+                if let event = joinedEvent {
+                    guard event.kind == .houseMemberJoined,
+                          event.origin == .familyTransition,
+                          event.actorID == membership.agentID,
+                          event.subjectID == membership.agentID,
+                          event.simulationTick.rawValue == membership.joinedTick,
+                          event.causes == [house.foundationEventID],
+                          event.payload == .operation(
+                              status: membership.basis.rawValue,
+                              detail: membership.houseID.rawValue
+                          ) else {
                         throw AgentFamilyError.invalidCausalReference(event.eventID)
                     }
-                case .sharedParentHouseAtBirth:
-                    guard let parentage = kinship.parentageRecords.first(where: {
-                        $0.childID == membership.agentID
-                    }), membership.joinedTick == parentage.birthTick,
-                    event.actorID == parentage.canonicalParentIDs[0],
-                    event.causes == [parentage.recordedEventID],
-                    event.payload == .operation(
-                        status: membership.basis.rawValue,
-                        detail: membership.houseID.rawValue
-                    ) else {
+                }
+            case .sharedParentHouseAtBirth:
+                let parentage = kinship.parentageRecords.filter {
+                    $0.childID == membership.agentID
+                }
+                guard membership.explicitJoinConsent == nil,
+                      parentage.count == 1,
+                      parentage[0].canonicalParentIDs.count == 2,
+                      membership.joinedTick == parentage[0].birthTick,
+                      family.houseMembershipPeriods.filter({
+                          $0.agentID == membership.agentID
+                              && $0.basis == .sharedParentHouseAtBirth
+                      }).count == 1,
+                      sharedParentalHouseAtBirth(
+                          parentIDs: parentage[0].canonicalParentIDs,
+                          tick: membership.joinedTick, family: family
+                      ) == membership.houseID else {
+                    throw AgentFamilyError.invalidState(
+                        "child house membership"
+                    )
+                }
+                if let event = joinedEvent {
+                    guard event.kind == .houseMemberJoined,
+                          event.origin == .familyTransition,
+                          event.actorID == parentage[0].canonicalParentIDs[0],
+                          event.subjectID == membership.agentID,
+                          event.simulationTick.rawValue == membership.joinedTick,
+                          event.causes == [parentage[0].recordedEventID],
+                          event.payload == .operation(
+                              status: membership.basis.rawValue,
+                              detail: membership.houseID.rawValue
+                          ) else {
                         throw AgentFamilyError.invalidCausalReference(event.eventID)
                     }
-                case .explicitAdultJoin:
-                    let detail: String
-                    if case let .operation(_, value) = event.payload {
-                        detail = value
-                    } else {
-                        detail = ""
+                }
+            case .explicitAdultJoin:
+                var consent = membership.explicitJoinConsent
+                if consent == nil,
+                   schemaVersion == AgentCheckpointSchema.familyVersion,
+                   let event = joinedEvent,
+                   event.causes.count == 2,
+                   case let .operation(_, detail) = event.payload,
+                   let acceptedByID = acceptedByID(
+                       from: detail, houseID: membership.houseID
+                   ),
+                   let matureSinceTick = familyExpectedMatureSinceTick(
+                       agentID: membership.agentID, lifecycle: lifecycle
+                   ) {
+                    let retainedCauses = try event.causes.compactMap {
+                        try retainedEvent($0)
                     }
-                    guard event.actorID == membership.agentID,
-                          event.causes.count == 2,
-                          detail.hasPrefix(
-                              "\(membership.houseID.rawValue)|acceptedBy="
+                    guard retainedCauses.count == 2,
+                          let request = retainedCauses.first(where: { event in
+                              guard event.actorID == membership.agentID,
+                                    event.subjectID == acceptedByID,
+                                    case let .operation(status, detail) =
+                                      event.payload else {
+                                  return false
+                              }
+                              return status == AgentFamilyInteractionKind
+                                .houseJoinRequest.rawValue
+                                  && familyInteractionPositionIsValid(detail)
+                          }),
+                          let acceptance = retainedCauses.first(where: { event in
+                              guard event.actorID == acceptedByID,
+                                    event.subjectID == membership.agentID,
+                                    case let .operation(status, detail) =
+                                      event.payload else {
+                                  return false
+                              }
+                              return status == AgentFamilyInteractionKind
+                                .houseJoinAcceptance.rawValue
+                                  && familyInteractionPositionIsValid(detail)
+                          }),
+                          let requestOperationID =
+                            request.operationID?.rawValue,
+                          let acceptanceOperationID =
+                            acceptance.operationID?.rawValue else {
+                        throw AgentFamilyError.invalidCausalReference(
+                            event.eventID
+                        )
+                    }
+                    consent = AgentHouseJoinConsent(
+                        acceptedByID: acceptedByID,
+                        joiningMatureSinceTick: matureSinceTick,
+                        request: AgentFamilyInteractionProof(
+                            eventID: request.eventID,
+                            operationID: requestOperationID,
+                            kind: .houseJoinRequest,
+                            actorID: membership.agentID,
+                            counterpartyID: acceptedByID,
+                            tick: membership.joinedTick
+                        ),
+                        acceptance: AgentFamilyInteractionProof(
+                            eventID: acceptance.eventID,
+                            operationID: acceptanceOperationID,
+                            kind: .houseJoinAcceptance,
+                            actorID: acceptedByID,
+                            counterpartyID: membership.agentID,
+                            tick: membership.joinedTick
+                        )
+                    )
+                }
+                guard let consent,
+                      known.contains(consent.acceptedByID),
+                      consent.acceptedByID != membership.agentID,
+                      consent.request.eventID != consent.acceptance.eventID,
+                      consent.request.operationID
+                        != consent.acceptance.operationID,
+                      family.houseMembershipPeriods.contains(where: {
+                          $0.houseID == membership.houseID
+                              && $0.agentID == consent.acceptedByID
+                              && familyMembership(
+                                  $0, isActiveAt: membership.joinedTick
+                              )
+                      }),
+                      familyMaturityMatches(
+                          agentID: membership.agentID,
+                          joinedTick: membership.joinedTick,
+                          matureSinceTick: consent.joiningMatureSinceTick,
+                          lifecycle: lifecycle
+                      ),
+                      familyGroundingExists(
+                          membership.agentID, consent.acceptedByID,
+                          at: membership.joinedTick,
+                          beforeEventID: membership.joinedEventID,
+                          family: family,
+                          parentageRecords: kinship.parentageRecords,
+                          maximumDepth:
+                            family.configuration.maximumProjectedAncestryDepth
+                      ),
+                      try interactionProofMatches(
+                          consent.request, .houseJoinRequest,
+                          membership.agentID, consent.acceptedByID,
+                          membership.joinedTick, membership.joinedEventID
+                      ),
+                      try interactionProofMatches(
+                          consent.acceptance, .houseJoinAcceptance,
+                          consent.acceptedByID, membership.agentID,
+                          membership.joinedTick, membership.joinedEventID
+                      ) else {
+                    throw AgentFamilyError.invalidState(
+                        "explicit house join consent"
+                    )
+                }
+                if let event = joinedEvent {
+                    guard event.kind == .houseMemberJoined,
+                          event.origin == .familyTransition,
+                          event.actorID == membership.agentID,
+                          event.subjectID == membership.agentID,
+                          event.simulationTick.rawValue == membership.joinedTick,
+                          event.causes == [
+                              consent.request.eventID,
+                              consent.acceptance.eventID
+                          ].sorted(),
+                          event.payload == .operation(
+                              status: membership.basis.rawValue,
+                              detail: "\(membership.houseID.rawValue)"
+                                  + "|acceptedBy="
+                                  + consent.acceptedByID.rawValue
                           ) else {
                         throw AgentFamilyError.invalidCausalReference(event.eventID)
                     }
@@ -1623,6 +1845,22 @@ extension AgentSimulationSession {
             )
             guard activeByHouse.values.allSatisfy({ $0.count == 1 }) else {
                 throw AgentFamilyError.invalidState("duplicate active membership")
+            }
+        }
+        for parentage in kinship.parentageRecords {
+            let birthMemberships = family.houseMembershipPeriods.filter {
+                $0.agentID == parentage.childID
+                    && $0.basis == .sharedParentHouseAtBirth
+            }
+            let expectedHouseID = sharedParentalHouseAtBirth(
+                parentIDs: parentage.canonicalParentIDs,
+                tick: parentage.birthTick, family: family
+            )
+            guard birthMemberships.count == (expectedHouseID == nil ? 0 : 1),
+                  birthMemberships.first?.houseID == expectedHouseID else {
+                throw AgentFamilyError.invalidState(
+                    "missing or unexpected child house membership"
+                )
             }
         }
         guard Set(population.members.map(\.agentID)) == active,
@@ -1796,24 +2034,188 @@ extension AgentSimulationSession {
         )
     }
 
-    private func hasInspectableFamilyGrounding(
-        _ joiningID: AgentID,
-        memberID: AgentID,
+    private func familyMatureSinceTick(_ agentID: AgentID) throws -> Int {
+        guard let lifecycle = lifecycleState,
+              let member = lifecycle.members.first(where: {
+                  $0.agentID == agentID
+              }) else {
+            throw AgentSessionError.family(.immaturePerson(agentID))
+        }
+        let remaining = max(
+            0, lifecycle.configuration.maturityAgeTicks - member.initialAgeTicks
+        )
+        let (matureSince, overflow) = member.lifecycleRegisteredTick
+            .addingReportingOverflow(remaining)
+        guard !overflow, matureSince <= tick else {
+            throw AgentSessionError.family(.immaturePerson(agentID))
+        }
+        return matureSince
+    }
+
+    private static func familyMembership(
+        _ membership: AgentHouseMembershipPeriod,
+        isActiveAt tick: Int
+    ) -> Bool {
+        membership.joinedTick <= tick
+            && (membership.leftTick == nil || membership.leftTick! > tick)
+    }
+
+    private static func sharedParentalHouseAtBirth(
+        parentIDs: [AgentID],
+        tick: Int,
         family: AgentFamilyState
+    ) -> AgentHouseID? {
+        let parents = parentIDs.sorted()
+        guard parents.count == 2, Set(parents).count == 2 else { return nil }
+        let foundedHouseIDs = Set(family.houses.compactMap {
+            $0.foundationTick <= tick ? $0.houseID : nil
+        })
+        func activeHouseIDs(for parentID: AgentID) -> Set<AgentHouseID> {
+            Set(family.houseMembershipPeriods.compactMap {
+                $0.agentID == parentID
+                    && familyMembership($0, isActiveAt: tick)
+                    && foundedHouseIDs.contains($0.houseID)
+                    ? $0.houseID : nil
+            })
+        }
+        let common = activeHouseIDs(for: parents[0])
+            .intersection(activeHouseIDs(for: parents[1]))
+            .sorted()
+        return common.count == 1 ? common[0] : nil
+    }
+
+    private static func familyUnion(
+        _ union: AgentUnionRecord,
+        isActiveAt tick: Int,
+        beforeEventID: AgentCausalEventID?
+    ) -> Bool {
+        guard union.activationTick <= tick else { return false }
+        if union.activationTick == tick, let beforeEventID,
+           union.activationEventID.sequence >= beforeEventID.sequence {
+            return false
+        }
+        guard let terminationTick = union.terminationTick else { return true }
+        if terminationTick > tick { return true }
+        if terminationTick < tick { return false }
+        guard let beforeEventID, let terminationEventID = union.terminationEventID else {
+            return false
+        }
+        return beforeEventID.sequence < terminationEventID.sequence
+    }
+
+    private static func familyGroundingExists(
+        _ lhs: AgentID,
+        _ rhs: AgentID,
+        at tick: Int,
+        beforeEventID: AgentCausalEventID?,
+        family: AgentFamilyState,
+        parentageRecords: [AgentParentageRecord],
+        maximumDepth: Int
     ) -> Bool {
         if family.unions.contains(where: {
-            $0.status == .active && Set($0.partnerIDs) == Set([joiningID, memberID])
-        }) { return true }
-        if (try? parents(of: joiningID))??.contains(memberID) == true
-            || (try? parents(of: memberID))??.contains(joiningID) == true {
+            $0.partnerIDs == [lhs, rhs].sorted()
+                && familyUnion($0, isActiveAt: tick, beforeEventID: beforeEventID)
+        }) {
             return true
         }
-        switch siblingRelation(between: joiningID, and: memberID) {
-        case .fullSibling, .halfSibling: return true
-        default: break
+        let parentageByChild = Dictionary(uniqueKeysWithValues:
+            parentageRecords.map { ($0.childID, $0.canonicalParentIDs) }
+        )
+        if parentageByChild[lhs]?.contains(rhs) == true
+            || parentageByChild[rhs]?.contains(lhs) == true {
+            return true
         }
-        return isAncestor(joiningID, of: memberID) == .ancestor
-            || isAncestor(memberID, of: joiningID) == .ancestor
+        let leftParents = Set(parentageByChild[lhs] ?? [])
+        let rightParents = Set(parentageByChild[rhs] ?? [])
+        if !leftParents.isEmpty, !rightParents.isEmpty,
+           !leftParents.intersection(rightParents).isEmpty {
+            return true
+        }
+        func ancestor(_ possible: AgentID, _ descendant: AgentID) -> Bool {
+            var frontier = parentageByChild[descendant] ?? []
+            var seen = Set<AgentID>()
+            var depth = 1
+            while !frontier.isEmpty, depth <= maximumDepth {
+                let ordered = Array(Set(frontier)).sorted()
+                if ordered.contains(possible) { return true }
+                seen.formUnion(ordered)
+                frontier = ordered.flatMap {
+                    parentageByChild[$0] ?? []
+                }.filter { !seen.contains($0) }
+                depth += 1
+            }
+            return false
+        }
+        return ancestor(lhs, rhs) || ancestor(rhs, lhs)
+    }
+
+    private static func acceptedByID(
+        from detail: String,
+        houseID: AgentHouseID
+    ) -> AgentID? {
+        let prefix = "\(houseID.rawValue)|acceptedBy="
+        guard detail.hasPrefix(prefix) else { return nil }
+        let rawValue = String(detail.dropFirst(prefix.count))
+        guard let agentID = AgentID(rawValue: rawValue),
+              detail == prefix + agentID.rawValue else {
+            return nil
+        }
+        return agentID
+    }
+
+    private static func familyInteractionPositionIsValid(_ detail: String) -> Bool {
+        let coordinates = detail.split(
+            separator: ",", omittingEmptySubsequences: false
+        )
+        return coordinates.count == 3 && coordinates.allSatisfy {
+            Int($0) != nil
+        }
+    }
+
+    private static func familyMaturityMatches(
+        agentID: AgentID,
+        joinedTick: Int,
+        matureSinceTick: Int,
+        lifecycle: AgentLifecycleState
+    ) -> Bool {
+        guard matureSinceTick >= 0, matureSinceTick <= joinedTick else {
+            return false
+        }
+        if let expected = familyExpectedMatureSinceTick(
+            agentID: agentID, lifecycle: lifecycle
+        ) {
+            return expected == matureSinceTick
+        }
+        // Lifecycle history is bounded. New schema-26 records retain the
+        // validated eligibility boundary even after an honest old member or
+        // birth prefix has been evicted.
+        return true
+    }
+
+    private static func familyExpectedMatureSinceTick(
+        agentID: AgentID,
+        lifecycle: AgentLifecycleState
+    ) -> Int? {
+        if let member = lifecycle.members.first(where: {
+            $0.agentID == agentID
+        }) {
+            let remaining = max(
+                0,
+                lifecycle.configuration.maturityAgeTicks - member.initialAgeTicks
+            )
+            let (expected, overflow) = member.lifecycleRegisteredTick
+                .addingReportingOverflow(remaining)
+            return overflow ? nil : expected
+        }
+        if let birth = lifecycle.births.first(where: {
+            $0.newbornID == agentID
+        }) {
+            let (expected, overflow) = birth.birthTick.addingReportingOverflow(
+                lifecycle.configuration.maturityAgeTicks
+            )
+            return overflow ? nil : expected
+        }
+        return nil
     }
 
     private mutating func countFamilyTransitions(

@@ -48,7 +48,8 @@ private func familySession(
     enableReproduction: Bool = false,
     lethalFirstAgent: Bool = false,
     firstAgentHealth: Int = 100,
-    maturityAgeTicks: Int = 2
+    maturityAgeTicks: Int = 2,
+    causalMaximumEvents: Int = 32_768
 ) -> AgentSimulationSession {
     let survival = try! AgentSurvivalConfiguration(
         hungerPerTick: 0.001, fatiguePerTick: 0.001,
@@ -75,7 +76,7 @@ private func familySession(
             )
         },
         simulationID: try! AgentSimulationID(validating: simulationID),
-        causalLedgerPolicy: .bounded(maxEvents: 32_768)
+        causalLedgerPolicy: .bounded(maxEvents: causalMaximumEvents)
     )
     session.setSurvivalEnabled(true)
     try! session.initializePopulationRegistry(
@@ -503,6 +504,8 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
           session.materialRightsSnapshot() == rightsBefore)
 
     try! session.setReproductionEnabled(true)
+    check("familyBirthEventCount is one for exactly one shared active house",
+          session.familyBirthEventCount(parentIDs: union.partnerIDs) == 1)
     let birth = familyBirth(&session)
     let childID = birth.newbornID
     check("normal birth remains independent from union truth",
@@ -659,8 +662,9 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
     let checkpoint = try! session.makeCheckpoint()
     let durableBytes = try! session.durableStateBytes()
     let restored = try! AgentSimulationSession.restoring(checkpoint)
-    check("checkpoint schema 25 restores family state byte-exact",
-          checkpoint.schemaVersion == AgentCheckpointSchema.familyVersion
+    check("checkpoint schema 26 restores family state byte-exact",
+          checkpoint.schemaVersion
+            == AgentCheckpointSchema.durableHouseConsentVersion
             && (try! restored.durableStateBytes()) == durableBytes
             && restored.familySnapshot() == session.familySnapshot())
     check("restart re-derives the same lineages houses and family relations",
@@ -718,6 +722,59 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
               family["houses"] = houses
               durable["familyState"] = family
           })
+    check("duplicate co-founding interaction proofs are refused",
+          familyRestoreRefused(checkpoint) { durable in
+              var family = durable["familyState"] as! [String: Any]
+              var houses = family["houses"] as! [[String: Any]]
+              var proofs = houses[0]["cofoundingInteractionProofs"]
+                as! [[String: Any]]
+              proofs[1]["eventID"] = proofs[0]["eventID"]
+              proofs[1]["operationID"] = proofs[0]["operationID"]
+              houses[0]["cofoundingInteractionProofs"] = proofs
+              family["houses"] = houses
+              durable["familyState"] = family
+          })
+    check("two-founder house without corresponding union is refused",
+          familyRestoreRefused(checkpoint) { durable in
+              var family = durable["familyState"] as! [String: Any]
+              family["proposals"] = []
+              family["unions"] = []
+              family["nextUnionOrdinal"] = 1
+              durable["familyState"] = family
+          })
+    check("house foundation before union activation is refused",
+          familyRestoreRefused(checkpoint) { durable in
+              var family = durable["familyState"] as! [String: Any]
+              let houses = family["houses"] as! [[String: Any]]
+              var unions = family["unions"] as! [[String: Any]]
+              unions[0]["activationTick"] =
+                (houses[0]["foundationTick"] as! Int) + 1
+              family["unions"] = unions
+              durable["familyState"] = family
+          })
+    check("house foundation after union termination is refused",
+          familyRestoreRefused(checkpoint) { durable in
+              var family = durable["familyState"] as! [String: Any]
+              var houses = family["houses"] as! [[String: Any]]
+              let unions = family["unions"] as! [[String: Any]]
+              houses[0]["foundationTick"] =
+                (unions[0]["terminationTick"] as! Int) + 1
+              family["houses"] = houses
+              durable["familyState"] = family
+          })
+    check("house founded during union remains valid after separation",
+          restored.familySnapshot().houses.first?.houseID == house.houseID
+            && restored.familySnapshot().unions.first?.status == .ended)
+    let legacySchema25 = familyMutatedCheckpoint(checkpoint) { durable in
+        durable["schemaVersion"] = AgentCheckpointSchema.familyVersion
+        var family = durable["familyState"] as! [String: Any]
+        var houses = family["houses"] as! [[String: Any]]
+        houses[0].removeValue(forKey: "cofoundingInteractionProofs")
+        family["houses"] = houses
+        durable["familyState"] = family
+    }
+    check("schema 25 house proof remains readable while causes are retained",
+          (try? AgentSimulationSession.restoring(legacySchema25)) != nil)
     check("unknown lineage root corruption is refused",
           familyRestoreRefused(checkpoint) { durable in
               var family = durable["familyState"] as! [String: Any]
@@ -734,6 +791,19 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
                   ($0["agentID"] as? String) == childID.rawValue
               }!
               periods[childIndex]["houseID"] = "house-99999999"
+              family["houseMembershipPeriods"] = periods
+              durable["familyState"] = family
+          })
+    check("missing exact-one child house membership is refused",
+          familyRestoreRefused(checkpoint) { durable in
+              var family = durable["familyState"] as! [String: Any]
+              var periods =
+                family["houseMembershipPeriods"] as! [[String: Any]]
+              periods.removeAll {
+                  ($0["agentID"] as? String) == childID.rawValue
+                      && ($0["basis"] as? String)
+                        == "sharedParentHouseAtBirth"
+              }
               family["houseMembershipPeriods"] = periods
               durable["familyState"] = family
           })
@@ -802,8 +872,9 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
     let replayed = try! AgentSessionReplayer.replay(
         checkpoint: replayBase, journal: journal
     )
-    check("schema 25 replay is byte-exact and non-duplicating",
-          recorder.schemaVersion == AgentReplaySchema.familyVersion
+    check("schema 26 replay is byte-exact and non-duplicating",
+          recorder.schemaVersion
+            == AgentReplaySchema.durableHouseConsentVersion
             && replayed.session.familySnapshot().unions.count == 1
             && replayed.session.familySnapshot().lineages.count == 1
             && (try! replayed.session.durableStateBytes())
@@ -842,6 +913,108 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
           )).contains {
               $0.houseID == singleHouse.houseID
                   && $0.basis == .explicitAdultJoin
+                  && $0.explicitJoinConsent?.acceptedByID.rawValue == "agent_0"
+                  && $0.explicitJoinConsent?.request.operationID
+                    == "house-join-request"
+                  && $0.explicitJoinConsent?.acceptance.operationID
+                    == "house-join-acceptance"
+          })
+    let joinedHouseCheckpoint = try! joinedHouse.makeCheckpoint()
+    let legacyJoinedHouseCheckpoint = familyMutatedCheckpoint(
+        joinedHouseCheckpoint
+    ) { durable in
+        durable["schemaVersion"] = AgentCheckpointSchema.familyVersion
+        var family = durable["familyState"] as! [String: Any]
+        var periods = family["houseMembershipPeriods"] as! [[String: Any]]
+        let index = periods.firstIndex {
+            ($0["basis"] as? String) == "explicitAdultJoin"
+        }!
+        periods[index].removeValue(forKey: "explicitJoinConsent")
+        family["houseMembershipPeriods"] = periods
+        durable["familyState"] = family
+    }
+    check("schema 25 join proof remains readable while causes are retained",
+          (try? AgentSimulationSession.restoring(
+              legacyJoinedHouseCheckpoint
+          )) != nil)
+    check("unknown acceptedBy durable corruption is refused",
+          familyRestoreRefused(joinedHouseCheckpoint) { durable in
+              var family = durable["familyState"] as! [String: Any]
+              var periods = family["houseMembershipPeriods"] as! [[String: Any]]
+              let index = periods.firstIndex {
+                  ($0["basis"] as? String) == "explicitAdultJoin"
+              }!
+              var consent = periods[index]["explicitJoinConsent"]
+                as! [String: Any]
+              consent["acceptedByID"] = "agent_unknown"
+              periods[index]["explicitJoinConsent"] = consent
+              family["houseMembershipPeriods"] = periods
+              durable["familyState"] = family
+          })
+    check("nonmember acceptedBy durable corruption is refused",
+          familyRestoreRefused(joinedHouseCheckpoint) { durable in
+              var family = durable["familyState"] as! [String: Any]
+              var periods = family["houseMembershipPeriods"] as! [[String: Any]]
+              let index = periods.firstIndex {
+                  ($0["basis"] as? String) == "explicitAdultJoin"
+              }!
+              var consent = periods[index]["explicitJoinConsent"]
+                as! [String: Any]
+              consent["acceptedByID"] = "agent_2"
+              periods[index]["explicitJoinConsent"] = consent
+              family["houseMembershipPeriods"] = periods
+              durable["familyState"] = family
+          })
+    check("identical request and acceptance causes are refused",
+          familyRestoreRefused(joinedHouseCheckpoint) { durable in
+              var family = durable["familyState"] as! [String: Any]
+              var periods = family["houseMembershipPeriods"] as! [[String: Any]]
+              let index = periods.firstIndex {
+                  ($0["basis"] as? String) == "explicitAdultJoin"
+              }!
+              var consent = periods[index]["explicitJoinConsent"]
+                as! [String: Any]
+              let request = consent["request"] as! [String: Any]
+              var acceptance = consent["acceptance"] as! [String: Any]
+              acceptance["eventID"] = request["eventID"]
+              acceptance["operationID"] = request["operationID"]
+              consent["acceptance"] = acceptance
+              periods[index]["explicitJoinConsent"] = consent
+              family["houseMembershipPeriods"] = periods
+              durable["familyState"] = family
+          })
+    check("two house join requests without acceptance are refused",
+          familyRestoreRefused(joinedHouseCheckpoint) { durable in
+              var family = durable["familyState"] as! [String: Any]
+              var periods = family["houseMembershipPeriods"] as! [[String: Any]]
+              let index = periods.firstIndex {
+                  ($0["basis"] as? String) == "explicitAdultJoin"
+              }!
+              var consent = periods[index]["explicitJoinConsent"]
+                as! [String: Any]
+              var acceptance = consent["acceptance"] as! [String: Any]
+              acceptance["kind"] = "houseJoinRequest"
+              consent["acceptance"] = acceptance
+              periods[index]["explicitJoinConsent"] = consent
+              family["houseMembershipPeriods"] = periods
+              durable["familyState"] = family
+          })
+    check("incorrectly inverted house acceptance actors are refused",
+          familyRestoreRefused(joinedHouseCheckpoint) { durable in
+              var family = durable["familyState"] as! [String: Any]
+              var periods = family["houseMembershipPeriods"] as! [[String: Any]]
+              let index = periods.firstIndex {
+                  ($0["basis"] as? String) == "explicitAdultJoin"
+              }!
+              var consent = periods[index]["explicitJoinConsent"]
+                as! [String: Any]
+              var acceptance = consent["acceptance"] as! [String: Any]
+              acceptance["actorID"] = "agent_1"
+              acceptance["counterpartyID"] = "agent_0"
+              consent["acceptance"] = acceptance
+              periods[index]["explicitJoinConsent"] = consent
+              family["houseMembershipPeriods"] = periods
+              durable["familyState"] = family
           })
     try! joinedHouse.leaveHouse(
         singleHouse.houseID, agentID: AgentID(rawValue: "agent_1")!,
@@ -868,6 +1041,129 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
                       && $0["leftTick"] != nil
               }!
               periods[index]["endReason"] = "memberDeath"
+              family["houseMembershipPeriods"] = periods
+              durable["familyState"] = family
+          })
+
+    var ungroundedJoin = familySession("sim-family-ungrounded-house-join")
+    let ungroundedHouse = try! ungroundedJoin.foundHouse(
+        founderID: AgentID(rawValue: "agent_0")!,
+        operationID: "ungrounded-house"
+    )
+    let ungroundedBefore = try! ungroundedJoin.durableStateBytes()
+    check("house join without durable family or active-union grounding is refused", {
+        do {
+            try ungroundedJoin.joinHouse(
+                ungroundedHouse.houseID,
+                request: familyReceipt(
+                    ungroundedJoin, id: "ungrounded-request",
+                    kind: .houseJoinRequest, actor: 2, counterparty: 0
+                ),
+                acceptance: familyReceipt(
+                    ungroundedJoin, id: "ungrounded-acceptance",
+                    kind: .houseJoinAcceptance, actor: 0, counterparty: 2
+                )
+            )
+            return false
+        } catch AgentSessionError.family(.invalidHouseMembershipBasis) {
+            return (try! ungroundedJoin.durableStateBytes())
+                == ungroundedBefore
+        } catch {
+            return false
+        }
+    }())
+
+    var matureChildJoin = familySession(
+        "sim-family-mature-child-house-join", enableReproduction: true
+    )
+    let parentHouse = try! matureChildJoin.foundHouse(
+        founderID: AgentID(rawValue: "agent_0")!,
+        operationID: "mature-child-parent-house"
+    )
+    let maturingChild = familyBirth(
+        &matureChildJoin, position: AgentPosition(x: 0, y: 64, z: 2)
+    ).newbornID
+    while matureChildJoin.lifecycleSnapshot().members.first(where: {
+        $0.agentID == maturingChild
+    })?.currentStage != .mature {
+        _ = try! matureChildJoin.advanceTick()
+    }
+    try! matureChildJoin.joinHouse(
+        parentHouse.houseID,
+        request: familyReceipt(
+            matureChildJoin, id: "mature-child-request",
+            kind: .houseJoinRequest, actor: 3, counterparty: 0
+        ),
+        acceptance: familyReceipt(
+            matureChildJoin, id: "mature-child-acceptance",
+            kind: .houseJoinAcceptance, actor: 0, counterparty: 3
+        )
+    )
+    let matureChildCheckpoint = try! matureChildJoin.makeCheckpoint()
+    check("explicit join before the entrant maturity boundary is refused",
+          familyRestoreRefused(matureChildCheckpoint) { durable in
+              var family = durable["familyState"] as! [String: Any]
+              var periods = family["houseMembershipPeriods"] as! [[String: Any]]
+              let index = periods.firstIndex {
+                  ($0["agentID"] as? String) == maturingChild.rawValue
+                      && ($0["basis"] as? String) == "explicitAdultJoin"
+              }!
+              let consent = periods[index]["explicitJoinConsent"]
+                as! [String: Any]
+              periods[index]["joinedTick"] =
+                (consent["joiningMatureSinceTick"] as! Int) - 1
+              family["houseMembershipPeriods"] = periods
+              durable["familyState"] = family
+          })
+
+    var evictedJoin = familySession(
+        "sim-family-evicted-house-join", causalMaximumEvents: 64
+    )
+    let evictedProposal = try! evictedJoin.proposeUnion(familyReceipt(
+        evictedJoin, id: "evicted-join-proposal", kind: .unionProposal,
+        actor: 0, counterparty: 1
+    ))
+    _ = try! evictedJoin.acceptUnion(
+        proposalID: evictedProposal.proposalID,
+        receipt: familyReceipt(
+            evictedJoin, id: "evicted-join-union-accept",
+            kind: .unionAcceptance, actor: 1, counterparty: 0
+        )
+    )
+    let evictedHouse = try! evictedJoin.foundHouse(
+        founderID: AgentID(rawValue: "agent_0")!,
+        operationID: "evicted-join-house"
+    )
+    try! evictedJoin.joinHouse(
+        evictedHouse.houseID,
+        request: familyReceipt(
+            evictedJoin, id: "evicted-house-request",
+            kind: .houseJoinRequest, actor: 1, counterparty: 0
+        ),
+        acceptance: familyReceipt(
+            evictedJoin, id: "evicted-house-acceptance",
+            kind: .houseJoinAcceptance, actor: 0, counterparty: 1
+        )
+    )
+    for _ in 0..<24 { _ = try! evictedJoin.advanceTick() }
+    let evictedCheckpoint = try! evictedJoin.makeCheckpoint()
+    let evictedRestored = try! AgentSimulationSession.restoring(
+        evictedCheckpoint
+    )
+    check("durable join consent survives honest bounded causal eviction",
+          evictedJoin.causalLedgerSnapshot().summary.droppedEventCount > 0
+            && evictedRestored.familySnapshot()
+                == evictedJoin.familySnapshot())
+    check("schema 25 join without retained proof is refused after eviction",
+          familyRestoreRefused(evictedCheckpoint) { durable in
+              durable["schemaVersion"] = AgentCheckpointSchema.familyVersion
+              var family = durable["familyState"] as! [String: Any]
+              var periods =
+                family["houseMembershipPeriods"] as! [[String: Any]]
+              let index = periods.firstIndex {
+                  ($0["basis"] as? String) == "explicitAdultJoin"
+              }!
+              periods[index].removeValue(forKey: "explicitJoinConsent")
               family["houseMembershipPeriods"] = periods
               durable["familyState"] = family
           })
@@ -902,6 +1198,110 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
           (try! independentAuthorities.currentHouseMemberships(
               of: differentHouseBirth.newbornID
           )).isEmpty)
+    check("familyBirthEventCount is zero without one shared active house",
+          independentAuthorities.familyBirthEventCount(
+              parentIDs: differentHouseBirth.progenitorIDs
+          ) == 0)
+
+    var ambiguousHouses = familySession(
+        "sim-family-ambiguous-shared-houses", enableReproduction: true
+    )
+    let ambiguousProposal = try! ambiguousHouses.proposeUnion(familyReceipt(
+        ambiguousHouses, id: "ambiguous-union-proposal",
+        kind: .unionProposal, actor: 0, counterparty: 1
+    ))
+    let ambiguousUnion = try! ambiguousHouses.acceptUnion(
+        proposalID: ambiguousProposal.proposalID,
+        receipt: familyReceipt(
+            ambiguousHouses, id: "ambiguous-union-accept",
+            kind: .unionAcceptance, actor: 1, counterparty: 0
+        )
+    )
+    let ambiguousHouse0 = try! ambiguousHouses.coFoundHouse(
+        founderIDs: ambiguousUnion.partnerIDs,
+        receipts: [
+            familyReceipt(
+                ambiguousHouses, id: "ambiguous-house-0-a",
+                kind: .houseCoFoundation, actor: 0, counterparty: 1
+            ),
+            familyReceipt(
+                ambiguousHouses, id: "ambiguous-house-0-b",
+                kind: .houseCoFoundation, actor: 1, counterparty: 0
+            ),
+        ]
+    )
+    _ = try! ambiguousHouses.coFoundHouse(
+        founderIDs: ambiguousUnion.partnerIDs,
+        receipts: [
+            familyReceipt(
+                ambiguousHouses, id: "ambiguous-house-1-a",
+                kind: .houseCoFoundation, actor: 0, counterparty: 1
+            ),
+            familyReceipt(
+                ambiguousHouses, id: "ambiguous-house-1-b",
+                kind: .houseCoFoundation, actor: 1, counterparty: 0
+            ),
+        ]
+    )
+    check("familyBirthEventCount is zero for multiple shared active houses",
+          ambiguousHouses.familyBirthEventCount(
+              parentIDs: ambiguousUnion.partnerIDs
+          ) == 0)
+    let ambiguousBirth = familyBirth(&ambiguousHouses)
+    let ambiguousChildJoinEvents = ambiguousHouses.causalLedgerSnapshot()
+        .events.filter {
+            $0.kind == .houseMemberJoined
+                && $0.subjectID == ambiguousBirth.newbornID
+        }
+    check("multiple shared parental houses preserve birth without affiliation",
+          ambiguousBirth.progenitorIDs == ambiguousUnion.partnerIDs
+            && (try! ambiguousHouses.currentHouseMemberships(
+                of: ambiguousBirth.newbornID
+            )).isEmpty
+            && ambiguousChildJoinEvents.isEmpty)
+    let ambiguousCheckpoint = try! ambiguousHouses.makeCheckpoint()
+    check("automatic child membership in one of two shared houses is refused",
+          familyRestoreRefused(ambiguousCheckpoint) { durable in
+              var family = durable["familyState"] as! [String: Any]
+              var periods = family["houseMembershipPeriods"] as! [[String: Any]]
+              var injected = periods.first {
+                  ($0["houseID"] as? String) == ambiguousHouse0.houseID.rawValue
+              }!
+              let kinship = durable["kinshipState"] as! [String: Any]
+              let parentage = (kinship["parentageRecords"]
+                as! [[String: Any]]).first {
+                    ($0["childID"] as? String)
+                        == ambiguousBirth.newbornID.rawValue
+                }!
+              injected["agentID"] = ambiguousBirth.newbornID.rawValue
+              injected["basis"] = "sharedParentHouseAtBirth"
+              injected["joinedTick"] = ambiguousBirth.birthTick
+              injected["joinedEventID"] = parentage["recordedEventID"]
+              injected.removeValue(forKey: "explicitJoinConsent")
+              injected.removeValue(forKey: "leftTick")
+              injected.removeValue(forKey: "leftEventID")
+              injected.removeValue(forKey: "endReason")
+              periods.append(injected)
+              periods.sort {
+                  (($0["houseID"] as? String) ?? "")
+                      < (($1["houseID"] as? String) ?? "")
+              }
+              family["houseMembershipPeriods"] = periods
+              durable["familyState"] = family
+          })
+    check("duplicate shared-parent birth-house periods are refused",
+          familyRestoreRefused(checkpoint) { durable in
+              var family = durable["familyState"] as! [String: Any]
+              var periods = family["houseMembershipPeriods"] as! [[String: Any]]
+              let childPeriod = periods.first {
+                  ($0["agentID"] as? String) == childID.rawValue
+                      && ($0["basis"] as? String)
+                        == "sharedParentHouseAtBirth"
+              }!
+              periods.append(childPeriod)
+              family["houseMembershipPeriods"] = periods
+              durable["familyState"] = family
+          })
 
     var death = familySession(
         "sim-family-partner-death", lethalFirstAgent: true

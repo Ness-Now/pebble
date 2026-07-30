@@ -774,7 +774,10 @@ extension AgentSimulationSession {
             )
         }
         let engagement = care.activeEngagements[engagementIndex]
-        durableSchemaVersionOverride = nil
+        if durableSchemaVersionOverride
+            == AgentCheckpointSchema.childhoodVersion {
+            durableSchemaVersionOverride = nil
+        }
         guard let need = care.activeNeeds.first(where: {
             $0.needID == engagement.needID && $0.status == .active
                 && $0.kind == .supervision

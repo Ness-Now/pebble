@@ -26,6 +26,7 @@ public enum AgentReplaySchema {
     public static let childhoodVersion = 23
     public static let verifiedSupervisionVersion = 24
     public static let familyVersion = 25
+    public static let durableHouseConsentVersion = 26
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -40,7 +41,7 @@ public enum AgentReplaySchema {
             || version == materialRightsVersion || version == persistenceReconciliationVersion
             || version == homeostasisVersion || version == geneticsVersion
             || version == childhoodVersion || version == verifiedSupervisionVersion
-            || version == familyVersion
+            || version == familyVersion || version == durableHouseConsentVersion
     }
 }
 
@@ -789,7 +790,7 @@ public struct AgentReplayRecorder {
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
         schemaVersion = session.familyV1Enabled
-            ? AgentReplaySchema.familyVersion
+            ? AgentReplaySchema.durableHouseConsentVersion
             : (session.childhoodV2Enabled
                 ? AgentReplaySchema.verifiedSupervisionVersion
                 : checkpoint.schemaVersion)
@@ -1010,13 +1011,13 @@ public struct AgentReplayRecorder {
         }
         if case let .setFamilyV1Enabled(enabled, _) = operation,
            enabled,
-           schemaVersion < AgentReplaySchema.familyVersion {
+           schemaVersion < AgentReplaySchema.durableHouseConsentVersion {
             guard records.isEmpty else {
                 throw AgentReplayError.invalidJournal(
-                    "family V1 activation must be the first v25 replay operation"
+                    "family V1 activation must be the first v26 replay operation"
                 )
             }
-            schemaVersion = AgentReplaySchema.familyVersion
+            schemaVersion = AgentReplaySchema.durableHouseConsentVersion
         }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
@@ -1243,6 +1244,10 @@ public enum AgentSessionReplayer {
             || (manifest.schemaVersion == AgentReplaySchema.familyVersion
                 && checkpoint.schemaVersion
                     <= AgentCheckpointSchema.verifiedSupervisionVersion)
+            || (manifest.schemaVersion
+                    == AgentReplaySchema.durableHouseConsentVersion
+                && checkpoint.schemaVersion
+                    <= AgentCheckpointSchema.familyVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,

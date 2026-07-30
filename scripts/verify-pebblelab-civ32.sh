@@ -33,7 +33,7 @@ if [ "${1:-}" = "--dry-run" ]; then
     printf 'CIV-32 rendered unions/family/lineages/houses proof (dry run)\n'
     printf '  World: %s seed=%s\n' "$WORLD_NAME" "$WORLD_SEED"
     printf '  Process 1: physical proposal and acceptance, two lineages,\n'
-    printf '             one co-founded house, normal birth, schema 25 save.\n'
+    printf '             one co-founded house, normal birth, schema 26 save.\n'
     printf '  Process 2: exact restart, explicit unilateral separation,\n'
     printf '             preserved parentage, lineages, house, and cleanup.\n'
     printf '  The harness never writes an active union, house membership,\n'
@@ -65,7 +65,7 @@ ACTIVE_CAPTURE="$EVIDENCE_ROOT/civ32-active-union-founded-house.png"
 RESTART_CAPTURE="$EVIDENCE_ROOT/civ32-same-family-after-restart.png"
 ENDED_CAPTURE="$EVIDENCE_ROOT/civ32-ended-union-preserved-family.png"
 MATRIX="$EVIDENCE_ROOT/matrix.tsv"
-MANIFEST_COPY="$EVIDENCE_ROOT/civ32-schema25-manifest.json"
+MANIFEST_COPY="$EVIDENCE_ROOT/civ32-schema26-manifest.json"
 BUILD_CONFIGURATION=${PEBBLELAB_CIV32_BUILD_CONFIGURATION:-release}
 case "$BUILD_CONFIGURATION" in
     debug|release) ;;
@@ -135,7 +135,7 @@ WORLD_READY='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule
 PHASE1_COMMANDS="$WORLD_READY|/lab start;/tp 14 69 -21;/lab pause;/lab movement off;/lab follow off;/lab population on;/lab settlement on;/lab ecology on;/lab ecology scan;/lab survival on;/lab mortality on;/lab lifecycle on;/lab kinship on;/lab household on;/lab homeostasis on;/lab genetics on;/lab care on;/lab childhood on;/lab family on;/lab observer open;/lab observer global;/lab family propose agent_0 agent_1 civ32-proposal;/lab family status;/lab causality tail 12;/tp 18 71 -14 135 24|/lab family accept civ32-proposal agent_1 agent_0 civ32-accept;/lab family lineage agent_0 civ32-lineage-0;/lab family lineage agent_1 civ32-lineage-1;/lab family house-cofound agent_0 agent_1 civ32-house-0 civ32-house-1;/lab family status;/lab observer select agent_0;/lab observer status;/lab causality tail 20;/tp 18 71 -14 135 24|/lab reproduction on;/lab step;/lab step;/lab step;/lab step;/lab births status;/lab family status;/lab childhood status;/lab observer select agent_3;/lab observer status;/lab causality tail 20;/lab checkpoint save civ32-family;/lab checkpoint status;/lab status"
 PHASE2_COMMANDS='/tp 14 66 -21|/lab start;/lab pause;/lab movement off;/lab follow off;/lab checkpoint load civ32-family;/lab family status;/lab observer open;/lab observer select agent_3;/lab observer status;/lab genetics status;/lab childhood status;/lab causality tail 20;/tp 18 71 -14 135 24|/lab family separate union-00000001 agent_0 agent_1 civ32-separate;/lab family status;/lab observer select agent_3;/lab observer status;/lab observer select agent_0;/lab observer status;/lab causality tail 20;/tp 18 71 -14 135 24|/lab checkpoint save civ32-ended;/lab checkpoint status;/lab observer close;/lab checkpoint delete civ32-family;/lab checkpoint delete civ32-ended;/lab checkpoint status;/lab family status;/lab status'
 
-printf '\nCIV-32 process 1: physical consent, durable family, schema 25.\n'
+printf '\nCIV-32 process 1: physical consent, durable family, schema 26.\n'
 run_app "$PHASE1_TRACE" "$PHASE1_COMMANDS" \
     "-|$PROPOSAL_CAPTURE|$ACTIVE_CAPTURE|-" 1
 
@@ -146,7 +146,7 @@ require_trace "$PHASE1_TRACE" \
     'family physical interaction receipt=civ32-proposal kind=unionProposal actor=agent_0 counterparty=agent_1 tick=0 distance=[123] communication=1 .*worldMutation=none' \
     'proposal originates in bounded live physical communication'
 require_trace "$PHASE1_TRACE" \
-    'family enabled=1 schema=25 proposals=1 unions=0 activeUnions=0 lineages=0 houses=0 .*proposalState=civ32-proposal:agent_0>agent_1:pending .*duplicates=0 .*mutation=none worldMutation=none' \
+    'family enabled=1 schema=26 proposals=1 unions=0 activeUnions=0 lineages=0 houses=0 .*proposalState=civ32-proposal:agent_0>agent_1:pending .*duplicates=0 .*mutation=none worldMutation=none' \
     'proposal is durable but cannot activate itself'
 require_trace "$PHASE1_TRACE" \
     'family physical interaction receipt=civ32-accept kind=unionAcceptance actor=agent_1 counterparty=agent_0 tick=0 distance=[123] communication=1 .*worldMutation=none' \
@@ -158,7 +158,7 @@ require_trace "$PHASE1_TRACE" \
     'family physical interaction receipt=civ32-house-1 kind=houseCoFoundation actor=agent_1 counterparty=agent_0 tick=0 .*communication=1 .*worldMutation=none' \
     'second co-founder acts physically'
 require_trace "$PHASE1_TRACE" \
-    'family enabled=1 schema=25 proposals=1 unions=1 activeUnions=1 lineages=2 houses=1 activeHouseMemberships=2 .*unionState=union-00000001:agent_0\+agent_1:active:none .*lineageState=lineage-00000001:agent_0,lineage-00000002:agent_1 .*houseState=house-00000001:agent_0\+agent_1:active .*duplicates=0' \
+    'family enabled=1 schema=26 proposals=1 unions=1 activeUnions=1 lineages=2 houses=1 activeHouseMemberships=2 .*unionState=union-00000001:agent_0\+agent_1:active:none .*lineageState=lineage-00000001:agent_0,lineage-00000002:agent_1 .*houseState=house-00000001:agent_0\+agent_1:active .*duplicates=0' \
     'one union, two roots, and one social house are published'
 require_trace "$PHASE1_TRACE" \
     'observer status .*selected=agent_0 schema=5 .*owner=none claims=none .*unionPartner=agent_1 formerPartners=none .*lineages=lineage-00000001 .*houses=house-00000001 .*mutation=none tickStable=1 causalStable=1 digestStable=1' \
@@ -167,14 +167,14 @@ require_trace "$PHASE1_TRACE" \
     '^.*birth finalized tick=4 .*newborn=agent_3 .*parents=agent_0,agent_1 .*kinshipParents=agent_0,agent_1 .*guardian=agent_0 .*genetics=1 genotype=genotype-agent_3-v1-[0-9a-f]+ geneticParents=agent_0,agent_1 .*probes=agent_0,agent_1,agent_2,agent_3 worldMutation=none$' \
     'normal birth remains the sole parentage and genotype authority'
 require_trace "$PHASE1_TRACE" \
-    'family enabled=1 schema=25 proposals=1 unions=1 activeUnions=1 lineages=2 houses=1 activeHouseMemberships=3 .*membershipState=.*house-00000001>agent_3:sharedParentHouseAtBirth:active .*duplicates=0' \
+    'family enabled=1 schema=26 proposals=1 unions=1 activeUnions=1 lineages=2 houses=1 activeHouseMemberships=3 .*membershipState=.*house-00000001>agent_3:sharedParentHouseAtBirth:active .*duplicates=0' \
     'child joins exactly the shared active parental house'
 require_trace "$PHASE1_TRACE" \
     'observer status .*selected=agent_3 schema=5 .*geneticOrigin=inherited geneticContributors=agent_0,agent_1 .*guardian=agent_0 guardianshipBasis=canonicalParent .*unionPartner=none .*familyRelations=.*parent:agent_0:canonicalParentage.*parent:agent_1:canonicalParentage .*lineages=lineage-00000001,lineage-00000002 .*houseMemberships=house-00000001:sharedParentHouseAtBirth .*mutation=none tickStable=1 causalStable=1 digestStable=1' \
     'child Observer projection derives parents, lineages, and house basis'
 require_trace "$PHASE1_TRACE" \
     'checkpoint saved name=civ32-family .*tick=4 .*manifestIntegrity=v1:[0-9a-f]{64} .*restartSafe=1 .*mutation=none' \
-    'restart-safe schema 25 checkpoint'
+    'restart-safe schema 26 checkpoint'
 require_trace "$PHASE1_TRACE" \
     'summary .*agents=4 .*runtimeErrors=0 .*probesRemoved=4 ' \
     'first process terminates with exact probe cleanup'
@@ -191,13 +191,13 @@ DB_PATH="$SESSION_HOME/Library/Application Support/Pebble/pebble.db"
 PERSISTENCE_ROOT="$SESSION_HOME/Library/Application Support/Pebble/PebbleLabAgents"
 FAMILY_MANIFEST=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f \
     -path '*/checkpoints/civ32-family/manifest.json' -print -quit)
-[ -n "$FAMILY_MANIFEST" ] || fail "schema 25 family manifest missing"
-/usr/bin/grep -q '"schemaVersion":25' "$FAMILY_MANIFEST" \
-    || fail "family checkpoint manifest is not schema 25"
+[ -n "$FAMILY_MANIFEST" ] || fail "schema 26 family manifest missing"
+/usr/bin/grep -q '"schemaVersion":26' "$FAMILY_MANIFEST" \
+    || fail "family checkpoint manifest is not schema 26"
 /usr/bin/grep -Eq '"manifestIntegrityVersion":1' "$FAMILY_MANIFEST" \
-    || fail "schema 25 manifest integrity version missing"
+    || fail "schema 26 manifest integrity version missing"
 /usr/bin/grep -Eq '"manifestIntegrityDigest":"[0-9a-f]{64}"' "$FAMILY_MANIFEST" \
-    || fail "schema 25 manifest integrity digest missing"
+    || fail "schema 26 manifest integrity digest missing"
 /bin/cp "$FAMILY_MANIFEST" "$MANIFEST_COPY"
 
 PHASE1_SIM=$(/usr/bin/sed -n \
@@ -226,9 +226,9 @@ run_app "$PHASE2_TRACE" "$PHASE2_COMMANDS" \
 
 require_trace "$PHASE2_TRACE" \
     "checkpoint loaded name=civ32-family .*tick=4 simulation=$PHASE1_SIM digest=$PHASE1_DIGEST .*restartSafe=1 manifestIntegrity=verified:v1 probes=4 paused=1 .*probeReconciliation=restored_verified:agent_3 .*worldMutation=none" \
-    'same schema 25 child and physical probe restored in process 2'
+    'same schema 26 child and physical probe restored in process 2'
 require_trace "$PHASE2_TRACE" \
-    'family enabled=1 schema=25 proposals=1 unions=1 activeUnions=1 lineages=2 houses=1 activeHouseMemberships=3 .*unionState=union-00000001:agent_0\+agent_1:active:none .*membershipState=.*house-00000001>agent_3:sharedParentHouseAtBirth:active .*duplicates=0' \
+    'family enabled=1 schema=26 proposals=1 unions=1 activeUnions=1 lineages=2 houses=1 activeHouseMemberships=3 .*unionState=union-00000001:agent_0\+agent_1:active:none .*membershipState=.*house-00000001>agent_3:sharedParentHouseAtBirth:active .*duplicates=0' \
     'union, lineages, house, and memberships are exact after restart'
 require_trace "$PHASE2_TRACE" \
     "observer status .*selected=agent_3 schema=5 world=$PHASE1_WORLD .*simulation=$PHASE1_SIM tick=4 .*genotype=$CHILD_GENOTYPE geneticOrigin=inherited geneticContributors=agent_0,agent_1 .*guardian=agent_0 guardianshipBasis=canonicalParent .*familyRelations=.*parent:agent_0:canonicalParentage.*parent:agent_1:canonicalParentage .*lineages=lineage-00000001,lineage-00000002 .*houseMemberships=house-00000001:sharedParentHouseAtBirth .*mutation=none tickStable=1 causalStable=1 digestStable=1" \
@@ -237,7 +237,7 @@ require_trace "$PHASE2_TRACE" \
     'family physical interaction receipt=civ32-separate kind=unionSeparation actor=agent_0 counterparty=agent_1 tick=4 .*communication=1 .*worldMutation=none' \
     'separation uses a fresh physical interaction receipt'
 require_trace "$PHASE2_TRACE" \
-    'family enabled=1 schema=25 proposals=1 unions=1 activeUnions=0 lineages=2 houses=1 activeHouseMemberships=3 .*unionState=union-00000001:agent_0\+agent_1:ended:unilateralSeparation .*membershipState=.*house-00000001>agent_3:sharedParentHouseAtBirth:active .*duplicates=0' \
+    'family enabled=1 schema=26 proposals=1 unions=1 activeUnions=0 lineages=2 houses=1 activeHouseMemberships=3 .*unionState=union-00000001:agent_0\+agent_1:ended:unilateralSeparation .*membershipState=.*house-00000001>agent_3:sharedParentHouseAtBirth:active .*duplicates=0' \
     'separation ends exactly one union and preserves house membership'
 require_trace "$PHASE2_TRACE" \
     'observer status .*selected=agent_0 schema=5 .*owner=none claims=none .*unionPartner=none formerPartners=agent_1 .*familyRelations=.*formerUnionPartner:agent_1:endedUnion .*lineages=lineage-00000001 .*houses=house-00000001 .*mutation=none tickStable=1 causalStable=1 digestStable=1' \
@@ -298,7 +298,7 @@ fi
     printf 'familyRelations\tparents+lineages\tparents+lineages\tDERIVED\n'
     printf 'separation\tnone\tciv32-separate/unilateralSeparation\tEXPLICIT\n'
     printf 'materialRights\tnone\tnone\tUNCHANGED\n'
-    printf 'checkpointSchema\t25\t25\tMATCH\n'
+    printf 'checkpointSchema\t26\t26\tMATCH\n'
     printf 'manifestIntegrity\t%s\tverified:v1\tMATCH\n' "$MANIFEST_DIGEST"
     printf 'unionActivationCount\t1\t1\tNO_DUPLICATION\n'
     printf 'houseFoundationCount\t1\t1\tNO_DUPLICATION\n'
