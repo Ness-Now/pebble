@@ -103,6 +103,38 @@ extension PebbleAgentController {
             "profession=\(individual.profession.primaryDomain ?? individual.profession.status)"
                 + " commitments=\(individual.profession.activeCommitmentCount)",
         ]
+        if let family = individual.family {
+            lines += [
+                "[UNIONS / FAMILY — DERIVED, READ ONLY]",
+                "activePartner=\(family.activeUnionPartnerID?.rawValue ?? "none")"
+                    + " former="
+                    + (family.formerUnionPartnerIDs.isEmpty
+                        ? "none"
+                        : family.formerUnionPartnerIDs.map(\.rawValue)
+                            .joined(separator: ",")),
+                "lineages="
+                    + (family.lineageIDs.isEmpty
+                        ? "none"
+                        : family.lineageIDs.map(\.rawValue).joined(separator: ",")),
+                "houses="
+                    + (family.houseMemberships.isEmpty
+                        ? "none"
+                        : family.houseMemberships.map {
+                            "\($0.houseID.rawValue):\($0.basis.rawValue)"
+                        }.joined(separator: ",")),
+            ]
+            lines += family.relations.prefix(12).map {
+                "  \($0.kind.rawValue):\($0.relatedPersonID.rawValue)"
+                    + " source=\($0.source.rawValue)"
+                    + " causal=\($0.sourceEventID.rawValue)"
+            }
+            if family.relationsTruncated {
+                lines.append("[TRUNCATED] bounded family relation projection")
+            }
+            lines.append(
+                "[SEPARATE AUTHORITIES] household, guardian, caregiver and ownership unchanged"
+            )
+        }
         if let childhood = individual.childhood {
             lines += [
                 "[CHILDHOOD / GUARDIANSHIP — READ ONLY]",

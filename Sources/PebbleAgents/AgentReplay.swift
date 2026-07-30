@@ -25,6 +25,7 @@ public enum AgentReplaySchema {
     public static let geneticsVersion = 22
     public static let childhoodVersion = 23
     public static let verifiedSupervisionVersion = 24
+    public static let familyVersion = 25
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -39,6 +40,7 @@ public enum AgentReplaySchema {
             || version == materialRightsVersion || version == persistenceReconciliationVersion
             || version == homeostasisVersion || version == geneticsVersion
             || version == childhoodVersion || version == verifiedSupervisionVersion
+            || version == familyVersion
     }
 }
 
@@ -145,6 +147,13 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case childhoodFeature
     case dependentCareDelegation
     case guardianshipReassignment
+    case familyFeature
+    case unionProposal
+    case unionAcceptance
+    case unionTermination
+    case lineageFoundation
+    case houseFoundation
+    case houseMembership
 }
 
 public enum AgentReplayOperation: Codable {
@@ -312,6 +321,30 @@ public enum AgentReplayOperation: Codable {
     )
     case delegateDependentCare(dependentID: AgentID, caregiverID: AgentID)
     case reassignGuardian(dependentID: AgentID, guardianID: AgentID)
+    case setFamilyV1Enabled(
+        Bool, configuration: AgentFamilyConfiguration
+    )
+    case proposeUnion(AgentFamilyInteractionReceipt)
+    case acceptUnion(
+        proposalID: AgentUnionProposalID,
+        receipt: AgentFamilyInteractionReceipt
+    )
+    case endUnion(
+        unionID: AgentUnionID,
+        reason: AgentUnionTerminationReason,
+        receipt: AgentFamilyInteractionReceipt
+    )
+    case foundLineage(rootPersonID: AgentID, actorID: AgentID, operationID: String)
+    case foundHouse(founderID: AgentID, operationID: String)
+    case coFoundHouse(
+        founderIDs: [AgentID], receipts: [AgentFamilyInteractionReceipt]
+    )
+    case joinHouse(
+        houseID: AgentHouseID,
+        request: AgentFamilyInteractionReceipt,
+        acceptance: AgentFamilyInteractionReceipt
+    )
+    case leaveHouse(houseID: AgentHouseID, agentID: AgentID, operationID: String)
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -411,6 +444,13 @@ public enum AgentReplayOperation: Codable {
         case .setChildhoodV2Enabled: return .childhoodFeature
         case .delegateDependentCare: return .dependentCareDelegation
         case .reassignGuardian: return .guardianshipReassignment
+        case .setFamilyV1Enabled: return .familyFeature
+        case .proposeUnion: return .unionProposal
+        case .acceptUnion: return .unionAcceptance
+        case .endUnion: return .unionTermination
+        case .foundLineage: return .lineageFoundation
+        case .foundHouse, .coFoundHouse: return .houseFoundation
+        case .joinHouse, .leaveHouse: return .houseMembership
         }
     }
 
@@ -428,6 +468,16 @@ public enum AgentReplayOperation: Codable {
         case let .applySocialVerification(observation): raw = "social-verification:\(observation.beliefID.rawValue)"
         case let .applyBirthSiteObservation(observation):
             raw = "birth-site:\(observation.planID.rawValue):\(observation.observedTick)"
+        case let .proposeUnion(receipt): raw = receipt.receiptID
+        case let .acceptUnion(_, receipt): raw = receipt.receiptID
+        case let .endUnion(_, _, receipt): raw = receipt.receiptID
+        case let .foundLineage(_, _, operationID): raw = operationID
+        case let .foundHouse(_, operationID): raw = operationID
+        case let .coFoundHouse(_, receipts):
+            raw = receipts.map(\.receiptID).sorted().joined(separator: "+")
+        case let .joinHouse(_, request, acceptance):
+            raw = [request.receiptID, acceptance.receiptID].sorted().joined(separator: "+")
+        case let .leaveHouse(_, _, operationID): raw = operationID
         case let .provideDependentNourishment(intent): raw = intent.provisionID
         case let .startApprenticeship(request):
             raw = "teaching-start:\(request.requestID)"
@@ -738,9 +788,11 @@ public struct AgentReplayRecorder {
         baseCheckpointDigest = checkpoint.semanticDigest
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
-        schemaVersion = session.childhoodV2Enabled
-            ? AgentReplaySchema.verifiedSupervisionVersion
-            : checkpoint.schemaVersion
+        schemaVersion = session.familyV1Enabled
+            ? AgentReplaySchema.familyVersion
+            : (session.childhoodV2Enabled
+                ? AgentReplaySchema.verifiedSupervisionVersion
+                : checkpoint.schemaVersion)
         records = []
         droppedRecordCount = 0
         nonReplayableReason = nil
@@ -955,6 +1007,16 @@ public struct AgentReplayRecorder {
                 )
             }
             schemaVersion = AgentReplaySchema.verifiedSupervisionVersion
+        }
+        if case let .setFamilyV1Enabled(enabled, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.familyVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "family V1 activation must be the first v25 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.familyVersion
         }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
@@ -1178,6 +1240,9 @@ public enum AgentSessionReplayer {
                     == AgentReplaySchema.verifiedSupervisionVersion
                 && checkpoint.schemaVersion
                     <= AgentCheckpointSchema.childhoodVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.familyVersion
+                && checkpoint.schemaVersion
+                    <= AgentCheckpointSchema.verifiedSupervisionVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -1511,6 +1576,35 @@ extension AgentSimulationSession {
         case let .reassignGuardian(dependentID, guardianID):
             try candidate.reassignGuardian(
                 dependentID: dependentID, to: guardianID
+            )
+        case let .setFamilyV1Enabled(enabled, configuration):
+            try candidate.setFamilyV1Enabled(enabled, configuration: configuration)
+        case let .proposeUnion(receipt):
+            _ = try candidate.proposeUnion(receipt)
+        case let .acceptUnion(proposalID, receipt):
+            _ = try candidate.acceptUnion(proposalID: proposalID, receipt: receipt)
+        case let .endUnion(unionID, reason, receipt):
+            try candidate.endUnion(unionID: unionID, reason: reason, receipt: receipt)
+        case let .foundLineage(rootPersonID, actorID, operationID):
+            _ = try candidate.foundLineage(
+                rootPersonID: rootPersonID, actorID: actorID,
+                operationID: operationID
+            )
+        case let .foundHouse(founderID, operationID):
+            _ = try candidate.foundHouse(
+                founderID: founderID, operationID: operationID
+            )
+        case let .coFoundHouse(founderIDs, receipts):
+            _ = try candidate.coFoundHouse(
+                founderIDs: founderIDs, receipts: receipts
+            )
+        case let .joinHouse(houseID, request, acceptance):
+            try candidate.joinHouse(
+                houseID, request: request, acceptance: acceptance
+            )
+        case let .leaveHouse(houseID, agentID, operationID):
+            try candidate.leaveHouse(
+                houseID, agentID: agentID, operationID: operationID
             )
         }
         self = candidate

@@ -93,6 +93,7 @@ public enum AgentSessionError: Error, Equatable {
     case persistenceReconciliation(AgentPersistenceReconciliationError)
     case homeostasis(AgentHomeostasisError)
     case genetics(AgentGeneticsError)
+    case family(AgentFamilyError)
 }
 
 public struct AgentSessionConfiguration: Codable {

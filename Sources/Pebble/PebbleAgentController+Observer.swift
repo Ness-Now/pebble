@@ -169,6 +169,7 @@ extension PebbleAgentController {
         let physiology = selected.physiology
         let genetics = selected.genetics
         let childhood = selected.childhood
+        let family = selected.family
         let view: String
         switch observerUIState.view {
         case .individual: view = "individual"
@@ -183,6 +184,20 @@ extension PebbleAgentController {
             trait.traitID.rawValue + ":"
                 + String(trait.expressedModifierBasisPoints)
         }.joined(separator: ",") ?? "unavailable"
+        let familyRelationText = family?.relations.map {
+            "\($0.kind.rawValue):\($0.relatedPersonID.rawValue)"
+                + ":\($0.source.rawValue)"
+        }.joined(separator: ",") ?? "none"
+        let familyHouseText = family?.houseMemberships.map {
+            "\($0.houseID.rawValue):\($0.basis.rawValue)"
+        }.joined(separator: ",") ?? "none"
+        let formerPartnerText = family?.formerUnionPartnerIDs.map(\.rawValue)
+            .joined(separator: ",") ?? "none"
+        let familyLineageText = family?.lineageIDs.map(\.rawValue)
+            .joined(separator: ",") ?? "none"
+        let familyHouseIDText = family?.houseMemberships.map {
+            $0.houseID.rawValue
+        }.joined(separator: ",") ?? "none"
         let message = [
             "observer status",
             "open=\(observerUIState.isOpen ? 1 : 0)",
@@ -226,6 +241,12 @@ extension PebbleAgentController {
             "autonomyReadiness=\(childhood?.autonomyReadinessBasisPoints ?? -1)",
             "socialDimensions=\(childhood?.socialDevelopment.count ?? 0)",
             "childhoodAtRisk=\(childhood?.atRisk == true ? 1 : 0)",
+            "unionPartner=\(family?.activeUnionPartnerID?.rawValue ?? "none")",
+            "formerPartners=\(formerPartnerText.isEmpty ? "none" : formerPartnerText)",
+            "familyRelations=\(familyRelationText.isEmpty ? "none" : familyRelationText)",
+            "lineages=\(familyLineageText.isEmpty ? "none" : familyLineageText)",
+            "houses=\(familyHouseIDText.isEmpty ? "none" : familyHouseIDText)",
+            "houseMemberships=\(familyHouseText.isEmpty ? "none" : familyHouseText)",
             "deaths=\(snapshot.recentDeaths.count)",
             "truncated=\(snapshot.truncation.isTruncated ? 1 : 0)",
             "mutation=none",

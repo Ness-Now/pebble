@@ -519,11 +519,15 @@ extension AgentSimulationSession {
         let terminalWorkEventCount = lethal.reduce(0) { count, candidate in
             count + activeWorkCommitments(for: candidate.agentID).count
         }
+        let familyEventCount = familyDeathEventCount(
+            agentIDs: lethal.map(\.agentID)
+        )
         try prevalidateCausalAppend(
             count: lethal.count * (lifecycleState == nil ? 7 : 9)
                 + householdEventCount
                 + (dependentCareState?.configuration.maximumCareTransitionsPerTick ?? 0)
                 + terminalWorkEventCount
+                + familyEventCount
         )
         let preDeathIDs = Set(statesById.values.map(\.agentID))
         guard lethal.map(\.agentID) == lethal.map(\.agentID).sorted(),
@@ -776,6 +780,11 @@ extension AgentSimulationSession {
                 causeEventID: lethalEvent.eventID,
                 at: mortalityTick
             )
+            let familyEventID = try applyFamilyDeath(
+                agentID: item.agentID,
+                causeEventID: lethalEvent.eventID,
+                at: mortalityTick
+            )
             try applyLifecycleDeath(
                 agentID: item.agentID,
                 causeEventID: lethalEvent.eventID,
@@ -802,6 +811,7 @@ extension AgentSimulationSession {
                     commitmentsEvent.eventID,
                     migrationFailureEvent?.eventID,
                     careEventID,
+                    familyEventID,
                     householdEventID,
                 ].compactMap { $0 }.sorted(),
                 payload: mortalityDeathPayload(

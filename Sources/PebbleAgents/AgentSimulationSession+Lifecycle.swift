@@ -472,6 +472,7 @@ extension AgentSimulationSession {
             parentIDs: plan.progenitorIDs,
             preferredHouseholdID: careBirth?.householdID
         )
+        let familyEventCount = familyBirthEventCount(parentIDs: plan.progenitorIDs)
         let ordinal = registry.nextPopulationOrdinal
         guard ordinal.rawValue < Int.max,
               let nextOrdinal = AgentPopulationOrdinal(rawValue: ordinal.rawValue + 1),
@@ -488,6 +489,7 @@ extension AgentSimulationSession {
                 + (careBirth == nil ? 0 : 2)
                 + (childhoodV2Enabled ? 2 : 0)
                 + (geneticsEnabled ? 1 : 0)
+                + familyEventCount
         )
         let site = try requiredLifecycleEvent(
             kind: .birthSiteValidated,
@@ -537,11 +539,17 @@ extension AgentSimulationSession {
             causeEventID: kinshipEventID ?? born.eventID,
             preferredHouseholdID: careBirth?.householdID
         )
+        let familyEventID = try registerFamilyBirth(
+            childID: newbornID,
+            parentIDs: plan.progenitorIDs,
+            causeEventID: kinshipEventID ?? born.eventID
+        )
         let careEventID = try careBirth.flatMap { careBirth in
             try registerDependentCareBirth(
                 childID: newbornID, caregiverID: careBirth.caregiverID,
                 householdID: careBirth.householdID,
-                causeEventID: householdEventID ?? kinshipEventID ?? born.eventID
+                causeEventID: familyEventID
+                    ?? householdEventID ?? kinshipEventID ?? born.eventID
             )
         }
         let finalized = try requiredLifecycleEvent(
@@ -682,6 +690,7 @@ extension AgentSimulationSession {
         try validateHouseholdCrossDomainIfEnabled()
         try validateDependentCareCrossDomainIfEnabled()
         try validateGeneticsCrossDomainIfEnabled()
+        try validateFamilyCrossDomainIfEnabled()
         return record
     }
 

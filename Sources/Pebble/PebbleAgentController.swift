@@ -56,6 +56,7 @@ final class PebbleAgentController {
     let naturalResourceAdapter = PebbleAgentNaturalResourceAdapter()
     let constructionSiteAdapter = PebbleAgentConstructionSiteAdapter()
     let physicalSignalAdapter = PebbleAgentPhysicalSignalAdapter()
+    let familyInteractionAdapter = PebbleAgentFamilyInteractionAdapter()
     let teachingObservationAdapter = PebbleAgentTeachingObservationAdapter()
     let ecologicalObservationSensor = PebbleAgentEcologicalObservationSensor()
     let physicalActionGateway = PebbleAgentPhysicalActionGateway()
@@ -164,6 +165,9 @@ final class PebbleAgentController {
     }
     var childhoodFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_CHILDHOOD"] == "1"
+    }
+    var familyFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_FAMILY"] == "1"
     }
     var skillFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_SKILLS"] == "1"
@@ -298,5 +302,6 @@ final class PebbleAgentController {
         case physicalFoodBoundary(String)
         case bootstrapPlacementBoundary(String)
         case bootstrapRollbackBoundary(String)
+        case familyBoundary(String)
     }
 }

@@ -26,6 +26,7 @@ public enum AgentCheckpointSchema {
     public static let geneticsVersion = 22
     public static let childhoodVersion = 23
     public static let verifiedSupervisionVersion = 24
+    public static let familyVersion = 25
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -40,6 +41,7 @@ public enum AgentCheckpointSchema {
             || version == materialRightsVersion || version == persistenceReconciliationVersion
             || version == homeostasisVersion || version == geneticsVersion
             || version == childhoodVersion || version == verifiedSupervisionVersion
+            || version == familyVersion
     }
 }
 
@@ -235,9 +237,12 @@ public struct AgentSessionDurableState: Codable {
     public let persistenceReconciliationState: AgentPersistenceReconciliationState?
     public let homeostasisState: AgentHomeostasisState?
     public let geneticsState: AgentGeneticsState?
+    public let familyState: AgentFamilyState?
 
     init(session: AgentSimulationSession) {
-        if let override = session.durableSchemaVersionOverride,
+        if session.familyState != nil {
+            schemaVersion = AgentCheckpointSchema.familyVersion
+        } else if let override = session.durableSchemaVersionOverride,
            session.dependentCareState?.childhoodV2 != nil {
             schemaVersion = override
         } else if session.dependentCareState?.childhoodV2 != nil {
@@ -381,6 +386,7 @@ public struct AgentSessionDurableState: Codable {
         persistenceReconciliationState = session.persistenceReconciliationState
         homeostasisState = session.homeostasisState
         geneticsState = session.geneticsState
+        familyState = session.familyState
     }
 }
 
@@ -979,6 +985,7 @@ extension AgentSimulationSession {
         persistenceReconciliationState = state.persistenceReconciliationState
         homeostasisState = state.homeostasisState
         geneticsState = state.geneticsState
+        familyState = state.familyState
         latestAutonomousTeachingReview = nil
         durableSchemaVersionOverride =
             state.schemaVersion == AgentCheckpointSchema.childhoodVersion
@@ -1004,12 +1011,19 @@ extension AgentSimulationSession {
         guard AgentCheckpointSchema.supports(state.schemaVersion) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
-        if state.schemaVersion == AgentCheckpointSchema.verifiedSupervisionVersion {
+        guard state.schemaVersion == AgentCheckpointSchema.familyVersion
+                || state.familyState == nil else {
+            throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
+        }
+        if state.schemaVersion == AgentCheckpointSchema.verifiedSupervisionVersion
+            || state.schemaVersion == AgentCheckpointSchema.familyVersion {
             guard state.populationRegistry != nil,
                   state.lifecycleState != nil,
                   state.kinshipState != nil,
                   state.householdState != nil,
-                  state.dependentCareState?.childhoodV2 != nil else {
+                  state.dependentCareState?.childhoodV2 != nil,
+                  state.schemaVersion != AgentCheckpointSchema.familyVersion
+                    || state.familyState != nil else {
                 throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
             }
         } else {
@@ -1281,7 +1295,8 @@ extension AgentSimulationSession {
                         || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                         || state.schemaVersion == AgentCheckpointSchema.childhoodVersion
                         || state.schemaVersion
-                            == AgentCheckpointSchema.verifiedSupervisionVersion)
+                            == AgentCheckpointSchema.verifiedSupervisionVersion
+                        || state.schemaVersion == AgentCheckpointSchema.familyVersion)
                     && (state.mortalityState?.totalDeathCount ?? 0) > 0) else {
             throw AgentCheckpointError.invalidAgent("empty")
         }
@@ -1417,6 +1432,23 @@ extension AgentSimulationSession {
                 causalLatestSequence: state.causalLedger.latestSequence,
                 causalDroppedEventCount:
                     state.causalLedger.droppedEventCount,
+                causalEvents: state.causalLedger.events
+            )
+        }
+        if let family = state.familyState {
+            guard let population = state.populationRegistry,
+                  let lifecycle = state.lifecycleState,
+                  let kinship = state.kinshipState,
+                  let households = state.householdState else {
+                throw AgentCheckpointError.invalidBound("family dependencies")
+            }
+            try validateFamilyState(
+                family, population: population, lifecycle: lifecycle,
+                kinship: kinship, households: households,
+                agents: state.agents, mortality: state.mortalityState,
+                clock: state.clock,
+                causalLatestSequence: state.causalLedger.latestSequence,
+                causalDroppedEventCount: state.causalLedger.droppedEventCount,
                 causalEvents: state.causalLedger.events
             )
         }
@@ -1916,6 +1948,11 @@ extension AgentSimulationSession {
                     $0.kind == .migrationFailed && $0.actorID == record.agentID
                         && $0.sequence > commitments.sequence && $0.sequence < exit.sequence
                 }
+                let careExit = exit.causes.compactMap { causeID in
+                    event(causeID)
+                }.filter {
+                    $0.origin == .dependentCareTransition
+                }.map(\.eventID).max()
                 let householdPeriod = state.householdState?.membershipPeriods.first {
                     $0.agentID == record.agentID
                         && $0.leftTick == record.deathTick
@@ -1931,6 +1968,21 @@ extension AgentSimulationSession {
                         && household.lastHouseholdEventID.sequence < exit.sequence
                         ? household.lastHouseholdEventID : householdPeriod?.leftEventID
                 } ?? householdPeriod?.leftEventID
+                let familyExit = ([
+                    state.familyState?.unions.compactMap { union in
+                        union.terminationReason == .partnerDeath
+                            && union.partnerIDs.contains(record.agentID)
+                            && union.terminationTick == record.deathTick
+                            ? union.terminationEventID : nil
+                    }.max(),
+                    state.familyState?.houseMembershipPeriods.compactMap {
+                        period in
+                        period.agentID == record.agentID
+                            && period.endReason == .memberDeath
+                            && period.leftTick == record.deathTick
+                            ? period.leftEventID : nil
+                    }.max(),
+                ].compactMap { $0 }).max()
                 if let terminalID = record.terminalPhysiologyEventID {
                     guard lethal.causes.contains(terminalID),
                           terminalPhysiology.map({
@@ -2022,6 +2074,8 @@ extension AgentSimulationSession {
                           resources.eventID,
                           commitments.eventID,
                           migrationFailure?.eventID,
+                          careExit,
+                          familyExit,
                           householdExit,
                       ].compactMap({ $0 }).sorted(),
                       finalized.causes == [exit.eventID],

@@ -204,6 +204,54 @@ public struct AgentObserverHousehold: Codable, Equatable, Sendable {
     public let memberIDs: [AgentID]
 }
 
+public struct AgentObserverFamilyIndividual: Codable, Equatable, Sendable {
+    public let activeUnionPartnerID: AgentID?
+    public let formerUnionPartnerIDs: [AgentID]
+    public let relations: [AgentFamilyRelation]
+    public let relationsTruncated: Bool
+    public let lineageIDs: [AgentLineageID]
+    public let houseMemberships: [AgentHouseMembershipPeriod]
+}
+
+public struct AgentObserverUnion: Codable, Equatable, Sendable {
+    public let unionID: AgentUnionID
+    public let partnerIDs: [AgentID]
+    public let status: AgentUnionStatus
+    public let proposalTick: Int
+    public let acceptanceTick: Int
+    public let activationTick: Int
+    public let terminationTick: Int?
+    public let terminationReason: AgentUnionTerminationReason?
+    public let sourceEventID: AgentCausalEventID
+    public let coResident: Bool
+}
+
+public struct AgentObserverLineage: Codable, Equatable, Sendable {
+    public let lineageID: AgentLineageID
+    public let rootPersonID: AgentID
+    public let foundationTick: Int
+    public let descendantCount: Int
+    public let memberIDs: [AgentID]
+    public let maximumDepthApplied: Int
+    public let truncated: Bool
+}
+
+public struct AgentObserverHouse: Codable, Equatable, Sendable {
+    public let houseID: AgentHouseID
+    public let founderIDs: [AgentID]
+    public let status: AgentHouseStatus
+    public let foundationTick: Int
+    public let activeMemberships: [AgentHouseMembershipPeriod]
+    public let livingMemberCount: Int
+    public let householdIDs: [AgentHouseholdID]
+}
+
+public struct AgentObserverFamilyAuthority: Codable, Equatable, Sendable {
+    public let unions: [AgentObserverUnion]
+    public let lineages: [AgentObserverLineage]
+    public let houses: [AgentObserverHouse]
+}
+
 public enum AgentObserverRelationKind: String, Codable, CaseIterable, Sendable {
     case household
     case parent
@@ -419,6 +467,7 @@ public struct AgentObserverIndividual: Codable, Equatable, Sendable {
     public let physiology: AgentObserverPhysiology?
     public let genetics: AgentObserverGenetics?
     public let childhood: AgentObserverChildhood?
+    public let family: AgentObserverFamilyIndividual?
 }
 
 public struct AgentObserverSnapshot: Codable, Equatable, Sendable {
@@ -427,6 +476,7 @@ public struct AgentObserverSnapshot: Codable, Equatable, Sendable {
     /// Newest event first. Sequence remains the stable total order.
     public let globalChronicle: [AgentObserverChronicleEvent]
     public let recentDeaths: [AgentObserverDeath]
+    public let familyAuthority: AgentObserverFamilyAuthority?
     public let truncation: AgentObserverTruncation
 }
 
@@ -524,6 +574,7 @@ extension AgentSimulationSession {
         let genetics = geneticsSnapshot()
         let care = dependentCareSnapshot()
         let childhood = childhoodSnapshot()
+        let family = familySnapshot()
         let textLimit = configuration.maximumPresentationTextLength
 
         let materialTransitionByEventID = Dictionary(
@@ -654,7 +705,8 @@ extension AgentSimulationSession {
                 genetics: observerGenetics(agentID, snapshot: genetics),
                 childhood: observerChildhood(
                     agentID, care: care, childhood: childhood
-                )
+                ),
+                family: observerFamilyIndividual(agentID, snapshot: family)
             )
         }
         let retainedDeaths = Array(
@@ -692,7 +744,9 @@ extension AgentSimulationSession {
             mortality.digest,
             genetics.digest,
             childhood.digest,
+            family.digest,
         ].joined(separator: "|")
+        let familyAuthority = observerFamilyAuthority(family)
         let truncation = AgentObserverTruncation(
             agentsOmitted: max(0, sortedAgents.count - visibleAgents.count),
             relationsOmitted: relationsOmitted,
@@ -708,7 +762,9 @@ extension AgentSimulationSession {
         return AgentObserverSnapshot(
             header: AgentObserverSnapshotHeader(
                 schemaVersion: childhood.enabled
-                    ? 4 : (genetics.enabled ? 3 : (homeostasis.enabled ? 2 : 1)),
+                    ? (family.enabled ? 5 : 4)
+                    : (family.enabled ? 5
+                        : (genetics.enabled ? 3 : (homeostasis.enabled ? 2 : 1))),
                 sessionIdentity: simulationID,
                 worldBinding: worldBinding,
                 asOfTick: tick,
@@ -718,7 +774,95 @@ extension AgentSimulationSession {
             individuals: individuals,
             globalChronicle: chronicle,
             recentDeaths: recentDeaths,
+            familyAuthority: familyAuthority,
             truncation: truncation
+        )
+    }
+}
+
+private extension AgentSimulationSession {
+    func observerFamilyIndividual(
+        _ agentID: AgentID,
+        snapshot: AgentFamilySnapshot
+    ) -> AgentObserverFamilyIndividual? {
+        guard snapshot.enabled else {
+            return nil
+        }
+        let relationProjection = try? familyRelationProjection(of: agentID)
+        let relations = relationProjection?.relations ?? []
+        let activePartner = snapshot.unions.first {
+            $0.status == .active && $0.partnerIDs.contains(agentID)
+        }?.partnerIDs.first { $0 != agentID }
+        let former = snapshot.unions.compactMap {
+            $0.status == .ended && $0.partnerIDs.contains(agentID)
+                ? $0.partnerIDs.first(where: { $0 != agentID }) : nil
+        }.sorted()
+        let lineageIDs = ((try? lineages(containing: agentID)) ?? [])
+            .map(\.lineage.lineageID).sorted()
+        let memberships = snapshot.houseMembershipPeriods.filter {
+            $0.agentID == agentID && $0.leftTick == nil
+        }.sorted {
+            if $0.houseID != $1.houseID { return $0.houseID < $1.houseID }
+            return $0.joinedEventID < $1.joinedEventID
+        }
+        return AgentObserverFamilyIndividual(
+            activeUnionPartnerID: activePartner,
+            formerUnionPartnerIDs: former,
+            relations: relations,
+            relationsTruncated: relationProjection?.truncated ?? false,
+            lineageIDs: lineageIDs,
+            houseMemberships: memberships
+        )
+    }
+
+    func observerFamilyAuthority(
+        _ snapshot: AgentFamilySnapshot
+    ) -> AgentObserverFamilyAuthority? {
+        guard snapshot.enabled else { return nil }
+        let unions = snapshot.unions.map { union in
+            let memberships = householdSnapshot().currentMemberships
+            let left = memberships.first { $0.agentID == union.partnerIDs[0] }
+            let right = memberships.first { $0.agentID == union.partnerIDs[1] }
+            return AgentObserverUnion(
+                unionID: union.unionID, partnerIDs: union.partnerIDs,
+                status: union.status, proposalTick: union.proposalTick,
+                acceptanceTick: union.acceptanceTick,
+                activationTick: union.activationTick,
+                terminationTick: union.terminationTick,
+                terminationReason: union.terminationReason,
+                sourceEventID: union.terminationEventID ?? union.activationEventID,
+                coResident: left?.householdID == right?.householdID
+                    && left != nil && right != nil
+            )
+        }
+        let lineages = snapshot.lineages.compactMap { lineage in
+            try? lineageProjection(lineage.lineageID)
+        }.map {
+            AgentObserverLineage(
+                lineageID: $0.lineage.lineageID,
+                rootPersonID: $0.lineage.rootPersonID,
+                foundationTick: $0.lineage.foundationTick,
+                descendantCount: $0.totalDescendantCount,
+                memberIDs: $0.memberIDs,
+                maximumDepthApplied: $0.maximumDepthApplied,
+                truncated: $0.truncated
+            )
+        }
+        let houses = snapshot.houses.compactMap { house in
+            try? houseProjection(house.houseID)
+        }.map {
+            AgentObserverHouse(
+                houseID: $0.house.houseID,
+                founderIDs: $0.house.founderIDs,
+                status: $0.house.status,
+                foundationTick: $0.house.foundationTick,
+                activeMemberships: $0.activeMemberships,
+                livingMemberCount: $0.livingMemberCount,
+                householdIDs: $0.householdIDs
+            )
+        }
+        return AgentObserverFamilyAuthority(
+            unions: unions, lineages: lineages, houses: houses
         )
     }
 }
