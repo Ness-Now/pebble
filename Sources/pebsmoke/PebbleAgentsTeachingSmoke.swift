@@ -289,6 +289,7 @@ private func teachingJuvenileSession() -> (AgentSimulationSession, AgentID) {
     try! session.setHouseholdsEnabled(true)
     session.setSurvivalEnabled(true)
     try! session.setDependentCareEnabled(true)
+    try! session.setChildhoodV2Enabled(true)
     try! session.setSkillsEnabled(true)
     var recorder: AgentReplayRecorder? = nil
     let teacherID = AgentID(rawValue: "agent_2")!
@@ -869,15 +870,25 @@ func runPebbleAgentsTeachingSmoke() {
     let juvenileUnits = juvenileSession.practiceUnits(
         agentID: child, domain: .materialHandling
     )
+    let teachingExposureBefore = juvenileSession.socialDevelopmentProfile(
+        for: child
+    )?.values.first {
+        $0.dimension == .teachingExposure
+    }?.basisPoints ?? 0
     _ = try! juvenileSession.recordTeachingDemonstration(teachingObservation(
         juvenileSession, engagement: juvenileEngagement,
         source: juvenileTeacherSuccess.source
     ))
-    check("juvenile observes without inherited or free skill",
+    check("juvenile teaching advances social exposure without free skill",
           juvenilePolicy.stage == .juvenile && juvenilePolicy.permits(.perceive)
             && juvenileSession.practiceUnits(
                 agentID: child, domain: .materialHandling
-            ) == juvenileUnits)
+            ) == juvenileUnits
+            && juvenileSession.socialDevelopmentProfile(
+                for: child
+            )?.values.first {
+                $0.dimension == .teachingExposure
+            }?.basisPoints == teachingExposureBefore + 120)
     let juvenileBytes = try! juvenileSession.durableStateBytes()
     check("juvenile apprenticeship never bypasses adult material policy", {
         do {

@@ -344,6 +344,24 @@ func runPebbleAgentsDependentCareSmoke() {
         AgentDependentCareConfiguration.self,
         from: AgentCheckpointCodec.encode(live)
     )) == live)
+    let diagonalCareAction = AgentActionDecider.decide(AgentActionDecisionInput(
+        agentId: "agent_0", tick: 1, goalKind: .provideDependentCare,
+        position: AgentPosition(x: 0, y: 64, z: 0),
+        homePosition: AgentPosition(x: 0, y: 64, z: 0),
+        careTarget: AgentPosition(x: 1, y: 65, z: 1),
+        careActionName: "supervise_dependent", careInteractionDistance: 1
+    ))
+    check("care three-dimensional diagonal adjacency is in range",
+          diagonalCareAction.name == "supervise_dependent")
+    let distantCareAction = AgentActionDecider.decide(AgentActionDecisionInput(
+        agentId: "agent_0", tick: 1, goalKind: .provideDependentCare,
+        position: AgentPosition(x: 0, y: 64, z: 0),
+        homePosition: AgentPosition(x: 0, y: 64, z: 0),
+        careTarget: AgentPosition(x: 2, y: 65, z: 1),
+        careActionName: "supervise_dependent", careInteractionDistance: 1
+    ))
+    check("care three-dimensional distance remains bounded",
+          distantCareAction.name == "approach_dependent")
     check("care newborn capability matrix", AgentStageCapabilityPolicy.policy(for: .newborn)
         .allowed == [.perceive])
     check("care juvenile capability matrix", {

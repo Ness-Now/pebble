@@ -71,6 +71,23 @@ extension AgentSimulationSession {
             guard statesById[candidate.actorID.rawValue] != nil else {
                 throw AgentSessionError.autonomousActivity(.unknownAgent(candidate.actorID))
             }
+            if dependentCareEnabled {
+                let requiredCapability: AgentStageCapability
+                switch candidate.domain {
+                case .agriculture, .fishing, .hunting, .wildGathering,
+                     .livestock:
+                    requiredCapability = .harvest
+                case .construction:
+                    requiredCapability = .build
+                case .materialHandling:
+                    requiredCapability = .deliver
+                case .dependentCare, .teaching:
+                    requiredCapability = .cooperateAsWorker
+                }
+                try requireStageCapability(
+                    requiredCapability, for: candidate.actorID
+                )
+            }
             guard !candidate.candidateID.isEmpty, !candidate.actionKey.isEmpty,
                   !candidate.stableReference.isEmpty,
                   !candidate.logicalTargetKey.isEmpty,

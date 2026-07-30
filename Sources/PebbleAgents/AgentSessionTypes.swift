@@ -79,6 +79,7 @@ public enum AgentSessionError: Error, Equatable {
     case kinship(AgentKinshipError)
     case household(AgentHouseholdError)
     case dependentCare(AgentDependentCareError)
+    case childhood(AgentChildhoodError)
     case skill(AgentSkillError)
     case teaching(AgentTeachingError)
     case ecologicalObservation(AgentEcologicalObservationError)

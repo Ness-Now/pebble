@@ -99,6 +99,7 @@ extension AgentSimulationSession {
         guard statesById[plannerID.rawValue]?.health ?? 0 > 0 else {
             throw AgentSessionError.agriculture(.unknownAgent(plannerID))
         }
+        try requireStageCapability(.harvest, for: plannerID)
         guard state.plots.count < state.configuration.maximumPlots else {
             throw AgentSessionError.agriculture(.plotCapacityReached)
         }
@@ -197,6 +198,7 @@ extension AgentSimulationSession {
         }
         let eligible = Array(Set(contenders)).sorted().filter {
             statesById[$0.rawValue]?.health ?? 0 > 0
+                && permitsStageCapability(.harvest, for: $0)
         }
         guard let winner = eligible.first else {
             throw AgentSessionError.agriculture(.invalidReservation("no eligible contender"))
@@ -217,7 +219,8 @@ extension AgentSimulationSession {
 
     public func nextAgriculturalIntent(for actorID: AgentID) -> AgentAgriculturalIntent? {
         guard let state = agricultureState,
-              statesById[actorID.rawValue]?.health ?? 0 > 0 else { return nil }
+              statesById[actorID.rawValue]?.health ?? 0 > 0,
+              permitsStageCapability(.harvest, for: actorID) else { return nil }
         for plot in state.plots where plot.phase != .cycleCompleted
             && plot.phase != .cancelled && plot.phase != .blocked {
             for cell in plot.cells {
@@ -278,6 +281,7 @@ extension AgentSimulationSession {
         guard var state = agricultureState else {
             throw AgentSessionError.agriculture(.disabled)
         }
+        try requireStageCapability(.harvest, for: plannerID)
         guard let plotIndex = state.plots.firstIndex(where: {
             $0.plotID == plotID
         }), state.plots[plotIndex].plannerID == plannerID,
@@ -367,6 +371,7 @@ extension AgentSimulationSession {
         guard statesById[outcome.actorID.rawValue]?.health ?? 0 > 0 else {
             throw AgentSessionError.agriculture(.unknownAgent(outcome.actorID))
         }
+        try requireStageCapability(.harvest, for: outcome.actorID)
         guard let plotIndex = state.plots.firstIndex(where: { $0.plotID == outcome.plotID }) else {
             throw AgentSessionError.agriculture(.unknownPlot(outcome.plotID))
         }

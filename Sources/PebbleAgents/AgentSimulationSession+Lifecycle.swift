@@ -486,6 +486,7 @@ extension AgentSimulationSession {
         try prevalidateCausalAppend(
             count: (kinshipEnabled ? 4 : 3) + householdEventCount
                 + (careBirth == nil ? 0 : 2)
+                + (childhoodV2Enabled ? 2 : 0)
                 + (geneticsEnabled ? 1 : 0)
         )
         let site = try requiredLifecycleEvent(

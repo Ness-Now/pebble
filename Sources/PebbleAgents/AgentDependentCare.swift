@@ -374,6 +374,10 @@ public struct AgentDependentCareState: Codable, Equatable, Sendable {
     public internal(set) var rollingDigest: String
     public let initializedEventID: AgentCausalEventID
     public internal(set) var lastCareEventID: AgentCausalEventID
+    /// CIV-31 extends the single Dependent Care authority. Keeping the V2
+    /// state optional preserves historical schema 9...22 decoding without
+    /// creating a parallel childhood engine.
+    public internal(set) var childhoodV2: AgentChildhoodState? = nil
 }
 
 public enum AgentStageCapability: String, Codable, CaseIterable, Sendable {

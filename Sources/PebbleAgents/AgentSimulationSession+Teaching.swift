@@ -623,7 +623,7 @@ extension AgentSimulationSession {
               ), tick <= Int.max - state.configuration.exposureFreshnessTicks else {
             throw AgentSessionError.teaching(.invalidState("demonstration ordinal"))
         }
-        try prevalidateCausalAppend(count: 1)
+        try prevalidateCausalAppend(count: 1 + (childhoodV2Enabled ? 1 : 0))
         let nextDigest = AgentTeachingDigest.make(
             "\(state.rollingDigest)|observe|\(demonstrationID.rawValue)|"
                 + "\(exposureID.rawValue)|\(observation.teacherID.rawValue)|"
@@ -673,6 +673,12 @@ extension AgentSimulationSession {
         state.rollingDigest = nextDigest
         evictTeachingHistoryIfNeeded(&state)
         teachingState = state
+        try recordTeachingSocialDevelopment(
+            studentID: observation.studentID,
+            teacherID: observation.teacherID,
+            sourceEventID: event.eventID,
+            guidedPractice: false
+        )
         return exposure
     }
 
@@ -740,7 +746,7 @@ extension AgentSimulationSession {
               status == "credited" else {
             throw AgentSessionError.teaching(.invalidGuidedPractice("material/skill provenance"))
         }
-        try prevalidateCausalAppend(count: 1)
+        try prevalidateCausalAppend(count: 1 + (childhoodV2Enabled ? 1 : 0))
         let nextDigest = AgentTeachingDigest.make(
             "\(state.rollingDigest)|guided|\(exposureID.rawValue)|"
                 + "\(studentSourceSuccessEventID.rawValue)|"
@@ -781,6 +787,12 @@ extension AgentSimulationSession {
         state.rollingDigest = nextDigest
         evictTeachingHistoryIfNeeded(&state)
         teachingState = state
+        try recordTeachingSocialDevelopment(
+            studentID: exposure.studentID,
+            teacherID: exposure.teacherID,
+            sourceEventID: event.eventID,
+            guidedPractice: true
+        )
         return link
     }
 

@@ -23,6 +23,7 @@ public enum AgentReplaySchema {
     public static let persistenceReconciliationVersion = 20
     public static let homeostasisVersion = 21
     public static let geneticsVersion = 22
+    public static let childhoodVersion = 23
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -36,6 +37,7 @@ public enum AgentReplaySchema {
             || version == physicalFoodSurvivalVersion || version == autonomousActivityVersion
             || version == materialRightsVersion || version == persistenceReconciliationVersion
             || version == homeostasisVersion || version == geneticsVersion
+            || version == childhoodVersion
     }
 }
 
@@ -138,6 +140,9 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case materialRightsOperation
     case homeostasisFeature
     case geneticsFeature
+    case childhoodFeature
+    case dependentCareDelegation
+    case guardianshipReassignment
 }
 
 public enum AgentReplayOperation: Codable {
@@ -297,6 +302,11 @@ public enum AgentReplayOperation: Codable {
     case setGeneticsEnabled(
         Bool, configuration: AgentGeneticsConfiguration
     )
+    case setChildhoodV2Enabled(
+        Bool, configuration: AgentChildhoodConfiguration
+    )
+    case delegateDependentCare(dependentID: AgentID, caregiverID: AgentID)
+    case reassignGuardian(dependentID: AgentID, guardianID: AgentID)
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -391,6 +401,9 @@ public enum AgentReplayOperation: Codable {
         case .applyMaterialRightsOperation: return .materialRightsOperation
         case .setHomeostasisEnabled: return .homeostasisFeature
         case .setGeneticsEnabled: return .geneticsFeature
+        case .setChildhoodV2Enabled: return .childhoodFeature
+        case .delegateDependentCare: return .dependentCareDelegation
+        case .reassignGuardian: return .guardianshipReassignment
         }
     }
 
@@ -924,6 +937,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.geneticsVersion
         }
+        if case let .setChildhoodV2Enabled(enabled, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.childhoodVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "childhood V2 activation must be the first v23 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.childhoodVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -1139,6 +1162,9 @@ public enum AgentSessionReplayer {
             || (manifest.schemaVersion == AgentReplaySchema.geneticsVersion
                 && checkpoint.schemaVersion
                     <= AgentCheckpointSchema.homeostasisVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.childhoodVersion
+                && checkpoint.schemaVersion
+                    <= AgentCheckpointSchema.geneticsVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -1454,6 +1480,18 @@ extension AgentSimulationSession {
         case let .setGeneticsEnabled(enabled, configuration):
             try candidate.setGeneticsEnabled(
                 enabled, configuration: configuration
+            )
+        case let .setChildhoodV2Enabled(enabled, configuration):
+            try candidate.setChildhoodV2Enabled(
+                enabled, configuration: configuration
+            )
+        case let .delegateDependentCare(dependentID, caregiverID):
+            try candidate.delegateDependentCare(
+                dependentID: dependentID, to: caregiverID
+            )
+        case let .reassignGuardian(dependentID, guardianID):
+            try candidate.reassignGuardian(
+                dependentID: dependentID, to: guardianID
             )
         }
         self = candidate

@@ -144,6 +144,7 @@ extension AgentSimulationSession {
             care.transitionTick = careTick
             care.transitionsAtTick = 0
         }
+        try applyChildhoodV2TickBoundary(at: careTick, care: &care)
         let dependentIDs = dependentLifecycleIDs()
         let dependentSet = Set(dependentIDs)
         let staleAssignments = care.assignments.indices.filter {
@@ -365,8 +366,9 @@ extension AgentSimulationSession {
               let dependent = statesById[intent.dependentID.rawValue] else {
             throw AgentSessionError.dependentCare(.invalidNeed(intent.needID.rawValue))
         }
-        guard manhattanDistance(caregiver.position, dependent.position)
-                <= care.configuration.careInteractionDistance else {
+        guard dependentCareInteractionDistance(
+            caregiver.position, dependent.position
+        ) <= care.configuration.careInteractionDistance else {
             throw AgentSessionError.dependentCare(.interactionTooFar)
         }
         let acceptedThrough = causalLedger.latestSequence
@@ -385,7 +387,9 @@ extension AgentSimulationSession {
               outcome.hungerAfter == max(0, dependent.needs.hunger - reduction) else {
             throw AgentSessionError.dependentCare(.materialDebitRequired)
         }
-        try prevalidateCausalAppend(count: skillsEnabled ? 4 : 3)
+        try prevalidateCausalAppend(
+            count: (skillsEnabled ? 4 : 3) + (care.childhoodV2 == nil ? 0 : 1)
+        )
     }
 
     @discardableResult
@@ -492,6 +496,14 @@ extension AgentSimulationSession {
         ), state: &care)
         care.lastCareEventID = resolved.eventID
         try countCareTransition(&care, at: tick, count: 2)
+        try recordChildhoodCareOutcome(
+            dependentID: intent.dependentID,
+            participantID: intent.caregiverID,
+            dimension: .stableCareExposure,
+            sourceEventID: resolved.eventID,
+            deltaBasisPoints: 160,
+            care: &care
+        )
         care.rollingDigest = AgentDependentCareDigest.make(
             "\(care.rollingDigest)|physicalFood|\(intent.dependentID.rawValue)|"
                 + "\(outcome.canonicalMaterialName)|1|\(outcome.hungerBefore)>"
@@ -541,11 +553,14 @@ extension AgentSimulationSession {
               var dependent = statesById[intent.dependentID.rawValue] else {
             throw AgentSessionError.dependentCare(.invalidNeed(intent.needID.rawValue))
         }
-        guard manhattanDistance(caregiver.position, dependent.position)
-                <= care.configuration.careInteractionDistance else {
+        guard dependentCareInteractionDistance(
+            caregiver.position, dependent.position
+        ) <= care.configuration.careInteractionDistance else {
             throw AgentSessionError.dependentCare(.interactionTooFar)
         }
-        try prevalidateCausalAppend(count: skillsEnabled ? 4 : 3)
+        try prevalidateCausalAppend(
+            count: (skillsEnabled ? 4 : 3) + (care.childhoodV2 == nil ? 0 : 1)
+        )
         let inventoryFoodBefore = caregiver.resourceInventory.count(of: .foodRaw)
         let campFoodBefore = campStock.count(of: .foodRaw)
         let source: AgentCareFoodSource
@@ -573,6 +588,14 @@ extension AgentSimulationSession {
             care.activeEngagements.removeAll { $0.needID == intent.needID }
             care.lastCareEventID = unmet.eventID
             try countCareTransition(&care, at: tick)
+            try recordChildhoodCareOutcome(
+                dependentID: intent.dependentID,
+                participantID: intent.caregiverID,
+                dimension: .unmetCareExposure,
+                sourceEventID: unmet.eventID,
+                deltaBasisPoints: 120,
+                care: &care
+            )
             dependentCareState = care
             return AgentCareProvisionResult(
                 provisionID: intent.provisionID, needID: intent.needID,
@@ -669,6 +692,14 @@ extension AgentSimulationSession {
         ), state: &care)
         care.lastCareEventID = resolved.eventID
         try countCareTransition(&care, at: tick, count: 2)
+        try recordChildhoodCareOutcome(
+            dependentID: intent.dependentID,
+            participantID: intent.caregiverID,
+            dimension: .stableCareExposure,
+            sourceEventID: resolved.eventID,
+            deltaBasisPoints: 160,
+            care: &care
+        )
         care.rollingDigest = AgentDependentCareDigest.make(
             "\(care.rollingDigest)|food|\(intent.dependentID.rawValue)|\(source.rawValue)|1|\(hungerBefore)>\(hungerAfter)|\(tick)"
         )
@@ -716,12 +747,19 @@ extension AgentSimulationSession {
               let need = care.activeNeeds.first(where: { $0.needID == engagement.needID }),
               let caregiver = statesById[caregiverID.rawValue],
               let dependent = statesById[dependentID.rawValue] else { return false }
-        guard manhattanDistance(caregiver.position, dependent.position)
-                <= care.configuration.careInteractionDistance else {
+        guard dependentCareInteractionDistance(
+            caregiver.position, dependent.position
+        ) <= care.configuration.careInteractionDistance else {
             throw AgentSessionError.dependentCare(.interactionTooFar)
         }
         if need.kind == .returnHome, dependent.position != dependent.homePosition { return false }
-        try prevalidateCausalAppend(count: 2)
+        if need.kind == .supervision, let childhood = care.childhoodV2 {
+            let elapsed = tick - engagement.startedTick
+            guard elapsed >= childhood.configuration.minimumSupervisionTicks else {
+                return false
+            }
+        }
+        try prevalidateCausalAppend(count: 2 + (care.childhoodV2 == nil ? 0 : 1))
         let assignment = care.assignments.first {
             $0.dependentID == dependentID && $0.status == .active
         }!
@@ -761,6 +799,14 @@ extension AgentSimulationSession {
         ), state: &care)
         care.lastCareEventID = resolved.eventID
         try countCareTransition(&care, at: tick, count: 2)
+        try recordChildhoodCareOutcome(
+            dependentID: dependentID, participantID: caregiverID,
+            dimension: need.kind == .supervision
+                ? .supervisedInteraction : .stableCareExposure,
+            sourceEventID: resolved.eventID,
+            deltaBasisPoints: need.kind == .supervision ? 140 : 80,
+            care: &care
+        )
         care.rollingDigest = AgentDependentCareDigest.make(
             "\(care.rollingDigest)|resolved|\(need.needID.rawValue)|\(tick)"
         )
@@ -792,7 +838,7 @@ extension AgentSimulationSession {
         } == true
     }
 
-    private mutating func startCareAssignment(
+    mutating func startCareAssignment(
         dependentID: AgentID,
         caregiverID: AgentID,
         householdID: AgentHouseholdID,
@@ -851,7 +897,7 @@ extension AgentSimulationSession {
         try countCareTransition(&state, at: assignmentTick)
     }
 
-    private mutating func endCareAssignment(
+    mutating func endCareAssignment(
         at index: Int,
         reason: AgentCareAssignmentEndReason,
         causeEventID: AgentCausalEventID,
@@ -1169,6 +1215,14 @@ extension AgentSimulationSession {
         configuration: AgentDependentCareConfiguration? = nil,
         excluding: Set<AgentID>
     ) -> AgentID? {
+        if dependentCareState?.childhoodV2 != nil {
+            return deterministicV2Caregiver(
+                for: dependentID, projectedLoads: projectedLoads,
+                configuration: configuration
+                    ?? dependentCareState?.configuration ?? .live,
+                excluding: excluding
+            )
+        }
         guard let household = try? currentMembership(of: dependentID),
               let kinship = kinshipState, let lifecycle = lifecycleState,
               let population = populationRegistry else { return nil }
@@ -1238,6 +1292,25 @@ extension AgentSimulationSession {
         }
         var preview = care
         try countCareTransition(&preview, at: tick, count: 2)
+        if let childhood = care.childhoodV2 {
+            let transitionsAtBirthTick = childhood.transitionTick == tick
+                ? childhood.transitionsAtTick : 0
+            guard childhood.socialProfiles.count
+                    < childhood.configuration.maximumSocialProfiles,
+                  childhood.totalExposureCount < Int.max,
+                  childhood.totalGuardianshipCount < Int.max,
+                  transitionsAtBirthTick
+                    <= childhood.configuration.maximumTransitionsPerTick - 2,
+                  childhood.guardianships.count
+                    < childhood.configuration.maximumRetainedGuardianships
+                    || childhood.guardianships.contains(where: {
+                        $0.status == .ended
+                    }) else {
+                throw AgentSessionError.childhood(
+                    .invalidState("birth capacity")
+                )
+            }
+        }
         let loads = Dictionary(grouping: care.assignments.filter {
             $0.status == .active
         }, by: \.caregiverID).mapValues(\.count)
@@ -1283,6 +1356,9 @@ extension AgentSimulationSession {
             dependentID: childID, kind: .supervision, severity: 60,
             caregiverID: caregiverID, tick: tick, state: &care
         )
+        try registerChildhoodBirth(
+            childID: childID, causeEventID: care.lastCareEventID, care: &care
+        )
         care.assignments.sort(by: careAssignmentSort)
         care.activeNeeds.sort(by: careNeedSort)
         care.rollingDigest = AgentDependentCareDigest.make(
@@ -1299,6 +1375,10 @@ extension AgentSimulationSession {
         at deathTick: Int
     ) throws -> AgentCausalEventID? {
         guard var care = dependentCareState else { return nil }
+        try applyChildhoodDeath(
+            agentID: agentID, lethalAgentIDs: lethalAgentIDs,
+            causeEventID: causeEventID, at: deathTick, care: &care
+        )
         let deadAsDependent = care.assignments.indices.filter {
             care.assignments[$0].status == .active
                 && care.assignments[$0].dependentID == agentID
@@ -1406,7 +1486,8 @@ extension AgentSimulationSession {
         do {
             try Self.validateDependentCareState(
                 state, population: population, lifecycle: lifecycle,
-                households: households,
+                kinship: kinshipState!, households: households,
+                mortality: mortalityState,
                 agents: statesById.values.sorted { $0.agentID < $1.agentID },
                 clock: clock, causalLatestSequence: causalLedger.latestSequence,
                 causalDroppedEventCount: causalLedger.droppedEventCount,
@@ -1414,6 +1495,8 @@ extension AgentSimulationSession {
             )
         } catch let error as AgentDependentCareError {
             throw AgentSessionError.dependentCare(error)
+        } catch let error as AgentChildhoodError {
+            throw AgentSessionError.childhood(error)
         }
     }
 
@@ -1421,7 +1504,9 @@ extension AgentSimulationSession {
         _ state: AgentDependentCareState,
         population: AgentPopulationRegistry,
         lifecycle: AgentLifecycleState,
+        kinship: AgentKinshipState,
         households: AgentHouseholdState,
+        mortality: AgentMortalityState?,
         agents: [AgentSessionAgentState],
         clock: AgentSimulationClock,
         causalLatestSequence: UInt64,
@@ -1609,7 +1694,9 @@ extension AgentSimulationSession {
             switch kind {
             case .dependentCareInitialized, .careAssignmentStarted, .careAssignmentEnded,
                  .careNeedRaised, .careEngagementStarted, .careProvided,
-                 .careNeedResolved, .careNeedUnmet:
+                 .careNeedResolved, .careNeedUnmet, .childhoodV2Initialized,
+                 .guardianshipAssigned, .guardianshipEnded,
+                 .guardianUnavailable, .socialDevelopmentChanged:
                 return true
             default:
                 return false
@@ -1766,6 +1853,17 @@ extension AgentSimulationSession {
                     && detail.contains("quantity=\(outcome.materialQuantity)")
             }
         }
+        if let childhood = state.childhoodV2 {
+            try validateChildhoodState(
+                childhood, care: state, population: population,
+                lifecycle: lifecycle, kinship: kinship,
+                households: households, mortality: mortality,
+                agents: agents, clock: clock,
+                causalLatestSequence: causalLatestSequence,
+                causalDroppedEventCount: causalDroppedEventCount,
+                causalEvents: causalEvents
+            )
+        }
     }
 
     private func dependentLifecycleIDs() -> [AgentID] {
@@ -1774,7 +1872,7 @@ extension AgentSimulationSession {
         }.sorted() ?? []
     }
 
-    private mutating func requiredDependentCareEvent(
+    mutating func requiredDependentCareEvent(
         kind: AgentCausalEventKind,
         actorID: AgentID? = nil,
         subjectID: AgentID? = nil,
@@ -1819,9 +1917,23 @@ extension AgentSimulationSession {
             state.activeEngagements.sorted(by: careEngagementSort).map {
                 "e|\($0.engagementID.rawValue)|\($0.needID.rawValue)|\($0.caregiverID.rawValue)"
             }.joined(separator: ";"),
+            state.childhoodV2.map {
+                "childhood|\(childhoodDigest($0))"
+            } ?? "childhood|disabled",
             "totals|\(state.totalAssignmentCount)|\(state.totalNeedCount)|\(state.totalEngagementCount)|\(state.totalOutcomeCount)|\(state.evictionCounts.outcomes)",
         ].joined(separator: "|"))
     }
+}
+
+private func dependentCareInteractionDistance(
+    _ lhs: AgentPosition,
+    _ rhs: AgentPosition
+) -> Int {
+    max(
+        abs(lhs.x - rhs.x),
+        abs(lhs.y - rhs.y),
+        abs(lhs.z - rhs.z)
+    )
 }
 
 private func careAssignmentSort(_ lhs: AgentCareAssignment, _ rhs: AgentCareAssignment) -> Bool {

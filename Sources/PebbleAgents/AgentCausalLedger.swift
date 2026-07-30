@@ -149,6 +149,11 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case careProvided
     case careNeedResolved
     case careNeedUnmet
+    case childhoodV2Initialized
+    case guardianshipAssigned
+    case guardianshipEnded
+    case guardianUnavailable
+    case socialDevelopmentChanged
     case skillsInitialized
     case skillPracticeCredited
     case teachingInitialized
@@ -910,6 +915,11 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.careProvided, .dependentCare),
              (.careNeedResolved, .dependentCare),
              (.careNeedUnmet, .dependentCare),
+             (.childhoodV2Initialized, .dependentCare),
+             (.guardianshipAssigned, .dependentCare),
+             (.guardianshipEnded, .dependentCare),
+             (.guardianUnavailable, .dependentCare),
+             (.socialDevelopmentChanged, .dependentCare),
              (.skillsInitialized, .skill),
              (.skillPracticeCredited, .skill),
              (.teachingInitialized, .teaching),

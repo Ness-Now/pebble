@@ -209,8 +209,11 @@ public enum AgentActionDecider {
                     name: "wait", reason: "dependent care target unavailable", tick: input.tick
                 )
             }
-            let distance = abs(input.position.x - target.x)
-                + abs(input.position.y - target.y) + abs(input.position.z - target.z)
+            let distance = max(
+                abs(input.position.x - target.x),
+                abs(input.position.y - target.y),
+                abs(input.position.z - target.z)
+            )
             if distance <= input.careInteractionDistance {
                 return AgentAction(
                     name: input.careActionName ?? "supervise_dependent",

@@ -320,6 +320,54 @@ public struct AgentObserverGenetics: Codable, Equatable, Sendable {
     public let phenotype: [AgentObserverPhenotypeTrait]
 }
 
+public struct AgentObserverSocialDevelopmentValue:
+    Codable, Equatable, Sendable
+{
+    public let dimension: AgentSocialDevelopmentDimension
+    public let basisPoints: Int
+    public let lastChangedTick: Int
+    public let lastEventID: AgentCausalEventID
+}
+
+public struct AgentObserverChildCareNeed: Codable, Equatable, Sendable {
+    public let needID: AgentCareNeedID
+    public let kind: AgentCareNeedKind
+    public let severity: Int
+    public let status: AgentCareNeedStatus
+    public let assignedCaregiverID: AgentID?
+    public let requiresPhysicalFood: Bool
+    public let raisedTick: Int
+    public let raisedEventID: AgentCausalEventID
+}
+
+public struct AgentObserverChildhood: Codable, Equatable, Sendable {
+    public let ageTicks: Int
+    public let lifeStage: AgentLifeStage
+    public let currentPhysicalLocation: AgentPosition
+    public let homePosition: AgentPosition
+    public let dependencyStatus: String
+    public let atRisk: Bool
+    public let guardianID: AgentID?
+    public let guardianshipBasis: AgentGuardianshipBasis?
+    public let guardianshipHouseholdID: AgentHouseholdID?
+    public let guardianshipStartedTick: Int?
+    public let guardianshipStatus: AgentGuardianshipStatus?
+    public let latestGuardianshipEndReason: AgentGuardianshipEndReason?
+    public let currentCaregiverID: AgentID?
+    public let currentCareEngagement: AgentCareEngagementKind?
+    public let currentCareEngagedTicks: Int?
+    public let activeNeeds: [AgentObserverChildCareNeed]
+    public let unmetNeedKinds: [AgentCareNeedKind]
+    public let latestCareOutcome: AgentCareNeedTerminalReason?
+    public let allowedCapabilities: [AgentStageCapability]
+    public let refusedCapabilities: [AgentStageCapability]
+    public let autonomyReadinessBasisPoints: Int
+    public let socialDevelopment: [AgentObserverSocialDevelopmentValue]
+    public let socialTrajectory: String
+    public let recentExposureEventIDs: [AgentCausalEventID]
+    public let lastSignificantChangeTick: Int?
+}
+
 public struct AgentObserverDeath: Codable, Equatable, Sendable {
     public let agentID: AgentID
     public let deathID: AgentDeathID
@@ -370,6 +418,7 @@ public struct AgentObserverIndividual: Codable, Equatable, Sendable {
     public let recentEventsTruncated: Bool
     public let physiology: AgentObserverPhysiology?
     public let genetics: AgentObserverGenetics?
+    public let childhood: AgentObserverChildhood?
 }
 
 public struct AgentObserverSnapshot: Codable, Equatable, Sendable {
@@ -473,6 +522,8 @@ extension AgentSimulationSession {
         let homeostasis = homeostasisSnapshot()
         let mortality = mortalitySnapshot()
         let genetics = geneticsSnapshot()
+        let care = dependentCareSnapshot()
+        let childhood = childhoodSnapshot()
         let textLimit = configuration.maximumPresentationTextLength
 
         let materialTransitionByEventID = Dictionary(
@@ -600,7 +651,10 @@ extension AgentSimulationSession {
                 }.map {
                     observerPhysiology($0, healthReserve: agent.health)
                 },
-                genetics: observerGenetics(agentID, snapshot: genetics)
+                genetics: observerGenetics(agentID, snapshot: genetics),
+                childhood: observerChildhood(
+                    agentID, care: care, childhood: childhood
+                )
             )
         }
         let retainedDeaths = Array(
@@ -637,6 +691,7 @@ extension AgentSimulationSession {
             homeostasis.digest,
             mortality.digest,
             genetics.digest,
+            childhood.digest,
         ].joined(separator: "|")
         let truncation = AgentObserverTruncation(
             agentsOmitted: max(0, sortedAgents.count - visibleAgents.count),
@@ -652,7 +707,8 @@ extension AgentSimulationSession {
         )
         return AgentObserverSnapshot(
             header: AgentObserverSnapshotHeader(
-                schemaVersion: genetics.enabled ? 3 : (homeostasis.enabled ? 2 : 1),
+                schemaVersion: childhood.enabled
+                    ? 4 : (genetics.enabled ? 3 : (homeostasis.enabled ? 2 : 1)),
                 sessionIdentity: simulationID,
                 worldBinding: worldBinding,
                 asOfTick: tick,
@@ -675,6 +731,129 @@ private struct AgentObserverReasonCandidate {
 }
 
 private extension AgentSimulationSession {
+    func observerChildhood(
+        _ agentID: AgentID,
+        care: AgentDependentCareSnapshot,
+        childhood: AgentChildhoodSnapshot
+    ) -> AgentObserverChildhood? {
+        guard childhood.enabled,
+              let policy = try? stageCapabilityPolicy(for: agentID),
+              let capabilities = try? childhoodCapabilities(for: agentID),
+              let agent = statesById[agentID.rawValue],
+              let lifecycleMember = lifecycleState?.members.first(where: {
+                  $0.agentID == agentID
+              }),
+              let ageTicks = try? lifecycleMember.age(at: tick)
+        else { return nil }
+        let guardian = childhood.guardianships.first {
+            $0.dependentID == agentID && $0.status == .active
+        }
+        let assignment = care.assignments.first {
+            $0.dependentID == agentID && $0.status == .active
+        }
+        let engagement = care.activeEngagements.first {
+            $0.dependentID == agentID
+        }
+        let latestOutcome = care.terminalOutcomes
+            .filter { $0.dependentID == agentID }
+            .sorted {
+                $0.tick == $1.tick
+                    ? $0.terminalEventID > $1.terminalEventID
+                    : $0.tick > $1.tick
+            }
+            .first
+        let latestEndedGuardianship = childhood.guardianships
+            .filter {
+                $0.dependentID == agentID && $0.status == .ended
+            }
+            .sorted {
+                ($0.endedTick ?? -1) == ($1.endedTick ?? -1)
+                    ? ($0.endedEventID ?? $0.startedEventID)
+                        > ($1.endedEventID ?? $1.startedEventID)
+                    : ($0.endedTick ?? -1) > ($1.endedTick ?? -1)
+            }
+            .first
+        let profile = childhood.socialProfiles.first {
+            $0.agentID == agentID
+        }
+        let exposures = childhood.exposures.filter {
+            $0.agentID == agentID
+        }.sorted {
+            $0.ordinal > $1.ordinal
+        }
+        let atRisk = childhood.atRiskDependentIDs.contains(agentID)
+        let activeNeeds = care.activeNeeds.filter {
+            $0.dependentID == agentID
+        }.sorted {
+            if $0.kind != $1.kind {
+                return $0.kind.rawValue < $1.kind.rawValue
+            }
+            return $0.needID < $1.needID
+        }
+        let socialTrajectory: String
+        if atRisk || exposures.first?.dimension == .unmetCareExposure {
+            socialTrajectory = "careDeficitExposure"
+        } else if exposures.isEmpty {
+            socialTrajectory = "noRecordedExposure"
+        } else {
+            socialTrajectory = "experienceLinkedGrowth"
+        }
+        return AgentObserverChildhood(
+            ageTicks: ageTicks,
+            lifeStage: policy.stage,
+            currentPhysicalLocation: agent.position,
+            homePosition: agent.homePosition,
+            dependencyStatus: policy.stage == .mature
+                ? "independent" : (atRisk ? "atRisk" : "guarded"),
+            atRisk: atRisk,
+            guardianID: guardian?.guardianID,
+            guardianshipBasis: guardian?.basis,
+            guardianshipHouseholdID: guardian?.householdID,
+            guardianshipStartedTick: guardian?.startedTick,
+            guardianshipStatus: guardian?.status,
+            latestGuardianshipEndReason:
+                latestEndedGuardianship?.endedReason,
+            currentCaregiverID: assignment?.caregiverID,
+            currentCareEngagement: engagement?.kind,
+            currentCareEngagedTicks: engagement.map {
+                max(0, tick - $0.startedTick)
+            },
+            activeNeeds: activeNeeds.map {
+                AgentObserverChildCareNeed(
+                    needID: $0.needID, kind: $0.kind,
+                    severity: $0.severity, status: $0.status,
+                    assignedCaregiverID: $0.assignedCaregiverID,
+                    requiresPhysicalFood: $0.kind == .nourishment,
+                    raisedTick: $0.raisedTick,
+                    raisedEventID: $0.raisedEventID
+                )
+            },
+            unmetNeedKinds: activeNeeds.filter {
+                $0.status == .unmet
+            }.map(\.kind),
+            latestCareOutcome: latestOutcome?.terminalReason,
+            allowedCapabilities: capabilities.allowed,
+            refusedCapabilities: capabilities.refused,
+            autonomyReadinessBasisPoints:
+                capabilities.autonomyReadinessBasisPoints,
+            socialDevelopment: profile?.values.sorted {
+                $0.dimension < $1.dimension
+            }.map {
+                AgentObserverSocialDevelopmentValue(
+                    dimension: $0.dimension,
+                    basisPoints: $0.basisPoints,
+                    lastChangedTick: $0.lastChangedTick,
+                    lastEventID: $0.lastEventID
+                )
+            } ?? [],
+            socialTrajectory: socialTrajectory,
+            recentExposureEventIDs: Array(
+                exposures.prefix(8).map(\.sourceEventID)
+            ),
+            lastSignificantChangeTick: profile?.lastSignificantChangeTick
+        )
+    }
+
     func observerGenetics(
         _ agentID: AgentID,
         snapshot: AgentGeneticsSnapshot
