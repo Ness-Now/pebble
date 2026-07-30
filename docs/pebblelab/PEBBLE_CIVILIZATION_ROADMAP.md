@@ -25,21 +25,21 @@ roadmap.
 ## Canonical position
 
 ```text
-CIV-00 through CIV-30: COMPLETE
+CIV-00 through CIV-31: COMPLETE
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: none
-next authorized action: CIV-31
-CIV-30: COMPLETE
+next authorized action: CIV-32
+CIV-31: COMPLETE
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
-CIV-31: NOT STARTED — NEXT ELIGIBLE PHASE
+CIV-32: NOT STARTED — NEXT ELIGIBLE PHASE
 V4-GATE-D-v1: PLANNED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: PLANNED
 ```
 
-The `CIV-29` completion is published on the canonical branch at
-`c1eda66dfacdd16911207b6fc8fd58df8581b99f`. The `CIV-30` completion in this
+The `CIV-30` completion is published on the canonical branch at
+`2cdf5d9c89e9e54e79dd6e9bf627a5cee2303851`. The `CIV-31` completion in this
 local tree remains a review candidate until senior review, manual push and
 remote verification complete.
 
@@ -193,12 +193,12 @@ The evaluated product baseline passed 108 focused adversarial checks, the
 3343-check repository gate and a rendered two-process restart with real
 missing-asset reconciliation, zero duplication and read-only observation.
 
-Gate C remains acquired and published. `CIV-29` and `CIV-30` do not reevaluate
-it.
+Gate C remains acquired and published. `CIV-29` through `CIV-31` do not
+reevaluate it.
 
 ## Wave 2 — Generational continuity
 
-Current entry status: `CIV-30` is **complete** and `CIV-31` is
+Current entry status: `CIV-31` is **complete** and `CIV-32` is
 **not started — next eligible phase**.
 
 | Phase | Requirement | Outcome |
@@ -263,7 +263,54 @@ detailed appearance, genetically assigned intelligence or personality,
 guardianship, unions, lineages, houses, inheritance, renewable subsistence or
 Gate D.
 
-`CIV-31` is the next eligible phase but remains not started.
+### `CIV-31` — Childhood, Guardianship and Social Development V2
+
+Status: **completed, required**.
+
+Result: Dependent Care V1 now carries one bounded durable guardian
+responsibility distinct from canonical parentage, household membership,
+current care execution, teaching, custody and ownership. A normal birth
+selects an eligible canonical parent deterministically; later death,
+incapacity, household separation, explicit reassignment or maturity ends that
+responsibility causally. The same-household replacement policy prefers
+canonical parents, then kin, then another eligible mature adult using bounded
+load and stable agent-ID ordering. If no adult is eligible, the child remains
+explicitly at risk with visible unmet needs and no invented guardian or
+caregiver.
+
+Care still uses the existing need, assignment, engagement and outcome engine.
+Supervision occupies the caregiver for a minimum real duration and requires
+physical proximity. Nourishment consumes exactly one verified physical food
+item through Pebble before its physiological and social outcome can publish.
+Delegation changes only the current care executor; guardian reassignment
+changes neither parentage nor household and never teleports the child.
+Newborn and juvenile stage gateways prevent adult work, agriculture,
+reproduction, guardianship and productive teaching while retaining bounded
+juvenile observation, communication, return-home and supervised learning.
+
+Social Development V2 is a bounded causal projection with six dimensions:
+guardian continuity, stable-care exposure, supervised interaction, teaching
+exposure, successful-practice exposure and unmet-care exposure. It is derived
+only from real guardianship, care, teaching and practice events. It neither
+copies nor silently mutates trust and it grants no knowledge, skill,
+personality, status, health reserve or genetic outcome.
+
+Bounded proof:
+[`CIV_31_PHASE_SUMMARY.md`](CIV_31_PHASE_SUMMARY.md). It covers deterministic
+guardian selection and reassignment, guardian/caregiver separation, timed
+supervision, one verified physical nourishment debit, at-risk behavior,
+mortality and maturity, adult-capability denial, corruption refusal,
+schema-23 checkpoint/replay and read-only Observer schema 4. A rendered
+two-process campaign proves normal birth, parental guardianship, real
+supervision and nourishment, exact child/guardian/social restoration,
+protected empty-probe recreation, causal household separation without
+teleportation, explicit at-risk state, zero duplication and exact cleanup.
+
+This phase does not claim legal adoption or guardianship, general education,
+personality or intelligence, unions, family relations V1, lineages, houses,
+estates, inheritance, succession, Gate D or renewable subsistence.
+
+`CIV-32` is the next eligible phase but remains not started.
 
 This wave must preserve the distinction between genotype, development,
 education, knowledge, skill and status. Care consumes real time and resources.

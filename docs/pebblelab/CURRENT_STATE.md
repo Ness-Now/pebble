@@ -10,19 +10,19 @@ SHA of the documentation commit that contains it.
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-B-v1`.
 - Gate C — Durable Observable Local World:
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-C-v1`.
-- `CIV-00` through `CIV-30`: **COMPLETE** in their bounded contracts.
+- `CIV-00` through `CIV-31`: **COMPLETE** in their bounded contracts.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
-Published product baseline from which `CIV-30` was implemented:
+Published product baseline from which `CIV-31` was implemented:
 
 ```text
-c1eda66dfacdd16911207b6fc8fd58df8581b99f
+2cdf5d9c89e9e54e79dd6e9bf627a5cee2303851
 ```
 
 This document does not claim to record the SHA of the commit containing
-`CIV-30`. Use Git to identify the exact reviewed or published phase HEAD.
+`CIV-31`. Use Git to identify the exact reviewed or published phase HEAD.
 
-The `CIV-29` completion is published on the canonical branch. The `CIV-30`
+The `CIV-30` completion is published on the canonical branch. The `CIV-31`
 completion recorded here is a local review candidate until senior review,
 manual push and remote verification complete.
 
@@ -30,42 +30,49 @@ manual push and remote verification complete.
 
 ```text
 active CIV phase: none
-next authorized action: CIV-31 — Childhood, Guardianship and Social Development V2
-CIV-30 status: COMPLETE
+next authorized action: CIV-32 — Unions, Family Relations, Lineages and Houses V1
+CIV-31 status: COMPLETE
 V4-GATE-C-v1 status: ACQUIRED
-CIV-31 status: NOT STARTED — NEXT ELIGIBLE PHASE
+CIV-32 status: NOT STARTED — NEXT ELIGIBLE PHASE
 V4-GATE-D-v1 status: PLANNED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: PLANNED
 roadmap generation: V4
 ```
 
-Completing `CIV-30` makes `CIV-31` eligible; it does not start the phase.
+Completing `CIV-31` makes `CIV-32` eligible; it does not start the phase.
 
 ## Last validation baseline
 
-For the `CIV-30` local review candidate:
+For the `CIV-31` local review candidate:
 
 ```text
-focused genetics/development/phenotype: 45 passed, 0 failed
+focused childhood/guardianship/social development: 51 passed, 0 failed
+focused dependent care: 55 passed, 0 failed
 focused lifecycle: 80 passed, 0 failed
+focused teaching: 41 passed, 0 failed
+focused skills: 59 passed, 0 failed
 focused homeostasis/health: 30 passed, 0 failed
+focused genetics/development/phenotype: 45 passed, 0 failed
 focused checkpoint/replay: 49 passed, 0 failed
 focused Observer: 20 passed, 0 failed
-repository gate: 3419 passed, 0 failed
+repository gate: 3472 passed, 0 failed
 repository verification steps: 35/35
-rendered two-process CIV-30 birth/restart/development campaign
-plus isolated tamper process: PASS
-founder/second-founder/child/post-restart captures: inspected
-normal inherited birth: YES
-parental locus provenance: YES
-inherited genotype bound to canonical birth, progenitors and birth tick: YES
-schema-22 checkpoint/replay: byte exact
-schema-22 manifest integrity digest: verified
-tampered physical attestation refused before World/session/probe mutation: YES
+rendered two-process CIV-31 birth/care/restart/separation campaign: PASS
+parental-guardian/care/restart/at-risk captures: inspected
+normal child, parentage and inherited genotype preserved: YES
+parental guardian assignment: agent_0/canonicalParent
+guardian and current caregiver represented separately: YES
+timed supervision outcome: causal
+physical nourishment: sweet_berries 1 -> 0
+physical care receipt count: 1
+social-development state exact at restart: YES
+schema-23 checkpoint/replay: byte exact
+schema-23 manifest integrity digest: verified
 Observer schema 3: read-only
-persistent child probe restored from empty-custody attestation: YES
-child genotype changed across restart: NO
-genotype assignment count: 1
+Observer schema 4: read-only childhood projection
+persistent child probe restored from protected empty-custody attestation: YES
+care outcome count: 2
+physical consumption count: 1
 asset duplication count: 0
 Observer mutation count: 0
 runtime errors: 0
@@ -114,12 +121,18 @@ cleanup: exact
   verified before any World mutation; older unprotected manifests and
   non-empty custody cannot authorize empty-probe recreation and remain
   fail-closed on the existing CIV-27 reconciliation path.
+- Childhood V2 extends the existing Dependent Care authority with one bounded,
+  durable active guardian, explicit reassignment or at-risk state, timed
+  supervision and causal social-development exposure. It does not make a
+  guardian a genetic or kinship parent, household owner, teacher, material
+  custodian or legal actor. Social development grants no trust, knowledge,
+  skill, profession, ownership, reproductive capability or status by itself.
 - Gate `V4-GATE-D-v1` requires proof of at least one genuinely renewable
   physical subsistence loop; Gate B did not claim this.
 
 ## Next authorized action
 
 After senior review, manual publication and remote verification of this
-`CIV-30` candidate, the next mission may start the bounded contract design and
-implementation of `CIV-31`. `CIV-31` remains **not started**. Gate D and the
+`CIV-31` candidate, the next mission may start the bounded contract design and
+implementation of `CIV-32`. `CIV-32` remains **not started**. Gate D and the
 renewable-subsistence milestone remain planned and unevaluated.
