@@ -10,19 +10,19 @@ SHA of the documentation commit that contains it.
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-B-v1`.
 - Gate C — Durable Observable Local World:
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-C-v1`.
-- `CIV-00` through `CIV-32`: **COMPLETE** in their bounded contracts.
+- `CIV-00` through `CIV-33`: **COMPLETE** in their bounded contracts.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
-Published product baseline from which `CIV-32` was implemented:
+Published product baseline from which `CIV-33` was implemented:
 
 ```text
-a5f06290e9596756e5690fd284f59aaa457d10d3
+dcfbafbff92e9c0c849f7234875476d0d49a25a9
 ```
 
 This document does not claim to record the SHA of the commit containing
-`CIV-32`. Use Git to identify the exact reviewed or published phase HEAD.
+`CIV-33`. Use Git to identify the exact reviewed or published phase HEAD.
 
-The `CIV-31` completion is published on the canonical branch. The `CIV-32`
+The `CIV-32` completion is published on the canonical branch. The `CIV-33`
 completion recorded here is a local review candidate until senior review,
 manual push and remote verification complete.
 
@@ -30,50 +30,51 @@ manual push and remote verification complete.
 
 ```text
 active CIV phase: none
-next authorized action: CIV-33 — Estates, Inheritance and Succession V1
-CIV-32 status: COMPLETE
+next authorized action: V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1
+CIV-33 status: COMPLETE
 V4-GATE-C-v1 status: ACQUIRED
-CIV-33 status: NOT STARTED — NEXT ELIGIBLE PHASE
-V4-GATE-D-v1 status: PLANNED
-V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: PLANNED
+V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: NOT STARTED — NEXT ELIGIBLE MILESTONE
+V4-GATE-D-v1 status: NOT EVALUATED — BLOCKED ON REQUIRED MILESTONE
+CIV-34 status: NOT STARTED
 roadmap generation: V4
 ```
 
-Completing `CIV-32` makes `CIV-33` eligible; it does not start the phase.
+Completing `CIV-33` completes every required CIV phase for Gate D. It does not
+complete the required renewable-subsistence milestone and does not evaluate
+or acquire Gate D.
 
 ## Last validation baseline
 
-For the `CIV-32` local review candidate:
+For the `CIV-33` local review candidate:
 
 ```text
+focused estates/inheritance/succession: 50 passed, 0 failed
 focused unions/family/lineages/houses: 83 passed, 0 failed
 focused lifecycle: 80 passed, 0 failed
 focused childhood/guardianship/social development: 62 passed, 0 failed
+focused dependent care: 55 passed, 0 failed
+focused homeostasis/health: 30 passed, 0 failed
 focused checkpoint/replay: 49 passed, 0 failed
 focused Observer: 20 passed, 0 failed
 focused mortality: 93 passed, 0 failed
 focused material rights: 21 passed, 0 failed
-repository gate: 3566 passed, 0 failed
+repository gate: 3616 passed, 0 failed
 repository verification steps: 35/35
-rendered two-process CIV-32 union/birth/restart/separation campaign: PASS
-physical proposal and independent acceptance: YES
-one canonical active union activation: YES
-two explicit lineage roots: YES
-one co-founded social house: YES
-normal child, parentage, inherited genotype and guardian preserved: YES
-child shared-parent-house membership count: 1
-family relations and lineage memberships: deterministically derived
-households remain separate after union and house foundation: YES
-material rights unchanged: YES
-schema-26 checkpoint/replay: byte exact
-schema-26 manifest integrity digest: verified
-Observer schema 3: read-only
-Observer schema 4: read-only childhood projection
-Observer schema 5: read-only family projection
+rendered two-process CIV-33 death/estate/restart/settlement campaign: PASS
+normal birth before death: YES
+verified physical exit before estate opening: YES
+successor tier: primary active partner at death + canonical child
+administrator acceptance count: 1
+estate opening count: 1
+asset settlement count: 1
+estate settlement count: 1
+physical quantity before/exit/restart/settlement: 1/1/1/1
+claims and permissions conserved under bounded policy: YES
+late physical settlement rollback: exact
+schema-27 checkpoint/replay: byte exact
+schema-27 manifest integrity digest: verified
+Observer schema 6: read-only estate projection
 persistent child probe restored from protected empty-custody attestation: YES
-union activation count: 1
-house foundation count: 1
-child house membership count: 1
 duplication count: 0
 Observer mutation count: 0
 runtime errors: 0
@@ -155,12 +156,28 @@ cleanup: exact
   remains read-only. Schema 25 is readable only when its retained causal
   events can reconstruct the complete proof; an honestly evicted but
   incomplete legacy proof fails closed.
+- Estates V1 activates explicitly and prospectively over canonical mortality.
+  One death can open at most one bounded estate only after complete physical
+  custody resolution. Successor tiers derive from the active partner at the
+  death tick and canonical kinship; a house, household, lineage, trust, skill,
+  phenotype or wealth score has no succession authority. Administration
+  requires explicit mature acceptance and is distinct from beneficiary,
+  owner, holder and custodian roles. A physical asset remains owned by the
+  decedent while settlement is pending, then changes Material Rights only
+  after an exact Pebble transfer receipt; third-party claims and permissions
+  follow their documented bounded policy. Minor ownership remains separate
+  from guardian custody. Schema 27 persists estate, plan, administration,
+  classification, obligations and settlement receipts, and Observer schema 6
+  projects them read-only. The model does not implement wills, taxation,
+  valuation, divisible shares, house leadership, public treasury, land law or
+  general contract inheritance.
 - Gate `V4-GATE-D-v1` requires proof of at least one genuinely renewable
   physical subsistence loop; Gate B did not claim this.
 
 ## Next authorized action
 
 After senior review, manual publication and remote verification of this
-`CIV-32` candidate, the next mission may start the bounded contract design and
-implementation of `CIV-33`. `CIV-33` remains **not started**. Gate D and the
-renewable-subsistence milestone remain planned and unevaluated.
+`CIV-33` candidate, the next eligible work is the separately bounded
+`V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1`. It remains **not started**. Gate D is
+**not evaluated** and blocked on that required milestone. `CIV-34` is not
+started and remains downstream of Gate D.

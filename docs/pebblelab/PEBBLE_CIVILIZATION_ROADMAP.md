@@ -25,21 +25,21 @@ roadmap.
 ## Canonical position
 
 ```text
-CIV-00 through CIV-32: COMPLETE
+CIV-00 through CIV-33: COMPLETE
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: none
-next authorized action: CIV-33
-CIV-32: COMPLETE
+next authorized action: V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1
+CIV-33: COMPLETE
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
-CIV-33: NOT STARTED — NEXT ELIGIBLE PHASE
-V4-GATE-D-v1: PLANNED
-V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: PLANNED
+V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: NOT STARTED — NEXT ELIGIBLE MILESTONE
+V4-GATE-D-v1: NOT EVALUATED — BLOCKED ON REQUIRED MILESTONE
+CIV-34: NOT STARTED
 ```
 
-The `CIV-31` completion is published on the canonical branch at
-`a5f06290e9596756e5690fd284f59aaa457d10d3`. The `CIV-32` completion in this
+The `CIV-32` completion is published on the canonical branch at
+`dcfbafbff92e9c0c849f7234875476d0d49a25a9`. The `CIV-33` completion in this
 local tree remains a review candidate until senior review, manual push and
 remote verification complete.
 
@@ -193,13 +193,14 @@ The evaluated product baseline passed 108 focused adversarial checks, the
 3343-check repository gate and a rendered two-process restart with real
 missing-asset reconciliation, zero duplication and read-only observation.
 
-Gate C remains acquired and published. `CIV-29` through `CIV-32` do not
+Gate C remains acquired and published. `CIV-29` through `CIV-33` do not
 reevaluate it.
 
 ## Wave 2 — Generational continuity
 
-Current entry status: `CIV-32` is **complete** and `CIV-33` is
-**not started — next eligible phase**.
+Current entry status: `CIV-29` through `CIV-33` are **complete**. The required
+renewable-subsistence milestone is **not started — next eligible milestone**;
+Gate D is **not evaluated** and blocked on that milestone.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -361,7 +362,63 @@ fertility policy, adoption, surnames, clans, dynasties, household merger,
 property, estate, inheritance, succession, house leadership, Gate D or
 renewable subsistence.
 
-`CIV-33` is the next eligible phase but remains not started.
+### `CIV-33` — Estates, Inheritance and Succession V1
+
+Status: **completed, required**.
+
+Result: Estates V1 is an explicitly activated, prospective and bounded
+extension of canonical mortality. It creates no retroactive estate. After a
+normal death has verified the complete physical exit of carried matter, the
+same candidate transaction opens at most one deterministic estate, classifies
+the verified physical assets and obligations, derives one successor plan,
+nominates an eligible administrator and then finishes the existing family,
+care, population and mortality closures. A late failure rolls the complete
+civilization and World boundary back.
+
+Successor tiers use only historical truth at the death tick:
+
+```text
+active union partner + canonical children
+otherwise canonical parents
+otherwise living full or half siblings
+otherwise no successor
+```
+
+Allocation is stable whole-asset round-robin under explicit bounds; V1 does
+not invent abstract splits or valuation. A minor may be the recognized owner,
+but direct custody remains with the real guardian or a verified safe
+container. The guardian does not become owner. Administration requires an
+explicit acceptance by an eligible mature resident and remains distinct from
+beneficiary, holder, custodian and owner. Administrator death or physiological
+incapacity ends the assignment and deterministically nominates a bounded
+replacement without changing beneficiaries.
+
+Physical settlement is never administrative. Pebble prevalidates the current
+holder and destination, moves the exact stack through the existing Material
+Rights gateway, verifies both endpoints, then publishes the receipt, current
+holder, owner and custodian. Ownership remains with the decedent while
+settlement is pending. Late failure restores the World, physical endpoints,
+gateway receipt cache, estate, rights, ledger and replay exactly. Unknown
+matter, contradictory third-party claims, missing custody or unavailable
+minor custody remain explicit blocked states rather than being deleted or
+guessed.
+
+Bounded proof:
+[`CIV_33_PHASE_SUMMARY.md`](CIV_33_PHASE_SUMMARY.md). It covers activation,
+stable identity, death atomicity, physical exit ordering, successor tiers,
+partner-at-death lookup, administrator acceptance and replacement,
+minor-owner custody, claims and permissions, no-successor and blocked states,
+whole-asset and partial settlement, corruption refusal, schema-27
+checkpoint/replay and read-only Observer schema 6. A rendered two-process
+campaign proves one normal birth, one normal physiological death, one exact
+physical exit, the same open estate and physical asset after restart, one
+physical inheritance settlement, quantity conservation `1 → 1 → 1 → 1`,
+zero duplication and exact cleanup.
+
+This phase does not claim wills, probate law, inheritance tax, currency,
+prices, valuation, divisible shares, land or building title, public treasury,
+house leadership, dynasties, general contract inheritance, renewable
+subsistence, Gate D or the production economy of `CIV-34`.
 
 This wave must preserve the distinction between genotype, development,
 education, knowledge, skill and status. Care consumes real time and resources.
@@ -377,7 +434,8 @@ Required milestone `V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1`:
 The proof may use agriculture, livestock or another honest physical loop, but
 must include real replenishment and a new productive cycle. Initial-world
 exhaustion plus external test injection is not sufficient. The detailed
-implementation belongs to a future mission, not this roadmap.
+implementation belongs to a separate future mission. It is now the next
+eligible milestone; it is not part of `CIV-33`.
 
 Observable slices:
 
@@ -398,6 +456,10 @@ Required milestone: `V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1`.
 The gate proves several possible generations, development shaped by childhood,
 causal aging and death, durable family distinctions, and survival of goods and
 obligations across people and restart.
+
+Status: **not evaluated — blocked on the required renewable-subsistence
+milestone**. All required CIV phases are complete, but phase completion alone
+does not acquire this gate.
 
 ## Wave 3 — Local material economy
 
@@ -613,7 +675,7 @@ keeps incarnation physical and produces verifiable long-duration history.
 | `V3-GATE-R-v1` | acquired | `CIV-19` |
 | `V4-GATE-B-v1` | acquired | `CIV-25`; bounded embodied autonomy contract |
 | `V4-GATE-C-v1` | acquired | `CIV-26`–`CIV-28` |
-| `V4-GATE-D-v1` | planned | `CIV-29`–`CIV-33`; renewable subsistence milestone |
+| `V4-GATE-D-v1` | not evaluated; blocked on milestone | `CIV-29`–`CIV-33` complete; renewable subsistence milestone not started |
 | `V4-GATE-E-v1` | planned | `CIV-34`–`CIV-37`; `CIV-38` optional |
 | `V4-GATE-F-v1` | planned | `CIV-39`; `CIV-40` optional |
 | `V4-GATE-G-v1` | planned | `CIV-41`–`CIV-47` |

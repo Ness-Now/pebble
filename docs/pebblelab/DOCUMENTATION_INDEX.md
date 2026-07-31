@@ -46,16 +46,16 @@ Canonical status at the product baseline reconciled by this documentation:
 ```text
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED under V4-GATE-B-v1
-CIV-00 through CIV-32: COMPLETE
+CIV-00 through CIV-33: COMPLETE
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
-CIV-33: NOT STARTED; NEXT ELIGIBLE PHASE
-V4-GATE-D-v1: PLANNED
-V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: PLANNED
+V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: NOT STARTED; NEXT ELIGIBLE MILESTONE
+V4-GATE-D-v1: NOT EVALUATED; BLOCKED ON REQUIRED MILESTONE
+CIV-34: NOT STARTED
 ```
 
-The `CIV-31` completion is published on the canonical branch at
-`a5f06290e9596756e5690fd284f59aaa457d10d3`. The `CIV-32` completion in this
+The `CIV-32` completion is published on the canonical branch at
+`dcfbafbff92e9c0c849f7234875476d0d49a25a9`. The `CIV-33` completion in this
 local tree is a review candidate until senior review, manual push and remote
 verification complete.
 
@@ -142,6 +142,12 @@ projections, social houses independent from households and property, atomic
 birth/death integration, exact-one parental-house affiliation, durable
 two-act house consent, schema-26 checkpoint/replay, Observer schema 5, and
 the rendered two-process family restart proof.
+
+[`CIV_33_PHASE_SUMMARY.md`](CIV_33_PHASE_SUMMARY.md) records the bounded
+prospective estate model, mortality and physical-exit atomicity, canonical
+successor tiers, explicit administration, minor-owner custody separation,
+whole-asset physical settlement, schema-27 checkpoint/replay, Observer schema
+6 and the rendered two-process death/estate/restart/settlement proof.
 
 [`GATE_C_EVALUATION_01_SUMMARY.md`](GATE_C_EVALUATION_01_SUMMARY.md) and
 [`GATE_C_EVALUATION_01_SUMMARY.json`](GATE_C_EVALUATION_01_SUMMARY.json)
