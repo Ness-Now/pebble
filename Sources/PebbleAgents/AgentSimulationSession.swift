@@ -73,6 +73,7 @@ public struct AgentSimulationSession {
     public internal(set) var homeostasisState: AgentHomeostasisState?
     public internal(set) var geneticsState: AgentGeneticsState?
     public internal(set) var familyState: AgentFamilyState?
+    public internal(set) var estateState: AgentEstateState?
     var latestAutonomousTeachingReview: AgentAutonomousTeachingReviewSnapshot?
     // Runtime-only compatibility marker. A schema 23 childhood checkpoint
     // remains byte-identical until the first schema 24 supervision-progress
@@ -167,6 +168,7 @@ public struct AgentSimulationSession {
         homeostasisState = nil
         geneticsState = nil
         familyState = nil
+        estateState = nil
         latestAutonomousTeachingReview = nil
         durableSchemaVersionOverride = nil
         try recordCausalEvent(
@@ -405,6 +407,7 @@ public struct AgentSimulationSession {
             }
         }
         try applyDependentCareTickBoundary(at: nextTick)
+        try applyEstateTickBoundary(at: nextTick)
         try expireActiveMigrationIfNeeded(at: nextTick)
         let ids = sortedIds
         refreshConstructionProjectStatus()

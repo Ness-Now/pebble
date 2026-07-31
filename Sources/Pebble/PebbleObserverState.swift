@@ -317,6 +317,38 @@ extension PebbleAgentController {
                     + " claimsPreserved=\(death.preservedMaterialClaims.count)"
             )
         }
+        if let estate = snapshot.estateAuthority?.estates.last {
+            lines += [
+                "[ESTATE / SUCCESSION — AUTHORITATIVE, READ ONLY]",
+                "estate=\(estate.estateID.rawValue)"
+                    + " decedent=\(estate.decedentID.rawValue)"
+                    + " status=\(estate.status.rawValue)",
+                "administrator=\(estate.administratorID?.rawValue ?? "none")"
+                    + " adminStatus=\(estate.administratorStatus?.rawValue ?? "none")"
+                    + " tier=\(estate.beneficiaryTier.rawValue)",
+                "assets=\(estate.totalAssetCount)"
+                    + " settled=\(estate.settledAssetCount)"
+                    + " pending=\(estate.pendingAssetCount)"
+                    + " blocked=\(estate.blockedAssetCount)",
+                "beneficiaries="
+                    + (estate.beneficiaries.isEmpty
+                        ? "none"
+                        : estate.beneficiaries.map {
+                            "\($0.agentID.rawValue):\($0.basis.rawValue)"
+                        }.joined(separator: ",")),
+            ]
+            lines += estate.assets.prefix(4).map {
+                "  \($0.entryID.rawValue)"
+                    + " x\($0.quantity)"
+                    + " holder=\($0.physicalHolder ?? "unresolved")"
+                    + " owner=\($0.currentOwnerID?.rawValue ?? "none")"
+                    + " custodian=\($0.currentCustodianID?.rawValue ?? "none")"
+                    + " beneficiary=\($0.beneficiaryID?.rawValue ?? "none")"
+                    + " custodian=\($0.intendedCustodianID?.rawValue ?? "none")"
+                    + " status=\($0.status.rawValue)"
+                    + " block=\($0.blockReason?.rawValue ?? "none")"
+            }
+        }
         lines += page.values.map {
             "#\($0.sequence) t\($0.tick) \($0.kind.rawValue) [\($0.result)] "
                 + "\($0.summary)"

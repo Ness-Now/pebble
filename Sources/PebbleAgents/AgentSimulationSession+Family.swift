@@ -1060,7 +1060,8 @@ extension AgentSimulationSession {
         family.lastFamilyEventID.sequence.rawValue <= causalLatestSequence,
         schemaVersion == AgentCheckpointSchema.familyVersion
             || schemaVersion
-                == AgentCheckpointSchema.durableHouseConsentVersion else {
+                == AgentCheckpointSchema.durableHouseConsentVersion
+            || schemaVersion == AgentCheckpointSchema.estateVersion else {
             throw AgentFamilyError.invalidState("bounds, ordering or counters")
         }
         let proposalIDs = family.proposals.map(\.proposalID)

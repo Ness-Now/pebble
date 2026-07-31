@@ -257,7 +257,10 @@ extension AgentSimulationSession {
                 if care.activeNeeds[index].status != .unmet {
                     let unmet = try requiredDependentCareEvent(
                         kind: .careNeedUnmet, subjectID: dependentID,
-                        causes: [care.activeNeeds[index].raisedEventID, care.lastCareEventID].sorted(),
+                        causes: Array(Set([
+                            care.activeNeeds[index].raisedEventID,
+                            care.lastCareEventID,
+                        ])).sorted(),
                         payload: carePayload(
                             dependentID: dependentID, caregiverID: nil,
                             householdID: (try? currentMembership(of: dependentID))??.householdID,
@@ -1118,7 +1121,9 @@ extension AgentSimulationSession {
         let need = state.activeNeeds[index]
         let closed = try requiredDependentCareEvent(
             kind: .careNeedUnmet, actorID: caregiverID, subjectID: need.dependentID,
-            causes: [need.raisedEventID, state.lastCareEventID].sorted(),
+            causes: Array(Set([
+                need.raisedEventID, state.lastCareEventID,
+            ])).sorted(),
             payload: carePayload(
                 dependentID: need.dependentID, caregiverID: caregiverID,
                 householdID: ((try? currentMembership(of: need.dependentID)) ?? nil)?.householdID,
@@ -1516,10 +1521,6 @@ extension AgentSimulationSession {
         at deathTick: Int
     ) throws -> AgentCausalEventID? {
         guard var care = dependentCareState else { return nil }
-        try applyChildhoodDeath(
-            agentID: agentID, lethalAgentIDs: lethalAgentIDs,
-            causeEventID: causeEventID, at: deathTick, care: &care
-        )
         let deadAsDependent = care.assignments.indices.filter {
             care.assignments[$0].status == .active
                 && care.assignments[$0].dependentID == agentID
@@ -1578,7 +1579,9 @@ extension AgentSimulationSession {
                     let need = care.activeNeeds[needIndex]
                     let unmet = try requiredDependentCareEvent(
                         kind: .careNeedUnmet, subjectID: dependentID,
-                        causes: [need.raisedEventID, care.lastCareEventID].sorted(),
+                        causes: Array(Set([
+                            need.raisedEventID, care.lastCareEventID,
+                        ])).sorted(),
                         payload: carePayload(
                             dependentID: dependentID, caregiverID: nil,
                             householdID: ((try? currentMembership(of: dependentID)) ?? nil)?.householdID,
@@ -1597,6 +1600,13 @@ extension AgentSimulationSession {
                 }
             }
         }
+        // Caregiver replacement may move a dependent into the surviving
+        // caregiver's candidate household. Guardianship must select against
+        // that same candidate household, never the stale published one.
+        try applyChildhoodDeath(
+            agentID: agentID, lethalAgentIDs: lethalAgentIDs,
+            causeEventID: causeEventID, at: deathTick, care: &care
+        )
         care.assignments.sort(by: careAssignmentSort)
         care.activeNeeds.sort(by: careNeedSort)
         care.activeEngagements.sort(by: careEngagementSort)

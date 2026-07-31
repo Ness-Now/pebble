@@ -428,6 +428,79 @@ public struct AgentObserverDeath: Codable, Equatable, Sendable {
     public let deathEventID: AgentCausalEventID
     public let preservedMaterialClaims: [AgentMaterialAssetID]
     public let genetics: AgentObserverGenetics?
+    public let estateID: AgentEstateID?
+    public let estateStatus: AgentEstateStatus?
+    public let estatePhysicalExitStatus:
+        AgentMortalityPhysicalCustodyResolutionKind?
+    public let estateAdministratorID: AgentID?
+    public let estateBeneficiaryTier: AgentEstateBeneficiaryTier?
+    public let estateSettledAssetCount: Int
+    public let estatePendingAssetCount: Int
+    public let estateBlockedAssetCount: Int
+}
+
+public struct AgentObserverEstateBeneficiary:
+    Codable, Equatable, Sendable
+{
+    public let agentID: AgentID
+    public let basis: AgentEstateBeneficiaryBasis
+    public let tier: AgentEstateBeneficiaryTier
+    public let allocationCount: Int
+    public let lifeStageAtPlan: AgentLifeStage
+    public let guardianIDAtPlan: AgentID?
+}
+
+public struct AgentObserverEstateAsset: Codable, Equatable, Sendable {
+    public let entryID: AgentEstateAssetEntryID
+    public let materialRightsAssetID: AgentMaterialAssetID?
+    public let materialIdentity: AgentMaterialIdentitySnapshot
+    public let quantity: Int
+    public let physicalHolder: String?
+    public let mortalityExitReceiptID: String
+    public let ownerAtOpeningID: AgentID?
+    public let currentOwnerID: AgentID?
+    public let currentCustodianID: AgentID?
+    public let claimantCount: Int
+    public let permissionCount: Int
+    public let beneficiaryID: AgentID?
+    public let intendedCustodianID: AgentID?
+    public let status: AgentEstateAssetStatus
+    public let blockReason: AgentEstateAssetBlockReason?
+    public let settlementReceiptID: String?
+}
+
+public struct AgentObserverEstate: Codable, Equatable, Sendable {
+    public let estateID: AgentEstateID
+    public let decedentID: AgentID
+    public let deathID: AgentDeathID
+    public let deathTick: Int
+    public let deathEventID: AgentCausalEventID?
+    public let openingEventID: AgentCausalEventID
+    public let status: AgentEstateStatus
+    public let administratorID: AgentID?
+    public let administratorStatus: AgentEstateAdministrationStatus?
+    public let beneficiaryTier: AgentEstateBeneficiaryTier
+    public let beneficiaries: [AgentObserverEstateBeneficiary]
+    public let assets: [AgentObserverEstateAsset]
+    public let totalAssetCount: Int
+    public let settledAssetCount: Int
+    public let pendingAssetCount: Int
+    public let blockedAssetCount: Int
+    public let obligationCount: Int
+    public let lastEventID: AgentCausalEventID
+    public let digest: String
+    public let truncated: Bool
+}
+
+public struct AgentObserverEstateAuthority:
+    Codable, Equatable, Sendable
+{
+    public let activationTick: Int
+    public let estates: [AgentObserverEstate]
+    public let totalEstateCount: Int
+    public let totalSettlementCount: Int
+    public let digest: String
+    public let truncated: Bool
 }
 
 public struct AgentObserverChronicleEvent: Codable, Equatable, Sendable {
@@ -477,6 +550,7 @@ public struct AgentObserverSnapshot: Codable, Equatable, Sendable {
     public let globalChronicle: [AgentObserverChronicleEvent]
     public let recentDeaths: [AgentObserverDeath]
     public let familyAuthority: AgentObserverFamilyAuthority?
+    public let estateAuthority: AgentObserverEstateAuthority?
     public let truncation: AgentObserverTruncation
 }
 
@@ -575,6 +649,7 @@ extension AgentSimulationSession {
         let care = dependentCareSnapshot()
         let childhood = childhoodSnapshot()
         let family = familySnapshot()
+        let estates = estateSnapshot()
         let textLimit = configuration.maximumPresentationTextLength
 
         let materialTransitionByEventID = Dictionary(
@@ -713,7 +788,10 @@ extension AgentSimulationSession {
             mortality.records.suffix(configuration.maximumAgents)
         )
         let recentDeaths = retainedDeaths.reversed().map { record in
-            AgentObserverDeath(
+            let estate = estates.estates.first {
+                $0.deathID == record.deathID
+            }
+            return AgentObserverDeath(
                 agentID: record.agentID,
                 deathID: record.deathID,
                 deathTick: record.deathTick,
@@ -731,7 +809,25 @@ extension AgentSimulationSession {
                         })
                         ? $0.asset.assetID : nil
                 }.sorted(),
-                genetics: observerGenetics(record.agentID, snapshot: genetics)
+                genetics: observerGenetics(record.agentID, snapshot: genetics),
+                estateID: estate?.estateID,
+                estateStatus: estate?.status,
+                estatePhysicalExitStatus:
+                    estate?.physicalCustodyResolution.kind,
+                estateAdministratorID: estate?.administrations.last(where: {
+                    $0.status == .active || $0.status == .nominated
+                })?.administratorID,
+                estateBeneficiaryTier: estate?.beneficiaryTier,
+                estateSettledAssetCount: estate?.assets.filter {
+                    $0.status.isTerminal
+                }.count ?? 0,
+                estatePendingAssetCount: estate?.assets.filter {
+                    $0.status == .pendingSettlement
+                        || $0.status == .pendingClassification
+                }.count ?? 0,
+                estateBlockedAssetCount: estate?.assets.filter {
+                    $0.status == .blocked
+                }.count ?? 0
             )
         }
         let generationSource = [
@@ -745,8 +841,15 @@ extension AgentSimulationSession {
             genetics.digest,
             childhood.digest,
             family.digest,
+            estates.digest,
         ].joined(separator: "|")
         let familyAuthority = observerFamilyAuthority(family)
+        let estateAuthority = observerEstateAuthority(
+            estates,
+            materialRights: rights,
+            maximumEstates: configuration.maximumAgents,
+            maximumAssetsPerEstate: configuration.maximumAssetsPerAgent
+        )
         let truncation = AgentObserverTruncation(
             agentsOmitted: max(0, sortedAgents.count - visibleAgents.count),
             relationsOmitted: relationsOmitted,
@@ -761,10 +864,12 @@ extension AgentSimulationSession {
         )
         return AgentObserverSnapshot(
             header: AgentObserverSnapshotHeader(
-                schemaVersion: childhood.enabled
-                    ? (family.enabled ? 5 : 4)
-                    : (family.enabled ? 5
-                        : (genetics.enabled ? 3 : (homeostasis.enabled ? 2 : 1))),
+                schemaVersion: estates.enabled ? 6
+                    : (childhood.enabled
+                        ? (family.enabled ? 5 : 4)
+                        : (family.enabled ? 5
+                            : (genetics.enabled ? 3
+                                : (homeostasis.enabled ? 2 : 1)))),
                 sessionIdentity: simulationID,
                 worldBinding: worldBinding,
                 asOfTick: tick,
@@ -775,6 +880,7 @@ extension AgentSimulationSession {
             globalChronicle: chronicle,
             recentDeaths: recentDeaths,
             familyAuthority: familyAuthority,
+            estateAuthority: estateAuthority,
             truncation: truncation
         )
     }
@@ -863,6 +969,109 @@ private extension AgentSimulationSession {
         }
         return AgentObserverFamilyAuthority(
             unions: unions, lineages: lineages, houses: houses
+        )
+    }
+
+    func observerEstateAuthority(
+        _ snapshot: AgentEstateSnapshot,
+        materialRights: AgentMaterialRightsSnapshot,
+        maximumEstates: Int,
+        maximumAssetsPerEstate: Int
+    ) -> AgentObserverEstateAuthority? {
+        guard snapshot.enabled, let activationTick = snapshot.activationTick else {
+            return nil
+        }
+        let rightsByAssetID = Dictionary(uniqueKeysWithValues:
+            materialRights.records.map { ($0.asset.assetID, $0) }
+        )
+        let selected = Array(snapshot.estates.prefix(maximumEstates))
+        let rows = selected.map { estate in
+            let visibleAssets = Array(
+                estate.assets.prefix(maximumAssetsPerEstate)
+            )
+            let administration = estate.administrations.last {
+                $0.status == .active || $0.status == .nominated
+            } ?? estate.administrations.last
+            return AgentObserverEstate(
+                estateID: estate.estateID,
+                decedentID: estate.decedentID,
+                deathID: estate.deathID,
+                deathTick: estate.deathTick,
+                deathEventID: estate.deathEventID,
+                openingEventID: estate.openingEventID,
+                status: estate.status,
+                administratorID: administration?.administratorID,
+                administratorStatus: administration?.status,
+                beneficiaryTier: estate.beneficiaryTier,
+                beneficiaries: estate.beneficiaries.map {
+                    AgentObserverEstateBeneficiary(
+                        agentID: $0.agentID,
+                        basis: $0.basis,
+                        tier: $0.tier,
+                        allocationCount: $0.allocationCount,
+                        lifeStageAtPlan: $0.lifeStageAtPlan,
+                        guardianIDAtPlan: $0.guardianIDAtPlan
+                    )
+                },
+                assets: visibleAssets.map {
+                    let current = $0.materialRightsAssetID.flatMap {
+                        rightsByAssetID[$0]
+                    }
+                    return AgentObserverEstateAsset(
+                        entryID: $0.entryID,
+                        materialRightsAssetID: $0.materialRightsAssetID,
+                        materialIdentity: $0.materialIdentity,
+                        quantity: $0.quantity,
+                        physicalHolder: current?.lastVerifiedHolder
+                            .holder.stableText
+                            ?? $0.destinationObservation?.holder.stableText
+                            ?? $0.holderAtOpening?.holder.stableText
+                            ?? $0.mortalityExitHolderID,
+                        mortalityExitReceiptID: $0.mortalityExitReceiptID,
+                        ownerAtOpeningID: $0.ownerAtOpening?.ownerID,
+                        currentOwnerID:
+                            current?.recognizedOwnership?.ownerID,
+                        currentCustodianID: current?.custodianID,
+                        claimantCount:
+                            current?.claims.count ?? $0.claimsAtOpening.count,
+                        permissionCount:
+                            current?.permissions.count
+                                ?? $0.permissionsAtOpening.count,
+                        beneficiaryID: $0.assignedBeneficiaryID,
+                        intendedCustodianID: $0.intendedCustodianID,
+                        status: $0.status,
+                        blockReason: $0.blockReason,
+                        settlementReceiptID: $0.settlementReceiptID
+                    )
+                },
+                totalAssetCount: estate.assets.count,
+                settledAssetCount: estate.assets.filter {
+                    $0.status.isTerminal
+                }.count,
+                pendingAssetCount: estate.assets.filter {
+                    $0.status == .pendingSettlement
+                        || $0.status == .pendingClassification
+                }.count,
+                blockedAssetCount: estate.assets.filter {
+                    $0.status == .blocked
+                }.count,
+                obligationCount: estate.obligations.count,
+                lastEventID: estate.lastEventID,
+                digest: AgentEstateDigest.make(
+                    "\(snapshot.digest)|\(estate.estateID.rawValue)|"
+                        + "\(estate.status.rawValue)|\(estate.lastEventID.rawValue)"
+                ),
+                truncated: visibleAssets.count < estate.assets.count
+            )
+        }
+        return AgentObserverEstateAuthority(
+            activationTick: activationTick,
+            estates: rows,
+            totalEstateCount: snapshot.totalEstateCount,
+            totalSettlementCount: snapshot.totalSettlementCount,
+            digest: snapshot.digest,
+            truncated: selected.count < snapshot.estates.count
+                || rows.contains(where: \.truncated)
         )
     }
 }

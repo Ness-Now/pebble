@@ -110,6 +110,13 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
     exit(failed > 0 ? 1 : 0)
 }
 
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
+    == "estates-inheritance-succession" {
+    runPebbleAgentsEstatesInheritanceSuccessionSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "mortality" {
     runPebbleAgentsMortalityPopulationExitSmoke()
     print("\n\(passed) passed, \(failed) failed")
@@ -2401,6 +2408,7 @@ runPebbleAgentsHomeostasisHealthSmoke()
 runPebbleAgentsGeneticsDevelopmentSmoke()
 runPebbleAgentsChildhoodGuardianshipSmoke()
 runPebbleAgentsUnionsFamilyLineagesHousesSmoke()
+runPebbleAgentsEstatesInheritanceSuccessionSmoke()
 
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)

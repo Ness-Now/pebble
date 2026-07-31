@@ -198,6 +198,7 @@ extension PebbleAgentController {
         let familyHouseIDText = family?.houseMemberships.map {
             $0.houseID.rawValue
         }.joined(separator: ",") ?? "none"
+        let latestEstate = snapshot.estateAuthority?.estates.last
         let message = [
             "observer status",
             "open=\(observerUIState.isOpen ? 1 : 0)",
@@ -247,6 +248,13 @@ extension PebbleAgentController {
             "lineages=\(familyLineageText.isEmpty ? "none" : familyLineageText)",
             "houses=\(familyHouseIDText.isEmpty ? "none" : familyHouseIDText)",
             "houseMemberships=\(familyHouseText.isEmpty ? "none" : familyHouseText)",
+            "estate=\(latestEstate?.estateID.rawValue ?? "none")",
+            "estateStatus=\(latestEstate?.status.rawValue ?? "none")",
+            "estateAdministrator=\(latestEstate?.administratorID?.rawValue ?? "none")",
+            "estateTier=\(latestEstate?.beneficiaryTier.rawValue ?? "none")",
+            "estateAssets=\(latestEstate?.totalAssetCount ?? 0)",
+            "estateSettledAssets=\(latestEstate?.settledAssetCount ?? 0)",
+            "estateBlockedAssets=\(latestEstate?.blockedAssetCount ?? 0)",
             "deaths=\(snapshot.recentDeaths.count)",
             "truncated=\(snapshot.truncation.isTruncated ? 1 : 0)",
             "mutation=none",

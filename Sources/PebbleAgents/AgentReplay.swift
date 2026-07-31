@@ -27,6 +27,7 @@ public enum AgentReplaySchema {
     public static let verifiedSupervisionVersion = 24
     public static let familyVersion = 25
     public static let durableHouseConsentVersion = 26
+    public static let estateVersion = 27
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -42,6 +43,7 @@ public enum AgentReplaySchema {
             || version == homeostasisVersion || version == geneticsVersion
             || version == childhoodVersion || version == verifiedSupervisionVersion
             || version == familyVersion || version == durableHouseConsentVersion
+            || version == estateVersion
     }
 }
 
@@ -155,6 +157,9 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case lineageFoundation
     case houseFoundation
     case houseMembership
+    case estateFeature
+    case estateAdministration
+    case estateSettlement
 }
 
 public enum AgentReplayOperation: Codable {
@@ -346,6 +351,13 @@ public enum AgentReplayOperation: Codable {
         acceptance: AgentFamilyInteractionReceipt
     )
     case leaveHouse(houseID: AgentHouseID, agentID: AgentID, operationID: String)
+    case setEstatesEnabled(Bool, configuration: AgentEstateConfiguration)
+    case acceptEstateAdministration(
+        estateID: AgentEstateID,
+        administratorID: AgentID,
+        operationID: String
+    )
+    case applyEstatePhysicalSettlement(AgentEstatePhysicalSettlementOutcome)
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -452,6 +464,9 @@ public enum AgentReplayOperation: Codable {
         case .foundLineage: return .lineageFoundation
         case .foundHouse, .coFoundHouse: return .houseFoundation
         case .joinHouse, .leaveHouse: return .houseMembership
+        case .setEstatesEnabled: return .estateFeature
+        case .acceptEstateAdministration: return .estateAdministration
+        case .applyEstatePhysicalSettlement: return .estateSettlement
         }
     }
 
@@ -479,6 +494,10 @@ public enum AgentReplayOperation: Codable {
         case let .joinHouse(_, request, acceptance):
             raw = [request.receiptID, acceptance.receiptID].sorted().joined(separator: "+")
         case let .leaveHouse(_, _, operationID): raw = operationID
+        case let .acceptEstateAdministration(_, _, operationID):
+            raw = operationID
+        case let .applyEstatePhysicalSettlement(outcome):
+            raw = outcome.operationID
         case let .provideDependentNourishment(intent): raw = intent.provisionID
         case let .startApprenticeship(request):
             raw = "teaching-start:\(request.requestID)"
@@ -789,11 +808,13 @@ public struct AgentReplayRecorder {
         baseCheckpointDigest = checkpoint.semanticDigest
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
-        schemaVersion = session.familyV1Enabled
-            ? AgentReplaySchema.durableHouseConsentVersion
-            : (session.childhoodV2Enabled
-                ? AgentReplaySchema.verifiedSupervisionVersion
-                : checkpoint.schemaVersion)
+        schemaVersion = session.estatesEnabled
+            ? AgentReplaySchema.estateVersion
+            : (session.familyV1Enabled
+                ? AgentReplaySchema.durableHouseConsentVersion
+                : (session.childhoodV2Enabled
+                    ? AgentReplaySchema.verifiedSupervisionVersion
+                    : checkpoint.schemaVersion))
         records = []
         droppedRecordCount = 0
         nonReplayableReason = nil
@@ -1018,6 +1039,16 @@ public struct AgentReplayRecorder {
                 )
             }
             schemaVersion = AgentReplaySchema.durableHouseConsentVersion
+        }
+        if case let .setEstatesEnabled(enabled, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.estateVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "estate activation must be the first v27 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.estateVersion
         }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
@@ -1248,6 +1279,9 @@ public enum AgentSessionReplayer {
                     == AgentReplaySchema.durableHouseConsentVersion
                 && checkpoint.schemaVersion
                     <= AgentCheckpointSchema.familyVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.estateVersion
+                && checkpoint.schemaVersion
+                    <= AgentCheckpointSchema.durableHouseConsentVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -1611,6 +1645,20 @@ extension AgentSimulationSession {
             try candidate.leaveHouse(
                 houseID, agentID: agentID, operationID: operationID
             )
+        case let .setEstatesEnabled(enabled, configuration):
+            try candidate.setEstatesEnabled(
+                enabled, configuration: configuration
+            )
+        case let .acceptEstateAdministration(
+            estateID, administratorID, operationID
+        ):
+            _ = try candidate.acceptEstateAdministration(
+                estateID: estateID,
+                administratorID: administratorID,
+                operationID: operationID
+            )
+        case let .applyEstatePhysicalSettlement(outcome):
+            _ = try candidate.applyEstatePhysicalSettlement(outcome)
         }
         self = candidate
         let causal = causalLedgerSnapshot().summary

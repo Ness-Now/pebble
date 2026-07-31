@@ -455,6 +455,7 @@ extension PebbleAgentController {
                         destinationHolderID: nil,
                         stackCount: 0,
                         itemCount: 0,
+                        physicalAssets: [],
                         verifiedAtTick: session.tick
                     )
                     var staged = session
@@ -590,6 +591,7 @@ extension PebbleAgentController {
                                         itemCount: allCarried.reduce(0) {
                                             $0 + $1.count
                                         },
+                                        physicalAssets: allCarried,
                                         verifiedAtTick: staged.tick
                                     )
                                 if try self.applyRecordedOperationIfActive(

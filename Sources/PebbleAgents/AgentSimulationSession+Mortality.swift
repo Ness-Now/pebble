@@ -448,6 +448,7 @@ extension AgentSimulationSession {
             destinationHolderID: outcome.destinationHolderID,
             stackCount: outcome.stackCount,
             itemCount: outcome.itemCount,
+            physicalAssets: outcome.physicalAssets,
             verifiedAtTick: outcome.verifiedAtTick,
             eventID: event.eventID
         )
@@ -621,7 +622,6 @@ extension AgentSimulationSession {
                 ),
                 summary: "lethal \(item.cause.rawValue) agent=\(item.agentID.rawValue) death=\(deathID.rawValue)"
             )
-
             let reservationCount = reservationsByTarget.values.filter {
                 $0.agentId == item.agentID.rawValue
             }.count
@@ -701,51 +701,6 @@ extension AgentSimulationSession {
                 ),
                 summary: "mortality resources retired death=\(deathID.rawValue) quantity=\(carriedTotal)"
             )
-            let commitmentsEvent = try requiredMortalityEvent(
-                kind: .mortalityCommitmentsResolved,
-                actorID: item.agentID,
-                subjectID: item.agentID,
-                causes: [lethalEvent.eventID],
-                payload: .mortalityCommitments(
-                    deathID: deathID.rawValue,
-                    reservations: reservationCount,
-                    socialVerifications: socialCount,
-                    signals: signalCount + presentationCount,
-                    tasksAndOffers: taskIndices.count + offerIDs.count,
-                    constructionBlocked: constructionBlocked,
-                    reason: "participantDied"
-                ),
-                summary: "mortality commitments resolved death=\(deathID.rawValue)"
-            )
-            for index in taskIndices { sharedTasks[index].terminalEventID = commitmentsEvent.eventID }
-
-            var migrationFailureEvent: AgentCausalEvent?
-            if let migrationIndex = registry.migrations.firstIndex(where: {
-                $0.migrantID == item.agentID && !$0.status.isTerminal
-            }) {
-                let migration = registry.migrations[migrationIndex]
-                migrationFailureEvent = try requiredMortalityEvent(
-                    kind: .migrationFailed,
-                    actorID: item.agentID,
-                    subjectID: item.agentID,
-                    causes: [migration.startedEventID, commitmentsEvent.eventID].sorted(),
-                    payload: .migration(
-                        migrationID: migration.migrationID.rawValue,
-                        migrantID: migration.migrantID.rawValue,
-                        origin: migration.origin.rawValue,
-                        destination: migration.destinationSettlementID.rawValue,
-                        entry: migration.entryPosition,
-                        reception: migration.receptionPosition,
-                        status: AgentMigrationStatus.failed.rawValue,
-                        reason: AgentMigrationFailure.memberDied.rawValue,
-                        routeLength: migration.route.count
-                    ),
-                    summary: "migration failed member died id=\(migration.migrationID.rawValue)"
-                )
-                registry.migrations[migrationIndex].status = .failed
-                registry.migrations[migrationIndex].failure = .memberDied
-            }
-
             // Capture the terminal activity boundary after lethal survival and
             // before the authoritative active-state removal below.
             let terminalActivity = AgentTerminalActivitySnapshot(state: state)
@@ -780,6 +735,89 @@ extension AgentSimulationSession {
                 causeEventID: lethalEvent.eventID,
                 at: mortalityTick
             )
+            var estateOpeningEventID: AgentCausalEventID?
+            if estateState != nil {
+                guard let physicalCustodyResolution =
+                    item.physicalCustodyResolution else {
+                    throw AgentSessionError.estate(.invalidState(
+                        "death before verified physical custody"
+                    ))
+                }
+                try applyEstateAdministratorDeaths(
+                    Set(lethal.map(\.agentID)),
+                    causeEventID: lethalEvent.eventID,
+                    at: mortalityTick
+                )
+                guard let estateID = try openEstateForMortality(
+                    decedentID: item.agentID,
+                    deathID: deathID,
+                    lethalAgentIDs: Set(lethal.map(\.agentID)),
+                    physicalCustodyResolution: physicalCustodyResolution,
+                    causeEventID: lethalEvent.eventID,
+                    at: mortalityTick
+                ), let openingEventID = estateState?.estates.first(where: {
+                    $0.estateID == estateID
+                })?.openingEventID else {
+                    throw AgentSessionError.estate(.invalidState(
+                        "estate opening publication"
+                    ))
+                }
+                estateOpeningEventID = openingEventID
+            }
+            let commitmentsEvent = try requiredMortalityEvent(
+                kind: .mortalityCommitmentsResolved,
+                actorID: item.agentID,
+                subjectID: item.agentID,
+                causes: ([lethalEvent.eventID] + [estateOpeningEventID]
+                    .compactMap { $0 }).sorted(),
+                payload: .mortalityCommitments(
+                    deathID: deathID.rawValue,
+                    reservations: reservationCount,
+                    socialVerifications: socialCount,
+                    signals: signalCount + presentationCount,
+                    tasksAndOffers: taskIndices.count + offerIDs.count,
+                    constructionBlocked: constructionBlocked,
+                    reason: "participantDied"
+                ),
+                summary:
+                    "mortality commitments resolved death=\(deathID.rawValue)"
+            )
+            for index in taskIndices {
+                sharedTasks[index].terminalEventID = commitmentsEvent.eventID
+            }
+
+            var migrationFailureEvent: AgentCausalEvent?
+            if let migrationIndex = registry.migrations.firstIndex(where: {
+                $0.migrantID == item.agentID && !$0.status.isTerminal
+            }) {
+                let migration = registry.migrations[migrationIndex]
+                migrationFailureEvent = try requiredMortalityEvent(
+                    kind: .migrationFailed,
+                    actorID: item.agentID,
+                    subjectID: item.agentID,
+                    causes: [
+                        migration.startedEventID,
+                        commitmentsEvent.eventID,
+                    ].sorted(),
+                    payload: .migration(
+                        migrationID: migration.migrationID.rawValue,
+                        migrantID: migration.migrantID.rawValue,
+                        origin: migration.origin.rawValue,
+                        destination:
+                            migration.destinationSettlementID.rawValue,
+                        entry: migration.entryPosition,
+                        reception: migration.receptionPosition,
+                        status: AgentMigrationStatus.failed.rawValue,
+                        reason: AgentMigrationFailure.memberDied.rawValue,
+                        routeLength: migration.route.count
+                    ),
+                    summary:
+                        "migration failed member died id="
+                        + migration.migrationID.rawValue
+                )
+                registry.migrations[migrationIndex].status = .failed
+                registry.migrations[migrationIndex].failure = .memberDied
+            }
             let familyEventID = try applyFamilyDeath(
                 agentID: item.agentID,
                 causeEventID: lethalEvent.eventID,
@@ -847,6 +885,10 @@ extension AgentSimulationSession {
                     reason: "death finalized"
                 ),
                 summary: "agent death finalized agent=\(item.agentID.rawValue) death=\(deathID.rawValue)"
+            )
+            try bindEstateToFinalizedDeath(
+                deathID: deathID,
+                deathEventID: deathEvent.eventID
             )
 
             let cleanup = AgentMortalityCleanupCounts(
@@ -987,6 +1029,7 @@ extension AgentSimulationSession {
         mortalityState = mortality
         try validateHouseholdCrossDomainIfEnabled()
         try validateDependentCareCrossDomainIfEnabled()
+        try validateEstateCrossDomainIfEnabled()
     }
 
     private func conservationSnapshotWith(

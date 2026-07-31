@@ -328,6 +328,9 @@ public struct AgentMortalityPhysicalCustodyResolution: Codable, Equatable, Senda
     public let destinationHolderID: String?
     public let stackCount: Int
     public let itemCount: Int
+    /// Exact read-only stack evidence captured by Pebble at the terminal
+    /// custody boundary. `nil` is reserved for historical pre-CIV-33 data.
+    public let physicalAssets: [AgentMaterialStackSnapshot]?
     public let verifiedAtTick: Int
     public let eventID: AgentCausalEventID
 }
@@ -340,6 +343,9 @@ public struct AgentMortalityPhysicalCustodyOutcome: Codable, Equatable, Sendable
     public let destinationHolderID: String?
     public let stackCount: Int
     public let itemCount: Int
+    /// Exact bounded carried-stack evidence. It conveys physical identity and
+    /// quantity only; it never creates ownership, a claim, or an inventory.
+    public let physicalAssets: [AgentMaterialStackSnapshot]?
     public let verifiedAtTick: Int
 
     public init(
@@ -350,6 +356,7 @@ public struct AgentMortalityPhysicalCustodyOutcome: Codable, Equatable, Sendable
         destinationHolderID: String?,
         stackCount: Int,
         itemCount: Int,
+        physicalAssets: [AgentMaterialStackSnapshot]? = nil,
         verifiedAtTick: Int
     ) {
         self.operationID = operationID
@@ -359,6 +366,7 @@ public struct AgentMortalityPhysicalCustodyOutcome: Codable, Equatable, Sendable
         self.destinationHolderID = destinationHolderID
         self.stackCount = stackCount
         self.itemCount = itemCount
+        self.physicalAssets = physicalAssets
         self.verifiedAtTick = verifiedAtTick
     }
 }

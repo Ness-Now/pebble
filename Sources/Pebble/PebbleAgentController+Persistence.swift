@@ -892,7 +892,11 @@ extension PebbleAgentController {
                 ? "reused_exact"
                 : "restored_verified:\(restoredCheckpointAgentIDs.joined(separator: ","))")
             : "retired_verified:\(retiredBootstrapAgentIDs.joined(separator: ","))"
-        let message = "checkpoint loaded name=\(name.rawValue) id=\(stored.checkpoint.checkpointID.rawValue) tick=\(candidate.tick) simulation=\(candidate.simulationID.rawValue) digest=\(checkpointDigest.rawValue) reconciledDigest=\(reconciledDigest.rawValue) causalSequence=\(causal.latestSequence) causalDigest=\(causal.digest) restartSafe=1 manifestIntegrity=verified:v\(stored.manifest.manifestIntegrityVersion ?? 0) probes=\(probesByAgentId.count) paused=1 focus=\(focusedAgentId ?? "none") lifecycleEvent=none probeReconciliation=\(probeReconciliation) physicalReconciliation=\(reconciliationSummary) worldMutation=none"
+        let retiredEvidence = retiredBootstrapAgentIDs.isEmpty
+            ? "none" : retiredBootstrapAgentIDs.joined(separator: ",")
+        let restoredEvidence = restoredCheckpointAgentIDs.isEmpty
+            ? "none" : restoredCheckpointAgentIDs.joined(separator: ",")
+        let message = "checkpoint loaded name=\(name.rawValue) id=\(stored.checkpoint.checkpointID.rawValue) tick=\(candidate.tick) simulation=\(candidate.simulationID.rawValue) digest=\(checkpointDigest.rawValue) reconciledDigest=\(reconciledDigest.rawValue) causalSequence=\(causal.latestSequence) causalDigest=\(causal.digest) restartSafe=1 manifestIntegrity=verified:v\(stored.manifest.manifestIntegrityVersion ?? 0) probes=\(probesByAgentId.count) paused=1 focus=\(focusedAgentId ?? "none") lifecycleEvent=none probeReconciliation=\(probeReconciliation) probeRetired=\(retiredEvidence) probeRestored=\(restoredEvidence) physicalReconciliation=\(reconciliationSummary) worldMutation=none"
         trace(message)
         return success(message)
     }

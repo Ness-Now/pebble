@@ -168,7 +168,10 @@ struct PebbleAgentMaterialCustodyEndpoint {
                       world.getBlockEntity(container.x, container.y, container.z) === container,
                       container.items?.count == slots.count else { return false }
                 container.items = copyItemInventory(slots)
-                return true
+                world.setBlockEntity(container)
+                return world.getBlockEntity(
+                    container.x, container.y, container.z
+                ) === container
             }
         )
     }
