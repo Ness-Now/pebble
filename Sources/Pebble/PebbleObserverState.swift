@@ -103,6 +103,23 @@ extension PebbleAgentController {
             "profession=\(individual.profession.primaryDomain ?? individual.profession.status)"
                 + " commitments=\(individual.profession.activeCommitmentCount)",
         ]
+        if individual.materialAssets.isEmpty {
+            lines.append("[SOCIAL CLAIM / PERMISSION] assets=none")
+        } else {
+            lines.append("[PHYSICAL + SOCIAL RIGHTS]")
+            for asset in individual.materialAssets.prefix(2) {
+                lines += [
+                    "  asset=\(asset.assetID.rawValue) item=\(asset.itemKey) x\(asset.quantity)",
+                    "  [PHYSICAL] holder=\(asset.physicalHolder) observed@\(asset.physicalObservationTick)",
+                    "  [SOCIAL] custodian=\(asset.custodianID?.rawValue ?? "none")"
+                        + " owner=\(asset.recognizedOwnerID?.rawValue ?? "none")",
+                    "  claims=\(asset.claimantIDs.map(\.rawValue).joined(separator: ","))"
+                        + " users=\(asset.authorizedUserIDs.map(\.rawValue).joined(separator: ","))",
+                    "  conflict=\(asset.conflict ? "YES" : "no")"
+                        + " reconciliation=\(asset.reconciliationOutcome ?? "not-run")",
+                ]
+            }
+        }
         if let family = individual.family {
             lines += [
                 "[UNIONS / FAMILY — DERIVED, READ ONLY]",
@@ -250,23 +267,6 @@ extension PebbleAgentController {
             lines.append("[SOCIAL] relations")
             lines += individual.relations.prefix(3).map {
                 "  \($0.kind.rawValue):\($0.otherAgentID.rawValue) \($0.presentation)"
-            }
-        }
-        if individual.materialAssets.isEmpty {
-            lines.append("[SOCIAL CLAIM / PERMISSION] assets=none")
-        } else {
-            lines.append("[PHYSICAL + SOCIAL RIGHTS]")
-            for asset in individual.materialAssets.prefix(2) {
-                lines += [
-                    "  asset=\(asset.assetID.rawValue) item=\(asset.itemKey) x\(asset.quantity)",
-                    "  [PHYSICAL] holder=\(asset.physicalHolder) observed@\(asset.physicalObservationTick)",
-                    "  [SOCIAL] custodian=\(asset.custodianID?.rawValue ?? "none")"
-                        + " owner=\(asset.recognizedOwnerID?.rawValue ?? "none")",
-                    "  claims=\(asset.claimantIDs.map(\.rawValue).joined(separator: ","))"
-                        + " users=\(asset.authorizedUserIDs.map(\.rawValue).joined(separator: ","))",
-                    "  conflict=\(asset.conflict ? "YES" : "no")"
-                        + " reconciliation=\(asset.reconciliationOutcome ?? "not-run")",
-                ]
             }
         }
         lines.append("[CAUSAL HISTORY] newest individual references")
