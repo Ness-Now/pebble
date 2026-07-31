@@ -143,7 +143,7 @@ PHASE2_COMMANDS='/tp 14 66 -21|/lab start;/lab pause;/lab movement off;/lab foll
 
 printf '\nCIV-33 process 1: normal birth, death, physical exit, and open estate.\n'
 run_app "$PHASE1_TRACE" "$PHASE1_COMMANDS" \
-    "-|$PREDEATH_CAPTURE|$OPEN_CAPTURE|-" 1
+    "-|$PREDEATH_CAPTURE|-|$OPEN_CAPTURE" 1
 
 require_trace "$PHASE1_TRACE" \
     '^\[pebblelab-proof\] disposable-world gate=armed$' \
@@ -231,7 +231,7 @@ MANIFEST_DIGEST=$(/usr/bin/sed -n \
 
 printf '\nCIV-33 process 2: exact restart and physical inheritance settlement.\n'
 run_app "$PHASE2_TRACE" "$PHASE2_COMMANDS" \
-    "$RESTART_CAPTURE|$SETTLED_CAPTURE|-" 0
+    "-|$RESTART_CAPTURE|$SETTLED_CAPTURE|-" 0
 
 require_trace "$PHASE2_TRACE" \
     "checkpoint loaded name=civ33-open .*tick=23 simulation=$PHASE1_SIM digest=$PHASE1_DIGEST .*restartSafe=1 manifestIntegrity=verified:v1 probes=3 paused=1 .*probeReconciliation=retired_verified:agent_0 probeRetired=agent_0 probeRestored=agent_3 physicalReconciliation=applied:matched worldMutation=none" \
