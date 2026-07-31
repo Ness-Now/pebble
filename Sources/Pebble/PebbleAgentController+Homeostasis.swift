@@ -7,7 +7,9 @@ extension PebbleAgentController {
         world: World,
         player: Player
     ) -> PebbleAgentCommandResult {
-        let usage = "Usage: /lab homeostasis <on|status|proof <setup|rollback|advance 1...32|cleanup>>"
+        let usage = "Usage: /lab homeostasis <on|status|proof <setup|"
+            + "estate-setup|rollback|advance 1...32|"
+            + "estate-advance 1...32|cleanup>>"
         guard homeostasisFeatureEnabled else {
             return failure(
                 "Homeostasis disabled. Set PEBBLELAB_APP_AGENTS_HOMEOSTASIS=1 before launch."
@@ -48,6 +50,13 @@ extension PebbleAgentController {
                 case "setup":
                     guard arguments.count == 2 else { return failure(usage) }
                     return try setupHomeostasisProof(session: &candidate, world: world)
+                case "estate-setup":
+                    guard arguments.count == 2 else {
+                        return failure(usage)
+                    }
+                    return try setupEstateHomeostasisProof(
+                        session: &candidate, world: world
+                    )
                 case "advance":
                     guard arguments.count == 3,
                           let count = Int(arguments[2]),
@@ -64,6 +73,16 @@ extension PebbleAgentController {
                         published: candidate,
                         world: world
                     )
+                case "estate-advance":
+                    guard arguments.count == 3,
+                          let count = Int(arguments[2]),
+                          (1...32).contains(count) else {
+                        return failure(usage)
+                    }
+                    session = candidate
+                    return try advanceEstateHomeostasisProof(
+                        count: count, world: world, player: player
+                    )
                 case "cleanup":
                     guard arguments.count == 2 else { return failure(usage) }
                     return try cleanupHomeostasisProof(
@@ -78,6 +97,290 @@ extension PebbleAgentController {
         } catch {
             return failure("Homeostasis command failed: \(error)")
         }
+    }
+
+    private func setupEstateHomeostasisProof(
+        session candidate: inout AgentSimulationSession,
+        world: World
+    ) throws -> PebbleAgentCommandResult {
+        let decedentID = AgentID(rawValue: "agent_0")!
+        let assetID =
+            AgentMaterialAssetID(rawValue: "asset:civ27:live-pickaxe")!
+        guard candidate.homeostasisEnabled,
+              candidate.physicalFoodSurvivalEnabled,
+              candidate.materialRightsEnabled,
+              candidate.persistenceReconciliationEnabled,
+              candidate.estatesEnabled,
+              candidate.familyV1Enabled,
+              candidate.expectedActiveAgentIDs().contains(decedentID),
+              let record = candidate.materialRightsSnapshot().records.first(
+                where: { $0.asset.assetID == assetID }
+              ),
+              record.recognizedOwnership?.ownerID == decedentID,
+              case let .container(location) =
+                record.lastVerifiedHolder.holder,
+              let position = homeostasisContainerPosition(location),
+              let container = world.getBlockEntity(
+                position.x, position.y, position.z
+              ),
+              let probe = probesByAgentId[decedentID.rawValue],
+              probe.carriedItems.allSatisfy({ $0 == nil }) else {
+            throw ControllerError.homeostasisBoundary(
+                "estate proof dependencies or physical asset unavailable"
+            )
+        }
+        let source = PebbleAgentMaterialCustodyEndpoint.container(
+            container, in: world
+        )
+        let destination = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            probe, in: world
+        )
+        let operationID = "civ33-decedent-agent-take"
+        let decision = candidate.evaluateMaterialUse(
+            AgentMaterialUseRequest(
+                requestID: operationID + ":decision",
+                assetID: assetID,
+                actorID: decedentID,
+                use: .transferCustody,
+                verifiedHolder: record.lastVerifiedHolder
+            )
+        )
+        var staged: AgentSimulationSession?
+        var publicationError: Error?
+        let physical = materialCustodyGateway.transfer(
+            PebbleAgentMaterialTransactionRequest(
+                transactionID: operationID,
+                material: AgentMaterialStackSnapshot(
+                    identity: record.asset.materialIdentity,
+                    count: record.asset.quantity
+                ),
+                expectedSourceFingerprint:
+                    try materialCustodyGateway.fingerprint(source),
+                expectedDestinationFingerprint:
+                    try materialCustodyGateway.fingerprint(destination)
+            ),
+            from: source,
+            to: destination,
+            verifyAfterMutation: {
+                do {
+                    let custody = try self.materialCustodyGateway.inspect(
+                        destination
+                    )
+                    guard custody.slots.compactMap({ $0 }).count == 1,
+                          custody.slots.compactMap({ $0 }).reduce(
+                            0, { $0 + $1.count }
+                          ) == record.asset.quantity else {
+                        return false
+                    }
+                    let observation = AgentMaterialHolderObservation(
+                        holder: .agent(decedentID),
+                        materialIdentity: record.asset.materialIdentity,
+                        quantity: record.asset.quantity,
+                        custodyFingerprint:
+                            try self.materialCustodyGateway.fingerprint(
+                                destination
+                            ),
+                        physicalReceiptID: operationID,
+                        observedAtTick: candidate.tick
+                    )
+                    var social = candidate
+                    _ = try social.applyMaterialRightsOperation(
+                        .physicalTransfer(
+                            AgentMaterialPhysicalTransferOutcome(
+                                operationID: operationID,
+                                decision: decision,
+                                disposition:
+                                    decision.verdict == .allowed
+                                        ? .authorized
+                                        : .observedTransgression,
+                                status: .succeeded,
+                                destinationObservation: observation,
+                                physicalReceiptID: operationID
+                            )
+                        )
+                    )
+                    staged = social
+                    return true
+                } catch {
+                    publicationError = error
+                    return false
+                }
+            }
+        )
+        guard physical.succeeded, let staged else {
+            throw publicationError
+                ?? ControllerError.homeostasisBoundary(
+                    "estate proof take \(physical.status.rawValue)"
+                )
+        }
+        candidate = staged
+        session = candidate
+        let updated = candidate.materialRightsSnapshot().records.first {
+            $0.asset.assetID == assetID
+        }!
+        let claimIDs = updated.claims.map(
+            \.claimantID.rawValue
+        ).joined(separator: ",")
+        let permissionIDs = updated.permissions.map(
+            \.userID.rawValue
+        ).joined(separator: ",")
+        let message = [
+            "estate proof setup",
+            "decedent=\(decedentID.rawValue)",
+            "asset=\(assetID.rawValue)",
+            "physicalItem=iron_pickaxe:\(updated.asset.quantity)",
+            "holder=\(updated.lastVerifiedHolder.holder.stableText)",
+            "custodian=\(updated.custodianID?.rawValue ?? "none")",
+            "owner=\(updated.recognizedOwnership?.ownerID.rawValue ?? "none")",
+            "claims=\(claimIDs)",
+            "permissions=\(permissionIDs)",
+            "worldMutation=physicalCustodyOnly",
+        ].joined(separator: " ")
+        trace(message)
+        return success(message)
+    }
+
+    private func advanceEstateHomeostasisProof(
+        count: Int,
+        world: World,
+        player: Player
+    ) throws -> PebbleAgentCommandResult {
+        guard let initial = session, initial.homeostasisEnabled,
+              initial.estatesEnabled else {
+            throw ControllerError.homeostasisBoundary(
+                "estate homeostasis proof is not active"
+            )
+        }
+        let terminalID = AgentID(rawValue: "agent_0")!
+        let tickBefore = initial.tick
+        let deathsBefore = initial.mortalitySnapshot().totalDeathCount
+        var fedAgentIDs: Set<AgentID> = []
+        var dependentMealsStaged = 0
+        for _ in 0..<count {
+            guard var current = session else {
+                throw ControllerError.homeostasisBoundary(
+                    "session disappeared"
+                )
+            }
+            for rawID in ["agent_1", "agent_2"] {
+                let agentID = AgentID(rawValue: rawID)!
+                guard current.expectedActiveAgentIDs().contains(agentID) else {
+                    continue
+                }
+                if try consumeHomeostasisProofFood(
+                    for: agentID,
+                    session: &current,
+                    world: world
+                ) {
+                    fedAgentIDs.insert(agentID)
+                }
+            }
+            if try stageEstateDependentCareFoodIfNeeded(
+                session: current, world: world
+            ) {
+                dependentMealsStaged += 1
+            }
+            session = current
+            guard advanceOneTick(world: world, player: player) else {
+                throw ControllerError.homeostasisBoundary(
+                    lastError ?? "live tick failed"
+                )
+            }
+        }
+        guard let final = session else {
+            throw ControllerError.homeostasisBoundary(
+                "session disappeared"
+            )
+        }
+        let death = final.mortalitySnapshot().records.last {
+            $0.agentID == terminalID
+        }
+        let profile = final.homeostasisProfile(for: terminalID)
+        let rights = final.materialRightsSnapshot().records.first {
+            $0.asset.assetID.rawValue == "asset:civ27:live-pickaxe"
+        }
+        let estate = final.estateSnapshot().estates.first {
+            $0.decedentID == terminalID
+        }
+        let vitalStatus = profile?.vitalStatus.rawValue
+            ?? death?.finalVitalStatus?.rawValue
+            ?? "missing"
+        let finalHealth = (try? final.state(for: terminalID).health)
+            ?? death?.finalHealth
+            ?? -1
+        let administratorID = estate?.administrations.last?
+            .administratorID.rawValue ?? "none"
+        let holder = rights?.lastVerifiedHolder.holder.stableText ?? "missing"
+        let ownerID = rights?.recognizedOwnership?.ownerID.rawValue ?? "none"
+        let fedAgents = fedAgentIDs.sorted().map(
+            \.rawValue
+        ).joined(separator: ",")
+        let message = [
+            "estate proof advance",
+            "ticks=\(count)",
+            "tick=\(tickBefore)>\(final.tick)",
+            "fedAgents=\(fedAgents)",
+            "deprivedAgent=\(terminalID.rawValue)",
+            "dependentMeals=\(dependentMealsStaged)",
+            "decedent=\(terminalID.rawValue)",
+            "vital=\(vitalStatus)",
+            "health=\(finalHealth)",
+            "deaths=\(deathsBefore)>\(final.mortalitySnapshot().totalDeathCount)",
+            "estate=\(estate?.estateID.rawValue ?? "none")",
+            "estateStatus=\(estate?.status.rawValue ?? "none")",
+            "tier=\(estate?.beneficiaryTier.rawValue ?? "none")",
+            "administrator=\(administratorID)",
+            "holder=\(holder)",
+            "owner=\(ownerID)",
+            "physicalQuantity=\(rights?.asset.quantity ?? 0)",
+            "activeAgents=\(final.expectedActiveAgentIDs().count)",
+            "probes=\(probesByAgentId.count)",
+            "runtimeErrors=\(runtimeErrorCount)",
+        ].joined(separator: " ")
+        trace(message)
+        return success(message)
+    }
+
+    private func stageEstateDependentCareFoodIfNeeded(
+        session: AgentSimulationSession,
+        world: World
+    ) throws -> Bool {
+        guard let engagement = session.dependentCareSnapshot()
+            .activeEngagements.filter({
+                $0.kind == .provideFood
+            }).sorted(by: {
+                if $0.dependentID != $1.dependentID {
+                    return $0.dependentID < $1.dependentID
+                }
+                return $0.caregiverID < $1.caregiverID
+            }).first else {
+            return false
+        }
+        guard let probe = probesByAgentId[engagement.caregiverID.rawValue],
+              probe.world === world, !probe.dead else {
+            throw ControllerError.homeostasisBoundary(
+                "dependent food caregiver embodiment unavailable"
+            )
+        }
+        if probe.carriedItems.compactMap({ $0 }).contains(where: {
+            foodConsumptionDescriptor(for: $0) != nil
+        }) {
+            return false
+        }
+        guard let slot = probe.carriedItems.firstIndex(where: { $0 == nil }) else {
+            throw ControllerError.homeostasisBoundary(
+                "dependent food caregiver custody is full"
+            )
+        }
+        probe.carriedItems[slot] = ItemStack(iid("bread"), 1)
+        guard probe.carriedItems[slot].flatMap(foodConsumptionDescriptor)?
+                .canonicalMaterialName == "bread" else {
+            probe.carriedItems[slot] = nil
+            throw ControllerError.homeostasisBoundary(
+                "dependent proof food was not physically staged"
+            )
+        }
+        return true
     }
 
     private func setupHomeostasisProof(
