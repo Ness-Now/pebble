@@ -429,8 +429,8 @@ func runPebbleAgentsAgricultureSmoke() {
 
     let checkpoint = try! session.makeCheckpoint()
     let restored = try! AgentSimulationSession.restoring(checkpoint)
-    check("agriculture v13 checkpoint restart is byte exact",
-          checkpoint.schemaVersion == 13
+    check("renewed agriculture checkpoint promotes v29 and restarts byte exact",
+          checkpoint.schemaVersion == 29
             && (try! restored.durableStateBytes()) == (try! session.durableStateBytes()))
 
     var replayed = try! AgentSimulationSession.restoring(v12)

@@ -84,4 +84,39 @@ func runPebbleCoreAgricultureSmoke() {
             && drops.contains(where: { itemDef($0.stack.id).name == "wheat" }))
     check("canonical harvest returns real planting input",
           drops.contains(where: { itemDef($0.stack.id).name == "wheat_seeds" }))
+
+    let carrotWorld = agricultureCoreWorld()
+    carrotWorld.setBlock(1, 63, 0, Int(cell(B.farmland, 7)), SET_SILENT)
+    let carrots = ItemStack(iid("carrot"), 1)
+    var carrotDebit = 0
+    let plantedCarrot = executeBlockPlacement(
+        BlockPlacementRuleContext(
+            world: carrotWorld,
+            orientation: BlockPlacementOrientation(yaw: 0, pitch: 0),
+            consumeHeld: { carrotDebit += $0 }
+        ),
+        RaycastHit(
+            x: 1, y: 64, z: 0, face: 1, cell: 0, t: 0,
+            px: 1.5, py: 64.5, pz: 0.5
+        ),
+        Int(B.carrots), carrots
+    )
+    check("one canonical carrot is both edible and a crop placer",
+          foodConsumptionDescriptor(for: carrots)?.food.hunger == 3
+            && itemDef(carrots.id).block == B.carrots
+            && plantedCarrot.succeeded && carrotDebit == 1
+            && carrotWorld.getBlock(1, 64, 0) == Int(cell(B.carrots, 0)))
+    carrotWorld.setBlock(1, 64, 0, Int(cell(B.carrots, 7)), SET_SILENT)
+    resetGameRng(46)
+    let carrotHarvest = executeBlockBreak(
+        BlockBreakRuleContext(
+            world: carrotWorld, heldItem: nil, isCreative: false
+        ),
+        1, 64, 0
+    )
+    let carrotDrops = carrotWorld.entities.compactMap { $0 as? ItemEntity }
+        .filter { itemDef($0.stack.id).name == "carrot" }
+        .reduce(0) { $0 + $1.stack.count }
+    check("canonical mature carrot output funds food, storage, and replanting",
+          carrotHarvest.status == .succeeded && carrotDrops >= 3)
 }

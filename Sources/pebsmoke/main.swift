@@ -200,6 +200,17 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "agriculture" 
     print("\n\(passed) passed, \(failed) failed")
     exit(failed > 0 ? 1 : 0)
 }
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
+    == "renewable-subsistence" {
+    registerAllBlocks()
+    registerAllItems()
+    registerAllEntities()
+    registerAllSystems()
+    runPebbleCoreAgricultureSmoke()
+    runPebbleAgentsRenewableSubsistenceSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "wild-subsistence" {
     registerAllBlocks()
     registerAllItems()

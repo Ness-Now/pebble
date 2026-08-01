@@ -404,7 +404,7 @@ public func registerAllBlocks() {
                   drops: .fn { m, ctx in (m & 7) >= 7 ? [Drop("wheat"), Drop("wheat_seeds", 1, 3 + ctx.fortune)] : [Drop("wheat_seeds")] }, ao: false)
     registerBlock("carrots", shape: .crop, tex: .named("carrots_stage3"), texFn: { m, _ in tileId("carrots_stage\(min(3, (m & 7) >> 1))") },
                   opaque: false, solid: false, fullCube: false, hardness: 0, sound: "grass", piston: .destroy, randomTicks: true,
-                  drops: .fn { m, ctx in (m & 7) >= 7 ? [Drop("carrot", 2, 5 + ctx.fortune)] : [Drop("carrot")] }, ao: false)
+                  drops: .fn { m, ctx in (m & 7) >= 7 ? [Drop("carrot", 3, 5 + ctx.fortune)] : [Drop("carrot")] }, ao: false)
     registerBlock("potatoes", shape: .crop, tex: .named("potatoes_stage3"), texFn: { m, _ in tileId("potatoes_stage\(min(3, (m & 7) >> 1))") },
                   opaque: false, solid: false, fullCube: false, hardness: 0, sound: "grass", piston: .destroy, randomTicks: true,
                   drops: .fn { m, ctx in

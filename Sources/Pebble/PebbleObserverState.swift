@@ -349,6 +349,22 @@ extension PebbleAgentController {
                     + " block=\($0.blockReason?.rawValue ?? "none")"
             }
         }
+        if let renewable = snapshot.renewableSubsistence?.last {
+            lines += [
+                "[RENEWABLE SUBSISTENCE — DERIVED, READ ONLY]",
+                "plot=\(renewable.plotID.rawValue)"
+                    + " crop=\(renewable.crop.rawValue)"
+                    + " cycle=\(renewable.cycleOrdinal)",
+                "firstOutput=\(renewable.firstOutputQuantity)"
+                    + " consumed=\(renewable.consumedQuantity)"
+                    + " reserved=\(renewable.reservedOutputQuantity)",
+                "secondInput=\(renewable.secondInputQuantity)"
+                    + " secondOutput=\(renewable.secondOutputQuantity)"
+                    + " status=\(renewable.status.rawValue)",
+                "block=\(renewable.blockReason ?? "none")"
+                    + " digest=\(renewable.digest)",
+            ]
+        }
         lines += page.values.map {
             "#\($0.sequence) t\($0.tick) \($0.kind.rawValue) [\($0.result)] "
                 + "\($0.summary)"

@@ -1146,10 +1146,12 @@ extension AgentSimulationSession {
         schemaVersion: Int
     ) throws {
         guard schemaVersion == AgentCheckpointSchema.legacyEstateVersion
-                || schemaVersion == AgentCheckpointSchema.estateVersion else {
+                || schemaVersion == AgentCheckpointSchema.estateVersion
+                || schemaVersion
+                    == AgentCheckpointSchema.renewableSubsistenceVersion else {
             throw AgentEstateError.invalidState("checkpoint schema")
         }
-        if schemaVersion == AgentCheckpointSchema.estateVersion,
+        if schemaVersion >= AgentCheckpointSchema.estateVersion,
            authority.estates.contains(where: {
                $0.successorPlanProof == nil
            }) {
@@ -1157,7 +1159,7 @@ extension AgentSimulationSession {
                 "schema 28 requires successor plan proof"
             )
         }
-        if schemaVersion == AgentCheckpointSchema.estateVersion {
+        if schemaVersion >= AgentCheckpointSchema.estateVersion {
             guard mortality.historicalEvidenceVersion
                     == AgentCompactedDeathSummary.currentVersion,
                   let summaries = mortality.compactedDeathSummaries,

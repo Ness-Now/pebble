@@ -59,7 +59,7 @@ public struct AgentAgricultureConfiguration: Codable, Equatable, Sendable {
     public init(
         maximumPlots: Int = 4,
         maximumCellsPerPlot: Int = 4,
-        minimumCellsPerPlot: Int = 2,
+        minimumCellsPerPlot: Int = 1,
         maximumReservations: Int = 16,
         reservationLifetimeTicks: Int = 4,
         maximumRetainedActions: Int = 128,
@@ -69,8 +69,8 @@ public struct AgentAgricultureConfiguration: Codable, Equatable, Sendable {
         guard (1...32).contains(maximumPlots) else {
             throw AgentAgricultureError.invalidConfiguration("plots")
         }
-        guard (2...16).contains(maximumCellsPerPlot),
-              (2...maximumCellsPerPlot).contains(minimumCellsPerPlot) else {
+        guard (1...16).contains(maximumCellsPerPlot),
+              (1...maximumCellsPerPlot).contains(minimumCellsPerPlot) else {
             throw AgentAgricultureError.invalidConfiguration("cells per plot")
         }
         guard (1...256).contains(maximumReservations) else {
@@ -132,9 +132,21 @@ public struct AgentAgriculturalActionID: RawRepresentable, Codable, Hashable, Co
 
 public enum AgentAgriculturalCrop: String, Codable, CaseIterable, Sendable {
     case wheat
+    case carrots
 
-    public var plantingItemKey: String { "wheat_seeds" }
-    public var produceItemKey: String { "wheat" }
+    public var plantingItemKey: String {
+        switch self {
+        case .wheat: return "wheat_seeds"
+        case .carrots: return "carrot"
+        }
+    }
+
+    public var produceItemKey: String {
+        switch self {
+        case .wheat: return "wheat"
+        case .carrots: return "carrot"
+        }
+    }
 }
 
 public enum AgentAgriculturalPlotPhase: String, Codable, CaseIterable, Sendable {
@@ -194,6 +206,34 @@ public struct AgentAgriculturalCell: Codable, Equatable, Sendable {
     public internal(set) var lastWorkEventID: AgentCausalEventID?
 }
 
+public struct AgentAgriculturalRenewalEvidence: Codable, Equatable, Sendable {
+    public let sourceCycleOrdinal: Int
+    public let sourcePlantActionIDs: [AgentAgriculturalActionID]
+    public let sourceHarvestActionIDs: [AgentAgriculturalActionID]
+    public let sourceOutputQuantity: Int
+    public let reproductiveInputQuantity: Int
+    public let reservedAtTick: Int
+    public let renewalEventID: AgentCausalEventID
+
+    public init(
+        sourceCycleOrdinal: Int,
+        sourcePlantActionIDs: [AgentAgriculturalActionID],
+        sourceHarvestActionIDs: [AgentAgriculturalActionID],
+        sourceOutputQuantity: Int,
+        reproductiveInputQuantity: Int,
+        reservedAtTick: Int,
+        renewalEventID: AgentCausalEventID
+    ) {
+        self.sourceCycleOrdinal = sourceCycleOrdinal
+        self.sourcePlantActionIDs = sourcePlantActionIDs.sorted()
+        self.sourceHarvestActionIDs = sourceHarvestActionIDs.sorted()
+        self.sourceOutputQuantity = sourceOutputQuantity
+        self.reproductiveInputQuantity = reproductiveInputQuantity
+        self.reservedAtTick = reservedAtTick
+        self.renewalEventID = renewalEventID
+    }
+}
+
 public struct AgentAgriculturalPlot: Codable, Equatable, Sendable {
     public let plotID: AgentAgriculturalPlotID
     public let plannerID: AgentID
@@ -206,6 +246,74 @@ public struct AgentAgriculturalPlot: Codable, Equatable, Sendable {
     public internal(set) var plantedCivilDate: AgentCivilDate?
     public internal(set) var harvestedCivilDate: AgentCivilDate?
     public internal(set) var lastAgricultureEventID: AgentCausalEventID
+    public internal(set) var cycleOrdinal: Int
+    public internal(set) var renewalEvidence: AgentAgriculturalRenewalEvidence?
+
+    init(
+        plotID: AgentAgriculturalPlotID,
+        plannerID: AgentID,
+        crop: AgentAgriculturalCrop,
+        cells: [AgentAgriculturalCell],
+        designatedStorageLocationID: String,
+        sourceObservationEventID: AgentCausalEventID,
+        plannedCivilDate: AgentCivilDate,
+        phase: AgentAgriculturalPlotPhase,
+        plantedCivilDate: AgentCivilDate?,
+        harvestedCivilDate: AgentCivilDate?,
+        lastAgricultureEventID: AgentCausalEventID,
+        cycleOrdinal: Int = 1,
+        renewalEvidence: AgentAgriculturalRenewalEvidence? = nil
+    ) {
+        self.plotID = plotID
+        self.plannerID = plannerID
+        self.crop = crop
+        self.cells = cells
+        self.designatedStorageLocationID = designatedStorageLocationID
+        self.sourceObservationEventID = sourceObservationEventID
+        self.plannedCivilDate = plannedCivilDate
+        self.phase = phase
+        self.plantedCivilDate = plantedCivilDate
+        self.harvestedCivilDate = harvestedCivilDate
+        self.lastAgricultureEventID = lastAgricultureEventID
+        self.cycleOrdinal = cycleOrdinal
+        self.renewalEvidence = renewalEvidence
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case plotID, plannerID, crop, cells, designatedStorageLocationID
+        case sourceObservationEventID, plannedCivilDate, phase
+        case plantedCivilDate, harvestedCivilDate, lastAgricultureEventID
+        case cycleOrdinal, renewalEvidence
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        plotID = try values.decode(AgentAgriculturalPlotID.self, forKey: .plotID)
+        plannerID = try values.decode(AgentID.self, forKey: .plannerID)
+        crop = try values.decode(AgentAgriculturalCrop.self, forKey: .crop)
+        cells = try values.decode([AgentAgriculturalCell].self, forKey: .cells)
+        designatedStorageLocationID = try values.decode(
+            String.self, forKey: .designatedStorageLocationID
+        )
+        sourceObservationEventID = try values.decode(
+            AgentCausalEventID.self, forKey: .sourceObservationEventID
+        )
+        plannedCivilDate = try values.decode(AgentCivilDate.self, forKey: .plannedCivilDate)
+        phase = try values.decode(AgentAgriculturalPlotPhase.self, forKey: .phase)
+        plantedCivilDate = try values.decodeIfPresent(
+            AgentCivilDate.self, forKey: .plantedCivilDate
+        )
+        harvestedCivilDate = try values.decodeIfPresent(
+            AgentCivilDate.self, forKey: .harvestedCivilDate
+        )
+        lastAgricultureEventID = try values.decode(
+            AgentCausalEventID.self, forKey: .lastAgricultureEventID
+        )
+        cycleOrdinal = try values.decodeIfPresent(Int.self, forKey: .cycleOrdinal) ?? 1
+        renewalEvidence = try values.decodeIfPresent(
+            AgentAgriculturalRenewalEvidence.self, forKey: .renewalEvidence
+        )
+    }
 }
 
 public struct AgentAgriculturalWorkReservation: Codable, Equatable, Sendable {
@@ -333,25 +441,113 @@ public struct AgentAgricultureSnapshot: Codable, Equatable, Sendable {
     public let digest: String
 }
 
+public enum AgentRenewableSubsistenceStatus: String, Codable, Equatable, Sendable {
+    case blocked
+    case secondCycleEstablished
+    case renewableCycleCompleted
+}
+
+/// Read-only milestone evidence derived from retained physical receipts. It
+/// owns no material, crop stage, need, or success transition of its own.
+public struct AgentRenewableSubsistenceEvidence: Codable, Equatable, Sendable {
+    public let plotID: AgentAgriculturalPlotID
+    public let crop: AgentAgriculturalCrop
+    public let cycleOrdinal: Int
+    public let firstPlantActionIDs: [AgentAgriculturalActionID]
+    public let firstHarvestActionIDs: [AgentAgriculturalActionID]
+    public let firstOutputQuantity: Int
+    public let consumptionID: String?
+    public let consumedQuantity: Int
+    public let hungerBefore: Double?
+    public let hungerAfter: Double?
+    public let reservedOutputQuantity: Int
+    public let secondPlantActionIDs: [AgentAgriculturalActionID]
+    public let secondInputQuantity: Int
+    public let secondHarvestActionIDs: [AgentAgriculturalActionID]
+    public let secondOutputQuantity: Int
+    public let status: AgentRenewableSubsistenceStatus
+    public let blockReason: String?
+    public let digest: String
+
+    public init(
+        plotID: AgentAgriculturalPlotID,
+        crop: AgentAgriculturalCrop,
+        cycleOrdinal: Int,
+        firstPlantActionIDs: [AgentAgriculturalActionID],
+        firstHarvestActionIDs: [AgentAgriculturalActionID],
+        firstOutputQuantity: Int,
+        consumptionID: String?,
+        consumedQuantity: Int,
+        hungerBefore: Double?,
+        hungerAfter: Double?,
+        reservedOutputQuantity: Int,
+        secondPlantActionIDs: [AgentAgriculturalActionID],
+        secondInputQuantity: Int,
+        secondHarvestActionIDs: [AgentAgriculturalActionID],
+        secondOutputQuantity: Int,
+        status: AgentRenewableSubsistenceStatus,
+        blockReason: String?,
+        digest: String
+    ) {
+        self.plotID = plotID
+        self.crop = crop
+        self.cycleOrdinal = cycleOrdinal
+        self.firstPlantActionIDs = firstPlantActionIDs.sorted()
+        self.firstHarvestActionIDs = firstHarvestActionIDs.sorted()
+        self.firstOutputQuantity = firstOutputQuantity
+        self.consumptionID = consumptionID
+        self.consumedQuantity = consumedQuantity
+        self.hungerBefore = hungerBefore
+        self.hungerAfter = hungerAfter
+        self.reservedOutputQuantity = reservedOutputQuantity
+        self.secondPlantActionIDs = secondPlantActionIDs.sorted()
+        self.secondInputQuantity = secondInputQuantity
+        self.secondHarvestActionIDs = secondHarvestActionIDs.sorted()
+        self.secondOutputQuantity = secondOutputQuantity
+        self.status = status
+        self.blockReason = blockReason
+        self.digest = digest
+    }
+}
+
 public struct AgentAgriculturalIntent: Codable, Equatable, Sendable {
     public let plotID: AgentAgriculturalPlotID
     public let cellIndex: Int?
     public let actorID: AgentID
     public let kind: AgentAgriculturalActionKind
     public let position: AgentPosition
+    public let crop: AgentAgriculturalCrop
 
     public init(
         plotID: AgentAgriculturalPlotID,
         cellIndex: Int?,
         actorID: AgentID,
         kind: AgentAgriculturalActionKind,
-        position: AgentPosition
+        position: AgentPosition,
+        crop: AgentAgriculturalCrop = .wheat
     ) {
         self.plotID = plotID
         self.cellIndex = cellIndex
         self.actorID = actorID
         self.kind = kind
         self.position = position
+        self.crop = crop
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case plotID, cellIndex, actorID, kind, position, crop
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        plotID = try values.decode(AgentAgriculturalPlotID.self, forKey: .plotID)
+        cellIndex = try values.decodeIfPresent(Int.self, forKey: .cellIndex)
+        actorID = try values.decode(AgentID.self, forKey: .actorID)
+        kind = try values.decode(AgentAgriculturalActionKind.self, forKey: .kind)
+        position = try values.decode(AgentPosition.self, forKey: .position)
+        crop = try values.decodeIfPresent(
+            AgentAgriculturalCrop.self, forKey: .crop
+        ) ?? .wheat
     }
 }
 

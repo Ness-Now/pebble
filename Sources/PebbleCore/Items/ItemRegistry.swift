@@ -173,10 +173,11 @@ public func registerAllItems() {
     // ---- food ----
     @discardableResult
     func food(_ name: String, _ hunger: Int, _ sat: Double, display: String? = nil, maxStack: Int? = nil,
+              block: UInt16? = nil,
               alwaysEat: Bool = false, meat: Bool = false, fast: Bool = false,
               effects: [(effect: String, duration: Int, amplifier: Int, chance: Double)] = [],
               rarity: Int = 0, compostChance: Double = 0) -> Int {
-        registerItem(name, display: display, maxStack: maxStack,
+        registerItem(name, display: display, maxStack: maxStack, block: block,
                      food: FoodDef(hunger: hunger, saturation: sat, alwaysEat: alwaysEat, meat: meat, fast: fast, effects: effects),
                      category: "food", rarity: rarity, compostChance: compostChance)
     }
@@ -203,7 +204,9 @@ public func registerAllItems() {
     food("cooked_salmon", 6, 9.6)
     food("tropical_fish", 1, 0.2)
     food("pufferfish", 1, 0.2, effects: [("poison", 1200, 1, 1), ("hunger", 300, 2, 1), ("nausea", 300, 0, 1)])
-    food("carrot", 3, 3.6, compostChance: 0.65)
+    // A carrot is both food and the canonical placer for the carrots crop.
+    // This preserves one physical identity across consumption and planting.
+    food("carrot", 3, 3.6, block: B.carrots, compostChance: 0.65)
     food("golden_carrot", 6, 14.4)
     food("potato", 1, 0.6, compostChance: 0.65)
     food("baked_potato", 5, 6, compostChance: 0.85)

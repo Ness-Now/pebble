@@ -22,6 +22,122 @@ extension AgentSimulationSession {
         )
     }
 
+    /// Derives the renewable-subsistence milestone from already authoritative
+    /// agriculture and physical-food receipts. No milestone state is mutated.
+    public func renewableSubsistenceEvidence() -> [AgentRenewableSubsistenceEvidence] {
+        guard let agricultureState,
+              let food = physicalFoodSurvivalState else { return [] }
+        return agricultureState.plots.compactMap { plot in
+            guard plot.cycleOrdinal == 2,
+                  let renewal = plot.renewalEvidence else { return nil }
+            let source = renewal.sourceHarvestActionIDs.compactMap { actionID in
+                agricultureState.retainedActions.first {
+                    $0.outcome.actionID == actionID
+                }
+            }.sorted { $0.outcome.actionID < $1.outcome.actionID }
+            guard source.count == plot.cells.count,
+                  let firstHarvestSequence = source.map({
+                      $0.agricultureEventID.sequence.rawValue
+                  }).max() else { return nil }
+            let renewalSequence = renewal.renewalEventID.sequence.rawValue
+            let firstPlants = renewal.sourcePlantActionIDs.compactMap { actionID in
+                agricultureState.retainedActions.first {
+                    $0.outcome.actionID == actionID
+                }
+            }.sorted { $0.outcome.actionID < $1.outcome.actionID }
+            let consumptions = food.completedOutcomes.filter {
+                $0.agentID == plot.plannerID
+                    && $0.canonicalMaterialName == plot.crop.produceItemKey
+                    && $0.consumptionSequence.rawValue > firstHarvestSequence
+                    && $0.consumptionSequence.rawValue < renewalSequence
+            }.sorted { $0.consumptionSequence < $1.consumptionSequence }
+            let secondPlants = agricultureState.retainedActions.filter {
+                $0.outcome.plotID == plot.plotID
+                    && $0.outcome.kind == .plant
+                    && $0.agricultureEventID.sequence.rawValue > renewalSequence
+            }.sorted { $0.outcome.actionID < $1.outcome.actionID }
+            let secondHarvests = agricultureState.retainedActions.filter {
+                $0.outcome.plotID == plot.plotID
+                    && $0.outcome.kind == .harvest
+                    && $0.agricultureEventID.sequence.rawValue > renewalSequence
+            }.sorted { $0.outcome.actionID < $1.outcome.actionID }
+            let secondInput = secondPlants.reduce(0) { total, record in
+                total + record.outcome.materialDeltas.filter {
+                    $0.direction == .consumed
+                        && $0.itemKey == plot.crop.plantingItemKey
+                }.reduce(0) { $0 + $1.quantity }
+            }
+            let secondOutput = secondHarvests.reduce(0) { total, record in
+                total + record.outcome.materialDeltas.filter {
+                    $0.direction == .acquired
+                        && $0.itemKey == plot.crop.produceItemKey
+                }.reduce(0) { $0 + $1.quantity }
+            }
+            let consumption = consumptions.count == 1 ? consumptions[0] : nil
+            let sourceFunded = renewal.sourceOutputQuantity
+                >= renewal.reproductiveInputQuantity + (consumption?.quantityConsumed ?? 0)
+            let secondEstablished = secondPlants.count == plot.cells.count
+                && secondInput == renewal.reproductiveInputQuantity
+            let secondCompleted = secondEstablished
+                && secondHarvests.count == plot.cells.count && secondOutput > 0
+            let status: AgentRenewableSubsistenceStatus
+            let blockReason: String?
+            if consumption == nil {
+                status = .blocked
+                blockReason = consumptions.isEmpty
+                    ? "verified physical food consumption missing"
+                    : "ambiguous physical food consumption"
+            } else if !sourceFunded {
+                status = .blocked
+                blockReason = "first output cannot fund consumption and renewal"
+            } else if !secondEstablished {
+                status = .blocked
+                blockReason = "second physical planting incomplete"
+            } else if secondCompleted {
+                status = .renewableCycleCompleted
+                blockReason = nil
+            } else {
+                status = .secondCycleEstablished
+                blockReason = nil
+            }
+            let firstPlantIDs = firstPlants.map(\.outcome.actionID)
+            let secondPlantIDs = secondPlants.map(\.outcome.actionID)
+            let secondHarvestIDs = secondHarvests.map(\.outcome.actionID)
+            let digest = AgentAgricultureDigest.make(
+                "\(plot.plotID.rawValue)|\(plot.crop.rawValue)|cycle=2|"
+                    + firstPlantIDs.map(\.rawValue).joined(separator: ",") + "|"
+                    + renewal.sourceHarvestActionIDs.map(\.rawValue).joined(separator: ",")
+                    + "|first=\(renewal.sourceOutputQuantity)|"
+                    + "consumption=\(consumption?.consumptionID ?? "none")|"
+                    + "reserved=\(renewal.reproductiveInputQuantity)|"
+                    + secondPlantIDs.map(\.rawValue).joined(separator: ",")
+                    + "|secondInput=\(secondInput)|"
+                    + secondHarvestIDs.map(\.rawValue).joined(separator: ",")
+                    + "|secondOutput=\(secondOutput)|status=\(status.rawValue)"
+            )
+            return AgentRenewableSubsistenceEvidence(
+                plotID: plot.plotID,
+                crop: plot.crop,
+                cycleOrdinal: plot.cycleOrdinal,
+                firstPlantActionIDs: firstPlantIDs,
+                firstHarvestActionIDs: renewal.sourceHarvestActionIDs,
+                firstOutputQuantity: renewal.sourceOutputQuantity,
+                consumptionID: consumption?.consumptionID,
+                consumedQuantity: consumption?.quantityConsumed ?? 0,
+                hungerBefore: consumption?.hungerBefore,
+                hungerAfter: consumption?.hungerAfter,
+                reservedOutputQuantity: renewal.reproductiveInputQuantity,
+                secondPlantActionIDs: secondPlantIDs,
+                secondInputQuantity: secondInput,
+                secondHarvestActionIDs: secondHarvestIDs,
+                secondOutputQuantity: secondOutput,
+                status: status,
+                blockReason: blockReason,
+                digest: digest
+            )
+        }.sorted { $0.plotID < $1.plotID }
+    }
+
     public mutating func setAgricultureEnabled(
         _ enabled: Bool,
         configuration: AgentAgricultureConfiguration = .live
@@ -239,14 +355,16 @@ extension AgentSimulationSession {
                 if let kind {
                     return AgentAgriculturalIntent(
                         plotID: plot.plotID, cellIndex: cell.index,
-                        actorID: actorID, kind: kind, position: cell.position
+                        actorID: actorID, kind: kind, position: cell.position,
+                        crop: plot.crop
                     )
                 }
             }
             if plot.cells.allSatisfy({ $0.phase == .harvested }) {
                 return AgentAgriculturalIntent(
                     plotID: plot.plotID, cellIndex: nil, actorID: actorID,
-                    kind: .store, position: plot.cells[0].position
+                    kind: .store, position: plot.cells[0].position,
+                    crop: plot.crop
                 )
             }
         }
@@ -310,18 +428,76 @@ extension AgentSimulationSession {
                 .invalidAction("renewal requires observed physical farmland")
             )
         }
+        let sourceCycleOrdinal = state.plots[plotIndex].cycleOrdinal
+        let sourceHarvestRecords = try state.plots[plotIndex].cells.map { cell in
+            guard let eventID = cell.lastWorkEventID,
+                  let record = state.retainedActions.first(where: {
+                      $0.agricultureEventID == eventID
+                  }),
+                  record.outcome.plotID == plotID,
+                  record.outcome.cellIndex == cell.index,
+                  record.outcome.kind == .harvest else {
+                throw AgentSessionError.agriculture(
+                    .invalidAction("retained source harvest evidence")
+                )
+            }
+            return record
+        }.sorted { $0.outcome.actionID < $1.outcome.actionID }
+        let sourceHarvestActionIDs = sourceHarvestRecords.map(\.outcome.actionID)
+        guard sourceHarvestActionIDs.count == Set(sourceHarvestActionIDs).count else {
+            throw AgentSessionError.agriculture(
+                .invalidAction("unique source harvest evidence")
+            )
+        }
+        let sourcePlantRecords = try sourceHarvestRecords.map { harvest in
+            guard let cellIndex = harvest.outcome.cellIndex,
+                  let record = state.retainedActions.last(where: {
+                      $0.outcome.plotID == plotID
+                          && $0.outcome.cellIndex == cellIndex
+                          && $0.outcome.kind == .plant
+                          && $0.agricultureEventID.sequence
+                              < harvest.agricultureEventID.sequence
+                  }) else {
+                throw AgentSessionError.agriculture(
+                    .invalidAction("retained source planting evidence")
+                )
+            }
+            return record
+        }.sorted { $0.outcome.actionID < $1.outcome.actionID }
+        let sourcePlantActionIDs = sourcePlantRecords.map(\.outcome.actionID)
+        guard sourcePlantActionIDs.count == Set(sourcePlantActionIDs).count else {
+            throw AgentSessionError.agriculture(
+                .invalidAction("unique source planting evidence")
+            )
+        }
+        let sourceOutputQuantity = sourceHarvestRecords.reduce(0) { total, record in
+            total + record.outcome.materialDeltas.filter {
+                $0.direction == .acquired
+                    && $0.itemKey == state.plots[plotIndex].crop.plantingItemKey
+            }.reduce(0) { $0 + $1.quantity }
+        }
+        let reproductiveInputQuantity = state.plots[plotIndex].cells.count
+        guard sourceOutputQuantity >= reproductiveInputQuantity else {
+            throw AgentSessionError.agriculture(
+                .invalidAction("source harvest cannot fund renewal")
+            )
+        }
         try prevalidateCausalAppend(count: 1)
         let digest = AgentAgricultureDigest.make(
             "\(state.rollingDigest)|renew|\(plotID.rawValue)|"
-                + sourceObservationEventID.rawValue
+                + sourceObservationEventID.rawValue + "|cycle=\(sourceCycleOrdinal)|"
+                + sourcePlantActionIDs.map(\.rawValue).joined(separator: ",") + "|"
+                + sourceHarvestActionIDs.map(\.rawValue).joined(separator: ",")
+                + "|output=\(sourceOutputQuantity)|input=\(reproductiveInputQuantity)"
         )
+        let renewalCauses = Array(Set(
+            [state.plots[plotIndex].lastAgricultureEventID, sourceObservationEventID]
+                + sourceHarvestRecords.map(\.agricultureEventID)
+        )).sorted().prefix(AgentCausalEvent.maximumCauseCount)
         let event = try requiredAgricultureEvent(
             kind: .agriculturalPlotPlanned,
             actorID: plannerID,
-            causes: [
-                state.plots[plotIndex].lastAgricultureEventID,
-                sourceObservationEventID,
-            ],
+            causes: Array(renewalCauses),
             payload: agriculturePayload(
                 plotID: plotID,
                 status: "renewed",
@@ -340,6 +516,16 @@ extension AgentSimulationSession {
         state.plots[plotIndex].plantedCivilDate = nil
         state.plots[plotIndex].harvestedCivilDate = nil
         state.plots[plotIndex].lastAgricultureEventID = event.eventID
+        state.plots[plotIndex].cycleOrdinal = sourceCycleOrdinal + 1
+        state.plots[plotIndex].renewalEvidence = AgentAgriculturalRenewalEvidence(
+            sourceCycleOrdinal: sourceCycleOrdinal,
+            sourcePlantActionIDs: sourcePlantActionIDs,
+            sourceHarvestActionIDs: sourceHarvestActionIDs,
+            sourceOutputQuantity: sourceOutputQuantity,
+            reproductiveInputQuantity: reproductiveInputQuantity,
+            reservedAtTick: tick,
+            renewalEventID: event.eventID
+        )
         state.reservations.removeAll { $0.plotID == plotID }
         state.lastAgricultureEventID = event.eventID
         state.rollingDigest = digest
@@ -499,8 +685,88 @@ extension AgentSimulationSession {
                   plot.cells.map(\.index) == Array(plot.cells.indices),
                   Set(plot.cells.map(\.position)).count == plot.cells.count,
                   plot.sourceObservationEventID.simulationID == clock.simulationID,
-                  plot.lastAgricultureEventID.simulationID == clock.simulationID else {
+                  plot.lastAgricultureEventID.simulationID == clock.simulationID,
+                  plot.cycleOrdinal >= 1 else {
                 throw AgentAgricultureError.invalidState("plot identity")
+            }
+            if plot.cycleOrdinal == 1 {
+                guard plot.renewalEvidence == nil else {
+                    throw AgentAgricultureError.invalidState("unexpected renewal evidence")
+                }
+            } else {
+                guard let evidence = plot.renewalEvidence,
+                      evidence.sourceCycleOrdinal == plot.cycleOrdinal - 1,
+                      evidence.reproductiveInputQuantity == plot.cells.count,
+                      evidence.sourceOutputQuantity >= evidence.reproductiveInputQuantity,
+                      evidence.reservedAtTick >= 0,
+                      evidence.reservedAtTick <= clock.tick.rawValue,
+                      evidence.renewalEventID.simulationID == clock.simulationID,
+                      evidence.sourcePlantActionIDs
+                        == evidence.sourcePlantActionIDs.sorted(),
+                      Set(evidence.sourcePlantActionIDs).count
+                        == evidence.sourcePlantActionIDs.count,
+                      evidence.sourcePlantActionIDs.count == plot.cells.count,
+                      evidence.sourceHarvestActionIDs
+                        == evidence.sourceHarvestActionIDs.sorted(),
+                      Set(evidence.sourceHarvestActionIDs).count
+                        == evidence.sourceHarvestActionIDs.count,
+                      evidence.sourceHarvestActionIDs.count == plot.cells.count else {
+                    throw AgentAgricultureError.invalidState("renewal evidence")
+                }
+                let sourceRecords = evidence.sourceHarvestActionIDs.compactMap { actionID in
+                    state.retainedActions.first { $0.outcome.actionID == actionID }
+                }
+                let sourcePlants = evidence.sourcePlantActionIDs.compactMap { actionID in
+                    state.retainedActions.first { $0.outcome.actionID == actionID }
+                }
+                guard sourceRecords.count == evidence.sourceHarvestActionIDs.count,
+                      sourcePlants.count == evidence.sourcePlantActionIDs.count,
+                      Set(sourceRecords.compactMap(\.outcome.cellIndex)).count
+                        == plot.cells.count,
+                      Set(sourcePlants.compactMap(\.outcome.cellIndex)).count
+                        == plot.cells.count,
+                      sourcePlants.allSatisfy({ record in
+                          record.outcome.plotID == plot.plotID
+                              && record.outcome.kind == .plant
+                              && record.outcome.materialDeltas
+                                  == [AgentAgriculturalMaterialDelta(
+                                      itemKey: plot.crop.plantingItemKey,
+                                      quantity: 1,
+                                      direction: .consumed
+                                  )]
+                      }),
+                      sourceRecords.allSatisfy({ record in
+                          record.outcome.plotID == plot.plotID
+                              && record.outcome.kind == .harvest
+                              && record.outcome.cellIndex.map(plot.cells.indices.contains) == true
+                      }),
+                      sourceRecords.reduce(0, { total, record in
+                          total + record.outcome.materialDeltas.filter {
+                              $0.direction == .acquired
+                                  && $0.itemKey == plot.crop.plantingItemKey
+                          }.reduce(0) { $0 + $1.quantity }
+                      }) == evidence.sourceOutputQuantity,
+                      sourceRecords.allSatisfy({ harvest in
+                          guard let cell = harvest.outcome.cellIndex,
+                                let plant = sourcePlants.first(where: {
+                                    $0.outcome.cellIndex == cell
+                                }),
+                                plant.agricultureEventID.sequence
+                                    < harvest.agricultureEventID.sequence else {
+                              return false
+                          }
+                          return !state.retainedActions.contains(where: {
+                              $0.outcome.plotID == plot.plotID
+                                  && $0.outcome.cellIndex == cell
+                                  && $0.outcome.kind == .plant
+                                  && $0.agricultureEventID.sequence
+                                      > plant.agricultureEventID.sequence
+                                  && $0.agricultureEventID.sequence
+                                      < harvest.agricultureEventID.sequence
+                          })
+                      }) else {
+                    throw AgentAgricultureError.invalidState("source harvest evidence")
+                }
             }
         }
         let reservationKeys = state.reservations.map {
@@ -531,6 +797,27 @@ extension AgentSimulationSession {
               }),
               state.managedSurplusRecords.allSatisfy({ eventExists($0.agricultureEventID) }) else {
             throw AgentAgricultureError.invalidState("causal references")
+        }
+        for plot in state.plots where plot.cycleOrdinal > 1 {
+            guard let evidence = plot.renewalEvidence,
+                  eventExists(evidence.renewalEventID) else {
+                throw AgentAgricultureError.invalidState("renewal causal reference")
+            }
+            if let event = retained[evidence.renewalEventID] {
+                guard event.kind == .agriculturalPlotPlanned,
+                      event.origin == .agricultureTransition,
+                      event.actorID == plot.plannerID,
+                      case let .agriculture(
+                          plotID, cellIndex, actionID, status, _, _, quantity, _
+                      ) = event.payload,
+                      plotID == plot.plotID.rawValue,
+                      cellIndex == nil,
+                      actionID == nil,
+                      status == "renewed",
+                      quantity == plot.cells.count else {
+                    throw AgentAgricultureError.invalidState("renewal causal event")
+                }
+            }
         }
     }
 
@@ -587,10 +874,17 @@ extension AgentSimulationSession {
             }
             return (.agriculturalCropMatured, false)
         case .harvest:
+            let produceQuantity = outcome.materialDeltas.filter {
+                $0.direction == .acquired && $0.itemKey == plot.crop.produceItemKey
+            }.reduce(0) { $0 + $1.quantity }
+            let reproductiveQuantity = outcome.materialDeltas.filter {
+                $0.direction == .acquired && $0.itemKey == plot.crop.plantingItemKey
+            }.reduce(0) { $0 + $1.quantity }
             guard plot.cells[outcome.cellIndex!].phase == .mature,
                   outcome.beforeFingerprint != outcome.afterFingerprint,
                   !outcome.materialDeltas.isEmpty,
                   outcome.materialDeltas.allSatisfy({ $0.direction == .acquired }),
+                  produceQuantity > 0, reproductiveQuantity > 0,
                   !outcome.sourceItemEntityIDs.isEmpty,
                   outcome.custodyFingerprint != nil else {
                 throw AgentSessionError.agriculture(.invalidAction("harvest evidence"))
@@ -681,9 +975,20 @@ extension AgentSimulationSession {
     }
 
     private func agricultureDigest(_ state: AgentAgricultureState) -> String {
-        AgentAgricultureDigest.make(
+        let cycles = state.plots.map { plot in
+            let renewal = plot.renewalEvidence.map {
+                "\($0.sourceCycleOrdinal):"
+                    + $0.sourcePlantActionIDs.map(\.rawValue).joined(separator: ",") + ":"
+                    + $0.sourceHarvestActionIDs.map(\.rawValue).joined(separator: ",")
+                    + ":\($0.sourceOutputQuantity):\($0.reproductiveInputQuantity):"
+                    + "\($0.reservedAtTick):\($0.renewalEventID.rawValue)"
+            } ?? "initial"
+            return "\(plot.plotID.rawValue):\(plot.cycleOrdinal):\(renewal)"
+        }.joined(separator: ";")
+        return AgentAgricultureDigest.make(
             "\(state.rollingDigest)|plots=\(state.plots.count)|actions=\(state.totalActionCount)|"
-                + "cycles=\(state.completedCycleCount)|last=\(state.lastAgricultureEventID.rawValue)"
+                + "cycles=\(state.completedCycleCount)|last=\(state.lastAgricultureEventID.rawValue)|"
+                + cycles
         )
     }
 
@@ -691,9 +996,15 @@ extension AgentSimulationSession {
         _ state: inout AgentAgricultureState
     ) {
         if state.retainedActions.count > state.configuration.maximumRetainedActions {
-            let excess = state.retainedActions.count - state.configuration.maximumRetainedActions
-            state.retainedActions.removeFirst(excess)
-            state.evictionCounts.actionRecords += excess
+            let pinned = Set(state.plots.compactMap(\.renewalEvidence)
+                .flatMap { $0.sourcePlantActionIDs + $0.sourceHarvestActionIDs })
+            while state.retainedActions.count > state.configuration.maximumRetainedActions,
+                  let index = state.retainedActions.firstIndex(where: {
+                      !pinned.contains($0.outcome.actionID)
+                  }) {
+                state.retainedActions.remove(at: index)
+                state.evictionCounts.actionRecords += 1
+            }
         }
         if state.managedSurplusRecords.count
             > state.configuration.maximumRetainedSurplusRecords {

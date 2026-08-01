@@ -29,6 +29,7 @@ public enum AgentReplaySchema {
     public static let durableHouseConsentVersion = 26
     public static let legacyEstateVersion = 27
     public static let estateVersion = 28
+    public static let renewableSubsistenceVersion = 29
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -45,6 +46,7 @@ public enum AgentReplaySchema {
             || version == childhoodVersion || version == verifiedSupervisionVersion
             || version == familyVersion || version == durableHouseConsentVersion
             || version == legacyEstateVersion || version == estateVersion
+            || version == renewableSubsistenceVersion
     }
 }
 
@@ -809,7 +811,10 @@ public struct AgentReplayRecorder {
         baseCheckpointDigest = checkpoint.semanticDigest
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
-        schemaVersion = session.estatesEnabled
+        schemaVersion = checkpoint.schemaVersion
+            == AgentCheckpointSchema.renewableSubsistenceVersion
+            ? AgentReplaySchema.renewableSubsistenceVersion
+            : session.estatesEnabled
             ? (checkpoint.schemaVersion
                 == AgentCheckpointSchema.legacyEstateVersion
                 ? AgentReplaySchema.legacyEstateVersion
@@ -1286,6 +1291,10 @@ public enum AgentSessionReplayer {
             || (manifest.schemaVersion == AgentReplaySchema.estateVersion
                 && checkpoint.schemaVersion
                     <= AgentCheckpointSchema.legacyEstateVersion)
+            || (manifest.schemaVersion
+                    == AgentReplaySchema.renewableSubsistenceVersion
+                && checkpoint.schemaVersion
+                    <= AgentCheckpointSchema.estateVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,

@@ -118,9 +118,10 @@ struct PebbleAgentAgricultureExecutor {
               actor.agentID == intent.actorID.rawValue, actor.isValid(in: world) else {
             throw ExecutionError.invalidIntent
         }
+        let cropBlockID = agricultureBlockID(for: intent.crop)
         guard let binding = materialGateway.placementBinding(
-            actor: actor, requiredBlockID: Int(B.wheat)
-        ), itemDef(binding.heldItem.id).name == AgentAgriculturalCrop.wheat.plantingItemKey else {
+            actor: actor, requiredBlockID: cropBlockID
+        ), itemDef(binding.heldItem.id).name == intent.crop.plantingItemKey else {
             throw ExecutionError.missingSeeds
         }
         let cropTarget = PhysicalBlockPosition(
@@ -138,7 +139,7 @@ struct PebbleAgentAgricultureExecutor {
             world: world, actor: actor,
             request: PebbleAgentBlockPlacementRequest(
                 actorID: intent.actorID.rawValue, hit: hit, target: cropTarget,
-                expectedCell: before, blockID: Int(B.wheat), heldItem: binding.heldItem,
+                expectedCell: before, blockID: cropBlockID, heldItem: binding.heldItem,
                 orientation: BlockPlacementOrientation(yaw: actor.yaw, pitch: actor.pitch)
             ),
             custody: binding.custody, occupiedPositions: occupiedPositions,
@@ -155,7 +156,7 @@ struct PebbleAgentAgricultureExecutor {
                             cropTarget.x, cropTarget.y, cropTarget.z
                         ),
                         materialDeltas: [AgentAgriculturalMaterialDelta(
-                            itemKey: AgentAgriculturalCrop.wheat.plantingItemKey,
+                            itemKey: intent.crop.plantingItemKey,
                             quantity: 1, direction: .consumed
                         )],
                         custodyFingerprint: fingerprint, civilDate: civilDate
@@ -185,7 +186,7 @@ struct PebbleAgentAgricultureExecutor {
         actionID: AgentAgriculturalActionID,
         publish: (AgentAgriculturalActionOutcome) throws -> AgentAgriculturalActionRecord
     ) throws -> AgentAgriculturalActionRecord {
-        guard intent.cellIndex != nil, observedCrop.cropKey == AgentAgriculturalCrop.wheat.rawValue,
+        guard intent.cellIndex != nil, observedCrop.cropKey == intent.crop.rawValue,
               observedCrop.position == AgentPosition(
                 x: intent.position.x, y: intent.position.y + 1, z: intent.position.z
               ), observedCrop.mature,
@@ -195,7 +196,8 @@ struct PebbleAgentAgricultureExecutor {
         let cropCell = world.getBlock(
             observedCrop.position.x, observedCrop.position.y, observedCrop.position.z
         )
-        guard cropCell >> 4 == Int(B.wheat), cropCell & 15 == 7 else {
+        guard cropCell >> 4 == agricultureBlockID(for: intent.crop),
+              cropCell & 15 == 7 else {
             throw ExecutionError.observationMismatch
         }
         return try publish(AgentAgriculturalActionOutcome(
@@ -321,8 +323,8 @@ struct PebbleAgentAgricultureExecutor {
         let sourceSnapshot = try materialGateway.inspect(source)
         let agriculturalStacks = sourceSnapshot.slots.compactMap { stack -> AgentMaterialStackSnapshot? in
             guard let stack,
-                  stack.identity.itemKey == AgentAgriculturalCrop.wheat.plantingItemKey
-                    || stack.identity.itemKey == AgentAgriculturalCrop.wheat.produceItemKey else {
+                  stack.identity.itemKey == intent.crop.plantingItemKey
+                    || stack.identity.itemKey == intent.crop.produceItemKey else {
                 return nil
             }
             return stack
@@ -331,7 +333,7 @@ struct PebbleAgentAgricultureExecutor {
             .compactMap { identity, stacks -> AgentMaterialStackSnapshot? in
                 var count = stacks.reduce(0) { $0 + $1.count }
                 if identity.itemKey
-                    == AgentAgriculturalCrop.wheat.plantingItemKey {
+                    == intent.crop.plantingItemKey {
                     count = max(0, count - max(0, retainedSeedQuantity))
                 }
                 guard count > 0 else { return nil }
@@ -358,10 +360,10 @@ struct PebbleAgentAgricultureExecutor {
                 do {
                     let stored = try materialGateway.inspect(destination)
                     let seeds = stored.slots.compactMap { $0 }.filter {
-                        $0.identity.itemKey == AgentAgriculturalCrop.wheat.plantingItemKey
+                        $0.identity.itemKey == intent.crop.plantingItemKey
                     }.reduce(0) { $0 + $1.count }
-                    let produce = stored.slots.compactMap { $0 }.filter {
-                        $0.identity.itemKey == AgentAgriculturalCrop.wheat.produceItemKey
+                    let storedProduceThisAction = materials.filter {
+                        $0.identity.itemKey == intent.crop.produceItemKey
                     }.reduce(0) { $0 + $1.count }
                     let deltas = materials.map {
                         AgentAgriculturalMaterialDelta(
@@ -378,7 +380,7 @@ struct PebbleAgentAgricultureExecutor {
                         custodyFingerprint: try materialGateway.fingerprint(destination),
                         storageLocationID: destination.locationID,
                         seedReserveQuantity: min(seeds, seedReserveTarget),
-                        physicalSurplusQuantity: produce,
+                        physicalSurplusQuantity: storedProduceThisAction,
                         civilDate: civilDate
                     ))
                     return true
@@ -413,5 +415,12 @@ struct PebbleAgentAgricultureExecutor {
             }.reduce(0) { $0 + $1.count },
             fingerprint: try materialGateway.fingerprint(endpoint)
         )
+    }
+
+    private func agricultureBlockID(for crop: AgentAgriculturalCrop) -> Int {
+        switch crop {
+        case .wheat: return Int(B.wheat)
+        case .carrots: return Int(B.carrots)
+        }
     }
 }

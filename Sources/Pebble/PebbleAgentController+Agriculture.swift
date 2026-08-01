@@ -35,6 +35,7 @@ private enum PebbleAgentAgricultureProofError: Error {
 
 struct PebbleLiveAgriculturalPlanEligibility {
     let actorID: AgentID
+    let crop: AgentAgriculturalCrop
     let positions: [AgentPosition]
     let hasHoe: Bool
     let seedCount: Int
@@ -148,7 +149,7 @@ extension PebbleAgentController {
                 continue
             }
             let operation = AgentReplayOperation.planAgriculturalPlot(
-                plannerID: actorID, positions: eligibility.positions, crop: .wheat,
+                plannerID: actorID, positions: eligibility.positions, crop: eligibility.crop,
                 sourceObservationEventID: observationRecord.causalEventID,
                 designatedStorageLocationID: "container:\(storage.x),\(storage.y),\(storage.z)"
             )
@@ -156,7 +157,7 @@ extension PebbleAgentController {
                 operation, session: &session, recorder: &recorder
             ) == nil {
                 _ = try session.planAgriculturalPlot(
-                    plannerID: actorID, positions: eligibility.positions, crop: .wheat,
+                    plannerID: actorID, positions: eligibility.positions, crop: eligibility.crop,
                     sourceObservationEventID: observationRecord.causalEventID,
                     designatedStorageLocationID: "container:\(storage.x),\(storage.y),\(storage.z)"
                 )
@@ -188,8 +189,12 @@ extension PebbleAgentController {
         let hasHoe = embodiment.carriedItems.compactMap { $0 }.contains {
             $0.count > 0 && itemDef($0.id).tool?.type == "hoe"
         }
-        let seedCount = embodiment.carriedItems.compactMap { $0 }.filter {
-            itemDef($0.id).name == AgentAgriculturalCrop.wheat.plantingItemKey
+        let carried = embodiment.carriedItems.compactMap { $0 }
+        let crop: AgentAgriculturalCrop = carried.contains {
+            $0.count > 0 && itemDef($0.id).name == AgentAgriculturalCrop.carrots.plantingItemKey
+        } ? .carrots : .wheat
+        let seedCount = carried.filter {
+            itemDef($0.id).name == crop.plantingItemKey
         }.reduce(0) { $0 + $1.count }
         let storage = nearestLiveAgricultureContainer(
             world: world, origin: embodiment.position, radius: 8
@@ -212,6 +217,7 @@ extension PebbleAgentController {
         }.map(\.position).sorted(by: agricultureLivePositionSort)
         return PebbleLiveAgriculturalPlanEligibility(
             actorID: actorID,
+            crop: crop,
             positions: Array(positions.prefix(maximum)),
             hasHoe: hasHoe,
             seedCount: seedCount,
@@ -268,7 +274,7 @@ extension PebbleAgentController {
             let hasSeeds = items.contains {
                 $0.count > 0
                     && itemDef($0.id).name
-                        == AgentAgriculturalCrop.wheat.plantingItemKey
+                        == intent.crop.plantingItemKey
             }
             let facts: AgentProductiveSourceExecutionFacts
             let reason: String
@@ -415,7 +421,8 @@ extension PebbleAgentController {
                     cellIndex: cell.index,
                     actorID: plot.plannerID,
                     kind: .maturityObserved,
-                    position: cell.position
+                    position: cell.position,
+                    crop: plot.crop
                 )
                 var candidate = session
                 var candidateRecorder = recorder
@@ -521,7 +528,7 @@ extension PebbleAgentController {
         }
     }
 
-    private func agricultureGateDependencies() -> [(String, Bool)] {
+    func agricultureGateDependencies() -> [(String, Bool)] {
         [
             ("PEBBLELAB_APP_AGENTS=1", featureEnabled),
             ("PEBBLELAB_APP_AGENTS_MOVE=1", movementFeatureEnabled),
@@ -1511,7 +1518,7 @@ extension PebbleAgentController {
         return restored
     }
 
-    private func navigateAgricultureActor(
+    func navigateAgricultureActor(
         world: World,
         embodiment: PebbleAgentEmbodiment,
         destination: AgentPosition
@@ -1555,11 +1562,11 @@ extension PebbleAgentController {
         throw PebbleAgentAgricultureProofError.failed("navigation bound")
     }
 
-    private func agricultureWorkPosition(for soil: AgentPosition) -> AgentPosition {
+    func agricultureWorkPosition(for soil: AgentPosition) -> AgentPosition {
         AgentPosition(x: soil.x - 1, y: soil.y + 1, z: soil.z)
     }
 
-    private func agricultureOccupiedPositions() -> [PhysicalBlockPosition] {
+    func agricultureOccupiedPositions() -> [PhysicalBlockPosition] {
         probesByAgentId.values.filter { !$0.dead }.map {
             PhysicalBlockPosition(
                 x: Int($0.x.rounded(.down)),
@@ -1569,11 +1576,11 @@ extension PebbleAgentController {
         }
     }
 
-    private func agricultureActionID(_ suffix: String) -> AgentAgriculturalActionID {
+    func agricultureActionID(_ suffix: String) -> AgentAgriculturalActionID {
         AgentAgriculturalActionID(rawValue: "agriculture-live:\(suffix)")!
     }
 
-    private func agricultureItemCount(_ key: String, in slots: [ItemStack?]) -> Int {
+    func agricultureItemCount(_ key: String, in slots: [ItemStack?]) -> Int {
         slots.compactMap { $0 }.filter { itemDef($0.id).name == key }
             .reduce(0) { $0 + $1.count }
     }

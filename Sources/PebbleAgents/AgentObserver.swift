@@ -551,6 +551,7 @@ public struct AgentObserverSnapshot: Codable, Equatable, Sendable {
     public let recentDeaths: [AgentObserverDeath]
     public let familyAuthority: AgentObserverFamilyAuthority?
     public let estateAuthority: AgentObserverEstateAuthority?
+    public let renewableSubsistence: [AgentRenewableSubsistenceEvidence]?
     public let truncation: AgentObserverTruncation
 }
 
@@ -650,6 +651,7 @@ extension AgentSimulationSession {
         let childhood = childhoodSnapshot()
         let family = familySnapshot()
         let estates = estateSnapshot()
+        let renewableSubsistence = renewableSubsistenceEvidence()
         let textLimit = configuration.maximumPresentationTextLength
 
         let materialTransitionByEventID = Dictionary(
@@ -842,6 +844,7 @@ extension AgentSimulationSession {
             childhood.digest,
             family.digest,
             estates.digest,
+            renewableSubsistence.map(\.digest).joined(separator: ","),
         ].joined(separator: "|")
         let familyAuthority = observerFamilyAuthority(family)
         let estateAuthority = observerEstateAuthority(
@@ -864,12 +867,12 @@ extension AgentSimulationSession {
         )
         return AgentObserverSnapshot(
             header: AgentObserverSnapshotHeader(
-                schemaVersion: estates.enabled ? 6
+                schemaVersion: renewableSubsistence.isEmpty ? (estates.enabled ? 6
                     : (childhood.enabled
                         ? (family.enabled ? 5 : 4)
                         : (family.enabled ? 5
                             : (genetics.enabled ? 3
-                                : (homeostasis.enabled ? 2 : 1)))),
+                                : (homeostasis.enabled ? 2 : 1))))) : 7,
                 sessionIdentity: simulationID,
                 worldBinding: worldBinding,
                 asOfTick: tick,
@@ -881,6 +884,8 @@ extension AgentSimulationSession {
             recentDeaths: recentDeaths,
             familyAuthority: familyAuthority,
             estateAuthority: estateAuthority,
+            renewableSubsistence: renewableSubsistence.isEmpty
+                ? nil : renewableSubsistence,
             truncation: truncation
         )
     }

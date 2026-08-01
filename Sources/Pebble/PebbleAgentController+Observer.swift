@@ -199,6 +199,7 @@ extension PebbleAgentController {
             $0.houseID.rawValue
         }.joined(separator: ",") ?? "none"
         let latestEstate = snapshot.estateAuthority?.estates.last
+        let renewable = snapshot.renewableSubsistence?.last
         let message = [
             "observer status",
             "open=\(observerUIState.isOpen ? 1 : 0)",
@@ -255,6 +256,16 @@ extension PebbleAgentController {
             "estateAssets=\(latestEstate?.totalAssetCount ?? 0)",
             "estateSettledAssets=\(latestEstate?.settledAssetCount ?? 0)",
             "estateBlockedAssets=\(latestEstate?.blockedAssetCount ?? 0)",
+            "renewablePlot=\(renewable?.plotID.rawValue ?? "none")",
+            "renewableCrop=\(renewable?.crop.rawValue ?? "none")",
+            "renewableCycle=\(renewable?.cycleOrdinal ?? 0)",
+            "renewableFirstOutput=\(renewable?.firstOutputQuantity ?? 0)",
+            "renewableConsumed=\(renewable?.consumedQuantity ?? 0)",
+            "renewableReserved=\(renewable?.reservedOutputQuantity ?? 0)",
+            "renewableSecondInput=\(renewable?.secondInputQuantity ?? 0)",
+            "renewableSecondOutput=\(renewable?.secondOutputQuantity ?? 0)",
+            "renewableStatus=\(renewable?.status.rawValue ?? "none")",
+            "renewableBlock=\(renewable?.blockReason ?? "none")",
             "deaths=\(snapshot.recentDeaths.count)",
             "truncated=\(snapshot.truncation.isTruncated ? 1 : 0)",
             "mutation=none",
