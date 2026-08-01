@@ -46,18 +46,18 @@ Canonical status at the product baseline reconciled by this documentation:
 ```text
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED under V4-GATE-B-v1
-CIV-00 through CIV-33: COMPLETE; CIV-33 LOCAL REVIEW CANDIDATE
+CIV-00 through CIV-33: COMPLETE AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
-V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: NOT STARTED; NEXT ELIGIBLE MILESTONE
-V4-GATE-D-v1: NOT EVALUATED; BLOCKED ON REQUIRED MILESTONE
+V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE; LOCAL REVIEW CANDIDATE
+V4-GATE-D-v1: NOT EVALUATED; NEXT ELIGIBLE GATE EVALUATION
 CIV-34: NOT STARTED
 ```
 
-The `CIV-32` completion is published on the canonical branch at
-`dcfbafbff92e9c0c849f7234875476d0d49a25a9`. The `CIV-33` completion in this
-local tree is a review candidate until senior review, manual push and remote
-verification complete.
+The `CIV-33` completion is published on the canonical branch at
+`7cd1bd3f65a4dc5943f8229b9444ac425c98c677`. The renewable-subsistence
+milestone in this local tree is a review candidate until senior review, manual
+push and remote verification complete.
 
 ## Operational
 
@@ -151,6 +151,12 @@ coordinated mortality/estate retention, durable schema-28 successor proof,
 bounded compacted-death evidence for exact historical eligibility,
 restrictive schema-27 compatibility, Observer schema 6 and the rendered
 two-process death/estate/restart/settlement proof.
+
+[`RENEWABLE_SUBSISTENCE_MILESTONE_SUMMARY.md`](RENEWABLE_SUBSISTENCE_MILESTONE_SUMMARY.md)
+records the bounded physical carrot loop, exact input/output and food debit,
+source-harvest renewal provenance, schema-29 restart, Observer schema 7,
+two-process rendered proof and explicit limits of
+`V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1`.
 
 [`GATE_C_EVALUATION_01_SUMMARY.md`](GATE_C_EVALUATION_01_SUMMARY.md) and
 [`GATE_C_EVALUATION_01_SUMMARY.json`](GATE_C_EVALUATION_01_SUMMARY.json)

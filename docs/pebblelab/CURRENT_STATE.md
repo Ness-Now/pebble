@@ -10,79 +10,82 @@ SHA of the documentation commit that contains it.
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-B-v1`.
 - Gate C — Durable Observable Local World:
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-C-v1`.
-- `CIV-00` through `CIV-33`: **COMPLETE** in their bounded contracts.
+- `CIV-00` through `CIV-33`: **COMPLETE AND PUBLISHED** in their bounded
+  contracts.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
-Published product baseline from which `CIV-33` was implemented:
+Published product baseline from which
+`V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1` was implemented:
 
 ```text
-dcfbafbff92e9c0c849f7234875476d0d49a25a9
+7cd1bd3f65a4dc5943f8229b9444ac425c98c677
 ```
 
 This document does not claim to record the SHA of the commit containing
-`CIV-33`. Use Git to identify the exact reviewed or published phase HEAD.
+the renewable-subsistence milestone. Use Git to identify the exact reviewed
+or published milestone HEAD.
 
-The `CIV-32` completion is published on the canonical branch. The `CIV-33`
-completion recorded here is a local review candidate until senior review,
-manual push and remote verification complete.
+The `CIV-33` completion is published on the canonical branch. The renewable-
+subsistence milestone recorded here is a local review candidate until senior
+review, manual push and remote verification complete.
 
 ## Current program position
 
 ```text
 active CIV phase: none
-next authorized action: V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1
-CIV-33 status: COMPLETE — LOCAL REVIEW CANDIDATE
+next authorized action: V4-GATE-D-v1 evaluation
+CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
-V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: NOT STARTED — NEXT ELIGIBLE MILESTONE
-V4-GATE-D-v1 status: NOT EVALUATED — BLOCKED ON REQUIRED MILESTONE
+V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE — LOCAL REVIEW CANDIDATE
+V4-GATE-D-v1 status: NOT EVALUATED — NEXT ELIGIBLE GATE EVALUATION
 CIV-34 status: NOT STARTED
 roadmap generation: V4
 ```
 
-Completing `CIV-33` completes every required CIV phase for Gate D. It does not
-complete the required renewable-subsistence milestone and does not evaluate
-or acquire Gate D.
+The completed local renewable-subsistence candidate satisfies the last named
+prerequisite for Gate D. It does not evaluate or acquire Gate D; that remains
+a separate senior-reviewed gate campaign.
 
 ## Last validation baseline
 
-For the `CIV-33` local review candidate:
+For the `V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1` local review candidate:
 
 ```text
-focused estates/inheritance/succession: 84 passed, 0 failed
-focused unions/family/lineages/houses: 83 passed, 0 failed
-focused lifecycle: 80 passed, 0 failed
-focused childhood/guardianship/social development: 62 passed, 0 failed
-focused dependent care: 55 passed, 0 failed
+focused renewable subsistence: 19 passed, 0 failed
+focused ecological observation: 17 passed, 0 failed
+focused harvest: 46 passed, 0 failed
+focused agriculture: 32 passed, 0 failed
+focused physical actions: 38 passed, 0 failed
+focused materials: 30 passed, 0 failed
 focused homeostasis/health: 30 passed, 0 failed
+focused physical food/survival: 50 passed, 0 failed
+focused lifecycle: 80 passed, 0 failed
+focused skills: 59 passed, 0 failed
+focused teaching: 41 passed, 0 failed
+focused work/professions: 29 passed, 0 failed
+focused material rights: 21 passed, 0 failed
 focused checkpoint/replay: 49 passed, 0 failed
+focused persistence/reconciliation: 18 passed, 0 failed
 focused Observer: 20 passed, 0 failed
 focused mortality: 93 passed, 0 failed
-focused material rights: 21 passed, 0 failed
-repository gate: 3650 passed, 0 failed
+focused estates/inheritance/succession: 84 passed, 0 failed
+repository gate: 3652 passed, 0 failed
 repository verification steps: 35/35
-rendered two-process CIV-33 death/estate/restart/settlement campaign: PASS
-normal birth before death: YES
-verified physical exit before estate opening: YES
-successor tier: primary active partner at death + canonical child
-administrator acceptance count: 1
-estate opening count: 1
-asset settlement count: 1
-estate settlement count: 1
-physical quantity before/exit/restart/settlement: 1/1/1/1
-claims and permissions conserved under bounded policy: YES
-late physical settlement rollback: exact
-schema-28 checkpoint/replay and durable successor proof: byte exact
-schema-28 compacted-death historical evidence: bounded, digested and byte exact
-pre-boundary compacted death eligibility/stage/guardian corruption: refused after complete re-signing
-post-boundary death eligibility: exactly preserved
-schema-27 exact-proof compatibility: verified; incomplete proof refused
-schema-28 manifest integrity digest: verified
-estate operational status recomputation: verified
-coordinated mortality/estate retention: verified at capacity 2
-settlement operation/physical receipt identity: exact and prevalidated
-blocked-asset custodian retry: causal, bounded and restart-stable
-Observer schema 6: read-only estate projection
-persistent child probe restored from protected empty-custody attestation: YES
+rendered two-process renewable-cycle campaign: PASS
+physical resource and food: carrot through canonical Pebble mechanics
+initial reproductive quantity: 1
+first plant debit / first harvest output: 1 / 5
+physical food debit: 1
+stored surplus / reserved reproductive quantity: 3 / 1
+second plant debit / second harvest output: 1 / 3
+final loose physical quantity: 6
+growth ticks per cycle: 17 / 17
+checkpoint and replay schema: 29
+Observer schema 7: read-only derived renewable-cycle projection
+same World/session/plot/stage-0 crop across real process restart: YES
+manifest integrity digest: verified
+external injections after initialization: 0
+direct World block mutations after initialization: 0
 duplication count: 0
 Observer mutation count: 0
 runtime errors: 0
@@ -198,13 +201,21 @@ cleanup: exact
   read-only. The model does not implement wills, taxation,
   valuation, divisible shares, house leadership, public treasury, land law or
   general contract inheritance.
-- Gate `V4-GATE-D-v1` requires proof of at least one genuinely renewable
-  physical subsistence loop; Gate B did not claim this.
+- Renewable Subsistence V1 proves one bounded real carrot loop through existing
+  PebbleCore crop growth, Pebble physical agriculture, physical food debit and
+  a new plant/harvest cycle across restart. One initialization carrot becomes
+  a first harvest of five; one is eaten, three are stored and one is replanted;
+  the stage-0 second crop survives restart and yields three. Schema 29 retains
+  exact source-action provenance and fails closed when the first-cycle receipts
+  needed to authorize renewal cannot be retained. Observer schema 7 derives a
+  read-only view from agriculture and physical-food authorities. This proof is
+  not a general food economy, market, land-rights system, irrigation or season
+  model, crop genetics, or industrial production system.
 
 ## Next authorized action
 
 After senior review, manual publication and remote verification of this
-`CIV-33` candidate, the next eligible work is the separately bounded
-`V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1`. It remains **not started**. Gate D is
-**not evaluated** and blocked on that required milestone. `CIV-34` is not
-started and remains downstream of Gate D.
+renewable-subsistence candidate, the next eligible work is a separate
+`V4-GATE-D-v1` evaluation. Gate D remains **not evaluated** and is not acquired
+by milestone completion alone. `CIV-34` is not started and remains downstream
+of Gate D.

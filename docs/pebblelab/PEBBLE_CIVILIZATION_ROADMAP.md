@@ -25,23 +25,23 @@ roadmap.
 ## Canonical position
 
 ```text
-CIV-00 through CIV-33: COMPLETE
+CIV-00 through CIV-33: COMPLETE AND PUBLISHED
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: none
-next authorized action: V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1
-CIV-33: COMPLETE — LOCAL REVIEW CANDIDATE
+next authorized action: V4-GATE-D-v1 evaluation
+CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
-V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: NOT STARTED — NEXT ELIGIBLE MILESTONE
-V4-GATE-D-v1: NOT EVALUATED — BLOCKED ON REQUIRED MILESTONE
+V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE — LOCAL REVIEW CANDIDATE
+V4-GATE-D-v1: NOT EVALUATED — NEXT ELIGIBLE GATE EVALUATION
 CIV-34: NOT STARTED
 ```
 
-The `CIV-32` completion is published on the canonical branch at
-`dcfbafbff92e9c0c849f7234875476d0d49a25a9`. The `CIV-33` completion in this
-local tree remains a review candidate until senior review, manual push and
-remote verification complete.
+The `CIV-33` completion is published on the canonical branch at
+`7cd1bd3f65a4dc5943f8229b9444ac425c98c677`. The renewable-subsistence
+milestone in this local tree remains a review candidate until senior review,
+manual push and remote verification complete.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:
@@ -198,9 +198,10 @@ reevaluate it.
 
 ## Wave 2 — Generational continuity
 
-Current entry status: `CIV-29` through `CIV-33` are **complete**. The required
-renewable-subsistence milestone is **not started — next eligible milestone**;
-Gate D is **not evaluated** and blocked on that milestone.
+Current entry status: `CIV-29` through `CIV-33` are **complete and published**.
+The required renewable-subsistence milestone is **complete — local review
+candidate**. Gate D is **not evaluated** and is the next eligible gate
+evaluation after milestone review and publication.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -452,17 +453,39 @@ education, knowledge, skill and status. Care consumes real time and resources.
 Death leaves physical goods, claims and obligations to a durable estate rather
 than deleting them administratively.
 
-Required milestone `V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1`:
+### `V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1` — Renewable Physical Subsistence Loop
+
+Status: **complete — local review candidate**.
+
+Contract:
 
 > Before Gate D evaluation, at least one physical subsistence loop must
 > complete and renew through normal Pebble mechanics across the relevant
 > lifecycle and restart boundary.
 
-The proof may use agriculture, livestock or another honest physical loop, but
-must include real replenishment and a new productive cycle. Initial-world
-exhaustion plus external test injection is not sufficient. The detailed
-implementation belongs to a separate future mission. It is now the next
-eligible milestone; it is not part of `CIV-33`.
+Delivered proof: one real carrot is planted through the existing Pebble
+agriculture boundary and grows for 17 authorized World ticks. The first
+physical harvest yields five carrots. One is debited by physical food
+consumption, three are stored as surplus and one is reserved then debited by a
+second planting operation whose durable evidence names the exact first-harvest
+action. The stage-0 second crop and stored quantity survive a real process
+restart; 17 further authorized World ticks produce a second physical harvest
+of three. Final loose physical quantity is six. There are no post-
+initialization injections or direct World block mutations.
+
+The implementation extends the existing crop, agriculture, physical-food,
+checkpoint/replay and Observer authorities. It adds no parallel farming,
+inventory, growth, food or milestone state engine. Renewal evidence and source
+receipts are bounded and fail closed under retention pressure. Schema 29
+persists the exact cycle/provenance state; Observer schema 7 derives the
+read-only milestone projection.
+
+Bounded evidence:
+[`RENEWABLE_SUBSISTENCE_MILESTONE_SUMMARY.md`](RENEWABLE_SUBSISTENCE_MILESTONE_SUMMARY.md).
+
+This milestone does not claim a general economy, markets, land law,
+irrigation, seasons, crop genetics, industrial production, Gate D acquisition
+or the production systems of `CIV-34`.
 
 Observable slices:
 
@@ -484,9 +507,10 @@ The gate proves several possible generations, development shaped by childhood,
 causal aging and death, durable family distinctions, and survival of goods and
 obligations across people and restart.
 
-Status: **not evaluated — blocked on the required renewable-subsistence
-milestone**. All required CIV phases are complete, but phase completion alone
-does not acquire this gate.
+Status: **not evaluated — next eligible gate evaluation**. All required CIV
+phases are complete and the required milestone is a complete local review
+candidate, but neither phase nor milestone completion evaluates or acquires
+this gate.
 
 ## Wave 3 — Local material economy
 
@@ -702,7 +726,7 @@ keeps incarnation physical and produces verifiable long-duration history.
 | `V3-GATE-R-v1` | acquired | `CIV-19` |
 | `V4-GATE-B-v1` | acquired | `CIV-25`; bounded embodied autonomy contract |
 | `V4-GATE-C-v1` | acquired | `CIV-26`–`CIV-28` |
-| `V4-GATE-D-v1` | not evaluated; blocked on milestone | `CIV-29`–`CIV-33` complete; renewable subsistence milestone not started |
+| `V4-GATE-D-v1` | not evaluated; next eligible gate evaluation | `CIV-29`–`CIV-33` published; renewable subsistence milestone complete local candidate |
 | `V4-GATE-E-v1` | planned | `CIV-34`–`CIV-37`; `CIV-38` optional |
 | `V4-GATE-F-v1` | planned | `CIV-39`; `CIV-40` optional |
 | `V4-GATE-G-v1` | planned | `CIV-41`–`CIV-47` |
