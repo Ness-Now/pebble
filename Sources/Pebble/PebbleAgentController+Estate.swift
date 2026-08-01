@@ -25,7 +25,7 @@ extension PebbleAgentController {
                 }
                 session = staged
                 return success(
-                    "Estates enabled schema=27 activationTick=\(staged.tick)."
+                    "Estates enabled schema=28 activationTick=\(staged.tick)."
                 )
             case "status" where arguments.count == 1:
                 let message = estateStatusEvidence(in: staged)
@@ -229,7 +229,7 @@ extension PebbleAgentController {
         }) else {
             return [
                 "estates",
-                "schema=27",
+                "schema=28",
                 "enabled=\(snapshot.enabled ? 1 : 0)",
                 "activation=\(snapshot.activationTick ?? -1)",
                 "count=\(snapshot.totalEstateCount)",
@@ -275,7 +275,7 @@ extension PebbleAgentController {
             - Set(snapshot.estates.map(\.estateID)).count
         return [
             "estates",
-            "schema=27",
+            "schema=28",
             "enabled=\(snapshot.enabled ? 1 : 0)",
             "activation=\(snapshot.activationTick ?? -1)",
             "count=\(snapshot.totalEstateCount)",
@@ -288,6 +288,10 @@ extension PebbleAgentController {
             "status=\(latest.status.rawValue)",
             "tier=\(latest.beneficiaryTier.rawValue)",
             "beneficiaries=\(beneficiaries)",
+            "successorPlanVersion=\(latest.successorPlanProof?.version ?? 0)",
+            "successorPlanDigest=\(latest.successorPlanProof?.planDigest ?? "none")",
+            "successorPlanRows=\(latest.successorPlanProof?.eligibilityRows.count ?? 0)",
+            "successorPlanEvent=\(latest.successorPlanEventID.rawValue)",
             "administrator=\(activeAdministration?.administratorID.rawValue ?? "none")",
             "administrationStatus=\(latestAdministration?.status.rawValue ?? "none")",
             "acceptance=\(latestAdministration?.acceptanceOperationID ?? "none")",

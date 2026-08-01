@@ -170,16 +170,16 @@ extension AgentSimulationSession {
             .acceptanceEventID = event.eventID
         authority.estates[estateIndex].administrations[administrationIndex]
             .status = .active
-        if authority.estates[estateIndex].status != .blocked,
-           authority.estates[estateIndex].status != .dormantNoSuccessor {
-            authority.estates[estateIndex].status = .openAdministered
-        }
+        recomputeEstateOperationalStatus(
+            estateIndex: estateIndex, authority: &authority
+        )
         authority.estates[estateIndex].lastEventID = event.eventID
         authority.processedOperationIDs.append(operationID)
         authority.processedOperationIDs.sort()
         authority.lastEventID = event.eventID
         authority.rollingDigest = Self.estateStateDigest(authority)
         estateState = authority
+        try validateEstateCrossDomainIfEnabled()
         return authority.estates[estateIndex].administrations[administrationIndex]
     }
 
@@ -200,6 +200,7 @@ extension AgentSimulationSession {
             throw AgentSessionError.estate(.disabled)
         }
         guard validEstateOperationID(outcome.operationID),
+              outcome.operationID == outcome.physicalReceiptID,
               !authority.processedOperationIDs.contains(outcome.operationID),
               authority.processedOperationIDs.count
                 < authority.configuration.maximumProcessedOperationIDs,
@@ -470,10 +471,13 @@ extension AgentSimulationSession {
                     final.eventID
             }
         } else {
-            authority.estates[estateIndex].status = .partiallySettled
+            recomputeEstateOperationalStatus(
+                estateIndex: estateIndex, authority: &authority
+            )
         }
         authority.rollingDigest = Self.estateStateDigest(authority)
         estateState = authority
+        try validateEstateCrossDomainIfEnabled()
         return authority.estates[estateIndex].assets[entryIndex]
     }
 
@@ -481,10 +485,14 @@ extension AgentSimulationSession {
         decedentID: AgentID,
         deathID: AgentDeathID,
         lethalAgentIDs: Set<AgentID>,
+        mortality: AgentMortalityState,
         physicalCustodyResolution: AgentMortalityPhysicalCustodyResolution,
         causeEventID: AgentCausalEventID,
         at deathTick: Int
-    ) throws -> AgentEstateID? {
+    ) throws -> (
+        estateID: AgentEstateID,
+        deathIDToEvict: AgentDeathID?
+    )? {
         guard var authority = estateState else { return nil }
         guard physicalCustodyResolution.verifiedAtTick == deathTick,
               physicalCustodyResolution.physicalAssets != nil,
@@ -505,21 +513,39 @@ extension AgentSimulationSession {
         }).count < authority.configuration.maximumOpenEstates else {
             throw AgentSessionError.estate(.capacityExceeded("estates"))
         }
-        if authority.estates.count
-            == authority.configuration.maximumRetainedEstates {
-            guard let evictionIndex = authority.estates.indices
-                .filter({ authority.estates[$0].status.isTerminal })
-                .min(by: {
-                    let lhs = authority.estates[$0]
-                    let rhs = authority.estates[$1]
-                    return lhs.deathTick == rhs.deathTick
-                        ? lhs.estateID < rhs.estateID
-                        : lhs.deathTick < rhs.deathTick
-                }) else {
+        let deathIDToEvict =
+            mortality.records.count
+                >= mortality.configuration.maximumRetainedDeathRecords
+            ? mortality.records.first?.deathID : nil
+        if let deathIDToEvict,
+           let evictionIndex = authority.estates.firstIndex(where: {
+               $0.deathID == deathIDToEvict
+           }) {
+            guard authority.estates[evictionIndex].status.isTerminal,
+                  let deathToEvict = mortality.records.first(where: {
+                      $0.deathID == deathIDToEvict
+                  }),
+                  !estateDeathHasRetainedDurableDependency(deathToEvict)
+            else {
                 throw AgentSessionError.estate(.capacityExceeded("estates"))
             }
             authority.estates.remove(at: evictionIndex)
             authority.evictionCounts.settledEstates += 1
+        } else if deathIDToEvict != nil {
+            let retainedPreActivationDeaths = max(
+                0,
+                authority.activationDeathCount
+                    - mortality.evictionCounts.deathRecords
+            )
+            guard retainedPreActivationDeaths > 0 else {
+                throw AgentSessionError.estate(.invalidState(
+                    "uncoordinated mortality retention"
+                ))
+            }
+        }
+        guard authority.estates.count
+                < authority.configuration.maximumRetainedEstates else {
+            throw AgentSessionError.estate(.capacityExceeded("estates"))
         }
         let digest = AgentEstateDigest.make(
             "\(simulationID.rawValue)|\(decedentID.rawValue)|"
@@ -528,14 +554,22 @@ extension AgentSimulationSession {
         let estateID = AgentEstateID(
             rawValue: "estate-\(digest)"
         )!
-        let partnerID = familyState?.unions.first(where: {
+        let activeUnion = familyState?.unions.first(where: {
             $0.status == .active && $0.partnerIDs.contains(decedentID)
-        })?.partnerIDs.first { $0 != decedentID }
+        })
+        let partnerID = activeUnion?.partnerIDs.first { $0 != decedentID }
         let plan = try estateBeneficiaryPlan(
             decedentID: decedentID,
-            activePartnerID: partnerID,
+            activeUnion: activeUnion,
             lethalAgentIDs: lethalAgentIDs
         )
+        guard plan.eligibilityRows.count
+                <= authority.configuration.maximumBeneficiariesPerEstate * 4
+        else {
+            throw AgentSessionError.estate(.capacityExceeded(
+                "successor eligibility proof"
+            ))
+        }
         var assets = try estateAssetsAtOpening(
             estateID: estateID,
             decedentID: decedentID,
@@ -570,15 +604,27 @@ extension AgentSimulationSession {
             summary: "estate opened estate=\(estateID.rawValue) "
                 + "decedent=\(decedentID.rawValue)"
         )
+        let planDigest = Self.estateSuccessorPlanDigest(
+            version: 1,
+            estateID: estateID,
+            decedentID: decedentID,
+            deathID: deathID,
+            deathBoundaryTick: deathTick,
+            selectedTier: plan.tier,
+            eligibilityRows: plan.eligibilityRows,
+            activeUnionAtDeath: plan.activeUnionAtDeath
+        )
         let planEvent = try requiredEstateEvent(
             kind: .estateSuccessorPlanCreated,
             subjectID: decedentID,
-            causes: [opened.eventID],
+            causes: [opened.eventID, causeEventID].sorted(),
             payload: .operation(
                 status: plan.tier.rawValue,
-                detail: plan.beneficiaries.map {
-                    $0.agentID.rawValue
-                }.joined(separator: ",")
+                detail: "\(estateID.rawValue)|"
+                    + plan.beneficiaries.map {
+                        $0.agentID.rawValue
+                    }.joined(separator: ",")
+                    + "|\(planDigest)"
             ),
             summary: "estate successor plan estate=\(estateID.rawValue) "
                 + "tier=\(plan.tier.rawValue) beneficiaries="
@@ -630,16 +676,12 @@ extension AgentSimulationSession {
             )]
             lastEventID = event.eventID
         }
-        var status: AgentEstateStatus
-        if allAssetsTerminal {
-            status = .settled
-        } else if plan.beneficiaries.isEmpty {
-            status = .dormantNoSuccessor
-        } else if assets.contains(where: { $0.status == .blocked }) {
-            status = .blocked
-        } else {
-            status = .openUnadministered
-        }
+        let status = Self.recomputedEstateOperationalStatus(
+            currentStatus: allAssetsTerminal ? .settled : .openUnadministered,
+            beneficiaries: plan.beneficiaries,
+            administrations: administrations,
+            assets: assets
+        )
         var settledEventID: AgentCausalEventID?
         if allAssetsTerminal {
             let settled = try requiredEstateEvent(
@@ -670,6 +712,18 @@ extension AgentSimulationSession {
             openedAtTick: deathTick,
             openingEventID: opened.eventID,
             successorPlanEventID: planEvent.eventID,
+            successorPlanProof: AgentEstateSuccessorPlanProof(
+                version: 1,
+                estateID: estateID,
+                decedentID: decedentID,
+                deathID: deathID,
+                deathBoundaryTick: deathTick,
+                selectedTier: plan.tier,
+                eligibilityRows: plan.eligibilityRows,
+                activeUnionAtDeath: plan.activeUnionAtDeath,
+                successorPlanEventID: planEvent.eventID,
+                planDigest: planDigest
+            ),
             beneficiaryTier: plan.tier,
             status: status,
             deathEventID: nil,
@@ -704,7 +758,44 @@ extension AgentSimulationSession {
             materialRightsState = rights
         }
         estateState = authority
-        return estateID
+        return (estateID, deathIDToEvict)
+    }
+
+    private func estateDeathHasRetainedDurableDependency(
+        _ death: AgentMortalityRecord
+    ) -> Bool {
+        if geneticsState?.genotypes.contains(where: {
+            $0.agentID == death.agentID
+        }) == true {
+            return true
+        }
+        if materialRightsState?.records.contains(where: { record in
+            record.lastVerifiedHolder.holder == .agent(death.agentID)
+                || record.custodianID == death.agentID
+                || record.claims.contains {
+                    $0.claimantID == death.agentID
+                }
+                || record.permissions.contains {
+                    $0.grantorID == death.agentID
+                        || $0.userID == death.agentID
+                }
+                || record.recognizedOwnership.map {
+                    $0.ownerID == death.agentID
+                        || $0.recognizingAgentIDs.contains(death.agentID)
+                } == true
+        }) == true {
+            return true
+        }
+        guard let family = familyState else { return false }
+        return family.unions.contains {
+            $0.terminationReason == .partnerDeath
+                && $0.terminationTick == death.deathTick
+                && $0.partnerIDs.contains(death.agentID)
+        } || family.houseMembershipPeriods.contains {
+            $0.agentID == death.agentID
+                && $0.endReason == .memberDeath
+                && $0.leftTick == death.deathTick
+        }
     }
 
     mutating func bindEstateToFinalizedDeath(
@@ -797,7 +888,6 @@ extension AgentSimulationSession {
                     .administrations[administrationIndex].endedReason = .died
                 authority.estates[estateIndex]
                     .administrations[administrationIndex].endedEventID = event.eventID
-                authority.estates[estateIndex].status = .openUnadministered
                 authority.estates[estateIndex].lastEventID = event.eventID
                 authority.lastEventID = event.eventID
                 try nominateReplacementEstateAdministrator(
@@ -807,6 +897,9 @@ extension AgentSimulationSession {
                     at: boundaryTick,
                     authority: &authority
                 )
+                recomputeEstateOperationalStatus(
+                    estateIndex: estateIndex, authority: &authority
+                )
             }
         }
         authority.rollingDigest = Self.estateStateDigest(authority)
@@ -814,6 +907,9 @@ extension AgentSimulationSession {
     }
 
     mutating func applyEstateTickBoundary(at boundaryTick: Int) throws {
+        try revalidateEstateCustodyAssignments(
+            for: nil, at: boundaryTick
+        )
         guard var authority = estateState else { return }
         for estateIndex in authority.estates.indices
             where !authority.estates[estateIndex].status.isTerminal {
@@ -858,7 +954,6 @@ extension AgentSimulationSession {
                 .administrations[administrationIndex].endedReason = reason
             authority.estates[estateIndex]
                 .administrations[administrationIndex].endedEventID = event.eventID
-            authority.estates[estateIndex].status = .openUnadministered
             authority.estates[estateIndex].lastEventID = event.eventID
             authority.lastEventID = event.eventID
             try nominateReplacementEstateAdministrator(
@@ -867,6 +962,106 @@ extension AgentSimulationSession {
                 causeEventID: event.eventID,
                 at: boundaryTick,
                 authority: &authority
+            )
+            recomputeEstateOperationalStatus(
+                estateIndex: estateIndex, authority: &authority
+            )
+        }
+        authority.rollingDigest = Self.estateStateDigest(authority)
+        estateState = authority
+        try validateEstateCrossDomainIfEnabled()
+    }
+
+    mutating func revalidateEstateCustodyAssignments(
+        for dependentID: AgentID?,
+        at revalidationTick: Int
+    ) throws {
+        guard var authority = estateState,
+              let lifecycle = lifecycleState,
+              let childhood = dependentCareState?.childhoodV2 else {
+            return
+        }
+        let retryableReasons: Set<AgentEstateAssetBlockReason> = [
+            .minorCustodyUnavailable,
+            .beneficiaryUnavailableForCustody,
+        ]
+        for estateIndex in authority.estates.indices
+            where !authority.estates[estateIndex].status.isTerminal {
+            for entryIndex in authority.estates[estateIndex].assets.indices {
+                let entry = authority.estates[estateIndex].assets[entryIndex]
+                guard !entry.status.isTerminal,
+                      let beneficiaryID = entry.assignedBeneficiaryID,
+                      dependentID == nil || beneficiaryID == dependentID,
+                      entry.blockReason == nil
+                        || retryableReasons.contains(entry.blockReason!),
+                      let stage = lifecycle.members.first(where: {
+                          $0.agentID == beneficiaryID
+                      })?.currentStage else {
+                    continue
+                }
+                let guardianship = childhood.guardianships.last {
+                    $0.dependentID == beneficiaryID && $0.status == .active
+                }
+                let intendedCustodianID: AgentID?
+                let blockReason: AgentEstateAssetBlockReason?
+                if stage == .mature {
+                    intendedCustodianID = beneficiaryID
+                    blockReason =
+                        estateAdministratorIsAvailable(beneficiaryID)
+                        ? nil : .beneficiaryUnavailableForCustody
+                } else {
+                    intendedCustodianID = guardianship?.guardianID
+                    blockReason =
+                        guardianship.map {
+                            estateAdministratorIsAvailable($0.guardianID)
+                        } == true
+                        ? nil : .minorCustodyUnavailable
+                }
+                let status: AgentEstateAssetStatus =
+                    blockReason == nil ? .pendingSettlement : .blocked
+                guard entry.intendedCustodianID != intendedCustodianID
+                        || entry.blockReason != blockReason
+                        || entry.status != status else {
+                    continue
+                }
+                try prevalidateEstateTransitions(
+                    &authority, count: 1, at: revalidationTick
+                )
+                let cause = guardianship?.startedEventID
+                    ?? entry.custodyRevalidationEventID
+                    ?? entry.classificationEventID
+                    ?? authority.estates[estateIndex].successorPlanEventID
+                let event = try requiredEstateEvent(
+                    kind: blockReason == nil
+                        ? .estateAssetClassified : .estateAssetBlocked,
+                    actorID: intendedCustodianID,
+                    subjectID: beneficiaryID,
+                    causes: [cause],
+                    payload: .operation(
+                        status: "custodyRevalidated",
+                        detail: "\(entry.entryID.rawValue)|"
+                            + "\(intendedCustodianID?.rawValue ?? "none")|"
+                            + "\(blockReason?.rawValue ?? "available")"
+                    ),
+                    summary: "estate custody revalidated entry="
+                        + "\(entry.entryID.rawValue) beneficiary="
+                        + beneficiaryID.rawValue
+                )
+                authority.estates[estateIndex].assets[entryIndex]
+                    .intendedCustodianID = intendedCustodianID
+                authority.estates[estateIndex].assets[entryIndex]
+                    .blockReason = blockReason
+                authority.estates[estateIndex].assets[entryIndex]
+                    .status = status
+                authority.estates[estateIndex].assets[entryIndex]
+                    .custodyRevalidatedAtTick = revalidationTick
+                authority.estates[estateIndex].assets[entryIndex]
+                    .custodyRevalidationEventID = event.eventID
+                authority.estates[estateIndex].lastEventID = event.eventID
+                authority.lastEventID = event.eventID
+            }
+            recomputeEstateOperationalStatus(
+                estateIndex: estateIndex, authority: &authority
             )
         }
         authority.rollingDigest = Self.estateStateDigest(authority)
@@ -903,7 +1098,11 @@ extension AgentSimulationSession {
                 homeostasis: homeostasisState,
                 causalLedger: causalLedger,
                 simulationID: simulationID,
-                currentTick: tick
+                currentTick: tick,
+                schemaVersion: authority.estates.allSatisfy({
+                    $0.successorPlanProof != nil
+                }) ? AgentCheckpointSchema.estateVersion
+                    : AgentCheckpointSchema.legacyEstateVersion
             )
         } catch let error as AgentEstateError {
             throw AgentSessionError.estate(error)
@@ -924,8 +1123,21 @@ extension AgentSimulationSession {
         homeostasis: AgentHomeostasisState?,
         causalLedger: AgentCausalLedger,
         simulationID: AgentSimulationID,
-        currentTick: Int
+        currentTick: Int,
+        schemaVersion: Int
     ) throws {
+        guard schemaVersion == AgentCheckpointSchema.legacyEstateVersion
+                || schemaVersion == AgentCheckpointSchema.estateVersion else {
+            throw AgentEstateError.invalidState("checkpoint schema")
+        }
+        if schemaVersion == AgentCheckpointSchema.estateVersion,
+           authority.estates.contains(where: {
+               $0.successorPlanProof == nil
+           }) {
+            throw AgentEstateError.invalidState(
+                "schema 28 requires successor plan proof"
+            )
+        }
         guard authority.activationTick >= 0,
               authority.activationTick <= currentTick,
               authority.activationDeathCount >= 0,
@@ -951,6 +1163,11 @@ extension AgentSimulationSession {
               authority.totalEstateCount
                 == mortality.totalDeathCount
                     - authority.activationDeathCount,
+              authority.evictionCounts.settledEstates == max(
+                0,
+                mortality.evictionCounts.deathRecords
+                    - authority.activationDeathCount
+              ),
               authority.totalSettlementCount
                 == authority.estates.filter({ $0.status == .settled }).count
                     + authority.evictionCounts.settledEstates,
@@ -1127,92 +1344,242 @@ extension AgentSimulationSession {
                     throw AgentEstateError.invalidState("death event")
                 }
             }
-            let expectedPlan = try estatePlanForValidation(
-                decedentID: estate.decedentID,
-                deathTick: estate.deathTick,
-                family: family,
-                kinship: kinship,
-                lifecycle: lifecycle,
-                mortality: mortality,
-                childhood: childhood
-            )
             let actualPlan = estate.beneficiaries.map {
                 "\($0.agentID.rawValue)|\($0.basis.rawValue)|\($0.weight)|"
                     + "\($0.lifeStageAtPlan.rawValue)|"
                     + "\($0.guardianIDAtPlan?.rawValue ?? "none")"
             }
-            let durablePlan = expectedPlan.beneficiaries.map {
-                "\($0.agentID.rawValue)|\($0.basis.rawValue)|\($0.weight)|"
-                    + "\($0.lifeStageAtPlan.rawValue)|"
-                    + "\($0.guardianIDAtPlan?.rawValue ?? "none")"
-            }
-            if mortality.evictionCounts.deathRecords == 0 {
-                guard estate.beneficiaryTier == expectedPlan.tier,
-                      actualPlan == durablePlan else {
+            if estate.successorPlanProof == nil {
+                guard schemaVersion
+                        == AgentCheckpointSchema.legacyEstateVersion else {
                     throw AgentEstateError.invalidState(
-                        "beneficiary plan expected=\(expectedPlan.tier.rawValue)"
-                            + ":\(durablePlan.joined(separator: ",")) actual="
-                            + "\(estate.beneficiaryTier.rawValue):"
-                            + actualPlan.joined(separator: ",")
+                        "legacy successor plan schema"
+                    )
+                }
+                let expectedPlan = try estatePlanForValidation(
+                    decedentID: estate.decedentID,
+                    deathTick: estate.deathTick,
+                    family: family,
+                    kinship: kinship,
+                    lifecycle: lifecycle,
+                    mortality: mortality,
+                    childhood: childhood
+                )
+                let durablePlan = expectedPlan.beneficiaries.map {
+                    "\($0.agentID.rawValue)|\($0.basis.rawValue)|"
+                        + "\($0.weight)|\($0.lifeStageAtPlan.rawValue)|"
+                        + "\($0.guardianIDAtPlan?.rawValue ?? "none")"
+                }
+                guard estate.beneficiaryTier == expectedPlan.tier,
+                      actualPlan == durablePlan,
+                      mortality.evictionCounts.deathRecords == 0,
+                      let planEvent = try retainedCausalEvent(
+                        estate.successorPlanEventID
+                      ),
+                      planEvent.kind == .estateSuccessorPlanCreated,
+                      planEvent.origin == .estateTransition,
+                      planEvent.actorID == nil,
+                      planEvent.subjectID == estate.decedentID,
+                      planEvent.simulationTick.rawValue == estate.deathTick,
+                      planEvent.causes == [estate.openingEventID],
+                      planEvent.payload == .operation(
+                        status: expectedPlan.tier.rawValue,
+                        detail: expectedPlan.beneficiaries.map {
+                            $0.agentID.rawValue
+                        }.joined(separator: ",")
+                      ) else {
+                    throw AgentEstateError.invalidState(
+                        "legacy successor plan is not exactly revalidable"
                     )
                 }
             } else {
-                for beneficiary in estate.beneficiaries {
-                    guard beneficiary.weight == 1,
-                          beneficiary.tier == estate.beneficiaryTier,
-                          beneficiary.agentID != estate.decedentID,
-                          knownPeople.contains(beneficiary.agentID),
-                          !personWasDead(
-                              beneficiary.agentID, estate.deathTick
+                guard let proof = estate.successorPlanProof,
+                      proof.version == 1,
+                      proof.estateID == estate.estateID,
+                      proof.decedentID == estate.decedentID,
+                      proof.deathID == estate.deathID,
+                      proof.deathBoundaryTick == estate.deathTick,
+                      proof.selectedTier == estate.beneficiaryTier,
+                      proof.successorPlanEventID
+                        == estate.successorPlanEventID,
+                      proof.eligibilityRows
+                        == proof.eligibilityRows.sorted(
+                            by: Self.estateEligibilityRowLess
+                        ),
+                      proof.eligibilityRows.count
+                        <= authority.configuration
+                            .maximumBeneficiariesPerEstate * 4,
+                      Set(proof.eligibilityRows.map(\.agentID)).count
+                        == proof.eligibilityRows.count,
+                      proof.planDigest == Self.estateSuccessorPlanDigest(
+                        version: proof.version,
+                        estateID: proof.estateID,
+                        decedentID: proof.decedentID,
+                        deathID: proof.deathID,
+                        deathBoundaryTick: proof.deathBoundaryTick,
+                        selectedTier: proof.selectedTier,
+                        eligibilityRows: proof.eligibilityRows,
+                        activeUnionAtDeath: proof.activeUnionAtDeath
+                      ) else {
+                    throw AgentEstateError.invalidState(
+                        "durable successor plan proof"
+                    )
+                }
+                let relationships =
+                    Self.estateRelationshipsForValidation(
+                        decedentID: estate.decedentID,
+                        deathTick: estate.deathTick,
+                        family: family,
+                        kinship: kinship
+                    )
+                let proofRelationships = proof.eligibilityRows.map {
+                    ($0.agentID, $0.tier, $0.basis)
+                }
+                guard Self.estateRelationshipTexts(relationships)
+                        == Self.estateRelationshipTexts(proofRelationships)
+                else {
+                    throw AgentEstateError.invalidState(
+                        "successor relationship rows"
+                    )
+                }
+                let selectedTier = [
+                    AgentEstateBeneficiaryTier
+                        .primaryPartnerAndChildren,
+                    .secondaryParents,
+                    .tertiarySiblings,
+                ].first { candidateTier in
+                    proof.eligibilityRows.contains {
+                        $0.tier == candidateTier && $0.eligibleAtDeath
+                    }
+                } ?? .none
+                let expectedBeneficiaries =
+                    proof.eligibilityRows.compactMap { row
+                        -> AgentEstateBeneficiary? in
+                        guard row.tier == selectedTier,
+                              row.eligibleAtDeath,
+                              let stage = row.lifeStageAtPlan else {
+                            return nil
+                        }
+                        return AgentEstateBeneficiary(
+                            agentID: row.agentID,
+                            tier: selectedTier,
+                            basis: row.basis,
+                            weight: 1,
+                            lifeStageAtPlan: stage,
+                            guardianIDAtPlan: row.guardianIDAtPlan,
+                            allocationCount: estate.beneficiaries.first {
+                                $0.agentID == row.agentID
+                            }?.allocationCount ?? 0
+                        )
+                    }
+                guard proof.selectedTier == selectedTier,
+                      estate.beneficiaries == expectedBeneficiaries else {
+                    throw AgentEstateError.invalidState(
+                        "exact successor beneficiary list"
+                    )
+                }
+                for row in proof.eligibilityRows {
+                    guard row.agentID != estate.decedentID,
+                          knownPeople.contains(row.agentID),
+                          row.tier != .none,
+                          row.lifeStageAtPlan != nil,
+                          row.lifeStageAtPlan == .mature
+                            ? row.guardianIDAtPlan == nil : true else {
+                        throw AgentEstateError.invalidState(
+                            "successor eligibility row"
+                        )
+                    }
+                    if let retainedDeath = mortality.records.first(where: {
+                        $0.agentID == row.agentID
+                    }) {
+                        let expectedEligible =
+                            retainedDeath.deathTick > estate.deathTick
+                        guard row.eligibleAtDeath == expectedEligible else {
+                            throw AgentEstateError.invalidState(
+                                "successor mortality eligibility"
+                            )
+                        }
+                    } else if activeIDs.contains(row.agentID),
+                              !row.eligibleAtDeath {
+                        throw AgentEstateError.invalidState(
+                            "living successor marked ineligible"
+                        )
+                    }
+                    if let expectedStage =
+                        Self.estateLifeStageForValidation(
+                            agentID: row.agentID,
+                            at: estate.deathTick,
+                            lifecycle: lifecycle,
+                            mortality: mortality
+                        ),
+                       row.lifeStageAtPlan != expectedStage {
+                        throw AgentEstateError.invalidState(
+                            "successor life stage at plan"
+                        )
+                    }
+                    if row.lifeStageAtPlan != .mature {
+                        let guardian = childhood.guardianships.last {
+                            $0.dependentID == row.agentID
+                                && $0.startedEventID.sequence
+                                    < estate.successorPlanEventID.sequence
+                                && ($0.endedEventID == nil
+                                    || $0.endedEventID!.sequence
+                                        > estate.successorPlanEventID.sequence)
+                        }?.guardianID
+                        guard row.guardianIDAtPlan == guardian else {
+                            throw AgentEstateError.invalidState(
+                                "successor guardian at plan"
+                            )
+                        }
+                    }
+                }
+                let unionAtDeath = family.unions.first {
+                    $0.partnerIDs.contains(estate.decedentID)
+                        && $0.activationTick <= estate.deathTick
+                        && ($0.terminationTick == nil
+                            || ($0.terminationTick == estate.deathTick
+                                && $0.terminationReason == .partnerDeath))
+                }
+                let expectedUnionEvidence = unionAtDeath.flatMap { union in
+                    union.partnerIDs.first {
+                        $0 != estate.decedentID
+                    }.map {
+                        AgentEstateActiveUnionAtDeathEvidence(
+                            unionID: union.unionID,
+                            partnerID: $0,
+                            activationTick: union.activationTick,
+                            activationEventID: union.activationEventID
+                        )
+                    }
+                }
+                guard proof.activeUnionAtDeath == expectedUnionEvidence else {
+                    throw AgentEstateError.invalidState(
+                        "active union at death proof"
+                    )
+                }
+                if let planEvent = try retainedCausalEvent(
+                    estate.successorPlanEventID
+                ) {
+                    guard planEvent.kind == .estateSuccessorPlanCreated,
+                          planEvent.origin == .estateTransition,
+                          planEvent.actorID == nil,
+                          planEvent.subjectID == estate.decedentID,
+                          planEvent.simulationTick.rawValue
+                            == estate.deathTick,
+                          planEvent.causes == [
+                            estate.openingEventID,
+                            death.lethalDamageEventID,
+                          ].sorted(),
+                          planEvent.payload == .operation(
+                            status: proof.selectedTier.rawValue,
+                            detail: "\(estate.estateID.rawValue)|"
+                                + estate.beneficiaries.map {
+                                    $0.agentID.rawValue
+                                }.joined(separator: ",")
+                                + "|\(proof.planDigest)"
                           ) else {
                         throw AgentEstateError.invalidState(
-                            "historical beneficiary"
-                        )
-                    }
-                    let relationIsValid: Bool
-                    switch beneficiary.basis {
-                    case .activeUnionPartnerAtDeath:
-                        relationIsValid = family.unions.contains {
-                            $0.partnerIDs
-                                == [estate.decedentID, beneficiary.agentID]
-                                    .sorted()
-                                && $0.activationTick <= estate.deathTick
-                                && ($0.terminationTick == nil
-                                    || ($0.terminationTick
-                                        == estate.deathTick
-                                        && $0.terminationReason
-                                            == .partnerDeath))
-                        }
-                    case .canonicalChild:
-                        relationIsValid = kinship.parentageRecords.contains {
-                            $0.childID == beneficiary.agentID
-                                && $0.canonicalParentIDs.contains(
-                                    estate.decedentID
-                                )
-                        }
-                    case .canonicalParent:
-                        relationIsValid = kinship.parentageRecords.contains {
-                            $0.childID == estate.decedentID
-                                && $0.canonicalParentIDs.contains(
-                                    beneficiary.agentID
-                                )
-                        }
-                    case .fullSibling, .halfSibling:
-                        let parentage = Dictionary(uniqueKeysWithValues:
-                            kinship.parentageRecords.map {
-                                ($0.childID, Set($0.canonicalParentIDs))
-                            }
-                        )
-                        let common = (parentage[estate.decedentID] ?? [])
-                            .intersection(
-                                parentage[beneficiary.agentID] ?? []
-                            ).count
-                        relationIsValid = beneficiary.basis == .fullSibling
-                            ? common == 2 : common == 1
-                    }
-                    guard relationIsValid else {
-                        throw AgentEstateError.invalidState(
-                            "historical beneficiary relation"
+                            "successor plan causal event"
                         )
                     }
                 }
@@ -1500,13 +1867,40 @@ extension AgentSimulationSession {
                    let classification = try retainedCausalEvent(
                     classificationEventID
                    ) {
-                    let wasBlocked = entry.blockReason != nil
+                    let ownerWasDecedent =
+                        entry.ownerAtOpening?.ownerID == estate.decedentID
+                    let hadThirdPartyClaim = entry.claimsAtOpening.contains {
+                        $0.claimantID != estate.decedentID
+                    }
+                    let beneficiaryAtPlan =
+                        entry.assignedBeneficiaryID.flatMap { id in
+                            estate.beneficiaries.first {
+                                $0.agentID == id
+                            }
+                        }
                     let expectedKind: AgentCausalEventKind =
-                        wasBlocked
+                        entry.materialRightsAssetID == nil
+                            || hadThirdPartyClaim
+                            || (ownerWasDecedent
+                                && (estate.beneficiaries.isEmpty
+                                    || (beneficiaryAtPlan?
+                                        .lifeStageAtPlan != .mature
+                                        && beneficiaryAtPlan?
+                                            .guardianIDAtPlan == nil)))
                             ? .estateAssetBlocked : .estateAssetClassified
                     let originalStatus: AgentEstateAssetStatus =
-                        entry.status == .transferred
-                            ? .pendingSettlement : entry.status
+                        entry.materialRightsAssetID == nil
+                            ? .blocked
+                            : (hadThirdPartyClaim
+                                ? .blocked
+                                : (!ownerWasDecedent
+                                    ? .nonTransferable
+                                    : (estate.beneficiaries.isEmpty
+                                        || (beneficiaryAtPlan?
+                                            .lifeStageAtPlan != .mature
+                                            && beneficiaryAtPlan?
+                                                .guardianIDAtPlan == nil)
+                                        ? .blocked : .pendingSettlement)))
                     guard classification.kind == expectedKind,
                           classification.origin == .estateTransition,
                           classification.subjectID == estate.decedentID,
@@ -1536,19 +1930,110 @@ extension AgentSimulationSession {
                    let beneficiary = estate.beneficiaries.first(where: {
                        $0.agentID == expectedBeneficiaryID
                    }) {
-                    let expectedCustodian =
-                        beneficiary.lifeStageAtPlan == .mature
-                            ? beneficiary.agentID
-                            : beneficiary.guardianIDAtPlan
+                    let custodyStage =
+                        entry.custodyRevalidatedAtTick.flatMap {
+                            Self.estateLifeStageForValidation(
+                                agentID: beneficiary.agentID,
+                                at: $0,
+                                lifecycle: lifecycle,
+                                mortality: mortality
+                            )
+                        }
+                    let expectedCustodian: AgentID?
+                    if entry.custodyRevalidationEventID == nil {
+                        expectedCustodian =
+                            beneficiary.lifeStageAtPlan == .mature
+                                ? beneficiary.agentID
+                                : beneficiary.guardianIDAtPlan
+                    } else if custodyStage == .mature {
+                        expectedCustodian = beneficiary.agentID
+                    } else {
+                        expectedCustodian = childhood.guardianships.last {
+                            $0.dependentID == beneficiary.agentID
+                                && $0.status == .active
+                        }?.guardianID
+                    }
                     guard entry.intendedCustodianID
                             == expectedCustodian else {
                         throw AgentEstateError.invalidState(
                             "asset custody assignment"
                         )
                     }
+                    if entry.custodyRevalidationEventID != nil,
+                       !entry.status.isTerminal {
+                        let custodianAvailable = expectedCustodian.map { id in
+                            (activeStates[id.rawValue]?.health ?? 0) > 0
+                                && population.members.contains {
+                                    $0.agentID == id
+                                        && ($0.status == .resident
+                                            || $0.status
+                                                == .founderResident)
+                                }
+                                && homeostasis?.profiles.first {
+                                    $0.agentID == id
+                                }?.vitalStatus != .incapacitated
+                        } == true
+                        let expectedReason:
+                            AgentEstateAssetBlockReason? =
+                            custodianAvailable
+                            ? nil
+                            : (custodyStage == .mature
+                                ? .beneficiaryUnavailableForCustody
+                                : .minorCustodyUnavailable)
+                        guard entry.blockReason == expectedReason,
+                              entry.status == (expectedReason == nil
+                                ? .pendingSettlement : .blocked) else {
+                            throw AgentEstateError.invalidState(
+                                "revalidated custody availability"
+                            )
+                        }
+                    }
                 } else if entry.intendedCustodianID != nil {
                     throw AgentEstateError.invalidState(
                         "unassigned asset custodian"
+                    )
+                }
+                if let revalidationEventID =
+                    entry.custodyRevalidationEventID {
+                    guard let revalidatedAtTick =
+                            entry.custodyRevalidatedAtTick,
+                          revalidatedAtTick >= estate.deathTick,
+                          revalidatedAtTick <= currentTick else {
+                        throw AgentEstateError.invalidState(
+                            "custody revalidation tick"
+                        )
+                    }
+                    if let revalidation = try retainedCausalEvent(
+                        revalidationEventID
+                    ) {
+                        let custodianText =
+                            entry.intendedCustodianID?.rawValue ?? "none"
+                        let reasonText =
+                            entry.blockReason?.rawValue ?? "available"
+                        guard revalidation.kind
+                                == (entry.blockReason == nil
+                                    ? .estateAssetClassified
+                                    : .estateAssetBlocked),
+                              revalidation.origin == .estateTransition,
+                              revalidation.actorID
+                                == entry.intendedCustodianID,
+                              revalidation.subjectID
+                                == entry.assignedBeneficiaryID,
+                              revalidation.simulationTick.rawValue
+                                == revalidatedAtTick,
+                              revalidation.payload == .operation(
+                                status: "custodyRevalidated",
+                                detail: "\(entry.entryID.rawValue)|"
+                                    + "\(custodianText)|\(reasonText)"
+                              ) else {
+                            throw AgentEstateError.invalidState(
+                                "custody revalidation event"
+                            )
+                        }
+                    }
+                } else if entry.custodyRevalidatedAtTick != nil {
+                    throw AgentEstateError.invalidState(
+                        "orphan custody revalidation"
                     )
                 }
                 if let assetID = entry.materialRightsAssetID {
@@ -1656,6 +2141,18 @@ extension AgentSimulationSession {
                     }
                 }
             }
+            let expectedOperationalStatus =
+                Self.recomputedEstateOperationalStatus(
+                    currentStatus: estate.status,
+                    beneficiaries: estate.beneficiaries,
+                    administrations: estate.administrations,
+                    assets: estate.assets
+                )
+            guard estate.status == expectedOperationalStatus else {
+                throw AgentEstateError.invalidState(
+                    "estate operational status"
+                )
+            }
             if estate.status == .settled {
                 guard estate.assets.allSatisfy(\.status.isTerminal),
                       estate.settledAtTick != nil,
@@ -1698,45 +2195,55 @@ extension AgentSimulationSession {
 
     private func estateBeneficiaryPlan(
         decedentID: AgentID,
-        activePartnerID: AgentID?,
+        activeUnion: AgentUnionRecord?,
         lethalAgentIDs: Set<AgentID>
     ) throws -> (
         tier: AgentEstateBeneficiaryTier,
-        beneficiaries: [AgentEstateBeneficiary]
+        beneficiaries: [AgentEstateBeneficiary],
+        eligibilityRows: [AgentEstateSuccessorEligibilityRow],
+        activeUnionAtDeath: AgentEstateActiveUnionAtDeathEvidence?
     ) {
         let living: (AgentID) -> Bool = {
             $0 != decedentID && !lethalAgentIDs.contains($0)
                 && statesById[$0.rawValue] != nil
         }
-        var rows: [(AgentID, AgentEstateBeneficiaryBasis)] = []
-        if let activePartnerID, living(activePartnerID) {
-            rows.append((activePartnerID, .activeUnionPartnerAtDeath))
+        var candidates:
+            [(AgentID, AgentEstateBeneficiaryTier, AgentEstateBeneficiaryBasis)]
+            = []
+        let activePartnerID = activeUnion?.partnerIDs.first {
+            $0 != decedentID
         }
-        for child in try children(of: decedentID) where living(child) {
-            rows.append((child, .canonicalChild))
+        if let activePartnerID {
+            candidates.append((
+                activePartnerID,
+                .primaryPartnerAndChildren,
+                .activeUnionPartnerAtDeath
+            ))
         }
-        var tier: AgentEstateBeneficiaryTier = .primaryPartnerAndChildren
-        if rows.isEmpty {
-            for parent in (try parents(of: decedentID)) ?? [] where living(parent) {
-                rows.append((parent, .canonicalParent))
+        for child in try children(of: decedentID) {
+            candidates.append((
+                child, .primaryPartnerAndChildren, .canonicalChild
+            ))
+        }
+        for parent in (try parents(of: decedentID)) ?? [] {
+            candidates.append((parent, .secondaryParents, .canonicalParent))
+        }
+        for person in kinshipState?.historicalPersons.map(\.agentID).sorted()
+            ?? [] {
+            switch siblingRelation(between: decedentID, and: person) {
+            case .fullSibling:
+                candidates.append((person, .tertiarySiblings, .fullSibling))
+            case .halfSibling:
+                candidates.append((person, .tertiarySiblings, .halfSibling))
+            default:
+                break
             }
-            tier = .secondaryParents
         }
-        if rows.isEmpty {
-            for person in kinshipState?.historicalPersons.map(\.agentID).sorted()
-                ?? [] where living(person) {
-                switch siblingRelation(between: decedentID, and: person) {
-                case .fullSibling: rows.append((person, .fullSibling))
-                case .halfSibling: rows.append((person, .halfSibling))
-                default: break
-                }
-            }
-            tier = .tertiarySiblings
-        }
-        if rows.isEmpty { tier = .none }
-        let unique = Dictionary(rows, uniquingKeysWith: { lhs, _ in lhs })
-            .map { ($0.key, $0.value) }.sorted { $0.0 < $1.0 }
-        let beneficiaries = unique.map { id, basis in
+        var seen = Set<AgentID>()
+        let canonical = candidates.filter {
+            $0.0 != decedentID && seen.insert($0.0).inserted
+        }.sorted(by: Self.estateEligibilityRowLess)
+        let eligibilityRows = canonical.map { id, tier, basis in
             let stage = lifecycleState?.members.first {
                 $0.agentID == id
             }?.currentStage ?? .mature
@@ -1744,13 +2251,84 @@ extension AgentSimulationSession {
                 : dependentCareState?.childhoodV2?.guardianships.last {
                     $0.dependentID == id && $0.status == .active
                 }?.guardianID
+            return AgentEstateSuccessorEligibilityRow(
+                agentID: id,
+                tier: tier,
+                basis: basis,
+                eligibleAtDeath: living(id),
+                lifeStageAtPlan: stage,
+                guardianIDAtPlan: guardian
+            )
+        }
+        let tier = [
+            AgentEstateBeneficiaryTier.primaryPartnerAndChildren,
+            .secondaryParents,
+            .tertiarySiblings,
+        ].first {
+            let candidateTier = $0
+            return eligibilityRows.contains {
+                $0.tier == candidateTier && $0.eligibleAtDeath
+            }
+        } ?? .none
+        let beneficiaries: [AgentEstateBeneficiary] =
+            eligibilityRows.compactMap { row -> AgentEstateBeneficiary? in
+            guard row.tier == tier, row.eligibleAtDeath,
+                  let stage = row.lifeStageAtPlan else {
+                return nil
+            }
             return AgentEstateBeneficiary(
-                agentID: id, tier: tier, basis: basis, weight: 1,
-                lifeStageAtPlan: stage, guardianIDAtPlan: guardian,
+                agentID: row.agentID, tier: tier, basis: row.basis, weight: 1,
+                lifeStageAtPlan: stage,
+                guardianIDAtPlan: row.guardianIDAtPlan,
                 allocationCount: 0
             )
         }
-        return (tier, beneficiaries)
+        let unionEvidence = activeUnion.flatMap { union in
+            activePartnerID.map {
+                AgentEstateActiveUnionAtDeathEvidence(
+                    unionID: union.unionID,
+                    partnerID: $0,
+                    activationTick: union.activationTick,
+                    activationEventID: union.activationEventID
+                )
+            }
+        }
+        return (tier, beneficiaries, eligibilityRows, unionEvidence)
+    }
+
+    private static func estateEligibilityTierRank(
+        _ tier: AgentEstateBeneficiaryTier
+    ) -> Int {
+        switch tier {
+        case .primaryPartnerAndChildren: return 0
+        case .secondaryParents: return 1
+        case .tertiarySiblings: return 2
+        case .none: return 3
+        }
+    }
+
+    private static func estateEligibilityRowLess(
+        _ lhs: (
+            AgentID, AgentEstateBeneficiaryTier, AgentEstateBeneficiaryBasis
+        ),
+        _ rhs: (
+            AgentID, AgentEstateBeneficiaryTier, AgentEstateBeneficiaryBasis
+        )
+    ) -> Bool {
+        let lhsRank = estateEligibilityTierRank(lhs.1)
+        let rhsRank = estateEligibilityTierRank(rhs.1)
+        if lhsRank != rhsRank { return lhsRank < rhsRank }
+        return lhs.0 < rhs.0
+    }
+
+    private static func estateEligibilityRowLess(
+        _ lhs: AgentEstateSuccessorEligibilityRow,
+        _ rhs: AgentEstateSuccessorEligibilityRow
+    ) -> Bool {
+        estateEligibilityRowLess(
+            (lhs.agentID, lhs.tier, lhs.basis),
+            (rhs.agentID, rhs.tier, rhs.basis)
+        )
     }
 
     private static func estatePlanForValidation(
@@ -1851,6 +2429,110 @@ extension AgentSimulationSession {
                 allocationCount: 0
             )
         })
+    }
+
+    private static func estateRelationshipsForValidation(
+        decedentID: AgentID,
+        deathTick: Int,
+        family: AgentFamilyState,
+        kinship: AgentKinshipState
+    ) -> [
+        (AgentID, AgentEstateBeneficiaryTier, AgentEstateBeneficiaryBasis)
+    ] {
+        var candidates:
+            [(AgentID, AgentEstateBeneficiaryTier, AgentEstateBeneficiaryBasis)]
+            = []
+        if let union = family.unions.first(where: {
+            $0.partnerIDs.contains(decedentID)
+                && $0.activationTick <= deathTick
+                && ($0.terminationTick == nil
+                    || ($0.terminationTick == deathTick
+                        && $0.terminationReason == .partnerDeath))
+        }), let partnerID = union.partnerIDs.first(where: {
+            $0 != decedentID
+        }) {
+            candidates.append((
+                partnerID,
+                .primaryPartnerAndChildren,
+                .activeUnionPartnerAtDeath
+            ))
+        }
+        let parentageByChild = Dictionary(uniqueKeysWithValues:
+            kinship.parentageRecords.map { ($0.childID, $0) }
+        )
+        for record in kinship.parentageRecords
+            where record.birthTick <= deathTick
+                && record.canonicalParentIDs.contains(decedentID) {
+            candidates.append((
+                record.childID,
+                .primaryPartnerAndChildren,
+                .canonicalChild
+            ))
+        }
+        if let record = parentageByChild[decedentID] {
+            for parentID in record.canonicalParentIDs {
+                candidates.append((
+                    parentID, .secondaryParents, .canonicalParent
+                ))
+            }
+            let decedentParents = Set(record.canonicalParentIDs)
+            for other in kinship.parentageRecords
+                where other.childID != decedentID
+                    && other.birthTick <= deathTick {
+                let common = decedentParents.intersection(
+                    other.canonicalParentIDs
+                ).count
+                if common == 2 {
+                    candidates.append((
+                        other.childID, .tertiarySiblings, .fullSibling
+                    ))
+                } else if common == 1 {
+                    candidates.append((
+                        other.childID, .tertiarySiblings, .halfSibling
+                    ))
+                }
+            }
+        }
+        var seen = Set<AgentID>()
+        return candidates.filter {
+            $0.0 != decedentID && seen.insert($0.0).inserted
+        }.sorted(by: estateEligibilityRowLess)
+    }
+
+    private static func estateLifeStageForValidation(
+        agentID: AgentID,
+        at tick: Int,
+        lifecycle: AgentLifecycleState,
+        mortality: AgentMortalityState
+    ) -> AgentLifeStage? {
+        let age: Int?
+        if let member = lifecycle.members.first(where: {
+            $0.agentID == agentID
+        }) {
+            age = try? member.age(at: tick)
+        } else if let laterDeath = mortality.records.first(where: {
+            $0.agentID == agentID && $0.deathTick >= tick
+        }), let ageAtDeath = laterDeath.demographicAgeTicks {
+            age = max(0, ageAtDeath - (laterDeath.deathTick - tick))
+        } else {
+            age = nil
+        }
+        guard let age else { return nil }
+        if age >= lifecycle.configuration.maturityAgeTicks {
+            return .mature
+        }
+        return age >= lifecycle.configuration.newbornDurationTicks
+            ? .juvenile : .newborn
+    }
+
+    private static func estateRelationshipTexts(
+        _ rows: [
+            (AgentID, AgentEstateBeneficiaryTier, AgentEstateBeneficiaryBasis)
+        ]
+    ) -> [String] {
+        rows.map {
+            "\($0.0.rawValue)|\($0.1.rawValue)|\($0.2.rawValue)"
+        }
     }
 
     private func estateAdministratorNomination(
@@ -2019,6 +2701,44 @@ extension AgentSimulationSession {
         return true
     }
 
+    private mutating func recomputeEstateOperationalStatus(
+        estateIndex: Int,
+        authority: inout AgentEstateState
+    ) {
+        let estate = authority.estates[estateIndex]
+        authority.estates[estateIndex].status =
+            Self.recomputedEstateOperationalStatus(
+                currentStatus: estate.status,
+                beneficiaries: estate.beneficiaries,
+                administrations: estate.administrations,
+                assets: estate.assets
+            )
+    }
+
+    private static func recomputedEstateOperationalStatus(
+        currentStatus: AgentEstateStatus,
+        beneficiaries: [AgentEstateBeneficiary],
+        administrations: [AgentEstateAdministration],
+        assets: [AgentEstateAssetEntry]
+    ) -> AgentEstateStatus {
+        if currentStatus == .settled
+            || assets.allSatisfy(\.status.isTerminal) {
+            return .settled
+        }
+        if beneficiaries.isEmpty {
+            return .dormantNoSuccessor
+        }
+        let terminalCount = assets.filter(\.status.isTerminal).count
+        if terminalCount > 0 && terminalCount < assets.count {
+            return .partiallySettled
+        }
+        if assets.contains(where: { $0.status == .blocked }) {
+            return .blocked
+        }
+        return administrations.contains(where: { $0.status == .active })
+            ? .openAdministered : .openUnadministered
+    }
+
     private func estateAssetsAtOpening(
         estateID: AgentEstateID,
         decedentID: AgentID,
@@ -2100,6 +2820,8 @@ extension AgentSimulationSession {
                     $0.lifeStageAtPlan == .mature
                         ? $0.agentID : $0.guardianIDAtPlan
                 },
+                custodyRevalidatedAtTick: nil,
+                custodyRevalidationEventID: nil,
                 status: status,
                 blockReason: reason,
                 settlementAttemptCount: 0,
@@ -2150,6 +2872,8 @@ extension AgentSimulationSession {
                 classificationEventID: nil,
                 assignedBeneficiaryID: nil,
                 intendedCustodianID: nil,
+                custodyRevalidatedAtTick: nil,
+                custodyRevalidationEventID: nil,
                 status: .blocked,
                 blockReason: .sociallyUnregistered,
                 settlementAttemptCount: 0,
@@ -2252,6 +2976,34 @@ extension AgentSimulationSession {
             }
     }
 
+    private static func estateSuccessorPlanDigest(
+        version: Int,
+        estateID: AgentEstateID,
+        decedentID: AgentID,
+        deathID: AgentDeathID,
+        deathBoundaryTick: Int,
+        selectedTier: AgentEstateBeneficiaryTier,
+        eligibilityRows: [AgentEstateSuccessorEligibilityRow],
+        activeUnionAtDeath: AgentEstateActiveUnionAtDeathEvidence?
+    ) -> String {
+        let rows = eligibilityRows.map {
+            "\($0.agentID.rawValue):\($0.tier.rawValue):"
+                + "\($0.basis.rawValue):\($0.eligibleAtDeath ? 1 : 0):"
+                + "\($0.lifeStageAtPlan?.rawValue ?? "none"):"
+                + "\($0.guardianIDAtPlan?.rawValue ?? "none")"
+        }.joined(separator: ",")
+        let union = activeUnionAtDeath.map {
+            "\($0.unionID.rawValue):\($0.partnerID.rawValue):"
+                + "\($0.activationTick):\($0.activationEventID.rawValue)"
+        } ?? "none"
+        return AgentEstateDigest.make(
+            "successor-plan-v\(version)|\(estateID.rawValue)|"
+                + "\(decedentID.rawValue)|\(deathID.rawValue)|"
+                + "\(deathBoundaryTick)|\(selectedTier.rawValue)|"
+                + "\(rows)|\(union)"
+        )
+    }
+
     private static func estateStateDigest(
         _ authority: AgentEstateState
     ) -> String {
@@ -2266,14 +3018,33 @@ extension AgentSimulationSession {
                 "\($0.agentID.rawValue):\($0.basis.rawValue):"
                     + "\($0.allocationCount)"
             }.joined(separator: ",")
+            let planProof = estate.successorPlanProof.map {
+                "\($0.version):\($0.planDigest):"
+                    + "\($0.successorPlanEventID.rawValue)"
+            }
             let assets = estate.assets.map {
-                "\($0.entryID.rawValue):\($0.materialRightsAssetID?.rawValue ?? "none"):"
+                let base =
+                    "\($0.entryID.rawValue):"
+                    + "\($0.materialRightsAssetID?.rawValue ?? "none"):"
                     + "\($0.quantity):\($0.status.rawValue):"
                     + "\($0.blockReason?.rawValue ?? "none"):"
                     + "\($0.settlementReceiptID ?? "none")"
+                if let eventID = $0.custodyRevalidationEventID {
+                    return base + ":custody:"
+                        + "\($0.custodyRevalidatedAtTick ?? -1):"
+                        + eventID.rawValue + ":"
+                        + "\($0.intendedCustodianID?.rawValue ?? "none")"
+                }
+                return base
             }.joined(separator: ",")
-            return "\(estate.estateID.rawValue)|\(estate.deathID.rawValue)|"
-                + "\(estate.status.rawValue)|\(admins)|\(beneficiaries)|\(assets)"
+            let prefix =
+                "\(estate.estateID.rawValue)|\(estate.deathID.rawValue)|"
+                    + "\(estate.status.rawValue)|"
+            if let planProof {
+                return prefix + "\(planProof)|\(admins)|"
+                    + "\(beneficiaries)|\(assets)"
+            }
+            return prefix + "\(admins)|\(beneficiaries)|\(assets)"
         }.joined(separator: ";")
         return AgentEstateDigest.make(
             "\(authority.activationTick)|\(authority.activationDeathCount)|"

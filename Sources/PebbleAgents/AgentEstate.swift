@@ -174,6 +174,42 @@ public struct AgentEstateBeneficiary: Codable, Equatable, Sendable {
     public internal(set) var allocationCount: Int
 }
 
+public struct AgentEstateSuccessorEligibilityRow:
+    Codable, Equatable, Sendable
+{
+    public let agentID: AgentID
+    public let tier: AgentEstateBeneficiaryTier
+    public let basis: AgentEstateBeneficiaryBasis
+    public let eligibleAtDeath: Bool
+    public let lifeStageAtPlan: AgentLifeStage?
+    public let guardianIDAtPlan: AgentID?
+}
+
+public struct AgentEstateActiveUnionAtDeathEvidence:
+    Codable, Equatable, Sendable
+{
+    public let unionID: AgentUnionID
+    public let partnerID: AgentID
+    public let activationTick: Int
+    public let activationEventID: AgentCausalEventID
+}
+
+public struct AgentEstateSuccessorPlanProof:
+    Codable, Equatable, Sendable
+{
+    public let version: Int
+    public let estateID: AgentEstateID
+    public let decedentID: AgentID
+    public let deathID: AgentDeathID
+    public let deathBoundaryTick: Int
+    public let selectedTier: AgentEstateBeneficiaryTier
+    public let eligibilityRows: [AgentEstateSuccessorEligibilityRow]
+    public let activeUnionAtDeath:
+        AgentEstateActiveUnionAtDeathEvidence?
+    public let successorPlanEventID: AgentCausalEventID
+    public let planDigest: String
+}
+
 public enum AgentEstateAdministratorBasis:
     String, Codable, CaseIterable, Sendable
 {
@@ -263,7 +299,9 @@ public struct AgentEstateAssetEntry: Codable, Equatable, Sendable {
     public let permissionsAtOpening: [AgentMaterialUsePermission]
     public internal(set) var classificationEventID: AgentCausalEventID?
     public let assignedBeneficiaryID: AgentID?
-    public let intendedCustodianID: AgentID?
+    public internal(set) var intendedCustodianID: AgentID?
+    public internal(set) var custodyRevalidatedAtTick: Int?
+    public internal(set) var custodyRevalidationEventID: AgentCausalEventID?
     public internal(set) var status: AgentEstateAssetStatus
     public internal(set) var blockReason: AgentEstateAssetBlockReason?
     public internal(set) var settlementAttemptCount: Int
@@ -300,6 +338,7 @@ public struct AgentEstateRecord: Codable, Equatable, Sendable {
     public let openedAtTick: Int
     public let openingEventID: AgentCausalEventID
     public let successorPlanEventID: AgentCausalEventID
+    public let successorPlanProof: AgentEstateSuccessorPlanProof?
     public let beneficiaryTier: AgentEstateBeneficiaryTier
     public internal(set) var status: AgentEstateStatus
     public internal(set) var deathEventID: AgentCausalEventID?

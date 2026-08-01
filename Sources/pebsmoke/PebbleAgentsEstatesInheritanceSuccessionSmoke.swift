@@ -82,7 +82,9 @@ private func makeEstateSession(
     includeUnionAndChild: Bool = true,
     registerAsset: Bool = true,
     thirdPartyClaim: Bool = false,
-    enableEstates: Bool = true
+    enableEstates: Bool = true,
+    mortalityConfiguration: AgentMortalityConfiguration = .embodiedLive,
+    estateConfiguration: AgentEstateConfiguration = .live
 ) -> (AgentSimulationSession, AgentBirthRecord?) {
     let survival = try! AgentSurvivalConfiguration(
         hungerPerTick: 0.001, fatiguePerTick: 0.001,
@@ -215,10 +217,12 @@ private func makeEstateSession(
         }
     }
     try! session.setMortalityEnabled(
-        true, configuration: .embodiedLive
+        true, configuration: mortalityConfiguration
     )
     if enableEstates {
-        try! session.setEstatesEnabled(true)
+        try! session.setEstatesEnabled(
+            true, configuration: estateConfiguration
+        )
     }
     return (session, birth)
 }
@@ -286,6 +290,40 @@ private func finalizeEstateDeath(
     }!
 }
 
+private func finalizeEmptyEstateDeathRefused(
+    _ session: inout AgentSimulationSession
+) -> Bool {
+    while session.pendingMortalityTransitions().isEmpty {
+        _ = try! session.advanceTick()
+    }
+    let pending = session.pendingMortalityTransitions().first!
+    let receipt = "\(session.simulationID.rawValue):retention:"
+        + "\(pending.agentID.rawValue):t\(session.tick)"
+    _ = try! session.applyMortalityPhysicalCustodyOutcome(
+        AgentMortalityPhysicalCustodyOutcome(
+            operationID: "\(receipt):custody",
+            terminalAgentID: pending.agentID,
+            kind: .verifiedEmpty,
+            physicalReceiptID: receipt,
+            destinationHolderID: nil,
+            stackCount: 0,
+            itemCount: 0,
+            physicalAssets: [],
+            verifiedAtTick: session.tick
+        )
+    )
+    let before = try! session.durableStateBytes()
+    do {
+        _ = try session.finalizePendingMortality(for: pending.agentID)
+        return false
+    } catch {
+        return (try! session.durableStateBytes()) == before
+            && session.pendingMortalityTransitions().contains {
+                $0.agentID == pending.agentID
+            }
+    }
+}
+
 private func registerEstateAsset(
     _ session: inout AgentSimulationSession,
     assetID: AgentMaterialAssetID,
@@ -293,6 +331,7 @@ private func registerEstateAsset(
     identity: AgentMaterialIdentitySnapshot,
     ownerID: AgentID = estateAgentIDs[0],
     holderID: AgentID = estateAgentIDs[0],
+    recognizingAgentIDs: [AgentID] = estateAgentIDs,
     operationPrefix: String
 ) {
     let observation = AgentMaterialHolderObservation(
@@ -316,7 +355,7 @@ private func registerEstateAsset(
     _ = try! session.applyMaterialRightsOperation(.recognizeOwnership(
         operationID: "\(operationPrefix):recognize",
         assetID: assetID, claimID: claimID,
-        recognizingAgentIDs: estateAgentIDs
+        recognizingAgentIDs: recognizingAgentIDs
     ))
 }
 
@@ -512,14 +551,27 @@ private func estateTestRollingDigest(
                 + "\($0.allocationCount)"
         }.joined(separator: ",")
         let assets = estate.assets.map {
-            "\($0.entryID.rawValue):"
+            let base = "\($0.entryID.rawValue):"
                 + "\($0.materialRightsAssetID?.rawValue ?? "none"):"
                 + "\($0.quantity):\($0.status.rawValue):"
                 + "\($0.blockReason?.rawValue ?? "none"):"
                 + "\($0.settlementReceiptID ?? "none")"
+            if let eventID = $0.custodyRevalidationEventID {
+                return base + ":custody:"
+                    + "\($0.custodyRevalidatedAtTick ?? -1):"
+                    + eventID.rawValue + ":"
+                    + "\($0.intendedCustodianID?.rawValue ?? "none")"
+            }
+            return base
         }.joined(separator: ",")
-        return "\(estate.estateID.rawValue)|\(estate.deathID.rawValue)|"
-            + "\(estate.status.rawValue)|\(admins)|\(beneficiaries)|\(assets)"
+        let prefix = "\(estate.estateID.rawValue)|"
+            + "\(estate.deathID.rawValue)|\(estate.status.rawValue)|"
+        if let proof = estate.successorPlanProof {
+            return prefix + "\(proof.version):\(proof.planDigest):"
+                + "\(proof.successorPlanEventID.rawValue)|\(admins)|"
+                + "\(beneficiaries)|\(assets)"
+        }
+        return prefix + "\(admins)|\(beneficiaries)|\(assets)"
     }.joined(separator: ";")
     let text = "\(authority.activationTick)|"
         + "\(authority.activationDeathCount)|\(authority.totalEstateCount)|"
@@ -527,6 +579,64 @@ private func estateTestRollingDigest(
         + "\(authority.evictionCounts.settledEstates)|\(estates)|"
         + "\(authority.processedOperationIDs.joined(separator: ","))"
     return AgentMortalityDigest.make("estate-v1|\(text)")
+}
+
+private func estateCausalDigest(_ text: String) -> String {
+    var value: UInt64 = 14_695_981_039_346_656_037
+    for byte in text.utf8 {
+        value ^= UInt64(byte)
+        value &*= 1_099_511_628_211
+    }
+    let digits = String(value, radix: 16, uppercase: false)
+    return String(repeating: "0", count: max(0, 16 - digits.count))
+        + digits
+}
+
+private func estateEventIDText(_ value: [String: Any]) -> String {
+    let simulationID = value["simulationID"] as! String
+    let sequence = value["sequence"] as! UInt64
+    let digits = String(sequence)
+    return "\(simulationID)/event-"
+        + String(repeating: "0", count: max(0, 20 - digits.count))
+        + digits
+}
+
+private func estateRepairOperationEventDigest(
+    _ event: inout [String: Any]
+) {
+    let eventID = estateEventIDText(
+        event["eventID"] as! [String: Any]
+    )
+    let instant = event["instant"] as! [String: Any]
+    let causes = (event["causes"] as! [[String: Any]])
+        .map(estateEventIDText).joined(separator: ",")
+    let payload = event["payload"] as! [String: Any]
+    let operation = payload["operation"] as! [String: Any]
+    let payloadText =
+        "operation|\(operation["status"] as! String)|"
+            + "\(operation["detail"] as! String)"
+    let text = "\(eventID)|\(instant["tick"] as! Int)|"
+        + "\(event["kind"] as! String)|\(event["origin"] as! String)|"
+        + "\(event["actorID"] as? String ?? "-")|"
+        + "\(event["subjectID"] as? String ?? "-")|"
+        + "\(event["operationID"] as? String ?? "-")|"
+        + "\(causes)|\(payloadText)|\(event["summary"] as! String)"
+    event["digest"] = estateCausalDigest(text)
+}
+
+private func estateRecomputeCausalRollingDigest(
+    _ durable: inout [String: Any]
+) {
+    var ledger = durable["causalLedger"] as! [String: Any]
+    let events = ledger["events"] as! [[String: Any]]
+    var rolling = estateCausalDigest("")
+    for event in events {
+        rolling = estateCausalDigest(
+            "\(rolling)|\(event["digest"] as! String)"
+        )
+    }
+    ledger["rollingDigest"] = rolling
+    durable["causalLedger"] = ledger
 }
 
 private func estateRestoreRefused(
@@ -540,6 +650,53 @@ private func estateRestoreRefused(
         return false
     } catch {
         return true
+    }
+}
+
+private func estateSchema27Checkpoint(
+    _ checkpoint: AgentSessionCheckpoint,
+    preserveExactCausalProof: Bool
+) -> AgentSessionCheckpoint {
+    estateMutatedCheckpoint(checkpoint) { durable in
+        durable["schemaVersion"] = AgentCheckpointSchema.legacyEstateVersion
+        var state = durable["estateState"] as! [String: Any]
+        var estates = state["estates"] as! [[String: Any]]
+        for index in estates.indices {
+            estates[index].removeValue(forKey: "successorPlanProof")
+        }
+        state["estates"] = estates
+        durable["estateState"] = state
+        guard preserveExactCausalProof else { return }
+
+        var ledger = durable["causalLedger"] as! [String: Any]
+        var events = ledger["events"] as! [[String: Any]]
+        for estate in estates {
+            let planEventID = estateEventIDText(
+                estate["successorPlanEventID"] as! [String: Any]
+            )
+            guard let eventIndex = events.firstIndex(where: {
+                estateEventIDText(
+                    $0["eventID"] as! [String: Any]
+                ) == planEventID
+            }) else {
+                continue
+            }
+            events[eventIndex]["causes"] = [
+                estate["openingEventID"] as! [String: Any],
+            ]
+            var payload = events[eventIndex]["payload"] as! [String: Any]
+            var operation = payload["operation"] as! [String: Any]
+            operation["detail"] = (estate["beneficiaries"]
+                as! [[String: Any]]).map {
+                    $0["agentID"] as! String
+                }.joined(separator: ",")
+            payload["operation"] = operation
+            events[eventIndex]["payload"] = payload
+            estateRepairOperationEventDigest(&events[eventIndex])
+        }
+        ledger["events"] = events
+        durable["causalLedger"] = ledger
+        estateRecomputeCausalRollingDigest(&durable)
     }
 }
 
@@ -562,6 +719,26 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
               AgentEstateConfiguration.self,
               from: AgentCheckpointCodec.encode(configuration)
           )) == configuration)
+    let lowRetentionMortality = try! AgentMortalityConfiguration(
+        maximumDeathsPerTick: 1,
+        maximumRetainedDeathRecords: 2,
+        maximumFinalMemoryEntries: 2,
+        maximumCancelledCommitmentIDsPerDeath: 8,
+        maximumExitFrames: 3,
+        maximumMaterialExitsPerDeath: 4,
+        requiresTerminalPhysicalCustodyVerification: true
+    )
+    let lowRetentionEstates = try! AgentEstateConfiguration(
+        maximumRetainedEstates: 2,
+        maximumOpenEstates: 2,
+        maximumAssetsPerEstate: 4,
+        maximumObligationsPerEstate: 4,
+        maximumBeneficiariesPerEstate: 8,
+        maximumAdministrationsPerEstate: 4,
+        maximumSettlementAttemptsPerAsset: 4,
+        maximumProcessedOperationIDs: 32,
+        maximumTransitionsPerTick: 32
+    )
 
     var missingRights = makeEstateSession(
         "civ33-needs-rights", includeUnionAndChild: false,
@@ -613,6 +790,113 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
             && postActivationOnly.estateSnapshot().estates.map(\.decedentID)
                 == [estateAgentIDs[1]])
 
+    var pinnedRetention = makeEstateSession(
+        "civ33-retention-pinned",
+        thirdPartyClaim: true,
+        mortalityConfiguration: lowRetentionMortality,
+        estateConfiguration: lowRetentionEstates
+    ).0
+    let pinnedA = finalizeEstateDeath(
+        &pinnedRetention,
+        physicalAssets: [
+            AgentMaterialStackSnapshot(identity: estateIdentity, count: 1),
+        ]
+    )
+    pinnedRetention = estateSessionPreparingLethalAgent(
+        pinnedRetention, targetID: estateAgentIDs[1]
+    )
+    let settledB = finalizeEstateDeath(
+        &pinnedRetention, physicalAssets: []
+    )
+    pinnedRetention = estateSessionPreparingLethalAgent(
+        pinnedRetention, targetID: estateAgentIDs[2]
+    )
+    let pinnedBefore = pinnedRetention.estateSnapshot()
+    check("open or blocked oldest estate pins its mortality record",
+          pinnedA.status == .blocked
+            && settledB.status == .settled
+            && finalizeEmptyEstateDeathRefused(&pinnedRetention)
+            && pinnedRetention.estateSnapshot() == pinnedBefore
+            && pinnedRetention.mortalitySnapshot().records.contains {
+                $0.deathID == pinnedA.deathID
+            })
+
+    var coordinatedRetention = makeEstateSession(
+        "civ33-retention-coordinated",
+        registerAsset: false,
+        mortalityConfiguration: lowRetentionMortality,
+        estateConfiguration: lowRetentionEstates
+    ).0
+    registerEstateAsset(
+        &coordinatedRetention,
+        assetID: estateSecondAssetID,
+        claimID: estateSecondOwnerClaimID,
+        identity: estateSecondIdentity,
+        ownerID: estateAgentIDs[1],
+        holderID: estateAgentIDs[1],
+        recognizingAgentIDs: [estateAgentIDs[1], estateAgentIDs[2]],
+        operationPrefix: "civ33-retention-coordinated:agent1"
+    )
+    let coordinatedUnion = coordinatedRetention.familySnapshot().unions[0]
+    try! coordinatedRetention.endUnion(
+        unionID: coordinatedUnion.unionID,
+        reason: .unilateralSeparation,
+        receipt: estateInteraction(
+            coordinatedRetention,
+            id: "civ33-retention-coordinated:separation",
+            kind: .unionSeparation,
+            actor: estateAgentIDs[0],
+            counterparty: estateAgentIDs[1]
+        )
+    )
+    let compactedA = finalizeEstateDeath(
+        &coordinatedRetention, physicalAssets: []
+    )
+    coordinatedRetention = estateSessionPreparingLethalAgent(
+        coordinatedRetention, targetID: estateAgentIDs[1]
+    )
+    let retainedB = finalizeEstateDeath(
+        &coordinatedRetention,
+        physicalAssets: [
+            AgentMaterialStackSnapshot(
+                identity: estateSecondIdentity, count: 1
+            ),
+        ]
+    )
+    coordinatedRetention = estateSessionPreparingLethalAgent(
+        coordinatedRetention, targetID: estateAgentIDs[2]
+    )
+    let retainedC = finalizeEstateDeath(
+        &coordinatedRetention, physicalAssets: []
+    )
+    let coordinatedCheckpoint = try! coordinatedRetention.makeCheckpoint()
+    let coordinatedRestart = try! AgentSimulationSession.restoring(
+        coordinatedCheckpoint
+    )
+    check("terminal estate and mortality record compact as one pair",
+          compactedA.status == .settled
+            && !coordinatedRetention.estateSnapshot().estates.contains {
+                $0.estateID == compactedA.estateID
+            }
+            && coordinatedRetention.estateSnapshot().estates.map(
+                \.estateID
+            ).sorted() == [retainedB.estateID, retainedC.estateID].sorted()
+            && coordinatedRetention.mortalitySnapshot().records.map(
+                \.deathID
+            ).sorted() == [retainedB.deathID, retainedC.deathID].sorted()
+            && coordinatedRetention.estateSnapshot().evictionCounts
+                .settledEstates == 1
+            && coordinatedRetention.mortalitySnapshot().evictionCounts
+                .deathRecords == 1
+            && coordinatedCheckpoint.schemaVersion == 28
+            && coordinatedRetention.estateSnapshot().estates.allSatisfy {
+                $0.successorPlanProof != nil
+            }
+            && coordinatedRestart.estateSnapshot()
+                == coordinatedRetention.estateSnapshot()
+            && coordinatedRestart.mortalitySnapshot()
+                == coordinatedRetention.mortalitySnapshot())
+
     let sessionAndBirth = makeEstateSession("civ33-main")
     var session = sessionAndBirth.0
     let childID = sessionAndBirth.1!.newbornID
@@ -662,6 +946,17 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
                 == [estateAgentIDs[1], childID].sorted()
             && Set(estate.beneficiaries.map(\.basis))
                 == [.activeUnionPartnerAtDeath, .canonicalChild])
+    check("schema 28 successor plan carries exact bounded eligibility proof",
+          estate.successorPlanProof?.version == 1
+            && estate.successorPlanProof?.selectedTier
+                == .primaryPartnerAndChildren
+            && estate.successorPlanProof?.eligibilityRows.filter(
+                \.eligibleAtDeath
+            ).map(\.agentID) == estate.beneficiaries.map(\.agentID)
+            && estate.successorPlanProof?.activeUnionAtDeath?.partnerID
+                == estateAgentIDs[1]
+            && estate.successorPlanProof?.successorPlanEventID
+                == estate.successorPlanEventID)
     check("partner remains successor while union ends by partner death",
           session.familySnapshot().unions.first?.terminationReason
             == .partnerDeath
@@ -728,11 +1023,37 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
 
     let openCheckpoint = try! session.makeCheckpoint()
     let restoredOpen = try! AgentSimulationSession.restoring(openCheckpoint)
-    check("schema 27 restores the same open estate without progress",
-          openCheckpoint.schemaVersion == 27
+    check("schema 28 restores the same open estate without progress",
+          openCheckpoint.schemaVersion == 28
             && restoredOpen.estateSnapshot() == session.estateSnapshot()
             && restoredOpen.materialRightsSnapshot()
                 == session.materialRightsSnapshot())
+    let exactSchema27Checkpoint = estateSchema27Checkpoint(
+        openCheckpoint, preserveExactCausalProof: true
+    )
+    let exactSchema27Restore = try? AgentSimulationSession.restoring(
+        exactSchema27Checkpoint
+    )
+    check("schema 27 remains readable only with exact retained causal proof",
+          exactSchema27Checkpoint.schemaVersion == 27
+            && exactSchema27Restore?.estateSnapshot().estates[0]
+                .successorPlanProof == nil
+            && exactSchema27Restore?.estateSnapshot().estates[0]
+                .beneficiaries == session.estateSnapshot().estates[0]
+                    .beneficiaries)
+    let incompleteSchema27Checkpoint = estateSchema27Checkpoint(
+        openCheckpoint, preserveExactCausalProof: false
+    )
+    check("schema 27 refuses an incomplete successor proof", {
+        do {
+            _ = try AgentSimulationSession.restoring(
+                incompleteSchema27Checkpoint
+            )
+            return false
+        } catch {
+            return true
+        }
+    }())
     let observer = session.observerSnapshot(
         worldBinding: try! AgentObserverWorldBinding(
             worldID: "world-civ33", storageIdentity: "civ33-store",
@@ -769,6 +1090,42 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
             "civ33-main:agent1:before-settlement",
         physicalReceiptID: "civ33-main:asset-settlement"
     )
+    let mismatchedSettlement = AgentEstatePhysicalSettlementOutcome(
+        operationID: "civ33-main:different-operation",
+        estateID: settlement.estateID,
+        entryID: settlement.entryID,
+        administratorID: settlement.administratorID,
+        beneficiaryID: settlement.beneficiaryID,
+        intendedCustodianID: settlement.intendedCustodianID,
+        sourceObservation: settlement.sourceObservation,
+        destinationObservation: settlement.destinationObservation,
+        sourceFingerprintAfterTransfer:
+            settlement.sourceFingerprintAfterTransfer,
+        destinationFingerprintBeforeTransfer:
+            settlement.destinationFingerprintBeforeTransfer,
+        physicalReceiptID: settlement.physicalReceiptID
+    )
+    let beforeMismatchedSettlement = try! session.durableStateBytes()
+    let beforeMismatchedObserver = session.observerSnapshot(
+        worldBinding: try! AgentObserverWorldBinding(
+            worldID: "world-civ33", storageIdentity: "civ33-store",
+            seed: 33, dimension: 0, observedWorldTick: session.tick
+        )
+    )
+    check("settlement operation and physical receipt must match before mutation", {
+        do {
+            _ = try session.applyEstatePhysicalSettlement(
+                mismatchedSettlement
+            )
+            return false
+        } catch {
+            return (try! session.durableStateBytes())
+                    == beforeMismatchedSettlement
+                && session.observerSnapshot(
+                    worldBinding: beforeMismatchedObserver.header.worldBinding
+                ) == beforeMismatchedObserver
+        }
+    }())
     _ = try! session.applyEstatePhysicalSettlement(settlement)
     let settledEstate = session.estateSnapshot().estates[0]
     let settledRights = session.materialRightsSnapshot().records[0]
@@ -841,7 +1198,7 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
         checkpoint: unacceptedCheckpoint,
         journal: estateReplayJournal
     )
-    check("schema 27 replay is byte-exact and non-duplicating",
+    check("schema 28 replay is byte-exact and non-duplicating",
           replayRecorder.schemaVersion == AgentReplaySchema.estateVersion
             && (try! replaySession.durableStateBytes())
                 == (try! session.durableStateBytes())
@@ -849,6 +1206,35 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
                 == (try! session.durableStateBytes())
             && replayedEstate.session.estateSnapshot()
                 .totalSettlementCount == 1)
+    var mismatchedReplaySession = try! AgentSimulationSession.restoring(
+        unacceptedCheckpoint
+    )
+    var mismatchedReplayRecorder = try! AgentReplayRecorder(
+        checkpoint: unacceptedCheckpoint,
+        session: mismatchedReplaySession
+    )
+    _ = try! mismatchedReplayRecorder.apply(
+        .acceptEstateAdministration(
+            estateID: estate.estateID,
+            administratorID: estateAgentIDs[1],
+            operationID: "civ33-main:administrator-acceptance"
+        ),
+        to: &mismatchedReplaySession
+    )
+    let beforeMismatchedReplay =
+        try! mismatchedReplaySession.durableStateBytes()
+    check("replay refuses divergent settlement operation and receipt", {
+        do {
+            _ = try mismatchedReplayRecorder.apply(
+                .applyEstatePhysicalSettlement(mismatchedSettlement),
+                to: &mismatchedReplaySession
+            )
+            return false
+        } catch {
+            return (try! mismatchedReplaySession.durableStateBytes())
+                == beforeMismatchedReplay
+        }
+    }())
 
     let formerPartnerFixture = makeEstateSession(
         "civ33-former-partner", registerAsset: false
@@ -1025,7 +1411,12 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
             && reassignedEstate.administrations[1].administratorID
                 == estateAgentIDs[2]
             && reassignedEstate.beneficiaries
-                == beneficiariesBeforeReplacement)
+                == beneficiariesBeforeReplacement
+            && reassignedEstate.assets[0].status == .blocked
+            && reassignedEstate.assets[0].blockReason
+                == .beneficiaryUnavailableForCustody
+            && reassignedEstate.assets[0].intendedCustodianID
+                == estateAgentIDs[1])
 
     var incapacitatedAdministrator = makeEstateSession(
         "civ33-administrator-incapacity"
@@ -1148,6 +1539,57 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
           orderedAssignments == reversedAssignments
             && orderedEstate.beneficiaries.map(\.agentID)
                 == reversedEstate.beneficiaries.map(\.agentID))
+
+    let custodyRetryFixture = makeEstateSession(
+        "civ33-custody-retry"
+    )
+    var custodyRetry = custodyRetryFixture.0
+    let custodyRetryChildID = custodyRetryFixture.1!.newbornID
+    registerEstateAsset(
+        &custodyRetry,
+        assetID: estateSecondAssetID,
+        claimID: estateSecondOwnerClaimID,
+        identity: estateSecondIdentity,
+        operationPrefix: "civ33-custody-retry:second"
+    )
+    let custodyRetryEstate = finalizeEstateDeath(
+        &custodyRetry,
+        physicalAssets: [
+            AgentMaterialStackSnapshot(identity: estateIdentity, count: 1),
+            AgentMaterialStackSnapshot(
+                identity: estateSecondIdentity, count: 1
+            ),
+        ]
+    )
+    let childEntryBefore = custodyRetryEstate.assets.first {
+        $0.assignedBeneficiaryID == custodyRetryChildID
+    }!
+    let childHousehold = try! custodyRetry.currentMembership(
+        of: custodyRetryChildID
+    )!.householdID
+    try! custodyRetry.moveMembers(
+        memberIDs: [estateAgentIDs[2]], to: childHousehold
+    )
+    try! custodyRetry.reassignGuardian(
+        dependentID: custodyRetryChildID,
+        to: estateAgentIDs[2]
+    )
+    let custodyAfterGuardianChange = custodyRetry.estateSnapshot()
+        .estates.first { $0.estateID == custodyRetryEstate.estateID }!
+        .assets.first { $0.entryID == childEntryBefore.entryID }!
+    let custodyRetryRestart = try! AgentSimulationSession.restoring(
+        custodyRetry.makeCheckpoint()
+    )
+    check("guardian change explicitly revalidates blocked asset custody",
+          childEntryBefore.intendedCustodianID != estateAgentIDs[2]
+            && custodyAfterGuardianChange.intendedCustodianID
+                == estateAgentIDs[2]
+            && custodyAfterGuardianChange.status == .pendingSettlement
+            && custodyAfterGuardianChange.blockReason == nil
+            && custodyAfterGuardianChange.custodyRevalidationEventID != nil
+            && custodyAfterGuardianChange.settlementAttemptCount == 0
+            && custodyRetryRestart.estateSnapshot()
+                == custodyRetry.estateSnapshot())
 
     var multipleAssets = makeEstateSession(
         "civ33-multiple-assets"
@@ -1315,6 +1757,37 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
             }.count == 1
             && restartedPartialBlocked.estateSnapshot()
                 .totalSettlementCount == 0)
+    var partialAdministratorLoss = estateSessionWithHealth(
+        partialBlocked, agentID: estateAgentIDs[1], health: 1
+    )
+    try! partialAdministratorLoss.setHomeostasisEnabled(
+        true,
+        configuration: try! AgentHomeostasisConfiguration(
+            ageVulnerabilityStartTicks: 1_000,
+            baseHealthDamagePerTick: 1,
+            healthRecoveryPerTick: 1,
+            incapacityHealthThreshold: 20
+        )
+    )
+    _ = try! partialAdministratorLoss.advanceTick()
+    let partialAfterAdministratorLoss = partialAdministratorLoss
+        .estateSnapshot().estates.first {
+            $0.estateID == partialBlockedEstate.estateID
+        }!
+    let partialLossRestart = try! AgentSimulationSession.restoring(
+        partialAdministratorLoss.makeCheckpoint()
+    )
+    check("administrator loss preserves partially settled material truth",
+          partialAfterAdministratorLoss.status == .partiallySettled
+            && partialAfterAdministratorLoss.assets.contains {
+                $0.status == .transferred
+            }
+            && partialAfterAdministratorLoss.assets.contains {
+                $0.status == .blocked
+                    && $0.blockReason == .thirdPartyClaim
+            }
+            && partialLossRestart.estateSnapshot()
+                == partialAdministratorLoss.estateSnapshot())
 
     var unregisteredResidual = makeEstateSession(
         "civ33-unregistered-residual",
@@ -1353,6 +1826,66 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
             && disputedEstate.assets[0].blockReason == .thirdPartyClaim
             && disputed.materialRightsSnapshot().records[0].claims.count == 2
             && disputedEstate.status == .blocked)
+    let disputedSurvivorHousehold = try! disputed.currentMembership(
+        of: estateAgentIDs[1]
+    )!.householdID
+    try! disputed.moveMembers(
+        memberIDs: [estateAgentIDs[2]], to: disputedSurvivorHousehold
+    )
+    _ = try! disputed.acceptEstateAdministration(
+        estateID: disputedEstate.estateID,
+        administratorID: estateAgentIDs[1],
+        operationID: "civ33-disputed:accept"
+    )
+    disputed = estateSessionWithHealth(
+        disputed, agentID: estateAgentIDs[1], health: 1
+    )
+    try! disputed.setHomeostasisEnabled(
+        true,
+        configuration: try! AgentHomeostasisConfiguration(
+            ageVulnerabilityStartTicks: 1_000,
+            baseHealthDamagePerTick: 1,
+            healthRecoveryPerTick: 1,
+            incapacityHealthThreshold: 20
+        )
+    )
+    _ = try! disputed.advanceTick()
+    let blockedAfterAdministratorLoss = disputed.estateSnapshot()
+        .estates.first { $0.estateID == disputedEstate.estateID }!
+    let blockedLossRestart = try! AgentSimulationSession.restoring(
+        disputed.makeCheckpoint()
+    )
+    check("administrator loss preserves blocked material truth",
+          blockedAfterAdministratorLoss.status == .blocked
+            && blockedAfterAdministratorLoss.assets[0].blockReason
+                == .thirdPartyClaim
+            && blockedAfterAdministratorLoss.administrations.last?
+                .administratorID == estateAgentIDs[2]
+            && blockedAfterAdministratorLoss.administrations.last?.status
+                == .nominated
+            && blockedLossRestart.estateSnapshot()
+                == disputed.estateSnapshot())
+
+    var dormant = makeEstateSession(
+        "civ33-dormant-no-successor",
+        includeUnionAndChild: false
+    ).0
+    let dormantEstate = finalizeEstateDeath(
+        &dormant,
+        physicalAssets: [
+            AgentMaterialStackSnapshot(identity: estateIdentity, count: 1),
+        ]
+    )
+    _ = try! dormant.advanceTick()
+    let dormantRestart = try! AgentSimulationSession.restoring(
+        dormant.makeCheckpoint()
+    )
+    check("dormant estate never reopens when no successor exists",
+          dormantEstate.status == .dormantNoSuccessor
+            && dormant.estateSnapshot().estates[0].status
+                == .dormantNoSuccessor
+            && dormantRestart.estateSnapshot()
+                == dormant.estateSnapshot())
 
     let settledCheckpoint = try! session.makeCheckpoint()
     check("checkpoint refuses missing estate authority", estateRestoreRefused(
@@ -1418,6 +1951,155 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
               estates[0]["beneficiaries"] = beneficiaries
               state["estates"] = estates
               durable["estateState"] = state
+          })
+    check("checkpoint refuses a successor tier changed after planning",
+          estateRestoreRefused(settledCheckpoint) { durable in
+              var state = durable["estateState"] as! [String: Any]
+              var estates = state["estates"] as! [[String: Any]]
+              var proof = estates[0]["successorPlanProof"]
+                  as! [String: Any]
+              proof["selectedTier"] =
+                  AgentEstateBeneficiaryTier.secondaryParents.rawValue
+              estates[0]["successorPlanProof"] = proof
+              state["estates"] = estates
+              durable["estateState"] = state
+          })
+    check("checkpoint refuses removing an eligible successor proof row",
+          estateRestoreRefused(settledCheckpoint) { durable in
+              var state = durable["estateState"] as! [String: Any]
+              var estates = state["estates"] as! [[String: Any]]
+              var proof = estates[0]["successorPlanProof"]
+                  as! [String: Any]
+              var rows = proof["eligibilityRows"] as! [[String: Any]]
+              rows.removeFirst()
+              proof["eligibilityRows"] = rows
+              estates[0]["successorPlanProof"] = proof
+              state["estates"] = estates
+              durable["estateState"] = state
+          })
+    check("checkpoint refuses adding a plausible person to the wrong tier",
+          estateRestoreRefused(settledCheckpoint) { durable in
+              var state = durable["estateState"] as! [String: Any]
+              var estates = state["estates"] as! [[String: Any]]
+              var proof = estates[0]["successorPlanProof"]
+                  as! [String: Any]
+              var rows = proof["eligibilityRows"] as! [[String: Any]]
+              var extra = rows[0]
+              extra["agentID"] = estateAgentIDs[2].rawValue
+              extra["tier"] =
+                  AgentEstateBeneficiaryTier.secondaryParents.rawValue
+              extra["basis"] =
+                  AgentEstateBeneficiaryBasis.canonicalParent.rawValue
+              rows.append(extra)
+              proof["eligibilityRows"] = rows
+              estates[0]["successorPlanProof"] = proof
+              state["estates"] = estates
+              durable["estateState"] = state
+          })
+    check("checkpoint refuses changed successor life stage evidence",
+          estateRestoreRefused(settledCheckpoint) { durable in
+              var state = durable["estateState"] as! [String: Any]
+              var estates = state["estates"] as! [[String: Any]]
+              var proof = estates[0]["successorPlanProof"]
+                  as! [String: Any]
+              var rows = proof["eligibilityRows"] as! [[String: Any]]
+              let childIndex = rows.firstIndex {
+                  $0["basis"] as? String
+                    == AgentEstateBeneficiaryBasis.canonicalChild.rawValue
+              }!
+              rows[childIndex]["lifeStageAtPlan"] =
+                  AgentLifeStage.mature.rawValue
+              proof["eligibilityRows"] = rows
+              estates[0]["successorPlanProof"] = proof
+              state["estates"] = estates
+              durable["estateState"] = state
+          })
+    check("checkpoint refuses changed successor guardian evidence",
+          estateRestoreRefused(settledCheckpoint) { durable in
+              var state = durable["estateState"] as! [String: Any]
+              var estates = state["estates"] as! [[String: Any]]
+              var proof = estates[0]["successorPlanProof"]
+                  as! [String: Any]
+              var rows = proof["eligibilityRows"] as! [[String: Any]]
+              let childIndex = rows.firstIndex {
+                  $0["basis"] as? String
+                    == AgentEstateBeneficiaryBasis.canonicalChild.rawValue
+              }!
+              rows[childIndex]["guardianIDAtPlan"] =
+                  estateAgentIDs[2].rawValue
+              proof["eligibilityRows"] = rows
+              estates[0]["successorPlanProof"] = proof
+              state["estates"] = estates
+              durable["estateState"] = state
+          })
+    check("post-eviction checkpoint still rejects successor-plan corruption",
+          estateRestoreRefused(coordinatedCheckpoint) { durable in
+              var state = durable["estateState"] as! [String: Any]
+              var estates = state["estates"] as! [[String: Any]]
+              let target = estates.firstIndex {
+                  ($0["estateID"] as? String)
+                    == retainedB.estateID.rawValue
+              }!
+              var proof = estates[target]["successorPlanProof"]
+                  as! [String: Any]
+              var rows = proof["eligibilityRows"] as! [[String: Any]]
+              let eligibleIndex = rows.firstIndex {
+                  $0["eligibleAtDeath"] as? Bool == true
+              }!
+              rows.remove(at: eligibleIndex)
+              proof["eligibilityRows"] = rows
+              estates[target]["successorPlanProof"] = proof
+              state["estates"] = estates
+              durable["estateState"] = state
+          })
+    check("checkpoint refuses successor plan event from another estate",
+          estateRestoreRefused(coordinatedCheckpoint) { durable in
+              var state = durable["estateState"] as! [String: Any]
+              var estates = state["estates"] as! [[String: Any]]
+              let firstEvent = estates[0]["successorPlanEventID"]!
+              var proof = estates[1]["successorPlanProof"]
+                  as! [String: Any]
+              proof["successorPlanEventID"] = firstEvent
+              estates[1]["successorPlanProof"] = proof
+              estates[1]["successorPlanEventID"] = firstEvent
+              state["estates"] = estates
+              durable["estateState"] = state
+          })
+    check("checkpoint refuses modified retained successor-plan payload",
+          estateRestoreRefused(settledCheckpoint) { durable in
+              var ledger = durable["causalLedger"] as! [String: Any]
+              var events = ledger["events"] as! [[String: Any]]
+              let index = events.firstIndex {
+                  $0["kind"] as? String
+                    == AgentCausalEventKind
+                        .estateSuccessorPlanCreated.rawValue
+              }!
+              var payload = events[index]["payload"] as! [String: Any]
+              var operation = payload["operation"] as! [String: Any]
+              operation["detail"] = "corrupt-successor-plan"
+              payload["operation"] = operation
+              events[index]["payload"] = payload
+              estateRepairOperationEventDigest(&events[index])
+              ledger["events"] = events
+              durable["causalLedger"] = ledger
+              estateRecomputeCausalRollingDigest(&durable)
+          })
+    check("checkpoint refuses modified retained successor-plan causes",
+          estateRestoreRefused(settledCheckpoint) { durable in
+              var ledger = durable["causalLedger"] as! [String: Any]
+              var events = ledger["events"] as! [[String: Any]]
+              let index = events.firstIndex {
+                  $0["kind"] as? String
+                    == AgentCausalEventKind
+                        .estateSuccessorPlanCreated.rawValue
+              }!
+              var causes = events[index]["causes"] as! [[String: Any]]
+              causes.removeLast()
+              events[index]["causes"] = causes
+              estateRepairOperationEventDigest(&events[index])
+              ledger["events"] = events
+              durable["causalLedger"] = ledger
+              estateRecomputeCausalRollingDigest(&durable)
           })
     check("checkpoint refuses juvenile estate administrator",
           estateRestoreRefused(settledCheckpoint) { durable in

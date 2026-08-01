@@ -27,7 +27,8 @@ public enum AgentReplaySchema {
     public static let verifiedSupervisionVersion = 24
     public static let familyVersion = 25
     public static let durableHouseConsentVersion = 26
-    public static let estateVersion = 27
+    public static let legacyEstateVersion = 27
+    public static let estateVersion = 28
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -43,7 +44,7 @@ public enum AgentReplaySchema {
             || version == homeostasisVersion || version == geneticsVersion
             || version == childhoodVersion || version == verifiedSupervisionVersion
             || version == familyVersion || version == durableHouseConsentVersion
-            || version == estateVersion
+            || version == legacyEstateVersion || version == estateVersion
     }
 }
 
@@ -809,7 +810,10 @@ public struct AgentReplayRecorder {
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
         schemaVersion = session.estatesEnabled
-            ? AgentReplaySchema.estateVersion
+            ? (checkpoint.schemaVersion
+                == AgentCheckpointSchema.legacyEstateVersion
+                ? AgentReplaySchema.legacyEstateVersion
+                : AgentReplaySchema.estateVersion)
             : (session.familyV1Enabled
                 ? AgentReplaySchema.durableHouseConsentVersion
                 : (session.childhoodV2Enabled
@@ -1281,7 +1285,7 @@ public enum AgentSessionReplayer {
                     <= AgentCheckpointSchema.familyVersion)
             || (manifest.schemaVersion == AgentReplaySchema.estateVersion
                 && checkpoint.schemaVersion
-                    <= AgentCheckpointSchema.durableHouseConsentVersion)
+                    <= AgentCheckpointSchema.legacyEstateVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,

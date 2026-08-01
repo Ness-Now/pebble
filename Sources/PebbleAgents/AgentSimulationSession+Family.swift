@@ -1061,6 +1061,7 @@ extension AgentSimulationSession {
         schemaVersion == AgentCheckpointSchema.familyVersion
             || schemaVersion
                 == AgentCheckpointSchema.durableHouseConsentVersion
+            || schemaVersion == AgentCheckpointSchema.legacyEstateVersion
             || schemaVersion == AgentCheckpointSchema.estateVersion else {
             throw AgentFamilyError.invalidState("bounds, ordering or counters")
         }

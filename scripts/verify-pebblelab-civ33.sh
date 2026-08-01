@@ -34,7 +34,7 @@ if [ "${1:-}" = "--dry-run" ]; then
     printf '  World: %s seed=%s\n' "$WORLD_NAME" "$WORLD_SEED"
     printf '  Process 1: normal union and child birth; a real agent-held\n'
     printf '             asset; normal homeostatic death; verified custody\n'
-    printf '             exit; one estate; rollback proof; schema 27 save.\n'
+    printf '             exit; one estate; rollback proof; schema 28 save.\n'
     printf '  Process 2: exact restart; same open estate; real whole-asset\n'
     printf '             settlement; Observer schema 6; exact cleanup.\n'
     printf '  The harness never writes an estate, beneficiary, owner,\n'
@@ -67,7 +67,7 @@ RESTART_CAPTURE="$EVIDENCE_ROOT/civ33-same-estate-after-restart.png"
 SETTLED_CAPTURE="$EVIDENCE_ROOT/civ33-settled-inheritance.png"
 MATRIX="$EVIDENCE_ROOT/matrix.tsv"
 COMPACT_TRACE="$EVIDENCE_ROOT/civ33-compact-trace.log"
-MANIFEST_COPY="$EVIDENCE_ROOT/civ33-schema27-manifest.json"
+MANIFEST_COPY="$EVIDENCE_ROOT/civ33-schema28-manifest.json"
 BUILD_CONFIGURATION=${PEBBLELAB_CIV33_BUILD_CONFIGURATION:-release}
 case "$BUILD_CONFIGURATION" in
     debug|release) ;;
@@ -167,7 +167,7 @@ require_trace "$PHASE1_TRACE" \
     'estate proof advance ticks=1 tick=22>23 .*deprivedAgent=agent_0 .*vital=dead health=0 deaths=0>1 estate=estate-[^ ]+ estateStatus=openUnadministered tier=primaryPartnerAndChildren administrator=agent_1 holder=container:.* owner=agent_0 physicalQuantity=1 activeAgents=3 probes=3 runtimeErrors=0' \
     'normal homeostatic death opens exactly one primary-tier estate'
 require_trace "$PHASE1_TRACE" \
-    'estates schema=27 enabled=1 .*count=1 retained=1 settlements=0 .*decedent=agent_0 .*status=openUnadministered tier=primaryPartnerAndChildren beneficiaries=.*agent_1:activeUnionPartnerAtDeath.*agent_3:canonicalChild.*administrator=none administrationStatus=nominated .*physical=transferred .*physicalStacks=1 physicalItems=1 assets=.*asset:civ27:live-pickaxe~iron_pickaxe:1~container:.*~agent_0~agent_1~agent_1~pendingSettlement~none~container:.*~agent_0~agent_1~none duplicateEstateIDs=0' \
+    'estates schema=28 enabled=1 .*count=1 retained=1 settlements=0 .*decedent=agent_0 .*status=openUnadministered tier=primaryPartnerAndChildren beneficiaries=.*agent_1:activeUnionPartnerAtDeath.*agent_3:canonicalChild.*successorPlanVersion=1 successorPlanDigest=[0-9a-f]{16} successorPlanRows=[1-9][0-9]* successorPlanEvent=.*administrator=none administrationStatus=nominated .*physical=transferred .*physicalStacks=1 physicalItems=1 assets=.*asset:civ27:live-pickaxe~iron_pickaxe:1~container:.*~agent_0~agent_1~agent_1~pendingSettlement~none~container:.*~agent_0~agent_1~none duplicateEstateIDs=0' \
     'estate separates successor owner assignment from pending physical custody'
 require_trace "$PHASE1_TRACE" \
     'estate administration accepted estate=estate-[^ ]+ administrator=agent_1 count=1' \
@@ -176,11 +176,11 @@ require_trace "$PHASE1_TRACE" \
     'estate settlement rollback lateFailure=verified session=exact estate=exact materialRights=exact source=restored destination=restored replay=unchanged' \
     'late physical settlement failure restores all authorities exactly'
 require_trace "$PHASE1_TRACE" \
-    'estates schema=27 enabled=1 .*status=openAdministered .*administrator=agent_1 administrationStatus=active acceptance=estate-accept:.*assets=.*pendingSettlement.*duplicateEstateIDs=0' \
+    'estates schema=28 enabled=1 .*status=openAdministered .*successorPlanVersion=1 successorPlanDigest=[0-9a-f]{16} .*administrator=agent_1 administrationStatus=active acceptance=estate-accept:.*assets=.*pendingSettlement.*duplicateEstateIDs=0' \
     'accepted estate remains open and physically unsettled after rollback'
 require_trace "$PHASE1_TRACE" \
     'checkpoint saved name=civ33-open .*tick=23 .*manifestIntegrity=v1:[0-9a-f]{64} .*restartSafe=1 .*mutation=none' \
-    'restart-safe schema 27 open-estate checkpoint'
+    'restart-safe schema 28 open-estate checkpoint'
 require_trace "$PHASE1_TRACE" \
     'observer status .*schema=6 .*estate=estate-[^ ]+ estateStatus=openUnadministered .*estateTier=primaryPartnerAndChildren estateAssets=1 estateSettledAssets=0 .*mutation=none tickStable=1 causalStable=1 digestStable=1' \
     'Observer schema 6 projects estate authority read-only'
@@ -200,13 +200,13 @@ DB_PATH="$SESSION_HOME/Library/Application Support/Pebble/pebble.db"
 PERSISTENCE_ROOT="$SESSION_HOME/Library/Application Support/Pebble/PebbleLabAgents"
 OPEN_MANIFEST=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f \
     -path '*/checkpoints/civ33-open/manifest.json' -print -quit)
-[ -n "$OPEN_MANIFEST" ] || fail "schema 27 open-estate manifest missing"
-/usr/bin/grep -q '"schemaVersion":27' "$OPEN_MANIFEST" \
-    || fail "open-estate checkpoint manifest is not schema 27"
+[ -n "$OPEN_MANIFEST" ] || fail "schema 28 open-estate manifest missing"
+/usr/bin/grep -q '"schemaVersion":28' "$OPEN_MANIFEST" \
+    || fail "open-estate checkpoint manifest is not schema 28"
 /usr/bin/grep -Eq '"manifestIntegrityVersion":1' "$OPEN_MANIFEST" \
-    || fail "schema 27 manifest integrity version missing"
+    || fail "schema 28 manifest integrity version missing"
 /usr/bin/grep -Eq '"manifestIntegrityDigest":"[0-9a-f]{64}"' "$OPEN_MANIFEST" \
-    || fail "schema 27 manifest integrity digest missing"
+    || fail "schema 28 manifest integrity digest missing"
 /bin/cp "$OPEN_MANIFEST" "$MANIFEST_COPY"
 
 PHASE1_SIM=$(/usr/bin/sed -n \
@@ -219,7 +219,7 @@ PHASE1_WORLD=$(/usr/bin/sed -n \
     's/.*observer status .*schema=6 world=\([^ ]*\) storage=.*/\1/p' \
     "$PHASE1_TRACE" | /usr/bin/tail -1)
 ESTATE_ID=$(/usr/bin/sed -n \
-    's/.*estates schema=27 .* latest=\([^ ]*\) decedent=agent_0.*/\1/p' \
+    's/.*estates schema=28 .* latest=\([^ ]*\) decedent=agent_0.*/\1/p' \
     "$PHASE1_TRACE" | /usr/bin/tail -1)
 MANIFEST_DIGEST=$(/usr/bin/sed -n \
     's/.*"manifestIntegrityDigest":"\([0-9a-f]*\)".*/\1/p' \
@@ -235,9 +235,9 @@ run_app "$PHASE2_TRACE" "$PHASE2_COMMANDS" \
 
 require_trace "$PHASE2_TRACE" \
     "checkpoint loaded name=civ33-open .*tick=23 simulation=$PHASE1_SIM digest=$PHASE1_DIGEST .*restartSafe=1 manifestIntegrity=verified:v1 probes=3 paused=1 .*probeReconciliation=retired_verified:agent_0 probeRetired=agent_0 probeRestored=agent_3 physicalReconciliation=applied:matched worldMutation=none" \
-    'same schema 27 open estate and child probe restored in process 2'
+    'same schema 28 open estate and child probe restored in process 2'
 require_trace "$PHASE2_TRACE" \
-    "estates schema=27 enabled=1 .*count=1 retained=1 settlements=0 latest=$ESTATE_ID decedent=agent_0 .*status=openAdministered tier=primaryPartnerAndChildren .*administrator=agent_1 administrationStatus=active .*assets=.*pendingSettlement.*container:.*~agent_0~agent_1~none duplicateEstateIDs=0" \
+    "estates schema=28 enabled=1 .*count=1 retained=1 settlements=0 latest=$ESTATE_ID decedent=agent_0 .*status=openAdministered tier=primaryPartnerAndChildren .*successorPlanVersion=1 successorPlanDigest=[0-9a-f]{16} .*administrator=agent_1 administrationStatus=active .*assets=.*pendingSettlement.*container:.*~agent_0~agent_1~none duplicateEstateIDs=0" \
     'same unsettled estate, beneficiary plan, and rights after restart'
 require_trace "$PHASE2_TRACE" \
     'observer status .*schema=6 .*estate=estate-[^ ]+ estateStatus=openAdministered estateAdministrator=agent_1 estateTier=primaryPartnerAndChildren estateAssets=1 estateSettledAssets=0 .*mutation=none tickStable=1 causalStable=1 digestStable=1' \
@@ -246,7 +246,7 @@ require_trace "$PHASE2_TRACE" \
     "estate asset settled estate=$ESTATE_ID entry=[^ ]+ status=transferred beneficiary=agent_1 custodian=agent_1 receipt=estate-settle:" \
     'one whole asset is physically transferred through the Pebble adapter'
 require_trace "$PHASE2_TRACE" \
-    "estates schema=27 enabled=1 .*count=1 retained=1 settlements=1 latest=$ESTATE_ID .*status=settled tier=primaryPartnerAndChildren .*administrator=none administrationStatus=ended .*assets=.*~agent_1~transferred~none~agent:agent_1~agent_1~none~estate-settle:.*duplicateEstateIDs=0" \
+    "estates schema=28 enabled=1 .*count=1 retained=1 settlements=1 latest=$ESTATE_ID .*status=settled tier=primaryPartnerAndChildren .*successorPlanVersion=1 successorPlanDigest=[0-9a-f]{16} .*administrator=none administrationStatus=ended .*assets=.*~agent_1~transferred~none~agent:agent_1~agent_1~none~estate-settle:.*duplicateEstateIDs=0" \
     'settlement publishes the intended custodian, direct adult holder/owner, and terminal estate once'
 require_trace "$PHASE2_TRACE" \
     'persistence reconciliation status enabled=1 .*outcome=matched asset=asset:civ27:live-pickaxe holder=agent:agent_1 .*owner=agent_1 .*duplicates=0' \
@@ -311,7 +311,7 @@ fi
     printf 'claims\tpreserved-owner\towner-replaced\tBOUNDED_POLICY\n'
     printf 'permissions\tpreserved\tpreserved\tUNCHANGED\n'
     printf 'rollback\texact\tunchanged\tVERIFIED\n'
-    printf 'checkpointSchema\t27\t27\tMATCH\n'
+    printf 'checkpointSchema\t28\t28\tMATCH\n'
     printf 'manifestIntegrity\t%s\tverified:v1\tMATCH\n' \
         "$MANIFEST_DIGEST"
     printf 'estateOpeningCount\t1\t1\tNO_DUPLICATION\n'
@@ -328,7 +328,7 @@ fi
     printf 'estate=%s\n' "$ESTATE_ID"
     printf 'manifestIntegrityDigest=%s\n' "$MANIFEST_DIGEST"
     /usr/bin/grep -E \
-        '^\[lab-live\] (birth finalized|estate proof setup|estate proof advance|mortality physical custody|mortality material exit|mortality exit|estates schema=27|estate administration accepted|estate settlement rollback|checkpoint saved name=civ33-(open|settled)|checkpoint loaded name=civ33-open|estate asset settled|observer status|estate proof cleanup)' \
+        '^\[lab-live\] (birth finalized|estate proof setup|estate proof advance|mortality physical custody|mortality material exit|mortality exit|estates schema=28|estate administration accepted|estate settlement rollback|checkpoint saved name=civ33-(open|settled)|checkpoint loaded name=civ33-open|estate asset settled|observer status|estate proof cleanup)' \
         "$PHASE1_TRACE" "$PHASE2_TRACE"
     printf 'estateOpeningCount=1\n'
     printf 'assetSettlementCount=1\n'

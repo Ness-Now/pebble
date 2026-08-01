@@ -736,6 +736,7 @@ extension AgentSimulationSession {
                 at: mortalityTick
             )
             var estateOpeningEventID: AgentCausalEventID?
+            var coordinatedDeathEvictionID: AgentDeathID?
             if estateState != nil {
                 guard let physicalCustodyResolution =
                     item.physicalCustodyResolution else {
@@ -748,21 +749,24 @@ extension AgentSimulationSession {
                     causeEventID: lethalEvent.eventID,
                     at: mortalityTick
                 )
-                guard let estateID = try openEstateForMortality(
+                guard let estateOpening = try openEstateForMortality(
                     decedentID: item.agentID,
                     deathID: deathID,
                     lethalAgentIDs: Set(lethal.map(\.agentID)),
+                    mortality: mortality,
                     physicalCustodyResolution: physicalCustodyResolution,
                     causeEventID: lethalEvent.eventID,
                     at: mortalityTick
                 ), let openingEventID = estateState?.estates.first(where: {
-                    $0.estateID == estateID
+                    $0.estateID == estateOpening.estateID
                 })?.openingEventID else {
                     throw AgentSessionError.estate(.invalidState(
                         "estate opening publication"
                     ))
                 }
                 estateOpeningEventID = openingEventID
+                coordinatedDeathEvictionID =
+                    estateOpening.deathIDToEvict
             }
             let commitmentsEvent = try requiredMortalityEvent(
                 kind: .mortalityCommitmentsResolved,
@@ -976,8 +980,22 @@ extension AgentSimulationSession {
             if mortality.records.count > mortality.configuration.maximumRetainedDeathRecords {
                 let removed = mortality.records.count
                     - mortality.configuration.maximumRetainedDeathRecords
+                if estateState != nil {
+                    guard removed == 1,
+                          mortality.records.first?.deathID
+                            == coordinatedDeathEvictionID else {
+                        throw AgentSessionError.estate(.invalidState(
+                            "mortality retention publication"
+                        ))
+                    }
+                }
                 mortality.records.removeFirst(removed)
                 mortality.evictionCounts.deathRecords += removed
+            } else if estateState != nil,
+                      coordinatedDeathEvictionID != nil {
+                throw AgentSessionError.estate(.invalidState(
+                    "unexpected coordinated mortality eviction"
+                ))
             }
             mortality.processedDeathIDs = mortality.records.map(\.deathID).sorted()
             if mortality.exitFrames.count > mortality.configuration.maximumExitFrames {

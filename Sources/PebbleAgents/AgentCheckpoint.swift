@@ -28,7 +28,8 @@ public enum AgentCheckpointSchema {
     public static let verifiedSupervisionVersion = 24
     public static let familyVersion = 25
     public static let durableHouseConsentVersion = 26
-    public static let estateVersion = 27
+    public static let legacyEstateVersion = 27
+    public static let estateVersion = 28
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -44,7 +45,7 @@ public enum AgentCheckpointSchema {
             || version == homeostasisVersion || version == geneticsVersion
             || version == childhoodVersion || version == verifiedSupervisionVersion
             || version == familyVersion || version == durableHouseConsentVersion
-            || version == estateVersion
+            || version == legacyEstateVersion || version == estateVersion
     }
 }
 
@@ -244,8 +245,11 @@ public struct AgentSessionDurableState: Codable {
     public let estateState: AgentEstateState?
 
     init(session: AgentSimulationSession) {
-        if session.estateState != nil {
-            schemaVersion = AgentCheckpointSchema.estateVersion
+        if let estate = session.estateState {
+            schemaVersion = estate.estates.allSatisfy({
+                $0.successorPlanProof != nil
+            }) ? AgentCheckpointSchema.estateVersion
+                : AgentCheckpointSchema.legacyEstateVersion
         } else if session.familyState != nil,
            session.durableSchemaVersionOverride
             == AgentCheckpointSchema.familyVersion {
@@ -1024,10 +1028,13 @@ extension AgentSimulationSession {
         guard AgentCheckpointSchema.supports(state.schemaVersion) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
+        let estateSchema =
+            state.schemaVersion == AgentCheckpointSchema.legacyEstateVersion
+            || state.schemaVersion == AgentCheckpointSchema.estateVersion
         guard state.schemaVersion == AgentCheckpointSchema.familyVersion
                 || state.schemaVersion
                     == AgentCheckpointSchema.durableHouseConsentVersion
-                || state.schemaVersion == AgentCheckpointSchema.estateVersion
+                || estateSchema
                 || state.familyState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -1035,7 +1042,7 @@ extension AgentSimulationSession {
             || state.schemaVersion == AgentCheckpointSchema.familyVersion
             || state.schemaVersion
                 == AgentCheckpointSchema.durableHouseConsentVersion
-            || state.schemaVersion == AgentCheckpointSchema.estateVersion {
+            || estateSchema {
             guard state.populationRegistry != nil,
                   state.lifecycleState != nil,
                   state.kinshipState != nil,
@@ -1044,11 +1051,11 @@ extension AgentSimulationSession {
                   (state.schemaVersion != AgentCheckpointSchema.familyVersion
                       && state.schemaVersion
                         != AgentCheckpointSchema.durableHouseConsentVersion
-                      && state.schemaVersion != AgentCheckpointSchema.estateVersion)
+                      && !estateSchema)
                     || state.familyState != nil else {
                 throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
             }
-            if state.schemaVersion == AgentCheckpointSchema.estateVersion {
+            if estateSchema {
                 guard state.estateState != nil,
                       state.mortalityState != nil,
                       state.materialRightsState != nil else {
@@ -1334,8 +1341,7 @@ extension AgentSimulationSession {
                         || state.schemaVersion == AgentCheckpointSchema.familyVersion
                         || state.schemaVersion
                             == AgentCheckpointSchema.durableHouseConsentVersion
-                        || state.schemaVersion
-                            == AgentCheckpointSchema.estateVersion)
+                        || estateSchema)
                     && (state.mortalityState?.totalDeathCount ?? 0) > 0) else {
             throw AgentCheckpointError.invalidAgent("empty")
         }
@@ -1523,7 +1529,8 @@ extension AgentSimulationSession {
                     restoring: state.causalLedger
                 ),
                 simulationID: state.clock.simulationID,
-                currentTick: state.clock.tick.rawValue
+                currentTick: state.clock.tick.rawValue,
+                schemaVersion: state.schemaVersion
             )
         }
         func unique(_ values: [String], _ label: String) throws {
@@ -2148,8 +2155,7 @@ extension AgentSimulationSession {
                       resources.causes == [lethal.eventID],
                       commitments.causes == (
                         [lethal.eventID]
-                            + (state.schemaVersion
-                                == AgentCheckpointSchema.estateVersion
+                            + (estateSchema
                                 ? [estateOpeningID].compactMap { $0 }
                                 : [])
                       ).sorted(),

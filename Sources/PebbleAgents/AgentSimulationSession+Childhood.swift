@@ -243,7 +243,11 @@ extension AgentSimulationSession {
         try candidate.reassignGuardianInPlace(
             dependentID: dependentID, to: guardianID
         )
+        try candidate.revalidateEstateCustodyAssignments(
+            for: dependentID, at: candidate.tick
+        )
         try candidate.validateDependentCareCrossDomainIfEnabled()
+        try candidate.validateEstateCrossDomainIfEnabled()
         self = candidate
     }
 
