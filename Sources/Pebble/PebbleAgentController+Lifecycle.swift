@@ -451,6 +451,74 @@ extension PebbleAgentController {
         return probe
     }
 
+    func prevalidateCheckpointProbeTarget(
+        for agent: AgentSnapshot,
+        in world: World,
+        ignoringEntityIDs: Set<Int>
+    ) throws {
+        let assessment = assessEntityPlacement(
+            in: world,
+            at: EntityPlacementPosition(
+                x: agent.position.x,
+                y: agent.position.y,
+                z: agent.position.z
+            ),
+            bodyWidth: 0.6,
+            bodyHeight: 1.8,
+            ignoringEntityIDs: ignoringEntityIDs
+        )
+        guard assessment.isValid else {
+            throw ControllerError.bootstrapPlacementBoundary(
+                "invalid checkpoint restore position for \(agent.id):"
+                    + assessment.rejections.map(\.rawValue).joined(separator: ",")
+            )
+        }
+    }
+
+    func restoreCheckpointProbePosition(
+        _ probe: LabCoreAgentEntity,
+        for agent: AgentSnapshot,
+        in world: World
+    ) throws {
+        guard probesByAgentId[agent.id] === probe,
+              probe.labAgentId == agent.id,
+              probe.world === world,
+              !probe.dead,
+              world.entities.filter({ $0 === probe }).count == 1,
+              probe.carriedItems.allSatisfy({ $0 == nil }) else {
+            throw ControllerError.bootstrapPlacementBoundary(
+                "checkpoint probe is not safely repositionable for \(agent.id)"
+            )
+        }
+        probe.setPos(
+            Double(agent.position.x) + 0.5,
+            Double(agent.position.y),
+            Double(agent.position.z) + 0.5
+        )
+        probe.vx = 0
+        probe.vy = 0
+        probe.vz = 0
+        probe.prevYaw = probe.yaw
+        probe.prevPitch = probe.pitch
+        let restored = try PebbleAgentEmbodiment.resolve(
+            agentID: agent.id,
+            in: world,
+            mappedByAgentID: probesByAgentId
+        )
+        guard restored.position == agent.position,
+              probe.prevX == probe.x,
+              probe.prevY == probe.y,
+              probe.prevZ == probe.z,
+              probe.vx == 0, probe.vy == 0, probe.vz == 0,
+              probe.prevYaw == probe.yaw,
+              probe.prevPitch == probe.pitch,
+              probe.carriedItems.allSatisfy({ $0 == nil }) else {
+            throw ControllerError.bootstrapPlacementBoundary(
+                "checkpoint probe position verification failed for \(agent.id)"
+            )
+        }
+    }
+
     func resetRunCounters() {
         successfulCognitiveTicks = 0
         blockedMovementOutcomeCount = 0

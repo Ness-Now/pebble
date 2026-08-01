@@ -94,6 +94,8 @@ final class PebbleAgentController {
     var persistenceDimension = 0
     var replayRecorder: AgentReplayRecorder?
     var replayBaseCheckpointName: AgentCheckpointName?
+    var checkpointPositionRestoreFailurePoint:
+        PebbleAgentCheckpointPositionRestoreFailurePoint?
     var isAdvancingSession = false
     var kinshipLateFailureProofInjected = false
     var skillLateFailureProofInjected = false
