@@ -151,6 +151,10 @@ extension PebbleAgentController {
             return handleAgriculture(
                 Array(arguments.dropFirst()), world: world, player: player
             )
+        case "renewable-subsistence":
+            return handleRenewableSubsistence(
+                Array(arguments.dropFirst()), world: world
+            )
         case "wild-subsistence":
             return handleWildSubsistence(
                 Array(arguments.dropFirst()), world: world, player: player
