@@ -50,6 +50,18 @@ extension AgentSimulationSession {
               mortality.configuration.requiresTerminalPhysicalCustodyVerification else {
             throw AgentSessionError.estate(.mortalityRequired)
         }
+        guard mortality.historicalEvidenceVersion
+                == AgentCompactedDeathSummary.currentVersion,
+              let compactedDeaths = mortality.compactedDeathSummaries,
+              compactedDeaths.count == mortality.evictionCounts.deathRecords,
+              compactedDeaths.allSatisfy({
+                  $0.demographicAgeTicks != nil
+                      && $0.lifeStageAtDeath != nil
+              }) else {
+            throw AgentSessionError.estate(.invalidState(
+                "historical mortality evidence"
+            ))
+        }
         guard configuration.maximumRetainedEstates
                 <= mortality.configuration.maximumRetainedDeathRecords else {
             throw AgentSessionError.estate(.invalidConfiguration(
@@ -62,8 +74,14 @@ extension AgentSimulationSession {
         guard lifecycleState != nil else {
             throw AgentSessionError.estate(.lifecycleRequired)
         }
-        guard kinshipState != nil else {
+        guard let kinship = kinshipState else {
             throw AgentSessionError.estate(.kinshipRequired)
+        }
+        guard compactedDeaths.count
+                <= kinship.configuration.maximumHistoricalPersons else {
+            throw AgentSessionError.estate(.capacityExceeded(
+                "historical mortality evidence"
+            ))
         }
         guard householdState != nil else {
             throw AgentSessionError.estate(.householdsRequired)
@@ -561,7 +579,8 @@ extension AgentSimulationSession {
         let plan = try estateBeneficiaryPlan(
             decedentID: decedentID,
             activeUnion: activeUnion,
-            lethalAgentIDs: lethalAgentIDs
+            lethalAgentIDs: lethalAgentIDs,
+            deathTick: deathTick
         )
         guard plan.eligibilityRows.count
                 <= authority.configuration.maximumBeneficiariesPerEstate * 4
@@ -1138,6 +1157,23 @@ extension AgentSimulationSession {
                 "schema 28 requires successor plan proof"
             )
         }
+        if schemaVersion == AgentCheckpointSchema.estateVersion {
+            guard mortality.historicalEvidenceVersion
+                    == AgentCompactedDeathSummary.currentVersion,
+                  let summaries = mortality.compactedDeathSummaries,
+                  summaries.count == mortality.evictionCounts.deathRecords,
+                  summaries.count
+                    <= mortality.configuration
+                        .maximumCompactedDeathSummaries,
+                  summaries.allSatisfy({
+                      $0.demographicAgeTicks != nil
+                          && $0.lifeStageAtDeath != nil
+                  }) else {
+                throw AgentEstateError.invalidState(
+                    "historical mortality evidence"
+                )
+            }
+        }
         guard authority.activationTick >= 0,
               authority.activationTick <= currentTick,
               authority.activationDeathCount >= 0,
@@ -1489,35 +1525,25 @@ extension AgentSimulationSession {
                             "successor eligibility row"
                         )
                     }
-                    if let retainedDeath = mortality.records.first(where: {
-                        $0.agentID == row.agentID
-                    }) {
-                        let expectedEligible =
-                            retainedDeath.deathTick > estate.deathTick
-                        guard row.eligibleAtDeath == expectedEligible else {
-                            throw AgentEstateError.invalidState(
-                                "successor mortality eligibility"
-                            )
-                        }
-                    } else if activeIDs.contains(row.agentID),
-                              !row.eligibleAtDeath {
+                    let historical = try Self.estateHistoricalEligibility(
+                        agentID: row.agentID,
+                        at: estate.deathTick,
+                        activeIDs: activeIDs,
+                        lifecycle: lifecycle,
+                        mortality: mortality
+                    )
+                    guard row.eligibleAtDeath == historical.eligible else {
                         throw AgentEstateError.invalidState(
-                            "living successor marked ineligible"
+                            "successor mortality eligibility"
                         )
                     }
-                    if let expectedStage =
-                        Self.estateLifeStageForValidation(
-                            agentID: row.agentID,
-                            at: estate.deathTick,
-                            lifecycle: lifecycle,
-                            mortality: mortality
-                        ),
-                       row.lifeStageAtPlan != expectedStage {
+                    guard row.lifeStageAtPlan == historical.lifeStage else {
                         throw AgentEstateError.invalidState(
                             "successor life stage at plan"
                         )
                     }
-                    if row.lifeStageAtPlan != .mature {
+                    if row.eligibleAtDeath,
+                       row.lifeStageAtPlan != .mature {
                         let guardian = childhood.guardianships.last {
                             $0.dependentID == row.agentID
                                 && $0.startedEventID.sequence
@@ -1531,6 +1557,10 @@ extension AgentSimulationSession {
                                 "successor guardian at plan"
                             )
                         }
+                    } else if row.guardianIDAtPlan != nil {
+                        throw AgentEstateError.invalidState(
+                            "ineligible successor guardian"
+                        )
                     }
                 }
                 let unionAtDeath = family.unions.first {
@@ -2196,17 +2226,14 @@ extension AgentSimulationSession {
     private func estateBeneficiaryPlan(
         decedentID: AgentID,
         activeUnion: AgentUnionRecord?,
-        lethalAgentIDs: Set<AgentID>
+        lethalAgentIDs: Set<AgentID>,
+        deathTick: Int
     ) throws -> (
         tier: AgentEstateBeneficiaryTier,
         beneficiaries: [AgentEstateBeneficiary],
         eligibilityRows: [AgentEstateSuccessorEligibilityRow],
         activeUnionAtDeath: AgentEstateActiveUnionAtDeathEvidence?
     ) {
-        let living: (AgentID) -> Bool = {
-            $0 != decedentID && !lethalAgentIDs.contains($0)
-                && statesById[$0.rawValue] != nil
-        }
         var candidates:
             [(AgentID, AgentEstateBeneficiaryTier, AgentEstateBeneficiaryBasis)]
             = []
@@ -2243,20 +2270,31 @@ extension AgentSimulationSession {
         let canonical = candidates.filter {
             $0.0 != decedentID && seen.insert($0.0).inserted
         }.sorted(by: Self.estateEligibilityRowLess)
-        let eligibilityRows = canonical.map { id, tier, basis in
-            let stage = lifecycleState?.members.first {
-                $0.agentID == id
-            }?.currentStage ?? .mature
-            let guardian = stage == .mature ? nil
-                : dependentCareState?.childhoodV2?.guardianships.last {
+        guard let mortality = mortalityState,
+              let lifecycle = lifecycleState else {
+            throw AgentSessionError.estate(.lifecycleRequired)
+        }
+        let activeIDs = Set(statesById.values.map(\.agentID))
+        let eligibilityRows = try canonical.map { id, tier, basis in
+            let historical = try Self.estateHistoricalEligibility(
+                agentID: id,
+                at: deathTick,
+                activeIDs: activeIDs,
+                lifecycle: lifecycle,
+                mortality: mortality
+            )
+            let eligible = historical.eligible
+                && !lethalAgentIDs.contains(id)
+            let guardian = eligible && historical.lifeStage != .mature
+                ? dependentCareState?.childhoodV2?.guardianships.last {
                     $0.dependentID == id && $0.status == .active
-                }?.guardianID
+                }?.guardianID : nil
             return AgentEstateSuccessorEligibilityRow(
                 agentID: id,
                 tier: tier,
                 basis: basis,
-                eligibleAtDeath: living(id),
-                lifeStageAtPlan: stage,
+                eligibleAtDeath: eligible,
+                lifeStageAtPlan: historical.lifeStage,
                 guardianIDAtPlan: guardian
             )
         }
@@ -2499,6 +2537,130 @@ extension AgentSimulationSession {
         }.sorted(by: estateEligibilityRowLess)
     }
 
+    private struct EstateHistoricalEligibility {
+        let eligible: Bool
+        let lifeStage: AgentLifeStage
+    }
+
+    private static func estateHistoricalEligibility(
+        agentID: AgentID,
+        at boundaryTick: Int,
+        activeIDs: Set<AgentID>,
+        lifecycle: AgentLifecycleState,
+        mortality: AgentMortalityState
+    ) throws -> EstateHistoricalEligibility {
+        let retained = mortality.records.filter { $0.agentID == agentID }
+        let compacted = (mortality.compactedDeathSummaries ?? []).filter {
+            $0.agentID == agentID
+        }
+        guard retained.count + compacted.count <= 1 else {
+            throw AgentEstateError.invalidState(
+                "contradictory successor mortality evidence"
+            )
+        }
+        if let death = retained.first {
+            guard let ageAtDeath = death.demographicAgeTicks,
+                  let stageAtDeath = death.lifeStage else {
+                throw AgentEstateError.invalidState(
+                    "incomplete retained successor mortality"
+                )
+            }
+            return try estateHistoricalEligibility(
+                deathTick: death.deathTick,
+                ageAtDeath: ageAtDeath,
+                stageAtDeath: stageAtDeath,
+                boundaryTick: boundaryTick,
+                lifecycle: lifecycle
+            )
+        }
+        if let death = compacted.first {
+            guard let ageAtDeath = death.demographicAgeTicks,
+                  let stageAtDeath = death.lifeStageAtDeath else {
+                throw AgentEstateError.invalidState(
+                    "incomplete compacted successor mortality"
+                )
+            }
+            return try estateHistoricalEligibility(
+                deathTick: death.deathTick,
+                ageAtDeath: ageAtDeath,
+                stageAtDeath: stageAtDeath,
+                boundaryTick: boundaryTick,
+                lifecycle: lifecycle
+            )
+        }
+        guard activeIDs.contains(agentID),
+              let member = lifecycle.members.first(where: {
+                  $0.agentID == agentID
+              }) else {
+            throw AgentEstateError.invalidState(
+                "missing successor mortality evidence"
+            )
+        }
+        let age: Int
+        do {
+            age = try member.age(at: boundaryTick)
+        } catch {
+            throw AgentEstateError.invalidState(
+                "successor lifecycle boundary"
+            )
+        }
+        return EstateHistoricalEligibility(
+            eligible: true,
+            lifeStage: estateLifeStage(age: age, lifecycle: lifecycle)
+        )
+    }
+
+    private static func estateHistoricalEligibility(
+        deathTick: Int,
+        ageAtDeath: Int,
+        stageAtDeath: AgentLifeStage,
+        boundaryTick: Int,
+        lifecycle: AgentLifecycleState
+    ) throws -> EstateHistoricalEligibility {
+        guard ageAtDeath >= 0 else {
+            throw AgentEstateError.invalidState(
+                "successor mortality age"
+            )
+        }
+        guard stageAtDeath
+                == estateLifeStage(age: ageAtDeath, lifecycle: lifecycle)
+        else {
+            throw AgentEstateError.invalidState(
+                "successor mortality life stage"
+            )
+        }
+        if deathTick <= boundaryTick {
+            return EstateHistoricalEligibility(
+                eligible: false,
+                lifeStage: stageAtDeath
+            )
+        }
+        let elapsed = deathTick - boundaryTick
+        guard ageAtDeath >= elapsed else {
+            throw AgentEstateError.invalidState(
+                "successor pre-death age"
+            )
+        }
+        return EstateHistoricalEligibility(
+            eligible: true,
+            lifeStage: estateLifeStage(
+                age: ageAtDeath - elapsed,
+                lifecycle: lifecycle
+            )
+        )
+    }
+
+    private static func estateLifeStage(
+        age: Int,
+        lifecycle: AgentLifecycleState
+    ) -> AgentLifeStage {
+        if age >= lifecycle.configuration.maturityAgeTicks {
+            return .mature
+        }
+        return age >= lifecycle.configuration.newbornDurationTicks
+            ? .juvenile : .newborn
+    }
+
     private static func estateLifeStageForValidation(
         agentID: AgentID,
         at tick: Int,
@@ -2514,15 +2676,16 @@ extension AgentSimulationSession {
             $0.agentID == agentID && $0.deathTick >= tick
         }), let ageAtDeath = laterDeath.demographicAgeTicks {
             age = max(0, ageAtDeath - (laterDeath.deathTick - tick))
+        } else if let laterDeath = mortality.compactedDeathSummaries?
+            .first(where: {
+                $0.agentID == agentID && $0.deathTick >= tick
+            }), let ageAtDeath = laterDeath.demographicAgeTicks {
+            age = max(0, ageAtDeath - (laterDeath.deathTick - tick))
         } else {
             age = nil
         }
         guard let age else { return nil }
-        if age >= lifecycle.configuration.maturityAgeTicks {
-            return .mature
-        }
-        return age >= lifecycle.configuration.newbornDurationTicks
-            ? .juvenile : .newborn
+        return estateLifeStage(age: age, lifecycle: lifecycle)
     }
 
     private static func estateRelationshipTexts(

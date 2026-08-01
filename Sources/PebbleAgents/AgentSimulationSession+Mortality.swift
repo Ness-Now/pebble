@@ -49,6 +49,8 @@ extension AgentSimulationSession {
             _ = try AgentMortalityConfiguration(
                 maximumDeathsPerTick: configuration.maximumDeathsPerTick,
                 maximumRetainedDeathRecords: configuration.maximumRetainedDeathRecords,
+                maximumCompactedDeathSummaries:
+                    configuration.maximumCompactedDeathSummaries,
                 maximumFinalMemoryEntries: configuration.maximumFinalMemoryEntries,
                 maximumCancelledCommitmentIDsPerDeath:
                     configuration.maximumCancelledCommitmentIDsPerDeath,
@@ -92,6 +94,9 @@ extension AgentSimulationSession {
                 exitFrames: [],
                 pendingTransitions: [],
                 evictionCounts: AgentMortalityEvictionCounts(),
+                historicalEvidenceVersion:
+                    AgentCompactedDeathSummary.currentVersion,
+                compactedDeathSummaries: [],
                 rollingDigest: AgentMortalityDigest.make(""),
                 initializedEventID: event.eventID,
                 lastMortalityEventID: event.eventID
@@ -145,6 +150,8 @@ extension AgentSimulationSession {
                 exitFrames: [],
                 pendingTransitions: [],
                 evictionCounts: AgentMortalityEvictionCounts(),
+                historicalEvidenceVersion: nil,
+                compactedDeathSummaries: nil,
                 rollingDigest: AgentMortalityDigest.make(""),
                 lastMortalityEventID: nil,
                 digest: AgentMortalityDigest.make("disabled|\(tick)")
@@ -157,7 +164,7 @@ extension AgentSimulationSession {
             return $0.deathID < $1.deathID
         }
         let canonical = [
-            "config=\(mortality.configuration.maximumDeathsPerTick),\(mortality.configuration.maximumRetainedDeathRecords),\(mortality.configuration.maximumFinalMemoryEntries),\(mortality.configuration.maximumCancelledCommitmentIDsPerDeath),\(mortality.configuration.maximumExitFrames),\(mortality.configuration.maximumMaterialExitsPerDeath),\(mortality.configuration.requiresTerminalPhysicalCustodyVerification ? 1 : 0)",
+            "config=\(mortality.configuration.maximumDeathsPerTick),\(mortality.configuration.maximumRetainedDeathRecords),\(mortality.configuration.maximumCompactedDeathSummaries),\(mortality.configuration.maximumFinalMemoryEntries),\(mortality.configuration.maximumCancelledCommitmentIDsPerDeath),\(mortality.configuration.maximumExitFrames),\(mortality.configuration.maximumMaterialExitsPerDeath),\(mortality.configuration.requiresTerminalPhysicalCustodyVerification ? 1 : 0)",
             "total=\(mortality.totalDeathCount)",
             "processed=\(mortality.processedDeathIDs.sorted().map(\.rawValue).joined(separator: ","))",
             "terminal=\(mortality.unrecoveredAtDeath.amounts.map { "\($0.resource.rawValue):\($0.quantity)" }.joined(separator: ","))",
@@ -181,6 +188,11 @@ extension AgentSimulationSession {
                     + "\($0.resolvedMaterialAssetIDs.map(\.rawValue).joined(separator: ",")):"
                     + physical
             }.joined(separator: ";"),
+            "historical=\(mortality.historicalEvidenceVersion.map(String.init) ?? "none")|"
+                + (mortality.compactedDeathSummaries?.map {
+                    "\($0.deathOrdinal):\($0.agentID.rawValue):"
+                        + "\($0.deathID.rawValue):\($0.evidenceDigest)"
+                }.joined(separator: ";") ?? "none"),
             "evicted=\(mortality.evictionCounts.deathRecords),\(mortality.evictionCounts.exitFrames)",
             "rolling=\(mortality.rollingDigest)",
             "last=\(mortality.lastMortalityEventID.rawValue)",
@@ -199,6 +211,8 @@ extension AgentSimulationSession {
                 $0.agentID < $1.agentID
             },
             evictionCounts: mortality.evictionCounts,
+            historicalEvidenceVersion: mortality.historicalEvidenceVersion,
+            compactedDeathSummaries: mortality.compactedDeathSummaries,
             rollingDigest: mortality.rollingDigest,
             lastMortalityEventID: mortality.lastMortalityEventID,
             digest: AgentMortalityDigest.make(canonical)
@@ -989,6 +1003,35 @@ extension AgentSimulationSession {
                         ))
                     }
                 }
+                guard mortality.historicalEvidenceVersion
+                        == AgentCompactedDeathSummary.currentVersion,
+                      var summaries = mortality.compactedDeathSummaries,
+                      summaries.count
+                        == mortality.evictionCounts.deathRecords,
+                      summaries.count + removed
+                        <= mortality.configuration
+                            .maximumCompactedDeathSummaries else {
+                    throw AgentSessionError.mortality(.invalidState(
+                        "compacted death evidence capacity"
+                    ))
+                }
+                for (offset, compacted) in mortality.records
+                    .prefix(removed).enumerated() {
+                    summaries.append(AgentCompactedDeathSummary(
+                        deathOrdinal:
+                            mortality.evictionCounts.deathRecords + offset + 1,
+                        agentID: compacted.agentID,
+                        deathID: compacted.deathID,
+                        cause: compacted.cause,
+                        deathTick: compacted.deathTick,
+                        demographicAgeTicks:
+                            compacted.demographicAgeTicks,
+                        lifeStageAtDeath: compacted.lifeStage,
+                        deathEventID: compacted.deathEventID,
+                        finalStateDigest: compacted.finalStateDigest
+                    ))
+                }
+                mortality.compactedDeathSummaries = summaries
                 mortality.records.removeFirst(removed)
                 mortality.evictionCounts.deathRecords += removed
             } else if estateState != nil,

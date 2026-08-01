@@ -1748,6 +1748,9 @@ extension AgentSimulationSession {
                     maximumDeathsPerTick: mortality.configuration.maximumDeathsPerTick,
                     maximumRetainedDeathRecords:
                         mortality.configuration.maximumRetainedDeathRecords,
+                    maximumCompactedDeathSummaries:
+                        mortality.configuration
+                            .maximumCompactedDeathSummaries,
                     maximumFinalMemoryEntries:
                         mortality.configuration.maximumFinalMemoryEntries,
                     maximumCancelledCommitmentIDsPerDeath:
@@ -1869,6 +1872,136 @@ extension AgentSimulationSession {
                   mortality.lastMortalityEventID.sequence.rawValue
                     <= state.causalLedger.latestSequence else {
                 throw AgentCheckpointError.invalidBound("mortality")
+            }
+            let summaries = mortality.compactedDeathSummaries ?? []
+            if state.schemaVersion == AgentCheckpointSchema.estateVersion {
+                guard mortality.historicalEvidenceVersion
+                        == AgentCompactedDeathSummary.currentVersion,
+                      mortality.compactedDeathSummaries != nil else {
+                    throw AgentCheckpointError.invalidBound(
+                        "mortality historical evidence"
+                    )
+                }
+            }
+            if mortality.historicalEvidenceVersion != nil
+                || mortality.compactedDeathSummaries != nil {
+                let summaryDeathIDs = summaries.map(\.deathID)
+                let summaryAgentIDs = summaries.map(\.agentID)
+                let retainedDeathIDs = Set(recordIDs)
+                let retainedAgentIDs = Set(recordAgents)
+                guard mortality.historicalEvidenceVersion
+                        == AgentCompactedDeathSummary.currentVersion,
+                      summaries.count
+                        == mortality.evictionCounts.deathRecords,
+                      summaries.count
+                        <= mortality.configuration
+                            .maximumCompactedDeathSummaries,
+                      summaries.map(\.deathOrdinal)
+                        == summaries.indices.map({ $0 + 1 }),
+                      summaryDeathIDs.count == Set(summaryDeathIDs).count,
+                      summaryAgentIDs.count == Set(summaryAgentIDs).count,
+                      retainedDeathIDs.isDisjoint(with: summaryDeathIDs),
+                      retainedAgentIDs.isDisjoint(with: summaryAgentIDs),
+                      summaryAgentIDs.allSatisfy({ !agentIDs.contains($0) })
+                else {
+                    throw AgentCheckpointError.invalidBound(
+                        "compacted death summaries"
+                    )
+                }
+                if let kinship = state.kinshipState {
+                    let known = Set(kinship.historicalPersons.map(\.agentID))
+                    guard summaries.count
+                            <= kinship.configuration.maximumHistoricalPersons,
+                          Set(summaryAgentIDs).isSubset(of: known) else {
+                        throw AgentCheckpointError.invalidBound(
+                            "compacted death identities"
+                        )
+                    }
+                }
+                for summary in summaries {
+                    let deathDigest = AgentMortalityDigest.make(
+                        "\(state.clock.simulationID.rawValue)|"
+                            + "\(summary.agentID.rawValue)|"
+                            + "\(summary.deathTick)|"
+                            + "\(summary.cause.rawValue)|"
+                            + "\(summary.deathOrdinal)"
+                    )
+                    let expectedDeathID = AgentDeathID(
+                        rawValue: "death-\(summary.agentID.rawValue)-"
+                            + "t\(summary.deathTick)-\(deathDigest)"
+                    )!
+                    let expectedEvidenceDigest =
+                        AgentCompactedDeathSummary.digest(
+                            version: summary.version,
+                            deathOrdinal: summary.deathOrdinal,
+                            agentID: summary.agentID,
+                            deathID: summary.deathID,
+                            cause: summary.cause,
+                            deathTick: summary.deathTick,
+                            demographicAgeTicks:
+                                summary.demographicAgeTicks,
+                            lifeStageAtDeath: summary.lifeStageAtDeath,
+                            deathEventID: summary.deathEventID,
+                            finalStateDigest: summary.finalStateDigest
+                        )
+                    guard summary.version
+                            == AgentCompactedDeathSummary.currentVersion,
+                          summary.deathID == expectedDeathID,
+                          summary.deathTick <= state.clock.tick.rawValue,
+                          (summary.demographicAgeTicks ?? 0) >= 0,
+                          summary.deathEventID.simulationID
+                            == state.clock.simulationID,
+                          !summary.finalStateDigest.isEmpty,
+                          summary.evidenceDigest == expectedEvidenceDigest
+                    else {
+                        throw AgentCheckpointError.invalidBound(
+                            "compacted death evidence"
+                        )
+                    }
+                    if let age = summary.demographicAgeTicks,
+                       let stage = summary.lifeStageAtDeath,
+                       let lifecycle = state.lifecycleState {
+                        let expectedStage: AgentLifeStage
+                        if age
+                            >= lifecycle.configuration.maturityAgeTicks {
+                            expectedStage = .mature
+                        } else if age >= lifecycle.configuration
+                            .newbornDurationTicks {
+                            expectedStage = .juvenile
+                        } else {
+                            expectedStage = .newborn
+                        }
+                        guard stage == expectedStage else {
+                            throw AgentCheckpointError.invalidBound(
+                                "compacted death life stage"
+                            )
+                        }
+                    }
+                    if let event = state.causalLedger.events.first(where: {
+                        $0.eventID == summary.deathEventID
+                    }) {
+                        guard event.kind == .agentDeathFinalized,
+                              event.origin == .mortalityTransition,
+                              event.actorID == summary.agentID,
+                              event.subjectID == summary.agentID,
+                              event.simulationTick.rawValue
+                                == summary.deathTick else {
+                            throw AgentCheckpointError.invalidBound(
+                                "compacted death causal binding"
+                            )
+                        }
+                    }
+                }
+                if state.estateState != nil {
+                    guard summaries.allSatisfy({
+                        $0.demographicAgeTicks != nil
+                            && $0.lifeStageAtDeath != nil
+                    }) else {
+                        throw AgentCheckpointError.invalidBound(
+                            "estate historical demographics"
+                        )
+                    }
+                }
             }
             for pending in mortality.pendingTransitions {
                 let required = pending.requiredMaterialAssetIDs

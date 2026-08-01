@@ -70,6 +70,7 @@ public enum AgentMortalityError: Error, Equatable, CustomStringConvertible {
 public struct AgentMortalityConfiguration: Codable, Equatable, Sendable {
     public let maximumDeathsPerTick: Int
     public let maximumRetainedDeathRecords: Int
+    public let maximumCompactedDeathSummaries: Int
     public let maximumFinalMemoryEntries: Int
     public let maximumCancelledCommitmentIDsPerDeath: Int
     public let maximumExitFrames: Int
@@ -81,6 +82,7 @@ public struct AgentMortalityConfiguration: Codable, Equatable, Sendable {
     public init(
         maximumDeathsPerTick: Int = 8,
         maximumRetainedDeathRecords: Int = 32,
+        maximumCompactedDeathSummaries: Int = 512,
         maximumFinalMemoryEntries: Int = 8,
         maximumCancelledCommitmentIDsPerDeath: Int = 32,
         maximumExitFrames: Int = 32,
@@ -92,6 +94,11 @@ public struct AgentMortalityConfiguration: Codable, Equatable, Sendable {
         }
         guard (1...64).contains(maximumRetainedDeathRecords) else {
             throw AgentMortalityError.invalidConfiguration("death records")
+        }
+        guard (1...4096).contains(maximumCompactedDeathSummaries) else {
+            throw AgentMortalityError.invalidConfiguration(
+                "compacted death summaries"
+            )
         }
         guard (0...16).contains(maximumFinalMemoryEntries) else {
             throw AgentMortalityError.invalidConfiguration("final memory entries")
@@ -107,6 +114,8 @@ public struct AgentMortalityConfiguration: Codable, Equatable, Sendable {
         }
         self.maximumDeathsPerTick = maximumDeathsPerTick
         self.maximumRetainedDeathRecords = maximumRetainedDeathRecords
+        self.maximumCompactedDeathSummaries =
+            maximumCompactedDeathSummaries
         self.maximumFinalMemoryEntries = maximumFinalMemoryEntries
         self.maximumCancelledCommitmentIDsPerDeath = maximumCancelledCommitmentIDsPerDeath
         self.maximumExitFrames = maximumExitFrames
@@ -123,6 +132,7 @@ public struct AgentMortalityConfiguration: Codable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case maximumDeathsPerTick
         case maximumRetainedDeathRecords
+        case maximumCompactedDeathSummaries
         case maximumFinalMemoryEntries
         case maximumCancelledCommitmentIDsPerDeath
         case maximumExitFrames
@@ -139,6 +149,9 @@ public struct AgentMortalityConfiguration: Codable, Equatable, Sendable {
             maximumRetainedDeathRecords: values.decode(
                 Int.self, forKey: .maximumRetainedDeathRecords
             ),
+            maximumCompactedDeathSummaries: try values.decodeIfPresent(
+                Int.self, forKey: .maximumCompactedDeathSummaries
+            ) ?? 512,
             maximumFinalMemoryEntries: values.decode(
                 Int.self, forKey: .maximumFinalMemoryEntries
             ),
@@ -415,6 +428,86 @@ public struct AgentMortalityEvictionCounts: Codable, Equatable, Sendable {
     }
 }
 
+/// Minimal, non-operational evidence retained when a full death record is
+/// compacted. It cannot reopen mortality or carry estate/material state; it
+/// exists only to revalidate historical facts at later causal boundaries.
+public struct AgentCompactedDeathSummary: Codable, Equatable, Sendable {
+    public static let currentVersion = 1
+
+    public let version: Int
+    public let deathOrdinal: Int
+    public let agentID: AgentID
+    public let deathID: AgentDeathID
+    public let cause: AgentMortalityCause
+    public let deathTick: Int
+    public let demographicAgeTicks: Int?
+    public let lifeStageAtDeath: AgentLifeStage?
+    public let deathEventID: AgentCausalEventID
+    public let finalStateDigest: String
+    public let evidenceDigest: String
+
+    public init(
+        deathOrdinal: Int,
+        agentID: AgentID,
+        deathID: AgentDeathID,
+        cause: AgentMortalityCause,
+        deathTick: Int,
+        demographicAgeTicks: Int?,
+        lifeStageAtDeath: AgentLifeStage?,
+        deathEventID: AgentCausalEventID,
+        finalStateDigest: String
+    ) {
+        version = Self.currentVersion
+        self.deathOrdinal = deathOrdinal
+        self.agentID = agentID
+        self.deathID = deathID
+        self.cause = cause
+        self.deathTick = deathTick
+        self.demographicAgeTicks = demographicAgeTicks
+        self.lifeStageAtDeath = lifeStageAtDeath
+        self.deathEventID = deathEventID
+        self.finalStateDigest = finalStateDigest
+        evidenceDigest = Self.digest(
+            version: Self.currentVersion,
+            deathOrdinal: deathOrdinal,
+            agentID: agentID,
+            deathID: deathID,
+            cause: cause,
+            deathTick: deathTick,
+            demographicAgeTicks: demographicAgeTicks,
+            lifeStageAtDeath: lifeStageAtDeath,
+            deathEventID: deathEventID,
+            finalStateDigest: finalStateDigest
+        )
+    }
+
+    public static func digest(
+        version: Int,
+        deathOrdinal: Int,
+        agentID: AgentID,
+        deathID: AgentDeathID,
+        cause: AgentMortalityCause,
+        deathTick: Int,
+        demographicAgeTicks: Int?,
+        lifeStageAtDeath: AgentLifeStage?,
+        deathEventID: AgentCausalEventID,
+        finalStateDigest: String
+    ) -> String {
+        AgentMortalityDigest.make([
+            "compacted-death-v\(version)",
+            String(deathOrdinal),
+            agentID.rawValue,
+            deathID.rawValue,
+            cause.rawValue,
+            String(deathTick),
+            demographicAgeTicks.map(String.init) ?? "none",
+            lifeStageAtDeath?.rawValue ?? "none",
+            deathEventID.rawValue,
+            finalStateDigest,
+        ].joined(separator: "|"))
+    }
+}
+
 public struct AgentMortalityState: Codable, Equatable {
     public let configuration: AgentMortalityConfiguration
     public internal(set) var records: [AgentMortalityRecord]
@@ -425,6 +518,11 @@ public struct AgentMortalityState: Codable, Equatable {
     public internal(set) var exitFrames: [AgentPopulationExitFrame]
     public internal(set) var pendingTransitions: [AgentPendingMortalityTransition]
     public internal(set) var evictionCounts: AgentMortalityEvictionCounts
+    /// `nil` is accepted only while decoding historical checkpoint schemas.
+    /// Schema 28 requires version 1 and exact evidence for every compaction.
+    public internal(set) var historicalEvidenceVersion: Int?
+    public internal(set) var compactedDeathSummaries:
+        [AgentCompactedDeathSummary]?
     public internal(set) var rollingDigest: String
     public let initializedEventID: AgentCausalEventID
     public internal(set) var lastMortalityEventID: AgentCausalEventID
@@ -442,6 +540,8 @@ public struct AgentMortalitySnapshot: Codable, Equatable {
     public let exitFrames: [AgentPopulationExitFrame]
     public let pendingTransitions: [AgentPendingMortalityTransition]
     public let evictionCounts: AgentMortalityEvictionCounts
+    public let historicalEvidenceVersion: Int?
+    public let compactedDeathSummaries: [AgentCompactedDeathSummary]?
     public let rollingDigest: String
     public let lastMortalityEventID: AgentCausalEventID?
     public let digest: String
