@@ -14,82 +14,69 @@ SHA of the documentation commit that contains it.
   contracts.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
-Published product baseline from which
-`V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1` was implemented:
+Published product baseline affected by Gate D Blocker 01 and from which its
+position-restore correction was implemented:
 
 ```text
-7cd1bd3f65a4dc5943f8229b9444ac425c98c677
+47104f70894b20e7d7db0042cb93f047540c336d
 ```
 
-This document does not claim to record the SHA of the commit containing
-the renewable-subsistence milestone. Use Git to identify the exact reviewed
-or published milestone HEAD.
-
-The `CIV-33` completion is published on the canonical branch. The renewable-
-subsistence milestone recorded here is a local review candidate until senior
-review, manual push and remote verification complete.
+The `CIV-33` completion and renewable-subsistence milestone are published on
+the canonical branch. Independent Gate D evaluation 01 at the baseline above
+remains an immutable FAIL because composed restart could not reconcile fresh
+bootstrap probe positions with the saved physical boundary.
 
 ## Current program position
 
 ```text
 active CIV phase: none
-next authorized action: V4-GATE-D-v1 evaluation
+next authorized action: senior review and manual publication of Gate D Blocker 01 fix
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
-V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE — LOCAL REVIEW CANDIDATE
-V4-GATE-D-v1 status: NOT EVALUATED — NEXT ELIGIBLE GATE EVALUATION
+V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
+V4-GATE-D-v1 status: NOT EVALUATED — BLOCKER FIX LOCAL REVIEW CANDIDATE
 CIV-34 status: NOT STARTED
 roadmap generation: V4
 ```
 
-The completed local renewable-subsistence candidate satisfies the last named
-prerequisite for Gate D. It does not evaluate or acquire Gate D; that remains
-a separate senior-reviewed gate campaign.
+The targeted correction clears the physical-position restart blocker locally.
+It does not evaluate or acquire Gate D. After senior review, manual publication
+and remote verification, the next authorized action is a new independent
+`V4-GATE-D-v1` evaluation.
 
 ## Last validation baseline
 
-For the `V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1` local review candidate:
+For the Gate D Blocker 01 position-restore correction:
 
 ```text
-focused renewable subsistence: 19 passed, 0 failed
-focused ecological observation: 17 passed, 0 failed
-focused harvest: 46 passed, 0 failed
-focused agriculture: 32 passed, 0 failed
-focused physical actions: 38 passed, 0 failed
-focused materials: 30 passed, 0 failed
-focused homeostasis/health: 30 passed, 0 failed
-focused physical food/survival: 50 passed, 0 failed
-focused lifecycle: 80 passed, 0 failed
-focused skills: 59 passed, 0 failed
-focused teaching: 41 passed, 0 failed
-focused work/professions: 29 passed, 0 failed
-focused material rights: 21 passed, 0 failed
-focused checkpoint/replay: 49 passed, 0 failed
 focused persistence/reconciliation: 18 passed, 0 failed
-focused Observer: 20 passed, 0 failed
+focused checkpoint/replay: 49 passed, 0 failed
+focused population/migration: 66 passed, 0 failed
+focused lifecycle: 80 passed, 0 failed
+focused childhood/guardianship: 62 passed, 0 failed
+focused dependent care: 55 passed, 0 failed
+focused unions/family/lineages/houses: 83 passed, 0 failed
+focused renewable subsistence: 19 passed, 0 failed
+focused Material Rights: 21 passed, 0 failed
 focused mortality: 93 passed, 0 failed
 focused estates/inheritance/succession: 84 passed, 0 failed
+focused Observer: 20 passed, 0 failed
+focused total: 650 passed, 0 failed
 repository gate: 3652 passed, 0 failed
 repository verification steps: 35/35
-rendered two-process renewable-cycle campaign: PASS
-physical resource and food: carrot through canonical Pebble mechanics
-initial reproductive quantity: 1
-first plant debit / first harvest output: 1 / 5
-physical food debit: 1
-stored surplus / reserved reproductive quantity: 3 / 1
-second plant debit / second harvest output: 1 / 3
-final loose physical quantity: 6
-growth ticks per cycle: 17 / 17
-checkpoint and replay schema: 29
-Observer schema 7: read-only derived renewable-cycle projection
-same World/session/plot/stage-0 crop across real process restart: YES
+rendered two-process blocker campaign: PASS
+World/session: wmsat85ib194e / live-46-14-66--21
+checkpoint schema / Observer schema: 29 / 7
 manifest integrity digest: verified
-external injections after initialization: 0
-direct World block mutations after initialization: 0
-duplication count: 0
+shared position mismatches before / after load: 3 / 0
+missing child probes restored: 1
+verified founder probes repositioned: 3
+probe duplication count: 0
+physical item duplication count: 0
 Observer mutation count: 0
 runtime errors: 0
 cleanup: exact
+rendered captures inspected at native resolution: 3
 ```
 
 ## Known important debt
@@ -190,18 +177,16 @@ cleanup: exact
   stage and minor guardianship at the estate death boundary. Schema 28
   persists that evidence and a bounded, digested successor proof covering the
   exact tier, complete canonical eligibility rows, life stage, minor guardian,
-  active union and causal plan event. Schema 27 remains readable
-  only when retained causes permit exact reconstruction; incomplete legacy
-  proof fails closed. Because schema 28 is still unpublished, incomplete older
-  schema-28 candidates are refused instead of introducing schema 29. Physical
-  settlement prevalidates one shared
+  active union and causal plan event. Schema 27 remains readable only when
+  retained causes permit exact reconstruction; incomplete legacy proof fails
+  closed. Physical settlement prevalidates one shared
   operation/receipt identity. Blocked custody can be causally revalidated
   after a real guardian or availability change without rewriting allocation,
   claims or permissions. Observer schema 6 projects estate authority
   read-only. The model does not implement wills, taxation,
   valuation, divisible shares, house leadership, public treasury, land law or
   general contract inheritance.
-- Renewable Subsistence V1 proves one bounded real carrot loop through existing
+- Renewable Subsistence V1, now published, proves one bounded real carrot loop through existing
   PebbleCore crop growth, Pebble physical agriculture, physical food debit and
   a new plant/harvest cycle across restart. One initialization carrot becomes
   a first harvest of five; one is eaten, three are stored and one is replanted;
@@ -214,8 +199,8 @@ cleanup: exact
 
 ## Next authorized action
 
-After senior review, manual publication and remote verification of this
-renewable-subsistence candidate, the next eligible work is a separate
+After senior review, manual publication and remote verification of the Gate D
+Blocker 01 correction, the next eligible work is a new independent
 `V4-GATE-D-v1` evaluation. Gate D remains **not evaluated** and is not acquired
-by milestone completion alone. `CIV-34` is not started and remains downstream
-of Gate D.
+by this correction. `CIV-34` is not started and remains downstream of a future
+published Gate D PASS.

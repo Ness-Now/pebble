@@ -22,6 +22,13 @@ This anchors the product behavior evaluated for Gate C. The containing
 evidence/status commit is identified by Git rather than self-referenced by this
 roadmap.
 
+Published product baseline evaluated by independent Gate D evaluation 01 and
+affected by Gate D Blocker 01:
+
+```text
+47104f70894b20e7d7db0042cb93f047540c336d
+```
+
 ## Canonical position
 
 ```text
@@ -30,18 +37,21 @@ Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: none
-next authorized action: V4-GATE-D-v1 evaluation
+next authorized action: senior review and manual publication of Gate D Blocker 01 fix
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
-V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE — LOCAL REVIEW CANDIDATE
-V4-GATE-D-v1: NOT EVALUATED — NEXT ELIGIBLE GATE EVALUATION
+V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
+V4-GATE-D-v1: NOT EVALUATED — BLOCKER FIX LOCAL REVIEW CANDIDATE
 CIV-34: NOT STARTED
 ```
 
 The `CIV-33` completion is published on the canonical branch at
 `7cd1bd3f65a4dc5943f8229b9444ac425c98c677`. The renewable-subsistence
-milestone in this local tree remains a review candidate until senior review,
-manual push and remote verification complete.
+milestone is published in baseline
+`47104f70894b20e7d7db0042cb93f047540c336d`. Gate D evaluation 01 at that
+baseline remains a historical FAIL. The targeted position-restore correction
+is a local review candidate; after its publication, the next authorized action
+is a new independent Gate D evaluation.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:
@@ -199,9 +209,10 @@ reevaluate it.
 ## Wave 2 — Generational continuity
 
 Current entry status: `CIV-29` through `CIV-33` are **complete and published**.
-The required renewable-subsistence milestone is **complete — local review
-candidate**. Gate D is **not evaluated** and is the next eligible gate
-evaluation after milestone review and publication.
+The required renewable-subsistence milestone is **complete and published**.
+Gate D is **not evaluated**. Its first independent evaluation found a composed
+physical-position restart blocker; the targeted correction is a **local review
+candidate**.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -507,10 +518,14 @@ The gate proves several possible generations, development shaped by childhood,
 causal aging and death, durable family distinctions, and survival of goods and
 obligations across people and restart.
 
-Status: **not evaluated — next eligible gate evaluation**. All required CIV
-phases are complete and the required milestone is a complete local review
-candidate, but neither phase nor milestone completion evaluates or acquires
-this gate.
+Status: **not evaluated — blocker fix local review candidate**. All required
+CIV phases and the required milestone are published. Independent evaluation 01
+correctly remains `GATE D FAIL — PRODUCT CORRECTION REQUIRED` for baseline
+`47104f70894b20e7d7db0042cb93f047540c336d`. The targeted correction is
+documented in
+[`GATE_D_BLOCKER_01_POSITION_RESTORE_FIX.md`](GATE_D_BLOCKER_01_POSITION_RESTORE_FIX.md).
+It does not acquire Gate D. After senior review, manual publication and remote
+verification of the fix, a new independent Gate D evaluation is required.
 
 ## Wave 3 — Local material economy
 
@@ -726,7 +741,7 @@ keeps incarnation physical and produces verifiable long-duration history.
 | `V3-GATE-R-v1` | acquired | `CIV-19` |
 | `V4-GATE-B-v1` | acquired | `CIV-25`; bounded embodied autonomy contract |
 | `V4-GATE-C-v1` | acquired | `CIV-26`–`CIV-28` |
-| `V4-GATE-D-v1` | not evaluated; next eligible gate evaluation | `CIV-29`–`CIV-33` published; renewable subsistence milestone complete local candidate |
+| `V4-GATE-D-v1` | not evaluated; blocker fix local review candidate | `CIV-29`–`CIV-33` and renewable subsistence milestone published; new independent evaluation required after fix publication |
 | `V4-GATE-E-v1` | planned | `CIV-34`–`CIV-37`; `CIV-38` optional |
 | `V4-GATE-F-v1` | planned | `CIV-39`; `CIV-40` optional |
 | `V4-GATE-G-v1` | planned | `CIV-41`–`CIV-47` |

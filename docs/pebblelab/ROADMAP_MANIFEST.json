@@ -10,7 +10,10 @@
     "civ31PublishedCanonicalHead": "a5f06290e9596756e5690fd284f59aaa457d10d3",
     "civ32PublishedCanonicalHead": "dcfbafbff92e9c0c849f7234875476d0d49a25a9",
     "civ33PublishedCanonicalHead": "7cd1bd3f65a4dc5943f8229b9444ac425c98c677",
-    "meaning": "Published product behavior independently evaluated for V4-GATE-C-v1; the containing evidence and status commit is intentionally identified by Git rather than self-referenced here.",
+    "renewableSubsistencePublishedCanonicalHead": "47104f70894b20e7d7db0042cb93f047540c336d",
+    "gateDEvaluation01EvaluatedProductHead": "47104f70894b20e7d7db0042cb93f047540c336d",
+    "gateDBlocker01AffectedProductHead": "47104f70894b20e7d7db0042cb93f047540c336d",
+    "meaning": "Published product behavior independently evaluated for V4-GATE-C-v1 and Gate D evaluation 01; Gate D evaluation 01 remains a historical FAIL and its targeted position-restore correction is a local review candidate.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -29,6 +32,7 @@
     "civ32PhaseEvidence": "docs/pebblelab/CIV_32_PHASE_SUMMARY.md",
     "civ33PhaseEvidence": "docs/pebblelab/CIV_33_PHASE_SUMMARY.md",
     "renewableSubsistenceMilestoneEvidence": "docs/pebblelab/RENEWABLE_SUBSISTENCE_MILESTONE_SUMMARY.md",
+    "gateDBlocker01PositionRestoreFix": "docs/pebblelab/GATE_D_BLOCKER_01_POSITION_RESTORE_FIX.md",
     "gateCEvidenceMarkdown": "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.md",
     "gateCEvidenceJSON": "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.json"
   },
@@ -44,7 +48,7 @@
     "activePhase": null,
     "completedThrough": "CIV-33",
     "nextEligiblePhase": null,
-    "nextAuthorizedAction": "V4-GATE-D-v1",
+    "nextAuthorizedAction": "GATE-D-BLOCKER-01-SENIOR-REVIEW-AND-MANUAL-PUBLICATION",
     "civ27Status": "completed",
     "civ28Status": "completed",
     "gateCStatus": "acquired",
@@ -57,8 +61,8 @@
     "gateRAcquired": true,
     "gateBAcquired": true,
     "gateCPublished": true,
-    "gateDStatus": "notEvaluatedNextEligibleGateEvaluation",
-    "renewableSubsistenceMilestoneStatus": "completedLocalReviewCandidate",
+    "gateDStatus": "notEvaluatedBlockerFixLocalReviewCandidate",
+    "renewableSubsistenceMilestoneStatus": "completedPublished",
     "v4CanonicalDocumentSet": true
   },
   "validationBaseline": {
@@ -134,6 +138,35 @@
     "renewableCleanup": "exact",
     "renewableRestartCapturesInspectedAtNativeResolution": true
   },
+  "gateDBlocker01Validation": {
+    "affectedPublishedBaseline": "47104f70894b20e7d7db0042cb93f047540c336d",
+    "sourceFailEvidenceCommit": "9232b65a8a32b2d054fe2e5c7ea80e0dd990d378",
+    "status": "fixedLocalReviewCandidate",
+    "checkpointSchema": 29,
+    "observerSchema": 7,
+    "focusedPassed": 650,
+    "focusedFailed": 0,
+    "repositoryChecksPassed": 3652,
+    "repositoryChecksFailed": 0,
+    "repositoryStepsPassed": 35,
+    "repositoryStepsTotal": 35,
+    "renderedTwoProcessCampaign": "passed",
+    "renderedWorldIdentity": "wmsat85ib194e",
+    "renderedSessionIdentity": "live-46-14-66--21",
+    "positionMismatchBeforeLoad": 3,
+    "positionMismatchAfterLoad": 0,
+    "probeRestoredMissing": 1,
+    "probeRepositionedVerified": 3,
+    "probeDuplicationCount": 0,
+    "physicalItemDuplicationCount": 0,
+    "observerMutationCount": 0,
+    "runtimeErrors": 0,
+    "cleanup": "exact",
+    "nativeCapturesInspected": 3,
+    "gateDAcquired": false,
+    "civ34Started": false,
+    "nextAuthorizedActionAfterPublication": "NEW-INDEPENDENT-V4-GATE-D-v1-EVALUATION"
+  },
   "publishedPostGateHardening": [
     {
       "id": "POST-GATE-B-SAFE-BOOTSTRAP",
@@ -147,7 +180,7 @@
     {
       "id": "V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1",
       "title": "Renewable Physical Subsistence Loop",
-      "status": "completedLocalReviewCandidate",
+      "status": "completedPublished",
       "requiredByGate": "V4-GATE-D-v1",
       "contract": "At least one physical subsistence loop renews and completes a new productive cycle through normal Pebble mechanics across the relevant lifecycle and restart boundary.",
       "evidence": "docs/pebblelab/RENEWABLE_SUBSISTENCE_MILESTONE_SUMMARY.md"
@@ -199,7 +232,7 @@
     "D": {
       "contractId": "V4-GATE-D-v1",
       "title": "Generational Continuity",
-      "status": "notEvaluatedNextEligibleGateEvaluation",
+      "status": "notEvaluatedBlockerFixLocalReviewCandidate",
       "requiredPhases": [
         "CIV-29",
         "CIV-30",
@@ -210,7 +243,18 @@
       "requiredMilestones": [
         "V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1"
       ],
-      "optionalPhases": []
+      "optionalPhases": [],
+      "evaluation01": {
+        "evaluatedProductBaseline": "47104f70894b20e7d7db0042cb93f047540c336d",
+        "evidenceCommit": "9232b65a8a32b2d054fe2e5c7ea80e0dd990d378",
+        "verdict": "failProductCorrectionRequired"
+      },
+      "blocker01PositionRestore": {
+        "status": "fixedLocalReviewCandidate",
+        "evidence": "docs/pebblelab/GATE_D_BLOCKER_01_POSITION_RESTORE_FIX.md",
+        "gateAcquired": false,
+        "nextAfterPublication": "newIndependentEvaluation"
+      }
     },
     "E": {
       "contractId": "V4-GATE-E-v1",

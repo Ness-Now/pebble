@@ -49,15 +49,17 @@ Gate B: ACQUIRED AND PUBLISHED under V4-GATE-B-v1
 CIV-00 through CIV-33: COMPLETE AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
-V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE; LOCAL REVIEW CANDIDATE
-V4-GATE-D-v1: NOT EVALUATED; NEXT ELIGIBLE GATE EVALUATION
+V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
+V4-GATE-D-v1: NOT EVALUATED; BLOCKER FIX LOCAL REVIEW CANDIDATE
 CIV-34: NOT STARTED
 ```
 
 The `CIV-33` completion is published on the canonical branch at
 `7cd1bd3f65a4dc5943f8229b9444ac425c98c677`. The renewable-subsistence
-milestone in this local tree is a review candidate until senior review, manual
-push and remote verification complete.
+milestone is published in baseline
+`47104f70894b20e7d7db0042cb93f047540c336d`. Gate D remains not evaluated;
+after publication of the targeted blocker fix, a new independent evaluation is
+required.
 
 ## Operational
 
@@ -157,6 +159,13 @@ records the bounded physical carrot loop, exact input/output and food debit,
 source-harvest renewal provenance, schema-29 restart, Observer schema 7,
 two-process rendered proof and explicit limits of
 `V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1`.
+
+[`GATE_D_BLOCKER_01_POSITION_RESTORE_FIX.md`](GATE_D_BLOCKER_01_POSITION_RESTORE_FIX.md)
+records the preserved independent Gate D FAIL, the bootstrap-position root
+cause, save-time physical-position validation, deterministic load
+classification, empty-custody policy, exact rollback and the targeted
+two-process correction campaign. It is product-correction evidence, not a Gate
+D PASS or acquisition report.
 
 [`GATE_C_EVALUATION_01_SUMMARY.md`](GATE_C_EVALUATION_01_SUMMARY.md) and
 [`GATE_C_EVALUATION_01_SUMMARY.json`](GATE_C_EVALUATION_01_SUMMARY.json)
