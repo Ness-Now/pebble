@@ -48,7 +48,7 @@ or acquire Gate D.
 For the `CIV-33` local review candidate:
 
 ```text
-focused estates/inheritance/succession: 70 passed, 0 failed
+focused estates/inheritance/succession: 84 passed, 0 failed
 focused unions/family/lineages/houses: 83 passed, 0 failed
 focused lifecycle: 80 passed, 0 failed
 focused childhood/guardianship/social development: 62 passed, 0 failed
@@ -58,7 +58,7 @@ focused checkpoint/replay: 49 passed, 0 failed
 focused Observer: 20 passed, 0 failed
 focused mortality: 93 passed, 0 failed
 focused material rights: 21 passed, 0 failed
-repository gate: 3636 passed, 0 failed
+repository gate: 3650 passed, 0 failed
 repository verification steps: 35/35
 rendered two-process CIV-33 death/estate/restart/settlement campaign: PASS
 normal birth before death: YES
@@ -72,6 +72,9 @@ physical quantity before/exit/restart/settlement: 1/1/1/1
 claims and permissions conserved under bounded policy: YES
 late physical settlement rollback: exact
 schema-28 checkpoint/replay and durable successor proof: byte exact
+schema-28 compacted-death historical evidence: bounded, digested and byte exact
+pre-boundary compacted death eligibility/stage/guardian corruption: refused after complete re-signing
+post-boundary death eligibility: exactly preserved
 schema-27 exact-proof compatibility: verified; incomplete proof refused
 schema-28 manifest integrity digest: verified
 estate operational status recomputation: verified
@@ -176,11 +179,19 @@ cleanup: exact
   truth, so administrator loss cannot reopen or erase material state.
   Mortality and estate retention are coordinated: a retained nonterminal
   estate pins its death record, while a terminal estate/death pair may compact
-  atomically. Schema 28 persists a bounded, digested successor proof covering
-  the exact tier, complete canonical eligibility rows, life stage, minor
-  guardian, active union and causal plan event. Schema 27 remains readable
+  atomically. Every compacted operational death first creates one bounded,
+  independently digested historical mortality summary from the true death
+  record; capacity failure refuses the candidate transaction before proof is
+  lost. Retained records, compacted summaries and active lifecycle state form
+  the fail-closed historical authority used to rederive eligibility, life
+  stage and minor guardianship at the estate death boundary. Schema 28
+  persists that evidence and a bounded, digested successor proof covering the
+  exact tier, complete canonical eligibility rows, life stage, minor guardian,
+  active union and causal plan event. Schema 27 remains readable
   only when retained causes permit exact reconstruction; incomplete legacy
-  proof fails closed. Physical settlement prevalidates one shared
+  proof fails closed. Because schema 28 is still unpublished, incomplete older
+  schema-28 candidates are refused instead of introducing schema 29. Physical
+  settlement prevalidates one shared
   operation/receipt identity. Blocked custody can be causally revalidated
   after a real guardian or availability change without rewriting allocation,
   claims or permissions. Observer schema 6 projects estate authority

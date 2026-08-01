@@ -148,6 +148,7 @@ prospective estate model, mortality and physical-exit atomicity, canonical
 successor tiers, explicit administration, minor-owner custody separation,
 whole-asset physical settlement, operational-status recomputation,
 coordinated mortality/estate retention, durable schema-28 successor proof,
+bounded compacted-death evidence for exact historical eligibility,
 restrictive schema-27 compatibility, Observer schema 6 and the rendered
 two-process death/estate/restart/settlement proof.
 

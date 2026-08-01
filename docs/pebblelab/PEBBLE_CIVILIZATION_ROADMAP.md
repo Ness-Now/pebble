@@ -398,7 +398,12 @@ dormant, partial, blocked, pending and administered truth. Administrator loss
 therefore cannot reopen a settled estate or erase blocked/partially-settled
 material state. Mortality and estate retention compact only a coordinated
 terminal estate/death pair; an open, blocked or partial estate pins its death
-record and capacity failure remains atomic and retryable.
+record. Before a retained death is removed, schema 28 derives one bounded,
+digested historical mortality summary from that authoritative record.
+Retained death records, compacted summaries and active lifecycle state then
+recompute successor eligibility and historical life stage exactly; missing or
+contradictory evidence fails closed. Summary-capacity failure remains atomic
+and retryable.
 
 Physical settlement is never administrative. Pebble prevalidates the current
 holder and destination, moves the exact stack through the existing Material
@@ -410,10 +415,12 @@ matter, contradictory third-party claims, missing custody or unavailable
 minor custody remain explicit blocked states rather than being deleted or
 guessed.
 
-Schema 28 persists a bounded successor-plan proof with the exact selected
-tier, complete canonical eligibility rows, life stage and minor guardian at
-the death boundary, active-union evidence, causal event identity and digest.
-The exact plan remains revalidable after honest bounded eviction. Schema 27
+Schema 28 persists bounded historical mortality summaries plus a bounded
+successor-plan proof with the exact selected tier, complete canonical
+eligibility rows, life stage and minor guardian at the death boundary,
+active-union evidence, causal event identity and digest. The exact plan remains
+revalidable after honest bounded death-record and causal-event eviction,
+including for relations who died before or after the boundary. Schema 27
 is compatible only while its retained causal evidence permits exact
 reconstruction; an incomplete legacy proof fails closed. Settlement uses one
 prevalidated operation/physical-receipt identity. A real guardian or
@@ -427,7 +434,8 @@ partner-at-death lookup, administrator acceptance and replacement,
 minor-owner custody, claims and permissions, no-successor and blocked states,
 whole-asset and partial settlement, status recomputation, coordinated
 mortality/estate retention, durable successor-plan corruption refusal,
-schema-28 checkpoint/replay with restrictive schema-27 compatibility,
+schema-28 compacted-death evidence and checkpoint/replay with restrictive
+schema-27 compatibility,
 and read-only Observer schema 6. A rendered two-process
 campaign proves one normal birth, one normal physiological death, one exact
 physical exit, the same open estate and physical asset after restart, one

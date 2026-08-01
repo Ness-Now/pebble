@@ -17,6 +17,7 @@ e37529c  Add rendered CIV-33 restart campaign
 adf6ff2  Capture published CIV-33 estate states
 ffd2d29  Expose CIV-33 rights in rendered proof
 b5f7e6c  Harden durable estate integrity
+5add4a3  Preserve exact successor eligibility after death compaction
 ```
 
 This report intentionally does not self-reference its containing documentation
@@ -81,6 +82,13 @@ owner or cognitive authority.
   Only the exact oldest terminal estate/death pair may compact atomically, and
   a new death is refused without partial publication when no coherent pair is
   evictable.
+- Before an operational death record is compacted, mortality derives one
+  bounded, versioned and independently digested historical summary from that
+  exact record. It records only the stable death identity, tick, cause,
+  demographic age, stage, causal event and final-state binding needed for
+  historical validation; it cannot reopen mortality, create an estate or carry
+  an asset. Summary order, identity and capacity are deterministic, and a full
+  summary bound refuses compaction atomically before proof is lost.
 
 The durable statuses are:
 
@@ -175,6 +183,16 @@ rows, selected tier, death boundary, active-union-at-death evidence, causal
 plan event and a versioned digest, so unrelated mortality or causal-ledger
 eviction never makes exact plan validation permissive.
 
+Eligibility is not trusted from those estate rows. Validation first uses a
+retained mortality record, otherwise its compacted historical summary,
+otherwise coherent active population/lifecycle truth, and refuses the restore
+when none is available. A relation dead at or before the death boundary is
+ineligible. A relation who dies later remains eligible at the boundary, with
+age and life stage recalculated backwards from the later death. An eligible
+minor's guardian is rederived from CIV-31 history; a pre-boundary death cannot
+gain an entitlement from guardian data. Contradictory retained and compacted
+evidence fails closed.
+
 Asset allocation uses sorted stable asset entries and beneficiaries with
 deterministic round-robin assignment. V1 does not estimate value, split
 stacks, apply primogeniture, prefer a house or elect a leader.
@@ -260,13 +278,15 @@ obligation dispositions
 asset assignments, intended custodians, causal revalidation and outcomes
 partial/final settlement state
 bounded counters and rolling digest
+bounded compacted-death summaries and their independent evidence digests
 ```
 
 Restore validates the complete cross-domain model before publication:
 activation coverage, coordinated death/estate retention, exactly-one
 post-activation estate per death, exact first non-empty successor tier and
 beneficiary list, partner-at-death history, kinship bases, historical life
-stage and guardian, administrator availability and acceptance, operational
+stage and guardian rederived from retained deaths, compacted-death summaries
+or active lifecycle truth, administrator availability and acceptance, operational
 status, asset identity/quantity, current Material Rights, custody retry,
 single settlement identity, receipts, causal events, state counters and
 terminal consistency.
@@ -274,7 +294,11 @@ terminal consistency.
 Schema 26 remains readable only with estates disabled and empty. It never
 retroactively invents an estate. Schema 27 remains readable only when its
 retained mortality and causal evidence reconstruct the exact successor plan;
-an incomplete legacy proof fails closed. Schema 28 replay restores the same
+an incomplete legacy proof fails closed. Schema 28 was not published, so this
+local candidate strengthens schema 28 directly rather than creating an
+artificial schema 29: every newly written schema-28 checkpoint carries the
+historical-evidence version and compacted-death summaries, while an incomplete
+older schema-28 candidate is refused. Schema 28 replay restores the same
 durable bytes and digest without reopening, reaccepting, retransferring or
 resettling.
 
@@ -295,7 +319,7 @@ Commands executed after the final product change:
 
 ```text
 PEBBLELAB_SMOKE_ONLY=estates-inheritance-succession swift run --disable-sandbox pebsmoke
-70 passed, 0 failed
+84 passed, 0 failed
 
 PEBBLELAB_SMOKE_ONLY=mortality swift run --disable-sandbox pebsmoke
 93 passed, 0 failed
@@ -316,7 +340,7 @@ PEBBLELAB_SMOKE_ONLY=observer swift run --disable-sandbox pebsmoke
 20 passed, 0 failed
 
 scripts/verify-pebblelab.sh
-3636 passed, 0 failed
+3650 passed, 0 failed
 35/35 verification steps
 exit status 0
 ```
@@ -332,12 +356,19 @@ exact-proof compatibility and incomplete-proof refusal, schema-28 exact
 successor proof after eviction, estate-status recomputation, coordinated
 mortality/estate retention at capacity two, operation/receipt identity,
 blocked-custody revalidation, schema-26 restrictive compatibility and
-Observer immutability.
+Observer immutability. The historical-successor matrix covers a parent whose
+death is retained, the same pre-boundary case after coordinated compaction,
+post-boundary death, compacted child and sibling relations, summary identity
+and duplication corruption, full-summary capacity rollback, and byte-exact
+checkpoint/replay after multiple compactions. Adversarial checkpoints repair
+the successor-plan event and digest, causal and estate rolling digests, and
+checkpoint semantic identity before changing eligibility, stage or guardian;
+restore still refuses them semantically.
 
 ## Rendered two-process campaign
 
 The final native rendered campaign used disposable World
-`PebbleLab-Disposable-CIV33-46`, World identity `wms9zxldtfa0y`, seed 46 and
+`PebbleLab-Disposable-CIV33-46`, World identity `wmsa8x5tgip4y`, seed 46 and
 session `live-46-14-66--21`.
 
 Process 1 verified:
@@ -358,7 +389,7 @@ successor proof v1 / digest fc016079e408e2c9 / 2 canonical rows
 administrator agent_1 accepted once
 late settlement fault rolled back exactly
 schema-28 save
-manifest integrity v1 / 77dfd50bc382a7fc45e433ae9e8363e4ffc048b4c75e27cf5a4cc5a209978703
+manifest integrity v1 / caa1ab9dad4bdda460dd078b1954172709652e77153419ba35bdfe412a19bb85
 complete process termination
 ```
 
