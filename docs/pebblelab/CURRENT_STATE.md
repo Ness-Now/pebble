@@ -31,7 +31,7 @@ manual push and remote verification complete.
 ```text
 active CIV phase: none
 next authorized action: V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1
-CIV-33 status: COMPLETE
+CIV-33 status: COMPLETE — LOCAL REVIEW CANDIDATE
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: NOT STARTED — NEXT ELIGIBLE MILESTONE
 V4-GATE-D-v1 status: NOT EVALUATED — BLOCKED ON REQUIRED MILESTONE
@@ -48,7 +48,7 @@ or acquire Gate D.
 For the `CIV-33` local review candidate:
 
 ```text
-focused estates/inheritance/succession: 50 passed, 0 failed
+focused estates/inheritance/succession: 70 passed, 0 failed
 focused unions/family/lineages/houses: 83 passed, 0 failed
 focused lifecycle: 80 passed, 0 failed
 focused childhood/guardianship/social development: 62 passed, 0 failed
@@ -58,7 +58,7 @@ focused checkpoint/replay: 49 passed, 0 failed
 focused Observer: 20 passed, 0 failed
 focused mortality: 93 passed, 0 failed
 focused material rights: 21 passed, 0 failed
-repository gate: 3616 passed, 0 failed
+repository gate: 3636 passed, 0 failed
 repository verification steps: 35/35
 rendered two-process CIV-33 death/estate/restart/settlement campaign: PASS
 normal birth before death: YES
@@ -71,8 +71,13 @@ estate settlement count: 1
 physical quantity before/exit/restart/settlement: 1/1/1/1
 claims and permissions conserved under bounded policy: YES
 late physical settlement rollback: exact
-schema-27 checkpoint/replay: byte exact
-schema-27 manifest integrity digest: verified
+schema-28 checkpoint/replay and durable successor proof: byte exact
+schema-27 exact-proof compatibility: verified; incomplete proof refused
+schema-28 manifest integrity digest: verified
+estate operational status recomputation: verified
+coordinated mortality/estate retention: verified at capacity 2
+settlement operation/physical receipt identity: exact and prevalidated
+blocked-asset custodian retry: causal, bounded and restart-stable
 Observer schema 6: read-only estate projection
 persistent child probe restored from protected empty-custody attestation: YES
 duplication count: 0
@@ -166,9 +171,20 @@ cleanup: exact
   decedent while settlement is pending, then changes Material Rights only
   after an exact Pebble transfer receipt; third-party claims and permissions
   follow their documented bounded policy. Minor ownership remains separate
-  from guardian custody. Schema 27 persists estate, plan, administration,
-  classification, obligations and settlement receipts, and Observer schema 6
-  projects them read-only. The model does not implement wills, taxation,
+  from guardian custody. Estate operational status is recomputed from
+  terminal, dormant, partial, blocked, pending and active-administration
+  truth, so administrator loss cannot reopen or erase material state.
+  Mortality and estate retention are coordinated: a retained nonterminal
+  estate pins its death record, while a terminal estate/death pair may compact
+  atomically. Schema 28 persists a bounded, digested successor proof covering
+  the exact tier, complete canonical eligibility rows, life stage, minor
+  guardian, active union and causal plan event. Schema 27 remains readable
+  only when retained causes permit exact reconstruction; incomplete legacy
+  proof fails closed. Physical settlement prevalidates one shared
+  operation/receipt identity. Blocked custody can be causally revalidated
+  after a real guardian or availability change without rewriting allocation,
+  claims or permissions. Observer schema 6 projects estate authority
+  read-only. The model does not implement wills, taxation,
   valuation, divisible shares, house leadership, public treasury, land law or
   general contract inheritance.
 - Gate `V4-GATE-D-v1` requires proof of at least one genuinely renewable

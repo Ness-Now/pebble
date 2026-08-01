@@ -16,6 +16,7 @@ The product and rendered proof are separated into these reviewable commits:
 e37529c  Add rendered CIV-33 restart campaign
 adf6ff2  Capture published CIV-33 estate states
 ffd2d29  Expose CIV-33 rights in rendered proof
+b5f7e6c  Harden durable estate integrity
 ```
 
 This report intentionally does not self-reference its containing documentation
@@ -75,9 +76,11 @@ owner or cognitive authority.
   estate to 32, administration periods per estate to 16, settlement attempts
   per asset to 16, processed operations to 512 and transitions per tick to
   128.
-- Settled-estate compaction is deterministic and counted. An open,
-  administered, partially settled, blocked or dormant estate cannot be
-  silently evicted.
+- Mortality and estate retention are coordinated. An open, administered,
+  partially settled, blocked or dormant estate pins its matching death record.
+  Only the exact oldest terminal estate/death pair may compact atomically, and
+  a new death is refused without partial publication when no coherent pair is
+  evictable.
 
 The durable statuses are:
 
@@ -90,8 +93,13 @@ settled
 dormantNoSuccessor
 ```
 
-A settled estate cannot reopen. Duplicate operation IDs, counter corruption,
-capacity overflow and contradictory terminal state fail closed.
+A single canonical recomputation derives operational status from terminal
+assets, absence of successors, mixed terminal/nonterminal assets, blocked
+assets, pending assets and an active administrator, in that precedence. A
+settled estate cannot reopen; administrator death, incapacity or absence
+cannot erase `blocked`, `partiallySettled` or `dormantNoSuccessor` truth.
+Duplicate operation IDs, counter corruption, capacity overflow and
+contradictory terminal state fail closed.
 
 ## Atomic mortality opening
 
@@ -162,7 +170,10 @@ removed and each beneficiary has equal unit weight. A partner whose union is
 ended by that same death remains discoverable through the union that was
 active immediately before death; a former partner separated before death is
 not eligible. Parentage, sibling basis, life stage and guardian-at-plan are
-durably revalidated.
+durably revalidated. Schema 28 persists the complete canonical eligibility
+rows, selected tier, death boundary, active-union-at-death evidence, causal
+plan event and a versioned digest, so unrelated mortality or causal-ledger
+eviction never makes exact plan validation permissive.
 
 Asset allocation uses sorted stable asset entries and beneficiaries with
 deterministic round-robin assignment. V1 does not estimate value, split
@@ -216,39 +227,55 @@ The guardian does not become owner merely by holding the item. Missing or
 invalid guardianship blocks the transfer without losing matter.
 
 Each asset records at most one successful settlement receipt and transition.
+The aggregate rejects an outcome or replay record unless the settlement
+operation ID and physical receipt ID are exactly the same, before any session
+or World-facing mutation.
 Partial settlement persists completed entries and leaves unresolved entries
 explicitly pending or blocked. A restart does not redistribute a transferred
 entry. Any failure after the physical move but before social publication
 performs and verifies the inverse physical transfer; unverifiable rollback is
 a hard failure.
 
+When a real guardian or physiological-availability change affects a blocked
+beneficiary, the candidate transaction revalidates the intended custodian
+through a bounded causal transition. It preserves successor allocation,
+claim tier and permissions, records a structured unavailability reason when
+necessary, and remains restart-stable.
+
 ## Persistence, replay and observation
 
-Checkpoint/replay schema 27 persists:
+Checkpoint/replay schema 28 persists:
 
 ```text
 estate configuration and activation boundary
 estate, death and asset identities
-beneficiary tier and plan-at-death evidence
+beneficiary tier and complete canonical eligibility rows
+life stage and minor guardian at the death boundary
+active-union-at-death evidence and successor-plan digest
+successor-plan causal event identity
 administration periods and accepted operations
 physical exit observations and receipts
 rights/claim/permission classifications
 obligation dispositions
-asset assignments, intended custodians and outcomes
+asset assignments, intended custodians, causal revalidation and outcomes
 partial/final settlement state
 bounded counters and rolling digest
 ```
 
 Restore validates the complete cross-domain model before publication:
-activation coverage, exactly-one post-activation estate per death, canonical
-successor tier, partner-at-death history, kinship bases, guardian custody,
-administrator availability and acceptance, asset identity/quantity, current
-Material Rights, receipts, causal events, state counters and terminal
-consistency.
+activation coverage, coordinated death/estate retention, exactly-one
+post-activation estate per death, exact first non-empty successor tier and
+beneficiary list, partner-at-death history, kinship bases, historical life
+stage and guardian, administrator availability and acceptance, operational
+status, asset identity/quantity, current Material Rights, custody retry,
+single settlement identity, receipts, causal events, state counters and
+terminal consistency.
 
 Schema 26 remains readable only with estates disabled and empty. It never
-retroactively invents an estate. Schema 27 replay restores the same durable
-bytes and digest without reopening, reaccepting, retransferring or
+retroactively invents an estate. Schema 27 remains readable only when its
+retained mortality and causal evidence reconstruct the exact successor plan;
+an incomplete legacy proof fails closed. Schema 28 replay restores the same
+durable bytes and digest without reopening, reaccepting, retransferring or
 resettling.
 
 The versioned manifest-integrity digest and protected empty-custody
@@ -267,38 +294,29 @@ digest.
 Commands executed after the final product change:
 
 ```text
-PEBBLELAB_SMOKE_ONLY=estates-inheritance-succession swift run pebsmoke
-50 passed, 0 failed
+PEBBLELAB_SMOKE_ONLY=estates-inheritance-succession swift run --disable-sandbox pebsmoke
+70 passed, 0 failed
 
-PEBBLELAB_SMOKE_ONLY=mortality swift run pebsmoke
+PEBBLELAB_SMOKE_ONLY=mortality swift run --disable-sandbox pebsmoke
 93 passed, 0 failed
 
-PEBBLELAB_SMOKE_ONLY=material-rights swift run pebsmoke
+PEBBLELAB_SMOKE_ONLY=material-rights swift run --disable-sandbox pebsmoke
 21 passed, 0 failed
 
-PEBBLELAB_SMOKE_ONLY=unions-family-lineages-houses swift run pebsmoke
+PEBBLELAB_SMOKE_ONLY=unions-family-lineages-houses swift run --disable-sandbox pebsmoke
 83 passed, 0 failed
 
-PEBBLELAB_SMOKE_ONLY=childhood-guardianship swift run pebsmoke
+PEBBLELAB_SMOKE_ONLY=childhood-guardianship swift run --disable-sandbox pebsmoke
 62 passed, 0 failed
 
-PEBBLELAB_SMOKE_ONLY=checkpoint-replay swift run pebsmoke
+PEBBLELAB_SMOKE_ONLY=checkpoint-replay swift run --disable-sandbox pebsmoke
 49 passed, 0 failed
 
-PEBBLELAB_SMOKE_ONLY=observer swift run pebsmoke
+PEBBLELAB_SMOKE_ONLY=observer swift run --disable-sandbox pebsmoke
 20 passed, 0 failed
 
-PEBBLELAB_SMOKE_ONLY=lifecycle swift run pebsmoke
-80 passed, 0 failed
-
-PEBBLELAB_SMOKE_ONLY=homeostasis-health swift run pebsmoke
-30 passed, 0 failed
-
-PEBBLELAB_SMOKE_ONLY=dependent-care swift run pebsmoke
-55 passed, 0 failed
-
 scripts/verify-pebblelab.sh
-3616 passed, 0 failed
+3636 passed, 0 failed
 35/35 verification steps
 exit status 0
 ```
@@ -310,12 +328,16 @@ dormancy, administrator acceptance and replacement, third-party claim and
 permission preservation, unregistered or missing material refusal, adult and
 minor custody, partial settlement, exact late-failure rollback, no duplicate
 settlement, bounded compaction, candidate mortality atomicity, schema-27
-restore/replay, schema-26 restrictive compatibility and Observer immutability.
+exact-proof compatibility and incomplete-proof refusal, schema-28 exact
+successor proof after eviction, estate-status recomputation, coordinated
+mortality/estate retention at capacity two, operation/receipt identity,
+blocked-custody revalidation, schema-26 restrictive compatibility and
+Observer immutability.
 
 ## Rendered two-process campaign
 
 The final native rendered campaign used disposable World
-`PebbleLab-Disposable-CIV33-46`, World identity `wms89pj6c7skw`, seed 46 and
+`PebbleLab-Disposable-CIV33-46`, World identity `wms9zxldtfa0y`, seed 46 and
 session `live-46-14-66--21`.
 
 Process 1 verified:
@@ -332,18 +354,20 @@ verified mortality exit to container 19,69,-21
 estate estate-47e162a3d3b54385 opened once
 successor tier primaryPartnerAndChildren
 beneficiaries agent_1 active partner + agent_3 canonical child
+successor proof v1 / digest fc016079e408e2c9 / 2 canonical rows
 administrator agent_1 accepted once
 late settlement fault rolled back exactly
-schema-27 save
-manifest integrity v1 / 49c734ef79a0d0530c0b4dd2398d8aa143876351457e9a79871891df4d74db3f
+schema-28 save
+manifest integrity v1 / 77dfd50bc382a7fc45e433ae9e8363e4ffc048b4c75e27cf5a4cc5a209978703
 complete process termination
 ```
 
 Process 2 loaded the same World and session. It restored `agent_3` only from
 the intact protected empty-custody attestation, retired the dead `agent_0`
 probe, matched physical reconciliation and reproduced the same estate,
-beneficiaries, administrator, asset identity, quantity, rights and causal
-history. It then transferred the one iron pickaxe exactly once to the mature
+beneficiaries, schema-28 successor proof and digest, administrator, asset
+identity, quantity, rights and causal history. It then transferred the one
+iron pickaxe exactly once to the mature
 beneficiary `agent_1` and settled the estate once.
 
 ```text
@@ -358,16 +382,16 @@ estate settlement count: 1
 duplication count: 0
 Observer mutation count: 0
 runtime errors: 0
-cleanup: probesRemoved=4; checkpoints deleted; exact
+cleanup: probesRemoved=3 per process; asset, fixture container and checkpoints deleted; exact
 ```
 
 The four native-resolution `3024×1898` captures were individually inspected:
 
 ```text
-civ33-estate-predeath.png
-civ33-estate-open.png
-civ33-estate-restart.png
-civ33-estate-settled.png
+civ33-predeath-physical-asset.png
+civ33-open-estate.png
+civ33-same-estate-after-restart.png
+civ33-settled-inheritance.png
 ```
 
 They show the pre-death physical/social rights, the administered open estate

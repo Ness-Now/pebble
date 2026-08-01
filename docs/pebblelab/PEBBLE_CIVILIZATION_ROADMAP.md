@@ -31,7 +31,7 @@ Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: none
 next authorized action: V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1
-CIV-33: COMPLETE
+CIV-33: COMPLETE — LOCAL REVIEW CANDIDATE
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: NOT STARTED — NEXT ELIGIBLE MILESTONE
 V4-GATE-D-v1: NOT EVALUATED — BLOCKED ON REQUIRED MILESTONE
@@ -364,7 +364,7 @@ renewable subsistence.
 
 ### `CIV-33` — Estates, Inheritance and Succession V1
 
-Status: **completed, required**.
+Status: **completed, required — local review candidate**.
 
 Result: Estates V1 is an explicitly activated, prospective and bounded
 extension of canonical mortality. It creates no retroactive estate. After a
@@ -393,6 +393,13 @@ beneficiary, holder, custodian and owner. Administrator death or physiological
 incapacity ends the assignment and deterministically nominates a bounded
 replacement without changing beneficiaries.
 
+Operational status is derived by one canonical precedence over terminal,
+dormant, partial, blocked, pending and administered truth. Administrator loss
+therefore cannot reopen a settled estate or erase blocked/partially-settled
+material state. Mortality and estate retention compact only a coordinated
+terminal estate/death pair; an open, blocked or partial estate pins its death
+record and capacity failure remains atomic and retryable.
+
 Physical settlement is never administrative. Pebble prevalidates the current
 holder and destination, moves the exact stack through the existing Material
 Rights gateway, verifies both endpoints, then publishes the receipt, current
@@ -403,13 +410,25 @@ matter, contradictory third-party claims, missing custody or unavailable
 minor custody remain explicit blocked states rather than being deleted or
 guessed.
 
+Schema 28 persists a bounded successor-plan proof with the exact selected
+tier, complete canonical eligibility rows, life stage and minor guardian at
+the death boundary, active-union evidence, causal event identity and digest.
+The exact plan remains revalidable after honest bounded eviction. Schema 27
+is compatible only while its retained causal evidence permits exact
+reconstruction; an incomplete legacy proof fails closed. Settlement uses one
+prevalidated operation/physical-receipt identity. A real guardian or
+physiological-availability change may causally revalidate blocked custody
+without rewriting beneficiary allocation, claims or permissions.
+
 Bounded proof:
 [`CIV_33_PHASE_SUMMARY.md`](CIV_33_PHASE_SUMMARY.md). It covers activation,
 stable identity, death atomicity, physical exit ordering, successor tiers,
 partner-at-death lookup, administrator acceptance and replacement,
 minor-owner custody, claims and permissions, no-successor and blocked states,
-whole-asset and partial settlement, corruption refusal, schema-27
-checkpoint/replay and read-only Observer schema 6. A rendered two-process
+whole-asset and partial settlement, status recomputation, coordinated
+mortality/estate retention, durable successor-plan corruption refusal,
+schema-28 checkpoint/replay with restrictive schema-27 compatibility,
+and read-only Observer schema 6. A rendered two-process
 campaign proves one normal birth, one normal physiological death, one exact
 physical exit, the same open estate and physical asset after restart, one
 physical inheritance settlement, quantity conservation `1 → 1 → 1 → 1`,

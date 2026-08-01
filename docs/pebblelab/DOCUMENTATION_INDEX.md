@@ -46,7 +46,7 @@ Canonical status at the product baseline reconciled by this documentation:
 ```text
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED under V4-GATE-B-v1
-CIV-00 through CIV-33: COMPLETE
+CIV-00 through CIV-33: COMPLETE; CIV-33 LOCAL REVIEW CANDIDATE
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: NOT STARTED; NEXT ELIGIBLE MILESTONE
@@ -146,8 +146,10 @@ the rendered two-process family restart proof.
 [`CIV_33_PHASE_SUMMARY.md`](CIV_33_PHASE_SUMMARY.md) records the bounded
 prospective estate model, mortality and physical-exit atomicity, canonical
 successor tiers, explicit administration, minor-owner custody separation,
-whole-asset physical settlement, schema-27 checkpoint/replay, Observer schema
-6 and the rendered two-process death/estate/restart/settlement proof.
+whole-asset physical settlement, operational-status recomputation,
+coordinated mortality/estate retention, durable schema-28 successor proof,
+restrictive schema-27 compatibility, Observer schema 6 and the rendered
+two-process death/estate/restart/settlement proof.
 
 [`GATE_C_EVALUATION_01_SUMMARY.md`](GATE_C_EVALUATION_01_SUMMARY.md) and
 [`GATE_C_EVALUATION_01_SUMMARY.json`](GATE_C_EVALUATION_01_SUMMARY.json)
