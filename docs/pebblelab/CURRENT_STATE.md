@@ -14,23 +14,25 @@ SHA of the documentation commit that contains it.
   contracts.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
-Published product baseline affected by Gate D Blocker 01 and from which its
-position-restore correction was implemented:
+Published product baseline evaluated by independent Gate D Evaluation 02 and
+affected by Gate D Blocker 02:
 
 ```text
-47104f70894b20e7d7db0042cb93f047540c336d
+6d114abb98aee652e44fe9a81c3bab47b72ff698
 ```
 
-The `CIV-33` completion and renewable-subsistence milestone are published on
-the canonical branch. Independent Gate D evaluation 01 at the baseline above
-remains an immutable FAIL because composed restart could not reconcile fresh
-bootstrap probe positions with the saved physical boundary.
+The `CIV-33` completion, renewable-subsistence milestone and Gate D Blocker 01
+position-restoration correction are published on the canonical branch.
+Independent Gate D Evaluations 01 and 02 remain immutable FAIL evidence for
+their evaluated baselines. Evaluation 02 found that a normal retained
+ecological observation became unrestorable after its observer died even while
+the exact full death authority remained retained.
 
 ## Current program position
 
 ```text
 active CIV phase: none
-next authorized action: senior review and manual publication of Gate D Blocker 01 fix
+next authorized action: senior review and manual publication of Gate D Blocker 02 fix
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -39,44 +41,54 @@ CIV-34 status: NOT STARTED
 roadmap generation: V4
 ```
 
-The targeted correction clears the physical-position restart blocker locally.
-It does not evaluate or acquire Gate D. After senior review, manual publication
-and remote verification, the next authorized action is a new independent
-`V4-GATE-D-v1` evaluation.
+The published Blocker 01 correction preserves verified physical position
+restart. The targeted Blocker 02 correction now validates ecological
+observations across a retained mortality boundary and coordinates their
+eviction before death-record compaction. It does not evaluate or acquire Gate
+D. After senior review, manual publication and remote verification, the next
+authorized action is independent `V4-GATE-D-v1` Evaluation 03.
 
 ## Last validation baseline
 
-For the Gate D Blocker 01 position-restore correction:
+For the Gate D Blocker 02 historical ecological-observer correction:
 
 ```text
-focused persistence/reconciliation: 18 passed, 0 failed
+focused ecological observation: 44 passed, 0 failed
+focused mortality: 93 passed, 0 failed
+focused estates/inheritance/succession: 84 passed, 0 failed
 focused checkpoint/replay: 49 passed, 0 failed
+focused persistence/reconciliation: 18 passed, 0 failed
 focused population/migration: 66 passed, 0 failed
 focused lifecycle: 80 passed, 0 failed
+focused genetics/development: 45 passed, 0 failed
 focused childhood/guardianship: 62 passed, 0 failed
 focused dependent care: 55 passed, 0 failed
 focused unions/family/lineages/houses: 83 passed, 0 failed
+focused agriculture: 32 passed, 0 failed
 focused renewable subsistence: 19 passed, 0 failed
 focused Material Rights: 21 passed, 0 failed
-focused mortality: 93 passed, 0 failed
-focused estates/inheritance/succession: 84 passed, 0 failed
 focused Observer: 20 passed, 0 failed
-focused total: 650 passed, 0 failed
-repository gate: 3652 passed, 0 failed
+focused total: 771 passed, 0 failed
+repository gate: 3679 passed, 0 failed
 repository verification steps: 35/35
 rendered two-process blocker campaign: PASS
-World/session: wmsat85ib194e / live-46-14-66--21
+World/session: wmsbewsw4i1sb / live-46-14-66--21
 checkpoint schema / Observer schema: 29 / 7
 manifest integrity digest: verified
-shared position mismatches before / after load: 3 / 0
-missing child probes restored: 1
-verified founder probes repositioned: 3
-probe duplication count: 0
-physical item duplication count: 0
+historical observer: agent_0 / deceasedAfterObservationRetained
+observation sequence / tick: 34 / 9
+observation digest before / after restart: cf59861f7d72703d / cf59861f7d72703d
+death ID / tick: death-agent_0-t24-3cfeb0b74c40c179 / 24
+estate ID: estate-18506feb632c6b93
+active dead-observer count / dead-observer probes: 0 / 0
+position mismatch after load: 0
+physical quantity: 1 / 1 / 1 / 1
+duplication count: 0
 Observer mutation count: 0
 runtime errors: 0
 cleanup: exact
-rendered captures inspected at native resolution: 3
+rendered captures inspected at native resolution: 4
+Gate D Blocker 01 regression: PASS
 ```
 
 ## Known important debt
@@ -200,7 +212,7 @@ rendered captures inspected at native resolution: 3
 ## Next authorized action
 
 After senior review, manual publication and remote verification of the Gate D
-Blocker 01 correction, the next eligible work is a new independent
-`V4-GATE-D-v1` evaluation. Gate D remains **not evaluated** and is not acquired
-by this correction. `CIV-34` is not started and remains downstream of a future
-published Gate D PASS.
+Blocker 02 correction, the next eligible work is a new independent
+`V4-GATE-D-v1` Evaluation 03. Gate D remains **not evaluated** and is not
+acquired by this correction. `CIV-34` is not started and remains downstream of
+a future published Gate D PASS.

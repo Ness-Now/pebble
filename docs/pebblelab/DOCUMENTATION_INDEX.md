@@ -57,9 +57,10 @@ CIV-34: NOT STARTED
 The `CIV-33` completion is published on the canonical branch at
 `7cd1bd3f65a4dc5943f8229b9444ac425c98c677`. The renewable-subsistence
 milestone is published in baseline
-`47104f70894b20e7d7db0042cb93f047540c336d`. Gate D remains not evaluated;
-after publication of the targeted blocker fix, a new independent evaluation is
-required.
+`47104f70894b20e7d7db0042cb93f047540c336d`. Gate D Blocker 01 is fixed and
+published in baseline `6d114abb98aee652e44fe9a81c3bab47b72ff698`. Gate D
+remains not evaluated; after publication of the targeted Blocker 02 fix,
+independent Evaluation 03 is required.
 
 ## Operational
 
@@ -166,6 +167,13 @@ cause, save-time physical-position validation, deterministic load
 classification, empty-custody policy, exact rollback and the targeted
 two-process correction campaign. It is product-correction evidence, not a Gate
 D PASS or acquisition report.
+
+[`GATE_D_BLOCKER_02_ECOLOGICAL_OBSERVER_HISTORY_FIX.md`](GATE_D_BLOCKER_02_ECOLOGICAL_OBSERVER_HISTORY_FIX.md)
+records Evaluation 02's preserved FAIL, the active-versus-historical observer
+root cause, exact registration/observation/death ordering, coordinated
+observation/death compaction, schema-29 compatibility, fully re-signed
+corruptions and the rendered two-process restart proof. It is product-correction
+evidence, not a Gate D PASS or acquisition report.
 
 [`GATE_C_EVALUATION_01_SUMMARY.md`](GATE_C_EVALUATION_01_SUMMARY.md) and
 [`GATE_C_EVALUATION_01_SUMMARY.json`](GATE_C_EVALUATION_01_SUMMARY.json)

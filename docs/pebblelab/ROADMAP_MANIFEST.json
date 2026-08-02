@@ -13,7 +13,10 @@
     "renewableSubsistencePublishedCanonicalHead": "47104f70894b20e7d7db0042cb93f047540c336d",
     "gateDEvaluation01EvaluatedProductHead": "47104f70894b20e7d7db0042cb93f047540c336d",
     "gateDBlocker01AffectedProductHead": "47104f70894b20e7d7db0042cb93f047540c336d",
-    "meaning": "Published product behavior independently evaluated for V4-GATE-C-v1 and Gate D evaluation 01; Gate D evaluation 01 remains a historical FAIL and its targeted position-restore correction is a local review candidate.",
+    "gateDBlocker01PublishedCanonicalHead": "6d114abb98aee652e44fe9a81c3bab47b72ff698",
+    "gateDEvaluation02EvaluatedProductHead": "6d114abb98aee652e44fe9a81c3bab47b72ff698",
+    "gateDBlocker02AffectedProductHead": "6d114abb98aee652e44fe9a81c3bab47b72ff698",
+    "meaning": "Published product behavior independently evaluated for V4-GATE-C-v1 and Gate D evaluations 01 and 02; both evaluations remain historical FAIL evidence, Blocker 01 is fixed and published, and the targeted Blocker 02 correction is a local review candidate.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -33,6 +36,7 @@
     "civ33PhaseEvidence": "docs/pebblelab/CIV_33_PHASE_SUMMARY.md",
     "renewableSubsistenceMilestoneEvidence": "docs/pebblelab/RENEWABLE_SUBSISTENCE_MILESTONE_SUMMARY.md",
     "gateDBlocker01PositionRestoreFix": "docs/pebblelab/GATE_D_BLOCKER_01_POSITION_RESTORE_FIX.md",
+    "gateDBlocker02EcologicalObserverHistoryFix": "docs/pebblelab/GATE_D_BLOCKER_02_ECOLOGICAL_OBSERVER_HISTORY_FIX.md",
     "gateCEvidenceMarkdown": "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.md",
     "gateCEvidenceJSON": "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.json"
   },
@@ -48,7 +52,7 @@
     "activePhase": null,
     "completedThrough": "CIV-33",
     "nextEligiblePhase": null,
-    "nextAuthorizedAction": "GATE-D-BLOCKER-01-SENIOR-REVIEW-AND-MANUAL-PUBLICATION",
+    "nextAuthorizedAction": "GATE-D-BLOCKER-02-SENIOR-REVIEW-AND-MANUAL-PUBLICATION",
     "civ27Status": "completed",
     "civ28Status": "completed",
     "gateCStatus": "acquired",
@@ -141,7 +145,8 @@
   "gateDBlocker01Validation": {
     "affectedPublishedBaseline": "47104f70894b20e7d7db0042cb93f047540c336d",
     "sourceFailEvidenceCommit": "9232b65a8a32b2d054fe2e5c7ea80e0dd990d378",
-    "status": "fixedLocalReviewCandidate",
+    "status": "fixedPublished",
+    "publishedCanonicalHead": "6d114abb98aee652e44fe9a81c3bab47b72ff698",
     "checkpointSchema": 29,
     "observerSchema": 7,
     "focusedPassed": 650,
@@ -165,7 +170,49 @@
     "nativeCapturesInspected": 3,
     "gateDAcquired": false,
     "civ34Started": false,
-    "nextAuthorizedActionAfterPublication": "NEW-INDEPENDENT-V4-GATE-D-v1-EVALUATION"
+    "publicationVerified": true
+  },
+  "gateDBlocker02Validation": {
+    "affectedPublishedBaseline": "6d114abb98aee652e44fe9a81c3bab47b72ff698",
+    "sourceFailEvidenceCommit": "d40ca4f8215ff14d904a1fb84aedb7ebd9185082",
+    "status": "fixedLocalReviewCandidate",
+    "checkpointSchema": 29,
+    "observerSchema": 7,
+    "historicalObserverPolicy": "activePopulationOrExactRetainedDeathRecord",
+    "compactedDeathPolicy": "evictPersonalObservationsAtomicallyBeforeCompaction",
+    "focusedPassed": 771,
+    "focusedFailed": 0,
+    "repositoryChecksPassed": 3679,
+    "repositoryChecksFailed": 0,
+    "repositoryStepsPassed": 35,
+    "repositoryStepsTotal": 35,
+    "renderedTwoProcessCampaign": "passed",
+    "renderedWorldIdentity": "wmsbewsw4i1sb",
+    "renderedSessionIdentity": "live-46-14-66--21",
+    "observerID": "agent_0",
+    "observationSequence": 34,
+    "observationTick": 9,
+    "observationEventID": "live-46-14-66--21/event-00000000000000000231",
+    "observationDigestBeforeRestart": "cf59861f7d72703d",
+    "observationDigestAfterRestart": "cf59861f7d72703d",
+    "deathID": "death-agent_0-t24-3cfeb0b74c40c179",
+    "deathTick": 24,
+    "deathEventID": "live-46-14-66--21/event-00000000000000000554",
+    "estateID": "estate-18506feb632c6b93",
+    "historicalClassification": "deceasedAfterObservationRetained",
+    "activeDeadObserverCount": 0,
+    "deadObserverProbeCount": 0,
+    "positionMismatchAfterLoad": 0,
+    "physicalQuantity": [1, 1, 1, 1],
+    "duplicationCount": 0,
+    "observerMutationCount": 0,
+    "runtimeErrors": 0,
+    "cleanup": "exact",
+    "nativeCapturesInspected": 4,
+    "blocker01Regression": "passed",
+    "gateDAcquired": false,
+    "civ34Started": false,
+    "nextAuthorizedActionAfterPublication": "NEW-INDEPENDENT-V4-GATE-D-v1-EVALUATION-03"
   },
   "publishedPostGateHardening": [
     {
@@ -250,10 +297,21 @@
         "verdict": "failProductCorrectionRequired"
       },
       "blocker01PositionRestore": {
-        "status": "fixedLocalReviewCandidate",
+        "status": "fixedPublished",
         "evidence": "docs/pebblelab/GATE_D_BLOCKER_01_POSITION_RESTORE_FIX.md",
         "gateAcquired": false,
-        "nextAfterPublication": "newIndependentEvaluation"
+        "publishedCanonicalHead": "6d114abb98aee652e44fe9a81c3bab47b72ff698"
+      },
+      "evaluation02": {
+        "evaluatedProductBaseline": "6d114abb98aee652e44fe9a81c3bab47b72ff698",
+        "evidenceCommit": "d40ca4f8215ff14d904a1fb84aedb7ebd9185082",
+        "verdict": "failProductCorrectionRequired"
+      },
+      "blocker02EcologicalObserverHistory": {
+        "status": "fixedLocalReviewCandidate",
+        "evidence": "docs/pebblelab/GATE_D_BLOCKER_02_ECOLOGICAL_OBSERVER_HISTORY_FIX.md",
+        "gateAcquired": false,
+        "nextAfterPublication": "newIndependentEvaluation03"
       }
     },
     "E": {
