@@ -650,9 +650,40 @@ extension AgentSimulationSession {
         mortality: AgentMortalityState?,
         clock: AgentSimulationClock,
         causalLatestSequence: UInt64,
-        causalDroppedEventCount: UInt64,
+        causalDroppedEventCount _: UInt64,
         causalEvents: [AgentCausalEvent]
     ) throws {
+        let retained = Dictionary(
+            uniqueKeysWithValues: causalEvents.map { ($0.eventID, $0) }
+        )
+        let retentionBoundary: AgentCausalEvent? = {
+            guard let event = retained[state.initializedEventID],
+                  event.kind == .agricultureInitialized,
+                  event.origin == .agricultureTransition,
+                  event.actorID == nil,
+                  event.subjectID == nil,
+                  event.operationID == nil,
+                  event.causes.isEmpty,
+                  case let .agriculture(
+                      plotID, cellIndex, actionID, status,
+                      physicalFingerprint, itemKey, quantity, digest
+                  ) = event.payload,
+                  plotID == nil,
+                  cellIndex == nil,
+                  actionID == nil,
+                  physicalFingerprint == 0,
+                  itemKey == nil,
+                  quantity == state.plots.count,
+                  status == "retentionBoundary",
+                  digest == agricultureCausalRetentionDigest(
+                      state,
+                      population: population,
+                      mortality: mortality
+                  ) else {
+                return nil
+            }
+            return event
+        }()
         let agents = Set(activeAgents.map(\.agentID))
         let populationByAgent = Dictionary(
             uniqueKeysWithValues: (population?.members ?? []).map {
@@ -667,22 +698,139 @@ extension AgentSimulationSession {
         let compactedDeathIDs = Set(
             (mortality?.compactedDeathSummaries ?? []).map(\.agentID)
         )
+        func registrationEventIsValid(
+            _ eventID: AgentCausalEventID,
+            agentID: AgentID,
+            noLaterThan tick: Int
+        ) -> Bool {
+            guard let event = retained[eventID],
+                  event.simulationTick.rawValue <= tick else {
+                return false
+            }
+            switch (event.kind, event.origin, event.payload) {
+            case let (
+                .populationMemberRegistered,
+                .populationTransition,
+                .population(_, memberID, _, _, _, _, _)
+            ):
+                return event.actorID == agentID
+                    && event.subjectID == agentID
+                    && memberID == agentID.rawValue
+            case let (
+                .populationMemberBorn,
+                .lifecycleTransition,
+                .birth(_, _, newbornID, _, _, _, _, _)
+            ):
+                return event.subjectID == agentID
+                    && newbornID == agentID.rawValue
+            default:
+                return false
+            }
+        }
+        func deathEventIsValid(_ death: AgentMortalityRecord) -> Bool {
+            guard let event = retained[death.deathEventID],
+                  event.kind == .agentDeathFinalized,
+                  event.origin == .mortalityTransition,
+                  event.actorID == death.agentID,
+                  event.subjectID == death.agentID,
+                  event.simulationTick.rawValue == death.deathTick,
+                  case let .mortalityDeath(
+                      deathID, agentID, _, tick, _, _, _, _, _, _, _, _, _, _
+                  ) = event.payload else {
+                return false
+            }
+            return deathID == death.deathID.rawValue
+                && agentID == death.agentID.rawValue
+                && tick == death.deathTick
+        }
+        func ecologicalObservationEventIsValid(
+            _ eventID: AgentCausalEventID,
+            observerID: AgentID
+        ) -> Bool {
+            guard let event = retained[eventID],
+                  event.kind == .ecologicalObservationRecorded,
+                  event.origin == .ecologicalObservationTransition,
+                  event.actorID == observerID,
+                  event.subjectID == observerID,
+                  case let .ecologicalObservation(
+                      payloadObserverID, _, _, _, _, _, status, digest
+                  ) = event.payload else {
+                return false
+            }
+            return payloadObserverID == observerID.rawValue
+                && status == "recorded"
+                && digest.count == 16
+        }
+        func agricultureEventIsValid(
+            _ eventID: AgentCausalEventID,
+            plotID: AgentAgriculturalPlotID? = nil,
+            cellIndex: Int? = nil
+        ) -> Bool {
+            guard let event = retained[eventID],
+                  event.origin == .agricultureTransition,
+                  case let .agriculture(
+                      payloadPlotID, payloadCellIndex, _, _, _, _, _, digest
+                  ) = event.payload,
+                  digest.count == 16 else {
+                return false
+            }
+            if let plotID, payloadPlotID != plotID.rawValue { return false }
+            if let cellIndex, payloadCellIndex != cellIndex { return false }
+            return true
+        }
+        func agricultureWorkEventIsValid(
+            _ eventID: AgentCausalEventID,
+            plotID: AgentAgriculturalPlotID,
+            cellIndex: Int
+        ) -> Bool {
+            guard let event = retained[eventID],
+                  event.origin == .agricultureTransition,
+                  case let .agriculture(
+                      payloadPlotID, payloadCellIndex, _, status, _, _, _, digest
+                  ) = event.payload,
+                  payloadPlotID == plotID.rawValue,
+                  digest.count == 16 else {
+                return false
+            }
+            return payloadCellIndex == cellIndex
+                || (event.kind == .agriculturalPlotPlanned
+                    && payloadCellIndex == nil
+                    && status == "renewed")
+        }
         func historicallyValidActor(
             _ agentID: AgentID,
             at simulationTick: Int,
             referenceEventID: AgentCausalEventID,
             lastHistoricalEventID: AgentCausalEventID? = nil
         ) -> Bool {
+            let coveredByBoundary = retentionBoundary.map {
+                referenceEventID.sequence < $0.sequence
+            } == true
             guard simulationTick >= 0,
                   simulationTick <= clock.tick.rawValue,
-                  referenceEventID.simulationID == clock.simulationID else {
+                  referenceEventID.simulationID == clock.simulationID,
+                  retained[referenceEventID] != nil || coveredByBoundary else {
                 return false
             }
             if agents.contains(agentID) {
+                let registrationIsExact = populationByAgent[agentID].map {
+                    registrationEventIsValid(
+                        $0.registrationEventID,
+                        agentID: agentID,
+                        noLaterThan: simulationTick
+                    )
+                } == true
+                let registrationIsBound = populationByAgent[agentID].map {
+                    member in
+                    retentionBoundary.map { boundary in
+                        member.registrationEventID.sequence < boundary.sequence
+                    } == true
+                } == true
                 guard let member = populationByAgent[agentID],
                       member.registeredTick <= simulationTick,
                       member.registrationEventID.sequence
                         < referenceEventID.sequence,
+                      registrationIsExact || registrationIsBound,
                       deathByAgent[agentID] == nil,
                       !compactedDeathIDs.contains(agentID) else {
                     return false
@@ -694,7 +842,15 @@ extension AgentSimulationSession {
                     < referenceEventID.sequence,
                   (lastHistoricalEventID ?? referenceEventID).sequence
                     < death.deathEventID.sequence,
-                  simulationTick <= death.deathTick else {
+                  simulationTick <= death.deathTick,
+                  registrationEventIsValid(
+                      death.registrationEventID,
+                      agentID: agentID,
+                      noLaterThan: simulationTick
+                  ) || retentionBoundary.map({
+                      death.registrationEventID.sequence < $0.sequence
+                  }) == true,
+                  deathEventIsValid(death) else {
                 return false
             }
             return true
@@ -741,6 +897,26 @@ extension AgentSimulationSession {
                   Set(plot.cells.map(\.position)).count == plot.cells.count,
                   plot.sourceObservationEventID.simulationID == clock.simulationID,
                   plot.lastAgricultureEventID.simulationID == clock.simulationID,
+                  ecologicalObservationEventIsValid(
+                      plot.sourceObservationEventID,
+                      observerID: plot.plannerID
+                  ) || retentionBoundary.map({
+                      plot.sourceObservationEventID.sequence < $0.sequence
+                  }) == true,
+                  (agricultureEventIsValid(
+                      plot.lastAgricultureEventID,
+                      plotID: plot.plotID
+                  ) || retentionBoundary?.eventID
+                      == plot.lastAgricultureEventID),
+                  plot.cells.allSatisfy({ cell in
+                      cell.lastWorkEventID.map {
+                          agricultureWorkEventIsValid(
+                              $0,
+                              plotID: plot.plotID,
+                              cellIndex: cell.index
+                          ) || retentionBoundary?.eventID == $0
+                      } ?? true
+                  }),
                   plot.cycleOrdinal >= 1 else {
                 throw AgentAgricultureError.invalidState("plot identity")
             }
@@ -851,19 +1027,29 @@ extension AgentSimulationSession {
               }) else {
             throw AgentAgricultureError.invalidState("reservations")
         }
-        let retained = Dictionary(uniqueKeysWithValues: causalEvents.map { ($0.eventID, $0) })
-        func eventExists(_ id: AgentCausalEventID) -> Bool {
-            retained[id] != nil || id.sequence.rawValue <= causalDroppedEventCount
-        }
         guard state.initializedEventID.simulationID == clock.simulationID,
               state.lastAgricultureEventID.simulationID == clock.simulationID,
               state.lastAgricultureEventID.sequence.rawValue <= causalLatestSequence,
-              eventExists(state.initializedEventID), eventExists(state.lastAgricultureEventID),
+              (retentionBoundary != nil || (
+                  retained[state.initializedEventID]?.kind == .agricultureInitialized
+                      && retained[state.initializedEventID]?.origin
+                          == .agricultureTransition
+                      && agricultureEventIsValid(state.initializedEventID)
+              )),
+              (agricultureEventIsValid(state.lastAgricultureEventID)
+                  || retentionBoundary?.eventID
+                      == state.lastAgricultureEventID),
               state.retainedActions.allSatisfy({
-                  eventExists($0.agricultureEventID)
-                      && ($0.skillPracticeEventID.map(eventExists) ?? true)
+                  agricultureEventIsValid(
+                      $0.agricultureEventID,
+                      plotID: $0.outcome.plotID,
+                      cellIndex: $0.outcome.cellIndex
+                  )
+                      && ($0.skillPracticeEventID.map { retained[$0] != nil } ?? true)
               }),
-              state.managedSurplusRecords.allSatisfy({ eventExists($0.agricultureEventID) }) else {
+              state.managedSurplusRecords.allSatisfy({
+                  agricultureEventIsValid($0.agricultureEventID, plotID: $0.plotID)
+              }) else {
             throw AgentAgricultureError.invalidState("causal references")
         }
         guard state.retainedActions.allSatisfy({ record in
@@ -875,25 +1061,93 @@ extension AgentSimulationSession {
         }) else {
             throw AgentAgricultureError.invalidState("historical action actor")
         }
+        for record in state.retainedActions {
+            let outcome = record.outcome
+            let expectedKind: AgentCausalEventKind
+            switch outcome.kind {
+            case .till: expectedKind = .agriculturalCellPrepared
+            case .plant: expectedKind = .agriculturalCropPlanted
+            case .maturityObserved: expectedKind = .agriculturalCropMatured
+            case .harvest: expectedKind = .agriculturalCropHarvested
+            case .store: expectedKind = .agriculturalSurplusStored
+            case .reconcile: expectedKind = .agriculturalCellReconciled
+            }
+            guard let event = retained[record.agricultureEventID],
+                  event.kind == expectedKind,
+                  event.origin == .agricultureTransition,
+                  event.actorID == outcome.actorID,
+                  event.operationID?.rawValue == outcome.actionID.rawValue,
+                  event.simulationTick.rawValue == outcome.civilDate.simulationTick,
+                  case let .agriculture(
+                      plotID, cellIndex, actionID, status,
+                      physicalFingerprint, itemKey, quantity, digest
+                  ) = event.payload,
+                  plotID == outcome.plotID.rawValue,
+                  cellIndex == outcome.cellIndex,
+                  actionID == outcome.actionID.rawValue,
+                  status == "succeeded",
+                  physicalFingerprint == outcome.afterFingerprint,
+                  itemKey == outcome.materialDeltas.first?.itemKey,
+                  quantity == outcome.materialDeltas.reduce(0, { $0 + $1.quantity }),
+                  digest == record.digest,
+                  event.causes.allSatisfy({ retained[$0] != nil }) else {
+                throw AgentAgricultureError.invalidState("action causal event")
+            }
+            if let skillEventID = record.skillPracticeEventID {
+                guard let skillEvent = retained[skillEventID],
+                      skillEvent.kind == .skillPracticeCredited,
+                      skillEvent.origin == .skillTransition,
+                      skillEvent.actorID == outcome.actorID,
+                      skillEvent.causes.contains(record.agricultureEventID) else {
+                    throw AgentAgricultureError.invalidState("skill causal event")
+                }
+            }
+            if let sourceObservationEventID = outcome.sourceObservationEventID {
+                guard ecologicalObservationEventIsValid(
+                    sourceObservationEventID,
+                    observerID: outcome.actorID
+                ) else {
+                    throw AgentAgricultureError.invalidState("action observation event")
+                }
+            }
+        }
+        for surplus in state.managedSurplusRecords {
+            guard let event = retained[surplus.agricultureEventID],
+                  event.kind == .agriculturalSurplusStored,
+                  event.origin == .agricultureTransition,
+                  event.simulationTick.rawValue == surplus.recordedTick,
+                  case let .agriculture(
+                      plotID, cellIndex, _, status, _, _, quantity, _
+                  ) = event.payload,
+                  plotID == surplus.plotID.rawValue,
+                  cellIndex == nil,
+                  status == "succeeded",
+                  quantity >= max(
+                      surplus.seedReserveQuantity,
+                      surplus.physicalSurplusQuantity
+                  ) else {
+                throw AgentAgricultureError.invalidState("surplus causal event")
+            }
+        }
         for plot in state.plots where plot.cycleOrdinal > 1 {
             guard let evidence = plot.renewalEvidence,
-                  eventExists(evidence.renewalEventID) else {
+                  retained[evidence.renewalEventID] != nil else {
                 throw AgentAgricultureError.invalidState("renewal causal reference")
             }
-            if let event = retained[evidence.renewalEventID] {
-                guard event.kind == .agriculturalPlotPlanned,
-                      event.origin == .agricultureTransition,
-                      event.actorID == plot.plannerID,
-                      case let .agriculture(
-                          plotID, cellIndex, actionID, status, _, _, quantity, _
-                      ) = event.payload,
-                      plotID == plot.plotID.rawValue,
-                      cellIndex == nil,
-                      actionID == nil,
-                      status == "renewed",
-                      quantity == plot.cells.count else {
-                    throw AgentAgricultureError.invalidState("renewal causal event")
-                }
+            guard let event = retained[evidence.renewalEventID],
+                  event.kind == .agriculturalPlotPlanned,
+                  event.origin == .agricultureTransition,
+                  event.actorID == plot.plannerID,
+                  case let .agriculture(
+                      plotID, cellIndex, actionID, status, _, _, quantity, _
+                  ) = event.payload,
+                  plotID == plot.plotID.rawValue,
+                  cellIndex == nil,
+                  actionID == nil,
+                  status == "renewed",
+                  quantity == plot.cells.count,
+                  event.causes.allSatisfy({ retained[$0] != nil }) else {
+                throw AgentAgricultureError.invalidState("renewal causal event")
             }
         }
     }
@@ -1125,6 +1379,54 @@ extension AgentSimulationSession {
             itemKey: itemKey, quantity: quantity, digest: digest
         )
     }
+}
+
+/// Canonical, bounded projection of immutable plot foundations. The retained
+/// causal boundary binds these fields after their original planning and
+/// observation events leave the FIFO suffix. Mutable action, receipt, renewal,
+/// and surplus history is intentionally excluded because those rows continue
+/// to require their own exact retained events.
+func agricultureCausalRetentionDigest(
+    _ state: AgentAgricultureState,
+    population: AgentPopulationRegistry?,
+    mortality: AgentMortalityState?
+) -> String {
+    let configuration = state.configuration
+    let configurationRow = [
+        configuration.maximumPlots,
+        configuration.maximumCellsPerPlot,
+        configuration.minimumCellsPerPlot,
+        configuration.maximumReservations,
+        configuration.reservationLifetimeTicks,
+        configuration.maximumRetainedActions,
+        configuration.maximumRetainedSurplusRecords,
+        configuration.maximumProcessedActionIDs,
+    ].map(String.init).joined(separator: ",")
+    let plots = state.plots.sorted { $0.plotID < $1.plotID }.map { plot in
+        let date = plot.plannedCivilDate
+        let registration = population?.members.first {
+            $0.agentID == plot.plannerID
+        }?.registrationEventID.rawValue ?? mortality?.records.first {
+            $0.agentID == plot.plannerID
+        }?.registrationEventID.rawValue ?? "missing-registration"
+        let cells = plot.cells.map {
+            "\($0.index):\($0.position.x),\($0.position.y),\($0.position.z)"
+        }.joined(separator: ";")
+        return [
+            plot.plotID.rawValue,
+            plot.plannerID.rawValue,
+            registration,
+            plot.crop.rawValue,
+            plot.designatedStorageLocationID,
+            plot.sourceObservationEventID.rawValue,
+            "\(date.day):\(date.season.rawValue):\(date.year):\(date.dayOfYear):"
+                + "\(date.absoluteDay):\(date.simulationTick)",
+            cells,
+        ].joined(separator: "|")
+    }.joined(separator: "||")
+    return AgentAgricultureDigest.make(
+        "agricultureCausalRetentionV1|configuration=\(configurationRow)|plots=\(plots)"
+    )
 }
 
 private func agriculturePositionSort(_ lhs: AgentPosition, _ rhs: AgentPosition) -> Bool {

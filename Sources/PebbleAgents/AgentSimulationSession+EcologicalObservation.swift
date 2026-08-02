@@ -72,6 +72,7 @@ extension AgentSimulationSession {
             activeAgents: Array(statesById.values),
             population: populationRegistry,
             mortality: mortalityState,
+            agriculture: agricultureState,
             clock: clock,
             causalLatestSequence: causalLedger.latestSequence,
             causalDroppedEventCount: causalLedger.droppedEventCount,
@@ -205,6 +206,15 @@ extension AgentSimulationSession {
             throw AgentSessionError.ecologicalObservation(.sequenceOverflow)
         }
         try prevalidateCausalAppend(count: 1)
+        try prepareDurableEvidenceForCausalAppend(count: 1)
+        guard let preparedState = ecologicalObservationState else {
+            throw AgentSessionError.ecologicalObservation(.disabled)
+        }
+        state = preparedState
+        if state.transitionTick != tick {
+            state.transitionTick = tick
+            state.observationsAtTick = 0
+        }
         let sequence = state.totalObservationCount + 1
         let event = try requiredEcologicalObservationEvent(
             kind: .ecologicalObservationRecorded,
@@ -241,6 +251,7 @@ extension AgentSimulationSession {
             activeAgents: Array(statesById.values),
             population: populationRegistry,
             mortality: mortalityState,
+            agriculture: agricultureState,
             clock: clock,
             causalLatestSequence: causalLedger.latestSequence,
             causalDroppedEventCount: causalLedger.droppedEventCount,
@@ -342,9 +353,10 @@ func validateEcologicalObservationState(
     activeAgents: [AgentSessionAgentState],
     population: AgentPopulationRegistry?,
     mortality: AgentMortalityState?,
+    agriculture: AgentAgricultureState?,
     clock: AgentSimulationClock,
     causalLatestSequence: UInt64,
-    causalDroppedEventCount: UInt64,
+    causalDroppedEventCount _: UInt64,
     causalEvents: [AgentCausalEvent]
 ) throws -> [AgentHistoricalEcologicalObservationValidation] {
     func invalid(_ reason: String) -> AgentSessionError {
@@ -355,21 +367,6 @@ func validateEcologicalObservationState(
         guard eventsByID.updateValue(event, forKey: event.eventID) == nil else {
             throw invalid("duplicate causal event")
         }
-    }
-    func causalReferenceExists(_ eventID: AgentCausalEventID) -> Bool {
-        eventID.simulationID == clock.simulationID
-            && eventID.sequence.rawValue > 0
-            && eventID.sequence.rawValue <= causalLatestSequence
-            && (eventsByID[eventID] != nil
-                || eventID.sequence.rawValue <= causalDroppedEventCount)
-    }
-    func honestlyEvicted(_ eventID: AgentCausalEventID) -> Bool {
-        eventsByID[eventID] == nil
-            && causalDroppedEventCount > 0
-            && eventID.sequence.rawValue <= causalDroppedEventCount
-            && (causalEvents.first.map {
-                eventID.sequence.rawValue < $0.eventID.sequence.rawValue
-            } ?? true)
     }
     func registrationBindingIsValid(
         observerID: AgentID,
@@ -383,9 +380,7 @@ func validateEcologicalObservationState(
                 < observationEventID.sequence.rawValue else {
             return false
         }
-        guard let event = eventsByID[registrationEventID] else {
-            return honestlyEvicted(registrationEventID)
-        }
+        guard let event = eventsByID[registrationEventID] else { return false }
         guard event.simulationTick.rawValue <= observationTick,
               registeredTick == nil
                 || event.simulationTick.rawValue == registeredTick else {
@@ -422,9 +417,7 @@ func validateEcologicalObservationState(
                 < death.deathEventID.sequence.rawValue else {
             return false
         }
-        guard let event = eventsByID[death.deathEventID] else {
-            return honestlyEvicted(death.deathEventID)
-        }
+        guard let event = eventsByID[death.deathEventID] else { return false }
         guard event.kind == .agentDeathFinalized,
               event.origin == .mortalityTransition,
               event.actorID == death.agentID,
@@ -474,8 +467,60 @@ func validateEcologicalObservationState(
         throw invalid("per-agent retention")
     }
 
-    guard causalReferenceExists(state.initializedEventID),
-          causalReferenceExists(state.lastObservationEventID) else {
+    func isAgricultureRetentionBoundary(_ event: AgentCausalEvent) -> Bool {
+        guard let agriculture,
+              event.eventID == agriculture.initializedEventID,
+              event.kind == .agricultureInitialized,
+              event.origin == .agricultureTransition,
+              event.actorID == nil,
+              event.subjectID == nil,
+              event.operationID == nil,
+              event.causes.isEmpty,
+              case let .agriculture(
+                  plotID, cellIndex, actionID, status,
+                  physicalFingerprint, itemKey, quantity, digest
+              ) = event.payload else {
+            return false
+        }
+        return plotID == nil && cellIndex == nil && actionID == nil
+            && status == "retentionBoundary" && physicalFingerprint == 0
+            && itemKey == nil && quantity == agriculture.plots.count
+            && digest == agricultureCausalRetentionDigest(
+                agriculture,
+                population: population,
+                mortality: mortality
+            )
+    }
+    func isEcologicalInitialization(_ event: AgentCausalEvent) -> Bool {
+        guard event.kind == .ecologicalObservationInitialized,
+              event.origin == .ecologicalObservationTransition,
+              event.actorID == nil,
+              event.subjectID == nil,
+              event.operationID == nil,
+              event.causes.isEmpty,
+              case let .ecologicalObservation(
+                  observer, world, dimension, results, reads, truncated,
+                  status, digest
+              ) = event.payload else {
+            return false
+        }
+        return observer == nil && world == nil && dimension == nil
+            && results >= 0 && reads == 0 && !truncated
+            && ["initialized", "retentionBoundary"].contains(status)
+            && digest.utf8.count == 16
+    }
+    guard state.initializedEventID.simulationID == clock.simulationID,
+          state.lastObservationEventID.simulationID == clock.simulationID,
+          state.initializedEventID.sequence.rawValue <= causalLatestSequence,
+          state.lastObservationEventID.sequence.rawValue <= causalLatestSequence,
+          let initializedEvent = eventsByID[state.initializedEventID],
+          let lastEvent = eventsByID[state.lastObservationEventID],
+          isEcologicalInitialization(initializedEvent)
+            || isAgricultureRetentionBoundary(initializedEvent),
+          (lastEvent.origin == .ecologicalObservationTransition
+              && [.ecologicalObservationInitialized, .ecologicalObservationRecorded]
+                .contains(lastEvent.kind))
+            || isAgricultureRetentionBoundary(lastEvent) else {
         throw invalid("causal reference")
     }
     var activeByID: [AgentID: AgentSessionAgentState] = [:]
@@ -529,7 +574,8 @@ func validateEcologicalObservationState(
                   observation.dimensionKey
               ),
               record.causalEventID.simulationID == clock.simulationID,
-              causalReferenceExists(record.causalEventID) else {
+              record.causalEventID.sequence.rawValue <= causalLatestSequence,
+              eventsByID[record.causalEventID] != nil else {
             throw invalid(
                 "\(HistoricalEcologicalObserverFailure.causalBindingInvalid.rawValue) "
                     + "sequence=\(record.sequence)"
@@ -552,46 +598,37 @@ func validateEcologicalObservationState(
             throw invalid("scan budget sequence=\(record.sequence)")
         }
 
-        if let event = eventsByID[record.causalEventID] {
-            guard event.kind == .ecologicalObservationRecorded,
-                  event.origin == .ecologicalObservationTransition,
-                  event.actorID == observation.observerID,
-                  event.subjectID == observation.observerID,
-                  event.operationID == nil,
-                  event.simulationTick.rawValue
-                    == observation.observedAtSimulationTick,
-                  event.causes.count == 1,
-                  event.causes[0].simulationID == clock.simulationID,
-                  event.causes[0].sequence.rawValue
-                    < event.eventID.sequence.rawValue,
-                  event.payload == .ecologicalObservation(
-                      observerID: observation.observerID.rawValue,
-                      worldContextKey: observation.worldContextKey,
-                      dimensionKey: observation.dimensionKey,
-                      resultCount: resultCount,
-                      worldReads: diagnostics.worldReads,
-                      truncated: diagnostics.completion != .complete,
-                      status: "recorded",
-                      digest: observation.digest
-                  ) else {
-                throw invalid(
-                    "\(HistoricalEcologicalObserverFailure.causalBindingInvalid.rawValue) "
-                        + "sequence=\(record.sequence)"
-                )
-            }
-        } else {
-            guard causalDroppedEventCount > 0,
-                  record.causalEventID.sequence.rawValue
-                    <= causalDroppedEventCount,
-                  causalEvents.first.map({
-                      record.causalEventID.sequence.rawValue
-                        < $0.eventID.sequence.rawValue
-                  }) ?? true else {
-                throw invalid(
-                    "\(HistoricalEcologicalObserverFailure.causalBindingInvalid.rawValue) "
-                        + "sequence=\(record.sequence)"
-                )
-            }
+        let event = eventsByID[record.causalEventID]!
+        guard event.kind == .ecologicalObservationRecorded,
+              event.origin == .ecologicalObservationTransition,
+              event.actorID == observation.observerID,
+              event.subjectID == observation.observerID,
+              event.operationID == nil,
+              event.simulationTick.rawValue
+                == observation.observedAtSimulationTick,
+              event.causes.count == 1,
+              event.causes[0].simulationID == clock.simulationID,
+              event.causes[0].sequence.rawValue
+                < event.eventID.sequence.rawValue,
+              let cause = eventsByID[event.causes[0]],
+              (cause.origin == .ecologicalObservationTransition
+                  && [.ecologicalObservationInitialized, .ecologicalObservationRecorded]
+                    .contains(cause.kind))
+                || isAgricultureRetentionBoundary(cause),
+              event.payload == .ecologicalObservation(
+                  observerID: observation.observerID.rawValue,
+                  worldContextKey: observation.worldContextKey,
+                  dimensionKey: observation.dimensionKey,
+                  resultCount: resultCount,
+                  worldReads: diagnostics.worldReads,
+                  truncated: diagnostics.completion != .complete,
+                  status: "recorded",
+                  digest: observation.digest
+              ) else {
+            throw invalid(
+                "\(HistoricalEcologicalObserverFailure.causalBindingInvalid.rawValue) "
+                    + "sequence=\(record.sequence)"
+            )
         }
 
         let observerID = observation.observerID

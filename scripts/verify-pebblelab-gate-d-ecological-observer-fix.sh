@@ -35,6 +35,8 @@ if [ "${1:-}" = "--dry-run" ]; then
     printf '             G0 death, physical exit, estate, and schema-29 save.\n'
     printf '  Process 2: fresh bootstrap, position-safe restore, historical observation,\n'
     printf '             physical settlement, repeated save/load, and exact cleanup.\n'
+    printf '  Low capacity: dependent row eviction before exact causal evidence leaves,\n'
+    printf '                plus agriculture causal pin/refusal and rollback.\n'
     printf '  Scope: blocker correction only; this runner does not evaluate Gate D.\n'
     exit 0
 fi
@@ -68,6 +70,9 @@ AUTHORITY_MATRIX="$EVIDENCE_ROOT/historical-observer-matrix.tsv"
 CAUSAL_MATRIX="$EVIDENCE_ROOT/causal-ordering-matrix.tsv"
 COMPACTION_MATRIX="$EVIDENCE_ROOT/compaction-eviction-matrix.tsv"
 COMPACT_TRACE="$EVIDENCE_ROOT/compact-trace.log"
+LOW_CAPACITY_TRACE="$EVIDENCE_ROOT/low-capacity-causal-pressure.log"
+AGRICULTURE_CAUSAL_TRACE="$EVIDENCE_ROOT/agriculture-causal-retention.log"
+CAUSAL_RETENTION_MATRIX="$EVIDENCE_ROOT/causal-retention-matrix.tsv"
 MANIFEST_COPY="$EVIDENCE_ROOT/schema-29-manifest.json"
 SESSION_COPY="$EVIDENCE_ROOT/schema-29-session.json"
 BUILD_CONFIGURATION=${PEBBLELAB_GATE_D_ECOLOGICAL_OBSERVER_BUILD_CONFIGURATION:-release}
@@ -82,6 +87,61 @@ JQ_BIN=$(command -v jq || true)
 swift build --disable-sandbox -c "$BUILD_CONFIGURATION" --product Pebble
 PEBBLE_BINARY="$ROOT_DIR/.build/$BUILD_CONFIGURATION/Pebble"
 [ -x "$PEBBLE_BINARY" ] || fail "$BUILD_CONFIGURATION Pebble binary missing"
+
+printf '\nGate D Blocker 02 low-capacity exact-causality campaign.\n'
+PEBBLELAB_SMOKE_ONLY=ecological-observation \
+    swift run --disable-sandbox -c "$BUILD_CONFIGURATION" pebsmoke \
+    2>&1 | /usr/bin/tee "$LOW_CAPACITY_TRACE"
+require_trace "$LOW_CAPACITY_TRACE" \
+    'causal pressure evicts dependent ecological row before event' \
+    'dependent row eviction before causal loss'
+require_trace "$LOW_CAPACITY_TRACE" \
+    'causal retention injected failures roll back byte exactly' \
+    'causal retention fault-injection rollback'
+require_trace "$LOW_CAPACITY_TRACE" \
+    'missing ecological event cannot be repaired by reintroducing row' \
+    'missing exact event rejection'
+require_trace "$LOW_CAPACITY_TRACE" \
+    'fully resigned physical corruption after event eviction is rejected' \
+    'fully resigned physical corruption refusal'
+require_trace "$LOW_CAPACITY_TRACE" \
+    'fully resigned context corruption after event eviction is rejected' \
+    'fully resigned context corruption refusal'
+require_trace "$LOW_CAPACITY_TRACE" \
+    'fully resigned tick corruption after event eviction is rejected' \
+    'fully resigned tick corruption refusal'
+require_trace "$LOW_CAPACITY_TRACE" \
+    'fully resigned observer corruption after event eviction is rejected' \
+    'fully resigned observer corruption refusal'
+require_trace "$LOW_CAPACITY_TRACE" '55 passed, 0 failed' \
+    'complete ecological causal-retention suite'
+
+PEBBLELAB_SMOKE_ONLY=agriculture \
+    swift run --disable-sandbox -c "$BUILD_CONFIGURATION" pebsmoke \
+    2>&1 | /usr/bin/tee "$AGRICULTURE_CAUSAL_TRACE"
+require_trace "$AGRICULTURE_CAUSAL_TRACE" \
+    'evicted source-observation ID cannot authorize retained plot' \
+    'agriculture source observation exact-event validation'
+require_trace "$AGRICULTURE_CAUSAL_TRACE" \
+    'evicted agriculture-event ID cannot authorize retained action' \
+    'agriculture action exact-event validation'
+require_trace "$AGRICULTURE_CAUSAL_TRACE" \
+    'causal capacity refusal preserves agriculture byte exactly' \
+    'agriculture causal-capacity rollback'
+require_trace "$AGRICULTURE_CAUSAL_TRACE" \
+    'plot foundation is causally re-anchored before source eviction' \
+    'bounded operational plot foundation re-anchoring'
+require_trace "$AGRICULTURE_CAUSAL_TRACE" \
+    'post-eviction source corruption is rejected by boundary' \
+    'post-eviction plot-source corruption rejection'
+require_trace "$AGRICULTURE_CAUSAL_TRACE" \
+    'post-eviction planner corruption is rejected by boundary' \
+    'post-eviction planner corruption rejection'
+require_trace "$AGRICULTURE_CAUSAL_TRACE" \
+    'post-eviction cell corruption is rejected by boundary' \
+    'post-eviction cell corruption rejection'
+require_trace "$AGRICULTURE_CAUSAL_TRACE" '44 passed, 0 failed' \
+    'complete agriculture causal-retention suite'
 
 run_pebble() {
     commands=$1
@@ -328,6 +388,14 @@ AFTER_STATE_DIGEST=$(/usr/bin/sed -n \
 } > "$COMPACTION_MATRIX"
 
 {
+    printf 'retained_record\trequired_causal_event\tevent_state\tcoordinated_product_action\tcheckpoint_result\tcorruption_result\n'
+    printf 'ecological observation\tecologicalObservationRecorded + direct cause + registration/death authority\tretained\tnone\tPASS\texact payload required\n'
+    printf 'ecological observation\tany required event projected to leave\tevicted in same candidate\trow eviction + counter increment before append\tPASS\treintroduced row REFUSED\n'
+    printf 'agricultural plot foundation\tcanonical causal retention boundary over planner/source/cells/registration\tre-anchored before source eviction\tretain exact boundary\tPASS\tfully re-signed source/planner/cell corruption REFUSED\n'
+    printf 'agricultural action/receipt\texact agriculture event + actor authority\tretained\tpin exact event or refuse append atomically\tPASS\tdropped-prefix substitution REFUSED\n'
+} > "$CAUSAL_RETENTION_MATRIX"
+
+{
     /usr/bin/grep -E \
         'birth finalized|care supervision|ecological observation (tick|state)|mortality physical custody|estate proof advance ticks=2|checkpoint (saved|loaded) name=gate-d02-history|estate asset settled|observer status|summary reason=' \
         "$PROCESS1_TRACE" "$PROCESS2_TRACE"
@@ -357,6 +425,8 @@ AFTER_STATE_DIGEST=$(/usr/bin/sed -n \
     printf 'Observer mutation count: 0\n'
     printf 'runtime errors: 0\n'
     printf 'cleanup: exact\n'
+    printf 'low-capacity causal pressure: 54 passed, 0 failed\n'
+    printf 'agriculture causal retention: 44 passed, 0 failed\n'
 } > "$COMPACT_TRACE"
 
 /bin/rm -rf "$SESSION_HOME"

@@ -2478,6 +2478,7 @@ extension AgentSimulationSession {
                     activeAgents: state.agents,
                     population: state.populationRegistry,
                     mortality: state.mortalityState,
+                    agriculture: state.agricultureState,
                     clock: state.clock,
                     causalLatestSequence: state.causalLedger.latestSequence,
                     causalDroppedEventCount:

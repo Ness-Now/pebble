@@ -34,15 +34,22 @@ private func agricultureAgent(_ index: Int) -> AgentSessionAgentState {
     )
 }
 
-private func agricultureBase(_ id: String) -> AgentSimulationSession {
+private func agricultureBase(
+    _ id: String,
+    causalMaximumEvents: Int = 16_384,
+    preRegistrationCausalEvents: Int = 0
+) -> AgentSimulationSession {
     var session = try! AgentSimulationSession(
         configuration: try! AgentSessionConfiguration(
             seed: 46, memoryPolicy: .bounded(maxEntries: 128)
         ),
         agents: [agricultureAgent(0), agricultureAgent(1), agricultureAgent(2)],
         simulationID: AgentSimulationID(rawValue: id)!,
-        causalLedgerPolicy: .bounded(maxEvents: 16_384)
+        causalLedgerPolicy: .bounded(maxEvents: causalMaximumEvents)
     )
+    for index in 0..<preRegistrationCausalEvents {
+        session.setEconomyEnabled(index.isMultiple(of: 2))
+    }
     try! session.initializePopulationRegistry(
         settlementAnchor: AgentPosition(x: 0, y: 64, z: 0),
         receptionPosition: AgentPosition(x: 0, y: 64, z: 2)
@@ -50,6 +57,54 @@ private func agricultureBase(_ id: String) -> AgentSimulationSession {
     try! session.setLifecycleEnabled(true, configuration: agricultureLifecycle)
     try! session.setSkillsEnabled(true)
     return session
+}
+
+private func agricultureRestoreRefused(
+    _ checkpoint: AgentSessionCheckpoint,
+    mutate: (inout [String: Any]) -> Void
+) -> Bool {
+    do {
+        var root = try JSONSerialization.jsonObject(
+            with: AgentCheckpointCodec.encode(checkpoint)
+        ) as! [String: Any]
+        var durable = root["durableState"] as! [String: Any]
+        mutate(&durable)
+        let mutationBytes = try JSONSerialization.data(
+            withJSONObject: durable,
+            options: [.sortedKeys, .withoutEscapingSlashes]
+        )
+        let state = try AgentCheckpointCodec.decode(
+            AgentSessionDurableState.self, from: mutationBytes
+        )
+        let durableBytes = try AgentCheckpointCodec.encode(state)
+        let canonical = try JSONSerialization.jsonObject(
+            with: durableBytes
+        ) as! [String: Any]
+        let clock = canonical["clock"] as! [String: Any]
+        let simulationID = clock["simulationID"] as! String
+        let tick = clock["tick"] as! Int
+        let digest = AgentCheckpointDigest.sha256(durableBytes)
+        let simulationDigest = AgentCheckpointDigest.sha256(
+            Data(simulationID.utf8)
+        )
+        root["durableState"] = canonical
+        root["schemaVersion"] = canonical["schemaVersion"]
+        root["semanticDigest"] = digest.rawValue
+        root["checkpointID"] =
+            "checkpoint-\(simulationDigest.rawValue.prefix(12))"
+                + "-t\(tick)-\(digest.rawValue.prefix(16))"
+        let resigned = try AgentCheckpointCodec.decode(
+            AgentSessionCheckpoint.self,
+            from: JSONSerialization.data(
+                withJSONObject: root,
+                options: [.sortedKeys, .withoutEscapingSlashes]
+            )
+        )
+        _ = try AgentSimulationSession.restoring(resigned)
+        return false
+    } catch {
+        return true
+    }
 }
 
 private func agricultureObservation(
@@ -432,6 +487,182 @@ func runPebbleAgentsAgricultureSmoke() {
     check("renewed agriculture checkpoint promotes v29 and restarts byte exact",
           checkpoint.schemaVersion == 29
             && (try! restored.durableStateBytes()) == (try! session.durableStateBytes()))
+
+    var causalRetention = agricultureBase(
+        "agriculture-exact-causal-retention",
+        causalMaximumEvents: 64,
+        preRegistrationCausalEvents: 60
+    )
+    try! causalRetention.setEcologicalObservationEnabled(true)
+    let retentionObservation = try! causalRetention
+        .recordEcologicalObservation(agricultureObservation(causalRetention))
+    try! causalRetention.setAgricultureEnabled(true)
+    let retentionPlot = try! causalRetention.planAgriculturalPlot(
+        plannerID: AgentID(rawValue: "agent_0")!,
+        positions: agricultureSoils,
+        sourceObservationEventID: retentionObservation.causalEventID,
+        designatedStorageLocationID: "container:9,64,0"
+    )
+    let retentionAction = try! causalRetention
+        .recordAgriculturalActionSuccess(agricultureAction(
+            causalRetention,
+            plotID: retentionPlot,
+            cellIndex: 0,
+            kind: .till,
+            suffix: "retention-till"
+        ))
+    let retentionCheckpoint = try! causalRetention.makeCheckpoint()
+    let droppedSequence = causalRetention.causalLedgerSnapshot()
+        .summary.droppedEventCount
+    let droppedEventJSON = try! JSONSerialization.jsonObject(
+        with: AgentCheckpointCodec.encode(AgentCausalEventID(
+            simulationID: causalRetention.simulationID,
+            sequence: AgentCausalSequence(
+                rawValue: max(1, droppedSequence)
+            )!
+        ))
+    ) as! [String: Any]
+    check("agriculture fixture has an unrelated evicted causal prefix",
+          droppedSequence > 0
+            && causalRetention.causalLedgerSnapshot().events.contains(where: {
+                $0.eventID == retentionObservation.causalEventID
+            })
+            && causalRetention.causalLedgerSnapshot().events.contains(where: {
+                $0.eventID == retentionAction.agricultureEventID
+            }))
+    check("evicted source-observation ID cannot authorize retained plot",
+          agricultureRestoreRefused(retentionCheckpoint) { durable in
+              var agriculture = durable["agricultureState"] as! [String: Any]
+              var plots = agriculture["plots"] as! [[String: Any]]
+              plots[0]["sourceObservationEventID"] = droppedEventJSON
+              agriculture["plots"] = plots
+              durable["agricultureState"] = agriculture
+          })
+    check("evicted agriculture-event ID cannot authorize retained action",
+          agricultureRestoreRefused(retentionCheckpoint) { durable in
+              var agriculture = durable["agricultureState"] as! [String: Any]
+              var actions = agriculture["retainedActions"] as! [[String: Any]]
+              actions[0]["agricultureEventID"] = droppedEventJSON
+              agriculture["retainedActions"] = actions
+              durable["agricultureState"] = agriculture
+          })
+    check("planner corruption is rejected by exact observation event",
+          agricultureRestoreRefused(retentionCheckpoint) { durable in
+              var agriculture = durable["agricultureState"] as! [String: Any]
+              var plots = agriculture["plots"] as! [[String: Any]]
+              plots[0]["plannerID"] = "agent_1"
+              agriculture["plots"] = plots
+              durable["agricultureState"] = agriculture
+          })
+    check("action actor corruption is rejected by exact agriculture event",
+          agricultureRestoreRefused(retentionCheckpoint) { durable in
+              var agriculture = durable["agricultureState"] as! [String: Any]
+              var actions = agriculture["retainedActions"] as! [[String: Any]]
+              var outcome = actions[0]["outcome"] as! [String: Any]
+              outcome["actorID"] = "agent_1"
+              actions[0]["outcome"] = outcome
+              agriculture["retainedActions"] = actions
+              durable["agricultureState"] = agriculture
+          })
+    check("causal capacity refusal preserves agriculture byte exactly", {
+        for _ in 0..<128 {
+            let before = try! causalRetention.durableStateBytes()
+            do {
+                _ = try causalRetention.advanceTick()
+            } catch AgentSessionError.agriculture(
+                .invalidState("retained agriculture causal evidence capacity")
+            ) {
+                return (try! causalRetention.durableStateBytes()) == before
+                    && causalRetention.causalLedgerSnapshot().events
+                        .contains(where: {
+                            $0.eventID == retentionAction.agricultureEventID
+                        })
+            } catch {
+                return false
+            }
+        }
+        return false
+    }())
+    var foundationRetention = agricultureBase(
+        "agriculture-foundation-boundary",
+        causalMaximumEvents: 64,
+        preRegistrationCausalEvents: 60
+    )
+    try! foundationRetention.setEcologicalObservationEnabled(true)
+    let foundationObservation = try! foundationRetention
+        .recordEcologicalObservation(agricultureObservation(foundationRetention))
+    try! foundationRetention.setAgricultureEnabled(true)
+    _ = try! foundationRetention.planAgriculturalPlot(
+        plannerID: AgentID(rawValue: "agent_0")!,
+        positions: agricultureSoils,
+        sourceObservationEventID: foundationObservation.causalEventID,
+        designatedStorageLocationID: "container:10,64,0"
+    )
+    for _ in 0..<128 { _ = try! foundationRetention.advanceTick() }
+    let postBoundaryCheckpoint = try! foundationRetention.makeCheckpoint()
+    let postBoundaryEvents = foundationRetention.causalLedgerSnapshot().events
+    check("plot foundation is causally re-anchored before source eviction",
+          !postBoundaryEvents.contains(where: {
+              $0.eventID == foundationObservation.causalEventID
+          })
+            && postBoundaryEvents.contains(where: { event in
+                event.kind == .agricultureInitialized
+                    && event.origin == .agricultureTransition
+                    && {
+                        guard case let .agriculture(
+                            plotID, _, _, status, _, _, _, digest
+                        ) = event.payload else { return false }
+                        return plotID == nil && status == "retentionBoundary"
+                            && digest.count == 16
+                    }()
+            }))
+    check("post-eviction agriculture boundary restores byte exactly", {
+        guard let restored = try? AgentSimulationSession.restoring(
+            postBoundaryCheckpoint
+        ) else { return false }
+        return (try? restored.durableStateBytes())
+            == (try? foundationRetention.durableStateBytes())
+    }())
+    check("post-eviction source corruption is rejected by boundary",
+          agricultureRestoreRefused(postBoundaryCheckpoint) { durable in
+              var agriculture = durable["agricultureState"] as! [String: Any]
+              var plots = agriculture["plots"] as! [[String: Any]]
+              plots[0]["sourceObservationEventID"] = droppedEventJSON
+              agriculture["plots"] = plots
+              durable["agricultureState"] = agriculture
+          })
+    check("post-eviction planner corruption is rejected by boundary",
+          agricultureRestoreRefused(postBoundaryCheckpoint) { durable in
+              var agriculture = durable["agricultureState"] as! [String: Any]
+              var plots = agriculture["plots"] as! [[String: Any]]
+              plots[0]["plannerID"] = "agent_1"
+              agriculture["plots"] = plots
+              durable["agricultureState"] = agriculture
+          })
+    check("post-eviction cell corruption is rejected by boundary",
+          agricultureRestoreRefused(postBoundaryCheckpoint) { durable in
+              var agriculture = durable["agricultureState"] as! [String: Any]
+              var plots = agriculture["plots"] as! [[String: Any]]
+              var cells = plots[0]["cells"] as! [[String: Any]]
+              var position = cells[0]["position"] as! [String: Any]
+              position["x"] = (position["x"] as! Int) + 1
+              cells[0]["position"] = position
+              plots[0]["cells"] = cells
+              agriculture["plots"] = plots
+              durable["agricultureState"] = agriculture
+          })
+    check("retained action tick corruption remains exactly rejected",
+          agricultureRestoreRefused(retentionCheckpoint) { durable in
+              var agriculture = durable["agricultureState"] as! [String: Any]
+              var actions = agriculture["retainedActions"] as! [[String: Any]]
+              var outcome = actions[0]["outcome"] as! [String: Any]
+              var date = outcome["civilDate"] as! [String: Any]
+              date["simulationTick"] = (date["simulationTick"] as! Int) + 1
+              outcome["civilDate"] = date
+              actions[0]["outcome"] = outcome
+              agriculture["retainedActions"] = actions
+              durable["agricultureState"] = agriculture
+          })
 
     var replayed = try! AgentSimulationSession.restoring(v12)
     var recorder = try! AgentReplayRecorder(checkpoint: v12, session: replayed)

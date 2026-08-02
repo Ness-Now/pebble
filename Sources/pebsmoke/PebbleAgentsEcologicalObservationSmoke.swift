@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let observationOrigin = AgentPosition(x: 0, y: 64, z: 0)
 
@@ -56,7 +56,8 @@ private func historicalObservationBase(
     _ id: String,
     lethalAgentIndices: Set<Int>,
     mortalityConfiguration: AgentMortalityConfiguration = .live,
-    causalMaximumEvents: Int = 8_192
+    causalMaximumEvents: Int = 8_192,
+    preRegistrationCausalEvents: Int = 0
 ) -> AgentSimulationSession {
     var session = try! AgentSimulationSession(
         configuration: try! AgentSessionConfiguration(
@@ -70,6 +71,9 @@ private func historicalObservationBase(
         simulationID: AgentSimulationID(rawValue: id)!,
         causalLedgerPolicy: .bounded(maxEvents: causalMaximumEvents)
     )
+    for index in 0..<preRegistrationCausalEvents {
+        session.setEconomyEnabled(index.isMultiple(of: 2))
+    }
     try! session.initializePopulationRegistry(
         settlementAnchor: observationOrigin,
         receptionPosition: observationOrigin
@@ -157,32 +161,63 @@ private func resignedEcologicalObservation(
     _ source: AgentEcologicalObservation,
     observerID: AgentID? = nil,
     observedAtSimulationTick: Int? = nil,
+    origin: AgentPosition? = nil,
+    worldContextKey: String? = nil,
+    dimensionKey: String? = nil,
+    physicalWorldTick: Int? = nil,
+    biome: AgentBiomeObservation? = nil,
+    water: [AgentWaterAffordance]? = nil,
+    soils: [AgentSoilAffordance]? = nil,
+    crops: [AgentCropObservation]? = nil,
+    plants: [AgentPlantObservation]? = nil,
+    animals: [AgentAnimalObservation]? = nil,
+    weather: AgentWeatherObservation? = nil,
     calendar: AgentCivilCalendarConfiguration = .live
 ) -> AgentEcologicalObservation {
     let observedTick = observedAtSimulationTick
         ?? source.observedAtSimulationTick
     return AgentEcologicalObservation(
         observerID: observerID ?? source.observerID,
-        origin: source.origin,
-        worldContextKey: source.worldContextKey,
-        dimensionKey: source.dimensionKey,
+        origin: origin ?? source.origin,
+        worldContextKey: worldContextKey ?? source.worldContextKey,
+        dimensionKey: dimensionKey ?? source.dimensionKey,
         observedAtSimulationTick: observedTick,
-        physicalWorldTick: source.physicalWorldTick,
+        physicalWorldTick: physicalWorldTick ?? source.physicalWorldTick,
         civilDate: calendar.date(atSimulationTick: observedTick)!,
-        biome: source.biome,
-        water: source.water,
-        soils: source.soils,
-        crops: source.crops,
-        plants: source.plants,
-        animals: source.animals,
+        biome: biome ?? source.biome,
+        water: water ?? source.water,
+        soils: soils ?? source.soils,
+        crops: crops ?? source.crops,
+        plants: plants ?? source.plants,
+        animals: animals ?? source.animals,
         fishing: source.fishing,
-        weather: source.weather,
+        weather: weather ?? source.weather,
         physicalTime: source.physicalTime,
         diagnostics: source.diagnostics,
         expiresAtSimulationTick: observedTick
             + max(0, source.expiresAtSimulationTick
                 - source.observedAtSimulationTick)
     )
+}
+
+private func ecologicalReinsertEvictedRecord(
+    _ durable: inout [String: Any],
+    record: AgentEcologicalObservationRecord,
+    replacement: AgentEcologicalObservation? = nil
+) {
+    var state = durable["ecologicalObservationState"] as! [String: Any]
+    var records = state["observations"] as! [[String: Any]]
+    var encoded = ecologicalJSONObject(record)
+    if let replacement {
+        encoded["observation"] = ecologicalJSONObject(replacement)
+    }
+    records.append(encoded)
+    records.sort { ($0["sequence"] as! Int) < ($1["sequence"] as! Int) }
+    state["observations"] = records
+    var evictions = state["evictionCounts"] as! [String: Any]
+    evictions["observations"] = (evictions["observations"] as! Int) - 1
+    state["evictionCounts"] = evictions
+    durable["ecologicalObservationState"] = state
 }
 
 private func ecologicalJSONObject<T: Encodable>(_ value: T) -> [String: Any] {
@@ -524,6 +559,97 @@ func runPebbleAgentsEcologicalObservationSmoke() {
             && bounded.ecologicalObservationSnapshot().evictionCounts.observations == 1
             && bounded.ecologicalObservations(for: AgentID(rawValue: "agent_0")!).first?
                 .observation.crops.first?.growthStage == 7)
+
+    var selectivePressure = historicalObservationBase(
+        "ecological-observation-selective-causal-pressure",
+        lethalAgentIndices: [],
+        causalMaximumEvents: 32,
+        preRegistrationCausalEvents: 20
+    )
+    let selectiveFirst = try! selectivePressure.recordEcologicalObservation(
+        normalizedObservation(selectivePressure, observer: "agent_0")
+    )
+    let selectiveSecond = try! selectivePressure.recordEcologicalObservation(
+        normalizedObservation(
+            selectivePressure, observer: "agent_0", cropStage: 7
+        )
+    )
+    let selectiveUnaffected = try! selectivePressure
+        .recordEcologicalObservation(
+            normalizedObservation(
+                selectivePressure, observer: "agent_1", physicalWorldTick: 121
+            )
+        )
+    let selectiveTotal = selectivePressure.ecologicalObservationSnapshot()
+        .totalObservationCount
+    var selectiveToggle = true
+    while selectivePressure.ecologicalObservationSnapshot().observations
+            .contains(where: { $0.sequence == selectiveFirst.sequence }) {
+        selectivePressure.setNaturalResourcesEnabled(selectiveToggle)
+        selectiveToggle.toggle()
+    }
+    let selectiveAfter = selectivePressure.ecologicalObservationSnapshot()
+    check("causal pressure evicts only rows whose exact authority leaves",
+          !selectiveAfter.observations.contains(where: {
+              $0.sequence == selectiveFirst.sequence
+                  || $0.sequence == selectiveSecond.sequence
+          })
+            && selectiveAfter.observations.contains(where: {
+                $0 == selectiveUnaffected
+            })
+            && selectiveAfter.totalObservationCount == selectiveTotal
+            && selectiveAfter.evictionCounts.observations == 2,
+          "retained=\(selectiveAfter.observations.map { $0.sequence }) "
+            + "evicted=\(selectiveAfter.evictionCounts.observations)")
+
+    var causalFaultBase = historicalObservationBase(
+        "ecological-observation-causal-fault-rollback",
+        lethalAgentIndices: [],
+        causalMaximumEvents: 16
+    )
+    let causalFaultRecord = try! causalFaultBase.recordEcologicalObservation(
+        normalizedObservation(causalFaultBase, observer: "agent_0")
+    )
+    let causalFaultEvent = causalFaultBase.causalLedgerSnapshot().events
+        .first { $0.eventID == causalFaultRecord.causalEventID }!
+    let causalFaultRegistration = causalFaultBase.populationSnapshot().members
+        .first { $0.agentID.rawValue == "agent_0" }!.registrationEventID
+    let causalFaultRequired = Set(
+        [causalFaultRecord.causalEventID, causalFaultRegistration]
+            + causalFaultEvent.causes
+    )
+    var causalFaultPressure = 0
+    while causalFaultPressure < 64,
+          let first = causalFaultBase.causalLedgerSnapshot().events.first,
+          !causalFaultRequired.contains(first.eventID) {
+        try! causalFaultBase.appendCausalRetentionTestEvent()
+        causalFaultPressure += 1
+    }
+    let causalFaultReady = causalFaultBase
+        .ecologicalObservationSnapshot().observations.contains {
+            $0.sequence == causalFaultRecord.sequence
+        }
+        && causalFaultBase.causalLedgerSnapshot().events.first.map {
+            causalFaultRequired.contains($0.eventID)
+        } == true
+    let causalFaultRollback = causalFaultReady
+        && AgentCausalRetentionFaultPoint.allCases.allSatisfy { fault in
+            var candidate = causalFaultBase
+            let before = try! candidate.durableStateBytes()
+            do {
+                try candidate.appendCausalRetentionTestEvent(failingAt: fault)
+                return false
+            } catch AgentSessionError.ecologicalObservation(
+                .invalidState("injected causal retention fault \(fault.rawValue)")
+            ) {
+                return (try! candidate.durableStateBytes()) == before
+            } catch {
+                return false
+            }
+        }
+    check("causal retention injected failures roll back byte exactly",
+          causalFaultRollback,
+          "ready=\(causalFaultReady) pressure=\(causalFaultPressure)")
 
     var deceasedObserver = historicalObservationBase(
         "ecological-observation-deceased-retained",
@@ -1044,24 +1170,151 @@ func runPebbleAgentsEcologicalObservationSmoke() {
         .recordEcologicalObservation(
             normalizedObservation(evictedCausal, observer: "agent_0")
         )
+    let causalPressureTotal = evictedCausal
+        .ecologicalObservationSnapshot().totalObservationCount
+    let causalPressureEvictions = evictedCausal
+        .ecologicalObservationSnapshot().evictionCounts.observations
     _ = try! evictedCausal.advanceTick()
+    var droppedAuthority = historicalObservationBase(
+        "ecological-observation-dropped-authority",
+        lethalAgentIndices: [0],
+        causalMaximumEvents: 32,
+        preRegistrationCausalEvents: 20
+    )
+    let droppedAuthorityRecord = try! droppedAuthority
+        .recordEcologicalObservation(
+            normalizedObservation(droppedAuthority, observer: "agent_0")
+        )
+    _ = try! droppedAuthority.advanceTick()
+    while droppedAuthority.causalLedgerSnapshot().summary.droppedEventCount == 0 {
+        _ = try! droppedAuthority.advanceTick()
+    }
+    let authorityPrefix = droppedAuthority
+        .causalLedgerSnapshot().summary.droppedEventCount
+    let authorityCheckpoint = try! droppedAuthority.makeCheckpoint()
+    let arbitraryDroppedEvent = ecologicalJSONObject(
+        AgentCausalEventID(
+            simulationID: droppedAuthority.simulationID,
+            sequence: AgentCausalSequence(rawValue: max(1, authorityPrefix))!
+        )
+    )
+    check("dropped causal prefix exists while death-backed row remains",
+          authorityPrefix > 0
+            && droppedAuthority.ecologicalObservationSnapshot()
+                .observations.contains(where: {
+                    $0.sequence == droppedAuthorityRecord.sequence
+                }))
+    check("dropped-prefix registration ID is not historical authority",
+          ecologicalRestoreRefused(authorityCheckpoint) { durable in
+              var mortality = durable["mortalityState"] as! [String: Any]
+              var records = mortality["records"] as! [[String: Any]]
+              records[0]["registrationEventID"] = arbitraryDroppedEvent
+              mortality["records"] = records
+              durable["mortalityState"] = mortality
+          })
+    check("dropped-prefix death ID is not historical authority",
+          ecologicalRestoreRefused(authorityCheckpoint) { durable in
+              var mortality = durable["mortalityState"] as! [String: Any]
+              var records = mortality["records"] as! [[String: Any]]
+              records[0]["deathEventID"] = arbitraryDroppedEvent
+              mortality["records"] = records
+              durable["mortalityState"] = mortality
+          })
+    while evictedCausal.ecologicalObservationSnapshot().observations
+            .contains(where: { $0.sequence == evictedCausalRecord.sequence }) {
+        _ = try! evictedCausal.advanceTick()
+    }
     while evictedCausal.causalLedgerSnapshot().summary.droppedEventCount
             < evictedCausalRecord.causalEventID.sequence.rawValue {
         _ = try! evictedCausal.advanceTick()
     }
     let evictedCausalCheckpoint = try! evictedCausal.makeCheckpoint()
-    check("honest causal eviction retains exact death-based observer proof", {
-        guard !evictedCausal.causalLedgerSnapshot().events.contains(where: {
-            $0.eventID == evictedCausalRecord.causalEventID
-        }), let restored = try? AgentSimulationSession.restoring(
+    check("causal pressure evicts dependent ecological row before event",
+          !evictedCausal.causalLedgerSnapshot().events.contains(where: {
+                $0.eventID == evictedCausalRecord.causalEventID
+            })
+            && evictedCausal.ecologicalObservationSnapshot()
+                .totalObservationCount == causalPressureTotal
+            && evictedCausal.ecologicalObservationSnapshot()
+                .evictionCounts.observations == causalPressureEvictions + 1
+            && evictedCausal.ecologicalObservationSnapshot()
+                .observations.isEmpty)
+    check("causal-pressure checkpoint restart remains exact", {
+        guard let restored = try? AgentSimulationSession.restoring(
             evictedCausalCheckpoint
         ) else { return false }
         return (try? restored.durableStateBytes())
             == (try? evictedCausal.durableStateBytes())
-            && (try? restored.historicalEcologicalObservationValidations()
-                .first?.classification)
-                == .deceasedAfterObservationRetained
     }())
+    check("missing ecological event cannot be repaired by reintroducing row",
+          ecologicalRestoreRefused(evictedCausalCheckpoint) { durable in
+              ecologicalReinsertEvictedRecord(
+                  &durable, record: evictedCausalRecord
+              )
+          })
+    let evictedSource = evictedCausalRecord.observation
+    let physicalCorruption = resignedEcologicalObservation(
+        evictedSource,
+        origin: AgentPosition(x: 9, y: 70, z: 9),
+        physicalWorldTick: evictedSource.physicalWorldTick + 77,
+        biome: AgentBiomeObservation(
+            biomeKey: "desert", position: AgentPosition(x: 9, y: 70, z: 9)
+        ),
+        water: [],
+        soils: [],
+        crops: [],
+        plants: [],
+        animals: [],
+        weather: AgentWeatherObservation(
+            kind: .rain, raining: true, thundering: false
+        )
+    )
+    check("fully resigned physical corruption after event eviction is rejected",
+          ecologicalRestoreRefused(evictedCausalCheckpoint) { durable in
+              ecologicalReinsertEvictedRecord(
+                  &durable,
+                  record: evictedCausalRecord,
+                  replacement: physicalCorruption
+              )
+          })
+    let contextCorruption = resignedEcologicalObservation(
+        evictedSource,
+        worldContextKey: "other-world-context",
+        dimensionKey: "the_nether"
+    )
+    check("fully resigned context corruption after event eviction is rejected",
+          ecologicalRestoreRefused(evictedCausalCheckpoint) { durable in
+              ecologicalReinsertEvictedRecord(
+                  &durable,
+                  record: evictedCausalRecord,
+                  replacement: contextCorruption
+              )
+          })
+    let tickCorruption = resignedEcologicalObservation(
+        evictedSource,
+        observedAtSimulationTick: evictedCausal
+            .mortalitySnapshot().records[0].deathTick
+    )
+    check("fully resigned tick corruption after event eviction is rejected",
+          ecologicalRestoreRefused(evictedCausalCheckpoint) { durable in
+              ecologicalReinsertEvictedRecord(
+                  &durable,
+                  record: evictedCausalRecord,
+                  replacement: tickCorruption
+              )
+          })
+    let observerCorruption = resignedEcologicalObservation(
+        evictedSource,
+        observerID: AgentID(rawValue: "agent_1")!
+    )
+    check("fully resigned observer corruption after event eviction is rejected",
+          ecologicalRestoreRefused(evictedCausalCheckpoint) { durable in
+              ecologicalReinsertEvictedRecord(
+                  &durable,
+                  record: evictedCausalRecord,
+                  replacement: observerCorruption
+              )
+          })
 
     check("historical validation and read-only projection mutate nothing", {
         let before = try! deceasedObserver.durableStateBytes()

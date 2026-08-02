@@ -1116,15 +1116,11 @@ extension AgentSimulationSession {
         summary: String,
         instant: AgentSimulationInstant? = nil
     ) throws -> AgentCausalEvent {
-        guard let event = try causalLedger.append(
-            instant: instant ?? simulationInstant,
-            kind: kind,
-            origin: .lifecycleTransition,
-            actorID: actorID,
-            subjectID: subjectID,
-            causes: causes,
-            payload: payload,
-            summary: summary
+        guard let event = try recordCausalEvent(
+            kind: kind, origin: .lifecycleTransition,
+            actorID: actorID, subjectID: subjectID, causes: causes,
+            payload: payload, summary: summary,
+            instant: instant ?? simulationInstant
         ) else {
             throw AgentSessionError.lifecycle(.causalLedgerRequired)
         }

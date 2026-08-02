@@ -1123,6 +1123,18 @@ struct AgentCausalLedger {
         }
     }
 
+    /// Existing retained events that would leave the bounded prefix after the
+    /// requested appends. Product authorities use this before append so their
+    /// durable evidence is removed or pinned while every event is still exact.
+    func eventsEvictedByAppending(count: Int) throws -> [AgentCausalEvent] {
+        try prevalidateAppend(count: count)
+        guard case let .bounded(maxEvents) = policy, count > 0 else {
+            return []
+        }
+        let excess = max(0, events.count + count - maxEvents)
+        return Array(events.prefix(min(events.count, excess)))
+    }
+
     mutating func append(
         instant: AgentSimulationInstant,
         kind: AgentCausalEventKind,
@@ -1132,7 +1144,9 @@ struct AgentCausalLedger {
         operationID: AgentOperationID? = nil,
         causes: [AgentCausalEventID] = [],
         payload: AgentCausalPayload,
-        summary: String
+        summary: String,
+        afterEventAppended: (() throws -> Void)? = nil,
+        afterCompaction: (() throws -> Void)? = nil
     ) throws -> AgentCausalEvent? {
         guard case let .bounded(maxEvents) = policy else { return nil }
         guard latestSequence < UInt64.max else { throw AgentCausalLedgerError.sequenceOverflow }
@@ -1152,11 +1166,13 @@ struct AgentCausalLedger {
         latestSequence = sequence.rawValue
         rollingDigest = AgentCausalEvent.digest("\(rollingDigest)|\(event.digest)")
         events.append(event)
+        try afterEventAppended?()
         if events.count > maxEvents {
             let removed = events.count - maxEvents
             events.removeFirst(removed)
             droppedEventCount += UInt64(removed)
         }
+        try afterCompaction?()
         return event
     }
 

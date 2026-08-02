@@ -424,7 +424,7 @@ public struct AgentAgricultureState: Codable, Equatable, Sendable {
     public internal(set) var completedCycleCount: Int
     public internal(set) var evictionCounts: AgentAgricultureEvictionCounts
     public internal(set) var rollingDigest: String
-    public let initializedEventID: AgentCausalEventID
+    public internal(set) var initializedEventID: AgentCausalEventID
     public internal(set) var lastAgricultureEventID: AgentCausalEventID
 }
 

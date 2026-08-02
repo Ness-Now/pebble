@@ -388,8 +388,24 @@ extension AgentSimulationSession {
         case .agriculture:
             guard demand.domain == .cultivation,
                   event.origin == .agricultureTransition,
-                  case let .agriculture(plotID, _, _, _, _, _, _, _) = event.payload,
-                  let plotID else { return false }
+                  case let .agriculture(
+                      plotID, _, _, status, _, _, _, digest
+                  ) = event.payload else { return false }
+            if status == "retentionBoundary", plotID == nil,
+               event.eventID == agricultureState?.initializedEventID,
+               digest == agricultureState.map({
+                   agricultureCausalRetentionDigest(
+                       $0,
+                       population: populationRegistry,
+                       mortality: mortalityState
+                   )
+               }) {
+                return agricultureState?.plots.contains(where: {
+                    $0.lastAgricultureEventID == event.eventID
+                        && demand.sourceKey.hasPrefix("\($0.plotID.rawValue)-")
+                }) == true
+            }
+            guard let plotID else { return false }
             return demand.sourceKey.hasPrefix("\(plotID)-")
         case .wildSubsistence:
             guard [.cultivation, .fishing, .hunting, .foraging].contains(demand.domain),
@@ -1174,10 +1190,10 @@ extension AgentSimulationSession {
         payload: AgentCausalPayload,
         summary: String
     ) throws -> AgentCausalEvent {
-        guard let event = try causalLedger.append(
-            instant: simulationInstant, kind: kind, origin: .workCommitmentTransition,
-            actorID: actorID, subjectID: subjectID, operationID: nil,
-            causes: causes, payload: payload, summary: summary
+        guard let event = try recordCausalEvent(
+            kind: kind, origin: .workCommitmentTransition,
+            actorID: actorID, subjectID: subjectID, causes: causes,
+            payload: payload, summary: summary
         ) else { throw AgentSessionError.workCommitment(.causalLedgerRequired) }
         return event
     }

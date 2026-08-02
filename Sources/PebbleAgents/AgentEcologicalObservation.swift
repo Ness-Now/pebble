@@ -623,7 +623,7 @@ public struct AgentEcologicalObservationState: Codable, Equatable, Sendable {
     public internal(set) var observations: [AgentEcologicalObservationRecord]
     public internal(set) var totalObservationCount: UInt64
     public internal(set) var evictionCounts: AgentEcologicalObservationEvictionCounts
-    public let initializedEventID: AgentCausalEventID
+    public internal(set) var initializedEventID: AgentCausalEventID
     public internal(set) var lastObservationEventID: AgentCausalEventID
     public internal(set) var transitionTick: Int
     public internal(set) var observationsAtTick: Int

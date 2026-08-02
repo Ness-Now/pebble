@@ -2095,11 +2095,11 @@ extension AgentSimulationSession {
         summary: String,
         instant: AgentSimulationInstant? = nil
     ) throws -> AgentCausalEvent {
-        let effectiveInstant = instant ?? simulationInstant
-        guard let event = try causalLedger.append(
-            instant: effectiveInstant, kind: kind, origin: .dependentCareTransition,
-            actorID: actorID, subjectID: subjectID, operationID: nil,
-            causes: causes, payload: payload, summary: summary
+        guard let event = try recordCausalEvent(
+            kind: kind, origin: .dependentCareTransition,
+            actorID: actorID, subjectID: subjectID, causes: causes,
+            payload: payload, summary: summary,
+            instant: instant ?? simulationInstant
         ) else { throw AgentSessionError.dependentCare(.causalLedgerRequired) }
         return event
     }

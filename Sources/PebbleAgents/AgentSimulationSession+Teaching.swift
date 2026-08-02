@@ -1212,10 +1212,10 @@ extension AgentSimulationSession {
         payload: AgentCausalPayload,
         summary: String
     ) throws -> AgentCausalEvent {
-        guard let event = try causalLedger.append(
-            instant: simulationInstant, kind: kind, origin: .teachingTransition,
-            actorID: actorID, subjectID: subjectID, operationID: nil,
-            causes: causes, payload: payload, summary: summary
+        guard let event = try recordCausalEvent(
+            kind: kind, origin: .teachingTransition,
+            actorID: actorID, subjectID: subjectID, causes: causes,
+            payload: payload, summary: summary
         ) else { throw AgentSessionError.teaching(.causalLedgerRequired) }
         return event
     }
