@@ -49,10 +49,34 @@ extension AgentSimulationSession {
         for observerID: AgentID,
         freshOnly: Bool = true
     ) -> [AgentEcologicalObservationRecord] {
-        ecologicalObservationState?.observations.filter {
+        guard statesById[observerID.rawValue] != nil,
+              populationRegistry?.members.contains(where: {
+                  $0.agentID == observerID
+              }) == true else {
+            return []
+        }
+        return ecologicalObservationState?.observations.filter {
             $0.observation.observerID == observerID
                 && (!freshOnly || $0.observation.isFresh(atSimulationTick: tick))
         }.sorted { $0.sequence > $1.sequence } ?? []
+    }
+
+    /// Returns only validation classifications derived from the active
+    /// population or retained mortality authority. It never grants current
+    /// agency to a historical observer.
+    public func historicalEcologicalObservationValidations() throws
+        -> [AgentHistoricalEcologicalObservationValidation] {
+        guard let state = ecologicalObservationState else { return [] }
+        return try validateEcologicalObservationState(
+            state,
+            activeAgents: Array(statesById.values),
+            population: populationRegistry,
+            mortality: mortalityState,
+            clock: clock,
+            causalLatestSequence: causalLedger.latestSequence,
+            causalDroppedEventCount: causalLedger.droppedEventCount,
+            causalEvents: causalLedger.events
+        )
     }
 
     public func nearestObservedWater(for observerID: AgentID) -> [AgentWaterAffordance] {
@@ -212,38 +236,16 @@ extension AgentSimulationSession {
 
     func validateEcologicalObservationStateIfEnabled() throws {
         guard let state = ecologicalObservationState else { return }
-        guard state.totalObservationCount >= UInt64(state.observations.count),
-              state.observations.count <= state.configuration.maximumRetainedObservations,
-              state.observations.map(\.sequence) == state.observations.map(\.sequence).sorted(),
-              Set(state.observations.map(\.sequence)).count == state.observations.count,
-              state.observations.allSatisfy({ $0.observation.hasValidDigest() }),
-              state.transitionTick <= tick,
-              state.observationsAtTick >= 0,
-              state.observationsAtTick <= state.configuration.maximumScansPerSimulationTick else {
-            throw AgentSessionError.ecologicalObservation(.invalidState("bounds or ordering"))
-        }
-        let counts = Dictionary(grouping: state.observations, by: { $0.observation.observerID })
-        guard counts.values.allSatisfy({
-            $0.count <= state.configuration.maximumRetainedObservationsPerAgent
-        }) else {
-            throw AgentSessionError.ecologicalObservation(.invalidState("per-agent retention"))
-        }
-        let eventIDs = Set(causalLedger.events.map(\.eventID))
-        guard ecologicalCausalReferenceExists(state.initializedEventID, retained: eventIDs),
-              ecologicalCausalReferenceExists(state.lastObservationEventID, retained: eventIDs),
-              state.observations.allSatisfy({
-                  ecologicalCausalReferenceExists($0.causalEventID, retained: eventIDs)
-              }) else {
-            throw AgentSessionError.ecologicalObservation(.invalidState("causal reference"))
-        }
-    }
-
-    private func ecologicalCausalReferenceExists(
-        _ eventID: AgentCausalEventID,
-        retained: Set<AgentCausalEventID>
-    ) -> Bool {
-        retained.contains(eventID)
-            || eventID.sequence.rawValue <= causalLedger.droppedEventCount
+        _ = try validateEcologicalObservationState(
+            state,
+            activeAgents: Array(statesById.values),
+            population: populationRegistry,
+            mortality: mortalityState,
+            clock: clock,
+            causalLatestSequence: causalLedger.latestSequence,
+            causalDroppedEventCount: causalLedger.droppedEventCount,
+            causalEvents: causalLedger.events
+        )
     }
 
     private func ecologicalContextKeyIsValid(_ value: String) -> Bool {
@@ -275,6 +277,31 @@ extension AgentSimulationSession {
         }
     }
 
+    /// Evicts retained personal observations before the full death authority
+    /// that proves their historical observer is compacted. The caller owns the
+    /// enclosing candidate transaction; no partial state is published.
+    mutating func evictEcologicalObservationsForCompactedDeaths(
+        _ records: [AgentMortalityRecord]
+    ) throws {
+        guard var state = ecologicalObservationState, !records.isEmpty else {
+            return
+        }
+        let agentIDs = Set(records.map(\.agentID))
+        let removed = state.observations.reduce(into: 0) { count, record in
+            if agentIDs.contains(record.observation.observerID) { count += 1 }
+        }
+        guard removed <= Int.max - state.evictionCounts.observations else {
+            throw AgentSessionError.ecologicalObservation(
+                .invalidState("mortality compaction eviction overflow")
+            )
+        }
+        state.observations.removeAll {
+            agentIDs.contains($0.observation.observerID)
+        }
+        state.evictionCounts.observations += removed
+        ecologicalObservationState = state
+    }
+
     private func ecologicalDistance(_ lhs: AgentPosition, _ rhs: AgentPosition) -> Int {
         abs(lhs.x - rhs.x) + abs(lhs.y - rhs.y) + abs(lhs.z - rhs.z)
     }
@@ -296,4 +323,364 @@ extension AgentSimulationSession {
         }
         return event
     }
+}
+
+private enum HistoricalEcologicalObserverFailure: String {
+    case historicalEvidenceUnavailable
+    case registeredAfterObservation
+    case diedBeforeObservation
+    case causalBindingInvalid
+    case unknownObserver
+}
+
+/// Canonical validation used both while publishing a candidate session and
+/// while validating checkpoint durable state. A historical-person row alone
+/// is deliberately insufficient: schema 29 requires either an active member
+/// or the full retained death record with registration/death ordering.
+func validateEcologicalObservationState(
+    _ state: AgentEcologicalObservationState,
+    activeAgents: [AgentSessionAgentState],
+    population: AgentPopulationRegistry?,
+    mortality: AgentMortalityState?,
+    clock: AgentSimulationClock,
+    causalLatestSequence: UInt64,
+    causalDroppedEventCount: UInt64,
+    causalEvents: [AgentCausalEvent]
+) throws -> [AgentHistoricalEcologicalObservationValidation] {
+    func invalid(_ reason: String) -> AgentSessionError {
+        .ecologicalObservation(.invalidState(reason))
+    }
+    var eventsByID: [AgentCausalEventID: AgentCausalEvent] = [:]
+    for event in causalEvents {
+        guard eventsByID.updateValue(event, forKey: event.eventID) == nil else {
+            throw invalid("duplicate causal event")
+        }
+    }
+    func causalReferenceExists(_ eventID: AgentCausalEventID) -> Bool {
+        eventID.simulationID == clock.simulationID
+            && eventID.sequence.rawValue > 0
+            && eventID.sequence.rawValue <= causalLatestSequence
+            && (eventsByID[eventID] != nil
+                || eventID.sequence.rawValue <= causalDroppedEventCount)
+    }
+    func honestlyEvicted(_ eventID: AgentCausalEventID) -> Bool {
+        eventsByID[eventID] == nil
+            && causalDroppedEventCount > 0
+            && eventID.sequence.rawValue <= causalDroppedEventCount
+            && (causalEvents.first.map {
+                eventID.sequence.rawValue < $0.eventID.sequence.rawValue
+            } ?? true)
+    }
+    func registrationBindingIsValid(
+        observerID: AgentID,
+        registrationEventID: AgentCausalEventID,
+        registeredTick: Int?,
+        observationTick: Int,
+        observationEventID: AgentCausalEventID
+    ) -> Bool {
+        guard registrationEventID.simulationID == clock.simulationID,
+              registrationEventID.sequence.rawValue
+                < observationEventID.sequence.rawValue else {
+            return false
+        }
+        guard let event = eventsByID[registrationEventID] else {
+            return honestlyEvicted(registrationEventID)
+        }
+        guard event.simulationTick.rawValue <= observationTick,
+              registeredTick == nil
+                || event.simulationTick.rawValue == registeredTick else {
+            return false
+        }
+        switch (event.kind, event.origin, event.payload) {
+        case let (
+            .populationMemberRegistered,
+            .populationTransition,
+            .population(
+                _, memberID, _, _, _, _, _
+            )
+        ):
+            return event.actorID == observerID
+                && event.subjectID == observerID
+                && memberID == observerID.rawValue
+        case let (
+            .populationMemberBorn,
+            .lifecycleTransition,
+            .birth(_, _, newbornID, _, _, _, _, _)
+        ):
+            return event.subjectID == observerID
+                && newbornID == observerID.rawValue
+        default:
+            return false
+        }
+    }
+    func deathBindingIsValid(
+        _ death: AgentMortalityRecord,
+        observationEventID: AgentCausalEventID
+    ) -> Bool {
+        guard death.deathEventID.simulationID == clock.simulationID,
+              observationEventID.sequence.rawValue
+                < death.deathEventID.sequence.rawValue else {
+            return false
+        }
+        guard let event = eventsByID[death.deathEventID] else {
+            return honestlyEvicted(death.deathEventID)
+        }
+        guard event.kind == .agentDeathFinalized,
+              event.origin == .mortalityTransition,
+              event.actorID == death.agentID,
+              event.subjectID == death.agentID,
+              event.simulationTick.rawValue == death.deathTick else {
+            return false
+        }
+        guard case let .mortalityDeath(
+            deathID, agentID, _, tick, _, _, _, _, _, _, _, _, _, _
+        ) = event.payload else {
+            return false
+        }
+        return deathID == death.deathID.rawValue
+            && agentID == death.agentID.rawValue
+            && tick == death.deathTick
+    }
+    guard let population else {
+        throw invalid("population authority unavailable")
+    }
+    guard state.evictionCounts.observations >= 0,
+          state.observations.count
+            <= state.configuration.maximumRetainedObservations,
+          state.totalObservationCount
+            == UInt64(state.observations.count)
+                + UInt64(state.evictionCounts.observations),
+          state.observations.map(\.sequence)
+            == state.observations.map(\.sequence).sorted(),
+          Set(state.observations.map(\.sequence)).count
+            == state.observations.count,
+          state.observations.allSatisfy({
+              $0.sequence > 0 && $0.sequence <= state.totalObservationCount
+          }),
+          state.transitionTick >= 0,
+          state.transitionTick <= clock.tick.rawValue,
+          state.observationsAtTick >= 0,
+          state.observationsAtTick
+            <= state.configuration.maximumScansPerSimulationTick else {
+        throw invalid("bounds or ordering")
+    }
+    let counts = Dictionary(
+        grouping: state.observations,
+        by: { $0.observation.observerID }
+    )
+    guard counts.values.allSatisfy({
+        $0.count <= state.configuration.maximumRetainedObservationsPerAgent
+    }) else {
+        throw invalid("per-agent retention")
+    }
+
+    guard causalReferenceExists(state.initializedEventID),
+          causalReferenceExists(state.lastObservationEventID) else {
+        throw invalid("causal reference")
+    }
+    var activeByID: [AgentID: AgentSessionAgentState] = [:]
+    for active in activeAgents {
+        guard activeByID.updateValue(active, forKey: active.agentID) == nil else {
+            throw invalid("duplicate active observer authority")
+        }
+    }
+    var membersByID: [AgentID: AgentPopulationMemberRecord] = [:]
+    for member in population.members {
+        guard membersByID.updateValue(member, forKey: member.agentID) == nil else {
+            throw invalid("duplicate population observer authority")
+        }
+    }
+    let deathRecords = mortality?.records ?? []
+    var deathsByID: [AgentID: AgentMortalityRecord] = [:]
+    for death in deathRecords {
+        guard deathsByID.updateValue(death, forKey: death.agentID) == nil else {
+            throw invalid("duplicate retained death observer authority")
+        }
+    }
+    let summaries = mortality?.compactedDeathSummaries ?? []
+    let summaryIDs = Set(summaries.map(\.agentID))
+    guard summaryIDs.count == summaries.count,
+          Set(deathsByID.keys).isDisjoint(with: summaryIDs) else {
+        throw invalid("duplicate historical authority")
+    }
+
+    var validations: [AgentHistoricalEcologicalObservationValidation] = []
+    validations.reserveCapacity(state.observations.count)
+    for record in state.observations {
+        let observation = record.observation
+        guard observation.observedAtSimulationTick >= 0,
+              observation.observedAtSimulationTick <= clock.tick.rawValue,
+              observation.civilDate == state.configuration.calendar.date(
+                  atSimulationTick: observation.observedAtSimulationTick
+              ),
+              observation.physicalWorldTick >= 0,
+              observation.physicalTime.worldTick
+                == observation.physicalWorldTick,
+              observation.expiresAtSimulationTick
+                >= observation.observedAtSimulationTick,
+              observation.expiresAtSimulationTick
+                    - observation.observedAtSimulationTick
+                <= state.configuration.dynamicFreshnessTicks,
+              observation.hasValidDigest(),
+              ecologicalObservationContextKeyIsValid(
+                  observation.worldContextKey
+              ),
+              ecologicalObservationContextKeyIsValid(
+                  observation.dimensionKey
+              ),
+              record.causalEventID.simulationID == clock.simulationID,
+              causalReferenceExists(record.causalEventID) else {
+            throw invalid(
+                "\(HistoricalEcologicalObserverFailure.causalBindingInvalid.rawValue) "
+                    + "sequence=\(record.sequence)"
+            )
+        }
+
+        let diagnostics = observation.diagnostics
+        let resultCount = ecologicalObservationResultCount(observation)
+        guard diagnostics.radius <= state.configuration.radius,
+              diagnostics.cellsConsidered
+                <= state.configuration.maximumCellsPerScan,
+              diagnostics.worldReads
+                <= state.configuration.maximumWorldReadsPerScan,
+              diagnostics.chunksTouched
+                <= state.configuration.maximumChunksPerScan,
+              diagnostics.entitiesConsidered
+                <= state.configuration.maximumEntitiesPerScan,
+              diagnostics.resultsEmitted == resultCount,
+              resultCount <= state.configuration.maximumResultsPerScan else {
+            throw invalid("scan budget sequence=\(record.sequence)")
+        }
+
+        if let event = eventsByID[record.causalEventID] {
+            guard event.kind == .ecologicalObservationRecorded,
+                  event.origin == .ecologicalObservationTransition,
+                  event.actorID == observation.observerID,
+                  event.subjectID == observation.observerID,
+                  event.operationID == nil,
+                  event.simulationTick.rawValue
+                    == observation.observedAtSimulationTick,
+                  event.causes.count == 1,
+                  event.causes[0].simulationID == clock.simulationID,
+                  event.causes[0].sequence.rawValue
+                    < event.eventID.sequence.rawValue,
+                  event.payload == .ecologicalObservation(
+                      observerID: observation.observerID.rawValue,
+                      worldContextKey: observation.worldContextKey,
+                      dimensionKey: observation.dimensionKey,
+                      resultCount: resultCount,
+                      worldReads: diagnostics.worldReads,
+                      truncated: diagnostics.completion != .complete,
+                      status: "recorded",
+                      digest: observation.digest
+                  ) else {
+                throw invalid(
+                    "\(HistoricalEcologicalObserverFailure.causalBindingInvalid.rawValue) "
+                        + "sequence=\(record.sequence)"
+                )
+            }
+        } else {
+            guard causalDroppedEventCount > 0,
+                  record.causalEventID.sequence.rawValue
+                    <= causalDroppedEventCount,
+                  causalEvents.first.map({
+                      record.causalEventID.sequence.rawValue
+                        < $0.eventID.sequence.rawValue
+                  }) ?? true else {
+                throw invalid(
+                    "\(HistoricalEcologicalObserverFailure.causalBindingInvalid.rawValue) "
+                        + "sequence=\(record.sequence)"
+                )
+            }
+        }
+
+        let observerID = observation.observerID
+        let classification: AgentHistoricalEcologicalObserverClassification
+        if let active = activeByID[observerID],
+           let member = membersByID[observerID] {
+            guard active.agentID == member.agentID,
+                  deathsByID[observerID] == nil,
+                  !summaryIDs.contains(observerID),
+                  member.registeredTick
+                    <= observation.observedAtSimulationTick,
+                  registrationBindingIsValid(
+                      observerID: observerID,
+                      registrationEventID: member.registrationEventID,
+                      registeredTick: member.registeredTick,
+                      observationTick:
+                        observation.observedAtSimulationTick,
+                      observationEventID: record.causalEventID
+                  ) else {
+                throw invalid(
+                    "\(HistoricalEcologicalObserverFailure.registeredAfterObservation.rawValue) "
+                        + "observer=\(observerID.rawValue)"
+                )
+            }
+            classification = .activeAtObservation
+        } else if activeByID[observerID] != nil
+                    || membersByID[observerID] != nil {
+            throw invalid(
+                "\(HistoricalEcologicalObserverFailure.unknownObserver.rawValue) "
+                    + "observer=\(observerID.rawValue)"
+            )
+        } else if let death = deathsByID[observerID] {
+            guard !summaryIDs.contains(observerID),
+                  registrationBindingIsValid(
+                      observerID: observerID,
+                      registrationEventID: death.registrationEventID,
+                      registeredTick: nil,
+                      observationTick:
+                        observation.observedAtSimulationTick,
+                      observationEventID: record.causalEventID
+                  ) else {
+                throw invalid(
+                    "\(HistoricalEcologicalObserverFailure.registeredAfterObservation.rawValue) "
+                        + "observer=\(observerID.rawValue)"
+                )
+            }
+            guard record.causalEventID.sequence.rawValue
+                    < death.deathEventID.sequence.rawValue,
+                  observation.observedAtSimulationTick <= death.deathTick,
+                  deathBindingIsValid(
+                      death,
+                      observationEventID: record.causalEventID
+                  ) else {
+                throw invalid(
+                    "\(HistoricalEcologicalObserverFailure.diedBeforeObservation.rawValue) "
+                        + "observer=\(observerID.rawValue)"
+                )
+            }
+            classification = .deceasedAfterObservationRetained
+        } else if summaryIDs.contains(observerID) {
+            throw invalid(
+                "\(HistoricalEcologicalObserverFailure.historicalEvidenceUnavailable.rawValue) "
+                    + "observer=\(observerID.rawValue)"
+            )
+        } else {
+            throw invalid(
+                "\(HistoricalEcologicalObserverFailure.unknownObserver.rawValue) "
+                    + "observer=\(observerID.rawValue)"
+            )
+        }
+        validations.append(AgentHistoricalEcologicalObservationValidation(
+            sequence: record.sequence,
+            observerID: observerID,
+            classification: classification
+        ))
+    }
+    return validations
+}
+
+private func ecologicalObservationContextKeyIsValid(_ value: String) -> Bool {
+    (1...160).contains(value.utf8.count)
+        && value.utf8.allSatisfy { (33...126).contains($0) }
+}
+
+private func ecologicalObservationResultCount(
+    _ observation: AgentEcologicalObservation
+) -> Int {
+    observation.water.count + observation.soils.count
+        + observation.crops.count + observation.plants.count
+        + observation.animals.count + observation.fishing.count
+        + (observation.biome == nil ? 0 : 1) + 2
 }

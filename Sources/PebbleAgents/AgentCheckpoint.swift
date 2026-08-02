@@ -2473,17 +2473,17 @@ extension AgentSimulationSession {
         }
         if let observations = state.ecologicalObservationState {
             do {
-                guard observations.observations.count
-                        <= observations.configuration.maximumRetainedObservations,
-                      observations.totalObservationCount
-                        >= UInt64(observations.observations.count),
-                      observations.observations.allSatisfy({
-                          $0.observation.observedAtSimulationTick <= state.clock.tick.rawValue
-                              && $0.observation.hasValidDigest()
-                              && state.agents.map(\.agentID).contains($0.observation.observerID)
-                      }) else {
-                    throw AgentEcologicalObservationError.invalidState("checkpoint bounds")
-                }
+                _ = try validateEcologicalObservationState(
+                    observations,
+                    activeAgents: state.agents,
+                    population: state.populationRegistry,
+                    mortality: state.mortalityState,
+                    clock: state.clock,
+                    causalLatestSequence: state.causalLedger.latestSequence,
+                    causalDroppedEventCount:
+                        state.causalLedger.droppedEventCount,
+                    causalEvents: state.causalLedger.events
+                )
             } catch {
                 throw AgentCheckpointError.invalidBound("ecological observation")
             }
@@ -2492,7 +2492,9 @@ extension AgentSimulationSession {
             do {
                 try validateAgricultureState(
                     agriculture,
-                    agents: Set(state.agents.map(\.agentID)),
+                    activeAgents: state.agents,
+                    population: state.populationRegistry,
+                    mortality: state.mortalityState,
                     clock: state.clock,
                     causalLatestSequence: state.causalLedger.latestSequence,
                     causalDroppedEventCount: state.causalLedger.droppedEventCount,

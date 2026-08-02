@@ -348,12 +348,22 @@ extension PebbleAgentController {
         reason: String
     ) {
         let snapshot = session.ecologicalObservationSnapshot()
+        let historical = (try? session
+            .historicalEcologicalObservationValidations()) ?? []
+        let activeObservers = historical.filter {
+            $0.classification == .activeAtObservation
+        }.count
+        let deceasedObservers = historical.filter {
+            $0.classification == .deceasedAfterObservationRetained
+        }.count
         let date = snapshot.civilDate
         trace(
             "ecological observation state tick=\(session.tick) reason=\(reason) "
                 + "enabled=\(snapshot.enabled ? 1 : 0) schema=\(snapshot.enabled ? 12 : 2) "
                 + "civil=\(date.map { "\($0.year)-\($0.season.rawValue)-\($0.day)" } ?? "none") "
                 + "retained=\(snapshot.observations.count) total=\(snapshot.totalObservationCount) "
+                + "historicalActive=\(activeObservers) "
+                + "historicalDeceased=\(deceasedObservers) "
                 + "fresh=\(snapshot.freshCount) stale=\(snapshot.staleCount) "
                 + "digest=\(snapshot.digest) mutation=none"
         )
@@ -363,6 +373,14 @@ extension PebbleAgentController {
         _ session: AgentSimulationSession
     ) -> PebbleAgentCommandResult {
         let snapshot = session.ecologicalObservationSnapshot()
+        let historical = (try? session
+            .historicalEcologicalObservationValidations()) ?? []
+        let activeObservers = historical.filter {
+            $0.classification == .activeAtObservation
+        }.count
+        let deceasedObservers = historical.filter {
+            $0.classification == .deceasedAfterObservationRetained
+        }.count
         let date = snapshot.civilDate
         let sensor = ecologicalObservationSensor.snapshot
         return success(
@@ -370,6 +388,8 @@ extension PebbleAgentController {
                 + "schema=\(snapshot.enabled ? 12 : 2) "
                 + "civil=\(date.map { "\($0.year)-\($0.season.rawValue)-\($0.day)" } ?? "none") "
                 + "retained=\(snapshot.observations.count) total=\(snapshot.totalObservationCount) "
+                + "historicalActive=\(activeObservers) "
+                + "historicalDeceased=\(deceasedObservers) "
                 + "fresh=\(snapshot.freshCount) stale=\(snapshot.staleCount) "
                 + "scans=\(sensor.scans) cacheHits=\(sensor.cacheHits) "
                 + "cacheMisses=\(sensor.cacheMisses) reads=\(sensor.worldReads) "

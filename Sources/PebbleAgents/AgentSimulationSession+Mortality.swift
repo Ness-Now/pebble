@@ -1015,8 +1015,24 @@ extension AgentSimulationSession {
                         "compacted death evidence capacity"
                     ))
                 }
-                for (offset, compacted) in mortality.records
-                    .prefix(removed).enumerated() {
+                let compactedRecords = Array(mortality.records.prefix(removed))
+                let historicalAgricultureActors = Set(
+                    (agricultureState?.plots.map(\.plannerID) ?? [])
+                        + (agricultureState?.retainedActions.map {
+                            $0.outcome.actorID
+                        } ?? [])
+                )
+                guard compactedRecords.allSatisfy({
+                    !historicalAgricultureActors.contains($0.agentID)
+                }) else {
+                    throw AgentSessionError.mortality(.invalidState(
+                        "retained agriculture requires full death evidence"
+                    ))
+                }
+                try evictEcologicalObservationsForCompactedDeaths(
+                    compactedRecords
+                )
+                for (offset, compacted) in compactedRecords.enumerated() {
                     summaries.append(AgentCompactedDeathSummary(
                         deathOrdinal:
                             mortality.evictionCounts.deathRecords + offset + 1,
@@ -1091,6 +1107,7 @@ extension AgentSimulationSession {
         try validateHouseholdCrossDomainIfEnabled()
         try validateDependentCareCrossDomainIfEnabled()
         try validateEstateCrossDomainIfEnabled()
+        try validateEcologicalObservationStateIfEnabled()
     }
 
     private func conservationSnapshotWith(

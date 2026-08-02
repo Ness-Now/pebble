@@ -665,6 +665,32 @@ public struct AgentEcologicalObservationSnapshot: Codable, Equatable, Sendable {
     public let digest: String
 }
 
+/// Read-only classification of the independent authority that proves an
+/// ecological observer existed and was alive at the observation boundary.
+/// This is derived during validation and is not a second durable history.
+public enum AgentHistoricalEcologicalObserverClassification: String,
+    Codable, Equatable, Sendable {
+    case activeAtObservation
+    case deceasedAfterObservationRetained
+}
+
+public struct AgentHistoricalEcologicalObservationValidation: Equatable,
+    Sendable {
+    public let sequence: UInt64
+    public let observerID: AgentID
+    public let classification: AgentHistoricalEcologicalObserverClassification
+
+    public init(
+        sequence: UInt64,
+        observerID: AgentID,
+        classification: AgentHistoricalEcologicalObserverClassification
+    ) {
+        self.sequence = sequence
+        self.observerID = observerID
+        self.classification = classification
+    }
+}
+
 public enum AgentEcologicalObservationDigest {
     public static func make(_ text: String) -> String {
         var value: UInt64 = 14_695_981_039_346_656_037

@@ -634,7 +634,9 @@ extension AgentSimulationSession {
     func validateAgricultureStateIfEnabled() throws {
         guard let state = agricultureState else { return }
         try Self.validateAgricultureState(
-            state, agents: Set(statesById.values.map(\.agentID)), clock: clock,
+            state, activeAgents: Array(statesById.values),
+            population: populationRegistry, mortality: mortalityState,
+            clock: clock,
             causalLatestSequence: causalLedger.latestSequence,
             causalDroppedEventCount: causalLedger.droppedEventCount,
             causalEvents: causalLedger.events
@@ -643,12 +645,60 @@ extension AgentSimulationSession {
 
     static func validateAgricultureState(
         _ state: AgentAgricultureState,
-        agents: Set<AgentID>,
+        activeAgents: [AgentSessionAgentState],
+        population: AgentPopulationRegistry?,
+        mortality: AgentMortalityState?,
         clock: AgentSimulationClock,
         causalLatestSequence: UInt64,
         causalDroppedEventCount: UInt64,
         causalEvents: [AgentCausalEvent]
     ) throws {
+        let agents = Set(activeAgents.map(\.agentID))
+        let populationByAgent = Dictionary(
+            uniqueKeysWithValues: (population?.members ?? []).map {
+                ($0.agentID, $0)
+            }
+        )
+        let deathByAgent = Dictionary(
+            uniqueKeysWithValues: (mortality?.records ?? []).map {
+                ($0.agentID, $0)
+            }
+        )
+        let compactedDeathIDs = Set(
+            (mortality?.compactedDeathSummaries ?? []).map(\.agentID)
+        )
+        func historicallyValidActor(
+            _ agentID: AgentID,
+            at simulationTick: Int,
+            referenceEventID: AgentCausalEventID,
+            lastHistoricalEventID: AgentCausalEventID? = nil
+        ) -> Bool {
+            guard simulationTick >= 0,
+                  simulationTick <= clock.tick.rawValue,
+                  referenceEventID.simulationID == clock.simulationID else {
+                return false
+            }
+            if agents.contains(agentID) {
+                guard let member = populationByAgent[agentID],
+                      member.registeredTick <= simulationTick,
+                      member.registrationEventID.sequence
+                        < referenceEventID.sequence,
+                      deathByAgent[agentID] == nil,
+                      !compactedDeathIDs.contains(agentID) else {
+                    return false
+                }
+                return true
+            }
+            guard let death = deathByAgent[agentID],
+                  death.registrationEventID.sequence
+                    < referenceEventID.sequence,
+                  (lastHistoricalEventID ?? referenceEventID).sequence
+                    < death.deathEventID.sequence,
+                  simulationTick <= death.deathTick else {
+                return false
+            }
+            return true
+        }
         _ = try AgentAgricultureConfiguration(
             maximumPlots: state.configuration.maximumPlots,
             maximumCellsPerPlot: state.configuration.maximumCellsPerPlot,
@@ -679,7 +729,12 @@ extension AgentSimulationSession {
             throw AgentAgricultureError.invalidState("plot ordering")
         }
         for plot in state.plots {
-            guard agents.contains(plot.plannerID),
+            guard historicallyValidActor(
+                    plot.plannerID,
+                    at: plot.plannedCivilDate.simulationTick,
+                    referenceEventID: plot.sourceObservationEventID,
+                    lastHistoricalEventID: plot.lastAgricultureEventID
+                  ),
                   (state.configuration.minimumCellsPerPlot...state.configuration.maximumCellsPerPlot)
                     .contains(plot.cells.count),
                   plot.cells.map(\.index) == Array(plot.cells.indices),
@@ -775,7 +830,20 @@ extension AgentSimulationSession {
         guard state.reservations == state.reservations.sorted(by: agricultureReservationSort),
               Set(reservationKeys).count == reservationKeys.count,
               state.reservations.allSatisfy({ reservation in
-                  agents.contains(reservation.agentID)
+                  let historicalPlanner = state.plots.first(where: {
+                      $0.plotID == reservation.plotID
+                          && $0.plannerID == reservation.agentID
+                  })
+                  let actorIsValid = agents.contains(reservation.agentID)
+                      || historicalPlanner.map {
+                          historicallyValidActor(
+                              reservation.agentID,
+                              at: reservation.reservedAtTick,
+                              referenceEventID: $0.sourceObservationEventID,
+                              lastHistoricalEventID: $0.lastAgricultureEventID
+                          )
+                      } == true
+                  return actorIsValid
                       && reservation.reservedAtTick <= clock.tick.rawValue
                       && reservation.expiresAtTick >= reservation.reservedAtTick
                       && state.plots.first(where: { $0.plotID == reservation.plotID })
@@ -797,6 +865,15 @@ extension AgentSimulationSession {
               }),
               state.managedSurplusRecords.allSatisfy({ eventExists($0.agricultureEventID) }) else {
             throw AgentAgricultureError.invalidState("causal references")
+        }
+        guard state.retainedActions.allSatisfy({ record in
+            historicallyValidActor(
+                record.outcome.actorID,
+                at: record.outcome.civilDate.simulationTick,
+                referenceEventID: record.agricultureEventID
+            )
+        }) else {
+            throw AgentAgricultureError.invalidState("historical action actor")
         }
         for plot in state.plots where plot.cycleOrdinal > 1 {
             guard let evidence = plot.renewalEvidence,
