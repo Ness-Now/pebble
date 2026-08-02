@@ -52,14 +52,14 @@ milestone is published in baseline
 correction is published in baseline
 `6d114abb98aee652e44fe9a81c3bab47b72ff698`. Gate D Evaluations 01 and 02
 remain historical FAIL evidence. The targeted historical ecological-observer
-correction is a local review candidate. A retained observation now requires
-its exact causal event, direct cause and applicable registration/birth and
-death authorities; it is evicted before any of those events leave the bounded
-ledger. Retained immutable agriculture foundations are re-anchored by one
-exact causal retention boundary before their original source leaves. Retained
-historical actions and physical receipts continue to require their exact
-events; an append that would lose them is refused atomically. After
-publication, the next authorized action is independent Gate D Evaluation 03.
+correction is a local review candidate. Schema 30 now requires every retained
+ecological row and exact causal event to reconcile with a bounded receipt in
+World persistence, outside the civilization checkpoint. Retention evicts the
+row before either causal or physical proof is lost. Agriculture reuses the
+source observation receipt and Pebble's exact physical action receipts rather
+than introducing another production authority. Legacy schema 29 with retained
+observations or plots fails closed. After publication, the next authorized
+action is independent Gate D Evaluation 03.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:

@@ -1,56 +1,138 @@
 # Gate D Blocker 02 — Historical ecological observer validation
 
-## 1. Affected published baseline
+## 1. Scope and affected baseline
 
-This targeted product correction starts from the published product baseline:
+This targeted correction starts from published product baseline:
 
 ```text
 6d114abb98aee652e44fe9a81c3bab47b72ff698
 ```
 
 That baseline includes checkpoint schema 29, Observer schema 7 and the
-published Gate D Blocker 01 position-restoration correction. This work does
-not evaluate or acquire `V4-GATE-D-v1`, and it does not start `CIV-34`.
-
-## 2. Preserved Evaluation 02 FAIL
-
-Independent evaluation commit
-`d40ca4f8215ff14d904a1fb84aedb7ebd9185082` on historical local branch
-`codex/gate-d-evaluation-02` records:
+published Gate D Blocker 01 position-restoration correction. Independent Gate
+D Evaluation 02 is preserved at commit
+`d40ca4f8215ff14d904a1fb84aedb7ebd9185082` with verdict:
 
 ```text
 GATE D FAIL — PRODUCT CORRECTION REQUIRED
 ```
 
-Its report and harness remain unchanged. Evaluation 01 commit
-`9232b65a8a32b2d054fe2e5c7ea80e0dd990d378` also remains immutable. The
-Evaluation 02 campaign recorded a normal ecological observation by `agent_0`,
-then finalized that agent's physiological death and physical exit. Schema-29
-checkpoint creation subsequently failed with `checkpoint bound exceeded:
-ecological observation`.
+Evaluation 01 commit `9232b65a8a32b2d054fe2e5c7ea80e0dd990d378`
+also remains immutable. This work fixes one product boundary. It does not
+evaluate or acquire `V4-GATE-D-v1`, and it does not start `CIV-34`.
 
-## 3. Reproduction and root cause
+## 2. Reproduction and final root cause
 
-The old checkpoint validator required every retained observation's
-`observerID` to remain in the active session-agent array. Mortality correctly
-removes a dead person from active population and lifecycle while retaining the
-bounded death record, estate and historical observation. The validator
-therefore confused two different statements:
+Evaluation 02 recorded a normal physical ecological observation by `agent_0`,
+then finalized that agent's physiological death and physical exit. The first
+defect required every retained observation author to remain active at
+checkpoint time. The earlier correction replaced that rule with exact
+historical registration, observation and death ordering and coordinated
+causal retention.
+
+The final data-consistency validation identified a separate issue. An
+ecological row and its `ecologicalObservationRecorded` event were stored in the
+same civilization checkpoint. A coherent mutation test could update both,
+then recompute the causal, checkpoint, storage and manifest digests. Those
+digests proved internal consistency, but not that the resulting physical
+content came from the World scan.
+
+The final distinction is therefore:
 
 ```text
-active at checkpoint time
-historically alive and authorized at observation time
+causal consistency
+!=
+independent physical authenticity
 ```
 
-The observation itself was valid. Its author simply died before the save.
-Deleting all observations at death would have hidden the defect and erased
-legitimate bounded history, so the correction preserves them while the full
-death authority remains retained.
+The physical content now requires an authority outside the civilization
+checkpoint.
 
-## 4. Active observations and historical evidence
+## 3. Independent World-side receipt authority
 
-One canonical validator is used by candidate-session publication and
-checkpoint durable-state validation. It classifies each row as either:
+`PebbleCore.SaveDB` now owns an opaque `world_receipts` table keyed by World,
+receipt kind and receipt ID. Pebble writes typed, immutable receipts into this
+World persistence. PebbleAgents receives only read-only evidence projections;
+it does not import PebbleCore and does not own a second physical or ecological
+engine.
+
+For a real scan, Pebble persists a bounded
+`PebbleEcologicalObservationReceipt` containing:
+
+```text
+receipt and operation identity
+observer identity
+World ID and sqlite World storage identity
+dimension and dimension key
+physical World tick and civilization simulation tick
+origin
+the normalized physical observation
+result and World-read counts
+physical-sensor provenance flag
+canonical receipt digest
+```
+
+The receipt bytes are not encoded in `AgentSessionDurableState`, the causal
+ledger, the checkpoint manifest or Observer. They remain in World persistence
+and are loaded independently for cross-store reconciliation.
+
+The normal publication chain is:
+
+```text
+physical World scan
+-> independent World-side receipt persisted by Pebble
+-> causal event containing the receipt identity and observation digest
+-> ecological row containing the same receipt identity
+```
+
+The causal event establishes civilization ordering. The independent receipt
+establishes the exact physical content.
+
+## 4. Schema 30 and cross-store reconciliation
+
+Checkpoint schema 30 is required whenever retained ecological rows or
+agricultural plots exist. Every retained ecological row has exactly one valid
+physical receipt reference. Before save and before load publication, Pebble
+loads the required receipts from World persistence and requires exact equality
+of:
+
+```text
+observer
+World and storage identity
+dimension and context
+physical and simulation ticks
+origin
+complete normalized observation
+result and read counts
+observation digest
+receipt identity and digest
+causal operation and payload
+```
+
+The checkpoint is never published when a receipt is missing, duplicated,
+invalid or belongs to another World. A coherent mutation of the row and causal
+event cannot change the separately persisted receipt, so cross-store
+reconciliation refuses the candidate semantically.
+
+Compatibility is deliberately fail closed:
+
+```text
+schema 30 + retained observation
+-> independent receipt mandatory
+
+schema 29 + retained observation
+-> refused because the independent proof does not exist
+
+schema 29 + no retained observation or plot
+-> remains readable under its other contracts
+```
+
+Observer schema 7 remains unchanged and read-only.
+
+## 5. Historical observer and causal ordering
+
+One canonical validator is used by candidate publication and checkpoint
+durable-state validation. It classifies a row as:
 
 ```text
 activeAtObservation
@@ -59,154 +141,127 @@ deceasedAfterObservationRetained
 
 An active observer requires matching active session and population records,
 registration no later than the observation and no contradictory mortality
-authority. A deceased observer requires the exact retained full death record.
-The validator never treats a historical-person ID or a compacted death summary
-alone as sufficient authority for a retained schema-29 observation.
+authority. A deceased observer requires the exact retained death record. A
+historical-person ID or compacted death summary alone never authorizes a
+retained personal observation.
 
-Current affordance queries remain active-agent-only. A dead observer's retained
-row is historical evidence: it does not grant perception, action, knowledge,
-agricultural instruction or agency to the dead person or an heir. Observer may
-display the record read-only without deriving new product truth.
-
-## 5. Registration, death and causal ordering
-
-For an active observer, the population registration tick is at or before the
-observation tick and the registration event precedes the observation event.
-For a deceased observer, the exact order is:
+The exact retained ordering is:
 
 ```text
-registration event sequence
-< ecologicalObservationRecorded event sequence
-< agentDeathFinalized event sequence
+registration or birth event
+< ecologicalObservationRecorded event
+< agentDeathFinalized event, when the observer later dies
 ```
 
-The observation tick must be no later than the death tick. Same-tick
-observation and death are accepted only when causal sequence proves that the
-observation preceded finalization.
+Same-tick observation and death require strict causal sequence. A sequence in
+the dropped prefix is not an authority. Each retained row keeps its exact
+observation event, direct cause, registration or birth authority and, for a
+deceased observer, exact death authority.
 
-Every retained row requires its exact `ecologicalObservationRecorded` event,
-its exact direct cause and the exact applicable registration or birth event.
-A deceased observer additionally requires the exact retained
-`agentDeathFinalized` event. Those events must retain the expected simulation,
-kind, transition origin, actor, subject, tick, context keys, result count,
-read count, truncation state and observation digest. A sequence in the causal
-ledger's dropped prefix is never accepted as a substitute for any of these
-authorities.
+A dead observer's row is historical evidence only. It does not grant current
+perception, knowledge, action, agriculture instruction or agency to the dead
+person or any heir.
 
-All causal appends use one aggregate boundary. Before an append could evict a
-required event, that boundary removes the dependent ecological row from the
-candidate state, increments `evictionCounts.observations` exactly and then
-allows normal causal compaction. If the last-observation or initialization
-boundary is itself about to leave, the candidate first records one exact
-bounded ecological retention boundary and refreshes both references. A later
-observation therefore never cites an event whose meaning is no longer
-available.
+## 6. Coordinated retention
 
-## 6. Death-record and compaction policy
+The row, required causal authorities and World receipt are bounded together.
+Before causal pressure would remove a required event, the aggregate candidate
+evicts the dependent ecological row and increments
+`evictionCounts.observations` exactly. Only then may the event leave. The
+receipt remains while either the row, its causal event or a saved checkpoint
+references it; once all such references are gone, Pebble removes it from World
+persistence.
 
-Schema 29 uses coordinated retention without adding another historical
-authority:
+The order is:
 
 ```text
-death finalized and full death record retained
--> personal observations remain retained
-
-full death record selected for compaction
--> all retained personal observations by that agent are evicted in the same
-   candidate transaction
--> ecological observation eviction count increases exactly
--> full death record may then become a compacted death summary
+row eviction
+-> lifetime total unchanged and eviction counter updated
+-> causal event released
+-> independent World-side receipt released
 ```
 
-Several rows from the same observer are removed together; rows from other
-observers remain unchanged. `totalObservationCount` remains the lifetime
-count. A retained observation whose only author evidence is a compacted death
-summary is invalid in schema 29, and honest runtime compaction cannot publish
-that state.
+Mortality compaction uses the same doctrine. Personal observations remain
+while the full death record is retained. Before that record becomes a compact
+summary, dependent rows are evicted atomically. Runtime cannot publish:
 
-The mandatory audit found one exact analogue in renewable agriculture. The
-immutable operational foundation of every retained plot (planner,
-registration, ecological source, plot/crop/storage identities and canonical
-cells) is covered by a canonical digest. Before an original source event can
-leave, the central append boundary emits one exact retained
-`agricultureInitialized` retention event carrying that digest and atomically
-refreshes the operational plot references. This permits bounded long-running
-production without trusting a dropped prefix.
+```text
+retained row + missing receipt
+retained row + missing exact causal authority
+retained deceased-observer row + compacted-summary-only authority
+duplicate receipt identity
+```
 
-Historical agriculture actions, skill events, source observations, managed
-surplus, renewal records and physical receipts are not summarized by that
-boundary. Their exact causal events remain pinned; an append that would evict
-one is refused atomically. Validators prove actor, tick, cell, material deltas
-and payload. A dropped-prefix sequence and compacted-summary-only actor
-evidence both fail closed. No broader historical-actor policy was changed.
+World receipt capacity is explicit and deterministic: 73,728 ecological
+receipts and 18,432 agricultural action receipts per World. Capacity failure
+refuses the candidate before any civilization publication.
 
-## 7. Atomicity
+## 7. Atomicity and rollback
 
-Ecological eviction, causal compaction, mortality compaction,
-compacted-summary creation and estate/death retention operate on the candidate
-aggregate. Bounds and historical agriculture dependencies are checked before
-publication. The candidate ecology, agriculture, mortality, estate and causal
-authorities are validated together before the aggregate is assigned.
+Receipt insertion/removal is tracked by a Pebble transaction until the
+civilization candidate and replay candidate both validate. Failures after
+receipt creation, causal append, row creation, candidate eviction, receipt
+counter update or cross-domain validation restore the prior receipt bytes and
+leave the published session unchanged.
 
-Injected failures after row removal, counter update, causal append and causal
-compaction prove byte-exact rollback of the observations, eviction counter,
-causal events, dropped count, rolling digest, mortality, estate and other
-aggregate authorities. No physical World mutation is introduced by this
-history-validation correction.
+The verified invariant is:
 
-## 8. Schema compatibility
+```text
+physical scan + World receipt + causal event + ecological row
+-> all published
+or
+-> none published
+```
 
-No schema increment is required. Schema 29 already persists the ecological
-record, population registration binding, retained mortality record and exact
-causal events needed for validation. The correction changes coordinated
-retention and validation, not the durable representation.
+Rollback tests compare durable session bytes, ecological counters, causal
+events, causal dropped count and rolling digest. Duplicate and full-capacity
+receipt paths leave no partial receipt. Receipt cleanup also protects all
+retained on-disk checkpoints for the same World.
 
-Schema 29 accepts active observers and observers who died after their
-observation while the exact death record remains retained. It refuses unknown
-observers, registration after observation, observation after death, invalid
-causal binding, every retained row missing its exact causal event or direct
-cause, arbitrary dropped-prefix registration/death IDs and
-compacted-summary-only authority. Older schemas retain their previous
-compatibility only where exact proof remains possible; otherwise restoration
-fails closed.
+## 8. Agriculture binding
 
-## 9. Fully re-signed corruptions
+Agricultural plot foundation and renewal records reference the exact source
+ecological receipt in addition to their causal source. Cross-store validation
+re-derives the source observation from the World-side receipt and checks the
+planner, source event, crop, cells, storage and renewal evidence.
 
-The adversarial fixtures recompute the modified observation digest,
-ecological state, causal event and rolling digest, agriculture foundation
-boundary and digest where applicable, mortality binding where
-applicable, checkpoint semantic digest, storage digest and manifest integrity
-digest. Semantic validation rejects:
+Pebble also persists the already-authoritative till, plant, maturity, harvest,
+transfer and renewal action outcomes as bounded World-side agricultural action
+receipts. Retained action rows must equal those receipts exactly. Planting or
+harvest receipt substitution, material-delta changes and source-observation
+receipt substitution fail cross-store reconciliation.
 
-- an unknown observer;
-- an active replacement whose causal actor does not match;
-- a child born after the observation;
-- an observer registered after the observation;
-- an observer already dead before the observation;
-- actor, subject, origin, tick or payload-digest corruption;
-- contradictory registration or death authority;
-- physical content, context, tick or observer replacement after the original
-  ecological event has left the ledger, even after every recalculable digest
-  is repaired;
-- arbitrary registration or death event IDs selected from the dropped causal
-  prefix;
-- a compacted observer reintroduced without a retained full death record.
+This adds no second agriculture journal or engine. Pebble's existing physical
+executors still perform and verify all World and material mutations; the new
+store persists their receipts outside the civilization checkpoint.
 
-The post-eviction fixtures first remove the legitimate row through causal
-pressure, then reintroduce a fully re-signed corruption without restoring its
-exact causal event. These refusals are semantic and do not rely on leaving an
-old checksum unrepaired.
+## 9. Coherent mutation tests
 
-The low-capacity campaign proves the retention matrix directly: an exact row
-and event restart successfully; pressure removes only rows whose required
-event is projected to leave; the lifetime observation total is unchanged and
-the eviction count increases by the exact removed-row count; an unaffected
-observer remains byte-identical; the event may then leave; and any artificial
-row reintroduction is rejected. Pressure against retained historical
-agriculture actions or receipts instead refuses the append and preserves its
-complete candidate state byte-for-byte.
+The focused fixtures recompute every recalculable bundle field: observation,
+causal event and rolling digests, ecological and agricultural durable digests,
+checkpoint semantic digest, storage digest and manifest integrity digest. The
+unchanged independent World-side receipt rejects:
 
-## 10. Two-process product campaign
+- combined physical-row and causal-event changes with dropped event count
+  equal to zero;
+- the same combined changes with a nonzero dropped prefix;
+- biome, origin, soil/crop content or physical World tick changes;
+- World context or dimension changes;
+- receipt substitution, absence, duplication or invalid digest;
+- receipt evidence from another World;
+- registration, death, actor, subject, tick, kind, origin or payload mismatch;
+- agricultural source-observation or physical-action receipt substitution.
+
+These are data-consistency refusals, not leftover checksum failures. Exact
+receipt evidence accepts active and deceased historical observers and remains
+byte-identical across repeated save/load.
+
+The low-capacity campaign proves that only the affected row is removed before
+its event, unrelated observers remain unchanged, counters are exact, the event
+then becomes evictable, and the receipt is finally released. Injected failures
+at each candidate boundary restore the complete prior state.
+
+## 10. Fresh two-process product campaign
 
 The reproducible runner is:
 
@@ -214,38 +269,39 @@ The reproducible runner is:
 scripts/verify-pebblelab-gate-d-ecological-observer-fix.sh
 ```
 
-Its final rendered campaign used World `wmsbnosi0cki2` and session
-`live-46-14-66--21`. Process 1 recorded normal observations, produced normal
-child `agent_3`, verified one supervision tick and an interrupted tick with no
-credit, finalized `agent_0` through mortality, preserved the physical asset in
-estate `estate-18506feb632c6b93`, and saved schema 29. Process 2 restored the
-same World and session, retained the same dead-observer observation and death
-record without recreating a dead probe, passed the Blocker 01 position
-reconciliation, advanced normally, settled the asset physically, and proved a
-second save/load.
-
-The decisive retained row was:
+Its final fresh run used:
 
 ```text
+World: wmsbu8ijg5vu1
+storage: sqlite-world:wmsbu8ijg5vu1
+session: live-46-14-66--21
 observer: agent_0
-sequence: 34
+observation sequence: 34
 observation tick: 9
-registration event: live-46-14-66--21/event-00000000000000000012
 observation event: live-46-14-66--21/event-00000000000000000231
+receipt: eco-c504ba4efee1d7232a19a9cb8e22bdd750bb6dde
+observation digest: 7bcbc4ab8f949942
+receipt digest: 59d6a5f8befae53640900a3552431d22aca6546d175fd11ea12d8d0ec42e8fc1
+death: death-agent_0-t24-3cfeb0b74c40c179
 death event: live-46-14-66--21/event-00000000000000000554
-death ID: death-agent_0-t24-3cfeb0b74c40c179
-death tick: 24
-classification: deceasedAfterObservationRetained
-digest before/after restart: fae65b79ac2d596c / fae65b79ac2d596c
-ecological state digest before/after: 517c97280ceef2ef / 517c97280ceef2ef
+estate: estate-18506feb632c6b93
+checkpoint schema: 30
 ```
 
-Final campaign accounting:
+Process 1 created the receipt from a real World scan, produced normal child
+`agent_3`, verified supervision and interruption accounting, finalized
+`agent_0` through mortality, preserved its physical asset in the open estate
+and saved schema 30. Process 2 restored the same World and session, validated
+the same independent receipt before publication, kept `agent_0` dead without
+recreating its probe, passed the Blocker 01 position reconciliation, continued
+normally, settled the asset physically and completed repeated save/load.
+
+Final accounting:
 
 ```text
 physical quantity: 1 / 1 / 1 / 1
-active agent_0 observer count: 0
-dead agent_0 probe count: 0
+active dead-observer count: 0
+dead-observer probe count: 0
 position mismatch after load: 0
 duplication count: 0
 Observer mutation count: 0
@@ -253,63 +309,55 @@ runtime errors: 0
 cleanup: exact
 ```
 
-Four rendered captures were opened individually and inspected at native
-resolution: live observation and G1 care; retained history with open estate;
-the same history after process restart; and the settled estate with continued
-family and renewable state. The images are evidence of the rendered World;
-the precise historical ordering remains digest-bound textual evidence.
+Four 3024×1898 rendered captures were opened individually at native
+resolution. They show G1 care before death, historical observation with an
+open estate, the same state after process restart, and the settled estate.
 
-## 11. Focused and repository validation
+## 11. Validation
 
 The final focused runs on the exact product diff reported:
 
 | Suite | Passed | Failed |
 | --- | ---: | ---: |
-| ecological observation | 55 | 0 |
+| ecological observation | 68 | 0 |
+| agriculture | 48 | 0 |
+| renewable subsistence | 19 | 0 |
 | mortality | 93 | 0 |
 | estates/inheritance/succession | 84 | 0 |
 | checkpoint/replay | 49 | 0 |
 | persistence/reconciliation | 18 | 0 |
-| population/migration | 66 | 0 |
-| lifecycle | 80 | 0 |
-| genetics/development | 45 | 0 |
-| childhood/guardianship | 62 | 0 |
-| dependent care | 55 | 0 |
-| unions/family/lineages/houses | 83 | 0 |
-| agriculture | 44 | 0 |
-| renewable subsistence | 19 | 0 |
 | Material Rights | 21 | 0 |
 | Observer | 20 | 0 |
-| **Total** | **794** | **0** |
+| **Total** | **420** | **0** |
 
-The supplemental 900-tick `work-demand-refresh` stress reported `26 passed, 0
-failed`; the bounded ledger retained 64 events while dropping 8,751 and kept
-the three work demands stable. The canonical repository gate reported `3702
-passed, 0 failed` and all `35/35` steps. The published Blocker 01 runner also
-passed on the corrected product with three mismatches before load, zero after
-load, zero probe or item duplication, zero Observer mutation, zero runtime
-error and exact cleanup.
+Schema-30 regressions additionally passed `livestock` 40/0, wild subsistence
+47/0 and work-demand-refresh 26/0. The canonical repository gate reported:
+
+```text
+3719 passed, 0 failed
+35/35 steps
+exit 0
+```
+
+The final Blocker 01 regression reported three position mismatches before
+load, zero afterward, zero probe or physical-item duplication, zero Observer
+mutation, zero runtime error and exact cleanup.
 
 ## 12. Limits
 
-- This correction proves only the historical ecological-observer blocker. It
-  is not an independent Gate D evaluation.
-- A compacted death summary does not authorize a retained personal ecological
-  observation in schema 29; coordinated compaction evicts that row first.
-- A retained ecological row cannot outlive its exact record event, direct
-  cause, registration/birth authority or retained death event. Causal pressure
-  evicts the row first; lifetime totals remain monotonic.
-- Immutable agriculture plot foundations may move to an exact, digest-bound
-  causal retention boundary before their source event leaves. Historical
-  action, skill, renewal, surplus and physical-receipt evidence remains exact;
-  causal-capacity exhaustion refuses the candidate append atomically rather
-  than weakening or silently discarding it.
+- This correction proves only Gate D Blocker 02. It is not an independent Gate
+  D evaluation.
+- Legacy schema 29 checkpoints with retained observations or plots lack the
+  independent receipt reference and fail closed.
 - Personal observations are not inherited, shared knowledge or current
   instructions.
-- No new unbounded history, second mortality authority, physical engine,
-  estate rule or Observer mutation path is added.
-- Gate D's complete generational contract must still be evaluated from a
-  published corrected product HEAD by a new independent Evaluation 03.
+- Receipt retention is bounded. When required evidence cannot be retained,
+  the candidate operation is refused or the dependent row is evicted before
+  proof loss.
+- The World receipt store is physical evidence, not inventory, cognition,
+  social state or a second ecology/agriculture engine.
+- Gate D's full generational contract still requires a new independent
+  Evaluation 03 from the published corrected product.
 
 ## 13. Program status
 

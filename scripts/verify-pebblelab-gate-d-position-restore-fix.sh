@@ -31,7 +31,7 @@ reject_trace() {
 
 if [ "${1:-}" = "--dry-run" ]; then
     printf 'Gate D Blocker 01 position-restore correction (dry run)\n'
-    printf '  Process 1: normal G1 birth, physical care/movement, schema-29 save.\n'
+    printf '  Process 1: normal G1 birth, physical care/movement, schema-30 save.\n'
     printf '  Process 2: fresh bootstrap, fail-closed custody/duplicate checks,\n'
     printf '             injected rollback checks, verified reposition + missing G1 restore.\n'
     printf '  Scope: blocker correction only; this runner does not evaluate Gate D.\n'
@@ -63,7 +63,7 @@ BOOTSTRAP_CAPTURE="$EVIDENCE_ROOT/fresh-bootstrap-before-load.png"
 RESTORE_CAPTURE="$EVIDENCE_ROOT/restored-g0-g1-after-load.png"
 MATRIX="$EVIDENCE_ROOT/position-matrix.tsv"
 COMPACT_TRACE="$EVIDENCE_ROOT/compact-trace.log"
-MANIFEST_COPY="$EVIDENCE_ROOT/schema-29-manifest.json"
+MANIFEST_COPY="$EVIDENCE_ROOT/schema-30-manifest.json"
 BUILD_CONFIGURATION=${PEBBLELAB_GATE_D_POSITION_BUILD_CONFIGURATION:-release}
 case "$BUILD_CONFIGURATION" in
     debug|release) ;;
@@ -154,7 +154,7 @@ require_trace "$PROCESS1_TRACE" \
     'interruption gives no supervision credit'
 require_trace "$PROCESS1_TRACE" \
     'checkpoint saved name=gate-d-position .*tick=8 .*manifestIntegrity=v1:[0-9a-f]{64} .*restartSafe=1 .*mutation=none' \
-    'schema-29 checkpoint saved from coherent physical positions'
+    'schema-30 checkpoint saved from coherent physical positions'
 require_trace "$PROCESS1_TRACE" \
     'summary .*agents=4 .*runtimeErrors=0 .*probesRemoved=4 ' \
     'first process exact probe cleanup'
@@ -166,9 +166,9 @@ reject_trace "$PROCESS1_TRACE" \
 PERSISTENCE_ROOT="$SESSION_HOME/Library/Application Support/Pebble/PebbleLabAgents"
 MANIFEST=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f \
     -path '*/checkpoints/gate-d-position/manifest.json' -print -quit)
-[ -n "$MANIFEST" ] || fail "schema-29 manifest missing"
-/usr/bin/grep -q '"schemaVersion":29' "$MANIFEST" \
-    || fail "checkpoint manifest is not schema 29"
+[ -n "$MANIFEST" ] || fail "schema-30 manifest missing"
+/usr/bin/grep -q '"schemaVersion":30' "$MANIFEST" \
+    || fail "checkpoint manifest is not schema 30"
 /usr/bin/grep -Eq '"manifestIntegrityDigest":"[0-9a-f]{64}"' "$MANIFEST" \
     || fail "manifest integrity digest missing"
 /bin/cp "$MANIFEST" "$MANIFEST_COPY"

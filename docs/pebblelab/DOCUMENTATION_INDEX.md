@@ -59,8 +59,10 @@ The `CIV-33` completion is published on the canonical branch at
 milestone is published in baseline
 `47104f70894b20e7d7db0042cb93f047540c336d`. Gate D Blocker 01 is fixed and
 published in baseline `6d114abb98aee652e44fe9a81c3bab47b72ff698`. Gate D
-remains not evaluated; after publication of the targeted Blocker 02 fix,
-independent Evaluation 03 is required.
+remains not evaluated. The Blocker 02 local review candidate uses checkpoint
+schema 30 to reconcile retained ecological history with bounded independent
+World-side receipts; after its publication, independent Evaluation 03 is
+required.
 
 ## Operational
 
