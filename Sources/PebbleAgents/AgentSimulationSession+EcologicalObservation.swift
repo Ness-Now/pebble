@@ -1,3 +1,5 @@
+import Foundation
+
 extension AgentSimulationSession {
     public var ecologicalObservationEnabled: Bool { ecologicalObservationState != nil }
 
@@ -24,7 +26,11 @@ extension AgentSimulationSession {
             "bounds=\(state.configuration.radius),\(state.configuration.verticalRadius),\(state.configuration.maximumCellsPerScan),\(state.configuration.maximumChunksPerScan),\(state.configuration.maximumEntitiesPerScan),\(state.configuration.maximumResultsPerScan),\(state.configuration.maximumWorldReadsPerScan),\(state.configuration.maximumScansPerSimulationTick)",
             "retention=\(state.configuration.maximumRetainedObservations),\(state.configuration.maximumRetainedObservationsPerAgent)",
             "freshness=\(state.configuration.dynamicFreshnessTicks),\(state.configuration.waterSoilFreshnessTicks),\(state.configuration.biomeFreshnessTicks)",
-            records.map { "r|\($0.sequence)|\($0.observation.digest)|\($0.causalEventID.rawValue)" }.joined(separator: ";"),
+            records.map {
+                "r|\($0.sequence)|\($0.observation.digest)|"
+                    + "\($0.causalEventID.rawValue)|"
+                    + "\($0.physicalObservationReceiptID?.rawValue ?? "none")"
+            }.joined(separator: ";"),
             "totals=\(state.totalObservationCount),\(state.evictionCounts.observations)",
             "events=\(state.initializedEventID.rawValue),\(state.lastObservationEventID.rawValue)",
         ].joined(separator: "|")
@@ -80,6 +86,127 @@ extension AgentSimulationSession {
         )
     }
 
+    /// Reconciles retained Civilization rows with receipts read from Pebble's
+    /// independent World-side store. The evidence is an input to validation;
+    /// it is deliberately absent from the Agent checkpoint bytes.
+    public func validateIndependentEcologicalObservationReceipts(
+        _ evidence: [AgentEcologicalPhysicalReceiptEvidence],
+        worldID: String,
+        storageIdentity: String,
+        dimension: Int
+    ) throws {
+        let receiptIDs = evidence.map(\.receiptID)
+        guard receiptIDs.count == Set(receiptIDs).count else {
+            throw AgentSessionError.ecologicalObservation(
+                .invalidState("duplicate independent physical receipt")
+            )
+        }
+        let byID = Dictionary(uniqueKeysWithValues: evidence.map {
+            ($0.receiptID, $0)
+        })
+        let ecologicalIDs = (ecologicalObservationState?.observations ?? [])
+            .compactMap(\.physicalObservationReceiptID)
+        let agricultureIDs = (agricultureState?.plots ?? [])
+            .compactMap(\.sourceObservationReceiptID)
+            + (agricultureState?.plots ?? []).compactMap {
+                $0.renewalEvidence?.sourceObservationReceiptID
+            }
+        let requiredIDs = Set(ecologicalIDs + agricultureIDs)
+        guard Set(receiptIDs) == requiredIDs,
+              evidence.allSatisfy({ receipt in
+                  receipt.version
+                    == AgentEcologicalPhysicalReceiptEvidence.currentVersion
+                    && receipt.hasValidDigest
+                    && receipt.operationID == receipt.receiptID.rawValue
+                    && receipt.worldID == worldID
+                    && receipt.storageIdentity == storageIdentity
+                    && receipt.dimension == dimension
+                    && receipt.simulationID == simulationID
+                    && receipt.observation.hasValidDigest()
+              }) else {
+            throw AgentSessionError.ecologicalObservation(
+                .invalidState("independent physical receipt set")
+            )
+        }
+        for record in ecologicalObservationState?.observations ?? [] {
+            guard let receiptID = record.physicalObservationReceiptID,
+                  let receipt = byID[receiptID] else {
+                throw AgentSessionError.ecologicalObservation(
+                    .invalidState("independent physical receipt unavailable")
+                )
+            }
+            let observation = record.observation
+            guard receipt.dimensionKey == observation.dimensionKey,
+                  receipt.observerID == observation.observerID,
+                  receipt.physicalWorldTick == observation.physicalWorldTick,
+                  receipt.simulationID == simulationID,
+                  receipt.simulationTick
+                    == observation.observedAtSimulationTick,
+                  receipt.origin == observation.origin,
+                  receipt.observation == observation,
+                  receipt.resultCount
+                    == observation.diagnostics.resultsEmitted,
+                  receipt.worldReadCount
+                    == observation.diagnostics.worldReads else {
+                throw AgentSessionError.ecologicalObservation(
+                    .invalidState(
+                        "independent physical receipt mismatch "
+                            + receiptID.rawValue
+                    )
+                )
+            }
+        }
+        for plot in agricultureState?.plots ?? [] {
+            guard let receiptID = plot.sourceObservationReceiptID,
+                  let receipt = byID[receiptID],
+                  receipt.observerID == plot.plannerID,
+                  receipt.simulationTick
+                    == plot.plannedCivilDate.simulationTick,
+                  plot.cells.allSatisfy({ cell in
+                      receipt.observation.soils.contains { soil in
+                          soil.position == cell.position
+                              && (soil.tillable || soil.alreadyFarmland)
+                      }
+                  }),
+                  plot.cells.allSatisfy({ cell in
+                      receipt.observation.water.contains { source in
+                          abs(source.position.x - cell.position.x) <= 4
+                              && abs(source.position.z - cell.position.z) <= 4
+                              && (0...1).contains(
+                                source.position.y - cell.position.y
+                              )
+                      }
+                  }) else {
+                throw AgentSessionError.ecologicalObservation(
+                    .invalidState(
+                        "agriculture source physical receipt mismatch "
+                            + plot.plotID.rawValue
+                    )
+                )
+            }
+            if let renewal = plot.renewalEvidence {
+                guard let renewalReceiptID = renewal.sourceObservationReceiptID,
+                      let renewalReceipt = byID[renewalReceiptID],
+                      renewalReceipt.observerID == plot.plannerID,
+                      renewalReceipt.simulationTick == renewal.reservedAtTick,
+                      plot.cells.allSatisfy({ cell in
+                          renewalReceipt.observation.soils.contains { soil in
+                              soil.position == cell.position
+                                  && soil.alreadyFarmland
+                                  && soil.supportsCrop
+                          }
+                      }) else {
+                    throw AgentSessionError.ecologicalObservation(
+                        .invalidState(
+                            "agriculture renewal physical receipt mismatch "
+                                + plot.plotID.rawValue
+                        )
+                    )
+                }
+            }
+        }
+    }
+
     public func nearestObservedWater(for observerID: AgentID) -> [AgentWaterAffordance] {
         guard let latest = ecologicalObservations(for: observerID).first?.observation else { return [] }
         return latest.water.sorted {
@@ -126,6 +253,7 @@ extension AgentSimulationSession {
                 kind: .ecologicalObservationInitialized,
                 payload: .ecologicalObservation(
                     observerID: nil, worldContextKey: nil, dimensionKey: nil,
+                    physicalReceiptID: nil,
                     resultCount: 0, worldReads: 0, truncated: false,
                     status: "initialized", digest: AgentEcologicalObservationDigest.make("empty")
                 ),
@@ -150,15 +278,37 @@ extension AgentSimulationSession {
     public mutating func recordEcologicalObservation(
         _ observation: AgentEcologicalObservation
     ) throws -> AgentEcologicalObservationRecord {
+        let ordinal = (ecologicalObservationState?.totalObservationCount ?? 0) + 1
+        let source = "unbound-physical-receipt|\(simulationID.rawValue)|"
+            + "\(ordinal)|\(observation.digest)"
+        let digest = AgentCheckpointDigest.sha256(Data(source.utf8))
+        let receiptID = AgentPhysicalObservationReceiptID(
+            rawValue: "unbound-\(digest.rawValue.prefix(40))"
+        )!
+        return try recordEcologicalObservation(
+            observation,
+            physicalReceiptID: receiptID
+        )
+    }
+
+    @discardableResult
+    public mutating func recordEcologicalObservation(
+        _ observation: AgentEcologicalObservation,
+        physicalReceiptID: AgentPhysicalObservationReceiptID
+    ) throws -> AgentEcologicalObservationRecord {
         var candidate = self
-        let record = try candidate.recordEcologicalObservationInPlace(observation)
+        let record = try candidate.recordEcologicalObservationInPlace(
+            observation,
+            physicalReceiptID: physicalReceiptID
+        )
         try candidate.validateEcologicalObservationStateIfEnabled()
         self = candidate
         return record
     }
 
     private mutating func recordEcologicalObservationInPlace(
-        _ observation: AgentEcologicalObservation
+        _ observation: AgentEcologicalObservation,
+        physicalReceiptID: AgentPhysicalObservationReceiptID
     ) throws -> AgentEcologicalObservationRecord {
         guard var state = ecologicalObservationState else {
             throw AgentSessionError.ecologicalObservation(.disabled)
@@ -220,11 +370,15 @@ extension AgentSimulationSession {
             kind: .ecologicalObservationRecorded,
             actorID: observation.observerID,
             subjectID: observation.observerID,
+            operationID: AgentOperationID(
+                rawValue: physicalReceiptID.rawValue
+            ),
             causes: [state.lastObservationEventID],
             payload: .ecologicalObservation(
                 observerID: observation.observerID.rawValue,
                 worldContextKey: observation.worldContextKey,
                 dimensionKey: observation.dimensionKey,
+                physicalReceiptID: physicalReceiptID.rawValue,
                 resultCount: resultCount,
                 worldReads: diagnostics.worldReads,
                 truncated: diagnostics.completion != .complete,
@@ -233,7 +387,9 @@ extension AgentSimulationSession {
             summary: "ecological observation recorded observer=\(observation.observerID.rawValue) results=\(resultCount)"
         )
         let record = AgentEcologicalObservationRecord(
-            sequence: sequence, observation: observation, causalEventID: event.eventID
+            sequence: sequence, observation: observation,
+            causalEventID: event.eventID,
+            physicalObservationReceiptID: physicalReceiptID
         )
         state.observations.append(record)
         state.totalObservationCount = sequence
@@ -321,13 +477,15 @@ extension AgentSimulationSession {
         kind: AgentCausalEventKind,
         actorID: AgentID? = nil,
         subjectID: AgentID? = nil,
+        operationID: AgentOperationID? = nil,
         causes: [AgentCausalEventID] = [],
         payload: AgentCausalPayload,
         summary: String
     ) throws -> AgentCausalEvent {
         guard let event = try recordCausalEvent(
             kind: kind, origin: .ecologicalObservationTransition,
-            actorID: actorID, subjectID: subjectID, causes: causes,
+            actorID: actorID, subjectID: subjectID,
+            operationID: operationID, causes: causes,
             payload: payload, summary: summary
         ) else {
             throw AgentSessionError.ecologicalObservation(.causalLedgerRequired)
@@ -499,12 +657,13 @@ func validateEcologicalObservationState(
               event.operationID == nil,
               event.causes.isEmpty,
               case let .ecologicalObservation(
-                  observer, world, dimension, results, reads, truncated,
-                  status, digest
+                  observer, world, dimension, receiptID, results, reads,
+                  truncated, status, digest
               ) = event.payload else {
             return false
         }
         return observer == nil && world == nil && dimension == nil
+            && receiptID == nil
             && results >= 0 && reads == 0 && !truncated
             && ["initialized", "retentionBoundary"].contains(status)
             && digest.utf8.count == 16
@@ -603,7 +762,8 @@ func validateEcologicalObservationState(
               event.origin == .ecologicalObservationTransition,
               event.actorID == observation.observerID,
               event.subjectID == observation.observerID,
-              event.operationID == nil,
+              event.operationID?.rawValue
+                == record.physicalObservationReceiptID?.rawValue,
               event.simulationTick.rawValue
                 == observation.observedAtSimulationTick,
               event.causes.count == 1,
@@ -619,6 +779,8 @@ func validateEcologicalObservationState(
                   observerID: observation.observerID.rawValue,
                   worldContextKey: observation.worldContextKey,
                   dimensionKey: observation.dimensionKey,
+                  physicalReceiptID:
+                    record.physicalObservationReceiptID?.rawValue,
                   resultCount: resultCount,
                   worldReads: diagnostics.worldReads,
                   truncated: diagnostics.completion != .complete,

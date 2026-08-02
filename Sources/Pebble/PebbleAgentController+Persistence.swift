@@ -326,6 +326,12 @@ extension PebbleAgentController {
                     snapshot: checkpointSnapshot,
                     world: world
                 )
+                if session.ecologicalObservationEnabled {
+                    try validateWorldEcologicalObservationReceipts(
+                        for: session,
+                        dimension: world.dim.rawValue
+                    )
+                }
                 let checkpoint = try session.makeCheckpoint()
                 let bytes = try AgentCheckpointCodec.encode(checkpoint)
                 let binding = try worldBinding(
@@ -748,6 +754,12 @@ extension PebbleAgentController {
             store: store
         )
         var candidate = try AgentSimulationSession.restoring(stored.checkpoint)
+        if candidate.ecologicalObservationEnabled {
+            try validateWorldEcologicalObservationReceipts(
+                for: candidate,
+                dimension: world.dim.rawValue
+            )
+        }
         if candidate.persistenceReconciliationEnabled
             && !persistenceReconciliationFeatureEnabled {
             return failure(

@@ -4,6 +4,7 @@
 //   chunks(world, dim, cx, cz, data BLOB)   — modified chunks (VCK1 binary)
 //   player(world, json)                     — player snapshot per world
 //   advancements(world, json)               — earned advancement ids per world
+//   world_receipts(world, kind, receiptID)  — bounded physical-boundary evidence
 // Legacy installs stored loose files under saves/; they are imported once on
 // first open and the old folder is kept as saves-legacy-backup. Chunk records
 // keep the VCK1 container (binary blocks + JSON tail); entity-only records
@@ -134,6 +135,11 @@ public final class SaveDB {
         """)
         exec("CREATE TABLE IF NOT EXISTS player(world TEXT PRIMARY KEY, json TEXT NOT NULL)")
         exec("CREATE TABLE IF NOT EXISTS advancements(world TEXT PRIMARY KEY, json TEXT NOT NULL)")
+        exec("""
+        CREATE TABLE IF NOT EXISTS world_receipts(
+            world TEXT NOT NULL, kind TEXT NOT NULL, receiptID TEXT NOT NULL,
+            data BLOB NOT NULL, PRIMARY KEY(world, kind, receiptID)) WITHOUT ROWID
+        """)
         migrateLegacySaves()
     }
 
@@ -174,8 +180,23 @@ public final class SaveDB {
     private func bindText(_ stmt: OpaquePointer, _ idx: Int32, _ s: String) {
         sqlite3_bind_text(stmt, idx, s, -1, SQLITE_TRANSIENT)
     }
+    private func bindData(_ stmt: OpaquePointer, _ idx: Int32, _ data: Data) {
+        _ = data.withUnsafeBytes { bytes in
+            sqlite3_bind_blob(
+                stmt, idx, bytes.baseAddress, Int32(bytes.count),
+                SQLITE_TRANSIENT
+            )
+        }
+    }
     private func columnText(_ stmt: OpaquePointer, _ idx: Int32) -> String? {
         sqlite3_column_text(stmt, idx).map { String(cString: $0) }
+    }
+    private func columnData(_ stmt: OpaquePointer, _ idx: Int32) -> Data? {
+        guard let bytes = sqlite3_column_blob(stmt, idx) else { return nil }
+        return Data(
+            bytes: bytes,
+            count: Int(sqlite3_column_bytes(stmt, idx))
+        )
     }
 
     // ---- worlds ---------------------------------------------------------------
@@ -208,11 +229,107 @@ public final class SaveDB {
     }
     public func deleteWorld(_ id: String) {
         exec("BEGIN")
-        for table in ["worlds", "chunks", "player", "advancements"] {
+        for table in [
+            "worlds", "chunks", "player", "advancements", "world_receipts",
+        ] {
             let col = table == "worlds" ? "id" : "world"
             run("DELETE FROM \(table) WHERE \(col)=?", bind: { self.bindText($0, 1, id) })
         }
         exec("COMMIT")
+    }
+
+    // ---- World-side physical receipts ---------------------------------------
+
+    /// Inserts immutable physical-boundary evidence. `false` means the row was
+    /// not inserted (invalid input, duplicate identity, or storage failure).
+    /// Callers own bounded retention and cross-authority rollback.
+    @discardableResult
+    public func putWorldReceiptIfAbsent(
+        worldID: String,
+        kind: String,
+        receiptID: String,
+        data: Data
+    ) -> Bool {
+        guard (1...240).contains(worldID.count),
+              (1...64).contains(kind.count),
+              (1...160).contains(receiptID.count),
+              !data.isEmpty, data.count <= 1_048_576,
+              [worldID, kind, receiptID].allSatisfy({ value in
+                  value.allSatisfy { $0.isASCII && !$0.isNewline }
+              }),
+              getWorldReceipt(
+                worldID: worldID, kind: kind, receiptID: receiptID
+              ) == nil else {
+            return false
+        }
+        let ok = run(
+            "INSERT OR IGNORE INTO world_receipts(world,kind,receiptID,data) "
+                + "VALUES(?,?,?,?)",
+            bind: { statement in
+                self.bindText(statement, 1, worldID)
+                self.bindText(statement, 2, kind)
+                self.bindText(statement, 3, receiptID)
+                self.bindData(statement, 4, data)
+            }
+        )
+        return ok && sqlite3_changes(db) == 1
+    }
+
+    public func getWorldReceipt(
+        worldID: String,
+        kind: String,
+        receiptID: String
+    ) -> Data? {
+        var value: Data?
+        _ = run(
+            "SELECT data FROM world_receipts WHERE world=? AND kind=? "
+                + "AND receiptID=?",
+            bind: { statement in
+                self.bindText(statement, 1, worldID)
+                self.bindText(statement, 2, kind)
+                self.bindText(statement, 3, receiptID)
+            },
+            row: { statement in value = self.columnData(statement, 0) }
+        )
+        return value
+    }
+
+    public func listWorldReceipts(
+        worldID: String,
+        kind: String
+    ) -> [(receiptID: String, data: Data)] {
+        var values: [(String, Data)] = []
+        _ = run(
+            "SELECT receiptID,data FROM world_receipts WHERE world=? "
+                + "AND kind=? ORDER BY receiptID",
+            bind: { statement in
+                self.bindText(statement, 1, worldID)
+                self.bindText(statement, 2, kind)
+            },
+            row: { statement in
+                guard let receiptID = self.columnText(statement, 0),
+                      let data = self.columnData(statement, 1) else { return }
+                values.append((receiptID, data))
+            }
+        )
+        return values
+    }
+
+    @discardableResult
+    public func deleteWorldReceipt(
+        worldID: String,
+        kind: String,
+        receiptID: String
+    ) -> Bool {
+        let ok = run(
+            "DELETE FROM world_receipts WHERE world=? AND kind=? AND receiptID=?",
+            bind: { statement in
+                self.bindText(statement, 1, worldID)
+                self.bindText(statement, 2, kind)
+                self.bindText(statement, 3, receiptID)
+            }
+        )
+        return ok && sqlite3_changes(db) == 1
     }
 
     // ---- chunks ---------------------------------------------------------------

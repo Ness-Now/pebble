@@ -231,7 +231,11 @@ extension PebbleAgentController {
             occupiedPositions: agricultureOccupiedPositions(),
             materialGateway: materialCustodyGateway,
             physicalGateway: physicalActionGateway, actionID: tillID,
-            publishAndVerify: { try session.recordAgriculturalActionSuccess($0) }
+            publishAndVerify: {
+                try publishVerifiedAgriculturalAction(
+                    $0, world: world, session: &session
+                )
+            }
         )
         guard let plantIntent = session.nextAgriculturalIntent(for: actorID),
               plantIntent.kind == .plant, plantIntent.crop == .carrots else {
@@ -244,7 +248,11 @@ extension PebbleAgentController {
             occupiedPositions: agricultureOccupiedPositions(),
             materialGateway: materialCustodyGateway,
             physicalGateway: physicalActionGateway, actionID: plantID,
-            publishAndVerify: { try session.recordAgriculturalActionSuccess($0) }
+            publishAndVerify: {
+                try publishVerifiedAgriculturalAction(
+                    $0, world: world, session: &session
+                )
+            }
         )
         let cropCell = world.getBlock(cell.position.x, cell.position.y + 1, cell.position.z)
         guard cropCell == Int(PebbleCore.cell(B.carrots, 0)),
@@ -309,7 +317,11 @@ extension PebbleAgentController {
             observationEventID: observation.causalEventID,
             observedCrop: crop, civilDate: try renewableCivilDate(session),
             actionID: maturityID,
-            publish: { try session.recordAgriculturalActionSuccess($0) }
+            publish: {
+                try publishVerifiedAgriculturalAction(
+                    $0, world: world, session: &session
+                )
+            }
         )
         guard let harvestIntent = session.nextAgriculturalIntent(for: actorID),
               harvestIntent.kind == .harvest else {
@@ -324,7 +336,11 @@ extension PebbleAgentController {
             occupiedPositions: agricultureOccupiedPositions(),
             materialGateway: materialCustodyGateway,
             physicalGateway: physicalActionGateway, actionID: harvestID,
-            publishAndVerify: { try session.recordAgriculturalActionSuccess($0) }
+            publishAndVerify: {
+                try publishVerifiedAgriculturalAction(
+                    $0, world: world, session: &session
+                )
+            }
         )
         let output = harvested.action.outcome.materialDeltas.filter {
             $0.direction == .acquired && $0.itemKey == "carrot"
@@ -418,7 +434,11 @@ extension PebbleAgentController {
             container: container, civilDate: try renewableCivilDate(session),
             seedReserveTarget: 1, retainedSeedQuantity: 1,
             materialGateway: materialCustodyGateway, actionID: storeID,
-            publishAndVerify: { try session.recordAgriculturalActionSuccess($0) }
+            publishAndVerify: {
+                try publishVerifiedAgriculturalAction(
+                    $0, world: world, session: &session
+                )
+            }
         )
         guard agricultureItemCount("carrot", in: probe.carriedItems) == 1,
               agricultureItemCount("carrot", in: container.items ?? []) == countBefore - 2,
@@ -455,7 +475,11 @@ extension PebbleAgentController {
             occupiedPositions: agricultureOccupiedPositions(),
             materialGateway: materialCustodyGateway,
             physicalGateway: physicalActionGateway, actionID: secondPlantID,
-            publishAndVerify: { try session.recordAgriculturalActionSuccess($0) }
+            publishAndVerify: {
+                try publishVerifiedAgriculturalAction(
+                    $0, world: world, session: &session
+                )
+            }
         )
         guard agricultureItemCount("carrot", in: probe.carriedItems) == 0,
               world.getBlock(cell.position.x, cell.position.y + 1, cell.position.z)
@@ -532,7 +556,11 @@ extension PebbleAgentController {
             container: container, civilDate: try renewableCivilDate(session),
             seedReserveTarget: 1, retainedSeedQuantity: 1,
             materialGateway: materialCustodyGateway, actionID: storeID,
-            publishAndVerify: { try session.recordAgriculturalActionSuccess($0) }
+            publishAndVerify: {
+                try publishVerifiedAgriculturalAction(
+                    $0, world: world, session: &session
+                )
+            }
         )
         guard agricultureItemCount("carrot", in: probe.carriedItems) == 1,
               agricultureItemCount("carrot", in: container.items ?? []) >= output else {

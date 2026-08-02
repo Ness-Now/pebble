@@ -1,3 +1,5 @@
+import Foundation
+
 public enum AgentEcologicalObservationError: Error, Equatable, CustomStringConvertible {
     case invalidConfiguration(String)
     case causalLedgerRequired
@@ -594,19 +596,169 @@ public struct AgentEcologicalObservationConfiguration: Codable, Equatable, Senda
     public static let live = try! AgentEcologicalObservationConfiguration()
 }
 
+public struct AgentPhysicalObservationReceiptID: RawRepresentable, Codable,
+    Hashable, Comparable, Sendable {
+    public let rawValue: String
+
+    public init?(rawValue: String) {
+        guard (1...160).contains(rawValue.count),
+              rawValue.allSatisfy({
+                  $0.isASCII
+                      && ($0.isLetter || $0.isNumber || "-_.:".contains($0))
+              }) else {
+            return nil
+        }
+        self.rawValue = rawValue
+    }
+
+    public static func < (
+        lhs: AgentPhysicalObservationReceiptID,
+        rhs: AgentPhysicalObservationReceiptID
+    ) -> Bool {
+        lhs.rawValue < rhs.rawValue
+    }
+}
+
+/// A read-only projection supplied by Pebble from the World-side receipt
+/// journal. It is never encoded in an Agent checkpoint. The receipt digest
+/// covers the canonical projection, while the full normalized observation
+/// lets cross-store validation rederive agricultural foundations.
+public struct AgentEcologicalPhysicalReceiptEvidence: Equatable, Sendable {
+    public static let currentVersion = 1
+
+    public let version: Int
+    public let receiptID: AgentPhysicalObservationReceiptID
+    public let operationID: String
+    public let observerID: AgentID
+    public let worldID: String
+    public let storageIdentity: String
+    public let dimension: Int
+    public let dimensionKey: String
+    public let physicalWorldTick: Int
+    public let simulationID: AgentSimulationID
+    public let simulationTick: Int
+    public let origin: AgentPosition
+    public let observation: AgentEcologicalObservation
+    public let resultCount: Int
+    public let worldReadCount: Int
+    public let receiptDigest: AgentCheckpointDigest
+
+    public init(
+        version: Int = currentVersion,
+        receiptID: AgentPhysicalObservationReceiptID,
+        operationID: String,
+        observerID: AgentID,
+        worldID: String,
+        storageIdentity: String,
+        dimension: Int,
+        dimensionKey: String,
+        physicalWorldTick: Int,
+        simulationID: AgentSimulationID,
+        simulationTick: Int,
+        origin: AgentPosition,
+        observation: AgentEcologicalObservation,
+        resultCount: Int,
+        worldReadCount: Int,
+        receiptDigest: AgentCheckpointDigest? = nil
+    ) {
+        self.version = version
+        self.receiptID = receiptID
+        self.operationID = operationID
+        self.observerID = observerID
+        self.worldID = worldID
+        self.storageIdentity = storageIdentity
+        self.dimension = dimension
+        self.dimensionKey = dimensionKey
+        self.physicalWorldTick = physicalWorldTick
+        self.simulationID = simulationID
+        self.simulationTick = simulationTick
+        self.origin = origin
+        self.observation = observation
+        self.resultCount = resultCount
+        self.worldReadCount = worldReadCount
+        self.receiptDigest = receiptDigest ?? Self.digest(
+            version: version,
+            receiptID: receiptID,
+            operationID: operationID,
+            observerID: observerID,
+            worldID: worldID,
+            storageIdentity: storageIdentity,
+            dimension: dimension,
+            dimensionKey: dimensionKey,
+            physicalWorldTick: physicalWorldTick,
+            simulationID: simulationID,
+            simulationTick: simulationTick,
+            origin: origin,
+            observation: observation,
+            resultCount: resultCount,
+            worldReadCount: worldReadCount
+        )
+    }
+
+    public var hasValidDigest: Bool {
+        receiptDigest == Self.digest(
+            version: version,
+            receiptID: receiptID,
+            operationID: operationID,
+            observerID: observerID,
+            worldID: worldID,
+            storageIdentity: storageIdentity,
+            dimension: dimension,
+            dimensionKey: dimensionKey,
+            physicalWorldTick: physicalWorldTick,
+            simulationID: simulationID,
+            simulationTick: simulationTick,
+            origin: origin,
+            observation: observation,
+            resultCount: resultCount,
+            worldReadCount: worldReadCount
+        )
+    }
+
+    private static func digest(
+        version: Int,
+        receiptID: AgentPhysicalObservationReceiptID,
+        operationID: String,
+        observerID: AgentID,
+        worldID: String,
+        storageIdentity: String,
+        dimension: Int,
+        dimensionKey: String,
+        physicalWorldTick: Int,
+        simulationID: AgentSimulationID,
+        simulationTick: Int,
+        origin: AgentPosition,
+        observation: AgentEcologicalObservation,
+        resultCount: Int,
+        worldReadCount: Int
+    ) -> AgentCheckpointDigest {
+        AgentCheckpointDigest.sha256(Data([
+            "world-ecological-receipt-v\(version)", receiptID.rawValue,
+            operationID, observerID.rawValue, worldID, storageIdentity,
+            String(dimension), dimensionKey, String(physicalWorldTick),
+            simulationID.rawValue, String(simulationTick),
+            "\(origin.x),\(origin.y),\(origin.z)", observation.digest,
+            String(resultCount), String(worldReadCount),
+        ].joined(separator: "|").utf8))
+    }
+}
+
 public struct AgentEcologicalObservationRecord: Codable, Equatable, Sendable {
     public let sequence: UInt64
     public let observation: AgentEcologicalObservation
     public let causalEventID: AgentCausalEventID
+    public let physicalObservationReceiptID: AgentPhysicalObservationReceiptID?
 
     public init(
         sequence: UInt64,
         observation: AgentEcologicalObservation,
-        causalEventID: AgentCausalEventID
+        causalEventID: AgentCausalEventID,
+        physicalObservationReceiptID: AgentPhysicalObservationReceiptID?
     ) {
         self.sequence = sequence
         self.observation = observation
         self.causalEventID = causalEventID
+        self.physicalObservationReceiptID = physicalObservationReceiptID
     }
 }
 

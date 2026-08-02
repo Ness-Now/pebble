@@ -1064,7 +1064,10 @@ extension AgentSimulationSession {
             || schemaVersion == AgentCheckpointSchema.legacyEstateVersion
             || schemaVersion == AgentCheckpointSchema.estateVersion
             || schemaVersion
-                == AgentCheckpointSchema.renewableSubsistenceVersion else {
+                == AgentCheckpointSchema.renewableSubsistenceVersion
+            || schemaVersion
+                == AgentCheckpointSchema
+                    .independentEcologicalReceiptVersion else {
             throw AgentFamilyError.invalidState("bounds, ordering or counters")
         }
         let proposalIDs = family.proposals.map(\.proposalID)

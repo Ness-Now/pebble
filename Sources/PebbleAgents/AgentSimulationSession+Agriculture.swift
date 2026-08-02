@@ -1,4 +1,48 @@
 extension AgentSimulationSession {
+    /// Reconciles durable agriculture action rows with receipts loaded from
+    /// Pebble's independent World-side persistence.
+    public func validateIndependentAgriculturalActionReceipts(
+        _ evidence: [AgentAgriculturalPhysicalReceiptEvidence],
+        worldID: String,
+        storageIdentity: String,
+        dimension: Int
+    ) throws {
+        let receiptIDs = evidence.map(\.receiptID)
+        guard receiptIDs.count == Set(receiptIDs).count else {
+            throw AgentSessionError.agriculture(
+                .invalidState("duplicate independent agriculture receipt")
+            )
+        }
+        let required = agricultureState?.retainedActions ?? []
+        guard Set(receiptIDs) == Set(required.map(\.outcome.actionID)) else {
+            throw AgentSessionError.agriculture(
+                .invalidState("independent agriculture receipt set")
+            )
+        }
+        let byID = Dictionary(uniqueKeysWithValues: evidence.map {
+            ($0.receiptID, $0)
+        })
+        for record in required {
+            guard let receipt = byID[record.outcome.actionID],
+                  receipt.version
+                    == AgentAgriculturalPhysicalReceiptEvidence.currentVersion,
+                  receipt.hasValidDigest,
+                  receipt.operationID == receipt.receiptID.rawValue,
+                  receipt.worldID == worldID,
+                  receipt.storageIdentity == storageIdentity,
+                  receipt.dimension == dimension,
+                  receipt.simulationID == simulationID,
+                  receipt.outcome == record.outcome else {
+                throw AgentSessionError.agriculture(
+                    .invalidState(
+                        "independent agriculture receipt mismatch "
+                            + record.outcome.actionID.rawValue
+                    )
+                )
+            }
+        }
+    }
+
     public var agricultureEnabled: Bool { agricultureState != nil }
 
     public func agricultureSnapshot() -> AgentAgricultureSnapshot {
@@ -279,7 +323,10 @@ extension AgentSimulationSession {
         state.plots.append(AgentAgriculturalPlot(
             plotID: plotID, plannerID: plannerID, crop: crop, cells: cells,
             designatedStorageLocationID: designatedStorageLocationID,
-            sourceObservationEventID: sourceObservationEventID, plannedCivilDate: date,
+            sourceObservationEventID: sourceObservationEventID,
+            sourceObservationReceiptID:
+                observationRecord.physicalObservationReceiptID,
+            plannedCivilDate: date,
             phase: .planned, plantedCivilDate: nil, harvestedCivilDate: nil,
             lastAgricultureEventID: event.eventID
         ))
@@ -524,6 +571,8 @@ extension AgentSimulationSession {
             sourceOutputQuantity: sourceOutputQuantity,
             reproductiveInputQuantity: reproductiveInputQuantity,
             reservedAtTick: tick,
+            sourceObservationReceiptID:
+                observationRecord.physicalObservationReceiptID,
             renewalEventID: event.eventID
         )
         state.reservations.removeAll { $0.plotID == plotID }
@@ -745,7 +794,8 @@ extension AgentSimulationSession {
         }
         func ecologicalObservationEventIsValid(
             _ eventID: AgentCausalEventID,
-            observerID: AgentID
+            observerID: AgentID,
+            physicalReceiptID: AgentPhysicalObservationReceiptID? = nil
         ) -> Bool {
             guard let event = retained[eventID],
                   event.kind == .ecologicalObservationRecorded,
@@ -753,11 +803,16 @@ extension AgentSimulationSession {
                   event.actorID == observerID,
                   event.subjectID == observerID,
                   case let .ecologicalObservation(
-                      payloadObserverID, _, _, _, _, _, status, digest
+                      payloadObserverID, _, _, payloadReceiptID,
+                      _, _, _, status, digest
                   ) = event.payload else {
                 return false
             }
             return payloadObserverID == observerID.rawValue
+                && event.operationID?.rawValue == payloadReceiptID
+                && (physicalReceiptID.map {
+                    $0.rawValue == payloadReceiptID
+                } ?? true)
                 && status == "recorded"
                 && digest.count == 16
         }
@@ -899,7 +954,9 @@ extension AgentSimulationSession {
                   plot.lastAgricultureEventID.simulationID == clock.simulationID,
                   ecologicalObservationEventIsValid(
                       plot.sourceObservationEventID,
-                      observerID: plot.plannerID
+                      observerID: plot.plannerID,
+                      physicalReceiptID:
+                        plot.sourceObservationReceiptID
                   ) || retentionBoundary.map({
                       plot.sourceObservationEventID.sequence < $0.sequence
                   }) == true,
@@ -931,6 +988,7 @@ extension AgentSimulationSession {
                       evidence.sourceOutputQuantity >= evidence.reproductiveInputQuantity,
                       evidence.reservedAtTick >= 0,
                       evidence.reservedAtTick <= clock.tick.rawValue,
+                      evidence.sourceObservationReceiptID != nil,
                       evidence.renewalEventID.simulationID == clock.simulationID,
                       evidence.sourcePlantActionIDs
                         == evidence.sourcePlantActionIDs.sorted(),
@@ -1312,7 +1370,9 @@ extension AgentSimulationSession {
                     + $0.sourcePlantActionIDs.map(\.rawValue).joined(separator: ",") + ":"
                     + $0.sourceHarvestActionIDs.map(\.rawValue).joined(separator: ",")
                     + ":\($0.sourceOutputQuantity):\($0.reproductiveInputQuantity):"
-                    + "\($0.reservedAtTick):\($0.renewalEventID.rawValue)"
+                    + "\($0.reservedAtTick):"
+                    + "\($0.sourceObservationReceiptID?.rawValue ?? "none"):"
+                    + $0.renewalEventID.rawValue
             } ?? "initial"
             return "\(plot.plotID.rawValue):\(plot.cycleOrdinal):\(renewal)"
         }.joined(separator: ";")
@@ -1419,6 +1479,7 @@ func agricultureCausalRetentionDigest(
             plot.crop.rawValue,
             plot.designatedStorageLocationID,
             plot.sourceObservationEventID.rawValue,
+            plot.sourceObservationReceiptID?.rawValue ?? "none",
             "\(date.day):\(date.season.rawValue):\(date.year):\(date.dayOfYear):"
                 + "\(date.absoluteDay):\(date.simulationTick)",
             cells,

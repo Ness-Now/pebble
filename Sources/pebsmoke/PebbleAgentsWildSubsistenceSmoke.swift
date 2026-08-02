@@ -153,13 +153,16 @@ func runPebbleAgentsWildSubsistenceSmoke() {
     try! session.setAgricultureEnabled(true)
     let v13 = try! session.makeCheckpoint()
     let v13Restored = try! AgentSimulationSession.restoring(v13)
-    check("v13 loads with no retroactive wild history",
-          v13.schemaVersion == 13 && !v13Restored.wildSubsistenceEnabled
+    check("schema 30 loads with no retroactive wild history",
+          v13.schemaVersion
+            == AgentCheckpointSchema.independentEcologicalReceiptVersion
+            && !v13Restored.wildSubsistenceEnabled
             && (try! v13Restored.durableStateBytes()) == (try! session.durableStateBytes()))
     let coarseBefore = session.snapshot()
     try! session.setWildSubsistenceEnabled(true)
-    check("v14 activation starts empty and agriculture is not an activation dependency",
-          session.durableState().schemaVersion == 14
+    check("schema 30 activation starts empty and agriculture is not an activation dependency",
+          session.durableState().schemaVersion
+            == AgentCheckpointSchema.independentEcologicalReceiptVersion
             && session.wildSubsistenceSnapshot().opportunities.isEmpty
             && session.wildSubsistenceSnapshot().retainedOutcomes.isEmpty)
 
@@ -422,8 +425,9 @@ func runPebbleAgentsWildSubsistenceSmoke() {
 
     let checkpoint = try! session.makeCheckpoint()
     let restored = try! AgentSimulationSession.restoring(checkpoint)
-    check("v14 completed history checkpoint is byte exact",
-          checkpoint.schemaVersion == 14
+    check("schema 30 completed history checkpoint is byte exact",
+          checkpoint.schemaVersion
+            == AgentCheckpointSchema.independentEcologicalReceiptVersion
             && (try! restored.durableStateBytes()) == (try! session.durableStateBytes()))
     let encodedCheckpoint = try! AgentCheckpointCodec.encode(checkpoint)
     let decodedCheckpoint = try! AgentCheckpointCodec.decode(
@@ -449,8 +453,10 @@ func runPebbleAgentsWildSubsistenceSmoke() {
     )), to: &replayed)
     let journal = try! recorder.journal(named: AgentCheckpointName(rawValue: "wild-replay")!)
     let replay = try! AgentSessionReplayer.replay(checkpoint: v13, journal: journal)
-    check("v14 replay reproduces wild state, causal ledger, skills, and digest",
-          replay.report.verified && replay.report.schemaVersion == 14
+    check("schema 30 replay reproduces wild state, causal ledger, skills, and digest",
+          replay.report.verified
+            && replay.report.schemaVersion
+                == AgentReplaySchema.independentEcologicalReceiptVersion
             && (try! replay.session.durableStateBytes()) == (try! replayed.durableStateBytes())
             && replay.session.wildSubsistenceSnapshot().digest == replayed.wildSubsistenceSnapshot().digest)
 }

@@ -225,6 +225,7 @@ extension AgentSimulationSession {
                 observerID: nil,
                 worldContextKey: nil,
                 dimensionKey: nil,
+                physicalReceiptID: nil,
                 resultCount: state.observations.count,
                 worldReads: 0,
                 truncated: false,

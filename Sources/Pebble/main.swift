@@ -524,6 +524,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         let t0 = CFAbsoluteTimeGetCurrent()
         game = GameCore()
         game.host = host
+        agentController.worldSideReceiptDatabase = game.db
         host.app = self
         print(String(format: "registries: %.0fms (%d blocks, %d items, %d biomes)",
                      (CFAbsoluteTimeGetCurrent() - t0) * 1000, blockDefs.count, itemDefs.count, BIOMES.count))

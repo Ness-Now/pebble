@@ -157,6 +157,36 @@ private func normalizedObservation(
     )
 }
 
+private func ecologicalPhysicalReceiptEvidence(
+    _ record: AgentEcologicalObservationRecord,
+    worldID: String = "world-seed-46",
+    storageIdentity: String = "sqlite-world:world-seed-46",
+    dimension: Int = 0,
+    receiptID: AgentPhysicalObservationReceiptID? = nil,
+    observation: AgentEcologicalObservation? = nil,
+    receiptDigest: AgentCheckpointDigest? = nil
+) -> AgentEcologicalPhysicalReceiptEvidence {
+    let observation = observation ?? record.observation
+    let receiptID = receiptID ?? record.physicalObservationReceiptID!
+    return AgentEcologicalPhysicalReceiptEvidence(
+        receiptID: receiptID,
+        operationID: receiptID.rawValue,
+        observerID: observation.observerID,
+        worldID: worldID,
+        storageIdentity: storageIdentity,
+        dimension: dimension,
+        dimensionKey: observation.dimensionKey,
+        physicalWorldTick: observation.physicalWorldTick,
+        simulationID: record.causalEventID.simulationID,
+        simulationTick: observation.observedAtSimulationTick,
+        origin: observation.origin,
+        observation: observation,
+        resultCount: observation.diagnostics.resultsEmitted,
+        worldReadCount: observation.diagnostics.worldReads,
+        receiptDigest: receiptDigest
+    )
+}
+
 private func resignedEcologicalObservation(
     _ source: AgentEcologicalObservation,
     observerID: AgentID? = nil,
@@ -172,6 +202,7 @@ private func resignedEcologicalObservation(
     plants: [AgentPlantObservation]? = nil,
     animals: [AgentAnimalObservation]? = nil,
     weather: AgentWeatherObservation? = nil,
+    physicalTime: AgentPhysicalWorldTimeObservation? = nil,
     calendar: AgentCivilCalendarConfiguration = .live
 ) -> AgentEcologicalObservation {
     let observedTick = observedAtSimulationTick
@@ -192,7 +223,7 @@ private func resignedEcologicalObservation(
         animals: animals ?? source.animals,
         fishing: source.fishing,
         weather: weather ?? source.weather,
-        physicalTime: source.physicalTime,
+        physicalTime: physicalTime ?? source.physicalTime,
         diagnostics: source.diagnostics,
         expiresAtSimulationTick: observedTick
             + max(0, source.expiresAtSimulationTick
@@ -259,6 +290,7 @@ private func ecologicalRepairEventDigest(_ event: inout [String: Any]) {
         + "\(ecological["observerID"] as? String ?? "none")|"
         + "\(ecological["worldContextKey"] as? String ?? "none")|"
         + "\(ecological["dimensionKey"] as? String ?? "none")|"
+        + "\(ecological["physicalReceiptID"] as? String ?? "none")|"
         + "\(ecological["resultCount"] as! Int)|"
         + "\(ecological["worldReads"] as! Int)|"
         + "\((ecological["truncated"] as! Bool) ? 1 : 0)|"
@@ -417,6 +449,75 @@ private func ecologicalReplaceRecordObserver(
     ecologicalRecomputeCausalRollingDigest(&durable)
 }
 
+private func ecologicalReplaceRecordAndEventObservation(
+    _ durable: inout [String: Any],
+    recordIndex: Int,
+    replacement: AgentEcologicalObservation,
+    receiptID: AgentPhysicalObservationReceiptID? = nil
+) {
+    var state = durable["ecologicalObservationState"] as! [String: Any]
+    var records = state["observations"] as! [[String: Any]]
+    var record = records[recordIndex]
+    record["observation"] = ecologicalJSONObject(replacement)
+    if let receiptID {
+        record["physicalObservationReceiptID"] = receiptID.rawValue
+    }
+    records[recordIndex] = record
+    state["observations"] = records
+    durable["ecologicalObservationState"] = state
+
+    let eventID = ecologicalEventIDText(
+        record["causalEventID"] as! [String: Any]
+    )
+    var ledger = durable["causalLedger"] as! [String: Any]
+    var events = ledger["events"] as! [[String: Any]]
+    let eventIndex = events.firstIndex {
+        ecologicalEventIDText($0["eventID"] as! [String: Any]) == eventID
+    }!
+    var instant = events[eventIndex]["instant"] as! [String: Any]
+    instant["tick"] = replacement.observedAtSimulationTick
+    events[eventIndex]["instant"] = instant
+    events[eventIndex]["simulationTick"] = replacement.observedAtSimulationTick
+    var payload = events[eventIndex]["payload"] as! [String: Any]
+    var ecological = payload["ecologicalObservation"] as! [String: Any]
+    ecological["observerID"] = replacement.observerID.rawValue
+    ecological["worldContextKey"] = replacement.worldContextKey
+    ecological["dimensionKey"] = replacement.dimensionKey
+    ecological["physicalReceiptID"] = receiptID?.rawValue
+        ?? record["physicalObservationReceiptID"] as! String
+    ecological["resultCount"] = replacement.diagnostics.resultsEmitted
+    ecological["worldReads"] = replacement.diagnostics.worldReads
+    ecological["truncated"] = replacement.diagnostics.completion != .complete
+    ecological["digest"] = replacement.digest
+    payload["ecologicalObservation"] = ecological
+    events[eventIndex]["payload"] = payload
+    ecologicalRepairEventDigest(&events[eventIndex])
+    ledger["events"] = events
+    durable["causalLedger"] = ledger
+    ecologicalRecomputeCausalRollingDigest(&durable)
+}
+
+private func ecologicalIndependentReceiptValidationRefused(
+    checkpoint: AgentSessionCheckpoint,
+    evidence: [AgentEcologicalPhysicalReceiptEvidence],
+    worldID: String = "world-seed-46",
+    storageIdentity: String = "sqlite-world:world-seed-46",
+    dimension: Int = 0
+) -> Bool {
+    do {
+        let restored = try AgentSimulationSession.restoring(checkpoint)
+        try restored.validateIndependentEcologicalObservationReceipts(
+            evidence,
+            worldID: worldID,
+            storageIdentity: storageIdentity,
+            dimension: dimension
+        )
+        return false
+    } catch {
+        return true
+    }
+}
+
 func runPebbleAgentsEcologicalObservationSmoke() {
     section("pebble agents ecological observation and civil calendar")
 
@@ -511,10 +612,146 @@ func runPebbleAgentsEcologicalObservationSmoke() {
 
     let checkpoint = try! session.makeCheckpoint()
     let restored = try! AgentSimulationSession.restoring(checkpoint)
-    check("ecological observation v12 checkpoint is byte exact",
-          checkpoint.schemaVersion == 12
+    check("ecological observation schema 30 checkpoint is byte exact",
+          checkpoint.schemaVersion
+            == AgentCheckpointSchema.independentEcologicalReceiptVersion
             && (try! restored.durableStateBytes()) == (try! session.durableStateBytes())
             && restored.ecologicalObservationSnapshot() == session.ecologicalObservationSnapshot())
+    let independentReceipt = ecologicalPhysicalReceiptEvidence(record)
+    check("exact independent World-side receipt validates schema 30", {
+        do {
+            try restored.validateIndependentEcologicalObservationReceipts(
+                [independentReceipt],
+                worldID: "world-seed-46",
+                storageIdentity: "sqlite-world:world-seed-46",
+                dimension: 0
+            )
+            return true
+        } catch {
+            return false
+        }
+    }())
+    let changedWorldTick = first.physicalWorldTick + 77
+    let coherentPhysicalChange = resignedEcologicalObservation(
+        first,
+        origin: AgentPosition(x: 9, y: 70, z: 9),
+        physicalWorldTick: changedWorldTick,
+        biome: AgentBiomeObservation(
+            biomeKey: "desert",
+            position: AgentPosition(x: 9, y: 70, z: 9)
+        ),
+        soils: [AgentSoilAffordance(
+            blockKey: "sand",
+            position: AgentPosition(x: 10, y: 69, z: 9),
+            tillable: false,
+            alreadyFarmland: false,
+            hydrated: false,
+            supportsCrop: false
+        )],
+        crops: [AgentCropObservation(
+            cropKey: "carrots",
+            position: AgentPosition(x: 10, y: 70, z: 10),
+            growthStage: 5,
+            maximumGrowthStage: 7,
+            mature: false,
+            supportBlockKey: "farmland"
+        )],
+        physicalTime: AgentPhysicalWorldTimeObservation(
+            worldTick: changedWorldTick,
+            dayTime: changedWorldTick % 24_000,
+            timeOfDay: .day,
+            daylightCycleEnabled: true
+        )
+    )
+    let coherentPhysicalCheckpoint = ecologicalMutatedCheckpoint(
+        checkpoint
+    ) { durable in
+        ecologicalReplaceRecordAndEventObservation(
+            &durable,
+            recordIndex: 0,
+            replacement: coherentPhysicalChange
+        )
+    }
+    check("coherent row and event mutation remains internally consistent", {
+        (try? AgentSimulationSession.restoring(coherentPhysicalCheckpoint))
+            != nil
+    }())
+    check("independent World-side receipt rejects coherent physical change",
+          ecologicalIndependentReceiptValidationRefused(
+            checkpoint: coherentPhysicalCheckpoint,
+            evidence: [independentReceipt]
+          ))
+    let coherentContextChange = resignedEcologicalObservation(
+        first,
+        worldContextKey: "other-world-context",
+        dimensionKey: "the_nether"
+    )
+    let coherentContextCheckpoint = ecologicalMutatedCheckpoint(
+        checkpoint
+    ) { durable in
+        ecologicalReplaceRecordAndEventObservation(
+            &durable,
+            recordIndex: 0,
+            replacement: coherentContextChange
+        )
+    }
+    check("independent World-side receipt rejects coherent context change",
+          ecologicalIndependentReceiptValidationRefused(
+            checkpoint: coherentContextCheckpoint,
+            evidence: [independentReceipt]
+          ))
+    let replacementReceiptID = AgentPhysicalObservationReceiptID(
+        rawValue: "eco-other-valid-receipt"
+    )!
+    let receiptSubstitutionCheckpoint = ecologicalMutatedCheckpoint(
+        checkpoint
+    ) { durable in
+        ecologicalReplaceRecordAndEventObservation(
+            &durable,
+            recordIndex: 0,
+            replacement: first,
+            receiptID: replacementReceiptID
+        )
+    }
+    check("independent World-side receipt rejects receipt substitution",
+          ecologicalIndependentReceiptValidationRefused(
+            checkpoint: receiptSubstitutionCheckpoint,
+            evidence: [independentReceipt]
+          ))
+    check("missing independent World-side receipt is refused",
+          ecologicalIndependentReceiptValidationRefused(
+            checkpoint: checkpoint,
+            evidence: []
+          ))
+    check("duplicate independent World-side receipt is refused",
+          ecologicalIndependentReceiptValidationRefused(
+            checkpoint: checkpoint,
+            evidence: [independentReceipt, independentReceipt]
+          ))
+    let wrongWorldReceipt = ecologicalPhysicalReceiptEvidence(
+        record,
+        worldID: "other-world",
+        storageIdentity: "sqlite-world:other-world"
+    )
+    check("independent receipt from another World is refused",
+          ecologicalIndependentReceiptValidationRefused(
+            checkpoint: checkpoint,
+            evidence: [wrongWorldReceipt]
+          ))
+    let invalidReceiptDigest = ecologicalPhysicalReceiptEvidence(
+        record,
+        receiptDigest: AgentCheckpointDigest.sha256(Data("changed".utf8))
+    )
+    check("invalid independent receipt digest is refused",
+          ecologicalIndependentReceiptValidationRefused(
+            checkpoint: checkpoint,
+            evidence: [invalidReceiptDigest]
+          ))
+    check("schema 29 retained observation without independent proof is refused",
+          ecologicalRestoreRefused(
+            checkpoint,
+            schemaVersion: AgentCheckpointSchema.renewableSubsistenceVersion
+          ) { _ in })
 
     var replayed = observationBase("ecological-observation-replay")
     let replayBase = try! replayed.makeCheckpoint()
@@ -691,6 +928,23 @@ func runPebbleAgentsEcologicalObservationSmoke() {
                 for: AgentID(rawValue: "agent_0")!
             ).isEmpty)
     let deceasedCheckpoint = try! deceasedObserver.makeCheckpoint()
+    let deceasedReceipt = ecologicalPhysicalReceiptEvidence(deceasedRecord)
+    check("deceased historical observer retains exact independent receipt", {
+        do {
+            let restored = try AgentSimulationSession.restoring(
+                deceasedCheckpoint
+            )
+            try restored.validateIndependentEcologicalObservationReceipts(
+                [deceasedReceipt],
+                worldID: "world-seed-46",
+                storageIdentity: "sqlite-world:world-seed-46",
+                dimension: 0
+            )
+            return true
+        } catch {
+            return false
+        }
+    }())
     let deceasedRestored = try! AgentSimulationSession.restoring(
         deceasedCheckpoint
     )
@@ -774,7 +1028,7 @@ func runPebbleAgentsEcologicalObservationSmoke() {
                   observerID: AgentID(rawValue: "agent_99")!
               )
           })
-    check("causal actor corruption is rejected after full resign",
+    check("causal actor mutation is rejected after full re-signing",
           ecologicalRestoreRefused(
               deceasedCheckpoint
           ) { durable in
@@ -786,7 +1040,7 @@ func runPebbleAgentsEcologicalObservationSmoke() {
                   event["actorID"] = "agent_1"
               }
           })
-    check("causal subject corruption is rejected after full resign",
+    check("causal subject mutation is rejected after full re-signing",
           ecologicalRestoreRefused(
               deceasedCheckpoint
           ) { durable in
@@ -798,7 +1052,7 @@ func runPebbleAgentsEcologicalObservationSmoke() {
                   event["subjectID"] = "agent_1"
               }
           })
-    check("causal origin corruption is rejected after full resign",
+    check("causal origin mutation is rejected after full re-signing",
           ecologicalRestoreRefused(
               deceasedCheckpoint
           ) { durable in
@@ -810,7 +1064,7 @@ func runPebbleAgentsEcologicalObservationSmoke() {
                   event["origin"] = "mortalityTransition"
               }
           })
-    check("causal payload digest corruption is rejected after full resign",
+    check("causal payload digest mutation is rejected after full re-signing",
           ecologicalRestoreRefused(
               deceasedCheckpoint
           ) { durable in
@@ -1192,6 +1446,42 @@ func runPebbleAgentsEcologicalObservationSmoke() {
     let authorityPrefix = droppedAuthority
         .causalLedgerSnapshot().summary.droppedEventCount
     let authorityCheckpoint = try! droppedAuthority.makeCheckpoint()
+    let authorityReceipt = ecologicalPhysicalReceiptEvidence(
+        droppedAuthorityRecord
+    )
+    let droppedCoherentChange = resignedEcologicalObservation(
+        droppedAuthorityRecord.observation,
+        biome: AgentBiomeObservation(
+            biomeKey: "taiga",
+            position: droppedAuthorityRecord.observation.origin
+        ),
+        soils: [AgentSoilAffordance(
+            blockKey: "podzol",
+            position: AgentPosition(x: 1, y: 63, z: 0),
+            tillable: true,
+            alreadyFarmland: false,
+            hydrated: nil,
+            supportsCrop: true
+        )]
+    )
+    let droppedCoherentCheckpoint = ecologicalMutatedCheckpoint(
+        authorityCheckpoint
+    ) { durable in
+        ecologicalReplaceRecordAndEventObservation(
+            &durable,
+            recordIndex: 0,
+            replacement: droppedCoherentChange
+        )
+    }
+    check("coherent mutation with dropped causal prefix is internally consistent", {
+        (try? AgentSimulationSession.restoring(droppedCoherentCheckpoint))
+            != nil
+    }())
+    check("independent receipt rejects coherent mutation with dropped prefix",
+          ecologicalIndependentReceiptValidationRefused(
+            checkpoint: droppedCoherentCheckpoint,
+            evidence: [authorityReceipt]
+          ))
     let arbitraryDroppedEvent = ecologicalJSONObject(
         AgentCausalEventID(
             simulationID: droppedAuthority.simulationID,
@@ -1269,7 +1559,7 @@ func runPebbleAgentsEcologicalObservationSmoke() {
             kind: .rain, raining: true, thundering: false
         )
     )
-    check("fully resigned physical corruption after event eviction is rejected",
+    check("fully re-signed physical mutation after event eviction is rejected",
           ecologicalRestoreRefused(evictedCausalCheckpoint) { durable in
               ecologicalReinsertEvictedRecord(
                   &durable,
@@ -1282,7 +1572,7 @@ func runPebbleAgentsEcologicalObservationSmoke() {
         worldContextKey: "other-world-context",
         dimensionKey: "the_nether"
     )
-    check("fully resigned context corruption after event eviction is rejected",
+    check("fully re-signed context mutation after event eviction is rejected",
           ecologicalRestoreRefused(evictedCausalCheckpoint) { durable in
               ecologicalReinsertEvictedRecord(
                   &durable,
@@ -1295,7 +1585,7 @@ func runPebbleAgentsEcologicalObservationSmoke() {
         observedAtSimulationTick: evictedCausal
             .mortalitySnapshot().records[0].deathTick
     )
-    check("fully resigned tick corruption after event eviction is rejected",
+    check("fully re-signed tick mutation after event eviction is rejected",
           ecologicalRestoreRefused(evictedCausalCheckpoint) { durable in
               ecologicalReinsertEvictedRecord(
                   &durable,
@@ -1307,7 +1597,7 @@ func runPebbleAgentsEcologicalObservationSmoke() {
         evictedSource,
         observerID: AgentID(rawValue: "agent_1")!
     )
-    check("fully resigned observer corruption after event eviction is rejected",
+    check("fully re-signed observer mutation after event eviction is rejected",
           ecologicalRestoreRefused(evictedCausalCheckpoint) { durable in
               ecologicalReinsertEvictedRecord(
                   &durable,

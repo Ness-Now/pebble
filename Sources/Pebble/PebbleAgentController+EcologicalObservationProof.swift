@@ -94,6 +94,16 @@ extension PebbleAgentController {
             )
         }
         ecologicalObservationProofFixture = fixture
+        var receiptTransaction =
+            PebbleWorldEcologicalObservationReceiptTransaction()
+        var receiptTransactionCommitted = false
+        defer {
+            if !receiptTransactionCommitted {
+                try? rollbackWorldEcologicalObservationReceipts(
+                    receiptTransaction
+                )
+            }
+        }
         do {
             let materialBefore = candidate.snapshot().agents.map {
                 ($0.id, $0.resourceInventory)
@@ -117,12 +127,13 @@ extension PebbleAgentController {
             guard beforeFirst == afterFirst else {
                 throw ControllerError.ecologicalObservationBoundary("first scan mutated World")
             }
-            if try applyRecordedOperationIfActive(
-                .recordEcologicalObservation(first),
-                session: &candidate, recorder: &recorder
-            ) == nil {
-                try candidate.recordEcologicalObservation(first)
-            }
+            try recordScannedEcologicalObservation(
+                first,
+                world: world,
+                session: &candidate,
+                recorder: &recorder,
+                receiptTransaction: &receiptTransaction
+            )
 
             let beforeCached = ecologicalWorldEvidence(world, fixture: fixture)
             let cached = ecologicalObservationSensor.scan(
@@ -253,11 +264,102 @@ extension PebbleAgentController {
                     "real World change was not observed"
                 )
             }
-            if try applyRecordedOperationIfActive(
-                .recordEcologicalObservation(changed),
-                session: &candidate, recorder: &recorder
-            ) == nil {
-                try candidate.recordEcologicalObservation(changed)
+            try recordScannedEcologicalObservation(
+                changed,
+                world: world,
+                session: &candidate,
+                recorder: &recorder,
+                receiptTransaction: &receiptTransaction
+            )
+
+            let worldReceiptStore = try worldEcologicalObservationReceiptStore()
+            let retainedReceiptIDs = candidate.ecologicalObservationSnapshot()
+                .observations.compactMap(\.physicalObservationReceiptID).sorted()
+            guard retainedReceiptIDs.count == 2,
+                  try worldReceiptStore.evidence(for: retainedReceiptIDs).count
+                    == 2 else {
+                throw ControllerError.ecologicalObservationBoundary(
+                    "independent World-side receipt set mismatch"
+                )
+            }
+
+            // A late publication failure discards the candidate row/event and
+            // removes the separately persisted receipt byte-for-byte.
+            let rollbackBaseBytes = try candidate.durableStateBytes()
+            var rollbackCandidate = candidate
+            var rollbackRecorder = recorder
+            var rollbackReceiptTransaction =
+                PebbleWorldEcologicalObservationReceiptTransaction()
+            try recordScannedEcologicalObservation(
+                changed,
+                world: world,
+                session: &rollbackCandidate,
+                recorder: &rollbackRecorder,
+                receiptTransaction: &rollbackReceiptTransaction
+            )
+            guard let rollbackReceiptID = rollbackCandidate
+                .ecologicalObservationSnapshot().observations.last?
+                .physicalObservationReceiptID else {
+                throw ControllerError.ecologicalObservationBoundary(
+                    "rollback receipt identity unavailable"
+                )
+            }
+            try rollbackWorldEcologicalObservationReceipts(
+                rollbackReceiptTransaction
+            )
+            guard worldReceiptStore.database.getWorldReceipt(
+                    worldID: worldReceiptStore.worldID,
+                    kind: PebbleEcologicalObservationReceipt.kind,
+                    receiptID: rollbackReceiptID.rawValue
+                  ) == nil,
+                  try candidate.durableStateBytes() == rollbackBaseBytes else {
+                throw ControllerError.ecologicalObservationBoundary(
+                    "late receipt/row rollback mismatch"
+                )
+            }
+
+            let existingReceipt = try worldReceiptStore.receipt(
+                retainedReceiptIDs[0]
+            )
+            var duplicateReceiptRefused = false
+            do {
+                try worldReceiptStore.insert(existingReceipt)
+            } catch PebbleWorldEcologicalObservationReceiptError
+                    .duplicateReceipt {
+                duplicateReceiptRefused = true
+            }
+            let receiptCount = worldReceiptStore.database.listWorldReceipts(
+                worldID: worldReceiptStore.worldID,
+                kind: PebbleEcologicalObservationReceipt.kind
+            ).count
+            let capacityStore = try PebbleWorldEcologicalObservationReceiptStore(
+                database: worldReceiptStore.database,
+                worldID: worldReceiptStore.worldID,
+                storageIdentity: worldReceiptStore.storageIdentity,
+                maximumReceipts: receiptCount
+            )
+            let capacityReceipt = capacityStore.makeReceipt(
+                observation: changed,
+                simulationID: candidate.simulationID,
+                dimension: world.dim.rawValue,
+                ordinal: UInt64.max - 1
+            )
+            var capacityRefused = false
+            do {
+                try capacityStore.insert(capacityReceipt)
+            } catch PebbleWorldEcologicalObservationReceiptError
+                    .capacityReached {
+                capacityRefused = true
+            }
+            guard duplicateReceiptRefused, capacityRefused,
+                  capacityStore.database.getWorldReceipt(
+                    worldID: capacityStore.worldID,
+                    kind: PebbleEcologicalObservationReceipt.kind,
+                    receiptID: capacityReceipt.receiptID.rawValue
+                  ) == nil else {
+                throw ControllerError.ecologicalObservationBoundary(
+                    "World-side receipt duplicate/capacity boundary mismatch"
+                )
             }
 
             guard first.biome != nil,
@@ -408,7 +510,8 @@ extension PebbleAgentController {
             do {
                 _ = try recordLiveEcologicalObservation(
                     world: world, observerID: missingID,
-                    session: &missingCandidate, recorder: &missingRecorder
+                    session: &missingCandidate, recorder: &missingRecorder,
+                    receiptTransaction: &receiptTransaction
                 )
                 missingRefused = false
             } catch ControllerError.ecologicalObservationBoundary {
@@ -461,17 +564,27 @@ extension PebbleAgentController {
                 )
             }
 
+            try validateWorldEcologicalObservationReceipts(
+                for: candidate, dimension: world.dim.rawValue
+            )
             let checkpoint = try candidate.makeCheckpoint()
             let restored = try AgentSimulationSession.restoring(checkpoint)
-            guard checkpoint.schemaVersion == 12,
+            try validateWorldEcologicalObservationReceipts(
+                for: restored, dimension: world.dim.rawValue
+            )
+            guard checkpoint.schemaVersion
+                    == AgentCheckpointSchema
+                        .independentEcologicalReceiptVersion,
                   try restored.durableStateBytes() == candidate.durableStateBytes() else {
                 throw ControllerError.ecologicalObservationBoundary(
-                    "v12 checkpoint restart mismatch"
+                    "v30 checkpoint restart mismatch"
                 )
             }
 
             session = candidate
             replayRecorder = recorder
+            receiptTransaction.commit()
+            receiptTransactionCommitted = true
             focusedAgentId = observerID.rawValue
             positionEcologicalObservationProofCamera(player: player, origin: origin)
             let digest = AgentEcologicalObservationDigest.make(
@@ -496,12 +609,15 @@ extension PebbleAgentController {
                     + "resultsMax=\(configuration.maximumResultsPerScan) "
                     + "scanWorldMutation=none fixtureMutation=controlled "
                     + "materialMutation=none coarseEcologyMutation=none "
-                    + "schema=12 restart=exact fixture=retainedForCapture cleanup=deferred "
+                    + "schema=30 restart=exact physicalReceiptCount=2 "
+                    + "physicalReceiptIDs=\(retainedReceiptIDs.map(\.rawValue).joined(separator: ",")) "
+                    + "receiptRollback=exact receiptCapacity=refused "
+                    + "fixture=retainedForCapture cleanup=deferred "
                     + "digest=\(digest)"
             )
             return success(
                 "Ecological observation proof passed: real local World categories, "
-                    + "civil calendar, cache invalidation, and v12 restart are exact."
+                    + "civil calendar, cache invalidation, and schema 30 restart are exact."
             )
         } catch {
             let cleanup = cleanupEcologicalObservationProofFixture(world: world)

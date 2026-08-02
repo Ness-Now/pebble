@@ -92,6 +92,7 @@ final class PebbleAgentController {
     var lastForageOutcome: AgentForageOutcome?
     var persistenceWorldID: String?
     var persistenceDimension = 0
+    var worldSideReceiptDatabase: SaveDB?
     var replayRecorder: AgentReplayRecorder?
     var replayBaseCheckpointName: AgentCheckpointName?
     var checkpointPositionRestoreFailurePoint:

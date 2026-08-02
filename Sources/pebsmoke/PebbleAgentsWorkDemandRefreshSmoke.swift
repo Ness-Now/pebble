@@ -395,8 +395,9 @@ func runPebbleAgentsWorkDemandRefreshSmoke() {
     )
     let replayCheckpoint = try! replay.makeCheckpoint()
     let replayRestored = try! AgentSimulationSession.restoring(replayCheckpoint)
-    check("checkpoint v18 preserves refreshed demand provenance byte exactly",
-          replayCheckpoint.schemaVersion == 18
+    check("checkpoint schema 30 preserves refreshed demand provenance byte exactly",
+          replayCheckpoint.schemaVersion
+            == AgentCheckpointSchema.independentEcologicalReceiptVersion
             && replayRestored.workCommitmentSnapshot()
                 == replay.workCommitmentSnapshot()
             && (try! replayRestored.durableStateBytes())
@@ -427,8 +428,10 @@ func runPebbleAgentsWorkDemandRefreshSmoke() {
     let replayed = try! AgentSessionReplayer.replay(
         checkpoint: replayBase, journal: journal
     )
-    check("replay v18 reproduces refresh and later physical evidence exactly",
-          replayed.report.verified && replayed.report.schemaVersion == 18
+    check("replay schema 30 reproduces refresh and later physical evidence exactly",
+          replayed.report.verified
+            && replayed.report.schemaVersion
+                == AgentReplaySchema.independentEcologicalReceiptVersion
             && replayed.session.workCommitmentSnapshot()
                 == replay.workCommitmentSnapshot()
             && (try! replayed.session.durableStateBytes())
@@ -521,8 +524,9 @@ func runPebbleAgentsWorkDemandRefreshSmoke() {
             && longSnapshot.totalDemandCount == 3
             && longCausal.retainedEventCount == 64
             && longCausal.droppedEventCount > 0)
-    check("post-eviction checkpoint continues accepting legitimate refresh",
-          longCheckpoint.schemaVersion == 16
+    check("post-eviction schema 30 checkpoint accepts legitimate refresh",
+          longCheckpoint.schemaVersion
+            == AgentCheckpointSchema.independentEcologicalReceiptVersion
             && longRestored.activeWorkDemands().count == 3
             && longRestored.causalLedgerSnapshot().summary.latestSequence
                 == nextCausalBefore)

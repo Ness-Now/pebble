@@ -305,8 +305,8 @@ func runPebbleAgentsRenewableSubsistenceSmoke() {
 
     let checkpoint = try! session.makeCheckpoint()
     let restored = try! AgentSimulationSession.restoring(checkpoint)
-    check("schema 29 restart preserves the non-mature second cycle exactly",
-          checkpoint.schemaVersion == 29
+    check("schema 30 restart preserves the non-mature second cycle exactly",
+          checkpoint.schemaVersion == 30
             && (try! restored.durableStateBytes()) == (try! session.durableStateBytes())
             && restored.renewableSubsistenceEvidence() == session.renewableSubsistenceEvidence())
 
@@ -382,9 +382,9 @@ func runPebbleAgentsRenewableSubsistenceSmoke() {
     let replay = try! AgentSessionReplayer.replay(
         checkpoint: checkpoint, journal: journal
     )
-    check("schema 29 replay is byte exact after second harvest",
-          recorder.schemaVersion == 29 && replay.report.verified
-            && replay.report.schemaVersion == 29
+    check("schema 30 replay is byte exact after second harvest",
+          recorder.schemaVersion == 30 && replay.report.verified
+            && replay.report.schemaVersion == 30
             && (try! replay.session.durableStateBytes())
                 == (try! replayed.durableStateBytes()))
 }

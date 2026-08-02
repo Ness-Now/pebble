@@ -449,8 +449,9 @@ func runPebbleAgentsLivestockSmoke() {
 
     let checkpoint = try! session.makeCheckpoint()
     let restored = try! AgentSimulationSession.restoring(checkpoint)
-    check("v15 checkpoint restores management records but no physical animals",
-          checkpoint.schemaVersion == 15
+    check("schema 30 checkpoint restores management records but no physical animals",
+          checkpoint.schemaVersion
+            == AgentCheckpointSchema.independentEcologicalReceiptVersion
             && restored.livestockSnapshot().digest == session.livestockSnapshot().digest
             && (try! restored.durableStateBytes()) == (try! session.durableStateBytes()))
 
@@ -471,8 +472,10 @@ func runPebbleAgentsLivestockSmoke() {
     )), to: &replayBase)
     let journal = try! recorder.journal(named: AgentCheckpointName(rawValue: "livestock-replay")!)
     let replay = try! AgentSessionReplayer.replay(checkpoint: v14, journal: journal)
-    check("v15 replay reproduces livestock state and causal digest",
-          replay.report.verified && replay.report.schemaVersion == 15
+    check("schema 30 replay reproduces livestock state and causal digest",
+          replay.report.verified
+            && replay.report.schemaVersion
+                == AgentReplaySchema.independentEcologicalReceiptVersion
             && (try! replay.session.durableStateBytes()) == (try! replayBase.durableStateBytes()))
 
     var renewable = livestockBase("livestock-renewable-source")

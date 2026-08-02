@@ -46,6 +46,21 @@ extension PebbleAgentController {
             return false
         }
         var recorder = replayRecorder
+        var receiptTransaction =
+            PebbleWorldEcologicalObservationReceiptTransaction()
+        defer {
+            if !receiptTransaction.committed {
+                do {
+                    try rollbackWorldEcologicalObservationReceipts(
+                        receiptTransaction
+                    )
+                } catch {
+                    lastError = "World-side receipt rollback failed: \(error)"
+                    runtimeErrorCount += 1
+                    trace("error \(lastError!)")
+                }
+            }
+        }
         isAdvancingSession = true
         defer { isAdvancingSession = false }
         lastInteractionAttempted = false
@@ -63,8 +78,23 @@ extension PebbleAgentController {
                     recorder: &recorder,
                     world: world
                 )
+                if session.ecologicalObservationEnabled {
+                    try reconcileWorldEcologicalObservationReceiptRetention(
+                        for: session,
+                        transaction: &receiptTransaction
+                    )
+                    try reconcileWorldAgriculturalActionReceiptRetention(
+                        for: session,
+                        transaction: &receiptTransaction
+                    )
+                    try validateWorldEcologicalObservationReceipts(
+                        for: session,
+                        dimension: world.dim.rawValue
+                    )
+                }
                 self.session = session
                 replayRecorder = recorder
+                receiptTransaction.commit()
                 return true
             }
             if session.livestockEnabled,
@@ -1216,7 +1246,8 @@ extension PebbleAgentController {
             if session.ecologicalObservationEnabled {
                 ecologicalObservationSensor.invalidate(world: world)
                 try recordLiveEcologicalObservations(
-                    world: world, session: &session, recorder: &recorder
+                    world: world, session: &session, recorder: &recorder,
+                    receiptTransaction: &receiptTransaction
                 )
             }
             if session.agricultureEnabled {
@@ -1248,6 +1279,20 @@ extension PebbleAgentController {
                 }
             }
             let finalSnapshot = session.snapshot()
+            if session.ecologicalObservationEnabled {
+                try reconcileWorldEcologicalObservationReceiptRetention(
+                    for: session,
+                    transaction: &receiptTransaction
+                )
+                try reconcileWorldAgriculturalActionReceiptRetention(
+                    for: session,
+                    transaction: &receiptTransaction
+                )
+                try validateWorldEcologicalObservationReceipts(
+                    for: session, dimension: world.dim.rawValue
+                )
+            }
+            receiptTransaction.commit()
             self.session = session
             replayRecorder = recorder
             tracePhysicalState(at: session.tick)

@@ -1,3 +1,5 @@
+import Foundation
+
 public enum AgentAgricultureError: Error, Equatable, CustomStringConvertible {
     case invalidConfiguration(String)
     case causalLedgerRequired
@@ -213,6 +215,7 @@ public struct AgentAgriculturalRenewalEvidence: Codable, Equatable, Sendable {
     public let sourceOutputQuantity: Int
     public let reproductiveInputQuantity: Int
     public let reservedAtTick: Int
+    public let sourceObservationReceiptID: AgentPhysicalObservationReceiptID?
     public let renewalEventID: AgentCausalEventID
 
     public init(
@@ -222,6 +225,7 @@ public struct AgentAgriculturalRenewalEvidence: Codable, Equatable, Sendable {
         sourceOutputQuantity: Int,
         reproductiveInputQuantity: Int,
         reservedAtTick: Int,
+        sourceObservationReceiptID: AgentPhysicalObservationReceiptID? = nil,
         renewalEventID: AgentCausalEventID
     ) {
         self.sourceCycleOrdinal = sourceCycleOrdinal
@@ -230,6 +234,7 @@ public struct AgentAgriculturalRenewalEvidence: Codable, Equatable, Sendable {
         self.sourceOutputQuantity = sourceOutputQuantity
         self.reproductiveInputQuantity = reproductiveInputQuantity
         self.reservedAtTick = reservedAtTick
+        self.sourceObservationReceiptID = sourceObservationReceiptID
         self.renewalEventID = renewalEventID
     }
 }
@@ -241,6 +246,7 @@ public struct AgentAgriculturalPlot: Codable, Equatable, Sendable {
     public internal(set) var cells: [AgentAgriculturalCell]
     public let designatedStorageLocationID: String
     public let sourceObservationEventID: AgentCausalEventID
+    public let sourceObservationReceiptID: AgentPhysicalObservationReceiptID?
     public let plannedCivilDate: AgentCivilDate
     public internal(set) var phase: AgentAgriculturalPlotPhase
     public internal(set) var plantedCivilDate: AgentCivilDate?
@@ -256,6 +262,7 @@ public struct AgentAgriculturalPlot: Codable, Equatable, Sendable {
         cells: [AgentAgriculturalCell],
         designatedStorageLocationID: String,
         sourceObservationEventID: AgentCausalEventID,
+        sourceObservationReceiptID: AgentPhysicalObservationReceiptID?,
         plannedCivilDate: AgentCivilDate,
         phase: AgentAgriculturalPlotPhase,
         plantedCivilDate: AgentCivilDate?,
@@ -270,6 +277,7 @@ public struct AgentAgriculturalPlot: Codable, Equatable, Sendable {
         self.cells = cells
         self.designatedStorageLocationID = designatedStorageLocationID
         self.sourceObservationEventID = sourceObservationEventID
+        self.sourceObservationReceiptID = sourceObservationReceiptID
         self.plannedCivilDate = plannedCivilDate
         self.phase = phase
         self.plantedCivilDate = plantedCivilDate
@@ -281,7 +289,8 @@ public struct AgentAgriculturalPlot: Codable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case plotID, plannerID, crop, cells, designatedStorageLocationID
-        case sourceObservationEventID, plannedCivilDate, phase
+        case sourceObservationEventID, sourceObservationReceiptID
+        case plannedCivilDate, phase
         case plantedCivilDate, harvestedCivilDate, lastAgricultureEventID
         case cycleOrdinal, renewalEvidence
     }
@@ -297,6 +306,10 @@ public struct AgentAgriculturalPlot: Codable, Equatable, Sendable {
         )
         sourceObservationEventID = try values.decode(
             AgentCausalEventID.self, forKey: .sourceObservationEventID
+        )
+        sourceObservationReceiptID = try values.decodeIfPresent(
+            AgentPhysicalObservationReceiptID.self,
+            forKey: .sourceObservationReceiptID
         )
         plannedCivilDate = try values.decode(AgentCivilDate.self, forKey: .plannedCivilDate)
         phase = try values.decode(AgentAgriculturalPlotPhase.self, forKey: .phase)
@@ -386,6 +399,88 @@ public struct AgentAgriculturalActionRecord: Codable, Equatable, Sendable {
     public let agricultureEventID: AgentCausalEventID
     public let skillPracticeEventID: AgentCausalEventID?
     public let digest: String
+}
+
+/// Read-only projection of Pebble's independent World-side agriculture
+/// receipt. The receipt bytes themselves remain in World persistence and are
+/// not serialized into the Civilization checkpoint.
+public struct AgentAgriculturalPhysicalReceiptEvidence: Codable, Equatable,
+    Sendable {
+    public static let currentVersion = 1
+
+    public let version: Int
+    public let receiptID: AgentAgriculturalActionID
+    public let operationID: String
+    public let worldID: String
+    public let storageIdentity: String
+    public let dimension: Int
+    public let simulationID: AgentSimulationID
+    public let outcome: AgentAgriculturalActionOutcome
+    public let receiptDigest: AgentCheckpointDigest
+
+    public init(
+        version: Int = currentVersion,
+        receiptID: AgentAgriculturalActionID,
+        operationID: String,
+        worldID: String,
+        storageIdentity: String,
+        dimension: Int,
+        simulationID: AgentSimulationID,
+        outcome: AgentAgriculturalActionOutcome,
+        receiptDigest: AgentCheckpointDigest? = nil
+    ) {
+        self.version = version
+        self.receiptID = receiptID
+        self.operationID = operationID
+        self.worldID = worldID
+        self.storageIdentity = storageIdentity
+        self.dimension = dimension
+        self.simulationID = simulationID
+        self.outcome = outcome
+        self.receiptDigest = receiptDigest ?? Self.makeDigest(
+            version: version,
+            receiptID: receiptID,
+            operationID: operationID,
+            worldID: worldID,
+            storageIdentity: storageIdentity,
+            dimension: dimension,
+            simulationID: simulationID,
+            outcome: outcome
+        )
+    }
+
+    public var hasValidDigest: Bool {
+        receiptDigest == Self.makeDigest(
+            version: version,
+            receiptID: receiptID,
+            operationID: operationID,
+            worldID: worldID,
+            storageIdentity: storageIdentity,
+            dimension: dimension,
+            simulationID: simulationID,
+            outcome: outcome
+        )
+    }
+
+    private static func makeDigest(
+        version: Int,
+        receiptID: AgentAgriculturalActionID,
+        operationID: String,
+        worldID: String,
+        storageIdentity: String,
+        dimension: Int,
+        simulationID: AgentSimulationID,
+        outcome: AgentAgriculturalActionOutcome
+    ) -> AgentCheckpointDigest {
+        let outcomeBytes = try! AgentCheckpointCodec.encode(outcome)
+        let canonical = [
+            "pebble-agriculture-physical-receipt-v1",
+            String(version), receiptID.rawValue, operationID, worldID,
+            storageIdentity, String(dimension), simulationID.rawValue,
+            AgentCheckpointDigest.sha256(outcomeBytes).rawValue,
+        ].joined(separator: "|")
+        return AgentCheckpointDigest.sha256(Data(canonical.utf8))
+    }
 }
 
 /// Historical, non-spendable evidence derived from a real designated

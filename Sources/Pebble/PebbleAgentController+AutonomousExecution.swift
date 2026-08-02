@@ -268,16 +268,12 @@ extension PebbleAgentController {
         var candidate = session
         var candidateRecorder = recorder
         func publish(_ outcome: AgentAgriculturalActionOutcome) throws -> AgentAgriculturalActionRecord {
-            if try applyRecordedOperationIfActive(
-                .recordAgriculturalAction(outcome),
-                session: &candidate, recorder: &candidateRecorder
-            ) != nil {
-                guard let record = candidate.agricultureSnapshot().retainedActions.last(where: {
-                    $0.outcome.actionID == outcome.actionID
-                }) else { throw ControllerError.feedbackBoundary("agriculture replay publication missing") }
-                return record
-            }
-            return try candidate.recordAgriculturalActionSuccess(outcome)
+            try publishVerifiedAgriculturalAction(
+                outcome,
+                world: world,
+                session: &candidate,
+                recorder: &candidateRecorder
+            )
         }
         switch intent.kind {
         case .till:

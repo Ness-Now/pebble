@@ -31,6 +31,7 @@ public enum AgentCheckpointSchema {
     public static let legacyEstateVersion = 27
     public static let estateVersion = 28
     public static let renewableSubsistenceVersion = 29
+    public static let independentEcologicalReceiptVersion = 30
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -48,6 +49,7 @@ public enum AgentCheckpointSchema {
             || version == familyVersion || version == durableHouseConsentVersion
             || version == legacyEstateVersion || version == estateVersion
             || version == renewableSubsistenceVersion
+            || version == independentEcologicalReceiptVersion
     }
 }
 
@@ -247,7 +249,11 @@ public struct AgentSessionDurableState: Codable {
     public let estateState: AgentEstateState?
 
     init(session: AgentSimulationSession) {
-        if session.agricultureState?.plots.contains(where: {
+        if session.ecologicalObservationState?.observations.isEmpty == false
+            || session.agricultureState?.plots.isEmpty == false {
+            schemaVersion = AgentCheckpointSchema
+                .independentEcologicalReceiptVersion
+        } else if session.agricultureState?.plots.contains(where: {
             $0.cycleOrdinal > 1 && $0.renewalEvidence != nil
         }) == true {
             schemaVersion = AgentCheckpointSchema.renewableSubsistenceVersion
@@ -1034,16 +1040,19 @@ extension AgentSimulationSession {
         guard AgentCheckpointSchema.supports(state.schemaVersion) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
+        let independentReceiptSchema = state.schemaVersion
+            == AgentCheckpointSchema.independentEcologicalReceiptVersion
         let renewableSchema = state.schemaVersion
             == AgentCheckpointSchema.renewableSubsistenceVersion
+        let latestSchema = renewableSchema || independentReceiptSchema
         let estateSchema =
             state.schemaVersion == AgentCheckpointSchema.legacyEstateVersion
             || state.schemaVersion == AgentCheckpointSchema.estateVersion
-            || (renewableSchema && state.estateState != nil)
+            || (latestSchema && state.estateState != nil)
         guard state.schemaVersion == AgentCheckpointSchema.familyVersion
                 || state.schemaVersion
                     == AgentCheckpointSchema.durableHouseConsentVersion
-                || renewableSchema
+                || latestSchema
                 || estateSchema
                 || state.familyState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
@@ -1091,7 +1100,7 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
                 || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                 || state.schemaVersion == AgentCheckpointSchema.childhoodVersion
-                || renewableSchema
+                || latestSchema
                 || state.ecologicalObservationState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -1106,7 +1115,7 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
                 || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                 || state.schemaVersion == AgentCheckpointSchema.childhoodVersion
-                || renewableSchema
+                || latestSchema
                 || state.agricultureState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -1120,7 +1129,7 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
                 || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                 || state.schemaVersion == AgentCheckpointSchema.childhoodVersion
-                || renewableSchema
+                || latestSchema
                 || state.wildSubsistenceState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -1133,7 +1142,7 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
                 || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                 || state.schemaVersion == AgentCheckpointSchema.childhoodVersion
-                || renewableSchema
+                || latestSchema
                 || state.livestockState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -1145,7 +1154,7 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
                 || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                 || state.schemaVersion == AgentCheckpointSchema.childhoodVersion
-                || renewableSchema
+                || latestSchema
                 || state.workCommitmentState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -1156,7 +1165,7 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
                 || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                 || state.schemaVersion == AgentCheckpointSchema.childhoodVersion
-                || renewableSchema
+                || latestSchema
                 || state.physicalFoodSurvivalState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -1166,7 +1175,7 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
                 || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                 || state.schemaVersion == AgentCheckpointSchema.childhoodVersion
-                || renewableSchema
+                || latestSchema
                 || state.autonomousActivityState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -1175,7 +1184,7 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
                 || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                 || state.schemaVersion == AgentCheckpointSchema.childhoodVersion
-                || renewableSchema
+                || latestSchema
                 || state.materialRightsState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -1183,20 +1192,20 @@ extension AgentSimulationSession {
                 || state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
                 || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                 || state.schemaVersion == AgentCheckpointSchema.childhoodVersion
-                || renewableSchema
+                || latestSchema
                 || state.persistenceReconciliationState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.schemaVersion == AgentCheckpointSchema.homeostasisVersion
                 || state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                 || state.schemaVersion == AgentCheckpointSchema.childhoodVersion
-                || renewableSchema
+                || latestSchema
                 || state.homeostasisState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.schemaVersion == AgentCheckpointSchema.geneticsVersion
                 || state.schemaVersion == AgentCheckpointSchema.childhoodVersion
-                || renewableSchema
+                || latestSchema
                 || state.geneticsState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
@@ -1320,7 +1329,14 @@ extension AgentSimulationSession {
                     && state.ecologicalObservationState != nil
                     && state.agricultureState?.plots.contains(where: {
                         $0.cycleOrdinal > 1 && $0.renewalEvidence != nil
-                    }) == true) else {
+                    }) == true)
+                || (independentReceiptSchema
+                    && state.populationRegistry != nil
+                    && state.ecologicalObservationState != nil
+                    && state.ecologicalObservationState?.observations
+                        .allSatisfy({
+                            $0.physicalObservationReceiptID != nil
+                        }) == true) else {
                 throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
             }
         }
@@ -1905,7 +1921,10 @@ extension AgentSimulationSession {
             let summaries = mortality.compactedDeathSummaries ?? []
             if state.schemaVersion == AgentCheckpointSchema.estateVersion
                 || state.schemaVersion
-                    == AgentCheckpointSchema.renewableSubsistenceVersion {
+                    == AgentCheckpointSchema.renewableSubsistenceVersion
+                || state.schemaVersion
+                    == AgentCheckpointSchema
+                        .independentEcologicalReceiptVersion {
                 guard mortality.historicalEvidenceVersion
                         == AgentCompactedDeathSummary.currentVersion,
                       mortality.compactedDeathSummaries != nil else {
@@ -2473,6 +2492,23 @@ extension AgentSimulationSession {
         }
         if let observations = state.ecologicalObservationState {
             do {
+                if independentReceiptSchema {
+                    let receiptIDs = observations.observations.compactMap(
+                        \.physicalObservationReceiptID
+                    )
+                    guard receiptIDs.count == observations.observations.count,
+                          receiptIDs.count == Set(receiptIDs).count else {
+                        throw AgentEcologicalObservationError.invalidState(
+                            "schema 30 physical receipt reference"
+                        )
+                    }
+                } else {
+                    guard observations.observations.isEmpty else {
+                        throw AgentEcologicalObservationError.invalidState(
+                            "legacy schema lacks independent physical receipt"
+                        )
+                    }
+                }
                 _ = try validateEcologicalObservationState(
                     observations,
                     activeAgents: state.agents,
@@ -2491,6 +2527,24 @@ extension AgentSimulationSession {
         }
         if let agriculture = state.agricultureState {
             do {
+                if independentReceiptSchema {
+                    guard agriculture.plots.allSatisfy({
+                        $0.sourceObservationReceiptID != nil
+                            && ($0.renewalEvidence == nil
+                                || $0.renewalEvidence?
+                                    .sourceObservationReceiptID != nil)
+                    }) else {
+                        throw AgentAgricultureError.invalidState(
+                            "schema 30 source observation receipt"
+                        )
+                    }
+                } else {
+                    guard agriculture.plots.isEmpty else {
+                        throw AgentAgricultureError.invalidState(
+                            "legacy schema lacks physical foundation receipt"
+                        )
+                    }
+                }
                 try validateAgricultureState(
                     agriculture,
                     activeAgents: state.agents,

@@ -530,6 +530,7 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         observerID: String?,
         worldContextKey: String?,
         dimensionKey: String?,
+        physicalReceiptID: String?,
         resultCount: Int,
         worldReads: Int,
         truncated: Bool,
@@ -752,11 +753,12 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
                 + "\(skillPracticeEventID ?? "none")|\(status)|"
                 + "\(reason ?? "none")|\(digest)"
         case let .ecologicalObservation(
-            observerID, worldContextKey, dimensionKey, resultCount, worldReads,
-            truncated, status, digest
+            observerID, worldContextKey, dimensionKey, physicalReceiptID,
+            resultCount, worldReads, truncated, status, digest
         ):
             return "ecologicalObservation|\(observerID ?? "none")|"
                 + "\(worldContextKey ?? "none")|\(dimensionKey ?? "none")|"
+                + "\(physicalReceiptID ?? "none")|"
                 + "\(resultCount)|\(worldReads)|\(truncated ? 1 : 0)|\(status)|\(digest)"
         case let .agriculture(
             plotID, cellIndex, actionID, status, physicalFingerprint,

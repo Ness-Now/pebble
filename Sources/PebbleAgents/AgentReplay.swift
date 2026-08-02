@@ -30,6 +30,7 @@ public enum AgentReplaySchema {
     public static let legacyEstateVersion = 27
     public static let estateVersion = 28
     public static let renewableSubsistenceVersion = 29
+    public static let independentEcologicalReceiptVersion = 30
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -47,6 +48,7 @@ public enum AgentReplaySchema {
             || version == familyVersion || version == durableHouseConsentVersion
             || version == legacyEstateVersion || version == estateVersion
             || version == renewableSubsistenceVersion
+            || version == independentEcologicalReceiptVersion
     }
 }
 
@@ -269,6 +271,10 @@ public enum AgentReplayOperation: Codable {
         configuration: AgentEcologicalObservationConfiguration
     )
     case recordEcologicalObservation(AgentEcologicalObservation)
+    case recordEcologicalObservationWithPhysicalReceipt(
+        AgentEcologicalObservation,
+        physicalReceiptID: AgentPhysicalObservationReceiptID
+    )
     case setAgricultureEnabled(Bool, configuration: AgentAgricultureConfiguration)
     case planAgriculturalPlot(
         plannerID: AgentID,
@@ -426,7 +432,9 @@ public enum AgentReplayOperation: Codable {
         case .endApprenticeship: return .apprenticeshipEnd
         case .linkGuidedPractice: return .guidedPractice
         case .setEcologicalObservationEnabled: return .ecologicalObservationFeature
-        case .recordEcologicalObservation: return .ecologicalObservationRecord
+        case .recordEcologicalObservation,
+             .recordEcologicalObservationWithPhysicalReceipt:
+            return .ecologicalObservationRecord
         case .setAgricultureEnabled: return .agricultureFeature
         case .planAgriculturalPlot: return .agriculturalPlotPlanning
         case .reserveAgriculturalCell: return .agriculturalReservation
@@ -515,6 +523,12 @@ public enum AgentReplayOperation: Codable {
         case let .recordEcologicalObservation(observation):
             raw = "ecological-observation:\(observation.observerID.rawValue):"
                 + "\(observation.observedAtSimulationTick):\(observation.digest)"
+        case let .recordEcologicalObservationWithPhysicalReceipt(
+            observation, physicalReceiptID
+        ):
+            raw = "ecological-observation:\(observation.observerID.rawValue):"
+                + "\(observation.observedAtSimulationTick):\(observation.digest):"
+                + physicalReceiptID.rawValue
         case let .recordAgriculturalAction(outcome): raw = outcome.actionID.rawValue
         case let .renewAgriculturalPlot(
             plotID, plannerID, sourceObservationEventID
@@ -812,6 +826,9 @@ public struct AgentReplayRecorder {
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
         schemaVersion = checkpoint.schemaVersion
+            == AgentCheckpointSchema.independentEcologicalReceiptVersion
+            ? AgentReplaySchema.independentEcologicalReceiptVersion
+            : checkpoint.schemaVersion
             == AgentCheckpointSchema.renewableSubsistenceVersion
             ? AgentReplaySchema.renewableSubsistenceVersion
             : session.estatesEnabled
@@ -938,6 +955,12 @@ public struct AgentReplayRecorder {
                 )
             }
             schemaVersion = AgentReplaySchema.ecologicalObservationVersion
+        }
+        if case .recordEcologicalObservationWithPhysicalReceipt = operation,
+           schemaVersion
+            < AgentReplaySchema.independentEcologicalReceiptVersion {
+            schemaVersion = AgentReplaySchema
+                .independentEcologicalReceiptVersion
         }
         if case let .setAgricultureEnabled(enabled, _) = operation,
            enabled,
@@ -1295,6 +1318,10 @@ public enum AgentSessionReplayer {
                     == AgentReplaySchema.renewableSubsistenceVersion
                 && checkpoint.schemaVersion
                     <= AgentCheckpointSchema.estateVersion)
+            || (manifest.schemaVersion
+                    == AgentReplaySchema.independentEcologicalReceiptVersion
+                && checkpoint.schemaVersion
+                    <= AgentCheckpointSchema.renewableSubsistenceVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -1538,6 +1565,13 @@ extension AgentSimulationSession {
             )
         case let .recordEcologicalObservation(observation):
             _ = try candidate.recordEcologicalObservation(observation)
+        case let .recordEcologicalObservationWithPhysicalReceipt(
+            observation, physicalReceiptID
+        ):
+            _ = try candidate.recordEcologicalObservation(
+                observation,
+                physicalReceiptID: physicalReceiptID
+            )
         case let .setAgricultureEnabled(enabled, configuration):
             try candidate.setAgricultureEnabled(enabled, configuration: configuration)
         case let .planAgriculturalPlot(

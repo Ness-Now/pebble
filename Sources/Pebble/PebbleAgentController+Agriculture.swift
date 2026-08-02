@@ -434,23 +434,11 @@ extension PebbleAgentController {
                     civilDate: date,
                     actionID: actionID,
                     publish: { outcome in
-                        if try self.applyRecordedOperationIfActive(
-                            .recordAgriculturalAction(outcome),
+                        try self.publishVerifiedAgriculturalAction(
+                            outcome,
+                            world: world,
                             session: &candidate,
                             recorder: &candidateRecorder
-                        ) != nil {
-                            guard let result = candidate.agricultureSnapshot()
-                                .retainedActions.last(where: {
-                                    $0.outcome.actionID == outcome.actionID
-                                }) else {
-                                throw ControllerError.agricultureBoundary(
-                                    "maturity replay publication missing"
-                                )
-                            }
-                            return result
-                        }
-                        return try candidate.recordAgriculturalActionSuccess(
-                            outcome
                         )
                     }
                 )
@@ -1001,7 +989,12 @@ extension PebbleAgentController {
                     materialGateway: materialCustodyGateway,
                     physicalGateway: physicalActionGateway,
                     actionID: agricultureActionID("till-\(cell.index)"),
-                    publishAndVerify: { try candidate.recordAgriculturalActionSuccess($0) }
+                    publishAndVerify: {
+                        try publishVerifiedAgriculturalAction(
+                            $0, world: world, session: &candidate,
+                            recorder: &recorder
+                        )
+                    }
                 )
                 if cell.index == 0 {
                     let digestBeforeDuplicate = candidate.agricultureSnapshot().digest
@@ -1021,7 +1014,12 @@ extension PebbleAgentController {
                     materialGateway: materialCustodyGateway,
                     physicalGateway: physicalActionGateway,
                     actionID: agricultureActionID("plant-\(cell.index)"),
-                    publishAndVerify: { try candidate.recordAgriculturalActionSuccess($0) }
+                    publishAndVerify: {
+                        try publishVerifiedAgriculturalAction(
+                            $0, world: world, session: &candidate,
+                            recorder: &recorder
+                        )
+                    }
                 )
             }
             let immatureWait = candidate.nextAgriculturalIntent(for: actorID) == nil
@@ -1084,7 +1082,12 @@ extension PebbleAgentController {
                     observationEventID: maturityRecord.causalEventID,
                     observedCrop: crop, civilDate: candidate.civilDate()!,
                     actionID: agricultureActionID("mature-\(cell.index)"),
-                    publish: { try candidate.recordAgriculturalActionSuccess($0) }
+                    publish: {
+                        try publishVerifiedAgriculturalAction(
+                            $0, world: world, session: &candidate,
+                            recorder: &recorder
+                        )
+                    }
                 )
             }
             resetGameRng(46)
@@ -1102,7 +1105,12 @@ extension PebbleAgentController {
                     materialGateway: materialCustodyGateway,
                     physicalGateway: physicalActionGateway,
                     actionID: agricultureActionID("harvest-\(cell.index)"),
-                    publishAndVerify: { try candidate.recordAgriculturalActionSuccess($0) }
+                    publishAndVerify: {
+                        try publishVerifiedAgriculturalAction(
+                            $0, world: world, session: &candidate,
+                            recorder: &recorder
+                        )
+                    }
                 )
             }
 
@@ -1175,7 +1183,12 @@ extension PebbleAgentController {
                 seedReserveTarget: fixture.productiveCells.count,
                 materialGateway: materialCustodyGateway,
                 actionID: agricultureActionID("store"),
-                publishAndVerify: { try candidate.recordAgriculturalActionSuccess($0) }
+                publishAndVerify: {
+                    try publishVerifiedAgriculturalAction(
+                        $0, world: world, session: &candidate,
+                        recorder: &recorder
+                    )
+                }
             )
             let stored = try agricultureExecutor.liveSurplus(
                 container: fixture.container, world: world,
@@ -1258,7 +1271,12 @@ extension PebbleAgentController {
                     materialGateway: materialCustodyGateway,
                     physicalGateway: physicalActionGateway,
                     actionID: agricultureActionID("display-till-\(cell.index)"),
-                    publishAndVerify: { try candidate.recordAgriculturalActionSuccess($0) }
+                    publishAndVerify: {
+                        try publishVerifiedAgriculturalAction(
+                            $0, world: world, session: &candidate,
+                            recorder: &recorder
+                        )
+                    }
                 )
                 _ = try agricultureExecutor.plant(
                     world: world, actor: embodiment,
@@ -1269,7 +1287,12 @@ extension PebbleAgentController {
                     materialGateway: materialCustodyGateway,
                     physicalGateway: physicalActionGateway,
                     actionID: agricultureActionID("display-plant-\(cell.index)"),
-                    publishAndVerify: { try candidate.recordAgriculturalActionSuccess($0) }
+                    publishAndVerify: {
+                        try publishVerifiedAgriculturalAction(
+                            $0, world: world, session: &candidate,
+                            recorder: &recorder
+                        )
+                    }
                 )
             }
             for (offset, position) in fixture.displayCells.enumerated() {
@@ -1302,8 +1325,7 @@ extension PebbleAgentController {
                 candidate.ecologicalObservations(for: actorID).first,
                 "tamper observation"
             )
-            _ = try candidate.recordAgriculturalActionSuccess(
-                AgentAgriculturalActionOutcome(
+            let reconciliationOutcome = AgentAgriculturalActionOutcome(
                     actionID: agricultureActionID("external-tamper"),
                     kind: .reconcile, actorID: actorID, plotID: displayPlotID,
                     cellIndex: 0, position: tampered,
@@ -1311,6 +1333,11 @@ extension PebbleAgentController {
                     sourceObservationEventID: tamperObservation.causalEventID,
                     civilDate: candidate.civilDate()!
                 )
+            _ = try publishVerifiedAgriculturalAction(
+                reconciliationOutcome,
+                world: world,
+                session: &candidate,
+                recorder: &recorder
             )
             let current = try agricultureExecutor.liveSurplus(
                 container: fixture.container, world: world,

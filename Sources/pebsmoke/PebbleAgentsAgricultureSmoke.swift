@@ -243,6 +243,66 @@ private func agricultureAction(
     )
 }
 
+private let agricultureReceiptWorldID = "agriculture-world"
+private let agricultureReceiptStorageID = "sqlite-world:agriculture-world"
+
+private func agricultureObservationReceiptEvidence(
+    _ session: AgentSimulationSession
+) -> [AgentEcologicalPhysicalReceiptEvidence] {
+    session.ecologicalObservationSnapshot().observations.compactMap { record in
+        guard let receiptID = record.physicalObservationReceiptID else {
+            return nil
+        }
+        let observation = record.observation
+        return AgentEcologicalPhysicalReceiptEvidence(
+            receiptID: receiptID,
+            operationID: receiptID.rawValue,
+            observerID: observation.observerID,
+            worldID: agricultureReceiptWorldID,
+            storageIdentity: agricultureReceiptStorageID,
+            dimension: 0,
+            dimensionKey: observation.dimensionKey,
+            physicalWorldTick: observation.physicalWorldTick,
+            simulationID: session.simulationID,
+            simulationTick: observation.observedAtSimulationTick,
+            origin: observation.origin,
+            observation: observation,
+            resultCount: observation.diagnostics.resultsEmitted,
+            worldReadCount: observation.diagnostics.worldReads
+        )
+    }
+}
+
+private func agricultureActionReceiptEvidence(
+    _ session: AgentSimulationSession
+) -> [AgentAgriculturalPhysicalReceiptEvidence] {
+    session.agricultureSnapshot().retainedActions.map { record in
+        AgentAgriculturalPhysicalReceiptEvidence(
+            receiptID: record.outcome.actionID,
+            operationID: record.outcome.actionID.rawValue,
+            worldID: agricultureReceiptWorldID,
+            storageIdentity: agricultureReceiptStorageID,
+            dimension: 0,
+            simulationID: session.simulationID,
+            outcome: record.outcome
+        )
+    }
+}
+
+private func agricultureIndependentReceiptValidationRefused(
+    _ body: () throws -> Void
+) -> Bool {
+    do {
+        try body()
+        return false
+    } catch AgentSessionError.agriculture(.invalidState),
+            AgentSessionError.ecologicalObservation(.invalidState) {
+        return true
+    } catch {
+        return false
+    }
+}
+
 func runPebbleAgentsAgricultureSmoke() {
     section("PebbleAgents bounded agriculture and managed surplus")
 
@@ -265,14 +325,14 @@ func runPebbleAgentsAgricultureSmoke() {
     )
     let v12 = try! session.makeCheckpoint()
     let v12Restored = try! AgentSimulationSession.restoring(v12)
-    check("v12 checkpoint remains loadable with agriculture empty",
-          v12.schemaVersion == 12 && !v12Restored.agricultureEnabled
+    check("schema 30 checkpoint retains independent observation reference with agriculture empty",
+          v12.schemaVersion == 30 && !v12Restored.agricultureEnabled
             && (try! v12Restored.durableStateBytes()) == (try! session.durableStateBytes()))
 
     let coarseBefore = session.snapshot()
     try! session.setAgricultureEnabled(true)
-    check("agriculture activation promotes v13 without retroactive farms",
-          session.durableState().schemaVersion == 13
+    check("agriculture activation remains schema 30 without retroactive farms",
+          session.durableState().schemaVersion == 30
             && session.agricultureSnapshot().plots.isEmpty
             && session.agricultureSnapshot().managedSurplusRecords.isEmpty)
     let plotID = try! session.planAgriculturalPlot(
@@ -318,8 +378,8 @@ func runPebbleAgentsAgricultureSmoke() {
           ) == nil)
     let partialCheckpoint = try! session.makeCheckpoint()
     let partialRestored = try! AgentSimulationSession.restoring(partialCheckpoint)
-    check("v13 checkpoint preserves a planted active plot without World invention",
-          partialCheckpoint.schemaVersion == 13
+    check("schema 30 checkpoint preserves a planted active plot without World invention",
+          partialCheckpoint.schemaVersion == 30
             && partialRestored.agricultureSnapshot() == session.agricultureSnapshot()
             && partialRestored.agricultureSnapshot().plots[0].phase == .growing)
     let practiceBeforeInvalid = session.practiceUnits(
@@ -484,9 +544,99 @@ func runPebbleAgentsAgricultureSmoke() {
 
     let checkpoint = try! session.makeCheckpoint()
     let restored = try! AgentSimulationSession.restoring(checkpoint)
-    check("renewed agriculture checkpoint promotes v29 and restarts byte exact",
-          checkpoint.schemaVersion == 29
+    check("renewed agriculture checkpoint remains schema 30 and restarts byte exact",
+          checkpoint.schemaVersion == 30
             && (try! restored.durableStateBytes()) == (try! session.durableStateBytes()))
+    let observationReceiptEvidence = agricultureObservationReceiptEvidence(
+        session
+    )
+    let actionReceiptEvidence = agricultureActionReceiptEvidence(session)
+    check("agriculture foundations reconcile with independent observation receipts", {
+        do {
+            try session.validateIndependentEcologicalObservationReceipts(
+                observationReceiptEvidence,
+                worldID: agricultureReceiptWorldID,
+                storageIdentity: agricultureReceiptStorageID,
+                dimension: 0
+            )
+            return true
+        } catch { return false }
+    }())
+    check("agriculture actions reconcile with independent physical receipts", {
+        do {
+            try session.validateIndependentAgriculturalActionReceipts(
+                actionReceiptEvidence,
+                worldID: agricultureReceiptWorldID,
+                storageIdentity: agricultureReceiptStorageID,
+                dimension: 0
+            )
+            return true
+        } catch { return false }
+    }())
+    check("wrong agriculture source observation receipt is refused", {
+        guard let sourceID = session.agricultureSnapshot().plots.first?
+                .sourceObservationReceiptID,
+              let sourceIndex = observationReceiptEvidence.firstIndex(where: {
+                  $0.receiptID == sourceID
+              }),
+              let replacement = observationReceiptEvidence.first(where: {
+                  $0.receiptID != sourceID
+                      && $0.observerID
+                        != observationReceiptEvidence[sourceIndex].observerID
+              }) else { return false }
+        var changed = observationReceiptEvidence
+        changed[sourceIndex] = AgentEcologicalPhysicalReceiptEvidence(
+            receiptID: sourceID,
+            operationID: sourceID.rawValue,
+            observerID: replacement.observerID,
+            worldID: agricultureReceiptWorldID,
+            storageIdentity: agricultureReceiptStorageID,
+            dimension: 0,
+            dimensionKey: replacement.dimensionKey,
+            physicalWorldTick: replacement.physicalWorldTick,
+            simulationID: session.simulationID,
+            simulationTick: replacement.simulationTick,
+            origin: replacement.origin,
+            observation: replacement.observation,
+            resultCount: replacement.resultCount,
+            worldReadCount: replacement.worldReadCount
+        )
+        return agricultureIndependentReceiptValidationRefused {
+            try session.validateIndependentEcologicalObservationReceipts(
+                changed,
+                worldID: agricultureReceiptWorldID,
+                storageIdentity: agricultureReceiptStorageID,
+                dimension: 0
+            )
+        }
+    }())
+    check("planting or harvest receipt substitution is refused", {
+        guard let first = actionReceiptEvidence.firstIndex(where: {
+                  $0.outcome.kind == .plant
+              }),
+              let replacement = actionReceiptEvidence.first(where: {
+                  $0.outcome.kind == .harvest
+              }) else { return false }
+        var changed = actionReceiptEvidence
+        let originalID = changed[first].receiptID
+        changed[first] = AgentAgriculturalPhysicalReceiptEvidence(
+            receiptID: originalID,
+            operationID: originalID.rawValue,
+            worldID: agricultureReceiptWorldID,
+            storageIdentity: agricultureReceiptStorageID,
+            dimension: 0,
+            simulationID: session.simulationID,
+            outcome: replacement.outcome
+        )
+        return agricultureIndependentReceiptValidationRefused {
+            try session.validateIndependentAgriculturalActionReceipts(
+                changed,
+                worldID: agricultureReceiptWorldID,
+                storageIdentity: agricultureReceiptStorageID,
+                dimension: 0
+            )
+        }
+    }())
 
     var causalRetention = agricultureBase(
         "agriculture-exact-causal-retention",
@@ -546,7 +696,7 @@ func runPebbleAgentsAgricultureSmoke() {
               agriculture["retainedActions"] = actions
               durable["agricultureState"] = agriculture
           })
-    check("planner corruption is rejected by exact observation event",
+    check("planner mutation is rejected by exact observation event",
           agricultureRestoreRefused(retentionCheckpoint) { durable in
               var agriculture = durable["agricultureState"] as! [String: Any]
               var plots = agriculture["plots"] as! [[String: Any]]
@@ -554,7 +704,7 @@ func runPebbleAgentsAgricultureSmoke() {
               agriculture["plots"] = plots
               durable["agricultureState"] = agriculture
           })
-    check("action actor corruption is rejected by exact agriculture event",
+    check("action actor mutation is rejected by exact agriculture event",
           agricultureRestoreRefused(retentionCheckpoint) { durable in
               var agriculture = durable["agricultureState"] as! [String: Any]
               var actions = agriculture["retainedActions"] as! [[String: Any]]
@@ -623,7 +773,7 @@ func runPebbleAgentsAgricultureSmoke() {
         return (try? restored.durableStateBytes())
             == (try? foundationRetention.durableStateBytes())
     }())
-    check("post-eviction source corruption is rejected by boundary",
+    check("post-eviction source mutation is rejected by boundary",
           agricultureRestoreRefused(postBoundaryCheckpoint) { durable in
               var agriculture = durable["agricultureState"] as! [String: Any]
               var plots = agriculture["plots"] as! [[String: Any]]
@@ -631,7 +781,7 @@ func runPebbleAgentsAgricultureSmoke() {
               agriculture["plots"] = plots
               durable["agricultureState"] = agriculture
           })
-    check("post-eviction planner corruption is rejected by boundary",
+    check("post-eviction planner mutation is rejected by boundary",
           agricultureRestoreRefused(postBoundaryCheckpoint) { durable in
               var agriculture = durable["agricultureState"] as! [String: Any]
               var plots = agriculture["plots"] as! [[String: Any]]
@@ -639,7 +789,7 @@ func runPebbleAgentsAgricultureSmoke() {
               agriculture["plots"] = plots
               durable["agricultureState"] = agriculture
           })
-    check("post-eviction cell corruption is rejected by boundary",
+    check("post-eviction cell mutation is rejected by boundary",
           agricultureRestoreRefused(postBoundaryCheckpoint) { durable in
               var agriculture = durable["agricultureState"] as! [String: Any]
               var plots = agriculture["plots"] as! [[String: Any]]
@@ -651,7 +801,7 @@ func runPebbleAgentsAgricultureSmoke() {
               agriculture["plots"] = plots
               durable["agricultureState"] = agriculture
           })
-    check("retained action tick corruption remains exactly rejected",
+    check("retained action tick mutation remains exactly rejected",
           agricultureRestoreRefused(retentionCheckpoint) { durable in
               var agriculture = durable["agricultureState"] as! [String: Any]
               var actions = agriculture["retainedActions"] as! [[String: Any]]
@@ -730,8 +880,8 @@ func runPebbleAgentsAgricultureSmoke() {
         named: AgentCheckpointName(rawValue: "agriculture-replay")!
     )
     let replay = try! AgentSessionReplayer.replay(checkpoint: v12, journal: journal)
-    check("agriculture v13 replay is deterministic and byte exact",
-          replay.report.verified && replay.report.schemaVersion == 13
+    check("agriculture schema 30 replay is deterministic and byte exact",
+          replay.report.verified && replay.report.schemaVersion == 30
             && (try! replay.session.durableStateBytes())
                 == (try! replayed.durableStateBytes()))
 }
