@@ -84,11 +84,23 @@ The observation tick must be no later than the death tick. Same-tick
 observation and death are accepted only when causal sequence proves that the
 observation preceded finalization.
 
-When retained, the ecological causal event must have the exact simulation,
+Every retained row requires its exact `ecologicalObservationRecorded` event,
+its exact direct cause and the exact applicable registration or birth event.
+A deceased observer additionally requires the exact retained
+`agentDeathFinalized` event. Those events must retain the expected simulation,
 kind, transition origin, actor, subject, tick, context keys, result count,
-read count, truncation state and observation digest. An honestly evicted event
-is accepted only under the existing bounded-ledger prefix policy and still
-requires independent active-population or retained-death authority.
+read count, truncation state and observation digest. A sequence in the causal
+ledger's dropped prefix is never accepted as a substitute for any of these
+authorities.
+
+All causal appends use one aggregate boundary. Before an append could evict a
+required event, that boundary removes the dependent ecological row from the
+candidate state, increments `evictionCounts.observations` exactly and then
+allows normal causal compaction. If the last-observation or initialization
+boundary is itself about to leave, the candidate first records one exact
+bounded ecological retention boundary and refreshes both references. A later
+observation therefore never cites an event whose meaning is no longer
+available.
 
 ## 6. Death-record and compaction policy
 
@@ -112,43 +124,57 @@ count. A retained observation whose only author evidence is a compacted death
 summary is invalid in schema 29, and honest runtime compaction cannot publish
 that state.
 
-The mandatory audit found one exact analogue: a retained renewable-agriculture
-plot can have a planner who later dies. Agriculture validation now proves such
-a planner or retained action actor through active population or the exact full
-death record, with the same registration/action/death ordering. A retained
-agriculture record pins that full death authority; compacted-summary-only
-evidence fails closed. No broader historical-actor policy was changed.
+The mandatory audit found one exact analogue in renewable agriculture. The
+immutable operational foundation of every retained plot (planner,
+registration, ecological source, plot/crop/storage identities and canonical
+cells) is covered by a canonical digest. Before an original source event can
+leave, the central append boundary emits one exact retained
+`agricultureInitialized` retention event carrying that digest and atomically
+refreshes the operational plot references. This permits bounded long-running
+production without trusting a dropped prefix.
+
+Historical agriculture actions, skill events, source observations, managed
+surplus, renewal records and physical receipts are not summarized by that
+boundary. Their exact causal events remain pinned; an append that would evict
+one is refused atomically. Validators prove actor, tick, cell, material deltas
+and payload. A dropped-prefix sequence and compacted-summary-only actor
+evidence both fail closed. No broader historical-actor policy was changed.
 
 ## 7. Atomicity
 
-Ecological eviction, mortality compaction, compacted-summary creation and
-estate/death retention operate on the candidate aggregate. Bounds and
-historical agriculture dependencies are checked before publication. The
-candidate ecology, mortality, estate and causal authorities are validated
-together before the aggregate is assigned.
+Ecological eviction, causal compaction, mortality compaction,
+compacted-summary creation and estate/death retention operate on the candidate
+aggregate. Bounds and historical agriculture dependencies are checked before
+publication. The candidate ecology, agriculture, mortality, estate and causal
+authorities are validated together before the aggregate is assigned.
 
-Injected capacity and late-candidate failures prove that the published
-session retains the original observations, death record, exact eviction
-counter, estate and causal ledger. No physical World mutation is introduced by
-this history-validation correction.
+Injected failures after row removal, counter update, causal append and causal
+compaction prove byte-exact rollback of the observations, eviction counter,
+causal events, dropped count, rolling digest, mortality, estate and other
+aggregate authorities. No physical World mutation is introduced by this
+history-validation correction.
 
 ## 8. Schema compatibility
 
 No schema increment is required. Schema 29 already persists the ecological
-record, population registration binding, retained mortality record, causal
-IDs and integrity digests needed for exact validation.
+record, population registration binding, retained mortality record and exact
+causal events needed for validation. The correction changes coordinated
+retention and validation, not the durable representation.
 
 Schema 29 accepts active observers and observers who died after their
 observation while the exact death record remains retained. It refuses unknown
 observers, registration after observation, observation after death, invalid
-causal binding and compacted-summary-only authority. Older schemas retain
-their previous compatibility only where exact proof remains possible;
-otherwise restoration fails closed.
+causal binding, every retained row missing its exact causal event or direct
+cause, arbitrary dropped-prefix registration/death IDs and
+compacted-summary-only authority. Older schemas retain their previous
+compatibility only where exact proof remains possible; otherwise restoration
+fails closed.
 
 ## 9. Fully re-signed corruptions
 
 The adversarial fixtures recompute the modified observation digest,
-ecological state, causal event and rolling digest, mortality binding where
+ecological state, causal event and rolling digest, agriculture foundation
+boundary and digest where applicable, mortality binding where
 applicable, checkpoint semantic digest, storage digest and manifest integrity
 digest. Semantic validation rejects:
 
@@ -159,9 +185,26 @@ digest. Semantic validation rejects:
 - an observer already dead before the observation;
 - actor, subject, origin, tick or payload-digest corruption;
 - contradictory registration or death authority;
+- physical content, context, tick or observer replacement after the original
+  ecological event has left the ledger, even after every recalculable digest
+  is repaired;
+- arbitrary registration or death event IDs selected from the dropped causal
+  prefix;
 - a compacted observer reintroduced without a retained full death record.
 
-These refusals do not rely on leaving an old checksum unrepaired.
+The post-eviction fixtures first remove the legitimate row through causal
+pressure, then reintroduce a fully re-signed corruption without restoring its
+exact causal event. These refusals are semantic and do not rely on leaving an
+old checksum unrepaired.
+
+The low-capacity campaign proves the retention matrix directly: an exact row
+and event restart successfully; pressure removes only rows whose required
+event is projected to leave; the lifetime observation total is unchanged and
+the eviction count increases by the exact removed-row count; an unaffected
+observer remains byte-identical; the event may then leave; and any artificial
+row reintroduction is rejected. Pressure against retained historical
+agriculture actions or receipts instead refuses the append and preserves its
+complete candidate state byte-for-byte.
 
 ## 10. Two-process product campaign
 
@@ -171,7 +214,7 @@ The reproducible runner is:
 scripts/verify-pebblelab-gate-d-ecological-observer-fix.sh
 ```
 
-Its final rendered campaign used World `wmsbewsw4i1sb` and session
+Its final rendered campaign used World `wmsbnosi0cki2` and session
 `live-46-14-66--21`. Process 1 recorded normal observations, produced normal
 child `agent_3`, verified one supervision tick and an interrupted tick with no
 credit, finalized `agent_0` through mortality, preserved the physical asset in
@@ -193,8 +236,8 @@ death event: live-46-14-66--21/event-00000000000000000554
 death ID: death-agent_0-t24-3cfeb0b74c40c179
 death tick: 24
 classification: deceasedAfterObservationRetained
-digest before/after restart: cf59861f7d72703d / cf59861f7d72703d
-ecological state digest before/after: 1c86d0d3175b784a / 1c86d0d3175b784a
+digest before/after restart: fae65b79ac2d596c / fae65b79ac2d596c
+ecological state digest before/after: 517c97280ceef2ef / 517c97280ceef2ef
 ```
 
 Final campaign accounting:
@@ -222,7 +265,7 @@ The final focused runs on the exact product diff reported:
 
 | Suite | Passed | Failed |
 | --- | ---: | ---: |
-| ecological observation | 44 | 0 |
+| ecological observation | 55 | 0 |
 | mortality | 93 | 0 |
 | estates/inheritance/succession | 84 | 0 |
 | checkpoint/replay | 49 | 0 |
@@ -233,16 +276,19 @@ The final focused runs on the exact product diff reported:
 | childhood/guardianship | 62 | 0 |
 | dependent care | 55 | 0 |
 | unions/family/lineages/houses | 83 | 0 |
-| agriculture | 32 | 0 |
+| agriculture | 44 | 0 |
 | renewable subsistence | 19 | 0 |
 | Material Rights | 21 | 0 |
 | Observer | 20 | 0 |
-| **Total** | **771** | **0** |
+| **Total** | **794** | **0** |
 
-The canonical repository gate reported `3679 passed, 0 failed` and all
-`35/35` steps. The published Blocker 01 runner also passed on the corrected
-product with three mismatches before load, zero after load, zero probe or item
-duplication, zero Observer mutation, zero runtime error and exact cleanup.
+The supplemental 900-tick `work-demand-refresh` stress reported `26 passed, 0
+failed`; the bounded ledger retained 64 events while dropping 8,751 and kept
+the three work demands stable. The canonical repository gate reported `3702
+passed, 0 failed` and all `35/35` steps. The published Blocker 01 runner also
+passed on the corrected product with three mismatches before load, zero after
+load, zero probe or item duplication, zero Observer mutation, zero runtime
+error and exact cleanup.
 
 ## 12. Limits
 
@@ -250,8 +296,14 @@ duplication, zero Observer mutation, zero runtime error and exact cleanup.
   is not an independent Gate D evaluation.
 - A compacted death summary does not authorize a retained personal ecological
   observation in schema 29; coordinated compaction evicts that row first.
-- Agriculture records that still need a dead historical actor pin the full
-  death record instead of adding a general actor-history authority.
+- A retained ecological row cannot outlive its exact record event, direct
+  cause, registration/birth authority or retained death event. Causal pressure
+  evicts the row first; lifetime totals remain monotonic.
+- Immutable agriculture plot foundations may move to an exact, digest-bound
+  causal retention boundary before their source event leaves. Historical
+  action, skill, renewal, surplus and physical-receipt evidence remains exact;
+  causal-capacity exhaustion refuses the candidate append atomically rather
+  than weakening or silently discarding it.
 - Personal observations are not inherited, shared knowledge or current
   instructions.
 - No new unbounded history, second mortality authority, physical engine,

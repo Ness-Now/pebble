@@ -44,16 +44,23 @@ roadmap generation: V4
 The published Blocker 01 correction preserves verified physical position
 restart. The targeted Blocker 02 correction now validates ecological
 observations across a retained mortality boundary and coordinates their
-eviction before death-record compaction. It does not evaluate or acquire Gate
-D. After senior review, manual publication and remote verification, the next
-authorized action is independent `V4-GATE-D-v1` Evaluation 03.
+eviction before death-record or exact-causal-proof compaction. Every retained
+row requires its exact observation event, direct cause and applicable
+registration/birth and death authority; a dropped-prefix sequence is never a
+substitute. Immutable retained agriculture foundations are re-anchored by an
+exact causal retention boundary before their original source leaves; retained
+historical actions and physical receipts keep their exact events or refuse the
+append atomically. This work does not evaluate or acquire Gate D. After senior
+review, manual publication and remote
+verification, the next authorized action is independent `V4-GATE-D-v1`
+Evaluation 03.
 
 ## Last validation baseline
 
 For the Gate D Blocker 02 historical ecological-observer correction:
 
 ```text
-focused ecological observation: 44 passed, 0 failed
+focused ecological observation: 55 passed, 0 failed
 focused mortality: 93 passed, 0 failed
 focused estates/inheritance/succession: 84 passed, 0 failed
 focused checkpoint/replay: 49 passed, 0 failed
@@ -64,20 +71,21 @@ focused genetics/development: 45 passed, 0 failed
 focused childhood/guardianship: 62 passed, 0 failed
 focused dependent care: 55 passed, 0 failed
 focused unions/family/lineages/houses: 83 passed, 0 failed
-focused agriculture: 32 passed, 0 failed
+focused agriculture: 44 passed, 0 failed
 focused renewable subsistence: 19 passed, 0 failed
 focused Material Rights: 21 passed, 0 failed
 focused Observer: 20 passed, 0 failed
-focused total: 771 passed, 0 failed
-repository gate: 3679 passed, 0 failed
+focused total: 794 passed, 0 failed
+supplemental work-demand refresh: 26 passed, 0 failed
+repository gate: 3702 passed, 0 failed
 repository verification steps: 35/35
 rendered two-process blocker campaign: PASS
-World/session: wmsbewsw4i1sb / live-46-14-66--21
+World/session: wmsbnosi0cki2 / live-46-14-66--21
 checkpoint schema / Observer schema: 29 / 7
 manifest integrity digest: verified
 historical observer: agent_0 / deceasedAfterObservationRetained
 observation sequence / tick: 34 / 9
-observation digest before / after restart: cf59861f7d72703d / cf59861f7d72703d
+observation digest before / after restart: fae65b79ac2d596c / fae65b79ac2d596c
 death ID / tick: death-agent_0-t24-3cfeb0b74c40c179 / 24
 estate ID: estate-18506feb632c6b93
 active dead-observer count / dead-observer probes: 0 / 0

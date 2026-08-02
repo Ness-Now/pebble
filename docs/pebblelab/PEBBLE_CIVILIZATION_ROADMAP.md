@@ -52,8 +52,14 @@ milestone is published in baseline
 correction is published in baseline
 `6d114abb98aee652e44fe9a81c3bab47b72ff698`. Gate D Evaluations 01 and 02
 remain historical FAIL evidence. The targeted historical ecological-observer
-correction is a local review candidate; after its publication, the next
-authorized action is independent Gate D Evaluation 03.
+correction is a local review candidate. A retained observation now requires
+its exact causal event, direct cause and applicable registration/birth and
+death authorities; it is evicted before any of those events leave the bounded
+ledger. Retained immutable agriculture foundations are re-anchored by one
+exact causal retention boundary before their original source leaves. Retained
+historical actions and physical receipts continue to require their exact
+events; an append that would lose them is refused atomically. After
+publication, the next authorized action is independent Gate D Evaluation 03.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:
