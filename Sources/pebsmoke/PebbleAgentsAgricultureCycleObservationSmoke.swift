@@ -33,7 +33,10 @@ private func b03Agent(_ index: Int) -> AgentSessionAgentState {
     )
 }
 
-private func b03Session(_ id: String) -> AgentSimulationSession {
+private func b03Session(
+    _ id: String,
+    maximumRetainedObservationsPerAgent: Int = 16
+) -> AgentSimulationSession {
     var session = try! AgentSimulationSession(
         configuration: try! AgentSessionConfiguration(
             seed: 303, memoryPolicy: .bounded(maxEntries: 128)
@@ -60,7 +63,16 @@ private func b03Session(_ id: String) -> AgentSimulationSession {
         )
     )
     try! session.setSkillsEnabled(true)
-    try! session.setEcologicalObservationEnabled(true)
+    try! session.setEcologicalObservationEnabled(
+        true,
+        configuration: try! AgentEcologicalObservationConfiguration(
+            maximumRetainedObservations: max(
+                16, maximumRetainedObservationsPerAgent * 3
+            ),
+            maximumRetainedObservationsPerAgent:
+                maximumRetainedObservationsPerAgent
+        )
+    )
     try! session.setAgricultureEnabled(true)
     return session
 }
@@ -69,7 +81,8 @@ private func b03Observation(
     _ session: AgentSimulationSession,
     observer: String = "agent_0",
     physicalTick: Int,
-    stages: [Int: (crop: String, stage: Int)] = [:]
+    stages: [Int: (crop: String, stage: Int)] = [:],
+    completion: AgentEcologicalScanCompletion = .complete
 ) -> AgentEcologicalObservation {
     let crops = stages.keys.sorted().map { index in
         let value = stages[index]!
@@ -126,7 +139,7 @@ private func b03Observation(
             radius: 4, cellsConsidered: 405, worldReads: 405,
             chunksTouched: 1, chunksUnavailable: 0,
             entitiesConsidered: 0, resultsEmitted: resultCount,
-            cacheHits: 0, cacheMisses: 1, completion: .complete
+            cacheHits: 0, cacheMisses: 1, completion: completion
         ),
         expiresAtSimulationTick: session.tick + 4
     )
@@ -226,8 +239,18 @@ private func b03Action(
     )
 }
 
-private func b03Fixture(_ id: String, cellCount: Int = 1) -> B03Fixture {
-    var session = b03Session(id)
+private func b03Fixture(
+    _ id: String,
+    cellCount: Int = 1,
+    maximumRetainedObservationsPerAgent: Int = 16,
+    cycle1MaturePhysicalTick: Int = 120,
+    renewalPhysicalTick: Int = 140
+) -> B03Fixture {
+    var session = b03Session(
+        id,
+        maximumRetainedObservationsPerAgent:
+            maximumRetainedObservationsPerAgent
+    )
     let source = try! session.recordEcologicalObservation(
         b03Observation(session, physicalTick: 100)
     )
@@ -253,7 +276,9 @@ private func b03Fixture(_ id: String, cellCount: Int = 1) -> B03Fixture {
     })
     let cycle1Mature = try! session.recordEcologicalObservation(
         b03Observation(
-            session, physicalTick: 120, stages: matureStages
+            session,
+            physicalTick: cycle1MaturePhysicalTick,
+            stages: matureStages
         )
     )
     for index in positions.indices {
@@ -272,7 +297,7 @@ private func b03Fixture(_ id: String, cellCount: Int = 1) -> B03Fixture {
         id: "b03-c1-store"
     ))
     let renewal = try! session.recordEcologicalObservation(
-        b03Observation(session, physicalTick: 140)
+        b03Observation(session, physicalTick: renewalPhysicalTick)
     )
     _ = try! session.renewAgriculturalPlot(
         plotID: plotID,
@@ -293,12 +318,14 @@ private func b03Fixture(_ id: String, cellCount: Int = 1) -> B03Fixture {
         plotID: plotID,
         cycle1Mature: cycle1Mature,
         cycle2PlantActions: cycle2Plants,
-        plantingMinimumPhysicalTick: 140
+        plantingMinimumPhysicalTick: renewalPhysicalTick
     )
 }
 
 private func b03Selection(
     _ fixture: B03Fixture,
+    eligibleCurrentReceiptIDs:
+        Set<AgentPhysicalObservationReceiptID>,
     cellIndex: Int = 0
 ) -> AgentCurrentCycleCropObservationResult {
     let plot = fixture.session.agricultureSnapshot().plots.first {
@@ -311,8 +338,15 @@ private func b03Selection(
         cropPosition: AgentPosition(
             x: cell.position.x, y: cell.position.y + 1, z: cell.position.z
         ),
-        minimumPhysicalWorldTick: fixture.plantingMinimumPhysicalTick
+        minimumPhysicalWorldTick: fixture.plantingMinimumPhysicalTick,
+        eligibleCurrentReceiptIDs: eligibleCurrentReceiptIDs
     )
+}
+
+private func b03ReceiptIDs(
+    _ records: AgentEcologicalObservationRecord...
+) -> Set<AgentPhysicalObservationReceiptID> {
+    Set(records.compactMap(\.physicalObservationReceiptID))
 }
 
 private func b03ObservationReceipts(
@@ -630,14 +664,18 @@ func runPebbleAgentsAgricultureCycleObservationSmoke() {
 
     var exact = b03Fixture("b03-exact")
     check("only prior-cycle mature evidence yields no current-cycle transition",
-          b03Selection(exact).classification == .noEligibleObservation)
+          b03Selection(
+              exact, eligibleCurrentReceiptIDs: []
+          ).classification == .noEligibleObservation)
     let stage0 = try! exact.session.recordEcologicalObservation(
         b03Observation(
             exact.session, physicalTick: 141,
             stages: [0: (crop: "wheat", stage: 0)]
         )
     )
-    let exactSelection = b03Selection(exact)
+    let exactSelection = b03Selection(
+        exact, eligibleCurrentReceiptIDs: b03ReceiptIDs(stage0)
+    )
     check("cycle-1 mature row plus cycle-2 stage-0 row selects non-mature",
           exactSelection.classification == .currentCycleNonMature
             && exactSelection.evidence?.record.causalEventID
@@ -651,6 +689,10 @@ func runPebbleAgentsAgricultureCycleObservationSmoke() {
             ).contains(where: {
                 $0.causalEventID == exact.cycle1Mature.causalEventID
             }))
+    check("retained current-looking row has no automatic authority",
+          b03Selection(
+              exact, eligibleCurrentReceiptIDs: []
+          ).classification == .noEligibleObservation)
     let beforeNonMature = try! exact.session.durableStateBytes()
     check("non-mature classification is non-mutating",
           (try! exact.session.durableStateBytes()) == beforeNonMature
@@ -658,7 +700,7 @@ func runPebbleAgentsAgricultureCycleObservationSmoke() {
                 == .planted)
 
     var multi = b03Fixture("b03-multi")
-    _ = try! multi.session.recordEcologicalObservation(b03Observation(
+    let olderMulti = try! multi.session.recordEcologicalObservation(b03Observation(
         multi.session, observer: "agent_0", physicalTick: 151,
         stages: [0: (crop: "wheat", stage: 7)]
     ))
@@ -668,13 +710,17 @@ func runPebbleAgentsAgricultureCycleObservationSmoke() {
             stages: [0: (crop: "wheat", stage: 0)]
         )
     )
+    let multiSelection = b03Selection(
+        multi,
+        eligibleCurrentReceiptIDs: b03ReceiptIDs(olderMulti, newestOther)
+    )
     check("newer physical evidence wins across actors",
-          b03Selection(multi).classification == .currentCycleNonMature
-            && b03Selection(multi).evidence?.record.causalEventID
+          multiSelection.classification == .currentCycleNonMature
+            && multiSelection.evidence?.record.causalEventID
                 == newestOther.causalEventID)
 
     var reversed = b03Fixture("b03-multi-reversed")
-    _ = try! reversed.session.recordEcologicalObservation(b03Observation(
+    let olderReversed = try! reversed.session.recordEcologicalObservation(b03Observation(
         reversed.session, observer: "agent_1", physicalTick: 151,
         stages: [0: (crop: "wheat", stage: 7)]
     ))
@@ -683,39 +729,56 @@ func runPebbleAgentsAgricultureCycleObservationSmoke() {
             reversed.session, observer: "agent_0", physicalTick: 152,
             stages: [0: (crop: "wheat", stage: 0)]
         ))
+    let reversedSelection = b03Selection(
+        reversed,
+        eligibleCurrentReceiptIDs: b03ReceiptIDs(
+            olderReversed, newestLexicalFirst
+        )
+    )
     check("actor lexical order cannot override physical recency",
-          b03Selection(reversed).classification == .currentCycleNonMature
-            && b03Selection(reversed).evidence?.record.causalEventID
+          reversedSelection.classification == .currentCycleNonMature
+            && reversedSelection.evidence?.record.causalEventID
                 == newestLexicalFirst.causalEventID)
 
     var conflict = b03Fixture("b03-conflict")
-    _ = try! conflict.session.recordEcologicalObservation(b03Observation(
+    let conflictMature = try! conflict.session.recordEcologicalObservation(b03Observation(
         conflict.session, observer: "agent_0", physicalTick: 160,
         stages: [0: (crop: "wheat", stage: 7)]
     ))
-    _ = try! conflict.session.recordEcologicalObservation(b03Observation(
+    let conflictNonMature = try! conflict.session.recordEcologicalObservation(b03Observation(
         conflict.session, observer: "agent_1", physicalTick: 160,
         stages: [0: (crop: "wheat", stage: 0)]
     ))
     check("incompatible evidence at one physical boundary fails closed",
-          b03Selection(conflict).classification
+          b03Selection(
+              conflict,
+              eligibleCurrentReceiptIDs: b03ReceiptIDs(
+                  conflictMature, conflictNonMature
+              )
+          ).classification
             == .conflictingCurrentEvidence)
 
     var wrongTick = b03Fixture("b03-world-tick")
-    _ = try! wrongTick.session.recordEcologicalObservation(b03Observation(
+    let wrongTickRecord = try! wrongTick.session.recordEcologicalObservation(b03Observation(
         wrongTick.session, physicalTick: 139,
         stages: [0: (crop: "wheat", stage: 0)]
     ))
     check("physical World tick before cycle foundation is invalid",
-          b03Selection(wrongTick).classification == .invalidCurrentEvidence)
+          b03Selection(
+              wrongTick,
+              eligibleCurrentReceiptIDs: b03ReceiptIDs(wrongTickRecord)
+          ).classification == .invalidCurrentEvidence)
 
     var replacement = b03Fixture("b03-crop-replacement")
-    _ = try! replacement.session.recordEcologicalObservation(b03Observation(
+    let replacementRecord = try! replacement.session.recordEcologicalObservation(b03Observation(
         replacement.session, physicalTick: 145,
         stages: [0: (crop: "carrots", stage: 0)]
     ))
     check("other-crop evidence at the same cell is never rebound",
-          b03Selection(replacement).classification
+          b03Selection(
+              replacement,
+              eligibleCurrentReceiptIDs: b03ReceiptIDs(replacementRecord)
+          ).classification
             == .invalidCurrentEvidence)
 
     var mature = exact
@@ -725,7 +788,9 @@ func runPebbleAgentsAgricultureCycleObservationSmoke() {
             stages: [0: (crop: "wheat", stage: 7)]
         )
     )
-    let matureSelection = b03Selection(mature)
+    let matureSelection = b03Selection(
+        mature, eligibleCurrentReceiptIDs: b03ReceiptIDs(matureRecord)
+    )
     let matureID = AgentAgriculturalActionID.automaticMaturity(
         simulationTick: mature.session.tick,
         plotID: mature.plotID,
@@ -773,9 +838,17 @@ func runPebbleAgentsAgricultureCycleObservationSmoke() {
         )
     )
     check("mixed cells classify independently",
-          b03Selection(twoCells, cellIndex: 0).classification
+          b03Selection(
+              twoCells,
+              eligibleCurrentReceiptIDs: b03ReceiptIDs(mixed),
+              cellIndex: 0
+          ).classification
             == .currentCycleMature
-            && b03Selection(twoCells, cellIndex: 1).classification
+            && b03Selection(
+                twoCells,
+                eligibleCurrentReceiptIDs: b03ReceiptIDs(mixed),
+                cellIndex: 1
+            ).classification
                 == .currentCycleNonMature)
     _ = try! twoCells.session.recordAgriculturalActionSuccess(b03Action(
         twoCells.session, plotID: twoCells.plotID, cellIndex: 0,
@@ -797,12 +870,118 @@ func runPebbleAgentsAgricultureCycleObservationSmoke() {
         cycle2PlantActions: exact.cycle2PlantActions,
         plantingMinimumPhysicalTick: exact.plantingMinimumPhysicalTick
     )
-    check("schema 30 stage-0 restart preserves both cycles and selection",
+    check("schema 30 restart keeps rows historical until a new scan",
           restartCheckpoint.schemaVersion == 30
-            && b03Selection(restartedFixture).classification
-                == .currentCycleNonMature
+            && b03Selection(
+                restartedFixture, eligibleCurrentReceiptIDs: []
+            ).classification == .noEligibleObservation
             && (try! restarted.durableStateBytes())
                 == (try! exact.session.durableStateBytes()))
+
+    var noExact = b03Fixture("b03-no-current-exact-cell")
+    let budgetLimited = try! noExact.session.recordEcologicalObservation(
+        b03Observation(
+            noExact.session,
+            physicalTick: 142,
+            completion: .scanBudgetExceeded
+        )
+    )
+    let noExactBytes = try! noExact.session.durableStateBytes()
+    check("current transaction without exact-cell evidence does not transition",
+          b03Selection(
+              noExact,
+              eligibleCurrentReceiptIDs: b03ReceiptIDs(budgetLimited)
+          ).classification == .noEligibleObservation
+            && (try! noExact.session.durableStateBytes()) == noExactBytes)
+    let noExactTickBefore = noExact.session.tick
+    _ = try! noExact.session.advanceTick()
+    check("scan-budget omission permits the normal tick to continue",
+          noExact.session.tick == noExactTickBefore + 1
+            && noExact.session.agricultureSnapshot().plots[0].cells[0].phase
+                == .planted)
+    check("a repeated transaction never reuses the previous tick receipt",
+          b03Selection(
+              exact,
+              eligibleCurrentReceiptIDs: b03ReceiptIDs(budgetLimited)
+          ).classification == .noEligibleObservation)
+
+    // This fixture models the review attack with product-valid state: O2 is
+    // honestly evicted, while O1 is rebound to a later ecological event with
+    // the exact same receipt ID and physical content. The resulting schema-30
+    // checkpoint is fully signed by the product and therefore stronger than
+    // merely repairing its JSON digests. Transaction membership, which is not
+    // part of the checkpoint, must still withhold transition authority.
+    var chronology = b03Fixture(
+        "b03-resigned-chronology",
+        maximumRetainedObservationsPerAgent: 3,
+        cycle1MaturePhysicalTick: 140,
+        renewalPhysicalTick: 140
+    )
+    let chronologyStage0 = try! chronology.session
+        .recordEcologicalObservation(b03Observation(
+            chronology.session,
+            physicalTick: 140,
+            stages: [0: (crop: "wheat", stage: 0)]
+        ))
+    let chronologyOldReceipt = chronology.cycle1Mature
+        .physicalObservationReceiptID!
+    let chronologyRebound = try! chronology.session
+        .recordEcologicalObservation(
+            chronology.cycle1Mature.observation,
+            physicalReceiptID: chronologyOldReceipt
+        )
+    _ = try! chronology.session.recordEcologicalObservation(
+        b03Observation(chronology.session, physicalTick: 141)
+    )
+    _ = try! chronology.session.recordEcologicalObservation(
+        b03Observation(chronology.session, physicalTick: 142)
+    )
+    let chronologyRows = chronology.session
+        .ecologicalObservationSnapshot().observations
+    let chronologyPlantEvent = chronology.cycle2PlantActions[0]
+        .agricultureEventID
+    let chronologyCheckpoint = try! chronology.session.makeCheckpoint()
+    let chronologyRestored = try! AgentSimulationSession.restoring(
+        chronologyCheckpoint
+    )
+    let chronologyRestoredFixture = B03Fixture(
+        session: chronologyRestored,
+        plotID: chronology.plotID,
+        cycle1Mature: chronology.cycle1Mature,
+        cycle2PlantActions: chronology.cycle2PlantActions,
+        plantingMinimumPhysicalTick: chronology.plantingMinimumPhysicalTick
+    )
+    check("fully signed chronology rebind retains World receipts unchanged",
+          chronologyCheckpoint.schemaVersion == 30
+            && chronologyOldReceipt
+                == chronology.cycle1Mature.physicalObservationReceiptID
+            && chronologyStage0.physicalObservationReceiptID
+                != chronologyOldReceipt
+            && chronologyRows.contains(where: {
+                $0.causalEventID == chronologyRebound.causalEventID
+                    && $0.physicalObservationReceiptID
+                        == chronologyOldReceipt
+                    && $0.observation == chronology.cycle1Mature.observation
+            })
+            && !chronologyRows.contains(where: {
+                $0.causalEventID == chronologyStage0.causalEventID
+            }))
+    check("re-signed old maturity has larger causal sequence at same tick",
+          chronologyRebound.causalEventID.sequence
+                > chronologyPlantEvent.sequence
+            && chronologyRebound.observation.observedAtSimulationTick
+                == chronology.cycle2PlantActions[0].outcome.civilDate
+                    .simulationTick)
+    check("chronology mutation is refused independently by membership",
+          b03Selection(
+              chronologyRestoredFixture,
+              eligibleCurrentReceiptIDs: []
+          ).classification == .noEligibleObservation)
+    check("explicit headless receipt authority remains bounded",
+          b03Selection(
+              chronologyRestoredFixture,
+              eligibleCurrentReceiptIDs: [chronologyOldReceipt]
+          ).classification == .currentCycleMature)
 
     let resignedObservationReceipts = b03ObservationReceipts(exact.session)
     let resignedActionReceipts = b03ActionReceipts(exact.session)
@@ -837,7 +1016,7 @@ func runPebbleAgentsAgricultureCycleObservationSmoke() {
               agriculture["plots"] = plots
               durable["agricultureState"] = agriculture
           })
-    check("fully re-signed current plant replacement by prior cycle is refused",
+    check("coherently rebound plant event with unchanged receipt is refused",
           b03FullyResignedRestoreRefused(
             restartCheckpoint,
             observationReceipts: resignedObservationReceipts,
@@ -1011,6 +1190,73 @@ func runPebbleAgentsAgricultureCycleObservationSmoke() {
 
     let observationEvidence = b03ObservationReceipts(exact.session)
     let actionEvidence = b03ActionReceipts(exact.session)
+    check("staged receipt absent from the independent World set is refused", {
+        guard let currentID = stage0.physicalObservationReceiptID else {
+            return false
+        }
+        do {
+            try exact.session.validateIndependentEcologicalObservationReceipts(
+                observationEvidence.filter { $0.receiptID != currentID },
+                worldID: "b03-world",
+                storageIdentity: "sqlite-world:b03-world",
+                dimension: 0
+            )
+            return false
+        } catch { return true }
+    }())
+    check("staged receipt from another World is refused", {
+        guard let currentID = stage0.physicalObservationReceiptID,
+              let currentIndex = observationEvidence.firstIndex(where: {
+                  $0.receiptID == currentID
+              }) else { return false }
+        var changed = observationEvidence
+        let current = changed[currentIndex]
+        changed[currentIndex] = AgentEcologicalPhysicalReceiptEvidence(
+            receiptID: current.receiptID,
+            operationID: current.operationID,
+            observerID: current.observerID,
+            worldID: "other-world",
+            storageIdentity: current.storageIdentity,
+            dimension: current.dimension,
+            dimensionKey: current.dimensionKey,
+            physicalWorldTick: current.physicalWorldTick,
+            simulationID: current.simulationID,
+            simulationTick: current.simulationTick,
+            origin: current.origin,
+            observation: current.observation,
+            resultCount: current.resultCount,
+            worldReadCount: current.worldReadCount
+        )
+        do {
+            try exact.session.validateIndependentEcologicalObservationReceipts(
+                changed,
+                worldID: "b03-world",
+                storageIdentity: "sqlite-world:b03-world",
+                dimension: 0
+            )
+            return false
+        } catch { return true }
+    }())
+    check("fully re-signed staged row and event mismatch is refused",
+          b03FullyResignedRestoreRefused(
+            restartCheckpoint,
+            observationReceipts: observationEvidence,
+            actionReceipts: actionEvidence
+          ) { durable in
+              var ecology = durable["ecologicalObservationState"]
+                  as! [String: Any]
+              var observations = ecology["observations"]
+                  as! [[String: Any]]
+              let currentIndex = observations.firstIndex {
+                  $0["physicalObservationReceiptID"] as? String
+                    == stage0.physicalObservationReceiptID?.rawValue
+              }!
+              observations[currentIndex]["causalEventID"] = b03JSONObject(
+                  exact.cycle1Mature.causalEventID
+              )
+              ecology["observations"] = observations
+              durable["ecologicalObservationState"] = ecology
+          })
     check("current-cycle observation receipt substitution is refused", {
         guard let currentID = stage0.physicalObservationReceiptID,
               let currentIndex = observationEvidence.firstIndex(where: {

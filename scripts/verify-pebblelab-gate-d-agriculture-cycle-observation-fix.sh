@@ -63,12 +63,14 @@ SESSION_HOME="$EVIDENCE_ROOT/home"
 /bin/mkdir -p "$SESSION_HOME"
 PROCESS1_TRACE="$EVIDENCE_ROOT/process-1-stage-zero.log"
 PROCESS2_TRACE="$EVIDENCE_ROOT/process-2-restart-and-second-harvest.log"
+HEADLESS_TRACE="$EVIDENCE_ROOT/tick-local-receipt-regressions.log"
 STAGE0_CAPTURE="$EVIDENCE_ROOT/01-cycle-2-stage-0-current-observation.png"
 RESTART_CAPTURE="$EVIDENCE_ROOT/02-cycle-2-stage-0-after-restart.png"
 MATURE_CAPTURE="$EVIDENCE_ROOT/03-cycle-2-current-maturity.png"
 HARVEST_CAPTURE="$EVIDENCE_ROOT/04-cycle-2-second-harvest.png"
 CYCLE_MATRIX="$EVIDENCE_ROOT/cycle-boundary.tsv"
 SELECTION_MATRIX="$EVIDENCE_ROOT/observation-selection.tsv"
+AUTHORITY_MATRIX="$EVIDENCE_ROOT/tick-local-receipt-authority.tsv"
 ORDERING_MATRIX="$EVIDENCE_ROOT/multi-actor-ordering.tsv"
 ACTION_MATRIX="$EVIDENCE_ROOT/maturity-action-ids.tsv"
 RECEIPT_MATRIX="$EVIDENCE_ROOT/world-receipts.tsv"
@@ -92,6 +94,23 @@ SQLITE3_BIN=$(command -v sqlite3 || true)
 swift build --disable-sandbox -c "$BUILD_CONFIGURATION" --product Pebble
 PEBBLE_BINARY="$ROOT_DIR/.build/$BUILD_CONFIGURATION/Pebble"
 [ -x "$PEBBLE_BINARY" ] || fail 'Pebble binary missing'
+
+printf '\nBlocker 03 tick-local receipt regressions.\n'
+PEBBLELAB_SMOKE_ONLY=agriculture \
+swift run --disable-sandbox pebsmoke 2>&1 \
+    | /usr/bin/tee "$HEADLESS_TRACE"
+require_trace "$HEADLESS_TRACE" \
+    'chronology mutation is refused independently by membership' \
+    'fully signed chronology mutation refused by transaction membership'
+require_trace "$HEADLESS_TRACE" \
+    'scan-budget omission permits the normal tick to continue' \
+    'missing exact-cell scan permits normal civilization progress'
+require_trace "$HEADLESS_TRACE" \
+    'schema 30 restart keeps rows historical until a new scan' \
+    'restored rows remain historical before a fresh process scan'
+require_trace "$HEADLESS_TRACE" \
+    '[0-9]+ passed, 0 failed' \
+    'tick-local receipt regressions passed'
 
 run_pebble() {
     commands=$1
@@ -165,7 +184,7 @@ require_trace "$PROCESS1_TRACE" \
     'renewable second operation .*stage=0 .*externalInjections=0 .*directWorldBlockMutations=0' \
     'cycle-2 physical planting'
 require_trace "$PROCESS1_TRACE" \
-    'agriculture lifecycle evidence .*cycle=2 .*classification=currentCycleNonMature .*observation=.* observationReceipt=.* plantAction=.* plantEvent=.*' \
+    'agriculture lifecycle evidence .*cycle=2 .*classification=currentCycleNonMature .*observation=.* observationReceipt=.* plantAction=.* plantEvent=.* currentTickReceipt=true historicalReceiptSelected=NO' \
     'cycle-2 current non-mature selection'
 require_trace "$PROCESS1_TRACE" \
     'renewable status schema=30 observerSchema=7 .*tick=2 .*cycle=2 .*phase=growing stage=0 .*runtimeErrors=0' \
@@ -225,7 +244,7 @@ require_trace "$PROCESS2_TRACE" \
     'renewable cycle physical maturity cycle=2 .*authorizedWorldTicks=[1-9][0-9]* .*stage=7 sessionMutation=none .*externalInjections=0 directWorldBlockMutations=0' \
     'canonical physical growth without session injection'
 require_trace "$PROCESS2_TRACE" \
-    'agriculture lifecycle evidence .*cycle=2 .*classification=currentCycleMature .*observation=.* observationReceipt=.* plantAction=.* plantEvent=.*' \
+    'agriculture lifecycle evidence .*cycle=2 .*classification=currentCycleMature .*observation=.* observationReceipt=.* plantAction=.* plantEvent=.* currentTickReceipt=true historicalReceiptSelected=NO' \
     'current-cycle mature selection'
 require_trace "$PROCESS2_TRACE" \
     'agriculture lifecycle maturity .*cycle=2 .*action=auto-maturity:[^ ]*:cycle-2:0 .*world=verified mutation=none' \
@@ -265,6 +284,28 @@ SECOND_OUTPUT=$(/usr/bin/sed -n \
 [ -n "$TICK_AFTER_RESTART" ] && [ -n "$MATURE_ACTION" ] \
     && [ -n "$SECOND_HARVEST" ] && [ -n "$SECOND_OUTPUT" ] \
     || fail 'process-2 evidence extraction failed'
+CYCLE1_MATURE_EVENT=$(/usr/bin/sed -n \
+    's/.*renewable cycle harvest cycle=1 .* maturityObservation=\([^ ]*\) .*/\1/p' \
+    "$PROCESS1_TRACE" | /usr/bin/tail -1)
+CYCLE1_MATURE_RECEIPT=$(/usr/bin/sed -n \
+    's/.*renewable cycle harvest cycle=1 .* maturityReceipt=\([^ ]*\) .*/\1/p' \
+    "$PROCESS1_TRACE" | /usr/bin/tail -1)
+STAGE0_EVENT=$(/usr/bin/sed -n \
+    's/.*agriculture lifecycle evidence .*classification=currentCycleNonMature observation=\([^ ]*\) .*/\1/p' \
+    "$PROCESS1_TRACE" | /usr/bin/tail -1)
+STAGE0_RECEIPT=$(/usr/bin/sed -n \
+    's/.*agriculture lifecycle evidence .*classification=currentCycleNonMature .* observationReceipt=\([^ ]*\) .*/\1/p' \
+    "$PROCESS1_TRACE" | /usr/bin/tail -1)
+MATURE_EVENT=$(/usr/bin/sed -n \
+    's/.*agriculture lifecycle evidence .*classification=currentCycleMature observation=\([^ ]*\) .*/\1/p' \
+    "$PROCESS2_TRACE" | /usr/bin/tail -1)
+MATURE_RECEIPT=$(/usr/bin/sed -n \
+    's/.*agriculture lifecycle evidence .*classification=currentCycleMature .* observationReceipt=\([^ ]*\) .*/\1/p' \
+    "$PROCESS2_TRACE" | /usr/bin/tail -1)
+[ -n "$CYCLE1_MATURE_EVENT" ] && [ -n "$CYCLE1_MATURE_RECEIPT" ] \
+    && [ -n "$STAGE0_EVENT" ] && [ -n "$STAGE0_RECEIPT" ] \
+    && [ -n "$MATURE_EVENT" ] && [ -n "$MATURE_RECEIPT" ] \
+    || fail 'tick-local maturity authority evidence extraction failed'
 
 for capture in "$STAGE0_CAPTURE" "$RESTART_CAPTURE" \
     "$MATURE_CAPTURE" "$HARVEST_CAPTURE"; do
@@ -354,6 +395,16 @@ done
             's/.*classification=([^ ]+) observation=([^ ]+) observationReceipt=([^ ]+) physicalTick=([^ ]+).*/\4\ttrace\t\1\t\2\t\3\tSELECTED_EXACT/'
 } > "$SELECTION_MATRIX"
 {
+    printf 'observationReceipt\tretainedHistorically\tstagedInCurrentTick\tcycleCausalOrdering\tselectedAsTransitionAuthority\tresult\n'
+    printf '%s\tYES\tNO\tprior-cycle/re-signable\tNO\tHISTORICAL_ONLY\n' \
+        "$CYCLE1_MATURE_RECEIPT"
+    printf '%s\tYES\tYES\tpost-current-plant\tYES\tcurrentCycleNonMature\n' \
+        "$STAGE0_RECEIPT"
+    printf 'none-exact-cell\tNO\tNO\tn/a\tNO\tnoEligibleObservation\n'
+    printf '%s\tYES\tYES\tpost-current-plant\tYES\tcurrentCycleMature\n' \
+        "$MATURE_RECEIPT"
+} > "$AUTHORITY_MATRIX"
+{
     printf 'policy\tresult\n'
     printf 'per-actor newest exact-cell row\tPASS\n'
     printf 'physicalWorldTick-desc,simulationTick-desc,causal-desc,ecological-desc,observer-asc\tPASS\n'
@@ -412,6 +463,16 @@ fi
     printf '  "cellIndex": 0,\n'
     printf '  "cycle1Ordinal": 1,\n'
     printf '  "cycle2Ordinal": 2,\n'
+    printf '  "currentTickReceiptPolicy": "mandatory",\n'
+    printf '  "historicalReceiptSelected": false,\n'
+    printf '  "coherentChronologyMutation": "REFUSED_BY_TRANSACTION_MEMBERSHIP",\n'
+    printf '  "noExactCellObservation": "NO_TRANSITION_TICK_CONTINUES",\n'
+    printf '  "cycle1MatureObservationEvent": "%s",\n' "$CYCLE1_MATURE_EVENT"
+    printf '  "cycle1MatureObservationReceipt": "%s",\n' "$CYCLE1_MATURE_RECEIPT"
+    printf '  "cycle2Stage0ObservationEvent": "%s",\n' "$STAGE0_EVENT"
+    printf '  "cycle2Stage0ObservationReceipt": "%s",\n' "$STAGE0_RECEIPT"
+    printf '  "cycle2MatureObservationEvent": "%s",\n' "$MATURE_EVENT"
+    printf '  "cycle2MatureObservationReceipt": "%s",\n' "$MATURE_RECEIPT"
     printf '  "simulationTickBefore": %s,\n' "$TICK_BEFORE"
     printf '  "simulationTickAfterStage0": %s,\n' "$TICK_AFTER_STAGE0"
     printf '  "simulationTickAfterRestartTicks": %s,\n' "$TICK_AFTER_RESTART"
@@ -441,6 +502,9 @@ printf 'World ID: %s\n' "$WORLD_ID"
 printf 'session ID: %s\n' "$SESSION_ID"
 printf 'civilization tick: %s -> %s -> %s\n' \
     "$TICK_BEFORE" "$TICK_AFTER_STAGE0" "$TICK_AFTER_RESTART"
+printf 'current-tick receipt policy: mandatory\n'
+printf 'historical receipt selected: NO\n'
+printf 'coherent chronology mutation: REFUSED_BY_TRANSACTION_MEMBERSHIP\n'
 printf 'second harvest receipt: %s output=%s\n' \
     "$SECOND_HARVEST" "$SECOND_OUTPUT"
 printf 'World receipt leak count: %s\n' "$WORLD_RECEIPT_LEAK_COUNT"
