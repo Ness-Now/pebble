@@ -16,7 +16,7 @@ extension PebbleAgentController {
         _ arguments: [String],
         world: World
     ) -> PebbleAgentCommandResult {
-        let usage = "Usage: /lab renewable-subsistence <setup|plant-first|harvest-first|consume-replant|status|harvest-second>"
+        let usage = "Usage: /lab renewable-subsistence <setup|plant-first|harvest-first|consume-replant|status|verify-maturity-mismatch|mature-second|harvest-second>"
         guard arguments.count == 1, let command = arguments.first?.lowercased(),
               var candidate = session, activeWorld === world else {
             return failure(usage)
@@ -62,6 +62,14 @@ extension PebbleAgentController {
             case "status":
                 traceRenewableSubsistenceStatus(world: world, session: candidate)
                 return success("Renewable subsistence status traced.")
+            case "mature-second":
+                try matureSecondRenewableCrop(
+                    world: world, session: candidate
+                )
+            case "verify-maturity-mismatch":
+                try verifyRenewableMaturityMismatch(
+                    world: world, session: &candidate
+                )
             case "harvest-second":
                 try harvestRenewableCycle(
                     ordinal: 2, world: world, session: &candidate
@@ -275,7 +283,8 @@ extension PebbleAgentController {
         let (actorID, probe, plot, cell) = try renewableContext(
             world: world, session: session
         )
-        guard plot.cycleOrdinal == ordinal, cell.phase == .planted,
+        guard plot.cycleOrdinal == ordinal,
+              cell.phase == .planted || cell.phase == .mature,
               agricultureItemCount("carrot", in: probe.carriedItems) == 0 else {
             throw PebbleRenewableSubsistenceProofError.failed(
                 "cycle \(ordinal) growth precondition"
@@ -287,42 +296,74 @@ extension PebbleAgentController {
             destination: agricultureWorkPosition(for: cell.position)
         )
         let growthStartTick = world.time
-        let growthTicks = try advanceRenewableCropByWorldTicks(
-            world: world, position: cell.position
-        )
-        ecologicalObservationSensor.invalidate(world: world)
-        var recorder: AgentReplayRecorder?
-        _ = try recordLiveEcologicalObservation(
-            world: world, observerID: actorID, session: &session, recorder: &recorder
-        )
-        guard let observation = session.ecologicalObservations(for: actorID).first,
-              let crop = observation.observation.crops.first(where: {
-                  $0.cropKey == AgentAgriculturalCrop.carrots.rawValue
-                      && $0.position == AgentPosition(
-                          x: cell.position.x, y: cell.position.y + 1,
-                          z: cell.position.z
-                      ) && $0.mature
-              }) else {
-            throw PebbleRenewableSubsistenceProofError.failed(
-                "cycle \(ordinal) maturity observation"
+        var growthTicks = 0
+        let maturityID: AgentAgriculturalActionID
+        let maturityObservation: AgentEcologicalObservationRecord
+        if cell.phase == .planted {
+            growthTicks = try advanceRenewableCropByWorldTicks(
+                world: world, position: cell.position
             )
-        }
-        let maturityID = agricultureActionID("renewable-cycle\(ordinal)-maturity")
-        _ = try agricultureExecutor.observeMaturity(
-            world: world,
-            intent: AgentAgriculturalIntent(
-                plotID: plot.plotID, cellIndex: cell.index, actorID: actorID,
-                kind: .maturityObserved, position: cell.position, crop: .carrots
-            ),
-            observationEventID: observation.causalEventID,
-            observedCrop: crop, civilDate: try renewableCivilDate(session),
-            actionID: maturityID,
-            publish: {
-                try publishVerifiedAgriculturalAction(
-                    $0, world: world, session: &session
+            ecologicalObservationSensor.invalidate(world: world)
+            var recorder: AgentReplayRecorder?
+            _ = try recordLiveEcologicalObservation(
+                world: world, observerID: actorID,
+                session: &session, recorder: &recorder
+            )
+            guard let observation = session.ecologicalObservations(
+                    for: actorID
+                  ).first,
+                  let crop = observation.observation.crops.first(where: {
+                      $0.cropKey == AgentAgriculturalCrop.carrots.rawValue
+                          && $0.position == AgentPosition(
+                              x: cell.position.x,
+                              y: cell.position.y + 1,
+                              z: cell.position.z
+                          ) && $0.mature
+                  }) else {
+                throw PebbleRenewableSubsistenceProofError.failed(
+                    "cycle \(ordinal) maturity observation"
                 )
             }
-        )
+            maturityObservation = observation
+            maturityID = agricultureActionID(
+                "renewable-cycle\(ordinal)-maturity"
+            )
+            _ = try agricultureExecutor.observeMaturity(
+                world: world,
+                intent: AgentAgriculturalIntent(
+                    plotID: plot.plotID, cellIndex: cell.index,
+                    actorID: actorID, kind: .maturityObserved,
+                    position: cell.position, crop: .carrots
+                ),
+                observationEventID: observation.causalEventID,
+                observedCrop: crop,
+                civilDate: try renewableCivilDate(session),
+                actionID: maturityID,
+                publish: {
+                    try publishVerifiedAgriculturalAction(
+                        $0, world: world, session: &session
+                    )
+                }
+            )
+        } else {
+            guard let maturity = session.agricultureSnapshot()
+                    .retainedActions.last(where: {
+                        $0.outcome.plotID == plot.plotID
+                            && $0.outcome.cellIndex == cell.index
+                            && $0.outcome.kind == .maturityObserved
+                    }),
+                  let source = maturity.outcome.sourceObservationEventID,
+                  let observation = session.ecologicalObservationSnapshot()
+                    .observations.first(where: {
+                        $0.causalEventID == source
+                    }) else {
+                throw PebbleRenewableSubsistenceProofError.failed(
+                    "cycle \(ordinal) retained maturity evidence"
+                )
+            }
+            maturityID = maturity.outcome.actionID
+            maturityObservation = observation
+        }
         guard let harvestIntent = session.nextAgriculturalIntent(for: actorID),
               harvestIntent.kind == .harvest else {
             throw PebbleRenewableSubsistenceProofError.failed(
@@ -366,6 +407,9 @@ extension PebbleAgentController {
             "renewable cycle harvest cycle=\(ordinal) growthStart=\(growthStartTick) "
                 + "authorizedWorldTicks=\(growthTicks) maturityTick=\(world.time) "
                 + "maturityID=\(maturityID.rawValue) harvestReceipt=\(harvestID.rawValue) "
+                + "maturityObservation=\(maturityObservation.causalEventID.rawValue) "
+                + "maturityReceipt="
+                + "\(maturityObservation.physicalObservationReceiptID?.rawValue ?? "none") "
                 + "output=carrot:\(output) foodOutput=1 reproductiveOutput=\(output - 1) "
                 + "siteAfter=air externalInjections=0 directWorldBlockMutations=0"
         )
@@ -379,6 +423,125 @@ extension PebbleAgentController {
             }
             traceRenewableSubsistenceStatus(world: world, session: session)
         }
+    }
+
+    private func matureSecondRenewableCrop(
+        world: World,
+        session: AgentSimulationSession
+    ) throws {
+        let (_, _, plot, cell) = try renewableContext(
+            world: world, session: session
+        )
+        guard plot.cycleOrdinal == 2, cell.phase == .planted else {
+            throw PebbleRenewableSubsistenceProofError.failed(
+                "cycle 2 physical maturity precondition"
+            )
+        }
+        let start = world.time
+        let ticks = try advanceRenewableCropByWorldTicks(
+            world: world, position: cell.position
+        )
+        trace(
+            "renewable cycle physical maturity cycle=2 growthStart=\(start) "
+                + "authorizedWorldTicks=\(ticks) maturityTick=\(world.time) "
+                + "stage=7 sessionMutation=none externalInjections=0 "
+                + "directWorldBlockMutations=0"
+        )
+    }
+
+    private func verifyRenewableMaturityMismatch(
+        world: World,
+        session: inout AgentSimulationSession
+    ) throws {
+        let (actorID, _, plot, cell) = try renewableContext(
+            world: world, session: session
+        )
+        let cropPosition = AgentPosition(
+            x: cell.position.x, y: cell.position.y + 1, z: cell.position.z
+        )
+        guard plot.cycleOrdinal == 2, cell.phase == .planted,
+              let worldID = persistenceWorldID,
+              world.getBlock(
+                cropPosition.x, cropPosition.y, cropPosition.z
+              ) == Int(PebbleCore.cell(B.carrots, 0)),
+              let current = session.ecologicalObservations(for: actorID).first,
+              let physicalCrop = current.observation.crops.first(where: {
+                  $0.position == cropPosition
+                      && $0.cropKey == AgentAgriculturalCrop.carrots.rawValue
+              }), !physicalCrop.mature, physicalCrop.growthStage == 0 else {
+            throw PebbleRenewableSubsistenceProofError.failed(
+                "maturity mismatch proof requires current cycle stage-0 evidence"
+            )
+        }
+        let beforeBytes = try session.durableStateBytes()
+        let beforeCell = world.getBlock(
+            cropPosition.x, cropPosition.y, cropPosition.z
+        )
+        let receiptStore = try worldAgriculturalActionReceiptStore()
+        let beforeReceipts = receiptStore.database.listWorldReceipts(
+            worldID: worldID,
+            kind: PebbleAgriculturalActionReceipt.kind
+        ).count
+        let adversarialCrop = AgentCropObservation(
+            cropKey: physicalCrop.cropKey,
+            position: physicalCrop.position,
+            growthStage: physicalCrop.maximumGrowthStage,
+            maximumGrowthStage: physicalCrop.maximumGrowthStage,
+            mature: true,
+            supportBlockKey: physicalCrop.supportBlockKey
+        )
+        var publicationCalled = false
+        let actionID = AgentAgriculturalActionID.automaticMaturity(
+            simulationTick: session.tick,
+            plotID: plot.plotID,
+            cycleOrdinal: plot.cycleOrdinal,
+            cellIndex: cell.index
+        )!
+        var refused = false
+        do {
+            _ = try agricultureExecutor.observeMaturity(
+                world: world,
+                intent: AgentAgriculturalIntent(
+                    plotID: plot.plotID, cellIndex: cell.index,
+                    actorID: actorID, kind: .maturityObserved,
+                    position: cell.position, crop: plot.crop
+                ),
+                observationEventID: current.causalEventID,
+                observedCrop: adversarialCrop,
+                civilDate: try renewableCivilDate(session),
+                actionID: actionID,
+                publish: { outcome in
+                    publicationCalled = true
+                    return try self.publishVerifiedAgriculturalAction(
+                        outcome, world: world, session: &session
+                    )
+                }
+            )
+        } catch let error as PebbleAgentAgricultureExecutor.ExecutionError {
+            refused = error.description
+                == PebbleAgentAgricultureExecutor.ExecutionError
+                    .observationMismatch.description
+        }
+        let afterReceipts = receiptStore.database.listWorldReceipts(
+            worldID: worldID,
+            kind: PebbleAgriculturalActionReceipt.kind
+        ).count
+        guard refused, !publicationCalled,
+              try session.durableStateBytes() == beforeBytes,
+              world.getBlock(cropPosition.x, cropPosition.y, cropPosition.z)
+                == beforeCell,
+              afterReceipts == beforeReceipts else {
+            throw PebbleRenewableSubsistenceProofError.failed(
+                "maturity mismatch did not fail closed exactly"
+            )
+        }
+        trace(
+            "renewable maturity mismatch cycle=2 physicalStage=0 "
+                + "adversarialEvidence=mature action=\(actionID.rawValue) "
+                + "refused=agricultural_maturity_observation_mismatch "
+                + "publication=none sessionRollback=exact worldRollback=exact "
+                + "WorldReceiptDelta=0 simulationTick=\(session.tick)"
+        )
     }
 
     private func consumeAndReplantRenewableOutput(
@@ -660,7 +823,8 @@ extension PebbleAgentController {
         let duplicateSites = plot.cells.count - Set(plot.cells.map(\.position)).count
         let evidence = session.renewableSubsistenceEvidence().first
         trace(
-            "renewable status schema=29 observerSchema=\(evidence == nil ? 6 : 7) "
+            "renewable status schema=\(session.durableState().schemaVersion) "
+                + "observerSchema=\(evidence == nil ? 6 : 7) "
                 + "world=\(ecologicalObservationWorldContextKey(world)) "
                 + "simulation=\(session.simulationID.rawValue) tick=\(session.tick) "
                 + "worldTick=\(world.time) agent=\(plot.plannerID.rawValue) "

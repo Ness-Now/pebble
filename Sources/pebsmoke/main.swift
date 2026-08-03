@@ -199,6 +199,7 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "ecological-ob
 }
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "agriculture" {
     runPebbleAgentsAgricultureSmoke()
+    runPebbleAgentsAgricultureCycleObservationSmoke()
     registerAllBlocks()
     registerAllItems()
     registerAllEntities()
@@ -2404,6 +2405,7 @@ runPebbleAgentsTeachingSmoke()
 runPebbleAgentsIntegratedTeachingInitiationSmoke()
 runPebbleAgentsEcologicalObservationSmoke()
 runPebbleAgentsAgricultureSmoke()
+runPebbleAgentsAgricultureCycleObservationSmoke()
 runPebbleAgentsHarvestPublicationSmoke()
 runPebbleCorePhysicalActionSmoke()
 runPebbleCoreAgricultureSmoke()
