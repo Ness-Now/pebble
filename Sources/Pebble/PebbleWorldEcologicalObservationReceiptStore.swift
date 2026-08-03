@@ -480,6 +480,15 @@ struct PebbleWorldEcologicalObservationReceiptTransaction {
         [PebbleAgriculturalActionReceipt] = []
     private(set) var committed = false
 
+    /// Ecological receipts created by the still-open candidate tick. A
+    /// retained World receipt is intentionally absent from this projection:
+    /// persistence proves history, while transaction membership grants the
+    /// bounded authority used by automatic live reconciliation.
+    var stagedEcologicalReceiptIDs:
+        Set<AgentPhysicalObservationReceiptID> {
+        Set(inserted.map(\.receiptID))
+    }
+
     mutating func recordInsertion(
         _ receipt: PebbleEcologicalObservationReceipt
     ) {

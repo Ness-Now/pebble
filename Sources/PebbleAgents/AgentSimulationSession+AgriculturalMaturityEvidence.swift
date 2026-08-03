@@ -1,14 +1,19 @@
 import Foundation
 
 extension AgentSimulationSession {
-    /// Selects the newest exact-cell observation only after proving the
-    /// current planting boundary. Independent World-side receipts remain a
-    /// Pebble adapter precondition and are not copied into this aggregate.
+    /// Selects the newest exact-cell observation only from the explicitly
+    /// supplied candidate-tick receipt set and after proving the current
+    /// planting boundary. Pebble supplies this set from its open World-side
+    /// receipt transaction; headless callers must model that boundary
+    /// explicitly. Retained observations outside the set are historical and
+    /// have no automatic transition authority.
     public func currentCycleCropObservation(
         plot expectedPlot: AgentAgriculturalPlot,
         cell expectedCell: AgentAgriculturalCell,
         cropPosition: AgentPosition,
-        minimumPhysicalWorldTick: Int
+        minimumPhysicalWorldTick: Int,
+        eligibleCurrentReceiptIDs:
+            Set<AgentPhysicalObservationReceiptID>
     ) throws -> AgentCurrentCycleCropObservationResult {
         guard minimumPhysicalWorldTick >= 0,
               let state = agricultureState,
@@ -79,11 +84,17 @@ extension AgentSimulationSession {
         for actorID in snapshot().agents.compactMap({
             AgentID(rawValue: $0.id)
         }).sorted() {
-            guard let record = ecologicalObservations(for: actorID).first(where: {
-                $0.observation.crops.contains(where: {
-                    $0.position == cropPosition
-                })
-            }) else {
+            guard let record = ecologicalObservations(for: actorID)
+                .first(where: { record in
+                    guard let receiptID = record
+                        .physicalObservationReceiptID,
+                          eligibleCurrentReceiptIDs.contains(receiptID) else {
+                        return false
+                    }
+                    return record.observation.crops.contains(where: {
+                        $0.position == cropPosition
+                    })
+                }) else {
                 continue
             }
             let exactCellCrops = record.observation.crops.filter {

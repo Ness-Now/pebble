@@ -382,6 +382,8 @@ extension PebbleAgentController {
         guard agricultureFeatureEnabled, session.agricultureEnabled else {
             return
         }
+        let eligibleCurrentReceiptIDs =
+            receiptTransaction.stagedEcologicalReceiptIDs
         var plots = session.agricultureSnapshot().plots
         for plot in plots where plot.phase != .cycleCompleted {
             for cell in plot.cells where cell.phase == .planted {
@@ -407,7 +409,9 @@ extension PebbleAgentController {
                     cell: cell,
                     cropPosition: cropPosition,
                     minimumPhysicalWorldTick:
-                        plantingSourceReceipt.physicalWorldTick
+                        plantingSourceReceipt.physicalWorldTick,
+                    eligibleCurrentReceiptIDs:
+                        eligibleCurrentReceiptIDs
                 )
                 trace(
                     "agriculture lifecycle evidence plot="
@@ -423,7 +427,10 @@ extension PebbleAgentController {
                         + "plantAction="
                         + "\(result.evidence?.currentPlantAction.outcome.actionID.rawValue ?? "none") "
                         + "plantEvent="
-                        + "\(result.evidence?.currentPlantAction.agricultureEventID.rawValue ?? "none")"
+                        + "\(result.evidence?.currentPlantAction.agricultureEventID.rawValue ?? "none") "
+                        + "currentTickReceipt="
+                        + "\(result.evidence?.record.physicalObservationReceiptID.map { eligibleCurrentReceiptIDs.contains($0) } ?? false) "
+                        + "historicalReceiptSelected=NO"
                 )
                 try injectAgricultureCycleObservationFault(
                     at: "after-evidence-selection"
