@@ -50,7 +50,8 @@ CIV-00 through CIV-33: COMPLETE AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
-V4-GATE-D-v1: NOT EVALUATED; BLOCKER FIX LOCAL REVIEW CANDIDATE
+V4-GATE-D-v1: NOT EVALUATED
+Gate D Blocker 03: FIXED — LOCAL REVIEW CANDIDATE
 CIV-34: NOT STARTED
 ```
 
@@ -58,11 +59,12 @@ The `CIV-33` completion is published on the canonical branch at
 `7cd1bd3f65a4dc5943f8229b9444ac425c98c677`. The renewable-subsistence
 milestone is published in baseline
 `47104f70894b20e7d7db0042cb93f047540c336d`. Gate D Blocker 01 is fixed and
-published in baseline `6d114abb98aee652e44fe9a81c3bab47b72ff698`. Gate D
-remains not evaluated. The Blocker 02 local review candidate uses checkpoint
-schema 30 to reconcile retained ecological history with bounded independent
-World-side receipts; after its publication, independent Evaluation 03 is
-required.
+published in baseline `6d114abb98aee652e44fe9a81c3bab47b72ff698`; Blocker
+02 is fixed and published in baseline
+`d0d99f8a1d06cf809b14a68c107f961b58c09674`. Gate D remains not evaluated.
+The Blocker 03 local review candidate scopes maturity observations to the
+exact current planting cycle while retaining prior-cycle history. After its
+publication, independent Evaluation 04 is required.
 
 ## Operational
 
@@ -176,6 +178,14 @@ root cause, exact registration/observation/death ordering, coordinated
 observation/death compaction, schema-29 compatibility, fully re-signed
 corruptions and the rendered two-process restart proof. It is product-correction
 evidence, not a Gate D PASS or acquisition report.
+
+[`GATE_D_BLOCKER_03_AGRICULTURE_CYCLE_OBSERVATION_FIX.md`](GATE_D_BLOCKER_03_AGRICULTURE_CYCLE_OBSERVATION_FIX.md)
+records Evaluation 03's preserved FAIL, the freshness-versus-cycle root cause,
+the exact current-planting boundary, deterministic multi-actor evidence
+selection, non-mature and fail-closed mature semantics, cycle-scoped action
+identity, schema-30 restart, rollback injections and the real two-process
+second-harvest proof. It is product-correction evidence, not a Gate D PASS or
+acquisition report.
 
 [`GATE_C_EVALUATION_01_SUMMARY.md`](GATE_C_EVALUATION_01_SUMMARY.md) and
 [`GATE_C_EVALUATION_01_SUMMARY.json`](GATE_C_EVALUATION_01_SUMMARY.json)

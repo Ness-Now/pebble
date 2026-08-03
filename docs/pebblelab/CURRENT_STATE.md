@@ -14,84 +14,84 @@ SHA of the documentation commit that contains it.
   contracts.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
-Published product baseline evaluated by independent Gate D Evaluation 02 and
-affected by Gate D Blocker 02:
+Published product baseline evaluated by independent Gate D Evaluation 03 and
+affected by Gate D Blocker 03:
 
 ```text
-6d114abb98aee652e44fe9a81c3bab47b72ff698
+d0d99f8a1d06cf809b14a68c107f961b58c09674
 ```
 
-The `CIV-33` completion, renewable-subsistence milestone and Gate D Blocker 01
-position-restoration correction are published on the canonical branch.
-Independent Gate D Evaluations 01 and 02 remain immutable FAIL evidence for
-their evaluated baselines. Evaluation 02 found that a normal retained
-ecological observation became unrestorable after its observer died even while
-the exact full death authority remained retained.
+The `CIV-33` completion, renewable-subsistence milestone and Gate D Blockers 01
+and 02 are published on the canonical branch. Independent Gate D Evaluations
+01, 02 and 03 remain immutable FAIL evidence for their evaluated baselines.
+Evaluation 03 found that a fresh mature observation from an earlier planting
+cycle could be selected for a stage-0 replanting at the same physical site.
 
 ## Current program position
 
 ```text
 active CIV phase: none
-next authorized action: senior review and manual publication of Gate D Blocker 02 fix
+next authorized action: senior review and manual publication of Gate D Blocker 03 fix
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
-V4-GATE-D-v1 status: NOT EVALUATED — BLOCKER FIX LOCAL REVIEW CANDIDATE
+V4-GATE-D-v1 status: NOT EVALUATED
+Gate D Blocker 03 status: FIXED — LOCAL REVIEW CANDIDATE
 CIV-34 status: NOT STARTED
 roadmap generation: V4
 ```
 
 The published Blocker 01 correction preserves verified physical position
-restart. The targeted Blocker 02 correction now validates ecological
-observations across retained mortality boundaries and binds their physical
-content to bounded receipts in the World `SaveDB`, outside the civilization
-checkpoint. Schema 30 cross-store reconciliation requires the row, exact
-causal event and independent World-side receipt to agree before save or load
-publication. Receipt and causal retention are coordinated with row eviction;
-schema 29 checkpoints containing observations or plots fail closed. The same
-World-side authority binds agricultural source observations and physical
-action outcomes without adding another agriculture engine. This work does not
-evaluate or acquire Gate D. After senior review, manual publication and remote
+restart. The published Blocker 02 correction validates ecological observations
+across retained mortality boundaries and binds their physical content to
+bounded receipts in the World `SaveDB`, outside the civilization checkpoint.
+The targeted Blocker 03 correction now selects crop maturity evidence only
+after proving the exact current-cycle plant action, causal event and physical
+receipt. A current non-mature row permits the tick to continue; retained mature
+rows from prior cycles remain historical and cannot mature a replanting. Schema
+30 and Observer schema 7 remain unchanged. This work does not evaluate or
+acquire Gate D. After senior review, manual publication and remote
 verification, the next authorized action is independent `V4-GATE-D-v1`
-Evaluation 03.
+Evaluation 04.
 
 ## Last validation baseline
 
-For the Gate D Blocker 02 historical ecological-observer correction:
+For the Gate D Blocker 03 cycle-scoped agricultural-observation correction:
 
 ```text
 focused ecological observation: 68 passed, 0 failed
-focused agriculture: 48 passed, 0 failed
+focused agriculture: 66 passed, 0 failed
 focused renewable subsistence: 19 passed, 0 failed
+focused physical actions: 38 passed, 0 failed
+focused physical food survival: 50 passed, 0 failed
+focused lifecycle: 80 passed, 0 failed
 focused mortality: 93 passed, 0 failed
 focused estates/inheritance/succession: 84 passed, 0 failed
 focused checkpoint/replay: 49 passed, 0 failed
 focused persistence/reconciliation: 18 passed, 0 failed
 focused Material Rights: 21 passed, 0 failed
 focused Observer: 20 passed, 0 failed
-focused total: 420 passed, 0 failed
-schema-30 regressions: livestock 40/0, wild subsistence 47/0, work-demand refresh 26/0
-repository gate: 3719 passed, 0 failed
+focused total: 606 passed, 0 failed
+repository gate: 3737 passed, 0 failed
 repository verification steps: 35/35
 rendered two-process blocker campaign: PASS
-World/session: wmsbu8ijg5vu1 / live-46-14-66--21
+World/session: wmscsurmvlc11 / live-103-14-62--21
 checkpoint schema / Observer schema: 30 / 7
-manifest integrity digest: verified
-historical observer: agent_0 / deceasedAfterObservationRetained
-observation sequence / tick: 34 / 9
-observation receipt: eco-c504ba4efee1d7232a19a9cb8e22bdd750bb6dde
-observation / receipt digest: 7bcbc4ab8f949942 / 59d6a5f8befae53640900a3552431d22aca6546d175fd11ea12d8d0ec42e8fc1
-death ID / tick: death-agent_0-t24-3cfeb0b74c40c179 / 24
-estate ID: estate-18506feb632c6b93
-active dead-observer count / dead-observer probes: 0 / 0
-position mismatch after load: 0
-physical quantity: 1 / 1 / 1 / 1
-duplication count: 0
+plot/cell/cycles: plot-955b8014709cd734 / 0 / 1→2
+civilization ticks: 1→2 before restart; 2→4 after restart; mature at 5
+cycle-1 retained mature receipt: eco-81bdee610abb9c38fb6261b4c807bbf28473643f
+cycle-2 stage-0 selection: currentCycleNonMature
+cycle-2 maturity receipt: eco-5dd51ac2d7b2c2a8846b9f4d761f74474f2e33c2
+cycle-2 maturity action: auto-maturity:5:plot-955b8014709cd734:cycle-2:0
+second harvest receipt/output: agriculture-live:renewable-cycle2-harvest / 5
+World receipts / leaks: 27 / 0
+duplicate actions / receipts: 0 / 0
 Observer mutation count: 0
 runtime errors: 0
 cleanup: exact
 rendered captures inspected at native resolution: 4
 Gate D Blocker 01 regression: PASS
+Gate D Blocker 02 regression: PASS
 ```
 
 ## Known important debt
@@ -215,7 +215,7 @@ Gate D Blocker 01 regression: PASS
 ## Next authorized action
 
 After senior review, manual publication and remote verification of the Gate D
-Blocker 02 correction, the next eligible work is a new independent
-`V4-GATE-D-v1` Evaluation 03. Gate D remains **not evaluated** and is not
+Blocker 03 correction, the next eligible work is a new independent
+`V4-GATE-D-v1` Evaluation 04. Gate D remains **not evaluated** and is not
 acquired by this correction. `CIV-34` is not started and remains downstream of
 a future published Gate D PASS.

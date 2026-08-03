@@ -22,11 +22,11 @@ This anchors the product behavior evaluated for Gate C. The containing
 evidence/status commit is identified by Git rather than self-referenced by this
 roadmap.
 
-Published product baseline evaluated by independent Gate D Evaluation 02 and
-affected by Gate D Blocker 02:
+Published product baseline evaluated by independent Gate D Evaluation 03 and
+affected by Gate D Blocker 03:
 
 ```text
-6d114abb98aee652e44fe9a81c3bab47b72ff698
+d0d99f8a1d06cf809b14a68c107f961b58c09674
 ```
 
 ## Canonical position
@@ -37,11 +37,12 @@ Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: none
-next authorized action: senior review and manual publication of Gate D Blocker 02 fix
+next authorized action: senior review and manual publication of Gate D Blocker 03 fix
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
-V4-GATE-D-v1: NOT EVALUATED — BLOCKER FIX LOCAL REVIEW CANDIDATE
+V4-GATE-D-v1: NOT EVALUATED
+Gate D Blocker 03: FIXED — LOCAL REVIEW CANDIDATE
 CIV-34: NOT STARTED
 ```
 
@@ -50,16 +51,16 @@ The `CIV-33` completion is published on the canonical branch at
 milestone is published in baseline
 `47104f70894b20e7d7db0042cb93f047540c336d`. The Blocker 01 position-restore
 correction is published in baseline
-`6d114abb98aee652e44fe9a81c3bab47b72ff698`. Gate D Evaluations 01 and 02
-remain historical FAIL evidence. The targeted historical ecological-observer
-correction is a local review candidate. Schema 30 now requires every retained
-ecological row and exact causal event to reconcile with a bounded receipt in
-World persistence, outside the civilization checkpoint. Retention evicts the
-row before either causal or physical proof is lost. Agriculture reuses the
-source observation receipt and Pebble's exact physical action receipts rather
-than introducing another production authority. Legacy schema 29 with retained
-observations or plots fails closed. After publication, the next authorized
-action is independent Gate D Evaluation 03.
+`6d114abb98aee652e44fe9a81c3bab47b72ff698`. The Blocker 02
+ecological-observer correction is published in baseline
+`d0d99f8a1d06cf809b14a68c107f961b58c09674`. Gate D Evaluations 01, 02 and
+03 remain historical FAIL evidence. The targeted Blocker 03 correction is a
+local review candidate. Schema 30 retains exact World-side ecological and
+physical-action receipts. Agriculture now proves the current plant action,
+cycle ordinal, causal sequence and receipt before classifying only the newest
+eligible exact-cell evidence as mature or non-mature. Prior-cycle observations
+remain historical. After publication, the next authorized action is
+independent Gate D Evaluation 04.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:
@@ -220,8 +221,9 @@ Current entry status: `CIV-29` through `CIV-33` are **complete and published**.
 The required renewable-subsistence milestone is **complete and published**.
 Gate D is **not evaluated**. Its first independent evaluation found a composed
 physical-position restart blocker, which is fixed and published. Evaluation 02
-found a historical ecological-observer validation blocker; its targeted
-correction is a **local review candidate**.
+found a historical ecological-observer validation blocker, also fixed and
+published. Evaluation 03 found a cycle-scoping blocker in agricultural
+maturity selection; its targeted correction is a **local review candidate**.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -527,17 +529,21 @@ The gate proves several possible generations, development shaped by childhood,
 causal aging and death, durable family distinctions, and survival of goods and
 obligations across people and restart.
 
-Status: **not evaluated — blocker fix local review candidate**. All required
-CIV phases and the required milestone are published. Independent Evaluations
-01 and 02 correctly remain `GATE D FAIL — PRODUCT CORRECTION REQUIRED` for
-their evaluated baselines. The published position-restart correction is
+Status: **not evaluated**; Blocker 03 is **fixed — local review candidate**.
+All required CIV phases and the required milestone are published. Independent
+Evaluations 01, 02 and 03 correctly remain
+`GATE D FAIL — PRODUCT CORRECTION REQUIRED` for their evaluated baselines. The
+published position-restart correction is
 documented in
 [`GATE_D_BLOCKER_01_POSITION_RESTORE_FIX.md`](GATE_D_BLOCKER_01_POSITION_RESTORE_FIX.md).
-The targeted historical ecological-observer correction is documented in
+The published historical ecological-observer correction is documented in
 [`GATE_D_BLOCKER_02_ECOLOGICAL_OBSERVER_HISTORY_FIX.md`](GATE_D_BLOCKER_02_ECOLOGICAL_OBSERVER_HISTORY_FIX.md).
-Neither correction acquires Gate D. After senior review, manual publication
-and remote verification of Blocker 02, independent Gate D Evaluation 03 is
-required.
+The targeted current-cycle agricultural-observation correction is documented
+in
+[`GATE_D_BLOCKER_03_AGRICULTURE_CYCLE_OBSERVATION_FIX.md`](GATE_D_BLOCKER_03_AGRICULTURE_CYCLE_OBSERVATION_FIX.md).
+None of these corrections acquires Gate D. After senior review, manual
+publication and remote verification of Blocker 03, independent Gate D
+Evaluation 04 is required.
 
 ## Wave 3 — Local material economy
 
@@ -753,7 +759,7 @@ keeps incarnation physical and produces verifiable long-duration history.
 | `V3-GATE-R-v1` | acquired | `CIV-19` |
 | `V4-GATE-B-v1` | acquired | `CIV-25`; bounded embodied autonomy contract |
 | `V4-GATE-C-v1` | acquired | `CIV-26`–`CIV-28` |
-| `V4-GATE-D-v1` | not evaluated; Blocker 02 fix local review candidate | `CIV-29`–`CIV-33`, renewable subsistence milestone and Blocker 01 fix published; independent Evaluation 03 required after Blocker 02 publication |
+| `V4-GATE-D-v1` | not evaluated; Blocker 03 fixed — local review candidate | `CIV-29`–`CIV-33`, renewable subsistence milestone and Blockers 01/02 published; independent Evaluation 04 required after Blocker 03 publication |
 | `V4-GATE-E-v1` | planned | `CIV-34`–`CIV-37`; `CIV-38` optional |
 | `V4-GATE-F-v1` | planned | `CIV-39`; `CIV-40` optional |
 | `V4-GATE-G-v1` | planned | `CIV-41`–`CIV-47` |

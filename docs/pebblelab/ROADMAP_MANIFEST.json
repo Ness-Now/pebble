@@ -16,7 +16,10 @@
     "gateDBlocker01PublishedCanonicalHead": "6d114abb98aee652e44fe9a81c3bab47b72ff698",
     "gateDEvaluation02EvaluatedProductHead": "6d114abb98aee652e44fe9a81c3bab47b72ff698",
     "gateDBlocker02AffectedProductHead": "6d114abb98aee652e44fe9a81c3bab47b72ff698",
-    "meaning": "Published product behavior independently evaluated for V4-GATE-C-v1 and Gate D evaluations 01 and 02; both evaluations remain historical FAIL evidence, Blocker 01 is fixed and published, and the targeted Blocker 02 correction is a local review candidate.",
+    "gateDBlocker02PublishedCanonicalHead": "d0d99f8a1d06cf809b14a68c107f961b58c09674",
+    "gateDEvaluation03EvaluatedProductHead": "d0d99f8a1d06cf809b14a68c107f961b58c09674",
+    "gateDBlocker03AffectedProductHead": "d0d99f8a1d06cf809b14a68c107f961b58c09674",
+    "meaning": "Published product behavior independently evaluated for V4-GATE-C-v1 and Gate D evaluations 01, 02 and 03; all three evaluations remain historical FAIL evidence, Blockers 01 and 02 are fixed and published, and the targeted Blocker 03 correction is a local review candidate.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -37,6 +40,7 @@
     "renewableSubsistenceMilestoneEvidence": "docs/pebblelab/RENEWABLE_SUBSISTENCE_MILESTONE_SUMMARY.md",
     "gateDBlocker01PositionRestoreFix": "docs/pebblelab/GATE_D_BLOCKER_01_POSITION_RESTORE_FIX.md",
     "gateDBlocker02EcologicalObserverHistoryFix": "docs/pebblelab/GATE_D_BLOCKER_02_ECOLOGICAL_OBSERVER_HISTORY_FIX.md",
+    "gateDBlocker03AgricultureCycleObservationFix": "docs/pebblelab/GATE_D_BLOCKER_03_AGRICULTURE_CYCLE_OBSERVATION_FIX.md",
     "gateCEvidenceMarkdown": "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.md",
     "gateCEvidenceJSON": "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.json"
   },
@@ -52,7 +56,7 @@
     "activePhase": null,
     "completedThrough": "CIV-33",
     "nextEligiblePhase": null,
-    "nextAuthorizedAction": "GATE-D-BLOCKER-02-SENIOR-REVIEW-AND-MANUAL-PUBLICATION",
+    "nextAuthorizedAction": "GATE-D-BLOCKER-03-SENIOR-REVIEW-AND-MANUAL-PUBLICATION",
     "civ27Status": "completed",
     "civ28Status": "completed",
     "gateCStatus": "acquired",
@@ -65,7 +69,8 @@
     "gateRAcquired": true,
     "gateBAcquired": true,
     "gateCPublished": true,
-    "gateDStatus": "notEvaluatedBlockerFixLocalReviewCandidate",
+    "gateDStatus": "notEvaluated",
+    "gateDBlocker03Status": "fixedLocalReviewCandidate",
     "renewableSubsistenceMilestoneStatus": "completedPublished",
     "v4CanonicalDocumentSet": true
   },
@@ -175,7 +180,8 @@
   "gateDBlocker02Validation": {
     "affectedPublishedBaseline": "6d114abb98aee652e44fe9a81c3bab47b72ff698",
     "sourceFailEvidenceCommit": "d40ca4f8215ff14d904a1fb84aedb7ebd9185082",
-    "status": "fixedLocalReviewCandidate",
+    "status": "fixedPublished",
+    "publishedCanonicalHead": "d0d99f8a1d06cf809b14a68c107f961b58c09674",
     "checkpointSchema": 30,
     "observerSchema": 7,
     "historicalObserverPolicy": "activePopulationOrExactRetainedDeathRecordWithExactCausalEvents",
@@ -224,7 +230,59 @@
     "blocker01Regression": "passed",
     "gateDAcquired": false,
     "civ34Started": false,
-    "nextAuthorizedActionAfterPublication": "NEW-INDEPENDENT-V4-GATE-D-v1-EVALUATION-03"
+    "publicationVerified": true
+  },
+  "gateDBlocker03Validation": {
+    "affectedPublishedBaseline": "d0d99f8a1d06cf809b14a68c107f961b58c09674",
+    "sourceFailEvidenceCommit": "fa63d04b05998b4d7021be313cc6413854b8fd39",
+    "status": "fixedLocalReviewCandidate",
+    "checkpointSchema": 30,
+    "observerSchema": 7,
+    "currentPlantingBoundary": "exactCurrentCyclePlantActionAndCausalEventAndWorldReceipt",
+    "selectionPolicy": "newestEligibleExactCellEvidenceBeforeReadingMaturity",
+    "multiActorOrder": "physicalWorldTickDescSimulationTickDescCausalSequenceDescEcologicalSequenceDescObserverIDAsc",
+    "nonMaturePolicy": "validEvidenceNoMaturityMutationTickContinues",
+    "maturePolicy": "exactCurrentCycleEvidenceThenFailClosedPhysicalVerification",
+    "maturityActionIdentity": "simulationTickPlotCycleOrdinalCell",
+    "focusedPassed": 606,
+    "focusedFailed": 0,
+    "focusedAgriculturePassed": 66,
+    "repositoryChecksPassed": 3737,
+    "repositoryChecksFailed": 0,
+    "repositoryStepsPassed": 35,
+    "repositoryStepsTotal": 35,
+    "renderedTwoProcessCampaign": "passed",
+    "renderedWorldIdentity": "wmscsurmvlc11",
+    "renderedSessionIdentity": "live-103-14-62--21",
+    "plotID": "plot-955b8014709cd734",
+    "cellIndex": 0,
+    "cycle1Ordinal": 1,
+    "cycle2Ordinal": 2,
+    "simulationTickBefore": 1,
+    "simulationTickAfterStage0": 2,
+    "simulationTickAfterRestartTicks": 4,
+    "cycle1MatureObservationEventID": "live-103-14-62--21/event-00000000000000000039",
+    "cycle1MatureObservationReceiptID": "eco-81bdee610abb9c38fb6261b4c807bbf28473643f",
+    "cycle2PlantActionID": "agriculture-live:renewable-cycle2-plant",
+    "cycle2PlantEventID": "live-103-14-62--21/event-00000000000000000047",
+    "cycle2MatureObservationEventID": "live-103-14-62--21/event-00000000000000000094",
+    "cycle2MatureObservationReceiptID": "eco-5dd51ac2d7b2c2a8846b9f4d761f74474f2e33c2",
+    "cycle2MaturityActionID": "auto-maturity:5:plot-955b8014709cd734:cycle-2:0",
+    "secondHarvestReceiptID": "agriculture-live:renewable-cycle2-harvest",
+    "secondHarvestQuantity": 5,
+    "worldReceiptCount": 27,
+    "worldReceiptLeakCount": 0,
+    "duplicateActionCount": 0,
+    "duplicateReceiptCount": 0,
+    "observerMutationCount": 0,
+    "runtimeErrors": 0,
+    "cleanup": "exact",
+    "nativeCapturesInspected": 4,
+    "blocker01Regression": "passed",
+    "blocker02Regression": "passed",
+    "gateDAcquired": false,
+    "civ34Started": false,
+    "nextAuthorizedActionAfterPublication": "NEW-INDEPENDENT-V4-GATE-D-v1-EVALUATION-04"
   },
   "publishedPostGateHardening": [
     {
@@ -291,7 +349,7 @@
     "D": {
       "contractId": "V4-GATE-D-v1",
       "title": "Generational Continuity",
-      "status": "notEvaluatedBlockerFixLocalReviewCandidate",
+      "status": "notEvaluated",
       "requiredPhases": [
         "CIV-29",
         "CIV-30",
@@ -320,10 +378,21 @@
         "verdict": "failProductCorrectionRequired"
       },
       "blocker02EcologicalObserverHistory": {
-        "status": "fixedLocalReviewCandidate",
+        "status": "fixedPublished",
         "evidence": "docs/pebblelab/GATE_D_BLOCKER_02_ECOLOGICAL_OBSERVER_HISTORY_FIX.md",
         "gateAcquired": false,
-        "nextAfterPublication": "newIndependentEvaluation03"
+        "publishedCanonicalHead": "d0d99f8a1d06cf809b14a68c107f961b58c09674"
+      },
+      "evaluation03": {
+        "evaluatedProductBaseline": "d0d99f8a1d06cf809b14a68c107f961b58c09674",
+        "evidenceCommit": "fa63d04b05998b4d7021be313cc6413854b8fd39",
+        "verdict": "failProductCorrectionRequired"
+      },
+      "blocker03AgricultureCycleObservation": {
+        "status": "fixedLocalReviewCandidate",
+        "evidence": "docs/pebblelab/GATE_D_BLOCKER_03_AGRICULTURE_CYCLE_OBSERVATION_FIX.md",
+        "gateAcquired": false,
+        "nextAfterPublication": "newIndependentEvaluation04"
       }
     },
     "E": {
