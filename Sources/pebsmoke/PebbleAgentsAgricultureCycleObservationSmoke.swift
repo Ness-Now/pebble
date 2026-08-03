@@ -138,7 +138,8 @@ private func b03Action(
     cellIndex: Int?,
     kind: AgentAgriculturalActionKind,
     id: String,
-    observationEventID: AgentCausalEventID? = nil
+    observationEventID: AgentCausalEventID? = nil,
+    position: AgentPosition? = nil
 ) -> AgentAgriculturalActionOutcome {
     let index = cellIndex ?? 0
     let material: [AgentAgriculturalMaterialDelta]
@@ -211,7 +212,7 @@ private func b03Action(
         actorID: AgentID(rawValue: "agent_0")!,
         plotID: plotID,
         cellIndex: cellIndex,
-        position: b03Positions[index],
+        position: position ?? b03Positions[index],
         beforeFingerprint: fingerprints.0,
         afterFingerprint: fingerprints.1,
         materialDeltas: material,
@@ -351,6 +352,275 @@ private func b03ActionReceipts(
             dimension: 0,
             simulationID: session.simulationID,
             outcome: record.outcome
+        )
+    }
+}
+
+private func b03JSONObject<T: Encodable>(_ value: T) -> [String: Any] {
+    try! JSONSerialization.jsonObject(
+        with: AgentCheckpointCodec.encode(value)
+    ) as! [String: Any]
+}
+
+private func b03EventIDText(_ value: [String: Any]) -> String {
+    let simulationID = value["simulationID"] as! String
+    let sequence = value["sequence"] as! UInt64
+    let digits = String(sequence)
+    return "\(simulationID)/event-"
+        + String(repeating: "0", count: max(0, 20 - digits.count))
+        + digits
+}
+
+private func b03Digest(_ text: String) -> String {
+    AgentAgricultureDigest.make(text)
+}
+
+private func b03RepairAgricultureEventDigest(
+    _ event: inout [String: Any]
+) {
+    let eventID = b03EventIDText(event["eventID"] as! [String: Any])
+    let instant = event["instant"] as! [String: Any]
+    let causes = (event["causes"] as! [[String: Any]])
+        .map(b03EventIDText).joined(separator: ",")
+    let payload = event["payload"] as! [String: Any]
+    let agriculture = payload["agriculture"] as! [String: Any]
+    let payloadText = "agriculture|"
+        + "\(agriculture["plotID"] as? String ?? "none")|"
+        + "\(agriculture["cellIndex"].map { String(describing: $0) } ?? "none")|"
+        + "\(agriculture["actionID"] as? String ?? "none")|"
+        + "\(agriculture["status"] as! String)|"
+        + "\(agriculture["physicalFingerprint"] as! Int)|"
+        + "\(agriculture["itemKey"] as? String ?? "none")|"
+        + "\(agriculture["quantity"] as! Int)|"
+        + "\(agriculture["digest"] as! String)"
+    let text = "\(eventID)|\(instant["tick"] as! Int)|"
+        + "\(event["kind"] as! String)|\(event["origin"] as! String)|"
+        + "\(event["actorID"] as? String ?? "-")|"
+        + "\(event["subjectID"] as? String ?? "-")|"
+        + "\(event["operationID"] as? String ?? "-")|"
+        + "\(causes)|\(payloadText)|\(event["summary"] as! String)"
+    event["digest"] = b03Digest(text)
+}
+
+private func b03RecomputeCausalRollingDigest(
+    _ durable: inout [String: Any]
+) {
+    var ledger = durable["causalLedger"] as! [String: Any]
+    let events = ledger["events"] as! [[String: Any]]
+    var rolling = b03Digest("")
+    for event in events {
+        rolling = b03Digest("\(rolling)|\(event["digest"] as! String)")
+    }
+    ledger["rollingDigest"] = rolling
+    durable["causalLedger"] = ledger
+}
+
+private func b03ReplaceMaturitySource(
+    _ durable: inout [String: Any],
+    actionID: AgentAgriculturalActionID,
+    oldEventID: AgentCausalEventID,
+    newEventID: AgentCausalEventID
+) {
+    var agriculture = durable["agricultureState"] as! [String: Any]
+    var actions = agriculture["retainedActions"] as! [[String: Any]]
+    let actionIndex = actions.firstIndex {
+        let outcome = $0["outcome"] as! [String: Any]
+        return outcome["actionID"] as? String == actionID.rawValue
+    }!
+    var outcome = actions[actionIndex]["outcome"] as! [String: Any]
+    outcome["sourceObservationEventID"] = b03JSONObject(newEventID)
+    actions[actionIndex]["outcome"] = outcome
+    agriculture["retainedActions"] = actions
+    durable["agricultureState"] = agriculture
+
+    var ledger = durable["causalLedger"] as! [String: Any]
+    var events = ledger["events"] as! [[String: Any]]
+    let eventIndex = events.firstIndex {
+        $0["operationID"] as? String == actionID.rawValue
+    }!
+    var causes = events[eventIndex]["causes"] as! [[String: Any]]
+    causes = causes.map {
+        b03EventIDText($0) == oldEventID.rawValue
+            ? b03JSONObject(newEventID) : $0
+    }.sorted {
+        ($0["sequence"] as! UInt64) < ($1["sequence"] as! UInt64)
+    }
+    events[eventIndex]["causes"] = causes
+    b03RepairAgricultureEventDigest(&events[eventIndex])
+    ledger["events"] = events
+    durable["causalLedger"] = ledger
+    b03RecomputeCausalRollingDigest(&durable)
+}
+
+private func b03ReplaceCurrentPlantWithPriorCycleAction(
+    _ durable: inout [String: Any]
+) {
+    var agriculture = durable["agricultureState"] as! [String: Any]
+    var actions = agriculture["retainedActions"] as! [[String: Any]]
+    let priorIndex = actions.firstIndex {
+        let outcome = $0["outcome"] as! [String: Any]
+        return outcome["actionID"] as? String == "b03-c1-plant-0"
+    }!
+    let currentIndex = actions.firstIndex {
+        let outcome = $0["outcome"] as! [String: Any]
+        return outcome["actionID"] as? String == "b03-c2-plant-0"
+    }!
+    let priorOutcome = actions[priorIndex]["outcome"] as! [String: Any]
+    let currentEventID = actions[currentIndex]["agricultureEventID"]
+        as! [String: Any]
+    let currentSequence = currentEventID["sequence"] as! UInt64
+
+    var ledger = durable["causalLedger"] as! [String: Any]
+    var events = ledger["events"] as! [[String: Any]]
+    let currentEventIndex = events.firstIndex {
+        b03EventIDText($0["eventID"] as! [String: Any])
+            == b03EventIDText(currentEventID)
+    }!
+    let previousAgricultureEvent = events.filter {
+        ($0["origin"] as? String) == "agricultureTransition"
+            && (($0["eventID"] as! [String: Any])["sequence"] as! UInt64)
+                < currentSequence
+            && (($0["payload"] as! [String: Any])["agriculture"] != nil)
+    }.max {
+        (($0["eventID"] as! [String: Any])["sequence"] as! UInt64)
+            < (($1["eventID"] as! [String: Any])["sequence"] as! UInt64)
+    }!
+    let previousPayload = (previousAgricultureEvent["payload"]
+        as! [String: Any])["agriculture"] as! [String: Any]
+    let previousDigest = previousPayload["digest"] as! String
+    let materialRows = priorOutcome["materialDeltas"] as! [[String: Any]]
+    let materialText = materialRows.map {
+        "\($0["direction"] as! String):\($0["itemKey"] as! String):"
+            + "\($0["quantity"] as! Int)"
+    }.joined(separator: ",")
+    let newDigest = b03Digest(
+        "\(previousDigest)|\(priorOutcome["actionID"] as! String)|"
+            + "\(priorOutcome["kind"] as! String)|"
+            + "\(priorOutcome["beforeFingerprint"] as! Int)>"
+            + "\(priorOutcome["afterFingerprint"] as! Int)|\(materialText)"
+    )
+
+    var currentRecord = actions[currentIndex]
+    currentRecord["outcome"] = priorOutcome
+    currentRecord["digest"] = newDigest
+    actions[currentIndex] = currentRecord
+    agriculture["retainedActions"] = actions
+    var processed = agriculture["processedActionIDs"] as! [String]
+    let currentProcessed = processed.firstIndex(of: "b03-c2-plant-0")!
+    processed[currentProcessed] = "b03-c1-plant-0"
+    agriculture["processedActionIDs"] = processed
+    agriculture["rollingDigest"] = newDigest
+    durable["agricultureState"] = agriculture
+
+    events[currentEventIndex]["operationID"] = "b03-c1-plant-0"
+    var payload = events[currentEventIndex]["payload"] as! [String: Any]
+    var agriculturalPayload = payload["agriculture"] as! [String: Any]
+    agriculturalPayload["actionID"] = "b03-c1-plant-0"
+    agriculturalPayload["digest"] = newDigest
+    payload["agriculture"] = agriculturalPayload
+    events[currentEventIndex]["payload"] = payload
+    b03RepairAgricultureEventDigest(&events[currentEventIndex])
+    ledger["events"] = events
+    durable["causalLedger"] = ledger
+    b03RecomputeCausalRollingDigest(&durable)
+}
+
+private func b03FullyResignedRestoreRefused(
+    _ checkpoint: AgentSessionCheckpoint,
+    observationReceipts: [AgentEcologicalPhysicalReceiptEvidence],
+    actionReceipts: [AgentAgriculturalPhysicalReceiptEvidence],
+    mutate: (inout [String: Any]) -> Void
+) -> Bool {
+    do {
+        var root = try JSONSerialization.jsonObject(
+            with: AgentCheckpointCodec.encode(checkpoint)
+        ) as! [String: Any]
+        var durable = root["durableState"] as! [String: Any]
+        mutate(&durable)
+        let mutationBytes = try JSONSerialization.data(
+            withJSONObject: durable,
+            options: [.sortedKeys, .withoutEscapingSlashes]
+        )
+        let state = try AgentCheckpointCodec.decode(
+            AgentSessionDurableState.self, from: mutationBytes
+        )
+        let durableBytes = try AgentCheckpointCodec.encode(state)
+        let canonical = try JSONSerialization.jsonObject(
+            with: durableBytes
+        ) as! [String: Any]
+        let digest = AgentCheckpointDigest.sha256(durableBytes)
+        let simulationDigest = AgentCheckpointDigest.sha256(
+            Data(state.clock.simulationID.rawValue.utf8)
+        )
+        root["durableState"] = canonical
+        root["schemaVersion"] = state.schemaVersion
+        root["simulationID"] = state.clock.simulationID.rawValue
+        root["tick"] = state.clock.tick.rawValue
+        root["semanticDigest"] = digest.rawValue
+        root["checkpointID"] =
+            "checkpoint-\(simulationDigest.rawValue.prefix(12))"
+                + "-t\(state.clock.tick.rawValue)-\(digest.rawValue.prefix(16))"
+        let resigned = try AgentCheckpointCodec.decode(
+            AgentSessionCheckpoint.self,
+            from: JSONSerialization.data(
+                withJSONObject: root,
+                options: [.sortedKeys, .withoutEscapingSlashes]
+            )
+        )
+        let restored = try AgentSimulationSession.restoring(resigned)
+        try restored.validateIndependentEcologicalObservationReceipts(
+            observationReceipts,
+            worldID: "b03-world",
+            storageIdentity: "sqlite-world:b03-world",
+            dimension: 0
+        )
+        try restored.validateIndependentAgriculturalActionReceipts(
+            actionReceipts,
+            worldID: "b03-world",
+            storageIdentity: "sqlite-world:b03-world",
+            dimension: 0
+        )
+        return false
+    } catch {
+        return true
+    }
+}
+
+private func b03FullyResignedMaturitySourceRefused(
+    _ fixture: inout B03Fixture,
+    wrongRecord: AgentEcologicalObservationRecord,
+    suffix: String
+) -> Bool {
+    let correct = try! fixture.session.recordEcologicalObservation(
+        b03Observation(
+            fixture.session, physicalTick: 220,
+            stages: [0: (crop: "wheat", stage: 7)]
+        )
+    )
+    let actionID = AgentAgriculturalActionID(
+        rawValue: "b03-resigned-\(suffix)-maturity"
+    )!
+    _ = try! fixture.session.recordAgriculturalActionSuccess(b03Action(
+        fixture.session,
+        plotID: fixture.plotID,
+        cellIndex: 0,
+        kind: .maturityObserved,
+        id: actionID.rawValue,
+        observationEventID: correct.causalEventID
+    ))
+    let checkpoint = try! fixture.session.makeCheckpoint()
+    let observationReceipts = b03ObservationReceipts(fixture.session)
+    let actionReceipts = b03ActionReceipts(fixture.session)
+    return b03FullyResignedRestoreRefused(
+        checkpoint,
+        observationReceipts: observationReceipts,
+        actionReceipts: actionReceipts
+    ) { durable in
+        b03ReplaceMaturitySource(
+            &durable,
+            actionID: actionID,
+            oldEventID: correct.causalEventID,
+            newEventID: wrongRecord.causalEventID
         )
     }
 }
@@ -534,6 +804,145 @@ func runPebbleAgentsAgricultureCycleObservationSmoke() {
             && (try! restarted.durableStateBytes())
                 == (try! exact.session.durableStateBytes()))
 
+    let resignedObservationReceipts = b03ObservationReceipts(exact.session)
+    let resignedActionReceipts = b03ActionReceipts(exact.session)
+    check("fully re-signed cycle ordinal without matching plant proof is refused",
+          b03FullyResignedRestoreRefused(
+            restartCheckpoint,
+            observationReceipts: resignedObservationReceipts,
+            actionReceipts: resignedActionReceipts
+          ) { durable in
+              var agriculture = durable["agricultureState"] as! [String: Any]
+              var plots = agriculture["plots"] as! [[String: Any]]
+              plots[0]["cycleOrdinal"] = 3
+              agriculture["plots"] = plots
+              durable["agricultureState"] = agriculture
+          })
+    check("fully re-signed last-work substitution to prior plant is refused",
+          b03FullyResignedRestoreRefused(
+            restartCheckpoint,
+            observationReceipts: resignedObservationReceipts,
+            actionReceipts: resignedActionReceipts
+          ) { durable in
+              var agriculture = durable["agricultureState"] as! [String: Any]
+              let actions = agriculture["retainedActions"] as! [[String: Any]]
+              let priorPlant = actions.first {
+                  let outcome = $0["outcome"] as! [String: Any]
+                  return outcome["actionID"] as? String == "b03-c1-plant-0"
+              }!
+              var plots = agriculture["plots"] as! [[String: Any]]
+              var cells = plots[0]["cells"] as! [[String: Any]]
+              cells[0]["lastWorkEventID"] = priorPlant["agricultureEventID"]
+              plots[0]["cells"] = cells
+              agriculture["plots"] = plots
+              durable["agricultureState"] = agriculture
+          })
+    check("fully re-signed current plant replacement by prior cycle is refused",
+          b03FullyResignedRestoreRefused(
+            restartCheckpoint,
+            observationReceipts: resignedObservationReceipts,
+            actionReceipts: resignedActionReceipts
+          ) { durable in
+              b03ReplaceCurrentPlantWithPriorCycleAction(&durable)
+          })
+
+    var resignedBeforePlant = b03Fixture("b03-resigned-before-plant")
+    let beforePlantSource = resignedBeforePlant.cycle1Mature
+    check("fully re-signed maturity source moved before planting is refused",
+          b03FullyResignedMaturitySourceRefused(
+            &resignedBeforePlant,
+            wrongRecord: beforePlantSource,
+            suffix: "before-plant"
+          ))
+
+    var resignedOtherCell = b03Fixture(
+        "b03-resigned-other-cell", cellCount: 2
+    )
+    let otherCellSource = try! resignedOtherCell.session
+        .recordEcologicalObservation(b03Observation(
+            resignedOtherCell.session,
+            physicalTick: 180,
+            stages: [1: (crop: "wheat", stage: 7)]
+        ))
+    check("fully re-signed other-cell maturity observation is refused",
+          b03FullyResignedMaturitySourceRefused(
+            &resignedOtherCell,
+            wrongRecord: otherCellSource,
+            suffix: "other-cell"
+          ))
+
+    var resignedOtherPlot = b03Fixture("b03-resigned-other-plot")
+    let otherPlotSource = try! resignedOtherPlot.session
+        .recordEcologicalObservation(b03Observation(
+            resignedOtherPlot.session, physicalTick: 181
+        ))
+    let otherPlotID = try! resignedOtherPlot.session.planAgriculturalPlot(
+        plannerID: AgentID(rawValue: "agent_0")!,
+        positions: [b03Positions[1]],
+        sourceObservationEventID: otherPlotSource.causalEventID,
+        designatedStorageLocationID: "container:13,64,9"
+    )
+    _ = try! resignedOtherPlot.session.recordAgriculturalActionSuccess(
+        b03Action(
+            resignedOtherPlot.session,
+            plotID: otherPlotID,
+            cellIndex: 0,
+            kind: .till,
+            id: "b03-other-plot-till",
+            position: b03Positions[1]
+        )
+    )
+    _ = try! resignedOtherPlot.session.recordAgriculturalActionSuccess(
+        b03Action(
+            resignedOtherPlot.session,
+            plotID: otherPlotID,
+            cellIndex: 0,
+            kind: .plant,
+            id: "b03-other-plot-plant",
+            position: b03Positions[1]
+        )
+    )
+    let otherPlotMature = try! resignedOtherPlot.session
+        .recordEcologicalObservation(b03Observation(
+            resignedOtherPlot.session,
+            physicalTick: 182,
+            stages: [1: (crop: "wheat", stage: 7)]
+        ))
+    check("fully re-signed other-plot maturity observation is refused",
+          b03FullyResignedMaturitySourceRefused(
+            &resignedOtherPlot,
+            wrongRecord: otherPlotMature,
+            suffix: "other-plot"
+          ))
+
+    var resignedOtherCrop = b03Fixture("b03-resigned-other-crop")
+    let otherCropSource = try! resignedOtherCrop.session
+        .recordEcologicalObservation(b03Observation(
+            resignedOtherCrop.session,
+            physicalTick: 183,
+            stages: [0: (crop: "carrots", stage: 7)]
+        ))
+    check("fully re-signed other-crop maturity observation is refused",
+          b03FullyResignedMaturitySourceRefused(
+            &resignedOtherCrop,
+            wrongRecord: otherCropSource,
+            suffix: "other-crop"
+          ))
+
+    var resignedWrongTick = b03Fixture("b03-resigned-wrong-world-tick")
+    let wrongTickSource = try! resignedWrongTick.session
+        .recordEcologicalObservation(b03Observation(
+            resignedWrongTick.session,
+            physicalTick: 139,
+            stages: [0: (crop: "wheat", stage: 7)]
+        ))
+    check("fully re-signed incompatible physical World tick is refused",
+          b03FullyResignedMaturitySourceRefused(
+            &resignedWrongTick,
+            wrongRecord: wrongTickSource,
+            suffix: "wrong-world-tick"
+          ))
+
     var beforePlant = b03Session("b03-before-plant")
     let source = try! beforePlant.recordEcologicalObservation(
         b03Observation(beforePlant, physicalTick: 100)
@@ -572,6 +981,32 @@ func runPebbleAgentsAgricultureCycleObservationSmoke() {
     } catch {
         check("observation before current plant event is refused atomically",
               false, "\(error)")
+    }
+
+    var reusedCycleID = b03Fixture("b03-reused-cycle-action-id")
+    let reusedMature = try! reusedCycleID.session.recordEcologicalObservation(
+        b03Observation(
+            reusedCycleID.session,
+            physicalTick: 190,
+            stages: [0: (crop: "wheat", stage: 7)]
+        )
+    )
+    let reusedBefore = try! reusedCycleID.session.durableStateBytes()
+    do {
+        _ = try reusedCycleID.session.recordAgriculturalActionSuccess(b03Action(
+            reusedCycleID.session,
+            plotID: reusedCycleID.plotID,
+            cellIndex: 0,
+            kind: .maturityObserved,
+            id: "b03-c1-mature-0",
+            observationEventID: reusedMature.causalEventID
+        ))
+        check("maturity action ID reuse across cycles is refused", false)
+    } catch AgentSessionError.agriculture(.duplicateAction) {
+        check("maturity action ID reuse across cycles is refused",
+              (try! reusedCycleID.session.durableStateBytes()) == reusedBefore)
+    } catch {
+        check("maturity action ID reuse across cycles is refused", false, "\(error)")
     }
 
     let observationEvidence = b03ObservationReceipts(exact.session)

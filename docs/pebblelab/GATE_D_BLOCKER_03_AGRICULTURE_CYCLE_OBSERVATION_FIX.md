@@ -136,20 +136,27 @@ ordering, both lexical multi-actor directions, same-boundary conflict,
 pre-plant evidence, same-tick causal separation, missing current evidence,
 later real maturity, receipt substitution, wrong physical tick, wrong crop,
 cycle-scoped action IDs, idempotence, multiple cells, schema-30 restart and
-non-mutating Observer inspection. Existing fully re-signed checkpoint suites
-continue to recompute action, causal, rolling, agriculture, semantic, storage
-and manifest digests and reject semantically inconsistent evidence.
+non-mutating Observer inspection. Fully re-signed checkpoints specifically
+reject changed `cycleOrdinal`, prior-cycle `lastWorkEventID`, replacement of
+the current plant record, a maturity source moved before planting, other-cell,
+other-plot and other-crop sources, and an incompatible physical World tick.
+The mutations preserve or recompute the applicable action digest, causal event
+digest, causal rolling digest, agriculture rolling digest and checkpoint
+semantic digest; the independent original receipt set remains authoritative.
+Cross-store storage and live-manifest integrity are recalculated and verified
+by the two-process runner. Reuse of a maturity action ID across cycles is
+refused atomically before a checkpoint can be published.
 
 ## 16. Targeted two-process campaign
 
 The disposable-World runner
 [`verify-pebblelab-gate-d-agriculture-cycle-observation-fix.sh`](../../scripts/verify-pebblelab-gate-d-agriculture-cycle-observation-fix.sh)
-proved the boundary with World `wmscsurmvlc11`, session
+proved the boundary with World `wmscvvl4oglk7`, session
 `live-103-14-62--21`, plot `plot-955b8014709cd734` and cell `0`.
 
 Process 1 retained cycle-1 maturity event
 `live-103-14-62--21/event-00000000000000000039` and receipt
-`eco-81bdee610abb9c38fb6261b4c807bbf28473643f`, replanted cycle 2 through
+`eco-bf1bab840c7132f5f99d84f8a62cf630a9265fa5`, replanted cycle 2 through
 action `agriculture-live:renewable-cycle2-plant` and causal event
 `live-103-14-62--21/event-00000000000000000047`, then selected the new
 stage-0 evidence as `currentCycleNonMature`. The normal tick advanced from `1`
@@ -158,7 +165,7 @@ to `2` without a maturity action or runtime error.
 Process 2 restored the same World/session, advanced normally to tick `4`, grew
 the real crop through PebbleCore random ticks to stage `7`, selected current
 mature event `live-103-14-62--21/event-00000000000000000094` with receipt
-`eco-5dd51ac2d7b2c2a8846b9f4d761f74474f2e33c2`, and published exactly one
+`eco-3cc0b63db49597e9fa1b0f0e990d2f408736f300`, and published exactly one
 `auto-maturity:5:plot-955b8014709cd734:cycle-2:0`. Physical harvest receipt
 `agriculture-live:renewable-cycle2-harvest` yielded five carrots. Final
 accounting was initial `1`, first planting debit `1`, first harvest `4`, food
@@ -173,12 +180,12 @@ individually and inspected at native resolution.
 
 ## 17. Regressions
 
-Focused suites passed for agriculture (`66/0`), renewable subsistence
+Focused suites passed for agriculture (`75/0`), renewable subsistence
 (`19/0`), ecological observation (`68/0`), physical actions (`38/0`), physical
 food survival (`50/0`), lifecycle (`80/0`), checkpoint/replay (`49/0`),
 persistence/reconciliation (`18/0`), Material Rights (`21/0`), mortality
 (`93/0`), estates/inheritance/succession (`84/0`) and Observer (`20/0`):
-`606` passed, `0` failed in total. Gate D Blocker 01 position restoration and
+`615` passed, `0` failed in total. Gate D Blocker 01 position restoration and
 Blocker 02 historical ecological-observer runners both remain PASS.
 
 The canonical repository gate result is recorded by the final correction

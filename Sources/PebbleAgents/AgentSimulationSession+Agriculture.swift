@@ -685,6 +685,7 @@ extension AgentSimulationSession {
         try Self.validateAgricultureState(
             state, activeAgents: Array(statesById.values),
             population: populationRegistry, mortality: mortalityState,
+            ecologicalObservations: ecologicalObservationState,
             clock: clock,
             causalLatestSequence: causalLedger.latestSequence,
             causalDroppedEventCount: causalLedger.droppedEventCount,
@@ -697,6 +698,7 @@ extension AgentSimulationSession {
         activeAgents: [AgentSessionAgentState],
         population: AgentPopulationRegistry?,
         mortality: AgentMortalityState?,
+        ecologicalObservations: AgentEcologicalObservationState?,
         clock: AgentSimulationClock,
         causalLatestSequence: UInt64,
         causalDroppedEventCount _: UInt64,
@@ -1194,6 +1196,9 @@ extension AgentSimulationSession {
             }
             if outcome.kind == .maturityObserved,
                let cellIndex = outcome.cellIndex {
+                let plot = state.plots.first {
+                    $0.plotID == outcome.plotID
+                }
                 let currentPlant = state.retainedActions.last(where: {
                     $0.outcome.kind == .plant
                         && $0.outcome.plotID == outcome.plotID
@@ -1201,25 +1206,65 @@ extension AgentSimulationSession {
                         && $0.agricultureEventID.sequence
                             < record.agricultureEventID.sequence
                 })
-                guard let currentPlant,
+                guard let plot,
+                      plot.cells.indices.contains(cellIndex),
+                      let currentPlant,
                       let sourceObservationEventID = outcome
                         .sourceObservationEventID,
                       currentPlant.agricultureEventID.sequence
                         < sourceObservationEventID.sequence,
-                      (state.plots.first(where: {
-                          $0.plotID == outcome.plotID
-                      }).map { plot in
-                          plot.cycleOrdinal == 1
-                              || plot.renewalEvidence.map { renewal in
-                                  record.agricultureEventID.sequence
-                                    < renewal.renewalEventID.sequence
-                                      || renewal.renewalEventID.sequence
-                                        < currentPlant.agricultureEventID.sequence
-                              } == true
-                      } == true) else {
+                      plot.cycleOrdinal == 1
+                        || plot.renewalEvidence.map({ renewal in
+                            record.agricultureEventID.sequence
+                              < renewal.renewalEventID.sequence
+                                || renewal.renewalEventID.sequence
+                                  < currentPlant.agricultureEventID.sequence
+                        }) == true else {
                     throw AgentAgricultureError.invalidState(
                         "current-cycle maturity boundary"
                     )
+                }
+                if let observation = ecologicalObservations?.observations
+                    .first(where: {
+                        $0.causalEventID == sourceObservationEventID
+                    }) {
+                    let cell = plot.cells[cellIndex]
+                    let cropPosition = AgentPosition(
+                        x: cell.position.x,
+                        y: cell.position.y + 1,
+                        z: cell.position.z
+                    )
+                    let exactCrops = observation.observation.crops.filter {
+                        $0.position == cropPosition
+                    }
+                    let foundationReceiptID: AgentPhysicalObservationReceiptID?
+                    if let renewal = plot.renewalEvidence,
+                       renewal.renewalEventID.sequence
+                        < currentPlant.agricultureEventID.sequence {
+                        foundationReceiptID = renewal.sourceObservationReceiptID
+                    } else {
+                        foundationReceiptID = plot.sourceObservationReceiptID
+                    }
+                    let minimumPhysicalTick = foundationReceiptID.flatMap {
+                        receiptID in
+                        ecologicalObservations?.observations.first(where: {
+                            $0.physicalObservationReceiptID == receiptID
+                        })?.observation.physicalWorldTick
+                    }
+                    let physicalTickIsCompatible = minimumPhysicalTick.map({
+                        observation.observation.physicalWorldTick >= $0
+                    }) ?? true
+                    guard outcome.position == cell.position,
+                          exactCrops.count == 1,
+                          let crop = exactCrops.first,
+                          crop.cropKey == plot.crop.rawValue,
+                          crop.mature,
+                          crop.growthStage == crop.maximumGrowthStage,
+                          physicalTickIsCompatible else {
+                        throw AgentAgricultureError.invalidState(
+                            "maturity observation content"
+                        )
+                    }
                 }
             }
         }
@@ -1307,9 +1352,39 @@ extension AgentSimulationSession {
             return (.agriculturalCropPlanted, true)
         case .maturityObserved:
             let cell = plot.cells[outcome.cellIndex!]
+            let observationRecord = ecologicalObservationState?.observations
+                .first { $0.causalEventID == outcome.sourceObservationEventID }
+            let cropPosition = AgentPosition(
+                x: cell.position.x,
+                y: cell.position.y + 1,
+                z: cell.position.z
+            )
+            let exactCrops = observationRecord?.observation.crops.filter {
+                $0.position == cropPosition
+            } ?? []
+            let foundationReceiptID = plot.cycleOrdinal > 1
+                ? plot.renewalEvidence?.sourceObservationReceiptID
+                : plot.sourceObservationReceiptID
+            let minimumPhysicalTick = foundationReceiptID.flatMap { receiptID in
+                ecologicalObservationState?.observations.first {
+                    $0.physicalObservationReceiptID == receiptID
+                }?.observation.physicalWorldTick
+            }
+            let physicalTickIsCompatible = observationRecord.map { record in
+                minimumPhysicalTick.map {
+                    record.observation.physicalWorldTick >= $0
+                } ?? true
+            } ?? false
             guard cell.phase == .planted,
                   outcome.beforeFingerprint == outcome.afterFingerprint,
                   outcome.materialDeltas.isEmpty, outcome.sourceObservationEventID != nil,
+                  outcome.position == cell.position,
+                  observationRecord != nil,
+                  exactCrops.count == 1,
+                  exactCrops[0].cropKey == plot.crop.rawValue,
+                  exactCrops[0].mature,
+                  exactCrops[0].growthStage == exactCrops[0].maximumGrowthStage,
+                  physicalTickIsCompatible,
                   let plantingEventID = cell.lastWorkEventID,
                   let plantingRecord = state.retainedActions.first(where: {
                       $0.agricultureEventID == plantingEventID

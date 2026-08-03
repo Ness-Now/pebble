@@ -142,7 +142,7 @@ require_trace "$AGRICULTURE_CAUSAL_TRACE" \
 require_trace "$AGRICULTURE_CAUSAL_TRACE" \
     'post-eviction cell mutation is rejected by boundary' \
     'post-eviction cell mutation rejection'
-require_trace "$AGRICULTURE_CAUSAL_TRACE" '66 passed, 0 failed' \
+require_trace "$AGRICULTURE_CAUSAL_TRACE" '75 passed, 0 failed' \
     'complete agriculture causal-retention suite'
 
 run_pebble() {
@@ -462,7 +462,7 @@ AFTER_STATE_DIGEST=$(/usr/bin/sed -n \
     printf 'runtime errors: 0\n'
     printf 'cleanup: exact\n'
     printf 'low-capacity causal pressure: 68 passed, 0 failed\n'
-    printf 'agriculture causal retention: 66 passed, 0 failed\n'
+    printf 'agriculture causal retention: 75 passed, 0 failed\n'
 } > "$COMPACT_TRACE"
 
 /bin/rm -rf "$SESSION_HOME"
