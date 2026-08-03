@@ -56,11 +56,13 @@ ecological-observer correction is published in baseline
 `d0d99f8a1d06cf809b14a68c107f961b58c09674`. Gate D Evaluations 01, 02 and
 03 remain historical FAIL evidence. The targeted Blocker 03 correction is a
 local review candidate. Schema 30 retains exact World-side ecological and
-physical-action receipts. Agriculture now proves the current plant action,
-cycle ordinal, causal sequence and receipt before classifying only the newest
-eligible exact-cell evidence as mature or non-mature. Prior-cycle observations
-remain historical. After publication, the next authorized action is
-independent Gate D Evaluation 04.
+physical-action receipts. Agriculture now requires the ecological receipt to
+be staged by the open candidate-tick transaction, then also proves the current
+plant action, cycle ordinal and causal boundary before classifying only the
+newest eligible exact-cell evidence as mature or non-mature. Retained
+prior-cycle observations are historical evidence without automatic transition
+authority. After publication, the next authorized action is independent Gate
+D Evaluation 04.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:

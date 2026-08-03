@@ -45,12 +45,15 @@ The published Blocker 01 correction preserves verified physical position
 restart. The published Blocker 02 correction validates ecological observations
 across retained mortality boundaries and binds their physical content to
 bounded receipts in the World `SaveDB`, outside the civilization checkpoint.
-The targeted Blocker 03 correction now selects crop maturity evidence only
-after proving the exact current-cycle plant action, causal event and physical
-receipt. A current non-mature row permits the tick to continue; retained mature
-rows from prior cycles remain historical and cannot mature a replanting. Schema
-30 and Observer schema 7 remain unchanged. This work does not evaluate or
-acquire Gate D. After senior review, manual publication and remote
+The targeted Blocker 03 correction now grants automatic crop-maturity
+authority only to an ecological receipt staged by the open candidate-tick
+World-receipt transaction, after also proving the exact current-cycle plant
+action and causal boundary. Retained observations are historical evidence. A
+current staged non-mature row permits the tick to continue; missing exact-cell
+evidence also permits progress without an agricultural transition. Causal
+ordering remains a consistency defense, not the sole proof of currentness.
+Schema 30 and Observer schema 7 remain unchanged. This work does not evaluate
+or acquire Gate D. After senior review, manual publication and remote
 verification, the next authorized action is independent `V4-GATE-D-v1`
 Evaluation 04.
 
@@ -60,7 +63,7 @@ For the Gate D Blocker 03 cycle-scoped agricultural-observation correction:
 
 ```text
 focused ecological observation: 68 passed, 0 failed
-focused agriculture: 75 passed, 0 failed
+focused agriculture: 86 passed, 0 failed
 focused renewable subsistence: 19 passed, 0 failed
 focused physical actions: 38 passed, 0 failed
 focused physical food survival: 50 passed, 0 failed
@@ -71,17 +74,17 @@ focused checkpoint/replay: 49 passed, 0 failed
 focused persistence/reconciliation: 18 passed, 0 failed
 focused Material Rights: 21 passed, 0 failed
 focused Observer: 20 passed, 0 failed
-focused total: 615 passed, 0 failed
-repository gate: 3746 passed, 0 failed
+focused total: 626 passed, 0 failed
+repository gate: 3757 passed, 0 failed
 repository verification steps: 35/35
 rendered two-process blocker campaign: PASS
-World/session: wmscvvl4oglk7 / live-103-14-62--21
+World/session: wmscy56llcmdd / live-103-14-62--21
 checkpoint schema / Observer schema: 30 / 7
 plot/cell/cycles: plot-955b8014709cd734 / 0 / 1→2
 civilization ticks: 1→2 before restart; 2→4 after restart; mature at 5
-cycle-1 retained mature receipt: eco-bf1bab840c7132f5f99d84f8a62cf630a9265fa5
-cycle-2 stage-0 selection: currentCycleNonMature
-cycle-2 maturity receipt: eco-3cc0b63db49597e9fa1b0f0e990d2f408736f300
+cycle-1 retained mature receipt: eco-28fde84b1ae1a0afceca7b84a38107362a728541 (historical only)
+cycle-2 stage-0 selection: currentCycleNonMature / current-tick receipt true
+cycle-2 maturity receipt: eco-603cefec28bb6b4dc72f38fa108dcefa32284839
 cycle-2 maturity action: auto-maturity:5:plot-955b8014709cd734:cycle-2:0
 second harvest receipt/output: agriculture-live:renewable-cycle2-harvest / 5
 World receipts / leaks: 27 / 0

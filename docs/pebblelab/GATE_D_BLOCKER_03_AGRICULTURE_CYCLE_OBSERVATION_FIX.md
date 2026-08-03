@@ -45,6 +45,18 @@ identity. Historical observations keep their original digests, receipts and
 Observer visibility. They remain valid for history, harvest provenance and
 renewable evidence, but cannot mature a later cycle.
 
+Final-review hardening makes the stronger authority distinction explicit:
+
+```text
+retained observation = historical evidence
+receipt staged by the open candidate-tick transaction = automatic transition authority
+```
+
+Simulation tick and causal sequence remain consistency defenses, but neither
+can manufacture transaction membership. This matters because a checkpoint,
+all of its event references and all of its digests can be coherently rebuilt
+without changing the independent World receipts.
+
 ## 6. Current planting boundary
 
 The durable current-cycle boundary is the exact `.plant` agricultural action
@@ -54,18 +66,28 @@ and crop, belong to `plot.cycleOrdinal`, occur after the current renewal event
 when one exists, and agree with `plot.lastAgricultureEventID` ordering.
 
 `plantedCivilDate` is retained but is not sufficient proof. The plant action's
-causal sequence separates operations that share one simulation tick. Its
-physical receipt tick, plus the current source and renewal receipts, provides
-the lower physical-World-tick boundary.
+causal sequence separates ordinary operations that share one simulation tick,
+and its physical receipt plus the source and renewal receipts remain exact
+consistency checks. That causal order is re-signable checkpoint data, however,
+so it is not used by itself to prove that an observation was produced by the
+current live tick.
 
 ## 7. Observation selection algorithm
 
 `AgentSimulationSession.currentCycleCropObservation` is the single canonical
-selector. For each active actor it first identifies that actor's latest fresh
-exact-cell row; it never walks backwards to find a desired mature value. It
-then validates exact causal-event and World-receipt linkage, World, storage,
-dimension, simulation, crop, position, plant-causal ordering and physical-tick
-boundary.
+selector. It requires an explicit
+`eligibleCurrentReceiptIDs: Set<AgentPhysicalObservationReceiptID>`. The live
+adapter supplies exactly the ecological receipt IDs inserted into its open
+candidate-tick World-receipt transaction. A restored row or a receipt retained
+in the World store is ineligible unless a new physical scan stages that exact
+receipt during the current transaction.
+
+For each active actor, the selector filters by that transaction set before it
+identifies the actor's latest fresh exact-cell row; it never walks backwards to
+find a desired mature value. It then validates exact row/event/receipt linkage,
+crop, position, plant-causal ordering and physical-tick boundary. Pebble's
+adapter validates World, storage, dimension and simulation against the
+independent store before reconciliation.
 
 The result is one of `noEligibleObservation`, `currentCycleNonMature`,
 `currentCycleMature`, `conflictingCurrentEvidence` or
@@ -82,11 +104,14 @@ produce `conflictingCurrentEvidence` rather than choosing the mature row.
 
 ## 9. Non-mature semantics
 
-`currentCycleNonMature` is valid physical evidence. Reconciliation does not
+`currentCycleNonMature` from a staged receipt is valid physical evidence.
+Reconciliation does not
 call `observeMaturity`, create an agricultural action, emit an error or mutate
 the plot. The rest of the normal civilization tick continues. Repeated ticks
-continue to select the current stage-0 row instead of the retained cycle-1
-mature row.
+create new physical receipts; they never reuse either the retained cycle-1
+mature row or a stage-0 row staged by a previous tick. If the current scan has
+no exact-cell result, classification is `noEligibleObservation` and the tick
+also continues without an agricultural mutation.
 
 ## 10. Mature fail-closed semantics
 
@@ -105,11 +130,21 @@ proof remains idempotent and publishes one action only.
 
 ## 12. Receipts
 
-The selector requires the exact ecological World receipt for the selected row
+The open receipt transaction exposes an immutable, bounded projection of only
+the ecological IDs it inserted. Removal during the same transaction also
+removes transition authority. The selector requires membership in that set;
+Pebble then requires the exact ecological World receipt for the selected row
 and the exact physical plant receipt for the current boundary. Auto-maturity
-receipts are registered in the candidate tick's World-receipt transaction.
-Receipt substitution, wrong World/storage/dimension/content/tick, prior-cycle
-receipt reuse and other-cell/plot/crop evidence are refused.
+receipts are registered in the same candidate transaction. Receipt
+substitution, missing store records, wrong World/storage/dimension/content/tick,
+prior-cycle reuse and other-cell/plot/crop evidence are refused.
+
+`reconcileLiveAgriculturalLifecycle` has one product caller: automatic
+`advanceOneTick`, after physical scans, World receipt staging and ecological
+row/event publication. Manual observation commands record and commit their own
+transactions but do not invoke agricultural reconciliation. Headless tests
+must pass an explicit eligible set; historical inspection passes no transition
+authority. There is no permissive overload.
 
 ## 13. Restart
 
@@ -117,8 +152,11 @@ No new durable field is required. Schema 30 already preserves cycle ordinal,
 current plant action and receipt, `lastWorkEventID`, renewal provenance, causal
 ordering and observation receipts. Restore validation now requires a planted
 cell's last-work event to be its exact current-cycle plant event while allowing
-older mature observations to remain historical. A schema-30 checkpoint saved
-with cycle 2 at stage `0` reloads and advances normally.
+older mature observations to remain historical. Restored rows have no automatic
+transition authority before a new-process physical scan. A schema-30
+checkpoint saved with cycle 2 at stage `0` reloads, stages fresh receipts in
+the first new candidate tick and advances normally. Checkpoint schema remains
+`30`; Observer schema remains `7`.
 
 ## 14. Atomicity
 
@@ -147,25 +185,39 @@ Cross-store storage and live-manifest integrity are recalculated and verified
 by the two-process runner. Reuse of a maturity action ID across cycles is
 refused atomically before a checkpoint can be published.
 
+The final-review fixture additionally keeps O1, P2 and O2 physical receipt
+content unchanged, honestly evicts O2's retained row, and rebinds O1 to a
+later ecological event at the same simulation and physical tick. Its
+product-signed schema-30 checkpoint restores successfully and has a causal
+sequence larger than P2, demonstrating the former selector weakness. O1 still
+classifies as `noEligibleObservation` when it is absent from the current
+transaction. A coherently rebound plant action/event with the unchanged plant
+receipt is separately refused. Missing exact-cell scan-budget evidence,
+cross-World staged evidence, absent World receipts, row/event mismatch and
+previous-tick receipt reuse are also covered.
+
 ## 16. Targeted two-process campaign
 
 The disposable-World runner
 [`verify-pebblelab-gate-d-agriculture-cycle-observation-fix.sh`](../../scripts/verify-pebblelab-gate-d-agriculture-cycle-observation-fix.sh)
-proved the boundary with World `wmscvvl4oglk7`, session
+proved the boundary with World `wmscy56llcmdd`, session
 `live-103-14-62--21`, plot `plot-955b8014709cd734` and cell `0`.
 
 Process 1 retained cycle-1 maturity event
 `live-103-14-62--21/event-00000000000000000039` and receipt
-`eco-bf1bab840c7132f5f99d84f8a62cf630a9265fa5`, replanted cycle 2 through
+`eco-28fde84b1ae1a0afceca7b84a38107362a728541`, replanted cycle 2 through
 action `agriculture-live:renewable-cycle2-plant` and causal event
 `live-103-14-62--21/event-00000000000000000047`, then selected the new
-stage-0 evidence as `currentCycleNonMature`. The normal tick advanced from `1`
-to `2` without a maturity action or runtime error.
+stage-0 event `live-103-14-62--21/event-00000000000000000059` and receipt
+`eco-622a12af04033709e4a52e3df2bc24d786fd9425` as
+`currentCycleNonMature`. Its trace records `currentTickReceipt=true` and
+`historicalReceiptSelected=NO`. The normal tick advanced from `1` to `2`
+without a maturity action or runtime error.
 
 Process 2 restored the same World/session, advanced normally to tick `4`, grew
 the real crop through PebbleCore random ticks to stage `7`, selected current
 mature event `live-103-14-62--21/event-00000000000000000094` with receipt
-`eco-3cc0b63db49597e9fa1b0f0e990d2f408736f300`, and published exactly one
+`eco-603cefec28bb6b4dc72f38fa108dcefa32284839`, and published exactly one
 `auto-maturity:5:plot-955b8014709cd734:cycle-2:0`. Physical harvest receipt
 `agriculture-live:renewable-cycle2-harvest` yielded five carrots. Final
 accounting was initial `1`, first planting debit `1`, first harvest `4`, food
@@ -180,13 +232,16 @@ individually and inspected at native resolution.
 
 ## 17. Regressions
 
-Focused suites passed for agriculture (`75/0`), renewable subsistence
+Focused suites passed for agriculture (`86/0`), renewable subsistence
 (`19/0`), ecological observation (`68/0`), physical actions (`38/0`), physical
 food survival (`50/0`), lifecycle (`80/0`), checkpoint/replay (`49/0`),
 persistence/reconciliation (`18/0`), Material Rights (`21/0`), mortality
 (`93/0`), estates/inheritance/succession (`84/0`) and Observer (`20/0`):
-`615` passed, `0` failed in total. Gate D Blocker 01 position restoration and
+`626` passed, `0` failed in total. Gate D Blocker 01 position restoration and
 Blocker 02 historical ecological-observer runners both remain PASS.
+
+The canonical repository gate passed `3757/0` with all `35/35` verification
+steps successful.
 
 The canonical repository gate result is recorded by the final correction
 commit and review package; this report must not be read as an independent Gate

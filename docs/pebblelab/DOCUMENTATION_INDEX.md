@@ -62,8 +62,9 @@ milestone is published in baseline
 published in baseline `6d114abb98aee652e44fe9a81c3bab47b72ff698`; Blocker
 02 is fixed and published in baseline
 `d0d99f8a1d06cf809b14a68c107f961b58c09674`. Gate D remains not evaluated.
-The Blocker 03 local review candidate scopes maturity observations to the
-exact current planting cycle while retaining prior-cycle history. After its
+The Blocker 03 local review candidate scopes maturity authority to receipts
+staged by the open candidate-tick transaction and the exact current planting
+boundary while retaining prior-cycle history as read-only evidence. After its
 publication, independent Evaluation 04 is required.
 
 ## Operational
