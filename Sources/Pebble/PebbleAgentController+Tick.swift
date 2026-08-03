@@ -1249,12 +1249,16 @@ extension PebbleAgentController {
                     world: world, session: &session, recorder: &recorder,
                     receiptTransaction: &receiptTransaction
                 )
+                try validateWorldEcologicalObservationReceipts(
+                    for: session, dimension: world.dim.rawValue
+                )
             }
             if session.agricultureEnabled {
                 try reconcileLiveAgriculturalLifecycle(
                     world: world,
                     session: &session,
-                    recorder: &recorder
+                    recorder: &recorder,
+                    receiptTransaction: &receiptTransaction
                 )
                 _ = try prepareLiveAgriculturalPlanIfEligible(
                     world: world, session: &session, recorder: &recorder
@@ -1290,6 +1294,18 @@ extension PebbleAgentController {
                 )
                 try validateWorldEcologicalObservationReceipts(
                     for: session, dimension: world.dim.rawValue
+                )
+            }
+            if environment[
+                "PEBBLELAB_DISPOSABLE_AGRICULTURE_CYCLE_OBSERVATION_FAULT"
+            ] == "after-final-validation",
+               session.agricultureSnapshot().retainedActions.contains(where: {
+                   $0.outcome.kind == .maturityObserved
+                       && $0.outcome.civilDate.simulationTick == session.tick
+               }) {
+                throw ControllerError.agricultureBoundary(
+                    "injected agriculture cycle observation fault "
+                        + "after-final-validation"
                 )
             }
             receiptTransaction.commit()

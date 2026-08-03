@@ -184,6 +184,7 @@ struct PebbleAgentAgricultureExecutor {
         observedCrop: AgentCropObservation,
         civilDate: AgentCivilDate,
         actionID: AgentAgriculturalActionID,
+        afterPhysicalVerification: () throws -> Void = {},
         publish: (AgentAgriculturalActionOutcome) throws -> AgentAgriculturalActionRecord
     ) throws -> AgentAgriculturalActionRecord {
         guard intent.cellIndex != nil, observedCrop.cropKey == intent.crop.rawValue,
@@ -200,6 +201,7 @@ struct PebbleAgentAgricultureExecutor {
               cropCell & 15 == 7 else {
             throw ExecutionError.observationMismatch
         }
+        try afterPhysicalVerification()
         return try publish(AgentAgriculturalActionOutcome(
             actionID: actionID, kind: .maturityObserved,
             actorID: intent.actorID, plotID: intent.plotID,

@@ -375,15 +375,13 @@ extension PebbleAgentController {
     func reconcileLiveAgriculturalLifecycle(
         world: World,
         session: inout AgentSimulationSession,
-        recorder: inout AgentReplayRecorder?
+        recorder: inout AgentReplayRecorder?,
+        receiptTransaction: inout
+            PebbleWorldEcologicalObservationReceiptTransaction
     ) throws {
         guard agricultureFeatureEnabled, session.agricultureEnabled else {
             return
         }
-        let actors = session.snapshot().agents.compactMap {
-            AgentID(rawValue: $0.id)
-        }.sorted()
-        let currentTick = session.tick
         var plots = session.agricultureSnapshot().plots
         for plot in plots where plot.phase != .cycleCompleted {
             for cell in plot.cells where cell.phase == .planted {
@@ -392,30 +390,100 @@ extension PebbleAgentController {
                     y: cell.position.y + 1,
                     z: cell.position.z
                 )
-                let evidence = actors.compactMap { actorID in
-                    session.ecologicalObservations(for: actorID).first(where: {
-                        $0.observation.isFresh(atSimulationTick: currentTick)
-                            && $0.observation.crops.contains {
-                                $0.position == cropPosition
-                                    && $0.cropKey == plot.crop.rawValue
-                                    && $0.mature
-                            }
-                    }).flatMap { record in
-                        record.observation.crops.first {
-                            $0.position == cropPosition
-                                && $0.cropKey == plot.crop.rawValue
-                                && $0.mature
-                        }.map { (record, $0) }
-                    }
-                }.first
-                guard let (record, crop) = evidence,
-                      let date = session.civilDate(),
-                      let actionID = AgentAgriculturalActionID(
-                          rawValue: "auto-maturity:\(session.tick):"
-                              + "\(plot.plotID.rawValue):\(cell.index)"
-                      ) else {
-                    continue
+                let sourceReceiptID = plot.cycleOrdinal > 1
+                    ? plot.renewalEvidence?.sourceObservationReceiptID
+                    : plot.sourceObservationReceiptID
+                guard let sourceReceiptID else {
+                    throw ControllerError.agricultureBoundary(
+                        "current-cycle planting source receipt unavailable"
+                    )
                 }
+                let plantingSourceReceipt = try
+                    worldEcologicalObservationReceiptStore().receipt(
+                        sourceReceiptID
+                    )
+                let result = try session.currentCycleCropObservation(
+                    plot: plot,
+                    cell: cell,
+                    cropPosition: cropPosition,
+                    minimumPhysicalWorldTick:
+                        plantingSourceReceipt.physicalWorldTick
+                )
+                trace(
+                    "agriculture lifecycle evidence plot="
+                        + "\(plot.plotID.rawValue) cycle=\(plot.cycleOrdinal) "
+                        + "cell=\(cell.index) classification="
+                        + result.classification.rawValue + " "
+                        + "observation="
+                        + "\(result.evidence?.record.causalEventID.rawValue ?? "none") "
+                        + "observationReceipt="
+                        + "\(result.evidence?.record.physicalObservationReceiptID?.rawValue ?? "none") "
+                        + "physicalTick="
+                        + "\(result.evidence?.record.observation.physicalWorldTick ?? -1) "
+                        + "plantAction="
+                        + "\(result.evidence?.currentPlantAction.outcome.actionID.rawValue ?? "none") "
+                        + "plantEvent="
+                        + "\(result.evidence?.currentPlantAction.agricultureEventID.rawValue ?? "none")"
+                )
+                try injectAgricultureCycleObservationFault(
+                    at: "after-evidence-selection"
+                )
+                switch result.classification {
+                case .noEligibleObservation, .currentCycleNonMature:
+                    continue
+                case .conflictingCurrentEvidence, .invalidCurrentEvidence:
+                    throw ControllerError.agricultureBoundary(
+                        "\(result.classification.rawValue)"
+                    )
+                case .currentCycleMature:
+                    break
+                }
+                guard let evidence = result.evidence,
+                      let observationReceiptID = evidence.record
+                        .physicalObservationReceiptID else {
+                    throw ControllerError.agricultureBoundary(
+                        "current-cycle evidence unavailable"
+                    )
+                }
+                let observationReceipt = try
+                    worldEcologicalObservationReceiptStore().receipt(
+                        observationReceiptID
+                    )
+                let plantReceipt = try worldAgriculturalActionReceiptStore()
+                    .receipt(
+                        evidence.currentPlantAction.outcome.actionID
+                    )
+                guard observationReceipt.observation
+                        == evidence.record.observation,
+                      observationReceipt.receiptID == observationReceiptID,
+                      observationReceipt.worldID == persistenceWorldID,
+                      observationReceipt.dimension == world.dim.rawValue,
+                      plantReceipt.outcome
+                        == evidence.currentPlantAction.outcome,
+                      plantReceipt.simulationID == session.simulationID,
+                      plantReceipt.dimension == world.dim.rawValue else {
+                    throw ControllerError.agricultureBoundary(
+                        "current-cycle independent receipt mismatch"
+                    )
+                }
+                try injectAgricultureCycleObservationFault(
+                    at: "after-cycle-validation"
+                )
+                guard let date = session.civilDate(),
+                      let actionID = AgentAgriculturalActionID
+                        .automaticMaturity(
+                            simulationTick: session.tick,
+                            plotID: plot.plotID,
+                            cycleOrdinal: plot.cycleOrdinal,
+                            cellIndex: cell.index
+                        ) else {
+                    throw ControllerError.agricultureBoundary(
+                        "cycle-scoped maturity action identity"
+                    )
+                }
+                try injectAgricultureCycleObservationFault(
+                    at: "after-action-id"
+                )
                 let intent = AgentAgriculturalIntent(
                     plotID: plot.plotID,
                     cellIndex: cell.index,
@@ -429,10 +497,15 @@ extension PebbleAgentController {
                 _ = try agricultureExecutor.observeMaturity(
                     world: world,
                     intent: intent,
-                    observationEventID: record.causalEventID,
-                    observedCrop: crop,
+                    observationEventID: evidence.record.causalEventID,
+                    observedCrop: evidence.crop,
                     civilDate: date,
                     actionID: actionID,
+                    afterPhysicalVerification: {
+                        try self.injectAgricultureCycleObservationFault(
+                            at: "after-physical-verification"
+                        )
+                    },
                     publish: { outcome in
                         try self.publishVerifiedAgriculturalAction(
                             outcome,
@@ -444,10 +517,25 @@ extension PebbleAgentController {
                 )
                 session = candidate
                 recorder = candidateRecorder
+                receiptTransaction.recordInsertion(
+                    try worldAgriculturalActionReceiptStore().receipt(actionID)
+                )
+                try injectAgricultureCycleObservationFault(
+                    at: "after-action-publication"
+                )
+                try injectAgricultureCycleObservationFault(
+                    at: "after-cell-update"
+                )
+                try injectAgricultureCycleObservationFault(
+                    at: "after-causal-append"
+                )
                 trace(
                     "agriculture lifecycle maturity plot="
                         + "\(plot.plotID.rawValue) cell=\(cell.index) "
-                        + "observation=\(record.causalEventID.rawValue) "
+                        + "cycle=\(plot.cycleOrdinal) "
+                        + "observation=\(evidence.record.causalEventID.rawValue) "
+                        + "plant=\(evidence.currentPlantAction.outcome.actionID.rawValue) "
+                        + "action=\(actionID.rawValue) "
                         + "world=verified mutation=none"
                 )
             }
@@ -514,6 +602,19 @@ extension PebbleAgentController {
                     + "farmland=verified seeds=\(seedCount) tool=verified"
             )
         }
+    }
+
+    private func injectAgricultureCycleObservationFault(
+        at point: String
+    ) throws {
+        guard environment[
+            "PEBBLELAB_DISPOSABLE_AGRICULTURE_CYCLE_OBSERVATION_FAULT"
+        ] == point else {
+            return
+        }
+        throw ControllerError.agricultureBoundary(
+            "injected agriculture cycle observation fault \(point)"
+        )
     }
 
     func agricultureGateDependencies() -> [(String, Bool)] {

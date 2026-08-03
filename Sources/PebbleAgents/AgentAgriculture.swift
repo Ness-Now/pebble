@@ -130,6 +130,21 @@ public struct AgentAgriculturalActionID: RawRepresentable, Codable, Hashable, Co
     }
 
     public static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
+
+    public static func automaticMaturity(
+        simulationTick: Int,
+        plotID: AgentAgriculturalPlotID,
+        cycleOrdinal: Int,
+        cellIndex: Int
+    ) -> Self? {
+        guard simulationTick >= 0, cycleOrdinal >= 1, cellIndex >= 0 else {
+            return nil
+        }
+        return Self(
+            rawValue: "auto-maturity:\(simulationTick):\(plotID.rawValue):"
+                + "cycle-\(cycleOrdinal):\(cellIndex)"
+        )
+    }
 }
 
 public enum AgentAgriculturalCrop: String, Codable, CaseIterable, Sendable {
@@ -399,6 +414,45 @@ public struct AgentAgriculturalActionRecord: Codable, Equatable, Sendable {
     public let agricultureEventID: AgentCausalEventID
     public let skillPracticeEventID: AgentCausalEventID?
     public let digest: String
+}
+
+public enum AgentCurrentCycleCropObservationClassification: String, Codable,
+    Equatable, Sendable {
+    case noEligibleObservation
+    case currentCycleNonMature
+    case currentCycleMature
+    case conflictingCurrentEvidence
+    case invalidCurrentEvidence
+}
+
+public struct AgentCurrentCycleCropObservationEvidence: Equatable, Sendable {
+    public let record: AgentEcologicalObservationRecord
+    public let crop: AgentCropObservation
+    public let currentPlantAction: AgentAgriculturalActionRecord
+
+    public init(
+        record: AgentEcologicalObservationRecord,
+        crop: AgentCropObservation,
+        currentPlantAction: AgentAgriculturalActionRecord
+    ) {
+        self.record = record
+        self.crop = crop
+        self.currentPlantAction = currentPlantAction
+    }
+}
+
+public struct AgentCurrentCycleCropObservationResult: Equatable, Sendable {
+    public let classification:
+        AgentCurrentCycleCropObservationClassification
+    public let evidence: AgentCurrentCycleCropObservationEvidence?
+
+    public init(
+        classification: AgentCurrentCycleCropObservationClassification,
+        evidence: AgentCurrentCycleCropObservationEvidence? = nil
+    ) {
+        self.classification = classification
+        self.evidence = evidence
+    }
 }
 
 /// Read-only projection of Pebble's independent World-side agriculture

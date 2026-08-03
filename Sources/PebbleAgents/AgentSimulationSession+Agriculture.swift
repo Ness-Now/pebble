@@ -794,21 +794,21 @@ extension AgentSimulationSession {
         }
         func ecologicalObservationEventIsValid(
             _ eventID: AgentCausalEventID,
-            observerID: AgentID,
+            observerID: AgentID?,
             physicalReceiptID: AgentPhysicalObservationReceiptID? = nil
         ) -> Bool {
             guard let event = retained[eventID],
                   event.kind == .ecologicalObservationRecorded,
                   event.origin == .ecologicalObservationTransition,
-                  event.actorID == observerID,
-                  event.subjectID == observerID,
+                  observerID.map({ event.actorID == $0 }) ?? true,
+                  observerID.map({ event.subjectID == $0 }) ?? true,
                   case let .ecologicalObservation(
                       payloadObserverID, _, _, payloadReceiptID,
                       _, _, _, status, digest
                   ) = event.payload else {
                 return false
             }
-            return payloadObserverID == observerID.rawValue
+            return observerID.map({ payloadObserverID == $0.rawValue }) ?? true
                 && event.operationID?.rawValue == payloadReceiptID
                 && (physicalReceiptID.map {
                     $0.rawValue == payloadReceiptID
@@ -1057,6 +1057,29 @@ extension AgentSimulationSession {
                     throw AgentAgricultureError.invalidState("source harvest evidence")
                 }
             }
+            for cell in plot.cells where cell.phase == .planted {
+                guard let workEventID = cell.lastWorkEventID,
+                      let workEvent = retained[workEventID],
+                      workEvent.kind == .agriculturalCropPlanted,
+                      workEvent.origin == .agricultureTransition,
+                      let plantRecord = state.retainedActions.first(where: {
+                          $0.agricultureEventID == workEventID
+                              && $0.outcome.kind == .plant
+                              && $0.outcome.plotID == plot.plotID
+                              && $0.outcome.cellIndex == cell.index
+                              && $0.outcome.position == cell.position
+                      }),
+                      workEvent.operationID?.rawValue
+                        == plantRecord.outcome.actionID.rawValue,
+                      (plot.cycleOrdinal == 1
+                          || plot.renewalEvidence.map {
+                              $0.renewalEventID.sequence < workEvent.sequence
+                          } == true) else {
+                    throw AgentAgricultureError.invalidState(
+                        "current-cycle planting boundary"
+                    )
+                }
+            }
         }
         let reservationKeys = state.reservations.map {
             "\($0.plotID.rawValue):\($0.cellIndex)"
@@ -1163,9 +1186,40 @@ extension AgentSimulationSession {
             if let sourceObservationEventID = outcome.sourceObservationEventID {
                 guard ecologicalObservationEventIsValid(
                     sourceObservationEventID,
-                    observerID: outcome.actorID
+                    observerID: outcome.kind == .maturityObserved
+                        ? nil : outcome.actorID
                 ) else {
                     throw AgentAgricultureError.invalidState("action observation event")
+                }
+            }
+            if outcome.kind == .maturityObserved,
+               let cellIndex = outcome.cellIndex {
+                let currentPlant = state.retainedActions.last(where: {
+                    $0.outcome.kind == .plant
+                        && $0.outcome.plotID == outcome.plotID
+                        && $0.outcome.cellIndex == cellIndex
+                        && $0.agricultureEventID.sequence
+                            < record.agricultureEventID.sequence
+                })
+                guard let currentPlant,
+                      let sourceObservationEventID = outcome
+                        .sourceObservationEventID,
+                      currentPlant.agricultureEventID.sequence
+                        < sourceObservationEventID.sequence,
+                      (state.plots.first(where: {
+                          $0.plotID == outcome.plotID
+                      }).map { plot in
+                          plot.cycleOrdinal == 1
+                              || plot.renewalEvidence.map { renewal in
+                                  record.agricultureEventID.sequence
+                                    < renewal.renewalEventID.sequence
+                                      || renewal.renewalEventID.sequence
+                                        < currentPlant.agricultureEventID.sequence
+                              } == true
+                      } == true) else {
+                    throw AgentAgricultureError.invalidState(
+                        "current-cycle maturity boundary"
+                    )
                 }
             }
         }
@@ -1252,13 +1306,29 @@ extension AgentSimulationSession {
             }
             return (.agriculturalCropPlanted, true)
         case .maturityObserved:
-            guard plot.cells[outcome.cellIndex!].phase == .planted,
+            let cell = plot.cells[outcome.cellIndex!]
+            guard cell.phase == .planted,
                   outcome.beforeFingerprint == outcome.afterFingerprint,
                   outcome.materialDeltas.isEmpty, outcome.sourceObservationEventID != nil,
-                  causalLedger.events.contains(where: {
+                  let plantingEventID = cell.lastWorkEventID,
+                  let plantingRecord = state.retainedActions.first(where: {
+                      $0.agricultureEventID == plantingEventID
+                          && $0.outcome.kind == .plant
+                          && $0.outcome.plotID == plot.plotID
+                          && $0.outcome.cellIndex == outcome.cellIndex
+                  }),
+                  plantingRecord.outcome.position == cell.position,
+                  let observationEvent = causalLedger.events.first(where: {
                       $0.eventID == outcome.sourceObservationEventID
                           && $0.kind == .ecologicalObservationRecorded
-                  }) else {
+                  }),
+                  observationEvent.sequence > plantingEventID.sequence,
+                  (plot.cycleOrdinal == 1
+                      || plot.renewalEvidence.map {
+                          $0.sourceCycleOrdinal == plot.cycleOrdinal - 1
+                              && $0.renewalEventID.sequence
+                                < plantingEventID.sequence
+                      } == true) else {
                 throw AgentSessionError.agriculture(.invalidAction("maturity evidence"))
             }
             return (.agriculturalCropMatured, false)
