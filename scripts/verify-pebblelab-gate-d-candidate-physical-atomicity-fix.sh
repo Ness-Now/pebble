@@ -35,9 +35,11 @@ if [ "${1:-}" = "--dry-run" ]; then
     printf '  Baseline: %s\n' "$BASELINE"
     printf '  Historical Evaluation 04 FAIL: %s\n' "$EVALUATION_04_FAIL"
     printf '  Test 0: unavailable shearing and injected parent-registration failure leave sheep, tool, RNG, custody, receipts, and publication exact.\n'
-    printf '  Test 1: external renewable World progress, failed candidate, fresh retry, checkpoint and process restart.\n'
-    printf '  Test 2: verified movement, late failure, exact full-state rollback, nominal retry, checkpoint and process restart.\n'
-    printf '  Test 3: injected non-verifiable movement compensation, hard failure, and step/checkpoint/restart refusal.\n'
+    printf '  Test 1: movement registration failure plus non-verifiable local compensation hard-fails and refuses continuation.\n'
+    printf '  Test 2: movement registration failure plus successful local compensation restores exactly without hard failure.\n'
+    printf '  Test 3: external renewable World progress, failed candidate, fresh retry, checkpoint and process restart.\n'
+    printf '  Test 4: verified movement, late failure, exact full-state rollback, nominal retry, checkpoint and process restart.\n'
+    printf '  Test 5: injected non-verifiable movement compensation, hard failure, and step/checkpoint/restart refusal.\n'
     printf '  Verdict is blocker-only; this command never declares Gate D PASS.\n'
     exit 0
 fi
@@ -82,10 +84,18 @@ MOVEMENT_RESTART_CAPTURE="$EVIDENCE_ROOT/04-movement-restart.png"
 HARD_HOME="$EVIDENCE_ROOT/hard-failure-home"
 HARD_TRACE="$EVIDENCE_ROOT/05-compensation-hard-failure.log"
 HARD_CAPTURE="$EVIDENCE_ROOT/05-compensation-hard-failure.png"
+REGISTER_HARD_HOME="$EVIDENCE_ROOT/register-hard-failure-home"
+REGISTER_HARD_TRACE="$EVIDENCE_ROOT/01-register-rollback-hard-failure.log"
+REGISTER_HARD_CAPTURE="$EVIDENCE_ROOT/01-register-rollback-hard-failure.png"
+REGISTER_RESTORE_HOME="$EVIDENCE_ROOT/register-restore-home"
+REGISTER_RESTORE_TRACE="$EVIDENCE_ROOT/02-register-rollback-restored.log"
+REGISTER_RESTORE_CAPTURE="$EVIDENCE_ROOT/02-register-rollback-restored.png"
 SUMMARY_JSON="$EVIDENCE_ROOT/summary.json"
 CAPTURE_DIGESTS="$EVIDENCE_ROOT/capture-sha256.txt"
+DIRECT_REGISTER_INVENTORY="$EVIDENCE_ROOT/direct-register-inventory.tsv"
 
-/bin/mkdir -p "$SHEARING_HOME" "$RENEWABLE_HOME" "$MOVEMENT_HOME" "$HARD_HOME"
+/bin/mkdir -p "$SHEARING_HOME" "$REGISTER_HARD_HOME" "$REGISTER_RESTORE_HOME" \
+    "$RENEWABLE_HOME" "$MOVEMENT_HOME" "$HARD_HOME"
 
 swift build --disable-sandbox -c "$BUILD_CONFIGURATION" --product Pebble
 swift build --disable-sandbox -c "$BUILD_CONFIGURATION" --product pebsmoke
@@ -117,6 +127,7 @@ run_pebble() {
     candidate_fault=$8
     compensation_fault=$9
     agriculture_navigation_fault=${10}
+    registration_fault=${11}
     if [ "$create_world" -eq 1 ]; then
         CFFIXED_USER_HOME="$home" \
         PEBBLE_AUTOLOAD=1 \
@@ -125,6 +136,7 @@ run_pebble() {
         PEBBLELAB_DISPOSABLE_CANDIDATE_PHYSICAL_FAULT="$candidate_fault" \
         PEBBLELAB_DISPOSABLE_CANDIDATE_COMPENSATION_FAULT="$compensation_fault" \
         PEBBLELAB_DISPOSABLE_CANDIDATE_AGRICULTURE_NAVIGATION_FAULT="$agriculture_navigation_fault" \
+        PEBBLELAB_DISPOSABLE_CANDIDATE_REGISTRATION_FAULT="$registration_fault" \
         run_pebble_environment "$proof_commands" "$proof_shots" \
             2>&1 | /usr/bin/tee "$trace_file"
     else
@@ -133,6 +145,7 @@ run_pebble() {
         PEBBLELAB_DISPOSABLE_CANDIDATE_PHYSICAL_FAULT="$candidate_fault" \
         PEBBLELAB_DISPOSABLE_CANDIDATE_COMPENSATION_FAULT="$compensation_fault" \
         PEBBLELAB_DISPOSABLE_CANDIDATE_AGRICULTURE_NAVIGATION_FAULT="$agriculture_navigation_fault" \
+        PEBBLELAB_DISPOSABLE_CANDIDATE_REGISTRATION_FAULT="$registration_fault" \
         run_pebble_environment "$proof_commands" "$proof_shots" \
             2>&1 | /usr/bin/tee "$trace_file"
     fi
@@ -176,7 +189,7 @@ SHEARING_COMMANDS="$WORLD_RULES;/tp 14 68 -18|/tp 14 68 -18;/lab start;/lab paus
 printf '\nTest 0: candidate shearing refusal and registration failure atomicity.\n'
 run_pebble "$SHEARING_HOME" "$SHEARING_TRACE" \
     "$SHEARING_COMMANDS" "-|$SHEARING_CAPTURE|-" 46 \
-    PebbleLab-Disposable-GateD-B04-Shearing 1 '' '' ''
+    PebbleLab-Disposable-GateD-B04-Shearing 1 '' '' '' ''
 require_trace "$SHEARING_TRACE" \
     'candidatePhysicalRegisterClosedTransactionRefused: PASS committed=refused rolledBack=refused tokens=0' \
     'closed candidate transactions refuse compensation registration'
@@ -189,15 +202,74 @@ require_trace "$SHEARING_TRACE" \
 reject_trace "$SHEARING_TRACE" \
     'candidateShearing.*: FAIL|CANDIDATE_PHYSICAL_HARD_FAILURE|runtimeErrors=[1-9]' \
     'shearing atomicity failure, hard failure, or runtime error'
+
+MOVEMENT_START='/tp 14 68 -18;/lab start;/lab pause;/lab movement off;/lab follow off;/lab overlay full;/lab population on;/lab settlement on;/lab ecology on;/lab ecology scan;/lab lifecycle on;/lab skills on;/lab ecological-observation on;/lab agriculture on;/lab migration admit;/lab focus agent_3;/lab movement on'
+REGISTER_HARD_COMMANDS="$WORLD_RULES;/tp 14 68 -18|$MOVEMENT_START;/lab step;/lab step;/lab migration admit;/lab checkpoint save forbidden;/lab reset;/lab start;/lab resume;/lab status;/tp 18 80 -14 135 24"
+printf '\nTest 1: register failure with non-verifiable local compensation hard-fails.\n'
+run_pebble "$REGISTER_HARD_HOME" "$REGISTER_HARD_TRACE" \
+    "$REGISTER_HARD_COMMANDS" "-|$REGISTER_HARD_CAPTURE|-" 46 \
+    PebbleLab-Disposable-GateD-B04-Register-Hard 1 \
+    '' movement-collision '' movement
+require_trace "$REGISTER_HARD_TRACE" \
+    'CANDIDATE_PHYSICAL_HARD_FAILURE operation=advanceOneTick .*mutation=.*movement batch .*attempt=movement-batch.*publishedSession=unchanged .*publishedRecorder=unchanged' \
+    'registration failure plus non-verifiable local compensation arms hard failure'
+require_trace "$REGISTER_HARD_TRACE" \
+    'registrationFailures=movement-batch' \
+    'hard failure identifies the failed movement registration seam'
+require_trace "$REGISTER_HARD_TRACE" \
+    'Step refused after candidate physical hard failure' \
+    'normal tick refused after registration-seam hard failure'
+require_trace "$REGISTER_HARD_TRACE" \
+    'Checkpoint operation refused after candidate physical hard failure' \
+    'checkpoint refused after registration-seam hard failure'
+require_trace "$REGISTER_HARD_TRACE" \
+    'Restart refused after candidate physical hard failure' \
+    'normal restart refused after registration-seam hard failure'
+require_trace "$REGISTER_HARD_TRACE" \
+    'PebbleAgents start refused after candidate physical hard failure' \
+    'normal start refused after registration-seam hard failure'
+require_trace "$REGISTER_HARD_TRACE" \
+    'Resume refused after candidate physical hard failure' \
+    'normal resume refused after registration-seam hard failure'
+reject_trace "$REGISTER_HARD_TRACE" \
+    'checkpoint saved name=forbidden|step tick=1|publishedSession=changed' \
+    'candidate publication or permissive continuation after registration-seam hard failure'
+
+REGISTER_RESTORE_COMMANDS="$WORLD_RULES;/tp 14 68 -18|$MOVEMENT_START;/lab step;/lab status;/tp 18 80 -14 135 24"
+printf '\nTest 2: register failure with successful local compensation restores exactly.\n'
+run_pebble "$REGISTER_RESTORE_HOME" "$REGISTER_RESTORE_TRACE" \
+    "$REGISTER_RESTORE_COMMANDS" "-|$REGISTER_RESTORE_CAPTURE|-" 46 \
+    PebbleLab-Disposable-GateD-B04-Register-Restore 1 '' '' '' movement
+require_trace "$REGISTER_RESTORE_TRACE" \
+    'CANDIDATE_PHYSICAL_ROLLBACK operation=advanceOneTick .*registrationFailures=movement-batch.*localRegistrationCompensations=movement-batch.*registered= completed=.*publishedSession=unchanged publishedSessionTick=0 publishedRecorder=unchanged' \
+    'registration failure restores locally with no surviving global token'
+require_trace "$REGISTER_RESTORE_TRACE" \
+    'localRegistrationBoundaries=movement-batch.*expected=\{.*position=.*prev=.*velocity=.*orientation=.*onGround=.*horizontalCollision=.*fallDistance=.*\}:observed=\{.*position=.*prev=.*velocity=.*orientation=.*onGround=.*horizontalCollision=.*fallDistance=.*\}' \
+    'successful registration-seam compensation records complete physical boundaries'
+reject_trace "$REGISTER_RESTORE_TRACE" \
+    'CANDIDATE_PHYSICAL_HARD_FAILURE|tick=1 movement=on moved=|publishedSession=changed' \
+    'hard failure or candidate publication after exact local registration rollback'
+
+/usr/bin/python3 - "$REGISTER_RESTORE_TRACE" <<'PY'
+import re
+import sys
+
+text = open(sys.argv[1], encoding="utf-8").read()
+line = next(line for line in text.splitlines() if "localRegistrationBoundaries=movement-batch" in line)
+match = re.search(r"localRegistrationBoundaries=movement-batch:[0-9]+:expected=\{(.*?)\}:observed=\{(.*?)\} registered=", line)
+if match is None or match.group(1) != match.group(2):
+    raise SystemExit("registration-seam local movement compensation was not exact")
+PY
+
 RENEWABLE_START='/tp 14 68 -18;/lab start;/lab pause;/lab movement off;/lab follow off;/lab overlay full;/lab survival on;/lab population on;/lab settlement on;/lab ecology on;/lab ecology scan;/lab lifecycle on;/lab physical-food-survival on;/lab skills on;/lab ecological-observation on;/lab agriculture on;/lab observer open;/lab observer global;/lab step'
 RENEWABLE_COMMANDS="$WORLD_RULES;/tp 14 68 -18|$RENEWABLE_START;/lab renewable-subsistence setup;/lab renewable-subsistence status;/lab renewable-subsistence setup;/lab renewable-subsistence plant-first;/lab renewable-subsistence harvest-first;/lab renewable-subsistence status;/lab renewable-subsistence harvest-first;/lab renewable-subsistence status;/lab renewable-subsistence consume-replant;/lab renewable-subsistence status;/lab checkpoint save b04-renewable;/lab checkpoint load b04-renewable;/lab checkpoint status;/lab status;/tp 18 80 -14 135 24"
 RENEWABLE_RESTART_COMMANDS="$WORLD_RULES;/tp 14 68 -18|/tp 14 68 -18;/lab start;/lab pause;/lab movement off;/lab follow off;/lab overlay full;/lab checkpoint load b04-renewable;/lab renewable-subsistence status;/lab checkpoint status;/lab status;/tp 18 80 -14 135 24"
 
-printf '\nTest 1: external renewable World progression and failed candidate retry.\n'
+printf '\nTest 3: external renewable World progression and failed candidate retry.\n'
 run_pebble "$RENEWABLE_HOME" "$RENEWABLE_TRACE" \
     "$RENEWABLE_COMMANDS" "-|$RENEWABLE_CAPTURE|-" 103 \
     PebbleLab-Disposable-GateD-B04-Renewable 1 \
-    renewable-after-final-validation '' after-first-verified-movement
+    renewable-after-final-validation '' after-first-verified-movement ''
 
 require_trace "$RENEWABLE_TRACE" \
     'candidate agriculture navigation fault seam operation=navigateAgricultureActor point=after-first-verified-movement .*globalTokenRegistered=0' \
@@ -265,9 +337,9 @@ RETRY_RECEIPT_COUNT=$($SQLITE3_BIN "$WORLD_DB" \
 [ "$FAILED_RECEIPT_COUNT" -eq 0 ] && [ "$RETRY_RECEIPT_COUNT" -eq 1 ] \
     || fail 'abandoned or committed renewable receipt count is incorrect'
 
-printf '\nTest 1 restart: exact checkpoint and reconciliation in a new process.\n'
+printf '\nTest 3 restart: exact checkpoint and reconciliation in a new process.\n'
 run_pebble "$RENEWABLE_HOME" "$RENEWABLE_RESTART_TRACE" \
-    "$RENEWABLE_RESTART_COMMANDS" "-|$RENEWABLE_RESTART_CAPTURE|-" 103 unused 0 '' '' ''
+    "$RENEWABLE_RESTART_COMMANDS" "-|$RENEWABLE_RESTART_CAPTURE|-" 103 unused 0 '' '' '' ''
 require_trace "$RENEWABLE_RESTART_TRACE" \
     'checkpoint loaded name=b04-renewable .*restartSafe=1 .*probeReconciliation=reused_exact .*worldMutation=none' \
     'separate-process renewable checkpoint reconciliation'
@@ -275,14 +347,13 @@ require_trace "$RENEWABLE_RESTART_TRACE" \
     'renewable status schema=30 observerSchema=7 .*cycle=2 phase=growing stage=0 .*runtimeErrors=0' \
     'renewable state and acquired external maturity provenance retained across restart'
 
-MOVEMENT_START='/tp 14 68 -18;/lab start;/lab pause;/lab movement off;/lab follow off;/lab overlay full;/lab population on;/lab settlement on;/lab ecology on;/lab ecology scan;/lab lifecycle on;/lab skills on;/lab ecological-observation on;/lab agriculture on;/lab migration admit;/lab focus agent_3;/lab movement on'
 MOVEMENT_COMMANDS="$WORLD_RULES;/tp 14 68 -18|$MOVEMENT_START;/lab step;/lab status;/lab step;/lab step;/lab movement off;/lab checkpoint save b04-movement;/lab checkpoint load b04-movement;/lab checkpoint status;/lab status;/tp 18 80 -14 135 24"
 MOVEMENT_RESTART_COMMANDS="$WORLD_RULES;/tp 14 68 -18|/tp 14 68 -18;/lab start;/lab pause;/lab movement off;/lab follow off;/lab overlay full;/lab checkpoint load b04-movement;/lab status;/lab movement on;/lab step;/lab movement off;/lab checkpoint save b04-movement-restart;/lab checkpoint load b04-movement-restart;/lab checkpoint status;/tp 18 80 -14 135 24"
 
-printf '\nTest 2: verified movement and late candidate failure.\n'
+printf '\nTest 4: verified movement and late candidate failure.\n'
 run_pebble "$MOVEMENT_HOME" "$MOVEMENT_TRACE" \
     "$MOVEMENT_COMMANDS" "-|$MOVEMENT_CAPTURE|-" 46 \
-    PebbleLab-Disposable-GateD-B04-Movement 1 after-verified-movement '' ''
+    PebbleLab-Disposable-GateD-B04-Movement 1 after-verified-movement '' '' ''
 require_trace "$MOVEMENT_TRACE" \
     'candidate physical fault seam operation=advanceOneTick point=after-verified-movement mutations=movement-batch' \
     'late fault after verified physical movement'
@@ -314,9 +385,9 @@ if match is None or match.group(1) not in rollback:
     raise SystemExit("full pre-movement physical state was not restored in rollback trace")
 PY
 
-printf '\nTest 2 restart: exact checkpoint, reconciliation, and nominal movement.\n'
+printf '\nTest 4 restart: exact checkpoint, reconciliation, and nominal movement.\n'
 run_pebble "$MOVEMENT_HOME" "$MOVEMENT_RESTART_TRACE" \
-    "$MOVEMENT_RESTART_COMMANDS" "-|$MOVEMENT_RESTART_CAPTURE|-" 46 unused 0 '' '' ''
+    "$MOVEMENT_RESTART_COMMANDS" "-|$MOVEMENT_RESTART_CAPTURE|-" 46 unused 0 '' '' '' ''
 require_trace "$MOVEMENT_RESTART_TRACE" \
     'checkpoint loaded name=b04-movement .*restartSafe=1 .*probeReconciliation=(reused_exact|restored_verified:agent_3) .*worldMutation=none' \
     'separate-process movement checkpoint reconciliation'
@@ -331,11 +402,11 @@ reject_trace "$MOVEMENT_RESTART_TRACE" \
     'movement mismatch or runtime failure after restart'
 
 HARD_COMMANDS="$WORLD_RULES;/tp 14 68 -18|$MOVEMENT_START;/lab step;/lab step;/lab migration admit;/lab checkpoint save forbidden;/lab reset;/lab start;/lab resume;/lab status;/tp 18 80 -14 135 24"
-printf '\nTest 3: non-verifiable compensation hard-fails without publication.\n'
+printf '\nTest 5: non-verifiable compensation hard-fails without publication.\n'
 run_pebble "$HARD_HOME" "$HARD_TRACE" \
     "$HARD_COMMANDS" "-|$HARD_CAPTURE|-" 46 \
     PebbleLab-Disposable-GateD-B04-Hard-Failure 1 \
-    after-verified-movement movement-collision ''
+    after-verified-movement movement-collision '' ''
 require_trace "$HARD_TRACE" \
     'CANDIDATE_PHYSICAL_HARD_FAILURE operation=advanceOneTick .*mutation=.*movement batch .*expected=\{.*\} observed=\{.*\} attempt=movement-batch.*error=physical=injected compensation collision/non-verifiable restore .*completed=.*remaining=.*publishedSession=unchanged worldTick=[0-9]+ candidateReceipts=.*world=.*session=.*checkpoint=none agent=.*probe=' \
     'complete observable hard-failure diagnostic'
@@ -361,11 +432,55 @@ reject_trace "$HARD_TRACE" \
     'checkpoint saved name=forbidden|step tick=1|publishedSession=changed' \
     'candidate publication, forbidden checkpoint, or permissive continuation'
 
-for capture in "$SHEARING_CAPTURE" "$RENEWABLE_CAPTURE" "$RENEWABLE_RESTART_CAPTURE" \
+/usr/bin/python3 - "$ROOT_DIR" "$DIRECT_REGISTER_INVENTORY" <<'PY'
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1])
+output = Path(sys.argv[2])
+source_root = root / "Sources" / "Pebble"
+hits = []
+for path in sorted(source_root.rglob("*.swift")):
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        if ".register(" in line:
+            hits.append((path.relative_to(root).as_posix(), line_number, line.strip()))
+
+classifications = {
+    "Sources/Pebble/PebbleAgentController+Livestock.swift": (
+        "proof-only",
+        "closed committed/rolledBack transaction refusal; no physical mutation",
+    ),
+    "Sources/Pebble/PebbleAgentController+MaterialRights.swift": (
+        "no physical mutation",
+        "AgentMaterialRightsOperation.register on a staged civilization value",
+    ),
+    "Sources/Pebble/PebbleAgentController+PersistenceReconciliation.swift": (
+        "no physical mutation",
+        "AgentMaterialRightsOperation.register during staged reconciliation",
+    ),
+}
+unexpected = [hit for hit in hits if hit[0] not in classifications]
+duplicate_files = [path for path in classifications if sum(hit[0] == path for hit in hits) != 1]
+if unexpected or duplicate_files or len(hits) != len(classifications):
+    raise SystemExit(
+        "unexpected direct .register inventory: "
+        + repr({"hits": hits, "unexpected": unexpected, "duplicateFiles": duplicate_files})
+    )
+
+rows = ["path\tline\tclassification\trationale\tcall"]
+for path, line_number, call in hits:
+    classification, rationale = classifications[path]
+    rows.append(f"{path}\t{line_number}\t{classification}\t{rationale}\t{call}")
+output.write_text("\n".join(rows) + "\n", encoding="utf-8")
+PY
+
+for capture in "$SHEARING_CAPTURE" "$REGISTER_HARD_CAPTURE" "$REGISTER_RESTORE_CAPTURE" \
+    "$RENEWABLE_CAPTURE" "$RENEWABLE_RESTART_CAPTURE" \
     "$MOVEMENT_CAPTURE" "$MOVEMENT_RESTART_CAPTURE" "$HARD_CAPTURE"; do
     [ -s "$capture" ] || fail "capture missing: $capture"
 done
-/usr/bin/shasum -a 256 "$SHEARING_CAPTURE" "$RENEWABLE_CAPTURE" "$RENEWABLE_RESTART_CAPTURE" \
+/usr/bin/shasum -a 256 "$SHEARING_CAPTURE" "$REGISTER_HARD_CAPTURE" "$REGISTER_RESTORE_CAPTURE" \
+    "$RENEWABLE_CAPTURE" "$RENEWABLE_RESTART_CAPTURE" \
     "$MOVEMENT_CAPTURE" "$MOVEMENT_RESTART_CAPTURE" "$HARD_CAPTURE" \
     > "$CAPTURE_DIGESTS"
 
@@ -387,24 +502,32 @@ fi
     printf '  "retryReceiptCount": %s,\n' "$RETRY_RECEIPT_COUNT"
     printf '  "candidateShearingUnavailableLeavesPhysicalStateExact": "PASS",\n'
     printf '  "candidateShearingRegistrationFailureCannotLeakParentMutation": "PASS",\n'
+    printf '  "candidateRegistrationFailureRollbackSuccessRestoresExactly": "PASS",\n'
+    printf '  "candidateRegistrationFailureRollbackUnverifiableHardFails": "PASS",\n'
     printf '  "candidateTickFailureAfterVerifiedMovementRestoresAllPhysicalState": "PASS",\n'
     printf '  "renewableWorldAdvanceRemainsExternalAfterCandidateFailure": "PASS",\n'
     printf '  "candidateCompensationCollisionHardFailsWithoutPublication": "PASS",\n'
+    printf '  "remainingDirectRegisterCalls": 3,\n'
+    printf '  "remainingProductiveDirectPhysicalRegisters": 0,\n'
     printf '  "gateDStatus": "EVALUATED_FAIL_NOT_ACQUIRED",\n'
     printf '  "civ34Status": "NOT_STARTED",\n'
     printf '  "verdict": "BLOCKER_FIX_LOCAL_CANDIDATE"\n'
     printf '}\n'
 } > "$SUMMARY_JSON"
 
-/bin/rm -rf "$SHEARING_HOME" "$RENEWABLE_HOME" "$MOVEMENT_HOME" "$HARD_HOME"
+/bin/rm -rf "$SHEARING_HOME" "$REGISTER_HARD_HOME" "$REGISTER_RESTORE_HOME" \
+    "$RENEWABLE_HOME" "$MOVEMENT_HOME" "$HARD_HOME"
 
 printf '\nGATE D BLOCKER 04 REPRODUCED AND FIXED — LOCAL CANDIDATE\n'
 printf 'Evidence: %s\n' "$EVIDENCE_ROOT"
 printf 'candidateShearingUnavailableLeavesPhysicalStateExact: PASS\n'
 printf 'candidateShearingRegistrationFailureCannotLeakParentMutation: PASS\n'
+printf 'candidateRegistrationFailureRollbackSuccessRestoresExactly: PASS\n'
+printf 'candidateRegistrationFailureRollbackUnverifiableHardFails: PASS\n'
 printf 'renewableWorldAdvanceRemainsExternalAfterCandidateFailure: PASS\n'
 printf 'candidateTickFailureAfterVerifiedMovementRestoresAllPhysicalState: PASS\n'
 printf 'candidateCompensationCollisionHardFailsWithoutPublication: PASS\n'
+printf 'remaining direct .register calls: 3 classified, 0 productive physical\n'
 printf 'abandoned receipt retained: NO\n'
 printf 'retry World advance: 0\n'
 printf 'movement full-state rollback: exact\n'
