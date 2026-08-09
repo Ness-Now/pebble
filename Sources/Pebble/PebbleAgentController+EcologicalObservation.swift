@@ -137,6 +137,15 @@ extension PebbleAgentController {
         session: inout AgentSimulationSession,
         recorder: inout AgentReplayRecorder?
     ) throws -> AgentEcologicalObservation {
+        if var activeCandidateReceiptTransaction {
+            return try recordLiveEcologicalObservation(
+                world: world,
+                observerID: observerID,
+                session: &session,
+                recorder: &recorder,
+                receiptTransaction: &activeCandidateReceiptTransaction
+            )
+        }
         var transaction =
             PebbleWorldEcologicalObservationReceiptTransaction()
         do {
@@ -230,8 +239,14 @@ extension PebbleAgentController {
             transaction: &receiptTransaction
         )
         let store = try worldEcologicalObservationReceiptStore()
+        guard worldReceiptAttemptSerial < UInt64.max else {
+            throw ControllerError.ecologicalObservationBoundary(
+                "World receipt attempt sequence exhausted"
+            )
+        }
+        worldReceiptAttemptSerial += 1
         let ordinal = (session.ecologicalObservationSnapshot()
-            .totalObservationCount) + 1
+            .totalObservationCount) + worldReceiptAttemptSerial
         let receipt = store.makeReceipt(
             observation: observation,
             simulationID: session.simulationID,

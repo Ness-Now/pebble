@@ -269,6 +269,12 @@ extension PebbleAgentController {
         _ arguments: [String],
         world: World
     ) -> PebbleAgentCommandResult {
+        if let candidatePhysicalHardFailure {
+            return failure(
+                "Checkpoint operation refused after candidate physical hard failure: "
+                    + candidatePhysicalHardFailure.description
+            )
+        }
         let usage = "Usage: /lab checkpoint <status|list|save <name>|load <name>"
             + "|delete <name>|position-proof ...>"
         guard persistenceFeatureEnabled else {

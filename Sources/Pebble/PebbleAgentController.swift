@@ -100,6 +100,9 @@ final class PebbleAgentController {
     var isAdvancingSession = false
     var kinshipLateFailureProofInjected = false
     var skillLateFailureProofInjected = false
+    var candidateMovementLateFailureProofInjected = false
+    var candidateRenewableLateFailureProofInjected = false
+    var candidateAgricultureNavigationFailureProofInjected = false
     var ecologicalObservationProofFixture: PebbleAgentEcologicalObservationProofFixture?
     var agricultureProofFixture: PebbleAgentAgricultureProofFixture?
     var wildSubsistenceProofFixture: PebbleAgentWildSubsistenceProofFixture?
@@ -112,6 +115,11 @@ final class PebbleAgentController {
     var passiveObserverBootstrapComplete = false
     var manualProductiveCommandsAfterBootstrap = 0
     var mortalityMaterialExitAttempt = 0
+    var activeCandidatePhysicalTransaction: PebbleCandidatePhysicalTransaction?
+    var activeCandidateReceiptTransaction:
+        PebbleWorldEcologicalObservationReceiptTransaction?
+    var candidatePhysicalHardFailure: PebbleCandidatePhysicalHardFailure?
+    var worldReceiptAttemptSerial: UInt64 = 0
 
     let environment = ProcessInfo.processInfo.environment
     var featureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS"] == "1" }

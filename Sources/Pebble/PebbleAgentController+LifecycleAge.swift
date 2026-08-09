@@ -58,6 +58,14 @@ extension PebbleAgentController {
         }) else {
             throw ControllerError.lifecycleBoundary("newborn candidate missing")
         }
+        let birthReservation: PebbleCandidatePhysicalCompensationReservation?
+        if let activeCandidatePhysicalTransaction {
+            birthReservation = try activeCandidatePhysicalTransaction.reserve(
+                compensationPrefix: "birth-probe:\(newborn.id)"
+            )
+        } else {
+            birthReservation = nil
+        }
         let probe = try createProbe(for: newborn, in: world)
         do {
             if kinshipLateFailureProofEnabled, !kinshipLateFailureProofInjected {
@@ -99,9 +107,38 @@ extension PebbleAgentController {
                 )
             }
             probesByAgentId[newborn.id] = probe
+            if let activeCandidatePhysicalTransaction, let birthReservation {
+                try activeCandidatePhysicalTransaction.register(
+                    PebbleCandidatePhysicalCompensation(
+                        reservation: birthReservation,
+                        mutation: "birth probe creation",
+                        agentID: newborn.id,
+                        probeID: probe.physicalId,
+                        expectedBefore: "probe absent",
+                        observedState: {
+                            "mapped=\(self.probesByAgentId[newborn.id] === probe ? 1 : 0) "
+                                + "world=\(world.entityById[probe.id] === probe ? 1 : 0)"
+                        },
+                        compensate: {
+                            guard self.probesByAgentId[newborn.id] === probe,
+                                  world.entityById[probe.id] === probe,
+                                  probe.carriedItems.allSatisfy({ $0 == nil }) else {
+                                return false
+                            }
+                            self.probesByAgentId.removeValue(forKey: newborn.id)
+                            return removeLabCoreAgentProbe(probe, from: world)
+                                && world.entityById[probe.id] == nil
+                                && self.probesByAgentId[newborn.id] == nil
+                        }
+                    )
+                )
+            }
             session = candidate
             recorder = candidateRecorder
         } catch {
+            if probesByAgentId[newborn.id] === probe {
+                probesByAgentId.removeValue(forKey: newborn.id)
+            }
             guard removeLabCoreAgentProbe(probe, from: world) else {
                 throw ControllerError.lifecycleBoundary("newborn probe rollback failed")
             }

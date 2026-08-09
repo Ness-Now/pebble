@@ -8,6 +8,12 @@ extension PebbleAgentController {
     }
 
     func start(world: World, player: Player) -> PebbleAgentCommandResult {
+        if let candidatePhysicalHardFailure {
+            return failure(
+                "PebbleAgents start refused after candidate physical hard failure: "
+                    + candidatePhysicalHardFailure.description
+            )
+        }
         guard featureEnabled else {
             trace("error disabled; set PEBBLELAB_APP_AGENTS=1")
             return failure("PebbleAgents disabled. Set PEBBLELAB_APP_AGENTS=1 before launch.")
@@ -33,6 +39,12 @@ extension PebbleAgentController {
         seed: UInt32,
         resetSpeed: Bool
     ) -> PebbleAgentCommandResult {
+        if let candidatePhysicalHardFailure {
+            return failure(
+                "PebbleAgents restart refused after candidate physical hard failure: "
+                    + candidatePhysicalHardFailure.description
+            )
+        }
         let preservedMovementEnabled = movementEnabled
         let preservedFocus = focusedAgentId
         let preservedFollowMode = followMode
@@ -59,6 +71,7 @@ extension PebbleAgentController {
         naturalResourceExecutor.resetDiagnostics()
         materialCustodyGateway.reset()
         ecologicalObservationSensor.invalidateAll()
+        worldReceiptAttemptSerial = 0
         livestockRuntimeEntityIDByRecord.removeAll()
         let probeCount = world.entities.compactMap { $0 as? LabCoreAgentEntity }.count
         guard clearLabCoreAgentProbes(in: world) == probeCount else {
@@ -528,6 +541,9 @@ extension PebbleAgentController {
         maxObservedDistanceFromHome = 0
         kinshipLateFailureProofInjected = false
         skillLateFailureProofInjected = false
+        candidateMovementLateFailureProofInjected = false
+        candidateRenewableLateFailureProofInjected = false
+        candidateAgricultureNavigationFailureProofInjected = false
     }
 
     @discardableResult
@@ -746,6 +762,7 @@ extension PebbleAgentController {
         lastConstructionSiteDiagnostics = PebbleAgentConstructionSiteDiagnostics()
         replayRecorder = nil
         replayBaseCheckpointName = nil
+        worldReceiptAttemptSerial = 0
         lastError = nil
         trace("stop probesRemoved=\(removed) reason=\(reason)")
         return removed

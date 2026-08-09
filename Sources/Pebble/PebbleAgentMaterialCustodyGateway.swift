@@ -187,6 +187,16 @@ struct PebbleAgentMaterialCustodyEndpoint {
 /// PebbleCore. It owns only preconditions, exact verification, rollback, and a
 /// bounded local replay receipt set; it is not an inventory or economic ledger.
 final class PebbleAgentMaterialCustodyGateway {
+    private enum CandidateReservation {
+        case none
+        case reserved(PebbleCandidatePhysicalCompensationReservation)
+        case refused
+
+        var value: PebbleCandidatePhysicalCompensationReservation? {
+            if case let .reserved(value) = self { return value }
+            return nil
+        }
+    }
     struct BoundarySnapshot {
         fileprivate let receiptOrder: [String]
         fileprivate let receipts: [String: PebbleAgentMaterialTransactionOutcome]
@@ -201,6 +211,7 @@ final class PebbleAgentMaterialCustodyGateway {
     private var receipts: [String: PebbleAgentMaterialTransactionOutcome] = [:]
     private var acquisitionReceiptOrder: [String] = []
     private var acquisitionReceipts: [String: PebbleAgentItemEntityAcquisitionOutcome] = [:]
+    var candidatePhysicalTransaction: PebbleCandidatePhysicalTransaction?
 
     func boundarySnapshot() -> BoundarySnapshot {
         BoundarySnapshot(
@@ -312,6 +323,16 @@ final class PebbleAgentMaterialCustodyGateway {
         )) == true else {
             return outcome(request.transactionID, .verificationFailure, 0, sourceFingerprintBefore, destinationFingerprintBefore)
         }
+        let boundaryBefore = boundarySnapshot()
+        let candidateReservation = reserveCandidateCompensation(
+            "material-transfer:\(request.transactionID)"
+        )
+        if case .refused = candidateReservation {
+            return outcome(
+                request.transactionID, .rollbackFailure, 0,
+                sourceFingerprintBefore, destinationFingerprintBefore
+            )
+        }
         guard source.write(sourceAfter), destination.write(destinationAfter) else {
             return rollback(
                 request.transactionID,
@@ -346,6 +367,22 @@ final class PebbleAgentMaterialCustodyGateway {
                 destinationFingerprintAfter
             )
             retain(result)
+            guard registerCandidateTransferCompensation(
+                reservation: candidateReservation.value,
+                mutation: "material transfer",
+                source: source,
+                destination: destination,
+                sourceBefore: sourceBefore,
+                destinationBefore: destinationBefore,
+                sourceAfter: sourceAfter,
+                destinationAfter: destinationAfter,
+                boundaryBefore: boundaryBefore
+            ) else {
+                return outcome(
+                    request.transactionID, .rollbackFailure, 0,
+                    sourceFingerprintBefore, destinationFingerprintBefore
+                )
+            }
             return result
         } catch {
             return rollback(
@@ -444,6 +481,16 @@ final class PebbleAgentMaterialCustodyGateway {
         )) == true else {
             return outcome(request.transactionID, .verificationFailure)
         }
+        let boundaryBefore = boundarySnapshot()
+        let candidateReservation = reserveCandidateCompensation(
+            "material-batch-transfer:\(request.transactionID)"
+        )
+        if case .refused = candidateReservation {
+            return outcome(
+                request.transactionID, .rollbackFailure, 0,
+                sourceFingerprintBefore, destinationFingerprintBefore
+            )
+        }
         guard source.write(sourceAfter), destination.write(destinationAfter) else {
             return rollback(
                 request.transactionID, source: source, destination: destination,
@@ -467,6 +514,22 @@ final class PebbleAgentMaterialCustodyGateway {
                 try fingerprint(source), try fingerprint(destination)
             )
             retain(result)
+            guard registerCandidateTransferCompensation(
+                reservation: candidateReservation.value,
+                mutation: "material batch transfer",
+                source: source,
+                destination: destination,
+                sourceBefore: sourceBefore,
+                destinationBefore: destinationBefore,
+                sourceAfter: sourceAfter,
+                destinationAfter: destinationAfter,
+                boundaryBefore: boundaryBefore
+            ) else {
+                return outcome(
+                    request.transactionID, .rollbackFailure, 0,
+                    sourceFingerprintBefore, destinationFingerprintBefore
+                )
+            }
             return result
         } catch {
             return rollback(
@@ -552,6 +615,13 @@ final class PebbleAgentMaterialCustodyGateway {
         )) == true else {
             return acquisitionOutcome(request.transactionID, .verificationFailure)
         }
+        let boundaryBefore = boundarySnapshot()
+        let candidateReservation = reserveCandidateCompensation(
+            "material-acquisition:\(request.transactionID)"
+        )
+        if case .refused = candidateReservation {
+            return acquisitionOutcome(request.transactionID, .rollbackFailure)
+        }
         guard destination.write(destinationAfter), source.remove(items) else {
             return rollbackAcquisition(
                 request.transactionID,
@@ -596,6 +666,18 @@ final class PebbleAgentMaterialCustodyGateway {
             )
         }
         retain(candidateOutcome)
+        guard registerCandidateAcquisitionCompensation(
+            reservation: candidateReservation.value,
+            source: source,
+            sourceItems: items,
+            sourceStacks: sourceStacks,
+            destination: destination,
+            destinationBefore: destinationBefore,
+            destinationAfter: destinationAfter,
+            boundaryBefore: boundaryBefore
+        ) else {
+            return acquisitionOutcome(request.transactionID, .rollbackFailure)
+        }
         return candidateOutcome
     }
 
@@ -640,6 +722,16 @@ final class PebbleAgentMaterialCustodyGateway {
         ) != nil else {
             return outcome(request.transactionID, .insufficientQuantity, 0, sourceFingerprintBefore, nil)
         }
+        let boundaryBefore = boundarySnapshot()
+        let candidateReservation = reserveCandidateCompensation(
+            "material-consume:\(request.transactionID)"
+        )
+        if case .refused = candidateReservation {
+            return outcome(
+                request.transactionID, .rollbackFailure, 0,
+                sourceFingerprintBefore, nil
+            )
+        }
         guard source.write(sourceAfter) else {
             return rollbackConsume(request.transactionID, source: source, sourceBefore: sourceBefore, failure: .physicalExecutionFailure)
         }
@@ -657,6 +749,18 @@ final class PebbleAgentMaterialCustodyGateway {
                 )
             }
             retain(result)
+            guard registerCandidateConsumeCompensation(
+                reservation: candidateReservation.value,
+                source: source,
+                sourceBefore: sourceBefore,
+                sourceAfter: sourceAfter,
+                boundaryBefore: boundaryBefore
+            ) else {
+                return outcome(
+                    request.transactionID, .rollbackFailure, 0,
+                    sourceFingerprintBefore, nil
+                )
+            }
             return result
         } catch {
             return rollbackConsume(request.transactionID, source: source, sourceBefore: sourceBefore, failure: .verificationFailure)
@@ -701,6 +805,165 @@ final class PebbleAgentMaterialCustodyGateway {
             case let (left?, right?): return left == right
             default: return false
             }
+        }
+    }
+
+    private func reserveCandidateCompensation(
+        _ prefix: String
+    ) -> CandidateReservation {
+        guard let candidatePhysicalTransaction else { return .none }
+        do {
+            return .reserved(try candidatePhysicalTransaction.reserve(
+                compensationPrefix: prefix
+            ))
+        } catch {
+            return .refused
+        }
+    }
+
+    private func registerCandidateTransferCompensation(
+        reservation: PebbleCandidatePhysicalCompensationReservation?,
+        mutation: String,
+        source: PebbleAgentMaterialCustodyEndpoint,
+        destination: PebbleAgentMaterialCustodyEndpoint,
+        sourceBefore: [ItemStack?],
+        destinationBefore: [ItemStack?],
+        sourceAfter: [ItemStack?],
+        destinationAfter: [ItemStack?],
+        boundaryBefore: BoundarySnapshot
+    ) -> Bool {
+        guard let reservation, let candidatePhysicalTransaction else {
+            return reservation == nil
+        }
+        let compensation = PebbleCandidatePhysicalCompensation(
+            reservation: reservation,
+            mutation: mutation,
+            expectedBefore: "source=\(source.locationID) destination=\(destination.locationID)",
+            observedState: {
+                "source=\(String(describing: source.read())) "
+                    + "destination=\(String(describing: destination.read()))"
+            },
+            compensate: { [weak self] in
+                guard let self,
+                      source.isValid, destination.isValid,
+                      self.exactSlots(source.read(), sourceAfter),
+                      self.exactSlots(destination.read(), destinationAfter),
+                      source.write(sourceBefore),
+                      destination.write(destinationBefore),
+                      self.exactSlots(source.read(), sourceBefore),
+                      self.exactSlots(destination.read(), destinationBefore) else {
+                    return false
+                }
+                self.restoreBoundarySnapshot(boundaryBefore)
+                return true
+            }
+        )
+        do {
+            try candidatePhysicalTransaction.register(compensation)
+            return true
+        } catch {
+            _ = source.write(sourceBefore)
+                && destination.write(destinationBefore)
+                && exactSlots(source.read(), sourceBefore)
+                && exactSlots(destination.read(), destinationBefore)
+            restoreBoundarySnapshot(boundaryBefore)
+            return false
+        }
+    }
+
+    private func registerCandidateConsumeCompensation(
+        reservation: PebbleCandidatePhysicalCompensationReservation?,
+        source: PebbleAgentMaterialCustodyEndpoint,
+        sourceBefore: [ItemStack?],
+        sourceAfter: [ItemStack?],
+        boundaryBefore: BoundarySnapshot
+    ) -> Bool {
+        guard let reservation, let candidatePhysicalTransaction else {
+            return reservation == nil
+        }
+        let compensation = PebbleCandidatePhysicalCompensation(
+            reservation: reservation,
+            mutation: "material consumption",
+            expectedBefore: "source=\(source.locationID)",
+            observedState: { "source=\(String(describing: source.read()))" },
+            compensate: { [weak self] in
+                guard let self, source.isValid,
+                      self.exactSlots(source.read(), sourceAfter),
+                      source.write(sourceBefore),
+                      self.exactSlots(source.read(), sourceBefore) else {
+                    return false
+                }
+                self.restoreBoundarySnapshot(boundaryBefore)
+                return true
+            }
+        )
+        do {
+            try candidatePhysicalTransaction.register(compensation)
+            return true
+        } catch {
+            _ = source.write(sourceBefore)
+                && exactSlots(source.read(), sourceBefore)
+            restoreBoundarySnapshot(boundaryBefore)
+            return false
+        }
+    }
+
+    private func registerCandidateAcquisitionCompensation(
+        reservation: PebbleCandidatePhysicalCompensationReservation?,
+        source: PebbleAgentItemEntityCustodyEndpoint,
+        sourceItems: [ItemEntity],
+        sourceStacks: [ItemStack],
+        destination: PebbleAgentMaterialCustodyEndpoint,
+        destinationBefore: [ItemStack?],
+        destinationAfter: [ItemStack?],
+        boundaryBefore: BoundarySnapshot
+    ) -> Bool {
+        guard let reservation, let candidatePhysicalTransaction else {
+            return reservation == nil
+        }
+        let compensation = PebbleCandidatePhysicalCompensation(
+            reservation: reservation,
+            mutation: "item entity acquisition",
+            expectedBefore: "entities=\(source.spawnedItemEntityIDs) "
+                + "destination=\(destination.locationID)",
+            observedState: {
+                "entitiesAbsent=\(source.containsNone() ? 1 : 0) "
+                    + "destination=\(String(describing: destination.read()))"
+            },
+            compensate: { [weak self] in
+                guard let self, destination.isValid,
+                      source.containsNone(),
+                      self.exactSlots(destination.read(), destinationAfter),
+                      destination.write(destinationBefore),
+                      self.exactSlots(destination.read(), destinationBefore),
+                      source.restore(sourceItems),
+                      source.read().map({ live in
+                          live.count == sourceStacks.count
+                              && zip(live, sourceStacks).allSatisfy {
+                                  $0.stack == $1
+                              }
+                      }) == true else {
+                    return false
+                }
+                self.restoreBoundarySnapshot(boundaryBefore)
+                return true
+            }
+        )
+        do {
+            try candidatePhysicalTransaction.register(compensation)
+            return true
+        } catch {
+            _ = rollbackAcquisition(
+                reservation.compensationID,
+                source: source,
+                sourceItems: sourceItems,
+                sourceStacks: sourceStacks,
+                destination: destination,
+                destinationBefore: destinationBefore,
+                failure: .rollbackFailure
+            )
+            restoreBoundarySnapshot(boundaryBefore)
+            return false
         }
     }
 

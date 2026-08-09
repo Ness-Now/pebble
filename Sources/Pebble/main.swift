@@ -651,7 +651,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        agentController.shutdown()
+        _ = agentController.shutdown()
         game.clearLabCoreAgentProbes()
         if game.hasWorld() { game.saveAndFlush(synchronous: true) }
     }

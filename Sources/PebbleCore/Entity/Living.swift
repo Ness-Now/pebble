@@ -7,6 +7,30 @@
 
 import Foundation
 
+/// Exact bounded state changed by one actor-neutral melee resolution.
+public struct LivingEntityCombatState: CustomStringConvertible {
+    public let health: Double
+    public let absorption: Double
+    public let armor: [ItemStack?]
+    public let hurtTime: Int
+    public let invulnerabilityTicks: Int
+    public let deathTime: Int
+    public let velocityX: Double
+    public let velocityY: Double
+    public let velocityZ: Double
+    public let lastAttacker: Entity?
+    public let lastHurtByPlayerTime: Int
+    public let lastDeathDropItemEntityIDs: [Int]
+    public let rng: RandomX
+
+    public var description: String {
+        "health=\(health) absorption=\(absorption) hurt=\(hurtTime) "
+            + "invulnerability=\(invulnerabilityTicks) death=\(deathTime) "
+            + "velocity=\(velocityX),\(velocityY),\(velocityZ) "
+            + "drops=\(lastDeathDropItemEntityIDs)"
+    }
+}
+
 public struct DropEntry {
     public var item: String
     public var min: Int?
@@ -66,6 +90,58 @@ open class LivingEntity: Entity {
         super.init(world: world)
         // baseline Living field initializer order: rng seeds from gameRng here
         rng = RandomX(UInt32(gameRng.nextInt(1000000000)))
+    }
+
+    public func captureCombatState() -> LivingEntityCombatState {
+        LivingEntityCombatState(
+            health: health,
+            absorption: absorption,
+            armor: copyItemInventory(armor),
+            hurtTime: hurtTime,
+            invulnerabilityTicks: invulnTicks,
+            deathTime: deathTime,
+            velocityX: vx,
+            velocityY: vy,
+            velocityZ: vz,
+            lastAttacker: lastAttacker,
+            lastHurtByPlayerTime: lastHurtByPlayerTime,
+            lastDeathDropItemEntityIDs: lastDeathDropItemEntityIDs,
+            rng: rng
+        )
+    }
+
+    @discardableResult
+    public func restoreCombatState(_ state: LivingEntityCombatState) -> Bool {
+        health = state.health
+        absorption = state.absorption
+        armor = copyItemInventory(state.armor)
+        hurtTime = state.hurtTime
+        invulnTicks = state.invulnerabilityTicks
+        deathTime = state.deathTime
+        vx = state.velocityX
+        vy = state.velocityY
+        vz = state.velocityZ
+        lastAttacker = state.lastAttacker
+        lastHurtByPlayerTime = state.lastHurtByPlayerTime
+        lastDeathDropItemEntityIDs = state.lastDeathDropItemEntityIDs
+        rng = state.rng
+        return combatStateMatches(state)
+    }
+
+    public func combatStateMatches(_ state: LivingEntityCombatState) -> Bool {
+        health == state.health
+            && absorption == state.absorption
+            && armor == state.armor
+            && hurtTime == state.hurtTime
+            && invulnTicks == state.invulnerabilityTicks
+            && deathTime == state.deathTime
+            && vx == state.velocityX
+            && vy == state.velocityY
+            && vz == state.velocityZ
+            && lastAttacker === state.lastAttacker
+            && lastHurtByPlayerTime == state.lastHurtByPlayerTime
+            && lastDeathDropItemEntityIDs == state.lastDeathDropItemEntityIDs
+            && rng == state.rng
     }
 
     public var breathesWaterOnly = false

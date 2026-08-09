@@ -11,7 +11,18 @@ extension PebbleAgentController {
             trace(
                 "passive command command=/lab_\(arguments.joined(separator: "_")) "
                     + "class=\(productive ? "productive" : "observer_debug") "
-                    + "productiveCount=\(manualProductiveCommandsAfterBootstrap)"
+                + "productiveCount=\(manualProductiveCommandsAfterBootstrap)"
+            )
+        }
+        if let candidatePhysicalHardFailure,
+           ![
+               "help", "status", "observer", "causality", "scale", "pause",
+               "stop", "clear", "start", "resume", "step", "reset",
+               "checkpoint",
+           ].contains(command) {
+            return failure(
+                "Command refused after candidate physical hard failure: "
+                    + candidatePhysicalHardFailure.description
             )
         }
         switch command {
@@ -45,6 +56,12 @@ extension PebbleAgentController {
         case "resume":
             guard arguments.count == 1 else { return failure("Usage: /lab resume") }
             guard session != nil else { return failure("No active PebbleAgents session.") }
+            if let candidatePhysicalHardFailure {
+                return failure(
+                    "Resume refused after candidate physical hard failure: "
+                        + candidatePhysicalHardFailure.description
+                )
+            }
             isPaused = false
             lastWorldTick = world.time
             credit = 0
@@ -53,6 +70,12 @@ extension PebbleAgentController {
         case "step":
             guard arguments.count == 1 else { return failure("Usage: /lab step") }
             guard session != nil else { return failure("No active PebbleAgents session.") }
+            if let candidatePhysicalHardFailure {
+                return failure(
+                    "Step refused after candidate physical hard failure: "
+                        + candidatePhysicalHardFailure.description
+                )
+            }
             guard advanceOneTick(world: world, player: player) else { return failure(lastError ?? "Cognitive step failed.") }
             trace("step tick=\(session?.tick ?? 0)")
             return success("PebbleAgents stepped to tick \(session?.tick ?? 0).")
@@ -66,6 +89,12 @@ extension PebbleAgentController {
             return success("PebbleAgents speed set to \(hz) Hz.")
         case "reset":
             guard arguments.count == 1 else { return failure("Usage: /lab reset") }
+            if let candidatePhysicalHardFailure {
+                return failure(
+                    "Restart refused after candidate physical hard failure: "
+                        + candidatePhysicalHardFailure.description
+                )
+            }
             guard session != nil, activeWorld === world, let anchor else {
                 return failure("No active PebbleAgents session.")
             }

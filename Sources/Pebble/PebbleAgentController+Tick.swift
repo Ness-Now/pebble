@@ -5,7 +5,50 @@ import PebbleCore
 extension PebbleAgentController {
     func advanceOneTick(world: World, player: Player) -> Bool {
         guard activeWorld === world, var session else { return false }
+        guard candidatePhysicalHardFailure == nil else {
+            lastError = "candidate physical hard failure; simulation advancement refused"
+            isPaused = true
+            return false
+        }
+        guard activeCandidatePhysicalTransaction == nil else {
+            lastError = String(describing:
+                PebbleCandidatePhysicalTransactionError.nestedCandidate("tick")
+            )
+            isPaused = true
+            return false
+        }
+        let candidatePhysicalTransaction = PebbleCandidatePhysicalTransaction(
+            transactionID: "tick:\(session.simulationID.rawValue):"
+                + "\(session.tick + 1):world:\(world.time)",
+            operation: "advanceOneTick",
+            physicalWorldTick: world.time,
+            injectedCompensationFailurePrefix: environment[
+                "PEBBLELAB_DISPOSABLE_CANDIDATE_COMPENSATION_FAULT"
+            ] == "movement-collision" ? "movement" : nil
+        )
+        activeCandidatePhysicalTransaction = candidatePhysicalTransaction
+        physicalActionGateway.candidatePhysicalTransaction =
+            candidatePhysicalTransaction
+        materialCustodyGateway.candidatePhysicalTransaction =
+            candidatePhysicalTransaction
+        defer {
+            if physicalActionGateway.candidatePhysicalTransaction
+                === candidatePhysicalTransaction {
+                physicalActionGateway.candidatePhysicalTransaction = nil
+            }
+            if materialCustodyGateway.candidatePhysicalTransaction
+                === candidatePhysicalTransaction {
+                materialCustodyGateway.candidatePhysicalTransaction = nil
+            }
+            if activeCandidatePhysicalTransaction === candidatePhysicalTransaction {
+                activeCandidatePhysicalTransaction = nil
+            }
+        }
         let publishedRecorder = replayRecorder
+        let publishedMovementOutcomes = lastMovementOutcomes
+        let publishedConstructionExecutor = constructionExecutor
+        let publishedInteractionExecutor = interactionExecutor
+        let publishedNaturalResourceExecutor = naturalResourceExecutor
         let skillLateFailureRunEnabled = environment[
             "PEBBLELAB_DISPOSABLE_SKILL_LATE_FAILURE_PROOF"
         ] == "1" && session.skillsEnabled && !skillLateFailureProofInjected
@@ -48,17 +91,10 @@ extension PebbleAgentController {
         var recorder = replayRecorder
         var receiptTransaction =
             PebbleWorldEcologicalObservationReceiptTransaction()
+        activeCandidateReceiptTransaction = receiptTransaction
         defer {
-            if !receiptTransaction.committed {
-                do {
-                    try rollbackWorldEcologicalObservationReceipts(
-                        receiptTransaction
-                    )
-                } catch {
-                    lastError = "World-side receipt rollback failed: \(error)"
-                    runtimeErrorCount += 1
-                    trace("error \(lastError!)")
-                }
+            if activeCandidateReceiptTransaction === receiptTransaction {
+                activeCandidateReceiptTransaction = nil
             }
         }
         isAdvancingSession = true
@@ -92,9 +128,10 @@ extension PebbleAgentController {
                         dimension: world.dim.rawValue
                     )
                 }
+                receiptTransaction.commit()
                 self.session = session
                 replayRecorder = recorder
-                receiptTransaction.commit()
+                candidatePhysicalTransaction.commit()
                 return true
             }
             if session.livestockEnabled,
@@ -993,6 +1030,7 @@ extension PebbleAgentController {
                         y: Int(player.y.rounded(.down)),
                         z: Int(player.z.rounded(.down))
                     )],
+                    candidatePhysicalTransaction: candidatePhysicalTransaction,
                     postApplyValidation: { verifiedMovements in
                         if try applyRecordedOperationIfActive(
                             .verifiedPhysicalMovements(verifiedMovements),
@@ -1026,6 +1064,24 @@ extension PebbleAgentController {
                     "embodiment movement tick=\(session.tick) authority=PebbleCore "
                         + "publication=verified outcomes=\(physicalMovementSummary) noNormalSetPos=1"
                 )
+                if environment[
+                    "PEBBLELAB_DISPOSABLE_CANDIDATE_PHYSICAL_FAULT"
+                ] == "after-verified-movement",
+                   !candidateMovementLateFailureProofInjected,
+                   verified.contains(where: { $0.outcome.status == .moved }) {
+                    candidateMovementLateFailureProofInjected = true
+                    trace(
+                        "candidate physical fault seam operation=advanceOneTick "
+                            + "point=after-verified-movement "
+                            + "mutations=\(candidatePhysicalTransaction.registeredCompensationIDs.joined(separator: ",")) "
+                            + "boundaries=\(candidatePhysicalTransaction.registeredBoundaryDiagnostics.joined(separator: "|")) "
+                            + "publishedSessionTick=\(self.session?.tick ?? -1) "
+                            + "candidateSessionTick=\(session.tick) physicalWorldTick=\(world.time)"
+                    )
+                    throw ControllerError.movementBoundary(
+                        "injected failure after verified physical movement"
+                    )
+                }
             } else {
                 lastMovementOutcomes = []
                 if session.settlementMetricsEnabled,
@@ -1311,6 +1367,7 @@ extension PebbleAgentController {
             receiptTransaction.commit()
             self.session = session
             replayRecorder = recorder
+            candidatePhysicalTransaction.commit()
             tracePhysicalState(at: session.tick)
             traceCooperationState(at: session.tick)
             tracePopulationState(at: session.tick)
@@ -1401,6 +1458,76 @@ extension PebbleAgentController {
             traceSocialState(snapshot: finalSnapshot)
             return true
         } catch {
+            lastMovementOutcomes = publishedMovementOutcomes
+            constructionExecutor = publishedConstructionExecutor
+            interactionExecutor = publishedInteractionExecutor
+            naturalResourceExecutor = publishedNaturalResourceExecutor
+            let candidateReceiptIDs = receiptTransaction.stagedReceiptIDs.sorted()
+            let registeredCompensations =
+                candidatePhysicalTransaction.registeredCompensationIDs
+            var receiptRollbackFailure: String?
+            if !receiptTransaction.committed {
+                do {
+                    try rollbackWorldEcologicalObservationReceipts(
+                        receiptTransaction
+                    )
+                } catch {
+                    receiptRollbackFailure = String(describing: error)
+                }
+            }
+            let physicalRollback = candidatePhysicalTransaction.rollback()
+            activeCandidatePhysicalTransaction = nil
+            if receiptRollbackFailure != nil || physicalRollback.failure != nil {
+                let compensationError = [
+                    receiptRollbackFailure.map { "receipt=\($0)" },
+                    physicalRollback.failure.map { "physical=\($0)" },
+                ].compactMap { $0 }.joined(separator: "; ")
+                let hardFailure = PebbleCandidatePhysicalHardFailure(
+                    operation: candidatePhysicalTransaction.operation,
+                    transactionID: candidatePhysicalTransaction.transactionID,
+                    mutation: physicalRollback.failedMutation
+                        ?? "candidate World receipt mutation",
+                    expectedPhysicalState: physicalRollback.expectedPhysicalState
+                        ?? "all candidate receipts absent",
+                    observedPhysicalState: physicalRollback.observedPhysicalState
+                        ?? "candidate receipts=\(candidateReceiptIDs.joined(separator: ","))",
+                    compensationAttempt: physicalRollback.failedCompensationID
+                        ?? "World receipt rollback",
+                    compensationError: compensationError,
+                    completedCompensations: physicalRollback.completed,
+                    remainingCompensations: physicalRollback.remaining,
+                    publishedSessionStatus: "unchanged",
+                    physicalWorldTick: world.time,
+                    candidateReceiptIDs: candidateReceiptIDs,
+                    worldID: persistenceWorldID ?? "unknown",
+                    sessionID: session.simulationID.rawValue,
+                    checkpointID: nil,
+                    agentID: physicalRollback.agentID,
+                    probeID: physicalRollback.probeID
+                )
+                candidatePhysicalHardFailure = hardFailure
+                replayRecorder = publishedRecorder
+                isPaused = true
+                lastError = "candidate physical hard failure: \(hardFailure)"
+                runtimeErrorCount += 1
+                trace("CANDIDATE_PHYSICAL_HARD_FAILURE \(hardFailure)")
+                return false
+            }
+            let restoredProbeStates = probesByAgentId.keys.sorted().compactMap { id in
+                probesByAgentId[id].map { probe in
+                    "\(id)={\(probe.capturePhysicalState())}"
+                }
+            }.joined(separator: ";")
+            trace(
+                "CANDIDATE_PHYSICAL_ROLLBACK operation=advanceOneTick "
+                    + "transaction=\(candidatePhysicalTransaction.transactionID) "
+                    + "error=\(error) registered=\(registeredCompensations.joined(separator: ",")) "
+                    + "completed=\(physicalRollback.completed.joined(separator: ",")) "
+                    + "receipts=\(candidateReceiptIDs.joined(separator: ",")) receiptsRetained=0 "
+                    + "publishedSession=unchanged publishedSessionTick=\(self.session?.tick ?? -1) "
+                    + "publishedRecorder=unchanged physicalWorldTick=\(world.time) "
+                    + "probes=\(restoredProbeStates)"
+            )
             let isKinshipLateFailure: Bool
             if case ControllerError.kinshipLateFailureProof = error {
                 isKinshipLateFailure = true
@@ -1506,9 +1633,8 @@ extension PebbleAgentController {
                     trace("error \(error)")
                     return false
                 }
-            } else if recorder != nil {
-                recorder?.markNonReplayable("tick failed: \(error)")
-                replayRecorder = recorder
+            } else {
+                replayRecorder = publishedRecorder
             }
             if autoInteractionEnabled {
                 autoInteractionEnabled = false
@@ -1520,8 +1646,6 @@ extension PebbleAgentController {
                 lastEconomyReason = "disabled after blocking failure: \(error)"
             }
             if session.buildAutoEnabled {
-                try? session.setBuildAutoEnabled(false)
-                self.session = session
                 lastConstructionReason = "disabled after blocking failure: \(error)"
             }
             lastError = String(describing: error)

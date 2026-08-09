@@ -46,12 +46,6 @@ struct PebbleAgentPhysicalActionOutcome {
     var succeeded: Bool { status == .succeeded }
 }
 
-private enum PebbleAgentBufferedPhysicalEffect {
-    case sound(String, Double, Double, Double, Double, Double)
-    case particles(String, Double, Double, Double, Int, Double, Int)
-    case vibration(Double, Double, Double, Int, EntityRef?)
-}
-
 struct PebbleAgentBlockPlacementRequest {
     let actorID: String
     let hit: RaycastHit
@@ -100,7 +94,19 @@ struct PebbleAgentBlockBreakToolState {
 /// It owns no cognition, inventory, drops, placement rules, or pathfinding. The
 /// action rules remain in PebbleCore; callers may publish Civilization state
 /// only after receiving a verified `.succeeded` outcome.
-struct PebbleAgentPhysicalActionGateway {
+final class PebbleAgentPhysicalActionGateway {
+    private enum CandidateReservation {
+        case none
+        case reserved(PebbleCandidatePhysicalCompensationReservation)
+        case refused
+
+        var value: PebbleCandidatePhysicalCompensationReservation? {
+            if case let .reserved(value) = self { return value }
+            return nil
+        }
+    }
+
+    var candidatePhysicalTransaction: PebbleCandidatePhysicalTransaction?
     func tillBlock(
         world: World,
         actor: PebbleAgentEmbodiment,
@@ -160,8 +166,23 @@ struct PebbleAgentPhysicalActionGateway {
                 before, before, [], .blockEntityUnsupported
             )
         }
+        let candidateReservation = reserveCandidateCompensation(
+            family: family, actorID: request.actorID, target: request.target
+        )
+        if case .refused = candidateReservation {
+            return outcome(
+                family: family, request.actorID, .rollbackFailure, request.target,
+                before, before, [], .rollbackMismatch
+            )
+        }
         let entityIDsBefore = Set(world.entities.map(\.id))
-        let (physical, bufferedEffects) = bufferPhysicalEffects(world: world) {
+        let gameRngBefore = gameRng
+        let rollbackCandidateActorState = {
+            let actorStateRestored = toolState.rollback()
+            gameRng = gameRngBefore
+            return actorStateRestored && gameRng == gameRngBefore
+        }
+        let (physical, bufferedEffects) = captureCandidateWorldEffects(world: world) {
             executeBlockTilling(
                 BlockTillingRuleContext(
                     world: world, heldItem: request.heldItem,
@@ -171,12 +192,16 @@ struct PebbleAgentPhysicalActionGateway {
             )
         }
         guard physical.status == .succeeded else {
-            return outcome(
-                family: family, request.actorID, .physicalExecutionFailure,
-                request.target, before, currentCell(world, request.target),
-                physical.mutations, .coreRefused
+            return rolledBackFailure(
+                family: family, actorID: request.actorID, target: request.target,
+                before: before, world: world, mutations: physical.mutations,
+                entityIDsBefore: entityIDsBefore,
+                rollbackActorState: rollbackCandidateActorState,
+                statusAfterRollback: .physicalExecutionFailure,
+                failureAfterRollback: .coreRefused
             )
         }
+        let gameRngAfter = gameRng
         let matches = physical.target == request.target
             && physical.originalCell == before
             && physical.finalCell == currentCell(world, request.target)
@@ -193,12 +218,29 @@ struct PebbleAgentPhysicalActionGateway {
                 family: family, actorID: request.actorID, target: request.target,
                 before: before, world: world, mutations: physical.mutations,
                 entityIDsBefore: entityIDsBefore,
-                rollbackActorState: toolState.rollback,
+                rollbackActorState: rollbackCandidateActorState,
                 statusAfterRollback: .verificationFailure,
                 failureAfterRollback: failure
             )
         }
-        commitPhysicalEffects(bufferedEffects, world: world)
+        guard registerCandidateCompensation(
+            reservation: candidateReservation,
+            family: family,
+            actorID: request.actorID,
+            target: request.target,
+            world: world,
+            mutations: physical.mutations,
+            entityIDsBefore: entityIDsBefore,
+            expectedGameRng: gameRngAfter,
+            rollbackActorState: rollbackCandidateActorState,
+            bufferedEffects: bufferedEffects
+        ) else {
+            return outcome(
+                family: family, request.actorID, .rollbackFailure, request.target,
+                before, currentCell(world, request.target), physical.mutations,
+                .rollbackMismatch
+            )
+        }
         return outcome(
             family: family, request.actorID, .succeeded, request.target,
             before, currentCell(world, request.target), physical.mutations, nil,
@@ -346,8 +388,23 @@ struct PebbleAgentPhysicalActionGateway {
             )
         }
 
+        let candidateReservation = reserveCandidateCompensation(
+            family: family, actorID: request.actorID, target: request.target
+        )
+        if case .refused = candidateReservation {
+            return outcome(
+                family: family, request.actorID, .rollbackFailure, request.target,
+                before, before, [], .rollbackMismatch
+            )
+        }
         let entityIDsBefore = Set(world.entities.map(\.id))
-        let (physical, bufferedEffects) = bufferPhysicalEffects(world: world) {
+        let gameRngBefore = gameRng
+        let rollbackCandidateActorState = {
+            let actorStateRestored = custody.rollback()
+            gameRng = gameRngBefore
+            return actorStateRestored && gameRng == gameRngBefore
+        }
+        let (physical, bufferedEffects) = captureCandidateWorldEffects(world: world) {
             executeBlockPlacement(
                 BlockPlacementRuleContext(
                     world: world,
@@ -361,18 +418,6 @@ struct PebbleAgentPhysicalActionGateway {
             )
         }
         guard physical.succeeded else {
-            if physical.mutations.isEmpty {
-                return outcome(
-                    family: family,
-                    request.actorID,
-                    .physicalExecutionFailure,
-                    request.target,
-                    before,
-                    currentCell(world, request.target),
-                    physical.mutations,
-                    .coreRefused
-                )
-            }
             return rolledBackFailure(
                 family: family,
                 actorID: request.actorID,
@@ -381,11 +426,12 @@ struct PebbleAgentPhysicalActionGateway {
                 world: world,
                 mutations: physical.mutations,
                 entityIDsBefore: entityIDsBefore,
-                rollbackActorState: custody.rollback,
+                rollbackActorState: rollbackCandidateActorState,
                 statusAfterRollback: .physicalExecutionFailure,
                 failureAfterRollback: .coreRefused
             )
         }
+        let gameRngAfter = gameRng
 
         let physicalOutcomeMatches = physical.target == request.target
             && physical.finalCell == currentCell(world, request.target)
@@ -409,12 +455,29 @@ struct PebbleAgentPhysicalActionGateway {
                 world: world,
                 mutations: physical.mutations,
                 entityIDsBefore: entityIDsBefore,
-                rollbackActorState: custody.rollback,
+                rollbackActorState: rollbackCandidateActorState,
                 statusAfterRollback: .verificationFailure,
                 failureAfterRollback: failure
             )
         }
-        commitPhysicalEffects(bufferedEffects, world: world)
+        guard registerCandidateCompensation(
+            reservation: candidateReservation,
+            family: family,
+            actorID: request.actorID,
+            target: request.target,
+            world: world,
+            mutations: physical.mutations,
+            entityIDsBefore: entityIDsBefore,
+            expectedGameRng: gameRngAfter,
+            rollbackActorState: rollbackCandidateActorState,
+            bufferedEffects: bufferedEffects
+        ) else {
+            return outcome(
+                family: family, request.actorID, .rollbackFailure, request.target,
+                before, currentCell(world, request.target), physical.mutations,
+                .rollbackMismatch
+            )
+        }
         return outcome(
             family: family,
             request.actorID,
@@ -561,8 +624,23 @@ struct PebbleAgentPhysicalActionGateway {
             )
         }
 
+        let candidateReservation = reserveCandidateCompensation(
+            family: family, actorID: request.actorID, target: request.target
+        )
+        if case .refused = candidateReservation {
+            return outcome(
+                family: family, request.actorID, .rollbackFailure, request.target,
+                before, before, [], .rollbackMismatch
+            )
+        }
         let entityIDsBefore = Set(world.entities.map(\.id))
-        let (physical, bufferedEffects) = bufferPhysicalEffects(world: world) {
+        let gameRngBefore = gameRng
+        let rollbackCandidateActorState = {
+            let actorStateRestored = toolState.rollback()
+            gameRng = gameRngBefore
+            return actorStateRestored && gameRng == gameRngBefore
+        }
+        let (physical, bufferedEffects) = captureCandidateWorldEffects(world: world) {
             executeBlockBreak(
                 BlockBreakRuleContext(
                     world: world,
@@ -577,17 +655,16 @@ struct PebbleAgentPhysicalActionGateway {
             )
         }
         guard physical.status == .succeeded else {
-            return outcome(
-                family: family,
-                request.actorID,
-                .physicalExecutionFailure,
-                request.target,
-                before,
-                currentCell(world, request.target),
-                physical.mutations,
-                .coreRefused
+            return rolledBackFailure(
+                family: family, actorID: request.actorID, target: request.target,
+                before: before, world: world, mutations: physical.mutations,
+                entityIDsBefore: entityIDsBefore,
+                rollbackActorState: rollbackCandidateActorState,
+                statusAfterRollback: .physicalExecutionFailure,
+                failureAfterRollback: .coreRefused
             )
         }
+        let gameRngAfter = gameRng
         let physicalOutcomeMatches = physical.target == request.target
             && physical.originalCell == before
             && physical.finalCell == currentCell(world, request.target)
@@ -617,12 +694,30 @@ struct PebbleAgentPhysicalActionGateway {
                 world: world,
                 mutations: physical.mutations,
                 entityIDsBefore: entityIDsBefore,
-                rollbackActorState: toolState.rollback,
+                rollbackActorState: rollbackCandidateActorState,
                 statusAfterRollback: .verificationFailure,
                 failureAfterRollback: failure
             )
         }
-        commitPhysicalEffects(bufferedEffects, world: world)
+        guard registerCandidateCompensation(
+            reservation: candidateReservation,
+            family: family,
+            actorID: request.actorID,
+            target: request.target,
+            world: world,
+            mutations: physical.mutations,
+            entityIDsBefore: entityIDsBefore,
+            rollbackRestoredEntityIDs: Set(physical.spawnedItemEntityIDs),
+            expectedGameRng: gameRngAfter,
+            rollbackActorState: rollbackCandidateActorState,
+            bufferedEffects: bufferedEffects
+        ) else {
+            return outcome(
+                family: family, request.actorID, .rollbackFailure, request.target,
+                before, currentCell(world, request.target), physical.mutations,
+                .rollbackMismatch
+            )
+        }
         return outcome(
             family: family,
             request.actorID,
@@ -635,6 +730,92 @@ struct PebbleAgentPhysicalActionGateway {
             spawnedItemEntityIDs: physical.spawnedItemEntityIDs,
             committedEffectCount: bufferedEffects.count
         )
+    }
+
+    private func reserveCandidateCompensation(
+        family: PebbleAgentPhysicalActionFamily,
+        actorID: String,
+        target: PhysicalBlockPosition
+    ) -> CandidateReservation {
+        guard let candidatePhysicalTransaction else { return .none }
+        do {
+            return .reserved(try candidatePhysicalTransaction.reserve(
+                compensationPrefix: "physical-action:\(family.rawValue):"
+                    + "\(actorID):\(target.x),\(target.y),\(target.z)"
+            ))
+        } catch {
+            return .refused
+        }
+    }
+
+    private func registerCandidateCompensation(
+        reservation: CandidateReservation,
+        family: PebbleAgentPhysicalActionFamily,
+        actorID: String,
+        target: PhysicalBlockPosition,
+        world: World,
+        mutations: [PhysicalBlockMutation],
+        entityIDsBefore: Set<Int>,
+        rollbackRestoredEntityIDs: Set<Int> = [],
+        expectedGameRng: RandomX,
+        rollbackActorState: @escaping () -> Bool,
+        bufferedEffects: [PebbleCandidateBufferedWorldEffect]
+    ) -> Bool {
+        guard let candidatePhysicalTransaction else {
+            guard reservation.value == nil else { return false }
+            publishCandidateWorldEffects(bufferedEffects, world: world)
+            return true
+        }
+        guard let reservation = reservation.value else { return false }
+        let expectedEntityIDs = Set(world.entities.map(\.id))
+        let compensation = PebbleCandidatePhysicalCompensation(
+            reservation: reservation,
+            mutation: "\(family.rawValue) at \(target.x),\(target.y),\(target.z)",
+            agentID: actorID,
+            expectedBefore: mutations.map {
+                "\($0.position.x),\($0.position.y),\($0.position.z)=\($0.before)"
+            }.joined(separator: ";"),
+            observedState: {
+                let cells = mutations.map {
+                    "\($0.position.x),\($0.position.y),\($0.position.z)="
+                        + "\(world.getBlock($0.position.x, $0.position.y, $0.position.z))"
+                }.joined(separator: ";")
+                return "cells=\(cells) entities=\(world.entities.map(\.id).sorted())"
+            },
+            compensate: { [weak self] in
+                guard let self,
+                      self.mutationsConform(world: world, mutations: mutations),
+                      gameRng == expectedGameRng,
+                      Set(world.entities.map(\.id))
+                        == expectedEntityIDs.union(rollbackRestoredEntityIDs),
+                      rollbackRestoredEntityIDs.allSatisfy({ id in
+                          world.entityById[id] is ItemEntity
+                      }) else {
+                    return false
+                }
+                return self.rollback(
+                    world: world,
+                    mutations: mutations,
+                    entityIDsBefore: entityIDsBefore,
+                    rollbackActorState: rollbackActorState
+                )
+            },
+            commit: {
+                publishCandidateWorldEffects(bufferedEffects, world: world)
+            }
+        )
+        do {
+            try candidatePhysicalTransaction.register(compensation)
+            return true
+        } catch {
+            _ = rollback(
+                world: world,
+                mutations: mutations,
+                entityIDsBefore: entityIDsBefore,
+                rollbackActorState: rollbackActorState
+            )
+            return false
+        }
     }
 
     private func resolvedPlacementTarget(
@@ -698,44 +879,6 @@ struct PebbleAgentPhysicalActionGateway {
             }
         }
         return false
-    }
-
-    private func bufferPhysicalEffects<Result>(
-        world: World,
-        operation: () -> Result
-    ) -> (Result, [PebbleAgentBufferedPhysicalEffect]) {
-        let originalHooks = world.hooks
-        var buffered: [PebbleAgentBufferedPhysicalEffect] = []
-        var transactionalHooks = originalHooks
-        transactionalHooks.playSound = { name, x, y, z, volume, pitch in
-            buffered.append(.sound(name, x, y, z, volume, pitch))
-        }
-        transactionalHooks.addParticles = { name, x, y, z, count, spread, data in
-            buffered.append(.particles(name, x, y, z, count, spread, data))
-        }
-        transactionalHooks.onVibration = { x, y, z, radius, source in
-            buffered.append(.vibration(x, y, z, radius, source))
-        }
-        world.hooks = transactionalHooks
-        let result = operation()
-        world.hooks = originalHooks
-        return (result, buffered)
-    }
-
-    private func commitPhysicalEffects(
-        _ effects: [PebbleAgentBufferedPhysicalEffect],
-        world: World
-    ) {
-        for effect in effects {
-            switch effect {
-            case let .sound(name, x, y, z, volume, pitch):
-                world.hooks.playSound(name, x, y, z, volume, pitch)
-            case let .particles(name, x, y, z, count, spread, data):
-                world.hooks.addParticles(name, x, y, z, count, spread, data)
-            case let .vibration(x, y, z, radius, source):
-                world.hooks.onVibration?(x, y, z, radius, source)
-            }
-        }
     }
 
     private func rolledBackFailure(

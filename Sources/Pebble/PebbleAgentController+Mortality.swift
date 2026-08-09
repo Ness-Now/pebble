@@ -178,6 +178,17 @@ extension PebbleAgentController {
         let followBefore = followMode
         let materialGatewayBefore = materialCustodyGateway.boundarySnapshot()
         let materialAttemptBefore = mortalityMaterialExitAttempt
+        let candidateTransaction = activeCandidatePhysicalTransaction
+        let mortalityReservation = try candidateTransaction?.reserve(
+            compensationPrefix: "mortality-boundary:\(current.tick)"
+        )
+        let outerMaterialTransaction =
+            materialCustodyGateway.candidatePhysicalTransaction
+        materialCustodyGateway.candidatePhysicalTransaction = nil
+        defer {
+            materialCustodyGateway.candidatePhysicalTransaction =
+                outerMaterialTransaction
+        }
         var completions: [PebbleMortalityPhysicalExitCompletion] = []
         var removedProbes: [LabCoreAgentEntity] = []
         do {
@@ -314,6 +325,65 @@ extension PebbleAgentController {
                         + "probes=\(previousIDs.count)>\(expected.count) "
                         + "focus=\(focusedAgentId ?? "none") "
                         + "corpse=none worldMutation=none"
+                )
+            }
+            if let candidateTransaction, let mortalityReservation,
+               !completions.isEmpty || !removedProbes.isEmpty {
+                let expectedProbeIDs = probesByAgentId.keys.sorted()
+                let expectedWorldEntities = world.entities
+                try candidateTransaction.register(
+                    PebbleCandidatePhysicalCompensation(
+                        reservation: mortalityReservation,
+                        mutation: "mortality custody and probe exit",
+                        expectedBefore: "probes=\(probesBefore.keys.sorted()) "
+                            + "entities=\(worldEntitiesBefore.map(\.id).sorted())",
+                        observedState: {
+                            "probes=\(self.probesByAgentId.keys.sorted()) "
+                                + "entities=\(world.entities.map(\.id).sorted())"
+                        },
+                        compensate: {
+                            guard self.probesByAgentId.keys.sorted()
+                                    == expectedProbeIDs,
+                                  expectedWorldEntities.count
+                                    == world.entities.count,
+                                  expectedWorldEntities.allSatisfy({ expected in
+                                      world.entities.contains { $0 === expected }
+                                  }) else {
+                                return false
+                            }
+                            for probe in removedProbes
+                            where !world.entities.contains(where: { $0 === probe }) {
+                                world.addEntity(probe)
+                            }
+                            self.probesByAgentId = probesBefore
+                            self.lastInfluencedTracesByAgentId = influencedBefore
+                            self.focusedAgentId = focusBefore
+                            self.followMode = followBefore
+                            let physicalRollback = self.rollbackMortalityMaterialExits(
+                                completions.compactMap(\.rollback), world: world
+                            )
+                            self.materialCustodyGateway.restoreBoundarySnapshot(
+                                materialGatewayBefore
+                            )
+                            self.mortalityMaterialExitAttempt = materialAttemptBefore
+                            let sameWorldEntities = worldEntitiesBefore.count
+                                    == world.entities.count
+                                && worldEntitiesBefore.allSatisfy { before in
+                                    world.entities.contains { $0 === before }
+                                }
+                            return physicalRollback && sameWorldEntities
+                                && probeStatesBefore.allSatisfy {
+                                    $0.matches(
+                                        world: world,
+                                        probesByAgentID: self.probesByAgentId
+                                    )
+                                }
+                                && self.probesByAgentId.keys.sorted()
+                                    == probesBefore.keys.sorted()
+                                && self.focusedAgentId == focusBefore
+                                && self.followMode == followBefore
+                        }
+                    )
                 )
             }
         } catch {

@@ -18,7 +18,7 @@ extension PebbleAgentController {
     ) -> PebbleAgentCommandResult {
         let usage = "Usage: /lab renewable-subsistence <setup|plant-first|harvest-first|consume-replant|status|verify-maturity-mismatch|mature-second|harvest-second>"
         guard arguments.count == 1, let command = arguments.first?.lowercased(),
-              var candidate = session, activeWorld === world else {
+              let publishedSession = session, activeWorld === world else {
             return failure(usage)
         }
         let gates = agricultureGateDependencies() + [
@@ -37,34 +37,123 @@ extension PebbleAgentController {
                     + missing.joined(separator: ", ")
             )
         }
-        guard candidate.agricultureEnabled, candidate.physicalFoodSurvivalEnabled,
-              candidate.lifecycleEnabled, candidate.skillsEnabled,
-              candidate.ecologicalObservationEnabled, isPaused, !movementEnabled,
+        guard publishedSession.agricultureEnabled,
+              publishedSession.physicalFoodSurvivalEnabled,
+              publishedSession.lifecycleEnabled, publishedSession.skillsEnabled,
+              publishedSession.ecologicalObservationEnabled, isPaused, !movementEnabled,
               replayRecorder == nil else {
             return failure(
                 "Renewable subsistence requires paused agriculture, physical food, lifecycle, skills, and ecological observation."
             )
         }
+        if command == "status" {
+            traceRenewableSubsistenceStatus(
+                world: world, session: publishedSession
+            )
+            return success("Renewable subsistence status traced.")
+        }
+        guard candidatePhysicalHardFailure == nil else {
+            return failure(
+                "Renewable subsistence refused after candidate physical hard failure."
+            )
+        }
+        guard activeCandidatePhysicalTransaction == nil else {
+            return failure("Renewable subsistence nested candidate refused.")
+        }
+        if command == "mature-second" {
+            do {
+                try matureSecondRenewableCrop(
+                    world: world, session: publishedSession
+                )
+                return success("Renewable subsistence mature-second passed.")
+            } catch {
+                return failure(
+                    "Renewable subsistence mature-second failed: \(error)"
+                )
+            }
+        }
+
+        var externalGrowthStartTick = world.time
+        var externalGrowthTicks = 0
+        if command == "harvest-first" || command == "harvest-second" {
+            do {
+                let (_, _, _, cell) = try renewableContext(
+                    world: world, session: publishedSession
+                )
+                externalGrowthStartTick = world.time
+                let cropCell = world.getBlock(
+                    cell.position.x, cell.position.y + 1, cell.position.z
+                )
+                if cell.phase == .planted,
+                   cropCell != Int(PebbleCore.cell(B.carrots, 7)) {
+                    externalGrowthTicks = try advanceRenewableCropByWorldTicks(
+                        world: world, position: cell.position
+                    )
+                }
+            } catch {
+                return failure(
+                    "Renewable subsistence \(command) external World progression failed: \(error)"
+                )
+            }
+        }
+
+        let transaction = PebbleCandidatePhysicalTransaction(
+            transactionID: "renewable:\(publishedSession.simulationID.rawValue):"
+                + "\(command):world:\(world.time)",
+            operation: "renewable-subsistence \(command)",
+            physicalWorldTick: world.time,
+            injectedCompensationFailurePrefix: environment[
+                "PEBBLELAB_DISPOSABLE_CANDIDATE_COMPENSATION_FAULT"
+            ] == "movement-collision" ? "agriculture-navigation" : nil
+        )
+        activeCandidatePhysicalTransaction = transaction
+        physicalActionGateway.candidatePhysicalTransaction = transaction
+        materialCustodyGateway.candidatePhysicalTransaction = transaction
+        defer {
+            if physicalActionGateway.candidatePhysicalTransaction === transaction {
+                physicalActionGateway.candidatePhysicalTransaction = nil
+            }
+            if materialCustodyGateway.candidatePhysicalTransaction === transaction {
+                materialCustodyGateway.candidatePhysicalTransaction = nil
+            }
+            if activeCandidatePhysicalTransaction === transaction {
+                activeCandidatePhysicalTransaction = nil
+            }
+        }
+        var candidate = publishedSession
+        let publishedRecorder = replayRecorder
+        var candidateRecorder = replayRecorder
+        var receiptTransaction =
+            PebbleWorldEcologicalObservationReceiptTransaction()
+        activeCandidateReceiptTransaction = receiptTransaction
+        defer {
+            if activeCandidateReceiptTransaction === receiptTransaction {
+                activeCandidateReceiptTransaction = nil
+            }
+        }
         do {
             switch command {
             case "setup":
-                try setupRenewableSubsistence(world: world, session: &candidate)
+                try setupRenewableSubsistence(
+                    world: world, session: &candidate,
+                    recorder: &candidateRecorder,
+                    receiptTransaction: &receiptTransaction
+                )
             case "plant-first":
                 try plantFirstRenewableCycle(world: world, session: &candidate)
             case "harvest-first":
                 try harvestRenewableCycle(
-                    ordinal: 1, world: world, session: &candidate
+                    ordinal: 1, world: world, session: &candidate,
+                    recorder: &candidateRecorder,
+                    receiptTransaction: &receiptTransaction,
+                    growthStartTick: externalGrowthStartTick,
+                    growthTicks: externalGrowthTicks
                 )
             case "consume-replant":
                 try consumeAndReplantRenewableOutput(
-                    world: world, session: &candidate
-                )
-            case "status":
-                traceRenewableSubsistenceStatus(world: world, session: candidate)
-                return success("Renewable subsistence status traced.")
-            case "mature-second":
-                try matureSecondRenewableCrop(
-                    world: world, session: candidate
+                    world: world, session: &candidate,
+                    recorder: &candidateRecorder,
+                    receiptTransaction: &receiptTransaction
                 )
             case "verify-maturity-mismatch":
                 try verifyRenewableMaturityMismatch(
@@ -72,21 +161,107 @@ extension PebbleAgentController {
                 )
             case "harvest-second":
                 try harvestRenewableCycle(
-                    ordinal: 2, world: world, session: &candidate
+                    ordinal: 2, world: world, session: &candidate,
+                    recorder: &candidateRecorder,
+                    receiptTransaction: &receiptTransaction,
+                    growthStartTick: externalGrowthStartTick,
+                    growthTicks: externalGrowthTicks
                 )
             default:
                 return failure(usage)
             }
+            if candidate.ecologicalObservationEnabled {
+                try validateWorldEcologicalObservationReceipts(
+                    for: candidate, dimension: world.dim.rawValue
+                )
+            }
+            if environment[
+                "PEBBLELAB_DISPOSABLE_CANDIDATE_PHYSICAL_FAULT"
+            ] == "renewable-after-final-validation",
+               !candidateRenewableLateFailureProofInjected,
+               command.hasPrefix("harvest-") {
+                candidateRenewableLateFailureProofInjected = true
+                trace(
+                    "candidate physical fault seam operation=renewable-subsistence "
+                        + "command=\(command) point=after-final-validation "
+                        + "mutations=\(transaction.registeredCompensationIDs.joined(separator: ",")) "
+                        + "growthStartTick=\(externalGrowthStartTick) "
+                        + "growthTicks=\(externalGrowthTicks) physicalWorldTick=\(world.time) "
+                        + "publishedSessionTick=\(publishedSession.tick)"
+                )
+                throw PebbleRenewableSubsistenceProofError.failed(
+                    "injected renewable failure after final validation"
+                )
+            }
+            receiptTransaction.commit()
             session = candidate
+            replayRecorder = candidateRecorder
+            transaction.commit()
             return success("Renewable subsistence \(command) passed.")
         } catch {
+            let receiptIDs = receiptTransaction.stagedReceiptIDs.sorted()
+            let registeredCompensations = transaction.registeredCompensationIDs
+            var receiptFailure: String?
+            do {
+                try rollbackWorldEcologicalObservationReceipts(
+                    receiptTransaction
+                )
+            } catch {
+                receiptFailure = String(describing: error)
+            }
+            let rollback = transaction.rollback()
+            activeCandidatePhysicalTransaction = nil
+            replayRecorder = publishedRecorder
+            if receiptFailure != nil || rollback.failure != nil {
+                let hardFailure = makeCandidatePhysicalHardFailure(
+                    transaction: transaction,
+                    rollback: rollback,
+                    receiptFailure: receiptFailure,
+                    receiptIDs: receiptIDs,
+                    session: publishedSession,
+                    world: world
+                )
+                candidatePhysicalHardFailure = hardFailure
+                isPaused = true
+                lastError = "candidate physical hard failure: \(hardFailure)"
+                runtimeErrorCount += 1
+                trace("CANDIDATE_PHYSICAL_HARD_FAILURE \(hardFailure)")
+            } else {
+                let cropState: String
+                if let (_, _, _, cell) = try? renewableContext(
+                    world: world, session: publishedSession
+                ) {
+                    cropState = String(
+                        world.getBlock(
+                            cell.position.x, cell.position.y + 1,
+                            cell.position.z
+                        )
+                    )
+                } else {
+                    cropState = "unavailable"
+                }
+                trace(
+                    "CANDIDATE_PHYSICAL_ROLLBACK operation=renewable-subsistence "
+                        + "command=\(command) transaction=\(transaction.transactionID) "
+                        + "error=\(error) registered=\(registeredCompensations.joined(separator: ",")) "
+                        + "completed=\(rollback.completed.joined(separator: ",")) "
+                        + "receipts=\(receiptIDs.joined(separator: ",")) receiptsRetained=0 "
+                        + "publishedSession=unchanged publishedSessionTick=\(self.session?.tick ?? -1) "
+                        + "publishedRecorder=unchanged growthStartTick=\(externalGrowthStartTick) "
+                        + "growthTicks=\(externalGrowthTicks) physicalWorldTick=\(world.time) "
+                        + "cropCell=\(cropState)"
+                )
+            }
             return failure("Renewable subsistence \(command) failed: \(error)")
         }
     }
 
     private func setupRenewableSubsistence(
         world: World,
-        session: inout AgentSimulationSession
+        session: inout AgentSimulationSession,
+        recorder: inout AgentReplayRecorder?,
+        receiptTransaction: inout
+            PebbleWorldEcologicalObservationReceiptTransaction
     ) throws {
         let actorID = try renewableActorID()
         guard session.agricultureSnapshot().plots.isEmpty,
@@ -133,6 +308,14 @@ extension PebbleAgentController {
                 )
             }
         }
+        let originalFixtureCells = fixturePositions.map {
+            ($0, world.getBlock($0.x, $0.y, $0.z))
+        }
+        let originalSky = world.getSkyLight(soil.x, soil.y + 1, soil.z)
+        let originalInventory = copyItemInventory(probe.carriedItems)
+        let fixtureReservation = try activeCandidatePhysicalTransaction?.reserve(
+            compensationPrefix: "renewable-proof-fixture:\(actorID.rawValue)"
+        )
         for x in work.x...origin.x {
             for z in work.z...origin.z {
                 _ = world.setBlock(x, origin.y - 1, z, Int(cell(B.stone)), SET_SILENT)
@@ -159,14 +342,93 @@ extension PebbleAgentController {
         )
         probe.carriedItems[0] = ItemStack(iid("iron_hoe"), 1)
         probe.carriedItems[1] = ItemStack(iid("carrot"), 1)
+        let expectedFixtureCells = fixturePositions.map {
+            ($0, world.getBlock($0.x, $0.y, $0.z))
+        }
+        let expectedInventory = copyItemInventory(probe.carriedItems)
+        func restoreFixture() -> Bool {
+            if world.getBlockEntity(
+                containerPosition.x, containerPosition.y,
+                containerPosition.z
+            ) === container {
+                _ = world.setBlock(
+                    containerPosition.x, containerPosition.y,
+                    containerPosition.z, 0, SET_SILENT
+                )
+            }
+            for (position, original) in originalFixtureCells.reversed() {
+                _ = world.setBlock(
+                    position.x, position.y, position.z,
+                    original, SET_SILENT
+                )
+            }
+            world.getChunkAt(soil.x, soil.z)?.setSky(
+                posMod(soil.x, CHUNK_W), soil.y + 1,
+                posMod(soil.z, CHUNK_W), originalSky
+            )
+            probe.carriedItems = copyItemInventory(originalInventory)
+            return originalFixtureCells.allSatisfy { position, original in
+                world.getBlock(position.x, position.y, position.z) == original
+            } && world.getBlockEntity(
+                containerPosition.x, containerPosition.y,
+                containerPosition.z
+            ) == nil
+                && world.getSkyLight(soil.x, soil.y + 1, soil.z) == originalSky
+                && probe.carriedItems == originalInventory
+        }
+        if let transaction = activeCandidatePhysicalTransaction,
+           let fixtureReservation {
+            let compensation = PebbleCandidatePhysicalCompensation(
+                reservation: fixtureReservation,
+                mutation: "renewable disposable proof fixture installation",
+                agentID: actorID.rawValue,
+                probeID: probe.physicalId,
+                expectedBefore: "cells=\(originalFixtureCells.count) "
+                    + "sky=\(originalSky) inventory=empty",
+                observedState: {
+                    let cellsConform = expectedFixtureCells.allSatisfy {
+                        position, expected in
+                        world.getBlock(position.x, position.y, position.z) == expected
+                    }
+                    return "cellsConform=\(cellsConform ? 1 : 0) "
+                        + "inventory=\(probe.carriedItems)"
+                },
+                compensate: {
+                    guard expectedFixtureCells.allSatisfy({ position, expected in
+                        world.getBlock(position.x, position.y, position.z) == expected
+                    }), world.getBlockEntity(
+                        containerPosition.x, containerPosition.y,
+                        containerPosition.z
+                    ) === container,
+                    probe.carriedItems == expectedInventory else {
+                        return false
+                    }
+                    return restoreFixture()
+                }
+            )
+            do {
+                try transaction.register(compensation)
+            } catch {
+                guard restoreFixture() else {
+                    throw PebbleRenewableSubsistenceProofError.failed(
+                        "renewable fixture rollback"
+                    )
+                }
+                throw error
+            }
+        }
         try navigateAgricultureActor(
             world: world, embodiment: PebbleAgentEmbodiment(probe: probe),
             destination: work
         )
+        try synchronizeRenewableCandidatePosition(
+            session: &session, actorID: actorID,
+            embodiment: PebbleAgentEmbodiment(probe: probe)
+        )
         ecologicalObservationSensor.invalidate(world: world)
-        var recorder: AgentReplayRecorder?
         _ = try recordLiveEcologicalObservation(
-            world: world, observerID: actorID, session: &session, recorder: &recorder
+            world: world, observerID: actorID, session: &session,
+            recorder: &recorder, receiptTransaction: &receiptTransaction
         )
         guard let observation = session.ecologicalObservations(for: actorID).first,
               observation.observation.soils.contains(where: {
@@ -278,7 +540,12 @@ extension PebbleAgentController {
     private func harvestRenewableCycle(
         ordinal: Int,
         world: World,
-        session: inout AgentSimulationSession
+        session: inout AgentSimulationSession,
+        recorder: inout AgentReplayRecorder?,
+        receiptTransaction: inout
+            PebbleWorldEcologicalObservationReceiptTransaction,
+        growthStartTick: Int,
+        growthTicks: Int
     ) throws {
         let (actorID, probe, plot, cell) = try renewableContext(
             world: world, session: session
@@ -295,19 +562,17 @@ extension PebbleAgentController {
             world: world, embodiment: embodiment,
             destination: agricultureWorkPosition(for: cell.position)
         )
-        let growthStartTick = world.time
-        var growthTicks = 0
+        try synchronizeRenewableCandidatePosition(
+            session: &session, actorID: actorID, embodiment: embodiment
+        )
         let maturityID: AgentAgriculturalActionID
         let maturityObservation: AgentEcologicalObservationRecord
         if cell.phase == .planted {
-            growthTicks = try advanceRenewableCropByWorldTicks(
-                world: world, position: cell.position
-            )
             ecologicalObservationSensor.invalidate(world: world)
-            var recorder: AgentReplayRecorder?
             _ = try recordLiveEcologicalObservation(
                 world: world, observerID: actorID,
-                session: &session, recorder: &recorder
+                session: &session, recorder: &recorder,
+                receiptTransaction: &receiptTransaction
             )
             guard let observation = session.ecologicalObservations(
                     for: actorID
@@ -399,7 +664,7 @@ extension PebbleAgentController {
                 probe: probe, plot: plot, output: output
             )
             try returnRenewableActorHome(
-                world: world, session: session, actorID: actorID,
+                world: world, session: &session, actorID: actorID,
                 embodiment: embodiment
             )
         }
@@ -546,7 +811,10 @@ extension PebbleAgentController {
 
     private func consumeAndReplantRenewableOutput(
         world: World,
-        session: inout AgentSimulationSession
+        session: inout AgentSimulationSession,
+        recorder: inout AgentReplayRecorder?,
+        receiptTransaction: inout
+            PebbleWorldEcologicalObservationReceiptTransaction
     ) throws {
         let (actorID, probe, plot, cell) = try renewableContext(
             world: world, session: session
@@ -612,9 +880,9 @@ extension PebbleAgentController {
         }
 
         ecologicalObservationSensor.invalidate(world: world)
-        var recorder: AgentReplayRecorder?
         _ = try recordLiveEcologicalObservation(
-            world: world, observerID: actorID, session: &session, recorder: &recorder
+            world: world, observerID: actorID, session: &session,
+            recorder: &recorder, receiptTransaction: &receiptTransaction
         )
         guard let observation = session.ecologicalObservations(for: actorID).first else {
             throw PebbleRenewableSubsistenceProofError.failed("renewal observation")
@@ -653,7 +921,7 @@ extension PebbleAgentController {
             world: world, probe: probe, embodiment: embodiment, container: container
         )
         try returnRenewableActorHome(
-            world: world, session: session, actorID: actorID,
+            world: world, session: &session, actorID: actorID,
             embodiment: embodiment
         )
         guard probe.carriedItems.allSatisfy({ $0 == nil }),
@@ -684,17 +952,36 @@ extension PebbleAgentController {
 
     private func returnRenewableActorHome(
         world: World,
-        session: AgentSimulationSession,
+        session: inout AgentSimulationSession,
         actorID: AgentID,
         embodiment: PebbleAgentEmbodiment
     ) throws {
-        let home = try session.state(for: actorID).position
+        let home = try session.state(for: actorID).homePosition
         try navigateAgricultureActor(
             world: world, embodiment: embodiment, destination: home
+        )
+        try synchronizeRenewableCandidatePosition(
+            session: &session, actorID: actorID, embodiment: embodiment
         )
         guard embodiment.position == home else {
             throw PebbleRenewableSubsistenceProofError.failed(
                 "probe did not return to checkpoint position"
+            )
+        }
+    }
+
+    private func synchronizeRenewableCandidatePosition(
+        session: inout AgentSimulationSession,
+        actorID: AgentID,
+        embodiment: PebbleAgentEmbodiment
+    ) throws {
+        try session.applyExternalUpdate(AgentExternalUpdate(
+            agentId: actorID.rawValue,
+            position: embodiment.position
+        ))
+        guard try session.state(for: actorID).position == embodiment.position else {
+            throw PebbleRenewableSubsistenceProofError.failed(
+                "renewable candidate position publication"
             )
         }
     }

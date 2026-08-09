@@ -29,19 +29,6 @@ struct PebbleAgentMovementExecutor {
         case rollbackVerificationFailed(String)
     }
 
-    private struct PhysicalState {
-        let x: Double
-        let y: Double
-        let z: Double
-        let prevX: Double
-        let prevY: Double
-        let prevZ: Double
-        let yaw: Double
-        let pitch: Double
-        let prevYaw: Double
-        let prevPitch: Double
-    }
-
     func apply(
         intents: [AgentMovementOutcome],
         snapshot: AgentSessionSnapshot,
@@ -49,6 +36,7 @@ struct PebbleAgentMovementExecutor {
         probesByAgentId: [String: LabCoreAgentEntity],
         explorationDistanceBoundary: Int,
         additionalOccupiedPositions: Set<AgentPosition> = [],
+        candidatePhysicalTransaction: PebbleCandidatePhysicalTransaction? = nil,
         postApplyValidation: ([AgentVerifiedPhysicalMovement]) throws -> Void = { _ in }
     ) throws -> [AgentVerifiedPhysicalMovement] {
         let agentsByID = Dictionary(uniqueKeysWithValues: snapshot.agents.map { ($0.id, $0) })
@@ -120,7 +108,8 @@ struct PebbleAgentMovementExecutor {
 
         let initiallyOccupied = Set(physicalPositions).union(additionalOccupiedPositions)
         var claimed = Set<AgentPosition>()
-        var movedStates: [(String, PhysicalState)] = []
+        var movementReservation: PebbleCandidatePhysicalCompensationReservation?
+        var movedStates: [(String, LabCoreAgentPhysicalState)] = []
         var verified: [AgentVerifiedPhysicalMovement] = []
 
         do {
@@ -213,7 +202,12 @@ struct PebbleAgentMovementExecutor {
                     continue
                 }
 
-                let original = capture(embodiment.probe)
+                let original = embodiment.probe.capturePhysicalState()
+                if movementReservation == nil, let candidatePhysicalTransaction {
+                    movementReservation = try candidatePhysicalTransaction.reserve(
+                        compensationID: "movement-batch:\(snapshot.tick)"
+                    )
+                }
                 embodiment.probe.prevX = original.x
                 embodiment.probe.prevY = original.y
                 embodiment.probe.prevZ = original.z
@@ -264,15 +258,58 @@ struct PebbleAgentMovementExecutor {
                 ))
             }
             try postApplyValidation(verified)
+            if let candidatePhysicalTransaction,
+               let movementReservation,
+               !movedStates.isEmpty {
+                let expectedAfter = movedStates.compactMap { id, _ in
+                    embodiments[id].map {
+                        (id: id, probe: $0.probe, state: $0.probe.capturePhysicalState())
+                    }
+                }
+                let compensation = PebbleCandidatePhysicalCompensation(
+                    reservation: movementReservation,
+                    mutation: "verified physical movement batch",
+                    agentID: movedStates.map(\.0).joined(separator: ","),
+                    probeID: movedStates.compactMap { id, _ in
+                        embodiments[id]?.physicalID
+                    }.joined(separator: ","),
+                    expectedBefore: movedStates.map {
+                        "\($0.0)={\($0.1)}"
+                    }.joined(separator: ";"),
+                    observedState: {
+                        expectedAfter.map {
+                            "\($0.id)={\($0.probe.capturePhysicalState())}"
+                        }.joined(separator: ";")
+                    },
+                    compensate: {
+                        guard expectedAfter.allSatisfy({ id, probe, expected in
+                            guard let embodiment = embodiments[id] else { return false }
+                            return embodiment.probe === probe
+                                && embodiment.isValid(in: world)
+                                && probe.capturePhysicalState() == expected
+                        }) else { return false }
+                        for (id, original) in movedStates.reversed() {
+                            guard let embodiment = embodiments[id],
+                                  embodiment.isValid(in: world),
+                                  embodiment.probe.restorePhysicalState(original) else {
+                                return false
+                            }
+                        }
+                        return movedStates.allSatisfy { id, original in
+                            embodiments[id]?.probe.capturePhysicalState() == original
+                        }
+                    }
+                )
+                try candidatePhysicalTransaction.register(compensation)
+            }
             return verified
         } catch {
             do {
-                for (id, original) in movedStates.reversed() {
-                    guard let embodiment = embodiments[id] else {
-                        throw ExecutionError.missingSnapshot(id)
-                    }
-                    try rollback(embodiment.probe, to: original, context: "late-publication:\(id)")
-                }
+                try restoreMovedStates(
+                    movedStates,
+                    embodiments: embodiments,
+                    context: "late-publication"
+                )
             } catch {
                 throw ExecutionError.rollbackVerificationFailed(String(describing: error))
             }
@@ -347,7 +384,7 @@ struct PebbleAgentMovementExecutor {
                 node: next
             )
         }
-        let original = capture(embodiment.probe)
+        let original = embodiment.probe.capturePhysicalState()
         embodiment.probe.prevX = original.x
         embodiment.probe.prevY = original.y
         embodiment.probe.prevZ = original.z
@@ -464,57 +501,32 @@ struct PebbleAgentMovementExecutor {
         )
     }
 
-    private func capture(_ probe: LabCoreAgentEntity) -> PhysicalState {
-        PhysicalState(
-            x: probe.x, y: probe.y, z: probe.z,
-            prevX: probe.prevX, prevY: probe.prevY, prevZ: probe.prevZ,
-            yaw: probe.yaw, pitch: probe.pitch,
-            prevYaw: probe.prevYaw, prevPitch: probe.prevPitch
-        )
-    }
-
     private func rollback(
         _ probe: LabCoreAgentEntity,
-        to original: PhysicalState,
+        to original: LabCoreAgentPhysicalState,
         context: String
     ) throws {
-        // Reverse a step-up from its upper cell before descending; reverse a
-        // step-down by rising before the horizontal leg. Both legs still pass
-        // through Core collision and avoid teleportation.
-        if probe.y > original.y {
-            probe.move(original.x - probe.x, 0, original.z - probe.z)
-            probe.move(0, original.y - probe.y, 0)
-        } else if probe.y < original.y {
-            probe.move(0, original.y - probe.y, 0)
-            probe.move(original.x - probe.x, 0, original.z - probe.z)
-        } else {
-            probe.move(original.x - probe.x, 0, original.z - probe.z)
-        }
-        probe.prevX = original.prevX
-        probe.prevY = original.prevY
-        probe.prevZ = original.prevZ
-        probe.yaw = original.yaw
-        probe.pitch = original.pitch
-        probe.prevYaw = original.prevYaw
-        probe.prevPitch = original.prevPitch
-        let epsilon = 0.000_001
-        guard abs(probe.x - original.x) <= epsilon,
-              abs(probe.y - original.y) <= epsilon,
-              abs(probe.z - original.z) <= epsilon,
-              probe.prevX == original.prevX,
-              probe.prevY == original.prevY,
-              probe.prevZ == original.prevZ,
-              probe.yaw == original.yaw,
-              probe.pitch == original.pitch,
-              probe.prevYaw == original.prevYaw,
-              probe.prevPitch == original.prevPitch else {
+        guard probe.restorePhysicalState(original) else {
             throw ExecutionError.rollbackVerificationFailed(
-                "\(context):position=\(probe.x),\(probe.y),\(probe.z)"
-                    + "/\(original.x),\(original.y),\(original.z)"
-                    + ":prev=\(probe.prevX),\(probe.prevY),\(probe.prevZ)"
-                    + "/\(original.prevX),\(original.prevY),\(original.prevZ)"
-                    + ":orientation=\(probe.yaw),\(probe.pitch),\(probe.prevYaw),\(probe.prevPitch)"
-                    + "/\(original.yaw),\(original.pitch),\(original.prevYaw),\(original.prevPitch)"
+                "\(context):expected={\(original)} "
+                    + "observed={\(probe.capturePhysicalState())}"
+            )
+        }
+    }
+
+    private func restoreMovedStates(
+        _ movedStates: [(String, LabCoreAgentPhysicalState)],
+        embodiments: [String: PebbleAgentEmbodiment],
+        context: String
+    ) throws {
+        for (id, original) in movedStates.reversed() {
+            guard let embodiment = embodiments[id] else {
+                throw ExecutionError.missingSnapshot(id)
+            }
+            try rollback(
+                embodiment.probe,
+                to: original,
+                context: "\(context):\(id)"
             )
         }
     }

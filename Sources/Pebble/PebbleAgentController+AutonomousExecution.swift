@@ -401,14 +401,16 @@ extension PebbleAgentController {
         ) else { throw ControllerError.feedbackBoundary("stale fishing opportunity") }
         _ = try wildSubsistenceExecutor.approach(
             world: world, actor: actor,
-            target: opportunity.lastObservedPosition, reach: 2
+            target: opportunity.lastObservedPosition, reach: 2,
+            candidatePhysicalTransaction: activeCandidatePhysicalTransaction
         )
         var candidate = session
         var candidateRecorder = recorder
         let physical = try wildSubsistenceExecutor.fish(
             world: world, actor: actor, water: opportunity.lastObservedPosition,
             rodSlot: rodSlot, attemptID: attemptID.rawValue,
-            materialGateway: materialCustodyGateway
+            materialGateway: materialCustodyGateway,
+            candidatePhysicalTransaction: activeCandidatePhysicalTransaction
         ) { ids, acquired, fingerprint, attribution in
             let outcome = AgentSubsistenceOutcome(
                 attemptID: attemptID, opportunityID: opportunity.opportunityID,
@@ -492,14 +494,16 @@ extension PebbleAgentController {
             throw ControllerError.feedbackBoundary("hunting target absent or physically ambiguous")
         }
         _ = try wildSubsistenceExecutor.approach(
-            world: world, actor: actor, target: resolved.1, reach: 2
+            world: world, actor: actor, target: resolved.1, reach: 2,
+            candidatePhysicalTransaction: activeCandidatePhysicalTransaction
         )
         var candidate = session
         var candidateRecorder = recorder
         let physical = try wildSubsistenceExecutor.hunt(
             world: world, actor: actor, target: resolved.0,
             expectedSpecies: species, weaponSlot: weaponSlot,
-            attemptID: attemptID.rawValue, materialGateway: materialCustodyGateway
+            attemptID: attemptID.rawValue, materialGateway: materialCustodyGateway,
+            candidatePhysicalTransaction: activeCandidatePhysicalTransaction
         ) { ids, acquired, fingerprint, attribution in
             let outcome = AgentSubsistenceOutcome(
                 attemptID: attemptID, opportunityID: opportunity.opportunityID,
@@ -575,7 +579,9 @@ extension PebbleAgentController {
             _ = try livestockExecutor.feed(
                 world: world, actor: actor, animal: animal,
                 taskID: task.taskID, actionID: actionID, recordID: record.recordID,
-                completedAtTick: session.tick, publish: publish
+                completedAtTick: session.tick,
+                candidatePhysicalTransaction: activeCandidatePhysicalTransaction,
+                publish: publish
             )
         case .collectProduct:
             guard let sheep = animal as? Sheep else {
@@ -585,7 +591,9 @@ extension PebbleAgentController {
                 world: world, actor: actor, sheep: sheep,
                 taskID: task.taskID, actionID: actionID, recordID: record.recordID,
                 materialGateway: materialCustodyGateway,
-                completedAtTick: session.tick, publish: publish
+                completedAtTick: session.tick,
+                candidatePhysicalTransaction: activeCandidatePhysicalTransaction,
+                publish: publish
             )
         case .breed:
             let feedCount = actor.carriedItems.compactMap { $0 }.filter {

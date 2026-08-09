@@ -524,9 +524,6 @@ extension PebbleAgentController {
                 )
                 session = candidate
                 recorder = candidateRecorder
-                receiptTransaction.recordInsertion(
-                    try worldAgriculturalActionReceiptStore().receipt(actionID)
-                )
                 try injectAgricultureCycleObservationFault(
                     at: "after-action-publication"
                 )
@@ -1667,34 +1664,108 @@ extension PebbleAgentController {
                 z: Int($0.z.rounded(.down))
             )
         })
-        for _ in 0..<32 {
-            if embodiment.position == destination { return }
-            guard let path = findPath(
-                world, embodiment.x, embodiment.y, embodiment.z,
-                Double(destination.x) + 0.5, Double(destination.y),
-                Double(destination.z) + 0.5, 600, true
-            ), let node = path.first else {
-                throw PebbleAgentAgricultureProofError.failed("Core navigation unavailable")
+        let original = embodiment.probe.capturePhysicalState()
+        var reservation: PebbleCandidatePhysicalCompensationReservation?
+        do {
+            for _ in 0..<32 {
+                if embodiment.position == destination {
+                    if let activeCandidatePhysicalTransaction,
+                       let reservation {
+                        let expectedAfter = embodiment.probe.capturePhysicalState()
+                        let probe = embodiment.probe
+                        try activeCandidatePhysicalTransaction.register(
+                            PebbleCandidatePhysicalCompensation(
+                                reservation: reservation,
+                                mutation: "agriculture actor navigation",
+                                agentID: probe.labAgentId,
+                                probeID: probe.physicalId,
+                                expectedBefore: original.description,
+                                observedState: {
+                                    probe.capturePhysicalState().description
+                                },
+                                compensate: {
+                                    guard embodiment.probe === probe,
+                                          embodiment.isValid(in: world),
+                                          probe.capturePhysicalState() == expectedAfter else {
+                                        return false
+                                    }
+                                    return probe.restorePhysicalState(original)
+                                }
+                            )
+                        )
+                    }
+                    return
+                }
+                guard let path = findPath(
+                    world, embodiment.x, embodiment.y, embodiment.z,
+                    Double(destination.x) + 0.5, Double(destination.y),
+                    Double(destination.z) + 0.5, 600, true
+                ), let node = path.first else {
+                    throw PebbleAgentAgricultureProofError.failed(
+                        "Core navigation unavailable"
+                    )
+                }
+                let next = AgentPosition(x: node.x, y: node.y, z: node.z)
+                guard !occupied.contains(next) else {
+                    throw PebbleAgentAgricultureProofError.failed("dynamic obstacle")
+                }
+                if reservation == nil, let activeCandidatePhysicalTransaction {
+                    reservation = try activeCandidatePhysicalTransaction.reserve(
+                        compensationPrefix: "agriculture-navigation:"
+                            + "\(embodiment.probe.labAgentId):"
+                            + "\(destination.x),\(destination.y),\(destination.z)"
+                    )
+                }
+                let before = embodiment.position
+                embodiment.probe.yaw = detAtan2(
+                    -(Double(next.x) + 0.5 - embodiment.x),
+                    Double(next.z) + 0.5 - embodiment.z
+                )
+                embodiment.probe.move(
+                    Double(next.x) + 0.5 - embodiment.x,
+                    Double(next.y) - embodiment.y,
+                    Double(next.z) + 0.5 - embodiment.z
+                )
+                guard embodiment.position == next, embodiment.position != before else {
+                    throw PebbleAgentAgricultureProofError.failed(
+                        "Core movement collision"
+                    )
+                }
+                if environment[
+                    "PEBBLELAB_DISPOSABLE_CANDIDATE_AGRICULTURE_NAVIGATION_FAULT"
+                ] == "after-first-verified-movement",
+                   !candidateAgricultureNavigationFailureProofInjected {
+                    candidateAgricultureNavigationFailureProofInjected = true
+                    trace(
+                        "candidate agriculture navigation fault seam "
+                            + "operation=navigateAgricultureActor "
+                            + "point=after-first-verified-movement "
+                            + "before={\(original)} "
+                            + "after={\(embodiment.probe.capturePhysicalState())} "
+                            + "globalTokenRegistered=0"
+                    )
+                    throw PebbleAgentAgricultureProofError.failed(
+                        "injected failure after first verified agriculture movement"
+                    )
+                }
             }
-            let next = AgentPosition(x: node.x, y: node.y, z: node.z)
-            guard !occupied.contains(next) else {
-                throw PebbleAgentAgricultureProofError.failed("dynamic obstacle")
+            throw PebbleAgentAgricultureProofError.failed("navigation bound")
+        } catch {
+            guard embodiment.probe.restorePhysicalState(original) else {
+                throw PebbleAgentMovementExecutor.ExecutionError
+                    .rollbackVerificationFailed(
+                        "agriculture-navigation:expected={\(original)} "
+                            + "observed={\(embodiment.probe.capturePhysicalState())}"
+                    )
             }
-            let before = embodiment.position
-            embodiment.probe.yaw = detAtan2(
-                -(Double(next.x) + 0.5 - embodiment.x),
-                Double(next.z) + 0.5 - embodiment.z
+            trace(
+                "CANDIDATE_PHYSICAL_LOCAL_ROLLBACK "
+                    + "operation=navigateAgricultureActor "
+                    + "error=\(error) restored={\(embodiment.probe.capturePhysicalState())} "
+                    + "globalTokenRegistered=0"
             )
-            embodiment.probe.move(
-                Double(next.x) + 0.5 - embodiment.x,
-                Double(next.y) - embodiment.y,
-                Double(next.z) + 0.5 - embodiment.z
-            )
-            guard embodiment.position == next, embodiment.position != before else {
-                throw PebbleAgentAgricultureProofError.failed("Core movement collision")
-            }
+            throw error
         }
-        throw PebbleAgentAgricultureProofError.failed("navigation bound")
     }
 
     func agricultureWorkPosition(for soil: AgentPosition) -> AgentPosition {

@@ -60,7 +60,7 @@ public func hashFloat3(_ seed: UInt32, _ x: Int, _ y: Int, _ z: Int, _ salt: UIn
 }
 
 /// mutable PRNG (sfc32) — identical sequence for any seed, on any machine
-public struct RandomX {
+public struct RandomX: Equatable {
     public var debugStateA: UInt32 { a }
     private var a: UInt32
     private var b: UInt32

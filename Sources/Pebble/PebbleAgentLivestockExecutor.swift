@@ -38,6 +38,7 @@ struct PebbleAgentLivestockExecutor {
         actionID: AgentLivestockActionID,
         recordID: AgentManagedAnimalRecordID,
         completedAtTick: Int,
+        candidatePhysicalTransaction: PebbleCandidatePhysicalTransaction? = nil,
         publish: (AgentLivestockValidatedOutcome) throws -> Void
     ) throws -> AgentLivestockValidatedOutcome {
         guard actor.isValid(in: world) else { throw ExecutionError.invalidActor }
@@ -55,10 +56,26 @@ struct PebbleAgentLivestockExecutor {
         let loveBefore = animal.loveTicks
         let growthBefore = animal.growUpAge
         let causeBefore = animal.data.loveCause
+        let reservation: PebbleCandidatePhysicalCompensationReservation?
+        if let candidatePhysicalTransaction {
+            reservation = try candidatePhysicalTransaction.reserve(
+                compensationPrefix: "livestock-feed:\(actionID.rawValue)"
+            )
+        } else {
+            reservation = nil
+        }
         let material = try PebbleAgentMaterialSnapshotBridge().snapshot(
             of: ItemStack(held.id, 1, damage: held.damage, ench: held.ench, label: held.label, data: held.data)
         )
-        guard animal.tryFeed(held, actorEntityID: actor.probe.id) else {
+        let (fed, bufferedWorldEffects) = captureCandidateWorldEffects(
+            world: world
+        ) {
+            animal.tryFeed(held, actorEntityID: actor.probe.id)
+        }
+        if candidatePhysicalTransaction == nil {
+            publishCandidateWorldEffects(bufferedWorldEffects, world: world)
+        }
+        guard fed else {
             throw ExecutionError.feedRefused
         }
         held.count -= 1
@@ -72,19 +89,63 @@ struct PebbleAgentLivestockExecutor {
         )
         do {
             try publish(outcome)
+            if let candidatePhysicalTransaction, let reservation {
+                let inventoryAfter = actor.carriedItems.map { $0?.copy() }
+                let loveAfter = animal.loveTicks
+                let growthAfter = animal.growUpAge
+                let causeAfter = animal.data.loveCause
+                let compensation = PebbleCandidatePhysicalCompensation(
+                    reservation: reservation,
+                    mutation: "livestock feeding",
+                    agentID: actor.agentID,
+                    probeID: actor.physicalID,
+                    expectedBefore: "inventory/love=\(loveBefore)/growth=\(growthBefore)",
+                    observedState: {
+                        "love=\(animal.loveTicks) growth=\(animal.growUpAge)"
+                    },
+                    compensate: {
+                        guard actor.isValid(in: world),
+                              inventoryEqual(actor.carriedItems, inventoryAfter),
+                              animal.world === world,
+                              world.entityById[animal.id] === animal,
+                              animal.loveTicks == loveAfter,
+                              animal.growUpAge == growthAfter,
+                              animal.data.loveCause == causeAfter else {
+                            return false
+                        }
+                        actor.carriedItems = inventoryBefore.map { $0?.copy() }
+                        animal.loveTicks = loveBefore
+                        animal.growUpAge = growthBefore
+                        animal.data.loveCause = causeBefore
+                        return inventoryEqual(actor.carriedItems, inventoryBefore)
+                            && animal.loveTicks == loveBefore
+                            && animal.growUpAge == growthBefore
+                            && animal.data.loveCause == causeBefore
+                    },
+                    commit: {
+                        publishCandidateWorldEffects(
+                            bufferedWorldEffects, world: world
+                        )
+                    }
+                )
+                do {
+                    try candidatePhysicalTransaction.register(compensation)
+                } catch {
+                    actor.carriedItems = inventoryBefore.map { $0?.copy() }
+                    animal.loveTicks = loveBefore
+                    animal.growUpAge = growthBefore
+                    animal.data.loveCause = causeBefore
+                    throw ExecutionError.rollbackFailure
+                }
+            }
             return outcome
         } catch {
             actor.carriedItems = inventoryBefore
             animal.loveTicks = loveBefore
             animal.growUpAge = growthBefore
             animal.data.loveCause = causeBefore
-            guard actor.carriedItems.elementsEqual(inventoryBefore, by: { lhs, rhs in
-                switch (lhs, rhs) {
-                case (nil, nil): return true
-                case let (a?, b?): return a.id == b.id && a.count == b.count && a.damage == b.damage
-                default: return false
-                }
-            }), animal.loveTicks == loveBefore, animal.growUpAge == growthBefore,
+            guard inventoryEqual(actor.carriedItems, inventoryBefore),
+                  animal.loveTicks == loveBefore, animal.growUpAge == growthBefore,
                   animal.data.loveCause == causeBefore else { throw ExecutionError.rollbackFailure }
             throw error
         }
@@ -99,6 +160,7 @@ struct PebbleAgentLivestockExecutor {
         recordID: AgentManagedAnimalRecordID,
         materialGateway: PebbleAgentMaterialCustodyGateway,
         completedAtTick: Int,
+        candidatePhysicalTransaction: PebbleCandidatePhysicalTransaction? = nil,
         publish: (AgentLivestockValidatedOutcome) throws -> Void
     ) throws -> AgentLivestockValidatedOutcome {
         guard actor.isValid(in: world), sheep.world === world,
@@ -106,22 +168,45 @@ struct PebbleAgentLivestockExecutor {
         guard let slot = actor.carriedItems.indices.first(where: {
             actor.carriedItems[$0].map { itemDef($0.id).name == "shears" && $0.count == 1 } ?? false
         }), let tool = actor.carriedItems[slot] else { throw ExecutionError.missingTool }
+        let inventoryBefore = actor.carriedItems.map { $0?.copy() }
         let toolBefore = tool.copy()
-        guard let shearing = sheep.shearForLivestock() else { throw ExecutionError.productUnavailable }
-        if damageItemStack(tool, amount: 1, random: { gameRng.nextFloat() }) == .broken {
-            actor.carriedItems[slot] = nil
+        let shearedBefore = sheep.sheared
+        let gameRngBefore = gameRng
+        let reservation: PebbleCandidatePhysicalCompensationReservation?
+        if let candidatePhysicalTransaction {
+            reservation = try candidatePhysicalTransaction.reserve(
+                compensationPrefix: "livestock-shear:\(actionID.rawValue)"
+            )
+        } else {
+            reservation = nil
         }
+        let (shearingPhysical, bufferedWorldEffects) =
+            captureCandidateWorldEffects(world: world) {
+                let shearing = sheep.shearForLivestock()
+                if damageItemStack(
+                    tool, amount: 1, random: { gameRng.nextFloat() }
+                ) == .broken {
+                    actor.carriedItems[slot] = nil
+                }
+                return shearing
+            }
+        if candidatePhysicalTransaction == nil {
+            publishCandidateWorldEffects(bufferedWorldEffects, world: world)
+        }
+        guard let shearing = shearingPhysical else {
+            throw ExecutionError.productUnavailable
+        }
+        let inventoryAfterToolDamage = actor.carriedItems.map { $0?.copy() }
         func rollbackPhysicalShearing() throws {
-            sheep.sheared = false
-            actor.carriedItems[slot] = toolBefore
+            sheep.sheared = shearedBefore
+            actor.carriedItems = inventoryBefore.map { $0?.copy() }
+            gameRng = gameRngBefore
             for id in shearing.spawnedItemEntityIDs {
                 if let item = world.entityById[id] as? ItemEntity { world.removeEntity(item) }
             }
-            guard !sheep.sheared,
+            guard sheep.sheared == shearedBefore,
                   shearing.spawnedItemEntityIDs.allSatisfy({ world.entityById[$0] == nil }),
-                  actor.carriedItems[slot]?.id == toolBefore.id,
-                  actor.carriedItems[slot]?.count == toolBefore.count,
-                  actor.carriedItems[slot]?.damage == toolBefore.damage else {
+                  inventoryEqual(actor.carriedItems, inventoryBefore) else {
                 throw ExecutionError.rollbackFailure
             }
         }
@@ -163,7 +248,61 @@ struct PebbleAgentLivestockExecutor {
                 catch { publicationError = error; return false }
             }
         )
-        if acquisition.succeeded, let published { return published }
+        if acquisition.succeeded, let published {
+            if let candidatePhysicalTransaction, let reservation {
+                let compensation = PebbleCandidatePhysicalCompensation(
+                    reservation: reservation,
+                    mutation: "livestock shearing",
+                    agentID: actor.agentID,
+                    probeID: actor.physicalID,
+                    expectedBefore: "sheared=\(shearedBefore ? 1 : 0) "
+                        + "tool=\(toolBefore.id):\(toolBefore.damage)",
+                    observedState: {
+                        "sheared=\(sheep.sheared ? 1 : 0) "
+                            + "entities=\(shearing.spawnedItemEntityIDs)"
+                    },
+                    compensate: {
+                        guard actor.isValid(in: world),
+                              sheep.world === world,
+                              world.entityById[sheep.id] === sheep,
+                              sheep.sheared,
+                              inventoryEqual(
+                                  actor.carriedItems,
+                                  inventoryAfterToolDamage
+                              ),
+                              shearing.spawnedItemEntityIDs.allSatisfy({ id in
+                                  world.entityById[id] is ItemEntity
+                              }) else {
+                            return false
+                        }
+                        for id in shearing.spawnedItemEntityIDs {
+                            if let item = world.entityById[id] as? ItemEntity {
+                                world.removeEntity(item)
+                            }
+                        }
+                        actor.carriedItems = inventoryBefore.map { $0?.copy() }
+                        sheep.sheared = shearedBefore
+                        gameRng = gameRngBefore
+                        return inventoryEqual(actor.carriedItems, inventoryBefore)
+                            && sheep.sheared == shearedBefore
+                            && shearing.spawnedItemEntityIDs.allSatisfy {
+                                world.entityById[$0] == nil
+                            }
+                    },
+                    commit: {
+                        publishCandidateWorldEffects(
+                            bufferedWorldEffects, world: world
+                        )
+                    }
+                )
+                do {
+                    try candidatePhysicalTransaction.register(compensation)
+                } catch {
+                    throw ExecutionError.rollbackFailure
+                }
+            }
+            return published
+        }
         try rollbackPhysicalShearing()
         if let publicationError { throw publicationError }
         if acquisition.status == .rollbackFailure { throw ExecutionError.rollbackFailure }
@@ -215,5 +354,18 @@ struct PebbleAgentLivestockExecutor {
             productReady: (animal as? Sheep).map { !$0.sheared && !$0.baby } ?? false,
             reason: reason, observedAtTick: tick
         )
+    }
+
+    private func inventoryEqual(
+        _ lhs: [ItemStack?],
+        _ rhs: [ItemStack?]
+    ) -> Bool {
+        lhs.elementsEqual(rhs, by: { left, right in
+            switch (left, right) {
+            case (nil, nil): return true
+            case let (a?, b?): return a == b
+            default: return false
+            }
+        })
     }
 }

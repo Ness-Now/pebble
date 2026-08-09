@@ -471,7 +471,7 @@ struct PebbleWorldAgriculturalActionReceiptStore {
     }
 }
 
-struct PebbleWorldEcologicalObservationReceiptTransaction {
+final class PebbleWorldEcologicalObservationReceiptTransaction {
     private(set) var inserted: [PebbleEcologicalObservationReceipt] = []
     private(set) var removed: [PebbleEcologicalObservationReceipt] = []
     private(set) var insertedAgriculturalActions:
@@ -489,13 +489,18 @@ struct PebbleWorldEcologicalObservationReceiptTransaction {
         Set(inserted.map(\.receiptID))
     }
 
-    mutating func recordInsertion(
+    var stagedReceiptIDs: [String] {
+        inserted.map { $0.receiptID.rawValue }
+            + insertedAgriculturalActions.map { $0.receiptID.rawValue }
+    }
+
+    func recordInsertion(
         _ receipt: PebbleEcologicalObservationReceipt
     ) {
         inserted.append(receipt)
     }
 
-    mutating func recordRemoval(
+    func recordRemoval(
         _ receipt: PebbleEcologicalObservationReceipt
     ) {
         if let insertedIndex = inserted.firstIndex(where: {
@@ -507,13 +512,13 @@ struct PebbleWorldEcologicalObservationReceiptTransaction {
         }
     }
 
-    mutating func recordInsertion(
+    func recordInsertion(
         _ receipt: PebbleAgriculturalActionReceipt
     ) {
         insertedAgriculturalActions.append(receipt)
     }
 
-    mutating func recordRemoval(
+    func recordRemoval(
         _ receipt: PebbleAgriculturalActionReceipt
     ) {
         if let insertedIndex = insertedAgriculturalActions.firstIndex(where: {
@@ -525,7 +530,7 @@ struct PebbleWorldEcologicalObservationReceiptTransaction {
         }
     }
 
-    mutating func commit() {
+    func commit() {
         committed = true
     }
 }
@@ -768,12 +773,13 @@ extension PebbleAgentController {
         session: inout AgentSimulationSession,
         recorder: inout AgentReplayRecorder?
     ) throws -> AgentAgriculturalActionRecord {
-        var cleanup = PebbleWorldEcologicalObservationReceiptTransaction()
+        var cleanup = activeCandidateReceiptTransaction
+            ?? PebbleWorldEcologicalObservationReceiptTransaction()
         try reconcileWorldAgriculturalActionReceiptRetention(
             for: session,
             transaction: &cleanup
         )
-        cleanup.commit()
+        if activeCandidateReceiptTransaction == nil { cleanup.commit() }
 
         let store = try worldAgriculturalActionReceiptStore()
         let receipt = store.makeReceipt(
@@ -825,6 +831,7 @@ extension PebbleAgentController {
             )
             session = candidate
             recorder = candidateRecorder
+            activeCandidateReceiptTransaction?.recordInsertion(receipt)
             return record
         } catch {
             _ = try store.remove(receipt.receiptID)
