@@ -67,6 +67,7 @@ extension PebbleAgentController {
             birthReservation = nil
         }
         let probe = try createProbe(for: newborn, in: world)
+        var birthRegistrationSeamHandled = false
         do {
             if kinshipLateFailureProofEnabled, !kinshipLateFailureProofInjected {
                 _ = try candidate.durableStateBytes()
@@ -108,8 +109,9 @@ extension PebbleAgentController {
             }
             probesByAgentId[newborn.id] = probe
             if let activeCandidatePhysicalTransaction, let birthReservation {
-                try activeCandidatePhysicalTransaction.register(
-                    PebbleCandidatePhysicalCompensation(
+                do {
+                    try activeCandidatePhysicalTransaction.registerOrCompensate(
+                        PebbleCandidatePhysicalCompensation(
                         reservation: birthReservation,
                         mutation: "birth probe creation",
                         agentID: newborn.id,
@@ -130,12 +132,20 @@ extension PebbleAgentController {
                                 && world.entityById[probe.id] == nil
                                 && self.probesByAgentId[newborn.id] == nil
                         }
+                        )
                     )
-                )
+                } catch {
+                    birthRegistrationSeamHandled = true
+                    throw error
+                }
             }
             session = candidate
             recorder = candidateRecorder
         } catch {
+            if birthRegistrationSeamHandled {
+                isPaused = true
+                throw error
+            }
             if probesByAgentId[newborn.id] === probe {
                 probesByAgentId.removeValue(forKey: newborn.id)
             }

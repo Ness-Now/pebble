@@ -24,7 +24,10 @@ extension PebbleAgentController {
             physicalWorldTick: world.time,
             injectedCompensationFailurePrefix: environment[
                 "PEBBLELAB_DISPOSABLE_CANDIDATE_COMPENSATION_FAULT"
-            ] == "movement-collision" ? "movement" : nil
+            ] == "movement-collision" ? "movement" : nil,
+            injectedRegistrationFailurePrefix: environment[
+                "PEBBLELAB_DISPOSABLE_CANDIDATE_REGISTRATION_FAULT"
+            ] == "movement" ? "movement" : nil
         )
         activeCandidatePhysicalTransaction = candidatePhysicalTransaction
         physicalActionGateway.candidatePhysicalTransaction =
@@ -1465,6 +1468,13 @@ extension PebbleAgentController {
             let candidateReceiptIDs = receiptTransaction.stagedReceiptIDs.sorted()
             let registeredCompensations =
                 candidatePhysicalTransaction.registeredCompensationIDs
+            let registrationFailures =
+                candidatePhysicalTransaction.registrationFailureIDs
+            let localRegistrationCompensations =
+                candidatePhysicalTransaction.locallyCompensatedRegistrationIDs
+            let localRegistrationBoundaries =
+                candidatePhysicalTransaction
+                    .locallyCompensatedRegistrationDiagnostics
             var receiptRollbackFailure: String?
             if !receiptTransaction.committed {
                 do {
@@ -1510,7 +1520,12 @@ extension PebbleAgentController {
                 isPaused = true
                 lastError = "candidate physical hard failure: \(hardFailure)"
                 runtimeErrorCount += 1
-                trace("CANDIDATE_PHYSICAL_HARD_FAILURE \(hardFailure)")
+                trace(
+                    "CANDIDATE_PHYSICAL_HARD_FAILURE \(hardFailure) "
+                        + "publishedRecorder=unchanged "
+                        + "registrationFailures="
+                        + "\(registrationFailures.joined(separator: ","))"
+                )
                 return false
             }
             let restoredProbeStates = probesByAgentId.keys.sorted().compactMap { id in
@@ -1521,7 +1536,13 @@ extension PebbleAgentController {
             trace(
                 "CANDIDATE_PHYSICAL_ROLLBACK operation=advanceOneTick "
                     + "transaction=\(candidatePhysicalTransaction.transactionID) "
-                    + "error=\(error) registered=\(registeredCompensations.joined(separator: ",")) "
+                    + "error=\(error) registrationFailures="
+                    + "\(registrationFailures.joined(separator: ",")) "
+                    + "localRegistrationCompensations="
+                    + "\(localRegistrationCompensations.joined(separator: ",")) "
+                    + "localRegistrationBoundaries="
+                    + "\(localRegistrationBoundaries.joined(separator: "|")) "
+                    + "registered=\(registeredCompensations.joined(separator: ",")) "
                     + "completed=\(physicalRollback.completed.joined(separator: ",")) "
                     + "receipts=\(candidateReceiptIDs.joined(separator: ",")) receiptsRetained=0 "
                     + "publishedSession=unchanged publishedSessionTick=\(self.session?.tick ?? -1) "

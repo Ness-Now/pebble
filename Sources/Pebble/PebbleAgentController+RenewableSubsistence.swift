@@ -406,16 +406,7 @@ extension PebbleAgentController {
                     return restoreFixture()
                 }
             )
-            do {
-                try transaction.register(compensation)
-            } catch {
-                guard restoreFixture() else {
-                    throw PebbleRenewableSubsistenceProofError.failed(
-                        "renewable fixture rollback"
-                    )
-                }
-                throw error
-            }
+            try transaction.registerOrCompensate(compensation)
         }
         try navigateAgricultureActor(
             world: world, embodiment: PebbleAgentEmbodiment(probe: probe),

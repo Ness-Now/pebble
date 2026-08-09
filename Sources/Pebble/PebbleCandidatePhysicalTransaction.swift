@@ -165,7 +165,9 @@ final class PebbleCandidatePhysicalTransaction {
     private var nextOrdinal = 0
     private var compensations: [Int: PebbleCandidatePhysicalCompensation] = [:]
     private var compensationIDs = Set<String>()
+    private(set) var registrationFailureIDs: [String] = []
     private(set) var locallyCompensatedRegistrationIDs: [String] = []
+    private(set) var locallyCompensatedRegistrationDiagnostics: [String] = []
     private(set) var committed = false
     private(set) var rolledBack = false
 
@@ -259,6 +261,7 @@ final class PebbleCandidatePhysicalTransaction {
             return
         } catch let registrationError {
             let reservation = compensation.reservation
+            registrationFailureIDs.append(reservation.compensationID)
             let ownsReservation = reservation.transactionID == transactionID
                 && compensationIDs.contains(reservation.compensationID)
             if ownsReservation, !committed, !rolledBack {
@@ -270,9 +273,12 @@ final class PebbleCandidatePhysicalTransaction {
                         continue
                     }
                     do {
-                        try child.compensate()
+                        try compensateAfterRegistrationFailure(child)
                         locallyCompensatedRegistrationIDs.append(
                             child.reservation.compensationID
+                        )
+                        locallyCompensatedRegistrationDiagnostics.append(
+                            localCompensationDiagnostic(child)
                         )
                         compensations.removeValue(forKey: childOrdinal)
                     } catch {
@@ -288,9 +294,12 @@ final class PebbleCandidatePhysicalTransaction {
                 }
             }
             do {
-                try compensation.compensate()
+                try compensateAfterRegistrationFailure(compensation)
                 locallyCompensatedRegistrationIDs.append(
                     reservation.compensationID
+                )
+                locallyCompensatedRegistrationDiagnostics.append(
+                    localCompensationDiagnostic(compensation)
                 )
             } catch {
                 if ownsReservation, !committed, !rolledBack,
@@ -305,6 +314,28 @@ final class PebbleCandidatePhysicalTransaction {
             }
             throw registrationError
         }
+    }
+
+    private func compensateAfterRegistrationFailure(
+        _ compensation: PebbleCandidatePhysicalCompensation
+    ) throws {
+        if let injectedCompensationFailurePrefix,
+           compensation.reservation.compensationID.hasPrefix(
+               injectedCompensationFailurePrefix
+           ) {
+            throw PebbleCandidatePhysicalTransactionError.compensationFailed(
+                compensation.reservation.compensationID,
+                "injected registration-seam collision/non-verifiable restore"
+            )
+        }
+        try compensation.compensate()
+    }
+
+    private func localCompensationDiagnostic(
+        _ compensation: PebbleCandidatePhysicalCompensation
+    ) -> String {
+        "\(compensation.reservation.compensationID):expected={"
+            + "\(compensation.expectedBefore)}:observed={\(compensation.observed)}"
     }
 
     var registeredCompensationIDs: [String] {

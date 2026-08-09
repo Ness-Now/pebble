@@ -56,6 +56,7 @@ struct PebbleAgentWildSubsistenceExecutor {
         let original = actor.probe.capturePhysicalState()
         var reservation: PebbleCandidatePhysicalCompensationReservation?
         var steps = 0
+        var registrationSeamHandled = false
         do {
             while steps < maximumSteps {
                 let here = actor.position
@@ -65,8 +66,9 @@ struct PebbleAgentWildSubsistenceExecutor {
                     if let candidatePhysicalTransaction, let reservation {
                         let expectedAfter = actor.probe.capturePhysicalState()
                         let probe = actor.probe
-                        try candidatePhysicalTransaction.register(
-                            PebbleCandidatePhysicalCompensation(
+                        do {
+                            try candidatePhysicalTransaction.registerOrCompensate(
+                                PebbleCandidatePhysicalCompensation(
                                 reservation: reservation,
                                 mutation: "wild subsistence approach",
                                 agentID: actor.agentID,
@@ -83,8 +85,12 @@ struct PebbleAgentWildSubsistenceExecutor {
                                     }
                                     return probe.restorePhysicalState(original)
                                 }
+                                )
                             )
-                        )
+                        } catch {
+                            registrationSeamHandled = true
+                            throw error
+                        }
                     }
                     return steps
                 }
@@ -119,6 +125,9 @@ struct PebbleAgentWildSubsistenceExecutor {
             }
             throw ExecutionError.outOfReach
         } catch {
+            if registrationSeamHandled {
+                throw error
+            }
             guard actor.probe.restorePhysicalState(original) else {
                 throw ExecutionError.rollbackFailure
             }

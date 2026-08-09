@@ -191,6 +191,7 @@ extension PebbleAgentController {
         }
         var completions: [PebbleMortalityPhysicalExitCompletion] = []
         var removedProbes: [LabCoreAgentEntity] = []
+        var mortalityRegistrationSeamHandled = false
         do {
             completions = try resolvePendingMortalityMaterialExits(
                 session: &current,
@@ -331,8 +332,9 @@ extension PebbleAgentController {
                !completions.isEmpty || !removedProbes.isEmpty {
                 let expectedProbeIDs = probesByAgentId.keys.sorted()
                 let expectedWorldEntities = world.entities
-                try candidateTransaction.register(
-                    PebbleCandidatePhysicalCompensation(
+                do {
+                    try candidateTransaction.registerOrCompensate(
+                        PebbleCandidatePhysicalCompensation(
                         reservation: mortalityReservation,
                         mutation: "mortality custody and probe exit",
                         expectedBefore: "probes=\(probesBefore.keys.sorted()) "
@@ -383,10 +385,19 @@ extension PebbleAgentController {
                                 && self.focusedAgentId == focusBefore
                                 && self.followMode == followBefore
                         }
+                        )
                     )
-                )
+                } catch {
+                    mortalityRegistrationSeamHandled = true
+                    throw error
+                }
             }
         } catch {
+            if mortalityRegistrationSeamHandled {
+                current = sessionBefore
+                recorder = recorderBefore
+                throw error
+            }
             for probe in removedProbes where !world.entities.contains(where: {
                 $0 === probe
             }) {

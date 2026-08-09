@@ -159,6 +159,7 @@ struct PebbleAgentLivestockExecutor {
             physicalCausalIDs: [animal.id], consumedItems: [material],
             attribution: "PebbleCore.Animal.tryFeed", completedAtTick: completedAtTick
         )
+        var registrationSeamHandled = false
         do {
             try publish(outcome)
             if let candidatePhysicalTransaction, let reservation {
@@ -201,17 +202,19 @@ struct PebbleAgentLivestockExecutor {
                     }
                 )
                 do {
-                    try candidatePhysicalTransaction.register(compensation)
+                    try candidatePhysicalTransaction.registerOrCompensate(
+                        compensation
+                    )
                 } catch {
-                    actor.carriedItems = inventoryBefore.map { $0?.copy() }
-                    animal.loveTicks = loveBefore
-                    animal.growUpAge = growthBefore
-                    animal.data.loveCause = causeBefore
-                    throw ExecutionError.rollbackFailure
+                    registrationSeamHandled = true
+                    throw error
                 }
             }
             return outcome
         } catch {
+            if registrationSeamHandled {
+                throw error
+            }
             actor.carriedItems = inventoryBefore
             animal.loveTicks = loveBefore
             animal.growUpAge = growthBefore

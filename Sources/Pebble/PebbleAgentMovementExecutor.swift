@@ -111,6 +111,7 @@ struct PebbleAgentMovementExecutor {
         var movementReservation: PebbleCandidatePhysicalCompensationReservation?
         var movedStates: [(String, LabCoreAgentPhysicalState)] = []
         var verified: [AgentVerifiedPhysicalMovement] = []
+        var registrationSeamHandled = false
 
         do {
             for id in ids {
@@ -300,10 +301,20 @@ struct PebbleAgentMovementExecutor {
                         }
                     }
                 )
-                try candidatePhysicalTransaction.register(compensation)
+                do {
+                    try candidatePhysicalTransaction.registerOrCompensate(
+                        compensation
+                    )
+                } catch {
+                    registrationSeamHandled = true
+                    throw error
+                }
             }
             return verified
         } catch {
+            if registrationSeamHandled {
+                throw error
+            }
             do {
                 try restoreMovedStates(
                     movedStates,

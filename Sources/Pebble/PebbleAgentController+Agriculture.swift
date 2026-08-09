@@ -1666,6 +1666,7 @@ extension PebbleAgentController {
         })
         let original = embodiment.probe.capturePhysicalState()
         var reservation: PebbleCandidatePhysicalCompensationReservation?
+        var registrationSeamHandled = false
         do {
             for _ in 0..<32 {
                 if embodiment.position == destination {
@@ -1673,8 +1674,10 @@ extension PebbleAgentController {
                        let reservation {
                         let expectedAfter = embodiment.probe.capturePhysicalState()
                         let probe = embodiment.probe
-                        try activeCandidatePhysicalTransaction.register(
-                            PebbleCandidatePhysicalCompensation(
+                        do {
+                            try activeCandidatePhysicalTransaction
+                                .registerOrCompensate(
+                                PebbleCandidatePhysicalCompensation(
                                 reservation: reservation,
                                 mutation: "agriculture actor navigation",
                                 agentID: probe.labAgentId,
@@ -1691,8 +1694,12 @@ extension PebbleAgentController {
                                     }
                                     return probe.restorePhysicalState(original)
                                 }
+                                )
                             )
-                        )
+                        } catch {
+                            registrationSeamHandled = true
+                            throw error
+                        }
                     }
                     return
                 }
@@ -1751,6 +1758,9 @@ extension PebbleAgentController {
             }
             throw PebbleAgentAgricultureProofError.failed("navigation bound")
         } catch {
+            if registrationSeamHandled {
+                throw error
+            }
             guard embodiment.probe.restorePhysicalState(original) else {
                 throw PebbleAgentMovementExecutor.ExecutionError
                     .rollbackVerificationFailed(
