@@ -50,8 +50,10 @@ CIV-00 through CIV-33: COMPLETE AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
-V4-GATE-D-v1: NOT EVALUATED
-Gate D Blocker 03: FIXED — LOCAL REVIEW CANDIDATE
+V4-GATE-D-v1: EVALUATED_FAIL_NOT_ACQUIRED
+Gate D Blocker 03: BLOCKER_FIX_PUBLISHED
+Gate D Evaluation 04: EVALUATED_FAIL_NOT_ACQUIRED
+Gate D Blocker 04: BLOCKER_FIX_LOCAL_CANDIDATE
 CIV-34: NOT STARTED
 ```
 
@@ -61,11 +63,13 @@ milestone is published in baseline
 `47104f70894b20e7d7db0042cb93f047540c336d`. Gate D Blocker 01 is fixed and
 published in baseline `6d114abb98aee652e44fe9a81c3bab47b72ff698`; Blocker
 02 is fixed and published in baseline
-`d0d99f8a1d06cf809b14a68c107f961b58c09674`. Gate D remains not evaluated.
-The Blocker 03 local review candidate scopes maturity authority to receipts
-staged by the open candidate-tick transaction and the exact current planting
-boundary while retaining prior-cycle history as read-only evidence. After its
-publication, independent Evaluation 04 is required.
+`d0d99f8a1d06cf809b14a68c107f961b58c09674`; Blocker 03 is fixed and
+published in baseline `4b11c93abd36a1a1c61d491df1e5efa6607f6206`.
+Independent Evaluation 04 remains historical FAIL evidence. The Blocker 04
+local candidate separates external World progression from candidate effects
+and compensates verified candidate-owned physical mutations before abandoning
+publication. After its future manual publication, independent Evaluation 05
+may be authorized. Gate D remains evaluated and not acquired.
 
 ## Operational
 
@@ -187,6 +191,13 @@ selection, non-mature and fail-closed mature semantics, cycle-scoped action
 identity, schema-30 restart, rollback injections and the real two-process
 second-harvest proof. It is product-correction evidence, not a Gate D PASS or
 acquisition report.
+
+[`GATE_D_BLOCKER_04_CANDIDATE_PHYSICAL_ATOMICITY_FIX.md`](GATE_D_BLOCKER_04_CANDIDATE_PHYSICAL_ATOMICITY_FIX.md)
+records Evaluation 04's preserved FAIL, the complete candidate-mutation
+inventory, external World-progression boundary, bounded compensation journal,
+full movement state, hard-failure policy, priority fault campaigns and
+checkpoint/restart evidence. It is product-correction evidence, not a Gate D
+PASS or acquisition report.
 
 [`GATE_C_EVALUATION_01_SUMMARY.md`](GATE_C_EVALUATION_01_SUMMARY.md) and
 [`GATE_C_EVALUATION_01_SUMMARY.json`](GATE_C_EVALUATION_01_SUMMARY.json)

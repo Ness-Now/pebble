@@ -19,7 +19,10 @@
     "gateDBlocker02PublishedCanonicalHead": "d0d99f8a1d06cf809b14a68c107f961b58c09674",
     "gateDEvaluation03EvaluatedProductHead": "d0d99f8a1d06cf809b14a68c107f961b58c09674",
     "gateDBlocker03AffectedProductHead": "d0d99f8a1d06cf809b14a68c107f961b58c09674",
-    "meaning": "Published product behavior independently evaluated for V4-GATE-C-v1 and Gate D evaluations 01, 02 and 03; all three evaluations remain historical FAIL evidence, Blockers 01 and 02 are fixed and published, and the targeted Blocker 03 correction is a local review candidate.",
+    "gateDBlocker03PublishedCanonicalHead": "4b11c93abd36a1a1c61d491df1e5efa6607f6206",
+    "gateDEvaluation04EvaluatedProductHead": "4b11c93abd36a1a1c61d491df1e5efa6607f6206",
+    "gateDBlocker04AffectedProductHead": "4b11c93abd36a1a1c61d491df1e5efa6607f6206",
+    "meaning": "Published product behavior independently evaluated for V4-GATE-C-v1 and Gate D evaluations 01 through 04; all four evaluations remain historical FAIL evidence, Blockers 01 through 03 are fixed and published, and the targeted Blocker 04 correction is a local review candidate.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -41,6 +44,7 @@
     "gateDBlocker01PositionRestoreFix": "docs/pebblelab/GATE_D_BLOCKER_01_POSITION_RESTORE_FIX.md",
     "gateDBlocker02EcologicalObserverHistoryFix": "docs/pebblelab/GATE_D_BLOCKER_02_ECOLOGICAL_OBSERVER_HISTORY_FIX.md",
     "gateDBlocker03AgricultureCycleObservationFix": "docs/pebblelab/GATE_D_BLOCKER_03_AGRICULTURE_CYCLE_OBSERVATION_FIX.md",
+    "gateDBlocker04CandidatePhysicalAtomicityFix": "docs/pebblelab/GATE_D_BLOCKER_04_CANDIDATE_PHYSICAL_ATOMICITY_FIX.md",
     "gateCEvidenceMarkdown": "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.md",
     "gateCEvidenceJSON": "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.json"
   },
@@ -56,7 +60,7 @@
     "activePhase": null,
     "completedThrough": "CIV-33",
     "nextEligiblePhase": null,
-    "nextAuthorizedAction": "GATE-D-BLOCKER-03-SENIOR-REVIEW-AND-MANUAL-PUBLICATION",
+    "nextAuthorizedAction": "GATE-D-BLOCKER-04-SENIOR-REVIEW-AND-MANUAL-PUBLICATION",
     "civ27Status": "completed",
     "civ28Status": "completed",
     "gateCStatus": "acquired",
@@ -69,8 +73,10 @@
     "gateRAcquired": true,
     "gateBAcquired": true,
     "gateCPublished": true,
-    "gateDStatus": "notEvaluated",
-    "gateDBlocker03Status": "fixedLocalReviewCandidate",
+    "gateDStatus": "evaluatedFailNotAcquired",
+    "gateDBlocker03Status": "fixedPublished",
+    "gateDEvaluation04Status": "evaluatedFailNotAcquired",
+    "gateDBlocker04Status": "blockerFixLocalCandidate",
     "renewableSubsistenceMilestoneStatus": "completedPublished",
     "v4CanonicalDocumentSet": true
   },
@@ -354,7 +360,7 @@
     "D": {
       "contractId": "V4-GATE-D-v1",
       "title": "Generational Continuity",
-      "status": "notEvaluated",
+      "status": "evaluatedFailNotAcquired",
       "requiredPhases": [
         "CIV-29",
         "CIV-30",
@@ -394,10 +400,21 @@
         "verdict": "failProductCorrectionRequired"
       },
       "blocker03AgricultureCycleObservation": {
-        "status": "fixedLocalReviewCandidate",
+        "status": "fixedPublished",
         "evidence": "docs/pebblelab/GATE_D_BLOCKER_03_AGRICULTURE_CYCLE_OBSERVATION_FIX.md",
         "gateAcquired": false,
-        "nextAfterPublication": "newIndependentEvaluation04"
+        "publishedCanonicalHead": "4b11c93abd36a1a1c61d491df1e5efa6607f6206"
+      },
+      "evaluation04": {
+        "evaluatedProductBaseline": "4b11c93abd36a1a1c61d491df1e5efa6607f6206",
+        "evidenceCommit": "d1115ae50318b15ffe064209b40a46dd44bb356f",
+        "verdict": "failProductCorrectionRequired"
+      },
+      "blocker04CandidatePhysicalAtomicity": {
+        "status": "blockerFixLocalCandidate",
+        "evidence": "docs/pebblelab/GATE_D_BLOCKER_04_CANDIDATE_PHYSICAL_ATOMICITY_FIX.md",
+        "gateAcquired": false,
+        "nextAfterPublication": "newIndependentEvaluation05"
       }
     },
     "E": {

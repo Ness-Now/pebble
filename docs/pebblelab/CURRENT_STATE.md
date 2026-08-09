@@ -14,29 +14,32 @@ SHA of the documentation commit that contains it.
   contracts.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
-Published product baseline evaluated by independent Gate D Evaluation 03 and
-affected by Gate D Blocker 03:
+Published product baseline evaluated by independent Gate D Evaluation 04 and
+affected by Gate D Blocker 04:
 
 ```text
-d0d99f8a1d06cf809b14a68c107f961b58c09674
+4b11c93abd36a1a1c61d491df1e5efa6607f6206
 ```
 
 The `CIV-33` completion, renewable-subsistence milestone and Gate D Blockers 01
-and 02 are published on the canonical branch. Independent Gate D Evaluations
-01, 02 and 03 remain immutable FAIL evidence for their evaluated baselines.
-Evaluation 03 found that a fresh mature observation from an earlier planting
-cycle could be selected for a stage-0 replanting at the same physical site.
+through 03 are published on the canonical branch. Independent Gate D
+Evaluations 01 through 04 remain immutable FAIL evidence for their evaluated
+baselines. Evaluation 04 found that an abandoned civilization candidate could
+leave an earlier successful physical movement in PebbleCore after a later
+agricultural navigation collision.
 
 ## Current program position
 
 ```text
 active CIV phase: none
-next authorized action: senior review and manual publication of Gate D Blocker 03 fix
+next authorized action: senior review and manual publication of Gate D Blocker 04 fix
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
-V4-GATE-D-v1 status: NOT EVALUATED
-Gate D Blocker 03 status: FIXED — LOCAL REVIEW CANDIDATE
+V4-GATE-D-v1 status: EVALUATED_FAIL_NOT_ACQUIRED
+Gate D Blocker 03 status: BLOCKER_FIX_PUBLISHED
+Gate D Evaluation 04 status: EVALUATED_FAIL_NOT_ACQUIRED
+Gate D Blocker 04 status: BLOCKER_FIX_LOCAL_CANDIDATE
 CIV-34 status: NOT STARTED
 roadmap generation: V4
 ```
@@ -45,17 +48,25 @@ The published Blocker 01 correction preserves verified physical position
 restart. The published Blocker 02 correction validates ecological observations
 across retained mortality boundaries and binds their physical content to
 bounded receipts in the World `SaveDB`, outside the civilization checkpoint.
-The targeted Blocker 03 correction now grants automatic crop-maturity
+The published Blocker 03 correction grants automatic crop-maturity
 authority only to an ecological receipt staged by the open candidate-tick
 World-receipt transaction, after also proving the exact current-cycle plant
 action and causal boundary. Retained observations are historical evidence. A
 current staged non-mature row permits the tick to continue; missing exact-cell
 evidence also permits progress without an agricultural transition. Causal
 ordering remains a consistency defense, not the sole proof of currentness.
-Schema 30 and Observer schema 7 remain unchanged. This work does not evaluate
-or acquire Gate D. After senior review, manual publication and remote
-verification, the next authorized action is independent `V4-GATE-D-v1`
-Evaluation 04.
+
+The targeted Blocker 04 correction separates external `World.tick()` crop
+progression from the later civilization candidate and gives the controller one
+bounded, reverse-order journal for verified compensations owned by the physical
+adapters. Failed candidates abandon receipts, recorder and session together;
+verified movement restores all captured entity fields directly in PebbleCore.
+A non-verifiable compensation produces an observable hard failure that pauses
+the session and refuses normal ticks, checkpoint operations and restart. Schema
+30 and Observer schema 7 remain unchanged. This work does not alter Evaluation
+04 or acquire Gate D. After senior review, manual publication and remote
+verification, the next authorized action may be independent `V4-GATE-D-v1`
+Evaluation 05.
 
 ## Last validation baseline
 
@@ -217,8 +228,9 @@ Gate D Blocker 02 regression: PASS
 
 ## Next authorized action
 
-After senior review, manual publication and remote verification of the Gate D
-Blocker 03 correction, the next eligible work is a new independent
-`V4-GATE-D-v1` Evaluation 04. Gate D remains **not evaluated** and is not
-acquired by this correction. `CIV-34` is not started and remains downstream of
-a future published Gate D PASS.
+The current authorized action is senior review and manual publication of the
+Gate D Blocker 04 local candidate. After publication and remote verification,
+the next eligible work may be a new independent `V4-GATE-D-v1` Evaluation 05.
+Gate D remains **EVALUATED_FAIL_NOT_ACQUIRED** and is not acquired by this
+correction. `CIV-34` is not started and remains downstream of a future
+published Gate D PASS.
