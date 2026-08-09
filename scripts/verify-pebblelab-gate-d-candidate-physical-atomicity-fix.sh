@@ -34,6 +34,7 @@ if [ "${1:-}" = "--dry-run" ]; then
     printf 'Gate D Blocker 04 candidate physical atomicity fix (dry run)\n'
     printf '  Baseline: %s\n' "$BASELINE"
     printf '  Historical Evaluation 04 FAIL: %s\n' "$EVALUATION_04_FAIL"
+    printf '  Test 0: unavailable shearing and injected parent-registration failure leave sheep, tool, RNG, custody, receipts, and publication exact.\n'
     printf '  Test 1: external renewable World progress, failed candidate, fresh retry, checkpoint and process restart.\n'
     printf '  Test 2: verified movement, late failure, exact full-state rollback, nominal retry, checkpoint and process restart.\n'
     printf '  Test 3: injected non-verifiable movement compensation, hard failure, and step/checkpoint/restart refusal.\n'
@@ -65,6 +66,9 @@ else
 fi
 
 HEADLESS_TRACE="$EVIDENCE_ROOT/00-priority-tests.log"
+SHEARING_HOME="$EVIDENCE_ROOT/shearing-home"
+SHEARING_TRACE="$EVIDENCE_ROOT/00-shearing-atomicity.log"
+SHEARING_CAPTURE="$EVIDENCE_ROOT/00-shearing-atomicity.png"
 RENEWABLE_HOME="$EVIDENCE_ROOT/renewable-home"
 RENEWABLE_TRACE="$EVIDENCE_ROOT/01-renewable-failure-retry.log"
 RENEWABLE_RESTART_TRACE="$EVIDENCE_ROOT/02-renewable-restart.log"
@@ -81,7 +85,7 @@ HARD_CAPTURE="$EVIDENCE_ROOT/05-compensation-hard-failure.png"
 SUMMARY_JSON="$EVIDENCE_ROOT/summary.json"
 CAPTURE_DIGESTS="$EVIDENCE_ROOT/capture-sha256.txt"
 
-/bin/mkdir -p "$RENEWABLE_HOME" "$MOVEMENT_HOME" "$HARD_HOME"
+/bin/mkdir -p "$SHEARING_HOME" "$RENEWABLE_HOME" "$MOVEMENT_HOME" "$HARD_HOME"
 
 swift build --disable-sandbox -c "$BUILD_CONFIGURATION" --product Pebble
 swift build --disable-sandbox -c "$BUILD_CONFIGURATION" --product pebsmoke
@@ -158,6 +162,7 @@ run_pebble_environment() {
     PEBBLELAB_APP_AGENTS_SKILLS=1 \
     PEBBLELAB_APP_AGENTS_ECOLOGICAL_OBSERVATION=1 \
     PEBBLELAB_APP_AGENTS_AGRICULTURE=1 \
+    PEBBLELAB_APP_AGENTS_LIVESTOCK=1 \
     PEBBLELAB_APP_AGENTS_OBSERVER=1 \
     PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
     PEBBLE_CMD="$proof_commands" \
@@ -166,6 +171,24 @@ run_pebble_environment() {
 }
 
 WORLD_RULES='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear'
+SHEARING_COMMANDS="$WORLD_RULES;/tp 14 68 -18|/tp 14 68 -18;/lab start;/lab pause;/lab movement off;/lab follow off;/lab overlay full;/lab population on;/lab lifecycle on;/lab skills on;/lab ecological-observation on;/lab livestock on;/lab livestock proof setup;/lab livestock proof atomicity;/lab livestock status;/lab status;/tp 18 80 -14 135 24"
+
+printf '\nTest 0: candidate shearing refusal and registration failure atomicity.\n'
+run_pebble "$SHEARING_HOME" "$SHEARING_TRACE" \
+    "$SHEARING_COMMANDS" "-|$SHEARING_CAPTURE|-" 46 \
+    PebbleLab-Disposable-GateD-B04-Shearing 1 '' '' ''
+require_trace "$SHEARING_TRACE" \
+    'candidatePhysicalRegisterClosedTransactionRefused: PASS committed=refused rolledBack=refused tokens=0' \
+    'closed candidate transactions refuse compensation registration'
+require_trace "$SHEARING_TRACE" \
+    'candidateShearingUnavailableLeavesPhysicalStateExact: PASS .*sheep=exact .*durability=exact .*rng=exact .*itemEntities=0 .*tokens=0 .*session=unchanged .*recorder=unchanged .*receipts=unchanged' \
+    'unavailable candidate shearing leaves all physical and publication state exact'
+require_trace "$SHEARING_TRACE" \
+    'candidateShearingRegistrationFailureCannotLeakParentMutation: PASS .*parent=restored childCustody=restored .*durability=exact .*rng=exact .*itemEntities=0 .*tokens=0 .*session=unchanged .*recorder=unchanged .*receipts=unchanged' \
+    'parent registration failure restores parent and child custody exactly'
+reject_trace "$SHEARING_TRACE" \
+    'candidateShearing.*: FAIL|CANDIDATE_PHYSICAL_HARD_FAILURE|runtimeErrors=[1-9]' \
+    'shearing atomicity failure, hard failure, or runtime error'
 RENEWABLE_START='/tp 14 68 -18;/lab start;/lab pause;/lab movement off;/lab follow off;/lab overlay full;/lab survival on;/lab population on;/lab settlement on;/lab ecology on;/lab ecology scan;/lab lifecycle on;/lab physical-food-survival on;/lab skills on;/lab ecological-observation on;/lab agriculture on;/lab observer open;/lab observer global;/lab step'
 RENEWABLE_COMMANDS="$WORLD_RULES;/tp 14 68 -18|$RENEWABLE_START;/lab renewable-subsistence setup;/lab renewable-subsistence status;/lab renewable-subsistence setup;/lab renewable-subsistence plant-first;/lab renewable-subsistence harvest-first;/lab renewable-subsistence status;/lab renewable-subsistence harvest-first;/lab renewable-subsistence status;/lab renewable-subsistence consume-replant;/lab renewable-subsistence status;/lab checkpoint save b04-renewable;/lab checkpoint load b04-renewable;/lab checkpoint status;/lab status;/tp 18 80 -14 135 24"
 RENEWABLE_RESTART_COMMANDS="$WORLD_RULES;/tp 14 68 -18|/tp 14 68 -18;/lab start;/lab pause;/lab movement off;/lab follow off;/lab overlay full;/lab checkpoint load b04-renewable;/lab renewable-subsistence status;/lab checkpoint status;/lab status;/tp 18 80 -14 135 24"
@@ -338,11 +361,11 @@ reject_trace "$HARD_TRACE" \
     'checkpoint saved name=forbidden|step tick=1|publishedSession=changed' \
     'candidate publication, forbidden checkpoint, or permissive continuation'
 
-for capture in "$RENEWABLE_CAPTURE" "$RENEWABLE_RESTART_CAPTURE" \
+for capture in "$SHEARING_CAPTURE" "$RENEWABLE_CAPTURE" "$RENEWABLE_RESTART_CAPTURE" \
     "$MOVEMENT_CAPTURE" "$MOVEMENT_RESTART_CAPTURE" "$HARD_CAPTURE"; do
     [ -s "$capture" ] || fail "capture missing: $capture"
 done
-/usr/bin/shasum -a 256 "$RENEWABLE_CAPTURE" "$RENEWABLE_RESTART_CAPTURE" \
+/usr/bin/shasum -a 256 "$SHEARING_CAPTURE" "$RENEWABLE_CAPTURE" "$RENEWABLE_RESTART_CAPTURE" \
     "$MOVEMENT_CAPTURE" "$MOVEMENT_RESTART_CAPTURE" "$HARD_CAPTURE" \
     > "$CAPTURE_DIGESTS"
 
@@ -362,6 +385,8 @@ fi
     printf '  "retryReceipt": "%s",\n' "$RETRY_RECEIPT"
     printf '  "failedReceiptRetained": false,\n'
     printf '  "retryReceiptCount": %s,\n' "$RETRY_RECEIPT_COUNT"
+    printf '  "candidateShearingUnavailableLeavesPhysicalStateExact": "PASS",\n'
+    printf '  "candidateShearingRegistrationFailureCannotLeakParentMutation": "PASS",\n'
     printf '  "candidateTickFailureAfterVerifiedMovementRestoresAllPhysicalState": "PASS",\n'
     printf '  "renewableWorldAdvanceRemainsExternalAfterCandidateFailure": "PASS",\n'
     printf '  "candidateCompensationCollisionHardFailsWithoutPublication": "PASS",\n'
@@ -371,10 +396,12 @@ fi
     printf '}\n'
 } > "$SUMMARY_JSON"
 
-/bin/rm -rf "$RENEWABLE_HOME" "$MOVEMENT_HOME" "$HARD_HOME"
+/bin/rm -rf "$SHEARING_HOME" "$RENEWABLE_HOME" "$MOVEMENT_HOME" "$HARD_HOME"
 
 printf '\nGATE D BLOCKER 04 REPRODUCED AND FIXED — LOCAL CANDIDATE\n'
 printf 'Evidence: %s\n' "$EVIDENCE_ROOT"
+printf 'candidateShearingUnavailableLeavesPhysicalStateExact: PASS\n'
+printf 'candidateShearingRegistrationFailureCannotLeakParentMutation: PASS\n'
 printf 'renewableWorldAdvanceRemainsExternalAfterCandidateFailure: PASS\n'
 printf 'candidateTickFailureAfterVerifiedMovementRestoresAllPhysicalState: PASS\n'
 printf 'candidateCompensationCollisionHardFailsWithoutPublication: PASS\n'

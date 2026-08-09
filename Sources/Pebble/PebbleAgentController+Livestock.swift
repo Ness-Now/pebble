@@ -32,7 +32,7 @@ extension PebbleAgentController {
         world: World,
         player: Player
     ) -> PebbleAgentCommandResult {
-        let usage = "Usage: /lab livestock <on|status|reconcile|proof [setup|feed|breed|work|loss]>"
+        let usage = "Usage: /lab livestock <on|status|reconcile|proof [setup|atomicity|feed|breed|work|loss]>"
         guard let command = arguments.first?.lowercased() else {
             return failure(usage)
         }
@@ -102,6 +102,8 @@ extension PebbleAgentController {
                 let phase = arguments.count == 2 ? arguments[1].lowercased() : "all"
                 switch phase {
                 case "setup": try setupLivestockProof(world: world)
+                case "atomicity":
+                    try runLivestockCandidateAtomicityProof(world: world)
                 case "feed": try runLivestockFeedProof(world: world)
                 case "breed": try runLivestockBreedProof(world: world)
                 case "work": try runLivestockWorkProof(world: world)
@@ -119,6 +121,341 @@ extension PebbleAgentController {
             }
         } catch {
             return failure("Livestock command failed: \(error)")
+        }
+    }
+
+    private func runLivestockCandidateAtomicityProof(world: World) throws {
+        guard let fixture = livestockProofFixture, fixture.stage == .setup,
+              let publishedSession = session,
+              let runtimeID = livestockRuntimeEntityIDByRecord[
+                  fixture.recordIDs[0]
+              ], let sheep = world.entityById[runtimeID] as? Sheep else {
+            throw ControllerError.livestockBoundary(
+                "candidate atomicity proof requires setup and exact sheep"
+            )
+        }
+        let actor = try PebbleAgentEmbodiment.resolve(
+            agentID: "agent_0", in: world,
+            mappedByAgentID: probesByAgentId
+        )
+        guard let toolSlot = actor.carriedItems.indices.first(where: { index in
+            actor.carriedItems[index].map {
+                itemDef($0.id).name == "shears" && $0.count == 1
+            } ?? false
+        }) else {
+            throw ControllerError.livestockBoundary(
+                "candidate atomicity proof missing shears"
+            )
+        }
+
+        func sheepBoundary() -> PebbleLivestockSheepPhysicalState {
+            PebbleLivestockSheepPhysicalState(sheep)
+        }
+        func itemEntityIDs() -> [Int] {
+            world.entities.compactMap { ($0 as? ItemEntity)?.id }.sorted()
+        }
+        func worldReceiptBoundary() throws -> [String] {
+            let ecological = try worldEcologicalObservationReceiptStore()
+            let agricultural = try worldAgriculturalActionReceiptStore()
+            let ecologicalRows = ecological.database.listWorldReceipts(
+                worldID: ecological.worldID,
+                kind: PebbleEcologicalObservationReceipt.kind
+            ).map {
+                "eco:\($0.receiptID):"
+                    + AgentCheckpointDigest.sha256($0.data).rawValue
+            }
+            let agriculturalRows = agricultural.database.listWorldReceipts(
+                worldID: agricultural.worldID,
+                kind: PebbleAgriculturalActionReceipt.kind
+            ).map {
+                "agriculture:\($0.receiptID):"
+                    + AgentCheckpointDigest.sha256($0.data).rawValue
+            }
+            return ecologicalRows + agriculturalRows
+        }
+        func cleanupAttempt(
+            inventory: [ItemStack?], sheared: Bool, rng: RandomX,
+            itemIDs: [Int], materialBoundary:
+                PebbleAgentMaterialCustodyGateway.BoundarySnapshot
+        ) {
+            let retained = Set(itemIDs)
+            for entity in world.entities where entity is ItemEntity
+                && !retained.contains(entity.id) {
+                world.removeEntity(entity)
+            }
+            actor.carriedItems = copyItemInventory(inventory)
+            sheep.sheared = sheared
+            gameRng = rng
+            materialCustodyGateway.restoreBoundarySnapshot(materialBoundary)
+        }
+
+        let publishedSessionBytes = try publishedSession.durableStateBytes()
+        let publishedRecorderBytes = try replayRecorder.map {
+            try AgentReplayCodec.encodeRecords($0.records)
+        }
+        let publishedReceipts = try worldReceiptBoundary()
+        let fixtureInventory = copyItemInventory(actor.carriedItems)
+        let fixtureSheared = sheep.sheared
+        let fixtureRng = gameRng
+        let fixtureItems = itemEntityIDs()
+        let fixtureMaterialBoundary = materialCustodyGateway.boundarySnapshot()
+        var failures: [String] = []
+
+        func closedTransactionRefusesRegistration(
+            terminal: String
+        ) throws -> Bool {
+            let transaction = PebbleCandidatePhysicalTransaction(
+                transactionID: "livestock-atomicity-closed-\(terminal)",
+                operation: "candidatePhysicalRegisterClosedTransactionRefused",
+                physicalWorldTick: world.time
+            )
+            let reservation = try transaction.reserve(
+                compensationPrefix: "closed-transaction-\(terminal)"
+            )
+            if terminal == "committed" {
+                transaction.commit()
+            } else {
+                _ = transaction.rollback()
+            }
+            let compensation = PebbleCandidatePhysicalCompensation(
+                reservation: reservation,
+                mutation: "closed candidate registration proof",
+                expectedBefore: "unchanged",
+                observedState: { "unchanged" },
+                compensate: { true }
+            )
+            do {
+                try transaction.register(compensation)
+                return false
+            } catch PebbleCandidatePhysicalTransactionError.noOpenCandidate {
+                return transaction.registeredCompensationIDs.isEmpty
+            }
+        }
+        let committedRegistrationRefused = try
+            closedTransactionRefusesRegistration(terminal: "committed")
+        let rolledBackRegistrationRefused = try
+            closedTransactionRefusesRegistration(terminal: "rolledBack")
+        if committedRegistrationRefused && rolledBackRegistrationRefused {
+            trace(
+                "candidatePhysicalRegisterClosedTransactionRefused: PASS "
+                    + "committed=refused rolledBack=refused tokens=0"
+            )
+        } else {
+            failures.append("candidatePhysicalRegisterClosedTransactionRefused")
+            trace(
+                "candidatePhysicalRegisterClosedTransactionRefused: FAIL "
+                    + "committed=\(committedRegistrationRefused ? "refused" : "accepted") "
+                    + "rolledBack=\(rolledBackRegistrationRefused ? "refused" : "accepted")"
+            )
+        }
+
+        sheep.sheared = true
+        actor.carriedItems = copyItemInventory(fixtureInventory)
+        actor.carriedItems[toolSlot]?.ench = [EnchInstance("unbreaking", 1)]
+        let unavailableInventory = copyItemInventory(actor.carriedItems)
+        let unavailableSheep = sheepBoundary()
+        let unavailableRng = gameRng
+        let unavailableItems = itemEntityIDs()
+        let unavailableMaterial = materialCustodyGateway.boundarySnapshot()
+        let unavailableTransaction = PebbleCandidatePhysicalTransaction(
+            transactionID: "livestock-atomicity-unavailable",
+            operation: "candidateShearingUnavailableLeavesPhysicalStateExact",
+            physicalWorldTick: world.time
+        )
+        let previousMaterialTransaction =
+            materialCustodyGateway.candidatePhysicalTransaction
+        materialCustodyGateway.candidatePhysicalTransaction =
+            unavailableTransaction
+        var unavailableRefused = false
+        var unavailablePublished = false
+        do {
+            _ = try livestockExecutor.shear(
+                world: world, actor: actor, sheep: sheep,
+                taskID: AgentLivestockTaskID(
+                    rawValue: "candidate-unavailable-task"
+                )!,
+                actionID: AgentLivestockActionID(
+                    rawValue: "candidate-unavailable-action"
+                )!,
+                recordID: fixture.recordIDs[0],
+                materialGateway: materialCustodyGateway,
+                completedAtTick: publishedSession.tick,
+                candidatePhysicalTransaction: unavailableTransaction,
+                publish: { _ in unavailablePublished = true }
+            )
+        } catch PebbleAgentLivestockExecutor.ExecutionError.productUnavailable {
+            unavailableRefused = true
+        } catch {
+            failures.append("unavailable unexpected error=\(error)")
+        }
+        materialCustodyGateway.candidatePhysicalTransaction =
+            previousMaterialTransaction
+        let unavailableSessionExact = try publishedSession.durableStateBytes()
+            == publishedSessionBytes
+        let unavailableRecorderExact = try replayRecorder.map {
+            try AgentReplayCodec.encodeRecords($0.records)
+        } == publishedRecorderBytes
+        let unavailableReceiptsExact = try worldReceiptBoundary()
+            == publishedReceipts
+        let unavailableExact = unavailableRefused && !unavailablePublished
+            && sheepBoundary() == unavailableSheep
+            && actor.carriedItems == unavailableInventory
+            && actor.carriedItems[toolSlot]?.damage
+                == unavailableInventory[toolSlot]?.damage
+            && gameRng == unavailableRng
+            && itemEntityIDs() == unavailableItems
+            && unavailableTransaction.registeredCompensationIDs.isEmpty
+            && materialCustodyGateway.boundarySnapshot() == unavailableMaterial
+            && unavailableSessionExact && unavailableRecorderExact
+            && unavailableReceiptsExact
+        if unavailableExact {
+            trace(
+                "candidateShearingUnavailableLeavesPhysicalStateExact: PASS "
+                    + "sheep=exact inventory=exact durability=exact rng=exact "
+                    + "itemEntities=0 tokens=0 session=unchanged "
+                    + "recorder=unchanged receipts=unchanged"
+            )
+        } else {
+            let sheepStatus = sheepBoundary() == unavailableSheep
+                ? "exact" : "changed"
+            let inventoryStatus = actor.carriedItems == unavailableInventory
+                ? "exact" : "changed"
+            let rngStatus = gameRng == unavailableRng ? "exact" : "changed"
+            failures.append(
+                "candidateShearingUnavailableLeavesPhysicalStateExact"
+            )
+            trace(
+                "candidateShearingUnavailableLeavesPhysicalStateExact: FAIL "
+                    + "sheep=\(sheepStatus) inventory=\(inventoryStatus) "
+                    + "rng=\(rngStatus) "
+                    + "tokens=\(unavailableTransaction.registeredCompensationIDs.count)"
+            )
+        }
+        cleanupAttempt(
+            inventory: fixtureInventory, sheared: fixtureSheared,
+            rng: fixtureRng, itemIDs: fixtureItems,
+            materialBoundary: fixtureMaterialBoundary
+        )
+
+        sheep.sheared = false
+        actor.carriedItems = copyItemInventory(fixtureInventory)
+        actor.carriedItems[toolSlot]?.ench = [EnchInstance("unbreaking", 1)]
+        let registrationInventory = copyItemInventory(actor.carriedItems)
+        let registrationSheep = sheepBoundary()
+        let registrationRng = gameRng
+        let registrationItems = itemEntityIDs()
+        let registrationMaterial = materialCustodyGateway.boundarySnapshot()
+        let registrationTransaction = PebbleCandidatePhysicalTransaction(
+            transactionID: "livestock-atomicity-registration",
+            operation:
+                "candidateShearingRegistrationFailureCannotLeakParentMutation",
+            physicalWorldTick: world.time,
+            injectedRegistrationFailurePrefix:
+                "livestock-shear:candidate-registration-action"
+        )
+        materialCustodyGateway.candidatePhysicalTransaction =
+            registrationTransaction
+        var registrationFailed = false
+        var candidateOutcome: AgentLivestockValidatedOutcome?
+        do {
+            _ = try livestockExecutor.shear(
+                world: world, actor: actor, sheep: sheep,
+                taskID: AgentLivestockTaskID(
+                    rawValue: "candidate-registration-task"
+                )!,
+                actionID: AgentLivestockActionID(
+                    rawValue: "candidate-registration-action"
+                )!,
+                recordID: fixture.recordIDs[0],
+                materialGateway: materialCustodyGateway,
+                completedAtTick: publishedSession.tick,
+                candidatePhysicalTransaction: registrationTransaction,
+                publish: { candidateOutcome = $0 }
+            )
+        } catch {
+            registrationFailed = true
+        }
+        materialCustodyGateway.candidatePhysicalTransaction =
+            previousMaterialTransaction
+        let childReservationPresent =
+            registrationTransaction.reservedCompensationIDs.contains {
+                $0.hasPrefix(
+                    "material-acquisition:candidate-registration-action:wool"
+                )
+            }
+        let locallyCompensated =
+            registrationTransaction.locallyCompensatedRegistrationIDs
+        let childCustodyCompensated = locallyCompensated.first.map {
+            $0.hasPrefix(
+                "material-acquisition:candidate-registration-action:wool"
+            )
+        } == true
+        let parentShearingCompensated = locallyCompensated.last.map {
+            $0.hasPrefix(
+                "livestock-shear:candidate-registration-action"
+            )
+        } == true
+        let registrationSessionExact = try publishedSession.durableStateBytes()
+            == publishedSessionBytes
+        let registrationRecorderExact = try replayRecorder.map {
+            try AgentReplayCodec.encodeRecords($0.records)
+        } == publishedRecorderBytes
+        let registrationReceiptsExact = try worldReceiptBoundary()
+            == publishedReceipts
+        let registrationExact = registrationFailed && candidateOutcome != nil
+            && childReservationPresent
+            && childCustodyCompensated && parentShearingCompensated
+            && locallyCompensated.count == 2
+            && sheepBoundary() == registrationSheep
+            && actor.carriedItems == registrationInventory
+            && actor.carriedItems[toolSlot]?.damage
+                == registrationInventory[toolSlot]?.damage
+            && gameRng == registrationRng
+            && itemEntityIDs() == registrationItems
+            && registrationTransaction.registeredCompensationIDs.isEmpty
+            && materialCustodyGateway.boundarySnapshot() == registrationMaterial
+            && registrationSessionExact && registrationRecorderExact
+            && registrationReceiptsExact
+        if registrationExact {
+            trace(
+                "candidateShearingRegistrationFailureCannotLeakParentMutation: PASS "
+                    + "parent=restored childCustody=restored sheep=exact "
+                    + "inventory=exact durability=exact rng=exact itemEntities=0 "
+                    + "tokens=0 session=unchanged recorder=unchanged receipts=unchanged"
+            )
+        } else {
+            let sheepStatus = sheepBoundary() == registrationSheep
+                ? "restored" : "leaked"
+            let inventoryStatus = actor.carriedItems == registrationInventory
+                ? "exact" : "changed"
+            let rngStatus = gameRng == registrationRng ? "exact" : "changed"
+            let tokens = registrationTransaction.registeredCompensationIDs
+                .joined(separator: ",")
+            failures.append(
+                "candidateShearingRegistrationFailureCannotLeakParentMutation"
+            )
+            trace(
+                "candidateShearingRegistrationFailureCannotLeakParentMutation: FAIL "
+                    + "parentSheep=\(sheepStatus) "
+                    + "childReserved=\(childReservationPresent ? 1 : 0) "
+                    + "localCompensations=\(locallyCompensated.joined(separator: ",")) "
+                    + "inventory=\(inventoryStatus) rng=\(rngStatus) "
+                    + "itemEntities=\(itemEntityIDs().count - registrationItems.count) "
+                    + "tokens=\(tokens)"
+            )
+        }
+        _ = registrationTransaction.rollback()
+        cleanupAttempt(
+            inventory: fixtureInventory, sheared: fixtureSheared,
+            rng: fixtureRng, itemIDs: fixtureItems,
+            materialBoundary: fixtureMaterialBoundary
+        )
+
+        guard failures.isEmpty else {
+            throw ControllerError.livestockBoundary(
+                "candidate shearing atomicity failures: "
+                    + failures.joined(separator: ",")
+            )
         }
     }
 
