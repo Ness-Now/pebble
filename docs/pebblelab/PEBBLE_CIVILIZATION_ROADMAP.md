@@ -65,7 +65,10 @@ newest eligible exact-cell evidence as mature or non-mature. Retained
 prior-cycle observations are historical evidence without automatic transition
 authority. The targeted Blocker 04 local candidate separates irreversible
 external World progression from compensable candidate physical effects and
-fails hard when an inverse cannot be verified. After its future manual
+fails hard when an inverse cannot be verified. Its senior-review correction
+also closes the shearing and nested parent/child token-registration gap while
+retaining the existing local ownership of already-correct movement, lifecycle
+and mortality paths. After its future manual
 publication, the next authorized action may be independent Gate D Evaluation
 05.
 

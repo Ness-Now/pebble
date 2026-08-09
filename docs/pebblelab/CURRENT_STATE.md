@@ -63,8 +63,12 @@ adapters. Failed candidates abandon receipts, recorder and session together;
 verified movement restores all captured entity fields directly in PebbleCore.
 A non-verifiable compensation produces an observable hard failure that pauses
 the session and refuses normal ticks, checkpoint operations and restart. Schema
-30 and Observer schema 7 remain unchanged. This work does not alter Evaluation
-04 or acquire Gate D. After senior review, manual publication and remote
+30 and Observer schema 7 remain unchanged. Senior review correction 01 also
+rejects unavailable shearing before tool/RNG mutation, closes nested
+child/parent registration failures for shearing, custody, physical action,
+fishing and hunting, and makes closed-transaction registration refusal a
+primitive invariant. This work does not alter Evaluation 04 or acquire Gate D.
+After senior review, manual publication and remote
 verification, the next authorized action may be independent `V4-GATE-D-v1`
 Evaluation 05.
 
