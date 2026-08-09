@@ -30,7 +30,7 @@ struct PebbleAgentMaterialBatchTransactionRequest {
     let expectedDestinationFingerprint: String
 }
 
-struct PebbleAgentMaterialTransactionOutcome {
+struct PebbleAgentMaterialTransactionOutcome: Equatable {
     let transactionID: String
     let status: PebbleAgentMaterialTransactionStatus
     let quantityMoved: Int
@@ -51,7 +51,7 @@ struct PebbleAgentItemEntityAcquisitionRecord: Equatable {
     let material: AgentMaterialStackSnapshot
 }
 
-struct PebbleAgentItemEntityAcquisitionOutcome {
+struct PebbleAgentItemEntityAcquisitionOutcome: Equatable {
     let transactionID: String
     let status: PebbleAgentMaterialTransactionStatus
     let acquired: [PebbleAgentItemEntityAcquisitionRecord]
@@ -197,7 +197,7 @@ final class PebbleAgentMaterialCustodyGateway {
             return nil
         }
     }
-    struct BoundarySnapshot {
+    struct BoundarySnapshot: Equatable {
         fileprivate let receiptOrder: [String]
         fileprivate let receipts: [String: PebbleAgentMaterialTransactionOutcome]
         fileprivate let acquisitionReceiptOrder: [String]
@@ -855,18 +855,13 @@ final class PebbleAgentMaterialCustodyGateway {
                     return false
                 }
                 self.restoreBoundarySnapshot(boundaryBefore)
-                return true
+                return self.boundarySnapshot() == boundaryBefore
             }
         )
         do {
-            try candidatePhysicalTransaction.register(compensation)
+            try candidatePhysicalTransaction.registerOrCompensate(compensation)
             return true
         } catch {
-            _ = source.write(sourceBefore)
-                && destination.write(destinationBefore)
-                && exactSlots(source.read(), sourceBefore)
-                && exactSlots(destination.read(), destinationBefore)
-            restoreBoundarySnapshot(boundaryBefore)
             return false
         }
     }
@@ -894,16 +889,13 @@ final class PebbleAgentMaterialCustodyGateway {
                     return false
                 }
                 self.restoreBoundarySnapshot(boundaryBefore)
-                return true
+                return self.boundarySnapshot() == boundaryBefore
             }
         )
         do {
-            try candidatePhysicalTransaction.register(compensation)
+            try candidatePhysicalTransaction.registerOrCompensate(compensation)
             return true
         } catch {
-            _ = source.write(sourceBefore)
-                && exactSlots(source.read(), sourceBefore)
-            restoreBoundarySnapshot(boundaryBefore)
             return false
         }
     }
@@ -946,23 +938,13 @@ final class PebbleAgentMaterialCustodyGateway {
                     return false
                 }
                 self.restoreBoundarySnapshot(boundaryBefore)
-                return true
+                return self.boundarySnapshot() == boundaryBefore
             }
         )
         do {
-            try candidatePhysicalTransaction.register(compensation)
+            try candidatePhysicalTransaction.registerOrCompensate(compensation)
             return true
         } catch {
-            _ = rollbackAcquisition(
-                reservation.compensationID,
-                source: source,
-                sourceItems: sourceItems,
-                sourceStacks: sourceStacks,
-                destination: destination,
-                destinationBefore: destinationBefore,
-                failure: .rollbackFailure
-            )
-            restoreBoundarySnapshot(boundaryBefore)
             return false
         }
     }

@@ -805,15 +805,9 @@ final class PebbleAgentPhysicalActionGateway {
             }
         )
         do {
-            try candidatePhysicalTransaction.register(compensation)
+            try candidatePhysicalTransaction.registerOrCompensate(compensation)
             return true
         } catch {
-            _ = rollback(
-                world: world,
-                mutations: mutations,
-                entityIDsBefore: entityIDsBefore,
-                rollbackActorState: rollbackActorState
-            )
             return false
         }
     }

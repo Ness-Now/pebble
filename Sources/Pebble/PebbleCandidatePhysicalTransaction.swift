@@ -51,6 +51,7 @@ enum PebbleCandidatePhysicalTransactionError: Error, CustomStringConvertible {
     case compensationCapacity(Int)
     case duplicateCompensation(String)
     case invalidReservation(String)
+    case injectedRegistrationFailure(String)
     case compensationFailed(String, String)
 
     var description: String {
@@ -65,6 +66,8 @@ enum PebbleCandidatePhysicalTransactionError: Error, CustomStringConvertible {
             return "duplicate physical compensation: \(id)"
         case let .invalidReservation(id):
             return "invalid physical compensation reservation: \(id)"
+        case let .injectedRegistrationFailure(id):
+            return "injected physical compensation registration failure: \(id)"
         case let .compensationFailed(id, reason):
             return "physical compensation failed: \(id): \(reason)"
         }
@@ -158,9 +161,11 @@ final class PebbleCandidatePhysicalTransaction {
     let operation: String
     let physicalWorldTick: Int
     let injectedCompensationFailurePrefix: String?
+    let injectedRegistrationFailurePrefix: String?
     private var nextOrdinal = 0
     private var compensations: [Int: PebbleCandidatePhysicalCompensation] = [:]
     private var compensationIDs = Set<String>()
+    private(set) var locallyCompensatedRegistrationIDs: [String] = []
     private(set) var committed = false
     private(set) var rolledBack = false
 
@@ -168,13 +173,16 @@ final class PebbleCandidatePhysicalTransaction {
         transactionID: String,
         operation: String,
         physicalWorldTick: Int,
-        injectedCompensationFailurePrefix: String? = nil
+        injectedCompensationFailurePrefix: String? = nil,
+        injectedRegistrationFailurePrefix: String? = nil
     ) {
         self.transactionID = transactionID
         self.operation = operation
         self.physicalWorldTick = physicalWorldTick
         self.injectedCompensationFailurePrefix =
             injectedCompensationFailurePrefix
+        self.injectedRegistrationFailurePrefix =
+            injectedRegistrationFailurePrefix
     }
 
     func reserve(
@@ -212,6 +220,18 @@ final class PebbleCandidatePhysicalTransaction {
 
     func register(_ compensation: PebbleCandidatePhysicalCompensation) throws {
         let reservation = compensation.reservation
+        guard !committed, !rolledBack else {
+            throw PebbleCandidatePhysicalTransactionError.noOpenCandidate(
+                reservation.compensationID
+            )
+        }
+        if let injectedRegistrationFailurePrefix,
+           reservation.compensationID.hasPrefix(
+               injectedRegistrationFailurePrefix
+           ) {
+            throw PebbleCandidatePhysicalTransactionError
+                .injectedRegistrationFailure(reservation.compensationID)
+        }
         guard reservation.transactionID == transactionID,
               compensationIDs.contains(reservation.compensationID),
               compensations[reservation.ordinal] == nil else {
@@ -222,10 +242,79 @@ final class PebbleCandidatePhysicalTransaction {
         compensations[reservation.ordinal] = compensation
     }
 
+    /// Transfers a locally verified mutation to the candidate journal.
+    ///
+    /// If registration is refused, compensations registered after this
+    /// reservation are necessarily nested child mutations from the same
+    /// synchronous adapter call. They are consumed first in reverse order,
+    /// followed by the offered parent compensation. Exact local restoration
+    /// leaves neither token registered. A non-verifiable restoration retains a
+    /// consumed diagnostic token so the enclosing candidate rollback must hard
+    /// fail instead of treating the reservation gap as clean.
+    func registerOrCompensate(
+        _ compensation: PebbleCandidatePhysicalCompensation
+    ) throws {
+        do {
+            try register(compensation)
+            return
+        } catch let registrationError {
+            let reservation = compensation.reservation
+            let ownsReservation = reservation.transactionID == transactionID
+                && compensationIDs.contains(reservation.compensationID)
+            if ownsReservation, !committed, !rolledBack {
+                let childOrdinals = compensations.keys.filter {
+                    $0 > reservation.ordinal
+                }.sorted(by: >)
+                for childOrdinal in childOrdinals {
+                    guard let child = compensations[childOrdinal] else {
+                        continue
+                    }
+                    do {
+                        try child.compensate()
+                        locallyCompensatedRegistrationIDs.append(
+                            child.reservation.compensationID
+                        )
+                        compensations.removeValue(forKey: childOrdinal)
+                    } catch {
+                        if compensations[reservation.ordinal] == nil {
+                            compensations[reservation.ordinal] = compensation
+                        }
+                        throw PebbleCandidatePhysicalTransactionError
+                            .compensationFailed(
+                                child.reservation.compensationID,
+                                "registration=\(registrationError) local=\(error)"
+                            )
+                    }
+                }
+            }
+            do {
+                try compensation.compensate()
+                locallyCompensatedRegistrationIDs.append(
+                    reservation.compensationID
+                )
+            } catch {
+                if ownsReservation, !committed, !rolledBack,
+                   compensations[reservation.ordinal] == nil {
+                    compensations[reservation.ordinal] = compensation
+                }
+                throw PebbleCandidatePhysicalTransactionError
+                    .compensationFailed(
+                        reservation.compensationID,
+                        "registration=\(registrationError) local=\(error)"
+                    )
+            }
+            throw registrationError
+        }
+    }
+
     var registeredCompensationIDs: [String] {
         compensations.keys.sorted().compactMap {
             compensations[$0]?.reservation.compensationID
         }
+    }
+
+    var reservedCompensationIDs: [String] {
+        compensationIDs.sorted()
     }
 
     var registeredBoundaryDiagnostics: [String] {

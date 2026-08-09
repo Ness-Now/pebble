@@ -1,6 +1,78 @@
 import PebbleAgents
 import PebbleCore
 
+struct PebbleLivestockSheepPhysicalState: Equatable,
+    CustomStringConvertible {
+    let sheared: Bool
+    let color: Int
+    let baby: Bool
+    let growUpAge: Int
+    let loveTicks: Int
+    let breedCooldown: Int
+    let loveCause: Int?
+    let eatGrassTimer: Int
+    let health: Double
+    let deathTime: Int
+    let x: Double
+    let y: Double
+    let z: Double
+    let prevX: Double
+    let prevY: Double
+    let prevZ: Double
+    let velocityX: Double
+    let velocityY: Double
+    let velocityZ: Double
+    let yaw: Double
+    let pitch: Double
+    let prevYaw: Double
+    let prevPitch: Double
+    let onGround: Bool
+    let horizontalCollision: Bool
+    let fallDistance: Double
+    let rng: RandomX
+
+    init(_ sheep: Sheep) {
+        sheared = sheep.sheared
+        color = sheep.color
+        baby = sheep.baby
+        growUpAge = sheep.growUpAge
+        loveTicks = sheep.loveTicks
+        breedCooldown = sheep.breedCooldown
+        loveCause = sheep.data.loveCause
+        eatGrassTimer = sheep.eatGrassTimer
+        health = sheep.health
+        deathTime = sheep.deathTime
+        x = sheep.x
+        y = sheep.y
+        z = sheep.z
+        prevX = sheep.prevX
+        prevY = sheep.prevY
+        prevZ = sheep.prevZ
+        velocityX = sheep.vx
+        velocityY = sheep.vy
+        velocityZ = sheep.vz
+        yaw = sheep.yaw
+        pitch = sheep.pitch
+        prevYaw = sheep.prevYaw
+        prevPitch = sheep.prevPitch
+        onGround = sheep.onGround
+        horizontalCollision = sheep.horizontalCollision
+        fallDistance = sheep.fallDistance
+        rng = sheep.rng
+    }
+
+    var description: String {
+        "sheared=\(sheared ? 1 : 0) color=\(color) baby=\(baby ? 1 : 0) "
+            + "growth=\(growUpAge) love=\(loveTicks) cooldown=\(breedCooldown) "
+            + "position=\(x),\(y),\(z) prev=\(prevX),\(prevY),\(prevZ) "
+            + "velocity=\(velocityX),\(velocityY),\(velocityZ) "
+            + "orientation=\(yaw),\(pitch),\(prevYaw),\(prevPitch) "
+            + "onGround=\(onGround ? 1 : 0) "
+            + "horizontalCollision=\(horizontalCollision ? 1 : 0) "
+            + "fallDistance=\(fallDistance)"
+    }
+}
+
 struct PebbleAgentLivestockExecutor {
     enum ExecutionError: Error, CustomStringConvertible {
         case invalidActor
@@ -170,7 +242,7 @@ struct PebbleAgentLivestockExecutor {
         }), let tool = actor.carriedItems[slot] else { throw ExecutionError.missingTool }
         let inventoryBefore = actor.carriedItems.map { $0?.copy() }
         let toolBefore = tool.copy()
-        let shearedBefore = sheep.sheared
+        let sheepBefore = PebbleLivestockSheepPhysicalState(sheep)
         let gameRngBefore = gameRng
         let reservation: PebbleCandidatePhysicalCompensationReservation?
         if let candidatePhysicalTransaction {
@@ -182,29 +254,33 @@ struct PebbleAgentLivestockExecutor {
         }
         let (shearingPhysical, bufferedWorldEffects) =
             captureCandidateWorldEffects(world: world) {
-                let shearing = sheep.shearForLivestock()
-                if damageItemStack(
-                    tool, amount: 1, random: { gameRng.nextFloat() }
-                ) == .broken {
-                    actor.carriedItems[slot] = nil
-                }
-                return shearing
+                sheep.shearForLivestock()
             }
-        if candidatePhysicalTransaction == nil {
-            publishCandidateWorldEffects(bufferedWorldEffects, world: world)
-        }
         guard let shearing = shearingPhysical else {
             throw ExecutionError.productUnavailable
         }
+        if damageItemStack(
+            tool, amount: 1, random: { gameRng.nextFloat() }
+        ) == .broken {
+            actor.carriedItems[slot] = nil
+        }
+        if candidatePhysicalTransaction == nil {
+            publishCandidateWorldEffects(bufferedWorldEffects, world: world)
+        }
         let inventoryAfterToolDamage = actor.carriedItems.map { $0?.copy() }
+        let sheepAfter = PebbleLivestockSheepPhysicalState(sheep)
         func rollbackPhysicalShearing() throws {
-            sheep.sheared = shearedBefore
+            guard PebbleLivestockSheepPhysicalState(sheep) == sheepAfter else {
+                throw ExecutionError.rollbackFailure
+            }
+            sheep.sheared = sheepBefore.sheared
+            sheep.rng = sheepBefore.rng
             actor.carriedItems = inventoryBefore.map { $0?.copy() }
             gameRng = gameRngBefore
             for id in shearing.spawnedItemEntityIDs {
                 if let item = world.entityById[id] as? ItemEntity { world.removeEntity(item) }
             }
-            guard sheep.sheared == shearedBefore,
+            guard PebbleLivestockSheepPhysicalState(sheep) == sheepBefore,
                   shearing.spawnedItemEntityIDs.allSatisfy({ world.entityById[$0] == nil }),
                   inventoryEqual(actor.carriedItems, inventoryBefore) else {
                 throw ExecutionError.rollbackFailure
@@ -255,17 +331,18 @@ struct PebbleAgentLivestockExecutor {
                     mutation: "livestock shearing",
                     agentID: actor.agentID,
                     probeID: actor.physicalID,
-                    expectedBefore: "sheared=\(shearedBefore ? 1 : 0) "
+                    expectedBefore: "\(sheepBefore) "
                         + "tool=\(toolBefore.id):\(toolBefore.damage)",
                     observedState: {
-                        "sheared=\(sheep.sheared ? 1 : 0) "
+                        "sheep={\(PebbleLivestockSheepPhysicalState(sheep))} "
                             + "entities=\(shearing.spawnedItemEntityIDs)"
                     },
                     compensate: {
                         guard actor.isValid(in: world),
                               sheep.world === world,
                               world.entityById[sheep.id] === sheep,
-                              sheep.sheared,
+                              PebbleLivestockSheepPhysicalState(sheep)
+                                == sheepAfter,
                               inventoryEqual(
                                   actor.carriedItems,
                                   inventoryAfterToolDamage
@@ -281,10 +358,12 @@ struct PebbleAgentLivestockExecutor {
                             }
                         }
                         actor.carriedItems = inventoryBefore.map { $0?.copy() }
-                        sheep.sheared = shearedBefore
+                        sheep.sheared = sheepBefore.sheared
+                        sheep.rng = sheepBefore.rng
                         gameRng = gameRngBefore
                         return inventoryEqual(actor.carriedItems, inventoryBefore)
-                            && sheep.sheared == shearedBefore
+                            && PebbleLivestockSheepPhysicalState(sheep)
+                                == sheepBefore
                             && shearing.spawnedItemEntityIDs.allSatisfy {
                                 world.entityById[$0] == nil
                             }
@@ -296,9 +375,11 @@ struct PebbleAgentLivestockExecutor {
                     }
                 )
                 do {
-                    try candidatePhysicalTransaction.register(compensation)
+                    try candidatePhysicalTransaction.registerOrCompensate(
+                        compensation
+                    )
                 } catch {
-                    throw ExecutionError.rollbackFailure
+                    throw error
                 }
             }
             return published

@@ -343,11 +343,10 @@ struct PebbleAgentWildSubsistenceExecutor {
                 }
             )
             do {
-                try candidatePhysicalTransaction.register(compensation)
+                try candidatePhysicalTransaction.registerOrCompensate(
+                    compensation
+                )
             } catch {
-                guard rollbackCandidateFishing() else {
-                    throw ExecutionError.rollbackFailure
-                }
                 throw error
             }
         }
@@ -534,11 +533,10 @@ struct PebbleAgentWildSubsistenceExecutor {
                 }
             )
             do {
-                try candidatePhysicalTransaction.register(compensation)
+                try candidatePhysicalTransaction.registerOrCompensate(
+                    compensation
+                )
             } catch {
-                guard rollbackCandidateHunt() else {
-                    throw ExecutionError.rollbackFailure
-                }
                 throw error
             }
         }
