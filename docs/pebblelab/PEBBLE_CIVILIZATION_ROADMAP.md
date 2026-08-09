@@ -67,10 +67,12 @@ authority. The targeted Blocker 04 local candidate separates irreversible
 external World progression from compensable candidate physical effects and
 fails hard when an inverse cannot be verified. Its senior-review correction
 also closes the shearing and nested parent/child token-registration gap while
-retaining the existing local ownership of already-correct movement, lifecycle
-and mortality paths. After its future manual
-publication, the next authorized action may be independent Gate D Evaluation
-05.
+the second correction routes every remaining productive post-mutation direct
+registration through the same `registerOrCompensate` fail-stop boundary.
+Exact local restoration leaves no token; unverifiable restoration remains
+journal-owned and necessarily hard-fails. No direct productive physical
+`.register(` call remains. After its future manual publication, the next
+authorized action may be independent Gate D Evaluation 05.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:

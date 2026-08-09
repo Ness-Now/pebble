@@ -92,19 +92,61 @@ result:
 | Path | Before/during mutation | Failure after mutation or during `register` | Ownership after success |
 | --- | --- | --- | --- |
 | Livestock shear | Reservation precedes mutation; unavailable shear returns before tool/RNG mutation; all later local errors restore exact sheep/tool/RNG/entities | Child custody then parent shearing compensate locally through `registerOrCompensate`, or force hard failure | Global candidate journal owns child and parent tokens |
-| Livestock feed | Existing `tryFeed` refusal is non-mutating; publication errors restore inventory/love/growth/cause exactly | Existing verified local register-failure rollback remains unchanged | Global candidate journal owns the feed token |
+| Livestock feed | Existing `tryFeed` refusal is non-mutating; publication errors restore inventory/love/growth/cause exactly | Registration refusal uses the same verified compensation through `registerOrCompensate`; an unverifiable restore remains journal-owned for hard failure | Global candidate journal owns the feed token |
 | Material custody | Existing transfer/consume/acquire local rollbacks remain authoritative | Registration refusal now runs the same exact compensation and verifies stacks plus boundary receipt cache; unverifiable restoration forces hard failure | Global candidate journal owns the material token |
 | Physical action gateway | Reservation precedes bounded Core mutation and existing validation/rollback | Registration refusal now uses the verified action compensation instead of ignoring a rollback result | Global candidate journal owns the action token |
 | Wild fishing and hunting | Existing local rollback restores actor/target, equipment, entities and RNG | Registered acquisition child is consumed before the fishing/hunting parent; partial child-only rollback is impossible | Global candidate journal owns child and parent tokens |
-| Wild approach, generic movement and agriculture navigation | Existing complete physical-state snapshots restore every successful local step | Existing verified register-failure rollback remains unchanged | Global candidate journal owns the movement token |
-| Birth and mortality | Existing composite local boundaries restore probe identity, World indexes, custody and controller mappings | Existing verified register-failure rollback remains unchanged; mortality suppresses nested material journaling | Global candidate journal owns the lifecycle composite token |
-| Renewable fixture | Existing fixture rollback verifies cells, block entity, sky light and inventory | Existing verified register-failure rollback remains unchanged | Global candidate journal owns the fixture token |
+| Wild approach, generic movement and agriculture navigation | Existing complete physical-state snapshots restore every successful local step | Registration refusal uses the offered movement compensation exactly once; a failed restore remains journal-owned for hard failure | Global candidate journal owns the movement token |
+| Birth and mortality | Existing composite local boundaries restore probe identity, World indexes, custody and controller mappings | Registration refusal uses the composite compensation exactly once; mortality still suppresses nested material journaling | Global candidate journal owns the lifecycle composite token |
+| Renewable fixture | Existing fixture rollback verifies cells, block entity, sky light and inventory | Registration refusal uses the same fixture compensation; a failed restore remains journal-owned for hard failure | Global candidate journal owns the fixture token |
 
 The audit therefore found additional registration-failure exposure in material
 custody, the physical-action gateway, and the nested fishing/hunting paths.
 Those gaps are corrected here. No audited path remains able to continue after
 an unverified registration-failure restore; it either restores exactly or
 enters the existing observable fail-stop boundary.
+
+## Senior review correction 02
+
+Review of corrected HEAD `1332517bfa0451f608a63c04407e030f86a0d62d`
+found that seven productive post-mutation call sites still invoked
+`PebbleCandidatePhysicalTransaction.register` directly. Each had a manually
+verified rollback, but an error from that manual rollback could escape before
+any token entered the global journal. The global rollback could therefore look
+clean without arming the fail-stop boundary.
+
+Agriculture navigation, generic movement, wild-subsistence approach, livestock
+feed, birth probe creation, mortality custody/probe exit and the renewable
+fixture now all transfer through `registerOrCompensate`. The helper is the sole
+registration-failure policy:
+
+1. successful registration leaves the global journal as sole owner;
+2. refused registration consumes newer synchronous child tokens in reverse
+   order and then the offered parent token;
+3. exact local compensation removes those tokens and propagates the original
+   registration error;
+4. a throwing, false or deliberately non-verifiable compensation retains a
+   diagnostic token in the global journal, so the enclosing rollback must
+   produce `PebbleCandidatePhysicalHardFailure`.
+
+The enclosing adapters mark only that `registerOrCompensate` already handled
+the seam. Their broader catches skip physical rollback in that case, preventing
+double compensation. Those catches retain their existing local rollback for
+errors that occur before ownership reaches the registration seam.
+
+The final static `.register(` inventory in `Sources/Pebble` is:
+
+| Call site | Classification | Why it is not a productive post-mutation physical seam |
+| --- | --- | --- |
+| `PebbleAgentController+Livestock.swift` | proof-only | Constructs a no-op compensation solely to prove that committed and rolled-back transactions refuse registration. |
+| `PebbleAgentController+MaterialRights.swift` | no physical mutation | Registers an `AgentMaterialRightsOperation` on a staged civilization value; it is not the candidate physical transaction. |
+| `PebbleAgentController+PersistenceReconciliation.swift` | no physical mutation | Registers an `AgentMaterialRightsOperation` during staged reconciliation; it is not the candidate physical transaction. |
+
+`registerOrCompensate` itself invokes the primitive `register` internally and
+immediately owns its error path; this is the intended primitive-internal call,
+not a direct adapter seam. The targeted runner regenerates and validates this
+three-row inventory. There are zero remaining direct productive physical
+registrations after mutation.
 
 On failure, candidate World receipts are removed first and verified absent,
 then physical tokens run in reverse order. The published session and recorder
@@ -209,6 +251,14 @@ It proves:
   no candidate state;
 - `candidatePhysicalRegisterClosedTransactionRefused`: direct primitive proof
   that both committed and rolled-back transactions reject registration;
+- `candidateRegistrationFailureRollbackSuccessRestoresExactly`: real verified
+  movement followed by injected registration refusal, exact local full-state
+  compensation, zero surviving token, unchanged session/recorder and no hard
+  failure;
+- `candidateRegistrationFailureRollbackUnverifiableHardFails`: real verified
+  movement followed by injected registration refusal and deliberately
+  non-verifiable local compensation, retained diagnostic ownership, observable
+  hard failure and refusal of step, checkpoint, reset, start and resume;
 - `renewableWorldAdvanceRemainsExternalAfterCandidateFailure`: one external
   growth interval, candidate failure with zero retained receipts, zero-tick
   retry, distinct observation receipt, identical deterministic harvest,
@@ -246,9 +296,10 @@ results:
   Blocker 03 reproduced and fixed, all eight late-failure boundaries exact,
   zero receipt leaks, duplicates or Observer mutation, exact cleanup;
 - `scripts/verify-pebblelab-gate-d-candidate-physical-atomicity-fix.sh`:
-  both shearing atomicity contracts, the closed-transaction primitive proof and
-  all three original priority contracts passed across failure, retry,
-  checkpoint and fresh-process restart; six rendered captures and their
+  both shearing atomicity contracts, both registration-seam contracts, the
+  closed-transaction primitive proof and all three original priority contracts
+  passed across failure, retry, checkpoint and fresh-process restart; eight
+  rendered captures and their
   SHA-256 manifest were inspected; and
 - `scripts/verify-pebblelab-live.sh --dry-run`: passed without launching or
   creating a directory.

@@ -67,7 +67,13 @@ the session and refuses normal ticks, checkpoint operations and restart. Schema
 rejects unavailable shearing before tool/RNG mutation, closes nested
 child/parent registration failures for shearing, custody, physical action,
 fishing and hunting, and makes closed-transaction registration refusal a
-primitive invariant. This work does not alter Evaluation 04 or acquire Gate D.
+primitive invariant. Senior review correction 02 routes the remaining
+productive post-mutation registrations—agriculture navigation, movement, wild
+approach, livestock feed, birth, mortality and the renewable fixture—through
+the same `registerOrCompensate` fail-stop policy. Exact local restoration leaves
+no token; an unverifiable restoration remains journal-owned and necessarily
+arms candidate physical hard failure. No direct productive physical
+`.register(` call remains. This work does not alter Evaluation 04 or acquire Gate D.
 After senior review, manual publication and remote
 verification, the next authorized action may be independent `V4-GATE-D-v1`
 Evaluation 05.
