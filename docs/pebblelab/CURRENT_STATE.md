@@ -14,11 +14,17 @@ SHA of the documentation commit that contains it.
   contracts.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
-Published product baseline evaluated by independent Gate D Evaluation 04 and
-affected by Gate D Blocker 04:
+Published canonical baseline evaluated by independent Gate D Evaluation 04
+and affected by Gate D Blocker 04:
 
 ```text
 4b11c93abd36a1a1c61d491df1e5efa6607f6206
+```
+
+Published Gate D Blocker 04 product-fix head:
+
+```text
+cca372bb841846db4b1010d26456bcc245b07c3e
 ```
 
 The `CIV-33` completion, renewable-subsistence milestone and Gate D Blockers 01
@@ -32,15 +38,16 @@ agricultural navigation collision.
 
 ```text
 active CIV phase: none
-next authorized action: senior review and manual publication of Gate D Blocker 04 fix
+next authorized action: NEW INDEPENDENT V4-GATE-D-v1 EVALUATION 05
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
 V4-GATE-D-v1 status: EVALUATED_FAIL_NOT_ACQUIRED
 Gate D Blocker 03 status: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 04 status: EVALUATED_FAIL_NOT_ACQUIRED
-Gate D Blocker 04 status: BLOCKER_FIX_LOCAL_CANDIDATE
-CIV-34 status: NOT STARTED
+Gate D Blocker 04 status: BLOCKER_FIX_PUBLISHED
+Gate D Evaluation 05 status: NOT_STARTED
+CIV-34 status: NOT_STARTED
 roadmap generation: V4
 ```
 
@@ -56,7 +63,7 @@ current staged non-mature row permits the tick to continue; missing exact-cell
 evidence also permits progress without an agricultural transition. Causal
 ordering remains a consistency defense, not the sole proof of currentness.
 
-The targeted Blocker 04 correction separates external `World.tick()` crop
+The published Blocker 04 correction separates external `World.tick()` crop
 progression from the later civilization candidate and gives the controller one
 bounded, reverse-order journal for verified compensations owned by the physical
 adapters. Failed candidates abandon receipts, recorder and session together;
@@ -74,9 +81,9 @@ the same `registerOrCompensate` fail-stop policy. Exact local restoration leaves
 no token; an unverifiable restoration remains journal-owned and necessarily
 arms candidate physical hard failure. No direct productive physical
 `.register(` call remains. This work does not alter Evaluation 04 or acquire Gate D.
-After senior review, manual publication and remote
-verification, the next authorized action may be independent `V4-GATE-D-v1`
-Evaluation 05.
+Senior review is approved, the published product-fix head is
+`cca372bb841846db4b1010d26456bcc245b07c3e`, and the next authorized action is
+a new independent `V4-GATE-D-v1` Evaluation 05. Evaluation 05 is not started.
 
 ## Last validation baseline
 
@@ -238,9 +245,8 @@ Gate D Blocker 02 regression: PASS
 
 ## Next authorized action
 
-The current authorized action is senior review and manual publication of the
-Gate D Blocker 04 local candidate. After publication and remote verification,
-the next eligible work may be a new independent `V4-GATE-D-v1` Evaluation 05.
+The current authorized action is a new independent `V4-GATE-D-v1` Evaluation
+05. Evaluation 05 is **NOT_STARTED**.
 Gate D remains **EVALUATED_FAIL_NOT_ACQUIRED** and is not acquired by this
 correction. `CIV-34` is not started and remains downstream of a future
 published Gate D PASS.

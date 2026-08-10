@@ -8,14 +8,18 @@ baseline `4b11c93abd36a1a1c61d491df1e5efa6607f6206`.
 ```text
 Gate D Evaluations 01 through 04: historical immutable FAIL
 Gate D Blockers 01 through 03: BLOCKER_FIX_PUBLISHED
-Gate D Blocker 04: BLOCKER_FIX_LOCAL_CANDIDATE
+Gate D Blocker 04: BLOCKER_FIX_PUBLISHED
 V4-GATE-D-v1: EVALUATED_FAIL_NOT_ACQUIRED
+Gate D Evaluation 05: NOT_STARTED
 CIV-34: NOT_STARTED
 ```
 
-The correction does not change Evaluation 04, acquire Gate D, start Evaluation
-05 or start `CIV-34`. No Evaluation 04 commit is merged into the product
-history. Its evidence was inspected only as immutable historical context.
+The published Blocker 04 product-fix head is
+`cca372bb841846db4b1010d26456bcc245b07c3e`. The correction does not change
+Evaluation 04, acquire Gate D, start Evaluation 05 or start `CIV-34`. No
+Evaluation 04 commit is merged into the product history. Its evidence was
+inspected only as immutable historical context. The historical filename is
+retained intentionally.
 
 ## Root cause
 
@@ -278,8 +282,9 @@ Gate D.
 
 ## Validation record
 
-The local candidate was validated on 2026-08-09 with the following exact
-results:
+The product-fix candidate, now senior-approved and recorded as published at
+`cca372bb841846db4b1010d26456bcc245b07c3e`, was validated on 2026-08-09 with
+the following exact results:
 
 - focused `candidate-physical-atomicity` pebsmoke selector: 3 passed, 0
   failed;
@@ -319,11 +324,12 @@ the journal is not extended across commands or process boundaries. The journal
 is bounded to 128 candidate mutations, and capacity failure occurs before the
 next physical mutation.
 
-Subject to the recorded full regression and live evidence, the maximum verdict
-of this work is:
+Following the recorded full regression, live evidence and senior approval, the
+publication state of this work is:
 
 ```text
-Gate D Blocker 04: BLOCKER_FIX_LOCAL_CANDIDATE
+Gate D Blocker 04: BLOCKER_FIX_PUBLISHED
 Gate D: EVALUATED_FAIL_NOT_ACQUIRED
+Independent Gate D Evaluation 05: NEXT AUTHORIZED ACTION, NOT_STARTED
 CIV-34: NOT_STARTED
 ```

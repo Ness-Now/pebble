@@ -53,8 +53,9 @@ V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
 V4-GATE-D-v1: EVALUATED_FAIL_NOT_ACQUIRED
 Gate D Blocker 03: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 04: EVALUATED_FAIL_NOT_ACQUIRED
-Gate D Blocker 04: BLOCKER_FIX_LOCAL_CANDIDATE
-CIV-34: NOT STARTED
+Gate D Blocker 04: BLOCKER_FIX_PUBLISHED
+Gate D Evaluation 05: NOT_STARTED
+CIV-34: NOT_STARTED
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -66,10 +67,12 @@ published in baseline `6d114abb98aee652e44fe9a81c3bab47b72ff698`; Blocker
 `d0d99f8a1d06cf809b14a68c107f961b58c09674`; Blocker 03 is fixed and
 published in baseline `4b11c93abd36a1a1c61d491df1e5efa6607f6206`.
 Independent Evaluation 04 remains historical FAIL evidence. The Blocker 04
-local candidate separates external World progression from candidate effects
-and compensates verified candidate-owned physical mutations before abandoning
-publication. After its future manual publication, independent Evaluation 05
-may be authorized. Gate D remains evaluated and not acquired.
+correction is published at product-fix head
+`cca372bb841846db4b1010d26456bcc245b07c3e`; it separates external World
+progression from candidate effects and compensates verified candidate-owned
+physical mutations before abandoning publication. A new independent
+Evaluation 05 is the next authorized action and is not started. Gate D remains
+evaluated and not acquired.
 
 ## Operational
 

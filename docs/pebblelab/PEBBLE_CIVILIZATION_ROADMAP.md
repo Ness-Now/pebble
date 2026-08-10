@@ -22,11 +22,17 @@ This anchors the product behavior evaluated for Gate C. The containing
 evidence/status commit is identified by Git rather than self-referenced by this
 roadmap.
 
-Published product baseline evaluated by independent Gate D Evaluation 04 and
-affected by Gate D Blocker 04:
+Published canonical baseline evaluated by independent Gate D Evaluation 04
+and affected by Gate D Blocker 04:
 
 ```text
 4b11c93abd36a1a1c61d491df1e5efa6607f6206
+```
+
+Published Gate D Blocker 04 product-fix head:
+
+```text
+cca372bb841846db4b1010d26456bcc245b07c3e
 ```
 
 ## Canonical position
@@ -37,15 +43,16 @@ Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: none
-next authorized action: senior review and manual publication of Gate D Blocker 04 fix
+next authorized action: NEW INDEPENDENT V4-GATE-D-v1 EVALUATION 05
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
 V4-GATE-D-v1: EVALUATED_FAIL_NOT_ACQUIRED
 Gate D Blocker 03: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 04: EVALUATED_FAIL_NOT_ACQUIRED
-Gate D Blocker 04: BLOCKER_FIX_LOCAL_CANDIDATE
-CIV-34: NOT STARTED
+Gate D Blocker 04: BLOCKER_FIX_PUBLISHED
+Gate D Evaluation 05: NOT_STARTED
+CIV-34: NOT_STARTED
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -63,7 +70,7 @@ be staged by the open candidate-tick transaction, then also proves the current
 plant action, cycle ordinal and causal boundary before classifying only the
 newest eligible exact-cell evidence as mature or non-mature. Retained
 prior-cycle observations are historical evidence without automatic transition
-authority. The targeted Blocker 04 local candidate separates irreversible
+authority. The published Blocker 04 correction separates irreversible
 external World progression from compensable candidate physical effects and
 fails hard when an inverse cannot be verified. Its senior-review correction
 also closes the shearing and nested parent/child token-registration gap while
@@ -71,8 +78,9 @@ the second correction routes every remaining productive post-mutation direct
 registration through the same `registerOrCompensate` fail-stop boundary.
 Exact local restoration leaves no token; unverifiable restoration remains
 journal-owned and necessarily hard-fails. No direct productive physical
-`.register(` call remains. After its future manual publication, the next
-authorized action may be independent Gate D Evaluation 05.
+`.register(` call remains. Its published product-fix head is
+`cca372bb841846db4b1010d26456bcc245b07c3e`. The next authorized action is a
+new independent Gate D Evaluation 05, which is not started.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:
@@ -237,7 +245,7 @@ found a historical ecological-observer validation blocker, also fixed and
 published. Evaluation 03 found a cycle-scoping blocker in agricultural
 maturity selection, now fixed and published. Evaluation 04 found that a late
 candidate failure could preserve an earlier physical effect; its targeted
-Blocker 04 correction is a **local review candidate**.
+Blocker 04 correction is **fixed and published**.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -543,8 +551,8 @@ The gate proves several possible generations, development shaped by childhood,
 causal aging and death, durable family distinctions, and survival of goods and
 obligations across people and restart.
 
-Status: **EVALUATED_FAIL_NOT_ACQUIRED**; Blocker 03 is published and Blocker
-04 is **BLOCKER_FIX_LOCAL_CANDIDATE**.
+Status: **EVALUATED_FAIL_NOT_ACQUIRED**; Blockers 03 and 04 are
+**BLOCKER_FIX_PUBLISHED**.
 All required CIV phases and the required milestone are published. Independent
 Evaluations 01 through 04 correctly remain
 `GATE D FAIL — PRODUCT CORRECTION REQUIRED` for their evaluated baselines. The
@@ -556,11 +564,10 @@ The published historical ecological-observer correction is documented in
 The published current-cycle agricultural-observation correction is documented
 in
 [`GATE_D_BLOCKER_03_AGRICULTURE_CYCLE_OBSERVATION_FIX.md`](GATE_D_BLOCKER_03_AGRICULTURE_CYCLE_OBSERVATION_FIX.md).
-The targeted candidate-physical-atomicity correction is documented in
+The published candidate-physical-atomicity correction is documented in
 [`GATE_D_BLOCKER_04_CANDIDATE_PHYSICAL_ATOMICITY_FIX.md`](GATE_D_BLOCKER_04_CANDIDATE_PHYSICAL_ATOMICITY_FIX.md).
-None of these corrections acquires Gate D. After senior review, manual
-publication and remote verification of Blocker 04, independent Gate D
-Evaluation 05 may be authorized.
+None of these corrections acquires Gate D. The next authorized action is a new
+independent Gate D Evaluation 05; Evaluation 05 is not started.
 
 ## Wave 3 — Local material economy
 
@@ -776,7 +783,7 @@ keeps incarnation physical and produces verifiable long-duration history.
 | `V3-GATE-R-v1` | acquired | `CIV-19` |
 | `V4-GATE-B-v1` | acquired | `CIV-25`; bounded embodied autonomy contract |
 | `V4-GATE-C-v1` | acquired | `CIV-26`–`CIV-28` |
-| `V4-GATE-D-v1` | evaluated FAIL, not acquired; Blocker 04 local candidate | `CIV-29`–`CIV-33`, renewable subsistence milestone and Blockers 01–03 published; independent Evaluation 05 may follow Blocker 04 publication |
+| `V4-GATE-D-v1` | evaluated FAIL, not acquired; Blocker 04 fixed and published | `CIV-29`–`CIV-33`, renewable subsistence milestone and Blockers 01–04 published; independent Evaluation 05 is the next authorized action and is not started |
 | `V4-GATE-E-v1` | planned | `CIV-34`–`CIV-37`; `CIV-38` optional |
 | `V4-GATE-F-v1` | planned | `CIV-39`; `CIV-40` optional |
 | `V4-GATE-G-v1` | planned | `CIV-41`–`CIV-47` |

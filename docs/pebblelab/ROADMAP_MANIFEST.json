@@ -22,7 +22,8 @@
     "gateDBlocker03PublishedCanonicalHead": "4b11c93abd36a1a1c61d491df1e5efa6607f6206",
     "gateDEvaluation04EvaluatedProductHead": "4b11c93abd36a1a1c61d491df1e5efa6607f6206",
     "gateDBlocker04AffectedProductHead": "4b11c93abd36a1a1c61d491df1e5efa6607f6206",
-    "meaning": "Published product behavior independently evaluated for V4-GATE-C-v1 and Gate D evaluations 01 through 04; all four evaluations remain historical FAIL evidence, Blockers 01 through 03 are fixed and published, and the targeted Blocker 04 correction is a local review candidate.",
+    "gateDBlocker04PublishedCanonicalHead": "cca372bb841846db4b1010d26456bcc245b07c3e",
+    "meaning": "Canonical history through the published Gate D Blocker 04 product fix; Gate D evaluations 01 through 04 remain historical FAIL evidence, Blockers 01 through 04 are fixed and published, and independent Evaluation 05 is the next authorized action but is not started.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -60,7 +61,7 @@
     "activePhase": null,
     "completedThrough": "CIV-33",
     "nextEligiblePhase": null,
-    "nextAuthorizedAction": "GATE-D-BLOCKER-04-SENIOR-REVIEW-AND-MANUAL-PUBLICATION",
+    "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-D-v1-EVALUATION-05",
     "civ27Status": "completed",
     "civ28Status": "completed",
     "gateCStatus": "acquired",
@@ -76,7 +77,8 @@
     "gateDStatus": "evaluatedFailNotAcquired",
     "gateDBlocker03Status": "fixedPublished",
     "gateDEvaluation04Status": "evaluatedFailNotAcquired",
-    "gateDBlocker04Status": "blockerFixLocalCandidate",
+    "gateDBlocker04Status": "fixedPublished",
+    "gateDEvaluation05Status": "notStarted",
     "renewableSubsistenceMilestoneStatus": "completedPublished",
     "v4CanonicalDocumentSet": true
   },
@@ -411,10 +413,13 @@
         "verdict": "failProductCorrectionRequired"
       },
       "blocker04CandidatePhysicalAtomicity": {
-        "status": "blockerFixLocalCandidate",
+        "status": "fixedPublished",
         "evidence": "docs/pebblelab/GATE_D_BLOCKER_04_CANDIDATE_PHYSICAL_ATOMICITY_FIX.md",
         "gateAcquired": false,
-        "nextAfterPublication": "newIndependentEvaluation05"
+        "publishedCanonicalHead": "cca372bb841846db4b1010d26456bcc245b07c3e"
+      },
+      "evaluation05": {
+        "status": "notStarted"
       }
     },
     "E": {
