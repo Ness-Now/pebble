@@ -29,11 +29,22 @@ reject_trace() {
     fi
 }
 
+require_trace_count() {
+    trace_file=$1
+    pattern=$2
+    expected_count=$3
+    description=$4
+    actual_count=$(/usr/bin/grep -Ec "$pattern" "$trace_file" || true)
+    [ "$actual_count" -eq "$expected_count" ] \
+        || fail "trace count $actual_count != $expected_count: $description"
+}
+
 if [ "${1:-}" = "--dry-run" ]; then
     printf 'Gate D Blocker 05 restart physical-care custody correction (dry run)\n'
     printf '  Process A: legitimate G1, durable care, real bread custody, protected checkpoint.\n'
     printf '  Process B: fresh bootstrap, exact custody restore, care debit and continuation.\n'
     printf '  Adversarial: post-custody rollback, corruption, conflict and multi-slot exactness.\n'
+    printf '  Senior review: stale position/custody reject false escrow and manifest-only restore.\n'
     printf '  Scope: targeted blocker proof only; this runner does not evaluate Gate D.\n'
     exit 0
 fi
@@ -66,6 +77,12 @@ MANIFEST_COPY="$EVIDENCE_ROOT/protected-custody-manifest.json"
 PROCESS_A_HOME="$EVIDENCE_ROOT/process-a-home"
 CORRUPTION_TRACE="$EVIDENCE_ROOT/adversarial-corrupted-evidence.log"
 CONFLICT_TRACE="$EVIDENCE_ROOT/adversarial-conflicting-bootstrap.log"
+STALE_POSITION_A_TRACE="$EVIDENCE_ROOT/stale-position-process-a.log"
+STALE_POSITION_B_TRACE="$EVIDENCE_ROOT/stale-position-process-b.log"
+STALE_POSITION_CAPTURE="$EVIDENCE_ROOT/stale-position-after-move.png"
+STALE_CUSTODY_A_TRACE="$EVIDENCE_ROOT/stale-custody-process-a.log"
+STALE_CUSTODY_B_TRACE="$EVIDENCE_ROOT/stale-custody-process-b.log"
+STALE_CUSTODY_CAPTURE="$EVIDENCE_ROOT/stale-custody-after-care.png"
 BUILD_CONFIGURATION=${PEBBLELAB_GATE_D_CARE_CUSTODY_BUILD_CONFIGURATION:-release}
 case "$BUILD_CONFIGURATION" in
     debug|release) ;;
@@ -134,7 +151,8 @@ run_app() {
 
 WORLD_READY='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 66 -21'
 ENABLE='/lab start;/tp 14 69 -21;/lab pause;/lab movement off;/lab follow off;/lab overlay full;/lab population on;/lab settlement on;/lab ecology on;/lab ecology scan;/lab survival on;/lab mortality on;/lab lifecycle on;/lab kinship on;/lab household on;/lab homeostasis on;/lab genetics on;/lab physical-food-survival on;/lab care on;/lab childhood on;/lab skills on;/lab social status;/lab teaching status;/lab observer open;/lab reproduction on'
-PROCESS_A_COMMANDS="$WORLD_READY|$ENABLE;/lab step;/lab step;/lab step;/lab step;/lab care proof proximity-setup;/lab step;/lab care proof supervision-separation;/lab step;/lab movement on;/lab step;/lab step;/lab movement off;/lab care proof supervision-resume;/lab checkpoint custody-proof multi-slot-setup agent_0;/lab care proof physical-food-setup;/lab births status;/lab kinship status;/lab household status;/lab care status;/lab childhood status;/lab checkpoint custody-proof status agent_0;/lab checkpoint save gate-d-b05-care;/lab checkpoint status;/lab observer select agent_3;/lab observer status;/lab status;/tp 18 71 -14 135 24|/tp 18 71 -14 135 24"
+CARE_SETUP_COMMANDS="$WORLD_READY|$ENABLE;/lab step;/lab step;/lab step;/lab step;/lab care proof proximity-setup;/lab step;/lab care proof supervision-separation;/lab step;/lab movement on;/lab step;/lab step;/lab movement off;/lab care proof supervision-resume;/lab checkpoint custody-proof multi-slot-setup agent_0;/lab care proof physical-food-setup"
+PROCESS_A_COMMANDS="$CARE_SETUP_COMMANDS;/lab births status;/lab kinship status;/lab household status;/lab care status;/lab childhood status;/lab checkpoint custody-proof status agent_0;/lab checkpoint save gate-d-b05-care;/lab checkpoint status;/lab observer select agent_3;/lab observer status;/lab status;/tp 18 71 -14 135 24|/tp 18 71 -14 135 24"
 PROCESS_B_COMMANDS="$WORLD_READY|/lab start;/lab pause;/lab movement off;/lab follow off;/lab overlay full;/lab status;/lab checkpoint custody-proof failure after-first-custody;/lab checkpoint load gate-d-b05-care;/lab checkpoint custody-proof status agent_0;/lab checkpoint custody-proof failure none;/tp 18 71 -14 135 24|/tp 18 71 -14 135 24|/lab checkpoint load gate-d-b05-care;/lab checkpoint custody-proof status agent_0;/lab births status;/lab kinship status;/lab household status;/lab care status;/lab childhood status;/lab observer open;/lab observer select agent_3;/lab observer status;/tp 18 71 -14 135 24|/tp 18 71 -14 135 24|/lab step;/lab checkpoint custody-proof status agent_0;/lab care status;/lab childhood status;/lab causality tail 20;/tp 18 71 -14 135 24|/tp 18 71 -14 135 24|/lab checkpoint delete gate-d-b05-care;/lab checkpoint status;/lab observer close;/lab status"
 
 printf '\nGate D Blocker 05 process A: real caregiver custody and protected save.\n'
@@ -153,7 +171,7 @@ require_trace "$PROCESS_A_TRACE" \
     'checkpoint saved name=gate-d-b05-care .*manifestIntegrity=v2:[0-9a-f]{64} .*restartSafe=1 protectedCustodyAgents=4 protectedCustodyStacks=2 protectedCustodyQuantity=2 ' \
     'restart-safe checkpoint with real custody'
 require_trace "$PROCESS_A_TRACE" \
-    'stop probesRemoved=4 reason=termination custodyHandoff=protected taggedCustodySpills=2' \
+    'stop probesRemoved=4 reason=termination custodyHandoff=protected handoffFreshness=exact taggedCustodySpills=2' \
     'graceful shutdown persists two uniquely tagged physical spills'
 require_trace "$PROCESS_A_TRACE" \
     'summary .*agents=4 .*runtimeErrors=0 .*probesRemoved=4 ' \
@@ -261,6 +279,66 @@ reject_trace "$CORRUPTION_TRACE" \
     'checkpoint loaded name=gate-d-b05-care|duplicates=[1-9]|rollback failed' \
     'corruption must not publish, duplicate, or mutate'
 
+printf '\nGate D Blocker 05 senior review: stale checkpoint position handoff.\n'
+SESSION_HOME="$EVIDENCE_ROOT/stale-position-home"
+/bin/mkdir -p "$SESSION_HOME"
+WORLD_NAME="PebbleLab-Disposable-GateD-Custody-Stale-Position-46"
+STALE_POSITION_A_COMMANDS="$CARE_SETUP_COMMANDS;/lab checkpoint save gate-d-b05-stale-position;/lab checkpoint custody-proof verified-move agent_0;/lab checkpoint custody-proof status agent_0;/lab checkpoint custody-proof world-material-status;/tp 18 71 -14 135 24|/tp 18 71 -14 135 24"
+run_app "$STALE_POSITION_A_TRACE" "$STALE_POSITION_A_COMMANDS" \
+    "-|-|$STALE_POSITION_CAPTURE" 1
+STALE_POSITION_B_COMMANDS="$WORLD_READY|/lab start;/lab pause;/lab movement off;/lab checkpoint custody-proof world-material-status;/lab checkpoint load gate-d-b05-stale-position;/lab checkpoint custody-proof world-material-status;/lab status"
+run_app "$STALE_POSITION_B_TRACE" "$STALE_POSITION_B_COMMANDS" "" 0
+
+printf '\nGate D Blocker 05 senior review: stale checkpoint custody handoff.\n'
+SESSION_HOME="$EVIDENCE_ROOT/stale-custody-home"
+/bin/mkdir -p "$SESSION_HOME"
+WORLD_NAME="PebbleLab-Disposable-GateD-Custody-Stale-Matter-47"
+WORLD_SEED=46
+STALE_CUSTODY_A_COMMANDS="$CARE_SETUP_COMMANDS;/lab checkpoint save gate-d-b05-stale-custody;/lab step;/lab checkpoint custody-proof status agent_0;/lab checkpoint custody-proof world-material-status;/tp 18 71 -14 135 24|/tp 18 71 -14 135 24"
+run_app "$STALE_CUSTODY_A_TRACE" "$STALE_CUSTODY_A_COMMANDS" \
+    "-|-|$STALE_CUSTODY_CAPTURE" 1
+STALE_CUSTODY_B_COMMANDS="$WORLD_READY|/lab start;/lab pause;/lab movement off;/lab checkpoint custody-proof world-material-status;/lab checkpoint load gate-d-b05-stale-custody;/lab checkpoint custody-proof world-material-status;/lab status"
+run_app "$STALE_CUSTODY_B_TRACE" "$STALE_CUSTODY_B_COMMANDS" "" 0
+
+require_trace "$STALE_POSITION_A_TRACE" \
+    'checkpoint custody proof verifiedMove agent=agent_0 from=([0-9-]+),([0-9-]+),([0-9-]+) to=([0-9-]+),([0-9-]+),([0-9-]+) authority=PebbleCore publication=verified_external_update' \
+    'real verified post-checkpoint movement'
+require_trace "$STALE_POSITION_A_TRACE" \
+    'stop probesRemoved=4 reason=termination custodyHandoff=none handoffFreshness=stale_[^ ]+ taggedCustodySpills=0' \
+    'stale-position handoff cannot label current matter as checkpoint escrow'
+require_trace_count "$STALE_POSITION_B_TRACE" \
+    'checkpoint custody proof worldMaterial probeStacks=0 probeQuantity=0 relevantWorldStacks=2 relevantWorldQuantity=2 breadProbe=0 breadWorld=1 toolProbe=0 toolWorld=1 taggedSpills=0 .*duplicateTokens=0' \
+    2 \
+    'stale-position matter survives only as ordinary current World matter'
+require_trace "$STALE_POSITION_B_TRACE" \
+    'PebbleAgents checkpoint command failed: persisted physical custody spill conflicts: checkpoint-bound escrow is absent' \
+    'stale-position checkpoint refuses manifest-only reconstruction'
+reject_trace "$STALE_POSITION_B_TRACE" \
+    'checkpoint loaded name=gate-d-b05-stale-position|taggedSpills=[1-9]|duplicateTokens=[1-9]' \
+    'stale-position load or false/duplicate escrow'
+[ -s "$STALE_POSITION_CAPTURE" ] || fail "stale-position capture missing"
+
+require_trace "$STALE_CUSTODY_A_TRACE" \
+    'checkpoint saved name=gate-d-b05-stale-custody .*protectedCustodyStacks=2 protectedCustodyQuantity=2 ' \
+    'stale-custody checkpoint boundary'
+require_trace "$STALE_CUSTODY_A_TRACE" \
+    'care physical nourishment tick=[0-9]+ caregiver=agent_0 dependent=agent_3 material=bread slot=1 physicalCount=1>0 physicalDebit=1 ' \
+    'normal post-checkpoint physical custody mutation'
+require_trace "$STALE_CUSTODY_A_TRACE" \
+    'stop probesRemoved=4 reason=termination custodyHandoff=none handoffFreshness=stale_[^ ]+ taggedCustodySpills=0' \
+    'stale-custody handoff cannot label current matter as checkpoint escrow'
+require_trace_count "$STALE_CUSTODY_B_TRACE" \
+    'checkpoint custody proof worldMaterial probeStacks=0 probeQuantity=0 relevantWorldStacks=1 relevantWorldQuantity=1 breadProbe=0 breadWorld=0 toolProbe=0 toolWorld=1 taggedSpills=0 .*duplicateTokens=0' \
+    2 \
+    'post-checkpoint surviving material before and after refused load'
+require_trace "$STALE_CUSTODY_B_TRACE" \
+    'PebbleAgents checkpoint command failed: persisted physical custody spill conflicts: checkpoint-bound escrow is absent' \
+    'stale-custody checkpoint refuses before physical mutation'
+reject_trace "$STALE_CUSTODY_B_TRACE" \
+    'checkpoint loaded name=gate-d-b05-stale-custody|breadProbe=[1-9]|toolProbe=[1-9]|taggedSpills=[1-9]|duplicateTokens=[1-9]' \
+    'manifest evidence materialization, matter duplication, or false escrow'
+[ -s "$STALE_CUSTODY_CAPTURE" ] || fail "stale-custody capture missing"
+
 SESSION_HOME="$EVIDENCE_ROOT/home"
 
 printf '\nGATE D BLOCKER 05 TARGETED PROOF PASSED\n'
@@ -268,5 +346,10 @@ printf 'Evidence: %s\n' "$EVIDENCE_ROOT"
 printf 'Physical item loss count: 0\n'
 printf 'Physical item duplication count: 0\n'
 printf 'Care debit count after restart: 1\n'
+printf 'Stale-position false escrow count: 0\n'
+printf 'Stale-custody synthetic material count: 0\n'
+printf 'Manifest-only abrupt-loss reconstruction: REFUSED_FAIL_CLOSED\n'
+printf 'checkpointCustodyHandoffRejectsPostCheckpointMovement: PASS\n'
+printf 'checkpointCustodyHandoffCannotRecreateOverPostCheckpointMatter: PASS\n'
 printf 'Runtime errors: 0\n'
 printf 'Cleanup: exact\n'

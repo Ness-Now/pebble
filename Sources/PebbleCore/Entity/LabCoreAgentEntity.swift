@@ -135,6 +135,10 @@ public func removeLabCoreAgentProbe(
         guard let stack = optionalStack else { continue }
         let item = spawnItem(world, probe.x, probe.y + 0.5, probe.z, stack.copy())
         item.custodyProvenance = spillProvenance?(slot, stack)
+        // Every material spill is a real physical mutation. Mark its existing
+        // chunk dirty whether or not a checkpoint may protect it, so stale or
+        // ordinary current custody cannot silently disappear at shutdown.
+        world.getChunkAt(ifloor(item.x), ifloor(item.z))?.modified = true
         if item.custodyProvenance != nil {
             item.pickupDelay = Int.max
             item.lifeTime = Int.max
@@ -143,7 +147,6 @@ public func removeLabCoreAgentProbe(
             // Entity-only saves are emitted only for dirty chunks. The
             // protected escrow is itself the physical mutation that must
             // make this chunk eligible for the existing World save path.
-            world.getChunkAt(ifloor(item.x), ifloor(item.z))?.modified = true
         }
         spilled.append(item)
     }

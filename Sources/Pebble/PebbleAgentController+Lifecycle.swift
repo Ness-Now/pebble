@@ -630,41 +630,52 @@ extension PebbleAgentController {
         }.sorted { $0.labAgentId < $1.labAgentId } ?? []
         let custodyHandoff = reason == "termination"
             ? checkpointCustodyHandoff : nil
-        let custodyHandoffExact = custodyHandoff.map { handoff in
-            handoff.custodyByAgentID.keys.sorted()
-                == orderedCleanupProbes.map(\.labAgentId)
-                && orderedCleanupProbes.allSatisfy { probe in
-                    handoff.custodyByAgentID[probe.labAgentId]?.slots
-                        == probe.carriedItems
+        let custodyHandoffFreshness: PebbleAgentCheckpointCustodyHandoffFreshness
+        if let custodyHandoff, let cleanupWorld {
+            custodyHandoffFreshness = checkpointCustodyHandoffFreshness(
+                custodyHandoff,
+                world: cleanupWorld
+            )
+        } else {
+            custodyHandoffFreshness = .stale("absent")
+        }
+        let custodyHandoffExact = custodyHandoffFreshness.isExact
+        let provenanceByAgentAndSlot: [String: [Int: String]]
+        if custodyHandoffExact, let exactHandoff = custodyHandoff {
+            provenanceByAgentAndSlot = Dictionary(uniqueKeysWithValues:
+                exactHandoff.custodyByAgentID.keys.sorted().map { agentID in
+                    let evidence = exactHandoff.custodyByAgentID[
+                        agentID
+                    ]?.evidence.items ?? []
+                    return (agentID, Dictionary(uniqueKeysWithValues:
+                        evidence.map { item in
+                            (item.slotOrdinal, checkpointCustodySpillToken(
+                                checkpointID: exactHandoff.checkpoint
+                                    .checkpointID,
+                                boundaryDigest: exactHandoff
+                                    .manifestIntegrityDigest,
+                                agentID: agentID,
+                                item: item
+                            ))
+                        }
+                    ))
                 }
-        } ?? false
+            )
+        } else {
+            provenanceByAgentAndSlot = [:]
+        }
         var taggedCustodySpills = 0
         let removed = cleanupWorld.map { cleanupWorld in
             orderedCleanupProbes.reduce(0) { count, probe in
-                let evidenceBySlot = Dictionary(uniqueKeysWithValues:
-                    (custodyHandoffExact
-                        ? custodyHandoff?.custodyByAgentID[
-                            probe.labAgentId
-                          ]?.evidence.items : nil
-                    )?.map { ($0.slotOrdinal, $0) } ?? []
-                )
                 let didRemove = removeLabCoreAgentProbe(
                     probe,
                     from: cleanupWorld,
                     spillProvenance: custodyHandoffExact ? { slot, stack in
-                        guard let item = evidenceBySlot[slot],
-                              item.quantity == stack.count,
-                              item.damage == stack.damage,
-                              item.itemKey == itemDef(stack.id).name,
-                              item.stackDigest == AgentCheckpointDigest.sha256(
-                                (try? AgentCheckpointCodec.encode(stack))
-                                    ?? Data()
-                              ) else { return nil }
+                        guard let token = provenanceByAgentAndSlot[
+                            probe.labAgentId
+                        ]?[slot] else { return nil }
                         taggedCustodySpills += 1
-                        return checkpointCustodySpillToken(
-                            agentID: probe.labAgentId,
-                            item: item
-                        )
+                        return token
                     } : nil
                 )
                 return count + (didRemove ? 1 : 0)
@@ -813,6 +824,7 @@ extension PebbleAgentController {
         trace(
             "stop probesRemoved=\(removed) reason=\(reason) "
                 + "custodyHandoff=\(custodyHandoffExact ? "protected" : "none") "
+                + "handoffFreshness=\(custodyHandoffFreshness.traceValue) "
                 + "taggedCustodySpills=\(taggedCustodySpills)"
         )
         return removed

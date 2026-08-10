@@ -84,6 +84,11 @@ func runPebbleCoreMaterialInventorySmoke() {
 
     section("probe custody lifecycle")
     let world = World(dim: .overworld, seed: 16)
+    let spillChunk = Chunk(
+        cx: 0, cz: 0, minY: GEN_MIN_Y, height: WORLD_H
+    )
+    world.setChunk(spillChunk)
+    spillChunk.modified = false
     let probe = LabCoreAgentEntity(world: world, labAgentId: "agent-16", physicalId: "physical-16")
     probe.setPos(2, 64, 2)
     probe.carriedItems[0] = ItemStack(iid("cobblestone"), 4)
@@ -93,6 +98,8 @@ func runPebbleCoreMaterialInventorySmoke() {
     check("nonempty probe removed through guarded API", removed && !world.entities.contains(where: { $0 === probe }))
     check("custody spills true ItemEntity", spill.count == 1 && spill[0].stack.id == iid("cobblestone"))
     check("spill preserves exact quantity", spill[0].stack.count == 4)
+    check("ordinary custody spill dirties its World chunk",
+          spillChunk.modified)
     check("removed probe custody cleared", probe.carriedItems.allSatisfy { $0 == nil })
     check("probe remains unregistered and nonpersistent", !probe.shouldSaveToChunk && probe.type == LabCoreAgentEntity.kind)
 

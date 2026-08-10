@@ -122,7 +122,29 @@ struct PebbleAgentCheckpointDecodedCustody {
 
 struct PebbleAgentCheckpointCustodyHandoff {
     let checkpointName: AgentCheckpointName
+    let checkpoint: AgentSessionCheckpoint
+    let manifestIntegrityDigest: AgentCheckpointDigest
+    let worldBinding: AgentCheckpointWorldBinding
+    let worldObjectIdentity: ObjectIdentifier
+    let causalSequence: UInt64
+    let causalDigest: String
+    let probeStatesByAgentID: [String: PebbleAgentCheckpointProbeState]
     let custodyByAgentID: [String: PebbleAgentCheckpointDecodedCustody]
+}
+
+enum PebbleAgentCheckpointCustodyHandoffFreshness: Equatable {
+    case exact
+    case stale(String)
+
+    var isExact: Bool { self == .exact }
+
+    var traceValue: String {
+        switch self {
+        case .exact: return "exact"
+        case let .stale(reason):
+            return "stale_" + reason.replacingOccurrences(of: " ", with: "_")
+        }
+    }
 }
 
 enum PebbleAgentCheckpointCustodyError: Error, CustomStringConvertible {
@@ -154,14 +176,19 @@ enum PebbleAgentCheckpointCustodyError: Error, CustomStringConvertible {
     }
 }
 
+let pebbleCheckpointCustodySpillRoot =
+    "pebblelab-checkpoint-custody-v"
 private let pebbleCheckpointCustodySpillPrefix =
-    "pebblelab-checkpoint-custody-v1:"
+    "pebblelab-checkpoint-custody-v2:"
 
 func checkpointCustodySpillToken(
+    checkpointID: AgentCheckpointID,
+    boundaryDigest: AgentCheckpointDigest,
     agentID: String,
     item: AgentCheckpointPhysicalItemEvidence
 ) -> String {
     pebbleCheckpointCustodySpillPrefix
+        + "\(checkpointID.rawValue):\(boundaryDigest.rawValue):"
         + "\(agentID):\(item.slotOrdinal):\(item.stackDigest.rawValue)"
 }
 
@@ -617,6 +644,21 @@ extension PebbleAgentController {
                     ),
                     reconciliationBinding: reconciliation
                 )
+                let proposedCustodyHandoff = protectedStackCount == 0
+                    ? nil
+                    : try makeCheckpointCustodyHandoff(
+                        checkpointName: name,
+                        checkpoint: checkpoint,
+                        manifest: manifest,
+                        world: world,
+                        causalSequence: causalBefore.latestSequence,
+                        causalDigest: causalBefore.digest,
+                        custodyByAgentID: Dictionary(
+                            uniqueKeysWithValues: decodedCustody.map {
+                                ($0.evidence.agentID, $0)
+                            }
+                        )
+                    )
                 try store.saveCheckpoint(name: name, checkpoint: checkpoint, manifest: manifest)
                 let causalAfter = session.causalLedgerSnapshot().summary
                 guard causalBefore == causalAfter,
@@ -626,16 +668,7 @@ extension PebbleAgentController {
                     )
                 }
                 self.session = session
-                checkpointCustodyHandoff = protectedStackCount == 0
-                    ? nil
-                    : PebbleAgentCheckpointCustodyHandoff(
-                        checkpointName: name,
-                        custodyByAgentID: Dictionary(
-                            uniqueKeysWithValues: decodedCustody.map {
-                                ($0.evidence.agentID, $0)
-                            }
-                        )
-                    )
+                checkpointCustodyHandoff = proposedCustodyHandoff
                 let message = "checkpoint saved name=\(name.rawValue) id=\(checkpoint.checkpointID.rawValue) tick=\(checkpoint.tick.rawValue) simulation=\(checkpoint.simulationID.rawValue) digest=\(checkpoint.semanticDigest.rawValue) storageDigest=\(manifest.storageDigest.rawValue) manifestIntegrity=v\(manifest.manifestIntegrityVersion ?? 0):\(manifest.manifestIntegrityDigest?.rawValue ?? "none") bytes=\(bytes.count) causalSequence=\(causalAfter.latestSequence) restartSafe=\(safety.safe ? 1 : 0) protectedCustodyAgents=\(decodedCustody.count) protectedCustodyStacks=\(protectedStackCount) protectedCustodyQuantity=\(protectedQuantity) boundCells=\(binding.cells.count) physicalReferences=\(reconciliation?.assets.count ?? 0) world=\(binding.worldID) mutation=none"
                 trace(message)
                 return success(message)
@@ -878,6 +911,153 @@ extension PebbleAgentController {
             throw PebbleAgentPersistenceStoreError.invalidManagedRoot
         }
         return try PebbleAgentPersistenceStore(worldID: persistenceWorldID)
+    }
+
+    private func makeCheckpointCustodyHandoff(
+        checkpointName: AgentCheckpointName,
+        checkpoint: AgentSessionCheckpoint,
+        manifest: AgentCheckpointManifest,
+        world: World,
+        causalSequence: UInt64,
+        causalDigest: String,
+        custodyByAgentID: [String: PebbleAgentCheckpointDecodedCustody]
+    ) throws -> PebbleAgentCheckpointCustodyHandoff {
+        let checkpointAgentIDs = checkpoint.durableState.agents.map {
+            $0.agentID.rawValue
+        }.sorted()
+        guard manifest.checkpointID == checkpoint.checkpointID,
+              manifest.semanticDigest == checkpoint.semanticDigest,
+              manifest.manifestIntegrityVersion
+                == AgentCheckpointManifest.currentIntegrityVersion,
+              let manifestIntegrityDigest = manifest.manifestIntegrityDigest,
+              custodyByAgentID.keys.sorted() == checkpointAgentIDs else {
+            throw PebbleAgentCheckpointCustodyError
+                .missingEvidence("handoff-boundary")
+        }
+        let probeStates = try Dictionary(uniqueKeysWithValues:
+            custodyByAgentID.keys.sorted().map { agentID in
+                guard let probe = probesByAgentId[agentID],
+                      probe.world === world, !probe.dead else {
+                    throw PebbleAgentCheckpointCustodyError
+                        .missingEvidence(agentID)
+                }
+                return (agentID, PebbleAgentCheckpointProbeState(
+                    agentID: agentID,
+                    probe: probe
+                ))
+            }
+        )
+        return PebbleAgentCheckpointCustodyHandoff(
+            checkpointName: checkpointName,
+            checkpoint: checkpoint,
+            manifestIntegrityDigest: manifestIntegrityDigest,
+            worldBinding: manifest.worldBinding,
+            worldObjectIdentity: ObjectIdentifier(world),
+            causalSequence: causalSequence,
+            causalDigest: causalDigest,
+            probeStatesByAgentID: probeStates,
+            custodyByAgentID: custodyByAgentID
+        )
+    }
+
+    /// Revalidates the complete checkpoint-owned physical boundary at the
+    /// instant custody would leave nonpersistent probes. No mutation path has
+    /// to remember to invalidate a flag: current session, World binding,
+    /// probe identity/position and canonical custody are compared directly to
+    /// the protected checkpoint capture.
+    func checkpointCustodyHandoffFreshness(
+        _ handoff: PebbleAgentCheckpointCustodyHandoff,
+        world: World
+    ) -> PebbleAgentCheckpointCustodyHandoffFreshness {
+        guard activeWorld === world,
+              handoff.worldObjectIdentity == ObjectIdentifier(world) else {
+            return .stale("world_identity")
+        }
+        guard let session else { return .stale("session_absent") }
+        let currentCheckpoint: AgentSessionCheckpoint
+        do {
+            currentCheckpoint = try session.makeCheckpoint()
+        } catch {
+            return .stale("session_checkpoint_unavailable")
+        }
+        guard currentCheckpoint.checkpointID
+                == handoff.checkpoint.checkpointID,
+              currentCheckpoint.simulationID
+                == handoff.checkpoint.simulationID,
+              currentCheckpoint.tick == handoff.checkpoint.tick,
+              currentCheckpoint.semanticDigest
+                == handoff.checkpoint.semanticDigest else {
+            return .stale("session_boundary")
+        }
+        let causal = session.causalLedgerSnapshot().summary
+        guard causal.latestSequence == handoff.causalSequence,
+              causal.digest == handoff.causalDigest else {
+            return .stale("causal_boundary")
+        }
+        let checkpointAgentIDs = handoff.checkpoint.durableState.agents.map {
+            $0.agentID.rawValue
+        }.sorted()
+        guard session.snapshot().agents.map(\.id).sorted()
+                == checkpointAgentIDs,
+              probesByAgentId.keys.sorted() == checkpointAgentIDs,
+              handoff.probeStatesByAgentID.keys.sorted()
+                == checkpointAgentIDs,
+              handoff.custodyByAgentID.keys.sorted()
+                == checkpointAgentIDs else {
+            return .stale("agent_population")
+        }
+        do {
+            let store = try persistenceStore()
+            try validateWorldBinding(
+                handoff.worldBinding,
+                checkpoint: handoff.checkpoint,
+                world: world,
+                store: store
+            )
+        } catch {
+            return .stale("world_binding")
+        }
+        let worldProbeIDs = world.entities.compactMap {
+            ($0 as? LabCoreAgentEntity)?.labAgentId
+        }.sorted()
+        guard worldProbeIDs == checkpointAgentIDs else {
+            return .stale("world_probe_population")
+        }
+        for agentID in checkpointAgentIDs {
+            guard let savedProbe = handoff.probeStatesByAgentID[agentID],
+                  let savedCustody = handoff.custodyByAgentID[agentID],
+                  let probe = probesByAgentId[agentID],
+                  savedProbe.probe === probe,
+                  probe.world === world, !probe.dead,
+                  world.entities.filter({ $0 === probe }).count == 1,
+                  probe.x == savedProbe.x,
+                  probe.y == savedProbe.y,
+                  probe.z == savedProbe.z,
+                  probe.carriedItems == savedCustody.slots else {
+                return .stale("probe_position_or_custody_\(agentID)")
+            }
+            do {
+                let currentCustody = try makeCheckpointPhysicalCustodyEvidence(
+                    agentID: agentID,
+                    slots: probe.carriedItems
+                )
+                guard currentCustody.evidence
+                        == savedCustody.evidence else {
+                    return .stale("custody_fingerprint_\(agentID)")
+                }
+            } catch {
+                return .stale("custody_unverifiable_\(agentID)")
+            }
+        }
+        let preexistingEscrow = world.entities.contains {
+            ($0 as? ItemEntity)?.custodyProvenance?.hasPrefix(
+                pebbleCheckpointCustodySpillRoot
+            ) == true
+        }
+        guard !preexistingEscrow else {
+            return .stale("preexisting_protected_escrow")
+        }
+        return .exact
     }
 
     private func liveRestartSafety() -> (safe: Bool, reason: String) {
@@ -1283,6 +1463,11 @@ extension PebbleAgentController {
         var persistedCustodySpillItems: [ItemEntity] = []
         var custodyReconciliation = "legacy_empty"
         if let custodyByAgentID {
+            guard let custodyBoundaryDigest =
+                    stored.manifest.manifestIntegrityDigest else {
+                throw PebbleAgentCheckpointCustodyError
+                    .missingEvidence("manifest-integrity-boundary")
+            }
             var expectedByToken: [String: (String, ItemStack)] = [:]
             for agentID in candidateAgentIDs {
                 guard let custody = custodyByAgentID[agentID] else {
@@ -1296,6 +1481,8 @@ extension PebbleAgentController {
                             .invalidEvidence(agentID, item.slotOrdinal)
                     }
                     let token = checkpointCustodySpillToken(
+                        checkpointID: stored.checkpoint.checkpointID,
+                        boundaryDigest: custodyBoundaryDigest,
                         agentID: agentID,
                         item: item
                     )
@@ -1310,7 +1497,7 @@ extension PebbleAgentController {
                 $0 as? ItemEntity
             }.filter {
                 $0.custodyProvenance?.hasPrefix(
-                    pebbleCheckpointCustodySpillPrefix
+                    pebbleCheckpointCustodySpillRoot
                 ) == true
             }
             var taggedByToken: [String: [ItemEntity]] = [:]
@@ -1337,8 +1524,24 @@ extension PebbleAgentController {
                     .conflictingPhysicalSpill("duplicate token")
             }
             if taggedByToken.isEmpty {
-                custodyReconciliation = custodyRestoreAgentIDs.isEmpty
-                    ? "reused_exact" : "restored"
+                let matchingFreshHandoff = checkpointCustodyHandoff.map {
+                    $0.checkpointName == name
+                        && $0.checkpoint.checkpointID
+                            == stored.checkpoint.checkpointID
+                        && $0.manifestIntegrityDigest
+                            == stored.manifest.manifestIntegrityDigest
+                        && checkpointCustodyHandoffFreshness(
+                            $0, world: world
+                        ).isExact
+                } ?? false
+                guard custodyRestoreAgentIDs.isEmpty,
+                      matchingFreshHandoff else {
+                    throw PebbleAgentCheckpointCustodyError
+                        .conflictingPhysicalSpill(
+                            "checkpoint-bound escrow is absent"
+                        )
+                }
+                custodyReconciliation = "reused_exact"
             } else {
                 guard Set(taggedByToken.keys) == Set(expectedByToken.keys),
                       expectedByToken.values.allSatisfy({
@@ -1845,14 +2048,24 @@ extension PebbleAgentController {
         let causal = candidate.causalLedgerSnapshot().summary
         let reconciledDigest = try candidate.durableStateDigest()
         if let decodedCustody {
-            checkpointCustodyHandoff = PebbleAgentCheckpointCustodyHandoff(
-                checkpointName: name,
-                custodyByAgentID: Dictionary(
+            let custodyByAgentID = Dictionary(
                     uniqueKeysWithValues: decodedCustody.map {
                         ($0.evidence.agentID, $0)
                     }
                 )
+            let proposedHandoff = try makeCheckpointCustodyHandoff(
+                checkpointName: name,
+                checkpoint: stored.checkpoint,
+                manifest: stored.manifest,
+                world: world,
+                causalSequence: causal.latestSequence,
+                causalDigest: causal.digest,
+                custodyByAgentID: custodyByAgentID
             )
+            checkpointCustodyHandoff = checkpointCustodyHandoffFreshness(
+                proposedHandoff,
+                world: world
+            ).isExact ? proposedHandoff : nil
         } else {
             checkpointCustodyHandoff = nil
         }
