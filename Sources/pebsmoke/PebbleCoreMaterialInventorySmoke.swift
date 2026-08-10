@@ -95,6 +95,49 @@ func runPebbleCoreMaterialInventorySmoke() {
     check("spill preserves exact quantity", spill[0].stack.count == 4)
     check("removed probe custody cleared", probe.carriedItems.allSatisfy { $0 == nil })
     check("probe remains unregistered and nonpersistent", !probe.shouldSaveToChunk && probe.type == LabCoreAgentEntity.kind)
+
+    section("protected probe custody escrow")
+    let escrowWorld = World(dim: .overworld, seed: 17)
+    let escrowProbe = LabCoreAgentEntity(
+        world: escrowWorld,
+        labAgentId: "agent-17",
+        physicalId: "physical-17"
+    )
+    escrowProbe.setPos(3.5, 64, 3.5)
+    escrowProbe.carriedItems[1] = ItemStack(iid("bread"), 1)
+    escrowWorld.addEntity(escrowProbe)
+    let escrowRemoved = removeLabCoreAgentProbe(
+        escrowProbe,
+        from: escrowWorld,
+        spillProvenance: { slot, _ in "checkpoint-token:\(slot)" }
+    )
+    let escrow = escrowWorld.entities.compactMap { $0 as? ItemEntity }.first
+    check("protected removal creates one physical escrow",
+          escrowRemoved && escrow?.stack == ItemStack(iid("bread"), 1)
+            && escrow?.custodyProvenance == "checkpoint-token:1")
+    let escrowX = escrow?.x
+    let escrowY = escrow?.y
+    let escrowZ = escrow?.z
+    for _ in 0..<6_100 { escrow?.tick() }
+    check("protected escrow cannot expire, move, or become pickable",
+          escrow?.dead == false && escrow?.pickupDelay == Int.max
+            && escrow?.lifeTime == Int.max
+            && escrow?.x == escrowX && escrow?.y == escrowY
+            && escrow?.z == escrowZ)
+    check("protected escrow refuses destructive damage",
+          escrow?.hurt(1, "explosion") == false && escrow?.dead == false)
+    if let escrow {
+        let persisted = escrow.save()
+        let reloaded = ItemEntity(world: escrowWorld)
+        reloaded.load(persisted)
+        check("protected escrow provenance and exact stack persist",
+              reloaded.custodyProvenance == escrow.custodyProvenance
+                && reloaded.stack == escrow.stack
+                && reloaded.pickupDelay == Int.max
+                && reloaded.lifeTime == Int.max && reloaded.noGravity)
+    } else {
+        check("protected escrow provenance and exact stack persist", false)
+    }
 }
 
 private func canonicalMaterialEncoder() -> JSONEncoder {

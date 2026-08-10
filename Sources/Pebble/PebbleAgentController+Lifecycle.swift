@@ -625,7 +625,51 @@ extension PebbleAgentController {
         let expectedProbeRemovals = cleanupWorld?.entities.compactMap {
             $0 as? LabCoreAgentEntity
         }.count ?? 0
-        let removed = cleanupWorld.map { clearLabCoreAgentProbes(in: $0) } ?? 0
+        let orderedCleanupProbes = cleanupWorld?.entities.compactMap {
+            $0 as? LabCoreAgentEntity
+        }.sorted { $0.labAgentId < $1.labAgentId } ?? []
+        let custodyHandoff = reason == "termination"
+            ? checkpointCustodyHandoff : nil
+        let custodyHandoffExact = custodyHandoff.map { handoff in
+            handoff.custodyByAgentID.keys.sorted()
+                == orderedCleanupProbes.map(\.labAgentId)
+                && orderedCleanupProbes.allSatisfy { probe in
+                    handoff.custodyByAgentID[probe.labAgentId]?.slots
+                        == probe.carriedItems
+                }
+        } ?? false
+        var taggedCustodySpills = 0
+        let removed = cleanupWorld.map { cleanupWorld in
+            orderedCleanupProbes.reduce(0) { count, probe in
+                let evidenceBySlot = Dictionary(uniqueKeysWithValues:
+                    (custodyHandoffExact
+                        ? custodyHandoff?.custodyByAgentID[
+                            probe.labAgentId
+                          ]?.evidence.items : nil
+                    )?.map { ($0.slotOrdinal, $0) } ?? []
+                )
+                let didRemove = removeLabCoreAgentProbe(
+                    probe,
+                    from: cleanupWorld,
+                    spillProvenance: custodyHandoffExact ? { slot, stack in
+                        guard let item = evidenceBySlot[slot],
+                              item.quantity == stack.count,
+                              item.damage == stack.damage,
+                              item.itemKey == itemDef(stack.id).name,
+                              item.stackDigest == AgentCheckpointDigest.sha256(
+                                (try? AgentCheckpointCodec.encode(stack))
+                                    ?? Data()
+                              ) else { return nil }
+                        taggedCustodySpills += 1
+                        return checkpointCustodySpillToken(
+                            agentID: probe.labAgentId,
+                            item: item
+                        )
+                    } : nil
+                )
+                return count + (didRemove ? 1 : 0)
+            }
+        } ?? 0
         guard removed == expectedProbeRemovals else {
             runtimeErrorCount += 1
             lastError = "physical custody cleanup failed; session retained"
@@ -762,9 +806,15 @@ extension PebbleAgentController {
         lastConstructionSiteDiagnostics = PebbleAgentConstructionSiteDiagnostics()
         replayRecorder = nil
         replayBaseCheckpointName = nil
+        checkpointCustodyHandoff = nil
+        checkpointPhysicalCustodyFailurePoint = nil
         worldReceiptAttemptSerial = 0
         lastError = nil
-        trace("stop probesRemoved=\(removed) reason=\(reason)")
+        trace(
+            "stop probesRemoved=\(removed) reason=\(reason) "
+                + "custodyHandoff=\(custodyHandoffExact ? "protected" : "none") "
+                + "taggedCustodySpills=\(taggedCustodySpills)"
+        )
         return removed
     }
 }

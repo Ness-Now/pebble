@@ -645,7 +645,8 @@ public final class GameCore {
         for e in w.entities {
             guard let ent = e as? Entity, !ent.isPlayer, !ent.dead, ent.shouldSaveToChunk else { continue }
             if floorDiv(ifloor(ent.x), 16) != c.cx || floorDiv(ifloor(ent.z), 16) != c.cz { continue }
-            if (ent.type == "item" || ent.type == "xp_orb") && ent.age > 4000 { continue }
+            if (ent.type == "item" || ent.type == "xp_orb"), ent.age > 4000,
+               (ent as? ItemEntity)?.custodyProvenance == nil { continue }
             ents.append(ent.save())
         }
         let key = db.chunkKey(worldId, d.rawValue, c.cx, c.cz)

@@ -364,10 +364,10 @@ require_trace "$PROCESS2_TRACE" \
     "estate asset settled estate=$ESTATE_ID .*beneficiary=agent_1 .*receipt=estate-settle:" \
     'one physical estate settlement'
 require_trace "$PROCESS2_TRACE" \
-    'checkpoint saved name=gate-d02-history-settled .*manifestIntegrity=v1:[0-9a-f]{64} .*restartSafe=1 .*mutation=none' \
+    'checkpoint saved name=gate-d02-history-settled .*manifestIntegrity=v2:[0-9a-f]{64} .*restartSafe=1 .*protectedCustodyStacks=1 .*mutation=none' \
     'post-settlement schema-30 save'
 require_trace "$PROCESS2_TRACE" \
-    'checkpoint loaded name=gate-d02-history-settled .*manifestIntegrity=verified:v1 .*probeReusedExact=3 .*worldMutation=none' \
+    'checkpoint loaded name=gate-d02-history-settled .*manifestIntegrity=verified:v2 .*probeReusedExact=3 .*custodyReconciliation=reused_exact .*worldMutation=none' \
     'repeated same-process load is exact and idempotent'
 require_trace "$PROCESS2_TRACE" \
     'checkpoint status gate=enabled .*count=0 latest=none' \

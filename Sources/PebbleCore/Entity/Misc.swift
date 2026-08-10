@@ -11,6 +11,12 @@ import Foundation
 public final class ItemEntity: Entity {
     public override var type: String { "item" }
     public var stack = ItemStack(0, 1)
+    /// Optional integrity token supplied by a physical custody adapter.
+    ///
+    /// The token never changes stack identity or grants ownership. It lets a
+    /// bounded restart adapter recognize the exact persisted physical spill
+    /// that it created, instead of adopting an unrelated compatible item.
+    public var custodyProvenance: String?
     public var pickupDelay = 10
     public var lifeTime = 6000
     public var bobOffset = Double.random(in: 0..<1) * .pi * 2
@@ -22,10 +28,24 @@ public final class ItemEntity: Entity {
     }
 
     public override func tick() {
+        let isProtectedCustodySpill = custodyProvenance != nil
         baseTick()
-        if pickupDelay > 0 { pickupDelay -= 1 }
-        lifeTime -= 1
-        if lifeTime <= 0 { remove(); return }
+        if isProtectedCustodySpill {
+            // A protected spill is a bounded physical escrow for a
+            // non-chunk-persisted Lab probe. Keep it inert until the adapter
+            // either adopts it or rolls it back; ordinary item behaviour
+            // would permit pickup, despawn, drift, or merging before load.
+            pickupDelay = Int.max
+            lifeTime = Int.max
+            noGravity = true
+            vx = 0; vy = 0; vz = 0
+            fireTicks = 0
+            return
+        } else {
+            if pickupDelay > 0 { pickupDelay -= 1 }
+            lifeTime -= 1
+            if lifeTime <= 0 { remove(); return }
+        }
 
         // float up in water
         if inWater {
@@ -48,9 +68,11 @@ public final class ItemEntity: Entity {
         vy *= 0.98
 
         // merge with nearby item entities
-        if age % 20 == 0 && stack.count < maxStackOf(stack) {
+        if !isProtectedCustodySpill,
+           age % 20 == 0 && stack.count < maxStackOf(stack) {
             for e in world.getEntitiesInBox(bb().expand(0.8, 0.5, 0.8), except: self) {
-                guard let other = e as? ItemEntity, !other.dead else { continue }
+                guard let other = e as? ItemEntity, !other.dead,
+                      other.custodyProvenance == nil else { continue }
                 if canMerge(stack, other.stack) && stack.count + other.stack.count <= maxStackOf(stack) {
                     stack.count += other.stack.count
                     other.remove()
@@ -62,6 +84,7 @@ public final class ItemEntity: Entity {
 
     @discardableResult
     public override func hurt(_ amount: Double, _ source: String, _ attacker: Entity? = nil) -> Bool {
+        if custodyProvenance != nil { return false }
         if source == "explosion" || source == "fire" || source == "lava" { remove(); return true }
         return false
     }
@@ -73,6 +96,7 @@ public final class ItemEntity: Entity {
             d["stack"] = obj
         }
         d["pickupDelay"] = pickupDelay
+        if let custodyProvenance { d["custodyProvenance"] = custodyProvenance }
         return d
     }
     public override func load(_ d: [String: Any]) {
@@ -85,6 +109,16 @@ public final class ItemEntity: Entity {
             stack = ItemStack(0, 1)
         }
         pickupDelay = inum(d["pickupDelay"])
+        if let value = d["custodyProvenance"] as? String,
+           !value.isEmpty, value.utf8.count <= 512 {
+            custodyProvenance = value
+            pickupDelay = Int.max
+            lifeTime = Int.max
+            noGravity = true
+            vx = 0; vy = 0; vz = 0
+        } else {
+            custodyProvenance = nil
+        }
     }
 }
 

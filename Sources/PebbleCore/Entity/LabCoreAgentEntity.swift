@@ -122,7 +122,8 @@ public final class LabCoreAgentEntity: Entity {
 @discardableResult
 public func removeLabCoreAgentProbe(
     _ probe: LabCoreAgentEntity,
-    from world: World
+    from world: World,
+    spillProvenance: ((Int, ItemStack) -> String?)? = nil
 ) -> Bool {
     guard probe.world === world,
           world.entities.contains(where: { $0 === probe }) else {
@@ -130,8 +131,20 @@ public func removeLabCoreAgentProbe(
     }
     let before = copyItemInventory(probe.carriedItems)
     var spilled: [ItemEntity] = []
-    for stack in before.compactMap({ $0 }) {
+    for (slot, optionalStack) in before.enumerated() {
+        guard let stack = optionalStack else { continue }
         let item = spawnItem(world, probe.x, probe.y + 0.5, probe.z, stack.copy())
+        item.custodyProvenance = spillProvenance?(slot, stack)
+        if item.custodyProvenance != nil {
+            item.pickupDelay = Int.max
+            item.lifeTime = Int.max
+            item.noGravity = true
+            item.vx = 0; item.vy = 0; item.vz = 0
+            // Entity-only saves are emitted only for dirty chunks. The
+            // protected escrow is itself the physical mutation that must
+            // make this chunk eligible for the existing World save path.
+            world.getChunkAt(ifloor(item.x), ifloor(item.z))?.modified = true
+        }
         spilled.append(item)
     }
     probe.carriedItems = Array(repeating: nil, count: LabCoreAgentEntity.carriedItemSlotCount)

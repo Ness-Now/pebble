@@ -586,9 +586,9 @@ func runPebbleAgentsGeneticsDevelopmentSmoke() {
         checkpoint: birthCheckpoint,
         verifiedEmptyProbeAgentIDs: activeBirthAgentIDs
     )
-    check("schema 22 manifest integrity is canonical and authorizes the verified empty child",
+    check("schema 22 empty-custody manifest v1 remains canonical and authorizes the verified empty child",
           intactManifest.manifestIntegrityVersion
-                == AgentCheckpointManifest.currentIntegrityVersion
+                == 1
             && intactManifest.manifestIntegrityDigest != nil
             && intactManifest.manifestIntegrityDigest
                 == repeatedIntactManifest.manifestIntegrityDigest
@@ -596,6 +596,8 @@ func runPebbleAgentsGeneticsDevelopmentSmoke() {
                 restoredAgentIDs: [child.rawValue],
                 for: birthCheckpoint
             )) == activeBirthAgentIDs)
+    check("protected non-empty custody advances manifest integrity to v2",
+          AgentCheckpointManifest.currentIntegrityVersion == 2)
     let tamperedManifest = geneticsManifestWithTamperedEmptyProbeID(
         intactManifest,
         replacement: "agent_9"

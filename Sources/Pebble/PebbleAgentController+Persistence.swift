@@ -71,7 +71,8 @@ struct PebbleAgentCheckpointProbeState {
     func isRestored(
         to position: AgentPosition,
         in world: World,
-        mappedByAgentID: [String: LabCoreAgentEntity]
+        mappedByAgentID: [String: LabCoreAgentEntity],
+        expectedCarriedItems: [ItemStack?]? = nil
     ) -> Bool {
         mappedByAgentID[agentID] === probe
             && probe.world === world
@@ -88,7 +89,7 @@ struct PebbleAgentCheckpointProbeState {
             && probe.vx == 0 && probe.vy == 0 && probe.vz == 0
             && probe.prevYaw == probe.yaw
             && probe.prevPitch == probe.pitch
-            && probe.carriedItems == carriedItems
+            && probe.carriedItems == (expectedCarriedItems ?? carriedItems)
     }
 
     func restorePriorPhysicalState() {
@@ -106,6 +107,206 @@ struct PebbleAgentCheckpointProbeState {
         probe.dead = dead
         probe.carriedItems = copyItemInventory(carriedItems)
     }
+}
+
+struct PebbleAgentCheckpointDecodedCustody {
+    let evidence: AgentCheckpointProbeCustodyEvidence
+    let slots: [ItemStack?]
+
+    var carriedQuantity: Int {
+        slots.compactMap { $0?.count }.reduce(0, +)
+    }
+
+    var stackCount: Int { slots.compactMap { $0 }.count }
+}
+
+struct PebbleAgentCheckpointCustodyHandoff {
+    let checkpointName: AgentCheckpointName
+    let custodyByAgentID: [String: PebbleAgentCheckpointDecodedCustody]
+}
+
+enum PebbleAgentCheckpointCustodyError: Error, CustomStringConvertible {
+    case invalidStack(String, Int)
+    case invalidEvidence(String, Int)
+    case missingEvidence(String)
+    case conflictingCurrentCustody(String)
+    case nonFreshEmptyPlaceholder(String)
+    case conflictingPhysicalSpill(String)
+    case materialRightsConflict(String)
+
+    var description: String {
+        switch self {
+        case let .invalidStack(agentID, slot):
+            return "invalid physical stack for \(agentID) slot \(slot)"
+        case let .invalidEvidence(agentID, slot):
+            return "protected custody evidence is invalid for \(agentID) slot \(slot)"
+        case let .missingEvidence(agentID):
+            return "protected custody evidence is absent for \(agentID)"
+        case let .conflictingCurrentCustody(agentID):
+            return "current probe custody conflicts with protected evidence for \(agentID)"
+        case let .nonFreshEmptyPlaceholder(agentID):
+            return "empty probe is not a fresh bootstrap placeholder for \(agentID)"
+        case let .conflictingPhysicalSpill(reason):
+            return "persisted physical custody spill conflicts: \(reason)"
+        case let .materialRightsConflict(reason):
+            return "Material Rights conflicts with physical custody: \(reason)"
+        }
+    }
+}
+
+private let pebbleCheckpointCustodySpillPrefix =
+    "pebblelab-checkpoint-custody-v1:"
+
+func checkpointCustodySpillToken(
+    agentID: String,
+    item: AgentCheckpointPhysicalItemEvidence
+) -> String {
+    pebbleCheckpointCustodySpillPrefix
+        + "\(agentID):\(item.slotOrdinal):\(item.stackDigest.rawValue)"
+}
+
+private func validateCheckpointPhysicalStack(
+    _ stack: ItemStack,
+    agentID: String,
+    slot: Int,
+    depth: Int = 0,
+    visitedStackCount: inout Int
+) throws {
+    visitedStackCount += 1
+    guard depth <= 8, visitedStackCount <= 256,
+          stack.id >= 0, stack.id < itemDefs.count,
+          stack.count > 0, stack.count <= itemDef(stack.id).maxStack,
+          stack.damage >= 0,
+          maxDamageOf(stack) > 0
+            ? stack.damage < maxDamageOf(stack) : stack.damage == 0,
+          stack.ench.count <= 32,
+          stack.ench.allSatisfy({
+              !$0.id.isEmpty && $0.id.utf8.count <= 128 && $0.lvl > 0
+          }),
+          (stack.label?.utf8.count ?? 0) <= 256,
+          (stack.data.potion?.utf8.count ?? 0) <= 256,
+          (stack.data.trim?.pattern.utf8.count ?? 0) <= 256,
+          (stack.data.trim?.material.utf8.count ?? 0) <= 256,
+          (stack.data.sherds?.count ?? 0) <= 64,
+          stack.data.sherds?.allSatisfy({ $0.utf8.count <= 256 }) ?? true,
+          (stack.data.lodestone == nil
+            || stack.data.lodestone?.count == 4),
+          (stack.data.priorWork ?? 0) >= 0,
+          (stack.data.repairUnits ?? 0) >= 0,
+          (stack.data.flight ?? 0) >= 0 else {
+        throw PebbleAgentCheckpointCustodyError.invalidStack(agentID, slot)
+    }
+    if let contents = stack.data.contents {
+        guard contents.count <= PebbleAgentMaterialSnapshotBridge
+            .maximumSnapshotSlots else {
+            throw PebbleAgentCheckpointCustodyError.invalidStack(agentID, slot)
+        }
+        for nested in contents.compactMap({ $0 }) {
+            try validateCheckpointPhysicalStack(
+                nested,
+                agentID: agentID,
+                slot: slot,
+                depth: depth + 1,
+                visitedStackCount: &visitedStackCount
+            )
+        }
+    }
+}
+
+func makeCheckpointPhysicalCustodyEvidence(
+    agentID: String,
+    slots: [ItemStack?]
+) throws -> PebbleAgentCheckpointDecodedCustody {
+    guard slots.count == LabCoreAgentEntity.carriedItemSlotCount else {
+        throw PebbleAgentCheckpointCustodyError.missingEvidence(agentID)
+    }
+    var items: [AgentCheckpointPhysicalItemEvidence] = []
+    var visitedStackCount = 0
+    for (slot, optionalStack) in slots.enumerated() {
+        guard let stack = optionalStack else { continue }
+        try validateCheckpointPhysicalStack(
+            stack,
+            agentID: agentID,
+            slot: slot,
+            visitedStackCount: &visitedStackCount
+        )
+        let bytes = try AgentCheckpointCodec.encode(stack)
+        guard bytes.count <= 65_536,
+              let roundTrip = try? AgentCheckpointCodec.decode(
+                ItemStack.self, from: bytes
+              ),
+              roundTrip == stack,
+              try AgentCheckpointCodec.encode(roundTrip) == bytes else {
+            throw PebbleAgentCheckpointCustodyError.invalidStack(agentID, slot)
+        }
+        items.append(try AgentCheckpointPhysicalItemEvidence(
+            slotOrdinal: slot,
+            itemKey: itemDef(stack.id).name,
+            quantity: stack.count,
+            damage: stack.damage,
+            canonicalStackBytes: bytes
+        ))
+    }
+    let evidence = try AgentCheckpointProbeCustodyEvidence(
+        agentID: agentID,
+        slotCount: slots.count,
+        items: items
+    )
+    return PebbleAgentCheckpointDecodedCustody(
+        evidence: evidence,
+        slots: copyItemInventory(slots)
+    )
+}
+
+private func decodeCheckpointPhysicalCustodyEvidence(
+    _ evidence: AgentCheckpointProbeCustodyEvidence
+) throws -> PebbleAgentCheckpointDecodedCustody {
+    var slots = Array<ItemStack?>(
+        repeating: nil,
+        count: evidence.slotCount
+    )
+    var visitedStackCount = 0
+    for item in evidence.items {
+        guard slots.indices.contains(item.slotOrdinal),
+              slots[item.slotOrdinal] == nil,
+              let stack = try? AgentCheckpointCodec.decode(
+                ItemStack.self,
+                from: item.canonicalStackBytes
+              ) else {
+            throw PebbleAgentCheckpointCustodyError.invalidEvidence(
+                evidence.agentID, item.slotOrdinal
+            )
+        }
+        try validateCheckpointPhysicalStack(
+            stack,
+            agentID: evidence.agentID,
+            slot: item.slotOrdinal,
+            visitedStackCount: &visitedStackCount
+        )
+        guard item.itemKey == itemDef(stack.id).name,
+              item.quantity == stack.count,
+              item.damage == stack.damage,
+              item.stackDigest == AgentCheckpointDigest.sha256(
+                item.canonicalStackBytes
+              ),
+              try AgentCheckpointCodec.encode(stack)
+                == item.canonicalStackBytes else {
+            throw PebbleAgentCheckpointCustodyError.invalidEvidence(
+                evidence.agentID, item.slotOrdinal
+            )
+        }
+        slots[item.slotOrdinal] = stack
+    }
+    let reconstructed = try makeCheckpointPhysicalCustodyEvidence(
+        agentID: evidence.agentID,
+        slots: slots
+    )
+    guard reconstructed.evidence == evidence else {
+        throw PebbleAgentCheckpointCustodyError.invalidEvidence(
+            evidence.agentID, -1
+        )
+    }
+    return reconstructed
 }
 
 enum PebbleAgentCheckpointProbeClassification: String {
@@ -175,7 +376,8 @@ struct PebbleAgentCheckpointProbePlanner {
         lifecycleAgentIDs: Set<String>,
         requirePopulationIdentity: Bool,
         requireLifecycleIdentity: Bool,
-        physicalHolderAgentIDs: Set<String>
+        physicalHolderAgentIDs: Set<String>,
+        protectedCustodyAgentIDs: Set<String> = []
     ) throws -> PebbleAgentCheckpointProbePlan {
         let ordered = candidateAgents.sorted { $0.id < $1.id }
         var positions: [AgentPosition: String] = [:]
@@ -201,7 +403,8 @@ struct PebbleAgentCheckpointProbePlanner {
                     agentID: agent.id,
                     currentEmbodiment: nil,
                     verifiedEmptyAgentIDs: verifiedEmptyAgentIDs,
-                    physicalHolderAgentIDs: physicalHolderAgentIDs
+                    physicalHolderAgentIDs: physicalHolderAgentIDs,
+                    protectedCustodyAgentIDs: protectedCustodyAgentIDs
                 )
                 entries.append(PebbleAgentCheckpointProbePlanEntry(
                     agent: agent,
@@ -222,7 +425,8 @@ struct PebbleAgentCheckpointProbePlanner {
                 agentID: agent.id,
                 currentEmbodiment: embodiment,
                 verifiedEmptyAgentIDs: verifiedEmptyAgentIDs,
-                physicalHolderAgentIDs: physicalHolderAgentIDs
+                physicalHolderAgentIDs: physicalHolderAgentIDs,
+                protectedCustodyAgentIDs: protectedCustodyAgentIDs
             )
             entries.append(PebbleAgentCheckpointProbePlanEntry(
                 agent: agent,
@@ -237,8 +441,10 @@ struct PebbleAgentCheckpointProbePlanner {
         agentID: String,
         currentEmbodiment: PebbleAgentEmbodiment?,
         verifiedEmptyAgentIDs: Set<String>,
-        physicalHolderAgentIDs: Set<String>
+        physicalHolderAgentIDs: Set<String>,
+        protectedCustodyAgentIDs: Set<String>
     ) throws {
+        if protectedCustodyAgentIDs.contains(agentID) { return }
         guard verifiedEmptyAgentIDs.contains(agentID) else {
             throw PebbleAgentCheckpointProbePlanError
                 .missingEmptyAttestation(agentID)
@@ -264,6 +470,10 @@ enum PebbleAgentCheckpointPositionRestoreFailurePoint {
     case afterFirstMissingCreation
 }
 
+enum PebbleAgentCheckpointPhysicalCustodyFailurePoint {
+    case afterFirstCustodyRestore
+}
+
 extension PebbleAgentController {
     func handleCheckpoint(
         _ arguments: [String],
@@ -276,7 +486,7 @@ extension PebbleAgentController {
             )
         }
         let usage = "Usage: /lab checkpoint <status|list|save <name>|load <name>"
-            + "|delete <name>|position-proof ...>"
+            + "|delete <name>|position-proof ...|custody-proof ...>"
         guard persistenceFeatureEnabled else {
             return failure(
                 "PebbleAgents persistence disabled. Set PEBBLELAB_APP_AGENTS_PERSISTENCE=1 before launch."
@@ -332,6 +542,27 @@ extension PebbleAgentController {
                     snapshot: checkpointSnapshot,
                     world: world
                 )
+                let decodedCustody = try checkpointAgentIDs.map { agentID in
+                    guard let embodiment = checkpointEmbodiments[agentID]
+                    else {
+                        throw PebbleAgentCheckpointCustodyError
+                            .missingEvidence(agentID)
+                    }
+                    return try makeCheckpointPhysicalCustodyEvidence(
+                        agentID: agentID,
+                        slots: embodiment.carriedItems
+                    )
+                }
+                let protectedCustodyEvidence = decodedCustody
+                    .map(\.evidence)
+                try validateCheckpointMaterialRightsCustody(
+                    session: session,
+                    custodyByAgentID: Dictionary(
+                        uniqueKeysWithValues: decodedCustody.map {
+                            ($0.evidence.agentID, $0)
+                        }
+                    )
+                )
                 if session.ecologicalObservationEnabled {
                     try validateWorldEcologicalObservationReceipts(
                         for: session,
@@ -352,10 +583,14 @@ extension PebbleAgentController {
                     store: store
                 )
                 let safety = liveRestartSafety()
-                let verifiedEmptyProbeAgentIDs = checkpointAgentIDs.filter {
-                    checkpointEmbodiments[$0]?.carriedItems.allSatisfy {
-                        $0 == nil
-                    } == true
+                let verifiedEmptyProbeAgentIDs = decodedCustody.filter {
+                    $0.evidence.isEmpty
+                }.map { $0.evidence.agentID }
+                let protectedStackCount = decodedCustody.reduce(0) {
+                    $0 + $1.stackCount
+                }
+                let protectedQuantity = decodedCustody.reduce(0) {
+                    $0 + $1.carriedQuantity
                 }
                 let manifest = try AgentCheckpointManifest(
                     name: name,
@@ -374,7 +609,11 @@ extension PebbleAgentController {
                         focusedAgentID: focusedAgentId,
                         naturalResourceScanDiagnostics: naturalResourceExecutor.state.lastScan,
                         verifiedEmptyProbeAgentIDsAtSave:
-                            verifiedEmptyProbeAgentIDs
+                            verifiedEmptyProbeAgentIDs,
+                        protectedProbeCustodyEvidenceAtSave:
+                            protectedStackCount == 0
+                                ? nil
+                                : protectedCustodyEvidence
                     ),
                     reconciliationBinding: reconciliation
                 )
@@ -387,7 +626,17 @@ extension PebbleAgentController {
                     )
                 }
                 self.session = session
-                let message = "checkpoint saved name=\(name.rawValue) id=\(checkpoint.checkpointID.rawValue) tick=\(checkpoint.tick.rawValue) simulation=\(checkpoint.simulationID.rawValue) digest=\(checkpoint.semanticDigest.rawValue) storageDigest=\(manifest.storageDigest.rawValue) manifestIntegrity=v\(manifest.manifestIntegrityVersion ?? 0):\(manifest.manifestIntegrityDigest?.rawValue ?? "none") bytes=\(bytes.count) causalSequence=\(causalAfter.latestSequence) restartSafe=\(safety.safe ? 1 : 0) boundCells=\(binding.cells.count) physicalReferences=\(reconciliation?.assets.count ?? 0) world=\(binding.worldID) mutation=none"
+                checkpointCustodyHandoff = protectedStackCount == 0
+                    ? nil
+                    : PebbleAgentCheckpointCustodyHandoff(
+                        checkpointName: name,
+                        custodyByAgentID: Dictionary(
+                            uniqueKeysWithValues: decodedCustody.map {
+                                ($0.evidence.agentID, $0)
+                            }
+                        )
+                    )
+                let message = "checkpoint saved name=\(name.rawValue) id=\(checkpoint.checkpointID.rawValue) tick=\(checkpoint.tick.rawValue) simulation=\(checkpoint.simulationID.rawValue) digest=\(checkpoint.semanticDigest.rawValue) storageDigest=\(manifest.storageDigest.rawValue) manifestIntegrity=v\(manifest.manifestIntegrityVersion ?? 0):\(manifest.manifestIntegrityDigest?.rawValue ?? "none") bytes=\(bytes.count) causalSequence=\(causalAfter.latestSequence) restartSafe=\(safety.safe ? 1 : 0) protectedCustodyAgents=\(decodedCustody.count) protectedCustodyStacks=\(protectedStackCount) protectedCustodyQuantity=\(protectedQuantity) boundCells=\(binding.cells.count) physicalReferences=\(reconciliation?.assets.count ?? 0) world=\(binding.worldID) mutation=none"
                 trace(message)
                 return success(message)
             case "load":
@@ -406,10 +655,18 @@ extension PebbleAgentController {
                     return failure("Checkpoint delete refused: active replay recording uses \(name.rawValue).")
                 }
                 try store.deleteCheckpoint(name: name)
+                if checkpointCustodyHandoff?.checkpointName == name {
+                    checkpointCustodyHandoff = nil
+                }
                 trace("checkpoint deleted name=\(name.rawValue)")
                 return success("Checkpoint deleted: \(name.rawValue).")
             case "position-proof":
                 return handleCheckpointPositionRestoreProof(
+                    Array(arguments.dropFirst()),
+                    world: world
+                )
+            case "custody-proof":
+                return handleCheckpointPhysicalCustodyProof(
                     Array(arguments.dropFirst()),
                     world: world
                 )
@@ -556,6 +813,64 @@ extension PebbleAgentController {
             )
         }
         return embodiments
+    }
+
+    func validateCheckpointMaterialRightsCustody(
+        session: AgentSimulationSession,
+        custodyByAgentID: [String: PebbleAgentCheckpointDecodedCustody]
+    ) throws {
+        let bridge = PebbleAgentMaterialSnapshotBridge()
+        var reservedQuantityByHolderAndIdentity: [String: Int] = [:]
+        for record in session.materialRightsSnapshot().records {
+            guard case let .agent(holderID) =
+                    record.lastVerifiedHolder.holder else { continue }
+            guard let custody = custodyByAgentID[holderID.rawValue] else {
+                throw PebbleAgentCheckpointCustodyError
+                    .materialRightsConflict(
+                        "missing holder \(holderID.rawValue)"
+                    )
+            }
+            let snapshot = try bridge.custodySnapshot(
+                locationID: "agent:pebble_app_agent_\(holderID.rawValue)",
+                slots: custody.slots
+            )
+            let physicalQuantity = snapshot.slots.compactMap { $0 }.filter {
+                $0.identity == record.asset.materialIdentity
+            }.reduce(0) { $0 + $1.count }
+            guard record.lastVerifiedHolder.materialIdentity
+                    == record.asset.materialIdentity,
+                  record.lastVerifiedHolder.quantity == record.asset.quantity,
+                  physicalQuantity >= record.asset.quantity else {
+                throw PebbleAgentCheckpointCustodyError
+                    .materialRightsConflict(
+                        "holder/material/quantity \(record.asset.assetID.rawValue)"
+                    )
+            }
+            let keyBytes = try AgentCheckpointCodec.encode(
+                record.asset.materialIdentity
+            )
+            let key = holderID.rawValue + ":"
+                + AgentCheckpointDigest.sha256(keyBytes).rawValue
+            reservedQuantityByHolderAndIdentity[key, default: 0]
+                += record.asset.quantity
+            guard reservedQuantityByHolderAndIdentity[key]!
+                    <= physicalQuantity else {
+                throw PebbleAgentCheckpointCustodyError
+                    .materialRightsConflict(
+                        "duplicate material references at \(holderID.rawValue)"
+                    )
+            }
+            if record.lastVerifiedHolder.observedAtTick == session.tick {
+                let exactFingerprint = try bridge.fingerprint(of: snapshot)
+                guard exactFingerprint
+                        == record.lastVerifiedHolder.custodyFingerprint else {
+                    throw PebbleAgentCheckpointCustodyError
+                        .materialRightsConflict(
+                            "current custody fingerprint \(record.asset.assetID.rawValue)"
+                        )
+                }
+            }
+        }
     }
 
     private func persistenceStore() throws -> PebbleAgentPersistenceStore {
@@ -883,6 +1198,26 @@ extension PebbleAgentController {
             try stored.manifest.protectedVerifiedEmptyProbeAgentIDs(
                 for: stored.checkpoint
             )
+        let protectedCustodyEvidence = try stored.manifest
+            .protectedProbeCustodyEvidence(for: stored.checkpoint)
+        let decodedCustody = try protectedCustodyEvidence?.map {
+            try decodeCheckpointPhysicalCustodyEvidence($0)
+        }
+        let custodyByAgentID = decodedCustody.map {
+            Dictionary(uniqueKeysWithValues: $0.map {
+                ($0.evidence.agentID, $0)
+            })
+        }
+        if let custodyByAgentID {
+            guard custodyByAgentID.keys.sorted() == candidateAgentIDs else {
+                throw PebbleAgentCheckpointCustodyError
+                    .missingEvidence("checkpoint-population")
+            }
+            try validateCheckpointMaterialRightsCustody(
+                session: candidate,
+                custodyByAgentID: custodyByAgentID
+            )
+        }
         guard worldProbeIDs == currentAgentIDs,
               verifiedEmptyProbeAgentIDs
                 == Array(Set(verifiedEmptyProbeAgentIDs)).sorted(),
@@ -919,6 +1254,104 @@ extension PebbleAgentController {
                 return agentID.rawValue
             }
         )
+        var custodyRestoreAgentIDs = Set<String>()
+        if let custodyByAgentID {
+            for agentID in candidateAgentIDs {
+                guard let expected = custodyByAgentID[agentID] else {
+                    throw PebbleAgentCheckpointCustodyError
+                        .missingEvidence(agentID)
+                }
+                guard let current = currentEmbodiments[agentID] else {
+                    custodyRestoreAgentIDs.insert(agentID)
+                    continue
+                }
+                if current.carriedItems == expected.slots { continue }
+                guard current.carriedItems.allSatisfy({ $0 == nil }) else {
+                    throw PebbleAgentCheckpointCustodyError
+                        .conflictingCurrentCustody(agentID)
+                }
+                guard oldSession.tick == 0 else {
+                    throw PebbleAgentCheckpointCustodyError
+                        .nonFreshEmptyPlaceholder(agentID)
+                }
+                custodyRestoreAgentIDs.insert(agentID)
+            }
+        }
+        let protectedCustodyAgentIDs = Set(
+            custodyByAgentID?.keys.map { $0 } ?? []
+        )
+        var persistedCustodySpillItems: [ItemEntity] = []
+        var custodyReconciliation = "legacy_empty"
+        if let custodyByAgentID {
+            var expectedByToken: [String: (String, ItemStack)] = [:]
+            for agentID in candidateAgentIDs {
+                guard let custody = custodyByAgentID[agentID] else {
+                    throw PebbleAgentCheckpointCustodyError
+                        .missingEvidence(agentID)
+                }
+                for item in custody.evidence.items {
+                    guard let stack = custody.slots[item.slotOrdinal]
+                    else {
+                        throw PebbleAgentCheckpointCustodyError
+                            .invalidEvidence(agentID, item.slotOrdinal)
+                    }
+                    let token = checkpointCustodySpillToken(
+                        agentID: agentID,
+                        item: item
+                    )
+                    guard expectedByToken[token] == nil else {
+                        throw PebbleAgentCheckpointCustodyError
+                            .conflictingPhysicalSpill("duplicate expected token")
+                    }
+                    expectedByToken[token] = (agentID, stack)
+                }
+            }
+            let taggedItems = world.entities.compactMap {
+                $0 as? ItemEntity
+            }.filter {
+                $0.custodyProvenance?.hasPrefix(
+                    pebbleCheckpointCustodySpillPrefix
+                ) == true
+            }
+            var taggedByToken: [String: [ItemEntity]] = [:]
+            for item in taggedItems {
+                guard let token = item.custodyProvenance,
+                      let expected = expectedByToken[token],
+                      item.world === world, !item.dead,
+                      item.stack == expected.1,
+                      let agent = candidateAgents.first(where: {
+                          $0.id == expected.0
+                      }),
+                      Int(item.x.rounded(.down)) == agent.position.x,
+                      Int(item.z.rounded(.down)) == agent.position.z,
+                      (agent.position.y...(agent.position.y + 1)).contains(
+                        Int(item.y.rounded(.down))
+                      ) else {
+                    throw PebbleAgentCheckpointCustodyError
+                        .conflictingPhysicalSpill("foreign token or stack")
+                }
+                taggedByToken[token, default: []].append(item)
+            }
+            guard taggedByToken.values.allSatisfy({ $0.count == 1 }) else {
+                throw PebbleAgentCheckpointCustodyError
+                    .conflictingPhysicalSpill("duplicate token")
+            }
+            if taggedByToken.isEmpty {
+                custodyReconciliation = custodyRestoreAgentIDs.isEmpty
+                    ? "reused_exact" : "restored"
+            } else {
+                guard Set(taggedByToken.keys) == Set(expectedByToken.keys),
+                      expectedByToken.values.allSatisfy({
+                          custodyRestoreAgentIDs.contains($0.0)
+                      }) else {
+                    throw PebbleAgentCheckpointCustodyError
+                        .conflictingPhysicalSpill("partial or duplicate custody")
+                }
+                persistedCustodySpillItems = taggedByToken.keys.sorted()
+                    .compactMap { taggedByToken[$0]?.first }
+                custodyReconciliation = "adopted_physical"
+            }
+        }
         let probePlan: PebbleAgentCheckpointProbePlan
         do {
             probePlan = try PebbleAgentCheckpointProbePlanner.plan(
@@ -929,7 +1362,8 @@ extension PebbleAgentController {
                 lifecycleAgentIDs: candidateLifecycleIDs,
                 requirePopulationIdentity: candidate.populationEnabled,
                 requireLifecycleIdentity: candidate.lifecycleEnabled,
-                physicalHolderAgentIDs: physicalHolderAgentIDs
+                physicalHolderAgentIDs: physicalHolderAgentIDs,
+                protectedCustodyAgentIDs: protectedCustodyAgentIDs
             )
             guard probePlan.missingAgentIDs == restoredCheckpointAgentIDs else {
                 throw PebbleAgentCheckpointProbePlanError
@@ -955,11 +1389,16 @@ extension PebbleAgentController {
             let carried = entry.currentEmbodiment?.carriedItems.compactMap {
                 $0?.count
             }.reduce(0, +) ?? 0
+            let protected = custodyByAgentID?[entry.agent.id]
             trace(
                 "checkpoint probe classification agent=\(entry.agent.id) "
                     + "checkpoint=\(positionText(entry.agent.position)) "
                     + "current=\(current.map(positionText) ?? "none") "
                     + "carried=\(carried) "
+                    + "protectedCustody=\(protected == nil ? 0 : 1) "
+                    + "protectedStacks=\(protected?.stackCount ?? 0) "
+                    + "protectedQuantity=\(protected?.carriedQuantity ?? 0) "
+                    + "custodyRestore=\(custodyRestoreAgentIDs.contains(entry.agent.id) ? 1 : 0) "
                     + "verifiedEmpty=\(verifiedEmptyProbeAgentIDs.contains(entry.agent.id) ? 1 : 0) "
                     + "presentCurrent=\(entry.currentEmbodiment == nil ? 0 : 1) "
                     + "presentCheckpoint=1 "
@@ -1003,6 +1442,7 @@ extension PebbleAgentController {
                     entry.classification == .repositionedVerified
                         ? entry.currentEmbodiment?.probe.id : nil
                 }
+                + persistedCustodySpillItems.map(\.id)
         )
         do {
             for entry in probePlan.entries where
@@ -1101,9 +1541,26 @@ extension PebbleAgentController {
         let injectedPositionRestoreFailure =
             checkpointPositionRestoreFailurePoint
         checkpointPositionRestoreFailurePoint = nil
+        let injectedCustodyRestoreFailure =
+            checkpointPhysicalCustodyFailurePoint
+        checkpointPhysicalCustodyFailurePoint = nil
         var retiredProbesRemoved: [PebbleAgentCheckpointProbeState] = []
         var repositionedProbes: [PebbleAgentCheckpointProbeState] = []
         var restoredProbesCreated: [PebbleAgentCheckpointProbeState] = []
+        var removedCustodySpillItems: [ItemEntity] = []
+        var custodyRestoredAgentIDs: [String] = []
+        var custodySpillChunkModifiedBefore: [Int64: Bool] = [:]
+        for item in persistedCustodySpillItems {
+            let itemX = Int(item.x.rounded(.down))
+            let itemZ = Int(item.z.rounded(.down))
+            let cx = floorDiv(itemX, CHUNK_W)
+            let cz = floorDiv(itemZ, CHUNK_W)
+            let key = chunkKey(cx, cz)
+            if custodySpillChunkModifiedBefore[key] == nil,
+               let chunk = world.getChunk(cx, cz) {
+                custodySpillChunkModifiedBefore[key] = chunk.modified
+            }
+        }
         do {
             for retired in retiredProbeStates.sorted(by: {
                 $0.agentID < $1.agentID
@@ -1155,6 +1612,53 @@ extension PebbleAgentController {
                     )
                 }
             }
+            for item in persistedCustodySpillItems {
+                world.removeEntity(item)
+                guard !world.entities.contains(where: { $0 === item }) else {
+                    throw PebbleAgentPersistenceStoreError.invalidBundle(
+                        "persisted custody spill removal failed"
+                    )
+                }
+                world.getChunkAt(
+                    Int(item.x.rounded(.down)),
+                    Int(item.z.rounded(.down))
+                )?.modified = true
+                removedCustodySpillItems.append(item)
+            }
+            if let custodyByAgentID {
+                for agentID in custodyRestoreAgentIDs.sorted() {
+                    guard let expected = custodyByAgentID[agentID],
+                          let probe = probesByAgentId[agentID],
+                          probe.world === world, !probe.dead else {
+                        throw PebbleAgentCheckpointCustodyError
+                            .missingEvidence(agentID)
+                    }
+                    if expected.slots.allSatisfy({ $0 == nil }) {
+                        guard probe.carriedItems.allSatisfy({ $0 == nil })
+                        else {
+                            throw PebbleAgentCheckpointCustodyError
+                                .conflictingCurrentCustody(agentID)
+                        }
+                        continue
+                    }
+                    let endpoint = PebbleAgentMaterialCustodyEndpoint
+                        .liveAgent(probe, in: world)
+                    guard probe.carriedItems.allSatisfy({ $0 == nil }),
+                          endpoint.write(expected.slots),
+                          endpoint.read() == expected.slots else {
+                        throw PebbleAgentPersistenceStoreError.invalidBundle(
+                            "checkpoint physical custody restore failed for \(agentID)"
+                        )
+                    }
+                    custodyRestoredAgentIDs.append(agentID)
+                    if injectedCustodyRestoreFailure
+                        == .afterFirstCustodyRestore {
+                        throw PebbleAgentPersistenceStoreError.invalidBundle(
+                            "injected checkpoint failure after first custody restore"
+                        )
+                    }
+                }
+            }
             session = candidate
             constructionExecutor = candidateConstructionExecutor
             interactionExecutor = candidateInteractionExecutor
@@ -1183,12 +1687,18 @@ extension PebbleAgentController {
                 entity -> ObjectIdentifier? in
                 entity is LabCoreAgentEntity ? nil : ObjectIdentifier(entity)
             })
+            let adoptedSpillObjectIDs = Set(
+                persistedCustodySpillItems.map(ObjectIdentifier.init)
+            )
             let worldEntitiesExact = oldNonProbeEntities
+                    .subtracting(adoptedSpillObjectIDs)
                     == currentNonProbeEntities
                 && world.entities.compactMap {
                     ($0 as? LabCoreAgentEntity)?.labAgentId
                 }.sorted() == candidateAgentIDs
-            let exactProbesUnchanged = probePlan.exactAgentIDs.allSatisfy {
+            let exactProbesUnchanged = probePlan.exactAgentIDs.filter {
+                !custodyRestoreAgentIDs.contains($0)
+            }.allSatisfy {
                 reusableProbeStatesByAgentID[$0]?.isUnchanged(
                     in: world,
                     mappedByAgentID: probesByAgentId
@@ -1200,14 +1710,27 @@ extension PebbleAgentController {
                 reusableProbeStatesByAgentID[entry.agent.id]?.isRestored(
                     to: entry.agent.position,
                     in: world,
-                    mappedByAgentID: probesByAgentId
+                    mappedByAgentID: probesByAgentId,
+                    expectedCarriedItems:
+                        custodyByAgentID?[entry.agent.id]?.slots
                 ) == true
             }
             let restoredProbesVerified = restoredProbesCreated.allSatisfy {
-                $0.isUnchanged(
-                    in: world,
-                    mappedByAgentID: probesByAgentId
-                )
+                state in
+                guard let probe = probesByAgentId[state.agentID],
+                      let agent = candidateAgents.first(where: {
+                          $0.id == state.agentID
+                      }) else { return false }
+                return probe.world === world && !probe.dead
+                    && world.entities.filter({ $0 === probe }).count == 1
+                    && AgentPosition(
+                        x: Int(probe.x.rounded(.down)),
+                        y: Int(probe.y.rounded(.down)),
+                        z: Int(probe.z.rounded(.down))
+                    ) == agent.position
+                    && probe.carriedItems
+                        == (custodyByAgentID?[state.agentID]?.slots
+                            ?? state.carriedItems)
             }
             let finalEmbodiments = try PebbleAgentEmbodiment.resolveAll(
                 agentIDs: candidateAgentIDs,
@@ -1217,9 +1740,15 @@ extension PebbleAgentController {
             let positionsExact = candidateAgents.allSatisfy {
                 finalEmbodiments[$0.id]?.position == $0.position
             }
+            let custodyExact = custodyByAgentID.map { expectedByAgentID in
+                candidateAgentIDs.allSatisfy { agentID in
+                    finalEmbodiments[agentID]?.carriedItems
+                        == expectedByAgentID[agentID]?.slots
+                }
+            } ?? true
             guard worldEntitiesExact, exactProbesUnchanged,
                   repositionedProbesVerified, restoredProbesVerified,
-                  positionsExact,
+                  positionsExact, custodyExact,
                   Set(finalEmbodiments.values.map(\.position)).count
                     == candidateAgentIDs.count,
                   probesByAgentId.keys.sorted() == candidateAgentIDs else {
@@ -1249,6 +1778,19 @@ extension PebbleAgentController {
             lastTickResult = oldOrchestration.11
             for restored in restoredProbesCreated.reversed() where
                 world.entities.contains(where: { $0 === restored.probe }) {
+                restored.probe.carriedItems = copyItemInventory(
+                    restored.carriedItems
+                )
+                guard restored.probe.carriedItems == restored.carriedItems
+                else {
+                    let rollbackFailure =
+                        "checkpoint restore rollback could not clear restored custody "
+                            + restored.agentID
+                    lastError = rollbackFailure
+                    throw PebbleAgentPersistenceStoreError.invalidBundle(
+                        rollbackFailure
+                    )
+                }
                 guard removeLabCoreAgentProbe(restored.probe, from: world) else {
                     let rollbackFailure =
                         "checkpoint restore rollback could not remove restored probe "
@@ -1260,13 +1802,20 @@ extension PebbleAgentController {
                 }
                 probesByAgentId.removeValue(forKey: restored.agentID)
             }
-            for repositioned in repositionedProbes.reversed() {
-                repositioned.restorePriorPhysicalState()
+            for reusable in reusableProbeStates.reversed() {
+                reusable.restorePriorPhysicalState()
             }
             for retired in retiredProbesRemoved where !world.entities.contains(
                 where: { $0 === retired.probe }
             ) {
                 world.addEntity(retired.probe)
+            }
+            for item in removedCustodySpillItems where
+                !world.entities.contains(where: { $0 === item }) {
+                world.addEntity(item)
+            }
+            for (key, wasModified) in custodySpillChunkModifiedBefore {
+                world.chunks[key]?.modified = wasModified
             }
             probesByAgentId = oldProbesByAgentID
             let worldEntityIDs = Set(world.entities.map(ObjectIdentifier.init))
@@ -1287,12 +1836,26 @@ extension PebbleAgentController {
                 "checkpoint probe rollback verified name=\(name.rawValue) "
                     + "repositioned=\(repositionedProbes.count) "
                     + "restoredMissing=\(restoredProbesCreated.count) "
-                    + "retired=\(retiredProbesRemoved.count)"
+                    + "retired=\(retiredProbesRemoved.count) "
+                    + "custodyRestored=\(custodyRestoredAgentIDs.count) "
+                    + "custodySpillsRestored=\(removedCustodySpillItems.count)"
             )
             throw error
         }
         let causal = candidate.causalLedgerSnapshot().summary
         let reconciledDigest = try candidate.durableStateDigest()
+        if let decodedCustody {
+            checkpointCustodyHandoff = PebbleAgentCheckpointCustodyHandoff(
+                checkpointName: name,
+                custodyByAgentID: Dictionary(
+                    uniqueKeysWithValues: decodedCustody.map {
+                        ($0.evidence.agentID, $0)
+                    }
+                )
+            )
+        } else {
+            checkpointCustodyHandoff = nil
+        }
         let probeReconciliation = probePlan.repositionedAgentIDs.isEmpty
             ? (retiredBootstrapAgentIDs.isEmpty
                 ? (restoredCheckpointAgentIDs.isEmpty
@@ -1304,9 +1867,24 @@ extension PebbleAgentController {
             ? "none" : retiredBootstrapAgentIDs.joined(separator: ",")
         let restoredEvidence = restoredCheckpointAgentIDs.isEmpty
             ? "none" : restoredCheckpointAgentIDs.joined(separator: ",")
-        let worldMutation = probePlan.repositionedAgentIDs.isEmpty
-            ? "none" : "verified_probe_position_restore"
-        let message = "checkpoint loaded name=\(name.rawValue) id=\(stored.checkpoint.checkpointID.rawValue) tick=\(candidate.tick) simulation=\(candidate.simulationID.rawValue) digest=\(checkpointDigest.rawValue) reconciledDigest=\(reconciledDigest.rawValue) causalSequence=\(causal.latestSequence) causalDigest=\(causal.digest) restartSafe=1 manifestIntegrity=verified:v\(stored.manifest.manifestIntegrityVersion ?? 0) probes=\(probesByAgentId.count) paused=1 focus=\(focusedAgentId ?? "none") lifecycleEvent=none probeReconciliation=\(probeReconciliation) probeReusedExact=\(probePlan.exactAgentIDs.count) probeRestoredMissing=\(probePlan.missingAgentIDs.count) probeRepositionedVerified=\(probePlan.repositionedAgentIDs.count) probeRetiredVerified=\(retiredBootstrapAgentIDs.count) probePositionRefused=0 probeRetired=\(retiredEvidence) probeRestored=\(restoredEvidence) physicalReconciliation=\(reconciliationSummary) worldMutation=\(worldMutation)"
+        let custodyRestoredStacks = custodyRestoreAgentIDs.reduce(0) {
+            $0 + (custodyByAgentID?[$1]?.stackCount ?? 0)
+        }
+        let custodyRestoredQuantity = custodyRestoreAgentIDs.reduce(0) {
+            $0 + (custodyByAgentID?[$1]?.carriedQuantity ?? 0)
+        }
+        let worldMutation: String
+        if !probePlan.repositionedAgentIDs.isEmpty
+            && custodyRestoredStacks > 0 {
+            worldMutation = "verified_probe_position_and_custody_restore"
+        } else if custodyRestoredStacks > 0 {
+            worldMutation = "verified_probe_custody_restore"
+        } else if !probePlan.repositionedAgentIDs.isEmpty {
+            worldMutation = "verified_probe_position_restore"
+        } else {
+            worldMutation = "none"
+        }
+        let message = "checkpoint loaded name=\(name.rawValue) id=\(stored.checkpoint.checkpointID.rawValue) tick=\(candidate.tick) simulation=\(candidate.simulationID.rawValue) digest=\(checkpointDigest.rawValue) reconciledDigest=\(reconciledDigest.rawValue) causalSequence=\(causal.latestSequence) causalDigest=\(causal.digest) restartSafe=1 manifestIntegrity=verified:v\(stored.manifest.manifestIntegrityVersion ?? 0) probes=\(probesByAgentId.count) paused=1 focus=\(focusedAgentId ?? "none") lifecycleEvent=none probeReconciliation=\(probeReconciliation) probeReusedExact=\(probePlan.exactAgentIDs.count) probeRestoredMissing=\(probePlan.missingAgentIDs.count) probeRepositionedVerified=\(probePlan.repositionedAgentIDs.count) probeRetiredVerified=\(retiredBootstrapAgentIDs.count) probePositionRefused=0 probeRetired=\(retiredEvidence) probeRestored=\(restoredEvidence) custodyReconciliation=\(custodyReconciliation) custodyRestoredAgents=\(custodyRestoreAgentIDs.count) custodyRestoredStacks=\(custodyRestoredStacks) custodyRestoredQuantity=\(custodyRestoredQuantity) custodyAdoptedSpills=\(persistedCustodySpillItems.count) custodyDuplicates=0 physicalReconciliation=\(reconciliationSummary) worldMutation=\(worldMutation)"
         trace(message)
         return success(message)
     }

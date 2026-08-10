@@ -504,6 +504,149 @@ public struct AgentCheckpointWorldBinding: Codable, Equatable, Sendable {
     }
 }
 
+/// Integrity-protected, adapter-owned evidence for one exact physical stack.
+///
+/// PebbleAgents treats the canonical bytes as opaque evidence. Only the
+/// Pebble adapter that owns `ItemStack` may decode them or use them to restore
+/// physical custody; the civilization session never treats this value as an
+/// inventory or as authority to create matter.
+public struct AgentCheckpointPhysicalItemEvidence:
+    Codable, Equatable, Sendable
+{
+    public let slotOrdinal: Int
+    public let itemKey: String
+    public let quantity: Int
+    public let damage: Int
+    public let canonicalStackBytes: Data
+    public let stackDigest: AgentCheckpointDigest
+
+    public init(
+        slotOrdinal: Int,
+        itemKey: String,
+        quantity: Int,
+        damage: Int,
+        canonicalStackBytes: Data
+    ) throws {
+        guard slotOrdinal >= 0, slotOrdinal < 54,
+              !itemKey.isEmpty, itemKey.count <= 256,
+              quantity > 0,
+              damage >= 0,
+              !canonicalStackBytes.isEmpty,
+              canonicalStackBytes.count <= 65_536 else {
+            throw AgentCheckpointError.invalidPhysicalAttestation
+        }
+        self.slotOrdinal = slotOrdinal
+        self.itemKey = itemKey
+        self.quantity = quantity
+        self.damage = damage
+        self.canonicalStackBytes = canonicalStackBytes
+        stackDigest = AgentCheckpointDigest.sha256(canonicalStackBytes)
+    }
+
+    fileprivate func validate(slotCount: Int) throws {
+        guard slotOrdinal >= 0, slotOrdinal < slotCount,
+              slotOrdinal < 54,
+              !itemKey.isEmpty, itemKey.count <= 256,
+              quantity > 0,
+              damage >= 0,
+              !canonicalStackBytes.isEmpty,
+              canonicalStackBytes.count <= 65_536,
+              stackDigest == AgentCheckpointDigest.sha256(canonicalStackBytes)
+        else {
+            throw AgentCheckpointError.invalidPhysicalAttestation
+        }
+    }
+}
+
+private struct AgentCheckpointProbeCustodyIntegrityPayload: Encodable {
+    let evidenceVersion: Int
+    let agentID: String
+    let slotCount: Int
+    let items: [AgentCheckpointPhysicalItemEvidence]
+}
+
+/// Complete exact-slot physical custody evidence for one non-persistent Lab
+/// probe. Empty slots are represented by their absence from `items`; unique
+/// slot ordinals and `slotCount` make that absence explicit and verifiable.
+public struct AgentCheckpointProbeCustodyEvidence:
+    Codable, Equatable, Sendable
+{
+    public static let currentEvidenceVersion = 1
+
+    public let evidenceVersion: Int
+    public let agentID: String
+    public let slotCount: Int
+    public let items: [AgentCheckpointPhysicalItemEvidence]
+    public let custodyFingerprint: AgentCheckpointDigest
+
+    public init(
+        agentID: String,
+        slotCount: Int,
+        items: [AgentCheckpointPhysicalItemEvidence]
+    ) throws {
+        let ordered = items.sorted { $0.slotOrdinal < $1.slotOrdinal }
+        guard AgentID(rawValue: agentID) != nil,
+              slotCount > 0, slotCount <= 54,
+              ordered.count <= slotCount,
+              ordered.map(\.slotOrdinal).count
+                == Set(ordered.map(\.slotOrdinal)).count else {
+            throw AgentCheckpointError.invalidPhysicalAttestation
+        }
+        for item in ordered { try item.validate(slotCount: slotCount) }
+        evidenceVersion = Self.currentEvidenceVersion
+        self.agentID = agentID
+        self.slotCount = slotCount
+        self.items = ordered
+        custodyFingerprint = try Self.fingerprint(
+            evidenceVersion: evidenceVersion,
+            agentID: agentID,
+            slotCount: slotCount,
+            items: ordered
+        )
+    }
+
+    public var isEmpty: Bool { items.isEmpty }
+
+    fileprivate func validate() throws {
+        guard evidenceVersion == Self.currentEvidenceVersion,
+              AgentID(rawValue: agentID) != nil,
+              slotCount > 0, slotCount <= 54,
+              items == items.sorted(by: {
+                  $0.slotOrdinal < $1.slotOrdinal
+              }),
+              items.count <= slotCount,
+              items.map(\.slotOrdinal).count
+                == Set(items.map(\.slotOrdinal)).count else {
+            throw AgentCheckpointError.invalidPhysicalAttestation
+        }
+        for item in items { try item.validate(slotCount: slotCount) }
+        guard custodyFingerprint == (try Self.fingerprint(
+            evidenceVersion: evidenceVersion,
+            agentID: agentID,
+            slotCount: slotCount,
+            items: items
+        )) else {
+            throw AgentCheckpointError.invalidPhysicalAttestation
+        }
+    }
+
+    private static func fingerprint(
+        evidenceVersion: Int,
+        agentID: String,
+        slotCount: Int,
+        items: [AgentCheckpointPhysicalItemEvidence]
+    ) throws -> AgentCheckpointDigest {
+        AgentCheckpointDigest.sha256(try AgentCheckpointCodec.encode(
+            AgentCheckpointProbeCustodyIntegrityPayload(
+                evidenceVersion: evidenceVersion,
+                agentID: agentID,
+                slotCount: slotCount,
+                items: items
+            )
+        ))
+    }
+}
+
 public struct AgentCheckpointLiveOrchestration: Codable, Equatable, Sendable {
     public let cognitiveHz: Int
     public let wasPaused: Bool
@@ -513,6 +656,8 @@ public struct AgentCheckpointLiveOrchestration: Codable, Equatable, Sendable {
     public let focusedAgentID: String?
     public let naturalResourceScanDiagnostics: AgentNaturalResourceScanDiagnostics?
     public let verifiedEmptyProbeAgentIDsAtSave: [String]?
+    public let protectedProbeCustodyEvidenceAtSave:
+        [AgentCheckpointProbeCustodyEvidence]?
 
     public init(
         cognitiveHz: Int,
@@ -522,7 +667,9 @@ public struct AgentCheckpointLiveOrchestration: Codable, Equatable, Sendable {
         economyAutoEnabled: Bool,
         focusedAgentID: String? = nil,
         naturalResourceScanDiagnostics: AgentNaturalResourceScanDiagnostics? = nil,
-        verifiedEmptyProbeAgentIDsAtSave: [String]? = nil
+        verifiedEmptyProbeAgentIDsAtSave: [String]? = nil,
+        protectedProbeCustodyEvidenceAtSave:
+            [AgentCheckpointProbeCustodyEvidence]? = nil
     ) {
         self.cognitiveHz = cognitiveHz
         self.wasPaused = wasPaused
@@ -533,6 +680,8 @@ public struct AgentCheckpointLiveOrchestration: Codable, Equatable, Sendable {
         self.naturalResourceScanDiagnostics = naturalResourceScanDiagnostics
         self.verifiedEmptyProbeAgentIDsAtSave =
             verifiedEmptyProbeAgentIDsAtSave
+        self.protectedProbeCustodyEvidenceAtSave =
+            protectedProbeCustodyEvidenceAtSave
     }
 }
 
@@ -552,7 +701,7 @@ private struct AgentCheckpointManifestIntegrityPayload: Encodable {
 }
 
 public struct AgentCheckpointManifest: Codable, Equatable, Sendable {
-    public static let currentIntegrityVersion = 1
+    public static let currentIntegrityVersion = 2
 
     public let schemaVersion: Int
     public let name: AgentCheckpointName
@@ -591,9 +740,16 @@ public struct AgentCheckpointManifest: Codable, Equatable, Sendable {
         self.orchestration = orchestration
         self.reconciliationBinding = reconciliationBinding
         if checkpoint.schemaVersion >= AgentCheckpointSchema.geneticsVersion {
-            manifestIntegrityVersion = Self.currentIntegrityVersion
+            // Preserve the exact v1 meaning and bytes for empty-custody
+            // checkpoints. Version 2 is selected only when the new protected
+            // non-empty custody evidence is actually present.
+            let integrityVersion = orchestration
+                .protectedProbeCustodyEvidenceAtSave == nil
+                ? 1
+                : Self.currentIntegrityVersion
+            manifestIntegrityVersion = integrityVersion
             manifestIntegrityDigest = try Self.integrityDigest(
-                integrityVersion: Self.currentIntegrityVersion,
+                integrityVersion: integrityVersion,
                 schemaVersion: checkpoint.schemaVersion,
                 name: name,
                 checkpointID: checkpoint.checkpointID,
@@ -614,12 +770,15 @@ public struct AgentCheckpointManifest: Codable, Equatable, Sendable {
 
     public func validateIntegrityDigest() throws {
         if schemaVersion >= AgentCheckpointSchema.geneticsVersion {
-            guard manifestIntegrityVersion == Self.currentIntegrityVersion,
+            guard let manifestIntegrityVersion,
+                  (1...Self.currentIntegrityVersion).contains(
+                    manifestIntegrityVersion
+                  ),
                   let manifestIntegrityDigest else {
                 throw AgentCheckpointError.missingManifestIntegrity
             }
             guard try manifestIntegrityDigest == Self.integrityDigest(
-                integrityVersion: Self.currentIntegrityVersion,
+                integrityVersion: manifestIntegrityVersion,
                 schemaVersion: schemaVersion,
                 name: name,
                 checkpointID: checkpointID,
@@ -640,6 +799,29 @@ public struct AgentCheckpointManifest: Codable, Equatable, Sendable {
               manifestIntegrityDigest == nil else {
             throw AgentCheckpointError.manifestIntegrityMismatch
         }
+    }
+
+    public func protectedProbeCustodyEvidence(
+        for checkpoint: AgentSessionCheckpoint
+    ) throws -> [AgentCheckpointProbeCustodyEvidence]? {
+        try validateIntegrityDigest()
+        guard checkpoint.schemaVersion == schemaVersion else {
+            throw AgentCheckpointError.invalidPhysicalAttestation
+        }
+        guard let evidence = orchestration
+            .protectedProbeCustodyEvidenceAtSave else {
+            return nil
+        }
+        let checkpointAgentIDs = checkpoint.durableState.agents
+            .map(\.agentID.rawValue).sorted()
+        guard manifestIntegrityVersion == Self.currentIntegrityVersion,
+              evidence == evidence.sorted(by: { $0.agentID < $1.agentID }),
+              evidence.map(\.agentID) == checkpointAgentIDs,
+              evidence.count == Set(evidence.map(\.agentID)).count else {
+            throw AgentCheckpointError.invalidPhysicalAttestation
+        }
+        for entry in evidence { try entry.validate() }
+        return evidence
     }
 
     public func protectedVerifiedEmptyProbeAgentIDs(
@@ -666,6 +848,13 @@ public struct AgentCheckpointManifest: Codable, Equatable, Sendable {
               )) else {
             throw AgentCheckpointError.invalidPhysicalAttestation
         }
+        if let evidence = try protectedProbeCustodyEvidence(
+            for: checkpoint
+        ) {
+            guard values == evidence.filter(\.isEmpty).map(\.agentID) else {
+                throw AgentCheckpointError.invalidPhysicalAttestation
+            }
+        }
         return values
     }
 
@@ -673,9 +862,14 @@ public struct AgentCheckpointManifest: Codable, Equatable, Sendable {
         restoredAgentIDs: [String],
         for checkpoint: AgentSessionCheckpoint
     ) throws -> [String] {
-        let protectedAgentIDs = try protectedVerifiedEmptyProbeAgentIDs(
-            for: checkpoint
-        )
+        let protectedAgentIDs: [String]
+        if let custody = try protectedProbeCustodyEvidence(for: checkpoint) {
+            protectedAgentIDs = custody.map(\.agentID)
+        } else {
+            protectedAgentIDs = try protectedVerifiedEmptyProbeAgentIDs(
+                for: checkpoint
+            )
+        }
         guard restoredAgentIDs == restoredAgentIDs.sorted(),
               restoredAgentIDs.count == Set(restoredAgentIDs).count,
               restoredAgentIDs.allSatisfy({

@@ -97,6 +97,9 @@ final class PebbleAgentController {
     var replayBaseCheckpointName: AgentCheckpointName?
     var checkpointPositionRestoreFailurePoint:
         PebbleAgentCheckpointPositionRestoreFailurePoint?
+    var checkpointPhysicalCustodyFailurePoint:
+        PebbleAgentCheckpointPhysicalCustodyFailurePoint?
+    var checkpointCustodyHandoff: PebbleAgentCheckpointCustodyHandoff?
     var isAdvancingSession = false
     var kinshipLateFailureProofInjected = false
     var skillLateFailureProofInjected = false

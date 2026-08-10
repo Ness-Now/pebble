@@ -259,7 +259,7 @@ require_trace "$PROCESS2_TRACE" \
     'observer status .*schema=7 .*renewableStatus=renewableCycleCompleted .*mutation=none tickStable=1 causalStable=1 digestStable=1' \
     'Observer read-only result'
 require_trace "$PROCESS2_TRACE" \
-    'checkpoint loaded name=b03-complete .*restartSafe=1 manifestIntegrity=verified:v1 .*worldMutation=none' \
+    'checkpoint loaded name=b03-complete .*restartSafe=1 manifestIntegrity=verified:v2 .*custodyReconciliation=reused_exact .*worldMutation=none' \
     'completed state reload'
 require_trace "$PROCESS2_TRACE" 'checkpoint deleted name=b03-stage-zero' \
     'stage-zero checkpoint cleanup'
