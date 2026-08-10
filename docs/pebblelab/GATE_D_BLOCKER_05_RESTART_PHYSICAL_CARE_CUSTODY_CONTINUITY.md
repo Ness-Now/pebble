@@ -69,21 +69,56 @@ produce that claim.
 ## Physical escrow and reconciliation
 
 On an exact graceful shutdown, `removeLabCoreAgentProbe` converts each carried
-stack once into a real `ItemEntity`. Each spill has an integrity-linked token
-derived from checkpoint agent, slot and protected stack digest. The spill is
-inert, unpickable, non-expiring, non-merging and protected from destructive
-damage while it is escrowed. Creation marks only its existing World chunk
-modified so the normal PebbleCore save persists the entity; there is no second
-World save or inventory engine.
+stack once into a real `ItemEntity`. Before that mutation, one centralized
+freshness validator compares the live boundary against the handoff captured by
+the checkpoint save. It requires the same checkpoint name and identity,
+simulation and tick, semantic digest, causal sequence and digest, live World
+object and protected World binding, exact session/mapping/World probe
+population, exact probe object and position, complete canonical slot custody
+and fingerprint, and absence of a pre-existing checkpoint escrow. Future
+movement or action paths do not maintain a fragile invalidation flag; the
+complete boundary is re-derived at the instant of handoff.
 
-At fresh load, Pebble either adopts the complete exact set of escrow entities
-or, after an abrupt process loss with no escrow set, reconstructs from the
-protected exact physical evidence. Partial sets, duplicate tokens, foreign
-tokens, stack or position divergence and contradictory current custody are
-refused. Adoption removes each escrow entity, marks its chunk for the normal
-World save, then writes the exact saved slots through the existing physical
-custody endpoint. One physical stack has one representation before and after
-the boundary.
+Each protected spill has a version-2 integrity-linked token derived from the
+checkpoint ID, manifest-v2 integrity digest, agent, slot and protected stack
+digest. Thus a physically identical escrow from another checkpoint or another
+manifest boundary is foreign. The spill is inert, unpickable, non-expiring,
+non-merging and protected from destructive damage while it is escrowed.
+Creation marks its existing World chunk modified so the normal PebbleCore save
+persists the entity; there is no second World save or inventory engine. An
+ordinary spill also dirties its existing chunk, so current post-checkpoint
+matter is not silently dropped merely because a checkpoint handoff became
+stale.
+
+At fresh load, Pebble adopts only the complete exact set of checkpoint-bound
+escrow entities. Manifest-v2 evidence alone is not physical authority to
+recreate matter. If no tagged escrow exists, only an exact same-process probe
+boundary may be reused without mutation; a fresh process cannot satisfy that
+condition and fails closed before physical mutation. Abrupt process loss
+without a persisted escrow is therefore not supported by this bounded
+correction. Partial sets, duplicate tokens, foreign tokens, stack or position
+divergence and contradictory current custody are also refused. Adoption
+removes each escrow entity, marks its chunk for the normal World save, then
+writes the exact saved slots through the existing physical custody endpoint.
+One physical stack has one representation before and after the boundary.
+
+## Senior review correction 01
+
+The candidate at reviewed head
+`c8125c7ffafedb81a3295d7b9fbce7844fbd24fb` retained the checkpoint custody
+handoff after save but tested its shutdown freshness mainly through agent-set
+and slot equality. A post-checkpoint move could consequently label current
+matter at a new position as escrow for an older checkpoint. A second seam let
+a fresh loader reconstruct manifest custody whenever no tagged spill was
+observed.
+
+The correction closes both seams. A stale position, session/causal boundary,
+World binding, population, probe identity or custody fingerprint prevents all
+checkpoint provenance tags. The resulting ordinary current matter is saved by
+the normal World path. A later attempt to load the older checkpoint observes
+no matching checkpoint-bound escrow and refuses before probe, custody or
+session mutation. Protected evidence describes and verifies expected custody;
+it never establishes that missing World matter is safe to recreate.
 
 ## Atomic load
 
@@ -129,6 +164,10 @@ The dedicated runner is
 `scripts/verify-pebblelab-gate-d-restart-physical-care-custody-fix.sh`. It
 also proves multi-slot exactness, rollback after physical restore, protected
 evidence corruption refusal and contradictory bootstrap-custody refusal. The
+senior-review additions prove that post-checkpoint movement creates no false
+escrow and that post-checkpoint custody mutation cannot trigger manifest-only
+reconstruction over surviving World matter. Both stale loads preserve the
+same relevant World material counts before and after refusal. The
 empty-custody Blocker 01 path and Blockers 02 through 04 remain separate
 mandatory regressions.
 

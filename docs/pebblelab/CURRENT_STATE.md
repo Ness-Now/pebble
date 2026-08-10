@@ -98,12 +98,19 @@ The local Blocker 05 candidate adds manifest-v2 exact physical-custody restart
 evidence only for non-empty nonpersistent Lab probes. Pebble captures and
 round-trips every material `ItemStack` field, while PebbleAgents retains only
 opaque protected evidence. Graceful shutdown represents the same stacks once
-as protected real `ItemEntity` escrow through the existing World chunk save;
-fresh load adopts that escrow or uses the exact protected evidence after an
-abrupt loss. Prevalidation, complete-set reconciliation and exact rollback
-remain adapter-owned. Material Rights constrains holder/material/quantity but
-never creates matter. Session schema 30 and Observer schema 7 are unchanged;
-empty custody preserves manifest v1 and the Blocker 01 path.
+as protected real `ItemEntity` escrow through the existing World chunk save,
+but only after revalidating checkpoint/session identity and tick, causal
+boundary, World binding, exact probe population/identity/position, complete
+custody and fingerprints. Escrow provenance is bound to checkpoint ID and the
+manifest-v2 integrity digest. Fresh load adopts only that complete exact
+escrow set. Absence of escrow is not authority to recreate manifest matter;
+abrupt loss without persisted escrow is unsupported and fails closed before
+mutation. Ordinary current spills dirty their World chunk and therefore
+survive a stale handoff refusal. Prevalidation, complete-set reconciliation
+and exact rollback remain adapter-owned. Material Rights constrains
+holder/material/quantity but never creates matter. Session schema 30 and
+Observer schema 7 are unchanged; empty custody preserves manifest v1 and the
+Blocker 01 path.
 
 ## Last validation baseline
 
