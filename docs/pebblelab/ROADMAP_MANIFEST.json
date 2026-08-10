@@ -25,7 +25,8 @@
     "gateDBlocker04PublishedCanonicalHead": "cca372bb841846db4b1010d26456bcc245b07c3e",
     "gateDEvaluation05EvaluatedProductHead": "1fa033173609b8cc6ff8a3c4f09cb0e6b0ec8a9e",
     "gateDBlocker05AffectedProductHead": "1fa033173609b8cc6ff8a3c4f09cb0e6b0ec8a9e",
-    "meaning": "Canonical history through historical Gate D Evaluation 05; Blockers 01 through 04 are fixed and published, Evaluation 05 remains immutable FAIL evidence, Blocker 05 is a local product-correction candidate, and its next action is senior review and manual publication.",
+    "gateDBlocker05PublishedProductFixHead": "d60e4f2dad11f02c184d8e7ae85b9bbdc9fe7712",
+    "meaning": "Canonical history through historical Gate D Evaluation 05; Blockers 01 through 05 are fixed and published, Evaluations 01 through 05 remain immutable FAIL evidence, and the next authorized action is a new independent Gate D Evaluation 06.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -64,7 +65,7 @@
     "activePhase": null,
     "completedThrough": "CIV-33",
     "nextEligiblePhase": null,
-    "nextAuthorizedAction": "SENIOR-REVIEW-AND-MANUAL-PUBLICATION-GATE-D-BLOCKER-05",
+    "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-D-v1-EVALUATION-06",
     "civ27Status": "completed",
     "civ28Status": "completed",
     "gateCStatus": "acquired",
@@ -82,7 +83,9 @@
     "gateDEvaluation04Status": "evaluatedFailNotAcquired",
     "gateDBlocker04Status": "fixedPublished",
     "gateDEvaluation05Status": "evaluatedFailNotAcquired",
-    "gateDBlocker05Status": "fixLocalCandidate",
+    "gateDBlocker05Status": "fixedPublished",
+    "gateDEvaluation06Status": "notStarted",
+    "civ34Status": "notStarted",
     "renewableSubsistenceMilestoneStatus": "completedPublished",
     "v4CanonicalDocumentSet": true
   },
@@ -423,7 +426,20 @@
         "publishedCanonicalHead": "cca372bb841846db4b1010d26456bcc245b07c3e"
       },
       "evaluation05": {
-        "status": "notStarted"
+        "status": "evaluatedFailNotAcquired",
+        "evaluatedProductBaseline": "1fa033173609b8cc6ff8a3c4f09cb0e6b0ec8a9e",
+        "verdict": "failProductCorrectionRequired",
+        "historicalEvidenceImmutable": true
+      },
+      "blocker05RestartPhysicalCareCustodyContinuity": {
+        "status": "fixedPublished",
+        "evidence": "docs/pebblelab/GATE_D_BLOCKER_05_RESTART_PHYSICAL_CARE_CUSTODY_CONTINUITY.md",
+        "gateAcquired": false,
+        "publishedProductFixHead": "d60e4f2dad11f02c184d8e7ae85b9bbdc9fe7712"
+      },
+      "evaluation06": {
+        "status": "notStarted",
+        "nextAuthorizedAction": true
       }
     },
     "E": {

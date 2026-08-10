@@ -4,14 +4,16 @@
 
 ```text
 Gate D Evaluation 05: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
-Gate D Blocker 05: BLOCKER_FIX_LOCAL_CANDIDATE
+Gate D Blocker 05: BLOCKER_FIX_PUBLISHED
 Gate D: EVALUATED_FAIL_NOT_ACQUIRED
+Independent Gate D Evaluation 06: NOT_STARTED — NEXT AUTHORIZED ACTION
 CIV-34: NOT_STARTED
-next action: senior review and manual publication of Gate D Blocker 05
+published product-fix head: d60e4f2dad11f02c184d8e7ae85b9bbdc9fe7712
 ```
 
 This product correction does not rerun Evaluation 05 and does not acquire
-Gate D. A future independent Evaluation 06 is required after publication.
+Gate D. A new independent Evaluation 06 is the next authorized action and has
+not started.
 
 ## Root cause
 
