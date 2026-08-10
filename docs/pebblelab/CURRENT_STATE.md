@@ -27,9 +27,16 @@ Published Gate D Blocker 04 product-fix head:
 cca372bb841846db4b1010d26456bcc245b07c3e
 ```
 
+Published baseline evaluated by independent Gate D Evaluation 05 and used as
+the direct base for the local Blocker 05 correction:
+
+```text
+1fa033173609b8cc6ff8a3c4f09cb0e6b0ec8a9e
+```
+
 The `CIV-33` completion, renewable-subsistence milestone and Gate D Blockers 01
 through 03 are published on the canonical branch. Independent Gate D
-Evaluations 01 through 04 remain immutable FAIL evidence for their evaluated
+Evaluations 01 through 05 remain immutable FAIL evidence for their evaluated
 baselines. Evaluation 04 found that an abandoned civilization candidate could
 leave an earlier successful physical movement in PebbleCore after a later
 agricultural navigation collision.
@@ -38,7 +45,7 @@ agricultural navigation collision.
 
 ```text
 active CIV phase: none
-next authorized action: NEW INDEPENDENT V4-GATE-D-v1 EVALUATION 05
+next authorized action: SENIOR REVIEW AND MANUAL PUBLICATION OF GATE D BLOCKER 05
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -46,7 +53,8 @@ V4-GATE-D-v1 status: EVALUATED_FAIL_NOT_ACQUIRED
 Gate D Blocker 03 status: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 04 status: EVALUATED_FAIL_NOT_ACQUIRED
 Gate D Blocker 04 status: BLOCKER_FIX_PUBLISHED
-Gate D Evaluation 05 status: NOT_STARTED
+Gate D Evaluation 05 status: EVALUATED_FAIL_NOT_ACQUIRED
+Gate D Blocker 05 status: BLOCKER_FIX_LOCAL_CANDIDATE
 CIV-34 status: NOT_STARTED
 roadmap generation: V4
 ```
@@ -83,7 +91,19 @@ arms candidate physical hard failure. No direct productive physical
 `.register(` call remains. This work does not alter Evaluation 04 or acquire Gate D.
 Senior review is approved, the published product-fix head is
 `cca372bb841846db4b1010d26456bcc245b07c3e`, and the next authorized action is
-a new independent `V4-GATE-D-v1` Evaluation 05. Evaluation 05 is not started.
+senior review and manual publication of Gate D Blocker 05. Evaluation 05
+remains historical FAIL evidence; Evaluation 06 is not started.
+
+The local Blocker 05 candidate adds manifest-v2 exact physical-custody restart
+evidence only for non-empty nonpersistent Lab probes. Pebble captures and
+round-trips every material `ItemStack` field, while PebbleAgents retains only
+opaque protected evidence. Graceful shutdown represents the same stacks once
+as protected real `ItemEntity` escrow through the existing World chunk save;
+fresh load adopts that escrow or uses the exact protected evidence after an
+abrupt loss. Prevalidation, complete-set reconciliation and exact rollback
+remain adapter-owned. Material Rights constrains holder/material/quantity but
+never creates matter. Session schema 30 and Observer schema 7 are unchanged;
+empty custody preserves manifest v1 and the Blocker 01 path.
 
 ## Last validation baseline
 
@@ -245,8 +265,9 @@ Gate D Blocker 02 regression: PASS
 
 ## Next authorized action
 
-The current authorized action is a new independent `V4-GATE-D-v1` Evaluation
-05. Evaluation 05 is **NOT_STARTED**.
+The current authorized action is senior review and manual publication of Gate
+D Blocker 05. Evaluation 05 remains **EVALUATED_FAIL_NOT_ACQUIRED** historical
+evidence, and Evaluation 06 is **NOT_STARTED**.
 Gate D remains **EVALUATED_FAIL_NOT_ACQUIRED** and is not acquired by this
 correction. `CIV-34` is not started and remains downstream of a future
 published Gate D PASS.

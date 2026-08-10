@@ -23,7 +23,9 @@
     "gateDEvaluation04EvaluatedProductHead": "4b11c93abd36a1a1c61d491df1e5efa6607f6206",
     "gateDBlocker04AffectedProductHead": "4b11c93abd36a1a1c61d491df1e5efa6607f6206",
     "gateDBlocker04PublishedCanonicalHead": "cca372bb841846db4b1010d26456bcc245b07c3e",
-    "meaning": "Canonical history through the published Gate D Blocker 04 product fix; Gate D evaluations 01 through 04 remain historical FAIL evidence, Blockers 01 through 04 are fixed and published, and independent Evaluation 05 is the next authorized action but is not started.",
+    "gateDEvaluation05EvaluatedProductHead": "1fa033173609b8cc6ff8a3c4f09cb0e6b0ec8a9e",
+    "gateDBlocker05AffectedProductHead": "1fa033173609b8cc6ff8a3c4f09cb0e6b0ec8a9e",
+    "meaning": "Canonical history through historical Gate D Evaluation 05; Blockers 01 through 04 are fixed and published, Evaluation 05 remains immutable FAIL evidence, Blocker 05 is a local product-correction candidate, and its next action is senior review and manual publication.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -46,6 +48,7 @@
     "gateDBlocker02EcologicalObserverHistoryFix": "docs/pebblelab/GATE_D_BLOCKER_02_ECOLOGICAL_OBSERVER_HISTORY_FIX.md",
     "gateDBlocker03AgricultureCycleObservationFix": "docs/pebblelab/GATE_D_BLOCKER_03_AGRICULTURE_CYCLE_OBSERVATION_FIX.md",
     "gateDBlocker04CandidatePhysicalAtomicityFix": "docs/pebblelab/GATE_D_BLOCKER_04_CANDIDATE_PHYSICAL_ATOMICITY_FIX.md",
+    "gateDBlocker05RestartPhysicalCareCustodyContinuity": "docs/pebblelab/GATE_D_BLOCKER_05_RESTART_PHYSICAL_CARE_CUSTODY_CONTINUITY.md",
     "gateCEvidenceMarkdown": "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.md",
     "gateCEvidenceJSON": "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.json"
   },
@@ -61,7 +64,7 @@
     "activePhase": null,
     "completedThrough": "CIV-33",
     "nextEligiblePhase": null,
-    "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-D-v1-EVALUATION-05",
+    "nextAuthorizedAction": "SENIOR-REVIEW-AND-MANUAL-PUBLICATION-GATE-D-BLOCKER-05",
     "civ27Status": "completed",
     "civ28Status": "completed",
     "gateCStatus": "acquired",
@@ -78,7 +81,8 @@
     "gateDBlocker03Status": "fixedPublished",
     "gateDEvaluation04Status": "evaluatedFailNotAcquired",
     "gateDBlocker04Status": "fixedPublished",
-    "gateDEvaluation05Status": "notStarted",
+    "gateDEvaluation05Status": "evaluatedFailNotAcquired",
+    "gateDBlocker05Status": "fixLocalCandidate",
     "renewableSubsistenceMilestoneStatus": "completedPublished",
     "v4CanonicalDocumentSet": true
   },
