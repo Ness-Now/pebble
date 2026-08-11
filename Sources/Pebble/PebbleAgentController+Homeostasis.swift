@@ -8,7 +8,7 @@ extension PebbleAgentController {
         player: Player
     ) -> PebbleAgentCommandResult {
         let usage = "Usage: /lab homeostasis <on|status|proof <setup|"
-            + "estate-setup|rollback|advance 1...32|"
+            + "estate-setup|estate-co-mingled-setup|rollback|advance 1...32|"
             + "estate-advance 1...32|cleanup>>"
         guard homeostasisFeatureEnabled else {
             return failure(
@@ -57,6 +57,15 @@ extension PebbleAgentController {
                     return try setupEstateHomeostasisProof(
                         session: &candidate, world: world
                     )
+                case "estate-co-mingled-setup":
+                    guard arguments.count == 2,
+                          environment["PEBBLELAB_GATE_D_BLOCKER_06"] == "1"
+                    else {
+                        return failure(usage)
+                    }
+                    return try setupCoMingledEstateHomeostasisProof(
+                        session: candidate, world: world
+                    )
                 case "advance":
                     guard arguments.count == 3,
                           let count = Int(arguments[2]),
@@ -97,6 +106,114 @@ extension PebbleAgentController {
         } catch {
             return failure("Homeostasis command failed: \(error)")
         }
+    }
+
+    /// Disposable-World fixture for Gate D Blocker 06. The registered
+    /// pickaxe remains in its durable container while one real, socially
+    /// unregistered hoe enters the future decedent's live custody. Normal
+    /// mortality then owns the complete physical exit into that same
+    /// container; this helper does not open or modify an estate.
+    private func setupCoMingledEstateHomeostasisProof(
+        session candidate: AgentSimulationSession,
+        world: World
+    ) throws -> PebbleAgentCommandResult {
+        let decedentID = AgentID(rawValue: "agent_0")!
+        let assetID =
+            AgentMaterialAssetID(rawValue: "asset:civ27:live-pickaxe")!
+        guard candidate.homeostasisEnabled,
+              candidate.physicalFoodSurvivalEnabled,
+              candidate.materialRightsEnabled,
+              candidate.persistenceReconciliationEnabled,
+              candidate.estatesEnabled,
+              candidate.familyV1Enabled,
+              candidate.expectedActiveAgentIDs().contains(decedentID),
+              let record = candidate.materialRightsSnapshot().records.first(
+                where: { $0.asset.assetID == assetID }
+              ),
+              record.recognizedOwnership?.ownerID == decedentID,
+              case let .container(location) =
+                record.lastVerifiedHolder.holder,
+              let position = homeostasisContainerPosition(location),
+              let container = world.getBlockEntity(
+                position.x, position.y, position.z
+              ),
+              let probe = probesByAgentId[decedentID.rawValue],
+              probe.world === world, !probe.dead,
+              probe.carriedItems.allSatisfy({ $0 == nil }) else {
+            throw ControllerError.homeostasisBoundary(
+                "co-mingled estate proof dependencies unavailable"
+            )
+        }
+        let durable = PebbleAgentMaterialCustodyEndpoint.container(
+            container, in: world
+        )
+        let durableBefore = try materialCustodyGateway.inspect(durable)
+        let tracked = durableBefore.slots.compactMap { $0 }.filter {
+            $0.identity == record.asset.materialIdentity
+        }
+        guard tracked.count == 1,
+              tracked[0].count == record.asset.quantity,
+              try materialCustodyGateway.fingerprint(durable)
+                == record.lastVerifiedHolder.custodyFingerprint else {
+            throw ControllerError.homeostasisBoundary(
+                "co-mingled estate tracked source is not initially exact"
+            )
+        }
+
+        let item = spawnItem(
+            world, probe.x, probe.y + 0.25, probe.z,
+            ItemStack(iid("iron_hoe"), 1)
+        )
+        guard let source = PebbleAgentItemEntityCustodyEndpoint(
+            spawnedItemEntityIDs: [item.id], world: world
+        ) else {
+            world.removeEntity(item)
+            throw ControllerError.homeostasisBoundary(
+                "co-mingled hoe source unavailable"
+            )
+        }
+        let destination = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            probe, in: world
+        )
+        let outcome = materialCustodyGateway.acquireItemEntities(
+            PebbleAgentItemEntityAcquisitionRequest(
+                transactionID: "gate-d-blocker-06-unregistered-hoe",
+                spawnedItemEntityIDs: [item.id],
+                expectedDestinationFingerprint:
+                    try materialCustodyGateway.fingerprint(destination)
+            ),
+            from: source,
+            to: destination
+        )
+        let carried = try materialCustodyGateway.inspect(destination)
+        let durableAfter = try materialCustodyGateway.inspect(durable)
+        guard outcome.succeeded,
+              !world.entities.contains(where: { $0 === item }),
+              carried.slots.compactMap({ $0 }).count == 1,
+              carried.slots.compactMap({ $0 }).first?.identity.itemKey
+                == "iron_hoe",
+              carried.slots.compactMap({ $0 }).first?.count == 1,
+              durableAfter == durableBefore,
+              try candidate.durableStateBytes() == session?.durableStateBytes()
+        else {
+            throw ControllerError.homeostasisBoundary(
+                "co-mingled hoe acquisition \(outcome.status.rawValue)"
+            )
+        }
+        let message = [
+            "estate co-mingled proof setup",
+            "decedent=\(decedentID.rawValue)",
+            "asset=\(assetID.rawValue)",
+            "tracked=iron_pickaxe:1",
+            "trackedHolder=\(record.lastVerifiedHolder.holder.stableText)",
+            "unregistered=iron_hoe:1",
+            "unregisteredHolder=agent:\(decedentID.rawValue)",
+            "physicalItemEntityAcquired=1",
+            "session=unchanged",
+            "worldMutation=physicalCustodyOnly",
+        ].joined(separator: " ")
+        trace(message)
+        return success(message)
     }
 
     private func setupEstateHomeostasisProof(

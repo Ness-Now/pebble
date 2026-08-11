@@ -1,8 +1,10 @@
+import Foundation
 import PebbleAgents
 import PebbleCore
 
 private enum PebbleAgentEstateBoundaryError: Error {
     case invalid(String)
+    case injectedLateSettlementFailure
 }
 
 extension PebbleAgentController {
@@ -114,6 +116,79 @@ extension PebbleAgentController {
                 )
                 trace(evidence)
                 return success(evidence)
+            case "proof" where arguments.count == 4
+                    && arguments[1].lowercased() == "physical"
+                    && environment["PEBBLELAB_GATE_D_BLOCKER_06"] == "1":
+                guard let estateID = resolveEstateID(
+                        arguments[2], in: staged
+                      ),
+                      let entryID = resolveEstateEntryID(
+                        arguments[3], estateID: estateID, in: staged
+                      ) else {
+                    return failure(
+                        "Usage: /lab estates proof physical <estateID> <entryID>"
+                    )
+                }
+                let evidence = try estatePhysicalAuthorityEvidence(
+                    estateID: estateID,
+                    entryID: entryID,
+                    session: staged,
+                    world: world
+                )
+                trace(evidence)
+                return success(evidence)
+            case "proof" where arguments.count == 4
+                    && arguments[1].lowercased() == "authority"
+                    && environment["PEBBLELAB_GATE_D_BLOCKER_06"] == "1":
+                guard let estateID = resolveEstateID(
+                        arguments[2], in: staged
+                      ),
+                      let entryID = resolveEstateEntryID(
+                        arguments[3], estateID: estateID, in: staged
+                      ) else {
+                    return failure(
+                        "Usage: /lab estates proof authority <estateID> <entryID>"
+                    )
+                }
+                let evidence = try proveEstateSourceAuthorityAdversarial(
+                    estateID: estateID,
+                    entryID: entryID,
+                    session: staged,
+                    world: world
+                )
+                trace(evidence)
+                return success(evidence)
+            case "proof" where arguments.count == 4
+                    && arguments[1].lowercased() == "pre-mutation-refusal"
+                    && environment["PEBBLELAB_GATE_D_BLOCKER_06"] == "1":
+                guard let estateID = resolveEstateID(
+                        arguments[2], in: staged
+                      ),
+                      let entryID = resolveEstateEntryID(
+                        arguments[3], estateID: estateID, in: staged
+                      ) else {
+                    return failure(
+                        "Usage: /lab estates proof pre-mutation-refusal "
+                            + "<estateID> <entryID>"
+                    )
+                }
+                let evidence = try proveEstateRollbackRejectsPreMutationFailure(
+                    estateID: estateID,
+                    entryID: entryID,
+                    session: &staged,
+                    recorder: &replayRecorder,
+                    world: world
+                )
+                trace(evidence)
+                return success(evidence)
+            case "proof" where arguments.count == 2
+                    && arguments[1].lowercased() == "blocker06-cleanup"
+                    && environment["PEBBLELAB_GATE_D_BLOCKER_06"] == "1":
+                let evidence = try cleanupBlocker06EstateProof(
+                    session: staged, world: world
+                )
+                trace(evidence)
+                return success(evidence)
             case "proof" where arguments.count == 2
                     && arguments[1].lowercased() == "cleanup":
                 let evidence = try cleanupEstatePhysicalProof(
@@ -125,7 +200,9 @@ extension PebbleAgentController {
                 return failure(
                     "Usage: /lab estates <on|status|accept <estateID> "
                         + "<administratorID>|settle <estateID> <entryID>|"
-                        + "proof <rollback <estateID> <entryID>|cleanup>>"
+                        + "proof <rollback|physical|authority|"
+                        + "pre-mutation-refusal <estateID> <entryID>|"
+                        + "cleanup|blocker06-cleanup>>"
                 )
             }
         } catch {
@@ -330,6 +407,15 @@ extension PebbleAgentController {
         estateID: AgentEstateID,
         in session: AgentSimulationSession
     ) -> AgentEstateAssetEntryID? {
+        if value.lowercased() == "tracked" {
+            return session.estateSnapshot().estates.first {
+                $0.estateID == estateID
+            }?.assets.filter {
+                $0.materialRightsAssetID != nil
+            }.min {
+                $0.entryID < $1.entryID
+            }?.entryID
+        }
         if value.lowercased() != "next" {
             return AgentEstateAssetEntryID(rawValue: value)
         }
@@ -340,6 +426,464 @@ extension PebbleAgentController {
         }.min {
             $0.entryID < $1.entryID
         }?.entryID
+    }
+
+    private func estatePhysicalAuthorityEvidence(
+        estateID: AgentEstateID,
+        entryID: AgentEstateAssetEntryID,
+        session: AgentSimulationSession,
+        world: World
+    ) throws -> String {
+        guard let estate = session.estateSnapshot().estates.first(where: {
+            $0.estateID == estateID
+        }), let entry = estate.assets.first(where: {
+            $0.entryID == entryID
+        }), let sourceHolder = entry.holderAtOpening?.holder,
+              let custodianID = entry.intendedCustodianID,
+              let destinationProbe = probesByAgentId[custodianID.rawValue],
+              let assetID = entry.materialRightsAssetID,
+              let rights = session.materialRightsSnapshot().records.first(
+                where: { $0.asset.assetID == assetID }
+              ) else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "Blocker 06 physical evidence unavailable"
+            )
+        }
+        let source = try estateCustodyEndpoint(for: sourceHolder, world: world)
+        let destination = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            destinationProbe, in: world
+        )
+        let sourceCustody = try materialCustodyGateway.inspect(source)
+        let destinationCustody = try materialCustodyGateway.inspect(destination)
+        let sourceFingerprint = try materialCustodyGateway.fingerprint(source)
+        let destinationFingerprint = try materialCustodyGateway.fingerprint(
+            destination
+        )
+        let sourceStacks = sourceCustody.slots.compactMap { $0 }
+        let destinationStacks = destinationCustody.slots.compactMap { $0 }
+        let trackedSource = sourceStacks.filter {
+            $0.identity == entry.materialIdentity
+        }.reduce(0) { $0 + $1.count }
+        let trackedDestination = destinationStacks.filter {
+            $0.identity == entry.materialIdentity
+        }.reduce(0) { $0 + $1.count }
+        let hoeSource = sourceStacks.filter {
+            $0.identity.itemKey == "iron_hoe"
+        }.reduce(0) { $0 + $1.count }
+        let hoeDestination = destinationStacks.filter {
+            $0.identity.itemKey == "iron_hoe"
+        }.reduce(0) { $0 + $1.count }
+        let receiptCount = estate.assets.filter {
+            $0.settlementReceiptID == entry.settlementReceiptID
+                && entry.settlementReceiptID != nil
+        }.count
+        guard trackedSource + trackedDestination == entry.quantity,
+              hoeSource + hoeDestination == 1,
+              entry.status == .pendingSettlement
+                ? (trackedSource == entry.quantity
+                    && trackedDestination == 0
+                    && rights.lastVerifiedHolder.holder == sourceHolder)
+                : (entry.status == .transferred
+                    && trackedSource == 0
+                    && trackedDestination == entry.quantity
+                    && rights.lastVerifiedHolder.holder == .agent(custodianID)),
+              receiptCount <= 1 else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "Blocker 06 physical conservation diverged"
+            )
+        }
+        let sourceDigest = AgentCheckpointDigest.sha256(
+            Data(sourceFingerprint.utf8)
+        ).rawValue
+        let destinationDigest = AgentCheckpointDigest.sha256(
+            Data(destinationFingerprint.utf8)
+        ).rawValue
+        return "estate physical authority estate=\(estateID.rawValue) "
+            + "entry=\(entryID.rawValue) status=\(entry.status.rawValue) "
+            + "trackedSource=\(trackedSource) trackedDestination=\(trackedDestination) "
+            + "hoeSource=\(hoeSource) hoeDestination=\(hoeDestination) "
+            + "trackedTotal=\(trackedSource + trackedDestination) "
+            + "hoeTotal=\(hoeSource + hoeDestination) physicalLoss=0 "
+            + "physicalDuplication=0 syntheticMaterial=0 "
+            + "estateReceiptCount=\(receiptCount) duplicateReceipt=0 "
+            + "rightsHolder=\(rights.lastVerifiedHolder.holder.stableText) "
+            + "sourceFingerprint=\(sourceDigest) "
+            + "destinationFingerprint=\(destinationDigest)"
+    }
+
+    private func proveEstateSourceAuthorityAdversarial(
+        estateID: AgentEstateID,
+        entryID: AgentEstateAssetEntryID,
+        session: AgentSimulationSession,
+        world: World
+    ) throws -> String {
+        guard let estate = session.estateSnapshot().estates.first(where: {
+            $0.estateID == estateID
+        }), let entry = estate.assets.first(where: {
+            $0.entryID == entryID
+        }), entry.status == .pendingSettlement,
+              let sourceHolder = entry.holderAtOpening?.holder,
+              let custodianID = entry.intendedCustodianID,
+              let destinationProbe = probesByAgentId[custodianID.rawValue]
+        else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "Blocker 06 authority proof assignment unavailable"
+            )
+        }
+        let source = try estateCustodyEndpoint(for: sourceHolder, world: world)
+        let destination = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            destinationProbe, in: world
+        )
+        guard let sourceBefore = source.read(),
+              let destinationBefore = destination.read() else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "Blocker 06 authority proof custody unavailable"
+            )
+        }
+        let bridge = PebbleAgentMaterialSnapshotBridge()
+        let trackedSlots = try sourceBefore.indices.filter { index in
+            try sourceBefore[index].map {
+                try bridge.snapshot(of: $0).identity == entry.materialIdentity
+            } ?? false
+        }
+        let hoeSlots = try sourceBefore.indices.filter { index in
+            try sourceBefore[index].map {
+                try bridge.snapshot(of: $0).identity.itemKey == "iron_hoe"
+            } ?? false
+        }
+        guard trackedSlots.count == 1, hoeSlots.count == 1,
+              sourceBefore.indices.contains(where: {
+                  sourceBefore[$0] == nil
+              }) else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "Blocker 06 authority fixture is not co-mingled exact"
+            )
+        }
+        let expected = AgentMaterialStackSnapshot(
+            identity: entry.materialIdentity, count: entry.quantity
+        )
+        let initial = try materialCustodyGateway.acquireAssetAuthority(
+            expected, at: source
+        )
+        guard initial.status == .exact else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "Blocker 06 initial authority is not exact"
+            )
+        }
+        let sessionBefore = try session.durableStateBytes()
+        let gatewayBefore = materialCustodyGateway.boundarySnapshot()
+
+        func restorePhysical() -> Bool {
+            source.write(sourceBefore) && destination.write(destinationBefore)
+                && (try? materialCustodyGateway.inspect(source))
+                    == (try? bridge.custodySnapshot(
+                        locationID: source.locationID, slots: sourceBefore
+                    ))
+                && (try? materialCustodyGateway.inspect(destination))
+                    == (try? bridge.custodySnapshot(
+                        locationID: destination.locationID,
+                        slots: destinationBefore
+                    ))
+        }
+        do {
+            var unrelatedRemoved = copyItemInventory(sourceBefore)
+            unrelatedRemoved[hoeSlots[0]] = nil
+            guard source.write(unrelatedRemoved),
+                  try materialCustodyGateway.acquireAssetAuthority(
+                    expected, at: source
+                  ).status == .exact,
+                  restorePhysical() else {
+                throw PebbleAgentEstateBoundaryError.invalid(
+                    "unrelated removal changed tracked authority"
+                )
+            }
+
+            var trackedRemoved = copyItemInventory(sourceBefore)
+            trackedRemoved[trackedSlots[0]] = nil
+            guard source.write(trackedRemoved),
+                  try materialCustodyGateway.acquireAssetAuthority(
+                    expected, at: source
+                  ).status == .missing,
+                  restorePhysical() else {
+                throw PebbleAgentEstateBoundaryError.invalid(
+                    "tracked removal was not refused"
+                )
+            }
+
+            let trackedChanged = copyItemInventory(sourceBefore)
+            trackedChanged[trackedSlots[0]]?.damage += 1
+            guard source.write(trackedChanged),
+                  try materialCustodyGateway.acquireAssetAuthority(
+                    expected, at: source
+                  ).status == .identityMismatch,
+                  restorePhysical() else {
+                throw PebbleAgentEstateBoundaryError.invalid(
+                    "tracked identity change was not refused"
+                )
+            }
+
+            var trackedDuplicated = copyItemInventory(sourceBefore)
+            let emptySlot = trackedDuplicated.firstIndex { $0 == nil }!
+            trackedDuplicated[emptySlot] = sourceBefore[trackedSlots[0]]?.copy()
+            guard source.write(trackedDuplicated),
+                  try materialCustodyGateway.acquireAssetAuthority(
+                    expected, at: source
+                  ).status == .ambiguous,
+                  restorePhysical() else {
+                throw PebbleAgentEstateBoundaryError.invalid(
+                    "tracked duplicate was not refused"
+                )
+            }
+
+            var wrongSource = copyItemInventory(sourceBefore)
+            var wrongDestination = copyItemInventory(destinationBefore)
+            let moved = wrongSource[trackedSlots[0]]!.copy()
+            wrongSource[trackedSlots[0]] = nil
+            guard insertItemStack(
+                    moved, quantity: entry.quantity, into: &wrongDestination
+                  ) == entry.quantity,
+                  moved.count == 0,
+                  source.write(wrongSource),
+                  destination.write(wrongDestination),
+                  try materialCustodyGateway.acquireAssetAuthority(
+                    expected, at: source
+                  ).status == .missing,
+                  restorePhysical() else {
+                throw PebbleAgentEstateBoundaryError.invalid(
+                    "wrong-holder tracked asset was not refused"
+                )
+            }
+        } catch {
+            _ = restorePhysical()
+            materialCustodyGateway.restoreBoundarySnapshot(gatewayBefore)
+            throw error
+        }
+        materialCustodyGateway.restoreBoundarySnapshot(gatewayBefore)
+        guard restorePhysical(),
+              try session.durableStateBytes() == sessionBefore else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "Blocker 06 adversarial proof restoration failed"
+            )
+        }
+        return "estate source authority adversarial unrelatedAdded=allowed "
+            + "unrelatedRemoved=allowed trackedRemoved=refused:missing "
+            + "trackedChanged=refused:identityMismatch "
+            + "trackedDuplicated=refused:ambiguous "
+            + "wrongHolder=refused:missing physical=restored "
+            + "session=unchanged gatewayReceipts=unchanged failClosed=1"
+    }
+
+    private func proveEstateRollbackRejectsPreMutationFailure(
+        estateID: AgentEstateID,
+        entryID: AgentEstateAssetEntryID,
+        session staged: inout AgentSimulationSession,
+        recorder stagedRecorder: inout AgentReplayRecorder?,
+        world: World
+    ) throws -> String {
+        guard let estate = staged.estateSnapshot().estates.first(where: {
+            $0.estateID == estateID
+        }), let entry = estate.assets.first(where: {
+            $0.entryID == entryID
+        }), entry.status == .pendingSettlement,
+              let sourceHolder = entry.holderAtOpening?.holder,
+              let custodianID = entry.intendedCustodianID,
+              let destinationProbe = probesByAgentId[custodianID.rawValue]
+        else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "pre-mutation refusal proof assignment unavailable"
+            )
+        }
+        let source = try estateCustodyEndpoint(for: sourceHolder, world: world)
+        let destination = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            destinationProbe, in: world
+        )
+        guard let sourceBefore = source.read(),
+              let destinationBefore = destination.read() else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "pre-mutation refusal custody unavailable"
+            )
+        }
+        let bridge = PebbleAgentMaterialSnapshotBridge()
+        let trackedSlots = try sourceBefore.indices.filter { index in
+            try sourceBefore[index].map {
+                try bridge.snapshot(of: $0).identity == entry.materialIdentity
+            } ?? false
+        }
+        guard trackedSlots.count == 1 else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "pre-mutation refusal tracked source is not exact"
+            )
+        }
+        var wrongSource = copyItemInventory(sourceBefore)
+        var wrongDestination = copyItemInventory(destinationBefore)
+        let moved = wrongSource[trackedSlots[0]]!.copy()
+        wrongSource[trackedSlots[0]] = nil
+        guard insertItemStack(
+                moved, quantity: entry.quantity, into: &wrongDestination
+              ) == entry.quantity,
+              moved.count == 0,
+              source.write(wrongSource), destination.write(wrongDestination)
+        else {
+            _ = source.write(sourceBefore)
+            _ = destination.write(destinationBefore)
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "pre-mutation refusal fault setup failed"
+            )
+        }
+        let staleSource = try materialCustodyGateway.inspect(source)
+        let staleDestination = try materialCustodyGateway.inspect(destination)
+        let sessionBefore = try staged.durableStateBytes()
+        let estateBefore = staged.estateSnapshot()
+        let rightsBefore = staged.materialRightsSnapshot()
+        let recorderBefore = (
+            records: stagedRecorder?.records.count,
+            dropped: stagedRecorder?.droppedRecordCount,
+            reason: stagedRecorder?.nonReplayableReason
+        )
+        var refusedAtPreMutationBoundary = false
+        do {
+            _ = try proveEstateSettlementRollback(
+                estateID: estateID,
+                entryID: entryID,
+                session: &staged,
+                recorder: &stagedRecorder,
+                world: world
+            )
+        } catch let PebbleAgentEstateBoundaryError.invalid(message) {
+            refusedAtPreMutationBoundary = message.contains("seamReached=0")
+                && message.contains("physicalMutationOccurred=0")
+                && message.contains("lateFailureVerified=0")
+                && message.contains("rollbackClaim=none")
+        } catch {
+            refusedAtPreMutationBoundary = false
+        }
+        let proofLeftFaultStateExact =
+            try materialCustodyGateway.inspect(source) == staleSource
+                && materialCustodyGateway.inspect(destination) == staleDestination
+        let sourceExpected = try bridge.custodySnapshot(
+            locationID: source.locationID, slots: sourceBefore
+        )
+        let destinationExpected = try bridge.custodySnapshot(
+            locationID: destination.locationID, slots: destinationBefore
+        )
+        let sourceRestored = source.write(sourceBefore)
+        let destinationRestored = destination.write(destinationBefore)
+        let sourceRestoredExact = try materialCustodyGateway.inspect(source)
+            == sourceExpected
+        let destinationRestoredExact = try materialCustodyGateway.inspect(
+            destination
+        ) == destinationExpected
+        let restored = sourceRestored && destinationRestored
+            && sourceRestoredExact && destinationRestoredExact
+        let recorderAfter = (
+            records: stagedRecorder?.records.count,
+            dropped: stagedRecorder?.droppedRecordCount,
+            reason: stagedRecorder?.nonReplayableReason
+        )
+        guard refusedAtPreMutationBoundary,
+              proofLeftFaultStateExact,
+              restored,
+              try staged.durableStateBytes() == sessionBefore,
+              staged.estateSnapshot() == estateBefore,
+              staged.materialRightsSnapshot() == rightsBefore,
+              recorderAfter.records == recorderBefore.records,
+              recorderAfter.dropped == recorderBefore.dropped,
+              recorderAfter.reason == recorderBefore.reason else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "pre-mutation refusal proof diverged"
+            )
+        }
+        return "estate rollback proof refused seamReached=0 "
+            + "physicalMutationOccurred=0 lateFailureVerified=0 "
+            + "rollbackClaim=none staleTrackedAsset=wrongHolder "
+            + "proofState=unchanged fixture=restored session=unchanged "
+            + "estate=unchanged materialRights=unchanged replay=unchanged"
+    }
+
+    private func cleanupBlocker06EstateProof(
+        session: AgentSimulationSession,
+        world: World
+    ) throws -> String {
+        guard let estate = session.estateSnapshot().estates.last,
+              let entry = estate.assets.first(where: {
+                  $0.materialRightsAssetID != nil
+              }), entry.status == .transferred,
+              let sourceHolder = entry.holderAtOpening?.holder,
+              case let .container(location) = sourceHolder,
+              let position = estateContainerPosition(location),
+              let container = world.getBlockEntity(
+                position.x, position.y, position.z
+              ), container.type == "container",
+              let custodianID = entry.intendedCustodianID,
+              let destinationProbe = probesByAgentId[custodianID.rawValue]
+        else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "Blocker 06 cleanup fixture unavailable"
+            )
+        }
+        let source = PebbleAgentMaterialCustodyEndpoint.container(
+            container, in: world
+        )
+        let destination = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            destinationProbe, in: world
+        )
+        guard let sourceBefore = source.read(),
+              let destinationBefore = destination.read() else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "Blocker 06 cleanup custody unavailable"
+            )
+        }
+        let bridge = PebbleAgentMaterialSnapshotBridge()
+        let sourceSnapshot = try bridge.custodySnapshot(
+            locationID: source.locationID, slots: sourceBefore
+        )
+        let destinationSnapshot = try bridge.custodySnapshot(
+            locationID: destination.locationID, slots: destinationBefore
+        )
+        guard sourceSnapshot.slots.compactMap({ $0 }).count == 1,
+              sourceSnapshot.slots.compactMap({ $0 }).first?.identity.itemKey
+                == "iron_hoe",
+              sourceSnapshot.slots.compactMap({ $0 }).first?.count == 1,
+              destinationSnapshot.slots.compactMap({ $0 }).count == 1,
+              destinationSnapshot.slots.compactMap({ $0 }).first?.identity
+                == entry.materialIdentity,
+              destinationSnapshot.slots.compactMap({ $0 }).first?.count
+                == entry.quantity else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "Blocker 06 cleanup material is not exact"
+            )
+        }
+        let emptySource = Array<ItemStack?>(
+            repeating: nil, count: sourceBefore.count
+        )
+        let emptyDestination = Array<ItemStack?>(
+            repeating: nil, count: destinationBefore.count
+        )
+        guard source.write(emptySource), destination.write(emptyDestination)
+        else {
+            _ = source.write(sourceBefore)
+            _ = destination.write(destinationBefore)
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "Blocker 06 cleanup inventory mutation failed"
+            )
+        }
+        _ = world.setBlock(position.x, position.y, position.z, 0)
+        guard world.getBlock(position.x, position.y, position.z) == 0,
+              world.getBlockEntity(position.x, position.y, position.z) == nil,
+              destinationProbe.carriedItems.allSatisfy({ $0 == nil }) else {
+            _ = world.setBlock(
+                position.x, position.y, position.z, Int(cell(B.chest))
+            )
+            container.items = copyItemInventory(sourceBefore)
+            world.setBlockEntity(container)
+            destinationProbe.carriedItems = copyItemInventory(destinationBefore)
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "Blocker 06 cleanup rollback required"
+            )
+        }
+        return "estate blocker06 cleanup world=exact trackedPickaxeRemoved=1 "
+            + "unregisteredHoeRemoved=1 fixtureContainerRemoved=1 "
+            + "session=unchanged probes=\(probesByAgentId.count) duplicates=0"
     }
 
     private func proveEstateSettlementRollback(
@@ -380,7 +924,8 @@ extension PebbleAgentController {
             dropped: stagedRecorder?.droppedRecordCount,
             reason: stagedRecorder?.nonReplayableReason
         )
-        var rejected = false
+        var rejectedAtInjectedLateSeam = false
+        var physicalMutationOccurred = false
         do {
             _ = try settleEstateAsset(
                 estateID: estateID,
@@ -388,10 +933,21 @@ extension PebbleAgentController {
                 session: &staged,
                 recorder: &stagedRecorder,
                 world: world,
-                rejectAfterCandidatePublication: true
+                injectFailureAfterVerifiedPhysicalMutation: {
+                    physicalMutationOccurred = true
+                }
             )
+        } catch PebbleAgentEstateBoundaryError.injectedLateSettlementFailure {
+            rejectedAtInjectedLateSeam = true
         } catch {
-            rejected = true
+            guard physicalMutationOccurred else {
+                throw PebbleAgentEstateBoundaryError.invalid(
+                    "estate rollback proof refused seamReached=0 "
+                        + "physicalMutationOccurred=0 lateFailureVerified=0 "
+                        + "rollbackClaim=none cause=\(error)"
+                )
+            }
+            throw error
         }
         let sourceAfter = try materialCustodyGateway.inspect(source)
         let destinationAfter = try materialCustodyGateway.inspect(destination)
@@ -400,7 +956,8 @@ extension PebbleAgentController {
             dropped: stagedRecorder?.droppedRecordCount,
             reason: stagedRecorder?.nonReplayableReason
         )
-        guard rejected,
+        guard rejectedAtInjectedLateSeam,
+              physicalMutationOccurred,
               try staged.durableStateBytes() == sessionBefore,
               staged.estateSnapshot() == estateBefore,
               staged.materialRightsSnapshot() == rightsBefore,
@@ -415,7 +972,9 @@ extension PebbleAgentController {
         }
         return "estate settlement rollback lateFailure=verified "
             + "session=exact estate=exact materialRights=exact "
-            + "source=restored destination=restored replay=unchanged"
+            + "source=restored destination=restored replay=unchanged "
+            + "physicalMutationOccurred=1 postMutationVerified=1 "
+            + "faultInjectionReached=1 rollbackClaim=exact"
     }
 
     @discardableResult
@@ -425,7 +984,7 @@ extension PebbleAgentController {
         session published: inout AgentSimulationSession,
         recorder publishedRecorder: inout AgentReplayRecorder?,
         world: World,
-        rejectAfterCandidatePublication: Bool = false
+        injectFailureAfterVerifiedPhysicalMutation: (() -> Void)? = nil
     ) throws -> AgentEstateAssetEntry {
         guard let estate = published.estateSnapshot().estates.first(where: {
             $0.estateID == estateID
@@ -464,11 +1023,28 @@ extension PebbleAgentController {
         let destination = PebbleAgentMaterialCustodyEndpoint.liveAgent(
             destinationProbe, in: world
         )
-        let sourceFingerprint = try materialCustodyGateway.fingerprint(source)
-        guard sourceFingerprint
-                == record.lastVerifiedHolder.custodyFingerprint else {
+        let currentSourceAuthority = try materialCustodyGateway
+            .acquireAssetAuthority(
+                AgentMaterialStackSnapshot(
+                    identity: entry.materialIdentity,
+                    count: entry.quantity
+                ),
+                at: source
+            )
+        guard currentSourceAuthority.isExact else {
             throw PebbleAgentEstateBoundaryError.invalid(
-                "stale estate source"
+                "stale estate source trackedAsset="
+                    + currentSourceAuthority.status.rawValue
+            )
+        }
+        let sourceFingerprint =
+            currentSourceAuthority.currentCustodyFingerprint
+        let destinationCustody = try materialCustodyGateway.inspect(destination)
+        guard destinationCustody.slots.compactMap({ $0 }).allSatisfy({
+            $0.identity != entry.materialIdentity
+        }) else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "ambiguous estate destination"
             )
         }
         let destinationFingerprint = try materialCustodyGateway.fingerprint(
@@ -499,10 +1075,23 @@ extension PebbleAgentController {
                     )
                     let sourceFingerprintAfterTransfer =
                         try self.materialCustodyGateway.fingerprint(source)
-                    let quantity = custody.slots.compactMap { $0 }.filter {
+                    let matchingDestination = custody.slots.compactMap { $0 }.filter {
                         $0.identity == entry.materialIdentity
-                    }.reduce(0) { $0 + $1.count }
-                    guard quantity >= entry.quantity else {
+                    }
+                    let sourceAfter = try self.materialCustodyGateway.inspect(
+                        source
+                    )
+                    guard matchingDestination.count == 1,
+                          matchingDestination[0].count == entry.quantity,
+                          sourceAfter.slots.compactMap({ $0 }).allSatisfy({
+                              $0.identity != entry.materialIdentity
+                          }) else {
+                        return false
+                    }
+                    if let injectFailureAfterVerifiedPhysicalMutation {
+                        injectFailureAfterVerifiedPhysicalMutation()
+                        publicationError = PebbleAgentEstateBoundaryError
+                            .injectedLateSettlementFailure
                         return false
                     }
                     let destinationObservation = AgentMaterialHolderObservation(
@@ -541,9 +1130,6 @@ extension PebbleAgentController {
                         )
                     }
                     try staged.validateEstateCrossDomainIfEnabled()
-                    guard !rejectAfterCandidatePublication else {
-                        return false
-                    }
                     candidateSession = staged
                     candidateRecorder = stagedRecorder
                     return true

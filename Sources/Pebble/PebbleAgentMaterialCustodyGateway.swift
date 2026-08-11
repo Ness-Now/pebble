@@ -40,6 +40,26 @@ struct PebbleAgentMaterialTransactionOutcome: Equatable {
     var succeeded: Bool { status == .succeeded }
 }
 
+enum PebbleAgentMaterialAssetAuthorityStatus: String {
+    case exact
+    case missing
+    case identityMismatch
+    case quantityMismatch
+    case ambiguous
+}
+
+/// Current physical proof for one durable, stack-scoped material reference.
+/// The full custody fingerprint is a transaction precondition, not the
+/// durable identity of the referenced asset.
+struct PebbleAgentMaterialAssetAuthority {
+    let status: PebbleAgentMaterialAssetAuthorityStatus
+    let currentCustodyFingerprint: String
+    let exactMatchingStackCount: Int
+    let exactMatchingQuantity: Int
+
+    var isExact: Bool { status == .exact }
+}
+
 struct PebbleAgentItemEntityAcquisitionRequest {
     let transactionID: String
     let spawnedItemEntityIDs: [Int]
@@ -249,6 +269,41 @@ final class PebbleAgentMaterialCustodyGateway {
         _ endpoint: PebbleAgentMaterialCustodyEndpoint
     ) throws -> String {
         try bridge.fingerprint(of: inspect(endpoint))
+    }
+
+    /// Reacquires the current physical authority for one durable asset at its
+    /// already-authorized holder. Unrelated slot drift is ignored, while the
+    /// tracked stack must remain one exact, unambiguous identity/quantity.
+    /// The returned full fingerprint is current and may be used only as the
+    /// immediate atomic precondition of the following gateway mutation.
+    func acquireAssetAuthority(
+        _ expected: AgentMaterialStackSnapshot,
+        at endpoint: PebbleAgentMaterialCustodyEndpoint
+    ) throws -> PebbleAgentMaterialAssetAuthority {
+        let custody = try inspect(endpoint)
+        let fingerprint = try bridge.fingerprint(of: custody)
+        let physical = custody.slots.compactMap { $0 }
+        let exact = physical.filter { $0.identity == expected.identity }
+        let exactQuantity = exact.reduce(0) { $0 + $1.count }
+        let sameItemKey = physical.filter {
+            $0.identity.itemKey == expected.identity.itemKey
+        }
+        let status: PebbleAgentMaterialAssetAuthorityStatus
+        if exact.isEmpty {
+            status = sameItemKey.isEmpty ? .missing : .identityMismatch
+        } else if exact.count != 1 {
+            status = .ambiguous
+        } else if exactQuantity != expected.count {
+            status = .quantityMismatch
+        } else {
+            status = .exact
+        }
+        return PebbleAgentMaterialAssetAuthority(
+            status: status,
+            currentCustodyFingerprint: fingerprint,
+            exactMatchingStackCount: exact.count,
+            exactMatchingQuantity: exactQuantity
+        )
     }
 
     func transfer(
