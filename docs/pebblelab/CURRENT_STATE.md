@@ -40,9 +40,22 @@ Published Gate D Blocker 05 product-fix head:
 d60e4f2dad11f02c184d8e7ae85b9bbdc9fe7712
 ```
 
+Published baseline evaluated by independent Gate D Evaluation 06 and used as
+the direct base for the local Blocker 06 correction:
+
+```text
+82a2e50da4db2fe861b88801e033788a2de16dd4
+```
+
+Local Gate D Blocker 06 product-fix commit:
+
+```text
+780ea9d
+```
+
 The `CIV-33` completion, renewable-subsistence milestone and Gate D Blockers 01
 through 05 are published on the canonical branch. Independent Gate D
-Evaluations 01 through 05 remain immutable FAIL evidence for their evaluated
+Evaluations 01 through 06 remain immutable FAIL evidence for their evaluated
 baselines. Evaluation 04 found that an abandoned civilization candidate could
 leave an earlier successful physical movement in PebbleCore after a later
 agricultural navigation collision.
@@ -51,7 +64,7 @@ agricultural navigation collision.
 
 ```text
 active CIV phase: none
-next authorized action: NEW INDEPENDENT V4-GATE-D-v1 EVALUATION 06
+next authorized action: SENIOR REVIEW AND MANUAL PUBLICATION OF GATE D BLOCKER 06
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -61,7 +74,8 @@ Gate D Evaluation 04 status: EVALUATED_FAIL_NOT_ACQUIRED
 Gate D Blocker 04 status: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 05 status: EVALUATED_FAIL_NOT_ACQUIRED
 Gate D Blocker 05 status: BLOCKER_FIX_PUBLISHED
-Independent Gate D Evaluation 06 status: NOT_STARTED — NEXT AUTHORIZED ACTION
+Gate D Evaluation 06 status: FAIL — HISTORICAL EVIDENCE
+Gate D Blocker 06 status: BLOCKER_FIX_LOCAL_CANDIDATE
 CIV-34 status: NOT_STARTED
 roadmap generation: V4
 ```
@@ -98,7 +112,8 @@ arms candidate physical hard failure. No direct productive physical
 `.register(` call remains. This work does not alter Evaluation 04 or acquire Gate D.
 Senior review is approved, the published product-fix head is
 `cca372bb841846db4b1010d26456bcc245b07c3e`. Evaluation 05 remains historical
-FAIL evidence; Evaluation 06 is not started.
+FAIL evidence. Evaluation 06 is also immutable historical FAIL evidence; the
+local Blocker 06 candidate does not reevaluate it or acquire Gate D.
 
 The published Blocker 05 correction adds manifest-v2 exact physical-custody
 restart evidence only for non-empty nonpersistent Lab probes. Pebble captures and
@@ -118,44 +133,57 @@ holder/material/quantity but never creates matter. Session schema 30 and
 Observer schema 7 are unchanged; empty custody preserves manifest v1 and the
 Blocker 01 path.
 
+The local Blocker 06 candidate separates durable estate-asset authority from
+an immediate full-endpoint transaction precondition. A pending asset retains
+its durable holder, exact material identity and quantity constraints. At
+settlement, Pebble reacquires a current physical observation at that holder,
+requires exactly one unambiguous matching stack, and passes the resulting
+current custody fingerprint to the existing atomic Material Custody Gateway.
+Unrelated co-mingled slots may change; removal, quantity or identity change,
+wrong holder and indistinguishable duplicate stacks fail closed before
+mutation. The settlement still transfers only the tracked stack and publishes
+estate and Material Rights state only after verified physical success.
+
+The estate rollback proof now has an explicit post-mutation seam. It can emit
+`lateFailure=verified` only after the real transfer and post-mutation
+source/destination verification occur. Any earlier failure reports that the
+seam was not reached and claims no rollback. A real late fault restores source,
+destination, estate, Material Rights, session, replay and receipts exactly; an
+immediate same-process retry then succeeds. No durable schema changes, no
+Observer schema changes and no new material identity were introduced.
+
 ## Last validation baseline
 
-For the Gate D Blocker 03 cycle-scoped agricultural-observation correction:
+For the Gate D Blocker 06 estate-source physical-authority correction:
 
 ```text
-focused ecological observation: 68 passed, 0 failed
-focused agriculture: 86 passed, 0 failed
-focused renewable subsistence: 19 passed, 0 failed
-focused physical actions: 38 passed, 0 failed
-focused physical food survival: 50 passed, 0 failed
-focused lifecycle: 80 passed, 0 failed
-focused mortality: 93 passed, 0 failed
+published baseline red reproduction: PASS (stale estate source before mutation)
+co-mingled no-fault settlement: PASS (immediate, no restart refresh)
+true post-mutation late-fault rollback: PASS
+same-process immediate retry: PASS
+fresh-process settled-state continuation: PASS (two independent pairs)
 focused estates/inheritance/succession: 84 passed, 0 failed
+focused mortality/physical exit: 93 passed, 0 failed
+focused homeostasis/health: 30 passed, 0 failed
+focused material custody: 35 passed, 0 failed
+focused Material Rights: 21 passed, 0 failed
 focused checkpoint/replay: 49 passed, 0 failed
 focused persistence/reconciliation: 18 passed, 0 failed
-focused Material Rights: 21 passed, 0 failed
-focused Observer: 20 passed, 0 failed
-focused total: 626 passed, 0 failed
-repository gate: 3757 passed, 0 failed
+repository shared smoke: 3761 passed, 0 failed
 repository verification steps: 35/35
-rendered two-process blocker campaign: PASS
-World/session: wmscy56llcmdd / live-103-14-62--21
 checkpoint schema / Observer schema: 30 / 7
-plot/cell/cycles: plot-955b8014709cd734 / 0 / 1→2
-civilization ticks: 1→2 before restart; 2→4 after restart; mature at 5
-cycle-1 retained mature receipt: eco-28fde84b1ae1a0afceca7b84a38107362a728541 (historical only)
-cycle-2 stage-0 selection: currentCycleNonMature / current-tick receipt true
-cycle-2 maturity receipt: eco-603cefec28bb6b4dc72f38fa108dcefa32284839
-cycle-2 maturity action: auto-maturity:5:plot-955b8014709cd734:cycle-2:0
-second harvest receipt/output: agriculture-live:renewable-cycle2-harvest / 5
-World receipts / leaks: 27 / 0
-duplicate actions / receipts: 0 / 0
-Observer mutation count: 0
-runtime errors: 0
-cleanup: exact
-rendered captures inspected at native resolution: 4
+tracked pickaxe total / unrelated hoe total: 1 / 1
+physical loss / duplication / synthetic material: 0 / 0 / 0
+estate receipts / duplicate receipts: 1 / 0
+pre-mutation proof: seam 0, mutation 0, late verification 0, rollback claim none
+late-fault proof: mutation 1, post-verification 1, seam 1, rollback exact
+rendered captures inspected at native resolution: 6
 Gate D Blocker 01 regression: PASS
 Gate D Blocker 02 regression: PASS
+Gate D Blocker 03 regression: PASS
+Gate D Blocker 04 regression: PASS
+Gate D Blocker 05 regression: PASS
+golden regeneration: NOT ATTEMPTED
 ```
 
 ## Known important debt
@@ -278,9 +306,8 @@ Gate D Blocker 02 regression: PASS
 
 ## Next authorized action
 
-The current authorized action is a new independent `V4-GATE-D-v1`
-Evaluation 06. Evaluation 05 remains **EVALUATED_FAIL_NOT_ACQUIRED**
-historical evidence, and Evaluation 06 is **NOT_STARTED**.
-Gate D remains **EVALUATED_FAIL_NOT_ACQUIRED** and is not acquired by this
-published Blocker 05 correction. `CIV-34` is not started and remains
-downstream of a future published Gate D PASS.
+The current authorized action is senior review and manual publication of the
+Gate D Blocker 06 product-fix candidate. Evaluation 06 remains **FAIL —
+HISTORICAL EVIDENCE**. Gate D remains **EVALUATED_FAIL_NOT_ACQUIRED** and is
+not acquired by this local correction. Evaluation 07 is not started. `CIV-34`
+is not started and remains downstream of a future published Gate D PASS.

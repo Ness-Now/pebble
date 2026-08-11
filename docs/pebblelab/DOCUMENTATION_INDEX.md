@@ -56,7 +56,8 @@ Gate D Evaluation 04: EVALUATED_FAIL_NOT_ACQUIRED
 Gate D Blocker 04: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 05: EVALUATED_FAIL_NOT_ACQUIRED
 Gate D Blocker 05: BLOCKER_FIX_PUBLISHED
-Independent Gate D Evaluation 06: NOT_STARTED — NEXT AUTHORIZED ACTION
+Gate D Evaluation 06: FAIL — HISTORICAL EVIDENCE
+Gate D Blocker 06: BLOCKER_FIX_LOCAL_CANDIDATE
 CIV-34: NOT_STARTED
 ```
 
@@ -76,9 +77,12 @@ physical mutations before abandoning publication. Independent Evaluation 05
 remains historical FAIL evidence for published
 baseline `1fa033173609b8cc6ff8a3c4f09cb0e6b0ec8a9e`. The Blocker 05 exact
 physical-custody restart correction is published at product-fix head
-`d60e4f2dad11f02c184d8e7ae85b9bbdc9fe7712`. The next authorized action is a
-new independent `V4-GATE-D-v1` Evaluation 06, which is not started. Gate D
-remains evaluated and not acquired.
+`d60e4f2dad11f02c184d8e7ae85b9bbdc9fe7712`. Independent Evaluation 06
+remains historical FAIL evidence for baseline
+`82a2e50da4db2fe861b88801e033788a2de16dd4`. Its targeted Blocker 06
+estate-source physical-authority correction is a local candidate. The next
+authorized action is senior review and manual publication. Gate D remains
+evaluated and not acquired.
 
 ## Operational
 
@@ -213,6 +217,12 @@ records Evaluation 05's preserved FAIL, the exact nonpersistent-probe custody
 boundary, manifest-v2 protected `ItemStack` evidence, real World escrow,
 transactional load/rollback and continued normal physical care. It is a
 published product correction, not a Gate D PASS or acquisition report.
+
+[`GATE_D_BLOCKER_06_ESTATE_SOURCE_PHYSICAL_AUTHORITY.md`](GATE_D_BLOCKER_06_ESTATE_SOURCE_PHYSICAL_AUTHORITY.md)
+records Evaluation 06's preserved FAIL, asset-scoped estate source authority,
+co-mingled custody, current transaction fingerprints, true post-mutation fault
+injection, exact rollback and immediate same-process retry. It is a local
+product-correction candidate, not a Gate D PASS or acquisition report.
 
 [`GATE_C_EVALUATION_01_SUMMARY.md`](GATE_C_EVALUATION_01_SUMMARY.md) and
 [`GATE_C_EVALUATION_01_SUMMARY.json`](GATE_C_EVALUATION_01_SUMMARY.json)
