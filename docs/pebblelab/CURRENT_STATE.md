@@ -41,16 +41,16 @@ d60e4f2dad11f02c184d8e7ae85b9bbdc9fe7712
 ```
 
 Published baseline evaluated by independent Gate D Evaluation 06 and used as
-the direct base for the local Blocker 06 correction:
+the direct base for the published Blocker 06 correction:
 
 ```text
 82a2e50da4db2fe861b88801e033788a2de16dd4
 ```
 
-Local Gate D Blocker 06 product-fix commit:
+Published Gate D Blocker 06 product-fix head:
 
 ```text
-780ea9d
+780ea9d7137b728d0fc4873152479f65ebe57d18
 ```
 
 The `CIV-33` completion, renewable-subsistence milestone and Gate D Blockers 01
@@ -64,7 +64,7 @@ agricultural navigation collision.
 
 ```text
 active CIV phase: none
-next authorized action: SENIOR REVIEW AND MANUAL PUBLICATION OF GATE D BLOCKER 06
+next authorized action: NEW INDEPENDENT V4-GATE-D-v1 EVALUATION 07
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -74,8 +74,9 @@ Gate D Evaluation 04 status: EVALUATED_FAIL_NOT_ACQUIRED
 Gate D Blocker 04 status: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 05 status: EVALUATED_FAIL_NOT_ACQUIRED
 Gate D Blocker 05 status: BLOCKER_FIX_PUBLISHED
-Gate D Evaluation 06 status: FAIL — HISTORICAL EVIDENCE
-Gate D Blocker 06 status: BLOCKER_FIX_LOCAL_CANDIDATE
+Gate D Evaluation 06 status: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
+Gate D Blocker 06 status: BLOCKER_FIX_PUBLISHED
+Independent Gate D Evaluation 07 status: NOT_STARTED — NEXT AUTHORIZED ACTION
 CIV-34 status: NOT_STARTED
 roadmap generation: V4
 ```
@@ -113,7 +114,7 @@ arms candidate physical hard failure. No direct productive physical
 Senior review is approved, the published product-fix head is
 `cca372bb841846db4b1010d26456bcc245b07c3e`. Evaluation 05 remains historical
 FAIL evidence. Evaluation 06 is also immutable historical FAIL evidence; the
-local Blocker 06 candidate does not reevaluate it or acquire Gate D.
+published Blocker 06 correction does not reevaluate it or acquire Gate D.
 
 The published Blocker 05 correction adds manifest-v2 exact physical-custody
 restart evidence only for non-empty nonpersistent Lab probes. Pebble captures and
@@ -133,7 +134,7 @@ holder/material/quantity but never creates matter. Session schema 30 and
 Observer schema 7 are unchanged; empty custody preserves manifest v1 and the
 Blocker 01 path.
 
-The local Blocker 06 candidate separates durable estate-asset authority from
+The published Blocker 06 correction separates durable estate-asset authority from
 an immediate full-endpoint transaction precondition. A pending asset retains
 its durable holder, exact material identity and quantity constraints. At
 settlement, Pebble reacquires a current physical observation at that holder,
@@ -306,8 +307,9 @@ golden regeneration: NOT ATTEMPTED
 
 ## Next authorized action
 
-The current authorized action is senior review and manual publication of the
-Gate D Blocker 06 product-fix candidate. Evaluation 06 remains **FAIL —
-HISTORICAL EVIDENCE**. Gate D remains **EVALUATED_FAIL_NOT_ACQUIRED** and is
-not acquired by this local correction. Evaluation 07 is not started. `CIV-34`
-is not started and remains downstream of a future published Gate D PASS.
+The current authorized action is a new independent `V4-GATE-D-v1` Evaluation
+07. Evaluation 06 remains **EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL
+EVIDENCE**. Gate D remains **EVALUATED_FAIL_NOT_ACQUIRED** and is not acquired
+by the published Blocker 06 correction. Evaluation 07 is **NOT_STARTED**.
+`CIV-34` is not started and remains downstream of a future published Gate D
+PASS.

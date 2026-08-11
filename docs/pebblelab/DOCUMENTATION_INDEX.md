@@ -56,8 +56,9 @@ Gate D Evaluation 04: EVALUATED_FAIL_NOT_ACQUIRED
 Gate D Blocker 04: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 05: EVALUATED_FAIL_NOT_ACQUIRED
 Gate D Blocker 05: BLOCKER_FIX_PUBLISHED
-Gate D Evaluation 06: FAIL — HISTORICAL EVIDENCE
-Gate D Blocker 06: BLOCKER_FIX_LOCAL_CANDIDATE
+Gate D Evaluation 06: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
+Gate D Blocker 06: BLOCKER_FIX_PUBLISHED
+Independent Gate D Evaluation 07: NOT_STARTED — NEXT AUTHORIZED ACTION
 CIV-34: NOT_STARTED
 ```
 
@@ -80,9 +81,10 @@ physical-custody restart correction is published at product-fix head
 `d60e4f2dad11f02c184d8e7ae85b9bbdc9fe7712`. Independent Evaluation 06
 remains historical FAIL evidence for baseline
 `82a2e50da4db2fe861b88801e033788a2de16dd4`. Its targeted Blocker 06
-estate-source physical-authority correction is a local candidate. The next
-authorized action is senior review and manual publication. Gate D remains
-evaluated and not acquired.
+estate-source physical-authority correction is published at product-fix head
+`780ea9d7137b728d0fc4873152479f65ebe57d18`. The next authorized action is a
+new independent `V4-GATE-D-v1` Evaluation 07, which is not started. Gate D
+remains evaluated and not acquired.
 
 ## Operational
 
@@ -221,8 +223,8 @@ published product correction, not a Gate D PASS or acquisition report.
 [`GATE_D_BLOCKER_06_ESTATE_SOURCE_PHYSICAL_AUTHORITY.md`](GATE_D_BLOCKER_06_ESTATE_SOURCE_PHYSICAL_AUTHORITY.md)
 records Evaluation 06's preserved FAIL, asset-scoped estate source authority,
 co-mingled custody, current transaction fingerprints, true post-mutation fault
-injection, exact rollback and immediate same-process retry. It is a local
-product-correction candidate, not a Gate D PASS or acquisition report.
+injection, exact rollback and immediate same-process retry. It is a published
+product correction, not a Gate D PASS or acquisition report.
 
 [`GATE_C_EVALUATION_01_SUMMARY.md`](GATE_C_EVALUATION_01_SUMMARY.md) and
 [`GATE_C_EVALUATION_01_SUMMARY.json`](GATE_C_EVALUATION_01_SUMMARY.json)
