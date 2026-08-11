@@ -1128,6 +1128,50 @@ extension AgentSimulationSession {
         }
     }
 
+    /// Keeps the current physical projection of an already transferred estate
+    /// asset aligned with a later verified use. The immutable settlement
+    /// observation and receipt remain untouched; only the entry's current
+    /// destination observation follows Material Rights physical truth.
+    mutating func synchronizeTransferredEstateAssetObservation(
+        assetID: AgentMaterialAssetID,
+        source: AgentMaterialHolderObservation,
+        destination: AgentMaterialHolderObservation
+    ) throws {
+        guard var authority = estateState else { return }
+        let matches = authority.estates.indices.flatMap { estateIndex in
+            authority.estates[estateIndex].assets.indices.compactMap {
+                entryIndex -> (Int, Int)? in
+                authority.estates[estateIndex].assets[entryIndex]
+                    .materialRightsAssetID == assetID
+                    ? (estateIndex, entryIndex) : nil
+            }
+        }
+        guard matches.count <= 1 else {
+            throw AgentSessionError.estate(.invalidState(
+                "duplicate transferred asset observation"
+            ))
+        }
+        guard let (estateIndex, entryIndex) = matches.first else { return }
+        let entry = authority.estates[estateIndex].assets[entryIndex]
+        guard entry.status == .transferred,
+              entry.destinationObservation == source,
+              entry.settlementObservation != nil,
+              entry.settlementReceiptID != nil,
+              destination.holder == source.holder,
+              destination.quantity == source.quantity,
+              destination.materialIdentity.itemKey
+                == source.materialIdentity.itemKey else {
+            throw AgentSessionError.estate(.invalidState(
+                "transferred asset current observation"
+            ))
+        }
+        authority.estates[estateIndex].assets[entryIndex]
+            .destinationObservation = destination
+        authority.rollingDigest = Self.estateStateDigest(authority)
+        estateState = authority
+        try validateEstateCrossDomainIfEnabled()
+    }
+
     static func validateEstateState(
         _ authority: AgentEstateState,
         mortality: AgentMortalityState,

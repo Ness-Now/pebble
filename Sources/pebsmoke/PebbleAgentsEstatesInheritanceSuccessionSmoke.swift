@@ -1847,6 +1847,56 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
             && settledEstate.administrations[0].status == .ended
             && settledEstate.administrations[0].endedReason
                 == .estateSettled)
+    var inheritedUse = session
+    let inheritedSource = inheritedUse.materialRightsSnapshot()
+        .records[0].lastVerifiedHolder
+    let inheritedDecision = inheritedUse.evaluateMaterialUse(
+        AgentMaterialUseRequest(
+            requestID: "civ33-inherited-tool-use:decision",
+            assetID: settledRights.asset.assetID,
+            actorID: estateAgentIDs[1],
+            use: .toolUse,
+            verifiedHolder: inheritedSource
+        )
+    )
+    let inheritedIdentity = AgentMaterialIdentitySnapshot(
+        itemKey: inheritedSource.materialIdentity.itemKey,
+        damage: inheritedSource.materialIdentity.damage + 1,
+        enchantments: inheritedSource.materialIdentity.enchantments,
+        label: inheritedSource.materialIdentity.label,
+        canonicalDataJSON: inheritedSource.materialIdentity.canonicalDataJSON
+    )
+    let inheritedObservation = AgentMaterialHolderObservation(
+        holder: inheritedSource.holder,
+        materialIdentity: inheritedIdentity,
+        quantity: inheritedSource.quantity,
+        custodyFingerprint: "civ33-inherited-tool-use-fingerprint",
+        physicalReceiptID: "civ33-inherited-tool-use",
+        observedAtTick: inheritedUse.tick
+    )
+    _ = try! inheritedUse.applyMaterialRightsOperation(.useAttempt(
+        AgentMaterialUseAttemptOutcome(
+            operationID: "civ33-inherited-tool-use",
+            decision: inheritedDecision,
+            status: .succeeded,
+            resultingObservation: inheritedObservation,
+            physicalReceiptID: "civ33-inherited-tool-use"
+        )
+    ))
+    let inheritedEntry = inheritedUse.estateSnapshot().estates[0].assets[0]
+    check("verified inherited use advances current estate custody only",
+          inheritedDecision.verdict == .allowed
+            && inheritedUse.materialRightsSnapshot().records[0]
+                .lastVerifiedHolder == inheritedObservation
+            && inheritedEntry.destinationObservation == inheritedObservation
+            && inheritedEntry.settlementObservation
+                == settledEstate.assets[0].settlementObservation
+            && inheritedEntry.settlementReceiptID
+                == settledEstate.assets[0].settlementReceiptID)
+    let inheritedCheckpoint = try! inheritedUse.makeCheckpoint()
+    check("inherited use and historical settlement restart byte-exact",
+          (try! AgentSimulationSession.restoring(inheritedCheckpoint))
+            .estateSnapshot() == inheritedUse.estateSnapshot())
     let afterSettlement = try! session.durableStateBytes()
     check("settled asset refuses duplicate distribution atomically", {
         do {

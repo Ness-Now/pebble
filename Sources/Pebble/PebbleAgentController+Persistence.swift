@@ -499,6 +499,7 @@ enum PebbleAgentCheckpointPositionRestoreFailurePoint {
 
 enum PebbleAgentCheckpointPhysicalCustodyFailurePoint {
     case afterFirstCustodyRestore
+    case afterMaterialRightsReconciliationCandidate
 }
 
 extension PebbleAgentController {
@@ -1668,37 +1669,11 @@ extension PebbleAgentController {
 
         var reconciliationSummary = "legacy_exact"
         if candidate.persistenceReconciliationEnabled {
-            guard let binding = stored.manifest.reconciliationBinding else {
+            guard stored.manifest.reconciliationBinding != nil else {
                 throw PebbleAgentPersistenceStoreError.invalidBundle(
                     "schema v20 checkpoint has no reconciliation binding"
                 )
             }
-            let request = try reconciliationRequest(
-                binding: binding,
-                candidate: candidate,
-                world: world,
-                store: store
-            )
-            let report = try candidate.applyPersistenceReconciliation(request)
-            guard report.publishable, report.run.duplicationCount == 0 else {
-                throw PebbleAgentPersistenceStoreError.invalidBundle(
-                    "reconciliation did not produce a publishable session"
-                )
-            }
-            let outcomes = report.run.assetResults.map(\.outcome.rawValue)
-                .joined(separator: ",")
-            reconciliationSummary = "applied:\(outcomes.isEmpty ? "none" : outcomes)"
-            trace(
-                "persistence reconciliation run=\(report.run.runID) "
-                    + "checkpoint=\(report.run.checkpointID.rawValue) "
-                    + "world=\(report.run.world.worldID) "
-                    + "assets=\(report.run.assetResults.count) "
-                    + "activities=\(report.run.activityResults.count) "
-                    + "outcomes=\(outcomes.isEmpty ? "none" : outcomes) "
-                    + "duplicates=\(report.run.duplicationCount) "
-                    + "causal=\(report.run.causalSequenceBefore)"
-                    + ">\(report.run.causalSequenceAfter)"
-            )
         } else if stored.manifest.reconciliationBinding != nil {
             throw PebbleAgentPersistenceStoreError.invalidBundle(
                 "legacy checkpoint has unexpected reconciliation binding"
@@ -1732,6 +1707,7 @@ extension PebbleAgentController {
         let oldEcologyScanDiagnostics = lastEcologyScanDiagnostics
         let oldForageOutcome = lastForageOutcome
         let oldEcologyReason = lastEcologyReason
+        let oldCheckpointCustodyHandoff = checkpointCustodyHandoff
         let oldOrchestration = (
             cognitiveHz, isPaused, movementEnabled, autoInteractionEnabled, economyAutoEnabled,
             seed, anchor, focusedAgentId, followMode, credit, lastWorldTick, lastTickResult
@@ -1753,6 +1729,8 @@ extension PebbleAgentController {
         var removedCustodySpillItems: [ItemEntity] = []
         var custodyRestoredAgentIDs: [String] = []
         var custodySpillChunkModifiedBefore: [Int64: Bool] = [:]
+        var candidateCheckpointCustodyHandoff:
+            PebbleAgentCheckpointCustodyHandoff?
         for item in persistedCustodySpillItems {
             let itemX = Int(item.x.rounded(.down))
             let itemZ = Int(item.z.rounded(.down))
@@ -1862,26 +1840,6 @@ extension PebbleAgentController {
                     }
                 }
             }
-            session = candidate
-            constructionExecutor = candidateConstructionExecutor
-            interactionExecutor = candidateInteractionExecutor
-            naturalResourceExecutor = candidateNaturalResourceExecutor
-            ecologicalObservationSensor.invalidateAll()
-            lastEcologyScanDiagnostics = candidateEcologyScanDiagnostics
-            lastForageOutcome = candidateForageOutcome
-            lastEcologyReason = "restored from checkpoint"
-            cognitiveHz = stored.manifest.orchestration.cognitiveHz
-            isPaused = true
-            movementEnabled = stored.manifest.orchestration.movementEnabled
-            autoInteractionEnabled = stored.manifest.orchestration.autoInteractionEnabled
-            economyAutoEnabled = stored.manifest.orchestration.economyAutoEnabled
-            seed = stored.manifest.worldBinding.seed
-            anchor = stored.manifest.worldBinding.anchor
-            credit = 0
-            lastWorldTick = world.time
-            lastTickResult = nil
-            focusedAgentId = restoredFocus ?? candidateAgentIDs.first
-            if followTargetId() == nil { followMode = .off }
             let oldNonProbeEntities = Set(oldWorldEntities.compactMap {
                 entity -> ObjectIdentifier? in
                 entity is LabCoreAgentEntity ? nil : ObjectIdentifier(entity)
@@ -1959,6 +1917,100 @@ extension PebbleAgentController {
                     "verified live probe reconciliation is not exact"
                 )
             }
+            trace(
+                "checkpoint physical boundary acquired name=\(name.rawValue) "
+                    + "probes=\(candidateAgentIDs.count) positions=exact "
+                    + "custody=exact retired=\(retiredProbesRemoved.count) "
+                    + "restoredMissing=\(restoredProbesCreated.count) "
+                    + "custodyRestored=\(custodyRestoredAgentIDs.count)"
+            )
+
+            if candidate.persistenceReconciliationEnabled {
+                guard let binding = stored.manifest.reconciliationBinding else {
+                    throw PebbleAgentPersistenceStoreError.invalidBundle(
+                        "schema v20 checkpoint has no reconciliation binding"
+                    )
+                }
+                let request = try reconciliationRequest(
+                    binding: binding,
+                    candidate: candidate,
+                    world: world,
+                    store: store
+                )
+                let report = try candidate.applyPersistenceReconciliation(request)
+                guard report.publishable, report.run.duplicationCount == 0 else {
+                    throw PebbleAgentPersistenceStoreError.invalidBundle(
+                        "reconciliation did not produce a publishable session"
+                    )
+                }
+                try candidate.validateEstateCrossDomainIfEnabled()
+                let outcomes = report.run.assetResults.map(\.outcome.rawValue)
+                    .joined(separator: ",")
+                reconciliationSummary =
+                    "applied:\(outcomes.isEmpty ? "none" : outcomes)"
+                trace(
+                    "persistence reconciliation candidate run=\(report.run.runID) "
+                        + "checkpoint=\(report.run.checkpointID.rawValue) "
+                        + "world=\(report.run.world.worldID) "
+                        + "phase=postPhysicalBoundary published=0 "
+                        + "assets=\(report.run.assetResults.count) "
+                        + "activities=\(report.run.activityResults.count) "
+                        + "outcomes=\(outcomes.isEmpty ? "none" : outcomes) "
+                        + "duplicates=\(report.run.duplicationCount) "
+                        + "causal=\(report.run.causalSequenceBefore)"
+                        + ">\(report.run.causalSequenceAfter)"
+                )
+                if injectedCustodyRestoreFailure
+                    == .afterMaterialRightsReconciliationCandidate {
+                    throw PebbleAgentPersistenceStoreError.invalidBundle(
+                        "injected checkpoint failure after Material Rights reconciliation candidate"
+                    )
+                }
+            }
+
+            let candidateCausal = candidate.causalLedgerSnapshot().summary
+            if let decodedCustody {
+                let decodedByAgentID = Dictionary(
+                    uniqueKeysWithValues: decodedCustody.map {
+                        ($0.evidence.agentID, $0)
+                    }
+                )
+                candidateCheckpointCustodyHandoff =
+                    try makeCheckpointCustodyHandoff(
+                        checkpointName: name,
+                        checkpoint: stored.checkpoint,
+                        manifest: stored.manifest,
+                        world: world,
+                        causalSequence: candidateCausal.latestSequence,
+                        causalDigest: candidateCausal.digest,
+                        custodyByAgentID: decodedByAgentID
+                    )
+            }
+
+            session = candidate
+            constructionExecutor = candidateConstructionExecutor
+            interactionExecutor = candidateInteractionExecutor
+            naturalResourceExecutor = candidateNaturalResourceExecutor
+            lastEcologyScanDiagnostics = candidateEcologyScanDiagnostics
+            lastForageOutcome = candidateForageOutcome
+            lastEcologyReason = "restored from checkpoint"
+            cognitiveHz = stored.manifest.orchestration.cognitiveHz
+            isPaused = true
+            movementEnabled = stored.manifest.orchestration.movementEnabled
+            autoInteractionEnabled = stored.manifest.orchestration.autoInteractionEnabled
+            economyAutoEnabled = stored.manifest.orchestration.economyAutoEnabled
+            seed = stored.manifest.worldBinding.seed
+            anchor = stored.manifest.worldBinding.anchor
+            credit = 0
+            lastWorldTick = world.time
+            lastTickResult = nil
+            focusedAgentId = restoredFocus ?? candidateAgentIDs.first
+            if followTargetId() == nil { followMode = .off }
+            checkpointCustodyHandoff = candidateCheckpointCustodyHandoff.flatMap {
+                checkpointCustodyHandoffFreshness($0, world: world).isExact
+                    ? $0 : nil
+            }
+            ecologicalObservationSensor.invalidateAll()
         } catch {
             session = oldSession
             constructionExecutor = oldConstructionExecutor
@@ -1967,6 +2019,7 @@ extension PebbleAgentController {
             lastEcologyScanDiagnostics = oldEcologyScanDiagnostics
             lastForageOutcome = oldForageOutcome
             lastEcologyReason = oldEcologyReason
+            checkpointCustodyHandoff = oldCheckpointCustodyHandoff
             cognitiveHz = oldOrchestration.0
             isPaused = oldOrchestration.1
             movementEnabled = oldOrchestration.2
@@ -2041,34 +2094,14 @@ extension PebbleAgentController {
                     + "restoredMissing=\(restoredProbesCreated.count) "
                     + "retired=\(retiredProbesRemoved.count) "
                     + "custodyRestored=\(custodyRestoredAgentIDs.count) "
-                    + "custodySpillsRestored=\(removedCustodySpillItems.count)"
+                    + "custodySpillsRestored=\(removedCustodySpillItems.count) "
+                    + "candidateReconciliation=discarded session=unchanged "
+                    + "recorder=unchanged"
             )
             throw error
         }
         let causal = candidate.causalLedgerSnapshot().summary
         let reconciledDigest = try candidate.durableStateDigest()
-        if let decodedCustody {
-            let custodyByAgentID = Dictionary(
-                    uniqueKeysWithValues: decodedCustody.map {
-                        ($0.evidence.agentID, $0)
-                    }
-                )
-            let proposedHandoff = try makeCheckpointCustodyHandoff(
-                checkpointName: name,
-                checkpoint: stored.checkpoint,
-                manifest: stored.manifest,
-                world: world,
-                causalSequence: causal.latestSequence,
-                causalDigest: causal.digest,
-                custodyByAgentID: custodyByAgentID
-            )
-            checkpointCustodyHandoff = checkpointCustodyHandoffFreshness(
-                proposedHandoff,
-                world: world
-            ).isExact ? proposedHandoff : nil
-        } else {
-            checkpointCustodyHandoff = nil
-        }
         let probeReconciliation = probePlan.repositionedAgentIDs.isEmpty
             ? (retiredBootstrapAgentIDs.isEmpty
                 ? (restoredCheckpointAgentIDs.isEmpty
@@ -2097,7 +2130,7 @@ extension PebbleAgentController {
         } else {
             worldMutation = "none"
         }
-        let message = "checkpoint loaded name=\(name.rawValue) id=\(stored.checkpoint.checkpointID.rawValue) tick=\(candidate.tick) simulation=\(candidate.simulationID.rawValue) digest=\(checkpointDigest.rawValue) reconciledDigest=\(reconciledDigest.rawValue) causalSequence=\(causal.latestSequence) causalDigest=\(causal.digest) restartSafe=1 manifestIntegrity=verified:v\(stored.manifest.manifestIntegrityVersion ?? 0) probes=\(probesByAgentId.count) paused=1 focus=\(focusedAgentId ?? "none") lifecycleEvent=none probeReconciliation=\(probeReconciliation) probeReusedExact=\(probePlan.exactAgentIDs.count) probeRestoredMissing=\(probePlan.missingAgentIDs.count) probeRepositionedVerified=\(probePlan.repositionedAgentIDs.count) probeRetiredVerified=\(retiredBootstrapAgentIDs.count) probePositionRefused=0 probeRetired=\(retiredEvidence) probeRestored=\(restoredEvidence) custodyReconciliation=\(custodyReconciliation) custodyRestoredAgents=\(custodyRestoreAgentIDs.count) custodyRestoredStacks=\(custodyRestoredStacks) custodyRestoredQuantity=\(custodyRestoredQuantity) custodyAdoptedSpills=\(persistedCustodySpillItems.count) custodyDuplicates=0 physicalReconciliation=\(reconciliationSummary) worldMutation=\(worldMutation)"
+        let message = "checkpoint loaded name=\(name.rawValue) id=\(stored.checkpoint.checkpointID.rawValue) tick=\(candidate.tick) simulation=\(candidate.simulationID.rawValue) digest=\(checkpointDigest.rawValue) reconciledDigest=\(reconciledDigest.rawValue) causalSequence=\(causal.latestSequence) causalDigest=\(causal.digest) restartSafe=1 manifestIntegrity=verified:v\(stored.manifest.manifestIntegrityVersion ?? 0) probes=\(probesByAgentId.count) paused=1 focus=\(focusedAgentId ?? "none") lifecycleEvent=none probeReconciliation=\(probeReconciliation) probeReusedExact=\(probePlan.exactAgentIDs.count) probeRestoredMissing=\(probePlan.missingAgentIDs.count) probeRepositionedVerified=\(probePlan.repositionedAgentIDs.count) probeRetiredVerified=\(retiredBootstrapAgentIDs.count) probePositionRefused=0 probeRetired=\(retiredEvidence) probeRestored=\(restoredEvidence) custodyReconciliation=\(custodyReconciliation) custodyRestoredAgents=\(custodyRestoreAgentIDs.count) custodyRestoredStacks=\(custodyRestoredStacks) custodyRestoredQuantity=\(custodyRestoredQuantity) custodyAdoptedSpills=\(persistedCustodySpillItems.count) custodyDuplicates=0 physicalBoundary=acquired reconciliationPhase=postPhysicalBoundary reconciliationRuns=\(candidate.persistenceReconciliationSnapshot().recentRuns.count) physicalReconciliation=\(reconciliationSummary) worldMutation=\(worldMutation)"
         trace(message)
         return success(message)
     }

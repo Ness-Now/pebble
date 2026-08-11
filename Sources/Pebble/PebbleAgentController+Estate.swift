@@ -190,6 +190,16 @@ extension PebbleAgentController {
                 trace(evidence)
                 return success(evidence)
             case "proof" where arguments.count == 2
+                    && arguments[1].lowercased()
+                        == "blocker07-inherited-use"
+                    && environment["PEBBLELAB_GATE_D_BLOCKER_07"] == "1":
+                let evidence = try proveBlocker07InheritedEstateUse(
+                    session: &staged, world: world
+                )
+                session = staged
+                trace(evidence)
+                return success(evidence)
+            case "proof" where arguments.count == 2
                     && arguments[1].lowercased() == "cleanup":
                 let evidence = try cleanupEstatePhysicalProof(
                     session: staged, world: world
@@ -1162,6 +1172,272 @@ extension PebbleAgentController {
             )
         }
         return settled
+    }
+
+    /// Exercises a settled inherited tool through the existing physical
+    /// action and Material Rights boundaries immediately after checkpoint
+    /// load. This proof command is restricted to a disposable World and does
+    /// not create either material or social authority.
+    private func proveBlocker07InheritedEstateUse(
+        session published: inout AgentSimulationSession,
+        world: World
+    ) throws -> String {
+        guard environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
+              environment["PEBBLELAB_GATE_D_BLOCKER_07"] == "1",
+              activeWorld === world, isPaused, !movementEnabled,
+              let estate = published.estateSnapshot().estates.last,
+              let entry = estate.assets.first(where: {
+                  $0.status == .transferred
+                      && $0.materialIdentity.itemKey == "iron_pickaxe"
+              }),
+              entry.settlementReceiptID != nil,
+              let assetID = entry.materialRightsAssetID,
+              let record = published.materialRightsSnapshot().records.first(
+                  where: { $0.asset.assetID == assetID }
+              ),
+              case let .agent(holderID) = record.lastVerifiedHolder.holder,
+              record.recognizedOwnership?.ownerID == holderID,
+              entry.intendedCustodianID == holderID,
+              let probe = probesByAgentId[holderID.rawValue],
+              probe.world === world, !probe.dead else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "blocker07 inherited-use authority"
+            )
+        }
+        let reconciliation = published.persistenceReconciliationSnapshot()
+        guard reconciliation.recentRuns.count == 1,
+              reconciliation.latestResults.first(where: {
+                  $0.assetID == assetID
+              })?.outcome.hasVerifiedPhysicalAsset == true else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "blocker07 inherited-use current physical reconciliation"
+            )
+        }
+
+        let endpoint = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            probe, in: world
+        )
+        let custodyBefore = try materialCustodyGateway.inspect(endpoint)
+        let matchingBefore = custodyBefore.slots.enumerated().filter {
+            $0.element?.identity == record.lastVerifiedHolder.materialIdentity
+                && $0.element?.count == record.lastVerifiedHolder.quantity
+        }
+        let fingerprintBefore = try materialCustodyGateway.fingerprint(endpoint)
+        guard matchingBefore.count == 1,
+              fingerprintBefore == record.lastVerifiedHolder.custodyFingerprint,
+              record.lastVerifiedHolder.quantity == 1 else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "blocker07 inherited-use stale tracked asset"
+            )
+        }
+
+        let actor = PebbleAgentEmbodiment(probe: probe)
+        let origin = PhysicalBlockPosition(
+            x: Int(probe.x.rounded(.down)),
+            y: Int(probe.y.rounded(.down)),
+            z: Int(probe.z.rounded(.down))
+        )
+        let occupied = probesByAgentId.values.filter {
+            !$0.dead && $0.world === world
+        }.map {
+            PhysicalBlockPosition(
+                x: Int($0.x.rounded(.down)),
+                y: Int($0.y.rounded(.down)),
+                z: Int($0.z.rounded(.down))
+            )
+        }
+        let offsets = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+        let targets = [-1, 0, 1, 2].flatMap { dy in
+            offsets.map { dx, dz in
+                PhysicalBlockPosition(
+                    x: origin.x + dx, y: origin.y + dy,
+                    z: origin.z + dz
+                )
+            }
+        }.filter { target in
+            world.getBlock(target.x, target.y, target.z) != 0
+                && world.isChunkReady(target.x >> 4, target.z >> 4)
+                && world.getBlockEntity(
+                    target.x, target.y, target.z
+                ) == nil
+                && !occupied.contains(target)
+        }
+        guard let target = targets.first else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "blocker07 inherited-use natural target"
+            )
+        }
+        let blockBefore = world.getBlock(target.x, target.y, target.z)
+        guard let binding = materialCustodyGateway.harvestToolBinding(
+            actor: probe, targetCell: blockBefore, world: world
+        ), binding.slot == matchingBefore[0].offset,
+              binding.heldItem.id == iid("iron_pickaxe") else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "blocker07 inherited-use tool binding"
+            )
+        }
+
+        let damageBefore = binding.heldItem.damage
+        let operationID = "gate-d-blocker07-inherited-tool-use:"
+            + "\(estate.estateID.rawValue):t\(published.tick)"
+        let decision = published.evaluateMaterialUse(AgentMaterialUseRequest(
+            requestID: operationID + ":decision",
+            assetID: assetID,
+            actorID: holderID,
+            use: .toolUse,
+            verifiedHolder: record.lastVerifiedHolder
+        ))
+        guard decision.verdict == .allowed,
+              decision.reason == .recognizedOwner else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "blocker07 inherited-use right refused "
+                    + "verdict=\(decision.verdict.rawValue) "
+                    + "reason=\(decision.reason.rawValue)"
+            )
+        }
+
+        let gatewayBefore = materialCustodyGateway.boundarySnapshot()
+        var candidateSession: AgentSimulationSession?
+        var publicationError: Error?
+        var acquiredDropQuantity = 0
+        let outcome = physicalActionGateway.breakBlock(
+            world: world,
+            actor: actor,
+            request: PebbleAgentBlockBreakRequest(
+                actorID: holderID.rawValue,
+                target: target,
+                expectedCell: blockBefore,
+                heldItem: binding.heldItem,
+                isCreative: false
+            ),
+            toolState: binding.toolState,
+            occupiedPositions: occupied,
+            acquireDrops: { entityIDs in
+                guard !entityIDs.isEmpty else { return true }
+                guard let source = PebbleAgentItemEntityCustodyEndpoint(
+                    spawnedItemEntityIDs: entityIDs, world: world
+                ) else { return false }
+                guard let destinationFingerprint = try? self
+                    .materialCustodyGateway.fingerprint(endpoint) else {
+                    return false
+                }
+                let result = self.materialCustodyGateway.acquireItemEntities(
+                    PebbleAgentItemEntityAcquisitionRequest(
+                        transactionID: operationID + ":drops",
+                        spawnedItemEntityIDs: entityIDs,
+                        expectedDestinationFingerprint: destinationFingerprint
+                    ),
+                    from: source,
+                    to: endpoint
+                )
+                acquiredDropQuantity = result.quantityMoved
+                return result.succeeded
+            },
+            verifyAfterMutation: {
+                do {
+                    let custodyAfter = try self.materialCustodyGateway.inspect(
+                        endpoint
+                    )
+                    let matches = custodyAfter.slots.compactMap({ $0 }).filter {
+                        $0.identity.itemKey == "iron_pickaxe"
+                            && $0.count == record.lastVerifiedHolder.quantity
+                    }
+                    guard matches.count == 1,
+                          matches[0].identity.damage == damageBefore + 1,
+                          world.getBlock(
+                            target.x, target.y, target.z
+                          ) == 0 else { return false }
+                    let observation = AgentMaterialHolderObservation(
+                        holder: .agent(holderID),
+                        materialIdentity: matches[0].identity,
+                        quantity: matches[0].count,
+                        custodyFingerprint: try self.materialCustodyGateway
+                            .fingerprint(endpoint),
+                        physicalReceiptID: operationID,
+                        observedAtTick: published.tick
+                    )
+                    var staged = published
+                    _ = try staged.applyMaterialRightsOperation(.useAttempt(
+                        AgentMaterialUseAttemptOutcome(
+                            operationID: operationID,
+                            decision: decision,
+                            status: .succeeded,
+                            resultingObservation: observation,
+                            physicalReceiptID: operationID
+                        )
+                    ))
+                    try staged.validateEstateCrossDomainIfEnabled()
+                    candidateSession = staged
+                    return true
+                } catch {
+                    publicationError = error
+                    return false
+                }
+            }
+        )
+        guard outcome.succeeded, let candidateSession else {
+            if outcome.status != .rollbackFailure {
+                materialCustodyGateway.restoreBoundarySnapshot(gatewayBefore)
+            }
+            throw publicationError
+                ?? PebbleAgentEstateBoundaryError.invalid(
+                    "blocker07 inherited-use physical action "
+                        + outcome.status.rawValue
+                )
+        }
+        published = candidateSession
+
+        let custodyAfter = try materialCustodyGateway.inspect(endpoint)
+        let pickaxesAfter = custodyAfter.slots.compactMap({ $0 }).filter {
+            $0.identity.itemKey == "iron_pickaxe"
+        }
+        let updated = published.materialRightsSnapshot().records.first {
+            $0.asset.assetID == assetID
+        }
+        let updatedEntry = published.estateSnapshot().estates.first {
+            $0.estateID == estate.estateID
+        }?.assets.first { $0.entryID == entry.entryID }
+        guard pickaxesAfter.count == 1,
+              pickaxesAfter[0].count == 1,
+              pickaxesAfter[0].identity.damage == damageBefore + 1,
+              updated?.lastVerifiedHolder.materialIdentity
+                == pickaxesAfter[0].identity,
+              updated?.lastVerifiedHolder.holder == .agent(holderID),
+              updatedEntry?.status == .transferred,
+              updatedEntry?.settlementReceiptID == entry.settlementReceiptID,
+              updatedEntry?.destinationObservation
+                == updated?.lastVerifiedHolder else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "blocker07 inherited-use publication verification"
+            )
+        }
+        return [
+            "blocker07 inherited estate use",
+            "estate=\(estate.estateID.rawValue)",
+            "entry=\(entry.entryID.rawValue)",
+            "asset=\(assetID.rawValue)",
+            "actor=\(holderID.rawValue)",
+            "holder=agent:\(holderID.rawValue)",
+            "right=\(decision.reason.rawValue)",
+            "tool=iron_pickaxe",
+            "damage=\(damageBefore)>\(pickaxesAfter[0].identity.damage)",
+            "target=\(target.x),\(target.y),\(target.z)",
+            "block=\(blockBefore)>0",
+            "dropsAcquired=\(acquiredDropQuantity)",
+            "physicalMutationOccurred=1",
+            "postMutationVerified=1",
+            "rightsPublication=1",
+            "estateEntryStatus=transferred",
+            "estateReceiptCount=1",
+            "reconciliationRuns=\(reconciliation.recentRuns.count)",
+            "firstAttempt=allowed",
+            "physicalLoss=0",
+            "physicalDuplication=0",
+            "syntheticMaterial=0",
+            "fingerprint=\(fingerprintBefore)>"
+                + "\(updated!.lastVerifiedHolder.custodyFingerprint)",
+            "authority=PebbleCore+PebbleGateway",
+        ].joined(separator: " ")
     }
 
     private func estateCustodyEndpoint(

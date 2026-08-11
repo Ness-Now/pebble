@@ -138,6 +138,11 @@ extension AgentSimulationSession {
             pendingIndex: Int,
             assetID: AgentMaterialAssetID
         )?
+        var transferredEstateObservationUpdate: (
+            assetID: AgentMaterialAssetID,
+            source: AgentMaterialHolderObservation,
+            destination: AgentMaterialHolderObservation
+        )?
         switch operation {
         case let .register(_, asset, observation):
             guard rights.records.count < rights.configuration.maximumAssets else {
@@ -399,7 +404,11 @@ extension AgentSimulationSession {
                         .invalidPhysicalOutcome(operationID)
                     )
                 }
+                let source = rights.records[index].lastVerifiedHolder
                 rights.records[index].lastVerifiedHolder = observation
+                transferredEstateObservationUpdate = (
+                    outcome.decision.request.assetID, source, observation
+                )
             } else {
                 guard outcome.resultingObservation == nil else {
                     throw AgentSessionError.materialRights(
@@ -522,6 +531,13 @@ extension AgentSimulationSession {
             eventID: event?.eventID
         ), in: &rights)
         materialRightsState = rights
+        if let update = transferredEstateObservationUpdate {
+            try synchronizeTransferredEstateAssetObservation(
+                assetID: update.assetID,
+                source: update.source,
+                destination: update.destination
+            )
+        }
         try validateMaterialRightsStateIfEnabled()
         return AgentMaterialRightsApplicationResult(
             status: .applied,

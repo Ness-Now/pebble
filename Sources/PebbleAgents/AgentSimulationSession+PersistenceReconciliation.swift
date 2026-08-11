@@ -147,10 +147,16 @@ extension AgentSimulationSession {
         var assetResults: [AgentPersistenceAssetReconciliationResult] = []
         var rights = materialRightsState
         for item in classified {
-            if let observation = item.observation,
+            if item.outcome == .changedButReconcilable,
+               let observation = item.observation,
                let index = rights?.records.firstIndex(where: {
                    $0.asset.assetID == item.expectation.asset.assetID
                }) {
+                // A matched current observation proves the durable physical
+                // projection without rewriting its historical receipt. The
+                // current observation remains authoritative in the run
+                // result; only a genuinely changed physical fact replaces
+                // the durable Material Rights projection.
                 rights?.records[index].lastVerifiedHolder = observation
             }
             let detail = [

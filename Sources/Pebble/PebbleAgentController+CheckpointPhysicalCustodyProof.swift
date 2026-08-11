@@ -11,7 +11,7 @@ extension PebbleAgentController {
         world: World
     ) -> PebbleAgentCommandResult {
         let usage = "Usage: /lab checkpoint custody-proof "
-            + "<failure <none|after-first-custody>"
+            + "<failure <none|after-first-custody|after-reconciliation-candidate>"
             + "|multi-slot-setup <agentID>"
             + "|conflicting-bootstrap <agentID>"
             + "|verified-move <agentID>|status <agentID>"
@@ -38,6 +38,9 @@ extension PebbleAgentController {
                 case "after-first-custody":
                     checkpointPhysicalCustodyFailurePoint =
                         .afterFirstCustodyRestore
+                case "after-reconciliation-candidate":
+                    checkpointPhysicalCustodyFailurePoint =
+                        .afterMaterialRightsReconciliationCandidate
                 default:
                     return failure(usage)
                 }

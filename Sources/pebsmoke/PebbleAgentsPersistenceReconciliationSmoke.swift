@@ -238,8 +238,17 @@ func runPebbleAgentsPersistenceReconciliationSmoke() {
           nominalReport.status == .applied
             && nominalReport.run.assetResults.map(\.outcome) == [.matched]
             && nominalReport.run.duplicationCount == 0
+            && nominalReport.run.assetResults[0].observation?.physicalReceiptID
+                == "restore:container-a"
             && nominalRights.lastVerifiedHolder.physicalReceiptID
-                == "restore:container-a")
+                == "save:container-a")
+    check("matched current truth preserves the durable historical receipt",
+          nominalReport.run.assetResults[0].observation
+            != nominalRights.lastVerifiedHolder
+            && nominalReport.run.assetResults[0].observation?.holder
+                == nominalRights.lastVerifiedHolder.holder
+            && nominalReport.run.assetResults[0].observation?.custodyFingerprint
+                == nominalRights.lastVerifiedHolder.custodyFingerprint)
     check("claims custody ownership and permission survive reconciliation",
           nominalRights.claims.map(\.claimantID.rawValue) == ["agent_0"]
             && nominalRights.recognizedOwnership?.ownerID.rawValue == "agent_0"
