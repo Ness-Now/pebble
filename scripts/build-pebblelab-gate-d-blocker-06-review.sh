@@ -252,6 +252,16 @@ directories are copied under `evidence/blockers-01-05-captures/`.
 - Blocker 03: current-cycle agricultural maturity authority.
 - Blocker 04: candidate physical compensation and hard failure.
 - Blocker 05: non-empty physical custody escrow and fail-closed stale handoff.
+
+Commands:
+
+```bash
+scripts/verify-pebblelab-gate-d-position-restore-fix.sh
+scripts/verify-pebblelab-gate-d-ecological-observer-fix.sh
+scripts/verify-pebblelab-gate-d-agriculture-cycle-observation-fix.sh
+PEBBLELAB_GATE_D_BLOCKER_04_BUILD_CONFIGURATION=release scripts/verify-pebblelab-gate-d-candidate-physical-atomicity-fix.sh
+scripts/verify-pebblelab-gate-d-restart-physical-care-custody-fix.sh
+```
 EOF
 
 /bin/cat > "$BUNDLE_DIR/10_TEST_RESULTS.md" <<'EOF'
@@ -265,7 +275,20 @@ with zero failures.
 
 `scripts/verify-pebblelab.sh` passes 35/35. Its shared smoke suite reports 3761
 passed and 0 failed. No golden regeneration was attempted. Exact commands and
-complete output are in the regression logs and `traces/test-matrix.csv`.
+complete output are represented by the following commands, the regression logs
+and `traces/test-matrix.csv`:
+
+```bash
+scripts/verify-pebblelab-gate-d-estate-source-physical-authority-fix.sh
+PEBBLELAB_SMOKE_ONLY=estates-inheritance-succession .build/release/pebsmoke
+PEBBLELAB_SMOKE_ONLY=mortality .build/release/pebsmoke
+PEBBLELAB_SMOKE_ONLY=homeostasis-health .build/release/pebsmoke
+PEBBLELAB_SMOKE_ONLY=materials .build/release/pebsmoke
+PEBBLELAB_SMOKE_ONLY=material-rights .build/release/pebsmoke
+PEBBLELAB_SMOKE_ONLY=checkpoint-replay .build/release/pebsmoke
+PEBBLELAB_SMOKE_ONLY=persistence-reconciliation .build/release/pebsmoke
+scripts/verify-pebblelab.sh
+```
 EOF
 
 /bin/cat > "$BUNDLE_DIR/11_GIT_STATE.md" <<'EOF'
