@@ -268,23 +268,28 @@ passed and 0 failed. No golden regeneration was attempted. Exact commands and
 complete output are in the regression logs and `traces/test-matrix.csv`.
 EOF
 
-/bin/cat > "$BUNDLE_DIR/11_GIT_STATE.md" <<EOF
+/bin/cat > "$BUNDLE_DIR/11_GIT_STATE.md" <<'EOF'
 # Git state
 
-```text
-repository: Ness-Now/pebble
-canonical branch: lab/pebblelab-v1
-required baseline: $BASELINE
-origin/lab/pebblelab-v1: $BASELINE
-local branch: codex/gate-d-blocker-06-estate-source-physical-authority
-bundle source HEAD: $HEAD_COMMIT
-worktree at bundle creation: clean
-push: NOT_ATTEMPTED
-```
+The exact resolved values at bundle creation are:
 
-The branch was created directly from the required baseline. No Evaluation 06
-commit was cherry-picked. `PATCH.diff` is `git diff $BASELINE..$HEAD_COMMIT`.
 EOF
+{
+    printf '```text\n'
+    printf 'repository: Ness-Now/pebble\n'
+    printf 'canonical branch: lab/pebblelab-v1\n'
+    printf 'required baseline: %s\n' "$BASELINE"
+    printf 'origin/lab/pebblelab-v1: %s\n' "$BASELINE"
+    printf 'local branch: codex/gate-d-blocker-06-estate-source-physical-authority\n'
+    printf 'bundle source HEAD: %s\n' "$HEAD_COMMIT"
+    printf 'worktree at bundle creation: clean\n'
+    printf 'push: NOT_ATTEMPTED\n'
+    printf '```\n\n'
+    printf 'The branch was created directly from the required baseline. '
+    printf 'No Evaluation 06 commit was cherry-picked. '
+    printf '`PATCH.diff` is the complete diff from `%s` to `%s`.\n' \
+        "$BASELINE" "$HEAD_COMMIT"
+} >> "$BUNDLE_DIR/11_GIT_STATE.md"
 
 /bin/cat > "$BUNDLE_DIR/12_OPEN_RISKS.md" <<'EOF'
 # Open risks and bounded limits
