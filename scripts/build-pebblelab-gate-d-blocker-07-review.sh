@@ -285,20 +285,26 @@ No golden regeneration was attempted. Schema 30 and Observer schema 7 are
 unchanged. See `traces/test-matrix.csv` and the raw regression logs.
 EOF
 
-/bin/cat > "$BUNDLE_DIR/11_GIT_STATE.md" <<EOF
+/bin/cat > "$BUNDLE_DIR/11_GIT_STATE.md" <<'EOF'
 # Git state
 
-```text
-repository: Ness-Now/pebble
-canonical branch: lab/pebblelab-v1
-required baseline: $BASELINE
-origin/lab/pebblelab-v1: $BASELINE
-local branch: codex/gate-d-blocker-07-reconciliation-after-physical-restore
-product-fix commit: $PRODUCT_FIX
-bundle source HEAD: $HEAD_COMMIT
-worktree at bundle creation: clean
-push: NOT_ATTEMPTED
-```
+The exact resolved values at bundle creation are:
+
+EOF
+{
+    printf '```text\n'
+    printf 'repository: Ness-Now/pebble\n'
+    printf 'canonical branch: lab/pebblelab-v1\n'
+    printf 'required baseline: %s\n' "$BASELINE"
+    printf 'origin/lab/pebblelab-v1: %s\n' "$BASELINE"
+    printf 'local branch: codex/gate-d-blocker-07-reconciliation-after-physical-restore\n'
+    printf 'product-fix commit: %s\n' "$PRODUCT_FIX"
+    printf 'bundle source HEAD: %s\n' "$HEAD_COMMIT"
+    printf 'worktree at bundle creation: clean\n'
+    printf 'push: NOT_ATTEMPTED\n'
+    printf '```\n\n'
+} >> "$BUNDLE_DIR/11_GIT_STATE.md"
+/bin/cat >> "$BUNDLE_DIR/11_GIT_STATE.md" <<'EOF'
 
 The branch was created directly from the required baseline. No Evaluation 07
 commit was cherry-picked. `PATCH.diff` is the complete diff from the baseline
