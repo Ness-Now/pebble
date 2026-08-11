@@ -4,16 +4,16 @@
 
 ```text
 Gate D Evaluation 07: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
-Gate D Blocker 07: BLOCKER_FIX_LOCAL_CANDIDATE
+Gate D Blocker 07: BLOCKER_FIX_PUBLISHED
 Gate D: EVALUATED_FAIL_NOT_ACQUIRED
-Independent Gate D Evaluation 08: NOT_STARTED
+Independent Gate D Evaluation 08: NOT_STARTED — NEXT AUTHORIZED ACTION
 CIV-34: NOT_STARTED
 ```
 
 This targeted correction starts directly from published baseline
 `bbafcb51ef0d8387e95302a134ec038fbb8dffa6`. It does not incorporate an
 Evaluation 07 commit, reevaluate or acquire Gate D, start Evaluation 08, or
-start `CIV-34`. The local product-fix commit is
+start `CIV-34`. The published product-fix head is
 `650b56b90381306c38d891dfdade9d89a1c45db5`.
 
 ## Root cause

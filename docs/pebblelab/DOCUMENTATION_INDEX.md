@@ -59,8 +59,8 @@ Gate D Blocker 05: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 06: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 06: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 07: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
-Gate D Blocker 07: BLOCKER_FIX_LOCAL_CANDIDATE
-Independent Gate D Evaluation 08: NOT_STARTED
+Gate D Blocker 07: BLOCKER_FIX_PUBLISHED
+Independent Gate D Evaluation 08: NOT_STARTED — NEXT AUTHORIZED ACTION
 CIV-34: NOT_STARTED
 ```
 
@@ -87,10 +87,10 @@ estate-source physical-authority correction is published at product-fix head
 `780ea9d7137b728d0fc4873152479f65ebe57d18`. Independent Evaluation 07 remains
 historical FAIL evidence for baseline
 `bbafcb51ef0d8387e95302a134ec038fbb8dffa6`. The targeted Blocker 07
-post-physical reconciliation correction is a local candidate at
-`650b56b90381306c38d891dfdade9d89a1c45db5`; senior review and manual
-publication are the next authorized action. Evaluation 08 is not started.
-Gate D remains evaluated and not acquired.
+post-physical reconciliation correction is published at product-fix head
+`650b56b90381306c38d891dfdade9d89a1c45db5`. A new independent Evaluation 08
+is the next authorized action and is not started. Gate D remains evaluated and
+not acquired.
 
 ## Operational
 
@@ -235,9 +235,8 @@ product correction, not a Gate D PASS or acquisition report.
 [`GATE_D_BLOCKER_07_RECONCILIATION_AFTER_PHYSICAL_RESTORE.md`](GATE_D_BLOCKER_07_RECONCILIATION_AFTER_PHYSICAL_RESTORE.md)
 records Evaluation 07's preserved FAIL, complete checkpoint physical-boundary
 acquisition before current Material Rights reconciliation, atomic load
-rollback and first-attempt inherited physical use. It is a local product
-correction candidate for senior review, not a Gate D PASS or acquisition
-report.
+rollback and first-attempt inherited physical use. It is a published product
+correction, not a Gate D PASS or acquisition report.
 
 [`GATE_C_EVALUATION_01_SUMMARY.md`](GATE_C_EVALUATION_01_SUMMARY.md) and
 [`GATE_C_EVALUATION_01_SUMMARY.json`](GATE_C_EVALUATION_01_SUMMARY.json)
