@@ -196,7 +196,7 @@ REVERSE_HOME="$EVIDENCE_ROOT/reverse-home"
 NORMAL_TRACE="$EVIDENCE_ROOT/normal-order.log"
 NORMAL_RESTORE_CAPTURE="$EVIDENCE_ROOT/normal-restored-layout.png"
 INHERITED_USE_CAPTURE="$EVIDENCE_ROOT/inherited-first-use.png"
-NORMAL_COMMANDS="$WORLD_READY|/lab start;/lab pause;/lab movement off;/lab follow off;/lab checkpoint position-proof collective-semantics;/lab checkpoint position-proof foreign-collision-load e08-succession 20 66 -24;/lab checkpoint position-proof failure after-first-missing;/lab checkpoint load e08-succession;/lab checkpoint position-proof failure none;/lab checkpoint custody-proof failure after-reconciliation-candidate;/lab checkpoint load e08-succession;/lab checkpoint custody-proof failure none;/lab checkpoint load e08-succession;/lab checkpoint custody-proof status agent_1;/lab checkpoint custody-proof status agent_3;/lab persistence-reconciliation status;/lab status|/lab estates proof blocker07-inherited-use;/lab estates proof physical latest tracked;/lab persistence-reconciliation status;/lab status"
+NORMAL_COMMANDS="$WORLD_READY|/lab start;/lab pause;/lab movement off;/lab follow off;/lab checkpoint position-proof collective-semantics;/lab checkpoint position-proof foreign-collision-load e08-succession 20 66 -24;/lab checkpoint position-proof failure after-first-missing;/lab checkpoint load e08-succession;/lab checkpoint position-proof failure none;/lab checkpoint custody-proof failure after-reconciliation-candidate;/lab checkpoint load e08-succession;/lab checkpoint custody-proof failure none;/lab checkpoint load e08-succession;/lab checkpoint custody-proof status agent_1;/lab checkpoint custody-proof status agent_3;/lab persistence-reconciliation status;/lab status|/lab estates proof blocker07-inherited-use;/lab persistence-reconciliation status;/lab status"
 run_pebble "$NORMAL_HOME" "$NORMAL_COMMANDS" \
     "-|$NORMAL_RESTORE_CAPTURE|$INHERITED_USE_CAPTURE" \
     "$NORMAL_TRACE" 0
@@ -228,6 +228,9 @@ require_trace "$NORMAL_TRACE" \
 require_trace "$NORMAL_TRACE" \
     'blocker07 inherited estate use .*damage=0>1 .*dropsAcquired=1 physicalMutationOccurred=1 postMutationVerified=1 .*firstAttempt=allowed physicalLoss=0 physicalDuplication=0 syntheticMaterial=0' \
     'first inherited physical use'
+reject_trace "$NORMAL_TRACE" \
+    'Estate boundary refused|runtimeErrors=[1-9]|rollback failed|duplicates=[1-9]' \
+    'unexpected estate, runtime, rollback, or duplication failure'
 require_trace "$NORMAL_TRACE" \
     'summary reason=termination .*agents=4 .*runtimeErrors=0 .*probesRemoved=4 ' \
     'normal process cleanup'
