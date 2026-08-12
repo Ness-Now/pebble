@@ -61,8 +61,8 @@ Gate D Blocker 06: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 07: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 07: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 08: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
-Gate D Blocker 08: BLOCKER_FIX_LOCAL_CANDIDATE
-Independent Gate D Evaluation 09: NOT_STARTED
+Gate D Blocker 08: BLOCKER_FIX_PUBLISHED
+Independent Gate D Evaluation 09: NOT_STARTED — NEXT AUTHORIZED ACTION
 CIV-34: NOT_STARTED
 ```
 
@@ -93,10 +93,10 @@ post-physical reconciliation correction is published at product-fix head
 `650b56b90381306c38d891dfdade9d89a1c45db5`. Independent Evaluation 08 remains
 historical FAIL evidence for baseline
 `02c7778769c8a6d971f4eb8bd73e5a3f7afc8c1e`. Its targeted Blocker 08
-collective probe-restore correction is a local review candidate at product-fix
-commit `a7f1fd7bf92a6d049d7601945209eb9c98d06058`. Senior review and manual
-publication are the next authorized action; independent Evaluation 09 is not
-started. Gate D remains evaluated and not acquired.
+collective probe-restore correction is published at product-fix head
+`a7f1fd7bf92a6d049d7601945209eb9c98d06058`. A new independent Evaluation 09
+is the next authorized action and is not started. Gate D remains evaluated and
+not acquired.
 
 ## Operational
 
@@ -248,8 +248,7 @@ correction, not a Gate D PASS or acquisition report.
 records Evaluation 08's preserved FAIL, bounded collective checkpoint
 placement authority, exact mixed-plan restore, true collision refusals,
 partial-creation rollback and decisive inherited-use continuation. It is a
-local product-correction candidate awaiting senior review, not a Gate D PASS
-or acquisition report.
+published product correction, not a Gate D PASS or acquisition report.
 
 [`GATE_C_EVALUATION_01_SUMMARY.md`](GATE_C_EVALUATION_01_SUMMARY.md) and
 [`GATE_C_EVALUATION_01_SUMMARY.json`](GATE_C_EVALUATION_01_SUMMARY.json)

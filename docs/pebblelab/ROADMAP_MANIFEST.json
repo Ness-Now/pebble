@@ -34,8 +34,8 @@
     "gateDBlocker07PublishedProductFixHead": "650b56b90381306c38d891dfdade9d89a1c45db5",
     "gateDEvaluation08EvaluatedProductHead": "02c7778769c8a6d971f4eb8bd73e5a3f7afc8c1e",
     "gateDBlocker08AffectedProductHead": "02c7778769c8a6d971f4eb8bd73e5a3f7afc8c1e",
-    "gateDBlocker08LocalProductFixCommit": "a7f1fd7bf92a6d049d7601945209eb9c98d06058",
-    "meaning": "Canonical history through historical Gate D Evaluation 08; Blockers 01 through 07 are fixed and published, Evaluations 01 through 08 remain immutable FAIL evidence, Blocker 08 is a local correction candidate, and the next authorized action is senior review and manual publication of Blocker 08.",
+    "gateDBlocker08PublishedProductFixHead": "a7f1fd7bf92a6d049d7601945209eb9c98d06058",
+    "meaning": "Canonical history through historical Gate D Evaluation 08; Blockers 01 through 08 are fixed and published, Evaluations 01 through 08 remain immutable FAIL evidence, and the next authorized action is a new independent Gate D Evaluation 09.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -77,7 +77,7 @@
     "activePhase": null,
     "completedThrough": "CIV-33",
     "nextEligiblePhase": null,
-    "nextAuthorizedAction": "SENIOR-REVIEW-AND-MANUAL-PUBLICATION-OF-GATE-D-BLOCKER-08",
+    "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-D-v1-EVALUATION-09",
     "civ27Status": "completed",
     "civ28Status": "completed",
     "gateCStatus": "acquired",
@@ -101,7 +101,7 @@
     "gateDEvaluation07Status": "evaluatedFailNotAcquired",
     "gateDBlocker07Status": "fixedPublished",
     "gateDEvaluation08Status": "evaluatedFailNotAcquired",
-    "gateDBlocker08Status": "fixedLocalCandidate",
+    "gateDBlocker08Status": "fixedPublished",
     "gateDEvaluation09Status": "notStarted",
     "civ34Status": "notStarted",
     "renewableSubsistenceMilestoneStatus": "completedPublished",
@@ -416,8 +416,8 @@
   "gateDBlocker08Validation": {
     "affectedPublishedBaseline": "02c7778769c8a6d971f4eb8bd73e5a3f7afc8c1e",
     "evaluation08EvidenceCommit": "c08f26ce575c814ad200779ff3d26ca430ee02d7",
-    "status": "fixedLocalCandidate",
-    "localProductFixCommit": "a7f1fd7bf92a6d049d7601945209eb9c98d06058",
+    "status": "fixedPublished",
+    "publishedProductFixHead": "a7f1fd7bf92a6d049d7601945209eb9c98d06058",
     "checkpointSchema": 30,
     "observerSchema": 7,
     "rootCause": "collectiveTargetPlanAcceptedThenMissingProbeCreationRepeatedIsolatedCollisionValidation",
@@ -463,7 +463,8 @@
     "gateDAcquired": false,
     "civ34Started": false,
     "evaluation09Started": false,
-    "nextAuthorizedAction": "SENIOR-REVIEW-AND-MANUAL-PUBLICATION-OF-GATE-D-BLOCKER-08"
+    "publicationVerified": true,
+    "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-D-v1-EVALUATION-09"
   },
   "publishedPostGateHardening": [
     {
@@ -630,14 +631,14 @@
     "historicalEvidenceImmutable": true
   },
   "blocker08CollectiveProbeRestorePlacement": {
-    "status": "fixedLocalCandidate",
+    "status": "fixedPublished",
     "evidence": "docs/pebblelab/GATE_D_BLOCKER_08_COLLECTIVE_PROBE_RESTORE_PLACEMENT.md",
     "gateAcquired": false,
-    "localProductFixCommit": "a7f1fd7bf92a6d049d7601945209eb9c98d06058",
-    "nextAuthorizedAction": true
+    "publishedProductFixHead": "a7f1fd7bf92a6d049d7601945209eb9c98d06058"
   },
   "evaluation09": {
-    "status": "notStarted"
+    "status": "notStarted",
+    "nextAuthorizedAction": true
   }
     },
     "E": {

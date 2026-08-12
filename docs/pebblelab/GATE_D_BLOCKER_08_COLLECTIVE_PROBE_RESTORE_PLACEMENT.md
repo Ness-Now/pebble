@@ -4,16 +4,16 @@
 
 ```text
 Gate D Evaluation 08: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
-Gate D Blocker 08: BLOCKER_FIX_LOCAL_CANDIDATE
+Gate D Blocker 08: BLOCKER_FIX_PUBLISHED
 Gate D: EVALUATED_FAIL_NOT_ACQUIRED
-Independent Gate D Evaluation 09: NOT_STARTED
+Independent Gate D Evaluation 09: NOT_STARTED — NEXT AUTHORIZED ACTION
 CIV-34: NOT_STARTED
 ```
 
 This targeted correction starts directly from published baseline
 `02c7778769c8a6d971f4eb8bd73e5a3f7afc8c1e`. It does not incorporate the
 Evaluation 08 evidence commit, reevaluate or acquire Gate D, start Evaluation
-09, or start `CIV-34`. The local product-fix commit is
+09, or start `CIV-34`. The published product-fix head is
 `a7f1fd7bf92a6d049d7601945209eb9c98d06058`.
 
 ## Root cause
@@ -155,5 +155,5 @@ This correction does not disable collision checks, invent restore positions,
 make checkpoint social state physical authority, or relax Blocker 05 escrow.
 External World changes that create a real conflict may still make an old
 checkpoint fail closed. Unsupported abrupt custody loss remains unsupported.
-The proof does not acquire Gate D or authorize Evaluation 09 before senior
-review and manual publication of this local candidate.
+The proof does not acquire Gate D. Independent Evaluation 09 is the next
+authorized action and remains not started.
