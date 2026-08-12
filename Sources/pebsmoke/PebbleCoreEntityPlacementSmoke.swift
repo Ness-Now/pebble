@@ -108,6 +108,55 @@ func runPebbleCoreEntityPlacementSmoke() {
     check("safe placement rejects live entity collision",
           collision.rejections.contains(.entityCollision))
 
+    let adjacentTargets = [
+        EntityPlacementPosition(x: 4, y: 64, z: 2),
+        EntityPlacementPosition(x: 5, y: 64, z: 2),
+        EntityPlacementPosition(x: 6, y: 64, z: 2),
+    ]
+    let adjacentSet = assessEntityPlacementSet(
+        in: openWorld,
+        at: adjacentTargets,
+        bodyWidth: 0.6,
+        bodyHeight: 1.8
+    )
+    let adjacentSetReversed = assessEntityPlacementSet(
+        in: openWorld,
+        at: Array(adjacentTargets.reversed()),
+        bodyWidth: 0.6,
+        bodyHeight: 1.8
+    )
+    check("collective placement accepts adjacent non-overlapping targets",
+          adjacentSet.isValid && adjacentSet.overlaps.isEmpty)
+    check("collective placement is target-order independent",
+          adjacentSetReversed.isValid
+              && Set(adjacentSet.assessments.map(\.position))
+                  == Set(adjacentSetReversed.assessments.map(\.position))
+              && adjacentSet.overlaps == adjacentSetReversed.overlaps)
+
+    let overlappingTargets = [
+        EntityPlacementPosition(x: 4, y: 64, z: 2),
+        EntityPlacementPosition(x: 4, y: 64, z: 2),
+    ]
+    let overlappingSet = assessEntityPlacementSet(
+        in: openWorld,
+        at: overlappingTargets,
+        bodyWidth: 0.6,
+        bodyHeight: 1.8
+    )
+    check("collective placement rejects actual target overlap",
+          !overlappingSet.isValid && overlappingSet.overlaps.count == 1)
+
+    let foreignCollisionSet = assessEntityPlacementSet(
+        in: collisionWorld,
+        at: adjacentTargets,
+        bodyWidth: 0.6,
+        bodyHeight: 1.8
+    )
+    check("collective placement keeps foreign World collisions fail closed",
+          !foreignCollisionSet.isValid
+              && foreignCollisionSet.assessments.first?.rejections
+                  .contains(.entityCollision) == true)
+
     let preferred = [
         EntityPlacementPosition(x: 4, y: 64, z: 2),
         EntityPlacementPosition(x: 5, y: 64, z: 2),

@@ -402,7 +402,9 @@ extension PebbleAgentController {
 
     func createProbe(
         for agent: AgentSnapshot,
-        in world: World
+        in world: World,
+        checkpointPlacementAuthority:
+            PebbleAgentCheckpointProbePlacementAuthority? = nil
     ) throws -> LabCoreAgentEntity {
         guard probesByAgentId[agent.id] == nil,
               !world.entities.contains(where: {
@@ -415,11 +417,23 @@ extension PebbleAgentController {
             y: agent.position.y,
             z: agent.position.z
         )
+        if let checkpointPlacementAuthority {
+            guard checkpointPlacementAuthority.authorizes(
+                agent: agent,
+                in: world
+            ) else {
+                throw ControllerError.bootstrapPlacementBoundary(
+                    "checkpoint collective placement authority mismatch for \(agent.id)"
+                )
+            }
+        }
         let assessment = assessEntityPlacement(
             in: world,
             at: placement,
             bodyWidth: 0.6,
-            bodyHeight: 1.8
+            bodyHeight: 1.8,
+            ignoringEntityIDs:
+                checkpointPlacementAuthority?.ignoredEntityIDs ?? []
         )
         guard assessment.isValid else {
             throw ControllerError.bootstrapPlacementBoundary(
@@ -462,30 +476,6 @@ extension PebbleAgentController {
             )
         }
         return probe
-    }
-
-    func prevalidateCheckpointProbeTarget(
-        for agent: AgentSnapshot,
-        in world: World,
-        ignoringEntityIDs: Set<Int>
-    ) throws {
-        let assessment = assessEntityPlacement(
-            in: world,
-            at: EntityPlacementPosition(
-                x: agent.position.x,
-                y: agent.position.y,
-                z: agent.position.z
-            ),
-            bodyWidth: 0.6,
-            bodyHeight: 1.8,
-            ignoringEntityIDs: ignoringEntityIDs
-        )
-        guard assessment.isValid else {
-            throw ControllerError.bootstrapPlacementBoundary(
-                "invalid checkpoint restore position for \(agent.id):"
-                    + assessment.rejections.map(\.rawValue).joined(separator: ",")
-            )
-        }
     }
 
     func restoreCheckpointProbePosition(

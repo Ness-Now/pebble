@@ -368,6 +368,22 @@ struct PebbleAgentCheckpointProbePlan {
     }
 }
 
+/// Bounded physical authority acquired for one checkpoint-load candidate.
+///
+/// The authority carries only the exact target identities/positions and the
+/// physical entity IDs proven to belong to the same restore transaction. It
+/// is never stored or published and cannot authorize an ordinary probe spawn.
+struct PebbleAgentCheckpointProbePlacementAuthority {
+    let worldIdentity: ObjectIdentifier
+    let targetPositionsByAgentID: [String: AgentPosition]
+    let ignoredEntityIDs: Set<Int>
+
+    func authorizes(agent: AgentSnapshot, in world: World) -> Bool {
+        worldIdentity == ObjectIdentifier(world)
+            && targetPositionsByAgentID[agent.id] == agent.position
+    }
+}
+
 enum PebbleAgentCheckpointProbePlanError: Error, CustomStringConvertible {
     case duplicateCandidatePosition(String)
     case missingPopulationIdentity(String)
@@ -846,7 +862,98 @@ extension PebbleAgentController {
                     + "physical=\(physical.map(positionText) ?? "missing")"
             )
         }
+        let placement = assessEntityPlacementSet(
+            in: world,
+            at: orderedAgents.map {
+                EntityPlacementPosition(
+                    x: $0.position.x,
+                    y: $0.position.y,
+                    z: $0.position.z
+                )
+            },
+            bodyWidth: 0.6,
+            bodyHeight: 1.8,
+            ignoringEntityIDs: Set(embodiments.values.map { $0.probe.id })
+        )
+        guard placement.isValid else {
+            let invalid = zip(orderedAgents, placement.assessments)
+                .filter { !$0.1.isValid }
+                .map {
+                    "\($0.0.id):"
+                        + $0.1.rejections.map(\.rawValue).joined(separator: ",")
+                }.joined(separator: ";")
+            let invalidTargets = invalid.isEmpty ? "none" : invalid
+            throw PebbleAgentPersistenceStoreError.invalidBundle(
+                "checkpoint save physical probe set is invalid "
+                    + "targets=\(invalidTargets) "
+                    + "overlaps=\(placement.overlaps.count)"
+            )
+        }
         return embodiments
+    }
+
+    func acquireCheckpointProbePlacementAuthority(
+        candidateAgents: [AgentSnapshot],
+        currentProbeStates: [PebbleAgentCheckpointProbeState],
+        checkpointCustodySpillItems: [ItemEntity],
+        world: World
+    ) throws -> PebbleAgentCheckpointProbePlacementAuthority {
+        guard currentProbeStates.allSatisfy({
+            $0.probe.world === world && !$0.probe.dead
+                && $0.probe.width == 0.6 && $0.probe.height == 1.8
+        }) else {
+            throw ControllerError.bootstrapPlacementBoundary(
+                "checkpoint restore contains a non-canonical current probe"
+            )
+        }
+        let targetPositions = candidateAgents.map {
+            EntityPlacementPosition(
+                x: $0.position.x,
+                y: $0.position.y,
+                z: $0.position.z
+            )
+        }
+        let ignoredEntityIDs = Set(
+            currentProbeStates.map { $0.probe.id }
+                + checkpointCustodySpillItems.map(\.id)
+        )
+        let placement = assessEntityPlacementSet(
+            in: world,
+            at: targetPositions,
+            bodyWidth: 0.6,
+            bodyHeight: 1.8,
+            ignoringEntityIDs: ignoredEntityIDs
+        )
+        if let invalidIndex = placement.assessments.firstIndex(where: {
+            !$0.isValid
+        }) {
+            let agent = candidateAgents[invalidIndex]
+            throw ControllerError.bootstrapPlacementBoundary(
+                "invalid checkpoint restore position for \(agent.id):"
+                    + placement.assessments[invalidIndex].rejections
+                        .map(\.rawValue).joined(separator: ",")
+            )
+        }
+        if let overlap = placement.overlaps.first {
+            throw ControllerError.bootstrapPlacementBoundary(
+                "checkpoint restore target overlap "
+                    + "\(overlap.first.x),\(overlap.first.y),\(overlap.first.z):"
+                    + "\(overlap.second.x),\(overlap.second.y),\(overlap.second.z)"
+            )
+        }
+        let targetPositionsByAgentID = Dictionary(
+            uniqueKeysWithValues: candidateAgents.map { ($0.id, $0.position) }
+        )
+        guard targetPositionsByAgentID.count == candidateAgents.count else {
+            throw ControllerError.bootstrapPlacementBoundary(
+                "checkpoint collective placement contains duplicate identities"
+            )
+        }
+        return PebbleAgentCheckpointProbePlacementAuthority(
+            worldIdentity: ObjectIdentifier(world),
+            targetPositionsByAgentID: targetPositionsByAgentID,
+            ignoredEntityIDs: ignoredEntityIDs
+        )
     }
 
     func validateCheckpointMaterialRightsCustody(
@@ -1640,23 +1747,14 @@ extension PebbleAgentController {
                 "Checkpoint load refused: retired bootstrap custody is not empty."
             )
         }
-        let ignoredRestoreEntityIDs = Set(
-            retiredProbeStates.map { $0.probe.id }
-                + probePlan.entries.compactMap { entry in
-                    entry.classification == .repositionedVerified
-                        ? entry.currentEmbodiment?.probe.id : nil
-                }
-                + persistedCustodySpillItems.map(\.id)
-        )
+        let placementAuthority: PebbleAgentCheckpointProbePlacementAuthority
         do {
-            for entry in probePlan.entries where
-                entry.classification != .reusedExact {
-                try prevalidateCheckpointProbeTarget(
-                    for: entry.agent,
-                    in: world,
-                    ignoringEntityIDs: ignoredRestoreEntityIDs
-                )
-            }
+            placementAuthority = try acquireCheckpointProbePlacementAuthority(
+                candidateAgents: candidateAgents,
+                currentProbeStates: reusableProbeStates + retiredProbeStates,
+                checkpointCustodySpillItems: persistedCustodySpillItems,
+                world: world
+            )
         } catch {
             trace(
                 "checkpoint probe position refused name=\(name.rawValue) "
@@ -1666,6 +1764,20 @@ extension PebbleAgentController {
                 "Checkpoint load refused: checkpoint probe target is invalid (\(error))."
             )
         }
+        let placementTargets = candidateAgents.map {
+            "\($0.id):\(positionText($0.position))"
+        }.joined(separator: ",")
+        trace(
+            "checkpoint collective placement authority name=\(name.rawValue) "
+                + "targets=\(placementTargets) "
+                + "currentProbes=\(reusableProbeStates.count + retiredProbeStates.count) "
+                + "retired=\(retiredProbeStates.count) "
+                + "repositioned=\(probePlan.repositionedAgentIDs.count) "
+                + "missing=\(probePlan.missingAgentIDs.count) "
+                + "checkpointEscrow=\(persistedCustodySpillItems.count) "
+                + "targetOverlap=0 foreignCollision=0 terrain=valid "
+                + "applicationOrderAuthority=collective"
+        )
 
         var reconciliationSummary = "legacy_exact"
         if candidate.persistenceReconciliationEnabled {
@@ -1731,6 +1843,9 @@ extension PebbleAgentController {
         var custodySpillChunkModifiedBefore: [Int64: Bool] = [:]
         var candidateCheckpointCustodyHandoff:
             PebbleAgentCheckpointCustodyHandoff?
+        let reconciliationRunCountBeforeLoad = candidate
+            .persistenceReconciliationSnapshot().recentRuns.count
+        var committedCurrentReconciliationThisLoad = 0
         for item in persistedCustodySpillItems {
             let itemX = Int(item.x.rounded(.down))
             let itemZ = Int(item.z.rounded(.down))
@@ -1776,15 +1891,44 @@ extension PebbleAgentController {
                     )
                 }
             }
-            for entry in probePlan.entries where
-                entry.classification == .restoredMissing {
-                let probe = try createProbe(for: entry.agent, in: world)
+            let missingRestoreEntries = probePlan.entries.filter {
+                $0.classification == .restoredMissing
+            }
+            let orderedMissingRestoreEntries:
+                [PebbleAgentCheckpointProbePlanEntry]
+            if environment["PEBBLELAB_GATE_D_BLOCKER_08"] == "1",
+               environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
+               environment[
+                   "PEBBLELAB_GATE_D_BLOCKER_08_REVERSE_CREATION_ORDER"
+               ] == "1" {
+                orderedMissingRestoreEntries = Array(
+                    missingRestoreEntries.reversed()
+                )
+            } else {
+                orderedMissingRestoreEntries = missingRestoreEntries
+            }
+            trace(
+                "checkpoint missing probe application order name=\(name.rawValue) "
+                    + "agents=\(orderedMissingRestoreEntries.map { $0.agent.id }.joined(separator: ",")) "
+                    + "authority=collective"
+            )
+            for entry in orderedMissingRestoreEntries {
+                let probe = try createProbe(
+                    for: entry.agent,
+                    in: world,
+                    checkpointPlacementAuthority: placementAuthority
+                )
                 probesByAgentId[entry.agent.id] = probe
                 restoredProbesCreated.append(
                     PebbleAgentCheckpointProbeState(
                         agentID: entry.agent.id,
                         probe: probe
                     )
+                )
+                trace(
+                    "checkpoint missing probe created agent=\(entry.agent.id) "
+                        + "position=\(positionText(entry.agent.position)) "
+                        + "authority=collective targetSet=exact"
                 )
                 if injectedPositionRestoreFailure
                     == .afterFirstMissingCreation {
@@ -1907,9 +2051,24 @@ extension PebbleAgentController {
                         == expectedByAgentID[agentID]?.slots
                 }
             } ?? true
+            let finalPlacement = assessEntityPlacementSet(
+                in: world,
+                at: candidateAgents.map {
+                    EntityPlacementPosition(
+                        x: $0.position.x,
+                        y: $0.position.y,
+                        z: $0.position.z
+                    )
+                },
+                bodyWidth: 0.6,
+                bodyHeight: 1.8,
+                ignoringEntityIDs: Set(
+                    finalEmbodiments.values.map { $0.probe.id }
+                )
+            )
             guard worldEntitiesExact, exactProbesUnchanged,
                   repositionedProbesVerified, restoredProbesVerified,
-                  positionsExact, custodyExact,
+                  positionsExact, custodyExact, finalPlacement.isValid,
                   Set(finalEmbodiments.values.map(\.position)).count
                     == candidateAgentIDs.count,
                   probesByAgentId.keys.sorted() == candidateAgentIDs else {
@@ -1938,11 +2097,18 @@ extension PebbleAgentController {
                     store: store
                 )
                 let report = try candidate.applyPersistenceReconciliation(request)
-                guard report.publishable, report.run.duplicationCount == 0 else {
+                let reconciliationAfter = candidate
+                    .persistenceReconciliationSnapshot()
+                guard report.publishable, report.run.duplicationCount == 0,
+                      reconciliationAfter.recentRuns.count
+                        == reconciliationRunCountBeforeLoad + 1,
+                      reconciliationAfter.recentRuns.last?.runID
+                        == report.run.runID else {
                     throw PebbleAgentPersistenceStoreError.invalidBundle(
                         "reconciliation did not produce a publishable session"
                     )
                 }
+                committedCurrentReconciliationThisLoad = 1
                 try candidate.validateEstateCrossDomainIfEnabled()
                 let outcomes = report.run.assetResults.map(\.outcome.rawValue)
                     .joined(separator: ",")
@@ -2130,7 +2296,7 @@ extension PebbleAgentController {
         } else {
             worldMutation = "none"
         }
-        let message = "checkpoint loaded name=\(name.rawValue) id=\(stored.checkpoint.checkpointID.rawValue) tick=\(candidate.tick) simulation=\(candidate.simulationID.rawValue) digest=\(checkpointDigest.rawValue) reconciledDigest=\(reconciledDigest.rawValue) causalSequence=\(causal.latestSequence) causalDigest=\(causal.digest) restartSafe=1 manifestIntegrity=verified:v\(stored.manifest.manifestIntegrityVersion ?? 0) probes=\(probesByAgentId.count) paused=1 focus=\(focusedAgentId ?? "none") lifecycleEvent=none probeReconciliation=\(probeReconciliation) probeReusedExact=\(probePlan.exactAgentIDs.count) probeRestoredMissing=\(probePlan.missingAgentIDs.count) probeRepositionedVerified=\(probePlan.repositionedAgentIDs.count) probeRetiredVerified=\(retiredBootstrapAgentIDs.count) probePositionRefused=0 probeRetired=\(retiredEvidence) probeRestored=\(restoredEvidence) custodyReconciliation=\(custodyReconciliation) custodyRestoredAgents=\(custodyRestoreAgentIDs.count) custodyRestoredStacks=\(custodyRestoredStacks) custodyRestoredQuantity=\(custodyRestoredQuantity) custodyAdoptedSpills=\(persistedCustodySpillItems.count) custodyDuplicates=0 physicalBoundary=acquired reconciliationPhase=postPhysicalBoundary reconciliationRuns=\(candidate.persistenceReconciliationSnapshot().recentRuns.count) physicalReconciliation=\(reconciliationSummary) worldMutation=\(worldMutation)"
+        let message = "checkpoint loaded name=\(name.rawValue) id=\(stored.checkpoint.checkpointID.rawValue) tick=\(candidate.tick) simulation=\(candidate.simulationID.rawValue) digest=\(checkpointDigest.rawValue) reconciledDigest=\(reconciledDigest.rawValue) causalSequence=\(causal.latestSequence) causalDigest=\(causal.digest) restartSafe=1 manifestIntegrity=verified:v\(stored.manifest.manifestIntegrityVersion ?? 0) probes=\(probesByAgentId.count) paused=1 focus=\(focusedAgentId ?? "none") lifecycleEvent=none probeReconciliation=\(probeReconciliation) probeReusedExact=\(probePlan.exactAgentIDs.count) probeRestoredMissing=\(probePlan.missingAgentIDs.count) probeRepositionedVerified=\(probePlan.repositionedAgentIDs.count) probeRetiredVerified=\(retiredBootstrapAgentIDs.count) probePositionRefused=0 probeRetired=\(retiredEvidence) probeRestored=\(restoredEvidence) custodyReconciliation=\(custodyReconciliation) custodyRestoredAgents=\(custodyRestoreAgentIDs.count) custodyRestoredStacks=\(custodyRestoredStacks) custodyRestoredQuantity=\(custodyRestoredQuantity) custodyAdoptedSpills=\(persistedCustodySpillItems.count) custodyDuplicates=0 physicalBoundary=acquired reconciliationPhase=postPhysicalBoundary reconciliationRuns=\(candidate.persistenceReconciliationSnapshot().recentRuns.count) physicalReconciliation=\(reconciliationSummary) reconciliationRunsBefore=\(reconciliationRunCountBeforeLoad) committedCurrentReconciliationThisLoad=\(committedCurrentReconciliationThisLoad) worldMutation=\(worldMutation)"
         trace(message)
         return success(message)
     }

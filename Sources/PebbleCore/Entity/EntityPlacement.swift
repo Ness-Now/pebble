@@ -53,6 +53,52 @@ public struct EntityPlacementAssessment {
     public var isValid: Bool { rejections.isEmpty }
 }
 
+/// One physical overlap inside a caller-supplied target set.
+///
+/// The positions are canonicalized so diagnostics do not depend on the order
+/// in which a transaction intends to apply its targets.
+public struct EntityPlacementSetOverlap: Hashable {
+    public let first: EntityPlacementPosition
+    public let second: EntityPlacementPosition
+
+    public init(
+        first: EntityPlacementPosition,
+        second: EntityPlacementPosition
+    ) {
+        if Self.less(first, second) {
+            self.first = first
+            self.second = second
+        } else {
+            self.first = second
+            self.second = first
+        }
+    }
+
+    private static func less(
+        _ lhs: EntityPlacementPosition,
+        _ rhs: EntityPlacementPosition
+    ) -> Bool {
+        if lhs.x != rhs.x { return lhs.x < rhs.x }
+        if lhs.y != rhs.y { return lhs.y < rhs.y }
+        return lhs.z < rhs.z
+    }
+}
+
+/// Read-only validation of one complete physical placement target set.
+///
+/// `assessments` retain the caller's order for per-target diagnostics while
+/// `overlaps` are canonical and therefore independent of application order.
+/// A set is valid only when every target is valid against the current World
+/// boundary and no two target AABBs intersect each other.
+public struct EntityPlacementSetAssessment {
+    public let assessments: [EntityPlacementAssessment]
+    public let overlaps: [EntityPlacementSetOverlap]
+
+    public var isValid: Bool {
+        assessments.allSatisfy(\.isValid) && overlaps.isEmpty
+    }
+}
+
 public struct BoundedEntityPlacementSearchConfiguration {
     public let requiredCount: Int
     public let horizontalRadius: Int
@@ -235,6 +281,71 @@ public func assessEntityPlacement(
         position: position,
         body: body,
         rejections: rejections
+    )
+}
+
+/// Validates a complete set of equal-sized entity targets against PebbleCore.
+///
+/// The ignored IDs are bounded caller-owned physical entities whose current
+/// positions are being replaced by the same atomic target set. They remain
+/// excluded only from the World-side checks in this call; the returned set
+/// assessment still checks every target body against every other target body.
+public func assessEntityPlacementSet(
+    in world: World,
+    at positions: [EntityPlacementPosition],
+    bodyWidth: Double,
+    bodyHeight: Double,
+    ignoringEntityIDs: Set<Int> = []
+) -> EntityPlacementSetAssessment {
+    let assessments = positions.map {
+        assessEntityPlacement(
+            in: world,
+            at: $0,
+            bodyWidth: bodyWidth,
+            bodyHeight: bodyHeight,
+            ignoringEntityIDs: ignoringEntityIDs
+        )
+    }
+    var overlapSet = Set<EntityPlacementSetOverlap>()
+    guard assessments.count > 1 else {
+        return EntityPlacementSetAssessment(
+            assessments: assessments,
+            overlaps: []
+        )
+    }
+    for firstIndex in assessments.indices.dropLast() {
+        for secondIndex in assessments.indices where secondIndex > firstIndex {
+            let first = assessments[firstIndex]
+            let second = assessments[secondIndex]
+            if first.body.intersects(second.body) {
+                overlapSet.insert(EntityPlacementSetOverlap(
+                    first: first.position,
+                    second: second.position
+                ))
+            }
+        }
+    }
+    let overlaps = overlapSet.sorted {
+        if $0.first != $1.first {
+            if $0.first.x != $1.first.x {
+                return $0.first.x < $1.first.x
+            }
+            if $0.first.y != $1.first.y {
+                return $0.first.y < $1.first.y
+            }
+            return $0.first.z < $1.first.z
+        }
+        if $0.second.x != $1.second.x {
+            return $0.second.x < $1.second.x
+        }
+        if $0.second.y != $1.second.y {
+            return $0.second.y < $1.second.y
+        }
+        return $0.second.z < $1.second.z
+    }
+    return EntityPlacementSetAssessment(
+        assessments: assessments,
+        overlaps: overlaps
     )
 }
 

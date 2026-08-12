@@ -1205,7 +1205,13 @@ extension PebbleAgentController {
             )
         }
         let reconciliation = published.persistenceReconciliationSnapshot()
-        guard reconciliation.recentRuns.count == 1,
+        let causalSequence = published.causalLedgerSnapshot().summary
+            .latestSequence
+        guard let currentRun = reconciliation.recentRuns.last,
+              currentRun.causalSequenceAfter == causalSequence,
+              currentRun.assetResults.first(where: {
+                  $0.assetID == assetID
+              })?.outcome.hasVerifiedPhysicalAsset == true,
               reconciliation.latestResults.first(where: {
                   $0.assetID == assetID
               })?.outcome.hasVerifiedPhysicalAsset == true else {
