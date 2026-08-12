@@ -66,10 +66,24 @@ Published Gate D Blocker 07 product-fix head:
 650b56b90381306c38d891dfdade9d89a1c45db5
 ```
 
+Published baseline evaluated by independent Gate D Evaluation 08 and used as
+the direct base for the local Blocker 08 correction candidate:
+
+```text
+02c7778769c8a6d971f4eb8bd73e5a3f7afc8c1e
+```
+
+Local Gate D Blocker 08 product-fix commit:
+
+```text
+a7f1fd7bf92a6d049d7601945209eb9c98d06058
+```
+
 The `CIV-33` completion, renewable-subsistence milestone and Gate D Blockers 01
 through 07 are published on the canonical branch. Independent Gate D
-Evaluations 01 through 07 remain immutable FAIL evidence for their evaluated
-baselines. Evaluation 04 found that an abandoned civilization candidate could
+Evaluations 01 through 08 remain immutable FAIL evidence for their evaluated
+baselines. Blocker 08 is a local correction candidate awaiting senior review
+and manual publication. Evaluation 04 found that an abandoned civilization candidate could
 leave an earlier successful physical movement in PebbleCore after a later
 agricultural navigation collision.
 
@@ -77,7 +91,7 @@ agricultural navigation collision.
 
 ```text
 active CIV phase: none
-next authorized action: NEW INDEPENDENT V4-GATE-D-v1 EVALUATION 08
+next authorized action: SENIOR REVIEW AND MANUAL PUBLICATION OF GATE D BLOCKER 08
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -91,7 +105,9 @@ Gate D Evaluation 06 status: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 06 status: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 07 status: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 07 status: BLOCKER_FIX_PUBLISHED
-Independent Gate D Evaluation 08 status: NOT_STARTED — NEXT AUTHORIZED ACTION
+Gate D Evaluation 08 status: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
+Gate D Blocker 08 status: BLOCKER_FIX_LOCAL_CANDIDATE
+Independent Gate D Evaluation 09 status: NOT_STARTED
 CIV-34 status: NOT_STARTED
 roadmap generation: V4
 ```
@@ -128,7 +144,7 @@ arms candidate physical hard failure. No direct productive physical
 `.register(` call remains. This work does not alter Evaluation 04 or acquire Gate D.
 Senior review is approved, the published product-fix head is
 `cca372bb841846db4b1010d26456bcc245b07c3e`. Evaluation 05 remains historical
-FAIL evidence. Evaluations 06 and 07 are immutable historical FAIL evidence.
+FAIL evidence. Evaluations 06 through 08 are immutable historical FAIL evidence.
 The published Blocker 06 and Blocker 07 corrections do not
 reevaluate either campaign or acquire Gate D.
 
@@ -185,31 +201,47 @@ its historical settlement observation and receipt. Missing, wrong, ambiguous
 or unprotected physical material remains fail-closed. Schema 30 and Observer
 schema 7 are unchanged.
 
+The local Blocker 08 candidate makes the complete checkpoint probe target set
+the bounded placement authority for that load candidate. PebbleCore validates
+terrain, foreign World entities and every target AABB collectively. Current
+probes and checkpoint escrow owned by the same transaction may be excluded
+only from their transient World positions; true target overlap and foreign
+collisions still fail before mutation. Missing probes reuse that exact
+authority instead of rebuilding an isolated placement context.
+
+The decisive mixed load composes one reused probe, one repositioned probe, two
+restored missing probes and one retired dead bootstrap probe. Normal and
+reversed creation orders acquire the same exact physical boundary. A fault
+after the first missing creation rolls back every partial probe and custody
+effect; the existing post-reconciliation fault also remains exact. Successful
+load commits one current reconciliation and first inherited use performs a
+real pickaxe mutation. Schema 30 and Observer schema 7 remain unchanged.
+
 ## Last validation baseline
 
-For the Gate D Blocker 07 post-physical reconciliation correction:
+For the Gate D Blocker 08 collective probe-restore correction candidate:
 
 ```text
-published baseline red reproduction: PASS (pre-restore outcomes=missing)
+published baseline red reproduction: PASS (isolated createProbe entityCollision)
+valid adjacent / true overlap / foreign collision: PASS / refused / refused
+normal / reversed missing-probe creation order: PASS / PASS
+mixed reused / repositioned / restored / retired: 1 / 1 / 2 / 1
+partial-creation rollback / immediate retry: exact / PASS
+post-reconciliation rollback / immediate retry: exact / PASS
 physical checkpoint boundary before reconciliation: PASS
-current reconciliation after exact custody restore: PASS (matched)
 successful-load committed reconciliation runs: 1
 failed-load published reconciliation runs: 0
-post-candidate load rollback: exact
-same-process immediate load retry: PASS
 first inherited use: PASS on first attempt
 inherited physical mutation: PASS (pickaxe damage 0>1, block removed)
-repository shared smoke: 3764 passed, 0 failed
+repository shared smoke: 3768 passed, 0 failed
 repository verification steps: 35/35
 checkpoint schema / Observer schema: 30 / 7
-physical loss / duplication / synthetic material: 0 / 0 / 0
-rendered captures inspected at native resolution: 5
+physical loss / duplication / synthetic material / duplicate probes: 0 / 0 / 0 / 0
+rendered captures inspected at native resolution: 4
 Gate D Blocker 01 regression: PASS
-Gate D Blocker 02 regression: PASS
-Gate D Blocker 03 regression: PASS
-Gate D Blocker 04 regression: PASS
 Gate D Blocker 05 regression: PASS
-Gate D Blocker 06 regression: PASS
+Gate D Blocker 07 regression: PASS
+Gate D Blockers 02, 03, 04 and 06 prior same-runtime revalidation: PASS
 golden regeneration: NOT ATTEMPTED
 ```
 
@@ -333,10 +365,10 @@ golden regeneration: NOT ATTEMPTED
 
 ## Next authorized action
 
-The current authorized action is a new independent `V4-GATE-D-v1` Evaluation
-08. Evaluations 06 and 07 remain
+The current authorized action is senior review and manual publication of Gate
+D Blocker 08. Evaluations 06 through 08 remain
 **EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE**. Gate D remains
-**EVALUATED_FAIL_NOT_ACQUIRED** and is not acquired by the published Blocker 07
-correction. Evaluation 08 is **NOT_STARTED — NEXT AUTHORIZED ACTION**.
+**EVALUATED_FAIL_NOT_ACQUIRED** and is not acquired by this local correction
+candidate. Independent Evaluation 09 is **NOT_STARTED**.
 `CIV-34` is not started and remains downstream of a future published Gate D
 PASS.

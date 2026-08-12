@@ -32,7 +32,10 @@
     "gateDEvaluation07EvaluatedProductHead": "bbafcb51ef0d8387e95302a134ec038fbb8dffa6",
     "gateDBlocker07AffectedProductHead": "bbafcb51ef0d8387e95302a134ec038fbb8dffa6",
     "gateDBlocker07PublishedProductFixHead": "650b56b90381306c38d891dfdade9d89a1c45db5",
-    "meaning": "Canonical history through historical Gate D Evaluation 07; Blockers 01 through 07 are fixed and published, Evaluations 01 through 07 remain immutable FAIL evidence, and the next authorized action is a new independent Gate D Evaluation 08.",
+    "gateDEvaluation08EvaluatedProductHead": "02c7778769c8a6d971f4eb8bd73e5a3f7afc8c1e",
+    "gateDBlocker08AffectedProductHead": "02c7778769c8a6d971f4eb8bd73e5a3f7afc8c1e",
+    "gateDBlocker08LocalProductFixCommit": "a7f1fd7bf92a6d049d7601945209eb9c98d06058",
+    "meaning": "Canonical history through historical Gate D Evaluation 08; Blockers 01 through 07 are fixed and published, Evaluations 01 through 08 remain immutable FAIL evidence, Blocker 08 is a local correction candidate, and the next authorized action is senior review and manual publication of Blocker 08.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -58,6 +61,7 @@
     "gateDBlocker05RestartPhysicalCareCustodyContinuity": "docs/pebblelab/GATE_D_BLOCKER_05_RESTART_PHYSICAL_CARE_CUSTODY_CONTINUITY.md",
     "gateDBlocker06EstateSourcePhysicalAuthority": "docs/pebblelab/GATE_D_BLOCKER_06_ESTATE_SOURCE_PHYSICAL_AUTHORITY.md",
     "gateDBlocker07ReconciliationAfterPhysicalRestore": "docs/pebblelab/GATE_D_BLOCKER_07_RECONCILIATION_AFTER_PHYSICAL_RESTORE.md",
+    "gateDBlocker08CollectiveProbeRestorePlacement": "docs/pebblelab/GATE_D_BLOCKER_08_COLLECTIVE_PROBE_RESTORE_PLACEMENT.md",
     "gateCEvidenceMarkdown": "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.md",
     "gateCEvidenceJSON": "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.json"
   },
@@ -73,7 +77,7 @@
     "activePhase": null,
     "completedThrough": "CIV-33",
     "nextEligiblePhase": null,
-    "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-D-v1-EVALUATION-08",
+    "nextAuthorizedAction": "SENIOR-REVIEW-AND-MANUAL-PUBLICATION-OF-GATE-D-BLOCKER-08",
     "civ27Status": "completed",
     "civ28Status": "completed",
     "gateCStatus": "acquired",
@@ -96,7 +100,9 @@
     "gateDBlocker06Status": "fixedPublished",
     "gateDEvaluation07Status": "evaluatedFailNotAcquired",
     "gateDBlocker07Status": "fixedPublished",
-    "gateDEvaluation08Status": "notStarted",
+    "gateDEvaluation08Status": "evaluatedFailNotAcquired",
+    "gateDBlocker08Status": "fixedLocalCandidate",
+    "gateDEvaluation09Status": "notStarted",
     "civ34Status": "notStarted",
     "renewableSubsistenceMilestoneStatus": "completedPublished",
     "v4CanonicalDocumentSet": true
@@ -407,6 +413,58 @@
     "publicationVerified": true,
     "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-D-v1-EVALUATION-08"
   },
+  "gateDBlocker08Validation": {
+    "affectedPublishedBaseline": "02c7778769c8a6d971f4eb8bd73e5a3f7afc8c1e",
+    "evaluation08EvidenceCommit": "c08f26ce575c814ad200779ff3d26ca430ee02d7",
+    "status": "fixedLocalCandidate",
+    "localProductFixCommit": "a7f1fd7bf92a6d049d7601945209eb9c98d06058",
+    "checkpointSchema": 30,
+    "observerSchema": 7,
+    "rootCause": "collectiveTargetPlanAcceptedThenMissingProbeCreationRepeatedIsolatedCollisionValidation",
+    "placementAuthority": "candidateScopedCompleteTargetSetWithExactWorldIdentityAndBoundedTransactionOwnedExclusions",
+    "ordinaryProbeCreationBypass": false,
+    "exactCheckpointPositions": true,
+    "adjacentTargetLayout": "restored",
+    "actualTargetOverlap": "refusedBeforeMutation",
+    "foreignWorldCollision": "refusedBeforeMutation",
+    "normalCreationOrder": "passed",
+    "reverseCreationOrder": "passed",
+    "mixedPlanReusedExact": 1,
+    "mixedPlanRepositionedVerified": 1,
+    "mixedPlanRestoredMissing": 2,
+    "mixedPlanRetired": 1,
+    "partialCreationFaultPoint": "afterFirstMissingProbeCreation",
+    "partialCreationRollback": "exact",
+    "partialCreationImmediateSameProcessRetry": "passed",
+    "postReconciliationCandidateRollback": "exact",
+    "postBoundaryImmediateSameProcessRetry": "passed",
+    "successfulLoadCommittedCurrentReconciliationRuns": 1,
+    "failedLoadPublishedReconciliationRuns": 0,
+    "firstInheritedUse": "allowedFirstAttempt",
+    "inheritedUsePhysicalMutation": "pickaxeDamage0To1AndBlockRemovedAndDropAcquired",
+    "physicalLoss": 0,
+    "physicalDuplication": 0,
+    "syntheticMaterial": 0,
+    "duplicateProbes": 0,
+    "observerMutationCount": 0,
+    "focusedPebbleCorePlacementPassed": 18,
+    "focusedPebbleCorePlacementFailed": 0,
+    "repositoryChecksPassed": 3768,
+    "repositoryChecksFailed": 0,
+    "repositoryStepsPassed": 35,
+    "repositoryStepsTotal": 35,
+    "blocker01ExactFinalRerun": "passed",
+    "blocker05ExactFinalRerun": "passed",
+    "blocker07ExactFinalRerun": "passed",
+    "blockers02_03_04_06PriorSameRuntimeRevalidation": "passed",
+    "evaluation08CommitIsAncestor": false,
+    "nativeCapturesInspected": 4,
+    "goldenRegenerationAttempted": false,
+    "gateDAcquired": false,
+    "civ34Started": false,
+    "evaluation09Started": false,
+    "nextAuthorizedAction": "SENIOR-REVIEW-AND-MANUAL-PUBLICATION-OF-GATE-D-BLOCKER-08"
+  },
   "publishedPostGateHardening": [
     {
       "id": "POST-GATE-B-SAFE-BOOTSTRAP",
@@ -564,10 +622,23 @@
         "gateAcquired": false,
         "publishedProductFixHead": "650b56b90381306c38d891dfdade9d89a1c45db5"
       },
-      "evaluation08": {
-        "status": "notStarted",
-        "nextAuthorizedAction": true
-      }
+  "evaluation08": {
+    "status": "evaluatedFailNotAcquired",
+    "evaluatedProductBaseline": "02c7778769c8a6d971f4eb8bd73e5a3f7afc8c1e",
+    "evidenceCommit": "c08f26ce575c814ad200779ff3d26ca430ee02d7",
+    "verdict": "failProductCorrectionRequired",
+    "historicalEvidenceImmutable": true
+  },
+  "blocker08CollectiveProbeRestorePlacement": {
+    "status": "fixedLocalCandidate",
+    "evidence": "docs/pebblelab/GATE_D_BLOCKER_08_COLLECTIVE_PROBE_RESTORE_PLACEMENT.md",
+    "gateAcquired": false,
+    "localProductFixCommit": "a7f1fd7bf92a6d049d7601945209eb9c98d06058",
+    "nextAuthorizedAction": true
+  },
+  "evaluation09": {
+    "status": "notStarted"
+  }
     },
     "E": {
       "contractId": "V4-GATE-E-v1",
