@@ -63,8 +63,8 @@ Gate D Blocker 07: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 08: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 08: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 09: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
-Gate D Blocker 09: BLOCKER_FIX_LOCAL_CANDIDATE
-Independent Gate D Evaluation 10: NOT_STARTED
+Gate D Blocker 09: BLOCKER_FIX_PUBLISHED
+Independent Gate D Evaluation 10: NOT_STARTED — NEXT AUTHORIZED ACTION
 CIV-34: NOT_STARTED
 ```
 
@@ -99,10 +99,10 @@ collective probe-restore correction is published at product-fix head
 `a7f1fd7bf92a6d049d7601945209eb9c98d06058`. Independent Evaluation 09 remains
 historical FAIL evidence for baseline
 `4ea6fba4b615d72a96087bb98bf5bbca4b560e4b`. Its targeted evolved-material
-checkpoint-save correction is a local candidate at product-fix commit
-`ee742afb41fda44c77d8b98f868fbe759934057e`. Senior review and manual
-publication of Blocker 09 is the next authorized action. Evaluation 10 is not
-started, and Gate D remains evaluated and not acquired.
+checkpoint-save correction is published at product-fix head
+`ee742afb41fda44c77d8b98f868fbe759934057e`. A new independent Evaluation 10
+is the next authorized action and is not started. Gate D remains evaluated and
+not acquired.
 
 ## Operational
 
@@ -261,7 +261,7 @@ records Evaluation 09's preserved FAIL, immutable durable asset history versus
 the exact current verified observation, current-identity checkpoint custody
 validation, repeated evolved-identity protected restarts and fail-closed stale,
 future, wrong-holder, wrong-quantity, ambiguous and duplicate-reservation
-cases. It is a local product-correction candidate, not a Gate D PASS or
+cases. It is a published product correction, not a Gate D PASS or
 acquisition report.
 
 [`GATE_C_EVALUATION_01_SUMMARY.md`](GATE_C_EVALUATION_01_SUMMARY.md) and

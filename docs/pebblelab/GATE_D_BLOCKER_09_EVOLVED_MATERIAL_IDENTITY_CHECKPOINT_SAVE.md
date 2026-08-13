@@ -4,16 +4,16 @@
 
 ```text
 Gate D Evaluation 09: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
-Gate D Blocker 09: BLOCKER_FIX_LOCAL_CANDIDATE
+Gate D Blocker 09: BLOCKER_FIX_PUBLISHED
 Gate D: EVALUATED_FAIL_NOT_ACQUIRED
-Independent Gate D Evaluation 10: NOT_STARTED
+Independent Gate D Evaluation 10: NOT_STARTED — NEXT AUTHORIZED ACTION
 CIV-34: NOT_STARTED
 ```
 
-This targeted correction starts directly from published baseline
+This targeted correction started directly from published baseline
 `4ea6fba4b615d72a96087bb98bf5bbca4b560e4b`. It does not incorporate either
 Evaluation 09 evidence commit, reevaluate or acquire Gate D, start Evaluation
-10, or start `CIV-34`. The local product-fix commit is
+10, or start `CIV-34`. The published product-fix head is
 `ee742afb41fda44c77d8b98f868fbe759934057e`.
 
 ## Root cause
@@ -161,5 +161,5 @@ current observation during save, create matter from social state, support
 abrupt custody loss, or make protected escrow reusable after consumption.
 
 Gate D remains `EVALUATED_FAIL_NOT_ACQUIRED`. Independent Evaluation 09 remains
-immutable historical FAIL evidence. The next authorized action is senior review
-and manual publication of Gate D Blocker 09; Evaluation 10 is not started.
+immutable historical FAIL evidence. The next authorized action is a new
+independent Gate D Evaluation 10, which is not started.
