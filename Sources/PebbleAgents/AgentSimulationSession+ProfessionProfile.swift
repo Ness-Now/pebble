@@ -248,6 +248,7 @@ extension AgentSimulationSession {
         case .fishing: return "fisher"
         case .hunting: return "hunter"
         case .husbandry: return "herder"
+        case .crafting: return "crafter"
         }
     }
 }

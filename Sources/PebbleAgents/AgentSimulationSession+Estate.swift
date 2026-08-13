@@ -1195,7 +1195,8 @@ extension AgentSimulationSession {
                     == AgentCheckpointSchema.renewableSubsistenceVersion
                 || schemaVersion
                     == AgentCheckpointSchema
-                        .independentEcologicalReceiptVersion else {
+                        .independentEcologicalReceiptVersion
+                || schemaVersion == AgentCheckpointSchema.productionVersion else {
             throw AgentEstateError.invalidState("checkpoint schema")
         }
         if schemaVersion >= AgentCheckpointSchema.estateVersion,

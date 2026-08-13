@@ -50,6 +50,11 @@ extension PebbleAgentController {
                     activity: activity, actor: embodiment, world: world,
                     session: &session, recorder: &recorder
                 )
+            case .production:
+                receipt = try executeAutonomousProduction(
+                    activity: activity, actor: embodiment, world: world,
+                    session: &session, recorder: &recorder
+                )
             case .dependentCare, .teaching, .construction, .materialHandling:
                 throw ControllerError.feedbackBoundary(
                     "autonomous domain remains owned by its existing cognitive path"
@@ -130,6 +135,71 @@ extension PebbleAgentController {
                     + "reason=\(String(describing: error).replacingOccurrences(of: " ", with: "_"))"
             )
         }
+    }
+
+    private func executeAutonomousProduction(
+        activity: AgentAutonomousActivity,
+        actor: PebbleAgentEmbodiment,
+        world: World,
+        session: inout AgentSimulationSession,
+        recorder: inout AgentReplayRecorder?
+    ) throws -> String {
+        guard let opportunityID = AgentProductionOpportunityID(
+            rawValue: activity.candidate.stableReference
+        ), let opportunity = session.productionSnapshot().opportunities.first(where: {
+            $0.opportunityID == opportunityID
+        }), opportunity.planFingerprint == activity.candidate.materialFingerprint else {
+            throw ControllerError.feedbackBoundary("production opportunity stale")
+        }
+        let operationID = "produce:\(opportunity.opportunityID.rawValue)"
+        guard productionInputsAreUnencumbered(opportunity, session: session) else {
+            throw ControllerError.feedbackBoundary(
+                "production input is reserved by Material Rights"
+            )
+        }
+        let sessionBefore = session
+        let recorderBefore = recorder
+        var recorderCandidate = recorder
+        let result = productionGateway.execute(
+            PebbleAgentProductionRequest(
+                operationID: operationID,
+                opportunity: opportunity,
+                completedAtTick: session.tick
+            ),
+            actor: actor,
+            world: world,
+            publish: { verified in
+                if var activeRecorder = recorderCandidate {
+                    _ = try activeRecorder.apply(
+                        .recordVerifiedProduction(verified), to: &session
+                    )
+                    recorderCandidate = activeRecorder
+                } else {
+                    try session.recordVerifiedProduction(verified)
+                }
+            }
+        )
+        guard result.succeeded else {
+            session = sessionBefore
+            recorder = recorderBefore
+            throw ControllerError.feedbackBoundary(
+                "production physical \(result.status.rawValue)"
+            )
+        }
+        recorder = recorderCandidate
+        trace(
+            "production verified actor=\(opportunity.actorID.rawValue) "
+                + "recipe=\(opportunity.recipeID) workshop="
+                + "\(opportunity.workshopPosition.x),"
+                + "\(opportunity.workshopPosition.y),"
+                + "\(opportunity.workshopPosition.z) inputs="
+                + opportunity.inputs.map {
+                    "\($0.identity.itemKey):\($0.count)"
+                }.joined(separator: ",")
+                + " output=\(opportunity.output.identity.itemKey):"
+                + "\(opportunity.output.count) receipt=\(operationID)"
+        )
+        return operationID
     }
 
     private func recordAutonomousTeachingEvidenceIfEligible(

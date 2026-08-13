@@ -31,6 +31,7 @@ public enum AgentReplaySchema {
     public static let estateVersion = 28
     public static let renewableSubsistenceVersion = 29
     public static let independentEcologicalReceiptVersion = 30
+    public static let productionVersion = 31
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -49,6 +50,7 @@ public enum AgentReplaySchema {
             || version == legacyEstateVersion || version == estateVersion
             || version == renewableSubsistenceVersion
             || version == independentEcologicalReceiptVersion
+            || version == productionVersion
     }
 }
 
@@ -165,6 +167,11 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case estateFeature
     case estateAdministration
     case estateSettlement
+    case productionFeature
+    case productionNeed
+    case productionOpportunity
+    case productionOutcome
+    case producedGoodUse
 }
 
 public enum AgentReplayOperation: Codable {
@@ -367,6 +374,18 @@ public enum AgentReplayOperation: Codable {
         operationID: String
     )
     case applyEstatePhysicalSettlement(AgentEstatePhysicalSettlementOutcome)
+    case setProductionEnabled(Bool, configuration: AgentProductionConfiguration)
+    case raiseProductionNeed(
+        needID: AgentProductionNeedID,
+        actorID: AgentID,
+        reason: AgentProductionNeedReason,
+        desiredOutputItemKey: String,
+        quantity: Int,
+        priority: Int
+    )
+    case recordProductionOpportunity(AgentProductionOpportunityObservation)
+    case recordVerifiedProduction(AgentVerifiedProductionOutcome)
+    case recordProducedGoodUse(AgentProducedGoodUseOutcome)
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -478,6 +497,11 @@ public enum AgentReplayOperation: Codable {
         case .setEstatesEnabled: return .estateFeature
         case .acceptEstateAdministration: return .estateAdministration
         case .applyEstatePhysicalSettlement: return .estateSettlement
+        case .setProductionEnabled: return .productionFeature
+        case .raiseProductionNeed: return .productionNeed
+        case .recordProductionOpportunity: return .productionOpportunity
+        case .recordVerifiedProduction: return .productionOutcome
+        case .recordProducedGoodUse: return .producedGoodUse
         }
     }
 
@@ -508,6 +532,14 @@ public enum AgentReplayOperation: Codable {
         case let .acceptEstateAdministration(_, _, operationID):
             raw = operationID
         case let .applyEstatePhysicalSettlement(outcome):
+            raw = outcome.operationID
+        case let .raiseProductionNeed(needID, _, _, _, _, _):
+            raw = "need:\(needID.rawValue)"
+        case let .recordProductionOpportunity(observation):
+            raw = "observe:\(observation.opportunityID.rawValue)"
+        case let .recordVerifiedProduction(outcome):
+            raw = outcome.operationID
+        case let .recordProducedGoodUse(outcome):
             raw = outcome.operationID
         case let .provideDependentNourishment(intent): raw = intent.provisionID
         case let .startApprenticeship(request):
@@ -826,6 +858,9 @@ public struct AgentReplayRecorder {
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
         schemaVersion = checkpoint.schemaVersion
+            == AgentCheckpointSchema.productionVersion
+            ? AgentReplaySchema.productionVersion
+            : checkpoint.schemaVersion
             == AgentCheckpointSchema.independentEcologicalReceiptVersion
             ? AgentReplaySchema.independentEcologicalReceiptVersion
             : checkpoint.schemaVersion
@@ -1082,6 +1117,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.estateVersion
         }
+        if case let .setProductionEnabled(enabled, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.productionVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "production activation must be the first v31 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.productionVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -1322,6 +1367,9 @@ public enum AgentSessionReplayer {
                     == AgentReplaySchema.independentEcologicalReceiptVersion
                 && checkpoint.schemaVersion
                     <= AgentCheckpointSchema.renewableSubsistenceVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.productionVersion
+                && checkpoint.schemaVersion
+                    <= AgentCheckpointSchema.independentEcologicalReceiptVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -1706,6 +1754,24 @@ extension AgentSimulationSession {
             )
         case let .applyEstatePhysicalSettlement(outcome):
             _ = try candidate.applyEstatePhysicalSettlement(outcome)
+        case let .setProductionEnabled(enabled, configuration):
+            try candidate.setProductionEnabled(
+                enabled, configuration: configuration
+            )
+        case let .raiseProductionNeed(
+            needID, actorID, reason, desiredOutputItemKey, quantity, priority
+        ):
+            try candidate.raiseProductionNeed(
+                needID: needID, actorID: actorID, reason: reason,
+                desiredOutputItemKey: desiredOutputItemKey,
+                quantity: quantity, priority: priority
+            )
+        case let .recordProductionOpportunity(observation):
+            try candidate.recordProductionOpportunity(observation)
+        case let .recordVerifiedProduction(outcome):
+            try candidate.recordVerifiedProduction(outcome)
+        case let .recordProducedGoodUse(outcome):
+            try candidate.recordProducedGoodUse(outcome)
         }
         self = candidate
         let causal = causalLedgerSnapshot().summary

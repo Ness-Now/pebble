@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--rights|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--integrated-teaching|--ecological-observation|--agriculture|--wild-subsistence|--physical-food-survival|--livestock|--work-professions|--work-demand-refresh|--gate-b-passive]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--rights|--production|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--integrated-teaching|--ecological-observation|--agriculture|--wild-subsistence|--physical-food-survival|--livestock|--work-professions|--work-demand-refresh|--gate-b-passive]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -39,6 +39,7 @@ Options:
   --physical Run local sound, pointing gesture, imperfect perception, and existing trust.
   --material Run real agent/container custody, transactions, consumption, and CIV-15 seams.
   --rights Run CIV-26 real custody, claims, permissions, transgression, and rollback.
+  --production Run CIV-34 real recipes, workshop, custody, restart, and produced-tool use.
   --cooperation Run shared construction-material task, delivery, and shelter completion.
   --persistence Run checkpoint, real process restart, causal replay, and uninterrupted control.
   --population Run bounded migrant admission, mid-route restart, arrival, and uninterrupted control.
@@ -131,6 +132,7 @@ for option in "$@"; do
         --physical) MODE="physical"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --material) MODE="material"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --rights) MODE="rights"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --production) MODE="production"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --cooperation) MODE="cooperation"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --persistence) MODE="persistence"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --population) MODE="population"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
@@ -181,6 +183,7 @@ AGRICULTURE_GATE=0
 WILD_SUBSISTENCE_GATE=0
 LIVESTOCK_GATE=0
 WORK_PROFESSIONS_GATE=0
+PRODUCTION_GATE=0
 AUTONOMOUS_CIVILIZATION_GATE=0
 INTEGRATED_TEACHING_PROOF=0
 PASSIVE_OBSERVER_INPUT_PROOF=0
@@ -190,7 +193,20 @@ GATE_B3_ACCEPTANCE=0
 GATE_B3_COGNITIVE_HZ=4
 GATE_B3_HORIZON=0
 GATE_B3_RANDOM_TICK_SPEED=3
-if [ "$MODE" = "integrated-teaching" ]; then
+if [ "$MODE" = "production" ]; then
+    WORLD_SEED="46"
+    MATERIAL_GATE=1
+    PERSISTENCE_GATE=1
+    POPULATION_GATE=1
+    LIFECYCLE_GATE=1
+    SKILL_GATE=1
+    PRODUCTION_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-Production-46"
+    CAPTURE_NAME="production-final.png"
+    PRODUCTION_PHASE1_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab population on;/lab lifecycle on;/lab skills on;/lab focus agent_2;/lab production setup;/lab production proof;/lab production status;/lab overlay compact|/lab step;/lab production status|/lab step;/lab production status;/lab checkpoint save production-v31;/lab checkpoint status;/lab causality tail 20;/lab status'
+    PRODUCTION_PHASE2_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab population on;/lab lifecycle on;/lab skills on;/lab focus agent_2;/lab checkpoint load production-v31;/lab production status;/lab overlay compact|/lab production use-produced-tool;/lab production status;/lab causality tail 20;/lab overlay compact|/lab production cleanup;/lab checkpoint save production-final-v31;/lab checkpoint status;/lab production status;/lab status'
+    LAB_COMMANDS="$PRODUCTION_PHASE1_COMMANDS"
+elif [ "$MODE" = "integrated-teaching" ]; then
     WORLD_SEED="46"
     MATERIAL_GATE=1
     PERSISTENCE_GATE=1
@@ -795,7 +811,15 @@ print_plan() {
     printf 'Isolated session root: %s\n' "$session_root"
     printf 'Disposable world name: %s\n' "$WORLD_NAME"
     printf 'Fixed seed: %s\n' "$WORLD_SEED"
-    if [ "$MODE" = "work-demand-refresh" ]; then
+    if [ "$MODE" = "production" ]; then
+        capture_dir=$(dirname "$capture_path")
+        printf 'Captures: %s\n' "$capture_dir/production-workshop.png"
+        printf '          %s\n' "$capture_dir/production-tool.png"
+        printf '          %s\n' "$capture_dir/production-output.png"
+        printf '          %s\n' "$capture_dir/production-restored.png"
+        printf '          %s\n' "$capture_dir/production-used.png"
+        printf '          %s\n' "$capture_path"
+    elif [ "$MODE" = "work-demand-refresh" ]; then
         capture_dir=$(dirname "$capture_path")
         printf 'Captures: %s\n' "$capture_dir/corr04-before-first-refresh.png"
         printf '          %s\n' "$capture_dir/corr04-after-first-refresh.png"
@@ -881,6 +905,7 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_WILD_SUBSISTENCE=%s\n' "$WILD_SUBSISTENCE_GATE"
     printf '  PEBBLELAB_APP_AGENTS_LIVESTOCK=%s\n' "$LIVESTOCK_GATE"
     printf '  PEBBLELAB_APP_AGENTS_WORK_PROFESSIONS=%s\n' "$WORK_PROFESSIONS_GATE"
+    printf '  PEBBLELAB_APP_AGENTS_PRODUCTION=%s\n' "$PRODUCTION_GATE"
     printf '  PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION=%s\n' "$AUTONOMOUS_CIVILIZATION_GATE"
     printf '  PEBBLELAB_INTEGRATED_TEACHING_PROOF=%s\n' "$INTEGRATED_TEACHING_PROOF"
     printf '  PEBBLELAB_PASSIVE_OBSERVER_INPUT_PROOF=%s\n' "$PASSIVE_OBSERVER_INPUT_PROOF"
@@ -891,7 +916,15 @@ print_plan() {
     printf '  PEBBLELAB_GATE_B3_HORIZON=%s\n' "$GATE_B3_HORIZON"
     printf '  PEBBLELAB_DISPOSABLE_WORLD_PROOF=1\n'
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
-    if [ "$MODE" = "work-demand-refresh" ]; then
+    if [ "$MODE" = "production" ]; then
+        printf '  PEBBLE_SHOT=-|%s/production-workshop.png|%s/production-tool.png|%s/production-output.png\n' \
+            "$(dirname "$capture_path")" "$(dirname "$capture_path")" \
+            "$(dirname "$capture_path")"
+        printf '  Restart PEBBLE_CMD=%s\n' "$PRODUCTION_PHASE2_COMMANDS"
+        printf '  Restart PEBBLE_SHOT=%s/production-restored.png|%s/production-used.png|%s\n' \
+            "$(dirname "$capture_path")" "$(dirname "$capture_path")" \
+            "$capture_path"
+    elif [ "$MODE" = "work-demand-refresh" ]; then
         printf '  PEBBLE_SHOT=%s@999999\n' "$capture_path"
     elif [ "$MODE" = "integrated-teaching" ]; then
         printf '  PEBBLE_SHOT=-|%s/integrated-teaching-before.png|%s/integrated-teaching-apprenticeship.png|%s/integrated-teaching-demonstration-context.png|%s\n' \
@@ -941,7 +974,11 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "work-demand-refresh" ]; then
+    if [ "$MODE" = "production" ]; then
+        printf '  2. Confirm the real crafting table transforms exact canonical inputs into a stone pickaxe and bread.\n'
+        printf '  3. Confirm the negative matrix, true late rollback, immediate retry, contention, and reserved-input refusal.\n'
+        printf '  4. Confirm a fresh process restores exact custody/history, then the produced pickaxe breaks real stone with damage 0->1.\n'
+    elif [ "$MODE" = "work-demand-refresh" ]; then
         printf '  2. Observe normal Player movement while the single integrated society crosses repeated Work reviews.\n'
         printf '  3. Confirm the three captures bracket tick 4 and show a later unfrozen society.\n'
         printf '  4. Confirm refresh traces distinguish heartbeats, newer provenance, and new logical demands.\n'
@@ -1070,13 +1107,13 @@ print_plan() {
         && [ "$MODE" != "mortality" ] && [ "$MODE" != "reproduction" ] \
         && [ "$MODE" != "kinship" ] && [ "$MODE" != "households" ] \
         && [ "$MODE" != "care" ] && [ "$MODE" != "skills" ]; then
-        if [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
+        if [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "production" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
             printf '  5. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         else
             printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         fi
     fi
-    if [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
+    if [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "production" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
         printf '  6. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
     else
         printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
@@ -1116,7 +1153,14 @@ TRACE_PATH="$SESSION_ROOT/pebble-live.log"
 DB_PATH="$SESSION_HOME/Library/Application Support/Pebble/pebble.db"
 [ ! -e "$DB_PATH" ] || fail "fresh disposable database already exists: $DB_PATH"
 /bin/mkdir -p "$SESSION_HOME" "$CAPTURE_DIR"
-if [ "$MODE" = "work-demand-refresh" ]; then
+if [ "$MODE" = "production" ]; then
+    CAPTURE_WORKSHOP_PATH="$CAPTURE_DIR/production-workshop.png"
+    CAPTURE_TOOL_PATH="$CAPTURE_DIR/production-tool.png"
+    CAPTURE_OUTPUT_PATH="$CAPTURE_DIR/production-output.png"
+    CAPTURE_RESTORED_PATH="$CAPTURE_DIR/production-restored.png"
+    CAPTURE_USED_PATH="$CAPTURE_DIR/production-used.png"
+    SHOT_SPEC="-|$CAPTURE_WORKSHOP_PATH|$CAPTURE_TOOL_PATH|$CAPTURE_OUTPUT_PATH"
+elif [ "$MODE" = "work-demand-refresh" ]; then
     CAPTURE_BEFORE_PATH="$CAPTURE_DIR/corr04-before-first-refresh.png"
     CAPTURE_AFTER_PATH="$CAPTURE_DIR/corr04-after-first-refresh.png"
     SHOT_SPEC="$CAPTURE_PATH@999999"
@@ -1178,6 +1222,158 @@ printf '\nLaunching Pebble now. Personal Pebble data is hidden by CFFIXED_USER_H
 
 if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
     fail "a Pebble process is already running; refusing an ambiguous live baseline"
+fi
+
+if [ "$MODE" = "production" ]; then
+    cd "$ROOT_DIR"
+    swift build -c release --product Pebble
+    PEBBLE_BINARY="$ROOT_DIR/.build/release/Pebble"
+    [ -x "$PEBBLE_BINARY" ] \
+        || fail "Release Pebble binary missing: $PEBBLE_BINARY"
+
+    PHASE1_TRACE="$SESSION_ROOT/production-phase1.log"
+    PHASE2_TRACE="$SESSION_ROOT/production-phase2.log"
+
+    run_production_app() {
+        run_home=$1
+        run_trace=$2
+        run_commands=$3
+        create_world=$4
+        command_world_tick=$5
+        run_shots=$6
+        if [ "$create_world" -eq 1 ]; then
+            CFFIXED_USER_HOME="$run_home" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLE_NEWWORLD="$WORLD_SEED" \
+            PEBBLE_NEWWORLD_NAME="$WORLD_NAME" \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_MATERIAL=1 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_APP_AGENTS_POPULATION=1 \
+            PEBBLELAB_APP_AGENTS_LIFECYCLE=1 \
+            PEBBLELAB_APP_AGENTS_SKILLS=1 \
+            PEBBLELAB_APP_AGENTS_PRODUCTION=1 \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT="$run_shots" \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        else
+            CFFIXED_USER_HOME="$run_home" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_MATERIAL=1 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_APP_AGENTS_POPULATION=1 \
+            PEBBLELAB_APP_AGENTS_LIFECYCLE=1 \
+            PEBBLELAB_APP_AGENTS_SKILLS=1 \
+            PEBBLELAB_APP_AGENTS_PRODUCTION=1 \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT="$run_shots" \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        fi
+        if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
+            fail "Pebble process remained after production phase: $run_trace"
+        fi
+    }
+
+    printf '\nProduction phase 1: autonomous physical recipes and protected checkpoint.\n'
+    run_production_app \
+        "$SESSION_HOME" "$PHASE1_TRACE" "$PRODUCTION_PHASE1_COMMANDS" \
+        1 100 "$SHOT_SPEC"
+    TRACE_PATH="$PHASE1_TRACE"
+    [ -s "$CAPTURE_WORKSHOP_PATH" ] \
+        || fail "production workshop capture missing: $CAPTURE_WORKSHOP_PATH"
+    [ -s "$CAPTURE_TOOL_PATH" ] \
+        || fail "production tool capture missing: $CAPTURE_TOOL_PATH"
+    [ -s "$CAPTURE_OUTPUT_PATH" ] \
+        || fail "production output capture missing: $CAPTURE_OUTPUT_PATH"
+    require_trace 'production setup actor=agent_2 reason=missingUsefulTool .*workshop=crafting_table@.*inputs=cobblestone:3,stick:2,wheat:3 .*outputsBefore=stone_pickaxe:0,bread:0 .*productPath=autonomous' 'causal need and physical workshop setup'
+    require_trace 'production boundary proof missingInput=PASS wrongQuantity=PASS wrongIdentity=PASS staleWorkshop=PASS externalChange=PASS reservedAmbiguous=PASS contention=PASS lateMutationReached=1 rollback=exact immediateRetry=PASS session=exact physicalLoss=0 physicalDuplication=0 syntheticMaterial=0 productionPublication=0' 'negative matrix and true post-mutation rollback'
+    require_trace_count 'production verified actor=agent_2 ' 2 'exactly two normal production publications'
+    require_trace 'production verified actor=agent_2 .*inputs=cobblestone:3,stick:2 output=stone_pickaxe:1 ' 'canonical stone pickaxe recipe'
+    require_trace 'production verified actor=agent_2 .*inputs=wheat:3 output=bread:1 ' 'second canonical bread recipe'
+    require_trace_count 'autonomous activity completed .*actor=agent_2 domain=production ' 2 'two production activities through normal autonomy'
+    require_trace 'autonomous material practice actor=agent_2 domain=crafting .*practice=0>1 .*outputBonus=0 manualTrigger=0' 'first real crafting practice'
+    require_trace 'autonomous material practice actor=agent_2 domain=crafting .*practice=1>2 .*outputBonus=0 manualTrigger=0' 'second real crafting practice'
+    require_trace 'production enabled=1 activeNeeds=0 fulfilled=2 opportunities=0 records=2 uses=0 totalProduction=2 duplicateProductionReceipts=0 inFlight=0 .*custody=agent_2:1,agent_2:1' 'exact output history and live custody before restart'
+    require_trace 'checkpoint saved name=production-v31 .*restartSafe=1 protectedCustodyAgents=3 protectedCustodyStacks=2 protectedCustodyQuantity=2 ' 'restart-safe exact physical custody checkpoint'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'first process clean runtime shutdown'
+    require_trace 'stop probesRemoved=3 reason=termination custodyHandoff=protected handoffFreshness=exact taggedCustodySpills=2' 'first process exact protected-custody handoff'
+    reject_trace '^\[lab-live\] error ' 'unexpected first-process runtime error'
+
+    PERSISTENCE_ROOT="$SESSION_HOME/Library/Application Support/Pebble/PebbleLabAgents"
+    PHASE1_SESSION=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f -path '*/checkpoints/production-v31/session.json' -print -quit)
+    [ -n "$PHASE1_SESSION" ] || fail "production-v31 session.json missing"
+    /usr/bin/grep -q '"schemaVersion":31' "$PHASE1_SESSION" \
+        || fail "production-v31 checkpoint is not schema 31"
+    PHASE1_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=production-v31 .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE1_TRACE" | /usr/bin/tail -1)
+    [ -n "$PHASE1_DIGEST" ] || fail "production-v31 digest extraction failed"
+    [ -f "$DB_PATH" ] || fail "production disposable database missing"
+    persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
+    case "$persisted_world_tick" in
+        ''|*[!0-9]*) fail "invalid persisted production World tick: $persisted_world_tick" ;;
+    esac
+    continuation_command_tick=$((persisted_world_tick + 100))
+
+    printf '\nProduction phase 2: fresh process, exact custody restore, and produced-tool use.\n'
+    PHASE2_SHOTS="$CAPTURE_RESTORED_PATH|$CAPTURE_USED_PATH|$CAPTURE_PATH"
+    run_production_app \
+        "$SESSION_HOME" "$PHASE2_TRACE" "$PRODUCTION_PHASE2_COMMANDS" \
+        0 "$continuation_command_tick" "$PHASE2_SHOTS"
+    TRACE_PATH="$PHASE2_TRACE"
+    [ -s "$CAPTURE_RESTORED_PATH" ] \
+        || fail "production restart capture missing: $CAPTURE_RESTORED_PATH"
+    [ -s "$CAPTURE_USED_PATH" ] \
+        || fail "production use capture missing: $CAPTURE_USED_PATH"
+    [ -s "$CAPTURE_PATH" ] \
+        || fail "production final capture missing: $CAPTURE_PATH"
+    require_trace "checkpoint loaded name=production-v31 .*digest=$PHASE1_DIGEST .*restartSafe=1 .*custodyRestoredStacks=2 custodyRestoredQuantity=2 .*custodyDuplicates=0 physicalBoundary=acquired" 'fresh-process exact session and physical custody restore'
+    require_trace 'production enabled=1 activeNeeds=0 fulfilled=2 opportunities=0 records=2 uses=0 totalProduction=2 duplicateProductionReceipts=0 inFlight=0 .*custody=agent_2:1,agent_2:1' 'restored output history without duplication'
+    require_trace 'produced tool used actor=agent_2 .*sameItem=stone_pickaxe damage=0>1 world=stone>air dropsAcquired=[1-9][0-9]* wrongTool=FAIL_CLOSED .*postRestartCapable=1' 'same produced stack used after restart with real durability and World effect'
+    require_trace 'production enabled=1 activeNeeds=0 fulfilled=2 opportunities=0 records=2 uses=1 totalProduction=2 duplicateProductionReceipts=0 inFlight=0 ' 'post-use causal production state'
+    require_trace 'production cleanup workshop=air target=air cognition=retained custody=retained fixtureCells=exact' 'disposable fixture cleanup'
+    require_trace 'checkpoint saved name=production-final-v31 .*restartSafe=1 protectedCustodyAgents=3 protectedCustodyStacks=3 protectedCustodyQuantity=3 ' 'final damaged-tool, bread, and acquired-drop custody checkpoint'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'second process clean runtime shutdown'
+    require_trace 'stop probesRemoved=3 reason=termination custodyHandoff=protected handoffFreshness=exact taggedCustodySpills=3' 'second process exact protected-custody handoff'
+    reject_trace '^\[lab-live\] error ' 'unexpected second-process runtime error'
+
+    FINAL_SESSION=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f -path '*/checkpoints/production-final-v31/session.json' -print -quit)
+    [ -n "$FINAL_SESSION" ] || fail "production-final-v31 session.json missing"
+    /usr/bin/grep -q '"schemaVersion":31' "$FINAL_SESSION" \
+        || fail "production-final-v31 checkpoint is not schema 31"
+    world_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT count(*), json_extract(json, '$.seed'), json_extract(json, '$.name'), json_extract(json, '$.dims.\"0\".dayTime'), json_extract(json, '$.dims.\"0\".raining'), json_extract(json, '$.dims.\"0\".thundering'), json_extract(json, '$.gameRules.doMobSpawning'), json_extract(json, '$.gameRules.doDaylightCycle'), json_extract(json, '$.gameRules.doWeatherCycle') FROM worlds;")
+    expected_world_facts="1|$WORLD_SEED|$WORLD_NAME|1000|0|0|0|0|0"
+    [ "$world_facts" = "$expected_world_facts" ] \
+        || fail "unexpected production disposable World facts: $world_facts"
+    if /usr/bin/pgrep -x Pebble >/dev/null 2>&1 \
+        || /usr/bin/pgrep -x swift-run >/dev/null 2>&1 \
+        || /usr/bin/pgrep -x pebsmoke >/dev/null 2>&1; then
+        fail "residual PebbleLab process after production proof"
+    fi
+    printf '\nPASS: canonical production, adversarial rollback, exact custody restart, produced-tool use, and cleanup verified.\n'
+    printf 'Phase 1 trace: %s\n' "$PHASE1_TRACE"
+    printf 'Phase 2 trace: %s\n' "$PHASE2_TRACE"
+    printf 'Checkpoint schema: 31\n'
+    printf 'Final capture: %s\n' "$CAPTURE_PATH"
+    printf 'Retained isolated session: %s\n' "$SESSION_ROOT"
+    exit 0
 fi
 
 if [ "$MODE" = "reproduction" ] || [ "$MODE" = "kinship" ] \
@@ -3268,6 +3464,7 @@ PEBBLELAB_APP_AGENTS_AGRICULTURE="$AGRICULTURE_GATE" \
 PEBBLELAB_APP_AGENTS_WILD_SUBSISTENCE="$WILD_SUBSISTENCE_GATE" \
 PEBBLELAB_APP_AGENTS_LIVESTOCK="$LIVESTOCK_GATE" \
 PEBBLELAB_APP_AGENTS_WORK_PROFESSIONS="$WORK_PROFESSIONS_GATE" \
+PEBBLELAB_APP_AGENTS_PRODUCTION="$PRODUCTION_GATE" \
 PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION="$AUTONOMOUS_CIVILIZATION_GATE" \
 PEBBLELAB_INTEGRATED_TEACHING_PROOF="$INTEGRATED_TEACHING_PROOF" \
 PEBBLELAB_PASSIVE_OBSERVER_INPUT_PROOF="$PASSIVE_OBSERVER_INPUT_PROOF" \

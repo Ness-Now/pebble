@@ -552,6 +552,7 @@ struct PebbleAgentDebugState {
             case .construction: primary = "build"
             case .caregiving: primary = "care"
             case .materialHandling: primary = "handle"
+            case .crafting: primary = "craft"
             case nil: primary = "none"
             }
             return "\(ordinal):\(primary)@\(profile.specializationStrengthBasisPoints / 100)%"

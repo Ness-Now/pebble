@@ -61,6 +61,8 @@ final class PebbleAgentController {
     let ecologicalObservationSensor = PebbleAgentEcologicalObservationSensor()
     let physicalActionGateway = PebbleAgentPhysicalActionGateway()
     let materialCustodyGateway = PebbleAgentMaterialCustodyGateway()
+    let productionSensor = PebbleAgentProductionSensor()
+    let productionGateway = PebbleAgentProductionGateway()
     let foodConsumptionExecutor = PebbleAgentFoodConsumptionExecutor()
     let agricultureExecutor = PebbleAgentAgricultureExecutor()
     let wildSubsistenceExecutor = PebbleAgentWildSubsistenceExecutor()
@@ -105,6 +107,8 @@ final class PebbleAgentController {
     var skillLateFailureProofInjected = false
     var candidateMovementLateFailureProofInjected = false
     var candidateRenewableLateFailureProofInjected = false
+    var productionWorkshopPosition: AgentPosition?
+    var productionToolTargetPosition: PhysicalBlockPosition?
     var candidateAgricultureNavigationFailureProofInjected = false
     var ecologicalObservationProofFixture: PebbleAgentEcologicalObservationProofFixture?
     var agricultureProofFixture: PebbleAgentAgricultureProofFixture?
@@ -206,6 +210,9 @@ final class PebbleAgentController {
     }
     var autonomousCivilizationFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION"] == "1"
+    }
+    var productionFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_PRODUCTION"] == "1"
     }
     var safeBootstrapLateFailureProofEnabled: Bool {
         environment["PEBBLELAB_DISPOSABLE_SAFE_BOOTSTRAP_LATE_FAILURE_PROOF"] == "1"

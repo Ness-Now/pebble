@@ -32,6 +32,7 @@ public enum AgentCheckpointSchema {
     public static let estateVersion = 28
     public static let renewableSubsistenceVersion = 29
     public static let independentEcologicalReceiptVersion = 30
+    public static let productionVersion = 31
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -50,6 +51,7 @@ public enum AgentCheckpointSchema {
             || version == legacyEstateVersion || version == estateVersion
             || version == renewableSubsistenceVersion
             || version == independentEcologicalReceiptVersion
+            || version == productionVersion
     }
 }
 
@@ -247,9 +249,12 @@ public struct AgentSessionDurableState: Codable {
     public let geneticsState: AgentGeneticsState?
     public let familyState: AgentFamilyState?
     public let estateState: AgentEstateState?
+    public let productionState: AgentProductionState?
 
     init(session: AgentSimulationSession) {
-        if session.ecologicalObservationState?.observations.isEmpty == false
+        if session.productionState != nil {
+            schemaVersion = AgentCheckpointSchema.productionVersion
+        } else if session.ecologicalObservationState?.observations.isEmpty == false
             || session.agricultureState?.plots.isEmpty == false {
             schemaVersion = AgentCheckpointSchema
                 .independentEcologicalReceiptVersion
@@ -414,6 +419,7 @@ public struct AgentSessionDurableState: Codable {
         geneticsState = session.geneticsState
         familyState = session.familyState
         estateState = session.estateState
+        productionState = session.productionState
     }
 }
 
@@ -1208,6 +1214,7 @@ extension AgentSimulationSession {
         geneticsState = state.geneticsState
         familyState = state.familyState
         estateState = state.estateState
+        productionState = state.productionState
         latestAutonomousTeachingReview = nil
         durableSchemaVersionOverride =
             state.schemaVersion == AgentCheckpointSchema.childhoodVersion
@@ -1221,6 +1228,7 @@ extension AgentSimulationSession {
         try validatePhysicalFoodSurvivalStateIfEnabled()
         try validateMaterialRightsStateIfEnabled()
         try validatePersistenceReconciliationStateIfEnabled()
+        try validateProductionStateIfEnabled()
         if let settlementMetricsState {
             try validateSettlementMetricsState(settlementMetricsState)
         }
@@ -1238,7 +1246,10 @@ extension AgentSimulationSession {
             == AgentCheckpointSchema.independentEcologicalReceiptVersion
         let renewableSchema = state.schemaVersion
             == AgentCheckpointSchema.renewableSubsistenceVersion
+        let productionSchema = state.schemaVersion
+            == AgentCheckpointSchema.productionVersion
         let latestSchema = renewableSchema || independentReceiptSchema
+            || productionSchema
         let estateSchema =
             state.schemaVersion == AgentCheckpointSchema.legacyEstateVersion
             || state.schemaVersion == AgentCheckpointSchema.estateVersion
@@ -1530,7 +1541,8 @@ extension AgentSimulationSession {
                     && state.ecologicalObservationState?.observations
                         .allSatisfy({
                             $0.physicalObservationReceiptID != nil
-                        }) == true) else {
+                        }) == true)
+                || (productionSchema && state.productionState != nil) else {
                 throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
             }
         }
@@ -1691,6 +1703,65 @@ extension AgentSimulationSession {
                         "productive sources"
                     )
                 }
+            }
+        }
+        if let production = state.productionState {
+            do {
+                _ = try AgentProductionConfiguration(
+                    maximumNeeds: production.configuration.maximumNeeds,
+                    maximumOpportunities:
+                        production.configuration.maximumOpportunities,
+                    maximumRecords: production.configuration.maximumRecords,
+                    maximumUseRecords:
+                        production.configuration.maximumUseRecords,
+                    maximumProcessedOperations:
+                        production.configuration.maximumProcessedOperations,
+                    opportunityLifetimeTicks:
+                        production.configuration.opportunityLifetimeTicks
+                )
+            } catch {
+                throw AgentCheckpointError.invalidConfiguration
+            }
+            let needIDs = production.needs.map(\.needID)
+            let opportunityIDs = production.opportunities.map(\.opportunityID)
+            let operationIDs = production.records.map(\.operationID)
+            let useIDs = production.useRecords.map { $0.outcome.operationID }
+            guard production.needs.count
+                    <= production.configuration.maximumNeeds,
+                  production.opportunities.count
+                    <= production.configuration.maximumOpportunities,
+                  production.records.count
+                    <= production.configuration.maximumRecords,
+                  production.useRecords.count
+                    <= production.configuration.maximumUseRecords,
+                  production.processedOperationIDs.count
+                    <= production.configuration.maximumProcessedOperations,
+                  needIDs.count == Set(needIDs).count,
+                  opportunityIDs.count == Set(opportunityIDs).count,
+                  operationIDs.count == Set(operationIDs).count,
+                  useIDs.count == Set(useIDs).count,
+                  production.processedOperationIDs.count
+                    == Set(production.processedOperationIDs).count,
+                  production.needs.allSatisfy({
+                      agentIDs.contains($0.actorID)
+                          && $0.causalEventID.simulationID
+                            == state.clock.simulationID
+                  }),
+                  production.opportunities.allSatisfy({
+                      agentIDs.contains($0.actorID)
+                          && $0.causalEventID.simulationID
+                            == state.clock.simulationID
+                  }),
+                  production.records.allSatisfy({
+                      agentIDs.contains($0.actorID)
+                          && $0.causalEventID.simulationID
+                            == state.clock.simulationID
+                  }),
+                  production.initializedEventID.simulationID
+                    == state.clock.simulationID,
+                  production.lastProductionEventID.simulationID
+                    == state.clock.simulationID else {
+                throw AgentCheckpointError.invalidBound("production")
             }
         }
         if let homeostasis = state.homeostasisState {
@@ -2118,7 +2189,8 @@ extension AgentSimulationSession {
                     == AgentCheckpointSchema.renewableSubsistenceVersion
                 || state.schemaVersion
                     == AgentCheckpointSchema
-                        .independentEcologicalReceiptVersion {
+                        .independentEcologicalReceiptVersion
+                || state.schemaVersion == AgentCheckpointSchema.productionVersion {
                 guard mortality.historicalEvidenceVersion
                         == AgentCompactedDeathSummary.currentVersion,
                       mortality.compactedDeathSummaries != nil else {

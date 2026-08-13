@@ -237,6 +237,11 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case estateAssetTransferred
     case estateAssetSettled
     case estateSettled
+    case productionInitialized
+    case productionNeedRaised
+    case productionOpportunityObserved
+    case productionCompleted
+    case producedGoodUsed
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -270,6 +275,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case geneticsTransition
     case familyTransition
     case estateTransition
+    case productionTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -1028,7 +1034,12 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.estateAssetTransferred, .operation),
              (.estateAssetSettled, .operation),
              (.estateSettled, .operation),
-             (.estatesInitialized, .feature):
+             (.estatesInitialized, .feature),
+             (.productionInitialized, .feature),
+             (.productionNeedRaised, .operation),
+             (.productionOpportunityObserved, .operation),
+             (.productionCompleted, .operation),
+             (.producedGoodUsed, .operation):
             matches = true
         default:
             matches = false

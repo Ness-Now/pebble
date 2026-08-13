@@ -34,6 +34,8 @@ extension PebbleAgentController {
             candidatePhysicalTransaction
         materialCustodyGateway.candidatePhysicalTransaction =
             candidatePhysicalTransaction
+        productionGateway.candidatePhysicalTransaction =
+            candidatePhysicalTransaction
         defer {
             if physicalActionGateway.candidatePhysicalTransaction
                 === candidatePhysicalTransaction {
@@ -42,6 +44,10 @@ extension PebbleAgentController {
             if materialCustodyGateway.candidatePhysicalTransaction
                 === candidatePhysicalTransaction {
                 materialCustodyGateway.candidatePhysicalTransaction = nil
+            }
+            if productionGateway.candidatePhysicalTransaction
+                === candidatePhysicalTransaction {
+                productionGateway.candidatePhysicalTransaction = nil
             }
             if activeCandidatePhysicalTransaction === candidatePhysicalTransaction {
                 activeCandidatePhysicalTransaction = nil

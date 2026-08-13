@@ -1065,6 +1065,8 @@ extension AgentSimulationSession {
         case .materialHandling:
             domainMatches = event.kind == .delivery
                 || event.origin == .cooperationTransition
+        case .crafting:
+            domainMatches = event.origin == .productionTransition
         }
         guard domainMatches else { return false }
         let status = AgentMaterialSuccessEvidence.status(event)

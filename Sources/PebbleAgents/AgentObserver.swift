@@ -552,6 +552,8 @@ public struct AgentObserverSnapshot: Codable, Equatable, Sendable {
     public let familyAuthority: AgentObserverFamilyAuthority?
     public let estateAuthority: AgentObserverEstateAuthority?
     public let renewableSubsistence: [AgentRenewableSubsistenceEvidence]?
+    /// Read-only production facts; physical custody remains owned by Pebble.
+    public let production: AgentProductionSnapshot?
     public let truncation: AgentObserverTruncation
 }
 
@@ -652,6 +654,7 @@ extension AgentSimulationSession {
         let family = familySnapshot()
         let estates = estateSnapshot()
         let renewableSubsistence = renewableSubsistenceEvidence()
+        let production = productionSnapshot()
         let textLimit = configuration.maximumPresentationTextLength
 
         let materialTransitionByEventID = Dictionary(
@@ -845,6 +848,9 @@ extension AgentSimulationSession {
             family.digest,
             estates.digest,
             renewableSubsistence.map(\.digest).joined(separator: ","),
+            production.enabled
+                ? "production:\(production.totalProductionCount):\(production.totalUseCount)"
+                : "production:none",
         ].joined(separator: "|")
         let familyAuthority = observerFamilyAuthority(family)
         let estateAuthority = observerEstateAuthority(
@@ -867,7 +873,8 @@ extension AgentSimulationSession {
         )
         return AgentObserverSnapshot(
             header: AgentObserverSnapshotHeader(
-                schemaVersion: renewableSubsistence.isEmpty ? (estates.enabled ? 6
+                schemaVersion: production.enabled ? 8
+                    : renewableSubsistence.isEmpty ? (estates.enabled ? 6
                     : (childhood.enabled
                         ? (family.enabled ? 5 : 4)
                         : (family.enabled ? 5
@@ -886,6 +893,7 @@ extension AgentSimulationSession {
             estateAuthority: estateAuthority,
             renewableSubsistence: renewableSubsistence.isEmpty
                 ? nil : renewableSubsistence,
+            production: production.enabled ? production : nil,
             truncation: truncation
         )
     }

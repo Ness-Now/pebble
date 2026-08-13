@@ -77,7 +77,7 @@ extension AgentSimulationSession {
                 case .agriculture, .fishing, .hunting, .wildGathering,
                      .livestock:
                     requiredCapability = .harvest
-                case .construction:
+                case .construction, .production:
                     requiredCapability = .build
                 case .materialHandling:
                     requiredCapability = .deliver

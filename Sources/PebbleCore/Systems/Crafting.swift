@@ -80,6 +80,235 @@ public func consumeCraftingGrid(_ grid: inout [ItemStack?]) -> [ItemStack] {
     return returns
 }
 
+// ---------------------------------------------------------------------------
+// Actor-neutral inventory crafting
+// ---------------------------------------------------------------------------
+
+/// One exact source-slot debit selected by the canonical recipe matcher.
+///
+/// This is physical planning data, not an inventory reservation. Callers must
+/// still revalidate the live inventory before applying `inventoryAfter`.
+public struct CanonicalCraftingInput {
+    public let slot: Int
+    public let stack: ItemStack
+    public let quantity: Int
+}
+
+/// A pure preview of one canonical crafting transformation.
+///
+/// Recipe matching and ingredient/tag semantics remain in PebbleCore. The
+/// returned inventory is a deep copy and no live holder is mutated here.
+public struct CanonicalCraftingMutation {
+    public let recipeID: String
+    public let gridWidth: Int
+    public let gridHeight: Int
+    public let inputs: [CanonicalCraftingInput]
+    public let output: ItemStack
+    public let containerReturns: [ItemStack]
+    public let inventoryAfter: [ItemStack?]
+}
+
+private func canonicalCraftingRecipeOutput(
+    _ recipe: CraftRecipe
+) -> (name: String, count: Int) {
+    switch recipe {
+    case let .shaped(_, _, _, out, count),
+         let .shapeless(_, out, count):
+        return (out, count)
+    }
+}
+
+private func canonicalCraftingRecipeID(
+    _ recipe: CraftRecipe,
+    registrationIndex: Int
+) -> String {
+    let output = canonicalCraftingRecipeOutput(recipe)
+    let shape: String
+    switch recipe {
+    case let .shaped(width, height, grid, _, _):
+        shape = "shaped:\(width)x\(height):" + grid.map { $0 ?? "_" }
+            .joined(separator: ",")
+    case let .shapeless(inputs, _, _):
+        shape = "shapeless:" + inputs.joined(separator: ",")
+    }
+    return "craft:\(registrationIndex):\(output.name):\(output.count):\(shape)"
+}
+
+private func canonicalCraftingIngredientMatches(
+    _ ingredient: String,
+    _ stack: ItemStack
+) -> Bool {
+    let name = itemDef(stack.id).name
+    if ingredient.hasPrefix("#") {
+        return tagMatches(String(ingredient.dropFirst()), name)
+    }
+    return ingredient == name
+}
+
+/// Resolves and previews one real crafting operation from an existing physical
+/// inventory. Registration order, shaped/mirrored matching, tags, canonical
+/// output, stack capacity and container returns all remain authoritative.
+///
+/// The search is bounded to the supplied inventory, a maximum 3x3 grid and the
+/// registered recipe list. Source slots are selected in ascending order.
+public func canonicalCraftingMutation(
+    producing outputItemKey: String,
+    from inventory: [ItemStack?],
+    gridWidth: Int,
+    gridHeight: Int
+) -> CanonicalCraftingMutation? {
+    guard !outputItemKey.isEmpty,
+          (1...3).contains(gridWidth), (1...3).contains(gridHeight),
+          !inventory.isEmpty, inventory.count <= 54 else { return nil }
+
+    for (registrationIndex, recipe) in craftingRecipes.enumerated() {
+        let recipeOutput = canonicalCraftingRecipeOutput(recipe)
+        guard recipeOutput.name == outputItemKey else { continue }
+
+        let ingredients: [String]
+        let recipeWidth: Int
+        let recipeHeight: Int
+        switch recipe {
+        case let .shaped(width, height, grid, _, _):
+            guard width <= gridWidth, height <= gridHeight else { continue }
+            ingredients = grid.compactMap { $0 }
+            recipeWidth = width
+            recipeHeight = height
+        case let .shapeless(inputs, _, _):
+            guard inputs.count <= gridWidth * gridHeight else { continue }
+            ingredients = inputs
+            recipeWidth = min(gridWidth, max(1, inputs.count))
+            recipeHeight = max(1, (inputs.count + gridWidth - 1) / gridWidth)
+        }
+
+        var remaining = inventory.map { $0?.count ?? 0 }
+        var selected: [(slot: Int, ingredient: String)] = []
+        var complete = true
+        for ingredient in ingredients {
+            guard let slot = inventory.indices.first(where: { index in
+                guard remaining[index] > 0, let stack = inventory[index] else {
+                    return false
+                }
+                return canonicalCraftingIngredientMatches(ingredient, stack)
+            }) else {
+                complete = false
+                break
+            }
+            remaining[slot] -= 1
+            selected.append((slot, ingredient))
+        }
+        guard complete else { continue }
+
+        var grid = [ItemStack?](
+            repeating: nil,
+            count: gridWidth * gridHeight
+        )
+        switch recipe {
+        case let .shaped(width, height, recipeGrid, _, _):
+            var selectedIndex = 0
+            for y in 0..<height {
+                for x in 0..<width {
+                    guard recipeGrid[y * width + x] != nil else { continue }
+                    let source = inventory[selected[selectedIndex].slot]!.copy()
+                    source.count = 1
+                    grid[y * gridWidth + x] = source
+                    selectedIndex += 1
+                }
+            }
+        case .shapeless:
+            for (index, selection) in selected.enumerated() {
+                let source = inventory[selection.slot]!.copy()
+                source.count = 1
+                grid[index] = source
+            }
+        }
+
+        guard let matched = matchCrafting(grid, gridWidth, gridHeight),
+              itemDef(matched.out.id).name == outputItemKey,
+              matched.out.count == recipeOutput.count else { continue }
+
+        let matchedRecipeID: String
+        if let matchedIndex = craftingRecipes.firstIndex(where: { candidate in
+            canonicalCraftingRecipeID(candidate, registrationIndex: 0)
+                .split(separator: ":", maxSplits: 1).dropFirst().first
+                == canonicalCraftingRecipeID(matched.recipe, registrationIndex: 0)
+                    .split(separator: ":", maxSplits: 1).dropFirst().first
+        }) {
+            matchedRecipeID = canonicalCraftingRecipeID(
+                matched.recipe,
+                registrationIndex: matchedIndex
+            )
+        } else {
+            matchedRecipeID = canonicalCraftingRecipeID(
+                recipe,
+                registrationIndex: registrationIndex
+            )
+        }
+
+        var inventoryAfter = copyItemInventory(inventory)
+        var debits: [Int: Int] = [:]
+        for selection in selected { debits[selection.slot, default: 0] += 1 }
+        for slot in debits.keys.sorted() {
+            guard let stack = inventoryAfter[slot],
+                  let quantity = debits[slot], stack.count >= quantity else {
+                complete = false
+                break
+            }
+            stack.count -= quantity
+            if stack.count == 0 { inventoryAfter[slot] = nil }
+        }
+        guard complete else { continue }
+
+        var consumedGrid = grid
+        let returns = consumeCraftingGrid(&consumedGrid)
+        let output = matched.out.copy()
+        let outputInsertion = output.copy()
+        guard insertItemStack(
+            outputInsertion,
+            quantity: outputInsertion.count,
+            into: &inventoryAfter
+        ) == matched.out.count,
+            outputInsertion.count == 0 else { continue }
+        var returnsInserted = true
+        for returned in returns {
+            let insertion = returned.copy()
+            let quantity = insertion.count
+            guard insertItemStack(
+                insertion,
+                quantity: quantity,
+                into: &inventoryAfter
+            ) == quantity, insertion.count == 0 else {
+                returnsInserted = false
+                break
+            }
+        }
+        guard returnsInserted else { continue }
+
+        let inputs = debits.keys.sorted().compactMap { slot -> CanonicalCraftingInput? in
+            guard let source = inventory[slot], let quantity = debits[slot] else {
+                return nil
+            }
+            let stack = source.copy()
+            stack.count = quantity
+            return CanonicalCraftingInput(
+                slot: slot,
+                stack: stack,
+                quantity: quantity
+            )
+        }
+        return CanonicalCraftingMutation(
+            recipeID: matchedRecipeID,
+            gridWidth: max(recipeWidth, gridWidth),
+            gridHeight: max(recipeHeight, gridHeight),
+            inputs: inputs,
+            output: matched.out.copy(),
+            containerReturns: returns.map { $0.copy() },
+            inventoryAfter: inventoryAfter
+        )
+    }
+    return nil
+}
+
 /// smithing: template + base + addition
 public func matchSmithing(_ template: ItemStack?, _ base: ItemStack?, _ addition: ItemStack?) -> ItemStack? {
     guard let template, let base, let addition else { return nil }

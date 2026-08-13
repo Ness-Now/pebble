@@ -501,6 +501,7 @@ extension PebbleAgentController {
         case .dependentCare: return "care"
         case .teaching: return "teaching"
         case .construction, .materialHandling: return "materialWork"
+        case .production: return "production"
         }
     }
 }

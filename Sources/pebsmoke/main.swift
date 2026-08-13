@@ -322,6 +322,16 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
     exit(failed > 0 ? 1 : 0)
 }
 
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "production" {
+    registerAllBlocks()
+    registerAllItems()
+    registerAllRecipes()
+    runPebbleCoreProductionSmoke()
+    runPebbleAgentsProductionSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
 // ---------------------------------------------------------------------------
 section("random (vs goldens)")
 check("hashString abc", hashString("abc") == 440920331, "got \(hashString("abc"))")
@@ -2441,6 +2451,8 @@ runPebbleAgentsGeneticsDevelopmentSmoke()
 runPebbleAgentsChildhoodGuardianshipSmoke()
 runPebbleAgentsUnionsFamilyLineagesHousesSmoke()
 runPebbleAgentsEstatesInheritanceSuccessionSmoke()
+runPebbleCoreProductionSmoke()
+runPebbleAgentsProductionSmoke()
 
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)

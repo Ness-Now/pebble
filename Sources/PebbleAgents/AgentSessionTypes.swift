@@ -95,6 +95,7 @@ public enum AgentSessionError: Error, Equatable {
     case genetics(AgentGeneticsError)
     case family(AgentFamilyError)
     case estate(AgentEstateError)
+    case production(AgentProductionError)
 }
 
 public struct AgentSessionConfiguration: Codable {

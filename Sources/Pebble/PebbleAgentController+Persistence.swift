@@ -1347,6 +1347,14 @@ extension PebbleAgentController {
                 positions.insert(patch.foragePosition)
             }
         }
+        if let production = state.productionState {
+            positions.formUnion(
+                production.opportunities.map(\.workshopPosition)
+            )
+            positions.formUnion(
+                production.records.map(\.workshopPosition)
+            )
+        }
         guard positions.count <= AgentCheckpointLimits.maximumBoundWorldCells else {
             throw AgentCheckpointError.invalidBound("World binding cells")
         }
@@ -1469,6 +1477,14 @@ extension PebbleAgentController {
             trace("checkpoint load refused name=\(name.rawValue) reason=agricultureGate")
             return failure(
                 "Checkpoint load refused: agriculture gate or dependency is disabled."
+            )
+        }
+        if candidate.productionEnabled
+            && (!productionFeatureEnabled || !featureEnabled
+                || !persistenceFeatureEnabled || !materialFeatureEnabled) {
+            trace("checkpoint load refused name=\(name.rawValue) reason=productionGate")
+            return failure(
+                "Checkpoint load refused: production gate or dependency is disabled."
             )
         }
         let checkpointDigest = try candidate.durableStateDigest()

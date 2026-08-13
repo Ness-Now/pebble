@@ -45,6 +45,7 @@ public enum AgentSkillDomain: String, Codable, CaseIterable, Comparable, Sendabl
     case fishing
     case hunting
     case husbandry
+    case crafting
 
     public static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
 }
@@ -250,6 +251,11 @@ public enum AgentMaterialSuccessEvidence {
             return event.origin == .livestockTransition
                 && event.subjectID == nil && event.operationID != nil
                 && AgentMaterialSuccessEvidence.status(event) == "succeeded"
+        case let (.crafting, .productionCompleted, .operation(status, detail)):
+            return event.origin == .productionTransition
+                && event.subjectID == nil && event.operationID != nil
+                && status == "succeeded"
+                && detail.hasPrefix("pebble-production:")
         default:
             return false
         }

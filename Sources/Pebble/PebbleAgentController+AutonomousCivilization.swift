@@ -128,6 +128,41 @@ extension PebbleAgentController {
         recorder: inout AgentReplayRecorder?
     ) throws {
         guard session.autonomousActivityEnabled else { return }
+        if session.productionEnabled && productionFeatureEnabled,
+           let lifetime = session.productionSnapshot().configuration?
+            .opportunityLifetimeTicks {
+            let production = session.productionSnapshot()
+            for need in production.needs.sorted(by: {
+                if $0.priority != $1.priority { return $0.priority > $1.priority }
+                return $0.needID < $1.needID
+            }) where need.status == .active {
+                guard let probe = probesByAgentId[need.actorID.rawValue],
+                      probe.world === world, !probe.dead,
+                      let observation = productionSensor.observe(
+                          need: need,
+                          actor: PebbleAgentEmbodiment(probe: probe),
+                          world: world,
+                          atTick: session.tick,
+                          lifetimeTicks: lifetime
+                      ) else { continue }
+                if production.opportunities.contains(where: {
+                    $0.needID == need.needID && $0.expiresAtTick >= session.tick
+                        && $0.recipeID == observation.recipeID
+                        && $0.workshopPosition == observation.workshopPosition
+                        && $0.sourceCustodyFingerprint
+                            == observation.sourceCustodyFingerprint
+                        && $0.planFingerprint == observation.planFingerprint
+                        && $0.inputs == observation.inputs
+                        && $0.output == observation.output
+                }) { continue }
+                if try applyRecordedOperationIfActive(
+                    .recordProductionOpportunity(observation),
+                    session: &session, recorder: &recorder
+                ) == nil {
+                    try session.recordProductionOpportunity(observation)
+                }
+            }
+        }
         if session.workCommitmentsEnabled,
            let configuration = session.workCommitmentSnapshot().configuration,
            session.tick % configuration.reviewIntervalTicks == 0 {
@@ -432,6 +467,34 @@ extension PebbleAgentController {
                     distance: distance(agent.position, target),
                     commitmentID: work?.commitmentID,
                     observedAtTick: session.tick
+                )
+            ))
+        }
+        for opportunity in session.productionSnapshot().opportunities where
+            opportunity.expiresAtTick >= session.tick {
+            guard let agent = snapshot.agents.first(where: {
+                $0.id == opportunity.actorID.rawValue
+            }) else { continue }
+            let need = session.productionSnapshot().needs.first {
+                $0.needID == opportunity.needID && $0.status == .active
+            }
+            candidates.append(markingLogicalContinuity(
+                AgentAutonomousActivityCandidate(
+                    candidateID: "production:\(opportunity.opportunityID.rawValue)",
+                    actorID: opportunity.actorID,
+                    domain: .production,
+                    actionKey: "craft:\(opportunity.output.identity.itemKey)",
+                    stableReference: opportunity.opportunityID.rawValue,
+                    target: opportunity.workshopPosition,
+                    logicalTargetKey: "production-need:\(opportunity.needID.rawValue)",
+                    physicalTarget: opportunity.workshopPosition,
+                    approachPosition: opportunity.workshopPosition,
+                    materialFingerprint: opportunity.planFingerprint,
+                    source: .need,
+                    priorityBand: need?.reason == .physicalFoodNeed ? 8 : 12,
+                    urgency: need?.priority ?? 70,
+                    distance: distance(agent.position, opportunity.workshopPosition),
+                    observedAtTick: opportunity.observedAtTick
                 )
             ))
         }

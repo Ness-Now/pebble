@@ -70,6 +70,7 @@ extension PebbleAgentController {
         interactionExecutor.clearBoundaryAudit()
         naturalResourceExecutor.resetDiagnostics()
         materialCustodyGateway.reset()
+        productionGateway.reset()
         ecologicalObservationSensor.invalidateAll()
         worldReceiptAttemptSerial = 0
         livestockRuntimeEntityIDByRecord.removeAll()
@@ -764,6 +765,7 @@ extension PebbleAgentController {
         interactionExecutor.clearBoundaryAudit()
         naturalResourceExecutor.resetDiagnostics()
         materialCustodyGateway.reset()
+        productionGateway.reset()
         session = nil
         activeWorld = nil
         probesByAgentId.removeAll()
