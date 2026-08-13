@@ -988,3 +988,48 @@ Le mode `scripts/verify-pebblelab-live.sh --build` utilise exclusivement le mond
 La preuve interrompt l'auto-construction après les cellules `0...2`, exécute quatre ticks sans pose, reprend exactement à l'index `3`, achève `9/9`, puis active la survie pour vérifier le nouveau home `(23,66,-24)` et le repos sous le toit. Les trois captures `fixed-shelter-before.png`, `fixed-shelter-partial.png` et `fixed-shelter-complete.png` complètent la trace structurée; elles ne remplacent pas les assertions de fingerprints, d'ordre et de rollback de `pebsmoke`.
 
 Enfin, `/lab build clear` restaure et vérifie les neuf fingerprints originaux en ordre inverse, rend `wood=6, stone=3` au stock, supprime le projet et restaure l'ancien home. Les ressources naturelles récoltées restent détruites. La construction est une sandbox temporaire: elle n'ouvre ni placement libre, ni crafting, ni persistance.
+
+## CIV-34 — Production, Tools and Workshops V1
+
+Le scénario `scripts/verify-pebblelab-live.sh --production` utilise le World
+jetable `PebbleLab-Disposable-Production-46`, la seed 46 et deux processus
+Pebble frais dans le même home isolé. Exécuter d'abord
+`scripts/verify-pebblelab-live.sh --production --dry-run` pour vérifier les
+gates, commandes, captures et bornes sans lancer le jeu.
+
+Le premier processus focalise `agent_2`, place une vraie table enregistrée
+`crafting_table` dans une cellule validée, confie trois `cobblestone`, deux
+`stick` et trois `wheat` à sa custody physique, puis exerce les refus
+missing/wrong/stale, le changement externe, la contention, la réservation
+ambiguë et une faute réellement injectée après mutation. Cette faute restaure
+l'inventaire exactement et le retry immédiat réussit. Deux `/lab step` normaux,
+sans helper de succès, laissent l'arbitrage civilisation sélectionner et
+publier successivement :
+
+```text
+cobblestone:3 + stick:2 -> stone_pickaxe:1
+wheat:3                 -> bread:1
+```
+
+Les recettes, tags, slots consommés et règles d'insertion sont ceux de
+PebbleCore. Pebble observe et mute la custody réelle transactionnellement ;
+PebbleAgents ne reçoit que l'observation et l'outcome vérifiés. Le checkpoint
+`production-v31` protège exactement deux stacks de quantité totale deux avant
+la terminaison contrôlée.
+
+Le second processus charge ce checkpoint, rétablit la frontière physique et
+adopte exactement les deux spills protégés sans duplication. La commande de
+preuve `/lab production use-produced-tool` refuse d'abord un outil incompatible,
+puis réutilise le même `stone_pickaxe` par l'exécuteur de block break existant :
+damage `0 -> 1`, `stone -> air`, drop canonique `cobblestone:1` acquis. Le
+cleanup retire et vérifie uniquement la table et la cible épuisée ; cognition,
+provenance et custody restent persistantes. Le checkpoint final protège trois
+stacks de quantité totale trois.
+
+Les six captures natives attendues sont `production-workshop.png`,
+`production-tool.png`, `production-output.png`, `production-restored.png`,
+`production-used.png` et `production-final.png`. Elles doivent être inspectées
+manuellement avec les deux traces, qui doivent montrer deux publications
+autonomes, deux crédits `crafting`, zéro erreur runtime, rollback exact,
+checkpoint schema 31, restore exact, zéro duplication, usage causal du produit
+et cleanup exact. Le script ne supprime pas le dossier de session validé.

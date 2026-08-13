@@ -64,6 +64,7 @@
     "civ31PhaseEvidence": "docs/pebblelab/CIV_31_PHASE_SUMMARY.md",
     "civ32PhaseEvidence": "docs/pebblelab/CIV_32_PHASE_SUMMARY.md",
     "civ33PhaseEvidence": "docs/pebblelab/CIV_33_PHASE_SUMMARY.md",
+    "civ34PhaseEvidence": "docs/pebblelab/CIV_34_PHASE_SUMMARY.md",
     "renewableSubsistenceMilestoneEvidence": "docs/pebblelab/RENEWABLE_SUBSISTENCE_MILESTONE_SUMMARY.md",
     "gateDBlocker01PositionRestoreFix": "docs/pebblelab/GATE_D_BLOCKER_01_POSITION_RESTORE_FIX.md",
     "gateDBlocker02EcologicalObserverHistoryFix": "docs/pebblelab/GATE_D_BLOCKER_02_ECOLOGICAL_OBSERVER_HISTORY_FIX.md",
@@ -88,10 +89,10 @@
     "historicalPlans": "nonDirective"
   },
   "currentState": {
-    "activePhase": null,
+    "activePhase": "CIV-34",
     "completedThrough": "CIV-33",
-    "nextEligiblePhase": "CIV-34",
-    "nextAuthorizedAction": "CIV-34",
+    "nextEligiblePhase": "CIV-35-after-CIV-34-review-and-publication",
+    "nextAuthorizedAction": "SENIOR_REVIEW_CIV_34",
     "civ27Status": "completed",
     "civ28Status": "completed",
     "gateCStatus": "acquired",
@@ -127,7 +128,8 @@
     "gateDEvaluation10Status": "evaluatedFailNotAcquired",
     "gateDBlocker10Status": "fixedPublished",
     "gateDEvaluation11Status": "passedPublished",
-    "civ34Status": "notStarted",
+    "civ34Status": "implementedLocalReviewCandidate",
+    "civ35Status": "notStarted",
     "renewableSubsistenceMilestoneStatus": "completedPublished",
     "v4CanonicalDocumentSet": true
   },
@@ -742,6 +744,50 @@
     "nextEligiblePhase": "CIV-34",
     "nextAuthorizedAction": "CIV-34"
   },
+  "civ34Validation": {
+    "scope": "CIV-34 Production Tools and Workshops V1 local review candidate; the containing documentation commit is intentionally identified by Git rather than self-referenced.",
+    "exactBaseline": "1bbf3df08ca8a05c79af61c888c424e52bb30801",
+    "status": "implementedLocalReviewCandidate",
+    "gateDStatus": "acquiredPublished",
+    "civ35Status": "notStarted",
+    "nextAuthorizedAction": "SENIOR_REVIEW_CIV_34",
+    "coreAuthority": "registeredCraftingRecipesTagsInventoryInsertionAndActorNeutralBlockActions",
+    "liveAuthority": "boundedPebbleSensorAndTransactionalGateway",
+    "cognitionAuthority": "soleAgentSimulationSession",
+    "normalAutonomousProductPath": "passed",
+    "firstRecipe": "cobblestone:3+stick:2->stone_pickaxe:1",
+    "secondRecipe": "wheat:3->bread:1",
+    "workshop": "crafting_table@16,70,-17",
+    "missingInput": "failClosed",
+    "staleWorkshop": "failClosed",
+    "wrongToolCapability": "failClosed",
+    "concurrentInputClaim": "failClosed",
+    "externalWorldChange": "failClosed",
+    "trueLateMutationReached": true,
+    "rollback": "exact",
+    "immediateRetry": "passed",
+    "freshProcessRestart": "passed",
+    "duplicateProductionAfterRestart": 0,
+    "physicalLoss": 0,
+    "physicalDuplication": 0,
+    "syntheticMaterial": 0,
+    "duplicateProductionReceipts": 0,
+    "duplicateReservations": 0,
+    "observerMutationCount": 0,
+    "focusedProductionPassed": 36,
+    "focusedProductionFailed": 0,
+    "repositoryChecksPassed": 3808,
+    "repositoryChecksFailed": 0,
+    "repositoryStepsPassed": 35,
+    "repositoryStepsTotal": 35,
+    "checkpointSchema": 31,
+    "observerSchema": 8,
+    "goldenRegenerationAttempted": false,
+    "liveRenderedTwoProcessCampaign": "passed",
+    "nativeCapturesInspected": 6,
+    "runtimeErrors": 0,
+    "cleanup": "exact"
+  },
   "publishedPostGateHardening": [
     {
       "id": "POST-GATE-B-SAFE-BOOTSTRAP",
@@ -1352,17 +1398,20 @@
     {
       "id": "CIV-34",
       "title": "Production, Tools and Workshops V1",
-      "status": "notStarted",
+      "status": "implementedLocalReviewCandidate",
       "wave": "wave-3-local-material-economy",
       "requiredForCanonicalProgression": true,
       "dependsOn": [
         "V4-GATE-D-v1"
+      ],
+      "evidence": [
+        "docs/pebblelab/CIV_34_PHASE_SUMMARY.md"
       ]
     },
     {
       "id": "CIV-35",
       "title": "Barter and Local Exchange V1",
-      "status": "planned",
+      "status": "notStarted",
       "wave": "wave-3-local-material-economy",
       "requiredForCanonicalProgression": true,
       "dependsOn": [

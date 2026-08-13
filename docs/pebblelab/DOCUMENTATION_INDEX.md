@@ -72,7 +72,9 @@ Gate D Blocker 09: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 10: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 10: BLOCKER_FIX_PUBLISHED
 Independent Gate D Evaluation 11: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-CIV-34: NOT_STARTED — NEXT ELIGIBLE PHASE
+CIV-34: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+CIV-35: NOT_STARTED
+next: SENIOR REVIEW OF CIV-34
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -118,8 +120,10 @@ Evaluation 11, evaluated against product baseline
 PASS and is senior-review approved. This commit is the Gate D acquisition and
 publication evidence, now independently remote-verified at canonical head
 `61fbf406713127b0993a7294020433e1e3c3fa39`.
-`CIV-34 — Production, Tools and Workshops V1` is not started and is the next
-eligible phase.
+`CIV-34 — Production, Tools and Workshops V1` is implemented from baseline
+`1bbf3df08ca8a05c79af61c888c424e52bb30801` as a local review candidate.
+`CIV-35` is not started; the next authorized action is senior review of
+`CIV-34`.
 
 ## Operational
 
@@ -213,6 +217,12 @@ coordinated mortality/estate retention, durable schema-28 successor proof,
 bounded compacted-death evidence for exact historical eligibility,
 restrictive schema-27 compatibility, Observer schema 6 and the rendered
 two-process death/estate/restart/settlement proof.
+
+[`CIV_34_PHASE_SUMMARY.md`](CIV_34_PHASE_SUMMARY.md) records canonical
+PebbleCore recipe reuse, the transactional live production gateway, bounded
+needs and opportunities, normal autonomous stone-pickaxe and bread production,
+exact late rollback and retry, schema-31 checkpoint/replay, Observer schema 8,
+fresh-process physical custody restore and downstream real pickaxe use.
 
 [`RENEWABLE_SUBSISTENCE_MILESTONE_SUMMARY.md`](RENEWABLE_SUBSISTENCE_MILESTONE_SUMMARY.md)
 records the bounded physical carrot loop, exact input/output and food debit,

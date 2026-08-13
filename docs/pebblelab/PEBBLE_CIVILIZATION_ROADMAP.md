@@ -133,9 +133,9 @@ CIV-00 through CIV-33: COMPLETE AND PUBLISHED
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
-active CIV phase: none
-next eligible phase: CIV-34
-next authorized action: CIV-34
+active CIV phase: CIV-34 local review candidate
+next eligible phase: CIV-35 after CIV-34 review and publication
+next authorized action: SENIOR REVIEW OF CIV-34
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -161,7 +161,8 @@ Gate D Blocker 09: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 10: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 10: BLOCKER_FIX_PUBLISHED
 Independent Gate D Evaluation 11: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-CIV-34: NOT_STARTED — NEXT ELIGIBLE PHASE
+CIV-34: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+CIV-35: NOT_STARTED
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -225,8 +226,9 @@ invalidate them, and leaves safe physical actions productive. Independent
 Evaluation 11 then passed the complete Gate D contract in composition on
 published baseline `24c679581f7dfd93d26bffa2e9486a5340af0d9c`; senior review
 approved the evidence. Evaluations 01 through 10 remain immutable historical
-FAIL evidence, Blockers 01 through 10 remain fixed and published, and
-`CIV-34` is now the next eligible phase without being started.
+FAIL evidence and Blockers 01 through 10 remain fixed and published. `CIV-34`
+is now implemented as a local review candidate from baseline
+`1bbf3df08ca8a05c79af61c888c424e52bb30801`; `CIV-35` remains not started.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:
@@ -404,7 +406,8 @@ targeted Blocker 09 correction is **fixed and published**. Evaluation 10
 remains historical FAIL evidence; its targeted Blocker 10 correction is a
 **BLOCKER_FIX_PUBLISHED**. Independent Evaluation 11 is the first accepted
 whole-Gate PASS and is **SENIOR REVIEW APPROVED**. `CIV-34` is
-**NOT_STARTED — NEXT ELIGIBLE PHASE**.
+**IMPLEMENTED_LOCAL_REVIEW_CANDIDATE** and awaits senior review. `CIV-35` is
+**NOT_STARTED**.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -740,8 +743,9 @@ The published active-probe physical-action safety correction is documented in
 No individual correction acquired Gate D. The independent composition proof is
 recorded in
 [`GATE_D_EVALUATION_11_REPORT.md`](GATE_D_EVALUATION_11_REPORT.md). Senior
-review approved it, Gate D is acquired and published, and the
-next authorized action is `CIV-34`; this cleanup commit does not start that phase.
+review approved it, so Gate D remains acquired and published. `CIV-34` is now
+implemented locally; the next authorized action is senior review of that
+candidate, not `CIV-35` implementation.
 
 ## Wave 3 — Local material economy
 
@@ -767,6 +771,39 @@ Observable slices:
 - after `CIV-37`: a physical market shows deposits, withdrawals and local
   price history;
 - `CIV-38`, if chosen: compare monetary and non-monetary trajectories.
+
+### `CIV-34` — Production, Tools and Workshops V1
+
+Status: **implemented, required — local review candidate**.
+
+Result: bounded production reuses the registered PebbleCore crafting recipes,
+tag matching, exact inventory consumption, output insertion, real tools and
+actor-neutral block action authority. Pebble alone observes the physical
+crafting table and actor custody, prevalidates one exact source fingerprint,
+mutates and verifies the real inventory, and registers exact candidate
+compensation before PebbleAgents may publish a production outcome. The sole
+`AgentSimulationSession` owns deterministic needs, opportunities, causal
+production history and produced-good use, but no recipe or World semantics.
+
+The normal autonomous path produces one real `stone_pickaxe` from three
+cobblestone and two sticks and one real `bread` from three wheat at the
+registered `crafting_table`. Missing, wrong, ambiguous, stale, externally
+changed or concurrently claimed input fails closed. A true post-mutation fault
+rolls back exactly and an immediate retry succeeds. After a fresh process
+restart the exact stone pickaxe remains in protected custody, advances damage
+from zero to one while breaking real stone and acquires the canonical
+cobblestone drop. Production and use remain causally linked with zero material
+loss, duplication or synthesis.
+
+Schema 31 persists and replays the bounded production state; Observer schema 8
+projects it read-only. The canonical gate passes 35/35 with 3808 assertions,
+and a two-process live campaign supplies six inspected native captures and
+exact cleanup. The bounded proof is
+[`CIV_34_PHASE_SUMMARY.md`](CIV_34_PHASE_SUMMARY.md).
+
+This phase does not claim barter, markets, prices, currency, debt, general
+contracts, guilds, large-scale industry, technology trees, full logistics,
+land/workshop property law or general organizations. `CIV-35` is not started.
 
 ### `V4-GATE-E-v1` — Local Material Economy
 
