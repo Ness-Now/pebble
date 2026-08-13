@@ -41,7 +41,12 @@
     "gateDEvaluation10EvaluatedProductHead": "55e513becac622e2f7f258f10ec406d26865eb6a",
     "gateDBlocker10AffectedProductHead": "55e513becac622e2f7f258f10ec406d26865eb6a",
     "gateDBlocker10PublishedProductFixHead": "6ec700640dfe806f32da62fe7d7315c64fdb8f74",
-    "meaning": "Canonical history through historical Gate D Evaluation 10; Blockers 01 through 10 are fixed and published; Evaluations 01 through 10 remain immutable FAIL evidence; the next authorized action is a new independent Gate D Evaluation 11.",
+    "gateDEvaluation11EvaluatedProductHead": "24c679581f7dfd93d26bffa2e9486a5340af0d9c",
+    "gateDEvaluation11EvidenceCommits": [
+      "f55b64305027bee3fb67a2e27b422578124c4e00",
+      "39f6b8bc464319b4ee3879686bab3af5fcf63e83"
+    ],
+    "meaning": "Canonical history through senior-review-approved Gate D Evaluation 11; Evaluation 11 is the first accepted PASS; Evaluations 01 through 10 remain immutable historical FAIL evidence; Blockers 01 through 10 remain fixed and published; Gate D is acquired and CIV-34 is the next eligible phase.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -70,6 +75,7 @@
     "gateDBlocker08CollectiveProbeRestorePlacement": "docs/pebblelab/GATE_D_BLOCKER_08_COLLECTIVE_PROBE_RESTORE_PLACEMENT.md",
     "gateDBlocker09EvolvedMaterialIdentityCheckpointSave": "docs/pebblelab/GATE_D_BLOCKER_09_EVOLVED_MATERIAL_IDENTITY_CHECKPOINT_SAVE.md",
     "gateDBlocker10ActiveProbeSupportPhysicalActionSafety": "docs/pebblelab/GATE_D_BLOCKER_10_ACTIVE_PROBE_SUPPORT_PHYSICAL_ACTION_SAFETY.md",
+    "gateDEvaluation11Evidence": "docs/pebblelab/GATE_D_EVALUATION_11_REPORT.md",
     "gateCEvidenceMarkdown": "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.md",
     "gateCEvidenceJSON": "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.json"
   },
@@ -84,8 +90,8 @@
   "currentState": {
     "activePhase": null,
     "completedThrough": "CIV-33",
-    "nextEligiblePhase": null,
-    "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-D-v1-EVALUATION-11",
+    "nextEligiblePhase": "CIV-34",
+    "nextAuthorizedAction": "CIV-34",
     "civ27Status": "completed",
     "civ28Status": "completed",
     "gateCStatus": "acquired",
@@ -98,7 +104,13 @@
     "gateRAcquired": true,
     "gateBAcquired": true,
     "gateCPublished": true,
-    "gateDStatus": "evaluatedFailNotAcquired",
+    "gateDStatus": "acquired",
+    "gateDPublished": true,
+    "gateDEvaluation01Status": "evaluatedFailNotAcquired",
+    "gateDBlocker01Status": "fixedPublished",
+    "gateDEvaluation02Status": "evaluatedFailNotAcquired",
+    "gateDBlocker02Status": "fixedPublished",
+    "gateDEvaluation03Status": "evaluatedFailNotAcquired",
     "gateDBlocker03Status": "fixedPublished",
     "gateDEvaluation04Status": "evaluatedFailNotAcquired",
     "gateDBlocker04Status": "fixedPublished",
@@ -114,7 +126,7 @@
     "gateDBlocker09Status": "fixedPublished",
     "gateDEvaluation10Status": "evaluatedFailNotAcquired",
     "gateDBlocker10Status": "fixedPublished",
-    "gateDEvaluation11Status": "notStarted",
+    "gateDEvaluation11Status": "passedPublished",
     "civ34Status": "notStarted",
     "renewableSubsistenceMilestoneStatus": "completedPublished",
     "v4CanonicalDocumentSet": true
@@ -580,6 +592,156 @@
     "evaluation11Started": false,
     "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-D-v1-EVALUATION-11"
   },
+  "gateDEvaluation11Validation": {
+    "status": "passedPublished",
+    "seniorReview": "approved",
+    "evaluatedProductHead": "24c679581f7dfd93d26bffa2e9486a5340af0d9c",
+    "evidenceCommits": [
+      "f55b64305027bee3fb67a2e27b422578124c4e00",
+      "39f6b8bc464319b4ee3879686bab3af5fcf63e83"
+    ],
+    "evidence": "docs/pebblelab/GATE_D_EVALUATION_11_REPORT.md",
+    "reviewBundleSHA256": "583a6e5335a6b6aa1d4893c4b20e30ee7ff8f5dbb96f2eb442037fb2fb95f687",
+    "internalChecksums": "77/77 PASS",
+    "unzip": "PASS",
+    "historicalEvaluations01Through10": "failHistoricalImmutableEvidence",
+    "blockers01Through10": "fixedPublished",
+    "generations": "G0ToG1ToG2Passed",
+    "causalBirths": 2,
+    "duplicateBirths": 0,
+    "causalDeath": "agent_0",
+    "activeAgentsAfterDeath": 4,
+    "deadProbeResurrection": 0,
+    "childhoodToDevelopment": "passed",
+    "historicalParentage": "retained",
+    "guardian": "distinct",
+    "caregiver": "distinct",
+    "household": "distinct",
+    "union": "historicalCurrentDistinctionRetained",
+    "lineage": "retained",
+    "house": "retained",
+    "activeDurableObligation": "agent_3->agent_4",
+    "renewableSubsistence": {
+      "externalWorldProgression": "proven",
+      "currentEcologicalEvidence": "proven",
+      "production": "proven",
+      "physicalCustody": "proven",
+      "consumption": "proven",
+      "reserve": "proven",
+      "lateCandidateRollback": "exact",
+      "immediateRetry": "passed",
+      "duplicateSites": 0
+    },
+    "checkpointA": {
+      "twoNonEmptyHolders": "proven",
+      "agent0CarrotQuantity": 1,
+      "agent1CarrotQuantity": 1,
+      "checkpointBoundEscrow": "exact",
+      "freshRestore": "exact",
+      "holderMaterialSwap": 0,
+      "manifestOnlyReconstruction": 0
+    },
+    "collectiveRestore": {
+      "reusedExact": 1,
+      "repositionedVerified": 1,
+      "restoredMissing": 2,
+      "retired": 1,
+      "validAdjacency": "passed",
+      "trueOverlap": "failClosed",
+      "foreignCollision": "failClosed",
+      "nearestFreeRelocation": 0,
+      "inventedPosition": 0,
+      "physicalBoundary": "acquired"
+    },
+    "restoreBeforeReconciliation": true,
+    "successfulImportantLoadCommittedCurrentReconciliations": 1,
+    "failedCandidateCommittedReconciliationPublications": 0,
+    "estate": {
+      "physicalAssetTransferCount": 1,
+      "coMingledUnrelatedIronHoe": "preserved",
+      "settlementReceiptCount": 1,
+      "lateFaultPhysicalMutationOccurred": 1,
+      "lateFaultPostMutationVerified": 1,
+      "lateFaultReached": 1,
+      "rollback": "exact",
+      "immediateRetry": "passed"
+    },
+    "materialIdentity": {
+      "assetID": "asset:civ27:live-pickaxe",
+      "durableRegisteredIdentity": "damage=0",
+      "currentLegitimateProgression": "0->1->2->3",
+      "checkpointBProtectedIdentity": "damage=1",
+      "laterProtectedIdentity": "damage=2",
+      "checkpointCProtectedIdentity": "damage=3",
+      "historicalSettlementRewritten": false,
+      "duplicateAsset": 0,
+      "duplicateSettlement": 0
+    },
+    "activeProbePhysicalSafety": {
+      "supportDestructiveCandidatePhysicalMutationOccurred": true,
+      "result": "verificationFailureActiveProbePlacementInvalid",
+      "rollback": "exact",
+      "worldDelta": 0,
+      "toolDamageDelta": 0,
+      "drops": 0,
+      "custodyDelta": 0,
+      "materialRightsDelta": 0,
+      "estateDelta": 0,
+      "sessionDelta": 0,
+      "recorderDelta": 0,
+      "protectedProbe": "placementValid",
+      "safePhysicalAction": "passed",
+      "safeToolDamage": "2->3",
+      "safeRealBlockMutation": true,
+      "safeRealDrop": true,
+      "safeRealCustodyAcquisition": true,
+      "afterFreshRestart": "passed",
+      "adversarialTillAndPlace": "exactRollback",
+      "safeTillAndPlace": "passed"
+    },
+    "checkpointCount": 5,
+    "checkpointIsolation": "uniqueIDsSessionDigestsManifestDigestsAndProtectedCustody",
+    "retroactiveCheckpointMutation": false,
+    "partialLoadRollback": "exactWithZeroPublicationAndImmediateRetryPassed",
+    "postBoundaryRollback": "exactWithZeroPublicationAndImmediateRetryPassed",
+    "identityAdversarials": {
+      "oldRegistrationIdentity": "failClosed",
+      "futureUnverifiedIdentity": "failClosed",
+      "missingCurrentMaterial": "failClosed",
+      "wrongHolder": "failClosed",
+      "wrongQuantity": "failClosed",
+      "ambiguousDuplicate": "failClosed",
+      "doubleReservation": "failClosed",
+      "checkpointSaveRepairsAdversarialState": false
+    },
+    "physicalLoss": 0,
+    "physicalDuplication": 0,
+    "syntheticMaterial": 0,
+    "duplicateProbes": 0,
+    "duplicateAssets": 0,
+    "duplicateSettlements": 0,
+    "duplicateReceipts": 0,
+    "duplicateSites": 0,
+    "observerMutationCount": 0,
+    "populationEquation": "3 founders + 2 births - 1 death = 4 active agents",
+    "blocker08HistoricalDedicatedFixture": "inconclusiveHistoricalSignedSessionHomeUnavailable",
+    "blocker09HistoricalWrapper": "inconclusiveHistoricalAffectedBaselinePreflightStaleAfterPublication",
+    "blocker10HistoricalWrapper": "inconclusiveHistoricalAffectedBaselinePreflightStaleAfterPublication",
+    "historicalWildSubsistenceWrapper": "inconclusiveExpectsCheckpointSchema14WhileCanonicalSchema30",
+    "currentWildPhysicalPath": "passedCanonicalBreakDropCustody",
+    "repositoryChecksPassed": 3772,
+    "repositoryChecksFailed": 0,
+    "repositoryStepsPassed": 35,
+    "repositoryStepsTotal": 35,
+    "checkpointSchema": 30,
+    "observerSchema": 7,
+    "goldenRegenerationAttempted": false,
+    "gateDAcquired": true,
+    "gateDPublished": true,
+    "civ34Started": false,
+    "nextEligiblePhase": "CIV-34",
+    "nextAuthorizedAction": "CIV-34"
+  },
   "publishedPostGateHardening": [
     {
       "id": "POST-GATE-B-SAFE-BOOTSTRAP",
@@ -645,7 +807,9 @@
     "D": {
       "contractId": "V4-GATE-D-v1",
       "title": "Generational Continuity",
-      "status": "evaluatedFailNotAcquired",
+      "status": "acquired",
+      "published": true,
+      "manualPushPendingLocally": true,
       "requiredPhases": [
         "CIV-29",
         "CIV-30",
@@ -658,9 +822,11 @@
       ],
       "optionalPhases": [],
       "evaluation01": {
+        "status": "evaluatedFailNotAcquired",
         "evaluatedProductBaseline": "47104f70894b20e7d7db0042cb93f047540c336d",
         "evidenceCommit": "9232b65a8a32b2d054fe2e5c7ea80e0dd990d378",
-        "verdict": "failProductCorrectionRequired"
+        "verdict": "failProductCorrectionRequired",
+        "historicalEvidenceImmutable": true
       },
       "blocker01PositionRestore": {
         "status": "fixedPublished",
@@ -669,9 +835,11 @@
         "publishedCanonicalHead": "6d114abb98aee652e44fe9a81c3bab47b72ff698"
       },
       "evaluation02": {
+        "status": "evaluatedFailNotAcquired",
         "evaluatedProductBaseline": "6d114abb98aee652e44fe9a81c3bab47b72ff698",
         "evidenceCommit": "d40ca4f8215ff14d904a1fb84aedb7ebd9185082",
-        "verdict": "failProductCorrectionRequired"
+        "verdict": "failProductCorrectionRequired",
+        "historicalEvidenceImmutable": true
       },
       "blocker02EcologicalObserverHistory": {
         "status": "fixedPublished",
@@ -680,9 +848,11 @@
         "publishedCanonicalHead": "d0d99f8a1d06cf809b14a68c107f961b58c09674"
       },
       "evaluation03": {
+        "status": "evaluatedFailNotAcquired",
         "evaluatedProductBaseline": "d0d99f8a1d06cf809b14a68c107f961b58c09674",
         "evidenceCommit": "fa63d04b05998b4d7021be313cc6413854b8fd39",
-        "verdict": "failProductCorrectionRequired"
+        "verdict": "failProductCorrectionRequired",
+        "historicalEvidenceImmutable": true
       },
       "blocker03AgricultureCycleObservation": {
         "status": "fixedPublished",
@@ -691,9 +861,11 @@
         "publishedCanonicalHead": "4b11c93abd36a1a1c61d491df1e5efa6607f6206"
       },
       "evaluation04": {
+        "status": "evaluatedFailNotAcquired",
         "evaluatedProductBaseline": "4b11c93abd36a1a1c61d491df1e5efa6607f6206",
         "evidenceCommit": "d1115ae50318b15ffe064209b40a46dd44bb356f",
-        "verdict": "failProductCorrectionRequired"
+        "verdict": "failProductCorrectionRequired",
+        "historicalEvidenceImmutable": true
       },
       "blocker04CandidatePhysicalAtomicity": {
         "status": "fixedPublished",
@@ -766,9 +938,35 @@
     "gateAcquired": false,
     "publishedProductFixHead": "ee742afb41fda44c77d8b98f868fbe759934057e"
   },
-  "evaluation10": {
-    "status": "notStarted"
-  }
+      "evaluation10": {
+        "status": "evaluatedFailNotAcquired",
+        "evaluatedProductBaseline": "55e513becac622e2f7f258f10ec406d26865eb6a",
+        "evidenceCommits": [
+          "a39cca48d4bbb33873ed9ba63fbcd7146f772976",
+          "154a79a6c34247fe5ad0ca4de33badaab3086f09"
+        ],
+        "verdict": "failProductCorrectionRequired",
+        "historicalEvidenceImmutable": true
+      },
+      "blocker10ActiveProbePhysicalActionSafety": {
+        "status": "fixedPublished",
+        "evidence": "docs/pebblelab/GATE_D_BLOCKER_10_ACTIVE_PROBE_SUPPORT_PHYSICAL_ACTION_SAFETY.md",
+        "publishedProductFixHead": "6ec700640dfe806f32da62fe7d7315c64fdb8f74"
+      },
+      "evaluation11": {
+        "status": "passedPublished",
+        "evaluatedProductBaseline": "24c679581f7dfd93d26bffa2e9486a5340af0d9c",
+        "evidenceCommits": [
+          "f55b64305027bee3fb67a2e27b422578124c4e00",
+          "39f6b8bc464319b4ee3879686bab3af5fcf63e83"
+        ],
+        "evidence": "docs/pebblelab/GATE_D_EVALUATION_11_REPORT.md",
+        "verdict": "pass",
+        "seniorReview": "approved",
+        "reviewBundleSHA256": "583a6e5335a6b6aa1d4893c4b20e30ee7ff8f5dbb96f2eb442037fb2fb95f687",
+        "internalChecksums": "77/77 PASS",
+        "unzip": "PASS"
+      }
     },
     "E": {
       "contractId": "V4-GATE-E-v1",

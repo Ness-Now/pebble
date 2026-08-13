@@ -10,6 +10,9 @@ SHA of the documentation commit that contains it.
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-B-v1`.
 - Gate C — Durable Observable Local World:
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-C-v1`.
+- Gate D — Generational Continuity:
+  **ACQUIRED AND PUBLISHED** under contract `V4-GATE-D-v1`; this local
+  publication candidate awaits the user-owned canonical push.
 - `CIV-00` through `CIV-33`: **COMPLETE AND PUBLISHED** in their bounded
   contracts.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
@@ -105,27 +108,46 @@ Published Gate D Blocker 10 product-fix head:
 6ec700640dfe806f32da62fe7d7315c64fdb8f74
 ```
 
+Published product baseline evaluated by independent Gate D Evaluation 11:
+
+```text
+24c679581f7dfd93d26bffa2e9486a5340af0d9c
+```
+
+Accepted Evaluation 11 evidence commits:
+
+```text
+f55b64305027bee3fb67a2e27b422578124c4e00
+39f6b8bc464319b4ee3879686bab3af5fcf63e83
+```
+
 The `CIV-33` completion, renewable-subsistence milestone and Gate D Blockers 01
 through 10 are published on the canonical branch. Independent Gate D
-Evaluations 01 through 10 remain immutable FAIL evidence for their evaluated
-baselines. Independent Gate D Evaluation 11 is the next authorized action and
-is not started. Evaluation 04 found that an abandoned civilization
-candidate could leave an earlier successful physical movement in PebbleCore
-after a later agricultural navigation collision.
+Evaluations 01 through 10 remain immutable historical FAIL evidence for their
+evaluated baselines. Evaluation 11 is the first accepted PASS and senior review
+approved it as the complete whole-Gate evidence. This commit is the Gate D
+acquisition/publication candidate; remote publication remains pending the
+user-owned push. `CIV-34` is not started and is now the next eligible phase.
 
 ## Current program position
 
 ```text
 active CIV phase: none
-next authorized action: NEW INDEPENDENT V4-GATE-D-v1 EVALUATION 11
+next eligible phase: CIV-34
+next authorized action: CIV-34
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
-V4-GATE-D-v1 status: EVALUATED_FAIL_NOT_ACQUIRED
+V4-GATE-D-v1 status: ACQUIRED AND PUBLISHED (publication candidate awaiting user push)
+Gate D Evaluation 01 status: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
+Gate D Blocker 01 status: BLOCKER_FIX_PUBLISHED
+Gate D Evaluation 02 status: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
+Gate D Blocker 02 status: BLOCKER_FIX_PUBLISHED
+Gate D Evaluation 03 status: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 03 status: BLOCKER_FIX_PUBLISHED
-Gate D Evaluation 04 status: EVALUATED_FAIL_NOT_ACQUIRED
+Gate D Evaluation 04 status: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 04 status: BLOCKER_FIX_PUBLISHED
-Gate D Evaluation 05 status: EVALUATED_FAIL_NOT_ACQUIRED
+Gate D Evaluation 05 status: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 05 status: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 06 status: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 06 status: BLOCKER_FIX_PUBLISHED
@@ -137,8 +159,8 @@ Gate D Evaluation 09 status: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 09 status: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 10 status: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 10 status: BLOCKER_FIX_PUBLISHED
-Independent Gate D Evaluation 11 status: NOT_STARTED
-CIV-34 status: NOT_STARTED
+Independent Gate D Evaluation 11 status: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
+CIV-34 status: NOT_STARTED — NEXT ELIGIBLE PHASE
 roadmap generation: V4
 ```
 
@@ -285,25 +307,30 @@ schema 7 are unchanged.
 
 ## Last validation baseline
 
-For the Gate D Blocker 10 active-probe physical-action safety correction:
+For the senior-review-approved Gate D Evaluation 11 whole-Gate campaign:
 
 ```text
-published baseline red reproduction: PASS (support break committed; checkpoint incompatibleSupport)
+Evaluation 11 verdict / senior review: PASS / APPROVED
+evaluated product baseline: 24c679581f7dfd93d26bffa2e9486a5340af0d9c
+G0>G1>G2 / births / deaths / active agents: PASS / 2 / 1 / 4
+childhood>durable development / renewable subsistence: PASS / PASS
+checkpoint A two non-empty holders / exact fresh restore: PASS / PASS
+mixed collective probe restore / load rollback seams: PASS / PASS
+estate succession / true late fault / retry: PASS / exact / PASS
 support-destructive break / till / place: exact rollback / exact rollback / exact rollback
-safe physical break: PASS (real wear, block removal and acquired drop)
-checkpoint immediately after refused mutation: restartSafe
-damage 1>2 / checkpoint C / fresh restore: PASS / PASS / exact damage 2
-successful-load committed current reconciliation runs: 1
-continued post-restore physical use: PASS (damage 2>3)
+safe physical break after refusal: PASS (real wear, block removal and acquired drop)
+damage progression / checkpoints B and C: 0>1>2>3 / exact / exact
+successful important load reconciliation publications: exactly 1
+failed candidate reconciliation publications: 0
 historical durable identity / settlement receipt: damage 0 / unchanged one
 checkpoint schema / Observer schema: 30 / 7
 physical loss / duplication / synthetic material: 0 / 0 / 0
 duplicate probes / assets / receipts / settlements: 0 / 0 / 0 / 0
 Observer mutation count: 0
-Gate D Blockers 01 through 07: PASS
+Gate D Blockers 01 through 07 dedicated regressions: PASS
 Gate D Blocker 08 dedicated runner: INCONCLUSIVE (signed historical session fixture unavailable)
 Gate D Blocker 08 integrated current semantics: PASS
-Gate D Blocker 09: PASS
+Gate D Blockers 09 and 10 integrated current semantics: PASS
 repository shared smoke: 3772 passed, 0 failed
 repository verification steps: 35/35
 golden regeneration: NOT ATTEMPTED
@@ -429,10 +456,9 @@ golden regeneration: NOT ATTEMPTED
 
 ## Next authorized action
 
-The current authorized action is a new independent V4 Gate D Evaluation 11.
-Evaluations 06 through 10 remain
-**EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE**. Gate D remains
-**EVALUATED_FAIL_NOT_ACQUIRED** and is not acquired by the published Blocker 10
-correction. Independent Evaluation 11 is **NOT_STARTED**.
-`CIV-34` is not started and remains downstream of a future published Gate D
-PASS.
+Gate D Evaluation 11 is **PASS — SENIOR REVIEW APPROVED**. Evaluations 01
+through 10 remain **FAIL — HISTORICAL IMMUTABLE EVIDENCE**, and Blockers 01
+through 10 remain **FIXED AND PUBLISHED**. Gate D is locally an
+**ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH**. `CIV-34 — Production,
+Tools and Workshops V1` is **NOT_STARTED — NEXT ELIGIBLE PHASE**; the next
+authorized action is `CIV-34`, but this publication commit does not start it.

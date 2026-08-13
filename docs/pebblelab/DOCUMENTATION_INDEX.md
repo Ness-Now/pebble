@@ -50,11 +50,16 @@ CIV-00 through CIV-33: COMPLETE AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
-V4-GATE-D-v1: EVALUATED_FAIL_NOT_ACQUIRED
+V4-GATE-D-v1: ACQUIRED AND PUBLISHED (publication candidate awaiting user push)
+Gate D Evaluation 01: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
+Gate D Blocker 01: BLOCKER_FIX_PUBLISHED
+Gate D Evaluation 02: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
+Gate D Blocker 02: BLOCKER_FIX_PUBLISHED
+Gate D Evaluation 03: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 03: BLOCKER_FIX_PUBLISHED
-Gate D Evaluation 04: EVALUATED_FAIL_NOT_ACQUIRED
+Gate D Evaluation 04: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 04: BLOCKER_FIX_PUBLISHED
-Gate D Evaluation 05: EVALUATED_FAIL_NOT_ACQUIRED
+Gate D Evaluation 05: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 05: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 06: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 06: BLOCKER_FIX_PUBLISHED
@@ -66,8 +71,8 @@ Gate D Evaluation 09: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 09: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 10: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 10: BLOCKER_FIX_PUBLISHED
-Independent Gate D Evaluation 11: NOT_STARTED
-CIV-34: NOT_STARTED
+Independent Gate D Evaluation 11: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
+CIV-34: NOT_STARTED — NEXT ELIGIBLE PHASE
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -106,8 +111,14 @@ checkpoint-save correction is published at product-fix head
 found that a committed physical action could remove canonical support beneath
 another active no-gravity probe. Its targeted Blocker 10 correction is
 published at product-fix head `6ec700640dfe806f32da62fe7d7315c64fdb8f74`.
-Independent Evaluation 11 is the next authorized action and is not started.
-Gate D remains evaluated and not acquired.
+Independent Evaluations 01 through 10 remain historical immutable FAIL
+evidence and Blockers 01 through 10 remain fixed and published. Independent
+Evaluation 11, evaluated against product baseline
+`24c679581f7dfd93d26bffa2e9486a5340af0d9c`, is the first accepted whole-Gate
+PASS and is senior-review approved. This commit is the Gate D acquisition and
+publication candidate; the user-owned canonical push remains pending.
+`CIV-34 — Production, Tools and Workshops V1` is not started and is the next
+eligible phase.
 
 ## Operational
 
@@ -275,6 +286,14 @@ actions and canonical active-probe placement validity, the shared PebbleCore
 post-mutation safety boundary, exact transaction rollback, safe positive
 control and evolved-tool checkpoint-C continuation. It is a published product
 correction, not a Gate D PASS or acquisition report.
+
+[`GATE_D_EVALUATION_11_REPORT.md`](GATE_D_EVALUATION_11_REPORT.md) records the
+first accepted independent whole-Gate PASS, its exact evaluated product
+baseline and evidence commits, senior-review approval, current B08/B09/B10
+composition proof, five-checkpoint isolation, conservation, wrapper
+limitations and repository validation. It is the durable Gate D acquisition
+evidence; the review ZIP checksum identifies the reviewed external bundle
+without making a machine-local path authoritative.
 
 [`GATE_C_EVALUATION_01_SUMMARY.md`](GATE_C_EVALUATION_01_SUMMARY.md) and
 [`GATE_C_EVALUATION_01_SUMMARY.json`](GATE_C_EVALUATION_01_SUMMARY.json)

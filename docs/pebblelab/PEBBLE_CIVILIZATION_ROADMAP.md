@@ -113,6 +113,19 @@ Published Gate D Blocker 10 product-fix head:
 6ec700640dfe806f32da62fe7d7315c64fdb8f74
 ```
 
+Published product baseline evaluated by independent Gate D Evaluation 11:
+
+```text
+24c679581f7dfd93d26bffa2e9486a5340af0d9c
+```
+
+Senior-review-approved Evaluation 11 evidence commits:
+
+```text
+f55b64305027bee3fb67a2e27b422578124c4e00
+39f6b8bc464319b4ee3879686bab3af5fcf63e83
+```
+
 ## Canonical position
 
 ```text
@@ -121,15 +134,21 @@ Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: none
-next authorized action: NEW INDEPENDENT V4-GATE-D-v1 EVALUATION 11
+next eligible phase: CIV-34
+next authorized action: CIV-34
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
-V4-GATE-D-v1: EVALUATED_FAIL_NOT_ACQUIRED
+V4-GATE-D-v1: ACQUIRED AND PUBLISHED (publication candidate awaiting user push)
+Gate D Evaluation 01: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
+Gate D Blocker 01: BLOCKER_FIX_PUBLISHED
+Gate D Evaluation 02: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
+Gate D Blocker 02: BLOCKER_FIX_PUBLISHED
+Gate D Evaluation 03: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 03: BLOCKER_FIX_PUBLISHED
-Gate D Evaluation 04: EVALUATED_FAIL_NOT_ACQUIRED
+Gate D Evaluation 04: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 04: BLOCKER_FIX_PUBLISHED
-Gate D Evaluation 05: EVALUATED_FAIL_NOT_ACQUIRED
+Gate D Evaluation 05: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 05: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 06: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 06: BLOCKER_FIX_PUBLISHED
@@ -141,8 +160,8 @@ Gate D Evaluation 09: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 09: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 10: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 10: BLOCKER_FIX_PUBLISHED
-Independent Gate D Evaluation 11: NOT_STARTED
-CIV-34: NOT_STARTED
+Independent Gate D Evaluation 11: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
+CIV-34: NOT_STARTED — NEXT ELIGIBLE PHASE
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -203,7 +222,11 @@ canonical checkpoint placement boundary. The published Blocker 10 correction
 reapplies PebbleCore placement semantics to all pre-valid active probes inside
 the physical-action transaction, compensates break/till/place mutations that
 invalidate them, and leaves safe physical actions productive. Independent
-Evaluation 11 is the next authorized action and is not started.
+Evaluation 11 then passed the complete Gate D contract in composition on
+published baseline `24c679581f7dfd93d26bffa2e9486a5340af0d9c`; senior review
+approved the evidence. Evaluations 01 through 10 remain immutable historical
+FAIL evidence, Blockers 01 through 10 remain fixed and published, and
+`CIV-34` is now the next eligible phase without being started.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:
@@ -362,7 +385,8 @@ reevaluate it.
 
 Current entry status: `CIV-29` through `CIV-33` are **complete and published**.
 The required renewable-subsistence milestone is **complete and published**.
-Gate D is **EVALUATED_FAIL_NOT_ACQUIRED**. Its first independent evaluation found a composed
+Gate D is **ACQUIRED AND PUBLISHED** in the canonical state represented by this
+publication candidate; the user push remains pending locally. Its first independent evaluation found a composed
 physical-position restart blocker, which is fixed and published. Evaluation 02
 found a historical ecological-observer validation blocker, also fixed and
 published. Evaluation 03 found a cycle-scoping blocker in agricultural
@@ -378,8 +402,9 @@ historical FAIL evidence; its targeted Blocker 08 correction is a
 **BLOCKER_FIX_PUBLISHED**. Evaluation 09 remains historical FAIL evidence; its
 targeted Blocker 09 correction is **fixed and published**. Evaluation 10
 remains historical FAIL evidence; its targeted Blocker 10 correction is a
-**BLOCKER_FIX_PUBLISHED**. Independent Evaluation 11 is the next authorized
-action and has not started.
+**BLOCKER_FIX_PUBLISHED**. Independent Evaluation 11 is the first accepted
+whole-Gate PASS and is **SENIOR REVIEW APPROVED**. `CIV-34` is
+**NOT_STARTED — NEXT ELIGIBLE PHASE**.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -712,8 +737,11 @@ The published evolved-material checkpoint-save correction is documented in
 [`GATE_D_BLOCKER_09_EVOLVED_MATERIAL_IDENTITY_CHECKPOINT_SAVE.md`](GATE_D_BLOCKER_09_EVOLVED_MATERIAL_IDENTITY_CHECKPOINT_SAVE.md).
 The published active-probe physical-action safety correction is documented in
 [`GATE_D_BLOCKER_10_ACTIVE_PROBE_SUPPORT_PHYSICAL_ACTION_SAFETY.md`](GATE_D_BLOCKER_10_ACTIVE_PROBE_SUPPORT_PHYSICAL_ACTION_SAFETY.md).
-None of these corrections acquires Gate D. The next authorized action is
-a new independent V4 Gate D Evaluation 11. Evaluation 11 is not started.
+No individual correction acquired Gate D. The independent composition proof is
+recorded in
+[`GATE_D_EVALUATION_11_REPORT.md`](GATE_D_EVALUATION_11_REPORT.md). Senior
+review approved it, Gate D is acquired by this publication candidate, and the
+next authorized action is `CIV-34`; this commit does not start that phase.
 
 ## Wave 3 — Local material economy
 
@@ -929,7 +957,7 @@ keeps incarnation physical and produces verifiable long-duration history.
 | `V3-GATE-R-v1` | acquired | `CIV-19` |
 | `V4-GATE-B-v1` | acquired | `CIV-25`; bounded embodied autonomy contract |
 | `V4-GATE-C-v1` | acquired | `CIV-26`–`CIV-28` |
-| `V4-GATE-D-v1` | evaluated FAIL, not acquired; Blocker 10 fixed and published | `CIV-29`–`CIV-33`, renewable subsistence milestone and Blockers 01–10 published; Evaluations 01–10 are historical FAIL evidence; independent Evaluation 11 is next and is not started |
+| `V4-GATE-D-v1` | acquired; publication candidate awaiting user push | `CIV-29`–`CIV-33`, renewable subsistence milestone and Blockers 01–10 published; Evaluations 01–10 remain historical FAIL evidence; Evaluation 11 PASS is senior-review approved |
 | `V4-GATE-E-v1` | planned | `CIV-34`–`CIV-37`; `CIV-38` optional |
 | `V4-GATE-F-v1` | planned | `CIV-39`; `CIV-40` optional |
 | `V4-GATE-G-v1` | planned | `CIV-41`–`CIV-47` |
