@@ -65,7 +65,7 @@ Gate D Blocker 08: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 09: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 09: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 10: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
-Gate D Blocker 10: BLOCKER_FIX_LOCAL_CANDIDATE
+Gate D Blocker 10: BLOCKER_FIX_PUBLISHED
 Independent Gate D Evaluation 11: NOT_STARTED
 CIV-34: NOT_STARTED
 ```
@@ -104,10 +104,10 @@ historical FAIL evidence for baseline
 checkpoint-save correction is published at product-fix head
 `ee742afb41fda44c77d8b98f868fbe759934057e`. A new independent Evaluation 10
 found that a committed physical action could remove canonical support beneath
-another active no-gravity probe. Its targeted Blocker 10 correction is a local
-candidate at `6ec700640dfe806f32da62fe7d7315c64fdb8f74`; senior review and manual
-publication are the next authorized action. Independent Evaluation 11 is not
-started. Gate D remains evaluated and not acquired.
+another active no-gravity probe. Its targeted Blocker 10 correction is
+published at product-fix head `6ec700640dfe806f32da62fe7d7315c64fdb8f74`.
+Independent Evaluation 11 is the next authorized action and is not started.
+Gate D remains evaluated and not acquired.
 
 ## Operational
 
@@ -273,9 +273,8 @@ acquisition report.
 records Evaluation 10's preserved FAIL, the mismatch between successful block
 actions and canonical active-probe placement validity, the shared PebbleCore
 post-mutation safety boundary, exact transaction rollback, safe positive
-control and evolved-tool checkpoint-C continuation. It is a local product
-correction candidate awaiting senior review, not a Gate D PASS or acquisition
-report.
+control and evolved-tool checkpoint-C continuation. It is a published product
+correction, not a Gate D PASS or acquisition report.
 
 [`GATE_C_EVALUATION_01_SUMMARY.md`](GATE_C_EVALUATION_01_SUMMARY.md) and
 [`GATE_C_EVALUATION_01_SUMMARY.json`](GATE_C_EVALUATION_01_SUMMARY.json)

@@ -101,13 +101,13 @@ ee742afb41fda44c77d8b98f868fbe759934057e
 ```
 
 Published baseline evaluated by independent Gate D Evaluation 10 and used as
-the direct base for the local Blocker 10 correction candidate:
+the direct base for the published Blocker 10 correction:
 
 ```text
 55e513becac622e2f7f258f10ec406d26865eb6a
 ```
 
-Local Gate D Blocker 10 product-fix commit:
+Published Gate D Blocker 10 product-fix head:
 
 ```text
 6ec700640dfe806f32da62fe7d7315c64fdb8f74
@@ -121,7 +121,7 @@ Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: none
-next authorized action: SENIOR REVIEW AND MANUAL PUBLICATION OF GATE D BLOCKER 10
+next authorized action: NEW INDEPENDENT V4-GATE-D-v1 EVALUATION 11
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -140,7 +140,7 @@ Gate D Blocker 08: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 09: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 09: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 10: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
-Gate D Blocker 10: BLOCKER_FIX_LOCAL_CANDIDATE
+Gate D Blocker 10: BLOCKER_FIX_PUBLISHED
 Independent Gate D Evaluation 11: NOT_STARTED
 CIV-34: NOT_STARTED
 ```
@@ -199,12 +199,11 @@ PebbleCore authoritative, and round-trips successive damage-1 and damage-2
 identities without rewriting durable asset or settlement history. Evaluation
 10 then found that a successful block action could remove support beneath a
 different active no-gravity probe and leave the World incompatible with the
-canonical checkpoint placement boundary. The local Blocker 10 candidate
+canonical checkpoint placement boundary. The published Blocker 10 correction
 reapplies PebbleCore placement semantics to all pre-valid active probes inside
 the physical-action transaction, compensates break/till/place mutations that
-invalidate them, and leaves safe physical actions productive. Senior review
-and manual publication of Blocker 10 are the next authorized action;
-Evaluation 11 is not started.
+invalidate them, and leaves safe physical actions productive. Independent
+Evaluation 11 is the next authorized action and is not started.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:
@@ -379,8 +378,8 @@ historical FAIL evidence; its targeted Blocker 08 correction is a
 **BLOCKER_FIX_PUBLISHED**. Evaluation 09 remains historical FAIL evidence; its
 targeted Blocker 09 correction is **fixed and published**. Evaluation 10
 remains historical FAIL evidence; its targeted Blocker 10 correction is a
-**BLOCKER_FIX_LOCAL_CANDIDATE**. Senior review and manual publication are the
-next authorized action. Evaluation 11 has not started.
+**BLOCKER_FIX_PUBLISHED**. Independent Evaluation 11 is the next authorized
+action and has not started.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -686,9 +685,8 @@ The gate proves several possible generations, development shaped by childhood,
 causal aging and death, durable family distinctions, and survival of goods and
 obligations across people and restart.
 
-Status: **EVALUATED_FAIL_NOT_ACQUIRED**; Blockers 03 through 09 are
-**BLOCKER_FIX_PUBLISHED** and Blocker 10 is a
-**BLOCKER_FIX_LOCAL_CANDIDATE**.
+Status: **EVALUATED_FAIL_NOT_ACQUIRED**; Blockers 03 through 10 are
+**BLOCKER_FIX_PUBLISHED**.
 All required CIV phases and the required milestone are published. Independent
 Evaluations 01 through 10 correctly remain
 `GATE D FAIL — PRODUCT CORRECTION REQUIRED` for their evaluated baselines. The
@@ -712,11 +710,10 @@ The published collective probe-restore placement correction is documented in
 [`GATE_D_BLOCKER_08_COLLECTIVE_PROBE_RESTORE_PLACEMENT.md`](GATE_D_BLOCKER_08_COLLECTIVE_PROBE_RESTORE_PLACEMENT.md).
 The published evolved-material checkpoint-save correction is documented in
 [`GATE_D_BLOCKER_09_EVOLVED_MATERIAL_IDENTITY_CHECKPOINT_SAVE.md`](GATE_D_BLOCKER_09_EVOLVED_MATERIAL_IDENTITY_CHECKPOINT_SAVE.md).
-The local active-probe physical-action safety correction is documented in
+The published active-probe physical-action safety correction is documented in
 [`GATE_D_BLOCKER_10_ACTIVE_PROBE_SUPPORT_PHYSICAL_ACTION_SAFETY.md`](GATE_D_BLOCKER_10_ACTIVE_PROBE_SUPPORT_PHYSICAL_ACTION_SAFETY.md).
 None of these corrections acquires Gate D. The next authorized action is
-senior review and manual publication of Gate D Blocker 10. Independent
-Evaluation 11 is not started.
+a new independent V4 Gate D Evaluation 11. Evaluation 11 is not started.
 
 ## Wave 3 — Local material economy
 
@@ -932,7 +929,7 @@ keeps incarnation physical and produces verifiable long-duration history.
 | `V3-GATE-R-v1` | acquired | `CIV-19` |
 | `V4-GATE-B-v1` | acquired | `CIV-25`; bounded embodied autonomy contract |
 | `V4-GATE-C-v1` | acquired | `CIV-26`–`CIV-28` |
-| `V4-GATE-D-v1` | evaluated FAIL, not acquired; Blocker 10 fixed local candidate | `CIV-29`–`CIV-33`, renewable subsistence milestone and Blockers 01–09 published; Evaluations 01–10 are historical FAIL evidence; senior review and manual publication of Blocker 10 are next; Evaluation 11 is not started |
+| `V4-GATE-D-v1` | evaluated FAIL, not acquired; Blocker 10 fixed and published | `CIV-29`–`CIV-33`, renewable subsistence milestone and Blockers 01–10 published; Evaluations 01–10 are historical FAIL evidence; independent Evaluation 11 is next and is not started |
 | `V4-GATE-E-v1` | planned | `CIV-34`–`CIV-37`; `CIV-38` optional |
 | `V4-GATE-F-v1` | planned | `CIV-39`; `CIV-40` optional |
 | `V4-GATE-G-v1` | planned | `CIV-41`–`CIV-47` |

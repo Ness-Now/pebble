@@ -40,8 +40,8 @@
     "gateDBlocker09PublishedProductFixHead": "ee742afb41fda44c77d8b98f868fbe759934057e",
     "gateDEvaluation10EvaluatedProductHead": "55e513becac622e2f7f258f10ec406d26865eb6a",
     "gateDBlocker10AffectedProductHead": "55e513becac622e2f7f258f10ec406d26865eb6a",
-    "gateDBlocker10LocalProductFixCommit": "6ec700640dfe806f32da62fe7d7315c64fdb8f74",
-    "meaning": "Canonical history through historical Gate D Evaluation 10; Blockers 01 through 09 are fixed and published; Blocker 10 is a local product-fix candidate awaiting senior review and manual publication; Evaluations 01 through 10 remain immutable FAIL evidence.",
+    "gateDBlocker10PublishedProductFixHead": "6ec700640dfe806f32da62fe7d7315c64fdb8f74",
+    "meaning": "Canonical history through historical Gate D Evaluation 10; Blockers 01 through 10 are fixed and published; Evaluations 01 through 10 remain immutable FAIL evidence; the next authorized action is a new independent Gate D Evaluation 11.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -85,7 +85,7 @@
     "activePhase": null,
     "completedThrough": "CIV-33",
     "nextEligiblePhase": null,
-    "nextAuthorizedAction": "SENIOR-REVIEW-AND-MANUAL-PUBLICATION-OF-GATE-D-BLOCKER-10",
+    "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-D-v1-EVALUATION-11",
     "civ27Status": "completed",
     "civ28Status": "completed",
     "gateCStatus": "acquired",
@@ -113,7 +113,7 @@
     "gateDEvaluation09Status": "evaluatedFailNotAcquired",
     "gateDBlocker09Status": "fixedPublished",
     "gateDEvaluation10Status": "evaluatedFailNotAcquired",
-    "gateDBlocker10Status": "fixedLocalCandidate",
+    "gateDBlocker10Status": "fixedPublished",
     "gateDEvaluation11Status": "notStarted",
     "civ34Status": "notStarted",
     "renewableSubsistenceMilestoneStatus": "completedPublished",
@@ -532,8 +532,10 @@
       "a39cca48d4bbb33873ed9ba63fbcd7146f772976",
       "154a79a6c34247fe5ad0ca4de33badaab3086f09"
     ],
-    "status": "fixedLocalCandidate",
-    "localProductFixCommit": "6ec700640dfe806f32da62fe7d7315c64fdb8f74",
+    "status": "fixedPublished",
+    "publishedProductFixHead": "6ec700640dfe806f32da62fe7d7315c64fdb8f74",
+    "seniorTechnicalReview": "approved",
+    "reviewBundleSHA256": "8508d8d938830a4a0438b49e450d60db286bdf89ba95d530a3f840710e8cccbe",
     "checkpointSchema": 30,
     "observerSchema": 7,
     "rootCause": "committedBlockMutationsCouldInvalidateCanonicalPlacementOfAnotherActiveNoGravityProbe",
@@ -576,7 +578,7 @@
     "gateDAcquired": false,
     "civ34Started": false,
     "evaluation11Started": false,
-    "nextAuthorizedAction": "SENIOR-REVIEW-AND-MANUAL-PUBLICATION-OF-GATE-D-BLOCKER-10"
+    "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-D-v1-EVALUATION-11"
   },
   "publishedPostGateHardening": [
     {

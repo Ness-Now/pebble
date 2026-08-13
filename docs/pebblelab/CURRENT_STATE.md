@@ -93,23 +93,23 @@ ee742afb41fda44c77d8b98f868fbe759934057e
 ```
 
 Published baseline evaluated by independent Gate D Evaluation 10 and used as
-the direct base for the local Blocker 10 correction candidate:
+the direct base for the published Blocker 10 correction:
 
 ```text
 55e513becac622e2f7f258f10ec406d26865eb6a
 ```
 
-Local Gate D Blocker 10 product-fix commit:
+Published Gate D Blocker 10 product-fix head:
 
 ```text
 6ec700640dfe806f32da62fe7d7315c64fdb8f74
 ```
 
 The `CIV-33` completion, renewable-subsistence milestone and Gate D Blockers 01
-through 09 are published on the canonical branch. Independent Gate D
+through 10 are published on the canonical branch. Independent Gate D
 Evaluations 01 through 10 remain immutable FAIL evidence for their evaluated
-baselines. Blocker 10 is a local correction candidate awaiting senior review
-and manual publication. Evaluation 04 found that an abandoned civilization
+baselines. Independent Gate D Evaluation 11 is the next authorized action and
+is not started. Evaluation 04 found that an abandoned civilization
 candidate could leave an earlier successful physical movement in PebbleCore
 after a later agricultural navigation collision.
 
@@ -117,7 +117,7 @@ after a later agricultural navigation collision.
 
 ```text
 active CIV phase: none
-next authorized action: SENIOR REVIEW AND MANUAL PUBLICATION OF GATE D BLOCKER 10
+next authorized action: NEW INDEPENDENT V4-GATE-D-v1 EVALUATION 11
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -136,7 +136,7 @@ Gate D Blocker 08 status: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 09 status: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 09 status: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 10 status: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
-Gate D Blocker 10 status: BLOCKER_FIX_LOCAL_CANDIDATE
+Gate D Blocker 10 status: BLOCKER_FIX_PUBLISHED
 Independent Gate D Evaluation 11 status: NOT_STARTED
 CIV-34 status: NOT_STARTED
 roadmap generation: V4
@@ -265,7 +265,7 @@ unverified future identity, wrong holder, wrong quantity, ambiguity and
 duplicate reservation all fail closed. Schema 30 and Observer schema 7 remain
 unchanged.
 
-The local Blocker 10 correction captures every active Lab probe that is
+The published Blocker 10 correction captures every active Lab probe that is
 canonically placeable before a candidate block mutation, then reuses
 PebbleCore `assessEntityPlacement` before any Civilization publication. A
 break, till or placement that would remove support, obstruct the body or
@@ -429,10 +429,10 @@ golden regeneration: NOT ATTEMPTED
 
 ## Next authorized action
 
-The current authorized action is senior review and manual publication of Gate D
-Blocker 10. Evaluations 06 through 10 remain
+The current authorized action is a new independent V4 Gate D Evaluation 11.
+Evaluations 06 through 10 remain
 **EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE**. Gate D remains
-**EVALUATED_FAIL_NOT_ACQUIRED** and is not acquired by the local Blocker 10
-correction candidate. Independent Evaluation 11 is **NOT_STARTED**.
+**EVALUATED_FAIL_NOT_ACQUIRED** and is not acquired by the published Blocker 10
+correction. Independent Evaluation 11 is **NOT_STARTED**.
 `CIV-34` is not started and remains downstream of a future published Gate D
 PASS.

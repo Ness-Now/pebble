@@ -7,7 +7,7 @@ Gate D Evaluation 10:
 EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 
 Gate D Blocker 10:
-BLOCKER_FIX_LOCAL_CANDIDATE
+BLOCKER_FIX_PUBLISHED
 
 Gate D:
 EVALUATED_FAIL_NOT_ACQUIRED
@@ -19,8 +19,8 @@ CIV-34:
 NOT_STARTED
 ```
 
-The next authorized action is senior review and manual publication of this
-targeted correction. This record does not reevaluate or acquire Gate D.
+The next authorized action is a new independent V4 Gate D Evaluation 11.
+Evaluation 11 is not started. This record does not reevaluate or acquire Gate D.
 
 ## Product identity
 
@@ -30,10 +30,18 @@ Published affected baseline:
 55e513becac622e2f7f258f10ec406d26865eb6a
 ```
 
-Local product-fix commit:
+Published product-fix head:
 
 ```text
 6ec700640dfe806f32da62fe7d7315c64fdb8f74
+```
+
+Senior technical review: **APPROVED**.
+
+Approved review bundle SHA-256:
+
+```text
+8508d8d938830a4a0438b49e450d60db286bdf89ba95d530a3f840710e8cccbe
 ```
 
 Historical Evaluation 10 commits are evidence only and are not ancestors of
