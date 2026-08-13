@@ -50,7 +50,7 @@ CIV-00 through CIV-33: COMPLETE AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
-V4-GATE-D-v1: ACQUIRED AND PUBLISHED (publication candidate awaiting user push)
+V4-GATE-D-v1: ACQUIRED AND PUBLISHED
 Gate D Evaluation 01: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 01: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 02: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
@@ -116,7 +116,8 @@ evidence and Blockers 01 through 10 remain fixed and published. Independent
 Evaluation 11, evaluated against product baseline
 `24c679581f7dfd93d26bffa2e9486a5340af0d9c`, is the first accepted whole-Gate
 PASS and is senior-review approved. This commit is the Gate D acquisition and
-publication candidate; the user-owned canonical push remains pending.
+publication evidence, now independently remote-verified at canonical head
+`61fbf406713127b0993a7294020433e1e3c3fa39`.
 `CIV-34 — Production, Tools and Workshops V1` is not started and is the next
 eligible phase.
 

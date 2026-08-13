@@ -139,7 +139,7 @@ next authorized action: CIV-34
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
-V4-GATE-D-v1: ACQUIRED AND PUBLISHED (publication candidate awaiting user push)
+V4-GATE-D-v1: ACQUIRED AND PUBLISHED
 Gate D Evaluation 01: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 01: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 02: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
@@ -385,8 +385,8 @@ reevaluate it.
 
 Current entry status: `CIV-29` through `CIV-33` are **complete and published**.
 The required renewable-subsistence milestone is **complete and published**.
-Gate D is **ACQUIRED AND PUBLISHED** in the canonical state represented by this
-publication candidate; the user push remains pending locally. Its first independent evaluation found a composed
+Gate D is **ACQUIRED AND PUBLISHED** at independently remote-verified canonical
+head `61fbf406713127b0993a7294020433e1e3c3fa39`. Its first independent evaluation found a composed
 physical-position restart blocker, which is fixed and published. Evaluation 02
 found a historical ecological-observer validation blocker, also fixed and
 published. Evaluation 03 found a cycle-scoping blocker in agricultural
@@ -740,8 +740,8 @@ The published active-probe physical-action safety correction is documented in
 No individual correction acquired Gate D. The independent composition proof is
 recorded in
 [`GATE_D_EVALUATION_11_REPORT.md`](GATE_D_EVALUATION_11_REPORT.md). Senior
-review approved it, Gate D is acquired by this publication candidate, and the
-next authorized action is `CIV-34`; this commit does not start that phase.
+review approved it, Gate D is acquired and published, and the
+next authorized action is `CIV-34`; this cleanup commit does not start that phase.
 
 ## Wave 3 — Local material economy
 
@@ -957,7 +957,7 @@ keeps incarnation physical and produces verifiable long-duration history.
 | `V3-GATE-R-v1` | acquired | `CIV-19` |
 | `V4-GATE-B-v1` | acquired | `CIV-25`; bounded embodied autonomy contract |
 | `V4-GATE-C-v1` | acquired | `CIV-26`–`CIV-28` |
-| `V4-GATE-D-v1` | acquired; publication candidate awaiting user push | `CIV-29`–`CIV-33`, renewable subsistence milestone and Blockers 01–10 published; Evaluations 01–10 remain historical FAIL evidence; Evaluation 11 PASS is senior-review approved |
+| `V4-GATE-D-v1` | acquired and published | `CIV-29`–`CIV-33`, renewable subsistence milestone and Blockers 01–10 published; Evaluations 01–10 remain historical FAIL evidence; Evaluation 11 PASS is senior-review approved |
 | `V4-GATE-E-v1` | planned | `CIV-34`–`CIV-37`; `CIV-38` optional |
 | `V4-GATE-F-v1` | planned | `CIV-39`; `CIV-40` optional |
 | `V4-GATE-G-v1` | planned | `CIV-41`–`CIV-47` |

@@ -11,8 +11,7 @@ SHA of the documentation commit that contains it.
 - Gate C — Durable Observable Local World:
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-C-v1`.
 - Gate D — Generational Continuity:
-  **ACQUIRED AND PUBLISHED** under contract `V4-GATE-D-v1`; this local
-  publication candidate awaits the user-owned canonical push.
+  **ACQUIRED AND PUBLISHED** under contract `V4-GATE-D-v1`.
 - `CIV-00` through `CIV-33`: **COMPLETE AND PUBLISHED** in their bounded
   contracts.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
@@ -125,9 +124,10 @@ The `CIV-33` completion, renewable-subsistence milestone and Gate D Blockers 01
 through 10 are published on the canonical branch. Independent Gate D
 Evaluations 01 through 10 remain immutable historical FAIL evidence for their
 evaluated baselines. Evaluation 11 is the first accepted PASS and senior review
-approved it as the complete whole-Gate evidence. This commit is the Gate D
-acquisition/publication candidate; remote publication remains pending the
-user-owned push. `CIV-34` is not started and is now the next eligible phase.
+approved it as the complete whole-Gate evidence. Gate D acquisition is
+published and independently remote-verified at canonical head
+`61fbf406713127b0993a7294020433e1e3c3fa39`. `CIV-34` is not started and is
+now the next eligible phase.
 
 ## Current program position
 
@@ -138,7 +138,7 @@ next authorized action: CIV-34
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
-V4-GATE-D-v1 status: ACQUIRED AND PUBLISHED (publication candidate awaiting user push)
+V4-GATE-D-v1 status: ACQUIRED AND PUBLISHED
 Gate D Evaluation 01 status: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 01 status: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 02 status: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
@@ -458,7 +458,7 @@ golden regeneration: NOT ATTEMPTED
 
 Gate D Evaluation 11 is **PASS — SENIOR REVIEW APPROVED**. Evaluations 01
 through 10 remain **FAIL — HISTORICAL IMMUTABLE EVIDENCE**, and Blockers 01
-through 10 remain **FIXED AND PUBLISHED**. Gate D is locally an
-**ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH**. `CIV-34 — Production,
-Tools and Workshops V1` is **NOT_STARTED — NEXT ELIGIBLE PHASE**; the next
-authorized action is `CIV-34`, but this publication commit does not start it.
+through 10 remain **FIXED AND PUBLISHED**. Gate D is **ACQUIRED AND
+PUBLISHED**. `CIV-34 — Production, Tools and Workshops V1` is **NOT_STARTED —
+NEXT ELIGIBLE PHASE**; the next authorized action is `CIV-34`, but this cleanup
+commit does not start it.

@@ -7,7 +7,7 @@ V4-GATE-D-v1 EVALUATION 11:
 PASS — SENIOR REVIEW APPROVED
 
 Gate D:
-ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH
+ACQUIRED AND PUBLISHED
 
 CIV-34:
 NOT_STARTED — NEXT ELIGIBLE PHASE
@@ -22,9 +22,9 @@ Evaluation 11 was created directly from published canonical baseline
 `154a79a6c34247fe5ad0ca4de33badaab3086f09` are not ancestors. The campaign
 uses a new E11 World, session, checkpoints and evidence directory. It contains
 no product correction and does not start CIV-34. Senior review approved this
-first successful whole-Gate evaluation. This documentation commit is the Gate
-D acquisition/publication candidate; it must not be described as remotely
-published until the user pushes and verifies it.
+first successful whole-Gate evaluation. Gate D acquisition is published and
+independently remote-verified at canonical head
+`61fbf406713127b0993a7294020433e1e3c3fa39`.
 
 ## Evidence identity and publication state
 
@@ -38,7 +38,7 @@ internalChecksums: 77/77 PASS
 unzip: PASS
 Evaluation 11 result: PASS
 senior review: APPROVED
-publication: pending manual push locally
+publication: PUBLISHED AND REMOTE-VERIFIED
 ```
 
 The durable repository authority is this report. The machine-local location
@@ -260,8 +260,7 @@ are stale after publication**. The historical wild-subsistence wrapper is
 the E11 current canonical break/drop/custody path is **PASS**.
 
 Senior review approved Evaluation 11 as the successful independent complete
-Gate D proof. Once this acquisition commit is manually pushed and the remote
-is verified, it represents `V4-GATE-D-v1: ACQUIRED AND PUBLISHED`. Locally it
-remains `ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH`. `CIV-34` remains
-not started, becomes the next eligible phase, and is not activated by this
-commit. Codex did not push.
+Gate D proof. The acquisition commit was manually pushed and independently
+remote-verified, so `V4-GATE-D-v1` is **ACQUIRED AND PUBLISHED**. `CIV-34`
+remains not started, is the next eligible phase, and is not activated by this
+cleanup commit. Codex did not push.
