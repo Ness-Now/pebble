@@ -143,6 +143,13 @@ func runPebbleAgentsMaterialRightsSmoke() {
     var session = rightsSession()
     rightsBootstrap(&session)
     var record = session.materialRightsSnapshot().records[0]
+    check("durable asset permits canonical same-item current evolution",
+          record.asset.permitsCurrentIdentity(rightsIdentity(damage: 1)))
+    check("durable asset refuses a different current material item",
+          !record.asset.permitsCurrentIdentity(AgentMaterialIdentitySnapshot(
+              itemKey: "iron_hoe", damage: 1, enchantments: [], label: nil,
+              canonicalDataJSON: "{}"
+          )))
     let ownerObservation = record.lastVerifiedHolder
     let ownerDecision = rightsDecision(
         session, actor: "agent_0", holder: ownerObservation, requestID: "use:owner"

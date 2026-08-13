@@ -1285,7 +1285,8 @@ extension PebbleAgentController {
 
         let damageBefore = binding.heldItem.damage
         let operationID = "gate-d-blocker07-inherited-tool-use:"
-            + "\(estate.estateID.rawValue):t\(published.tick)"
+            + "\(estate.estateID.rawValue):t\(published.tick):"
+            + "damage\(damageBefore)"
         let decision = published.evaluateMaterialUse(AgentMaterialUseRequest(
             requestID: operationID + ":decision",
             assetID: assetID,

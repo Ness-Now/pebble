@@ -693,7 +693,7 @@ extension AgentSimulationSession {
               validMaterialRightsText(observation.custodyFingerprint, maximum: 8192),
               validMaterialRightsText(observation.physicalReceiptID, maximum: 256),
               allowIdentityEvolution
-                ? identity.itemKey == asset.materialIdentity.itemKey
+                ? asset.permitsCurrentIdentity(identity)
                 : identity == asset.materialIdentity else {
             throw AgentSessionError.materialRights(.invalidPhysicalOutcome(
                 asset.assetID.rawValue

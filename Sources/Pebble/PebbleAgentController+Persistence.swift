@@ -960,9 +960,21 @@ extension PebbleAgentController {
         session: AgentSimulationSession,
         custodyByAgentID: [String: PebbleAgentCheckpointDecodedCustody]
     ) throws {
+        try validateCheckpointMaterialRightsCustody(
+            records: session.materialRightsSnapshot().records,
+            sessionTick: session.tick,
+            custodyByAgentID: custodyByAgentID
+        )
+    }
+
+    func validateCheckpointMaterialRightsCustody(
+        records: [AgentMaterialRightsRecord],
+        sessionTick: Int,
+        custodyByAgentID: [String: PebbleAgentCheckpointDecodedCustody]
+    ) throws {
         let bridge = PebbleAgentMaterialSnapshotBridge()
         var reservedQuantityByHolderAndIdentity: [String: Int] = [:]
-        for record in session.materialRightsSnapshot().records {
+        for record in records {
             guard case let .agent(holderID) =
                     record.lastVerifiedHolder.holder else { continue }
             guard let custody = custodyByAgentID[holderID.rawValue] else {
@@ -975,12 +987,18 @@ extension PebbleAgentController {
                 locationID: "agent:pebble_app_agent_\(holderID.rawValue)",
                 slots: custody.slots
             )
+            let currentIdentity = record.lastVerifiedHolder.materialIdentity
+            guard record.asset.permitsCurrentIdentity(currentIdentity) else {
+                throw PebbleAgentCheckpointCustodyError
+                    .materialRightsConflict(
+                        "invalid current identity evolution "
+                            + record.asset.assetID.rawValue
+                    )
+            }
             let physicalQuantity = snapshot.slots.compactMap { $0 }.filter {
-                $0.identity == record.asset.materialIdentity
+                $0.identity == currentIdentity
             }.reduce(0) { $0 + $1.count }
-            guard record.lastVerifiedHolder.materialIdentity
-                    == record.asset.materialIdentity,
-                  record.lastVerifiedHolder.quantity == record.asset.quantity,
+            guard record.lastVerifiedHolder.quantity == record.asset.quantity,
                   physicalQuantity >= record.asset.quantity else {
                 throw PebbleAgentCheckpointCustodyError
                     .materialRightsConflict(
@@ -988,7 +1006,7 @@ extension PebbleAgentController {
                     )
             }
             let keyBytes = try AgentCheckpointCodec.encode(
-                record.asset.materialIdentity
+                currentIdentity
             )
             let key = holderID.rawValue + ":"
                 + AgentCheckpointDigest.sha256(keyBytes).rawValue
@@ -1001,7 +1019,7 @@ extension PebbleAgentController {
                         "duplicate material references at \(holderID.rawValue)"
                     )
             }
-            if record.lastVerifiedHolder.observedAtTick == session.tick {
+            if record.lastVerifiedHolder.observedAtTick == sessionTick {
                 let exactFingerprint = try bridge.fingerprint(of: snapshot)
                 guard exactFingerprint
                         == record.lastVerifiedHolder.custodyFingerprint else {

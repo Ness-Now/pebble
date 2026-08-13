@@ -1897,6 +1897,60 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
     check("inherited use and historical settlement restart byte-exact",
           (try! AgentSimulationSession.restoring(inheritedCheckpoint))
             .estateSnapshot() == inheritedUse.estateSnapshot())
+    var repeatedlyEvolved = inheritedUse
+    let secondSource = repeatedlyEvolved.materialRightsSnapshot()
+        .records[0].lastVerifiedHolder
+    let secondDecision = repeatedlyEvolved.evaluateMaterialUse(
+        AgentMaterialUseRequest(
+            requestID: "civ33-inherited-tool-use-2:decision",
+            assetID: settledRights.asset.assetID,
+            actorID: estateAgentIDs[1],
+            use: .toolUse,
+            verifiedHolder: secondSource
+        )
+    )
+    let secondIdentity = AgentMaterialIdentitySnapshot(
+        itemKey: secondSource.materialIdentity.itemKey,
+        damage: secondSource.materialIdentity.damage + 1,
+        enchantments: secondSource.materialIdentity.enchantments,
+        label: secondSource.materialIdentity.label,
+        canonicalDataJSON: secondSource.materialIdentity.canonicalDataJSON
+    )
+    let secondObservation = AgentMaterialHolderObservation(
+        holder: secondSource.holder,
+        materialIdentity: secondIdentity,
+        quantity: secondSource.quantity,
+        custodyFingerprint: "civ33-inherited-tool-use-2-fingerprint",
+        physicalReceiptID: "civ33-inherited-tool-use-2",
+        observedAtTick: repeatedlyEvolved.tick
+    )
+    _ = try! repeatedlyEvolved.applyMaterialRightsOperation(.useAttempt(
+        AgentMaterialUseAttemptOutcome(
+            operationID: "civ33-inherited-tool-use-2",
+            decision: secondDecision,
+            status: .succeeded,
+            resultingObservation: secondObservation,
+            physicalReceiptID: "civ33-inherited-tool-use-2"
+        )
+    ))
+    let repeatedlyEvolvedRecord = repeatedlyEvolved.materialRightsSnapshot()
+        .records[0]
+    let repeatedlyEvolvedEntry = repeatedlyEvolved.estateSnapshot()
+        .estates[0].assets[0]
+    check("repeated legitimate identity evolution preserves durable asset",
+          secondDecision.verdict == .allowed
+            && repeatedlyEvolvedRecord.asset.materialIdentity
+                == settledRights.asset.materialIdentity
+            && repeatedlyEvolvedRecord.lastVerifiedHolder.materialIdentity
+                == secondIdentity
+            && repeatedlyEvolvedEntry.settlementObservation
+                == settledEstate.assets[0].settlementObservation
+            && repeatedlyEvolvedEntry.settlementReceiptID
+                == settledEstate.assets[0].settlementReceiptID)
+    let repeatedlyEvolvedCheckpoint = try! repeatedlyEvolved.makeCheckpoint()
+    check("repeated evolved identity checkpoint remains byte exact",
+          (try! AgentSimulationSession.restoring(repeatedlyEvolvedCheckpoint))
+            .estateSnapshot() == repeatedlyEvolved.estateSnapshot())
     let afterSettlement = try! session.durableStateBytes()
     check("settled asset refuses duplicate distribution atomically", {
         do {

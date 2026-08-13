@@ -58,6 +58,19 @@ public struct AgentMaterialAssetReference: Codable, Equatable, Sendable {
         self.materialIdentity = materialIdentity
         self.quantity = quantity
     }
+
+    /// Returns whether a verified current observation can still represent
+    /// this durable asset after a legitimate physical state evolution.
+    ///
+    /// Pebble currently has no per-item UUID, so Material Rights preserves
+    /// continuity at the canonical registry-key boundary. All other current
+    /// stack fields remain part of the exact physical observation and are not
+    /// ignored by adapters which validate custody.
+    public func permitsCurrentIdentity(
+        _ identity: AgentMaterialIdentitySnapshot
+    ) -> Bool {
+        identity.itemKey == materialIdentity.itemKey
+    }
 }
 
 /// Last verified physical holder observation. PebbleCore remains authoritative;

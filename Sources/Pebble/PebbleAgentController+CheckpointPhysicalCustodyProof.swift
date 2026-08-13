@@ -15,7 +15,7 @@ extension PebbleAgentController {
             + "|multi-slot-setup <agentID>"
             + "|conflicting-bootstrap <agentID>"
             + "|verified-move <agentID>|status <agentID>"
-            + "|world-material-status>"
+            + "|world-material-status|blocker09-identity <status|adversarial>>"
         guard environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1"
         else {
             return failure(
@@ -76,6 +76,12 @@ extension PebbleAgentController {
             case "world-material-status":
                 guard arguments.count == 1 else { return failure(usage) }
                 return try checkpointCustodyWorldMaterialStatus(world: world)
+            case "blocker09-identity":
+                guard environment["PEBBLELAB_GATE_D_BLOCKER_09"] == "1",
+                      arguments.count == 2 else { return failure(usage) }
+                return try handleBlocker09CheckpointIdentityProof(
+                    arguments[1], world: world
+                )
             default:
                 return failure(usage)
             }
