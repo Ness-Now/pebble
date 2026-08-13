@@ -46,7 +46,7 @@ Canonical status at the product baseline reconciled by this documentation:
 ```text
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED under V4-GATE-B-v1
-CIV-00 through CIV-33: COMPLETE AND PUBLISHED
+CIV-00 through CIV-34: COMPLETE AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -72,9 +72,9 @@ Gate D Blocker 09: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 10: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 10: BLOCKER_FIX_PUBLISHED
 Independent Gate D Evaluation 11: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-CIV-34: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
-CIV-35: NOT_STARTED
-next: SENIOR REVIEW OF CIV-34
+CIV-34: COMPLETE AND PUBLISHED
+CIV-35: NOT_STARTED — NEXT ELIGIBLE PHASE
+next: CIV-35
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -120,10 +120,13 @@ Evaluation 11, evaluated against product baseline
 PASS and is senior-review approved. This commit is the Gate D acquisition and
 publication evidence, now independently remote-verified at canonical head
 `61fbf406713127b0993a7294020433e1e3c3fa39`.
-`CIV-34 — Production, Tools and Workshops V1` is implemented from baseline
-`1bbf3df08ca8a05c79af61c888c424e52bb30801` as a local review candidate.
-`CIV-35` is not started; the next authorized action is senior review of
-`CIV-34`.
+`CIV-34 — Production, Tools and Workshops V1` is complete and published from
+baseline `1bbf3df08ca8a05c79af61c888c424e52bb30801`. The accepted product
+implementation is `73db4cd7fbf1aff86a23aacb8928ca460774696e`; senior review
+approved reviewed evidence HEAD
+`24f0f72aae7543177ca746e892c57482496dabef` and bundle SHA-256
+`8a00bfef38c7d93dae0eff6867d58bc4d05bc872fb72b00f83616367dd682b6d`.
+`CIV-35` is not started and is the next eligible phase and authorized action.
 
 ## Operational
 

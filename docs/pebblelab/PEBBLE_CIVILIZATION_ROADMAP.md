@@ -129,13 +129,14 @@ f55b64305027bee3fb67a2e27b422578124c4e00
 ## Canonical position
 
 ```text
-CIV-00 through CIV-33: COMPLETE AND PUBLISHED
+CIV-00 through CIV-34: COMPLETE AND PUBLISHED
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
-active CIV phase: CIV-34 local review candidate
-next eligible phase: CIV-35 after CIV-34 review and publication
-next authorized action: SENIOR REVIEW OF CIV-34
+active CIV phase: none
+completed through: CIV-34
+next eligible phase: CIV-35
+next authorized action: CIV-35
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -161,8 +162,8 @@ Gate D Blocker 09: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 10: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 10: BLOCKER_FIX_PUBLISHED
 Independent Gate D Evaluation 11: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-CIV-34: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
-CIV-35: NOT_STARTED
+CIV-34: COMPLETE AND PUBLISHED
+CIV-35: NOT_STARTED — NEXT ELIGIBLE PHASE
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -227,8 +228,9 @@ Evaluation 11 then passed the complete Gate D contract in composition on
 published baseline `24c679581f7dfd93d26bffa2e9486a5340af0d9c`; senior review
 approved the evidence. Evaluations 01 through 10 remain immutable historical
 FAIL evidence and Blockers 01 through 10 remain fixed and published. `CIV-34`
-is now implemented as a local review candidate from baseline
-`1bbf3df08ca8a05c79af61c888c424e52bb30801`; `CIV-35` remains not started.
+is complete and published from baseline
+`1bbf3df08ca8a05c79af61c888c424e52bb30801`; `CIV-35` remains not started and
+is the next eligible phase.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:
@@ -405,9 +407,8 @@ historical FAIL evidence; its targeted Blocker 08 correction is a
 targeted Blocker 09 correction is **fixed and published**. Evaluation 10
 remains historical FAIL evidence; its targeted Blocker 10 correction is a
 **BLOCKER_FIX_PUBLISHED**. Independent Evaluation 11 is the first accepted
-whole-Gate PASS and is **SENIOR REVIEW APPROVED**. `CIV-34` is
-**IMPLEMENTED_LOCAL_REVIEW_CANDIDATE** and awaits senior review. `CIV-35` is
-**NOT_STARTED**.
+whole-Gate PASS and is **SENIOR REVIEW APPROVED**. `CIV-34` is **COMPLETE AND
+PUBLISHED**. `CIV-35` is **NOT_STARTED — NEXT ELIGIBLE PHASE**.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -571,7 +572,7 @@ renewable subsistence.
 
 ### `CIV-33` — Estates, Inheritance and Succession V1
 
-Status: **completed, required — local review candidate**.
+Status: **completed and published, required**.
 
 Result: Estates V1 is an explicitly activated, prospective and bounded
 extension of canonical mortality. It creates no retroactive estate. After a
@@ -661,7 +662,7 @@ than deleting them administratively.
 
 ### `V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1` — Renewable Physical Subsistence Loop
 
-Status: **complete — local review candidate**.
+Status: **complete and published**.
 
 Contract:
 
@@ -713,8 +714,8 @@ The gate proves several possible generations, development shaped by childhood,
 causal aging and death, durable family distinctions, and survival of goods and
 obligations across people and restart.
 
-Status: **EVALUATED_FAIL_NOT_ACQUIRED**; Blockers 03 through 10 are
-**BLOCKER_FIX_PUBLISHED**.
+Status: **ACQUIRED AND PUBLISHED**. Blockers 01 through 10 are fixed and
+published.
 All required CIV phases and the required milestone are published. Independent
 Evaluations 01 through 10 correctly remain
 `GATE D FAIL — PRODUCT CORRECTION REQUIRED` for their evaluated baselines. The
@@ -743,9 +744,9 @@ The published active-probe physical-action safety correction is documented in
 No individual correction acquired Gate D. The independent composition proof is
 recorded in
 [`GATE_D_EVALUATION_11_REPORT.md`](GATE_D_EVALUATION_11_REPORT.md). Senior
-review approved it, so Gate D remains acquired and published. `CIV-34` is now
-implemented locally; the next authorized action is senior review of that
-candidate, not `CIV-35` implementation.
+review approved it, so Gate D remains acquired and published. `CIV-34` is
+complete and published; `CIV-35` is not started and is the next eligible phase
+and authorized action.
 
 ## Wave 3 — Local material economy
 
@@ -774,7 +775,17 @@ Observable slices:
 
 ### `CIV-34` — Production, Tools and Workshops V1
 
-Status: **implemented, required — local review candidate**.
+Status: **completed and published, required**.
+
+Publication identity:
+
+```text
+exact baseline: 1bbf3df08ca8a05c79af61c888c424e52bb30801
+product implementation: 73db4cd7fbf1aff86a23aacb8928ca460774696e
+reviewed evidence HEAD: 24f0f72aae7543177ca746e892c57482496dabef
+review bundle SHA-256: 8a00bfef38c7d93dae0eff6867d58bc4d05bc872fb72b00f83616367dd682b6d
+senior review: APPROVED
+```
 
 Result: bounded production reuses the registered PebbleCore crafting recipes,
 tag matching, exact inventory consumption, output insertion, real tools and

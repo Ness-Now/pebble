@@ -2,17 +2,26 @@
 
 ## Verdict and baseline
 
-`CIV-34` is implemented in its bounded contract as a local review candidate.
-It was implemented from the exact published canonical baseline:
+`CIV-34` is complete and published in its bounded contract. It was implemented
+from the exact published canonical baseline:
 
 ```text
 1bbf3df08ca8a05c79af61c888c424e52bb30801
 ```
 
-This report intentionally does not self-reference its containing commit. Gate
-R, Gate B, Gate C and Gate D remain acquired and published. `CIV-35` is not
-started; the next authorized action is senior review of `CIV-34`, followed by
-manual publication if accepted.
+Senior review approved the exact implementation and evidence identities:
+
+```text
+published product implementation: 73db4cd7fbf1aff86a23aacb8928ca460774696e
+senior-review candidate/evidence HEAD: 24f0f72aae7543177ca746e892c57482496dabef
+review bundle SHA-256: 8a00bfef38c7d93dae0eff6867d58bc4d05bc872fb72b00f83616367dd682b6d
+internal bundle checksums: 34/34 PASS
+senior review: APPROVED
+```
+
+This report intentionally does not self-reference its containing publication
+commit. Gate R, Gate B, Gate C and Gate D remain acquired and published.
+`CIV-35` is not started and is the next eligible phase and authorized action.
 
 ## Reuse-first architecture
 
@@ -63,8 +72,13 @@ the session can publish a production record.
 The live proof exercises two existing canonical crafting recipes:
 
 ```text
+actor: agent_2
+workshop: crafting_table@16,70,-17
 3 cobblestone + 2 sticks at crafting_table -> 1 stone_pickaxe
 3 wheat at crafting_table                 -> 1 bread
+normal autonomous product path: PASS
+manual productive trigger: 0
+second production variation: PASS
 ```
 
 The crafting table is the real registered `crafting_table` block at
@@ -99,6 +113,9 @@ immediateRetry=PASS
 physicalLoss=0
 physicalDuplication=0
 syntheticMaterial=0
+duplicateProductionReceipts=0
+duplicateReservations=0
+observerMutationCount=0
 ```
 
 Material Rights remains subordinate to physical truth. Any matching input
@@ -146,6 +163,7 @@ custodyRestoredStacks=2
 custodyRestoredQuantity=2
 custodyDuplicates=0
 physicalBoundary=acquired
+freshRestore=exact
 ```
 
 No published production repeats after restart. The produced-good use adds one
@@ -183,13 +201,17 @@ crafting-table authority; any future furnace or machine production must reuse
 the real Core timing, fuel and block-entity rules. It does not claim workshop
 ownership, production multipliers, automated logistics, omniscient material
 search, arbitrary recipes or an unbounded industrial economy.
+`CIV-35` owns barter and local exchange; CIV-34 does not start or implement
+that phase.
 
-## Local program state
+## Canonical program state
 
 ```text
-CIV-34: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+CIV-34: COMPLETE AND PUBLISHED
 Gate D: ACQUIRED AND PUBLISHED
-CIV-35: NOT_STARTED
-next: SENIOR REVIEW OF CIV-34
-push: NOT_ATTEMPTED
+CIV-35: NOT_STARTED — NEXT ELIGIBLE PHASE
+active CIV phase: none
+completed through: CIV-34
+next eligible phase: CIV-35
+next authorized action: CIV-35
 ```
