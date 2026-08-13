@@ -200,6 +200,28 @@ extension PebbleAgentController {
                 trace(evidence)
                 return success(evidence)
             case "proof" where arguments.count == 2
+                    && arguments[1].lowercased()
+                        == "evaluation11-inherited-support"
+                    && environment["PEBBLELAB_GATE_D_EVALUATION_11"] == "1"
+                    && environment["PEBBLELAB_GATE_D_BLOCKER_10"] == "1":
+                let evidence = try proveEvaluation11InheritedSupportRefusal(
+                    session: staged, world: world
+                )
+                trace(evidence)
+                return success(evidence)
+            case "proof" where arguments.count == 2
+                    && arguments[1].lowercased()
+                        == "evaluation11-inherited-safe-use"
+                    && environment["PEBBLELAB_GATE_D_EVALUATION_11"] == "1":
+                let evidence = try proveBlocker07InheritedEstateUse(
+                    session: &staged,
+                    world: world,
+                    requiresFreshLoadReconciliation: false
+                )
+                session = staged
+                trace("evaluation11 safe-after-refusal \(evidence)")
+                return success(evidence)
+            case "proof" where arguments.count == 2
                     && arguments[1].lowercased() == "cleanup":
                 let evidence = try cleanupEstatePhysicalProof(
                     session: staged, world: world
@@ -1180,7 +1202,8 @@ extension PebbleAgentController {
     /// not create either material or social authority.
     private func proveBlocker07InheritedEstateUse(
         session published: inout AgentSimulationSession,
-        world: World
+        world: World,
+        requiresFreshLoadReconciliation: Bool = true
     ) throws -> String {
         guard environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
               environment["PEBBLELAB_GATE_D_BLOCKER_07"] == "1",
@@ -1207,17 +1230,27 @@ extension PebbleAgentController {
         let reconciliation = published.persistenceReconciliationSnapshot()
         let causalSequence = published.causalLedgerSnapshot().summary
             .latestSequence
-        guard let currentRun = reconciliation.recentRuns.last,
-              currentRun.causalSequenceAfter == causalSequence,
-              currentRun.assetResults.first(where: {
-                  $0.assetID == assetID
-              })?.outcome.hasVerifiedPhysicalAsset == true,
-              reconciliation.latestResults.first(where: {
-                  $0.assetID == assetID
-              })?.outcome.hasVerifiedPhysicalAsset == true else {
-            throw PebbleAgentEstateBoundaryError.invalid(
-                "blocker07 inherited-use current physical reconciliation"
-            )
+        if requiresFreshLoadReconciliation {
+            guard let currentRun = reconciliation.recentRuns.last,
+                  currentRun.causalSequenceAfter == causalSequence,
+                  currentRun.assetResults.first(where: {
+                      $0.assetID == assetID
+                  })?.outcome.hasVerifiedPhysicalAsset == true,
+                  reconciliation.latestResults.first(where: {
+                      $0.assetID == assetID
+                  })?.outcome.hasVerifiedPhysicalAsset == true else {
+                throw PebbleAgentEstateBoundaryError.invalid(
+                    "blocker07 inherited-use current physical reconciliation"
+                )
+            }
+        } else {
+            guard reconciliation.latestResults.first(where: {
+                $0.assetID == assetID
+            })?.outcome.hasVerifiedPhysicalAsset == true else {
+                throw PebbleAgentEstateBoundaryError.invalid(
+                    "evaluation11 inherited-use verified physical asset"
+                )
+            }
         }
 
         let endpoint = PebbleAgentMaterialCustodyEndpoint.liveAgent(
@@ -1448,6 +1481,223 @@ extension PebbleAgentController {
             "fingerprint=\(fingerprintBefore)>"
                 + "\(updated!.lastVerifiedHolder.custodyFingerprint)",
             "authority=PebbleCore+PebbleGateway",
+        ].joined(separator: " ")
+    }
+
+    /// Evaluation 11 attacks Blocker 10 through the current inherited asset,
+    /// rather than through the dedicated synthetic-tool regression. The
+    /// current verified tool identity must remain exact when a real candidate
+    /// break removes another active probe's support and is compensated.
+    private func proveEvaluation11InheritedSupportRefusal(
+        session published: AgentSimulationSession,
+        world: World
+    ) throws -> String {
+        guard environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
+              environment["PEBBLELAB_GATE_D_EVALUATION_11"] == "1",
+              environment["PEBBLELAB_GATE_D_BLOCKER_10"] == "1",
+              activeWorld === world, isPaused, !movementEnabled,
+              !autoInteractionEnabled,
+              let estate = published.estateSnapshot().estates.last,
+              let entry = estate.assets.first(where: {
+                  $0.status == .transferred
+                      && $0.materialIdentity.itemKey == "iron_pickaxe"
+              }),
+              let settlementReceiptID = entry.settlementReceiptID,
+              let assetID = entry.materialRightsAssetID,
+              let record = published.materialRightsSnapshot().records.first(
+                  where: { $0.asset.assetID == assetID }
+              ),
+              case let .agent(holderID) = record.lastVerifiedHolder.holder,
+              record.recognizedOwnership?.ownerID == holderID,
+              let actorProbe = probesByAgentId[holderID.rawValue],
+              actorProbe.world === world, !actorProbe.dead else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "evaluation11 inherited support authority"
+            )
+        }
+        let probes = probesByAgentId.values.filter {
+            $0.world === world && !$0.dead
+        }.sorted {
+            if $0.labAgentId != $1.labAgentId {
+                return $0.labAgentId < $1.labAgentId
+            }
+            return $0.id < $1.id
+        }
+        guard probes.count >= 2 else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "evaluation11 inherited support requires multiple probes"
+            )
+        }
+        let ignored = Set(probes.map(\.id))
+        let actorPosition = PebbleAgentEmbodiment(
+            probe: actorProbe
+        ).position
+        let protectedCandidates = probes.filter { probe in
+            guard probe !== actorProbe else { return false }
+            let position = PebbleAgentEmbodiment(probe: probe).position
+            let horizontal = abs(actorPosition.x - position.x)
+                + abs(actorPosition.z - position.z)
+            guard horizontal == 1, actorPosition.y == position.y else {
+                return false
+            }
+            return assessEntityPlacement(
+                in: world,
+                at: EntityPlacementPosition(
+                    x: position.x, y: position.y, z: position.z
+                ),
+                bodyWidth: probe.width,
+                bodyHeight: probe.height,
+                ignoringEntityIDs: ignored
+            ).isValid
+        }
+        guard let protected = protectedCandidates.first else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "evaluation11 inherited support has no adjacent valid descendant"
+            )
+        }
+        let protectedPosition = PebbleAgentEmbodiment(
+            probe: protected
+        ).position
+        let target = PhysicalBlockPosition(
+            x: protectedPosition.x,
+            y: protectedPosition.y - 1,
+            z: protectedPosition.z
+        )
+        let blockBefore = world.getBlock(target.x, target.y, target.z)
+        guard blockBefore != 0,
+              world.isChunkReady(target.x >> 4, target.z >> 4),
+              world.getBlockEntity(target.x, target.y, target.z) == nil else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "evaluation11 inherited support target unavailable"
+            )
+        }
+        let endpoint = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            actorProbe, in: world
+        )
+        let custodyBefore = try materialCustodyGateway.inspect(endpoint)
+        let matches = custodyBefore.slots.enumerated().filter {
+            $0.element?.identity == record.lastVerifiedHolder.materialIdentity
+                && $0.element?.count == record.lastVerifiedHolder.quantity
+        }
+        guard matches.count == 1,
+              let binding = materialCustodyGateway.toolBinding(
+                  actor: actorProbe, slot: matches[0].offset, world: world
+              ),
+              binding.heldItem.id == iid("iron_pickaxe"),
+              binding.heldItem.damage
+                == record.lastVerifiedHolder.materialIdentity.damage else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "evaluation11 inherited support current tool mismatch"
+            )
+        }
+
+        let sessionBefore = try published.durableStateBytes()
+        let rightsBefore = published.materialRightsSnapshot()
+        let estatesBefore = published.estateSnapshot()
+        let recorderBefore = replayRecorder?.records.count ?? 0
+        let inventoryBefore = copyItemInventory(actorProbe.carriedItems)
+        let custodyFingerprintBefore = try materialCustodyGateway.fingerprint(
+            endpoint
+        )
+        let entityIDsBefore = Set(world.entities.map(\.id))
+        let occupied = probes.map { probe in
+            let position = PebbleAgentEmbodiment(probe: probe).position
+            return PhysicalBlockPosition(
+                x: position.x, y: position.y, z: position.z
+            )
+        }
+        let outcome = physicalActionGateway.breakBlock(
+            world: world,
+            actor: PebbleAgentEmbodiment(probe: actorProbe),
+            request: PebbleAgentBlockBreakRequest(
+                actorID: holderID.rawValue,
+                target: target,
+                expectedCell: blockBefore,
+                heldItem: binding.heldItem,
+                isCreative: false
+            ),
+            toolState: binding.toolState,
+            occupiedPositions: occupied
+        )
+        let placementAfter = assessEntityPlacement(
+            in: world,
+            at: EntityPlacementPosition(
+                x: protectedPosition.x,
+                y: protectedPosition.y,
+                z: protectedPosition.z
+            ),
+            bodyWidth: protected.width,
+            bodyHeight: protected.height,
+            ignoringEntityIDs: ignored
+        )
+        let custodyFingerprintAfter = try materialCustodyGateway.fingerprint(
+            endpoint
+        )
+        let sessionExact = try self.session?.durableStateBytes()
+            == sessionBefore
+        let rightsExact = self.session?.materialRightsSnapshot()
+            == rightsBefore
+        let estatesExact = self.session?.estateSnapshot()
+            == estatesBefore
+        let recorderExact = (replayRecorder?.records.count ?? 0)
+            == recorderBefore
+        let inventoryExact = actorProbe.carriedItems == inventoryBefore
+        let entitiesExact = Set(world.entities.map(\.id)) == entityIDsBefore
+        let worldExact = world.getBlock(
+            target.x, target.y, target.z
+        ) == blockBefore
+        let custodyExact = custodyFingerprintAfter
+            == custodyFingerprintBefore
+        let currentRecord = self.session?.materialRightsSnapshot().records
+            .first { $0.asset.assetID == assetID }
+        let currentEntry = self.session?.estateSnapshot().estates
+            .first { $0.estateID == estate.estateID }?.assets
+            .first { $0.entryID == entry.entryID }
+        let exact = outcome.status == .verificationFailure
+            && outcome.failure == .activeProbePlacementInvalid
+            && !outcome.mutations.isEmpty
+            && outcome.committedEffectCount == 0
+            && worldExact
+            && inventoryExact
+            && entitiesExact
+            && custodyExact
+            && sessionExact
+            && rightsExact
+            && estatesExact
+            && recorderExact
+            && placementAfter.isValid
+            && currentRecord?.lastVerifiedHolder
+                == record.lastVerifiedHolder
+            && currentEntry?.settlementReceiptID == settlementReceiptID
+        guard exact else {
+            throw PebbleAgentEstateBoundaryError.invalid(
+                "evaluation11 inherited support rollback diverged"
+            )
+        }
+        return [
+            "evaluation11 blocker10 inherited support destructive",
+            "actor=\(holderID.rawValue)",
+            "protected=\(protected.labAgentId)",
+            "activeProbes=\(probes.count)",
+            "target=\(target.x),\(target.y),\(target.z)",
+            "request=break",
+            "currentDamage=\(binding.heldItem.damage)",
+            "outcome=\(outcome.status.rawValue)",
+            "failure=\(outcome.failure?.rawValue ?? "none")",
+            "physicalMutationOccurred=1",
+            "candidateMutations=\(outcome.mutations.count)",
+            "committedEffects=\(outcome.committedEffectCount)",
+            "world=exact",
+            "tool=unchanged",
+            "drops=0",
+            "custody=unchanged",
+            "materialRights=unchanged",
+            "estate=unchanged",
+            "session=unchanged",
+            "recorder=unchanged",
+            "settlementReceipt=unchanged-one",
+            "protectedPlacement=valid",
+            "exactRollback=1",
         ].joined(separator: " ")
     }
 

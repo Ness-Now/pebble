@@ -17,6 +17,7 @@ extension PebbleAgentController {
         world: World
     ) -> PebbleAgentCommandResult {
         let usage = "Usage: /lab renewable-subsistence <setup|plant-first|harvest-first|consume-replant|status|verify-maturity-mismatch|mature-second|harvest-second>"
+            + " (Evaluation 11 gated: reserve-to-agent1|return-agent1-reserve|transfer-to-g1|final-reserve-to-g1|feed-g0)"
         guard arguments.count == 1, let command = arguments.first?.lowercased(),
               let publishedSession = session, activeWorld === world else {
             return failure(usage)
@@ -166,6 +167,34 @@ extension PebbleAgentController {
                     receiptTransaction: &receiptTransaction,
                     growthStartTick: externalGrowthStartTick,
                     growthTicks: externalGrowthTicks
+                )
+            case "evaluation11-reserve-to-agent1":
+                try transferEvaluation11RenewableReserve(
+                    quantity: 1, targetID: AgentID(rawValue: "agent_1")!,
+                    role: "independent-G0-reserve", world: world,
+                    session: candidate
+                )
+            case "evaluation11-return-agent1-reserve":
+                try returnEvaluation11RenewableReserve(
+                    sourceID: AgentID(rawValue: "agent_1")!,
+                    world: world, session: candidate
+                )
+            case "evaluation11-transfer-to-g1":
+                try transferEvaluation11RenewableReserve(
+                    quantity: 2, targetID: AgentID(rawValue: "agent_3")!,
+                    role: "mature-G1-care-reserve", world: world,
+                    session: candidate, requireMatureG1: true
+                )
+            case "evaluation11-final-reserve-to-g1":
+                try transferEvaluation11RenewableReserve(
+                    quantity: 1, targetID: AgentID(rawValue: "agent_3")!,
+                    role: "post-succession-obligation-reserve", world: world,
+                    session: candidate, requireMatureG1: true
+                )
+            case "evaluation11-feed-g0":
+                try feedEvaluation11G0FromRenewableOutput(
+                    world: world, session: &candidate,
+                    recorder: &candidateRecorder
                 )
             default:
                 return failure(usage)
@@ -1176,5 +1205,304 @@ extension PebbleAgentController {
             throw PebbleRenewableSubsistenceProofError.failed("civil date")
         }
         return date
+    }
+
+    /// Evaluation-only composition bridge. It redistributes material already
+    /// harvested by the published renewable cycle through the normal custody
+    /// gateway. It is unavailable without the exact Evaluation 11 gate.
+    private func transferEvaluation11RenewableReserve(
+        quantity: Int,
+        targetID: AgentID,
+        role: String,
+        world: World,
+        session: AgentSimulationSession,
+        requireMatureG1: Bool = false
+    ) throws {
+        guard environment["PEBBLELAB_GATE_D_EVALUATION_11"] == "1",
+              environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
+              quantity > 0,
+              session.renewableSubsistenceEvidence().contains(where: {
+                  $0.status == .renewableCycleCompleted
+              }),
+              let target = probesByAgentId[targetID.rawValue],
+              target.world === world, !target.dead,
+              target.carriedItems.allSatisfy({ $0 == nil }) else {
+            throw PebbleRenewableSubsistenceProofError.failed(
+                "evaluation11 renewable reserve precondition"
+            )
+        }
+        if requireMatureG1 {
+            guard session.lifecycleSnapshot().members.contains(where: {
+                $0.agentID == targetID && $0.currentStage == .mature
+            }), session.kinshipSnapshot().parentageRecords.contains(where: {
+                $0.childID == targetID
+                    && $0.canonicalParentIDs.map(\.rawValue)
+                        == ["agent_0", "agent_1"]
+            }) else {
+                throw PebbleRenewableSubsistenceProofError.failed(
+                    "evaluation11 G1 reserve authority"
+                )
+            }
+        }
+        let plot = try renewablePlot(session)
+        let container = try renewableContainer(world: world, plot: plot)
+        let source = PebbleAgentMaterialCustodyEndpoint.container(
+            container, in: world
+        )
+        let destination = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            target, in: world
+        )
+        let sourceBefore = try materialCustodyGateway.inspect(source)
+        let destinationBefore = try materialCustodyGateway.inspect(destination)
+        let matching = sourceBefore.slots.compactMap({ $0 }).filter {
+            $0.identity.itemKey == "carrot" && $0.count >= quantity
+        }
+        guard matching.count == 1, let carrots = matching.first else {
+            throw PebbleRenewableSubsistenceProofError.failed(
+                "evaluation11 renewable reserve source is not exact"
+            )
+        }
+        let totalBefore = sourceBefore.slots.compactMap({ $0 })
+            .filter { $0.identity.itemKey == "carrot" }
+            .reduce(0) { $0 + $1.count }
+            + destinationBefore.slots.compactMap({ $0 })
+                .filter { $0.identity.itemKey == "carrot" }
+                .reduce(0) { $0 + $1.count }
+        let sourceFingerprint = try materialCustodyGateway.fingerprint(source)
+        let destinationFingerprint = try materialCustodyGateway.fingerprint(
+            destination
+        )
+        let transactionID = "gate-d-e11-renewable-reserve:"
+            + "\(targetID.rawValue):t\(session.tick)"
+        let result = materialCustodyGateway.transfer(
+            PebbleAgentMaterialTransactionRequest(
+                transactionID: transactionID,
+                material: AgentMaterialStackSnapshot(
+                    identity: carrots.identity, count: quantity
+                ),
+                expectedSourceFingerprint: sourceFingerprint,
+                expectedDestinationFingerprint: destinationFingerprint
+            ),
+            from: source,
+            to: destination
+        )
+        let sourceAfter = try materialCustodyGateway.inspect(source)
+        let destinationAfter = try materialCustodyGateway.inspect(destination)
+        let sourceCarrots = sourceAfter.slots.compactMap({ $0 })
+            .filter { $0.identity.itemKey == "carrot" }
+            .reduce(0) { $0 + $1.count }
+        let targetCarrots = destinationAfter.slots.compactMap({ $0 })
+            .filter { $0.identity.itemKey == "carrot" }
+            .reduce(0) { $0 + $1.count }
+        guard result.succeeded, targetCarrots == quantity,
+              sourceCarrots + targetCarrots == totalBefore,
+              try session.durableStateBytes()
+                == self.session?.durableStateBytes() else {
+            throw PebbleRenewableSubsistenceProofError.failed(
+                "evaluation11 renewable reserve transfer"
+            )
+        }
+        trace(
+            "evaluation11 renewable reserve source=cycle2-container "
+                + "target=\(targetID.rawValue) role=\(role) material=carrot "
+                + "quantity=\(quantity) sourceBeforeFingerprint=\(sourceFingerprint) "
+                + "destinationBeforeFingerprint=\(destinationFingerprint) "
+                + "sourceAfter=\(sourceCarrots) targetAfter=\(targetCarrots) "
+                + "total=\(totalBefore)>\(sourceCarrots + targetCarrots) "
+                + "transaction=\(transactionID) syntheticMaterial=0 "
+                + "physicalLoss=0 physicalDuplication=0 sessionMutation=none"
+        )
+    }
+
+    private func returnEvaluation11RenewableReserve(
+        sourceID: AgentID,
+        world: World,
+        session: AgentSimulationSession
+    ) throws {
+        guard environment["PEBBLELAB_GATE_D_EVALUATION_11"] == "1",
+              environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
+              let sourceProbe = probesByAgentId[sourceID.rawValue],
+              sourceProbe.world === world, !sourceProbe.dead else {
+            throw PebbleRenewableSubsistenceProofError.failed(
+                "evaluation11 reserve return precondition"
+            )
+        }
+        let plot = try renewablePlot(session)
+        let container = try renewableContainer(world: world, plot: plot)
+        let source = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            sourceProbe, in: world
+        )
+        let destination = PebbleAgentMaterialCustodyEndpoint.container(
+            container, in: world
+        )
+        let sourceBefore = try materialCustodyGateway.inspect(source)
+        let destinationBefore = try materialCustodyGateway.inspect(destination)
+        let matches = sourceBefore.slots.compactMap({ $0 }).filter {
+            $0.identity.itemKey == "carrot" && $0.count == 1
+        }
+        guard matches.count == 1, let carrot = matches.first else {
+            throw PebbleRenewableSubsistenceProofError.failed(
+                "evaluation11 returned reserve is not exact"
+            )
+        }
+        let totalBefore = sourceBefore.slots.compactMap({ $0 })
+            .filter { $0.identity.itemKey == "carrot" }
+            .reduce(0) { $0 + $1.count }
+            + destinationBefore.slots.compactMap({ $0 })
+                .filter { $0.identity.itemKey == "carrot" }
+                .reduce(0) { $0 + $1.count }
+        let transactionID = "gate-d-e11-renewable-return:"
+            + "\(sourceID.rawValue):t\(session.tick)"
+        let result = materialCustodyGateway.transfer(
+            PebbleAgentMaterialTransactionRequest(
+                transactionID: transactionID,
+                material: AgentMaterialStackSnapshot(
+                    identity: carrot.identity, count: 1
+                ),
+                expectedSourceFingerprint:
+                    try materialCustodyGateway.fingerprint(source),
+                expectedDestinationFingerprint:
+                    try materialCustodyGateway.fingerprint(destination)
+            ),
+            from: source,
+            to: destination
+        )
+        let sourceAfter = try materialCustodyGateway.inspect(source)
+        let destinationAfter = try materialCustodyGateway.inspect(destination)
+        let sourceCarrots = sourceAfter.slots.compactMap({ $0 })
+            .filter { $0.identity.itemKey == "carrot" }
+            .reduce(0) { $0 + $1.count }
+        let destinationCarrots = destinationAfter.slots.compactMap({ $0 })
+            .filter { $0.identity.itemKey == "carrot" }
+            .reduce(0) { $0 + $1.count }
+        guard result.succeeded, sourceCarrots == 0,
+              sourceCarrots + destinationCarrots == totalBefore,
+              try session.durableStateBytes()
+                == self.session?.durableStateBytes() else {
+            throw PebbleRenewableSubsistenceProofError.failed(
+                "evaluation11 renewable reserve return conservation"
+            )
+        }
+        trace(
+            "evaluation11 renewable reserve return source=\(sourceID.rawValue) "
+                + "destination=cycle2-container material=carrot quantity=1 "
+                + "sourceAfter=\(sourceCarrots) destinationAfter=\(destinationCarrots) "
+                + "total=\(totalBefore)>\(sourceCarrots + destinationCarrots) "
+                + "transaction=\(transactionID) syntheticMaterial=0 "
+                + "physicalLoss=0 physicalDuplication=0 sessionMutation=none"
+        )
+    }
+
+    /// Evaluation-only bridge from harvested output into the normal physical
+    /// food executor. The renewable container remains the material source.
+    private func feedEvaluation11G0FromRenewableOutput(
+        world: World,
+        session: inout AgentSimulationSession,
+        recorder: inout AgentReplayRecorder?
+    ) throws {
+        guard environment["PEBBLELAB_GATE_D_EVALUATION_11"] == "1",
+              environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
+              session.renewableSubsistenceEvidence().contains(where: {
+                  $0.status == .renewableCycleCompleted
+              }),
+              let actorID = AgentID(rawValue: "agent_0"),
+              let actor = probesByAgentId[actorID.rawValue],
+              actor.world === world, !actor.dead,
+              actor.carriedItems.allSatisfy({ $0 == nil }) else {
+            throw PebbleRenewableSubsistenceProofError.failed(
+                "evaluation11 G0 feeding precondition"
+            )
+        }
+        let plot = try renewablePlot(session)
+        let container = try renewableContainer(world: world, plot: plot)
+        let source = PebbleAgentMaterialCustodyEndpoint.container(
+            container, in: world
+        )
+        let destination = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            actor, in: world
+        )
+        let sourceBefore = try materialCustodyGateway.inspect(source)
+        let carrots = sourceBefore.slots.compactMap({ $0 }).filter {
+            $0.identity.itemKey == "carrot" && $0.count >= 1
+        }
+        guard carrots.count == 1, let stack = carrots.first else {
+            throw PebbleRenewableSubsistenceProofError.failed(
+                "evaluation11 G0 renewable source is not exact"
+            )
+        }
+        let transferID = "gate-d-e11-renewable-g0:t\(session.tick)"
+        let transfer = materialCustodyGateway.transfer(
+            PebbleAgentMaterialTransactionRequest(
+                transactionID: transferID,
+                material: AgentMaterialStackSnapshot(
+                    identity: stack.identity, count: 1
+                ),
+                expectedSourceFingerprint:
+                    try materialCustodyGateway.fingerprint(source),
+                expectedDestinationFingerprint:
+                    try materialCustodyGateway.fingerprint(destination)
+            ),
+            from: source,
+            to: destination
+        )
+        guard transfer.succeeded else {
+            throw PebbleRenewableSubsistenceProofError.failed(
+                "evaluation11 G0 renewable transfer \(transfer.status.rawValue)"
+            )
+        }
+        let stateBefore = try session.state(for: actorID)
+        let intent = try session.nextPhysicalFoodConsumptionIntent(for: actorID)
+        guard let plan = try foodConsumptionExecutor.prepare(
+            intent, session: session, source: destination,
+            gateway: materialCustodyGateway
+        ), plan.validatedOutcome.canonicalMaterialName == "carrot" else {
+            throw PebbleRenewableSubsistenceProofError.failed(
+                "evaluation11 G0 carrot plan"
+            )
+        }
+        var recorderCandidate = recorder
+        let consumption = foodConsumptionExecutor.execute(
+            plan, session: &session, source: destination,
+            gateway: materialCustodyGateway,
+            publish: { outcome, candidate in
+                if var activeRecorder = recorderCandidate {
+                    _ = try activeRecorder.apply(
+                        .validatedPhysicalFoodConsumption(outcome),
+                        to: &candidate
+                    )
+                    recorderCandidate = activeRecorder
+                } else {
+                    try candidate.applyValidatedPhysicalFoodConsumption(outcome)
+                }
+            }
+        )
+        guard consumption.succeeded, let outcome = consumption.outcome,
+              actor.carriedItems.allSatisfy({ $0 == nil }) else {
+            throw PebbleRenewableSubsistenceProofError.failed(
+                "evaluation11 G0 carrot consumption "
+                    + consumption.status.rawValue
+            )
+        }
+        recorder = recorderCandidate
+        let sourceAfter = try materialCustodyGateway.inspect(source)
+        let remaining = sourceAfter.slots.compactMap({ $0 })
+            .filter { $0.identity.itemKey == "carrot" }
+            .reduce(0) { $0 + $1.count }
+        let stateAfter = try session.state(for: actorID)
+        guard remaining == stack.count - 1,
+              stateAfter.needs.hunger == outcome.hungerAfter else {
+            throw PebbleRenewableSubsistenceProofError.failed(
+                "evaluation11 G0 renewable conservation"
+            )
+        }
+        trace(
+            "evaluation11 renewable G0 nourishment actor=agent_0 "
+                + "material=carrot source=cycle2-container transfer=1 "
+                + "physicalCount=1>0 hunger=\(stateBefore.needs.hunger)>"
+                + "\(stateAfter.needs.hunger) remaining=\(remaining) "
+                + "receipt=\(outcome.physicalReceiptID) physicalDebit=1 "
+                + "deprivation=delayed-not-disabled syntheticMaterial=0 "
+                + "physicalLoss=0 physicalDuplication=0 publication=validated"
+        )
     }
 }

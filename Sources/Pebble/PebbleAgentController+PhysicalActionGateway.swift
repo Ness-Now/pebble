@@ -24,6 +24,9 @@ extension PebbleAgentController {
                 return proveBlocker10SafeBreak(world: world)
             case "mutation-family-audit":
                 return proveBlocker10MutationFamilyAudit(world: world)
+            case "evaluation11-mutation-family-audit"
+                    where environment["PEBBLELAB_GATE_D_EVALUATION_11"] == "1":
+                return proveEvaluation11MutationFamilyComposition(world: world)
             default:
                 break
             }
@@ -889,5 +892,333 @@ extension PebbleAgentController {
         } catch {
             return failure("Blocker 10 mutation-family audit failed: \(error)")
         }
+    }
+
+    /// Evaluation 11 composes the published adversarial mutation-family audit
+    /// with ordinary safe till/place controls, then removes every fixture item
+    /// and restores every fixture cell so the main civilization conservation
+    /// boundary sees no synthetic material.
+    private func proveEvaluation11MutationFamilyComposition(
+        world: World
+    ) -> PebbleAgentCommandResult {
+        guard environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
+              environment["PEBBLELAB_GATE_D_EVALUATION_11"] == "1",
+              let published = session, activeWorld === world,
+              isPaused, !movementEnabled, !autoInteractionEnabled else {
+            return failure("Evaluation 11 mutation-family boundary refused.")
+        }
+        let probes = probesByAgentId.values.filter {
+            $0.world === world && !$0.dead
+        }.sorted { $0.labAgentId < $1.labAgentId }
+        let pair = probes.flatMap { actor in
+            probes.compactMap { protected -> (
+                LabCoreAgentEntity, LabCoreAgentEntity
+            )? in
+                guard actor !== protected else { return nil }
+                let a = PebbleAgentEmbodiment(probe: actor).position
+                let p = PebbleAgentEmbodiment(probe: protected).position
+                return abs(a.x - p.x) + abs(a.z - p.z) == 1
+                    && a.y == p.y ? (actor, protected) : nil
+            }
+        }.first
+        guard let (actor, protected) = pair else {
+            return failure("Evaluation 11 mutation-family has no adjacent pair.")
+        }
+        let protectedPosition = PebbleAgentEmbodiment(
+            probe: protected
+        ).position
+        let adversarialPositions = [
+            PhysicalBlockPosition(
+                x: protectedPosition.x,
+                y: protectedPosition.y - 1,
+                z: protectedPosition.z
+            ),
+            PhysicalBlockPosition(
+                x: protectedPosition.x,
+                y: protectedPosition.y + 1,
+                z: protectedPosition.z
+            ),
+            PhysicalBlockPosition(
+                x: protectedPosition.x,
+                y: protectedPosition.y,
+                z: protectedPosition.z
+            ),
+        ]
+        let originalCells = adversarialPositions.map {
+            ($0, currentGatewayCell(world, $0))
+        }
+        let inventoryBefore = copyItemInventory(actor.carriedItems)
+        let entitiesBefore = Set(world.entities.map(\.id))
+        let recorderBefore = replayRecorder?.records.count ?? 0
+        let sessionBefore: Data
+        do {
+            sessionBefore = try published.durableStateBytes()
+        } catch {
+            return failure(
+                "Evaluation 11 mutation-family session snapshot failed: \(error)"
+            )
+        }
+        let adversarial = proveBlocker10MutationFamilyAudit(world: world)
+        actor.carriedItems = copyItemInventory(inventoryBefore)
+        for (position, cellValue) in originalCells {
+            _ = world.setBlock(
+                position.x, position.y, position.z,
+                cellValue, SET_SILENT
+            )
+        }
+        for entity in world.entities where !entitiesBefore.contains(entity.id) {
+            world.removeEntity(entity)
+        }
+        let adversarialCleanupExact = adversarial.succeeded
+            && inventoryEqual(actor.carriedItems, inventoryBefore)
+            && originalCells.allSatisfy {
+                currentGatewayCell(world, $0.0) == $0.1
+            }
+            && Set(world.entities.map(\.id)) == entitiesBefore
+        guard adversarialCleanupExact else {
+            return failure(
+                "Evaluation 11 mutation-family adversarial cleanup failed."
+            )
+        }
+
+        let actorPosition = PebbleAgentEmbodiment(probe: actor).position
+        let occupied = probes.map {
+            let position = PebbleAgentEmbodiment(probe: $0).position
+            return PhysicalBlockPosition(
+                x: position.x, y: position.y, z: position.z
+            )
+        }
+        let occupiedSet = Set(occupied)
+        let supports = Set(occupied.map {
+            PhysicalBlockPosition(x: $0.x, y: $0.y - 1, z: $0.z)
+        })
+        let offsets = [
+            (1, 0), (0, 1), (-1, 0), (0, -1),
+            (2, 0), (0, 2), (-2, 0), (0, -2),
+        ]
+        guard let safeTillTarget = offsets.map({ dx, dz in
+            PhysicalBlockPosition(
+                x: actorPosition.x + dx,
+                y: actorPosition.y - 1,
+                z: actorPosition.z + dz
+            )
+        }).first(where: { target in
+            world.isChunkReady(target.x >> 4, target.z >> 4)
+                && world.getBlockEntity(
+                    target.x, target.y, target.z
+                ) == nil
+                && world.getBlockEntity(
+                    target.x, target.y + 1, target.z
+                ) == nil
+                && !supports.contains(target)
+                && !occupiedSet.contains(PhysicalBlockPosition(
+                    x: target.x, y: target.y + 1, z: target.z
+                ))
+        }) else {
+            return failure("Evaluation 11 has no bounded safe till target.")
+        }
+        let safeTillAbove = PhysicalBlockPosition(
+            x: safeTillTarget.x,
+            y: safeTillTarget.y + 1,
+            z: safeTillTarget.z
+        )
+        let tillOriginal = [
+            (safeTillTarget, currentGatewayCell(world, safeTillTarget)),
+            (safeTillAbove, currentGatewayCell(world, safeTillAbove)),
+        ]
+        _ = world.setBlock(
+            safeTillTarget.x, safeTillTarget.y, safeTillTarget.z,
+            Int(cell(B.dirt)), SET_SILENT
+        )
+        _ = world.setBlock(
+            safeTillAbove.x, safeTillAbove.y, safeTillAbove.z,
+            0, SET_SILENT
+        )
+        guard let hoeSlot = actor.carriedItems.indices.first(where: {
+            actor.carriedItems[$0] == nil
+        }) else {
+            return failure("Evaluation 11 has no temporary hoe slot.")
+        }
+        actor.carriedItems[hoeSlot] = ItemStack(iid("iron_hoe"), 1)
+        guard let hoe = materialCustodyGateway.toolBinding(
+            actor: actor, slot: hoeSlot, world: world
+        ) else {
+            actor.carriedItems = copyItemInventory(inventoryBefore)
+            for (position, cellValue) in tillOriginal {
+                _ = world.setBlock(
+                    position.x, position.y, position.z,
+                    cellValue, SET_SILENT
+                )
+            }
+            return failure("Evaluation 11 safe till binding unavailable.")
+        }
+        let safeTill = physicalActionGateway.tillBlock(
+            world: world,
+            actor: PebbleAgentEmbodiment(probe: actor),
+            request: PebbleAgentBlockTillingRequest(
+                actorID: actor.labAgentId,
+                target: safeTillTarget,
+                expectedCell: Int(cell(B.dirt)),
+                heldItem: hoe.heldItem
+            ),
+            toolState: hoe.toolState,
+            occupiedPositions: occupied
+        )
+        let safeTillMutated = safeTill.succeeded
+            && safeTill.after >> 4 == Int(B.farmland)
+        actor.carriedItems = copyItemInventory(inventoryBefore)
+        for (position, cellValue) in tillOriginal {
+            _ = world.setBlock(
+                position.x, position.y, position.z,
+                cellValue, SET_SILENT
+            )
+        }
+
+        guard let safePlaceTarget = offsets.map({ dx, dz in
+            PhysicalBlockPosition(
+                x: actorPosition.x + dx,
+                y: actorPosition.y,
+                z: actorPosition.z + dz
+            )
+        }).first(where: { target in
+            let support = PhysicalBlockPosition(
+                x: target.x, y: target.y - 1, z: target.z
+            )
+            return target != safeTillAbove
+                && world.isChunkReady(target.x >> 4, target.z >> 4)
+                && world.getBlockEntity(
+                    target.x, target.y, target.z
+                ) == nil
+                && world.getBlockEntity(
+                    support.x, support.y, support.z
+                ) == nil
+                && !occupiedSet.contains(target)
+                && !supports.contains(target)
+                && !supports.contains(support)
+        }) else {
+            return failure("Evaluation 11 has no bounded safe place target.")
+        }
+        let safePlaceSupport = PhysicalBlockPosition(
+            x: safePlaceTarget.x,
+            y: safePlaceTarget.y - 1,
+            z: safePlaceTarget.z
+        )
+        let placeOriginal = [
+            (safePlaceTarget, currentGatewayCell(world, safePlaceTarget)),
+            (safePlaceSupport, currentGatewayCell(world, safePlaceSupport)),
+        ]
+        _ = world.setBlock(
+            safePlaceSupport.x, safePlaceSupport.y, safePlaceSupport.z,
+            Int(cell(B.stone)), SET_SILENT
+        )
+        _ = world.setBlock(
+            safePlaceTarget.x, safePlaceTarget.y, safePlaceTarget.z,
+            0, SET_SILENT
+        )
+        guard let blockSlot = actor.carriedItems.indices.first(where: {
+            actor.carriedItems[$0] == nil
+        }) else {
+            return failure("Evaluation 11 has no temporary block slot.")
+        }
+        actor.carriedItems[blockSlot] = ItemStack(iid("stone"), 1)
+        guard let placement = materialCustodyGateway.placementBinding(
+            actor: actor, slot: blockSlot
+        ) else {
+            return failure("Evaluation 11 safe placement binding unavailable.")
+        }
+        let hit = RaycastHit(
+            x: safePlaceTarget.x,
+            y: safePlaceSupport.y,
+            z: safePlaceTarget.z,
+            face: 1,
+            cell: Int(cell(B.stone)),
+            t: 0,
+            px: Double(safePlaceTarget.x) + 0.5,
+            py: Double(safePlaceTarget.y),
+            pz: Double(safePlaceTarget.z) + 0.5
+        )
+        let safePlace = physicalActionGateway.placeBlock(
+            world: world,
+            actor: actor,
+            request: PebbleAgentBlockPlacementRequest(
+                actorID: actor.labAgentId,
+                hit: hit,
+                target: safePlaceTarget,
+                expectedCell: 0,
+                blockID: Int(B.stone),
+                heldItem: placement.heldItem,
+                orientation: BlockPlacementOrientation(
+                    yaw: actor.yaw, pitch: actor.pitch
+                )
+            ),
+            custody: placement.custody,
+            occupiedPositions: Array(occupied.reversed())
+        )
+        let safePlaceMutated = safePlace.succeeded
+            && safePlace.after >> 4 == Int(B.stone)
+        actor.carriedItems = copyItemInventory(inventoryBefore)
+        for (position, cellValue) in placeOriginal {
+            _ = world.setBlock(
+                position.x, position.y, position.z,
+                cellValue, SET_SILENT
+            )
+        }
+        for entity in world.entities where !entitiesBefore.contains(entity.id) {
+            world.removeEntity(entity)
+        }
+        let finalPlacement = probes.allSatisfy { probe in
+            let position = PebbleAgentEmbodiment(probe: probe).position
+            return assessEntityPlacement(
+                in: world,
+                at: EntityPlacementPosition(
+                    x: position.x, y: position.y, z: position.z
+                ),
+                bodyWidth: probe.width,
+                bodyHeight: probe.height,
+                ignoringEntityIDs: Set(probes.map(\.id))
+            ).isValid
+        }
+        let sessionExact: Bool
+        do {
+            sessionExact = try self.session?.durableStateBytes()
+                == sessionBefore
+        } catch {
+            return failure(
+                "Evaluation 11 mutation-family final snapshot failed: \(error)"
+            )
+        }
+        let safeCleanupExact = inventoryEqual(
+            actor.carriedItems, inventoryBefore
+        )
+            && tillOriginal.allSatisfy {
+                currentGatewayCell(world, $0.0) == $0.1
+            }
+            && placeOriginal.allSatisfy {
+                currentGatewayCell(world, $0.0) == $0.1
+            }
+            && Set(world.entities.map(\.id)) == entitiesBefore
+            && sessionExact
+            && (replayRecorder?.records.count ?? 0) == recorderBefore
+            && finalPlacement
+        let exact = adversarialCleanupExact
+            && safeTillMutated
+            && safePlaceMutated
+            && safeCleanupExact
+        let message = "evaluation11 blocker10 mutation family composition "
+            + "adversarialTill=verificationFailure:activeProbePlacementInvalid "
+            + "adversarialPlace=verificationFailure:activeProbePlacementInvalid "
+            + "directOccupied=refused:occupiedTarget "
+            + "safeTill=\(safeTill.status.rawValue) "
+            + "safePlace=\(safePlace.status.rawValue) "
+            + "enumerationOrder=independent adversarialCleanup="
+            + (adversarialCleanupExact ? "exact" : "failed")
+            + " safeCleanup=" + (safeCleanupExact ? "exact" : "failed")
+            + " activePlacement=" + (finalPlacement ? "valid" : "invalid")
+            + " syntheticMaterial=0 exact=\(exact ? 1 : 0)"
+        trace(message)
+        guard exact else {
+            return failure("Evaluation 11 mutation-family composition failed.")
+        }
+        return success(message)
     }
 }

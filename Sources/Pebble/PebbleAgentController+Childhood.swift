@@ -85,6 +85,47 @@ extension PebbleAgentController {
                 }
                 session = candidate
                 replayRecorder = recorder
+            case "evaluation11-cohabit" where arguments.count == 3
+                    && environment["PEBBLELAB_GATE_D_EVALUATION_11"] == "1":
+                guard environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
+                      let memberID = AgentID(rawValue: arguments[1]),
+                      let dependentID = AgentID(rawValue: arguments[2]),
+                      let target = candidate.householdSnapshot()
+                        .currentMemberships.first(where: {
+                            $0.agentID == dependentID
+                        })?.householdID else {
+                    return failure(usage)
+                }
+                let before = candidate.householdSnapshot().currentMemberships
+                    .first { $0.agentID == memberID }?.householdID
+                var recorder = replayRecorder
+                if try applyRecordedOperationIfActive(
+                    .moveHouseholdMembers(
+                        memberIDs: [memberID], householdID: target
+                    ),
+                    session: &candidate, recorder: &recorder
+                ) == nil {
+                    try candidate.moveMembers(
+                        memberIDs: [memberID], to: target
+                    )
+                }
+                guard candidate.householdSnapshot().currentMemberships
+                    .first(where: { $0.agentID == memberID })?.householdID
+                        == target else {
+                    return failure(
+                        "Evaluation 11 cohabitation publication failed."
+                    )
+                }
+                session = candidate
+                replayRecorder = recorder
+                trace(
+                    "evaluation11 household cohabitation member="
+                        + "\(memberID.rawValue) dependent=\(dependentID.rawValue) "
+                        + "household=\(before?.rawValue ?? "none")>"
+                        + "\(target.rawValue) transition=canonical "
+                        + "parentageMutation=none guardianshipMutation=none "
+                        + "worldMutation=none"
+                )
             case "proof" where arguments.count == 2
                     && arguments[1].lowercased() == "guardian-separation":
                 guard environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
